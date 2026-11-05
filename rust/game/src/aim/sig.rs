@@ -76,13 +76,3 @@ pub fn reset_aim(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/aim.ts:355 aimSummary)
 pub fn aim_summary(g: &mut crate::game::Game) -> String { todo!() }
-
-pub mod aim_hooks {
-    #[allow(unused_imports)]
-    use crate::{ids::*, js::*, Quat, V3};
-    #[allow(unused_imports)]
-    use alloc::{string::String, vec::Vec};
-    /// (src/game/aim.ts:145 AIM_HOOKS.playerExternalK)
-    pub fn player_external_k() -> f64 { todo!() }
-
-}

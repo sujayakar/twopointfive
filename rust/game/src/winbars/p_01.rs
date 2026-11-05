@@ -7,10 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seams: what skeleton 3 still cannot give
-fn seam_furn_break_land(cls: crate::scene_materials::BreakClass) -> crate::furnblast::BreakRowLand { todo!("needs: FURN_BREAK[cls].land (the skeleton has `pub const FURN_BREAK: bool = false`, not the table)") }
-#[allow(clippy::too_many_arguments)]
-fn seam_particles_emit(g: &mut Game, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, speed: f64, speed_jit: f64, spread: f64, life: f64, life_jit: f64, size: f64, size_jit: f64, aspect: f64, color: V3, owner: f64) { todo!("needs: emit on the game's own Particles (gpu_fx returns a copy) and EmitOpts' speedJit, spread, lifeJit, sizeJit, aspect, color, owner") }
+// ---------------------------------------------------------------- seams: what this skeleton still cannot give
+/// a box's row (Box.*, boxes.ts:66). This skeleton has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes, this is the one line `&mut g.tab.boxes[b]`
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: g.col.boxes is Vec<BoxId> and no Tab of Box") }
 
 // ---------------------------------------------------------------- helpers
 /// the bits of two flag words or'd   (`a | b`)
@@ -20,27 +19,21 @@ fn stands(flags: f64) -> bool {
     let bar = js::to_i32(crate::scene_boxes::box_flag().bar);
     (js::to_i32(flags) & (bar | js::to_i32(HIDE))) == bar
 }
-/// `g.col.boxes[index]`: a number that is no row of the list is undefined
+/// `g.col.boxes[index]`: a number that is no place in the list is undefined
 fn box_of(g: &Game, index: f64) -> Option<BoxId> {
-    if !(index < 1e6) || index < 0.0 || m::floor(index) != index || index as usize >= g.col.boxes.len() { return None; }
-    Some(BoxId::from_ix(index as usize))
+    if !(index < 1e6) || index < 0.0 || m::floor(index) != index { return None; }
+    g.col.boxes.get(index as usize).copied()
 }
 /// `g.col.boxes[index]` where the TypeScript takes it to be there
-fn box_at(index: f64) -> BoxId { BoxId::from_ix(index as usize) }
-/// `Math.min(B.length, g.level.boxes.length)`: the statics the level was built with
-fn built_boxes(g: &Game) -> usize { if g.col.boxes.len() < g.level.boxes.len() { g.col.boxes.len() } else { g.level.boxes.len() } }
+fn box_at(g: &Game, index: f64) -> BoxId { g.col.boxes[index as usize] }
+/// `Math.min(B.length, g.level.boxes.length)`: that list and `g.col.boxes` are one array (game.ts:1100), so it is the list's length
+fn built_boxes(g: &Game) -> usize { g.col.boxes.len() }
 /// the bar's word, the level it was struck at   (breakBar's `seed`)
 fn seed_word(box_seed: f64, hit_u: f64) -> f64 { js::to_u32(box_seed + 131.0 + m::floor(hit_u * 16.0) * 31.0) as f64 }
 /// what the k-th choice of a break hashes   (breakBar's `R`, before hash01)
 fn hash_key(seed: f64, k: f64) -> f64 { m::imul(js::to_i32(seed + k), js::to_i32(2654435761.0)) as f64 }
 /// the k-th choice of a break   (breakBar's `R`)
 fn choice(seed: f64, k: f64) -> f64 { crate::debris::hash01(hash_key(seed, k)) }
-/// `x.toFixed(1)`: the exact value rounded, an exact tie away from zero (Rust's own format takes the even digit)
-fn to_fixed1(x: f64) -> String {
-    let q = x * 4.0;
-    let tie = m::floor(q) == q && js::rem(q, 2.0) != 0.0;
-    if tie { format!("{:.1}", if x < 0.0 { x - 0.05 } else { x + 0.05 }) } else { format!("{:.1}", x) }
-}
 
 // ---------------------------------------------------------------- the part
 /// The game's row, made if it is not there.   (winbars.ts stateOf)
@@ -52,7 +45,7 @@ pub fn bars_live(g: &mut crate::game::Game) -> bool { !g.touring }
 /// Is static `index` a window's bar that still stands?   (winbars.ts barAt)
 pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
     let Some(b) = box_of(g, index) else { return false };
-    stands(g.col.boxes[b].flags)
+    stands(seam_box(g, b).flags)
 }
 
 /// Every bar of this level that still stands, ascending.   (winbars.ts barsStanding)
@@ -60,7 +53,8 @@ pub fn bars_standing(g: &mut crate::game::Game) -> Vec<f64> {
     let n = built_boxes(g);
     let mut out = Vec::new();
     for i in 0..n {
-        if stands(g.col.boxes[BoxId::from_ix(i)].flags) { out.push(i as f64); }
+        let b = g.col.boxes[i];
+        if stands(seam_box(g, b).flags) { out.push(i as f64); }
     }
     out
 }
@@ -80,15 +74,15 @@ pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
 /// Once, as the game is made: the line of fire's question and the blasts' list.   (winbars.ts bootBars)
 pub fn boot_bars(g: &mut crate::game::Game) {
     g.col.fire_pass = Some(crate::scene_collision::FirePass::Bars);
-    crate::destruction::destruction_on_blast(g, &crate::destruction::BlastListener::Bars);
+    crate::destruction::destruction_on_blast(g, crate::destruction::BlastListener::Bars);
 }
 
 /// A round would stop in bar `index`: hidden from the rest of its flight, nothing more until bars_settle.   (winbars.ts barMeet)
 pub fn bar_meet(g: &mut crate::game::Game, index: f64, t: f64, at: V3, dir: V3) -> crate::winbars::BarMet {
-    let b = box_at(index);
-    let flags = g.col.boxes[b].flags;
+    let b = box_at(g, index);
+    let flags = seam_box(g, b).flags;
     let m = BarMet { index, t, at, dir, flags };
-    g.col.boxes[b].flags = bor(flags, HIDE);
+    seam_box(g, b).flags = bor(flags, HIDE);
     crate::scene_collision::wrote(g);
     state_of(g).met.push(m);
     m
@@ -101,7 +95,8 @@ pub fn bars_unmeet(g: &mut crate::game::Game) {
         _ => return,
     };
     for m in &met {
-        g.col.boxes[box_at(m.index)].flags = m.flags;
+        let b = box_at(g, m.index);
+        seam_box(g, b).flags = m.flags;
     }
     crate::scene_collision::wrote(g);
     state_of(g).met.clear();
@@ -112,7 +107,8 @@ pub fn bars_settle(g: &mut crate::game::Game, met: &[crate::winbars::BarMet], t_
     let mut n = 0.0;
     state_of(g).met.clear();
     for m in met {
-        g.col.boxes[box_at(m.index)].flags = m.flags;
+        let b = box_at(g, m.index);
+        seam_box(g, b).flags = m.flags;
     }
     crate::scene_collision::wrote(g);
     for m in met {
@@ -133,22 +129,21 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
     state_of(g);
     let Some(b) = box_of(g, index) else { return false };
     if state_of(g).gone.has(crate::Num(index)) || !bar_at(g, index) { return false; }
-    let flags = g.col.boxes[b].flags;
+    let flags = seam_box(g, b).flags;
     state_of(g).gone.set(crate::Num(index), flags);
-    g.col.boxes[b].flags = bor(flags, HIDE);
+    seam_box(g, b).flags = bor(flags, HIDE);
     changed(g, b);
     g.stats.winbars.broken += 1;
     if cause == BreakBarCause::Round { g.stats.winbars.by_round += 1; } else { g.stats.winbars.by_blast += 1; }
 
     // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
     let k_ = g.k.winbars;
-    let (bc, bh, yaw) = (g.col.boxes[b].c, g.col.boxes[b].h, g.col.boxes[b].yaw);
+    let (bc, bh, yaw, albedo, does) = { let r = seam_box(g, b); (r.c, r.h, r.yaw, r.albedo, r.does.map(|w| String::from(w.as_str()))) };
     let n = m::max(1.0, m::round(k_.pieces));
     let y0 = bc[1] - bh[1];
     let h = 2.0 * bh[1];
-    let does = g.col.boxes[b].does.map(|w| String::from(w.as_str()));
     let cls = crate::furnblast::break_class_of(g, &crate::furnblast::BreakClassOfB { does });
-    let land = seam_furn_break_land(cls);
+    let land = crate::furnblast::furn_break_row(cls).land;
     let seed = seed_word(crate::glass::box_seed(g, b), v3::clamp((at[1] - y0) / h, 0.0, 1.0));
     let mut cuts = vec![0.0];
     let mut j = 1.0;
@@ -166,7 +161,7 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
         dx /= l;
         dz /= l;
     }
-    let p = crate::particle_fx::gpu_fx(g).is_some();
+    let p = crate::particle_fx::gpu_fx(g);
     let hit_u = v3::clamp((at[1] - y0) / h, 0.0, 1.0);
     let tab = crate::scene_boxes::box_flag();
     let mut k = 100.0;
@@ -183,7 +178,7 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
         let fc: V3 = [bc[0], y0 + (u0 + u1) / 2.0 * h, bc[2]];
         let fh: V3 = [bh[0], (u1 - u0) / 2.0 * h, bh[2]];
         {
-            let piece = &mut g.col.boxes[f];
+            let piece = seam_box(g, f);
             piece.c = fc;
             piece.h = fh;
             piece.flags = tab.dynamic;
@@ -208,16 +203,16 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
         } else {
             g.stats.winbars.demoted += 1;
             if p {
-                let color = v3::copy(g.col.boxes[b].albedo);
-                seam_particles_emit(g, crate::render_particles::PKind::Debris, fc, v3::normalize([v[0], m::max(0.3, v[1]), v[2]]), 10.0, 2.2, 0.7, 1.1, 18.0, 0.3, 0.006, 0.6, 3.0, color, who);
+                let o = crate::render_particles::EmitOpts { speed: 2.2, speed_jit: Some(0.7), spread: Some(1.1), life: 18.0, life_jit: Some(0.3), size: 0.006, size_jit: Some(0.6), aspect: Some(3.0), color: Some(v3::copy(albedo)), owner: Some(who), ..Default::default() };
+                crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, fc, v3::normalize([v[0], m::max(0.3, v[1]), v[2]]), 10.0, o);
             }
         }
     }
     if p {
-        let color = v3::copy(g.col.boxes[b].albedo);
-        seam_particles_emit(g, crate::render_particles::PKind::Debris, [bc[0], v3::clamp(at[1], y0, y0 + h), bc[2]], v3::normalize([dx, 0.25, dz]), k_.chips, k_.chip_v, 0.7, 1.0, 18.0, 0.3, 0.007, 0.6, 4.0, color, who);
+        let o = crate::render_particles::EmitOpts { speed: k_.chip_v, speed_jit: Some(0.7), spread: Some(1.0), life: 18.0, life_jit: Some(0.3), size: 0.007, size_jit: Some(0.6), aspect: Some(4.0), color: Some(v3::copy(albedo)), owner: Some(who), ..Default::default() };
+        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [bc[0], v3::clamp(at[1], y0, y0 + h), bc[2]], v3::normalize([dx, 0.25, dz]), k_.chips, o);
     }
-    let line = format!("{}s bar {} broken by a {} (who {})", to_fixed1(g.time), index, cause.as_str(), who);
+    let line = format!("{}s bar {} broken by a {} (who {})", js::to_fixed(g.time, 1), js::num_str(index), cause.as_str(), js::num_str(who));
     let log = &mut g.m.winbars.log;
     log.push(line);
     if log.len() > 24 { log.remove(0); }
@@ -229,7 +224,7 @@ pub fn changed(g: &mut crate::game::Game, b: BoxId) {
     g.engine.world.geom_serial += 1.0;
     crate::scene_collision::wrote(g);
     crate::scene_collision::sound_paths_invalidate(g);
-    let (c, h) = (g.col.boxes[b].c, g.col.boxes[b].h);
+    let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
     crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
 }
 
@@ -240,19 +235,26 @@ pub fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
     let mut near: Vec<f64> = Vec::new();
     for i in bars_standing(g) {
-        let (c, h) = (g.col.boxes[box_at(i)].c, g.col.boxes[box_at(i)].h);
+        let b = box_at(g, i);
+        let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
         if m::hyp2(c[0] - from[0], c[2] - from[2]) <= r + m::max(h[0], h[2]) { near.push(i); }
     }
     if near.is_empty() { return; }
     let mut took: Vec<(f64, V3)> = Vec::new();
-    let was: Vec<f64> = near.iter().map(|&i| g.col.boxes[box_at(i)].flags).collect();
+    let mut was: Vec<f64> = Vec::new();
     for &i in &near {
-        let b = box_at(i);
-        g.col.boxes[b].flags = bor(g.col.boxes[b].flags, HIDE);
+        let b = box_at(g, i);
+        was.push(seam_box(g, b).flags);
+    }
+    for &i in &near {
+        let b = box_at(g, i);
+        let r = seam_box(g, b);
+        r.flags = bor(r.flags, HIDE);
     }
     crate::scene_collision::wrote(g);
     for &i in &near {
-        let (c, h) = (g.col.boxes[box_at(i)].c, g.col.boxes[box_at(i)].h);
+        let b = box_at(g, i);
+        let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
         for u in [0.0, 0.6, -0.6] {
             let q: V3 = [c[0], c[1] + u * h[1], c[2]];
             if v3::dist(from, q) > r + m::max(h[0], h[2]) { continue; }
@@ -262,11 +264,13 @@ pub fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
         }
     }
     for (k, &i) in near.iter().enumerate() {
-        g.col.boxes[box_at(i)].flags = was[k];
+        let b = box_at(g, i);
+        seam_box(g, b).flags = was[k];
     }
     crate::scene_collision::wrote(g);
     for (i, at) in took {
-        let c = g.col.boxes[box_at(i)].c;
+        let b = box_at(g, i);
+        let c = seam_box(g, b).c;
         let (dx, dz) = (c[0] - from[0], c[2] - from[2]);
         let l = m::hyp2(dx, dz);
         let dir: V3 = if l > 1e-3 { [dx / l, 0.0, dz / l] } else { [0.0, 0.0, 0.0] };
@@ -282,7 +286,7 @@ pub fn reset_bars(g: &mut crate::game::Game) {
     let gone: Vec<(crate::Num, f64)> = s.gone.iter().map(|(k, v)| (k, *v)).collect();
     for (i, f) in gone {
         if let Some(b) = box_of(g, i.0) {
-            g.col.boxes[b].flags = f;
+            seam_box(g, b).flags = f;
             changed(g, b);
         }
     }
@@ -297,8 +301,11 @@ pub fn bars_check(g: &mut crate::game::Game, s: Option<&crate::winbars::BarsSave
     let bar = js::to_i32(crate::scene_boxes::box_flag().bar);
     for &i in &s.s {
         let integer = i.is_finite() && m::floor(i) == i;
-        let bad = !integer || i < 0.0 || i >= n || (js::to_i32(g.col.boxes[box_at(i)].flags) & bar) == 0;
-        if bad { return Some(format!("window bars: static {} is not a window's bar of this level", i)); }
+        let bad = !integer || i < 0.0 || i >= n || {
+            let b = box_at(g, i);
+            (js::to_i32(seam_box(g, b).flags) & bar) == 0
+        };
+        if bad { return Some(format!("window bars: static {} is not a window's bar of this level", js::num_str(i))); }
     }
     None
 }
@@ -323,7 +330,7 @@ pub fn win_bars_log(g: &mut crate::game::Game) -> Vec<String> { g.m.winbars.log.
 mod tests {
     use super::*;
 
-    // the expected values are the TypeScript's own, printed under bun from the expressions of winbars.ts:117 and Number.prototype.toFixed
+    // the expected values are the TypeScript's own, printed under bun from the expressions of winbars.ts:117
     #[test]
     fn seed_word_is_the_typescripts() {
         for (s, h, want) in [(0.0, 0.0, 131.0), (4294967295.0, 1.0, 626.0), (123456789.0, 0.37, 123457075.0), (2147483648.0, 0.999, 2147484244.0), (7.0, f64::NAN, 0.0)] {
@@ -334,12 +341,6 @@ mod tests {
     fn hash_key_is_the_typescripts() {
         for (s, k, want) in [(0.0, 100.0, -844396252.0), (4294967295.0, 102.0, 1810039509.0), (3735928559.0, 11.0, 1763390682.0), (131.0, 10.0, 613287549.0)] {
             assert_eq!(hash_key(s, k).to_bits(), f64::to_bits(want));
-        }
-    }
-    #[test]
-    fn to_fixed1_is_the_typescripts() {
-        for (x, want) in [(0.0, "0.0"), (0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (2.5, "2.5"), (0.05, "0.1"), (0.15, "0.1"), (12.34, "12.3"), (99.95, "100.0"), (1234.5678, "1234.6"), (16.666666666666668, "16.7")] {
-            assert_eq!(to_fixed1(x), want);
         }
     }
     #[test]

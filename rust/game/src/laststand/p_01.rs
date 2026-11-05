@@ -1,4 +1,4 @@
-//! src/game/laststand.ts lines 1 to 408
+//! src/game/laststand.ts lines 1 to 410
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -36,20 +36,9 @@ static LINES: &[(LineKind, f64, &[&str], Option<&[&str]>, Option<&[&str]>)] = &[
     (LineKind::SetLoneOpen, 3.0, &["I'm set in {the}. if anyone's left — I'm not coming out.", "gun's on the door, {the}. I'm staying put."], None, None),
 ];
 
-// ---------------------------------------------------------------- seams: what the skeleton cannot do yet (notes.md, ## Skeleton)
-
-/// (:222) a `then` handed to the public `net` kept in Later for a line that must wait: a borrowed closure cannot be kept
-fn seam_keep_then(then: Option<&mut dyn FnMut(&mut Game)>) -> Option<LaterThen> {
-    match then { None => None, Some(_) => todo!("needs: net's then as Option<LaterThen>") }
-}
-/// (:222) a `redo` handed to the public `net` kept in Later: a borrowed closure cannot be kept
-fn seam_keep_redo(redo: Option<&mut dyn FnMut(&mut Game) -> NetRedoRet>) -> Option<LaterRedo> {
-    match redo { None => None, Some(_) => todo!("needs: net's redo as Option<LaterRedo>") }
-}
-
 // ---------------------------------------------------------------- what a line keeps: Later.then, Later.redo
 
-/// the closures of lines 262, 263, 358, 372, 393, 407, 418, 430: a line naming where its man is has been said
+/// the closures of lines 264, 265, 360, 374, 395, 409 and part 2's: a line naming where its man is has been said
 fn run_then(g: &mut Game, then: LaterThen) {
     match then {
         LaterThen::MovedFree { d } => { st_of(g).stats.moved += 1.0; name(g, d, None); }
@@ -61,7 +50,7 @@ fn run_then(g: &mut Game, then: LaterThen) {
         }
     }
 }
-/// the `f` of lines 263, 358, 372, 393: a line's words and its `then`, the place asked now
+/// the `f` of lines 265, 360, 374, 395: a line's words and its `then`, the place asked now
 fn redo_words(g: &mut Game, redo: &LaterRedo) -> NetRedoRet {
     match *redo {
         LaterRedo::MovedAt { d } => {
@@ -103,47 +92,29 @@ fn line_slot(g: &mut Game, kind: LineKind, vars: Option<&JsMap<String, String>>)
     st.cls_at[cls as usize] = at + gap + 0.1;
     (tpl, text, cls, at)
 }
-/// `net` with what the line keeps as Later holds it: every line of this part goes this way (:218)
-fn net_kept(g: &mut Game, gd: GuardId, kind: LineKind, vars: Option<&JsMap<String, String>>, then: Option<LaterThen>, redo: Option<LaterRedo>) {
-    let (tpl, text, cls, at) = line_slot(g, kind, vars);
-    let t0 = g.time;
-    if at > t0 {
-        st_of(g).later.push(Later { at, t0, gd, kind, text, cls, then, tpl: String::from(tpl), redo });
-    } else {
-        voice(g, gd, kind, &text, cls);
-        if let Some(t) = then { run_then(g, t); }
-    }
-}
-/// `netAt` by the name of its `f`: every such line of this part goes this way (:226)
-fn net_at_kept(g: &mut Game, d: RoomfightDefId, kind: LineKind, redo: LaterRedo) {
-    let gd = g.tab.roomfight_def[d].gd;
-    let a = redo_words(g, &redo);
-    net_kept(g, gd, kind, Some(&a.vars), a.then, Some(redo));
-}
-
 // ---------------------------------------------------------------- small helpers
 
 /// the row (STATES.get(g)): it stays in g.m.laststand.states while the tick runs; let go of it before the next call that takes g
 fn st_of(g: &mut Game) -> &mut State { g.m.laststand.states.as_mut().unwrap() }
 /// the check that is open (st.check), by its path: tick_check's C
 fn check_of(g: &mut Game) -> &mut Check { st_of(g).check.as_mut().unwrap() }
-/// (:403) member, which needs nothing of g
-fn of_stand(s: &Stand, d: RoomfightDefId) -> bool { s.in_.has(d) || s.out.has(d) || s.movers.iter().any(|m| m.d == d) }
+/// (:405) member, which needs nothing of g
+fn stand_has(s: &Stand, d: RoomfightDefId) -> bool { s.in_.has(d) || s.out.has(d) || s.movers.iter().any(|m| m.d == d) }
 /// JavaScript's truth of an optional string
 fn id_truthy(id: &Option<String>) -> bool { id.as_deref().map_or(false, |s| !s.is_empty()) }
 /// where this man's body stands
 fn man_pos(g: &Game, d: RoomfightDefId) -> V3 { let gd = g.tab.roomfight_def[d].gd; g.ch[g.gd[gd].ch].pos }
-/// (:228) the place as this man says it, asked now
+/// (:230) the place as this man says it, asked now
 fn man_spoken(g: &mut Game, d: RoomfightDefId) -> Spoken { let p = man_pos(g, d); spoken(g, p) }
 /// the defenders who are `alive`, in the list's order
 fn up_defs(g: &mut Game) -> Vec<RoomfightDefId> { let defs = g.fight.defs.clone(); defs.into_iter().filter(|&d| alive(g, d)).collect() }
 /// a line's `vars`
 fn vars_of(pairs: &[(&str, &str)]) -> JsMap<String, String> { let mut v = JsMap::new(); for (k, x) in pairs { v.set(String::from(*k), String::from(*x)); } v }
-/// `/^the |\d$/.test(n) ? n : 'the ' + n` (:189, :325)
+/// `/^the |\d$/.test(n) ? n : 'the ' + n` (:191, :327)
 fn the_word(n: &str) -> String {
     if n.starts_with("the ") || n.ends_with(|c: char| c.is_ascii_digit()) { String::from(n) } else { alloc::format!("the {}", n) }
 }
-/// `+x.toFixed(2)` (:211)
+/// `+x.toFixed(2)` (:213)
 fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
 /// the cell's number as a Set's key: -0 is 0 to a JavaScript Set
 fn room_has(g: &mut Game, r: RoomfightRoomId, p: V3) -> bool {
@@ -172,7 +143,7 @@ pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// up, and not broken and run: off the net from his shout on (laststand.ts alive)
 pub fn alive(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
-    g.gd[gd].state != crate::game::GuardState::Dead && !crate::runner::runner_owns(g, gd)
+    g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, gd, crate::owner::own().runner)
 }
 
 /// a beat between two numbers, off the state's own die (laststand.ts pick)
@@ -201,7 +172,7 @@ pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
 
 /// fit to speak or be spoken to: up, not held, his wits about him (laststand.ts fitGd)
 pub fn fit_gd(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::runner::runner_owns(g, gd)
+    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has_him(g, gd, crate::owner::own().runner)
         && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
 }
 
@@ -221,7 +192,7 @@ pub fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
 pub fn movable(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     calm(g, d) && g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold && g.tab.roomfight_def[d].rally_at != f64::INFINITY
-        && !crate::enemysquads::squad_defers(g, gd) && !crate::enemysquads::squad_busy(g, gd) && !crate::pressure::press_owns(g, d)
+        && !crate::owner::has_him(g, gd, crate::owner::own().squad_word) && !crate::owner::has_him(g, gd, crate::owner::own().squad_leg) && !crate::owner::has_him(g, gd, crate::owner::own().press) && !crate::pressure::press_keeps_home(g, d, None)
         && (crate::digin::dig_in_phase(g, gd) == "idle" || crate::digin::dig_in_phase(g, gd) == "set")
 }
 
@@ -299,34 +270,22 @@ pub fn fill(tpl: &str, vars: &JsMap<String, String>) -> String {
 }
 
 /// a line on the net, now or when the strip has room for its class; `then` happens when it is said (laststand.ts net)
-pub fn net(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind, vars: Option<&JsMap<String, String>>, then: Option<&mut dyn FnMut(&mut crate::game::Game)>, redo: Option<&mut dyn FnMut(&mut crate::game::Game) -> crate::laststand::NetRedoRet>) {
+pub fn net(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind, vars: Option<&JsMap<String, String>>, then: Option<&crate::laststand::LaterThen>, redo: Option<&crate::laststand::LaterRedo>) {
     let (tpl, text, cls, at) = line_slot(g, kind, vars);
     let t0 = g.time;
     if at > t0 {
-        let (then, redo) = (seam_keep_then(then), seam_keep_redo(redo));
-        st_of(g).later.push(Later { at, t0, gd, kind, text, cls, then, tpl: String::from(tpl), redo });
+        st_of(g).later.push(Later { at, t0, gd, kind, text, cls, then: then.cloned(), tpl: String::from(tpl), redo: redo.cloned() });
     } else {
         voice(g, gd, kind, &text, cls);
-        if let Some(t) = then { t(g); }
+        if let Some(t) = then { run_then(g, t.clone()); }
     }
 }
 
-/// a line that says where its man stands: the place is asked again as the line is said (laststand.ts netAt).
-/// `f` cannot be kept, so what is kept is the Later.redo that the line's kind names; every call in the TypeScript is in this part and goes by `net_at_kept`
-pub fn net_at(g: &mut crate::game::Game, d: RoomfightDefId, kind: crate::laststand::LineKind, f: &mut dyn FnMut(&mut crate::game::Game, crate::laststand::Spoken) -> crate::laststand::NetAtFRet) {
+/// a line that says where its man stands: the place is asked again as the line is said (laststand.ts netAt)
+pub fn net_at(g: &mut crate::game::Game, d: RoomfightDefId, kind: crate::laststand::LineKind, f: &crate::laststand::LaterRedo) {
     let gd = g.tab.roomfight_def[d].gd;
-    let w = man_spoken(g, d);
-    let a = f(g, w);
-    let free = matches!(a.then, Some(LaterThen::NameAt { w: None, .. }));
-    let n = a.vars.get(String::from("n")).and_then(|n| n.parse::<i32>().ok()).unwrap_or(0);
-    let redo = match kind {
-        LineKind::MovedAt => Some(LaterRedo::MovedAt { d }),
-        LineKind::CheckLoneAt => Some(LaterRedo::CheckLone { d }),
-        LineKind::AnsAt | LineKind::AnsFreeAt => Some(LaterRedo::Answer { d, free: kind == LineKind::AnsFreeAt }),
-        LineKind::LastAt | LineKind::FewAt => Some(LaterRedo::Tell { d, n, free }),
-        _ => None,
-    };
-    net_kept(g, gd, kind, Some(&a.vars), a.then, redo);
+    let a = redo_words(g, f);
+    net(g, gd, kind, Some(&a.vars), a.then.as_ref(), Some(f));
 }
 
 /// the lines waiting their turn on the strip: said by the same man if he is still fit to say it (laststand.ts tickLater)
@@ -380,7 +339,7 @@ pub fn tick_moved(g: &mut crate::game::Game) {
         let st = st_of(g);
         let said = st.at.get_mut(d).unwrap();
         if flat(p, said.still_at) > 0.4 { said.still_at = v3::copy(p); said.still_t = time; }
-        if st.stand.as_ref().map_or(false, |s| of_stand(s, d)) { continue; }
+        if st.stand.as_ref().map_or(false, |s| stand_has(s, d)) { continue; }
         let w = spoken(g, p);
         let free = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free;
         let now: Option<&str> = match &w.id { Some(id) => Some(id.as_str()), None => w.spot.as_ref().map(|s| s.name.as_str()) };
@@ -395,9 +354,9 @@ pub fn tick_moved(g: &mut crate::game::Game) {
         if st.later.iter().any(|l| l.gd == gd && (l.kind == LineKind::MovedAt || l.kind == LineKind::MovedFree)) { continue; }
         st.at.get_mut(d).unwrap().said_t = time;
         if free {
-            net_kept(g, gd, LineKind::MovedFree, Some(&vars_of(&[("the", the.as_str())])), Some(LaterThen::MovedFree { d }), None);
+            net(g, gd, LineKind::MovedFree, Some(&vars_of(&[("the", the.as_str())])), Some(&LaterThen::MovedFree { d }), None);
         } else {
-            net_at_kept(g, d, LineKind::MovedAt, LaterRedo::MovedAt { d });
+            net_at(g, d, LineKind::MovedAt, &LaterRedo::MovedAt { d });
         }
     }
 }
@@ -412,12 +371,12 @@ pub fn team_known(g: &mut crate::game::Game, near: V3) -> crate::laststand::Team
     for &d in &defs {
         if !alive(g, d) { continue; }
         let gd = g.tab.roomfight_def[d].gd;
-        if let Some(lk) = g.gd[gd].last_known {
-            let is_pt = g.tab.roomfight_def[d].fix_is_pt && lk == g.tab.roomfight_def[d].pt;   // (gd.lastKnown === D.pt: roomfight's rule, the flag alone can be stale)
-            if !is_pt && g.gd[gd].last_seen_t > -50.0 {
+        let pt = g.tab.roomfight_def[d].pt;
+        if let Some(kn) = crate::belief::eyes_fix(g, gd, pt) {
+            if g.gd[gd].last_seen_t > -50.0 {
                 let seen = g.gd[gd].last_seen_t;
-                if g.time - seen < known_secs { pts.push(lk); }
-                if seen > lt { lt = seen; last = Some(lk); }
+                if g.time - seen < known_secs { pts.push(kn); }
+                if seen > lt { lt = seen; last = Some(kn); }
             }
         }
         if let Some(at) = g.tab.roomfight_def[d].noise_at {
@@ -487,7 +446,7 @@ pub fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, known: &[V
 pub fn can_come(g: &mut crate::game::Game, x: RoomfightDefId, spot: V3, known: &[V3]) -> Option<f64> {
     if !movable(g, x) { return None; }
     let gd = g.tab.roomfight_def[x].gd;
-    if crate::enemysquads::squad_stays_in(g, gd) && !crate::enemysquads::squad_holds(g, gd, spot) { return None; }
+    if g.gd[gd].stays_in_rooms && !crate::enemysquads::in_squad_rooms(g, gd, spot) { return None; }
     way_to(g, x, spot, known)
 }
 
@@ -588,10 +547,10 @@ pub fn start_check(g: &mut crate::game::Game) {
     let caller_in_room = stand.as_ref().map_or(false, |s| s.room.is_some() && s.in_.has(caller));
     match stand.as_ref() {
         Some(s) if caller_in_room && s.in_.len() + s.movers.len() > 1 => {
-            net_kept(g, caller_gd, LineKind::CheckStand, Some(&vars_of(&[("the", s.the.as_str())])), None, None);
+            net(g, caller_gd, LineKind::CheckStand, Some(&vars_of(&[("the", s.the.as_str())])), None, None);
         }
-        _ if lone_now => net_at_kept(g, caller, LineKind::CheckLoneAt, LaterRedo::CheckLone { d: caller }),
-        _ => net_kept(g, caller_gd, if first { LineKind::Check1 } else { LineKind::CheckN }, None, None, None),
+        _ if lone_now => net_at(g, caller, LineKind::CheckLoneAt, &LaterRedo::CheckLone { d: caller }),
+        _ => net(g, caller_gd, if first { LineKind::Check1 } else { LineKind::CheckN }, None, None, None),
     }
     let answer = g.k.laststand.answer;
     let between = g.k.laststand.between;
@@ -628,7 +587,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
         let d = due.d;
         if !calm(g, d) { continue; }
         let free = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free;
-        net_at_kept(g, d, if free { LineKind::AnsFreeAt } else { LineKind::AnsAt }, LaterRedo::Answer { d, free });
+        net_at(g, d, if free { LineKind::AnsFreeAt } else { LineKind::AnsAt }, &LaterRedo::Answer { d, free });
         check_of(g).got.push(d);
         st_of(g).stats.answers += 1.0;
     }
@@ -659,7 +618,7 @@ pub fn tick_check(g: &mut crate::game::Game) {
     let mut names = st.named.keys();
     names.extend(st.spots.keys());
     for d in names {
-        let held = stand.as_ref().map_or(false, |s| of_stand(s, d));
+        let held = stand.as_ref().map_or(false, |s| stand_has(s, d));
         if !known.has(d) && !held { name(g, d, None); }
     }
     let signs: Vec<String> = known.keys().iter().map(|&d| g.gd[g.tab.roomfight_def[d].gd].callsign.clone()).collect();
@@ -688,13 +647,13 @@ pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
     let n = st.known.len() as i32;
     let redo = LaterRedo::Tell { d: c_2, n, free };
     if n <= 1 {
-        if lone(st) { net_at_kept(g, c_2, LineKind::LastAt, redo); }
+        if lone(st) { net_at(g, c_2, LineKind::LastAt, &redo); }
         return;
     }
     st.lone_said = false;
     if n as f64 != st.few_n {
         st.few_n = n as f64;
-        net_at_kept(g, c_2, LineKind::FewAt, redo);
+        net_at(g, c_2, LineKind::FewAt, &redo);
     }
 }
 
@@ -716,7 +675,7 @@ pub fn anchor_of(g: &mut crate::game::Game, s: &crate::laststand::Stand) -> V3 {
 }
 
 /// is he of this stand (laststand.ts member)
-pub fn member(g: &mut crate::game::Game, s: &crate::laststand::Stand, d: RoomfightDefId) -> bool { of_stand(s, d) }
+pub fn member(g: &mut crate::game::Game, s: &crate::laststand::Stand, d: RoomfightDefId) -> bool { stand_has(s, d) }
 
 /// told to hold where he is: he says so, once, with where (laststand.ts holdsOwn)
 pub fn holds_own(g: &mut crate::game::Game, s: &mut crate::laststand::Stand, d: RoomfightDefId, say: Option<crate::laststand::LineKind>) {
@@ -727,7 +686,7 @@ pub fn holds_own(g: &mut crate::game::Game, s: &mut crate::laststand::Stand, d: 
         st_of(g).told.add(d);
         let gd = g.tab.roomfight_def[d].gd;
         let vars = vars_of(&[("at", w.at.as_str()), ("the", w.the.as_str())]);
-        net_kept(g, gd, say, Some(&vars), Some(LaterThen::NameAt { d, w: Some(w) }), None);
+        net(g, gd, say, Some(&vars), Some(&LaterThen::NameAt { d, w: Some(w) }), None);
     }
 }
 

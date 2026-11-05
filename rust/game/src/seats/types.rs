@@ -41,23 +41,6 @@ impl SeatsModSEATASKS {
 }
 impl Default for SeatsModSEATASKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/seats.ts:111 men(g), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
-#[derive(Clone, Debug)]
-pub struct MenG {
-    pub player: PlayerId,
-    pub seats: Vec<SeatId>,
-}
-impl MenG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MenG {
-            player: PlayerId(0),
-            seats: Vec::new(),
-        }
-    }
-}
-impl Default for MenG { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/seats.ts:212 viewOfBody(c), src/game/seats.ts:212)
 #[derive(Clone, Copy, Debug)]
 pub struct ViewOfBodyC {

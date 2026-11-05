@@ -1,4 +1,4 @@
-//! src/game/buddy.ts lines 1 to 261
+//! src/game/buddy.ts lines 1 to 265
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -77,12 +77,6 @@ pub fn mates(g: &mut crate::game::Game, d: RoomfightDefId) -> Vec<RoomfightDefId
     out
 }
 
-/// `gd.lastKnown === D.pt`: one object in the TypeScript, two copies here. The flag says the fight last wrote pt as the fix; a fix without pt's bits is somebody else's whole write. (the fight's own test, roomfight.ts)
-fn fix_is_pt(g: &mut Game, d: RoomfightDefId) -> bool {
-    let def = &g.tab.roomfight_def[d];
-    def.fix_is_pt && g.gd[def.gd].last_known == Some(def.pt)
-}
-
 /// where the team is, as far as the defenders know. Never the team's true positions. (buddy.ts teamKnown)
 pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
     let mut out = Vec::new();
@@ -94,8 +88,14 @@ pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
         if !alive(g, d) {
             continue;
         }
-        if g.time - g.gd[gd].last_seen_t < 4.0 && g.gd[gd].last_known.is_some() && !fix_is_pt(g, d) {
-            out.push(g.gd[gd].last_known.unwrap());
+        let seen = if g.time - g.gd[gd].last_seen_t < 4.0 {
+            let pt = g.tab.roomfight_def[d].pt;
+            crate::belief::eyes_fix(g, gd, pt)
+        } else {
+            None
+        };
+        if let Some(seen) = seen {
+            out.push(seen);
         }
         if let Some(at) = g.tab.roomfight_def[d].noise_at {
             if g.time - g.tab.roomfight_def[d].noise_t < 4.0 {
@@ -195,7 +195,13 @@ pub fn free(g: &mut crate::game::Game, x: RoomfightDefId, mine: Option<u32>) -> 
     if g.time - done_t < g.k.buddy.again {
         return false; // (he has only just come to somebody: not off again on the next call)
     }
-    if crate::pressure::press_owns(g, x) || crate::enemysquads::squad_stays_in(g, gd) || crate::enemysquads::squad_defers(g, gd) || crate::laststand::last_stand_man(g, gd) {
+    let own_ = crate::owner::own();
+    if crate::owner::has_him(g, gd, own_.press)
+        || crate::pressure::press_keeps_home(g, x, None)
+        || g.gd[gd].stays_in_rooms
+        || crate::owner::has_him(g, gd, own_.squad_word)
+        || crate::owner::has_him(g, gd, own_.stand)
+    {
         return false;
     }
     let set = crate::digin::dig_in_set(g, gd);
@@ -314,7 +320,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             return;
         }
     };
-    if crate::laststand::last_stand_man(g, gd) {
+    if crate::owner::has_him(g, gd, crate::owner::own().stand) {
         let w = man_of(g, d);
         w.call_at = m::NAN;
         w.open = false;
@@ -504,16 +510,13 @@ pub fn tick_errand(g: &mut crate::game::Game, e: &mut crate::buddy::Errand) -> b
         let pick_i = if other >= 0.0 { other } else { mine };
         if pick_i >= 0.0 && (pick_i as usize) < n {
             let at = g.tab.roomfight_room[r].entries[pick_i as usize].at;
-            let aliased = fix_is_pt(g, b); // (asked before pt moves)
-            let def = &mut g.tab.roomfight_def[b];
-            def.home = v3::copy(at);
-            def.pt[0] = at[0];
-            def.pt[1] = 0.0;
-            def.pt[2] = at[2];
-            let pt = def.pt;
-            if aliased {
-                g.gd[gd].last_known = Some(pt); // (line 225 moves D.pt in place: a lastKnown that IS it moves with it)
+            g.tab.roomfight_def[b].home = v3::copy(at);
+            let to: V3 = [at[0], 0.0, at[2]];
+            // (covers holds D.pt by reference in the TypeScript and moves with it; here it is a copy: see notes, Skeleton)
+            if g.gd[gd].covers.is_some() && g.gd[gd].covers == Some(g.tab.roomfight_def[b].pt) {
+                g.gd[gd].covers = Some(to);
             }
+            crate::roomfight::def_move_pt(g, b, to); // (D.pt moved in place: a lastKnown that IS it moves with it)
         }
         let keep_t = g.time + g.k.buddy.again;
         for x in [b, c] {
@@ -563,16 +566,32 @@ pub fn nearest_entry(g: &mut crate::game::Game, r: RoomfightRoomId, p: V3) -> f6
     best
 }
 
-/// roomfight.ts rally() asks: a colleague is on his way to him, or the two have only just paired up. (buddy.ts buddyOwns)
-pub fn buddy_owns(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
-    if !g.k.buddy.on {
-        return false;
+/// who the call has (owner.ts): a colleague is on his way to him. (buddy.ts buddySay)
+pub fn buddy_say(g: &mut crate::game::Game) {
+    let on = g.k.buddy.on;
+    let rule = crate::owner::own().buddy;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        let called = on
+            && match &g.m.buddy.states {
+                Some(st) => st.errands.iter().any(|e| g.tab.roomfight_def[e.caller].gd == gd),
+                None => false,
+            };
+        let t = g.time;
+        if called {
+            crate::owner::claim_man(g, gd, rule, t, None);
+        } else {
+            crate::owner::release_man(g, gd, rule, t);
+        }
     }
-    let st = match &g.m.buddy.states {
-        Some(st) => st,
-        None => return false,
-    };
-    g.time < st.men.get(d).map_or(-100.0, |w| w.keep_t) || st.errands.iter().any(|e| e.caller == d)
+}
+
+/// for a moment after, the two have just paired up: he waits. (buddy.ts buddyPaired)
+pub fn buddy_paired(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+    let keep_t = g.m.buddy.states.as_ref().and_then(|st| st.men.get(d)).map_or(-100.0, |w| w.keep_t);
+    g.k.buddy.on && g.time < keep_t
 }
 
 /// once a frame from RoomFight.tick, after the defenders', the teammates' and the press's own ticks. (buddy.ts buddyTick)
@@ -593,33 +612,43 @@ pub fn buddy_tick(g: &mut crate::game::Game) {
             consider(g, d);
         }
     }
-    if state_of(g).errands.is_empty() {
-        return;
-    }
-    // the filter walks a copy: nothing adds to the list while it runs, and what the walk reads of the list (caller, buddy) no errand changes
-    let rows = state_of(g).errands.clone();
-    let mut kept: Vec<Errand> = Vec::with_capacity(rows.len());
-    for mut e in rows {
-        let over = tick_errand(g, &mut e);
-        if over && e.phase != ErrandPhase::Beat {
-            let now = g.time;
-            if let Some(w) = state_of(g).men.get_mut(e.buddy) {
-                w.done_t = now;
+    if !state_of(g).errands.is_empty() {
+        // the filter walks a copy: nothing adds to the list while it runs, and what the walk reads of the list (caller, buddy) no errand changes
+        let rows = state_of(g).errands.clone();
+        let mut kept: Vec<Errand> = Vec::with_capacity(rows.len());
+        for mut e in rows {
+            let over = tick_errand(g, &mut e);
+            if over && e.phase != ErrandPhase::Beat {
+                let now = g.time;
+                if let Some(w) = state_of(g).men.get_mut(e.buddy) {
+                    w.done_t = now;
+                }
+            }
+            if !over {
+                kept.push(e);
             }
         }
-        if !over {
-            kept.push(e);
-        }
+        state_of(g).errands = kept;
     }
-    state_of(g).errands = kept;
+    buddy_say(g);
 }
 
 /// the fight is over: every call forgotten; the counts stay until a new fight starts them again. (buddy.ts buddyStop)
 pub fn buddy_stop(g: &mut crate::game::Game) {
-    if let Some(st) = g.m.buddy.states.as_mut() {
-        st.men.clear();
-        st.errands = Vec::new();
-        st.stale = true;
+    let st = match g.m.buddy.states.as_mut() {
+        Some(st) => st,
+        None => return,
+    };
+    st.men.clear();
+    st.errands = Vec::new();
+    st.stale = true;
+    let rule = crate::owner::own().buddy;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        let t = g.time;
+        crate::owner::release_man(g, gd, rule, t);
     }
 }
 

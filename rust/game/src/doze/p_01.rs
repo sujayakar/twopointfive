@@ -624,8 +624,7 @@ pub fn doze_at(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Do
 /// his ears this frame: [noises, foot]; headphones on at his screen, whole for everybody else (doze.ts dozeEar)
 pub fn doze_ear(g: &mut crate::game::Game, gd: GuardId) -> [f64; 2] {
     if g.m.doze.rec.get(gd).map_or(false, |d| d.phase == Phase::Work) {
-        g.m.doze.ears = [g.k.doze.noises, g.k.doze.ears];
-        return g.m.doze.ears;
+        return [g.k.doze.noises, g.k.doze.ears];
     }
     whole()
 }

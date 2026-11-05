@@ -125,110 +125,120 @@ pub fn room_fight_evidence(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
 /// (src/game/roomfight.ts:658 RoomFight.told)
 pub fn room_fight_told(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool { todo!() }
 
-/// (src/game/roomfight.ts:664 RoomFight.entryToward)
+/// (src/game/roomfight.ts:665 RoomFight.entryToward)
 pub fn room_fight_entry_toward(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) -> f64 { todo!() }
 
-/// (src/game/roomfight.ts:669 RoomFight.chooseWatch)
+/// (src/game/roomfight.ts:670 RoomFight.chooseWatch)
 pub fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) { todo!() }
 
-/// (src/game/roomfight.ts:688 RoomFight.applyWatch)
+/// (src/game/roomfight.ts:689 RoomFight.applyWatch)
 pub fn room_fight_apply_watch(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) { todo!() }
 
-/// (src/game/roomfight.ts:702 RoomFight.reactions)
+/// (src/game/roomfight.ts:703 RoomFight.reactions)
 pub fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) { todo!() }
 
-/// (src/game/roomfight.ts:722 RoomFight.blind)
+/// (src/game/roomfight.ts:723 RoomFight.blind)
 pub fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) { todo!() }
 
-/// (src/game/roomfight.ts:740 RoomFight.drilled)
+/// (src/game/roomfight.ts:741 RoomFight.drilled)
 pub fn room_fight_drilled(g: &mut crate::game::Game) -> bool { todo!() }
 
-/// (src/game/roomfight.ts:743 RoomFight.lost)
+/// (src/game/roomfight.ts:744 RoomFight.lost)
 pub fn room_fight_lost(g: &mut crate::game::Game, d: RoomfightDefId) { todo!() }
 
-/// (src/game/roomfight.ts:763 RoomFight.outOfBuilding)
+/// (src/game/roomfight.ts:764 RoomFight.outOfBuilding)
 pub fn room_fight_out_of_building(g: &mut crate::game::Game, p: V3) -> bool { todo!() }
 
-/// (src/game/roomfight.ts:772 RoomFight.threatOf)
+/// (src/game/roomfight.ts:773 RoomFight.threatOf)
 pub fn room_fight_threat_of(g: &mut crate::game::Game, d: RoomfightDefId) -> V3 { todo!() }
 
-/// (src/game/roomfight.ts:781 RoomFight.bolt)
+/// (src/game/roomfight.ts:782 RoomFight.bolt)
 pub fn room_fight_bolt(g: &mut crate::game::Game, gd: GuardId, clear_secs: f64) -> Option<bool> { todo!() }
 
-/// (src/game/roomfight.ts:790 RoomFight.breakOff)
+/// (src/game/roomfight.ts:791 RoomFight.breakOff)
 pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) { todo!() }
 
-/// (src/game/roomfight.ts:851 RoomFight.tickMove)
+/// (src/game/roomfight.ts:852 RoomFight.tickMove)
 pub fn room_fight_tick_move(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64) { todo!() }
 
-/// (src/game/roomfight.ts:875 RoomFight.standOn)
+/// (src/game/roomfight.ts:876 RoomFight.standOn)
 pub fn room_fight_stand_on(g: &mut crate::game::Game, d: RoomfightDefId, set: bool) { todo!() }
 
-/// (src/game/roomfight.ts:884 RoomFight.laneStop)
+/// (src/game/roomfight.ts:885 RoomFight.laneStop)
 pub fn room_fight_lane_stop(g: &mut crate::game::Game, gd: GuardId, look: V3) -> bool { todo!() }
 
-/// (src/game/roomfight.ts:893 RoomFight.plant)
+/// (src/game/roomfight.ts:894 RoomFight.plant)
 pub fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str) { todo!() }
 
-/// (src/game/roomfight.ts:907 RoomFight.rally)
+/// (src/game/roomfight.ts:908 RoomFight.rally)
 pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) { todo!() }
 
-/// (src/game/roomfight.ts:934 RoomFight.tickFree)
+/// (src/game/roomfight.ts:935 RoomFight.tickFree)
 pub fn room_fight_tick_free(g: &mut crate::game::Game, d: RoomfightDefId) { todo!() }
 
-/// (src/game/roomfight.ts:943 RoomFight.newOp)
+/// (src/game/roomfight.ts:944 RoomFight.newOp)
 pub fn room_fight_new_op(g: &mut crate::game::Game, gd: GuardId) -> RoomfightOpId { todo!() }
 
-/// (src/game/roomfight.ts:949 RoomFight.friendInLine)
+/// (src/game/roomfight.ts:950 RoomFight.friendInLine)
 pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, self_: GuardId, sam_still: Option<bool>) -> Option<crate::roomfight::RoomFightFriendInLine> { todo!() }
 
-/// (src/game/roomfight.ts:963 RoomFight.samInLine)
+/// (src/game/roomfight.ts:964 RoomFight.samInLine)
 pub fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V3) -> bool { todo!() }
 
-/// (src/game/roomfight.ts:968 RoomFight.speak)
+/// (src/game/roomfight.ts:969 RoomFight.speak)
 pub fn room_fight_speak(g: &mut crate::game::Game, o: RoomfightOpId, text: &str, gap: Option<f64>) { todo!() }
 
-/// (src/game/roomfight.ts:970 RoomFight.coverPasses)
+/// (src/game/roomfight.ts:971 RoomFight.coverPasses)
 pub fn room_fight_cover_passes(g: &mut crate::game::Game, o: RoomfightOpId, h: GuardId) -> bool { todo!() }
 
-/// (src/game/roomfight.ts:983 RoomFight.tickOp)
+/// (src/game/roomfight.ts:984 RoomFight.tickOp)
 pub fn room_fight_tick_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64) { todo!() }
 
-/// (src/game/roomfight.ts:1096 RoomFight.point)
+/// (src/game/roomfight.ts:1097 RoomFight.point)
 pub fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt: f64, speed: f64) -> f64 { todo!() }
 
-/// (src/game/roomfight.ts:1111 RoomFight.cue)
+/// (src/game/roomfight.ts:1112 RoomFight.cue)
 pub fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) { todo!() }
 
-/// (src/game/roomfight.ts:1137 RoomFight.doorShot)
+/// (src/game/roomfight.ts:1138 RoomFight.doorShot)
 pub fn room_fight_door_shot(g: &mut crate::game::Game, o: RoomfightOpId, eye: V3, gone: Option<GuardId>, arc: Option<f64>, a: Option<OrdersAssignmentId>, only: Option<DoorId>) -> Option<crate::roomfight::RoomFightDoorShot> { todo!() }
 
-/// (src/game/roomfight.ts:1154 RoomFight.holdShort)
+/// (src/game/roomfight.ts:1155 RoomFight.holdShort)
 pub fn room_fight_hold_short(g: &mut crate::game::Game, o: RoomfightOpId) { todo!() }
 
-/// (src/game/roomfight.ts:1163 RoomFight.letGo)
+/// (src/game/roomfight.ts:1164 RoomFight.letGo)
 pub fn room_fight_let_go(g: &mut crate::game::Game, o: RoomfightOpId) { todo!() }
 
-/// (src/game/roomfight.ts:1173 RoomFight.walkOn)
+/// (src/game/roomfight.ts:1174 RoomFight.walkOn)
 pub fn room_fight_walk_on(g: &mut crate::game::Game, o: RoomfightOpId) { todo!() }
 
-/// (src/game/roomfight.ts:1179 RoomFight.restore)
+/// (src/game/roomfight.ts:1180 RoomFight.restore)
 pub fn room_fight_restore(g: &mut crate::game::Game, o: RoomfightOpId) { todo!() }
 
-/// (src/game/roomfight.ts:1181 RoomFight.stepTo)
+/// (src/game/roomfight.ts:1182 RoomFight.stepTo)
 pub fn room_fight_step_to(g: &mut crate::game::Game, o: RoomfightOpId, p: V3, door: bool, patch: crate::roomfight::RoomFightStepToPatch) { todo!() }
 
-/// (src/game/roomfight.ts:1188 RoomFight.handBack)
+/// (src/game/roomfight.ts:1189 RoomFight.handBack)
 pub fn room_fight_hand_back(g: &mut crate::game::Game, o: RoomfightOpId) { todo!() }
 
-/// (src/game/roomfight.ts:1193 RoomFight.funnelOf)
+/// (src/game/roomfight.ts:1194 RoomFight.funnelOf)
 pub fn room_fight_funnel_of(g: &mut crate::game::Game, p: V3) -> Option<DoorId> { todo!() }
 
-/// (src/game/roomfight.ts:1201 RoomFight.spotFree)
+/// (src/game/roomfight.ts:1202 RoomFight.spotFree)
 pub fn room_fight_spot_free(g: &mut crate::game::Game, p: V3, self_: GuardId) -> bool { todo!() }
 
-/// (src/game/roomfight.ts:1208 RoomFight.doorway)
+/// (src/game/roomfight.ts:1209 RoomFight.doorway)
 pub fn room_fight_doorway(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64) { todo!() }
 
-/// (src/game/roomfight.ts:1225 RoomFight.sideStep)
+/// (src/game/roomfight.ts:1226 RoomFight.sideStep)
 pub fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, speed: f64, waited: Option<f64>, why: Option<&str>) -> bool { todo!() }
+
+
+/// INVENTED: lastKnown === D.pt (roomfight.ts:303): D.pt_stamp == Some(g.gd[D.gd].fix_stamp) && g.gd[D.gd].last_known == Some(D.pt). Read at roomfight.ts:643, 654, 698, 879, buddy.ts:96, enemysquads.ts:432, 494, 1397, laststand.ts:274. Ask it BEFORE a call that may write the fix (standOn :876 asks before plant)
+pub fn def_fix_is_pt(g: &mut crate::game::Game, d: RoomfightDefId) -> bool { todo!() }
+
+/// INVENTED: gd.lastKnown = D.pt (roomfight.ts:699, 728, 889, 902, enemysquads.ts:1048, 1491, powerout.ts:219): last_known = Some(pt). Only if def_fix_is_pt was false: bump fix_stamp and store it in pt_stamp (the same object written again is no new fix: doze.ts:244)
+pub fn def_fix_to_pt(g: &mut crate::game::Game, d: RoomfightDefId) { todo!() }
+
+/// INVENTED: D.pt moved in place (roomfight.ts:691-695, 879, 889, 902, buddy.ts:225, pressure.ts:597, powerout.ts:218, enemysquads.ts:771, 1047, 1491): pt = to, and if def_fix_is_pt was true, last_known = Some(to) with no bump: in the TypeScript the fix is this object and moves with it
+pub fn def_move_pt(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) { todo!() }

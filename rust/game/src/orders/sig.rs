@@ -42,7 +42,7 @@ pub fn squad_orders_team(g: &mut crate::game::Game) -> crate::teams::Team { todo
 pub fn squad_orders_ring(g: &mut crate::game::Game) -> JsSet<String> { todo!() }
 
 /// (src/game/orders.ts:660 SquadOrders.recipients)
-pub fn squad_orders_recipients(g: &mut crate::game::Game, t: Option<&crate::orders::SquadOrdersRecipientsT>, who: Option<crate::orders::SquadOrdersRecipientsWho>) -> Vec<GuardId> { todo!() }
+pub fn squad_orders_recipients(g: &mut crate::game::Game, t: Option<&crate::orders::OrderTarget>, who: Option<crate::orders::Who>) -> Vec<GuardId> { todo!() }
 
 /// (src/game/orders.ts:667 SquadOrders.men)
 pub fn squad_orders_men(g: &mut crate::game::Game, sel: Option<crate::orders::SquadOrdersMenSel>, opts: Option<crate::orders::SquadOrdersMenOpts>) -> Vec<GuardId> { todo!() }
@@ -144,7 +144,7 @@ pub fn squad_orders_why_not(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &
 pub fn squad_orders_label_of(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget) -> String { todo!() }
 
 /// (src/game/orders.ts:859 SquadOrders.give)
-pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate::orders::OrderTarget>, who: Option<crate::orders::SquadOrdersGiveWho>, opts: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate::orders::OrderTarget>, who: Option<crate::orders::Who>, opts: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
 
 /// (src/game/orders.ts:891 SquadOrders.givenLine)
 pub fn squad_orders_given_line(g: &mut crate::game::Game, def: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> String { todo!() }
@@ -183,7 +183,7 @@ pub fn squad_orders_pick(g: &mut crate::game::Game, i: Option<f64>) -> Option<St
 pub fn squad_orders_part_give(g: &mut crate::game::Game, m: &crate::orders::Menu, give: &mut dyn FnMut(&mut crate::game::Game) -> Option<String>) -> Option<String> { todo!() }
 
 /// (src/game/orders.ts:979 SquadOrders.menuTarget)
-pub fn squad_orders_menu_target(g: &mut crate::game::Game) -> Option<crate::orders::SquadOrdersMenuTarget> { todo!() }
+pub fn squad_orders_menu_target(g: &mut crate::game::Game) -> Option<crate::orders::OrderTarget> { todo!() }
 
 /// (src/game/orders.ts:982 SquadOrders.reread)
 pub fn squad_orders_reread(g: &mut crate::game::Game) -> bool { todo!() }
@@ -195,16 +195,16 @@ pub fn squad_orders_refresh(g: &mut crate::game::Game) { todo!() }
 pub fn squad_orders_due(g: &mut crate::game::Game, m: &crate::orders::Menu) -> bool { todo!() }
 
 /// (src/game/orders.ts:1021 SquadOrders.hover)
-pub fn squad_orders_hover(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::SquadOrdersHover> { todo!() }
+pub fn squad_orders_hover(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::OrderTarget> { todo!() }
 
 /// (src/game/orders.ts:1030 SquadOrders.defaultFor)
 pub fn squad_orders_default_for(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Option<OrdersOrderDefId> { todo!() }
 
 /// (src/game/orders.ts:1033 SquadOrders.whoAfterT)
-pub fn squad_orders_who_after_t(g: &mut crate::game::Game, point: Option<&crate::orders::SquadOrdersWhoAfterTPoint>, dir: Option<f64>) -> crate::orders::Who { todo!() }
+pub fn squad_orders_who_after_t(g: &mut crate::game::Game, point: Option<&crate::orders::OrderTarget>, dir: Option<f64>) -> crate::orders::Who { todo!() }
 
 /// (src/game/orders.ts:1041 SquadOrders.stepWho)
-pub fn squad_orders_step_who(g: &mut crate::game::Game, dir: f64, point: Option<&crate::orders::SquadOrdersStepWhoPoint>) { todo!() }
+pub fn squad_orders_step_who(g: &mut crate::game::Game, dir: f64, point: Option<&crate::orders::OrderTarget>) { todo!() }
 
 /// (src/game/orders.ts:1051 SquadOrders.hostView)
 pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
@@ -222,7 +222,7 @@ pub fn squad_orders_ring_digit(g: &mut crate::game::Game, input: InputId) -> boo
 pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, cam: Option<CameraId>, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool { todo!() }
 
 /// (src/game/orders.ts:1211 SquadOrders.goalPart)
-pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, add: bool) -> Option<crate::orders::SquadOrdersGoalPart> { todo!() }
+pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, add: bool) -> Option<Option<crate::orders::SquadOrdersGoalPart>> { todo!() }
 
 /// (src/game/orders.ts:1218 SquadOrders.ringFree)
 pub fn squad_orders_ring_free(g: &mut crate::game::Game, input: InputId) -> bool { todo!() }
@@ -348,13 +348,13 @@ pub fn squad_orders_stack_file_on(g: &mut crate::game::Game, d: DoorId, side: f6
 pub fn squad_orders_stack_posts_room(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> { todo!() }
 
 /// (src/game/orders.ts:1844 SquadOrders.ownMarkFirst)
-pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ask: &mut dyn FnMut(&mut crate::game::Game) -> Option<Vec<crate::orders::SquadOrdersOwnMarkFirstAskRetItem>>) -> Option<Vec<crate::orders::SquadOrdersOwnMarkFirstAskRetItem>> { todo!() }
+pub fn squad_orders_own_mark_first(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ask: &mut dyn FnMut(&mut crate::game::Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> { todo!() }
 
 /// (src/game/orders.ts:1858 SquadOrders.ownMarks)
 pub fn squad_orders_own_marks(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId]) -> Vec<V3> { todo!() }
 
 /// (src/game/orders.ts:1869 SquadOrders.noRoomWords)
-pub fn squad_orders_no_room_words(g: &mut crate::game::Game, plain: &str, ask: &mut dyn FnMut(&mut crate::game::Game, &mut crate::game::Game) -> bool) -> String { todo!() }
+pub fn squad_orders_no_room_words(g: &mut crate::game::Game, plain: &str, ask: &mut dyn FnMut(&mut crate::game::Game) -> bool) -> String { todo!() }
 
 /// (src/game/orders.ts:1878 SquadOrders.samPlace)
 pub fn squad_orders_sam_place(g: &mut crate::game::Game) -> V3 { todo!() }
@@ -450,7 +450,7 @@ pub fn squad_orders_walk_try(g: &mut crate::game::Game, gd: GuardId, to: V3) -> 
 pub fn squad_orders_walk_stacks(g: &mut crate::game::Game, men: &[GuardId], to: V3) -> Option<crate::orders::SquadOrdersWalkStacks> { todo!() }
 
 /// (src/game/orders.ts:2454 SquadOrders.walkSend)
-pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::orders::SquadOrdersWalkSendT, at: V3, on: &crate::orders::SquadOrdersWalkSendOn) { todo!() }
+pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::orders::SquadOrdersWalkSendT, at: V3, on: &crate::orders::SquadOrdersAssignA) { todo!() }
 
 /// (src/game/orders.ts:2461 SquadOrders.walkOn)
 pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) { todo!() }
@@ -480,7 +480,7 @@ pub fn squad_orders_who_tag(g: &mut crate::game::Game) -> crate::orders::SquadOr
 pub fn squad_orders_who_strip(g: &mut crate::game::Game) -> String { todo!() }
 
 /// (src/game/orders.ts:2577 SquadOrders.hoverWords)
-pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::orders::SquadOrdersHoverWordsT>) -> String { todo!() }
+pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::orders::OrderTarget>) -> String { todo!() }
 
 /// (src/game/orders.ts:2583 SquadOrders.hud)
 pub fn squad_orders_hud(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> crate::orders::SquadOrdersHud { todo!() }
@@ -511,3 +511,76 @@ pub fn door_words(g: &mut crate::game::Game, d: DoorId) -> String { todo!() }
 
 /// (src/game/orders.ts:2689 doorIdWords)
 pub fn door_id_words(g: &mut crate::game::Game, id_2: &str) -> String { todo!() }
+
+
+/// INVENTED: `d.can(S, gd, t)`, the match over OrderCan (orders.ts:850, :868, planlay.ts:110). None: he can, or the row has no `can`. Some: the word he says. An arm that is a few public calls is written in the match; any other calls the arm's name in the module that wrote the closure
+pub fn order_can(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> { todo!() }
+
+/// INVENTED: `d.only(S, men, t)`, the match over OrderOnly (orders.ts:865, :1006, planlay.ts:107). A row with no `only`: men, as a copy. Empty is an answer: the caller keeps men when it is, as those lines do
+pub fn order_only(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { todo!() }
+
+/// INVENTED: `d.valid(S, t, men)`, the match over OrderValid (orders.ts:852). Ok: true, or the row has no `valid`. Err(None): false, whyNot's 'not here.'. Err(Some): the word
+pub fn order_valid(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+
+/// INVENTED: `d.issue(S, men, t, opts)`, the match over OrderIssue (orders.ts:877, startfile.ts:30, squadthrow.ts:461, doortools.ts:1207). Some: the refusal, the string the closure returned
+pub fn order_issue(g: &mut crate::game::Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+
+/// INVENTED: `d.tick?.(S, gd, A)`, the match over OrderTick (orders.ts:1393). Nothing with no `tick`. It may rewrite his Assignment or re-assign him: read A again after it
+pub fn order_tick(g: &mut crate::game::Game, d: OrdersOrderDefId, gd: GuardId, a: OrdersAssignmentId) { todo!() }
+
+/// INVENTED: `d.standsIn?.when(S, t, men)`, the match over OrderWhen (orders.ts:819). False with no stands_in
+pub fn order_when(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool { todo!() }
+
+/// INVENTED: `d.gone?.(S, t, men)`, the match over OrderGone (orders.ts:831). False with no `gone`
+pub fn order_gone(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool { todo!() }
+
+/// INVENTED: the 'move' row's can, the arm OrderCan::Move (orders.ts:581)
+pub fn row_move_can(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> { todo!() }
+
+/// INVENTED: the 'move' row's valid, the arm OrderValid::Move (orders.ts:582)
+pub fn row_move_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+
+/// INVENTED: the 'move' row's issue, the arm OrderIssue::Move (orders.ts:583)
+pub fn row_move_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+
+/// INVENTED: the 'move' row's tick, the arm OrderTick::Move (orders.ts:591)
+pub fn row_move_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) { todo!() }
+
+/// INVENTED: the 'stack' row's valid, the arm OrderValid::Stack (orders.ts:592)
+pub fn row_stack_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!() }
+
+/// INVENTED: the 'stack' row's issue, the arm OrderIssue::Stack (orders.ts:597)
+pub fn row_stack_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+
+/// INVENTED: the 'cover' row's words, the arm OrderLabel::Cover (orders.ts:605)
+pub fn row_cover_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String { todo!() }
+
+/// INVENTED: the 'cover' row's can, the arm OrderCan::Cover (orders.ts:606)
+pub fn row_cover_can(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> { todo!() }
+
+/// INVENTED: the 'cover' row's issue, the arm OrderIssue::Cover (orders.ts:606)
+pub fn row_cover_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+
+/// INVENTED: the 'fallIn' row's issue, the arm OrderIssue::FallIn (orders.ts:611)
+pub fn row_fall_in_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+
+/// INVENTED: the 'hold' row's issue, the arm OrderIssue::Hold (orders.ts:618)
+pub fn row_hold_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> { todo!() }
+
+/// INVENTED: the one SquadOwner's owns (orders.ts:631; the constructor pushes it, nothing else does): `owners.some(o => o.owns(gd))` and `owners.find(x => x.owns(gd))` ask this
+pub fn nightbreach_owns(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+
+/// INVENTED: the one SquadOwner's release (orders.ts:632, which reads nothing of ctx): an order has come for him, let go (None) or say why not
+pub fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> { todo!() }
+
+/// INVENTED: the one SquadOwner's status (orders.ts:633): the HUD's words for a man with no order of Sam's
+pub fn nightbreach_status(g: &mut crate::game::Game, gd: GuardId) -> Option<String> { todo!() }
+
+/// INVENTED: `this.people?.near(at) ?? null` (orders.ts:742; the closure is pairorders.ts:159): the man of the other side nearest the point and how near. None while g.orders.people is None
+pub fn squad_orders_people_near(g: &mut crate::game::Game, at: V3) -> Option<(GuardId, f64)> { todo!() }
+
+/// INVENTED: `this.people?.ray(ro, rd, max) ?? null` (orders.ts:783; the closure is pairorders.ts:162): the man of the other side a cursor ray lands on nearer than max. None while g.orders.people is None
+pub fn squad_orders_people_ray(g: &mut crate::game::Game, ro: V3, rd: V3, max: f64) -> Option<GuardId> { todo!() }
+
+/// INVENTED: what a PropPenalty answers for a cell, the closure at orders.ts:2660, so goTo can hand one to nav_grid_find_path: |g, ix, iz| prop_penalty_at(g, &round, ix, iz). (dear.has(nav.idx) ? cost : 1) * (pen's price, or 1), in that order; pen's price is lanes::lane_penalty_at
+pub fn prop_penalty_at(g: &mut crate::game::Game, p: &crate::orders::PropPenalty, ix: f64, iz: f64) -> f64 { todo!() }

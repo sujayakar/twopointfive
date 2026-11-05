@@ -28,8 +28,8 @@ pub fn player_choosing(g: &mut crate::game::Game, id: PlayerId) -> bool {
 pub fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
     let has_rifle = has_rifle.unwrap_or(true);
     let seat = seat.unwrap_or(0.0);
-    let pistol = seam_pistol_new(g);
-    let rifle = seam_rifle_new(g);
+    let pistol = crate::weapons::pistol_new(g, None);
+    let rifle = crate::weapons::rifle_new(g, None);
     let frags = g.k.frag.issue;
     let desc = crate::character::CharacterDesc {
         id: crate::seats::seat_man_id(seat),
@@ -43,25 +43,10 @@ pub fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos:
     let mut p = crate::game::Player::new(c, has_rifle, pistol, rifle);
     p.frags = frags;
     let id = g.pl.push(p);
-    seam_same_man(g, id, c);
+    g.ch[c].who = crate::character::Who::Player(id);
     let def = g.fa[pistol].def;
     g.ch[c].muzzle_ahead = g.m.weapons.weapons.get(def).unwrap().muzzle_ahead;
     id
-}
-
-/// `new Pistol()`: the fiveseven row. pistol_new (weapons.ts:511) takes no `g` and returns Opaque.
-fn seam_pistol_new(g: &mut crate::game::Game) -> FirearmId {
-    todo!("needs: pistol_new(g, def) -> FirearmId (game.ts:346)")
-}
-
-/// `new Rifle()`: the fn2000 row. rifle_new (weapons.ts:531) takes no `g` and returns Opaque.
-fn seam_rifle_new(g: &mut crate::game::Game) -> FirearmId {
-    todo!("needs: rifle_new(g, def) -> FirearmId (game.ts:351)")
-}
-
-/// `sameMan(this, this.char)`: a Player and a Character hold no row or ManCols to share, and ManCols has no fields.
-fn seam_same_man(g: &mut crate::game::Game, id: PlayerId, c: CharId) {
-    todo!("needs: where a Player's men row lives, or sameMan out of the game (game.ts:456)")
 }
 
 /// The firearm the kit has selected. (game.ts Player.firearm)
@@ -151,7 +136,7 @@ pub fn is_breathing(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// What a man has personally perceived, as an encounter starts. (game.ts newWitness)
 pub fn new_witness() -> crate::game::Witness {
     crate::game::Witness {
-        heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, last_t: -1.0 },
+        heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 },
         peak_awareness: 0.0,
         alerted_by: None,
         alert_t: -1.0,
@@ -192,6 +177,7 @@ mod tests {
     fn the_makers_start_their_clocks_at_minus_one() {
         let w = new_witness();
         assert!(w.heard.last_shot_t == -1.0 && w.heard.last_t == -1.0 && w.alert_t == -1.0);
+        assert!(w.heard.small_where.is_none() && w.heard.loud_at.is_none());
     }
 
     #[test]

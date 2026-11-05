@@ -11,7 +11,7 @@ pub struct Typed {
     pub byte_length: f64,
     pub byte_offset: f64,
     pub length: f64,
-    pub ___to_string_tag_610: crate::rollback::TypedToStringTag610,
+    pub ___to_string_tag_599: crate::rollback::TypedToStringTag599,
 }
 impl Typed {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -22,7 +22,7 @@ impl Typed {
             byte_length: 0.0,
             byte_offset: 0.0,
             length: 0.0,
-            ___to_string_tag_610: crate::rollback::TypedToStringTag610::Float32Array,
+            ___to_string_tag_599: crate::rollback::TypedToStringTag599::Float32Array,
         }
     }
 }
@@ -37,13 +37,13 @@ pub enum ArrayBufferLike {
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum TypedToStringTag610 {
+pub enum TypedToStringTag599 {
     Float32Array,
 }
-impl TypedToStringTag610 {
+impl TypedToStringTag599 {
     pub const fn as_str(self) -> &'static str {
         match self {
-            TypedToStringTag610::Float32Array => "Float32Array",
+            TypedToStringTag599::Float32Array => "Float32Array",
         }
     }
 }

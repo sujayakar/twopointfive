@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Belief, src/game/doorforce.ts:95)
+/// (TypeScript: Belief, src/game/doorforce.ts:97)
 #[derive(Clone, Copy, Debug)]
 pub struct Belief {
     pub door: DoorId,
@@ -26,7 +26,7 @@ impl Belief {
 }
 impl Default for Belief { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Stand, src/game/doorforce.ts:97)
+/// (TypeScript: Stand, src/game/doorforce.ts:99)
 #[derive(Clone, Copy, Debug)]
 pub struct Stand {
     pub door: DoorId,
@@ -59,7 +59,7 @@ impl Stand {
 }
 impl Default for Stand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Kick, src/game/doorforce.ts:98)
+/// (TypeScript: Kick, src/game/doorforce.ts:100)
 #[derive(Clone, Copy, Debug)]
 pub struct Kick {
     pub door: DoorId,
@@ -101,7 +101,7 @@ impl KickPhase {
     }
 }
 
-/// (TypeScript: Man, src/game/doorforce.ts:100)
+/// (TypeScript: Man, src/game/doorforce.ts:102)
 #[derive(Clone, Debug)]
 pub struct Man {
     pub beliefs: JsMap<DoorId, crate::doorforce::Belief>,
@@ -128,7 +128,7 @@ impl Man {
 }
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorforce.ts:100 Man.saw, src/game/doorforce.ts:100)
+/// (TypeScript: inline at src/game/doorforce.ts:102 Man.saw, src/game/doorforce.ts:102)
 #[derive(Clone, Copy, Debug)]
 pub struct ManSaw {
     pub at: V3,
@@ -147,7 +147,7 @@ impl ManSaw {
 }
 impl Default for ManSaw { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/doorforce.ts:102)
+/// (TypeScript: State, src/game/doorforce.ts:104)
 #[derive(Clone, Debug)]
 pub struct State {
     pub last_t: f64,
@@ -168,7 +168,7 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorforce.ts:152 doorForceHear(prop), src/game/doorforce.ts:152)
+/// (TypeScript: inline at src/game/doorforce.ts:154 doorForceHear(prop), src/game/doorforce.ts:154)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorForceHearProp {
     pub direct: bool,
@@ -189,7 +189,7 @@ impl DoorForceHearProp {
 }
 impl Default for DoorForceHearProp { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorforce.ts:246 doorForce ->, src/game/doorforce.ts:246)
+/// (TypeScript: inline at src/game/doorforce.ts:248 doorForce ->, src/game/doorforce.ts:248)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorForce {
     pub aim: V3,
@@ -206,7 +206,7 @@ impl DoorForce {
 }
 impl Default for DoorForce { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorforce.ts:310 kickStep ->, src/game/doorforce.ts:310)
+/// (TypeScript: inline at src/game/doorforce.ts:312 kickStep ->, src/game/doorforce.ts:312)
 #[derive(Clone, Copy, Debug)]
 pub struct KickStep {
     pub aim: V3,
@@ -223,7 +223,7 @@ impl KickStep {
 }
 impl Default for KickStep { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorforce.ts:351 doorForceBelief ->, src/game/doorforce.ts:351)
+/// (TypeScript: inline at src/game/doorforce.ts:354 doorForceBelief ->, src/game/doorforce.ts:354)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorForceBelief {
     pub sure: f64,
@@ -244,7 +244,7 @@ impl DoorForceBelief {
 }
 impl Default for DoorForceBelief { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorforce.ts:355 doorForceOn ->, src/game/doorforce.ts:355)
+/// (TypeScript: inline at src/game/doorforce.ts:358 doorForceOn ->, src/game/doorforce.ts:358)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorForceOn {
     pub door: DoorId,
@@ -283,9 +283,9 @@ impl DoorForceOnKick {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct DoorforceMod {
-    /// (src/game/doorforce.ts:90 DOORFORCE_LOG)
+    /// (src/game/doorforce.ts:92 DOORFORCE_LOG)
     pub doorforce_log: Vec<String>,
-    /// (src/game/doorforce.ts:103 states)
+    /// (src/game/doorforce.ts:105 states)
     pub states: Option<crate::doorforce::State>,
 }
 impl DoorforceMod {
@@ -310,5 +310,5 @@ pub struct DoorforceStats {
     pub no_kick: i32,
 }
 
-/// (src/game/doorforce.ts:92 BREAK)
+/// (src/game/doorforce.ts:94 BREAK)
 pub const BREAK: bool = false;

@@ -254,19 +254,6 @@ impl SnatchStats {
 }
 impl Default for SnatchStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet Snatch.run, quiet Snatch.run)
-#[derive(Clone, Copy, Debug)]
-pub struct SnatchRun {
-}
-impl SnatchRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnatchRun {
-        }
-    }
-}
-impl Default for SnatchRun { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/snatch.ts:98 teamOf ->, src/game/snatch.ts:98)
 #[derive(Clone, Copy, Debug)]
 pub struct SnatchTeamOfItem {

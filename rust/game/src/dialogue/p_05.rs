@@ -5,64 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ---------------------------------------------------------------- seams (the skeleton lacks these; notes.md, ## Skeleton)
-
-/// `g.audio.play(name, pos, gain, { rate })` (dialogue.ts:1738): `game_audio_like_play`'s opts hold `crate::Opaque`, which cannot carry a rate.
-fn seam_audio_play(g: &mut Game, name: &str, pos: Option<V3>, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
-
-// ---------------------------------------------------------------- the functions
-
-/// Every line of Sam's the scripts and the rooms can put in his mouth, into SAM_LINES as `script` entries.   (dialogue.ts registerScriptLines)
-pub fn register_script_lines(g: &mut crate::game::Game) {
-    let mut lines = script_sam_lines();
-    g.m.dialogue.sam_lines.append(&mut lines);
-    for (room, list) in crate::dialogue::room_menace().iter() {
-        for (i, r) in list.iter().enumerate() {
-            g.m.dialogue.sam_lines.push(script_line(format!("S:room:{}:{}", room, i), None, r.sam.clone(), None));
-            if let Some(after) = r.after.as_deref().filter(|a| !a.is_empty()) {
-                g.m.dialogue.sam_lines.push(script_line(format!("S:room:{}:{}+", room, i), None, String::from(after), None));
-            }
-        }
-    }
-}
-
-/// `sc.beats[s]`. ScriptBeats holds all four, as `Record<StageKey, Beat>` says.
-fn beat_at(beats: &crate::dialogue::ScriptBeats, s: crate::dialogue::StageKey) -> &crate::dialogue::Beat {
-    match s {
-        crate::dialogue::StageKey::X => &beats.x,
-        crate::dialogue::StageKey::Num(n) if n == 1.0 => &beats._1,
-        crate::dialogue::StageKey::Num(n) if n == 2.0 => &beats._2,
-        crate::dialogue::StageKey::Num(_) => &beats._3,
-    }
-}
-
-/// `String(s)` of a stage.
-fn stage_word(s: crate::dialogue::StageKey) -> String {
-    match s { crate::dialogue::StageKey::X => String::from("x"), crate::dialogue::StageKey::Num(n) => js_int(n) }
-}
-
-/// The scripts' half of registerScriptLines: every script x STAGES, in that order. An empty ask, rejoinder or take is falsy, as `if (b.ask)` has it.
-fn script_sam_lines() -> Vec<crate::dialogue::SamLine> {
-    let mut out = Vec::new();
-    for sc in crate::dialogue::scripts().iter() {
-        for s in crate::dialogue::stages() {
-            let b = beat_at(&sc.beats, s);
-            let base = format!("S:{}:{}", sc.id, stage_word(s));
-            out.push(script_line(base.clone(), Some(sc.t), b.sam.clone(), b.sam_now.clone()));
-            if let Some(x) = b.ask.as_deref().filter(|x| !x.is_empty()) { out.push(script_line(format!("{}?", base), Some(sc.t), String::from(x), None)); }
-            if let Some(x) = b.after.as_deref().filter(|x| !x.is_empty()) { out.push(script_line(format!("{}+", base), Some(sc.t), String::from(x), None)); }
-            if let Some(x) = b.take.as_deref().filter(|x| !x.is_empty()) { out.push(script_line(format!("{}+?", base), Some(sc.t), String::from(x), None)); }
-        }
-    }
-    out
-}
-
-/// One `{ id, s: 'script', t, text, guide }` of registerScriptLines.
-fn script_line(id: String, t: Option<crate::game::Temperament>, text: String, guide: Option<String>) -> crate::dialogue::SamLine {
-    crate::dialogue::SamLine { id, s: crate::dialogue::SamLineS::Script, t, text, guide, ..Default::default() }
-}
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The row the TypeScript's `R` holds, with no restart: `radio_state` has been called, this is for going back to it after a call that takes `g`.
 fn row(g: &mut Game) -> &mut crate::dialogue::RadioState {
@@ -135,9 +78,9 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     let table = crate::dialogue::handler_lines();
     let Some(pool) = table.get(String::from(beat.as_str())) else { return false };
     if pool.is_empty() { return false; }
-    let dealt = crate::math_dice::hash_str(&format!("{}|{}", beat.as_str(), js_int(m::round(g.mission.t0 * 10.0))));
+    let dealt = crate::math_dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
     let l = &pool[js::rem(dealt, pool.len() as f64) as usize];
-    let rack = js_int(g.level.mission.rack.index + 1.0);
+    let rack = js::num_str(g.level.mission.rack.index + 1.0);
     let own = !crate::dialogue::is_office(g);
     let h_now = l.h_now.as_deref().unwrap_or(&l.h);
     let h = if own { l.h_own.as_deref().unwrap_or(h_now) } else { h_now };
@@ -145,8 +88,8 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     let r = row(g);
     r.done.add(beat);
     r.last_at = now;
-    crate::game::game_msg(g, &format!("radio: {} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h.replace("{rack}", &rack)));
-    seam_audio_play(g, "radio", None, 0.3, 1.12);
+    crate::game::game_msg(g, &alloc::format!("radio: {} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h.replace("{rack}", &rack)));
+    crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
     let at = g.time + crate::dialogue::RADIO_REPLY_SECS;
     row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: s.replace("{rack}", &rack) });
     true
@@ -205,7 +148,7 @@ pub fn tick_radio(g: &mut crate::game::Game) {
             let talking = match &g.pl[pl].bubble { Some(b) => now - b.t < b.dur, None => false };
             if !talking {
                 let dur = m::min(2.4, m::max(1.3, 0.9 + 0.025 * p.text.encode_utf16().count() as f64));   // .length: UTF-16 units
-                let said = format!("radio: you \u{25B8} {}", p.text);
+                let said = alloc::format!("radio: you \u{25B8} {}", p.text);
                 g.pl[pl].bubble = Some(crate::game::PlayerBubble { text: p.text, t: now, dur, radio: true });
                 crate::game::game_msg(g, &said);
             }
@@ -246,13 +189,11 @@ fn replace_ascii_ci(text: &str, pat: &str, by: &str) -> String {
     out
 }
 
-/// `String(x)` of a whole number (a rounded time, a rack's number). −0 says "0", as JavaScript does.
-fn js_int(x: f64) -> String { format!("{}", x as i64) }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dialogue::{Him, StageKey};
+    use alloc::format;
+    use crate::dialogue::Him;
 
     /// FNV-1a over a string's UTF-8, the digest the TypeScript's side was worked out with.
     fn fnv(mut d: u64, s: &str) -> u64 { for b in s.bytes() { d ^= b as u64; d = d.wrapping_mul(0x100000001b3); } d }
@@ -263,15 +204,16 @@ mod tests {
     const TS_ROWS_DIGEST: u64 = 0xf4724108b7433e7f;
     const TS_HANDLER_DIGEST: u64 = 0x9dc9478aef436ee5;
 
+    /// The skeleton's first value of SAM_LINES holds what registerScriptLines put there: the scripts' rows, in the TypeScript's order.
     #[test]
     fn script_lines_are_the_typescripts() {
-        let lines = script_sam_lines();
+        let all = crate::dialogue::DialogueMod::blank().sam_lines;
+        let lines: Vec<_> = all.iter().filter(|l| l.s == crate::dialogue::SamLineS::Script && l.t.is_some()).collect();
         assert_eq!(lines.len(), TS_SCRIPT_LINES);
         let mut d = SEED;
         for l in &lines {
             d = fnv(d, &l.id); d = fnv(d, "\0"); d = fnv(d, &l.text); d = fnv(d, "\0"); d = fnv(d, l.guide.as_deref().unwrap_or(""));
             d = fnv(d, "\0"); d = fnv(d, l.t.unwrap().as_str()); d = fnv(d, "\n");
-            assert!(l.s == crate::dialogue::SamLineS::Script);
         }
         assert_eq!(d, TS_SCRIPT_DIGEST);
     }
@@ -290,8 +232,7 @@ mod tests {
             if let Some(x) = &sc.not { for b in x { d = fnv(d, b.as_str()); } }
             d = fnv(d, "|");
             if let Some(x) = sc.pin { d = fnv(d, x.as_str()); }
-            for s in crate::dialogue::stages() {
-                let b = beat_at(&sc.beats, s);
+            for b in [&sc.beats._1, &sc.beats._2, &sc.beats._3, &sc.beats.x] {
                 match &b.him {
                     Him::Text(t) => { d = fnv(d, t); }
                     Him::Arm1(p) => { for (k, v) in p.iter() { d = fnv(d, &k); d = fnv(d, "="); d = fnv(d, v); d = fnv(d, ";"); } }
@@ -318,15 +259,6 @@ mod tests {
     }
 
     #[test]
-    fn stages_read_their_own_beat() {
-        let mut beats = crate::dialogue::ScriptBeats::zeroed();
-        beats._1.sam = String::from("a"); beats._2.sam = String::from("b"); beats._3.sam = String::from("c"); beats.x.sam = String::from("d");
-        let said: Vec<String> = crate::dialogue::stages().into_iter().map(|s| format!("{}{}", stage_word(s), beat_at(&beats, s).sam)).collect();
-        assert_eq!(said, ["1a", "2b", "3c", "xd"]);
-        assert!(matches!(crate::dialogue::stages()[3], StageKey::X));
-    }
-
-    #[test]
     fn worst_pair_line_has_the_longest_tokens() {
         assert_eq!(pair_worst("{OTHER} {Code} {padDoor}, {PadDoor} {PADDOOR}"), "Lindqvist 7391 the office side door, The office side door {PADDOOR}");
     }
@@ -336,13 +268,5 @@ mod tests {
         assert_eq!(replace_ascii_ci("{other} {OTHER} {Other}! {othe} \u{2026}{oThEr}", "{other}", "Lindqvist"), "Lindqvist Lindqvist Lindqvist! {othe} \u{2026}Lindqvist");
         assert_eq!(replace_ascii_ci("{cod", "{code}", "7391"), "{cod");
         assert_eq!(replace_ascii_ci("", "{code}", "7391"), "");
-    }
-
-    #[test]
-    fn whole_numbers_say_what_string_says() {
-        assert_eq!(js_int(-0.0), "0");
-        assert_eq!(js_int(12.0), "12");
-        assert_eq!(js_int(-3.0), "-3");
-        assert_eq!(js_int(1234567890123.0), "1234567890123");
     }
 }

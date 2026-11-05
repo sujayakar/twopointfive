@@ -30,10 +30,10 @@ pub fn lay_men(g: &mut crate::game::Game, o: &crate::planlay::LaidOrder) -> Vec<
 pub fn lay_point(g: &mut crate::game::Game, o: &crate::planlay::LaidOrder) -> Option<V3> { todo!() }
 
 /// (src/game/planlay.ts:85 targetOf)
-pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::planlay::TargetOf> { todo!() }
+pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::orders::OrderTarget> { todo!() }
 
 /// (src/game/planlay.ts:94 layTarget)
-pub fn lay_target(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::planlay::LayTarget> { todo!() }
+pub fn lay_target(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::orders::OrderTarget> { todo!() }
 
 /// (src/game/planlay.ts:96 strike)
 pub fn strike(l: &mut crate::planlay::LayState, names: &JsSet<String>) -> f64 { todo!() }

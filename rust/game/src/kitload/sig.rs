@@ -30,13 +30,13 @@ pub fn snap(x: f64, r: f64) -> f64 { todo!() }
 pub fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Option<f64>) -> Option<crate::kitload::KitWorn> { todo!() }
 
 /// (src/game/kitload.ts:119 loadPaceK)
-pub fn load_pace_k(g: &mut crate::game::Game, gd: GuardId) -> f64 { todo!() }
+pub fn load_pace_k(g: &mut crate::game::Game, w: crate::kitload::KitWorn) -> f64 { todo!() }
 
 /// (src/game/kitload.ts:120 loadSeenK)
-pub fn load_seen_k(g: &mut crate::game::Game, gd: GuardId) -> f64 { todo!() }
+pub fn load_seen_k(g: &mut crate::game::Game, w: crate::kitload::KitWorn) -> f64 { todo!() }
 
 /// (src/game/kitload.ts:121 loadHeardK)
-pub fn load_heard_k(g: &mut crate::game::Game, gd: GuardId) -> f64 { todo!() }
+pub fn load_heard_k(g: &mut crate::game::Game, w: crate::kitload::KitWorn) -> f64 { todo!() }
 
 /// (src/game/kitload.ts:128 loadWear)
 pub fn load_wear(g: &mut crate::game::Game, m: Option<&crate::kit::MemberKit>) { todo!() }

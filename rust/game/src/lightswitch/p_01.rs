@@ -10,8 +10,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 type Ray = crate::scene_collision::Raycast;
 
 // ---------------------------------------------------------------- seam: what the skeleton still cannot do (notes.md, Skeleton)
-/// `S.sweeps(x, z, pad)`: the closure of `doors.swingOf`'s answer, which `DoorSwing` lost
-fn seam_swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool { crate::doors::p_02::swing_sweeps(s, x, z, pad) } // SKELETON-GAP: crate::doors::door_swing_sweeps(&DoorSwing, x, z, pad), the closure of swingOf's answer (doors.ts:559); the body is doors/p_02.rs swing_sweeps
+/// `g.level.boxes[i]`: a level box's half size, its centre and its flags, by its place in the level's list. That list is `g.col.boxes` (game.ts:1219).
+fn seam_level_box(g: &mut Game, i: usize) -> (V3, V3, f64) {
+    todo!("needs: the table of Box rows: skeleton 5 has no Level.boxes, g.col.boxes is Vec<BoxId> and no Tab holds a Box (lightswitch.ts:101, :131)")
+}
 
 // ---------------------------------------------------------------- finding them
 /// Is the rule running: nothing under a show. (lightswitch.ts switchesLive)
@@ -25,8 +27,9 @@ pub fn room_light(g: &mut crate::game::Game, t: FixtureId) -> bool {
     if !f.mains || f.group == "exterior" || f.group == "emergency" { return false; }
     if f.kind == crate::sim_lightshome::FixtureKind::Analytic { return f.light.is_some(); }
     if f.kind != crate::sim_lightshome::FixtureKind::Emissive || f.boxes.is_empty() { return false; }
-    let b = &g.level.boxes[f.boxes[0] as usize];
-    b.h[1] <= b.h[0] && b.h[1] <= b.h[2] && b.c[1] > 1.5
+    let first = f.boxes[0] as usize;
+    let (c, h, _) = seam_level_box(g, first);
+    h[1] <= h[0] && h[1] <= h[2] && c[1] > 1.5
 }
 
 /// The room a fixture hangs in: of the floor under it, or of the nearest floor it has a clear line down to. (lightswitch.ts roomOfLight)
@@ -61,9 +64,9 @@ pub fn wall_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<
 fn solid(g: &mut Game, h: &Option<Ray>) -> bool {
     let Some(h) = h else { return false };
     if h.index >= 1e6 { return false; }
-    let b = &g.level.boxes[h.index as usize];
-    if js::to_i32(b.flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0 { return false; }
-    b.c[1] + b.h[1] >= WALL_TOP
+    let (c, half, flags) = seam_level_box(g, h.index as usize);
+    if js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0 { return false; }
+    c[1] + half[1] >= WALL_TOP
 }
 
 /// A plate on the wall behind `stand`, or none: plain solid wall under all of it, room for a man, this room's floor at his back, clear of every leaf. (lightswitch.ts plateOn)
@@ -104,7 +107,7 @@ pub fn plate_on(g: &mut crate::game::Game, stand: V3, n: V3, room: f64, d: DoorI
     for o in doors {
         if v3::dist_xz(g.dr[o].frame_centre, pos) > 3.0 { continue; }
         let s = crate::doors::doors_swing_of(g, o);
-        if seam_swing_sweeps(&s, face[0], face[2], 0.08) || seam_swing_sweeps(&s, stand[0], stand[2], 0.3) { return None; }
+        if crate::doors::door_swing_sweeps(&s, face[0], face[2], Some(0.08)) || crate::doors::door_swing_sweeps(&s, stand[0], stand[2], Some(0.3)) { return None; }
     }
     if crate::scene_collision::solid_blocked(g, [stand[0], 1.3, stand[2]], v3::mad(pos, n, 0.05), None) { return None; }
     Some(Plate { pos, n, stand: [pos[0] + n[0] * stand_m, 0.0, pos[2] + n[2] * stand_m], floor, door: d, room })

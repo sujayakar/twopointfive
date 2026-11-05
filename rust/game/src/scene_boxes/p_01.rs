@@ -1,4 +1,4 @@
-//! src/scene/boxes.ts lines 1 to 1209
+//! src/scene/boxes.ts lines 1 to 1246
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -10,53 +10,46 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// the game's Box (the header's `Box` is alloc's)
 type Bx = crate::scene_boxes::Box;
 
-// BoxWorld's static numbers: the skeleton has no entry for a class's statics.
-const MAX_CAST: f64 = 16.0;
-/// `BoxWorld.castCap`: only `?allproxies=0` of the address moves it, so its value on the page
-const CAST_CAP: f64 = MAX_CAST;
-const CAPS_PER_CHAR: f64 = 15.0;
-const INFO_BOUNDS: f64 = 24.0;
-const RS: usize = 12;
-const RAY_PAD: f64 = 1e-3;
-// the browser's GPUBufferUsage words
+// the browser's GPUBufferUsage words: SKELETON-GAP, no entry in the index
 const USAGE_COPY_SRC: f64 = 4.0;
 const USAGE_COPY_DST: f64 = 8.0;
 const USAGE_UNIFORM: f64 = 64.0;
 const USAGE_STORAGE: f64 = 128.0;
 
-/// the box an ID names: the one place that says which table holds it
+/// `BoxWorld.RS` as an index
+const RS: usize = BOX_WORLD_RS as usize;
+
+// THE TABLE OF BOX ROWS. SKELETON-GAP: skeleton 5 has `g.col.boxes: Vec<BoxId>` and no `Tab<BoxId, Box>`, while the index says `g.col.boxes[id]`. These four are
+// every line of this file that says where a box lives. On a skeleton with the table each body is one line: `&g.tab.boxes[id]`, `&mut g.tab.boxes[id]`,
+// `g.tab.boxes.push(b)`; `seam_box_push_no_g` needs `g` on box_of's stub as well. Tests have a table of their own, at the foot of this file.
+/// the box an ID names
+#[cfg(not(test))]
 #[inline]
 fn bx(g: &Game, id: BoxId) -> &Bx {
-    if let Some(b) = super::b_01::made_get(id) { return b; }   // TEMP-BRINGUP: a made box (b_01.rs)
-    &g.col.boxes[id]
+    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
 }
-
-/// a new box into the game's table (boxes.ts:171 and :182 hand back the object itself)
+/// the box an ID names, to write
+#[cfg(not(test))]
+#[inline]
+fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx {
+    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
+}
+/// a new box into the table of every box (boxes.ts:186 and :204 hand back the object itself)
+#[cfg(not(test))]
 fn seam_box_push(g: &mut Game, b: Bx) -> BoxId {
-    let _ = g;
-    super::b_01::made_push(b)   // TEMP-BRINGUP, SKELETON-GAP: the table every Box lives in (b_01.rs)
+    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
 }
 /// the same for `box_of`, whose stub takes no `g`
+#[cfg(not(test))]
 fn seam_box_push_no_g(b: Bx) -> BoxId {
-    super::b_01::made_push(b)   // TEMP-BRINGUP, SKELETON-GAP: the table every Box lives in (b_01.rs)
+    todo!("needs: `g` on box_of's stub, and a table of Box rows")
 }
-/// `device.queue.writeBuffer(matBuf, offset, data, 0, bytes)` (boxes.ts:312, :317)
+
+/// `device.queue.writeBuffer(matBuf, offset, data, 0, bytes)` (boxes.ts:332, :337). No Rust part calls its two callers: the air grid and the hills go to the host.
 fn seam_write_mat_buf(g: &mut Game, offset: f64, data: &[f32], bytes: f64) {
     todo!("needs: a boundary call for the GPU queue's writeBuffer on matBuf")
 }
-/// `own.w` as the TypeScript casts it, `{ stamp, ray }`, taken out (boxes.ts:405)
-fn seam_own_take(own: &mut crate::scene_boxes::BoxWorldRayAsideOwn) -> Option<(Vec<u32>, f64)> {
-    todo!("needs: BoxWorldRayAsideOwnW to hold stamp: Vec<u32> and ray: f64 (it came out an empty struct)")
-}
-/// `own.w = { stamp, ray }` (boxes.ts:409)
-fn seam_own_put(own: &mut crate::scene_boxes::BoxWorldRayAsideOwn, stamp: Vec<u32>, ray: f64) {
-    todo!("needs: BoxWorldRayAsideOwnW to hold stamp: Vec<u32> and ray: f64 (it came out an empty struct)")
-}
-/// `this.glassOpen(i, p)` (boxes.ts:1047), the hook glassbreak.ts:214 sets
-fn seam_glass_open(g: &mut Game, i: f64, p: V3) -> bool {
-    todo!("needs: BoxWorld.glassOpen as an enum or a direct call, not FnField (glassbreak.ts:214 sets it to glass_break_live(g) && glass_break_open_at(g, i, p))")
-}
-/// `AREA_LIT_MARKS.has(m)`, a set of MarkingDef objects by identity (boxes.ts:505)
+/// `AREA_LIT_MARKS.has(m)`, a set of MarkingDef objects by identity (boxes.ts:534). Reached only from repackMarkings, which no Rust part calls.
 fn seam_area_lit(g: &mut Game, m: &crate::scene_markings::MarkingDef) -> bool {
     todo!("needs: a serial on MarkingDef (AREA_LIT_MARKS is a JsSet<u32> and a MarkingDef has no number to ask it with)")
 }
@@ -77,8 +70,23 @@ pub fn box_of(c_2: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, ow
     seam_box_push_no_g(box_value(c_2, h, yaw, albedo, emissive, flags, owner, rot, name.map(String::from)))
 }
 
-/// A box from what the caller gives; absent = boxOf's. (boxes.ts makeBox)
-pub fn make_box(g: &mut crate::game::Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId {
+/// Is this piece of trim drawn: while the box that says it is. (boxes.ts trimDrawn)
+pub fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
+    match bx(g, t).of {
+        None => true,
+        Some(of) => js::to_i32(bx(g, all[of as usize]).flags) & js::to_i32(box_flag().no_primary) == 0,
+    }
+}
+
+/// Is a static drawn: not hidden, not a pane, and trim only while its box is. (boxes.ts boxDrawn)
+pub fn box_drawn(g: &mut crate::game::Game, all: &[BoxId], b: BoxId) -> bool {
+    let f = box_flag();
+    let (flags, piece) = { let x = bx(g, b); (x.flags, x.piece) };
+    js::to_i32(flags) & (js::to_i32(f.no_primary) | js::to_i32(f.glass)) == 0 && (piece != Some(true) || trim_drawn(g, all, b))
+}
+
+/// makeBox's object as a value, in no table: what the caller gives; absent = boxOf's. (boxes.ts makeBox)
+pub fn make_box_value(p: &crate::scene_boxes::MakeBoxP) -> crate::scene_boxes::Box {
     let mut b = box_value(p.c, p.h, 0.0, [0.5, 0.5, 0.5], [0.0, 0.0, 0.0], 0.0, 0.0, None, None);
     if let Some(x) = p.yaw { b.yaw = x; }
     if let Some(x) = p.albedo { b.albedo = x; }
@@ -115,6 +123,12 @@ pub fn make_box(g: &mut crate::game::Game, p: &crate::scene_boxes::MakeBoxP) -> 
     b.piece = p.piece;
     b.of = p.of;
     b.dress = p.dress;
+    b
+}
+
+/// A box from what the caller gives, in the table. (boxes.ts makeBox)
+pub fn make_box(g: &mut crate::game::Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId {
+    let b = make_box_value(p);
     seam_box_push(g, b)
 }
 
@@ -153,25 +167,21 @@ pub fn box_world_set_ground_field(g: &mut crate::game::Game, rows: &[f32]) {
 
 /// A ray asked by the picture: the ray grid's stamps are the asker's, the last ray's scratch put back after. (boxes.ts BoxWorld.rayAside)
 pub fn box_world_ray_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::scene_boxes::BoxWorldRayAsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+    // own.w's table stays out of this: BoxWorldRayAsideOwnW is an empty struct (SKELETON-GAP). Every ask takes a clean table at ray 0, which the TypeScript does
+    // too for a first ask: a stamp is only "met on this ray", so the same candidates meet the same tests. It costs the table's allocation.
     let need = g.engine.world.rg_stamp.len();
-    let (q_stamp, q_ray) = match seam_own_take(own) {
-        Some((stamp, ray)) if stamp.len() >= need => (stamp, ray),
-        _ => (vec![0u32; need], 0.0),
-    };
     let w = &mut g.engine.world;
     let (best, bi, bn, ray) = (w.rc_best, w.rc_bi, w.rc_bn, w.rg_ray);
-    let stamp = core::mem::replace(&mut w.rg_stamp, q_stamp);
-    w.rg_ray = q_ray;
+    let stamp = core::mem::replace(&mut w.rg_stamp, vec![0u32; need]);
+    w.rg_ray = 0.0;
     own.w = None;
     let out = fn_(g);
     let w = &mut g.engine.world;
-    let own_stamp = core::mem::replace(&mut w.rg_stamp, stamp);
-    let own_ray = w.rg_ray;
+    w.rg_stamp = stamp;
     w.rg_ray = ray;
     w.rc_best = best;
     w.rc_bi = bi;
     w.rc_bn = bn;
-    seam_own_put(own, own_stamp, own_ray);
     out
 }
 
@@ -277,7 +287,7 @@ fn pack_clamped(a: V3) -> i32 {
 pub fn box_world_add_character_capsules(g: &mut crate::game::Game, owner: f64, albedo: &crate::scene_boxes::BoxWorldAddCharacterCapsulesAlbedo, caps: &[Vec<f64>], bound: [f64; 4]) {
     use crate::scene_boxes::BoxWorldAddCharacterCapsulesAlbedo as Albedo;
     let w = &mut g.engine.world;
-    if w.char_count >= CAST_CAP { return; }
+    if w.char_count >= BOX_WORLD_castCap { return; }
     let own = js::to_i32(owner) & 0xff;
     let misc = match albedo {
         Albedo::Array(_) => 0u32,
@@ -286,9 +296,9 @@ pub fn box_world_add_character_capsules(g: &mut crate::game::Game, owner: f64, a
             (own | (rgb565 << 8)) as u32
         }
     };
-    let base = w.char_count * CAPS_PER_CHAR;
+    let base = w.char_count * BOX_WORLD_CAPS_PER_CHAR;
     const NONE: [f64; 7] = [0.0, -100.0, 0.0, 0.0, 0.0, -100.0, 0.0];
-    for i in 0..CAPS_PER_CHAR as usize {
+    for i in 0..BOX_WORLD_CAPS_PER_CHAR as usize {
         let c: &[f64] = match caps.get(i) { Some(c) => c, None => &NONE };
         let o = (base as usize + i) * 8;
         w.capsule_data[o] = c[0] as f32;
@@ -304,13 +314,13 @@ pub fn box_world_add_character_capsules(g: &mut crate::game::Game, owner: f64, a
         };
         w.capsule_data[o + 7] = f32::from_bits(word);
     }
-    let bo = (INFO_BOUNDS + w.char_count * 4.0) as usize;
+    let bo = (BOX_WORLD_INFO_BOUNDS + w.char_count * 4.0) as usize;
     w.info_data[bo] = (bound[0] as f32).to_bits();
     w.info_data[bo + 1] = (bound[1] as f32).to_bits();
     w.info_data[bo + 2] = (bound[2] as f32).to_bits();
     w.info_data[bo + 3] = (bound[3] as f32).to_bits();
     w.char_count += 1.0;
-    w.capsule_count = w.char_count * CAPS_PER_CHAR;
+    w.capsule_count = w.char_count * BOX_WORLD_CAPS_PER_CHAR;
 }
 
 /// Half extents in world XZ of a yawed or rotated box. (boxes.ts BoxWorld.footprint)
@@ -424,8 +434,9 @@ pub fn box_world_ray_test(g: &mut crate::game::Game, i: f64, ro: V3, rd: V3, ski
     let best = g.engine.world.rc_best;
     let Some(r) = ray_box(g, ro, rd, id, best) else { return };
     if r.t < best || (r.t == best && i < g.engine.world.rc_bi) {
+        // (`this.glassOpen`: a FnField, and glassbreak.ts:214 is the only thing that sets it, so its closure's body is written here)
         if g.engine.world.glass_open.is_some() && js::to_i32(flags) & js::to_i32(box_flag().glass) != 0 && i < g.engine.world.statics.len() as f64
-            && seam_glass_open(g, i, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t]) { return; }
+            && crate::glassbreak::glass_break_live(g) && crate::glassbreak::glass_break_open_at(g, i, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t]) { return; }
         let w = &mut g.engine.world;
         w.rc_best = r.t;
         w.rc_bi = i;
@@ -518,10 +529,10 @@ pub fn box_world_build_ray_grid(g: &mut crate::game::Game, n: f64) {
         let b = bx(g, id);
         let [ex, ez] = footprint_of(b);
         let c = b.c;
-        let x0 = m::floor((c[0] - ex - RAY_PAD) / cs);
-        let x1 = m::floor((c[0] + ex + RAY_PAD) / cs);
-        let z0 = m::floor((c[2] - ez - RAY_PAD) / cs);
-        let z1 = m::floor((c[2] + ez + RAY_PAD) / cs);
+        let x0 = m::floor((c[0] - ex - BOX_WORLD_RAY_PAD) / cs);
+        let x1 = m::floor((c[0] + ex + BOX_WORLD_RAY_PAD) / cs);
+        let z0 = m::floor((c[2] - ez - BOX_WORLD_RAY_PAD) / cs);
+        let z1 = m::floor((c[2] + ez + BOX_WORLD_RAY_PAD) / cs);
         let w = &mut g.engine.world;
         if !(x0 >= 0.0 && z0 >= 0.0 && x1 < w_ && z1 < h_) || (x1 - x0 + 1.0) * (z1 - z0 + 1.0) > 96.0 {
             w.rg_ranges[r] = -1;
@@ -734,11 +745,11 @@ pub fn ray_box_cut(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, tmax: f6
     if !slab(h[1], oy, 1.0 / js::or(dy, 1e-20), 1, &mut t0, &mut t1, &mut axis, &mut sgn) { return None; }
     if !slab(h[2], oz, 1.0 / js::or(dz, 1e-20), 2, &mut t0, &mut t1, &mut axis, &mut sgn) { return None; }
     // (the record is lent out of the box for the call: cut_clip takes `g` and reads no box)
-    let cut = g.col.boxes[b].cut.take().unwrap();
+    let cut = bx_mut(g, b).cut.take().unwrap();
     let met = crate::scene_cut::cut_clip(g, &cut, ox, oy, oz, dx, dy, dz, t0, t1);
     let (clip_t0, k) = (g.m.scene_cut.cut_clip.t0, g.m.scene_cut.cut_clip.k);
     let plane = if met && k >= 0.0 { Some(cut[k as usize].n) } else { None };
-    g.col.boxes[b].cut = Some(cut);
+    bx_mut(g, b).cut = Some(cut);
     if !met { return None; }
     if k < 0.0 && axis < 0 { return None; }
     let ln: V3 = match plane {
@@ -801,7 +812,7 @@ mod tests {
                 if f3 < 0.2 { b.mkey = Some(crate::scene_boxes::mkey().look + 5.0); }
                 if f3 > 0.9 { b.dress = Some(true); }
             }
-            let id = g.col.boxes.push(b);
+            let id = seam_box_push(g, b);
             if dynamic { g.engine.world.dynamics.push(id); } else { box_world_add_static(g, id); }
         }
     }
@@ -860,11 +871,11 @@ mod tests {
         box_world_list(&mut g);
         g.engine.world.rg_n = 200.0;
         let id = g.engine.world.statics[3];
-        g.col.boxes[id].albedo = [1.0, 0.0, 0.0];
+        bx_mut(&mut g, id).albedo = [1.0, 0.0, 0.0];
         g.engine.world.ray_grid_stats.items = -1.0;
         box_world_list(&mut g);
         assert_eq!(g.engine.world.ray_grid_stats.items, -1.0, "colour leaves it standing");
-        g.col.boxes[id].c[0] += 1.0;
+        bx_mut(&mut g, id).c[0] += 1.0;
         box_world_list(&mut g);
         assert!(g.engine.world.ray_grid_stats.items > 0.0, "a move rebuilds it");
     }
@@ -885,6 +896,69 @@ mod tests {
         assert_eq!(w.info_data[24 + 3], 1.5f32.to_bits());
     }
 
+    #[test]
+    fn trim_is_drawn_while_its_box_is() {
+        let mut g = Game::blank();
+        let f = box_flag();
+        let plain = || box_value([0.0; 3], [1.0; 3], 0.0, [0.5; 3], [0.0; 3], 0.0, 0.0, None, None);
+        let wall = seam_box_push(&mut g, plain());
+        let mut piece = plain();
+        piece.piece = Some(true);
+        piece.of = Some(0.0);
+        let trim = seam_box_push(&mut g, piece);
+        let all = [wall, trim];
+        assert!(trim_drawn(&mut g, &all, wall), "no `of`: its own");
+        assert!(trim_drawn(&mut g, &all, trim) && box_drawn(&mut g, &all, trim));
+        bx_mut(&mut g, wall).flags = f.no_primary;
+        assert!(!trim_drawn(&mut g, &all, trim) && !box_drawn(&mut g, &all, trim), "the wall hidden: its trim with it");
+        assert!(!box_drawn(&mut g, &all, wall));
+        bx_mut(&mut g, wall).flags = f.glass;
+        assert!(!box_drawn(&mut g, &all, wall), "a pane is not drawn");
+        assert!(box_drawn(&mut g, &all, trim), "trim asks only whether its box is hidden");
+    }
+
+    #[test]
+    fn a_ray_aside_answers_the_same_and_leaves_the_last_rays_scratch() {
+        let mut g = Game::blank();
+        let mut x = Lcg(4242);
+        world(&mut g, &mut x);
+        box_world_list(&mut g);
+        let (ro, rd) = ([1.0, 1.0, 1.0], [0.8, -0.1, 0.6]);
+        let bits = |r: Option<crate::scene_boxes::BoxWorldRaycast>| r.map(|r| (r.t.to_bits(), r.index.to_bits(), r.n.map(f64::to_bits)));
+        let direct = bits(box_world_raycast(&mut g, ro, rd, None, None, None, None));
+        assert!(direct.is_some());
+        let w = &g.engine.world;
+        let before = (w.rg_stamp.clone(), w.rg_ray, w.rc_best, w.rc_bi, w.rc_bn);
+        let mut own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
+        let mut ask = |g: &mut Game| bits(box_world_raycast(g, ro, [-0.8, 0.1, -0.6], None, None, None, None));
+        let aside = box_world_ray_aside(&mut g, &mut own, &mut ask);
+        let w = &g.engine.world;
+        assert_eq!(before, (w.rg_stamp.clone(), w.rg_ray, w.rc_best, w.rc_bi, w.rc_bn), "nothing of the last ray moved");
+        let mut own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
+        let mut ask = |g: &mut Game| bits(box_world_raycast(g, ro, rd, None, None, None, None));
+        assert_eq!(box_world_ray_aside(&mut g, &mut own, &mut ask), direct, "a clean table meets the same box");
+        assert_eq!(aside, bits(box_world_raycast(&mut g, ro, [-0.8, 0.1, -0.6], None, None, None, None)));
+    }
+
     const TS_GRID: u32 = 0x92b81bdb;
     const TS_RAYS: u32 = 0x72cbf515;
 }
+
+// A TABLE OF BOX ROWS FOR THE TESTS ONLY, one a test's thread, while the skeleton has none (see the head of this file): the rows are leaked, as a test is short.
+#[cfg(test)]
+extern crate std;
+#[cfg(test)]
+std::thread_local! { static TEST_ROWS: core::cell::RefCell<Vec<*mut Bx>> = core::cell::RefCell::new(Vec::new()); }
+#[cfg(test)]
+fn test_row(id: BoxId) -> *mut Bx { TEST_ROWS.with(|r| r.borrow()[id.ix()]) }
+#[cfg(test)]
+fn bx(g: &Game, id: BoxId) -> &Bx { unsafe { &*test_row(id) } }
+#[cfg(test)]
+fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx { unsafe { &mut *test_row(id) } }
+#[cfg(test)]
+fn seam_box_push_no_g(b: Bx) -> BoxId {
+    let row = Box::into_raw(Box::new(b));
+    TEST_ROWS.with(|r| { let mut r = r.borrow_mut(); r.push(row); BoxId::from_ix(r.len() - 1) })
+}
+#[cfg(test)]
+fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { seam_box_push_no_g(b) }

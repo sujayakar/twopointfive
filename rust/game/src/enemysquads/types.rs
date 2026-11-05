@@ -13,6 +13,11 @@ pub enum RoundHot {
 pub enum RoundHotCell {
     Memo { hot_at: JsMap<crate::Num, bool> },
 }
+/// INVENTED: one row of DRILL_AT, what a map writes over the drill's table; None = the table's own (enemysquads.ts:287, the rows its literal names; merged as { ...SQUADS, ...row } at :306). One arm: the proposal shape has no key for a new struct
+#[derive(Clone, Debug)]
+pub enum DrillAtRow {
+    Row { drill_net: Option<bool>, net_k: Option<f64>, reinforce_k: Option<f64>, drill_own: Option<bool>, own_up: Option<f64>, drill_back: Option<bool>, back_beat: Option<f64> },
+}
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -787,7 +792,7 @@ impl StateWordCall {
 }
 impl Default for StateWordCall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Way, src/game/enemysquads.ts:439)
+/// (TypeScript: Way, src/game/enemysquads.ts:446)
 #[derive(Clone, Debug)]
 pub struct Way {
     pub spot: V3,
@@ -810,7 +815,7 @@ impl Way {
 }
 impl Default for Way { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Known, src/game/enemysquads.ts:489)
+/// (TypeScript: Known, src/game/enemysquads.ts:496)
 #[derive(Clone, Copy, Debug)]
 pub struct Known {
     pub p: V3,
@@ -827,7 +832,7 @@ impl Known {
 }
 impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoundCtx, src/game/enemysquads.ts:505)
+/// (TypeScript: RoundCtx, src/game/enemysquads.ts:512)
 #[derive(Clone, Debug)]
 pub struct RoundCtx {
     pub t: f64,
@@ -858,7 +863,7 @@ impl RoundCtx {
 }
 impl Default for RoundCtx { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SquadReport, src/game/enemysquads.ts:1518)
+/// (TypeScript: SquadReport, src/game/enemysquads.ts:1526)
 #[derive(Clone, Debug)]
 pub struct SquadReport {
     pub id: String,
@@ -885,7 +890,7 @@ impl SquadReport {
 }
 impl Default for SquadReport { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:872 BANGS, src/game/enemysquads.ts:872)
+/// (TypeScript: inline at src/game/enemysquads.ts:879 BANGS, src/game/enemysquads.ts:879)
 #[derive(Clone, Copy, Debug)]
 pub struct EnemysquadsModBANGSValue {
     pub n: f64,
@@ -904,7 +909,7 @@ impl EnemysquadsModBANGSValue {
 }
 impl Default for EnemysquadsModBANGSValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:326 grown ->, src/game/enemysquads.ts:326)
+/// (TypeScript: inline at src/game/enemysquads.ts:329 grown ->, src/game/enemysquads.ts:329)
 #[derive(Clone, Copy, Debug)]
 pub struct Grown {
     pub x0: f64,
@@ -925,7 +930,7 @@ impl Grown {
 }
 impl Default for Grown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:365 squadOf ->, src/game/enemysquads.ts:365)
+/// (TypeScript: inline at src/game/enemysquads.ts:379 squadOf ->, src/game/enemysquads.ts:379)
 #[derive(Clone, Debug)]
 pub struct SquadOf {
     pub def: crate::scene_scenarios::SquadData,
@@ -942,7 +947,7 @@ impl SquadOf {
 }
 impl Default for SquadOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:547 wayRound2(says), src/game/enemysquads.ts:547)
+/// (TypeScript: inline at src/game/enemysquads.ts:554 wayRound2(says), src/game/enemysquads.ts:554)
 #[derive(Clone, Copy, Debug)]
 pub struct WayRound2Says {
     pub limit: Option<f64>,
@@ -1028,7 +1033,7 @@ impl EventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:612 stayKey(room), src/game/enemysquads.ts:612)
+/// (TypeScript: inline at src/game/enemysquads.ts:619 stayKey(room), src/game/enemysquads.ts:619)
 #[derive(Clone, Debug)]
 pub struct StayKeyRoom {
     pub name: String,
@@ -1043,7 +1048,7 @@ impl StayKeyRoom {
 }
 impl Default for StayKeyRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:712 contact(words), src/game/enemysquads.ts:712)
+/// (TypeScript: inline at src/game/enemysquads.ts:719 contact(words), src/game/enemysquads.ts:719)
 #[derive(Clone, Debug)]
 pub struct ContactWords {
     pub say: String,
@@ -1060,7 +1065,7 @@ impl ContactWords {
 }
 impl Default for ContactWords { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:745 movedOn ->, src/game/enemysquads.ts:745)
+/// (TypeScript: inline at src/game/enemysquads.ts:752 movedOn ->, src/game/enemysquads.ts:752)
 #[derive(Clone, Debug)]
 pub struct MovedOn {
     pub at: V3,
@@ -1077,7 +1082,7 @@ impl MovedOn {
 }
 impl Default for MovedOn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:885 radioCheck ->, src/game/enemysquads.ts:885)
+/// (TypeScript: inline at src/game/enemysquads.ts:892 radioCheck ->, src/game/enemysquads.ts:892)
 #[derive(Clone, Debug)]
 pub struct RadioCheck {
     pub at: V3,
@@ -1094,7 +1099,7 @@ impl RadioCheck {
 }
 impl Default for RadioCheck { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:1242 squadCalls ->, src/game/enemysquads.ts:1242)
+/// (TypeScript: inline at src/game/enemysquads.ts:1249 squadCalls ->, src/game/enemysquads.ts:1249)
 #[derive(Clone, Debug)]
 pub struct SquadCallsItem {
     pub squad: String,
@@ -1117,7 +1122,7 @@ impl SquadCallsItem {
 }
 impl Default for SquadCallsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:1265 netSend ->, src/game/enemysquads.ts:1265)
+/// (TypeScript: inline at src/game/enemysquads.ts:1272 netSend ->, src/game/enemysquads.ts:1272)
 #[derive(Clone, Debug)]
 pub struct NetSend {
     pub q: EnemysquadsSquadId,
@@ -1134,7 +1139,7 @@ impl NetSend {
 }
 impl Default for NetSend { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:1535 squadWaysRound ->, src/game/enemysquads.ts:1535)
+/// (TypeScript: inline at src/game/enemysquads.ts:1543 squadWaysRound ->, src/game/enemysquads.ts:1543)
 #[derive(Clone, Debug)]
 pub struct SquadWaysRoundItem {
     pub squad: String,
@@ -1174,11 +1179,11 @@ impl Default for SquadWaysRoundItem { fn default() -> Self { Self::zeroed() } }
 pub struct EnemysquadsMod {
     /// (src/game/enemysquads.ts:281 STATES)
     pub states: Option<crate::enemysquads::State>,
-    /// (src/game/enemysquads.ts:506 CTX)
+    /// (src/game/enemysquads.ts:513 CTX)
     pub ctx: Option<crate::enemysquads::RoundCtx>,
-    /// (src/game/enemysquads.ts:872 BANGS)
+    /// (src/game/enemysquads.ts:879 BANGS)
     pub bangs: JsMap<GuardId, crate::enemysquads::EnemysquadsModBANGSValue>,
-    /// (src/game/enemysquads.ts:1123 GLIMPSED)
+    /// (src/game/enemysquads.ts:1130 GLIMPSED)
     pub glimpsed: JsMap<GuardId, f64>,
 }
 impl EnemysquadsMod {
@@ -1195,32 +1200,32 @@ impl EnemysquadsMod {
 /// (src/game/enemysquads.ts:231 SQUADS_DEFAULTS: a table nothing writes)
 pub fn squads_defaults() -> crate::knobs::SquadsK { crate::knobs::page_squads() }
 
-/// (src/game/enemysquads.ts:606 COUNT: a table nothing writes)
+/// (src/game/enemysquads.ts:613 COUNT: a table nothing writes)
 pub fn count() -> Vec<String> { alloc::vec![String::from("nobody"), String::from("one"), String::from("two"), String::from("three"), String::from("four")] }
 
-/// (src/game/enemysquads.ts:609 NUMBER: a table nothing writes)
+/// (src/game/enemysquads.ts:616 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("Zero"), String::from("One"), String::from("Two"), String::from("Three"), String::from("Four"), String::from("Five"), String::from("Six"), String::from("Seven"), String::from("Eight"), String::from("Nine"), String::from("Ten"), String::from("Eleven"), String::from("Twelve"), String::from("Thirteen"), String::from("Fourteen"), String::from("Fifteen"), String::from("Sixteen")] }
 
-/// (src/game/enemysquads.ts:1033 LOOK_AT_M)
+/// (src/game/enemysquads.ts:1040 LOOK_AT_M)
 pub const LOOK_AT_M: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1033 LOOK_NEAR_M)
+/// (src/game/enemysquads.ts:1040 LOOK_NEAR_M)
 pub const LOOK_NEAR_M: f64 = 2.5;
 
-/// (src/game/enemysquads.ts:1033 LOOK_ROUND_M)
+/// (src/game/enemysquads.ts:1040 LOOK_ROUND_M)
 pub const LOOK_ROUND_M: f64 = 3.5;
 
-/// (src/game/enemysquads.ts:1036 LOOK_SECS)
+/// (src/game/enemysquads.ts:1043 LOOK_SECS)
 pub const LOOK_SECS: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1186 NET_OUT_SECS)
+/// (src/game/enemysquads.ts:1193 NET_OUT_SECS)
 pub const NET_OUT_SECS: f64 = 90.0;
 
-/// (src/game/enemysquads.ts:1188 HUNG_SECS)
+/// (src/game/enemysquads.ts:1195 HUNG_SECS)
 pub const HUNG_SECS: f64 = 10.0;
 
-/// (src/game/enemysquads.ts:1257 NET_BREATH)
+/// (src/game/enemysquads.ts:1264 NET_BREATH)
 pub const NET_BREATH: f64 = 1.2;
 
-/// (src/game/enemysquads.ts:1285 NET_TRIES)
+/// (src/game/enemysquads.ts:1292 NET_TRIES)
 pub const NET_TRIES: f64 = 2.0;

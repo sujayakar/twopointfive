@@ -125,7 +125,7 @@ impl MathExactMod {
 }
 
 /// (src/math/exact.ts:308 SYS: a table nothing writes)
-pub fn sys() -> crate::math_exact::SYS { todo!() }
+pub fn sys() -> crate::math_exact::SYS { crate::math_exact::SYS { sin: crate::FnField, cos: crate::FnField, tan: crate::FnField, asin: crate::FnField, acos: crate::FnField, atan: crate::FnField, atan2: crate::FnField, exp: crate::FnField, log: crate::FnField, log2: crate::FnField, log10: crate::FnField, pow: crate::FnField, tanh: crate::FnField, hypot: crate::FnField } }
 
 /// (src/math/exact.ts:309 OWN: a table nothing writes)
-pub fn own() -> crate::math_exact::SYS { todo!() }
+pub fn own() -> crate::math_exact::SYS { crate::math_exact::SYS { sin: crate::FnField, cos: crate::FnField, tan: crate::FnField, asin: crate::FnField, acos: crate::FnField, atan: crate::FnField, atan2: crate::FnField, exp: crate::FnField, log: crate::FnField, log2: crate::FnField, log10: crate::FnField, pow: crate::FnField, tanh: crate::FnField, hypot: crate::FnField } }

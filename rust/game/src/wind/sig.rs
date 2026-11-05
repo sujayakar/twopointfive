@@ -5,9 +5,6 @@ use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
 
-/// (src/game/wind.ts:52 loadWind)
-pub fn load_wind(g: &mut crate::game::Game, tune: &mut crate::wind::WindTune) { todo!() }
-
 /// (src/game/wind.ts:60 saveWind)
 pub fn save_wind(g: &mut crate::game::Game) { todo!() }
 
@@ -57,7 +54,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind { todo!() }
 pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId { todo!() }
 
 /// (src/game/wind.ts:185 Wind.reroof)
-pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: Option<bool>) { todo!() }
+pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) { todo!() }
 
 /// (src/game/wind.ts:211 Wind.syncField)
 pub fn wind_sync_field(g: &mut crate::game::Game) { todo!() }

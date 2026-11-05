@@ -13,10 +13,8 @@ fn row(g: &mut Game, def: WeaponId) -> &WeaponDef { g.m.weapons.weapons.get(def)
 /// `g.audio.play(sfx, at, vol)`: no options
 fn play(g: &mut Game, sfx: &str, at: V3, vol: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), None) }
 
-// ---- seam: what skeleton 3 cannot give yet (see notes.md, ## Skeleton) ----
-
-/// `g.audio.play(sfx, at, vol, { rate })`: the opts of `game_audio_like_play` are a map of `Opaque`, which cannot hold a number (player.ts reloadInHand's callbacks)
-fn seam_audio_play_rate(g: &mut Game, sfx: &str, at: V3, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to hold a rate") }
+/// `g.audio.play(sfx, at, vol, { rate })` (player.ts reloadInHand's rifle callbacks)
+fn play_rate(g: &mut Game, sfx: &str, at: V3, vol: f64, rate: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate })) }
 
 // ---- what a reload tells its owner: the two callers' callbacks (player.ts reloadInHand) ----
 
@@ -39,7 +37,7 @@ fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
             let own = feed.as_ref().map_or(false, |f| f.cues.is_some());
             if !own {
                 let p = g.ch[ch].pos;
-                seam_audio_play_rate(g, "magOut", p, 0.75, 0.85);
+                play_rate(g, "magOut", p, 0.75, 0.85);
             }
             let def = g.fa[id].def;
             // (`fp?.drop !== null`: no plan at all is not null; a plan whose drop is null drops nothing)
@@ -76,7 +74,7 @@ fn ev_mag_in(g: &mut Game, id: FirearmId) {
         ReloadEvents::Rifle { ch, feed } => {
             if !feed.as_ref().map_or(false, |f| f.cues.is_some()) {
                 let p = g.ch[ch].pos;
-                seam_audio_play_rate(g, "magIn", p, 0.85, 0.85);
+                play_rate(g, "magIn", p, 0.85, 0.85);
             }
         }
     }
@@ -93,7 +91,7 @@ fn ev_rack(g: &mut Game, id: FirearmId) {
         ReloadEvents::Rifle { ch, feed } => {
             if !feed.as_ref().map_or(false, |f| f.cues.is_some()) {
                 let p = g.ch[ch].pos;
-                seam_audio_play_rate(g, "rack", p, 0.85, 0.8);
+                play_rate(g, "rack", p, 0.85, 0.8);
             }
         }
     }
@@ -436,10 +434,10 @@ pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) {
     }
 }
 
-// ---- Pistol and Rifle: rows of g.fa. Their stubs have no `g` and no ID: these bodies wait behind them (notes.md, ## Skeleton) ----
+// ---- Pistol and Rifle: rows of g.fa ----
 
 /// Sam's sidearm: the Five-seveN row unless a card picks another (weapons.ts Pistol.constructor)
-fn pistol_new_in(g: &mut Game, def: Option<&WeaponDef>) -> FirearmId {
+pub fn pistol_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponDef>) -> FirearmId {
     let id = match def {
         Some(d) => firearm_new(g, d),
         None => { let d = row(g, WeaponId::Fiveseven).clone(); firearm_new(g, &d) }
@@ -449,7 +447,7 @@ fn pistol_new_in(g: &mut Game, def: Option<&WeaponDef>) -> FirearmId {
 }
 
 /// Sam's FN2000 row, its loads from the launcher's tables; nothing under a barrel with pellets or `launcher: false` (weapons.ts Rifle.constructor)
-fn rifle_new_in(g: &mut Game, def: Option<&WeaponDef>) -> FirearmId {
+pub fn rifle_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponDef>) -> FirearmId {
     let fn2000;
     let def = match def {
         Some(d) => d,
@@ -475,13 +473,13 @@ fn rifle_new_in(g: &mut Game, def: Option<&WeaponDef>) -> FirearmId {
 }
 
 /// the attachment the right button fires now (weapons.ts Rifle.attachment)
-fn rifle_attachment_of(g: &mut Game, id: FirearmId) -> Option<RifleAttachment> {
+pub fn rifle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> {
     let fa = &g.fa[id];
     if fa.att_idx >= 0 { fa.attachments.get(fa.att_idx as usize).copied() } else { None }
 }
 
 /// rounds left of an attachment (weapons.ts Rifle.left)
-fn rifle_left_of(g: &mut Game, id: FirearmId, a: RifleAttachment) -> f64 {
+pub fn rifle_left(g: &mut crate::game::Game, id: FirearmId, a: crate::weapons::RifleAttachment) -> f64 {
     let fa = &g.fa[id];
     match a {
         RifleAttachment::Ring => fa.rings,
@@ -491,27 +489,12 @@ fn rifle_left_of(g: &mut Game, id: FirearmId, a: RifleAttachment) -> f64 {
 }
 
 /// the next attachment goes on the right button, the last back to the first (weapons.ts Rifle.cycleAttachment)
-fn rifle_cycle_attachment_of(g: &mut Game, id: FirearmId) -> Option<RifleAttachment> {
+pub fn rifle_cycle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> {
     let fa = &mut g.fa[id];
     let n = fa.attachments.len() as i32;
     fa.att_idx = if n != 0 { (fa.att_idx + 1) % n } else { -1 };
-    rifle_attachment_of(g, id)
+    rifle_attachment(g, id)
 }
-
-/// (weapons.ts Pistol.constructor)
-pub fn pistol_new(def: Option<&crate::weapons::WeaponDef>) -> crate::Opaque { todo!("needs: g and a FirearmId return: pistol_new_in has the body") }
-
-/// (weapons.ts Rifle.constructor)
-pub fn rifle_new(def: Option<&crate::weapons::WeaponDef>) -> crate::Opaque { todo!("needs: g and a FirearmId return: rifle_new_in has the body") }
-
-/// (weapons.ts Rifle.attachment)
-pub fn rifle_attachment() -> Option<crate::weapons::RifleAttachment> { todo!("needs: g and the FirearmId: rifle_attachment_of has the body") }
-
-/// (weapons.ts Rifle.left)
-pub fn rifle_left(a: crate::weapons::RifleAttachment) -> f64 { todo!("needs: g and the FirearmId: rifle_left_of has the body") }
-
-/// (weapons.ts Rifle.cycleAttachment)
-pub fn rifle_cycle_attachment() -> Option<crate::weapons::RifleAttachment> { todo!("needs: g and the FirearmId: rifle_cycle_attachment_of has the body") }
 
 // ---- Ocp ----
 
@@ -548,7 +531,7 @@ mod tests {
     #[test]
     fn a_new_gun_is_loaded_its_rows_way() {
         let mut g = Game::blank();
-        let p = pistol_new_in(&mut g, None);
+        let p = pistol_new(&mut g, None);
         assert_eq!(st(&g, p), (1.0, Some(15.0), vec![15.0, 15.0, 15.0], -1.0, 0.0, false, false, false));
         assert_eq!(firearm_spent(&mut g, p), 0.0);
         assert_eq!(g.fa[p].kind, GunKind::Pistol);
@@ -557,22 +540,22 @@ mod tests {
         assert_eq!(st(&g, gd), (1.0, Some(11.0), vec![], -1.0, 0.0, false, false, false));
         assert!(firearm_bottomless(&mut g, gd));
         assert_eq!(firearm_spent(&mut g, gd), 0.0);
-        let r = rifle_new_in(&mut g, None);
+        let r = rifle_new(&mut g, None);
         assert_eq!(st(&g, r), (1.0, Some(30.0), vec![30.0, 30.0], -1.0, 0.0, false, false, false));
-        assert_eq!(rifle_attachment_of(&mut g, r), Some(RifleAttachment::Ring));
+        assert_eq!(rifle_attachment(&mut g, r), Some(RifleAttachment::Ring));
         assert_eq!((g.fa[r].rings, g.fa[r].shells, g.fa[r].cams, g.fa[r].att_idx), (5.0, 3.0, 0.0, 0));
         let d = the_row(&mut g, WeaponId::M870);
-        let s = rifle_new_in(&mut g, Some(&d));
+        let s = rifle_new(&mut g, Some(&d));
         assert_eq!(st(&g, s), (1.0, Some(6.0), vec![6.0, 6.0, 6.0], -1.0, 0.0, false, false, false));
-        assert_eq!(rifle_attachment_of(&mut g, s), None);
+        assert_eq!(rifle_attachment(&mut g, s), None);
         assert_eq!((g.fa[s].rings, g.fa[s].shells, g.fa[s].att_idx), (0.0, 0.0, -1));
-        assert_eq!(rifle_cycle_attachment_of(&mut g, s), None);
+        assert_eq!(rifle_cycle_attachment(&mut g, s), None);
     }
 
     #[test]
     fn the_staged_reload_keeps_its_beats() {
         let mut g = Game::blank();
-        let p = pistol_new_in(&mut g, None);
+        let p = pistol_new(&mut g, None);
         for _ in 0..3 { assert!(firearm_fire(&mut g, p)); }
         assert_eq!(g.fa[p].mag, Some(12.0));
         assert_eq!(g.fa[p].shots_fired, 3.0);
@@ -599,7 +582,7 @@ mod tests {
     #[test]
     fn the_last_magazine_goes_back_in_and_is_racked() {
         let mut g = Game::blank();
-        let q = pistol_new_in(&mut g, None);
+        let q = pistol_new(&mut g, None);
         g.fa[q].spare.clear();
         assert!(!firearm_start_reload(&mut g, q, None, None, None, None));
         g.fa[q].mag = Some(4.0);
@@ -627,11 +610,11 @@ mod tests {
     fn a_tube_gun_takes_a_shell_at_a_time() {
         let mut g = Game::blank();
         let d = the_row(&mut g, WeaponId::M870);
-        let s = rifle_new_in(&mut g, Some(&d));
+        let s = rifle_new(&mut g, Some(&d));
         g.fa[s].chamber = 0.0;
         g.fa[s].mag = Some(0.0);
         g.fa[s].spare = vec![2.0, 1.0];
-        let beat = WeaponDefReload { dur: 1.0, out: None, in_: None, rack: Some(0.9), shell: None };
+        let beat = WeaponDefReload { dur: 1.0, out: None, in_: None, rack: Some(0.9), shell: None, exact: None };
         let shells = FirearmStartReloadShells { times: vec![0.2, 0.5, 0.7], port: true };
         assert!(firearm_start_reload(&mut g, s, None, Some(beat), None, Some(&shells)));
         assert_eq!(st(&g, s), (0.0, Some(0.0), vec![2.0, 1.0], 0.0, 3.0, true, false, true));
@@ -646,10 +629,10 @@ mod tests {
         firearm_update(&mut g, s, 0.2);
         assert_eq!(st(&g, s), (1.0, Some(2.0), vec![], -1.0, 3.0, true, false, false));
 
-        let t = rifle_new_in(&mut g, Some(&d));
+        let t = rifle_new(&mut g, Some(&d));
         g.fa[t].chamber = 0.0;
         g.fa[t].mag = Some(0.0);
-        firearm_plan_feed(&mut g, t, WeaponDefReload { dur: 1.0, out: None, in_: None, rack: None, shell: None }, &[0.1, 0.3], true);
+        firearm_plan_feed(&mut g, t, WeaponDefReload { dur: 1.0, out: None, in_: None, rack: None, shell: None, exact: None }, &[0.1, 0.3], true);
         firearm_feed_to(&mut g, t, 0.35, None);
         assert_eq!(st(&g, t), (1.0, Some(1.0), vec![6.0, 6.0, 6.0], -1.0, 2.0, true, false, true));
         assert_eq!(firearm_reload_row(&mut g, t).dur, 1.0);
@@ -660,7 +643,7 @@ mod tests {
     #[test]
     fn the_selector_and_the_string() {
         let mut g = Game::blank();
-        let r = rifle_new_in(&mut g, None);
+        let r = rifle_new(&mut g, None);
         assert!(!firearm_automatic(&mut g, r));
         assert_eq!(firearm_cycle_mode(&mut g, r), FireMode::Auto);
         assert!(firearm_automatic(&mut g, r));
@@ -672,9 +655,9 @@ mod tests {
         assert_eq!(g.fa[r].auto_idx, 2.0);
         firearm_auto_idle(&mut g, r, 100.0, false);
         assert_eq!(g.fa[r].auto_idx, 0.0);
-        assert_eq!(rifle_cycle_attachment_of(&mut g, r), Some(RifleAttachment::He40));
-        assert_eq!(rifle_left_of(&mut g, r, RifleAttachment::He40), 3.0);
-        assert_eq!(rifle_cycle_attachment_of(&mut g, r), Some(RifleAttachment::Ring));
+        assert_eq!(rifle_cycle_attachment(&mut g, r), Some(RifleAttachment::He40));
+        assert_eq!(rifle_left(&mut g, r, RifleAttachment::He40), 3.0);
+        assert_eq!(rifle_cycle_attachment(&mut g, r), Some(RifleAttachment::Ring));
     }
 
     #[test]

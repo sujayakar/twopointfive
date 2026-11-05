@@ -49,6 +49,8 @@ pub struct FogFrame {
     pub thin_bits: Vec<u32>,
     pub thin_serial: f64,
     pub thin_count: f64,
+    pub sight: bool,
+    pub pass: crate::render_fogofwar::FogPassMode,
 }
 impl FogFrame {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -82,6 +84,8 @@ impl FogFrame {
             thin_bits: Vec::new(),
             thin_serial: 0.0,
             thin_count: 0.0,
+            sight: false,
+            pass: crate::render_fogofwar::FogPassMode::Hint,
         }
     }
 }

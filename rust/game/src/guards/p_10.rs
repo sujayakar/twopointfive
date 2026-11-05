@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 3293 to 3631
+//! src/game/guards.ts lines 3305 to 3586
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,54 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Seconds a follower who has lost sight of his leader still trails his true position.   (guards.ts PARTNER_TRUST_SECS)
-const PARTNER_TRUST_SECS: f64 = 3.0;
-/// The character budget a caller gets without asking for more, Sam included.   (guards.ts MAX_CHARACTERS)
-const MAX_CHARACTERS: f64 = 8.0;
-/// Ids handed to units: clear of Sam's 1 and the staff's 10..15, inside the owner byte.   (guards.ts UNIT_ID0, UNIT_ID1)
-const UNIT_ID0: f64 = 20.0;
-const UNIT_ID1: f64 = 250.0;
-
-/// A side's jacket.   (guards.ts TEAM_TINT)
-fn team_tint(t: crate::teams::Team) -> V3 {
-    match t {
-        crate::teams::Team::Guard => [0.42, 0.36, 0.25],
-        crate::teams::Team::Operative => [0.07, 0.09, 0.1],
-        crate::teams::Team::Hostile => [0.36, 0.33, 0.24],
-        crate::teams::Team::Player => [0.05, 0.06, 0.07],
-        crate::teams::Team::Civilian => [0.75, 0.62, 0.08],
-    }
-}
-/// A side's trousers.   (guards.ts TEAM_TINT2)
-fn team_tint2(t: crate::teams::Team) -> V3 {
-    match t {
-        crate::teams::Team::Guard => [0.02, 0.02, 0.025],
-        crate::teams::Team::Operative => [0.05, 0.07, 0.06],
-        crate::teams::Team::Hostile => [0.09, 0.08, 0.05],
-        crate::teams::Team::Player => [0.1, 0.32, 0.18],
-        crate::teams::Team::Civilian => [0.05, 0.06, 0.1],
-    }
-}
-
-// The skeleton's gaps, one seam each (notes.md, ## Skeleton).
-/// `g.audio.play(name, pos, gain, { rate })`: the call is real; `opts` holds no numbers yet, so the rate does not reach the host (notes.md, ## Play).
-fn seam_audio_play(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), None);
-}
-fn seam_man_leaves(g: &mut Game, ch: CharId, gd: GuardId) { todo!("needs: ManCols of a body and a man for man_leaves") }
-
-/// `g.engine.lights.add(l)`: the stub takes `g` and the set that lives in `g`, so the set is lent out for the call and put back.   (guards.ts spawnUnit)
-fn lights_add(g: &mut Game, l: LightId) -> LightId {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    let fl = crate::render_lights::light_set_add(g, &mut set, l);
-    g.engine.lights = set;
-    fl
-}
-/// `g.engine.lights.remove(l)`, lent the same way.   (guards.ts releaseUnit)
-fn lights_remove(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_remove(g, &mut set, l);
-    g.engine.lights = set;
+/// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves; no goal, so it is not the standoff's point either.
+fn drop_plan(d: &mut crate::game::Guard) {
+    d.path = Vec::new();
+    d.path_serial = d.path_serial.wrapping_add(1);
+    d.path_goal = None;
+    d.path_goal_orbit = false;
 }
 
 /// One more round for a side.   (guards.ts tickEngagement)
@@ -71,100 +29,6 @@ fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
 /// The record's copy of the rounds: a side that fired none stays absent.   (guards.ts endEngagement)
 fn rounds_copy(r: &crate::guards::EngagementRounds) -> crate::guards::EngageResultRounds {
     crate::guards::EngageResultRounds { guard: r.guard, operative: r.operative, hostile: r.hostile, player: r.player, civilian: r.civilian }
-}
-
-/// One level down: lockdown to a shorter heightened spell, then calm.   (guards.ts stepDownEscalation)
-pub fn step_down_escalation(g: &mut crate::game::Game) {
-    let lvl: f64 = if g.escalation >= 2.0 { 1.0 } else { 0.0 };
-    g.escalation = lvl;
-    g.escalation_t = if lvl >= 1.0 { g.time + crate::guards::STEPDOWN_SECS } else { -1.0 };
-    crate::chronicle::chron_alarm(g, lvl, false, Some("time"));
-    if lvl < 2.0 { clear_lockdown(g); g.cleared_at.clear(); }
-    if lvl == 0.0 { g.alarm.placed = false; }
-    let at = if g.alarm.placed { Some(g.alarm.pos) } else { None };
-    let sp = spokesman(g, at, None);
-    if let Some(sp) = sp {
-        crate::game::game_say(g, sp, if lvl >= 1.0 { "ease off — singles, back on your routes; weapons stay out" } else { "stand down, back to normal" }, Some(true), None, None);
-        let c = g.gd[sp].ch;
-        let pos = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => g.ch[c].pos };
-        seam_audio_play(g, "radio", pos, 0.6, 0.95);
-    }
-}
-
-/// Once a frame after the guards: the alarm episode, stepping down, the lockdown duties.   (guards.ts updateEscalation)
-pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
-    update_rollcall(g, dt);
-    crate::dialogue::update_ambient(g, dt);
-    tick_engagement(g);
-    if g.quiet_utility { return; }
-    let (mut any_alert, mut hunting, mut living) = (false, false, 0.0_f64);
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].team != crate::teams::Team::Guard { continue; }
-        living += 1.0;
-        if g.gd[gd].state == crate::game::GuardState::Alert {
-            any_alert = true;
-            hunting = true;
-            if let Some(lk) = g.gd[gd].last_known { g.alarm.pos[0] = lk[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = lk[2]; g.alarm.placed = true; }
-        } else if g.gd[gd].state == crate::game::GuardState::Search { hunting = true; }
-    }
-    if any_alert {
-        if g.ai_enabled { g.alarm.episode = true; }
-    } else if g.alarm.episode && !hunting {
-        g.alarm.episode = false;
-        if living > 0.0 && !g.pl[g.player].down && g.ai_enabled {
-            let to = if g.escalation >= 1.0 { 2.0 } else { 1.0 };
-            raise_escalation(g, to, None, None, None);
-        }
-    }
-    if g.escalation > 0.0 && !g.alarm.episode && !hunting && !still_looking(g) && g.time >= g.escalation_t { step_down_escalation(g); }
-    if g.escalation >= 2.0 { supervise_lockdown(g, dt, living); }
-    if g.clearing.is_some() && !crate::squad::clearing_tick(g, dt) { g.clearing = None; }
-}
-
-/// A man the floor knows is dead.   (guards.ts superviseLockdown knownDead)
-fn known_dead(g: &mut Game, x: GuardId) -> bool {
-    g.gd[x].state == crate::game::GuardState::Dead && (g.gd[x].found || g.alarm.episode || g.gd[x].missed_at >= 0.0)
-}
-
-/// Keep the lockdown duties dealt, as far as the men know.   (guards.ts superviseLockdown)
-pub fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) {
-    let (mut follower, mut postman): (Option<GuardId>, Option<GuardId>) = (None, None);
-    let mut standing = 0_i32;
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        if g.gd[gd].team != crate::teams::Team::Guard || g.gd[gd].unit.is_some() { continue; }
-        if g.gd[gd].held.is_some() {
-            if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { g.gd[gd].leader = None; g.gd[gd].post = None; }
-            continue;
-        }
-        if known_dead(g, gd) { continue; }
-        standing += 1;
-        if g.gd[gd].leader.is_some() { follower = Some(gd); }
-        if g.gd[gd].post.is_some() { postman = Some(gd); }
-    }
-    let posts = g.level.chokepoints.as_ref().map_or(0, |c| c.len()) > 0;
-    let mut redo = if standing >= 2 {
-        follower.is_none()
-            || known_dead(g, g.gd[follower.unwrap()].leader.unwrap())
-            || (standing >= 3 && living >= 3.0 && posts && postman.is_none())
-    } else {
-        follower.is_some() || postman.is_some()
-    };
-    if let Some(fo) = follower {
-        if !redo && g.gd[fo].state != crate::game::GuardState::Dead {
-            let l = g.gd[fo].leader.unwrap();
-            let calm = g.gd[fo].state == crate::game::GuardState::Patrol && g.gd[l].state == crate::game::GuardState::Patrol;
-            let (fc, lc) = (g.gd[fo].ch, g.gd[l].ch);
-            g.alarm.apart_t = if calm && v3::dist(g.ch[fc].pos, g.ch[lc].pos) > 8.0 { g.alarm.apart_t + dt } else { 0.0 };
-            if g.alarm.apart_t > 5.0 { redo = true; }
-        }
-    }
-    if redo && living >= 1.0 { assign_lockdown(g, true, None); }
 }
 
 /// The same chokepoint: the TypeScript's `===` of two rows of the level's list; a man's post is a copy here.   (guards.ts assignLockdown)
@@ -220,8 +84,7 @@ pub fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: Option<G
         f.leader = Some(lead);
         f.follow_t = 0.0;
         f.leader_still_t = 0.0;
-        f.path = Vec::new();
-        f.path_goal = None;
+        drop_plan(f);
         f.leader_seen_t = now;
         f.leader_seen_pos = v3::copy(lead_pos);
     }
@@ -249,8 +112,7 @@ pub fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: Option<G
                 let t = &mut g.gd[third];
                 t.post = Some(best.clone());
                 t.follow_t = 0.0;
-                t.path = Vec::new();
-                t.path_goal = None;
+                drop_plan(t);
             }
             if (old_post.as_ref().map_or(true, |o| !same_post(o, &best)) || Some(third) != old_post_man)
                 && Some(third) != except
@@ -268,7 +130,7 @@ pub fn clear_lockdown(g: &mut crate::game::Game) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; }
+        if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { drop_plan(&mut g.gd[gd]); }
         g.gd[gd].leader = None;
         g.gd[gd].post = None;
     }
@@ -276,7 +138,8 @@ pub fn clear_lockdown(g: &mut crate::game::Game) {
 
 /// How long a man's route is, round the loop.   (guards.ts routeLength)
 pub fn route_length(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    let Some(&r) = g.level.routes.get(g.gd[gd].route_i) else { return 0.0; };
+    let Ok(ri) = usize::try_from(g.gd[gd].route_i) else { return 0.0; };   // (a unit's is -1)
+    let Some(&r) = g.level.routes.get(ri) else { return 0.0; };
     let pts = &g.tab.route[r].points;
     let mut s = 0.0;
     for i in 0..pts.len() { s += v3::dist(pts[i], pts[(i + 1) % pts.len()]); }
@@ -424,7 +287,7 @@ pub fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Option<bool>
             let now = g.time;
             crate::doors::door_set_noticed_t(g, d, now);
             let at = crate::doors::door_pos(g, d);
-            seam_audio_play(g, "lockOpen", at, 0.6, 0.85);
+            crate::audio_iface::game_audio_like_play(g, "lockOpen", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
         }
         break;
     }
@@ -455,30 +318,29 @@ pub fn tension(g: &mut crate::game::Game, theirs: Option<bool>) -> f64 {
     x
 }
 
-/// Stand an AI man of a side, held on a one-point route of his own. A spent budget is a panic: the TypeScript's throw.   (guards.ts spawnUnit)
-pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> GuardId {
-    if !g.tune.teams { panic!("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned"); }
-    if o.team == crate::teams::Team::Player { panic!("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side"); }
-    if o.team == crate::teams::Team::Civilian { panic!("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)"); }
+/// Stand an AI man of a side, held on a one-point route of his own. The TypeScript's throw is the Err: qrf.ts catches it.   (guards.ts spawnUnit)
+pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> {
+    if !g.tune.teams { return Err(String::from("spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned")); }
+    if o.team == crate::teams::Team::Player { return Err(String::from("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side")); }
+    if o.team == crate::teams::Team::Civilian { return Err(String::from("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)")); }
     let chars = 1.0 + g.guards.len() as f64;
     let cap = m::max(MAX_CHARACTERS, m::min(o.budget.unwrap_or(0.0), crate::guards::MAX_SKINNED));
     if chars + 1.0 > cap {
         if cap > MAX_CHARACTERS {
-            panic!("spawnUnit: {} characters already stand (the player + {} guards/units) and this caller's budget is {} — despawn a unit or reset the guards first", chars, g.guards.len(), cap);
+            return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and this caller's budget is {} — despawn a unit or reset the guards first", chars, g.guards.len(), cap));
         }
-        panic!("spawnUnit: {} characters already stand (the player + {} guards/units) and the shadow-capsule budget is {} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first", chars, g.guards.len(), MAX_CHARACTERS);
+        return Err(format!("spawnUnit: {} characters already stand (the player + {} guards/units) and the shadow-capsule budget is {} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first", chars, g.guards.len(), MAX_CHARACTERS));
     }
     let steady = g.engine.lights.lights.iter().filter(|&&l| g.tab.light[l].ttl < 0.0).count() as f64;
     if steady + 1.0 > crate::render_lights::MAX_LIGHTS {
-        panic!("spawnUnit: {} steady lights already exist and the light buffer holds {} (render/lights.ts) — his weapon light would never upload; despawn a unit first", steady, crate::render_lights::MAX_LIGHTS);
+        return Err(format!("spawnUnit: {} steady lights already exist and the light buffer holds {} (render/lights.ts) — his weapon light would never upload; despawn a unit first", steady, crate::render_lights::MAX_LIGHTS));
     }
-    let mg = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
     let mut used: Vec<f64> = Vec::new();
-    for pl in crate::seats::men(g, &mg) { let c = g.pl[pl].ch; used.push(g.ch[c].id); }
+    for pl in crate::seats::men(g) { let c = g.pl[pl].ch; used.push(g.ch[c].id); }
     for &x in g.guards.iter() { let c = g.gd[x].ch; used.push(g.ch[c].id); }
     let mut id = UNIT_ID0;
     while used.contains(&id) && id <= UNIT_ID1 { id += 1.0; }
-    if id > UNIT_ID1 { panic!("spawnUnit: no character id left in {}‥{} (the owner byte) — despawn units first", UNIT_ID0, UNIT_ID1); }
+    if id > UNIT_ID1 { return Err(format!("spawnUnit: no character id left in {}‥{} (the owner byte) — despawn units first", UNIT_ID0, UNIT_ID1)); }
     g.m.guards.unit_serial += 1.0;
     let n = g.m.guards.unit_serial;
     let name: String = match &o.name { Some(s) => s.clone(), None => format!("{}-{}", o.team.as_str(), n) };
@@ -502,16 +364,16 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Gua
         keys: Some(Vec::new()),
     });
     let def = crate::rig_props::torch_light_def(&format!("unitlight{}", id), id, g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-    let fl = lights_add(g, def);
+    let fl = crate::render_lights::light_set_add(g, def);
     let look = crate::game::GuardNewLook {
-        tint2: Some(match o.tint2 { Some(t) => t, None => team_tint2(o.team) }),
+        tint2: Some(match o.tint2 { Some(t) => t, None => *crate::guards::team_tint2().get(String::from(o.team.as_str())).unwrap() }),
         yaw: Some(o.yaw.unwrap_or(0.0)),
         name: Some(name.clone()),
         team: Some(o.team),
     };
-    let rig = g.rig;
-    let tint = match o.tint { Some(t) => t, None => team_tint(o.team) };
-    let gd = crate::game::guard_new(g, crate::Opaque, rig, id, route, -1.0, fl, tint, Some(&look));
+    let (men, rig) = (g.men, g.rig);
+    let tint = match o.tint { Some(t) => t, None => *crate::guards::team_tint().get(String::from(o.team.as_str())).unwrap() };
+    let gd = crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look));
     let now = g.time;
     g.gd[gd].unit = Some(crate::game::UnitInfo { name, spawned_at: now, light: o.light != Some(false), pair: o.pair, seat: None });
     g.gd[gd].hold = true;
@@ -519,13 +381,13 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Gua
     let c = g.gd[gd].ch;
     crate::character::character_update(g, c, 0.0);
     g.guards.push(gd);
-    gd
+    Ok(gd)
 }
 
 /// What of a unit lives outside his row: his weapon light, his meter keys.   (guards.ts releaseUnit)
 pub fn release_unit(g: &mut crate::game::Game, gd: GuardId) {
     let fl = g.gd[gd].flashlight;
-    lights_remove(g, fl);
+    crate::render_lights::light_set_remove(g, fl);
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
     crate::game::game_light_forget(g, &format!("unitC{}", id));
@@ -557,8 +419,6 @@ pub fn despawn_unit(g: &mut crate::game::Game, gd: GuardId) -> bool {
         if g.gd[o].leader == Some(gd) { g.gd[o].leader = None; }
         if matches!(&g.gd[o].task, Some(crate::game::GuardTask::CheckOn(t)) if t.who == gd) { g.gd[o].task = None; }
     }
-    let c = g.gd[gd].ch;
-    seam_man_leaves(g, c, gd);
     true
 }
 
@@ -579,81 +439,6 @@ pub fn engagement_of(g: &mut crate::game::Game) -> Option<crate::guards::Engagem
     g.m.guards.engagements.clone()
 }
 
-/// Arm one man for the fight against `foes`.   (guards.ts armForFight)
-pub fn arm_for_fight(g: &mut crate::game::Game, gd: GuardId, foes: &[GuardId], pin: bool, delay: Option<f64>) {
-    let delay = delay.unwrap_or(0.0);
-    if g.gd[gd].state == crate::game::GuardState::Dead { return; }
-    if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
-    {
-        let m_ = &mut g.gd[gd];
-        m_.hold = false;
-        m_.pinned = pin;
-        m_.state = crate::game::GuardState::Alert;
-        m_.awareness = 1.0;
-        m_.search_t = 0.0;
-        m_.body_duty = None;
-        m_.search_plan = None;
-        m_.standoff = None;
-    }
-    let r = crate::math_dice::sim_random(g);
-    g.gd[gd].react_t = 0.15 + r * 0.35 + delay;
-    let r = crate::math_dice::sim_random(g);
-    g.gd[gd].fire_cd = 0.4 + r * 0.4;
-    g.gd[gd].reload_t = -1.0;
-    reset_chase(g, gd);
-    g.gd[gd].witness.alerted_by = Some(crate::game::WitnessAlertedBy::Radio);
-    g.gd[gd].witness.alert_t = g.time;
-    let (mut best, mut best_rate, mut seen): (Option<GuardId>, f64, bool) = (None, -1.0, false);
-    for &f in foes {
-        let fc = g.gd[f].ch;
-        if g.gd[f].state == crate::game::GuardState::Dead || !g.ch[fc].alive { continue; }
-        let vis = can_see_char(g, gd, fc, false);
-        let rate = if vis.visible {
-            1.0 + sight_gain_on(g, gd, f, vis.dist)
-        } else {
-            let mc = g.gd[gd].ch;
-            1.0 / (1.0 + v3::dist_xz(g.ch[mc].pos, g.ch[fc].pos))
-        };
-        if rate > best_rate { best_rate = rate; best = Some(f); seen = vis.visible; }
-    }
-    g.gd[gd].foe = best.map(crate::game::Foe::Guard);
-    crate::aim::aim_state_clear(&mut g.gd[gd].aim);
-    if let Some(b) = best {
-        let bc = g.gd[b].ch;
-        let bp = g.ch[bc].pos;
-        let now = g.time;
-        let m_ = &mut g.gd[gd];
-        m_.last_known = Some(v3::copy(bp));
-        if seen { m_.last_seen_t = now; m_.sight_pos = v3::copy(bp); m_.sight_t = now; m_.led_t = now; }
-    }
-}
-
-/// Put both groups in the fight now. The answer is a copy: `engagement_of` to see it move.   (guards.ts engage)
-pub fn engage(g: &mut crate::game::Game, operatives: &[GuardId], hostiles: &[GuardId], opts: Option<crate::guards::EngageOpts>) -> crate::guards::Engagement {
-    let opts = opts.unwrap_or_default();
-    end_engagement(g, crate::guards::EndEngagementOutcome::Superseded);
-    let pin = opts.pin.unwrap_or(false);
-    for &gd in operatives { arm_for_fight(g, gd, hostiles, pin, None); }
-    for &gd in hostiles { arm_for_fight(g, gd, operatives, pin, Some(m::max(0.0, opts.surprise.unwrap_or(0.0)))); }
-    let mut alive: JsSet<GuardId> = JsSet::new();
-    for &x in operatives.iter().chain(hostiles.iter()) {
-        if g.gd[x].state != crate::game::GuardState::Dead { alive.add(x); }
-    }
-    let e = crate::guards::Engagement {
-        operatives: operatives.to_vec(),
-        hostiles: hostiles.to_vec(),
-        t0: g.time,
-        timeout: opts.timeout.unwrap_or(45.0),
-        done: false,
-        result: None,
-        kills: Vec::new(),
-        rounds: crate::guards::EngagementRounds::zeroed(),
-        alive,
-    };
-    g.m.guards.engagements = Some(e.clone());
-    e
-}
-
 /// Name of the character with this id, for the record.   (guards.ts nameOfId)
 pub fn name_of_id(g: &mut crate::game::Game, id_2: f64) -> String {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) { return crate::seats::player_name(g, pl); }
@@ -668,7 +453,7 @@ pub fn name_of_id(g: &mut crate::game::Game, id_2: f64) -> String {
 fn living_count(g: &mut Game, xs: &[GuardId]) -> f64 {
     let mut n = 0.0;
     for &x in xs {
-        if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !crate::runner::runner_fled(g, x) { n += 1.0; }
+        if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !g.gd[x].fled { n += 1.0; }
     }
     n
 }
@@ -701,7 +486,7 @@ pub fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::EndEnga
 /// Is anybody of this list still in the fight?   (guards.ts tickEngagement living)
 fn living_any(g: &mut Game, xs: &[GuardId]) -> bool {
     for &x in xs {
-        if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !crate::runner::runner_fled(g, x) { return true; }
+        if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !g.gd[x].fled { return true; }
     }
     false
 }

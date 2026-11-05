@@ -98,35 +98,12 @@ pub fn wand_summary(g: &mut crate::game::Game) -> String {
     let carried = if g.pl[pl].wand { "carried" } else { "not carried" };
     let under = match g.pl[pl].wanding {
         Some(w) => {
-            let state = if w.live { alloc::format!("live, {}°", to_fixed(w.pan * 180.0 / m::PI, 0)) } else { alloc::format!("feeding {} s", to_fixed(w.t, 1)) };
+            let state = if w.live { alloc::format!("live, {}°", js::to_fixed(w.pan * 180.0 / m::PI, 0)) } else { alloc::format!("feeding {} s", js::to_fixed(w.t, 1)) };
             alloc::format!(" · under {} {}", g.dr[w.door].def.name, state)
         }
         None => String::new(),
     };
     alloc::format!("on · {}{} · looks {}, marked {}", carried, under, g.stats.wand.looks, g.stats.wand.marked)
-}
-
-/// `Number.prototype.toFixed`: a tie goes to the larger magnitude and -0 prints as 0, where Rust's `{:.*}` goes to even and prints -0.
-fn to_fixed(x: f64, digits: usize) -> String {
-    if x == 0.0 { return alloc::format!("{:.*}", digits, 0.0_f64); }
-    let s = alloc::format!("{:.*}", digits, x);
-    // Every finite double's expansion ends by 1074 places, so this is exact: a tie is a 5 and then nothing.
-    let exact = alloc::format!("{:.1074}", x);
-    let Some(point) = exact.find('.') else { return s };
-    let rest = &exact[point + 1 + digits..];
-    if !rest.starts_with('5') || rest[1..].bytes().any(|b| b != b'0') { return s; }
-    let (sign, kept) = match exact[..point + 1 + digits].strip_prefix('-') { Some(k) => ("-", k), None => ("", &exact[..point + 1 + digits]) };
-    let mut out: Vec<u8> = kept.bytes().collect();
-    let mut i = out.len();
-    let mut carry = true;
-    while carry && i > 0 {
-        i -= 1;
-        if out[i] == b'.' { continue; }
-        if out[i] == b'9' { out[i] = b'0'; } else { out[i] += 1; carry = false; }
-    }
-    let digits_up = String::from_utf8(out).unwrap();
-    let digits_up = digits_up.strip_suffix('.').unwrap_or(&digits_up);
-    alloc::format!("{}{}{}", sign, if carry { "1" } else { "" }, digits_up)
 }
 
 #[cfg(test)]
@@ -159,20 +136,5 @@ mod tests {
         assert_eq!(turned(0.3, door_a(-1.0), [-20.0, 1.0, -3.0], max, PAN_RATE, 1.0 / 60.0).to_bits(), 0x3fd17e4b17e4b17e);
         assert_eq!(turned(-0.2, door_b(1.0), [40.0, 0.0, 40.0], max, PAN_RATE, 0.5).to_bits(), 0x3f8ddba57d757380);
         assert_eq!(turned(0.61, door_b(-1.0), [-11.0, 0.0, 2.0], max, PAN_RATE, 1.0 / 120.0).to_bits(), 0x3fe317e4b17e4b18);
-    }
-
-    #[test]
-    fn to_fixed_rounds_as_the_language_does() {
-        // [x, x.toFixed(1), x.toFixed(0)], as bun printed them.
-        for (x, one, none) in [
-            (0.5, "0.5", "1"), (1.5, "1.5", "2"), (2.5, "2.5", "3"), (-2.5, "-2.5", "-3"), (-0.3, "-0.3", "-0"), (-0.0, "0.0", "0"),
-            (0.25, "0.3", "0"), (0.35, "0.3", "0"), (12.05, "12.1", "12"), (34.377467707849394, "34.4", "34"),
-        ] {
-            assert_eq!(to_fixed(x, 1), one);
-            assert_eq!(to_fixed(x, 0), none);
-        }
-        assert_eq!(to_fixed(9.5, 0), "10");
-        assert_eq!(to_fixed(-99.5, 0), "-100");
-        assert_eq!(to_fixed(9.75, 1), "9.8");
     }
 }

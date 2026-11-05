@@ -1,4 +1,4 @@
-//! src/game/game.ts lines 1544 to 1856
+//! src/game/game.ts lines 1582 to 1864
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,356 +7,21 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ seats and the one seam left
-
 /// `s.view` handed to `f`. A game of one seat has no view: its seat's view IS the Game (seats.ts seatsStand).
 fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
     if g.seats.len() == 1 { return f(g); }
-    let pl = crate::cmd::seat_man(g, s);
-    crate::seats::with_seat(g, pl, &mut f)
-}
-/// `manLeaves(pl.char, pl)` (game.ts:1624): ManCols is an empty struct and neither a Character nor a Player holds one, nothing to name the two objects by.
-fn seam_man_leaves(g: &mut Game, c: CharId, pl: PlayerId) { todo!("needs: man_leaves over a CharId and a PlayerId") }
-
-/// A cut: `lens.target = copy(at); lens.desired = copy(at)`. A whole write of `desired` is what Seat.takeCut watches for, here by its serial.   (game.ts:1614, :1665, :1683)
-fn cut_lens(g: &mut Game, cam: CameraId, at: V3) {
-    let lens = &mut g.tab.camera[cam];
-    lens.target = at;
-    lens.desired = at;
-    lens.desired_serial += 1;
+    crate::seats::with_seat(g, s, &mut f)
 }
 
 /// the character of a seat's man
 fn man_char(g: &mut Game, s: SeatId) -> CharId { let pl = crate::cmd::seat_man(g, s); g.pl[pl].ch }
 
-// ------------------------------------------------------------ the panel's handles and small doors
+/// game.ts `WEAPONS[id]`
+fn weapon_row(g: &Game, id: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef { g.m.weapons.weapons.get(id).unwrap() }
 
-/// The rooms queued for the pair, the panel's line.   (game.ts clearQueueSummary)
-pub fn game_clear_queue_summary(g: &mut crate::game::Game) -> String { crate::guards::clear_queue_summary(g) }
-
-/// (game.ts clearNearestRoom)
-pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force_clear(g) }
-
-/// Camera follow position: a spectated guard, a rail's look, `at`, else the player.   (game.ts followPos)
-pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
-    let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
-    if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
-    if let Some(p) = crate::rails::rails_look(g) { return p; }
-    if let Some(a) = at { return a; }
-    let c = g.pl[g.player].ch;
-    g.ch[c].pos
-}
-
-/// (game.ts teleportPlayer)
-pub fn game_teleport_player(g: &mut crate::game::Game, p: V3) { crate::player::teleport_player(g, p) }
-
-/// What the player's feet are on as the hearing model has it.   (game.ts floorUnderPlayer)
-pub fn game_floor_under_player(g: &mut crate::game::Game) -> crate::floor::FloorMat {
-    let c = g.pl[g.player].ch;
-    let p = g.ch[c].pos;
-    crate::floor::step_mat(g, p)
-}
-
-/// The thud of a ragdoll's trunk or head meeting something, polled after the body's update.   (game.ts bodyThud)
-pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
-    let hit = match g.ch[c_2].ragdoll { Some(r) => crate::ragdoll::ragdoll_take_impact(g, r, None, None), None => 0.0 };
-    if hit > 1.4 {
-        let at = match g.ch[c_2].bones.get(crate::character::Bone::Spine2) { Some(b) => *b, None => g.ch[c_2].pos };
-        crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
-        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15), None);
-    }
-}
-
-/// (game.ts repairLights)
-pub fn game_repair_lights(g: &mut crate::game::Game) { crate::lighting::repair_lights(g) }
-
-/// Everything still in the air or the sound queue from what just happened: fresh guards must not inherit it.   (game.ts clearAftermath)
-pub fn game_clear_aftermath(g: &mut crate::game::Game) {
-    crate::frag::frag_reset(g);
-    crate::morale::morale_reset(g, None);
-    g.items.items.clear();
-    g.rings.clear();
-    g.shells.clear();
-    crate::tracers::tracers_clear(g);
-    crate::particle_fx::clear_particle_fx(g);
-    crate::destruction::destruction_clear_moving(g);
-    crate::shards::glass_shards_clear(g);
-    g.events.clear();
-    let seats = g.seats.clone();
-    for s in seats {
-        let pl = crate::cmd::seat_man(g, s);
-        g.pl[pl].pending_throw = None;
-        g.pl[pl].throw_held = false;
-        g.pl[pl].throw_preview = None;
-    }
-}
-
-/// The FN2000 in or out of the kit, applied to the man standing there now.   (game.ts setLoadout)
-pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
-    g.fn2000 = with_rifle;
-    let pl = g.player;
-    if !with_rifle && g.pl[pl].slot == crate::game::SlotKind::Rifle {
-        g.pl[pl].slot = crate::game::SlotKind::Pistol;
-        let rifle = g.pl[pl].rifle;
-        if crate::weapons::firearm_reloading(g, rifle) {
-            let c = g.pl[pl].ch;
-            crate::character::anim_cancel_reload(g, c);
-        }
-        crate::weapons::firearm_cancel_reload(g, rifle);
-    }
-    g.pl[pl].has_rifle = with_rifle;
-}
-
-/// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
-pub fn game_authored_on(g: &mut crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
-
-/// The level as authored: every switch back, every door, the marks, the panes, the debris.   (game.ts resetLevelState)
-pub fn game_reset_level_state(g: &mut crate::game::Game) {
-    let targets = g.targets.clone();
-    for t in targets {
-        let a = crate::sim_lightshome::fixture_authored(g, t);
-        crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().on, Some(t), Some(if a { 1.0 } else { 0.0 }), None, None, None);
-    }
-    let doors = g.doors.list.clone();
-    for d in doors { crate::doors::door_reset(g, d); }
-    crate::render_decals::decals_clear(g);
-    crate::glass::reset_glass(g);
-    crate::glasspen::reset_glass_pen(g);
-    crate::winbars::reset_bars(g);
-    crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
-    crate::destruction::destruction_reset(g);
-    crate::shards::glass_shards_reset(g);
-    crate::hours::hour_after_reset(g);
-    crate::air_dust::air_dust_reset(g);
-}
-
-/// (game.ts crackTest)
-pub fn game_crack_test(g: &mut crate::game::Game) -> f64 { crate::glass::crack_test(g) }
-
-/// (game.ts glassSummary)
-pub fn game_glass_summary(g: &mut crate::game::Game) -> String { crate::glass::glass_summary(g) }
-
-/// (game.ts wetSummary)
-pub fn game_wet_summary(g: &mut crate::game::Game) -> String { crate::wet::wet_summary(g) }
-
-/// (game.ts rainSummary)
-pub fn game_rain_summary(g: &mut crate::game::Game) -> String { crate::rain_fx::rain_summary(g) }
-
-/// The clocks the last try left running, as a new Game has them.   (game.ts cleanSlate)
-pub fn game_clean_slate(g: &mut crate::game::Game) {
-    g.alarm.raised_at = -100.0;
-    g.alarm.pos = [0.0, 0.0, 0.0];
-    let seats = g.seats.clone();
-    for &s in &seats { in_seat(g, s, |g| g.torch_on_t = -100.0); }
-    g.last_sting_t = -100.0;
-    crate::gunwall::gun_wall_fresh(g);
-    for &s in &seats { in_seat(g, s, |g| crate::guards::ground_fresh(g)); }
-    crate::wind::wind_fresh(g);
-}
-
-/// The player's restart: restartEncounter, the camera cut to the fresh man, the host told to start the picture's histories from nothing.   (game.ts restart)
-pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
-    game_restart_encounter(g);
-    if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }   // (after it: restartEncounter takes the old encounter's lines off the HUD)
-    if !g.touring && !crate::director::director_showing(g) && g.spectate < 0.0 {
-        let seats = g.seats.clone();
-        for s in seats {
-            let lens = g.tab.cmd_seat[s].cam;
-            let p = in_seat(g, s, |g| game_follow_pos(g, None));
-            cut_lens(g, lens, p);
-        }
-        g.restart_cut = true;
-        g.stats.cleanrestart.cuts += 1;
-    }
-    crate::host_api::host_api_restart_picture(g, "level restarted");
-    g.stats.cleanrestart.pictures += 1;
-}
-
-/// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
-pub fn game_restart_encounter(g: &mut crate::game::Game) {
-    let d = g.dice.clone();
-    crate::math_dice::use_dice(g, d);
-    crate::sensors::sensors_own_reset(g);
-    crate::quiet::quiet_mission_current(g);
-    g.stats.cleanrestart.restarts += 1;
-    g.stats.cleanrestart.lines += g.messages.len() as i32;
-    g.messages.clear();   // (the lines of the encounter that ended go before anything below speaks)
-    crate::quiet::quiet_mission_before_restart(g);   // deals this encounter's start BEFORE the fresh Player and Guards read it
-    let seats = g.seats.clone();
-    for &s in &seats {
-        let old = crate::cmd::seat_man(g, s);
-        let light = g.pl[old].light;
-        let c = g.pl[old].ch;
-        seam_man_leaves(g, c, old);
-        let spawn = g.level.player_spawn;
-        let index = g.tab.cmd_seat[s].index;
-        let at = crate::seats::spot_beside(g, spawn, index);
-        let fn2000 = g.fn2000;
-        let (men, rig) = (g.men, g.rig);
-        let pl = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
-        in_seat(g, s, |g| {
-            g.player = pl;
-            g.pl[pl].light = light;
-            crate::kit::kit_fresh(g);
-            let c = g.pl[pl].ch;
-            crate::character::character_update(g, c, 0.0);   // pose and bones exist before this frame's capsule upload
-        });
-    }
-    crate::cues::cues_reset(g);
-    crate::squadnet::squad_net_reset(g);
-    for &s in &seats {
-        in_seat(g, s, |g| { crate::holdfire::hold_fire_reset(g); crate::showwhy::reset_show_why(g); });
-    }
-    crate::dialogue::ambient_restart(g);
-    crate::fogofwar::fog_of_war_reset(g);
-    crate::game::game_reset_guards(g);
-    if let Some(last) = g.messages.last() { if last.text == "guards reset" { g.messages.pop(); } }
-    if crate::lighting::fresh_lights(g) { g.stats.cleanrestart.relit += 1; }
-    game_reset_level_state(g);
-    crate::lightswitch::light_switch_reset(g);
-    crate::props::prop_system_reset(g);
-    for r in g.rolls.iter_mut() { r.voice = 0.0; }
-    g.rolls.clear();
-    g.events.clear();
-    for &s in &seats { in_seat(g, s, |g| g.use_door = None); }
-    g.called_in = false;
-    g.stood_down = false;
-    // anything still in the air or venting belongs to the encounter that just ended
-    game_clear_aftermath(g);
-    crate::smoke_types::smoke_system_like_clear_all(g);
-    if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
-    g.engine.host_books = None;
-    for &s in &seats {
-        in_seat(g, s, |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });
-    }
-    game_clean_slate(g);
-    crate::devices::devices_reset(g);
-    let t = g.time;
-    g.mission = crate::game::new_mission(t);
-    g.mission.serial = g.serial();   // (a whole write of g.mission is a new run: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity)
-    g.chronicle = crate::chronicle::Chronicle::blank();
-    crate::director::director_on_encounter_restart(g);
-    crate::nightbreach::night_breach_on_encounter_restart(g);
-    crate::rescue::rescue_on_encounter_restart(g);
-    crate::quiet::quiet_mission_on_encounter_restart(g);
-    crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the next tick reads before its own paint
-    crate::fire::update_fire(g, 0.0);
-}
-
-/// (game.ts setGroup)
-pub fn game_set_group(g: &mut crate::game::Game, group: &str, on: bool) { crate::lighting::set_group(g, group, on) }
-
-/// (game.ts toggleTarget)
-pub fn game_toggle_target(g: &mut crate::game::Game, t: FixtureId) { crate::lighting::toggle_target(g, t) }
-
-/// (game.ts setBlackout)
-pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {
-    let cause = match cause {
-        crate::game::GameSetBlackoutCause::Shot => crate::lighting::SetBlackoutCause::Shot,
-        crate::game::GameSetBlackoutCause::Ocp => crate::lighting::SetBlackoutCause::Ocp,
-        crate::game::GameSetBlackoutCause::Debug => crate::lighting::SetBlackoutCause::Debug,
-        crate::game::GameSetBlackoutCause::Hand => crate::lighting::SetBlackoutCause::Hand,
-    };
-    crate::lighting::set_blackout(g, seconds, cause)
-}
-
-/// (game.ts endBlackout)
-pub fn game_end_blackout(g: &mut crate::game::Game) { crate::lighting::end_blackout(g) }
-
-/// `cause` defaults to 'shot' here, as the TypeScript's parameter does.   (game.ts lightEvent)
-pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::game::GameLightEventCause>, sw_at: Option<V3>) {
-    let cause = match cause.unwrap_or(crate::game::GameLightEventCause::Shot) {
-        crate::game::GameLightEventCause::Shot => crate::lighting::LightEventCause::Shot,
-        crate::game::GameLightEventCause::Ocp => crate::lighting::LightEventCause::Ocp,
-    };
-    crate::lighting::light_event(g, t, Some(cause), sw_at)
-}
-
-/// (game.ts ocp)
-pub fn game_ocp(g: &mut crate::game::Game, t: Option<FixtureId>) { crate::lighting::ocp(g, t) }
-
-/// (game.ts toggleDrag)
-pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { crate::player::toggle_drag(g, which) }
-
-// ------------------------------------------------------------ update
-
-/// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.   (game.ts update)
-pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    let d = g.dice.clone();
-    crate::math_dice::use_dice(g, d);
-    crate::quiet::quiet_mission_current(g);
-    let me = game_host_seat(g);
-    if g.restart_cut {
-        g.restart_cut = false;
-        let cut = crate::cmd::seat_take_cut(g, me);
-        if let Some(cut) = cut {
-            if g.tab.camera[cam].pin.is_none() {
-                cut_lens(g, cam, cut);
-                crate::camera::follow_camera_rebuild(g, cam);
-            }
-        }
-    }
-    crate::director::director_inject_input(g, input);
-    game_host_before(g, input);
-    crate::director::director_attach(g, crate::director::DirectorAttachO { cam: Some(cam), input: Some(input) });
-    let into = g.cmd_buf.take();
-    let c = in_seat(g, me, |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
-    g.cmd_buf = Some(c.clone());
-    if g.seats.len() == 1 {
-        game_step(g, dt, &c);
-    } else {
-        let seats = g.seats.clone();
-        let mut cmds = Vec::with_capacity(seats.len());
-        for s in seats {
-            if Some(s) == g.local_seat { cmds.push(c.clone()); } else { cmds.push(crate::cmd::seat_handed(g, s, &c)); }
-        }
-        game_step_seats(g, dt, &cmds);
-    }
-    game_host_after(g, input, cam, canvas);
-}
-
-/// What the host's input is told before a step: a held press's cursor is followed off the view only while the creep reads the mouse as a stick.   (game.ts hostBefore)
-pub fn game_host_before(g: &mut crate::game::Game, input: InputId) {
-    g.tab.input[input].drag_off = g.k.stalk.drag;
-}
-
-/// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.   (game.ts hostAfter)
-pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
-    let me = game_host_seat(g);
-    let me_cam = g.tab.cmd_seat[me].cam;
-    let (peek, kick) = (g.tab.camera[me_cam].peek_offset, g.tab.camera[me_cam].kick);
-    g.tab.camera[cam].peek_offset = peek;
-    g.tab.camera[cam].kick = kick;
-    if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
-    let vp = g.tab.camera[cam].view_proj;
-    in_seat(g, me, |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
-    crate::rails::rails_host_view(g, cam);
-    in_seat(g, me, |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
-}
-
-/// The tick for a game of one seat.   (game.ts step)
-pub fn game_step(g: &mut crate::game::Game, dt: f64, cmd: &crate::cmd::PlayerCmd) {
-    let buf = vec![cmd.clone()];
-    game_step_seats(g, dt, &buf);
-}
-
-/// The local seat, or the first for a host that shows nobody.   (game.ts hostSeat)
-pub fn game_host_seat(g: &mut crate::game::Game) -> SeatId { g.local_seat.unwrap_or(g.seats[0]) }
-
-/// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
-pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, boxes.ts rayAside, collision.ts aside)
-    let mut ray_own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
-    let mut col_own = crate::scene_collision::AsideOwn::zeroed();
-    crate::scene_boxes::box_world_ray_aside(g, &mut ray_own, &mut |g| crate::scene_collision::aside(g, &mut col_own, &mut *fn_))
-}
-
-/// A lens of the host's to put a record's view on while it asks aside (cmd.ts loadLens): scratch, in no snapshot.   (game.ts asideLens)
-pub fn game_aside_lens(g: &mut crate::game::Game) -> CameraId {
-    if let Some(lens) = g.alone_own.lens { return lens; }
-    let lens = g.tab.camera.push(crate::camera::FollowCamera::blank());
-    g.alone_own.lens = Some(lens);
-    lens
+/// a bone of his if it has been baked, else his feet raised by `up`
+fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
+    match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
 }
 
 /// THE TICK, off the players' plain records. The order of these lines is the game.   (game.ts stepSeats)
@@ -376,8 +41,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     let me_cam = g.tab.cmd_seat[me].cam;
     g.ticking = true;
     crate::scene_collision::tick_open(g);
-    // BRING-UP: `RUST_KNOBS.tick = true` (game.ts:1721). The write of the knobs into the module (knobsToRust) is still dropped: the block the host
-    // hands in holds them. Without the flag every animator's knobsNow would write them again (character.ts LAYERS.knobs).
+    // TEMP-BRINGUP: `knobsToRust()` (game.ts:1592) is not called: rustknobs::knobs_to_rust is still a stub of the skeleton's that no part's job holds, and the
+    // block the host hands in holds the knobs. The flag is real: without it every animator's knobsNow would write them again (rustknobs.ts knobsNow).
     g.m.rustknobs.rust_knobs.tick = true;
     // a record from anyone made one an honest seat could have sent, before anything reads it
     let mut checked: Vec<crate::cmd::PlayerCmd> = Vec::with_capacity(n);
@@ -388,8 +53,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
         if js::truthy(r.fixed) { g.tab.cmd_seat[s].fixed += r.fixed; g.tab.cmd_seat[s].fixed_cmds += 1.0; }
         checked.push(r.cmd);
     }
-    let d = g.dice.clone();
-    crate::math_dice::use_dice(g, d);
+    crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     crate::game::game_sense_step(g, dt);
     for i in 0..n { crate::cmd::seat_load(g, seats[i], &checked[i]); }
@@ -406,6 +70,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     g.ocp_cooldown = m::max(0.0, g.ocp_cooldown - dt);
     let now = g.time;
     crate::scene_collision::sound_paths_tick(g, now);
+    crate::belief::duties_anew(g);   // what a man covers is said anew each tick
     // each seat's half of the tick, over that seat's view
     for &s in &seats {
         let (input, cam, canvas) = (g.tab.cmd_seat[s].input, g.tab.cmd_seat[s].cam, g.tab.cmd_seat[s].canvas);
@@ -537,5 +202,269 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::teamtally::team_tally_tick(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
-    g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1855, the finally)
+    g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
+}
+
+/// threat proximity → how deliberately Sam moves   (game.ts threatTick)
+pub fn game_threat_tick(g: &mut crate::game::Game) {
+    use crate::character::Bone;
+    use crate::game::GuardState;
+    let pl = g.player; let pc = g.pl[pl].ch;
+    let mut near: Option<GuardId> = None; let mut nd = f64::INFINITY; let mut t = 0.0;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i]; i += 1;
+        if g.gd[gd].state == GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
+        let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[pc].pos);
+        if d < nd { nd = d; near = Some(gd); }
+    }
+    if let Some(nr) = near {
+        if !g.pl[pl].down && g.gd[nr].state != GuardState::Alert {
+            t = 1.0 - v3::smoothstep(3.0, 7.0, nd);
+            if g.gd[nr].state == GuardState::Suspicious || g.gd[nr].state == GuardState::Search { t = m::max(t, 0.6 * (1.0 - v3::smoothstep(7.0, 10.0, nd))); }
+            let p = g.ch[pc].pos;
+            let spots: [V3; 2] = [[p[0], 0.15, p[2]], bone_or(g, pc, Bone::Chest, 1.1)];
+            if g.torch_on_t > g.time { g.torch_on_t = -100.0; }
+            let mut i = 0;
+            'torch: while i < g.guards.len() {
+                let gd = g.guards[i]; i += 1;
+                if g.time - g.torch_on_t < 1.5 { break; }
+                let fl = g.gd[gd].flashlight;
+                if g.gd[gd].state == GuardState::Dead || !g.tab.light[fl].enabled || g.gd[gd].team == crate::teams::Team::Operative { continue; }
+                let (fl_pos, fl_dir) = (g.tab.light[fl].pos, g.tab.light[fl].dir);
+                let cos_o = m::cos(g.tab.light[fl].outer_deg * v3::DEG);
+                for s in spots {
+                    let to = v3::sub(s, fl_pos); let d = v3::len(to);
+                    if d < 10.0 && d > 1e-3 && v3::dot(to, fl_dir) / d > cos_o && !crate::scene_collision::segment_blocked(g, fl_pos, s, None, None, None) { g.torch_on_t = g.time; break 'torch; }
+                }
+            }
+            if g.time - g.torch_on_t < 1.5 { t = m::max(t, 0.5); }
+        }
+    }
+    g.threat_proximity = t; g.ch[pc].anim.deliberate = t;
+}
+
+/// the muzzle of the stand-in gun in his hands   (game.ts:1767, :1772)
+fn stand_in_muzzle(g: &Game, long: Option<crate::guards::LongRigOf>, cb: bool, def: crate::weapons::WeaponId) -> f64 {
+    if long == Some(crate::guards::LongRigOf::Sc20k) { return crate::rig_props::sc20k_muzzle_ahead(None); }
+    let row = weapon_row(g, def);
+    if cb && row.rig != crate::weapons::WeaponDefRig::Carbine { return crate::rig_props::carbine_muzzle_ahead(None); }
+    row.muzzle_ahead
+}
+
+/// the carbine dealt by the sandbox knob, and every man's animator armed with what is then in his hands   (game.ts dealWeapons)
+pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
+    use crate::character::AnimLongGrip;
+    use crate::game::{CarbineDeal, GuardState};
+    use crate::guards::LongRigOf;
+    use crate::teams::Team;
+    use crate::weapons::{GunModelId, WeaponId};
+    let dt = dt.unwrap_or(0.0);
+    let deal = g.tune.carbine_guards;
+    let mut grip: Option<AnimLongGrip> = None; let mut grip20k: Option<AnimLongGrip> = None;
+    let mut grip_own: Vec<(GunModelId, Option<AnimLongGrip>, Option<f64>)> = Vec::new();
+    let show = g.touring || crate::director::director_showing(g);
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i]; i += 1;
+        let c = g.gd[gd].ch;
+        if g.gd[gd].unit.is_none() { g.gd[gd].carbine = deal == CarbineDeal::All || (deal == CarbineDeal::Reyes && g.gd[gd].callsign == "Reyes"); }
+        let route = g.gd[gd].route;
+        let want = if g.gd[gd].carbine { WeaponId::Aks74u } else { g.tab.route[route].weapon.unwrap_or(WeaponId::Guard9mm) };
+        if g.gd[gd].state != GuardState::Dead && g.fa[g.gd[gd].weapon].def != want { let row = weapon_row(g, want).clone(); let w = crate::weapons::firearm_new(g, &row); g.gd[gd].weapon = w; g.gd[gd].reload_t = -1.0; }
+        if g.gd[gd].work_stow.is_some() { crate::workstow::mate_stow_tick(g, gd); }
+        if g.gd[gd].second.is_some() { crate::gunslots::side_tick(g, gd, Some(dt)); }
+        let long = crate::guards::long_rig_of(g, gd); let cb = long.is_some();
+        let def = g.fa[g.gd[gd].weapon].def;
+        if g.ch[c].anim.long_gun != cb {
+            g.ch[c].anim.long_gun = cb;
+            g.ch[c].anim.long_steady = if long == Some(LongRigOf::Sc20k) { 1.0 } else { 0.0 };
+            let a = stand_in_muzzle(g, long, cb, def);
+            g.ch[c].muzzle_ahead = a;
+        }
+        if long == Some(LongRigOf::Sc20k) {
+            let lg = *grip20k.get_or_insert_with(|| { let x = crate::rig_props::sc20k_grip(None, None); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
+            g.ch[c].anim.long_grip = lg;
+        } else if cb {
+            let lg = *grip.get_or_insert_with(|| { let x = crate::rig_props::carbine_grip(None); AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back } });
+            g.ch[c].anim.long_grip = lg;
+        }
+        if crate::gunlook::gun_look_on(g) || g.ch[c].gun_look.is_some() {
+            let had = g.ch[c].gun_look.as_ref().and_then(|l| l.hand);
+            let into = g.ch[c].gun_look.clone();
+            let in_hands = weapon_row(g, def).clone();
+            let other = g.gd[gd].second.as_ref().map(|s| weapon_row(g, g.fa[s.gun].def).clone());
+            let third = match g.gd[gd].slung.as_ref() { Some(s) if s.out => Some(weapon_row(g, g.fa[s.own].def).clone()), _ => None };
+            let look = crate::gunlook::gun_look_of(g, into, Some(&in_hands), other.as_ref(), third.as_ref());
+            let hand = if cb { look.as_ref().and_then(|l| l.hand) } else { None };
+            g.ch[c].gun_look = look;
+            if let Some(mo) = hand {
+                let at = match grip_own.iter().position(|r| r.0 == mo) {
+                    Some(k) => k,
+                    None => {
+                        let gr = crate::rig_props::model_grip(g, mo, None, None).map(|x| AnimLongGrip { wrist: x.wrist, fingers: x.fingers, back: x.back });
+                        let a = crate::rig_props::model_muzzle_ahead(g, mo, None);
+                        grip_own.push((mo, gr, a)); grip_own.len() - 1
+                    }
+                };
+                if let Some(lg) = grip_own[at].1 { g.ch[c].anim.long_grip = lg; }
+                if let Some(a) = grip_own[at].2 { g.ch[c].muzzle_ahead = a; }
+            } else if had.is_some() && cb {
+                let a = stand_in_muzzle(g, long, true, def);
+                g.ch[c].muzzle_ahead = a;
+            }
+            let gun = if cb { Some(g.gd[gd].weapon) } else { None };
+            crate::gunreload::feed_deal(g, c, gun, Some(true));
+        }
+        let team = g.gd[gd].team;
+        let trained = if team == Team::Operative { 1.0 } else if g.gd[gd].trained { 0.75 } else if team == Team::Civilian { 0.5 } else { 0.12 };
+        g.ch[c].anim.trained = trained;
+        let held = crate::guards::in_hand(g, gd).map(|h| match h { crate::guards::InHand::Torch => crate::handwork::SwapFeedHeld::Torch, crate::guards::InHand::Weapon => crate::handwork::SwapFeedHeld::Weapon });
+        crate::handwork::swap_feed(g, gd, held, !cb);
+        let in_hand = crate::guards::in_hand(g, gd).is_some();
+        g.ch[c].anim.grip[1] = in_hand;
+        // (GEAR.on, page true: `long === 'sc20k' && !GEAR.on` is false)
+        g.ch[c].anim.reload_back = false;
+        let pellets = weapon_row(g, def).pellets.is_some();
+        g.ch[c].anim.reload_mag = !pellets;
+        let (dead, now) = (g.gd[gd].state == GuardState::Dead, g.time);
+        g.ch[c].anim.clutch = if !dead && now < g.gd[gd].stagger_until && !(now < g.gd[gd].dazzled_until) { 1.0 } else { 0.0 };
+        // (MOVES.on, page 1: the block always runs)
+        {
+            let w = g.gd[gd].weapon;
+            let r = crate::weapons::firearm_reload_row(g, w);
+            let reload_t = g.gd[gd].reload_t;
+            let fo = if reload_t < 0.0 && !dead { crate::roomfight::room_fight_op_of(g, gd) } else { None };
+            let at = if dead { -1.0 }
+                else if reload_t >= 0.0 { r.dur - reload_t }
+                else { match fo { Some(o) if g.tab.roomfight_op[o].reload_until > now => m::max(0.0, r.dur - (g.tab.roomfight_op[o].reload_until - now)), _ => -1.0 } };
+            let row = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack.map(Some), keep: None, hand: None, exact: r.exact };
+            let an = &mut g.ch[c].anim;
+            an.reload_row = Some(row);
+            an.reload_at = at;
+        }
+        // (MOVES.on, page 1)
+        let dip = g.k.moves.entry > 0.5 && cb && !show && g.gd[gd].held.is_none() && !dead && team == Team::Operative
+            && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
+        g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
+        if !dead && now < g.gd[gd].dazzled_until {
+            // (trap: the TypeScript's `from` may be his own position array, which follows him; here it is this moment's copy: notes.md)
+            let from = g.gd[gd].dazzled_at.or(g.gd[gd].last_known).unwrap_or(g.ch[c].pos);
+            let k = m::min(1.0, (g.gd[gd].dazzled_until - now) / 0.5);
+            let an = &mut g.ch[c].anim;
+            let dz = an.dazzle.get_or_insert(crate::character::AnimDazzle { from, k: 0.0 });
+            dz.from = from; dz.k = k;
+        } else { g.ch[c].anim.dazzle = None; }
+        {
+            let on = !show && g.gd[gd].held.is_none();
+            let tk = g.ch[c].anim.trained;
+            let h = crate::weapons::handling_of(weapon_row(g, def));
+            let tw = &mut g.ch[c].turn;
+            tw.on = on; tw.h = h; tw.k = tk;
+        }
+    }
+    let seats = g.seats.clone();
+    for s in seats { let pl = crate::cmd::seat_man(g, s); let c = g.pl[pl].ch; g.ch[c].anim.trained = 1.0; }
+    crate::condition::condition_pose(g);
+}
+
+/// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody: never here, the row being the picture's   (game.ts stepFxAndDynBoxes)
+pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, cam: CameraId, canvas: crate::host_hud::View) -> bool {
+    g.dyn_boxes.clear();
+    // (the list is lent to the callees for the whole gathering: none of them reads g.dyn_boxes)
+    let mut out = core::mem::take(&mut g.dyn_boxes);
+    crate::fogofwar::fog_of_war_door_boxes(g, &mut out);
+    crate::props::prop_system_boxes(g, &mut out);
+    crate::throwables::throwables_boxes(g, &mut out);
+    crate::destruction::destruction_boxes(g, &mut out);
+    crate::devices::device_boxes(g, &mut out);
+    if !g.rings.is_empty() { crate::launcher::ring_boxes(g, &mut out); }
+    let seats = g.seats.clone();
+    for &s in seats.iter() {
+        let pl = crate::cmd::seat_man(g, s);
+        if !g.pl[pl].cams.is_empty() { in_seat(g, s, |g| crate::stickycam::sticky_boxes(g, &mut out)); }
+    }
+    crate::lightswitch::switch_boxes(g, &mut out);
+    if !g.shells.is_empty() { crate::he40::shell_boxes(g, &mut out); }
+    let lens = crate::game::GameViewPxCam { distance: g.tab.camera[cam].distance, fov: g.tab.camera[cam].fov };
+    g.m_per_px = game_view_px(g, lens, crate::game::GameViewPxCanvas { height: canvas.height });
+    let statured = false;   // (DRESS.stature: statureTick is the picture's)
+    let rig0 = out.len();
+    crate::combat::hand_props(g, &mut out);
+    g.fog_of_war.rig_from = rig0 as f64; g.fog_of_war.rig_to = out.len() as f64;
+    g.fx.clear();   // (DRESS.fx down: a host that draws nothing keeps no list of them)
+    if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
+    let px = g.m_per_px;
+    crate::tracers::tracers_update(g, dt, &mut out, Some(px));
+    crate::sparks::sparks_update(g, dt);
+    crate::sparks::sparks_boxes(g, &mut out);
+    for &s in seats.iter() { in_seat(g, s, |g| crate::blast_look::blast_look_tick(g, &mut out)); }
+    g.dyn_boxes = out;
+    statured
+}
+
+/// a push with no `body`   (game.ts:1845, :1848, :1849)
+fn smoke_push(g: &mut Game, pos: V3, dir: V3, speed: f64, radius: f64) {
+    crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos, dir, speed, radius, ..Default::default() });
+}
+
+/// men moving through smoke push it. The tick does not call it: DRESS.wake, the picture's   (game.ts smokeWake)
+pub fn game_smoke_wake(g: &mut crate::game::Game, all: &[CharId]) {
+    use crate::character::Bone;
+    let stir = if g.m.render_frame.look_config.on { m::max(0.0, g.m.render_frame.look_config.stir) } else { 0.0 };
+    crate::smoke_types::smoke_system_like_set_stir(g, stir);
+    for &c in all.iter() {
+        let vel = g.ch[c].vel;
+        let sp = m::hyp2(vel[0], vel[2]);
+        let Some(h) = g.ch[c].bones.get(Bone::Hips).copied() else { continue; };
+        if sp < 0.25 { continue; }
+        let dirv: V3 = [vel[0] / sp, 0.05, vel[2] / sp];
+        if stir > 0.0 {
+            let t = crate::game::smoke_stir();
+            let (hx, hz) = (dirv[0], dirv[2]);
+            let top = h[1] + t.above; let mid = (top + t.foot) / 2.0;
+            crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos: [h[0], mid, h[2]], dir: [hx, 0.0, hz], speed: sp, radius: t.body, body: Some(m::max(0.0, (top - t.foot) / 2.0 - t.body)), ..Default::default() });
+            let side = m::sin(2.0 * m::PI * g.ch[c].anim.phase);
+            if m::abs(side) > t.gap {
+                let k = m::sign(side);
+                smoke_push(g, [h[0] - hx * t.back, h[1] - t.low, h[2] - hz * t.back], [-hz * k, 0.0, hx * k], m::min(t.most, sp * t.kick * m::min(2.0, stir)), t.kick_r);
+            }
+            continue;
+        }
+        smoke_push(g, h, dirv, sp * 1.15, 0.3);
+        if let Some(chest) = g.ch[c].bones.get(Bone::Chest).copied() { smoke_push(g, chest, dirv, sp * 1.1, 0.26); }
+    }
+}
+
+/// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world   (game.ts drawCharacters)
+pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
+    g.men_all = all.to_vec(); g.men_statured = statured; g.men_bare = false;
+    game_draw_men(g, all, statured, false, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
+    g.dyn_raw = g.dyn_boxes.len() as f64;
+    let mut list = core::mem::take(&mut g.dyn_boxes);
+    let dynamics = crate::fogofwar::fog_of_war_things(g, &mut list);
+    g.dyn_boxes = list;
+    g.engine.world.dynamics = dynamics;
+}
+
+/// the world size of one drawn pixel at a camera's look-at depth, for a view of `canvas`'s height   (game.ts viewPx)
+pub fn game_view_px(g: &mut crate::game::Game, cam: crate::game::GameViewPxCam, canvas: crate::game::GameViewPxCanvas) -> f64 {
+    let sharp_still = g.engine.sharp_on.unwrap_or(false) && g.engine.settings.sharp_decouple;
+    view_px_sum(cam.distance, cam.fov, canvas.height, sharp_still, g.engine.effective_scale)
+}
+/// viewPx's sum
+fn view_px_sum(distance: f64, fov: f64, height: f64, sharp_still: bool, effective_scale: f64) -> f64 {
+    2.0 * distance * (if sharp_still { 1.6 } else { 1.0 }) * m::tan(fov / 2.0) / m::max(200.0, height * (if sharp_still { 1.0 } else { js::or(effective_scale, 1.0) }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    // the bits are the TypeScript's own, under bun with EXACT.on (the formula of game.ts viewPx)
+    #[test]
+    fn view_px_is_the_typescripts_bits() {
+        for (d, fov, h, sharp, sc, bits) in [(6.5, 0.9, 1080.0, false, 0.75, 0x3f7fc1551f25ec42u64), (6.5, 0.9, 1080.0, true, 0.75, 0x3f830d997916c0f5), (4.25, 1.1, 150.0, false, 0.0, 0x3f9aaeadc2d0442a)] {
+            assert_eq!(view_px_sum(d, fov, h, sharp, sc).to_bits(), bits);
+        }
+    }
 }

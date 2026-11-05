@@ -1,4 +1,4 @@
-//! src/game/squad.ts lines 449 to 665
+//! src/game/squad.ts lines 450 to 666
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,9 +9,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// `this` of a Clearing method: the one at `g.clearing`; every caller has just tested it, and nothing a method calls clears it.
 macro_rules! cl { ($g:ident) => { $g.clearing.as_mut().unwrap() } }
-
-/// seam: squad.ts:616 g.audio.play('radio', at, 0.35, { rate: 1.1 }): `opts` of game_audio_like_play holds `crate::Opaque`, which cannot carry a rate
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
 
 /// g.blackout.active (game.ts blackout, lightshome.ts Mains.active)
 fn blackout_active(g: &mut Game) -> bool {
@@ -40,6 +37,13 @@ fn rank(r: Perceive) -> i32 {
     match r { Perceive::Alert => 3, Perceive::Body => 2, Perceive::Suspicious => 1 }
 }
 
+/// `gd.lastKnown = <a new object>`: a new fix, so the stamp moves (doze.ts:244 asks by fix_stamp)
+fn new_fix(g: &mut Game, gd: GuardId, at: V3) {
+    let man = &mut g.gd[gd];
+    man.last_known = Some(at);
+    man.fix_stamp = man.fix_stamp.wrapping_add(1);
+}
+
 /// The senses updateGuard would have run for a man the runner drives: what they came to this frame. (squad.ts perceive)
 pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) -> Option<crate::squad::Perceive> {
     crate::guards::hearing_check(g, gd, None, None, None);
@@ -50,7 +54,8 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
         let rate = crate::guards::sight_gain(g, gd, vis.dist);
         if rate > 0.05 {
             g.gd[gd].awareness = v3::clamp(g.gd[gd].awareness + rate * dt, 0.0, 1.0);
-            g.gd[gd].last_known = Some(v3::copy(g.ch[pc].pos));
+            let pp = v3::copy(g.ch[pc].pos);
+            new_fix(g, gd, pp);
             seen = rate > 0.25;
             if seen { g.gd[gd].last_seen_t = g.time; }
         }
@@ -60,7 +65,7 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
     let gp = g.ch[g.gd[gd].ch].pos;
     if !g.pl[g.player].down && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
         g.gd[gd].awareness = 1.0;
-        g.gd[gd].last_known = Some(v3::copy(pp));
+        new_fix(g, gd, v3::copy(pp));
         g.gd[gd].last_seen_t = g.time;
         seen = true;
     }
@@ -70,7 +75,7 @@ pub fn perceive(g: &mut crate::game::Game, gd: GuardId, dt: f64, before: f64) ->
             g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
             let oc = g.gd[o].ch;
             let h = bone_or(g, oc, crate::character::Bone::Hips, g.ch[oc].pos);
-            g.gd[gd].last_known = Some([h[0], 0.0, h[2]]);
+            new_fix(g, gd, [h[0], 0.0, h[2]]);
             return Some(Perceive::Body);
         }
     }
@@ -120,7 +125,7 @@ pub fn clearing_name(g: &mut crate::game::Game, p: Option<&crate::scene_level::R
 
 /// the summary's `who`
 fn summary_who(g: &Game, gd: GuardId) -> String {
-    match g.level.routes.get(g.gd[gd].route_i) {
+    match usize::try_from(g.gd[gd].route_i).ok().and_then(|i| g.level.routes.get(i)) {
         Some(r) => g.tab.route[*r].name.clone(),
         None => format!("guard {}", g.ch[g.gd[gd].ch].id - 10.0),
     }
@@ -130,7 +135,7 @@ fn summary_who(g: &Game, gd: GuardId) -> String {
 pub fn clearing_summary(g: &mut crate::game::Game) -> String {
     let c = cl!(g).clone();
     let r = match &c.cur { Some(r) if c.stage != ClearStage::Done => r, _ => return String::new() };
-    let next: Vec<String> = c.rooms.iter().skip(c.room_i as usize + 1).map(|v| plan_name(v.first())).collect();
+    let next: Vec<String> = c.rooms.iter().skip(c.room_i + 1).map(|v| plan_name(v.first())).collect();
     let next = next.join(", ");
     let by = if c.stage != ClearStage::Muster { format!(" (by the {} door)", r.door) } else { String::new() };
     let what = match (c.stage, c.drill) {
@@ -181,7 +186,8 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
                 if g.gd[left].state != crate::game::GuardState::Dead {
                     end_guard_script(g, left, Some(EndGuardScriptState::Suspicious));
                     g.gd[left].awareness = m::max(g.gd[left].awareness, 0.6);
-                    g.gd[left].last_known = Some(v3::copy(g.ch[g.gd[dead].ch].pos));
+                    let at = g.ch[g.gd[dead].ch].pos;
+                    crate::belief::word(g, left, at);
                     g.gd[left].react_t = 0.7;
                     g.gd[left].search_t = 0.0;
                     crate::game::game_say(g, left, "hey — you with me? …say something.", None, None, None);
@@ -223,7 +229,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         for &gd in &men {
             end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
             g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
-            if let Some(f) = fix { g.gd[gd].last_known = Some(v3::copy(f)); }
+            if let Some(f) = fix { crate::belief::word(g, gd, f); }
             g.gd[gd].react_t = 0.6;
             g.gd[gd].search_t = 0.0;
         }
@@ -236,7 +242,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
         if let Some(b) = b {
             end_guard_script(g, b, Some(EndGuardScriptState::Suspicious));
             g.gd[b].awareness = m::max(g.gd[b].awareness, SUSPECT);
-            if let Some(f) = fix { g.gd[b].last_known = Some(v3::copy(f)); }
+            if let Some(f) = fix { crate::belief::word(g, b, f); }
             g.gd[b].react_t = 1.2;
             g.gd[b].search_t = 0.0;
         }
@@ -384,25 +390,24 @@ pub fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         };
         if let Some(room) = room.filter(|r| !r.is_empty()) {
             let room_i = cl!(g).room_i;
-            let idx = match cl!(g).rooms.iter().position(|v| plan_name(v.first()) == room) { Some(i) => i as f64, None => -1.0 };
-            if idx < 0.0 || idx > room_i {
-                let variants = if idx > room_i {
-                    cl!(g).rooms.remove(idx as usize)
-                } else {
-                    match &g.level.clear_plans {
+            let idx = cl!(g).rooms.iter().position(|v| plan_name(v.first()) == room);
+            if idx.map_or(true, |i| i > room_i) {
+                let variants = match idx {
+                    Some(i) => cl!(g).rooms.remove(i),
+                    None => match &g.level.clear_plans {
                         Some(plans) => plans.iter().filter(|p| plan_name(Some(p)) == room).cloned().collect(),
                         None => Vec::new(),
-                    }
+                    },
                 };
                 let c = cl!(g);
                 if c.stage == ClearStage::Approach {
-                    let at_room = core::cmp::min(room_i as usize, c.rooms.len());
+                    let at_room = core::cmp::min(room_i, c.rooms.len());
                     c.rooms.insert(at_room, variants);
                     clearing_approach(g);
                     line.push_str(" — this one first.");
                     replanned = true;
                 } else {
-                    let at_room = core::cmp::min(room_i as usize + 1, c.rooms.len());
+                    let at_room = core::cmp::min(room_i + 1, c.rooms.len());
                     c.rooms.insert(at_room, variants);
                     line.push_str(" — that one next.");
                 }
@@ -411,7 +416,7 @@ pub fn clearing_read_doors(g: &mut crate::game::Game) -> bool {
         crate::game::game_say(g, by, &line, None, None, None);
         let c = g.gd[by].ch;
         let at_ear = bone_or(g, c, crate::character::Bone::Head, g.ch[c].pos);
-        seam_audio_play_rate(g, "radio", at_ear, 0.35, 1.1);
+        crate::audio_iface::game_audio_like_play(g, "radio", Some(at_ear), Some(0.35), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
         return replanned;
     }
     false
@@ -436,7 +441,7 @@ fn to_stack(p: &crate::scene_level::RoomClearPlan) -> V3 { p.stack[0] }
 pub fn clearing_approach(g: &mut crate::game::Game) {
     let a = cl!(g).a;
     let from = g.ch[g.gd[a].ch].pos;
-    let variants = { let c = cl!(g); c.rooms[c.room_i as usize].clone() };
+    let variants = { let c = cl!(g); c.rooms[c.room_i].clone() };
     let here: Vec<crate::scene_level::RoomClearPlan> = match &g.level.clear_plans {
         Some(plans) => plans.iter().filter(|p| p.bounds.is_some() && in_bounds(from, p.bounds, None)).cloned().collect(),
         None => Vec::new(),
@@ -544,8 +549,8 @@ pub fn clearing_next_room(g: &mut crate::game::Game, cleared: Option<bool>) -> b
             g.cleared_at.set(name, now);
         }
     }
-    cl!(g).room_i += 1.0;
-    let (more, count, has_b) = { let c = cl!(g); (c.rooms.get(c.room_i as usize).is_some(), c.rooms.len(), c.b.is_some()) };
+    cl!(g).room_i += 1;
+    let (more, count, has_b) = { let c = cl!(g); (c.rooms.get(c.room_i).is_some(), c.rooms.len(), c.b.is_some()) };
     if !more {
         let w = crate::words::wg(g, &"to", &"on");
         let text = format!("{} — back {} the corridor{}", if count > 1 { "that's the near rooms done" } else { "room done" }, w, if has_b { ", stay paired" } else { "" });
@@ -555,7 +560,7 @@ pub fn clearing_next_room(g: &mut crate::game::Game, cleared: Option<bool>) -> b
     }
     clearing_approach(g);
     let c = cl!(g);
-    let text = format!("{}the {}", if c.room_i == (c.rooms.len() as f64) - 1.0 { "last one — " } else { "moving to " }, plan_name(c.cur.as_ref()));
+    let text = format!("{}the {}", if c.room_i == c.rooms.len() - 1 { "last one — " } else { "moving to " }, plan_name(c.cur.as_ref()));
     clearing_say(g, &text, None);
     true
 }

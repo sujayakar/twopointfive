@@ -28,7 +28,6 @@ impl Default for Pod { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: EntryPoints, src/game/entrypoints.ts:67)
 #[derive(Clone, Debug)]
 pub struct EntryPoints {
-    pub knobs: crate::knobs::EntryK,
     pub been: JsMap<CoverOpeningId, f64>,
     pub last: f64,
     pub stats: crate::entrypoints::EntryPointsStats,
@@ -38,7 +37,6 @@ impl EntryPoints {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         EntryPoints {
-            knobs: crate::knobs::EntryK { off_openings: true, move_: true, watch: true, near_m: 3.0, line_deg: 45.0, gaps: false, known_m: 4.0, move_m: 3.0, apart: 0.9, off_mouth: false, mouth_m: 1.8 },
             been: JsMap::new(),
             last: -1.0,
             stats: crate::entrypoints::EntryPointsStats { pods: 0.0, risky: 0.0, moved: 0.0, kept: 0.0 },

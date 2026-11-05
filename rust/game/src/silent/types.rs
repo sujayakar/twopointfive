@@ -22,7 +22,7 @@ impl By {
     }
 }
 
-/// (TypeScript: State, src/game/silent.ts:107)
+/// (TypeScript: State, src/game/silent.ts:109)
 #[derive(Clone, Debug)]
 pub struct State {
     pub cast: Vec<GuardId>,
@@ -47,7 +47,7 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/silent.ts:110 SILENT_LOG, src/game/silent.ts:110)
+/// (TypeScript: inline at src/game/silent.ts:112 SILENT_LOG, src/game/silent.ts:112)
 #[derive(Clone, Copy, Debug)]
 pub struct SilentModSILENTLOGItem {
     pub t: f64,
@@ -81,7 +81,7 @@ impl SilentModSILENTLOGItemTo {
     }
 }
 
-/// (TypeScript: inline at src/game/silent.ts:229 seats, src/game/silent.ts:229)
+/// (TypeScript: inline at src/game/silent.ts:233 seats, src/game/silent.ts:233)
 #[derive(Clone, Copy, Debug)]
 pub struct SilentModSeatsValue {
     pub on: bool,
@@ -116,11 +116,11 @@ impl SilentBoot {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SilentMod {
-    /// (src/game/silent.ts:108 states)
+    /// (src/game/silent.ts:110 states)
     pub states: JsMap<PlayerId, crate::silent::State>,
-    /// (src/game/silent.ts:110 SILENT_LOG)
+    /// (src/game/silent.ts:112 SILENT_LOG)
     pub silent_log: Vec<crate::silent::SilentModSILENTLOGItem>,
-    /// (src/game/silent.ts:229 seats)
+    /// (src/game/silent.ts:233 seats)
     pub seats: JsMap<PlayerId, crate::silent::SilentModSeatsValue>,
 }
 impl SilentMod {
@@ -147,14 +147,14 @@ pub struct SilentStats {
     pub tools: i32,
 }
 
-/// (src/game/silent.ts:105 LOUD_ROWS: a table nothing writes)
+/// (src/game/silent.ts:107 LOUD_ROWS: a table nothing writes)
 pub fn loud_rows() -> Vec<String> { alloc::vec![String::from("bangClear"), String::from("bigClear"), String::from("charge"), String::from("thrBang"), String::from("fragClear"), String::from("wallCharge"), String::from("fragThere"), String::from("stunThere"), String::from("shellThere")] }
 
-/// (src/game/silent.ts:218 TARGETS: a table nothing writes)
-pub fn targets() -> Vec<String> { alloc::vec![String::from("floor"), String::from("door"), String::from("none")] }
+/// (src/game/silent.ts:222 TARGETS: a table nothing writes)
+pub fn targets() -> Vec<crate::orders::TargetKind> { alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None] }
 
-/// (src/game/silent.ts:218 LISTED: a table nothing writes)
-pub fn listed() -> Option<Vec<String>> { Some(alloc::vec![String::from("floor"), String::from("none")]) }
+/// (src/game/silent.ts:222 LISTED: a table nothing writes)
+pub fn listed() -> Option<Vec<crate::orders::TargetKind>> { Some(alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::None]) }
 
-/// (src/game/silent.ts:219 HEAD)
+/// (src/game/silent.ts:223 HEAD)
 pub const HEAD: &str = "the whole squad";

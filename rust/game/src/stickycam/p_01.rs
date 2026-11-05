@@ -7,9 +7,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `g.audio.play(name, at, vol, { rate })` (stickycam.ts:110, :126, :235)
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
-    todo!("needs: game_audio_like_play's opts to carry a rate (JsMap<String, Opaque> cannot)")
+/// The checks' counters back to nothing. (stickycam.ts stickyStatsReset)
+pub fn sticky_stats_reset(g: &mut crate::game::Game) {
+    let s = &mut g.stats.stickycam;
+    s.fired = 0; s.stuck = 0; s.dropped = 0; s.retired = 0; s.blind = 0; s.taken = 0;
 }
 
 /// The module's knobs as the launcher's flight reads them. (stickycam.ts B)
@@ -67,7 +68,7 @@ pub fn cam_solve(g: &mut crate::game::Game, from: V3, target: V3) -> crate::thro
 /// The launch velocity: dead level through the aim point's height. (stickycam.ts camVel)
 pub fn cam_vel(g: &mut crate::game::Game, from: V3, target: V3) -> V3 {
     let r = b(g);
-    crate::launcher::launch_vel(from, target, Some(r))
+    crate::launcher::launch_vel(from, target, r)
 }
 
 /// One camera leaves the shooter's tube; the count is the caller's to take. (stickycam.ts fireCam)
@@ -78,7 +79,7 @@ pub fn fire_cam(g: &mut crate::game::Game, pl: PlayerId, from: V3, target: V3) -
     let cam = g.tab.stickycam_sticky_cam.push(StickyCam { pos: v3::copy(from), n: [0.0, 1.0, 0.0], vel: Some(vel), age: 0.0, si: -1.0, id });
     g.pl[pl].cams.push(cam);
     g.stats.stickycam.fired += 1;
-    seam_audio_play(g, "launcher", from, 0.5, 1.25);
+    crate::audio_iface::game_audio_like_play(g, "launcher", Some(from), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.25 }));
     let level = g.k.sticky.launch_noise;
     prop_event(g, pl, level);
     g.pl[pl].noise = m::max(g.pl[pl].noise, level);
@@ -115,7 +116,7 @@ pub fn settle(g: &mut crate::game::Game, pl: PlayerId, cam: StickyCamId, at: V3,
         g.stats.stickycam.stuck += 1;
     }
     let pos = g.tab.stickycam_sticky_cam[cam].pos;
-    seam_audio_play(g, "canisterBounce", pos, if si < 0.0 { 0.3 } else { 0.22 }, 2.1);
+    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(if si < 0.0 { 0.3 } else { 0.22 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.1 }));
     let (time, level, serial) = (g.time, g.k.sticky.stick_noise, g.serial());
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [pos[0], 0.0, pos[2]], time, loud: false, level: Some(level), who: Some(0.0), serial, ..crate::game::GameEvent::zeroed() });
     // the most that stay out: the oldest stuck one retires
@@ -269,7 +270,7 @@ pub fn sticky_live(g: &mut crate::game::Game, pl: &crate::stickycam::StickyLiveP
 /// The fog's eyes a player's live stuck cameras are, newest first. (stickycam.ts stickyEyes)
 pub fn sticky_eyes(g: &mut crate::game::Game) -> Vec<crate::fogofwar::FogEye> {
     let pl = g.player;
-    if g.pl[pl].cams.is_empty() { return Vec::new(); }
+    if g.pl[pl].cams.is_empty() { return none(); }
     let mut out: Vec<crate::fogofwar::FogEye> = Vec::new();
     let wide = g.k.sticky.fov_deg;
     let live = sticky_live(g, &crate::stickycam::StickyLivePl { cams: g.pl[pl].cams.clone() });
@@ -367,11 +368,65 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool {
     sticky_issue(g, pl, n, Some(true));
     g.stats.stickycam.taken += 1;
     let pos = g.tab.stickycam_sticky_cam[c].pos;
-    seam_audio_play(g, "canisterBounce", pos, 0.16, 2.6);
+    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(0.16), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
     let level = g.k.sticky.take_noise;
     prop_event(g, pl, level);
     g.pl[pl].noise = m::max(g.pl[pl].noise, level);
     true
+}
+
+/// Drawn: a dark block on its surface and a lens proud of it, keyed as a wall device's so the fog lets them through; the lens is red on the one that sends. (stickycam.ts stickyBoxes)
+pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+    let pl = g.player;
+    let flag = crate::scene_boxes::box_flag();
+    let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let device = crate::scene_boxes::mkey().device;
+    for i in 0..g.pl[pl].cams.len() {
+        let id = g.pl[pl].cams[i];
+        let c = g.tab.stickycam_sticky_cam[id];
+        let z = match c.vel { Some(v) => v3::normalize(v), None => c.n };
+        let up = m::abs(z[1]) > 0.9;
+        let yaw = if up { 0.0 } else { v3::yaw_of(z) };
+        let body_h: V3 = if up { [0.035, 0.014, 0.035] } else { [0.035, 0.035, 0.014] };
+        let lens_h: V3 = if up { [0.012, 0.006, 0.012] } else { [0.012, 0.012, 0.006] };
+        let c0 = v3::mad(c.pos, z, if c.vel.is_some() { 0.0 } else { 0.014 });
+        let c1 = v3::mad(c.pos, z, if c.vel.is_some() { 0.02 } else { 0.034 });
+        let key = device + CAM_KEY + js::rem(c.id, 4096.0) * 2.0;
+        let b0 = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: c0, h: body_h, yaw: Some(yaw), albedo: Some(v3::copy(body())), flags: Some(flags), mkey: Some(key), ..Default::default() });
+        out.push(b0);
+        let paint = if sending(g, id) { lens_live() } else { lens() };
+        let b1 = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: c1, h: lens_h, yaw: Some(yaw), albedo: Some(v3::copy(paint)), flags: Some(flags), mkey: Some(key + 1.0), ..Default::default() });
+        out.push(b1);
+    }
+}
+
+/// Is this camera sending this frame: one of the newest `live` stuck, and the fog took it as an eye. (stickycam.ts sending)
+pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool {
+    let live = if crate::fogofwar::fog_of_war_active(g) {
+        let pl = g.player;
+        let cams = StickyLivePl { cams: g.pl[pl].cams.clone() };
+        sticky_live(g, &cams)
+    } else {
+        none_cams()
+    };
+    let eye = EYE_ID + js::rem(g.tab.stickycam_sticky_cam[c].id, 50.0);
+    live.contains(&c) && g.fog_of_war.eyes.iter().any(|e| e.id == eye)
+}
+
+/// Where the HUD marks each of his stuck cameras and whether it sends, while the fog is live. (stickycam.ts stickyMarks)
+pub fn sticky_marks(g: &mut crate::game::Game) -> Vec<crate::stickycam::CamMark> {
+    let pl = g.player;
+    if !crate::fogofwar::fog_of_war_active(g) || g.fog_of_war.bared || g.pl[pl].cams.is_empty() { return no_marks(); }
+    let mut out: Vec<CamMark> = Vec::new();
+    for i in 0..g.pl[pl].cams.len() {
+        let c = g.pl[pl].cams[i];
+        if g.tab.stickycam_sticky_cam[c].vel.is_none() {
+            let at = cam_lens(g, c);
+            let sends = sending(g, c);
+            out.push(CamMark { at, sends });
+        }
+    }
+    out
 }
 
 /// A camera of his is still in the air. (stickycam.ts stickyFlying)
@@ -388,6 +443,23 @@ pub fn sticky_left(g: &mut crate::game::Game, pl: PlayerId) -> f64 {
         if g.tab.stickycam_sticky_cam[*c].vel.is_some() { n += 1.0; }
     }
     m::min(n, g.k.sticky.carry)
+}
+
+/// The panel's line. (stickycam.ts stickySummary)
+pub fn sticky_summary(g: &mut crate::game::Game) -> String {
+    let pl = g.player;
+    let out = g.pl[pl].cams.iter().filter(|c| g.tab.stickycam_sticky_cam[**c].vel.is_none()).count();
+    let active = crate::fogofwar::fog_of_war_active(g);
+    let eyes = if active { g.fog_of_war.eyes.iter().filter(|e| e.id >= EYE_ID).count() } else { 0 };
+    let rf = g.pl[pl].rifle;
+    let tail = if active {
+        alloc::format!(" · {} lifting the fog", eyes)
+    } else if out != 0 {
+        String::from(" · no fog on this floor: nothing for them to show")
+    } else {
+        String::new()
+    };
+    alloc::format!("{} to send · {} out{}", js::num_str(g.fa[rf].cams), out, tail)
 }
 
 #[cfg(test)]

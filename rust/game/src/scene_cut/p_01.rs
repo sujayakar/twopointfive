@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Whoever emits cut pieces asks this. Settled: the page has the switch on.   (cut.ts cutBoxesOn)
 pub fn cut_boxes_on(g: &mut crate::game::Game) -> bool {

@@ -7,21 +7,22 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---- what skeleton 3 still cannot do: one blocked step, with the TypeScript's own arguments
+// ---- what skeleton 5 still cannot do: one blocked step
 
-/// `FURN_BREAK.wood.land` (:295): FURN_BREAK came out as `pub const FURN_BREAK: bool = false`
-fn seam_wood_land(g: &mut Game) -> crate::furnblast::BreakRowLand {
-    todo!("needs: FURN_BREAK's rows (crate::furnblast::FURN_BREAK is a bool)")
+/// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
 }
 
-/// the slabs' hand-over in rust/sim's memory (sim::slabs::addr(0), the same doubles the page's `slabMem()` reads); sim::slabs::par is private
+/// the slabs' hand-over in rust/sim's memory (sim::slabs::addr(0), the same doubles the page's `slabMem()` reads); sim::slabs::par is private.
+/// Got afresh each side of the step, whose own par() makes a second &mut of the same static (doorblast.ts:375 `q = slabMem()`).
 fn slab_par() -> &'static mut [f64; sim::slabs::NPAR] {
     unsafe { &mut *(sim::slabs::addr(0) as *mut [f64; sim::slabs::NPAR]) }
 }
 
 /// Keeps a line of what the doors' blasts did. (doorblast.ts note)
 pub fn note(g: &mut crate::game::Game, s: &str) {
-    let line = format!("{:.2}s {}", g.time, s);
+    let line = format!("{}s {}", js::to_fixed(g.time, 2), s);
     let log = &mut g.m.doorblast.doorblast_log;
     log.push(line);
     if log.len() > 200 {
@@ -57,8 +58,9 @@ pub fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: 
     let mut ov = ov();
     let n = crate::scene_collision::gather(g, x - ex, z - ez, x + ex, z + ez, y0, y1, &mut ov);
     for i in 0..n as usize {
-        let b = BoxId(ov[i] as u32);
-        let (yaw, bc, bh) = (g.col.boxes[b].yaw, g.col.boxes[b].c, g.col.boxes[b].h);
+        let b = g.col.boxes[ov[i] as usize];
+        let row = seam_box(g, b);
+        let (yaw, bc, bh) = (row.yaw, row.c, row.h);
         let (bx, bz, dx, dz) = (m::cos(yaw), -m::sin(yaw), bc[0] - x, bc[2] - z);
         let c = m::abs(ux * bx + uz * bz);
         let s = m::abs(ux * bz - uz * bx);
@@ -171,8 +173,7 @@ pub fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
 
 /// Sam's hands come off a leaf that has left its frame. (doorblast.ts handsOff)
 pub fn hands_off(g: &mut crate::game::Game, d: DoorId) {
-    let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &of) {
+    for pl in crate::seats::men(g) {
         if g.pl[pl].easing == Some(d) {
             g.pl[pl].easing = None;
         }
@@ -289,8 +290,8 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
     if back {
         g.stats.doorblast.doorblast_back += 1;
     }
-    let said = if back { format!("no room ahead ({:.2} m): falls back", ahead) } else { format!("{:.2} m ahead", ahead) };
-    let line = format!("{} off its hinges · k {:.2} · {}", g.dr[d].def.name, k, said);
+    let said = if back { format!("no room ahead ({} m): falls back", js::to_fixed(ahead, 2)) } else { format!("{} m ahead", js::to_fixed(ahead, 2)) };
+    let line = format!("{} off its hinges · k {} · {}", g.dr[d].def.name, js::to_fixed(k, 2), said);
     note(g, &line);
     pose_slab(g, d);
     crate::doors::doors_torn(g, d, who, None);
@@ -325,6 +326,37 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
     let share = crate::doors::door_shot(g, d) / leaf_tough(g);
     if share >= 1.0 {
         splinter(g, d, dir, who, Some(hit_p));
+        return;
+    }
+    if share > 0.5 {
+        // past half its toll: every round takes splinters out of its far face
+        if crate::particle_fx::gpu_fx(g) {
+            let l = js::or(m::hyp3(dir[0], dir[1], dir[2]), 1.0);
+            let thick = g.dr[d].thick;
+            let (shed, speed) = (g.k.doorshot.shed, g.k.doorshot.chip_v[1]);
+            let albedo = seam_box(g, b).albedo;
+            let pos: V3 = [hit_p[0] + dir[0] / l * (thick + 0.02), hit_p[1], hit_p[2] + dir[2] / l * (thick + 0.02)];
+            crate::render_particles::particles_emit(
+                g,
+                crate::render_particles::PKind::Debris,
+                pos,
+                [dir[0] / l, dir[1] / l, dir[2] / l],
+                m::round(shed * m::min(1.0, share)),
+                crate::render_particles::EmitOpts {
+                    speed,
+                    speed_jit: Some(0.7),
+                    spread: Some(0.9),
+                    life: 16.0,
+                    life_jit: Some(0.3),
+                    size: 0.006,
+                    size_jit: Some(0.6),
+                    aspect: Some(3.0),
+                    color: Some(v3::copy(albedo)),
+                    owner: Some(who),
+                    ..Default::default()
+                },
+            );
+        }
     }
 }
 
@@ -359,7 +391,10 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
     let cz = hz + uz * (w_ * 0.5 + 0.01);
     let hw = g.dr[d].leaf_h[0];
     let leaf = g.dr[d].box_;
-    let yaw = g.col.boxes[leaf].yaw;
+    let (albedo, yaw) = {
+        let row = seam_box(g, leaf);
+        (row.albedo, row.yaw)
+    };
     let fly: f64 = if dir[2] * ux - dir[0] * uz >= 0.0 { 1.0 } else { -1.0 };
     let (nx, nz) = (-uz * fly, ux * fly);
     let (mut dx, mut dz) = (dir[0], dir[2]);
@@ -393,7 +428,8 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
     let mut rail: Option<[f64; 4]> = None;
     let mut rail_x = 0.0;
     let mut k = 100.0;
-    let land = seam_wood_land(g);
+    let p_fx = crate::particle_fx::gpu_fx(g);
+    let land = crate::furnblast::furn_break_row(crate::scene_materials::BreakClass::Wood).land;
     for i in 0..xs.len() - 1 {
         let ys = cuts(seed, m::max(1.0, kk.lengths), 20.0 + (i as f64) * 8.0, kk.uneven);
         let lx = (xs[i] + xs[i + 1]) / 2.0 * hw;
@@ -422,14 +458,14 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
             let top = fly * v3::lerp(kk.topple[0], kk.topple[1], r2);
             let v: V3 = [dx * sp + ux * sd, v3::lerp(kk.up[0], kk.up[1], r3), dz * sp + uz * sd];
             let om: V3 = [(r1 - 0.5) * kk.spin + ux * top, (r2 - 0.5) * 0.6 * kk.spin, (r3 - 0.5) * kk.spin + uz * top];
+            let c: V3 = [cx + ux * lx, h_ / 2.0 + 0.01 + ly, cz + uz * lx];
             let take = left > 0.0;
             left -= 1.0;
             let got = if take {
-                let c: V3 = [cx + ux * lx, h_ / 2.0 + 0.01 + ly, cz + uz * lx];
                 let he: V3 = [sw, sl, t_ / 2.0];
                 let rot = v3::quat::mul(v3::quat::axis_angle([ux, 0.0, uz], fly * v3::lerp(kk.tilt[0], kk.tilt[1], r3)), v3::quat::yaw(yaw));
                 let f = crate::scene_boxes::copy_box(g, leaf);
-                let piece = &mut g.col.boxes[f];
+                let piece = seam_box(g, f);
                 piece.c = c;
                 piece.h = he;
                 piece.yaw = yaw;
@@ -447,8 +483,76 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
                     crate::break_table::breaks_retag(g, c, crate::break_table::Mat::Wood);
                     crate::break_table::breaks_dress(g, c);
                 }
-                None => g.stats.doorblast.doorshot_demoted += 1,
+                None => {
+                    g.stats.doorblast.doorshot_demoted += 1;
+                    if p_fx {
+                        crate::render_particles::particles_emit(
+                            g,
+                            crate::render_particles::PKind::Debris,
+                            c,
+                            v3::normalize([v[0], m::max(0.3, v[1]), v[2]]),
+                            14.0,
+                            crate::render_particles::EmitOpts {
+                                speed: 2.4,
+                                speed_jit: Some(0.7),
+                                spread: Some(1.1),
+                                life: 18.0,
+                                life_jit: Some(0.3),
+                                size: 0.006,
+                                size_jit: Some(0.6),
+                                aspect: Some(3.0),
+                                color: Some(v3::copy(albedo)),
+                                owner: Some(who),
+                                ..Default::default()
+                            },
+                        );
+                    }
+                }
             }
+        }
+    }
+    if p_fx {
+        crate::render_particles::particles_emit(
+            g,
+            crate::render_particles::PKind::Debris,
+            [cx, h_ * 0.5, cz],
+            v3::normalize([dx, 0.3, dz]),
+            kk.slivers[0],
+            crate::render_particles::EmitOpts {
+                speed: kk.slivers[1],
+                speed_jit: Some(0.6),
+                spread: Some(0.9),
+                life: 20.0,
+                life_jit: Some(0.3),
+                size: 0.028,
+                size_jit: Some(0.5),
+                aspect: Some(5.0),
+                color: Some(v3::copy(albedo)),
+                owner: Some(who),
+                ..Default::default()
+            },
+        );
+        for (s, n, sp) in [(1.0, kk.chips[0], kk.chip_v[0]), (-1.0, kk.chips[1], kk.chip_v[1])] {
+            crate::render_particles::particles_emit(
+                g,
+                crate::render_particles::PKind::Debris,
+                [cx, h_ * 0.55, cz],
+                v3::normalize([dx * s, 0.25, dz * s]),
+                n,
+                crate::render_particles::EmitOpts {
+                    speed: sp,
+                    speed_jit: Some(0.7),
+                    spread: Some(1.1),
+                    life: 18.0,
+                    life_jit: Some(0.3),
+                    size: 0.006,
+                    size_jit: Some(0.6),
+                    aspect: Some(3.0),
+                    color: Some(v3::copy(albedo)),
+                    owner: Some(who),
+                    ..Default::default()
+                },
+            );
         }
     }
     // what is left: the lock rail, lying where it dropped a little the round's way, clear of every static or laid in its own doorway
@@ -550,7 +654,7 @@ pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
         return;
     }
     let met = match slab_there(g, d) {
-        Some(w) => step_there(g, d, r, dt, crate::doorblast::StepThereW { but: w.but, ask: w.ask }),
+        Some(w) => step_there(g, d, r, dt, w),
         None => {
             g.m.sim_slabshome.slabs_stepped.here += 1.0;
             step_here(g, d, r, dt)
@@ -562,7 +666,7 @@ pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
     }
     let a = &mut g.stats.doorblast;
     a.doorblast_nudged += met.nudged as i32;
-    a.doorblast_nudge_max = m::max(a.doorblast_nudge_max as f64, met.nudge_max) as i32;
+    a.doorblast_nudge_max = m::max(a.doorblast_nudge_max, met.nudge_max);
     a.doorblast_laid += met.laid as i32;
     if met.landed {
         g.stats.doorblast.doorblast_landed += 1;
@@ -572,8 +676,7 @@ pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
         without_leaf(g, d, &mut |g: &mut Game| crate::doors::doors_sound(g, d, crate::doors::DoorSound::Bang, at, who, level));
     }
     if met.rested {
-        let s = crate::doors::door_slab(g, d).unwrap();
-        let line = format!("{} slab at rest ({:.2}, {:.2}) after {:.2} s", g.dr[d].def.name, s.p[0], s.p[2], s.t);
+        let line = format!("{} slab at rest ({}, {}) after {} s", g.dr[d].def.name, js::to_fixed(s.p[0], 2), js::to_fixed(s.p[2], 2), js::to_fixed(s.t, 2));
         note(g, &line);
     }
 }
@@ -601,7 +704,7 @@ pub fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorbla
 }
 
 /// The step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. (doorblast.ts stepThere)
-pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::StepThereW) -> crate::doorblast::SlabMet {
+pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet {
     let q = slab_par();
     q[sim::slabs::P_DT] = dt;
     q[sim::slabs::P_ROW] = r;
@@ -619,13 +722,14 @@ pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crat
     q[sim::slabs::P_BOUNCE] = g.k.doorblast.bounce;
     q[sim::slabs::P_TIP] = g.k.doorblast.tip;
     let a = sim::slabs::step(g.sim, g.col.mirror.slot as usize);
+    let q = slab_par();
     let c = &mut g.m.sim_slabshome.slabs_stepped;
     c.rays += q[sim::slabs::P_RAYS];
     c.gathers += q[sim::slabs::P_GATHERS];
     c.substeps += q[sim::slabs::P_SUBSTEPS];
     if a == sim::slabs::HOST {
         c.host += 1.0;
-        panic!("a slab's step met a ray that is no number");
+        panic!("{}", crate::scene_collision::no_number(None, None, None));
     }
     if a != sim::slabs::STEPPED {
         panic!("the Rust module was asked to step row {} of the slabs, which is no slab in the air", r);
@@ -657,7 +761,7 @@ pub fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabsh
     let r = crate::sim_slabshome::slab_store_row_of(g, i);
     crate::sim_slabshome::slab_store_save(g, r, *s);
     let w = match slab_there(g, d) {
-        Some(w) => crate::doorblast::StepThereW { but: w.but, ask: w.ask },
+        Some(w) => w,
         None => panic!("a slab's step met a pane's rule the module cannot judge by: no glass stands behind it"),
     };
     let met = step_there(g, d, r, dt, w);
@@ -689,13 +793,16 @@ pub fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let lz = t_ / 2.0 + 0.03;
     let handles = g.dr[d].handle_boxes.clone();
     let seal = crate::scene_boxes::box_flag().sound_seal;
-    g.col.boxes[b].flags = (js::to_i32(g.col.boxes[b].flags) & !js::to_i32(seal)) as f64;
-    g.col.boxes[b].yaw = -s.a;
+    {
+        let row = seam_box(g, b);
+        row.flags = (js::to_i32(row.flags) & !js::to_i32(seal)) as f64;
+        row.yaw = -s.a;
+    }
     crate::scene_box_mirror::leaf_wrote(g);
     if s.landed {
         let hw = match s.bits { Some(bits) => bits[0], None => g.dr[d].leaf_h[0] };
         let hl = match s.bits { Some(bits) => bits[1], None => height / 2.0 };
-        let leaf = &mut g.col.boxes[b];
+        let leaf = seam_box(g, b);
         leaf.rot = None;
         leaf.marks = None;
         leaf.h = [hw, t_ / 2.0, hl];
@@ -704,7 +811,7 @@ pub fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
         let kx = match s.bits { Some(bits) => bits[2], None => lx };
         let ky = match s.bits { Some(bits) => bits[3], None => ly };
         for hb in handles {
-            let handle = &mut g.col.boxes[hb];
+            let handle = seam_box(g, hb);
             handle.rot = None;
             handle.yaw = -s.a;
             handle.c = [s.p[0] + ux * kx + tx * ky, t_ + LIFT + 0.03, s.p[2] + uz * kx + tz * ky];
@@ -714,13 +821,13 @@ pub fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let q = v3::quat::mul(v3::quat::axis_angle([ux, 0.0, uz], s.side * s.tip), v3::quat::yaw(-s.a));
     let c: V3 = [s.p[0], s.p[1], s.p[2]];
     let leaf_h = g.dr[d].leaf_h;
-    let leaf = &mut g.col.boxes[b];
+    let leaf = seam_box(g, b);
     leaf.rot = Some(q);
     leaf.h = leaf_h;
     leaf.c = c;
     for k in 0..2 {
         let z = if k == 0 { lz } else { -lz };
-        let handle = &mut g.col.boxes[handles[k]];
+        let handle = seam_box(g, handles[k]);
         handle.rot = Some(q);
         handle.yaw = -s.a;
         handle.c = v3::add(c, v3::quat::rotate(q, [lx, ly, z]));
@@ -743,7 +850,6 @@ pub fn run_on(g: &mut crate::game::Game, d: DoorId) -> crate::sim_slabshome::Sla
         match slab_there(g, d) {
             Some(w) => {
                 crate::sim_slabshome::slab_store_save(g, r, s);
-                let w = crate::doorblast::StepThereW { but: w.but, ask: w.ask };
                 let mut i = 0;
                 while i < 480 && !s.rest {
                     step_there(g, d, r, 1.0 / 60.0, w);

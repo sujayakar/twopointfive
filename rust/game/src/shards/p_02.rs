@@ -7,8 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-use crate::debris::hash01;
-
 const AXES: [V3; 3] = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]];
 
 /// `u32(a ^ b)`: both sides to int32, the word back as an unsigned number
@@ -38,12 +36,9 @@ fn spray(speed: f64, speed_jit: f64, spread: f64, life: f64, life_jit: f64, size
 fn to_sched(f: GlassShardsFallOf) -> GlassShardsScheduleFall { GlassShardsScheduleFall { t: f.t, pos: f.pos } }
 fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandingFall { t: f.t, pos: f.pos } }
 
-// ---- what the skeleton still cannot do: one seam a step
-fn seam_audio_play(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate (JsMap<String, Opaque> holds no number)") }
-fn seam_particles_emit_shard(g: &mut Game, pos: V3, dir: V3, count: f64, o: SprayOpts, seed: f64) { todo!("needs: EmitOpts with the spray's fields, and a Particles reached in place, not gpu_fx's copy") }
-
-/// A litter cell's name.   (shards.ts cellName)
-pub fn cell_name(ix: f64, iz: f64) -> f64 { (ix + 512.0) * 4096.0 + (iz + 512.0) }
+// ---- what the skeleton still cannot do
+/// `b.x` of a Box: the row of a box. Skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of rows.
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box") }
 
 /// The landings waiting, for a tool.   (shards.ts GlassShards.pending)
 pub fn glass_shards_pending(g: &mut crate::game::Game) -> Vec<crate::shards::Pending> {
@@ -123,7 +118,7 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
         let want = clamp_i(m::round(a * g.k.shards.fine_per_m2 * g.k.shards.dice_fine_share), 4.0, fine_max);
         let nf = glass_shards_budget(g, want);
         glass_shards_emit(g, f.centre, n, nf, spray(1.6 * sp, 0.85, 1.2, fine_life, 0.4, fine_size * 0.8, 0.5, 1.2, 45.0, 1.0, spread, Some(v3::scale(f.velocity, 0.5)), tint), xor_u32(f.seed, 0xF17E as f64));
-        glass_shards_schedule(g, to_sched(fall), FallSound::GlassShatter, m::min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * hash01(f.seed), a * 0.8, f.who, None);
+        glass_shards_schedule(g, to_sched(fall), FallSound::GlassShatter, m::min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * crate::debris::hash01(f.seed), a * 0.8, f.who, None);
     } else if f.kind == Kind::Sheet {
         let nf = glass_shards_budget(g, clamp_i(m::round(a * 60.0), 4.0, 40.0));
         glass_shards_emit(g, f.centre, n, nf, spray(0.8 * sp, 0.8, 1.2, fine_life, 0.4, fine_size, 0.5, 1.2, 40.0, 1.0, spread, Some(f.velocity), tint), xor_u32(f.seed, 0xF17E as f64));
@@ -144,8 +139,8 @@ pub fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassF
             let nb = glass_shards_budget(g, m::round(nf * share));
             glass_shards_emit(g, v3::mad(f.centre, n, -0.03), v3::scale(n, -1.0), nb, spray((1.0 + 0.8 * e) * sp, 0.8, 1.0, fine_life * 0.8, 0.4, fine_size * 0.9, 0.6, 1.3, 45.0, 1.0, spread * 0.6, None, tint), xor_u32(f.seed, 0xBACC as f64));
         }
-        if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { m::min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * hash01(f.seed), a, f.who); }
-        else if !js::truthy(plated) { glass_shards_schedule(g, to_sched(fall), FallSound::GlassTinkle, m::min(0.9, 0.3 + a * 8.0), 0.9 + 0.5 * hash01(f.seed), a, f.who, None); }
+        if by_fall { glass_shards_landing(g, to_landing(fall), if plateable { 0.0 } else { m::min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who); }
+        else if !js::truthy(plated) { glass_shards_schedule(g, to_sched(fall), FallSound::GlassTinkle, m::min(0.9, 0.3 + a * 8.0), 0.9 + 0.5 * crate::debris::hash01(f.seed), a, f.who, None); }
         else { glass_shards_schedule(g, GlassShardsScheduleFall { t: fall.t + 0.05, pos: fall.pos }, FallSound::GlassTinkle, 0.0, 1.0, a * 0.35, f.who, Some(false)); }
     }
     true
@@ -173,7 +168,7 @@ pub fn glass_shards_take(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, w
     if g.shards.hooked || !shards_live(g) { return None; }
     g.shards.serial += 1.0;
     let serial = g.shards.serial;
-    let c = g.col.boxes[box_].c;
+    let c = seam_box(g, box_).c;
     let word = m::imul(js::to_i32(serial), 0x9E3779B1u32 as i32)
         ^ m::imul(js::to_i32(m::round(c[0] * 1000.0)), 73856093)
         ^ m::imul(js::to_i32(m::round(c[1] * 1000.0)), 19349663)
@@ -197,10 +192,10 @@ pub fn glass_shards_take(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, w
                 g.shards.pane_mem.get_mut(key).unwrap().diced_t = now;
                 glass_shards_dice_pane(g, &st, &f);
             }
-            glass_shards_note(g, &alloc::format!("take pane {} tempered → dice", st.bi));
+            glass_shards_note(g, &alloc::format!("take pane {} tempered → dice", js::num_str(st.bi)));
             return Some(g.shards.ghost);
         }
-        glass_shards_note(g, &alloc::format!("take pane {} {} {} {} {:.0} cm²", st.bi, st.type_.as_str(), f.kind.as_str(), f.cause.as_str(), f.area * 1e4));
+        glass_shards_note(g, &alloc::format!("take pane {} {} {} {} {} cm²", js::num_str(st.bi), st.type_.as_str(), f.kind.as_str(), f.cause.as_str(), js::to_fixed(f.area * 1e4, 0)));
     }
     g.shards.last_plate = None;
     glass_shards_release(g, &f);
@@ -213,7 +208,7 @@ pub fn glass_shards_pane_at(g: &mut crate::game::Game, c_2: V3) -> Option<crate:
     let mut best = None;
     let mut best_d = 0.12;
     for (key, bx) in rows {
-        let (bc, bh, yaw) = { let b = &g.col.boxes[bx]; (b.c, b.h, b.yaw) };
+        let (bc, bh, yaw) = { let b = &*seam_box(g, bx); (b.c, b.h, b.yaw) };
         let (dx, dz) = (c_2[0] - bc[0], c_2[2] - bc[2]);
         let (cy, sy) = (m::cos(yaw), m::sin(yaw));
         let l = [dx * cy - dz * sy, c_2[1] - bc[1], dx * sy + dz * cy];
@@ -229,7 +224,7 @@ pub fn glass_shards_pane_at(g: &mut crate::game::Game, c_2: V3) -> Option<crate:
 pub fn glass_shards_dice_pane(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, f0: &crate::shards::GlassFragmentLike) {
     use crate::glassbreak::GlassType;
     use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind};
-    let (bc, bh, yaw) = { let b = &g.col.boxes[st.box_]; (b.c, b.h, b.yaw) };
+    let (bc, bh, yaw) = { let b = &*seam_box(g, st.box_); (b.c, b.h, b.yaw) };
     let thin = if bh[0] < bh[2] { 0 } else { 2 };
     let (hu, hv) = (bh[2 - thin], bh[1]);
     let nu = clamp_i(m::round(hu * 2.0 / 0.5), 1.0, 4.0);
@@ -249,7 +244,7 @@ pub fn glass_shards_dice_pane(g: &mut crate::game::Game, st: &crate::glassbreak:
                 pane: st.bi, type_: GlassType::Tempered, kind: Kind::Clump, grain: 0.009, cause: Cause::Dice,
                 outline: vec![corner(-1.0, -1.0), corner(1.0, -1.0), corner(1.0, 1.0), corner(-1.0, 1.0)],
                 centre: c, area: 4.0 * su * sv, thickness: 2.0 * bh[thin],
-                velocity: [f0.velocity[0], f0.velocity[1] - 0.2 * hash01(f0.seed + i * 7.0 + j), f0.velocity[2]],
+                velocity: [f0.velocity[0], f0.velocity[1] - 0.2 * crate::debris::hash01(f0.seed + i * 7.0 + j), f0.velocity[2]],
                 seed: u32(f0.seed + m::imul(js::to_i32(i * 4.0 + j + 1.0), 0x9E3779B1u32 as i32) as f64),
                 ..f0.clone()
             };
@@ -275,7 +270,7 @@ pub fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFr
     let mut made = 0.0;
     let mut j = 0.0;
     while j < k {
-        let h = |i: f64| hash01(u32(f.seed + j * 7919.0 + i * 104729.0));
+        let h = |i: f64| crate::debris::hash01(u32(f.seed + j * 7919.0 + i * 104729.0));
         let hu = fr.lu * sc / (2.0 * k);
         let hv = fr.lv * sc / 2.0;
         if 4.0 * hu * hv < g.k.shards.child_min_area { j += 1.0; continue; }
@@ -309,7 +304,7 @@ pub fn glass_shards_cut_plates(g: &mut crate::game::Game, f: &crate::shards::Gla
     let mut made = 0.0;
     for jx in 0..k {
         let j = jx as f64;
-        let h = |i: f64| hash01(u32(f.seed + j * 7919.0 + i * 104729.0));
+        let h = |i: f64| crate::debris::hash01(u32(f.seed + j * 7919.0 + i * 104729.0));
         let area = poly_area(&parts[jx]);
         if area < g.k.shards.child_min_area { continue; }
         let pb = match cut_plate_box(g, v3::mad(fr.mid, n, 0.02), rot, &parts[jx], half_t, albedo) { Some(pb) => pb, None => continue };
@@ -353,20 +348,20 @@ pub fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, 
         if by_fall { row.dress = Some(true); }
     }
     let bx = g.tab.debris_chunk[ch].box_;
-    g.col.boxes[bx].rough = Some(0.05);
-    g.col.boxes[bx].flags = flags_or(g.col.boxes[bx].flags, crate::scene_boxes::box_flag().no_shadow);
+    seam_box(g, bx).rough = Some(0.05);
+    seam_box(g, bx).flags = flags_or(seam_box(g, bx).flags, crate::scene_boxes::box_flag().no_shadow);
     if let Some(cut) = cut {
         if g.k.shards.cut_body > 0.0 {
-            let at = g.col.boxes[bx].c;
+            let at = seam_box(g, bx).c;
             let under = glass_shards_under_albedo(g, at);
             let albedo = if cut.cut.is_some() { cut_face_albedo(g, meta.tint, under, meta.type_, false) } else { plate_albedo(meta.tint, under, meta.type_) };
-            g.col.boxes[bx].albedo = albedo;
+            seam_box(g, bx).albedo = albedo;
         }
-        g.col.boxes[bx].cut = cut.cut.clone();
+        seam_box(g, bx).cut = cut.cut.clone();
         if cut.cut.is_some() {
-            if g.k.shards.cut_edge > 0.0 { let e = edge_colour(meta.tint, g.k.shards.cut_edge); g.col.boxes[bx].cut_core = Some(e); }
+            if g.k.shards.cut_edge > 0.0 { let e = edge_colour(meta.tint, g.k.shards.cut_edge); seam_box(g, bx).cut_core = Some(e); }
             if g.k.shards.cut_see > 0.0 || g.k.shards.cut_rim > 0.0 {
-                g.col.boxes[bx].cut_glass = Some(crate::scene_cut::CutGlass { see: g.k.shards.cut_see, rim: g.k.shards.cut_rim, anim: Some(true) });
+                seam_box(g, bx).cut_glass = Some(crate::scene_cut::CutGlass { see: g.k.shards.cut_see, rim: g.k.shards.cut_rim, anim: Some(true) });
             }
         }
         g.stats.shards.cut_plates += 1;
@@ -390,7 +385,7 @@ pub fn glass_shards_crumbs(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let n = glass_shards_budget(g, clamp_i(m::round(meta.area * 220.0), 3.0, 10.0));
     let bx = g.tab.debris_chunk[c_2].box_;
-    let at = g.col.boxes[bx].c;
+    let at = seam_box(g, bx).c;
     let (mid_life, mid_size) = (g.k.shards.mid_life, g.k.shards.mid_size);
     glass_shards_emit(g, v3::add(at, [0.0, 0.01, 0.0]), [0.0, 1.0, 0.0], n, spray(0.25, 0.8, 1.3, mid_life * 0.7, 0.3, mid_size, 0.5, 1.6, 6.0, 0.2, m::sqrt(meta.area) * 0.4, None, meta.tint), xor_u32(meta.seed, 0xC2B2 as f64));
 }
@@ -402,7 +397,7 @@ pub fn glass_shards_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) { gla
 pub fn glass_shards_gone(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     if !shards_live(g) || g.tab.debris_chunk[c_2].glass.is_none() { return; }
     let bx = g.tab.debris_chunk[c_2].box_;
-    if g.col.boxes[bx].c[1] < -0.5 { return; }
+    if seam_box(g, bx).c[1] < -0.5 { return; }
     glass_shards_crumbs(g, c_2);
 }
 
@@ -414,12 +409,12 @@ pub fn glass_shards_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed:
     let p = if v1 > v0 { m::max(0.0, m::min(1.0, (speed - v0) / (v1 - v0))) } else { 1.0 };
     let laminated = meta.type_ == crate::glassbreak::GlassType::Laminated;
     let breaks = shards_live(g) && !laminated && meta.gen_ < g.k.shards.max_gen && meta.area >= g.k.shards.child_min_area * 2.0
-        && hash01(serial * 61.0 + 7.0) < p * (if js::truthy(meta.gen_) { 0.6 } else { 1.0 });
+        && crate::debris::hash01(serial * 61.0 + 7.0) < p * (if js::truthy(meta.gen_) { 0.6 } else { 1.0 });
     if breaks { g.shards.breaks.push(GlassShardsBreaksItem { c: c_2, speed }); }
     let big = m::min(1.0, meta.area / 0.08);
-    let at = g.col.boxes[bx].c;
-    if breaks { glass_shards_sound(g, "glassShatter", at, m::min(1.0, 0.4 + 0.5 * big + speed * 0.05), 1.25 - 0.4 * big + 0.15 * hash01(serial * 31.0)); }
-    else { glass_shards_sound(g, "glassTinkle", at, m::min(1.0, 0.3 + 0.3 * big + speed * 0.08), (if laminated { 0.55 } else { 1.1 - 0.35 * big }) + 0.2 * hash01(serial * 31.0)); }
+    let at = seam_box(g, bx).c;
+    if breaks { glass_shards_sound(g, "glassShatter", at, m::min(1.0, 0.4 + 0.5 * big + speed * 0.05), 1.25 - 0.4 * big + 0.15 * crate::debris::hash01(serial * 31.0)); }
+    else { glass_shards_sound(g, "glassTinkle", at, m::min(1.0, 0.3 + 0.3 * big + speed * 0.08), (if laminated { 0.55 } else { 1.1 - 0.35 * big }) + 0.2 * crate::debris::hash01(serial * 31.0)); }
     if !g.k.shards.by_fall {
         let level = if breaks { g.k.shards.level + 0.05 } else { g.k.shards.level };
         glass_shards_heard(g, at, level, who);
@@ -431,16 +426,16 @@ pub fn glass_shards_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed:
 pub fn glass_shards_rested(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let bx = g.tab.debris_chunk[c_2].box_;
-    let at = g.col.boxes[bx].c;
+    let at = seam_box(g, bx).c;
     let under = glass_shards_under_albedo(g, at);
-    let has_cut = g.col.boxes[bx].cut.is_some();
+    let has_cut = seam_box(g, bx).cut.is_some();
     let albedo = if has_cut { cut_face_albedo(g, meta.tint, under, meta.type_, true) } else { plate_albedo(meta.tint, under, meta.type_) };
-    g.col.boxes[bx].albedo = albedo;
+    seam_box(g, bx).albedo = albedo;
     if has_cut {
-        if let Some(glass) = g.col.boxes[bx].cut_glass {
+        if let Some(glass) = seam_box(g, bx).cut_glass {
             if glass.see > 0.0 && g.k.shards.cut_see_rest > 0.0 {
                 let see = g.k.shards.cut_see_rest;
-                g.col.boxes[bx].cut_glass = Some(crate::scene_cut::CutGlass { see, ..glass });
+                seam_box(g, bx).cut_glass = Some(crate::scene_cut::CutGlass { see, ..glass });
             }
         }
     }
@@ -459,7 +454,7 @@ pub fn glass_shards_shed(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let n = glass_shards_budget(g, want);
     if n <= 0.0 { return; }
     if meta.poly.is_some() { glass_shards_shed_cut(g, c_2, n); return; }
-    let (bc, bh, yaw, brot) = { let b = &g.col.boxes[bx]; (b.c, b.h, b.yaw, b.rot) };
+    let (bc, bh, yaw, brot) = { let b = &*seam_box(g, bx); (b.c, b.h, b.yaw, b.rot) };
     let rot = brot.unwrap_or_else(|| v3::quat::yaw(yaw));
     let ax = sort_axes(bh);
     let (long, short) = (ax[2], ax[1]);
@@ -471,7 +466,7 @@ pub fn glass_shards_shed(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let (mid_life, crumb) = (g.k.shards.mid_life, g.k.shards.crumb_size);
     let mut j = 0.0;
     while j < pts {
-        let s = (j + hash01(u32(meta.seed + 0xC4B5 as f64 + j * 977.0))) / pts * per;
+        let s = (j + crate::debris::hash01(u32(meta.seed + 0xC4B5 as f64 + j * 977.0))) / pts * per;
         let (a, d) = outline_walk(s, hl, hs);
         let p = v3::mad(v3::mad(bc, l, a), s_ax, d);
         glass_shards_emit(g, [p[0], m::max(p[1], bc[1]) + 0.012, p[2]], [0.0, 1.0, 0.0], m::min(2.0, n - 2.0 * j), spray(0.15, 0.8, 1.3, mid_life, 0.3, crumb, 0.4, 1.3, 8.0, 0.3, 0.03, None, meta.tint), xor_u32(meta.seed, 0xC4B5 as f64 + j * 131.0));
@@ -484,7 +479,7 @@ pub fn glass_shards_shed_cut(g: &mut crate::game::Game, c_2: DebrisChunkId, n: f
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let bx = g.tab.debris_chunk[c_2].box_;
     let p_ = meta.poly.clone().unwrap();
-    let (bc, yaw, brot) = { let b = &g.col.boxes[bx]; (b.c, b.yaw, b.rot) };
+    let (bc, yaw, brot) = { let b = &*seam_box(g, bx); (b.c, b.yaw, b.rot) };
     let rot = brot.unwrap_or_else(|| v3::quat::yaw(yaw));
     let mut len: Vec<f64> = Vec::new();
     let mut per = 0.0;
@@ -500,7 +495,7 @@ pub fn glass_shards_shed_cut(g: &mut crate::game::Game, c_2: DebrisChunkId, n: f
     let (mid_life, crumb) = (g.k.shards.mid_life, g.k.shards.crumb_size);
     let mut j = 0.0;
     while j < pts {
-        let mut s = (j + hash01(u32(meta.seed + 0xC4B5 as f64 + j * 977.0))) / pts * per;
+        let mut s = (j + crate::debris::hash01(u32(meta.seed + 0xC4B5 as f64 + j * 977.0))) / pts * per;
         let mut i = 0;
         while i < p_.len() - 1 && s > len[i] { s -= len[i]; i += 1; }
         let (a, q) = (p_[i], p_[(i + 1) % p_.len()]);
@@ -517,7 +512,7 @@ pub fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed
     let i = match g.destr.debris.list.iter().position(|c| *c == c_2) { Some(i) => i, None => return };
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let (bx, serial, cv, who) = { let c = &g.tab.debris_chunk[c_2]; (c.box_, c.serial, c.v, c.who) };
-    let (bc, bh, yaw, balbedo, brot) = { let b = &g.col.boxes[bx]; (b.c, b.h, b.yaw, b.albedo, b.rot) };
+    let (bc, bh, yaw, balbedo, brot) = { let b = &*seam_box(g, bx); (b.c, b.h, b.yaw, b.albedo, b.rot) };
     let rot = brot.unwrap_or_else(|| v3::quat::yaw(yaw));
     g.destr.debris.list.remove(i);
     g.stats.shards.breaks += 1;
@@ -526,7 +521,7 @@ pub fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed
     let (long, short) = (ax[2], ax[1]);
     let l = v3::quat::rotate(rot, AXES[long]);
     let seed = meta.seed;
-    let h = |k: f64| hash01(u32(seed + serial * 131.0 + k * 977.0));
+    let h = |k: f64| crate::debris::hash01(u32(seed + serial * 131.0 + k * 977.0));
     let k = 2.0 + (if h(0.0) > 0.6 { 1.0 } else { 0.0 });
     let n_parts = k as usize;
     let mut cuts = vec![0.0];
@@ -562,7 +557,7 @@ pub fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed
             if glass_shards_plate(g, pb.box_, vel, w, who, &child, Some(&cut)).is_none() { lost += full; }
         }
     } else {
-        let word = crate::scene_boxes::WordOfB { stuff: g.col.boxes[bx].stuff, does: g.col.boxes[bx].does };
+        let word = crate::scene_boxes::WordOfB { stuff: seam_box(g, bx).stuff, does: seam_box(g, bx).does };
         for jx in 0..n_parts {
             let j = jx as f64;
             let (a0, a1) = (cuts[jx], cuts[jx + 1]);
@@ -594,13 +589,14 @@ pub fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed
     let nf = glass_shards_budget(g, want);
     glass_shards_emit(g, v3::add(bc, [0.0, 0.02, 0.0]), [0.0, 1.0, 0.0], nf, spray(0.9 + 0.35 * speed, 0.85, 1.35, fine_life, 0.4, fine_size, 0.6, 1.4, 45.0, 1.0, bh[long] * 0.7, None, meta.tint), xor_u32(meta.seed, 0x5A78 as f64));
     if meta.littered != Some(true) && !g.k.shards.by_fall { glass_shards_deposit(g, bc, a); }
-    glass_shards_note(g, &alloc::format!("plate {} (gen {}, {:.0} cm²) broke at {:.1} m/s into {} (+{} particles)", serial, meta.gen_, meta.area * 1e4, speed, k, nm + nf));
+    glass_shards_note(g, &alloc::format!("plate {} (gen {}, {} cm²) broke at {} m/s into {} (+{} particles)", js::num_str(serial), js::num_str(meta.gen_), js::to_fixed(meta.area * 1e4, 0), js::to_fixed(speed, 1), js::num_str(k), js::num_str(nm + nf)));
 }
 
-/// `g.level.boxes[bi]?.albedo ?? the pale default`
+/// `g.level.boxes[bi]?.albedo ?? the pale default`. That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219); off the list (a negative, fractional or NaN index) is undefined
 fn level_box_albedo(g: &mut Game, bi: f64) -> V3 {
-    let row = if bi >= 0.0 { g.level.boxes.get(bi as usize) } else { None };
-    match row { Some(b) => b.albedo, None => [0.72, 0.8, 0.82] }
+    let ix = bi as usize;
+    let row = if ix as f64 == bi { g.col.boxes.get(ix).copied() } else { None };
+    match row { Some(b) => seam_box(g, b).albedo, None => [0.72, 0.8, 0.82] }
 }
 
 /// A round went through a sheet: the exit spall, and a little litter where the jet comes down.   (shards.ts GlassShards.crossed)
@@ -676,7 +672,13 @@ pub fn glass_shards_send(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64
     g.stats.shards.emits += 1;
     g.stats.shards.born += count as i32;
     g.stats.shards.peak_live = g.stats.shards.peak_live.max(g.shards.live_est as i32);
-    seam_particles_emit_shard(g, pos, dir, count, o, seed);
+    if crate::particle_fx::gpu_fx(g) {
+        use crate::render_particles::{EmitOpts, EmitShape, PKind};
+        crate::render_particles::particles_emit(g, PKind::Shard, pos, dir, count, EmitOpts {
+            shape: Some(EmitShape::Cone), speed: o.speed, speed_jit: Some(o.speed_jit), spread: Some(o.spread), life: o.life, life_jit: Some(o.life_jit), size: o.size, size_jit: Some(o.size_jit),
+            aspect: Some(o.aspect), tumble: Some(o.tumble), nrm_jit: Some(o.nrm_jit), pos_jit: Some(o.pos_jit), vadd: o.vadd, color: Some(o.color), seed: Some(seed), ..EmitOpts::zeroed()
+        });
+    }
 }
 
 /// Where and when a fragment let go at `c` with velocity `v` reaches what is under it.   (shards.ts GlassShards.fallOf)
@@ -722,7 +724,7 @@ pub fn glass_shards_sound(g: &mut crate::game::Game, name: &str, pos: V3, gain: 
     g.shards.sound_at.set(key, now);
     g.shards.sounds_this_frame += 1.0;
     g.stats.shards.sounds += 1;
-    seam_audio_play(g, name, v3::copy(pos), gain + owed, rate);
+    crate::audio_iface::game_audio_like_play(g, name, Some(v3::copy(pos)), Some(gain + owed), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
 /// A landing the floor can hear: one 'prop' event a gap, floor-wide.   (shards.ts GlassShards.heard)
@@ -752,8 +754,8 @@ pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 
     if k == 0.0 { return level; }
     g.stats.shards.crunches += 1;
     g.shards.crunch_n += 1.0;
-    let rate = 0.85 + 0.3 * hash01(g.shards.crunch_n * 97.0);
-    seam_audio_play(g, "glassCrunch", [pos[0], 0.02, pos[2]], m::min(1.0, (0.35 + 0.65 * k) * m::min(1.5, 0.5 + level * 2.0)), rate);
+    let rate = 0.85 + 0.3 * crate::debris::hash01(g.shards.crunch_n * 97.0);
+    crate::audio_iface::game_audio_like_play(g, "glassCrunch", Some([pos[0], 0.02, pos[2]]), Some(m::min(1.0, (0.35 + 0.65 * k) * m::min(1.5, 0.5 + level * 2.0))), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     r.level
 }
 
@@ -847,12 +849,12 @@ pub fn glass_shards_plate_count(g: &mut crate::game::Game) -> f64 {
 pub fn glass_shards_under_albedo(g: &mut crate::game::Game, p: V3) -> V3 {
     let hit = crate::scene_collision::raycast(g, [p[0], p[1] + 0.05, p[2]], [0.0, -1.0, 0.0], p[1] + 0.6);
     let b = match hit { Some(h) if h.index >= 0.0 => g.engine.world.statics.get(h.index as usize).copied(), _ => None };
-    match b { Some(b) => g.col.boxes[b].albedo, None => [0.4, 0.4, 0.4] }
+    match b { Some(b) => seam_box(g, b).albedo, None => [0.4, 0.4, 0.4] }
 }
 
 /// A line in the tool's log, the last sixty kept.   (shards.ts GlassShards.note)
 pub fn glass_shards_note(g: &mut crate::game::Game, s: &str) {
-    let line = alloc::format!("{:.2} {}", g.time, s);
+    let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
     g.shards.log.push(line);
     if g.shards.log.len() > 60 { g.shards.log.remove(0); }
 }
@@ -864,8 +866,8 @@ pub fn glass_shards_summary(g: &mut crate::game::Game) -> String {
     for c in cells.iter() { lit += c[2]; }
     let (live, plates) = (shards_live(g), glass_shards_plate_count(g));
     let s = &g.stats.shards;
-    alloc::format!("{}{} · {} fragments → {} plates ({} now, {} broke, {} crumbled, {} refused) + {} particles in {} emits (~{} live of {}, {} trimmed) · {} sounds, {} heard, {} crunches · litter {:.0} cm² in {} cells",
-        if live { "live" } else { "inert" }, if g.shards.hooked { " (release hook)" } else { "" }, s.fragments, s.plates, plates, s.breaks, s.crumbled, s.plates_refused, s.born, s.emits, g.shards.live_est, g.k.shards.live_cap, s.trimmed, s.sounds, s.events, s.crunches, lit * 1e4, cells.len())
+    alloc::format!("{}{} · {} fragments → {} plates ({} now, {} broke, {} crumbled, {} refused) + {} particles in {} emits (~{} live of {}, {} trimmed) · {} sounds, {} heard, {} crunches · litter {} cm² in {} cells",
+        if live { "live" } else { "inert" }, if g.shards.hooked { " (release hook)" } else { "" }, s.fragments, s.plates, js::num_str(plates), s.breaks, s.crumbled, s.plates_refused, s.born, s.emits, js::num_str(g.shards.live_est), js::num_str(g.k.shards.live_cap), s.trimmed, s.sounds, s.events, s.crunches, js::to_fixed(lit * 1e4, 0), cells.len())
 }
 
 /// A hand test: a fragment of `area` m² let go at `at`, thrown along `dir`.   (shards.ts GlassShards.test)
@@ -892,8 +894,6 @@ pub fn glass_shards_test(g: &mut crate::game::Game, at: V3, dir: Option<V3>, are
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn a_cells_name() { assert_eq!(cell_name(-3.0, 7.0), 2085383.0); }
     #[test]
     fn seed_words_are_unsigned() {
         // the TypeScript's own: (3000000000 ^ 0xC8A7) >>> 0, and (1.5 ^ 0xBACC) >>> 0

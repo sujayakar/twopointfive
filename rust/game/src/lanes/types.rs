@@ -11,7 +11,7 @@ pub enum LanePenalty {
     Base { base: crate::tactics::TacticsPenalty },
 }
 
-/// (TypeScript: Lane, src/game/lanes.ts:156)
+/// (TypeScript: Lane, src/game/lanes.ts:158)
 #[derive(Clone, Debug)]
 pub struct Lane {
     pub id: f64,
@@ -90,7 +90,7 @@ impl Lane {
 }
 impl Default for Lane { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:172 Lane.re, src/game/lanes.ts:172)
+/// (TypeScript: inline at src/game/lanes.ts:174 Lane.re, src/game/lanes.ts:174)
 #[derive(Clone, Debug)]
 pub struct LaneRe {
     pub set: JsSet<crate::Num>,
@@ -107,7 +107,7 @@ impl LaneRe {
 }
 impl Default for LaneRe { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:175 Lane.can, src/game/lanes.ts:175)
+/// (TypeScript: inline at src/game/lanes.ts:177 Lane.can, src/game/lanes.ts:177)
 #[derive(Clone, Copy, Debug)]
 pub struct LaneCan {
     pub who: f64,
@@ -126,7 +126,7 @@ impl LaneCan {
 }
 impl Default for LaneCan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Flank, src/game/lanes.ts:187)
+/// (TypeScript: Flank, src/game/lanes.ts:189)
 #[derive(Clone, Copy, Debug)]
 pub struct Flank {
     pub lane: f64,
@@ -166,7 +166,7 @@ impl FlankPhase {
     }
 }
 
-/// (TypeScript: Peek, src/game/lanes.ts:188)
+/// (TypeScript: Peek, src/game/lanes.ts:190)
 #[derive(Clone, Copy, Debug)]
 pub struct Peek {
     pub lane: f64,
@@ -214,7 +214,7 @@ impl PeekPhase {
     }
 }
 
-/// (TypeScript: inline at src/game/lanes.ts:190 Peek.fire, src/game/lanes.ts:190)
+/// (TypeScript: inline at src/game/lanes.ts:192 Peek.fire, src/game/lanes.ts:192)
 #[derive(Clone, Copy, Debug)]
 pub struct PeekFire {
     pub n: f64,
@@ -237,7 +237,7 @@ impl PeekFire {
 }
 impl Default for PeekFire { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:192 Peek.frag, src/game/lanes.ts:192)
+/// (TypeScript: inline at src/game/lanes.ts:194 Peek.frag, src/game/lanes.ts:194)
 #[derive(Clone, Copy, Debug)]
 pub struct PeekFrag {
     pub at: Option<V3>,
@@ -268,10 +268,10 @@ impl PeekFrag {
 }
 impl Default for PeekFrag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/lanes.ts:193)
+/// (TypeScript: State, src/game/lanes.ts:195)
 #[derive(Clone, Debug)]
 pub struct State {
-    pub lanes: Vec<crate::lanes::Lane>,
+    pub lanes: Vec<LanesLaneId>,
     pub serial: f64,
     pub mask: Option<Vec<u8>>,
     pub ver: f64,
@@ -337,7 +337,7 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:197 State.own, src/game/lanes.ts:197)
+/// (TypeScript: inline at src/game/lanes.ts:199 State.own, src/game/lanes.ts:199)
 #[derive(Clone, Debug)]
 pub struct StateOwnValue {
     pub ver: f64,
@@ -354,7 +354,7 @@ impl StateOwnValue {
 }
 impl Default for StateOwnValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:200 State.held, src/game/lanes.ts:200)
+/// (TypeScript: inline at src/game/lanes.ts:202 State.held, src/game/lanes.ts:202)
 #[derive(Clone, Copy, Debug)]
 pub struct StateHeldValue {
     pub lane: f64,
@@ -377,7 +377,7 @@ impl StateHeldValue {
 }
 impl Default for StateHeldValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:200 State.due, src/game/lanes.ts:200)
+/// (TypeScript: inline at src/game/lanes.ts:202 State.due, src/game/lanes.ts:202)
 #[derive(Clone, Copy, Debug)]
 pub struct StateDueItem {
     pub gd: GuardId,
@@ -396,7 +396,7 @@ impl StateDueItem {
 }
 impl Default for StateDueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:201 State.stats, src/game/lanes.ts:201)
+/// (TypeScript: inline at src/game/lanes.ts:203 State.stats, src/game/lanes.ts:203)
 #[derive(Clone, Copy, Debug)]
 pub struct StateStats {
     pub lanes: f64,
@@ -453,7 +453,7 @@ impl StateStats {
 }
 impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:207 State.fragNo, src/game/lanes.ts:207)
+/// (TypeScript: inline at src/game/lanes.ts:209 State.fragNo, src/game/lanes.ts:209)
 #[derive(Clone, Copy, Debug)]
 pub struct StateFragNoValue {
     pub lane: f64,
@@ -470,7 +470,7 @@ impl StateFragNoValue {
 }
 impl Default for StateFragNoValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:209 State.near, src/game/lanes.ts:209)
+/// (TypeScript: inline at src/game/lanes.ts:211 State.near, src/game/lanes.ts:211)
 #[derive(Clone, Copy, Debug)]
 pub struct StateNearItem {
     pub gd: GuardId,
@@ -493,7 +493,7 @@ impl StateNearItem {
 }
 impl Default for StateNearItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LanesSave, src/game/lanes.ts:984)
+/// (TypeScript: LanesSave, src/game/lanes.ts:999)
 #[derive(Clone, Debug)]
 pub struct LanesSave {
     pub serial: f64,
@@ -510,7 +510,7 @@ impl LanesSave {
 }
 impl Default for LanesSave { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:984 LanesSave.lanes, src/game/lanes.ts:984)
+/// (TypeScript: inline at src/game/lanes.ts:999 LanesSave.lanes, src/game/lanes.ts:999)
 #[derive(Clone, Debug)]
 pub struct LanesSaveLanesItem {
     pub id: f64,
@@ -563,7 +563,7 @@ impl LanesSaveLanesItem {
 }
 impl Default for LanesSaveLanesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:591 stepper ->, src/game/lanes.ts:591)
+/// (TypeScript: inline at src/game/lanes.ts:606 stepper ->, src/game/lanes.ts:606)
 #[derive(Clone, Copy, Debug)]
 pub struct Stepper {
     pub gd: GuardId,
@@ -587,7 +587,7 @@ pub enum FragPlace {
     Edge,
 }
 
-/// (TypeScript: inline at src/game/lanes.ts:980 lanesList ->, src/game/lanes.ts:980)
+/// (TypeScript: inline at src/game/lanes.ts:995 lanesList ->, src/game/lanes.ts:995)
 #[derive(Clone, Copy, Debug)]
 pub struct LanesListItem {
     pub id: f64,
@@ -621,7 +621,7 @@ impl Default for LanesListItem { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct LanesMod {
-    /// (src/game/lanes.ts:211 states)
+    /// (src/game/lanes.ts:213 states)
     pub states: Option<crate::lanes::State>,
 }
 impl LanesMod {
@@ -632,11 +632,11 @@ impl LanesMod {
     }
 }
 
-/// (src/game/lanes.ts:154 LANES_DEFAULTS: a table nothing writes)
+/// (src/game/lanes.ts:156 LANES_DEFAULTS: a table nothing writes)
 pub fn lanes_defaults() -> crate::knobs::LanesK { crate::knobs::page_lanes() }
 
-/// (src/game/lanes.ts:217 SIDE)
+/// (src/game/lanes.ts:220 SIDE)
 pub const SIDE: &str = "hostile";
 
-/// (src/game/lanes.ts:574 SPOT_RING)
+/// (src/game/lanes.ts:589 SPOT_RING)
 pub const SPOT_RING: f64 = 0.7;

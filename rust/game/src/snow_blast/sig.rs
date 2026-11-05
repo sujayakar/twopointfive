@@ -36,7 +36,7 @@ pub fn step_snow_blast(g: &mut crate::game::Game, dt: f64) { todo!() }
 pub fn snow_blast_feed(g: &mut crate::game::Game, c_2: &mut Vec<f32>) { todo!() }
 
 /// (src/game/snowBlast.ts:189 snowBlastPuffs)
-pub fn snow_blast_puffs(g: &mut crate::game::Game, pp: &mut crate::render_particles::Particles, room: f64) -> f64 { todo!() }
+pub fn snow_blast_puffs(g: &mut crate::game::Game, room: f64) -> f64 { todo!() }
 
 /// (src/game/snowBlast.ts:204 snowBlastThrow)
-pub fn snow_blast_throw(g: &mut crate::game::Game, pp: &mut crate::render_particles::Particles, room: f64, size: f64, size_jit: f64) -> f64 { todo!() }
+pub fn snow_blast_throw(g: &mut crate::game::Game, room: f64, size: f64, size_jit: f64) -> f64 { todo!() }

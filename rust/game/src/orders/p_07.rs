@@ -5,18 +5,9 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-
-// ---- seams: what the skeleton cannot do yet ----
-
-/// orders.ts 2198 and on: asking a price `dearFor` handed back for a cell (cleared has no public way to answer one).
-fn seam_dear_price(g: &mut Game, price: &crate::cleared::DearPrice, ix: f64, iz: f64) -> f64 { todo!("needs: cleared::dear_price(g, price, ix, iz) in sig.rs") }
-/// orders.ts 2270 and on: asking a price `doorwayLanePrice` handed back for a cell; `&mut`, for its memo.
-fn seam_lane_price(g: &mut Game, price: &mut crate::doorway::DoorwayLanePrice, ix: f64, iz: f64) -> f64 { todo!("needs: doorway::doorway_lane_price_at(g, price, ix, iz) in sig.rs") }
-/// orders.ts 2283 and on: asking a price `seenPrice` handed back for a cell.
-fn seam_seen_price(g: &mut Game, price: &crate::seenwalk::SeenPrice, ix: f64, iz: f64) -> f64 { todo!("needs: seenwalk::seen_price_at(g, price, ix, iz) in sig.rs") }
 
 // ---- a walk's price list, as the closures of the TypeScript held it ----
 
@@ -28,11 +19,11 @@ enum Pen<'a> {
 }
 fn price(g: &mut Game, pen: Pen<'_>, ix: f64, iz: f64) -> f64 {
     match pen {
-        Pen::Dear(u) => seam_dear_price(g, u, ix, iz),
+        Pen::Dear(u) => crate::cleared::dear_price(g, u, ix, iz),
         Pen::Walk { dear, wall, unk } => {
             let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
             if dear.has(crate::Num(i)) { return wall; }
-            match unk { Some(u) => seam_dear_price(g, u, ix, iz), None => 1.0 }
+            match unk { Some(u) => crate::cleared::dear_price(g, u, ix, iz), None => 1.0 }
         }
     }
 }
@@ -46,10 +37,10 @@ fn along(g: &mut Game, from: V3, path: &[V3], pen: Pen<'_>) -> f64 {
     crate::cleared::cleared_rooms_dear_along(g, from, path, &mut |g: &mut Game, x: f64, z: f64| price(g, pen, x, z))
 }
 fn along_lanes(g: &mut Game, from: V3, path: &[V3], lanes: &mut crate::doorway::DoorwayLanePrice) -> f64 {
-    crate::cleared::cleared_rooms_dear_along(g, from, path, &mut |g: &mut Game, x: f64, z: f64| seam_lane_price(g, lanes, x, z))
+    crate::cleared::cleared_rooms_dear_along(g, from, path, &mut |g: &mut Game, x: f64, z: f64| crate::doorway::doorway_lane_price_at(g, lanes, x, z))
 }
 fn along_seen(g: &mut Game, from: V3, path: &[V3], seen: &crate::seenwalk::SeenPrice) -> f64 {
-    crate::cleared::cleared_rooms_dear_along(g, from, path, &mut |g: &mut Game, x: f64, z: f64| seam_seen_price(g, seen, x, z))
+    crate::cleared::cleared_rooms_dear_along(g, from, path, &mut |g: &mut Game, x: f64, z: f64| crate::seenwalk::seen_price_at(g, seen, x, z))
 }
 fn is_blocked(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 /// `nav.isBlocked(p) ? this.freeSpot(p) ?? p : p`
@@ -492,8 +483,8 @@ fn lane_only(g: &mut Game, w: Way<'_>, base: &[V3], pen: Option<Pen<'_>>) -> Opt
     let lane_m = along_lanes(g, w.from, base, &mut lanes);
     if lane_m < 1.0 { return None; }
     let way = crate::scene_collision::nav_grid_find_path(g, w.from, w.to, Some(ROUND_ITER), Some(&mut |g: &mut Game, x: f64, z: f64| match pen {
-        Some(p) => { let a = price(g, p, x, z); a * seam_lane_price(g, &mut lanes, x, z) }
-        None => seam_lane_price(g, &mut lanes, x, z),
+        Some(p) => { let a = price(g, p, x, z); a * crate::doorway::doorway_lane_price_at(g, &mut lanes, x, z) }
+        None => crate::doorway::doorway_lane_price_at(g, &mut lanes, x, z),
     }))?;
     if shut(g, w.from, w.ring, &way).is_some() || doors_on(g, w.from, &way).iter().any(|d| !mine.contains(d)) || along_lanes(g, w.from, &way, &mut lanes) > lane_m - 1.0
         || len_from(w.from, &way) > len_from(w.from, base) * g.k.doormanners.lane_long + 1.0 { return None; }
@@ -515,8 +506,8 @@ fn seen_way(g: &mut Game, w: Way<'_>, now: &[V3], base: &[V3], pen: Option<Pen<'
     let way = crate::scene_collision::nav_grid_find_path(g, w.from, w.to, Some(ROUND_ITER), Some(&mut |g: &mut Game, x: f64, z: f64| {
         let a = match pen { Some(p) => Some(price(g, p, x, z)), None => None };
         let both = match lanes.as_mut() {
-            Some(l) => { let v = seam_lane_price(g, l, x, z); m::max(v, seam_seen_price(g, &seen, x, z)) }
-            None => seam_seen_price(g, &seen, x, z),
+            Some(l) => { let v = crate::doorway::doorway_lane_price_at(g, l, x, z); m::max(v, crate::seenwalk::seen_price_at(g, &seen, x, z)) }
+            None => crate::seenwalk::seen_price_at(g, &seen, x, z),
         };
         match a { Some(a) => a * both, None => both }
     }))?;
@@ -599,7 +590,7 @@ pub fn squad_orders_route(g: &mut crate::game::Game, gd: GuardId, to: V3, shy: O
                 lock = Some(SquadOrdersRouteLock { door: s, side: side_of(g, s, a) });
             }
             let why = match still {
-                Some(s) => { let words = door_words(g, s); let name = if words == "door" { String::from("that door") } else { words }; format!("{} is locked.", name) }
+                Some(s) => { let words = door_words(g, s); let name = if words == "door" { String::from("that door") } else { words }; alloc::format!("{} is locked.", name) }
                 None => String::from("can't get there."),
             };
             return SquadOrdersRoute { why: Some(why), lock, ..route_none() };
@@ -885,6 +876,9 @@ pub fn squad_orders_walk_try(g: &mut crate::game::Game, gd: GuardId, to: V3) -> 
     if crate::doortools::door_tools_untried(g, l.door, l.side) { Some(SquadOrdersWalkTry { door: l.door, side: l.side }) } else { None }
 }
 
+/// `x.pos === p` where `p` is the spot itself, handed back: to the bit, so that a NaN finds its post as identity would
+fn same_bits(a: V3, b: V3) -> bool { a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits() && a[2].to_bits() == b[2].to_bits() }
+
 /// The men of a 'move' whose way runs at such a door, each dealt a stack mark on the face he comes to it by; Text: that door has no room for them.   (orders.ts SquadOrders.walkStacks)
 pub fn squad_orders_walk_stacks(g: &mut crate::game::Game, men: &[GuardId], to: V3) -> Option<crate::orders::SquadOrdersWalkStacks> {
     if g.orders.cast.is_some() { return None; }
@@ -901,20 +895,20 @@ pub fn squad_orders_walk_stacks(g: &mut crate::game::Game, men: &[GuardId], to: 
         let (door, side) = (*door, *side);
         let posts = match squad_orders_stack_posts_wait(g, door, side, men) {
             Some(p) => p,
-            None => return Some(SquadOrdersWalkStacks::Text(squad_orders_no_room_words(g, "no room on that door.", &mut |g: &mut Game, _: &mut Game| squad_orders_stack_posts_wait(g, door, side, men).is_some()))),
+            None => return Some(SquadOrdersWalkStacks::Text(squad_orders_no_room_words(g, "no room on that door.", &mut |g: &mut Game| squad_orders_stack_posts_wait(g, door, side, men).is_some()))),
         };
         let spots: Vec<V3> = posts.iter().map(|x| x.pos).collect();
         let groups: Vec<f64> = posts.iter().map(|x| x.group.unwrap_or(0.0)).collect();
         let fc = g.dr[door].frame_centre;
         for (gd, p) in squad_orders_pair(g, men, &spots, Some(&groups), Some(fc)) {
-            let post = *posts.iter().find(|x| x.pos == p).unwrap();   // (the TypeScript finds the same array by identity: the marks are a body apart, so the place names it)
+            let post = *posts.iter().find(|x| same_bits(x.pos, p)).unwrap();   // (the TypeScript finds the same array by identity: pair hands the spots back unchanged, and the marks are a body apart, so the bits of the place name it)
             out.get_or_insert_with(JsMap::new).set(gd, SquadOrdersWalkStacksMapValue { door, side, post });
         }
     }
     out.map(SquadOrdersWalkStacks::Map)
 }
 
-/// the all-optional order as the three struct types the skeleton made of the one TypeScript shape
+/// the all-optional order as the two struct types the skeleton made of the one TypeScript shape
 macro_rules! order_as {
     ($to:ident, $s:expr, $tries:expr) => {{
         let s = $s;
@@ -931,11 +925,10 @@ macro_rules! order_as {
 type TriesOn = crate::doortools::DoorToolsDoneItemLaneBackTriesOn;
 type Tries = crate::doortools::DoorToolsDoneItemLaneBackTries;
 fn on_to_assign(s: &TriesOn) -> SquadOrdersAssignA { order_as!(SquadOrdersAssignA, s, |t: Option<Box<Tries>>| t.map(|b| *b)) }
-fn on_to_send(s: &TriesOn) -> SquadOrdersWalkSendOn { order_as!(SquadOrdersWalkSendOn, s, |t: Option<Box<Tries>>| t.map(|b| *b)) }
-fn send_to_on(s: &SquadOrdersWalkSendOn) -> TriesOn { order_as!(TriesOn, s, |t: Option<Tries>| t.map(Box::new)) }
+fn assign_to_on(s: &SquadOrdersAssignA) -> TriesOn { order_as!(TriesOn, s, |t: Option<Tries>| t.map(Box::new)) }
 
 /// A man of them sent: to his stack mark on that door, in the stack's carriage, still on his 'move'.   (orders.ts SquadOrders.walkSend)
-pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::orders::SquadOrdersWalkSendT, at: V3, on: &crate::orders::SquadOrdersWalkSendOn) {
+pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::orders::SquadOrdersWalkSendT, at: V3, on: &crate::orders::SquadOrdersAssignA) {
     let fc = g.dr[t.door].frame_centre;
     let a = SquadOrdersAssignA {
         order: String::from("move"),
@@ -950,7 +943,7 @@ pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::
         stack_side: Some(t.post.stack_side),
         going: String::from("moving"),
         there: String::from("moving"),
-        tries: Some(Tries { door: t.door, side: t.side, post: t.post, at: v3::copy(at), on: send_to_on(on) }),
+        tries: Some(Tries { door: t.door, side: t.side, post: t.post, at: v3::copy(at), on: assign_to_on(on) }),
         ..SquadOrdersAssignA::zeroed()
     };
     squad_orders_assign(g, gd, &a);
@@ -994,7 +987,7 @@ pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
         let n = match &next { Some(SquadOrdersWalkStacks::Map(map)) => map.get(mm).copied(), _ => None };
         let why = if n.is_some() { None } else { squad_orders_reach(g, mm, at) };
         if let Some(n) = n {
-            squad_orders_walk_send(g, mm, SquadOrdersWalkSendT { door: n.door, side: n.side, post: n.post }, at, &on_to_send(&t.on));
+            squad_orders_walk_send(g, mm, SquadOrdersWalkSendT { door: n.door, side: n.side, post: n.post }, at, &on_to_assign(&t.on));
         } else if let Some(why) = why {
             if !said { crate::game::game_say(g, mm, &why, None, None, None); }
             said = true;
@@ -1004,4 +997,47 @@ pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
         }
     }
     if held.len() > 1 { squad_orders_same_ways(g, &held); }   // (the walk's second leg is a giving of its own: a pair goes on by one way)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_place_names_its_post_to_the_bit() {
+        let nan = f64::NAN;
+        assert!(same_bits([nan, 0.0, 1.0], [nan, 0.0, 1.0]));
+        assert!(!same_bits([0.0, 0.0, 1.0], [-0.0, 0.0, 1.0]));
+        assert!(!same_bits([1.0, 0.0, 1.0], [1.0, 0.0, 2.0]));
+    }
+
+    #[test]
+    fn a_bearing_wraps_both_ways() {
+        assert_eq!(bearing(-1), 35);
+        assert_eq!(bearing(36), 0);
+        assert_eq!(bearing(5), 5);
+    }
+
+    #[test]
+    fn each_man_is_dealt_the_bearing_past_his_own_side() {
+        let at: [V3; 2] = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]];
+        let men = [0usize, 1];
+        let yaws = [-m::PI / 2.0, m::PI / 2.0];
+        let mut x = ArcDeal { at: &at, men: &men, c: [0.0, 1.5, 0.0], yaws: &yaws, used: vec![false; 2], cur: vec![0; 2], best: Vec::new(), bd: f64::NEG_INFINITY };
+        arc_rec(&mut x, 0, 0.0);
+        assert_eq!(x.best, vec![1, 0]);
+    }
+
+    #[test]
+    fn corners_leave_both_ends_and_stand_on_the_floor() {
+        assert!(corners(&[[0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]).is_empty());
+        assert_eq!(corners(&[[0.0, 1.0, 0.0], [1.0, 1.0, 2.0], [3.0, 1.0, 0.0]]), vec![[1.0, 0.0, 2.0]]);
+        assert_eq!(all_but_last(&[[1.0, 1.0, 2.0], [3.0, 1.0, 0.0]]), vec![[1.0, 0.0, 2.0]]);
+    }
+
+    #[test]
+    fn a_walk_is_measured_on_the_flat() {
+        assert_eq!(len_of(&[[0.0, 9.0, 0.0], [3.0, 0.0, 4.0]]), 5.0);
+        assert_eq!(len_from([0.0, 0.0, 0.0], &[[3.0, 5.0, 4.0], [3.0, 0.0, 5.0]]), 6.0);
+    }
 }

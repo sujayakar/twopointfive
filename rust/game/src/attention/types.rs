@@ -41,7 +41,7 @@ impl HoldMode {
     }
 }
 
-/// (TypeScript: Hold, src/game/attention.ts:73)
+/// (TypeScript: Hold, src/game/attention.ts:74)
 #[derive(Clone, Copy, Debug)]
 pub struct Hold {
     pub at: V3,
@@ -53,7 +53,7 @@ pub struct Hold {
     pub full: f64,
     pub glimpse: f64,
     pub told: bool,
-    pub nth: f64,
+    pub nth: i32,
     pub ears: f64,
     pub noises: f64,
     pub yaw: Option<f64>,
@@ -73,7 +73,7 @@ impl Hold {
             full: 0.0,
             glimpse: 0.0,
             told: false,
-            nth: 0.0,
+            nth: 0,
             ears: 0.0,
             noises: 0.0,
             yaw: None,
@@ -83,7 +83,7 @@ impl Hold {
 }
 impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Mem, src/game/attention.ts:86)
+/// (TypeScript: Mem, src/game/attention.ts:87)
 #[derive(Clone, Debug)]
 pub struct Mem {
     pub hold: Option<crate::attention::Hold>,
@@ -92,7 +92,7 @@ pub struct Mem {
     pub takes: Vec<f64>,
     pub tick: f64,
     pub told_at: f64,
-    pub line: f64,
+    pub line: i32,
     pub heard_t: f64,
     pub lent_off: f64,
     pub owed: f64,
@@ -108,7 +108,7 @@ impl Mem {
             takes: Vec::new(),
             tick: 0.0,
             told_at: 0.0,
-            line: 0.0,
+            line: 0,
             heard_t: 0.0,
             lent_off: 0.0,
             owed: 0.0,
@@ -118,7 +118,7 @@ impl Mem {
 }
 impl Default for Mem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:89 Mem.cand, src/game/attention.ts:89)
+/// (TypeScript: inline at src/game/attention.ts:90 Mem.cand, src/game/attention.ts:90)
 #[derive(Clone, Copy, Debug)]
 pub struct MemCand {
     pub at: V3,
@@ -137,7 +137,7 @@ impl MemCand {
 }
 impl Default for MemCand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:91 Mem.lent, src/game/attention.ts:91)
+/// (TypeScript: inline at src/game/attention.ts:92 Mem.lent, src/game/attention.ts:92)
 #[derive(Clone, Copy, Debug)]
 pub struct MemLent {
     pub at: V3,
@@ -158,7 +158,7 @@ impl MemLent {
 }
 impl Default for MemLent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AttentionMark, src/game/attention.ts:288)
+/// (TypeScript: AttentionMark, src/game/attention.ts:289)
 #[derive(Clone, Copy, Debug)]
 pub struct AttentionMark {
     pub gd: GuardId,
@@ -189,7 +189,7 @@ impl AttentionMark {
 }
 impl Default for AttentionMark { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AttentionWayKept, src/game/attention.ts:307)
+/// (TypeScript: AttentionWayKept, src/game/attention.ts:308)
 #[derive(Clone, Debug)]
 pub struct AttentionWayKept {
     pub key: String,
@@ -210,7 +210,7 @@ impl AttentionWayKept {
 }
 impl Default for AttentionWayKept { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AttentionWayStore, src/game/attention.ts:308)
+/// (TypeScript: AttentionWayStore, src/game/attention.ts:309)
 #[derive(Clone, Copy, Debug)]
 pub struct AttentionWayStore {
 }
@@ -223,7 +223,7 @@ impl AttentionWayStore {
 }
 impl Default for AttentionWayStore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:331 AttentionSnap, src/game/attention.ts:331)
+/// (TypeScript: inline at src/game/attention.ts:332 AttentionSnap, src/game/attention.ts:332)
 #[derive(Clone, Debug)]
 pub struct AttentionSnapItem {
     pub hold: Option<crate::attention::AttentionSnapItemHold>,
@@ -254,7 +254,7 @@ impl AttentionSnapItem {
 }
 impl Default for AttentionSnapItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:331 AttentionSnapItem.hold, src/game/attention.ts:331 AttentionSnapItem.hold)
+/// (TypeScript: inline at src/game/attention.ts:332 AttentionSnapItem.hold, src/game/attention.ts:332 AttentionSnapItem.hold)
 #[derive(Clone, Copy, Debug)]
 pub struct AttentionSnapItemHold {
     pub kind: crate::attention::DrawKind,
@@ -293,7 +293,7 @@ impl AttentionSnapItemHold {
 }
 impl Default for AttentionSnapItemHold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:331 AttentionSnapItem.lent, src/game/attention.ts:331)
+/// (TypeScript: inline at src/game/attention.ts:332 AttentionSnapItem.lent, src/game/attention.ts:332)
 #[derive(Clone, Copy, Debug)]
 pub struct AttentionSnapItemLent {
     pub at: V3,
@@ -314,7 +314,7 @@ impl AttentionSnapItemLent {
 }
 impl Default for AttentionSnapItemLent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:105 ATTENTION_LOG, src/game/attention.ts:105)
+/// (TypeScript: inline at src/game/attention.ts:106 ATTENTION_LOG, src/game/attention.ts:106)
 #[derive(Clone, Debug)]
 pub struct AttentionModATTENTIONLOGItem {
     pub t: f64,
@@ -322,7 +322,7 @@ pub struct AttentionModATTENTIONLOGItem {
     pub what: String,
     pub kind: crate::attention::DrawKind,
     pub secs: f64,
-    pub nth: f64,
+    pub nth: i32,
 }
 impl AttentionModATTENTIONLOGItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -333,18 +333,18 @@ impl AttentionModATTENTIONLOGItem {
             what: String::new(),
             kind: crate::attention::DrawKind::Door,
             secs: 0.0,
-            nth: 0.0,
+            nth: 0,
         }
     }
 }
 impl Default for AttentionModATTENTIONLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:106 log(H), src/game/attention.ts:106)
+/// (TypeScript: inline at src/game/attention.ts:107 log(H), src/game/attention.ts:107)
 #[derive(Clone, Copy, Debug)]
 pub struct LogH {
     pub kind: crate::attention::DrawKind,
     pub secs: f64,
-    pub nth: f64,
+    pub nth: i32,
 }
 impl LogH {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -352,13 +352,13 @@ impl LogH {
         LogH {
             kind: crate::attention::DrawKind::Door,
             secs: 0.0,
-            nth: 0.0,
+            nth: 0,
         }
     }
 }
 impl Default for LogH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:120 attentionOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at quiet attentionOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Copy, Debug)]
 pub struct AttentionOf {
     pub at: V3,
@@ -397,7 +397,7 @@ impl AttentionOf {
 }
 impl Default for AttentionOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/attention.ts:186 attentionLend(o), src/game/attention.ts:186)
+/// (TypeScript: inline at src/game/attention.ts:187 attentionLend(o), src/game/attention.ts:187)
 #[derive(Clone, Copy, Debug)]
 pub struct AttentionLendO {
     pub ears: Option<f64>,
@@ -417,9 +417,9 @@ impl Default for AttentionLendO { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct AttentionMod {
-    /// (src/game/attention.ts:99 memOf)
+    /// (src/game/attention.ts:100 memOf)
     pub mem_of: JsMap<GuardId, crate::attention::Mem>,
-    /// (src/game/attention.ts:105 ATTENTION_LOG)
+    /// (src/game/attention.ts:106 ATTENTION_LOG)
     pub attention_log: Vec<crate::attention::AttentionModATTENTIONLOGItem>,
 }
 impl AttentionMod {
@@ -443,23 +443,23 @@ pub struct AttentionStats {
     pub worn: i32,
 }
 
-/// (src/game/attention.ts:102 STALE)
+/// (src/game/attention.ts:103 STALE)
 pub const STALE: f64 = 0.25;
 
-/// (src/game/attention.ts:111 WARY: a table nothing writes)
+/// (src/game/attention.ts:112 WARY: a table nothing writes)
 pub fn wary() -> Vec<String> { alloc::vec![String::from("again?"), String::from("…that's twice.")] }
 
-/// (src/game/attention.ts:111 WARY_FOE: a table nothing writes)
+/// (src/game/attention.ts:112 WARY_FOE: a table nothing writes)
 pub fn wary_foe() -> Vec<String> { alloc::vec![String::from("again. stay sharp."), String::from("twice now.")] }
 
-/// (src/game/attention.ts:112 SPENT: a table nothing writes)
+/// (src/game/attention.ts:113 SPENT: a table nothing writes)
 pub fn spent() -> Vec<String> { alloc::vec![String::from("no. somebody's doing that."), String::from("that's no accident. come out.")] }
 
-/// (src/game/attention.ts:112 SPENT_FOE: a table nothing writes)
+/// (src/game/attention.ts:113 SPENT_FOE: a table nothing writes)
 pub fn spent_foe() -> Vec<String> { alloc::vec![String::from("that's bait. search the place."), String::from("someone's playing us. sweep it.")] }
 
-/// (src/game/attention.ts:113 BROKE: a table nothing writes)
+/// (src/game/attention.ts:114 BROKE: a table nothing writes)
 pub fn broke() -> Vec<String> { alloc::vec![String::from("—wait."), String::from("what—")] }
 
-/// (src/game/attention.ts:114 DONE_FOE: a table nothing writes)
+/// (src/game/attention.ts:115 DONE_FOE: a table nothing writes)
 pub fn done_foe() -> Vec<String> { alloc::vec![String::from("…nothing."), String::from("nothing there.")] }

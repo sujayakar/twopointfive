@@ -1,4 +1,4 @@
-//! src/game/pressure.ts lines 931 to 1112
+//! src/game/pressure.ts lines 938 to 1121
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,23 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// how long after the call a hunter may still stand and fight   (pressure.ts CALLED_SECS)
-const CALLED_SECS: f64 = 30.0;
-
-/// `x.toFixed(d)`: a tie goes to the larger number, where Rust's formatter goes to the even one. A tie has a finite binary form: `|x| * 2^(d+1)` is an odd integer.
-fn to_fixed(x: f64, d: usize) -> String {
-    if x.is_nan() { return String::from("NaN"); }
-    let sign = if x < 0.0 { "-" } else { "" };
-    let a = m::abs(x);
-    if !a.is_finite() { return alloc::format!("{}Infinity", sign); }
-    let mut two = 2.0;
-    let mut unit = 0.25;
-    for _ in 0..d { two *= 2.0; unit /= 10.0; }
-    let v = if js::rem(a * two, 2.0) == 1.0 { a + unit } else { a };
-    alloc::format!("{}{:.*}", sign, d, v)
-}
 /// `+x.toFixed(2)`
-fn fixed2(x: f64) -> f64 { to_fixed(x, 2).parse::<f64>().unwrap_or(f64::NAN) }
+fn fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse::<f64>().unwrap_or(f64::NAN) }
 
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 /// `alive(X) && X.mode === 'hold'`   (standTo's holds)
@@ -126,7 +111,7 @@ pub fn stand_to(g: &mut crate::game::Game) {
             let made = Warn {
                 phase: if room.is_some() { WarnPhase::Heard } else { WarnPhase::Over },
                 t0: g.time,
-                by: by.unwrap_or_else(|| g.fight.defs[0]),
+                by: by.or(g.fight.defs.first().copied()).unwrap_or(RoomfightDefId(0)),   // (`by` is null only with room null: phase over, and nothing reads it)
                 call_t: -1.0,
                 last_t: g.time,
                 room,
@@ -157,7 +142,7 @@ pub fn stand_to(g: &mut crate::game::Game) {
         if let Some(x) = pick {
             let gd = g.tab.roomfight_def[x].gd;
             say_radio(g, gd, "contact! that's them \u{2014} everybody, go!");
-            let text = alloc::format!("stand to: a room is hit {} s after the call, all hands", to_fixed(g.time - w.call_t, 1));
+            let text = alloc::format!("stand to: a room is hit {} s after the call, all hands", js::to_fixed(g.time - w.call_t, 1));
             note(g, gd, &text);
         }
         return;
@@ -194,7 +179,7 @@ pub fn stand_to(g: &mut crate::game::Game) {
     state_of(g).stats.warn_calls += 1.0;
     let line: &str = crate::words::wg(g, &"that was outside \u{2014} they're coming. get ready!", &"that was outside \u{2014} they're coming. stand to!");
     say_radio(g, gd, line);
-    let text = alloc::format!("stand to: calls the report, room {} is the nearest of theirs to it", g.tab.roomfight_room[w.room.unwrap()].id);
+    let text = alloc::format!("stand to: calls the report, room {} is the nearest of theirs to it", js::num_str(g.tab.roomfight_room[w.room.unwrap()].id));
     note(g, gd, &text);
 }
 
@@ -209,7 +194,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
         let st = state_of(g);
         let m = st.of.get(d).copied();
         let k = match st.called.get(d).copied() { Some(k) => k, None => continue };
-        if g.time - k.t_2 > CALLED_SECS || !alive(g, d) || g.gd[gd].held.is_some() || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Free
+        if g.time - k.t > CALLED_SECS || !alive(g, d) || g.gd[gd].held.is_some() || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Free
             || m.map_or(false, |m| g.tab.pressure_man[m].fell) || g.time - g.gd[gd].last_seen_t >= 0.1 || g.time < g.gd[gd].dazzled_until || g.time < g.gd[gd].stagger_until { continue; }
         let dc = crate::guards::door_cells(g);
         let sight = g.gd[gd].sight_pos;
@@ -223,7 +208,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
             None => None,
         };
         let fc = match fc { Some(fc) => fc, None => continue };
-        let t = k.t;
+        let t = k.room;
         if g.tab.roomfight_room[t].cells.has(crate::Num(at)) || g.tab.roomfight_room[t].cells.has(crate::Num(mine)) || dc.has(crate::Num(mine)) { continue; }   // (never in a door frame himself: his mates need it)
         if let Some(door) = d_at {
             if g.tab.roomfight_room[t].entries.iter().any(|e| e.door == door) { continue; }   // one of them in that room's own door frame is not out of it
@@ -232,7 +217,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
         if !crate::guards::clear_shot(g, c, [fp[0], fp[1] + 1.2, fp[2]]) { continue; }
         if crate::lanes::lane_exposed(g, gd) { continue; }   // (floor his side knows a gun covers: no place to plant himself)
         g.gd[gd].hold = true;
-        g.gd[gd].path = Vec::new();
+        crate::game::guard_set_path(g, gd, Vec::new());
         g.gd[gd].path_goal = None;
         crate::roomfight::room_fight_stand_on(g, d, true);
         let now = g.time;
@@ -253,10 +238,11 @@ fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
     if !alive(g, d) || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold || state_of(g).of.has(d) { return false; }
     let gd = g.tab.roomfight_def[d].gd;
     if g.gd[gd].held.is_some() || g.tab.roomfight_def[d].rally_at == f64::INFINITY || !(g.time >= g.gd[gd].dazzled_until) || !(g.time >= g.gd[gd].stagger_until) { return false; }
-    if state_of(g).outs.iter().any(|o| o.def == d) || crate::laststand::last_stand_man(g, gd) || crate::enemysquads::squad_owns(g, gd) { return false; }
+    let own = crate::owner::own();
+    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has_him(g, gd, own.stand) || crate::owner::has_him(g, gd, own.squad) { return false; }
     let ph = crate::digin::dig_in_phase(g, gd);   // (on his way to cover or at a door with a wedge: busy. Set on his door, he has done getting ready)
     if ph != "idle" && ph != "set" { return false; }
-    !crate::lanes::lane_holds(g, gd, Some(p)) && !crate::lanes::lane_warns(g, gd, Some(p))
+    !crate::lanes::lane_bars(g, gd, Some(p)) && !crate::lanes::lane_known_at(g, gd, Some(p))
 }
 
 /// GO AND LOOK, once a frame after the press's own rules: the word is kept every frame; a look is called when it has gone quiet   (pressure.ts goLook)
@@ -319,7 +305,7 @@ pub fn go_look(g: &mut crate::game::Game) {
             state_of(g).stats.look_men += 1.0;
             let gd = g.tab.roomfight_def[d].gd;
             let c = g.gd[gd].ch;
-            let text = alloc::format!("goes to look where the team was last put ({} m)", to_fixed(flat(g.ch[c].pos, l.at), 1));
+            let text = alloc::format!("goes to look where the team was last put ({} m)", js::to_fixed(flat(g.ch[c].pos, l.at), 1));
             note(g, gd, &text);
         }
         return;
@@ -376,7 +362,7 @@ pub fn go_look(g: &mut crate::game::Game) {
         st.stats.look_called += 1.0;
         let gd = g.tab.roomfight_def[lead].gd;
         say_radio(g, gd, "it's gone quiet. with me \u{2014} let's go look.");
-        let text = alloc::format!("go and look: nothing of the team for {} s, calls {} to where they were last put", to_fixed(g.time - w.t, 0), n);
+        let text = alloc::format!("go and look: nothing of the team for {} s, calls {} to where they were last put", js::to_fixed(g.time - w.t, 0), js::num_str(n));
         note(g, gd, &text);
         return;
     }
@@ -389,7 +375,13 @@ fn fresh_state(g: &mut Game) {
 }
 
 /// once a frame from RoomFight.tick, after the defenders' and the teammates' own ticks   (pressure.ts pressTick)
-pub fn press_tick(g: &mut crate::game::Game, _dt: f64) {
+pub fn press_tick(g: &mut crate::game::Game, dt: f64) {
+    step_press(g, dt);
+    press_say(g);
+}
+
+/// the press's frame: the kit, what it learned, then stand to, its men, its presses and the men fallen back   (pressure.ts stepPress)
+pub fn step_press(g: &mut crate::game::Game, _dt: f64) {
     // the kit is its own lever: what a defender carries is handed out whether or not the press is on
     let mut i = 0;
     if g.k.pressure.stuns > 0.0 {
@@ -439,6 +431,14 @@ pub fn press_tick(g: &mut crate::game::Game, _dt: f64) {
 
 /// the fight is over: every press forgotten; the counts stay for whoever reads them after the run   (pressure.ts pressStop)
 pub fn press_stop(g: &mut crate::game::Game) {
+    if g.m.pressure.states.is_none() { return; }
+    let press = crate::owner::own().press;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let (gd, now) = (g.guards[i], g.time);
+        i += 1;
+        crate::owner::release_man(g, gd, press, now);
+    }
     let st = match g.m.pressure.states.as_mut() { Some(st) => st, None => return };
     st.presses = Vec::new();
     st.of.clear();
@@ -506,8 +506,8 @@ pub fn pressure_summary(g: &mut crate::game::Game) -> String {
     let s = st.stats;
     alloc::format!(
         "press + flank + fallBack{} \u{b7} {} live \u{b7} {} presses, {} words, {} round, {} fell back{}",
-        if second { " + second" } else { "" }, st.presses.len(), s.press_formed, s.press_words, s.flank_sent, s.fb_push + s.fb_last,
-        if second { alloc::format!(", {} stood", s.second_stood) } else { String::new() },
+        if second { " + second" } else { "" }, st.presses.len(), js::num_str(s.press_formed), js::num_str(s.press_words), js::num_str(s.flank_sent), js::num_str(s.fb_push + s.fb_last),
+        if second { alloc::format!(", {} stood", js::num_str(s.second_stood)) } else { String::new() },
     )
 }
 
@@ -526,15 +526,9 @@ pub fn save_pressure(g: &mut crate::game::Game) {}
 mod tests {
     use super::*;
 
-    /// node's own x.toFixed(d) for each
+    /// node's own +x.toFixed(2) for each
     #[test]
-    fn to_fixed_is_the_languages() {
-        for (x, d, want) in [
-            (0.125, 2, "0.13"), (0.375, 2, "0.38"), (1.005, 2, "1.00"), (2.675, 2, "2.67"), (0.25, 1, "0.3"), (0.75, 1, "0.8"), (0.5, 0, "1"),
-            (2.5, 0, "3"), (1.45, 1, "1.4"), (-0.125, 2, "-0.13"), (3.14159, 2, "3.14"), (1234.5, 0, "1235"), (0.0, 2, "0.00"),
-        ] {
-            assert_eq!(to_fixed(x, d), want);
-        }
+    fn fixed2_is_the_languages() {
         assert_eq!(fixed2(0.125).to_bits(), 0.13f64.to_bits());
         assert_eq!(fixed2(1.005).to_bits(), 1.0f64.to_bits());
     }

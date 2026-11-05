@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/smoke/types.ts:64 SmokeSystemLike.emit)
-pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: crate::smoke_types::SmokeEmitter) { todo!() }
+pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) { todo!() }
 
 /// (src/smoke/types.ts:65 SmokeSystemLike.push)
 pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::SmokePush) { todo!() }
@@ -21,7 +21,7 @@ pub fn smoke_system_like_round(g: &mut crate::game::Game, from: V3, dir: V3, len
 pub fn smoke_system_like_keep_hot(g: &mut crate::game::Game, heat: f64) { todo!() }
 
 /// (src/smoke/types.ts:75 SmokeSystemLike.budget)
-pub fn smoke_system_like_budget(g: &mut crate::game::Game) -> f64 { todo!() }
+pub fn smoke_system_like_budget(g: &mut crate::game::Game) -> Option<f64> { todo!() }
 
 /// (src/smoke/types.ts:78 SmokeSystemLike.drawing)
 pub fn smoke_system_like_drawing(g: &mut crate::game::Game) -> bool { todo!() }

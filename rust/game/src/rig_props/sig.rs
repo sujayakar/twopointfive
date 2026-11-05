@@ -15,7 +15,7 @@ pub fn clone_rig(r: crate::rig_props::Rig) -> crate::rig_props::Rig { todo!() }
 pub fn assign_rig(dst: &mut crate::rig_props::Rig, src: crate::rig_props::Rig) { todo!() }
 
 /// (src/game/rigProps.ts:280 clearAdjs)
-pub fn clear_adjs(rig: crate::rig_props::Rig) { todo!() }
+pub fn clear_adjs(rig: &mut crate::rig_props::Rig) { todo!() }
 
 /// (src/game/rigProps.ts:286 rigSource)
 pub fn rig_source(rig: Option<crate::rig_props::Rig>) -> String { todo!() }
@@ -32,23 +32,20 @@ pub fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>)
 /// (src/game/rigProps.ts:328 ZERO_ADJ)
 pub fn zero_adj() -> crate::rig_props::Adj { todo!() }
 
-/// (src/game/rigProps.ts:330 adjOf)
-pub fn adj_of<T: Clone + core::fmt::Debug>(owner: &mut T, key: crate::Opaque) -> crate::FnField { todo!() }
-
 /// (src/game/rigProps.ts:334 wristTieBoxes)
 pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>) { todo!() }
 
 /// (src/game/rigProps.ts:345 seg)
-pub fn seg(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: &mut crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) { todo!() }
+pub fn seg(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) { todo!() }
 
 /// (src/game/rigProps.ts:354 segAt)
-pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: &mut crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) { todo!() }
+pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) { todo!() }
 
 /// (src/game/rigProps.ts:367 headFlatForward)
 pub fn head_flat_forward(g: &mut crate::game::Game, c_2: CharId) -> V3 { todo!() }
 
 /// (src/game/rigProps.ts:379 gogglesBoxes)
-pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<BoxId>, g_2: &mut crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) { todo!() }
+pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<BoxId>, g_2: crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) { todo!() }
 
 /// (src/game/rigProps.ts:442 fitFrame)
 pub fn fit_frame(g_2: crate::rig_props::Frame, d: V3) -> crate::rig_props::Frame { todo!() }
@@ -96,7 +93,7 @@ pub fn pistol_look_of(g: &mut crate::game::Game, c_2: CharId, held: bool) -> Opt
 pub fn model_in_hands(g: &mut crate::game::Game, c_2: CharId, id_2: crate::weapons::GunModelId, l: &crate::gunlook::LongModel, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, lens: V3, black: bool, no_mag: bool) { todo!() }
 
 /// (src/game/rigProps.ts:673 modelGrip)
-pub fn model_grip(g: &mut crate::game::Game, id_2: crate::weapons::GunModelId, fit: Option<bool>, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::ModelGrip> { todo!() }
+pub fn model_grip(g: &mut crate::game::Game, id_2: crate::weapons::GunModelId, fit: Option<bool>, rig: Option<crate::rig_props::Rig>) -> Option<crate::character::AnimLongGrip> { todo!() }
 
 /// (src/game/rigProps.ts:680 modelMuzzleAhead)
 pub fn model_muzzle_ahead(g: &mut crate::game::Game, id_2: crate::weapons::GunModelId, rig: Option<crate::rig_props::Rig>) -> Option<f64> { todo!() }
@@ -105,7 +102,7 @@ pub fn model_muzzle_ahead(g: &mut crate::game::Game, id_2: crate::weapons::GunMo
 pub fn holster_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, parts: crate::rig_props::HolsterBoxesParts, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, holster_rig: Option<crate::rig_props::RigHolster>) { todo!() }
 
 /// (src/game/rigProps.ts:707 knifeBoxes)
-pub fn knife_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, k: Option<&mut crate::rig_props::RigKnife>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) { todo!() }
+pub fn knife_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, k: Option<crate::rig_props::RigKnife>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) { todo!() }
 
 /// (src/game/rigProps.ts:722 sheathFrame)
 pub fn sheath_frame(g: &mut crate::game::Game, c_2: CharId, s: Option<crate::rig_props::RigSheath>) -> Option<crate::rig_props::Frame> { todo!() }
@@ -114,7 +111,7 @@ pub fn sheath_frame(g: &mut crate::game::Game, c_2: CharId, s: Option<crate::rig
 pub fn sheath_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, full: Option<bool>, rig: Option<crate::rig_props::Rig>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) { todo!() }
 
 /// (src/game/rigProps.ts:746 heldCanBoxes)
-pub fn held_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<BoxId>, k: Option<&mut crate::rig_props::RigCan>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, fit: Option<bool>, left: Option<bool>) { todo!() }
+pub fn held_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<BoxId>, k: Option<crate::rig_props::RigCan>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, fit: Option<bool>, left: Option<bool>) { todo!() }
 
 /// (src/game/rigProps.ts:760 freeCanBoxes)
 pub fn free_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game::ThrowKind, out: &mut Vec<BoxId>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>) { todo!() }
@@ -123,19 +120,16 @@ pub fn free_can_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::game:
 pub fn carbine_frame(g: &mut crate::game::Game, c_2: CharId, hand: V3, c_3: crate::rig_props::RigCarbine) -> crate::rig_props::CarbineFrame { todo!() }
 
 /// (src/game/rigProps.ts:766 carbineBoxes)
-pub fn carbine_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, c_3: &mut crate::rig_props::RigCarbine, lens: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, at: Option<crate::rig_props::Frame>, as_: Option<crate::weapons::GunModelId>) { todo!() }
-
-/// (src/game/rigProps.ts:786 gripAdj)
-pub fn grip_adj(g: &mut crate::game::Game, g_2: crate::rig_props::RigCarbineGripL) -> crate::rig_props::Adj { todo!() }
+pub fn carbine_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, c_3: crate::rig_props::RigCarbine, lens: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, at: Option<crate::rig_props::Frame>, as_: Option<crate::weapons::GunModelId>) { todo!() }
 
 /// (src/game/rigProps.ts:791 carbineGrip)
-pub fn carbine_grip(rig: Option<crate::rig_props::Rig>) -> crate::rig_props::CarbineGrip { todo!() }
+pub fn carbine_grip(rig: Option<crate::rig_props::Rig>) -> crate::character::AnimLongGrip { todo!() }
 
 /// (src/game/rigProps.ts:793 carbineMuzzleAhead)
 pub fn carbine_muzzle_ahead(rig: Option<crate::rig_props::Rig>) -> f64 { todo!() }
 
 /// (src/game/rigProps.ts:795 longGripOf)
-pub fn long_grip_of(group_adj: Option<crate::rig_props::Adj>, g_2: crate::rig_props::LongGripOfG) -> crate::rig_props::LongGripOf { todo!() }
+pub fn long_grip_of(group_adj: Option<crate::rig_props::Adj>, g_2: crate::rig_props::LongGripOfG) -> crate::character::AnimLongGrip { todo!() }
 
 /// (src/game/rigProps.ts:801 muzzleAheadOf)
 pub fn muzzle_ahead_of(group_adj: Option<crate::rig_props::Adj>, part: crate::rig_props::Seg) -> f64 { todo!() }
@@ -159,13 +153,13 @@ pub fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::
 pub fn bare_barrel(can: crate::rig_props::Seg) -> crate::rig_props::Seg { todo!() }
 
 /// (src/game/rigProps.ts:889 sc20kBoxes)
-pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, s: Option<&mut crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::Sc20kBoxesWhere>, lens: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) { todo!() }
+pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, s: Option<crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::Sc20kBoxesWhere>, lens: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) { todo!() }
 
 /// (src/game/rigProps.ts:923 rifleM4)
 pub fn rifle_m4(g: &mut crate::game::Game, rig: Option<crate::rig_props::Rig>) -> Option<crate::rig_props::RigM4> { todo!() }
 
 /// (src/game/rigProps.ts:925 sc20kGrip)
-pub fn sc20k_grip(rig: Option<crate::rig_props::Rig>, fit: Option<bool>) -> crate::rig_props::Sc20kGrip { todo!() }
+pub fn sc20k_grip(rig: Option<crate::rig_props::Rig>, fit: Option<bool>) -> crate::character::AnimLongGrip { todo!() }
 
 /// (src/game/rigProps.ts:933 longHold)
 pub fn long_hold(weapon: crate::rig_props::LongHoldWeapon, rig: Option<crate::rig_props::Rig>) -> crate::inhand::InHandWord { todo!() }

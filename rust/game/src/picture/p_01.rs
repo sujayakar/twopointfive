@@ -14,23 +14,6 @@ macro_rules! pic { ($g:expr, $gd:expr) => { st!($g).men.get_mut($gd).unwrap() } 
 /// a picture by its owner: None = Sam's
 macro_rules! row { ($g:expr, $o:expr) => { match $o { None => &mut st!($g).sam, Some(x) => st!($g).men.get_mut(x).unwrap() } } }
 
-// ---------------------------------------------------------------- the seats
-/// run in the game as this seat has it: as it stands when that seat is on Game already (viewOfBody's "a view handed in is kept"), else with_seat
-fn in_seat(g: &mut Game, seat: PlayerId, run: &mut dyn FnMut(&mut Game)) {
-    if seat == g.player { run(g); } else { crate::seats::with_seat(g, seat, run); }
-}
-/// eachSeat(g, f) over one view: seats::each_seat's closure takes two `&mut Game` and cannot be lent (seats.ts eachSeat)
-fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 { f(g); return; }
-    let mut i = 0;
-    while i < g.seats.len() {
-        let s = g.seats[i];
-        i += 1;
-        let man = crate::cmd::seat_man(g, s);
-        in_seat(g, man, &mut *f);
-    }
-}
-
 // ---------------------------------------------------------------- the state
 /// S.men.get or a new one, in `s`: picOf's literal
 fn ensure_pic(s: &mut State, gd: GuardId, now: f64, look_secs: f64) {
@@ -111,7 +94,7 @@ pub fn pos_of(g: &mut crate::game::Game, w: crate::picture::Who) -> V3 {
 pub fn gone(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
     match w {
         Who::Player => false,
-        Who::Guard(o) => !g.guards.contains(&o) || crate::runner::runner_fled(g, o),
+        Who::Guard(o) => !g.guards.contains(&o) || g.gd[o].fled,
     }
 }
 
@@ -298,7 +281,7 @@ pub fn look_sam(g: &mut crate::game::Game) {
             }
             continue;
         }
-        if crate::runner::runner_fled(g, o) {
+        if g.gd[o].fled {
             continue;
         }
         let d = flat(q, cpos);
@@ -414,11 +397,12 @@ pub fn on_net(g: &mut crate::game::Game, a: Option<GuardId>, b: Option<GuardId>)
     if !fighter(g, bo) || g.gd[bo].held.is_some() {
         return false;
     }
-    if crate::runner::runner_owns(g, bo) {
+    let runner = crate::owner::own().runner;
+    if crate::owner::has_him(g, bo, runner) {
         return false;
     }
     if let Some(ao) = a {
-        if crate::runner::runner_owns(g, ao) {
+        if crate::owner::has_him(g, ao, runner) {
             return false;
         }
     }
@@ -540,7 +524,7 @@ pub fn picture_tick(g: &mut crate::game::Game, _dt: f64) {
             pic!(g, gd).look_t = m::max(look_t + look_secs, now - look_secs);
             let id = g.ch[g.gd[gd].ch].id;
             let view = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
-            in_seat(g, view, &mut |g: &mut Game| look(g, gd));
+            crate::seats::with_seat(g, view, &mut |g: &mut Game| look(g, gd));
         }
         let p = pic!(g, gd);
         if (p.step.is_some() || p.step_bad.is_some()) && now - p.step_ask.unwrap_or(-1e9) > 0.25 {
@@ -551,7 +535,7 @@ pub fn picture_tick(g: &mut crate::game::Game, _dt: f64) {
     }
     if ops && now >= st!(g).sam.look_t {
         st!(g).sam.look_t = now + look_secs;
-        on_each_seat(g, &mut |g: &mut Game| look_sam(g));
+        crate::seats::each_seat(g, &mut |g: &mut Game| look_sam(g));
     }
     if !g.events.is_empty() {
         hear(g);
@@ -669,7 +653,7 @@ pub fn exposed_at(g: &mut crate::game::Game, gd: GuardId, p: V3, low: Option<boo
 }
 
 /// the function exposureAsker returns, asked of one spot: exposedAt's own answer, each idea's places dealt once, the heaviest asked first (picture.ts:314)
-fn exposure_ask(g: &mut Game, ask: &mut ExposureAsker, p: V3) -> f64 {
+pub fn exposure_ask(g: &mut crate::game::Game, ask: &mut crate::picture::ExposureAsker, p: V3) -> f64 {
     g.stats.picture.asks += 1;
     let ExposureAsker::Ideas { h, rows } = ask;
     let h = *h;
@@ -832,10 +816,10 @@ pub fn any_idea(g: &mut crate::game::Game, men: &[GuardId]) -> bool {
     men.iter().any(|&gd| s.men.get(gd).map_or(0, |p| p.ideas.len()) > 0)
 }
 
-/// several whole deals of marks, safest first, by the worst any of the men knows of a deal's worst mark, in tenths (picture.ts safestSets)
-pub fn safest_sets(g: &mut crate::game::Game, men: &[GuardId], sets: &[Vec<crate::picture::SafestSetsSetsItemItem>]) -> Vec<Vec<crate::picture::SafestSetsSetsItemItem>> {
+/// several whole deals of marks, safest first, by the worst any of the men knows of a deal's worst mark, in tenths; answered as indices into `sets` (picture.ts safestSets)
+pub fn safest_sets(g: &mut crate::game::Game, men: &[GuardId], sets: &[Vec<crate::orders::StackPost>]) -> Vec<usize> {
     if sets.len() < 2 || !any_idea(g, men) {
-        return sets.to_vec();
+        return (0..sets.len()).collect();
     }
     let mut ranked: Vec<(usize, f64)> = Vec::new();
     for (i, s) in sets.iter().enumerate() {
@@ -846,7 +830,7 @@ pub fn safest_sets(g: &mut crate::game::Game, men: &[GuardId], sets: &[Vec<crate
         ranked.push((i, m::round(e * 10.0)));
     }
     js::sort_by(&mut ranked, |a, b| js::or(a.1 - b.1, a.0 as f64 - b.0 as f64));
-    ranked.iter().map(|x| sets[x.0].clone()).collect()
+    ranked.iter().map(|x| x.0).collect()
 }
 
 const N4: [[f64; 2]; 4] = [[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]];
@@ -1095,6 +1079,120 @@ pub fn picture_step_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::
     Some(PictureStepOf { at: x.at, mark: x.mark, low: x.low })
 }
 
+// ---------------------------------------------------------------- showing it (the host's floor view; nothing of the tick calls these)
+/// whose picture the floor shows: the fighter nearest the aim point, None with the view not on the cursor (picture.ts pictureShown)
+pub fn picture_shown(g: &mut crate::game::Game) -> Option<GuardId> {
+    if g.k.picture.show != crate::knobs::PictureKShow::Cursor {
+        return None;
+    }
+    let aim = g.aim_point;
+    let mut best = None;
+    let mut bd = 2.5;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        if !fighter(g, gd) {
+            continue;
+        }
+        let d = flat(g.ch[g.gd[gd].ch].pos, aim);
+        if d < bd {
+            bd = d;
+            best = Some(gd);
+        }
+    }
+    best
+}
+
+/// viewOf1 with no count ticked; the flag falls to false after, as written (picture.ts viewOf)
+pub fn view_of(g: &mut crate::game::Game, gd: GuardId, ground: bool) -> crate::picture::PictureView {
+    g.m.picture.viewing = true;
+    let r = view_of1(g, gd, ground);
+    g.m.picture.viewing = false;
+    r
+}
+
+/// one man's picture as the floor view draws it (picture.ts viewOf1)
+pub fn view_of1(g: &mut crate::game::Game, gd: GuardId, ground: bool) -> crate::picture::PictureView {
+    let c = g.ch[g.gd[gd].ch].pos;
+    let show_m = g.k.picture.show_m;
+    let mut ideas: Vec<PictureViewIdeasItem> = Vec::new();
+    for i in ideas_of(g, gd) {
+        let who = name_of(g, i.who);
+        let w = idea_weight(g, i);
+        let reach = idea_reach(g, i);
+        let maybe = maybe_of(g, i);
+        ideas.push(PictureViewIdeasItem { who, at: i.at, age: g.time - i.t, how: i.how, w, reach, lost: i.lost, maybe });
+    }
+    let mut unsafe_: Vec<[f64; 3]> = Vec::new();
+    if ground && !ideas.is_empty() {
+        let (x0, z0) = (m::round(c[0]), m::round(c[2]));
+        let span = m::ceil(show_m) as i32;
+        for ix in -span..=span {
+            for iz in -span..=span {
+                let q: V3 = [x0 + ix as f64 + 0.25, 0.0, z0 + iz as f64 + 0.25];
+                if flat(q, c) > show_m || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
+                    continue;
+                }
+                let e = exposed_at(g, gd, q, None);
+                if e > 0.0 {
+                    unsafe_.push([q[0], q[2], e]);
+                }
+            }
+        }
+    }
+    let cover = if ground { cover_near(g, gd, c, show_m, Some(6.0), None) } else { Vec::new() };
+    PictureView { gd, from: [c[0], 0.05, c[2]], ideas, unsafe_, cover }
+}
+
+/// what the floor view draws this frame; the ground and the cover re-read four times a second (picture.ts pictureViews)
+pub fn picture_views(g: &mut crate::game::Game) -> Vec<crate::picture::PictureView> {
+    let show = g.k.picture.show;
+    if show == crate::knobs::PictureKShow::Off || g.touring {
+        return Vec::new();
+    }
+    if show == crate::knobs::PictureKShow::All {
+        let mut men: Vec<GuardId> = Vec::new();
+        let mut i = 0;
+        while i < g.guards.len() {
+            let gd = g.guards[i];
+            i += 1;
+            if fighter(g, gd) && g.gd[gd].team == crate::teams::Team::Operative {
+                men.push(gd);
+            }
+        }
+        let mut out = Vec::new();
+        for gd in men {
+            out.push(view_of(g, gd, false));
+        }
+        return out;
+    }
+    let shown = picture_shown(g);
+    state_of(g);
+    let gd = match shown {
+        Some(gd) => gd,
+        None => {
+            st!(g).view = None;
+            return Vec::new();
+        }
+    };
+    let now = g.time;
+    let (view_gd, view_t) = {
+        let s = st!(g);
+        (s.view.as_ref().map(|v| v.gd), s.view_t)
+    };
+    if view_gd != Some(gd) || now - view_t >= 0.25 || now < view_t {
+        let v = view_of(g, gd, true);
+        let s = st!(g);
+        s.view = Some(v);
+        s.view_t = now;
+    } else {
+        let c = g.ch[g.gd[gd].ch].pos;
+        st!(g).view.as_mut().unwrap().from = [c[0], 0.05, c[2]];
+    }
+    vec![st!(g).view.clone().unwrap()]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1216,6 +1314,15 @@ mod tests {
         }
         assert!(picture_step(&mut g, gd, 8, [1.0, 0.0, 1.0], None, Some(true)).is_some());
         assert_eq!(pic_of(&mut g, gd, 10.0).step.unwrap().key, Some(8));
+    }
+
+    /// picture.ts:347: one deal, or nothing known: the list as it came, as indices into it
+    #[test]
+    fn safest_sets_keeps_the_order_with_nothing_known() {
+        let mut g = Game::blank();
+        let one = vec![crate::orders::StackPost::zeroed()];
+        assert_eq!(safest_sets(&mut g, &[GuardId(1)], &[one.clone()]), vec![0]);
+        assert_eq!(safest_sets(&mut g, &[GuardId(1)], &[one.clone(), one.clone(), one]), vec![0, 1, 2]);
     }
 
     #[test]

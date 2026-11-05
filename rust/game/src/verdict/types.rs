@@ -41,7 +41,7 @@ impl ManState {
     }
 }
 
-/// (TypeScript: VerdictMan, src/game/verdict.ts:72)
+/// (TypeScript: VerdictMan, src/game/verdict.ts:71)
 #[derive(Clone, Debug)]
 pub struct VerdictMan {
     pub id: f64,
@@ -76,7 +76,7 @@ impl VerdictMan {
 }
 impl Default for VerdictMan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RunVerdict, src/game/verdict.ts:77)
+/// (TypeScript: RunVerdict, src/game/verdict.ts:76)
 #[derive(Clone, Debug)]
 pub struct RunVerdict {
     pub kind: Option<crate::verdict::RunVerdictKind>,
@@ -136,7 +136,7 @@ impl RunVerdictKind {
     }
 }
 
-/// (TypeScript: inline at src/game/verdict.ts:89 RunVerdict.foes, src/game/verdict.ts:89)
+/// (TypeScript: inline at src/game/verdict.ts:88 RunVerdict.foes, src/game/verdict.ts:88)
 #[derive(Clone, Debug)]
 pub struct RunVerdictFoes {
     pub down: f64,
@@ -155,7 +155,7 @@ impl RunVerdictFoes {
 }
 impl Default for RunVerdictFoes { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:90 RunVerdict.hostages, src/game/verdict.ts:90)
+/// (TypeScript: inline at src/game/verdict.ts:89 RunVerdict.hostages, src/game/verdict.ts:89)
 #[derive(Clone, Copy, Debug)]
 pub struct RunVerdictHostages {
     pub alive: f64,
@@ -172,7 +172,7 @@ impl RunVerdictHostages {
 }
 impl Default for RunVerdictHostages { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KeptNote, src/game/verdict.ts:95)
+/// (TypeScript: KeptNote, src/game/verdict.ts:94)
 #[derive(Clone, Copy, Debug)]
 pub struct KeptNote {
     pub streak: f64,
@@ -195,7 +195,7 @@ impl KeptNote {
 }
 impl Default for KeptNote { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:95 KeptNote.ways, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/verdict.ts:94 KeptNote.ways, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct KeptNoteWays {
     pub doors: Option<crate::verdict::KeptNoteWaysDoors>,
@@ -216,7 +216,7 @@ impl KeptNoteWays {
 }
 impl Default for KeptNoteWays { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at KeptNoteWays.doors, src/game/verdict.ts:95)
+/// (TypeScript: inline at KeptNoteWays.doors, src/game/verdict.ts:94)
 #[derive(Clone, Copy, Debug)]
 pub struct KeptNoteWaysDoors {
     pub first: bool,
@@ -233,7 +233,7 @@ impl KeptNoteWaysDoors {
 }
 impl Default for KeptNoteWaysDoors { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Track, src/game/verdict.ts:97)
+/// (TypeScript: Track, src/game/verdict.ts:96)
 #[derive(Clone, Debug)]
 pub struct Track {
     pub id: f64,
@@ -274,7 +274,7 @@ impl Track {
 }
 impl Default for Track { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Verdict, src/game/verdict.ts:100)
+/// (TypeScript: Verdict, src/game/verdict.ts:99)
 #[derive(Clone, Debug)]
 pub struct Verdict {
     pub run: Option<u32>,
@@ -342,7 +342,7 @@ impl VerdictRun {
 }
 impl Default for VerdictRun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:181 onlyMate(h), src/game/verdict.ts:181)
+/// (TypeScript: inline at src/game/verdict.ts:180 onlyMate(h), src/game/verdict.ts:180)
 #[derive(Clone, Debug)]
 pub struct VerdictOnlyMateH {
     pub killer_id: f64,
@@ -361,7 +361,7 @@ impl VerdictOnlyMateH {
 }
 impl Default for VerdictOnlyMateH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:229 ended ->, src/game/verdict.ts:229)
+/// (TypeScript: inline at src/game/verdict.ts:228 ended ->, src/game/verdict.ts:228)
 #[derive(Clone, Debug)]
 pub struct VerdictEnded {
     pub won: bool,
@@ -380,7 +380,7 @@ impl VerdictEnded {
 }
 impl Default for VerdictEnded { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:245 close(end), src/game/verdict.ts:245)
+/// (TypeScript: inline at src/game/verdict.ts:244 close(end), src/game/verdict.ts:244)
 #[derive(Clone, Debug)]
 pub struct VerdictCloseEnd {
     pub won: bool,
@@ -418,11 +418,11 @@ impl VerdictApproachKind {
     }
 }
 
-/// (src/game/verdict.ts:98 PATH_CAP)
+/// (src/game/verdict.ts:97 PATH_CAP)
 pub const PATH_CAP: f64 = 1500.0;
 
-/// (src/game/verdict.ts:98 PATH_SECS)
+/// (src/game/verdict.ts:97 PATH_SECS)
 pub const PATH_SECS: f64 = 0.5;
 
-/// (src/game/verdict.ts:98 HOLE_M)
+/// (src/game/verdict.ts:97 HOLE_M)
 pub const HOLE_M: f64 = 0.9;

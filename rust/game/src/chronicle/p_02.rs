@@ -14,46 +14,12 @@ fn field<'a>(d: &'a Data, k: &str) -> Option<&'a ChronEventDataValue> {
     d.get(String::from(k)).and_then(|v| v.as_ref())
 }
 
-/// A number as JavaScript writes it (`String(x)`, `${x}`).
-fn num_text(x: f64) -> String {
-    if x.is_nan() { return String::from("NaN"); }
-    if x == 0.0 { return String::from("0"); }
-    if !x.is_finite() { return String::from(if x < 0.0 { "-Infinity" } else { "Infinity" }); }
-    let sign = if x < 0.0 { "-" } else { "" };
-    let sci = format!("{:e}", if x < 0.0 { -x } else { x });
-    let (mant, exp) = sci.split_once('e').unwrap();
-    let digits: String = mant.chars().filter(|c| *c != '.').collect();
-    let k = digits.len() as i32;
-    let n = exp.parse::<i32>().unwrap() + 1;
-    if k <= n && n <= 21 {
-        let mut s = format!("{sign}{digits}");
-        for _ in 0..n - k { s.push('0'); }
-        return s;
-    }
-    if 0 < n && n <= 21 {
-        let (a, b) = digits.split_at(n as usize);
-        return format!("{sign}{a}.{b}");
-    }
-    if -6 < n && n <= 0 {
-        let mut s = format!("{sign}0.");
-        for _ in 0..-n { s.push('0'); }
-        s.push_str(&digits);
-        return s;
-    }
-    let e = n - 1;
-    let es = if e < 0 { '-' } else { '+' };
-    let ea = if e < 0 { -e } else { e };
-    if k == 1 { return format!("{sign}{digits}e{es}{ea}"); }
-    let (a, b) = digits.split_at(1);
-    format!("{sign}{a}.{b}e{es}{ea}")
-}
-
 /// `String(d.k)` and `${d.k}`: a missing field writes 'undefined'.
 fn text(d: &Data, k: &str) -> String {
     match field(d, k) {
         None => String::from("undefined"),
         Some(ChronEventDataValue::Text(s)) => s.clone(),
-        Some(ChronEventDataValue::Num(x)) => num_text(*x),
+        Some(ChronEventDataValue::Num(x)) => js::num_str(*x),
         Some(ChronEventDataValue::Bool(b)) => String::from(if *b { "true" } else { "false" }),
     }
 }
@@ -119,18 +85,6 @@ fn put_out_how(g: &mut Game, d: &Data) -> String {
     else { String::from("the takedown") }
 }
 
-/// The name a door row's door was written, asked when the row is read. None = the row reads its id's words.   (chronicle.ts doorWritten)
-pub fn door_written(g: &mut crate::game::Game, door: &str) -> Option<String> {
-    let d = match crate::doors::doors_by_name(g, door) {
-        Some(d) => Some(d),
-        None => crate::doors::doors_by_name(g, &door.replace(' ', "_")),
-    };
-    match d {
-        Some(d) => crate::doornames::door_written_name(g, d),
-        None => None,
-    }
-}
-
 /// A row's words: the debrief card's timeline.   (chronicle.ts eventText)
 pub fn event_text(g: &mut crate::game::Game, e: &crate::chronicle::ChronEvent) -> String {
     let d = &e.data;
@@ -151,8 +105,8 @@ pub fn event_text(g: &mut crate::game::Game, e: &crate::chronicle::ChronEvent) -
             } else {
                 react
             };
-            let times = if n > 1.0 { format!(" ×{}", num_text(n)) } else { String::new() };
-            let more = if k > 3.0 { format!(" +{}", num_text(k - 3.0)) } else { String::new() };
+            let times = if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() };
+            let more = if k > 3.0 { format!(" +{}", js::num_str(k - 3.0)) } else { String::new() };
             format!("heard: {}{} · {}{} {}", s("what"), times, s("by"), more, verb)
         }
         ChronKind::Lost => format!("{} lost you — searching", s("who")),
@@ -167,7 +121,7 @@ pub fn event_text(g: &mut crate::game::Game, e: &crate::chronicle::ChronEvent) -
         }
         ChronKind::Radio => format!("{} (radio): “{}”", s("who"), s("text")),
         ChronKind::Shot => {
-            let times = if n > 1.0 { format!(" ×{}", num_text(n)) } else { String::new() };
+            let times = if n > 1.0 { format!(" ×{}", js::num_str(n)) } else { String::new() };
             let weapon = crate::gear::gear_text(g, &s("weapon"));
             let into = if is(d, "into", "geometry") {
                 String::from("into the scenery")
@@ -502,7 +456,7 @@ mod tests {
         (f64::from_bits(0x7ff0000000000000), "Infinity"),
         (f64::from_bits(0xfff0000000000000), "-Infinity"),
         ];
-        for (x, want) in rows { assert_eq!(num_text(x), want); }
+        for (x, want) in rows { assert_eq!(js::num_str(x), want); }
     }
 
     #[test]

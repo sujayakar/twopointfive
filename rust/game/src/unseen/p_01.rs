@@ -10,23 +10,12 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// the orders whose walk to a mark goes low while Sam is low (unseen.ts POSTED)
 static POSTED: [&str; 2] = ["move", "cover"];
 
-// ------------------------------------------------------------ seams: what skeleton 3 cannot say yet
-
-/// the identity of the wall hold Sam is on now, as `State.hold` and `placed` keep it (unseen.ts:174, 184, 187, 195)
-fn seam_wall_serial(g: &mut Game, pl: PlayerId) -> u32 {
-    todo!("needs: a serial on WallHold, dealt where a hold is made (player.ts:1081, 1255)")
-}
-/// `UNSEEN_STATS.seconds += dt` (unseen.ts:135): a sum of seconds, in a counter typed i32
-fn seam_add_seconds(g: &mut Game, dt: f64) {
-    todo!("needs: UnseenStats.seconds as f64")
-}
-
 // ------------------------------------------------------------ the state
 
 /// `g = viewOf(g, gd)`: run `f` in the game as this teammate's seat has it. The seat already on Game is that view: re-entrant by this test (seats.ts viewOf)
 fn in_view<R>(g: &mut Game, gd: GuardId, f: &mut dyn FnMut(&mut Game) -> R) -> R {
     let seat = crate::seats::view_of(g, gd);
-    if seat == g.player { f(g) } else { crate::seats::with_seat(g, seat, f) }
+    if seat == g.seat { f(g) } else { crate::seats::with_seat(g, seat, f) }
 }
 
 /// (unseen.ts clamp)
@@ -127,7 +116,7 @@ pub fn unseen_live(g: &mut Game) -> bool {
     s.live = live;
     s.why = why.clone();
     if live && was && dt > 0.0 && dt < 1.0 {
-        seam_add_seconds(g, dt);
+        g.stats.unseen.seconds += dt;
     }
     if live != was {
         let what = if live { UnseenModUNSEENLOGItemWhat::On } else { UnseenModUNSEENLOGItemWhat::Off };
@@ -168,8 +157,8 @@ pub fn cue(g: &mut Game, pl: PlayerId) {
     crate::game::game_say(g, gd, if low { "low and quiet." } else { "slow and quiet." }, None, None, None);
 }
 
-/// this teammate is unseen this frame (unseen.ts unseenMan)
-pub fn unseen_man(g: &mut Game, gd: GuardId) -> bool {
+/// this teammate is unseen this frame (unseen.ts underUnseen)
+pub fn under_unseen(g: &mut Game, gd: GuardId) -> bool {
     in_view(g, gd, &mut |g: &mut Game| mate(g, gd) && unseen_live(g) && !entering(g, gd))
 }
 
@@ -192,7 +181,7 @@ pub fn low_now(g: &mut Game, gd: GuardId) -> bool {
 
 /// he is low because Sam is (unseen.ts unseenLow)
 pub fn unseen_low(g: &mut Game, gd: GuardId) -> bool {
-    in_view(g, gd, &mut |g: &mut Game| unseen_man(g, gd) && low_now(g, gd))
+    in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd) && low_now(g, gd))
 }
 
 // ------------------------------------------------------------ the follower's seams (orders.ts tick)
@@ -200,7 +189,7 @@ pub fn unseen_low(g: &mut Game, gd: GuardId) -> bool {
 /// A follower's legs and knee this frame; None: the file's own (unseen.ts unseenFollow)
 pub fn unseen_follow(g: &mut Game, gd: GuardId, sam_v: f64, d: f64, walk: f64, speed0: f64) -> Option<UnseenFollow> {
     in_view(g, gd, &mut |g: &mut Game| {
-        if !unseen_man(g, gd) {
+        if !under_unseen(g, gd) {
             return None;
         }
         let low = low_now(g, gd);
@@ -224,7 +213,7 @@ pub fn unseen_wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) 
             let now = g.time;
             g.m.unseen.on_wall_at.set(gd, now);
             let pl = lead(g);
-            let wall = seam_wall_serial(g, pl);
+            let wall = g.pl[pl].wall.as_ref().unwrap().serial;
             g.m.unseen.placed.set(gd, wall);
         } else {
             g.m.unseen.placed.delete(gd);
@@ -242,20 +231,19 @@ pub fn unseen_wall_lost(g: &mut Game, gd: GuardId) {
 
 /// the place itself: along Sam's face, on the file's side, a body's width off it (unseen.ts wallSlot)
 pub fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V3> {
-    if !unseen_man(g, gd) {
+    if !under_unseen(g, gd) {
         return None;
     }
     let pl = lead(g);
     if g.pl[pl].wall.is_none() || !on_wall(g, pl) {
         return None;
     }
-    let (t, n, w_d, w_lo, w_hi, w_side, lean_off) = {
+    let (t, n, w_d, w_lo, w_hi, w_side, lean_off, wall) = {
         let w = g.pl[pl].wall.as_ref().unwrap();
-        (w.along, w.n, w.d, w.lo, w.hi, w.side, w.lean_off)
+        (w.along, w.n, w.d, w.lo, w.hi, w.side, w.lean_off, w.serial)
     };
     let sam = g.ch[g.pl[pl].ch].pos;
     let su = sam[0] * t[0] + sam[2] * t[2];
-    let wall = seam_wall_serial(g, pl);
     if state_of(g).hold != Some(wall) {
         let mut sum = 0.0;
         for &o in file {
@@ -312,13 +300,13 @@ pub fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Opti
 
 /// the most his legs may be asked for; None: no cap of this file's (unseen.ts unseenPace)
 pub fn unseen_pace(g: &mut Game, gd: GuardId) -> Option<f64> {
-    in_view(g, gd, &mut |g: &mut Game| if g.k.unseen.cap > 0.0 && unseen_man(g, gd) { Some(g.k.unseen.cap) } else { None })
+    in_view(g, gd, &mut |g: &mut Game| if g.k.unseen.cap > 0.0 && under_unseen(g, gd) { Some(g.k.unseen.cap) } else { None })
 }
 
 /// a footfall's level; None: his usual (unseen.ts unseenStep)
 pub fn unseen_step(g: &mut Game, gd: GuardId) -> Option<f64> {
     in_view(g, gd, &mut |g: &mut Game| {
-        if !unseen_man(g, gd) {
+        if !under_unseen(g, gd) {
             return None;
         }
         let c = g.gd[gd].ch;
@@ -333,17 +321,17 @@ pub fn unseen_dark(g: &mut Game, gd: GuardId) -> bool {
 
 /// (unseen.ts unseenHush)
 pub fn unseen_hush(g: &mut Game, gd: GuardId) -> bool {
-    in_view(g, gd, &mut |g: &mut Game| unseen_man(g, gd))
+    in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd))
 }
 
 /// (unseen.ts unseenEase)
 pub fn unseen_ease(g: &mut Game, gd: GuardId) -> bool {
-    in_view(g, gd, &mut |g: &mut Game| unseen_man(g, gd))
+    in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd))
 }
 
 /// his round at `h` is held: nobody has found the squad, and `h` has not noticed anybody. `urgent` runs in the caller's game, not the view, as its closure does (unseen.ts unseenHolds)
 pub fn unseen_holds(g: &mut Game, gd: GuardId, h: GuardId, noticed: f64, quiet: bool, urgent: &mut dyn FnMut(&mut Game) -> bool) -> bool {
-    if quiet || !in_view(g, gd, &mut |g: &mut Game| unseen_man(g, gd) && !crate::roomfight::room_fight_hot_for(g, gd)) {
+    if quiet || !in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd) && !crate::roomfight::room_fight_hot_for(g, gd)) {
         return false;
     }
     let state = g.gd[h].state;
@@ -356,7 +344,7 @@ pub fn unseen_holds(g: &mut Game, gd: GuardId, h: GuardId, noticed: f64, quiet: 
 
 /// through standing glass the hold is the silent order's own: is that rule his this frame (unseen.ts unseenGlass)
 pub fn unseen_glass(g: &mut Game, gd: GuardId) -> bool {
-    in_view(g, gd, &mut |g: &mut Game| unseen_man(g, gd) && !crate::roomfight::room_fight_hot_for(g, gd))
+    in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd) && !crate::roomfight::room_fight_hot_for(g, gd))
 }
 
 /// silent.ts's glass hold held a round under this rule (unseen.ts unseenGlassHeld)

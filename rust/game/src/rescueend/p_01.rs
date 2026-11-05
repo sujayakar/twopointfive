@@ -1,4 +1,4 @@
-//! src/game/rescueend.ts lines 1 to 125
+//! src/game/rescueend.ts lines 1 to 124
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -38,7 +38,7 @@ pub fn rescue_end_left(g: &mut crate::game::Game) -> Vec<GuardId> {
         if g.gd[h].civ.is_none()
             && crate::teams::hostile_to(g, h, crate::teams::HostileToO::Player)
             && g.gd[h].state != crate::game::GuardState::Dead
-            && !crate::runner::runner_fled(g, h)
+            && !g.gd[h].fled
         {
             left.push(h);
         }
@@ -61,7 +61,7 @@ pub fn rescue_end_free(g: &mut crate::game::Game) -> bool {
 }
 
 /// The row on each living hostage in reach.   (rescueend.ts RescueEnd.rows)
-pub fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     if !g.rescue.active || g.rescue.result.is_some() { return; }
     let pl = who(g);
     let had = crate::rescue::rescue_captor(g).is_some();
@@ -187,6 +187,5 @@ pub fn rescue_end_restore(g: &mut crate::game::Game, s: crate::rescueend::Rescue
 /// The hostages' rows, from player.ts buildInteractables.   (rescueend.ts rescueEndRows)
 pub fn rescue_end_rows_2(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::rescueend::RescueEndRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     if !g.rescue.active { return; }
-    // RescueEndRowsRowOver and RescueEndRows2RowOver are one type in the TypeScript; rows above never passes one, so `over` is always None here.
-    rescue_end_rows(g, p, busy, &mut |g, base, verb, text, hints, _over| row(g, base, verb, text, hints, None), offer);
+    rescue_end_rows(g, p, busy, row, offer);
 }

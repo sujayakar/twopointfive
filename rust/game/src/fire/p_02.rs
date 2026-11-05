@@ -7,8 +7,8 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// g.audio.play(name, at, gain, { rate }) (fire.ts:374): game_audio_like_play's opts are a map of `Opaque`, an empty struct, which cannot hold the rate.
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play opts that can hold a rate") }
+/// bx.emissive = e (fire.ts:358): skeleton 5 keeps no row of a Box anywhere (`g.col.boxes` and `world.statics` are lists of BoxId, Tabs has no box table).
+fn seam_box_set_emissive(g: &mut Game, bx: BoxId, e: V3) { todo!("needs: a table of Box rows that a BoxId indexes") }
 
 /// A lamp's place across: where the level hung it, wandering by two sines. (fire.ts:354, 355)
 fn wander_across(hung: f64, wander: f64, rate_a: f64, phase_a: f64, rate_b: f64, phase_b: f64, time: f64) -> f64 {
@@ -119,7 +119,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             let bi = g.tab.sim_lightshome_fixture[t].boxes[b];
             b += 1;
             if let Some(&bx) = g.engine.world.statics.get(bi as usize) {
-                g.col.boxes[bx].emissive = [glow[0] * ck, glow[1] * ck, glow[2] * ck];
+                seam_box_set_emissive(g, bx, [glow[0] * ck, glow[1] * ck, glow[2] * ck]);
             }
         }
         if moved {
@@ -135,7 +135,8 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 if p.at > was && p.at <= time {
                     state_of(g).cracks += 1.0;
                     let gain = g.k.fire.crack * (0.5 + 0.5 * p.hard) * heat;
-                    seam_audio_play(g, "fireCrack", mouth.pos, gain, 0.8 + 0.5 * p.seed);
+                    let opts = crate::audio_iface::PlayOpts::Rate { rate: 0.8 + 0.5 * p.seed };
+                    crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(mouth.pos), Some(gain), Some(&opts));
                 }
             }
         }

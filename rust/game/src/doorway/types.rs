@@ -115,7 +115,7 @@ impl Rel {
 }
 impl Default for Rel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorway.ts:160 Rel.F, src/game/guards.ts:2013)
+/// (TypeScript: inline at src/game/doorway.ts:160 Rel.F, src/game/guards.ts:2001)
 #[derive(Clone, Copy, Debug)]
 pub struct RelF {
     pub hx: f64,

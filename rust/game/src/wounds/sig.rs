@@ -5,9 +5,6 @@ use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
 
-/// (src/game/wounds.ts:48 resetWoundStats)
-pub fn reset_wound_stats() { todo!() }
-
 /// (src/game/wounds.ts:51 segDist)
 pub fn seg_dist(p1: V3, q1: V3, p2: V3, q2: V3) -> f64 { todo!() }
 

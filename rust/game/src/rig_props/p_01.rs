@@ -56,17 +56,10 @@ pub fn assign_rig(dst: &mut crate::rig_props::Rig, src: crate::rig_props::Rig) {
 }
 
 /// Drop every free adjustment. (rigProps.ts clearAdjs)
-pub fn clear_adjs(rig: crate::rig_props::Rig) {
-    let mut cleared = rig;
-    for slot in adj_slots(&mut cleared) {
+pub fn clear_adjs(rig: &mut crate::rig_props::Rig) {
+    for slot in adj_slots(rig) {
         *slot = None;
     }
-    seam_clear_adjs_write_back(cleared);
-}
-
-/// rigProps.ts:280 writes the caller's rig in place; the skeleton's parameter is a copy.
-fn seam_clear_adjs_write_back(cleared: crate::rig_props::Rig) {
-    todo!("needs: clear_adjs(rig: &mut Rig): the rig is taken by value, so the cleared copy has nowhere to go")
 }
 
 /// Every free adjustment of a rig: what the TypeScript finds by the key's name (/adj$/i).
@@ -377,16 +370,6 @@ pub fn zero_adj() -> crate::rig_props::Adj {
     Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }
 }
 
-/// The viewer's lazy maker of an Adj on its owner. (rigProps.ts adjOf)
-pub fn adj_of<T: Clone + core::fmt::Debug>(owner: &mut T, key: crate::Opaque) -> crate::FnField {
-    seam_adj_of(owner, key)
-}
-
-/// rigProps.ts:330: a closure that keeps its owner and writes a field by name.
-fn seam_adj_of<T>(owner: &mut T, key: crate::Opaque) -> crate::FnField {
-    todo!("needs: nothing to translate into: `key` and the answer are empty types, and RigNodeMeta.getAdj, the one holder of the closure, left the skeleton")
-}
-
 /// A character's id as the word on his boxes. (rigProps.ts `c.id & 0xff`)
 fn owner_of(g: &mut Game, c: CharId) -> f64 {
     (js::to_i32(g.ch[c].id) & 0xff) as f64
@@ -419,14 +402,14 @@ pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<Box
 }
 
 /// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame. (rigProps.ts seg)
-pub fn seg(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: &mut crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub fn seg(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
     seg_at(g, out, g_2, s, adj, albedo, emissive, meta, path, label, depth, name);
 }
 
 /// seg() with the part's adjustment handed in. (rigProps.ts segAt)
-pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: &mut crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
+pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<BoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
@@ -483,7 +466,7 @@ fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, own
 }
 
 /// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between. (rigProps.ts gogglesBoxes)
-pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<BoxId>, g_2: &mut crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) {
+pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<BoxId>, g_2: crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) {
     let mut meta = meta;
     let Some(head) = g.ch[c_2].bones.get(crate::character::Bone::Head).copied() else { return };
     let f = head_flat_forward(g, c_2);
@@ -954,9 +937,7 @@ mod tests {
         assert_eq!(rig_source(None), TS_PLAIN);
         assert_eq!(rig_source(Some(edited())), TS_EDITED);
         let mut cleared = crate::rig_props::rig();
-        for slot in adj_slots(&mut cleared) {
-            *slot = None;
-        }
+        clear_adjs(&mut cleared);
         assert_eq!(rig_source(Some(cleared)), TS_CLEARED);
     }
 

@@ -1,4 +1,4 @@
-//! src/game/player.ts lines 1281 to 1610
+//! src/game/player.ts lines 1282 to 1611
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -33,16 +33,6 @@ fn yes(x: Option<bool>) -> bool {
 #[inline]
 fn owed_with(owed: Option<f64>, clicked: f64) -> f64 {
     (js::to_i32(owed.unwrap_or(0.0)) | (js::to_i32(clicked) & 5)) as f64
-}
-
-// ---- what the skeleton still lacks: each body stays whole and only this step waits (notes.md, ## Skeleton)
-/// `g.audio.play(name, at, gain, { rate })` (player.ts:1372, 1518): `game_audio_like_play`'s opts hold `crate::Opaque`, which cannot carry a rate.
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
-
-/// `pl.rifle.attachment` (weapons.ts:533): the stub `rifle_attachment()` takes no id, so the getter is read off the gun's own row here.
-fn rifle_attachment_of(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> {
-    let fa = &g.fa[rifle];
-    if fa.att_idx >= 0 { fa.attachments.get(fa.att_idx as usize).copied() } else { None }
 }
 
 /// `gd.path = []; gd.pathGoal = null`: a whole new path, so its serial moves, and the goal is no longer the standoff's own point.
@@ -130,7 +120,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
     let rifle = g.pl[p].rifle;
     let pull = crate::input::input_lmb(g, input)
         || crate::input::input_lmb_hit(g, input)
-        || (rifle_attachment_of(g, rifle).is_some() && (crate::input::input_rmb(g, input) || crate::input::input_rmb_hit(g, input)))
+        || (crate::weapons::rifle_attachment(g, rifle).is_some() && (crate::input::input_rmb(g, input) || crate::input::input_rmb_hit(g, input)))
         || {
             let w = g.pl[p].wall.unwrap();
             ws.slow && truthy_opt(w.owed) && !(un(w.up) > 0.0)
@@ -294,7 +284,7 @@ pub fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
                 wall_voice(g, w0, true);
             } else if ws.scuff > 0.0 {
                 let pos = g.ch[c].pos;
-                seam_audio_play_rate(g, "footSoft", pos, ws.scuff, 0.7);
+                crate::audio_iface::game_audio_like_play(g, "footSoft", Some(pos), Some(ws.scuff), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
             }
         }
         let w = w!(g, p);
@@ -627,7 +617,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
     lose_path(g, gd);
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, 1.0);
     let at = v3::add(g.ch[gc].pos, [0.0, 1.3, 0.0]);
-    seam_audio_play_rate(g, "bodyHit", at, if loud { 0.8 } else { 0.55 }, 0.8);
+    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(if loud { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
 
 /// One frame of the takedown: hold station on the man, land the blow at its beat, give control back as it recovers.   (player.ts updateTakedown)
@@ -785,17 +775,15 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
             g.clearing = None;
             if let Some(o) = other {
                 if g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].held.is_none() {
-                    let seen_at = v3::copy(g.ch[gc].pos);
+                    g.gd[o].state = crate::game::GuardState::Suspicious;
+                    g.gd[o].awareness = m::max(g.gd[o].awareness, 0.6);
+                    let at = g.ch[gc].pos;
+                    crate::belief::word(g, o, at);
+                    g.gd[o].react_t = 0.7;
+                    g.gd[o].search_t = 0.0;
                     lose_path(g, o);
-                    let m_ = &mut g.gd[o];
-                    m_.state = crate::game::GuardState::Suspicious;
-                    m_.awareness = m::max(m_.awareness, 0.6);
-                    m_.last_known = Some(seen_at);
-                    m_.fix_stamp = m_.fix_stamp.wrapping_add(1);
-                    m_.react_t = 0.7;
-                    m_.search_t = 0.0;
-                    m_.search_plan = None;
-                    m_.pieing = None;
+                    g.gd[o].search_plan = None;
+                    g.gd[o].pieing = None;
                 }
             }
         }

@@ -41,7 +41,7 @@ impl Why {
     }
 }
 
-/// (TypeScript: Man, src/game/nvg.ts:73)
+/// (TypeScript: Man, src/game/nvg.ts:74)
 #[derive(Clone, Copy, Debug)]
 pub struct Man {
     pub down: bool,
@@ -68,7 +68,7 @@ impl Man {
 }
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Team, src/game/nvg.ts:83)
+/// (TypeScript: Team, src/game/nvg.ts:84)
 #[derive(Clone, Debug)]
 pub struct Team {
     pub t: f64,
@@ -99,7 +99,7 @@ impl Team {
 }
 impl Default for Team { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NvgNote, src/game/nvg.ts:90)
+/// (TypeScript: NvgNote, src/game/nvg.ts:91)
 #[derive(Clone, Debug)]
 pub struct NvgNote {
     pub t: f64,
@@ -118,7 +118,7 @@ impl NvgNote {
 }
 impl Default for NvgNote { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/nvg.ts:200 nvgState ->, src/game/nvg.ts:200)
+/// (TypeScript: inline at src/game/nvg.ts:201 nvgState ->, src/game/nvg.ts:201)
 #[derive(Clone, Debug)]
 pub struct NvgState {
     pub mode: crate::nvg::Mode,
@@ -139,7 +139,7 @@ impl NvgState {
 }
 impl Default for NvgState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/nvg.ts:200 NvgState.men, src/game/nvg.ts:200)
+/// (TypeScript: inline at src/game/nvg.ts:201 NvgState.men, src/game/nvg.ts:201)
 #[derive(Clone, Copy, Debug)]
 pub struct NvgStateMenItem {
     pub gd: GuardId,
@@ -165,9 +165,9 @@ impl Default for NvgStateMenItem { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct NvgMod {
-    /// (src/game/nvg.ts:92 NVG_LOG)
+    /// (src/game/nvg.ts:93 NVG_LOG)
     pub nvg_log: Vec<crate::nvg::NvgNote>,
-    /// (src/game/nvg.ts:93 teams)
+    /// (src/game/nvg.ts:94 teams)
     pub teams: Option<crate::nvg::Team>,
 }
 impl NvgMod {
@@ -179,8 +179,8 @@ impl NvgMod {
     }
 }
 
-/// (src/game/nvg.ts:137 LOOK_M: a table nothing writes)
+/// (src/game/nvg.ts:138 LOOK_M: a table nothing writes)
 pub fn look_m() -> Vec<f64> { alloc::vec![2.0, 5.0, 8.0, 12.0, 16.0] }
 
-/// (src/game/nvg.ts:137 TUBE_M)
+/// (src/game/nvg.ts:138 TUBE_M)
 pub const TUBE_M: f64 = 8.0;

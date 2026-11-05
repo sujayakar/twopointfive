@@ -24,7 +24,7 @@ pub fn sky_over_most(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]]) ->
 pub fn own_floor(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/weather.ts:131 rng32)
-pub fn rng32(seed: f64) -> crate::weather::WeatherDice { todo!() }
+pub fn rng32(seed: f64) -> crate::dice::Die { todo!() }
 
 /// (src/game/weather.ts:138 strokeMean)
 pub fn stroke_mean(s: &crate::weather::Stroke, a: f64, b: f64) -> f64 { todo!() }

@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn does_of_word(g: &mut crate::game::Game, w: Option<&str>) -> crate::scene_materials::Does { todo!() }
 
 /// (src/scene/materials.ts:133 doesOf)
-pub fn does_of(g: &mut crate::game::Game, b: Option<&crate::scene_materials::DoesOfB>) -> crate::scene_materials::Does { todo!() }
+pub fn does_of(g: &mut crate::game::Game, b: Option<crate::scene_materials::DoesWord>) -> crate::scene_materials::Does { todo!() }
 
 /// (src/scene/materials.ts:135 doesWet)
-pub fn does_wet(g: &mut crate::game::Game, b: Option<&crate::scene_materials::DoesWetB>) -> crate::scene_materials::Does { todo!() }
+pub fn does_wet(g: &mut crate::game::Game, b: Option<crate::scene_materials::DoesWord>) -> crate::scene_materials::Does { todo!() }

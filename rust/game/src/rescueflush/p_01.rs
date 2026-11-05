@@ -1,4 +1,4 @@
-//! src/game/rescueflush.ts lines 1 to 214
+//! src/game/rescueflush.ts lines 1 to 213
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -49,7 +49,7 @@ pub fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> 
 /// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody. (the closure `has` of ts:94)
 fn has(g: &mut Game, h: GuardId, alive: &[GuardId]) -> f64 {
     if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || g.time < g.gd[h].dazzled_until
-        || crate::runner::runner_owns(g, h) || crate::morale::morale_owns(g, h) { return f64::INFINITY; }
+        || crate::owner::has_him(g, h, crate::owner::own().runner) || crate::owner::has_him(g, h, crate::owner::own().morale) { return f64::INFINITY; }
     let mut best = f64::INFINITY;
     for &v in alive { let d = rescue_flush_line(g, h, v); best = m::min(best, d); }
     best
@@ -92,7 +92,7 @@ fn fight_def_of(g: &Game, h: GuardId) -> Option<RoomfightDefId> {
 /// May he be sent now? (the closure `free` of ts:136)
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
     if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || g.time < g.gd[h].dazzled_until || g.time < g.gd[h].stagger_until
-        || crate::runner::runner_owns(g, h) || crate::morale::morale_owns(g, h) || crate::rescuecheck::rescue_check_owns(g, h) { return false; }
+        || crate::owner::has_him(g, h, crate::owner::own().runner) || crate::owner::has_him(g, h, crate::owner::own().morale) || crate::owner::has_him(g, h, crate::owner::own().walk) { return false; }
     if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
     let f = fight_def_of(g, h);
@@ -112,6 +112,12 @@ fn way_of(g: &mut Game, goal: Goal, alive: &[GuardId], room: V3) -> (Goal, Vec<V
     (goal, via, at, door)
 }
 
+/// `h.path = []; h.pathGoal = null`: a new array, so path_serial moves; no goal, so none the standoff laid. (ts:130, ts:195)
+fn clear_path(g: &mut Game, h: GuardId) {
+    let gd = &mut g.gd[h];
+    gd.path = Vec::new(); gd.path_serial = gd.path_serial.wrapping_add(1); gd.path_goal = None; gd.path_goal_orbit = false;
+}
+
 /// Once a frame from rescue.ts tick(), after its defenders() and before its clock().   (rescueflush.ts RescueFlush.tick)
 pub fn rescue_flush_tick(g: &mut crate::game::Game) {
     if !rescue_flush_live(g) { return; }
@@ -120,7 +126,7 @@ pub fn rescue_flush_tick(g: &mut crate::game::Game) {
     if alive.is_empty() || crate::rescue::rescue_noise_at(g).is_none() { return; }
     if g.rescue.flush.fell_at.is_nan() {
         for c in crate::rescue::rescue_cast(g) {
-            if c.in_room && g.gd[c.gd].state != crate::game::GuardState::Dead && g.gd[c.gd].held.is_none() && !crate::runner::runner_fled(g, c.gd) { return; }
+            if c.in_room && g.gd[c.gd].state != crate::game::GuardState::Dead && g.gd[c.gd].held.is_none() && !g.gd[c.gd].fled { return; }
         }
         g.rescue.flush.fell_at = g.time;
         g.rescue.flush.next_at = g.time + g.k.rescueflush.after_secs;
@@ -151,7 +157,7 @@ pub fn rescue_flush_tick(g: &mut crate::game::Game) {
         let next = g.rescue.flush.sent.get(h).unwrap().via.first().copied();
         let to = match next { Some(p) => Some(p), None => rescue_flush_point_of(g, Goal::Room, &alive) };
         let Some(to) = to else { continue; };
-        g.gd[h].last_known = Some(v3::copy(to)); g.gd[h].path = Vec::new(); g.gd[h].path_goal = None;
+        crate::belief::word(g, h, to); clear_path(g, h);
         if g.rescue.flush.sent.get(h).unwrap().via.is_empty() {
             g.rescue.flush.sent.get_mut(h).unwrap().goal = Goal::Room;
             let note = format!("flush:through:{}", g.gd[h].callsign);
@@ -180,7 +186,7 @@ pub fn rescue_flush_tick(g: &mut crate::game::Game) {
         let mut ways = Vec::new();
         for w in made {
             let Some(at) = w.2 else { continue; };
-            if !crate::lanes::lane_holds(g, h, Some(at)) { ways.push(w); }
+            if !crate::lanes::lane_bars(g, h, Some(at)) { ways.push(w); }
         }
         if ways.is_empty() { continue; }
         let turned = ways.len() > 1 && covered(g, h, ways[0].3) && !covered(g, h, ways[1].3);
@@ -236,7 +242,8 @@ pub fn rescue_flush_send(g: &mut crate::game::Game, h: GuardId, goal: crate::res
     }
     if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
     let gd = &mut g.gd[h];
-    gd.state = crate::game::GuardState::Alert; gd.awareness = 1.0; gd.react_t = 0.0; gd.last_known = Some(v3::copy(at)); gd.path = Vec::new(); gd.path_goal = None;
+    gd.state = crate::game::GuardState::Alert; gd.awareness = 1.0; gd.react_t = 0.0;
+    crate::belief::word(g, h, at); clear_path(g, h);
     crate::guards::reset_chase(g, h);
     let time = g.time;
     g.rescue.flush.sent.set(h, Sent { at: time, n: n + 1.0, goal, via: via.iter().map(|p| v3::copy(*p)).collect() });

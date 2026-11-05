@@ -71,7 +71,7 @@ impl DoorDrive {
         DoorDrive {
             who: 0.0,
             dir: 0.0,
-            kind: crate::doors::DoorDriveKind::Body,
+            kind: crate::doors::DoorDriveKind::Boot,
             t: 0.0,
             from: 0.0,
             quiet: false,
@@ -88,17 +88,17 @@ impl Default for DoorDrive { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorDriveKind {
+    Boot,
     Body,
     Hand,
-    Boot,
     Swing,
 }
 impl DoorDriveKind {
     pub const fn as_str(self) -> &'static str {
         match self {
+            DoorDriveKind::Boot => "boot",
             DoorDriveKind::Body => "body",
             DoorDriveKind::Hand => "hand",
-            DoorDriveKind::Boot => "boot",
             DoorDriveKind::Swing => "swing",
         }
     }
@@ -541,17 +541,17 @@ impl SlabRowGK {
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DriveColsKind {
+    Boot,
     Body,
     Hand,
-    Boot,
     Swing,
 }
 impl DriveColsKind {
     pub const fn as_str(self) -> &'static str {
         match self {
+            DriveColsKind::Boot => "boot",
             DriveColsKind::Body => "body",
             DriveColsKind::Hand => "hand",
-            DriveColsKind::Boot => "boot",
             DriveColsKind::Swing => "swing",
         }
     }
@@ -560,17 +560,17 @@ impl DriveColsKind {
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DriveColsSetKindV {
+    Boot,
     Body,
     Hand,
-    Boot,
     Swing,
 }
 impl DriveColsSetKindV {
     pub const fn as_str(self) -> &'static str {
         match self {
+            DriveColsSetKindV::Boot => "boot",
             DriveColsSetKindV::Body => "body",
             DriveColsSetKindV::Hand => "hand",
-            DriveColsSetKindV::Boot => "boot",
             DriveColsSetKindV::Swing => "swing",
         }
     }
@@ -598,17 +598,17 @@ impl Default for DoorPoseAt { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorsDrivenKind {
+    Boot,
     Body,
     Hand,
-    Boot,
     Swing,
 }
 impl DoorsDrivenKind {
     pub const fn as_str(self) -> &'static str {
         match self {
+            DoorsDrivenKind::Boot => "boot",
             DoorsDrivenKind::Body => "body",
             DoorsDrivenKind::Hand => "hand",
-            DoorsDrivenKind::Boot => "boot",
             DoorsDrivenKind::Swing => "swing",
         }
     }
@@ -684,21 +684,6 @@ impl Default for DoorsFrameCoords { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum DoorsOnTornFnCause {
-    Blast,
-    Fire,
-}
-impl DoorsOnTornFnCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorsOnTornFnCause::Blast => "blast",
-            DoorsOnTornFnCause::Fire => "fire",
-        }
-    }
-}
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorsTornCause {
     Blast,
     Fire,
@@ -711,6 +696,21 @@ impl DoorsTornCause {
         }
     }
 }
+
+/// (src/game/doors.ts:1056 DOORS_PICK_SECS)
+pub const DOORS_PICK_SECS: f64 = 4.2;
+
+/// (src/game/doors.ts:1061 DOORS_PICK_LEVEL)
+pub const DOORS_PICK_LEVEL: f64 = 0.16;
+
+/// (src/game/doors.ts:1061 DOORS_UNLOCK_LEVEL)
+pub const DOORS_UNLOCK_LEVEL: f64 = 0.3;
+
+/// (src/game/doors.ts:1061 DOORS_KEY_LEVEL)
+pub const DOORS_KEY_LEVEL: f64 = 0.12;
+
+/// (src/game/doors.ts:1183 DOORS_USE_REACH)
+pub const DOORS_USE_REACH: f64 = 1.35;
 
 /// (src/game/doors.ts:76 SOLID_SLIDE)
 pub const SOLID_SLIDE: f64 = 2.2;

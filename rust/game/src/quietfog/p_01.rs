@@ -157,7 +157,7 @@ pub fn quiet_fog_href(g: &mut crate::game::Game, href: &str, quiet: bool) -> Str
         if rung != quiet_fog_default(g) { keys.push(alloc::format!("{}={}", PARAM, rung.as_str())); }
         if rung != QuietRung::Off && cams != quiet_cams_default(g) {
             let n = if cams { g.k.sticky.issue } else { 0.0 };
-            keys.push(alloc::format!("{}={}", PARAM_CAMS, n));
+            keys.push(alloc::format!("{}={}", PARAM_CAMS, js::num_str(n)));
         }
     }
     if keys.len() == kept && kept == all.len() { return String::from(href); }

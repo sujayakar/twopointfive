@@ -46,26 +46,8 @@ pub fn fire_stats(g: &mut crate::game::Game) -> crate::fire::FireStats {
 }
 
 /// The host's book of the fires, for the panel's line and the tools: none before the first frame a fire burns in.   (fire.ts fireShown)
-pub fn fire_shown(g: &mut crate::game::Game) -> Option<crate::fire::FireShown2> {
-    let f = g.engine.host_books.as_ref()?.fire.as_ref()?;
-    Some(crate::fire::FireShown2 {
-        n: f.n,
-        time: f.time,
-        stir: f.stir.clone(),
-        stir_at: f.stir_at.clone(),
-        bed: f.bed.clone(),
-        smoke: f.smoke.clone(),
-        smokes: f.smokes,
-        beds: f.beds,
-        ember: f.ember.clone(),
-        embers: f.embers,
-        gas: f.gas.clone(),
-        gas_mix: f.gas_mix.clone(),
-        gases: f.gases,
-        soot_mix: f.soot_mix.clone(),
-        kept: f.kept,
-        serial: f.serial,
-    })
+pub fn fire_shown(g: &mut crate::game::Game) -> Option<crate::fire::FireShown> {
+    g.engine.host_books.as_ref()?.fire.clone()
 }
 
 /// Integer hash to [0, 1). The TypeScript's signed and unsigned steps give these same 32 bits.   (fire.ts h01)
@@ -172,7 +154,7 @@ pub fn mouth_of(g: &mut crate::game::Game, t: FixtureId) -> crate::fire::MouthOf
     };
     let mouth = g.k.fire.mouth;
     if let Some(b) = b {
-        let (c, h) = (g.col.boxes[b].c, g.col.boxes[b].h);
+        let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
         return crate::fire::MouthOf { pos: [c[0], c[1] + h[1], c[2]], r: m::min(h[0], h[2]) * mouth, lid: m::min(h[0], h[2]) };
     }
     let p = g.tab.sim_lightshome_fixture[t].pos;
@@ -223,7 +205,7 @@ pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> b
     let b = static_at(g, ix);
     let r = m::max(mouth.lid * 1.7, 0.3);
     let Some(b) = b else { return false };
-    let c = g.col.boxes[b].c;
+    let c = seam_box(g, b).c;
     if m::hyp2(c[0] - mouth.pos[0], c[2] - mouth.pos[2]) > 0.05 || c[1] > mouth.pos[1] {
         return false;
     }
@@ -260,7 +242,7 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
     book.stir.get_or_insert_with(Vec::new).push(ix as f64);
     let pos = mouth_of(g, t).pos;
     let volume = g.k.fire.crack * heat_of(g, t);
-    seam_audio_play(g, "fireCrack", pos, volume, 0.7);
+    crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(pos), Some(volume), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
 }
 
 /// Out but still lit in the fog's picture: the remembered pool stays a fire's.   (fire.ts held)
@@ -312,10 +294,12 @@ pub fn plain(g: &mut crate::game::Game, t: FixtureId) {
     }
 }
 
-// ---- the one seam: what skeleton 4 still cannot reach (notes.md, ## Skeleton) ----
+// ---- the one seam: what skeleton 5 still cannot do (notes.md, ## Skeleton) ----
 
-/// `g.audio.play(name, pos, volume, { rate })` (fire.ts:303): the skeleton's `opts` are `JsMap<String, Opaque>`, which cannot hold the rate
-fn seam_audio_play(g: &mut Game, name: &str, pos: V3, volume: f64, rate: f64) { todo!("needs: GameAudioLike.play's opts to carry a number") }
+/// A box's row (Box.c, Box.h: fire.ts:271, :295). Other parts' notes say skeleton 5.1 has the table `g.tab.boxes`; if so, the body is `&mut g.tab.boxes[b]`.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box")
+}
 
 #[cfg(test)]
 mod tests {
@@ -398,58 +382,39 @@ mod tests {
         assert_eq!((s.frames, s.cracks, s.lo), (3.0, 1.0, m::INF));
     }
 
-    /// a lamp on a fixture: its box, when it has one, the world's first static
-    fn stand(boxed: bool) -> (crate::game::Game, FixtureId, LightId) {
+    /// a lamp on a fixture, with no box hung on it
+    fn stand() -> (crate::game::Game, FixtureId, LightId) {
         let mut g = crate::game::Game::blank();
         let l = g.tab.light.push(crate::render_lights::RtLight::zeroed());
         let mut f = crate::sim_lightshome::Fixture::blank();
         f.pos = [1.0, 2.0, 3.0];
         f.light = Some(l);
-        if boxed {
-            let mut b = crate::scene_boxes::Box::zeroed();
-            b.c = [1.0, 2.0, 3.0];
-            b.h = [0.5, 0.1, 0.25];
-            let id = g.col.boxes.push(b);
-            g.engine.world.statics.push(id);
-            f.boxes.push(0.0);
-        }
         let t = g.tab.sim_lightshome_fixture.push(f);
         (g, t, l)
     }
 
     #[test]
-    fn the_mouth_is_the_lid_of_its_box_or_a_hand_under_the_lamp() {
-        let (mut g, t, _) = stand(true);
+    fn with_no_box_the_mouth_is_a_hand_under_the_lamp() {
+        let (mut g, t, _) = stand();
         let mouth = g.k.fire.mouth;
-        let a = mouth_of(&mut g, t);
-        assert_eq!((a.pos, a.r, a.lid), ([1.0, 2.0 + 0.1, 3.0], 0.25 * mouth, 0.25));
-        let (mut g, t, _) = stand(false);
         let a = mouth_of(&mut g, t);
         assert_eq!((a.pos, a.r, a.lid), ([1.0, 2.0 - 0.16, 3.0], 0.19 * mouth, 0.0));
     }
 
     #[test]
-    fn a_round_strikes_the_fire_in_its_own_box_or_the_drum_under_its_mouth() {
-        let (mut g, t, _) = stand(true);
-        // its own box, wherever the round stopped
-        assert!(fire_struck(&mut g, t, [50.0, 50.0, 50.0], 0.0));
-        // past the list's end, a fractional index
+    fn a_round_strikes_the_fire_in_its_own_box_and_in_no_static_it_is_not() {
+        let (mut g, t, _) = stand();
+        // past the list's end, a fractional index: no static, no fire
         assert!(!fire_struck(&mut g, t, [1.0, 2.0, 3.0], 9.0));
         assert!(!fire_struck(&mut g, t, [1.0, 2.0, 3.0], 0.5));
-        let mut drum = crate::scene_boxes::Box::zeroed();
-        drum.c = [1.0, 1.0, 3.0];
-        let id = g.col.boxes.push(drum);
-        g.engine.world.statics.push(id);
-        assert!(fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0));
-        assert!(!fire_struck(&mut g, t, [1.0, 2.2, 3.0], 1.0)); // above the mouth
-        assert!(!fire_struck(&mut g, t, [1.5, 1.5, 3.0], 1.0)); // outside the wall
-        g.col.boxes[id].c = [2.0, 1.0, 3.0];
-        assert!(!fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0)); // off the axis
+        // its own box, wherever the round stopped (decided by the index, no row read)
+        g.tab.sim_lightshome_fixture[t].boxes.push(0.0);
+        assert!(fire_struck(&mut g, t, [50.0, 50.0, 50.0], 0.0));
     }
 
     #[test]
     fn plain_puts_the_lamp_back_and_ends_the_steady_row() {
-        let (mut g, t, l) = stand(false);
+        let (mut g, t, l) = stand();
         let lt = &mut g.tab.light[l];
         (lt.pos, lt.radius, lt.range, lt.color) = ([9.0; 3], 9.0, 9.0, [9.0; 3]);
         // no steady row: only the place moves
@@ -467,5 +432,51 @@ mod tests {
         plain(&mut g, t);
         let lt = &g.tab.light[l];
         assert_eq!((lt.radius, lt.range, lt.color), (2.5, 7.0, [0.1, 0.2, 0.3]));
+    }
+}
+
+// The lid's and the drum's ways read a Box row, so they wait for the table (seam_box). Never compiled: `g.tab.boxes` is the name other parts' notes give.
+// To run them: drop the cfg when seam_box's body changes.
+#[cfg(any())]
+mod tests_need_box_rows {
+    use super::*;
+
+    /// a lamp on a fixture, its box the world's first static
+    fn stand() -> (crate::game::Game, FixtureId) {
+        let mut g = crate::game::Game::blank();
+        let l = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        let mut f = crate::sim_lightshome::Fixture::blank();
+        f.pos = [1.0, 2.0, 3.0];
+        f.light = Some(l);
+        let mut b = crate::scene_boxes::Box::zeroed();
+        b.c = [1.0, 2.0, 3.0];
+        b.h = [0.5, 0.1, 0.25];
+        let id = g.tab.boxes.push(b);
+        g.engine.world.statics.push(id);
+        f.boxes.push(0.0);
+        let t = g.tab.sim_lightshome_fixture.push(f);
+        (g, t)
+    }
+
+    #[test]
+    fn the_mouth_is_the_lid_of_its_box() {
+        let (mut g, t) = stand();
+        let mouth = g.k.fire.mouth;
+        let a = mouth_of(&mut g, t);
+        assert_eq!((a.pos, a.r, a.lid), ([1.0, 2.0 + 0.1, 3.0], 0.25 * mouth, 0.25));
+    }
+
+    #[test]
+    fn a_round_strikes_the_drum_under_its_mouth() {
+        let (mut g, t) = stand();
+        let mut drum = crate::scene_boxes::Box::zeroed();
+        drum.c = [1.0, 1.0, 3.0];
+        let id = g.tab.boxes.push(drum);
+        g.engine.world.statics.push(id);
+        assert!(fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0));
+        assert!(!fire_struck(&mut g, t, [1.0, 2.2, 3.0], 1.0)); // above the mouth
+        assert!(!fire_struck(&mut g, t, [1.5, 1.5, 3.0], 1.0)); // outside the wall
+        g.tab.boxes[id].c = [2.0, 1.0, 3.0];
+        assert!(!fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0)); // off the axis
     }
 }

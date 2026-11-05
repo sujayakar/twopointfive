@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 415 to 806
+//! src/game/guards.ts lines 418 to 809
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -34,7 +34,7 @@ fn crown_of(g: &mut Game, c: CharId) -> f64 {
 fn with_duty(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut crate::game::GuardBodyDuty)) {
     if let Some(d) = g.gd[gd].body_duty.as_mut() { f(d); }
 }
-/// is this man out of the reckoning for a colleague's line: gd himself, the dead, the fallen, an enemy (the walks of 697, 713, 795, 798)
+/// is this man out of the reckoning for a colleague's line: gd himself, the dead, the fallen, an enemy (the walks of 700, 716, 798, 801)
 fn no_colleague(g: &mut Game, gd: GuardId, p: GuardId) -> bool {
     if p == gd || g.gd[p].state == crate::game::GuardState::Dead { return true; }
     let c = g.gd[p].ch;
@@ -42,11 +42,20 @@ fn no_colleague(g: &mut Game, gd: GuardId, p: GuardId) -> bool {
     let (a, b) = (g.gd[gd].team, g.gd[p].team);
     crate::teams::is_hostile(g, a, b)
 }
-/// `gd.path = []; gd.pathGoal = null`
+/// `gd.path = []; gd.pathGoal = null`: a whole write of the path (its serial), and the goal is no longer the standoff's object
 fn clear_path(g: &mut Game, gd: GuardId) {
-    g.gd[gd].path = Vec::new();
+    crate::game::guard_set_path(g, gd, Vec::new());
     g.gd[gd].path_goal = None;
+    g.gd[gd].path_goal_orbit = false;
 }
+/// `gd.lastKnown = v3.copy(p)`: a new object, so a new fix (doze.ts:244 asks by fix_stamp)
+fn set_fix(g: &mut Game, gd: GuardId, p: V3) {
+    let man = &mut g.gd[gd];
+    man.last_known = Some(v3::copy(p));
+    man.fix_stamp = man.fix_stamp.wrapping_add(1);
+}
+/// `Box.flags` of a row. Skeleton 5 has no table of Box rows (`g.col.boxes` is `Vec<BoxId>`, ids.txt and properties.txt say otherwise)
+fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { todo!("needs: a table of Box rows, then this is that row's flags") }
 
 // ---------------------------------------------------------------- what a man sees
 
@@ -115,11 +124,11 @@ pub fn witness_summary(g: &mut crate::game::Game, gd: GuardId) -> String {
 /// witnessSummary's words, over the record and the clock
 fn witness_line(w: &crate::game::Witness, now: f64) -> String {
     use alloc::format;
-    let ago = |t: f64| format!("{} s ago", m::max(0.0, m::round(now - t)));
-    let told = |n: f64, word: &str| format!("{} {}{}", n, word, if n > 1.0 { "s" } else { "" });
+    let ago = |t: f64| format!("{} s ago", js::num_str(m::max(0.0, m::round(now - t))));
+    let told = |n: f64, word: &str| format!("{} {}{}", js::num_str(n), word, if n > 1.0 { "s" } else { "" });
     let h = &w.heard;
     let mut parts: Vec<String> = Vec::new();
-    if w.peak_awareness >= 0.05 { parts.push(format!("peak {}", to_fixed(w.peak_awareness, 2))); }
+    if w.peak_awareness >= 0.05 { parts.push(format!("peak {}", js::to_fixed(w.peak_awareness, 2))); }
     if let Some(by) = w.alerted_by { parts.push(format!("alert by {} {}", by.as_str(), ago(w.alert_t))); }
     let mut heard: Vec<String> = Vec::new();
     if js::truthy(h.shots) { heard.push(told(h.shots, "shot")); }
@@ -127,8 +136,8 @@ fn witness_line(w: &crate::game::Witness, now: f64) -> String {
     if js::truthy(h.bang) { heard.push(told(h.bang, "bang")); }
     if js::truthy(h.small) {
         heard.push(match h.small_where {
-            Some(at) => format!("{} small (last @{},{})", h.small, to_fixed(at[0], 0), to_fixed(at[2], 0)),
-            None => format!("{} small", h.small),
+            Some(at) => format!("{} small (last @{},{})", js::num_str(h.small), js::to_fixed(at[0], 0), js::to_fixed(at[2], 0)),
+            None => format!("{} small", js::num_str(h.small)),
         });
     }
     if !heard.is_empty() { parts.push(format!("heard {}", heard.join(", "))); }
@@ -144,18 +153,9 @@ fn witness_line(w: &crate::game::Witness, now: f64) -> String {
     if let Some(b) = w.saw_body.as_ref() { parts.push(format!("found {} {} {}", b.victim, if b.breathing { "out cold" } else { "dead" }, ago(b.t))); }
     if let Some(b) = w.called_to_body.as_ref() { parts.push(format!("heard {} called in {}", b.victim, if b.breathing { "out cold" } else { "dead" })); }
     if let Some(s) = w.saw_held.as_ref() { parts.push(format!("saw {} held", s.who)); }
-    if js::truthy(w.was_held) { parts.push(format!("held \u{d7}{}", w.was_held)); }
-    if js::truthy(w.dazzled) { parts.push(format!("dazzled \u{d7}{}", w.dazzled)); }
+    if js::truthy(w.was_held) { parts.push(format!("held \u{d7}{}", js::num_str(w.was_held))); }
+    if js::truthy(w.dazzled) { parts.push(format!("dazzled \u{d7}{}", js::num_str(w.dazzled))); }
     parts.join(" \u{b7} ")
-}
-/// `x.toFixed(digits)` for this line's small numbers. Rust's format is exact and takes a tie to even, the language takes it up;
-/// a double on a tie has at most digits + 1 fractional bits, an odd count of them.
-fn to_fixed(x: f64, digits: usize) -> String {
-    let a = m::abs(x);
-    let y = a * (1u64 << (digits + 1)) as f64;
-    let tie = y == m::floor(y) && js::rem(y, 2.0) == 1.0;
-    let a = if tie { f64::from_bits(a.to_bits() + 1) } else { a };
-    alloc::format!("{}{:.*}", if x < 0.0 { "-" } else { "" }, digits, a)
 }
 
 /// Floor point under a body: its pelvis once the ragdoll has it. (guards.ts bodyPos)
@@ -336,7 +336,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                 let s = cover_spot(g, gd, bp, if role == Role::Finder { 1.5 } else { 2.1 });
                 spot = Some(s);
                 with_duty(g, gd, |d| d.spot = Some(s));
-                g.gd[gd].last_known = Some(v3::copy(s));
+                set_fix(g, gd, s);
                 clear_path(g, gd);
                 g.gd[gd].stall_ref = None;
             }
@@ -377,7 +377,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                         with_duty(g, gd, |d| d.spot = s);
                         g.gd[gd].stall_ref = None;
                         g.gd[gd].search_t = 0.0;
-                        if let Some(s) = s { g.gd[gd].last_known = Some(v3::copy(s)); }
+                        if let Some(s) = s { set_fix(g, gd, s); }
                     }
                 }
             }
@@ -400,7 +400,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
                 g.gd[gd].stall_ref = None;
                 g.gd[gd].search_t = 0.0;
                 clear_path(g, gd);
-                if let Some(s) = s { g.gd[gd].last_known = Some(v3::copy(s)); }
+                if let Some(s) = s { set_fix(g, gd, s); }
             }
         }
         Stage::Fan => {
@@ -496,8 +496,8 @@ pub fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
     let h = match crate::scene_collision::raycast(g, from, v3::scale(d, 1.0 / l), l - 0.3) { Some(h) => h, None => return false };
     if !(h.index < 1e6) { return false; }
     let i = h.index as usize;
-    // (the level's list IS col.boxes in the TypeScript, game.ts 1219: the one Rust keeps live is g.col.boxes)
-    let flags = if i < g.col.boxes.len() { g.col.boxes[BoxId::from_ix(i)].flags } else { 0.0 };
+    // (the level's list IS col.boxes in the TypeScript, game.ts: the one Rust keeps live is g.col.boxes; `?.` is a place past its end)
+    let flags = match g.col.boxes.get(i).copied() { Some(b) => seam_box_flags(g, b), None => 0.0 };
     (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0
 }
 
@@ -739,10 +739,11 @@ pub fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: Option<G
             }
         }
         if other { continue; }
+        crate::game::guard_set_path(g, gd, vec![cand]);
         let man = &mut g.gd[gd];
-        man.path = vec![cand];
         man.path_i = 0;
         man.path_goal = Some(v3::copy(cand));
+        man.path_goal_orbit = false;
         man.stall_ref = None;
         man.line_side = if s < 0.0 { -1.0 } else { 1.0 };
         man.line_gain = -1.0;
@@ -774,13 +775,7 @@ mod tests {
         assert_eq!(bits(&aim_ahead_of([1.1, 0.1 + 1.4, 2.2], 0.05, -2.3)), [0xc0136ec85ce57064, 0x3ffe65b7a8bfd90f, 0xc008fd061a86f980]);
     }
 
-    // Expected strings are the TypeScript's own: witnessSummary's source and Number.toFixed run under bun.
-    #[test]
-    fn to_fixed_is_the_languages() {
-        let cases: [(f64, usize, &str); 13] = [(0.125, 2, "0.13"), (0.375, 2, "0.38"), (2.5, 0, "3"), (-2.5, 0, "-3"), (0.5, 0, "1"), (1.5, 0, "2"), (-0.2, 0, "-0"), (-0.0, 0, "0"), (0.1, 2, "0.10"), (1.005, 2, "1.00"), (0.995, 2, "0.99"), (97.25, 0, "97"), (12.49, 0, "12")];
-        for (x, d, want) in cases { assert_eq!(to_fixed(x, d), want, "{} to {}", x, d); }
-    }
-
+    // Expected strings are the TypeScript's own: witnessSummary's source run under bun.
     #[test]
     fn witness_line_is_the_typescripts() {
         use crate::game::*;

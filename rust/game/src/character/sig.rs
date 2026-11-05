@@ -30,10 +30,10 @@ pub fn spring_step(this: &mut crate::character::Spring, target: f64, w: f64, dt:
 pub fn curve(t: f64, k: &[[f64; 2]]) -> f64 { todo!() }
 
 /// (src/game/character.ts:479 sampleAt0)
-pub fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: &mut crate::anim_skeleton::Pose) { todo!() }
+pub fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::anim_skeleton::Pose) { todo!() }
 
 /// (src/game/character.ts:492 addPoseDelta)
-pub fn add_pose_delta(p: &mut crate::anim_skeleton::Pose, from: &crate::anim_skeleton::Pose, to: &crate::anim_skeleton::Pose, w: f64, only: &[f32]) { todo!() }
+pub fn add_pose_delta(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, from: crate::anim_skeleton::Pose, to: crate::anim_skeleton::Pose, w: f64, only: &[f32]) { todo!() }
 
 /// (src/game/character.ts:510 bump)
 pub fn bump(t: f64, a: f64, b: f64, c_2: f64, d: f64) -> f64 { todo!() }
@@ -50,9 +50,6 @@ pub fn long_targets(stance: crate::character::LongStance, crouch_w: f64) -> Vec<
 /// (src/game/character.ts:707 longTuck)
 pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) { todo!() }
 
-/// (src/game/character.ts:722 animTables)
-pub fn anim_tables() -> JsMap<String, crate::character::AnimTablesValue> { todo!() }
-
 /// (src/game/character.ts:786 foldOn)
 pub fn fold_on(g: &mut crate::game::Game, too: Option<bool>) -> bool { todo!() }
 
@@ -63,7 +60,7 @@ pub fn set_moves(g: &mut crate::game::Game, on: bool) { todo!() }
 pub fn mv_on(g: &mut crate::game::Game, k: crate::character::MvOnK) -> bool { todo!() }
 
 /// (src/game/character.ts:806 qAng)
-pub fn q_ang(a: &[f64], i: f64, s: f64, b: &[f64], k: f64) -> f64 { todo!() }
+pub fn q_ang(a: &[f32], i: f64, s: f64, b: &[f32], k: f64) -> f64 { todo!() }
 
 /// (src/game/character.ts:809 inDipLane)
 pub fn in_dip_lane(dx: f64, dz: f64, gun_yaw: f64) -> bool { todo!() }
@@ -372,7 +369,7 @@ pub fn anim_trunk_frame(g: &mut crate::game::Game, c: CharId) -> crate::characte
 pub fn anim_reload_arm(g: &mut crate::game::Game, c: CharId, t: f64, w: f64) { todo!() }
 
 /// (src/game/character.ts:2815 CharacterAnimator.beatToBench)
-pub fn anim_beat_to_bench(g: &mut crate::game::Game, c: CharId, a: &mut Vec<f64>, o: f64) { todo!() }
+pub fn anim_beat_to_bench(g: &mut crate::game::Game, c: CharId) { todo!() }
 
 /// (src/game/character.ts:2820 CharacterAnimator.reloadArmAsk)
 pub fn anim_reload_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f64, w: f64, own: Option<&crate::character::AnimReloadArmAskOwn>) { todo!() }
@@ -414,13 +411,13 @@ pub fn anim_with_hands(g: &mut crate::game::Game, c: CharId, c_2: crate::anim_sk
 pub fn anim_mv_post_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, gate: f64) { todo!() }
 
 /// (src/game/character.ts:2930 CharacterAnimator.fkPart)
-pub fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: &crate::anim_skeleton::Pose, list: &[i32]) { todo!() }
+pub fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, list: &[i32]) { todo!() }
 
 /// (src/game/character.ts:2945 CharacterAnimator.fkList)
 pub fn anim_fk_list(g: &mut crate::game::Game, c: CharId, ends: &[f64]) -> Vec<i32> { todo!() }
 
 /// (src/game/character.ts:2956 CharacterAnimator.hand)
-pub fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: &mut crate::anim_skeleton::Pose, side: f64, curl: &[f64], thumb: f64, spread: Option<f64>) { todo!() }
+pub fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, side: f64, curl: &[f64], thumb: f64, spread: Option<f64>) { todo!() }
 
 /// (src/game/character.ts:2975 CharacterAnimator.toesUp)
 pub fn anim_toes_up(g: &mut crate::game::Game, c: CharId, w: f64) { todo!() }
@@ -459,22 +456,22 @@ pub fn anim_crouch_laid(g: &mut crate::game::Game, c: CharId, ph: f64, w_move: f
 pub fn anim_crouch_laid_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, ph: f64, w_move: f64, crouch_pose: f64) { todo!() }
 
 /// (src/game/character.ts:3094 CharacterAnimator.runArms)
-pub fn anim_run_arms(g: &mut crate::game::Game, c: CharId, pose: &crate::anim_skeleton::Pose, w: f64, ws: f64) { todo!() }
+pub fn anim_run_arms(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64, ws: f64) { todo!() }
 
 /// (src/game/character.ts:3099 CharacterAnimator.runArmsAsk)
-pub fn anim_run_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pose: &crate::anim_skeleton::Pose, w: f64, ws: f64) { todo!() }
+pub fn anim_run_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pose: crate::anim_skeleton::Pose, w: f64, ws: f64) { todo!() }
 
 /// (src/game/character.ts:3106 CharacterAnimator.stanceOf)
 pub fn anim_stance_of(g: &mut crate::game::Game, c: CharId, ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> { todo!() }
 
 /// (src/game/character.ts:3116 CharacterAnimator.sampleJog)
-pub fn anim_sample_jog(g: &mut crate::game::Game, c: CharId, ph: f64, out: &mut crate::anim_skeleton::Pose) { todo!() }
+pub fn anim_sample_jog(g: &mut crate::game::Game, c: CharId, ph: f64, out: crate::anim_skeleton::Pose) { todo!() }
 
 /// (src/game/character.ts:3125 CharacterAnimator.softKnees)
-pub fn anim_soft_knees(g: &mut crate::game::Game, c: CharId, pose: &crate::anim_skeleton::Pose, w: f64) { todo!() }
+pub fn anim_soft_knees(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64) { todo!() }
 
 /// (src/game/character.ts:3130 CharacterAnimator.softKneesAsk)
-pub fn anim_soft_knees_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pose: &crate::anim_skeleton::Pose, w: f64) { todo!() }
+pub fn anim_soft_knees_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pose: crate::anim_skeleton::Pose, w: f64) { todo!() }
 
 /// (src/game/character.ts:3142 CharacterAnimator.runPlant)
 pub fn anim_run_plant(g: &mut crate::game::Game, c: CharId, ph: f64, s: f64, dt: f64, w_run: f64, w_sprint: f64) { todo!() }
@@ -585,10 +582,10 @@ pub fn anim_nv_pose(g: &mut crate::game::Game, c: CharId, k: f64) { todo!() }
 pub fn anim_nv_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: f64) { todo!() }
 
 /// (src/game/character.ts:3504 CharacterAnimator.nvTip)
-pub fn anim_nv_tip(g: &mut crate::game::Game, c: CharId, pose: &mut crate::anim_skeleton::Pose, nod: f64, g_2: Option<Quat>) { todo!() }
+pub fn anim_nv_tip(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, nod: f64, g_2: Option<Quat>) { todo!() }
 
 /// (src/game/character.ts:3510 CharacterAnimator.nvHead)
-pub fn anim_nv_head(g: &mut crate::game::Game, c: CharId, pose: &crate::anim_skeleton::Pose) -> Quat { todo!() }
+pub fn anim_nv_head(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose) -> Quat { todo!() }
 
 /// (src/game/character.ts:3521 CharacterAnimator.tellLayer)
 pub fn anim_tell_layer(g: &mut crate::game::Game, c: CharId, t: f64) { todo!() }
@@ -654,10 +651,10 @@ pub fn anim_stealth_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt
 pub fn anim_stealth_picture(g: &mut crate::game::Game, c: CharId, dt: f64) { todo!() }
 
 /// (src/game/character.ts:3701 CharacterAnimator.cablePose)
-pub fn anim_cable_pose(g: &mut crate::game::Game, c: CharId, pic: &crate::anim_skeleton::Pose, e: f64, eh: f64) { todo!() }
+pub fn anim_cable_pose(g: &mut crate::game::Game, c: CharId, pic: crate::anim_skeleton::Pose, e: f64, eh: f64) { todo!() }
 
 /// (src/game/character.ts:3710 CharacterAnimator.cablePoseAsk)
-pub fn anim_cable_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pic: &crate::anim_skeleton::Pose, e: f64, eh: f64) { todo!() }
+pub fn anim_cable_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pic: crate::anim_skeleton::Pose, e: f64, eh: f64) { todo!() }
 
 /// (src/game/character.ts:3719 CharacterAnimator.untwist)
 pub fn anim_untwist(g: &mut crate::game::Game, c: CharId, tw_y: f64, tw_p: f64) -> crate::character::Untwist { todo!() }
@@ -720,10 +717,10 @@ pub fn anim_taken_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: c
 pub fn anim_knife_blow(g: &mut crate::game::Game, c: CharId, kind: crate::character::StrikeKind, dt: f64, total: f64, tw_y: f64, tw_p: f64) { todo!() }
 
 /// (src/game/character.ts:3912 CharacterAnimator.knifePose)
-pub fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::AnimKnifePoseK, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) { todo!() }
+pub fn anim_knife_pose(g: &mut crate::game::Game, c: CharId, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) { todo!() }
 
 /// (src/game/character.ts:3917 CharacterAnimator.knifePoseAsk)
-pub fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &crate::character::AnimKnifePoseAskK, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) { todo!() }
+pub fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &crate::character::KNIFEBLOWCross, t: f64, t0: f64, total: f64, tw_y: f64, tw_p: f64) { todo!() }
 
 /// (src/game/character.ts:3929 CharacterAnimator.lockpickLayer)
 pub fn anim_lockpick_layer(g: &mut crate::game::Game, c: CharId, w: f64) { todo!() }
@@ -768,7 +765,7 @@ pub fn anim_radio(g: &mut crate::game::Game, c: CharId, secs: f64) { todo!() }
 pub fn anim_radio_shown(g: &mut crate::game::Game, c: CharId) -> f64 { todo!() }
 
 /// (src/game/character.ts:4006 CharacterAnimator.swapHeld)
-pub fn anim_swap_held(g: &mut crate::game::Game, c: CharId, rule: Option<crate::character::AnimSwapHeldRule>) -> Option<crate::character::AnimSwapHeld> { todo!() }
+pub fn anim_swap_held(g: &mut crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> { todo!() }
 
 /// (src/game/character.ts:4010 CharacterAnimator.swapBelt)
 pub fn anim_swap_belt(g: &mut crate::game::Game, c: CharId) -> f64 { todo!() }
@@ -780,10 +777,10 @@ pub fn anim_swap_info(g: &mut crate::game::Game, c: CharId) -> crate::character:
 pub fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: bool, tw_y: f64, tw_p: f64) { todo!() }
 
 /// (src/game/character.ts:4028 CharacterAnimator.swapPose)
-pub fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: &crate::anim_skeleton::Pose) { todo!() }
+pub fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) { todo!() }
 
 /// (src/game/character.ts:4033 CharacterAnimator.swapPoseAsk)
-pub fn anim_swap_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: &crate::anim_skeleton::Pose) { todo!() }
+pub fn anim_swap_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) { todo!() }
 
 /// (src/game/character.ts:4044 CharacterAnimator.workLayer)
 pub fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool, armed: bool, tw_y: f64, tw_p: f64) { todo!() }
@@ -879,7 +876,7 @@ pub fn character_reach_ov(g: &mut crate::game::Game, id: CharId, ov: &mut Vec<Op
 pub fn character_in_hand_pass(g: &mut crate::game::Game, id: CharId, dt: f64) { todo!() }
 
 /// (src/game/character.ts:4488 Character.inHandWord)
-pub fn character_in_hand_word(g: &mut crate::game::Game, id: CharId, dt: f64, cur: Option<crate::character::CharacterInHandWordCur>, hr: Quat, r: V3, l: V3, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>, reach: &mut dyn FnMut(&mut crate::game::Game, bool, V3, Quat)) { todo!() }
+pub fn character_in_hand_word(g: &mut crate::game::Game, id: CharId, dt: f64, cur: Option<crate::inhand::InHandWord>, hr: Quat, r: V3, l: V3, ov: &mut Vec<Option<crate::anim_skeleton::NodeOverride>>) { todo!() }
 
 /// (src/game/character.ts:4526 Character.turnWeigh)
 pub fn character_turn_weigh(g: &mut crate::game::Game, id: CharId, dt: f64) { todo!() }
@@ -912,13 +909,13 @@ pub fn character_want_body(g: &mut crate::game::Game, id: CharId) -> f64 { todo!
 pub fn character_joint_under(g: &mut crate::game::Game, id: CharId, name: &str) -> Option<V3> { todo!() }
 
 /// (src/game/character.ts:4588 Character.joints)
-pub fn character_joints(g: &mut crate::game::Game, id: CharId, b: &mut JsMap<String, V3>) -> JsMap<String, V3> { todo!() }
+pub fn character_joints(g: &mut crate::game::Game, id: CharId, b: &mut JsMap<crate::character::Bone, V3>) { todo!() }
 
 /// (src/game/character.ts:4598 Character.readBones)
 pub fn character_read_bones(g: &mut crate::game::Game, id: CharId, dt: f64) { todo!() }
 
 /// (src/game/character.ts:4624 Character.ragdollize)
-pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: Option<&crate::ragdoll::RagdollWorld>, dir: V3, quiet: bool) { todo!() }
+pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, dir: V3, quiet: bool) { todo!() }
 
 /// (src/game/character.ts:4665 Character.updateRagdoll)
 pub fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) { todo!() }
@@ -953,12 +950,13 @@ pub fn character_inside_body(g: &mut crate::game::Game, id: CharId, p: V3, crown
 /// (src/game/character.ts:4858 Character.rayHit)
 pub fn character_ray_hit(g: &mut crate::game::Game, id: CharId, ro: V3, rd: V3, tmax: f64) -> f64 { todo!() }
 
-pub mod fold_with {
-    #[allow(unused_imports)]
-    use crate::{ids::*, js::*, Quat, V3};
-    #[allow(unused_imports)]
-    use alloc::{string::String, vec::Vec};
-    /// (src/game/character.ts:785 FOLD_WITH.on)
-    pub fn on() -> bool { todo!() }
 
-}
+/// INVENTED: fkList off the rig alone, for anim_new, whose animator is on no body yet (character.ts:2945, :1855)
+pub fn anim_fk_list_of(g: &mut crate::game::Game, ch: RigId, ends: &[f64]) -> Vec<i32> { todo!() }
+
+/// INVENTED: sampleJog on an animator not yet in g.ch, for anim_new (character.ts:3116, :1904)
+pub fn anim_sample_jog_on(g: &mut crate::game::Game, a: &crate::character::Anim, ph: f64, out: &mut crate::anim_skeleton::Pose) { todo!() }
+
+/// INVENTED: stanceOf, which reads no state, for anim_new (character.ts:3106, :1909, :1921)
+pub fn anim_stance_of_toes(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> { todo!() }
+

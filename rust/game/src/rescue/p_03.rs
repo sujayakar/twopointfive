@@ -1,4 +1,4 @@
-//! src/game/rescue.ts lines 896 to 1058
+//! src/game/rescue.ts lines 899 to 1061
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -43,13 +43,6 @@ fn hostage_name(g: &mut Game, h: GuardId) -> String {
         Some(c) => g.cv[c].name.clone(),
         None => String::from("a hostage"),
     }
-}
-
-/// `x.toFixed(0)`: the nearest whole number, a tie going up, a negative written as the sign and its size. Rust's own `{:.0}` sends a tie to the even one
-fn to_fixed_0(x: f64) -> String {
-    if x.is_nan() { return String::from("NaN"); }
-    let n = m::round(m::abs(x));
-    if x < 0.0 { alloc::format!("-{:.0}", n) } else { alloc::format!("{:.0}", n) }
 }
 
 /// the state endGuardScript is handed for a man taken off his script in place: his own, a dead man's being 'patrol'   (rescue.ts:938)
@@ -97,7 +90,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         if let Some(aim) = rescue_data(g).map(|d| d.room.door_aim) {
             let p = pos_of(g, by);
             let b = room(g);
-            if crate::squad::in_bounds(p, b, None) { g.gd[by].last_known = Some([aim[0], 0.0, aim[2]]); }
+            if crate::squad::in_bounds(p, b, None) { crate::belief::cover(g, by, [aim[0], 0.0, aim[2]]); }
         }
         g.gd[by].awareness = 1.0;
         if took { rescue_note(g, "act:blocked"); return; }
@@ -328,9 +321,9 @@ pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndStat
     let timed = if g.rescue.t0.is_nan() {
         String::from("room secured before anybody knew")
     } else if g.rescue.secured_at.is_nan() && !lost {
-        alloc::format!("{} s after the clock started", to_fixed_0(secs))
+        alloc::format!("{} s after the clock started", js::to_fixed(secs, 0))
     } else {
-        alloc::format!("room secured {} s after the clock started", to_fixed_0(secs))
+        alloc::format!("room secured {} s after the clock started", js::to_fixed(secs, 0))
     };
     let hs = g.rescue.hostages.clone();
     let left = standing(g, &hs).len();
@@ -430,7 +423,7 @@ pub fn rescue_summary(g: &mut crate::game::Game) -> String {
         }
         None => String::new(),
     };
-    let blind = if js::truthy(g.rescue.blind_rounds) { alloc::format!(" · {} blind rounds", g.rescue.blind_rounds) } else { String::new() };
+    let blind = if js::truthy(g.rescue.blind_rounds) { alloc::format!(" · {} blind rounds", js::num_str(g.rescue.blind_rounds)) } else { String::new() };
     let result = match &g.rescue.result {
         Some(r) => alloc::format!(" · {}", r.why),
         None => String::new(),
@@ -447,22 +440,7 @@ pub fn rescue_summary(g: &mut crate::game::Game) -> String {
         set,
         blind,
         result,
-        g.rescue.staged,
+        js::num_str(g.rescue.staged),
         flow,
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// the TypeScript's own answers, from node: [0, -0, 0.4, -0.4, 0.5, 1.5, 2.5, -2.5, 0.49999999999999994, 59.5, 12.499999, 1000.5, 4503599627370497, NaN].map(x => x.toFixed(0))
-    #[test]
-    fn to_fixed_0_is_the_languages() {
-        let cases: [(f64, &str); 14] = [
-            (0.0, "0"), (-0.0, "0"), (0.4, "0"), (-0.4, "-0"), (0.5, "1"), (1.5, "2"), (2.5, "3"), (-2.5, "-3"),
-            (0.49999999999999994, "0"), (59.5, "60"), (12.499999, "12"), (1000.5, "1001"), (4503599627370497.0, "4503599627370497"), (f64::NAN, "NaN"),
-        ];
-        for (x, s) in cases { assert_eq!(to_fixed_0(x), s); }
-    }
 }

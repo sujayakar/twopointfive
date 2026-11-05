@@ -7,13 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ seams: what skeleton 3 still cannot do
-fn seam_walk_watched(g: &mut Game, w: &mut crate::sneak::SneakWalk, x: f64, z: f64, wider: bool) -> bool { todo!("needs: SneakWalk.watched: the struct holds only `by`") }
-fn seam_walk_cost(g: &mut Game, w: &mut crate::sneak::SneakWalk, pts: &[V3], pace: f64, skip: V3) -> f64 { todo!("needs: SneakWalk.cost: the struct holds only `by`; it writes w.by") }
-
-const ROWS: [&str; 5] = ["pairMark", "pairWatch", "pairTake", "pairDark", "pairGo"];
-const TAKES: [&str; 2] = ["pairMark", "pairTake"];
-
 /// the living row of a man's job: the TypeScript holds the object, a copy would lose the write
 macro_rules! job { ($g:expr, $gd:expr) => { $g.pair.jobs.get_mut($gd).unwrap() } }
 /// the assignment under a man, by its ID
@@ -21,15 +14,6 @@ macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
 
 fn pos_of(g: &Game, h: GuardId) -> V3 { g.ch[g.gd[h].ch].pos }
 fn floor_of(p: V3) -> V3 { [p[0], 0.0, p[2]] }
-/// `x.toFixed(1)`: ties go up in size, where Rust's format goes to the even digit; the sign is kept for a negative that rounds to zero, and not for −0
-fn to_fixed1(x: f64) -> String {
-    let ax = m::abs(x);
-    let q = ax * 4.0;
-    let tie = q == m::floor(q) && js::rem(q, 2.0) == 1.0;
-    let s = if tie { format!("{:.1}", ax + 0.05) } else { format!("{:.1}", ax) };
-    if x < 0.0 { format!("-{}", s) } else { s }
-}
-
 /// ?pairorders and the harness's PAIRORDERS: host work, the address word writes g.k.pair.on before the game runs; nothing for the sim to do   (pairorders.ts flags)
 pub fn flags(g: &mut Game) {}
 
@@ -51,43 +35,10 @@ pub fn look_of(g: &mut Game, h: GuardId) -> [f64; 2] {
 
 /// The quiet orders for one partner; the squad orders' people and note are hung here   (PairOrders.constructor)
 pub fn pair_orders_new(g: &mut Game) -> crate::pairorders::PairOrders {
-    // (SquadOrdersPeople has no fields: being set says this module answers people_near and people_ray)
+    // (SquadOrdersPeople has no fields: being set is what orders' squad_orders_people_near and _ray test)
     g.orders.people = Some(crate::orders::SquadOrdersPeople::zeroed());
     g.orders.notes.push(crate::orders::OrderNoteFn::Pair);
     crate::pairorders::PairOrders::blank()
-}
-
-/// S.people.near: the man an order at this point is about   (pairorders.ts:159)
-pub(crate) fn people_near(g: &mut Game, at: V3) -> Option<(GuardId, f64)> {
-    if !pair_orders_up(g) { return None; }
-    let mut best: Option<GuardId> = None;
-    let mut bd = g.k.pair.pick_m;
-    let mut i = 0;
-    while i < g.guards.len() {
-        let h = g.guards[i];
-        i += 1;
-        if !pair_orders_is_foe(g, h) { continue; }
-        let d = v3::dist_xz(pos_of(g, h), at);
-        if d < bd { bd = d; best = Some(h); }
-    }
-    best.map(|gd| (gd, bd))
-}
-
-/// S.people.ray: the man's body under the cursor   (pairorders.ts:162)
-pub(crate) fn people_ray(g: &mut Game, ro: V3, rd: V3, max: f64) -> Option<GuardId> {
-    if !pair_orders_up(g) { return None; }
-    let mut best: Option<GuardId> = None;
-    let mut bt = max;
-    let mut i = 0;
-    while i < g.guards.len() {
-        let h = g.guards[i];
-        i += 1;
-        if !pair_orders_is_foe(g, h) { continue; }
-        let c = g.gd[h].ch;
-        let t = crate::character::character_ray_hit(g, c, ro, rd, bt);
-        if t >= 0.0 && t < bt { bt = t; best = Some(h); }
-    }
-    best
 }
 
 /// S.notes: the status line while somebody waits on the mark   (pairorders.ts:166)
@@ -152,36 +103,8 @@ pub fn pair_orders_waiting(g: &mut Game) -> Vec<(GuardId, crate::pairorders::Job
 }
 
 /// a man's job, to read   (PairOrders.jobOf)
-pub fn pair_orders_job_of(g: &mut Game, gd: GuardId) -> Option<crate::pairorders::PairOrdersJobOf> {
-    let j = g.pair.jobs.get(gd)?;
-    Some(crate::pairorders::PairOrdersJobOf {
-        foe: j.foe,
-        mode: match j.mode {
-            crate::pairorders::JobMode::Mark => crate::pairorders::PairOrdersJobOfMode::Mark,
-            crate::pairorders::JobMode::Now => crate::pairorders::PairOrdersJobOfMode::Now,
-        },
-        go: j.go,
-        set: j.set,
-        set_said: j.set_said,
-        t0: j.t0,
-        born: j.born,
-        check_t: j.check_t,
-        wait_t: j.wait_t,
-        heel_t: j.heel_t,
-        going: j.going,
-        scuffled: j.scuffled,
-        was_following: j.was_following,
-        handed: j.handed,
-        watcher: j.watcher,
-        watch_t: j.watch_t,
-        seen_t: j.seen_t,
-        force: j.force,
-        cue_t: j.cue_t,
-        cue_by: j.cue_by,
-        cued: j.cued,
-        back_said: j.back_said,
-        back_t: j.back_t,
-    })
+pub fn pair_orders_job_of(g: &mut Game, gd: GuardId) -> Option<crate::pairorders::Job> {
+    g.pair.jobs.get(gd).copied()
 }
 
 /// the partner's hands are on this man, for a bounded time   (PairOrders.gripped)
@@ -248,40 +171,6 @@ pub fn pair_orders_note(g: &mut Game, what: &str) {
 }
 
 // ------------------------------------------------------------ the rows
-/// `can` of the two take rows: None is the TypeScript's `true`   (pairorders.ts:208)
-pub(crate) fn take_can(g: &mut Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Some(String::from("nobody there.")) };
-    let to = pair_orders_behind(g, foe);
-    let spot = crate::orders::squad_orders_free_spot(g, to).unwrap_or(to);
-    if !pair_orders_back_open(g, foe, spot) || !pair_orders_rear(g, foe, spot, Some(true)) { return Some(String::from("no room behind him.")); }
-    let st = pair_orders_stage(g, foe);
-    crate::orders::squad_orders_reach(g, gd, st)
-}
-
-/// `only` of the two take rows: the nearest of those addressed who has a way to him   (pairorders.ts:206)
-pub(crate) fn take_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Vec::new() };
-    let to = pair_orders_stage(g, foe);
-    let mut out: Vec<GuardId> = Vec::new();
-    for gd in men.iter().copied() {
-        if crate::orders::squad_orders_reach(g, gd, to).is_none() { out.push(gd); }
-    }
-    let fp = pos_of(g, foe);
-    let rows: &Game = g;
-    js::sort_by(&mut out, |a, b| v3::dist_xz(pos_of(rows, *a), fp) - v3::dist_xz(pos_of(rows, *b), fp));
-    out.truncate(1);
-    out
-}
-
-/// `valid` of the two take rows: Ok is the TypeScript's boolean, Err its reason   (pairorders.ts:210)
-pub(crate) fn take_valid(g: &mut Game, t: &crate::orders::OrderTarget) -> Result<bool, String> {
-    let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Ok(false) };
-    if let Some(why) = pair_orders_gone(g, foe) { return Err(why); }
-    if pair_orders_noticed(g, foe) { return Err(String::from("he's fighting. can't grab him.")); }
-    if pair_orders_caught(g) { return Err(String::from("they're onto us. can't grab him.")); }
-    Ok(true)
-}
-
 /// `issue` of the two take rows   (pairorders.ts:211)
 pub(crate) fn take_issue(g: &mut Game, mode: crate::pairorders::JobMode, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Some(String::from("nobody there")) };
@@ -315,18 +204,6 @@ pub(crate) fn take_issue(g: &mut Game, mode: crate::pairorders::JobMode, men: &[
     None
 }
 
-/// `can` of 'watch him': None is `true`   (pairorders.ts:225)
-pub(crate) fn watch_can(g: &mut Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    if let crate::orders::OrderTarget::Foe(f) = t { if pair_orders_sees(g, gd, f.foe) { return None; } }
-    Some(String::from("no line from here."))
-}
-
-/// `valid` of 'watch him'   (pairorders.ts:226)
-pub(crate) fn watch_valid(g: &mut Game, t: &crate::orders::OrderTarget) -> Result<bool, String> {
-    let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Ok(false) };
-    match pair_orders_gone(g, foe) { Some(why) => Err(why), None => Ok(true) }
-}
-
 /// `issue` of 'watch him'   (pairorders.ts:227)
 pub(crate) fn watch_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let foe = match t { crate::orders::OrderTarget::Foe(f) => f.foe, _ => return Some(String::from("nobody there")) };
@@ -341,33 +218,6 @@ pub(crate) fn watch_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Orde
         });
     }
     None
-}
-
-/// `tick` of 'watch him': the gun stays on where he last saw the man   (pairorders.ts:232)
-pub(crate) fn watch_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
-    let h = match asg!(g, a).foe { Some(h) => h, None => return };
-    if g.gd[h].state == crate::game::GuardState::Dead || !g.guards.contains(&h) { pair_orders_stand(g, gd, "holding", None); return; }
-    if !pair_orders_sees(g, gd, h) { return; }
-    let c = pos_of(g, h);
-    let p = pos_of(g, gd);
-    if let Some(w) = asg!(g, a).watch.as_mut() { w[0] = c[0]; w[2] = c[2]; }
-    asg!(g, a).face = Some(v3::yaw_to(p, c));
-}
-
-/// `standsIn.when` of 'hold in the dark'   (pairorders.ts:238)
-pub(crate) fn dark_when(g: &mut Game) -> bool { pair_orders_up(g) && crate::silent::squad_silent(g) }
-
-/// `can` of 'hold in the dark': no way there is said before no dark there. None is `true`   (pairorders.ts:239)
-pub(crate) fn dark_can(g: &mut Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    let at = match t {
-        crate::orders::OrderTarget::Floor(f) => f.at,
-        crate::orders::OrderTarget::Door(f) => f.at,
-        crate::orders::OrderTarget::None(f) => f.at,
-        crate::orders::OrderTarget::Foe(f) => f.at,
-    };
-    let d = pair_orders_dark_spot(g, at);
-    if let Some(w) = crate::orders::squad_orders_reach(g, gd, d.unwrap_or(at)) { return Some(w); }
-    if d.is_some() { None } else { Some(String::from("no dark spot there.")) }
 }
 
 /// `issue` of 'hold in the dark'   (pairorders.ts:240)
@@ -393,7 +243,7 @@ pub(crate) fn dark_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Order
             going: String::from("moving · to the dark"), there: String::from("holding in the dark"), set_line: Some(String::from("set.")), ..Default::default()
         });
         g.stats.pairorders.dark += 1;
-        let line = format!("dark:{} {},{}{}", g.gd[gd].callsign, to_fixed1(p[0]), to_fixed1(p[2]), if d.is_some() { "" } else { " (lit)" });
+        let line = format!("dark:{} {},{}{}", g.gd[gd].callsign, js::to_fixed(p[0], 1), js::to_fixed(p[2], 1), if d.is_some() { "" } else { " (lit)" });
         pair_orders_note(g, &line);
         if d.is_none() { crate::game::game_say(g, gd, "it's lit there.", None, None, None); }
     }
@@ -434,29 +284,6 @@ pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
     vec![mark, watch, now, dark]
 }
 
-/// `label` of the mark's row   (pairorders.ts:253)
-pub(crate) fn go_label(g: &mut Game) -> String {
-    let w = pair_orders_waiting(g);
-    if w.is_empty() { return String::from("mark"); }
-    let mut parts: Vec<String> = Vec::new();
-    for (gd, j) in w.iter() {
-        let foe = name_of(g, j.foe);
-        parts.push(format!("{} takes {}{}", g.gd[*gd].callsign, foe, if j.watcher.is_some() { " anyway" } else { "" }));
-    }
-    format!("mark · {}", parts.join(" · "))
-}
-
-/// `only` of the mark's row   (pairorders.ts:254)
-pub(crate) fn go_only(g: &mut Game) -> Vec<GuardId> { pair_orders_waiting(g).iter().map(|r| r.0).collect() }
-
-/// `valid` of the mark's row   (pairorders.ts:254)
-pub(crate) fn go_valid(g: &mut Game) -> Result<bool, String> {
-    if !pair_orders_waiting(g).is_empty() { Ok(true) } else { Err(String::from("nobody's waiting on your mark.")) }
-}
-
-/// `issue` of the mark's row   (pairorders.ts:255)
-pub(crate) fn go_issue(g: &mut Game) { pair_orders_mark(g, Some(crate::pairorders::PairOrdersMarkBy::Row)); }
-
 /// the mark's own row: 'go' under the word's header   (PairOrders.goRow)
 pub fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
     use crate::orders::{OrderIssue, OrderLabel, OrderOnly, OrderValid};
@@ -480,7 +307,7 @@ pub fn pair_orders_seat(g: &mut Game) {
     let up = pair_orders_up(g);
     if up != g.pair.seated {
         g.pair.seated = up;
-        for id in ROWS.iter() { crate::orders::squad_orders_unregister(g, id); }
+        for id in crate::pairorders::rows().iter() { crate::orders::squad_orders_unregister(g, id); }
         for id in ["fallIn", "hold"] {
             let found = g.orders.defs.iter().copied().find(|x| g.tab.orders_order_def[*x].id == id);
             let d = match found { Some(d) => d, None => continue };
@@ -511,7 +338,7 @@ pub fn pair_orders_seat(g: &mut Game) {
 pub fn pair_orders_reset(g: &mut Game) {
     for gd in crate::orders::squad_orders_squad(g) {
         if let Some(a) = crate::orders::squad_orders_of(g, gd) {
-            if ROWS.contains(&asg!(g, a).order.as_str()) { pair_orders_stand(g, gd, "holding", None); }
+            if crate::pairorders::rows().contains(&asg!(g, a).order) { pair_orders_stand(g, gd, "holding", None); }
         }
     }
     g.pair.jobs.clear();
@@ -580,7 +407,7 @@ pub fn pair_orders_tick(g: &mut Game, dt: f64) {
         let foe = g.pair.jobs.get(gd).unwrap().foe;
         let a = crate::orders::squad_orders_of(g, gd);
         if g.gd[gd].state == crate::game::GuardState::Dead { g.pair.jobs.delete(gd); continue; }
-        let kept = match a { Some(a) => TAKES.contains(&asg!(g, a).order.as_str()) && asg!(g, a).foe == Some(foe), None => false };
+        let kept = match a { Some(a) => crate::pairorders::takes().contains(&asg!(g, a).order) && asg!(g, a).foe == Some(foe), None => false };
         if !kept {
             g.pair.jobs.delete(gd);
             g.stats.pairorders.cancelled += 1;
@@ -1175,7 +1002,7 @@ pub fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -
                     if !crate::scene_collision::nav_grid_walkable(g, from, first) { continue; }
                     if r.len() >= 2 && !crate::scene_collision::nav_grid_walkable(g, r[r.len() - 2], r[r.len() - 1]) { continue; }
                     let pts = from_on(from, &r);
-                    if seam_walk_cost(g, &mut w, &pts, pace, to) <= budget {
+                    if crate::sneak::sneak_walk_cost(g, &mut w, &pts, pace, Some(to), None) <= budget {
                         if g.time - was.t < 6.0 {
                             g.stats.pairup.ways_kept += 1;
                             return crate::pairorders::PairOrdersStalk { path: r, exposed: false, by: None };
@@ -1189,14 +1016,14 @@ pub fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -
         let mut path = {
             let mut pen = |g: &mut Game, ix: f64, iz: f64| -> f64 {
                 let (x, z) = ((ix + 0.5) * c, (iz + 0.5) * c);
-                if seam_walk_watched(g, &mut w, x, z, true) || ring_at(g, &ring, x, z) { 14.0 } else { 1.0 }
+                if crate::sneak::sneak_walk_watched(g, &mut w, x, z, Some(true)) || ring_at(g, &ring, x, z) { 14.0 } else { 1.0 }
             };
             crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), Some(&mut pen))
         };
         if path.is_none() { path = crate::scene_collision::nav_grid_find_path(g, from, to, None, None); }
         if let Some(rest) = rest {
             let ok = match path.as_ref() {
-                Some(pa) => { let pts = from_on(from, pa); seam_walk_cost(g, &mut w, &pts, pace, to) <= budget }
+                Some(pa) => { let pts = from_on(from, pa); crate::sneak::sneak_walk_cost(g, &mut w, &pts, pace, Some(to), None) <= budget }
                 None => false,
             };
             // (`ok` false with no path: the TypeScript's `||` stops there and never reads path!)
@@ -1213,7 +1040,7 @@ pub fn pair_orders_stalk(g: &mut Game, gd: GuardId, to: V3, pace: Option<f64>) -
             None => { g.pair.ways.delete(gd); return crate::pairorders::PairOrdersStalk { path: Vec::new(), exposed: true, by: None }; }
         };
         let pts = from_on(from, &path);
-        let exposed = seam_walk_cost(g, &mut w, &pts, pace, to) > budget;
+        let exposed = crate::sneak::sneak_walk_cost(g, &mut w, &pts, pace, Some(to), None) > budget;
         if exposed { g.pair.ways.delete(gd); } else { let t = g.time; g.pair.ways.set(gd, crate::pairorders::PairOrdersWaysValue { to: floor_of(to), path: path.clone(), t }); }
         return crate::pairorders::PairOrdersStalk { path, exposed, by: w.by };
     }
@@ -1311,8 +1138,7 @@ fn dark_find(g: &mut Game, at: V3) -> Option<V3> {
 
 /// the dark floor an order for `at` means; None: none is dark   (PairOrders.darkSpot)
 pub fn pair_orders_dark_spot(g: &mut Game, at: V3) -> Option<V3> {
-    // (`+ 0.0`: a −0 is written "0" by the TypeScript's template and "-0" by Rust's)
-    let key = format!("{},{}", m::round(at[0] * 4.0) + 0.0, m::round(at[2] * 4.0) + 0.0);
+    let key = format!("{},{}", js::num_str(m::round(at[0] * 4.0)), js::num_str(m::round(at[2] * 4.0)));
     let t = g.time;
     if let Some(was) = g.pair.dark_memo.get(key.clone()) {
         if m::abs(t - was.t) < 1.0 { return was.spot; }
@@ -1367,11 +1193,11 @@ pub fn pair_orders_summary(g: &mut Game) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own: (x).toFixed(1) under bun
+    /// the TypeScript's own: (x).toFixed(1) under bun, the values the dark row's log line prints by
     #[test]
     fn to_fixed_as_the_page() {
         for (x, want) in [(0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (-0.25, "-0.3"), (-0.04, "-0.0"), (-0.0, "0.0"), (2.05, "2.0"), (12.35, "12.3"), (0.05, "0.1"), (3.0, "3.0")] {
-            assert_eq!(to_fixed1(x), want, "{}", x);
+            assert_eq!(js::to_fixed(x, 1), want, "{}", x);
         }
     }
 }

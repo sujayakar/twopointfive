@@ -101,9 +101,6 @@ pub fn cone_visit_now(g: &mut crate::game::Game) -> Option<bool> { todo!() }
 /// (src/game/difficulty.ts:272 difficultyCustom)
 pub fn difficulty_custom(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/difficulty.ts:283 initDifficulty)
-pub fn init_difficulty(g: &mut crate::game::Game, q: crate::Opaque, plain: Option<bool>) { todo!() }
-
 /// (src/game/difficulty.ts:299 keptLevers)
 pub fn kept_levers(g: &mut crate::game::Game) -> crate::difficulty::KeptLevers { todo!() }
 

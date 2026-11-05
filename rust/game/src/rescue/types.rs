@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Rescue, src/game/rescue.ts:219)
+/// (TypeScript: Rescue, src/game/rescue.ts:221)
 #[derive(Clone, Debug)]
 pub struct Rescue {
     pub active: bool,
@@ -103,7 +103,7 @@ impl Rescue {
 }
 impl Default for Rescue { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Entry, src/game/rescue.ts:211)
+/// (TypeScript: Entry, src/game/rescue.ts:213)
 #[derive(Clone, Debug)]
 pub struct Entry {
     pub ops: Vec<crate::rescue::EntryOpsItem>,
@@ -130,7 +130,7 @@ impl Entry {
 }
 impl Default for Entry { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:211 Entry.ops, src/game/rescue.ts:211)
+/// (TypeScript: inline at src/game/rescue.ts:213 Entry.ops, src/game/rescue.ts:213)
 #[derive(Clone, Debug)]
 pub struct EntryOpsItem {
     pub op: DoorOpId,
@@ -153,7 +153,7 @@ impl EntryOpsItem {
 }
 impl Default for EntryOpsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:234 Rescue.log, src/game/rescue.ts:234)
+/// (TypeScript: inline at src/game/rescue.ts:236 Rescue.log, src/game/rescue.ts:236)
 #[derive(Clone, Debug)]
 pub struct RescueLogItem {
     pub t: f64,
@@ -170,7 +170,7 @@ impl RescueLogItem {
 }
 impl Default for RescueLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:242 Rescue.result, src/game/rescue.ts:242)
+/// (TypeScript: inline at src/game/rescue.ts:244 Rescue.result, src/game/rescue.ts:244)
 #[derive(Clone, Debug)]
 pub struct RescueResult {
     pub state: crate::rescue::RescueResultState,
@@ -227,7 +227,7 @@ impl RescueResultGrade {
     }
 }
 
-/// (TypeScript: Def, src/game/rescue.ts:214)
+/// (TypeScript: Def, src/game/rescue.ts:216)
 #[derive(Clone, Copy, Debug)]
 pub struct Def {
     pub role: crate::rescue::Role,
@@ -285,7 +285,7 @@ impl Role {
     }
 }
 
-/// (TypeScript: inline at src/game/rescue.ts:214 Def.mark, src/game/rescue.ts:214)
+/// (TypeScript: inline at src/game/rescue.ts:216 Def.mark, src/game/rescue.ts:216)
 #[derive(Clone, Copy, Debug)]
 pub struct DefMark {
     pub pos: V3,
@@ -325,7 +325,7 @@ impl DefCrew {
     }
 }
 
-/// (TypeScript: inline at src/game/rescue.ts:244 Rescue.act, src/game/rescue.ts:244)
+/// (TypeScript: inline at src/game/rescue.ts:246 Rescue.act, src/game/rescue.ts:246)
 #[derive(Clone, Copy, Debug)]
 pub struct RescueAct {
     pub by: GuardId,
@@ -382,7 +382,7 @@ impl RescueLastOrder {
 }
 impl Default for RescueLastOrder { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:260 Rescue.searchA, src/game/rescue.ts:260)
+/// (TypeScript: inline at src/game/rescue.ts:262 Rescue.searchA, src/game/rescue.ts:262)
 #[derive(Clone, Debug)]
 pub struct RescueSearchAValue {
     pub a: OrdersAssignmentId,
@@ -426,7 +426,7 @@ impl RescueState {
     }
 }
 
-/// (TypeScript: inline at src/game/rescue.ts:153 SIDE_MARKS, src/game/rescue.ts:153)
+/// (TypeScript: inline at src/game/rescue.ts:155 SIDE_MARKS, src/game/rescue.ts:155)
 #[derive(Clone, Debug)]
 pub struct SIDEMARKS {
     pub stack: Vec<V3>,
@@ -509,7 +509,7 @@ impl RescueOrderDoor {
     }
 }
 
-/// (TypeScript: inline at src/game/rescue.ts:481 pick ->, src/game/rescue.ts:481)
+/// (TypeScript: inline at src/game/rescue.ts:483 pick ->, src/game/rescue.ts:483)
 #[derive(Clone, Debug)]
 pub struct RescuePick {
     pub front: Vec<GuardId>,
@@ -541,7 +541,7 @@ impl RescueEndState {
     }
 }
 
-/// (TypeScript: inline at src/game/rescue.ts:1034 objective ->, src/game/rescue.ts:1034)
+/// (TypeScript: inline at src/game/rescue.ts:1037 objective ->, src/game/rescue.ts:1037)
 #[derive(Clone, Debug)]
 pub struct RescueObjective {
     pub text: String,
@@ -561,9 +561,9 @@ impl Default for RescueObjective { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct RescueMod {
-    /// (src/game/rescue.ts:148 applied)
+    /// (src/game/rescue.ts:150 applied)
     pub applied: Option<crate::scene_scenarios::TeamStart>,
-    /// (src/game/rescue.ts:159 DOOR_ORDERS)
+    /// (src/game/rescue.ts:161 DOOR_ORDERS)
     pub door_orders: JsSet<String>,
 }
 impl RescueMod {
@@ -575,17 +575,17 @@ impl RescueMod {
     }
 }
 
-/// (src/game/rescue.ts:153 SIDE_MARKS: a table nothing writes)
+/// (src/game/rescue.ts:155 SIDE_MARKS: a table nothing writes)
 pub fn side_marks() -> crate::rescue::SIDEMARKS { crate::rescue::SIDEMARKS { stack: alloc::vec![[20.85, 0.0, 7.55], [20.15, 0.0, 7.55]], standoff: alloc::vec![[20.5, 0.0, 7.55], [19.8, 0.0, 7.55]] } }
 
-/// (src/game/rescue.ts:154 NUMBER: a table nothing writes)
+/// (src/game/rescue.ts:156 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }
 
-/// (src/game/rescue.ts:159 SEARCH_RATE)
+/// (src/game/rescue.ts:161 SEARCH_RATE)
 pub const SEARCH_RATE: f64 = 1.3;
 
-/// (src/game/rescue.ts:159 SEARCH_HALF)
+/// (src/game/rescue.ts:161 SEARCH_HALF)
 pub const SEARCH_HALF: f64 = 1.75;
 
-/// (src/game/rescue.ts:216 CREW_SEEN)
+/// (src/game/rescue.ts:218 CREW_SEEN)
 pub const CREW_SEEN: f64 = 4.0;

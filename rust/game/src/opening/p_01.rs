@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `gd.routeI < 0` (opening.ts:81): the field is a usize here and the TypeScript's -1 (a spawned man) does not fit in it.
-fn seam_route_i_negative(g: &mut Game, gd: GuardId) -> bool {
-    todo!("needs: Guard.route_i able to hold -1")
-}
-
 /// The point `s` metres along p → q, on the floor. (opening.ts:65)
 fn leg_point(p: V3, q: V3, s: f64, l: f64) -> V3 {
     [p[0] + (q[0] - p[0]) * s / l, 0.0, p[2] + (q[2] - p[2]) * s / l]
@@ -47,7 +42,7 @@ pub fn way_len(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 /// Where along his route a man who starts inside the clear radius is put, or none; kept per route. (opening.ts openingSpot)
 pub fn opening_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::opening::OpeningSpot> {
     let spawn = g.level.player_spawn;
-    let key = alloc::format!("{}|{}|{}|{}", g.k.opening.clear_m, g.k.opening.step_m, spawn[0], spawn[2]);
+    let key = alloc::format!("{}|{}|{}|{}", js::num_str(g.k.opening.clear_m), js::num_str(g.k.opening.step_m), js::num_str(spawn[0]), js::num_str(spawn[2]));
     let route = g.gd[gd].route;
     if let Some(kept) = g.m.opening.spots.get(route) {
         if kept.key == key {
@@ -116,7 +111,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.gd[gd].team != crate::teams::Team::Guard || seam_route_i_negative(g, gd) {
+        if g.m.opening.seen.has(gd) || g.gd[gd].unit.is_some() || g.gd[gd].team != crate::teams::Team::Guard || g.gd[gd].route_i < 0 {
             continue;
         }
         if !g.m.opening.born.has(gd) {
@@ -150,7 +145,7 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
         g.gd[gd].last_pos = v3::copy(at.pos);
         g.gd[gd].wp = at.wp as usize;
         g.gd[gd].wait = 0.0;
-        g.gd[gd].path = Vec::new();
+        crate::game::guard_set_path(g, gd, Vec::new());
         g.gd[gd].path_i = 0;
         g.gd[gd].path_goal = None;
         crate::character::character_update(g, c, 0.0); // bones where he now stands, before anything reads them this frame

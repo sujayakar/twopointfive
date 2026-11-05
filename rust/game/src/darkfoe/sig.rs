@@ -11,17 +11,14 @@ pub fn frac(x: f64) -> f64 { todo!() }
 /// (src/game/darkfoe.ts:81 idShare)
 pub fn id_share(g: &mut crate::game::Game, gd: GuardId, salt: Option<f64>) -> f64 { todo!() }
 
-/// (src/game/darkfoe.ts:83 darkFoeCarries)
-pub fn dark_foe_carries(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/darkfoe.ts:83 carriesDarkLamp)
+pub fn carries_dark_lamp(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/darkfoe.ts:85 darkFoeRuled)
 pub fn dark_foe_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/darkfoe.ts:91 darkFoeLit)
 pub fn dark_foe_lit(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
-
-/// (src/game/darkfoe.ts:93 mine)
-pub fn mine(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
 /// (src/game/darkfoe.ts:94 placeOnly)
 pub fn place_only() -> bool { todo!() }
@@ -68,11 +65,11 @@ pub fn walk(g: &mut crate::game::Game, d: RoomfightDefId, goal: V3) { todo!() }
 /// (src/game/darkfoe.ts:189 darkFoeKept)
 pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>) -> Option<String> { todo!() }
 
-/// (src/game/darkfoe.ts:207 darkFoeTick)
+/// (src/game/darkfoe.ts:206 darkFoeTick)
 pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) { todo!() }
 
-/// (src/game/darkfoe.ts:236 darkFoeOf)
+/// (src/game/darkfoe.ts:235 darkFoeOf)
 pub fn dark_foe_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::darkfoe::DarkFoeOf> { todo!() }
 
-/// (src/game/darkfoe.ts:238 darkFoeSummary)
+/// (src/game/darkfoe.ts:237 darkFoeSummary)
 pub fn dark_foe_summary(g: &mut crate::game::Game) -> String { todo!() }

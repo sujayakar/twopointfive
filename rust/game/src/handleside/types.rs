@@ -159,7 +159,7 @@ impl Default for HandlesideModFacesValue { fn default() -> Self { Self::zeroed()
 #[derive(Clone, Copy, Debug)]
 pub struct Ahead {
     pub d: DoorId,
-    pub k: f64,
+    pub k: usize,
     pub at: V3,
     pub dist: f64,
 }
@@ -168,7 +168,7 @@ impl Ahead {
     pub fn zeroed() -> Self {
         Ahead {
             d: DoorId(0),
-            k: 0.0,
+            k: 0,
             at: [0.0; 3],
             dist: 0.0,
         }
@@ -179,19 +179,19 @@ impl Default for Ahead { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/handleside.ts:171 bend(A), src/game/handleside.ts:171)
 #[derive(Clone, Copy, Debug)]
 pub struct BendA {
-    pub k: f64,
+    pub k: usize,
 }
 impl BendA {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         BendA {
-            k: 0.0,
+            k: 0,
         }
     }
 }
 impl Default for BendA { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/handleside.ts:315 toolSpot ->, src/game/handleside.ts:315)
+/// (TypeScript: inline at src/game/handleside.ts:313 toolSpot ->, src/game/handleside.ts:313)
 #[derive(Clone, Copy, Debug)]
 pub struct ToolSpot {
     pub pos: V3,
@@ -232,9 +232,7 @@ pub struct HandlesideMod {
     pub lined: JsMap<GuardId, crate::handleside::HandlesideModLinedValue>,
     /// (src/game/handleside.ts:78 faces)
     pub faces: JsMap<DoorId, crate::handleside::HandlesideModFacesValue>,
-    /// (src/game/handleside.ts:186 feet)
-    pub feet: JsMap<GuardId, f64>,
-    /// (src/game/handleside.ts:357 stepped)
+    /// (src/game/handleside.ts:355 stepped)
     pub stepped: JsMap<GuardId, f64>,
 }
 impl HandlesideMod {
@@ -245,7 +243,6 @@ impl HandlesideMod {
             rested: JsMap::new(),
             lined: JsMap::new(),
             faces: JsMap::new(),
-            feet: JsMap::new(),
             stepped: JsMap::new(),
         }
     }

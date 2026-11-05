@@ -28,10 +28,10 @@ pub fn blank() -> crate::startle::St {
     }
 }
 
-/// THE START, for any caller: he jolts toward `at`; for `secs` his gun stays down. False = not given.   (startle.ts startleMan)
-pub fn startle_man(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>, torch: Option<bool>) -> bool {
+/// THE START, for any caller: he jolts toward `at`; for `secs` his gun stays down. False = not given.   (startle.ts giveStartle)
+pub fn give_startle(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>, torch: Option<bool>) -> bool {
     let secs = secs.unwrap_or(g.k.startle.beat);
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::runner::runner_owns(g, gd) { return false; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has_him(g, gd, crate::owner::own().runner) { return false; }
     if g.time < g.m.startle.state_of.get_or_insert_with(gd, blank).until { return false; }
     let c = g.gd[gd].ch;
     let torch = match torch { Some(t) => t, None => crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch };
@@ -82,7 +82,7 @@ pub fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate::game::
     if now < g.gd[gd].dazzled_until || now < g.gd[gd].stagger_until { return; }
     let at = if now - g.gd[gd].sight_t < 0.1 { g.gd[gd].sight_pos } else { g.gd[gd].last_known.unwrap_or(g.gd[gd].sight_pos) };
     let beat = g.k.startle.beat;
-    if startle_man(g, gd, at, Some(beat), Some(calm_torch)) {
+    if give_startle(g, gd, at, Some(beat), Some(calm_torch)) {
         g.m.startle.state_of.get_mut(gd).unwrap().choose = true;
         g.stats.startle.seen += 1;
         let call = match &g.gd[gd].bubble { Some(b) => b.t == g.time && b.text == "CONTACT!", None => false };
@@ -91,8 +91,8 @@ pub fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate::game::
     }
 }
 
-/// updateGuard, at the pose write: his gun is held down this frame.   (startle.ts startleHolds)
-pub fn startle_holds(g: &mut crate::game::Game, gd: GuardId) -> bool {
+/// updateGuard, at the pose write: his gun is held down this frame.   (startle.ts startleGunDown)
+pub fn startle_gun_down(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     match g.m.startle.state_of.get(gd) { Some(s) => now < s.until || s.pre || s.run.is_some(), None => false }
 }
@@ -123,8 +123,11 @@ pub fn startle_running(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// The run ends here; on his own feet he holds the spot as a man shifted under fire holds his.   (startle.ts startleScript `stop`)
 fn stop(g: &mut crate::game::Game, gd: GuardId, hold: bool) -> Option<crate::game::GuardScript> {
+    g.m.startle.state_of.get_mut(gd).unwrap().run = None;
+    let now = g.time;
+    crate::owner::release_man(g, gd, crate::owner::own().startle, now);
     let s = g.m.startle.state_of.get_mut(gd).unwrap();
-    s.run = None; s.ref_ = None; s.script = None;
+    s.ref_ = None; s.script = None;
     if hold { crate::suppression::end_displace(g, gd, "ran for it"); }
     None
 }
@@ -195,9 +198,13 @@ pub fn runs(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let way = crate::scene_collision::nav_grid_find_path(g, pos, p, None, None);
     if way.map_or(true, |w| w.is_empty()) { return false; }
     let now = g.time;
+    g.m.startle.state_of.get_mut(gd).unwrap().run = Some(p);
+    crate::owner::claim_man(g, gd, crate::owner::own().startle, now, None);
     let row = g.m.startle.state_of.get_mut(gd).unwrap();
-    row.run = Some(p); row.run_at = now; row.ref_ = None; row.script = None;
-    g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; g.gd[gd].stall_ref = None;
+    row.run_at = now; row.ref_ = None; row.script = None;
+    crate::game::guard_set_path(g, gd, Vec::new());
+    let man = &mut g.gd[gd];
+    man.path_goal = None; man.path_goal_orbit = false; man.stall_ref = None;
     true
 }
 
@@ -219,14 +226,14 @@ mod tests {
     fn the_clocks_run_from_the_start_through_the_draw_to_nothing() {
         let mut g = Game::blank();
         assert_eq!(startle_left(&mut g, GD), 0.0);
-        assert!(!startled(&mut g, GD) && !startle_holds(&mut g, GD) && !startle_running(&mut g, GD));
+        assert!(!startled(&mut g, GD) && !startle_gun_down(&mut g, GD) && !startle_running(&mut g, GD));
         g.m.startle.state_of.set(GD, St { until: 2.0, draw_until: 2.5, ..blank() });
         g.time = 1.0;
         assert_eq!(startle_left(&mut g, GD), 1.0);
-        assert!(startled(&mut g, GD) && startle_holds(&mut g, GD));
+        assert!(startled(&mut g, GD) && startle_gun_down(&mut g, GD));
         g.time = 2.25;
         assert_eq!(startle_left(&mut g, GD), 0.25);
-        assert!(!startled(&mut g, GD) && !startle_holds(&mut g, GD));
+        assert!(!startled(&mut g, GD) && !startle_gun_down(&mut g, GD));
         g.time = 2.5;
         assert_eq!(startle_left(&mut g, GD), 0.0);
     }

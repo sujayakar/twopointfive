@@ -20,7 +20,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: Out, src/game/rescuecheck.ts:73)
+/// (TypeScript: Out, src/game/rescuecheck.ts:74)
 #[derive(Clone, Debug)]
 pub struct Out {
     pub gd: GuardId,
@@ -53,7 +53,7 @@ impl Out {
 }
 impl Default for Out { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RescueCheckEvent, src/game/rescuecheck.ts:74)
+/// (TypeScript: RescueCheckEvent, src/game/rescuecheck.ts:75)
 #[derive(Clone, Debug)]
 pub struct RescueCheckEvent {
     pub t: f64,
@@ -109,7 +109,7 @@ impl RescueCheckEventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/rescuecheck.ts:75 Cast, src/game/rescue.ts:863)
+/// (TypeScript: inline at src/game/rescuecheck.ts:76 Cast, src/game/rescue.ts:866)
 #[derive(Clone, Copy, Debug)]
 pub struct CastItem {
     pub gd: GuardId,
@@ -136,7 +136,7 @@ impl CastItem {
 }
 impl Default for CastItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/rescuecheck.ts:76)
+/// (TypeScript: State, src/game/rescuecheck.ts:77)
 #[derive(Clone, Debug)]
 pub struct State {
     pub next_at: f64,
@@ -205,7 +205,7 @@ impl StateWordedValue {
     }
 }
 
-/// (TypeScript: RescueCheckSnap, src/game/rescuecheck.ts:230)
+/// (TypeScript: RescueCheckSnap, src/game/rescuecheck.ts:235)
 #[derive(Clone, Debug)]
 pub struct RescueCheckSnap {
     pub next_at: f64,
@@ -272,7 +272,7 @@ impl RescueCheckSnapWordedItem1 {
     }
 }
 
-/// (TypeScript: inline at src/game/rescuecheck.ts:231 RescueCheckSnap.out, src/game/rescuecheck.ts:231)
+/// (TypeScript: inline at src/game/rescuecheck.ts:236 RescueCheckSnap.out, src/game/rescuecheck.ts:236)
 #[derive(Clone, Debug)]
 pub struct RescueCheckSnapOut {
     pub i: f64,
@@ -340,7 +340,7 @@ impl EventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/rescuecheck.ts:114 goer ->, src/game/rescuecheck.ts:114)
+/// (TypeScript: inline at src/game/rescuecheck.ts:118 goer ->, src/game/rescuecheck.ts:118)
 #[derive(Clone, Copy, Debug)]
 pub struct Goer {
     pub d: RoomfightDefId,
@@ -360,7 +360,7 @@ impl Default for Goer { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct RescuecheckMod {
-    /// (src/game/rescuecheck.ts:79 STATES)
+    /// (src/game/rescuecheck.ts:80 STATES)
     pub states: Option<crate::rescuecheck::State>,
 }
 impl RescuecheckMod {

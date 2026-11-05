@@ -5,12 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-/// The blocked write of fireline.ts:166: `FIRELINE_STATS.heldS` counts seconds and FirelineStats.held_s is an i32.
-fn seam_stats_held_s(g: &mut Game, secs: f64) {
-    todo!("needs: FirelineStats.held_s as f64")
-}
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Is the rule running: a round of the player's is a round to his own men. (fireline.ts live)
 pub fn live(g: &mut crate::game::Game) -> bool {
@@ -72,10 +67,9 @@ pub fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
     let back = m::min(0.0, (pos[0] - muzzle[0]) * dx + (pos[2] - muzzle[2]) * dz) - 0.35;
     let k = g.k.friendlyfire.cone_k * g.k.fireline.spread;
     let half = g.k.friendlyfire.body_m + g.k.fireline.clear_m;
-    // A copy of the gun's row: these calls take `g` and the row lives in it.
-    let def = g.m.weapons.weapons.get(g.fa[gun].def).unwrap().clone();
-    let energy = crate::glasspen::shot_energy(g, c, Some(&def));
-    let thin = if crate::wallpen::wall_pen_live(g) { crate::glasspen::round_energy(g, &def) } else { -1.0 };
+    let def = g.fa[gun].def;
+    let energy = crate::glasspen::shot_energy(g, c, Some(def));
+    let thin = if crate::wallpen::wall_pen_live(g) { crate::glasspen::round_energy(g, def) } else { -1.0 };
     Some(Lane { m: muzzle, dx, dz, back, k, half, energy, thin })
 }
 
@@ -222,20 +216,17 @@ pub fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::
 }
 
 /// He stands: the wait's seconds counted as they pass. (fireline.ts hold)
-pub fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::Hold {
+pub fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet {
     let t = g.time;
-    let secs = m::min(0.1, m::max(0.0, t - g.m.fireline.states.get(gd).unwrap().t));
-    seam_stats_held_s(g, secs);
+    g.stats.fireline.held_s += m::min(0.1, m::max(0.0, t - g.m.fireline.states.get(gd).unwrap().t));
     g.m.fireline.states.get_mut(gd).unwrap().t = t;
-    // `serial` is player::Hold's, spilled here by name: this answer is only ever read for its speed.
-    Hold { speed: 0.0, serial: 0 }
+    FireLineFeet { goal: None, speed: 0.0 }
 }
 
-/// The row written back to the table, then `hold`, and the answer in the shape fireLineFeet returns.
+/// The row written back to the table, then `hold`.
 fn hold_row(g: &mut Game, gd: GuardId, s: St) -> Option<FireLineFeet> {
     g.m.fireline.states.set(gd, s);
-    let h = hold(g, gd);
-    Some(FireLineFeet { goal: None, speed: h.speed })
+    Some(hold(g, gd))
 }
 
 /// Is he on a door order past the stack. (fireline.ts:185)

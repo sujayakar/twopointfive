@@ -12,29 +12,14 @@ fn def_listed(g: &Game, id: &str) -> bool {
     g.orders.defs.iter().any(|d| g.tab.orders_order_def[*d].id == id)
 }
 
-/// the same 47 fields, from `LentBack` to `TurnBack` and back (a `Turn` extends a `Lent`: see notes, Skeleton)
-macro_rules! same_back {
-    ($to:path, $b:expr) => {{
-        let b = $b;
-        $to {
-            post: b.post, going: b.going, order: b.order, face: b.face, there: b.there, t0: b.t0, follow: b.follow, watch: b.watch, door: b.door,
-            strafe: b.strafe, stance: b.stance, upper: b.upper, stack_side: b.stack_side, move_: b.move_, set_line: b.set_line, group: b.group,
-            set_said: b.set_said, goal: b.goal, arrived: b.arrived, held_set: b.held_set, held_fire: b.held_fire, arr_t: b.arr_t, moved_t: b.moved_t,
-            light: b.light, low: b.low, yield_t: b.yield_t, face_now: b.face_now, search: b.search, search_t: b.search_t, via: b.via, anchor: b.anchor,
-            mark: b.mark, mark_t: b.mark_t, had: b.had, back_n: b.back_n, shy: b.shy, thru: b.thru, via_for: b.via_for, via_t: b.via_t, pace: b.pace,
-            spare: b.spare, from: b.from, foe: b.foe, crouch: b.crouch, lean: b.lean, fit: b.fit, tries: b.tries,
-        }
-    }};
-}
-
 /// the `Lent` a `Turn` extends, for `squadHandBack`
 fn lent_of(w: Turn) -> crate::squadthrow::Lent {
-    crate::squadthrow::Lent { mates: w.mates, gd: w.gd, t: w.t, a: w.a, home: w.home, home_yaw: w.home_yaw, back: w.back.map(|b| same_back!(crate::squadthrow::LentBack, b)) }
+    crate::squadthrow::Lent { mates: w.mates, gd: w.gd, t: w.t, a: w.a, home: w.home, home_yaw: w.home_yaw, back: w.back }
 }
 
 /// `{ ...squadLend(g, S, gd, t), at, t0, firedT, shot }`
 fn turn_of(l: crate::squadthrow::Lent, at: V3, t0: f64, fired_t: f64, shot: Shot) -> Turn {
-    Turn { at, t0, fired_t, shot, mates: l.mates, gd: l.gd, t: l.t, a: l.a, home: l.home, home_yaw: l.home_yaw, back: l.back.map(|b| same_back!(TurnBack, b)) }
+    Turn { at, t0, fired_t, shot, mates: l.mates, gd: l.gd, t: l.t, a: l.a, home: l.home, home_yaw: l.home_yaw, back: l.back }
 }
 
 /// the `at` every kind of target carries
@@ -90,7 +75,7 @@ pub fn squad40_word(g: &mut crate::game::Game) -> String {
     let key = crate::seats::view_key(g);
     let brought = g.m.squad40.states.get(key).map(|s| s.brought);
     match brought {
-        Some(b) if b > 0.0 => format!(" · 40 mm {}", squad40_left(g)),
+        Some(b) if b > 0.0 => format!(" · 40 mm {}", js::num_str(squad40_left(g))),
         _ => String::new(),
     }
 }
@@ -203,17 +188,14 @@ pub fn caught(g: &mut crate::game::Game, a: &crate::squad40::Shot, at: V3) -> Op
     crate::squadthrow::squad_frag_catches(g, a.burst, at, Some(moved), Some(true), Some(false), Some(&burst))
 }
 
-/// `q` of plan's key: a place on a quarter-metre grid (`${n}` of a rounded number prints -0 as 0)
+/// `q` of plan's key: a place on a quarter-metre grid
 fn grid_key(p: V3) -> String {
-    format!("{},{}", m::round(p[0] * 4.0) as i64, m::round(p[2] * 4.0) as i64)
+    format!("{},{}", js::num_str(m::round(p[0] * 4.0)), js::num_str(m::round(p[2] * 4.0)))
 }
-
-/// `toFixed(2)` of plan's key (-0 prints as 0; see notes, Decisions)
-fn fixed2(x: f64) -> String { format!("{:.2}", x + 0.0) }
 
 /// `ready` of plan: a launcher in a free hand, not turning already, the tube closed on his last round
 fn ready(g: &mut Game, gd: GuardId) -> bool {
-    if !tube_up(g, gd) || !crate::squadsmoke::squad_hand_free(g, gd) || crate::squadthrow::hands_busy(g, gd) { return false; }
+    if !tube_up(g, gd) || !crate::squadsmoke::squad_hand_free(g, gd) || crate::squadthrow::hands_at_work(g, gd) { return false; }
     let key = crate::seats::view_key(g);
     let (turning, t) = match g.m.squad40.states.get(key) {
         Some(s) => (s.turns.has(gd), s.last.get(gd).copied().unwrap_or(-1e9)),
@@ -232,11 +214,11 @@ fn plan_key(g: &mut Game, men: &[GuardId], at: V3) -> String {
         let rd = if ready(g, man) { 1 } else { 0 };
         let key = crate::seats::view_key(g);
         let rounds = g.m.squad40.states.get(key).and_then(|s| s.rounds.get(man).copied()).unwrap_or(0.0);
-        ms.push(format!("{}:{},{}{}{}", id, grid_key(pos), on, rd, rounds));
+        ms.push(format!("{}:{},{}{}{}", js::num_str(id), grid_key(pos), on, rd, js::num_str(rounds)));
     }
     let me = if g.pl[g.player].down { String::new() } else { grid_key(g.ch[g.pl[g.player].ch].pos) };
     let ours: Vec<String> = g.guards.iter().map(|&m| if g.gd[m].team == crate::teams::Team::Operative { grid_key(g.ch[g.gd[m].ch].pos) } else { String::new() }).collect();
-    format!("{},{}|{}|{}|{}", fixed2(at[0]), fixed2(at[2]), ms.join(";"), me, ours.join(";"))
+    format!("{},{}|{}|{}|{}", js::to_fixed(at[0], 2), js::to_fixed(at[2], 2), ms.join(";"), me, ours.join(";"))
 }
 
 /// `keep` of plan: an asker's answer kept with its key, and handed on
@@ -302,7 +284,7 @@ pub fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, asker: Option<cr
 }
 
 /// the round leaves his tube; `pl` is the row of `states` it is counted on. (squad40.ts fire)
-pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &mut crate::squad40::Shot, at: V3, turned: bool) {
+pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, at: V3, turned: bool) {
     let gd = a.gd;
     let now = g.time;
     let s = g.m.squad40.states.get_mut(pl).unwrap();
@@ -368,12 +350,12 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         return;
     }
     if now < t0 || now - t0 > g.k.squad40.aim_secs { return end_turn(g, gd, Some("no shot from here.")); }
-    if !crate::squadsmoke::squad_hand_free(g, gd) || crate::squadthrow::hands_busy(g, gd) || !tube_up(g, gd) { return; }
+    if !crate::squadsmoke::squad_hand_free(g, gd) || crate::squadthrow::hands_at_work(g, gd) || !tube_up(g, gd) { return; }
     if !on_it(g, gd, at) || now - t0 < g.k.squad40.raise_secs { return; }
     // the order's own sense, asked of the floor as it stands NOW: nothing is spent on a refusal
     let has = g.m.squad40.states.get(key).and_then(|s| s.rounds.get(gd).copied()).map_or(false, |k| k > 0.0);
     if !has { return end_turn(g, gd, Some(none)); }
-    let mut shot = match shot_of(g, gd, at, None) {
+    let shot = match shot_of(g, gd, at, None) {
         None => return end_turn(g, gd, Some("no shot from here.")),
         Some(ShotOf::Close) => return end_turn(g, gd, Some("too close to arm.")),
         Some(ShotOf::Shot(x)) => x,
@@ -382,33 +364,14 @@ pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
         g.stats.squad40.refused += 1;
         return end_turn(g, gd, Some(&who));
     }
-    fire(g, key, &mut shot, at, true);
+    fire(g, key, &shot, at, true);
     if let Some(w) = g.m.squad40.states.get_mut(key).and_then(|s| s.turns.get_mut(gd)) { w.fired_t = now; }
-}
-
-/// the arm `OrderLabel::Shell40`: the row's words
-pub fn row_label(g: &mut Game) -> String { format!("40 mm there · {} left", squad40_left(g)) }
-
-/// the arm `OrderOnly::Shell40`: the order is one man's, the man who fires
-pub fn row_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    match plan(g, men, at_of(t), Some(Asker::Only)) {
-        Plan::Text(_) => Vec::new(),
-        Plan::Arm1(a) => vec![a.a.gd],
-    }
-}
-
-/// the arm `OrderValid::Shell40`: None is the TypeScript's `true`, else the refusal's words
-pub fn row_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Option<String> {
-    match plan(g, men, at_of(t), Some(Asker::Valid)) {
-        Plan::Text(x) => Some(x),
-        Plan::Arm1(a) => a.who,
-    }
 }
 
 /// the arm `OrderIssue::Shell40`: a refusal's words, or None (the floor as it stands NOW: nothing is spent on a refusal)
 pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let at = at_of(t);
-    let mut a = match plan(g, men, at, None) {
+    let a = match plan(g, men, at, None) {
         Plan::Text(x) => { g.stats.squad40.refused += 1; return Some(x); }
         Plan::Arm1(PlanArm1 { who: Some(who), .. }) => { g.stats.squad40.refused += 1; return Some(who); }
         Plan::Arm1(PlanArm1 { a, who: None }) => a,
@@ -417,7 +380,7 @@ pub fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) 
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     crate::squadthrow::squad_log_row(g, gd, SHELL_THERE, at);
-    if a.aimed { let key = crate::seats::view_key(g); fire(g, key, &mut a, at, false); return None; }
+    if a.aimed { let key = crate::seats::view_key(g); fire(g, key, &a, at, false); return None; }
     let to = v3::copy(a.to);
     let now = g.time;
     let lent = crate::squadthrow::squad_lend(g, gd, t);
@@ -463,7 +426,7 @@ pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
     let key = crate::seats::view_key(g);
     let (brought, shown) = match g.m.squad40.states.get(key) { Some(s) => (s.brought, s.shown.clone()), None => return Vec::new() };
     if !js::truthy(brought) || !def_listed(g, SHELL_THERE) { return Vec::new(); }
-    let left = crate::orders::OrderNote::Text(format!("40 mm {}", squad40_left(g)));
+    let left = crate::orders::OrderNote::Text(format!("40 mm {}", js::num_str(squad40_left(g))));
     match shown {
         Some(w) if g.time >= w.t && g.time - w.t < g.k.squad40.shown_secs => vec![crate::orders::OrderNote::Text(w.text), left],
         _ => vec![left],
@@ -537,7 +500,7 @@ pub fn squad40_summary(g: &mut crate::game::Game) -> String {
     let key = crate::seats::view_key(g);
     let brought = g.m.squad40.states.get(key).map(|s| s.brought);
     match brought {
-        Some(b) if js::truthy(b) => format!("{} of {} left · X on a spot of floor, G, then 3 · fired {}", squad40_left(g), b, g.stats.squad40.fired),
+        Some(b) if js::truthy(b) => format!("{} of {} left · X on a spot of floor, G, then 3 · fired {}", js::num_str(squad40_left(g)), js::num_str(b), g.stats.squad40.fired),
         _ => String::from("none brought (no teammate's card carries a 40 mm grenade)"),
     }
 }
@@ -552,12 +515,5 @@ mod tests {
         assert_eq!(grid_key([-0.1, 0.0, 0.125]), "0,1");
         assert_eq!(grid_key([-0.125, 0.0, -0.13]), "0,-1");
         assert_eq!(grid_key([2.5, 0.0, -3.0]), "10,-12");
-    }
-
-    #[test]
-    fn the_spot_in_the_key_never_says_minus_zero() {
-        assert_eq!(fixed2(-0.0), "0.00");
-        assert_eq!(fixed2(1.5), "1.50");
-        assert_eq!(fixed2(-2.25), "-2.25");
     }
 }

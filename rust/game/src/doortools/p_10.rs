@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 3694 to 3855
+//! src/game/doortools.ts lines 3695 to 3856
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;

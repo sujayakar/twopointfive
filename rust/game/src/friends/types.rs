@@ -14,5 +14,5 @@ pub enum SamOffFriend {
 #[derive(Clone, Debug, Default)]
 pub struct FriendsStats {
     pub lowered: i32,
-    pub lowered_s: i32,
+    pub lowered_s: f64,
 }

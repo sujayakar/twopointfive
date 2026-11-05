@@ -130,8 +130,8 @@ pub fn doorway_held_by(g: &mut crate::game::Game, gd: GuardId) -> Option<String>
     }
 }
 
-/// The PASS gate has `gd` held this frame: short of a frame for a man in it, or stepped off to a jamb. (doorway.ts doorwayHeld)
-pub fn doorway_held(g: &mut crate::game::Game, gd: GuardId) -> bool {
+/// The PASS gate has `gd` held this frame: short of a frame for a man in it, or stepped off to a jamb. (doorway.ts doorGateStopped)
+pub fn door_gate_stopped(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let time = g.time;
     match g.m.doorway.states.get(gd) {
         Some(st) => time - st.t <= 0.25 && time >= st.t && (st.held_t > 0.0 || st.spot.is_some()),
@@ -189,7 +189,7 @@ mod tests {
     fn held_window() {
         let mut g = Game::blank();
         let gd = GuardId(0);
-        assert!(!doorway_held(&mut g, gd));
+        assert!(!door_gate_stopped(&mut g, gd));
         assert_eq!(doorway_held_by(&mut g, gd), None);
         let mut st = St::zeroed();
         st.t = 10.0;
@@ -197,19 +197,19 @@ mod tests {
         st.by = Some(String::from("Player"));
         g.m.doorway.states.set(gd, st);
         g.time = 10.25;
-        assert!(doorway_held(&mut g, gd));
+        assert!(door_gate_stopped(&mut g, gd));
         assert_eq!(doorway_held_by(&mut g, gd).as_deref(), Some("Player"));
         g.time = 10.26;
-        assert!(!doorway_held(&mut g, gd));
+        assert!(!door_gate_stopped(&mut g, gd));
         assert_eq!(doorway_held_by(&mut g, gd), None);
         g.time = 9.9;
-        assert!(!doorway_held(&mut g, gd));
+        assert!(!door_gate_stopped(&mut g, gd));
         // stepped off to a jamb: held, but not short of a man
         g.time = 10.0;
         let st = g.m.doorway.states.get_mut(gd).unwrap();
         st.held_t = 0.0;
         st.spot = Some([1.0, 0.0, 1.0]);
-        assert!(doorway_held(&mut g, gd));
+        assert!(door_gate_stopped(&mut g, gd));
         assert_eq!(doorway_held_by(&mut g, gd), None);
     }
 }

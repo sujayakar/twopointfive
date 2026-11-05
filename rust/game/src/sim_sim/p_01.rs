@@ -1,4 +1,4 @@
-//! src/sim/sim.ts lines 1 to 418
+//! src/sim/sim.ts lines 1 to 396
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -35,9 +35,9 @@ pub fn sim() -> crate::sim_sim::SimExports {
     SimExports { memory: crate::Opaque }
 }
 
-/// Is `b` the module's memory. (sim.ts simOwns)
+/// Is `b` the module's memory: never, since rust/game holds no view over it and an `ArrayBufferLike` holds nothing that could be one. (sim.ts simOwns)
 pub fn sim_owns(b: crate::sim_sim::ArrayBufferLike) -> bool {
-    todo!("needs: a buffer with an identity; ArrayBufferLike holds only Opaque, and a native build has no one memory to compare with (sim.ts:187)")
+    false
 }
 
 /// The views over the module's memory. (sim.ts views)
@@ -87,75 +87,20 @@ pub fn callers(skip: f64, n: f64, not: crate::Opaque, span: Option<f64>) -> Stri
     String::new()
 }
 
-/// A question the TypeScript answered while its row was up, counted. (sim.ts fell)
-pub fn fell(row: &str, why: &str) {
-    let mut k = format!("{} · {}", row, why);
-    let who = seam_fell_who();
-    if js::truthy(who) {
-        // (`not` is /scene\/(collision|boxMirror)\.ts/ in the TypeScript: callers has no frames to hold to it)
-        k += " · asked by ";
-        k += &callers(3.0, who, crate::Opaque, None);
-    }
-    seam_fell_count(&k);
-    if seam_fell_hard() {
-        panic!("rust: the TypeScript answered for the row \"{}\": {}", row, why);
-    }
-}
+/// Nothing to do: the TypeScript's count of questions it answered itself, a tool's with no other side in Rust. (sim.ts fell)
+pub fn fell(row: &str, why: &str) {}
 
-/// A rule of `row` was stepped in TypeScript while the row is up: counted, except where the row is idle by its own rule. (sim.ts ruleFell)
-pub fn rule_fell(row: &str, why: &str) {
-    if seam_fell_on() && (seam_exact_on() || !crate::sim_sim::own_maths().iter().any(|r| r == row)) {
-        fell(row, why);
-    }
-}
+/// Nothing to do, as `fell`: every TypeScript caller was a way back to a TypeScript step. (sim.ts ruleFell)
+pub fn rule_fell(row: &str, why: &str) {}
 
-/// The seal's red path for a rule's row: the first step of each row and every hundredth after is this side's. (sim.ts ruleRed)
+/// Never: only a tool raises FELL.red, and it sends a step to a TypeScript that Rust does not have. (sim.ts ruleRed)
 pub fn rule_red(row: &str) -> bool {
-    if !seam_fell_red() { return false; }
-    let n = seam_reds_count(row);
-    if js::rem(n, 100.0) != 1.0 { return false; }
-    fell(row, "the red path: a step sent to its TypeScript");
-    true
+    false
 }
 
 /// sim.ts:220: Maths holds FnField, which can name no function.
 fn seam_maths_of_the_module() -> crate::math_exact::Maths {
     todo!("needs: Maths' fields as something that can hold rust/sim's functions, and hypot_of_rust for its hypot (sim.ts:220)")
-}
-
-/// sim.ts:337 `FELL.who`.
-fn seam_fell_who() -> f64 {
-    todo!("needs: g on fell, to read g.m.sim_sim.fell.who (sim.ts:337)")
-}
-
-/// sim.ts:340 `FELL.n[k] = (FELL.n[k] ?? 0) + 1`.
-fn seam_fell_count(k: &str) {
-    todo!("needs: g on fell, to write g.m.sim_sim.fell.n (sim.ts:340)")
-}
-
-/// sim.ts:341 `FELL.hard`.
-fn seam_fell_hard() -> bool {
-    todo!("needs: g on fell, to read g.m.sim_sim.fell.hard (sim.ts:341)")
-}
-
-/// sim.ts:363 `FELL.on`.
-fn seam_fell_on() -> bool {
-    todo!("needs: g on rule_fell, to read g.m.sim_sim.fell.on (sim.ts:363)")
-}
-
-/// sim.ts:363 `EXACT.on`.
-fn seam_exact_on() -> bool {
-    todo!("needs: g on rule_fell, and EXACT.on in g.m.math_exact.exact, whose struct has no fields (sim.ts:363)")
-}
-
-/// sim.ts:368 `FELL.red`.
-fn seam_fell_red() -> bool {
-    todo!("needs: g on rule_red, to read g.m.sim_sim.fell.red (sim.ts:368)")
-}
-
-/// sim.ts:369 `FELL.reds[row] = (FELL.reds[row] ?? 0) + 1`: the count after it.
-fn seam_reds_count(row: &str) -> f64 {
-    todo!("needs: g on rule_red, to write g.m.sim_sim.fell.reds (sim.ts:369)")
 }
 
 #[cfg(test)]

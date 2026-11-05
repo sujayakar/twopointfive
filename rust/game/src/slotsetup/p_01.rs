@@ -68,11 +68,11 @@ pub fn setup_rows(g: &mut crate::game::Game, pl: PlayerId, gun: crate::slotsetup
     }
     if gun == SetupGun::Rifle && load_steps(g, pl) > 0.0 {
         let rf = g.pl[pl].rifle;
-        let up = seam_rifle_attachment(g, rf);
+        let up = crate::weapons::rifle_attachment(g, rf);
         let attachments = g.fa[rf].attachments.clone();
         let mut opts = Vec::new();
         for a in attachments {
-            let left = seam_rifle_left(g, rf, a);
+            let left = crate::weapons::rifle_left(g, rf, a);
             opts.push(SetupRowOptsItem { id: String::from(a.as_str()), on: Some(a) == up, left: Some(left) });
         }
         rows.push(SetupRow { key: row_digit(SetupKind::Load), kind: SetupKind::Load, opts });
@@ -161,13 +161,13 @@ pub fn load_steps(g: &mut crate::game::Game, pl: PlayerId) -> f64 {
     let rf = g.pl[pl].rifle;
     let a = g.fa[rf].attachments.clone();
     let n = a.len();
-    let i0: i64 = match seam_rifle_attachment(g, rf) {
+    let i0: i64 = match crate::weapons::rifle_attachment(g, rf) {
         Some(up) => a.iter().position(|x| *x == up).map_or(-1, |i| i as i64),
         None => -1,
     };
     for k in 1..n {
         let at = a[((i0 + k as i64) % n as i64) as usize];
-        if seam_rifle_left(g, rf, at) > 0.0 {
+        if crate::weapons::rifle_left(g, rf, at) > 0.0 {
             return k as f64;
         }
     }
@@ -186,7 +186,7 @@ pub fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row:
             let rf = g.pl[pl].rifle;
             let mut k = load_steps(g, pl);
             while k > 0.0 {
-                seam_rifle_cycle_attachment(g, rf);
+                crate::weapons::rifle_cycle_attachment(g, rf);
                 k -= 1.0;
             }
         }
@@ -243,7 +243,7 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
         if let Some(live) = g.pl[pl].setup.as_mut() {
             live.seen = now;
         }
-        let shut = back_take_lent(g, input)
+        let shut = crate::backkey::back_take(g, input)
             || crate::input::input_hit(g, input, "Paused")
             || crate::input::input_lmb_hit(g, input)
             || crate::input::input_rmb_hit(g, input)
@@ -304,23 +304,3 @@ pub fn slot_setup_keys(g: &mut crate::game::Game, input: InputId) {
     let muzzle = g.ch[g.pl[pl].ch].muzzle;
     crate::audio_iface::game_audio_like_play(g, "click", Some(muzzle), Some(0.35), None);
 }
-
-/// backTake(input) (slotsetup.ts:151): the frame's Input lends its pressed set as the back key's `Keys`, and gets back what the call left of it
-fn back_take_lent(g: &mut Game, input: InputId) -> bool {
-    let pressed = core::mem::take(&mut g.tab.input[input].pressed);
-    let mut keys = crate::backkey::Keys { pressed };
-    let taken = crate::backkey::back_take(g, &mut keys);
-    g.tab.input[input].pressed = keys.pressed;
-    taken
-}
-
-// The skeleton's gaps, each one step (notes.md, ## Skeleton).
-
-/// rf.attachment (slotsetup.ts:93, 122): rifle_attachment takes neither g nor the gun
-fn seam_rifle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[rf].att_idx; if i >= 0 { g.fa[rf].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
-
-/// rf.left(a) (slotsetup.ts:93, 122): rifle_left takes neither g nor the gun
-fn seam_rifle_left(g: &mut Game, rf: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { match a { crate::weapons::RifleAttachment::Ring => g.fa[rf].rings, crate::weapons::RifleAttachment::Cam => g.fa[rf].cams, _ => g.fa[rf].shells } } // SKELETON-GAP: crate::weapons::rifle_left taking g and the FirearmId (weapons.ts:533-538)
-
-/// rf.cycleAttachment() (slotsetup.ts:127): rifle_cycle_attachment takes neither g nor the gun
-fn seam_rifle_cycle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { let n = g.fa[rf].attachments.len() as i32; g.fa[rf].att_idx = if n > 0 { (g.fa[rf].att_idx + 1) % n } else { -1 }; let i = g.fa[rf].att_idx; if i >= 0 { g.fa[rf].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_cycle_attachment taking g and the FirearmId (weapons.ts:533-538)

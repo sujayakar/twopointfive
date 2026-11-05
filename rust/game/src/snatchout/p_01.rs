@@ -62,7 +62,7 @@ pub fn snatch_out_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn snatch_out_planted(g: &mut crate::game::Game) -> Vec<GuardId> { g.snatch.out.jobs.keys() }
 
 /// The row on him in reach. (snatchout.ts SnatchOut.rows)
-pub fn snatch_out_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::snatchout::SnatchOutRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn snatch_out_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::snatchout::SnatchOutRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     if !snatch_out_free(g) { return; }
     let pl = who(g);
     let gd = g.snatch.man.unwrap();
@@ -195,8 +195,8 @@ pub fn snatch_out_mover(g: &mut crate::game::Game) -> Option<CharId> {
 }
 
 /// An order of this module's, and the row it is from then on (what `last` and `jobs` know him by). (snatchout.ts SnatchOut.mine)
-pub fn snatch_out_mine(g: &mut crate::game::Game, gd: GuardId, spec: &crate::snatchout::SnatchOutMineSpec) -> OrdersAssignmentId {
-    crate::orders::squad_orders_assign(g, gd, &assign_spec(spec));
+pub fn snatch_out_mine(g: &mut crate::game::Game, gd: GuardId, spec: &crate::orders::SquadOrdersAssignA) -> OrdersAssignmentId {
+    crate::orders::squad_orders_assign(g, gd, spec);
     let a = crate::orders::squad_orders_of(g, gd).unwrap();
     g.snatch.out.last.set(gd, Some(a));
     a
@@ -220,7 +220,7 @@ pub fn snatch_out_rejoin(g: &mut crate::game::Game, gd: GuardId) {
     snatch_out_drop(g, gd);
     let Some(a) = a else { return; };
     if crate::orders::squad_orders_of(g, gd) == Some(a) && g.gd[gd].state != crate::game::GuardState::Dead {
-        snatch_out_mine(g, gd, &SnatchOutMineSpec {
+        snatch_out_mine(g, gd, &crate::orders::SquadOrdersAssignA {
             order: String::from("fallIn"),
             post: None,
             follow: Some(9.0),
@@ -286,7 +286,7 @@ pub fn snatch_out_plant(g: &mut crate::game::Game, men: &[GuardId]) {
     for (i, &gd) in men.iter().enumerate() {
         let arc = arcs.as_ref().and_then(|a| a.get(i).copied().flatten());
         let yaw = match arc { Some(arc) => arc.yaw, None => g.ch[g.gd[gd].ch].aim_yaw };
-        let job = snatch_out_mine(g, gd, &SnatchOutMineSpec {
+        let job = snatch_out_mine(g, gd, &crate::orders::SquadOrdersAssignA {
             order: String::from("hold"),
             post: Some(at[i]),
             face: Some(yaw),
@@ -448,9 +448,49 @@ pub fn snatch_out_objective(g: &mut crate::game::Game) -> Option<crate::snatchou
     Some(SnatchOutObjective { text, pos: Some(pos) })
 }
 
-/// His row, for player.ts buildInteractables. `rows` never hands an `over`, so none crosses between the two skeleton types. (snatchout.ts snatchOutRows)
+/// The state a save would hold; the bounds are not carried. (snatchout.ts SnatchOut.snapshot)
+pub fn snatch_out_snapshot(g: &mut crate::game::Game) -> crate::snatchout::SnatchOutSnap {
+    let lead = g.snatch.out.lead.map(|c| g.ch[c].id);
+    let o = &g.snatch.out;
+    SnatchOutSnap { lead, led: o.led, sent: o.sent, in_at: o.in_at }
+}
+
+/// A load: every man back in the file, he follows whom he followed if that man is still here. (snatchout.ts SnatchOut.restore)
+pub fn snatch_out_restore(g: &mut crate::game::Game, s: Option<crate::snatchout::SnatchOutSnap>) {
+    snatch_out_reset(g);
+    let Some(s) = s else { return; };
+    if !snatch_out_ruled(g) { return; }
+    let pl = who(g);
+    let by = match s.lead {
+        None => None,
+        Some(id) => {
+            let own = g.pl[pl].ch;
+            if g.ch[own].id == id {
+                Some(own)
+            } else {
+                g.guards.iter().copied().find(|x| g.ch[g.gd[*x].ch].id == id).map(|x| g.gd[x].ch)
+            }
+        }
+    };
+    if by.is_some() && snatch_out_free(g) {
+        let gd = g.snatch.man.unwrap();
+        let gap = g.k.snatchout.gap_m;
+        crate::civilians::hostage_lead(g, gd, by, gap);
+        g.snatch.out.lead = by;
+    }
+    g.snatch.out.led = s.led;
+    g.snatch.out.in_at = s.in_at;
+    if s.sent && g.snatch.out.lead.is_some() {
+        g.snatch.out.sent = true;
+        let gd = g.snatch.man.unwrap();
+        let van = snatch_out_van(g);
+        crate::civilians::civilian_led_to(g, gd, van);
+    }
+}
+
+/// His row, for player.ts buildInteractables. (snatchout.ts snatchOutRows)
 pub fn snatch_out_rows_2(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::snatchout::SnatchOutRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    snatch_out_rows(g, p, busy, &mut |g, it, verb, text, hints, _over| row(g, it, verb, text, hints, None), offer);
+    snatch_out_rows(g, p, busy, row, offer);
 }
 
 /// `ok` in spot: free floor, in no doorway or gap, off his way out, on no mate's spot.
@@ -513,60 +553,6 @@ fn any_fighting(g: &mut Game, men: &[GuardId]) -> bool {
 
 /// A man with no pair is a group of his own: the TypeScript's `m${gd.char.id}`.
 fn solo_key(id: f64) -> String { format!("m{}", id) }
-
-/// `mine`'s spec is `assign`'s own parameter type in the TypeScript; the skeleton made it two structs of one shape.
-fn assign_spec(spec: &SnatchOutMineSpec) -> crate::orders::SquadOrdersAssignA {
-    let s = spec.clone();
-    crate::orders::SquadOrdersAssignA {
-        post: s.post,
-        going: s.going,
-        order: s.order,
-        face: s.face,
-        there: s.there,
-        t0: s.t0,
-        follow: s.follow,
-        watch: s.watch,
-        door: s.door,
-        strafe: s.strafe,
-        stance: s.stance,
-        upper: s.upper,
-        stack_side: s.stack_side,
-        move_: s.move_,
-        set_line: s.set_line,
-        group: s.group,
-        set_said: s.set_said,
-        goal: s.goal,
-        arrived: s.arrived,
-        held_set: s.held_set,
-        held_fire: s.held_fire,
-        arr_t: s.arr_t,
-        moved_t: s.moved_t,
-        light: s.light,
-        low: s.low,
-        yield_t: s.yield_t,
-        face_now: s.face_now,
-        search: s.search,
-        search_t: s.search_t,
-        via: s.via,
-        anchor: s.anchor,
-        mark: s.mark,
-        mark_t: s.mark_t,
-        had: s.had,
-        back_n: s.back_n,
-        shy: s.shy,
-        thru: s.thru,
-        via_for: s.via_for,
-        via_t: s.via_t,
-        pace: s.pace,
-        spare: s.spare,
-        from: s.from,
-        foe: s.foe,
-        crouch: s.crouch,
-        lean: s.lean,
-        fit: s.fit,
-        tries: s.tries,
-    }
-}
 
 #[cfg(test)]
 mod tests {

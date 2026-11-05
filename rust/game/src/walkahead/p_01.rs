@@ -11,8 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `path`, when given, gets his place after each record; its length is set. (walkahead.ts walkAhead)
 pub fn walk_ahead(g: &mut crate::game::Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: f64, path: Option<&mut Vec<V3>>) -> crate::walkahead::Ahead {
     let mut path = path;
-    let man = crate::cmd::seat_man(g, seat);
-    crate::seats::with_seat(g, man, &mut |g: &mut Game| walk_in_view(g, seat, cmds, dt, path.as_deref_mut()))
+    crate::seats::with_seat(g, seat, &mut |g: &mut Game| walk_in_view(g, seat, cmds, dt, path.as_deref_mut()))
 }
 
 /// The body of walkAhead, with `g` as the seat's view.
@@ -58,7 +57,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
 /// The closure handed to Game.aside: every record, walked on `m`. (walkahead.ts:49 to 78)
 fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[crate::cmd::PlayerCmd], dt: f64, m: &mut crate::player::Legs, aim: &mut Option<V3>, path: Option<&mut Vec<V3>>) {
     let mut path = path;
-    crate::game::game_aside_lens(g); // the lens is g.alone_own.lens: the seams below act on it, never on the seat's own camera
+    let cam = crate::game::game_aside_lens(g); // scratch, never the seat's own camera
     let mut swing = crate::aimweight::AimSwingW { vel: g.pl[pl].aimw.vel };
     let weighs = crate::aimweight::aim_weighs(g);
     let top = if weighs { crate::aimweight::aim_top(g, pl) } else { 0.0 };
@@ -68,24 +67,24 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
         now += dt; // the tick's clock has moved on before it reads him (game.ts stepSeats)
         let near = if g.tab.cmd_seat[seat].remote { Some(m.char.pos) } else { None };
         let r = crate::cmd::honest_copy(g, &cmds[i], near);
-        seam_load_lens(g, &r.view);
+        crate::cmd::load_lens(g, cam, &r.view);
         // the cursor's point, before he moves (updateAim)
         let u = r.mx / m::max(1.0, r.w);
         let w = r.my / m::max(1.0, r.h);
-        let ray = seam_lens_ray(g, u, w);
+        let ray = crate::camera::follow_camera_ray(g, cam, u, w);
         let own = g.ch[ch].id;
         let hit = crate::player::cursor_hit(g, crate::player::CursorHitRay { ro: ray.ro, rd: ray.rd }, own);
         let hit = hit.map(|h| crate::player::CursorPointHit { t: h.t });
-        let at = match seam_cursor_point(g, u, w, crate::player::CursorPointRay { ro: ray.ro, rd: ray.rd }, hit) {
+        let at = match crate::player::cursor_point(g, cam, u, w, crate::player::CursorPointRay { ro: ray.ro, rd: ray.rd }, hit) {
             Some(p) => p,
             None => crate::player::aim_level(crate::player::AimLevelC { pos: m.char.pos, body_yaw: m.char.body_yaw }),
         };
         *aim = Some(at);
         // his keys, his stance, his stride (updatePlayer's movement block for a man whose legs are his own)
-        no_shove_begin_legs(g, m);
+        crate::noshove::no_shove_begin(g, Some(&mut *m));
         let (mut mx, mut mz) = (0.0, 0.0);
         if !crate::game::player_list_open(g, pl) && !crate::samstun::sam_rooted(g, Some(now)) {
-            let b = seam_lens_planar_basis(g);
+            let b = crate::camera::follow_camera_planar_basis(g, cam);
             let way = crate::player::keys_way(b.fwd, b.right, has(&r.keys, "KeyW"), has(&r.keys, "KeyS"), has(&r.keys, "KeyD"), has(&r.keys, "KeyA"));
             mx = way[0];
             mz = way[1];
@@ -138,37 +137,4 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
 /// `r.keys.includes(k)`
 fn has(list: &[String], k: &str) -> bool {
     list.iter().any(|x| x == k)
-}
-
-/// noShoveBegin on the copy of him: the rule's own shape lent his fields and given them back (Legs extends Shoved in the TypeScript).
-fn no_shove_begin_legs(g: &mut Game, m: &mut crate::player::Legs) {
-    let mut s = crate::noshove::Shoved {
-        char: crate::noshove::ShovedChar { pos: vec![m.char.pos[0], m.char.pos[1], m.char.pos[2]] },
-        shoved: m.shoved,
-        shoved_t: m.shoved_t,
-        shoved_from: m.shoved_from,
-    };
-    crate::noshove::no_shove_begin(g, Some(&mut s));
-    m.shoved = s.shoved;
-    m.shoved_t = s.shoved_t;
-    m.shoved_from = s.shoved_from;
-}
-
-// The seams: each is one step on the aside lens that the skeleton cannot yet say. See notes.md, ## Skeleton.
-
-/// `loadLens(cam, r.view)` on the aside lens g.alone_own.lens (walkahead.ts:54).
-fn seam_load_lens(g: &mut Game, v: &crate::cmd::PlayerCmdView) {
-    todo!("needs: load_lens to take cam: &mut FollowCamera; the stub dropped cam")
-}
-/// `cam.ray(u, w)` of the aside lens (walkahead.ts:56).
-fn seam_lens_ray(g: &mut Game, u: f64, w: f64) -> crate::camera::FollowCameraRay {
-    todo!("needs: follow_camera_ray to take this: &FollowCamera")
-}
-/// `cursorPoint(cam, u, w, ray, hit)` with the aside lens (walkahead.ts:57).
-fn seam_cursor_point(g: &mut Game, u: f64, w: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> {
-    todo!("needs: cursor_point to take cam: &FollowCamera; the stub dropped cam")
-}
-/// `cam.planarBasis()` of the aside lens (walkahead.ts:61).
-fn seam_lens_planar_basis(g: &mut Game) -> crate::camera::FollowCameraPlanarBasis {
-    todo!("needs: follow_camera_planar_basis to take this: &FollowCamera")
 }

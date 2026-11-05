@@ -3,17 +3,10 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
-pub enum Who {
-    Guard(GuardId),
-    Player,
-}
-
-/// (TypeScript: Know, src/game/coverfire.ts:94)
+/// (TypeScript: Know, src/game/coverfire.ts:92)
 #[derive(Clone, Copy, Debug)]
 pub struct Know {
-    pub who: crate::coverfire::Who,
+    pub who: crate::game::Foe,
     pub at: V3,
     pub y0: f64,
     pub v: [f64; 2],
@@ -24,7 +17,7 @@ impl Know {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Know {
-            who: crate::coverfire::Who::Guard(GuardId(0)),
+            who: crate::game::Foe::Guard(GuardId(0)),
             at: [0.0; 3],
             y0: 0.0,
             v: [0.0; 2],
@@ -35,12 +28,19 @@ impl Know {
 }
 impl Default for Know { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Chew, src/game/coverfire.ts:96)
+/// (TypeScript: a union)
+#[derive(Clone, Copy, Debug)]
+pub enum Who {
+    Guard(GuardId),
+    Player,
+}
+
+/// (TypeScript: Chew, src/game/coverfire.ts:94)
 #[derive(Clone, Debug)]
 pub struct Chew {
     pub id: f64,
     pub kind: String,
-    pub who: crate::coverfire::Who,
+    pub who: crate::game::Foe,
     pub to: V3,
     pub hit: V3,
     pub h0: V3,
@@ -64,7 +64,7 @@ impl Chew {
         Chew {
             id: 0.0,
             kind: String::new(),
-            who: crate::coverfire::Who::Guard(GuardId(0)),
+            who: crate::game::Foe::Guard(GuardId(0)),
             to: [0.0; 3],
             hit: [0.0; 3],
             h0: [0.0; 3],
@@ -86,7 +86,7 @@ impl Chew {
 }
 impl Default for Chew { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Man, src/game/coverfire.ts:97)
+/// (TypeScript: Man, src/game/coverfire.ts:95)
 #[derive(Clone, Debug)]
 pub struct Man {
     pub know: Vec<crate::coverfire::Know>,
@@ -109,7 +109,7 @@ impl Man {
 }
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/coverfire.ts:97 Man.no, src/game/coverfire.ts:97)
+/// (TypeScript: inline at src/game/coverfire.ts:95 Man.no, src/game/coverfire.ts:95)
 #[derive(Clone, Copy, Debug)]
 pub struct ManNo {
     pub id: f64,
@@ -126,7 +126,7 @@ impl ManNo {
 }
 impl Default for ManNo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/coverfire.ts:98)
+/// (TypeScript: State, src/game/coverfire.ts:96)
 #[derive(Clone, Debug)]
 pub struct State {
     pub last_t: f64,
@@ -155,7 +155,7 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/coverfire.ts:98 State.stats, src/game/coverfire.ts:84)
+/// (TypeScript: inline at src/game/coverfire.ts:96 State.stats, src/game/coverfire.ts:82)
 #[derive(Clone, Copy, Debug)]
 pub struct StateStats {
     pub chews: f64,
@@ -194,7 +194,7 @@ impl StateStats {
 }
 impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/coverfire.ts:98 State.byId, src/game/coverfire.ts:98)
+/// (TypeScript: inline at src/game/coverfire.ts:96 State.byId, src/game/coverfire.ts:96)
 #[derive(Clone, Copy, Debug)]
 pub struct StateByIdValue {
     pub landed: f64,
@@ -211,51 +211,7 @@ impl StateByIdValue {
 }
 impl Default for StateByIdValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: OpLike, src/game/coverfire.ts:100)
-#[derive(Clone, Debug)]
-pub struct OpLike {
-    pub gd: GuardId,
-    pub meters: JsMap<GuardId, crate::coverfire::OpLikeMetersValue>,
-    pub tgt: Option<GuardId>,
-    pub aim: V3,
-    pub reload_until: f64,
-    pub rounds: f64,
-    pub next: f64,
-}
-impl OpLike {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OpLike {
-            gd: GuardId(0),
-            meters: JsMap::new(),
-            tgt: None,
-            aim: [0.0; 3],
-            reload_until: 0.0,
-            rounds: 0.0,
-            next: 0.0,
-        }
-    }
-}
-impl Default for OpLike { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/coverfire.ts:100 OpLike.meters, src/game/coverfire.ts:100)
-#[derive(Clone, Copy, Debug)]
-pub struct OpLikeMetersValue {
-    pub m: f64,
-    pub seen_t: f64,
-}
-impl OpLikeMetersValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OpLikeMetersValue {
-            m: 0.0,
-            seen_t: 0.0,
-        }
-    }
-}
-impl Default for OpLikeMetersValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: Ask, src/game/coverfire.ts:147)
+/// (TypeScript: Ask, src/game/coverfire.ts:145)
 #[derive(Clone, Debug)]
 pub struct Ask {
     pub index: f64,
@@ -324,7 +280,7 @@ pub enum KnownWho {
     Player,
 }
 
-/// (TypeScript: inline at src/game/coverfire.ts:135 known ->, src/game/coverfire.ts:135)
+/// (TypeScript: inline at src/game/coverfire.ts:133 known ->, src/game/coverfire.ts:133)
 #[derive(Clone, Copy, Debug)]
 pub struct KnownItem {
     pub k: crate::coverfire::Know,
@@ -355,7 +311,7 @@ pub enum CoverSeenWho {
     Player,
 }
 
-/// (TypeScript: inline at src/game/coverfire.ts:386 coverfireOn ->, src/game/coverfire.ts:386)
+/// (TypeScript: inline at src/game/coverfire.ts:384 coverfireOn ->, src/game/coverfire.ts:384)
 #[derive(Clone, Debug)]
 pub struct CoverfireOn {
     pub id: f64,
@@ -381,11 +337,11 @@ impl Default for CoverfireOn { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct CoverfireMod {
-    /// (src/game/coverfire.ts:85 COVERFIRE_LOG)
+    /// (src/game/coverfire.ts:83 COVERFIRE_LOG)
     pub coverfire_log: Vec<String>,
-    /// (src/game/coverfire.ts:87 COVERFIRE_WHY)
+    /// (src/game/coverfire.ts:85 COVERFIRE_WHY)
     pub coverfire_why: JsMap<String, f64>,
-    /// (src/game/coverfire.ts:102 states)
+    /// (src/game/coverfire.ts:100 states)
     pub states: Option<crate::coverfire::State>,
 }
 impl CoverfireMod {
@@ -416,8 +372,8 @@ pub struct CoverfireStats {
     pub thru_shots: i32,
 }
 
-/// (src/game/coverfire.ts:81 COVERFIRE_DEFAULTS: a table nothing writes)
+/// (src/game/coverfire.ts:79 COVERFIRE_DEFAULTS: a table nothing writes)
 pub fn coverfire_defaults() -> crate::knobs::CoverfireK { crate::knobs::page_coverfire() }
 
-/// (src/game/coverfire.ts:89 ZERO: a table nothing writes)
+/// (src/game/coverfire.ts:87 ZERO: a table nothing writes)
 pub fn zero() -> crate::coverfire::StateStats { crate::coverfire::StateStats { chews: 0.0, shots: 0.0, landed: 0.0, opened: 0.0, gave_up: 0.0, held_friend: 0.0, held_silent: 0.0, calls: 0.0, walked: 0.0, op_chews: 0.0, def_chews: 0.0, thru: 0.0, thru_shots: 0.0 } }

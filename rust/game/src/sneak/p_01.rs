@@ -17,20 +17,18 @@ pub fn clamp(x: f64, a: f64, b: f64) -> f64 { m::max(a, m::min(b, x)) }
 pub fn save_sneak(g: &mut crate::game::Game) {}
 
 /// Was this leaf seen to move inside the settle time? Read at the plan's rate, for the doors Sam is at. (sneak.ts leafMoved)
-pub fn leaf_moved(g: &mut crate::game::Game, d: crate::sneak::LeafMovedD) -> bool {
-    let key = seam_leaf_key(g, d);
+pub fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
+    let angle = crate::doors::door_angle(g, d);
     let now = g.time;
-    match g.m.sneak.leaf_t.get_mut(key) {
-        None => { g.m.sneak.leaf_t.set(key, SneakModLeafTValue { a: d.angle, t: -1e9 }); }
+    match g.m.sneak.leaf_t.get_mut(d) {
+        None => { g.m.sneak.leaf_t.set(d, SneakModLeafTValue { a: angle, t: -1e9 }); }
         Some(r) => {
-            if m::abs(r.a - d.angle) > 1e-4 { r.a = d.angle; r.t = now; } else if now < r.t { r.t = -1e9; }
+            if m::abs(r.a - angle) > 1e-4 { r.a = angle; r.t = now; } else if now < r.t { r.t = -1e9; }
         }
     }
-    let t = g.m.sneak.leaf_t.get(key).unwrap().t;
+    let t = g.m.sneak.leaf_t.get(d).unwrap().t;
     now - t < g.k.sneak.door_settle
 }
-/// sneak.ts:190: leafT is keyed by DoorId now; `d` still carries only the leaf's angle.
-fn seam_leaf_key(g: &mut Game, d: LeafMovedD) -> DoorId { todo!("needs: the door's id in leaf_moved's d (sneak.ts:190)") }
 
 /// (sneak.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
@@ -218,15 +216,25 @@ pub fn eye_for(g: &mut crate::game::Game, h: GuardId, wide: f64) -> crate::guard
 }
 
 /// A man stood on a spot, as the eye test takes its target: a chest and a head. (sneak.ts standIn)
-pub fn stand_in(p: V3, low: bool) -> CharId {
+pub fn stand_in(p: V3, low: bool) -> crate::sneak::Target {
     let y = if low { low_y() } else { up_y() };
-    seam_stand_in(p, [p[0], y[0], p[2]], [p[0], y[1], p[2]])
+    Target::Spot { chest: [p[0], y[0], p[2]], head: [p[0], y[1], p[2]] }
 }
-/// sneak.ts:266 makes a throwaway Character for eyeContact, which reads only its chest, head and alive; a CharId names a row of g.ch and this signature has no g.
-fn seam_stand_in(pos: V3, chest: V3, head: V3) -> CharId { todo!("needs: eye_contact asked of a bare chest and head, or a stand-in row (sneak.ts:266)") }
+
+/// guards.ts eyeContact asked of what the sneak's eye test takes: a man's own body, or a spot (standIn: alive, never the player, so only `blind` shuts the eye). (sneak.ts:266, guards.ts:1330)
+fn ask(g: &mut Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guards::EyeContact {
+    match *pc {
+        Target::Man { c } => crate::guards::eye_contact(g, e, c, false, blind, 1.0, None),
+        Target::Spot { chest, head } => {
+            let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
+            let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag().glass);
+            crate::guards::EyeContact { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
+        }
+    }
+}
 
 /// A target's exposure by the guards' own eye test: a line from each defender, how lit the target is (asked once, only if somebody has a line), and whether he is looking. (sneak.ts read)
-pub fn read(g: &mut crate::game::Game, eyes: &[GuardId], pc: CharId, lit: &mut dyn FnMut(&mut crate::game::Game) -> f64, low: Option<bool>, card: Option<f64>) -> crate::sneak::Exp {
+pub fn read(g: &mut crate::game::Game, eyes: &[GuardId], pc: &crate::sneak::Target, lit: &mut dyn FnMut(&mut crate::game::Game) -> f64, low: Option<bool>, card: Option<f64>) -> crate::sneak::Exp {
     let low = low.unwrap_or(false);
     let card = card.unwrap_or(1.0);
     let (mut seen, mut watched, mut near) = (false, false, false);
@@ -236,7 +244,7 @@ pub fn read(g: &mut crate::game::Game, eyes: &[GuardId], pc: CharId, lit: &mut d
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
     for &h in eyes {
         let e = eye_for(g, h, wide);
-        let r = crate::guards::eye_contact(g, crate::guards::Eye { half_deg: 180.0, near_deg: 180.0, ..e }, pc, false, false, 1.0, None);
+        let r = ask(g, crate::guards::Eye { half_deg: 180.0, near_deg: 180.0, ..e }, pc, false);
         if !r.visible { continue; }
         if l < 0.0 { l = lit(g); }
         let elbow = r.dist < g.k.sneak.near_m;
@@ -244,7 +252,7 @@ pub fn read(g: &mut crate::game::Game, eyes: &[GuardId], pc: CharId, lit: &mut d
         if dim && !elbow { continue; }
         seen = true;
         if l < g.k.sneak.lit_at { near = true; }
-        if crate::guards::eye_contact(g, e, pc, false, true, 1.0, None).in_cone { watched = true; by = Some(h); break; }
+        if ask(g, e, pc, true).in_cone { watched = true; by = Some(h); break; }
     }
     Exp { seen, watched, near, by }
 }
@@ -253,15 +261,15 @@ pub fn read(g: &mut crate::game::Game, eyes: &[GuardId], pc: CharId, lit: &mut d
 pub fn exposure(g: &mut crate::game::Game, eyes: &[GuardId], c_2: &mut crate::sneak::Crumb, low: bool, card: Option<f64>) -> crate::sneak::Exp {
     let card = card.unwrap_or(1.0);
     let pc = stand_in(c_2.p, low);
-    read(g, eyes, pc, &mut |g: &mut Game| lit_at(g, c_2, low), Some(low), Some(card))
+    read(g, eyes, &pc, &mut |g: &mut Game| lit_at(g, c_2, low), Some(low), Some(card))
 }
 
 /// … of the man where he stands: his own bones, his own meter. (sneak.ts exposureOf)
 pub fn exposure_of(g: &mut crate::game::Game, eyes: &[GuardId], gd: GuardId) -> crate::sneak::Exp {
-    let pc = g.gd[gd].ch;
-    let low = g.ch[pc].anim.crouch > 0.5;
+    let c = g.gd[gd].ch;
+    let low = g.ch[c].anim.crouch > 0.5;
     let card = crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Guard(gd));
-    read(g, eyes, pc, &mut |g: &mut Game| g.gd[gd].visibility, Some(low), Some(card))
+    read(g, eyes, &Target::Man { c }, &mut |g: &mut Game| g.gd[gd].visibility, Some(low), Some(card))
 }
 
 /// The eye's rate on a man on a step: guards.ts sightGainOn's arithmetic. (sneak.ts eyeRate)
@@ -287,7 +295,7 @@ pub fn lit_seen(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, keen
 }
 
 /// What crossing the steps t[first..end) low at the crossing pace would leave on the most stirred looker. (sneak.ts crossCost)
-pub fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &[crate::sneak::Crumb], first: f64, end: f64, card: Option<f64>) -> f64 {
+pub fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &mut [crate::sneak::Crumb], first: f64, end: f64, card: Option<f64>) -> f64 {
     let card = card.unwrap_or(1.0);
     let mut worst = 0.0;
     let wide = g.k.sneak.cone_deg * g.k.sneak.skill;
@@ -297,9 +305,10 @@ pub fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &[crate::sneak
         let e = eye_for(g, h, wide);
         let mut k = first as usize;
         while (k as f64) < end {
-            let r = crate::guards::eye_contact(g, e, stand_in(t[k].p, true), false, false, 1.0, None);
+            let pc = stand_in(t[k].p, true);
+            let r = ask(g, e, &pc, false);
             if r.visible {
-                let lit = seam_lit_kept(g, t, k, true);
+                let lit = lit_at(g, &mut t[k], true);
                 let next = if t.len() - 1 < k + 1 { t.len() - 1 } else { k + 1 };
                 add += eye_rate(g, h, lit, r.dist, keen, None) * m::max(0.4, flat(t[k].p, t[next].p)) / g.k.sneak.cross_pace;
             }
@@ -309,9 +318,6 @@ pub fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &[crate::sneak
     }
     worst
 }
-
-/// sneak.ts:316 litAt(g, T[k], true) writes its read into the crumb, and `t` is `&[Crumb]`: once it is `&mut`, this is `lit_at(g, &mut t[k], low)`.
-fn seam_lit_kept(g: &mut Game, t: &[Crumb], k: usize, low: bool) -> f64 { todo!("needs: cross_cost's t as &mut [Crumb], so lit_at's read is kept in the crumb (sneak.ts:316)") }
 
 /// How lit a nav cell is to a man low or upright on it, kept per cell for `age` seconds. (sneak.ts litCell)
 pub fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Option<f64>) -> f64 {
@@ -334,36 +340,13 @@ pub fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Optio
     v
 }
 
-/// sneak.ts:352 one way a defender looks: as he looks now or as he mostly looks, each also `WIDER`.
-#[derive(Clone, Copy, Debug)]
-struct WalkLook { e: crate::guards::Eye, ew: crate::guards::Eye, lx: f64, lz: f64 }
-/// sneak.ts:352 one defender. His `kept` map stays in g.m.sneak.kept_lines, read by his id.
-#[derive(Clone, Debug)]
-struct WalkMan { h: GuardId, x: f64, z: f64, open: crate::guards::Eye, looks: Vec<WalkLook>, line: JsMap<crate::Num, f64> }
-/// What the SneakWalk object's closures captured in the TypeScript (sneak.ts:350 to 385), and its `by`.
-#[derive(Clone, Debug)]
-struct Walk {
-    gd: GuardId,
-    low: bool,
-    keen: f64,
-    card: f64,
-    reach: f64,
-    amb: f64,
-    cpu0: f64,
-    open0: bool,
-    men: Vec<WalkMan>,
-    roofs: JsMap<crate::Num, bool>,
-    memo: JsMap<crate::Num, bool>,
-    by: Option<GuardId>,
-}
-
 /// The sneak's eye over any walk by `gd`: every living defender hostile to him and not dazzled, each as guards.ts builds his eye and, where `habit` gives it, as he mostly looks. (sneak.ts sneakWalk)
 pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> Option<[f64; 2]>>) -> crate::sneak::SneakWalk {
     g.stats.pairup.eye_asks += 1;
     let mut habit = habit;
     let wide = g.k.sneak.cone_deg * g.k.sneak.skill;
     let keen = if crate::guards::escalation_of(g) >= 1.0 { crate::guards::KEEN } else { 1.0 };
-    let mut men: Vec<WalkMan> = Vec::new();
+    let mut men: Vec<SneakWalkMan> = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {
         let h = g.guards[i];
@@ -374,7 +357,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
         let mut looks = vec![walk_look(e)];
         if let Some(hh) = hab { looks.push(walk_look(crate::guards::Eye { look: [hh[0], 0.0, hh[1]], ..e })); }
         kept_of(g, h, low, e.pos[0], e.pos[2]);
-        men.push(WalkMan { h, x: e.pos[0], z: e.pos[2], open: crate::guards::Eye { half_deg: 180.0, near_deg: 180.0, ..e }, looks, line: JsMap::new() });
+        men.push(SneakWalkMan { h, x: e.pos[0], z: e.pos[2], open: crate::guards::Eye { half_deg: 180.0, near_deg: 180.0, ..e }, looks, line: JsMap::new() });
     }
     let reach = g.k.guard_eye.range + 0.5;
     // SNEAK.stalkAmbient (settled on): what his own meter shows over the estimate of where he stands is on the way ahead too.
@@ -388,16 +371,13 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
     let amb = m::max(0.0, m::min(visibility, crate::game::game_visibility_of(g, irradiance)) - cpu0 - 0.05);
     let open0 = amb > 0.0 && !crate::weather::weather_under_roof(g, p[0], p[2]);
     let card = crate::kitload::load_seen(g, crate::kitload::LoadSeenWho::Guard(gd));
-    let walk = Walk { gd, low, keen, card, reach, amb, cpu0, open0, men, roofs: JsMap::new(), memo: JsMap::new(), by: None };
-    seam_keep_walk(g, walk)
+    SneakWalk { by: None, gd, low, keen, card, reach, amb, cpu0, open0, men, roofs: JsMap::new(), memo: JsMap::new() }
 }
-/// sneak.ts:386 the object handed back holds `watched` and `cost` over all it captured; SneakWalk has only `by`, and no function stands for either.
-fn seam_keep_walk(g: &mut Game, w: Walk) -> SneakWalk { todo!("needs: SneakWalk to hold the walk, and sneak_walk_watched / sneak_walk_cost in the skeleton (sneak.ts:339, 342)") }
 
 /// (sneak.ts sneakWalk, look)
-fn walk_look(e: crate::guards::Eye) -> WalkLook {
+fn walk_look(e: crate::guards::Eye) -> SneakWalkLook {
     let l = js::or(m::hyp2(e.look[0], e.look[2]), 1.0);
-    WalkLook {
+    SneakWalkLook {
         e,
         ew: crate::guards::Eye { half_deg: m::min(180.0, e.half_deg + 15.0), near_deg: m::min(180.0, e.near_deg + 15.0), ..e },
         lx: e.look[0] / l,
@@ -416,7 +396,7 @@ fn kept_of(g: &mut Game, h: GuardId, low: bool, x: f64, z: f64) {
 /// (sneak.ts sneakWalk, cell)
 fn walk_cell(x: f64, z: f64) -> f64 { m::floor(x / 0.25) + 4096.0 * m::floor(z / 0.25) }
 /// (sneak.ts sneakWalk, roofed)
-fn walk_roofed(g: &mut Game, w: &mut Walk, x: f64, z: f64) -> bool {
+fn walk_roofed(g: &mut Game, w: &mut SneakWalk, x: f64, z: f64) -> bool {
     let k = num_key(walk_cell(x, z));
     if let Some(&r) = w.roofs.get(k) { return r; }
     let r = crate::weather::weather_under_roof(g, x, z);
@@ -424,7 +404,7 @@ fn walk_roofed(g: &mut Game, w: &mut Walk, x: f64, z: f64) -> bool {
     r
 }
 /// (sneak.ts sneakWalk, litOf)
-fn walk_lit_of(g: &mut Game, w: &mut Walk, x: f64, z: f64, age: Option<f64>) -> f64 {
+fn walk_lit_of(g: &mut Game, w: &mut SneakWalk, x: f64, z: f64, age: Option<f64>) -> f64 {
     let v = lit_cell(g, x, z, w.low, age);
     if w.amb > 0.0 {
         let all = (w.open0 && !walk_roofed(g, w, x, z)) || w.cpu0 <= 0.03;
@@ -432,31 +412,33 @@ fn walk_lit_of(g: &mut Game, w: &mut Walk, x: f64, z: f64, age: Option<f64>) -> 
     } else { v }
 }
 /// The cheap part first (reach, and the cone in plan with a little slack), then the eye test's own cone. (sneak.ts sneakWalk, inCone)
-fn walk_in_cone(g: &mut Game, mm: &WalkMan, reach: f64, k: usize, wider: bool, x: f64, z: f64, pc: CharId) -> bool {
+fn walk_in_cone(g: &mut Game, mm: &SneakWalkMan, reach: f64, k: usize, wider: bool, x: f64, z: f64, pc: &Target) -> bool {
     let l = mm.looks[k];
     let e = if wider { l.ew } else { l.e };
     let dx = x - mm.x;
     let dz = z - mm.z;
     let d = m::hyp2(dx, dz);
     if d > reach || (d > 0.3 && (dx * l.lx + dz * l.lz) / d <= m::cos(m::min(180.0, (if d < e.near_m + 0.5 { e.near_deg } else { e.half_deg }) + 4.0) * DEG)) { return false; }
-    crate::guards::eye_contact(g, e, pc, false, true, 1.0, None).in_cone
+    ask(g, e, pc, true).in_cone
 }
 /// The line from a defender to a man on this floor, asked once per defender per quarter-metre: its length, or −1. (sneak.ts sneakWalk, line)
-fn walk_line(g: &mut Game, w: &mut Walk, q: usize, x: f64, z: f64, pc: CharId, fresh: bool) -> f64 {
+fn walk_line(g: &mut Game, w: &mut SneakWalk, q: usize, x: f64, z: f64, pc: &Target, fresh: bool) -> f64 {
     let key = num_key(walk_cell(x, z));
     let h = w.men[q].h;
     if let Some(&v) = w.men[q].line.get(key) { return v; }
     if !fresh {
         if let Some(&v) = g.m.sneak.kept_lines.get(h).and_then(|k| k.map.get(key)) { return v; }
     }
-    let r = crate::guards::eye_contact(g, w.men[q].open, pc, false, false, 1.0, None);
+    let open = w.men[q].open;
+    let r = ask(g, open, pc, false);
     let v = if r.visible { r.dist } else { -1.0 };
     w.men[q].line.set(key, v);
     if let Some(k) = g.m.sneak.kept_lines.get_mut(h) { k.map.set(key, v); }
     v
 }
 /// A man on this floor would be looked at: lit or at an elbow, with a line, inside a defender's cone. (sneak.ts SneakWalk.watched)
-fn walk_watched(g: &mut Game, w: &mut Walk, x: f64, z: f64, wider: Option<bool>) -> bool {
+pub fn sneak_walk_watched(g: &mut crate::game::Game, this: &mut crate::sneak::SneakWalk, x: f64, z: f64, wider: Option<bool>) -> bool {
+    let w = this;
     let wider = wider.unwrap_or(false);
     let key = num_key(walk_cell(x, z) * 2.0 + if wider { 1.0 } else { 0.0 });
     if let Some(&was) = w.memo.get(key) { return was; }
@@ -466,10 +448,10 @@ fn walk_watched(g: &mut Game, w: &mut Walk, x: f64, z: f64, wider: Option<bool>)
     for q in 0..w.men.len() {
         let mut any = false;
         for k in 0..w.men[q].looks.len() {
-            if walk_in_cone(g, &w.men[q], w.reach, k, wider, x, z, pc) { any = true; break; }
+            if walk_in_cone(g, &w.men[q], w.reach, k, wider, x, z, &pc) { any = true; break; }
         }
         if !any { continue; }
-        let d = walk_line(g, w, q, x, z, pc, false);
+        let d = walk_line(g, w, q, x, z, &pc, false);
         if d < 0.0 { continue; }
         if d < g.k.sneak.near_m { r = true; break; }
         if lit < 0.0 { lit = walk_lit_of(g, w, x, z, None); }
@@ -480,7 +462,8 @@ fn walk_watched(g: &mut Game, w: &mut Walk, x: f64, z: f64, wider: Option<bool>)
     r
 }
 /// What walking `pts` at `pace` would leave on the most stirred watcher; 0: nobody would see a step of it. (sneak.ts SneakWalk.cost)
-fn walk_cost(g: &mut Game, w: &mut Walk, pts: &[V3], pace: f64, skip: Option<V3>, skip_m: Option<f64>) -> f64 {
+pub fn sneak_walk_cost(g: &mut crate::game::Game, this: &mut crate::sneak::SneakWalk, pts: &[V3], pace: f64, skip: Option<V3>, skip_m: Option<f64>) -> f64 {
+    let w = this;
     let skip_m = skip_m.unwrap_or(0.3);
     let mut add: Vec<Vec<f64>> = w.men.iter().map(|mm| vec![0.0; mm.looks.len()]).collect();
     let mut j = 1;
@@ -501,9 +484,9 @@ fn walk_cost(g: &mut Game, w: &mut Walk, pts: &[V3], pace: f64, skip: Option<V3>
             for q in 0..w.men.len() {
                 let mut rate = -1.0;
                 for k in 0..w.men[q].looks.len() {
-                    if !walk_in_cone(g, &w.men[q], w.reach, k, false, x, z, pc) { continue; }
+                    if !walk_in_cone(g, &w.men[q], w.reach, k, false, x, z, &pc) { continue; }
                     if rate < 0.0 {
-                        let d = walk_line(g, w, q, x, z, pc, true);
+                        let d = walk_line(g, w, q, x, z, &pc, true);
                         if d < 0.0 { break; }
                         if lit < 0.0 { lit = walk_lit_of(g, w, x, z, Some(0.4)); }
                         let h = w.men[q].h;

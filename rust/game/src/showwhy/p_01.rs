@@ -23,7 +23,7 @@ pub fn blank(t: f64) -> crate::showwhy::Mem {
         line_on: false,
         line_end_t: -100.0,
         wave_t: -100.0,
-        waves: 0.0,
+        waves: 0,
         line_b: f64::NAN,
         door_t0: -100.0,
         door_seen_t: -100.0,
@@ -31,7 +31,7 @@ pub fn blank(t: f64) -> crate::showwhy::Mem {
         door_t: -100.0,
         hurt_said: -1.0,
         lag_t: -100.0,
-        lag_n: 0.0,
+        lag_n: 0,
         keep_t0: f64::NAN,
         keep_said: false,
         keep_said_t: -100.0,
@@ -41,12 +41,12 @@ pub fn blank(t: f64) -> crate::showwhy::Mem {
 
 /// Nothing shown yet. (showwhy.ts fresh)
 pub fn fresh() -> crate::showwhy::ShowWhyStats {
-    ShowWhyStats { waves: 0.0, squeezes: 0.0, fists: 0.0, ways: 0.0, lines: 0.0, holds: 0.0 }
+    ShowWhyStats { waves: 0, squeezes: 0, fists: 0, ways: 0, lines: 0, holds: 0 }
 }
 
 /// This seat's state, made if there is none: the row itself. (showwhy.ts stateOf)
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::showwhy::State {
-    let (key, t) = (g.player, g.time);
+    let (key, t) = (crate::seats::view_key(g), g.time);
     g.m.showwhy.states.get_or_insert_with(key, || State { stats: fresh(), log: Vec::new(), after_you_t: -100.0, keep_say_t: -100.0, line_say_t: -100.0, t })
 }
 
@@ -62,7 +62,8 @@ pub fn flat(a: V3, b: V3) -> f64 {
 
 /// What the rule has shown this game; a read makes no state. (showwhy.ts showWhyStats)
 pub fn show_why_stats(g: &mut crate::game::Game) -> crate::showwhy::ShowWhyStats {
-    match g.m.showwhy.states.get(g.player) {
+    let key = crate::seats::view_key(g);
+    match g.m.showwhy.states.get(key) {
         Some(s) => s.stats,
         None => fresh(),
     }
@@ -70,7 +71,8 @@ pub fn show_why_stats(g: &mut crate::game::Game) -> crate::showwhy::ShowWhyStats
 
 /// The notes of what was shown. (showwhy.ts showWhyLog)
 pub fn show_why_log(g: &mut crate::game::Game) -> Vec<crate::showwhy::WhyNote> {
-    match g.m.showwhy.states.get(g.player) {
+    let key = crate::seats::view_key(g);
+    match g.m.showwhy.states.get(key) {
         Some(s) => s.log.clone(),
         None => Vec::new(),
     }
@@ -78,7 +80,7 @@ pub fn show_why_log(g: &mut crate::game::Game) -> Vec<crate::showwhy::WhyNote> {
 
 /// A fresh encounter: nothing shown, nothing owed. (showwhy.ts resetShowWhy)
 pub fn reset_show_why(g: &mut crate::game::Game) {
-    let key = g.player;
+    let key = crate::seats::view_key(g);
     g.m.showwhy.states.delete(key);
 }
 
@@ -106,7 +108,7 @@ pub fn say(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::sho
     if g.gd[gd].bubble.as_ref().map(|b| b.text.as_str()) != Some(text) {
         return false;
     }
-    st_row(g, pl).stats.lines += 1.0;
+    st_row(g, pl).stats.lines += 1;
     note(g, pl, gd, why, None, Some(text));
     true
 }
@@ -154,7 +156,7 @@ pub fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if hs == crate::game::GuardState::Alert || hs == crate::game::GuardState::Search || crate::roomfight::room_fight_hot_for(g, gd) {
         return true;
     }
-    !(crate::silent::silent_on_man(g, gd) || crate::holdfire::hold_fire_on_man(g, gd) || crate::unseen::unseen_man(g, gd))
+    !(crate::silent::silent_holds_target(g, gd) || crate::holdfire::hold_fire_holds_target(g, gd) || crate::unseen::under_unseen(g, gd))
 }
 
 /// A mate stands in this man's line to `to` nearer to him than the player does. (showwhy.ts mateNearer)
@@ -316,8 +318,8 @@ pub fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
         };
         if begins {
             // it waits from now (or the clock went back under it)
-            g.m.showwhy.op_mem.set(op, OpMem { t, turns: Vec::new(), fist_t: 0.0, fists: 0.0 });
-            st_row(g, pl).stats.holds += 1.0;
+            g.m.showwhy.op_mem.set(op, OpMem { t, turns: Vec::new(), fist_t: 0.0, fists: 0 });
+            st_row(g, pl).stats.holds += 1;
             let door = g.dr[g.tab.doortools_door_op[op].door].frame_centre;
             let mut at = t + 0.15;
             let lead = g.tab.doortools_door_op[op].lead;
@@ -351,20 +353,20 @@ pub fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
             };
             if stands_free(g, op, turn.gd) && man_ahead(g, op, turn.gd) {
                 sign(g, pl, turn.gd, Why::Stack, crate::character::SignalKind::Squeeze, None);
-                st_row(g, pl).stats.squeezes += 1.0;
+                st_row(g, pl).stats.squeezes += 1;
             }
         }
         let (none_left, fists, fist_t) = {
             let r = g.m.showwhy.op_mem.get(op).unwrap();
             (r.turns.is_empty(), r.fists, r.fist_t)
         };
-        if none_left && fists < k.hold_max && t >= fist_t {
+        if none_left && (fists as f64) < k.hold_max && t >= fist_t {
             let lead = g.tab.doortools_door_op[op].lead;
             if stands_free(g, op, lead) {
                 sign(g, pl, lead, Why::Stack, crate::character::SignalKind::Hold, None);
-                st_row(g, pl).stats.fists += 1.0;
+                st_row(g, pl).stats.fists += 1;
                 let r = g.m.showwhy.op_mem.get_mut(op).unwrap();
-                r.fists += 1.0;
+                r.fists += 1;
                 r.fist_t = t + k.hold_every * fist_doubling(r.fists);
             } else {
                 // his hands are busy, or the fight has him: looked at again shortly
@@ -375,8 +377,8 @@ pub fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
 }
 
 /// `1 << Math.min(fists - 1, 30)` (showwhy.ts:216): JavaScript's shift of a 32-bit one by the count's low five bits.
-fn fist_doubling(fists: f64) -> f64 {
-    (1i32 << (js::to_u32(m::min(fists - 1.0, 30.0)) & 31)) as f64
+fn fist_doubling(fists: i32) -> f64 {
+    (1i32 << (core::cmp::min(fists - 1, 30) & 31)) as f64
 }
 
 /// Once a frame, after the orders, the door tools and the room fight have had theirs. (showwhy.ts showWhyTick)
@@ -431,7 +433,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
             if !r.line_on && line_now && t - r.line_t0 >= k.line_after {
                 r.line_on = true;
                 if t - r.line_end_t > k.wave_later + 2.0 {
-                    r.waves = 0.0;
+                    r.waves = 0;
                 }
                 r.wave_t = m::max(t, r.wave_t);
                 r.line_b = f64::NAN;
@@ -457,10 +459,10 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 if t >= g.m.showwhy.mem.get(gd).unwrap().wave_t && crate::character::anim_signal_free(g, c) {
                     let side = line_side(g, gd);
                     sign(g, pl, gd, Why::Line, crate::character::SignalKind::Aside, Some(side));
-                    st_row(g, pl).stats.waves += 1.0;
+                    st_row(g, pl).stats.waves += 1;
                     let r = g.m.showwhy.mem.get_mut(gd).unwrap();
-                    r.waves += 1.0;
-                    r.wave_t = t + if r.waves < 2.0 { k.wave_every } else { k.wave_later };
+                    r.waves += 1;
+                    r.wave_t = t + if r.waves < 2 { k.wave_every } else { k.wave_later };
                 }
                 if !g.k.clearline.on {
                     if mine {
@@ -504,7 +506,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 r.door_t = t + k.door_every;
             }
             sign(g, pl, gd, Why::Door, crate::character::SignalKind::Go, None);
-            st_row(g, pl).stats.ways += 1.0;
+            st_row(g, pl).stats.ways += 1;
             if t >= st_row(g, pl).after_you_t {
                 owe(g.m.showwhy.mem.get_mut(gd).unwrap(), LINE_DOOR, Why::Door, t + 1.5);
             }
@@ -524,12 +526,12 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                     // too long ago to say now
                     r.hurt_said = hurt_at;
                     r.lag_t = t;
-                    r.lag_n = 0.0;
+                    r.lag_n = 0;
                 } else if t >= stagger_until {
                     owe(r, LINE_HURT, Why::Hurt, t + k.owed_for);
                 }
             } else if g.tab.orders_assignment[a].order == "fallIn"
-                && lag_n < k.lag_max
+                && (lag_n as f64) < k.lag_max
                 && t >= lag_t
                 && g.pl[pl].sprinting
                 && !g.pl[pl].down
@@ -594,11 +596,11 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                     let r = g.m.showwhy.mem.get_mut(gd).unwrap();
                     r.hurt_said = hurt_at;
                     r.lag_t = t + 3.0;
-                    r.lag_n = 0.0;
+                    r.lag_n = 0;
                 } else {
                     let r = g.m.showwhy.mem.get_mut(gd).unwrap();
                     r.lag_t = t + k.lag_every;
-                    r.lag_n += 1.0;
+                    r.lag_n += 1;
                 }
             }
             break;
@@ -697,10 +699,10 @@ mod tests {
 
     #[test]
     fn the_fists_space_out_by_doubling() {
-        assert_eq!(fist_doubling(1.0), 1.0);
-        assert_eq!(fist_doubling(2.0), 2.0);
-        assert_eq!(fist_doubling(3.0), 4.0);
-        assert_eq!(fist_doubling(100.0), 1073741824.0);
+        assert_eq!(fist_doubling(1), 1.0);
+        assert_eq!(fist_doubling(2), 2.0);
+        assert_eq!(fist_doubling(3), 4.0);
+        assert_eq!(fist_doubling(100), 1073741824.0);
     }
 
     #[test]

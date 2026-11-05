@@ -11,12 +11,6 @@ pub fn input_detached(g: &mut crate::game::Game) -> InputId { todo!() }
 /// (src/game/input.ts:44 Input.constructor)
 pub fn input_new(g: &mut crate::game::Game, el: Option<crate::Opaque>) -> InputId { todo!() }
 
-/// (src/game/input.ts:91 Input.modsUp)
-pub fn input_mods_up(g: &mut crate::game::Game, id: InputId, e: crate::input::InputModsUpE) { todo!() }
-
-/// (src/game/input.ts:96 Input.modUp)
-pub fn input_mod_up(g: &mut crate::game::Game, id: InputId, phys: &str) { todo!() }
-
 /// (src/game/input.ts:98 Input.focusGame)
 pub fn input_focus_game(g: &mut crate::game::Game, id: InputId) { todo!() }
 

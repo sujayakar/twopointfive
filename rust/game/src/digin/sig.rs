@@ -5,12 +5,6 @@ use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
 
-/// (src/game/digin.ts:198 saveDigIn)
-pub fn save_dig_in(g: &mut crate::game::Game) { todo!() }
-
-/// (src/game/digin.ts:199 loadDigIn)
-pub fn load_dig_in(g: &mut crate::game::Game) { todo!() }
-
 /// (src/game/digin.ts:203 resetDigIn)
 pub fn reset_dig_in(g: &mut crate::game::Game) { todo!() }
 

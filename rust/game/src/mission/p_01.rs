@@ -33,23 +33,32 @@ pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
 pub fn rack_dist(g: &mut crate::game::Game, p: V3) -> f64 {
     let front = g.level.mission.rack.front;
     let half_w = g.level.mission.rack.half_w;
-    if quiet_up(g) {
+    if crate::quiet::quiet_of(g) {
         let d = m::hyp2(p[0] - front[0], p[2] - front[2]);
         if d > 0.3 && crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [front[0] + (p[0] - front[0]) / d * 0.2, 1.0, front[2] + (p[2] - front[2]) / d * 0.2], None) {
             return m::INF;
         }
         return m::max(0.0, d - half_w);
     }
+    rack_dist_plain(front, half_w, p)
+}
+
+/// rackDist's arm for a rack on the plain night: anywhere across its width counts. (mission.ts:50)
+fn rack_dist_plain(front: V3, half_w: f64, p: V3) -> f64 {
     m::hyp2(m::max(0.0, m::abs(p[0] - front[0]) - half_w), p[2] - front[2])
 }
 
 /// Out through the mission's exit, or any exit of a quiet mission. (mission.ts outNow)
 pub fn out_now(g: &mut crate::game::Game, p: V3) -> bool {
-    if quiet_up(g) {
+    if crate::quiet::quiet_of(g) {
         let exits = crate::quiet::quiet_mission_exits(g);
         return exits.iter().any(|x| crate::quiet::out_through(x, p));
     }
-    let (exfil_x, exfil_z, exfil_out) = (g.level.mission.exfil_x, g.level.mission.exfil_z, g.level.mission.exfil_out);
+    out_plain(g.level.mission.exfil_x, g.level.mission.exfil_z, g.level.mission.exfil_out, p)
+}
+
+/// outNow's arm for the level's one exit: past its point going its way, or east past its x; inside its frame. (mission.ts:56-58)
+fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> bool {
     if let Some(o) = exfil_out {
         return (p[0] - exfil_x) * o[0] + (p[2] - exfil_z) * o[1] > 0.0 && m::abs((p[0] - exfil_x) * o[1] - (p[2] - exfil_z) * o[0]) < 1.8;
     }
@@ -128,7 +137,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
             } else {
                 crate::chronicle::chron_objective(g, "reached the server room", None);
                 g.mission.stage = MissionStage::Drive;
-                let n = g.level.mission.rack.index + 1.0;
+                let n = js::num_str(g.level.mission.rack.index + 1.0);
                 crate::game::game_msg(g, &format!("you've reached the server room. the drive is in rack {}, the marked one", n));
                 crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Server, Some(1.2));
             }
@@ -146,7 +155,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
             if asked {
                 g.mission.drive_t = 0.0;
                 crate::audio_iface::game_audio_like_play(g, "click", Some(rf), Some(0.8), None);
-                seam_audio_play_rate(g, "magOut", rf, 0.4, 0.55);
+                crate::audio_iface::game_audio_like_play(g, "magOut", Some(rf), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
                 let w = crate::quiet::quiet_words(g);
                 let line = match &w {
                     Some(w) => format!("you're taking {}. stay on it", w.thing),
@@ -211,7 +220,7 @@ pub fn cancel_drive(g: &mut crate::game::Game) {
 /// The caddy comes free: the rack goes dark, the clunk is heard, and soon a man is sent to look. (mission.ts drivePulled)
 pub fn drive_pulled(g: &mut crate::game::Game) {
     let rf = g.level.mission.rack.front;
-    let n = g.level.mission.rack.index + 1.0;
+    let n = js::num_str(g.level.mission.rack.index + 1.0);
     let w = crate::quiet::quiet_words(g);
     let line = match &w {
         Some(w) => format!("{} is out of {}", w.thing, w.holder),
@@ -230,7 +239,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
         crate::sim_lightshome::light_home_in(g, on, Some(t), Some(0.0), None, None, None);
         i += 1;
     }
-    seam_audio_play_rate(g, "rack", rf, 0.5, 0.7);
+    crate::audio_iface::game_audio_like_play(g, "rack", Some(rf), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::audio_iface::game_audio_like_play(g, "lightOff", Some(rf), Some(0.7), None);
     let pl = g.player;
     let who = g.ch[g.pl[pl].ch].id;
@@ -294,11 +303,13 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
         let b = &mut g.gd[best];
         b.task = Some(GuardTask::Arm0(GuardTaskArm0 { kind: GuardTaskArm0Kind::Rack, pos: goal }));
         b.last_known = Some(v3::copy(goal));
+        b.fix_stamp = b.fix_stamp.wrapping_add(1);
         b.awareness = m::max(b.awareness, 0.42);
         b.state = GuardState::Suspicious;
         b.react_t = 1.2;
         b.search_t = 0.0;
         b.path = Vec::new();
+        b.path_serial = b.path_serial.wrapping_add(1);
         b.path_goal = None;
     }
     if let Some(w) = &w {
@@ -307,7 +318,7 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
         return;
     }
-    let n = g.level.mission.rack.index + 1.0;
+    let n = js::num_str(g.level.mission.rack.index + 1.0);
     crate::game::game_say(g, best, &format!("rack {} just dropped off the network — going to take a look", n), Some(true), None, None);
     let at = g.ch[g.gd[best].ch].pos;
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
@@ -320,15 +331,15 @@ pub fn debrief_rows(s: &crate::game::MissionStats) -> Vec<[String; 2]> {
     let row = |a: &str, b: String| [String::from(a), b];
     let mut rows = vec![
         row("time", fmt_clock(s.elapsed)),
-        row("alerts raised", format!("{}", s.alerts)),
-        row("times spotted", format!("{}", s.spotted)),
-        row("bodies found", format!("{}", s.bodies)),
-        row("shots fired", format!("{}", s.shots)),
-        row("knocked out (breathing) · killed", format!("{} · {}", s.knockouts, s.kills)),
+        row("alerts raised", js::num_str(s.alerts)),
+        row("times spotted", js::num_str(s.spotted)),
+        row("bodies found", js::num_str(s.bodies)),
+        row("shots fired", js::num_str(s.shots)),
+        row("knocked out (breathing) · killed", format!("{} · {}", js::num_str(s.knockouts), js::num_str(s.kills))),
         row("blackout", String::from(if s.blackout { "used" } else { "no" })),
     ];
     if s.keys > 0.0 {
-        rows.push(row("keys taken off them", format!("{}", s.keys)));
+        rows.push(row("keys taken off them", js::num_str(s.keys)));
     }
     if s.qrf >= 1.0 {
         let at = fmt_clock(s.qrf_at);
@@ -415,7 +426,7 @@ pub fn objective_text(g: &mut crate::game::Game) -> String {
     }
     let s = g.mission.stage;
     let drive_t = g.mission.drive_t;
-    let n = g.level.mission.rack.index + 1.0;
+    let n = js::num_str(g.level.mission.rack.index + 1.0);
     if let Some(w) = crate::quiet::quiet_words(g) {
         match s {
             MissionStage::Infiltrate => return format!("objective ▸ reach {}", w.place),
@@ -449,8 +460,8 @@ pub fn objective_text(g: &mut crate::game::Game) -> String {
 }
 
 /// `Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))`, the pull's percent on the HUD (mission.ts:166, 169).
-fn drive_percent(drive_t: f64) -> f64 {
-    m::min(99.0, m::round(drive_t / crate::consts::DRIVE_SECS * 100.0))
+fn drive_percent(drive_t: f64) -> String {
+    js::num_str(m::min(99.0, m::round(drive_t / crate::consts::DRIVE_SECS * 100.0)))
 }
 
 /// `g.doors.byName(name)?.frameCentre ?? null` (mission.ts:150).
@@ -463,48 +474,33 @@ fn player_pos(g: &Game) -> V3 {
     g.ch[g.pl[g.player].ch].pos
 }
 
-/// quietOf(g) as a test (quiet.ts quietOf: `g.quiet?.active ? g.quiet : null`); the mission itself is `g.quiet`, and quiet_of's stub answers nothing.
-fn quiet_up(g: &Game) -> bool {
-    g.quiet.active
-}
-
-/// g.audio.play(name, pos, gain, { rate }) (mission.ts:90, 116): `opts` holds crate::Opaque, which cannot carry a number.
-fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
-    todo!("needs: game_audio_like_play's opts to carry a rate")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::game::MissionStage;
 
     fn game() -> Game {
-        let mut g = Game::blank();
-        g.level.mission.rack.front = [3.7, 0.0, -2.3];
-        g.level.mission.rack.half_w = 0.45;
-        g.level.mission.exfil_x = 10.0;
-        g.level.mission.exfil_z = 2.0;
+        let g = Game::blank();
         g
     }
 
     /// rackDist's plain arm against mission.ts's arithmetic run under bun with EXACT on.
     #[test]
     fn rack_dist_plain_has_the_typescripts_bits() {
-        let mut g = game();
-        assert_eq!(rack_dist(&mut g, [5.1, 0.0, -1.9]).to_bits(), 0x3ff07e0f66afed04);
-        assert_eq!(rack_dist(&mut g, [3.8, 0.0, 4.4]).to_bits(), 0x401acccccccccccd);
+        let (front, half_w) = ([3.7, 0.0, -2.3], 0.45);
+        assert_eq!(rack_dist_plain(front, half_w, [5.1, 0.0, -1.9]).to_bits(), 0x3ff07e0f66afed04);
+        assert_eq!(rack_dist_plain(front, half_w, [3.8, 0.0, 4.4]).to_bits(), 0x401acccccccccccd);
     }
 
     #[test]
     fn out_now_goes_by_the_exits_own_way_out() {
-        let mut g = game();
-        assert!(out_now(&mut g, [10.5, 0.0, 3.0]));
-        assert!(!out_now(&mut g, [9.5, 0.0, 3.0]));
-        assert!(!out_now(&mut g, [10.5, 0.0, 3.9]));
-        g.level.mission.exfil_out = Some([0.0, 1.0]);
-        assert!(out_now(&mut g, [10.5, 0.0, 3.0]));
-        assert!(!out_now(&mut g, [12.0, 0.0, 3.0]));
-        assert!(!out_now(&mut g, [10.5, 0.0, 1.0]));
+        assert!(out_plain(10.0, 2.0, None, [10.5, 0.0, 3.0]));
+        assert!(!out_plain(10.0, 2.0, None, [9.5, 0.0, 3.0]));
+        assert!(!out_plain(10.0, 2.0, None, [10.5, 0.0, 3.9]));
+        let o = Some([0.0, 1.0]);
+        assert!(out_plain(10.0, 2.0, o, [10.5, 0.0, 3.0]));
+        assert!(!out_plain(10.0, 2.0, o, [12.0, 0.0, 3.0]));
+        assert!(!out_plain(10.0, 2.0, o, [10.5, 0.0, 1.0]));
     }
 
     #[test]
@@ -537,9 +533,9 @@ mod tests {
     /// The HUD's percent, against the TypeScript's for the same times; it stops at 99 until the drive is out.
     #[test]
     fn the_drive_percent_stops_at_99() {
-        assert_eq!(format!("{}", drive_percent(0.0)), "0");
-        assert_eq!(format!("{}", drive_percent(1.75)), "50");
-        assert_eq!(format!("{}", drive_percent(3.49)), "99");
+        assert_eq!(drive_percent(0.0), "0");
+        assert_eq!(drive_percent(crate::consts::DRIVE_SECS / 2.0), "50");
+        assert_eq!(drive_percent(crate::consts::DRIVE_SECS * 0.9999), "99");
     }
 
     #[test]

@@ -7,6 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// `b` of the level's boxes, its row. (boxes.ts:66 Box) `g.level.boxes` is `g.col.boxes`, one array (game.ts:1100): the IDs are there, the rows have no table.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
+}
+
 /// The run-on a thing keeps past its landing where the ground bogs by `bog`, of a hard floor's. (snowBog.ts bogRun)
 pub fn bog_run(g: &mut crate::game::Game, bog: f64) -> f64 {
     run_on(bog, g.k.snowbog.run)
@@ -24,20 +29,20 @@ pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
     let count = g.col.boxes.len();
     let mut made = Ground { kinds: vec![0u8; count], lays: Vec::new(), banks: Vec::new() };
     for bi in 0..count {
-        let b = BoxId::from_ix(bi);
-        let does = g.col.boxes[b].does.map(|w| String::from(w.as_str()));
+        let b = g.col.boxes[bi];
+        let does = seam_box(g, b).does.map(|w| String::from(w.as_str()));
         let p = crate::render_snow_field::snow_paint_of(g, &crate::render_snow_field::SnowPaintOfB { does });
         if crate::render_snow_field::snow_thin_lay(g, b) {
             let packed = p == Some(crate::scene_materials::SnowKind::SnowPacked);
             let old = p == Some(crate::scene_materials::SnowKind::SnowOld);
             if packed || old || crate::render_snow_field::snow_lay_bare(g, b) {
-                made.lays.push(bi as f64);
+                made.lays.push(bi);
                 made.kinds[bi] = (if packed { kind.packed } else if old { kind.old } else { kind.bare }) as u8;
             }
         } else if p == Some(crate::scene_materials::SnowKind::Snow) {
-            let found = &g.col.boxes[b];
+            let found = seam_box(g, b);
             if (js::to_i32(found.flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) == 0 && found.c[1] + found.h[1] > 0.03 {
-                made.banks.push(bi as f64);
+                made.banks.push(bi);
                 made.kinds[bi] = kind.bank as u8;
             }
         }
@@ -48,7 +53,11 @@ pub fn ground(g: &mut crate::game::Game) -> crate::snow_bog::Ground {
 
 /// Is (x, z) over the box's footprint, turned by its yaw. (snowBog.ts over)
 pub fn over(g: &mut crate::game::Game, b: BoxId, x: f64, z: f64) -> bool {
-    let found = &g.col.boxes[b];
+    over_row(seam_box(g, b), x, z)
+}
+
+/// over's arithmetic, on the row.
+fn over_row(found: &crate::scene_boxes::Box, x: f64, z: f64) -> bool {
     let (cs, sn, px, pz) = (m::cos(found.yaw), m::sin(found.yaw), x - found.c[0], z - found.c[2]);
     m::abs(cs * px - sn * pz) <= found.h[0] && m::abs(sn * px + cs * pz) <= found.h[2]
 }
@@ -71,11 +80,11 @@ pub fn snow_bog_at(g: &mut crate::game::Game, x: f64, y: f64, z: f64) -> f64 {
     let found = ground(g);
     let n = g.col.boxes.len();
     if !(y < g.k.snowbog.top) {
-        for &at in &found.banks {
-            let bi = at as usize;
+        for &bi in &found.banks {
             if bi >= n { break; }
-            let b = BoxId::from_ix(bi);
-            let top = g.col.boxes[b].c[1] + g.col.boxes[b].h[1];
+            let b = g.col.boxes[bi];
+            let row = seam_box(g, b);
+            let top = row.c[1] + row.h[1];
             if m::abs(top - y) <= g.k.snowbog.bank_m && over(g, b, x, z) { return 1.0; }
         }
         return 0.0;
@@ -83,10 +92,10 @@ pub fn snow_bog_at(g: &mut crate::game::Game, x: f64, y: f64, z: f64) -> f64 {
     if crate::weather::weather_under_roof(g, x, z) { return 0.0; }
     let names = snow_kind();
     let mut k = 1.0;
-    for &at in &found.lays {
-        let bi = at as usize;
+    for &bi in &found.lays {
         if bi >= n { break; }
-        if !over(g, BoxId::from_ix(bi), x, z) { continue; }
+        let b = g.col.boxes[bi];
+        if !over(g, b, x, z) { continue; }
         let kind = found.kinds[bi] as f64;
         let v = if kind == names.packed { g.k.snowbog.packed } else if kind == names.old { g.k.snowbog.old } else { 0.0 };
         if v < k { k = v; }
@@ -114,14 +123,12 @@ mod tests {
 
     #[test]
     fn over_turns_the_point_by_the_yaw() {
-        let mut g = Game::blank();
         let mut made = crate::scene_boxes::Box::zeroed();
         made.c = [1.0, 0.0, 2.0];
         made.h = [2.0, 1.0, 0.5];
         made.yaw = m::atan2(1.0, 0.0);
-        let b = g.col.boxes.push(made);
         // a quarter turn: the long side runs along z
-        assert!(over(&mut g, b, 1.4, 3.5));
-        assert!(!over(&mut g, b, 2.0, 2.0));
+        assert!(over_row(&made, 1.4, 3.5));
+        assert!(!over_row(&made, 2.0, 2.0));
     }
 }

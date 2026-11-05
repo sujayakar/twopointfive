@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---- the bench and the seams of this part
+// ---- the bench
 
 /// where a layer's columns go on the bench's `args` (skeleton.ts LAYER_COLS_AT)
 const COLS: usize = crate::anim_skeleton::LAYER_COLS_AT as usize;
@@ -18,29 +18,6 @@ const KEYS: usize = crate::anim_skeleton::LAYER_KEYS_AT as usize;
 fn args() -> &'static mut [f64; ::sim::skeleton::ARGS] { &mut ::sim::skeleton::bench().args }
 /// a boolean as the bench holds it
 fn b01(x: bool) -> f64 { if x { 1.0 } else { 0.0 } }
-
-/// layerSlot(this.ch, this.pA, this.cast): the pose and the cast are lent out of the animator for the call (it reads neither through `g`) and put back
-fn man_slot(g: &mut Game, c: CharId) -> f64 {
-    let rig = g.ch[c].anim.rig;
-    let pose = core::mem::replace(&mut g.ch[c].anim.p_a, crate::anim_skeleton::Pose::blank());
-    let cast = core::mem::replace(&mut g.ch[c].anim.cast, crate::anim_skeleton::LayerCast::blank());
-    let slot = crate::anim_skeleton::layer_slot(g, rig, &pose, &cast);
-    g.ch[c].anim.p_a = pose;
-    g.ch[c].anim.cast = cast;
-    slot
-}
-/// layerRan(code, this.fk): the bones are lent out of the animator for the call and put back, written
-fn man_ran(g: &mut Game, c: CharId, code: f64) {
-    let mut fk = core::mem::replace(&mut g.ch[c].anim.fk, crate::anim_skeleton::PoseFK::blank());
-    crate::anim_skeleton::layer_ran(g, code, &mut fk);
-    g.ch[c].anim.fk = fk;
-}
-/// the slot as a layer takes it: below zero (a pose at home in no block) is the bench, never game slot 0
-fn slot_no(g_2: f64) -> usize {
-    if g_2 < 0.0 { ::sim::skeleton::ON_BENCH } else { g_2 as usize }
-}
-/// `pose.at`: where a pose stands in the game's block. A Pose is by value and has no place, and a layer finds its poses only by place (character.ts:3990)
-fn seam_pose_at(p: &crate::anim_skeleton::Pose) -> usize { crate::anim_skeleton::b_01::stage_pose(p) } // SKELETON-GAP: Pose.at (skeleton.ts:145): the bring-up stages the pose, anim_skeleton/b_01.rs
 
 /// HOLD_PH[phase] (character.ts:1109), the phase's number on the bench
 fn hold_no(p: HoldPhase) -> f64 { *hold_ph().get(String::from(p.as_str())).unwrap() }
@@ -74,8 +51,8 @@ pub fn anim_door_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: cr
         for i in 0..4 { a[13 + i] = an.hand_fix[0][i]; a[17 + i] = an.hand_fix[1][i]; }
     }
     door_cols_get(g, c);
-    let (slot, at, at_b, at_rest) = (slot_no(g_2), seam_pose_at(&g.ch[c].anim.p_a), seam_pose_at(&g.ch[c].anim.p_b), seam_pose_at(&g.ch[c].anim.rest));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::door_layer(slot, at, at_b, at_rest); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let (slot, at, at_b, at_rest) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::door_layer(slot, at, at_b, at_rest) as f64);
     door_cols_put(g, c);
 }
 
@@ -118,19 +95,17 @@ pub fn anim_radio_shown(g: &mut crate::game::Game, c: CharId) -> f64 {
 }
 
 /// What the gun hand visibly holds: the rule's, unless a swap is running. (character.ts swapHeld)
-pub fn anim_swap_held(g: &mut crate::game::Game, c: CharId, rule: Option<crate::character::AnimSwapHeldRule>) -> Option<crate::character::AnimSwapHeld> {
+pub fn anim_swap_held(g: &mut crate::game::Game, c: CharId, rule: Option<crate::character::AnimCarry>) -> Option<crate::character::AnimCarry> {
     let s = g.ch[c].anim.sw;
     if s.t < 0.0 {
-        if let (Some(r), Some(cur)) = (rule, s.cur) {
-            if cur.as_str() != r.as_str() { return Some(match cur { AnimSwCur::Torch => AnimSwapHeld::Torch, AnimSwCur::Weapon => AnimSwapHeld::Weapon }); }
+        if let (Some(r), Some(Some(cur))) = (rule, s.cur) {
+            if cur != r { return Some(cur); }
         }
-        return rule.map(|r| match r { AnimSwapHeldRule::Torch => AnimSwapHeld::Torch, AnimSwapHeldRule::Weapon => AnimSwapHeld::Weapon });
+        return rule;
     }
     let a = s.t / s.dur;
     let k = swap();
-    if a < k.away { s.from.map(|f| match f { AnimSwFrom::Torch => AnimSwapHeld::Torch, AnimSwFrom::Weapon => AnimSwapHeld::Weapon }) }
-    else if a < k.take { None }
-    else { s.to.map(|t| match t { AnimSwTo::Torch => AnimSwapHeld::Torch, AnimSwTo::Weapon => AnimSwapHeld::Weapon }) }
+    if a < k.away { s.from } else if a < k.take { None } else { s.to }
 }
 
 /// How far the swap's hand is at the torch on his belt this frame. (character.ts swapBelt)
@@ -143,7 +118,7 @@ pub fn anim_swap_info(g: &mut crate::game::Game, c: CharId) -> crate::character:
     let s = &g.ch[c].anim.sw;
     crate::character::AnimSwapInfo {
         a: if s.t < 0.0 { -1.0 } else { s.t / s.dur },
-        to: s.to.map(|t| match t { AnimSwTo::Torch => AnimSwapInfoTo::Torch, AnimSwTo::Weapon => AnimSwapInfoTo::Weapon }),
+        to: s.to,
         pending: s.wait >= 0.0,
     }
 }
@@ -151,7 +126,7 @@ pub fn anim_swap_info(g: &mut crate::game::Game, c: CharId) -> crate::character:
 /// The torch and sidearm swap's clock, and its arm when it shows. (character.ts swapLayer)
 pub fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: bool, tw_y: f64, tw_p: f64) {
     if taken { g.ch[c].anim.sw.t = -1.0; return; }
-    let weapon = g.ch[c].anim.sw.to == Some(AnimSwTo::Weapon);
+    let weapon = g.ch[c].anim.sw.to == Some(AnimCarry::Weapon);
     if g.ch[c].anim.shoot_t >= 0.0 && weapon {
         let s = &mut g.ch[c].anim.sw;
         s.t = m::max(s.t, s.dur * 0.85);
@@ -166,33 +141,31 @@ pub fn anim_swap_layer(g: &mut crate::game::Game, c: CharId, dt: f64, taken: boo
     let k = v3::smoothstep(k_sw.away - 0.04, k_sw.take, a);
     s.belt = e * (if weapon { 1.0 - k } else { k });
     if g.ch[c].anim.sw_buf.is_none() {
-        let n = g.ch[c].anim.p_a.num_nodes as f64;
-        let p = crate::anim_skeleton::pose_new(n);
+        let (set, n) = (g.ch[c].anim.poses, g.ch[c].anim.p_a.nodes as f64);
+        let p = crate::anim_skeleton::pose_set_make(g, set, n);
         g.ch[c].anim.sw_buf = Some(p);
     }
-    // lent for the call: only its place is read, and nothing under the call reads swBuf
-    let sw = g.ch[c].anim.sw_buf.take().unwrap();
-    anim_swap_pose(g, c, e, k, weapon, tw_y, tw_p, &sw);
-    g.ch[c].anim.sw_buf = Some(sw);
+    let sw = g.ch[c].anim.sw_buf.unwrap();
+    anim_swap_pose(g, c, e, k, weapon, tw_y, tw_p, sw);
     g.ch[c].anim.sw.shown = true;
 }
 
 /// The swap's arm, by its envelope e and how far across k. (character.ts swapPose)
-pub fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: &crate::anim_skeleton::Pose) {
-    let slot = man_slot(g, c);
+pub fn anim_swap_pose(g: &mut crate::game::Game, c: CharId, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) {
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_swap_pose_ask(g, c, slot, e, k, weapon, tw_y, tw_p, sw);
 }
 
 /// The swap's numbers onto the bench, and the layer. (character.ts swapPoseAsk)
-pub fn anim_swap_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: &crate::anim_skeleton::Pose) {
+pub fn anim_swap_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, k: f64, weapon: bool, tw_y: f64, tw_p: f64, sw: crate::anim_skeleton::Pose) {
     {
         let f = g.ch[c].anim.hand_fix[1];
         let a = args();
         a[0] = e; a[1] = k; a[2] = b01(weapon); a[3] = tw_y; a[4] = tw_p;
         for i in 0..4 { a[5 + i] = f[i]; }
     }
-    let (slot, at, at_b, at_rest, at_sw) = (slot_no(g_2), seam_pose_at(&g.ch[c].anim.p_a), seam_pose_at(&g.ch[c].anim.p_b), seam_pose_at(&g.ch[c].anim.rest), seam_pose_at(sw));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::swap_pose(slot, at, at_b, at_rest, at_sw); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let (slot, at, at_b, at_rest, at_sw) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize, sw.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::swap_pose(slot, at, at_b, at_rest, at_sw) as f64);
 }
 
 /// Hands at work on a thing: the gate, and the layer when it runs. (character.ts workLayer)
@@ -207,7 +180,7 @@ pub fn anim_work_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool
         return;
     }
     let l = k.last.clone().unwrap();
-    let slot = man_slot(g, c);
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_work_layer_ask(g, c, slot, &l, dt, live, armed, tw_y, tw_p);
 }
 
@@ -241,14 +214,14 @@ pub fn anim_work_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: &c
         for i in 0..nk { a[KEYS + i * 2] = keys[i][0]; a[KEYS + i * 2 + 1] = keys[i][1]; }
     }
     work_cols_get(g, c);
-    let (slot, at, at_b, at_rest) = (slot_no(g_2), seam_pose_at(&g.ch[c].anim.p_a), seam_pose_at(&g.ch[c].anim.p_b), seam_pose_at(&g.ch[c].anim.rest));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::work_layer(slot, at, at_b, at_rest); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let (slot, at, at_b, at_rest) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::work_layer(slot, at, at_b, at_rest) as f64);
     work_cols_put(g, c);
 }
 
 /// The torch up in the hand that holds it, weight e. (character.ts torchUpLayer)
 pub fn anim_torch_up_layer(g: &mut crate::game::Game, c: CharId, e: f64) {
-    let slot = man_slot(g, c);
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_torch_up_layer_ask(g, c, slot, e);
 }
 
@@ -260,8 +233,8 @@ pub fn anim_torch_up_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e
         a[0] = e;
         for i in 0..4 { a[1 + i] = f[i]; }
     }
-    let code = ({ let ran__ = ::sim::layers::torch_up(slot_no(g_2), seam_pose_at(&g.ch[c].anim.p_a), seam_pose_at(&g.ch[c].anim.p_b)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64;
-    man_ran(g, c, code);
+    let code = ::sim::layers::torch_up(g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize) as f64;
+    crate::anim_skeleton::layer_ran(g, code, c);
 }
 
 /// A hand to the radio: its clock and spring, and the pose when it shows. (character.ts radioLayer)
@@ -280,7 +253,7 @@ pub fn anim_radio_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: boo
 
 /// The hand at the radio by w, and the head's share hw. (character.ts radioPose)
 pub fn anim_radio_pose(g: &mut crate::game::Game, c: CharId, w: f64, hw: f64) {
-    let slot = man_slot(g, c);
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_radio_pose_ask(g, c, slot, w, hw);
 }
 
@@ -292,15 +265,15 @@ pub fn anim_radio_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
         a[0] = w; a[1] = hw;
         for i in 0..4 { a[2 + i] = f[i]; }
     }
-    let (slot, at, at_b, at_rest) = (slot_no(g_2), seam_pose_at(&g.ch[c].anim.p_a), seam_pose_at(&g.ch[c].anim.p_b), seam_pose_at(&g.ch[c].anim.rest));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::radio_pose(slot, at, at_b, at_rest); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let (slot, at, at_b, at_rest) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::radio_pose(slot, at, at_b, at_rest) as f64);
 }
 
 // ---- holding a man, and being held
 
 /// One man holding another from behind, weight w. (character.ts holdLayer)
 pub fn anim_hold_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: f64) {
-    let slot = man_slot(g, c);
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_hold_layer_ask(g, c, slot, w, dt);
 }
 
@@ -362,14 +335,14 @@ pub fn anim_hold_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
     }
     hold_cols_get(g, c);
     let an = &g.ch[c].anim;
-    let (slot, at, at_b, at_c, at_aim, at_rest) = (slot_no(g_2), seam_pose_at(&an.p_a), seam_pose_at(&an.p_b), seam_pose_at(&an.p_c), seam_pose_at(&an.p_aim), seam_pose_at(&an.rest));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::hold_layer(slot, at, at_b, at_c, at_aim, at_rest); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let (slot, at, at_b, at_c, at_aim, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.p_c.at as usize, an.p_aim.at as usize, an.rest.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::hold_layer(slot, at, at_b, at_c, at_aim, at_rest) as f64);
     hold_cols_put(g, c);
 }
 
 /// The held man, weight w. (character.ts heldLayer)
 pub fn anim_held_layer(g: &mut crate::game::Game, c: CharId, w: f64, dt: f64) {
-    let slot = man_slot(g, c);
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     anim_held_layer_ask(g, c, slot, w, dt);
 }
 
@@ -416,23 +389,25 @@ pub fn anim_held_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
     }
     held_cols_get(g, c);
     let an = &g.ch[c].anim;
-    let (slot, at, at_b, at_rest) = (slot_no(g_2), seam_pose_at(&an.p_a), seam_pose_at(&an.p_b), seam_pose_at(&an.rest));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::held_layer(slot, at, at_b, at_rest); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let (slot, at, at_b, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::held_layer(slot, at, at_b, at_rest) as f64);
     held_cols_put(g, c);
 }
 
 /// Out of a hold, with the layer still on its way out: has he been told to do anything since it let go? Latched until the next hold. (character.ts holdBusy)
 pub fn anim_hold_busy(g: &mut crate::game::Game, c: CharId) -> bool {
     let an = &mut g.ch[c].anim;
+    // (undefined, null or a word: all three are told apart)
+    let carry = an.carry.map(|o| o.map(|k| match k { CarryKind2::Torch => AnimCarry::Torch, CarryKind2::Weapon => AnimCarry::Weapon }));
     if an.hold_pose.is_some() {
         an.hd_idle.upper = an.upper; an.hd_idle.long = an.long_gun; an.hd_idle.crouch = an.crouch_target;
-        an.hd_idle.carry = an.carry.map(|k| match k { AnimCarry::Torch => AnimHdIdleCarry::Torch, AnimCarry::Weapon => AnimHdIdleCarry::Weapon });
+        an.hd_idle.carry = carry;
         an.hd_busy = false;
         return false;
     }
     if an.hd_busy || an.hd_w.x <= 0.003 { return an.hd_busy; }
     let i = &an.hd_idle;
-    an.hd_busy = an.upper != i.upper || an.long_gun != i.long || an.crouch_target != i.crouch || an.carry.map(|k| k.as_str()) != i.carry.map(|k| k.as_str())
+    an.hd_busy = an.upper != i.upper || an.long_gun != i.long || an.crouch_target != i.crouch || carry != i.carry
         || an.shoot_t >= 0.0 || an.reload_t >= 0.0 || an.throw_t >= 0.0 || an.strike_t >= 0.0 || an.hit_t >= 0.0 || an.kick_t >= 0.0 || an.sig_t >= 0.0 || an.bw.is_some() || an.kit.is_some()
         || an.lockpick || an.haul.is_some() || an.work.is_some() || an.door_push.is_some() || an.stance != Stance::None || an.ready.is_some() || an.creep || an.wound.is_some() || an.act.is_some();
     an.hd_busy
@@ -447,11 +422,11 @@ pub fn anim_big_layer(g: &mut crate::game::Game, c: CharId, b: &crate::character
     let ham = b.kind == AnimBigToolKind::Hammer;
     if !(b.t >= 0.0) || us >= 1.0 { g.ch[c].anim.big_under = false; g.ch[c].anim.big_k = 0.0; return; }
     if ham && g.ch[c].anim.big_buf.is_none() {
-        let n = g.ch[c].anim.p_a.num_nodes as f64;
-        let p = crate::anim_skeleton::pose_new(n);
+        let (set, n) = (g.ch[c].anim.poses, g.ch[c].anim.p_a.nodes as f64);
+        let p = crate::anim_skeleton::pose_set_make(g, set, n);
         g.ch[c].anim.big_buf = Some(p);
     }
-    let slot = man_slot(g, c);
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     let near = blows_near(&crate::character::BlowsNearB { t: b.t, end: b.end, blows: b.blows.clone() });
     anim_big_layer_ask(g, c, slot, b, &near, tw_y, tw_p);
 }
@@ -493,9 +468,9 @@ pub fn anim_big_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &cr
     }
     big_cols_get(g, c);
     let an = &g.ch[c].anim;
-    let at_buf = if ham { seam_pose_at(an.big_buf.as_ref().unwrap()) } else { 0 };
-    let (slot, at, at_b, at_rest) = (slot_no(g_2), seam_pose_at(&an.p_a), seam_pose_at(&an.p_b), seam_pose_at(&an.rest));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::big_layer(slot, at, at_b, at_buf, at_rest); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let at_buf = if ham { an.big_buf.unwrap().at as usize } else { 0 };
+    let (slot, at, at_b, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::big_layer(slot, at, at_b, at_buf, at_rest) as f64);
     big_cols_put(g, c);
 }
 
@@ -503,7 +478,7 @@ pub fn anim_big_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &cr
 
 /// The overhand throw at t. (character.ts throwLayer)
 pub fn anim_throw_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
-    let slot = man_slot(g, c);
+    let slot = crate::anim_skeleton::layer_slot(g, c);
     let tables = throw_tables(g.ch[c].anim.thr_low >= 0.0);   // (the swing's tables in the module's order)
     anim_throw_layer_ask(g, c, slot, t, &tables.k1, &tables.k3);
 }
@@ -550,8 +525,8 @@ pub fn anim_throw_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f
     }
     throw_cols_get(g, c);
     let an = &g.ch[c].anim;
-    let (slot, at, at_b, at_rest) = (slot_no(g_2), seam_pose_at(&an.p_a), seam_pose_at(&an.p_b), seam_pose_at(&an.rest));
-    anim_hands_ask(g, c, &mut |_g| ({ let ran__ = ::sim::layers::throw_layer(slot, at, at_b, at_rest); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64);
+    let (slot, at, at_b, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize);
+    anim_hands_ask(g, c, &mut |_g| ::sim::layers::throw_layer(slot, at, at_b, at_rest) as f64);
     throw_cols_put(g, c);
 }
 

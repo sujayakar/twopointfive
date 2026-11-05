@@ -190,9 +190,7 @@ pub fn agrees(f: &mut dyn FnMut(Vec<f64>) -> f64, arity: f64) -> bool {
 }
 
 /// The game's own maths on or off for lengths: in Rust `crate::m::hyp2/3/4` are always the Kahan sums, so there is nothing to install. (hyp.ts hypExact)
-pub fn hyp_exact(on: bool) {
-    if held() { return; }
-}
+pub fn hyp_exact(on: bool) {}
 
 /// The Kahan sum for any number of terms: what `Math.hypot` becomes under the game's own maths. (hyp.ts kahanN)
 pub fn kahan_n(v: &[f64]) -> f64 {

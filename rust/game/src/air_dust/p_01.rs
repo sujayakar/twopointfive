@@ -14,9 +14,10 @@ fn cell_count() -> usize {
     n() as usize
 }
 
-/// A door leaf's `c`, `h`, `yaw` and whether it has `rot` (airDust.ts:146, 151, 152): BoxId has no table (ids.rs "no table here", properties.txt `g.none[id]`).
+/// A door leaf's `c`, `h`, `yaw` and whether it has `rot` (airDust.ts:146, 151, 152). Skeleton 5 holds no Box row for a BoxId (notes, ## Skeleton).
+/// Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some())`.
 fn seam_box_pose(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) {
-    let x = crate::scene_boxes::b_01::any_box(g, b); (x.c, x.h, x.yaw, x.rot.is_some()) // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
+    todo!("needs: a table of Box rows; skeleton 5 has g.col.boxes: Vec<BoxId>")
 }
 
 /// The men's eyes read the field this run. (airDust.ts AirDust.live)
@@ -425,12 +426,12 @@ pub fn air_dust_summary(g: &mut crate::game::Game) -> String {
     }
     let len = d.cells.len();
     alloc::format!(
-        "moving · {} roofed cells · mean share {:.3} (leak {:.3}, max {:.3}) · {} open ways",
+        "moving · {} roofed cells · mean share {} (leak {}, max {}) · {} open ways",
         len,
-        sum / m::max(1.0, len as f64),
-        d.leak,
-        mx,
-        d.stats.open
+        js::to_fixed(sum / m::max(1.0, len as f64), 3),
+        js::to_fixed(d.leak, 3),
+        js::to_fixed(mx, 3),
+        js::num_str(d.stats.open)
     )
 }
 

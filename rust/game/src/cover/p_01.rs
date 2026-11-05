@@ -5,17 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-/// The gaps of a nav grid: `along_x` lays the runs along x, the caller asks both ways; `solid` says whether a line is shut to sight. (cover.ts gapsOf)
-pub fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: Option<crate::knobs::CoverK>, solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<CoverOpeningId> {
-    // (`K = COVER`, with no `g` to read it from: the page's table, the same for the four rows read here, which nothing writes as a game runs)
-    let k = k.unwrap_or_else(crate::knobs::page_cover);
-    gap_openings(nav, along_x, &k, solid).into_iter().map(seam_opening_id).collect()
-}
-
-/// A row of `g.tab.cover_opening` for a new opening: gapsOf has no `g`. (cover.ts:197, the literal in `mk`)
-fn seam_opening_id(o: Opening) -> CoverOpeningId { todo!("needs: gaps_of to return Vec<Opening>, or to take g") }
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// One run of free cells in row `v`, cells `a` to `b`. (cover.ts Run)
 #[derive(Clone, Copy)]
@@ -58,26 +48,21 @@ impl Grid<'_> {
     fn mk(&self, kind: crate::cover::OpeningKind, r: Run, other: Option<Run>, ci: usize, n: [f64; 2]) -> Opening {
         let p = self.at(r);
         Opening {
-            id: format!("{}@{},{}", kind.as_str(), to_fixed_2(p[0]), to_fixed_2(p[2])),
+            id: alloc::format!("{}@{},{}", kind.as_str(), js::to_fixed(p[0], 2), js::to_fixed(p[2], 2)),
             kind,
             at: p,
             n,
             half: ((r.b - r.a + 1) as f64) * self.c * 0.5 + 0.34,
             door: None,
-            pass: match other { Some(_) => Some(format!("{}{}", if self.along_x { "z" } else { "x" }, ci)), None => None },
+            pass: match other { Some(_) => Some(alloc::format!("{}{}", if self.along_x { "z" } else { "x" }, ci)), None => None },
             far: match other { Some(o) => Some(self.at(o)), None => None },
         }
     }
 }
 
-/// `x.toFixed(2)` of a positive number: the language takes the larger on an exact tie (an odd eighth), where Rust's format takes the even.
-fn to_fixed_2(x: f64) -> String {
-    let e = x * 8.0;
-    if m::floor(e) == e && js::rem(e, 2.0) != 0.0 { format!("{:.2}", x + 0.001) } else { format!("{:.2}", x) }
-}
-
-/// The body of gapsOf, the openings as values. (cover.ts gapsOf)
-pub fn gap_openings(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, mut solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<Opening> {
+/// The gaps of a nav grid as fresh values, which nothing holds yet: `along_x` lays the runs along x, the caller asks both ways; `solid` says whether a line is shut to sight. (cover.ts gapsOf)
+pub fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<crate::cover::Opening> {
+    let mut solid = solid;
     let (nav_w, nav_h) = (nav.w as i32, nav.h as i32);
     let grid = Grid { nav, along_x, w: if along_x { nav_w } else { nav_h }, h: if along_x { nav_h } else { nav_w }, c: nav.cell };
     let (w, h) = (grid.w, grid.h);
@@ -195,26 +180,17 @@ twin false true calls 2 cf655555555546be";
                         for x in a.iter().chain(b.iter()) { sum = (sum << 1) ^ (sum >> 63) ^ x.to_bits(); }
                         js::rem(m::floor(a[0] * 7.0 + b[2] * 3.0), 5.0) != 0.0
                     };
-                    let got = gap_openings(&nav, along_x, &k, if use_solid { Some(&mut solid) } else { None });
+                    let got = gaps_of(&nav, along_x, &k, if use_solid { Some(&mut solid) } else { None });
                     for o in got {
-                        out.push(format!("{} {} {} {} {} {:x} {:x} {:x} {}/{} {:x} {} {}", name, along_x, use_solid, o.id, o.kind.as_str(),
+                        out.push(alloc::format!("{} {} {} {} {} {:x} {:x} {:x} {}/{} {:x} {} {}", name, along_x, use_solid, o.id, o.kind.as_str(),
                             o.at[0].to_bits(), o.at[1].to_bits(), o.at[2].to_bits(), o.n[0], o.n[1], o.half.to_bits(), o.pass.as_deref().unwrap_or("-"),
-                            match o.far { Some(f) => format!("{:x}/{:x}/{:x}", f[0].to_bits(), f[1].to_bits(), f[2].to_bits()), None => String::from("-") }));
+                            match o.far { Some(f) => alloc::format!("{:x}/{:x}/{:x}", f[0].to_bits(), f[1].to_bits(), f[2].to_bits()), None => String::from("-") }));
                     }
-                    out.push(format!("{} {} {} calls {} {:x}", name, along_x, use_solid, calls, sum));
+                    out.push(alloc::format!("{} {} {} calls {} {:x}", name, along_x, use_solid, calls, sum));
                 }
             }
         }
         let want: Vec<&str> = TS.lines().collect();
         assert_eq!(out.iter().map(|s| s.as_str()).collect::<Vec<_>>(), want);
-    }
-
-    #[test]
-    fn to_fixed_takes_the_larger_on_a_tie() {
-        assert_eq!(to_fixed_2(0.125), "0.13");
-        assert_eq!(to_fixed_2(0.375), "0.38");
-        assert_eq!(to_fixed_2(1.625), "1.63");
-        assert_eq!(to_fixed_2(2.0), "2.00");
-        assert_eq!(to_fixed_2(0.7000000000000001), "0.70");
     }
 }

@@ -7,8 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// STILL A GAP, wind.ts:259,303: `gpuFx` hands the pool back by value and HostApi holds no `particles`, so `P.setWind` has nothing to write to.
-fn seam_particles_set_wind(g: &mut Game, srcs: &[crate::smoke_types::WindGpuSource], knobs: [f64; 3]) { todo!("needs: gpu_fx to give the pool itself, or particles_set_wind to take g (wind.ts:261,303)") }
 /// STILL A GAP, wind.ts:328: `(g.smoke as { stats? }).stats`; SmokeSystemLike has no stats. None = the solver is off.
 fn seam_smoke_wind_srcs(g: &mut Game) -> Option<Option<f64>> { todo!("needs: SmokeSystemLike.stats.windSrcs (wind.ts:328)") }
 
@@ -18,11 +16,6 @@ fn put(out: Option<&mut V3>, v: V3) -> V3 {
         *o = v;
     }
     v
-}
-
-/// The master and the rows as this machine last had them: with no browser storage in the game this is the path the TypeScript takes under bun. (wind.ts loadWind)
-pub fn load_wind(g: &mut crate::game::Game, tune: &mut crate::wind::WindTune) {
-    tune.wind = Some(g.k.wind.def);
 }
 
 /// Nothing of the game's: the whole body is the host's browser storage. (wind.ts saveWind)
@@ -244,6 +237,8 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
             field: None,
             bound: crate::smoke_types::WindGpuSourceBound { c: bc, r: br },
             vent: Some(v),
+            kinds: None,
+            heat: None,
         });
         w.all.push(id);
     }
@@ -274,6 +269,8 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         roofs: None,
         field: None,
         bound: crate::smoke_types::WindGpuSourceBound { c: [cx, 1.0, cz], r: 1e6 },
+        kinds: None,
+        heat: None,
     });
     w.all.push(w.storm);
     let doors = g.doors.list.clone();
@@ -293,7 +290,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         w.all.push(s);
     }
     if crate::weather::weather_level_roofs(g) {
-        let roofs: Vec<Vec<f64>> = g.weather.roofs.iter().map(|r| r.to_vec()).collect();
+        let roofs = g.weather.roofs.clone();
         let own = crate::weather::weather_own_storm(g);
         let before = core::mem::replace(&mut g.wind, w);
         wind_reroof(g, Some(&roofs), Some(own));
@@ -338,6 +335,8 @@ pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> Win
             c: v3::mad(pos, inward, d_max / 2.0),
             r: m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) + 0.3,
         },
+        kinds: None,
+        heat: None,
     })
 }
 
@@ -362,16 +361,18 @@ fn gpu_of(s: &WindSource) -> crate::smoke_types::WindGpuSource {
         roofs: s.roofs.clone(),
         field: s.field,
         bound: s.bound,
+        kinds: s.kinds,
+        heat: s.heat,
     }
 }
 
 /// wind.ts:189 in1, :197 under: is (x, z) under any of the roofs (edges in)?
-fn under_any(roofs: &[Vec<f64>], x: f64, z: f64) -> bool {
+fn under_any(roofs: &[[f64; 4]], x: f64, z: f64) -> bool {
     roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3])
 }
 
 /// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two. (wind.ts Wind.reroof)
-pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: Option<bool>) {
+pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) {
     // weather.ts:229 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
     if g.wind.all.is_empty() {
         return;
@@ -404,7 +405,7 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: O
     let i: [f64; 4] = match roofs {
         None => crate::weather::interior(),
         Some(rs) if rs.is_empty() => none,
-        Some(rs) if rs.len() <= 2 => [rs[0][0], rs[0][1], rs[0][2], rs[0][3]],
+        Some(rs) if rs.len() <= 2 => rs[0],
         Some(rs) => {
             let c = |k: usize| -> Vec<f64> { rs.iter().map(|r| r[k]).collect() };
             [m::min_n(&c(0)), m::min_n(&c(1)), m::max_n(&c(2)), m::max_n(&c(3))]
@@ -412,7 +413,7 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: O
     };
     let a: [f64; 4] = match roofs {
         None => crate::weather::annex(),
-        Some(rs) if rs.len() == 2 => [rs[1][0], rs[1][1], rs[1][2], rs[1][3]],
+        Some(rs) if rs.len() == 2 => rs[1],
         Some(_) => none,
     };
     let st = g.wind.storm;
@@ -527,13 +528,13 @@ pub fn wind_storm_wind(g: &mut crate::game::Game) -> Option<V3> {
 /// Once a frame: every source's speed for this frame, the active list, and the hand-off to both GPU consumers. (wind.ts Wind.update)
 pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
     let master = wind_of(g);
-    let pool_on = crate::particle_fx::gpu_fx(g).is_some();
+    let pool_on = crate::particle_fx::gpu_fx(g);
     let relax = g.k.wind.smoke_relax;
     g.wind.active.clear();
     g.wind.to_pool.list.clear();
     if master <= 0.0 {
         if pool_on {
-            seam_particles_set_wind(g, &[], knobs0());
+            crate::render_particles::particles_set_wind(g, &[], knobs0());
         }
         crate::smoke_types::smoke_system_like_set_wind(g, &[], relax);
         return;
@@ -659,7 +660,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
         let recs: Vec<crate::smoke_types::WindGpuSource> = pool.iter().map(|&s| gpu_of(&tab[s])).collect();
         let knobs = [g.k.wind.sheet_wake, g.k.wind.sheet_kick, g.k.wind.debris_k];
         g.wind.to_pool.list = pool;
-        seam_particles_set_wind(g, &recs, knobs);
+        crate::render_particles::particles_set_wind(g, &recs, knobs);
         g.stats.wind.to_particles += recs.len() as i32;
     }
     let recs: Vec<crate::smoke_types::WindGpuSource> = g.wind.active.iter().map(|&s| gpu_of(&g.tab.wind_wind_source[s])).collect();
@@ -721,8 +722,9 @@ pub fn wind_describe(g: &mut crate::game::Game) -> Vec<String> {
 /// The panel's one line. (wind.ts Wind.summary)
 pub fn wind_summary(g: &mut crate::game::Game) -> String {
     let master = wind_of(g);
-    let p = crate::particle_fx::gpu_fx(g);
+    let pool_on = crate::particle_fx::gpu_fx(g);
     let ss = seam_smoke_wind_srcs(g);
+    let p = if pool_on { g.engine.particles.as_ref() } else { None };
     let tab = &g.tab.wind_wind_source;
     let w = &g.wind;
     let vents = w.active.iter().filter(|&&s| tab[s].why == WindWhy::Vent).count();
@@ -731,12 +733,12 @@ pub fn wind_summary(g: &mut crate::game::Game) -> String {
     let storm_speed = tab[w.storm].speed;
     let storm = if storm_speed > 0.0 { alloc::format!(", storm {} m/s", js::to_fixed(storm_speed, 1)) } else { String::new() };
     let gusts = if doors > 0 { alloc::format!(", {} door gust(s)", doors) } else { String::new() };
-    let parts = match &p {
-        Some(p) => alloc::format!("{} records, {} leaves picked up", p.stats.winds, p.stats.wind_woken),
+    let parts = match p {
+        Some(p) => alloc::format!("{} records, {} leaves picked up", js::num_str(p.stats.winds), js::num_str(p.stats.wind_woken)),
         None => String::from("off"),
     };
     let solver = match ss {
-        Some(n) => alloc::format!("{} sources", n.unwrap_or(0.0)),
+        Some(n) => alloc::format!("{} sources", js::num_str(n.unwrap_or(0.0))),
         None => String::from("off"),
     };
     alloc::format!("wind {}{} · {}/{} sources blowing ({} vents{}{}) · particles {} · solver {}", js::to_fixed(master, 2), still, w.active.len(), w.all.len(), vents, storm, gusts, parts, solver)
@@ -867,14 +869,14 @@ mod tests {
         g.wind.all.push(keep);
         g.wind.all.push(gone);
         g.wind.extra.push(gone);
-        let roofs: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 3.0, 4.0], vec![5.0, 6.0, 7.0, 8.0]];
+        let roofs: [[f64; 4]; 2] = [[1.0, 2.0, 3.0, 4.0], [5.0, 6.0, 7.0, 8.0]];
         wind_reroof(&mut g, Some(&roofs), Some(false));
         assert_eq!(g.wind.all, vec![st, keep]);
         assert!(g.wind.extra.is_empty());
         assert_eq!(wind_by_name(&mut g, "storm"), Some(st));
         assert_eq!(g.tab.wind_wind_source[st].interior, Some([1.0, 2.0, 3.0, 4.0]));
         assert_eq!(g.tab.wind_wind_source[st].annex, Some([5.0, 6.0, 7.0, 8.0]));
-        assert_eq!(g.wind.lv_roofs, Some(roofs));
+        assert_eq!(g.wind.lv_roofs, Some(vec![vec![1.0, 2.0, 3.0, 4.0], vec![5.0, 6.0, 7.0, 8.0]]));
     }
 
     // wind.ts:144: `active` names the row itself, so what a holder writes through its ID is what `at` reads

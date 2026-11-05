@@ -3,6 +3,16 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// how an emit's particles are born (src/render/particles.ts:96 EmitShape); absent on a record reads as Cone (:471)
+#[derive(Clone, Copy, Debug)]
+pub enum EmitShape {
+    Cone,
+    Burst,
+    Ring,
+    Puff,
+    RainDisc,
+}
+
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PKind {
@@ -125,25 +135,53 @@ impl Default for KindParams { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: EmitOpts, src/render/particles.ts:104)
 #[derive(Clone, Copy, Debug)]
 pub struct EmitOpts {
+    pub shape: Option<crate::render_particles::EmitShape>,
     pub speed: f64,
+    pub spread: Option<f64>,
     pub life: f64,
     pub size: f64,
+    pub speed_jit: Option<f64>,
+    pub life_jit: Option<f64>,
+    pub size_jit: Option<f64>,
     pub lift: Option<f64>,
+    pub radius: Option<f64>,
     pub pos_jit: Option<f64>,
     pub vadd: Option<V3>,
+    pub owner: Option<f64>,
+    pub color: Option<V3>,
+    pub top: Option<f64>,
+    pub aspect: Option<f64>,
+    pub tumble: Option<f64>,
+    pub nrm_jit: Option<f64>,
     pub seed: Option<f64>,
+    pub steam: Option<f64>,
+    pub ember: Option<f64>,
 }
 impl EmitOpts {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         EmitOpts {
+            shape: None,
             speed: 0.0,
+            spread: None,
             life: 0.0,
             size: 0.0,
+            speed_jit: None,
+            life_jit: None,
+            size_jit: None,
             lift: None,
+            radius: None,
             pos_jit: None,
             vadd: None,
+            owner: None,
+            color: None,
+            top: None,
+            aspect: None,
+            tumble: None,
+            nrm_jit: None,
             seed: None,
+            steam: None,
+            ember: None,
         }
     }
 }
@@ -153,14 +191,26 @@ impl Default for EmitOpts { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct EmitRec {
     pub kind: crate::render_particles::PKind,
+    pub pos: V3,
+    pub dir: V3,
     pub count: f64,
+    pub o: crate::render_particles::EmitOpts,
+    pub seed: f64,
+    pub ours: bool,
+    pub waited: f64,
 }
 impl EmitRec {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         EmitRec {
             kind: crate::render_particles::PKind::Rain,
+            pos: [0.0; 3],
+            dir: [0.0; 3],
             count: 0.0,
+            o: crate::render_particles::EmitOpts::zeroed(),
+            seed: 0.0,
+            ours: false,
+            waited: 0.0,
         }
     }
 }
@@ -225,28 +275,52 @@ impl Default for ImpRec { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: ParticleStats, src/render/particles.ts:133)
 #[derive(Clone, Copy, Debug)]
 pub struct ParticleStats {
+    pub alive: f64,
+    pub asleep: f64,
+    pub bounces: f64,
+    pub killed_inside: f64,
     pub kicked: f64,
     pub wind_woken: f64,
+    pub live: [f64; 2],
+    pub born: f64,
+    pub records: f64,
+    pub impulses: f64,
     pub winds: f64,
+    pub emitted: f64,
+    pub per_sec: f64,
     pub dropped_recs: f64,
     pub dropped_births: f64,
     pub imp_queued: f64,
     pub imp_merged: f64,
     pub imp_dropped: f64,
+    pub imp_frames: f64,
+    pub imp_idle: f64,
     pub imp_refused: f64,
 }
 impl ParticleStats {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ParticleStats {
+            alive: 0.0,
+            asleep: 0.0,
+            bounces: 0.0,
+            killed_inside: 0.0,
             kicked: 0.0,
             wind_woken: 0.0,
+            live: [0.0; 2],
+            born: 0.0,
+            records: 0.0,
+            impulses: 0.0,
             winds: 0.0,
+            emitted: 0.0,
+            per_sec: 0.0,
             dropped_recs: 0.0,
             dropped_births: 0.0,
             imp_queued: 0.0,
             imp_merged: 0.0,
             imp_dropped: 0.0,
+            imp_frames: 0.0,
+            imp_idle: 0.0,
             imp_refused: 0.0,
         }
     }
@@ -333,7 +407,7 @@ impl Particles {
             shard_rest_frost: true,
             collide: true,
             spark_bounce: true,
-            stats: crate::render_particles::ParticleStats { kicked: 0.0, wind_woken: 0.0, winds: 0.0, dropped_recs: 0.0, dropped_births: 0.0, imp_queued: 0.0, imp_merged: 0.0, imp_dropped: 0.0, imp_refused: 0.0 },
+            stats: crate::render_particles::ParticleStats { alive: 0.0, asleep: 0.0, bounces: 0.0, killed_inside: 0.0, kicked: 0.0, wind_woken: 0.0, live: [0.0, 0.0], born: 0.0, records: 0.0, impulses: 0.0, winds: 0.0, emitted: 0.0, per_sec: 0.0, dropped_recs: 0.0, dropped_births: 0.0, imp_queued: 0.0, imp_merged: 0.0, imp_dropped: 0.0, imp_frames: 0.0, imp_idle: 0.0, imp_refused: 0.0 },
             winds: Vec::new(),
             wind_knobs: [0.35, 2.0, 0.15],
             shed_sparks: 0.0,

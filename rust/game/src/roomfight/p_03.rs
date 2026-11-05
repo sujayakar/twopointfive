@@ -8,18 +8,13 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- small helpers
-/// FIGHT_SKILL.operative (roomfight.ts:260)
-fn skill_operative() -> FightSkill { *fight_skill().get(String::from("operative")).unwrap() }
+/// FIGHT_SKILL.operative: `readonly skill = FIGHT_SKILL`, one table (roomfight.ts:260)
+fn skill_operative(g: &Game) -> FightSkill { *g.fight.skill.get(RoomFightSkillKey::Operative).unwrap() }
 /// FIGHT_SKILL.hostile (roomfight.ts:260)
-fn skill_hostile() -> FightSkill { *fight_skill().get(String::from("hostile")).unwrap() }
+fn skill_hostile(g: &Game) -> FightSkill { *g.fight.skill.get(RoomFightSkillKey::Hostile).unwrap() }
 /// `gd.weapon.def`: the row of WEAPONS behind a man's gun
 fn weapon_def_of(g: &Game, gd: GuardId) -> crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).unwrap().clone()
-}
-/// `men(g)` (seats.ts:111): its parameter is the Game's own seats and player
-fn men_of(g: &mut Game) -> Vec<PlayerId> {
-    let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    crate::seats::men(g, &of)
 }
 /// `s.over === O.ov`: only this module ever puts an overlay on a script, and each man has one Op
 fn over_is_mine(g: &Game, gd: GuardId) -> bool {
@@ -50,8 +45,26 @@ fn cone_friend(f: crate::friendlyfire::FriendInCone) -> RoomFightFriendInLine {
 fn line_by(f: RoomFightFriendInLine) -> OpLineBy {
     match f { RoomFightFriendInLine::Guard(x) => OpLineBy::Guard(x), RoomFightFriendInLine::Player => OpLineBy::Player }
 }
-fn clear_by(f: RoomFightFriendInLine) -> crate::clearline::ClearLineBlockedBy {
-    match f { RoomFightFriendInLine::Guard(x) => crate::clearline::ClearLineBlockedBy::Guard(x), RoomFightFriendInLine::Player => crate::clearline::ClearLineBlockedBy::Player }
+fn clear_by(f: RoomFightFriendInLine) -> crate::clearline::LeadsBy {
+    match f { RoomFightFriendInLine::Guard(x) => crate::clearline::LeadsBy::Guard(x), RoomFightFriendInLine::Player => crate::clearline::LeadsBy::Player }
+}
+/// `gd.lastKnown === D.pt` (off the page's path: with BELIEF.on nothing writes pt as the fix). The body of def_fix_is_pt, whose stub has no owner
+fn fix_is_pt(g: &Game, d: RoomfightDefId) -> bool { let def = &g.tab.roomfight_def[d]; def.pt_stamp == Some(g.gd[def.gd].fix_stamp) && g.gd[def.gd].last_known == Some(def.pt) }
+/// D.pt moved in place: a fix or a cover that is that object moves with it, with no new fix (def_move_pt's body, and `covers`)
+fn move_pt(g: &mut Game, d: RoomfightDefId, to: V3) {
+    let same = fix_is_pt(g, d);
+    let (gd, old) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
+    g.tab.roomfight_def[d].pt = to;
+    if same { g.gd[gd].last_known = Some(to); }
+    if g.gd[gd].covers == Some(old) { g.gd[gd].covers = Some(to); }
+}
+/// `cover(gd, D.pt)` (belief.ts cover): rule off that is `gd.lastKnown = D.pt`, a new fix only if it was not that object already (def_fix_to_pt's body)
+fn cover_pt(g: &mut Game, d: RoomfightDefId) {
+    let (gd, pt) = (g.tab.roomfight_def[d].gd, g.tab.roomfight_def[d].pt);
+    if g.k.belief.on { crate::belief::cover(g, gd, pt); return; }
+    let own = fix_is_pt(g, d);
+    g.gd[gd].last_known = Some(pt);
+    if !own { g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); g.tab.roomfight_def[d].pt_stamp = Some(g.gd[gd].fix_stamp); }
 }
 
 // ---------------------------------------------------------------- the men in the rooms
@@ -99,15 +112,9 @@ pub fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str)
         Some(r) if e >= 0.0 => v3::copy(g.tab.roomfight_room[r].entries[e as usize].at),
         _ => [threat[0], 0.0, threat[2]],
     };
-    let pt = {
-        let def = &mut g.tab.roomfight_def[d];
-        def.home = home;
-        def.pt[0] = home[0];
-        def.pt[1] = 0.0;
-        def.pt[2] = home[2];
-        def.pt
-    };
-    g.gd[gd].last_known = Some(pt);
+    g.tab.roomfight_def[d].home = home;
+    move_pt(g, d, [home[0], 0.0, home[2]]);
+    cover_pt(g, d);
     if move_kind == DefMoveKind::Cover && g.tune.suppression { g.gd[gd].sup.down_t = m::max(g.gd[gd].sup.down_t, 1.0); } // into cover: a breath with his head down
     let room_id = match room { Some(r) => alloc::format!("{}", g.tab.roomfight_room[r].id), None => String::from("-") };
     let watching = match room {
@@ -120,18 +127,19 @@ pub fn room_fight_plant(g: &mut crate::game::Game, d: RoomfightDefId, why: &str)
 /// A fight he can hear at a post of his side's in ANOTHER room than his: after his own few seconds he goes, or a quarter of the time does not. (roomfight.ts rally)
 pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd;
-    let skill = skill_hostile();
+    let skill = skill_hostile(g);
     let at = match g.tab.roomfight_def[d].noise_at { Some(at) => at, None => return };
-    if crate::enemysquads::squad_owns(g, gd) { return; }
-    if crate::pressure::press_owns(g, d) { return; }
+    let own = crate::owner::own();
+    if crate::owner::has_him(g, gd, own.squad) { return; } // a squad's man goes to another squad's fight on his squad's word
+    if crate::owner::has_him(g, gd, own.press) || crate::pressure::press_keeps_home(g, d, None) { return; }
     if g.k.digin.on && crate::digin::dig_in_stays(g, gd) { return; }
-    if crate::lanes::lane_holds(g, gd, Some(at)) || crate::lanes::lane_warns(g, gd, Some(at)) {
+    if crate::lanes::lane_bars(g, gd, Some(at)) || crate::lanes::lane_known_at(g, gd, Some(at)) {
         if g.tab.roomfight_def[d].rally_at != f64::INFINITY { g.tab.roomfight_def[d].rally_at = f64::NAN; }
         return;
     }
-    if crate::laststand::last_stand_owns(g, d) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
-    if crate::netquiet::net_quiet_holds(g, gd) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
-    if crate::buddy::buddy_owns(g, d) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
+    if crate::owner::has_him(g, gd, own.stand) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
+    if crate::owner::has_him(g, gd, own.last_man) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
+    if crate::owner::has_him(g, gd, own.buddy) || crate::buddy::buddy_paired(g, d) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
     let noise_t = g.tab.roomfight_def[d].noise_t;
     let fresh = g.time - noise_t < 1.5 && g.time - g.gd[gd].last_seen_t > 3.0;
     if !fresh {
@@ -172,8 +180,11 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     g.gd[gd].state = crate::game::GuardState::Alert;
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
     g.gd[gd].last_known = Some(v3::copy(at));
+    g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1); // a new object: a whole write of the fix (doze.ts:244)
     g.gd[gd].path = Vec::new();
+    g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1); // a whole replacement of the path
     g.gd[gd].path_goal = None;
+    g.gd[gd].path_goal_orbit = false;
     g.fight.stats.rallied += 1.0;
     room_fight_note(g, Some(gd), "goes to the fight next door");
     crate::game::game_say(g, gd, "they're hitting the others — move!", None, None, None);
@@ -264,7 +275,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
     if l2 < 0.0025 { return None; }
     let l = m::sqrt(l2);
     let t_max = 1.0 + 1.0 / l;
-    for pl in men_of(g) {
+    for pl in crate::seats::men(g) {
         if g.pl[pl].down { continue; }
         let ch = g.pl[pl].ch;
         if line_hit(g, ch, false, from, dx, dz, l2, l, t_max, sam_still) { return Some(RoomFightFriendInLine::Player); }
@@ -338,7 +349,7 @@ pub fn room_fight_tick_op(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64) 
 fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
-    let sk = skill_operative();
+    let sk = skill_operative(g);
     g.gd[gd].skill = Some(crate::game::GuardSkill { settle_k: sk.settle_k, spread_k: sk.spread_k });
     if g.gd[gd].state == crate::game::GuardState::Dead { g.tab.roomfight_op[o].tgt = None; g.tab.roomfight_op[o].turn = None; g.tab.roomfight_op[o].step = None; room_fight_restore(g, o); return; }
     if g.tab.roomfight_op[o].reload_until > 0.0 { // his gun's own feeding heard on this clock, the hand's stations dealt
@@ -405,7 +416,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         if theirs == mine || !crate::teams::is_hostile(g, mine, theirs) { continue; }
         if !g.tab.roomfight_op[o].meters.has(h) { g.tab.roomfight_op[o].meters.set(h, Meter { m: 0.0, seen_t: -100.0, glass_t: None }); }
         if g.gd[h].state == crate::game::GuardState::Dead { g.tab.roomfight_op[o].meters.get_mut(h).unwrap().m = 0.0; continue; }
-        if crate::runner::runner_fled(g, h) { g.tab.roomfight_op[o].meters.get_mut(h).unwrap().m = 0.0; continue; } // a man who dropped it and ran is nobody's target
+        if g.gd[h].fled { g.tab.roomfight_op[o].meters.get_mut(h).unwrap().m = 0.0; continue; } // a man who dropped it and ran is nobody's target
         let mut no_shot = false;
         if let Some(p) = g.tab.roomfight_op[o].pass {
             if p.h == h { // a masked man let go of (letGo): not his again for that long
@@ -533,7 +544,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
             };
             room_fight_sam_in_line(g, o, to);
             room_fight_point(g, o, to, dt, speed);
-        } else if !blind && cover_op_of(g, o, dt, speed) {
+        } else if !blind && crate::coverfire::cover_op(g, o, dt, speed, &mut |g: &mut Game, to: V3| room_fight_point(g, o, to, dt, speed)) {
             // a man he knows is behind something breakable: his rounds go into it
         } else if over_is_mine(g, gd) {
             if g.time - g.tab.roomfight_op[o].lost_at > 0.5 || (g.tab.roomfight_op[o].fell == Some(true) && crate::doortools::door_tools_owes_corner(g, gd)) {
@@ -562,7 +573,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         g.tab.roomfight_op[o].line_t += dt;
         g.tab.roomfight_op[o].line_by = Some(OpLineBy::Player);
         g.tab.roomfight_op[o].line_at = g.time;
-        if !crate::clearline::clear_line_blocked(g, gd, h, chest, crate::clearline::ClearLineBlockedBy::Player) { room_fight_side_step(g, o, chest, speed, None, None); }
+        if !crate::clearline::clear_line_blocked(g, gd, h, chest, crate::clearline::LeadsBy::Player) { room_fight_side_step(g, o, chest, speed, None, None); }
         room_fight_let_go(g, o);
         if g.tab.roomfight_op[o].tgt.is_none() { return; }
     }
@@ -594,7 +605,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
     g.tab.roomfight_op[o].wall_t = 0.0;
     if !on { g.tab.roomfight_op[o].block_t = m::max(0.0, g.tab.roomfight_op[o].block_t - dt); } // off him, the count runs back down
     if g.tab.roomfight_op[o].track < p.acquire_min - 1e-9 || g.time < g.tab.roomfight_op[o].next || g.time < g.tab.roomfight_op[o].reload_until || crate::gunslots::side_locked(g, gd) || !on { return; }
-    if crate::silent::silent_holds(g, gd, h) || crate::pairorders::pair_holds(g, gd, h) || crate::spotted::spotted_holds(g, gd, h) {
+    if crate::silent::round_held(g, gd, h) { // the man has not noticed the team: the gun stays on him, no round goes
         room_fight_speak(g, o, "eyes on. holding.", Some(8.0));
         return;
     }
@@ -603,7 +614,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         let head = head_of(g, hc);
         if crate::guards::clear_shot(g, c, head) {
             to = head;
-        } else if !crate::coverfire::cover_seen(g, gd, Some(crate::coverfire::CoverSeenWho::Guard(h)), chest) {
+        } else if !crate::coverfire::cover_seen(g, gd, Some(crate::game::Foe::Guard(h)), chest) {
             g.tab.roomfight_op[o].held_for_line += 1.0;
             g.tab.roomfight_op[o].block_t += dt;
             room_fight_walk_on(g, o);
@@ -611,7 +622,7 @@ fn tick_op_in_view(g: &mut Game, o: RoomfightOpId, dt: f64) {
         }
     }
     g.tab.roomfight_op[o].block_t = 0.0;
-    if crate::silent::silent_glass_holds(g, gd, h, c, to) { // a pane on the way to a man who has raised no alarm: held, said once a hold
+    if crate::silent::silent_holds_glass(g, gd, h, c, to) { // a pane on the way to a man who has raised no alarm: held, said once a hold
         if let Some(me) = g.tab.roomfight_op[o].meters.get(h).copied() {
             let say = match me.glass_t { None => true, Some(t) => g.time - t > GLASS_LOOK };
             if say { room_fight_speak(g, o, "eyes on, behind glass. holding.", Some(8.0)); }
@@ -702,18 +713,6 @@ pub fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt:
     brg
 }
 
-/// coverOp(g, O, dt, speed, to => this.point(O, to, dt, speed)): the part of the Op it reads lent as an OpLike, and what it wrote brought back (coverfire.ts:291; cover_op reads O.aim after `point` from the row itself)
-fn cover_op_of(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64) -> bool {
-    let (gd, tgt, aim, reload_until, rounds, next) = { let x = &g.tab.roomfight_op[o]; (x.gd, x.tgt, x.aim, x.reload_until, x.rounds, x.next) };
-    let mut like = crate::coverfire::OpLike { gd, meters: JsMap::new(), tgt, aim, reload_until, rounds, next }; // (coverOp reads no meters)
-    let shot = crate::coverfire::cover_op(g, &mut like, dt, speed, &mut |g: &mut Game, to: V3| room_fight_point(g, o, to, dt, speed));
-    let x = &mut g.tab.roomfight_op[o];
-    x.reload_until = like.reload_until;
-    x.rounds = like.rounds;
-    x.next = like.next;
-    shot
-}
-
 /// Is this man inside the arc an arrived hold gives him (the `mine` of roomfight.ts cue)
 fn in_arc(g: &Game, c: CharId, arc: Option<f64>, h: GuardId) -> bool {
     match arc {
@@ -726,7 +725,7 @@ fn in_arc(g: &Game, c: CharId, arc: Option<f64>, h: GuardId) -> bool {
 pub fn room_fight_cue(g: &mut crate::game::Game, o: RoomfightOpId) {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
-    let sk = skill_operative();
+    let sk = skill_operative(g);
     if let Some(u) = g.tab.roomfight_op[o].turn {
         let lapse = g.time > u.until || g.gd[u.to].state == crate::game::GuardState::Dead || (u.door.is_none() && (crate::workthings::work_passes(g, gd, u.to) || room_fight_cover_passes(g, o, u.to)));
         if lapse { g.tab.roomfight_op[o].turn = None; g.tab.roomfight_op[o].lost_at = g.time; }
@@ -896,7 +895,7 @@ pub fn room_fight_hold_short(g: &mut crate::game::Game, o: RoomfightOpId) {
     let goal = match script.goal { Some(goal) => goal, None => return };
     if script.arrived.unwrap_or(false) || g.tab.roomfight_op[o].step.is_some() { return; }
     let hp = g.ch[g.gd[h].ch].pos;
-    if flat(goal, hp) > flat(p, hp) - 0.3 || !crate::guards::on_lit_man(g, gd) || room_fight_funnel_of(g, p).is_some() { return; }
+    if flat(goal, hp) > flat(p, hp) - 0.3 || !crate::guards::gun_on_lit_man(g, gd) || room_fight_funnel_of(g, p).is_some() { return; }
     if g.time - g.tab.roomfight_op[o].short_seen > 1.0 || g.time < g.tab.roomfight_op[o].short_seen {
         g.tab.roomfight_op[o].short_since = g.time;
         let text = alloc::format!("holds short of {} in the dark: the player in his line", g.gd[h].callsign);
@@ -950,7 +949,7 @@ pub fn room_fight_walk_on(g: &mut crate::game::Game, o: RoomfightOpId) {
         Some(s) if s.goal.is_some() && !s.arrived.unwrap_or(false) => {}
         _ => return,
     }
-    let text = alloc::format!("no shot at {} for {:.1} s: walks on", g.gd[tgt].callsign, g.tab.roomfight_op[o].block_t);
+    let text = alloc::format!("no shot at {} for {} s: walks on", g.gd[tgt].callsign, js::to_fixed(g.tab.roomfight_op[o].block_t, 1));
     room_fight_note(g, Some(gd), &text);
     room_fight_speak(g, o, "no shot — moving.", Some(3.0));
     g.tab.roomfight_op[o].pass = Some(OpPass { h: tgt, until: g.time + r.no_shot_pass, no_shot: Some(true) });
@@ -1014,7 +1013,7 @@ pub fn room_fight_funnel_of(g: &mut crate::game::Game, p: V3) -> Option<DoorId> 
 /// A spot a man can step to: walkable, and nobody up within 0.8 m. (roomfight.ts spotFree)
 pub fn room_fight_spot_free(g: &mut crate::game::Game, p: V3, self_: GuardId) -> bool {
     if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) { return false; }
-    for pl in men_of(g) {
+    for pl in crate::seats::men(g) {
         if !g.pl[pl].down && flat(g.ch[g.pl[pl].ch].pos, p) < 0.8 { return false; }
     }
     let mut i = 0;
@@ -1030,7 +1029,7 @@ pub fn room_fight_spot_free(g: &mut crate::game::Game, p: V3, self_: GuardId) ->
 pub fn room_fight_doorway(g: &mut crate::game::Game, o: RoomfightOpId, dt: f64, speed: f64) {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
-    let sk = skill_operative();
+    let sk = skill_operative(g);
     if g.time < g.tab.roomfight_op[o].step_until { g.tab.roomfight_op[o].funnel_t = 0.0; return; }
     let pos = g.ch[c].pos;
     let d = if speed < 0.4 { room_fight_funnel_of(g, pos) } else { None };
@@ -1064,7 +1063,7 @@ pub fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3,
     let why = why.unwrap_or("steps round a friend in his line");
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
-    let sk = skill_operative();
+    let sk = skill_operative(g);
     let walking = match g.gd[gd].script.as_ref() {
         Some(s) => s.goal.is_some() && !s.arrived.unwrap_or(false),
         None => return false,
@@ -1078,8 +1077,8 @@ pub fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3,
         let p: V3 = [pos[0] + dz / l * w, 0.0, pos[2] - dx / l * w];
         if !room_fight_spot_free(g, p, gd) || room_fight_funnel_of(g, p).is_some() || crate::scene_collision::solid_blocked(g, [pos[0], 0.45, pos[2]], [p[0], 0.45, p[2]], None) { continue; }
         let from: V3 = [p[0], 1.4, p[2]];
-        let def = weapon_def_of(g, gd);
-        let energy = crate::glasspen::shot_energy(g, c, Some(&def));
+        let def = g.fa[g.gd[gd].weapon].def;
+        let energy = crate::glasspen::shot_energy(g, c, Some(def));
         if crate::scene_collision::shot_blocked(g, from, to, Some(0.02), energy) || room_fight_friend_in_line(g, from, to, gd, None).is_some() || crate::friendlyfire::friend_in_cone(g, gd, from, to, 0.08, None, None).is_some() { continue; }
         let face = g.ch[c].body_yaw;
         room_fight_step_to(g, o, p, false, RoomFightStepToPatch { speed: Some(2.2), strafe: Some(true), face: Some(face), ..Default::default() });
@@ -1125,6 +1124,30 @@ mod tests {
         assert_eq!(over.walk, op.ov.walk);
         room_fight_restore(&mut g, o);
         assert!(g.gd[gd].script.as_ref().unwrap().over.is_none());
+    }
+
+    /// D.pt moved in place carries a cover or a fix that IS it, with no new fix; a point given once and a noise stay. Rule off, `cover` is a new fix once, not twice.
+    #[test]
+    fn the_post_moved_takes_what_is_on_it() {
+        let (mut g, gd, _) = man_with_overlay();
+        let d = g.tab.roomfight_def.push(Def::zeroed());
+        g.tab.roomfight_def[d].gd = gd;
+        g.tab.roomfight_def[d].pt = [1.0, 0.0, 1.0];
+        g.gd[gd].covers = Some([1.0, 0.0, 1.0]);
+        g.gd[gd].last_known = Some([1.0, 0.0, 1.0]); // the same bits, but no stamp: a noise filed there is not the post
+        move_pt(&mut g, d, [2.0, 0.0, 2.0]);
+        assert_eq!(g.gd[gd].covers, Some([2.0, 0.0, 2.0]));
+        assert_eq!(g.gd[gd].last_known, Some([1.0, 0.0, 1.0]));
+        g.k.belief.on = false;
+        let was = g.gd[gd].fix_stamp;
+        cover_pt(&mut g, d);
+        assert_eq!(g.gd[gd].last_known, Some([2.0, 0.0, 2.0]));
+        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
+        cover_pt(&mut g, d);
+        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
+        move_pt(&mut g, d, [3.0, 0.0, 3.0]);
+        assert_eq!(g.gd[gd].last_known, Some([3.0, 0.0, 3.0]));
+        assert_eq!(g.gd[gd].fix_stamp, was.wrapping_add(1));
     }
 
     /// Stood still: he turns once a point is past 1.2 rad off his chest, and finishes the turn down to 0.3 rad.

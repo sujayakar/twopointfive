@@ -47,45 +47,125 @@ impl RigSlotName {
 /// (TypeScript: RigSlotFit, src/render/sdfrig.ts:38)
 #[derive(Clone, Copy, Debug)]
 pub struct RigSlotFit {
+    pub name: crate::render_sdfrig::RigSlotName,
+    pub r0: f64,
+    pub r1: f64,
+    pub solved: [f64; 2],
+    pub n: f64,
+    pub rms: f64,
+    pub max_abs: f64,
+    pub cover: f64,
+    pub len: f64,
+    pub hand: f64,
+    pub overridden: bool,
 }
 impl RigSlotFit {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RigSlotFit {
+            name: crate::render_sdfrig::RigSlotName::Chest,
+            r0: 0.0,
+            r1: 0.0,
+            solved: [0.0; 2],
+            n: 0.0,
+            rms: 0.0,
+            max_abs: 0.0,
+            cover: 0.0,
+            len: 0.0,
+            hand: 0.0,
+            overridden: false,
         }
     }
 }
 impl Default for RigSlotFit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RigFit, src/render/sdfrig.ts:48)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct RigFit {
+    pub r0: Vec<f32>,
+    pub r1: Vec<f32>,
+    pub slots: Vec<crate::render_sdfrig::RigSlotFit>,
+    pub verts: f64,
     pub ms: f64,
+    pub by_owner: Option<JsMap<crate::Num, crate::render_sdfrig::RigFitByOwnerValue>>,
     pub pad: Option<f64>,
 }
 impl RigFit {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         RigFit {
+            r0: Vec::new(),
+            r1: Vec::new(),
+            slots: Vec::new(),
+            verts: 0.0,
             ms: 0.0,
+            by_owner: None,
             pad: None,
         }
     }
 }
 impl Default for RigFit { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: inline at src/render/sdfrig.ts:51 RigFit.byOwner, src/render/sdfrig.ts:51)
+#[derive(Clone, Debug)]
+pub struct RigFitByOwnerValue {
+    pub r0: Vec<f32>,
+    pub r1: Vec<f32>,
+    pub pad: Option<f64>,
+}
+impl RigFitByOwnerValue {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        RigFitByOwnerValue {
+            r0: Vec::new(),
+            r1: Vec::new(),
+            pad: None,
+        }
+    }
+}
+impl Default for RigFitByOwnerValue { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: MeshRows, src/render/sdfrig.ts:189)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct MeshRows {
+    pub segs: Vec<[V3; 2]>,
+    pub cand: Vec<crate::render_sdfrig::MeshRowsCandItem>,
+    pub ends: Vec<u8>,
+    pub home: Vec<i8>,
 }
 impl MeshRows {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         MeshRows {
+            segs: Vec::new(),
+            cand: Vec::new(),
+            ends: Vec::new(),
+            home: Vec::new(),
         }
     }
 }
 impl Default for MeshRows { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/render/sdfrig.ts:189 MeshRows.cand, src/render/sdfrig.ts:189)
+#[derive(Clone, Debug)]
+pub struct MeshRowsCandItem {
+    pub v: Vec<i32>,
+    pub a: Vec<f64>,
+    pub b: Vec<f64>,
+    pub rho: Vec<f64>,
+}
+impl MeshRowsCandItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        MeshRowsCandItem {
+            v: Vec::new(),
+            a: Vec::new(),
+            b: Vec::new(),
+            rho: Vec::new(),
+        }
+    }
+}
+impl Default for MeshRowsCandItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/sdfrig.ts:31 RIG_OVERRIDES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]

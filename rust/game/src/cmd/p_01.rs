@@ -33,39 +33,6 @@ pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     }
 }
 
-/// `String(x)` of a finite number other than -0: the shortest digits that come back to the bit, laid out as the language lays them out.
-fn js_number(x: f64) -> String {
-    let e = alloc::format!("{:e}", x);
-    let (mant, exp) = e.split_once('e').unwrap();
-    let (sign, mant) = match mant.strip_prefix('-') { Some(rest) => ("-", rest), None => ("", mant) };
-    let digits: String = mant.chars().filter(|c| *c != '.').collect();
-    let k = digits.len() as i32;
-    let n = exp.parse::<i32>().unwrap() + 1;
-    let mut s = String::from(sign);
-    if k <= n && n <= 21 {
-        s.push_str(&digits);
-        for _ in 0..n - k { s.push('0'); }
-    } else if 0 < n && n <= 21 {
-        s.push_str(&digits[..n as usize]);
-        s.push('.');
-        s.push_str(&digits[n as usize..]);
-    } else if -6 < n && n <= 0 {
-        s.push_str("0.");
-        for _ in 0..-n { s.push('0'); }
-        s.push_str(&digits);
-    } else {
-        s.push_str(&digits[..1]);
-        if k > 1 {
-            s.push('.');
-            s.push_str(&digits[1..]);
-        }
-        s.push('e');
-        s.push(if n > 0 { '+' } else { '-' });
-        s.push_str(&alloc::format!("{}", (n - 1).abs()));
-    }
-    s
-}
-
 /// A string as JSON.stringify writes it.
 fn text_string(out: &mut String, x: &str) {
     out.push('"');
@@ -89,7 +56,7 @@ fn text_string(out: &mut String, x: &str) {
 fn text_num(out: &mut String, x: f64) {
     match num_word("", x) {
         Some(w) => text_string(out, w),
-        None => out.push_str(&js_number(x)),
+        None => out.push_str(&js::num_str(x)),
     }
 }
 
@@ -689,7 +656,7 @@ mod tests {
         a
     }
 
-    /// The TypeScript's own results for checkCmd (generated under bun with EXACT on), the lens's working taken from its answer: rebuild is a seam.
+    /// The TypeScript's own results for checkCmd (generated under bun with EXACT on), the lens's working taken from its answer: rebuild is a stub in this crate.
     #[test]
     fn check_matches_the_typescript() {
         let l = crate::knobs::page_cmdcheck();
@@ -753,7 +720,7 @@ mod tests {
     /// A number as the language writes it, against the TypeScript's `String(x)`.
     #[test]
     fn numbers_read_as_the_language_writes_them() {
-        for (b, want) in number_texts() { assert_eq!(js_number(f(b)), want); }
+        for (b, want) in number_texts() { assert_eq!(js::num_str(f(b)), want); }
     }
 
     /// The record's text both ways, against the TypeScript's cmdText and cmdFromText: words for what JSON cannot carry, escapes, the order of the fields.

@@ -1,4 +1,4 @@
-//! src/game/player.ts lines 392 to 834
+//! src/game/player.ts lines 393 to 835
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,17 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ---- the seams: each a step the skeleton cannot give yet, with the TypeScript's own arguments ----
-
-/// g.audio.play(name, at, vol, { rate }): the stub's opts are JsMap<String, Opaque>, and Opaque holds no number
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: Option<V3>, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to carry a rate") }
-/// rifle.attachment: the stub has no gun
-fn seam_rifle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[rifle].att_idx; if i >= 0 { g.fa[rifle].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
-/// rifle.left(a): the stub has no gun
-fn seam_rifle_left(g: &mut Game, rifle: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { match a { crate::weapons::RifleAttachment::Ring => g.fa[rifle].rings, crate::weapons::RifleAttachment::Cam => g.fa[rifle].cams, _ => g.fa[rifle].shells } } // SKELETON-GAP: crate::weapons::rifle_left taking g and the FirearmId (weapons.ts:533-538)
-/// rifle.cycleAttachment(): the stub has no gun
-fn seam_rifle_cycle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> { let n = g.fa[rifle].attachments.len() as i32; g.fa[rifle].att_idx = if n > 0 { (g.fa[rifle].att_idx + 1) % n } else { -1 }; let i = g.fa[rifle].att_idx; if i >= 0 { g.fa[rifle].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_cycle_attachment taking g and the FirearmId (weapons.ts:533-538)
 
 // ---- small lookups of the tick ----
 
@@ -347,7 +336,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             game_msg(g, &s);
         } else if crate::game::player_rifle_up(g, pl) {
             if g.pl[pl].equip_t <= 0.0 {
-                let a = seam_rifle_cycle_attachment(g, rifle);
+                let a = crate::weapons::rifle_cycle_attachment(g, rifle);
                 let muzzle = g.ch[c].muzzle; play(g, "click", Some(muzzle), 0.7);
                 let text = load_flip_line(g, rifle, a);
                 game_msg(g, &text);
@@ -383,14 +372,14 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     if hit(g, input, "Digit3") {
         if g.pl[pl].canisters > 0.0 {
             g.pl[pl].slot = SlotKind::Smoke; g.pl[pl].throw_kind = ThrowKind::Smoke;
-            let name = format!("smoke canister ×{}", g.pl[pl].canisters);
+            let name = format!("smoke canister ×{}", js::num_str(g.pl[pl].canisters));
             draw(g, pl, &name);
         } else { game_msg(g, "no smoke canisters left"); }
     }
     if hit(g, input, "Digit5") {
         if g.pl[pl].frags > 0.0 {
             g.pl[pl].slot = SlotKind::Frag;
-            let name = format!("frag grenade ×{} — click throws it; it goes off {}s after it leaves your hand", g.pl[pl].frags, g.k.frag.fuse);
+            let name = format!("frag grenade ×{} — click throws it; it goes off {}s after it leaves your hand", js::num_str(g.pl[pl].frags), js::num_str(g.k.frag.fuse));
             draw(g, pl, &name);
         } else { game_msg(g, "no frag grenades left"); }
     }
@@ -398,7 +387,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         if g.pl[pl].flashbangs > 0.0 {
             g.pl[pl].slot = SlotKind::Flash; g.pl[pl].throw_kind = ThrowKind::Flash;
             let fuse = crate::combat::flash_fuse(g);
-            let name = format!("stun canister ×{} — goes off {}s after it lands", g.pl[pl].flashbangs, fuse);
+            let name = format!("stun canister ×{} — goes off {}s after it lands", js::num_str(g.pl[pl].flashbangs), js::num_str(fuse));
             draw(g, pl, &name);
         } else { game_msg(g, "no flashbangs left"); }
     }
@@ -572,9 +561,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 g.pl[pl].drag_noise_t -= dt;
                 if g.pl[pl].drag_noise_t <= 0.0 {
                     g.pl[pl].drag_noise_t = 0.55;
-                    seam_audio_play_rate(g, "propScrape", Some(hips), 0.25, 0.7);
-                    let (time, who) = (g.time, g.ch[c].id);
-                    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [hips[0], 0.0, hips[2]], time, loud: false, level: Some(0.22), who: Some(who), ..Default::default() });
+                    crate::audio_iface::game_audio_like_play(g, "propScrape", Some(hips), Some(0.25), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
+                    let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
+                    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [hips[0], 0.0, hips[2]], time, loud: false, level: Some(0.22), who: Some(who), serial, ..Default::default() });
                     g.pl[pl].noise = m::max(g.pl[pl].noise, 0.22);
                 }
             }
@@ -759,13 +748,12 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         }
         // the launcher: the press begins the gesture, the arc is drawn while the button stays down, letting go sends the round
         let beat = g.pl[pl].equip_t > 0.0 && g.pl[pl].wall.is_some();
-        let load = seam_rifle_attachment(g, rifle);
+        let load = crate::weapons::rifle_attachment(g, rifle);
         let owed = walled && !stunned && launch_was.is_some() && crate::aimweight::aim_weigh_launch_keep(g, pl, dt);
         let mut held = None;
         if let Some(l) = load {
-            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.orders.menu.is_none() && seam_rifle_left(g, rifle, l) > 0.0 {
-                let keys = crate::backkey::Keys { pressed: g.tab.input[input].pressed.clone() };
-                if !crate::backkey::back_hit(g, &keys) && !hit(g, input, "Blur") && !hit(g, input, "Paused") { held = Some(l); }
+            if launch_was.is_some() && !beat && (!walled || owed) && !stunned && g.orders.menu.is_none() && crate::weapons::rifle_left(g, rifle, l) > 0.0 {
+                if !crate::backkey::back_hit(g, input) && !hit(g, input, "Blur") && !hit(g, input, "Paused") { held = Some(l); }
             }
         }
         let is_down = input_rmb(g, input) || input_rmb_hit(g, input);
@@ -774,7 +762,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 None => {
                     if g.aim_target.is_some() && !g.pl[pl].ocp_hinted { g.pl[pl].ocp_hinted = true; game_msg(g, "the OCP is on the pistol, so press 1 to draw it"); }
                 }
-                Some(l) if seam_rifle_left(g, rifle, l) > 0.0 && g.fa[rifle].ring_cd <= 0.0 => held = Some(l),
+                Some(l) if crate::weapons::rifle_left(g, rifle, l) > 0.0 && g.fa[rifle].ring_cd <= 0.0 => held = Some(l),
                 Some(l) => {
                     let muzzle = g.ch[c].muzzle; play(g, "dryFire", Some(muzzle), 0.4);
                     let text = launcher_dry_line(g, rifle, l);
@@ -822,7 +810,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                         g.fa[rifle].ring_cd = g.k.launcher40.cd;
                         g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.4);
                         if g.fa[rifle].shells <= 0.0 { game_msg(g, if armed { "that was the last 40 mm" } else { "that was the last 40 mm — and too close to arm" }); }
-                        else if !armed { let text = format!("you're too close. the 40 mm arms {} m out", g.k.he40.arm_m); game_msg(g, &text); }
+                        else if !armed { let text = format!("you're too close. the 40 mm arms {} m out", js::num_str(g.k.he40.arm_m)); game_msg(g, &text); }
                     }
                 }
                 g.pl[pl].last_fire_t = g.time;
@@ -905,8 +893,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
         let level = if g.pl[pl].sprinting { base } else { base * crate::kitload::load_heard(g, crate::kitload::LoadHeardWho::Player) };
         let pos = g.ch[c].pos;
         let loud = crate::floor::tread(g, pos, level, true);
-        let time = g.time;
-        g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Step, pos: v3::copy(pos), time, loud: false, level: Some(loud), ..Default::default() });
+        let (time, serial) = (g.time, g.serial());
+        g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Step, pos: v3::copy(pos), time, loud: false, level: Some(loud), serial, ..Default::default() });
         g.pl[pl].noise = m::max(g.pl[pl].noise, loud);
         if fall == 1.0 { let left = g.pl[pl].step_phase < 0.5; crate::wet::wet_footfall(g, left); }
     }
@@ -917,18 +905,19 @@ fn load_flip_line(g: &mut Game, rifle: FirearmId, a: Option<crate::weapons::Rifl
     use crate::weapons::RifleAttachment;
     match a {
         Some(RifleAttachment::Ring) => {
-            let s = if g.fa[rifle].rings > 0.0 { format!("ring airfoil ×{} on the right button — head = out cold, body = staggered, a wall = a noise they go and look at; 2 again for the 40 mm", g.fa[rifle].rings) }
+            let s = if g.fa[rifle].rings > 0.0 { format!("ring airfoil ×{} on the right button — head = out cold, body = staggered, a wall = a noise they go and look at; 2 again for the 40 mm", js::num_str(g.fa[rifle].rings)) }
                 else { String::from("the ring launcher — but no ring airfoils left (2 again for the 40 mm)") };
             crate::gear::gear_text(g, &s)
         }
         Some(RifleAttachment::He40) => {
             let s = if g.fa[rifle].shells > 0.0 {
                 let keys = crate::slotsetup::load_keys(g);
-                format!("40 mm grenade ×{} on the right button — goes off on what it hits, like a frag; arms {} m out (nearer: a dud); {} for {}", g.fa[rifle].shells, g.k.he40.arm_m, keys, next_load(rifle))
-            } else { format!("the 40 mm — but no grenades left for it (2 again for {})", next_load(rifle)) };
+                let next = next_load(g, rifle);
+                format!("40 mm grenade ×{} on the right button — goes off on what it hits, like a frag; arms {} m out (nearer: a dud); {} for {}", js::num_str(g.fa[rifle].shells), js::num_str(g.k.he40.arm_m), keys, next)
+            } else { let next = next_load(g, rifle); format!("the 40 mm — but no grenades left for it (2 again for {})", next) };
             crate::gear::gear_text(g, &s)
         }
-        Some(RifleAttachment::Cam) => if g.fa[rifle].cams > 0.0 { format!("sticky camera ×{} on the right button", g.fa[rifle].cams) } else { String::from("no sticky cameras left") },
+        Some(RifleAttachment::Cam) => if g.fa[rifle].cams > 0.0 { format!("sticky camera ×{} on the right button", js::num_str(g.fa[rifle].cams)) } else { String::from("no sticky cameras left") },
         None => { let def = g.fa[rifle].def; format!("{} — nothing goes on its right button", def_row(g, def).short) }
     }
 }
@@ -948,7 +937,8 @@ fn launcher_dry_line(g: &mut Game, rifle: FirearmId, load: crate::weapons::Rifle
             if g.fa[rifle].shells > 0.0 { return String::from("loading the launcher…"); }
             let s = if g.fa[rifle].rings > 0.0 || g.fa[rifle].cams > 0.0 {
                 let keys = crate::slotsetup::load_keys(g);
-                format!("no 40 mm grenades left ({} for {})", keys, next_load(rifle))
+                let next = next_load(g, rifle);
+                format!("no 40 mm grenades left ({} for {})", keys, next)
             } else { String::from("no 40 mm grenades left") };
             crate::gear::gear_text(g, &s)
         }

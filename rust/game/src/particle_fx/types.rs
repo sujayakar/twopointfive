@@ -603,6 +603,19 @@ impl PendingTinksItem {
 }
 impl Default for PendingTinksItem { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: inline at quiet sparkSink ->, src/game/particleFx.ts:323)
+#[derive(Clone, Copy, Debug)]
+pub struct SparkSink {
+}
+impl SparkSink {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        SparkSink {
+        }
+    }
+}
+impl Default for SparkSink { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TestBurstKind {

@@ -1,4 +1,4 @@
-//! src/game/hours.ts lines 1 to 431
+//! src/game/hours.ts lines 1 to 428
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -48,35 +48,11 @@ pub fn hour_id_of(v: Option<&str>) -> crate::hours::HourId {
     match alias().get(s) { Some(a) => hour_word(a).unwrap_or(HourId::Night), None => HourId::Night }
 }
 
-/// The visit's ?hour= and ?sun=, before the stand-up. (hours.ts initHour)
-pub fn init_hour(g: &mut crate::game::Game, q: crate::Opaque) {
-    g.m.hours.hour.id = hour_id_of(seam_query_get(&q, "hour").as_deref());
-    if let Some(s) = seam_query_number(&q, "sun") {
-        g.m.hours.hour.sun = v3::clamp(s, 0.0, 1.0);
-        g.m.hours.hour.sun_given = true;
-    }
-    if seam_query_has(&q, "noweather") { g.m.hours.hour.dry = false; }
-}
-
 /// The hour off a query handed to a running game; no `hour` key = nothing touched. (hours.ts hourFromQuery)
 pub fn hour_from_query(g: &mut crate::game::Game, q: crate::Opaque) {
     if !seam_query_has(&q, "hour") { return; }
     apply_hour(g, hour_id_of(seam_query_get(&q, "hour").as_deref()));
     if let Some(s) = seam_query_number(&q, "sun") { set_sun_strength(g, s, None); }
-}
-
-/// A link with the hour on it (night = none); whatever hour it carried is replaced. (hours.ts hourHref)
-pub fn hour_href(href: &str, id_2: Option<crate::hours::HourId>) -> String {
-    let id = match id_2 { Some(id) => id, None => seam_visit_hour() };
-    let mut parts = href.split('?');
-    let path = parts.next().unwrap_or("");
-    let query = parts.next().unwrap_or("");
-    let mut keys: Vec<String> = Vec::new();
-    for k in query.split('&') {
-        if !k.is_empty() && k != "hour" && !k.starts_with("hour=") { keys.push(String::from(k)); }
-    }
-    if id != HourId::Night { keys.push(alloc::format!("hour={}", id.as_str())); }
-    if keys.is_empty() { String::from(path) } else { alloc::format!("{}?{}", path, keys.join("&")) }
 }
 
 // ---------------------------------------------------------------- the hour on a Game
@@ -89,6 +65,17 @@ fn hour_row(g: &mut Game) -> &mut HourState {
 /// The hour this game stands at; Night = the level as authored. (hours.ts hourOf)
 pub fn hour_of(g: &mut crate::game::Game) -> crate::hours::HourId {
     match &g.m.hours.states { Some(st) => st.def.id, None => HourId::Night }
+}
+
+/// The exposure the game's scene is taken at now: the show's day's while it is in, else the hour's own, else the level's night's. Never 0: a sum divides by it. (hours.ts exposureOf)
+pub fn exposure_of(g: &mut crate::game::Game) -> f64 {
+    let own = if crate::lighting::is_daylight(g) {
+        g.level.daylight.as_ref().map(|d| d.exposure)
+    } else {
+        g.m.hours.states.as_ref().map(|st| st.def.exposure)
+    };
+    let e = match own { Some(e) => e, None => g.k.env.exposure };
+    if e > 0.0 { e } else { 1.0 }
 }
 
 /// The hour's sun in this game's light set; None at night. (hours.ts hourSun)
@@ -170,11 +157,11 @@ pub fn greyed(c_2: V3, w: f64, k: Option<f64>) -> V3 {
 
 /// The sky's share of the light on open ground at an hour as authored. (hours.ts skyShare)
 pub fn sky_share(d: &crate::hours::HourDef) -> f64 {
-    let (sky, _) = ray_tables();
+    let rays = sky();
     let zen = lum(d.sky.zenith);
     let hor = lum(d.sky.horizon);
     let mut k = 0.0;
-    for q in sky.iter() { k += (hor + (zen - hor) * v3::clamp(q.d[1] * 2.5, 0.0, 1.0)) * q.c6[2]; }
+    for q in rays.iter() { k += (hor + (zen - hor) * v3::clamp(q.d[1] * 2.5, 0.0, 1.0)) * q.c6[2]; }
     let s = lum(d.sun.color) * d.sun.intensity * m::max(0.0, m::sin(d.sun.elev_deg * DEG));
     if k + s > 0.0 { k / (k + s) } else { 1.0 }
 }
@@ -227,7 +214,10 @@ pub fn under_weather(g: &mut crate::game::Game) {
     g.tab.light[sun].color = greyed(d.sun.color, soft, None);
     g.tab.light[sun].volumetric = d.sun.volumetric * (1.0 - soft);
     let r = d.sun.radius + (m::max(d.sun.radius, SOFT_RADIUS) - d.sun.radius) * soft;
-    if r != g.tab.light[sun].radius { g.tab.light[sun].radius = r; }   // (sunReach, the picture's mask, dropped)
+    if r != g.tab.light[sun].radius {
+        g.tab.light[sun].radius = r;
+        if g.engine.reach.is_some() { crate::render_reach_keep::reach_keep_sun(g, sun, r); }
+    }
     g.engine.settings.sky_zenith = greyed(d.sky.zenith, soft, Some(sky_k));
     g.engine.settings.sky_horizon = greyed(d.sky.horizon, soft, Some(sky_k));
 }
@@ -302,7 +292,7 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
     let sun = g.tab.light.push(crate::render_lights::RtLight {
         name: String::from(SUN_NAME), group: String::from(SUN_GROUP), kind: 2.0, pos: [0.0, 0.0, 0.0], dir: v3::scale(to_sun, -1.0), color: v3::copy(def.sun.color),
         intensity: power, range: 1e6, inner_deg: 0.0, outer_deg: 0.0, radius: def.sun.radius, volumetric: def.sun.volumetric, owner: 0.0, enabled: true,
-        fixture_box: -1.0, ttl: -1.0, age: 0.0, peak_intensity: power,
+        fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: power, broad: false,
         ..crate::render_lights::RtLight::zeroed()   // every optional field absent, as in the literal
     });
     g.engine.lights.lights.insert(at, sun);
@@ -314,7 +304,8 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
         sun, def: def.clone(), sun_k, given, soft: 0.0, sky_k: 1.0, was_off, moons, lamps: JsMap::new(), sky, haze, exposure, storm,
         to_sun, casters, box_, cells: JsMap::new(), fine: JsMap::new(), dome: None, at: None,
     });
-    under_weather(g);   // (sunReach, the picture's mask, dropped)
+    under_weather(g);
+    if g.engine.reach.is_some() { let r = g.tab.light[sun].radius; crate::render_reach_keep::reach_keep_sun(g, sun, r); }
     lamps_out(g);
 }
 
@@ -329,9 +320,7 @@ pub fn take_out(g: &mut crate::game::Game) {
         if !crate::sim_lightshome::fixture_on(g, t) { crate::sim_lightshome::light_home_in(g, on, Some(t), Some(if was { 1.0 } else { 0.0 }), None, None, None); }
     }
     for l in moons { g.tab.light[l].enabled = true; }
-    let mut set = core::mem::take(&mut g.engine.lights);   // (the set is lent while g is: remove touches only the set's list)
-    crate::render_lights::light_set_remove(g, &mut set, sun);
-    g.engine.lights = set;
+    crate::render_lights::light_set_remove(g, sun);
     g.engine.settings.sky_zenith = v3::copy(sky.zenith);
     g.engine.settings.sky_horizon = v3::copy(sky.horizon);
     g.engine.settings.haze_density = haze;
@@ -344,11 +333,6 @@ pub fn take_out(g: &mut crate::game::Game) {
             crate::weather::weather_restore(g, storm);
         }
     }
-}
-
-/// PICTURE ONLY, not translated: a wide sun's reach mask, read by the renderer's candidates and game's reach passes. Its calls (hours.ts:231, 268) are dropped. (hours.ts sunReach)
-pub fn sun_reach(g: &mut crate::game::Game, sun: LightId, radius: f64) {
-    todo!("picture only: RtLight.reachDir, written and read by the renderer's side alone (hours.ts:284)")
 }
 
 /// The photocell: with the lamps out for the hour, every outside fixture's switch recorded as it stands and opened. (hours.ts lampsOut)
@@ -403,38 +387,13 @@ pub fn casters_of(g: &mut crate::game::Game) -> f64 {
     let mut i = 0;
     while i < n {
         let s = g.engine.world.statics[i];
-        if js::to_i32(g.col.boxes[s].flags) & no_shadow != 0 { h = js::to_i32(h + (i as f64 + 1.0) * 31.0) as f64; }
+        if js::to_i32(seam_box(g, s).flags) & no_shadow != 0 { h = js::to_i32(h + (i as f64 + 1.0) * 31.0) as f64; }
         i += 1;
     }
     h
 }
 
 // ---------------------------------------------------------------- the meter's stand-in
-
-/// The ambient's sample directions: SKY (the dome in three bands) and GND (eight just under the horizon). The TypeScript fills them once on first asking; nothing in Rust holds them, so they are worked out where they are read. (hours.ts rays, SKY, GND)
-fn ray_tables() -> (Vec<Ray>, Vec<Ray>) {
-    fn add(to: &mut Vec<Ray>, n6: &[V3], elev: f64, n: usize, w: f64, turn: f64) {
-        for i in 0..n {
-            let a = (i as f64 + turn) / n as f64 * 2.0 * m::PI;
-            let d: V3 = [m::cos(a) * m::cos(elev), m::sin(elev), m::sin(a) * m::cos(elev)];
-            let mut c6 = Vec::with_capacity(6);
-            for nn in n6.iter() { c6.push(m::max(0.0, v3::dot(*nn, d)) * w); }
-            to.push(Ray { d, c6 });
-        }
-    }
-    fn s(deg: f64) -> f64 { m::sin(deg * DEG) }
-    let n6 = n6();
-    let mut sky = Vec::with_capacity(15);
-    let mut gnd = Vec::with_capacity(8);
-    add(&mut sky, &n6, 90.0 * DEG, 1, 2.0 * m::PI * (1.0 - s(70.0)), 0.0);
-    add(&mut sky, &n6, 50.0 * DEG, 6, 2.0 * m::PI * (s(70.0) - s(32.0)) / 6.0, 0.0);
-    add(&mut sky, &n6, 16.0 * DEG, 8, 2.0 * m::PI * s(32.0) / 8.0, 0.5);
-    add(&mut gnd, &n6, GND_ELEV, 8, 2.0 * m::PI * s(25.0) / 8.0, 0.25);
-    (sky, gnd)
-}
-
-/// The TypeScript's lazy fill of SKY and GND: nothing to do, `ray_tables` answers. (hours.ts rays)
-pub fn rays() {}
 
 /// The sky's luminance at height y, off the live sky or the dome given. (hours.ts skyLum)
 pub fn sky_lum(g: &mut crate::game::Game, y: f64, sky: Option<crate::hours::SkyStateDome>) -> f64 {
@@ -455,8 +414,8 @@ pub fn box_of(g: &mut crate::game::Game) -> crate::hours::SkyStateBox {
     while i < g.engine.world.statics.len() {
         let s = g.engine.world.statics[i];
         i += 1;
-        if js::to_i32(g.col.boxes[s].flags) & no_shadow != 0 { continue; }
-        let (c, h) = (g.col.boxes[s].c, g.col.boxes[s].h);
+        if js::to_i32(seam_box(g, s).flags) & no_shadow != 0 { continue; }
+        let (c, h) = { let row = seam_box(g, s); (row.c, row.h) };
         let r = m::hyp2(h[0], h[2]);
         b.x0 = m::min(b.x0, c[0] - r);
         b.x1 = m::max(b.x1, c[0] + r);
@@ -516,21 +475,21 @@ fn kept_rays(g: &mut Game, fine: bool, key: crate::Num, at: V3) -> Vec<Open> {
 /// The ambient's rays that leave point C unblocked by the statics. (hours.ts openRays)
 pub fn open_rays(g: &mut crate::game::Game, c_2: V3) -> Vec<crate::hours::Open> {
     let Some(st) = sky_ask(g) else { return Vec::new() };
-    let (sky, gnd) = ray_tables();
+    let (sky_rays, gnd_rays) = (sky(), gnd());
     let mut out: Vec<Open> = Vec::new();
     let b = st.box_;
-    for (i, r) in sky.iter().enumerate() {
+    for (i, r) in sky_rays.iter().enumerate() {
         let len = reach_of(b, c_2, r.d);
-        if len > 0.05 && !static_blocked(g, c_2, v3::mad(c_2, r.d, len)) { out.push(Open { ray: i as f64, len, sun_k: 0.0, sky_k: 0.0 }); }
+        if len > 0.05 && !static_blocked(g, c_2, v3::mad(c_2, r.d, len)) { out.push(Open { ray: i, len, sun_k: 0.0, sky_k: 0.0 }); }
     }
-    for (i, r) in gnd.iter().enumerate() {
+    for (i, r) in gnd_rays.iter().enumerate() {
         let len = m::min((c_2[1] - 0.03) / -r.d[1], reach_of(b, c_2, r.d));
         if len < 0.3 { continue; }
         let g_pt = v3::mad(c_2, r.d, len);
         if g_pt[1] > 0.2 || static_blocked(g, c_2, g_pt) { continue; }
         let sun_k = if st.to_sun[1] > 0.0 && !static_blocked(g, g_pt, v3::mad(g_pt, st.to_sun, reach_of(b, g_pt, st.to_sun))) { st.to_sun[1] } else { 0.0 };
         let sky_k = if static_blocked(g, g_pt, [g_pt[0], b.top, g_pt[2]]) { 0.0 } else { 1.0 };
-        if sun_k > 0.0 || sky_k > 0.0 { out.push(Open { ray: (sky.len() + i) as f64, len, sun_k, sky_k }); }
+        if sun_k > 0.0 || sky_k > 0.0 { out.push(Open { ray: sky_rays.len() + i, len, sun_k, sky_k }); }
     }
     out
 }
@@ -629,14 +588,14 @@ pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     while i < g.col.dynamic_boxes.len() {
         let db = g.col.dynamic_boxes[i];
         i += 1;
-        let dc = g.col.boxes[db].c;
+        let dc = seam_box(g, db).c;
         if m::hyp2(dc[0] - p[0], dc[2] - p[2]) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
     }
-    let (sky_rays, gnd_rays) = ray_tables();
+    let (sky_rays, gnd_rays) = (sky(), gnd());
     let dome = st.dome;
     let mut e_up = -1.0;   // the sky's irradiance on open ground: asked only when a ground ray is open
     for o in open.iter() {
-        let ray = o.ray as usize;
+        let ray = o.ray;
         let sky = ray < sky_rays.len();
         let r = if sky { &sky_rays[ray] } else { &gnd_rays[ray - sky_rays.len()] };
         if let Some(leaves) = &leaves {
@@ -665,13 +624,6 @@ pub fn hour_light_at(g: &mut crate::game::Game, p: V3) -> f64 {
     m::max_n(&acc)
 }
 
-/// `x.toFixed(2)` for what the summary prints, none of it negative: a tie goes up, where Rust's `{:.2}` sends it to the even side. Only a multiple of 1/8 can be a tie.
-fn to_fixed_2(x: f64) -> String {
-    let e = x * 8.0;
-    if m::floor(e) == e && js::rem(e, 2.0) == 1.0 { return alloc::format!("{:.2}", x + 0.001); }
-    alloc::format!("{:.2}", x)
-}
-
 /// One line for the panel. (hours.ts hourSummary)
 pub fn hour_summary(g: &mut crate::game::Game) -> String {
     let Some(st) = g.m.hours.states.as_ref() else { return String::from("night (the level as authored)") };
@@ -683,12 +635,12 @@ pub fn hour_summary(g: &mut crate::game::Game) -> String {
     } else {
         match g.weather.kind { Some(k) => alloc::format!(" under {}'s cloud", k.as_str()), None => String::new() }
     };
-    let sky = if sky_k != 1.0 { alloc::format!(", sky ×{}", to_fixed_2(sky_k)) } else { String::new() };
+    let sky = if sky_k != 1.0 { alloc::format!(", sky ×{}", js::to_fixed(sky_k, 2)) } else { String::new() };
     let lamps = if d.lamps { String::from("as authored") } else { alloc::format!("out ({})", out) };
     alloc::format!(
         "{} {} · sun {}° up at {} (×{}{}{}) · exposure {} · outside lamps {}{} · {} cells",
-        d.label, d.clock, d.sun.elev_deg, to_fixed_2(intensity), to_fixed_2(sun_k), why, sky,
-        to_fixed_2(g.engine.settings.exposure), lamps, if storm { " · storm held" } else { "" }, cells,
+        d.label, d.clock, js::num_str(d.sun.elev_deg), js::to_fixed(intensity, 2), js::to_fixed(sun_k, 2), why, sky,
+        js::to_fixed(g.engine.settings.exposure, 2), lamps, if storm { " · storm held" } else { "" }, cells,
     )
 }
 
@@ -701,11 +653,14 @@ fn set_light_power(g: &mut Game, l: LightId, x: f64) {
 
 // ---------------------------------------------------------------- seams: what the skeleton still lacks
 
-fn seam_query_get(q: &crate::Opaque, key: &str) -> Option<String> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:94, 102)") }
-fn seam_query_has(q: &crate::Opaque, key: &str) -> bool { todo!("needs: URLSearchParams.has: q is Opaque (hours.ts:96, 101)") }
-/// `parseFloat(q.get(key))` where the key is there and the number finite (hours.ts:95, 103).
-fn seam_query_number(q: &crate::Opaque, key: &str) -> Option<f64> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:95, 103)") }
-fn seam_visit_hour() -> HourId { todo!("needs: `g` in hourHref, whose default is HOUR.id (hours.ts:106)") }
+/// A box's row (Box.* in the TypeScript). On a skeleton with the table `g.tab.boxes` (5.1), the body is `&mut g.tab.boxes[b]`.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box (hours.ts:301, 326-328, 408)")
+}
+fn seam_query_get(q: &crate::Opaque, key: &str) -> Option<String> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:103, 104)") }
+fn seam_query_has(q: &crate::Opaque, key: &str) -> bool { todo!("needs: URLSearchParams.has: q is Opaque (hours.ts:102)") }
+/// `parseFloat(q.get(key))` where the key is there and the number finite (hours.ts:104).
+fn seam_query_number(q: &crate::Opaque, key: &str) -> Option<f64> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:104)") }
 
 #[cfg(test)]
 mod tests {
@@ -831,9 +786,9 @@ mod tests {
     }
     #[test]
     fn rays_are_the_typescripts_bits() {
-        let (sky, gnd) = ray_tables();
-        assert_eq!((sky.len(), gnd.len()), (15, 8));
-        for (r, &(d, c)) in sky.iter().chain(gnd.iter()).zip(RAYS.iter()) {
+        let (sky_rays, gnd_rays) = (sky(), gnd());
+        assert_eq!((sky_rays.len(), gnd_rays.len()), (15, 8));
+        for (r, &(d, c)) in sky_rays.iter().chain(gnd_rays.iter()).zip(RAYS.iter()) {
             assert_eq!(b3(r.d), d);
             for k in 0..6 { assert_eq!(r.c6[k].to_bits(), c[k]); }
         }
@@ -852,23 +807,10 @@ mod tests {
         assert_eq!(hour_id_of(Some("constructor")), HourId::Night);
         assert_eq!(hour_id_of(None), HourId::Night);
     }
-    #[test]
-    fn hour_href_replaces_the_hour_on_a_link() {
-        assert_eq!(hour_href("/play?a=1&hour=dawn&b", Some(HourId::Dusk)), "/play?a=1&b&hour=dusk");
-        assert_eq!(hour_href("/play?hour=dawn", Some(HourId::Night)), "/play");
-        assert_eq!(hour_href("/play?hours=2&hour", Some(HourId::Night)), "/play?hours=2");
-        assert_eq!(hour_href("/play", Some(HourId::Midday)), "/play?hour=midday");
-        assert_eq!(hour_href("/p?a?b", Some(HourId::Night)), "/p?a");
-    }
     fn lamp(g: &mut Game, kind: f64, dir: V3, intensity: f64) -> LightId {
         let l = g.tab.light.push(crate::render_lights::RtLight { kind, dir, color: [1.0, 1.0, 1.0], intensity, enabled: true, ttl: -1.0, ..crate::render_lights::RtLight::zeroed() });
         g.engine.lights.lights.push(l);
         l
-    }
-    fn stat(g: &mut Game, c: V3, h: V3, flags: f64) -> BoxId {
-        let b = g.col.boxes.push(crate::scene_boxes::Box { c, h, flags, ..Default::default() });
-        g.engine.world.statics.push(b);
-        b
     }
     #[test]
     fn the_sky_lamp_is_the_brightest_steady_one_pointing_down() {
@@ -909,20 +851,13 @@ mod tests {
         set_sun_strength(&mut g, 7.0, Some(true));
         assert_eq!(sun_strength(&mut g), 1.0);
     }
+    // (the fold over real boxes waits on the table of Box rows: `seam_box`)
     #[test]
-    fn the_casters_fold_and_their_box() {
-        let no_shadow = crate::scene_boxes::box_flag().no_shadow;
+    fn with_no_statics_the_casters_are_nothing_and_the_box_the_stand_in() {
         let mut g = Game::blank();
         assert_eq!(casters_of(&mut g), 0.0);
-        let b = box_of(&mut g);   // nothing casts: the level's stand-in box
+        let b = box_of(&mut g);
         assert_eq!((b.x0, b.x1, b.z0, b.z1, b.top), (0.0, 40.0, 0.0, 28.0, 8.0));
-        stat(&mut g, [1.0, 2.0, 3.0], [3.0, 1.0, 4.0], 0.0);
-        let hidden = stat(&mut g, [100.0, 50.0, 100.0], [1.0, 1.0, 1.0], no_shadow);
-        assert_eq!(casters_of(&mut g), (2 * 7919 + 2 * 31) as f64);   // the second, by its place
-        let b = box_of(&mut g);   // a yawed box's circle, radius 5; the hidden one is not in it
-        assert_eq!((b.x0, b.x1, b.z0, b.z1, b.top), (-4.0, 6.0, -2.0, 8.0, 3.1));
-        g.col.boxes[hidden].flags = 0.0;
-        assert_eq!(casters_of(&mut g), (2 * 7919) as f64);
     }
     #[test]
     fn a_ray_runs_until_it_leaves_the_box() {
@@ -932,11 +867,5 @@ mod tests {
         assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]), 5.0);
         assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [0.0, -1.0, 0.0]), 60.0);   // down: the box has no floor, the 60 m stands
         assert_eq!(reach_of(b, [20.0, 1.0, 0.0], [1.0, 0.0, 0.0]), 0.0);    // already out
-    }
-    #[test]
-    fn to_fixed_2_is_the_typescripts() {
-        for (x, s) in [(0.625, "0.63"), (0.125, "0.13"), (0.375, "0.38"), (1.875, "1.88"), (1.005, "1.00"), (2.6, "2.60"), (0.0, "0.00"), (1.0, "1.00"), (0.25, "0.25"), (6.0, "6.00")] {
-            assert_eq!(to_fixed_2(x), s);
-        }
     }
 }

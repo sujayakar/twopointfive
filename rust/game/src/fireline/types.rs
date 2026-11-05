@@ -82,7 +82,7 @@ impl Lane {
 }
 impl Default for Lane { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fireline.ts:166 hold ->, src/game/fireline.ts:166)
+/// (TypeScript: inline at quiet hold ->, src/game/fireline.ts:166)
 #[derive(Clone, Copy, Debug)]
 pub struct Hold {
     pub speed: f64,
@@ -138,7 +138,7 @@ impl FirelineMod {
 #[derive(Clone, Debug, Default)]
 pub struct FirelineStats {
     pub holds: i32,
-    pub held_s: i32,
+    pub held_s: f64,
     pub cues: i32,
     pub ways: i32,
     pub no_way: i32,

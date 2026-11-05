@@ -7,4 +7,5 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// Nothing to translate: lines 585 to 588 are the end of PropSystem and the scratch `cc`, which the skeleton holds at g.m.props.cc.
+// Nothing to translate: lines 585 to 588 are the end of PropSystem and the scratch `cc`. Its only users, `step` and `circleContact`, are helpers of
+// the twin sim::props::update (notInTheGame.txt), so the game holds no `cc`.

@@ -29,14 +29,9 @@ pub fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRati
 /// `m:ss` of a count of seconds.   (game.ts fmtClock)
 pub fn fmt_clock(sec: f64) -> String {
     let s = m::max(0.0, m::floor(sec));
-    let tail = whole_number_string(js::rem(s, 60.0));
+    let tail = js::num_str(js::rem(s, 60.0));
     let pad = if tail.len() < 2 { "0" } else { "" };
-    alloc::format!("{}:{}{}", whole_number_string(m::floor(s / 60.0)), pad, tail)
-}
-
-/// `String(x)` of a whole number, NaN or +∞ (below 1e21, where JavaScript goes to an exponent; no clock gets there).
-fn whole_number_string(x: f64) -> String {
-    if x == f64::INFINITY { String::from("Infinity") } else { alloc::format!("{}", x) }
+    alloc::format!("{}:{}{}", js::num_str(m::floor(s / 60.0)), pad, tail)
 }
 
 /// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.   (game.ts newMission)
@@ -94,6 +89,9 @@ mod tests {
             (f64::NAN, "NaN:NaN"),
             (f64::INFINITY, "Infinity:NaN"),
             (f64::NEG_INFINITY, "0:00"),
+            (1e21, "16666666666666666000:40"),
+            (6e22, "1e+21:00"),
+            (1.2e23, "2e+21:00"),
         ];
         for (x, want) in cases {
             assert_eq!(fmt_clock(*x), *want, "fmt_clock({})", x);

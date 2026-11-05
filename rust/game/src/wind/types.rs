@@ -64,6 +64,8 @@ pub struct WindSource {
     pub roofs: Option<Vec<Vec<f64>>>,
     pub field: Option<bool>,
     pub bound: crate::smoke_types::WindGpuSourceBound,
+    pub kinds: Option<f64>,
+    pub heat: Option<bool>,
 }
 impl WindSource {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -91,6 +93,8 @@ impl WindSource {
             roofs: None,
             field: None,
             bound: crate::smoke_types::WindGpuSourceBound::zeroed(),
+            kinds: None,
+            heat: None,
         }
     }
 }

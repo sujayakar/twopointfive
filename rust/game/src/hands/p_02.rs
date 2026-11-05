@@ -14,7 +14,7 @@ pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> 
     if crate::character::anim_kicking(g, c) { return None; }
     let (pos, vel, id) = (g.ch[c].pos, g.ch[c].vel, g.ch[c].id);
     let seat = crate::seats::view_of(g, gd);
-    let at_handle = if seat == g.player { lead_at_handle(g, gd, pos) } else { crate::seats::with_seat(g, seat, &mut |g: &mut Game| lead_at_handle(g, gd, pos)) };
+    let at_handle = crate::seats::with_seat(g, seat, &mut |g: &mut Game| lead_at_handle(g, gd, pos));
     if at_handle.is_some() { return at_handle; }
     let slow = m::hyp2(vel[0], vel[2]) < g.k.hands.team_pace;
     let mut i = 0;

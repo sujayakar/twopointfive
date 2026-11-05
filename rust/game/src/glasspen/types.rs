@@ -189,23 +189,6 @@ impl ShellGlass {
 }
 impl Default for ShellGlass { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glasspen.ts:384 linePanes, src/game/glasspen.ts:384)
-#[derive(Clone, Copy, Debug)]
-pub struct GlasspenModLinePanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-impl GlasspenModLinePanesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlasspenModLinePanesItem {
-            bi: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for GlasspenModLinePanesItem { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ShellMark {
@@ -260,22 +243,13 @@ impl Default for ShotPassesPanesItem { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct GlasspenMod {
-    /// (src/game/glasspen.ts:108 forced)
-    pub forced: bool,
-    /// (src/game/glasspen.ts:110 forcedFoes)
-    pub forced_foes: bool,
     /// (src/game/glasspen.ts:168 states)
     pub states: Option<crate::glasspen::PenState>,
-    /// (src/game/glasspen.ts:384 linePanes)
-    pub line_panes: Vec<crate::glasspen::GlasspenModLinePanesItem>,
 }
 impl GlasspenMod {
     pub fn blank() -> Self {
         GlasspenMod {
-            forced: false,
-            forced_foes: false,
             states: None,
-            line_panes: Vec::new(),
         }
     }
 }

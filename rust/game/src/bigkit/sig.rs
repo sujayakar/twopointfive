@@ -24,7 +24,7 @@ pub fn sam_big_far(g: &mut crate::game::Game, d: DoorId, p: V3) -> Option<crate:
 pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 { todo!() }
 
 /// (src/game/bigkit.ts:154 samBigPose)
-pub fn sam_big_pose(g: &mut crate::game::Game) -> Option<crate::bigkit::SamBigPose> { todo!() }
+pub fn sam_big_pose(g: &mut crate::game::Game) -> Option<crate::character::AnimBigTool> { todo!() }
 
 /// (src/game/bigkit.ts:167 weighed)
 pub fn weighed(g: &mut crate::game::Game) -> bool { todo!() }
@@ -96,7 +96,7 @@ pub fn gun_down(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 pub fn hammer_blow(g: &mut crate::game::Game, gd: GuardId, d: DoorId, last: bool) -> bool { todo!() }
 
 /// (src/game/bigkit.ts:312 hammerOut)
-pub fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> crate::game::GuardBigOut { todo!() }
+pub fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> f64 { todo!() }
 
 /// (src/game/bigkit.ts:318 hammerIn)
 pub fn hammer_in(g: &mut crate::game::Game, gd: GuardId, hard: Option<bool>) { todo!() }

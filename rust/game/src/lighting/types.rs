@@ -130,7 +130,7 @@ impl LightingMod {
 pub struct LightingStats {
     pub asked: i32,
     pub pulled: i32,
-    pub max_back: i32,
+    pub max_back: f64,
 }
 
 /// (src/game/lighting.ts:34 LENS_SLANT)

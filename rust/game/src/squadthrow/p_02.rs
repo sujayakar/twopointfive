@@ -7,25 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// `n.toFixed(1)`: the nearer tenth, the larger magnitude on an exact tie; a negative zero prints as zero, a small negative as "-0.0"
-fn to_fixed_1(x: f64) -> String {
-    if x.is_nan() {
-        return String::from("NaN");
-    }
-    if x == 0.0 {
-        return String::from("0.0");
-    }
-    let a = m::abs(x);
-    // a tenth's tie in binary is an odd number of quarters and nothing else; the formatter rounds those to even, the language up
-    let q = a * 4.0;
-    if m::floor(q) == q && js::rem(q, 2.0) == 1.0 {
-        let n = m::floor(a * 10.0) + 1.0;
-        let sign = if x < 0.0 { "-" } else { "" };
-        return format!("{}{:.1}", sign, n / 10.0);
-    }
-    format!("{:.1}", x)
-}
-
 /// every kind of target carries `at` (the rows here are floor rows; squad40 lends on a floor target)
 fn target_at(t: &crate::orders::OrderTarget) -> V3 {
     match t {
@@ -69,13 +50,6 @@ fn arc_of(th: &SquadThrower) -> Arc {
 fn state_key(g: &mut Game) -> PlayerId {
     state(g);
     crate::seats::view_key(g)
-}
-
-/// …and never his call inside what it kills at. (squadthrow.ts samNear)
-pub fn sam_near(g: &mut crate::game::Game, pts: &[V3]) -> bool {
-    let p = g.ch[g.pl[g.player].ch].pos;
-    let min = g.k.squadthrow.duck_min_m;
-    pts.iter().any(|l| v3::dist_xz(p, *l) < min)
 }
 
 /// This view's state, the row itself, made if it is not there. (squadthrow.ts state)
@@ -127,7 +101,7 @@ pub fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow:
 /// The squad's order log, in its own words for a floor order. (squadthrow.ts squadLogRow)
 pub fn squad_log_row(g: &mut crate::game::Game, gd: GuardId, order: &str, at: V3) {
     let (t, who) = (g.time, g.gd[gd].callsign.clone());
-    let target = format!("floor:{},{}", to_fixed_1(at[0]), to_fixed_1(at[2]));
+    let target = format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     let serial = g.serial();
     g.orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, laid: None, serial });
 }
@@ -263,7 +237,7 @@ pub fn squad_hand_back(g: &mut crate::game::Game, w: &mut crate::squadthrow::Len
     if b.as_ref().map_or(false, |b| b.order == "fallIn") {
         let d = g.orders.defs.iter().copied().find(|d| g.tab.orders_order_def[*d].id == "fallIn");
         if let Some(d) = d {
-            seam_def_issue(g, d, &[gd], &w.t);
+            crate::orders::order_issue(g, d, &[gd], &w.t, None);
             return;
         }
     }
@@ -411,7 +385,7 @@ pub fn walk_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) 
     if !g.tab.orders_assignment[a].arrived && v3::dist_xz(p, post) > 0.4 {
         return;
     }
-    if !crate::squadsmoke::squad_hand_free(g, gd) || hands_busy(g, gd) {
+    if !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) {
         return;
     }
     let on_t = {
@@ -640,8 +614,8 @@ fn ask(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, fresh: bool)
     Ok(th)
 }
 
-/// (the row's `label`)
-fn row_label(g: &mut Game, kind: SquadThrowKind, at: V3) -> String {
+/// The row's words, with any warning `valid` left for this spot: the arm OrderLabel::ThrowRow. (squadthrow.ts:554 one.label)
+pub fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
     let key = crate::seats::view_key(g);
     let want = key_of(at);
     let x = g.m.squadthrow.states.get(key).and_then(|s| {
@@ -659,8 +633,8 @@ fn row_label(g: &mut Game, kind: SquadThrowKind, at: V3) -> String {
     format!("{} there · {} left{}", word(kind).as_str(), n, w)
 }
 
-/// The order is one man's, the thrower's. (the row's `only`)
-fn row_only(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Vec<GuardId> {
+/// The order is one man's, the thrower's: the arm OrderOnly::ThrowRow. (squadthrow.ts:556 one.only)
+pub fn row_only(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Vec<GuardId> {
     if g.k.squadthrow.lob {
         let key = state_key(g);
         let k = key_of(at);
@@ -672,8 +646,8 @@ fn row_only(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Vec<
     }
 }
 
-/// Err: why not. Also sets the row's warning. (the row's `valid`)
-fn row_valid(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Result<(), String> {
+/// Err: why not. Also sets the row's warning: the arm OrderValid::ThrowRow. (squadthrow.ts:557 one.valid)
+pub fn row_valid(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Result<(), String> {
     let a = ask(g, men, at, kind, false);
     if kind == SquadThrowKind::Stun {
         let who = match &a {
@@ -695,8 +669,8 @@ fn row_valid(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind) -> Res
     a.map(|_| ())
 }
 
-/// Some: the refusal. (the row's `issue`)
-fn row_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: SquadThrowKind) -> Option<String> {
+/// Some: the refusal: the arm OrderIssue::ThrowRow. (squadthrow.ts:563 one.issue)
+pub fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) -> Option<String> {
     let at = target_at(t);
     let mut a = match ask(g, men, at, kind, true) {
         Ok(a) => a,
@@ -846,22 +820,20 @@ pub fn squad_throw_summary(g: &mut crate::game::Game) -> String {
     format!("frag {} · stun {} · X on a spot of floor, {}, then 1 or 2 · thrown {}", f, s, g.k.frag.order_key.replacen("Key", "", 1), g.stats.squadthrow.thrown)
 }
 
-// ---- seam: only what the skeleton blocks (notes.md, ## Skeleton) ----
-
-/// squadthrow.ts:461 `d.issue(S, [gd], W.t)`: the arm of the `fallIn` row
-fn seam_def_issue(g: &mut Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) {
-    todo!("needs: a public name for OrderIssue's arms, here OrderIssue::FallIn (orders.ts:611); no function of crate::orders runs a row's issue")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    // the expected strings are the TypeScript's own: bun -e "console.log((x).toFixed(1))"
+    // the expected text is the TypeScript's own: `(0.25).toFixed(1)` is "0.3" (a tie goes up, where `{:.1}` goes to even), `(-0.04).toFixed(1)` is "-0.0"
     #[test]
-    fn to_fixed_is_the_languages() {
-        for (x, s) in [(0.25, "0.3"), (-0.25, "-0.3"), (0.75, "0.8"), (1.25, "1.3"), (2.5, "2.5"), (1.45, "1.4"), (8.35, "8.3"), (-0.04, "-0.0"), (-0.0, "0.0"), (0.0, "0.0"), (12.0, "12.0"), (-3.14159, "-3.1"), (0.05, "0.1"), (0.15, "0.1"), (1234.75, "1234.8")] {
-            assert_eq!(to_fixed_1(x), s, "{}", x);
-        }
+    fn a_floor_order_is_logged_in_the_languages_digits() {
+        let mut g = Game::blank();
+        let gd = g.gd.push(crate::game::Guard::blank());
+        squad_log_row(&mut g, gd, "fragThere", [0.25, 0.0, -0.04]);
+        squad_log_row(&mut g, gd, "fragThere", [1.45, 0.0, 12.0]);
+        let log = &g.orders.log;
+        assert_eq!(log[0].target, "floor:0.3,-0.0");
+        assert_eq!(log[1].target, "floor:1.4,12.0");
+        assert_ne!(log[0].serial, log[1].serial);
     }
 }

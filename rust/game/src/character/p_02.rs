@@ -77,64 +77,93 @@ pub fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
     (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
 }
 
-/// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into a pose of NaNs. (character.ts sampleAt0)
-pub fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: &mut crate::anim_skeleton::Pose) {
+/// A clip's first keys replayed into `out`: the slots are found once per clip, by sampling into NaNs. `out` itself is the page sampled on, its floats put back after, since a `pose_new` would hold a place in the pool for good where the TypeScript's scratch held none. (character.ts sampleAt0)
+pub fn sample_at0(g: &mut crate::game::Game, clip: ClipId, out: crate::anim_skeleton::Pose) {
+    let rows = crate::anim_skeleton::pose_rows(out.nodes as f64);
     let stale = match g.m.character.at0.get(clip) {
         None => true,
-        Some(e) => e.rows != out.rows as f64,
+        Some(e) => e.rows != rows,
     };
     if stale {
-        let mut p = crate::anim_skeleton::pose_new(out.num_nodes as f64);
-        p.cols.fill(f32::NAN);
-        crate::anim_skeleton::sample_clip(&g.tab.clip[clip], 0.0, false, &mut p);
-        let mut at: Vec<i32> = Vec::new();
-        for i in 0..p.cols.len() {
-            if !p.cols[i].is_nan() { at.push(i as i32); }
-        }
-        let v: Vec<f32> = at.iter().map(|&i| p.cols[i as usize]).collect();
-        g.m.character.at0.set(clip, crate::character::CharacterModAT0Value { rows: p.rows as f64, at, v });
+        let kept = crate::anim_skeleton::pose_cols(g, out).to_vec();
+        crate::anim_skeleton::pose_cols(g, out).fill(f32::NAN);
+        let singles = g.k.posemath.singles;   // (an open row: POSEMATH.singles stays a test)
+        crate::anim_skeleton::sample_clip(g, clip, 0.0, false, out, singles);
+        let (at, v) = keyed_slots(crate::anim_skeleton::pose_cols(g, out));
+        crate::anim_skeleton::pose_cols(g, out).copy_from_slice(&kept);
+        g.m.character.at0.set(clip, crate::character::CharacterModAT0Value { rows, at, v });
     }
-    let e = g.m.character.at0.get(clip).unwrap();
-    for k in 0..e.at.len() {
-        out.cols[e.at[k] as usize] = e.v[k];
+    // The row is taken out for the replay: pose_cols lends all of g, and a clone here would allocate for every man's aim, every frame.
+    let e = g.m.character.at0.get_mut(clip).unwrap();
+    let (at, v) = (core::mem::take(&mut e.at), core::mem::take(&mut e.v));
+    replay_slots(crate::anim_skeleton::pose_cols(g, out), &at, &v);
+    let e = g.m.character.at0.get_mut(clip).unwrap();
+    e.at = at;
+    e.v = v;
+}
+
+/// The slots a sample into NaNs wrote, and what it wrote there: a slot still NaN is one the clip does not key.
+fn keyed_slots(cols: &[f32]) -> (Vec<i32>, Vec<f32>) {
+    let mut at: Vec<i32> = Vec::new();
+    for i in 0..cols.len() {
+        if !cols[i].is_nan() { at.push(i as i32); }
+    }
+    let v: Vec<f32> = at.iter().map(|&i| cols[i as usize]).collect();
+    (at, v)
+}
+
+/// The same floats into the same slots, the rest left as it stands.
+fn replay_slots(d: &mut [f32], at: &[i32], v: &[f32]) {
+    for k in 0..at.len() {
+        d[at[k] as usize] = v[k];
     }
 }
 
 /// `p` with the difference between two poses laid on it by w, on the joints of `only`. (character.ts addPoseDelta)
-pub fn add_pose_delta(p: &mut crate::anim_skeleton::Pose, from: &crate::anim_skeleton::Pose, to: &crate::anim_skeleton::Pose, w: f64, only: &[f32]) {
+pub fn add_pose_delta(g: &mut crate::game::Game, p: crate::anim_skeleton::Pose, from: crate::anim_skeleton::Pose, to: crate::anim_skeleton::Pose, w: f64, only: &[f32]) {
     if w <= 0.0 { return; }
-    let (n, nr) = (p.num_nodes, p.rows);
-    delta_onto(&mut p.cols, &from.cols, &to.cols, n, nr, w, only);
+    let nr = crate::anim_skeleton::pose_rows(p.nodes as f64) as usize;
+    for i in 0..p.nodes as usize {
+        if only[i] as f64 <= 0.0 { continue; }
+        // One borrow at a time, read before written: p may be `from` (the head comment of the TypeScript's says so), and three slices of one pool cannot be held.
+        let a = joint_of(crate::anim_skeleton::pose_cols(g, from), nr, i);
+        let b = joint_of(crate::anim_skeleton::pose_cols(g, to), nr, i);
+        let pc = crate::anim_skeleton::pose_cols(g, p);
+        let q = delta_joint(joint_of(pc, nr, i), a, b, w);
+        for c in 0..7 { pc[c * nr + i] = q[c]; }
+    }
 }
 
-/// add_pose_delta's sums over the columns (rows `nr` apart), as the TypeScript does them: singles read into doubles, stored as singles once.
-fn delta_onto(pc: &mut [f32], ac: &[f32], bc: &[f32], n: usize, nr: usize, w: f64, only: &[f32]) {
-    for i in 0..n {
-        if only[i] as f64 <= 0.0 { continue; }
-        let mut o = i;
-        for _c in 0..3 {
-            pc[o] = (pc[o] as f64 + (bc[o] as f64 - ac[o] as f64) * w) as f32;
-            o += nr;
-        }
-        let (ax, ay, az, aw) = (-(ac[3 * nr + i] as f64), -(ac[4 * nr + i] as f64), -(ac[5 * nr + i] as f64), ac[6 * nr + i] as f64);
-        let (bx, by, bz, bw) = (bc[3 * nr + i] as f64, bc[4 * nr + i] as f64, bc[5 * nr + i] as f64, bc[6 * nr + i] as f64);
-        let mut dx = aw * bx + ax * bw + ay * bz - az * by;
-        let mut dy = aw * by - ax * bz + ay * bw + az * bx;
-        let mut dz = aw * bz + ax * by - ay * bx + az * bw;
-        let mut dw = aw * bw - ax * bx - ay * by - az * bz;
-        if dw < 0.0 { dx = -dx; dy = -dy; dz = -dz; dw = -dw; }
-        dx *= w; dy *= w; dz *= w; dw = 1.0 + (dw - 1.0) * w;
-        let (px, py, pz, pw) = (pc[3 * nr + i] as f64, pc[4 * nr + i] as f64, pc[5 * nr + i] as f64, pc[6 * nr + i] as f64);
-        let x = pw * dx + px * dw + py * dz - pz * dy;
-        let y = pw * dy - px * dz + py * dw + pz * dx;
-        let z = pw * dz + px * dy - py * dx + pz * dw;
-        let ww = pw * dw - px * dx - py * dy - pz * dz;
-        let l = js::or(m::hyp4(x, y, z, ww), 1.0);
-        pc[3 * nr + i] = (x / l) as f32;
-        pc[4 * nr + i] = (y / l) as f32;
-        pc[5 * nr + i] = (z / l) as f32;
-        pc[6 * nr + i] = (ww / l) as f32;
-    }
+/// A joint's origin and rotation (the first seven columns, `nr` rows apart), read into doubles.
+fn joint_of(cols: &[f32], nr: usize, i: usize) -> [f64; 7] {
+    let mut j = [0.0; 7];
+    for c in 0..7 { j[c] = cols[c * nr + i] as f64; }
+    j
+}
+
+/// add_pose_delta's sums for one joint, as the TypeScript does them: in doubles, stored as singles once.
+fn delta_joint(p: [f64; 7], a: [f64; 7], b: [f64; 7], w: f64) -> [f32; 7] {
+    let mut o = [0.0f32; 7];
+    for c in 0..3 { o[c] = (p[c] + (b[c] - a[c]) * w) as f32; }
+    let (ax, ay, az, aw) = (-a[3], -a[4], -a[5], a[6]);
+    let (bx, by, bz, bw) = (b[3], b[4], b[5], b[6]);
+    let mut dx = aw * bx + ax * bw + ay * bz - az * by;
+    let mut dy = aw * by - ax * bz + ay * bw + az * bx;
+    let mut dz = aw * bz + ax * by - ay * bx + az * bw;
+    let mut dw = aw * bw - ax * bx - ay * by - az * bz;
+    if dw < 0.0 { dx = -dx; dy = -dy; dz = -dz; dw = -dw; }
+    dx *= w; dy *= w; dz *= w; dw = 1.0 + (dw - 1.0) * w;
+    let (px, py, pz, pw) = (p[3], p[4], p[5], p[6]);
+    let x = pw * dx + px * dw + py * dz - pz * dy;
+    let y = pw * dy - px * dz + py * dw + pz * dx;
+    let z = pw * dz + px * dy - py * dx + pz * dw;
+    let ww = pw * dw - px * dx - py * dy - pz * dz;
+    let l = js::or(m::hyp4(x, y, z, ww), 1.0);
+    o[3] = (x / l) as f32;
+    o[4] = (y / l) as f32;
+    o[5] = (z / l) as f32;
+    o[6] = (ww / l) as f32;
+    o
 }
 
 /// Smooth 0 to 1 to 0 window: rises over [a,b], falls over [c,d]. (character.ts bump)
@@ -242,8 +271,13 @@ mod tests {
     #[test]
     fn pose_delta_bits() {
         let cols = |c: &[u32; 50]| -> Vec<f32> { c.iter().map(|&b| f32::from_bits(b)).collect() };
-        let mut p = cols(&DELTA_P);
-        delta_onto(&mut p, &cols(&DELTA_A), &cols(&DELTA_B), 3, 5, 0.62, &[1.0, 0.0, 0.25]);
+        let (mut p, a, b) = (cols(&DELTA_P), cols(&DELTA_A), cols(&DELTA_B));
+        let only = [1.0f32, 0.0, 0.25];
+        for i in 0..3 {
+            if only[i] as f64 <= 0.0 { continue; }
+            let q = delta_joint(joint_of(&p, 5, i), joint_of(&a, 5, i), joint_of(&b, 5, i), 0.62);
+            for c in 0..7 { p[c * 5 + i] = q[c]; }
+        }
         let got: Vec<u32> = p.iter().map(|x| x.to_bits()).collect();
         assert_eq!(got, DELTA_OUT);
     }
@@ -260,28 +294,28 @@ mod tests {
         for i in 0..8 { assert_eq!(a[i].to_bits(), b[i].to_bits()); }
     }
 
-    /// The kept slots replay into `out` and leave the rest of it as it stands; no sample is taken (the clip is never read).
+    /// A sample into NaNs: the slots it wrote are found, and replay into a pose leaving the rest of it as it stands.
     #[test]
-    fn sample_at0_replays_the_kept_slots() {
-        let mut g = crate::game::Game::blank();
-        let clip = ClipId(0);
-        let mut out = crate::anim_skeleton::Pose { num_nodes: 2, rows: 4, cols: vec![9.0; 40] };
-        g.m.character.at0.set(clip, crate::character::CharacterModAT0Value { rows: 4.0, at: vec![1, 7, 39], v: vec![0.25, -1.5, 3.0] });
-        sample_at0(&mut g, clip, &mut out);
+    fn sample_at0_finds_and_replays_the_slots() {
+        let mut sampled = vec![f32::NAN; 40];
+        sampled[1] = 0.25; sampled[7] = -0.0; sampled[39] = 3.0;
+        let (at, v) = keyed_slots(&sampled);
+        assert_eq!(at, vec![1, 7, 39]);
+        assert_eq!(v.iter().map(|x| x.to_bits()).collect::<Vec<u32>>(), vec![0.25f32.to_bits(), (-0.0f32).to_bits(), 3.0f32.to_bits()]);
+        let mut out = vec![9.0f32; 40];
+        replay_slots(&mut out, &at, &v);
         let mut want = vec![9.0f32; 40];
-        want[1] = 0.25; want[7] = -1.5; want[39] = 3.0;
-        assert_eq!(out.cols, want);
+        want[1] = 0.25; want[7] = -0.0; want[39] = 3.0;
+        assert_eq!(out.iter().map(|x| x.to_bits()).collect::<Vec<u32>>(), want.iter().map(|x| x.to_bits()).collect::<Vec<u32>>());
     }
 
+    /// No weight is no read of any pose (a stub would panic).
     #[test]
-    fn add_pose_delta_goes_by_the_pose_and_not_for_no_weight() {
-        let cols = |c: &[u32; 50]| -> Vec<f32> { c.iter().map(|&b| f32::from_bits(b)).collect() };
-        let pose = |c: &[u32; 50]| crate::anim_skeleton::Pose { num_nodes: 3, rows: 5, cols: cols(c) };
-        let (mut p, a, b) = (pose(&DELTA_P), pose(&DELTA_A), pose(&DELTA_B));
-        add_pose_delta(&mut p, &a, &b, 0.0, &[1.0, 0.0, 0.25]);
-        assert_eq!(p.cols.iter().map(|x| x.to_bits()).collect::<Vec<u32>>(), DELTA_P);
-        add_pose_delta(&mut p, &a, &b, 0.62, &[1.0, 0.0, 0.25]);
-        assert_eq!(p.cols.iter().map(|x| x.to_bits()).collect::<Vec<u32>>(), DELTA_OUT);
+    fn add_pose_delta_not_for_no_weight() {
+        let mut g = crate::game::Game::blank();
+        let z = crate::anim_skeleton::Pose::blank();
+        add_pose_delta(&mut g, z, z, z, 0.0, &[]);
+        add_pose_delta(&mut g, z, z, z, -1.0, &[]);
     }
 
     #[test]

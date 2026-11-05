@@ -1,4 +1,4 @@
-//! src/game/enemysquads.ts lines 1 to 314
+//! src/game/enemysquads.ts lines 1 to 310
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -41,26 +41,42 @@ pub fn squad_drill(g: &mut crate::game::Game) -> Option<crate::knobs::SquadsK> {
     let name = match &g.m.enemysquads.states { Some(st) => st.s.name.clone(), None => return None };
     if !g.k.pressure.on { return None; }
     let squads = g.k.squads;
-    Some(match seam_drill_at_over(g, &name, squads) { Some(merged) => merged, None => squads })
+    Some(match g.k.drill_at.rows.get(name) { Some(row) => drill_over(squads, row), None => squads })
 }
 
-/// The panel's line: which of the drill's rules hard has on where the game stands ('' = no squads staged).   (enemysquads.ts squadDrillWords)
-pub fn squad_drill_words(g: &mut crate::game::Game) -> String {
-    let name = match &g.m.enemysquads.states { Some(st) => st.s.name.clone(), None => return String::new() };
-    let k = match squad_drill(g) { Some(k) => k, None => return alloc::format!("{}: standard squads", name) };
-    let mut on: Vec<String> = Vec::new();
-    if k.drill_net && k.net_k != 1.0 { on.push(alloc::format!("let you commit first (× {} net)", k.net_k)); }
-    if k.drill_net && k.reinforce_k != 1.0 { on.push(alloc::format!("own men's beat × {}", k.reinforce_k)); }
-    if k.drill_own { on.push(alloc::format!("no man fed into a lost room (mates up {})", k.own_up)); }
-    if k.drill_back { on.push(String::from("pair gets back on its own doors")); }
-    if g.k.pressure.sweep { on.push(String::from("a pair goes to look when you go quiet")); }
-    let squads = g.k.squads;
-    let own_set = if seam_drill_at_over(g, &name, squads).is_some() { " — this map's own set" } else { "" };
-    let rules = if on.is_empty() { String::from("standard (no rule on here)") } else { on.join(" · ") };
-    alloc::format!("{}: hard = {}{}", name, rules, own_set)
+/// `{ ...SQUADS, ...row }`: the rows the map names, the table's own for the rest.   (enemysquads.ts:309)
+fn drill_over(mut k: crate::knobs::SquadsK, row: &DrillAtRow) -> crate::knobs::SquadsK {
+    let DrillAtRow::Row { drill_net, net_k, reinforce_k, drill_own, own_up, drill_back, back_beat } = *row;
+    if let Some(v) = drill_net { k.drill_net = v; }
+    if let Some(v) = net_k { k.net_k = v; }
+    if let Some(v) = reinforce_k { k.reinforce_k = v; }
+    if let Some(v) = drill_own { k.drill_own = v; }
+    if let Some(v) = own_up { k.own_up = v; }
+    if let Some(v) = drill_back { k.drill_back = v; }
+    if let Some(v) = back_beat { k.back_beat = v; }
+    k
 }
 
-/// `{ ...over, ...DRILL_AT[name] }`, or None when the map has no row: DrillAtK came out with no rows.   (enemysquads.ts:287 DRILL_AT, :305-306)
-fn seam_drill_at_over(g: &mut Game, name: &str, over: crate::knobs::SquadsK) -> Option<crate::knobs::SquadsK> {
-    todo!("needs: DRILL_AT's rows by structure name (g.k.drill_at, DrillAtK is an empty struct)")
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A row writes what it names and leaves the rest of the table standing (the map's set, enemysquads.ts:292-302).
+    #[test]
+    fn a_maps_row_writes_only_what_it_names() {
+        let table = crate::knobs::page_squads();
+        let rows = crate::knobs::page_drill_at().rows;
+        let compound = drill_over(table, rows.get(String::from("the compound")).unwrap());
+        assert!(compound.drill_net && compound.drill_own && !compound.drill_back);
+        assert_eq!((compound.net_k, compound.reinforce_k, compound.own_up), (1.0, 0.75, 1.0));
+        assert_eq!(compound.back_beat, table.back_beat);
+        assert_eq!(compound.drill_look, table.drill_look);
+        let warehouse = drill_over(table, rows.get(String::from("the warehouse")).unwrap());
+        assert!(!warehouse.drill_net && !warehouse.drill_own && !warehouse.drill_back);
+        assert_eq!((warehouse.net_k, warehouse.reinforce_k), (table.net_k, table.reinforce_k));
+        let barracks = drill_over(table, rows.get(String::from("the barracks")).unwrap());
+        assert!(!barracks.drill_net && barracks.drill_back);
+        assert_eq!(barracks.back_beat, 3.0);
+        assert!(rows.get(String::from("no such map")).is_none());
+    }
 }

@@ -45,7 +45,7 @@ pub fn work_things_moot(g: &mut crate::game::Game, th: &crate::workthings::WorkT
 pub fn work_things_near(g: &mut crate::game::Game, at: V3) -> Option<crate::workthings::WorkThingsNear> { todo!() }
 
 /// (src/game/workthings.ts:238 WorkThings.on)
-pub fn work_things_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::workthings::WorkThingsOn> { todo!() }
+pub fn work_things_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::orders::OrderTarget> { todo!() }
 
 /// (src/game/workthings.ts:244 WorkThings.rows)
 pub fn work_things_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> { todo!() }
@@ -96,7 +96,7 @@ pub fn work_things_summary(g: &mut crate::game::Game) -> String { todo!() }
 pub fn work_near(g: &mut crate::game::Game, at: V3) -> Option<crate::workthings::WorkNear> { todo!() }
 
 /// (src/game/workthings.ts:359 workOn)
-pub fn work_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::workthings::WorkOn> { todo!() }
+pub fn work_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::orders::OrderTarget> { todo!() }
 
 /// (src/game/workthings.ts:361 workRows)
 pub fn work_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page: Option<&str>, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> { todo!() }

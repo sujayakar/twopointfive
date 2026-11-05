@@ -78,7 +78,7 @@ pub fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::
     if r.wedged >= g.k.digin.wedges { return false; }
     let e = match entry_at(g, r.room, idx) { Some(e) => e, None => return false };
     if !wedgeable(g, e.door) || state_of(g).wedges.has(e.door) { return false; }
-    if !(crate::enemysquads::squad_may_wedge(g, gd, e.door) || crate::laststand::last_stand_man(g, gd)) { return false; }
+    if !(crate::enemysquads::squad_may_wedge(g, gd, e.door) || crate::owner::has_him(g, gd, crate::owner::own().stand)) { return false; }
     if flat(heard_at(g, d, *m), e.at) < g.k.digin.close_m { return false; }
     let first = nearest_prop(g, d, e, None);
     let stand = crate::roomfight::room_fight_free_near(g, [e.at[0] - e.out[0] * 1.4, 0.0, e.at[2] - e.out[1] * 1.4]);
@@ -117,7 +117,7 @@ pub fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::
         };
     }
     let goal = match goal { Some(q) => q, None => return false };
-    if crate::laststand::last_stand_man(g, gd) && !crate::roomfight::room_fight_in_room(g, Some(r.room), goal) { return false; }
+    if crate::owner::has_him(g, gd, crate::owner::own().stand) && !crate::roomfight::room_fight_in_room(g, Some(r.room), goal) { return false; }
     r.bracer = Some(gd);
     m.brace = idx;
     m.prop = Some(p);
@@ -266,7 +266,7 @@ pub fn holds(g: &mut crate::game::Game, e: crate::roomfight::Entry) -> bool {
 pub fn would_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt, e: crate::roomfight::Entry) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     if r.wedged >= g.k.digin.wedges || !wedgeable(g, e.door) || state_of(g).wedges.has(e.door) { return false; }
-    if !(crate::enemysquads::squad_may_wedge(g, gd, e.door) || crate::laststand::last_stand_man(g, gd)) { return false; }
+    if !(crate::enemysquads::squad_may_wedge(g, gd, e.door) || crate::owner::has_him(g, gd, crate::owner::own().stand)) { return false; }
     if flat(heard_at(g, d, m), e.at) < g.k.digin.close_m { return false; }
     if nearest_prop(g, d, e, None).is_none() { return false; }
     match crate::roomfight::room_fight_free_near(g, [e.at[0] - e.out[0] * 1.4, 0.0, e.at[2] - e.out[1] * 1.4]) {
@@ -575,7 +575,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if !inside { for l in listeners(g) { if crate::roomfight::room_fight_in_room(g, my_room, l.head) { inside = true; break; } } }
             if inside { m.phase = Phase::Idle; return; }              // they are in his room already: the room fight's man
             if now < m.until { return; }
-            if crate::enemysquads::squad_defers(g, gd) { return; }    // his squad has heard and not yet said what it does
+            if crate::owner::has_him(g, gd, crate::owner::own().squad_word) { return; }    // his squad has heard and not yet said what it does
             let far = m.far && reach > 0.0;
             if !far && crate::pressure::press_wants(g, d) { return; } // on his beat toward a press, or in one: the press has him first
             if !far && !g.tab.roomfight_def[d].rally_at.is_nan() && g.tab.roomfight_def[d].rally_go && now < g.tab.roomfight_def[d].rally_at + 0.5 { return; }   // he means to go to the fight next door: the rally has him first
@@ -693,7 +693,7 @@ fn set_tick(g: &mut Game, d: RoomfightDefId, m: &mut Man, k: RoomfightRoomId, co
     let r = row_of(g, k);
     if now - r.entered_at > 1.0 { m.phase = Phase::Idle; return; }    // they are in: his eye is his own again
     let last = m::max_n(&[g.tab.roomfight_def[d].noise_t, m.know_t, g.gd[gd].last_seen_t]);
-    if now - last > g.k.digin.hold_secs && !crate::laststand::last_stand_man(g, gd) {   // (the last stand stays set)
+    if now - last > g.k.digin.hold_secs && !crate::owner::has_him(g, gd, crate::owner::own().stand) {   // (the last stand stays set)
         m.phase = Phase::Idle;
         log(g, Some(gd), "stands down");
         return;
@@ -742,9 +742,6 @@ fn set_tick(g: &mut Game, d: RoomfightDefId, m: &mut Man, k: RoomfightRoomId, co
         }
     }
 }
-
-fn seam_add_know_to_ready(g: &mut Game, secs: f64) { todo!("needs: DiginStats.know_to_ready is i32, the TypeScript sums seconds") }
-fn seam_add_know_to_entry(g: &mut Game, secs: f64) { todo!("needs: DiginStats.know_to_entry is i32, the TypeScript sums seconds") }
 
 /// once a frame: a room all set, the team's first step into a room that dug in, and wedges that have been booted   (digin.ts watch)
 pub fn watch(g: &mut crate::game::Game) {
@@ -798,9 +795,9 @@ pub fn watch(g: &mut crate::game::Game) {
         if r.ready_at.is_nan() && !home.is_empty() && sets == home.len() {
             r.ready_at = now;
             g.stats.digin.ready_n += 1;
-            seam_add_know_to_ready(g, now - r.t0);
+            g.stats.digin.know_to_ready += now - r.t0;
             row_put(g, k, r.clone());
-            let text = format!("room {} all set, {:.1} s after the first word of them", g.tab.roomfight_room[r.room].id, now - r.t0);
+            let text = format!("room {} all set, {} s after the first word of them", g.tab.roomfight_room[r.room].id, js::to_fixed(now - r.t0, 1));
             log(g, None, &text);
         }
         let mut inside = false;
@@ -808,7 +805,7 @@ pub fn watch(g: &mut crate::game::Game) {
         if !inside { continue; }
         r.entered_at = now;
         g.stats.digin.entered += 1;
-        seam_add_know_to_entry(g, now - r.t0);
+        g.stats.digin.know_to_entry += now - r.t0;
         if !r.cue_at.is_nan() { g.stats.digin.cue_first += 1; }
         if r.cues.has(Cue::Radio) { g.stats.digin.cue_radio += 1; }
         if r.cues.has(Cue::Shout) { g.stats.digin.cue_shout += 1; }
@@ -826,8 +823,8 @@ pub fn watch(g: &mut crate::game::Game) {
         row_put(g, k, r.clone());
         let cues: Vec<&str> = r.cues.iter().map(|c| c.as_str()).collect();
         let cues = if cues.is_empty() { String::from("none") } else { cues.join("+") };
-        let cue_first = if r.cue_at.is_nan() { String::new() } else { format!(" (first {:.1} s before)", now - r.cue_at) };
-        let text = format!("team into room {} {:.1} s after its first word of them: cues {}{}, {}/{} set, {} still busy, {} wedged", g.tab.roomfight_room[r.room].id, now - r.t0, cues, cue_first, sets, home.len(), busy, r.wedged);
+        let cue_first = if r.cue_at.is_nan() { String::new() } else { format!(" (first {} s before)", js::to_fixed(now - r.cue_at, 1)) };
+        let text = format!("team into room {} {} s after its first word of them: cues {}{}, {}/{} set, {} still busy, {} wedged", g.tab.roomfight_room[r.room].id, js::to_fixed(now - r.t0, 1), cues, cue_first, sets, home.len(), busy, r.wedged);
         log(g, None, &text);
     }
 }
@@ -962,7 +959,7 @@ pub fn dig_in_refuge(g: &mut crate::game::Game, def: RoomfightDefId, threat: V3)
     let (spot, door, walk) = best?;
     g.stats.digin.refuge += 1;
     let by = match door { Some(x) => format!(" by {}", door_name(g, x)), None => String::new() };
-    let text = format!("falls back to a dug-in room{} ({:.1} m)", by, walk);
+    let text = format!("falls back to a dug-in room{} ({} m)", by, js::to_fixed(walk, 1));
     log(g, Some(gd), &text);
     Some(DigInRefuge { spot, door })
 }

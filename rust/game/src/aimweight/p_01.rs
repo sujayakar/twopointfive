@@ -193,12 +193,6 @@ pub fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool {
     true
 }
 
-/// `x.toFixed(0)` for the numbers a rate can be: nearest whole, a tie upward on the size, "-" for anything below zero (so -0.4 is "-0", -0 is "0").
-fn to_fixed_0(x: f64) -> String {
-    let size = m::round(m::abs(x));
-    alloc::format!("{}{:.0}", if x < 0.0 { "-" } else { "" }, size)
-}
-
 /// QA / the page's summary line. `AIMWEIGHT.on` is settled on.   (aimweight.ts aimWeightSummary)
 pub fn aim_weight_summary(g: &mut Game) -> String {
     let w = g.pl[g.player].aimw;
@@ -208,12 +202,12 @@ pub fn aim_weight_summary(g: &mut Game) -> String {
     if w.on {
         return String::from("on the cursor");
     }
-    alloc::format!("swinging {}°/s", to_fixed_0(w.vel * 180.0 / m::PI))
+    alloc::format!("swinging {}°/s", js::to_fixed(w.vel * 180.0 / m::PI, 0))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{swing, to_fixed_0};
+    use super::swing;
 
     /// The TypeScript's own bits (bun, EXACT.on, AIMWEIGHT.smooth 0.05): vel, err, top, dt in; vel, left out.
     const CASES: [[u64; 6]; 7] = [
@@ -226,21 +220,6 @@ mod tests {
         [0x4034000000000000, 0xc008cccccccccccd, 0x3fe0000000000000, 0x3fa1111111111111, 0x3fe8d9869fa8879b, 0xc00a835ff8b0d050],
     ];
 
-    const TO_FIXED: [(u64, &str); 12] = [
-    (0x0000000000000000, "0"),
-    (0x8000000000000000, "0"),
-    (0x3fe0000000000000, "1"),
-    (0x3ff8000000000000, "2"),
-    (0x4004000000000000, "3"),
-    (0xbfd999999999999a, "-0"),
-    (0xbfe0000000000000, "-1"),
-    (0xc004000000000000, "-3"),
-    (0x3fdfffffffffffff, "0"),
-    (0x4083b20000000000, "630"),
-    (0xc0934a0000000000, "-1235"),
-    (0x40667fffeb074a77, "180"),
-    ];
-
     #[test]
     fn swing_matches_the_typescript_bits() {
         for c in CASES {
@@ -249,14 +228,6 @@ mod tests {
             let left = swing(0.05, &mut vel, f(c[1]), f(c[2]), f(c[3]));
             assert_eq!(vel.to_bits(), c[4], "vel of {:x?}", c);
             assert_eq!(left.to_bits(), c[5], "left of {:x?}", c);
-        }
-    }
-
-    /// The TypeScript's own answers: `x.toFixed(0)` under bun.
-    #[test]
-    fn to_fixed_0_matches_the_typescript() {
-        for (bits, want) in TO_FIXED {
-            assert_eq!(to_fixed_0(f64::from_bits(bits)), want, "{:x}", bits);
         }
     }
 }

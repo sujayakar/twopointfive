@@ -8,8 +8,8 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- a seam: the one step the skeleton still cannot give (notes.md, ## Skeleton)
-/// g.audio.play(name, at, gain, { rate }): opts is a JsMap of Opaque, which cannot hold the rate, and an absent rate is a random one (audio.ts)
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
+/// `col.boxes[i]`'s centre, half sizes and yaw: g.col.boxes is Vec<BoxId> and no table holds the rows, while the index says g.col.boxes[id].c (faceAt, player.ts:964)
+fn seam_box_c_h_yaw(g: &mut Game, b: BoxId) -> (V3, V3, f64) { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c") }
 
 // ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
 fn legs_pos(g: &Game, m: &Option<&mut Legs>) -> V3 {
@@ -25,25 +25,6 @@ fn legs_set_safe_xz(g: &mut Game, m: &mut Option<&mut Legs>, x: f64, z: f64) {
     let pl = g.player;
     let s = match m { Some(l) => l.safe.as_mut(), None => g.pl[pl].safe.as_mut() };
     if let Some(s) = s { s[0] = x; s[2] = z; }
-}
-fn legs_shoved(l: &Legs) -> crate::noshove::Shoved {
-    crate::noshove::Shoved { char: crate::noshove::ShovedChar { pos: vec![l.char.pos[0], l.char.pos[1], l.char.pos[2]] }, shoved: l.shoved, shoved_t: l.shoved_t, shoved_from: l.shoved_from }
-}
-fn legs_no_shove_back(g: &mut Game, mx: f64, mz: f64, l: f64, m: &Option<&mut Legs>) -> f64 {
-    match m {
-        Some(legs) => { let s = legs_shoved(legs); crate::noshove::no_shove_back(g, mx, mz, l, Some(&s)) }
-        None => crate::noshove::no_shove_back(g, mx, mz, l, None),
-    }
-}
-fn legs_no_shove_note(g: &mut Game, dx: f64, dz: f64, m: &mut Option<&mut Legs>) {
-    match m {
-        Some(legs) => {
-            let mut s = legs_shoved(legs);
-            crate::noshove::no_shove_note(g, dx, dz, Some(&mut s));
-            legs.shoved = s.shoved; legs.shoved_t = s.shoved_t; legs.shoved_from = s.shoved_from;
-        }
-        None => crate::noshove::no_shove_note(g, dx, dz, None),
-    }
 }
 
 /// collideMan on either body: collide_man takes a shape of its own, so the two fields it reads and writes go in and come back
@@ -97,14 +78,14 @@ pub fn keep_off_guards(g: &mut crate::game::Game, dt: f64, y1: f64, m: Option<&m
         let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);
         let l = m::hyp2(dx, dz);
         if l >= KEEP_OFF { continue; }
-        if crate::noshove::no_shove_man(g, gd) {
-            let back = if l > 1e-4 { legs_no_shove_back(g, gp[0], gp[2], l, &m) } else { 0.0 };
+        if crate::noshove::falling_in_yields(g, gd) {
+            let back = if l > 1e-4 { crate::noshove::no_shove_back(g, gp[0], gp[2], l, m.as_deref()) } else { 0.0 };
             if back > 0.0 {
                 let (bx, bz) = (p[0], p[2]);
                 legs_set_xz(g, &mut m, p[0] + dx / l * back, p[2] + dz / l * back);
                 legs_collide(g, &mut m, y1);
                 let q = legs_pos(g, &m);
-                legs_no_shove_note(g, q[0] - bx, q[2] - bz, &mut m);
+                crate::noshove::no_shove_note(g, q[0] - bx, q[2] - bz, m.as_deref_mut());
             }
             continue;
         }
@@ -149,7 +130,7 @@ pub fn keep_off_guards(g: &mut crate::game::Game, dt: f64, y1: f64, m: Option<&m
             legs_set_safe_xz(g, &mut m, bx, bz);
         }
         let q = legs_pos(g, &m);
-        legs_no_shove_note(g, q[0] - bx, q[2] - bz, &mut m);
+        crate::noshove::no_shove_note(g, q[0] - bx, q[2] - bz, m.as_deref_mut());
     }
 }
 
@@ -167,8 +148,8 @@ pub fn face_at(g: &mut crate::game::Game, n: V3, d: f64, t: V3, u: f64) -> Optio
     let (ox, oz) = (t[0] * u + n[0] * (d + OFF), t[2] * u + n[2] * (d + OFF));
     let knee = face_cast(g, ox, oz, n, KNEE_Y, COPLANAR)?;
     if face_cast(g, ox, oz, n, CHEST_Y, UPPER_TOL).is_none() && face_cast(g, ox, oz, n, HIGH_Y, UPPER_TOL).is_none() { return None; }
-    let b = &g.col.boxes[BoxId::from_ix(knee.index as usize)];
-    let (c, h, yaw) = (b.c, b.h, b.yaw);
+    let b = g.col.boxes[knee.index as usize];
+    let (c, h, yaw) = seam_box_c_h_yaw(g, b);
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let hw = m::abs(t[0] * cs - t[2] * sn) * h[0] + m::abs(t[0] * sn + t[2] * cs) * h[2];
     let uc = c[0] * t[0] + c[2] * t[2];
@@ -352,10 +333,11 @@ pub fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&mut crat
     let (u_lo, u_hi) = (f.lo + BODY_R, f.hi - BODY_R);
     let open_lo = end_open(g, n, f.d, t, u_lo, -1.0);
     let open_hi = end_open(g, n, f.d, t, u_hi, 1.0);
+    let serial = g.serial();
     g.pl[pl].wall = Some(WallHold {
         n, along: t, d: f.d, lo: f.lo, hi: f.hi, open_lo, open_hi,
         u: f.u, v: 0.0, side, off: 0.0, away_t: 0.0, settle: 0.0, from: v3::copy(g.ch[c].pos), block_dir: 0.0, block_t: 0.0, seated: false,
-        drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, crouched: g.pl[pl].crouch,
+        drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, crouched: g.pl[pl].crouch, serial,
         ..WallHold::zeroed()
     });
     let stack = g.k.wallsnap.on && g.k.wallsnap.stack && crate::game::player_rifle_up(g, pl);
@@ -449,7 +431,7 @@ pub fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, on: boo
     if gain > 0.0 {
         let at = g.ch[g.pl[g.player].ch].pos;
         let rate = if w.kind == Some(WallHoldKind::Stack) { 0.92 } else { 1.0 };
-        seam_audio_play(g, if on { "wallOn" } else { "wallOff" }, at, gain, rate);
+        crate::audio_iface::game_audio_like_play(g, if on { "wallOn" } else { "wallOff" }, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }
 }
 

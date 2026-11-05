@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 593 to 970
+//! src/game/doortools.ts lines 594 to 971
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,24 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ---------------------------------------------------------------- the seams: each waits on the skeleton
-
-/// this.samOf   (doortools.ts:896)
-fn seam_sam_of(g: &mut Game) -> Option<PlayerId> {
-    // SKELETON-GAP: DoorTools.sam_of as Option<PlayerId> (doortools.ts:949 holds the Player object). TEMP-BRINGUP: the empty struct says only THAT one is held,
-    // so a held one is taken for the man on Game now. Wrong after a restart that makes the man anew (the charges' hand-back of :896 would not run).
-    let p = g.player;
-    g.door_tools.sam_of.as_ref().map(|_| p)
-}
-/// this.samOf = g.player   (doortools.ts:896)
-fn seam_set_sam_of(g: &mut Game, p: PlayerId) {
-    let _ = p;
-    g.door_tools.sam_of = Some(crate::doortools::DoorToolsSamOf {});
-}
-
-/// `DoorTools.go_key` holds `null` (no such row) as this: `undefined` is its None, and the word's key is never '' on the page (`wordOnKey` settled)
-const GO_NO_ROW: &str = "";
 
 // ---------------------------------------------------------------- where a door is
 
@@ -56,25 +38,17 @@ pub fn off_of(g: &mut crate::game::Game, d: DoorId, p: V3, side: f64) -> f64 {
 pub fn is_open(g: &mut crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= OPEN_RAD
 }
-/// the room these cells are, as SKY's key: the newest row of the rooms' table holding them, as a fresh flood is a fresh object (None: no row does)
-fn room_of_cells(g: &Game, cells: &JsSet<crate::Num>) -> Option<RoomfightRoomId> {
-    let mut found = None;
-    for (id, room) in g.tab.roomfight_room.iter() {
-        if room.cells.len() == cells.len() && room.cells.iter().eq(cells.iter()) { found = Some(id); }
-    }
-    found
-}
-/// is most of a room's floor under the sky (asked once per room): the walk of underSky over the room's cells
-fn under_sky_cells(g: &mut Game, cells: &JsSet<crate::Num>) -> bool {
-    let key = room_of_cells(g, cells);
-    let size = cells.len() as f64;
-    if let Some(hit) = key.and_then(|key| g.m.doortools.sky.get(key)) {
+/// is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them)   (doortools.ts underSky)
+pub fn under_sky(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
+    let size = g.tab.roomfight_room[room].cells.len() as f64;
+    if let Some(hit) = g.m.doortools.sky.get(room) {
         if hit.n == size { return hit.open; }
     }
     let (w, cs) = (g.col.nav.w, g.col.nav.cell);
     let every = m::max(1.0, m::floor(size / 64.0));
     let (mut k, mut of, mut sky) = (0.0, 0.0, 0.0);
-    for c in cells.iter() {
+    // the walk asks only the walls: it cannot change the room's cells
+    for c in g.tab.roomfight_room[room].cells.keys() {
         let ci = c.0;
         let at = k;
         k += 1.0;
@@ -85,16 +59,12 @@ fn under_sky_cells(g: &mut Game, cells: &JsSet<crate::Num>) -> bool {
         if !crate::scene_collision::solid_blocked(g, [x, 2.0, z], [x, 9.0, z], None) { sky += 1.0; }
     }
     let open = sky * 2.0 > of;
-    if let Some(key) = key { g.m.doortools.sky.set(key, crate::doortools::DoortoolsModSKYValue { n: size, open }); }
+    g.m.doortools.sky.set(room, crate::doortools::DoortoolsModSKYValue { n: size, open });
     open
 }
-/// is most of a room's floor under the sky   (doortools.ts underSky)
-pub fn under_sky(g: &mut crate::game::Game, room: &crate::doortools::UnderSkyRoom) -> bool {
-    under_sky_cells(g, &room.cells)
-}
 /// open floor, not a room: a flood past `searchCells`, or floor under the sky   (doortools.ts openFloor)
-pub fn open_floor(g: &mut crate::game::Game, room: &crate::doortools::OpenFloorRoom) -> bool {
-    room.cells.len() as f64 > g.k.doortools.search_cells || under_sky_cells(g, &room.cells)
+pub fn open_floor(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
+    g.tab.roomfight_room[room].cells.len() as f64 > g.k.doortools.search_cells || under_sky(g, room)
 }
 
 // ---------------------------------------------------------------- what the rows' functions share
@@ -108,14 +78,7 @@ fn door_of(t: &crate::orders::OrderTarget) -> Option<(DoorId, f64)> {
 }
 /// S.recipients(t)
 fn recipients_of(g: &mut Game, t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    use crate::orders::{OrderTarget as T, SquadOrdersRecipientsT as R};
-    let r = match t {
-        T::Floor(x) => R::Floor(x.clone()),
-        T::Door(x) => R::Door(x.clone()),
-        T::None(x) => R::None(x.clone()),
-        T::Foe(x) => R::Foe(x.clone()),
-    };
-    crate::orders::squad_orders_recipients(g, Some(&r), None)
+    crate::orders::squad_orders_recipients(g, Some(t), None)
 }
 /// this.thresholdThen(what, men, t)
 fn then_now(g: &mut Game, what: crate::doortools::DoorToolsThresholdThenWhat, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
@@ -467,7 +430,6 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     use crate::orders::{OrderDef, OrderGone as Gone, OrderIssue as Issue, OrderLabel as L, OrderOnly as Only, OrderValid as Valid, TargetKind as K};
     use crate::doortools::TOOLS_PAGE;
     let mut me = crate::doortools::DoorTools::blank();
-    me.knobs = g.k.doortools.clone();
     me.charges = g.k.doortools.charges;
     me.bangs = g.k.doortools.bangs;
     me.frags = g.k.frag.squad;
@@ -562,10 +524,9 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
     }
     // a man alone: a fresh Player is his new run
     let player = g.player;
-    let sam_of = seam_sam_of(g);
-    if sam_of != Some(player) {
-        let first = sam_of.is_none();
-        seam_set_sam_of(g, player);
+    if g.door_tools.sam_of != Some(player) {
+        let first = g.door_tools.sam_of.is_none();
+        g.door_tools.sam_of = Some(player);
         if !first && g.door_tools.roster.is_empty() {
             g.door_tools.set.clear();
             g.door_tools.charges += g.door_tools.sam_spent;
@@ -575,14 +536,13 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
     let n = g.door_tools.roster.len();
     let go_key: Option<String> = if n > 2 { Some(g.k.doortools.blow_key.clone()) } else { None };
     let small = n > 0 && n <= 2;
-    let go_want: &str = go_key.as_deref().unwrap_or(GO_NO_ROW);
-    if small && g.door_tools.go_key.as_deref() != Some("small") {
-        g.door_tools.go_key = Some(String::from("small"));
+    if small && g.door_tools.go_key != Some(Some(String::from("small"))) {
+        g.door_tools.go_key = Some(Some(String::from("small")));
         let blow = g.k.doortools.blow_key.clone();
         register(g, OrderDef { id: String::from("go"), head: Some(String::from(WORD_HEAD)), hot_key: Some(blow), label: L::DoorGoSmall, targets: vec![K::Floor, K::Door, K::None], listed: Some(Vec::new()), ack: Some(strs(&["going.", "moving."])),
             only: Some(Only::DoorGoSmall), valid: Some(Valid::DoorGoSmall), issue: Issue::DoorGoSmall, ..OrderDef::default() }, None);
-    } else if !small && g.door_tools.go_key.as_deref() != Some(go_want) {
-        g.door_tools.go_key = Some(String::from(go_want));
+    } else if !small && g.door_tools.go_key != Some(go_key.clone()) {
+        g.door_tools.go_key = Some(go_key.clone());
         if let Some(key) = &go_key {
             register(g, OrderDef { id: String::from("go"), head: Some(String::from(WORD_HEAD)), hot_key: Some(key.clone()).filter(|k| !k.is_empty()), label: L::DoorGoBig, targets: vec![K::Floor, K::Door, K::None], listed: Some(vec![K::Floor, K::None]), ack: Some(strs(&["going.", "moving."])),
                 only: Some(Only::DoorGoBig), valid: Some(Valid::DoorGoBig), issue: Issue::DoorGoBig, ..OrderDef::default() }, None);
@@ -675,7 +635,7 @@ pub fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderT
     use crate::doortools::DoorToolsStackable as V;
     let Some((d, side)) = door_of(t) else { return V::Bool(false) };
     let Some(deal) = door_tools_deal_stack(g, d, side, men) else {
-        return V::Text(crate::orders::squad_orders_no_room_words(g, "no room on that door.", &mut |g, _| door_tools_deal_stack(g, d, side, men).is_some()));
+        return V::Text(crate::orders::squad_orders_no_room_words(g, "no room on that door.", &mut |g| door_tools_deal_stack(g, d, side, men).is_some()));
     };
     let posts = deal.posts;
     let spots: Vec<V3> = posts.iter().map(|x| x.pos).collect();

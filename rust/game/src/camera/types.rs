@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: FollowCamera, src/game/camera.ts:7)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FollowCamera {
     pub target: V3,
     pub desired: V3,
@@ -30,7 +30,7 @@ pub struct FollowCamera {
     pub host_shift: Option<V3>,
     pub kick: Option<V3>,
     pub kick_held: Option<V3>,
-    pub kick_drawn: Option<Vec<f32>>,
+    pub kick_drawn: Option<crate::v3::m4::Mat4>,
     pub kick_vp: crate::v3::m4::Mat4,
     pub draw_held: Option<crate::camera::FollowCameraDrawHeld>,
     pub draw_vp: crate::v3::m4::Mat4,

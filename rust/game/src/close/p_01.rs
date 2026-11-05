@@ -7,13 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A seated man's row. (close.ts:148 SEATED holds close::Seat; the skeleton's table still holds SeatId, cmd.ts's Seat)
-fn seam_seat_get(g: &mut Game, gd: GuardId) -> Option<crate::close::Seat> { if !close_has_seat(g, gd) { return None; } todo!("needs: g.m.close.seated as JsMap<GuardId, close::Seat>, not SeatId (close.ts:148)") }
-/// Sets a seated man's row. (close.ts SEATED, as `seam_seat_get`)
-fn seam_seat_set(g: &mut Game, gd: GuardId, st: crate::close::Seat) { todo!("needs: g.m.close.seated as JsMap<GuardId, close::Seat>, not SeatId (close.ts:148)") }
-/// Deletes a seated man's row. (close.ts SEATED, as `seam_seat_get`)
-fn seam_seat_delete(g: &mut Game, gd: GuardId) { todo!("needs: g.m.close.seated as JsMap<GuardId, close::Seat>, not SeatId (close.ts:148)") }
-
 /// What a new State holds: the TypeScript's own literal. (close.ts stateOf)
 fn fresh_state() -> crate::close::State {
     crate::close::State { t: -1.0, best: None, mode: None, mode_d: m::INF, rmb_t: -1.0 }
@@ -32,9 +25,9 @@ pub fn note(g: &mut crate::game::Game, gd: GuardId, what: crate::close::NoteWhat
     if g.m.close.close_log.len() > 200 { g.m.close.close_log.remove(0); }
 }
 
-/// The men sat down, made if none yet; a copy: writes go through `g.m.close.seated`. (close.ts seatedOf)
-pub fn seated_of(g: &mut crate::game::Game) -> JsMap<GuardId, SeatId> {
-    g.m.close.seated.get_or_insert_with(JsMap::new).clone()
+/// The men sat down, made if none yet: the table itself. (close.ts seatedOf)
+pub fn seated_of(g: &mut crate::game::Game) -> &mut JsMap<GuardId, crate::close::Seat> {
+    g.m.close.seated.get_or_insert_with(JsMap::new)
 }
 
 /// This seat's close-in state, made if none yet: the row itself. (close.ts stateOf)
@@ -56,7 +49,7 @@ pub fn close_has_seat(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// Is this man sitting. (close.ts closeSeated)
 pub fn close_seated(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].civ.is_some() { return crate::civilians::civilian_seated(g, gd); }
-    seam_seat_get(g, gd).map_or(false, |st| st.down)
+    g.m.close.seated.as_ref().and_then(|s| s.get(gd)).map_or(false, |st| st.down)
 }
 
 /// The windows round one man as he is now. (close.ts closeWindows)
@@ -552,8 +545,7 @@ pub fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// Sit a calm staff man down on a mark; false if he cannot be sat. (close.ts closeSeat)
 pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, face: Option<f64>) -> bool {
     if g.gd[gd].civ.is_some() || g.gd[gd].unit.is_some() || g.gd[gd].state == crate::game::GuardState::Dead || !calm(g, gd) { return false; }
-    g.m.close.seated.get_or_insert_with(JsMap::new);
-    let prev = seam_seat_get(g, gd);
+    let prev = seated_of(g).get(gd).copied();
     if prev.is_some() && at.is_none() { return true; }
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -563,7 +555,7 @@ pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, fa
         hold: match prev { Some(prev) => prev.hold, None => g.gd[gd].hold },
         down: false,
     };
-    seam_seat_set(g, gd, st);
+    seated_of(g).set(gd, st);
     g.gd[gd].hold = true;
     g.stats.close.seats += 1;
     note(g, gd, crate::close::NoteWhat::Seat, None, None, None);
@@ -573,9 +565,8 @@ pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, fa
 /// Up out of the chair, his hold flag as it was. (close.ts closeUnseat)
 pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) {
     let back = back.unwrap_or(false);
-    g.m.close.seated.get_or_insert_with(JsMap::new);
-    let st = match seam_seat_get(g, gd) { Some(st) => st, None => return };
-    seam_seat_delete(g, gd);
+    let st = match seated_of(g).get(gd).copied() { Some(st) => st, None => return };
+    seated_of(g).delete(gd);
     g.gd[gd].hold = st.hold;
     let c = g.gd[gd].ch;
     if g.ch[c].anim.act.as_ref().map_or(false, |a| a.clip == sit_clip().clip) { g.ch[c].anim.act = None; }

@@ -28,13 +28,6 @@ macro_rules! line_of {
     };
 }
 
-// ---- seams: each step the skeleton still blocks, with the TypeScript's own arguments (notes.md, ## Skeleton)
-
-/// g.audio.play(name, pos, vol, { rate }) (squad.ts:277, 329): `opts` is a map of Opaque, which cannot hold the rate.
-fn seam_audio_play(g: &mut Game, name: &str, pos: V3, vol: f64, rate: f64) { todo!("needs: g.audio.play opts able to carry a rate") }
-/// gd.flashlight.enabled = on (squad.ts:126): LightId has no table and no accessor for `enabled`.
-fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { g.tab.light[l].enabled = on; } // (skeleton 4 has the row)
-
 // ---- orders
 
 /// A new waypoint list for a man, and orders: the goal is always a fresh copy, so always a new leg. (squad.ts:247, with OrderPatch's null where the public route's patch has none)
@@ -272,7 +265,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     crate::gunwall::gun_wall_pose(g, c);
     crate::character::character_update(g, c, dt);
     crate::guards::attach_flashlight(g, gd, None);
-    if s.light == Some(false) && !crate::guards::light_ruled(g, gd) { let l = g.gd[gd].flashlight; seam_light_set_enabled(g, l, false); }
+    if s.light == Some(false) && !crate::guards::light_ruled(g, gd) { let l = g.gd[gd].flashlight; g.tab.light[l].enabled = false; }
     let prev_phase = g.gd[gd].step_phase;
     let phase = g.ch[c].anim.phase;
     g.gd[gd].step_phase = phase;
@@ -312,7 +305,10 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
 /// Give a scripted guard new orders; a new goal drops his path, stuck timer and settle watch. A goal is a new leg even at the same spot, unless `held`
 /// says the caller keeps it and moves it (then by value). Some(None) is null; None is not in the patch. (squad.ts order)
 pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderPatch) {
-    if g.gd[gd].script.is_none() { g.gd[gd].script = Some(crate::game::GuardScript::zeroed()); }
+    if g.gd[gd].script.is_none() {
+        let serial = g.serial();   // (the one place a man's own script is made: doorpath.ts:178 asks by identity whether it is still his)
+        g.gd[gd].script = Some(crate::game::GuardScript { serial, ..crate::game::GuardScript::zeroed() });
+    }
     if let Some(goal) = patch.goal {
         let had = g.gd[gd].script.as_ref().unwrap().goal;
         let new_leg = match goal { None => had.is_some(), Some(_) => !patch.held || goal != had };
@@ -552,7 +548,7 @@ pub fn room_clear_shove(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
         let who = g.ch[c].id;
         crate::doors::door_set_last_who(g, d, who);
         let at = crate::doors::door_pos(g, d);
-        seam_audio_play(g, "doorBash", at, 0.5, 1.15);
+        crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
     }
     let row = &mut g.tab.squad_room_clear[id];
     row.t_kick = t;
@@ -677,7 +673,7 @@ pub fn room_clear_tick(g: &mut crate::game::Game, id: RoomClearId, t: f64, dt: f
                 crate::doors::door_set_last_who(g, d, who);
                 if on_it && !crate::doors::door_off(g, d) {
                     let at = crate::doors::door_pos(g, d);
-                    seam_audio_play(g, "doorBash", at, 1.0, 0.9);
+                    crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
                     crate::marks::kick_scuff(g, d, p);
                     crate::particle_fx::kick_dust_fx(g, d, p);
                 }
@@ -880,6 +876,32 @@ mod tests {
     #[test]
     fn ahead_is_the_typescripts_bits() {
         same(room_clear_ahead([1.5, 0.0, -2.25], 0.7, 3.0, 0.4), [0x400b7612cef4934a, 0x3fd999999999999a, 0x3fa6cc2f7ded8b80]);
+    }
+
+    /// A man with no script gets his own, with its own serial; a script he has keeps it. What is a new leg: any goal not `held`, even at the same spot; a held one by value; null only against a goal.
+    #[test]
+    fn order_deals_a_serial_once_and_says_what_is_a_new_leg() {
+        let mut g = Game::blank();
+        let (x, y) = (g.gd.push(crate::game::Guard::blank()), g.gd.push(crate::game::Guard::blank()));
+        let goal = |at: V3, held: bool| OrderPatch { goal: Some(Some(at)), held, ..OrderPatch::default() };
+        order(&mut g, x, OrderPatch::default());
+        order(&mut g, y, OrderPatch::default());
+        let first = g.gd[x].script.unwrap().serial;
+        assert_ne!(first, g.gd[y].script.unwrap().serial);
+        let (a, b) = ([1.0, 0.0, 2.0], [3.0, 0.0, 4.0]);
+        let new_leg = |g: &mut Game, patch: OrderPatch| {
+            g.gd[x].stuck_t = 7.0;
+            order(g, x, patch);
+            g.gd[x].stuck_t == 0.0
+        };
+        assert!(!new_leg(&mut g, OrderPatch { goal: Some(None), ..OrderPatch::default() }), "null over null");
+        assert!(new_leg(&mut g, goal(a, false)), "first goal");
+        assert!(new_leg(&mut g, goal(a, false)), "a fresh goal at the same spot");
+        assert!(!new_leg(&mut g, goal(a, true)), "held, not moved");
+        assert!(new_leg(&mut g, goal(b, true)), "held, moved");
+        assert!(!new_leg(&mut g, OrderPatch { crouch: Some(Some(true)), ..OrderPatch::default() }), "no goal in the patch");
+        assert!(new_leg(&mut g, OrderPatch { goal: Some(None), ..OrderPatch::default() }), "null over a goal");
+        assert_eq!(g.gd[x].script.unwrap().serial, first);
     }
 
     /// The minLeg floor against the old three-second sweep's remainder.

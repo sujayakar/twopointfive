@@ -7,40 +7,32 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// The lines he says when he waits and when the wait drags on (sneak.ts LINES): this part is the only reader.
-static LINES_WAIT: &[(Why, &str)] = &[
-    (Why::Lit, "holding. it's lit and he's looking."),
-    (Why::Near, "holding. too close while he's looking."),
-    (Why::Long, "holding. too much open light to cross."),
-    (Why::Open, "holding in the dark. you're stood in the light."),
-    (Why::Door, "i'm off the door. ready when you are."),
-];
-static LINES_NAG: &[(Why, &str)] = &[
-    (Why::Lit, "can't cross while it's lit. he's still on it."),
-    (Why::Near, "he's still facing me. waiting for his back."),
-    (Why::Long, "it's a long lit stretch. kill the light or go on."),
-    (Why::Open, "you're stood in the light. i'll hold in the dark."),
-    (Why::Door, ""),
-];
-static LINE_GO: &str = "moving.";
-/// The lines as they are said now, where one changed (sneak.ts LINES_NOW).
-static LINES_NOW_WAIT: &[(Why, &str)] = &[(Why::Open, "holding in the dark. you're standing in the light.")];
-static LINES_NOW_NAG: &[(Why, &str)] = &[
-    (Why::Near, "he's still facing me. waiting for him to turn."),
-    (Why::Open, "you're standing in the light. i'll hold in the dark."),
-];
-
-fn line_of(table: &[(Why, &'static str)], why: Why) -> Option<&'static str> {
-    table.iter().find(|row| row.0 == why).map(|row| row.1)
-}
-/// `wg(NOW[why] ?? WAS[why], WAS[why])`
-fn said(g: &mut Game, now: &[(Why, &'static str)], was: &[(Why, &'static str)], why: Why) -> &'static str {
-    let w = line_of(was, why).unwrap();
-    let n = line_of(now, why).unwrap_or(w);
+/// A wait's first line by why: `wg(LINES_NOW.wait[why] ?? LINES.wait[why], LINES.wait[why])`.
+fn said_wait(g: &mut Game, why: Why) -> String {
+    let (was, now) = (lines().wait, lines_now().wait);
+    let (n, w) = match why {
+        Why::Lit => (now.lit, was.lit),
+        Why::Near => (now.near, was.near),
+        Why::Long => (now.long, was.long),
+        Why::Open => (now.open, was.open),
+        Why::Door => (now.door, was.door),
+    };
+    let n = n.unwrap_or_else(|| w.clone());
     crate::words::wg(g, &n, &w)
 }
-
-fn seam_add_wait_s(g: &mut Game, secs: f64) { todo!("needs: SneakStats.wait_s as f64") }
+/// A wait's second line by why: `wg(LINES_NOW.nag[why] ?? LINES.nag[why], LINES.nag[why])`.
+fn said_nag(g: &mut Game, why: Why) -> String {
+    let (was, now) = (lines().nag, lines_now().nag);
+    let (n, w) = match why {
+        Why::Lit => (now.lit, was.lit),
+        Why::Near => (now.near, was.near),
+        Why::Long => (now.long, was.long),
+        Why::Open => (now.open, was.open),
+        Why::Door => (now.door, was.door),
+    };
+    let n = n.unwrap_or_else(|| w.clone());
+    crate::words::wg(g, &n, &w)
+}
 
 /// Sam's trail, a crumb every 0.4 m (once a frame, whoever asks first).   (sneak.ts track)
 pub fn track(g: &mut crate::game::Game) {
@@ -84,8 +76,8 @@ pub fn track(g: &mut crate::game::Game) {
     }
 }
 
-/// `sneakTick` without the copy of the state its signature hands back. False: not sneaking.
-fn tick(g: &mut Game) -> bool {
+/// Once a tick with a squad under orders: Sam's trail is kept while the squad sneaks. False: not sneaking, and what was kept is dropped.   (sneak.ts sneakTick)
+pub fn sneak_tick(g: &mut crate::game::Game) -> bool {
     if !g.k.sneak.on { return false; }
     if !sneak_live(g) {
         if let Some(s) = g.m.sneak.states.as_mut() {
@@ -98,16 +90,10 @@ fn tick(g: &mut Game) -> bool {
         }
         return false;
     }
-    let s = g.m.sneak.states.get_or_insert_with(|| State { trail: Vec::new(), off: 0.0, t: -1e9, men: JsMap::new(), list: Vec::new(), live: true, amb: 0.0 });
+    let s = g.m.sneak.states.get_or_insert_with(|| State { trail: Vec::new(), off: 0.0, t: -1e9, men: JsMap::new(), live: true, amb: 0.0 });
     s.live = true;
     track(g);
     true
-}
-
-/// Once a tick with a squad under orders: Sam's trail is kept while the squad sneaks. None: not sneaking.   (sneak.ts sneakTick)
-pub fn sneak_tick(g: &mut crate::game::Game) -> Option<crate::sneak::State> {
-    if !tick(g) { return None; }
-    g.m.sneak.states.clone()
 }
 
 fn low_pace(g: &Game, v: f64, is_low: bool) -> f64 {
@@ -213,7 +199,7 @@ fn unseen_at(g: &mut Game, w: &Way, t: &[Crumb], q: V3, lo: bool) -> bool {
         l
     };
     let pc = stand_in(q, lo);
-    if read(g, &w.eyes, pc, &mut lit, Some(lo), Some(w.card_f)).seen { return false; }
+    if read(g, &w.eyes, &pc, &mut lit, Some(lo), Some(w.card_f)).seen { return false; }
     if !funnel(g, w, q, &w.open_doors, 0.0, &mut lit, lo) { return true; }
     let v = lit(g);
     !(v >= g.k.sneak.lit_at)
@@ -368,8 +354,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
     if k_.door_m > 0.0 {
         for &d in list.iter() {
             if !(flat(sam, g.dr[d].frame_centre) < k_.door_m) { continue; }
-            let angle = crate::doors::door_angle(g, d);
-            if leaf_moved(g, LeafMovedD { angle }) || m::abs(crate::doors::door_angle(g, d)) <= 0.03 { sam_doors.push(d); }
+            if leaf_moved(g, d) || m::abs(crate::doors::door_angle(g, d)) <= 0.03 { sam_doors.push(d); }
         }
     }
     let mut open_doors: Vec<DoorId> = Vec::new();
@@ -545,8 +530,8 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
     // the words, and the tallies, on the change
     if mode != man.mode {
         if man.mode == Mode::Wait {
-            seam_add_wait_s(g, now - man.wait_t);
-            if mode == Mode::Cross && now - man.wait_t > 1.5 { cue(g, gd, man, LINE_GO, None); }
+            g.stats.sneak.wait_s += now - man.wait_t;
+            if mode == Mode::Cross && now - man.wait_t > 1.5 { cue(g, gd, man, &lines().go, None); }
             man.wait_t = -1.0;
         }
         if mode == Mode::Wait {
@@ -555,8 +540,8 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
             man.nagged = false;
             g.stats.sneak.waits += 1;
             note(g, gd, &format!("waits ({})", why.as_str()));
-            let line = said(g, LINES_NOW_WAIT, LINES_WAIT, why);
-            cue(g, gd, man, line, None);
+            let line = said_wait(g, why);
+            cue(g, gd, man, &line, None);
         }
         if mode == Mode::Cross {
             man.cross_t = now;
@@ -579,8 +564,8 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
         man.why = why;
     }
     if man.mode == Mode::Wait && !man.nagged && now - man.wait_t >= k_.nag_secs && !(now >= man.voice_t && now - man.voice_t < 3.0) {
-        let line = said(g, LINES_NOW_NAG, LINES_NAG, man.why);
-        man.nagged = cue(g, gd, man, line, Some(true));
+        let line = said_nag(g, man.why);
+        man.nagged = cue(g, gd, man, &line, Some(true));
     }
 }
 
@@ -755,7 +740,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, back: f64, sa
 /// The sneaking follower's feet this frame. None: he is the build's own follower.   (sneak.ts sneakFollow)
 pub fn sneak_follow(g: &mut crate::game::Game, gd: GuardId, back: f64, sam_v: f64, stopped: bool, speed0: f64) -> Option<crate::sneak::Feet> {
     if !g.k.sneak.on || !mate(g, gd) { return None; }
-    if !tick(g) { return None; }
+    if !sneak_tick(g) { return None; }
     let now = g.time;
     // the state and his row are out of `g` for the frame's read: nothing the read calls reads them
     let mut s = g.m.sneak.states.take().unwrap();
@@ -803,7 +788,7 @@ pub fn sneak_way(g: &mut crate::game::Game, gd: GuardId, goal: V3) {
         if flat(pg, goal) < 0.05 && g.gd[gd].path_i < g.gd[gd].path.len() { return; }
     }
     let way = g.m.sneak.states.as_mut().unwrap().men.get_mut(gd).unwrap().way.take().unwrap();
-    g.gd[gd].path = way;
+    crate::game::guard_set_path(g, gd, way);
     g.gd[gd].path_i = 0;
     g.gd[gd].path_goal = Some([goal[0], 0.0, goal[2]]);
     g.gd[gd].repath_t = 0.0;
@@ -839,5 +824,5 @@ pub fn sneak_summary(g: &mut crate::game::Game) -> String {
     let squad = if rows.is_empty() { String::from("no squad") } else { rows.join(" · ") };
     let trail = match g.m.sneak.states.as_ref() { Some(s) => s.trail.len() as f64 * 0.4, None => 0.0 };
     let st = &g.stats.sneak;
-    format!("on · {} · trail {} m · waits {} crossings {} shade {} back-offs {}", squad, m::round(trail) as i64, st.waits, st.crossings, st.shade, st.back_offs)
+    format!("on · {} · trail {} m · waits {} crossings {} shade {} back-offs {}", squad, js::to_fixed(trail, 0), st.waits, st.crossings, st.shade, st.back_offs)
 }

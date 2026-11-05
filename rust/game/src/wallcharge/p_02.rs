@@ -1,4 +1,4 @@
-//! src/game/wallcharge.ts lines 420 to 785
+//! src/game/wallcharge.ts lines 421 to 786
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,19 +9,18 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 
-// ---------------------------------------------------------------- seams: what the skeleton still lacks
-/// `kept` in the public signatures is a closure whose answer is Opaque; the store it names should come in as the WallChargeKept it is.
-fn seam_kept_of(f: &mut dyn FnMut(&mut Game, String, crate::FnField) -> crate::Opaque) -> WallChargeKept { todo!("needs: safePosts' and plan's `kept` as Option<&mut WallChargeKept> (wallcharge.ts:642, 768)") }
-/// `t` is the open menu's own target by identity: that target's serial, else None.
-fn seam_menu_own(g: &mut Game, t: &crate::orders::OrderTarget) -> Option<u32> { todo!("needs: OrderTargetFloor.serial, stamped where a menu opens (wallcharge.ts:785)") }
+/// A box's row (`Box.*`). Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows; on skeleton 5.1, which has the table `g.tab.boxes`, the body is `&g.tab.boxes[b]`.
+fn seam_box(g: &Game, b: BoxId) -> &crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
+}
 
 fn sam_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
 fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn free(g: &mut Game, q: V3) -> bool { !crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) }
 fn clear(g: &mut Game, a: V3, b: V3) -> bool { !crate::scene_collision::solid_blocked(g, [a[0], 0.45, a[2]], [b[0], 0.45, b[2]], None) }
-fn box_ch(g: &Game, b: BoxId) -> (V3, V3) { (g.col.boxes[b].c, g.col.boxes[b].h) }
+fn box_ch(g: &Game, b: BoxId) -> (V3, V3) { { let r = seam_box(g, b); (r.c, r.h) } }
 /// the box of the wall as authored, by the engine's id, else the spot's own (`g.col.boxes[wall] ?? W.box`)
-fn box_of_wall(g: &Game, w: &WallSpot, wall: f64) -> BoxId { if wall >= 0.0 && (wall as usize) < g.col.boxes.len() { BoxId(wall as u32) } else { w.box_ } }
+fn box_of_wall(g: &Game, w: &WallSpot, wall: f64) -> BoxId { if wall >= 0.0 { g.col.boxes.get(wall as usize).copied().unwrap_or(w.box_) } else { w.box_ } }
 fn wall_of(g: &Game, c: WallChargeId) -> WallSpot { g.tab.wallcharge_set_wall_charge[c].wall.clone() }
 
 // ---------------------------------------------------------------- the run, the switch, the rows
@@ -293,7 +292,7 @@ pub fn wall_charge_spot(g: &mut crate::game::Game, t: &crate::orders::OrderTarge
         _ => return None,
     };
     let sam = sam_pos(g);
-    let c = g.col.boxes[w.box_].c;
+    let c = seam_box(g, w.box_).c;
     let perp = if w.along_x { sam[2] - c[2] } else { sam[0] - c[0] };
     let mut q = w.clone();
     q.side = if perp >= 0.0 { 1.0 } else { -1.0 };
@@ -431,7 +430,7 @@ pub fn wall_charge_floor_after(g: &mut crate::game::Game, w: &crate::wallcharge:
     let cell = g.col.nav.cell;
     let (cx, cz) = ((mm::floor(q[0] / cell) + 0.5) * cell, (mm::floor(q[2] / cell) + 0.5) * cell);
     let b = box_of_wall(g, w, wall);
-    let bc = g.col.boxes[b].c;
+    let bc = seam_box(g, b).c;
     let r = 0.36;
     let off = mm::max(0.0, mm::abs(if w.along_x { cz - bc[2] } else { cx - bc[0] }) - thick(g, w) / 2.0);
     if off >= r { return true; }
@@ -467,7 +466,7 @@ pub fn wall_charge_standoff_posts(g: &mut crate::game::Game, w: &crate::wallchar
     let old = old.unwrap_or(false);
     let (sam, at) = (sam_pos(g), wall_pt(g, w, 0.0, 0.0, None));
     if !old {
-        if let Some(out) = safe_posts_in(g, w, n, spot, None, None) { return Some(out); }
+        if let Some(out) = wall_charge_safe_posts(g, w, n, spot, None, None) { return Some(out); }
     }
     let (post_off, file_gap, clear_m) = (g.k.wallcharge.post_off, g.k.wallcharge.file_gap, g.k.wallcharge.clear_m);
     let (standoff, back_m) = (g.k.wallcharge.standoff.clone(), g.k.wallcharge.back_m.clone());
@@ -593,8 +592,9 @@ fn covered(g: &mut Game, src: V3, open: f64, p: V3) -> bool {
     crate::scene_collision::solid_blocked(g, from, chest, None) && crate::scene_collision::segment_blocked(g, from, chest, None, None, None)
 }
 
-/// The body of safePosts, with the store of its walks as what it is.
-fn safe_posts_in(g: &mut Game, w: &WallSpot, n: f64, spot: V3, mut can: Option<&mut dyn FnMut(&mut Game, V3) -> bool>, mut kept: Option<&mut WallChargeKept>) -> Option<Vec<V3>> {
+/// The safe stand-off: n marks out of the blast, the shortest walk back first; None: the floor has not n of them. (wallcharge.ts safePosts)
+pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, n: f64, spot: V3, can: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>, kept: Option<&mut crate::wallcharge::WallChargeKept>) -> Option<Vec<V3>> {
+    let (mut can, mut kept) = (can, kept);
     let (sam, at) = (sam_pos(g), wall_pt(g, w, 0.0, 0.0, None));
     let r = safe_radius(g, w);
     let (post_off, file_gap, hide) = (g.k.wallcharge.post_off, g.k.wallcharge.file_gap, g.k.wallcharge.safe_hide_m);
@@ -664,7 +664,7 @@ fn safe_posts_in(g: &mut Game, w: &WallSpot, n: f64, spot: V3, mut can: Option<&
                     break;
                 }
                 if pool.iter().any(|o| flat(o.0, q) < 0.8) { continue; }
-                if pass == 0 && fire_any(g, &mut fire, q) { late.push(q); continue; }
+                if pass == 0 && wall_charge_fire_any(g, &mut fire, q) { late.push(q); continue; }
                 tries += 1.0;
                 let len = walk_kept(g, spot, q, cap, room0, kept.as_deref_mut());
                 if len >= 0.0 { pool.push((q, Some(len))); walks += 1.0; }
@@ -675,7 +675,7 @@ fn safe_posts_in(g: &mut Game, w: &WallSpot, n: f64, spot: V3, mut can: Option<&
     js::sort_by(&mut fan, |a, b| flat(*a, spot) - flat(*b, spot));
     let mut all: Vec<(V3, f64)> = Vec::with_capacity(pool.len() + fan.len());
     for q in pool.iter().map(|o| o.0).chain(fan.iter().copied()) {
-        let s = fire_score(g, &mut fire, q);
+        let s = wall_charge_fire_score(g, &mut fire, q);
         all.push((q, s));
     }
     js::sort_by(&mut all, |a, b| a.1 - b.1);
@@ -688,12 +688,6 @@ fn safe_posts_in(g: &mut Game, w: &WallSpot, n: f64, spot: V3, mut can: Option<&
         }
     }
     if out.len() as f64 >= n { Some(out) } else { None }
-}
-
-/// The safe stand-off: n marks out of the blast, the shortest walk back first; None: the floor has not n of them. (wallcharge.ts safePosts)
-pub fn wall_charge_safe_posts(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, n: f64, spot: V3, can: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>, kept: Option<&mut dyn FnMut(&mut crate::game::Game, String, crate::FnField) -> crate::Opaque>) -> Option<Vec<V3>> {
-    let mut store = kept.map(|f| seam_kept_of(f));
-    safe_posts_in(g, w, n, spot, can, store.as_mut())
 }
 
 /// Each living enemy in the team's picture now, where he stands or was last seen. (wallcharge.ts knownFoes)
@@ -722,70 +716,9 @@ fn counts(g: &mut Game, h: GuardId, held: Option<GuardId>) -> bool {
     Some(h) != held && g.gd[h].state != crate::game::GuardState::Dead && g.ch[g.gd[h].ch].alive && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
 
-fn place_key(q: V3) -> [crate::Num; 3] { [crate::Num(q[0]), crate::Num(q[1]), crate::Num(q[2])] }
-
 fn fire_new(g: &mut Game, w: Option<&WallSpot>, all: Option<&[V3]>) -> WallChargeFireAsk {
     let all = match all { Some(a) => a.to_vec(), None => wall_charge_known_foes(g) };
     WallChargeFireAsk::Lines { wall: w.cloned(), all, memo: JsMap::new(), hit: JsMap::new() }
-}
-
-/// Can a round take the line `a` to `b`; the wall about to go is no cover inside the hole the charge will open (the closure `line` of underFire).
-fn fire_line(g: &mut Game, wall: &Option<WallSpot>, a: V3, b: V3) -> bool {
-    if !crate::scene_collision::segment_blocked(g, a, b, None, None, None) { return true; }
-    let w = match wall { Some(w) => w, None => return false };
-    let t = thick(g, w);
-    let half = g.k.walls.blast.radius * g.k.walls.blast.hole_k;
-    let (oa, ob) = (wall_off(g, w, a), wall_off(g, w, b));
-    if !(oa < -t && ob > 0.0) { return false; }
-    let at = |off: f64| -> V3 { v3::lerp3(a, b, (oa - off) / (oa - ob)) };
-    if m::abs(wall_along(w, at(-t / 2.0))) > half { return false; }
-    !crate::scene_collision::segment_blocked(g, a, at(-t - 0.05), None, None, None) && !crate::scene_collision::segment_blocked(g, at(0.05), b, None, None, None)
-}
-
-fn fire_lines(g: &mut Game, wall: &Option<WallSpot>, f: V3, q: V3, stop: bool) -> f64 {
-    let e = g.k.wallcharge.fire_step;
-    let mut n = 0.0;
-    let from: V3 = [f[0], 1.4, f[2]];
-    for [dx, dz, y] in [[0.0, 0.0, 1.1], [0.0, 0.0, 1.55], [e, 0.0, 1.1], [-e, 0.0, 1.1], [0.0, e, 1.1], [0.0, -e, 1.1]] {
-        let (x, z) = (q[0] + dx, q[2] + dz);
-        if (js::truthy(dx) || js::truthy(dz)) && crate::scene_collision::nav_grid_is_blocked(g, x, z) { continue; }
-        if fire_line(g, wall, from, [x, y, z]) { n += 1.0; if stop { break; } }
-    }
-    n
-}
-
-/// How much under fire a place is, each place asked once (the closure `score` of underFire).
-fn fire_score(g: &mut Game, fire: &mut WallChargeFireAsk, q: V3) -> f64 {
-    let WallChargeFireAsk::Lines { wall, all, memo, hit } = fire;
-    let key = place_key(q);
-    if let Some(v) = memo.get(key) { return *v; }
-    let (fire_m, grain) = (g.k.wallcharge.fire_m, g.k.wallcharge.fire_grain);
-    let mut sum = 0.0;
-    for i in 0..all.len() {
-        let f = all[i];
-        if !(flat(f, q) <= fire_m) { continue; }
-        sum += fire_lines(g, wall, f, q, false) / 6.0 / m::max(1.0, flat(f, q));
-    }
-    let v = if sum > 0.0 { 1.0 + m::floor(sum / grain) } else { 0.0 };
-    memo.set(key, v);
-    hit.set(key, v > 0.0);
-    v
-}
-
-/// Is it under fire at all, the first clear line ending the asking (the closure `any` of underFire).
-fn fire_any(g: &mut Game, fire: &mut WallChargeFireAsk, q: V3) -> bool {
-    let WallChargeFireAsk::Lines { wall, all, memo: _, hit } = fire;
-    let key = place_key(q);
-    if let Some(v) = hit.get(key) { return *v; }
-    let fire_m = g.k.wallcharge.fire_m;
-    let mut v = false;
-    for i in 0..all.len() {
-        let f = all[i];
-        if !(flat(f, q) <= fire_m) { continue; }
-        if fire_lines(g, wall, f, q, true) > 0.0 { v = true; break; }
-    }
-    hit.set(key, v);
-    v
 }
 
 /// How much under the known enemies' fire a place is: what its two answers close over. (wallcharge.ts underFire)
@@ -796,7 +729,7 @@ pub fn wall_charge_under_fire(g: &mut crate::game::Game, w: Option<&crate::wallc
 /// (wallcharge.ts fireAt)
 pub fn wall_charge_fire_at(g: &mut crate::game::Game, q: V3, w: Option<&crate::wallcharge::WallSpot>) -> f64 {
     let mut fire = wall_charge_under_fire(g, w, None);
-    fire_score(g, &mut fire.score, q)
+    wall_charge_fire_score(g, &mut fire.score, q)
 }
 
 /// How much of the blast a place on the charge's own side takes: 0 = none, up to 1 at the wall. (wallcharge.ts blastShare)
@@ -885,7 +818,7 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
         let mut kept = WallChargeKept::Local { memo: JsMap::new() };
         let (mut marks, mut k): (Option<Vec<V3>>, f64) = (None, n + 2.0);
         while k >= 1.0 && marks.is_none() {
-            marks = safe_posts_in(g, &w, k, spot, Some(&mut |g: &mut Game, q: V3| out_of_all(g, q)), Some(&mut kept));
+            marks = wall_charge_safe_posts(g, &w, k, spot, Some(&mut |g: &mut Game, q: V3| out_of_all(g, q)), Some(&mut kept));
             k -= 1.0;
         }
         if let Some(row) = g.wall_charge.away_marks.get_mut(c) { row.n = n; row.marks = marks.unwrap_or_default(); row.t = t; row.sets = sets; }
@@ -1019,10 +952,10 @@ fn walk_of(g: &mut Game, d: &[(GuardId, V3)], menu: bool) -> Option<String> {
 }
 
 /// Who sets it, from where, and where everybody stands off, or the word for why not. (wallcharge.ts plan)
-pub fn wall_charge_plan(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, men: &[GuardId], kept: Option<&mut dyn FnMut(&mut crate::game::Game, String, crate::FnField) -> crate::Opaque>) -> crate::wallcharge::WallChargePlan {
+pub fn wall_charge_plan(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, men: &[GuardId], kept: Option<&crate::wallcharge::WallChargeKept>) -> crate::wallcharge::WallChargePlan {
     let text = |s: &str| WallChargePlan::Text(String::from(s));
     if men.is_empty() { return text("nobody to take it."); }
-    let mut kept = kept.map(|f| seam_kept_of(f));
+    let mut kept = kept.cloned();
     let menu = matches!(kept, Some(WallChargeKept::Menu));
     let spot = match wall_charge_set_spot(g, w) { Some(s) => s, None => return text("no room at that wall.") };
     if wall_charge_far_floor(g, w, None).is_none() { return text("no floor behind it."); }
@@ -1031,7 +964,7 @@ pub fn wall_charge_plan(g: &mut crate::game::Game, w: &crate::wallcharge::WallSp
     let lead = sorted[0];
     let rest: Vec<GuardId> = men.iter().copied().filter(|m_| *m_ != lead).collect();
     let n = men.len() as f64;
-    let posts = safe_posts_in(g, w, n, spot, Some(&mut |g: &mut Game, q: V3| reach_kept(g, lead, q, menu).is_none()), kept.as_mut());
+    let posts = wall_charge_safe_posts(g, w, n, spot, Some(&mut |g: &mut Game, q: V3| reach_kept(g, lead, q, menu).is_none()), kept.as_mut());
     if let Some(posts) = posts {
         if wall_charge_in_blast(g, w, men).is_none() && reach_kept(g, lead, spot, menu).is_none() {
             let d = deal_of(g, lead, &rest, &posts);
@@ -1047,8 +980,13 @@ pub fn wall_charge_plan(g: &mut crate::game::Game, w: &crate::wallcharge::WallSp
 }
 
 /// The walks of the open menu, kept between its re-reads, when `t` is that menu's own target. (wallcharge.ts keptFor)
-pub fn wall_charge_kept_for(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Option<crate::FnField> {
-    if !g.wall_charge.keep.on || g.orders.menu.is_none() { return None; }
-    let m_ = seam_menu_own(g, t)?;
-    Some(wall_charge_kept_walks(g, m_))
+pub fn wall_charge_kept_for(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Option<crate::wallcharge::WallChargeKept> {
+    use crate::orders::OrderTarget;
+    if !g.wall_charge.keep.on { return None; }
+    // `M.target === t`: the serial the menu's own target was stamped with as it opened; a target made by anyone else has serial 0
+    let own = match (g.orders.menu.as_ref().map(|m_| &m_.target), t) {
+        (Some(OrderTarget::Floor(a)), OrderTarget::Floor(b)) if b.serial != 0 && a.serial == b.serial => b.serial,
+        _ => return None,
+    };
+    Some(wall_charge_kept_walks(g, own))
 }

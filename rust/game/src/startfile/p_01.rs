@@ -15,10 +15,9 @@ pub fn team_starts_fallen_in(g: &mut crate::game::Game, men: &[GuardId]) -> f64 
         for s in g.seats.clone() {
             let mut mine: Vec<GuardId> = Vec::new();
             for &m in men {
-                if crate::seats::seat_has(g, s, m) { mine.push(m); }
+                if crate::seats::in_seat(g, s, m) { mine.push(m); }
             }
-            let man = crate::cmd::seat_man(g, s);
-            k += crate::seats::with_seat(g, man, &mut |g: &mut Game| fall_in_here(g, &mine));
+            k += crate::seats::with_seat(g, s, &mut |g: &mut Game| fall_in_here(g, &mine));
         }
         return k;
     }
@@ -36,7 +35,7 @@ fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
     let p = g.ch[g.pl[g.player].ch].pos;
     crate::orders::squad_orders_new_group(g);
     let t = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
-    if seam_order_def_issue(g, def, &up, &t).is_some() { return 0.0; }
+    if crate::orders::order_issue(g, def, &up, &t, None).is_some() { return 0.0; }
     let mut took = 0.0;
     for &m in &up {
         if let Some(a) = crate::orders::squad_orders_of(g, m) {
@@ -44,9 +43,4 @@ fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
         }
     }
     took
-}
-
-/// `def.issue(S, men, t)`: Some(reason) is the TypeScript's string return, a refusal.
-fn seam_order_def_issue(g: &mut Game, def: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
-    todo!("needs: a public call of OrderDef.issue (OrderIssue's match and its FallIn arm have no name in orders/sig.rs)")
 }

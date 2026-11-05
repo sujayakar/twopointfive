@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/game/rails.ts:166 said)
-pub fn said(a: &crate::rails::SaidA, gave: f64) -> Option<String> { todo!() }
+pub fn said(a: &crate::scene_scenarios::LessonStepAfter, gave: f64) -> Option<String> { todo!() }
 
 /// (src/game/rails.ts:169 lookoutEye)
 pub fn lookout_eye(id_2: f64, e: crate::rails::LookoutEyeE) -> crate::fogofwar::FogEye { todo!() }
@@ -81,7 +81,7 @@ pub fn rails_note_given(g: &mut crate::game::Game, o: &str) { todo!() }
 pub fn rails_runs(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/rails.ts:325 Rails.onWay)
-pub fn rails_on_way(g: &mut crate::game::Game, s: Option<&crate::rails::RailsOnWayS>) -> bool { todo!() }
+pub fn rails_on_way(g: &mut crate::game::Game, s: Option<&crate::rails::RailsLesson>) -> bool { todo!() }
 
 /// (src/game/rails.ts:333 Rails.offers)
 pub fn rails_offers(g: &mut crate::game::Game, verb: &str) -> bool { todo!() }
@@ -93,7 +93,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
 pub fn rails_mark_under(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::rails::RailsMarkUnderCanvas) -> Option<V3> { todo!() }
 
 /// (src/game/rails.ts:394 Rails.orderRows)
-pub fn rails_order_rows(g: &mut crate::game::Game, rows: &[crate::rails::RailsOrderRowsRowsItem]) -> Vec<crate::rails::RailsOrderRowsRowsItem> { todo!() }
+pub fn rails_order_rows(g: &mut crate::game::Game, rows: &[OrdersOrderDefId]) -> Vec<OrdersOrderDefId> { todo!() }
 
 /// (src/game/rails.ts:396 Rails.eye)
 pub fn rails_eye(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogEye> { todo!() }
@@ -114,7 +114,7 @@ pub fn rails_host_view(g: &mut crate::game::Game, cam: CameraId) { todo!() }
 pub fn rails_tick(g: &mut crate::game::Game, dt: f64) { todo!() }
 
 /// (src/game/rails.ts:448 Rails.answer)
-pub fn rails_answer(g: &mut crate::game::Game, s: &crate::rails::RailsAnswerS, again: bool) { todo!() }
+pub fn rails_answer(g: &mut crate::game::Game, s: &crate::rails::RailsLesson, again: bool) { todo!() }
 
 /// (src/game/rails.ts:456 Rails.startProgram)
 pub fn rails_start_program(g: &mut crate::game::Game, why: &str) { todo!() }
@@ -156,10 +156,10 @@ pub fn rails_park(g: &mut crate::game::Game, r: &crate::scene_scenarios::RailsDa
 pub fn rails_hold_here(g: &mut crate::game::Game, gd: GuardId, low: Option<bool>) { todo!() }
 
 /// (src/game/rails.ts:537 Rails.waiting)
-pub fn rails_waiting(g: &mut crate::game::Game, s: &crate::rails::RailsWaitingS) -> bool { todo!() }
+pub fn rails_waiting(g: &mut crate::game::Game, s: &crate::rails::RailsLesson) -> bool { todo!() }
 
 /// (src/game/rails.ts:544 Rails.holdWaiting)
-pub fn rails_hold_waiting(g: &mut crate::game::Game, s: &crate::rails::RailsHoldWaitingS) { todo!() }
+pub fn rails_hold_waiting(g: &mut crate::game::Game, s: &crate::rails::RailsLesson) { todo!() }
 
 /// (src/game/rails.ts:548 Rails.unpark)
 pub fn rails_unpark(g: &mut crate::game::Game) { todo!() }

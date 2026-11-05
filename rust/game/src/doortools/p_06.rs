@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 2146 to 2580
+//! src/game/doortools.ts lines 2147 to 2581
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -49,19 +49,6 @@ fn standing_off(g: &Game, d: DoorId, p: &crate::orders::StackPost, name: &str) -
         stack_side: Some(p.stack_side), going: String::from("standing off"), there: format!("stood off · {}", name), ..Default::default()
     }
 }
-/// `Object.assign(op, { ended })` as the list of done orders holds it: a copy of the row at this moment
-fn done_of(op: &DoorOp, why: &str) -> DoorToolsDoneItem {
-    let o = op.clone();
-    DoorToolsDoneItem {
-        kind: o.kind, door: o.door, side: o.side, coded: o.coded, men: o.men, lead: o.lead, fled: o.fled, fled_w: o.fled_w, fled_t: o.fled_t, fled_said: o.fled_said, fled_go: o.fled_go,
-        rear: o.rear, lane: o.lane, from: o.from, phase: o.phase, t0: o.t0, bang_held: o.bang_held, frag: o.frag, frag_way_t: o.frag_way_t, leaf_a: o.leaf_a, leaf_t: o.leaf_t,
-        mine: o.mine, post: o.post, kick: o.kick, no_gun: o.no_gun, big: o.big, open_t: o.open_t, can: o.can, toss_t: o.toss_t, land_t: o.land_t, bang_t: o.bang_t, bang_at: o.bang_at,
-        queue: o.queue, set_t: o.set_t, stow_off_t: o.stow_off_t, pod: o.pod, on_pod: o.on_pod, slice: o.slice, crossed: o.crossed, corner: o.corner, search: o.search, first: o.first,
-        threw: o.threw, aim: o.aim, pass: o.pass, beats: o.beats, on_word: o.on_word, word: o.word, hold: o.hold, ready_t: o.ready_t, gate: o.gate, thr: o.thr, thr_hold: o.thr_hold,
-        thr_pre: o.thr_pre, worded: o.worded, last_stack: o.last_stack, last_hold: o.last_hold, last_tossed: o.last_tossed, other: o.other, threat: o.threat, ended: String::from(why),
-    }
-}
-
 /// `stowFight(g, lead, A, op)`: the order's `stowOffT` lent to it and written back (workstow.ts writes it)
 fn stow_fight_of(g: &mut Game, gd: GuardId, a: crate::workstow::StowFightA, op: DoorOpId) -> bool {
     let mut s = crate::workstow::StowFightOp { stow_off_t: o!(g, op).stow_off_t };
@@ -110,8 +97,8 @@ pub fn door_tools_end(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
     }
     door_tools_pie_off(g, op);
     door_tools_beat(g, op, &format!("end: {}", why));
-    let item = done_of(&o!(g, op), why);
-    g.door_tools.done.push(item);
+    o!(g, op).ended = Some(String::from(why));
+    g.door_tools.done.push(op);
     if g.door_tools.done.len() > 12 { g.door_tools.done.remove(0); }
 }
 
@@ -593,7 +580,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
     while i > 0 {
         i -= 1;
         let q = o!(g, op).queue[i];
-        if crate::rearwatch::rear_holds(g, op, q.gd) { continue; }
+        if crate::rearwatch::rear_watcher_waits(g, op, q.gd) { continue; }
         let mq = crate::doorpath::DoorPathMayGoQ { gd: q.gd, pod: crate::doorpath::DoorPathMayGoQPod { pos: q.pod.pos } };
         if !crate::doorpath::door_path_may_go(g, op, mq, i as f64) { continue; }
         o!(g, op).queue.remove(i);
@@ -744,7 +731,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
                     if crate::squadnet::in_flood(g, &flood, xp) { ins.push(x); }
                 }
             }
-            let open = open_floor(g, &OpenFloorRoom { cells: g.tab.roomfight_room[r].cells.clone() });
+            let open = open_floor(g, r);
             let seen = ins.iter().any(|&x| crate::autopilot::in_sight(g, x));
             if let Some(call) = crate::squadnet::plain_call(g, open, left, !ins.is_empty(), seen) { say(g, lead, &call); }
         }

@@ -1,4 +1,4 @@
-//! src/game/pressure.ts lines 1 to 434
+//! src/game/pressure.ts lines 1 to 441
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -150,15 +150,33 @@ pub fn picket_marks(g: &mut crate::game::Game, marks: &[crate::nightbreach::Nigh
 /// Nothing to do: picket_marks never posts a man. (pressure.ts postPicket)
 pub fn post_picket(g: &mut crate::game::Game, gd: GuardId, room: RoomfightRoomId) {}
 
-/// Asked first by the stock rally: true = this module has the man, so the walk-over-by-himself does not start. (pressure.ts pressOwns)
-pub fn press_owns(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
+/// Who the press has, for the one record: in a press, or on his beat toward one. Said as its tick ends. (pressure.ts pressSay)
+pub fn press_say(g: &mut crate::game::Game) {
+    let press = crate::owner::own().press;
+    let on = g.k.pressure.on && g.m.pressure.states.is_some();
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        let t = g.time;
+        let has = on && match g.fight.defs.iter().copied().find(|x| g.tab.roomfight_def[*x].gd == gd) {
+            Some(d) => g.m.pressure.states.as_ref().map_or(false, |st| st.of.has(d) || st.think.has(d)),
+            None => false,
+        };
+        if has {
+            crate::owner::claim_man(g, gd, press, t, None);
+        } else {
+            crate::owner::release_man(g, gd, press, t);
+        }
+    }
+}
+
+/// Whom the press keeps at home, worked out as it is asked: the last of them alive, everybody while a report is stood to, and the man who stays to keep his room. (pressure.ts pressKeepsHome)
+pub fn press_keeps_home(g: &mut crate::game::Game, d: RoomfightDefId, stop_clock: Option<bool>) -> bool {
     if !g.k.pressure.on {
         return false;
     }
-    let st = state_of(g);
-    if st.of.has(d) || st.think.has(d) {
-        return true;
-    }
+    state_of(g);
     if last_alone(g, d) {
         return true;
     }

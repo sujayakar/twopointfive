@@ -21,7 +21,7 @@ pub fn brief(x: crate::Opaque, top: Option<bool>) -> crate::Opaque { todo!() }
 pub fn frames(stack: crate::Opaque, drop: Option<f64>) -> Vec<String> { todo!() }
 
 /// (src/cloud/report.ts:70 hand)
-pub fn hand(g: &mut crate::game::Game, r: crate::cloud_report::Report) { todo!() }
+pub fn hand(g: &mut crate::game::Game, r: &crate::cloud_report::Report) { todo!() }
 
 /// (src/cloud/report.ts:76 room)
 pub fn room(g: &mut crate::game::Game, level: crate::cloud_report::ReportLevel) -> bool { todo!() }

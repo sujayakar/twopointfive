@@ -8,7 +8,7 @@ pub use p_01::{work_key_beat};
 pub mod p_02;
 pub use p_02::{hold_polish, hold_out_rate, nod_lift, q_yaw, spring_new, spring_step, curve, sample_at0, add_pose_delta, bump, clone_shape, long_flat, long_targets};
 pub mod p_03;
-pub use p_03::{long_tuck, anim_tables, fold_on, set_moves, mv_on, q_ang, in_dip_lane, reload_marks, set_turn, turn_feel};
+pub use p_03::{long_tuck, fold_on, set_moves, mv_on, q_ang, in_dip_lane, reload_marks, set_turn, turn_feel};
 pub mod p_04;
 pub use p_04::{blows_near, layer_tables_fit, throw_tables};
 pub mod p_05;

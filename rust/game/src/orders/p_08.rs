@@ -13,42 +13,6 @@ fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 /// where a man's body stands now
 fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
-/// a number in a template string, for a key: JavaScript has no "-0" there
-fn num_word(x: f64) -> String { format!("{}", x + 0.0) }
-
-// ------------------------------------------------------------ the squad's other owners
-
-/// orders.ts:631 `o.owns(gd)`. SquadOwner holds only its name; the one row ever pushed (orders.ts:630) is the night breach's. `i`: its place in g.orders.owners
-fn owner_owns(g: &mut Game, i: usize, gd: GuardId) -> bool {
-    match g.orders.owners[i].name.as_str() {
-        "nightbreach" => g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g),
-        name => unreachable!("no owner is pushed under the name {}", name),
-    }
-}
-
-/// orders.ts:633 `o.status?.(gd)`: the HUD's words for a man with no order of Sam's. `i`: its place in g.orders.owners
-fn owner_status(g: &mut Game, i: usize, gd: GuardId) -> Option<String> {
-    use crate::nightbreach::NightBreachState as S;
-    match g.orders.owners[i].name.as_str() {
-        "nightbreach" => {
-            if !g.night_breach.active || !g.night_breach.ops.contains(&gd) { return None; }
-            let state = crate::nightbreach::night_breach_state(g);
-            if !crate::nightbreach::night_breach_drill_ops(g).contains(&gd) {
-                return if state == S::Off { None } else { Some(String::from("standing by")) };
-            }
-            Some(String::from(match state {
-                S::Staged => "waiting",
-                S::Stacking => "stacking · the breach",
-                S::Set => "set · press F to send them in",
-                S::Going | S::Inside => "breaching",
-                S::Clear => "holding the room",
-                _ => "holding",
-            }))
-        }
-        name => unreachable!("no owner is pushed under the name {}", name),
-    }
-}
-
 // ------------------------------------------------------------ a walk, asked for a menu
 
 /// What route() says of his walk there, for a menu; the answer for the same two cells is kept a second.   (orders.ts SquadOrders.asked)
@@ -65,10 +29,10 @@ pub fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> cra
     }
     let key = format!(
         "{}|{},{}|{},{}|{},{},{},{}",
-        num_word(g.ch[g.gd[gd].ch].id),
-        num_word(m::floor(at[0] / cell)), num_word(m::floor(at[2] / cell)),
-        num_word(m::floor(to[0] / cell)), num_word(m::floor(to[2] / cell)),
-        g.pl[p].keys.len(), g.pl[p].codes.len(), num_word(locks), num_word(g.cleared.known),
+        js::num_str(g.ch[g.gd[gd].ch].id),
+        js::num_str(m::floor(at[0] / cell)), js::num_str(m::floor(at[2] / cell)),
+        js::num_str(m::floor(to[0] / cell)), js::num_str(m::floor(to[2] / cell)),
+        g.pl[p].keys.len(), g.pl[p].codes.len(), js::num_str(locks), js::num_str(g.cleared.known),
     );
     let t = g.time;
     if let Some(hit) = g.orders.reached.get(key.clone()) {
@@ -336,8 +300,8 @@ pub fn squad_orders_status_of(g: &mut crate::game::Game, gd: GuardId) -> String 
     for own in [true, false] {
         let mut i = 0;
         while i < g.orders.owners.len() {
-            if owner_owns(g, i, gd) == own {
-                if let Some(s) = owner_status(g, i, gd) {
+            if nightbreach_owns(g, gd) == own {
+                if let Some(s) = nightbreach_status(g, gd) {
                     if !s.is_empty() { return s; }
                 }
             }
@@ -368,7 +332,7 @@ pub fn squad_orders_who_tag(g: &mut crate::game::Game) -> crate::orders::SquadOr
         Who::All => String::from(if squad_orders_paired(g) { "GOLD" } else { "all" }),
         Who::Red => String::from("RED"),
         Who::Blue => String::from("BLUE"),
-        Who::Num(n) => num_word(n),
+        Who::Num(n) => js::num_str(n),
     };
     SquadOrdersWhoTag { tag, one: false }
 }
@@ -398,33 +362,23 @@ pub fn squad_orders_who_strip(g: &mut crate::game::Game) -> String {
 }
 
 /// A target in the panel's words: what an order from the menu would be about.   (orders.ts SquadOrders.hoverWords)
-pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::orders::SquadOrdersHoverWordsT>) -> String {
+pub fn squad_orders_hover_words(g: &mut crate::game::Game, t: Option<&crate::orders::OrderTarget>) -> String {
     match t {
         None => String::new(),
-        Some(SquadOrdersHoverWordsT::Door(t)) => door_words(g, t.door),
-        Some(SquadOrdersHoverWordsT::Floor(t)) => match (t.thing.as_ref(), t.wall.is_some()) {
+        Some(OrderTarget::Door(t)) => door_words(g, t.door),
+        Some(OrderTarget::Floor(t)) => match (t.thing.as_ref(), t.wall.is_some()) {
             (Some(x), _) => x.name.clone(),
             (None, true) => String::from("that wall"),
             (None, false) => String::from("that spot"),
         },
-        Some(SquadOrdersHoverWordsT::Foe(t)) => {
+        Some(OrderTarget::Foe(t)) => {
             let c = &g.gd[t.foe].callsign;
             if c.is_empty() { String::from("that man") } else { c.clone() }
         }
-        Some(SquadOrdersHoverWordsT::None(t)) => match t.man {
+        Some(OrderTarget::None(t)) => match t.man {
             Some(x) => format!("{} alone", g.gd[x].callsign),
             None => String::from("the squad itself"),
         },
-    }
-}
-
-/// orders.ts hoverWords' parameter is the same union as OrderTarget, in a type of its own
-fn hover_of(t: &OrderTarget) -> SquadOrdersHoverWordsT {
-    match t {
-        OrderTarget::Floor(x) => SquadOrdersHoverWordsT::Floor(x.clone()),
-        OrderTarget::Door(x) => SquadOrdersHoverWordsT::Door(*x),
-        OrderTarget::None(x) => SquadOrdersHoverWordsT::None(*x),
-        OrderTarget::Foe(x) => SquadOrdersHoverWordsT::Foe(*x),
     }
 }
 
@@ -444,17 +398,17 @@ pub fn squad_orders_mark(g: &mut crate::game::Game) -> Option<crate::orders::Squ
         OrderTarget::Foe(f) => {
             let p = man_pos(g, f.foe);
             let who = squad_orders_who_tag(g).tag;
-            let what = squad_orders_hover_words(g, Some(&hover_of(&t)));
+            let what = squad_orders_hover_words(g, Some(&t));
             ([p[0], 1.0, p[2]], format!("{} → {}", who, what))
         }
         OrderTarget::Door(d) => {
             let who = squad_orders_who_tag(g).tag;
-            let what = squad_orders_hover_words(g, Some(&hover_of(&t)));
+            let what = squad_orders_hover_words(g, Some(&t));
             ([d.at[0], 1.0, d.at[2]], format!("{} → {}", who, what))
         }
         OrderTarget::Floor(f) => {
             let who = squad_orders_who_tag(g).tag;
-            let what = squad_orders_hover_words(g, Some(&hover_of(&t)));
+            let what = squad_orders_hover_words(g, Some(&t));
             ([f.at[0], 0.03, f.at[2]], format!("{} → {}", who, what))
         }
     };
@@ -505,7 +459,7 @@ pub fn prop_penalty(g: &mut crate::game::Game, gd: GuardId, pen: Option<&crate::
     if g.gd[gd].team != crate::teams::Team::Operative || g.props.props.is_empty() { return None; }
     let mut i = 0;
     while i < g.orders.owners.len() {
-        if owner_owns(g, i, gd) { return None; }
+        if nightbreach_owns(g, gd) { return None; }
         i += 1;
     }
     let (pad, by) = (g.k.orders.prop_round_pad, g.k.orders.prop_round_door);
@@ -544,6 +498,13 @@ pub fn prop_penalty(g: &mut crate::game::Game, gd: GuardId, pen: Option<&crate::
     if dear.is_empty() { return None; }
     let cost = g.k.orders.prop_round_cost;
     Some(PropPenalty::Dear { dear, cost, pen: pen.cloned() })
+}
+
+/// What a PropPenalty answers for a cell: dear or not, times what `pen` asks.   (orders.ts:2660, the closure propPenalty returns)
+pub fn prop_penalty_at(g: &mut crate::game::Game, p: &crate::orders::PropPenalty, ix: f64, iz: f64) -> f64 {
+    let PropPenalty::Dear { dear, cost, pen } = p;
+    let here = if dear.has(crate::Num(crate::scene_collision::nav_grid_idx(g, ix, iz))) { *cost } else { 1.0 };
+    here * match pen.as_ref() { Some(q) => crate::lanes::lane_penalty_at(q, ix, iz), None => 1.0 }
 }
 
 /// ORDERS.sameWay: how far way `a` gets from way `b`, asked every half metre of `a`, and where on `a` that is.   (orders.ts farOff)

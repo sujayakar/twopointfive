@@ -54,7 +54,7 @@ pub fn rim_taper(r01: f64) -> f64 { todo!() }
 pub fn update_snow_fx(g: &mut crate::game::Game, dt: f64, cam: CameraId) { todo!() }
 
 /// (src/game/snowFx.ts:335 markKicks)
-pub fn mark_kicks(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, room: f64, size: f64, size_jit: f64, cx: f64, cz: f64, r: f64) -> f64 { todo!() }
+pub fn mark_kicks(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, room: f64, size: f64, size_jit: f64, cx: f64, cz: f64, r: f64) -> f64 { todo!() }
 
 /// (src/game/snowFx.ts:373 bootKicks)
 pub fn boot_kicks(g: &mut crate::game::Game, kicks: &[crate::snow_tracks::SnowKick], seen: f64, amount: f64) -> f64 { todo!() }
@@ -66,16 +66,16 @@ pub fn kicks_due(t: &crate::snow_fx::KicksDueT, b: &crate::snow_fx::KicksDueB) -
 pub fn wisp_look_byte() -> f64 { todo!() }
 
 /// (src/game/snowFx.ts:399 updateWisps)
-pub fn update_wisps(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, dt: f64, cx: f64, cz: f64, r: f64, area: f64, room: f64, max: Option<f64>, one_air: Option<bool>) { todo!() }
+pub fn update_wisps(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, dt: f64, cx: f64, cz: f64, r: f64, area: f64, room: f64, max: Option<f64>, one_air: Option<bool>) { todo!() }
 
 /// (src/game/snowFx.ts:420 oneAirCfg)
-pub fn one_air_cfg(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, on: bool) { todo!() }
+pub fn one_air_cfg(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, on: bool) { todo!() }
 
 /// (src/game/snowFx.ts:430 grainCap)
 pub fn grain_cap() -> f64 { todo!() }
 
 /// (src/game/snowFx.ts:432 grainsOff)
-pub fn grains_off(st: &mut crate::snow_fx::SnowState, p: Option<&mut crate::render_particles::Particles>, why: &str) { todo!() }
+pub fn grains_off(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, why: &str) { todo!() }
 
 /// (src/game/snowFx.ts:442 updateGrains)
-pub fn update_grains(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, dt: f64, cx: f64, cz: f64, room: f64, slot_life: f64) { todo!() }
+pub fn update_grains(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, dt: f64, cx: f64, cz: f64, room: f64, slot_life: f64) { todo!() }

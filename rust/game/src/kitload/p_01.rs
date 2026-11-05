@@ -132,42 +132,19 @@ pub fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n
     Some(crate::kitload::KitWorn { mob: snap(l.mob, r.mob), con: snap(l.con, r.con), ref_mob: r.mob, ref_con: r.con })
 }
 
-/// loadPaceK of a worn card, whoever wears it. The skeleton's key reaches only a teammate's row; yours is on the Player.
-fn pace_k(k: &crate::knobs::KitloadK, w: crate::kitload::KitWorn) -> f64 {
-    m::max(0.5, 1.0 + (w.mob - w.ref_mob) * k.pace)
-}
-
-/// loadSeenK of a worn card, whoever wears it.
-fn seen_k(k: &crate::knobs::KitloadK, w: crate::kitload::KitWorn) -> f64 {
-    m::max(0.25, 1.0 - (w.con - w.ref_con) * k.seen)
-}
-
-/// loadHeardK of a worn card, whoever wears it.
-fn heard_k(k: &crate::knobs::KitloadK, w: crate::kitload::KitWorn) -> f64 {
-    m::max(0.25, 1.0 - (w.con - w.ref_con) * k.heard)
-}
-
-/// A staged teammate's row: the TypeScript's `w` is never null here, so no row is a caller's bug.
-fn man_row(g: &Game, gd: GuardId) -> crate::kitload::KitWorn {
-    *g.m.kitload.man_load.get(gd).expect("loadPaceK / loadSeenK / loadHeardK of a man with no row")
-}
-
 /// His legs' pace × his reference.   (kitload.ts loadPaceK)
-pub fn load_pace_k(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    let w = man_row(g, gd);
-    pace_k(&g.k.kitload, w)
+pub fn load_pace_k(g: &mut crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
+    m::max(0.5, 1.0 + (w.mob - w.ref_mob) * g.k.kitload.pace)
 }
 
 /// The notice he builds in an eye × his reference.   (kitload.ts loadSeenK)
-pub fn load_seen_k(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    let w = man_row(g, gd);
-    seen_k(&g.k.kitload, w)
+pub fn load_seen_k(g: &mut crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
+    m::max(0.25, 1.0 - (w.con - w.ref_con) * g.k.kitload.seen)
 }
 
 /// His footfall's level × his reference.   (kitload.ts loadHeardK)
-pub fn load_heard_k(g: &mut crate::game::Game, gd: GuardId) -> f64 {
-    let w = man_row(g, gd);
-    heard_k(&g.k.kitload, w)
+pub fn load_heard_k(g: &mut crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
+    m::max(0.25, 1.0 - (w.con - w.ref_con) * g.k.kitload.heard)
 }
 
 /// Your card has just gone on this run's Player (None: it came off, or the staging chose his kit itself).   (kitload.ts loadWear)
@@ -217,7 +194,7 @@ pub fn load_pace_on(g: &mut crate::game::Game, who: crate::kitload::LoadPaceOnWh
         crate::kitload::LoadPaceOnWho::Player => crate::kitload::LoadOnWho::Player,
     };
     match load_on(g, who) {
-        Some(w) => pace_k(&g.k.kitload, w),
+        Some(w) => load_pace_k(g, w),
         None => 1.0,
     }
 }
@@ -225,7 +202,7 @@ pub fn load_pace_on(g: &mut crate::game::Game, who: crate::kitload::LoadPaceOnWh
 /// × YOUR flat-out run: as much of the pace factor as `sprint` keeps.   (kitload.ts loadSprintOn)
 pub fn load_sprint_on(g: &mut crate::game::Game) -> f64 {
     match load_on(g, crate::kitload::LoadOnWho::Player) {
-        Some(w) => 1.0 + (pace_k(&g.k.kitload, w) - 1.0) * g.k.kitload.sprint,
+        Some(w) => 1.0 + (load_pace_k(g, w) - 1.0) * g.k.kitload.sprint,
         None => 1.0,
     }
 }
@@ -235,7 +212,7 @@ pub fn sam_load_pace(g: &mut crate::game::Game, speed: f64, sprint: Option<bool>
     let sprint = sprint.unwrap_or(false);
     match load_on(g, crate::kitload::LoadOnWho::Player) {
         None => speed,
-        Some(w) => speed * (if sprint { load_sprint_on(g) } else { pace_k(&g.k.kitload, w) }),
+        Some(w) => speed * (if sprint { load_sprint_on(g) } else { load_pace_k(g, w) }),
     }
 }
 
@@ -245,7 +222,7 @@ pub fn load_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
         Some(w) => w,
         None => return speed,
     };
-    m::min(speed * pace_k(&g.k.kitload, w), m::max(speed, g.k.kitload.pace_top))
+    m::min(speed * load_pace_k(g, w), m::max(speed, g.k.kitload.pace_top))
 }
 
 /// The speed he would be doing with his issue on him, for "is this step a walk's or a run's".   (kitload.ts loadGait)
@@ -255,7 +232,7 @@ pub fn load_gait(g: &mut crate::game::Game, who: crate::kitload::LoadGaitWho, sp
         crate::kitload::LoadGaitWho::Player => crate::kitload::LoadOnWho::Player,
     };
     let k = match load_on(g, who) {
-        Some(w) => pace_k(&g.k.kitload, w),
+        Some(w) => load_pace_k(g, w),
         None => 1.0,
     };
     if k == 1.0 { speed } else { speed / k - 1e-6 }
@@ -268,7 +245,7 @@ pub fn load_seen(g: &mut crate::game::Game, who: crate::kitload::LoadSeenWho) ->
         crate::kitload::LoadSeenWho::Player => crate::kitload::LoadOnWho::Player,
     };
     match load_on(g, who) {
-        Some(w) => seen_k(&g.k.kitload, w),
+        Some(w) => load_seen_k(g, w),
         None => 1.0,
     }
 }
@@ -280,7 +257,7 @@ pub fn load_heard(g: &mut crate::game::Game, who: crate::kitload::LoadHeardWho) 
         crate::kitload::LoadHeardWho::Player => crate::kitload::LoadOnWho::Player,
     };
     match load_on(g, who) {
-        Some(w) => heard_k(&g.k.kitload, w),
+        Some(w) => load_heard_k(g, w),
         None => 1.0,
     }
 }
@@ -292,7 +269,7 @@ pub fn load_cross(g: &mut crate::game::Game, who: crate::kitload::LoadCrossWho) 
         crate::kitload::LoadCrossWho::Player => crate::kitload::LoadOnWho::Player,
     };
     match load_on(g, who) {
-        Some(w) => seen_k(&g.k.kitload, w) / pace_k(&g.k.kitload, w),
+        Some(w) => load_seen_k(g, w) / load_pace_k(g, w),
         None => 1.0,
     }
 }
@@ -331,16 +308,16 @@ mod tests {
     /// Bits of loadPaceK / loadSeenK / loadHeardK from kitload.ts under bun with EXACT on; the last two rows hit the floors and the far side.
     #[test]
     fn the_three_factors_match_the_typescripts_bits() {
-        let k = crate::knobs::page_kitload();
+        let mut g = Game::blank();
         let rows: [(crate::kitload::KitWorn, [u64; 3]); 3] = [
             (worn(0.37, 0.61, 0.52, 0.48), [0x3fee147ae147ae14, 0x3fed810624dd2f1b, 0x3fed16872b020c4a]),
             (worn(0.1, 0.1, 1.0, 1.0), [0x3fe47ae147ae147a, 0x3ff8a3d70a3d70a4, 0x3ffa147ae147ae14]),
             (worn(1.0, 1.0, 0.0, 0.0), [0x3ff6666666666666, 0x3fd999999999999a, 0x3fd3333333333334]),
         ];
         for (w, [p, s, h]) in rows {
-            assert_eq!(pace_k(&k, w).to_bits(), p);
-            assert_eq!(seen_k(&k, w).to_bits(), s);
-            assert_eq!(heard_k(&k, w).to_bits(), h);
+            assert_eq!(load_pace_k(&mut g, w).to_bits(), p);
+            assert_eq!(load_seen_k(&mut g, w).to_bits(), s);
+            assert_eq!(load_heard_k(&mut g, w).to_bits(), h);
         }
     }
 

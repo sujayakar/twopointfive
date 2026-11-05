@@ -16,7 +16,7 @@ pub struct Shell {
     pub def: crate::weapons::WeaponDef,
     pub i: f64,
     pub dir: Option<V3>,
-    pub men: JsMap<GuardId, crate::shotgun::ShellMenValue>,
+    pub men: JsMap<Option<GuardId>, crate::shotgun::ShellMenValue>,
     pub ends: Vec<crate::shotgun::ShellEndsItem>,
     pub glass: JsMap<crate::Num, Vec<f64>>,
     pub late: Vec<crate::shotgun::ShellLate>,
@@ -37,7 +37,7 @@ impl Shell {
 }
 impl Default for Shell { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shotgun.ts:64 Shell.men, src/game/shotgun.ts:64)
+/// (TypeScript: inline at quiet Shell.men, src/game/shotgun.ts:64)
 #[derive(Clone, Copy, Debug)]
 pub struct ShellMenValue {
     pub n: f64,

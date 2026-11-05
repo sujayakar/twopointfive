@@ -54,7 +54,7 @@ pub fn warm_of(g: &mut crate::game::Game, c_2: V3) -> V3 { todo!() }
 pub fn afterglow(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) { todo!() }
 
 /// (src/game/blastLook.ts:246 blastSparks)
-pub fn blast_sparks(g: &mut crate::game::Game, p: &mut crate::render_particles::Particles, at: V3) -> bool { todo!() }
+pub fn blast_sparks(g: &mut crate::game::Game, at: V3) -> bool { todo!() }
 
 /// (src/game/blastLook.ts:258 flashUnder)
 pub fn flash_under(g: &mut crate::game::Game, at: V3, born: bool) -> bool { todo!() }
@@ -66,19 +66,19 @@ pub fn can_at(g: &mut crate::game::Game, at: V3) -> bool { todo!() }
 pub fn door_charge_at(g: &mut crate::game::Game, at: V3, dt: f64) -> Option<crate::blast_look::DoorChargeAt> { todo!() }
 
 /// (src/game/blastLook.ts:280 doorBlast)
-pub fn door_blast(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, d: crate::blast_look::DoorBlastD) { todo!() }
+pub fn door_blast(g: &mut crate::game::Game, pl: PlayerId, d: crate::blast_look::DoorBlastD) { todo!() }
 
 /// (src/game/blastLook.ts:287 burstOf)
-pub fn burst_of(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, at: V3, r: crate::blast_look::STUNSPARKSFountain, k: crate::blast_look::BurstOfK) { todo!() }
+pub fn burst_of(g: &mut crate::game::Game, pl: PlayerId, at: V3, r: crate::blast_look::STUNSPARKSFountain, k: crate::blast_look::BurstOfK) { todo!() }
 
 /// (src/game/blastLook.ts:293 emit)
-pub fn emit(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) { todo!() }
+pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) { todo!() }
 
 /// (src/game/blastLook.ts:299 scale)
 pub fn scale(g: &mut crate::game::Game) -> crate::blast_look::BurstOfK { todo!() }
 
 /// (src/game/blastLook.ts:302 wallBlast)
-pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, p: &crate::render_particles::Particles, w: &crate::wallcharge::WallSpot) { todo!() }
+pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot) { todo!() }
 
 /// (src/game/blastLook.ts:320 stunSparks)
-pub fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, at: V3) { todo!() }
+pub fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) { todo!() }

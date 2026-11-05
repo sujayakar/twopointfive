@@ -1,4 +1,4 @@
-//! src/game/devices.ts lines 1 to 438
+//! src/game/devices.ts lines 1 to 439
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,33 +8,17 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- what the skeleton cannot give yet (each one line in notes.md)
-/// devices.ts:92 `g.engine.lights.add({...})`: the skeleton has no way to make a lamp's record (no RtLight, LightId has no table)
-#[allow(clippy::too_many_arguments)]
-fn seam_add_cone(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, owner: f64, enabled: bool, fixture_box: f64, flicker: f64, ttl: f64, age: f64, peak_intensity: f64) -> Option<LightId> { todo!("needs: a maker of an RtLight") }
-/// devices.ts:369 `out[k].mkey = …`: a made box has no setter (BoxId's table is "none", so the index's g.none[id].mkey names nothing on Game)
-fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { crate::scene_boxes::b_01::any_box_mut(g, b).mkey = Some(mkey); } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
+/// devices.ts:370 `out[k].mkey = …`: a made box has no row to write (ids.rs "Box: no table here", StaticCollision.boxes is Vec<BoxId>); the one blocked step of deviceBoxes
+fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { todo!("needs: a table of Box rows (ids.rs: Box has none; StaticCollision.boxes is Vec<BoxId>): g.tab.boxes[b].mkey = Some(mkey)") }
 
 // ---------------------------------------------------------------- small readers of this file
-/// `men(g)`: the skeleton's stub also takes the `Pick<Game, 'seats' | 'player'>`, here made from g
-fn men_of(g: &mut Game) -> Vec<PlayerId> {
-    let picked = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    crate::seats::men(g, &picked)
-}
 /// `c.bones.<b> ?? v3.add(c.pos, off)`
 fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, off: V3) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, off) }
 }
 fn callsign_of(g: &Game, gd: Option<GuardId>) -> Option<String> { gd.map(|x| g.gd[x].callsign.clone()) }
-/// `CameraMachine.yaw`, read off rust/sim's column (lights.md)
-fn cam_yaw(g: &Game, slot: f64) -> f64 { sim::state::state(g.sim).lights.cam_yaw[slot as usize] }
-fn cam_seen(g: &Game, slot: f64) -> f64 { sim::state::state(g.sim).lights.cam_seen[slot as usize] }
-fn cam_idle(g: &Game, slot: f64) -> bool { sim::state::state(g.sim).lights.cam_state[slot as usize] == sim::lights::S_IDLE }
-/// `CameraMachine.lastSeen`
-fn cam_last_seen(g: &Game, slot: f64) -> Option<V3> {
-    let l = &sim::state::state(g.sim).lights;
-    let s = slot as usize;
-    if l.cam_bits[s] & sim::lights::C_LAST != 0 { Some([l.cam_lx[s], l.cam_ly[s], l.cam_lz[s]]) } else { None }
-}
+/// `m & CAM.x`, of the words the wrappers answer
+fn has(bits: f64, bit: f64) -> bool { js::to_i32(bits) & js::to_i32(bit) != 0 }
 fn data(rows: &[(&str, Option<ChronDeviceDataValue>)]) -> JsMap<String, Option<ChronDeviceDataValue>> {
     let mut o = JsMap::new();
     for (k, v) in rows { o.set(String::from(*k), v.clone()); }
@@ -85,11 +69,14 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
                 let target = crate::sim_lightshome::light_home_add(g, &fix);
                 g.targets.push(target);
                 let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
-                let cone = seam_add_cone(g, &format!("{}_cone", d.name), "devices", 1.0, v3::copy(d.pos), [0.0, -1.0, 0.0], v3::copy(cone().color), cone().intensity, d.range.unwrap_or(dd.range) * cone().range_k,
-                    m::max(1.0, m::min(half, cone().outer_max_deg) - 6.0), m::min(half, cone().outer_max_deg), cone().radius, cone().volumetric, 0.0, false, -1.0, 0.0, -1.0, 0.0, cone().intensity);
+                let k = cone();
+                let lamp = g.tab.light.push(crate::render_lights::RtLight { name: format!("{}_cone", d.name), group: String::from("devices"), kind: 1.0, pos: v3::copy(d.pos), dir: [0.0, -1.0, 0.0], color: v3::copy(k.color), intensity: k.intensity, range: d.range.unwrap_or(dd.range) * k.range_k,
+                    inner_deg: m::max(1.0, m::min(half, k.outer_max_deg) - 6.0), outer_deg: m::min(half, k.outer_max_deg), radius: k.radius, volumetric: k.volumetric, owner: 0.0, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: k.intensity, ..crate::render_lights::RtLight::zeroed() });
+                g.engine.lights.lights.push(lamp);   // LightSet.add's one line: its stub has no part (see notes, Skeleton)
+                let cone = lamp;
                 let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
                 ci += 1.0;
-                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, cone, &format!("smokeCam{}", ci));
+                let rt = camera_rt_new(g, slot, crate::Opaque, d, ci, target, Some(cone), &format!("smokeCam{}", ci));
                 this.cameras.push(rt);
             }
             crate::scene_level::DeviceDef::Laser(d) => {
@@ -138,6 +125,41 @@ pub fn devices_pad_near(g: &mut crate::game::Game, p: V3) -> Option<crate::devic
     }
     best.map(|i| g.devices.keypads[i].clone())
 }
+/// For a checkpoint: each camera's pan, integrator and report state, each beam's counts and clocks, the log.   (devices.ts Devices.snapshot)
+pub fn devices_snapshot(g: &mut crate::game::Game) -> crate::devices::DevicesSnap {
+    use crate::sim_lightshome as h;
+    let mut cameras = Vec::new();
+    for c in g.devices.cameras.clone() {
+        cameras.push(DevicesSnapCamerasItem { yaw: h::camera_machine_yaw(g, c), phase: h::camera_machine_phase(g, c), seen: h::camera_machine_seen(g, c), state: h::camera_machine_state(g, c), reported_at: h::camera_machine_reported_at(g, c), last_seen: h::camera_machine_last_seen(g, c), dead_called: h::camera_machine_dead_called(g, c) });
+    }
+    let mut lasers = Vec::new();
+    for l in g.devices.lasers.clone() {
+        lasers.push(DevicesSnapLasersItem { last_trip_at: h::laser_machine_last_trip_at(g, l), trips: h::laser_machine_trips(g, l), dead_called: h::laser_machine_dead_called(g, l), held: h::laser_machine_held(g, l) });
+    }
+    DevicesSnap { cameras, lasers, log: g.devices.log.clone(), radio_count: g.devices.radio_count, seq: g.devices.seq }
+}
+/// `Number.isFinite(x) ? x : d`, restore's guard on what a save holds
+fn finite_or(x: f64, d: f64) -> f64 { if x.is_finite() { x } else { d } }
+/// From a checkpoint: reset first, then what the save holds; an unfinished code is broken off.   (devices.ts Devices.restore)
+pub fn devices_restore(g: &mut crate::game::Game, s: &crate::devices::DevicesSnap) {
+    use crate::sim_lightshome::{camera_machine_put, laser_machine_put};
+    devices_reset(g);
+    for (i, cs) in s.cameras.iter().enumerate() {
+        let c = match g.devices.cameras.get(i) { Some(c) => *c, None => continue };
+        let rest = g.tab.devices_camera_rt[c].def.yaw;
+        camera_machine_put(g, c, finite_or(cs.yaw, rest), finite_or(cs.phase, 0.0), m::max(0.0, finite_or(cs.seen, 0.0)), cs.state, finite_or(cs.reported_at, -100.0), cs.last_seen, cs.dead_called);
+    }
+    for (i, ls) in s.lasers.iter().enumerate() {
+        let l = match g.devices.lasers.get(i) { Some(l) => *l, None => continue };
+        laser_machine_put(g, l, finite_or(ls.last_trip_at, -100.0), js::to_i32(ls.trips) as f64, ls.dead_called, ls.held);
+    }
+    let from = s.log.len().saturating_sub(48);
+    g.devices.log = s.log[from..].to_vec();
+    g.devices.radio_count = js::to_i32(s.radio_count) as f64;
+    g.devices.seq = m::max(g.devices.seq, js::to_i32(s.seq) as f64);
+    let pl = g.player;
+    if g.pl[pl].coding.is_some() { stop_coding(g); }
+}
 /// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).   (devices.ts Devices.reset)
 pub fn devices_reset(g: &mut crate::game::Game) {
     for c in g.devices.cameras.clone() {
@@ -147,6 +169,32 @@ pub fn devices_reset(g: &mut crate::game::Game) {
     for l in g.devices.lasers.clone() { crate::sim_lightshome::laser_machine_put(g, l, -100.0, 0.0, false, false); }
     g.devices.log.clear();
     g.devices.radio_count = 0.0;
+}
+
+/// The panel's line: every camera's state and integrator, every beam's trips, the codes he knows.   (devices.ts Devices.summary)
+pub fn devices_summary(g: &mut crate::game::Game) -> String {
+    use crate::sim_lightshome as h;
+    let mut cams: Vec<String> = Vec::new();
+    for c in g.devices.cameras.clone() {
+        let (name, target) = (g.tab.devices_camera_rt[c].def.name.clone(), g.tab.devices_camera_rt[c].target);
+        let dark = if alive(g, target) { "" } else { " (dark)" };
+        let saw = if h::camera_machine_saw_this_frame(g, c) { " ◉" } else { "" };
+        cams.push(format!("{}{} {} {}s{}", name, dark, h::camera_machine_state(g, c).as_str(), js::to_fixed(h::camera_machine_seen(g, c), 2), saw));
+    }
+    let mut las: Vec<String> = Vec::new();
+    for l in g.devices.lasers.clone() {
+        let (name, target) = (g.tab.devices_laser_rt[l].def.name.clone(), g.tab.devices_laser_rt[l].target);
+        let dark = if alive(g, target) { "" } else { " (dark)" };
+        las.push(format!("{}{} ×{}", name, dark, js::num_str(h::laser_machine_trips(g, l))));
+    }
+    let pl = g.player;
+    let codes: Vec<String> = g.pl[pl].codes.iter().collect();
+    let (cams, las, codes) = (cams.join(" · "), las.join(" · "), codes.join(" "));
+    format!("devices ▸ {}{} | {} | codes [{}]",
+        if g.tune.devices { "" } else { "OFF · " },
+        if cams.is_empty() { "no cameras" } else { cams.as_str() },
+        if las.is_empty() { "no beams" } else { las.as_str() },
+        if codes.is_empty() { "—" } else { codes.as_str() })
 }
 
 /// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
@@ -182,26 +230,26 @@ pub fn update_devices(g: &mut crate::game::Game, dt: f64) {
     let live = sensing(g);
     for c in g.devices.cameras.clone() { update_camera(g, c, dt, live); }
     for l in g.devices.lasers.clone() { let on = live && g.tune.lasers; update_laser(g, l, dt, on); }
-    if g.seats.len() == 1 { update_coding(g, dt); } else {
-        for pl in men_of(g) { crate::seats::with_seat(g, pl, &mut |v: &mut Game| update_coding(v, dt)); }
-    }
+    crate::seats::each_seat(g, &mut |v: &mut Game| update_coding(v, dt));
 }
 /// One camera's frame: the pan, the feed dropping, the picture, what it does about it.   (devices.ts updateCamera)
 pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: bool) {
     let c = c_2;
     let d = g.tab.devices_camera_rt[c].def.clone();
-    let (slot, index) = (g.tab.devices_camera_rt[c].slot, g.tab.devices_camera_rt[c].index);
-    let pan = sim::lights::camera_pan(g.sim, slot as usize, dt, live, g.tune.device_cones);
-    if pan & sim::lights::CAM_DOWN != 0 && live { device_down(g, &d.name, &format!("camera {}", index), d.pos); }
-    if pan & sim::lights::CAM_OK == 0 || !live { return; }
+    let (slot, index, lamp) = (g.tab.devices_camera_rt[c].slot, g.tab.devices_camera_rt[c].index, g.tab.devices_camera_rt[c].cone);
+    let cones = g.tune.device_cones;
+    let pan = crate::sim_lightshome::light_home_camera_pan(g, slot, lamp, dt, live, cones);
+    let bit = crate::sim_lightshome::cam();
+    if has(pan, bit.down) && live { device_down(g, &d.name, &format!("camera {}", index), d.pos); }
+    if !has(pan, bit.ok) || !live { return; }
     let dd = crate::scene_level_data::device_defaults();
     let pl = if g.seats.len() == 1 { g.player } else {
-        match crate::seats::nearest_man(g, &d.pos) { Some(p) => p, None => men_of(g)[0] }
+        match crate::seats::nearest_man(g, &d.pos) { Some(p) => p, None => crate::seats::men(g)[0] }
     };
     let pc = g.pl[pl].ch;
     let range = d.range.unwrap_or(dd.range);
     let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
-    let look = lens_dir(cam_yaw(g, slot), d.pitch.unwrap_or(dd.pitch));
+    let look = lens_dir(crate::sim_lightshome::camera_machine_yaw(g, c), d.pitch.unwrap_or(dd.pitch));
     let e = crate::guards::Eye { pos: d.pos, look, range, half_deg: half, near_m: 0.0, near_deg: half, v_half_deg: Some(half) };
     let key = g.tab.devices_camera_rt[c].smoke_key.clone();
     if let Some(tr) = crate::sensors::sensors_read(g, &key) { g.tab.devices_camera_rt[c].smoke_trans = tr; }
@@ -211,16 +259,17 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let vis = crate::guards::eye_contact(g, e, pc, true, false, air, None);
     if vis.in_cone { let chest = bone_or(g, pc, crate::character::Bone::Chest, [0.0, 1.1, 0.0]); crate::sensors::sensors_ask_segment(g, &key, d.pos, chest); }
     let gain = if vis.visible { lens_gain(g, vis.dist, range, air) } else { 0.0 };
-    let r = sim::lights::camera_see(g.sim, slot as usize, g.time, dt, vis.visible, gain, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
-    if r & sim::lights::CAM_SUSPECT != 0 { camera_suspect(g, c); }
-    if r & sim::lights::CAM_ALARM != 0 { camera_alarm(g, c); }
+    let (now, at, sus, alarm) = (g.time, g.ch[pc].pos, g.tune.camera_suspicion_secs, g.tune.camera_alarm_secs);
+    let r = crate::sim_lightshome::light_home_camera_see(g, slot, now, dt, vis.visible, gain, at, sus, alarm);
+    if has(r, bit.suspect) { camera_suspect(g, c); }
+    if has(r, bit.alarm) { camera_alarm(g, c); }
 }
 /// The picture has movement: a man sent, the radio, the debrief.   (devices.ts cameraSuspect)
 pub fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
-    let (slot, index) = (g.tab.devices_camera_rt[c].slot, g.tab.devices_camera_rt[c].index);
+    let index = g.tab.devices_camera_rt[c].index;
     let name = g.tab.devices_camera_rt[c].def.name.clone();
-    let seen = cam_last_seen(g, slot).unwrap();
+    let seen = crate::sim_lightshome::camera_machine_last_seen(g, c).unwrap();
     let where_ = crate::chronicle::room_of(g, seen);
     let sent = send_to_look(g, seen, &format!("camera {}", index));
     let sign = callsign_of(g, sent);
@@ -233,9 +282,9 @@ pub fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
 /// The picture has him: the floor's fix, everybody sharp, the floor up a step.   (devices.ts cameraAlarm)
 pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
-    let (slot, index) = (g.tab.devices_camera_rt[c].slot, g.tab.devices_camera_rt[c].index);
+    let index = g.tab.devices_camera_rt[c].index;
     let name = g.tab.devices_camera_rt[c].def.name.clone();
-    let p = cam_last_seen(g, slot).unwrap();
+    let p = crate::sim_lightshome::camera_machine_last_seen(g, c).unwrap();
     let where_ = crate::chronicle::room_of(g, p);
     control(g, &format!("camera {}: that's him — the {}. all posts, the {}", index, where_, where_));
     g.alarm.pos[0] = p[0];
@@ -244,16 +293,18 @@ pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     g.alarm.placed = true;
     for i in 0..g.guards.len() {
         let id = g.guards[i];
-        let gd = &mut g.gd[id];
-        if gd.state != crate::game::GuardState::Dead && gd.held.is_none() && gd.unit.is_none() {
-            gd.last_known = Some(v3::copy(p));
+        if g.gd[id].state != crate::game::GuardState::Dead && g.gd[id].held.is_none() && g.gd[id].unit.is_none() {
+            crate::belief::word(g, id, p);
+            let gd = &mut g.gd[id];
             gd.awareness = m::max(gd.awareness, 0.5);
             if gd.state == crate::game::GuardState::Patrol {
                 gd.state = crate::game::GuardState::Suspicious;
                 gd.react_t = 0.8;
                 gd.search_t = 0.0;
                 gd.path = Vec::new();
+                gd.path_serial = gd.path_serial.wrapping_add(1);
                 gd.path_goal = None;
+                gd.path_goal_orbit = false;
             }
         }
     }
@@ -268,12 +319,13 @@ pub fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
 pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let (slot, dir, len) = (g.tab.devices_laser_rt[l].slot, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
-    let open = sim::lights::laser_open(g.sim, slot as usize);
-    if open & sim::lights::LASER_DOWN != 0 && sensing(g) {
+    let open = crate::sim_lightshome::light_home_laser_open(g, slot);
+    let bit = crate::sim_lightshome::laser();
+    if has(open, bit.down) && sensing(g) {
         let room = crate::chronicle::room_of(g, d.from);
         device_down(g, &d.name, &format!("the {} beam", room), d.from);
     }
-    if open & sim::lights::LASER_OK == 0 { return; }
+    if !has(open, bit.ok) { return; }
     let mut reach = len;
     let no_shadow = crate::scene_boxes::box_flag().no_shadow;
     if let Some(wh) = crate::scene_boxes::box_world_raycast(g, v3::mad(d.from, dir, 0.03), dir, Some(reach), Some(no_shadow), None, None) { reach = m::min(reach, wh.t + 0.03); }
@@ -289,7 +341,7 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
     let mut who: Option<&'static str> = None;
     let mut at: Option<V3> = None;
     let mut cut = reach;
-    for pl in men_of(g) {
+    for pl in crate::seats::men(g) {
         if who.is_some() { break; }
         if !g.pl[pl].down && !g.player_invisible {
             let c = g.pl[pl].ch;
@@ -327,7 +379,8 @@ pub fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool
         let t = crate::character::character_ray_hit(g, c, d.from, dir, cut);
         if t >= 0.0 { cut = m::min(cut, t); }
     }
-    if sim::lights::laser_close(g.sim, slot as usize, g.time, live, cut, sense, who.is_some()) & sim::lights::LASER_TRIP != 0 {
+    let now = g.time;
+    if has(crate::sim_lightshome::light_home_laser_close(g, slot, now, live, cut, sense, who.is_some()), bit.trip) {
         laser_trip(g, l, who.unwrap(), at.unwrap());
     }
 }
@@ -401,12 +454,15 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
         let gd = &mut g.gd[id];
         gd.task = Some(crate::game::GuardTask::Arm0(crate::game::GuardTaskArm0 { kind: crate::game::GuardTaskArm0Kind::Device, pos: v3::copy(goal) }));
         gd.last_known = Some(v3::copy(goal));
+        gd.fix_stamp = gd.fix_stamp.wrapping_add(1);
         gd.awareness = m::max(gd.awareness, errand().awareness);
         gd.state = crate::game::GuardState::Suspicious;
         gd.react_t = errand().react_t;
         gd.search_t = 0.0;
         gd.path = Vec::new();
+        gd.path_serial = gd.path_serial.wrapping_add(1);
         gd.path_goal = None;
+        gd.path_goal_orbit = false;
     }
     crate::game::game_say(g, id, "copy, control — on my way", Some(true), None, None);
     let c = g.gd[id].ch;
@@ -598,10 +654,10 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     let deco = bits_or(fl.dynamic, fl.no_shadow);
     for c in g.devices.cameras.clone() {
         let d = g.tab.devices_camera_rt[c].def.clone();
-        let (target, slot) = (g.tab.devices_camera_rt[c].target, g.tab.devices_camera_rt[c].slot);
+        let target = g.tab.devices_camera_rt[c].target;
         let ok = alive(g, target);
         let pitch = d.pitch.unwrap_or(crate::scene_level_data::device_defaults().pitch);
-        let yaw = cam_yaw(g, slot);
+        let yaw = crate::sim_lightshome::camera_machine_yaw(g, c);
         let look = lens_dir(yaw, pitch);
         let back: V3 = [-m::sin(d.yaw), 0.0, -m::cos(d.yaw)];
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::zeroed() }));
@@ -609,9 +665,9 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         let y = v3::cross(look, x);
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::zeroed() }));
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::zeroed() }));
-        let seen = cam_seen(g, slot);
+        let seen = crate::sim_lightshome::camera_machine_seen(g, c);
         let hot = seen > 0.02;
-        let blink = if !cam_idle(g, slot) { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
+        let blink = if crate::sim_lightshome::camera_machine_state(g, c) != crate::sim_lightshome::CameraState::Idle { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
         let led: V3 = if !ok { [0.0, 0.0, 0.0] } else {
             v3::scale(if hot { led_hot() } else { led_idle() }, blink * (if hot { v3::clamp(0.4 + seen / m::max(0.1, g.tune.camera_suspicion_secs), 0.4, 1.6) } else { 1.0 }))
         };
@@ -624,22 +680,38 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::zeroed() }));
         let locked = crate::doors::door_locked(g, k.door) && crate::doors::door_latched(g, k.door);
-        let busy = men_of(g).iter().any(|&pl| g.pl[pl].coding == Some(k.door));
+        let busy = crate::seats::men(g).iter().any(|&pl| g.pl[pl].coding == Some(k.door));
         let led: V3 = if busy { v3::scale(amber(), if m::sin(g.time * 30.0) > 0.0 { 1.0 } else { 0.2 }) } else if locked { red() } else { green() };
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::zeroed() }));
     }
     for l in g.devices.lasers.clone() {
         let d = g.tab.devices_laser_rt[l].def.clone();
-        let (target, slot, dir, len) = (g.tab.devices_laser_rt[l].target, g.tab.devices_laser_rt[l].slot as usize, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
+        let (target, dir, len) = (g.tab.devices_laser_rt[l].target, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
         let ok = alive(g, target);
         let yaw = v3::yaw_of(dir);
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
         out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }));
-        let (last, cut) = { let c = &sim::state::state(g.sim).lights; (c.las_last[slot], c.las_cut[slot]) };
+        let (last, cut) = (crate::sim_lightshome::laser_machine_last_trip_at(g, l), crate::sim_lightshome::laser_machine_cut(g, l));
         let glow: V3 = if ok { if g.time - last < 1.5 { v3::scale(red(), if m::sin(g.time * 40.0) > 0.0 { 2.0 } else { 0.2 }) } else { [1.5, 0.1, 0.05] } } else { [0.0, 0.0, 0.0] };
         out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::zeroed() }));
         if ok && cut > 0.05 { crate::combat::beam_boxes(g, d.from, dir, cut, out, cut < len - 0.05, None, None); }
     }
+}
+
+// ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
+/// `localStorage` is the host's: what it keeps arrives written in `g.tune`, so nothing here reads.   (devices.ts loadDeviceTune)
+pub fn load_device_tune(g: &mut crate::game::Game) {}
+/// `localStorage` is the host's: it keeps `g.tune`'s five rows if it keeps them.   (devices.ts saveDeviceTune)
+pub fn save_device_tune(g: &mut crate::game::Game) {}
+/// The five rows to their defaults; the removal from `localStorage` is the host's.   (devices.ts resetDeviceTune)
+pub fn reset_device_tune(g: &mut crate::game::Game) {
+    let d = device_tune_defaults();
+    let t = &mut g.tune;
+    t.devices = d.devices;
+    t.lasers = d.lasers;
+    t.camera_suspicion_secs = d.camera_suspicion_secs;
+    t.camera_alarm_secs = d.camera_alarm_secs;
+    t.device_cones = d.device_cones;
 }
 
 // ---------------------------------------------------------------- geometry

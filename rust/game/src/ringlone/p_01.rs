@@ -120,14 +120,15 @@ fn pill_of(w: &crate::ringlone::Wedge, n: f64) -> crate::ringlone::LonePill {
     let widths: Vec<f64> = rows.iter().map(|s| words_w(s)).collect();
     let text_w = m::max_n(&widths);
     let crate::ringlone::BoxOf { x0, y0, x1, y1, py, left, .. } = box_of(w.key, n, text_w, Some(tall));
-    let (x0e, x1e, y0s, y1s) = (fixed1(x0 + e), fixed1(x1 - e), fixed1(y0), fixed1(y1));
+    let f = |v: f64| js::to_fixed(v, 1);
+    let (x0e, x1e, y0s, y1s, r) = (f(x0 + e), f(x1 - e), f(y0), f(y1), js::num_str(e));
     let d = if tall {
         format!(
-            "M{x0e},{y0s} H{x1e} A{e},{e} 0 0 1 {},{} V{} A{e},{e} 0 0 1 {x1e},{y1s} H{x0e} A{e},{e} 0 0 1 {},{} V{} A{e},{e} 0 0 1 {x0e},{y0s} Z",
-            fixed1(x1), fixed1(y0 + e), fixed1(y1 - e), fixed1(x0), fixed1(y1 - e), fixed1(y0 + e),
+            "M{x0e},{y0s} H{x1e} A{r},{r} 0 0 1 {},{} V{} A{r},{r} 0 0 1 {x1e},{y1s} H{x0e} A{r},{r} 0 0 1 {},{} V{} A{r},{r} 0 0 1 {x0e},{y0s} Z",
+            f(x1), f(y0 + e), f(y1 - e), f(x0), f(y1 - e), f(y0 + e),
         )
     } else {
-        format!("M{x0e},{y0s} H{x1e} A{e},{e} 0 0 1 {x1e},{y1s} H{x0e} A{e},{e} 0 0 1 {x0e},{y0s} Z")
+        format!("M{x0e},{y0s} H{x1e} A{r},{r} 0 0 1 {x1e},{y1s} H{x0e} A{r},{r} 0 0 1 {x0e},{y0s} Z")
     };
     let cy = if tall { (y0 + y1) / 2.0 } else { py };
     let count = rows.len() as f64;
@@ -155,15 +156,6 @@ fn pill_of(w: &crate::ringlone::Wedge, n: f64) -> crate::ringlone::LonePill {
         ty,
         anchor: if left { crate::ringlone::LonePillAnchor::End } else { crate::ringlone::LonePillAnchor::Start },
     }
-}
-
-/// `v.toFixed(1)`: Rust's `{:.1}` breaks an exact tie to even where the language breaks it upward, which differs only at a fraction of exactly .25,
-/// and it gives -0 a sign where the language does not. A pill's numbers are far below 1e21, where toFixed changes form.
-fn fixed1(v: f64) -> String {
-    let a = m::abs(v);
-    let tie = a - m::floor(a) == 0.25;
-    let body = if tie { format!("{}.3", m::floor(a)) } else { format!("{:.1}", a) };
-    if v < 0.0 { format!("-{body}") } else { body }
 }
 
 /// The place the game reads for wedge `key`'s pill: the longest pill's box, two lines tall. (ringlone.ts pillBox)
@@ -278,7 +270,7 @@ mod tests {
             (0x0000000000000000, "0.0"), (0x3ff7333333333333, "1.4"), (0x4028b33333333333, "12.3"), (0x405ed00000000000, "123.3"),
             (0xc05ef00000000000, "-123.8"), (0x3fee666666666666, "0.9"), (0x3fa47ae147ae147b, "0.0"),
         ] {
-            assert_eq!(fixed1(f64::from_bits(bits)), want, "{bits:#x}");
+            assert_eq!(js::to_fixed(f64::from_bits(bits), 1), want, "{bits:#x}");
         }
     }
 

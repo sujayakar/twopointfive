@@ -21,16 +21,16 @@ pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: 
 pub fn afterglow(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastLook.ts:280 doorBlast)
-pub fn door_blast(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, d: crate::blast_look::DoorBlastD) {}
+pub fn door_blast(g: &mut crate::game::Game, pl: PlayerId, d: crate::blast_look::DoorBlastD) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastLook.ts:287 burstOf)
-pub fn burst_of(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, at: V3, r: crate::blast_look::STUNSPARKSFountain, k: crate::blast_look::BurstOfK) {}
+pub fn burst_of(g: &mut crate::game::Game, pl: PlayerId, at: V3, r: crate::blast_look::STUNSPARKSFountain, k: crate::blast_look::BurstOfK) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastLook.ts:293 emit)
-pub fn emit(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
+pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastLook.ts:302 wallBlast)
-pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, p: &crate::render_particles::Particles, w: &crate::wallcharge::WallSpot) {}
+pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastLook.ts:320 stunSparks)
-pub fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, at: V3) {}
+pub fn stun_sparks(g: &mut crate::game::Game, pl: PlayerId, at: V3) {}

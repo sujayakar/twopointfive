@@ -8,7 +8,10 @@ use alloc::{string::String, vec::Vec};
 pub struct SmokeLevel {
     pub voxel: f64,
     pub dims: [f64; 3],
+    pub page_base: f64,
     pub tex_y: f64,
+    pub tile: f64,
+    pub tile_base: f64,
 }
 impl SmokeLevel {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -16,7 +19,10 @@ impl SmokeLevel {
         SmokeLevel {
             voxel: 0.0,
             dims: [0.0; 3],
+            page_base: 0.0,
             tex_y: 0.0,
+            tile: 0.0,
+            tile_base: 0.0,
         }
     }
 }
@@ -25,8 +31,14 @@ impl Default for SmokeLevel { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: SmokeGrid, src/smoke/smokeGrid.ts:18)
 #[derive(Clone, Copy, Debug)]
 pub struct SmokeGrid {
+    pub cap: f64,
     pub levels: [crate::smoke_smoke_grid::SmokeLevel; 2],
+    pub n0: f64,
+    pub n_page: f64,
+    pub n_tiles: f64,
+    pub page_tex: [f64; 3],
     pub macro_y: f64,
+    pub macro_dims: [f64; 3],
     pub atlas_blocks: [f64; 3],
     pub atlas_tex: [f64; 3],
 }
@@ -34,8 +46,14 @@ impl SmokeGrid {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SmokeGrid {
+            cap: 0.0,
             levels: [crate::smoke_smoke_grid::SmokeLevel::zeroed(); 2],
+            n0: 0.0,
+            n_page: 0.0,
+            n_tiles: 0.0,
+            page_tex: [0.0; 3],
             macro_y: 0.0,
+            macro_dims: [0.0; 3],
             atlas_blocks: [0.0; 3],
             atlas_tex: [0.0; 3],
         }

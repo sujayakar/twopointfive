@@ -1,4 +1,4 @@
-//! src/game/rescue.ts lines 1 to 437
+//! src/game/rescue.ts lines 1 to 438
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,26 +9,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ── small helpers ──
 
-/// `g.engine.lights.add(l)`: the set is lent while g is; add touches only the set's own list
-fn lights_add(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_add(g, &mut set, l);
-    g.engine.lights = set;
-}
-/// `g.engine.lights.remove(l)`: the same
-fn lights_remove(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_remove(g, &mut set, l);
-    g.engine.lights = set;
-}
-
-/// a number as a template string writes it, for the ordinary range of a mark's coordinates
-fn num(x: f64) -> String { if x == 0.0 { String::from("0") } else { format!("{}", x) } }
-/// `x.toFixed(2)` of a number >= 0: JavaScript takes the larger on an exact tie (a tie is an odd count of eighths), Rust the even
-fn to_fixed2(x: f64) -> String {
-    let e = x * 8.0;
-    if m::floor(e) == e && js::rem(e, 2.0) == 1.0 { format!("{:.2}", x + 0.001) } else { format!("{:.2}", x) }
-}
 fn rect_of(b: crate::scene_level::BreachPlanBounds) -> crate::scene_scenarios::Rect {
     crate::scene_scenarios::Rect { x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 }
 }
@@ -69,10 +49,10 @@ fn check_free(g: &mut Game, bad: &mut Vec<String>, what: &str, p: V3) -> bool {
         let gap = crate::roomclear::prop_gap(crate::roomclear::PropGapP { home: row.home, hx: row.hx, hz: row.hz }, p);
         if gap < 0.3 { prop = Some(pr); break; }
     }
-    if let Some(pr) = prop { bad.push(format!("{} ({}, {}): standing in {}", what, num(p[0]), num(p[2]), g.tab.props_prop[pr].def.name)); }
+    if let Some(pr) = prop { bad.push(format!("{} ({}, {}): standing in {}", what, js::num_str(p[0]), js::num_str(p[2]), g.tab.props_prop[pr].def.name)); }
     let far = match near { None => true, Some(n) => m::hyp2(n[0] - p[0], n[2] - p[2]) > 0.8 };
-    let why = if pushed > 0.15 { format!("in a wall or fixed furniture (pushed {} m out)", to_fixed2(pushed)) } else if far { String::from("no walkable floor within a step") } else { String::new() };
-    if !why.is_empty() { bad.push(format!("{} ({}, {}): {}", what, num(p[0]), num(p[2]), why)); }
+    let why = if pushed > 0.15 { format!("in a wall or fixed furniture (pushed {} m out)", js::to_fixed(pushed, 2)) } else if far { String::from("no walkable floor within a step") } else { String::new() };
+    if !why.is_empty() { bad.push(format!("{} ({}, {}): {}", what, js::num_str(p[0]), js::num_str(p[2]), why)); }
     why.is_empty()
 }
 /// checkRescue's `way`: joined on foot
@@ -107,7 +87,7 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
         let what = format!("hostage {}", i + 1);
         if check_free(g, &mut bad, &what, h.pos) {
             if let Some(b) = bb {
-                if !crate::squad::in_bounds(h.pos, Some(plan_bounds_of(b)), None) { bad.push(format!("{} ({}, {}): outside the hostage room", what, num(h.pos[0]), num(h.pos[2]))); }
+                if !crate::squad::in_bounds(h.pos, Some(plan_bounds_of(b)), None) { bad.push(format!("{} ({}, {}): outside the hostage room", what, js::num_str(h.pos[0]), js::num_str(h.pos[2]))); }
             }
         }
     }
@@ -122,7 +102,7 @@ pub fn check_rescue(g: &mut crate::game::Game, s: Option<&crate::scene_scenarios
         if !check_free(g, &mut bad, what, mk.pos) { continue; }
         if let Some(b) = bb {
             if *inside != crate::squad::in_bounds(mk.pos, Some(plan_bounds_of(b)), None) {
-                bad.push(format!("{} ({}, {}): {} the hostage room", what, num(mk.pos[0]), num(mk.pos[2]), if *inside { "outside" } else { "inside" }));
+                bad.push(format!("{} ({}, {}): {} the hostage room", what, js::num_str(mk.pos[0]), js::num_str(mk.pos[2]), if *inside { "outside" } else { "inside" }));
             }
         }
         if what != "the door man, outside" { check_line(g, &mut bad, what, *mk); }
@@ -260,7 +240,7 @@ pub fn rescue_stop(g: &mut crate::game::Game) {
     if let Some(mut benched) = g.rescue.benched.take() {
         for gd in benched.iter() {
             let l = g.gd[*gd].flashlight;
-            if !g.engine.lights.lights.contains(&l) { lights_add(g, l); }
+            if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(g, l); }
         }
         benched.extend_from_slice(&g.guards);
         g.guards = benched;
@@ -322,7 +302,7 @@ pub fn rescue_bench(g: &mut crate::game::Game) {
     for gd in staff.iter() {
         let l = g.gd[*gd].flashlight;
         g.tab.light[l].enabled = false;
-        lights_remove(g, l);
+        crate::render_lights::light_set_remove(g, l);
     }
     let mut benched = g.rescue.benched.take().unwrap_or_default();
     benched.extend_from_slice(&staff);
@@ -398,7 +378,7 @@ pub fn rescue_stage(g: &mut crate::game::Game) {
     if let Err(e) = stage_tried(g) { panic!("{}", e); }
 }
 
-/// The staging; Err is the message of what the TypeScript's staging throws.
+/// The staging; Err is the message of what the TypeScript's staging throws, spawnUnit's among them.
 fn stage_tried(g: &mut Game) -> Result<(), String> {
     let Some(s) = rescue_data(g) else { return Err(String::from("the level has no hostage rescue data")); };
     g.rescue.ops = Vec::new();
@@ -466,7 +446,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let gd = crate::guards::spawn_unit(g, &crate::guards::UnitOpts {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),
             name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::zeroed()
-        });
+        })?;
         g.gd[gd].hold = true;
         g.gd[gd].pinned = true;
         g.rescue.hostiles.push(gd);
@@ -512,7 +492,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
                 let n = 2.0 + g.guards.len() as f64;
                 crate::guards::UnitOpts {
                     team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
-                    pair: Some(if r.pair == "red" { crate::game::PairId::Red } else { crate::game::PairId::Blue }), tint: Some(r.tint), tint2: Some(r.tint2),
+                    pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
                     budget: Some(m::max(crate::nightbreach::SQUAD4_BUDGET, n)), ..crate::guards::UnitOpts::zeroed()
                 }
             }
@@ -522,7 +502,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
                 budget: Some(2.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
             },
         };
-        let gd = crate::guards::spawn_unit(g, &opts);
+        let gd = crate::guards::spawn_unit(g, &opts)?;
         g.gd[gd].hold = true;
         g.gd[gd].pinned = true;
         g.gd[gd].trained = true;
@@ -617,13 +597,6 @@ pub fn rescue_place(g: &mut crate::game::Game) -> String {
     }
 }
 
-/// What happened when, on the game clock. (rescue.ts Rescue.note)
-pub fn rescue_note(g: &mut crate::game::Game, what: &str) {
-    let t = g.time;
-    g.rescue.log.push(RescueLogItem { t, what: String::from(what) });
-    if g.rescue.log.len() > 600 { g.rescue.log.drain(0..150); }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -635,11 +608,5 @@ mod tests {
         assert_eq!(wrap(4.0).to_bits(), 0xc00243f6a8885a30);
         assert_eq!(wrap(-7.5).to_bits(), 0xbff37812aeef4b9e);
         assert_eq!(wrap(0.3).to_bits(), 0x3fd3333333333333);
-    }
-    #[test]
-    fn to_fixed_as_the_language_has_it() {
-        for (x, s) in [(0.125, "0.13"), (0.375, "0.38"), (0.625, "0.63"), (1.005, "1.00"), (0.155, "0.15"), (2.5, "2.50")] {
-            assert_eq!(to_fixed2(x), s);
-        }
     }
 }

@@ -1,4 +1,4 @@
-//! src/scene/collision.ts lines 1 to 1192
+//! src/scene/collision.ts lines 1 to 1076
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,19 +12,14 @@ use sim::world::ASK_HOST;
 
 // ---- small private helpers
 
+/// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
+}
 /// which of the module's worlds is this game's: M.slot, which the mirror's `take` names as the copy first stands
 #[inline]
 fn slot(g: &Game) -> usize {
     g.col.mirror.slot as usize
-}
-/// a box's flags as a word
-#[inline]
-fn flags_of(g: &Game, b: BoxId) -> u32 {
-    js::to_u32(g.col.boxes[b].flags)
-}
-/// every row of the box table, in order: a box's row in the world is its ID's row
-fn all_rows(g: &Game) -> Vec<BoxId> {
-    g.col.boxes.ids().collect()
 }
 /// a double of one of the module's tables, by its byte address and its place
 #[inline]
@@ -44,9 +39,14 @@ fn get_u32(addr: usize, i: usize) -> u32 {
 fn is(x: f64, y: f64) -> bool {
     x.to_bits() == y.to_bits() || (x.is_nan() && y.is_nan())
 }
-/// a point as `a.join(', ')` writes it, for a check's line (a check's words, so Rust's printing of a double will do)
-fn joined(a: V3) -> String {
-    alloc::format!("{}, {}, {}", a[0], a[1], a[2])
+/// a point as `a.join(', ')` writes it, in the language's own printing of a number
+fn joined(a: &[f64]) -> String {
+    let mut s = String::new();
+    for (i, v) in a.iter().enumerate() {
+        if i > 0 { s.push_str(", "); }
+        s.push_str(&js::num_str(*v));
+    }
+    s
 }
 /// the same function lent on again, for one call
 fn relend<'a>(p: &'a mut Option<&mut dyn FnMut(&mut Game, f64, f64) -> f64>) -> Option<&'a mut dyn FnMut(&mut Game, f64, f64) -> f64> {
@@ -57,28 +57,29 @@ fn relend<'a>(p: &'a mut Option<&mut dyn FnMut(&mut Game, f64, f64) -> f64>) -> 
 }
 /// the block's stamp (SimState.stamp): the tables made from the game's state are kept by it. The skeleton has no SimState: `st`, `Q.sim` are Opaque.
 fn seam_sim_stamp(g: &mut Game) -> f64 {
-    todo!("needs: SimState.stamp of the game's block (collision.ts:594, :659; skeleton has st: Opaque)")
+    todo!("needs: SimState.stamp of the game's block (collision.ts:623, :692; skeleton has st: Opaque)")
 }
 
 // ---- the line through a box
 
-/// the interval of the line a + t·rd inside box b, and how deep the origin sits. (collision.ts lineBox)
-pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<crate::scene_collision::LineBox> {
+/// where a line stands in a box's own frame, and its interval through the slabs
+#[derive(Clone, Copy)]
+struct Slab { t0: f64, t1: f64, depth: f64, o: V3, d: V3 }
+
+/// lineBox's first half: the box's frame and the slabs, over the row's numbers
+fn slab(a: V3, rd: V3, c: V3, h: V3, yaw: f64, rot: Option<Quat>) -> Option<Slab> {
     let (ox, oy, oz, dx, dy, dz);
-    let bc = g.col.boxes[b].c;
-    if let Some(rot) = g.col.boxes[b].rot {
+    if let Some(rot) = rot {
         let qi = quat::conj(rot);
-        let o = quat::rotate(qi, v3::sub(a, bc));
+        let o = quat::rotate(qi, v3::sub(a, c));
         let d = quat::rotate(qi, rd);
         ox = o[0]; oy = o[1]; oz = o[2]; dx = d[0]; dy = d[1]; dz = d[2];
     } else {
-        let yaw = g.col.boxes[b].yaw;
         let (cs, sn) = (m::cos(yaw), m::sin(yaw));
-        let (px, pz) = (a[0] - bc[0], a[2] - bc[2]);
-        ox = cs * px - sn * pz; oy = a[1] - bc[1]; oz = sn * px + cs * pz;
+        let (px, pz) = (a[0] - c[0], a[2] - c[2]);
+        ox = cs * px - sn * pz; oy = a[1] - c[1]; oz = sn * px + cs * pz;
         dx = cs * rd[0] - sn * rd[2]; dy = rd[1]; dz = sn * rd[0] + cs * rd[2];
     }
-    let h = g.col.boxes[b].h;
     let (mut t0, mut t1) = (-m::INF, m::INF);
     let (o, d) = ([ox, oy, oz], [dx, dy, dz]);
     for ax in 0..3 {
@@ -92,23 +93,41 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
         if tb < t1 { t1 = tb; }
         if t0 > t1 { return None; }
     }
-    let mut depth = m::min_n(&[h[0] - m::abs(ox), h[1] - m::abs(oy), h[2] - m::abs(oz)]);
-    if g.col.boxes[b].round == Some(true) {
-        let (qa, qb, qc) = (dx * dx + dz * dz, ox * dx + oz * dz, ox * ox + oz * oz - h[0] * h[0]);
-        if qa < 1e-18 {
-            if qc > 0.0 { return None; }
-        } else {
-            let disc = qb * qb - qa * qc;
-            if disc < 0.0 { return None; }
-            let s = m::sqrt(disc);
-            let (ta, tb) = ((-qb - s) / qa, (-qb + s) / qa);
-            if ta > t0 { t0 = ta; }
-            if tb < t1 { t1 = tb; }
-            if t0 > t1 { return None; }
-        }
-        depth = m::min(h[0] - m::sqrt(ox * ox + oz * oz), h[1] - m::abs(oy));
-    } else if g.col.boxes[b].cut.is_some() && crate::scene_boxes::cut_met(g, b) {
-        let cut = g.col.boxes[b].cut.clone().unwrap();
+    let depth = m::min_n(&[h[0] - m::abs(ox), h[1] - m::abs(oy), h[2] - m::abs(oz)]);
+    Some(Slab { t0, t1, depth, o, d })
+}
+/// lineBox's round things: the interval inside the cylinder about the box's own y, and the origin's depth
+fn slab_round(s: Slab, h: V3) -> Option<Slab> {
+    let ([ox, oy, oz], [dx, _, dz]) = (s.o, s.d);
+    let (mut t0, mut t1) = (s.t0, s.t1);
+    let (qa, qb, qc) = (dx * dx + dz * dz, ox * dx + oz * dz, ox * ox + oz * oz - h[0] * h[0]);
+    if qa < 1e-18 {
+        if qc > 0.0 { return None; }
+    } else {
+        let disc = qb * qb - qa * qc;
+        if disc < 0.0 { return None; }
+        let r = m::sqrt(disc);
+        let (ta, tb) = ((-qb - r) / qa, (-qb + r) / qa);
+        if ta > t0 { t0 = ta; }
+        if tb < t1 { t1 = tb; }
+        if t0 > t1 { return None; }
+    }
+    let depth = m::min(h[0] - m::sqrt(ox * ox + oz * oz), h[1] - m::abs(oy));
+    Some(Slab { t0, t1, depth, ..s })
+}
+
+/// the interval of the line a + t·rd inside box b, and how deep the origin sits. (collision.ts lineBox)
+pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<crate::scene_collision::LineBox> {
+    let (c, h, yaw, rot, round, has_cut) = { let x = seam_box(g, b); (x.c, x.h, x.yaw, x.rot, x.round == Some(true), x.cut.is_some()) };
+    let s = slab(a, rd, c, h, yaw, rot)?;
+    if round {
+        let s = slab_round(s, h)?;
+        return Some(LineBox { t0: s.t0, t1: s.t1, depth: s.depth });
+    }
+    let (mut t0, mut t1, mut depth) = (s.t0, s.t1, s.depth);
+    if has_cut && crate::scene_boxes::cut_met(g, b) {
+        let cut = seam_box(g, b).cut.clone().unwrap();
+        let ([ox, oy, oz], [dx, dy, dz]) = (s.o, s.d);
         if !crate::scene_cut::cut_clip(g, &cut, ox, oy, oz, dx, dy, dz, t0, t1) { return None; }
         t0 = g.m.scene_cut.cut_clip.t0;
         t1 = g.m.scene_cut.cut_clip.t1;
@@ -120,7 +139,7 @@ pub fn line_box(g: &mut crate::game::Game, a: V3, rd: V3, b: BoxId) -> Option<cr
             k += 1;
         }
     }
-    Some(crate::scene_collision::LineBox { t0, t1, depth })
+    Some(LineBox { t0, t1, depth })
 }
 
 /// where a span's foot is asked from: a test that begins at the feet begins at the bake's height. UNDERFOOT.on is settled on. (collision.ts footBand)
@@ -128,29 +147,30 @@ pub fn foot_band(g: &mut crate::game::Game, y0: f64) -> f64 {
     if y0 >= FEET_Y && y0 < BAKE_Y { BAKE_Y } else { y0 }
 }
 
-/// a ray that is no number, as a value. The skeleton's Opaque holds no words: the raycast says them itself. (collision.ts noNumber)
-pub fn no_number(ro: Option<V3>, rd: Option<V3>, tmax: Option<f64>) -> crate::Opaque {
-    crate::Opaque
+/// a ray that is no number, in words. (collision.ts noNumber)
+pub fn no_number(ro: Option<V3>, rd: Option<V3>, tmax: Option<f64>) -> String {
+    let at = match (ro, rd) {
+        (Some(ro), Some(rd)) => alloc::format!(": from [{}] along [{}] for {}", joined(&ro), joined(&rd), match tmax { Some(t) => js::num_str(t), None => String::from("undefined") }),
+        _ => String::new(),
+    };
+    alloc::format!("a ray that is no number{} — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)", at)
 }
 
-/// a sense's row by its bit. (collision.ts senseName)
-pub fn sense_name(bit: f64) -> String {
-    let s = crate::scene_box_mirror::senses();
-    let rows: [(&str, f64); 5] = [("sight", s.sight), ("light", s.light), ("smoke", s.smoke), ("sound", s.sound), ("paths", s.paths)];
-    for (k, v) in rows.iter() {
-        if *v == bit { return String::from(*k); }
-    }
-    String::from("a sense")
+/// a sense's question the module handed back, in words
+fn handed_back_words(row: &str, why: &str, a: &[f64], b: &[f64]) -> String {
+    alloc::format!("{}: the Rust module handed the question back ({}): [{}] → [{}]", row, why, joined(&a[..3]), joined(&b[..3]))
+}
+/// a sense's question the module handed back, as a value. The skeleton's Opaque holds no words: every asker here panics with `handed_back_words`. (collision.ts handedBack)
+pub fn handed_back(row: &str, why: &str, a: &[f64], b: &[f64]) -> crate::Opaque {
+    crate::Opaque
 }
 
 // ---- StaticCollision: the grid, as the boxes are filed in it
 
-/// the box world stood up: the cells from `boxes`, the rows written, the walk grid baked. `g.col = new(g, …)`: the boxes are already rows of g.col.boxes,
-/// and everything else of g.col is new. (collision.ts StaticCollision.constructor)
+/// the box world stood up: the cells from `boxes`, the walk grid baked. `g.col = new(g, …)`: everything of g.col is new, and is built where the bake can ask it. (collision.ts StaticCollision.constructor)
 pub fn new(g: &mut crate::game::Game, boxes: &[BoxId], of: Option<&str>) -> crate::scene_collision::StaticCollision {
-    let table = core::mem::take(&mut g.col.boxes);
     g.col = StaticCollision::blank();
-    g.col.boxes = table;
+    g.col.boxes = boxes.to_vec();
     g.col.mirror.of = of.map(String::from);
     let wd = crate::scene_world::world();
     g.col.w = wd.grid_w;
@@ -159,11 +179,10 @@ pub fn new(g: &mut crate::game::Game, boxes: &[BoxId], of: Option<&str>) -> crat
     let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
     g.col.cells = vec![Vec::new(); (gw * gh) as usize];
     let skip = js::to_u32(crate::scene_boxes::box_flag().no_shadow) | js::to_u32(crate::scene_boxes::box_flag().dynamic);
-    for &b in boxes.iter() {
-        if flags_of(g, b) & skip != 0 { continue; }
-        // (a box's index is its ID: TRAP, see the notes)
-        let i = b.ix() as f64;
-        let (yaw, h, c, tilted) = { let r = &g.col.boxes[b]; (r.yaw, r.h, r.c, r.rot.is_some()) };
+    for (at, &b) in boxes.iter().enumerate() {
+        let (flags, yaw, h, c, tilted) = { let r = seam_box(g, b); (r.flags, r.yaw, r.h, r.c, r.rot.is_some()) };
+        if js::to_u32(flags) & skip != 0 { continue; }
+        let i = at as f64;
         let (cs, sn) = (m::abs(m::cos(yaw)), m::abs(m::sin(yaw)));
         let (ex, ez) = (cs * h[0] + sn * h[2], sn * h[0] + cs * h[2]);
         let (x0, x1) = (m::max(0.0, m::floor((c[0] - ex) / gc)), m::min(gw - 1.0, m::floor((c[0] + ex) / gc)));
@@ -186,9 +205,10 @@ pub fn new(g: &mut crate::game::Game, boxes: &[BoxId], of: Option<&str>) -> crat
     core::mem::take(&mut g.col)
 }
 
-/// a static appended in play: `b` (a row already) filed in the cells of `footprint`'s plan. Its index is its row. (collision.ts StaticCollision.addStatic)
+/// a static appended in play: `b` joins the list and is filed in the cells of `footprint`'s plan. → its index. (collision.ts StaticCollision.addStatic)
 pub fn add_static(g: &mut crate::game::Game, b: BoxId, footprint: Option<BoxId>) -> f64 {
-    let i = b.ix() as f64;
+    let i = g.col.boxes.len() as f64;
+    g.col.boxes.push(b);
     crate::scene_box_mirror::box_mirror_wrote_grid(g);
     let [x0, x1, z0, z1] = foot_cells(g, footprint.unwrap_or(b));
     let gw = g.col.w;
@@ -206,7 +226,7 @@ pub fn add_static(g: &mut crate::game::Game, b: BoxId, footprint: Option<BoxId>)
 
 /// the cells a static appended over `f` is filed in: x0, x1, z0, z1. (collision.ts StaticCollision.footCells)
 pub fn foot_cells(g: &mut crate::game::Game, f: BoxId) -> [f64; 4] {
-    let (yaw, h, c) = { let r = &g.col.boxes[f]; (r.yaw, r.h, r.c) };
+    let (yaw, h, c) = { let r = seam_box(g, f); (r.yaw, r.h, r.c) };
     let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
     let (cs, sn) = (m::abs(m::cos(yaw)), m::abs(m::sin(yaw)));
     let (ex, ez) = (cs * h[0] + sn * h[2], sn * h[0] + cs * h[2]);
@@ -224,10 +244,11 @@ pub fn foot_entries(g: &mut crate::game::Game, f: BoxId) -> f64 {
     m::max(0.0, x1 - x0 + 1.0) * m::max(0.0, z1 - z0 + 1.0)
 }
 
-/// every static past the first `n` leaves the cells. The rows stay: a Tab never shrinks, and the table holds boxes that are no statics. (collision.ts StaticCollision.truncateStatics)
+/// the level's list cut back to its first `n`: every later index leaves the cells. (collision.ts StaticCollision.truncateStatics)
 pub fn truncate_statics(g: &mut crate::game::Game, n: f64) {
     if (g.col.boxes.len() as f64) <= n { return; }
     cut_cells(&mut g.col.cells, n);
+    g.col.boxes.truncate(n as usize);
     crate::scene_box_mirror::box_mirror_wrote_grid(g);
 }
 /// every index from `n` on leaves the cells, the rest keeping their order
@@ -243,15 +264,23 @@ fn cut_cells(cells: &mut [Vec<f64>], n: f64) {
 fn walk_rule(g: &mut Game, bi: f64) -> bool {
     crate::glassbreak::glass_break_walkable(g, bi)
 }
-/// the rows good for a question, whoever asks: in a tick or a window they stand, and outside both they are proven for this one. (Rust's: every question here answers)
-fn prove(g: &mut Game) {
-    ready(g);
-    if !g.col.mirror.live && lone(g) { crate::scene_box_mirror::box_mirror_shut(g); }
-}
 /// a question outside every tick and window is proven for itself, and shut behind it
 #[inline]
 fn alone(g: &mut Game) -> bool {
-    !g.col.mirror.live && lone(g)
+    !g.col.mirror.live && lone(g, None)
+}
+/// M.open, with the rows it says the questions go to. (`cells` and `tiltedAt` are lent for the call: the copy's writer reads neither through g.)
+fn open_copy(g: &mut Game, rows: bool) {
+    let ids = g.col.boxes.clone();
+    let (cells, tilted) = (core::mem::take(&mut g.col.cells), core::mem::take(&mut g.col.tilted_at));
+    let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
+    let leaves = g.col.dynamic_boxes.clone();
+    let glass = glass_panes(g);
+    let mut rule = walk_rule;
+    let walk: Option<&mut dyn FnMut(&mut Game, f64) -> bool> = if g.col.glass_walkable.is_some() { Some(&mut rule) } else { None };
+    crate::scene_box_mirror::box_mirror_open(g, &ids, &cells, &tilted, gw, gh, gc, &leaves, walk, glass.as_ref(), rows, rows, rows);
+    g.col.cells = cells;
+    g.col.tilted_at = tilted;
 }
 
 /// a tick opens: the rows are made the boxes as they stand. (collision.ts StaticCollision.tickOpen)
@@ -262,18 +291,7 @@ pub fn tick_open(g: &mut crate::game::Game) {
 
 /// the rows made the boxes as they stand, for whoever opens a stretch of questions. Every row of RUST is on: there is no other side. (collision.ts StaticCollision.stand)
 pub fn stand(g: &mut crate::game::Game) {
-    let ids = all_rows(g);
-    let (cells, tilted) = (core::mem::take(&mut g.col.cells), core::mem::take(&mut g.col.tilted_at));
-    let (gw, gh, gc) = (g.col.w, g.col.h, g.col.cs);
-    let leaves = g.col.dynamic_boxes.clone();
-    let glass = glass_panes(g);
-    let s = crate::scene_box_mirror::senses();
-    let senses = s.sight + s.light + s.smoke + s.sound + s.paths;
-    let mut rule = walk_rule;
-    let walk: Option<&mut dyn FnMut(&mut Game, f64) -> bool> = if g.col.glass_walkable.is_some() { Some(&mut rule) } else { None };
-    crate::scene_box_mirror::box_mirror_open(g, &ids, &cells, &tilted, gw, gh, gc, &leaves, walk, glass.as_ref(), true, true, true, Some(senses), Some(true));
-    g.col.cells = cells;
-    g.col.tilted_at = tilted;
+    open_copy(g, true);
 }
 
 /// the world a rule of the module's steps over, with the game's own leaves `dyn_` in list 0 as they are. (collision.ts StaticCollision.rulesWorld, boxMirror.ts rules)
@@ -286,9 +304,10 @@ pub fn rules_world(g: &mut crate::game::Game, dyn_: &[BoxId]) {
     if was_alone { crate::scene_box_mirror::box_mirror_shut(g); }
 }
 
-/// the world a rule asks of the statics alone. (collision.ts StaticCollision.rulesStatics)
+/// the world a rule asks of the statics alone. The signature has no null: outside a tick and a window the rows are proven and shut, and their tables hold. (collision.ts StaticCollision.rulesStatics)
 pub fn rules_statics(g: &mut crate::game::Game) {
-    prove(g);
+    ready(g);
+    if alone(g) { crate::scene_box_mirror::box_mirror_shut(g); }
 }
 
 /// the pane rule as a rule's step takes it. (collision.ts StaticCollision.rulesPanes)
@@ -323,18 +342,20 @@ pub fn window<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut 
 
 /// the rows ready for a question: a window's first question proves them, and a debt is paid. (collision.ts StaticCollision.ready)
 pub fn ready(g: &mut crate::game::Game) {
-    if !g.col.mirror.live && g.col.windowed { lone(g); }
+    if !g.col.mirror.live && g.col.windowed { lone(g, Some(true)); }
     if g.col.mirror.owes {
-        let ids = all_rows(g);
+        let ids = g.col.boxes.clone();
         let mut rule = walk_rule;
         let walk: Option<&mut dyn FnMut(&mut Game, f64) -> bool> = if g.col.glass_walkable.is_some() { Some(&mut rule) } else { None };
         crate::scene_box_mirror::box_mirror_again(g, &ids, walk);
     }
 }
 
-/// a question outside a tick: true = the rows stand for it alone, and the caller shuts them behind it. (collision.ts StaticCollision.lone)
-pub fn lone(g: &mut crate::game::Game) -> bool {
+/// a question outside a tick: true = the rows stand for it alone, and the caller shuts them behind it; `must` = whatever ANYTIME says. (collision.ts StaticCollision.lone)
+pub fn lone(g: &mut crate::game::Game, must: Option<bool>) -> bool {
+    if !g.m.scene_collision.anytime.on && !must.unwrap_or(false) { return false; }
     stand(g);
+    if !g.col.mirror.live { return false; }
     if g.col.windowed {
         g.m.scene_collision.anytime.windows += 1.0;
         return false;
@@ -348,13 +369,11 @@ pub fn wrote(g: &mut crate::game::Game) {
     crate::scene_box_mirror::box_mirror_wrote(g);
 }
 
-/// a question the picture asks: searches on the asker's tables, no sound's route kept. The stamps are the module's now. (collision.ts StaticCollision.aside)
+/// a question the picture asks: no sound's route kept. The query stamps it swaps in the TypeScript are the twins' scratch, and the module's here. (collision.ts StaticCollision.aside)
 pub fn aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::scene_collision::AsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let asked = g.col.sound.asking;
     g.col.sound.asking = true;
-    let mut nav_own = NavGridAsideOwn { s: own.s.take() };
-    let r = nav_grid_aside(g, &mut nav_own, fn_);
-    own.s = nav_own.s;
+    let r = fn_(g);
     g.col.sound.asking = asked;
     r
 }
@@ -460,16 +479,15 @@ pub fn clamp_to_world(g: &mut crate::game::Game, p: &mut V3, r: f64) -> bool {
 
 // ---- the glass
 
-/// has the game a pane rule. Its question is the module's now, and glassbreak's for a rule of its own. (collision.ts StaticCollision.glassOpen)
-pub fn glass_open(g: &mut crate::game::Game) -> Option<crate::FnField> {
-    g.col.pane_rule.as_ref().map(|_| crate::FnField)
+/// the game's pane rule, or none. (collision.ts StaticCollision.glassOpen)
+pub fn glass_open(g: &mut crate::game::Game) -> Option<crate::scene_collision::PaneRule> {
+    g.col.pane_rule
 }
 
-/// the pane rule and what it answers by, hung together. The only rule is glassbreak's: what is kept is the enum, and the closures say only whether there is one. (collision.ts StaticCollision.glassRule)
-pub fn glass_rule(g: &mut crate::game::Game, rule: Option<&mut dyn FnMut(&mut crate::game::Game, f64, V3) -> bool>, rows: Option<&mut dyn FnMut(&mut crate::game::Game) -> crate::scene_box_mirror::PaneSource>) {
-    let hung = rule.is_some();
-    g.col.pane_rule = if hung { Some(PaneRule::GlassBreak) } else { None };
-    g.col.pane_rows = if hung && rows.is_some() { Some(PaneRows::GlassBreak) } else { None };
+/// the pane rule and what it answers by, hung together. (collision.ts StaticCollision.glassRule)
+pub fn glass_rule(g: &mut crate::game::Game, rule: Option<crate::scene_collision::PaneRule>, rows: Option<crate::scene_collision::PaneRows>) {
+    g.col.pane_rule = rule;
+    g.col.pane_rows = if rule.is_none() { None } else { rows };
     let glass = glass_panes(g);
     crate::scene_box_mirror::box_mirror_glass_is(g, glass.as_ref());
 }
@@ -561,33 +579,48 @@ pub fn segment_blocked_dynamic_ask(g: &mut crate::game::Game, a: V3, b: V3, need
     set >= 0 && sim::lines::leaves_blocked(slot(g), a[0], a[1], a[2], b[0], b[1], b[2], len, js::to_u32(need), set)
 }
 
-/// the furniture's ray: the nearest part met. None = nothing met (the TypeScript's undefined, the caller's own walk, is gone). (collision.ts StaticCollision.thingsRay)
-pub fn things_ray(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::ThingsRay> {
+/// the furniture as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (the TypeScript hands PropSystem itself; here `P` is always g.props)
+fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
+    fn things(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
+        let mut out = Vec::with_capacity(ids.len());
+        for &p in ids {
+            let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };
+            let (x, z, yaw) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p));
+            out.push(crate::scene_box_mirror::FurnitureThing { id, x, z, yaw, radius, boxes });
+        }
+        out
+    }
+    let (all, props) = (g.props.all.clone(), g.props.props.clone());
+    crate::scene_box_mirror::Furniture { all: things(g, &all), props: things(g, &props) }
+}
+
+/// the furniture's ray: the nearest part met; inner None = nothing met, outer None = the module cannot answer it now. (collision.ts StaticCollision.thingsRay)
+pub fn things_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsRay>> {
     let r = if alone(g) {
-        let r = things_ask(g, p, ro, rd, tmax);
+        let r = things_ask(g, ro, rd, tmax);
         crate::scene_box_mirror::box_mirror_shut(g);
         r
     } else {
-        things_ask(g, p, ro, rd, tmax)
+        things_ask(g, ro, rd, tmax)
     };
-    r.map(|t| ThingsRay { row: t.row, t: t.t, n: t.n, box_: t.box_ })
+    r.map(|o| o.map(|t| ThingsRay { row: t.row, t: t.t, n: t.n, box_: t.box_ }))
 }
 
 /// (collision.ts StaticCollision.thingsAsk)
-pub fn things_ask(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::ThingsAsk> {
+pub fn things_ask(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<Option<crate::scene_collision::ThingsAsk>> {
     ready(g);
-    if !crate::scene_box_mirror::box_mirror_things(g, p) {
-        panic!("more furniture than the box world holds: {} things", p.all.len());
-    }
+    if !g.col.mirror.live { return None; }
+    let p = furniture(g);
+    if !crate::scene_box_mirror::box_mirror_things(g, &p) { return None; }
     let mut out = [0.0; 5];
     let k = sim::lines::ray_things(slot(g), ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, &mut out);
-    if k < 0 { return None; }
+    if k < 0 { return Some(None); }
     let at = out[sim::lines::RAY_PART];
-    let box_ = match crate::scene_box_mirror::box_mirror_thing_box(g, p, at) {
+    let box_ = match crate::scene_box_mirror::box_mirror_thing_box(g, &p, at) {
         Some(b) => b,
-        None => panic!("the module's ray into the furniture met part {} of its list, which is no part of the furniture as it stands ({} things)", at, p.props.len()),
+        None => panic!("the Rust module's ray into the furniture met part {} of its list, which is no part of the furniture as it stands ({} things)", js::num_str(at), p.props.len()),
     };
-    Some(ThingsAsk { row: k as f64, t: out[0], n: [out[1], out[2], out[3]], box_ })
+    Some(Some(ThingsAsk { row: k as f64, t: out[0], n: [out[1], out[2], out[3]], box_ }))
 }
 
 /// the furniture's ray answered both ways: the module's against what the caller's own walk answered, and the copy against the furniture. A check's. (collision.ts StaticCollision.thingsBoth)
@@ -611,31 +644,30 @@ pub fn things_both(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furni
     both.stale += st;
     if !ok { both.differ += 1.0; }
     if (js::truthy(st) || !ok) && both.first.is_empty() {
-        both.first = alloc::format!("the furniture's ray [{}] → [{}] ({}, {}): {}{} row(s) of the copy not the furniture", joined(ro), joined(rd), tmax, k, if ok { "" } else { "the two answers differ; " }, st);
+        both.first = alloc::format!("the furniture's ray [{}] → [{}] ({}, {}): {}{} row(s) of the copy not the furniture", joined(&ro), joined(&rd), tmax, k, if ok { "" } else { "the two answers differ; " }, st);
     }
 }
 
 /// the check's count of one question answered both ways, and of the copy against its boxes and panes. (collision.ts StaticCollision.compared)
 pub fn compared(g: &mut crate::game::Game, set: f64, ok: bool, what: &str, a: V3, b: V3, p: f64, q: f64) {
-    let (ids, leaves) = (all_rows(g), g.col.dynamic_boxes.clone());
+    let (ids, leaves) = (g.col.boxes.clone(), g.col.dynamic_boxes.clone());
     let st = crate::scene_box_mirror::box_mirror_stale(g, &ids, &leaves, set) + crate::scene_box_mirror::box_mirror_stale_panes(g);
     let both = &mut g.m.scene_collision.both;
     both.asked += 1.0;
     both.stale += st;
     if !ok { both.differ += 1.0; }
     if (js::truthy(st) || !ok) && both.first.is_empty() {
-        both.first = alloc::format!("{} [{}] → [{}] ({}, {}): {}{} row(s) of the copy not their box or their pane", what, joined(a), joined(b), p, q, if ok { "" } else { "the two answers differ; " }, st);
+        both.first = alloc::format!("{} [{}] → [{}] ({}, {}): {}{} row(s) of the copy not their box or their pane", what, joined(&a), joined(&b), p, q, if ok { "" } else { "the two answers differ; " }, st);
     }
-}
-
-/// the check's line for a sense's question answered both ways. (collision.ts StaticCollision.senseCompared)
-pub fn sense_compared(g: &mut crate::game::Game, set: f64, ok: bool, what: &str, a: V3, b: V3) {
-    compared(g, set, ok, what, a, b, 0.0, 0.0);
 }
 
 /// can the segment from a along unit r for `len` be said, without the slab test, to come nowhere near box b (grown by `pad`). (collision.ts segClear)
 pub fn seg_clear(g: &mut crate::game::Game, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, b: BoxId, pad: f64) -> bool {
-    let (c, h, tilted) = { let x = &g.col.boxes[b]; (x.c, x.h, x.rot.is_some()) };
+    let (c, h, tilted) = { let x = seam_box(g, b); (x.c, x.h, x.rot.is_some()) };
+    seg_clear_at(c, h, tilted, a0, a1, a2, r0, r1, r2, len, pad)
+}
+/// segClear over the row's numbers
+fn seg_clear_at(c: V3, h: V3, tilted: bool, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, len: f64, pad: f64) -> bool {
     let hy = if h[1] < 0.0 { -h[1] } else { h[1] };
     let m1 = c[1] - a1;
     if !tilted {
@@ -652,7 +684,11 @@ pub fn seg_clear(g: &mut crate::game::Game, a0: f64, a1: f64, a2: f64, r0: f64, 
 
 /// does the ray enter this yawed box within tmax: rayBox's own statements, stopping where it would build the normal. (collision.ts rayBoxHits)
 pub fn ray_box_hits(g: &mut crate::game::Game, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: BoxId, tmax: f64) -> bool {
-    let (c, h, yaw) = { let x = &g.col.boxes[b]; (x.c, x.h, x.yaw) };
+    let (c, h, yaw) = { let x = seam_box(g, b); (x.c, x.h, x.yaw) };
+    ray_box_hits_at(c, h, yaw, a0, a1, a2, r0, r1, r2, tmax)
+}
+/// rayBoxHits over the row's numbers
+fn ray_box_hits_at(c: V3, h: V3, yaw: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64) -> bool {
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let (px, py, pz) = (a0 - c[0], a1 - c[1], a2 - c[2]);
     let (lx, lz, ly) = (cs * px - sn * pz, sn * px + cs * pz, py);
@@ -680,7 +716,7 @@ pub fn dynamic_hit(g: &mut crate::game::Game, a: V3, r0: f64, r1: f64, r2: f64, 
     while i < g.col.dynamic_boxes.len() {
         let db = g.col.dynamic_boxes[i];
         i += 1;
-        let (flags, c, h, tilted, round, cut) = { let x = &g.col.boxes[db]; (x.flags, x.c, x.h, x.rot.is_some(), x.round == Some(true), x.cut.is_some()) };
+        let (flags, c, h, tilted, round, cut) = { let x = seam_box(g, db); (x.flags, x.c, x.h, x.rot.is_some(), x.round == Some(true), x.cut.is_some()) };
         if ((js::to_i32(flags) & need) as f64) != need_flags { continue; }
         if tilted || round || (cut && crate::scene_boxes::cut_met(g, db)) {
             if seg_clear(g, a0, a1, a2, r0, r1, r2, len, db, SEG_PAD) { continue; }
@@ -701,7 +737,7 @@ pub fn dynamic_hit(g: &mut crate::game::Game, a: V3, r0: f64, r1: f64, r2: f64, 
 }
 
 /// the module's line a→b, past the proof. Panes in the way are added to `panes` where it is given (static, metres along). (collision.ts segmentBlockedAsk's call of lines_blocked)
-fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<(f64, f64)>>) -> bool {
+fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     let (a0, a1, a2) = (a[0], a[1], a[2]);
     let (d0, d1, d2) = (b[0] - a0, b[1] - a1, b[2] - a2);
     let len = m::hyp3(d0, d1, d2);
@@ -719,7 +755,7 @@ fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mu
         if let Some(out) = panes {
             let o = sim::world::world(w);
             for i in 0..r as usize {
-                out.push((o.pane_bi[i] as f64, o.pane_t[i]));
+                out.push(SegmentBlockedPanesItem { bi: o.pane_bi[i] as f64, t: o.pane_t[i] });
             }
         }
     }
@@ -728,35 +764,19 @@ fn line(g: &mut Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mu
 
 /// is a→b blocked by a static or a leaf; `through` = the flags it passes (glass by default: the line of sight). (collision.ts StaticCollision.segmentBlocked)
 pub fn segment_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
-    let (shrink, through) = (shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass));
-    let was_alone = alone(g);
-    ready(g);
-    let r = match panes {
-        Some(out) => {
-            let mut got = Vec::new();
-            let r = line(g, a, b, shrink, through, Some(&mut got));
-            for (bi, t) in got { out.push(SegmentBlockedPanesItem { bi, t }); }
-            r
-        }
-        None => line(g, a, b, shrink, through, None),
-    };
-    if was_alone { crate::scene_box_mirror::box_mirror_shut(g); }
-    r
+    if alone(g) {
+        let r = segment_blocked_ask(g, a, b, shrink, through, panes);
+        crate::scene_box_mirror::box_mirror_shut(g);
+        return r;
+    }
+    segment_blocked_ask(g, a, b, shrink, through, panes)
 }
 
 /// (collision.ts StaticCollision.segmentBlockedAsk)
-pub fn segment_blocked_ask(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedAskPanesItem>>) -> bool {
+pub fn segment_blocked_ask(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     let (shrink, through) = (shrink.unwrap_or(0.02), through.unwrap_or(crate::scene_boxes::box_flag().glass));
     ready(g);
-    match panes {
-        Some(out) => {
-            let mut got = Vec::new();
-            let r = line(g, a, b, shrink, through, Some(&mut got));
-            for (bi, t) in got { out.push(SegmentBlockedAskPanesItem { bi, t }); }
-            r
-        }
-        None => line(g, a, b, shrink, through, None),
-    }
+    line(g, a, b, shrink, through, panes)
 }
 
 /// is the line test this class's own: a check's override has no Rust. (collision.ts StaticCollision.ownLines)
@@ -765,16 +785,8 @@ pub fn own_lines(g: &mut crate::game::Game) -> bool {
 }
 
 /// TWIN: the module's line. (collision.ts StaticCollision.segmentBlockedHere)
-pub fn segment_blocked_here(g: &mut crate::game::Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedHerePanesItem>>) -> bool {
-    match panes {
-        Some(out) => {
-            let mut got = Vec::new();
-            let r = line(g, a, b, shrink, through, Some(&mut got));
-            for (bi, t) in got { out.push(SegmentBlockedHerePanesItem { bi, t }); }
-            r
-        }
-        None => line(g, a, b, shrink, through, None),
-    }
+pub fn segment_blocked_here(g: &mut crate::game::Game, a: V3, b: V3, shrink: f64, through: f64, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
+    line(g, a, b, shrink, through, panes)
 }
 
 /// segmentBlocked with nothing passed: the solid test. (collision.ts StaticCollision.solidBlocked)
@@ -796,9 +808,8 @@ pub fn shot_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>
     if segment_blocked(g, a, b, Some(shrink), Some(pass), Some(&mut panes)) { return true; }
     if panes.is_empty() { return false; }
     js::sort_by(&mut panes, |x, y| x.t - y.t);
-    let list: Vec<crate::glasspen::ShotPassesPanesItem> = panes.iter().map(|p| crate::glasspen::ShotPassesPanesItem { bi: p.bi, t: p.t }).collect();
-    let d = v3::sub(b, a);
-    !crate::glasspen::shot_passes(g, a, v3::scale(d, 1.0 / v3::len(d)), &list, energy)
+        let d = v3::sub(b, a);
+    !crate::glasspen::shot_passes(g, a, v3::scale(d, 1.0 / v3::len(d)), &panes, energy)
 }
 
 // ---- rays
@@ -837,12 +848,45 @@ pub fn raycast_here(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Opt
     Some(RaycastHere { t: out[0], index: k as f64, n: [out[1], out[2], out[3]] })
 }
 
-// ---- the senses in the module (rust/sim fog.rs, sight.rs, light.rs, smoke.rs, bricks.rs)
+// ---- the senses, the module's alone (rust/sim fog.rs, sight.rs, light.rs, smoke.rs, bricks.rs): what it cannot take is the asker's mistake, by name
 
-/// a sight pass opens: may its questions go to the module (no more eyes than a question names). (collision.ts StaticCollision.sightOpen)
-pub fn sight_open(g: &mut crate::game::Game, n: f64) -> bool {
-    prove(g);
-    n <= SIGHT_EYES
+/// the copy, standing, for a sense's question → which of the module's lists holds the leaves (−1 none). (collision.ts StaticCollision.sense)
+pub fn sense(g: &mut crate::game::Game, row: &str) -> f64 {
+    ready(g);
+    if !g.col.mirror.live {
+        panic!("{}: asked with no copy of the box world standing ({}): a sense is the Rust module's alone, asked inside a tick or a window (StaticCollision.window)", row, fell_why(g));
+    }
+    let d = g.col.dynamic_boxes.clone();
+    let set = crate::scene_box_mirror::box_mirror_leaves(g, &d);
+    if set == -2.0 {
+        panic!("{}: {} leaves, and a list of the module's holds {} (game/levelfit.ts holds a level to that as it loads)", row, d.len(), sim::world::MAX_LEAVES);
+    }
+    set
+}
+
+/// the pane rule as a sense's question takes it: 0 none, 1 it has one and the copy holds its rows. (collision.ts StaticCollision.sensePanes)
+pub fn sense_panes(g: &mut crate::game::Game, row: &str) -> f64 {
+    if g.col.pane_rule.is_none() { return 0.0; }
+    if !crate::scene_box_mirror::box_mirror_glass_in(g) {
+        let why = if g.col.pane_rows.is_none() { "it was hung with no rows behind it: glassRule hands the rule and its rows together" } else { "more broken panes, or a view of more panes, than the copy holds" };
+        panic!("{}: a pane's rule the module cannot judge by ({})", row, why);
+    }
+    1.0
+}
+
+/// an eye's line, and the fog's: it passes glass, and is asked by flags the copy keeps. (collision.ts StaticCollision.eyeLine)
+pub fn eye_line(g: &mut crate::game::Game, row: &str, through: f64) {
+    if js::to_u32(through) & !js::to_u32(crate::scene_box_mirror::mirrored()) != 0 || js::to_u32(through) & sim::world::F_GLASS == 0 {
+        panic!("{}: an eye's line passes glass and names only flags the copy keeps (asked through {}): one that stops at glass is no eye's, and is asked as a line (segmentBlocked)", row, js::num_str(through));
+    }
+}
+
+/// a sight pass opens: its `n` eyes are written next. More than a question names is a mistake by name. (collision.ts StaticCollision.sightOpen)
+pub fn sight_open(g: &mut crate::game::Game, n: f64) {
+    sense(g, "fog");
+    if n > SIGHT_EYES {
+        panic!("fog: a sight pass of {} eyes, and a question names {} (rust/sim/src/fog.rs; the fog's own most is render/fogofwar.ts FOG_EYES)", js::num_str(n), js::num_str(SIGHT_EYES));
+    }
 }
 
 /// eye `k` of the pass. (collision.ts StaticCollision.sightEye)
@@ -860,55 +904,40 @@ pub fn sight_eye(g: &mut crate::game::Game, k: f64, pos: V3, look: V3, look_len:
     put_f64(at, o + 8, if full { 1.0 } else { 0.0 });
 }
 
-/// which eyes have a line: how many × 2²⁸ + those eyes, four bits each; −1 = the caller walks its own lines. (collision.ts StaticCollision.eyesSee)
+/// which eyes have a line: how many × 2²⁸ + those eyes, four bits each. (collision.ts StaticCollision.eyesSee)
 pub fn eyes_see(g: &mut crate::game::Game, order: f64, n: f64, want: f64, kind: f64, through: f64, a: V3, b: V3) -> f64 {
-    prove(g);
-    let thr = js::to_u32(through);
-    if thr & !js::to_u32(crate::scene_box_mirror::mirrored()) != 0 || thr & sim::world::F_GLASS == 0 { return -1.0; }
-    let set = leaves_set(g);
-    let r = sim::fog::see(slot(g), set, js::to_u32(order), js::to_u32(n), js::to_u32(want), js::to_u32(kind), thr, a[0], a[1], a[2], b[0], b[1], b[2]);
-    if r == ASK_HOST { return -1.0; }
+    eye_line(g, "fog", through);
+    let set = sense(g, "fog") as i32;
+    let r = sim::fog::see(slot(g), set, js::to_u32(order), js::to_u32(n), js::to_u32(want), js::to_u32(kind), js::to_u32(through), a[0], a[1], a[2], b[0], b[1], b[2]);
+    if r == ASK_HOST { panic!("{}", handed_back_words("fog", "a length that is no length of this world's, or more eyes than a question names", &a, &b)); }
     r as f64
 }
 
-/// may a sense be asked of the module now: always, and which list holds the leaves (−1 none). (collision.ts StaticCollision.senseSet)
-pub fn sense_set(g: &mut crate::game::Game, bit: f64) -> f64 {
-    prove(g);
-    leaves_set(g) as f64
-}
-
-/// an eye on a man's chest and head as one question. None = the caller's own statements (a line that stops at glass). (collision.ts StaticCollision.eyeContact)
-pub fn eye_contact(g: &mut crate::game::Game, e: crate::scene_collision::EyeContactE, chest: V3, head: V3, unseen: bool, smoked: bool, through: f64) -> Option<crate::scene_collision::EyeContact> {
-    let thr = js::to_u32(through);
-    if thr & !js::to_u32(crate::scene_box_mirror::mirrored()) != 0 || thr & sim::world::F_GLASS == 0 { return None; }
+/// an eye on a man's chest and head as one question. (collision.ts StaticCollision.eyeContact)
+pub fn eye_contact(g: &mut crate::game::Game, e: crate::scene_collision::EyeContactE, chest: V3, head: V3, unseen: bool, smoked: bool, through: f64) -> crate::scene_collision::EyeContact {
+    eye_line(g, "sight", through);
     let q = EyeContactAskE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
-    let r = if alone(g) {
-        let r = eye_contact_ask(g, q, chest, head, unseen, smoked, through);
-        crate::scene_box_mirror::box_mirror_shut(g);
-        r
-    } else {
-        eye_contact_ask(g, q, chest, head, unseen, smoked, through)
-    };
-    r.map(|c| EyeContact { visible: c.visible, dist: c.dist, in_cone: c.in_cone })
+    let alone_now = !g.col.mirror.live && lone(g, Some(true));
+    let c = eye_contact_ask(g, q, chest, head, unseen, smoked, through);
+    if alone_now { crate::scene_box_mirror::box_mirror_shut(g); }
+    EyeContact { visible: c.visible, dist: c.dist, in_cone: c.in_cone }
 }
 
 /// (collision.ts StaticCollision.eyeContactAsk)
-pub fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::EyeContactAskE, chest: V3, head: V3, unseen: bool, smoked: bool, through: f64) -> Option<crate::scene_collision::EyeContactAsk> {
-    let bit = crate::scene_box_mirror::senses().sight;
-    let set = sense_set(g, bit) as i32;
+pub fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::EyeContactAskE, chest: V3, head: V3, unseen: bool, smoked: bool, through: f64) -> crate::scene_collision::EyeContactAsk {
+    let set = sense(g, "sight") as i32;
     let q = (if e.v_half_deg.is_some() { sim::sight::Q_LENS } else { 0 }) | (if unseen { sim::sight::Q_UNSEEN } else { 0 }) | (if smoked { sim::sight::Q_SMOKED } else { 0 });
     let mut dist = 0.0;
     let r = sim::sight::contact(slot(g), set, js::to_u32(through), q, e.pos, e.look, e.range, e.half_deg, e.near_m, e.near_deg, e.v_half_deg.unwrap_or(0.0), chest, head, &mut dist);
-    if r == ASK_HOST { return None; }
+    if r == ASK_HOST { panic!("{}", handed_back_words("sight", "a line too long to be one, or of no number", &e.pos, &chest)); }
     g.m.scene_collision.sensed.sight += 1.0;
-    Some(EyeContactAsk { visible: r & sim::sight::A_VISIBLE != 0, dist, in_cone: r & sim::sight::A_IN_CONE != 0 })
+    EyeContactAsk { visible: r & sim::sight::A_VISIBLE != 0, dist, in_cone: r & sim::sight::A_IN_CONE != 0 }
 }
 
 /// a question about the light begins; `shade` = the smoke's shadow. (collision.ts StaticCollision.lampsBegin)
-pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: Option<&crate::scene_collision::LampsBeginShade>, k: Option<crate::scene_collision::SmokeNumbers>) -> bool {
+pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: Option<&crate::scene_collision::LampsBeginShade>, k: Option<crate::scene_collision::SmokeNumbers>) {
     lamps_over(g);
-    let bit = crate::scene_box_mirror::senses().light;
-    g.col.mirror.lamp_set = sense_set(g, bit);
+    g.col.mirror.lamp_set = sense(g, "light");
     g.col.mirror.lamp_n = 0.0;
     if let (Some(shade), Some(k)) = (shade, k) {
         blobs_fit(g, shade.blobs.len() as f64);
@@ -924,7 +953,6 @@ pub fn lamps_begin(g: &mut crate::game::Game, p: V3, shade: Option<&crate::scene
     }
     g.col.lamp_q.p = Some(p);
     g.col.lamp_q.on = true;
-    true
 }
 
 /// no question about the light stands. (collision.ts StaticCollision.lampsOver)
@@ -939,8 +967,8 @@ pub fn lamps_over(g: &mut crate::game::Game) {
     q.parts = 0.0;
 }
 
-/// the lamps written so far, asked as a part; the six faces so far into `out`. False = the module handed it back.
-fn lamps_part_into(g: &mut Game, out: &mut [f64; 6]) -> bool {
+/// the lamps written so far, asked as a part; the six faces so far into `out` (the module's scratch, in the TypeScript)
+fn lamps_part_into(g: &mut Game, out: &mut [f64; 6]) {
     let w = slot(g);
     let q = g.col.lamp_q;
     let p = q.p.unwrap_or([0.0; 3]);
@@ -957,23 +985,22 @@ fn lamps_part_into(g: &mut Game, out: &mut [f64; 6]) -> bool {
     g.col.mirror.lamp_n = 0.0;
     if r == ASK_HOST {
         lamps_over(g);
-        return false;
+        panic!("{}", handed_back_words("light", "a lamp's line too long to be one, or of no number", &p, &p));
     }
-    true
 }
 
 /// the lamps written so far, asked as a part of the question. (collision.ts StaticCollision.lampsPart)
-pub fn lamps_part(g: &mut crate::game::Game) -> bool {
+pub fn lamps_part(g: &mut crate::game::Game) {
     let mut out = [0.0; 6];
-    lamps_part_into(g, &mut out)
+    lamps_part_into(g, &mut out);
 }
 
-/// one lamp of the question; past the table's room the table is sent on as a part. False = no room and no question, or handed back. (collision.ts StaticCollision.lamp)
+/// one lamp of the question, or of the grid's sweep; past the table's room a question sends the table on as a part, and a sweep answers false. (collision.ts StaticCollision.lamp)
 pub fn lamp(g: &mut crate::game::Game, pos: V3, range: f64, radius: f64, kind: f64, dir: V3, outer_deg: f64, inner_deg: f64, color: V3, intensity: f64) -> bool {
     if g.col.mirror.lamp_n as usize >= sim::light::MAX_LAMPS {
         if !g.col.lamp_q.on { return false; }
         g.m.scene_collision.lamps.parts += 1.0;
-        if !lamps_part(g) { return false; }
+        lamps_part(g);
     }
     let at = sim::light::lamps_addr();
     let o = g.col.mirror.lamp_n as usize * sim::light::LAMP;
@@ -986,31 +1013,28 @@ pub fn lamp(g: &mut crate::game::Game, pos: V3, range: f64, radius: f64, kind: f
 }
 
 /// the last part asked, and the six faces of the whole question read into `acc`. (collision.ts StaticCollision.lampsOn)
-pub fn lamps_on(g: &mut crate::game::Game, acc: &mut Vec<f64>) -> bool {
-    if !g.col.lamp_q.on { return false; }
+pub fn lamps_on(g: &mut crate::game::Game, acc: &mut Vec<f64>) {
+    if !g.col.lamp_q.on { panic!("light: lampsOn with no question begun (lampsBegin)"); }
     let mut out = [0.0; 6];
-    if !lamps_part_into(g, &mut out) { return false; }
+    lamps_part_into(g, &mut out);
     lamps_over(g);
     for k in 0..6 {
         if k < acc.len() { acc[k] = out[k]; } else { acc.push(out[k]); }
     }
     g.m.scene_collision.sensed.light += 1.0;
-    true
 }
 
 /// a question of the smoke's blobs begins. (collision.ts StaticCollision.blobsBegin)
-pub fn blobs_begin(g: &mut crate::game::Game, n: f64) -> bool {
-    let bit = crate::scene_box_mirror::senses().smoke;
-    g.col.mirror.blob_set = sense_set(g, bit);
+pub fn blobs_begin(g: &mut crate::game::Game, n: f64) {
+    g.col.mirror.blob_set = sense(g, "smoke");
     g.col.mirror.blob_n = 0.0;
     blobs_fit(g, n);
-    true
 }
 
 /// a game keeps no more blobs than the module's table: more is a mistake, by name. (collision.ts StaticCollision.blobsFit)
 pub fn blobs_fit(g: &mut crate::game::Game, n: f64) {
     if n > sim::smoke::MAX_BLOBS as f64 {
-        panic!("{} blobs of smoke and the module's table holds {}: a game keeps no more than that (sense.ts CpuSmoke.emit), so somebody else filled the list", n, sim::smoke::MAX_BLOBS);
+        panic!("{} blobs of smoke and the Rust module's table holds {}: a game keeps no more than that (sense.ts CpuSmoke.emit), so somebody else filled the list", js::num_str(n), sim::smoke::MAX_BLOBS);
     }
 }
 
@@ -1025,20 +1049,31 @@ pub fn blob(g: &mut crate::game::Game, x: f64, y0: f64, z: f64, r2: f64, age: f6
     }
 }
 
-/// the transmittance along a→b; −1 = the caller's own loop. (collision.ts StaticCollision.blobsAlong)
+/// the transmittance along a→b. (collision.ts StaticCollision.blobsAlong)
 pub fn blobs_along(g: &mut crate::game::Game, a: V3, b: V3, sigma: f64, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> f64 {
     let mut out = 0.0;
     let (set, n) = (g.col.mirror.blob_set as i32, g.col.mirror.blob_n as usize);
-    if sim::smoke::trans(slot(g), set, n, a, b, sigma, spread, widest, rise, rise_rate, &mut out) == ASK_HOST { return -1.0; }
+    if sim::smoke::trans(slot(g), set, n, a, b, sigma, spread, widest, rise, rise_rate, &mut out) == ASK_HOST {
+        panic!("{}", handed_back_words("smoke", "a line too long to be one, or of no number", &a, &b));
+    }
     g.m.scene_collision.sensed.smoke += 1.0;
     out
+}
+
+/// a sound's or a search's question: the leaves' list and the pane rule to ask with. (collision.ts StaticCollision.senseFor)
+pub fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseForRow) -> crate::scene_collision::SenseFor {
+    let set = sense(g, row.as_str());
+    SenseFor { set, ask: sense_panes(g, row.as_str()) }
 }
 
 /// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done. (collision.ts StaticCollision.gridStep)
 pub fn grid_step(g: &mut crate::game::Game, st: &mut crate::Opaque, pending: &[f64], n: f64, k: crate::scene_collision::GridStepK, glow: Option<crate::scene_collision::GridStepGlow>, wind: Option<&crate::scene_collision::GridWind>) -> bool {
     ready(g);
     let mine = !g.col.mirror.live;
-    if mine { stand(g); }
+    if mine {
+        open_copy(g, false);   // (the copy for the step alone, with no question of the game's sent to it)
+        if !g.col.mirror.live { return false; }
+    }
     let d = g.col.dynamic_boxes.clone();
     let set = crate::scene_box_mirror::box_mirror_leaves(g, &d);
     if set == -2.0 {
@@ -1135,55 +1170,35 @@ pub fn sound_paths_propagate(g: &mut crate::game::Game, src: V3, dst: V3, keep: 
     }
 }
 
-/// (collision.ts SoundPaths.propagateAsk)
+/// how a sound at `src` reaches `dst`, from the module's two questions with this file's memory of routed answers between them. (collision.ts SoundPaths.propagateAsk)
 pub fn sound_paths_propagate_ask(g: &mut crate::game::Game, src: V3, dst: V3, keep: bool) -> crate::scene_collision::Propagation {
-    match sound_paths_propagate_there(g, src, dst, keep, true) {
-        Some(r) => r,
-        None => sound_paths_propagate_here(g, src, dst, Some(keep)),
-    }
-}
-
-/// the remembered routes' key: the two nav cells. (A −0 reads as 0, as a JavaScript string does.)
-fn route_key(g: &Game, src: V3, dst: V3) -> String {
-    let cs = g.col.nav.cell;
-    alloc::format!("{},{}>{},{}", m::floor(src[0] / cs) + 0.0, m::floor(src[2] / cs) + 0.0, m::floor(dst[0] / cs) + 0.0, m::floor(dst[2] / cs) + 0.0)
-}
-fn sealed(src: V3, straight: f64) -> Propagation {
-    Propagation { direct: false, routed: false, path_len: straight * 1.5, via: v3::copy(src), apparent: v3::copy(src), muffle: 1.0, carry: 0.25 }
-}
-
-/// the answer from the module, with this file's memory of routed answers between its two questions. None = propagateHere's. (collision.ts SoundPaths.propagateThere)
-pub fn sound_paths_propagate_there(g: &mut crate::game::Game, src: V3, dst: V3, keep: bool, write: bool) -> Option<crate::scene_collision::Propagation> {
-    let bit = crate::scene_box_mirror::senses().sound;
-    let set = sense_set(g, bit) as i32;
-    let ask = pane_ask(g);
-    if ask < 0.0 { return None; }
-    let ask = ask as u32;
+    let s = sense_for(g, SenseForRow::Sound);
+    let (set, ask) = (s.set as i32, s.ask as u32);
     let w = slot(g);
     let mut straight = 0.0;
     let c = sim::hear::direct(w, set, ask, src, dst, &mut straight);
-    if c == ASK_HOST { return None; }
+    if c == ASK_HOST { panic!("{}", handed_back_words("sound", "a straight line too long to be one, or of no number", &src, &dst)); }
     if c != sim::hear::WALLED { g.m.scene_collision.sensed.sound += 1.0; }
     if c < sim::hear::OVER {
         let mut graze = 0.0;
         if c & sim::hear::GRAZE_A != 0 { graze += 0.1; }
         if c & sim::hear::GRAZE_B != 0 { graze += 0.1; }
-        return Some(Propagation { direct: true, routed: false, path_len: straight, via: v3::copy(src), apparent: v3::copy(src), muffle: graze, carry: 1.0 });
+        return Propagation { direct: true, routed: false, path_len: straight, via: v3::copy(src), apparent: v3::copy(src), muffle: graze, carry: 1.0 };
     }
     if c == sim::hear::OVER {
-        return Some(Propagation { direct: true, routed: false, path_len: straight, via: v3::copy(src), apparent: v3::copy(src), muffle: 0.15, carry: 0.9 });
+        return Propagation { direct: true, routed: false, path_len: straight, via: v3::copy(src), apparent: v3::copy(src), muffle: 0.15, carry: 0.9 };
     }
-    if c == sim::hear::FAR { return Some(sealed(src, straight)); }
+    if c == sim::hear::FAR { return sealed(src, straight); }
     let key = route_key(g, src, dst);
     if let Some(hit) = g.col.sound.cache.get(key.clone()) {
-        if m::abs(g.col.sound.now - hit.t) < 0.5 { return Some(hit.r); }
+        if m::abs(g.col.sound.now - hit.t) < 0.5 { return hit.r; }
     }
-    if !nav_grid_there(g) { return None; }
+    nav_grid_there(g);
     let (nw, nh, cs) = (g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell);
     let seal = js::to_u32(crate::scene_boxes::box_flag().sound_seal);
     let mut out = [0.0; 4];
     let k = sim::hear::route(w, set, ask, seal, nw, nh, cs, src, dst, straight, &mut out);
-    if k == ASK_HOST { return None; }
+    if k == ASK_HOST { panic!("{}", handed_back_words("sound", "a line of its way round too long to be one", &src, &dst)); }
     g.m.scene_collision.sensed.sound += 1.0;
     let r = if k == sim::hear::SEALED {
         sealed(src, straight)
@@ -1193,75 +1208,20 @@ pub fn sound_paths_propagate_there(g: &mut crate::game::Game, src: V3, dst: V3, 
         let muffle = if k == sim::hear::ROUTED_DOOR { 0.85 } else { 0.35 };
         Propagation { direct: false, routed: true, path_len: l, via, apparent: [dst[0] + dir[0] * l, src[1], dst[2] + dir[2] * l], muffle, carry: 1.0 - muffle * 0.8 }
     };
-    if write && keep && !g.col.sound.asking {
-        let t = g.col.sound.now;
-        g.col.sound.cache.set(key, SoundPathsCacheValue { t, r });
-    }
-    Some(r)
-}
-
-/// propagate as this file answers it, wherever the module hands it back. (collision.ts SoundPaths.propagateHere)
-pub fn sound_paths_propagate_here(g: &mut crate::game::Game, src: V3, dst: V3, keep: Option<bool>) -> crate::scene_collision::Propagation {
-    let keep = keep.unwrap_or(true);
-    let a: V3 = [src[0], m::max(src[1], 0.9), src[2]];
-    let b: V3 = [dst[0], m::max(dst[1], 0.9), dst[2]];
-    let straight = v3::dist(a, b);
-    if !solid_blocked(g, a, b, None) {
-        let mut graze = 0.0;
-        if straight > 1.0 {
-            let d = v3::sub(b, a);
-            let side = v3::normalize([-d[2], 0.0, d[0]]);
-            if solid_blocked(g, v3::mad(a, side, 0.5), b, None) { graze += 0.1; }
-            if solid_blocked(g, v3::mad(a, side, -0.5), b, None) { graze += 0.1; }
-        }
-        return Propagation { direct: true, routed: false, path_len: straight, via: v3::copy(src), apparent: v3::copy(src), muffle: graze, carry: 1.0 };
-    }
-    let (a2, b2): (V3, V3) = ([src[0], 2.0, src[2]], [dst[0], 2.0, dst[2]]);
-    if !solid_blocked(g, a2, b2, None) {
-        return Propagation { direct: true, routed: false, path_len: straight, via: v3::copy(src), apparent: v3::copy(src), muffle: 0.15, carry: 0.9 };
-    }
-    if straight > 28.0 { return sealed(src, straight); }
-    let key = route_key(g, src, dst);
-    if let Some(hit) = g.col.sound.cache.get(key.clone()) {
-        if m::abs(g.col.sound.now - hit.t) < 0.5 { return hit.r; }
-    }
-    let path = nav_grid_find_path(g, dst, src, Some(6000.0), None);
-    let r = match path {
-        Some(path) if !path.is_empty() => {
-            let mut l = 0.0;
-            let mut prev: V3 = [dst[0], 0.0, dst[2]];
-            let mut via: V3 = [path[0][0], 1.0, path[0][2]];
-            let mut door_in_way = false;
-            let mut pa: V3 = [dst[0], 1.0, dst[2]];
-            let mut sight_lost = false;
-            let seal = crate::scene_boxes::box_flag().sound_seal;
-            for q in path.iter() {
-                l += v3::dist_xz(*q, prev);
-                prev = *q;
-                let pb: V3 = [q[0], 1.0, q[2]];
-                if !sight_lost {
-                    if !solid_blocked(g, b, pb, None) { via = pb; } else { sight_lost = true; }
-                }
-                if !door_in_way && segment_blocked_dynamic(g, pa, pb, Some(seal)) { door_in_way = true; }
-                pa = pb;
-            }
-            let last_leg = v3::dist_xz(src, prev);
-            l += last_leg;
-            l = m::max(l, straight);
-            let s1: V3 = [src[0], 1.0, src[2]];
-            let end: V3 = if last_leg > 0.3 { v3::mad(s1, v3::normalize(v3::sub(pa, s1)), 0.25) } else { pa };
-            if !door_in_way && segment_blocked_dynamic(g, pa, end, Some(seal)) { door_in_way = true; }
-            let dir = v3::normalize([via[0] - dst[0], 0.0, via[2] - dst[2]]);
-            let muffle = if door_in_way { 0.85 } else { 0.35 };
-            Propagation { direct: false, routed: true, path_len: l, via, apparent: [dst[0] + dir[0] * l, src[1], dst[2] + dir[2] * l], muffle, carry: 1.0 - muffle * 0.8 }
-        }
-        _ => sealed(src, straight),
-    };
     if keep && !g.col.sound.asking {
         let t = g.col.sound.now;
         g.col.sound.cache.set(key, SoundPathsCacheValue { t, r });
     }
     r
+}
+
+/// the remembered routes' key: the two nav cells. (A −0 reads as 0, as a JavaScript string does.)
+fn route_key(g: &Game, src: V3, dst: V3) -> String {
+    let cs = g.col.nav.cell;
+    alloc::format!("{},{}>{},{}", m::floor(src[0] / cs) + 0.0, m::floor(src[2] / cs) + 0.0, m::floor(dst[0] / cs) + 0.0, m::floor(dst[2] / cs) + 0.0)
+}
+fn sealed(src: V3, straight: f64) -> Propagation {
+    Propagation { direct: false, routed: false, path_len: straight * 1.5, via: v3::copy(src), apparent: v3::copy(src), muffle: 1.0, carry: 0.25 }
 }
 
 // ---- the walk grid
@@ -1347,25 +1307,6 @@ pub fn nav_grid_is_blocked(g: &mut crate::game::Game, wx: f64, wz: f64) -> bool 
     g.col.nav.blocked[(z * nw + x) as usize] == 1
 }
 
-/// findPath for a picture's question: on the asker's tables. (collision.ts NavGrid.findPathAside)
-pub fn nav_grid_find_path_aside(g: &mut crate::game::Game, own: &mut crate::scene_collision::NavGridFindPathAsideOwn, a: V3, b: V3, max_iter: Option<f64>) -> Option<Vec<V3>> {
-    let max_iter = max_iter.unwrap_or(6000.0);
-    let mut o = NavGridAsideOwn { s: own.s.take() };
-    let r = nav_grid_aside(g, &mut o, &mut |g: &mut Game| nav_grid_find_path(g, a, b, Some(max_iter), None));
-    own.s = o.s;
-    r
-}
-
-/// `fn_` with every search of it on the asker's own tables. (collision.ts NavGrid.aside)
-pub fn nav_grid_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, own: &mut crate::scene_collision::NavGridAsideOwn, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
-    let mine = g.col.nav.scratch.take();
-    g.col.nav.scratch = own.s.take();
-    let r = fn_(g);
-    own.s = g.col.nav.scratch.take();
-    g.col.nav.scratch = mine;
-    r
-}
-
 /// A* from a to b, smoothed; `penalty` a cost multiplier for stepping into a cell. (collision.ts NavGrid.findPath)
 pub fn nav_grid_find_path(g: &mut crate::game::Game, a: V3, b: V3, max_iter: Option<f64>, penalty: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64>) -> Option<Vec<V3>> {
     let max_iter = max_iter.unwrap_or(6000.0);
@@ -1380,30 +1321,22 @@ pub fn nav_grid_find_path(g: &mut crate::game::Game, a: V3, b: V3, max_iter: Opt
     }
 }
 
-/// (collision.ts NavGrid.findPathAsk)
-pub fn nav_grid_find_path_ask(g: &mut crate::game::Game, a: V3, b: V3, max_iter: f64, penalty: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64>) -> Option<Vec<V3>> {
-    nav_grid_find_path_there(g, a, b, max_iter, penalty)
-}
-
-/// the grid as it stands, written to the module for one question of its search. False = larger than its table. (collision.ts NavGrid.there)
-pub fn nav_grid_there(g: &mut crate::game::Game) -> bool {
+/// the grid as it stands, written to the module for one question of its search. A floor larger than its table is the build's mistake, by name. (collision.ts NavGrid.there)
+pub fn nav_grid_there(g: &mut crate::game::Game) {
     let n = g.col.nav.blocked.len();
-    if n > sim::nav::MAX_NAV { return false; }
+    if n > sim::nav::MAX_NAV {
+        panic!("the floor's grid has {} cells and a search of the Rust module holds {} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's (scene/world.ts WORLD), so the module's tables are to be made larger with it", n, sim::nav::MAX_NAV);
+    }
     unsafe { core::ptr::copy_nonoverlapping(g.col.nav.blocked.as_ptr(), sim::nav::shut_addr() as *mut u8, n); }
-    true
 }
 
-/// findPath from the module; where the module hands a search back, this file's own (the signature has no third answer). (collision.ts NavGrid.findPathThere)
-pub fn nav_grid_find_path_there(g: &mut crate::game::Game, a: V3, b: V3, max_iter: f64, penalty: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64>) -> Option<Vec<V3>> {
+/// the way from the module's search; a price is asked of the caller where the search comes to a cell it has none for. (collision.ts NavGrid.findPathAsk)
+pub fn nav_grid_find_path_ask(g: &mut crate::game::Game, a: V3, b: V3, max_iter: f64, penalty: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64>) -> Option<Vec<V3>> {
+    if js::to_u32(max_iter) as f64 != max_iter { panic!("paths: a cap on the search that is no whole number ({})", js::num_str(max_iter)); }
     let mut penalty = penalty;
-    let bit = crate::scene_box_mirror::senses().paths;
-    let set = sense_set(g, bit) as i32;
-    if js::to_u32(max_iter) as f64 != max_iter || !nav_grid_there(g) {
-        return nav_grid_find_path_here(g, a, b, Some(max_iter), penalty);
-    }
-    let ask = pane_ask(g);
-    if ask < 0.0 { return nav_grid_find_path_here(g, a, b, Some(max_iter), penalty); }
-    let ask = ask as u32;
+    let s = sense_for(g, SenseForRow::Paths);
+    let (set, ask) = (s.set as i32, s.ask as u32);
+    nav_grid_there(g);
     let (w, nw, nh, cell) = (slot(g), g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell);
     let mi = js::to_u32(max_iter);
     let mut n;
@@ -1423,7 +1356,7 @@ pub fn nav_grid_find_path_there(g: &mut crate::game::Game, a: V3, b: V3, max_ite
         }
         if n != sim::nav::ASK_HOST { g.m.scene_collision.priced.n += 1.0; }
     }
-    if n == sim::nav::ASK_HOST { return nav_grid_find_path_here(g, a, b, Some(max_iter), penalty); }
+    if n == sim::nav::ASK_HOST { panic!("{}", handed_back_words("paths", "a point that is no number, or a line too long to be one", &a, &b)); }
     g.m.scene_collision.sensed.paths += 1.0;
     if n == sim::nav::NO_WAY { return None; }
     let at = sim::nav::way_addr();
@@ -1443,165 +1376,6 @@ pub fn nav_grid_price_these(g: &mut crate::game::Game, k: f64, penalty: &mut dyn
         put_f64(sim::nav::price_addr(), c as usize, v);
     }
     g.m.scene_collision.priced.cells += k;
-}
-
-/// findPath as this file answers it, wherever the module hands a search back. (collision.ts NavGrid.findPathHere)
-pub fn nav_grid_find_path_here(g: &mut crate::game::Game, a: V3, b: V3, max_iter: Option<f64>, penalty: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64>) -> Option<Vec<V3>> {
-    let max_iter = max_iter.unwrap_or(6000.0);
-    let mut penalty = penalty;
-    if a[0].is_nan() || a[2].is_nan() || b[0].is_nan() || b[2].is_nan() { return None; }   // (TRAP: the TypeScript's walk over cells that are no cells ends with no way)
-    let (cell, w_f, h_f) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
-    let (w, h) = (w_f as i32, h_f as i32);
-    let sx = clampi(m::floor(a[0] / cell), 0.0, w_f - 1.0) as i32;
-    let sz = clampi(m::floor(a[2] / cell), 0.0, h_f - 1.0) as i32;
-    let mut gx = clampi(m::floor(b[0] / cell), 0.0, w_f - 1.0) as i32;
-    let mut gz = clampi(m::floor(b[2] / cell), 0.0, h_f - 1.0) as i32;
-    if g.col.nav.blocked[(gz * w + gx) as usize] != 0 {
-        let alt = nav_grid_nearest_free(g, gx as f64, gz as f64, Some(b[0]), Some(b[2]))?;
-        gx = alt[0] as i32;
-        gz = alt[1] as i32;
-    }
-    let (start, goal) = (sz * w + sx, gz * w + gx);
-    if start == goal {
-        return Some(vec![[(gx as f64 + 0.5) * cell, 0.0, (gz as f64 + 0.5) * cell]]);
-    }
-    // (the tables are lent out of the grid for the search: a search inside a penalty finds none and takes fresh ones, as it finds them busy in the TypeScript)
-    let mut s = match g.col.nav.scratch.take() {
-        Some(s) if s.g.len() == (w * h) as usize => s,
-        _ => nav_scratch((w * h) as f64),
-    };
-    let (mut n_open, mut n_seen) = (0usize, 0usize);
-    {
-        let (x, z) = (start % w, start / w);
-        let (dx, dz) = ((x - gx).abs(), (z - gz).abs());
-        s.g[start as usize] = 0.0;
-        s.f[start as usize] = (((dx + dz) as f64) + (core::f64::consts::SQRT_2 - 2.0) * (dx.min(dz) as f64)) as f32;
-    }
-    s.open[n_open] = start;
-    n_open += 1;
-    s.seen[n_seen] = start;
-    n_seen += 1;
-    let mut iter = 0.0;
-    loop {
-        if n_open == 0 { break; }
-        let go = iter < max_iter;
-        iter += 1.0;
-        if !go { break; }
-        let (mut mi, mut mf) = (0usize, s.f[s.open[0] as usize] as f64);
-        for i in 1..n_open {
-            let fi = s.f[s.open[i] as usize] as f64;
-            if fi < mf { mi = i; mf = fi; }
-        }
-        let cur = s.open[mi];
-        n_open -= 1;
-        s.open[mi] = s.open[n_open];
-        if cur == goal { break; }
-        if s.closed[cur as usize] != 0 { continue; }
-        s.closed[cur as usize] = 1;
-        let (cx, cz) = (cur % w, cur / w);
-        if n_open + 8 > s.open.len() { let n = s.open.len() * 2; s.open.resize(n, 0); }
-        if n_seen + 8 > s.seen.len() { let n = s.seen.len() * 2; s.seen.resize(n, 0); }
-        for dz in -1..=1i32 {
-            for dx in -1..=1i32 {
-                if dx == 0 && dz == 0 { continue; }
-                let (nx, nz) = (cx + dx, cz + dz);
-                if nx < 0 || nz < 0 || nx >= w || nz >= h { continue; }
-                let ni = (nz * w + nx) as usize;
-                if g.col.nav.blocked[ni] != 0 || s.closed[ni] != 0 { continue; }
-                if dx != 0 && dz != 0 && (g.col.nav.blocked[(cz * w + cx + dx) as usize] != 0 || g.col.nav.blocked[((cz + dz) * w + cx) as usize] != 0) { continue; }
-                let step = if dx != 0 && dz != 0 { core::f64::consts::SQRT_2 } else { 1.0 };
-                let price = match penalty.as_mut() {
-                    Some(p) => step * m::max(1.0, p(g, nx as f64, nz as f64)),
-                    None => step,
-                };
-                let ng = s.g[cur as usize] as f64 + price;
-                if ng < s.g[ni] as f64 {
-                    let (hx, hz) = ((nx - gx).abs(), (nz - gz).abs());
-                    s.g[ni] = ng as f32;
-                    s.came[ni] = cur;
-                    s.f[ni] = (ng + (((hx + hz) as f64) + (core::f64::consts::SQRT_2 - 2.0) * (hx.min(hz) as f64))) as f32;
-                    s.open[n_open] = ni as i32;
-                    n_open += 1;
-                    s.seen[n_seen] = ni as i32;
-                    n_seen += 1;
-                }
-            }
-        }
-    }
-    let mut cells: Vec<i32> = Vec::new();
-    let found = s.came[goal as usize] >= 0;
-    if found {
-        let mut c = goal;
-        while c >= 0 && c != start {
-            cells.push(c);
-            c = s.came[c as usize];
-        }
-    }
-    for i in 0..n_seen {
-        let c = s.seen[i] as usize;
-        s.g[c] = f32::INFINITY;
-        s.f[c] = f32::INFINITY;
-        s.came[c] = -1;
-        s.closed[c] = 0;
-    }
-    g.col.nav.scratch = Some(s);
-    if !found { return None; }
-    cells.reverse();
-    let n = cells.len();
-    let dear: Option<Vec<bool>> = match penalty.as_mut() {
-        Some(p) => {
-            let mut d = Vec::with_capacity(n);
-            for &c in cells.iter() {
-                d.push(p(g, (c % w) as f64, (c / w) as f64) > 1.0);
-            }
-            Some(d)
-        }
-        None => None,
-    };
-    let mut out: Vec<V3> = Vec::new();
-    let mut anchor: V3 = [a[0], 0.0, a[2]];
-    let mut i = 0usize;
-    while i < n {
-        let mut j = n - 1;
-        while j > i {
-            let c = cells[j];
-            let q: V3 = [((c % w) as f64 + 0.5) * cell, 0.0, ((c / w) as f64 + 0.5) * cell];
-            if nav_grid_walkable(g, anchor, q) {
-                match (&dear, penalty.as_mut()) {
-                    (Some(d), Some(p)) => {
-                        if nav_grid_dear_along(g, anchor, q, &mut **p) <= count_true(d, i as f64, j as f64) { break; }
-                    }
-                    _ => break,
-                }
-            }
-            j -= 1;
-        }
-        let c = cells[j];
-        let p: V3 = [((c % w) as f64 + 0.5) * cell, 0.0, ((c / w) as f64 + 0.5) * cell];
-        out.push(p);
-        anchor = p;
-        i = j + 1;
-    }
-    Some(out)
-}
-
-/// distinct cells along a straight leg whose penalty is above plain floor. (collision.ts NavGrid.dearAlong)
-pub fn nav_grid_dear_along(g: &mut crate::game::Game, a: V3, b: V3, penalty: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) -> f64 {
-    let (cell, nw, nh) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h);
-    let (dx, dz) = (b[0] - a[0], b[2] - a[2]);
-    let n = m::ceil(m::hyp2(dx, dz) / (cell * 0.5)) + 1.0;
-    let (mut last, mut count) = (-1.0, 0.0);
-    let mut k = 0.0;
-    while k <= n {
-        let t = k / n;
-        let (ix, iz) = (m::floor((a[0] + dx * t) / cell), m::floor((a[2] + dz * t) / cell));
-        let i = iz * nw + ix;
-        k += 1.0;
-        if i == last { continue; }
-        last = i;
-        if ix >= 0.0 && iz >= 0.0 && ix < nw && iz < nh && penalty(g, ix, iz) > 1.0 { count += 1.0; }
-    }
-    count
 }
 
 /// the free cell nearest by ring to a shut one; with the point that asked, on its own side of the wall. (collision.ts NavGrid.nearestFree)
@@ -1664,41 +1438,12 @@ pub fn clampi(x: f64, a: f64, b: f64) -> f64 {
     if x < a { a } else if x > b { b } else { x }
 }
 
-/// two points, the same to the bit. (collision.ts same3)
-pub fn same3(a: V3, b: V3) -> bool {
-    is(a[0], b[0]) && is(a[1], b[1]) && is(a[2], b[2])
-}
-
-/// a search's tables, blank. (collision.ts navScratch)
-pub fn nav_scratch(n: f64) -> crate::scene_collision::NavScratch {
-    let n = n as usize;
-    NavScratch { g: vec![f32::INFINITY; n], f: vec![f32::INFINITY; n], came: vec![-1; n], closed: vec![0; n], open: vec![0; 1024], seen: vec![0; 1024] }
-}
-
-/// how many of flags[i‥j] are set. (collision.ts countTrue)
-pub fn count_true(flags: &[bool], i: f64, j: f64) -> f64 {
-    let mut n = 0.0;
-    let mut k = i as usize;
-    while k <= j as usize {
-        if flags[k] { n += 1.0; }
-        k += 1;
-    }
-    n
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn bits(a: &[f64]) -> Vec<u64> {
         a.iter().map(|x| x.to_bits()).collect()
-    }
-    fn a_box(g: &mut Game, c: V3, h: V3, yaw: f64) -> BoxId {
-        let mut b = crate::scene_boxes::Box::zeroed();
-        b.c = c;
-        b.h = h;
-        b.yaw = yaw;
-        g.col.boxes.push(b)
     }
     fn grid(g: &mut Game) {
         g.col.nav.w = 80.0;
@@ -1711,41 +1456,30 @@ mod tests {
 
     #[test]
     fn line_box_is_the_typescripts_to_the_bit() {
-        let mut g = Box::new(Game::blank());
-        let g = &mut *g;
         let (a, rd): (V3, V3) = ([1.25, 0.7, -2.5], [0.6, 0.0, 0.8]);
-        let yaw = a_box(g, [3.0, 1.0, 1.0], [1.5, 1.0, 0.75], 0.7);
-        let r = line_box(g, a, rd, yaw).unwrap();
+        let (c, h): (V3, V3) = ([3.0, 1.0, 1.0], [1.5, 1.0, 0.75]);
+        let r = slab(a, rd, c, h, 0.7, None).unwrap();
         assert_eq!(bits(&[r.t0, r.t1, r.depth]), [0x400879431796fbb5, 0x40123f15faa99759, 0xc0086f43d65a5520]);
-        let rot = a_box(g, [3.0, 1.0, 1.0], [1.5, 1.0, 0.75], 0.0);
-        g.col.boxes[rot].rot = Some([0.1, 0.2, 0.3, m::sqrt(1.0 - 0.14)]);
-        let r = line_box(g, a, rd, rot).unwrap();
+        let r = slab(a, rd, c, h, 0.0, Some([0.1, 0.2, 0.3, m::sqrt(1.0 - 0.14)])).unwrap();
         assert_eq!(bits(&[r.t0, r.t1, r.depth]), [0x4009a0153febbaba, 0x4012f1af13a82510, 0xc009137acf27ccdb]);
-        let round = a_box(g, [3.0, 1.0, 1.0], [1.5, 1.0, 1.5], 0.7);
-        g.col.boxes[round].round = Some(true);
-        let r = line_box(g, a, rd, round).unwrap();
+        let h2: V3 = [1.5, 1.0, 1.5];
+        let r = slab_round(slab(a, rd, c, h2, 0.7, None).unwrap(), h2).unwrap();
         assert_eq!(bits(&[r.t0, r.t1, r.depth]), [0x40042fd22b3439eb, 0x4014b4e3b732afd6, 0xc0034e115049ec25]);
-        let miss = a_box(g, [30.0, 1.0, 1.0], [1.0, 1.0, 1.0], 0.2);
-        assert!(line_box(g, a, rd, miss).is_none());
+        assert!(slab(a, rd, [30.0, 1.0, 1.0], [1.0, 1.0, 1.0], 0.2, None).is_none());
     }
 
     #[test]
-    fn the_hosts_search_finds_the_typescripts_way() {
+    fn the_walk_grid_answers_as_it_stands() {
         let mut g = Box::new(Game::blank());
         let g = &mut *g;
         grid(g);
-        let (a, b): (V3, V3) = ([5.1, 0.0, 5.2], [25.3, 0.0, 3.7]);
-        let want = [0x402d800000000000u64, 0, 0x4024800000000000, 0x402f800000000000, 0, 0x4024800000000000, 0x4039400000000000, 0, 0x400e000000000000];
-        let flat = |p: Vec<V3>| -> Vec<u64> { p.iter().flat_map(|q| q.iter().map(|x| x.to_bits())).collect() };
-        assert_eq!(flat(nav_grid_find_path_here(g, a, b, None, None).unwrap()), want);
-        let mut pen = |_: &mut Game, ix: f64, iz: f64| if iz >= 5.0 && iz <= 14.0 && ix >= 20.0 && ix <= 25.0 { 6.0 } else { 1.0 };
-        assert_eq!(flat(nav_grid_find_path_here(g, a, b, None, Some(&mut pen)).unwrap()), want);
-        // (its tables are blank again, and kept)
-        let s = g.col.nav.scratch.as_ref().unwrap();
-        assert!(s.came.iter().all(|&c| c == -1) && s.closed.iter().all(|&c| c == 0));
         assert!(!nav_grid_walkable(g, [5.0, 0.0, 5.0], [20.0, 0.0, 5.0]));
         assert!(nav_grid_walkable(g, [5.0, 0.0, 5.0], [5.0, 0.0, 19.9]));
-        assert!(nav_grid_find_path_here(g, [f64::NAN, 0.0, 5.0], b, None, None).is_none());
+        assert!(nav_grid_is_blocked(g, -1.0, 5.0));
+        assert!(!nav_grid_is_blocked(g, f64::NAN, 5.0));
+        assert_eq!(nav_grid_idx(g, 3.0, 2.0), 163.0);
+        // (no point asked for: the ring's first free cell, and no line is asked)
+        assert_eq!(nav_grid_nearest_free(g, 30.0, 5.0, None, None), Some([29.0, 4.0]));
     }
 
     #[test]
@@ -1760,8 +1494,6 @@ mod tests {
         // (the answers of segClear and rayBoxHits under bun with EXACT.on, over the same 256 made-up lines and boxes)
         let want_clear = "1010101111011110101111111011101100111001101000111011111111111011111001111101101111011111001111110011011011111010111011101110111100011111110011110111011011111111011100000111111000110000111011110000101101110111111101101001011111111111001010110110110111011111";
         let want_hits = "0000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000100000000100000000000000000000100000000000000000000000000000000000011000000010000001000000000101000000001000000000010000000000000000000000000000000000000000";
-        let mut g = Box::new(Game::blank());
-        let g = &mut *g;
         let mut x = 12345.0;
         let mut r = |lo: f64, hi: f64| { x = js::rem(x * 16807.0, 2147483647.0); lo + (hi - lo) * (x / 2147483647.0) };
         let (mut clear, mut hits) = (String::new(), String::new());
@@ -1771,28 +1503,19 @@ mod tests {
             let len = m::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]);
             let u = [d[0] / len, if i % 7 == 0 { 0.0 } else { d[1] / len }, d[2] / len];
             let (c, h, yaw) = ([r(0.0, 12.0), r(0.0, 3.0), r(0.0, 12.0)], [r(0.1, 2.0), r(0.1, 1.5), r(0.1, 2.0)], r(-3.0, 3.0));
-            let b = a_box(g, c, h, yaw);
-            if i % 5 == 0 { g.col.boxes[b].rot = Some([0.0, 0.0, 0.0, 1.0]); }
-            clear.push(if seg_clear(g, a[0], a[1], a[2], u[0], u[1], u[2], len, b, 0.05) { '1' } else { '0' });
-            hits.push(if ray_box_hits(g, a[0], a[1], a[2], u[0], u[1], u[2], b, len) { '1' } else { '0' });
+            clear.push(if seg_clear_at(c, h, i % 5 == 0, a[0], a[1], a[2], u[0], u[1], u[2], len, 0.05) { '1' } else { '0' });
+            hits.push(if ray_box_hits_at(c, h, yaw, a[0], a[1], a[2], u[0], u[1], u[2], len) { '1' } else { '0' });
         }
         assert_eq!(clear, want_clear);
         assert_eq!(hits, want_hits);
     }
 
     #[test]
-    fn a_leaf_across_the_line_stops_it_if_it_carries_the_flags() {
-        let mut g = Box::new(Game::blank());
-        let g = &mut *g;
-        let leaf = a_box(g, [5.0, 1.0, 0.0], [0.05, 1.0, 1.0], 0.0);
-        g.col.boxes[leaf].flags = 4.0;
-        g.col.dynamic_boxes = vec![leaf];
-        let a: V3 = [0.0, 1.0, 0.0];
-        assert!(dynamic_hit(g, a, 1.0, 0.0, 0.0, 10.0, 0.0));
-        assert!(dynamic_hit(g, a, 1.0, 0.0, 0.0, 10.0, 4.0));
-        assert!(!dynamic_hit(g, a, 1.0, 0.0, 0.0, 10.0, 8.0));
-        assert!(!dynamic_hit(g, a, 1.0, 0.0, 0.0, 4.0, 0.0));
-        assert!(!dynamic_hit(g, a, 0.0, 0.0, 1.0, 10.0, 0.0));
+    fn a_mistake_is_said_in_the_typescripts_words() {
+        let tail = " — where it starts, the way it goes and how far are numbers, and how far is finite (a way worked out of two points that are one point is none)";
+        assert_eq!(no_number(None, None, None), alloc::format!("a ray that is no number{}", tail));
+        assert_eq!(no_number(Some([1.5, 0.0, -0.0]), Some([f64::NAN, 1.0, 2.0]), Some(3.0)), alloc::format!("a ray that is no number: from [1.5, 0, 0] along [NaN, 1, 2] for 3{}", tail));
+        assert_eq!(handed_back_words("sound", "why", &[1.0, 2.5, 3.0], &[4.0, 5.0, 6.0]), "sound: the Rust module handed the question back (why): [1, 2.5, 3] → [4, 5, 6]");
     }
 
     #[test]
@@ -1800,12 +1523,5 @@ mod tests {
         assert_eq!(clampi(-1.0, 0.0, 3.0), 0.0);
         assert_eq!(clampi(4.0, 0.0, 3.0), 3.0);
         assert!(clampi(f64::NAN, 0.0, 3.0).is_nan());
-        assert!(same3([f64::NAN, 0.0, 1.0], [-f64::NAN, 0.0, 1.0]));
-        assert!(!same3([0.0, 0.0, 1.0], [-0.0, 0.0, 1.0]));
-        assert_eq!(count_true(&[true, false, true, true], 1.0, 3.0), 2.0);
-        assert_eq!(sense_name(8.0), "sound");
-        assert_eq!(sense_name(3.0), "a sense");
-        let s = nav_scratch(4.0);
-        assert!(s.g[0].is_infinite() && s.came[3] == -1 && s.open.len() == 1024);
     }
 }

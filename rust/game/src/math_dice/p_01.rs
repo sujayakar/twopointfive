@@ -5,11 +5,14 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A closure die: the same stream as `roll(die_of(a))`.   (dice.ts mulberry32)
-pub fn mulberry32(a: f64) -> crate::FnField {
-    todo!("needs: a return type that can hold the word (FnField is empty): `-> Die`, with callers using roll")
+/// The die's bit in the block's head: which systems' state is at home there.   (dicehome.ts simTenant's `bit`)
+const DICE_BIT: u32 = 1;
+
+/// A die made and spent inside one call: the stream of `roll(die_of(a))`.   (dice.ts mulberry32)
+pub fn mulberry32(a: f64) -> crate::dice::Die {
+    crate::dice::Die::new(js::to_u32(a))
 }
 
 /// A die whose whole state is one word on a record.   (dice.ts dieOf)
@@ -26,11 +29,6 @@ pub fn roll(d: &mut crate::math_dice::Die) -> f64 {
     (((t ^ ((t as u32 >> 14) as i32)) as u32) as f64) / 4294967296.0
 }
 
-/// `roll` as a method of the record that carries the word.   (dice.ts rollOn)
-pub fn roll_on(g: &mut crate::game::Game) -> f64 {
-    todo!("needs: the record's die as the parameter (`this: Die` became g): `roll_on(d: &mut Die)`, whose body is roll(d)")
-}
-
 /// FNV-1a, 32 bit, over UTF-16 code units: what is dealt by name.   (dice.ts hashStr)
 pub fn hash_str(s: &str) -> f64 {
     let mut h: u32 = 0x811c9dc5;
@@ -41,20 +39,15 @@ pub fn hash_str(s: &str) -> f64 {
     h as f64
 }
 
-/// The seeded die that stands in Math.random, remembering the one it displaced.   (dice.ts simDie)
-pub fn sim_die(seed: f64, displaced: &mut dyn FnMut() -> f64) -> crate::FnField {
-    todo!("needs: a die value that can hold its word and the displaced die (FnField is empty; a borrowed FnMut cannot be kept)")
-}
-
-/// A game's die at the start of `seed`'s stream.   (dice.ts SimDice.constructor; `sys` has no field: see seam_math_random_is_own)
+/// A game's die at the start of `seed`'s stream.   (dice.ts SimDice.constructor; `sys` has no field: see sim_random)
 pub fn sim_dice_new(seed: f64) -> crate::math_dice::SimDice {
     SimDice { s0: js::to_i32(seed) as f64, seed: js::to_u32(seed) as f64, ..SimDice::blank() }
 }
 
-/// Where the word stands.   (dice.ts SimDice.s)
+/// Where the word stands. `home` keeps the block's word as sim_random leaves it.   (dice.ts SimDice.s)
 pub fn sim_dice_s(this: &mut crate::math_dice::SimDice) -> f64 {
     match this.home {
-        Some(h) => seam_home_s(h),
+        Some(h) => h.s,
         None => this.s0,
     }
 }
@@ -62,57 +55,63 @@ pub fn sim_dice_s(this: &mut crate::math_dice::SimDice) -> f64 {
 /// How many draws have been taken.   (dice.ts SimDice.n)
 pub fn sim_dice_n(this: &mut crate::math_dice::SimDice) -> f64 {
     match this.home {
-        Some(h) => seam_home_n(h),
+        Some(h) => h.n,
         None => this.n0,
     }
 }
 
-/// Make `d` the die sim_random draws; returns the one it replaced. A die first put in use moves into the game's block (dicehome.ts `into`).   (dice.ts useDice)
-pub fn use_dice(g: &mut crate::game::Game, d: Option<crate::math_dice::SimDice>) -> Option<crate::math_dice::SimDice> {
-    let p = g.m.math_dice.cur;
-    match d {
-        None => g.m.math_dice.cur = None,
-        Some(n) => {
-            let same = match p { Some(o) => o.seed.to_bits() == n.seed.to_bits(), None => false };
-            if !same {
-                let b = &mut ::sim::state::state(g.sim).dice;
-                b.s = js::to_u32(n.s0);
-                b.n = n.n0;
-                g.m.math_dice.cur = Some(SimDice { home: Some(DiceHome::zeroed()), ..n });
-            }
+/// As a game's frame opens: `g.dice` is the die sim_random draws, and it moves into or out of the game's block as RUST.dice wishes.
+/// (dice.ts useDice; dicehome.ts wants, into, outOf, with state.ts settle's test of the bit: neither has a part)
+pub fn use_dice(g: &mut crate::game::Game) {
+    let want = g.m.sim_sim.dice_on && g.dice.is_some();
+    let st = ::sim::state::state(g.sim);
+    let have = st.head.homes & DICE_BIT != 0;
+    if want == have {
+        return;
+    }
+    if want {
+        let d = g.dice.as_mut().unwrap();
+        let (s, n) = (sim_dice_s(d), sim_dice_n(d));
+        st.dice.s = js::to_u32(s);
+        st.dice.n = n;
+        st.head.homes |= DICE_BIT;
+        d.home = Some(DiceHome { s: js::to_i32(s) as f64, n });
+    } else {
+        st.head.homes &= !DICE_BIT;
+        if let Some(d) = g.dice.as_mut() {
+            let (s, n) = (sim_dice_s(d), sim_dice_n(d));
+            d.home = None;
+            d.s0 = js::to_i32(s) as f64;
+            d.n0 = n;
+            st.dice = ::sim::dice::Dice { n: 0.0, s: 0, spare: 0 };
         }
     }
-    p
 }
 
-/// The die in use; None also while somebody else's die stands in Math.random's place.   (dice.ts diceInUse)
+/// The die in use: the game's own, since nothing in the Rust game can stand in Math.random's place.   (dice.ts diceInUse)
 pub fn dice_in_use(g: &mut crate::game::Game) -> Option<crate::math_dice::SimDice> {
-    let cur = g.m.math_dice.cur;
-    if cur.is_some() && seam_math_random_is_own(g) { cur } else { None }
+    g.dice
 }
 
-/// A draw for the simulation, uniform in [0, 1): the game's own die, in rust/sim's block.   (dice.ts simRandom)
+/// A draw for the simulation, uniform in [0, 1): off the block where the die is at home, else off its own word; no die, Math.random.   (dice.ts simRandom)
 pub fn sim_random(g: &mut crate::game::Game) -> f64 {
-    if g.m.math_dice.cur.is_none() || !seam_math_random_is_own(g) {
+    if g.dice.is_none() {
         return seam_math_random(g);
     }
-    ::sim::dice::roll_of(g.sim)
-}
-
-/// dice.ts:45 `h.s`
-fn seam_home_s(h: DiceHome) -> f64 {
-    todo!("needs: g on SimDice.s: a die at home has its word in sim::state::state(g.sim).dice.s")
-}
-
-/// dice.ts:47 `h.n`
-fn seam_home_n(h: DiceHome) -> f64 {
-    todo!("needs: g on SimDice.n: a die at home has its count in sim::state::state(g.sim).dice.n")
-}
-
-/// dice.ts:56,59 `Math.random === d.sys`
-fn seam_math_random_is_own(g: &mut Game) -> bool {
-    // TEMP-BRINGUP: nothing in the Rust game puts another die in Math.random's place (with_dice and the journal's die are the host's), so a die in use is the game's own
-    true
+    let slot = g.sim;
+    let d = g.dice.as_mut().unwrap();
+    if let Some(h) = d.home.as_mut() {
+        let r = ::sim::dice::roll_of(slot);
+        let b = &::sim::state::state(slot).dice;
+        h.s = b.s as i32 as f64;
+        h.n = b.n;
+        return r;
+    }
+    d.n0 += 1.0;
+    let mut word = Die { dice: d.s0 };
+    let r = roll(&mut word);
+    d.s0 = word.dice;
+    r
 }
 
 /// dice.ts:59 `Math.random()`
@@ -198,20 +197,62 @@ mod tests {
         }
     }
 
-    // the trap: Game.update calls useDice(this.dice) every frame, and in Rust that is a stale copy: it must not rewind the word
     #[test]
-    fn use_dice_moves_the_word_once() {
+    fn mulberry32_is_the_records_stream() {
+        for seed in [0.0, 1.0, -1.0, 12345.0, 4294967301.0, 2147483648.0, -7.9, 1e20, f64::NAN] {
+            let (mut a, mut b) = (mulberry32(seed), die_of(seed));
+            for _ in 0..100 {
+                assert_eq!(a.roll().to_bits(), roll(&mut b).to_bits(), "seed {seed}");
+            }
+        }
+    }
+
+    // one test: slot 0's block is shared. The trap: Game.update calls useDice every frame and must not rewind the word.
+    #[test]
+    fn the_die_moves_rolls_and_comes_back() {
         let mut g = Game::blank();
-        let die = sim_dice_new(-7.0);
-        assert!(use_dice(&mut g, Some(die)).is_none());
-        let b = &mut ::sim::state::state(g.sim).dice;
-        assert_eq!(b.s, js::to_u32(-7.0));
-        ::sim::dice::roll(b);
-        let (s, n) = (b.s, b.n);
-        assert!(use_dice(&mut g, Some(die)).is_some());
-        let b = &::sim::state::state(g.sim).dice;
-        assert_eq!((b.s, b.n), (s, n));
-        assert!(use_dice(&mut g, None).is_some());
-        assert!(g.m.math_dice.cur.is_none());
+        let mut stream = mulberry32(-7.0);
+        ::sim::state::state(g.sim).head.homes = 0;
+        ::sim::state::state(g.sim).dice = ::sim::dice::Dice { n: 0.0, s: 0, spare: 0 };
+
+        // no die: nothing moves, and the draw is the host's
+        use_dice(&mut g);
+        assert_eq!(::sim::state::state(g.sim).head.homes & DICE_BIT, 0);
+        super::super::b_01::host_draws_set(&[0.25]);
+        assert_eq!(sim_random(&mut g), 0.25);
+        assert_eq!(super::super::b_01::host_draws_count(), (1, 1));
+
+        // a die not yet at home rolls its own word (a game's construction)
+        g.dice = Some(sim_dice_new(-7.0));
+        assert_eq!(sim_random(&mut g).to_bits(), stream.roll().to_bits());
+        assert_eq!(g.dice.unwrap().n0, 1.0);
+
+        // the move carries the word whole, once, and every frame after leaves it
+        use_dice(&mut g);
+        assert_eq!(::sim::state::state(g.sim).head.homes & DICE_BIT, DICE_BIT);
+        assert_eq!(::sim::state::state(g.sim).dice.s, stream.s);
+        assert_eq!(sim_random(&mut g).to_bits(), stream.roll().to_bits());
+        use_dice(&mut g);
+        assert_eq!(sim_random(&mut g).to_bits(), stream.roll().to_bits());
+        let mut d = g.dice.unwrap();
+        assert_eq!(sim_dice_s(&mut d).to_bits(), (stream.s as i32 as f64).to_bits());
+        assert_eq!(sim_dice_n(&mut d), 3.0);
+        assert_eq!(dice_in_use(&mut g).unwrap().seed.to_bits(), d.seed.to_bits());
+
+        // a die imported at home with its block not brought: the word is the one `home` carries, not the stale s0
+        ::sim::state::state(g.sim).head.homes = 0;
+        ::sim::state::state(g.sim).dice = ::sim::dice::Dice { n: 0.0, s: 0, spare: 0 };
+        use_dice(&mut g);
+        assert_eq!(sim_random(&mut g).to_bits(), stream.roll().to_bits());
+
+        // the row off: home again on the die, its part of the block zeros, the same stream
+        g.m.sim_sim.dice_on = false;
+        use_dice(&mut g);
+        let d = g.dice.unwrap();
+        assert!(d.home.is_none());
+        assert_eq!(d.n0, 4.0);
+        assert_eq!(::sim::state::state(g.sim).head.homes & DICE_BIT, 0);
+        assert_eq!((::sim::state::state(g.sim).dice.s, ::sim::state::state(g.sim).dice.n), (0, 0.0));
+        assert_eq!(sim_random(&mut g).to_bits(), stream.roll().to_bits());
     }
 }

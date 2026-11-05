@@ -32,8 +32,8 @@ pub fn spotted_mode(g: &mut crate::game::Game, gd: GuardId) -> crate::spotted::S
 /// (src/game/spotted.ts:144 spottedBy)
 pub fn spotted_by(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> { todo!() }
 
-/// (src/game/spotted.ts:146 spottedHolds)
-pub fn spotted_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool { todo!() }
+/// (src/game/spotted.ts:146 spottedHoldsRound)
+pub fn spotted_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool { todo!() }
 
 /// (src/game/spotted.ts:155 dangerNow)
 pub fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool { todo!() }
@@ -51,7 +51,7 @@ pub fn set(g: &mut crate::game::Game, gd: GuardId, to: crate::spotted::SpottedMo
 pub fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>) { todo!() }
 
 /// (src/game/spotted.ts:196 ring)
-pub fn ring(g: &mut crate::game::Game, p: V3, max_m: f64) -> crate::Opaque { todo!() }
+pub fn ring(g: &mut crate::game::Game, p: V3, max_m: f64) -> Vec<V3> { todo!() }
 
 /// (src/game/spotted.ts:206 inSamsLine)
 pub fn in_sams_line(g: &mut crate::game::Game, q: V3, h: GuardId) -> bool { todo!() }

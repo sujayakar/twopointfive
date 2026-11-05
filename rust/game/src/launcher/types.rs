@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Ring, src/game/launcher.ts:51)
+/// (TypeScript: Ring, src/game/launcher.ts:52)
 #[derive(Clone, Copy, Debug)]
 pub struct Ring {
     pub pos: V3,
@@ -26,7 +26,7 @@ impl Ring {
 }
 impl Default for Ring { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Ballistics, src/game/launcher.ts:54)
+/// (TypeScript: Ballistics, src/game/launcher.ts:55)
 #[derive(Clone, Copy, Debug)]
 pub struct Ballistics {
     pub speed: f64,
@@ -53,5 +53,5 @@ impl Ballistics {
 }
 impl Default for Ballistics { fn default() -> Self { Self::zeroed() } }
 
-/// (src/game/launcher.ts:48 STAGGER_LINES: a table nothing writes)
+/// (src/game/launcher.ts:49 STAGGER_LINES: a table nothing writes)
 pub fn stagger_lines_table() -> Vec<String> { alloc::vec![String::from("agh — what the—"), String::from("AH! son of a—"), String::from("ow! what— who's there?!"), String::from("nngh— something hit me!"), String::from("jesus— my ribs—")] }

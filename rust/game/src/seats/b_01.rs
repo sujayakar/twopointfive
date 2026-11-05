@@ -24,20 +24,18 @@ fn swap_set(g: &mut Game, o: &mut SeatSet) {
     swap(&mut g.view_proj, &mut o.view_proj); swap(&mut g.threat_proximity, &mut o.threat_proximity); swap(&mut g.torch_on_t, &mut o.torch_on_t);
 }
 
-/// INVENTED BY THE SKELETON (conventions, SEATS): a pass about another seat. The seat whose man is `seat` has its SEAT_KEYS fields put on Game for the call and
+/// INVENTED BY THE SKELETON (conventions, SEATS): a pass about another seat. That seat's SEAT_KEYS fields are put on Game for the call and
 /// taken back after; the seat that stood on Game keeps its own meanwhile. The seat already on Game runs as it stands (so a nesting is fine).
 /// NEVER RUN in the bring-up past its first line: the missions compared have one seat.
-pub fn with_seat<R>(g: &mut crate::game::Game, seat: PlayerId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
-    if g.player == seat { return f(g); }
-    let (from, mut to) = (g.seat, None);
-    for i in 0..g.seats.len() { let s = g.seats[i]; if g.tab.cmd_seat[s].own.as_ref().map_or(false, |o| o.player == seat) { to = Some(s); break; } }
-    let to = match to { Some(s) => s, None => panic!("with_seat: no seat keeps that man's set") };
-    let mut theirs = g.tab.cmd_seat[to].own.take().unwrap();
-    swap_set(g, &mut theirs);                 // Game now stands on `to`; `theirs` holds what `from` had
+pub fn with_seat<R>(g: &mut crate::game::Game, seat: SeatId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
+    if g.seat == seat { return f(g); }
+    let from = g.seat;
+    let mut theirs = match g.tab.cmd_seat[seat].own.take() { Some(o) => o, None => panic!("with_seat: that seat keeps no set") };
+    swap_set(g, &mut theirs);                 // Game now stands on `seat`; `theirs` holds what `from` had
     g.tab.cmd_seat[from].own = Some(theirs);
     let r = f(g);
     let mut back = g.tab.cmd_seat[from].own.take().unwrap();
     swap_set(g, &mut back);
-    g.tab.cmd_seat[to].own = Some(back);
+    g.tab.cmd_seat[seat].own = Some(back);
     r
 }

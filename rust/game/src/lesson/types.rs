@@ -3,15 +3,15 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a step's done-test: one arm a row of LESSON_TESTS, with the fields that row's `ok` reads (lesson.ts:167-282; a level file's `{ is: '<kind>', … }`, tag from `is`). Unknown: an `is` no row has, which never passes (:109)
+/// a step's done-test, the one enum of it: one arm a row of LESSON_TESTS (lesson.ts:167-282; a level file's `{ is: '<kind>', … }`, tag from `is`; scenarios.ts:225). Unknown: an `is` no row has, or a word no arm's type holds (empty: a record with no `is`), which never passes (:109). Pace's band is read only by bandCheck: on the page :174 is always true
 #[derive(Clone, Debug)]
 pub enum LessonTest {
-    Unknown,
+    Unknown { is: String },
     In { area: crate::scene_scenarios::Rect },
     Near { at: V3, r: Option<f64> },
     Flag { flag: String, value: Option<bool> },
     Slot { slot: crate::game::SlotKind, drawn: Option<bool> },
-    Pace,
+    Pace { below: Option<f64>, above: Option<f64> },
     Meter { which: String, below: Option<f64>, above: Option<f64> },
     Stage { stage: String },
     Door { door: String, state: String },
@@ -198,6 +198,32 @@ impl LessonRun {
     }
 }
 impl Default for LessonRun { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/lesson.ts:113 after(log), src/game/lesson.ts:113 after(log))
+#[derive(Clone, Copy, Debug)]
+pub struct AfterLogItem {
+}
+impl AfterLogItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        AfterLogItem {
+        }
+    }
+}
+impl Default for AfterLogItem { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/lesson.ts:113 after(last), src/game/lesson.ts:113 after(last))
+#[derive(Clone, Copy, Debug)]
+pub struct AfterLast {
+}
+impl AfterLast {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        AfterLast {
+        }
+    }
+}
+impl Default for AfterLast { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lesson.ts:392 objective ->, src/game/lesson.ts:392)
 #[derive(Clone, Debug)]

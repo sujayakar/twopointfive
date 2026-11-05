@@ -3,41 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: EdgeLook, src/game/edgeLook.ts:84)
-#[derive(Clone, Debug)]
-pub struct EdgeLook {
-    pub decor: JsMap<crate::Num, Vec<BoxId>>,
-    pub dirty: JsMap<crate::Num, crate::edge_look::BreakLike>,
-    pub rubble: Vec<crate::edge_look::Rubble>,
-    pub flying: f64,
-    pub serial: f64,
-    pub room: f64,
-    pub blasted: JsMap<crate::Num, Vec<[f64; 2]>>,
-    pub todo: Vec<crate::edge_look::EdgeLookTodoItem>,
-    pub held: bool,
-    pub last: f64,
-    pub foot_book: crate::debris::FootBook,
-}
-impl EdgeLook {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
-    pub fn blank() -> Self {
-        EdgeLook {
-            decor: JsMap::new(),
-            dirty: JsMap::new(),
-            rubble: Vec::new(),
-            flying: 0.0,
-            serial: 0.0,
-            room: 1000000000.0,
-            blasted: JsMap::new(),
-            todo: Vec::new(),
-            held: false,
-            last: 0.0,
-            foot_book: crate::debris::FootBook { shoves: 0.0, stats: crate::debris::FootBookStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 } },
-        }
-    }
-}
-impl Default for EdgeLook { fn default() -> Self { Self::blank() } }
-
 /// (TypeScript: BreakLike, src/game/edgeLook.ts:75)
 #[derive(Clone, Debug)]
 pub struct BreakLike {
@@ -69,7 +34,7 @@ impl BreakLike {
 }
 impl Default for BreakLike { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Rubble, src/game/edgeLook.ts:80)
+/// (TypeScript: Rubble, src/game/edgeLook.ts:90)
 #[derive(Clone, Copy, Debug)]
 pub struct Rubble {
     pub box_: BoxId,
@@ -100,30 +65,7 @@ impl Rubble {
 }
 impl Default for Rubble { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/edgeLook.ts:112 EdgeLook.todo, src/game/edgeLook.ts:112)
-#[derive(Clone, Debug)]
-pub struct EdgeLookTodoItem {
-    pub b: crate::edge_look::BreakLike,
-    pub f: Option<crate::edge_look::Frame>,
-    pub c: f64,
-    pub dir: Option<V3>,
-    pub blast: bool,
-}
-impl EdgeLookTodoItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EdgeLookTodoItem {
-            b: crate::edge_look::BreakLike::zeroed(),
-            f: None,
-            c: 0.0,
-            dir: None,
-            blast: false,
-        }
-    }
-}
-impl Default for EdgeLookTodoItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: Frame, src/game/edgeLook.ts:82)
+/// (TypeScript: Frame, src/game/edgeLook.ts:92)
 #[derive(Clone, Copy, Debug)]
 pub struct Frame {
     pub b: BoxId,
@@ -161,6 +103,64 @@ impl Frame {
     }
 }
 impl Default for Frame { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: EdgeLook, src/game/edgeLook.ts:94)
+#[derive(Clone, Debug)]
+pub struct EdgeLook {
+    pub decor: JsMap<crate::Num, Vec<BoxId>>,
+    pub dirty: JsMap<crate::Num, crate::edge_look::BreakLike>,
+    pub rubble: Vec<crate::edge_look::Rubble>,
+    pub flying: f64,
+    pub serial: f64,
+    pub room: f64,
+    pub blasted: JsMap<crate::Num, Vec<[f64; 2]>>,
+    pub todo: Vec<crate::edge_look::EdgeLookTodoItem>,
+    pub held: bool,
+    pub last: f64,
+    pub foot_book: crate::debris::FootBook,
+}
+impl EdgeLook {
+    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    pub fn blank() -> Self {
+        EdgeLook {
+            decor: JsMap::new(),
+            dirty: JsMap::new(),
+            rubble: Vec::new(),
+            flying: 0.0,
+            serial: 0.0,
+            room: 1000000000.0,
+            blasted: JsMap::new(),
+            todo: Vec::new(),
+            held: false,
+            last: 0.0,
+            foot_book: crate::debris::FootBook { shoves: 0.0, stats: crate::debris::FootBookStats { kicked: 0.0, off_man: 0.0, walled: 0.0, gave_up: 0.0 } },
+        }
+    }
+}
+impl Default for EdgeLook { fn default() -> Self { Self::blank() } }
+
+/// (TypeScript: inline at src/game/edgeLook.ts:122 EdgeLook.todo, src/game/edgeLook.ts:122)
+#[derive(Clone, Debug)]
+pub struct EdgeLookTodoItem {
+    pub b: crate::edge_look::BreakLike,
+    pub f: Option<crate::edge_look::Frame>,
+    pub c: f64,
+    pub dir: Option<V3>,
+    pub blast: bool,
+}
+impl EdgeLookTodoItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        EdgeLookTodoItem {
+            b: crate::edge_look::BreakLike::zeroed(),
+            f: None,
+            c: 0.0,
+            dir: None,
+            blast: false,
+        }
+    }
+}
+impl Default for EdgeLookTodoItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/edgeLook.ts:40 EDGE, src/game/edgeLook.ts:40)
 #[derive(Clone, Copy, Debug)]
@@ -336,17 +336,17 @@ pub struct EdgeLookStats {
     pub rebuilds: i32,
 }
 
-/// (src/game/edgeLook.ts:77 MKEY_LOOK)
+/// (src/game/edgeLook.ts:87 MKEY_LOOK)
 pub const MKEY_LOOK: f64 = 150994944.0;
 
-/// (src/game/edgeLook.ts:78 STEEL: a table nothing writes)
+/// (src/game/edgeLook.ts:88 STEEL: a table nothing writes)
 pub fn steel() -> V3 { [0.5, 0.52, 0.54] }
 
-/// (src/game/edgeLook.ts:78 CORE: a table nothing writes)
+/// (src/game/edgeLook.ts:88 CORE: a table nothing writes)
 pub fn core() -> V3 { [0.8, 0.79, 0.75] }
 
-/// (src/game/edgeLook.ts:78 PAPER: a table nothing writes)
+/// (src/game/edgeLook.ts:88 PAPER: a table nothing writes)
 pub fn paper() -> V3 { [0.52, 0.47, 0.39] }
 
-/// (src/game/edgeLook.ts:79 UP: a table nothing writes)
+/// (src/game/edgeLook.ts:89 UP: a table nothing writes)
 pub fn up() -> V3 { [0.0, 1.0, 0.0] }

@@ -7,12 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A machine's kept switch and knobs: the browser's storage is the host's, which writes `g.tune` and `g.k.shards` itself; with no storage the TypeScript's own `try` does nothing too.   (shards.ts loadShards)
-pub fn load_shards(g: &mut crate::game::Game, tune: &mut crate::shards::ShardsTune) {}
-
-/// Nothing of the game's: the TypeScript only writes the browser's storage, the host's.   (shards.ts saveShards)
-pub fn save_shards(g: &mut crate::game::Game) {}
-
 /// The one gate: the switch on AND glass breaking live.   (shards.ts shardsLive)
 pub fn shards_live(g: &mut crate::game::Game) -> bool {
     g.tune.glass_shards && crate::glassbreak::glass_break_live(g)

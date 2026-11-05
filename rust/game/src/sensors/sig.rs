@@ -42,13 +42,13 @@ pub fn sensors_first_divergence(g: &mut crate::game::Game) -> Option<crate::sens
 pub fn sensors_divergence_log(g: &mut crate::game::Game) -> Vec<crate::sensors::SensorDivergence> { todo!() }
 
 /// (src/game/sensors.ts:105 Sensors.setOwn)
-pub fn sensors_set_own(g: &mut crate::game::Game, f: Option<&mut dyn FnMut(&mut crate::game::Game, V3, V3) -> f64>) { todo!() }
+pub fn sensors_set_own(g: &mut crate::game::Game, f: Option<crate::sensors::SensorsOwn>) { todo!() }
 
 /// (src/game/sensors.ts:107 Sensors.ownReset)
 pub fn sensors_own_reset(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/sensors.ts:109 Sensors.constructor)
-pub fn sensors_new(g: &mut crate::game::Game, probe_of: &mut dyn FnMut(&mut crate::game::Game) -> crate::sensors::ProbeLike) -> crate::sensors::Sensors { todo!() }
+pub fn sensors_new(g: &mut crate::game::Game) -> crate::sensors::Sensors { todo!() }
 
 /// (src/game/sensors.ts:113 Sensors.ask)
 pub fn sensors_ask(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: Option<f64>) { todo!() }
@@ -78,7 +78,7 @@ pub fn sensors_begin_frame(g: &mut crate::game::Game) { todo!() }
 pub fn sensors_end_frame(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/sensors.ts:188 Sensors.push)
-pub fn sensors_push(g: &mut crate::game::Game, r: &[Option<crate::sensors::SensorsPushRItem>]) { todo!() }
+pub fn sensors_push(g: &mut crate::game::Game, r: &[Option<crate::sensors::SensorRecItem>]) { todo!() }
 
 /// (src/game/sensors.ts:189 Sensors.diverge)
 pub fn sensors_diverge(g: &mut crate::game::Game, d: &crate::sensors::SensorDivergence) { todo!() }
@@ -103,3 +103,12 @@ pub fn sensors_summary(g: &mut crate::game::Game) -> String { todo!() }
 
 /// (src/game/sensors.ts:215 first)
 pub fn first(r: Option<&[f64]>) -> Option<f64> { todo!() }
+
+
+/// INVENTED: one ask in the frame's table of the light meter, kept on g.probe so a checkpoint takes it back with the game (render/probe.ts:17 Ask, :22). `pos` is a line's a, `b` its other end, None for a light ask.
+#[derive(Clone, Debug)]
+pub struct ProbeAsk { pub key: String, pub pos: V3, pub skip_owner: f64, pub b: Option<V3>, pub rank: f64 }
+/// INVENTED: free places in the table this frame (render/probe.ts:78 IrradianceProbe.room): MAX_QUERIES less what is pending, so it falls with each ask of a frame. fogofwar.ts:680 reads it before each ask.
+pub fn probe_like_room(g: &mut crate::game::Game) -> f64 { todo!() }
+/// INVENTED, for the host's frame: takes the table to upload and leaves it empty, keeping whose turn it is on a full frame (the game's half of render/probe.ts:106 encode: its lines 125, 126). Nothing in the tick calls it; headless nothing does, and the table stays full, as in the TypeScript.
+pub fn probe_like_take_asks(g: &mut crate::game::Game) -> Vec<crate::sensors::ProbeAsk> { todo!() }

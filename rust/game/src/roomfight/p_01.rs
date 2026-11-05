@@ -106,11 +106,9 @@ pub fn room_fight_sam_speed_of(g: &mut crate::game::Game, ch: CharId) -> f64 {
     m::INF
 }
 
-/// A new room fight; `knobs` is the game's own table as it stands, not the module's defaults.   (roomfight.ts RoomFight.constructor)
+/// A new room fight: the class's field initialisers; its constructor only keeps `g`.   (roomfight.ts RoomFight.constructor)
 pub fn room_fight_new(g: &mut crate::game::Game) -> crate::roomfight::RoomFight {
-    let mut f = crate::roomfight::RoomFight::blank();
-    f.knobs = g.k.roomfight;
-    f
+    crate::roomfight::RoomFight::blank()
 }
 
 /// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).   (roomfight.ts RoomFight.on)

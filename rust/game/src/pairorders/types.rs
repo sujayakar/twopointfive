@@ -208,7 +208,7 @@ impl PairordersModPAIRLOGItem {
 }
 impl Default for PairordersModPAIRLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairorders.ts:181 jobOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at quiet jobOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Copy, Debug)]
 pub struct PairOrdersJobOf {
     pub foe: GuardId,

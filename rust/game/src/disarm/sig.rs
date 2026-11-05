@@ -42,7 +42,7 @@ pub fn long(kind: &str) -> bool { todo!() }
 pub fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) { todo!() }
 
 /// (src/game/disarm.ts:103 carry)
-pub fn carry(g: &mut crate::game::Game, s: &mut crate::disarm::Strip, sam: CharId) { todo!() }
+pub fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) { todo!() }
 
 /// (src/game/disarm.ts:112 letGo)
 pub fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f64>) { todo!() }

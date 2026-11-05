@@ -139,7 +139,7 @@ impl StateStats {
 }
 impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/buddy.ts:140 answerer ->, src/game/buddy.ts:140)
+/// (TypeScript: inline at src/game/buddy.ts:141 answerer ->, src/game/buddy.ts:141)
 #[derive(Clone, Copy, Debug)]
 pub struct Answerer {
     pub x: RoomfightDefId,
@@ -158,7 +158,7 @@ impl Answerer {
 }
 impl Default for Answerer { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/buddy.ts:152 send(a), src/game/buddy.ts:152)
+/// (TypeScript: inline at src/game/buddy.ts:153 send(a), src/game/buddy.ts:153)
 #[derive(Clone, Copy, Debug)]
 pub struct SendA {
     pub x: RoomfightDefId,

@@ -78,10 +78,10 @@ pub fn drive_cols_dir(g: &mut crate::game::Game, id: DriveColsId) -> f64 { todo!
 pub fn drive_cols_set_dir(g: &mut crate::game::Game, id: DriveColsId, v: f64) { todo!() }
 
 /// (src/game/doors.ts:282 DriveCols.kind)
-pub fn drive_cols_kind(g: &mut crate::game::Game, id: DriveColsId) -> crate::doors::DriveColsKind { todo!() }
+pub fn drive_cols_kind(g: &mut crate::game::Game, id: DriveColsId) -> crate::doors::DoorDriveKind { todo!() }
 
 /// (src/game/doors.ts:282 DriveCols.kind)
-pub fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate::doors::DriveColsSetKindV) { todo!() }
+pub fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate::doors::DoorDriveKind) -> crate::doors::DoorDriveKind { todo!() }
 
 /// (src/game/doors.ts:283 DriveCols.t)
 pub fn drive_cols_t(g: &mut crate::game::Game, id: DriveColsId) -> f64 { todo!() }
@@ -393,7 +393,7 @@ pub fn door_place(g: &mut crate::game::Game, id: DoorId) { todo!() }
 pub fn door_pose_at(g: &mut crate::game::Game, id: DoorId, angle: f64) -> crate::doors::DoorPoseAt { todo!() }
 
 /// (src/game/doors.ts:536 Doors.constructor)
-pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::doors::DoorEvent), st: Option<crate::Opaque>) -> crate::doors::Doors { todo!() }
+pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::doors::DoorEvent)) -> crate::doors::Doors { todo!() }
 
 /// (src/game/doors.ts:538 Doors.byName)
 pub fn doors_by_name(g: &mut crate::game::Game, n: &str) -> Option<DoorId> { todo!() }
@@ -438,7 +438,7 @@ pub fn doors_throws(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn doors_opening(g: &mut crate::game::Game, d: DoorId, dir: f64) -> bool { todo!() }
 
 /// (src/game/doors.ts:596 Doors.driven)
-pub fn doors_driven(g: &mut crate::game::Game, d: DoorId, who: f64, dir: f64, kind: crate::doors::DoorsDrivenKind, quiet: bool, rate: f64) { todo!() }
+pub fn doors_driven(g: &mut crate::game::Game, d: DoorId, who: f64, dir: f64, kind: crate::doors::DoorDriveKind, quiet: bool, rate: f64) { todo!() }
 
 /// (src/game/doors.ts:636 Doors.update)
 pub fn doors_update(g: &mut crate::game::Game, dt: f64, contacts: &mut Vec<crate::doors::DoorContact>) { todo!() }
@@ -503,9 +503,6 @@ pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> 
 /// (src/game/doors.ts:1144 Doors.sound)
 pub fn doors_sound(g: &mut crate::game::Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) { todo!() }
 
-/// (src/game/doors.ts:1147 Doors.onTorn)
-pub fn doors_on_torn(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, DoorId, f64, crate::doors::DoorsOnTornFnCause)) -> crate::FnField { todo!() }
-
 /// (src/game/doors.ts:1148 Doors.torn)
 pub fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::doors::DoorsTornCause>) { todo!() }
 
@@ -520,3 +517,22 @@ pub fn doors_leaf_boxes(g: &mut crate::game::Game) -> Vec<BoxId> { todo!() }
 
 /// (src/game/doors.ts:1190 Doors.posAside)
 pub fn doors_pos_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T { todo!() }
+
+
+/// INVENTED: DoorSwing.sweeps (src/game/doors.ts:559), a closure that captures only what the swing holds (hx, hz = hinge[0], hinge[2]; W = radius; c = closed_dir; S = swing; open): is (x, z) on the floor the leaf sweeps, or within pad of the leaf at either end of its swing. pad absent = 0.
+pub fn door_swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: Option<f64>) -> bool { todo!() }
+
+/// (src/game/doors.ts:1056 Doors.PICK_SECS)
+pub const PICK_SECS: f64 = 4.2;
+
+/// (src/game/doors.ts:1061 Doors.PICK_LEVEL)
+pub const PICK_LEVEL: f64 = 0.16;
+
+/// (src/game/doors.ts:1061 Doors.UNLOCK_LEVEL)
+pub const UNLOCK_LEVEL: f64 = 0.3;
+
+/// (src/game/doors.ts:1061 Doors.KEY_LEVEL)
+pub const KEY_LEVEL: f64 = 0.12;
+
+/// (src/game/doors.ts:1183 Doors.USE_REACH)
+pub const USE_REACH: f64 = 1.35;

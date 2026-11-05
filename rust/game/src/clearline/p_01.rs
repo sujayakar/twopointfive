@@ -7,24 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `bodies` as a list: nothing between its yields writes, so laying it out at once reads the same floor. (clearline.ts bodies)
-fn bodies_of(g: &Game, self_: GuardId) -> Vec<V3> {
-    let mut out = Vec::new();
-    if !g.pl[g.player].down {
-        out.push(g.ch[g.pl[g.player].ch].pos);
-    }
-    for &o in g.guards.iter() {
-        if o != self_ && g.gd[o].state != crate::game::GuardState::Dead {
-            out.push(g.ch[g.gd[o].ch].pos);
-        }
-    }
-    for &o in g.civilians.iter() {
-        if g.gd[o].state != crate::game::GuardState::Dead {
-            out.push(g.ch[g.gd[o].ch].pos);
-        }
-    }
-    out
-}
 /// The live `D` of the TypeScript: his row's Doing, for a write. Only where `doing` has just answered Some and nothing since has ended it.
 fn live<'g>(g: &'g mut Game, gd: GuardId) -> &'g mut Doing {
     mem_of(g, gd).doing.as_mut().unwrap()
@@ -37,17 +19,11 @@ fn lead_of_is(lead_of: Option<LeadsBy>, by: LeadsBy) -> bool {
         _ => false,
     }
 }
-fn lead_by(by: ClearLineBlockedBy) -> LeadsBy {
-    match by {
-        ClearLineBlockedBy::Player => LeadsBy::Player,
-        ClearLineBlockedBy::Guard(b) => LeadsBy::Guard(b),
-    }
-}
 /// The line he says with a friend in his line and nothing to do about it. (clearline.ts:362, 393)
-fn my_line(g: &Game, by: ClearLineBlockedBy) -> String {
+fn my_line(g: &Game, by: LeadsBy) -> String {
     match by {
-        ClearLineBlockedBy::Player => String::from("no shot — you're in my line!"),
-        ClearLineBlockedBy::Guard(b) => alloc::format!("no shot — {}, my line!", g.gd[b].callsign),
+        LeadsBy::Player => String::from("no shot — you're in my line!"),
+        LeadsBy::Guard(b) => alloc::format!("no shot — {}, my line!", g.gd[b].callsign),
     }
 }
 
@@ -231,6 +207,25 @@ pub fn entering(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !e.past
 }
 
+/// Every body on the floor but his own, as a list: nothing between the generator's yields writes, so laying it out at once reads the same floor. (clearline.ts bodies)
+pub fn bodies(g: &mut crate::game::Game, self_: GuardId) -> Vec<V3> {
+    let mut out = Vec::new();
+    if !g.pl[g.player].down {
+        out.push(g.ch[g.pl[g.player].ch].pos);
+    }
+    for &o in g.guards.iter() {
+        if o != self_ && g.gd[o].state != crate::game::GuardState::Dead {
+            out.push(g.ch[g.gd[o].ch].pos);
+        }
+    }
+    for &o in g.civilians.iter() {
+        if g.gd[o].state != crate::game::GuardState::Dead {
+            out.push(g.ch[g.gd[o].ch].pos);
+        }
+    }
+    out
+}
+
 /// A round from `p` at `to` is clear by the fire gate's own tests, from everywhere the gate may measure it. (clearline.ts shotFrom)
 pub fn shot_from(g: &mut crate::game::Game, gd: GuardId, p: V3, to: V3) -> bool {
     let dx = to[0] - p[0];
@@ -273,7 +268,7 @@ pub fn spot_ok(g: &mut crate::game::Game, gd: GuardId, p: V3, to: V3) -> bool {
         }
     }
     let body_m = g.k.clearline.body_m;
-    for b in bodies_of(g, gd) {
+    for b in bodies(g, gd) {
         if flat(b, p) < body_m {
             return false;
         }
@@ -372,7 +367,7 @@ pub fn find_spot(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate
             continue;
         }
         let mut through = false;
-        for b in bodies_of(g, gd) {
+        for b in bodies(g, gd) {
             let [d, t] = off_seg(b, c, p);
             if d < body_m - 0.1 && t > 0.15 {
                 through = true;
@@ -535,7 +530,7 @@ pub fn cover_ok(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
         return false;
     }
     let body_m = g.k.clearline.body_m;
-    for b in bodies_of(g, gd) {
+    for b in bodies(g, gd) {
         if flat(b, p) < body_m {
             return false;
         }
@@ -555,7 +550,7 @@ pub fn cover_ok(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 }
 
 /// roomfight.ts (tickOp): this frame his shot at `tgt` is masked by a friend. True: this rule has it. (clearline.ts clearLineBlocked)
-pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, to: V3, by: crate::clearline::ClearLineBlockedBy) -> bool {
+pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, to: V3, by: crate::clearline::LeadsBy) -> bool {
     let k = g.k.clearline;
     if !k.on || g.gd[gd].script.is_none() {
         return false;
@@ -566,7 +561,7 @@ pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, 
         return false;
     }
     let mut ladder = !crate::roomfight::room_fight_short(g, gd);
-    if let ClearLineBlockedBy::Guard(b) = by {
+    if let LeadsBy::Guard(b) = by {
         let v = g.ch[g.gd[b].ch].vel;
         if m::hyp2(v[0], v[2]) > 0.5 {
             return false;
@@ -580,7 +575,7 @@ pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, 
         }
         ladder = ladder && g.tab.orders_assignment[a].arrived;
     }
-    let is_player = matches!(by, ClearLineBlockedBy::Player);
+    let is_player = matches!(by, LeadsBy::Player);
     g.stats.clearline.blocked += 1;
     let row = mem_of(g, gd);
     if t - row.seen_t > 0.5 || t < row.seen_t {
@@ -621,7 +616,7 @@ pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, 
             return true;
         }
     }
-    if crate::silent::silent_holds(g, gd, tgt) {
+    if crate::silent::silent_holds_round(g, gd, tgt) {
         return false;
     }
     let kneeling = matches!(d, Some(x) if x.what == What::Kneel);
@@ -634,7 +629,7 @@ pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, 
         look_later(g, gd, d.is_some(), t + k.again);
         return false;
     }
-    if k.hold_behind > 0.0 && leads(g, gd, lead_by(by), tgt, to, k.hold_behind) {
+    if k.hold_behind > 0.0 && leads(g, gd, by, tgt, to, k.hold_behind) {
         if kneeling {
             return true;
         }
@@ -645,8 +640,8 @@ pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, 
         return false;
     }
     let who = match by {
-        ClearLineBlockedBy::Player => String::from("Player"),
-        ClearLineBlockedBy::Guard(b) => g.gd[b].callsign.clone(),
+        LeadsBy::Player => String::from("Player"),
+        LeadsBy::Guard(b) => g.gd[b].callsign.clone(),
     };
     if let Some(s) = find_spot(g, gd, to) {
         let walk = m::hyp2(s.along, s.side);
@@ -762,11 +757,6 @@ pub fn clear_line_summary(g: &mut crate::game::Game) -> String {
 pub fn clear_line_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::clearline::ClearLineOf> {
     let d = if g.k.clearline.on { doing(g, gd) } else { None }?;
     Some(ClearLineOf { what: d.what, spot: d.spot, of: d.of })
-}
-
-/// The generator's shape has no type in the skeleton (it came out `crate::Opaque`); this part uses `bodies_of`. (clearline.ts bodies)
-pub fn bodies(g: &mut crate::game::Game, self_: GuardId) -> crate::Opaque {
-    todo!("needs: bodies to return Vec<V3>; bodies_of in this file is the body")
 }
 
 #[cfg(test)]

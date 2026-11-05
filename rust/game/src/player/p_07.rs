@@ -1,4 +1,4 @@
-//! src/game/player.ts lines 2300 to 2630
+//! src/game/player.ts lines 2301 to 2631
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,12 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ---- the one seam left: it waits on the next skeleton (notes.md, ## Skeleton)
-
-/// Doors.USE_REACH, a class's static the skeleton does not have (doors.ts:1183)
-const DOORS_USE_REACH: f64 = 1.35; // SKELETON-GAP: crate::doors::DOORS_USE_REACH (doors.ts:1183)
-fn seam_use_reach() -> f64 { DOORS_USE_REACH }
 
 // ---- buildInteractables' closures, as private functions
 
@@ -127,16 +121,14 @@ macro_rules! offer_cb {
 fn running_cb(_g: &mut Game, base: crate::game::Interactable, verb: crate::game::Verb, text: String, progress: f64) -> crate::game::Interactable {
     running(&base, verb, &text, Some(progress))
 }
-/// a number the TypeScript prints in a template, known to be whole
-fn whole(x: f64) -> String { format!("{}", x as i64) }
 /// `${Math.min(99, Math.round(x * 100))}`
-fn pct(x: f64) -> String { whole(m::min(99.0, m::round(x * 100.0))) }
+fn pct(x: f64) -> String { js::num_str(m::min(99.0, m::round(x * 100.0))) }
 /// a civilian's possessive for 'gun to … head' with the row of WORDS.on
 fn civ_whose(g: &mut Game, cv: CivId) -> String {
     if g.cv[cv].she == "he" { String::from("his") } else { g.cv[cv].her.clone() }
 }
 
-/// the closure interactOrder returns: in reach first, then by what matters (INTERACT_PRIORITY, lower = higher up), then nearest   (player.ts:2558)
+/// the closure interactOrder returns (interactOrder is not in the game: this is the ordering): in reach first, then by what matters (INTERACT_PRIORITY, lower = higher up), then nearest   (player.ts:2559)
 fn interact_cmp(g: &mut Game, p: V3, priority: &JsMap<String, f64>, a: &crate::game::Interactable, b: &crate::game::Interactable) -> f64 {
     if a.in_reach != b.in_reach { return if a.in_reach { -1.0 } else { 1.0 }; }
     let rank = |k: crate::game::InteractableKind| *priority.get(String::from(k.as_str())).unwrap();
@@ -294,7 +286,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             di += 1;
             if crate::doors::door_off(g, d) { continue; }
             let dp = crate::doors::door_pos(g, d);
-            let near = m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) < seam_use_reach();
+            let near = m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) < crate::doors::DOORS_USE_REACH;
             let reach = near && !sprinting;
             let shut = crate::doors::door_is_closed(g, d);
             let pick = crate::doors::door_pick(g, d);
@@ -591,7 +583,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             let qw = crate::quiet::quiet_words(g);
             let line1 = match &qw {
                 Some(q) => format!("{} · {}", q.holder, q.thing),
-                None => format!("rack {} · the drive", whole(g.level.mission.rack.index + 1.0)),
+                None => format!("rack {} · the drive", js::num_str(g.level.mission.rack.index + 1.0)),
             };
             let mut it = mark(crate::game::InteractableKind::Objective, g.level.mission.rack.front, line1, String::from(if reach { "" } else if dragging_any { "hands full" } else { "step closer" }), reach, false);
             it.progress = if drive_t >= 0.0 { Some(m::min(1.0, drive_t / crate::consts::DRIVE_SECS)) } else { None };
@@ -797,9 +789,6 @@ pub fn thing_dist(g: &mut crate::game::Game, it: &crate::game::Interactable, p: 
         None => d,
     }
 }
-
-/// The one ordering for 'what is offered near Sam'. The TypeScript only makes and returns a comparer; the skeleton dropped the return, so nothing is left to do here. The comparer is `interact_cmp`, which buildInteractables calls.   (player.ts interactOrder)
-pub fn interact_order(g: &mut crate::game::Game, p: V3) {}
 
 /// how many of a kind are on the belt   (player.ts throwCount)
 pub fn throw_count(g: &mut crate::game::Game, kind: crate::game::ThrowKind) -> f64 {

@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The price list `dearOnly` hands out: `dear_only_price` over these captures. Only the branch of orders.ts:2377 that ORDERS.cleared (settled, on) never takes asks for it.   (cleared.ts:105)
-fn seam_dear_only_pen(g: &mut Game, room: f64, dear: f64) -> crate::FnField { todo!("needs: the stub gone from sig.rs (no caller on the page), or a return type holding (room, dear)") }
-
 /// `M[i]` of a Uint16Array: `None` is JavaScript's undefined (a negative, NaN or past-the-end index).
 fn cell_at(m: &[u16], i: f64) -> Option<f64> {
     if i >= 0.0 && i < m.len() as f64 { Some(m[i as usize] as f64) } else { None }
@@ -20,7 +17,7 @@ fn known_flag(g: &Game, r: f64) -> bool {
     r >= 0.0 && g.cleared.known_room.get(r as usize).copied().unwrap_or(0) != 0
 }
 
-/// The built grid, once `ensure_built` has run.
+/// The built grid, once `cleared_rooms_build` has run.
 fn grid(g: &Game) -> &[u16] {
     g.cleared.room_of_cell.as_deref().unwrap()
 }
@@ -33,8 +30,8 @@ fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
     g.col.nav.blocked[i as usize] != 1 && !dc.has(crate::Num(i + 0.0))
 }
 
-/// The body of `build`, without handing out a copy of the grid. Built once: a game has one nav grid, rebaked in place.   (cleared.ts:44)
-fn ensure_built(g: &mut Game) {
+/// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.   (cleared.ts ClearedRooms.build)
+pub fn cleared_rooms_build(g: &mut crate::game::Game) {
     if g.cleared.room_of_cell.is_some() { return; }
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let dc = crate::guards::door_cells(g);
@@ -105,19 +102,13 @@ fn ensure_built(g: &mut Game) {
 }
 
 /// What `dearFor`'s price list answers for a cell. The room map and what is known are read live, as the closure's shared arrays were.   (cleared.ts:102)
-fn dear_price(g: &mut Game, price: &crate::cleared::DearPrice, ix: f64, iz: f64) -> f64 {
+pub fn dear_price(g: &mut crate::game::Game, price: &crate::cleared::DearPrice, ix: f64, iz: f64) -> f64 {
     let crate::cleared::DearPrice::Rooms { dear, from_room, mark_rooms, also } = price;
     let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
     match cell_at(grid(g), i) {
         Some(r) if r != 0.0 && (also.contains(&r) || (!known_flag(g, r) && r != *from_room && !mark_rooms.contains(&r))) => *dear,
         _ => 1.0,
     }
-}
-
-/// What `dearOnly`'s price list answers for a cell.   (cleared.ts:105)
-fn dear_only_price(g: &mut Game, room: f64, dear: f64, ix: f64, iz: f64) -> f64 {
-    let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
-    if cell_at(grid(g), i) == Some(room) { dear } else { 1.0 }
 }
 
 /// A new one: the field initialisers, nothing more.   (cleared.ts ClearedRooms.constructor)
@@ -134,15 +125,9 @@ pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
     g.cleared.stats = crate::cleared::ClearedRoomsStats { round: 0.0, through: 0.0, face: 0.0, mouth: 0.0 };
 }
 
-/// The rooms of the level: a flood from the floor on either face of every door.   (cleared.ts ClearedRooms.build)
-pub fn cleared_rooms_build(g: &mut crate::game::Game) -> Vec<u16> {
-    ensure_built(g);
-    grid(g).to_vec()
-}
-
 /// The room `p` stands in (0: none, a doorway, open floor).   (cleared.ts ClearedRooms.roomAt)
 pub fn cleared_rooms_room_at(g: &mut crate::game::Game, p: V3) -> f64 {
-    ensure_built(g);
+    cleared_rooms_build(g);
     let cell = g.col.nav.cell;
     let x = m::floor(p[0] / cell);
     let z = m::floor(p[2] / cell);
@@ -159,7 +144,7 @@ pub fn cleared_rooms_known_at(g: &mut crate::game::Game, p: V3) -> bool {
 
 /// The room on a door's `side` face, by the cell its floor was flooded from (0: open floor, or no floor there).   (cleared.ts ClearedRooms.roomBy)
 pub fn cleared_rooms_room_by(g: &mut crate::game::Game, d: DoorId, side: f64) -> f64 {
-    ensure_built(g);
+    cleared_rooms_build(g);
     let s = g.cleared.seeds.get(d).map_or(-1.0, |p| p[if side > 0.0 { 0 } else { 1 }]);
     if s < 0.0 { return 0.0; }
     cell_at(grid(g), s).unwrap_or(0.0)
@@ -167,7 +152,7 @@ pub fn cleared_rooms_room_by(g: &mut crate::game::Game, d: DoorId, side: f64) ->
 
 /// Is there floor at all on that face of the door.   (cleared.ts ClearedRooms.hasFloor)
 pub fn cleared_rooms_has_floor(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
-    ensure_built(g);
+    cleared_rooms_build(g);
     g.cleared.seeds.get(d).map_or(-1.0, |p| p[if side > 0.0 { 0 } else { 1 }]) >= 0.0
 }
 
@@ -175,7 +160,7 @@ pub fn cleared_rooms_has_floor(g: &mut crate::game::Game, d: DoorId, side: f64) 
 pub fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
     let r = cleared_rooms_room_at(g, p);
     if js::truthy(r) { return vec![r]; }
-    ensure_built(g);
+    cleared_rooms_build(g);
     let cell = g.col.nav.cell;
     let x = m::floor(p[0] / cell);
     let z = m::floor(p[2] / cell);
@@ -201,7 +186,7 @@ pub fn cleared_rooms_is_known(g: &mut crate::game::Game, room: f64) -> bool {
 
 /// Where somebody might stand in the rooms nobody of the team has been in: one point of their floor every `step` nav cells each way.   (cleared.ts ClearedRooms.unknownEyes)
 pub fn cleared_rooms_unknown_eyes(g: &mut crate::game::Game, step: f64) -> Vec<crate::cleared::ClearedRoomsUnknownEyesItem> {
-    ensure_built(g);
+    cleared_rooms_build(g);
     let (w, h, cell) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let mut out = Vec::new();
     let n = m::max(1.0, js::to_i32(step) as f64);
@@ -242,8 +227,7 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
             cleared_rooms_mark(g, p);
         }
     }
-    let who = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &who) {
+    for pl in crate::seats::men(g) {
         if !g.pl[pl].down {
             let p = g.ch[g.pl[pl].ch].pos;
             cleared_rooms_mark(g, p);
@@ -254,7 +238,7 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
 /// A walk's price list for nav.findPath: every cell of a room nobody of the team has been in is `dear`, bar the room he stands in and the room his mark is in; `also`: rooms dear whatever is known of them. None: nothing on this floor is dear for this walk.   (cleared.ts ClearedRooms.dearFor)
 pub fn cleared_rooms_dear_for(g: &mut crate::game::Game, from: V3, to: V3, dear: f64, also: Option<&[f64]>) -> Option<crate::cleared::DearPrice> {
     let also = also.unwrap_or(&[]);
-    ensure_built(g);
+    cleared_rooms_build(g);
     let a = cleared_rooms_room_at(g, from);
     let b = cleared_rooms_rooms_of(g, to);
     let mut some = also.iter().any(|&r| r > 0.0);
@@ -269,12 +253,6 @@ pub fn cleared_rooms_dear_for(g: &mut crate::game::Game, from: V3, to: V3, dear:
     }
     if !some { return None; }
     Some(crate::cleared::DearPrice::Rooms { dear, from_room: a, mark_rooms: b, also: also.to_vec() })
-}
-
-/// One room alone dear.   (cleared.ts ClearedRooms.dearOnly)
-pub fn cleared_rooms_dear_only(g: &mut crate::game::Game, room: f64, dear: f64) -> crate::FnField {
-    ensure_built(g);
-    seam_dear_only_pen(g, room, dear)
 }
 
 /// Metres of a path (from `from`, by its corners) that lie on cells `pen` prices dear.   (cleared.ts ClearedRooms.dearAlong)
@@ -299,7 +277,7 @@ pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3]
 
 /// The line for the checks.   (cleared.ts ClearedRooms.summary)
 pub fn cleared_rooms_summary(g: &mut crate::game::Game) -> String {
-    ensure_built(g);
+    cleared_rooms_build(g);
     let k = g.cleared.known;
     let s = g.cleared.stats;
     alloc::format!(
@@ -324,7 +302,7 @@ mod tests {
         assert_eq!(metres.to_bits(), 0x4033adbc8267228b);
     }
 
-    /// An index a typed array has no element for reads as undefined, which `dearOnly` tells from a 0.
+    /// An index a typed array has no element for reads as undefined, not a panic.
     #[test]
     fn cell_at_reads_as_a_typed_array_does() {
         let cells = [0u16, 7, 65535];

@@ -1,4 +1,4 @@
-//! src/game/qrf.ts lines 426 to 877
+//! src/game/qrf.ts lines 427 to 878
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,12 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ---------------------------------------------------------------- seams: each waits on the skeleton (notes.md, ## Skeleton)
-/// qrf.ts:571 `g.audio.play(name, pos, volume, {rate})`: game_audio_like_play's opts is a map of Opaque, which cannot hold the rate
-fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, volume: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to hold {{rate}} (qrf.ts:571)") }
-/// qrf.ts:525 `spawnUnit` throws where a man cannot be stood up, and the caller catches it; spawn_unit returns GuardId and cannot say so
-fn seam_spawn_unit(g: &mut Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> { todo!("needs: a spawn_unit that can refuse (qrf.ts:525)") }
 
 // ---------------------------------------------------------------- small private helpers
 fn pos_of(g: &Game, x: GuardId) -> V3 { g.ch[g.gd[x].ch].pos }
@@ -34,10 +28,6 @@ fn set_last_known(g: &mut Game, x: GuardId, at: V3) {
     g.gd[x].last_known = Some(at);
     g.gd[x].fix_stamp = g.gd[x].fix_stamp.wrapping_add(1);
 }
-/// `face: null` in a RoutePatch: its absent field means "leave it", so the null is written after the call (order() only assigns them)
-fn clear_face(g: &mut Game, x: GuardId) { if let Some(s) = g.gd[x].script.as_mut() { s.face = None; } }
-/// `aimAt: null` in a RoutePatch, the same way
-fn clear_aim(g: &mut Game, x: GuardId) { if let Some(s) = g.gd[x].script.as_mut() { s.aim_at = None; } }
 /// `st[0] = want[0]; st[1] = 0; st[2] = want[2]` on his station. In the TypeScript the station IS his script's goal once he has been ordered onto it, so the
 /// goal creeps with it and no new leg starts. Returns the station and whether his goal was that very point (by value: the Vec3 is no object here).
 fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
@@ -53,12 +43,6 @@ fn write_station(g: &mut Game, x: GuardId, want: V3) -> (V3, bool) {
 }
 
 // ---------------------------------------------------------------- the calls
-/// The radio's words for this level's team (null: it has none).   (qrf.ts responseWords)
-pub fn response_words(g: &mut crate::game::Game) -> Option<crate::qrf::ResponseWords> {
-    let r = response_of(g)?;
-    Some(crate::qrf::ResponseWords { site: r.site, at: r.at, team: r.team })
-}
-
 /// What this call gets: the way in, how many, how long, off the game's own die.   (qrf.ts dealt)
 pub fn dealt(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> crate::qrf::Dealt {
     let qrf_eta = g.tune.qrf_eta;
@@ -190,6 +174,7 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
         g.qrf.answered = true;
         let n = m::min(4.0, if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) });
         let secs = m::round(g.qrf.arrive_at - g.time);
+        let (n, secs) = (js::num_str(n), js::num_str(secs));
         let silent = g.qrf.reason == Some(QrfReason::Silent);
         if !quiet && !own {
             let text = if silent { format!("all stations — QRF is rolling to two-six: {} men, west stairwell, {} seconds", n, secs) }
@@ -263,7 +248,7 @@ pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
             team, pos: at, yaw: Some(yaw), weapon: Some(crate::weapons::WeaponId::Aks74u), name: Some(format!("{}-{}", mk.tag, i + 1)), light: Some(true),
             tint: Some(crate::consts::qrf_tint()), tint2: Some(crate::consts::qrf_tint2()), carbine_rig: None, pair: None, budget,
         };
-        let gd = match seam_spawn_unit(g, &opts) {
+        let gd = match crate::guards::spawn_unit(g, &opts) {
             Ok(gd) => gd,
             Err(e) => { let short: String = e.chars().take(40).collect(); let what = format!("spawn-failed:{}:{}", i, short); note(g, &what); break; }
         };
@@ -282,7 +267,7 @@ pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
     }
     g.qrf.bangs = g.qrf.men.len() as f64;
     let count = g.qrf.men.len();
-    if n < want { let what = format!("capped:{}/{}", count, want); note(g, &what); }
+    if n < want { let what = format!("capped:{}/{}", count, js::num_str(want)); note(g, &what); }
     if count == 0 {
         g.qrf.state = QrfState::Deployed;
         g.qrf.deployed_at = g.time;
@@ -365,7 +350,7 @@ pub fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
     let who = char_id(g, by);
     door_set_last_who(g, d, who);
     let at = door_pos(g, d);
-    seam_audio_play_rate(g, "doorBash", at, 0.9, 0.85);
+    crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
 }
 
 // ---------------------------------------------------------------- the men, every frame
@@ -677,7 +662,7 @@ pub fn phase_file(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         g.gd[x].awareness = m::max(g.gd[x].awareness, HUNT_AWARENESS);
         let e = mk.entry.get(i).copied().unwrap_or(mk.entry[0]);
         let ef = mk.entry_face.get(i).copied().unwrap_or(m::PI / 2.0);
-        route(g, x, &[e], Some(crate::qrf::RoutePatch { speed: Some(2.4), face: Some(ef), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), aim_at: Some(sector_point(e, ef, None, None)), crouch: Some(i == 3), strafe: Some(false), ..Default::default() }));
+        route(g, x, &[e], Some(crate::squad::OrderPatch { speed: Some(Some(2.4)), face: Some(Some(ef)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)), aim_at: Some(Some(sector_point(e, ef, None, None))), crouch: Some(Some(i == 3)), strafe: Some(Some(false)), ..Default::default() }));
         g.qrf.filed += 1.0;
         let what = format!("in:{}", i + 1);
         note(g, &what);
@@ -839,7 +824,7 @@ pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesIte
         for r in &rooms {
             let mut held = false;
             for &h in &r.defenders {
-                if g.gd[h].state != crate::game::GuardState::Dead && !crate::runner::runner_owns(g, h) { held = true; break; }
+                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has_him(g, h, crate::owner::own().runner) { held = true; break; }
             }
             if !held { out.push(SweepPlacesItem { name: r.def.name.clone(), pos: mid(&r.def.bounds) }); }
         }
@@ -850,13 +835,13 @@ pub fn sweep_places(g: &mut crate::game::Game) -> Vec<crate::qrf::SweepPlacesIte
     out
 }
 
-fn cr_at(p: V3) -> String { format!("({}, {})", p[0], p[2]) }
+fn cr_at(p: V3) -> String { format!("({}, {})", js::num_str(p[0]), js::num_str(p[2])) }
 fn cr_free(g: &mut Game, p: V3) -> bool { !nav_blocked(g, p[0], p[2]) }
 fn cr_walk(g: &mut Game, a: V3, b: V3) -> f64 { path_len(g, [a[0], 0.0, a[2]], [b[0], 0.0, b[2]]) }
 fn cr_apart(out: &mut Vec<String>, ps: &[V3], what: &str) {
     for i in 0..ps.len() {
         for j in i + 1..ps.len() {
-            if flat(ps[i], ps[j]) < 0.6 { out.push(format!("{}: marks {} and {} are {:.2} m apart", what, i + 1, j + 1, flat(ps[i], ps[j]))); }
+            if flat(ps[i], ps[j]) < 0.6 { out.push(format!("{}: marks {} and {} are {} m apart", what, i + 1, j + 1, js::to_fixed(flat(ps[i], ps[j]), 2))); }
         }
     }
 }
@@ -887,7 +872,7 @@ pub fn check_response(g: &mut crate::game::Game) -> Vec<String> {
             if !cr_free(g, p) || !cr_free(g, e) { continue; }
             let l = cr_walk(g, p, e);
             if !(l <= 30.0) {
-                let how = if l == f64::INFINITY { String::from("no walk at all") } else { format!("{:.1} m", l) };
+                let how = if l == f64::INFINITY { String::from("no walk at all") } else { format!("{} m", js::to_fixed(l, 1)) };
                 out.push(format!("{}: man {}'s walk from muster to his fan mark is {} (30 m at most)", way, i + 1, how));
             }
         }
@@ -905,7 +890,7 @@ pub fn check_response(g: &mut crate::game::Game) -> Vec<String> {
     for s in &starts {
         if !r.ways.iter().any(|y| flat(s.sam, y.muster[0]) >= clear_m) {
             let name = s.name.clone().unwrap_or_else(|| cr_at(s.sam));
-            out.push(format!("start '{}': every way's muster is within {} m of it", name, clear_m));
+            out.push(format!("start '{}': every way's muster is within {} m of it", name, js::num_str(clear_m)));
         }
     }
     let outside = r.outside.clone().unwrap_or_default();
@@ -969,9 +954,7 @@ pub fn start_move(g: &mut crate::game::Game, el: &[GuardId]) {
     g.qrf.move_speed = if g.qrf.cue_rush { RUSH_SPEED } else { MOVE_SPEED };
     g.qrf.cue_rush = false;
     let speed = g.qrf.move_speed;
-    route(g, lead, &[goal], Some(crate::qrf::RoutePatch { speed: Some(speed), strafe: Some(false), stance: Some(Stance::None), upper: Some(UpperMode::Aim), crouch: Some(false), ..Default::default() }));
-    clear_face(g, lead);
-    clear_aim(g, lead);
+    route(g, lead, &[goal], Some(crate::squad::OrderPatch { speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), stance: Some(Some(Stance::None)), upper: Some(Some(UpperMode::Aim)), aim_at: Some(None), crouch: Some(Some(false)), ..Default::default() }));
     for (i, &x) in el.iter().enumerate() {
         if i == 0 { continue; }
         g.gd[x].state = crate::game::GuardState::Search;

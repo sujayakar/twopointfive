@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 use ::sim::lights::{
     self as rs, Lights, BEACONS, CAMERAS, C_DEAD, C_LAST, C_SAW, C_SWEEP, LASERS, L_DEAD, L_HELD, M_ACTIVE, M_PERMANENT, ROWS, R_AREA, R_BEACON, R_CONE, R_ON,
@@ -33,49 +33,11 @@ fn las_slot(g: &Game, id: LaserRtId) -> usize {
     g.tab.devices_laser_rt[id].slot as usize
 }
 
-// ---- the seams: what the skeleton has no way to reach yet. A lamp (`RtLight`) is a bare `LightId` with no record behind it (notes.md, ## Skeleton).
-/// (lightshome.ts:188,190,204,216,252 `l.row`) undefined = none
-fn seam_lamp_row(g: &mut Game, l: LightId) -> Option<usize> { g.tab.light[l].row.map(|r| r as usize) } // SKELETON-GAP was: RtLight.row by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:188,190 `l.row = …`)
-fn seam_lamp_set_row(g: &mut Game, l: LightId, row: Option<usize>) { g.tab.light[l].row = row.map(|r| r as f64); } // SKELETON-GAP was: RtLight.row by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:188 `l.owner`)
-fn seam_lamp_owner(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].owner } // SKELETON-GAP was: RtLight.owner by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:196 `l.name`, in the error)
-fn seam_lamp_name(g: &mut Game, l: LightId) -> String { g.tab.light[l].name.clone() } // SKELETON-GAP was: RtLight.name by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:184 `b.light.peakIntensity`)
-fn seam_lamp_peak_intensity(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].peak_intensity } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:245 `l.peakIntensity = …`)
-fn seam_lamp_set_peak_intensity(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].peak_intensity = x; } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:206 `l.pos`)
-fn seam_lamp_pos(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].pos } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:252 `cone.pos = …`)
-fn seam_lamp_set_pos(g: &mut Game, l: LightId, x: V3) { g.tab.light[l].pos = x; } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:206 `l.range`)
-fn seam_lamp_range(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].range } // SKELETON-GAP was: RtLight.range by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:206 `l.radius`)
-fn seam_lamp_radius(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].radius } // SKELETON-GAP was: RtLight.radius by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:206 `l.kind`)
-fn seam_lamp_kind(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].kind } // SKELETON-GAP was: RtLight.kind by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:207 `l.dir`)
-fn seam_lamp_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:246,252 `l.dir = …`)
-fn seam_lamp_set_dir(g: &mut Game, l: LightId, x: V3) { g.tab.light[l].dir = x; } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:207 `l.outerDeg`)
-fn seam_lamp_outer_deg(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].outer_deg } // SKELETON-GAP was: RtLight.outerDeg by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:207 `l.innerDeg`)
-fn seam_lamp_inner_deg(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].inner_deg } // SKELETON-GAP was: RtLight.innerDeg by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:208 `l.color`)
-fn seam_lamp_color(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].color } // SKELETON-GAP was: RtLight.color by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:208 `l.intensity`)
-fn seam_lamp_intensity(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].intensity } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:244 `l.intensity = …`)
-fn seam_lamp_set_intensity(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].intensity = x; } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:210,215 `l.enabled`)
-fn seam_lamp_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:244,252 `l.enabled = …`)
-fn seam_lamp_set_enabled(g: &mut Game, l: LightId, x: bool) { g.tab.light[l].enabled = x; } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
-/// (lightshome.ts:205 `l.steady`) its intensity, pos, radius
-fn seam_lamp_steady(g: &mut Game, l: LightId) -> Option<(f64, V3, f64)> { g.tab.light[l].steady.map(|s| (s.intensity, s.pos, s.radius)) } // (skeleton 4 has the row)
+/// a lamp's row, as an index (`RtLight.row`; undefined = none)
+#[inline(always)]
+fn lamp_row(g: &Game, l: LightId) -> Option<usize> {
+    g.tab.light[l].row.map(|r| r as usize)
+}
 
 /// Where the columns stand is the block's own struct here: what is left of the TypeScript's reading of them is that the module and this file agree on how much a part holds. (lightshome.ts columns)
 pub fn columns(g: &mut crate::game::Game) {
@@ -379,12 +341,9 @@ pub fn light_home_laser(g: &mut crate::game::Game, target: FixtureId, len: f64) 
 
 /// a lamp's row, which the module writes: it must have one (lightshome.ts stand's rowOf)
 fn row_of(g: &mut Game, l: LightId) -> u32 {
-    match seam_lamp_row(g, l) {
+    match lamp_row(g, l) {
         Some(r) => r as u32,
-        None => {
-            let name = seam_lamp_name(g, l);
-            panic!("the lamp '{}' has an owner or is not in the list, and the module writes it: a beacon's spot and a camera's cone must each have a row", name);
-        }
+        None => panic!("the lamp '{}' has an owner or is not in the list, and the module writes it: a beacon's spot and a camera's cone must each have a row", g.tab.light[l].name),
     }
 }
 
@@ -403,7 +362,7 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
         }
     }
     for b in beacons {
-        let base = seam_lamp_peak_intensity(g, b.light);
+        let base = g.tab.light[b.light].peak_intensity;
         who.set(b.light, (R_BEACON, b.target, base));
     }
     for c in cones {
@@ -414,19 +373,19 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
     let mut r: usize = 0;
     g.light_home.lamps = Vec::new();
     for &l in list {
-        seam_lamp_set_row(g, l, None);
+        g.tab.light[l].row = None;
         let w = who.get(l).copied();
         let (role, t, base) = match w {
             Some(w) => w,
             None => continue,
         };
-        if js::truthy(seam_lamp_owner(g, l)) {
+        if js::truthy(g.tab.light[l].owner) {
             continue; // (a lamp with an owner gets no row: `skipOwner` is the question's, and only the question's own lamps have one)
         }
         if r >= ROWS {
             panic!("a level of more than {} lamps on its fixtures got past game/levelfit.ts", ROWS);
         }
-        seam_lamp_set_row(g, l, Some(r));
+        g.tab.light[l].row = Some(r as f64);
         g.light_home.lamps.push(l);
         let i = fix_i(g, t) as u32;
         let monitors = g.tab.sim_lightshome_fixture[t].group == "monitors";
@@ -457,37 +416,34 @@ pub fn light_home_stand(g: &mut crate::game::Game, list: &[LightId], targets: &[
 
 /// A lamp's whole record into its row, as the lamp stands. Nothing for a lamp with no row. (lightshome.ts LightHome.feed)
 pub fn light_home_feed(g: &mut crate::game::Game, l: LightId) {
-    let r = match seam_lamp_row(g, l) {
+    let r = match lamp_row(g, l) {
         Some(r) => r,
         None => return,
     };
-    let s = seam_lamp_steady(g, l);
-    let (pos, range, radius, kind) = (seam_lamp_pos(g, l), seam_lamp_range(g, l), seam_lamp_radius(g, l), seam_lamp_kind(g, l));
-    let (dir, outer, inner) = (seam_lamp_dir(g, l), seam_lamp_outer_deg(g, l), seam_lamp_inner_deg(g, l));
-    let (color, intensity, enabled) = (seam_lamp_color(g, l), seam_lamp_intensity(g, l), seam_lamp_enabled(g, l));
+    let lamp = &g.tab.light[l];
     let c = lights(g);
-    c.x[r] = pos[0];
-    c.y[r] = pos[1];
-    c.z[r] = pos[2];
-    c.range[r] = range;
-    c.radius[r] = radius;
-    c.kind[r] = kind;
-    c.dx[r] = dir[0];
-    c.dy[r] = dir[1];
-    c.dz[r] = dir[2];
-    c.outer[r] = outer;
-    c.inner[r] = inner;
-    c.r[r] = color[0];
-    c.g[r] = color[1];
-    c.b[r] = color[2];
-    c.intensity[r] = intensity;
-    match s {
-        Some((s_intensity, s_pos, s_radius)) => {
-            c.sx[r] = s_pos[0];
-            c.sy[r] = s_pos[1];
-            c.sz[r] = s_pos[2];
-            c.s_radius[r] = s_radius;
-            c.s_intensity[r] = s_intensity;
+    c.x[r] = lamp.pos[0];
+    c.y[r] = lamp.pos[1];
+    c.z[r] = lamp.pos[2];
+    c.range[r] = lamp.range;
+    c.radius[r] = lamp.radius;
+    c.kind[r] = lamp.kind;
+    c.dx[r] = lamp.dir[0];
+    c.dy[r] = lamp.dir[1];
+    c.dz[r] = lamp.dir[2];
+    c.outer[r] = lamp.outer_deg;
+    c.inner[r] = lamp.inner_deg;
+    c.r[r] = lamp.color[0];
+    c.g[r] = lamp.color[1];
+    c.b[r] = lamp.color[2];
+    c.intensity[r] = lamp.intensity;
+    match &lamp.steady {
+        Some(s) => {
+            c.sx[r] = s.pos[0];
+            c.sy[r] = s.pos[1];
+            c.sz[r] = s.pos[2];
+            c.s_radius[r] = s.radius;
+            c.s_intensity[r] = s.intensity;
         }
         None => {
             c.sx[r] = 0.0;
@@ -497,16 +453,16 @@ pub fn light_home_feed(g: &mut crate::game::Game, l: LightId) {
             c.s_intensity[r] = 0.0;
         }
     }
-    c.row_bits[r] = (c.row_bits[r] & !(R_ON | R_STEADY)) | if enabled { R_ON } else { 0 } | if s.is_some() { R_STEADY } else { 0 };
+    c.row_bits[r] = (c.row_bits[r] & !(R_ON | R_STEADY)) | if lamp.enabled { R_ON } else { 0 } | if lamp.steady.is_some() { R_STEADY } else { 0 };
 }
 
 /// …of a lamp somebody moves each tick (a fire's): only while it burns; out, its record is the picture's alone. (lightshome.ts LightHome.feedBurning)
 pub fn light_home_feed_burning(g: &mut crate::game::Game, l: LightId) {
-    if seam_lamp_enabled(g, l) {
+    if g.tab.light[l].enabled {
         light_home_feed(g, l);
         return;
     }
-    if let Some(r) = seam_lamp_row(g, l) {
+    if let Some(r) = lamp_row(g, l) {
         lights(g).row_bits[r] &= !R_ON;
     }
 }
@@ -546,12 +502,13 @@ pub fn light_home_paint(g: &mut crate::game::Game) {
         }
         let (i, dir) = (c.intensity[r], [c.dx[r], c.dy[r], c.dz[r]]);
         let l = g.light_home.lamps[r];
-        seam_lamp_set_enabled(g, l, b & R_ON != 0);
-        seam_lamp_set_intensity(g, l, i);
+        let lamp = &mut g.tab.light[l];
+        lamp.enabled = b & R_ON != 0;
+        lamp.intensity = i;
         if role == R_AREA {
-            seam_lamp_set_peak_intensity(g, l, i);
+            lamp.peak_intensity = i;
         } else if role == R_BEACON {
-            seam_lamp_set_dir(g, l, dir);
+            lamp.dir = dir;
         }
     }
 }
@@ -560,12 +517,12 @@ pub fn light_home_paint(g: &mut crate::game::Game) {
 pub fn light_home_camera_pan(g: &mut crate::game::Game, slot: f64, cone: Option<LightId>, dt: f64, live: bool, cones: bool) -> f64 {
     let out = rs::camera_pan(g.sim, slot as usize, dt, live, cones);
     if let Some(cone) = cone {
-        if let Some(r) = seam_lamp_row(g, cone) {
+        if let Some(r) = lamp_row(g, cone) {
             let c = lights(g);
-            let (on, pos, dir) = (c.row_bits[r] & R_ON != 0, [c.x[r], c.y[r], c.z[r]], [c.dx[r], c.dy[r], c.dz[r]]);
-            seam_lamp_set_enabled(g, cone, on);
-            seam_lamp_set_pos(g, cone, pos);
-            seam_lamp_set_dir(g, cone, dir);
+            let lamp = &mut g.tab.light[cone];
+            lamp.enabled = c.row_bits[r] & R_ON != 0;
+            lamp.pos = [c.x[r], c.y[r], c.z[r]];
+            lamp.dir = [c.dx[r], c.dy[r], c.dz[r]];
         }
     }
     out as f64
@@ -651,6 +608,102 @@ mod tests {
             assert_eq!((laser_machine_trips(g, t), laser_machine_dead_called(g, t), laser_machine_held(g, t)), (2.0, true, false));
             laser_machine_put(g, t, 3.0, 2.0, false, true);
             assert_eq!((laser_machine_dead_called(g, t), laser_machine_held(g, t)), (false, true));
+        }).unwrap().join().unwrap();
+    }
+
+    /// a lamp of the list, as a level's lights hang it
+    fn lamp(g: &mut Game, name: &str, on: bool) -> LightId {
+        let mut l = crate::render_lights::RtLight::zeroed();
+        l.name = String::from(name);
+        l.enabled = on;
+        g.tab.light.push(l)
+    }
+
+    /// the rows: stood in the list's order, written from the lamp's record, and painted back (lightshome.ts stand, feed, feedBurning, paint, cameraPan's cone)
+    #[test]
+    fn the_rows_stand_and_paint() {
+        std::thread::Builder::new().stack_size(64 << 20).spawn(|| {
+            let mut g = Box::new(Game::blank());
+            g.sim = 2;
+            let g = &mut *g;
+            g.light_home = light_home_new(g, crate::Opaque);
+
+            let (own, panel, none, owned, spot, cone) = (lamp(g, "own", true), lamp(g, "panel", true), lamp(g, "none", true), lamp(g, "owned", true), lamp(g, "spot", true), lamp(g, "cone", true));
+            g.tab.light[owned].owner = 7.0;
+            g.tab.light[spot].peak_intensity = 9.0;
+            g.tab.light[own].pos = [1.0, 2.0, 3.0];
+            g.tab.light[own].intensity = 5.0;
+            g.tab.light[own].steady = Some(crate::render_lights::RtLightSteady { intensity: 4.0, pos: [6.0, 7.0, 8.0], radius: 0.5, ..crate::render_lights::RtLightSteady::zeroed() });
+
+            let a = light_home_add(g, &FixtureDef { light: Some(own), ..def(true, FixtureDefKind::Analytic) });
+            let b = light_home_add(g, &FixtureDef { group: String::from("monitors"), area_lights: Some(vec![FixtureDefAreaLightsItem { light: panel, base: 2.5 }]), ..def(true, FixtureDefKind::Emissive) });
+            let c = light_home_add(g, &FixtureDef { light: Some(owned), ..def(true, FixtureDefKind::Analytic) });
+            let s = light_home_camera(g, c, 0.0, None, 6.0, 0.0, [0.0, 0.0, 0.0]);
+            let (fa, fb, fc) = (&g.tab.sim_lightshome_fixture[a], &g.tab.sim_lightshome_fixture[b], &g.tab.sim_lightshome_fixture[c]);
+            assert!(fa.area_lights.is_none() && fb.area_lights.is_some() && fc.light == Some(owned));
+
+            // the list's order deals the rows, not the roles' order; no fixture's or an owner's lamp has none
+            light_home_stand(g, &[spot, none, own, owned, panel, cone], &[a, b, c], &[BeaconFact { light: spot, phase: 0.25, target: a }], &[LightHomeStandConesItem { light: Some(cone), target: c, slot: s }]);
+            let rows = |g: &Game, l: LightId| g.tab.light[l].row;
+            assert_eq!((rows(g, spot), rows(g, none), rows(g, own), rows(g, owned), rows(g, panel), rows(g, cone)), (Some(0.0), None, Some(1.0), None, Some(2.0), Some(3.0)));
+            assert_eq!(g.light_home.lamps, vec![spot, own, panel, cone]);
+
+            let l = lights(g);
+            assert_eq!(l.rows, 4);
+            assert_eq!(l.row_bits[0], R_BEACON | R_PASSING | R_ON);
+            assert_eq!(l.row_bits[1], R_OWN | R_ON | R_STEADY);
+            assert_eq!(l.row_bits[2], R_AREA | R_SCREEN | R_ON);
+            assert_eq!(l.row_bits[3], R_CONE | R_ON);
+            assert_eq!((l.row_base[0], l.row_base[1], l.row_base[2], l.row_base[3]), (9.0, 0.0, 2.5, 0.0));
+            assert_eq!((l.row_target[0], l.row_target[1], l.row_target[2], l.row_target[3]), (0, 0, 1, 2));
+            assert_eq!((l.x[1], l.y[1], l.z[1], l.intensity[1]), (1.0, 2.0, 3.0, 5.0));
+            assert_eq!((l.sx[1], l.sy[1], l.sz[1], l.s_radius[1], l.s_intensity[1]), (6.0, 7.0, 8.0, 0.5, 4.0));
+            assert_eq!((l.beacons, l.beacon_phase[0], l.beacon_row[0], l.beacon_target[0], l.cam_row[0]), (1, 0.25, 0, 0, 3));
+
+            // a lamp out: its record stays out of the block, and only the row's bit goes down
+            g.tab.light[own].enabled = false;
+            g.tab.light[own].intensity = 99.0;
+            light_home_feed_burning(g, own);
+            let l = lights(g);
+            assert_eq!((l.row_bits[1], l.intensity[1]), (R_OWN | R_STEADY, 5.0));
+            // lit again: the whole record; the steady self gone takes its columns to zeros and its bit down
+            g.tab.light[own].enabled = true;
+            g.tab.light[own].steady = None;
+            light_home_feed_burning(g, own);
+            let l = lights(g);
+            assert_eq!((l.row_bits[1], l.intensity[1], l.sx[1], l.s_intensity[1]), (R_OWN | R_ON, 99.0, 0.0, 0.0));
+            // a lamp with no row: nothing, and no fault
+            light_home_feed(g, none);
+            light_home_feed_burning(g, none);
+
+            // paint: what the module worked out goes to the lamps, by role; a cone's row is not painted
+            let l = lights(g);
+            l.intensity[0] = 11.0;
+            l.dx[0] = 0.5;
+            l.dy[0] = 0.25;
+            l.dz[0] = 0.75;
+            l.intensity[1] = 12.0;
+            l.dx[1] = 0.125;
+            l.intensity[2] = 13.0;
+            l.row_bits[2] &= !R_ON;
+            l.intensity[3] = 14.0;
+            g.tab.light[own].dir = [0.0, -1.0, 0.0];
+            g.tab.light[own].peak_intensity = 1.0;
+            light_home_paint(g);
+            assert_eq!((g.tab.light[spot].intensity, g.tab.light[spot].dir, g.tab.light[spot].peak_intensity), (11.0, [0.5, 0.25, 0.75], 9.0));
+            assert_eq!((g.tab.light[own].intensity, g.tab.light[own].dir, g.tab.light[own].peak_intensity), (12.0, [0.0, -1.0, 0.0], 1.0));
+            assert_eq!((g.tab.light[panel].intensity, g.tab.light[panel].peak_intensity, g.tab.light[panel].enabled), (13.0, 13.0, false));
+            assert_eq!(g.tab.light[cone].intensity, 0.0);
+
+            // the cone copy: what camera_pan left in the row reaches the lamp; a cone with no row stays as it stood
+            let bits = light_home_camera_pan(g, s, Some(cone), 0.0, true, true);
+            let l = lights(g);
+            assert_eq!((g.tab.light[cone].enabled, g.tab.light[cone].pos, g.tab.light[cone].dir), (l.row_bits[3] & R_ON != 0, [l.x[3], l.y[3], l.z[3]], [l.dx[3], l.dy[3], l.dz[3]]));
+            assert_eq!(g.tab.light[cone].dir, [0.0, 0.0, 1.0]);
+            g.tab.light[none].dir = [1.0, 0.0, 0.0];
+            assert_eq!(light_home_camera_pan(g, s, Some(none), 0.0, true, true), bits);
+            assert_eq!(light_home_camera_pan(g, s, None, 0.0, true, true), bits);
+            assert_eq!(g.tab.light[none].dir, [1.0, 0.0, 0.0]);
         }).unwrap().join().unwrap();
     }
 }

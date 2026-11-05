@@ -22,18 +22,65 @@ pub fn ask_rank(key: &str, segment: bool) -> f64 {
 pub fn probe_like_query(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: Option<f64>, rank: Option<f64>) {
     let skip_owner = skip_owner.unwrap_or(0.0);
     let rank = rank.unwrap_or(2.0);
-    seam_probe_put(g, key, pos, skip_owner, None, rank);
+    probe_put(g, ProbeAsk { key: String::from(key), pos, skip_owner, b: None, rank });
 }
 
 /// Queue a smoke line for the picture; the default is the probe's own. (sensors.ts ProbeLike.querySegment, render/probe.ts 75)
 pub fn probe_like_query_segment(g: &mut crate::game::Game, key: &str, a: V3, b: V3, rank: Option<f64>) {
     let rank = rank.unwrap_or(1.0);
-    seam_probe_put(g, key, a, 0.0, Some(b), rank);
+    probe_put(g, ProbeAsk { key: String::from(key), pos: a, skip_owner: 0.0, b: Some(b), rank });
 }
 
 /// The last answer the host filed under `key`: [maxAxis, mean, up]. (sensors.ts ProbeLike.get, render/probe.ts 76)
 pub fn probe_like_get(g: &mut crate::game::Game, key: &str) -> Option<Vec<f64>> {
     g.probe.results.get(String::from(key)).map(|r| r.to_vec())
+}
+
+/// Free places in the frame's table of asks. (render/probe.ts IrradianceProbe.room)
+pub fn probe_like_room(g: &mut crate::game::Game) -> f64 {
+    crate::render_probe::MAX_QUERIES - g.probe.pending.len() as f64
+}
+
+/// The host's frame takes the table to upload and leaves it empty, keeping whose turn it is on a full frame. (render/probe.ts encode, lines 107, 125, 126)
+pub fn probe_like_take_asks(g: &mut crate::game::Game) -> Vec<crate::sensors::ProbeAsk> {
+    if g.probe.pending.is_empty() { return Vec::new(); }
+    let asks = core::mem::take(&mut g.probe.pending);
+    if g.probe.tight {
+        if g.probe.answered.len() > 1024 { g.probe.answered.clear(); }
+        g.probe.serial += 1.0;
+        let serial = g.probe.serial;
+        for a in &asks { g.probe.answered.set(a.key.clone(), serial); }
+        g.probe.tight = false;
+    }
+    asks
+}
+
+/// (render/probe.ts:16 LAST_RANK; a private number there, so it is not in the skeleton)
+const LAST_RANK: f64 = 3.0;
+
+/// One ask into the frame's table: a full table gives a place to an ask that outranks its holder, and inside a rank to a key that has waited longer. (render/probe.ts put)
+fn probe_put(g: &mut crate::game::Game, q: ProbeAsk) {
+    if (g.probe.pending.len() as f64) < crate::render_probe::MAX_QUERIES {
+        g.probe.pending.push(q);
+        return;
+    }
+    g.probe.tight = true;
+    let mut j = g.probe.pending.iter().position(|x| x.key == q.key);
+    if j.is_none() {
+        let mine = g.probe.answered.get(q.key.clone()).copied().unwrap_or(-1.0);
+        let (mut worst, mut when) = (-1.0, -2.0);
+        for i in 0..g.probe.pending.len() {
+            let x_rank = g.probe.pending[i].rank;
+            let t = g.probe.answered.get(g.probe.pending[i].key.clone()).copied().unwrap_or(-1.0);
+            if !(x_rank > q.rank || (x_rank == q.rank && q.rank < LAST_RANK && t > mine)) { continue; }
+            if x_rank > worst || (x_rank == worst && t >= when) {
+                j = Some(i);
+                worst = x_rank;
+                when = t;
+            }
+        }
+    }
+    if let Some(j) = j { g.probe.pending[j] = q; }
 }
 
 /// A delivered value as the journal files it. (sensors.ts encodeValue)
@@ -136,10 +183,9 @@ pub fn sensors_divergence_log(g: &mut crate::game::Game) -> Vec<crate::sensors::
     g.sensors.s.divergence_log.clone()
 }
 
-/// Hand the sight lines to the game's own working (None = back to the probe); answers kept from before are dropped. The one function ever handed
-/// is the game's own smoke (game.ts 2069), so `f` is never called: only whether one was handed is kept. (sensors.ts Sensors.setOwn)
-pub fn sensors_set_own(g: &mut crate::game::Game, f: Option<&mut dyn FnMut(&mut crate::game::Game, V3, V3) -> f64>) {
-    g.sensors.own = f.map(|_| SensorsOwn::CpuSmokeAlong);
+/// Hand the sight lines to the game's own working (None = back to the probe); answers kept from before are dropped. (sensors.ts Sensors.setOwn)
+pub fn sensors_set_own(g: &mut crate::game::Game, f: Option<crate::sensors::SensorsOwn>) {
+    g.sensors.own = f;
     g.sensors.own_vals.clear();
 }
 
@@ -149,7 +195,7 @@ pub fn sensors_own_reset(g: &mut crate::game::Game) {
 }
 
 /// The probe is always `g.probe` here: nothing swaps it, so `probe_of` holds nothing. (sensors.ts Sensors.constructor)
-pub fn sensors_new(g: &mut crate::game::Game, probe_of: &mut dyn FnMut(&mut crate::game::Game) -> crate::sensors::ProbeLike) -> crate::sensors::Sensors {
+pub fn sensors_new(g: &mut crate::game::Game) -> crate::sensors::Sensors {
     crate::sensors::Sensors::blank()
 }
 
@@ -166,7 +212,7 @@ pub fn sensors_ask(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: Op
 /// Queue a smoke-transmittance query along a → b under `key`; dropped in replay. (sensors.ts Sensors.askSegment)
 pub fn sensors_ask_segment(g: &mut crate::game::Game, key: &str, a: V3, b: V3) {
     g.sensors.s.stats.asks += 1.0;
-    if let Some(own) = g.sensors.own.clone() {
+    if let Some(own) = g.sensors.own {
         if g.sensors.s.mode != SensorMode::Replay {
             let t = match own {
                 SensorsOwn::CpuSmokeAlong => crate::sense::cpu_smoke_along(g, a, b),
@@ -309,7 +355,7 @@ fn begin_frame(s: &mut SensorStream) {
     let src = s.src.as_ref().unwrap();
     while (s.cursor as usize) < src.recs.len() {
         let r = &src.recs[s.cursor as usize];
-        let is_k = matches!(r.first(), Some(Some(SensorJournalRecsItemItem::Text(t))) if t == "K");
+        let is_k = matches!(r.first(), Some(Some(SensorRecItem::Text(t))) if t == "K");
         let f = rec_num(&r[if is_k { 1 } else { 0 }]);
         if f > s.frame { break; }
         if is_k {
@@ -334,20 +380,20 @@ fn begin_frame(s: &mut SensorStream) {
 }
 
 /// A number of a journal's record (`as number`).
-fn rec_num(item: &Option<SensorJournalRecsItemItem>) -> f64 {
+fn rec_num(item: &Option<SensorRecItem>) -> f64 {
     match item {
-        Some(SensorJournalRecsItemItem::Num(x)) => *x,
+        Some(SensorRecItem::Num(x)) => *x,
         _ => f64::NAN,
     }
 }
 
 /// A journal's record item as the value code it is: any other word is −∞, as decodeValue has it.
-fn rec_enc(item: &Option<SensorJournalRecsItemItem>) -> Option<SensorEnc> {
+fn rec_enc(item: &Option<SensorRecItem>) -> Option<SensorEnc> {
     match item {
         None => None,
-        Some(SensorJournalRecsItemItem::Num(x)) => Some(SensorEnc::Num(*x)),
-        Some(SensorJournalRecsItemItem::List(a)) => Some(SensorEnc::List(*a)),
-        Some(SensorJournalRecsItemItem::Text(t)) => Some(match t.as_str() {
+        Some(SensorRecItem::Num(x)) => Some(SensorEnc::Num(*x)),
+        Some(SensorRecItem::List(a)) => Some(SensorEnc::List(*a)),
+        Some(SensorRecItem::Text(t)) => Some(match t.as_str() {
             "nan" => SensorEnc::Nan,
             "inf" => SensorEnc::Inf,
             "-0" => SensorEnc::V0,
@@ -357,15 +403,15 @@ fn rec_enc(item: &Option<SensorJournalRecsItemItem>) -> Option<SensorEnc> {
 }
 
 /// A value code as an item of a record about to be pushed.
-fn enc_item(e: Option<SensorEnc>) -> Option<SensorsPushRItem> {
+fn enc_item(e: Option<SensorEnc>) -> Option<SensorRecItem> {
     match e {
         None => None,
-        Some(SensorEnc::Num(x)) => Some(SensorsPushRItem::Num(x)),
-        Some(SensorEnc::List(a)) => Some(SensorsPushRItem::List(a)),
-        Some(SensorEnc::Nan) => Some(SensorsPushRItem::Text(String::from("nan"))),
-        Some(SensorEnc::Inf) => Some(SensorsPushRItem::Text(String::from("inf"))),
-        Some(SensorEnc::Inf2) => Some(SensorsPushRItem::Text(String::from("-inf"))),
-        Some(SensorEnc::V0) => Some(SensorsPushRItem::Text(String::from("-0"))),
+        Some(SensorEnc::Num(x)) => Some(SensorRecItem::Num(x)),
+        Some(SensorEnc::List(a)) => Some(SensorRecItem::List(a)),
+        Some(SensorEnc::Nan) => Some(SensorRecItem::Text(String::from("nan"))),
+        Some(SensorEnc::Inf) => Some(SensorRecItem::Text(String::from("inf"))),
+        Some(SensorEnc::Inf2) => Some(SensorRecItem::Text(String::from("-inf"))),
+        Some(SensorEnc::V0) => Some(SensorRecItem::Text(String::from("-0"))),
     }
 }
 
@@ -383,21 +429,21 @@ fn end_frame(s: &mut SensorStream) {
         let seq = core::mem::take(&mut s.cur_seq);
         let vals = core::mem::take(&mut s.cur_vals);
         let same_seq = seq == s.prev_seq;
-        let mut vr: Vec<Option<SensorsPushRItem>> = vec![Some(SensorsPushRItem::Num(f))];
+        let mut vr: Vec<Option<SensorRecItem>> = vec![Some(SensorRecItem::Num(f))];
         if !same_seq {
-            let mut kr: Vec<Option<SensorsPushRItem>> = vec![Some(SensorsPushRItem::Text(String::from("K"))), Some(SensorsPushRItem::Num(f))];
-            kr.extend(seq.iter().map(|k| Some(SensorsPushRItem::Num(*k))));
+            let mut kr: Vec<Option<SensorRecItem>> = vec![Some(SensorRecItem::Text(String::from("K"))), Some(SensorRecItem::Num(f))];
+            kr.extend(seq.iter().map(|k| Some(SensorRecItem::Num(*k))));
             push(s, &kr);
             for (i, v) in vals.iter().enumerate() {
                 if v.is_some() {
-                    vr.push(Some(SensorsPushRItem::Num(i as f64)));
+                    vr.push(Some(SensorRecItem::Num(i as f64)));
                     vr.push(enc_item(encode_value(*v)));
                 }
             }
         } else {
             for (i, v) in vals.iter().enumerate() {
                 if !same_value(*v, s.prev_vals[i]) {
-                    vr.push(Some(SensorsPushRItem::Num(i as f64)));
+                    vr.push(Some(SensorRecItem::Num(i as f64)));
                     vr.push(enc_item(encode_value(*v)));
                 }
             }
@@ -430,18 +476,13 @@ fn end_frame(s: &mut SensorStream) {
 }
 
 /// File a record, with a running estimate of the stream as JSON. (sensors.ts Sensors.push)
-pub fn sensors_push(g: &mut crate::game::Game, r: &[Option<crate::sensors::SensorsPushRItem>]) {
+pub fn sensors_push(g: &mut crate::game::Game, r: &[Option<crate::sensors::SensorRecItem>]) {
     push(&mut g.sensors.s, r)
 }
 
-fn push(s: &mut SensorStream, r: &[Option<SensorsPushRItem>]) {
-    let is_k = matches!(r.first(), Some(Some(SensorsPushRItem::Text(t))) if t == "K");
-    let rec = r.iter().map(|item| item.as_ref().map(|item| match item {
-        SensorsPushRItem::Text(t) => SensorStreamRecsItemItem::Text(t.clone()),
-        SensorsPushRItem::Num(x) => SensorStreamRecsItemItem::Num(*x),
-        SensorsPushRItem::List(a) => SensorStreamRecsItemItem::List(*a),
-    })).collect();
-    s.recs.push(rec);
+fn push(s: &mut SensorStream, r: &[Option<SensorRecItem>]) {
+    let is_k = matches!(r.first(), Some(Some(SensorRecItem::Text(t))) if t == "K");
+    s.recs.push(r.to_vec());
     s.bytes += 3.0 + r.len() as f64 * if is_k { 3.0 } else { 7.0 };
 }
 
@@ -500,11 +541,7 @@ pub fn sensors_journal(g: &mut crate::game::Game) -> crate::sensors::SensorJourn
 fn journal(s: &SensorStream) -> SensorJournal {
     SensorJournal {
         keys: s.keys.clone(),
-        recs: s.recs.iter().map(|r| r.iter().map(|item| item.as_ref().map(|item| match item {
-            SensorStreamRecsItemItem::Text(t) => SensorJournalRecsItemItem::Text(t.clone()),
-            SensorStreamRecsItemItem::Num(x) => SensorJournalRecsItemItem::Num(*x),
-            SensorStreamRecsItemItem::List(a) => SensorJournalRecsItemItem::List(*a),
-        })).collect()).collect(),
+        recs: s.recs.clone(),
         frames: if s.mode == SensorMode::Record { s.frame + if s.in_frame { 0.0 } else { 1.0 } } else { s.stats.frames },
     }
 }
@@ -562,15 +599,6 @@ fn summary(s: &SensorStream) -> String {
 /// (sensors.ts first)
 pub fn first(r: Option<&[f64]>) -> Option<f64> {
     r.and_then(|r| r.first().copied())
-}
-
-/// `this.put({ key, pos, skipOwner, b, rank })` (render/probe.ts 73, 75, 81): ProbeLike holds only `results`, so the frame's table of asks has no home.
-fn seam_probe_put(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: f64, b: Option<V3>, rank: f64) {
-    // BOUNDARY (bring-up): the ask goes to the picture's probe (render/probe.ts put), whose table of asks is the host's and no part of the game's state.
-    // Nothing is recorded for the host yet: a headless host answers none, so `g.probe.results` stays as it is and every read is "no answer".
-    // SKELETON-GAP: a host seam that takes the ask (key, pos, skip_owner, b, rank), and `room` back for the callers that test it.
-    let _ = (g, key, pos, skip_owner, b, rank);
-    super::b_01::host_probe_put();   // TEMP-BRINGUP: the count `room` is read off (b_01.rs)
 }
 
 #[cfg(test)]
@@ -647,7 +675,7 @@ mod tests {
         assert_eq!(format!("{:x}", h), "5f200f02baadbd6b");
     }
 
-    // what `g` adds to the stream: whose answers a read gets, and which asks stop before the picture. No path here reaches the seam or the game's smoke.
+    // what `g` adds to the stream: whose answers a read gets, and which asks stop before the picture. No path here reaches the probe's table or the game's smoke.
     #[test]
     fn a_read_goes_to_the_probes_table_or_to_own() {
         let mut g = Game::blank();
@@ -661,7 +689,7 @@ mod tests {
 
         g.probe.results.set(String::from("k"), [0.25, 8.0, 9.0]);
         g.sensors.own_vals.set(String::from("old"), 1.0);
-        sensors_set_own(g, Some(&mut |_: &mut Game, _: V3, _: V3| 0.0));
+        sensors_set_own(g, Some(SensorsOwn::CpuSmokeAlong));
         assert!(matches!(g.sensors.own, Some(SensorsOwn::CpuSmokeAlong)));
         assert_eq!(sensors_read(g, "old"), None, "setOwn drops what was kept");
         assert_eq!(sensors_read(g, "k"), None, "nothing of the probe's is served");
@@ -681,6 +709,62 @@ mod tests {
         sensors_forget(g, "k");
         assert!(g.probe.results.get(String::from("k")).is_some(), "replay's forget does nothing");
         assert_eq!(sensors_stats(g).asks, 2.0);
+    }
+
+    // 200,000 scripted asks and takes, through a table that fills, swaps by rank and turn, and clears `answered` past 1024. The fold and the counts are what
+    // the real render/probe.ts put() and encode() gave under bun with a fake GPU.
+    #[test]
+    fn the_table_of_asks_keeps_who_the_typescript_keeps() {
+        let mut g = Game::blank();
+        let g = &mut g;
+        let (mut h, mut st, mut takes, mut kept, mut max_answered) = (0x811c9dc5u32, 12345u32, 0, 0, 0);
+        fn mix(h: &mut u32, x: f64) { *h = (*h ^ (x as u32)).wrapping_mul(16777619); }
+        for _ in 0..200000 {
+            st = st.wrapping_mul(1664525).wrapping_add(1013904223);
+            let small = (st >> 12) & 3;
+            let id = (st >> 8) % if small != 0 { 97 } else { 3000 };
+            let rank = ((st >> 20) % 4) as f64;
+            let key = format!("k{}", id);
+            let n = id as f64;
+            if st >> 24 == 0 {
+                let asks = probe_like_take_asks(g);
+                takes += 1;
+                kept += asks.len();
+                max_answered = max_answered.max(g.probe.answered.len());
+                for a in &asks {
+                    let (kn, bn) = (a.key[1..].parse::<f64>().unwrap(), a.b.map_or(0.0, |b| b[1] + 1.0));
+                    for x in [kn, a.rank, a.pos[0], bn, a.skip_owner] { mix(&mut h, x); }
+                }
+                mix(&mut h, g.probe.answered.len() as f64);
+                mix(&mut h, g.probe.serial);
+                mix(&mut h, if g.probe.tight { 1.0 } else { 0.0 });
+            }
+            if (st >> 4) & 1 != 0 {
+                probe_like_query(g, &key, [n, 0.0, 0.0], Some((id & 7) as f64), Some(rank));
+            } else {
+                probe_like_query_segment(g, &key, [n, 0.0, 0.0], [0.0, n, 0.0], Some(rank));
+            }
+            mix(&mut h, probe_like_room(g));
+            mix(&mut h, if g.probe.tight { 1.0 } else { 0.0 });
+        }
+        assert_eq!((format!("{:x}", h), takes, kept, max_answered, probe_like_room(g), g.probe.serial), (String::from("1908c3a2"), 784, 44465, 1056, 0.0, 607.0));
+    }
+
+    // an ask on the probe's side lands in the table with sensors.ts's rank
+    #[test]
+    fn asks_land_in_the_table_with_their_rank() {
+        let mut g = Game::blank();
+        let g = &mut g;
+        assert_eq!(probe_like_room(g), 64.0);
+        sensors_ask(g, "playerChest", [1.0, 2.0, 3.0], Some(7.0));
+        sensors_ask_segment(g, "fowx", [1.0; 3], [2.0; 3]);
+        assert_eq!(probe_like_room(g), 62.0);
+        let (a, b) = (&g.probe.pending[0], &g.probe.pending[1]);
+        assert!(a.key == "playerChest" && a.rank == 0.0 && a.skip_owner == 7.0 && a.b.is_none());
+        assert!(b.key == "fowx" && b.rank == 3.0 && b.pos == [1.0; 3] && b.b == Some([2.0; 3]));
+        assert_eq!(probe_like_take_asks(g).len(), 2);
+        assert_eq!(probe_like_room(g), 64.0);
+        assert_eq!(g.probe.serial, 0.0, "no turns are kept on a frame the table was not full");
     }
 
     #[test]
@@ -705,9 +789,9 @@ mod tests {
         let recs: Vec<String> = j.recs.iter().map(|r| {
             let items: Vec<String> = r.iter().map(|i| match i {
                 None => String::from("null"),
-                Some(SensorJournalRecsItemItem::Text(t)) => format!("\"{}\"", t),
-                Some(SensorJournalRecsItemItem::Num(x)) => format!("{}", x),
-                Some(SensorJournalRecsItemItem::List(a)) => format!("[{}]", a[0]),
+                Some(SensorRecItem::Text(t)) => format!("\"{}\"", t),
+                Some(SensorRecItem::Num(x)) => format!("{}", x),
+                Some(SensorRecItem::List(a)) => format!("[{}]", a[0]),
             }).collect();
             format!("[{}]", items.join(","))
         }).collect();

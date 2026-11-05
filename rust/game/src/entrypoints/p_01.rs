@@ -5,13 +5,11 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A new tracker: nothing known. (entrypoints.ts EntryPoints.constructor)
 pub fn entry_points_new(g: &mut crate::game::Game) -> crate::entrypoints::EntryPoints {
-    let mut e = EntryPoints::blank();
-    e.knobs = g.k.entry;
-    e
+    EntryPoints::blank()
 }
 
 /// Nothing known: a restart. A point already marked moved stays so, as in the TypeScript. (entrypoints.ts EntryPoints.reset)
@@ -40,8 +38,7 @@ pub fn entry_points_tick(g: &mut crate::game::Game) {
             entry_points_mark(g, p);
         }
     }
-    let who = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &who) {
+    for pl in crate::seats::men(g) {
         let c = g.pl[pl].ch;
         let p = g.ch[c].pos;
         entry_points_mark(g, p);
@@ -174,13 +171,13 @@ pub fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: &[crate
             continue;
         };
         out[i] = Pod { pos: best, face: pod.face, watch: Some(watch), moved: true };
-        let line = format!(
+        let line = alloc::format!(
             "{} · ({}, {}) → ({}, {}) · off {}",
             g.dr[d].def.name,
-            to_fixed_1(pod.pos[0]),
-            to_fixed_1(pod.pos[2]),
-            to_fixed_1(best[0]),
-            to_fixed_1(best[2]),
+            js::to_fixed(pod.pos[0], 1),
+            js::to_fixed(pod.pos[2], 1),
+            js::to_fixed(best[0], 1),
+            js::to_fixed(best[2], 1),
             g.tab.cover_opening[by].id
         );
         g.entry.log.push(line);
@@ -190,8 +187,8 @@ pub fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: &[crate
 }
 
 /// A search point taken over a better-seeing one by an uncleared opening: it counts as moved. (entrypoints.ts EntryPoints.swapped)
-pub fn entry_points_swapped(g: &mut crate::game::Game, pod: crate::entrypoints::Pod) {
-    todo!("needs: `pod: &mut Pod`: by value, Pod.moved cannot reach the caller's point (entrypoints.ts:170, doortools.ts:3189)")
+pub fn entry_points_swapped(g: &mut crate::game::Game, pod: &mut crate::entrypoints::Pod) {
+    pod.moved = true;
 }
 
 /// A point an entry has just dealt to a man: the tallies. (entrypoints.ts EntryPoints.dealt)
@@ -210,7 +207,7 @@ pub fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Po
 pub fn entry_points_summary(g: &mut crate::game::Game) -> String {
     let s = g.entry.stats;
     let n = g.entry.been.values().filter(|&&v| js::truthy(v)).count();
-    format!(
+    alloc::format!(
         "entry points: {} dealt · {} by an uncleared opening · {} moved off one · {} with nowhere to go · {} openings known",
         s.pods, s.risky, s.moved, s.kept, n
     )
@@ -226,31 +223,18 @@ fn side_of(at: V3, n: [f64; 2], q: V3) -> f64 {
     if (q[0] - at[0]) * n[0] + (q[2] - at[2]) * n[1] >= 0.0 { 1.0 } else { -1.0 }
 }
 
-/// `x.toFixed(1)`: the exact value to the nearest tenth, an exact tie going up in size; −0 has no sign. A double's only ties at a tenth are odd quarters.
-fn to_fixed_1(x: f64) -> String {
-    let a = m::abs(x);
-    let quarters = a * 4.0;
-    if m::floor(quarters) == quarters && js::rem(quarters, 2.0) != 0.0 {
-        let tenths = (a * 10.0 + 0.5) as u64;
-        let sign = if x < 0.0 { "-" } else { "" };
-        return format!("{}{}.{}", sign, tenths / 10, tenths % 10);
-    }
-    if x == 0.0 { return String::from("0.0"); }
-    format!("{:.1}", x)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Each expected string is what `x.toFixed(1)` printed under node.
+    /// The log's numbers (entrypoints.ts:164): each expected string is what `x.toFixed(1)` printed under node.
     #[test]
-    fn to_fixed_1_is_javascripts() {
+    fn log_numbers_print_as_to_fixed() {
         let cases: [(f64, &str); 17] = [
             (0.25, "0.3"), (0.75, "0.8"), (3.25, "3.3"), (-3.25, "-3.3"), (2.5, "2.5"), (0.05, "0.1"), (0.35, "0.3"), (1.45, "1.4"), (-0.04, "-0.0"),
             (-0.0, "0.0"), (0.0, "0.0"), (12.75, "12.8"), (1.05, "1.1"), (100.25, "100.3"), (-0.25, "-0.3"), (0.15, "0.1"), (7.999, "8.0"),
         ];
-        for (x, want) in cases { assert_eq!(to_fixed_1(x), want, "{x}"); }
+        for (x, want) in cases { assert_eq!(js::to_fixed(x, 1), want, "{x}"); }
     }
 
     #[test]
@@ -286,7 +270,7 @@ mod tests {
     /// The summary's counts print as a JavaScript template prints a whole number.
     #[test]
     fn whole_counts_print_with_no_point() {
-        assert_eq!(format!("{}", 3.0_f64), "3");
-        assert_eq!(format!("{}", 0.0_f64), "0");
+        assert_eq!(alloc::format!("{}", 3.0_f64), "3");
+        assert_eq!(alloc::format!("{}", 0.0_f64), "0");
     }
 }

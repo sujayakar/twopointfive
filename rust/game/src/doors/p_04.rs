@@ -5,15 +5,9 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// seconds of cylinder work to pick a lock (doors.ts Doors.PICK_SECS)
-const PICK_SECS: f64 = 4.2;
-/// hearing levels of a pick's click and of the cylinder going over (doors.ts Doors.PICK_LEVEL, UNLOCK_LEVEL)
-const PICK_LEVEL: f64 = 0.16;
-const UNLOCK_LEVEL: f64 = 0.3;
-
-/// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name (game.ts:1325).
+/// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name (game.ts:1196).
 fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
     crate::game::game_on_door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
 }
@@ -144,7 +138,7 @@ pub fn doors_pick(g: &mut crate::game::Game, d: DoorId, who: f64, dt: f64) -> bo
     door_set_picking(g, d, true);
     door_set_last_who(g, d, who);
     door_set_quiet_t(g, d, 0.0);
-    let pick = m::min(1.0, door_pick(g, d) + dt / PICK_SECS);
+    let pick = m::min(1.0, door_pick(g, d) + dt / DOORS_PICK_SECS);
     door_set_pick(g, d, pick);
     let clock = door_pick_clock(g, d) - dt;
     door_set_pick_clock(g, d, clock);
@@ -153,7 +147,7 @@ pub fn doors_pick(g: &mut crate::game::Game, d: DoorId, who: f64, dt: f64) -> bo
         door_set_pick_n(g, d, n);
         door_set_pick_clock(g, d, pick_gap(n));
         let pos = door_pos(g, d);
-        emit(g, d, crate::doors::DoorSound::Pick, pos, who, PICK_LEVEL);
+        emit(g, d, crate::doors::DoorSound::Pick, pos, who, DOORS_PICK_LEVEL);
     }
     if door_pick(g, d) < 1.0 { return false; }
     door_set_locked(g, d, false);
@@ -161,7 +155,7 @@ pub fn doors_pick(g: &mut crate::game::Game, d: DoorId, who: f64, dt: f64) -> bo
     door_set_picking(g, d, false);
     door_set_noticed(g, d, false);
     let pos = door_pos(g, d);
-    emit(g, d, crate::doors::DoorSound::Unlock, pos, who, UNLOCK_LEVEL);
+    emit(g, d, crate::doors::DoorSound::Unlock, pos, who, DOORS_UNLOCK_LEVEL);
     true
 }
 
@@ -202,7 +196,7 @@ pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, l
         door_set_since_bash(g, d, 0.0);
         if doors_throws(g) && { let dir = m::sign(door_vel(g, d)); doors_opening(g, d, dir) } {
             let vel = door_vel(g, d);
-            doors_driven(g, d, who, vel, crate::doors::DoorsDrivenKind::Boot, false, 0.0);
+            doors_driven(g, d, who, vel, crate::doors::DoorDriveKind::Boot, false, 0.0);
         }
     }
     let pos = door_pos(g, d);
@@ -210,7 +204,7 @@ pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, l
     true
 }
 
-/// The doors' side of a blast: the leaves it took off. The Game's `blaster`, called by name (game.ts:1335).   (doors.ts Doors.blast)
+/// The doors' side of a blast: the leaves it took off. The Game's `blaster`, called by name (game.ts:1206).   (doors.ts Doors.blast)
 pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     crate::doorblast::door_blast(g, at, tear_m, who)
 }
@@ -220,20 +214,15 @@ pub fn doors_sound(g: &mut crate::game::Game, d: DoorId, sound: crate::doors::Do
     emit(g, d, sound, pos, who, level);
 }
 
-/// Keeps nothing: the one subscriber there is (game.ts:1337) is called by name from `doors_torn`.   (doors.ts Doors.onTorn)
-pub fn doors_on_torn(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, DoorId, f64, crate::doors::DoorsOnTornFnCause)) -> crate::FnField {
-    crate::FnField
-}
-
-/// The subscriber game.ts:1337 hangs on the doors: a torn leaf is a row in the destruction's change feed.
+/// The subscriber game.ts:1208 hangs on the doors: a torn leaf is a row in the destruction's change feed.
 fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCause) {
     let c = g.dr[d].frame_centre;
     let r = g.dr[d].def.width / 2.0 + 0.1;
     let row = crate::wallbreak::WallBreakNoteC {
         kind: crate::wallbreak::LevelChangeKind::Door,
         cause: match cause {
-            crate::doors::DoorsTornCause::Blast => crate::wallbreak::WallBreakNoteCCause::Blast,
-            crate::doors::DoorsTornCause::Fire => crate::wallbreak::WallBreakNoteCCause::Fire,
+            crate::doors::DoorsTornCause::Blast => crate::wallbreak::LevelChangeCause::Blast,
+            crate::doors::DoorsTornCause::Fire => crate::wallbreak::LevelChangeCause::Fire,
         },
         id: g.doors.list.iter().position(|x| *x == d).map_or(-1.0, |i| i as f64),
         name: Some(g.dr[d].def.name.clone()),

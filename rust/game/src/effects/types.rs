@@ -3,11 +3,12 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what a shot's smoke rides: read live off the shooter's body each time it is asked (effects.ts Track; the closures of combat.ts fireWeaponRaw)
+/// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body (combat.ts fireWeaponRaw), a blast's trail off its spark (sparks.ts tracker: answers nothing once the spark dies or its slot is reused)
 #[derive(Clone, Debug)]
 pub enum Track {
     Muzzle { by: CharId },
     EjectPort { by: CharId },
+    Spark { slot: usize, gen_: f64 },
 }
 
 /// (TypeScript: FxLight, src/game/effects.ts:36)

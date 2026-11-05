@@ -57,7 +57,7 @@ pub fn stack_view_reach(g: &mut crate::game::Game, d: DoorId) -> f64 { todo!() }
 pub fn stack_view_sees(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool { todo!() }
 
 /// (src/game/stackroom.ts:264 stackViewFix)
-pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, taken: &[V3], men: &[crate::stackroom::StackViewFixMenItem]) -> Option<Vec<crate::orders::StackPost>> { todo!() }
+pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, taken: &[V3], men: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> { todo!() }
 
 /// (src/game/stackroom.ts:350 nextRoom)
 pub fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackroom::Floor, used: &[V3], min_m: f64, shy: bool) -> Option<crate::stackroom::NextRoom> { todo!() }
@@ -67,3 +67,7 @@ pub fn stack_room_probe(g: &mut crate::game::Game, d: DoorId, side: f64) -> crat
 
 /// (src/game/stackroom.ts:377 stackRoomSummary)
 pub fn stack_room_summary(g: &mut crate::game::Game) -> String { todo!() }
+
+
+/// INVENTED: puts back what stack_room_book_keep took, in place of calling the closure stackRoomBookKeep returned (stackroom.ts:93,95). Call it once. Forget: books = None. Back: if the book has the kept sig and doors, near is forgotten if it had not been made, and every face read since is forgotten; otherwise the book was rebuilt during the ask: books = None.
+pub fn stack_room_book_put_back(g: &mut crate::game::Game, keep: crate::stackroom::StackRoomBookKeep) { todo!() }

@@ -8,12 +8,6 @@ use alloc::{string::String, vec::Vec};
 /// (src/game/props.ts:57 freshTrig)
 pub fn fresh_trig(g: &mut crate::game::Game) { todo!() }
 
-/// (src/game/props.ts:63 clampRow)
-pub fn clamp_row(d: &mut Vec<f64>, vx: f64, vz: f64, ww: f64, r: f64) { todo!() }
-
-/// (src/game/props.ts:68 turnRow)
-pub fn turn_row(d: &mut Vec<f64>, yaw: f64, cs: f64, sn: f64, r: f64, y: f64) { todo!() }
-
 /// (src/game/props.ts:78 Prop.f)
 pub fn prop_f(g: &mut crate::game::Game, id: PropId, o: f64) -> f64 { todo!() }
 
@@ -132,7 +126,7 @@ pub fn prop_system_set_time(g: &mut crate::game::Game, v: f64) { todo!() }
 pub fn prop_system_say(g: &mut crate::game::Game, e: crate::props::PropEvent) { todo!() }
 
 /// (src/game/props.ts:194 PropSystem.constructor)
-pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::PropDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::props::PropEvent), st: Option<crate::Opaque>) -> crate::props::PropSystem { todo!() }
+pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::PropDef], st: Option<crate::Opaque>) -> crate::props::PropSystem { todo!() }
 
 /// (src/game/props.ts:202 PropSystem.propOf)
 pub fn prop_system_prop_of(g: &mut crate::game::Game, b: BoxId) -> Option<PropId> { todo!() }

@@ -7,46 +7,18 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---- the one seam: what skeleton 4 still lacks (its line is in notes.md)
-
-/// `g.audio.play(name, null, gain, { lowpass, rate, pan, wet })`: game_audio_like_play's opts hold `crate::Opaque`, which carries no number.
-fn seam_audio_play(g: &mut Game, name: &str, gain: f64, lowpass: f64, rate: f64, pan: f64, wet: f64) { todo!("needs: game_audio_like_play's opts to carry lowpass, rate, pan, wet (weather.ts:406)") }
-
-// ---- the lights' set: its stub takes g and the set, and the set lives in g, so it is lent out for the call
-
-/// `g.engine.lights.add(l)`: add touches only the set's own list.
-fn lights_add(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_add(g, &mut set, l);
-    g.engine.lights = set;
-}
-
-/// `g.engine.lights.remove(l)`: the same.
-fn lights_remove(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_remove(g, &mut set, l);
-    g.engine.lights = set;
-}
-
 // ---- this file's reach of a box
 
-/// A static box by its ID: the rows of `g.col.boxes` (properties.txt's `g.none[id]` does not exist; see notes).
-#[inline]
-fn bx(g: &Game, b: BoxId) -> &crate::scene_boxes::Box { &g.col.boxes[b] }
+/// A box's row (Box.* in the TypeScript): the one seam left. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`.
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box (weather.ts:68, 79, 88, 438, 439, 448)") }
 
-/// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript (game.ts:1219), and a level's box is the row of its place in the list.
-fn level_boxes(g: &Game) -> Vec<BoxId> {
-    let n = if g.col.boxes.len() < g.level.boxes.len() { g.col.boxes.len() } else { g.level.boxes.len() };
-    (0..n).map(|i| BoxId(i as u32)).collect()
-}
+/// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript (game.ts:1219), statics appended later included. `level.boxes` is not a field in Rust.
+fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }
 
-/// Paints a box: its row, and the level's copy where it is a level's box (`level.boxes` and `col.boxes` are one array in the TypeScript).
+/// Paints a box's row.
 fn paint(g: &mut Game, b: BoxId, albedo: V3, flags: f64, rough: Option<f64>, aniso: Option<bool>) {
-    let x = &mut g.col.boxes[b];
+    let x = seam_box(g, b);
     x.albedo = albedo; x.flags = flags; x.rough = rough; x.aniso = aniso;
-    if let Some(x) = g.level.boxes.get_mut(b.0 as usize) {
-        x.albedo = albedo; x.flags = flags; x.rough = rough; x.aniso = aniso;
-    }
 }
 
 /// `WEATHER_PRESETS[kind]`.
@@ -62,7 +34,7 @@ pub fn roofs_of(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<[f64; 4]> {
     let ceiling_y = crate::scene_world::world().ceiling_y;
     let mut out: Vec<[f64; 4]> = Vec::new();
     for &b in boxes {
-        let (c, h) = (bx(g, b).c, bx(g, b).h);
+        let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
         let y0 = c[1] - h[1];
         let y1 = c[1] + h[1];
         if !(y0 >= ceiling_y - 0.25 && y1 <= ceiling_y + 0.45) || h[0] < 0.45 || h[2] < 0.45 { continue; }
@@ -76,7 +48,7 @@ pub fn roofs_of(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<[f64; 4]> {
 
 /// A ground slab a picked rain wets: the ground's top, drawn, not small, and some of it under open sky. (weather.ts openGround)
 pub fn open_ground(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]]) -> bool {
-    let (c, h, flags) = (bx(g, b).c, bx(g, b).h, bx(g, b).flags);
+    let (c, h, flags) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).flags);
     let top = c[1] + h[1];
     let f = crate::scene_boxes::box_flag();
     let skip = js::to_i32(f.no_primary) | js::to_i32(f.glass) | js::to_i32(f.dynamic);
@@ -86,7 +58,7 @@ pub fn open_ground(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]]) -> b
 
 /// Of 25 spots over the box's rectangle, how many have no roof over them, counted no further than `enough`. (weather.ts skySpots)
 pub fn sky_spots(g: &mut crate::game::Game, b: BoxId, roofs: &[[f64; 4]], enough: f64, step: f64) -> f64 {
-    let (c, h, yaw) = (bx(g, b).c, bx(g, b).h, bx(g, b).yaw);
+    let (c, h, yaw) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).yaw);
     let cs = m::cos(yaw);
     let sn = m::sin(yaw);
     let mut n = 0.0;
@@ -117,8 +89,8 @@ pub fn own_floor(g: &mut crate::game::Game) -> bool {
 }
 
 /// mulberry32: the weather's own dice. (weather.ts rng32)
-pub fn rng32(seed: f64) -> crate::weather::WeatherDice {
-    WeatherDice { a: js::to_u32(seed) as f64 }
+pub fn rng32(seed: f64) -> crate::dice::Die {
+    crate::dice::Die::new(js::to_u32(seed))
 }
 
 /// Mean of the stroke's envelope over [a, b]. (weather.ts strokeMean)
@@ -235,7 +207,7 @@ fn sync_roofs(g: &mut Game, tell_wind: bool, built: bool) {
         }
     }
     if !built { return; }
-    let roofs: Option<Vec<Vec<f64>>> = if g.weather.kind.is_some() || own { Some(g.weather.roofs.iter().map(|r| r.to_vec()).collect()) } else { None };
+    let roofs: Option<Vec<[f64; 4]>> = if g.weather.kind.is_some() || own { Some(g.weather.roofs.clone()) } else { None };
     crate::wind::wind_reroof(g, roofs.as_deref(), Some(own));
 }
 
@@ -370,7 +342,7 @@ pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 
 /// The weather's dice, reseeded. (weather.ts Weather.seed)
 pub fn weather_seed(g: &mut crate::game::Game, n: f64) {
-    g.weather.dice = crate::dice::Die::new(js::to_u32(rng32(n).a));
+    g.weather.dice = rng32(n);
     g.weather.next_flash_at = -1.0;
 }
 
@@ -455,10 +427,10 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     let dir = dir_of(bearing, elev);
     let light = g.tab.light.push(crate::render_lights::RtLight {
         name: String::from("lightning"), group: String::from("weather"), kind: 2.0, pos: [0.0, 0.0, 0.0], dir, color: v3::copy(flash_color()), intensity: 0.0, range: 1e6, inner_deg: 0.0, outer_deg: 0.0,
-        radius: 0.006, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
-        ..crate::render_lights::RtLight::zeroed()   // (every field the literal leaves absent; `flicker` is not a field in Rust)
+        radius: 0.006, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
+        ..crate::render_lights::RtLight::zeroed()   // (every field the literal leaves absent)
     });
-    lights_add(g, light);
+    crate::render_lights::light_set_add(g, light);
     g.weather.flash = Some(Flash { light, stroke, t: 0.0, peak, dir, bearing, dist_km });
     let at = g.time + dist_km * 1000.0 / SPEED_OF_SOUND;
     g.weather.thunders.push(Thunder { at, dist_km, bearing, loud: v3::clamp(1.15 - dist_km * 0.22, 0.25, 1.0) });
@@ -543,7 +515,7 @@ pub fn weather_apply_flash(g: &mut crate::game::Game, t: f64, dt: f64) {
 /// The stroke's light leaves the set. (weather.ts Weather.endFlash)
 pub fn weather_end_flash(g: &mut crate::game::Game) {
     let light = match g.weather.flash.as_ref() { Some(f) => f.light, None => return };
-    lights_remove(g, light);
+    crate::render_lights::light_set_remove(g, light);
     g.weather.flash = None;
 }
 
@@ -560,7 +532,8 @@ pub fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thund
     let bx = m::sin(th.bearing);
     let bz = -m::cos(th.bearing);
     let right = bx * cy - bz * sy;
-    seam_audio_play(g, name, gain, lowpass, rate, v3::clamp(right * 0.6, -0.6, 0.6), if near { 0.35 } else { 0.55 });
+    let opts = crate::audio_iface::PlayOpts::Thunder { lowpass, rate, pan: v3::clamp(right * 0.6, -0.6, 0.6), wet: if near { 0.35 } else { 0.55 } };
+    crate::audio_iface::game_audio_like_play(g, name, None, Some(gain), Some(&opts));
     g.weather.stats.thunders += 1.0;
     g.weather.stats.last_thunder = Some(WeatherStatsLastThunder { at: th.at, dist_km: th.dist_km, bearing: th.bearing, loud: th.loud, played_at: g.time, name: String::from(name), gain });
     if g.weather.kind.is_some() && th.loud > g.k.wx_sim.thunder_loud { g.weather.thunder_until = g.time + g.k.wx_sim.thunder_secs; }
@@ -602,16 +575,26 @@ pub fn weather_set_wet(g: &mut crate::game::Game, on: bool) {
     g.weather.wet_on = on;
     if on {
         // the lot's ground: the one big slab whose top is the y = 0 the cars stand on (40 x 28 m: the interior carpet base is 32 x 20 and must never match)
-        let asphalt = g.engine.world.statics.iter().copied().find(|&b| {
-            let (c, h) = (bx(g, b).c, bx(g, b).h);
-            c[1] < 0.0 && c[1] + h[1] > -0.01 && h[0] > 18.0 && h[2] > 12.0
-        });
+        let mut asphalt = None;
+        for i in 0..g.engine.world.statics.len() {
+            let b = g.engine.world.statics[i];
+            let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
+            if c[1] < 0.0 && c[1] + h[1] > -0.01 && h[0] > 18.0 && h[2] > 12.0 { asphalt = Some(b); break; }
+        }
         if let Some(b) = asphalt { soak(g, b); }
         g.weather.lot = asphalt;
+        if g.weather.wet_gloss && g.weather.gloss_was.is_none() {
+            g.weather.gloss_was = Some(g.engine.settings.gloss);
+            g.engine.settings.gloss = true;
+        }
     } else {
         let touched = core::mem::take(&mut g.weather.touched);
         for t in &touched { paint(g, t.box_, t.albedo, t.flags, t.rough, t.aniso); }
         g.weather.lot = None;
+        if let Some(was) = g.weather.gloss_was {
+            if g.engine.settings.gloss { g.engine.settings.gloss = was; }   // (only if it is still what we set: a gloss switched off by hand stays off)
+            g.weather.gloss_was = None;
+        }
     }
     // the rest of the wet ground is the picture's and follows in this very call
     crate::wet_ground::wet_ground_follow(g);
@@ -619,7 +602,7 @@ pub fn weather_set_wet(g: &mut crate::game::Game, on: bool) {
 
 /// Darkens a box and remembers what to put back. (weather.ts Weather.setWet soak)
 fn soak(g: &mut Game, b: BoxId) {
-    let (albedo, flags, rough, aniso) = { let x = bx(g, b); (x.albedo, x.flags, x.rough, x.aniso) };
+    let (albedo, flags, rough, aniso) = { let x = seam_box(g, b); (x.albedo, x.flags, x.rough, x.aniso) };
     g.weather.touched.push(WeatherTouchedItem { box_: b, albedo: v3::copy(albedo), flags, rough, aniso });
     let gloss = crate::scene_boxes::box_flag().gloss;
     paint(g, b, [albedo[0] * WET_ALBEDO, albedo[1] * WET_ALBEDO, albedo[2] * WET_ALBEDO * 1.04], (js::to_i32(flags) | js::to_i32(gloss)) as f64, Some(WET_ROUGH), Some(true));
@@ -671,7 +654,7 @@ mod tests {
     // Bits from the TypeScript's own rng32 / strokeMean / strokeAt, run under bun with EXACT.on (first pass). The die is `dice::Die` now: the same bits must come off it.
     #[test]
     fn the_dice_draw_the_typescripts_bits() {
-        let mut d = crate::dice::Die::new(js::to_u32(rng32(20260809.0).a));
+        let mut d = rng32(20260809.0);
         let want: [u64; 6] = WANT_DICE;
         for w in want { assert_eq!(d.roll().to_bits(), w); }
         assert_eq!((d.s as f64).to_bits(), WANT_DICE_A);

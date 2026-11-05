@@ -1,11 +1,11 @@
-//! src/game/morale.ts lines 452 to 604
+//! src/game/morale.ts lines 456 to 608
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The row as it stands now, for reading: every read comes fresh from the table, every write goes through it. `step` and `drive` are called on a man who has one.
 fn row(g: &mut Game, gd: GuardId) -> Mind {
@@ -236,11 +236,6 @@ pub fn morale_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::ga
     Some(s.script)
 }
 
-/// has a sequence of this file's got him, as of the last tick (morale.ts moraleOwns)
-pub fn morale_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    match g.m.morale.state_of.get(gd) { Some(s) => s.drive, None => false }
-}
-
 /// his dread, 0 to 1 (0 for a man never met) (morale.ts dreadOf)
 pub fn dread_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     match g.m.morale.state_of.get(gd).copied() { Some(s) => dread(g, gd), None => 0.0 }
@@ -270,12 +265,6 @@ pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale
     })
 }
 
-/// `x.toFixed(2)` of a number at or above 0. Only a multiple of 1/8 sits exactly on a tie at two places: JavaScript takes the larger there, Rust the even.
-fn fixed2(x: f64) -> String {
-    let e = x * 8.0;
-    if e == m::floor(e) && js::rem(e, 2.0) != 0.0 { format!("{:.2}", x + 0.001) } else { format!("{:.2}", x) }
-}
-
 /// 'morale ▸ Tango 2 0.85 BROKEN hold (alone, dark) · Tango 4 0.35 jumpy duck': every living man with anything on him (morale.ts moraleSummary)
 pub fn morale_summary(g: &mut crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();
@@ -286,7 +275,7 @@ pub fn morale_summary(g: &mut crate::game::Game) -> String {
         if !(s.rung > 0.0 || s.act != MoraleAct::None || s.shock > 0.005) { continue; }
         let d = dread(g, gd);
         let word = if s.rung == 2.0 { "BROKEN" } else if s.rung == 1.0 { "jumpy" } else { "steady" };
-        let mut line = format!("{} {} {}", g.gd[gd].callsign, fixed2(d), word);
+        let mut line = alloc::format!("{} {} {}", g.gd[gd].callsign, js::to_fixed(d, 2), word);
         if s.act != MoraleAct::None { line.push(' '); line.push_str(s.act.as_str()); }
         if s.alone || s.dark || s.leader_down {
             let mut why: Vec<&str> = Vec::new();
@@ -300,7 +289,7 @@ pub fn morale_summary(g: &mut crate::game::Game) -> String {
         parts.push(line);
     }
     let body = parts.join(" · ");
-    format!("morale ▸ {}", if body.is_empty() { "every man steady" } else { body.as_str() })
+    alloc::format!("morale ▸ {}", if body.is_empty() { "every man steady" } else { body.as_str() })
 }
 
 /// 'men ▸ S g g g · S g g': who is steady and who green, a band at a time, the living only; men with no band as one last group (morale.ts moraleRoster)
@@ -331,7 +320,7 @@ pub fn morale_roster(g: &mut crate::game::Game) -> String {
         shown.push(marks.join(" "));
     }
     let body = shown.join(" · ");
-    format!("men ▸ {}", if body.is_empty() { "nobody" } else { body.as_str() })
+    alloc::format!("men ▸ {}", if body.is_empty() { "nobody" } else { body.as_str() })
 }
 
 /// HOST WORK, the tab's sessionStorage: not translated (conventions 6). Only the host's address reader reaches it. (morale.ts kept)
@@ -349,27 +338,16 @@ pub fn morale_from_query(g: &mut crate::game::Game, q: crate::Opaque) {
     todo!("host work: the host reads the address and sets g.k.morale")
 }
 
-/// runner.ts: the man is that file's from here: whatever sequence has him ends where it stands; dread and rung stay (morale.ts moraleRelease)
+/// runner.ts: the man is that file's from here: whatever sequence has him ends where it stands, and this rule lets go of him; dread and rung stay (morale.ts moraleRelease)
 pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
     if let Some(s) = g.m.morale.state_of.get(gd).copied() {
         if s.act != MoraleAct::None || s.drive { end(g, gd); }
     }
+    let t = g.time;
+    crate::owner::release_man(g, gd, crate::owner::own().morale, t);
 }
 
 /// A position as three numbers, NaN for none. (morale.ts n3)
 pub fn n3(p: Option<V3>) -> Vec<f64> {
     match p { Some(p) => vec![p[0], p[1], p[2]], None => vec![f64::NAN, f64::NAN, f64::NAN] }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Expected strings are Number.prototype.toFixed(2) as printed by the JavaScript engine.
-    #[test]
-    fn fixed2_matches_to_fixed() {
-        for (x, want) in [(0.0, "0.00"), (1.0, "1.00"), (0.125, "0.13"), (0.375, "0.38"), (0.625, "0.63"), (0.875, "0.88"), (0.25, "0.25"), (0.85, "0.85"), (0.005, "0.01"), (0.015, "0.01"), (0.345, "0.34")] {
-            assert_eq!(fixed2(x), want, "{}", x);
-        }
-    }
 }

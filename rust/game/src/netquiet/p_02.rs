@@ -1,4 +1,4 @@
-//! src/game/netquiet.ts lines 429 to 522
+//! src/game/netquiet.ts lines 433 to 519
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// What he watches from the spot: the arc's middle, moved round until his doors sit in his eyes. (netquiet.ts watch)
-pub fn watch(g: &mut Game, gd: GuardId) {
+pub fn watch(g: &mut crate::game::Game, gd: GuardId) {
     let eye_slack = g.k.netquiet.eye_slack;
     let n = g.m.netquiet.state_of.get_mut(gd).unwrap();
     if n.arc > m::PI { n.look = None; return; }
@@ -22,14 +22,8 @@ fn look_from(s: V3, yaw: f64, eye: f64, eye_half: f64, arc: f64, eye_slack: f64)
     [s[0] + m::sin(y) * 6.0, 0.0, s[2] + m::cos(y) * 6.0]
 }
 
-/// Is he the last man at his act: his line said, backing, or low. (netquiet.ts netQuietHolds)
-pub fn net_quiet_holds(g: &mut Game, gd: GuardId) -> bool {
-    if !live(g) || netquiet_qa().broken { return false; }
-    g.m.netquiet.state_of.has(gd) && mine(g, gd)
-}
-
 /// What a man holding a room watches: the last man's arc, low on his spot; a whip's noise. (netquiet.ts netQuietLook)
-pub fn net_quiet_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
+pub fn net_quiet_look(g: &mut crate::game::Game, gd: GuardId, pt: &mut V3) {
     if !live(g) || netquiet_qa().broken { return; }
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return };
     let (low, look, whip_at) = (n.low, n.look, n.whip_at);
@@ -44,7 +38,7 @@ pub fn net_quiet_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
 }
 
 /// How he stands and where his gun goes: low on his spot he is crouched; a whipping man comes round to the noise. (netquiet.ts netQuietPose)
-pub fn net_quiet_pose(g: &mut Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> Option<crate::netquiet::NetQuietPose> {
+pub fn net_quiet_pose(g: &mut crate::game::Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> Option<crate::netquiet::NetQuietPose> {
     if !live(g) { return None; }
     let n = g.m.netquiet.state_of.get(gd)?;
     let (low, whip_at) = (n.low, n.whip_at);
@@ -61,7 +55,7 @@ pub fn net_quiet_pose(g: &mut Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> 
 }
 
 /// QA: where the last man's rule would send this man now, and the arc from there or from where he stands. (netquiet.ts netQuietSpot)
-pub fn net_quiet_spot(g: &mut Game, gd: GuardId) -> Option<crate::netquiet::NetQuietSpot> {
+pub fn net_quiet_spot(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::netquiet::NetQuietSpot> {
     let def = g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd)?;
     let r = g.tab.roomfight_def[def].room?;
     let to = low_spot(g, gd, r);
@@ -72,14 +66,12 @@ pub fn net_quiet_spot(g: &mut Game, gd: GuardId) -> Option<crate::netquiet::NetQ
 }
 
 /// QA: what the rule has of a man, None if never met. A copy of his row, as of this call. (netquiet.ts netQuietOf)
-pub fn net_quiet_of(g: &mut Game, gd: GuardId) -> Option<crate::netquiet::NetQuietOf> {
-    let crate::netquiet::Mind { quiet, asked, known, paid, say, say_t, say_name, bark, last_kind, body_t, roused, heard_t, cs, cl, fx, fz, whip_at, whip_in, whip_t, whip_held, last, t, mate_t, news, news_t, eye, eye_half, spot, yaw, arc, look, low } =
-        g.m.netquiet.state_of.get(gd).cloned()?;
-    Some(crate::netquiet::NetQuietOf { quiet, asked, known, paid, say, say_t, say_name, bark, last_kind, body_t, roused, heard_t, cs, cl, fx, fz, whip_at, whip_in, whip_t, whip_held, last, t, mate_t, news, news_t, eye, eye_half, spot, yaw, arc, look, low })
+pub fn net_quiet_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::netquiet::Mind> {
+    g.m.netquiet.state_of.get(gd).cloned()
 }
 
 /// 'net ▸ Tango 2 quiet ×2 · Tango 4 LAST low (arc 31°)': every living man with anything on him. (netquiet.ts netQuietSummary)
-pub fn net_quiet_summary(g: &mut Game) -> String {
+pub fn net_quiet_summary(g: &mut crate::game::Game) -> String {
     if !live(g) { return String::new(); }
     const ACTS: [&str; 5] = ["", "LAST said", "LAST backing", "LAST low", "LAST"];
     let mut men: Vec<String> = Vec::new();
@@ -87,9 +79,9 @@ pub fn net_quiet_summary(g: &mut Game) -> String {
         if !ours(g, gd) { continue; }
         let Some(n) = g.m.netquiet.state_of.get(gd) else { continue };
         if !(n.quiet > 0.0 || n.last != NONE || n.whip_at.is_some()) { continue; }
-        let quiet = if js::truthy(n.quiet) { alloc::format!(" quiet ×{}", n.quiet) } else { String::new() };
+        let quiet = if js::truthy(n.quiet) { alloc::format!(" quiet ×{}", js::num_str(n.quiet)) } else { String::new() };
         let act = if js::truthy(n.last) {
-            let arc = if n.last == LOW { alloc::format!(" (arc {}°)", m::round(n.arc / v3::DEG)) } else { String::new() };
+            let arc = if n.last == LOW { alloc::format!(" (arc {}°)", js::num_str(m::round(n.arc / v3::DEG))) } else { String::new() };
             alloc::format!(" {}{}", ACTS[n.last as usize], arc)
         } else {
             String::new()
@@ -99,14 +91,6 @@ pub fn net_quiet_summary(g: &mut Game) -> String {
     }
     let list = men.join(" · ");
     alloc::format!("net ▸ {}", if list.is_empty() { "every man answered" } else { list.as_str() })
-}
-
-/// A vector for the checkpoint's flat list, NaN for none. Its one caller is checkpoint code, not translated. (netquiet.ts n3)
-pub fn n3(p: Option<V3>) -> Vec<f64> {
-    match p {
-        Some(p) => vec![p[0], p[1], p[2]],
-        None => vec![f64::NAN, f64::NAN, f64::NAN],
-    }
 }
 
 #[cfg(test)]
@@ -147,13 +131,5 @@ mod tests {
     #[test]
     fn net_quiet_of_is_none_for_a_man_never_met() {
         on_a_game(|g| { assert!(net_quiet_of(g, GuardId(0)).is_none()); });
-    }
-
-    #[test]
-    fn n3_is_three_numbers_or_three_nans() {
-        assert_eq!(n3(Some([1.0, 2.0, 3.0])), vec![1.0, 2.0, 3.0]);
-        let none = n3(None);
-        assert_eq!(none.len(), 3);
-        assert!(none.iter().all(|x| x.is_nan()));
     }
 }

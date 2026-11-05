@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/game/devices.ts:39 CameraDef, src/scene/level.ts:129)
+/// (TypeScript: inline at src/game/devices.ts:40 CameraDef, src/scene/level.ts:129)
 #[derive(Clone, Debug)]
 pub struct CameraDef2 {
     pub kind: crate::devices::CameraDef2Kind,
@@ -51,7 +51,7 @@ impl CameraDef2Kind {
     }
 }
 
-/// (TypeScript: inline at src/game/devices.ts:40 KeypadDef, src/scene/level.ts:130)
+/// (TypeScript: inline at src/game/devices.ts:41 KeypadDef, src/scene/level.ts:130)
 #[derive(Clone, Debug)]
 pub struct KeypadDef2 {
     pub kind: crate::devices::KeypadDef2Kind,
@@ -89,7 +89,7 @@ impl KeypadDef2Kind {
     }
 }
 
-/// (TypeScript: inline at src/game/devices.ts:41 LaserDef, src/scene/level.ts:131)
+/// (TypeScript: inline at src/game/devices.ts:42 LaserDef, src/scene/level.ts:131)
 #[derive(Clone, Debug)]
 pub struct LaserDef2 {
     pub kind: crate::devices::LaserDef2Kind,
@@ -144,7 +144,7 @@ impl LaserDef2Alarm {
     }
 }
 
-/// (TypeScript: CameraRt, src/game/devices.ts:61)
+/// (TypeScript: CameraRt, src/game/devices.ts:62)
 #[derive(Clone, Debug)]
 pub struct CameraRt {
     pub smoke_trans: f64,
@@ -173,7 +173,7 @@ impl CameraRt {
 }
 impl Default for CameraRt { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: LaserRt, src/game/devices.ts:67)
+/// (TypeScript: LaserRt, src/game/devices.ts:68)
 #[derive(Clone, Debug)]
 pub struct LaserRt {
     pub def: crate::devices::LaserDef2,
@@ -200,7 +200,7 @@ impl LaserRt {
 }
 impl Default for LaserRt { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: KeypadRt, src/game/devices.ts:70)
+/// (TypeScript: KeypadRt, src/game/devices.ts:71)
 #[derive(Clone, Debug)]
 pub struct KeypadRt {
     pub def: crate::devices::KeypadDef2,
@@ -219,7 +219,7 @@ impl KeypadRt {
 }
 impl Default for KeypadRt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DeviceLogRow, src/game/devices.ts:72)
+/// (TypeScript: DeviceLogRow, src/game/devices.ts:73)
 #[derive(Clone, Debug)]
 pub struct DeviceLogRow {
     pub seq: f64,
@@ -269,7 +269,7 @@ impl DeviceLogRowWhat {
     }
 }
 
-/// (TypeScript: DevicesSnap, src/game/devices.ts:74)
+/// (TypeScript: DevicesSnap, src/game/devices.ts:75)
 #[derive(Clone, Debug)]
 pub struct DevicesSnap {
     pub cameras: Vec<crate::devices::DevicesSnapCamerasItem>,
@@ -292,7 +292,7 @@ impl DevicesSnap {
 }
 impl Default for DevicesSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/devices.ts:74 DevicesSnap.cameras, src/game/devices.ts:74)
+/// (TypeScript: inline at src/game/devices.ts:75 DevicesSnap.cameras, src/game/devices.ts:75)
 #[derive(Clone, Copy, Debug)]
 pub struct DevicesSnapCamerasItem {
     pub yaw: f64,
@@ -319,7 +319,7 @@ impl DevicesSnapCamerasItem {
 }
 impl Default for DevicesSnapCamerasItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/devices.ts:74 DevicesSnap.lasers, src/game/devices.ts:74)
+/// (TypeScript: inline at src/game/devices.ts:75 DevicesSnap.lasers, src/game/devices.ts:75)
 #[derive(Clone, Copy, Debug)]
 pub struct DevicesSnapLasersItem {
     pub last_trip_at: f64,
@@ -340,7 +340,7 @@ impl DevicesSnapLasersItem {
 }
 impl Default for DevicesSnapLasersItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Devices, src/game/devices.ts:76)
+/// (TypeScript: Devices, src/game/devices.ts:77)
 #[derive(Clone, Debug)]
 pub struct Devices {
     pub cameras: Vec<CameraRtId>,
@@ -367,7 +367,7 @@ impl Devices {
 }
 impl Default for Devices { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/devices.ts:47 CONE, src/game/devices.ts:47)
+/// (TypeScript: inline at src/game/devices.ts:48 CONE, src/game/devices.ts:48)
 #[derive(Clone, Copy, Debug)]
 pub struct CONE {
     pub intensity: f64,
@@ -392,7 +392,7 @@ impl CONE {
 }
 impl Default for CONE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/devices.ts:57 ERRAND, src/game/devices.ts:57)
+/// (TypeScript: inline at src/game/devices.ts:58 ERRAND, src/game/devices.ts:58)
 #[derive(Clone, Copy, Debug)]
 pub struct ERRAND {
     pub awareness: f64,
@@ -409,7 +409,7 @@ impl ERRAND {
 }
 impl Default for ERRAND { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/devices.ts:406 DEVICE_TUNE_DEFAULTS, src/game/devices.ts:406)
+/// (TypeScript: inline at src/game/devices.ts:407 DEVICE_TUNE_DEFAULTS, src/game/devices.ts:407)
 #[derive(Clone, Copy, Debug)]
 pub struct DEVICETUNEDEFAULTS {
     pub devices: bool,
@@ -432,7 +432,7 @@ impl DEVICETUNEDEFAULTS {
 }
 impl Default for DEVICETUNEDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/devices.ts:83 note(r), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
+/// (TypeScript: inline at src/game/devices.ts:84 note(r), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
 #[derive(Clone, Debug)]
 pub struct DevicesNoteR {
     pub device: String,
@@ -524,7 +524,7 @@ impl LearnCodeHow {
     }
 }
 
-/// (TypeScript: inline at src/game/devices.ts:318 padState ->, src/game/devices.ts:318)
+/// (TypeScript: inline at src/game/devices.ts:319 padState ->, src/game/devices.ts:319)
 #[derive(Clone, Debug)]
 pub struct PadState {
     pub pad: crate::devices::KeypadRt,
@@ -541,7 +541,7 @@ impl PadState {
 }
 impl Default for PadState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/devices.ts:419 segSegClosest ->, src/game/devices.ts:419)
+/// (TypeScript: inline at src/game/devices.ts:420 segSegClosest ->, src/game/devices.ts:420)
 #[derive(Clone, Copy, Debug)]
 pub struct SegSegClosest {
     pub dist: f64,
@@ -558,53 +558,53 @@ impl SegSegClosest {
 }
 impl Default for SegSegClosest { fn default() -> Self { Self::zeroed() } }
 
-/// (src/game/devices.ts:45 LED_IDLE: a table nothing writes)
+/// (src/game/devices.ts:46 LED_IDLE: a table nothing writes)
 pub fn led_idle() -> V3 { [1.6, 0.08, 0.05] }
 
-/// (src/game/devices.ts:45 LED_HOT: a table nothing writes)
+/// (src/game/devices.ts:46 LED_HOT: a table nothing writes)
 pub fn led_hot() -> V3 { [14.0, 0.7, 0.3] }
 
-/// (src/game/devices.ts:47 CONE: a table nothing writes)
+/// (src/game/devices.ts:48 CONE: a table nothing writes)
 pub fn cone() -> crate::devices::CONE { crate::devices::CONE { intensity: 1.1, color: [1.0, 0.12, 0.07], range_k: 0.7, volumetric: 1.0, outer_max_deg: 24.0, radius: 0.12 } }
 
-/// (src/game/devices.ts:49 BEAM_MARGIN)
+/// (src/game/devices.ts:50 BEAM_MARGIN)
 pub const BEAM_MARGIN: f64 = 0.02;
 
-/// (src/game/devices.ts:51 CODE_SECS)
+/// (src/game/devices.ts:52 CODE_SECS)
 pub const CODE_SECS: f64 = 1.2;
 
-/// (src/game/devices.ts:52 PAD_REACH)
+/// (src/game/devices.ts:53 PAD_REACH)
 pub const PAD_REACH: f64 = 1.35;
 
-/// (src/game/devices.ts:52 DENY_LEVEL)
+/// (src/game/devices.ts:53 DENY_LEVEL)
 pub const DENY_LEVEL: f64 = 0.05;
 
-/// (src/game/devices.ts:57 ERRAND: a table nothing writes)
+/// (src/game/devices.ts:58 ERRAND: a table nothing writes)
 pub fn errand() -> crate::devices::ERRAND { crate::devices::ERRAND { awareness: 0.42, react_t: 1.0 } }
 
-/// (src/game/devices.ts:364 CAM_COL: a table nothing writes)
+/// (src/game/devices.ts:365 CAM_COL: a table nothing writes)
 pub fn cam_col() -> V3 { [0.16, 0.17, 0.19] }
 
-/// (src/game/devices.ts:364 CAM_DARK: a table nothing writes)
+/// (src/game/devices.ts:365 CAM_DARK: a table nothing writes)
 pub fn cam_dark() -> V3 { [0.05, 0.05, 0.06] }
 
-/// (src/game/devices.ts:364 PAD_COL: a table nothing writes)
+/// (src/game/devices.ts:365 PAD_COL: a table nothing writes)
 pub fn pad_col() -> V3 { [0.22, 0.23, 0.25] }
 
-/// (src/game/devices.ts:364 EMIT_COL: a table nothing writes)
+/// (src/game/devices.ts:365 EMIT_COL: a table nothing writes)
 pub fn emit_col() -> V3 { [0.14, 0.14, 0.16] }
 
-/// (src/game/devices.ts:365 GREEN: a table nothing writes)
+/// (src/game/devices.ts:366 GREEN: a table nothing writes)
 pub fn green() -> V3 { [0.3, 5.0, 0.6] }
 
-/// (src/game/devices.ts:365 RED: a table nothing writes)
+/// (src/game/devices.ts:366 RED: a table nothing writes)
 pub fn red() -> V3 { [5.0, 0.3, 0.15] }
 
-/// (src/game/devices.ts:365 AMBER: a table nothing writes)
+/// (src/game/devices.ts:366 AMBER: a table nothing writes)
 pub fn amber() -> V3 { [5.0, 2.4, 0.2] }
 
-/// (src/game/devices.ts:405 LS_KEY)
+/// (src/game/devices.ts:406 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.devices";
 
-/// (src/game/devices.ts:406 DEVICE_TUNE_DEFAULTS: a table nothing writes)
+/// (src/game/devices.ts:407 DEVICE_TUNE_DEFAULTS: a table nothing writes)
 pub fn device_tune_defaults() -> crate::devices::DEVICETUNEDEFAULTS { crate::devices::DEVICETUNEDEFAULTS { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true } }

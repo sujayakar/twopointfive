@@ -10,30 +10,10 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// how many cards the table holds, as an index
 const CARDS: usize = KIT_MEMBERS as usize;
 
-// ------------------------------------------------------------ seams: what skeleton 3 still cannot give
-//  (rifle_new, pistol_new, rifle_left and rifle_attachment have no `g` and no gun: a copy of them here would be a second constructor)
-
-/// `new Rifle(def)` (rifle_new takes no game and returns Opaque)
-fn seam_rifle_new(g: &mut Game, def: &crate::weapons::WeaponDef) -> FirearmId { todo!("needs: rifle_new(g, def) -> FirearmId") }
-/// `new Pistol(def)` (pistol_new takes no game and returns Opaque)
-fn seam_pistol_new(g: &mut Game, def: &crate::weapons::WeaponDef) -> FirearmId { todo!("needs: pistol_new(g, def) -> FirearmId") }
-/// `rf.left(a)` (rifle_left has no `this`)
-fn seam_rifle_left(g: &mut Game, rf: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { match a { crate::weapons::RifleAttachment::Ring => g.fa[rf].rings, crate::weapons::RifleAttachment::Cam => g.fa[rf].cams, _ => g.fa[rf].shells } } // SKELETON-GAP: crate::weapons::rifle_left taking g and the FirearmId (weapons.ts:533-538)
-/// `rf.attachment` (rifle_attachment has no `this`)
-fn seam_rifle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[rf].att_idx; if i >= 0 { g.fa[rf].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
-
 // ------------------------------------------------------------ small asks of this file
 
 /// `issuing` as a condition (true and 'own' both hold)
 fn issuing_on(g: &mut Game) -> bool { !matches!(g.m.kit.issuing, KitModIssuing::Bool(false)) }
-/// `eachSeat(g, f)`: one seat is `g` itself; more, each seat's view through with_seat (each_seat's own `f` takes two `&mut Game`, which nobody can lend)
-fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 { f(g); return; }
-    for s in g.seats.clone() {
-        let man = crate::cmd::seat_man(g, s);
-        crate::seats::with_seat(g, man, &mut |v: &mut Game| f(v));
-    }
-}
 /// `WEAPONS[w]`, a copy to hand on while `g` is lent
 fn weapon_row(g: &mut Game, w: crate::weapons::WeaponId) -> crate::weapons::WeaponDef { g.m.weapons.weapons.get(w).unwrap().clone() }
 /// `gd.weapon.def.cls === 'pistol'`, of a gun's row
@@ -205,7 +185,7 @@ pub fn kit_pistol(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// The breaching shotgun or the hammer in a staged teammate's big slot.   (kit.ts kitBig)
 pub fn kit_big(g: &mut crate::game::Game, gd: GuardId) -> crate::kit::BigKit {
-    if !g.m.kit.big_on { return BigKit::None; }
+    if !g.k.bigslot.on { return BigKit::None; }
     match g.m.kit.man_of.get(gd) {
         Some(e) if !js::truthy(e.kit.walls) => e.kit.big,
         _ => BigKit::None,
@@ -269,11 +249,11 @@ pub fn kit_player(g: &mut crate::game::Game) {
         g.m.kit.issued_player.set(pl, was);
     }
     let counts = !(page_issued(g) && matches!(g.m.kit.issuing, KitModIssuing::Bool(true)));
-    if g.m.kit.big_on {
+    if g.k.bigslot.on {
         big_home(&mut m, 0.0);
         g.m.kit.kit.members[0] = m.clone();
     }
-    g.pl[pl].big_kit = if g.m.kit.big_on && !js::truthy(m.walls) { m.big } else { BigKit::None };
+    g.pl[pl].big_kit = if g.k.bigslot.on && !js::truthy(m.walls) { m.big } else { BigKit::None };
     if m.weapon == KitWeapon::Pistol && g.pl[pl].has_rifle {
         g.pl[pl].has_rifle = false;
         if g.pl[pl].slot == crate::game::SlotKind::Rifle { g.pl[pl].slot = crate::game::SlotKind::Pistol; }
@@ -285,17 +265,17 @@ pub fn kit_player(g: &mut crate::game::Game) {
         if let Some(long) = long {
             if g.pl[pl].has_rifle {
                 let want = mine(g, tree, long, &m, crate::gunslots::GunSlot::Primary);
-                if g.fa[g.pl[pl].rifle].def != want.id { g.pl[pl].rifle = seam_rifle_new(g, &want); }
+                if g.fa[g.pl[pl].rifle].def != want.id { g.pl[pl].rifle = crate::weapons::rifle_new(g, Some(&want)); }
             }
         }
         if let Some(side) = side {
             let want = mine(g, tree, side, &m, crate::gunslots::GunSlot::Secondary);
-            if g.fa[g.pl[pl].pistol].def != want.id { g.pl[pl].pistol = seam_pistol_new(g, &want); }
+            if g.fa[g.pl[pl].pistol].def != want.id { g.pl[pl].pistol = crate::weapons::pistol_new(g, Some(&want)); }
         }
     }
     if m.weapon == KitWeapon::Shotgun && g.pl[pl].has_rifle && g.fa[g.pl[pl].rifle].def != crate::weapons::WeaponId::M870 {
         let def = weapon_row(g, crate::weapons::WeaponId::M870);
-        g.pl[pl].rifle = seam_rifle_new(g, &def);
+        g.pl[pl].rifle = crate::weapons::rifle_new(g, Some(&def));
     }
     if counts && (m.smoke != b.smoke || m.bangs != b.bangs) {
         g.pl[pl].canisters = m.smoke;
@@ -322,7 +302,7 @@ pub fn kit_player(g: &mut crate::game::Game) {
             let rf = g.pl[pl].rifle;
             let handed = if lent && stealth_run(g) { g.k.kittree.lend } else { 0.0 };
             g.fa[rf].rings = m::min(RINGS_MAX, m::max(m.rings, handed));
-            if !js::truthy(g.fa[rf].rings) && seam_rifle_attachment(g, rf) == Some(crate::weapons::RifleAttachment::Ring) {
+            if !js::truthy(g.fa[rf].rings) && crate::weapons::rifle_attachment(g, rf) == Some(crate::weapons::RifleAttachment::Ring) {
                 let (shells, cams) = (g.fa[rf].shells, g.fa[rf].cams);
                 let k = g.fa[rf].attachments.iter().position(|&a| match a {
                     crate::weapons::RifleAttachment::He40 => shells > 0.0,
@@ -349,7 +329,7 @@ pub fn kit_player(g: &mut crate::game::Game) {
             };
             let rf = g.pl[pl].rifle;
             if let Some(k) = g.fa[rf].attachments.iter().position(|&x| x == a) {
-                if seam_rifle_left(g, rf, a) > 0.0 { g.fa[rf].att_idx = k as i32; }
+                if crate::weapons::rifle_left(g, rf, a) > 0.0 { g.fa[rf].att_idx = k as i32; }
             }
         }
     }
@@ -390,7 +370,7 @@ pub fn kit_alone(g: &mut crate::game::Game) {
 /// The solo night wears your card.   (kit.ts kitSolo)
 pub fn kit_solo(g: &mut crate::game::Game) {
     g.m.kit.kit_solo.on = true;
-    on_each_seat(g, &mut |v| kit_player(v));
+    crate::seats::each_seat(g, &mut |v| kit_player(v));
 }
 
 /// The page's own question: the plain night off the loadout screen, or a quiet mission alone, and no squad scenario up.   (kit.ts kitSoloIf)
@@ -445,7 +425,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     g.m.kit.kit_staged.n += 1.0;
     g.m.kit.kit_staged.ops = came.clone();
     if !g.m.kit.kit.on {
-        on_each_seat(g, &mut |v| {
+        crate::seats::each_seat(g, &mut |v| {
             crate::squadsmoke::squad_smoke_stage(v, 0.0);
             crate::squad40::squad40_stage(v, &[]);
         });
@@ -455,18 +435,18 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     if g.k.slots.on { kit_team(g, Some(n)); }
     if g.seats.len() > 1 { crate::seats::deal_seats(g); }
     let cans = kit_smokes(g, ops.len() as f64);
-    on_each_seat(g, &mut |v| {
+    crate::seats::each_seat(g, &mut |v| {
         let share = crate::seats::seat_share(v, cans);
         crate::squadsmoke::squad_smoke_stage(v, share);
     });
-    on_each_seat(g, &mut |v| kit_player(v));
+    crate::seats::each_seat(g, &mut |v| kit_player(v));
     let mut worn = kit_worn(g, Some(n), None);
     let worn_is_table = !dealing(g) || n < 3.0;   // (kitWorn handed back KIT.members itself: bigHome below writes through to the table)
     let issued_cards = issued();
     for (k, &gd) in came.iter().enumerate() {
         let i = k + 1;
         let d = &issued_cards[i];
-        let m = if g.m.kit.big_on {
+        let m = if g.k.bigslot.on {
             let r = big_home(&mut worn[i], i as f64);
             if worn_is_table { g.m.kit.kit.members[i] = worn[i].clone(); }
             r
@@ -499,18 +479,18 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     }
     let rows: Vec<(GuardId, f64)> = came.iter().map(|&gd| (gd, g.m.kit.man_of.get(gd).map_or(0.0, |e| e.kit.shells))).collect();
     let one = g.seats.len() == 1;
-    on_each_seat(g, &mut |v| {
+    crate::seats::each_seat(g, &mut |v| {
         if one {
             crate::squad40::squad40_stage(v, &rows);
         } else {
             let s = v.seat;
-            let mine: Vec<(GuardId, f64)> = rows.iter().copied().filter(|r| crate::seats::seat_has(v, s, r.0)).collect();
+            let mine: Vec<(GuardId, f64)> = rows.iter().copied().filter(|r| crate::seats::in_seat(v, s, r.0)).collect();
             crate::squad40::squad40_stage(v, &mine);
         }
     });
     let pool = kit_pool(g, n, None);
     if js::truthy(n) && (pool.bangs != g.k.doortools.bangs || pool.charges != g.k.doortools.charges || pool.frags != g.k.frag.squad) {
-        on_each_seat(g, &mut |v| {
+        crate::seats::each_seat(g, &mut |v| {
             crate::doortools::door_tools_sync(v);
             v.door_tools.bangs = crate::seats::seat_share(v, pool.bangs);
             v.door_tools.charges = crate::seats::seat_share(v, pool.charges);
@@ -519,7 +499,7 @@ pub fn kit_stage(g: &mut crate::game::Game, ops: &[GuardId]) {
     }
     if js::truthy(n) && g.k.slots.on && wall_here() {
         let walls = kit_walls(g, n);
-        on_each_seat(g, &mut |v| {
+        crate::seats::each_seat(g, &mut |v| {
             let share = crate::seats::seat_share(v, walls);
             crate::wallcharge::wall_charge_set_carried(v, Some(share));
         });
@@ -617,9 +597,9 @@ mod tests {
         let mut kit = g.m.kit.kit.members[1].clone();
         kit.big = BigKit::Hammer;
         g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit: kit.clone() });
-        g.m.kit.big_on = false;
+        g.k.bigslot.on = false;
         assert_eq!(kit_big(&mut g, gd), BigKit::None);
-        g.m.kit.big_on = true;
+        g.k.bigslot.on = true;
         assert_eq!(kit_big(&mut g, gd), BigKit::Hammer);
         kit.walls = 1.0;
         g.m.kit.man_of.set(gd, KitModManOfValue { i: 1.0, kit });

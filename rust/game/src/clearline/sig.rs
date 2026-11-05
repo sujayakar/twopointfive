@@ -39,7 +39,7 @@ pub fn sam_moves(g: &mut crate::game::Game, secs: f64) -> bool { todo!() }
 pub fn entering(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/clearline.ts:199 bodies)
-pub fn bodies(g: &mut crate::game::Game, self_: GuardId) -> crate::Opaque { todo!() }
+pub fn bodies(g: &mut crate::game::Game, self_: GuardId) -> Vec<V3> { todo!() }
 
 /// (src/game/clearline.ts:206 shotFrom)
 pub fn shot_from(g: &mut crate::game::Game, gd: GuardId, p: V3, to: V3) -> bool { todo!() }
@@ -75,7 +75,7 @@ pub fn clear_line_feet(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::
 pub fn cover_ok(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool { todo!() }
 
 /// (src/game/clearline.ts:322 clearLineBlocked)
-pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, to: V3, by: crate::clearline::ClearLineBlockedBy) -> bool { todo!() }
+pub fn clear_line_blocked(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId, to: V3, by: crate::clearline::LeadsBy) -> bool { todo!() }
 
 /// (src/game/clearline.ts:400 clearLineSummary)
 pub fn clear_line_summary(g: &mut crate::game::Game) -> String { todo!() }

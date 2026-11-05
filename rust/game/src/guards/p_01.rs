@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 1 to 415
+//! src/game/guards.ts lines 1 to 418
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,24 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// What a calm man mutters when a light before him dims out under the OCP. (guards.ts OCP_MUTTER)
-static OCP_MUTTER: [&str; 5] = ["light's on the blink again", "hm — bulb's going", "power dip?", "these fittings…", "that light again"];
-
-// Motion acuity: a still man's worth in the dark, the apparent speeds, the light that makes him plain standing. (guards.ts MOTION_*)
-const MOTION_STILL: f64 = 0.35;
-const MOTION_LO: f64 = 0.05;
-const MOTION_HI: f64 = 1.2;
-const MOTION_LIT_LO: f64 = 0.3;
-const MOTION_LIT_HI: f64 = 0.75;
-const MOTION_RADIAL: f64 = 0.4;
-const MOTION_SPRINT: f64 = 1.6;
-const MOTION_SPRINT_MS: f64 = 3.5;
-const MOTION_NEAR_M: f64 = 2.5;
-const MOTION_NEAR_FLOOR: f64 = 0.8;
-const MOTION_HUNT_FLOOR: f64 = 0.7;
-
-/// Probe queries the body tests may spend a frame between them. (guards.ts BODY_PROBE_BUDGET)
-const BODY_PROBE_BUDGET: f64 = 6.0;
+/// `gd.lastKnown = at`, a new object in the TypeScript: every whole write bumps `fix_stamp`, doze.ts:244's and roomfight's identity question.
+fn write_fix(g: &mut Game, gd: GuardId, at: V3) {
+    let man = &mut g.gd[gd];
+    man.last_known = Some(at);
+    man.fix_stamp = man.fix_stamp.wrapping_add(1);
+}
 
 /// A bone of a body, or a stand-in where it has none yet (`c.bones.head ?? …`).
 fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, or: V3) -> V3 {
@@ -60,7 +48,7 @@ fn unannounced(g: &Game, at: usize) -> bool {
 }
 
 fn shot_e(e: &crate::game::GameEvent) -> crate::guards::ShotRelationE {
-    crate::guards::ShotRelationE { kind: String::from(e.kind.as_str()), who: e.who }
+    crate::guards::ShotRelationE { kind: e.kind, who: e.who }
 }
 
 /// How a 'glass' event reaches an ear: from its own point, and from each face of the pane it carries, whichever arrives best. (guards.ts glassHeard)
@@ -84,6 +72,16 @@ pub fn glass_heard(g: &mut crate::game::Game, e: crate::game::GameEvent, ear: V3
         }
     }
     best
+}
+
+/// His eyes have a man at `at` this moment, by another rule's look than updateGuard's own: the record of a sighting, in one place. (guards.ts eyesOn)
+pub fn eyes_on(g: &mut crate::game::Game, gd: GuardId, at: V3) {
+    write_fix(g, gd, at);
+    let now = g.time;
+    let man = &mut g.gd[gd];
+    man.sight_pos = at;
+    man.sight_t = now;
+    man.last_seen_t = now;
 }
 
 /// A man's ears (and his eye on a light going out): every event of the frame once, what the kind of noise does to him. (guards.ts hearingCheck)
@@ -111,6 +109,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             continue;
         }
         g.gd[gd].heard_up_to = m::max(g.gd[gd].heard_up_to, id);
+        let placed = crate::belief::word_stands(g, gd, e.time);   // a blast or a mate's word has placed his belief since this was made: that report stands
         let d_straight = v3::dist(e.pos, g.ch[c].pos);
         if e.kind == K::LightOut {
             if eyes && d_straight < 10.0 && g.gd[gd].awareness < 0.4 && crate::guards::light_out_seen(g, gd, crate::guards::LightOutSeenE { pos: e.pos, from: e.from }) {
@@ -135,8 +134,9 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                         crate::chronicle::chron_heard(g, gd, e, None);
                         if unannounced(g, at_e) && g.gd[gd].state == S::Patrol {
                             g.events[at_e].announced = Some(true);
-                            let line = js::rem(g.ch[c].id + m::floor(g.time), OCP_MUTTER.len() as f64) as usize;
-                            crate::game::game_say(g, gd, OCP_MUTTER[line], Some(false), None, None);
+                            let lines = crate::guards::ocp_mutter();
+                            let line = js::rem(g.ch[c].id + m::floor(g.time), lines.len() as f64) as usize;
+                            crate::game::game_say(g, gd, &lines[line], Some(false), None, None);
                         }
                     }
                 } else {
@@ -145,7 +145,9 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                         None => e.pos,
                     };
                     g.gd[gd].awareness = 0.4;
-                    g.gd[gd].last_known = Some(at);
+                    if !placed {
+                        write_fix(g, gd, at);
+                    }
                     g.gd[gd].react_t = 0.8;
                     small(g, gd, &e, at);
                     crate::chronicle::chron_heard(g, gd, e, None);
@@ -187,12 +189,12 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             || (e.kind == K::GuardShot
                 && crate::gunslots::quiet_heard(g)
                 && d_straight >= 0.1
-                && crate::guards::shot_relation(g, gd, &shot_e(&e)) == crate::guards::ShotRelation::Threat);
+                && crate::guards::shot_relation(g, gd, shot_e(&e)) == crate::guards::ShotRelation::Threat);
         if odd && !gunfire && d < 7.0 * carry * m::max(0.3, e.level.unwrap_or(0.6) / 0.6) * ear + 0.5 {
             g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.5);
             let at = if prop.direct { e.pos } else { heard_at };
-            if g.gd[gd].state != S::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0 {
-                g.gd[gd].last_known = Some(at);
+            if !placed && (g.gd[gd].state != S::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
+                write_fix(g, gd, at);
             }
             if g.gd[gd].state == S::Patrol {
                 g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.6);
@@ -204,7 +206,7 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             if e.kind == K::GuardShot && d_straight < 0.1 {
                 continue;
             }
-            let rel = if gunfire { crate::guards::shot_relation(g, gd, &shot_e(&e)) } else { crate::guards::ShotRelation::Threat };
+            let rel = if gunfire { crate::guards::shot_relation(g, gd, shot_e(&e)) } else { crate::guards::ShotRelation::Threat };
             if rel == crate::guards::ShotRelation::None
                 || crate::frag::own_bang(g, gd, crate::frag::OwnBangE { frag: e.frag, who: e.who })
                 || crate::doorforce::door_force_own_boot(g, gd, e)
@@ -231,19 +233,22 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             crate::chronicle::chron_heard(g, gd, e, None);
             if rel == crate::guards::ShotRelation::Own {
                 let at = crate::guards::colleague_fire_pos(g, gd, crate::guards::ColleagueFirePosE { who: e.who, pos: e.pos, to: e.to, blind: e.blind });
-                if let Some(at) = at {
-                    g.gd[gd].last_known = Some(at);
+                if let (Some(at), false) = (at, placed) {
+                    write_fix(g, gd, at);
                 }
             } else if g.gd[gd].state != S::Alert || g.gd[gd].last_known.is_none() || prop.direct || g.time - g.gd[gd].last_seen_t > 1.0 {
                 let err = if prop.direct { 0.0 } else { m::min(4.0, 0.6 + d_loud * 0.08) * (1.3 - 0.3 * carry) };
                 let a = crate::math_dice::sim_random(g) * m::PI * 2.0;
                 let cand: V3 = [e.pos[0] + m::cos(a) * err, 0.0, e.pos[2] + m::sin(a) * err];
-                let reachable = !crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) && {
-                    let from = g.ch[c].pos;
-                    crate::scene_collision::nav_grid_find_path(g, from, cand, None, None).is_some()
-                };
-                g.gd[gd].last_known = Some(if reachable { cand } else { e.pos });
+                if !placed {
+                    let reachable = !crate::scene_collision::nav_grid_is_blocked(g, cand[0], cand[2]) && {
+                        let from = g.ch[c].pos;
+                        crate::scene_collision::nav_grid_find_path(g, from, cand, None, None).is_some()
+                    };
+                    write_fix(g, gd, if reachable { cand } else { e.pos });
+                }
             }
+            g.gd[gd].witness.heard.loud_at = g.gd[gd].last_known;   // what the report came to in his head, written or not: the room fight's evidence reads it
             if calm {
                 let late = 0.25 + m::min(1.2, d_loud / 25.0) + crate::math_dice::sim_random(g) * 0.4;
                 g.gd[gd].react_t = m::max(g.gd[gd].react_t, late);
@@ -278,8 +283,8 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             if a > 0.08 {
                 let aw = g.gd[gd].awareness;
                 g.gd[gd].awareness = m::min(1.0, m::max(aw, m::min(if e.loud { 0.75 } else { 0.45 }, aw + a)));
-                if g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert {
-                    g.gd[gd].last_known = Some(heard_at);
+                if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert) {
+                    write_fix(g, gd, heard_at);
                 }
                 if g.gd[gd].state == S::Patrol {
                     g.gd[gd].react_t = 0.6;
@@ -294,8 +299,8 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
                 let calm = was_calm(g, gd);
                 let aw = g.gd[gd].awareness;
                 g.gd[gd].awareness = m::min(1.0, m::max(aw, m::min(0.85, 0.4 + a)));
-                if g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert {
-                    g.gd[gd].last_known = Some(heard_at);
+                if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state != S::Alert) {
+                    write_fix(g, gd, heard_at);
                 }
                 if calm {
                     g.gd[gd].react_t = m::max(g.gd[gd].react_t, 0.5);
@@ -318,8 +323,8 @@ pub fn hearing_check(g: &mut crate::game::Game, gd: GuardId, ear: Option<f64>, e
             if a > 0.12 {
                 let aw = g.gd[gd].awareness;
                 g.gd[gd].awareness = m::min(1.0, m::max(aw, m::min(0.6, aw + a * 0.5)));
-                if g.gd[gd].last_known.is_none() || g.gd[gd].state == S::Patrol {
-                    g.gd[gd].last_known = Some(heard_at);
+                if !placed && (g.gd[gd].last_known.is_none() || g.gd[gd].state == S::Patrol) {
+                    write_fix(g, gd, heard_at);
                 }
                 small(g, gd, &e, heard_at);
                 crate::chronicle::chron_heard(g, gd, e, None);
@@ -356,7 +361,7 @@ pub fn gunfire_due(g: &mut crate::game::Game, gd: GuardId, bangs: Option<bool>) 
         if d > 80.0 || (e.kind == K::GuardShot && d < 0.1) {
             continue;
         }
-        if crate::guards::shot_relation(g, gd, &shot_e(&e)) != crate::guards::ShotRelation::None {
+        if crate::guards::shot_relation(g, gd, shot_e(&e)) != crate::guards::ShotRelation::None {
             return true;
         }
     }
@@ -364,8 +369,8 @@ pub fn gunfire_due(g: &mut crate::game::Game, gd: GuardId, bangs: Option<bool>) 
 }
 
 /// Whose gunfire this is to `gd`: a man of his side's, an enemy's, or neither. (guards.ts shotRelation)
-pub fn shot_relation(g: &mut crate::game::Game, gd: GuardId, e: &crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
-    let shooter = if e.kind == "shot" { crate::teams::Team::Player } else { crate::teams::team_of_id(g, e.who.unwrap_or(-1.0)) };
+pub fn shot_relation(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::ShotRelationE) -> crate::guards::ShotRelation {
+    let shooter = if e.kind == crate::director::EventKind::Shot { crate::teams::Team::Player } else { crate::teams::team_of_id(g, e.who.unwrap_or(-1.0)) };
     let team = g.gd[gd].team;
     if shooter == team {
         return crate::guards::ShotRelation::Own;
@@ -722,14 +727,14 @@ pub fn body_lit(g: &mut crate::game::Game, gd: GuardId, o: GuardId, eye: V3, dis
 }
 
 /// The switch and its numbers as this machine kept them: no storage on this side of the host, so the shipped values stand, the TypeScript's own path with none. (guards.ts loadBodyLight)
-pub fn load_body_light(g: &mut crate::game::Game, tune: &mut crate::guards::LoadBodyLightTune) {}
+pub fn load_body_light(g: &mut crate::game::Game) {}
 
 /// Keep the switch and its numbers on this machine: nothing to keep them in on this side of the host. (guards.ts saveBodyLight)
-pub fn save_body_light(g: &mut crate::game::Game, tune: crate::guards::SaveBodyLightTune) {}
+pub fn save_body_light(g: &mut crate::game::Game) {}
 
 /// The switch on and the bar back to the shipped values; the machine's copy is the host's to drop. (guards.ts resetBodyLight)
-pub fn reset_body_light(g: &mut crate::game::Game, tune: &mut crate::guards::ResetBodyLightTune) {
-    tune.body_light = true;
+pub fn reset_body_light(g: &mut crate::game::Game) {
+    g.tune.body_light = true;
     let d = crate::guards::body_light_defaults();
     let b = &mut g.k.body_light;
     b.lit = d.lit;
@@ -751,14 +756,14 @@ pub fn body_light_summary(g: &mut crate::game::Game) -> String {
         }
         let v = crate::guards::body_visibility(g, o);
         let e = match g.m.guards.body_meters.get(o) {
-            Some(row) => alloc::format!("{:.3}", row.e),
+            Some(row) => js::to_fixed(row.e, 3),
             None => String::from("?"),
         };
-        parts.push(alloc::format!("{} {:.2} (E {})", g.gd[o].callsign, v, e));
+        parts.push(alloc::format!("{} {} (E {})", g.gd[o].callsign, js::to_fixed(v, 2), e));
     }
     let list = if parts.is_empty() { String::from("nobody down unfound") } else { parts.join(" · ") };
     let b = g.k.body_light;
-    alloc::format!("bodies by light ▸ {} · bar {} from {} m (any light inside {} m) · {}", if g.tune.body_light { "on" } else { "OFF" }, b.lit, b.far_m, b.near_m, list)
+    alloc::format!("bodies by light ▸ {} · bar {} from {} m (any light inside {} m) · {}", if g.tune.body_light { "on" } else { "OFF" }, js::num_str(b.lit), js::num_str(b.far_m), js::num_str(b.near_m), list)
 }
 
 #[cfg(test)]

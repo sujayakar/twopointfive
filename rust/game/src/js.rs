@@ -259,6 +259,59 @@ pub fn to_fixed(x: f64, digits: u32) -> alloc::string::String {
     out
 }
 
+/// `String(x)` / `${x}` of a number: JavaScript's own form (the shortest digits that read back the same double; plain decimals from
+/// 1e-6 up to 1e21, exponent form outside: "1e+21", "1.5e-7"; "0" for minus zero; "NaN", "Infinity").
+pub fn num_str(x: f64) -> alloc::string::String {
+    use alloc::string::{String, ToString};
+    if x.is_nan() {
+        return "NaN".to_string();
+    }
+    if x == 0.0 {
+        return "0".to_string();
+    }
+    if x.is_infinite() {
+        return if x > 0.0 { "Infinity".to_string() } else { "-Infinity".to_string() };
+    }
+    let neg = x < 0.0;
+    // Rust's `{:e}` gives the same shortest digits: "d.ddde<exp>"
+    let e = alloc::format!("{:e}", if neg { -x } else { x });
+    let (mant, exp) = e.split_once('e').unwrap();
+    let exp: i32 = exp.parse().unwrap();
+    let digits: String = mant.chars().filter(|c| *c != '.').collect();
+    let k = digits.len() as i32; // how many digits
+    let n = exp + 1; // the decimal point sits after n digits
+    let mut out = String::new();
+    if neg {
+        out.push('-');
+    }
+    if k <= n && n <= 21 {
+        out.push_str(&digits);
+        for _ in 0..(n - k) {
+            out.push('0');
+        }
+    } else if 0 < n && n <= 21 {
+        out.push_str(&digits[..n as usize]);
+        out.push('.');
+        out.push_str(&digits[n as usize..]);
+    } else if -6 < n && n <= 0 {
+        out.push_str("0.");
+        for _ in 0..(-n) {
+            out.push('0');
+        }
+        out.push_str(&digits);
+    } else {
+        out.push_str(&digits[..1]);
+        if k > 1 {
+            out.push('.');
+            out.push_str(&digits[1..]);
+        }
+        out.push('e');
+        out.push(if n - 1 < 0 { '-' } else { '+' });
+        out.push_str(&(n - 1).abs().to_string());
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -450,6 +503,44 @@ mod tests {
         ];
         for &(b, f, want) in cases {
             assert_eq!(to_fixed(f64::from_bits(b), f), want, "{:#x} {}", b, f);
+        }
+    }
+    #[test]
+    fn num_str_is_javascripts() {
+        let cases: &[(u64, &str)] = &[
+            (0x0, "0"),
+            (0x8000000000000000, "0"),
+            (0x3ff0000000000000, "1"),
+            (0xbff0000000000000, "-1"),
+            (0x3ff8000000000000, "1.5"),
+            (0x3fb999999999999a, "0.1"),
+            (0x3fd3333333333334, "0.30000000000000004"),
+            (0x419d6f3454000000, "123456789"),
+            (0x444b1ae4d6e2ef50, "1e+21"),
+            (0x4415af1d78b58c40, "100000000000000000000"),
+            (0x4454542ba12a337c, "1.5e+21"),
+            (0x3e7ad7f29abcaf48, "1e-7"),
+            (0x3eb0c6f7a0b5ed8d, "0.000001"),
+            (0x3e8421f5f40d8376, "1.5e-7"),
+            (0x405edd2f1a9fbe77, "123.456"),
+            (0xbeb4b3fd5942cd96, "-0.000001234"),
+            (0x1, "5e-324"),
+            (0x7fefffffffffffff, "1.7976931348623157e+308"),
+            (0x7ff8000000000000, "NaN"),
+            (0x7ff0000000000000, "Infinity"),
+            (0xfff0000000000000, "-Infinity"),
+            (0x4059000000000000, "100"),
+            (0x430c6bf526340000, "1000000000000000"),
+            (0x441ac53a7e04bcda, "123456789012345680000"),
+            (0x3eb0c6f7a0b5ed8d, "0.000001"),
+            (0x4340000000000000, "9007199254740992"),
+            (0x3fd5555555555555, "0.3333333333333333"),
+            (0xbe25798ee2308c3a, "-2.5e-9"),
+            (0x4045000000000000, "42"),
+            (0x400921f9f01b866e, "3.14159"),
+        ];
+        for &(b, want) in cases {
+            assert_eq!(num_str(f64::from_bits(b)), want, "{:#x}", b);
         }
     }
 }

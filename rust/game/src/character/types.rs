@@ -988,7 +988,7 @@ pub struct Anim {
     pub held_pose: Option<crate::character::HeldPose>,
     pub door_push: Option<crate::character::DoorPush>,
     pub work: Option<crate::character::WorkPose>,
-    pub carry: Option<crate::character::AnimCarry>,
+    pub carry: Option<Option<crate::character::CarryKind2>>,
     pub swap_lag: f64,
     pub haul: Option<crate::character::HaulPose>,
     pub long_gun: bool,
@@ -1231,6 +1231,7 @@ pub struct Anim {
     pub grip_can: bool,
     pub hn: crate::character::AnimHn,
     pub nodes: crate::character::AnimNodes,
+    pub poses: PoseSetId,
     pub rig: RigId,
     pub nv: Option<crate::character::AnimNv>,
     pub nv_arm: f64,
@@ -1552,6 +1553,7 @@ impl Anim {
             grip_can: false,
             hn: crate::character::AnimHn { nodes: Vec::new(), fist: Vec::new(), own: Vec::new(), open: Vec::new(), trig: alloc::vec![0.0; 12], thumb: alloc::vec![alloc::vec![0.0; 12], alloc::vec![0.0; 12]], base: alloc::vec![alloc::vec![0.0; 60], alloc::vec![0.0; 60]], note: alloc::vec![alloc::vec![0.0; 5], alloc::vec![0.0; 5]], seed: 0.0, built: f64::NAN, quiet: false, grip: alloc::vec![0.0, 0.0], off: 1.0, fired: 9.0, gun: 0.0 },
             nodes: crate::character::AnimNodes::zeroed(),
+            poses: PoseSetId(0),
             rig: RigId(0),
             nv: None,
             nv_arm: 0.0,
@@ -2428,9 +2430,9 @@ impl Default for AnimWk { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/character.ts:1748 CharacterAnimator.sw, src/game/character.ts:1748)
 #[derive(Clone, Copy, Debug)]
 pub struct AnimSw {
-    pub cur: Option<crate::character::AnimSwCur>,
-    pub from: Option<crate::character::AnimSwFrom>,
-    pub to: Option<crate::character::AnimSwTo>,
+    pub cur: Option<Option<crate::character::AnimCarry>>,
+    pub from: Option<crate::character::AnimCarry>,
+    pub to: Option<crate::character::AnimCarry>,
     pub t: f64,
     pub dur: f64,
     pub shown: bool,
@@ -2517,7 +2519,7 @@ impl AnimRx {
 impl Default for AnimRx { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1758 CharacterAnimator.sp, src/game/character.ts:1758)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct AnimSp {
     pub w_a: f64,
     pub t: f64,
@@ -3091,7 +3093,7 @@ pub struct AnimHdIdle {
     pub upper: crate::character::UpperMode,
     pub long: bool,
     pub crouch: f64,
-    pub carry: Option<crate::character::AnimHdIdleCarry>,
+    pub carry: Option<Option<crate::character::AnimCarry>>,
 }
 impl AnimHdIdle {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -4306,7 +4308,7 @@ impl Default for WALLPOSEGait { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct LONGRELOAD {
     pub box_: crate::character::LONGRELOADBox,
-    pub back: crate::character::LONGRELOADBack,
+    pub back: crate::character::LONGRELOADBox,
     pub head: crate::character::LONGRELOADHead,
     pub in_: f64,
     pub out: f64,
@@ -4320,7 +4322,7 @@ impl LONGRELOAD {
     pub fn zeroed() -> Self {
         LONGRELOAD {
             box_: crate::character::LONGRELOADBox::zeroed(),
-            back: crate::character::LONGRELOADBack::zeroed(),
+            back: crate::character::LONGRELOADBox::zeroed(),
             head: crate::character::LONGRELOADHead::zeroed(),
             in_: 0.0,
             out: 0.0,
@@ -4354,7 +4356,7 @@ impl LONGRELOADBox {
 }
 impl Default for LONGRELOADBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:670 LONGRELOAD.back, src/game/character.ts:670)
+/// (TypeScript: inline at quiet LONGRELOAD.back, src/game/character.ts:670)
 #[derive(Clone, Copy, Debug)]
 pub struct LONGRELOADBack {
     pub at: V3,
@@ -4658,7 +4660,7 @@ impl Default for MV2 { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct MV2Reload {
     pub box_: crate::character::MV2ReloadBox,
-    pub back: crate::character::MV2ReloadBack,
+    pub back: crate::character::MV2ReloadBox,
     pub pouch: [V3; 2],
     pub pole: V3,
     pub pole_w: f64,
@@ -4673,7 +4675,7 @@ impl MV2Reload {
     pub fn zeroed() -> Self {
         MV2Reload {
             box_: crate::character::MV2ReloadBox::zeroed(),
-            back: crate::character::MV2ReloadBack::zeroed(),
+            back: crate::character::MV2ReloadBox::zeroed(),
             pouch: [[0.0; 3]; 2],
             pole: [0.0; 3],
             pole_w: 0.0,
@@ -4712,7 +4714,7 @@ impl MV2ReloadBox {
 }
 impl Default for MV2ReloadBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/character.ts:836 MV2Reload.back, src/game/character.ts:836)
+/// (TypeScript: inline at quiet MV2Reload.back, src/game/character.ts:836)
 #[derive(Clone, Copy, Debug)]
 pub struct MV2ReloadBack {
     pub mag: V3,
@@ -6154,13 +6156,6 @@ impl BIGMOVEShotgun {
 }
 impl Default for BIGMOVEShotgun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
-pub enum AnimTablesValue {
-    Num(f64),
-    Arm1,
-}
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum MvOnK {
@@ -6709,7 +6704,7 @@ impl AnimSwapHeld {
 #[derive(Clone, Copy, Debug)]
 pub struct AnimSwapInfo {
     pub a: f64,
-    pub to: Option<crate::character::AnimSwapInfoTo>,
+    pub to: Option<crate::character::AnimCarry>,
     pub pending: bool,
 }
 impl AnimSwapInfo {
@@ -6880,7 +6875,7 @@ impl CharacterMod {
 }
 
 /// (src/game/character.ts:28 LONG_STANCES: a table nothing writes)
-pub fn long_stances() -> Vec<String> { alloc::vec![String::from("patrolLong"), String::from("lowLong"), String::from("shoulder"), String::from("portLong")] }
+pub fn long_stances() -> Vec<crate::character::LongStance> { alloc::vec![crate::character::LongStance::PatrolLong, crate::character::LongStance::LowLong, crate::character::LongStance::Shoulder, crate::character::LongStance::PortLong] }
 
 /// (src/game/character.ts:81 WORK: a table nothing writes)
 pub fn work() -> crate::character::WORK { crate::character::WORK { key_lead: 0.2, tip_len: 0.215, hover: 0.022, key_off: 0.03, lever: 0.035 } }
@@ -6991,7 +6986,7 @@ pub fn long() -> JsMap<String, crate::character::LongShape> { { let mut t = JsMa
 pub fn long_crouch() -> JsMap<String, crate::character::LongShape> { crate::character::long() }
 
 /// (src/game/character.ts:668 LONG_RELOAD: a table nothing writes)
-pub fn long_reload() -> crate::character::LONGRELOAD { crate::character::LONGRELOAD { box_: crate::character::LONGRELOADBox { at: [-0.15, -0.075, 0.19], pitch: 20.0, aim_k: 0.0, yaw: 12.0 }, back: crate::character::LONGRELOADBack { at: [-0.16, -0.06, 0.21], pitch: 12.0, aim_k: 0.0, yaw: 4.0 }, head: crate::character::LONGRELOADHead { yaw: -10.0, pitch: 22.0, roll: 0.0 }, in_: 0.35, out: 0.35, end: 0.06, head_in: 0.3, head_out: 0.3, rate: 8.0 } }
+pub fn long_reload() -> crate::character::LONGRELOAD { crate::character::LONGRELOAD { box_: crate::character::LONGRELOADBox { at: [-0.15, -0.075, 0.19], pitch: 20.0, aim_k: 0.0, yaw: 12.0 }, back: crate::character::LONGRELOADBox { at: [-0.16, -0.06, 0.21], pitch: 12.0, aim_k: 0.0, yaw: 4.0 }, head: crate::character::LONGRELOADHead { yaw: -10.0, pitch: 22.0, roll: 0.0 }, in_: 0.35, out: 0.35, end: 0.06, head_in: 0.3, head_out: 0.3, rate: 8.0 } }
 
 /// (src/game/character.ts:674 LC: a table nothing writes)
 pub fn lc() -> crate::character::LC { crate::character::LC { side: 0.0, up: 1.0, fwd: 2.0, pitch: 3.0, aim_k: 4.0, yaw: 5.0, blade: 6.0, lean: 7.0, head_yaw: 8.0, head_pitch: 9.0, head_roll: 10.0, elbow_r: 11.0, elbow_l: 14.0, pole_w: 17.0, sway: 18.0, anchor: 19.0, steady: 20.0, count: 21.0 } }
@@ -7015,7 +7010,7 @@ pub fn wound_pose() -> JsMap<String, crate::character::WOUNDPOSEValue> { { let m
 pub fn wound_at() -> V3 { [-0.05, 0.03, 0.15] }
 
 /// (src/game/character.ts:833 MV2: a table nothing writes)
-pub fn mv2() -> crate::character::MV2 { crate::character::MV2 { reload: crate::character::MV2Reload { box_: crate::character::MV2ReloadBox { mag: [0.085, -0.17, 0.125], strip: [0.09, -0.26, 0.15], handle: [0.05, -0.08, 0.07], pull: [0.05, -0.08, -0.03], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }, back: crate::character::MV2ReloadBack { mag: [0.085, -0.15, -0.115], strip: [0.09, -0.23, -0.17], handle: [0.1, 0.01, 0.17], pull: [0.1, 0.01, 0.08], hf: [-0.9, 0.1, 0.3], hb: [0.0, 1.0, 0.0] }, pouch: [[0.15, 0.04, 0.215], [0.1, -0.03, 0.195]], pole: [0.7, -0.6, -0.25], pole_w: 0.7, fumble: 0.055, tap: 0.11, flare: crate::character::MV2ReloadFlare { off: [0.12, 0.12, -0.03], tap: [0.13, 0.04, 0.0], pole: [1.0, 0.35, -0.2] }, fling: 0.06, rate: 14.0 }, bound: crate::character::MV2Bound { rate: 6.0, back: crate::character::MV2BoundBack { up: 0.07, out: 0.045, behind: 0.15, curl: alloc::vec![0.64, 0.7, 0.76, 0.82], thumb: 0.7 }, head: crate::character::MV2BoundHead { up: 0.2, out: 0.095, behind: 0.065, elbow: -0.2, curl: alloc::vec![0.28, 0.32, 0.36, 0.4], knuckle: alloc::vec![16.0, 5.0], thumb: 0.3 } }, clutch: crate::character::MV2Clutch { rate: 7.0, at: [-0.14, 0.12, 0.12], pole: [1.0, -0.05, -0.35], fold: crate::character::MV2ClutchFold { rate: 6.0, pitch: 24.0, pitch_too: 34.0, head: 20.0, drop: 0.05, sway: 3.0, hz: 1.0 } }, hurt: crate::character::MV2Hurt { rate: 4.0, pitch: 11.0, lean: 8.0, head: 9.0, head_brace: 0.5, drop: 0.025, sway: 1.5, hz: 0.45, brace: 0.7, step_pitch: 5.0, step_roll: 10.0, step_yaw: 5.0, step_head: 4.0, step_drop: 0.04, step_side: 0.06, arm: 1.0 }, shaken: crate::character::MV2Shaken { rate_in: 12.0, rate_out: 3.0, pitch: 11.0, head: 18.0, drop: 0.1, brace: 0.75 }, dip: crate::character::MV2Dip { pitch: -36.0, down: 0.035, back: 0.02, rate_in: 13.0, rate_out: 9.0, lane: alloc::vec![0.25, 1.9, 0.34] } } }
+pub fn mv2() -> crate::character::MV2 { crate::character::MV2 { reload: crate::character::MV2Reload { box_: crate::character::MV2ReloadBox { mag: [0.085, -0.17, 0.125], strip: [0.09, -0.26, 0.15], handle: [0.05, -0.08, 0.07], pull: [0.05, -0.08, -0.03], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }, back: crate::character::MV2ReloadBox { mag: [0.085, -0.15, -0.115], strip: [0.09, -0.23, -0.17], handle: [0.1, 0.01, 0.17], pull: [0.1, 0.01, 0.08], hf: [-0.9, 0.1, 0.3], hb: [0.0, 1.0, 0.0] }, pouch: [[0.15, 0.04, 0.215], [0.1, -0.03, 0.195]], pole: [0.7, -0.6, -0.25], pole_w: 0.7, fumble: 0.055, tap: 0.11, flare: crate::character::MV2ReloadFlare { off: [0.12, 0.12, -0.03], tap: [0.13, 0.04, 0.0], pole: [1.0, 0.35, -0.2] }, fling: 0.06, rate: 14.0 }, bound: crate::character::MV2Bound { rate: 6.0, back: crate::character::MV2BoundBack { up: 0.07, out: 0.045, behind: 0.15, curl: alloc::vec![0.64, 0.7, 0.76, 0.82], thumb: 0.7 }, head: crate::character::MV2BoundHead { up: 0.2, out: 0.095, behind: 0.065, elbow: -0.2, curl: alloc::vec![0.28, 0.32, 0.36, 0.4], knuckle: alloc::vec![16.0, 5.0], thumb: 0.3 } }, clutch: crate::character::MV2Clutch { rate: 7.0, at: [-0.14, 0.12, 0.12], pole: [1.0, -0.05, -0.35], fold: crate::character::MV2ClutchFold { rate: 6.0, pitch: 24.0, pitch_too: 34.0, head: 20.0, drop: 0.05, sway: 3.0, hz: 1.0 } }, hurt: crate::character::MV2Hurt { rate: 4.0, pitch: 11.0, lean: 8.0, head: 9.0, head_brace: 0.5, drop: 0.025, sway: 1.5, hz: 0.45, brace: 0.7, step_pitch: 5.0, step_roll: 10.0, step_yaw: 5.0, step_head: 4.0, step_drop: 0.04, step_side: 0.06, arm: 1.0 }, shaken: crate::character::MV2Shaken { rate_in: 12.0, rate_out: 3.0, pitch: 11.0, head: 18.0, drop: 0.1, brace: 0.75 }, dip: crate::character::MV2Dip { pitch: -36.0, down: 0.035, back: 0.02, rate_in: 13.0, rate_out: 9.0, lane: alloc::vec![0.25, 1.9, 0.34] } } }
 
 /// (src/game/character.ts:881 TURN_FEEL: a table nothing writes)
 pub fn turn_feel_table() -> crate::character::TURNFEEL { crate::character::TURNFEEL { light: crate::character::TURNFEELLight { aim: 11.0, aim_acc: 150.0, body: 7.0, body_acc: 60.0 }, medium: crate::character::TURNFEELMedium { aim: 8.75, aim_acc: 75.0, body: 6.0, body_acc: 40.0 }, heavy: crate::character::TURNFEELHeavy { aim: 7.0, aim_acc: 50.0, body: 5.0, body_acc: 30.0 } } }
@@ -7081,10 +7076,10 @@ pub fn reach() -> crate::character::REACH { crate::character::REACH { in_: 0.3, 
 pub fn knife_blow() -> crate::character::KNIFEBLOW { crate::character::KNIFEBLOW { snap: 0.16, t_clear: 0.06, clear: [0.14, 0.05], az: 0.7, reach: 0.96, fade: 0.12, cross: crate::character::KNIFEBLOWCross { end: 0.6, hit: 0.27, keys: alloc::vec![crate::character::BlowKey { t: 0.16, at: [0.27, 0.0, 0.3], blade: [0.1, 0.9, 0.5], fing: [0.7, 0.1, 0.6], pole: [-0.5, -0.8, 0.1] }, crate::character::BlowKey { t: 0.27, at: [-0.05, 0.03, 0.5], blade: [-0.1, 0.8, 0.6], fing: [0.2, 0.0, 1.0], pole: [-0.7, -0.7, 0.0] }, crate::character::BlowKey { t: 0.36, at: [-0.22, -0.06, 0.36], blade: [-0.4, 0.8, 0.45], fing: [-0.2, -0.1, 1.0], pole: [-0.8, -0.6, -0.1] }] }, jab: crate::character::KNIFEBLOWCross { end: 0.52, hit: 0.24, keys: alloc::vec![crate::character::BlowKey { t: 0.15, at: [-0.02, -0.32, 0.08], blade: [0.0, 0.5, 1.0], fing: [0.05, -0.5, 0.8], pole: [-0.5, -0.3, -0.8] }, crate::character::BlowKey { t: 0.24, at: [0.12, -0.2, 0.56], blade: [0.0, 1.0, 0.8], fing: [0.2, 0.1, 1.0], pole: [-0.6, -0.8, -0.1] }, crate::character::BlowKey { t: 0.33, at: [0.0, -0.28, 0.2], blade: [0.0, 0.6, 1.0], fing: [0.05, -0.4, 0.9], pole: [-0.5, -0.5, -0.7] }] } } }
 
 /// (src/game/character.ts:1077 KNIFE_SLASH: a table nothing writes)
-pub fn knife_slash() -> crate::character::KNIFESLASH { crate::character::KNIFESLASH { end: 0.52, hit: 0.24, keys: alloc::vec![crate::character::BlowKey { t: 0.14, at: [0.3, -0.38, 0.12], blade: [-0.3, 0.6, 0.7], fing: [0.6, -0.3, 0.6], pole: [-0.3, -0.6, -0.6] }, crate::character::BlowKey { t: 0.24, at: [0.1, -0.08, 0.62], blade: [-0.6, 0.5, 0.6], fing: [0.1, 0.0, 1.0], pole: [-0.7, -0.6, 0.0] }, crate::character::BlowKey { t: 0.34, at: [-0.46, 0.3, 0.3], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }, crate::character::BlowKey { t: 0.42, at: [-0.46, 0.28, 0.28], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }] } }
+pub fn knife_slash() -> crate::character::KNIFEBLOWCross { crate::character::KNIFEBLOWCross { end: 0.52, hit: 0.24, keys: alloc::vec![crate::character::BlowKey { t: 0.14, at: [0.3, -0.38, 0.12], blade: [-0.3, 0.6, 0.7], fing: [0.6, -0.3, 0.6], pole: [-0.3, -0.6, -0.6] }, crate::character::BlowKey { t: 0.24, at: [0.1, -0.08, 0.62], blade: [-0.6, 0.5, 0.6], fing: [0.1, 0.0, 1.0], pole: [-0.7, -0.6, 0.0] }, crate::character::BlowKey { t: 0.34, at: [-0.46, 0.3, 0.3], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }, crate::character::BlowKey { t: 0.42, at: [-0.46, 0.28, 0.28], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }] } }
 
 /// (src/game/character.ts:1084 KNIFE_BACK: a table nothing writes)
-pub fn knife_back() -> crate::character::KNIFEBACK { crate::character::KNIFEBACK { end: 0.6, hit: 0.27, keys: alloc::vec![crate::character::BlowKey { t: 0.15, at: [-0.02, -0.4, -0.04], blade: [0.0, 0.25, 1.0], fing: [0.0, -1.0, 0.25], pole: [-0.4, 0.0, -1.0] }, crate::character::BlowKey { t: 0.27, at: [0.08, -0.34, 0.33], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }, crate::character::BlowKey { t: 0.44, at: [0.08, -0.36, 0.31], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }] } }
+pub fn knife_back() -> crate::character::KNIFEBLOWCross { crate::character::KNIFEBLOWCross { end: 0.6, hit: 0.27, keys: alloc::vec![crate::character::BlowKey { t: 0.15, at: [-0.02, -0.4, -0.04], blade: [0.0, 0.25, 1.0], fing: [0.0, -1.0, 0.25], pole: [-0.4, 0.0, -1.0] }, crate::character::BlowKey { t: 0.27, at: [0.08, -0.34, 0.33], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }, crate::character::BlowKey { t: 0.44, at: [0.08, -0.36, 0.31], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }] } }
 
 /// (src/game/character.ts:1091 BLOW: a table nothing writes)
 pub fn blow() -> crate::character::BLOW { crate::character::BLOW { rise: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.85); t.set(String::from("palm"), 0.6); t.set(String::from("mouth"), 0.9); t.set(String::from("sweep"), 0.8); t.set(String::from("slash"), 0.7); t }, clip: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.25); t.set(String::from("palm"), 0.35); t.set(String::from("mouth"), 1.0); t.set(String::from("sweep"), 1.0); t.set(String::from("slash"), 1.0); t }, reach: 0.98, fist: alloc::vec![0.92, 0.95, 0.95, 0.95], open: alloc::vec![0.08, 0.06, 0.08, 0.12], loose: alloc::vec![0.25, 0.3, 0.3, 0.35], cup: alloc::vec![0.35, 0.35, 0.4, 0.45], legs: crate::character::BLOWLegs { gap: 0.2, lift: 0.05, straight: 0.985, up: 0.4, fwd: 0.6, out: 0.4 }, tail: 1.0, sink: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.8); t.set(String::from("palm"), 0.6); t.set(String::from("mouth"), 1.0); t.set(String::from("sweep"), 0.75); t.set(String::from("slash"), 0.75); t }, walk: alloc::vec![0.4, 1.5] } }
@@ -7117,7 +7112,7 @@ pub fn work_no() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(Strin
 pub fn kit_no() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("pistol"), 1.0); t.set(String::from("rifle"), 2.0); t.set(String::from("can"), 3.0); t.set(String::from("knife"), 4.0); t } }
 
 /// (src/game/character.ts:1138 KIT_OF: a table nothing writes)
-pub fn kit_of() -> Vec<Option<String>> { alloc::vec![None, Some(String::from("pistol")), Some(String::from("rifle")), Some(String::from("can")), Some(String::from("knife"))] }
+pub fn kit_of() -> Vec<Option<crate::character::KitItem>> { alloc::vec![None, Some(crate::character::KitItem::Pistol), Some(crate::character::KitItem::Rifle), Some(crate::character::KitItem::Can), Some(crate::character::KitItem::Knife)] }
 
 /// (src/game/character.ts:1146 CREEP: a table nothing writes)
 pub fn creep() -> crate::character::CREEP { crate::character::CREEP { in_: 6.0, out: 5.0, gait_in: 0.2, gait_out: 0.4, drop: alloc::vec![0.09, 0.03], back: alloc::vec![0.03, 0.01], lean: alloc::vec![14.0, 6.0], round: 10.0, look: 0.85, low: crate::character::CREEPLow { rate: 8.0, up: 24.0 }, wide: crate::character::CREEPWide { in_: 5.0, out: 14.0, still: 0.03, pole: [0.75, 0.1, -0.65], fing: [0.3, -0.5, 0.8], back: [0.15, 0.9, 0.35], curl: 0.1, thumb: 0.15, spread: 0.55 }, heft: crate::character::CREEPHeft { stride: 0.75, lift: 0.1, run: 1.6, trunk: [11.0, 0.7], arm: [7.0, 0.55], body: [9.0, 0.75], go: [5.0, 0.5], out: 0.15, up: 0.3, breath: 1.3, breath_hz: 0.32, dt: 0.03333333333333333 }, l: crate::character::CREEPL { at: [-0.05, -0.27, 0.3], at_c: [0.0, -0.17, 0.3], pole: [0.7, -0.6, -0.5], fing: [-0.2, 0.35, 1.0], back: [0.7, 0.7, 0.0], curl: 0.32, thumb: 0.25, spread: 0.2 }, r: crate::character::CREEPR { at: [0.05, -0.33, 0.27], at_c: [0.0, -0.21, 0.28], pole: [-0.7, -0.6, -0.5], fing: [0.2, 0.3, 1.0], back: [-0.7, 0.7, 0.0], curl: 0.38, thumb: 0.3, spread: 0.15 } } }
@@ -7186,7 +7181,7 @@ pub fn rag_limbs() -> Vec<(String, f64, f64, f64)> { alloc::vec![(String::from("
 pub fn rag_bone() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("pelvis"), String::from("hips")); t.set(String::from("spine"), String::from("spine2")); t.set(String::from("neck"), String::from("neck")); t.set(String::from("head"), String::from("head")); t.set(String::from("shoL"), String::from("upperArmL")); t.set(String::from("shoR"), String::from("upperArmR")); t.set(String::from("elbL"), String::from("forearmL")); t.set(String::from("elbR"), String::from("forearmR")); t.set(String::from("handL"), String::from("handL")); t.set(String::from("handR"), String::from("handR")); t.set(String::from("hipL"), String::from("thighL")); t.set(String::from("hipR"), String::from("thighR")); t.set(String::from("kneeL"), String::from("shinL")); t.set(String::from("kneeR"), String::from("shinR")); t.set(String::from("ankL"), String::from("footL")); t.set(String::from("ankR"), String::from("footR")); t } }
 
 /// (src/game/character.ts:4269 RAG_BONES: a table nothing writes)
-pub fn rag_bones() -> Vec<String> { Vec::new() }
+pub fn rag_bones() -> Vec<crate::character::Bone> { alloc::vec![crate::character::Bone::Hips, crate::character::Bone::Spine2, crate::character::Bone::Neck, crate::character::Bone::Head, crate::character::Bone::UpperArmL, crate::character::Bone::UpperArmR, crate::character::Bone::ForearmL, crate::character::Bone::ForearmR, crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::ThighL, crate::character::Bone::ThighR, crate::character::Bone::ShinL, crate::character::Bone::ShinR, crate::character::Bone::FootL, crate::character::Bone::FootR] }
 
 impl Character {
     /// (character.ts Character's constructor, up to what needs the rig: rest_chest_inv, rest_head_inv, the hand frames, anim and skel are the part's to fill from the rig)

@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Zero what the rule has answered since the last reset. (wounds.ts resetWoundStats)
-pub fn reset_wound_stats() { todo!("needs: g, the counters are g.stats.wounds and the stub has no g; only tools/qa call it") }
-
 /// Closest distance between segments p1→q1 and p2→q2. (wounds.ts segDist)
 pub fn seg_dist(p1: V3, q1: V3, p2: V3, q2: V3) -> f64 {
     let (d1, d2, r) = (v3::sub(q1, p1), v3::sub(q2, p2), v3::sub(p1, p2));
@@ -178,8 +175,7 @@ pub fn finish_wounded(g: &mut crate::game::Game, gd: GuardId, dir: V3, by_player
         g.gd[gd].down_by = Some(crate::game::DownBy::Player);
         crate::guards::witness_kill(g, gd, crate::game::DownKind::Shot, crate::game::DownBy::Player);
     }
-    let world = crate::ragdoll::RagdollWorld { boxes: g.col.boxes.ids().collect(), dynamic_boxes: g.col.dynamic_boxes.clone() };
-    crate::character::character_ragdollize(g, c, Some(&world), dir, true);
+    crate::character::character_ragdollize(g, c, true, dir, true);
     let text = alloc::format!("{} — finished on the floor", g.gd[gd].callsign);
     crate::game::game_msg(g, &text);
 }

@@ -82,8 +82,7 @@ pub fn throwables_spawn(g: &mut crate::game::Game, kind: crate::throwables::Item
         }
     }
     let row = crate::sim_itemshome::item_store_enter(g);
-    let things = g.props.all.clone();
-    let it = item_new(g, row, &things);
+    let it = item_new(g, row);
     // every field through its own setter: the row is written
     item_set_kind(g, it, opts.kind.unwrap_or(kind));
     item_set_pos(g, it, opts.pos.unwrap_or(pos));
@@ -219,8 +218,31 @@ pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
     throwables_say(g, &ev);
 }
 
-/// Whether the walk is the module's to take. In Rust it always is (blitz/doors-kit.md), over the game's one world: nothing to decide, nothing to hand back.   (throwables.ts Throwables.world)
-pub fn throwables_world(g: &mut crate::game::Game) {}
+/// The box world's copy stood for the walk, with the game's own leaves and the furniture in it. In Rust the walk is always the module's: nothing to decide, nothing to hand back.   (throwables.ts Throwables.world)
+pub fn throwables_world(g: &mut crate::game::Game) {
+    let dyn_ = g.col.dynamic_boxes.clone();
+    crate::scene_collision::rules_world(g, &dyn_);
+    debug_assert!(crate::scene_collision::rules_panes(g) >= 0.0, "the pane's rule is not the module's to ask");
+    let p = furniture(g);
+    if !crate::scene_box_mirror::box_mirror_things(g, &p) {
+        panic!("the box world's copy would not take the level's furniture: more things, or more boxes of them, than its tables hold, and a level of more is not loaded (game/levelfit.ts levelOver)");
+    }
+}
+
+/// `this.props` as the copy reads it: every thing by its id, and the ones in the level in the furniture's own order (throwables.ts:318 hands the PropSystem itself).
+fn furniture(g: &mut Game) -> crate::scene_box_mirror::Furniture {
+    let (all, props) = (g.props.all.clone(), g.props.props.clone());
+    crate::scene_box_mirror::Furniture { all: things_of(g, &all), props: things_of(g, &props) }
+}
+fn things_of(g: &mut Game, ids: &[PropId]) -> Vec<crate::scene_box_mirror::FurnitureThing> {
+    let mut out = Vec::with_capacity(ids.len());
+    for &p in ids {
+        let (id, radius, boxes) = { let r = &g.tab.props_prop[p]; (r.id, r.radius, r.boxes.clone()) };
+        let (x, z, yaw) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p), crate::props::prop_yaw(g, p));
+        out.push(crate::scene_box_mirror::FurnitureThing { id, x, z, yaw, radius, boxes });
+    }
+    out
+}
 
 /// One number of the walk's hand-over (rust/sim items.rs PAR, by its address as the TypeScript has it: never a reference kept across the walk).
 fn par_put(i: usize, v: f64) {
@@ -239,7 +261,7 @@ fn ev_get(i: usize) -> f64 {
 
 /// The module's walk from row `from` down: the hand-over written, the walk asked, the tallies kept, what it listed copied onto `ev`. → the row it hands back, or −1.   (throwables.ts Throwables.walkThere)
 pub fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: &mut Vec<f64>) -> f64 {
-    let ask = crate::scene_collision::pane_ask(g);
+    let ask = crate::scene_collision::rules_panes(g);
     debug_assert!(ask >= 0.0, "the pane's rule is not the module's to ask");
     let bog = crate::snow_bog::snow_bog_may(g);
     par_put(sim::items::P_DT, dt);
@@ -327,35 +349,35 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
     match b {
         // doortools, tactics, squadthrow and the rest: the can's knock
         ItemBounce::Can => crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(1.0, sp / 4.0)), None),
-        // player.ts:814: the player's own throw, and the room hears it
+        // player.ts:815: the player's own throw, and the room hears it
         ItemBounce::CanHeard => {
             crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(1.0, sp / 4.0)), None);
             let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(p), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
             g.events.push(e);
         }
-        // launcher.ts:168
+        // launcher.ts:169
         ItemBounce::RingSkitter => {
             if sp > 1.2 {
-                seam_audio_play_rate(g, "canisterBounce", p, m::min(0.5, sp / 12.0), 1.7);
+                crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.5, sp / 12.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.7 }));
             }
         }
         // he40.ts:123
         ItemBounce::ShellSkitter => {
             if sp > 1.0 {
-                seam_audio_play_rate(g, "canisterBounce", p, m::min(0.7, sp / 8.0), 0.8);
+                crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(p), Some(m::min(0.7, sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
             }
         }
-        // player.ts:362
+        // player.ts:363
         ItemBounce::Mag => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), None),
-        // player.ts:381, guards.ts:2827
-        ItemBounce::MagRate { belt } => seam_audio_play_rate(g, "magDrop", p, m::min(1.0, sp / 3.0), if belt { 0.6 } else { 0.8 }),
-        // combat.ts:422 dropFromHand; who 0: nobody living made it, a clatter the room cannot explain
+        // player.ts:382, guards.ts:2782
+        ItemBounce::MagRate { belt } => crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate: if belt { 0.6 } else { 0.8 } })),
+        // combat.ts:423 dropFromHand; who 0: nobody living made it, a clatter the room cannot explain
         ItemBounce::Dropped { kind, quiet } => {
             if sp < 0.7 {
                 return;
             }
             let rate = if kind == ItemKind::Pistol { 0.72 } else if kind == ItemKind::Rifle { 0.6 } else { 0.85 };
-            seam_audio_play_rate(g, "magDrop", p, m::min(1.0, sp / 3.0) * (if quiet { 0.5 } else { 1.0 }), rate);
+            crate::audio_iface::game_audio_like_play(g, "magDrop", Some(p), Some(m::min(1.0, sp / 3.0) * (if quiet { 0.5 } else { 1.0 })), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
             if !quiet {
                 let c = g.tab.item[it].clatters.unwrap_or(0.0) + 1.0;
                 g.tab.item[it].clatters = Some(c);
@@ -377,17 +399,122 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
     }
 }
 
-/// `g.audio.play(name, pos, gain, { rate })`: `opts` of game_audio_like_play holds `crate::Opaque`, which cannot carry the rate.
-fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
-    todo!("needs: game_audio_like_play's opts to carry a rate")
+/// `out[k].mkey = key` of a box made this frame: it has no row to write yet (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>).   (throwables.ts:507)
+fn seam_box_set_mkey(g: &mut Game, b: BoxId, mkey: f64) {
+    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
 }
 
-/// Picture only (blitz/doors-kit.md "Throwables.boxes only draws: leave it"): not translated, as the skeleton's stub.   (throwables.ts Throwables.boxes)
+/// Fill 4 to 7's magazines (gunreload.ts): half length, half width, half thickness, colour.   (throwables.ts:502)
+const OWN_MAGS: [(f64, f64, f64, V3); 4] = [
+    (0.11, 0.016, 0.012, [0.06, 0.06, 0.065]),
+    (0.06, 0.045, 0.035, [0.16, 0.17, 0.1]),
+    (0.065, 0.014, 0.012, [0.03, 0.03, 0.033]),
+    (0.1, 0.011, 0.012, [0.03, 0.03, 0.033]),
+];
+
+/// A thrown thing's parts as boxes into this frame's list, each keyed off its serial.   (throwables.ts Throwables.boxes)
 pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    // BRING-UP: game_step_fx_and_dyn_boxes calls this (p_game_07 holds that the dyn boxes are state). With nothing thrown the TypeScript's loop makes no box
-    // (throwables.ts:437), so that case returns; a thrown thing's boxes are still not translated.
-    if g.items.items.is_empty() { return; }
-    todo!("picture only by blitz/doors-kit.md, yet the tick calls it: the boxes of a thrown thing (throwables.ts:436) are not translated")
+    let flag = crate::scene_boxes::box_flag();
+    let dy = flag.dynamic;
+    let dn = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
+    let item_key = crate::scene_boxes::mkey().item;
+    let x_axis: V3 = [1.0, 0.0, 0.0];
+    for i in 0..g.items.items.len() {
+        let it = g.items.items[i];
+        // (its row, read once)
+        let (p, kind, settled, yaw, tumble, radius, fill, serial) = (item_pos(g, it), item_kind(g, it), item_settled(g, it), item_yaw(g, it), item_tumble(g, it), item_radius(g, it), item_fill(g, it), item_serial(g, it));
+        let n0 = out.len();
+        let flying = v3::quat::mul(v3::quat::yaw(yaw), v3::quat::axis_angle(x_axis, tumble));
+        match kind {
+            ItemKind::Smoke | ItemKind::Flash => {
+                let (body, band): (V3, V3) = if kind == ItemKind::Flash {
+                    if item_fired(g, it) { ([0.03, 0.03, 0.03], [0.12, 0.11, 0.1]) } else { ([0.07, 0.075, 0.08], [0.7, 0.7, 0.66]) }
+                } else {
+                    ([0.25, 0.29, 0.2], [0.6, 0.08, 0.06])
+                };
+                let c0: V3 = if settled { [p[0], p[1] - radius + 0.034, p[2]] } else { v3::copy(p) };
+                out.push(item_box(c0, [0.032, 0.032, 0.07], yaw, flying, body, dy));
+                out.push(item_box(v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.045])), [0.034, 0.034, 0.012], yaw, flying, band, dn));
+            }
+            ItemKind::Frag => {
+                let f = frag_item();
+                let c0: V3 = if settled { [p[0], p[1] - radius + f.half[0] + 0.002, p[2]] } else { v3::copy(p) };
+                out.push(item_box(c0, f.half, yaw, flying, f.body, dy));
+                out.push(item_box(v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.012])), [0.034, 0.034, 0.006], yaw, flying, f.band, dn));
+                out.push(item_box(v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, 0.05])), [0.012, 0.012, 0.014], yaw, flying, f.fuze, dn));
+            }
+            ItemKind::Pistol | ItemKind::Torch | ItemKind::Rifle => {
+                // in the air it flips end over end; settled, on its side with that face on the floor
+                let thick = if kind == ItemKind::Pistol { 0.016 } else if kind == ItemKind::Rifle { if fill == 1.0 { sc20_k_item().thick } else { rifle_item().thick } } else { 0.022 };
+                let rot = if settled {
+                    v3::quat::mul(v3::quat::mul(v3::quat::yaw(yaw), v3::quat::axis_angle(x_axis, m::round(tumble / m::PI) * m::PI)), v3::quat::axis_angle([0.0, 0.0, 1.0], m::PI / 2.0))
+                } else {
+                    flying
+                };
+                let c: V3 = if settled { [p[0], p[1] - radius + thick + 0.004, p[2]] } else { v3::copy(p) };
+                let at = |off: V3| -> V3 { v3::add(c, v3::quat::rotate(rot, off)) };
+                if kind == ItemKind::Pistol {
+                    out.push(item_box(at([0.0, 0.0, 0.0]), [0.016, 0.026, 0.095], yaw, rot, [0.05, 0.05, 0.055], dy));
+                    let grip_rot = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, 108.0 * m::PI / 180.0));
+                    out.push(item_box(v3::add(at([0.0, -0.024, -0.045]), v3::quat::rotate(grip_rot, [0.0, 0.0, 0.047])), [0.014, 0.017, 0.047], yaw, grip_rot, [0.05, 0.05, 0.055], dy));
+                    if fill > 0.0 {
+                        out.push(item_box(at([0.0, 0.0, 0.17]), [0.019, 0.019, 0.075], yaw, rot, [0.09, 0.09, 0.09], dy));
+                    }
+                } else if kind == ItemKind::Rifle && fill == 1.0 {
+                    let s = m4_item();
+                    out.push(item_box(at([0.0, 0.0, s.hull.z]), s.hull.h, yaw, rot, s.polymer, dy));
+                    out.push(item_box(at([0.0, 0.0, s.fore.z]), s.fore.h, yaw, rot, s.fore_col, dy));
+                    out.push(item_box(at([0.0, s.mag.y, s.mag.z]), s.mag.h, yaw, rot, s.metal, dy));
+                    out.push(item_box(at([0.0, s.optic.y, s.optic.z]), s.optic.h, yaw, rot, s.metal, dn));
+                } else if kind == ItemKind::Rifle {
+                    let r = rifle_item();
+                    out.push(item_box(at([0.0, 0.0, r.receiver.z]), r.receiver.h, yaw, rot, r.steel, dy));
+                    out.push(item_box(at([0.0, 0.0, r.fore.z]), r.fore.h, yaw, rot, r.wood, dy));
+                    let mag_rot = v3::quat::mul(rot, v3::quat::axis_angle(x_axis, r.mag.cant));
+                    out.push(item_box(at([0.0, r.mag.y, r.mag.z]), r.mag.h, yaw, mag_rot, r.wood, dy));
+                    out.push(item_box(at([0.0, -0.012, r.stock.z]), r.stock.h, yaw, rot, r.steel, dn));
+                } else {
+                    out.push(item_box(at([0.0, 0.0, 0.0]), [0.022, 0.022, 0.09], yaw, rot, [0.09, 0.09, 0.1], dy));
+                    out.push(item_box(at([0.0, 0.0, 0.095]), [0.026, 0.026, 0.008], yaw, rot, [0.16, 0.16, 0.15], dn));
+                }
+            }
+            // GEAR.on, settled true on the page: the 40 mm sponge round
+            ItemKind::Ring => {
+                let c: V3 = if settled { [p[0], p[1] - radius + sponge_item().wide + 0.002, p[2]] } else { v3::copy(p) };
+                sponge_boxes(out, c, if settled { v3::quat::yaw(yaw) } else { flying }, yaw);
+            }
+            ItemKind::Shell => {
+                let s = shell_item();
+                let c0: V3 = if settled { [p[0], p[1] - radius + s.half[0] + 0.002, p[2]] } else { v3::copy(p) };
+                out.push(item_box(c0, s.half, yaw, flying, s.body, dy));
+                out.push(item_box(v3::add(c0, v3::quat::rotate(flying, [0.0, 0.0, s.half[2] * 0.62])), [s.half[0] + 0.001, s.half[1] + 0.001, s.half[2] * 0.4], yaw, flying, s.nose, dn));
+            }
+            // a magazine. fill 2: a rifleman's empty thirty; 3: the FN2000's black thirty; 4 to 7: OWN_MAGS; else a pistol's (0 empty, 0 to 1 part full)
+            ItemKind::Mag => {
+                let (box30, box20k) = (fill > 1.0, fill >= 3.0);
+                let own = if fill >= 4.0 { Some(OWN_MAGS[m::min(3.0, fill - 4.0) as usize]) } else { None };
+                let col: V3 = match own {
+                    Some(o) => o.3,
+                    None => if box20k { sc20_k_item().metal } else if box30 { rifle_item().wood } else if fill > 0.0 { [0.09, 0.09, 0.1] } else { [0.06, 0.06, 0.065] },
+                };
+                let hl = match own { Some(o) => o.0, None => if box30 { 0.095 } else { 0.055 } };
+                let hw = match own { Some(o) => o.1, None => if box30 { 0.014 } else { 0.018 } };
+                let th = match own { Some(o) => o.2, None => 0.012 };
+                if settled {
+                    let b = crate::scene_boxes::make_box(g, &crate::scene_boxes::MakeBoxP { c: [p[0], p[1] + th, p[2]], h: [hw, th, hl], yaw: Some(yaw), albedo: Some(col), flags: Some(dn), ..Default::default() });
+                    out.push(b);
+                } else {
+                    let deep = match own { Some(o) => m::max(0.03, o.2), None => 0.03 };
+                    out.push(item_box(v3::copy(p), [hw, hl, deep], yaw, flying, col, dn));
+                }
+            }
+        }
+        // motion identity per part: the g-buffer reprojects the flying can through its own last transform, whatever spawned or died around it in the list
+        for k in n0..out.len() {
+            let b = out[k];
+            seam_box_set_mkey(g, b, item_key + (js::to_i32(serial) & 8191) as f64 * 8.0 + m::min(7.0, (k - n0) as f64));
+        }
+    }
 }
 
 /// A canister that is still something: its fuse not yet gone, or (smoke) gone and still venting.   (throwables.ts liveCan)

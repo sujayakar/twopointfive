@@ -36,7 +36,7 @@ pub fn snatch_out_owns(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!()
 pub fn snatch_out_planted(g: &mut crate::game::Game) -> Vec<GuardId> { todo!() }
 
 /// (src/game/snatchout.ts:93 SnatchOut.rows)
-pub fn snatch_out_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::snatchout::SnatchOutRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) { todo!() }
+pub fn snatch_out_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::snatchout::SnatchOutRows2RowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) { todo!() }
 
 /// (src/game/snatchout.ts:102 SnatchOut.word)
 pub fn snatch_out_word(g: &mut crate::game::Game, by: Option<CharId>) -> bool { todo!() }
@@ -60,7 +60,7 @@ pub fn snatch_out_fighting(g: &mut crate::game::Game, gd: GuardId) -> bool { tod
 pub fn snatch_out_mover(g: &mut crate::game::Game) -> Option<CharId> { todo!() }
 
 /// (src/game/snatchout.ts:147 SnatchOut.mine)
-pub fn snatch_out_mine(g: &mut crate::game::Game, gd: GuardId, spec: &crate::snatchout::SnatchOutMineSpec) -> OrdersAssignmentId { todo!() }
+pub fn snatch_out_mine(g: &mut crate::game::Game, gd: GuardId, spec: &crate::orders::SquadOrdersAssignA) -> OrdersAssignmentId { todo!() }
 
 /// (src/game/snatchout.ts:148 SnatchOut.drop)
 pub fn snatch_out_drop(g: &mut crate::game::Game, gd: GuardId) { todo!() }

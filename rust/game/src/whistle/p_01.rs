@@ -43,20 +43,8 @@ pub fn glance_toward(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Optio
 }
 
 /// Read-only peek for the panel / the QA harness (None: no whistle has ever concerned this man).   (whistle.ts whistleMem)
-pub fn whistle_mem(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem2> {
-    g.m.whistle.mem_of.get(gd).map(|r| WhistleMem2 {
-        responded_at: r.responded_at,
-        responses: r.responses,
-        searches: r.searches,
-        cues: r.cues,
-        glances: r.glances,
-        glance_until: r.glance_until,
-        glance_at: r.glance_at,
-        soft: r.soft,
-        soft_at: r.soft_at,
-        last_look: r.last_look,
-        last_twice: r.last_twice,
-    })
+pub fn whistle_mem(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::whistle::WhistleMem> {
+    g.m.whistle.mem_of.get(gd).copied()
 }
 
 /// What a new player's breath holds (the literal in whistle.ts blower).
@@ -173,6 +161,13 @@ pub fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen
     g.m.whistle.res_of.get_mut(key).unwrap()
 }
 
+/// `gd.lastKnown = v3.copy(at)`, a new object in the TypeScript: every whole write bumps `fix_stamp` (doze.ts:244's identity question).
+fn write_fix(g: &mut crate::game::Game, gd: GuardId, at: V3) {
+    let man = &mut g.gd[gd];
+    man.last_known = Some(v3::copy(at));
+    man.fix_stamp = man.fix_stamp.wrapping_add(1);
+}
+
 /// hearingCheck, for a whistle inside the horizon: what it does to THIS man. `small` = hearingCheck's note of a small noise.   (whistle.ts hearWhistle)
 pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, keen: f64, small: &mut dyn FnMut(&mut crate::game::Game, V3)) {
     use crate::game::GuardState;
@@ -187,8 +182,9 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     // already hunting: one more fix on where you are, nothing said
     let state = g.gd[gd].state;
     if state == GuardState::Alert || state == GuardState::Search || g.gd[gd].awareness >= 0.85 {
-        if state != GuardState::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0 {
-            g.gd[gd].last_known = Some(v3::copy(h.at));
+        // (a word on the radio this tick stands over what he hears: belief.ts wordNow)
+        if !crate::belief::word_now(g, gd) && (state != GuardState::Alert || g.gd[gd].last_known.is_none() || g.time - g.gd[gd].last_seen_t > 1.0) {
+            write_fix(g, gd, h.at);
         }
         g.gd[gd].awareness = m::max(g.gd[gd].awareness, knob_aw);
         let row = mem(g, gd);
@@ -216,11 +212,13 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
     row.responses += 1.0;
     resolve(g, e, keen).answered_by = Some(gd);
     g.stats.whistle.answered += 1;
+    if !crate::belief::word_now(g, gd) { write_fix(g, gd, h.at); }
     {
         let man = &mut g.gd[gd];
-        man.last_known = Some(v3::copy(h.at));
         man.path = Vec::new();
+        man.path_serial = man.path_serial.wrapping_add(1);
         man.path_goal = None;
+        man.path_goal_orbit = false;
         man.stall_ref = None;
         man.stall_t = 0.0;
         man.search_t = 0.0;
@@ -322,8 +320,8 @@ pub fn whistle_summary(g: &mut crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();
     let blown = blower(g).blown;
     let rd = whistle_ready_in(g);
-    parts.push(if rd > 0.0 { alloc::format!("again in {:.1} s", rd) } else { String::from("ready (V)") });
-    parts.push(alloc::format!("{} blown", blown));
+    parts.push(if rd > 0.0 { alloc::format!("again in {} s", js::to_fixed(rd, 1)) } else { String::from("ready (V)") });
+    parts.push(alloc::format!("{} blown", js::num_str(blown)));
     let mut at = 0;
     while at < g.guards.len() {
         let gd = g.guards[at];
@@ -332,19 +330,20 @@ pub fn whistle_summary(g: &mut crate::game::Game) -> String {
         if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
         let mut bits: Vec<String> = Vec::new();
         if js::truthy(row.responses) {
-            let searches = if js::truthy(row.searches) { alloc::format!(" ({} search{})", row.searches, if row.searches > 1.0 { "es" } else { "" }) } else { String::new() };
+            let searches = if js::truthy(row.searches) { alloc::format!(" ({} search{})", js::num_str(row.searches), if row.searches > 1.0 { "es" } else { "" }) } else { String::new() };
             let torch = if whistle_soft(g, gd) { ", torch" } else { "" };
-            bits.push(alloc::format!("answered {:.0} s ago ×{}{}{}", g.time - row.responded_at, row.responses, searches, torch));
+            bits.push(alloc::format!("answered {} s ago ×{}{}{}", js::to_fixed(g.time - row.responded_at, 0), js::num_str(row.responses), searches, torch));
         }
-        if js::truthy(row.cues) { bits.push(alloc::format!("{} cue{}", row.cues, if row.cues > 1.0 { "s" } else { "" })); }
+        if js::truthy(row.cues) { bits.push(alloc::format!("{} cue{}", js::num_str(row.cues), if row.cues > 1.0 { "s" } else { "" })); }
         if js::truthy(row.glances) {
-            bits.push(alloc::format!("{} glance{}{}", row.glances, if row.glances > 1.0 { "s" } else { "" }, if g.time < row.glance_until { " (looking)" } else { "" }));
+            bits.push(alloc::format!("{} glance{}{}", js::num_str(row.glances), if row.glances > 1.0 { "s" } else { "" }, if g.time < row.glance_until { " (looking)" } else { "" }));
         }
         if !bits.is_empty() { parts.push(alloc::format!("{}: {}", g.gd[gd].callsign, bits.join(", "))); }
     }
     if let Some(l) = g.m.whistle.whistle_log.last() {
         let heard = if l.hearers.is_empty() { String::from("nobody") } else { l.hearers.join("/") };
-        let what = match (&l.answered, &l.responder) {
+        // (a blank callsign is no name: the TypeScript tests the strings for truth)
+        let what = match (l.answered.as_ref().filter(|s| !s.is_empty()), l.responder.as_ref().filter(|s| !s.is_empty())) {
             (Some(a), _) => alloc::format!(" — {} {}", a, if l.search { "searches" } else { "looks" }),
             (None, Some(r)) => alloc::format!(" — {} to answer", r),
             (None, None) => String::new(),

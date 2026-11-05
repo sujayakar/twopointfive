@@ -1,4 +1,4 @@
-//! src/game/player.ts lines 2026 to 2300
+//! src/game/player.ts lines 2027 to 2301
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,9 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
-/// (player.ts WOUNDED_SNAP_PX) px: the cursor this close to a wounded man's chest puts the reticle on him
-const WOUNDED_SNAP_PX: f64 = 26.0;
 
 /// Let go at once: the man is handed straight back, Sam's side cleared; past killCut with the knife in, he dies by it.   (player.ts freeHeld)
 pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
@@ -359,7 +356,7 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     }
     if let Some(t) = tool {
         let (pos, door_at, frame) = (g.ch[c].pos, crate::doors::door_pos(g, d), g.dr[d].frame_centre);
-        if m::min(v3::dist_xz(door_at, pos), v3::dist_xz(frame, pos)) >= seam_use_reach(g) && crate::bigkit::sam_big_spot(g, d, pos, big_spot_tool(t)).is_none() {
+        if m::min(v3::dist_xz(door_at, pos), v3::dist_xz(frame, pos)) >= crate::doors::DOORS_USE_REACH && crate::bigkit::sam_big_spot(g, d, pos, big_spot_tool(t)).is_none() {
             return;
         }
     }
@@ -492,20 +489,7 @@ pub fn update_kick(g: &mut crate::game::Game, dt: f64) {
     g.ch[c].anim.speed = if step_v > 0.2 { m::min(step_v, 1.7) } else { 0.0 };
     g.ch[c].anim.crouch_target = 0.0;
     g.ch[c].anim.upper = if crate::game::player_pistol_up(g, pl) { crate::character::UpperMode::Relaxed } else { crate::character::UpperMode::None };
-    g.ch[c].anim.big_tool = crate::bigkit::sam_big_pose(g).map(|p| crate::character::AnimBigTool {
-        kind: match p.kind {
-            crate::bigkit::SamBigPoseKind::Shotgun => crate::character::AnimBigToolKind::Shotgun,
-            crate::bigkit::SamBigPoseKind::Hammer => crate::character::AnimBigToolKind::Hammer,
-        },
-        t: p.t,
-        equip: p.equip,
-        windup: p.windup,
-        stow: p.stow,
-        blows: p.blows,
-        end: p.end,
-        at: p.at,
-        snug: Some(p.snug),
-    });
+    g.ch[c].anim.big_tool = crate::bigkit::sam_big_pose(g);
     let in_hands = crate::game::player_rifle_up(g, pl);
     arm_rifle(g, in_hands, Some(crate::character::LongStance::PortLong));
     crate::character::character_update(g, c, dt);
@@ -816,13 +800,6 @@ fn chest_or(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
         Some(b) => *b,
         None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
     }
-}
-
-// ---- seams: what skeleton 4 cannot give yet
-
-/// Doors.USE_REACH: a class's static number the skeleton does not carry
-fn seam_use_reach(g: &mut crate::game::Game) -> f64 {
-    todo!("needs: Doors.USE_REACH")
 }
 
 #[cfg(test)]

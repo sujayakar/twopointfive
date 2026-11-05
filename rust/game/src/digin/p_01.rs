@@ -7,18 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seam: what skeleton 3 cannot yet say (notes.md, Skeleton)
-
-/// digin.ts:393 `g.audio.play(name, pos, vol, { rate })`: game_audio_like_play's opts hold crate::Opaque, which cannot carry the rate. The rate's die is drawn by the caller, before this.
-fn seam_audio_play(g: &mut Game, name: &str, pos: V3, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a number (crate::Opaque holds nothing)") }
-
 // ---------------------------------------------------------------- the table of defaults and the state
-
-/// Host work: the debugger panel's copy of the table in the browser's storage. Nothing of the game's. (digin.ts saveDigIn)
-pub fn save_dig_in(g: &mut Game) {}
-
-/// Host work: the stored copy and the address word `?digin`; the host writes g.k.digin. Nothing of the game's. (digin.ts loadDigIn)
-pub fn load_dig_in(g: &mut Game) {}
 
 /// Back to the defaults; a level's difficulty does this. The stored copy is the host's. (digin.ts resetDigIn)
 pub fn reset_dig_in(g: &mut Game) { g.k.digin = crate::digin::digin_defaults(); }
@@ -83,8 +72,7 @@ pub fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
 /// Every player who is up and the living teammates, with their ears. (digin.ts listeners)
 pub fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
     let mut out = Vec::new();
-    let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &of) {
+    for pl in crate::seats::men(g) {
         if !g.pl[pl].down {
             let c = g.pl[pl].ch;
             out.push(crate::digin::ListenersItem { gd: None, head: at(g.ch[c].pos, 1.6), vel: g.ch[c].vel });
@@ -550,7 +538,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
     let level = if thud { m::min(1.0, g.k.digin.scrape_level + 0.1) } else { g.k.digin.scrape_level };
     let tune_rate = if thud { g.tab.props_prop[p].tune.thud_rate } else { g.tab.props_prop[p].tune.scrape_rate };
     let rate = tune_rate * (0.95 + crate::math_dice::sim_random(g) * 0.1);
-    seam_audio_play(g, if thud { "propThud" } else { "propScrape" }, pos, if thud { 0.6 } else { 0.5 }, rate);
+    crate::audio_iface::game_audio_like_play(g, if thud { "propThud" } else { "propScrape" }, Some(pos), Some(if thud { 0.6 } else { 0.5 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     let c = g.gd[gd].ch;
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
     g.events.push(crate::game::GameEvent {

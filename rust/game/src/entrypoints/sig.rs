@@ -33,7 +33,7 @@ pub fn entry_points_risk_at(g: &mut crate::game::Game, p: V3, skip: Option<DoorI
 pub fn entry_points_clear_of(g: &mut crate::game::Game, d: DoorId, pods: &[crate::entrypoints::Pod], frame: &mut dyn FnMut(&mut crate::game::Game, V3) -> [f64; 2]) -> Vec<crate::entrypoints::Pod> { todo!() }
 
 /// (src/game/entrypoints.ts:170 EntryPoints.swapped)
-pub fn entry_points_swapped(g: &mut crate::game::Game, pod: crate::entrypoints::Pod) { todo!() }
+pub fn entry_points_swapped(g: &mut crate::game::Game, pod: &mut crate::entrypoints::Pod) { todo!() }
 
 /// (src/game/entrypoints.ts:172 EntryPoints.dealt)
 pub fn entry_points_dealt(g: &mut crate::game::Game, pod: crate::entrypoints::Pod, skip: Option<DoorId>) { todo!() }

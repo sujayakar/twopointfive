@@ -45,7 +45,7 @@ pub fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lan
 pub fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::St>) { todo!() }
 
 /// (src/game/fireline.ts:166 hold)
-pub fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::Hold { todo!() }
+pub fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet { todo!() }
 
 /// (src/game/fireline.ts:171 fireLineFeet)
 pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, speed: f64, mine: bool) -> Option<crate::fireline::FireLineFeet> { todo!() }

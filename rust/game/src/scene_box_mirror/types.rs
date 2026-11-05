@@ -200,7 +200,7 @@ impl PaneSource {
 }
 impl Default for PaneSource { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BoxMirror, src/scene/boxMirror.ts:143)
+/// (TypeScript: BoxMirror, src/scene/boxMirror.ts:139)
 #[derive(Clone, Debug)]
 pub struct BoxMirror {
     pub x: crate::sim_sim::SimExports,
@@ -209,8 +209,6 @@ pub struct BoxMirror {
     pub lines: bool,
     pub rays: bool,
     pub circles: bool,
-    pub sight: bool,
-    pub senses: f64,
     pub owes: bool,
     pub glass: Option<crate::scene_box_mirror::PaneSource>,
     pub owed: f64,
@@ -227,8 +225,6 @@ pub struct BoxMirror {
     pub row_lines: bool,
     pub row_rays: bool,
     pub row_circles: bool,
-    pub row_sight: bool,
-    pub row_senses: f64,
     pub walk: Option<crate::FnField>,
     pub eyes: f64,
     pub pt: f64,
@@ -298,8 +294,6 @@ impl BoxMirror {
             lines: false,
             rays: false,
             circles: false,
-            sight: false,
-            senses: 0.0,
             owes: false,
             glass: None,
             owed: 0.0,
@@ -316,8 +310,6 @@ impl BoxMirror {
             row_lines: false,
             row_rays: false,
             row_circles: false,
-            row_sight: false,
-            row_senses: 0.0,
             walk: None,
             eyes: 0.0,
             pt: 0.0,
@@ -381,7 +373,7 @@ impl BoxMirror {
 }
 impl Default for BoxMirror { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:185 BoxMirror.gridOf, src/scene/boxMirror.ts:185)
+/// (TypeScript: inline at src/scene/boxMirror.ts:178 BoxMirror.gridOf, src/scene/boxMirror.ts:178)
 #[derive(Clone, Debug)]
 pub struct BoxMirrorGridOf {
     pub cells: Vec<Vec<f64>>,
@@ -404,7 +396,7 @@ impl BoxMirrorGridOf {
 }
 impl Default for BoxMirrorGridOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:187 BoxMirror.caps, src/scene/boxMirror.ts:187)
+/// (TypeScript: inline at src/scene/boxMirror.ts:180 BoxMirror.caps, src/scene/boxMirror.ts:180)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxMirrorCaps {
     pub boxes: f64,
@@ -497,30 +489,7 @@ impl SceneBoxMirrorModTHINGS {
 }
 impl Default for SceneBoxMirrorModTHINGS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:99 SENSES, src/scene/boxMirror.ts:99)
-#[derive(Clone, Copy, Debug)]
-pub struct SENSES {
-    pub sight: f64,
-    pub light: f64,
-    pub smoke: f64,
-    pub sound: f64,
-    pub paths: f64,
-}
-impl SENSES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SENSES {
-            sight: 0.0,
-            light: 0.0,
-            smoke: 0.0,
-            sound: 0.0,
-            paths: 0.0,
-        }
-    }
-}
-impl Default for SENSES { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/boxMirror.ts:106 NAV, src/scene/boxMirror.ts:106)
+/// (TypeScript: inline at src/scene/boxMirror.ts:104 NAV, src/scene/boxMirror.ts:104)
 #[derive(Clone, Copy, Debug)]
 pub struct NAV {
     pub no_way: f64,
@@ -539,7 +508,7 @@ impl NAV {
 }
 impl Default for NAV { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxMirror.ts:107 FACE, src/scene/boxMirror.ts:107)
+/// (TypeScript: inline at src/scene/boxMirror.ts:105 FACE, src/scene/boxMirror.ts:105)
 #[derive(Clone, Copy, Debug)]
 pub struct FACE {
     pub lamp: f64,
@@ -816,11 +785,8 @@ pub const VIEW_GIVES: f64 = 2.0;
 /// (src/scene/boxMirror.ts:97 MIRRORED: a table nothing writes)
 pub fn mirrored() -> f64 { 4294901770.0 }
 
-/// (src/scene/boxMirror.ts:99 SENSES: a table nothing writes)
-pub fn senses() -> crate::scene_box_mirror::SENSES { crate::scene_box_mirror::SENSES { sight: 1.0, light: 2.0, smoke: 4.0, sound: 8.0, paths: 16.0 } }
-
-/// (src/scene/boxMirror.ts:106 NAV: a table nothing writes)
+/// (src/scene/boxMirror.ts:104 NAV: a table nothing writes)
 pub fn nav() -> crate::scene_box_mirror::NAV { crate::scene_box_mirror::NAV { no_way: -1.0, ask_host: -2.0, need: -3.0 } }
 
-/// (src/scene/boxMirror.ts:107 FACE: a table nothing writes)
+/// (src/scene/boxMirror.ts:105 FACE: a table nothing writes)
 pub fn face() -> crate::scene_box_mirror::FACE { crate::scene_box_mirror::FACE { lamp: 15.0, max_lamps: 256.0, blob: 6.0, max_blobs: 64.0, graze_a: 1.0, graze_b: 2.0, over: 4.0, far: 8.0, walled: 16.0, sealed: 0.0, routed: 1.0, routed_door: 3.0, q_lens: 1.0, q_unseen: 2.0, q_smoked: 4.0, a_visible: 1.0, a_in_cone: 2.0 } }

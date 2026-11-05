@@ -1093,6 +1093,32 @@ impl KeptNow {
 }
 impl Default for KeptNow { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: inline at src/game/kit.ts:1243 kitYouLight(pl), src/game/kit.ts:1243 kitYouLight(pl))
+#[derive(Clone, Copy, Debug)]
+pub struct KitYouLightPl {
+}
+impl KitYouLightPl {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        KitYouLightPl {
+        }
+    }
+}
+impl Default for KitYouLightPl { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/kit.ts:1244 kitYouNvg(pl), src/game/kit.ts:1244 kitYouNvg(pl))
+#[derive(Clone, Copy, Debug)]
+pub struct KitYouNvgPl {
+}
+impl KitYouNvgPl {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        KitYouNvgPl {
+        }
+    }
+}
+impl Default for KitYouNvgPl { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: inline at src/game/kit.ts:1378 kitPool(issued), src/game/kit.ts:1378)
 #[derive(Clone, Copy, Debug)]
 pub struct KitPoolIssued {
@@ -1132,10 +1158,6 @@ impl Default for KitPool { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct KitMod {
-    /// (src/game/kit.ts:162 ruleOn)
-    pub rule_on: bool,
-    /// (src/game/kit.ts:164 bigOn)
-    pub big_on: bool,
     /// (src/game/kit.ts:171 hand)
     pub hand: Option<crate::kit::KitHand>,
     /// (src/game/kit.ts:175 KIT)
@@ -1180,8 +1202,6 @@ pub struct KitMod {
 impl KitMod {
     pub fn blank() -> Self {
         KitMod {
-            rule_on: true,
-            big_on: false,
             hand: None,
             kit: { let card = |bangs: f64, charges: f64, smoke: f64, frags: f64, shells: f64| crate::kit::MemberKit { weapon: crate::kit::KitWeapon::Rifle, suppressed: true, light: true, nvg: true, bangs, charges, smoke, frags, walls: 0.0, shells, suit: crate::kit::SuitId::Issued, trim: crate::kit::TrimId::Issued, wand: false, cams: 0.0, bare: None, big: crate::kit::BigKit::None, primary: String::from("mk18"), secondary: String::from("g19"), side_can: true, rings: 0.0 }; crate::kit::KitModKIT { on: true, members: alloc::vec![card(1.0, 0.0, 1.0, 1.0, 1.0), card(2.0, 1.0, 0.0, 1.0, 0.0), card(1.0, 1.0, 0.0, 1.0, 0.0), card(0.0, 0.0, 0.0, 0.0, 0.0), card(0.0, 0.0, 0.0, 0.0, 0.0)] } },
             team: 4.0,

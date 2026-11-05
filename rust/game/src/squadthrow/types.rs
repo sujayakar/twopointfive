@@ -650,7 +650,7 @@ impl SquadThrowKeptDuck {
 }
 impl Default for SquadThrowKeptDuck { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squadthrow.ts:201 SquadThrowKeptDuck.m, src/game/frag.ts:697)
+/// (TypeScript: inline at src/game/squadthrow.ts:201 SquadThrowKeptDuck.m, src/game/frag.ts:699)
 #[derive(Clone, Debug)]
 pub struct SquadThrowKeptDuckM {
     pub stay: Vec<V3>,

@@ -13,6 +13,23 @@ pub enum EventFilter {
     OrderSignal,
     Heard { by: crate::director::UnitRef, run_level: f64, run_within: f64, walk_level: f64, walk_within: f64 },
 }
+/// a beat's generator as plain data, so a clone of Game holds where it stands (LiveBeat.it): one arm a beat, its resume point and locals, added by hand with the nine scripts (CHANGES-2 Open 1). Spent: not begun, or closed: it.return() is writing Spent, no script has a finally
+#[derive(Clone, Copy, Debug)]
+pub enum BeatFrame {
+    Spent,
+}
+/// what a c.until asks (CondArm2.test): Script, a test of the beat's own script, answered by beat_test with the beat's frame; Burst, the stimulus.burst's cond at director.ts:1012: no row of r.bursts with this serial and left > 0
+#[derive(Clone, Debug)]
+pub enum CondTest {
+    Script { id: u32 },
+    Burst { serial: u32 },
+}
+/// e.near's first argument, DoorRef | Place (director.ts:102, :1092)
+#[derive(Clone, Debug)]
+pub enum NearWhat {
+    Door { d: crate::director::DoorRef },
+    Place { p: crate::director::Place },
+}
 
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
@@ -24,7 +41,7 @@ pub enum Json {
     Arm4(JsMap<String, Option<crate::director::Json>>),
 }
 
-/// (TypeScript: MarkRef, src/game/director.ts:77)
+/// (TypeScript: MarkRef, src/game/director.ts:78)
 #[derive(Clone, Debug)]
 pub struct MarkRef {
     pub kind: crate::director::MarkRefKind,
@@ -54,7 +71,7 @@ impl MarkRefKind {
     }
 }
 
-/// (TypeScript: DoorRef, src/game/director.ts:78)
+/// (TypeScript: DoorRef, src/game/director.ts:79)
 #[derive(Clone, Debug)]
 pub struct DoorRef {
     pub kind: crate::director::DoorRefKind,
@@ -84,7 +101,7 @@ impl DoorRefKind {
     }
 }
 
-/// (TypeScript: VolumeRef, src/game/director.ts:79)
+/// (TypeScript: VolumeRef, src/game/director.ts:80)
 #[derive(Clone, Debug)]
 pub struct VolumeRef {
     pub kind: crate::director::VolumeRefKind,
@@ -114,7 +131,7 @@ impl VolumeRefKind {
     }
 }
 
-/// (TypeScript: RouteRef, src/game/director.ts:80)
+/// (TypeScript: RouteRef, src/game/director.ts:81)
 #[derive(Clone, Debug)]
 pub struct RouteRef {
     pub kind: crate::director::RouteRefKind,
@@ -144,7 +161,7 @@ impl RouteRefKind {
     }
 }
 
-/// (TypeScript: GroupRef, src/game/director.ts:81)
+/// (TypeScript: GroupRef, src/game/director.ts:82)
 #[derive(Clone, Debug)]
 pub struct GroupRef {
     pub kind: crate::director::GroupRefKind,
@@ -174,7 +191,7 @@ impl GroupRefKind {
     }
 }
 
-/// (TypeScript: VariantRef, src/game/director.ts:82)
+/// (TypeScript: VariantRef, src/game/director.ts:83)
 #[derive(Clone, Copy, Debug)]
 pub struct VariantRef {
     pub kind: crate::director::VariantRefKind,
@@ -217,7 +234,7 @@ impl VariantRefId {
     }
 }
 
-/// (TypeScript: LoadoutRef, src/game/director.ts:83)
+/// (TypeScript: LoadoutRef, src/game/director.ts:84)
 #[derive(Clone, Debug)]
 pub struct LoadoutRef {
     pub kind: crate::director::LoadoutRefKind,
@@ -247,7 +264,7 @@ impl LoadoutRefKind {
     }
 }
 
-/// (TypeScript: DeviceRef, src/game/director.ts:85)
+/// (TypeScript: DeviceRef, src/game/director.ts:86)
 #[derive(Clone, Debug)]
 pub struct DeviceRef {
     pub kind: crate::director::DeviceRefKind,
@@ -292,7 +309,7 @@ impl PlanKind {
     }
 }
 
-/// (TypeScript: UnitRef, src/game/director.ts:88)
+/// (TypeScript: UnitRef, src/game/director.ts:89)
 #[derive(Clone, Debug)]
 pub struct UnitRef {
     pub kind: crate::director::UnitRefKind,
@@ -331,7 +348,7 @@ pub enum Place {
     Mark(crate::director::MarkRef),
 }
 
-/// (TypeScript: LoadoutSpec, src/game/director.ts:92)
+/// (TypeScript: LoadoutSpec, src/game/director.ts:93)
 #[derive(Clone, Copy, Debug)]
 pub struct LoadoutSpec {
     pub team: crate::teams::Team,
@@ -358,14 +375,14 @@ impl LoadoutSpec {
 }
 impl Default for LoadoutSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:96 OrderPatch, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/director.ts:97 OrderPatch, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct OrderPatch2 {
     pub goal: Option<Option<crate::director::Place>>,
     pub speed: Option<Option<f64>>,
     pub face: Option<Option<f64>>,
     pub strafe: Option<Option<bool>>,
-    pub aim_at: Option<Option<crate::director::OrderPatch2AimAt>>,
+    pub aim_at: Option<crate::director::Place>,
     pub stance: Option<Option<crate::character::Stance>>,
     pub stack_side: Option<Option<f64>>,
     pub crouch: Option<Option<bool>>,
@@ -441,7 +458,7 @@ impl EventKind {
     }
 }
 
-/// (TypeScript: EventView, src/game/director.ts:100)
+/// (TypeScript: EventView, src/game/director.ts:101)
 #[derive(Clone, Debug)]
 pub struct EventView {
     pub kind: crate::director::EventViewKind,
@@ -512,7 +529,7 @@ pub enum Cond {
     Arm5(crate::director::CondArm5),
 }
 
-/// (TypeScript: inline at src/game/director.ts:106 Cond, src/game/director.ts:107)
+/// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:108)
 #[derive(Clone, Debug)]
 pub struct CondArm0 {
     pub k: crate::director::CondArm0K,
@@ -544,7 +561,7 @@ impl CondArm0K {
     }
 }
 
-/// (TypeScript: inline at src/game/director.ts:106 Cond, src/game/director.ts:108)
+/// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:109)
 #[derive(Clone, Copy, Debug)]
 pub struct CondArm1 {
     pub k: crate::director::CondArm1K,
@@ -574,11 +591,11 @@ impl CondArm1K {
     }
 }
 
-/// (TypeScript: inline at src/game/director.ts:106 Cond, src/game/director.ts:109)
+/// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:110)
 #[derive(Clone, Debug)]
 pub struct CondArm2 {
     pub k: crate::director::CondArm2K,
-    pub test: crate::FnField,
+    pub test: crate::director::CondTest,
     pub label: String,
 }
 impl CondArm2 {
@@ -586,7 +603,7 @@ impl CondArm2 {
     pub fn zeroed() -> Self {
         CondArm2 {
             k: crate::director::CondArm2K::Pred,
-            test: crate::FnField,
+            test: crate::director::CondTest::Script { id: 0 },
             label: String::new(),
         }
     }
@@ -606,7 +623,7 @@ impl CondArm2K {
     }
 }
 
-/// (TypeScript: inline at src/game/director.ts:106 Cond, src/game/director.ts:110)
+/// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:111)
 #[derive(Clone, Debug)]
 pub struct CondArm3 {
     pub k: crate::director::CondArm3K,
@@ -677,7 +694,7 @@ impl CondArm3Kind {
     }
 }
 
-/// (TypeScript: inline at src/game/director.ts:106 Cond, src/game/director.ts:111)
+/// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:112)
 #[derive(Clone, Debug)]
 pub struct CondArm4 {
     pub k: crate::director::CondArm4K,
@@ -724,7 +741,7 @@ impl CondArm4State {
     }
 }
 
-/// (TypeScript: inline at src/game/director.ts:106 Cond, src/game/director.ts:112)
+/// (TypeScript: inline at src/game/director.ts:107 Cond, src/game/director.ts:113)
 #[derive(Clone, Debug)]
 pub struct CondArm5 {
     pub k: crate::director::CondArm5K,
@@ -756,7 +773,7 @@ impl CondArm5K {
     }
 }
 
-/// (TypeScript: CondResult, src/game/director.ts:114)
+/// (TypeScript: CondResult, src/game/director.ts:115)
 #[derive(Clone, Debug)]
 pub struct CondResult {
     pub index: f64,
@@ -792,7 +809,7 @@ impl BeatState {
     }
 }
 
-/// (TypeScript: Query, src/game/director.ts:119)
+/// (TypeScript: Query, src/game/director.ts:120)
 #[derive(Clone, Copy, Debug)]
 pub struct Query {
     pub t: f64,
@@ -815,7 +832,7 @@ impl Query {
 }
 impl Default for Query { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DrillRef, src/game/director.ts:140)
+/// (TypeScript: DrillRef, src/game/director.ts:141)
 #[derive(Clone, Debug)]
 pub struct DrillRef {
     pub kind: crate::director::DrillRefKind,
@@ -859,7 +876,7 @@ impl DrillRefKind {
     }
 }
 
-/// (TypeScript: CameraShotSpec, src/game/director.ts:142)
+/// (TypeScript: CameraShotSpec, src/game/director.ts:143)
 #[derive(Clone, Debug)]
 pub struct CameraShotSpec {
     pub look_y: Option<f64>,
@@ -872,6 +889,8 @@ pub struct CameraShotSpec {
     pub dur: f64,
     pub title: Option<String>,
     pub chapter: Option<f64>,
+    /// INVENTED by a review: see the proposals
+    pub look: crate::director::Place,
 }
 impl CameraShotSpec {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -887,35 +906,51 @@ impl CameraShotSpec {
             dur: 0.0,
             title: None,
             chapter: None,
+            look: crate::director::Place::List([0.0; 3]),
         }
     }
 }
 impl Default for CameraShotSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BeatCtx, src/game/director.ts:150)
-#[derive(Clone, Debug)]
+/// (TypeScript: BeatCtx, src/game/director.ts:151)
+#[derive(Clone, Copy, Debug)]
 pub struct BeatCtx {
-    pub flag: JsMap<String, Option<crate::director::Json>>,
-    pub query: crate::director::Query,
-    pub dt: f64,
-    pub view: crate::director::SamView,
-    pub camera: crate::director::BeatCtxCamera,
 }
 impl BeatCtx {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         BeatCtx {
-            flag: JsMap::new(),
-            query: crate::director::Query::zeroed(),
-            dt: 0.0,
-            view: crate::director::SamView::zeroed(),
-            camera: crate::director::BeatCtxCamera::zeroed(),
         }
     }
 }
 impl Default for BeatCtx { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SamView, src/game/director.ts:225)
+/// (TypeScript: PuppetSpec, src/game/director.ts:224)
+#[derive(Clone, Debug)]
+pub struct PuppetSpec {
+    pub goal: Option<crate::director::Place>,
+    pub aim: Option<crate::director::Place>,
+    pub crouch: Option<bool>,
+    pub walk: Option<f64>,
+    pub fixtures: Option<bool>,
+    pub throw_at: Option<crate::director::Place>,
+}
+impl PuppetSpec {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        PuppetSpec {
+            goal: None,
+            aim: None,
+            crouch: None,
+            walk: None,
+            fixtures: None,
+            throw_at: None,
+        }
+    }
+}
+impl Default for PuppetSpec { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: SamView, src/game/director.ts:226)
 #[derive(Clone, Debug)]
 pub struct SamView {
     pub pos: V3,
@@ -980,7 +1015,7 @@ impl SamView {
 }
 impl Default for SamView { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:228 SamView.hover, src/game/director.ts:228)
+/// (TypeScript: inline at src/game/director.ts:229 SamView.hover, src/game/director.ts:229)
 #[derive(Clone, Debug)]
 pub struct SamViewHover {
     pub kind: String,
@@ -1003,7 +1038,7 @@ impl SamViewHover {
 }
 impl Default for SamViewHover { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:232 SamView.holding, src/game/director.ts:232)
+/// (TypeScript: inline at src/game/director.ts:233 SamView.holding, src/game/director.ts:233)
 #[derive(Clone, Debug)]
 pub struct SamViewHolding {
     pub who: String,
@@ -1024,47 +1059,7 @@ impl SamViewHolding {
 }
 impl Default for SamViewHolding { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:206 BeatCtx.camera, src/game/director.ts:206)
-#[derive(Clone, Copy, Debug)]
-pub struct BeatCtxCamera {
-    pub shot_t: f64,
-}
-impl BeatCtxCamera {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BeatCtxCamera {
-            shot_t: 0.0,
-        }
-    }
-}
-impl Default for BeatCtxCamera { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: PuppetSpec, src/game/director.ts:223)
-#[derive(Clone, Debug)]
-pub struct PuppetSpec {
-    pub goal: Option<crate::director::Place>,
-    pub aim: Option<crate::director::Place>,
-    pub crouch: Option<bool>,
-    pub walk: Option<f64>,
-    pub fixtures: Option<bool>,
-    pub throw_at: Option<crate::director::Place>,
-}
-impl PuppetSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PuppetSpec {
-            goal: None,
-            aim: None,
-            crouch: None,
-            walk: None,
-            fixtures: None,
-            throw_at: None,
-        }
-    }
-}
-impl Default for PuppetSpec { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: ProgramOpts, src/game/director.ts:243)
+/// (TypeScript: ProgramOpts, src/game/director.ts:244)
 #[derive(Clone, Copy, Debug)]
 pub struct ProgramOpts {
     pub showcase: Option<bool>,
@@ -1087,7 +1082,7 @@ impl ProgramOpts {
 }
 impl Default for ProgramOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ProgramApi, src/game/director.ts:255)
+/// (TypeScript: ProgramApi, src/game/director.ts:256)
 #[derive(Clone, Copy, Debug)]
 pub struct ProgramApi {
 }
@@ -1100,7 +1095,7 @@ impl ProgramApi {
 }
 impl Default for ProgramApi { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DirectorApi, src/game/director.ts:262)
+/// (TypeScript: DirectorApi, src/game/director.ts:263)
 #[derive(Clone, Copy, Debug)]
 pub struct DirectorApi {
 }
@@ -1113,7 +1108,7 @@ impl DirectorApi {
 }
 impl Default for DirectorApi { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Manifest, src/game/director.ts:280)
+/// (TypeScript: Manifest, src/game/director.ts:281)
 #[derive(Clone, Debug)]
 pub struct Manifest {
     pub marks: JsMap<String, crate::director::ManifestMarksValue>,
@@ -1150,7 +1145,7 @@ impl Manifest {
 }
 impl Default for Manifest { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:281 Manifest.marks, src/game/director.ts:281)
+/// (TypeScript: inline at src/game/director.ts:282 Manifest.marks, src/game/director.ts:282)
 #[derive(Clone, Copy, Debug)]
 pub struct ManifestMarksValue {
     pub pos: Option<V3>,
@@ -1167,7 +1162,7 @@ impl ManifestMarksValue {
 }
 impl Default for ManifestMarksValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ProgramDef, src/game/director.ts:287)
+/// (TypeScript: ProgramDef, src/game/director.ts:288)
 #[derive(Clone, Debug)]
 pub struct ProgramDef {
     pub name: String,
@@ -1188,24 +1183,24 @@ impl ProgramDef {
 }
 impl Default for ProgramDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:287 ProgramDef.beats, src/game/director.ts:287)
+/// (TypeScript: inline at src/game/director.ts:288 ProgramDef.beats, src/game/director.ts:288)
 #[derive(Clone, Copy, Debug)]
 pub struct ProgramDefBeatsValue {
-    pub fn_: crate::FnField,
+    pub fn_: crate::scene_level::LevelScriptFn,
     pub atomic: bool,
 }
 impl ProgramDefBeatsValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ProgramDefBeatsValue {
-            fn_: crate::FnField,
+            fn_: crate::scene_level::LevelScriptFn::TutSky,
             atomic: false,
         }
     }
 }
 impl Default for ProgramDefBeatsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: TriggerDef, src/game/director.ts:286)
+/// (TypeScript: TriggerDef, src/game/director.ts:287)
 #[derive(Clone, Debug)]
 pub struct TriggerDef {
     pub kind: crate::director::TriggerDefKind,
@@ -1267,7 +1262,7 @@ pub enum TriggerDefWho {
     Unit(crate::director::UnitRef),
 }
 
-/// (TypeScript: inline at src/game/director.ts:283 Manifest.expects, src/game/director.ts:283)
+/// (TypeScript: inline at src/game/director.ts:284 Manifest.expects, src/game/director.ts:284)
 #[derive(Clone, Debug)]
 pub struct ManifestExpectsItem {
     pub kind: crate::director::ManifestExpectsItemKind,
@@ -1315,8 +1310,8 @@ impl ManifestExpectsItemKind {
 #[derive(Clone, Copy, Debug)]
 pub struct ManifestSystems {
     pub civilians: Option<bool>,
-    pub qrf: Option<bool>,
     pub needs: Option<bool>,
+    pub qrf: Option<bool>,
     pub autosave: Option<bool>,
     pub their_frags: Option<bool>,
 }
@@ -1325,8 +1320,8 @@ impl ManifestSystems {
     pub fn zeroed() -> Self {
         ManifestSystems {
             civilians: None,
-            qrf: None,
             needs: None,
+            qrf: None,
             autosave: None,
             their_frags: None,
         }
@@ -1334,7 +1329,7 @@ impl ManifestSystems {
 }
 impl Default for ManifestSystems { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LintProblem, src/game/director.ts:288)
+/// (TypeScript: LintProblem, src/game/director.ts:289)
 #[derive(Clone, Debug)]
 pub struct LintProblem {
     pub level: crate::director::LintProblemLevel,
@@ -1366,7 +1361,7 @@ impl LintProblemLevel {
     }
 }
 
-/// (TypeScript: LogRow, src/game/director.ts:396)
+/// (TypeScript: LogRow, src/game/director.ts:397)
 #[derive(Clone, Debug)]
 pub struct LogRow {
     pub t: f64,
@@ -1426,7 +1421,7 @@ impl LogRowKind {
     }
 }
 
-/// (TypeScript: DirectorFrame, src/game/director.ts:399)
+/// (TypeScript: DirectorFrame, src/game/director.ts:400)
 #[derive(Clone, Debug)]
 pub struct DirectorFrame {
     pub look: Option<V3>,
@@ -1453,11 +1448,11 @@ impl DirectorFrame {
 }
 impl Default for DirectorFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LiveBeat, src/game/director.ts:401)
+/// (TypeScript: LiveBeat, src/game/director.ts:402)
 #[derive(Clone, Debug)]
 pub struct LiveBeat {
     pub name: String,
-    pub it: crate::Opaque,
+    pub it: crate::director::BeatFrame,
     pub waiting: Option<crate::director::Cond>,
     pub result: crate::director::CondResult,
     pub t0: f64,
@@ -1472,7 +1467,7 @@ impl LiveBeat {
     pub fn zeroed() -> Self {
         LiveBeat {
             name: String::new(),
-            it: crate::Opaque,
+            it: crate::director::BeatFrame::Spent,
             waiting: None,
             result: crate::director::CondResult::zeroed(),
             t0: 0.0,
@@ -1486,7 +1481,7 @@ impl LiveBeat {
 }
 impl Default for LiveBeat { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:401 LiveBeat.flow, src/game/director.ts:401)
+/// (TypeScript: inline at src/game/director.ts:402 LiveBeat.flow, src/game/director.ts:402)
 #[derive(Clone, Copy, Debug)]
 pub struct LiveBeatFlow {
     pub finish: bool,
@@ -1501,7 +1496,7 @@ impl LiveBeatFlow {
 }
 impl Default for LiveBeatFlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: UnitRec, src/game/director.ts:402)
+/// (TypeScript: UnitRec, src/game/director.ts:403)
 #[derive(Clone, Debug)]
 pub struct UnitRec {
     pub ref_: crate::director::UnitRef,
@@ -1531,7 +1526,7 @@ pub enum DrillImpl {
     Exchange(crate::director::DrillImplExchange),
 }
 
-/// (TypeScript: inline at src/game/director.ts:403 DrillImpl, src/game/director.ts:404)
+/// (TypeScript: inline at src/game/director.ts:404 DrillImpl, src/game/director.ts:405)
 #[derive(Clone, Copy, Debug)]
 pub struct DrillImplBreach {
     pub forwarded: f64,
@@ -1546,7 +1541,7 @@ impl DrillImplBreach {
 }
 impl Default for DrillImplBreach { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:403 DrillImpl, src/game/director.ts:405)
+/// (TypeScript: inline at src/game/director.ts:404 DrillImpl, src/game/director.ts:406)
 #[derive(Clone, Debug)]
 pub struct DrillImplClear {
     pub d: RoomClearId,
@@ -1565,7 +1560,7 @@ impl DrillImplClear {
 }
 impl Default for DrillImplClear { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:403 DrillImpl, src/game/director.ts:407)
+/// (TypeScript: inline at src/game/director.ts:404 DrillImpl, src/game/director.ts:408)
 #[derive(Clone, Debug)]
 pub struct DrillImplExchange {
     pub e: crate::guards::Engagement,
@@ -1580,7 +1575,7 @@ impl DrillImplExchange {
 }
 impl Default for DrillImplExchange { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DrillRun, src/game/director.ts:408)
+/// (TypeScript: DrillRun, src/game/director.ts:409)
 #[derive(Clone, Debug)]
 pub struct DrillRun {
     pub ref_: crate::director::DrillRef,
@@ -1617,7 +1612,7 @@ impl DrillRun {
 }
 impl Default for DrillRun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Shot, src/game/director.ts:409)
+/// (TypeScript: Shot, src/game/director.ts:410)
 #[derive(Clone, Debug)]
 pub struct Shot {
     pub spec: crate::director::CameraShotSpec,
@@ -1636,7 +1631,7 @@ impl Shot {
 }
 impl Default for Shot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ShowState, src/game/director.ts:410)
+/// (TypeScript: ShowState, src/game/director.ts:411)
 #[derive(Clone, Debug)]
 pub struct ShowState {
     pub saved: crate::director::ShowStateSaved,
@@ -1687,7 +1682,7 @@ impl ShowState {
 }
 impl Default for ShowState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:410 ShowState.saved, src/game/director.ts:410)
+/// (TypeScript: inline at src/game/director.ts:411 ShowState.saved, src/game/director.ts:411)
 #[derive(Clone, Copy, Debug)]
 pub struct ShowStateSaved {
     pub ai: bool,
@@ -1712,7 +1707,7 @@ impl ShowStateSaved {
 }
 impl Default for ShowStateSaved { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:410 ShowStateSaved.cam, src/game/director.ts:410)
+/// (TypeScript: inline at src/game/director.ts:411 ShowStateSaved.cam, src/game/director.ts:411)
 #[derive(Clone, Copy, Debug)]
 pub struct ShowStateSavedCam {
     pub yaw: f64,
@@ -1731,7 +1726,7 @@ impl ShowStateSavedCam {
 }
 impl Default for ShowStateSavedCam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:411 ShowState.chapters, src/game/director.ts:411)
+/// (TypeScript: inline at src/game/director.ts:412 ShowState.chapters, src/game/director.ts:412)
 #[derive(Clone, Debug)]
 pub struct ShowStateChaptersItem {
     pub title: String,
@@ -1748,7 +1743,7 @@ impl ShowStateChaptersItem {
 }
 impl Default for ShowStateChaptersItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:411 ShowState.ending, src/game/director.ts:411)
+/// (TypeScript: inline at src/game/director.ts:412 ShowState.ending, src/game/director.ts:412)
 #[derive(Clone, Copy, Debug)]
 pub struct ShowStateEnding {
     pub t: f64,
@@ -1763,7 +1758,7 @@ impl ShowStateEnding {
 }
 impl Default for ShowStateEnding { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:414 ShowState.weatherSaved, src/game/director.ts:414)
+/// (TypeScript: inline at src/game/director.ts:415 ShowState.weatherSaved, src/game/director.ts:415)
 #[derive(Clone, Copy, Debug)]
 pub struct ShowStateWeatherSaved {
     pub storm: f64,
@@ -1780,7 +1775,7 @@ impl ShowStateWeatherSaved {
 }
 impl Default for ShowStateWeatherSaved { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Run, src/game/director.ts:415)
+/// (TypeScript: Run, src/game/director.ts:416)
 #[derive(Clone, Debug)]
 pub struct Run {
     pub serial: f64,
@@ -1837,7 +1832,7 @@ impl Run {
 }
 impl Default for Run { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:415 Run.signals, src/game/director.ts:415)
+/// (TypeScript: inline at src/game/director.ts:416 Run.signals, src/game/director.ts:416)
 #[derive(Clone, Debug)]
 pub struct RunSignalsItem {
     pub name: String,
@@ -1856,7 +1851,7 @@ impl RunSignalsItem {
 }
 impl Default for RunSignalsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:416 Run.bursts, src/game/director.ts:416)
+/// (TypeScript: inline at src/game/director.ts:417 Run.bursts, src/game/director.ts:417)
 #[derive(Clone, Debug)]
 pub struct RunBurstsItem {
     pub u: crate::director::UnitRef,
@@ -1867,6 +1862,8 @@ pub struct RunBurstsItem {
     pub next: f64,
     pub cond: crate::director::RunBurstsItemCond,
     pub fired: f64,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
 }
 impl RunBurstsItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -1880,6 +1877,7 @@ impl RunBurstsItem {
             next: 0.0,
             cond: crate::director::RunBurstsItemCond::zeroed(),
             fired: 0.0,
+            serial: 0,
         }
     }
 }
@@ -1893,7 +1891,7 @@ pub enum RunBurstsItemAt {
     Mark(crate::director::MarkRef),
 }
 
-/// (TypeScript: inline at src/game/director.ts:416 RunBurstsItem.cond, src/game/director.ts:416)
+/// (TypeScript: inline at src/game/director.ts:417 RunBurstsItem.cond, src/game/director.ts:417)
 #[derive(Clone, Debug)]
 pub struct RunBurstsItemCond {
     pub k: crate::director::RunBurstsItemCondK,
@@ -1923,7 +1921,7 @@ impl RunBurstsItemCondK {
     }
 }
 
-/// (TypeScript: inline at src/game/director.ts:418 Run.kicks, src/game/director.ts:418)
+/// (TypeScript: inline at src/game/director.ts:419 Run.kicks, src/game/director.ts:419)
 #[derive(Clone, Debug)]
 pub struct RunKicksItem {
     pub door: DoorId,
@@ -1944,7 +1942,7 @@ impl RunKicksItem {
 }
 impl Default for RunKicksItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:419 Run.objective, src/game/director.ts:419)
+/// (TypeScript: inline at src/game/director.ts:420 Run.objective, src/game/director.ts:420)
 #[derive(Clone, Debug)]
 pub struct RunObjective {
     pub text: String,
@@ -1965,8 +1963,8 @@ impl Default for RunObjective { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct RunSystemsSaved {
     pub civilians: Option<bool>,
-    pub qrf: Option<bool>,
     pub needs: Option<bool>,
+    pub qrf: Option<bool>,
     pub autosave: Option<bool>,
 }
 impl RunSystemsSaved {
@@ -1974,15 +1972,15 @@ impl RunSystemsSaved {
     pub fn zeroed() -> Self {
         RunSystemsSaved {
             civilians: None,
-            qrf: None,
             needs: None,
+            qrf: None,
             autosave: None,
         }
     }
 }
 impl Default for RunSystemsSaved { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BeatFailure, src/game/director.ts:420)
+/// (TypeScript: BeatFailure, src/game/director.ts:421)
 #[derive(Clone, Debug)]
 pub struct BeatFailure {
     pub name: String,
@@ -2003,12 +2001,11 @@ impl BeatFailure {
 }
 impl Default for BeatFailure { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Director, src/game/director.ts:422)
+/// (TypeScript: Director, src/game/director.ts:423)
 #[derive(Clone, Debug)]
 pub struct Director {
     pub manifest: Option<crate::director::Manifest>,
     pub problems: Vec<crate::director::LintProblem>,
-    pub scan: Vec<crate::director::DirectorScanItem>,
     pub armed: bool,
     pub log: Vec<crate::director::LogRow>,
     pub run: Option<DirectorRunId>,
@@ -2030,7 +2027,6 @@ impl Director {
         Director {
             manifest: None,
             problems: Vec::new(),
-            scan: Vec::new(),
             armed: false,
             log: Vec::new(),
             run: None,
@@ -2050,26 +2046,7 @@ impl Director {
 }
 impl Default for Director { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/director.ts:424 Director.scan, src/game/director.ts:424)
-#[derive(Clone, Debug)]
-pub struct DirectorScanItem {
-    pub program: String,
-    pub beat: String,
-    pub verb: String,
-}
-impl DirectorScanItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DirectorScanItem {
-            program: String::new(),
-            beat: String::new(),
-            verb: String::new(),
-        }
-    }
-}
-impl Default for DirectorScanItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/director.ts:427 Director.lastRun, src/game/director.ts:427)
+/// (TypeScript: inline at src/game/director.ts:428 Director.lastRun, src/game/director.ts:428)
 #[derive(Clone, Debug)]
 pub struct DirectorLastRun {
     pub serial: f64,
@@ -2090,7 +2067,7 @@ impl DirectorLastRun {
 }
 impl Default for DirectorLastRun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:329 UTIL, src/game/director.ts:271)
+/// (TypeScript: inline at src/game/director.ts:330 UTIL, src/game/director.ts:272)
 #[derive(Clone, Copy, Debug)]
 pub struct UTIL {
 }
@@ -2103,14 +2080,14 @@ impl UTIL {
 }
 impl Default for UTIL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:338 lintManifest(level), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
+/// (TypeScript: inline at src/game/director.ts:339 lintManifest(level), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
 #[derive(Clone, Debug)]
 pub struct LintManifestLevel {
-    pub lights: Vec<crate::scene_level::LightDef>,
     pub routes: Vec<RouteId>,
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub devices: Option<Vec<crate::scene_level::DeviceDef>>,
     pub doors: Vec<crate::scene_level::LevelDoorDef>,
+    pub lights: Vec<crate::scene_level::LightDef>,
     pub switchables: Vec<crate::scene_level::LevelSwitchablesItem>,
     pub clear_plans: Option<Vec<crate::scene_level::RoomClearPlan>>,
     pub daylight: Option<crate::scene_level::DaylightDef>,
@@ -2120,11 +2097,11 @@ impl LintManifestLevel {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         LintManifestLevel {
-            lights: Vec::new(),
             routes: Vec::new(),
             breach: None,
             devices: None,
             doors: Vec::new(),
+            lights: Vec::new(),
             switchables: Vec::new(),
             clear_plans: None,
             daylight: None,
@@ -2134,26 +2111,7 @@ impl LintManifestLevel {
 }
 impl Default for LintManifestLevel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:379 scanShowcaseVerbs ->, src/game/director.ts:379)
-#[derive(Clone, Debug)]
-pub struct ScanShowcaseVerbsItem {
-    pub program: String,
-    pub beat: String,
-    pub verb: String,
-}
-impl ScanShowcaseVerbsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScanShowcaseVerbsItem {
-            program: String::new(),
-            beat: String::new(),
-            verb: String::new(),
-        }
-    }
-}
-impl Default for ScanShowcaseVerbsItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/director.ts:452 attach(o), src/game/director.ts:452)
+/// (TypeScript: inline at src/game/director.ts:453 attach(o), src/game/director.ts:453)
 #[derive(Clone, Copy, Debug)]
 pub struct DirectorAttachO {
     pub cam: Option<CameraId>,
@@ -2170,7 +2128,7 @@ impl DirectorAttachO {
 }
 impl Default for DirectorAttachO { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:477 objective ->, src/game/director.ts:477)
+/// (TypeScript: inline at src/game/director.ts:478 objective ->, src/game/director.ts:478)
 #[derive(Clone, Debug)]
 pub struct DirectorObjective {
     pub text: String,
@@ -2197,7 +2155,7 @@ pub enum DirectorSignalData {
     Arm4(JsMap<String, Option<crate::director::Json>>),
 }
 
-/// (TypeScript: inline at src/game/director.ts:482 chapters ->, src/game/director.ts:482)
+/// (TypeScript: inline at src/game/director.ts:483 chapters ->, src/game/director.ts:483)
 #[derive(Clone, Debug)]
 pub struct DirectorChapters {
     pub list: Vec<crate::director::DirectorChaptersListItem>,
@@ -2216,7 +2174,7 @@ impl DirectorChapters {
 }
 impl Default for DirectorChapters { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:482 DirectorChapters.list, src/game/director.ts:482)
+/// (TypeScript: inline at src/game/director.ts:483 DirectorChapters.list, src/game/director.ts:483)
 #[derive(Clone, Debug)]
 pub struct DirectorChaptersListItem {
     pub title: String,
@@ -2233,7 +2191,7 @@ impl DirectorChaptersListItem {
 }
 impl Default for DirectorChaptersListItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:493 push(row), src/game/director.ts:493 push(row))
+/// (TypeScript: inline at src/game/director.ts:494 push(row), src/game/director.ts:494 push(row))
 #[derive(Clone, Debug)]
 pub struct DirectorPushRow {
     pub kind: crate::director::DirectorPushRowKind,
@@ -2289,7 +2247,7 @@ impl DirectorPushRowKind {
     }
 }
 
-/// (TypeScript: inline at src/game/director.ts:502 start(opts), src/game/director.ts:502)
+/// (TypeScript: inline at src/game/director.ts:503 start(opts), src/game/director.ts:503)
 #[derive(Clone, Copy, Debug)]
 pub struct DirectorStartOpts {
     pub seed: Option<f64>,
@@ -2304,7 +2262,7 @@ impl DirectorStartOpts {
 }
 impl Default for DirectorStartOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PlanRef, src/game/director.ts:87)
+/// (TypeScript: PlanRef, src/game/director.ts:88)
 #[derive(Clone, Debug)]
 pub struct PlanRef {
     pub kind: crate::director::PlanRefKind,
@@ -2352,7 +2310,7 @@ pub enum DirectorInsideVolumeWho {
     Unit(crate::director::UnitRef),
 }
 
-/// (TypeScript: inline at src/game/director.ts:1115 signalView(s), src/game/director.ts:1115)
+/// (TypeScript: inline at src/game/director.ts:1116 signalView(s), src/game/director.ts:1116)
 #[derive(Clone, Debug)]
 pub struct SignalViewS {
     pub name: String,
@@ -2371,23 +2329,23 @@ impl SignalViewS {
 }
 impl Default for SignalViewS { fn default() -> Self { Self::zeroed() } }
 
-/// (src/game/director.ts:329 UTIL: a table nothing writes)
+/// (src/game/director.ts:330 UTIL: a table nothing writes)
 pub fn util() -> crate::director::UTIL { crate::director::UTIL {  } }
 
-/// (src/game/director.ts:334 TEAMS: a table nothing writes)
+/// (src/game/director.ts:335 TEAMS: a table nothing writes)
 pub fn teams() -> Vec<String> { alloc::vec![String::from("guard"), String::from("operative"), String::from("hostile")] }
 
-/// (src/game/director.ts:376 SHOWCASE_VERBS: a table nothing writes)
+/// (src/game/director.ts:377 SHOWCASE_VERBS: a table nothing writes)
 pub fn showcase_verbs() -> [String; 16] { [String::from("stage"), String::from("puppet"), String::from("press"), String::from("click"), String::from("camera"), String::from("caption"), String::from("chapters"), String::from("fade"), String::from("variant"), String::from("shift"), String::from("select"), String::from("view"), String::from("weather"), String::from("mission"), String::from("handover"), String::from("chaos")] }
 
-/// (src/game/director.ts:393 MAX_RESUMES)
+/// (src/game/director.ts:394 MAX_RESUMES)
 pub const MAX_RESUMES: f64 = 64.0;
 
-/// (src/game/director.ts:395 LOG_CAP)
+/// (src/game/director.ts:396 LOG_CAP)
 pub const LOG_CAP: f64 = 2500.0;
 
-/// (src/game/director.ts:395 MAX_WHEN)
+/// (src/game/director.ts:396 MAX_WHEN)
 pub const MAX_WHEN: f64 = 32.0;
 
-/// (src/game/director.ts:395 MAX_PASSES)
+/// (src/game/director.ts:396 MAX_PASSES)
 pub const MAX_PASSES: f64 = 8.0;

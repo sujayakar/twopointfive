@@ -18,7 +18,7 @@ pub fn glass_pen_harness(g: &mut crate::game::Game) { todo!() }
 pub fn glass_pen_live(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/glasspen.ts:124 roundEnergy)
-pub fn round_energy(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> f64 { todo!() }
+pub fn round_energy(g: &mut crate::game::Game, def: crate::weapons::WeaponId) -> f64 { todo!() }
 
 /// (src/game/glasspen.ts:126 roundEnergyOf)
 pub fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 { todo!() }
@@ -27,7 +27,7 @@ pub fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 { todo!() 
 pub fn side_shot_energy(g: &mut crate::game::Game, team: crate::teams::Team) -> Option<f64> { todo!() }
 
 /// (src/game/glasspen.ts:140 shotEnergy)
-pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<&crate::weapons::WeaponDef>) -> Option<f64> { todo!() }
+pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> { todo!() }
 
 /// (src/game/glasspen.ts:147 paneType)
 pub fn pane_type(g: &mut crate::game::Game, b: BoxId, bi: Option<f64>) -> crate::glassbreak::GlassType { todo!() }
@@ -66,7 +66,7 @@ pub fn deflect(g: &mut crate::game::Game, b: BoxId, at: V3, d: V3, t: crate::gla
 pub fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> { todo!() }
 
 /// (src/game/glasspen.ts:260 roundPath)
-pub fn round_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<crate::glasspen::StaticHit2>, nth0: Option<f64>) -> Option<crate::glasspen::RoundPath> { todo!() }
+pub fn round_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<Option<crate::glasspen::RoundPathSt>>, nth0: Option<f64>) -> Option<crate::glasspen::RoundPath> { todo!() }
 
 /// (src/game/glasspen.ts:276 segAt)
 pub fn seg_at(p: &crate::glasspen::RoundPath, t: f64) -> crate::glasspen::RoundSeg { todo!() }
@@ -93,7 +93,7 @@ pub fn arm_in_hole(g: &mut crate::game::Game, from: V3, rd: V3, l: f64) -> bool 
 pub fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3, energy: f64, shell: Option<&mut crate::glasspen::ShellGlass>) -> Option<crate::glasspen::ArmThroughGlass> { todo!() }
 
 /// (src/game/glasspen.ts:361 shotPasses)
-pub fn shot_passes(g: &mut crate::game::Game, a: V3, rd: V3, panes: &[crate::glasspen::ShotPassesPanesItem], energy: Option<f64>) -> bool { todo!() }
+pub fn shot_passes(g: &mut crate::game::Game, a: V3, rd: V3, panes: &[crate::scene_collision::SegmentBlockedPanesItem], energy: Option<f64>) -> bool { todo!() }
 
 /// (src/game/glasspen.ts:371 shotThroughGlass)
 pub fn shot_through_glass(g: &mut crate::game::Game, eyes: &[V3], p: V3, energy: Option<f64>) -> f64 { todo!() }

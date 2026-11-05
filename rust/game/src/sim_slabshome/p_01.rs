@@ -13,7 +13,7 @@ fn cols(g: &Game) -> &'static mut ::sim::slabs::Slabs {
 }
 
 /// The column starts in SLAB_F64 then SLAB_U32 order, as `names` in slab_io walks them.
-fn in_order(o: &SlabCols) -> [f64; 21] {
+fn in_order(o: &SlabStoreO) -> [f64; 21] {
     [o.px, o.py, o.pz, o.vx, o.vy, o.vz, o.a, o.spin, o.tip, o.tip_v, o.t, o.ang, o.wedged, o.bw, o.bl, o.bx, o.by, o.flags, o.who, o.door, o.row]
 }
 
@@ -187,7 +187,7 @@ pub fn slab_io(g: &mut crate::game::Game) -> crate::sim_slabshome::SlabIo {
     if let Some(io) = g.m.sim_slabshome.io { return io; }
     let x = crate::sim_sim::sim();
     let o = slab_cols(SLAB_CAP);
-    let at = in_order(&o);
+    let at = in_order(&store_o(&o));
     let doubles = slab_f64().len();
     let names: Vec<String> = slab_f64().into_iter().chain(slab_u32()).collect();
     let mut off: Vec<String> = Vec::new();
@@ -211,15 +211,52 @@ fn word(a: &[u8], i: usize) -> u32 {
     u32::from_le_bytes([a[at], a[at + 1], a[at + 2], a[at + 3]])
 }
 
-/// colDiff over the moved columns, naming a row `door ${u[O.door + r]}`, appending to `out`.
-fn seam_col_diff(g: &mut Game, a: &[u8], b: &[u8], rows: f64, most: f64, out: Vec<String>) -> Vec<String> {
-    todo!("needs: sim_colstore::col_diff's ColDiffO to name its columns (it holds only `bytes`) (slabshome.ts:142)")
+/// Double `i` of a store's bytes. (the Float64Array views of colDiff)
+fn double(a: &[u8], i: usize) -> f64 {
+    let at = i * 8;
+    f64::from_le_bytes([a[at], a[at + 1], a[at + 2], a[at + 3], a[at + 4], a[at + 5], a[at + 6], a[at + 7]])
+}
+
+/// `Object.is` on numbers: a NaN is a NaN whatever its bits, -0 is not 0.
+fn same_double(x: f64, y: f64) -> bool {
+    (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
+}
+
+/// colDiff over SLAB_F64 and SWAPPED, naming a row `door ${u[O.door + r]}`, appending to `out`. A read past a view's end is `undefined` on both sides, so no line.
+// SKELETON-GAP: sim_colstore::col_diff cannot find a column (ColDiffO holds only `bytes`, and a name K has no way to a field), so this is its walk by column start. (slabshome.ts:142, colstore.ts:58)
+fn col_diff_slabs(o: &SlabStoreO, a: &[u8], b: &[u8], rows: f64, most: f64, mut out: Vec<String>) -> Vec<String> {
+    let at = in_order(o);
+    let (doubles_long, words_long) = ((js::to_u32(o.flags) >> 1) as usize, (js::to_u32(o.bytes) >> 2) as usize);
+    let doubles = slab_f64();
+    for (i, k) in doubles.iter().enumerate() {
+        let col = at[i] as usize;
+        let mut r = 0usize;
+        while (r as f64) < rows && (out.len() as f64) < most {
+            if col + r < doubles_long && !same_double(double(a, col + r), double(b, col + r)) {
+                let door_at = o.door as usize + r;
+                let whose = if door_at < words_long { format!("{}", word(a, door_at)) } else { String::from("undefined") };
+                out.push(format!("row {} (door {}).{} {} | {}", r, whose, k, js::num_str(double(a, col + r)), js::num_str(double(b, col + r))));
+            }
+            r += 1;
+        }
+    }
+    for (i, k) in swapped().iter().enumerate() {
+        let col = at[doubles.len() + i] as usize;
+        let mut r = 0usize;
+        while (r as f64) < rows && (out.len() as f64) < most {
+            if col + r < words_long && word(a, col + r) != word(b, col + r) {
+                out.push(format!("row {}.{} {} | {}", r, k, word(a, col + r), word(b, col + r)));
+            }
+            r += 1;
+        }
+    }
+    out
 }
 
 /// Where two takes of a store's bytes differ, in words: at most `most` lines, none if they are the same state. (slabshome.ts slabDiff)
 pub fn slab_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
-    let (o_row, doors) = (g.doors.slabs.o.row, g.doors.slabs.doors);
+    let (o, doors) = (g.doors.slabs.o, g.doors.slabs.doors);
     let (ua0, ub0) = (word(a, 0), word(b, 0));
     let mut out: Vec<String> = Vec::new();
     if ua0 != ub0 || word(a, 1) != word(b, 1) {
@@ -227,13 +264,13 @@ pub fn slab_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64
     }
     let mut k = 0.0;
     while k < doors && (out.len() as f64) < most {
-        let at = (o_row + k) as usize;
+        let at = (o.row + k) as usize;
         if word(a, at) != word(b, at) {
             out.push(format!("door {}'s row (plus one) {} | {}", k as usize, word(a, at), word(b, at)));
         }
         k += 1.0;
     }
-    seam_col_diff(g, a, b, m::max(ua0 as f64, ub0 as f64), most, out)
+    col_diff_slabs(&o, a, b, m::max(ua0 as f64, ub0 as f64), most, out)
 }
 
 #[cfg(test)]
@@ -272,13 +309,13 @@ mod tests {
     fn cols_are_the_typescripts_and_the_modules() {
         let o = slab_cols(64.0);
         let want = [2.0, 66.0, 130.0, 194.0, 258.0, 322.0, 386.0, 450.0, 514.0, 578.0, 642.0, 706.0, 770.0, 834.0, 898.0, 962.0, 1026.0, 2180.0, 2244.0, 2308.0, 2372.0];
-        assert_eq!(in_order(&o), want);
+        assert_eq!(in_order(&store_o(&o)), want);
         assert_eq!(o.bytes, 9744.0);
         let small = slab_cols(3.0);
-        assert_eq!(in_order(&small), [2.0, 5.0, 8.0, 11.0, 14.0, 17.0, 20.0, 23.0, 26.0, 29.0, 32.0, 35.0, 38.0, 41.0, 44.0, 47.0, 50.0, 106.0, 109.0, 112.0, 115.0]);
+        assert_eq!(in_order(&store_o(&small)), [2.0, 5.0, 8.0, 11.0, 14.0, 17.0, 20.0, 23.0, 26.0, 29.0, 32.0, 35.0, 38.0, 41.0, 44.0, 47.0, 50.0, 106.0, 109.0, 112.0, 115.0]);
         assert_eq!(small.bytes, 472.0);
         // the module's own layout, as slab_io holds it to
-        for (i, c) in in_order(&o).iter().enumerate() {
+        for (i, c) in in_order(&store_o(&o)).iter().enumerate() {
             let scale = if i < 17 { 8.0 } else { 4.0 };
             assert_eq!(::sim::slabs::COLS[i] as f64, c * scale);
         }
@@ -331,5 +368,42 @@ mod tests {
         let s = slab_store_load(g, 0.0);
         assert_eq!((s.p, s.v, s.a, s.spin, s.tip, s.tip_v), (all.p, all.v, 7.0, 8.0, 9.0, 10.0));
         assert_eq!((s.side, s.rest, s.landed, s.who, s.t, s.ang, s.wedged, s.bits), (-1.0, true, true, 7.0, 11.0, 12.0, Some(13.0), all.bits));
+    }
+
+    fn put_word(a: &mut [u8], i: f64, x: u32) { a[i as usize * 4..i as usize * 4 + 4].copy_from_slice(&x.to_le_bytes()); }
+    fn put_double(a: &mut [u8], i: f64, x: f64) { a[i as usize * 8..i as usize * 8 + 8].copy_from_slice(&x.to_le_bytes()); }
+
+    // The lines below are the TypeScript's own slabDiff, printed under bun over the same bytes (S = the layout of 64 rows, 8 doors).
+    #[test]
+    fn diff_says_what_the_typescripts_says() {
+        let g = &mut Game::blank();
+        let c = slab_cols(64.0);
+        g.doors.slabs.o = store_o(&c);
+        g.doors.slabs.doors = 8.0;
+        let mut a = vec![0u8; c.bytes as usize];
+        let mut b = a.clone();
+        assert!(slab_diff(g, &a, &b, None).is_empty());
+
+        for x in [&mut a, &mut b] {
+            put_word(x, 0.0, 3); put_word(x, 1.0, 2);
+            put_word(x, c.door, 4); put_word(x, c.door + 1.0, 7); put_word(x, c.door + 2.0, 2);
+        }
+        put_double(&mut a, c.px, 1.5); put_double(&mut b, c.px, 2.25);
+        put_double(&mut a, c.tip_v + 1.0, 0.0); put_double(&mut b, c.tip_v + 1.0, -0.0);
+        put_double(&mut a, c.ang + 2.0, f64::NAN); put_double(&mut b, c.ang + 2.0, f64::from_bits(0x7ff8_0000_0000_0001));
+        put_double(&mut a, c.by + 2.0, 1e21); put_double(&mut b, c.by + 2.0, f64::NAN);
+        put_double(&mut a, c.px + 3.0, 9.0); put_double(&mut b, c.px + 3.0, 8.0);
+        put_word(&mut a, c.who + 1.0, 0xffff_ffff); put_word(&mut b, c.who + 1.0, 3);
+        put_word(&mut b, c.door + 2.0, 5);
+        let four = ["row 0 (door 4).px 1.5 | 2.25", "row 1 (door 7).tipV 0 | 0", "row 2 (door 2).by 1e+21 | NaN", "row 1.who 4294967295 | 3"];
+        assert_eq!(slab_diff(g, &a, &b, Some(20.0)), [&four[..], &["row 2.door 2 | 5"][..]].concat());
+        assert_eq!(slab_diff(g, &a, &b, None), four);
+        assert_eq!(slab_diff(g, &a, &b, Some(2.0)), four[..2]);
+
+        put_word(&mut a, 1.0, 1); put_word(&mut a, 0.0, 5);
+        put_word(&mut a, c.row + 3.0, 1); put_word(&mut b, c.row + 3.0, 2);
+        put_word(&mut a, c.row + 9.0, 4);
+        assert_eq!(slab_diff(g, &a, &b, Some(20.0)), ["5 slabs, 1 in the air | 3, 2", "door 3's row (plus one) 1 | 2", "row 0 (door 4).px 1.5 | 2.25", "row 3 (door 0).px 9 | 8", "row 1 (door 7).tipV 0 | 0", "row 2 (door 2).by 1e+21 | NaN", "row 1.who 4294967295 | 3", "row 2.door 2 | 5"]);
+        assert_eq!(slab_diff(g, &a, &b, Some(1.0)), ["5 slabs, 1 in the air | 3, 2"]);
     }
 }

@@ -54,7 +54,7 @@ pub fn feed_play(g: &mut crate::game::Game, at: V3, c_2: &crate::gunreload::Feed
 pub fn feed_tick(g: &mut crate::game::Game, c_2: CharId, def: &crate::weapons::WeaponDef, before: f64, now: f64, vol: Option<f64>, gun: Option<FirearmId>) { todo!() }
 
 /// (src/game/gunreload.ts:201 feedDrop)
-pub fn feed_drop(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<f64> { todo!() }
+pub fn feed_drop(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<Option<f64>> { todo!() }
 
 /// (src/game/gunreload.ts:203 feedStarts)
 pub fn feed_starts(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> bool { todo!() }

@@ -12,13 +12,13 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn update_snow_fx(g: &mut crate::game::Game, dt: f64, cam: CameraId) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowFx.ts:399 updateWisps)
-pub fn update_wisps(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, dt: f64, cx: f64, cz: f64, r: f64, area: f64, room: f64, max: Option<f64>, one_air: Option<bool>) {}
+pub fn update_wisps(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, dt: f64, cx: f64, cz: f64, r: f64, area: f64, room: f64, max: Option<f64>, one_air: Option<bool>) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowFx.ts:420 oneAirCfg)
-pub fn one_air_cfg(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, on: bool) {}
+pub fn one_air_cfg(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, on: bool) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowFx.ts:432 grainsOff)
-pub fn grains_off(st: &mut crate::snow_fx::SnowState, p: Option<&mut crate::render_particles::Particles>, why: &str) {}
+pub fn grains_off(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, why: &str) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/snowFx.ts:442 updateGrains)
-pub fn update_grains(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, dt: f64, cx: f64, cz: f64, room: f64, slot_life: f64) {}
+pub fn update_grains(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, dt: f64, cx: f64, cz: f64, room: f64, slot_life: f64) {}

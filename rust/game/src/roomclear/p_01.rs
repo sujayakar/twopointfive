@@ -1,4 +1,4 @@
-//! src/game/roomclear.ts lines 1 to 420
+//! src/game/roomclear.ts lines 1 to 419
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,10 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// `${number}` in a line: Rust's shortest digits are the language's for a level's numbers, but for −0.
-fn num(x: f64) -> String {
-    if x == 0.0 { String::from("0") } else { format!("{}", x) }
-}
 /// a line's `s` of `room${left > 1 ? 's' : ''}`
 fn plural(left: usize) -> &'static str {
     if left > 1 { "s" } else { "" }
@@ -27,9 +23,9 @@ fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
 fn up(g: &Game, h: GuardId) -> bool {
     g.gd[h].state != crate::game::GuardState::Dead
 }
-/// `h.state !== 'dead' && !runnerFled(h)`
-fn holds(g: &mut Game, h: GuardId) -> bool {
-    up(g, h) && !crate::runner::runner_fled(g, h)
+/// `h.state !== 'dead' && !h.fled`
+fn holds(g: &Game, h: GuardId) -> bool {
+    up(g, h) && !g.gd[h].fled
 }
 /// `nb.ops.filter(o => o.state !== 'dead').length`
 fn ops_up(g: &Game) -> usize {
@@ -135,7 +131,7 @@ pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::C
         }
         for (name, p) in &who {
             if blocked(g, p[0], p[2]) {
-                bad.push(format!("{}, {} ({}, {}): not on floor a man can stand on", start, name, num(p[0]), num(p[2])));
+                bad.push(format!("{}, {} ({}, {}): not on floor a man can stand on", start, name, js::num_str(p[0]), js::num_str(p[2])));
             } else if name != "Player" && crate::scene_collision::nav_grid_find_path(g, t.sam, *p, None, None).is_none() {
                 bad.push(format!("{}, {}: no way on foot from the player's mark", start, name));
             }
@@ -152,12 +148,12 @@ pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::C
         // a structure made for more: the staging lifts the four-man squad's budget to fit
         Some(mm) if men <= m::min(most, mm) => {}
         Some(mm) if men > 5.0 => {
-            let more = if mm > most { format!(" and at most {} fit beside the player and the four (sixteen characters are skinned)", num(most)) } else { String::new() };
-            bad.push(format!("{} defenders: the structure's maxMen is {}{}", num(men), num(mm), more));
+            let more = if mm > most { format!(" and at most {} fit beside the player and the four (sixteen characters are skinned)", js::num_str(most)) } else { String::new() };
+            bad.push(format!("{} defenders: the structure's maxMen is {}{}", js::num_str(men), js::num_str(mm), more));
         }
         _ => {
             if men > 5.0 {
-                bad.push(format!("{} defenders: only five fit beside the player and the pair (eight characters cast shadows)", num(men)));
+                bad.push(format!("{} defenders: only five fit beside the player and the pair (eight characters cast shadows)", js::num_str(men)));
             }
         }
     }
@@ -172,7 +168,7 @@ pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::C
             bad.push(format!("{}: nobody holds it", r.name));
         }
         if (r.marks.len() as f64) < r.garrison {
-            bad.push(format!("{}: {} marks for {} men", r.name, r.marks.len(), num(r.garrison)));
+            bad.push(format!("{}: {} marks for {} men", r.name, r.marks.len(), js::num_str(r.garrison)));
         }
         for d in &r.doors {
             if crate::doors::doors_by_name(g, &d.id).is_none() {
@@ -187,7 +183,7 @@ pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::C
             }
         }
         for (i, mk) in r.marks.iter().enumerate() {
-            let at = format!("{} mark {} ({}, {})", r.name, i, num(mk.pos[0]), num(mk.pos[2]));
+            let at = format!("{} mark {} ({}, {})", r.name, i, js::num_str(mk.pos[0]), js::num_str(mk.pos[2]));
             if !in_rect(mk.pos, r.bounds) {
                 bad.push(format!("{}: outside the room", at));
             }
@@ -204,7 +200,7 @@ pub fn check_structure(g: &mut crate::game::Game, s: Option<&crate::roomclear::C
                 }
             }
             if let Some((gap, name)) = prop {
-                bad.push(format!("{}: {:.2} m from {} — he would stand in it", at, gap, name));
+                bad.push(format!("{}: {} m from {} — he would stand in it", at, js::to_fixed(gap, 2), name));
             }
             if !r.doors.iter().any(|d| d.id == mk.watch) {
                 bad.push(format!("{}: watches '{}', which is no door of this room", at, mk.watch));
@@ -255,9 +251,9 @@ pub fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquads
         }
         if let Some(rally) = q.rally {
             if blocked(g, rally[0], rally[2]) {
-                bad.push(format!("{}: its rally point ({}, {}) is not on floor a man can stand on", w, num(rally[0]), num(rally[2])));
+                bad.push(format!("{}: its rally point ({}, {}) is not on floor a man can stand on", w, js::num_str(rally[0]), js::num_str(rally[2])));
             } else if !late && !mine.iter().any(|r| in_rect(rally, r.bounds)) {
-                bad.push(format!("{}: its rally point ({}, {}) is inside none of its rooms", w, num(rally[0]), num(rally[2])));
+                bad.push(format!("{}: its rally point ({}, {}) is inside none of its rooms", w, js::num_str(rally[0]), js::num_str(rally[2])));
             }
         }
         for id in q.barricade.iter().flatten() {
@@ -274,14 +270,14 @@ pub fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquads
             bad.push(format!("{}: no door '{}' in the level to arrive by", w, a.door));
         }
         if !(a.men >= 1.0) || (a.spawn.len() as f64) < a.men {
-            bad.push(format!("{}: {} spawn points for {} men", w, a.spawn.len(), num(a.men)));
+            bad.push(format!("{}: {} spawn points for {} men", w, a.spawn.len(), js::num_str(a.men)));
         }
         if a.men > cap {
-            bad.push(format!("{}: {} men can never fit maxMen {}", w, num(a.men), num(cap)));
+            bad.push(format!("{}: {} men can never fit maxMen {}", w, js::num_str(a.men), js::num_str(cap)));
         }
         for (i, p) in a.spawn.iter().enumerate() {
             let p = *p;
-            let at = format!("{} spawn {} ({}, {})", w, i, num(p[0]), num(p[2]));
+            let at = format!("{} spawn {} ({}, {})", w, i, js::num_str(p[0]), js::num_str(p[2]));
             if let Some(inside) = s.rooms.iter().find(|r| in_rect(p, r.bounds)) {
                 bad.push(format!("{}: inside the {} — a late squad starts outside every room", at, inside.name));
             }
@@ -307,7 +303,7 @@ pub fn check_squads(g: &mut crate::game::Game, s: &crate::roomclear::CheckSquads
         }
     }
     if men > cap {
-        bad.push(format!("{} men in the rooms' garrisons: more than maxMen {}", num(men), num(cap)));
+        bad.push(format!("{} men in the rooms' garrisons: more than maxMen {}", js::num_str(men), js::num_str(cap)));
     }
     bad
 }
@@ -482,14 +478,11 @@ pub fn room_clear_scenario_start_at(g: &mut crate::game::Game) -> Option<V3> {
 
 /// the scenario, its layout named   (roomclear.ts RoomClearScenario.constructor)
 pub fn room_clear_scenario_new(g: &mut crate::game::Game) -> crate::roomclear::RoomClearScenario {
-    let mut s = crate::roomclear::RoomClearScenario::blank();
-    s.knobs = g.k.roomclear.clone();
-    s.layout.name = String::from("room clear");
-    s
+    crate::roomclear::RoomClearScenario::blank()
 }
 
-/// the layout's budget getter: a structure with maxMen holds Sam, the four and its men (no stub reaches it: notes)   (roomclear.ts:269)
-fn budget(g: &mut Game) -> Option<f64> {
+/// the layout's budget getter: a structure with maxMen holds Sam, the four and its men   (roomclear.ts:268 layout.budget)
+pub fn room_clear_scenario_budget(g: &mut crate::game::Game) -> Option<f64> {
     let n = match room_clear_scenario_structure(g) {
         Some(s) if s.max_men.map_or(false, js::truthy) => s.rooms.iter().fold(0.0, |k, r| k + r.garrison),
         _ => 0.0,
@@ -497,8 +490,8 @@ fn budget(g: &mut Game) -> Option<f64> {
     if n > 5.0 { Some(5.0 + n) } else { None }
 }
 
-/// the line the staging says, the layout's stagedLine (no stub reaches it: notes)   (roomclear.ts:271)
-fn staged_line(g: &mut Game) -> String {
+/// the line the staging says   (roomclear.ts:270 layout.stagedLine)
+pub fn room_clear_scenario_staged_line(g: &mut crate::game::Game) -> String {
     let names: Vec<String> = g.room_clear.rooms.iter().map(|r| r.def.name.clone()).collect();
     let what = if !g.night_breach.no_drill {
         let room = room_clear_scenario_drill_room(g).map_or(String::from("door"), |r| r.name);
@@ -679,18 +672,8 @@ pub fn room_clear_scenario_on_staged(g: &mut crate::game::Game) {
     let lesson = g.level.scenarios.as_ref().map_or(false, |c| c.lesson.is_some());
     let cut = crate::squaddeal::squad_deal(g, Some(&s), &dealt_rooms, Some(lesson));
     crate::enemysquads::squads_stage(g, cut.as_ref(), &hostiles, &dealt_rooms);
-    let line = format!("staged:{}/{}", num(g.room_clear.seed), num(g.room_clear.attempt));
+    let line = format!("staged:{}/{}", js::num_str(g.room_clear.seed), js::num_str(g.room_clear.attempt));
     room_clear_scenario_note(g, &line);
-}
-
-/// `R.defenders.some(h => h.state !== 'dead' && !runnerFled(h))`
-fn any_holds(g: &mut Game, men: &[GuardId]) -> bool {
-    for h in men {
-        if holds(g, *h) {
-            return true;
-        }
-    }
-    false
 }
 
 /// Once a frame, right after the night breach's own tick: the rooms' state and the two ends   (roomclear.ts RoomClearScenario.tick)
@@ -705,18 +688,11 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
         return;
     }
     crate::enemysquads::squads_tick(g);
-    let hostiles = g.night_breach.hostiles.clone();
-    let mut live: Vec<GuardId> = Vec::new();
-    for h in hostiles {
-        if holds(g, h) {
-            live.push(h);
-        }
-    }
+    let live: Vec<GuardId> = g.night_breach.hostiles.iter().copied().filter(|h| holds(g, *h)).collect();
     let mut i = 0;
     while i < g.room_clear.rooms.len() {
-        let men = g.room_clear.rooms[i].defenders.clone();
         let bounds = g.room_clear.rooms[i].def.bounds;
-        let c = !any_holds(g, &men) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.ch[g.gd[*h].ch].pos, bounds));
+        let c = !g.room_clear.rooms[i].defenders.iter().any(|h| holds(g, *h)) && !live.iter().any(|h| g.gd[*h].held.is_none() && in_rect(g.ch[g.gd[*h].ch].pos, bounds));
         if c == g.room_clear.rooms[i].cleared {
             i += 1;
             continue;
@@ -993,9 +969,9 @@ pub fn room_clear_scenario_summary(g: &mut crate::game::Game) -> String {
     let t = room_clear_scenario_team(g);
     let state = room_clear_scenario_state(g);
     let ended = if g.room_clear.end.is_some() { format!(" ({})", g.room_clear.end_why) } else { String::new() };
-    let (seed, attempt, way) = (num(g.room_clear.seed), num(g.room_clear.attempt), g.room_clear.way);
+    let (seed, attempt, way) = (js::num_str(g.room_clear.seed), js::num_str(g.room_clear.attempt), g.room_clear.way);
     let ways = match room_clear_scenario_structure(g).and_then(|s| s.starts) {
-        Some(v) if !v.is_empty() => format!(" · way in {} of {}", num(way + 1.0), 1 + v.len()),
+        Some(v) if !v.is_empty() => format!(" · way in {} of {}", js::num_str(way + 1.0), 1 + v.len()),
         _ => String::new(),
     };
     let rooms: Vec<String> = g
@@ -1019,7 +995,7 @@ pub fn room_clear_scenario_summary(g: &mut crate::game::Game) -> String {
         attempt,
         ways,
         rooms.join(" · "),
-        num(t.ops),
+        js::num_str(t.ops),
         g.night_breach.ops.len(),
         player,
         seed,

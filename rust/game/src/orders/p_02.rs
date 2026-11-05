@@ -38,20 +38,17 @@ fn sel_of_pair(id: crate::game::PairId) -> SquadOrdersMenSel {
         crate::game::PairId::Blue => SquadOrdersMenSel::Blue,
     }
 }
-/// SquadOrders.people.near: the man of the other side nearest a point, with how near; only targetAt asks, while `people` is set (pairorders.ts:159)
-fn people_near(g: &mut Game, at: V3) -> Option<(GuardId, f64)> {
-    if !crate::pairorders::pair_orders_up(g) { return None; }
-    let mut best: Option<GuardId> = None;
-    let mut bd = g.k.pair.pick_m;
-    let mut i = 0;
-    while i < g.guards.len() {
-        let h = g.guards[i];
-        i += 1;
-        if !crate::pairorders::pair_orders_is_foe(g, h) { continue; }
-        let d = v3::dist_xz(g.ch[g.gd[h].ch].pos, at);
-        if d < bd { bd = d; best = Some(h); }
+fn sel_of_who(w: Who) -> SquadOrdersMenSel {
+    match w {
+        Who::Num(k) => SquadOrdersMenSel::Num(k),
+        Who::All => SquadOrdersMenSel::All,
+        Who::Red => SquadOrdersMenSel::Red,
+        Who::Blue => SquadOrdersMenSel::Blue,
     }
-    best.map(|gd| (gd, bd))
+}
+/// `a === b` of two marks of one deal: pair() hands the spots back unchanged, so their bits are the same, a NaN's too
+fn same_bits(a: V3, b: V3) -> bool {
+    a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits() && a[2].to_bits() == b[2].to_bits()
 }
 fn is_dead(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].state == crate::game::GuardState::Dead
@@ -62,24 +59,24 @@ fn truthy_str(s: &Option<String>) -> bool {
 }
 
 // ------------------------------------------------------------ the built-in rows' functions (orders.ts:581-627)
-// The arms of OrderLabel, OrderCan, OrderValid, OrderIssue and OrderTick: orders' match calls these, `row_<arm>_<field>`, with what the TypeScript calls the field with.
+// The arms of OrderLabel, OrderCan, OrderValid, OrderIssue and OrderTick: order_can, order_valid, order_issue, order_tick and the label's match call these.
 // `can`: None is true, Some the word why not. `valid`: Ok is true, Err(None) false, Err(Some) the word. `issue`: the reason it cannot be done.
 
 /// 'move'.can (orders.ts:581)
-pub(crate) fn row_move_can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
+pub fn row_move_can(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
     let at = target_pos(t);
     if squad_orders_walk_try(g, gd, at).is_some() { return None; }
     squad_orders_reach(g, gd, at)
 }
 /// 'move'.valid: a door nobody has tried is walked up to, where it has room for them (orders.ts:582)
-pub(crate) fn row_move_valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+pub fn row_move_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     match squad_orders_walk_stacks(g, men, target_pos(t)) {
         Some(SquadOrdersWalkStacks::Text(w)) => Err(Some(w)),
         _ => Ok(()),
     }
 }
 /// 'move'.issue: a place and a watch each that fit the room, or the line abreast (orders.ts:583)
-pub(crate) fn row_move_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+pub fn row_move_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let t_at = target_pos(t);
     let pc = g.pl[g.player].ch;
     let sam = g.ch[pc].pos;
@@ -119,36 +116,30 @@ pub(crate) fn row_move_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: 
     for (gd, p) in deal {
         let fit = fits.as_ref().and_then(|f| f.iter().find(|x| v3::dist_xz(x.pos, p) < 1e-6).cloned());
         let walk = at.as_ref().and_then(|m| m.get(gd).copied());
+        let on = SquadOrdersAssignA {
+            order: String::from("move"), post: Some(p), face: Some(face),
+            stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
+            going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
+            ..Default::default()
+        };
         if let Some(w) = walk {
-            let on = SquadOrdersWalkSendOn {
-                order: String::from("move"), post: Some(p), face: Some(face),
-                stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-                going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
-                ..Default::default()
-            };
             squad_orders_walk_send(g, gd, SquadOrdersWalkSendT { door: w.door, side: w.side, post: w.post }, t_at, &on);
         } else {
-            let on = SquadOrdersAssignA {
-                order: String::from("move"), post: Some(p), face: Some(face),
-                stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-                going: String::from("moving"), there: String::from("in position"), set_line: Some(String::from("set.")), fit,
-                ..Default::default()
-            };
             squad_orders_assign(g, gd, &on);
         }
     }
     None
 }
 /// 'move'.tick (orders.ts:591)
-pub(crate) fn row_move_tick(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
+pub fn row_move_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     crate::roomfit::fit_tick(g, gd, a);
 }
 /// 'stack'.valid (orders.ts:592)
-pub(crate) fn row_stack_valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
+pub fn row_stack_valid(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
     let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Err(None) };
     let posts = match squad_orders_stack_posts_wait(g, door, side, men) {
         Some(p) => p,
-        None => return Err(Some(squad_orders_no_room_words(g, "no room on that door.", &mut |g, _| squad_orders_stack_posts_wait(g, door, side, men).is_some()))),   // (ORDERS.inWay: … or that it is Sam who is in the way, where it is)
+        None => return Err(Some(squad_orders_no_room_words(g, "no room on that door.", &mut |g| squad_orders_stack_posts_wait(g, door, side, men).is_some()))),   // (ORDERS.inWay: … or that it is Sam who is in the way, where it is)
     };
     let spots: Vec<V3> = posts.iter().map(|x| x.pos).collect();
     let groups: Vec<f64> = posts.iter().map(|x| x.group.unwrap_or(0.0)).collect();
@@ -159,19 +150,19 @@ pub(crate) fn row_stack_valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) ->
     Ok(())
 }
 /// 'stack'.issue (orders.ts:597)
-pub(crate) fn row_stack_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+pub fn row_stack_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let (door, side) = match t { OrderTarget::Door(x) => (x.door, x.side), _ => return Some(String::from("no door")) };
     let posts = match squad_orders_stack_posts_wait(g, door, side, men) {
         Some(p) => p,
-        None => return Some(squad_orders_no_room_words(g, "no room to stack on that door", &mut |g, _| squad_orders_stack_posts_wait(g, door, side, men).is_some())),
+        None => return Some(squad_orders_no_room_words(g, "no room to stack on that door", &mut |g| squad_orders_stack_posts_wait(g, door, side, men).is_some())),
     };
     let name = door_words(g, door);
     let spots: Vec<V3> = posts.iter().map(|p| p.pos).collect();
     let groups: Vec<f64> = posts.iter().map(|p| p.group.unwrap_or(0.0)).collect();
     let fc = g.dr[door].frame_centre;
     for (gd, p) in squad_orders_pair(g, men, &spots, Some(&groups), Some(fc)) {
-        // (`x.pos === p` in the TypeScript: the very mark dealt. Marks of one stack are never at one spot, so the first equal is that one)
-        let post = *posts.iter().find(|x| x.pos == p).unwrap();
+        // (`x.pos === p` in the TypeScript: the very mark dealt. Marks of one stack are never at one spot, so the first of the same bits is that one)
+        let post = *posts.iter().find(|x| same_bits(x.pos, p)).unwrap();
         let a = SquadOrdersAssignA {
             order: String::from("stack"), post: Some(post.pos), face: Some(post.face),
             watch: Some([fc[0], 1.05, fc[2]]), door: Some(door), shy: Some(door),
@@ -188,15 +179,15 @@ pub(crate) fn row_stack_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o:
     None
 }
 /// 'cover'.label (orders.ts:605)
-pub(crate) fn row_cover_label(g: &mut Game, t: &OrderTarget) -> String {
+pub fn row_cover_label(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> String {
     String::from(if matches!(t, OrderTarget::Door(_)) { "cover this door" } else { "cover that way" })
 }
 /// 'cover'.can (orders.ts:606)
-pub(crate) fn row_cover_can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
+pub fn row_cover_can(g: &mut crate::game::Game, gd: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
     if squad_orders_has_line(g, gd, t) { None } else { Some(String::from("no line from here.")) }
 }
 /// 'cover'.issue (orders.ts:606)
-pub(crate) fn row_cover_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+pub fn row_cover_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let t_at = target_pos(t);
     let watch: V3 = [t_at[0], 1.1, t_at[2]];
     for &gd in men {
@@ -232,7 +223,7 @@ fn fall_in_cmp(many: bool, a: (f64, f64, Option<crate::game::PairId>), b: (f64, 
     js::or(js::or(a.0 - b.0, pair), a.1 - b.1)
 }
 /// 'fallIn'.issue: a man already in the file keeps his place; three or more file by pairs, the pair with the nearer man first (orders.ts:611)
-pub(crate) fn row_fall_in_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+pub fn row_fall_in_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let mut taken: Vec<f64> = Vec::new();
     for (gd, a) in g.orders.asg.iter() {
         let row = &g.tab.orders_assignment[*a];
@@ -269,7 +260,7 @@ pub(crate) fn row_fall_in_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, 
     None
 }
 /// 'hold'.issue: a running man plants a stride on; the squad of four take an approach each (orders.ts:618)
-pub(crate) fn row_hold_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
+pub fn row_hold_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let mut posts: Vec<V3> = Vec::with_capacity(men.len());
     for &gd in men {
         let c = g.gd[gd].ch;
@@ -318,15 +309,15 @@ pub(crate) fn row_hold_issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: 
 // ------------------------------------------------------------ the night breach's owner (orders.ts:630-637)
 
 /// owner 'nightbreach'.owns: of four, the drill's are the first pair alone
-pub(crate) fn nightbreach_owns(g: &mut Game, gd: GuardId) -> bool {
+pub fn nightbreach_owns(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g)
 }
 /// owner 'nightbreach'.release: the drill is the pair's, letting go of one man ends it for both
-pub(crate) fn nightbreach_release(g: &mut Game, gd: GuardId) -> Option<String> {
+pub fn nightbreach_release(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
     if g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None }
 }
 /// owner 'nightbreach'.status
-pub(crate) fn nightbreach_status(g: &mut Game, gd: GuardId) -> Option<String> {
+pub fn nightbreach_status(g: &mut crate::game::Game, gd: GuardId) -> Option<String> {
     use crate::nightbreach::NightBreachState as St;
     if !g.night_breach.active || !g.night_breach.ops.contains(&gd) { return None; }
     let state = crate::nightbreach::night_breach_state(g);
@@ -396,7 +387,7 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
         let id = g.tab.orders_order_def.push(row);
         s.defs.push(id);
     }
-    // the night breach's drill owns the pair from Sam's 'stack up' (F) until the room is called or lost (its closures, reached by this row's name: nightbreach_owns, _release, _status)
+    // the night breach's drill owns the pair from Sam's 'stack up' (F) until the room is called or lost (its closures are the functions nightbreach_owns, _release, _status)
     s.owners.push(SquadOwner { name: String::from("nightbreach") });
     s
 }
@@ -430,7 +421,7 @@ pub fn squad_orders_mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.orders.cast.is_some() { return g.qrf.men.contains(&gd); }   // (OtherCast.mine: its one closure, qrf.ts:1021)
     if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative { return false; }
     let seat = g.seat;
-    crate::seats::seat_has(g, seat, gd)
+    crate::seats::in_seat(g, seat, gd)   // (… of this book's seat, in a game of more than one: seats.ts)
 }
 
 /// The player is one of these men's own.   (orders.ts SquadOrders.sams)
@@ -456,25 +447,14 @@ pub fn squad_orders_ring(g: &mut crate::game::Game) -> JsSet<String> {
 }
 
 /// The living men an order would go to: the teammate under the reticle, else `who`.   (orders.ts SquadOrders.recipients)
-pub fn squad_orders_recipients(g: &mut crate::game::Game, t: Option<&crate::orders::SquadOrdersRecipientsT>, who: Option<crate::orders::SquadOrdersRecipientsWho>) -> Vec<GuardId> {
-    if let Some(SquadOrdersRecipientsT::None(x)) = t {
+pub fn squad_orders_recipients(g: &mut crate::game::Game, t: Option<&crate::orders::OrderTarget>, who: Option<crate::orders::Who>) -> Vec<GuardId> {
+    if let Some(OrderTarget::None(x)) = t {
         if let Some(man) = x.man {
             return if !is_dead(g, man) && squad_orders_squad(g).contains(&man) { vec![man] } else { Vec::new() };
         }
     }
-    let sel = match who {
-        Some(SquadOrdersRecipientsWho::Num(k)) => SquadOrdersMenSel::Num(k),
-        Some(SquadOrdersRecipientsWho::All) => SquadOrdersMenSel::All,
-        Some(SquadOrdersRecipientsWho::Red) => SquadOrdersMenSel::Red,
-        Some(SquadOrdersRecipientsWho::Blue) => SquadOrdersMenSel::Blue,
-        None => match g.orders.who {
-            Who::Num(k) => SquadOrdersMenSel::Num(k),
-            Who::All => SquadOrdersMenSel::All,
-            Who::Red => SquadOrdersMenSel::Red,
-            Who::Blue => SquadOrdersMenSel::Blue,
-        },
-    };
-    squad_orders_men(g, Some(sel), None)
+    let who = who.unwrap_or(g.orders.who);
+    squad_orders_men(g, Some(sel_of_who(who)), None)
 }
 
 /// The one place to ask for men: the squad, a pair, or a man; the living unless `down`.   (orders.ts SquadOrders.men)
@@ -715,6 +695,23 @@ pub fn squad_orders_clear(g: &mut crate::game::Game, men: Option<&[GuardId]>) {
     if !g.orders.asg.values().any(|&a| g.tab.orders_assignment[a].post.is_none()) { g.orders.trail.clear(); }
 }
 
+/// `this.people?.near(at) ?? null`: the man of the other side nearest the point, with how near; None while g.orders.people is None.   (orders.ts:742, the closure at pairorders.ts:159)
+pub fn squad_orders_people_near(g: &mut crate::game::Game, at: V3) -> Option<(GuardId, f64)> {
+    if g.orders.people.is_none() { return None; }
+    if !crate::pairorders::pair_orders_up(g) { return None; }
+    let mut best: Option<GuardId> = None;
+    let mut bd = g.k.pair.pick_m;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let h = g.guards[i];
+        i += 1;
+        if !crate::pairorders::pair_orders_is_foe(g, h) { continue; }
+        let d = v3::dist_xz(g.ch[g.gd[h].ch].pos, at);
+        if d < bd { bd = d; best = Some(h); }
+    }
+    best.map(|gd| (gd, bd))
+}
+
 /// What a point in the world is, as a target: the nearest of a door, a teammate and Sam himself; else the free floor at or nearest it; else nothing.   (orders.ts SquadOrders.targetAt)
 pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders::OrderTarget {
     let (door_pick_m, man_m, self_m) = (g.k.orders.door_pick_m, g.k.orders.man_m, g.k.orders.self_m);
@@ -738,7 +735,7 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
         if !is_dead(g, gd) && x < dm { dm = x; man = Some(gd); }
     }
     let ds = v3::dist_xz(sam, at);
-    let fo = if g.orders.people.is_some() { people_near(g, at) } else { None };   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
+    let fo = squad_orders_people_near(g, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
     if let Some((foe, fd)) = fo {
         if !(door.is_some() && dd < fd) && !(man.is_some() && dm < fd) && !(ds < self_m && ds < fd) {
             let fp = g.ch[g.gd[foe].ch].pos;

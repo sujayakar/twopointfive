@@ -1204,7 +1204,7 @@ impl LongLookOf {
 }
 impl Default for LongLookOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:673 modelGrip ->, src/game/rigProps.ts:673)
+/// (TypeScript: inline at quiet modelGrip ->, src/game/rigProps.ts:673)
 #[derive(Clone, Copy, Debug)]
 pub struct ModelGrip {
     pub wrist: V3,
@@ -1259,7 +1259,7 @@ impl CarbineFrame {
 }
 impl Default for CarbineFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:791 carbineGrip ->, src/game/rigProps.ts:791)
+/// (TypeScript: inline at quiet carbineGrip ->, src/game/rigProps.ts:791)
 #[derive(Clone, Copy, Debug)]
 pub struct CarbineGrip {
     pub wrist: V3,
@@ -1297,7 +1297,7 @@ impl LongGripOfG {
 }
 impl Default for LongGripOfG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:795 longGripOf ->, src/game/rigProps.ts:795)
+/// (TypeScript: inline at quiet longGripOf ->, src/game/rigProps.ts:795)
 #[derive(Clone, Copy, Debug)]
 pub struct LongGripOf {
     pub wrist: V3,
@@ -1403,7 +1403,7 @@ impl Sc20kBoxesWhere {
     }
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:925 sc20kGrip ->, src/game/rigProps.ts:925)
+/// (TypeScript: inline at quiet sc20kGrip ->, src/game/rigProps.ts:925)
 #[derive(Clone, Copy, Debug)]
 pub struct Sc20kGrip {
     pub wrist: V3,

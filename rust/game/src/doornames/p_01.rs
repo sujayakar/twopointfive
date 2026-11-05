@@ -7,6 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
+/// COMPASS: a whole compass word or letter. (doornames.ts:29)
+static COMPASS: &[&str] = &["n", "s", "e", "w", "ne", "nw", "se", "sw", "north", "south", "east", "west"];
+/// JOIN: two letters and a word all the same. (doornames.ts:32)
+static JOIN: &[&str] = &["to"];
+/// ODD: id words that name no door when said. (doornames.ts:34)
+static ODD: &[&str] = &["off", "his"];
 /// What `BEARING` (the skeleton keeps it as the pattern's text) matches as a whole word.
 static BEARINGS: &[&str] = &["north", "south", "east", "west", "northern", "southern", "eastern", "western"];
 
@@ -15,19 +21,19 @@ fn js_space(c: char) -> bool {
     matches!(c, '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
 }
 
-/// The test of one token of an id, over the module's word sets. (doornames.ts shorthand)
-fn token_is_shorthand(w: &DoornamesMod, t: &str) -> bool {
-    w.compass.has(String::from(t))
-        || w.odd.has(String::from(t))
+/// The test of one token of an id. (doornames.ts shorthand)
+fn token_is_shorthand(t: &str) -> bool {
+    COMPASS.contains(&t)
+        || ODD.contains(&t)
         || (!(!t.is_empty() && t.bytes().all(|b| b.is_ascii_digit()))
-            && !w.join.has(String::from(t))
+            && !JOIN.contains(&t)
             && (t.encode_utf16().count() <= 2
                 || t.bytes().any(|b| b.is_ascii_digit())
                 || !t.bytes().any(|b| matches!(b, b'a' | b'e' | b'i' | b'o' | b'u' | b'y'))))
 }
 
-fn id_is_shorthand(w: &DoornamesMod, id: &str) -> bool {
-    id.split('_').any(|t| token_is_shorthand(w, t))
+fn id_is_shorthand(id: &str) -> bool {
+    id.split('_').any(token_is_shorthand)
 }
 
 /// `/\b(?:north|south|east|west)(?:ern)?\b/`: a whole run of ASCII word characters is one of the bearings.
@@ -37,12 +43,12 @@ fn has_bearing(s: &str) -> bool {
 
 /// A token of an id that is no word: compass, one or two letters, letters with a number, no vowel. (doornames.ts shorthand)
 pub fn shorthand(g: &mut crate::game::Game, t: &str) -> bool {
-    token_is_shorthand(&g.m.doornames, t)
+    token_is_shorthand(t)
 }
 
 /// True = this door id is its author's shorthand, not words to say. (doornames.ts shorthandId)
 pub fn shorthand_id(g: &mut crate::game::Game, id_2: &str) -> bool {
-    id_is_shorthand(&g.m.doornames, id_2)
+    id_is_shorthand(id_2)
 }
 
 /// A name without its leading article. (doornames.ts bare)
@@ -58,7 +64,7 @@ pub fn bare(s: &str) -> String {
     String::from(s)
 }
 
-fn names_of(w: &DoornamesMod, level: &crate::scene_level::Level, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
+fn names_of(level: &crate::scene_level::Level, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
     let mut out: JsMap<String, String> = JsMap::new();
     let ordinals = ordinals();
     let Some(scenarios) = level.scenarios.as_ref() else { return out };
@@ -72,7 +78,7 @@ fn names_of(w: &DoornamesMod, level: &crate::scene_level::Level, ids: &[String],
     // (id, name), in the file's order
     let mut made: Vec<(String, String)> = Vec::new();
     for id in ids {
-        if written.is_some_and(|wr| wr.has(id.clone())) || !id_is_shorthand(w, id) {
+        if written.is_some_and(|wr| wr.has(id.clone())) || !id_is_shorthand(id) {
             continue; // (a door its level has named is not made a name)
         }
         let of: Vec<&crate::scene_scenarios::StructureRoom> = rooms.iter().filter(|r| r.doors.iter().any(|d| d.id == *id)).collect();
@@ -130,7 +136,7 @@ fn names_of(w: &DoornamesMod, level: &crate::scene_level::Level, ids: &[String],
 
 /// The said name of every shorthand door the level's structure lists, by door id. (doornames.ts doorNamesOf)
 pub fn door_names_of(g: &mut crate::game::Game, ids: &[String], written: Option<&JsMap<String, String>>) -> JsMap<String, String> {
-    names_of(&g.m.doornames, &g.level, ids, written)
+    names_of(&g.level, ids, written)
 }
 
 fn authored_of(level: &crate::scene_level::Level, ids: &[String]) -> JsMap<String, String> {
@@ -211,11 +217,6 @@ mod tests {
         r
     }
 
-    /// the word sets as a game starts with them
-    fn words() -> DoornamesMod {
-        DoornamesMod::blank()
-    }
-
     fn row(door: &str, name: &str) -> LevelScenariosDoorNamesItem {
         LevelScenariosDoorNamesItem { door: door.to_string(), name: name.to_string() }
     }
@@ -278,7 +279,7 @@ mod tests {
     #[test]
     fn made_names_match_the_typescript() {
         let expect: Vec<(String, String)> = [COMMON_HEAD, VAULT, PANTRY].iter().flat_map(|r| want(r)).collect();
-        assert_eq!(pairs(&names_of(&words(), &level(), &ids(), None)), expect);
+        assert_eq!(pairs(&names_of(&level(), &ids(), None)), expect);
     }
 
     #[test]
@@ -286,15 +287,15 @@ mod tests {
         let written = authored_of(&level(), &ids());
         assert_eq!(pairs(&written), want(&[("v1", "strong door"), ("v2", "the"), ("n9", "night door")]));
         let expect: Vec<(String, String)> = [COMMON_HEAD, PANTRY].iter().flat_map(|r| want(r)).collect();
-        assert_eq!(pairs(&names_of(&words(), &level(), &ids(), Some(&written))), expect);
+        assert_eq!(pairs(&names_of(&level(), &ids(), Some(&written))), expect);
     }
 
     #[test]
     fn no_names_for_a_lesson_or_a_level_without_structure() {
         let mut lesson = level();
         lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::zeroed());
-        assert!(names_of(&words(), &lesson, &ids(), None).is_empty());
-        assert!(names_of(&words(), &Level::zeroed(), &ids(), None).is_empty());
+        assert!(names_of(&lesson, &ids(), None).is_empty());
+        assert!(names_of(&Level::zeroed(), &ids(), None).is_empty());
     }
 
     #[test]
@@ -305,7 +306,7 @@ mod tests {
             ("é", true), ("ééé", true), ("Abc", true), ("BCD", true),
         ];
         for (id, want) in rows {
-            assert_eq!(id_is_shorthand(&words(), id), want, "{id}");
+            assert_eq!(id_is_shorthand(id), want, "{id}");
         }
     }
 

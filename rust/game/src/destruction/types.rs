@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which CHAOS row a rate cap reads, live at each take (destruction.ts:235): puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum RateCapN {
     Puff,
     Paper,
@@ -12,7 +12,7 @@ pub enum RateCapN {
     Decal,
 }
 /// who is told of a blast, in the order they subscribed, before the doors and walls are judged: Glass adds its count to ev.res.panes (glassbreak.ts:219), Bars (winbars.ts:80), Snow (snowBlast.ts:119)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum BlastListener {
     Glass,
     Bars,
@@ -42,7 +42,6 @@ pub struct Destruction {
     pub last_fixture_t: f64,
     pub roofs: JsMap<crate::Num, f64>,
     pub target_of_box: JsMap<crate::Num, FixtureId>,
-    pub gather_scratch: Vec<i32>,
     pub caps: crate::destruction::DestructionCaps,
     pub puffs_this_frame: f64,
     pub free_knocks: f64,
@@ -80,7 +79,6 @@ impl Destruction {
             last_fixture_t: -100.0,
             roofs: JsMap::new(),
             target_of_box: JsMap::new(),
-            gather_scratch: alloc::vec![0; 32],
             caps: crate::destruction::DestructionCaps { puff: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Puff }, paper: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Paper }, knock: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Knock }, decal: crate::destruction::RateCap { ts: alloc::vec::Vec::new(), head: 0.0, n: crate::destruction::RateCapN::Decal } },
             puffs_this_frame: 0.0,
             free_knocks: 0.0,

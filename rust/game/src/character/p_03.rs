@@ -31,19 +31,6 @@ pub fn long_tuck(t: &mut Vec<f64>, gun_wall: f64) {
     t[c.fwd as usize] -= v3::clamp(gun_wall - 1.0, 0.0, 1.0) * wall.over;
 }
 
-/// The animator's tables of numbers by the name rust/sim reads them under: tooling, and game/rustknobs.ts's first word `ANIM`. (character.ts animTables)
-pub fn anim_tables() -> JsMap<String, crate::character::AnimTablesValue> {
-    todo!("needs: a value that can hold a table; AnimTablesValue's object arm carries nothing, so a path under ANIM cannot be read through this map")
-}
-
-pub mod fold_with {
-    /// Who else raises the fold: a function in a table, written by wounds.ts:43 to read WOUND.on, which this signature has no `g` to reach. fold_on
-    /// reads the switch directly. (character.ts FOLD_WITH.on)
-    pub fn on() -> bool {
-        todo!("needs: g, for WOUND.on (wounds.ts:43); fold_on reads it directly and nothing else calls this")
-    }
-}
-
 /// Is the stagger's fold up: `too` is the figure's own foldToo; while MOVES.fold is 0 the wounds switch raises it too. (character.ts foldOn)
 pub fn fold_on(g: &mut Game, too: Option<bool>) -> bool {
     let too = too.unwrap_or(false);
@@ -81,13 +68,13 @@ pub fn mv_on(g: &mut Game, k: crate::character::MvOnK) -> bool {
     v > 0.5
 }
 
-/// A read of an ArrayLike: past its end is undefined, which is NaN in the sum.
-fn q_at(a: &[f64], n: f64) -> f64 {
-    a.get(n as usize).copied().unwrap_or(m::NAN)
+/// A read of an ArrayLike of singles, as a double: past its end is undefined, which is NaN in the sum.
+fn q_at(a: &[f32], n: f64) -> f64 {
+    a.get(n as usize).map_or(m::NAN, |x| *x as f64)
 }
 
 /// The angle between the rotation at a[i] (its four numbers `s` apart) and the one at b[k‥k+3]. (character.ts qAng)
-pub fn q_ang(a: &[f64], i: f64, s: f64, b: &[f64], k: f64) -> f64 {
+pub fn q_ang(a: &[f32], i: f64, s: f64, b: &[f32], k: f64) -> f64 {
     let d = m::abs(q_at(a, i) * q_at(b, k) + q_at(a, i + s) * q_at(b, k + 1.0) + q_at(a, i + 2.0 * s) * q_at(b, k + 2.0) + q_at(a, i + 3.0 * s) * q_at(b, k + 3.0));
     if d >= 1.0 { 0.0 } else { 2.0 * m::acos(d) }
 }
@@ -104,11 +91,7 @@ pub fn in_dip_lane(dx: f64, dz: f64, gun_yaw: f64) -> bool {
 /// MOVES.reload's marks on a long gun, off the trigger hand's wrist in the gun's frame. (character.ts reloadMarks)
 pub fn reload_marks(back: bool) -> crate::character::MV2ReloadBox {
     let r = mv2().reload;
-    if !back {
-        return r.box_;
-    }
-    let b = r.back;
-    crate::character::MV2ReloadBox { mag: b.mag, strip: b.strip, handle: b.handle, pull: b.pull, hf: b.hf, hb: b.hb }
+    if back { r.back } else { r.box_ }
 }
 
 /// A row of TURN by its TypeScript key (`Object.hasOwn(TURN, k)`, `TURN[k]`); None = no such key.
@@ -230,17 +213,17 @@ pub fn turn_feel(g: &mut Game) -> String {
 mod tests {
     use super::*;
 
-    // The expected bits are the TypeScript's own, run under bun with EXACT.on.
+    // The expected bits are the TypeScript's own, run under bun with EXACT.on, over Float32Arrays as every caller's are.
     #[test]
     fn q_ang_has_the_typescripts_bits() {
-        let a = [0.1, 0.0, 0.2, 0.0, 0.3, 0.0, 0.9273618495495703, 0.0];
-        let b = [0.5, -0.5, 0.5, 0.5];
-        assert_eq!(q_ang(&a, 0.0, 2.0, &b, 0.0).to_bits(), 0x3fff1a4dc03e2d76);
-        let c = [9.0, 0.2, 0.4, 0.4, 0.7999999999999999];
-        let e = [7.0, 0.1, 0.7, 0.1, 0.6999999999999999];
+        let a = [0.1f32, 0.0, 0.2, 0.0, 0.3, 0.0, 0.9273618495495703, 0.0];
+        let b = [0.5f32, -0.5, 0.5, 0.5];
+        assert_eq!(q_ang(&a, 0.0, 2.0, &b, 0.0).to_bits(), 0x3fff1a4dbe042acd);
+        let c = [9.0f32, 0.2, 0.4, 0.4, 0.7999999999999999];
+        let e = [7.0f32, 0.1, 0.7, 0.1, 0.6999999999999999];
         assert_eq!(q_ang(&c, 1.0, 1.0, &e, 1.0).to_bits(), 0x3fecdd9f8f922ea1);
         assert_eq!(q_ang(&[0.0, 0.0, 0.0, 1.0], 0.0, 1.0, &[0.0, 0.0, 0.0, 1.0], 0.0).to_bits(), 0);
-        assert_eq!(q_ang(&[0.0, 0.0, 0.0, -0.5], 0.0, 1.0, &[0.1, 0.2, 0.3, 0.9], 0.0).to_bits(), 0x4001aa1c65a25825);
+        assert_eq!(q_ang(&[0.0, 0.0, 0.0, -0.5], 0.0, 1.0, &[0.1, 0.2, 0.3, 0.9], 0.0).to_bits(), 0x4001aa1c6937ac15);
     }
 
     #[test]

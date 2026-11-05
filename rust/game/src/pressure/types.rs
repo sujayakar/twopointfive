@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Man, src/game/pressure.ts:233)
+/// (TypeScript: Man, src/game/pressure.ts:234)
 #[derive(Clone, Copy, Debug)]
 pub struct Man {
     pub d: RoomfightDefId,
@@ -77,7 +77,7 @@ impl ManRole {
     }
 }
 
-/// (TypeScript: Press, src/game/pressure.ts:248)
+/// (TypeScript: Press, src/game/pressure.ts:249)
 #[derive(Clone, Debug)]
 pub struct Press {
     pub id: f64,
@@ -139,7 +139,7 @@ impl PressPhase {
     }
 }
 
-/// (TypeScript: Out, src/game/pressure.ts:250)
+/// (TypeScript: Out, src/game/pressure.ts:251)
 #[derive(Clone, Copy, Debug)]
 pub struct Out {
     pub door: Option<DoorId>,
@@ -164,7 +164,7 @@ impl Out {
 }
 impl Default for Out { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Warn, src/game/pressure.ts:268)
+/// (TypeScript: Warn, src/game/pressure.ts:269)
 #[derive(Clone, Copy, Debug)]
 pub struct Warn {
     pub phase: crate::pressure::WarnPhase,
@@ -208,7 +208,7 @@ impl WarnPhase {
     }
 }
 
-/// (TypeScript: State, src/game/pressure.ts:277)
+/// (TypeScript: State, src/game/pressure.ts:278)
 #[derive(Clone, Debug)]
 pub struct State {
     pub presses: Vec<crate::pressure::Press>,
@@ -277,7 +277,7 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:281 State.think, src/game/pressure.ts:281)
+/// (TypeScript: inline at src/game/pressure.ts:282 State.think, src/game/pressure.ts:282)
 #[derive(Clone, Copy, Debug)]
 pub struct StateThinkValue {
     pub room: RoomfightRoomId,
@@ -296,24 +296,24 @@ impl StateThinkValue {
 }
 impl Default for StateThinkValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:281 State.called, src/game/pressure.ts:281)
+/// (TypeScript: inline at src/game/pressure.ts:282 State.called, src/game/pressure.ts:282)
 #[derive(Clone, Copy, Debug)]
 pub struct StateCalledValue {
-    pub t: RoomfightRoomId,
-    pub t_2: f64,
+    pub room: RoomfightRoomId,
+    pub t: f64,
 }
 impl StateCalledValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         StateCalledValue {
-            t: RoomfightRoomId(0),
-            t_2: 0.0,
+            room: RoomfightRoomId(0),
+            t: 0.0,
         }
     }
 }
 impl Default for StateCalledValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:285 State.ear, src/game/pressure.ts:285)
+/// (TypeScript: inline at src/game/pressure.ts:286 State.ear, src/game/pressure.ts:286)
 #[derive(Clone, Copy, Debug)]
 pub struct StateEarValue {
     pub t: f64,
@@ -332,26 +332,26 @@ impl StateEarValue {
 }
 impl Default for StateEarValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:288 State.told, src/game/pressure.ts:288)
+/// (TypeScript: inline at src/game/pressure.ts:289 State.told, src/game/pressure.ts:289)
 #[derive(Clone, Copy, Debug)]
 pub struct StateToldValue {
-    pub t: RoomfightRoomId,
+    pub room: RoomfightRoomId,
     pub at: V3,
-    pub t_2: f64,
+    pub t: f64,
 }
 impl StateToldValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         StateToldValue {
-            t: RoomfightRoomId(0),
+            room: RoomfightRoomId(0),
             at: [0.0; 3],
-            t_2: 0.0,
+            t: 0.0,
         }
     }
 }
 impl Default for StateToldValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:291 State.heard, src/game/pressure.ts:291)
+/// (TypeScript: inline at src/game/pressure.ts:292 State.heard, src/game/pressure.ts:292)
 #[derive(Clone, Copy, Debug)]
 pub struct StateHeardItem {
     pub t: f64,
@@ -368,7 +368,7 @@ impl StateHeardItem {
 }
 impl Default for StateHeardItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:291 State.marks, src/game/pressure.ts:291)
+/// (TypeScript: inline at src/game/pressure.ts:292 State.marks, src/game/pressure.ts:292)
 #[derive(Clone, Copy, Debug)]
 pub struct StateMarksValue {
     pub r: Option<RoomfightRoomId>,
@@ -387,7 +387,7 @@ impl StateMarksValue {
 }
 impl Default for StateMarksValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:293 State.word, src/game/pressure.ts:293)
+/// (TypeScript: inline at src/game/pressure.ts:294 State.word, src/game/pressure.ts:294)
 #[derive(Clone, Copy, Debug)]
 pub struct StateWord {
     pub t: f64,
@@ -404,7 +404,7 @@ impl StateWord {
 }
 impl Default for StateWord { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:293 State.look, src/game/pressure.ts:293)
+/// (TypeScript: inline at src/game/pressure.ts:294 State.look, src/game/pressure.ts:294)
 #[derive(Clone, Debug)]
 pub struct StateLook {
     pub at: V3,
@@ -425,7 +425,7 @@ impl StateLook {
 }
 impl Default for StateLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:294 State.stats, src/game/pressure.ts:251)
+/// (TypeScript: inline at src/game/pressure.ts:295 State.stats, src/game/pressure.ts:252)
 #[derive(Clone, Copy, Debug)]
 pub struct StateStats {
     pub press_formed: f64,
@@ -530,7 +530,7 @@ impl StateStats {
 }
 impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:223 PRESSURE_HOOKS, src/game/pressure.ts:223)
+/// (TypeScript: inline at src/game/pressure.ts:224 PRESSURE_HOOKS, src/game/pressure.ts:224)
 #[derive(Clone, Copy, Debug)]
 pub struct PRESSUREHOOKS {
 }
@@ -560,7 +560,7 @@ impl HookedWhy {
     }
 }
 
-/// (TypeScript: inline at src/game/pressure.ts:224 hooked ->, src/game/pressure.ts:224)
+/// (TypeScript: inline at src/game/pressure.ts:225 hooked ->, src/game/pressure.ts:225)
 #[derive(Clone, Copy, Debug)]
 pub struct Hooked {
     pub spot: V3,
@@ -577,7 +577,7 @@ impl Hooked {
 }
 impl Default for Hooked { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:317 target ->, src/game/pressure.ts:317)
+/// (TypeScript: inline at src/game/pressure.ts:319 target ->, src/game/pressure.ts:319)
 #[derive(Clone, Copy, Debug)]
 pub struct Target {
     pub t: RoomfightRoomId,
@@ -594,7 +594,58 @@ impl Target {
 }
 impl Default for Target { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:418 gatherSpot ->, src/game/pressure.ts:418)
+/// (TypeScript: inline at src/game/pressure.ts:346 picketMarks(marks), src/game/pressure.ts:346)
+#[derive(Clone, Copy, Debug)]
+pub struct PicketMarksMarksItem {
+    pub pos: V3,
+    pub aim_at: V3,
+    pub drill: Option<bool>,
+}
+impl PicketMarksMarksItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        PicketMarksMarksItem {
+            pos: [0.0; 3],
+            aim_at: [0.0; 3],
+            drill: None,
+        }
+    }
+}
+impl Default for PicketMarksMarksItem { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at quiet picketMarks ->, quiet picketMarks ->)
+#[derive(Clone, Copy, Debug)]
+pub struct PicketMarksItem {
+    pub pos: V3,
+    pub aim_at: V3,
+    pub drill: Option<bool>,
+}
+impl PicketMarksItem {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        PicketMarksItem {
+            pos: [0.0; 3],
+            aim_at: [0.0; 3],
+            drill: None,
+        }
+    }
+}
+impl Default for PicketMarksItem { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/pressure.ts:385 postPicket(room), src/game/pressure.ts:385 postPicket(room))
+#[derive(Clone, Copy, Debug)]
+pub struct PostPicketRoom {
+}
+impl PostPicketRoom {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        PostPicketRoom {
+        }
+    }
+}
+impl Default for PostPicketRoom { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/pressure.ts:425 gatherSpot ->, src/game/pressure.ts:425)
 #[derive(Clone, Copy, Debug)]
 pub struct GatherSpot {
     pub spot: V3,
@@ -611,7 +662,7 @@ impl GatherSpot {
 }
 impl Default for GatherSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:441 standOffSpot ->, src/game/pressure.ts:441)
+/// (TypeScript: inline at src/game/pressure.ts:448 standOffSpot ->, src/game/pressure.ts:448)
 #[derive(Clone, Copy, Debug)]
 pub struct StandOffSpot {
     pub spot: V3,
@@ -628,7 +679,7 @@ impl StandOffSpot {
 }
 impl Default for StandOffSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:522 teamPlaced ->, src/game/pressure.ts:522)
+/// (TypeScript: inline at src/game/pressure.ts:529 teamPlaced ->, src/game/pressure.ts:529)
 #[derive(Clone, Copy, Debug)]
 pub struct TeamPlaced {
     pub known: bool,
@@ -645,7 +696,7 @@ impl TeamPlaced {
 }
 impl Default for TeamPlaced { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:935 aim ->, src/game/pressure.ts:935)
+/// (TypeScript: inline at src/game/pressure.ts:942 aim ->, src/game/pressure.ts:942)
 #[derive(Clone, Copy, Debug)]
 pub struct Aim {
     pub t: RoomfightRoomId,
@@ -665,13 +716,13 @@ impl Default for Aim { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct PressureMod {
-    /// (src/game/pressure.ts:296 STATES)
+    /// (src/game/pressure.ts:297 STATES)
     pub states: Option<crate::pressure::State>,
-    /// (src/game/pressure.ts:303 KITTED)
+    /// (src/game/pressure.ts:305 KITTED)
     pub kitted: JsSet<GuardId>,
-    /// (src/game/pressure.ts:333 PICKETS)
+    /// (src/game/pressure.ts:335 PICKETS)
     pub pickets: JsMap<GuardId, RoomfightRoomId>,
-    /// (src/game/pressure.ts:333 PICKET_WENT)
+    /// (src/game/pressure.ts:335 PICKET_WENT)
     pub picket_went: JsSet<GuardId>,
 }
 impl PressureMod {
@@ -685,35 +736,35 @@ impl PressureMod {
     }
 }
 
-/// (src/game/pressure.ts:223 PRESSURE_HOOKS: a table nothing writes)
+/// (src/game/pressure.ts:224 PRESSURE_HOOKS: a table nothing writes)
 pub fn pressure_hooks() -> crate::pressure::PRESSUREHOOKS { crate::pressure::PRESSUREHOOKS {  } }
 
-/// (src/game/pressure.ts:304 ROOM_CELLS)
+/// (src/game/pressure.ts:306 ROOM_CELLS)
 pub const ROOM_CELLS: f64 = 500.0;
 
-/// (src/game/pressure.ts:305 STAND_OFF_BAND)
+/// (src/game/pressure.ts:307 STAND_OFF_BAND)
 pub const STAND_OFF_BAND: f64 = 7.0;
 
-/// (src/game/pressure.ts:305 STAND_OFF_TRIES)
+/// (src/game/pressure.ts:307 STAND_OFF_TRIES)
 pub const STAND_OFF_TRIES: f64 = 10.0;
 
-/// (src/game/pressure.ts:306 PAIR_WAIT_SECS)
+/// (src/game/pressure.ts:308 PAIR_WAIT_SECS)
 pub const PAIR_WAIT_SECS: f64 = 6.0;
 
-/// (src/game/pressure.ts:307 CUE_FIRST_SECS)
+/// (src/game/pressure.ts:309 CUE_FIRST_SECS)
 pub const CUE_FIRST_SECS: f64 = 1.0;
 
-/// (src/game/pressure.ts:334 PICKET_DOOR_M)
+/// (src/game/pressure.ts:336 PICKET_DOOR_M)
 pub const PICKET_DOOR_M: f64 = 2.5;
 
-/// (src/game/pressure.ts:994 CALLED_SECS)
+/// (src/game/pressure.ts:1001 CALLED_SECS)
 pub const CALLED_SECS: f64 = 30.0;
 
-/// (src/game/pressure.ts:1097 KEPT: a table nothing writes)
+/// (src/game/pressure.ts:1106 KEPT: a table nothing writes)
 pub fn kept() -> [String; 21] { [String::from("on"), String::from("press"), String::from("flank"), String::from("fallBack"), String::from("second"), String::from("secondKeeps"), String::from("secondSet"), String::from("maxMen"), String::from("keepRoom"), String::from("keeperLeft"), String::from("organiseK"), String::from("gather"), String::from("warned"), String::from("standPress"), String::from("picket"), String::from("byWay"), String::from("wayOut"), String::from("rescueCrew"), String::from("drilled"), String::from("squadDrill"), String::from("sweep")] }
 
-/// (src/game/pressure.ts:1098 LS)
+/// (src/game/pressure.ts:1107 LS)
 pub const LS: &str = "twopointsix.pressure";
 
-/// (src/game/pressure.ts:1099 PRESSURE_DEFAULTS: a table nothing writes)
+/// (src/game/pressure.ts:1108 PRESSURE_DEFAULTS: a table nothing writes)
 pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::page_pressure() }

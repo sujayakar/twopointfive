@@ -4,9 +4,24 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// who is told of a row of the change feed, on the frame it is filed (wallbreak.ts note): WallReact = the game's one WallReact takes the row into its queue (wallreact.ts:167)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum ChangeListener {
     WallReact,
+}
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum BKind {
+    Wall,
+    Cover,
+}
+impl BKind {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            BKind::Wall => "wall",
+            BKind::Cover => "cover",
+        }
+    }
 }
 
 /// (TypeScript: words)
@@ -30,7 +45,7 @@ impl LevelChangeKind {
     }
 }
 
-/// (TypeScript: LevelChange, src/game/wallbreak.ts:87)
+/// (TypeScript: LevelChange, src/game/wallbreak.ts:88)
 #[derive(Clone, Debug)]
 pub struct LevelChange {
     pub serial: f64,
@@ -90,7 +105,7 @@ impl LevelChangeCause {
     }
 }
 
-/// (TypeScript: BlastOpts, src/game/wallbreak.ts:113)
+/// (TypeScript: BlastOpts, src/game/wallbreak.ts:114)
 #[derive(Clone, Copy, Debug)]
 pub struct BlastOpts {
     pub radius: Option<f64>,
@@ -115,7 +130,7 @@ impl BlastOpts {
 }
 impl Default for BlastOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:129 BlastOpts.hung, src/game/wallbreak.ts:129)
+/// (TypeScript: inline at src/game/wallbreak.ts:130 BlastOpts.hung, src/game/wallbreak.ts:130)
 #[derive(Clone, Copy, Debug)]
 pub struct BlastOptsHung {
     pub wall: f64,
@@ -132,7 +147,7 @@ impl BlastOptsHung {
 }
 impl Default for BlastOptsHung { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallOpening, src/game/wallbreak.ts:132)
+/// (TypeScript: WallOpening, src/game/wallbreak.ts:133)
 #[derive(Clone, Debug)]
 pub struct WallOpening {
     pub id: f64,
@@ -157,22 +172,7 @@ impl WallOpening {
 }
 impl Default for WallOpening { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum BKind {
-    Wall,
-    Cover,
-}
-impl BKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BKind::Wall => "wall",
-            BKind::Cover => "cover",
-        }
-    }
-}
-
-/// (TypeScript: BlastResult, src/game/wallbreak.ts:135)
+/// (TypeScript: BlastResult, src/game/wallbreak.ts:136)
 #[derive(Clone, Copy, Debug)]
 pub struct BlastResult {
     pub walls: f64,
@@ -197,7 +197,7 @@ impl BlastResult {
 }
 impl Default for BlastResult { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BlastEvent, src/game/wallbreak.ts:138)
+/// (TypeScript: BlastEvent, src/game/wallbreak.ts:139)
 #[derive(Clone, Copy, Debug)]
 pub struct BlastEvent {
     pub at: V3,
@@ -220,7 +220,7 @@ impl BlastEvent {
 }
 impl Default for BlastEvent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Breakable, src/game/wallbreak.ts:141)
+/// (TypeScript: Breakable, src/game/wallbreak.ts:142)
 #[derive(Clone, Debug)]
 pub struct Breakable {
     pub id: f64,
@@ -263,7 +263,7 @@ impl Breakable {
 }
 impl Default for Breakable { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallsSave, src/game/wallbreak.ts:156)
+/// (TypeScript: WallsSave, src/game/wallbreak.ts:157)
 #[derive(Clone, Debug)]
 pub struct WallsSave {
     pub v: f64,
@@ -282,7 +282,7 @@ impl WallsSave {
 }
 impl Default for WallsSave { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AABB, src/game/wallbreak.ts:162)
+/// (TypeScript: AABB, src/game/wallbreak.ts:163)
 #[derive(Clone, Copy, Debug)]
 pub struct AABB {
     pub x0: f64,
@@ -307,7 +307,7 @@ impl AABB {
 }
 impl Default for AABB { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallBreak, src/game/wallbreak.ts:169)
+/// (TypeScript: WallBreak, src/game/wallbreak.ts:170)
 #[derive(Clone, Debug)]
 pub struct WallBreak {
     pub authored: f64,
@@ -324,6 +324,7 @@ pub struct WallBreak {
     pub fixture_boxes: JsSet<crate::Num>,
     pub ghosts: Vec<f64>,
     pub wear: crate::wallwear::WallWear,
+    pub skins: crate::wallskin::WallSkin,
     pub room: crate::levelfit::BreakRoom,
     pub shell_gaps: JsSet<crate::Num>,
     pub hung_now: Option<crate::wallbreak::WallBreakHungNow>,
@@ -347,6 +348,7 @@ impl WallBreak {
             fixture_boxes: JsSet::new(),
             ghosts: Vec::new(),
             wear: crate::wallwear::WallWear::blank(),
+            skins: crate::wallskin::WallSkin::blank(),
             room: crate::levelfit::BreakRoom::zeroed(),
             shell_gaps: JsSet::new(),
             hung_now: None,
@@ -356,7 +358,7 @@ impl WallBreak {
 }
 impl Default for WallBreak { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:576 WallBreak.hungNow, src/game/wallbreak.ts:576)
+/// (TypeScript: inline at src/game/wallbreak.ts:581 WallBreak.hungNow, src/game/wallbreak.ts:581)
 #[derive(Clone, Debug)]
 pub struct WallBreakHungNow {
     pub wall: f64,
@@ -377,7 +379,7 @@ impl WallBreakHungNow {
 }
 impl Default for WallBreakHungNow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:254 inventory ->, src/game/wallbreak.ts:254)
+/// (TypeScript: inline at src/game/wallbreak.ts:258 inventory ->, src/game/wallbreak.ts:258)
 #[derive(Clone, Copy, Debug)]
 pub struct WallBreakInventory {
     pub walls: f64,
@@ -402,7 +404,7 @@ impl WallBreakInventory {
 }
 impl Default for WallBreakInventory { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:259 breakableAt ->, src/game/wallbreak.ts:259)
+/// (TypeScript: inline at src/game/wallbreak.ts:263 breakableAt ->, src/game/wallbreak.ts:263)
 #[derive(Clone, Copy, Debug)]
 pub struct WallBreakBreakableAt {
     pub id: f64,
@@ -427,7 +429,7 @@ impl WallBreakBreakableAt {
 }
 impl Default for WallBreakBreakableAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:305 all ->, src/game/wallbreak.ts:305)
+/// (TypeScript: inline at src/game/wallbreak.ts:309 all ->, src/game/wallbreak.ts:309)
 #[derive(Clone, Copy, Debug)]
 pub struct WallBreakAllItem {
     pub id: f64,
@@ -452,7 +454,7 @@ impl WallBreakAllItem {
 }
 impl Default for WallBreakAllItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:332 rectBox ->, src/game/wallbreak.ts:332)
+/// (TypeScript: inline at src/game/wallbreak.ts:336 rectBox ->, src/game/wallbreak.ts:336)
 #[derive(Clone, Copy, Debug)]
 pub struct WallBreakRectBox {
     pub c: V3,
@@ -490,7 +492,7 @@ impl WallBreakOpenCellsCause {
     }
 }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:422 raze(budget), src/game/wallbreak.ts:422)
+/// (TypeScript: inline at src/game/wallbreak.ts:427 raze(budget), src/game/wallbreak.ts:427)
 #[derive(Clone, Copy, Debug)]
 pub struct WallBreakRazeBudget {
     pub chunks: f64,
@@ -505,7 +507,7 @@ impl WallBreakRazeBudget {
 }
 impl Default for WallBreakRazeBudget { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:425 razeIn(budget), src/game/wallbreak.ts:425)
+/// (TypeScript: inline at src/game/wallbreak.ts:430 razeIn(budget), src/game/wallbreak.ts:430)
 #[derive(Clone, Copy, Debug)]
 pub struct WallBreakRazeInBudget {
     pub chunks: f64,
@@ -520,12 +522,12 @@ impl WallBreakRazeInBudget {
 }
 impl Default for WallBreakRazeInBudget { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:449 note(c), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
+/// (TypeScript: inline at src/game/wallbreak.ts:454 note(c), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
 #[derive(Clone, Debug)]
 pub struct WallBreakNoteC {
     pub dead: bool,
     pub kind: crate::wallbreak::LevelChangeKind,
-    pub cause: crate::wallbreak::WallBreakNoteCCause,
+    pub cause: crate::wallbreak::LevelChangeCause,
     pub name: Option<String>,
     pub who: f64,
     pub pos: V3,
@@ -541,7 +543,7 @@ impl WallBreakNoteC {
         WallBreakNoteC {
             dead: false,
             kind: crate::wallbreak::LevelChangeKind::Door,
-            cause: crate::wallbreak::WallBreakNoteCCause::Blast,
+            cause: crate::wallbreak::LevelChangeCause::Blast,
             name: None,
             who: 0.0,
             pos: [0.0; 3],
@@ -576,7 +578,7 @@ impl WallBreakNoteCCause {
     }
 }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:656 planBlast ->, src/game/wallbreak.ts:656)
+/// (TypeScript: inline at src/game/wallbreak.ts:661 planBlast ->, src/game/wallbreak.ts:661)
 #[derive(Clone, Debug)]
 pub struct WallBreakPlanBlastItem {
     pub b: WallbreakBreakableId,
@@ -595,7 +597,7 @@ impl WallBreakPlanBlastItem {
 }
 impl Default for WallBreakPlanBlastItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallbreak.ts:663 planOf ->, src/game/wallbreak.ts:663)
+/// (TypeScript: inline at src/game/wallbreak.ts:668 planOf ->, src/game/wallbreak.ts:668)
 #[derive(Clone, Debug)]
 pub struct WallBreakPlanOfItem {
     pub b: WallbreakBreakableId,
@@ -617,7 +619,7 @@ impl Default for WallBreakPlanOfItem { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct WallbreakMod {
-    /// (src/game/wallbreak.ts:159 WALL_LOG)
+    /// (src/game/wallbreak.ts:160 WALL_LOG)
     pub wall_log: Vec<String>,
 }
 impl WallbreakMod {
@@ -645,8 +647,8 @@ pub struct WallbreakStats {
     pub nav_opened: i32,
 }
 
-/// (src/game/wallbreak.ts:80 WALLS_DEFAULTS: a table nothing writes)
+/// (src/game/wallbreak.ts:81 WALLS_DEFAULTS: a table nothing writes)
 pub fn walls_defaults() -> crate::knobs::WallsK { crate::knobs::page_walls() }
 
-/// (src/game/wallbreak.ts:161 HIDE)
+/// (src/game/wallbreak.ts:162 HIDE)
 pub const HIDE: f64 = 3.0;

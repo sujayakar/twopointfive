@@ -59,7 +59,7 @@ pub fn spot_on(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::doors:
 }
 
 /// Who of `men` takes it and where he kneels: the nearest carrier who can walk to the door's face; else why not. (wandorder.ts pick)
-pub fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &mut crate::orders::OrderTarget) -> crate::wandorder::Pick {
+pub fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Pick {
     let crate::orders::OrderTarget::Door(t) = t else { return Pick::Text(String::from("not a door.")) };
     let d = t.door;
     if crate::doors::door_off(g, d) {
@@ -170,9 +170,9 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
 }
 
 /// Gives the one man the look, and opens his job. `Issue::Arm1(())` is the TypeScript's `void`; it never returns words. (wandorder.ts issue)
-pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &mut crate::orders::OrderTarget) -> crate::wandorder::Issue {
+pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Issue {
     let p = pick(g, men, t);
-    let (Pick::Arm1(p), crate::orders::OrderTarget::Door(t)) = (p, &*t) else { return Issue::Arm1(()) };
+    let (Pick::Arm1(p), crate::orders::OrderTarget::Door(t)) = (p, t) else { return Issue::Arm1(()) };
     let st_key = crate::seats::view_key(g);
     if !g.m.wandorder.states.has(st_key) {
         return Issue::Arm1(());

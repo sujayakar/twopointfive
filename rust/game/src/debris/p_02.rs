@@ -5,14 +5,19 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Turn box `b` by fraction `k` of the way toward lying with its nearest face on a surface of normal `n` (k = 1: exactly flat); keeps yaw as the heading.   (debris.ts layFlat)
 pub fn lay_flat(g: &mut crate::game::Game, b: BoxId, n: V3, k: f64) {
-    let r: Quat = match g.col.boxes[b].rot { Some(q) => q, None => v3::quat::yaw(g.col.boxes[b].yaw) };
+    lay_flat_row(seam_box(g, b), n, k);
+}
+
+/// The whole of layFlat on the box's row, so the only step the skeleton blocks is finding the row.
+fn lay_flat_row(row: &mut crate::scene_boxes::Box, n: V3, k: f64) {
+    let r: Quat = match row.rot { Some(q) => q, None => v3::quat::yaw(row.yaw) };
     let axes: [V3; 3] = [v3::quat::rotate(r, [1.0, 0.0, 0.0]), v3::quat::rotate(r, [0.0, 1.0, 0.0]), v3::quat::rotate(r, [0.0, 0.0, 1.0])];
     // the axis most aligned with n PER UNIT OF EXTENT: a slab ends on its face unless it arrives all but exactly on edge
-    let h = g.col.boxes[b].h;
+    let h = row.h;
     let (mut bi, mut bd) = (0usize, -1.0);
     for i in 0..3 {
         let d = m::abs(v3::dot(axes[i], n)) / m::max(0.01, h[i]);
@@ -25,7 +30,7 @@ pub fn lay_flat(g: &mut crate::game::Game, b: BoxId, n: V3, k: f64) {
     let sl = v3::len(cr);
     let cs = m::max(-1.0, m::min(1.0, v3::dot(a, n)));
     if sl < 1e-6 {
-        if k >= 1.0 { g.col.boxes[b].rot = Some(v3::quat::normalize(r)); }
+        if k >= 1.0 { row.rot = Some(v3::quat::normalize(r)); }
         return;
     }
     let ang = m::atan2(sl, cs) * m::max(0.0, m::min(1.0, k));
@@ -33,9 +38,14 @@ pub fn lay_flat(g: &mut crate::game::Game, b: BoxId, n: V3, k: f64) {
     let s2 = m::sin(ang / 2.0);
     let q: Quat = [axis[0] * s2, axis[1] * s2, axis[2] * s2, m::cos(ang / 2.0)];
     let rot = v3::quat::normalize(v3::quat::mul(q, r));
-    g.col.boxes[b].rot = Some(rot);
+    row.rot = Some(rot);
     let f = v3::quat::rotate(rot, [0.0, 0.0, 1.0]);
-    if m::hyp2(f[0], f[2]) > 1e-3 { g.col.boxes[b].yaw = m::atan2(f[0], f[2]); }   // heading of local +Z, the level's yaw convention
+    if m::hyp2(f[0], f[2]) > 1e-3 { row.yaw = m::atan2(f[0], f[2]); }   // heading of local +Z, the level's yaw convention
+}
+
+/// A box's row. Once `g.col.boxes` is the table the index says, the body is `&mut g.col.boxes[b]`.
+fn seam_box(g: &mut crate::game::Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].h")
 }
 
 /// Any change of a prop's pose changes this (exact float compare: 'did it move', not a hash).   (debris.ts poseKey)
@@ -49,15 +59,13 @@ mod tests {
 
     /// Expected bits are the TypeScript's own layFlat, run under bun with EXACT on.
     fn check(h: V3, yaw: f64, rot: Option<Quat>, n: V3, k: f64, want_rot: Option<[u64; 4]>, want_yaw: u64) {
-        let mut g = alloc::boxed::Box::new(crate::game::Game::blank());
         let mut row = crate::scene_boxes::Box::zeroed();
         row.h = h;
         row.yaw = yaw;
         row.rot = rot;
-        let b = g.col.boxes.push(row);
-        lay_flat(&mut g, b, n, k);
-        assert_eq!(g.col.boxes[b].rot.map(|q| q.map(f64::to_bits)), want_rot);
-        assert_eq!(g.col.boxes[b].yaw.to_bits(), want_yaw);
+        lay_flat_row(&mut row, n, k);
+        assert_eq!(row.rot.map(|q| q.map(f64::to_bits)), want_rot);
+        assert_eq!(row.yaw.to_bits(), want_yaw);
     }
 
     #[test]

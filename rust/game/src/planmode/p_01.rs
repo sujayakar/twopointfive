@@ -49,8 +49,7 @@ pub fn goal_men(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> Op
     let spot = is_spot(t);
     if let OrderTarget::None(n) = t {
         if n.man.is_some() {
-            let asked = crate::orders::SquadOrdersRecipientsT::None(n.clone());
-            return Some(GoalMen { men: crate::orders::squad_orders_recipients(g, Some(&asked), None), how: GoalMenHow::His });
+            return Some(GoalMen { men: crate::orders::squad_orders_recipients(g, Some(t), None), how: GoalMenHow::His });
         }
     }
     let half = groups.is_empty() && g.k.cmdring.goal_half && all.len() > 1;

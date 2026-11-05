@@ -33,8 +33,6 @@ pub struct Walk {
     pub body_t: f64,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
-    /// INVENTED: g.serial() where sent() makes the walk (doorpath.ts:309): mayGo asks by identity whether the man's row is still the walk this door last let go (doorpath.ts:299)
-    pub serial_2: u32,
 }
 impl Walk {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -66,7 +64,6 @@ impl Walk {
             pod0: [0.0; 3],
             body_t: 0.0,
             serial: 0,
-            serial_2: 0,
         }
     }
 }

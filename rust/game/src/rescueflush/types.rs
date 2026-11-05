@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: RescueFlush, src/game/rescueflush.ts:63)
+/// (TypeScript: RescueFlush, src/game/rescueflush.ts:62)
 #[derive(Clone, Debug)]
 pub struct RescueFlush {
     pub fell_at: f64,
@@ -28,7 +28,7 @@ impl RescueFlush {
 }
 impl Default for RescueFlush { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Sent, src/game/rescueflush.ts:60)
+/// (TypeScript: Sent, src/game/rescueflush.ts:59)
 #[derive(Clone, Debug)]
 pub struct Sent {
     pub at: f64,
@@ -68,7 +68,7 @@ impl Goal {
     }
 }
 
-/// (TypeScript: RescueFlushSnap, src/game/rescueflush.ts:61)
+/// (TypeScript: RescueFlushSnap, src/game/rescueflush.ts:60)
 #[derive(Clone, Debug)]
 pub struct RescueFlushSnap {
     pub fell_at: f64,
@@ -93,7 +93,7 @@ impl RescueFlushSnap {
 }
 impl Default for RescueFlushSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueflush.ts:61 RescueFlushSnap.sent, src/game/rescueflush.ts:61)
+/// (TypeScript: inline at src/game/rescueflush.ts:60 RescueFlushSnap.sent, src/game/rescueflush.ts:60)
 #[derive(Clone, Debug)]
 pub struct RescueFlushSnapSentItem {
     pub id: f64,

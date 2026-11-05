@@ -137,8 +137,7 @@ pub fn ambient_live(g: &mut crate::game::Game) -> bool {
     if crate::guards::escalation_of(g) != 0.0 { return false; }
     if g.alarm.episode { return false; }
     if crate::sim_lightshome::mains_active(g) { return false; }
-    let seats = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    let men = crate::seats::men(g, &seats);
+    let men = crate::seats::men(g);
     !men.iter().any(|&p| g.pl[p].holding.is_some() || g.pl[p].down)
 }
 
@@ -151,7 +150,7 @@ pub fn chatty(g: &mut crate::game::Game, x: GuardId) -> bool {
         && m.leader.is_none() && m.post.is_none() && m.awareness < 0.15
         && !m.bubble.as_ref().map_or(false, |b| time - b.t < b.dur + 1.0);
     if !calm { return false; }
-    if crate::needs::needs_busy(g, x) { return false; }
+    if crate::owner::has_him(g, x, crate::owner::own().needs) { return false; }
     g.guards.contains(&x)
 }
 
@@ -240,10 +239,10 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
         let time = g.time;
         let Some(r) = ambient_state(g).run.as_mut() else { return; };
         if time < r.at { return; }
-        if r.i >= r.talk.lines.len() as f64 { end_ambient(g); return; }
-        let line = r.talk.lines[r.i as usize].clone();
-        r.i += 1.0;
-        let who = if line.who == 0.0 { r.a } else { r.b };
+        if r.i >= r.talk.lines.len() { end_ambient(g); return; }
+        let line = r.talk.lines[r.i].clone();
+        r.i += 1;
+        let who = if line.who == 0 { r.a } else { r.b };
         let (other, pad) = (r.other.clone(), r.pad.clone());
         let own = !is_office(g);
         let raw = pair_said(&line, own);
@@ -303,7 +302,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             s.count += 1.0;
             let a_opens = js::to_i32(crate::math_dice::hash_str(&format!("{}{}{}", csa, csb, s.count))) & 1 != 0;
             let (opener, other2, held) = if a_opens { (a, b, [hold_a, hold_b]) } else { (b, a, [hold_b, hold_a]) };
-            s.run = Some(AmbientRun { a: opener, b: other2, talk, i: 0.0, at: time + 0.3, other, pad, held });
+            s.run = Some(AmbientRun { a: opener, b: other2, talk, i: 0, at: time + 0.3, other, pad, held });
             g.gd[opener].hold = true;
             g.gd[other2].hold = true;
             return;

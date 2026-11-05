@@ -18,25 +18,6 @@ fn light_in(g: &mut Game, kind: u32, t: Option<FixtureId>, a: f64, b: f64, c: f6
     ::sim::lights::input(g.sim, kind, i, a, b, c, d)
 }
 
-// ---- seams: what the skeleton lacks (notes.md, Skeleton)
-
-fn seam_lens_max_back(g: &mut Game, back: f64) {
-    todo!("needs: LightingStats.max_back as f64, it is metres: LENS_STATS.maxBack = Math.max(LENS_STATS.maxBack, back) (lighting.ts:49)")
-}
-// ---- the set of lights: its methods take `g` and the set inside `g`, which cannot both be lent (notes.md, Skeleton), so the set is lent out for the call
-
-fn lights_add(g: &mut Game, l: LightId) -> LightId {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    let l = crate::render_lights::light_set_add(g, &mut set, l);
-    g.engine.lights = set;
-    l
-}
-fn lights_remove(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_remove(g, &mut set, l);
-    g.engine.lights = set;
-}
-
 // ---- the bodies
 
 /// Where a carried light is, given where its lens is drawn: pulled back along from→lens short of a wall or leaf.   (lighting.ts lensClear)
@@ -61,7 +42,7 @@ pub fn lens_clear(g: &mut crate::game::Game, from: V3, lens: V3, radius: f64, li
         return lens;
     }
     g.stats.lighting.pulled += 1;
-    seam_lens_max_back(g, len - m::max(0.0, t));
+    g.stats.lighting.max_back = m::max(g.stats.lighting.max_back, len - m::max(0.0, t));
     v3::mad(from, rd, m::max(0.0, t))
 }
 
@@ -85,8 +66,7 @@ pub fn lens_recheck(g: &mut crate::game::Game) {
         recheck_one(g, l);
         i += 1;
     }
-    let who = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &who) {
+    for pl in crate::seats::men(g) {
         let l = g.pl[pl].light;
         recheck_one(g, l);
     }
@@ -122,19 +102,15 @@ pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
     let time = g.time;
     let mut near: Option<GuardId> = None;
-    if crate::sim_lightshome::mains_active(g)
-        && !crate::sim_lightshome::mains_permanent(g)
-        && time - crate::sim_lightshome::mains_since(g) > 3.0
-    {
-        let mut i = 0;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            // no break: the LAST guard that qualifies wins (blitz/lights.md trap 5)
-            if breaker_reset_near(g, gd) && their_mains(g, gd) && !crate::workthings::work_not_his(g, gd) {
-                near = Some(gd);
-            }
-            i += 1;
+    // the lights' mend (blitz/lights.md): no gate outside the walk, breaker_reset_near holds it
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        // no break: the LAST guard that qualifies wins (blitz/lights.md trap 5)
+        if breaker_reset_near(g, gd) && their_mains(g, gd) && !crate::workthings::work_not_his(g, gd) {
+            near = Some(gd);
         }
+        i += 1;
     }
     let fumble = g.level.breaker.fumble.unwrap_or(2.2);
     let hand_t = crate::sim_lightshome::mains_fix_t(g) + dt;
@@ -195,7 +171,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
             && their_mains(g, gd)
             && !crate::workthings::work_not_his(g, gd)
             && !crate::workthings::work_stays_put(g, gd)
-            && !crate::powerout::power_out_man(g, gd)
+            && !crate::powerout::power_out_rules(g, gd)
         {
             bd = d;
             best = Some(gd);
@@ -214,6 +190,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
                 pos: goal,
             }));
             g.gd[best].last_known = Some(goal);
+            g.gd[best].fix_stamp = g.gd[best].fix_stamp.wrapping_add(1);
             g.gd[best].awareness = m::max(g.gd[best].awareness, 0.42);
             if g.gd[best].state == crate::game::GuardState::Patrol {
                 g.gd[best].state = crate::game::GuardState::Suspicious;
@@ -336,6 +313,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                         let pos = g.ch[c].pos;
                         let fwd = crate::character::character_forward(g, c);
                         g.gd[gd].last_known = Some(v3::add(pos, v3::scale(fwd, 2.0)));
+                        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
                     }
                     let pos = g.ch[c].pos;
                     crate::audio_iface::game_audio_like_play(g, "lightOff", Some(pos), Some(0.6), None);
@@ -458,7 +436,7 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
         let haze = g.engine.settings.haze_density;
         let exposure = g.engine.settings.exposure;
         let sun = crate::render_lights::light_from_def(&d.sun);
-        let sun = lights_add(g, sun);
+        let sun = crate::render_lights::light_set_add(g, sun);
         let mut st = crate::lighting::DayState {
             hour,
             hour_sun_k,
@@ -471,7 +449,9 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             sun,
             blackout,
         };
-        crate::game::game_build_dir_reach(g, st.sun, None);
+        if g.engine.reach.is_some() {
+            crate::render_reach_keep::reach_keep_dir(g, st.sun, None);
+        }
         let mut i = 0;
         while i < g.targets.len() {
             let t = g.targets[i];
@@ -517,7 +497,7 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
         g.engine.settings.sky_horizon = cur.sky.horizon;
         g.engine.settings.haze_density = cur.haze;
         g.engine.settings.exposure = cur.exposure;
-        lights_remove(g, cur.sun);
+        crate::render_lights::light_set_remove(g, cur.sun);
         if let Some(b) = cur.blackout {
             if !crate::sim_lightshome::mains_active(g) {
                 let restored = crate::sim_lightshome::mains_restored_at(g);

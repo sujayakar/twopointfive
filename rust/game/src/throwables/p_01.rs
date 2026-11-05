@@ -116,8 +116,8 @@ pub fn sponge_boxes(out: &mut Vec<BoxId>, c_2: V3, rot: Quat, yaw: f64) {
 }
 
 /// A handle on row `r` of the pool's columns (the store is `g.items.store`). (throwables.ts Item.constructor)
-pub fn item_new(g: &mut crate::game::Game, r: f64, things: &[PropId]) -> ItemId {
-    g.tab.item.push(Item { r, kept: None, side: None, on_bounce: None, clatters: None, hand: None, things: things.to_vec() })
+pub fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId {
+    g.tab.item.push(Item { r, kept: None, side: None, on_bounce: None, clatters: None, hand: None })
 }
 
 /// Which row it stands in, -1 out of the pool. (throwables.ts Item.row)
@@ -436,10 +436,10 @@ pub fn item_set_serial(g: &mut crate::game::Game, id: ItemId, v: f64) {
     item_pw(g, id, ic::SERIAL, v);
 }
 
-/// The thing of furniture it lies on: the column holds its id plus one. (throwables.ts Item.on)
+/// The thing of furniture it lies on: the column holds its id plus one, a place in `g.props.all` (the TypeScript's `things`). (throwables.ts Item.on)
 pub fn item_on(g: &mut crate::game::Game, id: ItemId) -> Option<PropId> {
     let k = item_w(g, id, ic::ON);
-    if js::truthy(k) { g.tab.item[id].things.get(k as usize - 1).copied() } else { None }
+    if js::truthy(k) { g.props.all.get(k as usize - 1).copied() } else { None }
 }
 
 /// (throwables.ts Item.on, set)
@@ -535,7 +535,8 @@ mod tests {
     /// a game with one handle; `sim` picks the block's slot
     fn one_item(things: &[PropId]) -> (Box<Game>, ItemId) {
         let mut g = Box::new(Game::blank());
-        let id = item_new(&mut g, 2.0, things);
+        g.props.all = things.to_vec();
+        let id = item_new(&mut g, 2.0);
         (g, id)
     }
 

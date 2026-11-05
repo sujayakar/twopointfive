@@ -1,4 +1,4 @@
-//! src/game/combat.ts lines 342 to 663
+//! src/game/combat.ts lines 343 to 664
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,20 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seams: what skeleton 3 still cannot give
+// ---------------------------------------------------------------- seams: what skeleton 5 still cannot give
 
-/// `g.audio.play(name, at, gain, { duration })`: `opts` is a map of `crate::Opaque`, which holds no number.   (combat.ts:660)
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, gain: f64, duration: f64) { todo!("needs: game_audio_like_play's opts able to hold rate and duration") }
-/// `gd.flashlight.enabled`: a LightId has no table and RtLight no accessors.   (combat.ts:399, 549)
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
-/// `gd.flashlight.color`: a LightId has no table and RtLight no accessors.   (combat.ts:549)
-fn seam_light_color(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].color } // SKELETON-GAP was: RtLight.color by LightId; skeleton 4 has the row (g.tab.light)
-/// `sideLocal(c.ch, p)`: it wants a `&PackChar` where a body holds a `RigId`.   (combat.ts:506)
-fn seam_side_local(g: &mut Game, c: CharId, p: crate::packside::SidePlace) -> Option<crate::packside::SidePlace> { todo!("needs: side_local taking the body's RigId") }
-/// `b.owner` of a box made this frame: Box has no table for a made box (`g.none`).   (combat.ts:456)
-fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).owner } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
-/// `b.mkey = k` of a box made this frame: the same.   (combat.ts:456)
-fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { crate::scene_boxes::b_01::any_box_mut(g, b).mkey = Some(k); } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
+/// `b.owner` of a box made this frame: BoxId has no table of rows in skeleton 5.   (combat.ts:457)
+fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { todo!("needs: a table of Box rows (ids.rs: Box has none; StaticCollision.boxes is Vec<BoxId>)") }
+/// `b.mkey = k` of a box made this frame: the same.   (combat.ts:457)
+fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { todo!("needs: a table of Box rows (ids.rs: Box has none; StaticCollision.boxes is Vec<BoxId>)") }
 
 // ---------------------------------------------------------------- panels and contact
 
@@ -41,18 +33,6 @@ fn row(g: &Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
 /// `W.drop`, as dropFromHand's kind.
 fn drop_kind(g: &Game, def: crate::weapons::WeaponId) -> DropFromHandKind {
     match row(g, def).drop { crate::slotsetup::SetupGun::Pistol => DropFromHandKind::Pistol, crate::slotsetup::SetupGun::Rifle => DropFromHandKind::Rifle }
-}
-
-/// `c.ragdollize(g.col, dir, quiet)`: the world is g.col, lent as a list of what is in it (a Ragdoll keeps only that it has a world).
-fn ragdollize(g: &mut Game, c: CharId, dir: V3, quiet: bool) {
-    let world = crate::ragdoll::RagdollWorld { boxes: g.col.boxes.ids().collect(), dynamic_boxes: g.col.dynamic_boxes.clone() };
-    crate::character::character_ragdollize(g, c, Some(&world), dir, quiet);
-}
-
-/// `men(g)`: every seat's man, in seat order.
-fn men_here(g: &mut Game) -> Vec<PlayerId> {
-    let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    crate::seats::men(g, &of)
 }
 
 /// `a | b` of two box flags.
@@ -77,7 +57,7 @@ pub fn solid_between(g: &mut crate::game::Game, from: V3, to: V3) -> bool {
     let n = crate::scene_collision::gather(g, m::min(from[0], to[0]) - 0.1, m::min(from[2], to[2]) - 0.1, m::max(from[0], to[0]) + 0.1, m::max(from[2], to[2]) + 0.1, m::min(from[1], to[1]) - 0.1, m::max(from[1], to[1]) + 0.1, &mut scratch);
     let mut i = 0usize;
     while (i as f64) < n {
-        let b = BoxId::from_ix(scratch[i] as usize);
+        let b = g.col.boxes[scratch[i] as usize];   // gather answers places in g.col.boxes, not IDs
         if crate::scene_boxes::ray_box(g, from, rd, b, l).is_some() { return true; }
         i += 1;
     }
@@ -149,7 +129,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
     crate::netquiet::net_quiet_fall(g, gd);
     if g.gd[gd].torch_lost_at < 0.0 && g.gd[gd].gun_lost_at < 0.0 {
         let fl = g.gd[gd].flashlight;
-        g.gd[gd].light_lit_at_loss = seam_light_enabled(g, fl);
+        g.gd[gd].light_lit_at_loss = g.tab.light[fl].enabled;
     }
     let now = g.time;
     {
@@ -171,7 +151,7 @@ pub fn kill_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Option
         let z = zone.map(|z| match z { KillGuardZone::Side => crate::wounds::WoundDownZone::Side, KillGuardZone::Leg => crate::wounds::WoundDownZone::Leg });
         crate::wounds::wound_down(g, gd, dir, z);
     } else {
-        ragdollize(g, c, dir, quiet);
+        crate::character::character_ragdollize(g, c, true, dir, quiet);
     }
     let text: String = match line {
         Some(l) => String::from(l),
@@ -263,7 +243,7 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
             drop_from_hand(g, c, kind, along, from_dir, Some(suppressed), None, None);
             if gun == rifle { g.pl[p].rifle_gone = true; }
         }
-        ragdollize(g, c, from_dir, false);
+        crate::character::character_ragdollize(g, c, true, from_dir, false);
         let elapsed = g.mission.stats.elapsed;
         let ck = crate::savestate::checkpoints_newest(g, Some(true), Some(elapsed));
         let back = match &ck { Some(info) => crate::savestate::checkpoints_is_this_run(g, info), None => false };
@@ -276,7 +256,7 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
 
 // ---------------------------------------------------------------- what the men carry, as boxes (world.raycast sees them) and the words the figure is told
 
-/// Held and worn props as small boxes, and what each figure is told it holds. The rigKeys call is left out while a made box has no table (see notes).   (combat.ts handProps)
+/// Held and worn props as small boxes, and what each figure is told it holds. The rigKeys call waits on a table of Box rows (notes, Skeleton).   (combat.ts handProps)
 pub fn hand_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     hand_props_raw(g, out);
 }
@@ -298,11 +278,7 @@ pub fn rig_keys(g: &mut crate::game::Game, out: &mut Vec<BoxId>, n0: f64) {
 
 /// Each player's own kit, then each man's, then the hostages' wrist ties.   (combat.ts handPropsRaw)
 pub fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    if g.seats.len() == 1 {
-        player_props(g, out);
-    } else {
-        for pl in men_here(g) { crate::seats::with_seat(g, pl, &mut |g| player_props(g, out)); }
-    }
+    crate::seats::each_seat(g, &mut |g| player_props(g, out));
     let mut i = 0usize;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -377,7 +353,7 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     g.ch[c].anim.big_clear = clear;
     let in_hand = !down;
     g.ch[c].in_hand = if !in_hand { None }
-        else if pistol_in_hand { Some(crate::inhand::InHandWord::Pistol) }
+        else if pistol_in_hand { Some(crate::inhand::in_pistol()) }
         else if rifle == Some(Rf::Hand) && !fit { Some(crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Sc20k, None)) }
         else { None };
     g.ch[c].anim.grip[1] = held.is_some();
@@ -414,13 +390,15 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     };
     crate::rig_props::rig_boxes(g, c, opts, out, None, None);
     crate::handwork::work_props(g, c, out);
+    crate::irlaser::sam_laser_boxes(g, out);
     if crate::rails::rails_sky_on(g) { out.truncate(mine0); }
 }
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.   (combat.ts hammerSide)
 pub fn hammer_side(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::combat::HammerSide> {
     let p = crate::rig_props::pack_side_bind(g, c_2, crate::rig_props::PackSideBindWhat::Hammer, None)?;
-    let l = seam_side_local(g, c_2, p)?;
+    let rig = g.ch[c_2].rig;
+    let l = crate::packside::side_local(g, rig, p)?;
     Some(HammerSide { o: l.o, z: l.z })
 }
 
@@ -492,7 +470,7 @@ pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, h
     let rk = crate::guards::rig_of(g, gd);
     let carbine = rk == RigOf::Carbine;
     if g.gd[gd].state == crate::game::GuardState::Dead {
-        if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, &mut rig().goggles, None, None); }
+        if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, rig().goggles, None, None); }
         let dropped = g.gd[gd].dropped;
         let on_floor = match dropped {
             Some(it) => { let k = crate::throwables::item_kind(g, it); k == crate::throwables::ItemKind::Torch || k == crate::throwables::ItemKind::Rifle }
@@ -519,7 +497,7 @@ pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, h
     if held.is_none() && g.gd[gd].gun_lost_at >= 0.0 && rk == RigOf::Pistol && !crate::kit::kit_pistol(g, gd) && g.gd[gd].torch_lost_at < 0.0 {
         crate::handwork::belt_torch(g, c, out);
     }
-    if held.is_none() && ((crate::runner::runner_fled(g, gd) && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == RigOf::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return; }
+    if held.is_none() && ((g.gd[gd].fled && (!carbine || crate::runner::runner_bare(g, gd))) || (rk == RigOf::Pistol && g.gd[gd].gun_lost_at >= 0.0)) { return; }
     if held.is_none() {
         let r = rig();
         crate::rig_props::holster_boxes(g, c, out, crate::rig_props::HolsterBoxesParts { slide: r.guard_pistol.slide, grip: r.guard_pistol.grip, suppressor: None }, None, hr);
@@ -541,7 +519,7 @@ pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, h
             crate::rig_props::rig_boxes(g, c, o, out, None, None);
             if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
                 let nv = crate::nvg::nvg_down(g, gd);
-                crate::rig_props::goggles_boxes(g, c, nv, out, &mut rig().goggles, None, None);
+                crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None, None);
             }
         }
         return;
@@ -550,16 +528,16 @@ pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, h
         g.ch[c].in_hand = Some(crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Sc20k, None));
         let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
         let black = crate::cast::sneak_suit(g, c);
-        let light = seam_light_enabled(g, fl);
+        let light = g.tab.light[fl].enabled;
         let o = RigOpts { goggles, nv, slot: 0.0, light_on: false, is_guard: false, holster: Some(true), rifle: Some(RigOptsRifle::Hand), rifle_black: Some(black), rifle_light: Some(light), ..Default::default() };
         crate::rig_props::rig_boxes(g, c, o, out, None, None);
         free_can(g, gd, out);
         return;
     }
     if crate::kit::kit_pistol(g, gd) && row(g, def).rig == crate::weapons::WeaponDefRig::Pistol {
-        g.ch[c].in_hand = Some(crate::inhand::InHandWord::Pistol);
+        g.ch[c].in_hand = Some(crate::inhand::in_pistol());
         let (goggles, nv) = (crate::nvg::nvg_worn(g, gd), crate::nvg::nvg_down(g, gd));
-        let light_on = seam_light_enabled(g, fl);
+        let light_on = g.tab.light[fl].enabled;
         let o = RigOpts { goggles, nv, slot: 1.0, light_on, is_guard: false, in_hand: Some(true), fit: Some(true), ..Default::default() };
         crate::rig_props::rig_boxes(g, c, o, out, None, None);
         return;
@@ -568,9 +546,9 @@ pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, h
     let beam = g.gd[gd].beam_dir;
     g.ch[c].in_hand = Some(if carbine { crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Carbine, None) }
         else if torch_held { crate::rig_props::torch_hold(beam, None) }
-        else { crate::inhand::InHandWord::Pistol });
-    let light_on = seam_light_enabled(g, fl);
-    let lens = seam_light_color(g, fl);
+        else { crate::inhand::in_pistol() });
+    let light_on = g.tab.light[fl].enabled;
+    let lens = g.tab.light[fl].color;
     let o = RigOpts {
         goggles: false, nv: false, slot: 1.0, light_on, is_guard: true,
         torch: Some(torch_held), beam_dir: Some(beam), lens_color: Some(lens),
@@ -582,7 +560,7 @@ pub fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>, h
     crate::rig_props::rig_boxes(g, c, o, out, None, None);
     if js::truthy(crate::kit::kit_index(g, gd)) && crate::nvg::nvg_worn(g, gd) {
         let nv = crate::nvg::nvg_down(g, gd);
-        crate::rig_props::goggles_boxes(g, c, nv, out, &mut rig().goggles, None, None);
+        crate::rig_props::goggles_boxes(g, c, nv, out, rig().goggles, None, None);
     }
     if carbine { free_can(g, gd, out); }
 }
@@ -636,7 +614,7 @@ pub fn laser_boxes(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<BoxId>)
         if let Some(on) = r.on { if crate::irlaser::paints_own(g, gd, on) { return; } }
     }
     let b = crate::stature::drawn_beam(g, c, from, dir, l);
-    if crate::fogofwar::fog_of_war_active(g) && g.fog_of_war.knobs.lasers && !crate::fogofwar::fog_of_war_on_team(g, gd) {
+    if crate::fogofwar::fog_of_war_active(g) && g.k.fog.lasers && !crate::fogofwar::fog_of_war_on_team(g, gd) {
         if !crate::fogofwar::fog_of_war_seen(g, gd) { return; }
         for run in crate::fogofwar::fog_of_war_beam_runs(g, from, dir, l) {
             let (t0, t1) = (run[0], run[1]);
@@ -662,7 +640,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
     if let Some(h) = &wh { l = h.t; }
     let ph = crate::props::prop_system_raycast(g, from, dir, l);
     if let Some(h) = &ph { l = m::min(l, h.t); }
-    for pl in men_here(g) {
+    for pl in crate::seats::men(g) {
         let pc = g.pl[pl].ch;
         if c_2 != pc {
             let tp = crate::character::character_ray_hit(g, pc, from, dir, l);
@@ -783,11 +761,12 @@ pub fn start_canister(g: &mut crate::game::Game, it: ItemId) {
         let p = smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 });
         seconds = p.canister_duration;
         let pos = v3::add(crate::throwables::item_pos(g, it), [0.0, 0.1, 0.0]);
-        crate::smoke_types::smoke_system_like_emit(g, crate::smoke_types::SmokeEmitter { pos, radius: p.canister_radius, density: p.canister_density, ttl: p.canister_duration, look: None });
+        // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
+        crate::smoke_types::smoke_system_like_emit(g, &crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::zeroed() });
     }
     crate::throwables::item_set_emit_t(g, it, seconds);
     let pos = crate::throwables::item_pos(g, it);
-    seam_audio_play(g, "smokeHiss", pos, 1.0, seconds);
+    crate::audio_iface::game_audio_like_play(g, "smokeHiss", Some(pos), Some(1.0), Some(&crate::audio_iface::PlayOpts::Duration { duration: seconds }));
     crate::game::game_msg(g, "smoke deployed");
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
     g.events.push(e);

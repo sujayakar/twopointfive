@@ -777,7 +777,6 @@ pub fn door_path_sent(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
         pod0: [pod.pos[0], 0.0, pod.pos[2]],
         body_t: -1.0,
         serial,
-        serial_2: serial,
     };
     door_path_own(g, &mut w);
     door_path_lay(g, &mut w);
@@ -801,7 +800,7 @@ pub fn door_path_own(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) -
 }
 
 /// The walk is over early: handed back to the nav, and the order's way round to the order if he is not yet through. (doorpath.ts DoorPath.drop)
-pub fn door_path_drop(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, why: crate::doorpath::DoorPathDropWhy) {
+pub fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: crate::doorpath::DoorPathDropWhy) {
     g.door_path.walks.delete(w.gd);
     match why {
         crate::doorpath::DoorPathDropWhy::Taken => g.door_path.stats.taken += 1.0,
@@ -809,11 +808,10 @@ pub fn door_path_drop(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, 
     }
     if why == crate::doorpath::DoorPathDropWhy::GaveUp {
         // (the line under him was this walk's own: left there, goTo sees its goal met and never plans)
-        let m = &mut g.gd[w.gd];
-        m.path = Vec::new();
-        m.path_serial = m.path_serial.wrapping_add(1);
-        m.path_goal = None;
-        m.path_goal_orbit = false;
+        crate::game::guard_set_path(g, w.gd, Vec::new());
+        let man = &mut g.gd[w.gd];
+        man.path_goal = None;
+        man.path_goal_orbit = false;
     }
     let Some(a) = crate::orders::squad_orders_of(g, w.gd) else { return };
     let Some(post) = g.tab.orders_assignment[a].post else { return };
@@ -958,13 +956,12 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
     let goal = g.gd[gd].script.unwrap().goal.unwrap();
     let first = arr[0];
     let arr_n = arr.len() as f64;
-    let m = &mut g.gd[gd];
-    m.path = arr;
-    m.path_serial = m.path_serial.wrapping_add(1);
-    m.path_i = 0;
-    m.path_goal = Some([goal[0], goal[1], goal[2]]);
-    m.path_goal_orbit = false;
-    w.arr = Some(m.path_serial);
+    crate::game::guard_set_path(g, gd, arr);
+    let man = &mut g.gd[gd];
+    man.path_i = 0;
+    man.path_goal = Some([goal[0], goal[1], goal[2]]);
+    man.path_goal_orbit = false;
+    w.arr = Some(man.path_serial);
     w.arr_n = arr_n;
     // his feet stay on the line: until his chest is round he side-steps along it, as the fight had him
     let yaw = m::atan2(first[0] - p[0], first[2] - p[2]);

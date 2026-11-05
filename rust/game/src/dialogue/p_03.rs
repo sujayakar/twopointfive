@@ -219,7 +219,7 @@ pub fn synth_ctx(g: &mut crate::game::Game, k: crate::dialogue::Knowledge, band:
     }
     let live: Vec<IntelKind> = over.intel_live.clone().unwrap_or_else(|| vec![IntelKind::Door, IntelKind::Rollcall, IntelKind::Routes]);
     let mut intel: Vec<IntelItem> = Vec::new();
-    for kind in INTEL_KIND_LIST {
+    for kind in crate::dialogue::intel_kinds() {
         let text = intel_text(g, kind, t, k);
         intel.push(IntelItem { kind, text, live: live.contains(&kind), known: true });
     }
@@ -243,16 +243,19 @@ pub fn lint_dialogue(g: &mut crate::game::Game) -> Vec<String> {
     let sam_lines = g.m.dialogue.sam_lines.clone();
     let lines = crate::dialogue::lines();
     let scripts = crate::dialogue::scripts();
-    let tokens_all = crate::dialogue::tokens();
+    let tokens_all: Vec<String> = crate::dialogue::tokens().iter().map(|x| f(x.as_str())).collect();
     let always = crate::dialogue::tokens_always();
     let by_k = crate::dialogue::tokens_by_k();
     let sam_needs = crate::dialogue::sam_needs();
     let sam_stages = crate::dialogue::sam_stages();
-    let intel_kinds = crate::dialogue::intel_kinds();
-    let knowledge = crate::dialogue::knowledge();
-    let temperaments = crate::dialogue::temperaments();
-    let shapes = crate::dialogue::shapes();
-    let needs = crate::dialogue::needs();
+    let knowledge_list = crate::dialogue::knowledge();
+    let band_list = crate::dialogue::bands();
+    let temperament_list = crate::dialogue::temperaments();
+    let intel_kinds: Vec<String> = crate::dialogue::intel_kinds().iter().map(|x| f(x.as_str())).collect();
+    let knowledge: Vec<String> = knowledge_list.iter().map(|x| f(x.as_str())).collect();
+    let temperaments: Vec<String> = temperament_list.iter().map(|x| f(x.as_str())).collect();
+    let shapes: Vec<String> = crate::dialogue::shapes().iter().map(|x| f(x.as_str())).collect();
+    let needs: Vec<String> = crate::dialogue::needs().iter().map(|x| f(x.as_str())).collect();
     let stages = crate::dialogue::stages();
     let intel_text_tab = crate::dialogue::intel_text_table();
     let shape_lead = crate::dialogue::shape_lead();
@@ -326,9 +329,10 @@ pub fn lint_dialogue(g: &mut crate::game::Game) -> Vec<String> {
     // the useful things: keys, tokens, and length with the worst lead-in anybody who can say that text can put in front (shape-voiced texts take none)
     let mut shape_ts: JsMap<ShapeKey, JsSet<Temperament>> = JsMap::new();
     for sc in &scripts { shape_ts.get_or_insert_with(sc.shape, JsSet::new).add(sc.t); }
-    for kind in INTEL_KIND_LIST {
+    for kind in crate::dialogue::intel_kinds() {
         let table = intel_table(g, kind);
         let mut rows: Vec<(String, String)> = intel_rows!(table).into_iter().filter_map(|(k, v)| v.clone().map(|t| (f(k), t))).collect();
+        rows.extend(table.sc.iter().map(|(id, t)| (alloc::format!("sc:{}", id), t.clone())));
         if kind == crate::dialogue::IntelKind::CheckOn { rows.push((f("self"), check_on_self(g))); }
         let own = intel_text_tab.get(f(kind.as_str()));
         for (tk, text) in &rows {
@@ -337,18 +341,20 @@ pub fn lint_dialogue(g: &mut crate::game::Game) -> Vec<String> {
             p.orig(&at, text); p.dup(&at, text);
             for t2 in tokens_in(text) { if !has(&tokens_all, &t2) { p.push(alloc::format!("{}: unknown token {{{}}}", at, t2)); } }
             let (a_part, b_part) = match tk.split_once(':') { Some((a, b)) => (a, Some(b)), None => (tk.as_str(), None) };
-            let is_shape = has(&shapes, a_part);
+            let is_script = a_part == "sc";
+            let is_shape = is_script || has(&shapes, a_part);
             if a_part != "*" && a_part != "self" && !is_shape && !has(&temperaments, a_part) { p.push(alloc::format!("intel {}: bad key '{}'", kind.as_str(), tk)); }
-            if let Some(b) = b_part { if !(if is_shape { has(&temperaments, b) } else { has(&knowledge, b) }) { p.push(alloc::format!("intel {}: bad second part in key '{}'", kind.as_str(), tk)); } }
+            let bad_second = if is_script { !scripts.iter().any(|sc| Some(sc.id.as_str()) == b_part) } else { b_part.is_some_and(|b| !(if is_shape { has(&temperaments, b) } else { has(&knowledge, b) })) };
+            if bad_second { p.push(alloc::format!("intel {}: bad second part in key '{}'", kind.as_str(), tk)); }
             if kind == crate::dialogue::IntelKind::Door {
                 let low = text.to_lowercase();
                 if !["belt", "mine", "pocket", "clip"].iter().any(|w| low.contains(w)) { p.push(alloc::format!("intel door/{}: \"{}\" never puts the key on his person — the player takes it off him as this is said", tk, text)); }
             }
             let len = if is_shape { js_len(&p.worst(text)) } else {
                 let users: Vec<Temperament> = if a_part == "*" || a_part == "self" {
-                    TEMPERAMENT_LIST.into_iter().filter(|t| a_part == "self" || !own.is_some_and(|o| intel_own_of(o, *t).is_some_and(|x| !x.is_empty()))).collect()
-                } else { TEMPERAMENT_LIST.into_iter().filter(|t| t.as_str() == a_part).collect() };
-                let ks: Vec<Knowledge> = match b_part { Some(b) => KNOWLEDGE_LIST.into_iter().filter(|k| k.as_str() == b).collect(), None => KNOWLEDGE_LIST.to_vec() };
+                    temperament_list.iter().copied().filter(|t| a_part == "self" || !own.is_some_and(|o| intel_own_of(o, *t).is_some_and(|x| !x.is_empty()))).collect()
+                } else { temperament_list.iter().copied().filter(|t| t.as_str() == a_part).collect() };
+                let ks: Vec<Knowledge> = match b_part { Some(b) => knowledge_list.iter().copied().filter(|k| k.as_str() == b).collect(), None => knowledge_list.clone() };
                 js_len(&p.worst(text)) + lead_worst(&shape_ts, &shape_lead, &users, &ks)
             };
             if len > crate::dialogue::MAX_CHARS { p.push(alloc::format!("{}: {} chars after expansion with the lead-in (> {}): \"{}\"", at, len, crate::dialogue::MAX_CHARS, p.worst(text))); }
@@ -361,20 +367,20 @@ pub fn lint_dialogue(g: &mut crate::game::Game) -> Vec<String> {
         let at = alloc::format!("intel drive/away {}", tk);
         p.orig(&at, text); p.dup(&at, text);
         let users: Vec<Temperament> = if tk == "*" {
-            TEMPERAMENT_LIST.into_iter().filter(|t| match t { Temperament::Steady => drive_tab.steady.is_none(), Temperament::Nervy => drive_tab.nervy.is_none(), Temperament::Hard => drive_tab.hard.is_none() }).collect()
-        } else { TEMPERAMENT_LIST.into_iter().filter(|t| t.as_str() == tk).collect() };
-        let len = js_len(text) + lead_worst(&shape_ts, &shape_lead, &users, &KNOWLEDGE_LIST);
+            temperament_list.iter().copied().filter(|t| match t { Temperament::Steady => drive_tab.steady.is_none(), Temperament::Nervy => drive_tab.nervy.is_none(), Temperament::Hard => drive_tab.hard.is_none() }).collect()
+        } else { temperament_list.iter().copied().filter(|t| t.as_str() == tk).collect() };
+        let len = js_len(text) + lead_worst(&shape_ts, &shape_lead, &users, &knowledge_list);
         if !tokens_in(text).is_empty() || len > crate::dialogue::MAX_CHARS { p.push(alloc::format!("{}: a token, or {} chars with the lead-in (> {})", at, len, crate::dialogue::MAX_CHARS)); }
     }
     // coverage of the pools: reachable without needs (nor `only`) and with only the guaranteed tokens
-    for k in KNOWLEDGE_LIST { for band in BAND_LIST { for t in TEMPERAMENT_LIST { for s in &stages {
+    for k in knowledge_list.iter().copied() { for band in band_list.iter().copied() { for t in temperament_list.iter().copied() { for s in &stages {
         let sure = sure_of(k.as_str());
         let reach = |own: bool| lines.iter().any(|l| line_matches(l, k, band, t, *s, false, false) && l.needs.as_ref().map_or(true, |n| n.is_empty()) && l.only.is_none() && tokens_in(&l.text).iter().all(|x| sure.contains(x)) && (!own || l.k.as_str() == k.as_str()));
         if !reach(false) { p.push(alloc::format!("cell {}·{}·{} stage {}: no line always reachable", k.as_str(), band.as_str(), t.as_str(), stage_word(*s))); }
         else if (is_stage(*s, 1.0) || is_stage(*s, 2.0)) && !reach(true) { p.push(alloc::format!("cell {}·{}·{} stage {}: only floor-colour lines, none written for '{}'", k.as_str(), band.as_str(), t.as_str(), stage_word(*s), k.as_str())); }
     } } } }
     // …and a spawned unit's own cells (always hard, no `only` row, no man's name)
-    for k in KNOWLEDGE_LIST { for band in BAND_LIST { for s in &stages {
+    for k in knowledge_list.iter().copied() { for band in band_list.iter().copied() { for s in &stages {
         let mut sure = always.clone();
         if let Some(own) = by_k.get(f(k.as_str())) { sure.extend(own.iter().filter(|x| *x != "victim").cloned()); }
         let any = lines.iter().any(|l| line_matches(l, k, band, Temperament::Hard, *s, true, false) && l.needs.as_ref().map_or(true, |n| n.is_empty()) && l.only.is_none() && tokens_in(l.bare.as_deref().unwrap_or(&l.text)).iter().all(|x| sure.contains(x)));
@@ -392,7 +398,7 @@ pub fn lint_dialogue(g: &mut crate::game::Game) -> Vec<String> {
             p.push(alloc::format!("{}: bad k list [{}]", at, words.join(", ")));
         }
         if sc.k.contains(&Knowledge::SawHurt) { p.push(alloc::format!("{}: written for sawHurt — a man who watched the player hurt somebody is frightened, never funny (the pools have him)", at)); }
-        if let Some(b) = &sc.band { if b.is_empty() || b.iter().any(|x| !BAND_LIST.contains(x)) { p.push(alloc::format!("{}: bad band list", at)); } }
+        if let Some(b) = &sc.band { if b.is_empty() || b.iter().any(|x| !band_list.contains(x)) { p.push(alloc::format!("{}: bad band list", at)); } }
         for n in sc.needs.iter().flatten().chain(sc.not.iter().flatten()) { if !has(&needs, n.as_str()) { p.push(alloc::format!("{}: unknown need '{}'", at, n.as_str())); } }
         if let Some(pin) = sc.pin { if !has(&intel_kinds, pin.as_str()) { p.push(alloc::format!("{}: pin '{}' is no useful thing", at, pin.as_str())); } }
         let key = alloc::format!("{}·{}", sc.shape.as_str(), sc.t.as_str());
@@ -448,7 +454,7 @@ pub fn lint_dialogue(g: &mut crate::game::Game) -> Vec<String> {
     for (key, n) in per_shape_t.iter() { if n < &crate::dialogue::SCRIPT_VARIANTS_MIN { p.push(alloc::format!("scripts {}: only {} written (want ≥ {} variants per shape × temperament)", key, n, crate::dialogue::SCRIPT_VARIANTS_MIN)); } }
     // every man below sawHurt, on a plain floor with the ordinary useful things live, draws SOME script
     let lint_over = crate::dialogue::SynthCtxOver { who: Some(f("lint")), ..Default::default() };
-    for t in TEMPERAMENT_LIST { for k in KNOWLEDGE_LIST { for band in BAND_LIST {
+    for t in temperament_list.iter().copied() { for k in knowledge_list.iter().copied() { for band in band_list.iter().copied() {
         if k == Knowledge::SawHurt { continue; }
         let ctx = synth_ctx(g, k, band, t, Some(&lint_over));
         let talk = crate::game::new_talk(g);
@@ -498,14 +504,14 @@ pub fn lint_dialogue(g: &mut crate::game::Game) -> Vec<String> {
         let at = alloc::format!("pair '{}'", pr.id);
         p.id(&alloc::format!("pair:{}", pr.id), alloc::format!("duplicate pair id {}", pr.id));
         if pr.lines.len() < 2 || pr.lines.len() > 4 { p.push(alloc::format!("{}: {} lines (want 2‥4)", at, pr.lines.len())); }
-        if pr.lines.first().map(|l| l.who) != Some(0.0) { p.push(alloc::format!("{}: the first line is not the opener's (who 0)", at)); }
+        if pr.lines.first().map(|l| l.who) != Some(0) { p.push(alloc::format!("{}: the first line is not the opener's (who 0)", at)); }
         for (i, l) in pr.lines.iter().enumerate() {
             let w0 = alloc::format!("{} #{}", at, i);
             p.orig(&w0, &l.text); p.dup(&w0, &l.text);
             let w = pair_worst(&l.text);
             if js_len(&w) > crate::dialogue::AIM_CHARS { p.push(alloc::format!("{}: \"{}\" is {} chars (> {})", w0, w, js_len(&w), crate::dialogue::AIM_CHARS)); }
             if brace_other_than(&l.text, &["other}", "Other}", "code}", "Code}", "padDoor}", "PadDoor}"]) { p.push(alloc::format!("{}: only {{other}} / {{code}} / {{padDoor}} resolve between two men", w0)); }
-            if l.who != 0.0 && l.who != 1.0 { p.push(alloc::format!("{}: who {}", w0, l.who)); }
+            if l.who != 0 && l.who != 1 { p.push(alloc::format!("{}: who {}", w0, l.who)); }
         }
     }
     // the needs (game/needs.ts): a pool per kind of at least two, the replies, the way back
@@ -543,7 +549,7 @@ pub fn coverage_matrix() -> crate::dialogue::CoverageMatrix {
     let lines = crate::dialogue::lines();
     let stages = crate::dialogue::stages();
     let mut rows: Vec<CoverageMatrixRowsItem> = Vec::new();
-    let mut words = crate::dialogue::knowledge();
+    let mut words: Vec<String> = crate::dialogue::knowledge().iter().map(|k| String::from(k.as_str())).collect();
     words.push(String::from("*"));
     for k in &words {
         let mut counts: JsMap<String, f64> = JsMap::new();
@@ -558,6 +564,7 @@ pub fn coverage_matrix() -> crate::dialogue::CoverageMatrix {
     let mut intel = 0.0;
     for (_, v) in crate::dialogue::intel_text_table().iter() {
         for (_, text) in intel_rows!(v) { if text.as_ref().is_some_and(|t| !t.is_empty()) { intel += 1.0; } }
+        for (_, text) in v.sc.iter() { if !text.is_empty() { intel += 1.0; } }
     }
     CoverageMatrix { rows, total: lines.len() as f64, intel: intel + 1.0 }
 }
@@ -662,16 +669,7 @@ fn js_len(s: &str) -> f64 {
     s.encode_utf16().count() as f64
 }
 
-const KNOWLEDGE_LIST: [crate::dialogue::Knowledge; 5] = [crate::dialogue::Knowledge::None, crate::dialogue::Knowledge::Heard, crate::dialogue::Knowledge::Glimpsed, crate::dialogue::Knowledge::Saw, crate::dialogue::Knowledge::SawHurt];
-const BAND_LIST: [crate::dialogue::Band; 3] = [crate::dialogue::Band::Low, crate::dialogue::Band::Mid, crate::dialogue::Band::High];
-const TEMPERAMENT_LIST: [crate::game::Temperament; 3] = [crate::game::Temperament::Steady, crate::game::Temperament::Nervy, crate::game::Temperament::Hard];
-const INTEL_KIND_LIST: [crate::dialogue::IntelKind; 11] = [
-    crate::dialogue::IntelKind::CheckOn, crate::dialogue::IntelKind::Clearing, crate::dialogue::IntelKind::RollcallLive, crate::dialogue::IntelKind::Blackout,
-    crate::dialogue::IntelKind::Door, crate::dialogue::IntelKind::Code, crate::dialogue::IntelKind::Rollcall, crate::dialogue::IntelKind::LockdownPosts,
-    crate::dialogue::IntelKind::Routes, crate::dialogue::IntelKind::Missing, crate::dialogue::IntelKind::Drive,
-];
-
-/// `Object.entries` of an intel table: the TypeScript's key beside the field it became (a struct's order, not the literal's: only the order of the lint's messages feels it).
+/// `Object.entries` of an intel table but its 'sc:<script id>' rows (the map `sc`, walked after these): the TypeScript's key beside the field it became (a struct's order, not the literal's: only the order of the lint's messages feels it).
 macro_rules! intel_rows { ($t:expr) => { [
     ("steady", &$t.steady), ("nervy", &$t.nervy), ("hard", &$t.hard), ("*", &$t.under),
     ("pedant", &$t.pedant), ("selfown", &$t.selfown), ("folder", &$t.folder), ("ramble", &$t.ramble), ("fan", &$t.fan), ("stoic", &$t.stoic), ("con", &$t.con), ("game", &$t.game), ("menace", &$t.menace),
@@ -922,18 +920,6 @@ mod tests {
     }
 
     #[test]
-    fn the_lists_written_here_are_the_tables_in_their_order() {
-        let w: Vec<&str> = KNOWLEDGE_LIST.iter().map(|x| x.as_str()).collect();
-        assert_eq!(w, crate::dialogue::knowledge().iter().map(|s| s.as_str()).collect::<Vec<_>>());
-        let w: Vec<&str> = BAND_LIST.iter().map(|x| x.as_str()).collect();
-        assert_eq!(w, crate::dialogue::bands().iter().map(|s| s.as_str()).collect::<Vec<_>>());
-        let w: Vec<&str> = TEMPERAMENT_LIST.iter().map(|x| x.as_str()).collect();
-        assert_eq!(w, crate::dialogue::temperaments().iter().map(|s| s.as_str()).collect::<Vec<_>>());
-        let w: Vec<&str> = INTEL_KIND_LIST.iter().map(|x| x.as_str()).collect();
-        assert_eq!(w, crate::dialogue::intel_kinds().iter().map(|s| s.as_str()).collect::<Vec<_>>());
-    }
-
-    #[test]
     fn a_blocked_phrase_is_found_whatever_its_case() {
         assert_eq!(blocked_phrase("A real NINJA move").as_deref(), Some("ninja"));
         assert_eq!(blocked_phrase("Quiet now. You and I are going to talk."), None);
@@ -947,7 +933,7 @@ mod tests {
         assert!(!brace_other_than("no braces", &["rack}"]));
     }
 
-    /// against `coverageMatrix()` of the TypeScript under bun. `intel` is short of its 43 by the 'sc:<script>' rows the skeleton's table has no field for (notes: Skeleton).
+    /// against `coverageMatrix()` of the TypeScript under bun.
     #[test]
     fn coverage_counts_as_the_typescript_does() {
         let c = coverage_matrix();
@@ -959,6 +945,6 @@ mod tests {
             for (s, n) in ["1", "2", "3", "x"].iter().zip(counts) { assert_eq!(row.counts.get(String::from(*s)).copied(), Some(n), "{} {}", k, s); }
         }
         assert_eq!(c.total, 85.0);
-        assert_eq!(c.intel, 43.0 - 5.0);   // the five 'sc:' rows of INTEL_TEXT
+        assert_eq!(c.intel, 43.0);
     }
 }

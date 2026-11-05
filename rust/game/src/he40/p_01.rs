@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Empties the QA log and the counters. (he40.ts he40StatsReset)
 pub fn he40_stats_reset(g: &mut crate::game::Game) {
@@ -32,9 +32,6 @@ pub fn arc_length(sol: &crate::throwables::ThrowSolution) -> f64 {
 pub fn arc_armed(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution) -> bool {
     arc_length(sol) >= g.k.he40.arm_m
 }
-
-/// Nothing to do: the crown test this made is `BodyHitContact::Flight` now, which combat's `body_hit` runs itself. (he40.ts insideAt)
-pub fn inside_at(g: &mut crate::game::Game, pos: V3) {}
 
 /// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
 pub fn shell_man(g: &mut crate::game::Game) -> Option<GuardId> {
@@ -135,7 +132,7 @@ pub fn preview_too_close(g: &mut crate::game::Game) -> bool {
         return false;
     }
     let rifle = g.pl[pl].rifle;
-    if seam_rifle_attachment(g, rifle) != Some(crate::weapons::RifleAttachment::He40) {
+    if crate::weapons::rifle_attachment(g, rifle) != Some(crate::weapons::RifleAttachment::He40) {
         return false;
     }
     let preview = g.pl[pl].throw_preview.clone().unwrap();
@@ -164,7 +161,7 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: 
     let b = ballistics(g);
     let sh = crate::he40::Shell {
         pos: v3::copy(from),
-        vel: crate::launcher::launch_vel(from, target, Some(b)),
+        vel: crate::launcher::launch_vel(from, target, b),
         age: 0.0,
         flown: 0.0,
         shooter,
@@ -172,8 +169,9 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: 
     };
     g.shells.push(sh);
     g.stats.he40.fired += 1;
-    seam_audio_play(g, "launcher", from, 1.0, 0.6);
+    crate::audio_iface::game_audio_like_play(g, "launcher", Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.6 }));
     let launch_noise = g.k.he40.launch_noise;
+    let serial = g.serial();
     let ev = crate::game::GameEvent {
         kind: crate::director::EventKind::Prop,
         pos: v3::copy(g.ch[shooter].pos),
@@ -181,6 +179,7 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, from: V3, target: 
         loud: false,
         level: Some(launch_noise),
         who: Some(g.ch[shooter].id),
+        serial,
         ..Default::default()
     };
     g.events.push(ev);
@@ -200,7 +199,7 @@ pub fn log_end(g: &mut crate::game::Game, e: &crate::he40::ShellEnd) {
 }
 
 /// Armed and stopped: frag.ts's blast, judged from `pt`. (he40.ts burst)
-pub fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::he40::BurstMet) {
+pub fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: crate::he40::ShellEndMet) {
     let spec = crate::frag::BlastSpec {
         who: g.ch[sh.shooter].id,
         name: Some(String::from("40 mm grenade")),
@@ -209,13 +208,6 @@ pub fn burst(g: &mut crate::game::Game, sh: crate::he40::Shell, pt: V3, met: cra
     let lift = g.k.frag.lift;
     let report = crate::frag::blast(g, [pt[0], pt[1] - lift, pt[2]], &spec);
     g.stats.he40.bursts += 1;
-    let met = match met {
-        crate::he40::BurstMet::Prop => crate::he40::ShellEndMet::Prop,
-        crate::he40::BurstMet::Air => crate::he40::ShellEndMet::Air,
-        crate::he40::BurstMet::Man => crate::he40::ShellEndMet::Man,
-        crate::he40::BurstMet::Floor => crate::he40::ShellEndMet::Floor,
-        crate::he40::BurstMet::Static => crate::he40::ShellEndMet::Static,
-    };
     log_end(g, &crate::he40::ShellEnd { at: v3::copy(pt), flown: sh.flown, armed: true, met, report: Some(report) });
 }
 
@@ -231,7 +223,7 @@ pub fn bounce_off(g: &mut crate::game::Game, v: V3, n: V3) -> V3 {
 }
 
 /// Not armed and stopped: a 'shell' item with what motion is left, and a noise the room hears. (he40.ts dud)
-pub fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::DudMet, noise: Option<f64>, who: Option<f64>) {
+pub fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: crate::he40::ShellEndMet, noise: Option<f64>, who: Option<f64>) {
     let noise = noise.unwrap_or(g.k.he40.dud_noise);
     let who = who.unwrap_or(0.0);
     let mut vel = vel;
@@ -247,9 +239,10 @@ pub fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, m
     };
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Shell, v3::copy(at), vel, Some(opts));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::ShellSkitter);
-    seam_audio_play(g, "canisterBounce", at, 0.8, 0.7);
+    crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(at), Some(0.8), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
     crate::particle_fx::clack_fx(g, at);
     if noise > 0.0 {
+        let serial = g.serial();
         let ev = crate::game::GameEvent {
             kind: crate::director::EventKind::Prop,
             pos: [at[0], 0.0, at[2]],
@@ -257,26 +250,20 @@ pub fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, m
             loud: false,
             level: Some(noise),
             who: Some(who),
+            serial,
             ..Default::default()
         };
         g.events.push(ev);
     }
     if crate::seats::is_man_id(g, shooter_id) {
-        let text = format!(
+        let text = alloc::format!(
             "the 40 mm was a dud because it hit something {} m out, short of the {} m it needs to arm",
-            to_fixed_1(sh.flown),
-            g.k.he40.arm_m
+            js::to_fixed(sh.flown, 1),
+            js::num_str(g.k.he40.arm_m)
         );
         crate::game::game_msg(g, &text);
     }
     g.stats.he40.duds += 1;
-    let met = match met {
-        crate::he40::DudMet::Prop => crate::he40::ShellEndMet::Prop,
-        crate::he40::DudMet::Air => crate::he40::ShellEndMet::Air,
-        crate::he40::DudMet::Man => crate::he40::ShellEndMet::Man,
-        crate::he40::DudMet::Floor => crate::he40::ShellEndMet::Floor,
-        crate::he40::DudMet::Static => crate::he40::ShellEndMet::Static,
-    };
     log_end(g, &crate::he40::ShellEnd { at: v3::copy(at), flown: sh.flown, armed: false, met, report: None });
 }
 
@@ -373,7 +360,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                     if armed_at(g.shells[i].flown, best, r_k.arm_m) {
                         g.shells[i].flown += best;
                         let sh = g.shells[i];
-                        burst(g, sh, v3::mad(at, dir, -r_k.standoff), crate::he40::BurstMet::Man);
+                        burst(g, sh, v3::mad(at, dir, -r_k.standoff), crate::he40::ShellEndMet::Man);
                     } else {
                         g.shells[i].flown += best;
                         let sh = g.shells[i];
@@ -389,14 +376,14 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                 let hit_p = v3::mad(pos, dir, t_p);
                 if armed_at(g.shells[i].flown, 0.0, r_k.arm_m) {
                     let sh = g.shells[i];
-                    burst(g, sh, v3::mad(hit_p, ph.n, r_k.standoff), crate::he40::BurstMet::Prop);
+                    burst(g, sh, v3::mad(hit_p, ph.n, r_k.standoff), crate::he40::ShellEndMet::Prop);
                 } else {
                     let who = g.ch[shooter].id;
                     crate::props::prop_system_apply_impulse(g, ph.prop, hit_p, [dir[0] * r_k.prop_j, 0.0, dir[2] * r_k.prop_j], who, Some(true));
                     crate::marks::chip_mark(g, hit_p, ph.n, Some(crate::marks::Surface2 { box_: ph.box_, dynamic: true }), None);
                     let sh = g.shells[i];
                     let back = bounce_off(g, sh.vel, ph.n);
-                    dud(g, sh, v3::mad(pos, dir, m::max(0.0, t_p - r_k.radius)), back, crate::he40::DudMet::Prop, None, None);
+                    dud(g, sh, v3::mad(pos, dir, m::max(0.0, t_p - r_k.radius)), back, crate::he40::ShellEndMet::Prop, None, None);
                 }
                 done = true;
                 break;
@@ -407,13 +394,13 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                 let hit_p = v3::mad(pos, dir, t_s);
                 if armed_at(g.shells[i].flown, 0.0, r_k.arm_m) {
                     let sh = g.shells[i];
-                    burst(g, sh, v3::mad(hit_p, st.n, r_k.standoff), crate::he40::BurstMet::Static);
+                    burst(g, sh, v3::mad(hit_p, st.n, r_k.standoff), crate::he40::ShellEndMet::Static);
                 } else {
                     let surface = crate::marks::static_surface(g, st.index);
                     crate::marks::chip_mark(g, hit_p, st.n, surface, None);
                     let sh = g.shells[i];
                     let back = bounce_off(g, sh.vel, st.n);
-                    dud(g, sh, v3::mad(pos, dir, m::max(0.0, t_s - r_k.radius)), back, crate::he40::DudMet::Static, None, None);
+                    dud(g, sh, v3::mad(pos, dir, m::max(0.0, t_s - r_k.radius)), back, crate::he40::ShellEndMet::Static, None, None);
                 }
                 done = true;
                 break;
@@ -426,10 +413,10 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                 let at: V3 = [p[0], r_k.radius, p[2]];
                 let sh = g.shells[i];
                 if armed_at(sh.flown, 0.0, r_k.arm_m) {
-                    burst(g, sh, [at[0], r_k.standoff, at[2]], crate::he40::BurstMet::Floor);
+                    burst(g, sh, [at[0], r_k.standoff, at[2]], crate::he40::ShellEndMet::Floor);
                 } else {
                     let back = bounce_off(g, sh.vel, [0.0, 1.0, 0.0]);
-                    dud(g, sh, at, back, crate::he40::DudMet::Floor, None, None);
+                    dud(g, sh, at, back, crate::he40::ShellEndMet::Floor, None, None);
                 }
                 done = true;
                 break;
@@ -460,13 +447,13 @@ pub fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2:
     match gd {
         None => {
             crate::character::anim_hit(g, c);
-            seam_audio_play(g, "bodyHit", at, 0.6, 0.9);
+            crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
             crate::game::game_msg(g, "a 40 mm round in the ribs — unarmed, luckily");
         }
         Some(id) if g.gd[id].civ.is_some() => {
             crate::character::anim_hit(g, c);
             let pos = g.ch[c].pos;
-            seam_audio_play(g, "bodyHit", v3::add(pos, [0.0, 1.1, 0.0]), 0.6, 0.9);
+            crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(v3::add(pos, [0.0, 1.1, 0.0])), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
             if g.gd[id].held.is_none() {
                 let pos = g.ch[c].pos;
                 crate::civilians::to_alarmed(g, id, crate::civilians::CivCause::Noise, [pos[0] - dir[0] * 4.0, 0.0, pos[2] - dir[2] * 4.0], false);
@@ -484,19 +471,10 @@ pub fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2:
         r,
         v3::mad(at, dir, -0.06),
         [-dir[0] * 1.2, 0.8, -dir[2] * 1.2],
-        crate::he40::DudMet::Man,
+        crate::he40::ShellEndMet::Man,
         Some(noise),
         Some(who),
     );
-}
-
-/// `x.toFixed(1)` for the non-negative distance in the dud's line: `{:.1}` rounds an exact tie to even, toFixed upward.
-fn to_fixed_1(x: f64) -> String {
-    let q = x * 4.0;
-    if q == m::floor(q) && js::rem(q, 2.0) != 0.0 {
-        return format!("{:.1}", x + 0.05);
-    }
-    format!("{:.1}", x)
 }
 
 /// Rounds in flight as boxes: the stubby body and its gold nose along the line of flight. Picture only; nothing in the tick calls it. (he40.ts shellBoxes)
@@ -544,17 +522,6 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     }
 }
 
-/// he40.ts:105,124,187,189 g.audio.play(name, at, volume, { rate }): the play is real, but `opts` holds `Opaque` values and cannot carry the rate, so it plays at its own pitch.
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, volume: f64, rate: f64) {
-    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(volume), None);
-}
-
-/// he40.ts:86 pl.rifle.attachment: `rifle_attachment()` has no way to name the rifle, so this is its getter (weapons.ts:533) over the rifle's own fields.
-fn seam_rifle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> {
-    let at = g.fa[rifle].att_idx;
-    if at >= 0 { g.fa[rifle].attachments.get(at as usize).copied() } else { None }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -568,23 +535,5 @@ mod tests {
             land: [0.0; 3],
         };
         assert_eq!(arc_length(&sol).to_bits(), 0x402bb764c2ed4dde);
-    }
-
-    #[test]
-    fn to_fixed_1_matches_the_typescript() {
-        let cases: [(f64, &str); 9] = [
-            (2.25, "2.3"),
-            (0.75, "0.8"),
-            (2.35, "2.4"),
-            (1.45, "1.4"),
-            (0.05, "0.1"),
-            (7.95, "8.0"),
-            (0.0, "0.0"),
-            (8.0, "8.0"),
-            (3.15, "3.1"),
-        ];
-        for (x, want) in cases {
-            assert_eq!(to_fixed_1(x), want);
-        }
     }
 }

@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Shoved, src/game/noshove.ts:54)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Shoved {
     pub char: crate::noshove::ShovedChar,
     pub shoved: [f64; 2],
@@ -25,15 +25,15 @@ impl Shoved {
 impl Default for Shoved { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/noshove.ts:54 Shoved.char, src/game/noshove.ts:54)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct ShovedChar {
-    pub pos: Vec<f64>,
+    pub pos: V3,
 }
 impl ShovedChar {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ShovedChar {
-            pos: Vec::new(),
+            pos: [0.0; 3],
         }
     }
 }

@@ -19,28 +19,9 @@ fn sam_pos(g: &Game) -> V3 {
     g.ch[g.pl[g.player].ch].pos
 }
 
-/// `x.toFixed(2)`: the exact decimal, a tie going to the larger magnitude; a negative's sign is kept however small, −0 has none
-fn to_fixed2(x: f64) -> String {
-    let a = m::abs(x);
-    let eighths = a * 8.0;
-    let tie = m::floor(eighths) == eighths && js::rem(eighths, 2.0) == 1.0;   // (of two decimals only an odd number of eighths lies exactly between two)
-    let s = if tie {
-        let n = (a * 100.0 + 0.5) as u64;
-        format!("{}.{:02}", n / 100, n % 100)
-    } else {
-        format!("{:.2}", a)
-    };
-    if x < 0.0 { format!("-{}", s) } else { s }
-}
-
-/// a whole number in a key, as JavaScript writes it (−0 is "0")
-fn int_str(x: f64) -> String {
-    format!("{}", x + 0.0)
-}
-
 /// (squadFragCatches q) a point on a quarter-metre grid
 fn quarter(p: V3) -> String {
-    format!("{},{}", int_str(m::round(p[0] * 4.0)), int_str(m::round(p[2] * 4.0)))
+    format!("{},{}", js::num_str(m::round(p[0] * 4.0)), js::num_str(m::round(p[2] * 4.0)))
 }
 
 /// this view's row asks `tossing`: `states.get(g)`, which makes no row, and `tossing` takes no row out of `g` while it holds `g`
@@ -84,14 +65,6 @@ fn throw_to_lim(g: &mut Game, gd: GuardId, at: V3, kind: SquadThrowKind, stood: 
     let th = crate::throwplan::throw_to(g, gd, at, kind, stood, Some(walls), Some(&mut count));
     lim.n = count.n;
     th
-}
-
-/// `o.owns(gd)` of a row of g.orders.owners: the one closure there is (orders.ts:631, the night breach's drill), asked by the row's name
-fn owner_owns(g: &mut Game, owner: &str, gd: GuardId) -> bool {
-    match owner {
-        "nightbreach" => g.night_breach.active && crate::nightbreach::night_breach_drill_ops(g).contains(&gd) && crate::nightbreach::night_breach_owns_pair(g),
-        _ => false,
-    }
 }
 
 /// (walkSpot side) a short step to a side of a cell
@@ -342,7 +315,7 @@ pub fn aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, pl: PlayerI
 
 /// a spot in a key (squadthrow.ts keyOf)
 pub fn key_of(at: V3) -> String {
-    format!("{},{}", to_fixed2(at[0]), to_fixed2(at[2]))
+    format!("{},{}", js::to_fixed(at[0], 2), js::to_fixed(at[2], 2))
 }
 
 /// how many are left in the one bag (squadthrow.ts left)
@@ -376,8 +349,8 @@ pub fn tossing(g: &mut crate::game::Game, s: Option<&crate::squadthrow::State>, 
     toss_window(g, t)
 }
 
-/// his hands are on something else: a charge, a door's handle or boot, a thing he works, a magazine (squadthrow.ts handsBusy)
-pub fn hands_busy(g: &mut crate::game::Game, gd: GuardId) -> bool {
+/// his hands are on something else: a charge, a door's handle or boot, a thing he works, a magazine (squadthrow.ts handsAtWork)
+pub fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool {
     use crate::doortools::Phase as DoorPhase;
     if g.door_tools.ops.iter().any(|&o| { let op = &g.tab.doortools_door_op[o]; op.lead == gd && (op.phase == DoorPhase::Place || op.phase == DoorPhase::Kick) }) { return true; }
     if g.wall_charge.ops.iter().any(|&o| { let op = &g.tab.wallcharge_wall_op[o]; op.lead == gd && op.phase == crate::wallcharge::Phase::Place }) { return true; }
@@ -399,7 +372,7 @@ pub fn stand_throw(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: cra
     let mut sorted: Vec<GuardId> = men.to_vec();
     { let r: &Game = &*g; js::sort_by(&mut sorted, |a, b| v3::dist_xz(pos_of(r, *a), at) - v3::dist_xz(pos_of(r, *b), at)); }
     for gd in sorted {
-        if !crate::squadsmoke::squad_hand_free(g, gd) || hands_busy(g, gd) || tossing_here(g, gd) { continue; }
+        if !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) || tossing_here(g, gd) { continue; }
         if walking_here(g, gd) { continue; }   // (on his way to a throw already: that one first)
         let roll = roll_of(g, kind);
         let arc = match crate::squadsmoke::squad_arc_to(g, gd, at, roll, None) {
@@ -439,7 +412,7 @@ pub fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], la
     let apart = match kept {
         Some(a) => a,
         None => {
-            let a = crate::frag::flee_mates(g, gd, rest);
+            let a = crate::frag::flee_mates(g, gd, rest).map(|a| SquadThrowKeptDuckM { stay: a.stay, go: a.go });
             g.m.squadthrow.duck_mates = Some(SquadThrowKeptDuck { gd, t: time, x: rest[0], y: rest[1], z: rest[2], m: a.clone() });
             a
         }
@@ -523,10 +496,7 @@ pub fn stun_in(g: &mut crate::game::Game, pts: &[V3], eye: V3, full: bool) -> bo
 /// may this man be walked off to a throw: no drill, door tool, wall charge or fight has him, and his order can be handed back (squadthrow.ts mayWalk)
 pub fn may_walk(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let a = crate::orders::squad_orders_of(g, gd);
-    let owners: Vec<String> = g.orders.owners.iter().map(|o| o.name.clone()).collect();
-    for name in &owners {
-        if owner_owns(g, name, gd) { return false; }
-    }
+    if !g.orders.owners.is_empty() && crate::orders::nightbreach_owns(g, gd) { return false; }   // (`S.owners.some(o => o.owns(gd))`: the one row there is)
     if g.door_tools.ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(&gd)) || g.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd)) { return false; }
     // (a room fight drives a teammate in 'patrol' with no yield stamp: the man it has a gun on is its `tgt`; a stack's or a stand-off's rear man keeps the squad's back)
     if g.gd[gd].state == crate::game::GuardState::Alert { return false; }
@@ -554,7 +524,7 @@ pub fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate
     for &gd in men {
         if g.gd[gd].state != crate::game::GuardState::Dead
             && crate::squadsmoke::squad_hand_free(g, gd)
-            && !hands_busy(g, gd)
+            && !hands_at_work(g, gd)
             && !tossing_here(g, gd)
             && (forced || (!state(g).walks.has(gd) && may_walk(g, gd)))
         {
@@ -614,7 +584,7 @@ pub fn squad_throw_plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
     let keys: Vec<String> = men.iter().map(|&m_| {
         let c = g.gd[m_].ch;
         let p = g.ch[c].pos;
-        format!("{}:{},{}", int_str(g.ch[c].id), int_str(m::floor(p[0] * 2.0)), int_str(m::floor(p[2] * 2.0)))
+        format!("{}:{},{}", js::num_str(g.ch[c].id), js::num_str(m::floor(p[0] * 2.0)), js::num_str(m::floor(p[2] * 2.0)))
     }).collect();
     let key = format!("{}|{}|{}", kind.as_str(), key_of(at), keys.join(";"));
     let keep = if lob_on { g.k.squadthrow.lob_keep_secs } else { g.k.squadthrow.keep_secs };
@@ -675,7 +645,7 @@ pub fn squad_frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Op
         let burst2 = burst.map(|b| FragCatchesBurst { reach: b.reach, no: b.no.clone() });
         return frag_catches(g, rest, at, moved2, sam, burst2.as_ref());
     }
-    let moved_key = match moved { Some(q) => format!("{}:{}", int_str(g.ch[g.gd[q.gd].ch].id), quarter(q.at)), None => String::new() };
+    let moved_key = match moved { Some(q) => format!("{}:{}", js::num_str(g.ch[g.gd[q.gd].ch].id), quarter(q.at)), None => String::new() };
     let sam_key = if g.pl[g.player].down { String::new() } else { quarter(sam_pos(g)) };
     let mates: Vec<String> = g.guards.iter().map(|&o| {
         if g.gd[o].team == crate::teams::Team::Operative {
@@ -806,18 +776,13 @@ mod tests {
 
     /// the TypeScript's own answers: bun -e 'console.log((0.125).toFixed(2), …)'
     #[test]
-    fn to_fixed_as_javascript() {
+    fn keys_as_javascript() {
         for (x, want) in [(0.125, "0.13"), (0.375, "0.38"), (2.5, "2.50"), (1.005, "1.00"), (-0.001, "-0.00"), (-0.0, "0.00"), (-0.125, "-0.13"), (12.345, "12.35"), (3.0, "3.00"), (10.625, "10.63")] {
-            assert_eq!(to_fixed2(x), want, "{}", x);
+            assert_eq!(key_of([x, 0.0, 3.0]), format!("{},3.00", want), "{}", x);
         }
         assert_eq!(key_of([0.125, 9.0, -0.0]), "0.13,0.00");
-    }
-
-    #[test]
-    fn whole_numbers_as_javascript() {
-        assert_eq!(int_str(-0.0), "0");
-        assert_eq!(int_str(-3.0), "-3");
         assert_eq!(quarter([-0.1, 0.0, 1.0]), "0,4");
+        assert_eq!(quarter([-0.75, 0.0, 2.5]), "-3,10");
     }
 
     #[test]

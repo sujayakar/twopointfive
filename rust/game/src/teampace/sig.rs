@@ -21,10 +21,10 @@ pub fn team_walk_of(g: &mut crate::game::Game, gd: GuardId) -> f64 { todo!() }
 pub fn quiet(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/teampace.ts:158 isRun)
-pub fn is_run(why: crate::teampace::IsRunWhy) -> bool { todo!() }
+pub fn is_run(why: crate::teampace::LeaveWhy) -> bool { todo!() }
 
 /// (src/game/teampace.ts:161 teamLeave)
-pub fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::TeamLeaveWhy, top: f64, secs: Option<f64>) -> bool { todo!() }
+pub fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::LeaveWhy, top: f64, secs: Option<f64>) -> bool { todo!() }
 
 /// (src/game/teampace.ts:169 live)
 pub fn live(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::teampace::Leave> { todo!() }

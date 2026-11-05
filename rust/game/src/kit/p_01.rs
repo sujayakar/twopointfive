@@ -9,8 +9,8 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- private helpers
 
-/// (kit.ts SLOT_AMOUNT[k](m)) The table as a call by its key.
-fn slot_amount_of(g: &mut crate::game::Game, k: &str, m: &crate::kit::MemberKit) -> f64 {
+/// SLOT_AMOUNT[k](m): the table as a call by its key; a key it does not hold panics, as the call of undefined throws.   (kit.ts:252, skeleton's slot_amount_of)
+pub fn slot_amount_of(g: &mut crate::game::Game, k: &str, m: &crate::kit::MemberKit) -> f64 {
     match k {
         "smoke" => slot_amount::smoke(m),
         "bangs" => slot_amount::bangs(m),
@@ -23,7 +23,25 @@ fn slot_amount_of(g: &mut crate::game::Game, k: &str, m: &crate::kit::MemberKit)
         "cams" => slot_amount::cams(g, m),
         "rings" => slot_amount::rings(g, m),
         "wand" => slot_amount::wand(g, m),
-        _ => unreachable!(),
+        _ => panic!("SLOT_AMOUNT has no row {}", k),
+    }
+}
+
+/// SLOT_PUT[k](m, n, d): the table as a call by its key; `d`, what he is issued, is read by the shotgun alone.   (kit.ts:261, skeleton's slot_put_of)
+pub fn slot_put_of(g: &mut crate::game::Game, k: &str, m: &mut crate::kit::MemberKit, n: f64, d: &crate::kit::MemberKit) {
+    match k {
+        "smoke" => slot_put::smoke(m, n),
+        "bangs" => slot_put::bangs(m, n),
+        "frags" => slot_put::frags(m, n),
+        "shells" => slot_put::shells(m, n),
+        "charges" => slot_put::charges(m, n),
+        "walls" => slot_put::walls(m, n),
+        "wand" => slot_put::wand(m, n),
+        "cams" => slot_put::cams(m, n),
+        "rings" => slot_put::rings(m, n),
+        "shotgun" => slot_put::shotgun(g, m, n, d),
+        "hammer" => slot_put::hammer(g, m, n),
+        _ => panic!("SLOT_PUT has no row {}", k),
     }
 }
 
@@ -273,7 +291,7 @@ pub fn pouch_words(n: f64) -> String {
     if n == 1.0 {
         return String::from("a pouch");
     }
-    alloc::format!("{} pouches", n)
+    alloc::format!("{} pouches", js::num_str(n))
 }
 
 /// Which of a table's two most-a-man columns member i reads.   (kit.ts kindOf)
@@ -602,5 +620,33 @@ mod tests {
         assert_eq!(pouch_words(1.0), "a pouch");
         assert_eq!(pouch_words(2.0), "2 pouches");
         assert_eq!(pouch_words(0.0), "0 pouches");
+        assert_eq!(pouch_words(-0.0), "0 pouches");
+        assert_eq!(pouch_words(1.5), "1.5 pouches");
+    }
+
+    #[test]
+    fn the_tables_answer_by_their_keys() {
+        let d = card();
+        let mut g = game(true, true);
+        let mut c = card();
+        for k in slot_put().keys() {
+            if k == "shotgun" || k == "hammer" { continue; }
+            slot_put_of(&mut g, &k, &mut c, 1.0, &d);
+        }
+        assert_eq!((c.smoke, c.bangs, c.frags, c.shells, c.charges, c.walls, c.cams, c.rings), (1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0));
+        assert!(c.wand);
+        slot_put_of(&mut g, "hammer", &mut c, 1.0, &d);
+        assert_eq!(slot_amount_of(&mut g, "hammer", &c), 1.0);
+        slot_put_of(&mut g, "shotgun", &mut c, 1.0, &d);
+        assert_eq!((slot_amount_of(&mut g, "shotgun", &c), slot_amount_of(&mut g, "hammer", &c)), (1.0, 0.0));
+        assert_eq!(slot_amount_of(&mut g, "smoke", &c), 1.0);
+        assert_eq!(slot_amount_of(&mut g, "wand", &c), 1.0);
+    }
+
+    #[test]
+    #[should_panic]
+    fn a_key_the_table_does_not_hold_throws() {
+        let mut g = game(true, true);
+        slot_amount_of(&mut g, "shield", &card());
     }
 }

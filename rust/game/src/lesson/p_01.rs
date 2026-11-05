@@ -70,8 +70,6 @@ pub fn bare_line(line: &str) -> String {
     replace_words(&s, "left-click to kill him with the knife", "right-click to knock him out")
 }
 
-/// the four tokens, as a level writes them of 'him' (lesson.ts LESSON_TOKENS)
-static LESSON_TOKENS: [&str; 4] = ["grab him", "grab him from behind", "knock him out", "take him out"];
 /// `s` between `head` and `tail`, at least a letter of it
 fn between<'a>(s: &'a str, head: &str, tail: &str) -> Option<&'a str> { s.strip_prefix(head)?.strip_suffix(tail).filter(|w| !w.is_empty()) }
 /// row `row` of lesson.ts TOKENS: its pattern on a name already of the letters lessonToken allows: the man's words
@@ -152,7 +150,7 @@ pub fn lesson_token_faults(w: &str, line: &str, cap: f64, row: Option<&str>, alw
         while j < b.len() && b[j] != b'{' && b[j] != b'}' { j += 1; }
         if b.get(j) != Some(&b'}') { return None; }
         let name = &line[i + 1..j];
-        if !lesson_token(name) { out.push(format!("{} has {{{}}}, which is no move's token ({})", w, name, LESSON_TOKENS.join(", "))); }
+        if !lesson_token(name) { out.push(format!("{} has {{{}}}, which is no move's token ({})", w, name, lesson_tokens().join(", "))); }
         Some((j + 1, String::new()))
     });
     if rest.contains('{') || rest.contains('}') { out.push(format!("{} has a brace that closes nothing or is never closed", w)); }
@@ -170,20 +168,13 @@ fn line_on_page(written: &str, wedges: f64) -> String {
     // (stalkClickOnly() with no game is false on the page: no stalkLine · CLOSE.on && CLOSE.noKnife: bareLine · HANDRING.on: the whistle and the wheel)
     let s = bare_line(&token_line(written, None, None));
     let s = replace_words(&s, "V whistles", &format!("Space held, then {}, whistles", wedges));
-    replace_words(&s, "Hold Space, wheel to kick, let go", "Hold Space, then 2 kicks it")
+    replace_words(&s, "Hold Space, wheel to kick, let go", WHEEL_RING)
 }
-
-// ---- the seams: what skeleton 4 still cannot say
-
-/// lesson.ts:212, 233 S.n.set(...): a test writes the step's counts and `passes` has it as `&StepSeen`
-fn seam_seen_set(s: &StepSeen, key: &str, v: f64) { todo!("needs: passes to take s: &mut StepSeen") }
-/// lesson.ts:217 r.attachment: rifle_attachment() takes no rifle
-fn seam_rifle_attachment(g: &mut Game, r: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[r].att_idx; if i >= 0 { g.fa[r].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
 
 // ---- the tests
 
 /// one test asked: an unknown kind, or a flag no row has (which throws in the TypeScript and is caught there), is never true (lesson.ts passes)
-pub fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &crate::lesson::StepSeen) -> bool {
+pub fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &mut crate::lesson::StepSeen) -> bool {
     test_ok(g, t, s).unwrap_or(false)
 }
 
@@ -193,15 +184,6 @@ pub fn after(log: &[u32], last: Option<u32>) -> usize {
     while k > 0 && Some(log[k - 1]) != last { k -= 1; }
     k
 }
-
-/// a type guard over a record's raw field: a typed LessonTest has no raw fields, and this signature can answer nothing (lesson.ts num; the checks use finite)
-pub fn num(v: crate::Opaque) { todo!("needs: nothing calls it, and it can go: `(v: Opaque)` returning nothing can say no answer") }
-/// …(lesson.ts str)
-pub fn str(v: crate::Opaque) { todo!("needs: nothing calls it, and it can go: `(v: Opaque)` returning nothing can say no answer") }
-/// …(lesson.ts rect; the checks use rect_ok)
-pub fn rect(v: crate::Opaque) { todo!("needs: nothing calls it, and it can go: `(v: Opaque)` returning nothing can say no answer") }
-/// …(lesson.ts vec; the checks use vec_ok)
-pub fn vec(v: crate::Opaque) { todo!("needs: nothing calls it, and it can go: `(v: Opaque)` returning nothing can say no answer") }
 
 /// (lesson.ts inside)
 pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
@@ -228,7 +210,7 @@ pub fn partner_of(g: &mut crate::game::Game) -> Option<GuardId> { g.guards.iter(
 
 /// is `v` within the record's below and above; a kind with neither field has nothing to refuse (lesson.ts band)
 pub fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
-    let LessonTest::Meter { below, above, .. } = t else { return true };
+    let (LessonTest::Meter { below, above, .. } | LessonTest::Pace { below, above }) = t else { return true };
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
 }
 
@@ -247,20 +229,20 @@ fn chron_text<'a>(e: &'a crate::chronicle::ChronEvent, key: &str) -> Option<&'a 
     match e.data.get(String::from(key)) { Some(Some(crate::chronicle::ChronEventDataValue::Text(s))) => Some(s.as_str()), _ => None }
 }
 /// STAGES.indexOf
-fn stage_index(s: &str) -> i32 { ["infiltrate", "drive", "exfil", "done"].iter().position(|w| *w == s).map_or(-1, |i| i as i32) }
+fn stage_index(s: &str) -> i32 { stages().iter().position(|w| w == s).map_or(-1, |i| i as i32) }
 /// a count kept in the step's map, as a test reads it
 fn seen_n(s: &StepSeen, key: String) -> f64 { s.n.get(key).copied().unwrap_or(0.0) }
 
 /// lesson.ts LESSON_TESTS, the `ok` of each kind (the `check` of each is check_of). None: the row would have thrown, or no such kind
-fn test_ok(g: &mut Game, t: &LessonTest, s: &StepSeen) -> Option<bool> {
+fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
     use LessonTest as T;
     Some(match t {
-        T::Unknown => return None,
+        T::Unknown { .. } => return None,
         T::In { area } => inside(*area, own_pos(g)),
         T::Near { at, r } => { let p = own_pos(g); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
         T::Flag { flag, value } => flag_of(g, flag)? == value.unwrap_or(true),
         T::Slot { slot, drawn } => { let p = who(g); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
-        T::Pace => true,   // (TWOGEARS.on: the wheel is nobody's pace and the line goes by)
+        T::Pace { .. } => true,   // (TWOGEARS.on: the wheel is nobody's pace and the line goes by)
         T::Meter { which, .. } => { let p = who(g); let v = if which == "noise" { g.pl[p].noise } else { g.pl[p].visibility }; band(v, t) }
         T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage) && g.mission.stage != crate::game::MissionStage::Failed,
         T::Door { door, state } => ok_door(g, door, state),
@@ -344,10 +326,10 @@ fn ok_calm(g: &mut Game, route: Option<&str>) -> bool {
     })
 }
 
-fn ok_loaded(g: &mut Game, s: &StepSeen) -> bool {
+fn ok_loaded(g: &mut Game, s: &mut StepSeen) -> bool {
     let p = who(g);
     let Some(w) = crate::game::player_gun_in_hand(g, p) else { return false };
-    if crate::weapons::firearm_reloading(g, w) { seam_seen_set(s, "loaded:began", 1.0); return false; }
+    if crate::weapons::firearm_reloading(g, w) { s.n.set(String::from("loaded:began"), 1.0); return false; }
     if js::truthy(seen_n(s, String::from("loaded:began"))) || g.fa[w].spare.is_empty() { return true; }
     if g.fa[w].chamber != 1.0 { return false; }
     let (mag, most) = (g.fa[w].mag.unwrap_or(0.0), m::max_n(&g.fa[w].spare));
@@ -363,7 +345,7 @@ fn ok_reload(g: &mut Game) -> bool {
 fn ok_launcher(g: &mut Game, on: &str, fired: bool) -> bool {
     let p = who(g);
     let r = g.pl[p].rifle;
-    let up = seam_rifle_attachment(g, r).map_or("none", |a| a.as_str());
+    let up = crate::weapons::rifle_attachment(g, r).map_or("none", |a| a.as_str());
     on == up && (!fired || (crate::game::player_rifle_up(g, p) && g.fa[r].ring_cd > 0.0))
 }
 
@@ -373,7 +355,7 @@ fn ok_burst(g: &mut Game, n: Option<f64>) -> bool {
     crate::game::player_rifle_up(g, p) && crate::weapons::firearm_automatic(g, r) && g.fa[r].auto_idx >= n.unwrap_or(3.0)
 }
 
-fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scene_scenarios::Rect>, s: &StepSeen) -> bool {
+fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scene_scenarios::Rect>, s: &mut StepSeen) -> bool {
     use crate::chronicle::ChronKind;
     let from = if quick { s.held_at } else { s.chron0 };
     if from < 0.0 { return false; }
@@ -385,7 +367,7 @@ fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scen
         if e.kind != ChronKind::Thrown || !(k.is_none() || chron_text(e, "kind") == k) { continue; }
         let Some(a) = area else { return true };
         let since = g.mission.stats.elapsed - e.t + 0.5;   // (the chronicle's clock is the mission's own)
-        if lying_can(g, a, k, since) || bang_in(g, a, k) { seam_seen_set(s, &key, 1.0); return true; }
+        if lying_can(g, a, k, since) || bang_in(g, a, k) { s.n.set(key, 1.0); return true; }
     }
     false
 }
@@ -489,15 +471,6 @@ fn ok_watching(g: &mut Game, a: V3, r: Option<f64>, n: Option<f64>) -> bool {
 
 // ---- the checks: what is wrong with a record on this floor. A field's type is the skeleton's now, so a check of a type alone (`typeof t.on`) has nothing to ask
 
-/// Object.keys(LESSON_TESTS)
-static TEST_KINDS: [&str; 34] = ["in", "near", "flag", "slot", "pace", "meter", "stage", "door", "target", "men", "did", "downed", "body", "calm", "loaded", "reload", "launcher", "burst", "threw", "orderTo", "stackOn", "pairsOn", "word", "taken", "following", "mate", "pair", "cue", "view", "squad", "stacks", "watching", "all", "any"];
-/// Object.keys(FLAGS)
-static FLAG_WORDS: [&str; 25] = ["crouch", "sprint", "wall", "peek", "lean", "nv", "light", "holstered", "gun", "ringsOut", "shellsOut", "auto", "setup", "setupShut", "dragging", "dark", "chargeSet", "chargeClear", "wallBlown", "holding", "picking", "coding", "menu", "ownRing", "silent"];
-/// lesson.ts HOWS
-static HOWS_WORDS: [&str; 5] = ["takedown", "choke", "whip", "ring", "knife"];
-/// lesson.ts PAIR_WHATS
-static PAIR_WORDS: [&str; 7] = ["mark", "now", "set", "go", "go:F", "go:hands", "down"];
-
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
 /// lesson.ts rect
@@ -557,11 +530,11 @@ fn check_of(g: &mut Game, t: &LessonTest) -> Option<String> {
     use LessonTest as T;
     let say = |s: &str| Some(String::from(s));
     match t {
-        T::Unknown | T::Slot { .. } | T::Loaded | T::Reload | T::Following => None,   // (a slot is a SlotKind: all five are the check's)
+        T::Unknown { .. } | T::Slot { .. } | T::Loaded | T::Reload | T::Following => None,   // (a slot is a SlotKind: all five are the check's)
         T::In { area } | T::Body { area } => check_area(g, *area),
         T::Near { at, r } => if !vec_ok(*at) { say("at: a Vec3") } else if r.map_or(false, |r| !finite(r)) { say("r: metres") } else { None },
-        T::Flag { flag, .. } => if FLAG_WORDS.contains(&flag.as_str()) { None } else { Some(format!("flag: one of {}", FLAG_WORDS.join(", "))) },
-        T::Pace => band_check(t),
+        T::Flag { flag, .. } => { let rows = flags(); if rows.has(flag.clone()) { None } else { Some(format!("flag: one of {}", rows.keys().join(", "))) } }
+        T::Pace { .. } => band_check(t),
         T::Meter { which, .. } => if which != "light" && which != "noise" { say("which: 'light' or 'noise'") } else { band_check(t) },
         T::Stage { stage } => if stage_index(stage) > 0 { None } else { say("stage: drive (the place reached), exfil (the thing taken) or done") },
         T::Door { door, state } => {
@@ -572,7 +545,8 @@ fn check_of(g: &mut Game, t: &LessonTest) -> Option<String> {
         T::Men { down } => if count_ok(*down, 1.0) { None } else { say("down: how many, ≥ 1") },
         T::Did { what, on, .. } => check_did(g, what, on.as_deref()),
         T::Downed { how, n } => {
-            if !HOWS_WORDS.contains(&how.as_str()) { return Some(format!("how: one of {}", HOWS_WORDS.join(", "))); }
+            let hows = hows();
+            if !hows.contains(how) { return Some(format!("how: one of {}", hows.join(", "))); }
             if count_ok(*n, 1.0) { None } else { say("n: how many, ≥ 1") }
         }
         T::Calm { route } => {
@@ -610,7 +584,8 @@ fn check_of(g: &mut Game, t: &LessonTest) -> Option<String> {
             if metres_ok(*r) && metres_ok(*by) && metres_ok(*away) { None } else { say("r / by / away: metres, > 0") }
         }
         T::Pair { what, n } => {
-            if !PAIR_WORDS.contains(&what.as_str()) { return Some(format!("what: one of {}", PAIR_WORDS.join(", "))); }
+            let whats = pair_whats();
+            if !whats.contains(what) { return Some(format!("what: one of {}", whats.join(", "))); }
             if count_ok(*n, 1.0) { None } else { say("n: how many, ≥ 1") }
         }
         T::Cue { name } => if name.is_empty() { say("name: the beat the level's script ends with c.signal('done:<name>')") } else { None },
@@ -636,9 +611,9 @@ fn check_of(g: &mut Game, t: &LessonTest) -> Option<String> {
     }
 }
 
-/// a row's `below` and `above`; `Pace` lost its two in the skeleton's enum, and on the page nothing asks them (lesson.ts bandCheck)
+/// a row's `below` and `above` (lesson.ts bandCheck)
 pub fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
-    let (below, above) = match t { LessonTest::Pace => return None, LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
+    let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
     let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
     if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }
 }
@@ -668,7 +643,7 @@ pub fn free_in(g: &mut crate::game::Game, r: crate::scene_scenarios::Rect) -> bo
 fn kind_word(t: &LessonTest) -> &'static str {
     use LessonTest as T;
     match t {
-        T::Unknown => "", T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Pace => "pace", T::Meter { .. } => "meter",
+        T::Unknown { .. } => "", T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Pace { .. } => "pace", T::Meter { .. } => "meter",
         T::Stage { .. } => "stage", T::Door { .. } => "door", T::Target { .. } => "target", T::Men { .. } => "men", T::Did { .. } => "did", T::Downed { .. } => "downed",
         T::Body { .. } => "body", T::Calm { .. } => "calm", T::Loaded => "loaded", T::Reload => "reload", T::Launcher { .. } => "launcher", T::Burst { .. } => "burst",
         T::Threw { .. } => "threw", T::OrderTo { .. } => "orderTo", T::StackOn { .. } => "stackOn", T::PairsOn { .. } => "pairsOn", T::Word { .. } => "word", T::Taken { .. } => "taken",
@@ -679,8 +654,13 @@ fn kind_word(t: &LessonTest) -> &'static str {
 
 /// what is wrong with one test record on this floor; None: nothing (lesson.ts testFault)
 pub fn test_fault(g: &mut crate::game::Game, t: &crate::lesson::LessonTest) -> Option<String> {
-    if matches!(t, LessonTest::Unknown) { return Some(format!("no test kind ({})", TEST_KINDS.join(", "))); }
+    if let LessonTest::Unknown { is } = t { return Some(unknown_fault(is)); }
     check_of(g, t).map(|why| format!("{} — {}", kind_word(t), why))
+}
+/// …of a record no row of the table holds (empty: it had no `is`)
+fn unknown_fault(is: &str) -> String {
+    if is.is_empty() { return String::from("a test is a record { is: '<kind>', … }"); }
+    format!("no test kind '{}' ({})", is, lesson_tests().keys().join(", "))
 }
 
 /// lesson.ts FLAGS by the word a test names; None: no such flag
@@ -929,7 +909,31 @@ mod tests {
         assert!(band(0.5, &meter(Some(1.0), Some(0.0))) && !band(1.0, &meter(Some(1.0), None)) && !band(0.0, &meter(None, Some(0.0))));
         assert!(band(9.0, &LessonTest::Loaded));
         assert!(band_check(&meter(None, None)).is_some() && band_check(&meter(Some(f64::NAN), None)).is_some() && band_check(&meter(Some(1.0), None)).is_none());
-        assert!(band_check(&LessonTest::Pace).is_none());
+        let pace = |below, above| LessonTest::Pace { below, above };
+        assert!(band(0.5, &pace(Some(1.0), None)) && !band(1.5, &pace(Some(1.0), None)));
+        assert!(band_check(&pace(None, None)).is_some() && band_check(&pace(None, Some(0.5))).is_none());
+        assert!(band_check(&LessonTest::Loaded).is_some());   // (t.below and t.above are undefined on any other kind)
+    }
+    /// lesson.ts testFault run under bun
+    static UNKNOWN: &[(&str, &str)] = &[
+        ("", "a test is a record { is: '<kind>', … }"),
+        ("nope", "no test kind 'nope' (in, near, flag, slot, pace, meter, stage, door, target, men, did, downed, body, calm, loaded, reload, launcher, burst, threw, orderTo, stackOn, pairsOn, word, taken, following, mate, pair, cue, view, squad, stacks, watching, all, any)"),
+    ];
+    #[test]
+    fn a_record_no_row_holds_as_the_typescript() {
+        for (is, want) in UNKNOWN { assert_eq!(unknown_fault(is), *want); }
+    }
+    #[test]
+    fn the_skeletons_tables_say_what_the_typescript_says() {
+        // (the lists in lesson.ts testFault's messages, run under bun)
+        assert_eq!(flags().keys().join(", "), "crouch, sprint, wall, peek, lean, nv, light, holstered, gun, ringsOut, shellsOut, auto, setup, setupShut, dragging, dark, chargeSet, chargeClear, wallBlown, holding, picking, coding, menu, ownRing, silent");
+        assert_eq!(hows().join(", "), "takedown, choke, whip, ring, knife");
+        assert_eq!(pair_whats().join(", "), "mark, now, set, go, go:F, go:hands, down");
+        let kinds = [LessonTest::Pace { below: None, above: None }, LessonTest::Loaded, LessonTest::Following, LessonTest::Cue { name: String::new() }, LessonTest::All { of: Vec::new() }];
+        for k in &kinds { assert!(lesson_tests().has(String::from(kind_word(k)))); }
+        assert_eq!(stage_index("infiltrate"), 0);
+        assert_eq!(stage_index("done"), 3);
+        assert_eq!(stage_index("failed"), -1);
     }
     #[test]
     fn inside_is_open_at_its_edges() {

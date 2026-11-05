@@ -1,4 +1,4 @@
-//! src/game/runner.ts lines 1 to 435
+//! src/game/runner.ts lines 1 to 434
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -16,17 +16,9 @@ macro_rules! run {
 
 // ---- the lines
 
-const DONE_SAY: &[&str] = &["no. no, I'm done. I'm done!", "that's it — I'm done! I'm done!", "no more! I'm finished here!"];
-const MATES_SAY: &[&str] = &["don't shoot — it's me! it's me!"];
-const MATES_HE: &[&str] = &["don't shoot, it's me! he's right behind me!", "it's me! hold your fire — he's coming!"];
-const MATES_THEY: &[&str] = &["don't shoot, it's me! they're right behind me!", "it's me! hold your fire — they're coming!"];
-
-/// one kind's pools: say, he, they   (runner.ts LINES)
-fn lines_of(kind: LineKind) -> (&'static [&'static str], Option<&'static [&'static str]>, Option<&'static [&'static str]>) {
-    match kind {
-        LineKind::Done => (DONE_SAY, None, None),
-        LineKind::Mates => (MATES_SAY, Some(MATES_HE), Some(MATES_THEY)),
-    }
+/// one kind's row of the skeleton's table   (runner.ts LINES)
+fn lines_of(kind: LineKind) -> LINESValue {
+    lines().get(String::from(kind.as_str())).unwrap().clone()
 }
 
 /// this file's lines, every kind's or one kind's   (runner.ts runnerLines)
@@ -38,24 +30,23 @@ pub fn runner_lines(kind: Option<crate::runner::LineKind>) -> Vec<String> {
     };
     let mut out = Vec::new();
     for k in kinds {
-        let (say, he, they) = lines_of(*k);
-        for l in say.iter().chain(he.unwrap_or(&[]).iter()).chain(they.unwrap_or(&[]).iter()) {
-            out.push(String::from(*l));
-        }
+        let l = lines_of(*k);
+        out.extend(l.say);
+        out.extend(l.he.unwrap_or_default());
+        out.extend(l.they.unwrap_or_default());
     }
     out
 }
 
 /// one line of a kind from this man, shouted, never on the net   (runner.ts bark)
 pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
-    let (say, he, they) = lines_of(kind);
-    let extra = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &they, &he) } else { he };
-    let mut pool: Vec<&'static str> = Vec::new();
-    pool.extend_from_slice(say);
-    pool.extend_from_slice(extra.unwrap_or(&[]));
+    let l = lines_of(kind);
+    let extra = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &l.they, &l.he) } else { l.he };
+    let mut pool = l.say;
+    pool.extend(extra.unwrap_or_default());
     let n = pool.len() as f64;
     let at = js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize;
-    crate::game::game_say(g, gd, pool[at], Some(false), Some(true), None);
+    crate::game::game_say(g, gd, &pool[at], Some(false), Some(true), None);
 }
 
 /// distance on the floor   (runner.ts flat)
@@ -188,8 +179,10 @@ pub fn lost(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     let c = g.gd[gd].ch;
     let at = v3::copy(g.ch[c].pos);
+    let (rule, now) = (crate::owner::own().runner, g.time);
+    crate::owner::claim_man(g, gd, rule, now, None);
     g.m.runner.state_of.set(gd, Run {
-        phase: RunPhase::Say, t: 0.0, fled: false, from: [from[0], 0.0, from[2]], goal: None, mate: None, told: 0.0, unseen: 0.0, at, stall: 0.0, is_out: false,
+        phase: RunPhase::Say, t: 0.0, from: [from[0], 0.0, from[2]], goal: None, mate: None, told: 0.0, unseen: 0.0, at, stall: 0.0, is_out: false,
         tries: 0.0, plan: 0.0, face: None, bold: false, bare: false, drive: false, drive_t: -1.0, script: crate::game::GuardScript::zeroed(),
     });
     crate::morale::morale_release(g, gd);
@@ -469,7 +462,9 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
         crate::combat::drop_from_hand(g, c, crate::combat::DropFromHandKind::Pistol, dir, [0.0, 0.0, 0.0], Some(false), Some(true), Some(from));
         run!(g, gd).bare = true;
     }
-    run!(g, gd).fled = true;
+    g.gd[gd].fled = true;
+    let (rule, now) = (crate::owner::own().runner, g.time);
+    crate::owner::claim_man(g, gd, rule, now, Some(1.0));
     g.stats.runner.dropped += 1;
     {
         let o = &mut g.gd[gd];
@@ -583,7 +578,7 @@ pub fn tell(g: &mut crate::game::Game, gd: GuardId) {
         if on_post {
             crate::digin::dig_in_order(g, d.unwrap(), from, tell_beat);
         } else {
-            g.gd[o].last_known = Some(v3::copy(from));
+            crate::belief::word(g, o, from);
             g.gd[o].awareness = m::max(g.gd[o].awareness, tell_aware);
         }
         run!(g, gd).told += 1.0;
@@ -595,6 +590,7 @@ pub fn tell(g: &mut crate::game::Game, gd: GuardId) {
 pub fn pose(g: &mut crate::game::Game, gd: GuardId) {
     let pos = g.ch[g.gd[gd].ch].pos;
     let chase = g.tune.guard_chase;
+    let fled = g.gd[gd].fled;
     let r = run!(g, gd);
     let say = r.phase == RunPhase::Say;
     let arrived = r.script.arrived.unwrap_or(false);
@@ -608,7 +604,7 @@ pub fn pose(g: &mut crate::game::Game, gd: GuardId) {
     r.script.stance = Some(if say { crate::character::Stance::LowReady } else { crate::character::Stance::None });
     r.script.crouch = Some(say || (arrived && (r.phase == RunPhase::Low || (r.phase == RunPhase::Out && r.unseen == 0.0))));
     r.script.over = None;
-    if r.fled { r.script.light = Some(false); }
+    if fled { r.script.light = Some(false); }
 }
 
 /// once a frame, after morale.ts's tick: the ripe men are asked for the enemy in their eyes, every man in a run takes a step   (runner.ts runnerTick)
@@ -641,6 +637,8 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     if run!(g, gd).phase == RunPhase::Say {
         if !reacts(g, gd) {
             g.m.runner.state_of.delete(gd);
+            let (rule, now) = (crate::owner::own().runner, g.time);
+            crate::owner::release_man(g, gd, rule, now);
             return;
         }
         let beat = g.k.runner.beat_secs;
@@ -840,26 +838,20 @@ pub fn runner_script(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::ga
     }
 }
 
-/// has a run of this file's got him, from the shout on   (runner.ts runnerOwns)
-pub fn runner_owns(g: &mut crate::game::Game, gd: GuardId) -> bool { g.m.runner.state_of.has(gd) }
-
-/// has the weapon left his hand   (runner.ts runnerFled)
-pub fn runner_fled(g: &mut crate::game::Game, gd: GuardId) -> bool { g.m.runner.state_of.get(gd).map_or(false, |r| r.fled) }
-
 /// and his sidearm with it   (runner.ts runnerBare)
 pub fn runner_bare(g: &mut crate::game::Game, gd: GuardId) -> bool { g.m.runner.state_of.get(gd).map_or(false, |r| r.bare) }
 
 /// counts for nothing, from the drop   (runner.ts runnerNobody)
-pub fn runner_nobody(g: &mut crate::game::Game, gd: GuardId) -> bool { runner_fled(g, gd) }
+pub fn runner_nobody(g: &mut crate::game::Game, gd: GuardId) -> bool { g.gd[gd].fled }
 
 /// speaks for nobody, from the shout   (runner.ts runnerMute)
-pub fn runner_mute(g: &mut crate::game::Game, gd: GuardId) -> bool { runner_owns(g, gd) }
+pub fn runner_mute(g: &mut crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::own().runner; crate::owner::has_him(g, gd, rule) }
 
 /// what the rule has of a man, for the checks   (runner.ts runnerOf)
 pub fn runner_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::runner::RunnerOf> {
     g.m.runner.state_of.get(gd).map(|r| RunnerOf {
         at: r.at, drive: r.drive, t: r.t, from: r.from, phase: r.phase, plan: r.plan, goal: r.goal, face: r.face, tries: r.tries, bare: r.bare, told: r.told,
-        mate: r.mate, drive_t: r.drive_t, stall: r.stall, bold: r.bold, fled: r.fled, unseen: r.unseen, is_out: r.is_out,
+        mate: r.mate, drive_t: r.drive_t, stall: r.stall, bold: r.bold, unseen: r.unseen, is_out: r.is_out,
     })
 }
 

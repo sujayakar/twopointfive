@@ -5,9 +5,6 @@ use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
 
-/// (src/game/weapons.ts:324 bareRow)
-pub fn bare_row(of: &crate::weapons::WeaponDef, over: &crate::weapons::BareRowOver) -> crate::weapons::WeaponDef { todo!() }
-
 /// (src/game/weapons.ts:345 handlingOf)
 pub fn handling_of(def: &crate::weapons::WeaponDef) -> f64 { todo!() }
 
@@ -90,19 +87,19 @@ pub fn firearm_fit(g: &mut crate::game::Game, id: FirearmId) { todo!() }
 pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) { todo!() }
 
 /// (src/game/weapons.ts:511 Pistol.constructor)
-pub fn pistol_new(def: Option<&crate::weapons::WeaponDef>) -> crate::Opaque { todo!() }
+pub fn pistol_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponDef>) -> FirearmId { todo!() }
 
 /// (src/game/weapons.ts:531 Rifle.constructor)
-pub fn rifle_new(def: Option<&crate::weapons::WeaponDef>) -> crate::Opaque { todo!() }
+pub fn rifle_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponDef>) -> FirearmId { todo!() }
 
 /// (src/game/weapons.ts:533 Rifle.attachment)
-pub fn rifle_attachment() -> Option<crate::weapons::RifleAttachment> { todo!() }
+pub fn rifle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!() }
 
 /// (src/game/weapons.ts:535 Rifle.left)
-pub fn rifle_left(a: crate::weapons::RifleAttachment) -> f64 { todo!() }
+pub fn rifle_left(g: &mut crate::game::Game, id: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { todo!() }
 
 /// (src/game/weapons.ts:538 Rifle.cycleAttachment)
-pub fn rifle_cycle_attachment() -> Option<crate::weapons::RifleAttachment> { todo!() }
+pub fn rifle_cycle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!() }
 
 /// (src/game/weapons.ts:544 Ocp.ready)
 pub fn ocp_ready(this: &mut crate::weapons::Ocp) -> bool { todo!() }

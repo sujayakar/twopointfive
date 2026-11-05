@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The team has that man in sight: the fog of war's answer where it runs, the room fight's otherwise.   (autopilot.ts inSight)
 pub fn in_sight(g: &mut crate::game::Game, o: GuardId) -> bool {
@@ -13,8 +13,7 @@ pub fn in_sight(g: &mut crate::game::Game, o: GuardId) -> bool {
 }
 
 /// An enemy the team has in sight in the room beyond that door.   (autopilot.ts contactBehind)
-pub fn contact_behind(g: &mut crate::game::Game, t: crate::autopilot::DoorTarget, far: f64) -> bool {
-    let crate::autopilot::DoorTarget::Door(t) = t else { unreachable!("a DoorTarget is a door") };
+pub fn contact_behind(g: &mut crate::game::Game, t: crate::orders::OrderTargetDoor, far: f64) -> bool {
     let c = g.dr[t.door].frame_centre;
     let mut i = 0;
     while i < g.guards.len() {
@@ -35,27 +34,9 @@ pub fn contact_behind(g: &mut crate::game::Game, t: crate::autopilot::DoorTarget
 }
 
 /// The entries the squad would take on a door it is stacked on, first choice first. AUTOPILOT.plain is settled on: the key never picks a tool.   (autopilot.ts autoEntries)
-pub fn auto_entries(g: &mut crate::game::Game, t: crate::autopilot::DoorTarget, shut: Option<bool>) -> crate::autopilot::AutoEntries {
-    let why = if crate::silent::squad_silent(g) { crate::autopilot::AutoEntriesWhy::Silent } else { crate::autopilot::AutoEntriesWhy::Known };
+pub fn auto_entries(g: &mut crate::game::Game, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries {
+    let why = if crate::silent::squad_silent(g) { crate::autopilot::AutoPickWhy::Silent } else { crate::autopilot::AutoPickWhy::Known };
     crate::autopilot::AutoEntries { ids: vec![String::from("openClear")], why, kept: None }
-}
-
-/// `AutoPick['why']` from the same union as `autoEntries` returns it (the skeleton made it two enums).
-fn pick_why(w: crate::autopilot::AutoEntriesWhy) -> crate::autopilot::AutoPickWhy {
-    use crate::autopilot::AutoEntriesWhy as E;
-    use crate::autopilot::AutoPickWhy as P;
-    match w {
-        E::Set => P::Set,
-        E::Blow => P::Blow,
-        E::Contact => P::Contact,
-        E::Pending => P::Pending,
-        E::Unknown => P::Unknown,
-        E::Shut => P::Shut,
-        E::First => P::First,
-        E::Silent => P::Silent,
-        E::Known => P::Known,
-        E::Word => P::Word,
-    }
 }
 
 /// `S.defs.find(x => x.id === id)`
@@ -83,7 +64,7 @@ pub fn auto_pick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, chec
     let door = td.door;
     let r: Vec<GuardId> = match men {
         Some(m) => m.to_vec(),
-        None => crate::orders::squad_orders_recipients(g, Some(&crate::orders::SquadOrdersRecipientsT::Door(td.clone())), None),
+        None => crate::orders::squad_orders_recipients(g, Some(t), None),
     };
     let Some(w) = crate::doortools::door_tools_waits_on(g, &r, door) else {
         let Some(c) = crate::doortools::door_tools_charge_on(g, door) else { return first(g, t) };
@@ -114,9 +95,10 @@ pub fn auto_pick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, chec
     let a = match w.men.first().copied() { Some(m) => crate::orders::squad_orders_of(g, m), None => None };
     let post = match a { Some(a) => g.tab.orders_assignment[a].post, None => None };
     let side = match post { Some(p) => crate::orders::side_of(g, door, p), None => td.side };
-    let tm = crate::orders::OrderTarget::Door(crate::orders::OrderTargetDoor { at: td.at, door, side });
-    let e = auto_entries(g, crate::autopilot::DoorTarget::Door(crate::autopilot::DoorTargetDoor { at: td.at, door, side }), Some(check));
-    let why = pick_why(e.why);
+    let td_men = crate::orders::OrderTargetDoor { side, ..*td };
+    let tm = crate::orders::OrderTarget::Door(td_men);
+    let e = auto_entries(g, td_men, Some(check));
+    let why = e.why;
     if check {
         for id in &e.ids {
             let Some(d) = def_of(g, id) else { continue };

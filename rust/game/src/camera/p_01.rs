@@ -85,10 +85,10 @@ pub fn follow_camera_frame(g: &mut Game, id: CameraId) {
     frame(&mut g.tab.camera[id])
 }
 fn frame(c: &mut FollowCamera) {
-    match c.kick_drawn.take() {
-        Some(d) => c.prev_view_proj.copy_from_slice(&d),
-        None => c.prev_view_proj = v3::m4::copy(&c.view_proj),
-    }
+    c.prev_view_proj = match c.kick_drawn.take() {
+        Some(d) => d,
+        None => v3::m4::copy(&c.view_proj),
+    };
 }
 
 /// The look-at without the kick or the pose. (camera.ts FollowCamera.focus)
@@ -127,7 +127,7 @@ fn kick_out(c: &mut FollowCamera) {
         None => return,
     };
     c.kick_vp = v3::m4::copy(&c.view_proj);
-    c.kick_drawn = Some(c.kick_vp.to_vec());
+    c.kick_drawn = Some(c.kick_vp);
     c.kick_held = None;
     c.target = t;
     rebuild(c);
@@ -160,7 +160,7 @@ fn draw_out(c: &mut FollowCamera) {
     };
     if c.kick_drawn.is_none() {
         c.draw_vp = v3::m4::copy(&c.view_proj);
-        c.kick_drawn = Some(c.draw_vp.to_vec());
+        c.kick_drawn = Some(c.draw_vp);
     }
     c.draw_held = None;
     c.target = h.target;

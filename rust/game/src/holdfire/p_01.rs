@@ -12,16 +12,6 @@ fn fresh() -> State {
     State { lift_t: f64::NEG_INFINITY, why: None, cast: Vec::new(), by: None, loud_t: f64::NEG_INFINITY }
 }
 
-/// `x.toFixed(0)` for a finite x below 1e21: the nearest integer, a tie going up in size (Rust's `{:.0}` sends a tie to even).
-fn to_fixed_0(x: f64) -> String {
-    if x < 0.0 {
-        return alloc::format!("-{}", to_fixed_0(-x));
-    }
-    let f = m::floor(x);
-    let n = if x - f >= 0.5 { f + 1.0 } else { f };
-    alloc::format!("{}", n as i64)
-}
-
 /// This view's row, made if missing.   (holdfire.ts stateOf)
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::State {
     let key = crate::seats::view_key(g);
@@ -243,9 +233,9 @@ pub fn hold_fire_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId, notic
     true
 }
 
-/// The man the room fight has him on is one this rule will not let him shoot; asked afresh, nothing counted.   (holdfire.ts holdFireOnMan)
-pub fn hold_fire_on_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if crate::silent::silent_man(g, gd) {
+/// The man the room fight has him on is one this rule will not let him shoot; asked afresh, nothing counted.   (holdfire.ts holdFireHoldsTarget)
+pub fn hold_fire_holds_target(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    if crate::silent::under_silence(g, gd) {
         return false;
     }
     let h = match crate::roomfight::room_fight_op_of(g, gd).and_then(|op| g.tab.roomfight_op[op].tgt) {
@@ -291,7 +281,7 @@ pub fn hold_fire_summary(g: &mut crate::game::Game) -> String {
         alloc::format!("found ({})", found)
     } else if lifted {
         let why = match g.m.holdfire.states.get(key) {
-            Some(s) if g.time - s.lift_t < secs => alloc::format!("{}, {} s left", s.why.map_or("null", |w| w.as_str()), to_fixed_0(secs - (g.time - s.lift_t))),
+            Some(s) if g.time - s.lift_t < secs => alloc::format!("{}, {} s left", s.why.map_or("null", |w| w.as_str()), js::to_fixed(secs - (g.time - s.lift_t), 0)),
             _ => String::from("a door order under way"),
         };
         alloc::format!("fight started ({})", why)
@@ -301,17 +291,4 @@ pub fn hold_fire_summary(g: &mut crate::game::Game) -> String {
     let st = &g.stats.holdfire;
     let (shot, order, drill) = (st.lifts[LiftWhy::Shot as usize], st.lifts[LiftWhy::Order as usize], st.lifts[LiftWhy::Drill as usize]);
     alloc::format!("{} · held {} · for glass {} · started by shot {} / order {} / drill {}", head, st.held, st.held_glass, shot, order, drill)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // Each right-hand side is what `x.toFixed(0)` prints under bun.
-    #[test]
-    fn to_fixed_0_as_the_language() {
-        for (x, s) in [(2.5, "3"), (3.5, "4"), (0.49999999999999994, "0"), (44.5, "45"), (45.0, "45"), (0.0, "0"), (-0.0, "0"), (-2.5, "-3"), (-0.4, "-0")] {
-            assert_eq!(to_fixed_0(x), s);
-        }
-    }
 }

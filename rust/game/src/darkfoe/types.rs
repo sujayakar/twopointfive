@@ -55,7 +55,7 @@ impl DarkFoeSpot {
 }
 impl Default for DarkFoeSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkfoe.ts:236 darkFoeOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at src/game/darkfoe.ts:235 darkFoeOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Copy, Debug)]
 pub struct DarkFoeOf {
     pub knows: bool,

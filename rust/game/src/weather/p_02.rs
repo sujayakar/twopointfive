@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The direction a stroke's light travels, for a stroke seen at this bearing and elevation.   (weather.ts dirOf)
 pub fn dir_of(bearing: f64, elev: f64) -> V3 {
@@ -43,11 +43,11 @@ pub fn loud_len(g: &mut crate::game::Game, path_len: f64, ear: V3) -> f64 {
 pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     let l = if g.weather.kind.is_some() { g.weather.flash.as_ref().map(|f| f.light) } else { None };
     let Some(l) = l else { return };
-    let lamp = seam_stroke_lamp(g, l);
-    if !lamp.enabled { return; }
-    let i = (0.2126 * lamp.color[0] + 0.7152 * lamp.color[1] + 0.0722 * lamp.color[2]) * lamp.intensity;
+    let (enabled, color, intensity, dir) = { let r = &g.tab.light[l]; (r.enabled, r.color, r.intensity, r.dir) };
+    if !enabled { return; }
+    let i = (0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2]) * intensity;
     if !(i > 0.002) { return; }
-    let (tx, ty, tz) = (-lamp.dir[0], -lamp.dir[1], -lamp.dir[2]);
+    let (tx, ty, tz) = (-dir[0], -dir[1], -dir[2]);
     let t = if ty > 0.05 { m::min(60.0, m::max(0.0, (crate::scene_world::world().ceiling_y + 6.0 - p[1]) / ty)) } else { 60.0 };
     if t > 0.05 && crate::scene_collision::segment_blocked(g, p, [p[0] + tx * t, p[1] + ty * t, p[2] + tz * t], None, None, None) { return; }
     if tx > 0.0 { acc[0] += i * tx; } else { acc[1] -= i * tx; }
@@ -58,19 +58,6 @@ pub fn stroke_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
 /// Sight through the weather: the fog's transmittance along a to b.   (weather.ts airTrans)
 pub fn air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     weather_air_trans(g, a, b)
-}
-
-/// What `stroke_light` reads of the stroke's lamp (`RtLight`).
-struct StrokeLamp {
-    enabled: bool,
-    color: V3,
-    intensity: f64,
-    dir: V3,
-}
-
-/// `l.enabled`, `l.color`, `l.intensity`, `l.dir` of an `RtLight` (weather.ts:493 to 495)
-fn seam_stroke_lamp(g: &mut Game, l: LightId) -> StrokeLamp {
-    let r = &g.tab.light[l]; StrokeLamp { enabled: r.enabled, color: r.color, intensity: r.intensity, dir: r.dir } // (skeleton 4 has the row)
 }
 
 #[cfg(test)]

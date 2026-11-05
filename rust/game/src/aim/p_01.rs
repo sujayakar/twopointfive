@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Back to nothing; `last_shot` stays, as in the TypeScript. (aim.ts AimState.clear)
 pub fn aim_state_clear(this: &mut crate::aim::AimState) {
@@ -90,7 +90,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     feed_feet(g, &mut a, speed, dt, p.feet_tau, on_cost, None);
     g.gd[gd].aim = a;
     let at_player = matches!(g.gd[gd].foe, Some(crate::game::Foe::Player));
-    let key = if at_player { String::from("sam") } else { format!("u{}", g.ch[pc].id) };
+    let key = if at_player { String::from("sam") } else { alloc::format!("u{}", js::num_str(g.ch[pc].id)) };
     let a = &mut g.gd[gd].aim;
     if a.tgt_key != key {
         if !a.tgt_key.is_empty() {
@@ -294,9 +294,9 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     };
     let lt = if tg.is_none() && lamp_cost(g) { g.aim_target } else { None };
     let key = if let Some(t) = tg {
-        format!("g{}", g.ch[g.gd[t].ch].id)
+        alloc::format!("g{}", js::num_str(g.ch[g.gd[t].ch].id))
     } else if let Some(l) = lt {
-        format!("l{}", g.tab.sim_lightshome_fixture[l].name)
+        alloc::format!("l{}", g.tab.sim_lightshome_fixture[l].name)
     } else {
         String::from("free")
     };
@@ -405,16 +405,6 @@ pub fn reset_aim(g: &mut crate::game::Game) {
     g.k.aim = aim_defaults();
 }
 
-/// `x.toFixed(2)` for the panel's line. (aim.ts aimSummary f2)
-fn f2(x: f64) -> String {
-    format!("{:.2}", x)
-}
-
-/// `x.toFixed(3)` for the panel's line. (aim.ts aimSummary f3)
-fn f3(x: f64) -> String {
-    format!("{:.3}", x)
-}
-
 /// The panel's line: Sam, then every living alert man, or the nearest at rest. (aim.ts aimSummary)
 pub fn aim_summary(g: &mut crate::game::Game) -> String {
     if !g.tune.aim_model {
@@ -423,14 +413,14 @@ pub fn aim_summary(g: &mut crate::game::Game) -> String {
     let r = player_aim(g);
     let key = g.pl[g.player].aim.tgt_key.clone();
     let on = if !key.is_empty() && key != "free" {
-        if key.starts_with('l') { format!(" on lamp {}", &key[1..]) } else { format!(" on #{}", &key[1..]) }
+        if key.starts_with('l') { alloc::format!(" on lamp {}", &key[1..]) } else { alloc::format!(" on #{}", &key[1..]) }
     } else {
         String::new()
     };
     let puppet = if g.puppet.is_some() { " [puppet: dead-on]" } else { "" };
-    let mut parts: Vec<String> = vec![format!(
+    let mut parts: Vec<String> = vec![alloc::format!(
         "you: track {}{} · cone {} (hands {} ×{} + crossing {} + feet {}){}",
-        f2(g.pl[g.player].aim.track), on, f3(r.spread), f3(r.base), f2(r.settle), f3(r.tgt), f3(r.own), puppet
+        js::to_fixed(g.pl[g.player].aim.track, 2), on, js::to_fixed(r.spread, 3), js::to_fixed(r.base, 3), js::to_fixed(r.settle, 2), js::to_fixed(r.tgt, 3), js::to_fixed(r.own, 3), puppet
     )];
     let mut men: Vec<GuardId> = g.guards.iter().copied().filter(|x| g.gd[*x].state == crate::game::GuardState::Alert).collect();
     if men.is_empty() {
@@ -446,26 +436,15 @@ pub fn aim_summary(g: &mut crate::game::Game) -> String {
         let pinned = if x.pinned { " (pinned)" } else { "" };
         let braking = if x.aim.braking { " · BRAKING" } else { "" };
         let last = match &x.aim.last_shot {
-            Some(ls) if now - ls.t < 3.0 => format!(" · last round {} s ago at track {}, {} rad, {} m/s", f2(now - ls.t), f2(ls.track), f3(ls.spread), f2(ls.speed)),
+            Some(ls) if now - ls.t < 3.0 => alloc::format!(" · last round {} s ago at track {}, {} rad, {} m/s", js::to_fixed(now - ls.t, 2), js::to_fixed(ls.track, 2), js::to_fixed(ls.spread, 3), js::to_fixed(ls.speed, 2)),
             _ => String::new(),
         };
-        parts.push(format!(
+        parts.push(alloc::format!(
             "{}{} {} track {}{} · brg {} rad/s · cone {} (hands {} ×{} + crossing {} + feet {}){}{}",
-            x.callsign, acquired, x.state.as_str(), f2(x.aim.track), pinned, f2(x.aim.bearing_rate), f3(t.spread), f3(t.hands), f2(t.settle), f3(t.tgt), f3(t.own), braking, last
+            x.callsign, acquired, x.state.as_str(), js::to_fixed(x.aim.track, 2), pinned, js::to_fixed(x.aim.bearing_rate, 2), js::to_fixed(t.spread, 3), js::to_fixed(t.hands, 3), js::to_fixed(t.settle, 2), js::to_fixed(t.tgt, 3), js::to_fixed(t.own, 3), braking, last
         ));
     }
-    format!("aim ▸ {}", parts.join(" · "))
-}
-
-pub mod aim_hooks {
-    #[allow(unused_imports)]
-    use crate::{ids::*, js::*, Quat, V3};
-    #[allow(unused_imports)]
-    use alloc::{string::String, vec::Vec};
-    /// (src/game/aim.ts:145 AIM_HOOKS.playerExternalK)
-    pub fn player_external_k() -> f64 {
-        todo!("needs: g (its only real value, player.ts:258, reads g.player.braced); player_aim reads that directly, nothing calls this")
-    }
+    alloc::format!("aim ▸ {}", parts.join(" · "))
 }
 
 #[cfg(test)]

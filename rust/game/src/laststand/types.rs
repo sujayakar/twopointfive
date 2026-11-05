@@ -79,7 +79,7 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: Mover, src/game/laststand.ts:137)
+/// (TypeScript: Mover, src/game/laststand.ts:138)
 #[derive(Clone, Copy, Debug)]
 pub struct Mover {
     pub d: RoomfightDefId,
@@ -123,7 +123,7 @@ impl MoverPhase {
     }
 }
 
-/// (TypeScript: Stand, src/game/laststand.ts:138)
+/// (TypeScript: Stand, src/game/laststand.ts:139)
 #[derive(Clone, Debug)]
 pub struct Stand {
     pub room: Option<RoomfightRoomId>,
@@ -164,7 +164,7 @@ impl Stand {
 }
 impl Default for Stand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Check, src/game/laststand.ts:143)
+/// (TypeScript: Check, src/game/laststand.ts:144)
 #[derive(Clone, Debug)]
 pub struct Check {
     pub caller: RoomfightDefId,
@@ -187,7 +187,7 @@ impl Check {
 }
 impl Default for Check { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:143 Check.due, src/game/laststand.ts:143)
+/// (TypeScript: inline at src/game/laststand.ts:144 Check.due, src/game/laststand.ts:144)
 #[derive(Clone, Copy, Debug)]
 pub struct CheckDueItem {
     pub d: RoomfightDefId,
@@ -204,7 +204,7 @@ impl CheckDueItem {
 }
 impl Default for CheckDueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LastStandSaid, src/game/laststand.ts:144)
+/// (TypeScript: LastStandSaid, src/game/laststand.ts:145)
 #[derive(Clone, Debug)]
 pub struct LastStandSaid {
     pub t: f64,
@@ -227,7 +227,7 @@ impl LastStandSaid {
 }
 impl Default for LastStandSaid { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Later, src/game/laststand.ts:153)
+/// (TypeScript: Later, src/game/laststand.ts:154)
 #[derive(Clone, Debug)]
 pub struct Later {
     pub at: f64,
@@ -258,7 +258,7 @@ impl Later {
 }
 impl Default for Later { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/laststand.ts:154)
+/// (TypeScript: State, src/game/laststand.ts:155)
 #[derive(Clone, Debug)]
 pub struct State {
     pub die: crate::math_dice::Die,
@@ -311,7 +311,7 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Spot, src/game/laststand.ts:164)
+/// (TypeScript: Spot, src/game/laststand.ts:165)
 #[derive(Clone, Debug)]
 pub struct Spot {
     pub name: String,
@@ -328,7 +328,7 @@ impl Spot {
 }
 impl Default for Spot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Said, src/game/laststand.ts:167)
+/// (TypeScript: Said, src/game/laststand.ts:168)
 #[derive(Clone, Debug)]
 pub struct Said {
     pub key: String,
@@ -353,7 +353,7 @@ impl Said {
 }
 impl Default for Said { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Hint, src/game/laststand.ts:168)
+/// (TypeScript: Hint, src/game/laststand.ts:169)
 #[derive(Clone, Debug)]
 pub struct Hint {
     pub key: String,
@@ -372,7 +372,7 @@ impl Hint {
 }
 impl Default for Hint { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:158 State.stats, src/game/laststand.ts:145)
+/// (TypeScript: inline at src/game/laststand.ts:159 State.stats, src/game/laststand.ts:146)
 #[derive(Clone, Copy, Debug)]
 pub struct StateStats {
     pub t0: f64,
@@ -431,7 +431,7 @@ impl StateStats {
 }
 impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Plan, src/game/laststand.ts:326)
+/// (TypeScript: Plan, src/game/laststand.ts:328)
 #[derive(Clone, Debug)]
 pub struct Plan {
     pub room: RoomfightRoomId,
@@ -454,7 +454,7 @@ impl Plan {
 }
 impl Default for Plan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:326 Plan.come, src/game/laststand.ts:326)
+/// (TypeScript: inline at src/game/laststand.ts:328 Plan.come, src/game/laststand.ts:328)
 #[derive(Clone, Copy, Debug)]
 pub struct PlanComeItem {
     pub d: RoomfightDefId,
@@ -473,7 +473,7 @@ impl PlanComeItem {
 }
 impl Default for PlanComeItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:107 LINES, src/game/laststand.ts:107)
+/// (TypeScript: inline at src/game/laststand.ts:108 LINES, src/game/laststand.ts:108)
 #[derive(Clone, Debug)]
 pub struct LINESValue {
     pub cls: f64,
@@ -494,7 +494,7 @@ impl LINESValue {
 }
 impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:187 where ->, src/game/laststand.ts:187)
+/// (TypeScript: inline at src/game/laststand.ts:189 where ->, src/game/laststand.ts:189)
 #[derive(Clone, Debug)]
 pub struct Where {
     pub id: Option<String>,
@@ -513,7 +513,7 @@ impl Where {
 }
 impl Default for Where { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:200 spoken ->, src/game/laststand.ts:200)
+/// (TypeScript: inline at src/game/laststand.ts:202 spoken ->, src/game/laststand.ts:202)
 #[derive(Clone, Debug)]
 pub struct Spoken {
     pub id: Option<String>,
@@ -534,7 +534,7 @@ impl Spoken {
 }
 impl Default for Spoken { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:218 net(redo), src/game/laststand.ts:153)
+/// (TypeScript: inline at src/game/laststand.ts:220 net(redo), src/game/laststand.ts:154)
 #[derive(Clone, Debug)]
 pub struct NetRedoRet {
     pub vars: JsMap<String, String>,
@@ -551,7 +551,7 @@ impl NetRedoRet {
 }
 impl Default for NetRedoRet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:226 netAt(f), src/game/laststand.ts:226)
+/// (TypeScript: inline at src/game/laststand.ts:228 netAt(f), src/game/laststand.ts:228)
 #[derive(Clone, Debug)]
 pub struct NetAtFRet {
     pub vars: JsMap<String, String>,
@@ -568,7 +568,7 @@ impl NetAtFRet {
 }
 impl Default for NetAtFRet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:270 teamKnown ->, src/game/laststand.ts:270)
+/// (TypeScript: inline at src/game/laststand.ts:272 teamKnown ->, src/game/laststand.ts:272)
 #[derive(Clone, Debug)]
 pub struct TeamKnown {
     pub pts: Vec<V3>,
@@ -585,7 +585,7 @@ impl TeamKnown {
 }
 impl Default for TeamKnown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:311 standRoom ->, src/game/laststand.ts:311)
+/// (TypeScript: inline at src/game/laststand.ts:313 standRoom ->, src/game/laststand.ts:313)
 #[derive(Clone, Debug)]
 pub struct StandRoom {
     pub room: RoomfightRoomId,
@@ -602,7 +602,7 @@ impl StandRoom {
 }
 impl Default for StandRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:318 homeRoom ->, src/game/laststand.ts:318)
+/// (TypeScript: inline at src/game/laststand.ts:320 homeRoom ->, src/game/laststand.ts:320)
 #[derive(Clone, Debug)]
 pub struct HomeRoom {
     pub room: RoomfightRoomId,
@@ -621,7 +621,7 @@ impl HomeRoom {
 }
 impl Default for HomeRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:613 lastStandReport ->, src/game/laststand.ts:613)
+/// (TypeScript: inline at src/game/laststand.ts:608 lastStandReport ->, src/game/laststand.ts:608)
 #[derive(Clone, Debug)]
 pub struct LastStandReport {
     pub on: String,
@@ -655,7 +655,7 @@ impl Default for LastStandReport { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct LaststandMod {
-    /// (src/game/laststand.ts:169 STATES)
+    /// (src/game/laststand.ts:170 STATES)
     pub states: Option<crate::laststand::State>,
 }
 impl LaststandMod {
@@ -666,14 +666,14 @@ impl LaststandMod {
     }
 }
 
-/// (src/game/laststand.ts:90 LASTSTAND_DEFAULTS: a table nothing writes)
+/// (src/game/laststand.ts:91 LASTSTAND_DEFAULTS: a table nothing writes)
 pub fn laststand_defaults() -> crate::knobs::LaststandK { crate::knobs::page_laststand() }
 
-/// (src/game/laststand.ts:91 LS)
+/// (src/game/laststand.ts:92 LS)
 pub const LS: &str = "twopointsix.laststand";
 
-/// (src/game/laststand.ts:94 KEPT: a table nothing writes)
+/// (src/game/laststand.ts:95 KEPT: a table nothing writes)
 pub fn kept() -> [String; 7] { [String::from("regroup"), String::from("callOut"), String::from("places"), String::from("few"), String::from("every"), String::from("again"), String::from("maxM")] }
 
-/// (src/game/laststand.ts:107 LINES: a table nothing writes)
+/// (src/game/laststand.ts:108 LINES: a table nothing writes)
 pub fn lines() -> JsMap<String, crate::laststand::LINESValue> { { let mut t = JsMap::new(); t.set(String::from("check1"), crate::laststand::LINESValue { cls: 4.0, say: alloc::vec![String::from("radio check — who's still up? sound off!"), String::from("all posts, radio check — who's left? sound off!")], now: None, guide: None }); t.set(String::from("checkN"), crate::laststand::LINESValue { cls: 4.0, say: alloc::vec![String::from("radio check — sound off, who's still up?"), String::from("count off — who's still with us?")], now: None, guide: None }); t.set(String::from("checkStand"), crate::laststand::LINESValue { cls: 4.0, say: alloc::vec![String::from("anyone else out there? we're holed up in {the} — get to us!"), String::from("any post still up — we're in {the}. sound off!")], now: None, guide: None }); t.set(String::from("checkLoneAt"), crate::laststand::LINESValue { cls: 4.0, say: alloc::vec![String::from("anybody? anybody still up? I'm still {at}."), String::from("if anyone's left — I'm still {at}. sound off!")], now: None, guide: None }); t.set(String::from("ansAt"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("still up — {at}."), String::from("here — holding {the}."), String::from("still here — {at}.")], now: None, guide: None }); t.set(String::from("ansFreeAt"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("still up — after them, {at}."), String::from("here — on them, {at}.")], now: None, guide: Some(alloc::vec![String::from("still up — going after them, {at}."), String::from("here — I'm after them, {at}.")]) }); t.set(String::from("fewAt"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("that's only {n} of us — I'm {at}. stay on your doors!"), String::from("{n} of us left — I'm {at}. nobody opens a door!")], now: Some(alloc::vec![String::from("that's only {n} of us — I'm {at}."), String::from("{n} of us left — I'm {at}.")]), guide: None }); t.set(String::from("lastAt"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("nobody's answering — if anyone can hear me, I'm {at}!"), String::from("no answer… it's just me. if anyone's left, I'm {at}!")], now: None, guide: None }); t.set(String::from("movedAt"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("moved — I'm {at} now."), String::from("I've moved — {at} now.")], now: None, guide: None }); t.set(String::from("movedFree"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("I'm out of {the} — going after them."), String::from("left {the} — I'm on them.")], now: None, guide: None }); t.set(String::from("lastGo"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("nobody's answering — if anyone can hear me, I'm going back to {the}!"), String::from("no answer… it's just me. I'll be in {the} if anyone's left!")], now: None, guide: None }); t.set(String::from("order"), crate::laststand::LINESValue { cls: 1.0, say: alloc::vec![String::from("that's {n} of us left — everybody to {the}, we hold it there!"), String::from("only {n} of us — fall back on {the}. we make our stand there!")], now: None, guide: None }); t.set(String::from("orderFrom"), crate::laststand::LINESValue { cls: 1.0, say: alloc::vec![String::from("that's {n} of us left — get together in {the} and hold it. I can't reach you: I'm keeping {at}."), String::from("only {n} of us — make the stand in {the}. no way through for me, I'm staying {at}.")], now: None, guide: None }); t.set(String::from("orderStay"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("that's {n} of us and no way to each other — I'm {at}. block your doors and hold where you are!")], now: None, guide: None }); t.set(String::from("orderShut"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("that's {n} of us left — I'm {at}. stay shut in where you are, nobody opens a door!")], now: None, guide: None }); t.set(String::from("orderOut"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("that's {n} of us and no way to each other — I'm {at}. hold where you are and watch every way in!")], now: None, guide: None }); t.set(String::from("go"), crate::laststand::LINESValue { cls: 1.0, say: alloc::vec![String::from("moving to {the} — don't shoot me coming in!"), String::from("on my way to {the}!")], now: None, guide: None }); t.set(String::from("cant"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("can't get to you — digging in {at}."), String::from("no way through to you. I'll hold {the}.")], now: None, guide: None }); t.set(String::from("in"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("I'm in — {n} of us in {the}."), String::from("made it. {n} of us in {the}.")], now: None, guide: None }); t.set(String::from("short"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("can't make it — holding {at}."), String::from("not getting through. holding {at}.")], now: None, guide: None }); t.set(String::from("set"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("{the} is shut — let them come."), String::from("door's blocked. we're set in {the}.")], now: None, guide: None }); t.set(String::from("setOpen"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("we're set in {the}. they'll have to come through the door."), String::from("in position in {the} — guns on the door.")], now: None, guide: None }); t.set(String::from("setLone"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("I'm shut in {the}. if anyone's left — I'm not coming out."), String::from("door's blocked, {the}. I'm staying put.")], now: None, guide: None }); t.set(String::from("setLoneOpen"), crate::laststand::LINESValue { cls: 3.0, say: alloc::vec![String::from("I'm set in {the}. if anyone's left — I'm not coming out."), String::from("gun's on the door, {the}. I'm staying put.")], now: None, guide: None }); t } }

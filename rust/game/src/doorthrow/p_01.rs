@@ -1,4 +1,4 @@
-//! src/game/doorthrow.ts lines 1 to 113
+//! src/game/doorthrow.ts lines 1 to 114
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -42,10 +42,11 @@ pub fn door_man(g: &mut Game, who: f64) -> f64 {
     let braced_bit = js::to_i32(crate::doors::MAN_BRACED);
     let held_bit = js::to_i32(crate::doors::MAN_HELD);
     let calm_bit = js::to_i32(crate::doors::MAN_CALM);
-    if let Some(pl) = crate::seats::view_of_id(g, who) {
+    if let Some(seat) = crate::seats::view_of_id(g, who) {
         // a player's man: over his own seat's view
-        let folded = crate::seats::with_seat(g, pl, &mut |g: &mut Game| crate::samstun::sam_staggered(g, None));
-        let until = g.pl[pl].stagger_until;
+        let (folded, until) = crate::seats::with_seat(g, seat, &mut |g: &mut Game| {
+            (crate::samstun::sam_staggered(g, None), g.pl[g.player].stagger_until)
+        });
         let braced = if g.puppet.is_some() {
             braced_bit | held_bit
         } else if until >= 0.0 && now < until + again {
@@ -91,10 +92,10 @@ pub fn door_throw_after(g: &mut Game, contacts: &[crate::doors::DoorContact]) {
         if moved {
             g.stats.doorthrow.carried += 1;
         }
-        if let Some(pl) = crate::seats::view_of_id(g, c.who) {
+        if let Some(seat) = crate::seats::view_of_id(g, c.who) {
             if let Some(s) = c.struck {
                 if s.tier != crate::doors::DoorStrikeTier::Open {
-                    crate::seats::with_seat(g, pl, &mut |g: &mut Game| throw_sam(g, s));
+                    crate::seats::with_seat(g, seat, &mut |g: &mut Game| throw_sam(g, s));
                 }
             }
             continue;
@@ -161,12 +162,13 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         g.gd[gd].state = crate::game::GuardState::Suspicious;
         g.gd[gd].react_t = m::max(g.gd[gd].react_t, startle);
         g.gd[gd].search_t = 0.0;
-        g.gd[gd].path = Vec::new();
+        crate::game::guard_set_path(g, gd, Vec::new());
         g.gd[gd].path_goal = None;
+        g.gd[gd].path_goal_orbit = false;
         g.gd[gd].stall_ref = None;
         let weapon = g.gd[gd].weapon;
         g.fa[weapon].burst = None;
-        if !crate::startle::startle_man(g, gd, door, Some(startle), None) {
+        if !crate::startle::give_startle(g, gd, door, Some(startle), None) {
             let ch = g.gd[gd].ch;
             crate::character::anim_flinch(g, ch);
         }
@@ -175,6 +177,7 @@ pub fn startle_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     if g.gd[gd].state == crate::game::GuardState::Suspicious {
         let wary = g.k.doorthrow.wary;
         g.gd[gd].last_known = Some(door);
+        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
         g.gd[gd].awareness = m::max(g.gd[gd].awareness, wary);
     }
 }
@@ -192,7 +195,7 @@ pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     let until = g.time + secs;
     crate::character::anim_hit_from(g, c, Some(away));
     let heard = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
-    seam_audio_play(g, "bodyHit", heard, if hard { 0.8 } else { 0.55 }, if hard { 0.9 } else { 1.05 });
+    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
     g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, until);
     count(g, s);
     if g.gd[gd].civ.is_some() {
@@ -213,8 +216,9 @@ pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
     let weapon = g.gd[gd].weapon;
     g.fa[weapon].burst = None;
-    g.gd[gd].path = Vec::new();
+    crate::game::guard_set_path(g, gd, Vec::new());
     g.gd[gd].path_goal = None;
+    g.gd[gd].path_goal_orbit = false;
     g.gd[gd].stall_ref = None;
     g.gd[gd].speed = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -228,7 +232,7 @@ pub fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
             let aware = g.k.doorthrow.aware;
             g.gd[gd].awareness = m::max(g.gd[gd].awareness, aware);
             if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].last_known.is_none() {
-                g.gd[gd].last_known = Some([at[0], 0.0, at[2]]);
+                crate::belief::word(g, gd, [at[0], 0.0, at[2]]);
             }
         }
     }
@@ -244,14 +248,9 @@ pub fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     }
     crate::samstun::stagger_player(g, secs, [s.dir[0], 0.0, s.dir[1]]);
     let heard = v3::add(g.ch[g.pl[pl].ch].pos, [0.0, 1.1, 0.0]);
-    seam_audio_play(g, "bodyHit", heard, if hard { 0.8 } else { 0.55 }, if hard { 0.9 } else { 1.05 });
+    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
     if s.floor {
         g.pl[pl].crouch = true;
     }
     count(g, s);
-}
-
-/// g.audio.play(name, at, volume, { rate }).
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, volume: f64, rate: f64) {
-    todo!("needs: game_audio_like_play's opts to carry the number `rate` (crate::Opaque holds nothing)")
 }

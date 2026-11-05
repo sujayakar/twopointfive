@@ -54,11 +54,11 @@ pub fn hands_busy(g: &mut crate::game::Game) -> bool {
 pub fn mid(a: V3, b: V3) -> V3 { [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, (a[2] + b[2]) / 2.0] }
 
 /// Floor distance from the player to an END of a body, Infinity when a static stands between. (hands.ts endDist)
-pub fn end_dist(g: &mut crate::game::Game, gd: GuardId, end: crate::hands::EndDistEnd) -> f64 {
+pub fn end_dist(g: &mut crate::game::Game, gd: GuardId, end: crate::hands::HaulEnd) -> f64 {
     let Some(rc) = rag_char(g, gd) else { return m::INF };
     let rag = crate::ragdoll::rag();
     let p = g.ch[g.pl[g.player].ch].pos;
-    let mp = if end == crate::hands::EndDistEnd::Feet {
+    let mp = if end == crate::hands::HaulEnd::Feet {
         let (a, b) = (pt(g, rc, rag.ank_l), pt(g, rc, rag.ank_r));
         mid(a, b)
     } else {
@@ -75,7 +75,7 @@ pub fn body_grip_dist(g: &mut crate::game::Game, gd: GuardId, within: f64) -> f6
     let (a, b) = (pt(g, rc, rag.sho_l), pt(g, rc, rag.sho_r));
     let p = g.ch[g.pl[g.player].ch].pos;
     if v3::dist_xz(mid(a, b), p) >= within { return m::INF; }
-    end_dist(g, gd, crate::hands::EndDistEnd::Head)
+    end_dist(g, gd, crate::hands::HaulEnd::Head)
 }
 
 /// player.ts toggleDrag, the body just taken: which end, which hand has which limb, the move's first beat. (hands.ts haulBegin)
@@ -126,8 +126,8 @@ pub fn drag_haul(g: &mut crate::game::Game, gd: GuardId) -> crate::hands::Haul {
     let c = g.pl[g.player].ch;
     let rc = rag_char(g, gd).unwrap();
     let rag = crate::ragdoll::rag();
-    let dh = end_dist(g, gd, crate::hands::EndDistEnd::Head);
-    let df = end_dist(g, gd, crate::hands::EndDistEnd::Feet);
+    let dh = end_dist(g, gd, crate::hands::HaulEnd::Head);
+    let df = end_dist(g, gd, crate::hands::HaulEnd::Feet);
     let feet = !(dh + g.k.hands.head_bias < df);
     let end = if feet { crate::hands::HaulEnd::Feet } else { crate::hands::HaulEnd::Head };
     let mut i_l = if feet { rag.ank_l } else { rag.sho_l };
@@ -602,12 +602,9 @@ pub fn open_side(g: &mut crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 {
     of_q * m::sign(js::or(leaf_perp(g, d, a1, l), 1.0))
 }
 
-/// Waits on the skeleton: the TypeScript's three answers (a spot, null, undefined) do not fit `Option<V3>`. The body is `clear_spot_3`. (hands.ts clearSpot)
-pub fn clear_spot(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> Option<V3> { todo!("needs: -> Option<Option<V3>> (hands.ts:367; both readers tell undefined from null); body is clear_spot_3") }
-
 /// Where to stand for the leaf to go from a0 to a1 without meeting him: Some(None) = where he is (`null`); Some(Some(spot)) = the nearest standing room the sweep
 /// misses, on his side of the wall; None = there is none within a step (`undefined`). (hands.ts clearSpot)
-fn clear_spot_3(g: &mut Game, d: DoorId, a0: f64, a1: f64) -> Option<Option<V3>> {
+pub fn clear_spot(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> Option<Option<V3>> {
     let p = g.ch[g.pl[g.player].ch].pos;
     let need = body_r(g, d);
     let clear = sweep_dist(g, d, a0, a1, p) >= need;
@@ -708,7 +705,7 @@ pub fn door_move_begin(g: &mut crate::game::Game, d: DoorId) -> bool {
         if m::abs(target) < 0.3 { return false; }
     }
     let angle = door_angle(g, d);
-    if clear_spot_3(g, d, angle, target).is_none() { return false; }
+    if clear_spot(g, d, angle, target).is_none() { return false; }
     // a step in to it as the hand goes out, when the leaf is to be pushed open AWAY from him from further off than a hand reaches and the step is a short one
     let mut goal: Option<V3> = None;
     if open && leaf_perp(g, d, angle, p) * target < 0.0 {
@@ -762,7 +759,7 @@ pub fn door_move_tick(g: &mut crate::game::Game, dt: f64) {
         let hw = crate::character::anim_door_hands(g, c);
         if mv.t < g.k.hands.door_reach || (m::max(hw.l, hw.r) < 0.6 && mv.t < g.k.hands.hand_secs) { return; }
         let angle = door_angle(g, d);
-        let Some(goal) = clear_spot_3(g, d, angle, mv.target) else {
+        let Some(goal) = clear_spot(g, d, angle, mv.target) else {
             // no room after all: as it always was, unless the leaf has meanwhile got where the row wanted it
             g.pl[pl].door_move = None;
             if mv.open == door_is_closed(g, d) {

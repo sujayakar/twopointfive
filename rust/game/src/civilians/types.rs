@@ -7,7 +7,7 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CivBadTarget { Guard(GuardId), Spot(u32) }
 
-/// (TypeScript: CivSnap, src/game/civilians.ts:235)
+/// (TypeScript: CivSnap, src/game/civilians.ts:236)
 #[derive(Clone, Debug)]
 pub struct CivSnap {
     pub time: f64,
@@ -26,7 +26,7 @@ impl CivSnap {
 }
 impl Default for CivSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CivSnapOne, src/game/civilians.ts:219)
+/// (TypeScript: CivSnapOne, src/game/civilians.ts:220)
 #[derive(Clone, Debug)]
 pub struct CivSnapOne {
     pub id: String,
@@ -181,7 +181,7 @@ impl CivSnapOne {
 }
 impl Default for CivSnapOne { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:224 CivSnapOne.talk, src/game/civilians.ts:224)
+/// (TypeScript: inline at src/game/civilians.ts:225 CivSnapOne.talk, src/game/civilians.ts:225)
 #[derive(Clone, Copy, Debug)]
 pub struct CivSnapOneTalk {
     pub stage: f64,
@@ -202,7 +202,7 @@ impl CivSnapOneTalk {
 }
 impl Default for CivSnapOneTalk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:224 CivSnapOne.bubble, src/game/civilians.ts:224)
+/// (TypeScript: inline at src/game/civilians.ts:225 CivSnapOne.bubble, src/game/civilians.ts:225)
 #[derive(Clone, Debug)]
 pub struct CivSnapOneBubble {
     pub text: String,
@@ -223,7 +223,7 @@ impl CivSnapOneBubble {
 }
 impl Default for CivSnapOneBubble { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:225 CivSnapOne.down, src/game/civilians.ts:225)
+/// (TypeScript: inline at src/game/civilians.ts:226 CivSnapOne.down, src/game/civilians.ts:226)
 #[derive(Clone, Debug)]
 pub struct CivSnapOneDown {
     pub kind: crate::game::DownKind,
@@ -246,7 +246,7 @@ impl CivSnapOneDown {
 }
 impl Default for CivSnapOneDown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:225 CivSnapOneDown.rag, src/game/civilians.ts:225)
+/// (TypeScript: inline at src/game/civilians.ts:226 CivSnapOneDown.rag, src/game/civilians.ts:226)
 #[derive(Clone, Debug)]
 pub struct CivSnapOneDownRag {
     pub x: Vec<f64>,
@@ -329,7 +329,7 @@ impl CivCause {
     }
 }
 
-/// (TypeScript: inline at src/game/civilians.ts:228 CivSnapOne.target, src/game/civilians.ts:228)
+/// (TypeScript: inline at src/game/civilians.ts:229 CivSnapOne.target, src/game/civilians.ts:229)
 #[derive(Clone, Debug)]
 pub struct CivSnapOneTarget {
     pub kind: crate::civilians::CivSnapOneTargetKind,
@@ -369,7 +369,7 @@ impl CivSnapOneTargetKind {
     }
 }
 
-/// (TypeScript: inline at src/game/civilians.ts:235 CivSnap.floor, src/game/civilians.ts:235)
+/// (TypeScript: inline at src/game/civilians.ts:236 CivSnap.floor, src/game/civilians.ts:236)
 #[derive(Clone, Debug)]
 pub struct CivSnapFloor {
     pub evac_told: bool,
@@ -388,7 +388,7 @@ impl CivSnapFloor {
 }
 impl Default for CivSnapFloor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CivPendingSnap, src/game/civilians.ts:234)
+/// (TypeScript: CivPendingSnap, src/game/civilians.ts:235)
 #[derive(Clone, Debug)]
 pub struct CivPendingSnap {
     pub at: f64,
@@ -446,7 +446,7 @@ impl PendKind {
     }
 }
 
-/// (TypeScript: CivSpot, src/game/civilians.ts:55)
+/// (TypeScript: CivSpot, src/game/civilians.ts:56)
 #[derive(Clone, Debug)]
 pub struct CivSpot {
     pub name: String,
@@ -465,7 +465,7 @@ impl CivSpot {
 }
 impl Default for CivSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CivTarget, src/game/civilians.ts:135)
+/// (TypeScript: CivTarget, src/game/civilians.ts:136)
 #[derive(Clone, Debug)]
 pub struct CivTarget {
     pub kind: crate::civilians::CivTargetKind,
@@ -507,7 +507,7 @@ impl CivTargetKind {
     }
 }
 
-/// (TypeScript: Civ, src/game/civilians.ts:136)
+/// (TypeScript: Civ, src/game/civilians.ts:137)
 #[derive(Clone, Debug)]
 pub struct Civ {
     pub def: crate::scene_level::CivilianDef,
@@ -628,7 +628,7 @@ impl Civ {
 }
 impl Default for Civ { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pending, src/game/civilians.ts:448)
+/// (TypeScript: Pending, src/game/civilians.ts:449)
 #[derive(Clone, Debug)]
 pub struct Pending {
     pub at: f64,
@@ -659,7 +659,7 @@ impl Pending {
 }
 impl Default for Pending { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:56 CIV_SPOTS, src/game/civilians.ts:56)
+/// (TypeScript: inline at src/game/civilians.ts:57 CIV_SPOTS, src/game/civilians.ts:57)
 #[derive(Clone, Debug)]
 pub struct CIVSPOTS {
     pub phones: Vec<crate::civilians::CivSpot>,
@@ -676,7 +676,7 @@ impl CIVSPOTS {
 }
 impl Default for CIVSPOTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:77 ownSpots, src/game/civilians.ts:77)
+/// (TypeScript: inline at src/game/civilians.ts:78 ownSpots, src/game/civilians.ts:78)
 #[derive(Clone, Debug)]
 pub struct CiviliansModOwnSpotsValue {
     pub phones: Vec<crate::civilians::CivSpot>,
@@ -693,7 +693,7 @@ impl CiviliansModOwnSpotsValue {
 }
 impl Default for CiviliansModOwnSpotsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:180 CIV_LOG, src/game/civilians.ts:180)
+/// (TypeScript: inline at src/game/civilians.ts:181 CIV_LOG, src/game/civilians.ts:181)
 #[derive(Clone, Debug)]
 pub struct CiviliansModCIVLOGItem {
     pub t: f64,
@@ -712,7 +712,7 @@ impl CiviliansModCIVLOGItem {
 }
 impl Default for CiviliansModCIVLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:181 CIV_DEBUG, src/game/civilians.ts:181)
+/// (TypeScript: inline at src/game/civilians.ts:182 CIV_DEBUG, src/game/civilians.ts:182)
 #[derive(Clone, Copy, Debug)]
 pub struct CIVDEBUG {
 }
@@ -725,7 +725,7 @@ impl CIVDEBUG {
 }
 impl Default for CIVDEBUG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:442 floors, src/game/civilians.ts:442)
+/// (TypeScript: inline at src/game/civilians.ts:443 floors, src/game/civilians.ts:443)
 #[derive(Clone, Debug)]
 pub struct CiviliansModFloorsValue {
     pub evac_told: bool,
@@ -744,7 +744,7 @@ impl CiviliansModFloorsValue {
 }
 impl Default for CiviliansModFloorsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:675 TASK_CLIP, src/game/civilians.ts:675)
+/// (TypeScript: inline at src/game/civilians.ts:676 TASK_CLIP, src/game/civilians.ts:676)
 #[derive(Clone, Debug)]
 pub struct TASKCLIPValue {
     pub clip: String,
@@ -769,7 +769,7 @@ impl TASKCLIPValue {
 }
 impl Default for TASKCLIPValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:70 civSpots ->, src/game/civilians.ts:70)
+/// (TypeScript: inline at src/game/civilians.ts:71 civSpots ->, src/game/civilians.ts:71)
 #[derive(Clone, Debug)]
 pub struct CivSpots {
     pub phones: Vec<crate::civilians::CivSpot>,
@@ -786,7 +786,7 @@ impl CivSpots {
 }
 impl Default for CivSpots { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:371 spawnHostage(def), src/game/civilians.ts:371)
+/// (TypeScript: inline at src/game/civilians.ts:372 spawnHostage(def), src/game/civilians.ts:372)
 #[derive(Clone, Debug)]
 pub struct SpawnHostageDef {
     pub name: String,
@@ -826,7 +826,7 @@ impl SpawnHostageDefKind {
     }
 }
 
-/// (TypeScript: inline at src/game/civilians.ts:380 spawnTarget(def), src/game/civilians.ts:380)
+/// (TypeScript: inline at src/game/civilians.ts:381 spawnTarget(def), src/game/civilians.ts:381)
 #[derive(Clone, Debug)]
 pub struct SpawnTargetDef {
     pub name: String,
@@ -853,7 +853,7 @@ impl SpawnTargetDef {
 }
 impl Default for SpawnTargetDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:449 later(P), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
+/// (TypeScript: inline at src/game/civilians.ts:450 later(P), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
 #[derive(Clone, Debug)]
 pub struct LaterP {
     pub dead: Option<bool>,
@@ -889,7 +889,7 @@ pub enum InViewVp {
     Float32Array(Vec<f32>),
 }
 
-/// (TypeScript: inline at src/game/civilians.ts:684 work ->, src/game/civilians.ts:684)
+/// (TypeScript: inline at src/game/civilians.ts:685 work ->, src/game/civilians.ts:685)
 #[derive(Clone, Copy, Debug)]
 pub struct Work {
     pub move_: f64,
@@ -904,7 +904,7 @@ impl Work {
 }
 impl Default for Work { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:795 pathMetres ->, src/game/civilians.ts:795)
+/// (TypeScript: inline at src/game/civilians.ts:796 pathMetres ->, src/game/civilians.ts:796)
 #[derive(Clone, Debug)]
 pub struct PathMetres {
     pub m: f64,
@@ -921,7 +921,7 @@ impl PathMetres {
 }
 impl Default for PathMetres { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:805 pickTarget(opts), src/game/civilians.ts:805)
+/// (TypeScript: inline at src/game/civilians.ts:806 pickTarget(opts), src/game/civilians.ts:806)
 #[derive(Clone, Copy, Debug)]
 pub struct PickTargetOpts {
     pub exits_only: Option<bool>,
@@ -951,7 +951,7 @@ impl DeliverReportHow {
     }
 }
 
-/// (TypeScript: inline at src/game/civilians.ts:1000 follow ->, src/game/civilians.ts:1000)
+/// (TypeScript: inline at src/game/civilians.ts:1001 follow ->, src/game/civilians.ts:1001)
 #[derive(Clone, Copy, Debug)]
 pub struct Follow {
     pub move_: f64,
@@ -968,7 +968,7 @@ impl Follow {
 }
 impl Default for Follow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:1019 cower ->, src/game/civilians.ts:1019)
+/// (TypeScript: inline at src/game/civilians.ts:1020 cower ->, src/game/civilians.ts:1020)
 #[derive(Clone, Copy, Debug)]
 pub struct Cower {
     pub move_: f64,
@@ -985,7 +985,7 @@ impl Cower {
 }
 impl Default for Cower { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/civilians.ts:1074 civilianSamLine ->, src/game/civilians.ts:1074)
+/// (TypeScript: inline at src/game/civilians.ts:1075 civilianSamLine ->, src/game/civilians.ts:1075)
 #[derive(Clone, Debug)]
 pub struct CivilianSamLine {
     pub text: String,
@@ -1020,11 +1020,11 @@ impl CivPanicWhat {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct CiviliansMod {
-    /// (src/game/civilians.ts:77 ownSpots)
+    /// (src/game/civilians.ts:78 ownSpots)
     pub own_spots: Option<crate::civilians::CivSpots>,
-    /// (src/game/civilians.ts:180 CIV_LOG)
+    /// (src/game/civilians.ts:181 CIV_LOG)
     pub civ_log: Vec<crate::civilians::CiviliansModCIVLOGItem>,
-    /// (src/game/civilians.ts:442 floors)
+    /// (src/game/civilians.ts:443 floors)
     pub floors: Option<crate::civilians::CiviliansModFloorsValue>,
 }
 impl CiviliansMod {
@@ -1060,26 +1060,26 @@ pub struct CiviliansStats {
     pub sam_seen: i32,
 }
 
-/// (src/game/civilians.ts:56 CIV_SPOTS: a table nothing writes)
-pub fn civ_spots_table() -> crate::civilians::CIVSPOTS { crate::civilians::CIVSPOTS { phones: alloc::vec![crate::civilians::CivSpot { name: String::from("the reception phone"), pos: [8.9, 0.0, 13.8], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the break-room phone"), pos: [34.6, 0.0, 16.2], face: 1.5707963267948966 }], exits: alloc::vec![crate::civilians::CivSpot { name: String::from("the fire exit"), pos: [38.2, 0.0, 23.2], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the outside door"), pos: [34.0, 0.0, 25.0], face: 1.5707963267948966 }] } }
+/// (src/game/civilians.ts:57 CIV_SPOTS: a table nothing writes)
+pub fn civ_spots_table() -> crate::civilians::CivSpots { crate::civilians::CivSpots { phones: alloc::vec![crate::civilians::CivSpot { name: String::from("the reception phone"), pos: [8.9, 0.0, 13.8], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the break-room phone"), pos: [34.6, 0.0, 16.2], face: 1.5707963267948966 }], exits: alloc::vec![crate::civilians::CivSpot { name: String::from("the fire exit"), pos: [38.2, 0.0, 23.2], face: 0.0 }, crate::civilians::CivSpot { name: String::from("the outside door"), pos: [34.0, 0.0, 25.0], face: 1.5707963267948966 }] } }
 
-/// (src/game/civilians.ts:121 CIV_ID0)
+/// (src/game/civilians.ts:122 CIV_ID0)
 pub const CIV_ID0: f64 = 40.0;
 
-/// (src/game/civilians.ts:181 CIV_DEBUG: a table nothing writes)
+/// (src/game/civilians.ts:182 CIV_DEBUG: a table nothing writes)
 pub fn civ_debug() -> crate::civilians::CIVDEBUG { crate::civilians::CIVDEBUG {  } }
 
-/// (src/game/civilians.ts:434 NONE: a table nothing writes)
+/// (src/game/civilians.ts:435 NONE: a table nothing writes)
 pub fn none() -> Vec<GuardId> { Vec::new() }
 
-/// (src/game/civilians.ts:666 SIT_ADVANCE)
+/// (src/game/civilians.ts:667 SIT_ADVANCE)
 pub const SIT_ADVANCE: f64 = 0.33;
 
-/// (src/game/civilians.ts:675 TASK_CLIP: a table nothing writes)
+/// (src/game/civilians.ts:676 TASK_CLIP: a table nothing writes)
 pub fn task_clip() -> JsMap<String, Option<crate::civilians::TASKCLIPValue>> { { let mut t = JsMap::new(); t.set(String::from("stand"), None); t.set(String::from("wipe"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Interact"), loop_: Some(true), rate: Some(0.85), in_: Some(0.4), out: Some(0.4), rise: None })); t.set(String::from("bin"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Fixing_Kneeling"), loop_: Some(true), rate: Some(0.8), in_: Some(0.6), out: Some(0.7), rise: Some(0.8) })); t.set(String::from("sit"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Sitting_Idle_Loop"), loop_: Some(true), rate: Some(1.0), in_: Some(0.7), out: Some(0.8), rise: Some(1.0) })); t.set(String::from("cooler"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Interact"), loop_: Some(true), rate: Some(0.6), in_: Some(0.4), out: Some(0.4), rise: None })); t.set(String::from("printer"), Some(crate::civilians::TASKCLIPValue { clip: String::from("Interact"), loop_: Some(true), rate: Some(0.7), in_: Some(0.4), out: Some(0.4), rise: None })); t.set(String::from("shelf"), Some(crate::civilians::TASKCLIPValue { clip: String::from("PickUp_Table"), loop_: Some(true), rate: Some(0.7), in_: Some(0.4), out: Some(0.5), rise: None })); t } }
 
-/// (src/game/civilians.ts:1071 DIGIT_WORDS: a table nothing writes)
+/// (src/game/civilians.ts:1072 DIGIT_WORDS: a table nothing writes)
 pub fn digit_words() -> Vec<String> { alloc::vec![String::from("oh"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six"), String::from("seven"), String::from("eight"), String::from("nine")] }
 
-/// (src/game/civilians.ts:1251 LS_KEY)
+/// (src/game/civilians.ts:1252 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.civilians";

@@ -5,12 +5,6 @@ use crate::{ids::*, js::*, Quat, V3};
 #[allow(unused_imports)]
 use alloc::{string::String, vec::Vec};
 
-/// (src/game/shards.ts:132 loadShards)
-pub fn load_shards(g: &mut crate::game::Game, tune: &mut crate::shards::ShardsTune) { todo!() }
-
-/// (src/game/shards.ts:141 saveShards)
-pub fn save_shards(g: &mut crate::game::Game) { todo!() }
-
 /// (src/game/shards.ts:143 shardsLive)
 pub fn shards_live(g: &mut crate::game::Game) -> bool { todo!() }
 

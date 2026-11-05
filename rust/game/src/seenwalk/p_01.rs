@@ -7,24 +7,19 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A number as the stamp's text. Only ever compared, so all it must keep is JavaScript's classes of equal text: -0 reads as 0.
-fn stamp_num(x: f64) -> String {
-    alloc::format!("{}", if x == 0.0 { 0.0 } else { x })
-}
-
 /// The memo's key of a block: two nav cells each way.   (seenwalk.ts seenPrice)
 fn block_of(ix: f64, iz: f64) -> (f64, f64, f64) {
     let (bx, bz) = ((js::to_i32(ix) >> 1) as f64, (js::to_i32(iz) >> 1) as f64);
     (bx, bz, bz * 8192.0 + bx)
 }
 
-/// What the game holds of this tick's floor, thrown away with the clock, a room, the floor, a door or a number changed. A copy: the memo is written through `g.m.seenwalk.shared`.   (seenwalk.ts sharedOf)
-pub fn shared_of(g: &mut crate::game::Game) -> crate::seenwalk::Shared {
+/// What the game holds of this tick's floor, thrown away with the clock, a room, the floor, a door or a number changed. Hands back the row.   (seenwalk.ts sharedOf)
+pub fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     let mut doors = String::new();
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        doors.push_str(&stamp_num(crate::doors::door_angle(g, d)));
+        doors.push_str(&js::num_str(crate::doors::door_angle(g, d)));
         if crate::doors::door_latched(g, d) { doors.push('l'); }
         if crate::doors::door_locked(g, d) { doors.push('k'); }
         if crate::doors::door_off(g, d) { doors.push('o'); }
@@ -34,11 +29,11 @@ pub fn shared_of(g: &mut crate::game::Game) -> crate::seenwalk::Shared {
     let stamp = alloc::format!(
         "{}|{}|{}|{}|{}|{}",
         doors,
-        stamp_num(g.engine.world.geom_serial),
-        stamp_num(g.k.seenwalk.lit_at),
-        stamp_num(g.k.seenwalk.dear),
-        stamp_num(g.k.seenwalk.eye_step),
-        stamp_num(g.k.seenwalk.eye_y),
+        js::num_str(g.engine.world.geom_serial),
+        js::num_str(g.k.seenwalk.lit_at),
+        js::num_str(g.k.seenwalk.dear),
+        js::num_str(g.k.seenwalk.eye_step),
+        js::num_str(g.k.seenwalk.eye_y),
     );
     let stale = match &g.m.seenwalk.shared {
         None => true,
@@ -53,7 +48,7 @@ pub fn shared_of(g: &mut crate::game::Game) -> crate::seenwalk::Shared {
             .collect();
         g.m.seenwalk.shared = Some(Shared { t, known, stamp, eyes, memo: JsMap::new() });
     }
-    g.m.seenwalk.shared.clone().unwrap()
+    g.m.seenwalk.shared.as_mut().unwrap()
 }
 
 /// Nothing kept: a restart, a checkpoint loaded.   (seenwalk.ts seenReset)
@@ -63,9 +58,9 @@ pub fn seen_reset(g: &mut crate::game::Game) {
 
 /// The price of the floor to a walk from `from` by `base`: `dear` on lit floor in view of an uncleared room, 1 elsewhere; None when no uncleared room is within an eye's reach of that walk.   (seenwalk.ts seenPrice)
 pub fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<crate::seenwalk::SeenPrice> {
-    let s = shared_of(g);
+    let all = shared_of(g).eyes.clone();
     g.stats.seenwalk.asks += 1;
-    if s.eyes.is_empty() { return None; }
+    if all.is_empty() { return None; }
     let (mut x0, mut x1, mut z0, mut z1) = (from[0], from[0], from[2], from[2]);
     for b in base {
         x0 = m::min(x0, b[0]);
@@ -79,8 +74,7 @@ pub fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<cr
     z0 -= margin;
     z1 += margin;
     let far = crate::guards::eye_reach(g, 1.0);
-    let eyes: Vec<SharedEyesItem> = s
-        .eyes
+    let eyes: Vec<SharedEyesItem> = all
         .iter()
         .filter(|e| e.x >= x0 - far && e.x <= x1 + far && e.z >= z0 - far && e.z <= z1 + far)
         .copied()
@@ -90,7 +84,7 @@ pub fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<cr
 }
 
 /// What a price `seen_price` handed back asks of a cell.   (seenwalk.ts seenPrice, the returned closure)
-fn seen_price_at(g: &mut Game, price: &SeenPrice, ix: f64, iz: f64) -> f64 {
+pub fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::SeenPrice, ix: f64, iz: f64) -> f64 {
     let SeenPrice::Floor { x0, x1, z0, z1, eyes } = price;
     let cs = g.col.nav.cell;
     let (x, z) = ((ix + 0.5) * cs, (iz + 0.5) * cs);
@@ -141,12 +135,6 @@ fn seen_price_at(g: &mut Game, price: &SeenPrice, ix: f64, iz: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_stamp_reads_minus_zero_as_javascript_does() {
-        assert_eq!(stamp_num(-0.0), stamp_num(0.0));
-        assert_ne!(stamp_num(0.1), stamp_num(0.1 + 1e-16));
-    }
 
     #[test]
     fn a_block_key_shifts_to_the_low_side() {

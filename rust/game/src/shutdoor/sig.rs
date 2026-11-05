@@ -67,3 +67,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) { tod
 
 /// (src/game/shutdoor.ts:214 registerShutDoor)
 pub fn register_shut_door(g: &mut crate::game::Game) { todo!() }
+
+
+/// INVENTED, for OrderIssue::ShutDoor, the `issue` closure of the row registerShutDoor makes (shutdoor.ts:220): sends the man plan picks and sets his job. Some: the refusal. orders' match calls it (orders.ts:877); the closure takes no opts.
+pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> { todo!() }

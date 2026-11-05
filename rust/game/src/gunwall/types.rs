@@ -194,7 +194,7 @@ impl GunwallMod {
 pub struct GunwallStats {
     pub asked: i32,
     pub lowered: i32,
-    pub lowered_s: i32,
+    pub lowered_s: f64,
     pub tucked: i32,
 }
 

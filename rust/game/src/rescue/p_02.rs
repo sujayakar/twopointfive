@@ -1,4 +1,4 @@
-//! src/game/rescue.ts lines 437 to 896
+//! src/game/rescue.ts lines 438 to 899
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -21,6 +21,13 @@ fn in_rect(p: V3, r: Option<crate::scene_scenarios::Rect>) -> bool {
 fn last_log_order(g: &Game) -> Option<u32> { g.orders.log.last().map(|l| l.serial) }
 fn hot(g: &Game) -> bool { g.k.rescue.start == crate::knobs::RescueKStart::Hot }
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+
+/// A line in the scenario's log, cut when it grows long. (rescue.ts Rescue.note)
+pub fn rescue_note(g: &mut crate::game::Game, what: &str) {
+    let t = g.time;
+    g.rescue.log.push(RescueLogItem { t, what: String::from(what) });
+    if g.rescue.log.len() > 600 { g.rescue.log.drain(0..150); }
+}
 
 /// A line said once a staging. (rescue.ts Rescue.once)
 pub fn rescue_once(g: &mut crate::game::Game, key: &str, text: &str) {
@@ -252,11 +259,11 @@ pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
         for &o in &up { if !crate::orders::squad_orders_has(g, o) { idle.push(o); } }
         let target = crate::orders::OrderTarget::None(crate::orders::OrderTargetNone { at: [p[0], 0.0, p[2]], man: None });
         if idle.len() == up.len() {
-            crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::SquadOrdersGiveWho::All), None);
+            crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::All), None);
         } else {
             for &o in &idle {
                 let at = match crate::orders::squad_orders_squad(g).iter().position(|&x| x == o) { Some(i) => i as f64, None => -1.0 };
-                crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::SquadOrdersGiveWho::Num(at)), None);
+                crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::Num(at)), None);
             }
         }
         if !idle.is_empty() { g.rescue.last_order = last_log_order(g); }
@@ -272,6 +279,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Opti
         crate::game::game_restart_encounter(g);
         if !g.rescue.active { return; }
     }
+    crate::rescuecheck::rescue_check_say(g);
     if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
     if crate::input::input_hit(g, input, "KeyF") { rescue_order_door(g); }
@@ -342,7 +350,7 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);
         }
-        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) && !crate::rescuecheck::rescue_check_owns(g, h) {
+        if def_of(g, h).learned.is_nan() && (g.gd[h].state != GuardState::Patrol || g.gd[h].awareness >= 0.3) && !crate::owner::has_him(g, h, crate::owner::own().walk) {
             g.rescue.defs.get_mut(h).unwrap().learned = g.time;
             let line = format!("learned:{}", g.gd[h].callsign);
             rescue_note(g, &line);
@@ -386,12 +394,12 @@ pub fn rescue_defenders(g: &mut crate::game::Game) {
                     fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
                 }
                 if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
-                if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() {
+                if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || (g.k.belief.on && g.time - g.gd[h].last_seen_t > 1.0) {
                     let to = match g.rescue.noise { Some(n) => n, None => rescue_room_point(g, RescueRoomPointWhich::Outside) };
                     g.gd[h].state = GuardState::Alert;
                     g.gd[h].awareness = 1.0;
                     g.gd[h].react_t = 0.0;
-                    g.gd[h].last_known = Some(v3::copy(to));
+                    crate::belief::word(g, h, to);
                     crate::guards::reset_chase(g, h);
                 }
                 let line = format!("released:{}", g.gd[h].callsign);
@@ -586,11 +594,11 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         let fd = &mut g.tab.roomfight_def[f];
         fd.mode = DefMode::Free; fd.free_at = now; fd.rally_at = f64::NAN;
         if g.gd[h].script.is_some() { crate::squad::end_guard_script(g, h, Some(crate::squad::EndGuardScriptState::Alert)); }
-        if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() {
+        if g.gd[h].state != GuardState::Alert || g.gd[h].foe.is_none() || (g.k.belief.on && g.time - g.gd[h].last_seen_t > 1.0) {
             g.gd[h].state = GuardState::Alert;
             g.gd[h].awareness = 1.0;
             g.gd[h].react_t = 0.0;
-            g.gd[h].last_known = Some(v3::copy(pt));
+            crate::belief::word(g, h, pt);
             crate::guards::reset_chase(g, h);
         }
         rescue_note(g, &format!("crew:behind:{}", name));
@@ -1141,6 +1149,14 @@ mod tests {
         g.k.pressure.on = false;
         rescue_crew_look(&mut g, h, &mut pt);
         assert_eq!(pt, [1.0, 2.0, 1.0]);
+    }
+
+    #[test]
+    fn the_log_is_cut_by_150_when_it_passes_600() {
+        let mut g = Game::blank();
+        for i in 0..601 { rescue_note(&mut g, &format!("{}", i)); }
+        assert_eq!(g.rescue.log.len(), 451);
+        assert_eq!(g.rescue.log[0].what, "150");
     }
 
     #[test]

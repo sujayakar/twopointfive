@@ -1,4 +1,4 @@
-//! src/game/laststand.ts lines 408 to 623
+//! src/game/laststand.ts lines 410 to 618
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,11 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
-// ---------------------------------------------------------------- seams: what the skeleton does not give yet
-
-/// `g.audio.play(name, at, vol, { rate })`: opts' values are `crate::Opaque`, a unit, so a rate cannot be said. (laststand.ts:550)
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to carry a rate") }
 
 // ---------------------------------------------------------------- small private helpers
 
@@ -26,26 +21,6 @@ fn vars(pairs: &[(&str, &str)]) -> JsMap<String, String> {
     let mut v = JsMap::new();
     for &(k, x) in pairs { v.set(String::from(k), String::from(x)); }
     v
-}
-
-/// A line with a `then`. `net` takes `then` as a borrowed closure it cannot keep, and the kept row's is a LaterThen: net is asked with none; if it kept the line, the row gets
-/// the enum, and if it said it, the `then` happens now, as net's last line does. (laststand.ts:222)
-fn net_then(g: &mut Game, gd: GuardId, kind: LineKind, line: &JsMap<String, String>, then: LaterThen) {
-    let before = st(g).later.len();
-    net(g, gd, kind, Some(line), None, None);
-    let later = &mut st(g).later;
-    if later.len() > before {
-        later.last_mut().unwrap().then = Some(then);
-        return;
-    }
-    match then {
-        LaterThen::NameAt { d, w } => name_at(g, d, w.as_ref()),
-        LaterThen::NameAtUnlessFree { d, w } => {
-            let w = if mode_of(g, d) == crate::roomfight::DefMode::Free { None } else { Some(&w) };
-            name_at(g, d, w);
-        }
-        LaterThen::MovedFree { .. } | LaterThen::MovedAt { .. } => unreachable!("tickMoved's, made in part 1"),
-    }
 }
 
 /// `decide`'s `send`: he goes from out to a mover, and the net names the stand's room for him
@@ -96,7 +71,7 @@ fn decide_on(g: &mut Game, c: RoomfightDefId, heard: &[RoomfightDefId], stand: &
         if of_it.iter().any(|&d| alive(g, d)) {
             if lone(st(g)) {
                 let line = vars(&[("at", w.at.as_str())]);
-                net_then(g, cgd, LineKind::LastAt, &line, LaterThen::NameAtUnlessFree { d: c, w });
+                net(g, cgd, LineKind::LastAt, Some(&line), Some(&LaterThen::NameAtUnlessFree { d: c, w }), None);
             }
             return;
         }
@@ -130,7 +105,7 @@ fn decide_on(g: &mut Game, c: RoomfightDefId, heard: &[RoomfightDefId], stand: &
                 let what = alloc::format!("the last man: digs in {}", w.at);
                 if first {
                     let line = vars(&[("at", w.at.as_str())]);
-                    net_then(g, cgd, LineKind::LastAt, &line, LaterThen::NameAt { d: c, w: Some(w) });
+                    net(g, cgd, LineKind::LastAt, Some(&line), Some(&LaterThen::NameAt { d: c, w: Some(w) }), None);
                 } else {
                     name_at(g, c, Some(&w));
                 }
@@ -485,7 +460,7 @@ pub fn tick_stand(g: &mut crate::game::Game, s: &mut crate::laststand::Stand) {
                 }
             }
             let (Some(e), Some(who)) = (e, who) else { return };
-            seam_audio_play(g, "propThud", e.at, 0.9, 0.8);
+            crate::audio_iface::game_audio_like_play(g, "propThud", Some(e.at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
             let wg = gd_of(g, who);
             let wc = g.gd[wg].ch;
             let serial = g.serial();
@@ -532,10 +507,36 @@ pub fn dissolve(g: &mut crate::game::Game, s: &crate::laststand::Stand) {
         crate::digin::dig_in_release(g, gd);
     }
     st(g).stand = None;
+    stand_say(g);
+}
+
+/// Who the stand has: in the room, on his way to it, or told to hold where he is.   (laststand.ts ofStand)
+pub fn of_stand(g: &mut crate::game::Game, s: &crate::laststand::Stand, gd: GuardId) -> bool {
+    for d in s.in_.iter() { if g.tab.roomfight_def[d].gd == gd { return true; } }
+    for d in s.out.iter() { if g.tab.roomfight_def[d].gd == gd { return true; } }
+    s.movers.iter().any(|x| g.tab.roomfight_def[x.d].gd == gd)
+}
+
+/// The owner's bit: the stand claims its men and lets go of every other.   (laststand.ts standSay)
+pub fn stand_say(g: &mut crate::game::Game) {
+    let s = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone());
+    let rule = crate::owner::own().stand;
+    let t = g.time;
+    let guards = g.guards.clone();   // (neither call touches the list)
+    for gd in guards {
+        let has = match &s { Some(s) => of_stand(g, s, gd), None => false };
+        if has { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+    }
 }
 
 /// Once a frame from RoomFight.tick, after the defenders', the press's and the buddy call's own ticks.   (laststand.ts lastStandTick)
 pub fn last_stand_tick(g: &mut crate::game::Game) {
+    step_stand(g);
+    if g.k.laststand.regroup { stand_say(g); }
+}
+
+/// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.   (laststand.ts stepStand)
+pub fn step_stand(g: &mut crate::game::Game) {
     if !g.k.laststand.regroup {
         // (the switch flipped mid-stand; callOut is settled on, so the frame goes on)
         if let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.clone()) { dissolve(g, &s); }
@@ -545,7 +546,7 @@ pub fn last_stand_tick(g: &mut crate::game::Game) {
         let all = g.night_breach.hostiles.clone();
         let few = m::min(g.k.laststand.few, m::floor(all.len() as f64 / 3.0));
         let mut up = 0;
-        for &h in &all { if g.gd[h].state != crate::game::GuardState::Dead && !crate::runner::runner_fled(g, h) { up += 1; } }
+        for &h in &all { if g.gd[h].state != crate::game::GuardState::Dead && !g.gd[h].fled { up += 1; } }
         if up as f64 > few || up == 0 { return; }
         let row = fresh(g);
         g.m.laststand.states = Some(row);
@@ -580,6 +581,8 @@ pub fn last_stand_stop(g: &mut crate::game::Game) {
     let Some(st) = g.m.laststand.states.as_mut() else { return };
     st.check = None;
     st.stand = None;
+    stand_say(g);
+    let st = g.m.laststand.states.as_mut().unwrap();
     st.known.clear();
     st.named.clear();
     st.spots.clear();
@@ -587,21 +590,6 @@ pub fn last_stand_stop(g: &mut crate::game::Game) {
     st.later.clear();
     st.hint = None;
     st.stale = true;
-}
-
-/// This man is one of a last stand (in the room, on his way to it, or told to hold where he is). False on its first line with `regroup` off.   (laststand.ts lastStandMan)
-pub fn last_stand_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !g.k.laststand.regroup { return false; }
-    let Some(s) = g.m.laststand.states.as_ref().and_then(|st| st.stand.as_ref()) else { return false };
-    for d in s.in_.iter() { if g.tab.roomfight_def[d].gd == gd { return true; } }
-    for d in s.out.iter() { if g.tab.roomfight_def[d].gd == gd { return true; } }
-    s.movers.iter().any(|x| g.tab.roomfight_def[x.d].gd == gd)
-}
-
-/// roomfight.ts rally() and lost(): he does not walk off to a noise next door, or give his room up through a door.   (laststand.ts lastStandOwns)
-pub fn last_stand_owns(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
-    let gd = gd_of(g, d);
-    last_stand_man(g, gd)
 }
 
 /// roomclear.ts objective(): the rooms their net has named, the named places that are no room of it, and a key that changes when they do.   (laststand.ts lastStandHint)

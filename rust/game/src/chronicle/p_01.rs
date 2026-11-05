@@ -38,7 +38,7 @@ fn data_number(d: &RowData, k: &str) -> f64 {
 fn data_string(d: &RowData, k: &str) -> String {
     match data_get(d, k) {
         Some(ChronEventDataValue::Text(s)) => s.clone(),
-        Some(ChronEventDataValue::Num(x)) => num_str(*x),
+        Some(ChronEventDataValue::Num(x)) => js::num_str(*x),
         Some(ChronEventDataValue::Bool(b)) => String::from(if *b { "true" } else { "false" }),
         None => String::from("undefined"),
     }
@@ -77,17 +77,9 @@ fn data_from_n(d: &JsMap<String, Option<ChronicleNDataValue>>) -> RowData {
     o
 }
 
-/// a number in a template literal: `${n}`; −0 prints 0. (The exponent forms past 1e21 and under 1e-6 are not reached: what is printed here are counts.)
-fn num_str(x: f64) -> String {
-    if x == 0.0 { return String::from("0"); }
-    if x != x { return String::from("NaN"); }
-    if x == f64::INFINITY { return String::from("Infinity"); }
-    if x == f64::NEG_INFINITY { return String::from("-Infinity"); }
-    format!("{}", x)
-}
 /// `String(x).padStart(2, '0')`
 fn pad2(x: f64) -> String {
-    let s = num_str(x);
+    let s = js::num_str(x);
     if s.chars().count() < 2 { format!("0{}", s) } else { s }
 }
 /// `s.replace(/_/g, ' ')`
@@ -598,8 +590,7 @@ pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::Down
             let man = crate::seats::man_here(g);
             match crate::game::player_gun_in_hand(g, man) {
                 Some(gun) => {
-                    let row = g.m.weapons.weapons.get(g.fa[gun].def).unwrap();
-                    crate::gear::plain_short(&crate::gear::PlainShortDef { id: String::from(row.id.as_str()), short: row.short.clone() })
+                    crate::gear::plain_short(g.m.weapons.weapons.get(g.fa[gun].def).unwrap())
                 }
                 None => String::from("a round"),
             }
@@ -702,25 +693,25 @@ fn take(lines: &mut Vec<ScoreLine>, pts: f64, label: String) {
 }
 fn score_of(s: &crate::knobs::ScoreK, c: &RunCounts) -> StealthScore {
     let mut lines: Vec<ScoreLine> = Vec::new();
-    let up = if js::truthy(c.seen_up) { format!(" ({} with the floor already up)", num_str(c.seen_up)) } else { String::new() };
+    let up = if js::truthy(c.seen_up) { format!(" ({} with the floor already up)", js::num_str(c.seen_up)) } else { String::new() };
     take(&mut lines, c.seen * s.seen + c.seen_up * s.seen_up, format!("seen {}{}", times(c.seen), up));
-    take(&mut lines, c.alarms * s.alarm, format!("{} alarm{} raised", num_str(c.alarms), plural(c.alarms, "", "s")));
-    let locked = if js::truthy(c.esc2) { format!(" ({} to lockdown)", num_str(c.esc2)) } else { String::new() };
+    take(&mut lines, c.alarms * s.alarm, format!("{} alarm{} raised", js::num_str(c.alarms), plural(c.alarms, "", "s")));
+    let locked = if js::truthy(c.esc2) { format!(" ({} to lockdown)", js::num_str(c.esc2)) } else { String::new() };
     take(&mut lines, c.esc1 * s.heightened + c.esc2 * s.lockdown, format!("the floor went up {}{}", times(c.esc1 + c.esc2), locked));
-    take(&mut lines, c.bodies * s.body, format!("{} bod{} found", num_str(c.bodies), plural(c.bodies, "y", "ies")));
-    take(&mut lines, c.kills * s.kill, format!("{} killed", num_str(c.kills)));
-    take(&mut lines, c.kos * s.ko, format!("{} knocked out", num_str(c.kos)));
-    take(&mut lines, m::min(s.shot_near_cap, c.shots_near_men * s.shot_near), format!("{} round{} at or near men", num_str(c.shots_near_men), plural(c.shots_near_men, "", "s")));
-    take(&mut lines, m::min(s.light_cap, c.lights_shot * s.light), format!("{} light{} shot out", num_str(c.lights_shot), plural(c.lights_shot, "", "s")));
+    take(&mut lines, c.bodies * s.body, format!("{} bod{} found", js::num_str(c.bodies), plural(c.bodies, "y", "ies")));
+    take(&mut lines, c.kills * s.kill, format!("{} killed", js::num_str(c.kills)));
+    take(&mut lines, c.kos * s.ko, format!("{} knocked out", js::num_str(c.kos)));
+    take(&mut lines, m::min(s.shot_near_cap, c.shots_near_men * s.shot_near), format!("{} round{} at or near men", js::num_str(c.shots_near_men), plural(c.shots_near_men, "", "s")));
+    take(&mut lines, m::min(s.light_cap, c.lights_shot * s.light), format!("{} light{} shot out", js::num_str(c.lights_shot), plural(c.lights_shot, "", "s")));
     take(&mut lines, m::min(s.device_cap, c.devices * s.device), format!("called in by security {}", times(c.devices)));
     take(&mut lines, c.civ_reported * s.civ_reported, format!("a civilian told them {}", times(c.civ_reported)));
-    take(&mut lines, c.civ_ko * s.civ_ko, format!("{} civilian{} knocked out", num_str(c.civ_ko), plural(c.civ_ko, "", "s")));
-    take(&mut lines, c.civ_killed * s.civ_killed, format!("{} CIVILIAN{} KILLED", num_str(c.civ_killed), plural(c.civ_killed, "", "S")));
+    take(&mut lines, c.civ_ko * s.civ_ko, format!("{} civilian{} knocked out", js::num_str(c.civ_ko), plural(c.civ_ko, "", "s")));
+    take(&mut lines, c.civ_killed * s.civ_killed, format!("{} CIVILIAN{} KILLED", js::num_str(c.civ_killed), plural(c.civ_killed, "", "S")));
     take(&mut lines, c.hits * s.hit, format!("hit {}", times(c.hits)));
     take(&mut lines, if c.down { s.down } else { 0.0 }, String::from("went down"));
-    take(&mut lines, c.loads * s.load, format!("{} checkpoint load{}", num_str(c.loads), plural(c.loads, "", "s")));
+    take(&mut lines, c.loads * s.load, format!("{} checkpoint load{}", js::num_str(c.loads), plural(c.loads, "", "s")));
     let over = m::floor(m::max(0.0, c.elapsed - s.par_secs) / 60.0);
-    take(&mut lines, m::min(s.time_cap, over * s.per_min), format!("{} min over par", num_str(over)));
+    take(&mut lines, m::min(s.time_cap, over * s.per_min), format!("{} min over par", js::num_str(over)));
     let mut off = 0.0;
     for l in lines.iter() { off = off + l.pts; }
     js::sort_by(&mut lines, |a, b| b.pts - a.pts);
@@ -733,7 +724,7 @@ pub fn stealth_score(g: &mut crate::game::Game, c_2: &crate::chronicle::RunCount
 
 /// (chronicle.ts times)
 pub fn times(n: f64) -> String {
-    if n == 1.0 { String::from("once") } else if n == 2.0 { String::from("twice") } else { format!("{} times", num_str(n)) }
+    if n == 1.0 { String::from("once") } else if n == 2.0 { String::from("twice") } else { format!("{} times", js::num_str(n)) }
 }
 
 /// The rating word for a score.   (chronicle.ts ratingOf)
@@ -754,8 +745,8 @@ fn badges_for(b: &crate::knobs::BadgeK, c: &RunCounts) -> Vec<Badge> {
         badge("unseen", "never seen", c.seen == 0.0, String::from("no alert man ever had eyes on you")),
         badge("quiet", "no alarms", c.alarms == 0.0 && c.esc1 + c.esc2 == 0.0, String::from("nobody went to alert, the floor never went up")),
         badge("nokills", "no kills", c.kills == 0.0, String::from("nobody shot dead (a man out cold is not a kill)")),
-        badge("pacifist", "pacifist", c.shots_near_men == 0.0 && c.kills == 0.0, format!("not one round into or within {} m of a man", num_str(SHOT_NEAR_M))),
-        badge("lightsout", "lights out", c.lights_shot >= b.lights_out_n, format!("{}+ fixtures shot out", num_str(b.lights_out_n))),
+        badge("pacifist", "pacifist", c.shots_near_men == 0.0 && c.kills == 0.0, format!("not one round into or within {} m of a man", js::num_str(SHOT_NEAR_M))),
+        badge("lightsout", "lights out", c.lights_shot >= b.lights_out_n, format!("{}+ fixtures shot out", js::num_str(b.lights_out_n))),
         badge("talkative", "talkative", c.roster > 0.0 && c.questioned >= c.roster, String::from("every man on the floor questioned")),
         badge("unseenStaff", "unseen by civilians", c.civ_seen == 0.0 && c.civ_ko == 0.0 && c.civ_killed == 0.0, String::from("no cleaner or late worker ever laid eyes on you (or a hand of yours on them)")),
         badge("locksmith", "locksmith", c.picked >= 1.0 && c.kicked == 0.0, String::from("a lock picked and none kicked in")),
@@ -788,7 +779,7 @@ pub fn debrief_of(g: &mut crate::game::Game) -> crate::chronicle::Debrief {
     };
     let scored = !crate::verdict::loud_row(g);
     let summary = summary_line(&counts, score, &r.word, &badges, line_state, Some(scored));
-    let grade = if scored { format!("{} {}", r.word, num_str(score)) } else { String::new() };
+    let grade = if scored { format!("{} {}", r.word, js::num_str(score)) } else { String::new() };
     Debrief { counts, score, lines, rating: r.word, blurb: r.blurb, badges, summary, state, scored, grade }
 }
 
@@ -797,24 +788,24 @@ pub fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, b
     let c = c_2;
     let scored = scored.unwrap_or(true);
     let mut parts: Vec<String> = Vec::new();
-    if scored { parts.push(format!("{} {}", word, num_str(score))); }
+    if scored { parts.push(format!("{} {}", word, js::num_str(score))); }
     parts.push(fmt_mmss(c.elapsed));
-    parts.push(format!("seen {}", num_str(c.seen)));
-    parts.push(format!("alarms {}", num_str(c.alarms)));
-    parts.push(format!("bodies found {}", num_str(c.bodies)));
-    parts.push(format!("KOs {}", num_str(c.kos)));
-    parts.push(format!("kills {}", num_str(c.kills)));
-    parts.push(format!("shots {}", num_str(c.shots)));
+    parts.push(format!("seen {}", js::num_str(c.seen)));
+    parts.push(format!("alarms {}", js::num_str(c.alarms)));
+    parts.push(format!("bodies found {}", js::num_str(c.bodies)));
+    parts.push(format!("KOs {}", js::num_str(c.kos)));
+    parts.push(format!("kills {}", js::num_str(c.kills)));
+    parts.push(format!("shots {}", js::num_str(c.shots)));
     if js::truthy(c.civ_seen) || js::truthy(c.civ_reported) || js::truthy(c.civ_ko) || js::truthy(c.civ_killed) {
-        let ko = if js::truthy(c.civ_ko) { format!(" · KO {}", num_str(c.civ_ko)) } else { String::new() };
-        let killed = if js::truthy(c.civ_killed) { format!(" · KILLED {}", num_str(c.civ_killed)) } else { String::new() };
-        parts.push(format!("civilians: saw you {} · told them {}{}{}", num_str(c.civ_seen), num_str(c.civ_reported), ko, killed));
+        let ko = if js::truthy(c.civ_ko) { format!(" · KO {}", js::num_str(c.civ_ko)) } else { String::new() };
+        let killed = if js::truthy(c.civ_killed) { format!(" · KILLED {}", js::num_str(c.civ_killed)) } else { String::new() };
+        parts.push(format!("civilians: saw you {} · told them {}{}{}", js::num_str(c.civ_seen), js::num_str(c.civ_reported), ko, killed));
     }
-    if js::truthy(c.ocps) { parts.push(format!("OCP {}", num_str(c.ocps))); }
-    if js::truthy(c.kicked) || js::truthy(c.picked) { parts.push(format!("doors kicked {} / picked {}", num_str(c.kicked), num_str(c.picked))); }
-    if js::truthy(c.keys) { parts.push(format!("keys {}", num_str(c.keys))); }
-    if js::truthy(c.intel) { parts.push(format!("intel {}", num_str(c.intel))); }
-    if js::truthy(c.loads) { parts.push(format!("loads {}", num_str(c.loads))); }
+    if js::truthy(c.ocps) { parts.push(format!("OCP {}", js::num_str(c.ocps))); }
+    if js::truthy(c.kicked) || js::truthy(c.picked) { parts.push(format!("doors kicked {} / picked {}", js::num_str(c.kicked), js::num_str(c.picked))); }
+    if js::truthy(c.keys) { parts.push(format!("keys {}", js::num_str(c.keys))); }
+    if js::truthy(c.intel) { parts.push(format!("intel {}", js::num_str(c.intel))); }
+    if js::truthy(c.loads) { parts.push(format!("loads {}", js::num_str(c.loads))); }
     if scored {
         let on: Vec<&str> = badges.iter().filter(|b| b.on).map(|b| b.name.as_str()).collect();
         if !on.is_empty() { parts.push(on.join(", ")); }
@@ -847,8 +838,8 @@ mod tests {
 
     fn line(c: &RunCounts, s: &crate::knobs::ScoreK) -> String {
         let r = score_of(s, c);
-        let mut out = format!("{}", num_str(r.score));
-        for l in r.lines.iter() { out = format!("{}|{}={}", out, l.label, num_str(l.pts)); }
+        let mut out = format!("{}", js::num_str(r.score));
+        for l in r.lines.iter() { out = format!("{}|{}={}", out, l.label, js::num_str(l.pts)); }
         out
     }
 

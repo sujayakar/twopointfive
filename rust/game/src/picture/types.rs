@@ -367,6 +367,19 @@ impl SafestSetsSetsItemItem {
 }
 impl Default for SafestSetsSetsItemItem { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: inline at src/game/picture.ts:373 pictureStep(key), src/game/picture.ts:373 pictureStep(key))
+#[derive(Clone, Copy, Debug)]
+pub struct PictureStepKey {
+}
+impl PictureStepKey {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        PictureStepKey {
+        }
+    }
+}
+impl Default for PictureStepKey { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: inline at src/game/picture.ts:373 pictureStep ->, src/game/picture.ts:373)
 #[derive(Clone, Copy, Debug)]
 pub struct PictureStep {

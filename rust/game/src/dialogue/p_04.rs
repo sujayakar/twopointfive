@@ -22,9 +22,9 @@ pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&s
     g.m.dialogue.forced_by_talk.set(talk, id_2.map(String::from));
 }
 
-/// The deal forced on this man and not yet made.   (dialogue.ts forcedScriptOf)
-pub fn forced_script_of(g: &mut crate::game::Game, talk: GameTalkId) -> Option<String> {
-    g.m.dialogue.forced_by_talk.get(talk).cloned().flatten()
+/// The deal forced on this man and not yet made: `None` = none pending, `Some(None)` = forced to the pools.   (dialogue.ts forcedScriptOf)
+pub fn forced_script_of(g: &mut crate::game::Game, talk: GameTalkId) -> Option<Option<String>> {
+    g.m.dialogue.forced_by_talk.get(talk).cloned()
 }
 
 /// The script this man's hold plays, if one has been dealt; never deals.   (dialogue.ts peekScript)
@@ -91,7 +91,7 @@ pub fn script_fits(g: &mut crate::game::Game, sc: &crate::dialogue::Script, ctx:
     if let Some(pin) = sc.pin {
         if crate::dialogue::pending_intel(g, ctx, talk, None).first().map(|x| x.kind) != Some(pin) { return false; }
     }
-    let tokens = tokens_of(ctx);
+    let tokens = ctx_tokens_map(&ctx.tokens);
     for s in stages() {
         let b = beat_for(sc, s, ctx);
         for text in [Some(b.sam.as_str()), b.ask.as_deref(), b.after.as_deref(), b.take.as_deref(), b.mild.as_deref()] {
@@ -124,7 +124,7 @@ pub fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx:
 /// The man's line off a beat for this man; `None` if it does not resolve.   (dialogue.ts himOf)
 pub fn him_of(b: &crate::dialogue::Beat, ctx: &crate::dialogue::DialogueCtx) -> Option<crate::dialogue::HimOf> {
     let (raw, k) = him_raw(b, ctx)?;
-    let text = expand(&raw, &tokens_of(ctx))?;
+    let text = expand(&raw, &ctx_tokens_map(&ctx.tokens))?;
     if text.is_empty() { None } else { Some(HimOf { text, k }) }
 }
 
@@ -180,22 +180,6 @@ fn fact(ctx: &DialogueCtx, n: Need) -> bool {
         Need::Office => f.office,
     };
     row == Some(true)
-}
-
-/// `ctx.tokens` as `expand` takes it: keyed by the TypeScript's own words (`sawWhere`), which is what `expand` looks up.   (dialogue.ts:1311, 1331)
-fn tokens_of(ctx: &DialogueCtx) -> JsMap<String, Option<String>> {
-    let t = &ctx.tokens;
-    let mut out = JsMap::new();
-    for (key, value) in [
-        ("door", &t.door), ("code", &t.code), ("missing", &t.missing), ("body", &t.body), ("n", &t.n), ("up", &t.up), ("post", &t.post),
-        ("room", &t.room), ("route", &t.route), ("partner", &t.partner), ("victim", &t.victim), ("sawWhere", &t.saw_where),
-        ("heardWhere", &t.heard_where), ("partnerRoute", &t.partner_route), ("caller", &t.caller), ("checker", &t.checker),
-        ("checked", &t.checked), ("clearRoom", &t.clear_room), ("breakerRoom", &t.breaker_room), ("checkEta", &t.check_eta),
-        ("minutes", &t.minutes), ("badge", &t.badge), ("padDoor", &t.pad_door),
-    ] {
-        out.set(String::from(key), value.clone());
-    }
-    out
 }
 
 /// `sc.beats[s]`. A stage past the table throws in the TypeScript (`b.room` of undefined), and panics here.   (dialogue.ts:1318)
@@ -254,13 +238,14 @@ mod tests {
     }
 
     #[test]
-    fn the_tokens_map_has_the_tables_words() {
-        let mut c = ctx(Knowledge::None, crate::game::Temperament::Steady);
-        c.tokens.saw_where = Some(String::from("the lobby"));
-        let map = tokens_of(&c);
-        assert_eq!(map.len(), tokens().len());
-        for word in tokens() { assert!(map.has(word)); }
-        assert_eq!(map.get(String::from("sawWhere")).cloned().flatten().as_deref(), Some("the lobby"));
+    fn a_forced_deal_tells_the_pools_from_none_pending() {
+        let mut g = Game::blank();
+        let t = GameTalkId(0);
+        assert_eq!(forced_script_of(&mut g, t), None);
+        force_script(&mut g, t, None);
+        assert_eq!(forced_script_of(&mut g, t), Some(None));
+        force_script(&mut g, t, Some("pedant-s1"));
+        assert_eq!(forced_script_of(&mut g, t), Some(Some(String::from("pedant-s1"))));
     }
 
     #[test]

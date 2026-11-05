@@ -27,12 +27,11 @@ impl FloorMat {
 }
 
 /// (TypeScript: inline at src/game/floor.ts:22 FLOOR, src/game/floor.ts:22)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FLOORValue {
     pub loud: f64,
     pub hard: bool,
     pub rate: f64,
-    pub label: String,
 }
 impl FLOORValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -41,7 +40,6 @@ impl FLOORValue {
             loud: 0.0,
             hard: false,
             rate: 0.0,
-            label: String::new(),
         }
     }
 }
@@ -69,32 +67,30 @@ impl BUILDING {
 impl Default for BUILDING { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/floor.ts:38 FINISHES, src/game/floor.ts:38)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FINISHESItem {
-    pub mat: String,
+    pub mat: crate::floor::FloorMat,
     pub x0: f64,
     pub z0: f64,
     pub x1: f64,
     pub z1: f64,
-    pub room: String,
 }
 impl FINISHESItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         FINISHESItem {
-            mat: String::new(),
+            mat: crate::floor::FloorMat::Carpet,
             x0: 0.0,
             z0: 0.0,
             x1: 0.0,
             z1: 0.0,
-            room: String::new(),
         }
     }
 }
 impl Default for FINISHESItem { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/floor.ts:22 FLOOR: a table nothing writes)
-pub fn floor() -> JsMap<String, crate::floor::FLOORValue> { { let mut t = JsMap::new(); t.set(String::from("carpet"), crate::floor::FLOORValue { loud: 0.6, hard: false, rate: 0.94, label: String::from("carpet") }); t.set(String::from("lino"), crate::floor::FLOORValue { loud: 1.0, hard: true, rate: 1.0, label: String::from("lino") }); t.set(String::from("stone"), crate::floor::FLOORValue { loud: 1.1, hard: true, rate: 1.08, label: String::from("stone") }); t.set(String::from("tile"), crate::floor::FLOORValue { loud: 1.05, hard: true, rate: 1.04, label: String::from("raised floor") }); t.set(String::from("asphalt"), crate::floor::FLOORValue { loud: 0.9, hard: true, rate: 0.97, label: String::from("asphalt") }); t.set(String::from("grass"), crate::floor::FLOORValue { loud: 0.45, hard: false, rate: 0.88, label: String::from("grass") }); t } }
+pub fn floor() -> &'static [(crate::floor::FloorMat, crate::floor::FLOORValue)] { &[(crate::floor::FloorMat::Carpet, crate::floor::FLOORValue { loud: 0.6, hard: false, rate: 0.94 }), (crate::floor::FloorMat::Lino, crate::floor::FLOORValue { loud: 1.0, hard: true, rate: 1.0 }), (crate::floor::FloorMat::Stone, crate::floor::FLOORValue { loud: 1.1, hard: true, rate: 1.08 }), (crate::floor::FloorMat::Tile, crate::floor::FLOORValue { loud: 1.05, hard: true, rate: 1.04 }), (crate::floor::FloorMat::Asphalt, crate::floor::FLOORValue { loud: 0.9, hard: true, rate: 0.97 }), (crate::floor::FloorMat::Grass, crate::floor::FLOORValue { loud: 0.45, hard: false, rate: 0.88 })] }
 
 /// (src/game/floor.ts:32 BUILDING: a table nothing writes)
 pub fn building() -> crate::floor::BUILDING { crate::floor::BUILDING { x0: 4.0, x1: 36.0, z0: 4.0, z1: 24.0 } }
@@ -103,4 +99,4 @@ pub fn building() -> crate::floor::BUILDING { crate::floor::BUILDING { x0: 4.0, 
 pub const GRASS_EDGE: f64 = 3.2;
 
 /// (src/game/floor.ts:38 FINISHES: a table nothing writes)
-pub fn finishes() -> Vec<crate::floor::FINISHESItem> { alloc::vec![crate::floor::FINISHESItem { mat: String::from("lino"), x0: 4.0, z0: 10.0, x1: 36.0, z1: 12.2, room: String::from("corridor, wall to wall (level.ts floor(4, 10, 36, 12.2, lino); the runner down its middle is a decal)") }, crate::floor::FINISHESItem { mat: String::from("stone"), x0: 4.0, z0: 16.0, x1: 12.0, z1: 24.0, room: String::from("lobby south of the reception counter (floor(4, 16, 12, 24, stone))") }, crate::floor::FINISHESItem { mat: String::from("tile"), x0: 14.0, z0: 4.0, x1: 22.0, z1: 10.0, room: String::from("server room raised floor (floor(14, 4, 22, 10))") }, crate::floor::FINISHESItem { mat: String::from("lino"), x0: 28.0, z0: 12.2, x1: 36.0, z1: 24.0, room: String::from("break room (floor(28, 12.2, 36, 24, lino))") }] }
+pub fn finishes() -> &'static [crate::floor::FINISHESItem] { &[crate::floor::FINISHESItem { mat: crate::floor::FloorMat::Lino, x0: 4.0, z0: 10.0, x1: 36.0, z1: 12.2 }, crate::floor::FINISHESItem { mat: crate::floor::FloorMat::Stone, x0: 4.0, z0: 16.0, x1: 12.0, z1: 24.0 }, crate::floor::FINISHESItem { mat: crate::floor::FloorMat::Tile, x0: 14.0, z0: 4.0, x1: 22.0, z1: 10.0 }, crate::floor::FINISHESItem { mat: crate::floor::FloorMat::Lino, x0: 28.0, z0: 12.2, x1: 36.0, z1: 24.0 }] }

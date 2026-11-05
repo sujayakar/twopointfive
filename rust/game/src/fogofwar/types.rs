@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: FogEye, src/game/fogofwar.ts:393)
+/// (TypeScript: FogEye, src/game/fogofwar.ts:392)
 #[derive(Clone, Copy, Debug)]
 pub struct FogEye {
     pub id: f64,
@@ -30,7 +30,7 @@ impl FogEye {
 }
 impl Default for FogEye { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FogSnap, src/game/fogofwar.ts:378)
+/// (TypeScript: FogSnap, src/game/fogofwar.ts:377)
 #[derive(Clone, Debug)]
 pub struct FogSnap {
     pub doors: Option<Vec<(String, f64)>>,
@@ -53,11 +53,10 @@ impl FogSnap {
 }
 impl Default for FogSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FogOfWar, src/game/fogofwar.ts:425)
+/// (TypeScript: FogOfWar, src/game/fogofwar.ts:424)
 #[derive(Clone, Debug)]
 pub struct FogOfWar {
     pub on: bool,
-    pub knobs: crate::knobs::FogK,
     pub frame: crate::render_fogofwar::FogFrame,
     pub eyes: Vec<crate::fogofwar::FogEye>,
     pub mates: Vec<CharId>,
@@ -115,7 +114,6 @@ impl FogOfWar {
     pub fn blank() -> Self {
         FogOfWar {
             on: false,
-            knobs: crate::knobs::FogK { dim: 0.4, desat: 0.0, fov_deg: 360.0, near_m: 2.0, cone: false, cone_deg: 120.0, cone_near_m: 1.5, cone_soft_deg: 12.0, cone_near_soft_m: 0.6, own: false, calls: true, call_secs: 10.0, call_gap: 3.0, call_known: 3.0, smoke: 0.3, linger: 0.25, top_pad: 0.3, doors: true, squad_doors: true, squad_doors_m: 2.0, squad_fire: true, squad_fire_secs: 1.0, lasers: true, things: true, flat: 0.12, lit: 1.0, full: true, air: true, thin: true, eyes: 7.0, kept: true, filed: true, tracks: true, mates: true, ours: true, full_fill: 0.0, edge: 0.5, lit_fill: 0.5, lit_ao: 0.75, lit_ao_m: 1.5, lit_cut: 0.006, last_seen: 0.0 },
             frame: crate::render_fogofwar::FogFrame { eyes: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], looks: alloc::vec![0.0; (crate::render_fogofwar::FOG_EYES * 4.0) as usize], dim: 0.4, desat: 0.75, top_pad: 0.3, lights: alloc::vec![0.0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], lights_u: alloc::vec![0; (crate::render_fogofwar::FOG_LIGHTS * 16.0) as usize], thin_bits: alloc::vec![0; crate::render_fogofwar::FOG_THIN_WORDS as usize], thin_serial: -1.0, thin_count: -1.0, ..crate::render_fogofwar::FogFrame::zeroed() },
             eyes: Vec::new(),
             mates: Vec::new(),
@@ -172,7 +170,7 @@ impl FogOfWar {
 }
 impl Default for FogOfWar { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:437 FogOfWar.stats, src/game/fogofwar.ts:437)
+/// (TypeScript: inline at src/game/fogofwar.ts:436 FogOfWar.stats, src/game/fogofwar.ts:436)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarStats {
     pub frames: f64,
@@ -201,7 +199,7 @@ impl FogOfWarStats {
 }
 impl Default for FogOfWarStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Rec, src/game/fogofwar.ts:408)
+/// (TypeScript: Rec, src/game/fogofwar.ts:407)
 #[derive(Clone, Copy, Debug)]
 pub struct Rec {
     pub seen: bool,
@@ -230,7 +228,7 @@ impl Rec {
 }
 impl Default for Rec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:447 FogOfWar.doorRecs, src/game/fogofwar.ts:447)
+/// (TypeScript: inline at src/game/fogofwar.ts:446 FogOfWar.doorRecs, src/game/fogofwar.ts:446)
 #[derive(Clone, Debug)]
 pub struct FogOfWarDoorRecsValue {
     pub shown: f64,
@@ -247,7 +245,7 @@ impl FogOfWarDoorRecsValue {
 }
 impl Default for FogOfWarDoorRecsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:454 FogOfWar.lampPick, src/game/fogofwar.ts:454)
+/// (TypeScript: inline at src/game/fogofwar.ts:453 FogOfWar.lampPick, src/game/fogofwar.ts:453)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarLampPickItem {
     pub l: LightId,
@@ -266,7 +264,7 @@ impl FogOfWarLampPickItem {
 }
 impl Default for FogOfWarLampPickItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:455 FogOfWar.litStats, src/game/fogofwar.ts:455)
+/// (TypeScript: inline at src/game/fogofwar.ts:454 FogOfWar.litStats, src/game/fogofwar.ts:454)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarLitStats {
     pub lamps: f64,
@@ -285,7 +283,7 @@ impl FogOfWarLitStats {
 }
 impl Default for FogOfWarLitStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ThingRec, src/game/fogofwar.ts:379)
+/// (TypeScript: ThingRec, src/game/fogofwar.ts:378)
 #[derive(Clone, Debug)]
 pub struct ThingRec {
     pub ghost: Vec<BoxId>,
@@ -314,7 +312,7 @@ impl ThingRec {
 }
 impl Default for ThingRec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:458 FogOfWar.thingStats, src/game/fogofwar.ts:458)
+/// (TypeScript: inline at src/game/fogofwar.ts:457 FogOfWar.thingStats, src/game/fogofwar.ts:457)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarThingStats {
     pub held: f64,
@@ -333,7 +331,7 @@ impl FogOfWarThingStats {
 }
 impl Default for FogOfWarThingStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:464 FogOfWar.pending, src/game/fogofwar.ts:464)
+/// (TypeScript: inline at src/game/fogofwar.ts:463 FogOfWar.pending, src/game/fogofwar.ts:463)
 #[derive(Clone, Debug)]
 pub struct FogOfWarPendingItem {
     pub key: String,
@@ -352,7 +350,7 @@ impl FogOfWarPendingItem {
 }
 impl Default for FogOfWarPendingItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:623 FogOfWar.callLog, src/game/fogofwar.ts:623)
+/// (TypeScript: inline at src/game/fogofwar.ts:622 FogOfWar.callLog, src/game/fogofwar.ts:622)
 #[derive(Clone, Debug)]
 pub struct FogOfWarCallLogItem {
     pub t: f64,
@@ -390,7 +388,7 @@ impl FogOfWarCallLogItemKind {
     }
 }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:624 FogOfWar.callStats, src/game/fogofwar.ts:624)
+/// (TypeScript: inline at src/game/fogofwar.ts:623 FogOfWar.callStats, src/game/fogofwar.ts:623)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarCallStats {
     pub contact: f64,
@@ -407,7 +405,7 @@ impl FogOfWarCallStats {
 }
 impl Default for FogOfWarCallStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:816 FogOfWar.fullStats, src/game/fogofwar.ts:816)
+/// (TypeScript: inline at src/game/fogofwar.ts:805 FogOfWar.fullStats, src/game/fogofwar.ts:805)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarFullStats {
     pub hidden: f64,
@@ -426,7 +424,7 @@ impl FogOfWarFullStats {
 }
 impl Default for FogOfWarFullStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:349 FOG_PAGE, src/game/fogofwar.ts:349)
+/// (TypeScript: inline at src/game/fogofwar.ts:348 FOG_PAGE, src/game/fogofwar.ts:348)
 #[derive(Clone, Copy, Debug)]
 pub struct FogofwarModFOGPAGE {
     pub desat: f64,
@@ -462,7 +460,7 @@ impl FogOfWarCallWordsKind {
     }
 }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:1098 sighting ->, src/game/fogofwar.ts:1098)
+/// (TypeScript: inline at src/game/fogofwar.ts:1087 sighting ->, src/game/fogofwar.ts:1087)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarSighting {
     pub at: V3,
@@ -479,7 +477,7 @@ impl FogOfWarSighting {
 }
 impl Default for FogOfWarSighting { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:1114 lastSeen ->, src/game/fogofwar.ts:1114)
+/// (TypeScript: inline at src/game/fogofwar.ts:1103 lastSeen ->, src/game/fogofwar.ts:1103)
 #[derive(Clone, Copy, Debug)]
 pub struct FogOfWarLastSeenItem {
     pub gd: GuardId,
@@ -503,9 +501,9 @@ impl Default for FogOfWarLastSeenItem { fn default() -> Self { Self::zeroed() } 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct FogofwarMod {
-    /// (src/game/fogofwar.ts:349 FOG_PAGE)
+    /// (src/game/fogofwar.ts:348 FOG_PAGE)
     pub fog_page: crate::fogofwar::FogofwarModFOGPAGE,
-    /// (src/game/fogofwar.ts:356 THING_PASS)
+    /// (src/game/fogofwar.ts:355 THING_PASS)
     pub thing_pass: JsSet<crate::Num>,
 }
 impl FogofwarMod {
@@ -517,116 +515,116 @@ impl FogofwarMod {
     }
 }
 
-/// (src/game/fogofwar.ts:322 GAZE_SIGHTS: a table nothing writes)
+/// (src/game/fogofwar.ts:321 GAZE_SIGHTS: a table nothing writes)
 pub fn gaze_sights() -> Vec<f64> { alloc::vec![0.7, 0.866] }
 
-/// (src/game/fogofwar.ts:324 COS_FRONT)
+/// (src/game/fogofwar.ts:323 COS_FRONT)
 pub const COS_FRONT: f64 = 0.7071067811865476;
 
-/// (src/game/fogofwar.ts:324 COS_BEHIND)
+/// (src/game/fogofwar.ts:323 COS_BEHIND)
 pub const COS_BEHIND: f64 = -0.5;
 
-/// (src/game/fogofwar.ts:326 CALL_EVERY)
+/// (src/game/fogofwar.ts:325 CALL_EVERY)
 pub const CALL_EVERY: f64 = 6.0;
 
-/// (src/game/fogofwar.ts:328 FOG_FLAT_ON)
+/// (src/game/fogofwar.ts:327 FOG_FLAT_ON)
 pub const FOG_FLAT_ON: f64 = 0.12;
 
-/// (src/game/fogofwar.ts:330 FOG_LIT_ON)
+/// (src/game/fogofwar.ts:329 FOG_LIT_ON)
 pub const FOG_LIT_ON: f64 = 1.0;
 
-/// (src/game/fogofwar.ts:332 FOG_DESAT_WAS)
+/// (src/game/fogofwar.ts:331 FOG_DESAT_WAS)
 pub const FOG_DESAT_WAS: f64 = 0.75;
 
-/// (src/game/fogofwar.ts:334 FOG_EDGE_ON)
+/// (src/game/fogofwar.ts:333 FOG_EDGE_ON)
 pub const FOG_EDGE_ON: f64 = 0.5;
 
-/// (src/game/fogofwar.ts:336 FOG_EYES_ON)
+/// (src/game/fogofwar.ts:335 FOG_EYES_ON)
 pub const FOG_EYES_ON: f64 = 7.0;
 
-/// (src/game/fogofwar.ts:336 FOG_EYES_WAS)
+/// (src/game/fogofwar.ts:335 FOG_EYES_WAS)
 pub const FOG_EYES_WAS: f64 = 5.0;
 
-/// (src/game/fogofwar.ts:351 DOOR_EPS)
+/// (src/game/fogofwar.ts:350 DOOR_EPS)
 pub const DOOR_EPS: f64 = 0.01;
 
-/// (src/game/fogofwar.ts:355 THING_BITS: a table nothing writes)
+/// (src/game/fogofwar.ts:354 THING_BITS: a table nothing writes)
 pub fn thing_bits() -> Vec<f64> { alloc::vec![0.0, 0.0, 4.0, 3.0] }
 
-/// (src/game/fogofwar.ts:357 THING_TEST)
+/// (src/game/fogofwar.ts:356 THING_TEST)
 pub const THING_TEST: f64 = 7.0;
 
-/// (src/game/fogofwar.ts:361 FIXTURE_LO)
+/// (src/game/fogofwar.ts:360 FIXTURE_LO)
 pub const FIXTURE_LO: f64 = 20480.0;
 
-/// (src/game/fogofwar.ts:361 FIXTURE_HI)
+/// (src/game/fogofwar.ts:360 FIXTURE_HI)
 pub const FIXTURE_HI: f64 = 28672.0;
 
-/// (src/game/fogofwar.ts:361 FIXTURE_BODY)
+/// (src/game/fogofwar.ts:360 FIXTURE_BODY)
 pub const FIXTURE_BODY: f64 = 6.0;
 
-/// (src/game/fogofwar.ts:372 THING_EPS)
+/// (src/game/fogofwar.ts:371 THING_EPS)
 pub const THING_EPS: f64 = 0.001;
 
-/// (src/game/fogofwar.ts:372 THING_PRIME)
+/// (src/game/fogofwar.ts:371 THING_PRIME)
 pub const THING_PRIME: f64 = 30.0;
 
-/// (src/game/fogofwar.ts:372 THING_EVERY)
+/// (src/game/fogofwar.ts:371 THING_EVERY)
 pub const THING_EVERY: f64 = 3.0;
 
-/// (src/game/fogofwar.ts:372 THING_CAP)
+/// (src/game/fogofwar.ts:371 THING_CAP)
 pub const THING_CAP: f64 = 768.0;
 
-/// (src/game/fogofwar.ts:382 PROP_SYS)
+/// (src/game/fogofwar.ts:381 PROP_SYS)
 pub const PROP_SYS: f64 = 2.0;
 
-/// (src/game/fogofwar.ts:386 BEAM_STEP)
+/// (src/game/fogofwar.ts:385 BEAM_STEP)
 pub const BEAM_STEP: f64 = 0.75;
 
-/// (src/game/fogofwar.ts:386 BEAM_FINE)
+/// (src/game/fogofwar.ts:385 BEAM_FINE)
 pub const BEAM_FINE: f64 = 0.1;
 
-/// (src/game/fogofwar.ts:407 EYE_STAND)
+/// (src/game/fogofwar.ts:406 EYE_STAND)
 pub const EYE_STAND: f64 = 1.55;
 
-/// (src/game/fogofwar.ts:407 EYE_CROUCH)
+/// (src/game/fogofwar.ts:406 EYE_CROUCH)
 pub const EYE_CROUCH: f64 = 0.95;
 
-/// (src/game/fogofwar.ts:410 SMOKE_ASKS)
+/// (src/game/fogofwar.ts:409 SMOKE_ASKS)
 pub const SMOKE_ASKS: f64 = 6.0;
 
-/// (src/game/fogofwar.ts:410 SMOKE_EYES)
+/// (src/game/fogofwar.ts:409 SMOKE_EYES)
 pub const SMOKE_EYES: f64 = 2.0;
 
-/// (src/game/fogofwar.ts:412 SMOKE_FRESH)
+/// (src/game/fogofwar.ts:411 SMOKE_FRESH)
 pub const SMOKE_FRESH: f64 = 8.0;
 
-/// (src/game/fogofwar.ts:412 SMOKE_KEEP)
+/// (src/game/fogofwar.ts:411 SMOKE_KEEP)
 pub const SMOKE_KEEP: f64 = 30.0;
 
-/// (src/game/fogofwar.ts:413 DEG)
+/// (src/game/fogofwar.ts:412 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/fogofwar.ts:415 DARK: a table nothing writes)
+/// (src/game/fogofwar.ts:414 DARK: a table nothing writes)
 pub fn dark() -> [f64; 3] { [0.0, 0.0, 0.0] }
 
-/// (src/game/fogofwar.ts:417 FACE_HOLD)
+/// (src/game/fogofwar.ts:416 FACE_HOLD)
 pub const FACE_HOLD: f64 = 0.98;
 
-/// (src/game/fogofwar.ts:419 DOOR_F: a table nothing writes)
+/// (src/game/fogofwar.ts:418 DOOR_F: a table nothing writes)
 pub fn door_f() -> Vec<f64> { alloc::vec![0.95, 0.6, 0.25] }
 
-/// (src/game/fogofwar.ts:419 DOOR_Y: a table nothing writes)
+/// (src/game/fogofwar.ts:418 DOOR_Y: a table nothing writes)
 pub fn door_y() -> Vec<f64> { alloc::vec![1.0, 1.8] }
 
-/// (src/game/fogofwar.ts:421 nearEyes: a table nothing writes)
+/// (src/game/fogofwar.ts:420 nearEyes: a table nothing writes)
 pub fn near_eyes() -> Vec<crate::fogofwar::FogEye> { Vec::new() }
 
-/// (src/game/fogofwar.ts:421 nearD2: a table nothing writes)
-pub fn near_d2() -> Vec<f64> { Vec::new() }
+/// (src/game/fogofwar.ts:420 nearD2: a table nothing writes)
+pub fn near_d2() -> Vec<f64> { alloc::vec![142.06703449236966, 142.91613629056707, 160.0566298593451, 172.7126492955776, 176.2774516719939] }
 
-/// (src/game/fogofwar.ts:423 IN_ORDER)
+/// (src/game/fogofwar.ts:422 IN_ORDER)
 pub const IN_ORDER: f64 = 106181136.0;
 
-/// (src/game/fogofwar.ts:423 ONE_EYE)
+/// (src/game/fogofwar.ts:422 ONE_EYE)
 pub const ONE_EYE: f64 = 268435456.0;

@@ -1,4 +1,4 @@
-//! src/game/frag.ts lines 296 to 678
+//! src/game/frag.ts lines 297 to 680
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,75 +7,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seams: the steps the skeleton still cannot do
-/// (frag.ts:307 g.audio.play with { rate })
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, volume: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to carry a rate (crate::Opaque holds nothing)") }
-
-// ---------------------------------------------------------------- the answers kept as values: the match where they are called
-/// `eachSeat`: `f` over every seat's view; the Game itself in a game of one. (seats.ts:129; its stub lends two Games, so with_seat)
-fn each_seat_view(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 { f(g); return; }
-    for pl in men_of(g) { crate::seats::with_seat(g, pl, &mut *f); }
-}
-/// The function exposureAsker hands back, asked of one spot; a row's `maybe` is dealt once. (picture.ts:314)
-fn ask_exposure(g: &mut Game, ask: &mut crate::picture::ExposureAsker, p: V3) -> f64 {
-    g.stats.picture.asks += 1;
-    let maybe_k = g.k.picture.maybe_k;
-    let crate::picture::ExposureAsker::Ideas { h, rows } = ask;
-    let h = *h;
-    let mut e = 0.0;
-    for x in rows.iter_mut() {
-        let (i, w) = (x.0, x.1);
-        if e >= w { break; }
-        if !i.lost && crate::picture::line_to(g, i.at, p, h) { e = w; continue; }
-        let k = w * maybe_k;
-        if e >= k { continue; }
-        if x.2.is_none() { x.2 = Some(crate::picture::maybe_of(g, i)); }
-        let mut any = false;
-        for &q in x.2.as_ref().unwrap() { if crate::picture::line_to(g, q, p, h) { any = true; break; } }
-        if any || (i.lost && crate::picture::line_to(g, i.at, p, h)) { e = k; }
-    }
-    e
-}
-/// The price tacticsPenalty's answer asks of a cell. (tactics.ts:361)
-fn tactics_price(t: &crate::tactics::TacticsPenalty, ix: f64, iz: f64) -> f64 {
-    let crate::tactics::TacticsPenalty::Cells { w, door_idx, door_mult, avoid } = t;
-    let i = crate::Num(iz * *w + ix);
-    let mut p = 1.0;
-    if let Some(s) = door_idx { if s.has(i) { p = *door_mult; } }
-    if let Some(s) = avoid { if s.has(i) { p = m::max(p, crate::tactics::CORRIDOR_COST); } }
-    p
-}
-/// `m[iz * W + ix] ? dear : 1` (lanes.ts priceOf)
-fn mask_price(mask: &[u8], w: f64, dear: f64, ix: f64, iz: f64) -> f64 {
-    let at = iz * w + ix;
-    if at >= 0.0 && mask.get(at as usize).map_or(false, |c| *c != 0) { dear } else { 1.0 }
-}
-/// The price lanePenalty's answer asks of a cell. (lanes.ts priceOf)
-fn lane_price(l: &crate::lanes::LanePenalty, ix: f64, iz: f64) -> f64 {
-    match l {
-        crate::lanes::LanePenalty::Dear { m: mask, w, dear } => mask_price(mask, *w, *dear, ix, iz),
-        crate::lanes::LanePenalty::DearOver { base, m: mask, w, dear } => m::max(tactics_price(base, ix, iz), mask_price(mask, *w, *dear, ix, iz)),
-        crate::lanes::LanePenalty::Base { base } => tactics_price(base, ix, iz),
-    }
-}
-/// priceOf's answer with `base` under what lane_penalty asked with no base: its stub cannot build one from a closure, and what it asks does not depend on `base`. (lanes.ts priceOf)
-fn lane_over(asked: Option<crate::lanes::LanePenalty>, base: Option<crate::tactics::TacticsPenalty>) -> Option<crate::lanes::LanePenalty> {
-    match (asked, base) {
-        (None, None) => None,
-        (None, Some(base)) => Some(crate::lanes::LanePenalty::Base { base }),
-        (Some(crate::lanes::LanePenalty::Dear { m, w, dear }), Some(base)) => Some(crate::lanes::LanePenalty::DearOver { base, m, w, dear }),
-        (Some(p), _) => Some(p),
-    }
-}
-/// goTo's own planner: the floor's way as this man's feet will find it, at his prices when there is a man. (frag.ts:630)
+/// goTo's own planner: the floor's way as this man's feet will find it, at his prices when there is a man. (frag.ts:632)
 fn find_way(g: &mut Game, a: V3, b: V3, nodes: f64, who: Option<GuardId>) -> Option<Vec<V3>> {
     let pen = match who {
-        Some(w) => { let t = crate::tactics::tactics_penalty(g, w, b); let asked = crate::lanes::lane_penalty(g, w, None); lane_over(asked, t) }
+        Some(w) => { let t = crate::tactics::tactics_penalty(g, w, b); crate::lanes::lane_penalty(g, w, t.as_ref()) }
         None => None,
     };
     match pen {
-        Some(l) => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), Some(&mut |_g: &mut Game, ix: f64, iz: f64| lane_price(&l, ix, iz))),
+        Some(l) => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), Some(&mut |_g: &mut Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(&l, ix, iz))),
         None => crate::scene_collision::nav_grid_find_path(g, a, b, Some(nodes), None),
     }
 }
@@ -113,7 +52,7 @@ struct Judged {
     r: Option<BlastResult>,
     behind: Option<BlastHitBehind>,
 }
-/// (frag.ts:345 judgeAt)
+/// (frag.ts:346 judgeAt)
 fn judge_at(g: &mut Game, b: &Burst, id: f64, d: f64, shows: Shows) -> Judged {
     if d > b.wound { return Judged { d, e: 0.0, r: None, behind: None }; }
     let was = match &b.before { Some(m) => m.get(crate::Num(id)).copied(), None => None };
@@ -130,12 +69,12 @@ fn judge_at(g: &mut Game, b: &Burst, id: f64, d: f64, shows: Shows) -> Judged {
     let p = g.k.frag.wound_kill * (1.0 - t) * (1.0 - t) * (if e >= 0.5 { 1.0 } else { 0.4 });
     Judged { d, e, r: Some(if hash01(b.serial, id) < p { BlastResult::Killed } else { BlastResult::Wounded }), behind: None }
 }
-/// (frag.ts:357 judge)
+/// (frag.ts:358 judge)
 fn judge(g: &mut Game, b: &Burst, feet: V3, head: V3, id: f64) -> Judged {
     let d = v3::dist(b.from, [feet[0], feet[1] + 0.9, feet[2]]);
     judge_at(g, b, id, d, Shows::Man { feet, head })
 }
-/// (frag.ts:358 away)
+/// (frag.ts:359 away)
 fn away(at: V3, feet: V3) -> V3 {
     let d: V3 = [feet[0] - at[0], 0.0, feet[2] - at[2]];
     let l = m::hyp2(d[0], d[2]);
@@ -149,19 +88,7 @@ fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
 fn down_by(b: &Burst) -> crate::game::DownBy {
     if b.mine { crate::game::DownBy::Player } else if js::truthy(b.who) { crate::game::DownBy::Guard } else { crate::game::DownBy::World }
 }
-/// `men(g)`: every seat's man
-fn men_of(g: &mut Game) -> Vec<PlayerId> {
-    let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    crate::seats::men(g, &of)
-}
-/// the live `off` of the door whose leaf is this box (TORN's rows hold the box: see the notes)
-fn torn_door_off(g: &mut Game, b: BoxId) -> bool {
-    let list = g.doors.list.clone();
-    for d in list { if g.dr[d].box_ == b { return crate::doors::door_off(g, d); } }
-    false
-}
-
-/// A man already down and breathing: judged where he lies, killed or left exactly as he was. (frag.ts:362 finish)
+/// A man already down and breathing: judged where he lies, killed or left exactly as he was. (frag.ts:363 finish)
 fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
@@ -196,15 +123,14 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     }
     if b.mine { crate::guards::witness_kill(g, gd, crate::game::DownKind::Shot, crate::game::DownBy::Player); }
     if g.ch[c].ragdoll.is_none() {
-        let world = crate::ragdoll::RagdollWorld { boxes: g.col.boxes.ids().collect(), dynamic_boxes: g.col.dynamic_boxes.clone() };
-        crate::character::character_ragdollize(g, c, Some(&world), dir, true);
+        crate::character::character_ragdollize(g, c, true, dir, true);
     }
     let shove = v3::scale(dir, g.k.frag.down_shove * m::max(0.0, 1.0 - j.d / b.wound));
     if let Some(r) = g.ch[c].ragdoll { crate::ragdoll::ragdoll_add_rigid_velocity(g, r, shove, [0.0, 0.0, 0.0]); }
     crate::game::game_msg(g, &line);
 }
 
-/// One seat's man and the burst. (frag.ts:404 the eachSeat body)
+/// One seat's man and the burst. (frag.ts:405 the eachSeat body)
 fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -264,7 +190,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
     let mine = crate::seats::is_man_id(g, spec.who);
     if spec.fx != Some(false) {
-        let gpu = crate::particle_fx::gpu_fx(g).is_some();
+        let gpu = crate::particle_fx::gpu_fx(g);
         let seed = g.fx_seed;
         g.fx_seed += 1.0;
         let o = if gpu {
@@ -273,13 +199,10 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
         } else { None };
         let l = crate::effects::spawn_burst(g, from, seed, o);
         if gpu { crate::particle_fx::bang_fx(g, from); }
-        // the stub takes `g` and the set, and the set lives in `g`: lent out for the call (lights.ts flash touches only this.lights and the new light)
-        let mut set = core::mem::take(&mut g.engine.lights);
-        let flash = crate::render_lights::light_set_flash(g, &mut set, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
-        g.engine.lights = set;
+        let flash = crate::render_lights::light_set_flash(g, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
         let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(spec.who));
         if let Some(r) = l.radius { if js::truthy(r) { g.tab.light[light].radius = r; } }
-        seam_audio_play_rate(g, "stunBang", from, 1.0, 0.62);
+        crate::audio_iface::game_audio_like_play(g, "stunBang", Some(from), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.62 }));
         crate::marks::bang_scorch(g, from);
         let ears = crate::seats::host_man(g);
         let eye = bone_or(g, g.pl[ears].ch, crate::character::Bone::Head, 1.6);
@@ -315,7 +238,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
                 if v3::dist(from, pts[0]) <= wound { let e = lying_shows(g, from, &pts, GlassView::Blown); let id = g.ch[g.gd[gd].ch].id; map.set(crate::Num(id), e); }
             }
         }
-        for pl in men_of(g) {
+        for pl in crate::seats::men(g) {
             if !g.pl[pl].down {
                 let c = g.pl[pl].ch;
                 let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.6), g.ch[c].id);
@@ -331,14 +254,13 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     if fresh_book { g.m.frag.torn = Some(FragModTORNValue { time: g.time, doors: Vec::new() }); }
     for d in hung {
         if crate::doors::door_off(g, d) {
-            let bx = g.dr[d].box_;
             let t = g.m.frag.torn.as_mut().unwrap();
-            if !t.doors.iter().any(|x| x.box_ == bx) { t.doors.push(FragModTORNValueDoorsItem { off: true, box_: bx }); }
+            if !t.doors.contains(&d) { t.doors.push(d); }
         }
     }
-    let rows: Vec<BoxId> = g.m.frag.torn.as_ref().unwrap().doors.iter().map(|x| x.box_).collect();
+    let rows: Vec<DoorId> = g.m.frag.torn.as_ref().unwrap().doors.clone();
     let mut torn: Vec<BoxId> = Vec::new();
-    for bx in rows { if torn_door_off(g, bx) { torn.push(bx); } }
+    for d in rows { if crate::doors::door_off(g, d) { torn.push(g.dr[d].box_); } }
     let ev_serial = g.serial();
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Bang, pos: v3::copy(from), time: g.time, loud: true, level: Some(2.0), who: Some(spec.who), frag: Some(true), serial: ev_serial, ..Default::default() });
     let b = Burst { at, from, lethal, wound, serial, who: spec.who, side, mine, name, before, torn };
@@ -377,18 +299,18 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
                 man.stagger_until = m::max(man.stagger_until, time + secs);
                 man.react_t = m::max(man.react_t, secs);
                 g.fa[w].burst = None;
-                let man = &mut g.gd[gd];
-                man.awareness = m::max(man.awareness, 0.92);
-                if man.state != crate::game::GuardState::Alert { man.last_known = Some(v3::copy(at)); }
-                man.path = Vec::new();
-                man.path_goal = None;
-                man.speed = 0.0;
+                g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.92);
+                if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
+                crate::game::guard_set_path(g, gd, Vec::new());
+                g.gd[gd].path_goal = None;
+                g.gd[gd].path_goal_orbit = false;
+                g.gd[gd].speed = 0.0;
                 if r == BlastResult::Wounded { crate::condition::condition_hurt(g, &mut crate::condition::Man::Guard(gd)); }
             }
             crate::character::anim_hit(g, c);
         }
     }
-    each_seat_view(g, &mut |g: &mut Game| seat_blast(g, &b, &mut rep));
+    crate::seats::each_seat(g, &mut |g: &mut Game| seat_blast(g, &b, &mut rep));
     crate::morale::morale_blast(g, at, Some(spec.who));
     g.stats.frag.bursts += 1;
     g.stats.frag.killed += rep.killed as i32;
@@ -399,7 +321,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     if g.m.frag.frag_log.len() > 64 { g.m.frag.frag_log.remove(0); }
     // the count is for eyes that had a line to it: a room nobody has looked into keeps what it did to itself
     let mut eyes: Vec<V3> = Vec::new();
-    for pl in men_of(g) { if !g.pl[pl].down { eyes.push(bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, 1.6)); } }
+    for pl in crate::seats::men(g) { if !g.pl[pl].down { eyes.push(bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, 1.6)); } }
     for o in g.guards.clone() { if g.gd[o].team == crate::teams::Team::Operative && g.gd[o].state != crate::game::GuardState::Dead { eyes.push(bone_or(g, g.gd[o].ch, crate::character::Bone::Head, 1.6)); } }
     let mut seen = false;
     for &e in &eyes { if v3::dist(e, from) < 30.0 && !crate::scene_collision::segment_blocked(g, e, from, None, None, None) { seen = true; break; } }
@@ -454,19 +376,24 @@ pub fn frag_fuse(g: &mut crate::game::Game, it: ItemId, dt: f64) {
     if crate::throwables::item_fuse(g, it) <= 0.0 { detonate_frag(g, it); }
 }
 
-/// The game's list of live grenades. A COPY: a writer goes through g.m.frag.books. (frag.ts booksOf)
-pub fn books_of(g: &mut crate::game::Game) -> Vec<crate::frag::Live> {
-    g.m.frag.books.get_or_insert_with(Vec::new).clone()
+/// The game's list of live grenades: the row itself, a writer writes through it. (frag.ts booksOf)
+pub fn books_of(g: &mut crate::game::Game) -> &mut Vec<crate::frag::Live> {
+    g.m.frag.books.get_or_insert_with(Vec::new)
 }
 
 /// Forget every live grenade's book: nobody is left running from something no longer there. (frag.ts fragReset)
 pub fn frag_reset(g: &mut crate::game::Game) {
     g.m.frag.def_books = None;
-    let Some(books) = g.m.frag.books.take() else { return };
-    for l in &books {
-        for gd in l.flee.keys() { g.gd[gd].path = Vec::new(); g.gd[gd].path_goal = None; }
+    let Some(books) = g.m.frag.books.as_ref() else { return };
+    let men: Vec<GuardId> = books.iter().flat_map(|l| l.flee.keys()).collect();
+    let (frag, time) = (crate::owner::own().frag, g.time);
+    for gd in men {
+        crate::game::guard_set_path(g, gd, Vec::new());
+        g.gd[gd].path_goal = None;
+        g.gd[gd].path_goal_orbit = false;
+        crate::owner::release_man(g, gd, frag, time);
     }
-    g.m.frag.books = Some(Vec::new());
+    g.m.frag.books.as_mut().unwrap().clear();
 }
 
 /// Where a grenade is to be judged from: where it lies, or where its arc comes down. (frag.ts comeDown)
@@ -497,11 +424,11 @@ struct RollBody {
     bounces: f64,
     fuse: f64,
 }
-/// (frag.ts:473 slow)
+/// (frag.ts:475 slow)
 fn roll_slow(g: &mut Game, v: V3, bog: f64) -> bool {
     m::abs(v[1]) < 0.5 && m::hyp2(v[0], v[2]) < 0.35 + (if bog > 0.0 { crate::throwables::bog_stick(g, bog) } else { 0.0 })
 }
-/// The item step's own bounce and roll replayed on a copy for what is left of its fuse: nothing is moved or sounded. (frag.ts:470 rollOn's body)
+/// The item step's own bounce and roll replayed on a copy for what is left of its fuse: nothing is moved or sounded. (frag.ts:472 rollOn's body)
 fn roll_body(g: &mut Game, it: RollBody, touch_fuse: Option<f64>, props: bool, high: bool) -> RollOn {
     let (mut p, mut v) = (it.pos, it.vel);
     let h = 1.0 / 120.0;
@@ -631,21 +558,22 @@ pub fn frag_rest_guess(g: &mut crate::game::Game, it: ItemId) -> V3 {
     roll_on(g, it, None, None, None).at
 }
 
-/// The rest reckoning of one live grenade, made again ten times a second. (frag.ts restOf)
-pub fn rest_of(g: &mut crate::game::Game, l: &mut crate::frag::Live) -> crate::frag::Rest {
-    let it = l.it;
+/// The rest reckoning of book `l` of the live grenades, made again ten times a second. (frag.ts restOf)
+pub fn rest_of(g: &mut crate::game::Game, l: usize) -> crate::frag::Rest {
+    let it = books_of(g)[l].it;
     let settled = crate::throwables::item_settled(g, it);
-    if let Some(r) = &l.rest {
-        if r.still == settled && (settled || g.time - r.t < 0.1) { return r.clone(); }
+    let time = g.time;
+    if let Some(r) = &books_of(g)[l].rest {
+        if r.still == settled && (settled || time - r.t < 0.1) { return r.clone(); }
     }
     let rest = if settled {
         let p = crate::throwables::item_pos(g, it);
-        Rest { t: g.time, still: true, at: [p[0], rest_y(g, p[1]), p[2]], path: Vec::new() }
+        Rest { t: time, still: true, at: [p[0], rest_y(g, p[1]), p[2]], path: Vec::new() }
     } else {
         let r = roll_on(g, it, None, None, None);
-        Rest { t: g.time, still: false, at: r.at, path: r.path }
+        Rest { t: time, still: false, at: r.at, path: r.path }
     };
-    l.rest = Some(rest.clone());
+    books_of(g)[l].rest = Some(rest.clone());
     rest
 }
 
@@ -706,7 +634,7 @@ pub fn leg_by_leaf(g: &mut crate::game::Game, l: &[Vec<f64>], a: V3, b: V3, ref_
 const LOOK_RINGS: [f64; 6] = [1.6, 2.5, 3.5, 4.5, 5.0, 6.25];
 const FIRST_RINGS: [f64; 6] = [1.2, 2.0, 3.0, 4.0, 5.5, 7.0];
 
-/// (frag.ts:569 shade): a spot only a wall or leaf the burst will take hides
+/// (frag.ts:571 shade): a spot only a wall or leaf the burst will take hides
 fn flee_shade(g: &mut Game, from: V3, p: V3) -> bool {
     exposure(g, from, p, [p[0], 1.15, p[2]], None) <= 0.0
 }
@@ -770,7 +698,7 @@ pub fn flee_spot(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3,
             plain_s = score(hidden, shaded, r, dp) + flee_keep;
             // seenKept: only a firm line turns him off the leg he is on
             let kept = if hidden {
-                let e = match ask.as_mut() { Some(f) => ask_exposure(g, f, p), None => 0.0 };
+                let e = match ask.as_mut() { Some(f) => crate::picture::exposure_ask(g, f, p), None => 0.0 };
                 if e >= 0.5 { flee_cost * e } else { 0.0 }
             } else { 0.0 };
             best_s = plain_s - kept;
@@ -823,7 +751,7 @@ pub fn flee_spot(g: &mut crate::game::Game, c_2: crate::frag::FleeSpotC, at: V3,
                 let s0 = score(hidden, shaded, r, dp);
                 let sc = if hidden && s0 > best_s {
                     // seen: a spot past his legs pays the whole cost; no asker, nothing
-                    let cost = match ask.as_mut() { Some(f) => flee_cost * (if r > reach { 1.0 } else { ask_exposure(g, f, p) }), None => 0.0 };
+                    let cost = match ask.as_mut() { Some(f) => flee_cost * (if r > reach { 1.0 } else { crate::picture::exposure_ask(g, f, p) }), None => 0.0 };
                     s0 - cost
                 } else { s0 };
                 if barred {
@@ -871,17 +799,17 @@ struct DoorDeal<'a> {
     best_s: f64,
     via: bool,
 }
-/// (frag.ts:623 offPath)
+/// (frag.ts:625 offPath)
 fn door_off_path(g: &Game, x: f64, z: f64, path: &[V3]) -> f64 {
     let mut d = g.k.frag.lethal_m;
     for q in path { d = m::min(d, m::hyp2(x - q[0], z - q[2])); }
     d
 }
-/// (frag.ts:624 near)
+/// (frag.ts:626 near)
 fn door_near(g: &Game, k: &DoorDeal, x: f64, z: f64) -> bool {
     m::hyp2(x - k.at[0], z - k.at[2]) < k.d0 - g.k.frag.flee_door_dip || door_off_path(g, x, z, &k.wise.path) < k.path0 - 0.3
 }
-/// One straight leg: 0 clear, 1 a step of it is nearer the thing, 2 a leaf stands in it. (frag.ts:627 clear)
+/// One straight leg: 0 clear, 1 a step of it is nearer the thing, 2 a leaf stands in it. (frag.ts:629 clear)
 fn door_clear(g: &mut Game, k: &DoorDeal, a: V3, b: V3, ref_: f64) -> i32 {
     let r = flat(a, b);
     let mut t = 0.25;
@@ -892,14 +820,14 @@ fn door_clear(g: &mut Game, k: &DoorDeal, a: V3, b: V3, ref_: f64) -> i32 {
     }
     if leg_by_leaf(g, &k.leaves, a, b, ref_) { 2 } else { 0 }
 }
-/// A point of the path lies on the door's own frame line, in the opening. (frag.ts:640 onFrame)
+/// A point of the path lies on the door's own frame line, in the opening. (frag.ts:642 onFrame)
 fn door_on_frame(g: &mut Game, b: V3, x: DoorId) -> bool {
     let f = crate::guards::frame_of(g, x);
     if m::abs((b[0] - f.hx) * f.nx + (b[2] - f.hz) * f.nz) > 1e-4 { return false; }
     let al = (b[0] - f.hx) * f.ux + (b[2] - f.hz) * f.uz;
     al >= -0.1 && al <= f.w + 0.1
 }
-/// The floor's own way from `a` to `p` through doorway `d`: its length, or -1 (no way, a door not open on it, a step nearer the thing, not through `d`), -2 (a leaf stands in it). (frag.ts:629 walk)
+/// The floor's own way from `a` to `p` through doorway `d`: its length, or -1 (no way, a door not open on it, a step nearer the thing, not through `d`), -2 (a leaf stands in it). (frag.ts:631 walk)
 fn door_walk(g: &mut Game, k: &DoorDeal, a: V3, p: V3, d: DoorId) -> f64 {
     g.stats.frag.door_walks += 1;
     let nodes = g.k.frag.flee_door_nodes;
@@ -921,7 +849,7 @@ fn door_walk(g: &mut Game, k: &DoorDeal, a: V3, p: V3, d: DoorId) -> f64 {
     }
     if thru { len } else { -1.0 }
 }
-/// (frag.ts:643 take)
+/// (frag.ts:645 take)
 fn door_take(g: &mut Game, k: &mut DoorDeal, goal: V3, p: V3, len: f64, v: bool) {
     let keep = k.wise.keep;
     let same = match keep { Some(q) => flat(goal, q) < 0.05, None => false };
@@ -1025,23 +953,5 @@ mod tests {
         assert_eq!(leaf_dist(&l, 1.9, -1.3).to_bits(), 0x3ff6a09e667f3bcf);
         assert_eq!(leaf_dist(&l, -0.4, 1.1).to_bits(), 0x3fe6666666666666);
         assert_eq!(leaf_dist(&[], 1.0, 1.0).to_bits(), 0x7ff0000000000000);
-    }
-    /// priceOf: no mask is the base as it was; a mask with a base is the dearer of the two, cell by cell
-    #[test]
-    fn a_lane_goes_over_the_tactics_price() {
-        use crate::lanes::LanePenalty;
-        use crate::tactics::TacticsPenalty;
-        let mut doors = JsSet::new();
-        doors.add(crate::Num(5.0));
-        let base = || TacticsPenalty::Cells { w: 4.0, door_idx: Some(doors.clone()), door_mult: 7.0, avoid: None };
-        let mask = vec![0u8, 1, 0, 0, 0, 0, 0, 0];
-        assert!(lane_over(None, None).is_none());
-        let plain = lane_over(None, Some(base())).unwrap();
-        assert_eq!((lane_price(&plain, 1.0, 1.0), lane_price(&plain, 1.0, 0.0)), (7.0, 1.0));
-        let dear = LanePenalty::Dear { m: mask.clone(), w: 4.0, dear: 3.0 };
-        let alone = lane_over(Some(dear.clone()), None).unwrap();
-        assert_eq!((lane_price(&alone, 1.0, 0.0), lane_price(&alone, 1.0, 1.0)), (3.0, 1.0));
-        let over = lane_over(Some(dear), Some(base())).unwrap();
-        assert_eq!((lane_price(&over, 1.0, 0.0), lane_price(&over, 1.0, 1.0), lane_price(&over, 0.0, 0.0)), (3.0, 7.0, 1.0));
     }
 }

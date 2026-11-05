@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:64 SmokeSystemLike.emit)
-pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: crate::smoke_types::SmokeEmitter) {}
+pub fn smoke_system_like_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/smoke/types.ts:65 SmokeSystemLike.push)
 pub fn smoke_system_like_push(g: &mut crate::game::Game, p: crate::smoke_types::SmokePush) {}

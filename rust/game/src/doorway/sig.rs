@@ -77,8 +77,12 @@ pub fn doorway_in_way(g: &mut crate::game::Game, p: V3) -> bool { todo!() }
 /// (src/game/doorway.ts:459 doorwayHeldBy)
 pub fn doorway_held_by(g: &mut crate::game::Game, gd: GuardId) -> Option<String> { todo!() }
 
-/// (src/game/doorway.ts:461 doorwayHeld)
-pub fn doorway_held(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/doorway.ts:461 doorGateStopped)
+pub fn door_gate_stopped(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/doorway.ts:464 doorwayClearNear)
 pub fn doorway_clear_near(g: &mut crate::game::Game, p: V3, bad: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool, taken: Option<&[V3]>, apart: Option<f64>, face: Option<V3>) -> Option<V3> { todo!() }
+
+
+/// INVENTED, what a DoorwayLanePrice answers for a cell, so a caller can hand one to nav_grid_find_path or cleared_rooms_dear_along: |g, ix, iz| doorway_lane_price_at(g, &mut price, ix, iz). &mut for the value's own memo: a cell's first answer stands for this value only, as with the closure (doorway.ts:199 the closure doorwayLanePrice returns)
+pub fn doorway_lane_price_at(g: &mut crate::game::Game, price: &mut crate::doorway::DoorwayLanePrice, ix: f64, iz: f64) -> f64 { todo!() }

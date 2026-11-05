@@ -141,8 +141,8 @@ pub fn bare_barrel(can: crate::rig_props::Seg) -> crate::rig_props::Seg {
 }
 
 /// The rifle's boxes (or its model's), off the right hand or slung, stamped with this man. They are not only a picture: they reach the world's dynamics, which a laser's reach and the cursor's ray read. (rigProps.ts sc20kBoxes)
-pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, s: Option<&mut crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::Sc20kBoxesWhere>, lens: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) {
-    let s: RigSc20k = match s { Some(s) => *s, None => crate::rig_props::rig().sc20k };
+pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>, s: Option<crate::rig_props::RigSc20k>, where_: Option<crate::rig_props::Sc20kBoxesWhere>, lens: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, m: Option<crate::rig_props::RigM4>, kit: Option<crate::rig_props::KitDraw>, fit: Option<bool>, front: Option<bool>, rest: Option<f64>, black: Option<bool>) {
+    let s: RigSc20k = s.unwrap_or_else(|| crate::rig_props::rig().sc20k);
     let where_ = where_.unwrap_or(Sc20kBoxesWhere::Hand);
     let lens = lens.unwrap_or([0.0, 0.0, 0.0]);
     let mut meta = meta;
@@ -210,10 +210,9 @@ pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<BoxId>,
         }
     }
 }
-/// One part of the rifle: seg() at depth 2 with the rifle's tag. The part is a copy: seg writes a part only through a node's getAdj, which RigNodeMeta does not hold.
+/// One part of the rifle: seg() at depth 2 with the rifle's tag.
 fn sc20k_part(g: &mut Game, out: &mut Vec<BoxId>, gf: Frame, part: Seg, albedo: V3, emissive: Option<V3>, meta: &mut Option<&mut Vec<RigNodeMeta>>, path: &str, label: &str) {
-    let mut part = part;
-    seg(g, out, gf, &mut part, albedo, emissive, meta.as_deref_mut(), Some(path), Some(label), Some(2.0), Some(SC20K_TAG));
+    seg(g, out, gf, part, albedo, emissive, meta.as_deref_mut(), Some(path), Some(label), Some(2.0), Some(SC20K_TAG));
 }
 /// `curOwner = c.id & 0xff`: the character id the boxes being emitted are stamped with
 fn stamp_owner(g: &mut Game, c: CharId) {
@@ -227,17 +226,17 @@ pub fn rifle_m4(g: &mut crate::game::Game, rig: Option<crate::rig_props::Rig>) -
 }
 
 /// The SC-20K's support-hand grip for the animator. (rigProps.ts sc20kGrip)
-pub fn sc20k_grip(rig: Option<crate::rig_props::Rig>, fit: Option<bool>) -> crate::rig_props::Sc20kGrip {
+pub fn sc20k_grip(rig: Option<crate::rig_props::Rig>, fit: Option<bool>) -> crate::character::AnimLongGrip {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let gl = rig.sc20k.grip_l;
     let gr = long_grip_of(rig.sc20k.adj, LongGripOfG { off: gl.off, fingers: gl.fingers, back: gl.back });
     if !fit.unwrap_or(false) {
-        return Sc20kGrip { wrist: gr.wrist, fingers: gr.fingers, back: gr.back };
+        return gr;
     }
     let fits = gripfit();
     let d = fits.long;
     let f = fits.fore;
-    Sc20kGrip {
+    crate::character::AnimLongGrip {
         wrist: v3::mad(v3::mad(v3::mad(v3::add(gr.wrist, d), gr.fingers, -f.back), gr.back, -f.lift), v3::normalize(v3::cross(gr.fingers, gr.back)), -f.down),
         fingers: gr.fingers,
         back: gr.back,
@@ -327,17 +326,17 @@ pub fn rig_torch_pos(g: &mut crate::game::Game, c_2: CharId, dir: V3, torch: boo
 
 /// The player's rail light, parked and off until posed. (rigProps.ts railLightDef)
 pub fn rail_light_def(owner: f64, intensity: f64) -> LightId {
-    seam_rt_light("pistol_light", "player", 1.0, [0.0, -10.0, 0.0], [0.0, 0.0, 1.0], [0.9, 0.96, 1.0], intensity, 18.0, 5.0, 15.0, 0.035, 1.0, owner, false, -1.0, 0.0, -1.0, 0.0, intensity, true)
+    seam_light_row(crate::render_lights::RtLight { name: String::from("pistol_light"), group: String::from("player"), kind: 1.0, pos: [0.0, -10.0, 0.0], dir: [0.0, 0.0, 1.0], color: [0.9, 0.96, 1.0], intensity, range: 18.0, inner_deg: 5.0, outer_deg: 15.0, radius: 0.035, volumetric: 1.0, owner, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: intensity, card: true, ..crate::render_lights::RtLight::zeroed() })
 }
 
 /// A guard's torch / weapon light, warm and wider. (rigProps.ts torchLightDef)
 pub fn torch_light_def(name: &str, owner: f64, intensity: f64, inner_deg: f64, outer_deg: f64) -> LightId {
-    seam_rt_light(name, "flashlights", 1.0, [0.0, -10.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.92, 0.78], intensity, 16.0, inner_deg, outer_deg, 0.05, 1.0, owner, true, -1.0, 0.0, -1.0, 0.0, intensity, true)
+    seam_light_row(crate::render_lights::RtLight { name: String::from(name), group: String::from("flashlights"), kind: 1.0, pos: [0.0, -10.0, 0.0], dir: [0.0, 0.0, 1.0], color: [1.0, 0.92, 0.78], intensity, range: 16.0, inner_deg, outer_deg, radius: 0.05, volumetric: 1.0, owner, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: intensity, card: true, ..crate::render_lights::RtLight::zeroed() })
 }
 
-/// An `RtLight` literal, in the TypeScript's field order: a LightId is a row of rust/sim and these functions have no `g` to make one in.
-fn seam_rt_light(name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, owner: f64, enabled: bool, fixture_box: f64, flicker: f64, ttl: f64, age: f64, peak_intensity: f64, card: bool) -> LightId {
-    todo!("needs: a value type for an RtLight literal, or a g and a maker that gives a LightId row")
+/// The new light as a row of `g.tab.light`: the literal's fields the TypeScript leaves out are absent, which is what `zeroed` holds for them. The two callers above have no `g` to push it with.
+fn seam_light_row(l: crate::render_lights::RtLight) -> LightId {
+    todo!("needs: rail_light_def and torch_light_def to take g, to push the literal in g.tab.light")
 }
 
 /// The relaxed torch carry's beam, eased from last frame's. (rigProps.ts torchCarryDir)
@@ -408,8 +407,8 @@ pub fn pack_side_dims(g: &mut crate::game::Game, what: crate::rig_props::PackSid
 /// The pack-side place in the bind space of the mesh he wears, pitched to his back as posed. (rigProps.ts packSideBind)
 pub fn pack_side_bind(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_props::PackSideBindWhat, rig: Option<crate::rig_props::Rig>) -> Option<crate::packside::SidePlace> {
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
-    let parts = g.ch[c_2].parts;
-    let e = seam_pack_of(g, c_2, parts)?;
+    let (ch, parts) = (g.ch[c_2].rig, g.ch[c_2].parts);
+    let e = crate::packside::pack_of(g, ch, parts)?;
     let (dims_what, side_what) = match what {
         PackSideBindWhat::Hammer => (PackSideDimsWhat::Hammer, crate::packside::SideBindWhat::Hammer),
         PackSideBindWhat::Shotgun => (PackSideDimsWhat::Shotgun, crate::packside::SideBindWhat::Shotgun),
@@ -418,7 +417,7 @@ pub fn pack_side_bind(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_p
     let d = pack_side_dims(g, dims_what, Some(rig));
     let dims = crate::packside::SideBindDims { grip: d.grip, thick: d.thick, head: d.head, rear: d.rear, top: d.top, len: Some(d.len) };
     let p = crate::packside::side_bind(g, e, side_what, dims);
-    let th = seam_side_pitch(g, c_2, p);
+    let th = crate::packside::side_pitch(g, p, c_2);
     Some(crate::packside::side_pitched(p, th))
 }
 
@@ -430,24 +429,11 @@ pub fn pack_side(g: &mut crate::game::Game, c_2: CharId, what: crate::rig_props:
         PackSideWhat::Rifle => PackSideBindWhat::Rifle,
     };
     let p = pack_side_bind(g, c_2, bind_what, rig)?;
-    let j = seam_chest_joint(g, c_2);
+    let ch = g.ch[c_2].rig;
+    let j = crate::packside::chest_joint(g, ch);
     if j < 0.0 { return None; }
-    let jd: Vec<f64> = g.ch[c_2].skel.joint_data.iter().map(|x| *x as f64).collect();   // (the stub takes doubles: a Float32Array read is its double, so this is exact)
-    let w = crate::packside::side_skinned(p, &jd, j * 16.0);
+    let w = crate::packside::side_skinned(p, &g.ch[c_2].skel.joint_data, j * 16.0);
     Some(Frame { o: w.o, x: w.x, y: w.y, z: w.z })
-}
-
-/// `packOf(c.ch, c.parts)`: the stub takes a `&PackChar` and `c.ch` is a RigId, a GltfCharacter row.
-fn seam_pack_of(g: &mut Game, c: CharId, mask: f64) -> Option<crate::packside::PackExt> {
-    todo!("needs: pack_of taking a RigId, or a PackChar view of g.tab.rig[..]")
-}
-/// `sidePitch(c.ch, p, c.skel.jointData)`: `&PackChar` from a RigId, and `jd: &[f64]` where joint_data is `Vec<f32>`.
-fn seam_side_pitch(g: &mut Game, c: CharId, p: crate::packside::SidePlace) -> f64 {
-    todo!("needs: side_pitch taking a RigId and jd: &[f32]")
-}
-/// `chestJoint(c.ch)`: the stub takes a `&PackChar` and `c.ch` is a RigId.
-fn seam_chest_joint(g: &mut Game, c: CharId) -> f64 {
-    todo!("needs: chest_joint taking a RigId")
 }
 
 /// Where a thing across the back is, off six joints in whatever one space they are given in. (rigProps.ts bigBackOf)
@@ -499,17 +485,15 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
     }
     let mut meta = meta;
     if kind == BigBoxesKind::Shotgun {
-        let mut cb = rig.carbine;
-        carbine_boxes(g, c_2, out, &mut cb, [0.0, 0.0, 0.0], meta, Some(gf), Some(crate::weapons::GunModelId::M870));
+        carbine_boxes(g, c_2, out, rig.carbine, [0.0, 0.0, 0.0], meta, Some(gf), Some(crate::weapons::GunModelId::M870));
         return;
     }
     if let Some(sink) = meta.as_deref_mut() {
         sink.push(RigNodeMeta { path: String::from("big.hammer"), label: String::from("dynamic hammer (big slot)"), depth: 1.0, parent: on_back, frame: gf, box_start: out.len() as f64, box_count: 2.0 });
     }
     let (table, col) = (bigrig(), crate::rig_props::col());
-    let (mut handle, mut head) = (table.hammer.handle, table.hammer.head);
-    seg_at(g, out, gf, &mut handle, None, col.haft, no_glow(), None, Some(""), Some(""), Some(0.0), Some(BIG_TAG));
-    seg_at(g, out, gf, &mut head, None, col.sledge, no_glow(), None, Some(""), Some(""), Some(0.0), Some(BIG_TAG));
+    seg_at(g, out, gf, table.hammer.handle, None, col.haft, no_glow(), None, Some(""), Some(""), Some(0.0), Some(BIG_TAG));
+    seg_at(g, out, gf, table.hammer.head, None, col.sledge, no_glow(), None, Some(""), Some(""), Some(0.0), Some(BIG_TAG));
 }
 
 /// A man's own long gun let go of for the big slot's tool: on its sling down his front, dark. (rigProps.ts hungBoxes)
@@ -517,15 +501,13 @@ pub fn hung_boxes(g: &mut crate::game::Game, c_2: CharId, weapon: crate::rig_pro
     let rig = rig.unwrap_or_else(crate::rig_props::rig);
     let black = black.unwrap_or(false);
     if weapon == HungBoxesWeapon::Sc20k {
-        let mut s = rig.sc20k;
         let m4 = rifle_m4(g, Some(rig));
-        sc20k_boxes(g, c_2, out, Some(&mut s), Some(Sc20kBoxesWhere::Slung), Some([0.0, 0.0, 0.0]), meta, m4, None, Some(false), Some(true), None, Some(black));
+        sc20k_boxes(g, c_2, out, Some(rig.sc20k), Some(Sc20kBoxesWhere::Slung), Some([0.0, 0.0, 0.0]), meta, m4, None, Some(false), Some(true), None, Some(black));
         return;
     }
     stamp_owner(g, c_2);
     let at = sc20k_frame(g, c_2, rig.sc20k, Sc20kFrameWhere::Slung, Some(true), None).g;
-    let mut cb = rig.carbine;
-    carbine_boxes(g, c_2, out, &mut cb, [0.0, 0.0, 0.0], meta, Some(at), None);
+    carbine_boxes(g, c_2, out, rig.carbine, [0.0, 0.0, 0.0], meta, Some(at), None);
 }
 
 #[cfg(test)]

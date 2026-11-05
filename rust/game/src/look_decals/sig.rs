@@ -6,4 +6,4 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/game/lookDecals.ts:4 lookDecal)
-pub fn look_decal<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, d: Option<&T>) -> Option<T> { todo!() }
+pub fn look_decal(g: &mut crate::game::Game, d: Option<&crate::render_decals::Decal>) -> Option<crate::render_decals::Decal> { todo!() }

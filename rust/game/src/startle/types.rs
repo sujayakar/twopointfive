@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: StartleSnap, src/game/startle.ts:155)
+/// (TypeScript: StartleSnap, src/game/startle.ts:156)
 #[derive(Clone, Debug)]
 pub struct StartleSnap {
     pub men: Vec<Option<Vec<f64>>>,

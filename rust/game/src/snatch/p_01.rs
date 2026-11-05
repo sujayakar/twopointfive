@@ -14,23 +14,6 @@ fn exit_spot_key(g: &mut Game, spot: &crate::civilians::CivSpot) -> crate::civil
     crate::civilians::CivBadTarget::Spot(place.map_or(u32::MAX, |i| (spots.phones.len() + i) as u32))
 }
 
-/// `x.toFixed(1)`. Rust's `{:.1}` takes an exact tie to the even digit, JavaScript to the larger: a tie is an odd number of quarters.
-fn to_fixed_1(x: f64) -> String {
-    let a = m::abs(x);
-    let quarters = a * 4.0;
-    if a < 1e15 && m::floor(quarters) == quarters && js::rem(quarters, 2.0) == 1.0 {
-        let n = m::floor(a * 10.0) + 1.0;
-        let sign = if x < 0.0 { "-" } else { "" };
-        return format!("{}{}.{}", sign, m::floor(n / 10.0), js::rem(n, 10.0));
-    }
-    if x == 0.0 { return String::from("0.0"); }
-    format!("{:.1}", x)
-}
-/// A number in a template string: `-0` reads `0`. (Exponents, which only |x| under 1e-6 or from 1e21 would show, do not arise in these lines.)
-fn num_str(x: f64) -> String {
-    if x == 0.0 { return String::from("0"); }
-    format!("{}", x)
-}
 /// `text.length`: JavaScript counts UTF-16 units.
 fn js_len(text: &str) -> f64 { text.encode_utf16().count() as f64 }
 
@@ -144,7 +127,7 @@ pub fn snatch_team_of(g: &mut crate::game::Game) -> Vec<crate::snatch::SnatchTea
 /// A note on the run's log, cut to its last rows. (snatch.ts Snatch.note)
 pub fn snatch_note(g: &mut crate::game::Game, what: &str) {
     g.snatch.notes += 1.0;
-    let line = format!("{} {}", to_fixed_1(g.time), what);
+    let line = format!("{} {}", js::to_fixed(g.time, 1), what);
     g.snatch.log.push(line);
     if g.snatch.log.len() > 60 { g.snatch.log.drain(0..20); }
 }
@@ -170,16 +153,7 @@ pub fn snatch_stage(g: &mut crate::game::Game, n: &crate::scene_scenarios::Snatc
     g.snatch.log.clear();
     g.snatch.notes = 0.0;
     crate::snatchout::snatch_out_reset(g);
-    let def = crate::civilians::SpawnTargetDef {
-        name: n.man.name.clone(),
-        pos: n.man.pos,
-        face: n.man.face,
-        tint: n.man.tint,
-        tint2: n.man.tint2,
-        points: n.man.points.clone(),
-        wait: n.man.wait.clone(),
-    };
-    g.snatch.man = Some(crate::civilians::spawn_target(g, &def));
+    g.snatch.man = Some(crate::civilians::spawn_target(g, &n.man));
     snatch_note(g, &format!("{} staged in his room", n.man.name));
 }
 
@@ -494,7 +468,77 @@ pub fn snatch_summary(g: &mut crate::game::Game) -> String {
     } else {
         String::from(g.cv[civ].state.as_str())
     };
-    format!("snatch: {} · {} · turned {} · bolted {}", g.cv[civ].name, st, num_str(g.snatch.stats.turned), num_str(g.snatch.stats.bolted))
+    format!("snatch: {} · {} · turned {} · bolted {}", g.cv[civ].name, st, js::num_str(g.snatch.stats.turned), js::num_str(g.snatch.stats.bolted))
+}
+
+/// The overlay's slice of a checkpoint; None while he is not staged. (snatch.ts Snatch.snapshot)
+pub fn snatch_snapshot(g: &mut crate::game::Game) -> Option<crate::snatch::SnatchSnap> {
+    let m = g.snatch.man;
+    if !snatch_active(g) { return None; }
+    let m = m?;
+    let c = g.gd[m].ch;
+    let out = if crate::snatchout::snatch_out_ruled(g) { Some(crate::snatchout::snatch_out_snapshot(g)) } else { None };
+    let s = &g.snatch;
+    Some(SnatchSnap {
+        hands_up: s.hands_up,
+        tied: s.tied,
+        near_t: s.near_t,
+        alone_t: s.alone_t,
+        end: s.end,
+        why: s.why.clone(),
+        seen: s.seen.map(v3::copy),
+        fear: s.fear.map(v3::copy),
+        lost: s.lost.map(|l| match l {
+            SnatchLost::Gone => SnatchSnapLost::Gone,
+            SnatchLost::Dead => SnatchSnapLost::Dead,
+        }),
+        killer: s.killer.as_ref().map(|k| SnatchSnapKiller { side: k.side.clone(), who: k.who.clone() }),
+        times: SnatchSnapTimes { ran: s.times.ran, up: s.times.up, tied: s.times.tied, end: s.times.end },
+        stats: SnatchSnapStats { turned: s.stats.turned, bolted: s.stats.bolted },
+        last_exit: s.last_exit.clone(),
+        at: v3::copy(g.ch[c].pos),
+        yaw: g.ch[c].body_yaw,
+        out,
+    })
+}
+
+/// A load: stages him if the restart has not, stands him where the file had him, and puts the overlay's flags back. (snatch.ts Snatch.restore)
+pub fn snatch_restore(g: &mut crate::game::Game, s: Option<&crate::snatch::SnatchSnap>) {
+    let Some(n) = snatch_data(g) else { return };
+    let Some(s) = s else { return };
+    let staged = match g.snatch.man {
+        None => false,
+        Some(man) => g.civilians.contains(&man),
+    };
+    if !staged {
+        snatch_stage(g, &n);
+        let c = g.gd[g.snatch.man.unwrap()].ch;
+        g.ch[c].pos[0] = s.at[0];
+        g.ch[c].pos[2] = s.at[2];
+        g.ch[c].body_yaw = s.yaw;
+    }
+    g.snatch.run = Some(g.mission.serial);
+    g.snatch.hands_up = s.hands_up;
+    g.snatch.tied = s.tied;
+    g.snatch.near_t = s.near_t;
+    g.snatch.alone_t = s.alone_t;
+    g.snatch.end = s.end;
+    g.snatch.why = s.why.clone();
+    g.snatch.seen = s.seen.map(v3::copy);
+    g.snatch.fear = s.fear.map(v3::copy);
+    g.snatch.lost = s.lost.map(|l| match l {
+        SnatchSnapLost::Gone => SnatchLost::Gone,
+        SnatchSnapLost::Dead => SnatchLost::Dead,
+    });
+    g.snatch.killer = s.killer.as_ref().map(|k| SnatchKiller { side: k.side.clone(), who: k.who.clone() });
+    g.snatch.times = SnatchTimes { ran: s.times.ran, up: s.times.up, tied: s.times.tied, end: s.times.end };
+    g.snatch.stats = SnatchStats { turned: s.stats.turned, bolted: s.stats.bolted };
+    g.snatch.last_exit = s.last_exit.clone();
+    if g.snatch.tied || g.snatch.hands_up {
+        let man = g.snatch.man.unwrap();
+        crate::civilians::civilian_tie(g, man);
+    }
+    crate::snatchout::snatch_out_restore(g, s.out.clone());
 }
 
 /// The block against the built floor: he and his ways out stand on floor a man can walk, and every way out can be walked to from where he keeps. (snatch.ts checkSnatch)
@@ -508,7 +552,7 @@ pub fn check_snatch(g: &mut crate::game::Game) -> Vec<String> {
     for (i, e) in n.exits.iter().enumerate() { pts.push((format!("exits[{}] {}", i, e.name), e.pos)); }
     for (w, p) in &pts {
         if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) {
-            out.push(format!("scenarios.snatch.{}: ({}, {}) is not floor a man can stand on", w, num_str(p[0]), num_str(p[2])));
+            out.push(format!("scenarios.snatch.{}: ({}, {}) is not floor a man can stand on", w, js::num_str(p[0]), js::num_str(p[2])));
         }
     }
     let mut walk: Vec<f64> = Vec::new();
@@ -531,7 +575,7 @@ pub fn check_snatch(g: &mut crate::game::Game) -> Vec<String> {
     }
     if let Some(van) = &n.van {
         if crate::scene_collision::nav_grid_is_blocked(g, van.pos[0], van.pos[2]) {
-            out.push(format!("scenarios.snatch.van.pos: ({}, {}) is not floor a man can stand on", num_str(van.pos[0]), num_str(van.pos[2])));
+            out.push(format!("scenarios.snatch.van.pos: ({}, {}) is not floor a man can stand on", js::num_str(van.pos[0]), js::num_str(van.pos[2])));
         } else if !crate::scene_collision::nav_grid_find_path(g, n.man.pos, van.pos, None, None).map_or(false, |w| !w.is_empty()) {
             out.push(format!("scenarios.snatch: no way on foot from where he keeps to {}", van.name));
         }
@@ -545,26 +589,6 @@ pub fn check_snatch(g: &mut crate::game::Game) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The strings JavaScript gives (node: `x.toFixed(1)`), ties to the larger digit where `{:.1}` goes to the even one.
-    #[test]
-    fn to_fixed_1_is_javascripts() {
-        for (x, s) in [
-            (0.0, "0.0"), (-0.0, "0.0"), (0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (2.5, "2.5"), (12.75, "12.8"),
-            (1.05, "1.1"), (1.15, "1.1"), (0.04, "0.0"), (0.05, "0.1"), (59.99, "60.0"), (9.95, "9.9"), (9.75, "9.8"),
-            (123.456, "123.5"), (-0.25, "-0.3"), (-1.25, "-1.3"), (99.75, "99.8"),
-        ] {
-            assert_eq!(to_fixed_1(x), s, "{}", x);
-        }
-    }
-
-    #[test]
-    fn a_number_in_a_template_reads_as_javascripts() {
-        assert_eq!(num_str(3.0), "3");
-        assert_eq!(num_str(-0.0), "0");
-        assert_eq!(num_str(-12.5), "-12.5");
-        assert_eq!(num_str(0.1), "0.1");
-    }
 
     #[test]
     fn a_length_is_in_utf16_units() {

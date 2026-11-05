@@ -1,11 +1,16 @@
-//! src/game/wallcharge.ts lines 1 to 420
+//! src/game/wallcharge.ts lines 1 to 421
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
+
+/// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
+}
 
 /// How near a point passes a line on the floor, a to b.   (wallcharge.ts nearSeg)
 pub fn near_seg(q: V3, a: V3, b: V3) -> f64 {
@@ -18,7 +23,7 @@ pub fn near_seg(q: V3, a: V3, b: V3) -> f64 {
 
 /// The wall's thickness.   (wallcharge.ts thick)
 pub fn thick(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 {
-    let h = g.col.boxes[w.box_].h;
+    let h = seam_box(g, w.box_).h;
     2.0 * (if w.along_x { h[2] } else { h[0] })
 }
 
@@ -31,8 +36,13 @@ pub fn charge_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> 
 /// A point by the wall: `du` along it from the charge, `off` out from the charge's face (the far face is at −thick), at height y.   (wallcharge.ts wallPt)
 pub fn wall_pt(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, du: f64, off: f64, y: Option<f64>) -> V3 {
     let y = y.unwrap_or(0.0);
-    let b = &g.col.boxes[w.box_];
-    if w.along_x { [w.u + du, y, b.c[2] + w.side * (b.h[2] + off)] } else { [b.c[0] + w.side * (b.h[0] + off), y, w.u + du] }
+    let (c, h) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    wall_pt_of(c, h, w, du, off, y)
+}
+
+/// wallPt's arithmetic, on the box's centre and half sizes.
+fn wall_pt_of(c: V3, h: V3, w: &crate::wallcharge::WallSpot, du: f64, off: f64, y: f64) -> V3 {
+    if w.along_x { [w.u + du, y, c[2] + w.side * (h[2] + off)] } else { [c[0] + w.side * (h[0] + off), y, w.u + du] }
 }
 
 /// The wall's unit normal on the charge's side.   (wallcharge.ts wallN)
@@ -42,8 +52,13 @@ pub fn wall_n(w: &crate::wallcharge::WallSpot) -> V3 {
 
 /// Metres out from the charge's face (negative: in the wall, or past it).   (wallcharge.ts wallOff)
 pub fn wall_off(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot, p: V3) -> f64 {
-    let b = &g.col.boxes[w.box_];
-    if w.along_x { (p[2] - b.c[2]) * w.side - b.h[2] } else { (p[0] - b.c[0]) * w.side - b.h[0] }
+    let (c, h) = { let b = seam_box(g, w.box_); (b.c, b.h) };
+    wall_off_of(c, h, w, p)
+}
+
+/// wallOff's arithmetic, on the box's centre and half sizes.
+fn wall_off_of(c: V3, h: V3, w: &crate::wallcharge::WallSpot, p: V3) -> f64 {
+    if w.along_x { (p[2] - c[2]) * w.side - h[2] } else { (p[0] - c[0]) * w.side - h[0] }
 }
 
 /// Metres along the wall from the charge.   (wallcharge.ts wallAlong)
@@ -66,8 +81,8 @@ pub fn sky_faces(g: &mut crate::game::Game, index: f64) -> f64 {
     if let Some(&n) = g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).get(crate::Num(index)) {
         return n;
     }
-    let b = BoxId(index as u32);
-    let (c, h) = (g.col.boxes[b].c, g.col.boxes[b].h);
+    let b = g.col.boxes[index as usize];
+    let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
     let along_x = h[0] >= h[2];
     let hu = if along_x { h[0] } else { h[2] };
     let ht = if along_x { h[2] } else { h[0] };
@@ -113,22 +128,16 @@ pub fn sky_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &m
     out
 }
 
-/// `doesOf(b)` of a box: the row of its word, else the default row. The same answer as does_of of an object holding that word.   (materials.ts doesOf)
-fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
-    let word = g.col.boxes[b].does.map(|d| d.as_str());
-    crate::scene_materials::does_of_word(g, word)
-}
-
 /// Is structure static `index` an outer wall a charge cuts: not steel, thin enough, long enough, adoptable, the sky over one face or both.   (wallcharge.ts outerWall)
 pub fn outer_wall(g: &mut crate::game::Game, index: f64) -> bool {
-    let b = BoxId(index as u32);
-    let h = g.col.boxes[b].h;
+    let b = g.col.boxes[index as usize];
+    let h = seam_box(g, b).h;
     let thin = 2.0 * m::min(h[0], h[2]);
     let long = 2.0 * m::max(h[0], h[2]);
     if thin > g.k.wallcharge.outer_thick
         || long < g.k.wallcharge.outer_min_len
-        || g.col.boxes[b].metal == Some(true)
-        || does_of_box(g, b).surf == crate::scene_materials::Surf::Metal
+        || seam_box(g, b).metal == Some(true)
+        || { let word = seam_box(g, b).does; crate::scene_materials::does_of(g, word).surf == crate::scene_materials::Surf::Metal }
         || !crate::wallbreak::wall_break_adoptable(g, index)
     {
         return false;
@@ -191,8 +200,8 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
     let mut bd = g.k.wallcharge.pick_m + 1e-6;
     for i in 0..n {
         let index = i as f64;
-        let b = BoxId(i as u32);
-        let (c, h) = (g.col.boxes[b].c, g.col.boxes[b].h);
+        let b = g.col.boxes[i];
+        let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
         let dx = m::max_n(&[c[0] - h[0] - at[0], 0.0, at[0] - c[0] - h[0]]);
         if dx > bd {
             continue;
@@ -204,12 +213,12 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
         let bb = crate::wallbreak::wall_break_breakable_at(g, index);
         let passed = match &bb {
             Some(x) => x.kind != crate::wallbreak::BKind::Wall,
-            None => (js::to_i32(g.col.boxes[b].flags) & skip) != 0,
+            None => (js::to_i32(seam_box(g, b).flags) & skip) != 0,
         };
         if passed {
             continue; // (a partition already holed is hidden: its pieces stand in for it, and it is still the wall)
         }
-        if g.col.boxes[b].rot.is_some() || m::abs(m::sin(g.col.boxes[b].yaw)) > 1e-6 {
+        if seam_box(g, b).rot.is_some() || m::abs(m::sin(seam_box(g, b).yaw)) > 1e-6 {
             continue;
         }
         let sx = h[0] * 2.0;
@@ -226,11 +235,12 @@ pub fn wall_at(g: &mut crate::game::Game, at: V3, from: Option<V3>) -> Option<cr
             if c[1] - h[1] > 0.1 || c[1] + h[1] < g.k.walls.wall_min_top || long < 0.8 || thin > 1.2 {
                 continue;
             }
-            let s = does_of_box(g, b).surf;
+            let word = seam_box(g, b).does;
+            let s = crate::scene_materials::does_of(g, word).surf;
             if s != crate::scene_materials::Surf::Drywall && s != crate::scene_materials::Surf::Concrete && s != crate::scene_materials::Surf::Metal {
                 continue;
             }
-            why = String::from(if s == crate::scene_materials::Surf::Metal || g.col.boxes[b].metal == Some(true) {
+            why = String::from(if s == crate::scene_materials::Surf::Metal || seam_box(g, b).metal == Some(true) {
                 "steel. a charge won't cut it."
             } else if thin > g.k.walls.wall_max_thick || s == crate::scene_materials::Surf::Concrete {
                 "concrete. a charge won't cut it."
@@ -321,44 +331,7 @@ pub fn wall_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page
 
 /// Sam's own row at the foot of a partition his cursor is on.   (wallcharge.ts wallChargeRows)
 pub fn wall_charge_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    let mut sam_row = |g: &mut Game, base: crate::game::Interactable, verb: crate::game::Verb, text: String, hints: Option<String>, over: Option<crate::wallcharge::WallChargeSamRowsRowOver>| row(g, base, verb, text, hints, over.map(over_of));
-    wall_charge_sam_rows(g, p, busy, &mut sam_row, offer);
-}
-
-/// `Partial<Interactable>` came out as two types, the one samRows hands and the one its caller's `row` takes: the same fields.
-fn over_of(o: crate::wallcharge::WallChargeSamRowsRowOver) -> crate::wallcharge::WallChargeRowsRowOver {
-    use crate::wallcharge::WallChargeRowsRowOverKind as To;
-    use crate::wallcharge::WallChargeSamRowsRowOverKind as From;
-    crate::wallcharge::WallChargeRowsRowOver {
-        kind: o.kind.map(|k| match k {
-            From::Cam => To::Cam,
-            From::Guard => To::Guard,
-            From::Breaker => To::Breaker,
-            From::Door => To::Door,
-            From::Light => To::Light,
-            From::Body => To::Body,
-            From::Objective => To::Objective,
-            From::Held => To::Held,
-            From::Wall => To::Wall,
-            From::Switch => To::Switch,
-            From::Charge => To::Charge,
-            From::Cancel => To::Cancel,
-        }),
-        pos: o.pos,
-        line1: o.line1,
-        line2: o.line2,
-        in_reach: o.in_reach,
-        off: o.off,
-        progress: o.progress,
-        target: o.target,
-        door: o.door,
-        guard: o.guard,
-        verb: o.verb,
-        running: o.running,
-        close: o.close,
-        past: o.past,
-        framed: o.framed,
-    }
+    wall_charge_sam_rows(g, p, busy, row, offer);
 }
 
 /// The module and its two rows; the HUD's notes are asked of it from here on. The closures are enums now: orders.ts's callers match them.   (wallcharge.ts WallCharge.constructor)
@@ -399,13 +372,6 @@ mod tests {
         crate::wallcharge::WallSpot { along_x, index, u, side, ..crate::wallcharge::WallSpot::zeroed() }
     }
 
-    /// A blank game with one wall in it, at c with half-sizes h; the spot's box_ is that wall.
-    fn game_with_wall(c: V3, h: V3) -> (alloc::boxed::Box<Game>, BoxId) {
-        let mut g = alloc::boxed::Box::new(Game::blank());
-        let b = g.col.boxes.push(crate::scene_boxes::Box { c, h, ..crate::scene_boxes::Box::zeroed() });
-        (g, b)
-    }
-
     /// bits from the TypeScript's own line under bun with EXACT.on
     #[test]
     fn near_seg_has_the_typescripts_bits() {
@@ -439,22 +405,19 @@ mod tests {
     /// A point set off the wall reads back the same offset and place along it; the far face is at −thick.
     #[test]
     fn a_wall_point_round_trips() {
-        let (mut g, b) = game_with_wall([10.0, 1.5, -4.0], [3.0, 1.5, 0.125]);
-        let w = crate::wallcharge::WallSpot { box_: b, ..spot(true, 0.0, 11.0, -1.0) };
-        assert_eq!(thick(&mut g, &w), 0.25);
-        let p = wall_pt(&mut g, &w, 0.5, 1.25, Some(1.0));
+        let (c, h): (V3, V3) = ([10.0, 1.5, -4.0], [3.0, 1.5, 0.125]);
+        let w = spot(true, 0.0, 11.0, -1.0);
+        let p = wall_pt_of(c, h, &w, 0.5, 1.25, 1.0);
         assert_eq!(p, [11.5, 1.0, -5.375]);
-        assert_eq!(wall_off(&mut g, &w, p), 1.25);
+        assert_eq!(wall_off_of(c, h, &w, p), 1.25);
         assert_eq!(wall_along(&w, p), 0.5);
-        let far = wall_pt(&mut g, &w, 0.0, -0.25, None);
-        assert_eq!(far, [11.0, 0.0, -3.875]);
+        assert_eq!(wall_pt_of(c, h, &w, 0.0, -0.25, 0.0), [11.0, 0.0, -3.875]);
 
-        let (mut g, b) = game_with_wall([2.0, 1.5, 6.0], [0.125, 1.5, 3.0]);
-        let w = crate::wallcharge::WallSpot { box_: b, ..spot(false, 0.0, 7.0, 1.0) };
-        assert_eq!(thick(&mut g, &w), 0.25);
-        let p = wall_pt(&mut g, &w, -1.0, 0.5, None);
+        let (c, h): (V3, V3) = ([2.0, 1.5, 6.0], [0.125, 1.5, 3.0]);
+        let w = spot(false, 0.0, 7.0, 1.0);
+        let p = wall_pt_of(c, h, &w, -1.0, 0.5, 0.0);
         assert_eq!(p, [2.625, 0.0, 6.0]);
-        assert_eq!(wall_off(&mut g, &w, p), 0.5);
+        assert_eq!(wall_off_of(c, h, &w, p), 0.5);
     }
 
     /// What is asked aside leaves the memo as it was; a memo that did not exist does not exist after.

@@ -52,25 +52,28 @@ fn emit(g: &mut Game, e: PropEvent) {
 /// In Rust there is one maths (`crate::m`, whatever `maths_epoch` says), so the kept cos and sin are never out of date   (props.ts freshTrig)
 pub fn fresh_trig(g: &mut crate::game::Game) {}
 
-/// the speed caps, on a row of a block of doubles   (props.ts clampRow)
-pub fn clamp_row(d: &mut Vec<f64>, vx: f64, vz: f64, ww: f64, r: f64) {
-    let (vx, vz, ww) = ((vx + r) as usize, (vz + r) as usize, (ww + r) as usize);
-    let s = m::hyp2(d[vx], d[vz]);
+/// the speed caps, on a row of the columns   (props.ts clampRow)
+fn clamp_row(c: &mut sim::props::Props, r: usize) {
+    let s = m::hyp2(c.vx[r], c.vz[r]);
     if s > MAX_V {
-        d[vx] *= MAX_V / s;
-        d[vz] *= MAX_V / s;
+        c.vx[r] *= MAX_V / s;
+        c.vz[r] *= MAX_V / s;
     }
-    if d[ww] > MAX_W { d[ww] = MAX_W; } else if d[ww] < -MAX_W { d[ww] = -MAX_W; }
+    if c.w[r] > MAX_W { c.w[r] = MAX_W; } else if c.w[r] < -MAX_W { c.w[r] = -MAX_W; }
 }
 
 /// a row's yaw written, with its cos and sin when it is another value   (props.ts turnRow)
-pub fn turn_row(d: &mut Vec<f64>, yaw: f64, cs: f64, sn: f64, r: f64, y: f64) {
-    let (yaw, cs, sn) = ((yaw + r) as usize, (cs + r) as usize, (sn + r) as usize);
-    if y != d[yaw] {
-        d[cs] = m::cos(y);
-        d[sn] = m::sin(y);
+fn turn_row(c: &mut sim::props::Props, r: usize, y: f64) {
+    if y != c.yaw[r] {
+        c.cs[r] = m::cos(y);
+        c.sn[r] = m::sin(y);
     }
-    d[yaw] = y;
+    c.yaw[r] = y;
+}
+
+/// A box's row (`Box.c`, `Box.yaw`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows: once the table is back the body is that row
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
 }
 
 /// a double column of this thing, by the column's offset   (props.ts Prop.f)
@@ -138,11 +141,7 @@ pub fn prop_yaw(g: &mut crate::game::Game, id: PropId) -> f64 {
 pub fn prop_set_yaw(g: &mut crate::game::Game, id: PropId, v: f64) {
     let s = cols(g);
     let r = row(s, id);
-    if v != s.yaw[r] {
-        s.cs[r] = m::cos(v);
-        s.sn[r] = m::sin(v);
-    }
-    s.yaw[r] = v;
+    turn_row(s, r, v);
     crate::scene_box_mirror::thing_wrote(g);
 }
 
@@ -358,7 +357,7 @@ pub fn prop_place(g: &mut crate::game::Game, id: PropId) {
             (t.def.parts[i].off, t.def.parts[i].yaw, t.boxes[i])
         };
         let c = [x + cs * off[0] + sn * off[2], off[1], z - sn * off[0] + cs * off[2]];
-        let bx = &mut g.col.boxes[b];
+        let bx = seam_box(g, b);
         bx.c = c;
         bx.yaw = yaw + part_yaw;
     }
@@ -399,7 +398,7 @@ pub fn prop_system_say(g: &mut crate::game::Game, e: crate::props::PropEvent) {
 
 /// the furniture of a level made and settled. RETURNS the system; for the settle, which reaches it by `g.props` as every method does, it stands in
 /// `g.props` and the old value is put back, so the caller's `g.props = …` is what keeps it   (props.ts PropSystem.constructor)
-pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::PropDef], emit: &mut dyn FnMut(&mut crate::game::Game, crate::props::PropEvent), st: Option<crate::Opaque>) -> crate::props::PropSystem {
+pub fn prop_system_new(g: &mut crate::game::Game, defs: &[crate::scene_level::PropDef], st: Option<crate::Opaque>) -> crate::props::PropSystem {
     let mut sys = PropSystem::blank();
     sys.store = crate::sim_propshome::prop_store_new(g, st.unwrap_or(crate::Opaque), defs.len() as f64);
     for (i, d) in defs.iter().enumerate() {
@@ -491,8 +490,10 @@ pub fn prop_system_settle(g: &mut crate::game::Game) {
         prop_set_dirty(g, p, true);
     }
     if !g.props.props.is_empty() {
-        prop_system_settle_world(g);
-        prop_system_settle_there(g);
+        crate::scene_collision::window(g, &mut |g: &mut Game| {
+            prop_system_settle_world(g);
+            prop_system_settle_there(g);
+        });
     }
     for i in 0..g.props.props.len() {
         let p = g.props.props[i];
@@ -512,8 +513,11 @@ pub fn prop_system_settle_here(g: &mut crate::game::Game) {
     sim::props::settle(g.sim, g.col.mirror.slot as usize);
 }
 
-/// nothing to find: in Rust the module always takes the passes, and the box world's rows are written as the boxes are   (props.ts PropSystem.settleWorld)
-pub fn prop_system_settle_world(g: &mut crate::game::Game) {}
+/// the box world's copy standing for the passes; in Rust the module always takes them   (props.ts PropSystem.settleWorld)
+pub fn prop_system_settle_world(g: &mut crate::game::Game) {
+    crate::scene_collision::rules_statics(g);
+    debug_assert!(g.col.mirror.live, "the furniture settled as a level stood up, with no copy of the box world standing");
+}
 
 /// the passes taken in the module: the level's facts by row, the call, and how often a thing was pushed out of a static   (props.ts PropSystem.settleThere)
 pub fn prop_system_settle_there(g: &mut crate::game::Game) {
@@ -526,12 +530,17 @@ pub fn prop_system_settle_there(g: &mut crate::game::Game) {
     c.settle_walls += walls as f64;
 }
 
-/// closest part of any thing along the ray (t < tmax): the module's ray, there being no other   (props.ts PropSystem.raycast)
+/// closest part of any thing along the ray (t < tmax): the module's ray, over the copy of the furniture   (props.ts PropSystem.raycast)
 pub fn prop_system_raycast(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::props::PropSystemRaycast> {
     if g.props.props.is_empty() {
         return None;
     }
-    prop_system_raycast_here(g, ro, rd, tmax).map(|h| PropSystemRaycast { t: h.t, n: h.n, prop: h.prop, box_: h.box_ })
+    match crate::scene_collision::things_ray(g, ro, rd, tmax) {
+        // (no copy of the furniture standing: the TypeScript's walk, which in Rust is the twin)
+        None => prop_system_raycast_here(g, ro, rd, tmax).map(|h| PropSystemRaycast { t: h.t, n: h.n, prop: h.prop, box_: h.box_ }),
+        Some(None) => None,
+        Some(Some(h)) => Some(PropSystemRaycast { t: h.t, n: h.n, prop: g.props.props[h.row as usize], box_: h.box_ }),
+    }
 }
 
 /// TWIN, with what its row and part name   (props.ts PropSystem.raycastHere, collision.ts thingsAsk)
@@ -584,12 +593,7 @@ pub fn prop_system_apply_impulse(g: &mut crate::game::Game, p: PropId, point: V3
 pub fn prop_system_clamp_vel(g: &mut crate::game::Game, p: PropId) {
     let c = cols(g);
     let r = row(c, p);
-    let s = m::hyp2(c.vx[r], c.vz[r]);
-    if s > MAX_V {
-        c.vx[r] *= MAX_V / s;
-        c.vz[r] *= MAX_V / s;
-    }
-    if c.w[r] > MAX_W { c.w[r] = MAX_W; } else if c.w[r] < -MAX_W { c.w[r] = -MAX_W; }
+    clamp_row(c, r);
 }
 
 /// a noise, rate limited by the thing: a chair along a wall is one scrape and the odd knock   (props.ts PropSystem.noise)
@@ -664,14 +668,16 @@ pub fn prop_system_there(g: &mut crate::game::Game, contacts: &[crate::props::Pr
         contacts.len() <= sim::props::MAXC && leaves.len() <= sim::world::MAX_LEAVES && g.props.doorways.len() <= sim::props::MAXW,
         "the furniture's step was handed more men, leaves or door frames than its hand-over holds"
     );
+    let dyn_ = g.col.dynamic_boxes.clone();
     let mut idx: Vec<f64> = Vec::with_capacity(leaves.len());
     for &b in leaves {
-        let i = g.col.dynamic_boxes.iter().position(|&q| q == b);
+        let i = dyn_.iter().position(|&q| q == b);
         debug_assert!(i.is_some(), "a leaf handed in that is not in the box world");
         if let Some(i) = i {
             idx.push(i as f64);
         }
     }
+    crate::scene_collision::rules_world(g, &dyn_);
     let n = idx.len() as f64;
     Some(PropSystemThere { leaves: Some(idx), n })
 }
@@ -740,6 +746,7 @@ pub fn prop_system_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[cra
     io.par[P_CAS_START] = g.k.castor.start_v;
     io.par[P_CAS_STOP] = g.k.castor.stop_v;
     let ev = sim::props::update(g.sim, g.col.mirror.slot as usize);
+    let io = self::io();   // (taken again: the step wrote the hand-over through its own reference)
     {
         let s = &mut g.m.sim_propshome.props_stepped;
         s.swept += io.par[P_SWEPT];
@@ -810,29 +817,32 @@ pub fn prop_system_heard(g: &mut crate::game::Game, e: &[f64], o: f64) -> crate:
 mod tests {
     use super::*;
 
+    // (every blank game has the same block and the tests run at once: each case has a row of its own)
     #[test]
     fn clamp_row_caps_speed_and_spin() {
-        let mut d = vec![6.0, 8.0, 12.0];
-        clamp_row(&mut d, 0.0, 1.0, 2.0, 0.0);
-        assert_eq!(d, vec![3.0, 4.0, 9.0]);
-        let mut d = vec![0.0, 3.0, 4.0, -12.0];
-        clamp_row(&mut d, 0.0, 1.0, 2.0, 1.0);
-        assert_eq!(d[1], 3.0);
-        assert_eq!(d[2], 4.0);
-        assert_eq!(d[3], -9.0);
+        let g = crate::game::Game::blank();
+        let c = cols(&g);
+        (c.vx[1], c.vz[1], c.w[1]) = (6.0, 8.0, 12.0);
+        clamp_row(c, 1);
+        assert_eq!((c.vx[1], c.vz[1], c.w[1]), (3.0, 4.0, 9.0));
+        (c.vx[1], c.vz[1], c.w[1]) = (3.0, 4.0, -12.0);
+        clamp_row(c, 1);
+        assert_eq!((c.vx[1], c.vz[1], c.w[1]), (3.0, 4.0, -9.0));
     }
 
     #[test]
     fn turn_row_keeps_the_trig_of_an_equal_yaw() {
         // −0 equals 0 in the TypeScript's `!==` too: the yaw is written, its cos and sin stay
-        let mut d = vec![0.0, 0.25, 0.75];
-        turn_row(&mut d, 0.0, 1.0, 2.0, 0.0, -0.0);
-        assert_eq!(d[0].to_bits(), (-0.0f64).to_bits());
-        assert_eq!((d[1], d[2]), (0.25, 0.75));
-        turn_row(&mut d, 0.0, 1.0, 2.0, 0.0, 0.5);
-        assert_eq!(d[0], 0.5);
-        assert_eq!(d[1].to_bits(), m::cos(0.5).to_bits());
-        assert_eq!(d[2].to_bits(), m::sin(0.5).to_bits());
+        let g = crate::game::Game::blank();
+        let c = cols(&g);
+        (c.yaw[2], c.cs[2], c.sn[2]) = (0.0, 0.25, 0.75);
+        turn_row(c, 2, -0.0);
+        assert_eq!(c.yaw[2].to_bits(), (-0.0f64).to_bits());
+        assert_eq!((c.cs[2], c.sn[2]), (0.25, 0.75));
+        turn_row(c, 2, 0.5);
+        assert_eq!(c.yaw[2], 0.5);
+        assert_eq!(c.cs[2].to_bits(), m::cos(0.5).to_bits());
+        assert_eq!(c.sn[2].to_bits(), m::sin(0.5).to_bits());
     }
 
     #[test]
@@ -851,13 +861,14 @@ mod tests {
     #[test]
     fn against_the_typescripts_own_bits() {
         // bun, EXACT.on: 1.7 * (5 / Math.hypot(1.7, 9.3)), 9.3 * (…), Math.cos(0.7), Math.sin(0.7)
-        let mut d = vec![1.7, 9.3, 0.0];
-        clamp_row(&mut d, 0.0, 1.0, 2.0, 0.0);
-        assert_eq!(d[0].to_bits(), 0x3fecc545374c7b17);
-        assert_eq!(d[1].to_bits(), 0x4013ac8b911bd42d);
-        let mut d = vec![0.0, 1.0, 0.0];
-        turn_row(&mut d, 0.0, 1.0, 2.0, 0.0, 0.7);
-        assert_eq!(d[1].to_bits(), 0x3fe87996529f9d92);
-        assert_eq!(d[2].to_bits(), 0x3fe49d6e694619b8);
+        let g = crate::game::Game::blank();
+        let c = cols(&g);
+        (c.vx[3], c.vz[3], c.w[3], c.yaw[3]) = (1.7, 9.3, 0.0, 0.0);
+        clamp_row(c, 3);
+        assert_eq!(c.vx[3].to_bits(), 0x3fecc545374c7b17);
+        assert_eq!(c.vz[3].to_bits(), 0x4013ac8b911bd42d);
+        turn_row(c, 3, 0.7);
+        assert_eq!(c.cs[3].to_bits(), 0x3fe87996529f9d92);
+        assert_eq!(c.sn[3].to_bits(), 0x3fe49d6e694619b8);
     }
 }

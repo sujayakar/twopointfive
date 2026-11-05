@@ -16,4 +16,4 @@ pub use p_05::{update_hold, hold_tail, set_phase, ease_off_hold, cancel_ask, say
 pub mod p_06;
 pub use p_06::{free_held, drop_hold, start_picking, stop_picking, update_picking, start_wand, stop_wand, update_wanding, update_coding_plant, update_work_plant, start_kick, side_kick_spot, update_kick, body_dist, throw_origin, do_throw, aim_ease, aim_level, cursor_hit, cursor_point, update_aim};
 pub mod p_07;
-pub use p_07::{build_interactables, row_key, pick_hover, cancel_row, thing_dist, interact_order, throw_count, can_back, throw_off, toggle_drag, release_body, cancel_actions, teleport_player};
+pub use p_07::{build_interactables, row_key, pick_hover, cancel_row, thing_dist, throw_count, can_back, throw_off, toggle_drag, release_body, cancel_actions, teleport_player};

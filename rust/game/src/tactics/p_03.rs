@@ -1,4 +1,4 @@
-//! src/game/tactics.ts lines 875 to 1038
+//! src/game/tactics.ts lines 876 to 1039
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -303,12 +303,12 @@ pub fn tactics_summary(g: &mut crate::game::Game) -> String {
             let kind = match r { Some(r) => r.kind.as_str(), None => "?" };
             let holding = match r { Some(r) if r.holding => " (holding)", _ => "" };
             let round = match r {
-                Some(r) if r.kind == RoleKind::Flanker => format!(" {}° round", m::round(deg_apart(r.bearing, p.presser_bearing))),
+                Some(r) if r.kind == RoleKind::Flanker => format!(" {}° round", js::num_str(m::round(deg_apart(r.bearing, p.presser_bearing)))),
                 _ => String::new(),
             };
             format!("{} {}{}{}", g.gd[man].callsign, kind, holding, round)
         }).collect();
-        parts.push(format!("plan #{} {} on ({}, {}): {}", p.id, p.phase.as_str(), js::to_fixed(p.target[0], 1), js::to_fixed(p.target[2], 1), men.join(", ")));
+        parts.push(format!("plan #{} {} on ({}, {}): {}", js::num_str(p.id), p.phase.as_str(), js::to_fixed(p.target[0], 1), js::to_fixed(p.target[2], 1), men.join(", ")));
     }
     for (man, l) in st.lone.iter() {
         let what = if l.released { format!("on at a walk ({})", l.released_why) }
@@ -320,7 +320,7 @@ pub fn tactics_summary(g: &mut crate::game::Game) -> String {
         let r = &g.tab.tactics_danger_rec[rid];
         if r.until > g.time {
             let victim = match &r.victim { Some(v) if !v.is_empty() => format!(" {}", v), _ => String::new() };
-            parts.push(format!("{} dangerous for {} ({}{}) {} s{}{}", g.dr[r.door].def.name, r.team.as_str(), r.why.as_str(), victim, m::ceil(r.until - g.time),
+            parts.push(format!("{} dangerous for {} ({}{}) {} s{}{}", g.dr[r.door].def.name, r.team.as_str(), r.why.as_str(), victim, js::num_str(m::ceil(r.until - g.time)),
                 if r.banged { " banged" } else { "" }, if r.entered { " entered" } else { "" }));
         }
     }

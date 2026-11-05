@@ -105,7 +105,7 @@ pub fn known_places(g: &mut crate::game::Game, men: &[GuardId], max_age: f64) ->
 pub fn any_idea(g: &mut crate::game::Game, men: &[GuardId]) -> bool { todo!() }
 
 /// (src/game/picture.ts:346 safestSets)
-pub fn safest_sets(g: &mut crate::game::Game, men: &[GuardId], sets: &[Vec<crate::picture::SafestSetsSetsItemItem>]) -> Vec<Vec<crate::picture::SafestSetsSetsItemItem>> { todo!() }
+pub fn safest_sets(g: &mut crate::game::Game, men: &[GuardId], sets: &[Vec<crate::orders::StackPost>]) -> Vec<usize> { todo!() }
 
 /// (src/game/picture.ts:354 coverNear)
 pub fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n: Option<f64>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, V3) -> bool>) -> Vec<crate::picture::CoverSpot> { todo!() }
@@ -133,3 +133,7 @@ pub fn picture_summary(g: &mut crate::game::Game) -> String { todo!() }
 
 /// (src/game/picture.ts:493 ideaOf)
 pub fn idea_of(g: &mut crate::game::Game, gd: GuardId, who: crate::picture::Who) -> Option<crate::picture::Idea> { todo!() }
+
+
+/// INVENTED: the function exposureAsker hands back, asked of one spot: exposedAt's own answer, each row's places dealt once, the heaviest idea asked first. Ticks g.stats.picture.asks on every ask, as the closure does. (picture.ts:314)
+pub fn exposure_ask(g: &mut crate::game::Game, ask: &mut crate::picture::ExposureAsker, p: V3) -> f64 { todo!() }

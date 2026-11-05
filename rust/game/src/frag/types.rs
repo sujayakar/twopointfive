@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: BlastReport, src/game/frag.ts:206)
+/// (TypeScript: BlastReport, src/game/frag.ts:207)
 #[derive(Clone, Debug)]
 pub struct BlastReport {
     pub at: V3,
@@ -34,7 +34,7 @@ impl BlastReport {
 }
 impl Default for BlastReport { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BlastHit, src/game/frag.ts:205)
+/// (TypeScript: BlastHit, src/game/frag.ts:206)
 #[derive(Clone, Debug)]
 pub struct BlastHit {
     pub id: f64,
@@ -97,7 +97,7 @@ impl BlastHitBehind {
     }
 }
 
-/// (TypeScript: BlastSpec, src/game/frag.ts:191)
+/// (TypeScript: BlastSpec, src/game/frag.ts:192)
 #[derive(Clone, Debug)]
 pub struct BlastSpec {
     pub who: f64,
@@ -124,7 +124,7 @@ impl BlastSpec {
 }
 impl Default for BlastSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:202 BlastSpec.destr, src/game/frag.ts:202)
+/// (TypeScript: inline at src/game/frag.ts:203 BlastSpec.destr, src/game/frag.ts:203)
 #[derive(Clone, Copy, Debug)]
 pub struct BlastSpecDestr {
     pub radius: Option<f64>,
@@ -160,7 +160,7 @@ impl GlassView {
     }
 }
 
-/// (TypeScript: Live, src/game/frag.ts:446)
+/// (TypeScript: Live, src/game/frag.ts:447)
 #[derive(Clone, Debug)]
 pub struct Live {
     pub it: ItemId,
@@ -197,7 +197,7 @@ impl Live {
 }
 impl Default for Live { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Rest, src/game/frag.ts:469)
+/// (TypeScript: Rest, src/game/frag.ts:471)
 #[derive(Clone, Debug)]
 pub struct Rest {
     pub t: f64,
@@ -218,7 +218,7 @@ impl Rest {
 }
 impl Default for Rest { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:446 Live.made, src/game/frag.ts:446)
+/// (TypeScript: inline at src/game/frag.ts:447 Live.made, src/game/frag.ts:447)
 #[derive(Clone, Copy, Debug)]
 pub struct LiveMadeValue {
     pub at: V3,
@@ -235,7 +235,7 @@ impl LiveMadeValue {
 }
 impl Default for LiveMadeValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Carrier, src/game/frag.ts:813)
+/// (TypeScript: Carrier, src/game/frag.ts:818)
 #[derive(Clone, Debug)]
 pub struct Carrier {
     pub gd: GuardId,
@@ -264,7 +264,7 @@ impl Carrier {
 }
 impl Default for Carrier { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:813 Carrier.wind, src/game/frag.ts:813)
+/// (TypeScript: inline at src/game/frag.ts:818 Carrier.wind, src/game/frag.ts:818)
 #[derive(Clone, Copy, Debug)]
 pub struct CarrierWind {
     pub until: f64,
@@ -289,7 +289,7 @@ impl CarrierWind {
 }
 impl Default for CarrierWind { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:813 Carrier.spots, src/game/frag.ts:813)
+/// (TypeScript: inline at src/game/frag.ts:818 Carrier.spots, src/game/frag.ts:818)
 #[derive(Clone, Debug)]
 pub struct CarrierSpots {
     pub at: V3,
@@ -310,7 +310,7 @@ impl CarrierSpots {
 }
 impl Default for CarrierSpots { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DefBook, src/game/frag.ts:814)
+/// (TypeScript: DefBook, src/game/frag.ts:819)
 #[derive(Clone, Debug)]
 pub struct DefBook {
     pub men: Vec<GuardId>,
@@ -333,7 +333,7 @@ impl DefBook {
 }
 impl Default for DefBook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:267 WALLS_FOR, src/game/frag.ts:267)
+/// (TypeScript: inline at src/game/frag.ts:268 WALLS_FOR, src/game/frag.ts:268)
 #[derive(Clone, Debug)]
 pub struct FragModWALLSFORValue {
     pub time: f64,
@@ -352,11 +352,11 @@ impl FragModWALLSFORValue {
 }
 impl Default for FragModWALLSFORValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:280 TORN, src/game/frag.ts:280)
+/// (TypeScript: inline at src/game/frag.ts:281 TORN, src/game/frag.ts:281)
 #[derive(Clone, Debug)]
 pub struct FragModTORNValue {
     pub time: f64,
-    pub doors: Vec<crate::frag::FragModTORNValueDoorsItem>,
+    pub doors: Vec<DoorId>,
 }
 impl FragModTORNValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -369,7 +369,7 @@ impl FragModTORNValue {
 }
 impl Default for FragModTORNValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:280 FragModTORNValue.doors, src/game/frag.ts:280)
+/// (TypeScript: inline at quiet FragModTORNValue.doors, src/game/frag.ts:281)
 #[derive(Clone, Copy, Debug)]
 pub struct FragModTORNValueDoorsItem {
     pub off: bool,
@@ -386,7 +386,7 @@ impl FragModTORNValueDoorsItem {
 }
 impl Default for FragModTORNValueDoorsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:470 rollOn ->, src/game/frag.ts:470)
+/// (TypeScript: inline at src/game/frag.ts:472 rollOn ->, src/game/frag.ts:472)
 #[derive(Clone, Debug)]
 pub struct RollOn {
     pub at: V3,
@@ -403,7 +403,7 @@ impl RollOn {
 }
 impl Default for RollOn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:501 restOfThrow ->, src/game/frag.ts:501)
+/// (TypeScript: inline at src/game/frag.ts:503 restOfThrow ->, src/game/frag.ts:503)
 #[derive(Clone, Debug)]
 pub struct RestOfThrow {
     pub at: V3,
@@ -420,7 +420,7 @@ impl RestOfThrow {
 }
 impl Default for RestOfThrow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:542 fleeSpot(c), src/game/frag.ts:542)
+/// (TypeScript: inline at src/game/frag.ts:544 fleeSpot(c), src/game/frag.ts:544)
 #[derive(Clone, Copy, Debug)]
 pub struct FleeSpotC {
     pub pos: V3,
@@ -435,7 +435,7 @@ impl FleeSpotC {
 }
 impl Default for FleeSpotC { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:542 fleeSpot(wise), src/game/frag.ts:542)
+/// (TypeScript: inline at src/game/frag.ts:544 fleeSpot(wise), src/game/frag.ts:544)
 #[derive(Clone, Debug)]
 pub struct FleeSpotWise {
     pub path: Vec<V3>,
@@ -456,7 +456,7 @@ impl FleeSpotWise {
 }
 impl Default for FleeSpotWise { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:542 FleeSpotWise.apart, src/game/frag.ts:542)
+/// (TypeScript: inline at src/game/frag.ts:544 FleeSpotWise.apart, src/game/frag.ts:544)
 #[derive(Clone, Debug)]
 pub struct FleeSpotWiseApart {
     pub stay: Vec<V3>,
@@ -473,7 +473,7 @@ impl FleeSpotWiseApart {
 }
 impl Default for FleeSpotWiseApart { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:619 fleeByDoor(c), src/game/frag.ts:619)
+/// (TypeScript: inline at src/game/frag.ts:621 fleeByDoor(c), src/game/frag.ts:621)
 #[derive(Clone, Copy, Debug)]
 pub struct FleeByDoorC {
     pub pos: V3,
@@ -488,7 +488,7 @@ impl FleeByDoorC {
 }
 impl Default for FleeByDoorC { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:619 fleeByDoor(wise), src/game/frag.ts:619)
+/// (TypeScript: inline at src/game/frag.ts:621 fleeByDoor(wise), src/game/frag.ts:621)
 #[derive(Clone, Debug)]
 pub struct FleeByDoorWise {
     pub path: Vec<V3>,
@@ -509,7 +509,7 @@ impl FleeByDoorWise {
 }
 impl Default for FleeByDoorWise { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:619 FleeByDoorWise.apart, src/game/frag.ts:619)
+/// (TypeScript: inline at src/game/frag.ts:621 FleeByDoorWise.apart, src/game/frag.ts:621)
 #[derive(Clone, Debug)]
 pub struct FleeByDoorWiseApart {
     pub stay: Vec<V3>,
@@ -526,7 +526,7 @@ impl FleeByDoorWiseApart {
 }
 impl Default for FleeByDoorWiseApart { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:619 fleeByDoor ->, src/game/frag.ts:619)
+/// (TypeScript: inline at src/game/frag.ts:621 fleeByDoor ->, src/game/frag.ts:621)
 #[derive(Clone, Copy, Debug)]
 pub struct FleeByDoor {
     pub goal: V3,
@@ -543,7 +543,7 @@ impl FleeByDoor {
 }
 impl Default for FleeByDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:683 takenBy ->, src/game/frag.ts:683)
+/// (TypeScript: inline at src/game/frag.ts:685 takenBy ->, src/game/frag.ts:685)
 #[derive(Clone, Debug)]
 pub struct TakenBy {
     pub stay: Vec<V3>,
@@ -560,7 +560,7 @@ impl TakenBy {
 }
 impl Default for TakenBy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:778 ownBang(e), src/game/frag.ts:778)
+/// (TypeScript: inline at src/game/frag.ts:783 ownBang(e), src/game/frag.ts:783)
 #[derive(Clone, Copy, Debug)]
 pub struct OwnBangE {
     pub frag: Option<bool>,
@@ -577,7 +577,7 @@ impl OwnBangE {
 }
 impl Default for OwnBangE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/frag.ts:795 fragMarks ->, src/game/frag.ts:795)
+/// (TypeScript: inline at src/game/frag.ts:800 fragMarks ->, src/game/frag.ts:800)
 #[derive(Clone, Copy, Debug)]
 pub struct FragMarksItem {
     pub at: V3,
@@ -609,26 +609,43 @@ impl WindUp {
     }
 }
 
+/// (TypeScript: inline at quiet free ->, src/game/frag.ts:948)
+#[derive(Clone, Debug)]
+pub struct Free {
+    pub b: crate::frag::DefBook,
+    pub c: crate::frag::Carrier,
+}
+impl Free {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        Free {
+            b: crate::frag::DefBook::zeroed(),
+            c: crate::frag::Carrier::zeroed(),
+        }
+    }
+}
+impl Default for Free { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FragThrowAt {
     Thrown,
     Own,
-    Busy,
     Arc,
+    Busy,
 }
 impl FragThrowAt {
     pub const fn as_str(self) -> &'static str {
         match self {
             FragThrowAt::Thrown => "thrown",
             FragThrowAt::Own => "own",
-            FragThrowAt::Busy => "busy",
             FragThrowAt::Arc => "arc",
+            FragThrowAt::Busy => "busy",
         }
     }
 }
 
-/// (TypeScript: inline at src/game/frag.ts:978 lands(sol), src/game/frag.ts:978)
+/// (TypeScript: inline at src/game/frag.ts:983 lands(sol), src/game/frag.ts:983)
 #[derive(Clone, Copy, Debug)]
 pub struct LandsSol {
     pub land: V3,
@@ -646,19 +663,19 @@ impl Default for LandsSol { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct FragMod {
-    /// (src/game/frag.ts:209 FRAG_LOG)
+    /// (src/game/frag.ts:210 FRAG_LOG)
     pub frag_log: Vec<crate::frag::BlastReport>,
-    /// (src/game/frag.ts:212 FRAG_WHY)
+    /// (src/game/frag.ts:213 FRAG_WHY)
     pub frag_why: JsMap<String, f64>,
-    /// (src/game/frag.ts:267 WALLS_FOR)
+    /// (src/game/frag.ts:268 WALLS_FOR)
     pub walls_for: Option<crate::frag::FragModWALLSFORValue>,
-    /// (src/game/frag.ts:280 TORN)
+    /// (src/game/frag.ts:281 TORN)
     pub torn: Option<crate::frag::FragModTORNValue>,
-    /// (src/game/frag.ts:448 warned)
+    /// (src/game/frag.ts:449 warned)
     pub warned: JsMap<GuardId, f64>,
-    /// (src/game/frag.ts:449 books)
+    /// (src/game/frag.ts:450 books)
     pub books: Option<Vec<crate::frag::Live>>,
-    /// (src/game/frag.ts:815 defBooks)
+    /// (src/game/frag.ts:820 defBooks)
     pub def_books: Option<crate::frag::DefBook>,
 }
 impl FragMod {
@@ -695,11 +712,11 @@ pub struct FragStats {
     pub stunned: i32,
 }
 
-/// (src/game/frag.ts:268 NO_WALLS: a table nothing writes)
+/// (src/game/frag.ts:269 NO_WALLS: a table nothing writes)
 pub fn no_walls() -> Vec<crate::wallbreak::WallOpening> { Vec::new() }
 
-/// (src/game/frag.ts:531 LOOK_RINGS: a table nothing writes)
+/// (src/game/frag.ts:533 LOOK_RINGS: a table nothing writes)
 pub fn look_rings() -> Vec<f64> { alloc::vec![1.6, 2.5, 3.5, 4.5, 5.0, 6.25] }
 
-/// (src/game/frag.ts:830 SHOUTS: a table nothing writes)
+/// (src/game/frag.ts:835 SHOUTS: a table nothing writes)
 pub fn shouts() -> Vec<String> { alloc::vec![String::from("frag out!"), String::from("grenade out!"), String::from("fire in the hole!")] }

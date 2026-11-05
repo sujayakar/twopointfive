@@ -16,18 +16,23 @@ pub fn sup_clear_reactions(this: &mut crate::suppression::Sup) {
     this.cover_until = -1.0;
 }
 
+/// `TEMPERAMENT[callsign]`: the skeleton's table is a slice of pairs, walked for the name.
+fn temperament_row(callsign: &str) -> Option<crate::game::Temperament> {
+    crate::game::temperament().iter().find(|row| row.0 == callsign).map(|row| row.1)
+}
+
 /// How readily this body accrues suppression, by his temperament.   (suppression.ts keenOf)
 pub fn keen_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if c_2 == g.pl[g.player].ch { return 1.0; }
-    let mut t: Option<String> = None;
+    let mut t: Option<crate::game::Temperament> = None;
     for &x in &g.guards {
         if g.gd[x].ch == c_2 {
-            t = crate::game::temperament().get(g.gd[x].callsign.clone()).cloned();
+            t = temperament_row(&g.gd[x].callsign);
             break;
         }
     }
     match t {
-        Some(t) => match g.k.suppression.keen.get(t) {
+        Some(t) => match g.k.suppression.keen.get(String::from(t.as_str())) {
             Some(&k) => js::or(k, 1.0),
             None => 1.0,
         },
@@ -43,7 +48,7 @@ pub fn note_round(g: &mut crate::game::Game, shooter: CharId, from: V3, to: V3, 
     let dir = v3::scale(seg, 1.0 / t_hit);
     let shooter_team = crate::teams::team_of_char(g, shooter);
     let round = Round { shooter, hit, from, to, dir, t_hit, shooter_team };
-    for pl in all_men(g) {
+    for pl in crate::seats::men(g) {
         let c = g.pl[pl].ch;
         note_one(g, &round, c, crate::condition::Man::Player(pl), false, crate::teams::Team::Player);
     }
@@ -285,7 +290,7 @@ fn start_from_round(g: &mut Game, gd: GuardId) {
 pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
     let k = m::pow(2.0, -dt / g.k.suppression.half_life);
     let kk = m::exp(-g.k.suppression.kick_decay * dt);
-    for pl in all_men(g) {
+    for pl in crate::seats::men(g) {
         let down = g.pl[pl].down;
         let p = &mut g.pl[pl].sup;
         if down { p.v = 0.0; p.kick = 0.0; } else { decay(p, k, kk); }
@@ -366,7 +371,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
         if g.gd[gd].sup.was_pinned && g.gd[gd].sup.v < 0.02 {
             g.gd[gd].sup.was_pinned = false;
             if reacts(g, gd) && g.gd[gd].state == crate::game::GuardState::Alert
-                && crate::game::temperament().get(g.gd[gd].callsign.clone()).map(String::as_str) == Some("hard")
+                && temperament_row(&g.gd[gd].callsign) == Some(crate::game::Temperament::Hard)
             {
                 sup_bark(g, gd, SupMoment::Recover, None);
             }
@@ -387,6 +392,15 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
         }
         g.gd[gd].sup.band = band;
     }
+}
+
+/// `gd.path = []; gd.pathGoal = null; gd.stallRef = null`: a whole write of his path (Guard.path_serial), and a goal the standoff did not lay.
+fn clear_walk(g: &mut Game, gd: GuardId) {
+    crate::game::guard_set_path(g, gd, Vec::new());
+    let o = &mut g.gd[gd];
+    o.path_goal = None;
+    o.path_goal_orbit = false;
+    o.stall_ref = None;
 }
 
 /// The alert branch's question each frame: is this man's head down, or is he shifting to cover.   (suppression.ts headDown)
@@ -440,9 +454,7 @@ pub fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::supp
             sup.pinned_t = 0.0;
             sup.down_t = 0.0;
             sup.latched = false;
-            g.gd[gd].path = Vec::new();
-            g.gd[gd].path_goal = None;
-            g.gd[gd].stall_ref = None;
+            clear_walk(g, gd);
             sup_bark(g, gd, SupMoment::Displace, Some(true));
             return HeadDown::Displace;
         }
@@ -461,9 +473,7 @@ pub fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     sup.pinned_t = 0.0;
     sup.down_t = 0.0;
     sup.latched = false;
-    g.gd[gd].path = Vec::new();
-    g.gd[gd].path_goal = None;
-    g.gd[gd].stall_ref = None;
+    clear_walk(g, gd);
     g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, delay);
 }
 
@@ -581,10 +591,10 @@ pub fn sam_spread(g: &mut crate::game::Game) -> f64 {
     }
 }
 
-/// `x.toFixed(2)`, for the panel's text only.
-fn f2(x: f64) -> String { alloc::format!("{:.2}", x) }
-/// `x.toFixed(1)`, for the panel's text only.
-fn f1(x: f64) -> String { alloc::format!("{:.1}", x) }
+/// `x.toFixed(2)`.   (suppressionSummary's f2)
+fn f2(x: f64) -> String { js::to_fixed(x, 2) }
+/// `x.toFixed(1)`.   (suppressionSummary's f1)
+fn f1(x: f64) -> String { js::to_fixed(x, 1) }
 
 /// Panel / QA: the player, then every living man with anything on him (or the nearest, at rest).   (suppression.ts suppressionSummary)
 pub fn suppression_summary(g: &mut crate::game::Game) -> String {
@@ -615,17 +625,11 @@ pub fn suppression_summary(g: &mut crate::game::Game) -> String {
             bits.push(String::from("flinching"));
         }
         if js::truthy(s.displaces) {
-            bits.push(alloc::format!("{} shift{}", s.displaces, if s.displaces > 1.0 { "s" } else { "" }));
+            bits.push(alloc::format!("{} shift{}", js::num_str(s.displaces), if s.displaces > 1.0 { "s" } else { "" }));
         }
         parts.push(bits.join(" "));
     }
     alloc::format!("suppression{} ▸ {}", if g.tune.suppression { "" } else { " (reactions OFF)" }, parts.join(" · "))
-}
-
-/// Every seat's man, in seat order.   (suppression.ts's `men(g)`: the stub takes the seats and the player as a value)
-fn all_men(g: &mut Game) -> Vec<PlayerId> {
-    let view = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    crate::seats::men(g, &view)
 }
 
 #[cfg(test)]
@@ -685,6 +689,13 @@ mod tests {
         for moment in [SupMoment::Recover, SupMoment::Friendly, SupMoment::Flinch, SupMoment::Pinned, SupMoment::Displace] {
             assert_eq!(rank(moment) as f64, *crate::suppression::rank().get(String::from(moment.as_str())).unwrap());
         }
+    }
+
+    #[test]
+    fn a_temperament_is_found_by_the_name() {
+        assert_eq!(temperament_row("Reyes"), Some(crate::game::Temperament::Hard));
+        assert_eq!(temperament_row("Novak"), Some(crate::game::Temperament::Nervy));
+        assert_eq!(temperament_row("nobody"), None);
     }
 
     #[test]

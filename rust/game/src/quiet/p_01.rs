@@ -118,7 +118,7 @@ pub fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, squad: O
     if js::truthy(squad) {
         g.quiet.was = Some(held_now(g));
         g.m.pairup.pair_held.row = Some(g.k.pairup.on);
-        holder_take(g);
+        g.m.quiet.holder = true;
         g.k.pairup.on = true;
         crate::pairup::pair_up_apply(g, None);
         g.k.silent.on = true;
@@ -164,7 +164,7 @@ pub fn quiet_mission_release(g: &mut crate::game::Game) {
     }
     g.quiet.was = None;
     g.quiet.mine = None;
-    g.m.quiet.holder = None;
+    g.m.quiet.holder = false;
 }
 
 /// each switch: what stood before the run where it still stands as the run wrote it, else the hand that moved it   (quiet.ts QuietMission.release)
@@ -180,21 +180,16 @@ fn released(w: crate::quiet::Held, mine: crate::quiet::Held, n: crate::quiet::He
     }
 }
 
-/// `holder = this`. The field's type keeps a copy (see notes): only whether it is set is ever read   (quiet.ts holder)
-fn holder_take(g: &mut crate::game::Game) {
-    g.m.quiet.holder = Some(g.quiet.clone());
-}
-
 /// THIS GAME IS THE ONE RUNNING: its own run, if up, takes the switches again. No other Game's run can hold them here: they are this Game's   (quiet.ts QuietMission.current)
 pub fn quiet_mission_current(g: &mut crate::game::Game) {
-    if g.m.quiet.holder.is_some() { return; }
+    if g.m.quiet.holder { return; }
     if g.quiet.active && js::truthy(g.quiet.squad) {
         if let Some(mine) = g.quiet.mine {
             g.quiet.was = Some(held_now(g));
             g.m.pairup.pair_held.row = Some(g.k.pairup.on);
             held_set(g, mine);
             crate::teams::staff_vs_operatives(g, true);
-            holder_take(g);
+            g.m.quiet.holder = true;
         }
     }
 }
@@ -232,24 +227,10 @@ pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     for &gd in &off {
         let l = g.gd[gd].flashlight;
         g.tab.light[l].enabled = false;
-        lights_remove(g, l);
+        crate::render_lights::light_set_remove(g, l);
     }
     if !off.is_empty() { g.guards.retain(|x| !off.contains(x)); }
     g.quiet.benched = off;
-}
-
-/// `g.engine.lights.add(l)`: the stub takes `g` and the set that lives in `g`, so the set is lent out for the call and put back   (lights.ts:171)
-fn lights_add(g: &mut crate::game::Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_add(g, &mut set, l);
-    g.engine.lights = set;
-}
-
-/// `g.engine.lights.remove(l)`, lent the same way   (lights.ts:172)
-fn lights_remove(g: &mut crate::game::Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_remove(g, &mut set, l);
-    g.engine.lights = set;
 }
 
 /// restartEncounter's last act: Sam faced as the start has him, the partner staged. A staging that fails ends the mission cleanly   (quiet.ts QuietMission.onEncounterRestart)
@@ -286,7 +267,7 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     g.quiet.fall_in = false;
     let at = g.ch[g.pl[g.player].ch].pos;
     let target = crate::orders::squad_orders_target_at(g, at);
-    let why = crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::SquadOrdersGiveWho::All), None);
+    let why = crate::orders::squad_orders_give(g, "fallIn", Some(&target), Some(crate::orders::Who::All), None);
     match why {
         Some(w) => quiet_mission_note(g, &format!("fall in refused: {}", w)),
         None => quiet_mission_note(g, "partner following"),
@@ -332,11 +313,6 @@ fn is_integer(x: f64) -> bool {
     x.is_finite() && m::floor(x) == x
 }
 
-/// a number as a template string writes it (these are indices and authored marks: no exponents to mind)
-fn num(x: f64) -> String {
-    if x == 0.0 { String::from("0") } else { format!("{}", x) }
-}
-
 /// the run in a line   (quiet.ts QuietMission.summary)
 pub fn quiet_mission_summary(g: &mut crate::game::Game) -> String {
     if !g.quiet.active || g.quiet.data.is_none() {
@@ -349,9 +325,9 @@ pub fn quiet_mission_summary(g: &mut crate::game::Game) -> String {
     let patrol = quiet_mission_patrol(g).join(", ");
     let q = g.quiet.data.as_ref().unwrap();
     let d = g.quiet.deal;
-    let pinned = match g.quiet.pin { None => String::from("dealt"), Some(n) => format!("pinned {}", num(n)) };
+    let pinned = match g.quiet.pin { None => String::from("dealt"), Some(n) => format!("pinned {}", js::num_str(n)) };
     let name = match s.name.as_deref() { Some(n) if !n.is_empty() => format!(" ({})", n), _ => String::new() };
-    let sets = match q.patrols.as_ref() { Some(l) => format!("{}/{}", num(d.patrol + 1.0), l.len()), None => String::from("all") };
+    let sets = match q.patrols.as_ref() { Some(l) => format!("{}/{}", js::num_str(d.patrol + 1.0), l.len()), None => String::from("all") };
     let who = if patrol.is_empty() { "nobody" } else { patrol.as_str() };
     let plural = if q.exits.len() == 1 { "" } else { "s" };
     let partner = if js::truthy(g.quiet.squad) {
@@ -362,7 +338,7 @@ pub fn quiet_mission_summary(g: &mut crate::game::Game) -> String {
     };
     format!(
         "on · {} · start {}/{}{} · {} in {}, {} ({}/{}) · patrol {}: {} · {} way{} out · {}",
-        pinned, num(d.start + 1.0), q.starts.len(), name, thing, p.holder, p.place, num(d.spot + 1.0), q.spots.len(), sets, who, q.exits.len(), plural, partner
+        pinned, js::num_str(d.start + 1.0), q.starts.len(), name, thing, p.holder, p.place, js::num_str(d.spot + 1.0), q.spots.len(), sets, who, q.exits.len(), plural, partner
     )
 }
 
@@ -383,13 +359,17 @@ pub fn quiet_mission_deal_one(g: &mut crate::game::Game, q: &crate::scene_scenar
             crate::math_dice::sim_random(g);
             crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: if sets.map_or(false, |n| n > 0) { 0.0 } else { -1.0 } }
         }
-        Some(pin) => pinned_deal(pin, q.starts.len(), q.spots.len(), sets),
+        Some(pin) => pinned_deal(crate::math_dice::mulberry32(pin_seed(pin) as f64), q.starts.len(), q.spots.len(), sets),
     }
 }
 
+/// `(pin | 0) ^ 0x51ed270b`: a pinned deal's seed   (quiet.ts QuietMission.dealOne)
+fn pin_seed(pin: f64) -> i32 {
+    js::to_i32(pin) ^ 0x51ed270b
+}
+
 /// a pinned deal, off a stream of its own: three draws whatever the lists' lengths   (quiet.ts QuietMission.dealOne)
-fn pinned_deal(pin: f64, starts: usize, spots: usize, sets: Option<usize>) -> crate::quiet::QuietDeal {
-    let mut die = crate::dice::Die::new((js::to_i32(pin) ^ 0x51ed270b) as u32);   // mulberry32's stream: `roll(dieOf(seed))`, draw for draw (dice.ts)
+fn pinned_deal(mut die: crate::dice::Die, starts: usize, spots: usize, sets: Option<usize>) -> crate::quiet::QuietDeal {
     let mut pick = |n: f64| m::min(n - 1.0, m::floor(die.roll() * n));
     let start = pick(starts as f64);
     let spot = pick(spots as f64);
@@ -403,9 +383,9 @@ pub fn quiet_mission_unbench(g: &mut crate::game::Game) {
     let benched = g.quiet.benched.clone();
     for &gd in &benched {
         let l = g.gd[gd].flashlight;
-        if !g.engine.lights.lights.contains(&l) { lights_add(g, l); }
+        if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(g, l); }
     }
-    let mut staff: Vec<(usize, GuardId)> = g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_none()).chain(benched.iter().copied()).map(|x| (g.gd[x].route_i, x)).collect();
+    let mut staff: Vec<(i32, GuardId)> = g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_none()).chain(benched.iter().copied()).map(|x| (g.gd[x].route_i, x)).collect();
     js::sort_by(&mut staff, |a, b| a.0 as f64 - b.0 as f64);
     let mut guards: Vec<GuardId> = staff.iter().map(|s| s.1).collect();
     guards.extend(g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_some()));
@@ -415,7 +395,7 @@ pub fn quiet_mission_unbench(g: &mut crate::game::Game) {
 
 /// what goes dark when the thing comes out: the switchables named for the mission's holder   (quiet.ts QuietMission.rack)
 pub fn quiet_mission_rack(g: &mut crate::game::Game) {
-    let n = num(g.level.mission.rack.index);
+    let n = js::num_str(g.level.mission.rack.index);
     let leds = format!("rack{}_leds", n);
     let glow = format!("rack{}_glow", n);
     g.rack_targets = g.targets.iter().copied().filter(|&t| { let name = &g.tab.sim_lightshome_fixture[t].name; *name == leds || *name == glow }).collect();
@@ -439,7 +419,7 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
             light: Some(false),
             pair: Some(crate::game::PairId::Blue),
             ..crate::guards::UnitOpts::zeroed()
-        });
+        })?;
         g.gd[man].state = crate::game::GuardState::Patrol;
         g.gd[man].awareness = 0.0;
         g.gd[man].hold = false;
@@ -498,7 +478,7 @@ fn behind_or_why(g: &mut crate::game::Game, s: &crate::scene_scenarios::QuietSta
     }
     match best {
         Some(p) => Ok(p),
-        None => Err(format!("no free floor beside the start at ({}, {}) for the partner — give the start a 'mate' mark", num(s.sam[0]), num(s.sam[2]))),
+        None => Err(format!("no free floor beside the start at ({}, {}) for the partner — give the start a 'mate' mark", js::num_str(s.sam[0]), js::num_str(s.sam[2]))),
     }
 }
 
@@ -531,8 +511,8 @@ pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::qu
 }
 
 /// the quiet mission that is up on this game   (quiet.ts quietOf)
-pub fn quiet_of(g: &mut crate::game::Game) {
-    todo!("needs: quietOf's return value: the skeleton returns nothing; a ONCE class's `T | null` should be bool (g.quiet.active)")
+pub fn quiet_of(g: &mut crate::game::Game) -> bool {
+    g.quiet.active
 }
 
 /// `thing.replace(/^(the|a|an) /i, '')`
@@ -592,7 +572,7 @@ pub fn nearest_exit(g: &mut crate::game::Game, p: V3) -> Option<crate::scene_sce
 
 /// a point as a fault line writes it   (quiet.ts checkQuiet `at`)
 fn at(p: V3) -> String {
-    format!("({}, {})", num(p[0]), num(p[2]))
+    format!("({}, {})", js::num_str(p[0]), js::num_str(p[2]))
 }
 
 /// free floor, or a fault said   (quiet.ts checkQuiet `free`)
@@ -634,7 +614,7 @@ pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
         let a = p.area;
         let e = 0.3;
         if p.front[0] < a.x0 - e || p.front[0] > a.x1 + e || p.front[2] < a.z0 - e || p.front[2] > a.z1 + e {
-            out.push(format!("{}.front {} is outside its area (x {}‥{}, z {}‥{})", w, at(p.front), num(a.x0), num(a.x1), num(a.z0), num(a.z1)));
+            out.push(format!("{}.front {} is outside its area (x {}‥{}, z {}‥{})", w, at(p.front), js::num_str(a.x0), js::num_str(a.x1), js::num_str(a.z0), js::num_str(a.z1)));
         }
         let h = holder_stand(g, p.front, Some(crate::quiet::HolderStandArea { x0: a.x0, x1: a.x1, z0: a.z0, z1: a.z1 }));
         match h.pos {
@@ -767,7 +747,8 @@ mod tests {
             (-5.0, 5, 4, Some(2), 4.0, 0.0, 1.0),
             (2147483648.5, 2, 3, Some(0), 1.0, 1.0, -1.0),
         ] {
-            let d = pinned_deal(pin, s, p, q);
+            // mulberry32's stream is `Die`'s, draw for draw (dice.ts); `mulberry32` itself is a stub in this crate
+            let d = pinned_deal(crate::dice::Die::new(pin_seed(pin) as u32), s, p, q);
             assert_eq!((d.start, d.spot, d.patrol), (a, b, c), "pin {}", pin);
         }
     }

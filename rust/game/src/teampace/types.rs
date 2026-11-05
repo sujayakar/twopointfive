@@ -64,19 +64,6 @@ impl LeaveWhy {
     }
 }
 
-/// (TypeScript: inline at src/game/teampace.ts:103 TEAMPACE_DEBUG, src/game/teampace.ts:103)
-#[derive(Clone, Copy, Debug)]
-pub struct TEAMPACEDEBUG {
-}
-impl TEAMPACEDEBUG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TEAMPACEDEBUG {
-        }
-    }
-}
-impl Default for TEAMPACEDEBUG { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/teampace.ts:114 ran, src/game/teampace.ts:114)
 #[derive(Clone, Copy, Debug)]
 pub struct TeampaceModRanValue {
@@ -217,17 +204,14 @@ pub struct TeampaceStats {
     pub blast: i32,
     pub cover: i32,
     pub told: i32,
-    pub secs: i32,
+    pub secs: f64,
 }
-
-/// (src/game/teampace.ts:103 TEAMPACE_DEBUG: a table nothing writes)
-pub fn teampace_debug() -> crate::teampace::TEAMPACEDEBUG { crate::teampace::TEAMPACEDEBUG {  } }
 
 /// (src/game/teampace.ts:104 PACING_BREAK)
 pub const PACING_BREAK: bool = false;
 
-/// (src/game/teampace.ts:105 DOORBRISK_BREAK)
-pub const DOORBRISK_BREAK: bool = false;
+/// (src/game/teampace.ts:105 DOORBRISK_BREAK: a table nothing writes)
+pub fn doorbrisk_break() -> String { String::from("") }
 
 /// (src/game/teampace.ts:106 WALKAIM_BREAK)
 pub const WALKAIM_BREAK: bool = false;

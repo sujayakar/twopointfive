@@ -22,7 +22,7 @@ impl NeedKind {
     }
 }
 
-/// (TypeScript: NeedsSnap, src/game/needs.ts:407)
+/// (TypeScript: NeedsSnap, src/game/needs.ts:408)
 #[derive(Clone, Debug)]
 pub struct NeedsSnap {
     pub men: Vec<Option<crate::needs::NeedsManSnap>>,
@@ -39,7 +39,7 @@ impl NeedsSnap {
 }
 impl Default for NeedsSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NeedsManSnap, src/game/needs.ts:406)
+/// (TypeScript: NeedsManSnap, src/game/needs.ts:407)
 #[derive(Clone, Debug)]
 pub struct NeedsManSnap {
     pub needs: Vec<crate::needs::Need>,
@@ -66,7 +66,7 @@ impl NeedsManSnap {
 }
 impl Default for NeedsManSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Need, src/game/needs.ts:92)
+/// (TypeScript: Need, src/game/needs.ts:93)
 #[derive(Clone, Copy, Debug)]
 pub struct Need {
     pub kind: crate::needs::NeedKind,
@@ -89,7 +89,7 @@ impl Need {
 }
 impl Default for Need { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:406 NeedsManSnap.trip, src/game/needs.ts:406 NeedsManSnap.trip)
+/// (TypeScript: inline at src/game/needs.ts:407 NeedsManSnap.trip, src/game/needs.ts:407 NeedsManSnap.trip)
 #[derive(Clone, Debug)]
 pub struct NeedsManSnapTrip {
     pub kind: crate::needs::NeedKind,
@@ -163,7 +163,7 @@ impl TripPhase {
     }
 }
 
-/// (TypeScript: NeedSpot, src/game/needs.ts:37)
+/// (TypeScript: NeedSpot, src/game/needs.ts:38)
 #[derive(Clone, Debug)]
 pub struct NeedSpot {
     pub kind: crate::needs::NeedKind,
@@ -186,7 +186,7 @@ impl NeedSpot {
 }
 impl Default for NeedSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Trip, src/game/needs.ts:94)
+/// (TypeScript: Trip, src/game/needs.ts:95)
 #[derive(Clone, Debug)]
 pub struct Trip {
     pub kind: crate::needs::NeedKind,
@@ -243,7 +243,7 @@ impl Trip {
 }
 impl Default for Trip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NeedMem, src/game/needs.ts:109)
+/// (TypeScript: NeedMem, src/game/needs.ts:110)
 #[derive(Clone, Debug)]
 pub struct NeedMem {
     pub needs: Vec<crate::needs::Need>,
@@ -270,7 +270,7 @@ impl NeedMem {
 }
 impl Default for NeedMem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:81 NEEDS_DEFAULTS, src/game/needs.ts:81)
+/// (TypeScript: inline at src/game/needs.ts:82 NEEDS_DEFAULTS, src/game/needs.ts:82)
 #[derive(Clone, Copy, Debug)]
 pub struct NEEDSDEFAULTS {
     pub rate_k: f64,
@@ -291,7 +291,7 @@ impl NEEDSDEFAULTS {
 }
 impl Default for NEEDSDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:81 NEEDSDEFAULTS.dwell, src/game/needs.ts:81)
+/// (TypeScript: inline at src/game/needs.ts:82 NEEDSDEFAULTS.dwell, src/game/needs.ts:82)
 #[derive(Clone, Copy, Debug)]
 pub struct NEEDSDEFAULTSDwell {
     pub smoke: f64,
@@ -312,7 +312,7 @@ impl NEEDSDEFAULTSDwell {
 }
 impl Default for NEEDSDEFAULTSDwell { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:120 floorOf, src/game/needs.ts:120)
+/// (TypeScript: inline at src/game/needs.ts:121 floorOf, src/game/needs.ts:121)
 #[derive(Clone, Copy, Debug)]
 pub struct NeedsModFloorOfValue {
     pub last_depart_at: f64,
@@ -327,7 +327,7 @@ impl NeedsModFloorOfValue {
 }
 impl Default for NeedsModFloorOfValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:125 NEEDS_LOG, src/game/needs.ts:125)
+/// (TypeScript: inline at src/game/needs.ts:126 NEEDS_LOG, src/game/needs.ts:126)
 #[derive(Clone, Debug)]
 pub struct NeedsModNEEDSLOGItem {
     pub t: f64,
@@ -346,7 +346,7 @@ impl NeedsModNEEDSLOGItem {
 }
 impl Default for NeedsModNEEDSLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:126 NEEDS_DEBUG, src/game/needs.ts:126)
+/// (TypeScript: inline at src/game/needs.ts:127 NEEDS_DEBUG, src/game/needs.ts:127)
 #[derive(Clone, Copy, Debug)]
 pub struct NEEDSDEBUG {
 }
@@ -359,7 +359,7 @@ impl NEEDSDEBUG {
 }
 impl Default for NEEDSDEBUG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:53 ownSpot(s), src/game/needs.ts:53)
+/// (TypeScript: inline at src/game/needs.ts:54 ownSpot(s), src/game/needs.ts:54)
 #[derive(Clone, Debug)]
 pub struct OwnSpotS {
     pub name: String,
@@ -380,7 +380,7 @@ impl OwnSpotS {
 }
 impl Default for OwnSpotS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:113 needsMem ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at src/game/needs.ts:115 needsMem ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Debug)]
 pub struct NeedsMem {
     pub needs: Vec<crate::needs::Need>,
@@ -407,7 +407,7 @@ impl NeedsMem {
 }
 impl Default for NeedsMem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:115 needsTrip ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at src/game/needs.ts:117 needsTrip ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Debug)]
 pub struct NeedsTrip {
     pub kind: crate::needs::NeedKind,
@@ -464,7 +464,7 @@ impl NeedsTrip {
 }
 impl Default for NeedsTrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:137 departurePoint ->, src/game/needs.ts:137)
+/// (TypeScript: inline at src/game/needs.ts:138 departurePoint ->, src/game/needs.ts:138)
 #[derive(Clone, Copy, Debug)]
 pub struct DeparturePoint {
     pub wp: f64,
@@ -481,67 +481,19 @@ impl DeparturePoint {
 }
 impl Default for DeparturePoint { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/needs.ts:384 saveNeeds(tune), src/game/needs.ts:384)
-#[derive(Clone, Copy, Debug)]
-pub struct SaveNeedsTune {
-    pub needs: bool,
-}
-impl SaveNeedsTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveNeedsTune {
-            needs: false,
-        }
-    }
-}
-impl Default for SaveNeedsTune { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/needs.ts:388 loadNeeds(tune), src/game/needs.ts:388)
-#[derive(Clone, Copy, Debug)]
-pub struct LoadNeedsTune {
-    pub needs: bool,
-}
-impl LoadNeedsTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LoadNeedsTune {
-            needs: false,
-        }
-    }
-}
-impl Default for LoadNeedsTune { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/needs.ts:399 resetNeeds(tune), src/game/needs.ts:399)
-#[derive(Clone, Copy, Debug)]
-pub struct ResetNeedsTune {
-    pub needs: bool,
-}
-impl ResetNeedsTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResetNeedsTune {
-            needs: false,
-        }
-    }
-}
-impl Default for ResetNeedsTune { fn default() -> Self { Self::zeroed() } }
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct NeedsMod {
-    /// (src/game/needs.ts:52 owned)
-    pub owned: JsMap<crate::needs::NeedKind, crate::needs::NeedSpot>,
-    /// (src/game/needs.ts:110 memOf)
+    /// (src/game/needs.ts:111 memOf)
     pub mem_of: JsMap<GuardId, crate::needs::NeedMem>,
-    /// (src/game/needs.ts:120 floorOf)
+    /// (src/game/needs.ts:121 floorOf)
     pub floor_of: Option<crate::needs::NeedsModFloorOfValue>,
-    /// (src/game/needs.ts:125 NEEDS_LOG)
+    /// (src/game/needs.ts:126 NEEDS_LOG)
     pub needs_log: Vec<crate::needs::NeedsModNEEDSLOGItem>,
 }
 impl NeedsMod {
     pub fn blank() -> Self {
         NeedsMod {
-            owned: JsMap::new(),
             mem_of: JsMap::new(),
             floor_of: None,
             needs_log: Vec::new(),
@@ -565,38 +517,38 @@ pub struct NeedsStats {
     pub stuck: i32,
 }
 
-/// (src/game/needs.ts:34 NEED_KINDS: a table nothing writes)
-pub fn need_kinds() -> Vec<String> { alloc::vec![String::from("coffee"), String::from("smoke"), String::from("water"), String::from("stretch")] }
+/// (src/game/needs.ts:35 NEED_KINDS: a table nothing writes)
+pub fn need_kinds() -> Vec<crate::needs::NeedKind> { alloc::vec![crate::needs::NeedKind::Coffee, crate::needs::NeedKind::Smoke, crate::needs::NeedKind::Water, crate::needs::NeedKind::Stretch] }
 
-/// (src/game/needs.ts:38 NEED_SPOTS: a table nothing writes)
+/// (src/game/needs.ts:39 NEED_SPOTS: a table nothing writes)
 pub fn need_spots() -> JsMap<String, crate::needs::NeedSpot> { { let mut t = JsMap::new(); t.set(String::from("coffee"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Coffee, name: String::from("the break-room counter"), pos: [34.6, 0.0, 14.4], face: 1.5707963267948966, loop_: None }); t.set(String::from("smoke"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Smoke, name: String::from("outside the fire exit"), pos: [37.6, 0.0, 22.4], face: 1.1, loop_: None }); t.set(String::from("water"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Water, name: String::from("the water cooler"), pos: [26.9, 0.0, 22.8], face: 0.7853981633974483, loop_: None }); t.set(String::from("stretch"), crate::needs::NeedSpot { kind: crate::needs::NeedKind::Stretch, name: String::from("the lobby"), pos: [8.4, 0.0, 17.0], face: 0.0, loop_: Some(alloc::vec![[10.8, 0.0, 18.6], [9.6, 0.0, 21.4], [7.4, 0.0, 22.8], [5.4, 0.0, 18.4], [8.4, 0.0, 17.0]]) }); t } }
 
-/// (src/game/needs.ts:81 NEEDS_DEFAULTS: a table nothing writes)
+/// (src/game/needs.ts:82 NEEDS_DEFAULTS: a table nothing writes)
 pub fn needs_defaults() -> crate::needs::NEEDSDEFAULTS { crate::needs::NEEDSDEFAULTS { rate_k: 1.0, max_away: 1.0, announce_lead: 20.0, dwell: crate::needs::NEEDSDEFAULTSDwell { smoke: 40.0, coffee: 25.0, water: 12.0, stretch: 0.0 } } }
 
-/// (src/game/needs.ts:84 FILL_MIN: a table nothing writes)
+/// (src/game/needs.ts:85 FILL_MIN: a table nothing writes)
 pub fn fill_min() -> JsMap<String, [f64; 2]> { { let mut t = JsMap::new(); t.set(String::from("coffee"), [6.0, 9.0]); t.set(String::from("smoke"), [8.0, 12.0]); t.set(String::from("water"), [6.0, 10.0]); t.set(String::from("stretch"), [5.0, 7.0]); t } }
 
-/// (src/game/needs.ts:85 LEVEL0: a table nothing writes)
+/// (src/game/needs.ts:86 LEVEL0: a table nothing writes)
 pub fn level0() -> Vec<f64> { alloc::vec![0.3, 0.7] }
 
-/// (src/game/needs.ts:87 LEVEL_CAP)
+/// (src/game/needs.ts:88 LEVEL_CAP)
 pub const LEVEL_CAP: f64 = 1.5;
 
-/// (src/game/needs.ts:87 CALM_AWARENESS)
+/// (src/game/needs.ts:88 CALM_AWARENESS)
 pub const CALM_AWARENESS: f64 = 0.3;
 
-/// (src/game/needs.ts:87 SCHEDULE_AWARENESS)
+/// (src/game/needs.ts:88 SCHEDULE_AWARENESS)
 pub const SCHEDULE_AWARENESS: f64 = 0.15;
 
-/// (src/game/needs.ts:89 GLANCE_AT)
+/// (src/game/needs.ts:90 GLANCE_AT)
 pub const GLANCE_AT: f64 = 1.1;
 
-/// (src/game/needs.ts:89 GLANCE_SECS)
+/// (src/game/needs.ts:90 GLANCE_SECS)
 pub const GLANCE_SECS: f64 = 2.2;
 
-/// (src/game/needs.ts:126 NEEDS_DEBUG: a table nothing writes)
+/// (src/game/needs.ts:127 NEEDS_DEBUG: a table nothing writes)
 pub fn needs_debug() -> crate::needs::NEEDSDEBUG { crate::needs::NEEDSDEBUG {  } }
 
-/// (src/game/needs.ts:383 LS_KEY)
+/// (src/game/needs.ts:384 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.needs";

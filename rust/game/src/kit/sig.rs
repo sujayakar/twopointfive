@@ -150,7 +150,7 @@ pub fn deal_named(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit]) ->
 pub fn deal(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64) -> Vec<crate::kit::MemberKit> { todo!() }
 
 /// (src/game/kit.ts:481 lend)
-pub fn lend(g: &mut crate::game::Game, cards: &mut Vec<crate::kit::MemberKit>, t: &crate::kit::SlotTable, n: f64, of: &[crate::kit::MemberKit], mine: bool) -> Vec<crate::kit::MemberKit> { todo!() }
+pub fn lend(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: &crate::kit::SlotTable, n: f64, of: &[crate::kit::MemberKit], mine: bool) -> Vec<crate::kit::MemberKit> { todo!() }
 
 /// (src/game/kit.ts:489 lendable)
 pub fn lendable(g: &mut crate::game::Game, of: &[crate::kit::MemberKit], mine: bool) -> bool { todo!() }
@@ -225,10 +225,7 @@ pub fn wand_row(g: &mut crate::game::Game, i: Option<f64>) -> bool { todo!() }
 pub fn cam_row(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/kit.ts:661 kitFitAll)
-pub fn kit_fit_all(g: &mut crate::game::Game, cards: &[crate::kit::MemberKit], t: Option<&crate::kit::SlotTable>, n: Option<f64>) -> Vec<Vec<String>> { todo!() }
-
-/// (src/game/kit.ts:681 slotsSet)
-pub fn slots_set(g: &mut crate::game::Game) -> Option<String> { todo!() }
+pub fn kit_fit_all(g: &mut crate::game::Game, cards: &mut [crate::kit::MemberKit], t: Option<&crate::kit::SlotTable>, n: Option<f64>) -> Vec<Vec<String>> { todo!() }
 
 /// (src/game/kit.ts:690 cardWhy)
 pub fn card_why(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Option<String> { todo!() }
@@ -255,7 +252,7 @@ pub fn row_has(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> bool { todo
 pub fn row_under(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> Option<crate::gunslots::GunSlot> { todo!() }
 
 /// (src/game/kit.ts:767 rowGet)
-pub fn row_get(r: &crate::kit::KitRow, m: &crate::kit::MemberKit) -> crate::kit::KitValue { todo!() }
+pub fn row_get(r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit) -> crate::kit::KitValue { todo!() }
 
 /// (src/game/kit.ts:768 rowSet)
 pub fn row_set(g: &mut crate::game::Game, r: &crate::kit::KitRow, m: &mut crate::kit::MemberKit, v: &crate::kit::KitValue) { todo!() }
@@ -386,9 +383,6 @@ pub fn store_remove_item(g: &mut crate::game::Game, k: &str) { todo!() }
 /// (src/game/kit.ts:1082 kitSanitize)
 pub fn kit_sanitize(g: &mut crate::game::Game, i: f64, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> crate::kit::MemberKit { todo!() }
 
-/// (src/game/kit.ts:1125 kitLoad)
-pub fn kit_load(g: &mut crate::game::Game, search: Option<&str>) { todo!() }
-
 /// (src/game/kit.ts:1149 kitIssuedPage)
 pub fn kit_issued_page(g: &mut crate::game::Game, on: Option<bool>) { todo!() }
 
@@ -484,6 +478,12 @@ pub fn kit_pool(g: &mut crate::game::Game, n: f64, issued: Option<crate::kit::Ki
 
 /// (src/game/kit.ts:1390 kitSmokes)
 pub fn kit_smokes(g: &mut crate::game::Game, n: f64) -> f64 { todo!() }
+
+
+/// INVENTED, SLOT_AMOUNT[k](m) by key (kit.ts:252): the table's values are empty FnFields, so a call by key is this match over slot_amount::*. A key the table does not hold panics, as the TypeScript's call of undefined throws.
+pub fn slot_amount_of(g: &mut crate::game::Game, k: &str, m: &crate::kit::MemberKit) -> f64 { todo!() }
+/// INVENTED, SLOT_PUT[k](m, n, d) by key (kit.ts:261): the same match over slot_put::*; `d`, what he is issued, is read by shotgun alone.
+pub fn slot_put_of(g: &mut crate::game::Game, k: &str, m: &mut crate::kit::MemberKit, n: f64, d: &crate::kit::MemberKit) { todo!() }
 
 pub mod slot_amount {
     #[allow(unused_imports)]

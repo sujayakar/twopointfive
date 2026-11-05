@@ -1,4 +1,4 @@
-//! src/game/player.ts lines 1610 to 2026
+//! src/game/player.ts lines 1611 to 2027
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,11 +12,6 @@ macro_rules! hold {
     ($g:ident, $p:ident) => {
         $g.pl[$p].holding.as_mut().unwrap()
     };
-}
-
-/// `g.audio.play(name, pos, gain, { rate })`: `game_audio_like_play`'s opts are a map of `Opaque`, a unit struct, which cannot hold the rate
-fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
-    todo!("needs: a rate in game_audio_like_play's opts")
 }
 
 /// JavaScript's `s.length`: UTF-16 units, not bytes (Sam's lines hold dashes and arrows)
@@ -681,7 +676,7 @@ pub fn ease_off_hold(g: &mut crate::game::Game) {
     crate::game::game_msg(g, &text);
     let hc = g.gd[gd].ch;
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
-    seam_audio_play_rate(g, "propScrape", at, 0.1, 2.2);
+    crate::audio_iface::game_audio_like_play(g, "propScrape", Some(at), Some(0.1), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.2 }));
 }
 
 /// Sam's unfinished question dies in his mouth, and a remark waiting its turn with it; an answer the man has begun runs on.   (player.ts cancelAsk)
@@ -771,7 +766,7 @@ pub fn start_choke(g: &mut crate::game::Game) {
     let hc = g.gd[gd].ch;
     set_phase(g, Ph::Choke);
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
-    seam_audio_play_rate(g, "bodyHit", at, 0.3, 0.55);
+    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
     let pos = v3::copy(g.ch[hc].pos);
     prop_noise(g, pos, CHOKE_NOISE);
 }
@@ -786,7 +781,7 @@ pub fn start_whip(g: &mut crate::game::Game) {
     hold!(g, p).gun_out = 0.0;
     let c = g.pl[p].ch;
     let at = v3::add(g.ch[c].pos, [0.0, 1.5, 0.0]);
-    seam_audio_play_rate(g, "propScrape", at, 0.12, 2.6);
+    crate::audio_iface::game_audio_like_play(g, "propScrape", Some(at), Some(0.12), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
 }
 
 /// The knife's clock in the hold.   (player.ts killSecs)
@@ -811,7 +806,7 @@ pub fn start_kill(g: &mut crate::game::Game) {
     let hc = g.gd[gd].ch;
     set_phase(g, crate::character::HoldPhase::Kill);
     let at = v3::add(g.ch[hc].pos, [0.0, 1.3, 0.0]);
-    seam_audio_play_rate(g, "bodyHit", at, 0.55, 0.8);
+    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.55), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
 
 /// The man rigid in front, HOLD.dist ahead on Sam's facing, kept out of the statics; what the walls take off his station Sam gives up too.   (player.ts placeHeld)
@@ -864,7 +859,7 @@ pub fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
         if l >= KEEP_OFF || l < 1e-4 {
             continue;
         }
-        if crate::noshove::no_shove_man(g, o) {
+        if crate::noshove::falling_in_yields(g, o) {
             continue;
         }
         let (bx, bz) = (g.ch[c].pos[0], g.ch[c].pos[2]);
@@ -975,7 +970,7 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
     }
     let hc = g.gd[gd].ch;
     let at = v3::add(g.ch[hc].pos, [0.0, 1.0, 0.0]);
-    seam_audio_play_rate(g, "lockPick", at, 0.45, 1.6);
+    crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.6 }));
     crate::mission::tally(g, crate::mission::TallyK::Keys);
     crate::chronicle::chron_key(g, gd);
     let text = format!("you took {}'s key. keyed doors will open for you now", g.gd[gd].callsign);

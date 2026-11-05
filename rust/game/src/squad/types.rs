@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Sweep, src/game/squad.ts:153)
+/// (TypeScript: Sweep, src/game/squad.ts:154)
 #[derive(Clone, Debug)]
 pub struct Sweep {
     pub pts: Vec<V3>,
@@ -24,7 +24,7 @@ impl Sweep {
 }
 impl Default for Sweep { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: RoomClear, src/game/squad.ts:183)
+/// (TypeScript: RoomClear, src/game/squad.ts:184)
 #[derive(Clone, Debug)]
 pub struct RoomClear {
     pub phase: crate::squad::RoomClearPhase,
@@ -137,11 +137,11 @@ impl ClearStage {
     }
 }
 
-/// (TypeScript: Clearing, src/game/squad.ts:489)
+/// (TypeScript: Clearing, src/game/squad.ts:490)
 #[derive(Clone, Debug)]
 pub struct Clearing {
     pub stage: crate::squad::ClearStage,
-    pub room_i: f64,
+    pub room_i: usize,
     pub drill: Option<RoomClearId>,
     pub cur: Option<crate::scene_level::RoomClearPlan>,
     pub t: f64,
@@ -161,7 +161,7 @@ impl Clearing {
     pub fn blank() -> Self {
         Clearing {
             stage: crate::squad::ClearStage::Muster,
-            room_i: 0.0,
+            room_i: 0,
             drill: None,
             cur: None,
             t: 0.0,
@@ -180,7 +180,7 @@ impl Clearing {
 }
 impl Default for Clearing { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/squad.ts:38 settleWatch, src/game/squad.ts:38)
+/// (TypeScript: inline at src/game/squad.ts:39 settleWatch, src/game/squad.ts:39)
 #[derive(Clone, Copy, Debug)]
 pub struct SquadModSettleWatchValue {
     pub goal: V3,
@@ -199,7 +199,7 @@ impl SquadModSettleWatchValue {
 }
 impl Default for SquadModSettleWatchValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:41 walkWatch, src/game/squad.ts:41)
+/// (TypeScript: inline at src/game/squad.ts:42 walkWatch, src/game/squad.ts:42)
 #[derive(Clone, Copy, Debug)]
 pub struct SquadModWalkWatchValue {
     pub x: f64,
@@ -218,7 +218,7 @@ impl SquadModWalkWatchValue {
 }
 impl Default for SquadModWalkWatchValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:399 CENTRE_CHECK, src/game/squad.ts:399)
+/// (TypeScript: inline at src/game/squad.ts:400 CENTRE_CHECK, src/game/squad.ts:400)
 #[derive(Clone, Copy, Debug)]
 pub struct CENTRECHECK {
     pub corner: f64,
@@ -237,7 +237,7 @@ impl CENTRECHECK {
 }
 impl Default for CENTRECHECK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:422 BODY_LINES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/squad.ts:423 BODY_LINES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct BODYLINES {
     pub stack1: Option<String>,
@@ -274,7 +274,7 @@ impl BODYLINES {
 }
 impl Default for BODYLINES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:428 BODY_LINES_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/squad.ts:429 BODY_LINES_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct BODYLINESNOW {
     pub stack1: Option<String>,
@@ -311,7 +311,7 @@ impl BODYLINESNOW {
 }
 impl Default for BODYLINESNOW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:429 BODY_LINES_COLD_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/squad.ts:430 BODY_LINES_COLD_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct BODYLINESCOLDNOW {
     pub stack1: Option<String>,
@@ -348,7 +348,7 @@ impl BODYLINESCOLDNOW {
 }
 impl Default for BODYLINESCOLDNOW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:431 BODY_LINES_COLD, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/squad.ts:432 BODY_LINES_COLD, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct BODYLINESCOLD {
     pub stack1: Option<String>,
@@ -404,7 +404,7 @@ impl EndGuardScriptState {
     }
 }
 
-/// (TypeScript: inline at src/game/squad.ts:144 order(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/squad.ts:145 order(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct OrderPatch {
     pub goal: Option<Option<V3>>,
@@ -454,7 +454,7 @@ impl OrderPatch {
 }
 impl Default for OrderPatch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:200 constructor(opts), src/game/squad.ts:200)
+/// (TypeScript: inline at src/game/squad.ts:201 constructor(opts), src/game/squad.ts:201)
 #[derive(Clone, Copy, Debug)]
 pub struct RoomClearNewOpts {
     pub live: Option<bool>,
@@ -519,7 +519,7 @@ impl RoomClearSayKey {
     }
 }
 
-/// (TypeScript: inline at src/game/squad.ts:247 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/squad.ts:248 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct RoomClearRoutePatch {
     pub goal: Option<V3>,
@@ -586,9 +586,9 @@ impl Perceive {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SquadMod {
-    /// (src/game/squad.ts:38 settleWatch)
+    /// (src/game/squad.ts:39 settleWatch)
     pub settle_watch: JsMap<GuardId, crate::squad::SquadModSettleWatchValue>,
-    /// (src/game/squad.ts:41 walkWatch)
+    /// (src/game/squad.ts:42 walkWatch)
     pub walk_watch: JsMap<GuardId, crate::squad::SquadModWalkWatchValue>,
 }
 impl SquadMod {
@@ -600,38 +600,38 @@ impl SquadMod {
     }
 }
 
-/// (src/game/squad.ts:30 SETTLE)
+/// (src/game/squad.ts:31 SETTLE)
 pub const SETTLE: f64 = 0.6;
 
-/// (src/game/squad.ts:34 FACE_WITHIN)
+/// (src/game/squad.ts:35 FACE_WITHIN)
 pub const FACE_WITHIN: f64 = 1.0;
 
-/// (src/game/squad.ts:394 STACK_CAP)
+/// (src/game/squad.ts:395 STACK_CAP)
 pub const STACK_CAP: f64 = 6.0;
 
-/// (src/game/squad.ts:396 KICK_BACK)
+/// (src/game/squad.ts:397 KICK_BACK)
 pub const KICK_BACK: f64 = 0.7;
 
-/// (src/game/squad.ts:399 CENTRE_CHECK: a table nothing writes)
+/// (src/game/squad.ts:400 CENTRE_CHECK: a table nothing writes)
 pub fn centre_check() -> crate::squad::CENTRECHECK { crate::squad::CENTRECHECK { corner: 0.95, total: 3.0, min_leg: 0.6 } }
 
-/// (src/game/squad.ts:422 BODY_LINES: a table nothing writes)
+/// (src/game/squad.ts:423 BODY_LINES: a table nothing writes)
 pub fn body_lines() -> crate::squad::BODYLINES { crate::squad::BODYLINES { stack1: None, stack2: None, go2: None, in1: None, side2: Some(String::from("door side clear — apart from him.")), side1: Some(String::from("my side's clear. …he's right here.")), push1: None, under2: Some(String::from("checking under… just him.")), nothing2: Some(String::from("nothing else down here.")), corner1: Some(String::from("corner's clear. only him.")), empty2: Some(String::from("room's clear — nobody but him.")), radio1: None } }
 
-/// (src/game/squad.ts:428 BODY_LINES_NOW: a table nothing writes)
+/// (src/game/squad.ts:429 BODY_LINES_NOW: a table nothing writes)
 pub fn body_lines_now() -> crate::squad::BODYLINESNOW { crate::squad::BODYLINESNOW { stack1: None, stack2: None, go2: None, in1: None, side2: Some(String::from("door side clear — except for him.")), side1: None, push1: None, under2: None, nothing2: None, corner1: None, empty2: None, radio1: None } }
 
-/// (src/game/squad.ts:429 BODY_LINES_COLD_NOW: a table nothing writes)
+/// (src/game/squad.ts:430 BODY_LINES_COLD_NOW: a table nothing writes)
 pub fn body_lines_cold_now() -> crate::squad::BODYLINESCOLDNOW { crate::squad::BODYLINESCOLDNOW { stack1: None, stack2: None, go2: None, in1: None, side2: None, side1: None, push1: None, under2: None, nothing2: Some(String::from("nothing else down here. he took a hard hit.")), corner1: None, empty2: None, radio1: None } }
 
-/// (src/game/squad.ts:431 BODY_LINES_COLD: a table nothing writes)
+/// (src/game/squad.ts:432 BODY_LINES_COLD: a table nothing writes)
 pub fn body_lines_cold() -> crate::squad::BODYLINESCOLD { crate::squad::BODYLINESCOLD { stack1: None, stack2: None, go2: None, in1: None, side2: Some(String::from("door side clear — just him, out cold.")), side1: Some(String::from("my side's clear. …he's here — still breathing.")), push1: None, under2: Some(String::from("checking under… just him. breathing.")), nothing2: Some(String::from("nothing else down here. he took a proper hit.")), corner1: Some(String::from("corner's clear. only him.")), empty2: Some(String::from("room's clear — nobody but him, and he's breathing.")), radio1: None } }
 
-/// (src/game/squad.ts:449 SUSPECT)
+/// (src/game/squad.ts:450 SUSPECT)
 pub const SUSPECT: f64 = 0.4;
 
-/// (src/game/squad.ts:472 APPROACH_SPEED)
+/// (src/game/squad.ts:473 APPROACH_SPEED)
 pub const APPROACH_SPEED: f64 = 1.6;
 
-/// (src/game/squad.ts:474 DRILL_CAP)
+/// (src/game/squad.ts:475 DRILL_CAP)
 pub const DRILL_CAP: f64 = 32.0;

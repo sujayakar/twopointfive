@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: SessionRecorder, src/game/journal.ts:701)
+/// (TypeScript: SessionRecorder, src/game/journal.ts:712)
 #[derive(Clone, Debug)]
 pub struct SessionRecorder {
     pub state: crate::journal::JournalState,
@@ -93,7 +93,7 @@ impl JournalState {
     }
 }
 
-/// (TypeScript: RecordOpts, src/game/journal.ts:698)
+/// (TypeScript: RecordOpts, src/game/journal.ts:709)
 #[derive(Clone, Debug)]
 pub struct RecordOpts {
     pub seed: Option<f64>,
@@ -116,7 +116,7 @@ impl RecordOpts {
 }
 impl Default for RecordOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EnvSnap, src/game/journal.ts:212)
+/// (TypeScript: EnvSnap, src/game/journal.ts:217)
 #[derive(Clone, Debug)]
 pub struct EnvSnap {
     pub debris_cap: f64,
@@ -153,7 +153,7 @@ impl EnvSnap {
 }
 impl Default for EnvSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/journal.ts:219 EnvSnap.canister, src/game/journal.ts:219)
+/// (TypeScript: inline at src/game/journal.ts:224 EnvSnap.canister, src/game/journal.ts:224)
 #[derive(Clone, Copy, Debug)]
 pub struct EnvSnapCanister {
     pub canister_duration: f64,
@@ -176,7 +176,7 @@ impl EnvSnapCanister {
 }
 impl Default for EnvSnapCanister { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/journal.ts:221 EnvSnap.destruction, src/game/journal.ts:221)
+/// (TypeScript: inline at src/game/journal.ts:226 EnvSnap.destruction, src/game/journal.ts:226)
 #[derive(Clone, Copy, Debug)]
 pub struct EnvSnapDestruction {
     pub on: bool,
@@ -191,7 +191,7 @@ impl EnvSnapDestruction {
 }
 impl Default for EnvSnapDestruction { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KnobsSnap, src/game/journal.ts:224)
+/// (TypeScript: KnobsSnap, src/game/journal.ts:229)
 #[derive(Clone, Debug)]
 pub struct KnobsSnap {
     pub tune: JsMap<String, crate::Opaque>,
@@ -210,7 +210,7 @@ impl KnobsSnap {
 }
 impl Default for KnobsSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/journal.ts:224 KnobsSnap.flags, src/game/journal.ts:224)
+/// (TypeScript: inline at src/game/journal.ts:229 KnobsSnap.flags, src/game/journal.ts:229)
 #[derive(Clone, Copy, Debug)]
 pub struct KnobsSnapFlags {
     pub god_mode: bool,
@@ -245,7 +245,7 @@ impl KnobsSnapFlags {
 }
 impl Default for KnobsSnapFlags { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: InputRec, src/game/journal.ts:210)
+/// (TypeScript: InputRec, src/game/journal.ts:215)
 #[derive(Clone, Debug)]
 pub struct InputRec {
     pub k: Option<Vec<String>>,
@@ -270,7 +270,7 @@ impl InputRec {
 }
 impl Default for InputRec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/journal.ts:712 SessionRecorder.slots, src/game/journal.ts:712 SessionRecorder.slots)
+/// (TypeScript: inline at src/game/journal.ts:723 SessionRecorder.slots, src/game/journal.ts:723 SessionRecorder.slots)
 #[derive(Clone, Debug)]
 pub struct SessionRecorderSlots {
     pub index: Option<String>,
@@ -306,7 +306,7 @@ impl SessionRecorderSlotsLastAuto {
 }
 impl Default for SessionRecorderSlotsLastAuto { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SessionFile, src/game/journal.ts:226)
+/// (TypeScript: SessionFile, src/game/journal.ts:231)
 #[derive(Clone, Debug)]
 pub struct SessionFile {
     pub v: f64,
@@ -370,7 +370,7 @@ impl SessionFileGame {
     }
 }
 
-/// (TypeScript: inline at src/game/journal.ts:241 SessionFile.slots, src/game/journal.ts:241 SessionFile.slots)
+/// (TypeScript: inline at src/game/journal.ts:246 SessionFile.slots, src/game/journal.ts:246 SessionFile.slots)
 #[derive(Clone, Debug)]
 pub struct SessionFileSlots {
     pub index: Option<String>,
@@ -389,7 +389,7 @@ impl SessionFileSlots {
 }
 impl Default for SessionFileSlots { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/journal.ts:244 SessionFile.meta, src/game/journal.ts:244)
+/// (TypeScript: inline at src/game/journal.ts:249 SessionFile.meta, src/game/journal.ts:249)
 #[derive(Clone, Debug)]
 pub struct SessionFileMeta {
     pub seconds: f64,
@@ -414,7 +414,7 @@ impl SessionFileMeta {
 }
 impl Default for SessionFileMeta { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: View, src/game/journal.ts:247)
+/// (TypeScript: View, src/game/journal.ts:252)
 #[derive(Clone, Copy, Debug)]
 pub struct View {
     pub client_width: f64,
@@ -435,17 +435,30 @@ impl View {
 }
 impl Default for View { fn default() -> Self { Self::zeroed() } }
 
-/// (src/game/journal.ts:187 JOURNAL_VERSION)
+/// (TypeScript: inline at quiet knobTables ->, quiet knobTables ->)
+#[derive(Clone, Copy, Debug)]
+pub struct KnobTablesValue {
+}
+impl KnobTablesValue {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        KnobTablesValue {
+        }
+    }
+}
+impl Default for KnobTablesValue { fn default() -> Self { Self::zeroed() } }
+
+/// (src/game/journal.ts:192 JOURNAL_VERSION)
 pub const JOURNAL_VERSION: f64 = 1.0;
 
-/// (src/game/journal.ts:191 JOURNAL_VERSION_SLOTS)
+/// (src/game/journal.ts:196 JOURNAL_VERSION_SLOTS)
 pub const JOURNAL_VERSION_SLOTS: f64 = 2.0;
 
-/// (src/game/journal.ts:193 JOURNAL_DIGEST_EVERY)
+/// (src/game/journal.ts:198 JOURNAL_DIGEST_EVERY)
 pub const JOURNAL_DIGEST_EVERY: f64 = 120.0;
 
-/// (src/game/journal.ts:195 JOURNAL_PENDING_FRAMES)
+/// (src/game/journal.ts:200 JOURNAL_PENDING_FRAMES)
 pub const JOURNAL_PENDING_FRAMES: f64 = 480.0;
 
-/// (src/game/journal.ts:197 JOURNAL_MAX_FRAMES)
+/// (src/game/journal.ts:202 JOURNAL_MAX_FRAMES)
 pub const JOURNAL_MAX_FRAMES: f64 = 72000.0;

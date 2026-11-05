@@ -6,11 +6,11 @@ use alloc::{string::String, vec::Vec};
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CharSlot {
+    Boot,
     ClothPlain,
     Skin,
     ClothUniform,
     Webbing,
-    Boot,
     Helmet,
     MetalDark,
     Rubber,
@@ -21,11 +21,11 @@ pub enum CharSlot {
 impl CharSlot {
     pub const fn as_str(self) -> &'static str {
         match self {
+            CharSlot::Boot => "boot",
             CharSlot::ClothPlain => "cloth_plain",
             CharSlot::Skin => "skin",
             CharSlot::ClothUniform => "cloth_uniform",
             CharSlot::Webbing => "webbing",
-            CharSlot::Boot => "boot",
             CharSlot::Helmet => "helmet",
             CharSlot::MetalDark => "metal_dark",
             CharSlot::Rubber => "rubber",
@@ -42,6 +42,9 @@ pub struct CharSlotData {
     pub slot: Vec<u8>,
     pub cavity: Vec<f32>,
     pub authored: bool,
+    pub cap_weights: Vec<f32>,
+    pub area: Vec<f32>,
+    pub unmatched: Vec<String>,
 }
 impl CharSlotData {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -50,6 +53,9 @@ impl CharSlotData {
             slot: Vec::new(),
             cavity: Vec::new(),
             authored: false,
+            cap_weights: Vec::new(),
+            area: Vec::new(),
+            unmatched: Vec::new(),
         }
     }
 }
@@ -131,7 +137,7 @@ impl SlotAlias {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SlotAlias {
-            as_: crate::render_char_materials::CharSlot::ClothPlain,
+            as_: crate::render_char_materials::CharSlot::Boot,
         }
     }
 }
@@ -191,11 +197,11 @@ impl Default for SideTableGrime { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/render/charMaterials.ts:228 SideTable.standIn, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct SideTableStandIn {
+    pub boot: Option<crate::render_char_materials::CharSlot>,
     pub cloth_plain: Option<crate::render_char_materials::CharSlot>,
     pub skin: Option<crate::render_char_materials::CharSlot>,
     pub cloth_uniform: Option<crate::render_char_materials::CharSlot>,
     pub webbing: Option<crate::render_char_materials::CharSlot>,
-    pub boot: Option<crate::render_char_materials::CharSlot>,
     pub helmet: Option<crate::render_char_materials::CharSlot>,
     pub metal_dark: Option<crate::render_char_materials::CharSlot>,
     pub rubber: Option<crate::render_char_materials::CharSlot>,
@@ -207,11 +213,11 @@ impl SideTableStandIn {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SideTableStandIn {
+            boot: None,
             cloth_plain: None,
             skin: None,
             cloth_uniform: None,
             webbing: None,
-            boot: None,
             helmet: None,
             metal_dark: None,
             rubber: None,
@@ -286,7 +292,7 @@ impl ResolveSlot {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ResolveSlot {
-            name: crate::render_char_materials::CharSlot::ClothPlain,
+            name: crate::render_char_materials::CharSlot::Boot,
             m: crate::render_char_materials::SlotMat::zeroed(),
         }
     }

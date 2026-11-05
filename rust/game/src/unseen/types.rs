@@ -137,7 +137,7 @@ impl UnseenMod {
 #[derive(Clone, Debug, Default)]
 pub struct UnseenStats {
     pub spells: i32,
-    pub seconds: i32,
+    pub seconds: f64,
     pub held: i32,
     pub held_glass: i32,
     pub wall_places: i32,

@@ -1,4 +1,4 @@
-//! src/game/frag.ts lines 1 to 296
+//! src/game/frag.ts lines 1 to 297
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -70,7 +70,7 @@ pub fn exposure(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view: O
     through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, from, &pts))
 }
 
-/// The closure `exposure` and `lyingShows` both hand the glass: the share of `pts` with a clear line. (frag.ts:241, 295)
+/// The closure `exposure` and `lyingShows` both hand the glass: the share of `pts` with a clear line. (frag.ts:242, 296)
 fn share_clear(g: &mut Game, from: V3, pts: &[V3]) -> f64 {
     let mut n = 0.0;
     for &p in pts {
@@ -131,8 +131,7 @@ pub fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::W
     if !keep {
         g.m.frag.walls_for = Some(crate::frag::FragModWALLSFORValue { time, serial, at: JsMap::new() });
     }
-    // (`+ 0.0`: the language's own text of −0 is "0", and this text is only ever a key)
-    let key = alloc::format!("{},{},{}", from[0] + 0.0, from[1] + 0.0, from[2] + 0.0);
+    let key = alloc::format!("{},{},{}", js::num_str(from[0]), js::num_str(from[1]), js::num_str(from[2]));
     if let Some(c) = &mut g.m.frag.walls_for {
         if let Some(w) = c.at.get(key.clone()) {
             return w.clone();

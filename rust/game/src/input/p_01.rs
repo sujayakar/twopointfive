@@ -17,16 +17,6 @@ pub fn input_new(g: &mut Game, el: Option<crate::Opaque>) -> InputId {
     g.tab.input.push(Input::blank())
 }
 
-/// A modifier the event says is up is let go, whatever it was held as.   (input.ts Input.modsUp)
-pub fn input_mods_up(g: &mut Game, id: InputId, e: crate::input::InputModsUpE) {
-    mods_up(&mut g.tab.input[id], e)
-}
-
-/// Let go of one physical key the board holds.   (input.ts Input.modUp)
-pub fn input_mod_up(g: &mut Game, id: InputId, phys: &str) {
-    mod_up(&mut g.tab.input[id], phys)
-}
-
 /// Focus is the page's: an Input here has no `el`, and the TypeScript's detached path does nothing.   (input.ts Input.focusGame)
 pub fn input_focus_game(g: &mut Game, id: InputId) {}
 
@@ -85,42 +75,6 @@ fn bit(word: f64, mask: i32) -> bool {
     (js::to_i32(word) & mask) != 0
 }
 
-fn mods_up(i: &mut Input, e: InputModsUpE) {
-    if i.held_as.is_empty() {
-        return;
-    }
-    if !e.shift_key {
-        mod_up(i, "ShiftLeft");
-        mod_up(i, "ShiftRight");
-    }
-    if !e.ctrl_key {
-        mod_up(i, "ControlLeft");
-        mod_up(i, "ControlRight");
-    }
-    if !e.alt_key {
-        mod_up(i, "AltLeft");
-        mod_up(i, "AltRight");
-    }
-    if !e.meta_key {
-        mod_up(i, "MetaLeft");
-        mod_up(i, "MetaRight");
-    }
-}
-
-fn mod_up(i: &mut Input, phys: &str) {
-    let held = match i.held_as.get(String::from(phys)) {
-        Some(a) => a.clone(),
-        None => return,
-    };
-    i.held_as.delete(String::from(phys));
-    if !held.is_empty() {
-        i.keys.delete(held);
-    }
-    if i.cam_held == phys {
-        i.cam_held = String::new();
-    }
-}
-
 fn end_frame(i: &mut Input) {
     i.pressed.clear();
     i.clicked = 0.0;
@@ -143,10 +97,6 @@ mod tests {
         String::from(x)
     }
 
-    fn up() -> InputModsUpE {
-        InputModsUpE::zeroed()
-    }
-
     #[test]
     fn a_button_word_reads_as_int32() {
         assert!(bit(5.0, 1) && bit(5.0, 4) && !bit(5.0, 2));
@@ -154,60 +104,6 @@ mod tests {
         assert!(bit(4294967297.0, 1)); // 2^32 + 1: ToInt32 wraps it to 1
         assert!(bit(-1.0, 4));
         assert!(bit(1.5, 1)); // truncates
-    }
-
-    #[test]
-    fn mods_up_lets_go_of_what_it_was_held_as() {
-        let mut i = Input::blank();
-        i.keys.add(s("Sprint"));
-        i.keys.add(s("KeyW"));
-        i.held_as.set(s("ShiftLeft"), s("Sprint"));
-        i.held_as.set(s("KeyW"), s("KeyW"));
-        mods_up(&mut i, up());
-        assert!(!i.keys.has(s("Sprint")));
-        assert!(!i.held_as.has(s("ShiftLeft")));
-        assert!(i.keys.has(s("KeyW")), "not a modifier");
-        assert!(i.held_as.has(s("KeyW")));
-    }
-
-    #[test]
-    fn mods_up_keeps_what_the_event_says_is_down() {
-        let mut i = Input::blank();
-        i.keys.add(s("Sprint"));
-        i.held_as.set(s("ShiftRight"), s("Sprint"));
-        let mut e = up();
-        e.shift_key = true;
-        mods_up(&mut i, e);
-        assert!(i.keys.has(s("Sprint")));
-        assert!(i.held_as.has(s("ShiftRight")));
-    }
-
-    #[test]
-    fn nothing_held_leaves_the_cameras_key_alone() {
-        let mut i = Input::blank();
-        i.cam_held = s("ShiftLeft");
-        mods_up(&mut i, up());
-        assert_eq!(i.cam_held, "ShiftLeft");
-    }
-
-    #[test]
-    fn a_key_whose_row_moved_away_lets_go_of_nothing() {
-        let mut i = Input::blank();
-        i.keys.add(s("ShiftLeft")); // the key his row moved TO may be down
-        i.held_as.set(s("ShiftLeft"), s(""));
-        i.cam_held = s("ShiftLeft");
-        mod_up(&mut i, "ShiftLeft");
-        assert!(i.keys.has(s("ShiftLeft")));
-        assert!(!i.held_as.has(s("ShiftLeft")));
-        assert_eq!(i.cam_held, "");
-    }
-
-    #[test]
-    fn a_key_not_held_changes_nothing() {
-        let mut i = Input::blank();
-        i.cam_held = s("AltLeft");
-        mod_up(&mut i, "AltLeft");
-        assert_eq!(i.cam_held, "AltLeft");
     }
 
     #[test]

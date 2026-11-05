@@ -372,13 +372,11 @@ pub fn rescue_flow_sense(g: &mut crate::game::Game) {
     while i < g.rescue.flow.known.len() {
         let at = i;
         i += 1;
-        let o = g.rescue.flow.known[at].o.clone();
-        if g.rescue.flow.known[at].built_open != rescue_flow_open(g, &o) {
-            let mut row = core::mem::take(&mut g.rescue.flow.known[at]);
+        // (the row out of the table for the calls, and back before the note and the message: open, lookable and holder do not read `known`)
+        let mut row = core::mem::take(&mut g.rescue.flow.known[at]);
+        if row.built_open != rescue_flow_open(g, &row.o) {
             rescue_flow_lookable(g, &mut row);
-            g.rescue.flow.known[at] = row;
         }
-        let row = &g.rescue.flow.known[at];
         let r = &g.tab.rescueflow_region[row.region];
         let (hot, cleared) = (!r.hot.is_empty(), r.cleared);
         let mut n = 0.0;
@@ -387,29 +385,29 @@ pub fn rescue_flow_sense(g: &mut crate::game::Game) {
                 n += 1.0;
             }
         }
-        let share = if !row.lookable.is_empty() { n / row.lookable.len() as f64 } else { 0.0 };
-        let held = rescue_flow_holder(g, &o);
-        let row = &mut g.rescue.flow.known[at];
-        row.share = share;
+        row.share = if !row.lookable.is_empty() { n / row.lookable.len() as f64 } else { 0.0 };
         row.hot = hot;
-        row.held = held;
+        row.held = rescue_flow_holder(g, &row.o);
         let was = row.state;
         row.state = if hot {
             OpenState::Hot
-        } else if held.is_some() {
+        } else if row.held.is_some() {
             OpenState::Held
         } else if cleared {
             OpenState::Cleared
-        } else if share >= k.look_share {
+        } else if row.share >= k.look_share {
             OpenState::Looked
         } else {
             OpenState::Unknown
         };
         let state = row.state;
+        g.rescue.flow.known[at] = row;
         if state != was {
-            crate::rescue::rescue_note(g, &alloc::format!("flow:state:{}:{}", o.id, state.as_str()));
+            let note = alloc::format!("flow:state:{}:{}", g.rescue.flow.known[at].o.id, state.as_str());
+            crate::rescue::rescue_note(g, &note);
             if state == OpenState::Hot {
-                crate::game::game_msg(g, &alloc::format!("contact — {}", o.name));
+                let msg = alloc::format!("contact — {}", g.rescue.flow.known[at].o.name);
+                crate::game::game_msg(g, &msg);
             }
         }
     }
@@ -540,20 +538,21 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
     }
     // the men on a job
     for gd in g.rescue.flow.jobs.keys() {
-        // (a local copy of the row: what a later read needs is written to both; a job only ever ends or changes on its own man's turn)
-        let Some(mut j) = g.rescue.flow.jobs.get(gd).cloned() else { continue };
+        // (what the turn reads, as locals: a job only ever ends or changes on its own man's turn; the row itself is cloned only once the job is done)
+        let Some(j) = g.rescue.flow.jobs.get(gd) else { continue };
+        let (kind, ja, t0, mut on_t, said_hot, said_wait, leap, has_chain, mark, at, look, side) = (j.kind, j.a, j.t0, j.on_t, j.said_hot, j.said_wait, j.leap, !j.chain.is_empty(), j.o.mark, j.o.at, j.o.look, j.o.side);
         let a = crate::orders::squad_orders_of(g, gd);
         if g.gd[gd].state == crate::game::GuardState::Dead || crate::rescue::rescue_owns(g, gd) {
             // (down on the job: what was queued behind him is wanted again)
-            g.rescue.flow.jobs.delete(gd);
+            let gone = g.rescue.flow.jobs.delete(gd);
             if g.gd[gd].state == crate::game::GuardState::Dead {
-                for o in j.chain.iter() {
+                for o in gone.iter().flat_map(|j| j.chain.iter()) {
                     g.rescue.flow.want.set(o.id.clone(), t);
                 }
             }
             continue;
         }
-        if a != Some(j.a) {
+        if a != Some(ja) {
             // Sam's own order has him: the flow lets go, and does not send the next man to the same openings
             g.rescue.flow.jobs.delete(gd);
             g.rescue.flow.stats.overridden += 1.0;
@@ -564,33 +563,34 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
         if g.gd[gd].script.is_none() && g.gd[gd].state == crate::game::GuardState::Alert {
             continue; // (the fight AI has him: his fight first)
         }
-        let o = j.o.clone();
-        let callsign = g.gd[gd].callsign.clone();
-        if j.kind == JobKind::Corridor {
+        if kind == JobKind::Corridor {
             if on_route || sam_in.is_none() {
                 rescue_flow_rejoin(g, gd, Some("on you."));
-                crate::rescue::rescue_note(g, &alloc::format!("flow:done:corridor:{}", callsign));
+                let note = alloc::format!("flow:done:corridor:{}", g.gd[gd].callsign);
+                crate::rescue::rescue_note(g, &note);
             }
             continue;
         }
         let pos = g.ch[g.gd[gd].ch].pos;
-        if j.on_t.is_nan() && (g.tab.orders_assignment[j.a].arrived || flat(pos, o.mark) < 0.6) {
-            j.on_t = t;
+        if on_t.is_nan() && (g.tab.orders_assignment[ja].arrived || flat(pos, mark) < 0.6) {
+            on_t = t;
             g.rescue.flow.jobs.get_mut(gd).unwrap().on_t = t;
         }
-        let known = g.rescue.flow.known.iter().find(|x| x.o.id == o.id).unwrap();
-        let (k_hot, k_region) = (known.hot, known.region);
-        if k_hot {
+        let ki = {
+            let id = &g.rescue.flow.jobs.get(gd).unwrap().o.id;
+            g.rescue.flow.known.iter().position(|x| x.o.id == *id).unwrap()
+        };
+        if g.rescue.flow.known[ki].hot {
             // one of theirs is known in it: it is held for as long as he has lately been seen or heard there
-            let times: Vec<f64> = g.tab.rescueflow_region[k_region].hot.values().map(|e| e.t).collect();
+            let times: Vec<f64> = g.tab.rescueflow_region[g.rescue.flow.known[ki].region].hot.values().map(|e| e.t).collect();
             let last = m::max_n(&times);
             if t - last < k.hot_hold {
-                if !j.said_hot {
-                    j.said_hot = true;
+                if !said_hot {
                     g.rescue.flow.jobs.get_mut(gd).unwrap().said_hot = true;
                     g.rescue.flow.stats.hot_holds += 1.0;
-                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", o.side.as_str()), None, None, None);
-                    crate::rescue::rescue_note(g, &alloc::format!("flow:hold:{}:{}", o.id, callsign));
+                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None, None);
+                    let note = alloc::format!("flow:hold:{}:{}", g.rescue.flow.jobs.get(gd).unwrap().o.id, g.gd[gd].callsign);
+                    crate::rescue::rescue_note(g, &note);
                 }
                 continue;
             }
@@ -598,19 +598,21 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
         if crate::roomfight::room_fight_engaged(g, gd) {
             continue; // (the man he was holding on has just gone from his sight: not released on that frame)
         }
-        let sam_past = !on_route || sam[0] > o.at[0] + k.past;
-        let done = if j.on_t.is_nan() { t - j.t0 > k.give_up } else { t - j.on_t >= o.look && (sam_past || t - j.on_t >= k.max_cover) };
-        if !j.said_wait && !j.chain.is_empty() && on_route && sam[0] - pos[0] > k.wait_m {
-            j.said_wait = true;
+        let sam_past = !on_route || sam[0] > at[0] + k.past;
+        let done = if on_t.is_nan() { t - t0 > k.give_up } else { t - on_t >= look && (sam_past || t - on_t >= k.max_cover) };
+        if !said_wait && has_chain && on_route && sam[0] - pos[0] > k.wait_m {
             g.rescue.flow.jobs.get_mut(gd).unwrap().said_wait = true;
             crate::game::game_say(g, gd, "wait one.", None, None, None);
-            crate::rescue::rescue_note(g, &alloc::format!("flow:wait:{}", callsign));
+            let note = alloc::format!("flow:wait:{}", g.gd[gd].callsign);
+            crate::rescue::rescue_note(g, &note);
         }
         if !done {
             continue;
         }
-        crate::rescue::rescue_note(g, &alloc::format!("flow:done:{}:{}", o.id, callsign));
-        // (the chain is shifted on the copy: from here this job is replaced by take or ended by rejoin, so the row's own list is never read again)
+        // (the chain is shifted on a copy: from here this job is replaced by take or ended by rejoin, so the row's own list is never read again)
+        let mut j = g.rescue.flow.jobs.get(gd).cloned().unwrap();
+        let note = alloc::format!("flow:done:{}:{}", j.o.id, g.gd[gd].callsign);
+        crate::rescue::rescue_note(g, &note);
         let mut next = if j.chain.is_empty() { None } else { Some(j.chain.remove(0)) };
         while let Some(n) = &next {
             if !rescue_flow_settled(g, n) {
@@ -629,9 +631,9 @@ pub fn rescue_flow_tick(g: &mut crate::game::Game) {
             rescue_flow_take(g, gd, n, &j.chain, j.said_wait, true);
             g.rescue.flow.stats.chained += 1.0;
         } else {
-            let words = if j.said_hot {
+            let words = if said_hot {
                 Some("lost him — moving.")
-            } else if j.leap {
+            } else if leap {
                 Some("moving.")
             } else {
                 None
@@ -1048,6 +1050,25 @@ mod tests {
         rescue_flow_sense(&mut g);
         assert_eq!(g.rescue.flow.heard.keys(), vec![7u32, 8u32]);
         assert_eq!(g.rescue.flow.turn, 1.0);
+    }
+
+    /// A row taken out of `known` for sense's calls comes back whole, with what sense worked out written on it. (rescueflow.ts:188-192)
+    #[test]
+    fn sense_puts_each_known_row_back_with_its_share() {
+        let mut g = Game::blank();
+        g.player = g.pl.push(crate::game::Player { down: true, ..Default::default() });
+        let r = g.tab.rescueflow_region.push(Region { seen_t: vec![0.0, -1e9], ..Default::default() });
+        let mut k = opening("o", "glass", r);
+        k.built_open = true;
+        k.lookable = vec![0.0, 1.0];
+        g.rescue.flow.known.push(k);
+        rescue_flow_sense(&mut g);
+        let row = &g.rescue.flow.known[0];
+        assert_eq!(row.o.id, "o");
+        assert_eq!(row.region, r);
+        assert_eq!(row.lookable.len(), 2);
+        assert_eq!(row.share, 0.5);
+        assert!(row.state == OpenState::Unknown);
     }
 
     /// The objective line and the summary, against the TypeScript's templates. (rescueflow.ts:358, 363)

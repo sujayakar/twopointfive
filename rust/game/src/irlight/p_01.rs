@@ -1,4 +1,4 @@
-//! src/game/irlight.ts lines 1 to 315
+//! src/game/irlight.ts lines 1 to 316
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -39,6 +39,7 @@ pub fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId {
         owner,
         enabled: false,
         fixture_box: -1.0,
+        flicker: 0.0,
         ttl: -1.0,
         age: 0.0,
         peak_intensity: 0.0,
@@ -61,8 +62,8 @@ pub fn pose(g: &mut crate::game::Game, l: LightId, c_2: CharId) {
     // (a face against a wall or a leaf: the lens stays at the brow, this side of it)
     let blocked = crate::scene_collision::segment_blocked(g, head, [head[0] + fx * LENS_CLEAR, head[1], head[2] + fz * LENS_CLEAR], None, None, None);
     let at = if blocked { v3::copy(head) } else { [head[0] + fx * LENS_AHEAD, head[1], head[2] + fz * LENS_AHEAD] };
-    let e = g.engine.settings.exposure;
-    let strength = g.k.irlight.power / (if e > 0.0 { e } else { 1.0 });
+    // (the game's own exposure for the hour: never a player's Brightness)
+    let strength = g.k.irlight.power / crate::hours::exposure_of(g);
     let reach = g.k.irlight.reach;
     let outer = v3::clamp(g.k.irlight.cone, 5.0, 89.0);
     let inner = m::min(g.k.irlight.core, outer - 0.5);
@@ -441,7 +442,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
     kit_of(g).seen.clear();
     let mut live: Option<bool> = None;
     let host = crate::seats::host_man(g);
-    on_each_seat(g, &mut |g: &mut Game| seat_light(g, host, &mut live));
+    crate::seats::each_seat(g, &mut |g: &mut Game| seat_light(g, host, &mut live));
     for gd in kit_of(g).men.keys() {
         if !g.guards.contains(&gd) {
             kit_of(g).men.delete(gd);
@@ -566,8 +567,9 @@ pub fn ir_shows_at(g: &mut crate::game::Game, m: GuardId, p: V3) -> bool {
     }
     let x = d / reach;
     let w = v3::clamp(1.0 - x * x * x * x, 0.0, 1.0);
-    let s = g.engine.settings.exposure;
-    let v = crate::nvg::tube_vis(g, g.k.irlight.power / (if s > 0.0 { s } else { 1.0 }) * w * w / d2);
+    let power = g.k.irlight.power;
+    let e = power / crate::hours::exposure_of(g) * w * w / d2;
+    let v = crate::nvg::tube_vis(g, e);
     v >= g.k.nvg.black_at
 }
 
@@ -605,21 +607,6 @@ pub fn ir_light_summary(g: &mut crate::game::Game) -> String {
         }
     }
     alloc::format!("IR light: yours {}{} — only goggles see it", yours, team)
-}
-
-/// eachSeat(g, f) over one view: seats::each_seat's closure takes two `&mut Game` and cannot be lent, so its one body is here, through with_seat. (seats.ts eachSeat)
-fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 {
-        f(g);
-        return;
-    }
-    let mut i = 0;
-    while i < g.seats.len() {
-        let s = g.seats[i];
-        i += 1;
-        let man = crate::cmd::seat_man(g, s);
-        crate::seats::with_seat(g, man, &mut *f);
-    }
 }
 
 #[cfg(test)]

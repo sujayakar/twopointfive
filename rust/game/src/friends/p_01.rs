@@ -88,7 +88,7 @@ pub fn sam_off_friend(g: &mut crate::game::Game, c_2: CharId, up: bool, dt: f64)
     } else if g.pl[pl].friend_low && (!live || !(g.time - g.pl[pl].friend_t >= 0.0 && g.time - g.pl[pl].friend_t <= g.k.friends.up_secs)) {
         g.pl[pl].friend_low = false;
     }
-    if g.pl[pl].friend_low { seam_stats_lowered_s_add(g, dt); }
+    if g.pl[pl].friend_low { g.stats.friends.lowered_s += dt; }
     if g.pl[pl].friend_low {
         match o {
             Some(o) => Some(crate::friends::SamOffFriend::Guard(o)),
@@ -132,11 +132,6 @@ fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
         Some(b) => *b,
         None => v3::add(g.ch[c].pos, [0.0, up, 0.0]),
     }
-}
-
-/// `FRIENDS_STATS.loweredS += dt`: the skeleton has the field as i32, the TypeScript sums seconds.   (friends.ts:86)
-fn seam_stats_lowered_s_add(g: &mut Game, dt: f64) {
-    todo!("needs: FriendsStats.lowered_s as f64")
 }
 
 #[cfg(test)]
@@ -200,6 +195,18 @@ mod tests {
         g.pl[p].friend_t = g.time + 1.0;
         assert!(not_lowered(sam_off_friend(&mut g, c, true, 0.016)));
         assert!(!g.pl[p].friend_low);
+    }
+
+    #[test]
+    fn inside_the_beat_the_gun_stays_down_for_nobody_and_the_seconds_count() {
+        let (mut g, c) = lone_player();
+        let p = g.player;
+        g.pl[p].friend_low = true;
+        g.pl[p].friend_t = g.time;
+        assert!(sam_off_friend(&mut g, c, true, 0.25).is_none());
+        assert!(g.pl[p].friend_low);
+        assert_eq!(g.stats.friends.lowered_s, 0.25);
+        assert_eq!(g.stats.friends.lowered, 0);
     }
 
     #[test]

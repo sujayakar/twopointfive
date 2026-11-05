@@ -1,4 +1,4 @@
-//! src/game/pressure.ts lines 434 to 931
+//! src/game/pressure.ts lines 441 to 938
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// the table of spots outside a door, (depth, lateral) (pressure.ts 872)
+/// the table of spots outside a door, (depth, lateral) (pressure.ts 879)
 const SPOTS: [(f64, f64); 9] = [(3.0, 1.6), (3.0, -1.6), (2.4, 1.2), (2.4, -1.2), (1.2, 2.4), (1.2, -2.4), (1.2, 1.7), (1.2, -1.7), (2.6, 0.0)];
 
 // ---- small reads
@@ -291,6 +291,11 @@ pub fn learn(g: &mut crate::game::Game) {
         }
         heard_at(state_of(g), e.time, p);
     }
+    // (the WeakSet let go of an event with the event: g.events drops one after half a second and none comes back, so a serial off the list is never asked about again)
+    let seen = core::mem::take(&mut state_of(g).ev_seen);
+    let mut keep = JsSet::new();
+    for e in &g.events { if seen.has(e.serial) { keep.add(e.serial); } }
+    state_of(g).ev_seen = keep;
     let know = g.k.pressure.stun_know_secs;
     let st = state_of(g);
     if st.heard.len() > 24 || (!st.heard.is_empty() && now - st.heard[0].t > know) {
@@ -357,9 +362,10 @@ pub fn loose(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) {
     man.hold = false; man.pinned = false;
     man.state = crate::game::GuardState::Alert;
     man.awareness = m::max(man.awareness, 0.92);
-    if now - man.last_seen_t > 1.0 { man.last_known = Some(at); }
-    man.path = Vec::new();
-    man.path_goal = None;
+    if now - man.last_seen_t > 1.0 { crate::belief::word(g, gd, at); }
+    crate::game::guard_set_path(g, gd, Vec::new());
+    let man = &mut g.gd[gd];
+    man.path_goal = None; man.path_goal_orbit = false;
 }
 /// a man on a scripted leg files his own boots, so the team's ears get them. (pressure.ts boots)
 pub fn boots(g: &mut crate::game::Game, gd: GuardId, last: f64) -> f64 {
@@ -403,13 +409,13 @@ pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
     let de = dfm(g, d);
     de.want = i as f64; de.watch = i as f64;
     de.home = at;
-    de.pt[0] = at[0]; de.pt[1] = 0.0; de.pt[2] = at[2];
+    crate::roomfight::def_move_pt(g, d, [at[0], 0.0, at[2]]);
 }
 
 /// a far fight he placed or was told of, while it is still worth going to. (pressure.ts toldOf)
 pub fn told_of(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::StateToldValue> {
     let (now, memory) = (g.time, g.k.pressure.memory_secs);
-    match state_of(g).told.get(d) { Some(t) if now - t.t_2 < memory => Some(*t), _ => None }
+    match state_of(g).told.get(d) { Some(t) if now - t.t < memory => Some(*t), _ => None }
 }
 /// PRESSURE.byWay: his room and the room being fought over share a door. (pressure.ts nextDoor)
 pub fn next_door(g: &mut crate::game::Game, r: Option<RoomfightRoomId>, t: RoomfightRoomId) -> bool {
@@ -429,9 +435,9 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
         && g.time >= g.gd[gd].dazzled_until && g.time >= g.gd[gd].stagger_until
         && g.time - df(g, d).noise_t < g.k.pressure.memory_secs && g.time - g.gd[gd].last_seen_t > 3.0
         && g.time - state_of(g).done_at.get(d).copied().unwrap_or(-100.0) > again && !state_of(g).outs.iter().any(|o| o.def == d)
-        && !crate::laststand::last_stand_man(g, gd)
-        && !{ let n = df(g, d).noise_at; crate::lanes::lane_holds(g, gd, n) }
-        && !crate::enemysquads::squad_owns(g, gd)
+        && !crate::owner::has_him(g, gd, crate::owner::own().stand)
+        && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) }
+        && !crate::owner::has_him(g, gd, crate::owner::own().squad)
         && !(g.k.digin.on && crate::digin::dig_in_stays(g, gd));
     // the last of them alive has no others to go to, and nobody on the net to call: he keeps his room
     let lone = last_alone(g, d);
@@ -447,11 +453,11 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let heard = if ok { aim(g, d) } else { None };
     if let (Some(h), Some(t)) = (heard, told) {
         let room = df(g, d).room;
-        if h.t != t.t && next_door(g, room, h.t) { state_of(g).told.delete(d); }
+        if h.t != t.room && next_door(g, room, h.t) { state_of(g).told.delete(d); }
     }
     let tg: Option<(RoomfightRoomId, V3)> = match heard {
         Some(h) => Some((h.t, h.at)),
-        None => match told { Some(t) if ok && !report_stands(g, d) && state_of(g).told.has(d) => Some((t.t, t.at)), _ => None },
+        None => match told { Some(t) if ok && !report_stands(g, d) && state_of(g).told.has(d) => Some((t.room, t.at)), _ => None },
     };
     if let Some((tt, _)) = tg {
         if state_of(g).stay.get(d).copied() == Some(tt) && !stays_home(g, d) { state_of(g).stay.delete(d); }
@@ -474,14 +480,14 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             let at = g.time + pick(g, beat) * g.k.pressure.organise_k;
             state_of(g).think.set(d, crate::pressure::StateThinkValue { room: tt, at, held: None });
             // PRESSURE.byWay, a fight that is not next door: he says what he has placed, and the men of his room who heard it and could not place it know it from him
-            if g.k.pressure.by_way && heard.is_some() && told.map(|t| t.t) != heard.map(|h| h.t) && my_room.is_some() && !next_door(g, my_room, tt) {
+            if g.k.pressure.by_way && heard.is_some() && told.map(|t| t.room) != heard.map(|h| h.t) && my_room.is_some() && !next_door(g, my_room, tt) {
                 let now = g.time;
-                state_of(g).told.set(d, crate::pressure::StateToldValue { t: tt, at: tat, t_2: now });
+                state_of(g).told.set(d, crate::pressure::StateToldValue { room: tt, at: tat, t: now });
                 let mut n = 0;
                 for &x in &defs {
                     if x != d && alive(g, x) && df(g, x).room == my_room && df(g, x).mode == hold && !state_of(g).of.has(x) && !state_of(g).think.has(x)
-                        && told_of(g, x).map(|t| t.t) != Some(tt) && df(g, x).noise_out && now - df(g, x).noise_t < 1.5 {
-                        state_of(g).told.set(x, crate::pressure::StateToldValue { t: tt, at: tat, t_2: now });
+                        && told_of(g, x).map(|t| t.room) != Some(tt) && df(g, x).noise_out && now - df(g, x).noise_t < 1.5 {
+                        state_of(g).told.set(x, crate::pressure::StateToldValue { room: tt, at: tat, t: now });
                         n += 1;
                     }
                 }
@@ -513,7 +519,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             // a mate on his beat toward the same fight, or told of it and free to come
             let w = match state_of(g).think.get(x).copied() {
                 Some(tx) => tx.room == tt && tx.at > g.time,
-                None => told_of(g, x).map(|t| t.t) == Some(tt) && df(g, x).mode == hold && g.time >= g.gd[o].dazzled_until && g.time >= g.gd[o].stagger_until
+                None => told_of(g, x).map(|t| t.room) == Some(tt) && df(g, x).mode == hold && g.time >= g.gd[o].dazzled_until && g.time >= g.gd[o].stagger_until
                     && g.time - g.gd[o].last_seen_t > 3.0 && g.time - state_of(g).done_at.get(x).copied().unwrap_or(-100.0) > again,
             };
             if w { wait = true; }
@@ -614,7 +620,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let st = state_of(g);
     st.presses[pi].men.push(man);
     st.of.set(d, man);
-    st.called.set(d, crate::pressure::StateCalledValue { t: tt, t_2: now });
+    st.called.set(d, crate::pressure::StateCalledValue { room: tt, t: now });
     if let Some(r) = my_room { st.sent.add(r); }
     let (p_id, p_room, p_at, p_phase) = (st.presses[pi].id, st.presses[pi].room, st.presses[pi].at, st.presses[pi].phase);
     if p_phase == PressPhase::Go {   // no forming up: a presser goes at the fight now, a flanker runs round to his door first
@@ -845,8 +851,10 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
             if to.is_some() || crate::scene_collision::nav_grid_find_path(g, here, spot, None, None).map_or(false, |w| !w.is_empty()) {
                 let x = &mut g.tab.pressure_man[mi];
                 x.fell = true; x.moving = true;
+                g.gd[gd].hold = true;
+                crate::game::guard_set_path(g, gd, Vec::new());
                 let who = &mut g.gd[gd];
-                who.hold = true; who.path = Vec::new(); who.path_goal = None;
+                who.path_goal = None; who.path_goal_orbit = false;
                 if let Some(t) = to {
                     let x = &mut g.tab.pressure_man[mi];
                     x.spot = t.spot;
@@ -981,8 +989,8 @@ pub fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
             }
             !other
         }
-        && !crate::enemysquads::squad_stays_in(g, gd)
-        && !crate::laststand::last_stand_man(g, gd);
+        && !g.gd[gd].stays_in_rooms
+        && !crate::owner::has_him(g, gd, crate::owner::own().stand);
     if !ok { state_of(g).last.delete(d); return; }
     let r = room.unwrap();
     let mut why: Option<HookedWhy> = None;

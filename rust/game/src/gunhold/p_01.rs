@@ -7,44 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- the lines this file owns
-
-/// (gunhold.ts LINES) the staff's lines for the four moments
-fn lines(kind: GunHoldPoolKind) -> &'static [&'static str] {
-    match kind {
-        GunHoldPoolKind::Gun => &["gun — he's got a gun! get behind something!", "he's armed — cover, get to cover!"],
-        GunHoldPoolKind::Shot => &["he's shooting — out of his line, move!", "shots! get off his line — go round him!"],
-        GunHoldPoolKind::Round => &["going round him — keep him talking", "I'll get behind him. keep his eyes on you"],
-        GunHoldPoolKind::Gone => &["he's moved — they're not there!"],
-    }
-}
-/// (gunhold.ts GUNHOLD_DEFENDER_LINES) the same four from a defender of a squad mission
-fn defender_lines(kind: GunHoldPoolKind) -> &'static [&'static str] {
-    match kind {
-        GunHoldPoolKind::Gun => &["pistol's out behind his shield — get to cover!", "he's drawn from the hold — get behind something!"],
-        GunHoldPoolKind::Shot => &["he's firing past his shield — off that line, move!", "rounds from the hold — get off it, go round him!"],
-        GunHoldPoolKind::Round => &["going round behind him — keep his eyes on you", "coming at his back. hold him where he is"],
-        GunHoldPoolKind::Gone => &["he's moved — nobody where we left them!"],
-    }
-}
-/// (gunhold.ts GUNHOLD_NOW) a line as it is said now, by the line it stands for; written order
-static NOW: &[(&str, &str)] = &[
-    ("shots! get off his line — go round him!", "shots! get out of his line of fire — go around him!"),
-    ("going round him — keep him talking", "going around him — keep him talking"),
-    ("he's drawn from the hold — get behind something!", "he's pulled a pistol — get behind something!"),
-    ("rounds from the hold — get off it, go round him!", "he's shooting — get out of his line of fire, go around him!"),
-    ("going round behind him — keep his eyes on you", "going around behind him — keep his eyes on you"),
-    ("coming at his back. hold him where he is", "coming up behind him. keep him where he is"),
-    ("he's moved — nobody where we left them!", "he's moved — they're not where we left them!"),
-];
 /// `GUNHOLD_NOW[was] ?? was`
-fn now_of(was: &str) -> &str {
-    for &(from, to) in NOW {
-        if from == was {
-            return to;
-        }
-    }
-    was
+fn now_of(was: &str) -> String {
+    gunhold_now().get(String::from(was)).cloned().unwrap_or_else(|| String::from(was))
 }
 
 // ---------------------------------------------------------------- stats, the men
@@ -149,8 +114,8 @@ pub fn learn_shot(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, shot
     }
 }
 
-/// partOf without the copy: the keys of the hold's Known and of this man's St, when the rule has him.
-fn part_keys(g: &mut Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
+/// Is this man's standoff one the rule has (the pistol known in the hold, a part dealt him): the keys of the hold's Known and of his St. (gunhold.ts partOf)
+pub fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
     if !live(g) {
         return None;
     }
@@ -166,17 +131,9 @@ fn part_keys(g: &mut Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
     }
 }
 
-/// Is this man's standoff one the rule has (the pistol known in the hold, a part dealt him); copies of both rows. (gunhold.ts partOf)
-pub fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::gunhold::PartOf> {
-    let (key, s) = part_keys(g, gd)?;
-    let k = g.m.gunhold.knowns.get(key)?.clone();
-    let st = *g.m.gunhold.states.get(s)?;
-    Some(PartOf { k, st })
-}
-
-/// Behind cover on purpose the standoff is kept while somebody of his side has seen the pair lately and no look found them gone. (gunhold.ts gunHoldKeeps)
-pub fn gun_hold_keeps(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let (key, s) = match part_keys(g, gd) {
+/// Behind cover on purpose the standoff is kept while somebody of his side has seen the pair lately and no look found them gone. (gunhold.ts standoffFixKept)
+pub fn standoff_fix_kept(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    let (key, s) = match part_of(g, gd) {
         Some(p) => p,
         None => return false,
     };
@@ -187,9 +144,9 @@ pub fn gun_hold_keeps(g: &mut crate::game::Game, gd: GuardId) -> bool {
     gone_t < 0.0 && g.time - m::max(g.tab.guards_standoff[s].seen_t, fix_t) < g.k.gunhold.keep_secs
 }
 
-/// A man this rule has on his feet for cover is not rooted in the open by rounds past his head. (gunhold.ts gunHoldRuns)
-pub fn gun_hold_runs(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let (key, s) = match part_keys(g, gd) {
+/// A man this rule has on his feet for cover is not rooted in the open by rounds past his head. (gunhold.ts standoffOnFeet)
+pub fn standoff_on_feet(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    let (key, s) = match part_of(g, gd) {
         Some(p) => p,
         None => return false,
     };
@@ -321,9 +278,6 @@ fn price_at(g: &mut Game, k: &mut Known, ix: f64, iz: f64) -> f64 {
     }
 }
 
-/// The TypeScript's price only makes the closure, which is `price_at` here, and writes nothing; its only callers are in this file. (gunhold.ts price)
-pub fn price(g: &mut crate::game::Game, k: &mut crate::gunhold::Known) {}
-
 /// A way to `goal` at that price; its length and the longest unbroken stretch of it across floor Sam's gun covers in front of him. (gunhold.ts wayTo)
 pub fn way_to(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> {
     let start = g.ch[g.gd[gd].ch].pos;
@@ -360,10 +314,11 @@ pub fn way_to(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Kn
 pub fn take(g: &mut crate::game::Game, gd: GuardId, path: &[V3], goal: V3) {
     let start = g.ch[g.gd[gd].ch].pos;
     let threaded = crate::doors::doors_thread_path(g, path, start, Some(&mut |g: &mut Game, x: f64, z: f64| !crate::scene_collision::nav_grid_is_blocked(g, x, z)));
+    crate::game::guard_set_path(g, gd, threaded);
     let man = &mut g.gd[gd];
-    man.path = threaded;
     man.path_i = 0;
     man.path_goal = None;
+    man.path_goal_orbit = false;
     man.repath_t = 0.0;
     man.stall_ref = None;
     man.line_side = 0.0;
@@ -627,12 +582,19 @@ pub fn goes_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k
 
 /// The pool a man draws one of the four moments from: a defender's own, else the staff's. (gunhold.ts gunHoldPool)
 pub fn gun_hold_pool(g: &mut crate::game::Game, gd: GuardId, kind: crate::gunhold::GunHoldPoolKind) -> Vec<String> {
-    let own = if crate::teams::defender_words(g, gd) { Some(defender_lines(kind)) } else { None };
-    let pool = match own {
+    let own = if crate::teams::defender_words(g, gd) { gunhold_defender_lines().get(String::from(kind.as_str())).cloned() } else { None };
+    match own {
         Some(own) if !own.is_empty() => own,
-        _ => lines(kind),
-    };
-    pool.iter().map(|&s| String::from(s)).collect()
+        _ => {
+            let t = lines();
+            match kind {
+                GunHoldPoolKind::Gun => t.gun,
+                GunHoldPoolKind::Shot => t.shot,
+                GunHoldPoolKind::Round => t.round,
+                GunHoldPoolKind::Gone => t.gone,
+            }
+        }
+    }
 }
 
 /// One line of a moment, at most one every second and a half for the side; the one roll of the die is drawn either table. (gunhold.ts bark)
@@ -651,7 +613,8 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Know
     let pool = gun_hold_pool(g, gd, kind);
     let n = pool.len() as f64;
     let was = &pool[js::rem(m::floor(crate::math_dice::sim_random(g) * n), n) as usize];
-    crate::game::game_say(g, gd, now_of(was), Some(radio), None, None);
+    let said = now_of(was);
+    crate::game::game_say(g, gd, &said, Some(radio), None, None);
     true
 }
 
@@ -702,8 +665,9 @@ fn out(g: &Game, f: Feet, move_: f64, run: bool, lk: Option<V3>, crouch: f64, qu
 
 /// `gd.path = []; gd.pathGoal = null`
 fn drop_path(g: &mut Game, gd: GuardId) {
-    g.gd[gd].path = Vec::new();
+    crate::game::guard_set_path(g, gd, Vec::new());
     g.gd[gd].path_goal = None;
+    g.gd[gd].path_goal_orbit = false;
 }
 
 /// `now + GUNHOLD.peekEvery * (0.6 + 0.8 * simRandom())`
@@ -1120,7 +1084,7 @@ pub fn gun_hold_summary(g: &mut crate::game::Game) -> String {
     let held = g.pl[g.player].holding.as_ref().map(|h| (h.g, h.serial));
     let known = held.and_then(|(_, key)| g.m.gunhold.knowns.get(key).map(|k| (k.gun_t, k.shot_t)));
     let s = *gun_hold_stats(g);
-    let tail = alloc::format!("{} ran for cover · {} went round · {} lines · {} looks", s.ran, s.rounds, s.lines, s.looks);
+    let tail = alloc::format!("{} ran for cover · {} went round · {} lines · {} looks", js::num_str(s.ran), js::num_str(s.rounds), js::num_str(s.lines), js::num_str(s.looks));
     let (held, gun_t, shot_t) = match (held, known) {
         (Some((h, _)), Some((gun_t, shot_t))) if !(gun_t < 0.0) => (h, gun_t, shot_t),
         _ => return alloc::format!("gun in the hold ▸ — ({})", tail),
@@ -1136,7 +1100,7 @@ pub fn gun_hold_summary(g: &mut crate::game::Game) -> String {
             Phase::Cover => alloc::format!("behind cover{}", if st.low { " (low)" } else { "" }),
             Phase::Peek | Phase::Back => String::from("taking a look"),
             Phase::Flank => match st.goal {
-                Some(goal) => alloc::format!("going round, {:.1} m off his spot", flat(g.ch[g.gd[gd].ch].pos, goal)),
+                Some(goal) => alloc::format!("going round, {} m off his spot", js::to_fixed(flat(g.ch[g.gd[gd].ch].pos, goal), 1)),
                 None => String::from("going round"),
             },
             Phase::Line => String::from("on the line at his back"),
@@ -1149,7 +1113,7 @@ pub fn gun_hold_summary(g: &mut crate::game::Game) -> String {
 
 /// QA and the standoff's muzzle: this man's part, by name. (gunhold.ts gunHoldPhase)
 pub fn gun_hold_phase(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::gunhold::Phase> {
-    let (_, s) = part_keys(g, gd)?;
+    let (_, s) = part_of(g, gd)?;
     g.m.gunhold.states.get(s).map(|st| st.phase)
 }
 
@@ -1174,9 +1138,11 @@ mod tests {
 
     #[test]
     fn every_reworded_line_is_a_line_of_a_table() {
-        let kinds = [GunHoldPoolKind::Gun, GunHoldPoolKind::Shot, GunHoldPoolKind::Round, GunHoldPoolKind::Gone];
-        for &(from, _) in NOW {
-            assert!(kinds.iter().any(|&k| lines(k).contains(&from) || defender_lines(k).contains(&from)), "{}", from);
+        let t = lines();
+        let staff: Vec<String> = [t.gun, t.shot, t.round, t.gone].concat();
+        let own: Vec<String> = gunhold_defender_lines().values().flatten().cloned().collect();
+        for from in gunhold_now().keys() {
+            assert!(staff.contains(&from) || own.contains(&from), "{}", from);
         }
     }
 

@@ -195,7 +195,7 @@ impl Default for NightBreachObjOfO { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct SQUAD4Item {
     pub name: String,
-    pub pair: String,
+    pub pair: crate::game::PairId,
     pub tint: V3,
     pub tint2: V3,
 }
@@ -204,7 +204,7 @@ impl SQUAD4Item {
     pub fn zeroed() -> Self {
         SQUAD4Item {
             name: String::new(),
-            pair: String::new(),
+            pair: crate::game::PairId::Red,
             tint: [0.0; 3],
             tint2: [0.0; 3],
         }
@@ -284,7 +284,7 @@ impl NightbreachMod {
 }
 
 /// (src/game/nightbreach.ts:88 SQUAD4: a table nothing writes)
-pub fn squad4() -> Vec<crate::nightbreach::SQUAD4Item> { alloc::vec![crate::nightbreach::SQUAD4Item { name: String::from("Red One"), pair: String::from("red"), tint: [0.2, 0.085, 0.075], tint2: [0.55, 0.07, 0.05] }, crate::nightbreach::SQUAD4Item { name: String::from("Red Two"), pair: String::from("red"), tint: [0.2, 0.085, 0.075], tint2: [0.55, 0.07, 0.05] }, crate::nightbreach::SQUAD4Item { name: String::from("Blue One"), pair: String::from("blue"), tint: [0.06, 0.075, 0.13], tint2: [0.07, 0.2, 0.6] }, crate::nightbreach::SQUAD4Item { name: String::from("Blue Two"), pair: String::from("blue"), tint: [0.06, 0.075, 0.13], tint2: [0.07, 0.2, 0.6] }] }
+pub fn squad4() -> Vec<crate::nightbreach::SQUAD4Item> { alloc::vec![crate::nightbreach::SQUAD4Item { name: String::from("Red One"), pair: crate::game::PairId::Red, tint: [0.2, 0.085, 0.075], tint2: [0.55, 0.07, 0.05] }, crate::nightbreach::SQUAD4Item { name: String::from("Red Two"), pair: crate::game::PairId::Red, tint: [0.2, 0.085, 0.075], tint2: [0.55, 0.07, 0.05] }, crate::nightbreach::SQUAD4Item { name: String::from("Blue One"), pair: crate::game::PairId::Blue, tint: [0.06, 0.075, 0.13], tint2: [0.07, 0.2, 0.6] }, crate::nightbreach::SQUAD4Item { name: String::from("Blue Two"), pair: crate::game::PairId::Blue, tint: [0.06, 0.075, 0.13], tint2: [0.07, 0.2, 0.6] }] }
 
 /// (src/game/nightbreach.ts:96 SQUAD4_BUDGET)
 pub const SQUAD4_BUDGET: f64 = 10.0;

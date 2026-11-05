@@ -181,9 +181,9 @@ impl ShellRowShell {
 impl Default for ShellRowShell { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunreload.ts:52 FEED, src/game/gunreload.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct FEEDValue {
-    pub kind: String,
+    pub kind: crate::gunreload::FeedKind,
     pub hand: V3,
     pub col: V3,
     pub drop: Option<f64>,
@@ -195,7 +195,7 @@ impl FEEDValue {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         FEEDValue {
-            kind: String::new(),
+            kind: crate::gunreload::FeedKind::Mag,
             hand: [0.0; 3],
             col: [0.0; 3],
             drop: None,
@@ -401,7 +401,7 @@ impl Default for ReloadShow { fn default() -> Self { Self::zeroed() } }
 pub fn group() -> V3 { [0.06, 0.08, 0.09] }
 
 /// (src/game/gunreload.ts:52 FEED: a table nothing writes)
-pub fn feed() -> JsMap<String, crate::gunreload::FEEDValue> { { let mut t = JsMap::new(); t.set(String::from("mk12"), crate::gunreload::FEEDValue { kind: String::from("mag"), hand: [0.012, 0.055, 0.03], col: [0.03, 0.03, 0.033], drop: Some(6.0), marks: None, port_first: None, pump: None }); t.set(String::from("mp7"), crate::gunreload::FEEDValue { kind: String::from("mag"), hand: [0.008, 0.095, 0.013], col: [0.03, 0.03, 0.033], drop: Some(7.0), marks: Some(crate::gunreload::FeedMarks { mag: [0.0 + 0.06 + 0.025, -0.135 + 0.08 + -0.15, -0.045 + 0.09 + -0.05], strip: [0.0 + 0.06 + 0.03, -0.135 + 0.08 + -0.24, -0.045 + 0.09 + -0.07], handle: [0.05, 0.09, -0.02], pull: [0.05, 0.09, -0.1], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }), port_first: None, pump: None }); t.set(String::from("mk46"), crate::gunreload::FEEDValue { kind: String::from("belt"), hand: [0.035, 0.045, 0.06], col: [0.16, 0.17, 0.1], drop: Some(5.0), marks: None, port_first: None, pump: None }); t.set(String::from("m1014"), crate::gunreload::FEEDValue { kind: String::from("shells"), hand: [0.01, 0.035, 0.01], col: [0.5, 0.05, 0.04], drop: None, marks: None, port_first: Some(true), pump: None }); t.set(String::from("m870"), crate::gunreload::FEEDValue { kind: String::from("shells"), hand: [0.01, 0.035, 0.01], col: [0.5, 0.05, 0.04], drop: None, marks: None, port_first: None, pump: Some(true) }); t.set(String::from("hk45"), crate::gunreload::FEEDValue { kind: String::from("mag"), hand: [0.009, 0.055, 0.018], col: [0.05, 0.05, 0.055], drop: Some(0.0), marks: None, port_first: None, pump: None }); t.set(String::from("g18"), crate::gunreload::FEEDValue { kind: String::from("mag"), hand: [0.008, 0.11, 0.016], col: [0.05, 0.05, 0.055], drop: Some(4.0), marks: None, port_first: None, pump: None }); t } }
+pub fn feed() -> JsMap<String, crate::gunreload::FEEDValue> { { let mut t = JsMap::new(); t.set(String::from("mk12"), crate::gunreload::FEEDValue { kind: crate::gunreload::FeedKind::Mag, hand: [0.012, 0.055, 0.03], col: [0.03, 0.03, 0.033], drop: Some(6.0), marks: None, port_first: None, pump: None }); t.set(String::from("mp7"), crate::gunreload::FEEDValue { kind: crate::gunreload::FeedKind::Mag, hand: [0.008, 0.095, 0.013], col: [0.03, 0.03, 0.033], drop: Some(7.0), marks: Some(crate::gunreload::FeedMarks { mag: [0.0 + 0.06 + 0.025, -0.135 + 0.08 + -0.15, -0.045 + 0.09 + -0.05], strip: [0.0 + 0.06 + 0.03, -0.135 + 0.08 + -0.24, -0.045 + 0.09 + -0.07], handle: [0.05, 0.09, -0.02], pull: [0.05, 0.09, -0.1], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }), port_first: None, pump: None }); t.set(String::from("mk46"), crate::gunreload::FEEDValue { kind: crate::gunreload::FeedKind::Belt, hand: [0.035, 0.045, 0.06], col: [0.16, 0.17, 0.1], drop: Some(5.0), marks: None, port_first: None, pump: None }); t.set(String::from("m1014"), crate::gunreload::FEEDValue { kind: crate::gunreload::FeedKind::Shells, hand: [0.01, 0.035, 0.01], col: [0.5, 0.05, 0.04], drop: None, marks: None, port_first: Some(true), pump: None }); t.set(String::from("m870"), crate::gunreload::FEEDValue { kind: crate::gunreload::FeedKind::Shells, hand: [0.01, 0.035, 0.01], col: [0.5, 0.05, 0.04], drop: None, marks: None, port_first: None, pump: Some(true) }); t.set(String::from("hk45"), crate::gunreload::FEEDValue { kind: crate::gunreload::FeedKind::Mag, hand: [0.009, 0.055, 0.018], col: [0.05, 0.05, 0.055], drop: Some(0.0), marks: None, port_first: None, pump: None }); t.set(String::from("g18"), crate::gunreload::FEEDValue { kind: crate::gunreload::FeedKind::Mag, hand: [0.008, 0.11, 0.016], col: [0.05, 0.05, 0.055], drop: Some(4.0), marks: None, port_first: None, pump: None }); t } }
 
 /// (src/game/gunreload.ts:65 BELT: a table nothing writes)
 pub fn belt() -> crate::gunreload::BELT { crate::gunreload::BELT { cover: [0.0 + 0.06 + 0.07, 0.04 + 0.08 + 0.03, 0.07 + 0.09 + -0.03], lifted: [0.0 + 0.06 + 0.07, 0.04 + 0.08 + 0.1, 0.07 + 0.09 + -0.08], box_: [0.02 + 0.06 + 0.03, -0.085 + 0.08 + -0.13, 0.06 + 0.09 + -0.04], strip: [0.02 + 0.06 + 0.04, -0.085 + 0.08 + -0.225, 0.06 + 0.09 + -0.03], tray: [0.0 + 0.06 + 0.06, 0.04 + 0.08 + 0.01, 0.07 + 0.09 + 0.0], handle: [0.04, -0.06, 0.1], pull: [0.04, -0.06, 0.0] } }

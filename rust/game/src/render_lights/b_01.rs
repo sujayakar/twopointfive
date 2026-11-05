@@ -12,4 +12,4 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn pack_light(g: &mut crate::game::Game, f: &mut Vec<f32>, u: &mut Vec<u32>, o: f64, l: LightId, inten: f64, kind_word: f64, volumetric: f64, owner_word: f64) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/render/lights.ts:172 LightSet.remove)
-pub fn light_set_remove(g: &mut crate::game::Game, this: &mut crate::render_lights::LightSet, l: LightId) {}
+pub fn light_set_remove(g: &mut crate::game::Game, l: LightId) {}

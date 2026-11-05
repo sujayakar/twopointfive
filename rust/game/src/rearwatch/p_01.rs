@@ -18,14 +18,6 @@ fn flat(a: V3, b: V3) -> f64 {
     v3::dist_xz(a, b)
 }
 
-/// `n.toFixed(1)` for a time: JavaScript takes the larger on an exact tie, the formatter the even digit, and they differ only on a fraction of exactly .25.
-fn to_fixed1(x: f64) -> String {
-    if x - m::floor(x) == 0.25 {
-        return format!("{:.1}", x + 0.01);
-    }
-    format!("{:.1}", x)
-}
-
 // ---- small reads
 
 fn of(g: &mut Game, m: GuardId) -> Option<OrdersAssignmentId> {
@@ -493,7 +485,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         }
         if p.out != Some(true) {
             book!(g, key).pins.get_mut(m).unwrap().out = Some(true);
-            let s = format!("{} {} keeps {} from outside", to_fixed1(g.time), g.gd[m].callsign, g.tab.cover_opening[p.o].id);
+            let s = format!("{} {} keeps {} from outside", js::to_fixed(g.time, 1), g.gd[m].callsign, g.tab.cover_opening[p.o].id);
             note(book!(g, key), &s);
         }
         let row = pin_row(g, key, m).unwrap();
@@ -575,8 +567,6 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 a,
                 going: None,
                 raised: None,
-                held: None,
-                late: None,
                 out: None,
                 to: None,
             },
@@ -602,7 +592,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
             g.stats.rearwatch.pins += 1;
             let s = format!(
                 "{} {} on {} ({} beyond) behind the stack on {}{}",
-                to_fixed1(time),
+                js::to_fixed(time, 1),
                 g.gd[pm].callsign,
                 g.tab.cover_opening[po].id,
                 if js::truthy(pcls) { "known" } else { "uncleared" },
@@ -656,7 +646,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         } else {
             "off the stack"
         };
-        let s = format!("{} {} off {} · {}", to_fixed1(g.time), g.gd[m].callsign, g.tab.cover_opening[p.o].id, why);
+        let s = format!("{} {} off {} · {}", js::to_fixed(g.time, 1), g.gd[m].callsign, g.tab.cover_opening[p.o].id, why);
         note(book!(g, key), &s);
     }
     book!(g, key).pins = next;
@@ -698,7 +688,7 @@ fn let_go(g: &mut Game, pl: PlayerId, m: GuardId, why: &str) {
             g.tab.orders_assignment[a].going = String::from(FALLING);
         }
     }
-    let s = format!("{} {} off {} · {}", to_fixed1(g.time), g.gd[m].callsign, g.tab.cover_opening[r.pin.o].id, why);
+    let s = format!("{} {} off {} · {}", js::to_fixed(g.time, 1), g.gd[m].callsign, g.tab.cover_opening[r.pin.o].id, why);
     note(book!(g, pl), &s);
 }
 /// The walk to Sam, once a judging for each man. (rearwatch.ts roomKeepTick walk)
@@ -782,8 +772,6 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                     a,
                     going: None,
                     raised: None,
-                    held: None,
-                    late: None,
                     out: None,
                     to,
                 },
@@ -794,7 +782,7 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
             },
         );
         g.stats.rearwatch.rooms += 1;
-        let s = format!("{} {} keeps {} while the squad leaves the room", to_fixed1(time), g.gd[m].callsign, g.tab.cover_opening[o].id);
+        let s = format!("{} {} keeps {} while the squad leaves the room", js::to_fixed(time, 1), g.gd[m].callsign, g.tab.cover_opening[o].id);
         note(book!(g, pl), &s);
     }
     book!(g, pl).was = now;
@@ -844,7 +832,7 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                 }
                 let s = format!(
                     "{} {} off {} · another order{}",
-                    to_fixed1(g.time),
+                    js::to_fixed(g.time, 1),
                     g.gd[m].callsign,
                     g.tab.cover_opening[o].id,
                     if stays { " (still a way behind the stack)" } else { "" }
@@ -992,7 +980,12 @@ pub fn walk_to(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 /// orders.ts, the fall-in leg: this man's feet stay where they are, in his seat's book. (rearwatch.ts roomKept)
 pub fn room_kept(g: &mut crate::game::Game, gd: GuardId) -> bool {
     // (viewOf: his seat's book; a cast is one book, its own)
-    let key = if g.in_cast { crate::seats::view_key(g) } else { crate::seats::view_of(g, gd) };
+    let key = if g.in_cast {
+        crate::seats::view_key(g)
+    } else {
+        let seat = crate::seats::view_of(g, gd);
+        crate::cmd::seat_man(g, seat)
+    };
     g.m.rearwatch.books.get(key).map_or(false, |b| b.keeps.has(gd))
 }
 
@@ -1058,8 +1051,8 @@ pub fn rear_pin(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rearwat
     g.m.rearwatch.books.get(key)?.pins.get(gd).copied()
 }
 
-/// doortools.ts, the entry's queue: nobody is held back, REARWATCH.hold being off on the page. (rearwatch.ts rearHolds)
-pub fn rear_holds(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+/// doortools.ts, the entry's queue: nobody is held back, REARWATCH.hold being off on the page. (rearwatch.ts rearWatcherWaits)
+pub fn rear_watcher_waits(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     false
 }
 
@@ -1136,10 +1129,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn to_fixed_takes_the_larger_on_a_tie_as_javascript_does() {
-        // (each right-hand side is what (x).toFixed(1) prints under bun)
+    fn a_log_line_time_prints_as_to_fixed_does_under_bun() {
+        // (each right-hand side is what (x).toFixed(1) prints under bun: the case that differs from the formatter is the exact tie at .25)
         for (x, s) in [(0.25, "0.3"), (1.25, "1.3"), (0.75, "0.8"), (1.75, "1.8"), (0.35, "0.3"), (0.05, "0.1"), (2.5, "2.5"), (0.0, "0.0"), (12.34, "12.3")] {
-            assert_eq!(to_fixed1(x), s);
+            assert_eq!(js::to_fixed(x, 1), s);
         }
     }
 

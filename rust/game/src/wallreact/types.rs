@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Breach, src/game/wallreact.ts:111)
+/// (TypeScript: Breach, src/game/wallreact.ts:110)
 #[derive(Clone, Debug)]
 pub struct Breach {
     pub key: String,
@@ -77,7 +77,7 @@ impl BreachCause {
     }
 }
 
-/// (TypeScript: inline at src/game/wallreact.ts:123 Breach.tell, src/game/wallreact.ts:123)
+/// (TypeScript: inline at src/game/wallreact.ts:122 Breach.tell, src/game/wallreact.ts:122)
 #[derive(Clone, Copy, Debug)]
 pub struct BreachTellItem {
     pub by: GuardId,
@@ -94,7 +94,7 @@ impl BreachTellItem {
 }
 impl Default for BreachTellItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Mind, src/game/wallreact.ts:127)
+/// (TypeScript: Mind, src/game/wallreact.ts:126)
 #[derive(Clone, Copy, Debug)]
 pub struct Mind {
     pub ev: f64,
@@ -115,7 +115,7 @@ impl Mind {
 }
 impl Default for Mind { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Gone, src/game/wallreact.ts:129)
+/// (TypeScript: Gone, src/game/wallreact.ts:128)
 #[derive(Clone, Copy, Debug)]
 pub struct Gone {
     pub rect: [f64; 4],
@@ -134,7 +134,7 @@ impl Gone {
 }
 impl Default for Gone { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pend, src/game/wallreact.ts:130)
+/// (TypeScript: Pend, src/game/wallreact.ts:129)
 #[derive(Clone, Debug)]
 pub struct Pend {
     pub gd: GuardId,
@@ -161,7 +161,7 @@ impl Pend {
 }
 impl Default for Pend { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallReact, src/game/wallreact.ts:153)
+/// (TypeScript: WallReact, src/game/wallreact.ts:152)
 #[derive(Clone, Debug)]
 pub struct WallReact {
     pub breaches: Vec<WallreactBreachId>,
@@ -198,7 +198,7 @@ impl WallReact {
 }
 impl Default for WallReact { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/wallreact.ts:107 WALLREACT_DEBUG, src/game/wallreact.ts:107)
+/// (TypeScript: inline at src/game/wallreact.ts:106 WALLREACT_DEBUG, src/game/wallreact.ts:106)
 #[derive(Clone, Copy, Debug)]
 pub struct WALLREACTDEBUG {
 }
@@ -211,7 +211,7 @@ impl WALLREACTDEBUG {
 }
 impl Default for WALLREACTDEBUG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallreact.ts:108 WALLREACT_TEST, src/game/wallreact.ts:108)
+/// (TypeScript: inline at src/game/wallreact.ts:107 WALLREACT_TEST, src/game/wallreact.ts:107)
 #[derive(Clone, Copy, Debug)]
 pub struct WALLREACTTEST {
 }
@@ -250,7 +250,7 @@ impl WallReactManKnowsHow {
     }
 }
 
-/// (TypeScript: inline at src/game/wallreact.ts:418 posts ->, src/game/wallreact.ts:418)
+/// (TypeScript: inline at src/game/wallreact.ts:417 posts ->, src/game/wallreact.ts:417)
 #[derive(Clone, Copy, Debug)]
 pub struct WallReactPostsItem {
     pub gd: GuardId,
@@ -267,7 +267,7 @@ impl WallReactPostsItem {
 }
 impl Default for WallReactPostsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallreact.ts:423 charOf ->, src/game/wallreact.ts:423)
+/// (TypeScript: inline at src/game/wallreact.ts:422 charOf ->, src/game/wallreact.ts:422)
 #[derive(Clone, Copy, Debug)]
 pub struct WallReactCharOf {
     pub pos: V3,
@@ -291,7 +291,7 @@ pub enum WallReactAsks {
     Arm1(crate::wallreact::WallReactAsksArm1),
 }
 
-/// (TypeScript: inline at src/game/wallreact.ts:444 asks ->, src/game/wallreact.ts:444)
+/// (TypeScript: inline at src/game/wallreact.ts:443 asks ->, src/game/wallreact.ts:443)
 #[derive(Clone, Copy, Debug)]
 pub struct WallReactAsksArm1 {
     pub x: crate::wallreact::Gone,
@@ -379,9 +379,9 @@ impl WallReactOpMove {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct WallreactMod {
-    /// (src/game/wallreact.ts:103 WALLREACT_LOG)
+    /// (src/game/wallreact.ts:102 WALLREACT_LOG)
     pub wallreact_log: Vec<String>,
-    /// (src/game/wallreact.ts:153)
+    /// (src/game/wallreact.ts:152)
     pub wall_react: crate::wallreact::WallReact,
 }
 impl WallreactMod {
@@ -411,14 +411,14 @@ pub struct WallreactStats {
     pub openings: i32,
 }
 
-/// (src/game/wallreact.ts:107 WALLREACT_DEBUG: a table nothing writes)
+/// (src/game/wallreact.ts:106 WALLREACT_DEBUG: a table nothing writes)
 pub fn wallreact_debug() -> crate::wallreact::WALLREACTDEBUG { crate::wallreact::WALLREACTDEBUG {  } }
 
-/// (src/game/wallreact.ts:108 WALLREACT_TEST: a table nothing writes)
+/// (src/game/wallreact.ts:107 WALLREACT_TEST: a table nothing writes)
 pub fn wallreact_test() -> crate::wallreact::WALLREACTTEST { crate::wallreact::WALLREACTTEST {  } }
 
-/// (src/game/wallreact.ts:138 EYE)
+/// (src/game/wallreact.ts:137 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/wallreact.ts:138 CHEST)
+/// (src/game/wallreact.ts:137 CHEST)
 pub const CHEST: f64 = 1.1;

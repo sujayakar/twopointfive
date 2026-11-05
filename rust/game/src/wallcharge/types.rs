@@ -22,7 +22,7 @@ pub enum WallChargeFireAsk {
     Lines { wall: Option<crate::wallcharge::WallSpot>, all: Vec<V3>, memo: JsMap<[crate::Num; 3], f64>, hit: JsMap<[crate::Num; 3], bool> },
 }
 
-/// (TypeScript: WallSpot, src/game/wallcharge.ts:248)
+/// (TypeScript: WallSpot, src/game/wallcharge.ts:249)
 #[derive(Clone, Debug)]
 pub struct WallSpot {
     pub index: f64,
@@ -51,7 +51,7 @@ impl WallSpot {
 }
 impl Default for WallSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallCharge, src/game/wallcharge.ts:398)
+/// (TypeScript: WallCharge, src/game/wallcharge.ts:399)
 #[derive(Clone, Debug)]
 pub struct WallCharge {
     pub knobs: crate::knobs::WallchargeK,
@@ -118,7 +118,7 @@ impl WallCharge {
 }
 impl Default for WallCharge { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:400 WallCharge.done, src/game/wallcharge.ts:400 WallCharge.done)
+/// (TypeScript: inline at src/game/wallcharge.ts:401 WallCharge.done, src/game/wallcharge.ts:401 WallCharge.done)
 #[derive(Clone, Debug)]
 pub struct WallChargeDoneItem {
     pub wall: crate::wallcharge::WallSpot,
@@ -206,7 +206,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:268 WallChargeDoneItem.hole, src/game/wallcharge.ts:268)
+/// (TypeScript: inline at src/game/wallcharge.ts:269 WallChargeDoneItem.hole, src/game/wallcharge.ts:269)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeDoneItemHole {
     pub du: f64,
@@ -223,7 +223,7 @@ impl WallChargeDoneItemHole {
 }
 impl Default for WallChargeDoneItemHole { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:270 WallChargeDoneItem.queue, src/game/wallcharge.ts:270)
+/// (TypeScript: inline at src/game/wallcharge.ts:271 WallChargeDoneItem.queue, src/game/wallcharge.ts:271)
 #[derive(Clone, Debug)]
 pub struct WallChargeDoneItemQueueItem {
     pub gd: GuardId,
@@ -244,7 +244,7 @@ impl WallChargeDoneItemQueueItem {
 }
 impl Default for WallChargeDoneItemQueueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pod, src/game/wallcharge.ts:256)
+/// (TypeScript: Pod, src/game/wallcharge.ts:257)
 #[derive(Clone, Debug)]
 pub struct Pod {
     pub pos: V3,
@@ -269,7 +269,7 @@ impl Pod {
 }
 impl Default for Pod { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:256 Pod.hold, src/game/wallcharge.ts:256)
+/// (TypeScript: inline at src/game/wallcharge.ts:257 Pod.hold, src/game/wallcharge.ts:257)
 #[derive(Clone, Debug)]
 pub struct PodHold {
     pub face: f64,
@@ -303,7 +303,7 @@ impl WallChargeDoneItemStageValue {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:271 WallChargeDoneItem.beats, src/game/wallcharge.ts:271)
+/// (TypeScript: inline at src/game/wallcharge.ts:272 WallChargeDoneItem.beats, src/game/wallcharge.ts:272)
 #[derive(Clone, Debug)]
 pub struct WallChargeDoneItemBeatsItem {
     pub t: f64,
@@ -320,7 +320,7 @@ impl WallChargeDoneItemBeatsItem {
 }
 impl Default for WallChargeDoneItemBeatsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:401 WallCharge.stats, src/game/wallcharge.ts:401)
+/// (TypeScript: inline at src/game/wallcharge.ts:402 WallCharge.stats, src/game/wallcharge.ts:402)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeStats {
     pub orders: f64,
@@ -357,7 +357,7 @@ impl WallChargeStats {
 }
 impl Default for WallChargeStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:403 WallCharge.away, src/game/wallcharge.ts:403)
+/// (TypeScript: inline at src/game/wallcharge.ts:404 WallCharge.away, src/game/wallcharge.ts:404)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeAwayValue {
     pub c: WallChargeId,
@@ -378,7 +378,7 @@ impl WallChargeAwayValue {
 }
 impl Default for WallChargeAwayValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:404 WallCharge.awayMarks, src/game/wallcharge.ts:404)
+/// (TypeScript: inline at src/game/wallcharge.ts:405 WallCharge.awayMarks, src/game/wallcharge.ts:405)
 #[derive(Clone, Debug)]
 pub struct WallChargeAwayMarksValue {
     pub n: f64,
@@ -403,7 +403,7 @@ impl WallChargeAwayMarksValue {
 }
 impl Default for WallChargeAwayMarksValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:404 WallChargeAwayMarksValue.R, src/game/wallcharge.ts:342)
+/// (TypeScript: inline at src/game/wallcharge.ts:405 WallChargeAwayMarksValue.R, src/game/wallcharge.ts:343)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeAwayMarksValueR {
     pub standoff: f64,
@@ -422,7 +422,7 @@ impl WallChargeAwayMarksValueR {
 }
 impl Default for WallChargeAwayMarksValueR { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:406 WallCharge.log, src/game/wallcharge.ts:406)
+/// (TypeScript: inline at src/game/wallcharge.ts:407 WallCharge.log, src/game/wallcharge.ts:407)
 #[derive(Clone, Debug)]
 pub struct WallChargeLogItem {
     pub t: f64,
@@ -439,7 +439,7 @@ impl WallChargeLogItem {
 }
 impl Default for WallChargeLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:412 WallCharge.sam, src/game/wallcharge.ts:412)
+/// (TypeScript: inline at src/game/wallcharge.ts:413 WallCharge.sam, src/game/wallcharge.ts:413)
 #[derive(Clone, Debug)]
 pub struct WallChargeSam {
     pub wall: crate::wallcharge::WallSpot,
@@ -458,7 +458,7 @@ impl WallChargeSam {
 }
 impl Default for WallChargeSam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:818 WallCharge.walks, src/game/wallcharge.ts:818)
+/// (TypeScript: inline at src/game/wallcharge.ts:819 WallCharge.walks, src/game/wallcharge.ts:819)
 #[derive(Clone, Debug)]
 pub struct WallChargeWalks {
     pub menu: u32,
@@ -477,20 +477,7 @@ impl WallChargeWalks {
 }
 impl Default for WallChargeWalks { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet WallChargeWalks.menu, quiet WallChargeWalks.menu)
-#[derive(Clone, Copy, Debug)]
-pub struct WallChargeWalksMenu {
-}
-impl WallChargeWalksMenu {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeWalksMenu {
-        }
-    }
-}
-impl Default for WallChargeWalksMenu { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/wallcharge.ts:820 WallCharge.keep, src/game/wallcharge.ts:820)
+/// (TypeScript: inline at src/game/wallcharge.ts:821 WallCharge.keep, src/game/wallcharge.ts:821)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeKeep {
     pub on: bool,
@@ -509,7 +496,7 @@ impl WallChargeKeep {
 }
 impl Default for WallChargeKeep { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1130 WallCharge.lastBlow, src/game/wallcharge.ts:1130)
+/// (TypeScript: inline at src/game/wallcharge.ts:1131 WallCharge.lastBlow, src/game/wallcharge.ts:1131)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeLastBlow {
     pub reach: f64,
@@ -532,7 +519,7 @@ impl WallChargeLastBlow {
 }
 impl Default for WallChargeLastBlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SetWallCharge, src/game/wallcharge.ts:251)
+/// (TypeScript: SetWallCharge, src/game/wallcharge.ts:252)
 #[derive(Clone, Debug)]
 pub struct SetWallCharge {
     pub wall: crate::wallcharge::WallSpot,
@@ -555,7 +542,7 @@ impl SetWallCharge {
 }
 impl Default for SetWallCharge { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallOp, src/game/wallcharge.ts:257)
+/// (TypeScript: WallOp, src/game/wallcharge.ts:258)
 #[derive(Clone, Debug)]
 pub struct WallOp {
     pub wall: crate::wallcharge::WallSpot,
@@ -635,7 +622,7 @@ impl WallOpStageValue {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:396 wallChargeRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/wallcharge.ts:397 wallChargeRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct WallChargeRowsRowOver {
     pub kind: Option<crate::wallcharge::WallChargeRowsRowOverKind>,
@@ -713,7 +700,7 @@ impl WallChargeRowsRowOverKind {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:670 underFire ->, src/game/wallcharge.ts:670)
+/// (TypeScript: inline at src/game/wallcharge.ts:671 underFire ->, src/game/wallcharge.ts:671)
 #[derive(Clone, Debug)]
 pub struct WallChargeUnderFire {
     pub score: crate::wallcharge::WallChargeFireAsk,
@@ -735,7 +722,7 @@ pub enum WallChargePlan {
     Arm1(crate::wallcharge::WallChargePlanArm1),
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:765 plan ->, src/game/wallcharge.ts:765)
+/// (TypeScript: inline at src/game/wallcharge.ts:766 plan ->, src/game/wallcharge.ts:766)
 #[derive(Clone, Debug)]
 pub struct WallChargePlanArm1 {
     pub lead: GuardId,
@@ -770,7 +757,20 @@ pub enum WallChargeValid {
     Bool(bool),
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:832 assign(a), src/game/wallcharge.ts:832 assign(a))
+/// (TypeScript: inline at src/game/wallcharge.ts:822 keptWalks(M), src/game/wallcharge.ts:822 keptWalks(M))
+#[derive(Clone, Copy, Debug)]
+pub struct WallChargeKeptWalksM {
+}
+impl WallChargeKeptWalksM {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        WallChargeKeptWalksM {
+        }
+    }
+}
+impl Default for WallChargeKeptWalksM { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/wallcharge.ts:833 assign(a), src/game/wallcharge.ts:833 assign(a))
 #[derive(Clone, Debug)]
 pub struct WallChargeAssignA {
     pub post: Option<V3>,
@@ -893,7 +893,7 @@ pub enum WallChargeOrderWho {
     Blue,
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1063 blow ->, src/game/wallcharge.ts:1063)
+/// (TypeScript: inline at src/game/wallcharge.ts:1064 blow ->, src/game/wallcharge.ts:1064)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeBlow {
     pub hole: bool,
@@ -916,7 +916,7 @@ impl WallChargeBlow {
 }
 impl Default for WallChargeBlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1064 blowRaw ->, src/game/wallcharge.ts:1064)
+/// (TypeScript: inline at src/game/wallcharge.ts:1065 blowRaw ->, src/game/wallcharge.ts:1065)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeBlowRaw {
     pub hole: bool,
@@ -939,7 +939,7 @@ impl WallChargeBlowRaw {
 }
 impl Default for WallChargeBlowRaw { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1143 holeAt ->, src/game/wallcharge.ts:1143)
+/// (TypeScript: inline at src/game/wallcharge.ts:1144 holeAt ->, src/game/wallcharge.ts:1144)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeHoleAt {
     pub du: f64,
@@ -956,7 +956,7 @@ impl WallChargeHoleAt {
 }
 impl Default for WallChargeHoleAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1191 samRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/wallcharge.ts:1192 samRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct WallChargeSamRowsRowOver {
     pub kind: Option<crate::wallcharge::WallChargeSamRowsRowOverKind>,
@@ -1034,7 +1034,7 @@ impl WallChargeSamRowsRowOverKind {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1223 samJob ->, src/game/wallcharge.ts:1223)
+/// (TypeScript: inline at src/game/wallcharge.ts:1224 samJob ->, src/game/wallcharge.ts:1224)
 #[derive(Clone, Copy, Debug)]
 pub struct WallChargeSamJob {
     pub p: V3,
@@ -1056,9 +1056,9 @@ impl Default for WallChargeSamJob { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct WallchargeMod {
-    /// (src/game/wallcharge.ts:301 skyMemo)
+    /// (src/game/wallcharge.ts:302 skyMemo)
     pub sky_memo: Option<JsMap<crate::Num, f64>>,
-    /// (src/game/wallcharge.ts:302 standIns)
+    /// (src/game/wallcharge.ts:303 standIns)
     pub stand_ins: JsMap<OrdersOrderDefId, OrdersOrderDefId>,
 }
 impl WallchargeMod {
@@ -1070,23 +1070,23 @@ impl WallchargeMod {
     }
 }
 
-/// (src/game/wallcharge.ts:211 WALLCHARGE_DEFAULTS: a table nothing writes)
+/// (src/game/wallcharge.ts:212 WALLCHARGE_DEFAULTS: a table nothing writes)
 pub fn wallcharge_defaults() -> crate::knobs::WallchargeK { crate::knobs::page_wallcharge() }
 
-/// (src/game/wallcharge.ts:241 WALL_PAGE)
+/// (src/game/wallcharge.ts:242 WALL_PAGE)
 pub const WALL_PAGE: &str = "walltools";
 
-/// (src/game/wallcharge.ts:243 WALL_ORDER)
+/// (src/game/wallcharge.ts:244 WALL_ORDER)
 pub const WALL_ORDER: &str = "wallCharge";
 
-/// (src/game/wallcharge.ts:283 FACE)
+/// (src/game/wallcharge.ts:284 FACE)
 pub const FACE: f64 = 0.06;
 
-/// (src/game/wallcharge.ts:300 SKY_TOP)
+/// (src/game/wallcharge.ts:301 SKY_TOP)
 pub const SKY_TOP: f64 = 12.0;
 
-/// (src/game/wallcharge.ts:300 SKY_OFF: a table nothing writes)
+/// (src/game/wallcharge.ts:301 SKY_OFF: a table nothing writes)
 pub fn sky_off() -> Vec<f64> { alloc::vec![0.5, 1.0, 1.6] }
 
-/// (src/game/wallcharge.ts:300 SKY_ALONG: a table nothing writes)
+/// (src/game/wallcharge.ts:301 SKY_ALONG: a table nothing writes)
 pub fn sky_along() -> Vec<f64> { alloc::vec![-0.5, 0.0, 0.5] }

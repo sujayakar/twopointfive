@@ -14,25 +14,18 @@ fn row_of(i: f64, len: usize) -> Option<usize> {
     let u = i as usize;
     if i >= 0.0 && u as f64 == i && u < len { Some(u) } else { None }
 }
+/// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
+}
 /// `g.col.boxes[index]`
-fn static_at(g: &Game, index: f64) -> Option<BoxId> { row_of(index, g.col.boxes.len()).map(BoxId::from_ix) }
+fn static_at(g: &Game, index: f64) -> Option<BoxId> { row_of(index, g.col.boxes.len()).map(|u| g.col.boxes[u]) }
 /// `g.col.dynamicBoxes[i]`
 fn leaf_at(g: &Game, i: f64) -> Option<BoxId> { row_of(i, g.col.dynamic_boxes.len()).map(|u| g.col.dynamic_boxes[u]) }
-/// `g.col.glassOpen && g.col.glassOpen(bi, p)`. The one rule hung is glassbreak's (glassbreak.ts:213): open where a piece has fallen, or where the burst's view in hand sees no glass
-fn pane_open(g: &mut Game, bi: f64, p: V3) -> bool {
-    if crate::scene_collision::glass_open(g).is_none() { return false; }
-    if crate::glassbreak::glass_break_open_at(g, bi, p) { return true; }
-    match g.glass_break.also.clone() {
-        None => false,
-        Some(crate::glassbreak::GlassBreakAlso::Blown) => crate::glassbreak::glass_break_going_at(g, bi, p),
-        Some(crate::glassbreak::GlassBreakAlso::Wary { from, size }) => crate::glassbreak::glass_break_would_give(g, bi, from, Some(size), None),
-        Some(crate::glassbreak::GlassBreakAlso::Counted { from, size }) => crate::glassbreak::glass_break_would_give(g, bi, from, Some(size), Some(p)),
-    }
-}
 /// `WALLPEN.thinMax[stuff]`
 fn thin_max(g: &Game, stuff: ThinStuff) -> f64 { *g.k.wallpen.thin_max.get(stuff).unwrap() }
 /// a ray's answer as a leg of the flight holds it
-fn hit_of(h: crate::scene_collision::Raycast) -> StaticHit2 { StaticHit2 { t: h.t, index: h.index, n: h.n } }
+fn hit_of(h: crate::scene_collision::Raycast) -> crate::glasspen::RoundPathSt { crate::glasspen::RoundPathSt { t: h.t, index: h.index, n: h.n } }
 /// `flags & mask`, as a condition
 fn any_flag(flags: f64, mask: i32) -> bool { js::to_i32(flags) & mask != 0 }
 /// `Math.sign(x) || 1`
@@ -82,10 +75,16 @@ fn scatter(seed: f64, a: f64, d: V3) -> V3 {
 pub fn wall_pen_live(g: &mut crate::game::Game) -> bool { !g.touring }
 
 /// The thin level axis of a box in the world. (wallpen.ts thinN)
-pub fn thin_n(g: &mut crate::game::Game, b: BoxId) -> V3 { thin_n_of(g.col.boxes[b].h, g.col.boxes[b].yaw) }
+pub fn thin_n(g: &mut crate::game::Game, b: BoxId) -> V3 {
+    let bx = seam_box(g, b);
+    thin_n_of(bx.h, bx.yaw)
+}
 
 /// The outward face of `b` that `p` lies on. (wallpen.ts faceN)
-pub fn face_n(g: &mut crate::game::Game, b: BoxId, p: V3) -> V3 { face_n_of(g.col.boxes[b].c, g.col.boxes[b].h, g.col.boxes[b].yaw, p) }
+pub fn face_n(g: &mut crate::game::Game, b: BoxId, p: V3) -> V3 {
+    let bx = seam_box(g, b);
+    face_n_of(bx.c, bx.h, bx.yaw, p)
+}
 
 /// Ceiling over the point; no interior cells built = everywhere. (wallpen.ts roofed)
 pub fn roofed(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
@@ -100,16 +99,15 @@ pub fn roofed(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
 pub fn stuff_of(g: &mut crate::game::Game, index: f64, b: BoxId) -> Option<crate::wallpen::ThinStuff> {
     let bf = crate::scene_boxes::box_flag();
     let mask = js::to_i32(bf.glass) | js::to_i32(bf.no_primary) | js::to_i32(bf.no_shadow) | js::to_i32(bf.dynamic);
-    let bx = &g.col.boxes[b];
-    let (c, h, em) = (bx.c, bx.h, bx.emissive);
+    let bx = seam_box(g, b);
+    let (c, h, em, word) = (bx.c, bx.h, bx.emissive, bx.does);
     if any_flag(bx.flags, mask) || bx.rot.is_some() || bx.metal.unwrap_or(false) || em[0] + em[1] + em[2] > 0.0 { return None; }
-    let word = bx.does.map(|w| String::from(w.as_str()));
     let w = crate::scene_world::world();
     if c[0] < w.min[0] || c[0] > w.max[0] || c[2] < w.min[2] || c[2] > w.max[2] || crate::destruction::destruction_item_of(g, index).is_some() { return None; }
     for &t in &g.targets {
         if g.tab.sim_lightshome_fixture[t].boxes.contains(&index) { return None; }
     }
-    let does = crate::scene_materials::does_of(g, Some(&crate::scene_materials::DoesOfB { does: word }));
+    let does = crate::scene_materials::does_of(g, word);
     match does.surf {
         crate::scene_materials::Surf::Wood => return Some(ThinStuff::Wood),
         crate::scene_materials::Surf::Cardboard => return Some(ThinStuff::Cardboard),
@@ -139,7 +137,7 @@ pub fn stuff_of(g: &mut crate::game::Game, index: f64, b: BoxId) -> Option<crate
 pub fn thing_at(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpen::ThingAt> {
     if index >= 1e6 {
         let b = leaf_at(g, index - 1e6)?;
-        let bx = &g.col.boxes[b];
+        let bx = seam_box(g, b);
         let is_door = bx.name.as_deref().unwrap_or("").starts_with("door_");
         return if !bx.metal.unwrap_or(false) && bx.rot.is_none() && is_door { Some(ThingAt { b, stuff: ThinStuff::Wood }) } else { None };
     }
@@ -151,7 +149,7 @@ pub fn thing_at(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpen:
 /// What static (or leaf) `index` is to a round: its stuff and how thick it stands. (wallpen.ts thinThing)
 pub fn thin_thing(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpen::ThinThing> {
     let t = thing_at(g, index)?;
-    let h = g.col.boxes[t.b].h;
+    let h = seam_box(g, t.b).h;
     let thick = m::min(h[0], h[2]) * 2.0;
     if thick <= thin_max(g, t.stuff) { Some(ThinThing { stuff: t.stuff, thick }) } else { None }
 }
@@ -160,9 +158,9 @@ pub fn thin_thing(g: &mut crate::game::Game, index: f64) -> Option<crate::wallpe
 pub fn thin_toll(g: &mut crate::game::Game, index: f64, at: V3, d: V3, e: f64) -> Option<crate::wallpen::ThinToll> {
     let t = thing_at(g, index)?;
     let b = t.b;
-    let h = g.col.boxes[b].h;
+    let h = seam_box(g, b).h;
     if m::min(h[0], h[2]) * 2.0 > thin_max(g, t.stuff) { return None; }
-    let cut = g.col.boxes[b].cut.as_ref().map_or(false, |c| c.len() > 0);
+    let cut = seam_box(g, b).cut.as_ref().map_or(false, |c| c.len() > 0);
     if cut && crate::scene_cut::cut_boxes_on(g) && !crate::scene_boxes::shape_cut(g, b) { return None; }
     let s = crate::scene_collision::line_box(g, at, d, b)?;
     if s.t1 <= 0.0 { return None; }
@@ -189,15 +187,16 @@ pub fn born_in(g: &mut crate::game::Game, p: V3, d: V3, self_: f64) -> f64 {
     let (no_shadow, glass) = (js::to_i32(bf.no_shadow), js::to_i32(bf.glass));
     let mut i = 0;
     while (i as f64) < n {
+        let at = scratch[i] as usize;
         let bi = scratch[i] as f64;
         i += 1;
         if bi == self_ { continue; }
-        let b = BoxId::from_ix(bi as usize);
-        let flags = g.col.boxes[b].flags;
+        let b = g.col.boxes[at];
+        let flags = seam_box(g, b).flags;
         if any_flag(flags, no_shadow) { continue; }
         let Some(s) = crate::scene_collision::line_box(g, p, d, b) else { continue };
         if s.depth < 0.0 || s.t1 <= 0.0 { continue; }
-        if any_flag(flags, glass) && pane_open(g, bi, p) { continue; }
+        if any_flag(flags, glass) && crate::scene_collision::pane_open(g, bi, p) { continue; }
         return bi;
     }
     let mut i = 0;
@@ -239,10 +238,10 @@ pub fn crossing(g: &mut crate::game::Game, index: f64, o: V3, d: V3, t: f64, n: 
 }
 
 /// The flight of a round over panes and thin things; None = it crosses nothing. Pure: nothing is filed until commitWalls. (wallpen.ts thinPath)
-pub fn thin_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<crate::wallpen::StaticHit2>, nth0: Option<f64>) -> Option<crate::wallpen::ThinPath> {
+pub fn thin_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<Option<crate::glasspen::RoundPathSt>>, nth0: Option<f64>) -> Option<crate::wallpen::ThinPath> {
     let nth0 = nth0.unwrap_or(0.0);
-    let mut hit: Option<StaticHit2> = match first {
-        Some(f) => Some(f),
+    let mut hit: Option<crate::glasspen::RoundPathSt> = match first {
+        Some(f) => f,
         None => crate::scene_collision::raycast(g, from, dir, range).map(hit_of),
     };
     if hit.is_none() { return None; }
@@ -292,7 +291,7 @@ pub fn thin_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energ
         }
         if t0 >= range { return Some(ThinPath { segs: segs.unwrap(), cross, walls, st: None, len: range }); }
         hit = if into >= 0.0 {
-            Some(StaticHit2 { t: 0.0, index: into, n: v3::scale(d, -1.0) })
+            Some(crate::glasspen::RoundPathSt { t: 0.0, index: into, n: v3::scale(d, -1.0) })
         } else {
             crate::scene_collision::raycast(g, o, d, range - t0).map(hit_of)
         };
@@ -317,11 +316,12 @@ pub fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::WallCros
             if let Some(p) = pel.as_deref_mut() { crate::shotgun::pellet_end(p, x.index, x.t, x.at); }
         }
         if third {
-            crate::destruction::destruction_round(g, shooter, x.at, x.dir_in, &mut crate::destruction::DestructionRoundHit { n: x.n_in, index: Some(x.index), prop: None, box_: None }, def);
+            crate::destruction::destruction_round(g, shooter, x.at, x.dir_in, &crate::destruction::DestructionRoundHit { n: x.n_in, index: Some(x.index), prop: None, box_: None }, def);
         }
         let line = format!(
-            "{:.1}s {} {} ({}, {:.0} cm of path) crossed: energy {:.2} \u{2192} {:.2} (who {})",
-            g.time, if x.index >= 1e6 { "leaf" } else { "static" }, js::rem(x.index, 1e6), x.stuff.as_str(), x.thru * 100.0, x.e_in, x.e_out, g.ch[shooter].id,
+            "{}s {} {} ({}, {} cm of path) crossed: energy {} \u{2192} {} (who {})",
+            js::to_fixed(g.time, 1), if x.index >= 1e6 { "leaf" } else { "static" }, js::num_str(js::rem(x.index, 1e6)), x.stuff.as_str(),
+            js::to_fixed(x.thru * 100.0, 0), js::to_fixed(x.e_in, 2), js::to_fixed(x.e_out, 2), js::num_str(g.ch[shooter].id),
         );
         g.m.wallpen.log.push(line);
         if g.m.wallpen.log.len() > 24 { g.m.wallpen.log.remove(0); }
@@ -341,12 +341,12 @@ pub fn thin_line(g: &mut crate::game::Game, from: V3, to: V3, energy: f64, short
     if reach <= 1e-3 { return Some(ThinLine2::Clear); }
     let dir = v3::scale(d, 1.0 / l);
     let hit = match first {
-        Some(f) => Some(StaticHit2 { t: f.t, index: f.index, n: f.n }),
+        Some(f) => Some(crate::glasspen::RoundPathSt { t: f.t, index: f.index, n: f.n }),
         None => crate::scene_collision::raycast(g, from, dir, reach).map(hit_of),
     };
     let Some(hit) = hit else { return Some(ThinLine2::Clear) };
     g.stats.wallpen.asked += 1;
-    let p = thin_path(g, from, dir, reach, energy, Some(hit), None)?;
+    let p = thin_path(g, from, dir, reach, energy, Some(Some(hit)), None)?;
     if p.st.is_some() || p.walls.is_empty() { return None; }
     g.stats.wallpen.through += 1;
     let e = p.segs[p.segs.len() - 1].e;
@@ -365,11 +365,11 @@ pub fn top_energy(g: &mut crate::game::Game) -> f64 {
 /// How far a round flies from `from` along `dir`: to the first thing that stops it. (wallpen.ts flightLen)
 pub fn flight_len(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64) -> f64 {
     let Some(first) = crate::scene_collision::raycast(g, from, dir, range) else { return range };
-    if !wall_pen_live(g) { return first.t; }
-    let hit = StaticHit2 { t: first.t, index: first.index, n: first.n };
-    match thin_path(g, from, dir, range, energy, Some(hit), None) {
+    let first_t = first.t;
+    if !wall_pen_live(g) { return first_t; }
+    match thin_path(g, from, dir, range, energy, Some(Some(hit_of(first))), None) {
         Some(p) => p.len,
-        None => first.t,
+        None => first_t,
     }
 }
 

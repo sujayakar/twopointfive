@@ -5,12 +5,12 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A pellet has found a man `t` metres from the muzzle: does it put him down? Booked either way. (shotgun.ts pelletDrops)
 pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, who: Option<GuardId>, t: f64, dir: V3) -> bool {
     let p = s.def.pellets.unwrap();
-    let h = s.men.get_or_insert_with(seam_men_key(who), || crate::shotgun::ShellMenValue { n: 0.0, near: t, dir, down: false });
+    let h = s.men.get_or_insert_with(who, || crate::shotgun::ShellMenValue { n: 0.0, near: t, dir, down: false });
     h.n += 1.0;
     h.near = m::min(h.near, t);
     g.stats.shotgun.in_men += 1;
@@ -34,8 +34,8 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pla
     g.stats.shotgun.shells += 1;
     g.stats.shotgun.pellets += p.n as i32;
     let muzzle = v3::copy(g.ch[shooter].muzzle);
-    let first = crate::combat::FireOpts { spread: o.spread, weapon: Some(def.clone()), steady: o.steady, blind: o.blind, pellet: None };
-    seam_fire_pellet(g, shooter, target, is_player, &first, &mut shell);
+    let first = crate::combat::FireOpts { spread: o.spread, weapon: Some(def.clone()), steady: o.steady, blind: o.blind };
+    crate::combat::fire_pellet(g, shooter, target, is_player, &first, &mut shell);
     let d0 = match shell.dir { Some(d) => d, None => v3::normalize(v3::sub(target, muzzle)) };
     let ax = v3::normalize(v3::cross(d0, if m::abs(d0[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] }));
     let ay = v3::cross(ax, d0);
@@ -47,19 +47,19 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pla
         let x = r * m::cos(a);
         let y = r * m::sin(a);
         let dir = v3::normalize([d0[0] + ax[0] * x + ay[0] * y, d0[1] + ax[1] * x + ay[1] * y, d0[2] + ax[2] * x + ay[2] * y]);
-        let rest = crate::combat::FireOpts { spread: Some(0.0), weapon: Some(def.clone()), steady: Some(true), blind: o.blind, pellet: None };
-        seam_fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), is_player, &rest, &mut shell);
+        let rest = crate::combat::FireOpts { spread: Some(0.0), weapon: Some(def.clone()), steady: Some(true), blind: o.blind };
+        crate::combat::fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), is_player, &rest, &mut shell);
         i += 1.0;
     }
     let mut l = 0;
     while l < shell.late.len() {
-        seam_run_late(g, &shell.late[l]);
+        crate::combat::run_shell_late(g, &shell.late[l]);
         l += 1;
     }
-    for (key, h) in shell.men.iter() {
+    for (who, h) in shell.men.iter() {
         if h.down { continue; }
         g.stats.shotgun.peppered += 1;
-        match seam_men_who(key) {
+        match who {
             None => {
                 let pl = g.player;
                 let c = g.pl[pl].ch;
@@ -248,18 +248,47 @@ fn own_side_asked(g: &mut Game, d: DoorId, side: f64, at: V3, w: f64, avoid: &[V
     None
 }
 
-fn seam_men_key(who: Option<GuardId>) -> GuardId {
-    todo!("needs: Shell.men keyed by Option<GuardId> (null = the player, in first-set order)")
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-fn seam_men_who(key: GuardId) -> Option<GuardId> {
-    todo!("needs: Shell.men keyed by Option<GuardId> (null = the player, in first-set order)")
-}
+    fn m870_shell(g: &Game) -> crate::shotgun::Shell {
+        let def = g.m.weapons.weapons.get(crate::weapons::WeaponId::M870).unwrap().clone();
+        crate::shotgun::Shell { def, i: 0.0, dir: None, men: JsMap::new(), ends: Vec::new(), glass: JsMap::new(), late: Vec::new() }
+    }
 
-fn seam_fire_pellet(g: &mut Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, shell: &mut crate::shotgun::Shell) {
-    todo!("needs: fire_weapon lending the Shell mutably (FireOpts.pellet is by value behind a & and fireWeapon writes dir, ends, men, glass, late)")
-}
+    /// Inside dropM the first pellet puts him down, and no later one does it again.
+    #[test]
+    fn inside_drop_range_the_first_pellet_drops_him_once() {
+        let mut g = Game::blank();
+        let mut s = m870_shell(&g);
+        let p = s.def.pellets.unwrap();
+        assert!(pellet_drops(&mut g, &mut s, Some(GuardId(0)), p.drop_m, [1.0, 0.0, 0.0]));
+        assert!(!pellet_drops(&mut g, &mut s, Some(GuardId(0)), p.drop_m, [1.0, 0.0, 0.0]));
+        assert_eq!(g.stats.shotgun.in_men, 2);
+        assert_eq!(g.stats.shotgun.dropped, 1);
+    }
 
-fn seam_run_late(g: &mut Game, f: &crate::shotgun::ShellLate) {
-    todo!("needs: a public combat function that runs a ShellLate (fireWeapon's manDown and samHit)")
+    /// Past dropM only the need-th pellet of this shell does it; the player (None) keeps his own count, the first dir and the nearest t.
+    #[test]
+    fn past_drop_range_the_need_th_pellet_drops_him() {
+        let mut g = Game::blank();
+        let mut s = m870_shell(&g);
+        let p = s.def.pellets.unwrap();
+        let far = p.drop_m + 5.0;
+        let mut n = 1.0;
+        while n < p.need {
+            assert!(!pellet_drops(&mut g, &mut s, None, far + n, [n, 0.0, 0.0]));
+            n += 1.0;
+        }
+        assert!(!pellet_drops(&mut g, &mut s, Some(GuardId(1)), far, [0.0, 0.0, 1.0]));
+        assert!(pellet_drops(&mut g, &mut s, None, far, [9.0, 0.0, 0.0]));
+        let h = s.men.get(None).unwrap();
+        assert!(h.down);
+        assert_eq!(h.n, p.need);
+        assert_eq!(h.near, far);
+        assert_eq!(h.dir, [1.0, 0.0, 0.0]);
+        let keys: Vec<Option<GuardId>> = s.men.iter().map(|(k, _)| k).collect();
+        assert_eq!(keys, vec![None, Some(GuardId(1))]);
+    }
 }

@@ -8,14 +8,14 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// The back key went down this tick: read, not taken. Tab backs out as Esc does (settled: `BACKKEY.tab`). (backkey.ts backHit)
-pub fn back_hit(g: &mut crate::game::Game, input: &crate::backkey::Keys) -> bool {
-    hit(input, "Escape") || hit(input, "Tab")
+pub fn back_hit(g: &mut crate::game::Game, input: InputId) -> bool {
+    crate::input::input_hit(g, input, "Escape") || crate::input::input_hit(g, input, "Tab")
 }
 
 /// The back key, taken out of the frame: whoever answers to it, nobody after does. Both codes go, whichever was there. (backkey.ts backTake)
-pub fn back_take(g: &mut crate::game::Game, input: &mut crate::backkey::Keys) -> bool {
-    let esc = input.pressed.delete(String::from("Escape"));
-    let tab = input.pressed.delete(String::from("Tab"));
+pub fn back_take(g: &mut crate::game::Game, input: InputId) -> bool {
+    let esc = g.tab.input[input].pressed.delete(String::from("Escape"));
+    let tab = g.tab.input[input].pressed.delete(String::from("Tab"));
     esc || tab
 }
 
@@ -24,39 +24,28 @@ pub fn back_name(g: &mut crate::game::Game) -> String {
     String::from("Tab")
 }
 
-/// `Keys.hit`: the interface's one holder is `Input`, whose `hit` is `pressed.has` (input.ts:100).
-fn hit(input: &crate::backkey::Keys, code: &str) -> bool {
-    input.pressed.has(String::from(code))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn keys(codes: &[&str]) -> Keys {
-        let mut k = Keys::zeroed();
-        for c in codes { k.pressed.add(String::from(*c)); }
-        k
-    }
-
     #[test]
     fn take_empties_both_codes_whichever_was_there() {
         let mut g = Game::blank();
-        let mut both = keys(&["Escape", "Tab", "KeyE"]);
-        assert!(back_take(&mut g, &mut both));
-        assert!(!both.pressed.has(String::from("Escape")) && !both.pressed.has(String::from("Tab")));
-        assert!(both.pressed.has(String::from("KeyE")));
-        assert!(!back_take(&mut g, &mut both));
+        let mut row = crate::input::Input::blank();
+        for c in ["Escape", "Tab", "KeyE"] { row.pressed.add(String::from(c)); }
+        let id: InputId = g.tab.input.push(row);
+        assert!(back_take(&mut g, id));
+        assert!(!g.tab.input[id].pressed.has(String::from("Escape")) && !g.tab.input[id].pressed.has(String::from("Tab")));
+        assert!(g.tab.input[id].pressed.has(String::from("KeyE")));
+        assert!(!back_take(&mut g, id));
     }
 
     #[test]
-    fn hit_reads_either_code_and_takes_nothing() {
+    fn take_answers_for_tab_alone() {
         let mut g = Game::blank();
-        assert!(back_hit(&mut g, &keys(&["Tab"])));
-        assert!(back_hit(&mut g, &keys(&["Escape"])));
-        assert!(!back_hit(&mut g, &keys(&["KeyE"])));
-        let k = keys(&["Tab"]);
-        back_hit(&mut g, &k);
-        assert!(k.pressed.has(String::from("Tab")));
+        let mut row = crate::input::Input::blank();
+        row.pressed.add(String::from("Tab"));
+        let id: InputId = g.tab.input.push(row);
+        assert!(back_take(&mut g, id));
     }
 }

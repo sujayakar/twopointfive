@@ -156,10 +156,6 @@ pub struct Def {
     pub bolt_from: Option<crate::game::Foe>,
     /// INVENTED by a review: see the proposals
     pub pt_stamp: Option<u32>,
-    /// INVENTED: last_known is this very D.pt (roomfight.ts:303, off path with BELIEF on)
-    pub fix_is_pt: bool,
-    /// INVENTED: lastKnown === D.pt (roomfight.ts:303) is D.pt_stamp == Some(g.gd[D.gd].fix_stamp). Set where pt is written as the fix: roomfight.ts:699, 728, 889, 902, enemysquads.ts:1048, 1491, powerout.ts:219
-    pub pt_stamp_2: Option<u32>,
 }
 impl Def {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -204,8 +200,6 @@ impl Def {
             bolt_until: 0.0,
             bolt_from: None,
             pt_stamp: None,
-            fix_is_pt: false,
-            pt_stamp_2: None,
         }
     }
 }
@@ -552,7 +546,6 @@ impl Default for FightNote { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: RoomFight, src/game/roomfight.ts:378)
 #[derive(Clone, Debug)]
 pub struct RoomFight {
-    pub knobs: crate::knobs::RoomfightK,
     pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
     pub live: bool,
     pub blind_fire: bool,
@@ -578,7 +571,6 @@ impl RoomFight {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         RoomFight {
-            knobs: crate::knobs::RoomfightK { on: true, evidence_secs: 12.0, sticky: 0.25, crowd: 0.2, fear_min: 0.15, fall_back: true, rally: true, fall_back_in: true, doorway: true, side_step: true, turn_walk: true, nearest: true, close_m: 2.5, no_shot: 0.4, close_lane: true, point_blank: 2.0, sam_behind: true, sam_beside: true, sam_travel: true, no_shot_go: 1.5, no_shot_pass: 4.0, keep_track: true, rally_k: 1.0, step_ears: true, arc_half_deg: 100.0, cover_keep: false, cover_half_deg: 45.0, cover_near_m: 6.0, team_hot: 45.0, cued: true, let_go: 0.8, step_look: true, step_look_secs: 5.0, door_ears: true, door_look_secs: 3.5, door_shots: false, door_shot_m: 8.0, sam_line: true, hold_short_secs: 4.0, pairs: 6.0, move_engage_m: 7.0, lamp: 0.7, preaim_deg: 12.0, sights: true, sights_foe: false, sights_deg: 45.0 },
             skill: { let mut t = JsMap::new(); t.set(crate::roomfight::RoomFightSkillKey::Operative, crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(crate::roomfight::RoomFightSkillKey::Hostile, crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t },
             live: false,
             blind_fire: true,
@@ -747,7 +739,7 @@ pub enum RoomFightFriendInLine {
     Player,
 }
 
-/// (TypeScript: inline at src/game/roomfight.ts:1137 doorShot ->, src/game/roomfight.ts:1137)
+/// (TypeScript: inline at src/game/roomfight.ts:1138 doorShot ->, src/game/roomfight.ts:1138)
 #[derive(Clone, Copy, Debug)]
 pub struct RoomFightDoorShot {
     pub by: GuardId,
@@ -766,7 +758,7 @@ impl RoomFightDoorShot {
 }
 impl Default for RoomFightDoorShot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/roomfight.ts:1181 stepTo(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/roomfight.ts:1182 stepTo(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct RoomFightStepToPatch {
     pub goal: Option<V3>,

@@ -1,4 +1,4 @@
-//! src/game/frag.ts lines 678 to 992
+//! src/game/frag.ts lines 680 to 997
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -17,10 +17,8 @@ macro_rules! car { ($g:ident, $ci:ident) => { $g.m.frag.def_books.as_mut().unwra
 fn head_of(g: &Game, c: CharId) -> V3 {
     match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) }
 }
-/// `gd.weapon.def`: the row of his gun, a copy, since `shot_energy` is lent it beside `g`.
-fn gun_row(g: &Game, gd: GuardId) -> Option<crate::weapons::WeaponDef> {
-    g.m.weapons.weapons.get(g.fa[g.gd[gd].weapon].def).cloned()
-}
+/// `gd.weapon.def`: which row of the weapons' table his gun is.
+fn gun_row(g: &Game, gd: GuardId) -> Option<crate::weapons::WeaponId> { Some(g.fa[g.gd[gd].weapon].def) }
 /// `s.arrived` as a condition.
 fn arrived(s: &crate::game::GuardScript) -> bool { s.arrived == Some(true) }
 /// A man's script off this book, null and absent alike.
@@ -29,7 +27,7 @@ fn flee_of(g: &Game, i: usize, gd: GuardId) -> Option<crate::game::GuardScript> 
 }
 
 /// The floor others of his side have a claim to while this grenade burns: where a mate is going, where a mate is staying.   (frag.ts takenBy)
-pub fn taken_by(g: &mut crate::game::Game, l: Option<&crate::frag::Live>, gd: GuardId, dz: V3) -> crate::frag::TakenBy {
+pub fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3) -> crate::frag::TakenBy {
     let (mut stay, mut go): (Vec<V3>, Vec<V3>) = (Vec::new(), Vec::new());
     let from: V3 = [dz[0], dz[1] + g.k.frag.lift, dz[2]];
     let team = g.gd[gd].team;
@@ -38,18 +36,17 @@ pub fn taken_by(g: &mut crate::game::Game, l: Option<&crate::frag::Live>, gd: Gu
     while n < g.guards.len() {
         let o = g.guards[n]; n += 1;
         if o == gd || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].team != team { continue; }
-        let s = l.and_then(|l| l.flee.get(o)).and_then(|s| s.as_ref());
+        let s = l.and_then(|i| flee_of(g, i, o));
         let oc = g.gd[o].ch;
         let p = g.ch[oc].pos;
-        let on_leg = s.map_or(false, |s| s.goal.is_some() && !arrived(s));
-        let q = if on_leg { s.unwrap().goal.unwrap() } else { p };
+        let on_leg = s.as_ref().map_or(false, |s| s.goal.is_some() && !arrived(s));
+        let q = if on_leg { s.as_ref().unwrap().goal.unwrap() } else { p };
         if flat(q, me) > 8.5 { continue; }
         if on_leg { go.push(q); }
         else if s.is_some() || g.time < g.gd[o].stagger_until || g.time < g.gd[o].dazzled_until || flat(p, dz) > g.k.frag.flee_m || { let h = head_of(g, oc); exposed_to(g, from, p, h, None) <= 0.0 } { stay.push(p); }
     }
     if team == crate::teams::Team::Operative {
-        let mg = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-        for pl in crate::seats::men(g, &mg) {
+        for pl in crate::seats::men(g) {
             let pp = g.ch[g.pl[pl].ch].pos;
             if flat(pp, me) <= 8.5 { stay.push(pp); }
         }
@@ -58,14 +55,30 @@ pub fn taken_by(g: &mut crate::game::Game, l: Option<&crate::frag::Live>, gd: Gu
 }
 
 /// The list the deal would hand `flee_spot` for this man off a grenade at rest at `dz` that has dealt nobody yet.   (frag.ts fleeMates)
-pub fn flee_mates(g: &mut crate::game::Game, gd: GuardId, dz: V3) -> Option<crate::squadthrow::SquadThrowKeptDuckM> {
-    let t = taken_by(g, None, gd, dz);
-    Some(crate::squadthrow::SquadThrowKeptDuckM { stay: t.stay, go: t.go })
+pub fn flee_mates(g: &mut crate::game::Game, gd: GuardId, dz: V3) -> Option<crate::frag::TakenBy> {
+    Some(taken_by(g, None, gd, dz))
 }
 
-/// Once a frame, before the men move: each live grenade's book.   (frag.ts fragTick)
-pub fn frag_tick(g: &mut crate::game::Game, _dt: f64) {
-    g.m.frag.books.get_or_insert_with(Vec::new);
+/// Once a frame, before the men move: each live grenade's book, then who the books have.   (frag.ts fragTick)
+pub fn frag_tick(g: &mut crate::game::Game, dt: f64) {
+    step_frag(g, dt);
+    frag_say(g);
+}
+
+/// Who the grenade's books have: anybody with legs dealt on a live one's line.   (frag.ts fragSay)
+pub fn frag_say(g: &mut crate::game::Game) {
+    let mut n = 0;
+    while n < g.guards.len() {
+        let gd = g.guards[n]; n += 1;
+        let dealt = g.m.frag.books.as_ref().map_or(false, |b| b.iter().any(|l| matches!(l.flee.get(gd), Some(Some(_)))));
+        let (rule, t) = (crate::owner::own().frag, g.time);
+        if dealt { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+    }
+}
+
+/// Each live grenade's book: who has noticed it, the shout, and the legs of whoever is in its line.   (frag.ts stepFrag)
+pub fn step_frag(g: &mut crate::game::Game, _dt: f64) {
+    books_of(g);
     let mut n = 0;
     while n < g.items.items.len() {
         let it = g.items.items[n]; n += 1;
@@ -73,7 +86,7 @@ pub fn frag_tick(g: &mut crate::game::Game, _dt: f64) {
         if g.m.frag.books.as_ref().unwrap().iter().any(|l| l.it == it) { continue; }
         let who = crate::throwables::item_who(g, it);
         let side = if js::truthy(who) { crate::teams::team_of_id(g, who) } else { crate::teams::Team::Guard };
-        g.m.frag.books.as_mut().unwrap().push(crate::frag::Live {
+        books_of(g).push(crate::frag::Live {
             it, side, knows: JsMap::new(), shouted: JsSet::new(), flee: JsMap::new(), via: None, flee_at: JsMap::new(),
             deal_t: JsMap::new(), counted: JsSet::new(), cued: false, rest: None, made: None,
         });
@@ -85,7 +98,7 @@ pub fn frag_tick(g: &mut crate::game::Game, _dt: f64) {
     }
 }
 
-/// One grenade's turn of `frag_tick`; a grenade that is gone is struck off here.
+/// One grenade's turn of `step_frag`; a grenade that is gone is struck off here.
 fn tick_book(g: &mut Game, i: usize) {
     let it = live!(g, i).it;
     // (the list first: the accessors read a row that a thing off the list no longer has)
@@ -100,15 +113,9 @@ fn tick_book(g: &mut Game, i: usize) {
     }
     let at = crate::throwables::item_pos(g, it);
     let eye_at: V3 = [at[0], at[1] + 0.12, at[2]];
-    let mut lifted = live!(g, i).clone();
-    let wise = rest_of(g, &mut lifted);
-    live!(g, i) = lifted;
+    let wise = rest_of(g, i);
     let dz = wise.at;
-    if !live!(g, i).cued && live!(g, i).side == crate::teams::Team::Hostile {
-        let mut lifted = live!(g, i).clone();
-        sam_cue(g, &mut lifted, eye_at);
-        live!(g, i) = lifted;
-    }
+    if !live!(g, i).cued && live!(g, i).side == crate::teams::Team::Hostile { sam_cue(g, i, eye_at); }
     if !g.ai_enabled { return; }
     let mut n = 0;
     while n < g.guards.len() {
@@ -239,8 +246,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     let speed = crate::condition::condition_pace(g, gd, run);
     let acc = if team == crate::teams::Team::Operative && g.gd[gd].speed < speed * 0.6 { g.k.pace.accel } else { m::INF };
     let keep_goal = keep.as_ref().and_then(|k| k.goal);
-    let lifted = live!(g, i).clone();
-    let apart = taken_by(g, Some(&lifted), gd, dz);
+    let apart = taken_by(g, Some(i), gd, dz);
     let w_spot = crate::frag::FleeSpotWise { path: wise.path.clone(), keep: keep_goal, not, apart: Some(crate::frag::FleeSpotWiseApart { stay: apart.stay.clone(), go: apart.go.clone() }) };
     let legs = crate::kitload::load_pace(g, gd, speed);
     let pick = acc * crate::kitload::load_pace_on(g, crate::kitload::LoadPaceOnWho::Guard(gd));
@@ -314,7 +320,7 @@ pub fn own_noise(g: &mut crate::game::Game, gd: GuardId, who: Option<f64>) -> bo
 }
 
 /// A defender's live grenade Sam can see, or hear land, inside cueM: one HUD line, once.   (frag.ts samCue)
-pub fn sam_cue(g: &mut crate::game::Game, l: &mut crate::frag::Live, eye_at: V3) {
+pub fn sam_cue(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
     if g.pl[pl].down { return; }
@@ -323,12 +329,13 @@ pub fn sam_cue(g: &mut crate::game::Game, l: &mut crate::frag::Live, eye_at: V3)
     if d > g.k.frag.cue_m { return; }
     let head = head_of(g, pc);
     let mut knows = !crate::scene_collision::segment_blocked(g, head, eye_at, None, None, None);
-    if !knows && crate::throwables::item_bounces(g, l.it) > 0.0 {
+    let it = live!(g, l).it;
+    if !knows && crate::throwables::item_bounces(g, it) > 0.0 {
         let pr = crate::scene_collision::sound_paths_propagate(g, eye_at, head, None);
         knows = pr.muffle < 0.6 && pr.path_len <= g.k.frag.cue_m;
     }
     if !knows { return; }
-    l.cued = true;
+    live!(g, l).cued = true;
     g.stats.frag.cues += 1;
     crate::game::game_msg(g, "GRENADE — get clear");
 }
@@ -353,9 +360,7 @@ pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3
     for i in 0..n {
         let it = live!(g, i).it;
         if !live!(g, i).cued || crate::throwables::item_fired(g, it) { continue; }
-        let mut lifted = live!(g, i).clone();
-        let wise = rest_of(g, &mut lifted);
-        live!(g, i) = lifted;
+        let wise = rest_of(g, i);
         let at = wise.at;
         let pos = g.ch[pc].pos;
         if m::hyp2(pos[0] - at[0], pos[2] - at[2]) > g.k.frag.wound_m { continue; }
@@ -436,7 +441,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
     let gd = car!(g, ci).gd;
     let c = g.gd[gd].ch;
     if !js::truthy(car!(g, ci).frags) { return; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || crate::runner::runner_owns(g, gd) { car!(g, ci).wind = None; return; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::own().runner; crate::owner::has_him(g, gd, r) } { car!(g, ci).wind = None; return; }
     let out = g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until;
     let head = head_of(g, c);
     if car!(g, ci).wind.is_some() { tick_wind(g, ci, gd, c, out); return; }
@@ -450,18 +455,12 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
     // (a) the man he was on has gone where his rifle cannot follow; (b) two or more of them bunched in his view
     let chest: V3 = [fix[0], fix[1] + 1.1, fix[2]];
     let def = gun_row(g, gd);
-    let energy = crate::glasspen::shot_energy(g, c, def.as_ref());
+    let energy = crate::glasspen::shot_energy(g, c, def);
     let blocked = crate::scene_collision::shot_blocked(g, head, chest, Some(0.02), energy);
     car!(g, ci).blocked_t = if blocked { car!(g, ci).blocked_t + dt } else { 0.0 };
     let mut bunch = 0;
     if g.time - g.gd[gd].last_seen_t < 0.5 {
-        if g.seats.len() == 1 { if seat_in_bunch(g, gd, c, head, fix) { bunch += 1; } }
-        else {
-            let mg = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-            for pl in crate::seats::men(g, &mg) {
-                if crate::seats::with_seat(g, pl, &mut |v: &mut Game| seat_in_bunch(v, gd, c, head, fix)) { bunch += 1; }
-            }
-        }
+        crate::seats::each_seat(g, &mut |v: &mut Game| if seat_in_bunch(v, gd, c, head, fix) { bunch += 1; });
         let mut n = 0;
         while n < g.guards.len() {
             let o = g.guards[n]; n += 1;
@@ -511,11 +510,11 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
         if let Some(h) = g.ch[c].bones.get(crate::character::Bone::HandL).copied() {
             if flat(h, pos) < 1.0 && !crate::scene_collision::solid_blocked(g, [pos[0], h[1], pos[2]], h, None) {
                 let sh = crate::throwables::throwables_solve(g, h, wd.at, Some(11.0));
-                if lands(g, Some(crate::frag::LandsSol { land: sh.land }), wd.at, 2.0) { from = h; sol = sh; }
+                if lands(g, sh.land, wd.at, 2.0) { from = h; sol = sh; }
             }
         }
     }
-    if !lands(g, Some(crate::frag::LandsSol { land: sol.land }), wd.at, 2.0) || !own_clear(g, gd, sol.land, Some(true)) || hostage_near(g, sol.land) {
+    if !lands(g, sol.land, wd.at, 2.0) || !own_clear(g, gd, sol.land, Some(true)) || hostage_near(g, sol.land) {
         book!(g).last_t = wd.last_t;
         car!(g, ci).try_at = g.time + 2.0;
         let line = crate::words::w(g, &"no — holding it!", &"no — hold it!");
@@ -561,7 +560,7 @@ pub fn aim_spots(g: &mut crate::game::Game, gd: GuardId, from: Option<V3>, fix: 
     let mut out: Vec<V3> = Vec::new();
     let chest: V3 = [fix[0], fix[1] + 1.1, fix[2]];
     let def = gun_row(g, gd);
-    let glass = if crate::glasspen::shot_energy(g, c, def.as_ref()).unwrap_or(0.0) > 0.0 { crate::frag::GlassView::Counted } else { crate::frag::GlassView::Whole };
+    let glass = if crate::glasspen::shot_energy(g, c, def).unwrap_or(0.0) > 0.0 { crate::frag::GlassView::Counted } else { crate::frag::GlassView::Whole };
     let mut q = -2.0;
     while q < n {
         let rr = if q <= 0.0 { 0.0 } else if q <= 8.0 { 1.3 } else { 2.4 };
@@ -574,7 +573,7 @@ pub fn aim_spots(g: &mut crate::game::Game, gd: GuardId, from: Option<V3>, fix: 
             None => out.push(p),
             Some(f) => {
                 let sol = crate::throwables::throwables_solve(g, f, p, Some(11.0));
-                if lands(g, Some(crate::frag::LandsSol { land: sol.land }), p, 1.0) { return vec![p]; }
+                if lands(g, sol.land, p, 1.0) { return vec![p]; }
             }
         }
     }
@@ -592,7 +591,7 @@ pub fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V
     let mut land: V3 = [aim[0] + m::sin(a) * r, 0.0, aim[2] + m::cos(a) * r];
     if crate::scene_collision::nav_grid_is_blocked(g, land[0], land[2]) { land = aim; }
     let mut sol = crate::throwables::throwables_solve(g, from, land, Some(11.0));
-    if !lands(g, Some(crate::frag::LandsSol { land: sol.land }), land, 1.6) { sol = crate::throwables::throwables_solve(g, from, aim, Some(11.0)); }
+    if !lands(g, sol.land, land, 1.6) { sol = crate::throwables::throwables_solve(g, from, aim, Some(11.0)); }
     if !own_clear(g, gd, sol.land, None) { return Some(crate::frag::WindUp::Own); }
     let now_t = g.time;
     let wind = crate::frag::CarrierWind { until: now_t + g.k.frag.def_wind, at: sol.land, swung: false, last_t: book!(g).last_t, hand: if toward.is_some() { Some(from) } else { None }, toward };
@@ -654,7 +653,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> {
     let b = g.m.frag.def_books.as_ref()?;
     let ci = b.carriers.iter().position(|x| x.gd == gd)?;
     if !js::truthy(b.carriers[ci].frags) || b.carriers[ci].wind.is_some() { return None; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || crate::runner::runner_owns(g, gd) || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::own().runner; crate::owner::has_him(g, gd, r) } || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
     Some(ci)
 }
 
@@ -686,7 +685,7 @@ pub fn frag_throw_at(g: &mut crate::game::Game, gd: GuardId, at: V3, stand: V3, 
     let mut aim = None;
     for &p in &s.list {
         let sol = crate::throwables::throwables_solve(g, hand, p, Some(11.0));
-        if lands(g, Some(crate::frag::LandsSol { land: sol.land }), p, 1.0) { aim = Some(p); break; }
+        if lands(g, sol.land, p, 1.0) { aim = Some(p); break; }
     }
     let Some(aim) = aim else { return R::Arc };
     let head = head_of(g, c);
@@ -708,8 +707,8 @@ pub fn frag_away(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 }
 
 /// The arc comes DOWN ON THE FLOOR within `tol` of where he means it.   (frag.ts lands)
-pub fn lands(g: &mut crate::game::Game, sol: Option<crate::frag::LandsSol>, p: V3, tol: f64) -> bool {
-    match sol { Some(s) => s.land[1] <= g.k.frag.lift + 0.1 && flat(s.land, p) <= tol, None => false }
+pub fn lands(g: &mut crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
+    sol[1] <= g.k.frag.lift + 0.1 && flat(sol, p) <= tol
 }
 
 /// A live hostage in what a grenade there would reach.   (frag.ts hostageNear)

@@ -1,11 +1,11 @@
-//! src/game/combat.ts lines 663 to 756
+//! src/game/combat.ts lines 664 to 757
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.   (combat.ts flashFuse)
 pub fn flash_fuse(g: &mut crate::game::Game) -> f64 {
@@ -28,7 +28,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
     let tear = g.k.doorblast.tear_m.stun;
     let who = crate::throwables::item_who(g, it);
     crate::doors::doors_blast(g, at, tear, who);
-    let gpu = crate::particle_fx::gpu_fx(g).is_some();
+    let gpu = crate::particle_fx::gpu_fx(g);
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
     let o = if gpu {
@@ -38,7 +38,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
     };
     let l = crate::effects::spawn_burst(g, at, seed, o);
     if gpu { crate::particle_fx::bang_fx(g, at); }
-    let flash = lights_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, 0.0);
+    let flash = crate::render_lights::light_set_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, 0.0);
     let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(who));
     if let Some(r) = l.radius {
         if js::truthy(r) { g.tab.light[light].radius = r; }
@@ -124,9 +124,9 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
             g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, g.time + secs);
             g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
             g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.6);
-            if g.gd[gd].state != crate::game::GuardState::Alert { g.gd[gd].last_known = Some(at); }
+            if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
             if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
-            g.gd[gd].path = Vec::new();
+            crate::game::guard_set_path(g, gd, Vec::new());
             g.gd[gd].path_goal = None;
             g.gd[gd].speed = 0.0;
             g.gd[gd].dazzled_at = Some(at);
@@ -138,7 +138,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
     let sam_side: crate::teams::Team = sam.and_then(|s| s.side).unwrap_or(side);
     let spare = sam.and_then(|s| s.spare).unwrap_or(false);
     let mut told = false;
-    on_each_seat(g, &mut |g: &mut Game| {
+    crate::seats::each_seat(g, &mut |g: &mut Game| {
         let mut sam_secs = 0.0;
         let c = g.pl[g.player].ch;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
@@ -189,9 +189,9 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
         if !told {
             told = true;
             let text: String = if side == crate::teams::Team::Hostile {
-                if n != 0 { format!("their stun charge — {} dazzled", n) } else { String::from("their stun charge went off") }
+                if n != 0 { alloc::format!("their stun charge — {} dazzled", n) } else { String::from("their stun charge went off") }
             } else if n != 0 {
-                format!("flashbang — {} guard{} dazzled", n, if n > 1 { "s" } else { "" })
+                alloc::format!("flashbang — {} guard{} dazzled", n, if n > 1 { "s" } else { "" })
             } else {
                 String::from("flashbang went off")
             };
@@ -199,7 +199,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
         }
         if sam_secs > 0.0 {
             let by = if sam_side == crate::teams::Team::Player || sam_side == crate::teams::Team::Operative { "a flashbang" } else { "their stun charge" };
-            let text = format!("{} blinded you", by);
+            let text = alloc::format!("{} blinded you", by);
             crate::game::game_msg(g, &text);
         }
     });
@@ -229,24 +229,4 @@ pub fn drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p
 /// g.col.segmentBlocked(a, b) with its defaults.
 fn seg(g: &mut Game, a: V3, b: V3) -> bool {
     crate::scene_collision::segment_blocked(g, a, b, None, None, None)
-}
-
-/// eachSeat(g, f) over one view: seats::each_seat's closure takes two `&mut Game` and cannot be lent, so its one body is here, through with_seat.
-fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 { f(g); return; }
-    let mut i = 0;
-    while i < g.seats.len() {
-        let s = g.seats[i];
-        i += 1;
-        let man = crate::cmd::seat_man(g, s);
-        crate::seats::with_seat(g, man, &mut *f);
-    }
-}
-
-/// g.engine.lights.flash(…): the stub takes `g` and the set, and the set lives in `g`, so it is lent out of `g` for the call and put back.
-fn lights_flash(g: &mut Game, pos: V3, color: V3, intensity: f64, range: f64, ttl: f64, owner: f64) -> LightId {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    let l = crate::render_lights::light_set_flash(g, &mut set, pos, color, intensity, range, ttl, owner);
-    g.engine.lights = set;
-    l
 }

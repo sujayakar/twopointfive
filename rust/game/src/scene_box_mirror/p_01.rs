@@ -1,4 +1,4 @@
-//! src/scene/boxMirror.ts lines 1 to 505
+//! src/scene/boxMirror.ts lines 1 to 498
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -59,22 +59,9 @@ fn world(w: usize) -> &'static mut sim::world::World {
     sim::world::world(w)
 }
 
-/// WHICH OF THE MODULE'S WORLDS IS THIS GAME'S. The TypeScript's HELD hands a process's worlds round its games by who stepped longest ago, and writes the game it
-/// took one from; a `Game` here reaches no other game. `g.sim` is the game's slot for its life and there are as many worlds as slots (world.rs WORLDS, state.rs GAMES).
-#[inline]
-fn seam_world_slot(g: &Game) -> usize {
-    g.sim
-}
-
-/// a box by its ID. ids.txt says BoxId has no table (`g.none`): the one `Tab<BoxId, Box>` the skeleton has is `g.col.boxes`.
-#[inline]
-fn seam_box(g: &Game, b: BoxId) -> &SBox {
-    &g.col.boxes[b]
-}
-
-/// RUST.sight, light, smoke, sound or paths (:109): `senseRows` has no `g` to read them by, and `g.m.sim_sim.rust` came out an empty struct.
-fn seam_rust_row(row: &str) -> bool {
-    todo!("needs: g in sense_rows and the rows of RUST on g.m.sim_sim.rust")
+/// A box's row (Box.* in the TypeScript), by its ID. The one blocked step of this file.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut SBox {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
 }
 
 /// `Object.is`: every double by its bits (a −0 is not a 0), and a NaN is itself
@@ -119,16 +106,6 @@ pub fn mirrors_shut(g: &mut crate::game::Game) {
     box_mirror_shut(g);
 }
 
-/// Which of the senses' rows are on now, a bit each.   (boxMirror.ts senseRows)
-pub fn sense_rows() -> f64 {
-    let s = senses();
-    (if seam_rust_row("sight") { s.sight as u32 } else { 0 }
-        | if seam_rust_row("light") { s.light as u32 } else { 0 }
-        | if seam_rust_row("smoke") { s.smoke as u32 } else { 0 }
-        | if seam_rust_row("sound") { s.sound as u32 } else { 0 }
-        | if seam_rust_row("paths") { s.paths as u32 } else { 0 }) as f64
-}
-
 /// What kind of row a box is: rotated, round, cut.   (boxMirror.ts kindOf)
 pub fn kind_of(g: &mut crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
     let (rot, round, has_cut, cut_len) = {
@@ -141,7 +118,8 @@ pub fn kind_of(g: &mut crate::game::Game, b: BoxId, cut_on: bool) -> f64 {
 
 /// A static's kind, with the pane rule's answer for it as it stands.   (boxMirror.ts kindAt)
 pub fn kind_at(g: &mut crate::game::Game, b: BoxId, i: f64, cut_on: bool, walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>) -> f64 {
-    let glass = (js::to_u32(seam_box(g, b).flags) & F_GLASS_) != 0;
+    let flags = seam_box(g, b).flags;
+    let glass = (js::to_u32(flags) & F_GLASS_) != 0;
     if let Some(walk) = walk {
         if glass && walk(g, i) {
             return ((kind_of(g, b, cut_on) as u32) | K_WALK_) as f64;
@@ -252,11 +230,11 @@ pub fn put(g: &mut crate::game::Game, m: &mut Vec<f64>, fl: &mut Vec<u32>, o: f6
 }
 
 /// static `i`'s row in world `w` is box b: the row of the statics' table, the planes in the cut table.
-fn static_same(g: &Game, w: usize, i: usize, b: BoxId, kind: f64) -> bool {
+fn static_same(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64) -> bool {
     let o = world(w);
     row_same(&o.rec, i * REC_, o.flags[i], &o.cut, 0, seam_box(g, b), kind)
 }
-fn static_put(g: &Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f64) {
+fn static_put(g: &mut Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f64) {
     let (o, x) = (world(w), seam_box(g, b));
     row_put(&mut o.rec, i * REC_, &mut o.flags[i], x, kind, cut_row);
     if (kind as u32) & K_CUT_ != 0 {
@@ -264,11 +242,11 @@ fn static_put(g: &Game, w: usize, i: usize, b: BoxId, kind: f64, cut_row: f64) {
     }
 }
 /// row `at` of the leaves' table (a list's rows one after another) in world `w`; a leaf's cut record is its own, past the statics'
-fn leaf_same(g: &Game, w: usize, at: usize, b: BoxId, kind: f64) -> bool {
+fn leaf_same(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64) -> bool {
     let o = world(w);
     row_same(&o.leaf, at * REC_, o.leaf_flags[at], &o.cut, 0, seam_box(g, b), kind)
 }
-fn leaf_put(g: &Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64) {
+fn leaf_put(g: &mut Game, w: usize, at: usize, b: BoxId, kind: f64, cut_row: f64) {
     let (o, x) = (world(w), seam_box(g, b));
     row_put(&mut o.leaf, at * REC_, &mut o.leaf_flags[at], x, kind, cut_row);
     if (kind as u32) & K_CUT_ != 0 {
@@ -329,7 +307,8 @@ pub fn box_mirror_boot(g: &mut crate::game::Game) {
     x.cut_of = vec![-1; c.boxes as usize];
 }
 
-/// This game's world in the module. True = the world is newly this game's and nothing in it is ours.   (boxMirror.ts BoxMirror.take)
+/// This game's world in the module. True = the world is newly this game's and nothing in it is ours. HELD hands a process's worlds round its games there;
+/// a `Game` here reaches no other game, and `g.sim` is its slot for its life, with as many worlds as slots (world.rs WORLDS, state.rs GAMES).   (boxMirror.ts BoxMirror.take)
 pub fn box_mirror_take(g: &mut crate::game::Game) -> bool {
     if g.col.mirror.caps.boxes == 0.0 {
         box_mirror_boot(g);
@@ -337,9 +316,9 @@ pub fn box_mirror_take(g: &mut crate::game::Game) -> bool {
     g.m.scene_box_mirror.clock.n += 1.0;
     g.col.mirror.used = g.m.scene_box_mirror.clock.n;
     if g.col.mirror.slot >= 0.0 {
-        return false; // (no other game can have taken it: seam_world_slot)
+        return false; // (no other game can have taken it: g.sim)
     }
-    let s = seam_world_slot(g);
+    let s = g.sim;
     let at = |t: f64, by: usize| (sim::world_addr(s, t as u32) / by) as f64;
     let x = &mut g.col.mirror;
     x.slot = s as f64;
@@ -368,8 +347,7 @@ pub fn box_mirror_take(g: &mut crate::game::Game) -> bool {
 }
 
 /// A TICK OPENS: the copy is made the boxes as they stand.   (boxMirror.ts BoxMirror.open)
-pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, cs: f64, leaves: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, glass: Option<&crate::scene_box_mirror::PaneSource>, lines: bool, circles: bool, sight: bool, senses: Option<f64>, rays: Option<bool>) {
-    let (senses, rays) = (senses.unwrap_or(0.0), rays.unwrap_or(false));
+pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<f64>], tilted_at: &[f64], w: f64, h: f64, cs: f64, leaves: &[BoxId], walk: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, glass: Option<&crate::scene_box_mirror::PaneSource>, lines: bool, circles: bool, rays: bool) {
     g.col.mirror.walk = walk.map(|_| crate::FnField); // (the rule itself is g.col.glass_walkable: kind_at_copy)
     g.col.mirror.glass = glass.cloned();
     let fresh = box_mirror_take(g);
@@ -377,7 +355,7 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     let all = fresh || g.col.mirror.epoch != epoch || g.col.mirror.put_backs != put_backs;
     g.col.mirror.epoch = epoch;
     g.col.mirror.put_backs = put_backs;
-    let s = seam_world_slot(g);
+    let s = g.sim;
     if all {
         for r in g.col.mirror.cut_of.iter_mut() {
             *r = -1;
@@ -413,14 +391,10 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     x.row_lines = lines;
     x.row_rays = rays;
     x.row_circles = circles;
-    x.row_sight = sight;
-    x.row_senses = senses;
     x.live = true;
     x.lines = lines;
     x.rays = rays;
     x.circles = circles;
-    x.sight = sight;
-    x.senses = senses;
 }
 
 /// The tick is over.   (boxMirror.ts BoxMirror.shut)
@@ -430,10 +404,8 @@ pub fn box_mirror_shut(g: &mut crate::game::Game) {
     x.lines = false;
     x.rays = false;
     x.circles = false;
-    x.sight = false;
     x.owes = false;
     x.owed = 0.0;
-    x.senses = 0.0;
     x.own = None;
     x.walk = None;
     x.glass = None;
@@ -474,7 +446,7 @@ pub fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at:
     if total as f64 > c.items {
         box_mirror_outgrown(g, "entries of the grid's cells", total as f64, c.items);
     }
-    let o = world(seam_world_slot(g));
+    let o = world(g.sim);
     let mut at = 0usize;
     for i in 0..n {
         let cell = &cells[i];
@@ -495,7 +467,7 @@ pub fn box_mirror_grid(g: &mut crate::game::Game, cells: &[Vec<f64>], tilted_at:
 pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool) {
     let n = boxes.len();
     let cut_on = crate::scene_cut::cut_boxes_on(g);
-    let s = seam_world_slot(g);
+    let s = g.sim;
     let grid = !all && g.col.mirror.grid_over;
     let was = g.col.mirror.boxes as usize;
     for i in n..was {
@@ -554,7 +526,7 @@ pub fn box_mirror_statics(g: &mut crate::game::Game, boxes: &[BoxId], all: bool)
 pub fn box_mirror_grid_dirty(g: &mut crate::game::Game, m: &[f64], o: f64) {
     let o = o as usize;
     let e = m[o + 3] + m[o + 4] + m[o + 5];
-    sim::grid_dirty(seam_world_slot(g), m[o] - e, m[o + 2] - e, m[o] + e, m[o + 2] + e);
+    sim::grid_dirty(g.sim, m[o] - e, m[o + 2] - e, m[o] + e, m[o + 2] + e);
 }
 
 /// The copy's number, for a step of a smoke grid over it: from here a row that is written is said to the grid.   (boxMirror.ts BoxMirror.gridCopy)
@@ -586,8 +558,6 @@ pub fn box_mirror_debt(g: &mut crate::game::Game, what: f64) {
         x.lines = false;
         x.rays = false;
         x.circles = false;
-        x.sight = false;
-        x.senses = 0.0;
     }
 }
 
@@ -632,7 +602,7 @@ pub fn box_mirror_owes_boxes(g: &mut crate::game::Game) -> bool {
 pub fn box_mirror_snow(g: &mut crate::game::Game, kinds: &[u8]) {
     let cap = g.col.mirror.caps.boxes as usize;
     let n = if kinds.len() < cap { kinds.len() } else { cap };
-    let o = world(seam_world_slot(g));
+    let o = world(g.sim);
     for i in 0..n {
         if o.snow[i] != kinds[i] {
             o.snow[i] = kinds[i];
@@ -670,7 +640,7 @@ pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option
             g.col.tilted_at = tilted;
         }
         box_mirror_statics(g, boxes, false);
-        sim::world_shape(seam_world_slot(g), w as u32, h as u32, cs, boxes.len() as u32, g.col.mirror.n_tilted as u32);
+        sim::world_shape(g.sim, w as u32, h as u32, cs, boxes.len() as u32, g.col.mirror.n_tilted as u32);
     }
     if owed & OWE_GLASS_ != 0 {
         box_mirror_panes(g);
@@ -684,8 +654,6 @@ pub fn box_mirror_again(g: &mut crate::game::Game, boxes: &[BoxId], walk: Option
     x.lines = x.row_lines;
     x.rays = x.row_rays;
     x.circles = x.row_circles;
-    x.sight = x.row_sight;
-    x.senses = x.row_senses;
 }
 
 /// The grid was written: the same debt, and the compare that pays it copies the cells again first.   (boxMirror.ts BoxMirror.wroteGrid)
@@ -696,7 +664,7 @@ pub fn box_mirror_wrote_grid(g: &mut crate::game::Game) {
 
 /// The panes that are no longer whole, written whole: a row each in the order the game hands them over.   (boxMirror.ts BoxMirror.panes)
 pub fn box_mirror_panes(g: &mut crate::game::Game) {
-    let s = seam_world_slot(g);
+    let s = g.sim;
     {
         let o = world(s);
         let x = &g.col.mirror;
@@ -824,7 +792,7 @@ pub fn box_mirror_viewed(g: &mut crate::game::Game) {
 pub fn box_mirror_view_in(g: &mut crate::game::Game) {
     let v = if g.col.mirror.glass.is_some() { crate::glassbreak::glass_break_view(g) } else { None };
     g.col.mirror.view_lengths = false;
-    let s = seam_world_slot(g);
+    let s = g.sim;
     let v = match v {
         None => {
             sim::world_view(s, VIEW_NONE as u32, 0);
@@ -860,6 +828,60 @@ pub fn box_mirror_glass_plain(g: &mut crate::game::Game) -> bool {
     !g.col.mirror.glass_angles && !g.col.mirror.view_lengths
 }
 
+/// is this kept row (`keep_w`, `keep_d`: one pane's) the pane as it would be written now, on a row of the check's own: the copy is not touched.
+fn pane_kept(keep_w: &[u32], keep_d: &[f64], p: &PaneRow) -> bool {
+    let (mut tw, mut td) = (vec![0u32; GW_], vec![0.0f64; GD_]);
+    pane_row(&mut td, &mut tw, p);
+    let ns = if p.sites.len() < G_SITES_ { p.sites.len() } else { G_SITES_ };
+    for k in 0..GW_ {
+        if k >= GW_N_ && k < GW_OPEN_ && (k - GW_N_) % G_SITES_ >= ns {
+            continue;
+        }
+        if (k == GW_COLS_ || k == GW_ROWS_ || k == GW_DSEED_) && p.dice.is_none() {
+            continue;
+        }
+        if keep_w[k] != tw[k] {
+            return false;
+        }
+    }
+    for i in 0..ns * G_SITE_ {
+        if !is(keep_d[i], td[i]) {
+            return false;
+        }
+    }
+    if p.dice.is_some() {
+        for i in G_DICE_AT_..G_DICE_AT_ + 6 {
+            if !is(keep_d[i], td[i]) {
+                return false;
+            }
+        }
+    }
+    true
+}
+
+/// THE CHECK'S QUESTION of the panes' copy: how many of its rows are not the game's glass now.   (boxMirror.ts BoxMirror.stalePanes)
+pub fn box_mirror_stale_panes(g: &mut crate::game::Game) -> f64 {
+    if g.col.mirror.glass.is_none() {
+        return g.col.mirror.glass_n;
+    }
+    let was_n = g.col.mirror.glass_n as usize;
+    let o = world(g.sim);
+    let (keep_w, keep_d) = (o.glass_w[..was_n * GW_].to_vec(), o.glass[..was_n * GD_].to_vec());
+    let (mut n, mut bad) = (0usize, 0.0f64);
+    crate::glassbreak::glass_break_each(g, &mut |_g, p| {
+        let r = n;
+        n += 1;
+        if r >= was_n {
+            bad += 1.0;
+            return;
+        }
+        if !pane_kept(&keep_w[r * GW_..(r + 1) * GW_], &keep_d[r * GD_..(r + 1) * GD_], &p) {
+            bad += 1.0;
+        }
+    });
+    bad + if n < was_n { (was_n - n) as f64 } else { 0.0 }
+}
+
 /// THE LEAVES A QUESTION IS ASKED WITH: which of the module's lists holds them. −1 no leaves, −2 more than a list holds.   (boxMirror.ts BoxMirror.leaves)
 pub fn box_mirror_leaves(g: &mut crate::game::Game, dyn_: &[BoxId]) -> f64 {
     let n = dyn_.len();
@@ -878,7 +900,7 @@ pub fn box_mirror_leaves(g: &mut crate::game::Game, dyn_: &[BoxId]) -> f64 {
     let set = if own { 0usize } else { 1usize };
     let cut_on = crate::scene_cut::cut_boxes_on(g);
     let base = set * caps.leaves as usize;
-    let s = seam_world_slot(g);
+    let s = g.sim;
     for i in 0..n {
         let b = dyn_[i];
         let kind = kind_of(g, b, cut_on);
@@ -918,7 +940,7 @@ pub fn box_mirror_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror:
     let cut_on = crate::scene_cut::cut_boxes_on(g);
     let base = THING_SET_ * c.leaves as usize;
     let every = g.col.mirror.things_all;
-    let s = seam_world_slot(g);
+    let s = g.sim;
     {
         let o = world(s);
         for (i, t) in p.all.iter().enumerate() {
@@ -966,6 +988,41 @@ pub fn box_mirror_thing_box(g: &mut crate::game::Game, p: &crate::scene_box_mirr
     None
 }
 
+/// THE CHECK'S QUESTION of the furniture's copy: how many of its rows are not the furniture now.   (boxMirror.ts BoxMirror.staleThings)
+pub fn box_mirror_stale_things(g: &mut crate::game::Game, p: &crate::scene_box_mirror::Furniture) -> f64 {
+    let cut_on = crate::scene_cut::cut_boxes_on(g);
+    let base = THING_SET_ * g.col.mirror.caps.leaves as usize;
+    let s = g.sim;
+    let mut bad = 0.0f64;
+    {
+        let o = world(s);
+        for (i, t) in p.all.iter().enumerate() {
+            let q = i * TH_;
+            if !is(o.thing[q], t.x) || !is(o.thing[q + 1], t.z) || !is(o.thing[q + 2], t.yaw) || !is(o.thing[q + 3], t.radius) {
+                bad += 1.0;
+            }
+        }
+    }
+    let mut at = 0usize;
+    for (r, t) in p.props.iter().enumerate() {
+        {
+            let o = world(s);
+            let q = r * TL_;
+            if o.thing_live[q] as f64 != t.id || o.thing_live[q + 1] != at as u32 || o.thing_live[q + 2] != t.boxes.len() as u32 {
+                bad += 1.0;
+            }
+        }
+        for &b in &t.boxes {
+            let kind = kind_of(g, b, cut_on);
+            if !leaf_same(g, s, base + at, b, kind) {
+                bad += 1.0;
+            }
+            at += 1;
+        }
+    }
+    bad
+}
+
 /// Where the glass the last line crossed is listed: which static.   (boxMirror.ts BoxMirror.glassBi)
 pub fn box_mirror_glass_bi(g: &mut crate::game::Game) -> f64 {
     g.col.mirror.pane_bi
@@ -990,7 +1047,7 @@ pub fn box_mirror_rules(g: &mut crate::game::Game, dyn_: &[BoxId]) -> bool {
     // (a level with no leaf at all: list 0 is the game's own, and empty — said to the module once)
     let writes = g.m.scene_box_mirror.leaves.n;
     if g.col.mirror.own_at != writes || g.col.mirror.own_len != 0.0 {
-        sim::world_leaves(seam_world_slot(g), 0, 0);
+        sim::world_leaves(g.sim, 0, 0);
         g.col.mirror.own_at = writes;
         g.col.mirror.own_len = 0.0;
     }
@@ -1011,7 +1068,7 @@ pub fn box_mirror_follow_leaf(g: &mut crate::game::Game, i: f64, b: BoxId) -> f6
 
 /// A leaf's row as leafRow read it → its box, the same writes as followLeaf. → the yaw.   (boxMirror.ts BoxMirror.followRow)
 pub fn box_mirror_follow_row(g: &mut crate::game::Game, b: BoxId, r: &[f64]) -> f64 {
-    let x = &mut g.col.boxes[b];
+    let x = seam_box(g, b);
     x.c = [r[0], r[1], r[2]];
     x.yaw = r[3];
     x.flags = flags_from(x.flags, r[4]);
@@ -1020,7 +1077,7 @@ pub fn box_mirror_follow_row(g: &mut crate::game::Game, b: BoxId, r: &[f64]) -> 
 
 /// Leaf i's row of list 0: its centre, its yaw, its flags.   (boxMirror.ts BoxMirror.leafRow)
 pub fn box_mirror_leaf_row(g: &mut crate::game::Game, i: f64) -> Vec<f64> {
-    let (o, i) = (world(seam_world_slot(g)), i as usize);
+    let (o, i) = (world(g.sim), i as usize);
     let q = i * REC_;
     vec![o.leaf[q], o.leaf[q + 1], o.leaf[q + 2], o.leaf[q + R_YAW_], o.leaf_flags[i] as f64]
 }
@@ -1028,6 +1085,32 @@ pub fn box_mirror_leaf_row(g: &mut crate::game::Game, i: f64) -> Vec<f64> {
 /// The game's own leaves are being placed box by box while what the rule answered is heard.   (boxMirror.ts BoxMirror.leavesTurned)
 pub fn box_mirror_leaves_turned(g: &mut crate::game::Game) {
     g.col.mirror.own_at = -1.0;
+}
+
+/// THE CHECK'S QUESTION: how many rows of the copy are not their box now: the statics, and list `set` of the leaves.   (boxMirror.ts BoxMirror.stale)
+pub fn box_mirror_stale(g: &mut crate::game::Game, boxes: &[BoxId], dyn_: &[BoxId], set: f64) -> f64 {
+    let cut_on = crate::scene_cut::cut_boxes_on(g);
+    let s = g.sim;
+    let was = g.col.mirror.boxes as usize;
+    let mut bad = if boxes.len() == was { 0.0f64 } else { 1.0 };
+    let mut i = 0usize;
+    while i < boxes.len() && i < was {
+        let kind = kind_at_copy(g, boxes[i], i, cut_on);
+        if !static_same(g, s, i, boxes[i], kind) {
+            bad += 1.0;
+        }
+        i += 1;
+    }
+    if set >= 0.0 {
+        let base = set as usize * g.col.mirror.caps.leaves as usize;
+        for i in 0..dyn_.len() {
+            let kind = kind_of(g, dyn_[i], cut_on);
+            if !leaf_same(g, s, base + i, dyn_[i], kind) {
+                bad += 1.0;
+            }
+        }
+    }
+    bad
 }
 
 #[cfg(test)]
@@ -1058,42 +1141,41 @@ mod tests {
 
     #[test]
     fn a_row_put_is_the_same_until_its_box_moves() {
-        let mut g = game(0);
         let mut b = a_box();
         b.rot = Some([0.0, 0.0, 0.0, 1.0]);
         b.cut = Some(vec![CutPlane { n: [1.0, 0.0, 0.0], d: 0.25 }, CutPlane { n: [0.0, 1.0, 0.0], d: -0.0 }]);
-        let id = g.col.boxes.push(b);
         let kind = (K_ROT_ | K_CUT_) as f64;
         let (mut m, mut fl) = (vec![0.0; 256], vec![0u32; 4]);
-        put(&mut g, &mut m, &mut fl, 16.0, 1.0, id, kind, 64.0, 2.0);
-        assert!(same(&mut g, &m, &fl, 16.0, 1.0, id, kind, 64.0));
+        row_put(&mut m, 16, &mut fl[1], &b, kind, 2.0);
+        planes_put(&mut m, 64 + 2 * CUT_ROW_, &b);
+        let same = |m: &[f64], fl: &[u32], b: &SBox| row_same(m, 16, fl[1], m, 64, b, kind);
+        assert!(same(&m, &fl, &b));
         assert_eq!(fl[1], (1 << 17) | 2, "only the flags the copy keeps");
         assert_eq!(m[16 + R_COS_].to_bits(), crate::m::cos(0.5).to_bits());
         assert_eq!(m[16 + R_CUT_], 2.0);
         assert_eq!(m[16 + R_CUTN_], 2.0);
         assert_eq!(m[64 + 2 * CUT_ROW_ + 3], 0.25);
         // a flag the copy does not keep is no news
-        g.col.boxes[id].flags = ((1u32 << 17) | 0x0102) as f64;
-        assert!(same(&mut g, &m, &fl, 16.0, 1.0, id, kind, 64.0));
+        b.flags = ((1u32 << 17) | 0x0102) as f64;
+        assert!(same(&m, &fl, &b));
         // a −0 is not a 0: a plane's distance by its bits
-        g.col.boxes[id].cut.as_mut().unwrap()[1].d = 0.0;
-        assert!(!same(&mut g, &m, &fl, 16.0, 1.0, id, kind, 64.0));
-        g.col.boxes[id].cut.as_mut().unwrap()[1].d = -0.0;
-        assert!(same(&mut g, &m, &fl, 16.0, 1.0, id, kind, 64.0));
-        g.col.boxes[id].c[2] = 3.5;
-        assert!(!same(&mut g, &m, &fl, 16.0, 1.0, id, kind, 64.0));
+        b.cut.as_mut().unwrap()[1].d = 0.0;
+        assert!(!same(&m, &fl, &b));
+        b.cut.as_mut().unwrap()[1].d = -0.0;
+        assert!(same(&m, &fl, &b));
+        b.c[2] = 3.5;
+        assert!(!same(&m, &fl, &b));
         // a NaN is itself
-        g.col.boxes[id].c[2] = f64::NAN;
+        b.c[2] = f64::NAN;
         m[16 + 2] = -f64::NAN;
-        assert!(same(&mut g, &m, &fl, 16.0, 1.0, id, kind, 64.0));
+        assert!(same(&m, &fl, &b));
     }
 
     #[test]
     fn a_plain_row_leaves_the_rotation_and_the_record_alone() {
-        let mut g = game(0);
-        let id = g.col.boxes.push(a_box());
+        let b = a_box();
         let (mut m, mut fl) = (vec![7.0; 16], vec![0u32; 1]);
-        put(&mut g, &mut m, &mut fl, 0.0, 0.0, id, 0.0, 0.0, -1.0);
+        row_put(&mut m, 0, &mut fl[0], &b, 0.0, -1.0);
         assert_eq!(m[R_ROT_], 7.0);
         assert_eq!(m[R_CUT_], 7.0);
         assert_eq!(m[R_KIND_], 0.0);
@@ -1155,16 +1237,30 @@ mod tests {
     /// the TypeScript's own answers: `followRow` under bun
     #[test]
     fn a_box_follows_its_row_as_an_int32() {
-        let mut g = game(0);
-        let mut b = SBox::zeroed();
-        b.flags = ((1u32 << 31) | (1 << 17) | 0x12 | 0x300) as f64;
-        let id = g.col.boxes.push(b);
-        assert_eq!(box_mirror_follow_row(&mut g, id, &[1.0, 2.0, 3.0, 0.5, 0x8000000au32 as f64]), 0.5);
-        assert_eq!(g.col.boxes[id].flags, -2147482854.0);
-        assert_eq!(g.col.boxes[id].c, [1.0, 2.0, 3.0]);
-        g.col.boxes[id].flags = 0x0302 as f64;
-        box_mirror_follow_row(&mut g, id, &[1.0, 2.0, 3.0, 0.5, 0x00020008u32 as f64]);
-        assert_eq!(g.col.boxes[id].flags, 131848.0);
+        let f = ((1u32 << 31) | (1 << 17) | 0x12 | 0x300) as f64;
+        assert_eq!(flags_from(f, 0x8000000au32 as f64), -2147482854.0);
+        assert_eq!(flags_from(0x0302 as f64, 0x00020008u32 as f64), 131848.0);
+    }
+
+    /// stalePanes' compare: what a pane with fewer sites or no dice leaves unsaid is no difference; a word or a double it says is one.
+    #[test]
+    fn a_kept_pane_row_is_compared_by_what_the_pane_says() {
+        let p = PaneRow { bi: 7.0, gone: false, run: false, sites: vec![PaneSite { u: 0.5, v: 0.25, rot: 1.0, n: 3.0, seed: 9.0, rho: vec![1.0, 2.0, 3.0, 4.0], rz: 0.1, merge: 0.2 }], open: vec![0u8; 84], pending: Vec::new(), dice: None };
+        let (mut w, mut d) = (vec![0u32; GW_], vec![0.0f64; GD_]);
+        pane_row(&mut d, &mut w, &p);
+        assert!(pane_kept(&w, &d, &p));
+        // past the pane's sites, the dice's words and doubles: another pane's leavings
+        w[GW_N_ + 1] = 5;
+        w[GW_SEED_ + 7] = 5;
+        w[GW_COLS_] = 5;
+        d[G_SITE_] = 5.0;
+        d[G_DICE_AT_] = 5.0;
+        assert!(pane_kept(&w, &d, &p));
+        w[GW_N_] = 4;
+        assert!(!pane_kept(&w, &d, &p));
+        w[GW_N_] = 3;
+        d[1] = -0.25;
+        assert!(!pane_kept(&w, &d, &p));
     }
 
     #[test]
@@ -1203,17 +1299,13 @@ mod tests {
             x.live = true;
             x.lines = true;
             x.row_lines = true;
-            x.senses = 16.0;
-            x.row_senses = 16.0;
         }
         box_mirror_glass_begin(&mut g);
         assert!(g.col.mirror.owes && !g.col.mirror.lines);
-        assert_eq!(g.col.mirror.senses, 0.0);
         assert!(!box_mirror_owes_boxes(&mut g));
         box_mirror_again(&mut g, &[], None);
         assert!(g.col.mirror.owes, "still being worked on: the next question writes its rows again");
         assert!(g.col.mirror.lines);
-        assert_eq!(g.col.mirror.senses, 16.0);
         box_mirror_glass_end(&mut g);
         box_mirror_again(&mut g, &[], None);
         assert!(!g.col.mirror.owes);

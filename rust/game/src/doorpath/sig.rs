@@ -87,7 +87,7 @@ pub fn door_path_sent(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
 pub fn door_path_own(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) -> bool { todo!() }
 
 /// (src/game/doorpath.ts:317 DoorPath.drop)
-pub fn door_path_drop(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk, why: crate::doorpath::DoorPathDropWhy) { todo!() }
+pub fn door_path_drop(g: &mut crate::game::Game, w: &crate::doorpath::Walk, why: crate::doorpath::DoorPathDropWhy) { todo!() }
 
 /// (src/game/doorpath.ts:323 DoorPath.tick)
 pub fn door_path_tick(g: &mut crate::game::Game, dt: f64) { todo!() }

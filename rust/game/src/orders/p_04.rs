@@ -33,13 +33,6 @@ fn buttons_off(g: &mut Game, input: InputId, bits: i32) {
 fn shift_down(g: &mut Game, input: InputId) -> bool {
     crate::input::input_down(g, input, "ShiftLeft") || crate::input::input_down(g, input, "ShiftRight")
 }
-/// backTake(input): `Keys` holds `pressed` by value, so it is lent and put back
-fn back_take_input(g: &mut Game, input: InputId) -> bool {
-    let mut keys = crate::backkey::Keys { pressed: core::mem::take(&mut g.tab.input[input].pressed) };
-    let esc = crate::backkey::back_take(g, &mut keys);
-    g.tab.input[input].pressed = keys.pressed;
-    esc
-}
 /// `if (input === g.seat.input) g.seat.swallow(1)`
 fn swallow_if_seat(g: &mut Game, input: InputId) {
     let s = g.seat;
@@ -70,22 +63,6 @@ fn target_at(t: &OrderTarget) -> V3 {
         OrderTarget::Door(x) => x.at,
         OrderTarget::None(x) => x.at,
         OrderTarget::Foe(x) => x.at,
-    }
-}
-fn from_menu_target(t: SquadOrdersMenuTarget) -> OrderTarget {
-    match t {
-        SquadOrdersMenuTarget::Floor(x) => OrderTarget::Floor(x),
-        SquadOrdersMenuTarget::Door(x) => OrderTarget::Door(x),
-        SquadOrdersMenuTarget::None(x) => OrderTarget::None(x),
-        SquadOrdersMenuTarget::Foe(x) => OrderTarget::Foe(x),
-    }
-}
-fn hover_target(t: &OrderTarget) -> SquadOrdersHoverWordsT {
-    match t {
-        OrderTarget::Floor(x) => SquadOrdersHoverWordsT::Floor(x.clone()),
-        OrderTarget::Door(x) => SquadOrdersHoverWordsT::Door(x.clone()),
-        OrderTarget::None(x) => SquadOrdersHoverWordsT::None(x.clone()),
-        OrderTarget::Foe(x) => SquadOrdersHoverWordsT::Foe(x.clone()),
     }
 }
 /// `{ kind: 'none', at: [p[0], 0, p[2]] }`, p where Sam stands
@@ -183,7 +160,7 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: C
         }
     }
     pressed_delete(g, input, crate::consts::INTERACT_KEY);
-    let esc = if key != "Tab" { back_take_input(g, input) } else { pressed_delete(g, input, "Escape") };
+    let esc = if key != "Tab" { crate::backkey::back_take(g, input) } else { pressed_delete(g, input, "Escape") };
     let blur = pressed_has(g, input, "Blur") || pressed_has(g, input, "Paused");
     let rmb = crate::input::input_rmb_hit(g, input);
     if rmb { clicked_off(g, input, 4); }
@@ -379,9 +356,14 @@ pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderT
     true
 }
 
-/// `goalPart` with its three answers: `None` = null (nobody is free: said, no ring) · `Some(None)` = undefined (the ring it always was) ·
-/// `Some(Some(_))` = the men the ring is for. The skeleton's signature below has lost null from undefined.
-fn goal_part_three(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Option<SquadOrdersGoalPart>> {
+/// `this.goalPart(t, add)` for ring_up's argument (the same object in the TypeScript, two types here): the outer None is still null
+fn goal_part_or_nobody(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Option<SquadOrdersRingUpG>> {
+    squad_orders_goal_part(g, t, add).map(|p| p.map(|p| SquadOrdersRingUpG { men: p.men, split: p.split }))
+}
+
+/// Shift with the key: the men a tap of it on `t` would have sent; the ring is theirs. `None` = null (nobody is free: said, no ring) ·
+/// `Some(None)` = undefined (the ring it always was) · `Some(Some(_))` = the men the ring is for. (orders.ts goalPart)
+pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, add: bool) -> Option<Option<crate::orders::SquadOrdersGoalPart>> {
     if !add || !crate::planmode::goal_ring_on(g) { return Some(None); }
     let men = match crate::planmode::goal_men(g, t) {
         Some(men) => men,
@@ -397,15 +379,6 @@ fn goal_part_three(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Option<Sq
     } else {
         None
     })
-}
-/// goal_part_three for ring_up's argument: the outer None is still null
-fn goal_part_or_nobody(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Option<SquadOrdersRingUpG>> {
-    goal_part_three(g, t, add).map(|p| p.map(|p| SquadOrdersRingUpG { men: p.men, split: p.split }))
-}
-
-/// Shift with the key: the men a tap of it on `t` would have sent; the ring is theirs. (orders.ts goalPart)
-pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, add: bool) -> Option<crate::orders::SquadOrdersGoalPart> {
-    goal_part_three(g, t, add).flatten()
 }
 
 /// The ring's key would open a ring now. (orders.ts ringFree)
@@ -456,7 +429,7 @@ pub fn squad_orders_seats(g: &mut crate::game::Game, m: &crate::orders::Menu, r:
     }
     // the flat tree's first ring: a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's
     let q = if flat { squad_orders_menu_quick(g, m) } else { None };
-    let mt = if text(&q) { squad_orders_menu_target(g).map(from_menu_target) } else { None };
+    let mt = if text(&q) { squad_orders_menu_target(g) } else { None };
     if let (true, Some(mt)) = (text(&q), mt) {
         for d in 2..=wedges {
             let i = s_row[d];
@@ -657,7 +630,7 @@ pub fn squad_orders_ring_view(g: &mut crate::game::Game) -> Option<crate::cmdrin
         (Some(r), Some(menu)) => (r, menu),
         _ => return None,
     };
-    let mt = from_menu_target(squad_orders_menu_target(g).unwrap());
+    let mt = squad_orders_menu_target(g).unwrap();
     let mut wedges = Vec::new();
     let seat = squad_orders_seats(g, &menu, Some(r));
     let n = g.k.cmdring.wedges as usize;
@@ -678,7 +651,7 @@ pub fn squad_orders_ring_view(g: &mut crate::game::Game) -> Option<crate::cmdrin
     }
     let what = match &menu.target {
         OrderTarget::None(n) => n.man.map_or(String::new(), |man| g.gd[man].callsign.clone()),
-        t => { let h = hover_target(t); squad_orders_hover_words(g, Some(&h)) }
+        t => squad_orders_hover_words(g, Some(t)),
     };
     let who = squad_orders_who_tag(g).tag;
     let tone = squad_orders_tone_of(g, &menu.men).map(|t| String::from(t.as_str()));

@@ -1,4 +1,4 @@
-//! src/game/silent.ts lines 1 to 270
+//! src/game/silent.ts lines 1 to 274
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,10 +7,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `LOUD_ROWS.includes(id)`   (silent.ts:244, :245)
+/// `LOUD_ROWS.includes(id)`   (silent.ts:248, :249)
 fn is_loud_row(id: &str) -> bool { loud_rows().iter().any(|r| r == id) }
 
-/// a state as the TypeScript's literal makes it   (silent.ts:121, :255)
+/// a state as the TypeScript's literal makes it   (silent.ts:123, :259)
 fn new_state(cast: Vec<GuardId>, since: f64) -> State {
     State { cast, silent: false, since, hot: false, was: None, booted: None }
 }
@@ -50,10 +50,10 @@ pub fn set_silent(g: &mut crate::game::Game, on: bool, by: Option<crate::silent:
     if g.m.silent.silent_log.len() > 100 { g.m.silent.silent_log.drain(0..50); }
 }
 
-/// this teammate is under the silent posture this frame   (silent.ts silentMan)
-pub fn silent_man(g: &mut crate::game::Game, gd: GuardId) -> bool { squad_silent_of_view(g, gd) && mate(g, gd) }
+/// this teammate is under the silent posture this frame   (silent.ts underSilence)
+pub fn under_silence(g: &mut crate::game::Game, gd: GuardId) -> bool { squad_silent_of_view(g, gd) && mate(g, gd) }
 
-/// squadSilent(viewOf(g, gd)): one book is the game in hand, as viewOf says; else asked inside his seat   (silent.ts:127, seats.ts:244)
+/// squadSilent(viewOf(g, gd)): one book is the game in hand, as viewOf says; else asked inside his seat   (silent.ts:129, seats.ts:244)
 fn squad_silent_of_view(g: &mut Game, gd: GuardId) -> bool {
     if crate::seats::one_book(g) { return squad_silent(g); }
     let seat = crate::seats::view_of(g, gd);
@@ -62,7 +62,7 @@ fn squad_silent_of_view(g: &mut Game, gd: GuardId) -> bool {
 
 /// the speed his legs may be asked for   (silent.ts silentPace)
 pub fn silent_pace(g: &mut crate::game::Game, gd: GuardId, speed: f64) -> f64 {
-    if !silent_man(g, gd) {
+    if !under_silence(g, gd) {
         let cap = crate::unseen::unseen_pace(g, gd);
         return match cap {
             Some(c) if speed > c && !crate::frag::frag_running(g, gd) => c,
@@ -94,7 +94,7 @@ pub fn urgent(g: &mut crate::game::Game) -> bool {
 
 /// a walking footfall's base level; None: his usual   (silent.ts silentStep)
 pub fn silent_step(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
-    if !silent_man(g, gd) { return crate::unseen::unseen_step(g, gd); }
+    if !under_silence(g, gd) { return crate::unseen::unseen_step(g, gd); }
     let own = if g.k.silent.step > 0.0 {
         match crate::sneak::sneak_step(g, gd) { Some(x) => Some(x), None => Some(g.k.silent.step) }
     } else { None };
@@ -108,13 +108,13 @@ pub fn silent_step(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
 }
 
 /// his weapon light or torch is held off   (silent.ts silentDark)
-pub fn silent_dark(g: &mut crate::game::Game, gd: GuardId) -> bool { if silent_man(g, gd) { true } else { crate::unseen::unseen_dark(g, gd) } }
+pub fn silent_dark(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { crate::unseen::unseen_dark(g, gd) } }
 
 /// his line goes over the net   (silent.ts silentHush)
-pub fn silent_hush(g: &mut crate::game::Game, gd: GuardId) -> bool { if silent_man(g, gd) { true } else { crate::unseen::unseen_hush(g, gd) } }
+pub fn silent_hush(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { crate::unseen::unseen_hush(g, gd) } }
 
 /// he eases a door   (silent.ts silentEase)
-pub fn silent_ease(g: &mut crate::game::Game, gd: GuardId) -> bool { if silent_man(g, gd) { true } else { crate::unseen::unseen_ease(g, gd) } }
+pub fn silent_ease(g: &mut crate::game::Game, gd: GuardId) -> bool { if under_silence(g, gd) { true } else { crate::unseen::unseen_ease(g, gd) } }
 
 /// the boot is held back; counted   (silent.ts silentNoBoot)
 pub fn silent_no_boot(g: &mut crate::game::Game) -> bool {
@@ -157,9 +157,14 @@ pub fn own_hold(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
     !(st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || g.gd[h].awareness >= g.k.silent.noticed || urgent(g))
 }
 
-/// his round at `h` is held   (silent.ts silentHolds)
-pub fn silent_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
-    if !silent_man(g, gd) {
+/// is this round held: the room fight's and the cover's fire's one question   (silent.ts roundHeld)
+pub fn round_held(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+    silent_holds_round(g, gd, h) || crate::pairorders::pair_holds_round(g, gd, h) || crate::spotted::spotted_holds_round(g, gd, h)
+}
+
+/// his round at `h` is held   (silent.ts silentHoldsRound)
+pub fn silent_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+    if !under_silence(g, gd) {
         if !crate::holdfire::hold_fire_loud(g) {
             let (noticed, quiet) = (g.k.silent.noticed, quiet_gun(g, gd));
             if crate::unseen::unseen_holds(g, gd, h, noticed, quiet, &mut urgent) { return true; }
@@ -172,17 +177,17 @@ pub fn silent_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool 
     true
 }
 
-/// the man the room fight has him on is one the order will not let him shoot   (silent.ts silentOnMan)
-pub fn silent_on_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !silent_man(g, gd) { return false; }
+/// the man the room fight has him on is one the order will not let him shoot   (silent.ts silentHoldsTarget)
+pub fn silent_holds_target(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    if !under_silence(g, gd) { return false; }
     let op = match crate::roomfight::room_fight_op_of(g, gd) { Some(op) => op, None => return false };
     let h = match g.tab.roomfight_op[op].tgt { Some(h) => h, None => return false };
     g.gd[h].state != crate::game::GuardState::Dead && own_hold(g, gd, h)
 }
 
-/// his round at `h` would have to go through standing glass to reach `to`: held   (silent.ts silentGlassHolds)
-pub fn silent_glass_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId, c_2: CharId, to: V3) -> bool {
-    let sil = silent_man(g, gd);
+/// his round at `h` would have to go through standing glass to reach `to`: held   (silent.ts silentHoldsGlass)
+pub fn silent_holds_glass(g: &mut crate::game::Game, gd: GuardId, h: GuardId, c_2: CharId, to: V3) -> bool {
+    let sil = under_silence(g, gd);
     let uns = !sil && !crate::holdfire::hold_fire_loud(g) && crate::unseen::unseen_glass(g, gd);
     let out = if sil { reached(g, gd) } else { !uns && !crate::holdfire::hold_fire_glass(g, gd) };
     if out { return false; }
@@ -211,17 +216,14 @@ pub fn silent_compromised(g: &mut crate::game::Game) -> bool {
     match g.m.silent.states.get(key) { Some(s) => s.hot, None => false }
 }
 
-fn row_targets() -> Vec<crate::orders::TargetKind> { vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None] }
-fn row_listed() -> Vec<crate::orders::TargetKind> { vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::None] }
-
 /// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are   (silent.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
     let silent = g.tab.orders_order_def.push(crate::orders::OrderDef {
         id: String::from("silent"),
         head: Some(String::from(HEAD)),
         label: crate::orders::OrderLabel::Text { text: String::from("go silent") },
-        targets: row_targets(),
-        listed: Some(row_listed()),
+        targets: targets(),
+        listed: listed(),
         free: Some(true),
         only: Some(crate::orders::OrderOnly::SilentAll),
         ack: Some(vec![String::from("going quiet."), String::from("copy. silent.")]),
@@ -232,8 +234,8 @@ pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
         id: String::from("loud"),
         head: Some(String::from(HEAD)),
         label: crate::orders::OrderLabel::Text { text: String::from("go loud") },
-        targets: row_targets(),
-        listed: Some(row_listed()),
+        targets: targets(),
+        listed: listed(),
         free: Some(true),
         only: Some(crate::orders::OrderOnly::SilentAll),
         ack: Some(vec![String::from("going loud."), String::from("copy. loud.")]),
@@ -277,7 +279,7 @@ pub fn seat(g: &mut crate::game::Game) {
     g.orders.posture = Some(seam_posture(g));
 }
 
-/// `posture.word`   (silent.ts:243): what the posture's seam should call
+/// `posture.word`   (silent.ts:247): what the posture's seam should call
 fn posture_word(g: &mut Game) -> Option<String> {
     if !crate::orders::squad_orders_active(g) { return None; }
     if squad_silent(g) {
@@ -286,11 +288,11 @@ fn posture_word(g: &mut Game) -> Option<String> {
     let w = crate::unseen::unseen_word(g);
     Some(loud_word(w.as_deref()))
 }
-/// `posture.mark`   (silent.ts:244): what the posture's seam should call
+/// `posture.mark`   (silent.ts:248): what the posture's seam should call
 fn posture_mark(g: &mut Game, def: OrdersOrderDefId) -> &'static str {
     if squad_silent(g) && is_loud_row(&g.tab.orders_order_def[def].id) { " · LOUD" } else { "" }
 }
-/// `posture.given`   (silent.ts:245): what the posture's seam should call
+/// `posture.given`   (silent.ts:249): what the posture's seam should call
 fn posture_given(g: &mut Game, def: OrdersOrderDefId) {
     let loud = is_loud_row(&g.tab.orders_order_def[def].id);
     silent_tool(g, loud);
@@ -352,20 +354,10 @@ pub fn silent_summary(g: &mut crate::game::Game) -> String {
         match g.m.silent.states.get(key) { Some(s) if s.hot => "SILENT · compromised", _ => "SILENT" }
     } else { "loud" };
     let lasted = match g.m.silent.states.get(key) {
-        Some(s) if s.since > 0.0 => alloc::format!(" for {} s", to_fixed_0(g.time - s.since)),
+        Some(s) if s.since > 0.0 => alloc::format!(" for {} s", js::to_fixed(g.time - s.since, 0)),
         _ => String::new(),
     };
     alloc::format!("{}{} · {} men · a new squad starts {}", word, lasted, n, start)
-}
-
-/// `x.toFixed(0)`: a tie goes up, which Rust's `{:.0}` does not do
-fn to_fixed_0(x: f64) -> String {
-    if x.is_nan() { return String::from("NaN"); }
-    if x < 0.0 { return alloc::format!("-{}", to_fixed_0(-x)); }
-    let f = m::floor(x);
-    let n = if x - f >= 0.5 { f + 1.0 } else { f };
-    if n == 0.0 { return String::from("0"); }
-    alloc::format!("{:.0}", n)
 }
 
 #[cfg(test)]
@@ -378,10 +370,10 @@ mod tests {
         assert_eq!(loud_word(Some("sneaking")), "loud · sneaking");
     }
     #[test]
-    fn to_fixed_as_the_language() {
+    fn the_summary_seconds_as_the_language() {
         // the right-hand strings are what bun printed for x.toFixed(0)
         for (x, s) in [(0.0, "0"), (0.4, "0"), (0.5, "1"), (1.5, "2"), (2.5, "3"), (0.49999999999999994, "0"), (-0.4, "-0"), (-2.5, "-3"), (44.999, "45"), (1234.5, "1235")] {
-            assert_eq!(to_fixed_0(x), s, "{}", x);
+            assert_eq!(js::to_fixed(x, 0), s, "{}", x);
         }
     }
 }

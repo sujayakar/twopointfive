@@ -33,7 +33,7 @@ pub fn ff_side(g: &mut crate::game::Game, sg: Option<GuardId>) -> bool {
 }
 
 /// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach. (friendlyfire.ts friendInCone)
-pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<&crate::weapons::WeaponDef>, on: Option<CharId>) -> Option<crate::friendlyfire::FriendInCone> {
+pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<crate::friendlyfire::FriendInCone> {
     if !ff_live(g) || !ff_side(g, Some(self_)) {
         return None;
     }
@@ -47,13 +47,9 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
     dz /= l;
     let rise = (to[1] - muzzle[1]) / l;
     let k = g.k.friendlyfire.cone_k * m::max(0.0, spread);
-    let own_def; // his own gun's row, copied out of g: the calls below take g
-    let w: &crate::weapons::WeaponDef = match def {
+    let w = match def {
         Some(d) => d,
-        None => {
-            own_def = g.m.weapons.weapons.get(g.fa[g.gd[self_].weapon].def).unwrap().clone();
-            &own_def
-        }
+        None => g.fa[g.gd[self_].weapon].def,
     };
     let self_ch = g.gd[self_].ch;
     let energy = crate::glasspen::shot_energy(g, self_ch, Some(w));
@@ -70,7 +66,7 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
     }
     let mut best: Option<crate::friendlyfire::FriendInCone> = None;
     let mut bt = f64::INFINITY;
-    for pl in men_of(g) {
+    for pl in crate::seats::men(g) {
         if !g.pl[pl].down {
             let c = g.pl[pl].ch;
             ask(g, c, crate::friendlyfire::FriendInCone::Player, muzzle, dx, dz, rise, k, past, energy, thin, &mut best, &mut bt);
@@ -147,7 +143,7 @@ pub fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzle: V3, 
         }
     }
     let foe = crate::teams::foe_char(g, sg);
-    if friend_in_cone(g, sg, muzzle, to, spread, Some(def), foe).is_none() {
+    if friend_in_cone(g, sg, muzzle, to, spread, Some(def.id), foe).is_none() {
         return false;
     }
     g.stats.friendlyfire.unpressed += 1;
@@ -210,10 +206,4 @@ pub fn ff_note(g: &mut crate::game::Game, sg: Option<GuardId>, is_player: bool, 
     } else if sg.is_some() {
         s.mate_on_mate += 1;
     }
-}
-
-/// `men(g)`: the stub also asks for the `Pick<Game, 'seats' | 'player'>` as a value, filled here from `g`.
-fn men_of(g: &mut Game) -> Vec<PlayerId> {
-    let view = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    crate::seats::men(g, &view)
 }

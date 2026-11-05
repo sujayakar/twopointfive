@@ -1,4 +1,4 @@
-//! src/game/netquiet.ts lines 1 to 429
+//! src/game/netquiet.ts lines 1 to 433
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,26 +12,14 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `Mind.say` and `Mind.last_kind` are indices of THIS list (netquiet.ts KINDS), not of the enum's own order.
 static KINDS: [LineKind; 6] = [LineKind::Name, LineKind::Why, LineKind::Last, LineKind::Body, LineKind::Alone, LineKind::Ask];
 
-/// (netquiet.ts LINES)
-fn lines_of(kind: LineKind) -> &'static [&'static str] {
-    match kind {
-        LineKind::Name => &["{name}. … {name}.", "{name}? … {name}.", "{name}. {name}, answer up."],
-        LineKind::Why => &["why's nobody answering?", "where is everybody? answer me.", "that's another of you quiet. come on."],
-        LineKind::Last => &["somebody talk to me!", "anybody. anybody at all, talk to me!", "is anyone left on this net?"],
-        LineKind::Body => &["he's down. nobody heard a thing?", "man down here. not a sound out of him.", "he's down, and nobody heard it?"],
-        LineKind::Alone => &["that's my whole squad quiet. it's just me in here.", "nobody left in here but me.", "it's gone quiet in here. i'm on my own."],
-        LineKind::Ask => &["all posts, answer up.", "anyone on this net, come in.", "who's still up? sound off."],
-    }
+/// (netquiet.ts LINES) one kind's pool, from the skeleton's table
+fn lines_of(kind: LineKind) -> Vec<String> {
+    lines().get(String::from(kind.as_str())).cloned().unwrap_or_default()
 }
 
 /// (netquiet.ts LINES_NOW) a line as it is said now, by the line it stands for
-static LINES_NOW: [(&str, &str); 2] = [
-    ("that's another of you quiet. come on.", "that's another one of you not answering. come on."),
-    ("that's my whole squad quiet. it's just me in here.", "my whole squad's quiet. it's just me in here."),
-];
-
-fn line_now(t: &str) -> Option<&'static str> {
-    LINES_NOW.iter().find(|(was, _)| *was == t).map(|(_, now)| *now)
+fn line_now(t: &str) -> Option<String> {
+    lines_now().get(String::from(t)).cloned()
 }
 
 /// `KINDS.indexOf(kind)`
@@ -53,18 +41,18 @@ fn id_of(g: &mut Game, gd: GuardId) -> f64 {
 
 /// this file's lines, every kind's or one kind's, with a line's wording of now beside it (netquiet.ts netQuietLines)
 pub fn net_quiet_lines(g: &mut crate::game::Game, kind: Option<crate::netquiet::LineKind>) -> Vec<String> {
-    let mut l: Vec<&str> = Vec::new();
+    let mut l: Vec<String> = Vec::new();
     match kind {
-        Some(k) => l.extend_from_slice(lines_of(k)),
+        Some(k) => l.extend(lines_of(k)),
         None => {
             for k in KINDS.iter() {
-                l.extend_from_slice(lines_of(*k));
+                l.extend(lines_of(*k));
             }
         }
     }
-    let now: Vec<&str> = l.iter().filter_map(|t| line_now(t)).collect();
+    let now: Vec<String> = l.iter().filter_map(|t| line_now(t)).collect();
     l.extend(now);
-    l.iter().map(|t| String::from(*t)).collect()
+    l
 }
 
 /// distance in plan (netquiet.ts flat)
@@ -103,14 +91,14 @@ pub fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// …on the net: alive, not in Sam's arm, not a man who has run (netquiet.ts onNet)
 pub fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    ours(g, gd) && g.gd[gd].held.is_none() && !crate::runner::runner_owns(g, gd)
+    ours(g, gd) && g.gd[gd].held.is_none() && !crate::owner::has_him(g, gd, crate::owner::own().runner)
 }
 
 /// gone to his mates, whether or not they know it yet (netquiet.ts lostTo)
 pub fn lost_to(g: &mut crate::game::Game, m: GuardId) -> bool {
     g.gd[m].state == crate::game::GuardState::Dead
         || g.gd[m].held.is_some()
-        || crate::runner::runner_owns(g, m)
+        || crate::owner::has_him(g, m, crate::owner::own().runner)
         || !g.guards.contains(&m)
 }
 
@@ -185,7 +173,7 @@ pub fn owe(n: &mut crate::netquiet::Mind, kind: crate::netquiet::LineKind, name:
 
 /// he says a line of the kind's pool (netquiet.ts speak)
 pub fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::LineKind, name: &str, radio: bool) {
-    let pool: Vec<&str> = lines_of(kind).iter().map(|t| line_now(t).unwrap_or(*t)).collect();
+    let pool: Vec<String> = lines_of(kind).into_iter().map(|t| line_now(&t).unwrap_or(t)).collect();
     let len = pool.len() as f64;
     let at = js::rem(m::floor(crate::math_dice::sim_random(g) * len), len) as usize;
     let text = pool[at].replace("{name}", name);
@@ -334,7 +322,7 @@ pub fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> O
 /// a body found: the finder, and the men of `men` he tells (netquiet.ts netQuietBody)
 pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &[GuardId]) {
     let Some(finder) = finder else { return };
-    if !ours(g, finder) || crate::runner::runner_owns(g, finder) {
+    if !ours(g, finder) || crate::owner::has_him(g, finder, crate::owner::own().runner) {
         return;
     }
     let (k_body, k_told, calm_secs, body_beat) = (g.k.netquiet.body, g.k.netquiet.body_told, g.k.netquiet.calm_secs, g.k.netquiet.body_beat);
@@ -674,8 +662,8 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
         && g.gd[gd].held.is_none()
         && g.time >= g.gd[gd].dazzled_until
         && g.time >= g.gd[gd].stagger_until
-        && !crate::morale::morale_owns(g, gd)
-        && !crate::runner::runner_owns(g, gd)
+        && !crate::owner::has_him(g, gd, crate::owner::own().morale)
+        && !crate::owner::has_him(g, gd, crate::owner::own().runner)
 }
 
 /// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither (netquiet.ts lastKind)
@@ -737,6 +725,22 @@ pub fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
     n.last >= SAID && n.last <= LOW && !(n.last == SAID && n.t > last_beat + give_up)
 }
 
+/// the record of who is the last man at his act, as the frame's acts leave it (netquiet.ts syncLastMan)
+pub fn sync_last_man(g: &mut crate::game::Game) {
+    let last_man = crate::owner::own().last_man;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        let t = g.time;
+        if mine(g, gd) {
+            crate::owner::claim_man(g, gd, last_man, t, None);
+        } else {
+            crate::owner::release_man(g, gd, last_man, t);
+        }
+    }
+}
+
 /// at his post: holding his room, on nobody's scripted leg (netquiet.ts posted)
 pub fn posted(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) -> bool {
     g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold && g.gd[gd].hold && g.gd[gd].script.is_none()
@@ -769,10 +773,9 @@ pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
         i += 1;
         if !ours(g, gd) {
             g.m.netquiet.state_of.delete(gd);
-            crate::netquietfeed::net_feed_hold(g, gd, false);
             continue;
         }
-        if crate::runner::runner_owns(g, gd) {
+        if crate::owner::has_him(g, gd, crate::owner::own().runner) {
             if let Some(n) = g.m.netquiet.state_of.get_mut(gd) {
                 n.last = NONE;
                 n.t = 0.0;
@@ -784,11 +787,11 @@ pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
                 n.say = -1.0;
                 n.low = false;
             }
-            crate::netquietfeed::net_feed_hold(g, gd, false);
             continue;
         }
         tick_man(g, gd, dt);
     }
+    sync_last_man(g);
 }
 
 /// one man's frame of the tick; a `return` here is the TypeScript loop's `continue` (netquiet.ts netQuietTick)
@@ -817,8 +820,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         n.news_t = m::min(n.news_t + dt, 60.0);
     }
     n.roused = if patrol { 0.0 } else { m::min(n.roused + dt, 60.0) };
-    let held = mine(g, gd);
-    crate::netquietfeed::net_feed_hold(g, gd, held);
     // the line owed
     let n = mind(g, gd);
     if n.say >= 0.0 {
@@ -931,8 +932,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         n.last = SAID;
         n.t = 0.0;
         g.stats.netquiet.last += 1;
-        let held = mine(g, gd);
-        crate::netquietfeed::net_feed_hold(g, gd, held);
         if !said {
             speak(g, gd, kind, "", true);
         }
@@ -949,7 +948,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         n.mate_t = 0.0;
         n.spot = None;
         n.look = None;
-        crate::netquietfeed::net_feed_hold(g, gd, false);
         g.stats.netquiet.released += 1;
         return;
     }
@@ -959,7 +957,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         }
         let Some(d) = d else {
             n.last = DONE;
-            crate::netquietfeed::net_feed_hold(g, gd, false);
             return;
         };
         let out = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free && g.gd[gd].script.is_none();
@@ -1020,7 +1017,6 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     if n.last == BACK {
         let Some(d) = d else {
             n.last = DONE;
-            crate::netquietfeed::net_feed_hold(g, gd, false);
             return;
         };
         if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Move {
@@ -1058,7 +1054,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     // nothing seen, nothing heard for `alertSecs`: he is no longer 'alert'; the spot, the crouch and the arc stay
     let alert = g.gd[gd].state == crate::game::GuardState::Alert;
     let long_enough = mind(g, gd).t > k.alert_secs;
-    if alert && ok && long_enough && g.time - m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_t) > k.alert_secs {
+    if alert && ok && long_enough && g.time - m::max(g.gd[gd].last_seen_t, g.gd[gd].witness.heard.last_t) > k.alert_secs && (!g.k.belief.on || g.gd[gd].awareness < 0.85) {
         ease(g, gd);
     } else if !alert && ok {
         wary(g, gd);
@@ -1154,9 +1150,15 @@ mod tests {
     }
 
     #[test]
+    fn the_typed_kinds_stand_in_the_order_of_the_skeletons_table() {
+        let words: Vec<String> = KINDS.iter().map(|k| String::from(k.as_str())).collect();
+        assert_eq!(words, kinds());
+    }
+
+    #[test]
     fn every_reworded_line_stands_for_a_line_of_a_pool() {
-        for (was, _) in LINES_NOW.iter() {
-            assert!(KINDS.iter().any(|k| lines_of(*k).contains(was)), "{}", was);
+        for was in lines_now().keys() {
+            assert!(KINDS.iter().any(|k| lines_of(*k).contains(&was)), "{}", was);
         }
     }
 

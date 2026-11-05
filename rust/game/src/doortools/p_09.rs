@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 3312 to 3694
+//! src/game/doortools.ts lines 3313 to 3695
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -104,15 +104,7 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
             }
         }
         // …and Sam, as one of ours: dazzled as a teammate there is, never felled (every player's man: eachSeat)
-        let seats = g.seats.clone();
-        if seats.len() == 1 {
-            if blow_seat(g, d, side, fc, inn, out) { sam_too = true; }
-        } else {
-            for s in seats {
-                let pl = crate::cmd::seat_man(g, s);
-                if crate::seats::with_seat(g, pl, &mut |g: &mut Game| blow_seat(g, d, side, fc, inn, out)) { sam_too = true; }
-            }
-        }
+        crate::seats::each_seat(g, &mut |g: &mut Game| { if blow_seat(g, d, side, fc, inn, out) { sam_too = true; } });
     });
     crate::morale::morale_blast(g, inn, Some(who));
     g.door_tools.stats.blown += 1.0;
@@ -165,9 +157,10 @@ pub fn door_tools_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: 
     r.dazzled_until = m::max(r.dazzled_until, until);
     r.react_t = m::max(r.react_t, secs);
     r.awareness = m::max(r.awareness, 0.6);
-    if r.state != crate::game::GuardState::Alert { r.last_known = Some(v3::copy(at)); }
-    if ai { r.witness.dazzled += 1.0; }
-    r.path = Vec::new();
+    if r.state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
+    if ai { g.gd[gd].witness.dazzled += 1.0; }
+    crate::game::guard_set_path(g, gd, Vec::new());
+    let r = &mut g.gd[gd];
     r.path_goal = None;
     r.speed = 0.0;
     r.dazzled_at = Some(v3::copy(at));

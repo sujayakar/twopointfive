@@ -91,10 +91,9 @@ pub fn cover_build(g: &mut Game) {
     let leaves = core::mem::take(&mut g.col.dynamic_boxes);
     let found = {
         let mut solid = |a: V3, b: V3| crate::scene_collision::segment_blocked(g, a, b, None, None, None);
-        // SKELETON-GAP: gaps_of returning Vec<Opening> (it has no g to make rows with). Its body, p_01's gap_openings, is called for the values, and
-        // an opening gets its row of g.tab.cover_opening only once it is kept (the TypeScript keeps no other).
-        let mut found = super::p_01::gap_openings(&nav, true, &k, Some(&mut solid));
-        found.extend(super::p_01::gap_openings(&nav, false, &k, Some(&mut solid)));
+        // (an opening gets its row of g.tab.cover_opening only once it is kept, below: nothing holds the others)
+        let mut found = gaps_of(&nav, true, &k, Some(&mut solid));
+        found.extend(gaps_of(&nav, false, &k, Some(&mut solid)));
         found
     };
     for o in found {

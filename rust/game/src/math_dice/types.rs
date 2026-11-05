@@ -55,17 +55,3 @@ impl SimDice {
     }
 }
 impl Default for SimDice { fn default() -> Self { Self::blank() } }
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct MathDiceMod {
-    /// (src/math/dice.ts:50 cur)
-    pub cur: Option<crate::math_dice::SimDice>,
-}
-impl MathDiceMod {
-    pub fn blank() -> Self {
-        MathDiceMod {
-            cur: None,
-        }
-    }
-}

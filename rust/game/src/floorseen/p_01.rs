@@ -13,7 +13,7 @@ pub fn floor_seen_new(g: &mut crate::game::Game) -> crate::floorseen::FloorSeen 
 }
 
 /// Once a frame: bring the staggered living men's record of seen floor up to date; `reach` in metres.   (floorseen.ts FloorSeen.tick)
-pub fn floor_seen_tick(g: &mut crate::game::Game, men: &mut Vec<GuardId>, reach: f64) {
+pub fn floor_seen_tick(g: &mut crate::game::Game, men: &[GuardId], reach: f64) {
     let (cs, w, h, t) = (g.col.nav.cell, g.col.nav.w, g.col.nav.h, g.time);
     let frame = {
         let s = g.door_tools.seen.as_mut().unwrap();

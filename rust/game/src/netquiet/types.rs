@@ -26,7 +26,7 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: Mind, src/game/netquiet.ts:121)
+/// (TypeScript: Mind, src/game/netquiet.ts:122)
 #[derive(Clone, Debug)]
 pub struct Mind {
     pub quiet: f64,
@@ -103,7 +103,7 @@ impl Mind {
 }
 impl Default for Mind { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NetQuietSnap, src/game/netquiet.ts:497)
+/// (TypeScript: NetQuietSnap, src/game/netquiet.ts:495)
 #[derive(Clone, Debug)]
 pub struct NetQuietSnap {
     pub men: Vec<Option<Vec<f64>>>,
@@ -128,7 +128,7 @@ impl NetQuietSnap {
 }
 impl Default for NetQuietSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:88 NETQUIET_LOG, src/game/netquiet.ts:88)
+/// (TypeScript: inline at src/game/netquiet.ts:89 NETQUIET_LOG, src/game/netquiet.ts:89)
 #[derive(Clone, Debug)]
 pub struct NetquietModNETQUIETLOGItem {
     pub id: f64,
@@ -151,7 +151,7 @@ impl NetquietModNETQUIETLOGItem {
 }
 impl Default for NetquietModNETQUIETLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:92 NETQUIET_QA, src/game/netquiet.ts:92)
+/// (TypeScript: inline at src/game/netquiet.ts:93 NETQUIET_QA, src/game/netquiet.ts:93)
 #[derive(Clone, Copy, Debug)]
 pub struct NETQUIETQA {
     pub broken: bool,
@@ -166,7 +166,7 @@ impl NETQUIETQA {
 }
 impl Default for NETQUIETQA { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:260 arcAt ->, src/game/netquiet.ts:260)
+/// (TypeScript: inline at src/game/netquiet.ts:262 arcAt ->, src/game/netquiet.ts:262)
 #[derive(Clone, Copy, Debug)]
 pub struct ArcAt {
     pub seen: f64,
@@ -187,7 +187,7 @@ impl ArcAt {
 }
 impl Default for ArcAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:458 netQuietPose ->, src/game/netquiet.ts:458)
+/// (TypeScript: inline at src/game/netquiet.ts:456 netQuietPose ->, src/game/netquiet.ts:456)
 #[derive(Clone, Copy, Debug)]
 pub struct NetQuietPose {
     pub aim: Option<V3>,
@@ -204,7 +204,7 @@ impl NetQuietPose {
 }
 impl Default for NetQuietPose { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:471 netQuietSpot ->, src/game/netquiet.ts:471)
+/// (TypeScript: inline at src/game/netquiet.ts:469 netQuietSpot ->, src/game/netquiet.ts:469)
 #[derive(Clone, Copy, Debug)]
 pub struct NetQuietSpot {
     pub to: Option<V3>,
@@ -223,7 +223,7 @@ impl NetQuietSpot {
 }
 impl Default for NetQuietSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:476 netQuietOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at quiet netQuietOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Debug)]
 pub struct NetQuietOf {
     pub quiet: f64,
@@ -303,9 +303,9 @@ impl Default for NetQuietOf { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct NetquietMod {
-    /// (src/game/netquiet.ts:88 NETQUIET_LOG)
+    /// (src/game/netquiet.ts:89 NETQUIET_LOG)
     pub netquiet_log: Vec<crate::netquiet::NetquietModNETQUIETLOGItem>,
-    /// (src/game/netquiet.ts:124 stateOf)
+    /// (src/game/netquiet.ts:125 stateOf)
     pub state_of: JsMap<GuardId, crate::netquiet::Mind>,
 }
 impl NetquietMod {
@@ -340,32 +340,32 @@ pub struct NetquietStats {
     pub staff_bodies: i32,
 }
 
-/// (src/game/netquiet.ts:92 NETQUIET_QA: a table nothing writes)
+/// (src/game/netquiet.ts:93 NETQUIET_QA: a table nothing writes)
 pub fn netquiet_qa() -> crate::netquiet::NETQUIETQA { crate::netquiet::NETQUIETQA { broken: false } }
 
-/// (src/game/netquiet.ts:99 KINDS: a table nothing writes)
+/// (src/game/netquiet.ts:100 KINDS: a table nothing writes)
 pub fn kinds() -> Vec<String> { alloc::vec![String::from("name"), String::from("why"), String::from("last"), String::from("body"), String::from("alone"), String::from("ask")] }
 
-/// (src/game/netquiet.ts:100 LINES: a table nothing writes)
+/// (src/game/netquiet.ts:101 LINES: a table nothing writes)
 pub fn lines() -> JsMap<String, Vec<String>> { { let mut t = JsMap::new(); t.set(String::from("name"), alloc::vec![String::from("{name}. … {name}."), String::from("{name}? … {name}."), String::from("{name}. {name}, answer up.")]); t.set(String::from("why"), alloc::vec![String::from("why's nobody answering?"), String::from("where is everybody? answer me."), String::from("that's another of you quiet. come on.")]); t.set(String::from("last"), alloc::vec![String::from("somebody talk to me!"), String::from("anybody. anybody at all, talk to me!"), String::from("is anyone left on this net?")]); t.set(String::from("body"), alloc::vec![String::from("he's down. nobody heard a thing?"), String::from("man down here. not a sound out of him."), String::from("he's down, and nobody heard it?")]); t.set(String::from("alone"), alloc::vec![String::from("that's my whole squad quiet. it's just me in here."), String::from("nobody left in here but me."), String::from("it's gone quiet in here. i'm on my own.")]); t.set(String::from("ask"), alloc::vec![String::from("all posts, answer up."), String::from("anyone on this net, come in."), String::from("who's still up? sound off.")]); t } }
 
-/// (src/game/netquiet.ts:109 LINES_NOW: a table nothing writes)
-pub fn lines_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("that\\s another of you quiet. come on."), String::from("that's another one of you not answering. come on.")); t.set(String::from("that\\s my whole squad quiet. it\\s just me in here."), String::from("my whole squad's quiet. it's just me in here.")); t } }
+/// (src/game/netquiet.ts:110 LINES_NOW: a table nothing writes)
+pub fn lines_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("that's another of you quiet. come on."), String::from("that's another one of you not answering. come on.")); t.set(String::from("that's my whole squad quiet. it's just me in here."), String::from("my whole squad's quiet. it's just me in here.")); t } }
 
-/// (src/game/netquiet.ts:114 NONE)
+/// (src/game/netquiet.ts:115 NONE)
 pub const NONE: f64 = 0.0;
 
-/// (src/game/netquiet.ts:114 SAID)
+/// (src/game/netquiet.ts:115 SAID)
 pub const SAID: f64 = 1.0;
 
-/// (src/game/netquiet.ts:114 BACK)
+/// (src/game/netquiet.ts:115 BACK)
 pub const BACK: f64 = 2.0;
 
-/// (src/game/netquiet.ts:114 LOW)
+/// (src/game/netquiet.ts:115 LOW)
 pub const LOW: f64 = 3.0;
 
-/// (src/game/netquiet.ts:114 DONE)
+/// (src/game/netquiet.ts:115 DONE)
 pub const DONE: f64 = 4.0;
 
-/// (src/game/netquiet.ts:486 VISIT)
+/// (src/game/netquiet.ts:484 VISIT)
 pub const VISIT: &str = "twopointsix.netquiet.visit";

@@ -7,16 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Each scenario's name in the player's words, by its kind's word.   (scenarioRun.ts WORDS)
-static WORDS: &[(&str, &str)] = &[("nightbreach", "night breach"), ("roomclear", "room clear"), ("rescue", "hostage rescue"), ("quiet", "quiet mission")];
-
-fn word(kind: &str) -> &'static str {
-    for &(k, w) in WORDS {
-        if k == kind {
-            return w;
-        }
-    }
-    unreachable!("a scenario kind with no word")
+/// A scenario's name in the player's words, by its kind's word.   (scenarioRun.ts WORDS, the skeleton's `words()`)
+fn word(kind: &str) -> String {
+    words().get(String::from(kind)).cloned().expect("a scenario kind with no word")
 }
 
 /// `w[0].toUpperCase() + w.slice(1)`; every word of WORDS starts with an ASCII letter.
@@ -211,7 +204,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 
 /// A refusal in the card's words.   (scenarioRun.ts refusalWords)
 pub fn refusal_words(spec: &crate::scene_scenario_list::ScenarioSpec, why: &str) -> String {
-    alloc::format!("{} did not start: {}", capitalised(word(spec.kind.as_str())), why)
+    alloc::format!("{} did not start: {}", capitalised(&word(spec.kind.as_str())), why)
 }
 
 /// Which scenario is up on this game right now; the room clear is asked first, being the night breach on its own layout.   (scenarioRun.ts activeScenario)
@@ -285,7 +278,7 @@ pub fn running_scenario(g: &mut crate::game::Game, level_file: Option<&str>, lis
     }
     let title = match &entry {
         Some(e) => e.title.clone(),
-        None => capitalised(word(kind.as_str())),
+        None => capitalised(&word(kind.as_str())),
     };
     Some(RunningScenario { kind: running_kind(kind), squad, entry, title, team, saves: None })
 }

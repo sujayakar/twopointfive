@@ -5,49 +5,9 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 type P2 = [f64; 2];
-
-fn row_of(core: Option<V3>, pale: Option<f64>, cell: &[Shape], thick: f64, span: P2, slim: P2, tears: P2, ragged: Option<BreakRowRagged>, again: Option<BreakRowAgain>, small: (f64, P2, P2), fines: [f64; 3], rest: f64, level: f64, mark: f64) -> BreakRow {
-    BreakRow { core, pale, cell: cell.to_vec(), thick, span, slim, tears, ragged, again, small: BreakRowSmall { n: small.0, size: small.1, aspect: small.2 }, dust: fines[0], sparks: fines[1], puff: fines[2], rest, level, mark }
-}
-fn ragged_of(deg: P2, bite: f64, grain: Option<bool>) -> Option<BreakRowRagged> { Some(BreakRowRagged { deg, bite, grain }) }
-fn again_of(land: f64, kick: f64, how: Split, chips: f64) -> Option<BreakRowAgain> { Some(BreakRowAgain { land, kick, how, chips, chance: None }) }
-
-/// THE TABLE, one row a material: `BREAK[mat]`. Private until the skeleton gives `BREAK` its rows (notes, Skeleton).   (breakTable.ts BREAK)
-fn break_row(mat: Mat) -> BreakRow {
-    use Shape::{Lump, Panel, Slab, Snapped, Strip, Wedge};
-    match mat {
-        Mat::Plasterboard => row_of(Some([0.92, 0.91, 0.88]), None, &[Slab, Wedge], 0.015, [0.15, 0.7], [0.35, 0.8], [2.0, 3.0], ragged_of([8.0, 25.0], 0.12, None),
-            again_of(6.5, 0.7, Split::Across, 4.0), (18.0, [0.01, 0.035], [1.0, 1.6]), [6.0, 0.0, 1.4], 0.1, 0.0, 0.03),
-        Mat::Masonry => row_of(Some([0.6, 0.59, 0.57]), None, &[], 0.03, [0.1, 0.2], [0.6, 1.0], [2.0, 3.0], None,
-            None, (16.0, [0.008, 0.02], [1.0, 1.0]), [5.0, 5.0, 1.0], 0.1, 0.0, 0.02),
-        Mat::Blockwork => row_of(Some([0.6, 0.59, 0.57]), None, &[Lump, Slab], 0.05, [0.16, 0.4], [0.55, 0.95], [2.0, 3.0], None,
-            None, (20.0, [0.01, 0.035], [1.0, 1.4]), [8.0, 3.0, 1.8], 0.08, 0.0, 0.03),
-        Mat::Wood => row_of(Some([0.78, 0.63, 0.42]), None, &[Snapped, Strip], 0.011, [0.3, 0.6], [0.16, 0.33], [1.0, 2.0], ragged_of([8.0, 25.0], 0.12, Some(true)),
-            again_of(NEVER, 0.85, Split::Along, 4.0), (18.0, [0.006, 0.014], [3.0, 6.0]), [3.0, 0.0, 0.0], 0.25, 0.0, 0.014),
-        Mat::Metal => row_of(None, None, &[Panel], 0.004, [0.3, 0.48], [0.6, 1.0], [0.0, 0.0], None,
-            None, (2.0, [0.006, 0.012], [1.0, 2.0]), [0.0, 16.0, 0.0], 0.35, 0.5, 0.0),
-        Mat::Glass => row_of(None, None, &[], 0.003, [0.1, 0.3], [0.4, 1.0], [0.0, 0.0], None, None, (0.0, [0.01, 0.04], [1.0, 2.0]), [0.0, 0.0, 0.0], 0.22, 0.0, 0.0),
-        Mat::GlassTough => row_of(None, None, &[], 0.003, [0.1, 0.3], [0.4, 1.0], [0.0, 0.0], None, None, (0.0, [0.005, 0.01], [1.0, 1.0]), [0.0, 0.0, 0.0], 0.22, 0.0, 0.0),
-        Mat::GlassLam => row_of(None, None, &[], 0.003, [0.1, 0.3], [0.4, 1.0], [0.0, 0.0], None, None, (0.0, [0.005, 0.01], [1.0, 1.0]), [0.0, 0.0, 0.0], 0.22, 0.0, 0.0),
-        Mat::Screen => row_of(Some([0.09, 0.09, 0.1]), None, &[Wedge, Wedge], 0.02, [0.15, 0.3], [0.5, 0.9], [1.0, 2.0], None,
-            again_of(5.0, NEVER, Split::Diag, 5.0), (14.0, [0.006, 0.014], [1.0, 2.0]), [0.0, 6.0, 0.0], 0.22, 0.0, 0.0),
-        Mat::Fabric => row_of(None, Some(0.35), &[Wedge, Wedge], 0.012, [0.3, 0.5], [0.6, 1.0], [1.0, 1.0], ragged_of([8.0, 15.0], 0.08, None),
-            None, (5.0, [0.01, 0.02], [1.0, 1.0]), [3.0, 0.0, 0.0], 0.1, 0.0, 0.0),
-        Mat::Paper => row_of(None, None, &[], 0.001, [0.2, 0.3], [0.7, 0.7], [0.0, 0.0], None, None, (0.0, [0.01, 0.02], [1.0, 1.0]), [0.0, 0.0, 0.0], 0.1, 0.0, 0.0),
-        Mat::Cardboard => row_of(Some([0.66, 0.54, 0.38]), None, &[Slab, Slab], 0.015, [0.2, 0.4], [0.55, 1.0], [1.0, 1.0], ragged_of([8.0, 15.0], 0.12, None),
-            None, (8.0, [0.008, 0.02], [1.0, 2.0]), [3.0, 0.0, 0.0], 0.1, 0.0, 0.0),
-        Mat::Tile => row_of(Some([0.9, 0.89, 0.86]), None, &[], 0.0075, [0.3, 0.58], [0.6, 1.0], [1.0, 2.0], None,
-            again_of(5.0, NEVER, Split::Across, 6.0), (6.0, [0.009, 0.022], [1.0, 1.6]), [4.0, 0.0, 1.0], 0.1, 0.0, 0.03),
-        Mat::Plastic => row_of(None, Some(0.25), &[Wedge, Wedge], 0.01, [0.08, 0.2], [0.5, 1.0], [1.0, 2.0], None,
-            again_of(5.0, NEVER, Split::Diag, 8.0), (8.0, [0.006, 0.014], [1.0, 2.0]), [0.0, 0.0, 0.0], 0.22, 0.0, 0.0),
-        Mat::Carpet => row_of(None, None, &[], 0.005, [0.1, 0.2], [0.6, 1.0], [0.0, 0.0], None, None, (4.0, [0.008, 0.016], [1.0, 3.0]), [4.0, 0.0, 0.0], 0.1, 0.0, 0.0),
-        Mat::Plant => row_of(Some([0.62, 0.36, 0.24]), None, &[Wedge, Wedge], 0.02, [0.1, 0.25], [0.6, 1.0], [1.0, 2.0], None,
-            again_of(NEVER, 0.85, Split::Diag, 6.0), (16.0, [0.008, 0.018], [1.0, 2.5]), [2.0, 0.0, 0.0], 0.1, 0.0, 0.02),
-    }
-}
 
 /// The row a Surf reads.   (breakTable.ts matOfSurf, SURF_MAT)
 pub fn mat_of_surf(s: crate::scene_materials::Surf) -> crate::break_table::Mat {
@@ -74,7 +34,7 @@ pub fn mat_of(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: &
     if kind == ChunkKind::Tile { return Mat::Tile; }
     if kind == ChunkKind::Housing { return Mat::Screen; }
     if kind == ChunkKind::Binder { return Mat::Plastic; }
-    let s = crate::scene_materials::does_of(g, Some(&crate::scene_materials::DoesOfB { does: box_.does.clone() })).surf;
+    let s = crate::scene_materials::does_of_word(g, box_.does.as_deref()).surf;
     if kind == ChunkKind::Clutter { return if s == Surf::Foliage { Mat::Plant } else { Mat::Plastic }; }
     mat_of_surf(s)
 }
@@ -357,8 +317,13 @@ fn wall_normal_at(yaw: f64, h: V3, c: V3, toward: V3, keep: f64) -> V3 {
 /// The horizontal unit normal of a wall-like box on the side `toward` points to, with `keep` of `toward` mixed back in.   (breakTable.ts wallNormal)
 pub fn wall_normal(g: &mut crate::game::Game, b: BoxId, toward: V3, keep: Option<f64>) -> V3 {
     let keep = keep.unwrap_or(0.0);
-    let bx = &g.col.boxes[b];
-    wall_normal_at(bx.yaw, bx.h, bx.c, toward, keep)
+    let (yaw, h, c) = seam_box_numbers(g, b);
+    wall_normal_at(yaw, h, c, toward, keep)
+}
+
+/// A box's yaw, half sizes and centre. Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.yaw, x.h, x.c)`.
+fn seam_box_numbers(g: &mut crate::game::Game, b: BoxId) -> (f64, V3, V3) {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
 }
 
 #[cfg(test)]
@@ -382,6 +347,8 @@ mod tests {
         fn w(&mut self, s: &str) { self.f(s.len() as f64); for b in s.bytes() { self.f(b as f64); } }
         fn pts(&mut self, o: &[P2]) { self.f(o.len() as f64); for p in o { self.f(p[0]); self.f(p[1]); } }
     }
+    /// `BREAK[mat]`, off the skeleton's rows (the test below holds them to the TypeScript's bits)
+    fn break_row(mat: Mat) -> &'static BreakRow { &break_().iter().find(|(k, _)| *k == mat).unwrap().1 }
     fn stream(seed: f64) -> impl FnMut() -> f64 { let mut x = seed; move || { x = js::rem(x + 0.6180339887498949, 1.0); x } }
     fn ln(i: usize) -> f64 { 0.1 + 0.03 * i as f64 }
     fn sn(i: usize) -> f64 { 0.05 + 0.011 * i as f64 }
@@ -413,7 +380,7 @@ mod tests {
         let sh = [Shape::Slab, Shape::Lump, Shape::Panel, Shape::Wedge, Shape::Snapped, Shape::Strip];
         let row = break_row(Mat::Plasterboard);
         let mut h = Fold::new();
-        for i in 0..120 { h.pts(&outline_of(sh[i % 6], ln(i), sn(i), &row, &mut stream(seed(i)), i % 3 == 0)); }
+        for i in 0..120 { h.pts(&outline_of(sh[i % 6], ln(i), sn(i), row, &mut stream(seed(i)), i % 3 == 0)); }
         assert_eq!(h.0, OUTLINE);
     }
 
@@ -471,7 +438,7 @@ mod tests {
             match r.core { Some(c) => { f.f(c[0]); f.f(c[1]); f.f(c[2]); } None => f.f(-1.0) }
             f.f(r.pale.unwrap_or(-1.0));
             f.f(r.cell.len() as f64);
-            for s in &r.cell { f.w(s.as_str()); }
+            for s in r.cell { f.w(s.as_str()); }
             for x in [r.thick, r.span[0], r.span[1], r.slim[0], r.slim[1], r.tears[0], r.tears[1]] { f.f(x); }
             match r.ragged { Some(g) => { f.f(g.deg[0]); f.f(g.deg[1]); f.f(g.bite); f.f(if g.grain == Some(true) { 1.0 } else { 0.0 }); } None => f.f(-1.0) }
             match r.again { Some(a) => { f.f(a.land); f.f(a.kick); f.w(a.how.as_str()); f.f(a.chips); f.f(a.chance.unwrap_or(-1.0)); } None => f.f(-1.0) }

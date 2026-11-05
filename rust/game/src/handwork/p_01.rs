@@ -7,12 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---------------------------------------------------------------- seams: what skeleton 3 cannot give yet
+// ---------------------------------------------------------------- seams: what skeleton 5 cannot give yet
 
-/// `g.audio.play(name, at, vol, { rate })` (handwork.ts:105; game_audio_like_play's opts are a map of `Opaque`, which cannot hold a rate)
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
-/// A static box's `c`, `h`, `yaw` and whether it has a `rot` (handwork.ts:125; BoxId has no table: ids.rs "no table here", properties.txt `g.none[id]`)
-fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { let x = crate::scene_boxes::b_01::any_box(g, b); (x.c, x.h, x.yaw, x.rot.is_some()) } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
+/// A static box's `c`, `h`, `yaw` and whether it has a `rot` (handwork.ts:126). Once a table of Box rows stands, the body is that row's four fields.
+fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
+}
 
 // ---------------------------------------------------------------- private helpers
 
@@ -20,10 +20,6 @@ fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { let x = crate:
 fn flag_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 /// `c.id & 0xff`: a box's owner off the man's id.
 fn owner_of(g: &Game, c: CharId) -> f64 { (js::to_i32(g.ch[c].id) & 0xff) as f64 }
-/// The rule's word as the animator's `swapHeld` takes it.
-fn rule_of(held: SwapFeedHeld) -> crate::character::AnimSwapHeldRule {
-    match held { SwapFeedHeld::Torch => crate::character::AnimSwapHeldRule::Torch, SwapFeedHeld::Weapon => crate::character::AnimSwapHeldRule::Weapon }
-}
 
 // ---------------------------------------------------------------- the switch
 
@@ -116,7 +112,7 @@ pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, 
     for k in 0..4 {
         let at = crate::character::work_key_beat(k as f64, secs);
         if before < at && after >= at {
-            seam_audio_play(g, "padBeep", pad.def.pos, 0.5, 1.0 + 0.03 * k as f64);
+            crate::audio_iface::game_audio_like_play(g, "padBeep", Some(pad.def.pos), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 + 0.03 * k as f64 }));
             let [x, y] = keys[k];
             let (pos, n) = (pad.def.pos, pad.n);
             let spot: V3 = [pos[0] + n[0] * 0.03 + r[0] * x, pos[1] + y, pos[2] + n[2] * 0.03 + r[2] * x];
@@ -180,7 +176,7 @@ pub fn breaker_face(g: &mut crate::game::Game, from: V3) -> crate::handwork::Bre
 /// The face of the objective's holder toward a man: the office's rack faces ±z; a quiet mission's holder faces the way he came at it. (handwork.ts rackFace)
 pub fn rack_face(g: &mut crate::game::Game, from: V3) -> crate::handwork::RackFace {
     let rf = g.level.mission.rack.front;
-    let n = if g.quiet.active { face_toward(rf, from) } else { [0.0, 0.0, js::or(m::sign(from[2] - rf[2]), 1.0)] };
+    let n = if crate::quiet::quiet_of(g) { face_toward(rf, from) } else { [0.0, 0.0, js::or(m::sign(from[2] - rf[2]), 1.0)] };
     RackFace { p: rf, n }
 }
 
@@ -371,30 +367,29 @@ pub fn swap_feed(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::han
     let si = crate::character::anim_swap_info(g, c);
     if let Some(h) = held {
         if si.a < 0.0 && !si.pending {
-            let shown = crate::character::anim_swap_held(g, c, Some(rule_of(h)));
-            let same = matches!(
-                (shown, h),
-                (Some(crate::character::AnimSwapHeld::Torch), SwapFeedHeld::Torch) | (Some(crate::character::AnimSwapHeld::Weapon), SwapFeedHeld::Weapon)
-            );
-            if !same { g.stats.handwork.swaps += 1; }
+            let rule = match h {
+                SwapFeedHeld::Torch => crate::character::AnimCarry::Torch,
+                SwapFeedHeld::Weapon => crate::character::AnimCarry::Weapon,
+            };
+            if crate::character::anim_swap_held(g, c, Some(rule)) != Some(rule) { g.stats.handwork.swaps += 1; }
         }
     }
-    g.ch[c].anim.carry = held.map(|h| match h {
-        SwapFeedHeld::Torch => crate::character::AnimCarry::Torch,
-        SwapFeedHeld::Weapon => crate::character::AnimCarry::Weapon,
-    });
+    g.ch[c].anim.carry = Some(held.map(|h| match h {
+        SwapFeedHeld::Torch => crate::character::CarryKind2::Torch,
+        SwapFeedHeld::Weapon => crate::character::CarryKind2::Weapon,
+    }));
 }
 
 /// What his gun hand visibly holds this frame: the rule's answer, but for the frames of a swap. (handwork.ts swapHeld)
 pub fn swap_held(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapHeldHeld>) -> Option<crate::handwork::SwapHeld> {
     let c = g.gd[gd].ch;
     let rule = held.map(|h| match h {
-        SwapHeldHeld::Torch => crate::character::AnimSwapHeldRule::Torch,
-        SwapHeldHeld::Weapon => crate::character::AnimSwapHeldRule::Weapon,
+        SwapHeldHeld::Torch => crate::character::AnimCarry::Torch,
+        SwapHeldHeld::Weapon => crate::character::AnimCarry::Weapon,
     });
     crate::character::anim_swap_held(g, c, rule).map(|h| match h {
-        crate::character::AnimSwapHeld::Torch => SwapHeld::Torch,
-        crate::character::AnimSwapHeld::Weapon => SwapHeld::Weapon,
+        crate::character::AnimCarry::Torch => SwapHeld::Torch,
+        crate::character::AnimCarry::Weapon => SwapHeld::Weapon,
     })
 }
 

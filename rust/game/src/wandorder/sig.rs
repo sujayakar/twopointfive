@@ -24,7 +24,7 @@ pub fn on_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> V3 { todo!() 
 pub fn spot_on(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::doors::DoorsWorkSpot { todo!() }
 
 /// (src/game/wandorder.ts:71 pick)
-pub fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &mut crate::orders::OrderTarget) -> crate::wandorder::Pick { todo!() }
+pub fn pick(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Pick { todo!() }
 
 /// (src/game/wandorder.ts:81 lensOut)
 pub fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job) { todo!() }
@@ -33,7 +33,7 @@ pub fn lens_out(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder
 pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job, line: Option<&str>, moved: bool) { todo!() }
 
 /// (src/game/wandorder.ts:94 issue)
-pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &mut crate::orders::OrderTarget) -> crate::wandorder::Issue { todo!() }
+pub fn issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::wandorder::Issue { todo!() }
 
 /// (src/game/wandorder.ts:107 tick)
 pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) { todo!() }

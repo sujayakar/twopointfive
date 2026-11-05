@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The kernel's hash, one word to one word: integer ops only. (shardModel.ts pcg)
 pub fn pcg(v: f64) -> f64 {
@@ -181,6 +181,7 @@ pub fn spray_shards(r: crate::shard_model::ShardSpray) -> Vec<crate::shard_model
 mod tests {
     //! Against the TypeScript's own bits: tools run under bun with EXACT.on, each double printed as hex; a flight's path is folded by FNV over the bits.
     use super::*;
+    use alloc::format;
     use crate::shard_model::{FlyShardOpts, FlyShardOptsWall, ShardSpray, ShardState};
 
     fn hex(x: f64) -> String { format!("{:016x}", x.to_bits()) }

@@ -219,22 +219,56 @@ pub fn item_io(g: &mut crate::game::Game) -> crate::sim_itemshome::ItemIo {
     io
 }
 
+/// A double of a take of the store's bytes, by its index into the doubles.
+fn double_of(b: &[u8], i: usize) -> f64 {
+    f64::from_ne_bytes(b[i * 8..i * 8 + 8].try_into().unwrap())
+}
+
+/// A word of a take of the store's bytes, by its index into the words.
+fn word_of(b: &[u8], i: usize) -> u32 {
+    u32::from_ne_bytes(b[i * 4..i * 4 + 4].try_into().unwrap())
+}
+
+/// Object.is of two doubles: a NaN is a NaN whatever its bits, -0 is not 0.
+fn same_double(x: f64, y: f64) -> bool {
+    (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
+}
+
 /// Where two takes of the store's bytes differ, in words: at most `most` lines, none if they are the same state. (itemshome.ts itemDiff)
 pub fn item_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
     let o = g.items.store.o;
-    let ua0 = u32::from_ne_bytes([a[0], a[1], a[2], a[3]]);
-    let ub0 = u32::from_ne_bytes([b[0], b[1], b[2], b[3]]);
+    let (ua0, ub0) = (word_of(a, 0), word_of(b, 0));
     let mut out: Vec<String> = Vec::new();
     if ua0 != ub0 { out.push(format!("{} things in the pool | {}", ua0, ub0)); }
-    let serial = o.serial;
-    let mut who = |u: Vec<u32>, r: f64| format!("serial {}", u[(serial + r) as usize]);
-    seam_col_diff(o, a, b, m::max(ua0 as f64, ub0 as f64), &mut who, most, &mut out)
+    col_diff_items(&o, a, b, m::max(ua0 as f64, ub0 as f64) as usize, most, &mut out);
+    out
 }
 
-/// colDiff(O, ITEM_F64, ITEM_U32, a, b, rows, who, most, out) (itemshome.ts:143): the skeleton's ColDiffO carries only `bytes`, so the columns' starts cannot reach it.
-fn seam_col_diff(o: ItemStoreO, a: &[u8], b: &[u8], rows: f64, who: &mut dyn FnMut(Vec<u32>, f64) -> String, most: f64, out: &mut Vec<String>) -> Vec<String> {
-    todo!("needs: sim_colstore::ColDiffO to carry every column's start (it has only bytes)")
+/// colDiff(O, ITEM_F64, ITEM_U32, a, b, rows, who, most, out) over this store's columns (itemshome.ts:143, colstore.ts:58), `who` being the row's serial:
+/// sim_colstore::col_diff cannot do it, its ColDiffO carrying only `bytes`.
+fn col_diff_items(o: &ItemStoreO, a: &[u8], b: &[u8], rows: usize, most: f64, out: &mut Vec<String>) {
+    let at = places_of(o);
+    for (c, k) in item_f64().iter().enumerate() {
+        let col = at[c] as usize;
+        let mut r = 0;
+        while r < rows && (out.len() as f64) < most {
+            let (x, y) = (double_of(a, col + r), double_of(b, col + r));
+            if !same_double(x, y) {
+                out.push(format!("row {} (serial {}).{} {} | {}", r, word_of(a, o.serial as usize + r), k, js::num_str(x), js::num_str(y)));
+            }
+            r += 1;
+        }
+    }
+    for (c, k) in item_u32().iter().enumerate() {
+        let col = at[COLS_F + c] as usize;
+        let mut r = 0;
+        while r < rows && (out.len() as f64) < most {
+            let (x, y) = (word_of(a, col + r), word_of(b, col + r));
+            if x != y { out.push(format!("row {}.{} {} | {}", r, k, x, y)); }
+            r += 1;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -309,5 +343,38 @@ mod tests {
         let fault = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| item_store_lay(g2, &many)));
         assert!(fault.is_err());
         assert_eq!(item_store_n(&mut g), 1.0, "nothing laid by a pool that does not fit");
+    }
+
+    /// the words itemDiff gives, held to the TypeScript's own output for these same bytes (bun, src/sim/itemshome.ts itemDiff)
+    #[test]
+    fn two_takes_differ_in_the_typescripts_words() {
+        let mut g = Box::new(crate::game::Game::blank());
+        g.items.store.o = o_of(item_cols());
+        let o = g.items.store.o;
+        let size = o.bytes as usize;
+        let put_f = |t: &mut [u8], i: f64, r: usize, v: f64| { let at = (i as usize + r) * 8; t[at..at + 8].copy_from_slice(&v.to_ne_bytes()); };
+        let put_w = |t: &mut [u8], i: f64, r: usize, v: u32| { let at = (i as usize + r) * 4; t[at..at + 4].copy_from_slice(&v.to_ne_bytes()); };
+        let mut a = vec![0u8; size];
+        put_w(&mut a, 0.0, 0, 2);
+        put_w(&mut a, o.serial, 0, 7);
+        put_w(&mut a, o.serial, 1, 9);
+        put_f(&mut a, o.fuse, 1, f64::NAN);
+        assert!(item_diff(&mut g, &a, &a.clone(), None).is_empty(), "the same state");
+
+        let mut b = a.clone();
+        put_f(&mut b, o.fuse, 1, f64::from_bits(0x7ff8_0000_0000_0001));
+        assert!(item_diff(&mut g, &a, &b, None).is_empty(), "a NaN is a NaN");
+
+        put_f(&mut b, o.px, 0, -0.0);
+        put_f(&mut b, o.tumble_rate, 1, 0.1);
+        put_w(&mut b, o.who, 1, 4294967295);
+        put_w(&mut b, 0.0, 0, 3);
+        assert_eq!(item_diff(&mut g, &a, &b, None), vec![
+            String::from("2 things in the pool | 3"),
+            String::from("row 0 (serial 7).px 0 | 0"),
+            String::from("row 1 (serial 9).tumbleRate 0 | 0.1"),
+            String::from("row 1.who 0 | 4294967295"),
+        ]);
+        assert_eq!(item_diff(&mut g, &a, &b, Some(2.0)).len(), 2);
     }
 }

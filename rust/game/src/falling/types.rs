@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// WHAT A FALLING THING LANDS ON (falling.ts): the statics (shards.ts:568), or the statics and the props (debris.ts:107). A pane's glass does not land on furniture.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum FallWorld {
     Statics,
     StaticsAndProps,

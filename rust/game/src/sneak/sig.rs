@@ -12,7 +12,7 @@ pub fn clamp(x: f64, a: f64, b: f64) -> f64 { todo!() }
 pub fn save_sneak(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/sneak.ts:189 leafMoved)
-pub fn leaf_moved(g: &mut crate::game::Game, d: crate::sneak::LeafMovedD) -> bool { todo!() }
+pub fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool { todo!() }
 
 /// (src/game/sneak.ts:194 flat)
 pub fn flat(a: V3, b: V3) -> f64 { todo!() }
@@ -57,10 +57,10 @@ pub fn lit_at(g: &mut crate::game::Game, c_2: &mut crate::sneak::Crumb, low: boo
 pub fn eye_for(g: &mut crate::game::Game, h: GuardId, wide: f64) -> crate::guards::Eye { todo!() }
 
 /// (src/game/sneak.ts:266 standIn)
-pub fn stand_in(p: V3, low: bool) -> CharId { todo!() }
+pub fn stand_in(p: V3, low: bool) -> crate::sneak::Target { todo!() }
 
 /// (src/game/sneak.ts:271 read)
-pub fn read(g: &mut crate::game::Game, eyes: &[GuardId], pc: CharId, lit: &mut dyn FnMut(&mut crate::game::Game) -> f64, low: Option<bool>, card: Option<f64>) -> crate::sneak::Exp { todo!() }
+pub fn read(g: &mut crate::game::Game, eyes: &[GuardId], pc: &crate::sneak::Target, lit: &mut dyn FnMut(&mut crate::game::Game) -> f64, low: Option<bool>, card: Option<f64>) -> crate::sneak::Exp { todo!() }
 
 /// (src/game/sneak.ts:283 exposure)
 pub fn exposure(g: &mut crate::game::Game, eyes: &[GuardId], c_2: &mut crate::sneak::Crumb, low: bool, card: Option<f64>) -> crate::sneak::Exp { todo!() }
@@ -78,7 +78,7 @@ pub fn eye_gains(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, kee
 pub fn lit_seen(g: &mut crate::game::Game, h: GuardId, lit: f64, dist: f64, keen: f64, low: bool, card: Option<f64>, pad: Option<f64>) -> bool { todo!() }
 
 /// (src/game/sneak.ts:310 crossCost)
-pub fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &[crate::sneak::Crumb], first: f64, end: f64, card: Option<f64>) -> f64 { todo!() }
+pub fn cross_cost(g: &mut crate::game::Game, eyes: &[GuardId], t: &mut [crate::sneak::Crumb], first: f64, end: f64, card: Option<f64>) -> f64 { todo!() }
 
 /// (src/game/sneak.ts:329 litCell)
 pub fn lit_cell(g: &mut crate::game::Game, x: f64, z: f64, low: bool, age: Option<f64>) -> f64 { todo!() }
@@ -90,7 +90,7 @@ pub fn sneak_walk(g: &mut crate::game::Game, gd: GuardId, low: bool, habit: Opti
 pub fn track(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/sneak.ts:434 sneakTick)
-pub fn sneak_tick(g: &mut crate::game::Game) -> Option<crate::sneak::State> { todo!() }
+pub fn sneak_tick(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/sneak.ts:444 sneakFollow)
 pub fn sneak_follow(g: &mut crate::game::Game, gd: GuardId, back: f64, sam_v: f64, stopped: bool, speed0: f64) -> Option<crate::sneak::Feet> { todo!() }
@@ -103,3 +103,18 @@ pub fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, li
 
 /// (src/game/sneak.ts:639 sneakSummary)
 pub fn sneak_summary(g: &mut crate::game::Game) -> String { todo!() }
+
+
+/// INVENTED: one way a defender looks in a SneakWalk, as he looks now or as he mostly looks, each also WIDER (sneak.ts:352, :359)
+#[derive(Clone, Copy, Debug)]
+pub struct SneakWalkLook { pub e: crate::guards::Eye, pub ew: crate::guards::Eye, pub lx: f64, pub lz: f64 }
+/// INVENTED: one defender in a SneakWalk (sneak.ts:352, :362). His `kept` lines stay in g.m.sneak.kept_lines, read by his id
+#[derive(Clone, Debug)]
+pub struct SneakWalkMan { pub h: GuardId, pub x: f64, pub z: f64, pub open: crate::guards::Eye, pub looks: Vec<crate::sneak::SneakWalkLook>, pub line: JsMap<crate::Num, f64> }
+/// INVENTED: what the eye test is asked about: a spot a man could stand on, or a man's own body (sneak.ts:266 standIn, :284 exposureOf)
+#[derive(Clone, Copy, Debug)]
+pub enum Target { Spot { chest: V3, head: V3 }, Man { c: CharId } }
+/// INVENTED: SneakWalk.watched, a closure in the TypeScript (sneak.ts:388)
+pub fn sneak_walk_watched(g: &mut crate::game::Game, this: &mut crate::sneak::SneakWalk, x: f64, z: f64, wider: Option<bool>) -> bool { todo!() }
+/// INVENTED: SneakWalk.cost, a closure in the TypeScript; writes this.by (sneak.ts:396)
+pub fn sneak_walk_cost(g: &mut crate::game::Game, this: &mut crate::sneak::SneakWalk, pts: &[V3], pace: f64, skip: Option<V3>, skip_m: Option<f64>) -> f64 { todo!() }

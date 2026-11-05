@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 2580 to 2963
+//! src/game/doortools.ts lines 2581 to 2964
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -22,9 +22,6 @@ fn eye_of(g: &Game, m: GuardId) -> V3 {
 fn blocked_at(g: &mut Game, x: f64, z: f64) -> bool { crate::scene_collision::nav_grid_is_blocked(g, x, z) }
 fn solid_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::solid_blocked(g, a, b, None) }
 fn segment_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
-
-/// `{ rate }` of g.audio.play: `opts` is a map of crate::Opaque, which holds no number
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) { todo!("needs: a rate in game_audio_like_play's opts") }
 
 /// the men of the orders let go on this order's word (doortools.ts bangSpot, bang)
 fn word_ops(g: &Game, op: DoorOpId) -> Vec<DoorOpId> {
@@ -87,7 +84,7 @@ pub fn door_tools_shove(g: &mut crate::game::Game, op: DoorOpId) {
     let id = g.ch[c].id;
     crate::doors::door_set_last_who(g, d, id);
     let dp = crate::doors::door_pos(g, d);
-    if crate::silent::silent_ease(g, lead) { crate::audio_iface::game_audio_like_play(g, "doorCreak", Some(dp), Some(0.5), None); } else { seam_audio_play_rate(g, "doorBash", dp, 0.5, 1.15); }
+    if crate::silent::silent_ease(g, lead) { crate::audio_iface::game_audio_like_play(g, "doorCreak", Some(dp), Some(0.5), None); } else { crate::audio_iface::game_audio_like_play(g, "doorBash", Some(dp), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 })); }
     door_tools_beat(g, op, "shove");
 }
 
@@ -690,11 +687,6 @@ pub fn door_tools_on_other(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId)
     false
 }
 
-/// open_floor of a room in the table (the stub wants its own type, of the same cells).
-fn room_open(g: &mut Game, room: RoomfightRoomId) -> bool {
-    let cells = g.tab.roomfight_room[room].cells.clone();
-    open_floor(g, &crate::doortools::OpenFloorRoom { cells })
-}
 fn opening_of(g: &mut Game, o: DoorId) -> Option<CoverOpeningId> {
     let ready = crate::cover::cover_ready(g);
     ready.into_iter().find(|x| g.tab.cover_opening[*x].door == Some(o))
@@ -773,7 +765,7 @@ pub fn door_tools_other_doors(g: &mut crate::game::Game, op: DoorOpId, ended: Op
     }
     if inside.is_empty() { return false; }
     let room = door_tools_room_in(g, op);
-    let open = match room { Some(r) => room_open(g, r), None => true };
+    let open = match room { Some(r) => open_floor(g, r), None => true };
     if let (Some(room), false) = (room, open) {
         let mut squad: Vec<GuardId> = Vec::new();
         for x in g.guards.clone() {
@@ -904,7 +896,7 @@ pub fn door_tools_leaf_across(g: &mut crate::game::Game, o: DoorId, p: V3, at: V
 pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
     let (d, side) = (dop!(g, op).door, dop!(g, op).side);
     let room = match door_tools_room_in(g, op) { Some(r) => r, None => return };
-    if room_open(g, room) { return; }
+    if open_floor(g, room) { return; }
     let all_men = dop!(g, op).men.clone();
     let mut men: Vec<GuardId> = all_men.iter().copied().filter(|x| !dead(g, *x) && g.door_tools.held.get(*x).map_or(false, |h| !h.out.unwrap_or(false))).collect();
     if men.is_empty() { return; }
@@ -1014,14 +1006,10 @@ pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
             dop!(g, op).on_pod.delete(gd);
             stood.set(gd, to);
             dealt.set(gd, to);
-            // (DoorTools.assign inlined: its `shy: null` overrides the `shy: op.door` it adds, and DoorToolsAssignA.shy cannot say null)
-            let order = String::from(dop!(g, op).kind.as_str());
             let pace = g.orders.knobs.entry;
             // (NIGHTBREACH.opLights: true on the page)
             let light = g.door_tools.lights.unwrap_or(true);
-            crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA { order, door: Some(d), shy: None, post: Some(to), face: Some(yaw), watch: Some(w), thru: Some(d), pace: Some(pace), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(light), search: Some(true), going: format!("to the far door · {}", name), there: format!("holding · {}", name), ..Default::default() });
-            let a = crate::orders::squad_orders_of(g, gd).unwrap();
-            dop!(g, op).mine.set(gd, a);
+            door_tools_assign(g, op, gd, &DoorToolsAssignA { post: Some(to), face: Some(yaw), watch: Some(w), shy: Some(None), thru: Some(d), pace: Some(pace), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim), light: Some(light), search: Some(true), going: format!("to the far door · {}", name), there: format!("holding · {}", name), ..Default::default() });
         }
         let a = *dop!(g, op).mine.get(gd).unwrap();
         asg!(g, a).watch = Some(w);
@@ -1073,7 +1061,7 @@ pub fn door_tools_search_of(g: &mut crate::game::Game, op: DoorOpId, at: Option<
     dop!(g, op).search = Some(None);
     let room = match at { Some(a) => crate::roomfight::room_fight_room_at(g, a), None => door_tools_room_in(g, op) };
     let room = room?;
-    if room_open(g, room) { return None; }
+    if open_floor(g, room) { return None; }
     for o in g.door_tools.ops.clone() {
         if o == op { continue; }
         if let Some(Some(s)) = dop!(g, o).search {

@@ -68,29 +68,29 @@ pub fn halt(g: &mut crate::game::Game, gd: GuardId, dt: f64) { todo!() }
 /// (src/game/handleside.ts:182 handleGate)
 pub fn handle_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: Option<bool>) -> bool { todo!() }
 
-/// (src/game/handleside.ts:189 handleHeld)
-pub fn handle_held(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/handleside.ts:187 handleGateStopped)
+pub fn handle_gate_stopped(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/handleside.ts:190 gate)
+/// (src/game/handleside.ts:188 gate)
 pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: bool) -> bool { todo!() }
 
-/// (src/game/handleside.ts:280 wayTo)
+/// (src/game/handleside.ts:278 wayTo)
 pub fn way_to(g: &mut crate::game::Game, a: V3, to: V3) -> Option<Vec<V3>> { todo!() }
 
-/// (src/game/handleside.ts:290 stepTo)
+/// (src/game/handleside.ts:288 stepTo)
 pub fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f64, strafe: bool, pass: Option<bool>) -> bool { todo!() }
 
-/// (src/game/handleside.ts:306 handPress)
+/// (src/game/handleside.ts:304 handPress)
 pub fn hand_press(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> { todo!() }
 
-/// (src/game/handleside.ts:315 toolSpot)
+/// (src/game/handleside.ts:313 toolSpot)
 pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: Option<bool>, order: Option<bool>) -> Option<crate::handleside::ToolSpot> { todo!() }
 
-/// (src/game/handleside.ts:337 nearStand)
+/// (src/game/handleside.ts:335 nearStand)
 pub fn near_stand(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3) -> Option<crate::handleside::NearStand> { todo!() }
 
-/// (src/game/handleside.ts:352 toolStep)
+/// (src/game/handleside.ts:350 toolStep)
 pub fn tool_step(g: &mut crate::game::Game, gd: GuardId, pos: V3) -> bool { todo!() }
 
-/// (src/game/handleside.ts:360 latchFirst)
+/// (src/game/handleside.ts:358 latchFirst)
 pub fn latch_first(g: &mut crate::game::Game, d: DoorId, stack: V3) -> bool { todo!() }

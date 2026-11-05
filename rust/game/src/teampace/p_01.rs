@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `TEAMPACE_STATS.secs += dt`, teampace.ts:198: the stats field is i32 and this is a sum of seconds.
-fn seam_stats_secs(g: &mut Game, dt: f64) { todo!("needs: TeampaceStats.secs as f64") }
-
 /// this teammate's pace is the rule's this frame   (teampace.ts teamSlow)
 pub fn team_slow(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.k.teampace.on && crate::guards::team_paced(g, gd)
@@ -78,36 +75,14 @@ pub fn team_walk_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 
 /// he is one of the quiet: no run of his own, none behind the player   (teampace.ts quiet)
 pub fn quiet(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    crate::sneak::sneaking(g, gd) || crate::unseen::unseen_man(g, gd) || crate::silent::silent_man(g, gd)
+    crate::sneak::sneaking(g, gd) || crate::unseen::under_unseen(g, gd) || crate::silent::under_silence(g, gd)
 }
 
 /// is this reason a run   (teampace.ts isRun)
-pub fn is_run(why: crate::teampace::IsRunWhy) -> bool {
-    why != IsRunWhy::Close && why != IsRunWhy::Fight
+pub fn is_run(why: crate::teampace::LeaveWhy) -> bool {
+    why != LeaveWhy::Close && why != LeaveWhy::Fight
 }
 
-/// the same word in the type a `Leave` holds
-fn leave_why(why: TeamLeaveWhy) -> LeaveWhy {
-    match why {
-        TeamLeaveWhy::Blast => LeaveWhy::Blast,
-        TeamLeaveWhy::Cover => LeaveWhy::Cover,
-        TeamLeaveWhy::Follow => LeaveWhy::Follow,
-        TeamLeaveWhy::Told => LeaveWhy::Told,
-        TeamLeaveWhy::Close => LeaveWhy::Close,
-        TeamLeaveWhy::Fight => LeaveWhy::Fight,
-    }
-}
-/// the same word in the type `is_run` takes
-fn is_run_why(why: TeamLeaveWhy) -> IsRunWhy {
-    match why {
-        TeamLeaveWhy::Blast => IsRunWhy::Blast,
-        TeamLeaveWhy::Cover => IsRunWhy::Cover,
-        TeamLeaveWhy::Follow => IsRunWhy::Follow,
-        TeamLeaveWhy::Told => IsRunWhy::Told,
-        TeamLeaveWhy::Close => IsRunWhy::Close,
-        TeamLeaveWhy::Fight => IsRunWhy::Fight,
-    }
-}
 /// a leave's word as a run's reason, or None for one that is no run   (teampace.ts runWhy's `isRun(L.why)`)
 fn run_word(why: LeaveWhy) -> Option<RunWhy> {
     match why {
@@ -120,11 +95,11 @@ fn run_word(why: LeaveWhy) -> Option<RunWhy> {
 }
 
 /// leave to go faster than the walk for `secs` more than this frame. False = none   (teampace.ts teamLeave)
-pub fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::TeamLeaveWhy, top: f64, secs: Option<f64>) -> bool {
+pub fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::LeaveWhy, top: f64, secs: Option<f64>) -> bool {
     let secs = secs.unwrap_or(0.0);
     if !team_slow(g, gd) { return false; }
-    if is_run(is_run_why(why)) {
-        let barred = if why == TeamLeaveWhy::Follow { !g.k.teampace.follow } else { !g.k.teampace.own };
+    if is_run(why) {
+        let barred = if why == LeaveWhy::Follow { !g.k.teampace.follow } else { !g.k.teampace.own };
         if barred { return false; }
         if quiet(g, gd) || crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None) { return false; }
     }
@@ -132,7 +107,7 @@ pub fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::
     if let Some(was) = g.m.teampace.leave.get(gd) {
         if g.time <= was.until && was.until > until && was.top >= top { return true; }
     }
-    g.m.teampace.leave.set(gd, Leave { why: leave_why(why), top, until });
+    g.m.teampace.leave.set(gd, Leave { why, top, until });
     true
 }
 
@@ -191,7 +166,7 @@ pub fn team_ran(g: &mut crate::game::Game, gd: GuardId) {
     if !team_slow(g, gd) { return; }
     if g.k.teampace.back_secs > 0.0 && crate::frag::frag_running(g, gd) {
         let (top, secs) = (g.k.pace.max, g.k.teampace.back_secs);
-        team_leave(g, gd, TeamLeaveWhy::Fight, top, Some(secs));
+        team_leave(g, gd, LeaveWhy::Fight, top, Some(secs));
     }
     let why = match run_why(g, gd) { Some(why) => why, None => return };
     let now = g.time;
@@ -201,7 +176,7 @@ pub fn team_ran(g: &mut crate::game::Game, gd: GuardId) {
     let t = g.time;
     match was {
         Some(was) if !(t - was.t > g.k.teampace.gap) => {
-            if t > was.t { seam_stats_secs(g, t - was.t); }
+            if t > was.t { g.stats.teampace.secs += t - was.t; }
         }
         _ => match why {
             RunWhy::Follow => g.stats.teampace.follow += 1,
@@ -259,12 +234,12 @@ pub fn team_follow(g: &mut crate::game::Game, gd: GuardId, sam_v: f64, d: f64, g
     let sprint = g.tune.player_sprint;
     if g.k.teampace.follow && g.pl[g.player].sprinting && !crate::roomfight::room_fight_busy(g, gd, 0.5) {
         let running = match live(g, gd) { Some(l) => l.why == LeaveWhy::Follow, None => false };
-        if (running || d > g.k.teampace.behind_m) && team_leave(g, gd, TeamLeaveWhy::Follow, sprint, None) {
+        if (running || d > g.k.teampace.behind_m) && team_leave(g, gd, LeaveWhy::Follow, sprint, None) {
             return Some(m::max(walk, m::min(sprint, want)));
         }
     }
     let top = m::max(walk, g.tune.player_walk * g.k.teampace.follow_k);
-    if top > walk { team_leave(g, gd, TeamLeaveWhy::Close, top, None); }
+    if top > walk { team_leave(g, gd, LeaveWhy::Close, top, None); }
     Some(m::max(walk, m::min(top, want)))
 }
 
@@ -272,7 +247,7 @@ pub fn team_follow(g: &mut crate::game::Game, gd: GuardId, sam_v: f64, d: f64, g
 pub fn team_fight(g: &mut crate::game::Game, gd: GuardId, secs: Option<f64>) {
     if g.k.teampace.on {
         let top = g.k.pace.max;
-        team_leave(g, gd, TeamLeaveWhy::Fight, top, secs);
+        team_leave(g, gd, LeaveWhy::Fight, top, secs);
     }
 }
 
@@ -316,7 +291,7 @@ pub fn team_dash(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, stack: 
             yes
         }
     };
-    let why = if brisk { TeamLeaveWhy::Fight } else { TeamLeaveWhy::Cover };
+    let why = if brisk { LeaveWhy::Fight } else { LeaveWhy::Cover };
     if yes && team_leave(g, gd, why, run, None) { Some(run) } else { None }
 }
 
@@ -324,7 +299,7 @@ pub fn team_dash(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, stack: 
 pub fn team_told(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
     if !crate::rails::rails_runs(g, gd) || !team_slow(g, gd) || crate::roomfight::room_fight_engaged(g, gd) { return None; }
     let run = g.tune.player_sprint;
-    if team_leave(g, gd, TeamLeaveWhy::Told, run, None) { Some(run) } else { None }
+    if team_leave(g, gd, LeaveWhy::Told, run, None) { Some(run) } else { None }
 }
 
 /// the pace a teammate leaves a grenade at   (teampace.ts teamBlastPace)
@@ -340,13 +315,12 @@ mod tests {
     /// the words a leave can hold: two walk's and the runs
     #[test]
     fn run_words() {
-        assert!(!is_run(IsRunWhy::Close) && !is_run(IsRunWhy::Fight));
-        assert!(is_run(IsRunWhy::Blast) && is_run(IsRunWhy::Cover) && is_run(IsRunWhy::Follow) && is_run(IsRunWhy::Told));
+        assert!(!is_run(LeaveWhy::Close) && !is_run(LeaveWhy::Fight));
+        assert!(is_run(LeaveWhy::Blast) && is_run(LeaveWhy::Cover) && is_run(LeaveWhy::Follow) && is_run(LeaveWhy::Told));
         assert!(run_word(LeaveWhy::Close).is_none() && run_word(LeaveWhy::Fight).is_none());
         assert!(run_word(LeaveWhy::Told) == Some(RunWhy::Told));
-        for w in [TeamLeaveWhy::Blast, TeamLeaveWhy::Cover, TeamLeaveWhy::Follow, TeamLeaveWhy::Told, TeamLeaveWhy::Close, TeamLeaveWhy::Fight] {
-            assert_eq!(leave_why(w).as_str(), w.as_str());
-            assert_eq!(is_run_why(w).as_str(), w.as_str());
+        for w in [LeaveWhy::Blast, LeaveWhy::Cover, LeaveWhy::Follow, LeaveWhy::Told, LeaveWhy::Close, LeaveWhy::Fight] {
+            assert_eq!(run_word(w).map(|r| r.as_str()), if is_run(w) { Some(w.as_str()) } else { None });
         }
     }
 

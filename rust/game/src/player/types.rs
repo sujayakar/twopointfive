@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Hold, src/game/player.ts:131)
+/// (TypeScript: Hold, src/game/player.ts:132)
 #[derive(Clone, Debug)]
 pub struct Hold {
     pub g: GuardId,
@@ -67,7 +67,7 @@ impl Hold {
 }
 impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:131 Hold.ask, src/game/player.ts:131)
+/// (TypeScript: inline at src/game/player.ts:132 Hold.ask, src/game/player.ts:132)
 #[derive(Clone, Copy, Debug)]
 pub struct HoldAsk {
     pub t: f64,
@@ -84,7 +84,7 @@ impl HoldAsk {
 }
 impl Default for HoldAsk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:131 Hold.after, src/game/player.ts:131)
+/// (TypeScript: inline at src/game/player.ts:132 Hold.after, src/game/player.ts:132)
 #[derive(Clone, Debug)]
 pub struct HoldAfter {
     pub text: String,
@@ -101,7 +101,7 @@ impl HoldAfter {
 }
 impl Default for HoldAfter { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Legs, src/game/player.ts:413)
+/// (TypeScript: Legs, src/game/player.ts:414)
 #[derive(Clone, Copy, Debug)]
 pub struct Legs {
     pub char: crate::player::LegsChar,
@@ -148,7 +148,7 @@ impl Legs {
 }
 impl Default for Legs { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:414 Legs.char, src/game/player.ts:414)
+/// (TypeScript: inline at src/game/player.ts:415 Legs.char, src/game/player.ts:415)
 #[derive(Clone, Copy, Debug)]
 pub struct LegsChar {
     pub pos: V3,
@@ -169,7 +169,7 @@ impl LegsChar {
 }
 impl Default for LegsChar { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallHold, src/game/player.ts:927)
+/// (TypeScript: WallHold, src/game/player.ts:928)
 #[derive(Clone, Copy, Debug)]
 pub struct WallHold {
     pub n: V3,
@@ -214,6 +214,8 @@ pub struct WallHold {
     pub cam_along: Option<f64>,
     pub cam: bool,
     pub ran: Option<f64>,
+    /// INVENTED: g.serial() where wallSnap makes the hold (player.ts:1081): unseen.ts:184 and :195 ask by identity whether this is the same take of the wall (State.hold, placed). A copy of the hold keeps it
+    pub serial: u32,
 }
 impl WallHold {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -261,6 +263,7 @@ impl WallHold {
             cam_along: None,
             cam: false,
             ran: None,
+            serial: 0,
         }
     }
 }
@@ -312,7 +315,7 @@ impl WhKind {
     }
 }
 
-/// (TypeScript: WallSnap, src/game/player.ts:1222)
+/// (TypeScript: WallSnap, src/game/player.ts:1223)
 #[derive(Clone, Debug)]
 pub struct WallSnap {
     pub hold: Option<crate::player::WallHold>,
@@ -329,7 +332,7 @@ impl WallSnap {
 }
 impl Default for WallSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1222 WallSnap.press, src/game/player.ts:1222)
+/// (TypeScript: inline at src/game/player.ts:1223 WallSnap.press, src/game/player.ts:1223)
 #[derive(Clone, Debug)]
 pub struct WallSnapPress {
     pub t: f64,
@@ -356,7 +359,7 @@ impl WallSnapPress {
 }
 impl Default for WallSnapPress { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:148 DOOR_FIT, src/game/player.ts:148)
+/// (TypeScript: inline at src/game/player.ts:149 DOOR_FIT, src/game/player.ts:149)
 #[derive(Clone, Copy, Debug)]
 pub struct DOORFIT {
     pub lat: [f64; 2],
@@ -373,7 +376,7 @@ impl DOORFIT {
 }
 impl Default for DOORFIT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1134 wsPend, src/game/player.ts:1134)
+/// (TypeScript: inline at src/game/player.ts:1135 wsPend, src/game/player.ts:1135)
 #[derive(Clone, Copy, Debug)]
 pub struct PlayerModWsPendValue {
     pub t: f64,
@@ -392,7 +395,7 @@ impl PlayerModWsPendValue {
 }
 impl Default for PlayerModWsPendValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1164 wsPress, src/game/player.ts:1164)
+/// (TypeScript: inline at src/game/player.ts:1165 wsPress, src/game/player.ts:1165)
 #[derive(Clone, Copy, Debug)]
 pub struct PlayerModWsPressValue {
     pub t: f64,
@@ -419,7 +422,7 @@ impl PlayerModWsPressValue {
 }
 impl Default for PlayerModWsPressValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1216 WH, src/game/player.ts:1216)
+/// (TypeScript: inline at src/game/player.ts:1217 WH, src/game/player.ts:1217)
 #[derive(Clone, Debug)]
 pub struct WH {
     pub n: String,
@@ -514,7 +517,7 @@ impl WH {
 }
 impl Default for WH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:176 collideMan(pl), src/game/player.ts:176)
+/// (TypeScript: inline at src/game/player.ts:177 collideMan(pl), src/game/player.ts:177)
 #[derive(Clone, Copy, Debug)]
 pub struct CollideManPl {
     pub char: crate::player::CollideManPlChar,
@@ -531,7 +534,7 @@ impl CollideManPl {
 }
 impl Default for CollideManPl { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:176 CollideManPl.char, src/game/player.ts:176)
+/// (TypeScript: inline at src/game/player.ts:177 CollideManPl.char, src/game/player.ts:177)
 #[derive(Clone, Copy, Debug)]
 pub struct CollideManPlChar {
     pub pos: V3,
@@ -561,7 +564,7 @@ impl ShellBreak {
     }
 }
 
-/// (TypeScript: inline at src/game/player.ts:438 strideStep(tap), src/game/player.ts:438)
+/// (TypeScript: inline at src/game/player.ts:439 strideStep(tap), src/game/player.ts:439)
 #[derive(Clone, Copy, Debug)]
 pub struct StrideStepTap {
     pub speed: f64,
@@ -576,7 +579,7 @@ impl StrideStepTap {
 }
 impl Default for StrideStepTap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:438 strideStep(stalk), src/game/player.ts:438)
+/// (TypeScript: inline at src/game/player.ts:439 strideStep(stalk), src/game/player.ts:439)
 #[derive(Clone, Copy, Debug)]
 pub struct StrideStepStalk {
     pub pace: f64,
@@ -593,7 +596,7 @@ impl StrideStepStalk {
 }
 impl Default for StrideStepStalk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:453 gunRaised(m), src/game/player.ts:453)
+/// (TypeScript: inline at src/game/player.ts:454 gunRaised(m), src/game/player.ts:454)
 #[derive(Clone, Copy, Debug)]
 pub struct GunRaisedM {
     pub sprinting: bool,
@@ -608,7 +611,7 @@ impl GunRaisedM {
 }
 impl Default for GunRaisedM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:455 leafFacing(dp), src/game/player.ts:455)
+/// (TypeScript: inline at src/game/player.ts:456 leafFacing(dp), src/game/player.ts:456)
 #[derive(Clone, Debug)]
 pub struct LeafFacingDp {
     pub w: f64,
@@ -627,7 +630,7 @@ impl LeafFacingDp {
 }
 impl Default for LeafFacingDp { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1020 findWall(why), src/game/player.ts:1020)
+/// (TypeScript: inline at src/game/player.ts:1021 findWall(why), src/game/player.ts:1021)
 #[derive(Clone, Copy, Debug)]
 pub struct FindWallWhy {
     pub blocked: bool,
@@ -642,7 +645,7 @@ impl FindWallWhy {
 }
 impl Default for FindWallWhy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1020 findWall ->, src/game/player.ts:1020)
+/// (TypeScript: inline at src/game/player.ts:1021 findWall ->, src/game/player.ts:1021)
 #[derive(Clone, Copy, Debug)]
 pub struct FindWall {
     pub n: V3,
@@ -667,7 +670,7 @@ impl FindWall {
 }
 impl Default for FindWall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1073 wallSnap(why), src/game/player.ts:1073)
+/// (TypeScript: inline at src/game/player.ts:1074 wallSnap(why), src/game/player.ts:1074)
 #[derive(Clone, Copy, Debug)]
 pub struct WallSnapWhy {
     pub blocked: bool,
@@ -699,7 +702,7 @@ impl WallStepOffHow {
     }
 }
 
-/// (TypeScript: inline at src/game/player.ts:1135 wallSnapLater(why), src/game/player.ts:1135)
+/// (TypeScript: inline at src/game/player.ts:1136 wallSnapLater(why), src/game/player.ts:1136)
 #[derive(Clone, Copy, Debug)]
 pub struct WallSnapLaterWhy {
     pub blocked: bool,
@@ -714,7 +717,7 @@ impl WallSnapLaterWhy {
 }
 impl Default for WallSnapLaterWhy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1167 pressFace ->, src/game/player.ts:1167)
+/// (TypeScript: inline at src/game/player.ts:1168 pressFace ->, src/game/player.ts:1168)
 #[derive(Clone, Copy, Debug)]
 pub struct PressFace {
     pub n: V3,
@@ -733,7 +736,7 @@ impl PressFace {
 }
 impl Default for PressFace { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1277 throwRest ->, src/game/player.ts:1277)
+/// (TypeScript: inline at src/game/player.ts:1278 throwRest ->, src/game/player.ts:1278)
 #[derive(Clone, Debug)]
 pub struct ThrowRest {
     pub at: V3,
@@ -750,7 +753,7 @@ impl ThrowRest {
 }
 impl Default for ThrowRest { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1908 heldTalk ->, src/game/player.ts:1908)
+/// (TypeScript: inline at src/game/player.ts:1909 heldTalk ->, src/game/player.ts:1909)
 #[derive(Clone, Copy, Debug)]
 pub struct HeldTalk {
     pub asking: bool,
@@ -803,7 +806,7 @@ impl StartKickTool {
     }
 }
 
-/// (TypeScript: inline at src/game/player.ts:2172 sideKickSpot ->, src/game/player.ts:2172)
+/// (TypeScript: inline at src/game/player.ts:2173 sideKickSpot ->, src/game/player.ts:2173)
 #[derive(Clone, Copy, Debug)]
 pub struct SideKickSpot {
     pub pos: V3,
@@ -820,7 +823,7 @@ impl SideKickSpot {
 }
 impl Default for SideKickSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2231 aimLevel(c), src/game/player.ts:2231)
+/// (TypeScript: inline at src/game/player.ts:2232 aimLevel(c), src/game/player.ts:2232)
 #[derive(Clone, Copy, Debug)]
 pub struct AimLevelC {
     pub pos: V3,
@@ -837,7 +840,7 @@ impl AimLevelC {
 }
 impl Default for AimLevelC { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2234 cursorHit(ray), src/game/player.ts:2234)
+/// (TypeScript: inline at src/game/player.ts:2235 cursorHit(ray), src/game/player.ts:2235)
 #[derive(Clone, Copy, Debug)]
 pub struct CursorHitRay {
     pub ro: V3,
@@ -854,7 +857,7 @@ impl CursorHitRay {
 }
 impl Default for CursorHitRay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2235 cursorPoint(ray), src/game/player.ts:2235)
+/// (TypeScript: inline at src/game/player.ts:2236 cursorPoint(ray), src/game/player.ts:2236)
 #[derive(Clone, Copy, Debug)]
 pub struct CursorPointRay {
     pub ro: V3,
@@ -871,7 +874,7 @@ impl CursorPointRay {
 }
 impl Default for CursorPointRay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2235 cursorPoint(hit), src/game/player.ts:2235)
+/// (TypeScript: inline at src/game/player.ts:2236 cursorPoint(hit), src/game/player.ts:2236)
 #[derive(Clone, Copy, Debug)]
 pub struct CursorPointHit {
     pub t: f64,
@@ -889,13 +892,13 @@ impl Default for CursorPointHit { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct PlayerMod {
-    /// (src/game/player.ts:1134 wsPend)
+    /// (src/game/player.ts:1135 wsPend)
     pub ws_pend: JsMap<PlayerId, crate::player::PlayerModWsPendValue>,
-    /// (src/game/player.ts:1164 wsPress)
+    /// (src/game/player.ts:1165 wsPress)
     pub ws_press: JsMap<PlayerId, crate::player::PlayerModWsPressValue>,
-    /// (src/game/player.ts:1209 PRESS_THINGS)
+    /// (src/game/player.ts:1210 PRESS_THINGS)
     pub press_things: JsSet<String>,
-    /// (src/game/player.ts:2300 lightAt)
+    /// (src/game/player.ts:2301 lightAt)
     pub light_at: JsMap<PlayerId, [f64; 2]>,
 }
 impl PlayerMod {
@@ -909,158 +912,158 @@ impl PlayerMod {
     }
 }
 
-/// (src/game/player.ts:91 BODY_R)
+/// (src/game/player.ts:92 BODY_R)
 pub const BODY_R: f64 = 0.42;
 
-/// (src/game/player.ts:93 KEEP_OFF)
+/// (src/game/player.ts:94 KEEP_OFF)
 pub const KEEP_OFF: f64 = 0.55;
 
-/// (src/game/player.ts:100 HOLD_PACE)
+/// (src/game/player.ts:101 HOLD_PACE)
 pub const HOLD_PACE: f64 = 0.85;
 
-/// (src/game/player.ts:100 HOLD_PACE_BACK)
+/// (src/game/player.ts:101 HOLD_PACE_BACK)
 pub const HOLD_PACE_BACK: f64 = 0.65;
 
-/// (src/game/player.ts:100 HOLD_TURN)
+/// (src/game/player.ts:101 HOLD_TURN)
 pub const HOLD_TURN: f64 = 2.6;
 
-/// (src/game/player.ts:105 INTERROGATE_GAP)
+/// (src/game/player.ts:106 INTERROGATE_GAP)
 pub const INTERROGATE_GAP: f64 = 1.2;
 
-/// (src/game/player.ts:105 ANSWER_TAIL)
+/// (src/game/player.ts:106 ANSWER_TAIL)
 pub const ANSWER_TAIL: f64 = 0.5;
 
-/// (src/game/player.ts:110 GRAB_NOISE)
+/// (src/game/player.ts:111 GRAB_NOISE)
 pub const GRAB_NOISE: f64 = 0.12;
 
-/// (src/game/player.ts:110 CHOKE_NOISE)
+/// (src/game/player.ts:111 CHOKE_NOISE)
 pub const CHOKE_NOISE: f64 = 0.15;
 
-/// (src/game/player.ts:110 FOLD_NOISE)
+/// (src/game/player.ts:111 FOLD_NOISE)
 pub const FOLD_NOISE: f64 = 0.3;
 
-/// (src/game/player.ts:110 WHIP_NOISE)
+/// (src/game/player.ts:111 WHIP_NOISE)
 pub const WHIP_NOISE: f64 = 0.35;
 
-/// (src/game/player.ts:113 CHOKE_GRAIN)
+/// (src/game/player.ts:114 CHOKE_GRAIN)
 pub const CHOKE_GRAIN: f64 = 0.4;
 
-/// (src/game/player.ts:116 HOLD_FIRE_CD)
+/// (src/game/player.ts:117 HOLD_FIRE_CD)
 pub const HOLD_FIRE_CD: f64 = 0.7;
 
-/// (src/game/player.ts:116 HOLD_SPREAD)
+/// (src/game/player.ts:117 HOLD_SPREAD)
 pub const HOLD_SPREAD: f64 = 0.09;
 
-/// (src/game/player.ts:148 DOOR_R)
+/// (src/game/player.ts:149 DOOR_R)
 pub const DOOR_R: f64 = 0.3;
 
-/// (src/game/player.ts:148 DOOR_FIT: a table nothing writes)
+/// (src/game/player.ts:149 DOOR_FIT: a table nothing writes)
 pub fn door_fit() -> crate::player::DOORFIT { crate::player::DOORFIT { lat: [0.12, 0.5], out: [0.55, 1.0] } }
 
-/// (src/game/player.ts:166 SWEEP_STEP)
+/// (src/game/player.ts:167 SWEEP_STEP)
 pub const SWEEP_STEP: f64 = 0.2;
 
-/// (src/game/player.ts:218 PACE_MIN)
+/// (src/game/player.ts:219 PACE_MIN)
 pub const PACE_MIN: f64 = 0.35;
 
-/// (src/game/player.ts:218 PACE_STEP)
+/// (src/game/player.ts:219 PACE_STEP)
 pub const PACE_STEP: f64 = 0.13;
 
-/// (src/game/player.ts:260 RIFLE_EQUIP_SECS)
+/// (src/game/player.ts:261 RIFLE_EQUIP_SECS)
 pub const RIFLE_EQUIP_SECS: f64 = 0.45;
 
-/// (src/game/player.ts:290 LOW_AT)
+/// (src/game/player.ts:291 LOW_AT)
 pub const LOW_AT: f64 = 1.25;
 
-/// (src/game/player.ts:290 LOW_UNDER)
+/// (src/game/player.ts:291 LOW_UNDER)
 pub const LOW_UNDER: f64 = 0.25;
 
-/// (src/game/player.ts:290 LOW_TOP)
+/// (src/game/player.ts:291 LOW_TOP)
 pub const LOW_TOP: f64 = 0.15;
 
-/// (src/game/player.ts:305 LEVEL_REACH)
+/// (src/game/player.ts:306 LEVEL_REACH)
 pub const LEVEL_REACH: f64 = 20.0;
 
-/// (src/game/player.ts:895 WALL_REACH)
+/// (src/game/player.ts:896 WALL_REACH)
 pub const WALL_REACH: f64 = 0.7;
 
-/// (src/game/player.ts:897 WALL_GAP)
+/// (src/game/player.ts:898 WALL_GAP)
 pub const WALL_GAP: f64 = 0.03;
 
-/// (src/game/player.ts:900 KNEE_Y)
+/// (src/game/player.ts:901 KNEE_Y)
 pub const KNEE_Y: f64 = 0.45;
 
-/// (src/game/player.ts:900 CHEST_Y)
+/// (src/game/player.ts:901 CHEST_Y)
 pub const CHEST_Y: f64 = 1.35;
 
-/// (src/game/player.ts:900 HIGH_Y)
+/// (src/game/player.ts:901 HIGH_Y)
 pub const HIGH_Y: f64 = 2.7;
 
-/// (src/game/player.ts:902 COPLANAR)
+/// (src/game/player.ts:903 COPLANAR)
 pub const COPLANAR: f64 = 0.01;
 
-/// (src/game/player.ts:904 UPPER_TOL)
+/// (src/game/player.ts:905 UPPER_TOL)
 pub const UPPER_TOL: f64 = 0.08;
 
-/// (src/game/player.ts:906 WALL_BRIDGE)
+/// (src/game/player.ts:907 WALL_BRIDGE)
 pub const WALL_BRIDGE: f64 = 0.15;
 
-/// (src/game/player.ts:908 WALL_MIN_FACE)
+/// (src/game/player.ts:909 WALL_MIN_FACE)
 pub const WALL_MIN_FACE: f64 = 0.8999999999999999;
 
-/// (src/game/player.ts:910 WALL_PACE)
+/// (src/game/player.ts:911 WALL_PACE)
 pub const WALL_PACE: f64 = 1.4;
 
-/// (src/game/player.ts:912 WALL_TURN)
+/// (src/game/player.ts:913 WALL_TURN)
 pub const WALL_TURN: f64 = 0.9599310885968813;
 
-/// (src/game/player.ts:914 WALL_LOOK)
+/// (src/game/player.ts:915 WALL_LOOK)
 pub const WALL_LOOK: f64 = 0.4363323129985824;
 
-/// (src/game/player.ts:914 WALL_PEEK_LOOK)
+/// (src/game/player.ts:915 WALL_PEEK_LOOK)
 pub const WALL_PEEK_LOOK: f64 = 0.5235987755982988;
 
-/// (src/game/player.ts:917 WALL_SHOVE_OFF)
+/// (src/game/player.ts:918 WALL_SHOVE_OFF)
 pub const WALL_SHOVE_OFF: f64 = 0.25;
 
-/// (src/game/player.ts:917 WALL_AWAY_SECS)
+/// (src/game/player.ts:918 WALL_AWAY_SECS)
 pub const WALL_AWAY_SECS: f64 = 0.25;
 
-/// (src/game/player.ts:919 WALL_SETTLE)
+/// (src/game/player.ts:920 WALL_SETTLE)
 pub const WALL_SETTLE: f64 = 0.22;
 
-/// (src/game/player.ts:919 WALL_PEEK_SECS)
+/// (src/game/player.ts:920 WALL_PEEK_SECS)
 pub const WALL_PEEK_SECS: f64 = 0.3;
 
-/// (src/game/player.ts:991 PROP_BODY_R)
+/// (src/game/player.ts:992 PROP_BODY_R)
 pub const PROP_BODY_R: f64 = 0.3;
 
-/// (src/game/player.ts:1216 WH: a table nothing writes)
+/// (src/game/player.ts:1217 WH: a table nothing writes)
 pub fn wh() -> crate::player::WH { crate::player::WH { n: String::from("vec"), along: String::from("derived"), from: String::from("vec"), d: String::from("num"), lo: String::from("num"), hi: String::from("num"), u: String::from("num"), v: String::from("num"), off: String::from("num"), away_t: String::from("num"), block_t: String::from("num"), settle: String::from("unit"), peek: String::from("unit"), open_lo: String::from("bool"), open_hi: String::from("bool"), seated: String::from("bool"), drawn: String::from("bool"), crouched: String::from("bool"), side: String::from("sign"), peek_dir: String::from("sign"), block_dir: String::from("sign0"), at_edge: String::from("sign0"), take_t: String::from("opt"), yaw0: String::from("opt"), yaw_d: String::from("opt"), hit_t: String::from("opt"), ran: String::from("opt"), up: String::from("opt"), lean: String::from("opt"), lean_dwell: String::from("opt"), lean_out_t: String::from("opt"), lean_off: String::from("opt"), lean_more: String::from("opt"), flip_t: String::from("opt"), say_t: String::from("opt"), rise: String::from("opt"), owed: String::from("opt"), cam_along: String::from("opt"), lean_want: String::from("optbool"), lean_dir: String::from("optsign"), kind: String::from("stack") } }
 
-/// (src/game/player.ts:1381 LEAN_CHEST)
+/// (src/game/player.ts:1382 LEAN_CHEST)
 pub const LEAN_CHEST: f64 = 1.2;
 
-/// (src/game/player.ts:1383 STACK_PRESS)
+/// (src/game/player.ts:1384 STACK_PRESS)
 pub const STACK_PRESS: f64 = 0.12;
 
-/// (src/game/player.ts:2237 WOUNDED_SNAP_PX)
+/// (src/game/player.ts:2238 WOUNDED_SNAP_PX)
 pub const WOUNDED_SNAP_PX: f64 = 26.0;
 
-/// (src/game/player.ts:2553 INTERACT_PRIORITY: a table nothing writes)
+/// (src/game/player.ts:2554 INTERACT_PRIORITY: a table nothing writes)
 pub fn interact_priority() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("guard"), 0.0); t.set(String::from("held"), 0.0); t.set(String::from("body"), 1.0); t.set(String::from("objective"), 2.0); t.set(String::from("door"), 3.0); t.set(String::from("light"), 9.0); t.set(String::from("breaker"), 2.5); t.set(String::from("switch"), 3.2); t.set(String::from("charge"), 9.4); t.set(String::from("wall"), 9.5); t.set(String::from("cam"), 9.6); t.set(String::from("cancel"), 10.0); t } }
 
-/// (src/game/player.ts:2561 NEARBY_M)
+/// (src/game/player.ts:2562 NEARBY_M)
 pub const NEARBY_M: f64 = 3.0;
 
-/// (src/game/player.ts:2563 MAX_NEAR)
+/// (src/game/player.ts:2564 MAX_NEAR)
 pub const MAX_NEAR: f64 = 3.0;
 
-/// (src/game/player.ts:2567 EASE_RATE)
+/// (src/game/player.ts:2568 EASE_RATE)
 pub const EASE_RATE: f64 = 0.55;
 
-/// (src/game/player.ts:2567 EASE_MAX)
+/// (src/game/player.ts:2568 EASE_MAX)
 pub const EASE_MAX: f64 = 1.45;
 
-/// (src/game/player.ts:2567 EASE_OFFER)
+/// (src/game/player.ts:2568 EASE_OFFER)
 pub const EASE_OFFER: f64 = 0.62;

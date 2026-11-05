@@ -24,7 +24,7 @@ pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {}
 pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastFeel.ts:175 emit)
-pub fn emit(g: &mut crate::game::Game, pl: PlayerId, p: &mut crate::render_particles::Particles, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
+pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particles::PKind, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/blastFeel.ts:181 fireball)
 pub fn fireball(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot, open: bool, n: V3) {}

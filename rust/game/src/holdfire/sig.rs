@@ -53,8 +53,8 @@ pub fn holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId, noticed: f64, q
 /// (src/game/holdfire.ts:155 holdFireHolds)
 pub fn hold_fire_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId, noticed: f64, quiet: bool, urgent: &mut dyn FnMut(&mut crate::game::Game) -> bool) -> bool { todo!() }
 
-/// (src/game/holdfire.ts:163 holdFireOnMan)
-pub fn hold_fire_on_man(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/holdfire.ts:163 holdFireHoldsTarget)
+pub fn hold_fire_holds_target(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/holdfire.ts:168 holdFireGlass)
 pub fn hold_fire_glass(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }

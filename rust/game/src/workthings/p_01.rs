@@ -7,10 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ seams: what skeleton 4 cannot say yet
+// ------------------------------------------------------------ seams: what skeleton 5 cannot say yet
 
-/// `g.audio.play(name, at, volume, { rate })`: `opts` of game_audio_like_play holds `crate::Opaque`, which cannot carry the rate. (workthings.ts:304)
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: Option<V3>, volume: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
+/// `box.c`, `box.h` (workthings.ts:117-119): skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of Box rows.
+fn seam_box_c_h(g: &mut Game, b: BoxId) -> (V3, V3) {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
+}
 
 // ------------------------------------------------------------ small local helpers
 
@@ -80,7 +82,7 @@ pub fn panel_face(g: &mut crate::game::Game) -> crate::workthings::PanelFace {
     let mut n: V3 = [0.0, 0.0, -1.0];
     let mut face: V3 = [bp[0], bp[1], bp[2]];
     if let Some(bx) = bx {
-        let (c, h) = (g.col.boxes[bx].c, g.col.boxes[bx].h);
+        let (c, h) = seam_box_c_h(g, bx);
         let dx = bp[0] - c[0];
         let dz = bp[2] - c[2];
         if m::abs(dx) > m::abs(dz) {
@@ -285,11 +287,11 @@ pub fn work_things_near(g: &mut crate::game::Game, at: V3) -> Option<crate::work
 }
 
 /// orders.ts targetUnder: the thing whose own box the cursor's ray landed on. (workthings.ts WorkThings.on)
-pub fn work_things_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::workthings::WorkThingsOn> {
+pub fn work_things_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::orders::OrderTarget> {
     let b = box_?;
     if !g.level.breaker.boxes.iter().any(|&i| g.engine.world.statics.get(i as usize) == Some(&b)) { return None; }
     let th = work_things_things(g).into_iter().find(|x| x.kind == WorkThingKind::Breaker)?;
-    Some(WorkThingsOn::Floor(thing_target(th)))
+    Some(crate::orders::OrderTarget::Floor(thing_target(th)))
 }
 
 /// orders.ts rowsFor: a thing's menu is the floor's with its own order where 'move there' was. (workthings.ts WorkThings.rows)
@@ -485,7 +487,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
         if verb == WorkVerb::Drive {
             let w = crate::quiet::quiet_words(g);
             crate::audio_iface::game_audio_like_play(g, "click", Some(th.face), Some(0.8), None);
-            seam_audio_play_rate(g, "magOut", Some(th.face), 0.4, 0.55);
+            crate::audio_iface::game_audio_like_play(g, "magOut", Some(th.face), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.55 }));
             if !g.mission.hands_on {
                 g.mission.hands_on = true;
                 let text = match &w { Some(w) => format!("hands on {}", w.thing), None => String::from("hands on the drive") };
@@ -658,13 +660,8 @@ pub fn work_near(g: &mut crate::game::Game, at: V3) -> Option<crate::workthings:
 }
 
 /// orders.ts targetUnder: the thing whose own box the cursor is on. (workthings.ts workOn)
-pub fn work_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::workthings::WorkOn> {
-    work_things_on(g, box_).map(|t| match t {
-        WorkThingsOn::Floor(x) => WorkOn::Floor(x),
-        WorkThingsOn::Door(x) => WorkOn::Door(x),
-        WorkThingsOn::None(x) => WorkOn::None(x),
-        WorkThingsOn::Foe(x) => WorkOn::Foe(x),
-    })
+pub fn work_on(g: &mut crate::game::Game, box_: Option<BoxId>) -> Option<crate::orders::OrderTarget> {
+    work_things_on(g, box_)
 }
 
 /// orders.ts rowsFor. (workthings.ts workRows)
@@ -674,18 +671,12 @@ pub fn work_rows(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, page
 
 /// game.ts handsOnDoors: the first seat with a hand out for this body. (workthings.ts workHand)
 pub fn work_hand(g: &mut crate::game::Game, c_2: CharId) -> Option<crate::character::DoorPush> {
-    if g.seats.len() == 1 { return work_things_hand(g, c_2); }
-    for i in 0..g.seats.len() {
-        let pl = crate::cmd::seat_man(g, g.seats[i]);
-        let r = crate::seats::with_seat(g, pl, &mut |v: &mut Game| work_things_hand(v, c_2));
-        if r.is_some() { return r; }
-    }
-    None
+    crate::seats::first_of(g, &mut |v: &mut Game| work_things_hand(v, c_2))
 }
 
 /// A man stood at the thing he was sent to work does not take as a target a man his round is held for. (workthings.ts workPasses)
 pub fn work_passes(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
-    work_things_at_thing(g, gd) && crate::silent::silent_holds(g, gd, h)
+    work_things_at_thing(g, gd) && crate::silent::silent_holds_round(g, gd, h)
 }
 
 /// The man is walking to the breaker and this teammate is stood on that walk: he is not held for him. (workthings.ts workComing)

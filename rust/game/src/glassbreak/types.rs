@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// who takes a fragment as it lets go (GlassBreak.onRelease; shards.ts takes and gives it back): None = the stand-in runs
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum GlassBreakOnRelease {
     Shards,
 }
@@ -358,7 +358,6 @@ pub struct GlassBreak {
     pub ext: JsMap<crate::Num, f64>,
     pub blasted: Vec<crate::glassbreak::GlassBreakBlastedItem>,
     pub released_this_frame: f64,
-    pub also: Option<crate::glassbreak::GlassBreakAlso>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
     pub gust_dirty: bool,
     pub gusts: JsMap<crate::Num, WindWindSourceId>,
@@ -374,7 +373,6 @@ impl GlassBreak {
             ext: JsMap::new(),
             blasted: Vec::new(),
             released_this_frame: 0.0,
-            also: None,
             view_of: None,
             gust_dirty: false,
             gusts: JsMap::new(),

@@ -16,7 +16,7 @@ pub fn who(g: &mut crate::game::Game) -> PlayerId { g.player }
 /// Seconds as m:ss, rounded up, never below zero.   (defuse.ts mmss)
 pub fn mmss(s: f64) -> String {
     let t = m::max(0.0, m::ceil(s));
-    format!("{}:{:0>2}", num(m::floor(t / 60.0)), num(js::rem(t, 60.0)))
+    format!("{}:{:0>2}", js::num_str(m::floor(t / 60.0)), js::num_str(js::rem(t, 60.0)))
 }
 
 /// A charge's planar normal as a vector.   (defuse.ts n3)
@@ -120,7 +120,7 @@ pub fn defuse_tick(g: &mut crate::game::Game, _dt: f64) {
         g.defuse.log.clear();
         g.defuse.from = Some([p[0], 0.0, p[2]]);
         g.defuse.last_order = g.orders.log.last().map(|r| r.serial);
-        defuse_note(g, &format!("armed: {} charges, {} s", n, num(d.secs)));
+        defuse_note(g, &format!("armed: {} charges, {} s", n, js::num_str(d.secs)));
     }
     defuse_draw(g, &d);
     let taken = g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Taken);
@@ -165,7 +165,7 @@ pub fn defuse_tick(g: &mut crate::game::Game, _dt: f64) {
         let b = m::ceil(left);
         if b != g.defuse.beat {
             g.defuse.beat = b;
-            seam_audio_play_rate(g, "click", None, 0.7, 1.6);
+            crate::audio_iface::game_audio_like_play(g, "click", None, Some(0.7), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.6 }));
         }
     }
 }
@@ -186,7 +186,7 @@ pub fn defuse_make_safe(g: &mut crate::game::Game, i: f64, by: crate::defuse::De
     if let DefuseMakeSafeBy::Player = by { g.stats.defuse.by_sam += 1; }
     crate::audio_iface::game_audio_like_play(g, "click", Some(dev.pos), Some(0.9), None);
     let left = defuse_left(g);
-    defuse_note(g, &format!("safe: {} by {} with {} s left", dev.id, name, fixed1(left)));
+    defuse_note(g, &format!("safe: {} by {} with {} s left", dev.id, name, js::to_fixed(left, 1)));
     let live = g.defuse.states.iter().filter(|s| **s == ChargeState::Armed).count();
     if live > 0 {
         let togo = if live == 1 { String::from("one") } else { format!("{}", live) };
@@ -233,7 +233,7 @@ pub fn defuse_blow(g: &mut crate::game::Game, d: &crate::scene_scenarios::Defuse
         };
         let r = crate::frag::blast(g, [dev.pos[0], dev.pos[1], dev.pos[2]], &spec);
         let player = match r.player { Some(x) => format!(", the player {}", x.as_str()), None => String::new() };
-        defuse_note(g, &format!("blown: {} — {} killed, {} wounded{}", dev.id, num(r.killed), num(r.wounded), player));
+        defuse_note(g, &format!("blown: {} — {} killed, {} wounded{}", dev.id, js::num_str(r.killed), js::num_str(r.wounded), player));
     }
     let text = format!("{} went off — mission failed. press Shift+Enter to restart", gone.join(" and "));
     crate::game::game_msg(g, &text);
@@ -286,7 +286,7 @@ pub fn defuse_draw(g: &mut crate::game::Game, d: &crate::scene_scenarios::Defuse
 }
 
 /// player.ts buildInteractables: each live charge near him is a thing with one row, 'make it safe'.   (defuse.ts Defuse.samRows)
-pub fn defuse_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::defuse::DefuseSamRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn defuse_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::defuse::DefuseRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     g.defuse.offered = -1.0;
     g.defuse.marker = None;
     let d = match defuse_data(g) { Some(d) => d, None => return };
@@ -319,7 +319,7 @@ pub fn defuse_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut d
         }
         let mut verbs = Vec::new();
         if reach && !busy && g.defuse.sam.is_none() {
-            let hints = format!("{} s — stay on it", num(defuse_work_secs(g)));
+            let hints = format!("{} s — stay on it", js::num_str(defuse_work_secs(g)));
             verbs.push(row(g, it.clone(), crate::game::Verb::Defuse, String::from("make it safe"), Some(hints), None));
             if dist < best { best = dist; g.defuse.offered = i as f64; }
         }
@@ -403,7 +403,7 @@ pub fn defuse_running_row(g: &mut crate::game::Game, running: &mut dyn FnMut(&mu
             ..Default::default()
         },
     };
-    let text = format!("making it safe… {}% — stay on it (Space or a step lets go)", num(m::min(99.0, m::round(k * 100.0))));
+    let text = format!("making it safe… {}% — stay on it (Space or a step lets go)", js::num_str(m::min(99.0, m::round(k * 100.0))));
     running(g, it, crate::game::Verb::Defuse, text, k)
 }
 
@@ -478,6 +478,63 @@ pub fn defuse_on_it(g: &mut crate::game::Game, i: f64) -> Option<String> {
     Some(format!("{} {}", g.gd[w.gd].callsign, if w.on { "on it" } else { "going" }))
 }
 
+/// A checkpoint's slice (None: not live, or not this run's).   (defuse.ts Defuse.snapshot)
+pub fn defuse_snapshot(g: &mut crate::game::Game) -> Option<crate::defuse::DefuseSnap> {
+    if defuse_data(g).is_none() || !defuse_mine(g) { return None; }
+    let ran = if defuse_started(g) { (if g.defuse.t_end.is_nan() { g.time } else { g.defuse.t_end }) - g.defuse.t0 } else { -1.0 };
+    let end = match g.defuse.end {
+        Some(DefuseEnd::Safe) => Some(DefuseSnapEnd::Safe),
+        Some(DefuseEnd::Failed) => Some(DefuseSnapEnd::Failed),
+        Some(DefuseEnd::Over) | None => None,
+    };
+    let sam = g.defuse.sam.map(|s| DefuseSnapSam { dev: s.dev, ran: g.time - s.t0 });
+    Some(DefuseSnap { ran, st: g.defuse.states.clone(), by: Some(g.defuse.safe_by.clone()), end, sam })
+}
+
+/// A checkpoint loaded; a file without the slice on a live level is a fresh clock, as on a restart.   (defuse.ts Defuse.restore)
+pub fn defuse_restore(g: &mut crate::game::Game, s: Option<&crate::defuse::DefuseSnap>) {
+    let d = defuse_data(g);
+    g.defuse.run = None;
+    g.defuse.sam = None;
+    let (d, s) = match (d, s) { (Some(d), Some(s)) => (d, s), _ => return };
+    let pl = who(g);
+    let p = g.ch[g.pl[pl].ch].pos;
+    if s.st.len() != d.devices.len() || !s.ran.is_finite() { return; }
+    // (the end is what the charges say, whatever the file's own word: one blown = failed, all safe = safe, a live one = running)
+    let safe_by: Vec<Option<String>> = s.st.iter().enumerate().map(|(i, v)| {
+        let by = s.by.as_ref().and_then(|by| by.get(i)).and_then(|b| b.as_ref());
+        match by {
+            Some(b) if *v == ChargeState::Safe => Some(if b == "Sam" { String::from("Player") } else { b.clone() }),   // (a file from before the player lost his name)
+            _ => None,
+        }
+    }).collect();
+    g.defuse.run = Some(g.mission.serial);
+    g.defuse.states = s.st.clone();
+    g.defuse.safe_by = safe_by;
+    g.defuse.end = if s.st.contains(&ChargeState::Blown) {
+        Some(DefuseEnd::Failed)
+    } else if s.st.iter().all(|v| *v == ChargeState::Safe) {
+        Some(DefuseEnd::Safe)
+    } else {
+        None
+    };
+    g.defuse.t0 = if s.ran >= 0.0 { g.time - s.ran } else { f64::NAN };
+    g.defuse.t_end = if g.defuse.end.is_some() && s.ran >= 0.0 { g.time } else { f64::NAN };
+    g.defuse.beat = -1.0;
+    g.defuse.offered = -1.0;
+    g.defuse.won_said = false;
+    g.defuse.took_said = g.room_clear.end == Some(crate::roomclear::RoomClearEnd::Taken);
+    g.defuse.from = Some([p[0], 0.0, p[2]]);
+    g.defuse.last_order = g.orders.log.last().map(|r| r.serial);
+    if let Some(sam) = s.sam {
+        // (state_at answers None for anything Number.isInteger refuses)
+        if state_at(g, sam.dev) == Some(ChargeState::Armed) && sam.ran.is_finite() {
+            g.defuse.sam = Some(DefuseSam { dev: sam.dev, t0: g.time - sam.ran, at: [p[0], 0.0, p[2]] });
+        }
+    }
+    defuse_note(g, "checkpoint loaded");
+}
+
 /// (defuse.ts Defuse.note)
 pub fn defuse_note(g: &mut crate::game::Game, what: &str) {
     let t = g.time;
@@ -485,13 +542,27 @@ pub fn defuse_note(g: &mut crate::game::Game, what: &str) {
     if g.defuse.log.len() > 200 { g.defuse.log.drain(0..50); }
 }
 
+/// The debugger's one line on the mission.   (defuse.ts Defuse.summary)
+pub fn defuse_summary(g: &mut crate::game::Game) -> String {
+    let d = match defuse_data(g) { Some(d) => d, None => return String::from("no charges on this level") };
+    if !defuse_mine(g) { return String::from("staged"); }
+    let head = match g.defuse.end {
+        Some(e) => String::from(e.as_str()),
+        None => if defuse_started(g) { mmss(defuse_left(g)) } else { String::from("waiting on the first move") },
+    };
+    let rows: Vec<String> = d.devices.iter().enumerate().map(|(i, dev)| {
+        let st = g.defuse.states.get(i).map_or("undefined", |s| s.as_str());
+        match g.defuse.safe_by.get(i).and_then(|b| b.as_ref()).filter(|b| !b.is_empty()) {
+            Some(by) => format!("{} {} ({})", dev.id, st, by),
+            None => format!("{} {}", dev.id, st),
+        }
+    }).collect();
+    format!("{} · {}", head, rows.join(" · "))
+}
+
 /// player.ts buildInteractables.   (defuse.ts defuseRows)
 pub fn defuse_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::defuse::DefuseRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
-    // (samRows, the only caller of this `row`, never passes `over`: the skeleton's two same-shaped patch types need no conversion)
-    let mut sam_row = |g: &mut Game, base: crate::game::Interactable, verb: crate::game::Verb, text: String, hints: Option<String>, _over: Option<DefuseSamRowsRowOver>| {
-        row(g, base, verb, text, hints, None)
-    };
-    defuse_sam_rows(g, p, busy, &mut sam_row, offer);
+    defuse_sam_rows(g, p, busy, row, offer);
 }
 
 // ---------------------------------------------------------------- private helpers
@@ -510,26 +581,6 @@ fn push_fx(g: &mut Game, p: crate::scene_boxes::MakeBoxP) {
     g.fx.push(crate::game::GameFxItem { box_: b, ttl: 1e-3 });
 }
 
-/// A number in text, as the language writes one, for this file's numbers (seconds, counts, a percentage: never an exponent's range).
-fn num(x: f64) -> String {
-    if x == 0.0 { String::from("0") } else { format!("{}", x) }
-}
-
-/// `x.toFixed(1)`: the nearest tenth, an exact tie going away from zero (Rust's own formatting takes a tie to the even digit), and -0 as "0.0".
-fn fixed1(x: f64) -> String {
-    if x == 0.0 { return String::from("0.0"); }
-    let a = m::abs(x);
-    let q = a * 4.0;
-    let tie = q == m::floor(q) && js::rem(q, 2.0) == 1.0;   // (only a quarter or three quarters is a tie that a double can hold)
-    let body = format!("{:.1}", if tie { a + 0.05 } else { a });
-    if x < 0.0 { format!("-{}", body) } else { body }
-}
-
-// ---------------------------------------------------------------- seams: what skeleton 3 still cannot do
-
-/// defuse.ts:135 `g.audio.play(name, at, vol, { rate })`.
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: Option<V3>, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts is JsMap<String, Opaque>, which cannot hold the number `rate`") }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -538,20 +589,6 @@ mod tests {
     fn mmss_as_the_typescript_writes_it() {
         for (s, want) in [(0.0, "0:00"), (-0.5, "0:00"), (-3.0, "0:00"), (0.2, "0:01"), (59.2, "1:00"), (60.0, "1:00"), (61.0, "1:01"), (600.1, "10:01"), (90.0, "1:30")] {
             assert_eq!(mmss(s), want, "{}", s);
-        }
-    }
-
-    #[test]
-    fn to_fixed_as_the_language_has_it() {
-        for (x, want) in FIXED {
-            assert_eq!(fixed1(*x), *want, "{}", x);
-        }
-    }
-
-    #[test]
-    fn a_number_in_text() {
-        for (x, want) in [(0.0, "0"), (-0.0, "0"), (90.0, "90"), (6.5, "6.5"), (0.1 + 0.2, "0.30000000000000004")] {
-            assert_eq!(num(x), want);
         }
     }
 
@@ -572,6 +609,4 @@ mod tests {
         assert_eq!(g.defuse.log.len(), 151);
         assert_eq!(g.defuse.log[0].what, "50");
     }
-
-    const FIXED: &[(f64, &str)] = &[(0.0, "0.0"), (-0.0, "0.0"), (0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (-0.25, "-0.3"), (-0.04, "-0.0"), (0.05, "0.1"), (0.15, "0.1"), (12.34, "12.3"), (2.5, "2.5"), (59.95, "60.0"), (99.96, "100.0"), (3.75, "3.8"), (-1.75, "-1.8"), (0.1, "0.1"), (0.001, "0.0")];
 }

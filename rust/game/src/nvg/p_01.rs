@@ -7,23 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---- what the skeleton does not reach yet: the next skeleton changes these, not the bodies
-
-/// `l.kind` of a light (nvg.ts:126).
-fn seam_light_kind(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].kind } // SKELETON-GAP was: RtLight.kind by LightId; skeleton 4 has the row (g.tab.light)
-/// `l.enabled` of a light (nvg.ts:126, 183, 208).
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
-/// `l.intensity` of a light (nvg.ts:126, 127).
-fn seam_light_intensity(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].intensity } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
-/// `l.transient` of a light; absent reads false (nvg.ts:126).
-fn seam_light_transient(g: &mut Game, l: LightId) -> bool { g.tab.light[l].transient.unwrap_or(false) } // SKELETON-GAP was: RtLight.transient by LightId; skeleton 4 has the row (g.tab.light)
-/// `l.ttl` of a light (nvg.ts:126).
-fn seam_light_ttl(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].ttl } // SKELETON-GAP was: RtLight.ttl by LightId; skeleton 4 has the row (g.tab.light)
-/// `l.dir` of a light (nvg.ts:127).
-fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
-/// `l.color` of a light (nvg.ts:127).
-fn seam_light_color(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].color } // SKELETON-GAP was: RtLight.color by LightId; skeleton 4 has the row (g.tab.light)
-
 // ---- the team's state
 
 /// A team nothing has happened to.   (nvg.ts fresh)
@@ -77,17 +60,18 @@ fn live_man(g: &Game, gd: GuardId) -> Option<Man> {
 
 // ---- the tube
 
-/// post.wgsl's intensifier curve: the signal's `k` and the signal of irradiance `e`.   (nvg.ts:102, 103, 108, 109)
-fn tube_curve_of(exposure: f64, nv_gain: f64, albedo: f64, e: f64) -> (f64, f64) {
-    let k = albedo / m::PI * (if exposure > 0.0 { exposure } else { 1.0 });
-    let gain = m::max(if nv_gain > 0.0 { nv_gain } else { 1.0 }, 1.0);
+/// post.wgsl's intensifier curve at an exposure and a gain: the signal's `k` and the signal of irradiance `e`.   (nvg.ts:103, 104, 109, 110)
+fn tube_curve_of(exposure: f64, gain: f64, albedo: f64, e: f64) -> (f64, f64) {
+    let k = albedo / m::PI * exposure;
     let sig = v3::clamp(m::log(1.0 + m::max(e, 0.0) * k * gain) / m::log(1.0 + gain), 0.0, 1.0);
     (k, sig)
 }
 
-/// The curve at the scene's exposure and gain, the picture's own settings.
-fn tube_curve(g: &Game, e: f64) -> (f64, f64) {
-    tube_curve_of(g.engine.settings.exposure, g.engine.settings.nv_gain, g.k.nvg.albedo, e)
+/// The curve at the game's own exposure (hours.ts exposureOf) and tube gain (env.ts tubeGain).
+fn tube_curve(g: &mut Game, e: f64) -> (f64, f64) {
+    let exposure = crate::hours::exposure_of(g);
+    let gain = crate::env::tube_gain(g);
+    tube_curve_of(exposure, gain, g.k.nvg.albedo, e)
 }
 
 /// The meter's 0..1 for a man under irradiance `e` seen through the goggles.   (nvg.ts tubeVis)
@@ -135,19 +119,19 @@ pub fn nvg_place_light(g: &mut crate::game::Game, p: V3) -> f64 {
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];
         i += 1;
-        if seam_light_kind(g, l) != 2.0
-            || !seam_light_enabled(g, l)
-            || seam_light_intensity(g, l) <= 0.0
-            || seam_light_transient(g, l)
-            || seam_light_ttl(g, l) >= 0.0
+        if g.tab.light[l].kind != 2.0
+            || !g.tab.light[l].enabled
+            || g.tab.light[l].intensity <= 0.0
+            || g.tab.light[l].transient.unwrap_or(false)
+            || g.tab.light[l].ttl >= 0.0
             || crate::hours::in_estimate(g, l)
         {
             continue;
         }
-        let d = seam_light_dir(g, l);
+        let d = g.tab.light[l].dir;
         if !crate::scene_collision::segment_blocked(g, p, [p[0] - d[0] * 60.0, p[1] - d[1] * 60.0, p[2] - d[2] * 60.0], None, None, None) {
-            let c = seam_light_color(g, l);
-            e += (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * seam_light_intensity(g, l);
+            let c = g.tab.light[l].color;
+            e += (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * g.tab.light[l].intensity;
         }
     }
     e
@@ -262,8 +246,7 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
         return;
     }
     // ---- what the team knows of its own secret
-    let seats = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    let mut up = crate::seats::men(g, &seats);
+    let mut up = crate::seats::men(g);
     up.retain(|&pl| !g.pl[pl].down);
     let mut lit = false;
     for &pl in &up {
@@ -336,7 +319,7 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
         }
         let want = row.dim && (dark || {
             let l = g.gd[gd].flashlight;   // (his light as last frame posed it; a dark man's is going off this frame)
-            !seam_light_enabled(g, l)
+            !g.tab.light[l].enabled
         });
         if want == row.down {
             row.agree_t = g.time;
@@ -417,7 +400,7 @@ pub fn nvg_summary(g: &mut crate::game::Game) -> String {
             "goggles"
         } else {
             let l = g.gd[row.gd].flashlight;
-            if seam_light_enabled(g, l) { "light" } else { "bare eyes" }
+            if g.tab.light[l].enabled { "light" } else { "bare eyes" }
         };
         out.push_str(&format!("{} {}{}", g.gd[row.gd].callsign, kit, if row.black { ", black ahead" } else { "" }));
     }
@@ -428,19 +411,20 @@ pub fn nvg_summary(g: &mut crate::game::Game) -> String {
 mod tests {
     use super::*;
 
-    /// the TypeScript's own bits under EXACT (bun, nvg.ts:108 and 109 with albedo 0.3)
+    /// the TypeScript's own bits under EXACT (bun, nvg.ts:109 and 110 with albedo 0.3, re-run on the snapshot): exposure, gain, E, k, sig
     #[test]
     fn the_tube_curve_gives_the_typescripts_bits() {
-        let rows: [(f64, f64, f64, u64); 6] = [
-            (1.0, 1000.0, 0.03, 0x3fc90c0d2d4ae68b),
-            (0.7, 35.0, 0.5, 0x3fcbab47e33c45a4),
-            (0.0, 0.0, 2.25, 0x3fd1f872c94058d2),
-            (1.3, 0.5, 0.0001, 0x3ef2c7944cbe6151),
-            (2.5, 1000.0, 50.0, 0x3ff0000000000000),
-            (1.0, 1000.0, -1.0, 0),
+        let rows: [(f64, f64, f64, u64, u64); 6] = [
+            (1.0, 1000.0, 0.03, 0x3fb8723a1d588a36, 0x3fc90c0d2d4ae68b),
+            (0.7, 35.0, 0.5, 0x3fb11cc247bdfa59, 0x3fcbab47e33c45a4),
+            (1.0, 1.0, 2.25, 0x3fb8723a1d588a36, 0x3fd1f872c94058d2),
+            (1.3, 1.0, 0.0001, 0x3fbfc7b1f2f31a13, 0x3ef2c7944cbe6151),
+            (2.5, 1000.0, 50.0, 0x3fce8ec8a4aeacc4, 0x3ff0000000000000),
+            (1.0, 1000.0, -1.0, 0x3fb8723a1d588a36, 0),
         ];
-        for (exposure, gain, e, bits) in rows {
-            assert_eq!(tube_curve_of(exposure, gain, 0.3, e).1.to_bits(), bits, "{} {} {}", exposure, gain, e);
+        for (exposure, gain, e, k_bits, sig_bits) in rows {
+            let (k, sig) = tube_curve_of(exposure, gain, 0.3, e);
+            assert_eq!((k.to_bits(), sig.to_bits()), (k_bits, sig_bits), "{} {} {}", exposure, gain, e);
         }
     }
 

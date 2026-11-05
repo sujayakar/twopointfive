@@ -285,19 +285,6 @@ impl WorkThingsAskAsideOwn {
 }
 impl Default for WorkThingsAskAsideOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet WorkThingsAskAsideOwn.c, quiet WorkThingsAskAsideOwn.c)
-#[derive(Clone, Copy, Debug)]
-pub struct WorkThingsAskAsideOwnC {
-}
-impl WorkThingsAskAsideOwnC {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkThingsAskAsideOwnC {
-        }
-    }
-}
-impl Default for WorkThingsAskAsideOwnC { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/workthings.ts:227 near ->, src/game/workthings.ts:227)
 #[derive(Clone, Debug)]
 pub struct WorkThingsNear {

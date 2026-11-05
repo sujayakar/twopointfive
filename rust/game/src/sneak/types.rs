@@ -153,7 +153,6 @@ pub struct State {
     pub off: f64,
     pub t: f64,
     pub men: JsMap<GuardId, crate::sneak::Man>,
-    pub list: Vec<crate::sneak::Man>,
     pub live: bool,
     pub amb: f64,
 }
@@ -165,7 +164,6 @@ impl State {
             off: 0.0,
             t: 0.0,
             men: JsMap::new(),
-            list: Vec::new(),
             live: false,
             amb: 0.0,
         }
@@ -195,15 +193,48 @@ impl Exp {
 impl Default for Exp { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SneakWalk, src/game/sneak.ts:336)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct SneakWalk {
     pub by: Option<GuardId>,
+    /// INVENTED by a review: see the proposals
+    pub gd: GuardId,
+    /// INVENTED by a review: see the proposals
+    pub low: bool,
+    /// INVENTED by a review: see the proposals
+    pub keen: f64,
+    /// INVENTED by a review: see the proposals
+    pub card: f64,
+    /// INVENTED by a review: see the proposals
+    pub reach: f64,
+    /// INVENTED by a review: see the proposals
+    pub amb: f64,
+    /// INVENTED by a review: see the proposals
+    pub cpu0: f64,
+    /// INVENTED by a review: see the proposals
+    pub open0: bool,
+    /// INVENTED by a review: see the proposals
+    pub men: Vec<crate::sneak::SneakWalkMan>,
+    /// INVENTED by a review: see the proposals
+    pub roofs: JsMap<crate::Num, bool>,
+    /// INVENTED by a review: see the proposals
+    pub memo: JsMap<crate::Num, bool>,
 }
 impl SneakWalk {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SneakWalk {
             by: None,
+            gd: GuardId(0),
+            low: false,
+            keen: 0.0,
+            card: 0.0,
+            reach: 0.0,
+            amb: 0.0,
+            cpu0: 0.0,
+            open0: false,
+            men: Vec::new(),
+            roofs: JsMap::new(),
+            memo: JsMap::new(),
         }
     }
 }
@@ -484,7 +515,7 @@ impl SneakMod {
 #[derive(Clone, Debug, Default)]
 pub struct SneakStats {
     pub waits: i32,
-    pub wait_s: i32,
+    pub wait_s: f64,
     pub crossings: i32,
     pub shade: i32,
     pub back_offs: i32,

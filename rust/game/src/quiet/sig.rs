@@ -102,7 +102,7 @@ pub fn quiet_mission_behind(g: &mut crate::game::Game, s: &crate::scene_scenario
 pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::quiet::HolderStandArea>) -> crate::quiet::HolderStand { todo!() }
 
 /// (src/game/quiet.ts:299 quietOf)
-pub fn quiet_of(g: &mut crate::game::Game) { todo!() }
+pub fn quiet_of(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/quiet.ts:302 quietWords)
 pub fn quiet_words(g: &mut crate::game::Game) -> Option<crate::quiet::QuietWords> { todo!() }

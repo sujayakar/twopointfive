@@ -41,8 +41,8 @@ pub fn rear_pin_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rear
 /// (src/game/rearwatch.ts:333 rearPin)
 pub fn rear_pin(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> { todo!() }
 
-/// (src/game/rearwatch.ts:337 rearHolds)
-pub fn rear_holds(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool { todo!() }
+/// (src/game/rearwatch.ts:337 rearWatcherWaits)
+pub fn rear_watcher_waits(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/rearwatch.ts:348 rearLast)
 pub fn rear_last(g: &mut crate::game::Game, op: DoorOpId, turn: &[GuardId], first: GuardId) -> Vec<GuardId> { todo!() }

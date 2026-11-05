@@ -72,7 +72,7 @@ pub fn take_cam(g: &mut crate::game::Game, pl: PlayerId) -> bool { todo!() }
 pub fn sticky_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) { todo!() }
 
 /// (src/game/stickycam.ts:263 sending)
-pub fn sending(g: &mut crate::game::Game) -> crate::FnField { todo!() }
+pub fn sending(g: &mut crate::game::Game, c: StickyCamId) -> bool { todo!() }
 
 /// (src/game/stickycam.ts:271 stickyMarks)
 pub fn sticky_marks(g: &mut crate::game::Game) -> Vec<crate::stickycam::CamMark> { todo!() }

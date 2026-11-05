@@ -41,7 +41,7 @@ pub struct Turn {
     pub a: Option<OrdersAssignmentId>,
     pub home: V3,
     pub home_yaw: f64,
-    pub back: Option<crate::squad40::TurnBack>,
+    pub back: Option<crate::squadthrow::LentBack>,
 }
 impl Turn {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -63,7 +63,7 @@ impl Turn {
 }
 impl Default for Turn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squadthrow.ts:128 Turn.back, src/game/squadthrow.ts:128 Turn.back)
+/// (TypeScript: inline at quiet Turn.back, quiet Turn.back)
 #[derive(Clone, Debug)]
 pub struct TurnBack {
     pub post: Option<V3>,

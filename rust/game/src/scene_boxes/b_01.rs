@@ -35,14 +35,14 @@ pub fn made_get(id: BoxId) -> Option<&'static crate::scene_boxes::Box> {
 /// how many boxes have been made
 pub fn made_count() -> usize { unsafe { (*MADE.0.get()).len() } }
 
-/// the box an ID names, static or made (TEMP-BRINGUP: what `g.tab.box[id]` will be)
+/// the box an ID names, static or made (TEMP-BRINGUP: a static's row is `g.tab.boxes[id]` since skeleton 5.1; a made box's is still the arena's)
 pub fn any_box(g: &Game, id: BoxId) -> &crate::scene_boxes::Box {
-    match made_get(id) { Some(b) => b, None => &g.col.boxes[id] }
+    match made_get(id) { Some(b) => b, None => &g.tab.boxes[id] }
 }
 /// …to write
 pub fn any_box_mut(g: &mut Game, id: BoxId) -> &mut crate::scene_boxes::Box {
     let i = id.ix();
-    if i < MADE_BASE { return &mut g.col.boxes[id]; }
+    if i < MADE_BASE { return &mut g.tab.boxes[id]; }
     let v = unsafe { &mut *MADE.0.get() };
     &mut *v[i - MADE_BASE]
 }

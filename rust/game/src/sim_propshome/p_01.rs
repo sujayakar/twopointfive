@@ -5,11 +5,23 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Where each column starts for columns `cap` rows long. (propshome.ts propCols)
 pub fn prop_cols(cap: f64) -> crate::sim_propshome::PropCols {
-    seam_cols_of(PROP_HEAD, cap)
+    // colsOf(PROP_HEAD, PROP_F64, PROP_U32, cap): walked here, as `ColsOf2` has no field for a column's start
+    let mut o = crate::sim_propshome::PropCols::zeroed();
+    let mut at = PROP_HEAD;
+    for k in [&mut o.x, &mut o.z, &mut o.yaw, &mut o.vx, &mut o.vz, &mut o.w, &mut o.cs, &mut o.sn, &mut o.idle, &mut o.push_t, &mut o.noise_t] {
+        *k = at / 8.0;
+        at += cap * 8.0;
+    }
+    for k in [&mut o.flags, &mut o.who, &mut o.id, &mut o.row] {
+        *k = at / 4.0;
+        at += cap * 4.0;
+    }
+    o.bytes = at;
+    o
 }
 
 /// The columns of the game's furniture, over its block: every thing in its own row, asleep, to be placed. (propshome.ts PropStore.constructor, colstore.ts ColStore.constructor)
@@ -114,7 +126,7 @@ pub fn prop_io(g: &mut crate::game::Game) -> crate::sim_propshome::PropIo {
     }
     if cap(0) != PROP_CAP || cap(13) != o.bytes || !off.is_empty() || cap(100 + names.len()) != 0.0 || cap(6) != PROP_PARS
         || cap(9) != pd().chair + 1.0 || cap(10) != pk().quiet + 1.0 || cap(11) != py().half + 1.0 || cap(12) != PROP_EV || pe().rolling + 1.0 != PROP_EV {
-        let columns = if off.is_empty() { String::new() } else { format!(" (columns not where the module has them: {})", off.join(", ")) };
+        let columns = if off.is_empty() { String::new() } else { alloc::format!(" (columns not where the module has them: {})", off.join(", ")) };
         panic!("the Rust module lays the furniture out as {} rows in {} bytes and src/sim/propshome.ts as {} in {}{}, or the hand-over's tables are not the same width: bun run tools/sim/build.ts", cap(0), cap(13), PROP_CAP, o.bytes, columns);
     }
     let addr = |t: u32| sim::props::addr(t) as f64;
@@ -140,14 +152,52 @@ pub fn prop_diff(g: &mut crate::game::Game, a: &[u8], b: &[u8], most: Option<f64
     let most = most.unwrap_or(4.0);
     let o = g.props.store.o;
     let total = g.props.store.total;
-    let (da, db) = (double_at(a), double_at(b));
+    let (da, db) = (double_at(a, 0), double_at(b, 0));
     let (ua2, ua3, ub2, ub3) = (word_at(a, 2), word_at(a, 3), word_at(b, 2), word_at(b, 3));
     let mut out: Vec<String> = Vec::new();
-    if !object_is(da, db) { out.push(format!("the clock {} | {}", da, db)); }
-    if ua2 != ub2 || ua3 != ub3 { out.push(format!("{} of {} things in the level | {} of {}", ua2, ua3, ub2, ub3)); }
-    let id_at = o.id;
-    let mut who = |u: Vec<u32>, r: f64| -> String { format!("thing {}", u[(id_at + r) as usize]) };
-    seam_col_diff(o, a, b, total, &mut who, most, out)
+    if !object_is(da, db) { out.push(alloc::format!("the clock {} | {}", js::num_str(da), js::num_str(db))); }
+    if ua2 != ub2 || ua3 != ub3 { out.push(alloc::format!("{} of {} things in the level | {} of {}", ua2, ua3, ub2, ub3)); }
+    col_diff_of(&o, a, b, total, most, out)
+}
+
+/// colsOf's `O[k]` of the doubles, in PROP_F64's order.
+fn double_cols(o: &crate::sim_propshome::PropStoreO) -> [f64; 11] {
+    [o.x, o.z, o.yaw, o.vx, o.vz, o.w, o.cs, o.sn, o.idle, o.push_t, o.noise_t]
+}
+
+/// colsOf's `O[k]` of the words, in PROP_U32's order.
+fn word_cols(o: &crate::sim_propshome::PropStoreO) -> [f64; 4] {
+    [o.flags, o.who, o.id, o.row]
+}
+
+/// colstore.ts colDiff over this family's columns, a row named by its id: `sim_colstore::col_diff` cannot be called, its `ColDiffO` holding only `bytes`.
+/// The views' lengths are taken as there, so bytes too short panic where the TypeScript throws.
+fn col_diff_of(o: &crate::sim_propshome::PropStoreO, a: &[u8], b: &[u8], rows: f64, most: f64, mut out: Vec<String>) -> Vec<String> {
+    let doubles = (js::to_u32(o.flags) >> 1) as usize * 8;
+    let words = (js::to_u32(o.bytes) >> 2) as usize * 4;
+    let (da, db, ua, ub) = (&a[..doubles], &b[..doubles], &a[..words], &b[..words]);
+    for (k, col) in prop_f64().iter().zip(double_cols(o)) {
+        let mut r = 0usize;
+        while (r as f64) < rows && (out.len() as f64) < most {
+            let at = col as usize + r;
+            let (x, y) = (double_at(da, at), double_at(db, at));
+            if !object_is(x, y) {
+                let whom = word_at(ua, o.id as usize + r);
+                out.push(alloc::format!("row {} (thing {}).{} {} | {}", r, whom, k, js::num_str(x), js::num_str(y)));
+            }
+            r += 1;
+        }
+    }
+    for (k, col) in prop_u32().iter().zip(word_cols(o)) {
+        let mut r = 0usize;
+        while (r as f64) < rows && (out.len() as f64) < most {
+            let at = col as usize + r;
+            let (x, y) = (word_at(ua, at), word_at(ub, at));
+            if x != y { out.push(alloc::format!("row {}.{} {} | {}", r, k, x, y)); }
+            r += 1;
+        }
+    }
+    out
 }
 
 /// PropCols and PropStoreO are one shape, two types by rule.
@@ -172,14 +222,14 @@ fn store_o(c: crate::sim_propshome::PropCols) -> crate::sim_propshome::PropStore
     }
 }
 
-/// `new Float64Array(bytes.buffer, bytes.byteOffset, 1)[0]`
-fn double_at(bytes: &[u8]) -> f64 {
+/// `new Float64Array(bytes.buffer, bytes.byteOffset, …)[i]`
+fn double_at(bytes: &[u8], i: usize) -> f64 {
     let mut w = [0u8; 8];
-    w.copy_from_slice(&bytes[..8]);
+    w.copy_from_slice(&bytes[i * 8..i * 8 + 8]);
     f64::from_ne_bytes(w)
 }
 
-/// `new Uint32Array(bytes.buffer, bytes.byteOffset, 4)[i]`
+/// `new Uint32Array(bytes.buffer, bytes.byteOffset, …)[i]`
 fn word_at(bytes: &[u8], i: usize) -> u32 {
     let mut w = [0u8; 4];
     w.copy_from_slice(&bytes[i * 4..i * 4 + 4]);
@@ -189,16 +239,6 @@ fn word_at(bytes: &[u8], i: usize) -> u32 {
 /// `Object.is` of two doubles: a NaN is a NaN, −0 is not 0.
 fn object_is(a: f64, b: f64) -> bool {
     (a.is_nan() && b.is_nan()) || a.to_bits() == b.to_bits()
-}
-
-/// propshome.ts:41 `colsOf(PROP_HEAD, PROP_F64, PROP_U32, cap)`.
-fn seam_cols_of(head: f64, cap: f64) -> crate::sim_propshome::PropCols {
-    todo!("needs: sim_colstore::cols_of to give every column's start (its ColsOf2 holds only `bytes`)")
-}
-
-/// propshome.ts:131 `colDiff(O, PROP_F64, PROP_U32, a, b, S.total, who, most, out)`.
-fn seam_col_diff(o: crate::sim_propshome::PropStoreO, a: &[u8], b: &[u8], rows: f64, who: &mut dyn FnMut(Vec<u32>, f64) -> String, most: f64, out: Vec<String>) -> Vec<String> {
-    todo!("needs: sim_colstore::col_diff's ColDiffO to hold every column's start (it holds only `bytes`)")
 }
 
 #[cfg(test)]
@@ -251,6 +291,61 @@ mod tests {
         let p = &sim::state::state(g.sim).props;
         assert_eq!(p.row[..5], [0, 1, 2, 3, 4]);
         assert_eq!(p.x[..5], [100.0, 101.0, 102.0, 103.0, 104.0]);
+    }
+
+    /// colsOf(16, PROP_F64, PROP_U32, 128) as the TypeScript's own sum gives it, and held to the module's own layout as propIo holds it.
+    #[test]
+    fn the_columns_are_where_the_module_has_them() {
+        let o = prop_cols(PROP_CAP);
+        assert_eq!([o.x, o.z, o.noise_t, o.flags, o.who, o.id, o.row, o.bytes], [2.0, 130.0, 1282.0, 2820.0, 2948.0, 3076.0, 3204.0, 13328.0]);
+        let store = store_o(o);
+        for (i, col) in double_cols(&store).into_iter().enumerate() {
+            assert_eq!(sim::props::cap(100 + i as u32) as f64, col * 8.0);
+        }
+        for (i, col) in word_cols(&store).into_iter().enumerate() {
+            assert_eq!(sim::props::cap(111 + i as u32) as f64, col * 4.0);
+        }
+        assert_eq!(sim::props::cap(13) as f64, o.bytes);
+        assert_eq!(sim::props::cap(115), 0);
+    }
+
+    fn put_double(bytes: &mut [u8], i: usize, x: f64) { bytes[i * 8..i * 8 + 8].copy_from_slice(&x.to_ne_bytes()); }
+    fn put_word(bytes: &mut [u8], i: usize, x: u32) { bytes[i * 4..i * 4 + 4].copy_from_slice(&x.to_ne_bytes()); }
+
+    /// The lines are propDiff's own, run under bun on the same two takes (see notes.md).
+    #[test]
+    fn two_takes_differ_in_these_words() {
+        let mut g = alloc::boxed::Box::new(Game::blank());
+        let o = store_o(prop_cols(PROP_CAP));
+        g.props.store.o = o;
+        g.props.store.total = 3.0;
+        let mut a = vec![0u8; o.bytes as usize];
+        for (r, id) in [7u32, 8, 9].into_iter().enumerate() { put_word(&mut a, o.id as usize + r, id); }
+        put_word(&mut a, 2, 3);
+        put_word(&mut a, 3, 3);
+        put_double(&mut a, o.noise_t as usize, f64::NAN);
+        let mut b = a.clone();
+        assert!(prop_diff(&mut g, &a, &b, None).is_empty());
+
+        put_double(&mut b, 0, 1.5);
+        put_word(&mut b, 2, 2);
+        put_double(&mut a, o.yaw as usize + 1, 0.25);
+        put_double(&mut b, o.yaw as usize + 1, f64::NAN);
+        put_double(&mut a, o.push_t as usize, -0.0);
+        put_double(&mut b, o.noise_t as usize, f64::from_bits(0x7ff8_0000_0000_0001));
+        put_word(&mut a, o.flags as usize + 2, 1);
+        put_word(&mut b, o.flags as usize + 2, 3);
+        let lines = prop_diff(&mut g, &a, &b, Some(9.0));
+        assert_eq!(lines, [
+            "the clock 0 | 1.5",
+            "3 of 3 things in the level | 2 of 3",
+            "row 1 (thing 8).yaw 0.25 | NaN",
+            "row 0 (thing 7).pushT 0 | 0",
+            "row 2.flags 1 | 3",
+        ]);
+        // at most `most`, four if none is said; what is past the most is not looked at
+        assert_eq!(prop_diff(&mut g, &a, &b, None).len(), 4);
+        assert_eq!(prop_diff(&mut g, &a, &b, Some(1.0)).len(), 2);
     }
 
     #[test]

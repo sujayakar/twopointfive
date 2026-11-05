@@ -7,8 +7,8 @@ use alloc::{string::String, vec::Vec};
 #[derive(Clone, Debug)]
 pub struct Ground {
     pub kinds: Vec<u8>,
-    pub lays: Vec<f64>,
-    pub banks: Vec<f64>,
+    pub lays: Vec<usize>,
+    pub banks: Vec<usize>,
 }
 impl Ground {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own

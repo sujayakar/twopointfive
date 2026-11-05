@@ -1,4 +1,4 @@
-//! src/game/tactics.ts lines 1 to 446
+//! src/game/tactics.ts lines 1 to 447
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -46,21 +46,6 @@ fn fresh_leg(g: &mut Game, m: GuardId) {
     o.path_goal = None;
     o.path_goal_orbit = false;
     o.stall_ref = None;
-}
-
-/// The kept knobs into `tune`. The game has no storage, so what the TypeScript does without one: the shipped values stand. (tactics.ts loadTactics)
-pub fn load_tactics(tune: &mut crate::tactics::TacticsTune) {}
-
-/// The kept knobs out. The game has no storage: nothing to keep them in. (tactics.ts saveTactics)
-pub fn save_tactics(tune: crate::tactics::TacticsTune) {}
-
-/// The four back to the shipped values; the stored copy is the host's. (tactics.ts resetTactics)
-pub fn reset_tactics(tune: &mut crate::tactics::TacticsTune) {
-    let d = crate::tactics::tactics_defaults();
-    tune.flank_wait = d.flank_wait;
-    tune.lone_wait = d.lone_wait;
-    tune.door_danger = d.door_danger;
-    tune.door_wait = d.door_wait;
 }
 
 /// The state, built if it is not there: the row itself. (tactics.ts S)

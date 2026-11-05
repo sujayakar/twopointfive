@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A number as WGSL wants a float: a whole one keeps a `.0`.   (world.ts wgslWorldConsts, its `f`)
 fn f(n: f64) -> String {
-    if n.is_finite() && m::floor(n) == n { format!("{:.1}", n) } else { format!("{}", n) }
+    if n.is_finite() && m::floor(n) == n { js::to_fixed(n, 1) } else { js::num_str(n) }
 }
 
 /// Three numbers through `f`, joined by commas.   (world.ts wgslWorldConsts, `.map(f).join(', ')`)
@@ -40,15 +40,15 @@ const RC_SIZE = vec3f({});
         f3(w.min),
         f3(w.max),
         f(w.grid_cell),
-        w.grid_w,
-        w.grid_h,
-        w.grid_w * w.grid_h + 1.0,
+        js::num_str(w.grid_w),
+        js::num_str(w.grid_h),
+        js::num_str(w.grid_w * w.grid_h + 1.0),
         f(w.grid_y0),
         f(w.grid_y_levels / (w.grid_y1 - w.grid_y0)),
         f(w.grid_y_levels - 1.0),
         f(w.ceiling_y),
-        w.max_boxes,
-        m::ceil((w.grid_w * w.grid_h) / 16.0),
+        js::num_str(w.max_boxes),
+        js::num_str(m::ceil((w.grid_w * w.grid_h) / 16.0)),
         f3(w.rc_min),
         f3(w.rc_size),
     )

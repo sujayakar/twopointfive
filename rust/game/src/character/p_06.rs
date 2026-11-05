@@ -7,22 +7,78 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// the rig's named nodes, as the animator and a layer call them (character.ts N), in the written order
-static N: [(&str, &str); 24] = [
-    ("hips", "DEF-hips"), ("spine1", "DEF-spine.001"), ("spine2", "DEF-spine.002"), ("spine3", "DEF-spine.003"), ("neck", "DEF-neck"), ("head", "DEF-head"),
-    ("upperArmL", "DEF-upper_arm.L"), ("forearmL", "DEF-forearm.L"), ("handL", "DEF-hand.L"), ("upperArmR", "DEF-upper_arm.R"), ("forearmR", "DEF-forearm.R"), ("handR", "DEF-hand.R"),
-    ("thighL", "DEF-thigh.L"), ("shinL", "DEF-shin.L"), ("footL", "DEF-foot.L"), ("toeL", "DEF-toe.L"), ("thighR", "DEF-thigh.R"), ("shinR", "DEF-shin.R"), ("footR", "DEF-foot.R"), ("toeR", "DEF-toe.R"),
-    ("shoulderL", "DEF-shoulder.L"), ("shoulderR", "DEF-shoulder.R"), ("middle1R", "DEF-f_middle.01.R"), ("middle1L", "DEF-f_middle.01.L"),
-];
+/// the rig's named nodes as `Object.entries(N)` walks them: the key a layer asks for (the TypeScript's own name), the node's name   (character.ts N)
+fn n_entries(nn: &crate::character::N) -> [(&'static str, &str); 24] {
+    [
+        ("hips", &nn.hips), ("spine1", &nn.spine1), ("spine2", &nn.spine2), ("spine3", &nn.spine3), ("neck", &nn.neck), ("head", &nn.head),
+        ("upperArmL", &nn.upper_arm_l), ("forearmL", &nn.forearm_l), ("handL", &nn.hand_l), ("upperArmR", &nn.upper_arm_r), ("forearmR", &nn.forearm_r), ("handR", &nn.hand_r),
+        ("thighL", &nn.thigh_l), ("shinL", &nn.shin_l), ("footL", &nn.foot_l), ("toeL", &nn.toe_l), ("thighR", &nn.thigh_r), ("shinR", &nn.shin_r), ("footR", &nn.foot_r), ("toeR", &nn.toe_r),
+        ("shoulderL", &nn.shoulder_l), ("shoulderR", &nn.shoulder_r), ("middle1R", &nn.middle1_r), ("middle1L", &nn.middle1_l),
+    ]
+}
 
-// ---- seams: what skeleton 4 still lacks (each has its line in notes.md)
+// ---- what the constructor does before the animator is on a body: anim_fk_list, anim_stance_of and anim_sample_jog take a CharId (notes, ## Skeleton)
 
-/// this.fkList in the constructor (character.ts:1855): the stub takes a CharId and the animator is not on a body yet
-fn seam_fk_list(g: &mut crate::game::Game, ch: RigId, ends: &[f64]) -> Vec<i32> { todo!("needs: fk_list by rig, callable before the animator is on a body") }
-/// this.sampleJog in the constructor (character.ts:1904): the stub takes a CharId and the animator is not on a body yet
-fn seam_sample_jog(g: &mut crate::game::Game, a: &crate::character::Anim, ph: f64, out: &mut crate::anim_skeleton::Pose) { todo!("needs: sample_jog on an animator not yet on a body") }
-/// this.stanceOf in the constructor (character.ts:1909, 1921): the stub takes a CharId and the animator is not on a body yet
-fn seam_stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> { todo!("needs: stance_of with no CharId (it reads no state)") }
+/// the nodes fkPart must compute for `ends`: each and all its ancestors, parents first   (character.ts fkList, by the rig)
+fn fk_list(rig: &crate::anim_gltf::GltfCharacter, ends: &[f64]) -> Vec<i32> {
+    let mut want = vec![false; rig.nodes.len()];
+    for &e in ends {
+        let mut i = e;
+        while i >= 0.0 {
+            want[i as usize] = true;
+            i = rig.nodes[i as usize].parent;
+        }
+    }
+    rig.order.iter().filter(|&&i| want[i as usize]).map(|&i| i as i32).collect()
+}
+/// a run clip's stances from its toes; None if either foot never qualifies   (character.ts stanceOf: it reads no state)
+fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<crate::character::AnimStanceOf> {
+    let mm = ty[0].len();
+    let mut cs: Vec<f64> = Vec::with_capacity(ty.len());
+    for k in 0..ty.len() {
+        let ys = &ty[k];
+        let lo = m::min_n(ys) + 0.02;
+        let (mut sx, mut cx, mut n) = (0.0, 0.0, 0);
+        for i in 0..mm {
+            if ys[i] <= lo && tz[k][(i + 1) % mm] < tz[k][(i + mm - 1) % mm] {
+                sx += m::sin(2.0 * m::PI * i as f64 / mm as f64);
+                cx += m::cos(2.0 * m::PI * i as f64 / mm as f64);
+                n += 1;
+            }
+        }
+        cs.push(if n != 0 { js::rem(m::atan2(sx, cx) / (2.0 * m::PI) + 1.0, 1.0) } else { f64::NAN });
+    }
+    if !cs[0].is_finite() || !cs[1].is_finite() { return None; }
+    let c = js::rem(m::atan2(m::sin(4.0 * m::PI * cs[0]) + m::sin(4.0 * m::PI * cs[1]), m::cos(4.0 * m::PI * cs[0]) + m::cos(4.0 * m::PI * cs[1])) / (4.0 * m::PI) + 1.0, 0.5);
+    Some(crate::character::AnimStanceOf { c, c_l: cs[0], c_r: cs[1] })
+}
+/// Jog_Fwd_Loop at phase ph with its loop seam closed, in doubles as all the constructor's measuring is   (character.ts sampleJog, on the animator being built)
+fn sample_jog(g: &mut crate::game::Game, a: &crate::character::Anim, ph: f64, out: crate::anim_skeleton::Pose) {
+    let cj = kept(a, "Jog_Fwd_Loop");
+    let t = ph * g.tab.clip[cj].duration;
+    crate::anim_skeleton::sample_clip(g, cj, t, true, out, false);
+    let k = ph - m::floor(ph) - 0.5;
+    let rows = crate::anim_skeleton::pose_rows(out.nodes as f64) as usize;
+    jog_seam_close(crate::anim_skeleton::pose_cols(g, out), rows, &a.jog_seam, k);
+}
+/// every channel whose last key misses its first carries k × the gap: the sums in doubles, each stored as a single once   (character.ts sampleJog)
+fn jog_seam_close(d: &mut [f32], rows: usize, seam: &[crate::character::AnimJogSeamItem], k: f64) {
+    for s in seam {
+        if let Some(v) = s.d {
+            let o = s.node as usize;
+            d[o] = (d[o] as f64 + v[0] * k) as f32;
+            d[o + rows] = (d[o + rows] as f64 + v[1] * k) as f32;
+            d[o + 2 * rows] = (d[o + 2 * rows] as f64 + v[2] * k) as f32;
+        } else {
+            let o = 3 * rows + s.node as usize;
+            let q = v3::quat::mul([d[o] as f64, d[o + rows] as f64, d[o + 2 * rows] as f64, d[o + 3 * rows] as f64], v3::quat::axis_angle(s.axis.unwrap(), s.ang.unwrap() * k));
+            d[o] = q[0] as f32;
+            d[o + rows] = q[1] as f32;
+            d[o + 2 * rows] = q[2] as f32;
+            d[o + 3 * rows] = q[3] as f32;
+        }
+    }
+}
 
 // ---- helpers
 
@@ -42,11 +98,11 @@ fn kept(a: &crate::character::Anim, k: &'static str) -> ClipId {
     *a.clips.get(k).unwrap()
 }
 /// the fist-taking `grab` of the constructor: each hand's 15 digit joints' rotations off a pose
-fn grab(hands: &[Vec<i32>], q: &mut crate::anim_skeleton::Pose) -> Vec<Vec<f32>> {
+fn grab(g: &mut crate::game::Game, hands: &[Vec<i32>], q: crate::anim_skeleton::Pose) -> Vec<Vec<f32>> {
     hands.iter().map(|ns| {
         let mut a = vec![0.0f32; 60];
         for (k, i) in ns.iter().enumerate() {
-            let r = crate::anim_skeleton::pose_rot(q, *i as f64);
+            let r = crate::anim_skeleton::pose_rot(g, q, *i as f64);
             for j in 0..4 { a[k * 4 + j] = r[j] as f32; }
         }
         a
@@ -111,40 +167,51 @@ fn throw_by_read(lo: f64, full: f64, toss_fast: f64, dist: f64, speed: Option<f6
 
 // ---- the part
 
-/// the pose under every look-only arm layer that showed this frame; none when none showed. A copy, read at once by its caller   (character.ts underPose)
+/// the pose under every look-only arm layer that showed this frame; none when none showed   (character.ts underPose)
 pub fn anim_under_pose(g: &mut crate::game::Game, c: CharId) -> Option<crate::anim_skeleton::Pose> {
-    let singles = g.k.posemath.singles;
-    let crate::character::Anim { arms_pre, hand_pre, under_buf, arm_r_only, .. } = &mut g.ch[c].anim;
-    let (a, h) = match (arms_pre.as_ref(), hand_pre.as_ref()) {
+    let (a, h) = match (g.ch[c].anim.arms_pre, g.ch[c].anim.hand_pre) {
         (Some(a), Some(h)) => (a, h),
-        (a, h) => return a.or(h).cloned(),
+        (a, h) => return a.or(h),
     };
-    let buf = under_buf.get_or_insert_with(|| crate::anim_skeleton::pose_new(a.num_nodes as f64));
-    crate::anim_skeleton::blend_pose(Some(a), h, 1.0, Some(arm_r_only.as_slice()), buf, singles);
-    Some(buf.clone())
+    let buf = match g.ch[c].anim.under_buf {
+        Some(b) => b,
+        None => {
+            let id = g.ch[c].anim.poses;
+            let b = crate::anim_skeleton::pose_set_make(g, id, a.nodes as f64);
+            g.ch[c].anim.under_buf = Some(b);
+            b
+        }
+    };
+    let singles = g.k.posemath.singles;
+    // (lent out of the row for the call, which takes g: blend_pose reads the pool, not the animator)
+    let mask = core::mem::take(&mut g.ch[c].anim.arm_r_only);
+    crate::anim_skeleton::blend_pose(g, Some(a), h, 1.0, Some(mask.as_slice()), buf, singles);
+    g.ch[c].anim.arm_r_only = mask;
+    Some(buf)
 }
 
 /// the animator of a rig: its poses, clips, masks, and everything measured off the clips; then his phase off the game's die   (character.ts CharacterAnimator)
 pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim {
     let mut a = crate::character::Anim::blank();
     a.rig = ch;
+    a.poses = crate::anim_skeleton::pose_set_new(g, crate::character::ANIM_POSES);
     let n = g.tab.rig[ch].nodes.len() as f64;
-    a.pose = crate::anim_skeleton::pose_new(n);
-    a.p_a = crate::anim_skeleton::pose_new(n);
-    a.p_b = crate::anim_skeleton::pose_new(n);
-    a.p_c = crate::anim_skeleton::pose_new(n);
-    a.p_upper = crate::anim_skeleton::pose_new(n);
-    a.p_aim = crate::anim_skeleton::pose_new(n);
-    let mut made = crate::anim_skeleton::pose_new(n);
-    a.rest = crate::anim_skeleton::rest_pose(&g.tab.rig[ch], &mut made);
-    crate::anim_skeleton::pose_copy(&mut a.pose, &a.rest);
-    crate::anim_skeleton::pose_copy(&mut a.p_a, &a.rest);
-    crate::anim_skeleton::pose_copy(&mut a.p_b, &a.rest);
-    crate::anim_skeleton::pose_copy(&mut a.p_c, &a.rest);
-    crate::anim_skeleton::pose_copy(&mut a.p_upper, &a.rest);
-    crate::anim_skeleton::pose_copy(&mut a.p_aim, &a.rest);
+    let set = a.poses;
+    a.pose = crate::anim_skeleton::pose_set_make(g, set, n);
+    a.p_a = crate::anim_skeleton::pose_set_make(g, set, n);
+    a.p_b = crate::anim_skeleton::pose_set_make(g, set, n);
+    a.p_c = crate::anim_skeleton::pose_set_make(g, set, n);
+    a.p_upper = crate::anim_skeleton::pose_set_make(g, set, n);
+    a.p_aim = crate::anim_skeleton::pose_set_make(g, set, n);
+    a.rest = crate::anim_skeleton::pose_set_make(g, set, n);
+    crate::anim_skeleton::rest_pose(g, ch, a.rest);
+    let rest = a.rest;
+    for p in [a.pose, a.p_a, a.p_b, a.p_c, a.p_upper, a.p_aim] { crate::anim_skeleton::pose_copy(g, p, rest); }
+    // The TypeScript's `new Pose(n).copy(this.rest)` scratch of this function goes to the collector; in the pool a pose's place is for good. So its two
+    // scratch poses at any one time are p_b and p_c, each copied from rest as the TypeScript's is made, and both are back at rest at the end, as it leaves them.
+    let (s1, s2) = (a.p_b, a.p_c);
 
-    // what is measured off a clip to keep is MEASURED IN DOUBLES whatever the pose rule says (POSEMATH)
+    // what is measured off a clip to keep is MEASURED IN DOUBLES whatever the pose rule says (POSEMATH): every sample_clip below says so
     let pose_rule = g.k.posemath.singles;
     g.k.posemath.singles = false;
 
@@ -157,7 +224,9 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     }
     if let Some(j) = g.tab.rig[ch].clips.get(String::from("Punch_Jab")) { a.clips.set("Punch_Jab", *j); }
 
-    let at: Vec<usize> = N.iter().map(|e| node(g, ch, e.1)).collect();
+    let nn = crate::character::n();
+    let names = n_entries(&nn);
+    let at: Vec<usize> = names.iter().map(|e| node(g, ch, e.1)).collect();
     a.nodes = crate::character::AnimNodes {
         hips: at[0], spine1: at[1], spine2: at[2], spine3: at[3], neck: at[4], head: at[5],
         upper_arm_l: at[6], forearm_l: at[7], hand_l: at[8], upper_arm_r: at[9], forearm_r: at[10], hand_r: at[11],
@@ -186,20 +255,20 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
         l
     }).collect();
 
-    a.upper_mask = crate::anim_skeleton::build_mask(g, ch, &[entry("DEF-spine.001", 0.3, false), entry("DEF-spine.002", 0.65, false), entry("DEF-spine.003", 1.0, true)]);
-    a.arm_r_mask = crate::anim_skeleton::build_mask(g, ch, &[entry("DEF-shoulder.R", 1.0, true), entry("DEF-spine.003", 0.25, false)]);
-    a.head_mask = crate::anim_skeleton::build_mask(g, ch, &[entry("DEF-neck", 1.0, true)]);
-    a.arms_mask = crate::anim_skeleton::build_mask(g, ch, &[entry("DEF-shoulder.L", 1.0, true), entry("DEF-shoulder.R", 1.0, true)]);
-    a.arm_r_only = crate::anim_skeleton::build_mask(g, ch, &[entry("DEF-shoulder.R", 1.0, true)]);
+    a.upper_mask = crate::anim_skeleton::build_mask(g, ch, &[entry(&nn.spine1, 0.3, false), entry(&nn.spine2, 0.65, false), entry(&nn.spine3, 1.0, true)]);
+    a.arm_r_mask = crate::anim_skeleton::build_mask(g, ch, &[entry(&nn.shoulder_r, 1.0, true), entry(&nn.spine3, 0.25, false)]);
+    a.head_mask = crate::anim_skeleton::build_mask(g, ch, &[entry(&nn.neck, 1.0, true)]);
+    a.arms_mask = crate::anim_skeleton::build_mask(g, ch, &[entry(&nn.shoulder_l, 1.0, true), entry(&nn.shoulder_r, 1.0, true)]);
+    a.arm_r_only = crate::anim_skeleton::build_mask(g, ch, &[entry(&nn.shoulder_r, 1.0, true)]);
     a.torso_mask = a.upper_mask.iter().enumerate().map(|(i, w)| if a.arms_mask[i] > 0.0 { 0.0 } else { *w }).collect();
 
     a.fk = crate::anim_skeleton::pose_fk_new(g, ch);
-    a.fk_legs = seam_fk_list(g, ch, &[nd.hips as f64, nd.thigh_l as f64, nd.shin_l as f64, nd.foot_l as f64, nd.toe_l as f64, nd.thigh_r as f64, nd.shin_r as f64, nd.foot_r as f64, nd.toe_r as f64]);
-    a.fk_arms = seam_fk_list(g, ch, &[nd.spine3 as f64, nd.upper_arm_r as f64, nd.forearm_r as f64, nd.hand_r as f64, nd.middle1_r as f64, nd.upper_arm_l as f64, nd.forearm_l as f64, nd.hand_l as f64]);
-    a.fk_head = seam_fk_list(g, ch, &[nd.head as f64]);
+    a.fk_legs = fk_list(&g.tab.rig[ch], &[nd.hips as f64, nd.thigh_l as f64, nd.shin_l as f64, nd.foot_l as f64, nd.toe_l as f64, nd.thigh_r as f64, nd.shin_r as f64, nd.foot_r as f64, nd.toe_r as f64]);
+    a.fk_arms = fk_list(&g.tab.rig[ch], &[nd.spine3 as f64, nd.upper_arm_r as f64, nd.forearm_r as f64, nd.hand_r as f64, nd.middle1_r as f64, nd.upper_arm_l as f64, nd.forearm_l as f64, nd.hand_l as f64]);
+    a.fk_head = fk_list(&g.tab.rig[ch], &[nd.head as f64]);
 
-    crate::anim_skeleton::sample_clip(&g.tab.clip[kept(&a, "Pistol_Aim_Neutral")], 0.0, false, &mut a.p_aim);
-    crate::anim_skeleton::pose_fk_run(&mut a.fk, &a.rest, &g.tab.rig[ch]);
+    crate::anim_skeleton::sample_clip(g, kept(&a, "Pistol_Aim_Neutral"), 0.0, false, a.p_aim, false);
+    crate::anim_skeleton::pose_fk_run(g, &mut a.fk, rest);
     a.chest_rest_inv = v3::quat::conj(a.fk.rot[nd.spine3]);
     a.head_rest_inv = v3::quat::conj(a.fk.rot[nd.head]);
     a.hand_fix = [nd.hand_l, nd.hand_r].iter().map(|&h| {
@@ -208,37 +277,39 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
         let b = v3::normalize(v3::mad(ay(), f, -v3::dot(ay(), f)));
         v3::quat::mul(v3::quat::conj(v3::quat::from_basis(v3::cross(f, b), f, b)), r)
     }).collect();
-    crate::anim_skeleton::pose_fk_run(&mut a.fk, &a.p_aim, &g.tab.rig[ch]);
+    crate::anim_skeleton::pose_fk_run(g, &mut a.fk, a.p_aim);
     a.grip_up = v3::quat::rotate(v3::quat::conj(a.fk.rot[nd.hand_r]), ay());
 
     {   // the standing idle: the gaze, the feet, and the fist the hand pass measures from
-        let mut p = a.rest.clone();
-        crate::anim_skeleton::sample_clip(&g.tab.clip[kept(&a, "Idle_Loop")], 0.0, false, &mut p);
-        crate::anim_skeleton::pose_fk_run(&mut a.fk, &p, &g.tab.rig[ch]);
+        let p = s1;
+        crate::anim_skeleton::pose_copy(g, p, rest);
+        crate::anim_skeleton::sample_clip(g, kept(&a, "Idle_Loop"), 0.0, false, p, false);
+        crate::anim_skeleton::pose_fk_run(g, &mut a.fk, p);
         a.gaze_local = v3::quat::rotate(v3::quat::conj(a.fk.rot[nd.head]), az());
-        a.hn.fist = grab(&a.hn.nodes, &mut p);
-        let mut pc = a.rest.clone();
-        crate::anim_skeleton::sample_clip(&g.tab.clip[kept(&a, "Crouch_Idle_Loop")], 0.0, false, &mut pc);
-        let cr = grab(&a.hn.nodes, &mut pc);
+        a.hn.fist = grab(g, &a.hn.nodes, p);
+        let pc = s2;
+        crate::anim_skeleton::pose_copy(g, pc, rest);
+        crate::anim_skeleton::sample_clip(g, kept(&a, "Crouch_Idle_Loop"), 0.0, false, pc, false);
+        let cr = grab(g, &a.hn.nodes, pc);
         a.hn.own = [0usize, 1].iter().map(|&sd| {
-            let crd: Vec<f64> = cr[sd].iter().map(|x| *x as f64).collect();
-            let fd: Vec<f64> = a.hn.fist[sd].iter().map(|x| *x as f64).collect();
+            let (cd, fd) = (&cr[sd], &a.hn.fist[sd]);
             [0.0f64, 1.0, 2.0, 3.0, 4.0].iter().map(|&d| {
-                m::max(10.0 * DEGR, (q_ang(&crd, d * 12.0, 1.0, &fd, d * 12.0) + q_ang(&crd, d * 12.0 + 4.0, 1.0, &fd, d * 12.0 + 4.0) + q_ang(&crd, d * 12.0 + 8.0, 1.0, &fd, d * 12.0 + 8.0)) / 3.0) as f32
+                m::max(10.0 * DEGR, (q_ang(cd, d * 12.0, 1.0, fd, d * 12.0) + q_ang(cd, d * 12.0 + 4.0, 1.0, fd, d * 12.0 + 4.0) + q_ang(cd, d * 12.0 + 8.0, 1.0, fd, d * 12.0 + 8.0)) / 3.0) as f32
             }).collect()
         }).collect();
         a.idle_feet = crate::character::AnimIdleFeet { l: a.fk.pos[nd.foot_l], r: a.fk.pos[nd.foot_r], r_l: a.fk.rot[nd.foot_l], r_r: a.fk.rot[nd.foot_r] };
     }
     {   // the crouch walk's gait for the deliberate retime: the ankles' fore-aft middle, and where the toes come down
-        let mut p = a.rest.clone();
+        let p = s1;
+        crate::anim_skeleton::pose_copy(g, p, rest);
         let cf = kept(&a, "Crouch_Fwd_Loop");
         let cf_dur = g.tab.clip[cf].duration;
         const M: usize = 48;
         let (mut zmin, mut zmax) = (1e9f64, -1e9f64);
         let mut ty: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         for i in 0..M {
-            crate::anim_skeleton::sample_clip(&g.tab.clip[cf], cf_dur * i as f64 / M as f64, true, &mut p);
-            crate::anim_skeleton::pose_fk_run(&mut a.fk, &p, &g.tab.rig[ch]);
+            crate::anim_skeleton::sample_clip(g, cf, cf_dur * i as f64 / M as f64, true, p, false);
+            crate::anim_skeleton::pose_fk_run(g, &mut a.fk, p);
             for f in [nd.foot_l, nd.foot_r] { zmin = m::min(zmin, a.fk.pos[f][2]); zmax = m::max(zmax, a.fk.pos[f][2]); }
             ty[0].push(a.fk.pos[nd.toe_l][1]);
             ty[1].push(a.fk.pos[nd.toe_r][1]);
@@ -260,29 +331,32 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     {   // the run clip's loop seam: each keyed channel's gap, first − last, spread round the cycle at sample time (sampleJog)
         let cj = kept(&a, "Jog_Fwd_Loop");
         let cj_dur = g.tab.clip[cj].duration;
-        let (mut pa, mut pb) = (a.rest.clone(), a.rest.clone());
-        crate::anim_skeleton::sample_clip(&g.tab.clip[cj], 0.0, false, &mut pa);
-        crate::anim_skeleton::sample_clip(&g.tab.clip[cj], cj_dur, false, &mut pb);
-        for tr in &g.tab.clip[cj].tracks {
-            if tr.path == 0.0 {
-                let d = v3::sub(crate::anim_skeleton::pose_pos(&mut pa, tr.node), crate::anim_skeleton::pose_pos(&mut pb, tr.node));
-                if v3::len(d) > 5e-4 { a.jog_seam.push(crate::character::AnimJogSeamItem { node: tr.node, d: Some(d), axis: None, ang: None }); }
-            } else if tr.path == 1.0 {
-                let mut q = v3::quat::mul(v3::quat::conj(crate::anim_skeleton::pose_rot(&mut pb, tr.node)), crate::anim_skeleton::pose_rot(&mut pa, tr.node));
+        let (pa, pb) = (s1, s2);
+        crate::anim_skeleton::pose_copy(g, pa, rest);
+        crate::anim_skeleton::pose_copy(g, pb, rest);
+        crate::anim_skeleton::sample_clip(g, cj, 0.0, false, pa, false);
+        crate::anim_skeleton::sample_clip(g, cj, cj_dur, false, pb, false);
+        let tracks: Vec<(f64, f64)> = g.tab.clip[cj].tracks.iter().map(|tr| (tr.node, tr.path)).collect();
+        for (node, path) in tracks {
+            if path == 0.0 {
+                let d = v3::sub(crate::anim_skeleton::pose_pos(g, pa, node), crate::anim_skeleton::pose_pos(g, pb, node));
+                if v3::len(d) > 5e-4 { a.jog_seam.push(crate::character::AnimJogSeamItem { node, d: Some(d), axis: None, ang: None }); }
+            } else if path == 1.0 {
+                let mut q = v3::quat::mul(v3::quat::conj(crate::anim_skeleton::pose_rot(g, pb, node)), crate::anim_skeleton::pose_rot(g, pa, node));
                 if q[3] < 0.0 { q = [-q[0], -q[1], -q[2], -q[3]]; }
                 let s = m::hyp3(q[0], q[1], q[2]);
                 let ang = 2.0 * m::atan2(s, q[3]);
-                if ang > 0.3 * DEGR { a.jog_seam.push(crate::character::AnimJogSeamItem { node: tr.node, d: None, axis: Some([q[0] / s, q[1] / s, q[2] / s]), ang: Some(ang) }); }
+                if ang > 0.3 * DEGR { a.jog_seam.push(crate::character::AnimJogSeamItem { node, d: None, axis: Some([q[0] / s, q[1] / s, q[2] / s]), ang: Some(ang) }); }
             }
         }
     }
     layer_tables_fit();
     let all: Vec<ClipId> = g.tab.rig[ch].clips.values().copied().collect();
-    crate::anim_skeleton::layer_clips_fit(g, &all, a.p_a.num_nodes as f64);
+    crate::anim_skeleton::layer_clips_fit(g, &all, a.p_a.nodes as f64);
 
     // what a layer of the Rust module is handed with the rig (skeleton.ts layerSlot)
     let mut cast = crate::anim_skeleton::LayerCast::blank();
-    for (i, e) in N.iter().enumerate() { cast.nodes.set(e.0, at[i]); }
+    for (i, e) in names.iter().enumerate() { cast.nodes.set(e.0, at[i]); }
     cast.lists.set("fkLegs", a.fk_legs.clone());
     cast.lists.set("fkArms", a.fk_arms.clone());
     cast.lists.set("fkHead", a.fk_head.clone());
@@ -301,15 +375,16 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     a.cast = cast;
 
     {   // the run clip's pelvis height by phase and its mean, its ankles' middle, its stances
-        let mut p = a.rest.clone();
+        let p = s1;
+        crate::anim_skeleton::pose_copy(g, p, rest);
         const M: usize = 64;
         let mut sum = 0.0;
         let (mut zmin, mut zmax) = (1e9f64, -1e9f64);
         let mut ty: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         let mut tz: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         for i in 0..M {
-            seam_sample_jog(g, &a, i as f64 / M as f64, &mut p);
-            crate::anim_skeleton::pose_fk_run(&mut a.fk, &p, &g.tab.rig[ch]);
+            sample_jog(g, &a, i as f64 / M as f64, p);
+            crate::anim_skeleton::pose_fk_run(g, &mut a.fk, p);
             a.jog_hips_y[i] = a.fk.pos[nd.hips][1] as f32;
             sum += a.jog_hips_y[i] as f64;   // (the table's single, read back)
             for f in [nd.foot_l, nd.foot_r] { zmin = m::min(zmin, a.fk.pos[f][2]); zmax = m::max(zmax, a.fk.pos[f][2]); }
@@ -320,10 +395,11 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
         }
         a.jog_hips_mean = sum / M as f64;
         if zmax > zmin { a.jog_mid = (zmin + zmax) / 2.0; }
-        if let Some(s) = seam_stance_of(&ty, &tz) { a.run_gait.jog = crate::character::AnimRunGaitJog { c: s.c, c_l: s.c_l, c_r: s.c_r }; }
+        if let Some(s) = stance_of(&ty, &tz) { a.run_gait.jog = crate::character::AnimRunGaitJog { c: s.c, c_l: s.c_l, c_r: s.c_r }; }
     }
     {   // the sprint clip likewise: its ankles' middle, their lowest height, its stances
-        let mut p = a.rest.clone();
+        let p = s1;
+        crate::anim_skeleton::pose_copy(g, p, rest);
         let cs = kept(&a, "Sprint_Loop");
         let cs_dur = g.tab.clip[cs].duration;
         const M: usize = 64;
@@ -331,8 +407,8 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
         let mut ty: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         let mut tz: [Vec<f64>; 2] = [Vec::new(), Vec::new()];
         for i in 0..M {
-            crate::anim_skeleton::sample_clip(&g.tab.clip[cs], cs_dur * i as f64 / M as f64, true, &mut p);
-            crate::anim_skeleton::pose_fk_run(&mut a.fk, &p, &g.tab.rig[ch]);
+            crate::anim_skeleton::sample_clip(g, cs, cs_dur * i as f64 / M as f64, true, p, false);
+            crate::anim_skeleton::pose_fk_run(g, &mut a.fk, p);
             for f in [nd.foot_l, nd.foot_r] { zmin = m::min(zmin, a.fk.pos[f][2]); zmax = m::max(zmax, a.fk.pos[f][2]); ymin = m::min(ymin, a.fk.pos[f][1]); }
             ty[0].push(a.fk.pos[nd.toe_l][1]);
             ty[1].push(a.fk.pos[nd.toe_r][1]);
@@ -341,8 +417,10 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
         }
         if zmax > zmin { a.sprint_mid = (zmin + zmax) / 2.0; }
         if ymin < 1e8 { a.sprint_floor_y = ymin; }
-        if let Some(s) = seam_stance_of(&ty, &tz) { a.run_gait.sprint = crate::character::AnimRunGaitSprint { c: s.c, c_l: s.c_l, c_r: s.c_r }; }
+        if let Some(s) = stance_of(&ty, &tz) { a.run_gait.sprint = crate::character::AnimRunGaitSprint { c: s.c, c_l: s.c_l, c_r: s.c_r }; }
     }
+    crate::anim_skeleton::pose_copy(g, s1, rest);
+    crate::anim_skeleton::pose_copy(g, s2, rest);
     g.k.posemath.singles = pose_rule;
     a.phase = crate::math_dice::sim_random(g);
     a
@@ -610,10 +688,10 @@ pub fn anim_kit_swap(g: &mut crate::game::Game, c: CharId, from: Option<crate::c
         None => t_a + g.k.kit.away + (if from == Some(Kit::Rifle) && !front { g.k.kit.far } else { 0.0 }),
     };
     // where the hands are now: off the pose as last shown
-    {
-        let a = &mut g.ch[c].anim;
-        crate::anim_skeleton::pose_fk_run(&mut a.fk, &a.pose, &g.tab.rig[a.rig]);
-    }
+    let pose = g.ch[c].anim.pose;
+    let mut fk = core::mem::replace(&mut g.ch[c].anim.fk, crate::anim_skeleton::PoseFK::blank());   // (lent out of the row for the call, which takes g)
+    crate::anim_skeleton::pose_fk_run(g, &mut fk, pose);
+    g.ch[c].anim.fk = fk;
     let f = anim_trunk_frame(g, c);
     let (r, rq, l, lq) = {
         let a = &g.ch[c].anim;
@@ -815,5 +893,70 @@ mod tests {
         assert_eq!(read(1.1, Some(9.0)), (0xbff0000000000000, 0));
         assert_eq!(read(5.3, None), (0xbff0000000000000, 0x3fe5e00000000000));
         assert_eq!(read(12.0, None), (0xbff0000000000000, 0x3ff0000000000000));
+    }
+
+    /// N as the TypeScript writes it, key by key: the pairs are by hand and a swap would compile   (character.ts:430)
+    #[test]
+    fn n_entries_are_the_typescripts() {
+        let want: [(&str, &str); 24] = [("hips", "DEF-hips"), ("spine1", "DEF-spine.001"), ("spine2", "DEF-spine.002"), ("spine3", "DEF-spine.003"), ("neck", "DEF-neck"), ("head", "DEF-head"), ("upperArmL", "DEF-upper_arm.L"), ("forearmL", "DEF-forearm.L"), ("handL", "DEF-hand.L"), ("upperArmR", "DEF-upper_arm.R"), ("forearmR", "DEF-forearm.R"), ("handR", "DEF-hand.R"), ("thighL", "DEF-thigh.L"), ("shinL", "DEF-shin.L"), ("footL", "DEF-foot.L"), ("toeL", "DEF-toe.L"), ("thighR", "DEF-thigh.R"), ("shinR", "DEF-shin.R"), ("footR", "DEF-foot.R"), ("toeR", "DEF-toe.R"), ("shoulderL", "DEF-shoulder.L"), ("shoulderR", "DEF-shoulder.R"), ("middle1R", "DEF-f_middle.01.R"), ("middle1L", "DEF-f_middle.01.L")];
+        let nn = crate::character::n();
+        assert_eq!(n_entries(&nn), want);
+    }
+
+    /// each end and its ancestors, in the rig's order and no other
+    #[test]
+    fn fk_list_is_ancestors_in_order() {
+        let mut rig = crate::anim_gltf::GltfCharacter::zeroed();
+        for parent in [-1.0, 0.0, 1.0, 1.0, 3.0, 0.0] {
+            rig.nodes.push(crate::anim_gltf::GltfNode { parent, ..crate::anim_gltf::GltfNode::zeroed() });
+        }
+        rig.order = vec![0.0, 5.0, 1.0, 3.0, 2.0, 4.0];
+        assert_eq!(fk_list(&rig, &[4.0]), vec![0, 1, 3, 4]);
+        assert_eq!(fk_list(&rig, &[2.0, 5.0]), vec![0, 5, 1, 2]);
+        assert_eq!(fk_list(&rig, &[]), Vec::<i32>::new());
+    }
+
+    /// the TypeScript's own bits for stanceOf (bun, EXACT on)
+    #[test]
+    fn stance_of_bits() {
+        let n = 37;
+        let mut ty = vec![vec![0.0; n], vec![0.0; n]];
+        let mut tz = vec![vec![0.0; n], vec![0.0; n]];
+        for i in 0..n {
+            let p = i as f64 / n as f64;
+            ty[0][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * p + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 1.0);
+            tz[0][i] = -0.2 * m::cos(2.0 * m::PI * p + 0.3);
+            ty[1][i] = 0.1 + 0.08 * m::sin(2.0 * m::PI * (p + 0.52) + 0.3) + 0.01 * m::sin(4.0 * m::PI * p + 2.0);
+            tz[1][i] = -0.2 * m::cos(2.0 * m::PI * (p + 0.52) + 0.3);
+        }
+        let s = stance_of(&ty, &tz).unwrap();
+        assert_eq!([s.c.to_bits(), s.c_l.to_bits(), s.c_r.to_bits()], [0x3fcacf914c1bacf8, 0x3fe759f22983759f, 0x3fc83759f2298370]);
+        let flat = vec![vec![1.0; 4], vec![1.0; 4]];
+        assert!(stance_of(&flat, &flat).is_none());
+    }
+
+    /// the TypeScript's own bits for sampleJog's closing of the seam: a move and a turn on one node, a turn and a move on two others, a phase past 1
+    #[test]
+    fn jog_seam_close_bits() {
+        use crate::character::AnimJogSeamItem as S;
+        const IN: [u32; 40] = [0x3dcc7576, 0x3f37a4a6, 0x3f7f5bd5, 0x3f4ef99f, 0x3e74fdc7, 0xbee2920a, 0xbf6a89da, 0xbf757c10, 0xbf0cf9ba, 0x3deeb159, 0x3f3a9db7, 0x3f7fa089, 0x3f4c69a7, 0x3e643d41, 0xbeea4225, 0xbf6c3b03, 0xbf743a9b, 0xbf095cd8, 0x3e086dfb, 0x3f3d8946, 0x3f7fd2bd, 0x3f49cae3, 0x3e536c36, 0xbef1e14b, 0xbf6ddb12, 0xbf72e779, 0xbf05b604, 0x3e197969, 0x3f40671e, 0x3f7ff26d, 0x3f471d85, 0x3e428bde, 0xbef96ef0, 0xbf6f69eb, 0xbf7182c2, 0xbf020583, 0x3e2a79bc, 0x3f433708, 0x3f7fff97, 0x3f4461bd];
+        let want: [(f64, u64, [u32; 40]); 2] = [
+            (0.28125, 0xbfcc000000000000, [0x3e296dee, 0x3f36f451, 0x3f7f5bd5, 0x3f4ef99f, 0x3e5e9761, 0xbedffbb7, 0xbf6a89da, 0xbf757c10, 0xbf1af9ba, 0x3deb8e88, 0x3f3a9db7, 0x3f7fa089, 0x3f4c69a7, 0x3e6617b7, 0xbee9cafc, 0xbf6c3b03, 0xbf743a9b, 0xbf08cdec, 0x3e063bc8, 0x3f3d8946, 0x3f7fd2bd, 0x3f49a933, 0x3e55a698, 0xbef1e14b, 0xbf6ddb12, 0xbf733814, 0xbf05d50a, 0x3e197969, 0x3f40671e, 0x3f7ff26d, 0x3f471d85, 0x3e428bde, 0xbef96ef0, 0xbf6f69eb, 0xbf7182c2, 0xbf020583, 0x3e2a79bc, 0x3f433708, 0x3f7fff97, 0x3f4461bd]),
+            (1.75, 0x3fd0000000000000, [0x3ccb6f72, 0x3f386e2c, 0x3f7f5bd5, 0x3f4ef99f, 0x3e874bb0, 0xbee586fb, 0xbf6a89da, 0xbf757c10, 0xbef9f374, 0x3df246da, 0x3f3a9db7, 0x3f7fa089, 0x3f4c69a7, 0x3e621ea3, 0xbeeac8ec, 0xbf6c3b03, 0xbf743a9b, 0xbf09fff4, 0x3e0aefad, 0x3f3d8946, 0x3f7fd2bd, 0x3f49f10e, 0x3e50df14, 0xbef1e14b, 0xbf6ddb12, 0xbf728af3, 0xbf0591c2, 0x3e197969, 0x3f40671e, 0x3f7ff26d, 0x3f471d85, 0x3e428bde, 0xbef96ef0, 0xbf6f69eb, 0xbf7182c2, 0xbf020583, 0x3e2a79bc, 0x3f433708, 0x3f7fff97, 0x3f4461bd]),
+        ];
+        let seam = [
+            S { node: 1.0, d: Some([0.0123, -0.0231, 0.007]), axis: None, ang: None },
+            S { node: 2.0, d: None, axis: Some([0.6, 0.0, 0.8]), ang: Some(0.04) },
+            S { node: 1.0, d: None, axis: Some([0.0, 1.0, 0.0]), ang: Some(0.021) },
+            S { node: 0.0, d: Some([-0.3, 0.1, 0.25]), axis: None, ang: None },
+        ];
+        for (ph, k_bits, out) in want {
+            let k = ph - m::floor(ph) - 0.5;
+            assert_eq!(k.to_bits(), k_bits);
+            let mut d: Vec<f32> = IN.iter().map(|b| f32::from_bits(*b)).collect();
+            jog_seam_close(&mut d, 4, &seam, k);
+            let got: Vec<u32> = d.iter().map(|x| x.to_bits()).collect();
+            assert_eq!(got, out.to_vec());
+        }
     }
 }

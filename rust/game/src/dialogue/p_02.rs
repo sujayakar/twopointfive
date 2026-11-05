@@ -8,23 +8,14 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- names: rooms, routes, doors, numbers
-/// the one key of roomRects / ownRects: a Game has one level, reached at g.level (notes, Decisions)
-const LEVEL_KEY: u32 = 0;
-
 fn with_the_room(room: &str) -> String { if room.starts_with("the ") { String::from(room) } else { alloc::format!("the {}", room) } }
 fn rect_dist_of(x0: f64, x1: f64, z0: f64, z1: f64, p: V3) -> f64 {
     m::hyp2(m::max_n(&[x0 - p[0], 0.0, p[0] - x1]), m::max_n(&[z0 - p[2], 0.0, p[2] - z1]))
 }
 fn rect_holds(r: &Rect, p: V3) -> bool { p[0] >= r.x0 && p[0] <= r.x1 && p[2] >= r.z0 && p[2] <= r.z1 }
 fn place_of_room(r: &Rect) -> PlaceRect { PlaceRect { id: None, name: r.name.clone(), x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 } }
-/// a number as `String(n)` says it
-fn num_string(n: f64) -> String {
-    if n.is_nan() { return String::from("NaN"); }
-    if n == f64::INFINITY { return String::from("Infinity"); }
-    if n == f64::NEG_INFINITY { return String::from("-Infinity"); }
-    if m::floor(n) == n && m::abs(n) < 1e15 { return alloc::format!("{}", n as i64); }
-    alloc::format!("{}", n)
-}
+/// `level.routes[i]`: a negative index is no route   (dialogue.ts:509)
+fn route_at(g: &Game, i: i32) -> Option<RouteId> { usize::try_from(i).ok().and_then(|i| g.level.routes.get(i).copied()) }
 
 /// WHERE, for a line on the net: the level's own name for the spot, else roomName.   (dialogue.ts placeName)
 pub fn place_name(g: &mut crate::game::Game, p: V3) -> String {
@@ -40,7 +31,7 @@ pub fn with_the(n: &str) -> String {
 }
 /// THE LEVEL'S OWN NAMES for its floor, first match wins; null on the office and on a level that names nothing.   (dialogue.ts levelRects)
 pub fn level_rects(g: &mut crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
-    if let Some(r) = g.m.dialogue.own_rects.get(LEVEL_KEY) { return r.clone(); }
+    if let Some(r) = g.m.dialogue.own_rects.as_ref() { return r.clone(); }
     let mut r: Option<Vec<PlaceRect>> = None;
     if !is_office(g) {
         let mut out: Vec<PlaceRect> = Vec::new();
@@ -68,7 +59,7 @@ pub fn level_rects(g: &mut crate::game::Game) -> Option<Vec<crate::dialogue::Pla
         }
         if !out.is_empty() { r = Some(out); }
     }
-    g.m.dialogue.own_rects.set(LEVEL_KEY, r.clone());
+    g.m.dialogue.own_rects = Some(r.clone());
     r
 }
 /// (dialogue.ts rectDist)
@@ -111,7 +102,7 @@ pub fn place_in(g: &mut crate::game::Game, p: V3) -> Option<crate::dialogue::Pla
     if let Some(w) = own_place(g, p) { return if w.d == 0.0 { Some(w.rect) } else { None }; }
     if !is_office(g) { return None; }
     room_name(g, p);
-    let rr = g.m.dialogue.room_rects.get(LEVEL_KEY).unwrap();
+    let rr = g.m.dialogue.room_rects.as_ref().unwrap();
     for r in rr.rooms.iter() { if rect_holds(r, p) { return Some(place_of_room(r)); } }
     None
 }
@@ -148,11 +139,11 @@ pub fn place_rects(g: &mut crate::game::Game) -> Vec<crate::dialogue::PlaceRect>
     if let Some(r) = level_rects(g) { return r; }
     if !is_office(g) { return Vec::new(); }
     room_name(g, [0.0, 0.0, 0.0]);
-    g.m.dialogue.room_rects.get(LEVEL_KEY).unwrap().rooms.iter().map(place_of_room).collect()
+    g.m.dialogue.room_rects.as_ref().unwrap().rooms.iter().map(place_of_room).collect()
 }
 /// The room a floor point is in, as the men would say it.   (dialogue.ts roomName)
 pub fn room_name(g: &mut crate::game::Game, p: V3) -> String {
-    if !g.m.dialogue.room_rects.has(LEVEL_KEY) {
+    if g.m.dialogue.room_rects.is_none() {
         let office = is_office(g);
         let level = &g.level;
         let mut rooms: Vec<Rect> = Vec::new();
@@ -172,12 +163,12 @@ pub fn room_name(g: &mut crate::game::Game, p: V3) -> String {
             rooms.push(Rect { name: String::from("the server room"), x0: s.x0, x1: s.x1, z0: s.z0, z1: s.z1 });
         }
         if office { rooms.extend(office_areas()); }
-        g.m.dialogue.room_rects.set(LEVEL_KEY, DialogueModRoomRectsValue { rooms, building: office_walls(), office });
+        g.m.dialogue.room_rects = Some(DialogueModRoomRectsValue { rooms, building: office_walls(), office });
     }
-    if !g.m.dialogue.room_rects.get(LEVEL_KEY).unwrap().office {
+    if !g.m.dialogue.room_rects.as_ref().unwrap().office {
         return match own_place(g, p) { Some(w) => w.rect.name, None => String::from(NAMELESS) };
     }
-    let rr = g.m.dialogue.room_rects.get(LEVEL_KEY).unwrap();
+    let rr = g.m.dialogue.room_rects.as_ref().unwrap();
     for r in rr.rooms.iter() { if rect_holds(r, p) { return r.name.clone(); } }
     if rect_holds(&rr.building, p) { return String::from("the back offices"); }
     String::from("the car park")
@@ -202,7 +193,7 @@ pub fn door_name(g: &mut crate::game::Game, n: &str) -> String {
 /// (dialogue.ts numWord)
 pub fn num_word(n: f64) -> String {
     if n >= 0.0 && m::floor(n) == n { if let Some(w) = num_words().get(n as usize) { return w.clone(); } }
-    num_string(n)
+    js::num_str(n)
 }
 /// (dialogue.ts distToRoute)
 pub fn dist_to_route(pts: &[V3], p: V3) -> f64 {
@@ -218,7 +209,7 @@ pub fn dist_to_route(pts: &[V3], p: V3) -> f64 {
 }
 /// the keyed door nearest this man's route line, within DOOR_ROUTE_M, by its authored lock   (dialogue.ts keyedDoorOn)
 pub fn keyed_door_on(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> {
-    let route = g.level.routes.get(g.gd[gd].route_i).copied()?;
+    let route = route_at(g, g.gd[gd].route_i)?;
     let pts = g.tab.route[route].points.clone();
     if pts.is_empty() { return None; }
     let mut best: Option<DoorId> = None;
@@ -434,24 +425,8 @@ fn lead_of_shape(shape: ShapeKey) -> Option<String> {
     let l = shape_lead();
     match shape { ShapeKey::Pedant => l.pedant, ShapeKey::Selfown => l.selfown, ShapeKey::Folder => l.folder, ShapeKey::Ramble => l.ramble, ShapeKey::Fan => l.fan, ShapeKey::Stoic => l.stoic, ShapeKey::Con => l.con, ShapeKey::Game => l.game, ShapeKey::Menace => l.menace }
 }
-/// the ctx's tokens as the table `expand` reads, by the TypeScript's keys (dialogue.ts:524)
-fn tokens_table(t: &DialogueCtxTokens) -> JsMap<String, Option<String>> {
-    let mut o: JsMap<String, Option<String>> = JsMap::new();
-    let rows: [(&str, &Option<String>); 23] = [
-        ("door", &t.door), ("code", &t.code), ("missing", &t.missing), ("body", &t.body), ("n", &t.n), ("up", &t.up), ("post", &t.post), ("room", &t.room),
-        ("route", &t.route), ("partner", &t.partner), ("victim", &t.victim), ("sawWhere", &t.saw_where), ("heardWhere", &t.heard_where), ("partnerRoute", &t.partner_route),
-        ("caller", &t.caller), ("checker", &t.checker), ("checked", &t.checked), ("clearRoom", &t.clear_room), ("breakerRoom", &t.breaker_room), ("checkEta", &t.check_eta),
-        ("minutes", &t.minutes), ("badge", &t.badge), ("padDoor", &t.pad_door),
-    ];
-    for (k, v) in rows { o.set(String::from(k), v.clone()); }
-    o
-}
-/// the ctx's facts as needsHold takes them: one shape, two generated types (dialogue.ts:523, 671)
-fn hold_facts(f: &DialogueCtxFacts) -> NeedsHoldFacts {
-    NeedsHoldFacts { shift: f.shift, rollcall_live: f.rollcall_live, blackout: f.blackout, body_found: f.body_found, floor_up: f.floor_up, lockdown: f.lockdown, episode: f.episode, heard_small: f.heard_small, heard_shots: f.heard_shots, heard_bang: f.heard_bang, body_called: f.body_called, body_known: f.body_known, missing_known: f.missing_known, held_long: f.held_long, dazzled: f.dazzled, saw_shot: f.saw_shot, saw_drop: f.saw_drop, alert_now: f.alert_now, drew_on_you: f.drew_on_you, partner_known: f.partner_known, office: f.office }
-}
 /// `!!facts[n]`   (dialogue.ts needsHold)
-fn hold_fact(f: &NeedsHoldFacts, n: Need) -> bool {
+fn hold_fact(f: &DialogueCtxFacts, n: Need) -> bool {
     let v = match n {
         Need::Shift => f.shift, Need::RollcallLive => f.rollcall_live, Need::Blackout => f.blackout, Need::BodyFound => f.body_found, Need::FloorUp => f.floor_up, Need::Lockdown => f.lockdown, Need::Episode => f.episode,
         Need::HeardSmall => f.heard_small, Need::HeardShots => f.heard_shots, Need::HeardBang => f.heard_bang, Need::BodyCalled => f.body_called, Need::BodyKnown => f.body_known, Need::MissingKnown => f.missing_known,
@@ -459,12 +434,9 @@ fn hold_fact(f: &NeedsHoldFacts, n: Need) -> bool {
     };
     v == Some(true)
 }
-fn stage_eq(a: StageKey, b: StageKey) -> bool {
-    match (a, b) { (StageKey::X, StageKey::X) => true, (StageKey::Num(x), StageKey::Num(y)) => x == y, _ => false }
-}
 /// `String(s)` of a stage: '1', '2', '3', 'x'
 fn stage_str(s: StageKey) -> String {
-    match s { StageKey::X => String::from("x"), StageKey::Num(n) => num_string(n) }
+    match s { StageKey::X => String::from("x"), StageKey::Num(n) => js::num_str(n) }
 }
 /// a `{token}` at byte `i` of the text (TOKEN_RE): where it ends (past the brace) and its letters
 fn token_at(text: &str, i: usize) -> Option<(usize, &str)> {
@@ -521,11 +493,11 @@ pub fn stage_key_of(n: f64) -> crate::dialogue::StageKey {
 /// Is stage `s` one this man GIVES the useful thing at?   (dialogue.ts givingStage)
 pub fn giving_stage(t: crate::game::Temperament, band: crate::dialogue::Band, s: crate::dialogue::StageKey, stage_n: f64, given_none: bool) -> bool {
     let gives = gives_at(t, band);
-    gives.iter().any(|x| stage_eq(*x, s)) || (stage_eq(s, StageKey::X) && given_none && !gives.is_empty() && stage_n == 4.0)
+    gives.contains(&s) || (s == StageKey::X && given_none && !gives.is_empty() && stage_n == 4.0)
 }
 /// (dialogue.ts lineMatches)
 pub fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, band: crate::dialogue::Band, t: crate::game::Temperament, s: crate::dialogue::StageKey, use_t: bool, use_a: bool) -> bool {
-    if !stage_eq(l.s, s) { return false; }
+    if l.s != s { return false; }
     let lk = l.k.as_str();
     if lk != "*" && lk != k.as_str() { return false; }
     if use_t { if let Some(lt) = l.t { if lt != t { return false; } } }
@@ -541,23 +513,22 @@ pub fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, ba
     true
 }
 /// (dialogue.ts needsHold)
-pub fn needs_hold(g: &mut crate::game::Game, l: &crate::dialogue::Line, facts: crate::dialogue::NeedsHoldFacts) -> bool {
-    let only_ok = match l.only { None => true, Some(LineOnly::Shift) => hold_fact(&facts, Need::Shift), Some(LineOnly::Office) => hold_fact(&facts, Need::Office) };
-    only_ok && l.needs.as_ref().map_or(true, |ns| ns.iter().all(|n| hold_fact(&facts, *n)))
+pub fn needs_hold(g: &mut crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
+    let only_ok = match l.only { None => true, Some(LineOnly::Shift) => hold_fact(facts, Need::Shift), Some(LineOnly::Office) => hold_fact(facts, Need::Office) };
+    only_ok && l.needs.as_ref().map_or(true, |ns| ns.iter().all(|n| hold_fact(facts, *n)))
 }
 /// The pending useful things: true now, known to him, not yet given, in the order he would give them.   (dialogue.ts pendingIntel)
 pub fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Vec<crate::dialogue::PendingIntelItem> {
     let mut out: Vec<PendingIntelItem> = Vec::new();
     let kinds = intel_kinds();
-    let order: Vec<String> = match sc.and_then(|x| x.pin) {
-        Some(pin) => { let mut o = vec![String::from(pin.as_str())]; o.extend(kinds.iter().filter(|k| k.as_str() != pin.as_str()).cloned()); o }
+    let order: Vec<IntelKind> = match sc.and_then(|x| x.pin) {
+        Some(pin) => { let mut o = vec![pin]; o.extend(kinds.iter().copied().filter(|k| *k != pin)); o }
         None => kinds.to_vec(),
     };
-    let tokens = tokens_table(&ctx.tokens);
-    for word in order {
-        let Some(it) = ctx.intel.iter().find(|i| i.kind.as_str() == word) else { continue; };
-        let kind = it.kind;
-        if !it.live || !it.known || g.tab.game_talk[talk].given.has(word) { continue; }
+    let tokens = ctx_tokens_map(&ctx.tokens);
+    for kind in order {
+        let Some(it) = ctx.intel.iter().find(|i| i.kind == kind) else { continue; };
+        if !it.live || !it.known || g.tab.game_talk[talk].given.has(String::from(kind.as_str())) { continue; }
         let own = kind == IntelKind::CheckOn && it.text == check_on_self(g);
         let shaped = match sc {
             Some(x) if !own => shaped_intel_text(g, kind, &ShapedIntelTextSc { id: x.id.clone(), shape: x.shape }, ctx.t),
@@ -580,7 +551,7 @@ pub fn intel_for(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, 
 /// The rambler's stream swallows a giving stage, when exactly ONE thing is pending.   (dialogue.ts swallowed)
 pub fn swallowed(g: &mut crate::game::Game, sc: Option<&crate::dialogue::Script>, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     match sc {
-        Some(x) => x.shape == ShapeKey::Ramble && RAMBLE_SWALLOWS > 0.0 && stage_eq(s, StageKey::Num(2.0)) && ctx.t == crate::game::Temperament::Nervy && pending_intel(g, ctx, talk, sc).len() == 1,
+        Some(x) => x.shape == ShapeKey::Ramble && RAMBLE_SWALLOWS > 0.0 && s == StageKey::Num(2.0) && ctx.t == crate::game::Temperament::Nervy && pending_intel(g, ctx, talk, sc).len() == 1,
         None => false,
     }
 }
@@ -601,7 +572,7 @@ fn sayable(text: Option<&str>, tokens: &JsMap<String, Option<String>>) -> Option
 fn eligible(g: &mut Game, lines: &[Line], ctx: &DialogueCtx, tokens: &JsMap<String, Option<String>>, talk: GameTalkId, s: StageKey, use_t: bool, use_a: bool, allow_said: bool) -> Vec<(usize, String, f64)> {
     let mut out: Vec<(usize, String, f64)> = Vec::new();
     for (i, l) in lines.iter().enumerate() {
-        if !line_matches(l, ctx.k, ctx.band, ctx.t, s, use_t, use_a) || !needs_hold(g, l, hold_facts(&ctx.facts)) { continue; }
+        if !line_matches(l, ctx.k, ctx.band, ctx.t, s, use_t, use_a) || !needs_hold(g, l, &ctx.facts) { continue; }
         if !allow_said && g.tab.game_talk[talk].said.has(l.id.clone()) { continue; }
         let said = said_text(g, &SaidTextL { text: l.text.clone(), now: l.now.clone(), away: l.away.clone(), bare: l.bare.clone(), guide: l.guide.clone() }, ctx);
         let Some(text) = expand(&said, tokens) else { continue; };
@@ -630,7 +601,7 @@ pub fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
     let sc = sc0.filter(|x| stage_n <= 4.0 && script_live(x, ctx));
     let beat = sc.as_ref().map(|x| beat_for(x, s, ctx));
     let (script_id, shape) = (sc.as_ref().map(|x| x.id.clone()), sc.as_ref().map(|x| x.shape));
-    let tokens = tokens_table(&ctx.tokens);
+    let tokens = ctx_tokens_map(&ctx.tokens);
     let base = DialoguePick { text: String::new(), id: String::new(), kind: None, stage: s, stage_n, cell: cell.clone(), k: ctx.k, band: ctx.band, t: ctx.t, line_k: pick_k(ctx.k), widened: DialoguePickWidened::Empty, after: None, script: script_id, shape };
     let stage_word = stage_str(s);
     // the giving stages: the INTEL generator first
@@ -659,7 +630,7 @@ pub fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
     }
     // the pool for this cell and stage: exact, else any temperament, else any agitation too; never another man's knowledge
     let lines = crate::dialogue::lines();
-    let chain: [(bool, bool, bool, DialoguePickWidened); 4] = if stage_eq(s, StageKey::X) {
+    let chain: [(bool, bool, bool, DialoguePickWidened); 4] = if s == StageKey::X {
         [(true, true, false, DialoguePickWidened::Empty), (true, true, true, DialoguePickWidened::Repeat), (false, true, true, DialoguePickWidened::T), (false, false, true, DialoguePickWidened::A)]
     } else {
         [(true, true, false, DialoguePickWidened::Empty), (false, true, false, DialoguePickWidened::T), (false, false, false, DialoguePickWidened::A), (false, false, true, DialoguePickWidened::Repeat)]
@@ -732,11 +703,11 @@ pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn 
 pub fn prompt_for(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::PromptFor {
     let talk = g.gd[gd].talk;
     let next = stage_key_of(g.tab.game_talk[talk].stage + 1.0);
-    if stage_eq(next, StageKey::Num(1.0)) { return PromptFor { text: String::from("make him talk"), spent: false }; }
+    if next == StageKey::Num(1.0) { return PromptFor { text: String::from("make him talk"), spent: false }; }
     let mut ctx = gather(g, gd);
     if peek_give(g, &mut ctx, talk).is_some() { return PromptFor { text: String::from("ask what he knows"), spent: false }; }
-    if stage_eq(next, StageKey::Num(2.0)) { PromptFor { text: String::from("lean on him"), spent: false } }
-    else if stage_eq(next, StageKey::Num(3.0)) { PromptFor { text: String::from("ask what he knows"), spent: false } }
+    if next == StageKey::Num(2.0) { PromptFor { text: String::from("lean on him"), spent: false } }
+    else if next == StageKey::Num(3.0) { PromptFor { text: String::from("ask what he knows"), spent: false } }
     else { PromptFor { text: String::from("he's got nothing left"), spent: true } }
 }
 /// One line for the panel and probes: his cell, the next press, what he has said, what he would give next.   (dialogue.ts dialogueSummary)
@@ -750,12 +721,12 @@ pub fn dialogue_summary(g: &mut crate::game::Game, gd: GuardId) -> String {
     let row = &g.tab.game_talk[talk];
     let why = if ctx.why.is_empty() { String::from("—") } else { ctx.why.join(", ") };
     let script = match sc.as_ref() { Some(x) => alloc::format!("{} ({})", x.id, x.shape.as_str()), None => String::from("—") };
-    let gives = if gives_at(ctx.t, ctx.band).iter().any(|x| stage_eq(*x, next)) { " (gives)" } else { "" };
+    let gives = if gives_at(ctx.t, ctx.band).contains(&next) { " (gives)" } else { "" };
     let gave = if row.given.is_empty() { String::new() } else { alloc::format!(" · gave {}", row.given.keys().join("/")) };
     let last = match row.last.as_ref() { Some(l) => alloc::format!(" · last: {} @{} s{}", l.id, l.cell, l.stage), None => String::new() };
-    alloc::format!("{} ({}{}) · cell {}·{}·{} · A {:.2} [{}] · script {} · next press: stage {}{} · said {}{} · next intel: {}{}",
+    alloc::format!("{} ({}{}) · cell {}·{}·{} · A {} [{}] · script {} · next press: stage {}{} · said {}{} · next intel: {}{}",
         g.gd[gd].callsign, ctx.t.as_str(), if g.gd[gd].state == crate::game::GuardState::Dead { ", down" } else { "" },
-        ctx.k.as_str(), ctx.band.as_str(), ctx.t.as_str(), ctx.a, why, script, stage_str(next), gives, row.said.len(), gave,
+        ctx.k.as_str(), ctx.band.as_str(), ctx.t.as_str(), js::to_fixed(ctx.a, 2), why, script, stage_str(next), gives, row.said.len(), gave,
         it.as_ref().map_or("—", |x| x.kind.as_str()), last)
 }
 
@@ -800,16 +771,15 @@ mod tests {
         let mut t = DialogueCtxTokens::zeroed();
         t.saw_where = Some(String::from("the yard"));
         t.pad_door = Some(String::from("the pad door"));
-        let tab = tokens_table(&t);
+        let tab = ctx_tokens_map(&t);
         assert_eq!(expand("{SawWhere}, {padDoor}", &tab).as_deref(), Some("The yard, the pad door"));
         assert_eq!(expand("{clearRoom}", &tab), None);
         let mut f = DialogueCtxFacts::zeroed();
         f.office = Some(true);
         f.saw_drop = Some(false);
-        let h = hold_facts(&f);
-        assert!(hold_fact(&h, Need::Office));
-        assert!(!hold_fact(&h, Need::SawDrop));
-        assert!(!hold_fact(&h, Need::Shift));
+        assert!(hold_fact(&f, Need::Office));
+        assert!(!hold_fact(&f, Need::SawDrop));
+        assert!(!hold_fact(&f, Need::Shift));
         assert_eq!(lead_of_shape(ShapeKey::Folder).as_deref(), Some(""));
         assert_eq!(lead_of_shape(ShapeKey::Fan).as_deref(), Some("Oh— and "));
         assert_eq!(lead_of_shape(ShapeKey::Stoic), None);

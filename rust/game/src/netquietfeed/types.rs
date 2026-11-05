@@ -61,15 +61,12 @@ pub struct NetquietfeedMod {
     pub netfeed: crate::netquietfeed::NetquietfeedModNETFEED,
     /// (src/game/netquietfeed.ts:13 filed)
     pub filed: Option<Vec<crate::netquietfeed::NetFeed>>,
-    /// (src/game/netquietfeed.ts:25 holding)
-    pub holding: JsSet<GuardId>,
 }
 impl NetquietfeedMod {
     pub fn blank() -> Self {
         NetquietfeedMod {
             netfeed: crate::netquietfeed::NetquietfeedModNETFEED { live: false },
             filed: None,
-            holding: JsSet::new(),
         }
     }
 }

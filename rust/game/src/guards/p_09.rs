@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 2903 to 3293
+//! src/game/guards.ts lines 2913 to 3305
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -11,23 +11,6 @@ use crate::character::Bone;
 use crate::game::{GuardBodyDuty, GuardBodyDutyRole, GuardBodyDutyStage, GuardBubble, GuardState, GuardTask, GuardTaskCheckOn};
 use crate::teams::Team;
 
-// ---- seams: what skeleton 3 still cannot do
-
-/// guards.ts 2914 and on: an RtLight's fields have no accessor (LightId has neither table nor properties).
-fn seam_light_set_pos(g: &mut Game, l: LightId, p: V3) { g.tab.light[l].pos = p; } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_set_dir(g: &mut Game, l: LightId, d: V3) { g.tab.light[l].dir = d; } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { g.tab.light[l].enabled = on; } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_peak(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].peak_intensity } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_set_peak(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].peak_intensity = x; } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_set_intensity(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].intensity = x; } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_set_inner(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].inner_deg = x; } // SKELETON-GAP was: RtLight.innerDeg by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_set_outer(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].outer_deg = x; } // SKELETON-GAP was: RtLight.outerDeg by LightId; skeleton 4 has the row (g.tab.light)
-fn seam_light_set_radius(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].radius = x; } // SKELETON-GAP was: RtLight.radius by LightId; skeleton 4 has the row (g.tab.light)
-/// guards.ts 2979 `manLeaves(gd.char, gd)`: ManCols came out empty, and a Character / a Guard do not turn into one.
-fn seam_man_leaves(g: &mut Game, gd: GuardId) { todo!("needs: man_leaves by his CharId and GuardId") }
-/// guards.ts 3118, 3138 `g.audio.play(name, at, vol, { rate })`: game_audio_like_play's opts hold `crate::Opaque`, which cannot carry a number.
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry the number `rate`") }
 
 // ---- small readers
 
@@ -35,28 +18,28 @@ fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
 fn play(g: &mut Game, name: &str, at: V3, vol: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), None);
 }
-/// `gd.weapon.def.rig === 'pistol'`
-fn weapon_rig_is_pistol(g: &Game, gd: GuardId) -> bool {
-    let def = g.fa[g.gd[gd].weapon].def;
-    matches!(g.m.weapons.weapons.get(def), Some(d) if d.rig == crate::weapons::WeaponDefRig::Pistol)
+/// `g.audio.play(name, at, vol, { rate })`
+fn play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) {
+    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
-/// `ordersOf(g, gd)`'s `sams && mine(gd)`: orders_of returns nothing in the skeleton, so its choice of book is made here: this game's, or his seat's.
+/// `ordersOf(g, gd)`'s `sams && mine(gd)` (seats.ts:246): the book on Game with one book, his seat's otherwise, asked inside that seat.
 fn orders_sams_mine(g: &mut Game, gd: GuardId) -> bool {
     if crate::seats::one_book(g) { return crate::orders::squad_orders_sams(g) && crate::orders::squad_orders_mine(g, gd); }
     let s = crate::seats::seat_of(g, gd);
-    let man = crate::cmd::seat_man(g, s);
-    crate::seats::with_seat(g, man, &mut |g: &mut Game| crate::orders::squad_orders_sams(g) && crate::orders::squad_orders_mine(g, gd))
+    crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::orders::squad_orders_sams(g) && crate::orders::squad_orders_mine(g, gd))
 }
-/// `eachSeat(g, v => …)`: each_seat's closure takes two `&mut Game` and cannot be lent, so its body is here, through with_seat.
-fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 { f(g); return; }
-    for i in 0..g.seats.len() {
-        let s = g.seats[i];
-        let man = crate::cmd::seat_man(g, s);
-        crate::seats::with_seat(g, man, &mut |g: &mut Game| f(g));
-    }
+/// `gd.lastKnown = at`: a new object in the TypeScript, so every whole write bumps `fix_stamp` (doze.ts:244's identity question).
+fn write_fix(d: &mut crate::game::Guard, at: V3) {
+    d.last_known = Some(at);
+    d.fix_stamp = d.fix_stamp.wrapping_add(1);
 }
-
+/// `gd.path = []; gd.pathGoal = null`: a new array, so `path_serial` moves (`gd.path === W.arr` elsewhere), and the goal is no longer the standoff's point (`path_goal_orbit`).
+fn no_path(d: &mut crate::game::Guard) {
+    d.path = Vec::new();
+    d.path_serial = d.path_serial.wrapping_add(1);
+    d.path_goal = None;
+    d.path_goal_orbit = false;
+}
 /// his head bone, or his feet (`x.char.bones.head ?? x.char.pos`: where a radio crackle sounds)
 fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
@@ -64,161 +47,11 @@ fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
 }
 /// `g.level.routes[gd.routeI]`'s points, if that route exists
 fn route_points(g: &Game, gd: GuardId) -> Option<Vec<V3>> {
-    g.level.routes.get(g.gd[gd].route_i).map(|r| g.tab.route[*r].points.clone())
+    g.level.routes.get(g.gd[gd].route_i as usize).map(|r| g.tab.route[*r].points.clone())
 }
 /// `g.level.routes[M.routeI]?.points[0] ?? M.char.pos`
 fn post_of(g: &Game, m: GuardId) -> V3 {
     match route_points(g, m).and_then(|p| p.first().copied()) { Some(p) => p, None => g.ch[g.gd[m].ch].pos }
-}
-/// a number as the TypeScript's template prints it (no minus on a zero)
-fn num(x: f64) -> String { format!("{}", x + 0.0) }
-
-// ---- the flashlight
-
-/// The light at its lens, its beam and whether it burns; returns what the lens hangs off.   (guards.ts poseFlashlight)
-pub fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> {
-    let c = g.gd[gd].ch;
-    let fl = g.gd[gd].flashlight;
-    if g.ch[c].bones.get(Bone::HandR).is_none() { return None; }
-    let mut dir = g.ch[c].gun_dir;
-    let rk = rig_of(g, gd);
-    let carbine = rk == RigOf::Carbine;
-    let torch = hand_carry(g, gd) == HandCarry::Torch;
-    let hangs = torch && g.ch[c].alive && torch_low(g, gd);
-    if torch && g.ch[c].alive {
-        let low = if hangs { Some(crate::rig_props::TorchCarryDirLow { tan: g.k.torch.low_tan, rate: g.k.torch.low_rate }) } else { None };
-        let prev = g.gd[gd].beam_dir;
-        let beam = crate::rig_props::torch_carry_dir(g, c, prev, Some(dt), low);
-        g.gd[gd].beam_dir = beam;
-        dir = beam;
-    } else {
-        g.gd[gd].beam_dir = v3::copy(dir);
-    }
-    let lens = if rk == RigOf::Sc20k {
-        crate::rig_props::sc20k_light_pose(g, c, None).pos
-    } else if crate::kit::kit_pistol(g, gd) && weapon_rig_is_pistol(g, gd) {
-        crate::rig_props::rig_light_pose(g, c, None).pos
-    } else {
-        let want = if torch { crate::handwork::SwapHeldHeld::Torch } else { crate::handwork::SwapHeldHeld::Weapon };
-        let in_torch_hand = crate::handwork::swap_held(g, gd, Some(want)) == Some(crate::handwork::SwapHeld::Torch);
-        let weapon = if carbine { crate::rig_props::RigTorchPosWeapon::Carbine } else { crate::rig_props::RigTorchPosWeapon::Pistol };
-        crate::rig_props::rig_torch_pos(g, c, dir, in_torch_hand, Some(crate::rig_props::rig()), Some(weapon))
-    };
-    seam_light_set_pos(g, fl, lens);
-    seam_light_set_dir(g, fl, dir);
-    if crate::runner::runner_fled(g, gd) {
-        seam_light_set_enabled(g, fl, false);
-        return g.ch[c].bones.get(Bone::UpperArmR).copied();
-    }
-    let mut held: Option<V3> = g.ch[c].bones.get(Bone::UpperArmR).copied();
-    let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
-    if g.gd[gd].state == GuardState::Dead || lost_live >= 0.0 {
-        if let Some(it) = g.gd[gd].dropped {
-            let (yaw, tumble) = (crate::throwables::item_yaw(g, it), crate::throwables::item_tumble(g, it));
-            let hd: V3 = [m::sin(yaw) * m::cos(tumble), -m::sin(tumble), m::cos(yaw) * m::cos(tumble)];
-            let at = crate::throwables::item_pos(g, it);
-            seam_light_set_pos(g, fl, v3::mad(at, hd, 0.1));
-            seam_light_set_dir(g, fl, hd);
-            held = Some(at);
-        }
-    }
-    if g.gd[gd].state != GuardState::Dead && lost_live >= 0.0 {
-        if !g.gd[gd].light_lit_at_loss { seam_light_set_enabled(g, fl, false); return held; }
-        sputter(g, fl, g.time - lost_live);
-        return held;
-    }
-    if g.gd[gd].state == GuardState::Dead && g.time >= g.gd[gd].light_dead_until {
-        if !g.gd[gd].light_lit_at_loss { seam_light_set_enabled(g, fl, false); return held; }
-        let (tl, gl) = (g.gd[gd].torch_lost_at, g.gd[gd].gun_lost_at);
-        let lost_at = m::min(m::min(if tl >= 0.0 { tl } else { f64::INFINITY }, if gl >= 0.0 { gl } else { f64::INFINITY }), g.gd[gd].died_at);
-        sputter(g, fl, g.time - lost_at);
-        return held;
-    }
-    let until = g.gd[gd].light_dead_until;
-    if g.time < until {
-        seam_light_set_enabled(g, fl, false);
-    } else if until > 0.0 && g.time < until + 1.0 {
-        let on = m::sin(g.time * 50.0) > 0.2;
-        seam_light_set_enabled(g, fl, on);
-    } else {
-        let unit_light = g.gd[gd].unit.as_ref().map(|u| u.light);
-        let on = (match unit_light {
-            None => true,
-            Some(lit) => (lit || crate::darkfoe::dark_foe_lit(g, gd) || crate::powerout::power_out_lit(g, gd))
-                && (!light_ruled(g, gd) || team_lit(g, gd))
-                && !crate::nvg::nvg_dark(g, gd)
-                && !crate::silent::silent_dark(g, gd),
-        }) && !(torch && crate::calmtorch::calm_torch_dark(g, gd, dt));
-        seam_light_set_enabled(g, fl, on);
-    }
-    if wall_dark(g, gd, held) && seam_light_enabled(g, fl) {
-        seam_light_set_enabled(g, fl, false);
-        if let Some(s) = g.m.guards.wall_seen.get_mut(gd) { s.out = Some(true); }
-    }
-    if seam_light_enabled(g, fl) && crate::doze::doze_dark(g, gd) { seam_light_set_enabled(g, fl, false); }
-    let (peak, inner, outer) = (g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-    seam_light_set_peak(g, fl, peak);
-    seam_light_set_intensity(g, fl, peak);
-    seam_light_set_inner(g, fl, inner);
-    seam_light_set_outer(g, fl, outer);
-    let radius = g.engine.settings.flashlight_radius;
-    seam_light_set_radius(g, fl, radius);
-    held
-}
-/// A light on the floor `t` seconds after it fell: a couple of sputters, then dark.   (guards.ts 2921, 2929)
-fn sputter(g: &mut Game, fl: LightId, t: f64) {
-    let on = t < 0.9 && (t < 0.35 || m::sin(t * 60.0) > 0.3);
-    seam_light_set_enabled(g, fl, on);
-    let peak = seam_light_peak(g, fl);
-    seam_light_set_intensity(g, fl, peak * v3::clamp(1.0 - t / 0.9, 0.0, 1.0));
-}
-
-// ---- on a screen, and a man's line
-
-/// On a player's screen: with two, on either's.   (guards.ts onScreen)
-pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
-    if g.seats.len() > 1 {
-        let seats = g.seats.clone();
-        for s in seats {
-            let man = crate::cmd::seat_man(g, s);
-            if crate::seats::with_seat(g, man, &mut |g: &mut Game| in_game_view(g, p)) { return true; }
-        }
-        return false;
-    }
-    in_game_view(g, p)
-}
-/// inView of the view on Game: of the seat this pass is about.
-fn in_game_view(g: &Game, p: V3) -> bool {
-    match &g.view_proj {
-        None => false,
-        Some(crate::game::GameViewProj::Array(v)) => in_view_of(|i| v[i], p),
-        Some(crate::game::GameViewProj::Float32Array(v)) => in_view_of(|i| v[i] as f64, p),
-    }
-}
-/// Is a point inside the frame of this view-projection?   (guards.ts inView)
-pub fn in_view(vp: Option<&crate::guards::InViewVp>, p: V3) -> bool {
-    match vp {
-        None => false,
-        Some(InViewVp::Array(v)) => in_view_of(|i| v[i], p),
-        Some(InViewVp::Float32Array(v)) => in_view_of(|i| v[i] as f64, p),
-    }
-}
-fn in_view_of(vp: impl Fn(usize) -> f64, p: V3) -> bool {
-    let w = vp(3) * p[0] + vp(7) * p[1] + vp(11) * p[2] + vp(15);
-    if w <= 0.0 { return false; }
-    let x = (vp(0) * p[0] + vp(4) * p[1] + vp(8) * p[2] + vp(12)) / w;
-    let y = (vp(1) * p[0] + vp(5) * p[1] + vp(9) * p[2] + vp(13)) / w;
-    x > -0.92 && x < 0.92 && y > -0.9 && y < 0.9
-}
-
-/// How long a line stands over a man's head, by its length (the language's: UTF-16 units).   (guards.ts bubbleSecs)
-pub fn bubble_secs(text: &str) -> f64 {
-    m::min(4.0, m::max(2.0, 1.5 + text.encode_utf16().count() as f64 * 0.055))
-}
-/// His head, or where it would be.   (guards.ts headOf)
-pub fn head_of(g: &mut crate::game::Game, gd: GuardId) -> V3 {
-    let c = g.gd[gd].ch;
-    match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.7, 0.0]) }
 }
 
 /// A man says something: a bubble over his head, and a log row if it went over the radio or is out of sight.   (guards.ts say)
@@ -254,8 +87,7 @@ pub fn say(g: &mut crate::game::Game, gd: GuardId, text: &str, radio: Option<boo
 
 /// Fresh guards at the start of their routes; spawned units are not stood up again.   (guards.ts resetGuards)
 pub fn reset_guards(g: &mut crate::game::Game) {
-    let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &of) {
+    for pl in crate::seats::men(g) {
         g.pl[pl].dragging = None;
         g.pl[pl].takedown = None;
         g.pl[pl].holding = None;
@@ -268,13 +100,12 @@ pub fn reset_guards(g: &mut crate::game::Game) {
     }
     end_engagement(g, EndEngagementOutcome::Reset);
     let old = g.guards.clone();
-    let mut fresh: Vec<(f64, RouteId, f64, LightId, V3)> = Vec::new();
+    let mut fresh: Vec<(f64, RouteId, i32, LightId, V3)> = Vec::new();
     for &gd in &old {
         if g.gd[gd].unit.is_some() { continue; }
         let c = g.gd[gd].ch;
-        fresh.push((g.ch[c].id, g.gd[gd].route, g.gd[gd].route_i as f64, g.gd[gd].flashlight, g.ch[c].tint));
+        fresh.push((g.ch[c].id, g.gd[gd].route, g.gd[gd].route_i, g.gd[gd].flashlight, g.ch[c].tint));
     }
-    for &gd in &old { seam_man_leaves(g, gd); }
     let mut shift: Vec<GuardId> = Vec::with_capacity(fresh.len());
     let (men, rig) = (g.men, g.rig);
     for (id, route, route_i, fl, tint) in fresh { shift.push(crate::game::guard_new(g, men, rig, id, route, route_i, fl, tint, None)); }
@@ -285,7 +116,7 @@ pub fn reset_guards(g: &mut crate::game::Game) {
     }
     crate::opening::opening_start(g);
     crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().fix, None, Some(0.0), None, None, None);
-    on_each_seat(g, &mut |v: &mut Game| { v.aim_guard = None; });
+    crate::seats::each_seat(g, &mut |v: &mut Game| { v.aim_guard = None; });
     g.escalation = 0.0;
     g.escalation_t = -1.0;
     g.alarm.episode = false;
@@ -314,16 +145,16 @@ pub fn escalation_name(l: f64) -> String {
 
 /// `g.level.routes[gd.routeI]?.name ?? guard n`: a man's name on the panel
 fn route_name(g: &Game, gd: GuardId) -> String {
-    match g.level.routes.get(g.gd[gd].route_i) {
+    match g.level.routes.get(g.gd[gd].route_i as usize) {
         Some(r) => g.tab.route[*r].name.clone(),
-        None => format!("guard {}", num(g.ch[g.gd[gd].ch].id - 10.0)),
+        None => format!("guard {}", js::num_str(g.ch[g.gd[gd].ch].id - 10.0)),
     }
 }
 /// One line for the Tab panel: level, its clock, the episode, the lockdown duties, the radio check.   (guards.ts escalationSummary)
 pub fn escalation_summary(g: &mut crate::game::Game) -> String {
     let lvl = g.escalation;
     let mut s = format!("alarm level: {}{}", escalation_name(lvl), if g.quiet_utility && js::truthy(lvl) { " (tour: ignored)" } else { "" });
-    if lvl > 0.0 { s += &format!(" · {} s", num(m::max(0.0, m::ceil(g.escalation_t - g.time)))); }
+    if lvl > 0.0 { s += &format!(" · {} s", js::num_str(m::max(0.0, m::ceil(g.escalation_t - g.time)))); }
     if g.alarm.episode { s += " · episode running"; }
     for &gd in &g.guards {
         if g.gd[gd].state == GuardState::Dead { continue; }
@@ -339,12 +170,12 @@ pub fn escalation_summary(g: &mut crate::game::Game) -> String {
         };
         s += &format!(" · radio check: {}", what);
     } else if next_at >= 0.0 && !g.quiet_utility {
-        s += &format!(" · radio check in {} s", num(m::max(0.0, m::ceil(next_at - g.time))));
+        s += &format!(" · radio check in {} s", js::num_str(m::max(0.0, m::ceil(next_at - g.time))));
     }
     for &gd in &g.guards {
         if g.gd[gd].state == GuardState::Dead { continue; }
         if let Some(GuardTask::CheckOn(k)) = &g.gd[gd].task {
-            s += &format!(" · {} walks {}'s route ({} to go)", route_name(g, gd), g.gd[k.who].callsign, num(k.left));
+            s += &format!(" · {} walks {}'s route ({} to go)", route_name(g, gd), g.gd[k.who].callsign, js::num_str(k.left));
         }
     }
     s
@@ -528,17 +359,16 @@ pub fn send_check_on(g: &mut crate::game::Game, gd: GuardId, m: GuardId, line: &
     let t0 = g.time;
     let d = &mut g.gd[gd];
     d.task = Some(GuardTask::CheckOn(GuardTaskCheckOn { pos, who: m, wp: i0 as f64, left: m::max(1.0, pts.len() as f64), t0 }));
-    d.last_known = Some(v3::copy(pos));
+    write_fix(d, v3::copy(pos));
     d.awareness = m::max(d.awareness, 0.42);
     if d.state == GuardState::Patrol { d.state = GuardState::Suspicious; d.react_t = 0.8; }
     d.search_t = 0.0;
-    d.path = Vec::new();
-    d.path_goal = None;
+    no_path(d);
     d.body_duty = None;
     d.stall_ref = None;
     crate::game::game_say(g, gd, line, Some(true), None, None);
     let at = head_or_pos(g, gd);
-    seam_audio_play_rate(g, "radio", at, 0.5, 1.05);
+    play_rate(g, "radio", at, 0.5, 1.05);
 }
 /// One frame of the errand's bookkeeping: over if the man has been found, capped, or on to the next waypoint.   (guards.ts checkOnTick)
 pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
@@ -551,12 +381,11 @@ pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
             g.gd[gd].body_duty = Some(GuardBodyDuty { body: who, role: GuardBodyDutyRole::Called, stage: GuardBodyDutyStage::To, t: 0.0, t0, spot: None });
             let body = body_pos(g, who);
             let d = &mut g.gd[gd];
-            d.last_known = Some(body);
+            write_fix(d, body);
             d.awareness = m::max(d.awareness, 0.45);
             d.react_t = 0.5;
             d.search_t = 0.0;
-            d.path = Vec::new();
-            d.path_goal = None;
+            no_path(d);
         }
         return;
     }
@@ -580,16 +409,15 @@ pub fn advance_check_on(g: &mut crate::game::Game, gd: GuardId) {
         pos = v3::copy(pts[k.wp as usize]);
         k.pos = pos;
     }
-    d.last_known = Some(v3::copy(pos));
+    write_fix(d, v3::copy(pos));
     d.search_t = 0.0;
-    d.path = Vec::new();
-    d.path_goal = None;
+    no_path(d);
     d.stall_ref = None;
     if left == m::floor(pts.len() as f64 / 2.0) {
         let line = format!("halfway around — nothing yet. {}, if you can hear this, sound off", g.gd[who].callsign);
         crate::game::game_say(g, gd, &line, Some(true), None, None);
         let at = head_or_pos(g, gd);
-        seam_audio_play_rate(g, "radio", at, 0.4, 1.05);
+        play_rate(g, "radio", at, 0.4, 1.05);
     }
 }
 /// The walk is over without him: the line, and, once per missing man, the floor goes up a step on it.   (guards.ts checkOnDone)
@@ -939,7 +767,7 @@ pub fn clear_queue_summary(g: &mut crate::game::Game) -> String {
     let mut entries: Vec<(String, f64)> = g.cleared_at.iter().map(|(k, t)| (k, *t)).collect();
     js::sort_by(&mut entries, |x, y| y.1 - x.1);
     let done: Vec<String> = entries.iter().map(|(k, t)| {
-        format!("{} ({} s ago{})", k, num(m::round(g.time - *t)), if g.time - *t < RECLEAR_SECS { ", holds" } else { "" })
+        format!("{} ({} s ago{})", k, js::num_str(m::round(g.time - *t)), if g.time - *t < RECLEAR_SECS { ", holds" } else { "" })
     }).collect();
     if !done.is_empty() { parts.push(format!("cleared this lockdown: {}", done.join(", "))); }
     parts.join(" · ")
@@ -967,31 +795,103 @@ pub fn force_clear(g: &mut crate::game::Game) {
     crate::game::game_note(g, &line);
 }
 
+/// One level down: lockdown to a shorter heightened spell, then calm.   (guards.ts stepDownEscalation)
+pub fn step_down_escalation(g: &mut crate::game::Game) {
+    let lvl: f64 = if g.escalation >= 2.0 { 1.0 } else { 0.0 };
+    g.escalation = lvl;
+    g.escalation_t = if lvl >= 1.0 { g.time + STEPDOWN_SECS } else { -1.0 };
+    crate::chronicle::chron_alarm(g, lvl, false, Some("time"));
+    if lvl < 2.0 { clear_lockdown(g); g.cleared_at.clear(); }
+    if lvl == 0.0 { g.alarm.placed = false; }
+    let at = if g.alarm.placed { Some(g.alarm.pos) } else { None };
+    let sp = spokesman(g, at, None);
+    if let Some(sp) = sp {
+        crate::game::game_say(g, sp, if lvl >= 1.0 { "ease off — singles, back on your routes; weapons stay out" } else { "stand down, back to normal" }, Some(true), None, None);
+        let at = head_or_pos(g, sp);
+        play_rate(g, "radio", at, 0.6, 0.95);
+    }
+}
+
+/// Once a frame after the guards: the alarm episode, stepping down, the lockdown duties.   (guards.ts updateEscalation)
+pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
+    update_rollcall(g, dt);
+    crate::dialogue::update_ambient(g, dt);
+    tick_engagement(g);
+    if g.quiet_utility { return; }
+    let (mut any_alert, mut hunting, mut living) = (false, false, 0.0_f64);
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        if g.gd[gd].state == GuardState::Dead || g.gd[gd].team != Team::Guard { continue; }
+        living += 1.0;
+        if g.gd[gd].state == GuardState::Alert {
+            any_alert = true;
+            hunting = true;
+            if let Some(lk) = g.gd[gd].last_known { g.alarm.pos[0] = lk[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = lk[2]; g.alarm.placed = true; }
+        } else if g.gd[gd].state == GuardState::Search { hunting = true; }
+    }
+    if any_alert {
+        if g.ai_enabled { g.alarm.episode = true; }
+    } else if g.alarm.episode && !hunting {
+        g.alarm.episode = false;
+        if living > 0.0 && !g.pl[g.player].down && g.ai_enabled {
+            let to = if g.escalation >= 1.0 { 2.0 } else { 1.0 };
+            raise_escalation(g, to, None, None, None);
+        }
+    }
+    if g.escalation > 0.0 && !g.alarm.episode && !hunting && !still_looking(g) && g.time >= g.escalation_t { step_down_escalation(g); }
+    if g.escalation >= 2.0 { supervise_lockdown(g, dt, living); }
+    if g.clearing.is_some() && !crate::squad::clearing_tick(g, dt) { g.clearing = None; }
+}
+
+/// A man the floor knows is dead.   (guards.ts superviseLockdown's `knownDead`)
+fn known_dead(g: &Game, x: GuardId) -> bool {
+    g.gd[x].state == GuardState::Dead && (g.gd[x].found || g.alarm.episode || g.gd[x].missed_at >= 0.0)
+}
+
+/// Keep the lockdown duties dealt, as far as the men know.   (guards.ts superviseLockdown)
+pub fn supervise_lockdown(g: &mut crate::game::Game, dt: f64, living: f64) {
+    let (mut follower, mut postman): (Option<GuardId>, Option<GuardId>) = (None, None);
+    let mut standing = 0_i32;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() { continue; }
+        if g.gd[gd].held.is_some() {
+            if g.gd[gd].leader.is_some() || g.gd[gd].post.is_some() { g.gd[gd].leader = None; g.gd[gd].post = None; }
+            continue;
+        }
+        if known_dead(g, gd) { continue; }
+        standing += 1;
+        if g.gd[gd].leader.is_some() { follower = Some(gd); }
+        if g.gd[gd].post.is_some() { postman = Some(gd); }
+    }
+    let posts = g.level.chokepoints.as_ref().map_or(0, |c| c.len()) > 0;
+    let mut redo = if standing >= 2 {
+        match follower {
+            None => true,
+            Some(fo) => known_dead(g, g.gd[fo].leader.unwrap()) || (standing >= 3 && living >= 3.0 && posts && postman.is_none()),
+        }
+    } else {
+        follower.is_some() || postman.is_some()
+    };
+    if let Some(fo) = follower {
+        if !redo && g.gd[fo].state != GuardState::Dead {
+            let l = g.gd[fo].leader.unwrap();
+            let calm = g.gd[fo].state == GuardState::Patrol && g.gd[l].state == GuardState::Patrol;
+            let (fc, lc) = (g.gd[fo].ch, g.gd[l].ch);
+            g.alarm.apart_t = if calm && v3::dist(g.ch[fc].pos, g.ch[lc].pos) > 8.0 { g.alarm.apart_t + dt } else { 0.0 };
+            if g.alarm.apart_t > 5.0 { redo = true; }
+        }
+    }
+    if redo && living >= 1.0 { assign_lockdown(g, true, None); }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // bits from the TypeScript's own expression, under bun
-    #[test]
-    fn a_line_stands_by_its_length_in_utf16_units() {
-        assert_eq!(bubble_secs("radio check — sound off").to_bits(), 0x40061eb851eb851e);
-        assert_eq!(bubble_secs("x").to_bits(), 0x4000000000000000);
-        assert_eq!(bubble_secs("and still nothing from Bravo — keep looking for him, all of you, all of you now right away").to_bits(), 0x4010000000000000);
-    }
-
-    #[test]
-    fn the_frame_test_takes_either_shape_of_matrix() {
-        let doubles: Vec<f64> = vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
-        let singles: Vec<f32> = doubles.iter().map(|x| *x as f32).collect();
-        for vp in [InViewVp::Array(doubles.clone()), InViewVp::Float32Array(singles)] {
-            assert!(in_view(Some(&vp), [0.5, 0.5, 0.0]));
-            assert!(!in_view(Some(&vp), [0.95, 0.0, 0.0]));
-            assert!(!in_view(Some(&vp), [0.0, -0.91, 0.0]));
-        }
-        assert!(!in_view(None, [0.0, 0.0, 0.0]));
-        let behind = InViewVp::Array(vec![1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0, 0.0, 0.0]);
-        assert!(!in_view(Some(&behind), [0.0, 0.0, 1.0]));
-    }
 
     #[test]
     fn a_write_through_the_rollcall_row_lands() {

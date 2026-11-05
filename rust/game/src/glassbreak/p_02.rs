@@ -14,26 +14,18 @@ use crate::glass_pattern::{
 use crate::scene_box_mirror::{PaneDice, PaneDiceClumpsItem, PaneRow, PaneRowPendingItem, PaneSite, PaneView, VIEW_BLOWN, VIEW_GIVES};
 use crate::Num;
 
-// ---------------------------------------------------------------- seams: what skeleton 4 still lacks
-/// g.audio.play(name, at, volume, { rate })
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, volume: f64, rate: f64) { todo!("needs: a rate in game_audio_like_play's opts") }
-/// P.emit('debris', at, dir, count, { shape: 'cone', speed: 1.1, speedJit: 0.8, spread: 1.2, life: 30, lifeJit: 0.4, size, sizeJit: 0.6, aspect: 1.4, posJit, color })
-fn seam_chips_emit(g: &mut Game, at: V3, dir: V3, count: f64, size: f64, pos_jit: f64, color: V3) { todo!("needs: EmitOpts with shape, speedJit, spread, lifeJit, sizeJit, aspect, color; and a Particles lent, not returned by value") }
+// ---------------------------------------------------------------- seams: what skeleton 5 still lacks
+/// a box's row. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of rows; when it has one this body is one line and no other line moves
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box") }
 
-// ---------------------------------------------------------------- a pane's row lent out of its table
-/// the row, taken out of the table for the length of a call that takes `g` and `st` both (the table's row is blank meanwhile: see sync_row)
-fn take_row(g: &mut Game, bi: f64) -> Option<PaneState> { g.glass_break.panes.get_mut(Num(bi)).map(core::mem::take) }
-/// the row back. A row deleted meanwhile stays deleted: in the TypeScript the writes went to an object nobody holds any more.
-fn put_row(g: &mut Game, st: PaneState) { let bi = st.bi; if let Some(r) = g.glass_break.panes.get_mut(Num(bi)) { *r = st; } }
-/// the table's row made what the holder of `st` has: before anything outside this file may read the panes (a line through a hole, the shards)
-fn sync_row(g: &mut Game, st: &PaneState) { let bi = st.bi; if let Some(r) = g.glass_break.panes.get_mut(Num(bi)) { *r = st.clone(); } }
-/// g.col.wrote() after a pane's `walkable` changed: its row's kind reads that (boxMirror.ts kindAt), so the table must hold it before the collision can ask
-fn wrote_row(g: &mut Game, st: &PaneState) { sync_row(g, st); crate::scene_collision::wrote(g); }
-/// `g.level.boxes[bi]`: undefined off the list (a negative or fractional index included). That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219)
+// ---------------------------------------------------------------- a pane's row, by its key
+/// the row of pane bi, for a few lines. Nothing a release reaches deletes a row (reset and setType are a restart's and the panel's), so a row in hand stays
+fn row<'g>(g: &'g mut Game, bi: f64) -> &'g mut PaneState { g.glass_break.panes.get_mut(Num(bi)).unwrap() }
+/// `g.level.boxes[bi]`: undefined off the list (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219): the box at place bi
 fn box_at(g: &Game, bi: f64) -> Option<BoxId> {
     let ix = bi as usize;
-    if ix as f64 != bi || ix >= g.col.boxes.len() { return None; }
-    Some(BoxId::from_ix(ix))
+    if ix as f64 != bi { return None; }
+    g.col.boxes.get(ix).copied()
 }
 
 fn gp_of(d: &Dice) -> GpDice { GpDice { u: d.u, v: d.v, cols: d.cols, rows: d.rows, seed: d.seed, hu: d.hu, hv: d.hv } }
@@ -43,7 +35,6 @@ fn seed_mix(seed: f64, n: f64) -> f64 { (js::to_i32(seed) ^ m::imul(js::to_i32(n
 fn xor_u32(a: f64, b: f64) -> f64 { (js::to_i32(a) ^ js::to_i32(b)) as u32 as f64 }
 fn by_time(a: &Pending, b: &Pending) -> f64 { js::or(a.at - b.at, a.fid - b.fid) }
 fn is_tooth(f: &GpFrag, tooth_area: f64) -> bool { f.area < tooth_area && f.frame.bottom + f.frame.left + f.frame.right + f.frame.top > 1e-4 }
-fn men_of(g: &mut Game) -> Vec<PlayerId> { let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() }; crate::seats::men(g, &of) }
 
 fn crater_cause(c: PendingCause) -> GlassBreakReleaseCraterCause {
     match c {
@@ -154,29 +145,26 @@ pub fn glass_break_each(g: &mut crate::game::Game, to: &mut dyn FnMut(&mut crate
 pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, view: crate::glassbreak::GlassBreakSeeThroughView, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let statics = g.engine.world.glass_statics.clone();
     for bi in statics { glass_break_sky_side(g, bi); }
-    let (kind, also) = match view {
-        GlassBreakSeeThroughView::Blown => (GlassBreakViewOfKind::Blown, GlassBreakAlso::Blown),
-        GlassBreakSeeThroughView::Wary => (GlassBreakViewOfKind::Wary, GlassBreakAlso::Wary { from, size }),
-        GlassBreakSeeThroughView::Counted => (GlassBreakViewOfKind::Counted, GlassBreakAlso::Counted { from, size }),
+    let kind = match view {
+        GlassBreakSeeThroughView::Blown => GlassBreakViewOfKind::Blown,
+        GlassBreakSeeThroughView::Wary => GlassBreakViewOfKind::Wary,
+        GlassBreakSeeThroughView::Counted => GlassBreakViewOfKind::Counted,
     };
-    let was = g.glass_break.also.take();
     let was_of = g.glass_break.view_of.take();
-    g.glass_break.also = Some(also);
     g.glass_break.view_of = Some(GlassBreakViewOf { kind, from, size, rows: None });
     crate::scene_collision::glass_viewed(g);
     let out = fn_(g);
-    g.glass_break.also = was;
     g.glass_break.view_of = was_of;
     crate::scene_collision::glass_viewed(g);
     out
 }
-/// the rule the TypeScript's `also` closure held (glassbreak.ts:466): what the view in hand says of pane bi at x
+/// the rule the TypeScript's `also` closure held (glassbreak.ts:466), from the view in hand, which holds the same three things: what it says of pane bi at x
 fn glass_view_also(g: &mut Game, bi: f64, x: V3) -> bool {
-    match g.glass_break.also.clone() {
-        None => false,
-        Some(GlassBreakAlso::Blown) => glass_break_going_at(g, bi, x),
-        Some(GlassBreakAlso::Wary { from, size }) => glass_break_would_give(g, bi, from, Some(size), None),
-        Some(GlassBreakAlso::Counted { from, size }) => glass_break_would_give(g, bi, from, Some(size), Some(x)),
+    let (kind, from, size) = match g.glass_break.view_of.as_ref() { Some(v) => (v.kind, v.from, v.size), None => return false };
+    match kind {
+        GlassBreakViewOfKind::Blown => glass_break_going_at(g, bi, x),
+        GlassBreakViewOfKind::Wary => glass_break_would_give(g, bi, from, Some(size), None),
+        GlassBreakViewOfKind::Counted => glass_break_would_give(g, bi, from, Some(size), Some(x)),
     }
 }
 
@@ -235,15 +223,15 @@ pub fn glass_break_give(g: &mut crate::game::Game, bi: f64, b: BoxId, at: V3, ra
 
 /// is the glass of pane bi at x on its way out (glassbreak.ts GlassBreak.goingAt)
 pub fn glass_break_going_at(g: &mut crate::game::Game, bi: f64, x: V3) -> bool {
-    let st = match take_row(g, bi) { Some(st) => st, None => return false };
-    let ans = going_at_st(g, &st, x);
-    put_row(g, st);
-    ans
-}
-fn going_at_st(g: &mut Game, st: &PaneState, x: V3) -> bool {
-    if st.gone || st.dice.is_some() { return true; }
-    if st.pending.is_empty() { return false; }
-    let [u, v] = glass_break_to_uv(g, st, x);
+    match g.glass_break.panes.get(Num(bi)) {
+        None => return false,
+        Some(st) => {
+            if st.gone || st.dice.is_some() { return true; }
+            if st.pending.is_empty() { return false; }
+        }
+    }
+    let [u, v] = glass_break_to_uv(g, x, bi);
+    let st = row(g, bi);
     let fid = gp_classify(&st.sites, st.run, u, v);
     if fid < 0.0 { return false; }
     let at = gp_unfid(fid);
@@ -273,12 +261,16 @@ pub fn glass_break_bang(g: &mut crate::game::Game, at: V3, who: f64) -> f64 {
 
 // ---------------------------------------------------------------- tempered: the dice
 /// toughened glass starts to come down; the clump under the blow goes with this call (glassbreak.ts GlassBreak.startDice)
-pub fn glass_break_start_dice(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, u: f64, v: f64, seed: f64, why: &str) {
-    if st.dice.is_some() || st.gone { return; }
+pub fn glass_break_start_dice(g: &mut crate::game::Game, u: f64, v: f64, seed: f64, why: &str, bi: f64) {
+    let (hu, hv) = {
+        let st = row(g, bi);
+        if st.dice.is_some() || st.gone { return; }
+        (st.hu, st.hv)
+    };
     let clump_m = g.k.glassbreak.clump_m;
-    let cols = m::max(1.0, m::round(2.0 * st.hu / clump_m));
-    let rows = m::max(1.0, m::round(2.0 * st.hv / clump_m));
-    let mut d = Dice { u, v, cols, rows, seed: (js::to_u32(seed) >> 8) as f64, hu: st.hu, hv: st.hv, t0: g.time, clumps: Vec::new(), next: 0.0, out: vec![0u8; (cols * rows) as usize] };
+    let cols = m::max(1.0, m::round(2.0 * hu / clump_m));
+    let rows = m::max(1.0, m::round(2.0 * hv / clump_m));
+    let mut d = Dice { u, v, cols, rows, seed: (js::to_u32(seed) >> 8) as f64, hu, hv, t0: g.time, clumps: Vec::new(), next: 0.0, out: vec![0u8; (cols * rows) as usize] };
     let gp = gp_of(&d);
     let (mut r, mut clumps) = (0.0, Vec::new());
     while r < rows {
@@ -292,112 +284,121 @@ pub fn glass_break_start_dice(g: &mut crate::game::Game, st: &mut crate::glassbr
     js::sort_by(&mut clumps, |a, b| js::or(a.key - b.key, a.k - b.k));
     d.clumps = clumps;
     let n_clumps = d.clumps.len();
-    st.dice = Some(d.clone());
-    g.stats.glassbreak.diced += 1;
-    let bi = st.bi;
-    glass_break_note(g, &format!("pane {} DICES ({})", bi, why));
-    glass_break_plog(g, st, &format!("dices ({}): {} clumps", why, n_clumps));
     let k0 = gp_dice_clump(gp, u, v);
     let key0 = d.clumps.iter().find(|c| c.k == k0).unwrap().key;
-    while (d.next as usize) < d.clumps.len() && d.clumps[d.next as usize].key <= key0 + DICE_TIE {
-        let c = d.clumps[d.next as usize];
-        glass_break_release_clump(g, st, &mut d, c);
-        d.next += 1.0;
-        if let Some(sd) = st.dice.as_mut() { sd.next = d.next; }
+    row(g, bi).dice = Some(d);
+    g.stats.glassbreak.diced += 1;
+    glass_break_note(g, &format!("pane {} DICES ({})", bi, why));
+    glass_break_plog(g, &format!("dices ({}): {} clumps", why, n_clumps), bi);
+    loop {
+        let d = row(g, bi).dice.as_ref().unwrap();
+        let at = d.next as usize;
+        if at >= d.clumps.len() || !(d.clumps[at].key <= key0 + DICE_TIE) { break; }
+        let c = d.clumps[at];
+        glass_break_release_clump(g, c, bi);
+        row(g, bi).dice.as_mut().unwrap().next += 1.0;
     }
-    if (d.next as usize) >= d.clumps.len() { glass_break_dice_done(g, st); }
+    let d = row(g, bi).dice.as_ref().unwrap();
+    if (d.next as usize) >= d.clumps.len() { glass_break_dice_done(g, bi); }
 }
 
 /// every clump is out (glassbreak.ts GlassBreak.diceDone)
-pub fn glass_break_dice_done(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) {
+pub fn glass_break_dice_done(g: &mut crate::game::Game, bi: f64) {
+    let st = row(g, bi);
     st.gone = true;
     st.walkable = true;
-    wrote_row(g, st);
-    if st.exterior { g.glass_break.gust_dirty = true; }
+    let exterior = st.exterior;
+    crate::scene_collision::wrote(g);
+    if exterior { g.glass_break.gust_dirty = true; }
 }
 
 /// the crazed sheet stands `hang` seconds, then every clump leaves on the one step: GLASSREAL.drop, settled (glassbreak.ts GlassBreak.stepDice)
-pub fn glass_break_step_dice(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) {
-    let t0 = st.dice.as_ref().unwrap().t0;
+pub fn glass_break_step_dice(g: &mut crate::game::Game, bi: f64) {
+    let (t0, walkable) = { let st = row(g, bi); (st.dice.as_ref().unwrap().t0, st.walkable) };
     if g.time - t0 >= g.k.glassreal.hang {
-        let mut d = st.dice.clone().unwrap();
-        glass_break_drop_all(g, st, &mut d);
-    } else if st.walkable {
-        st.walkable = false;
-        wrote_row(g, st);
+        glass_break_drop_all(g, bi);
+    } else if walkable {
+        row(g, bi).walkable = false;
+        crate::scene_collision::wrote(g);
     }
 }
 
-/// a clump lets go (glassbreak.ts GlassBreak.releaseClump). `d` is a copy of st.dice lent by the caller: `out` is written to both.
-pub fn glass_break_release_clump(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, d: &mut crate::glassbreak::Dice, c_2: crate::glassbreak::Clump) {
-    let k = c_2.k as usize;
-    d.out[k] = 1;
-    if let Some(sd) = st.dice.as_mut() { sd.out[k] = 1; }
+/// a clump lets go (glassbreak.ts GlassBreak.releaseClump). `D` is the row's own dice: the skeleton dropped the parameter, one holder now
+pub fn glass_break_release_clump(g: &mut crate::game::Game, c_2: crate::glassbreak::Clump, bi: f64) {
+    let gp = {
+        let d = row(g, bi).dice.as_mut().unwrap();
+        d.out[c_2.k as usize] = 1;
+        gp_of(d)
+    };
     g.stats.glassbreak.clumps += 1;
     g.stats.glassbreak.dropped += 1;
-    let pts = gp_dice_poly(gp_of(d), c_2.c, c_2.r);
+    let pts = gp_dice_poly(gp, c_2.c, c_2.r);
     if pts.len() < 3 { return; }
     let pa = gp_poly_area(&pts);
     let (area, cen) = (pa.area, pa.cen);
     if area < 1e-8 { return; }
-    let n = glass_break_normal_of(g, st);
-    let out_sign = if v3::dot(n, st.last_dir) >= 0.0 { 1.0 } else { -1.0 };
+    let n = glass_break_normal_of(g, bi);
+    let (st_key, last_dir, type_, ht, box_, last_who) = { let st = row(g, bi); (st.key, st.last_dir, st.type_, st.ht, st.box_, st.last_who) };
+    let out_sign = if v3::dot(n, last_dir) >= 0.0 { 1.0 } else { -1.0 };
     let nn = v3::scale(n, out_sign);
-    let h1 = crate::debris::hash01(st.key * 7919.0 + c_2.k * 131.0);
-    let h2 = crate::debris::hash01(st.key * 104729.0 + c_2.k * 193.0);
-    let h3 = crate::debris::hash01(c_2.k * 7.0 + st.key);
-    let rad = m::max(1e-3, m::hyp2(cen[0] - d.u, cen[1] - d.v));
-    let spread = glass_break_dir_uv(g, st, (cen[0] - d.u) / rad, (cen[1] - d.v) / rad);
+    let h1 = crate::debris::hash01(st_key * 7919.0 + c_2.k * 131.0);
+    let h2 = crate::debris::hash01(st_key * 104729.0 + c_2.k * 193.0);
+    let h3 = crate::debris::hash01(c_2.k * 7.0 + st_key);
+    let rad = m::max(1e-3, m::hyp2(cen[0] - gp.u, cen[1] - gp.v));
+    let spread = glass_break_dir_uv(g, (cen[0] - gp.u) / rad, (cen[1] - gp.v) / rad, bi);
     let (out, spin, grain) = (g.k.glassbreak.out, g.k.glassbreak.spin, g.k.glassbreak.dice_grain);
     let velocity = v3::add(v3::add(v3::scale(nn, out * (0.3 + 0.9 * h1)), v3::scale(spread, 0.5 * h2)), [0.0, -0.3 - 0.5 * h3, 0.0]);
     let f = GlassFragment {
-        pane: st.bi,
-        type_: st.type_,
+        pane: bi,
+        type_,
         kind: GlassFragmentKind::Clump,
-        outline: glass_break_outline(g, st, &pts, out_sign),
-        centre: glass_break_to_world(g, st, cen[0], cen[1], None),
+        outline: glass_break_outline(g, &pts, out_sign, bi),
+        centre: glass_break_to_world(g, cen[0], cen[1], None, bi),
         normal: nn,
-        thickness: 2.0 * st.ht,
+        thickness: 2.0 * ht,
         area,
         velocity,
         spin: [(h1 - 0.5) * spin, (h2 - 0.5) * 2.0, (h3 - 0.5) * spin],
-        tint: g.col.boxes[st.box_].albedo,
+        tint: seam_box(g, box_).albedo,
         grain,
         cause: GlassFragmentCause::Dice,
-        who: st.last_who,
-        seed: seed_mix(d.seed, c_2.k + 1.0),
+        who: last_who,
+        seed: seed_mix(gp.seed, c_2.k + 1.0),
     };
-    glass_break_emit(g, st, &f, c_2.k);
+    glass_break_emit(g, &f, c_2.k, bi);
 }
 
 /// GLASSREAL.drop: every clump still standing leaves on this step, handed on in square blocks (glassbreak.ts GlassBreak.dropAll)
-pub fn glass_break_drop_all(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, d: &mut crate::glassbreak::Dice) {
-    let left = d.clumps.len() as f64 - d.next;
+pub fn glass_break_drop_all(g: &mut crate::game::Game, bi: f64) {
+    let (gp, n_clumps, next0) = { let d = row(g, bi).dice.as_ref().unwrap(); (gp_of(d), d.clumps.len() as f64, d.next) };
+    let left = n_clumps - next0;
     let mut mm = 1.0;
     let blocks = m::max(1.0, g.k.glassreal.blocks);
-    while m::ceil(d.cols / mm) * m::ceil(d.rows / mm) > blocks { mm += 1.0; }
-    let du = 2.0 * d.hu / d.cols;
-    let dv = 2.0 * d.hv / d.rows;
-    let bc = m::ceil(d.cols / mm);
-    let br = m::ceil(d.rows / mm);
+    while m::ceil(gp.cols / mm) * m::ceil(gp.rows / mm) > blocks { mm += 1.0; }
+    let du = 2.0 * gp.hu / gp.cols;
+    let dv = 2.0 * gp.hv / gp.rows;
+    let bc = m::ceil(gp.cols / mm);
+    let br = m::ceil(gp.rows / mm);
     let size = (bc * br) as usize;
     let (mut n, mut su, mut sv) = (vec![0u16; size], vec![0.0f64; size], vec![0.0f64; size]);
-    let gp = gp_of(d);
-    while (d.next as usize) < d.clumps.len() {
-        let c = d.clumps[d.next as usize];
-        d.out[c.k as usize] = 1;
-        g.stats.glassbreak.clumps += 1;
-        g.stats.glassbreak.dropped += 1;
-        let b = (m::floor(c.r / mm) * bc + m::floor(c.c / mm)) as usize;
-        let p = gp_dice_centre(gp, c.c, c.r);
-        n[b] = n[b].wrapping_add(1);
-        su[b] += p[0];
-        sv[b] += p[1];
-        d.next += 1.0;
+    {
+        let d = g.glass_break.panes.get_mut(Num(bi)).unwrap().dice.as_mut().unwrap();
+        while (d.next as usize) < d.clumps.len() {
+            let c = d.clumps[d.next as usize];
+            d.out[c.k as usize] = 1;
+            g.stats.glassbreak.clumps += 1;
+            g.stats.glassbreak.dropped += 1;
+            let b = (m::floor(c.r / mm) * bc + m::floor(c.c / mm)) as usize;
+            let p = gp_dice_centre(gp, c.c, c.r);
+            n[b] = n[b].wrapping_add(1);
+            su[b] += p[0];
+            sv[b] += p[1];
+            d.next += 1.0;
+        }
     }
-    st.dice = Some(d.clone());
-    let nrm = glass_break_normal_of(g, st);
-    let out_sign = if v3::dot(nrm, st.last_dir) >= 0.0 { 1.0 } else { -1.0 };
+    let nrm = glass_break_normal_of(g, bi);
+    let (st_key, last_dir, type_, ht, box_, last_who) = { let st = row(g, bi); (st.key, st.last_dir, st.type_, st.ht, st.box_, st.last_who) };
+    let out_sign = if v3::dot(nrm, last_dir) >= 0.0 { 1.0 } else { -1.0 };
     let nn = v3::scale(nrm, out_sign);
     let (out, spin, grain) = (g.k.glassbreak.out, g.k.glassbreak.spin, g.k.glassbreak.dice_grain);
     for bi_ in 0..n.len() {
@@ -406,113 +407,123 @@ pub fn glass_break_drop_all(g: &mut crate::game::Game, st: &mut crate::glassbrea
         let count = n[bi_] as f64;
         let c0 = js::rem(b, bc) * mm;
         let r0 = m::floor(b / bc) * mm;
-        let u0 = -d.hu + c0 * du;
-        let u1 = m::min(d.hu, u0 + mm * du);
-        let v0 = -d.hv + r0 * dv;
-        let v1 = m::min(d.hv, v0 + mm * dv);
+        let u0 = -gp.hu + c0 * du;
+        let u1 = m::min(gp.hu, u0 + mm * du);
+        let v0 = -gp.hv + r0 * dv;
+        let v1 = m::min(gp.hv, v0 + mm * dv);
         let cu = su[bi_] / count;
         let cv = sv[bi_] / count;
-        let h1 = crate::debris::hash01(st.key * 7919.0 + b * 131.0);
-        let h3 = crate::debris::hash01(b * 7.0 + st.key);
-        let near = m::max(0.0, 1.0 - m::hyp2(cu - d.u, cv - d.v) / 0.6);
+        let h1 = crate::debris::hash01(st_key * 7919.0 + b * 131.0);
+        let h3 = crate::debris::hash01(b * 7.0 + st_key);
+        let near = m::max(0.0, 1.0 - m::hyp2(cu - gp.u, cv - gp.v) / 0.6);
         let f = GlassFragment {
-            pane: st.bi,
-            type_: st.type_,
+            pane: bi,
+            type_,
             kind: GlassFragmentKind::Clump,
-            outline: glass_break_outline(g, st, &[[u0, v0], [u1, v0], [u1, v1], [u0, v1]], out_sign),
-            centre: glass_break_to_world(g, st, cu, cv, None),
+            outline: glass_break_outline(g, &[[u0, v0], [u1, v0], [u1, v1], [u0, v1]], out_sign, bi),
+            centre: glass_break_to_world(g, cu, cv, None, bi),
             normal: nn,
-            thickness: 2.0 * st.ht,
+            thickness: 2.0 * ht,
             area: count * du * dv,
             velocity: v3::add(v3::scale(nn, out * (0.1 + 0.25 * h1 + 0.8 * near)), [0.0, -0.3 - 0.5 * h3, 0.0]),
             spin: [(h1 - 0.5) * spin, 0.0, (h3 - 0.5) * spin],
-            tint: g.col.boxes[st.box_].albedo,
+            tint: seam_box(g, box_).albedo,
             grain,
             cause: GlassFragmentCause::Dice,
-            who: st.last_who,
-            seed: seed_mix(d.seed, b + 1.0),
+            who: last_who,
+            seed: seed_mix(gp.seed, b + 1.0),
         };
-        glass_break_emit(g, st, &f, b);
+        glass_break_emit(g, &f, b, bi);
     }
-    glass_break_plog(g, st, &format!("drops: {} clumps as blocks of {} × {}", left, mm, mm));
-    glass_break_dice_done(g, st);
+    glass_break_plog(g, &format!("drops: {} clumps as blocks of {} × {}", left, mm, mm), bi);
+    glass_break_dice_done(g, bi);
 }
 
 /// a laminated sheet leaves its frame whole (glassbreak.ts GlassBreak.releaseSheet)
-pub fn glass_break_release_sheet(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, away: V3, k: f64) {
-    if st.gone { return; }
-    st.gone = true;
-    st.walkable = true;
-    wrote_row(g, st);
-    st.pending.clear();
+pub fn glass_break_release_sheet(g: &mut crate::game::Game, away: V3, k: f64, bi: f64) {
+    {
+        let st = row(g, bi);
+        if st.gone { return; }
+        st.gone = true;
+        st.walkable = true;
+    }
+    crate::scene_collision::wrote(g);
+    let (exterior, st_key, type_, ht, hu, hv, box_, last_who) = {
+        let st = row(g, bi);
+        st.pending.clear();
+        (st.exterior, st.key, st.type_, st.ht, st.hu, st.hv, st.box_, st.last_who)
+    };
     g.stats.glassbreak.sheets += 1;
     g.stats.glassbreak.dropped += 1;
-    if st.exterior { g.glass_break.gust_dirty = true; }
-    let n = glass_break_normal_of(g, st);
+    if exterior { g.glass_break.gust_dirty = true; }
+    let n = glass_break_normal_of(g, bi);
     let out_sign = if v3::dot(n, away) >= 0.0 { 1.0 } else { -1.0 };
     let nn = v3::scale(n, out_sign);
-    let pts = [[-st.hu, -st.hv], [st.hu, -st.hv], [st.hu, st.hv], [-st.hu, st.hv]];
-    let bi = st.bi;
+    let pts = [[-hu, -hv], [hu, -hv], [hu, hv], [-hu, hv]];
     glass_break_note(g, &format!("pane {}: the laminated sheet leaves its frame", bi));
-    glass_break_plog(g, st, "sheet blown out");
-    let c = g.col.boxes[st.box_].c;
+    glass_break_plog(g, "sheet blown out", bi);
+    let (c, albedo) = { let b = seam_box(g, box_); (b.c, b.albedo) };
     let blast_out = g.k.glassbreak.blast_out;
     let f = GlassFragment {
-        pane: st.bi,
-        type_: st.type_,
+        pane: bi,
+        type_,
         kind: GlassFragmentKind::Sheet,
-        outline: glass_break_outline(g, st, &pts, out_sign),
+        outline: glass_break_outline(g, &pts, out_sign, bi),
         centre: v3::copy(c),
         normal: nn,
-        thickness: 2.0 * st.ht,
-        area: 4.0 * st.hu * st.hv,
+        thickness: 2.0 * ht,
+        area: 4.0 * hu * hv,
         velocity: v3::add(v3::scale(nn, blast_out * k * 0.6), [0.0, 0.4, 0.0]),
         spin: [1.5 * k, 0.0, 0.4],
-        tint: g.col.boxes[st.box_].albedo,
+        tint: albedo,
         grain: 0.0,
         cause: GlassFragmentCause::Blast,
-        who: st.last_who,
-        seed: crate::glass::point_seed(st.key, c),
+        who: last_who,
+        seed: crate::glass::point_seed(st_key, c),
     };
-    glass_break_emit(g, st, &f, 0.0);
+    glass_break_emit(g, &f, 0.0, bi);
 }
 
 // ---------------------------------------------------------------- pieces letting go
 /// a pane-local direction in the world (glassbreak.ts GlassBreak.dirUV)
-pub fn glass_break_dir_uv(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, du: f64, dv: f64) -> V3 {
-    let a = glass_break_to_world(g, st, 0.0, 0.0, None);
-    let b = glass_break_to_world(g, st, du, dv, None);
+pub fn glass_break_dir_uv(g: &mut crate::game::Game, du: f64, dv: f64, bi: f64) -> V3 {
+    let a = glass_break_to_world(g, 0.0, 0.0, None, bi);
+    let b = glass_break_to_world(g, du, dv, None, bi);
     v3::sub(b, a)
 }
 
 /// pane-local polygon to the world outline, anticlockwise seen from the side the fragment leaves by (glassbreak.ts GlassBreak.outline)
-pub fn glass_break_outline(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, pts: &[[f64; 2]], out_sign: f64) -> Vec<V3> {
-    let ccw_from_plus_w = st.u_axis == 0.0;
+pub fn glass_break_outline(g: &mut crate::game::Game, pts: &[[f64; 2]], out_sign: f64, bi: f64) -> Vec<V3> {
+    let ccw_from_plus_w = row(g, bi).u_axis == 0.0;
     let keep = (out_sign > 0.0) == ccw_from_plus_w;
     let mut out = Vec::with_capacity(pts.len());
     if keep {
-        for p in pts { out.push(glass_break_to_world(g, st, p[0], p[1], None)); }
+        for p in pts { out.push(glass_break_to_world(g, p[0], p[1], None, bi)); }
     } else {
-        for p in pts.iter().rev() { out.push(glass_break_to_world(g, st, p[0], p[1], None)); }
+        for p in pts.iter().rev() { out.push(glass_break_to_world(g, p[0], p[1], None, bi)); }
     }
     out
 }
 
 /// a site's crater goes, as one fragment (glassbreak.ts GlassBreak.releaseCrater)
-pub fn glass_break_release_crater(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, i: f64, cause: crate::glassbreak::GlassBreakReleaseCraterCause) -> f64 {
-    let s_ = st.sites[i as usize];
-    let mut any = false;
-    let mut s = 0.0;
-    while s < s_.n {
-        let fid = (i * GP_FRAGS_PER_SITE + s) as usize;
-        if st.open[fid] == 0 {
-            st.open[fid] = 1;
-            st.n_open += 1.0;
-            any = true;
+pub fn glass_break_release_crater(g: &mut crate::game::Game, i: f64, cause: crate::glassbreak::GlassBreakReleaseCraterCause, bi: f64) -> f64 {
+    let (s_, hu, hv) = {
+        let st = row(g, bi);
+        let s_ = st.sites[i as usize];
+        let mut any = false;
+        let mut s = 0.0;
+        while s < s_.n {
+            let fid = (i * GP_FRAGS_PER_SITE + s) as usize;
+            if st.open[fid] == 0 {
+                st.open[fid] = 1;
+                st.n_open += 1.0;
+                any = true;
+            }
+            s += 1.0;
         }
-        s += 1.0;
-    }
-    if !any { return 0.0; }
+        if !any { return 0.0; }
+        (s_, st.hu, st.hv)
+    };
     g.stats.glassbreak.dropped += 1;
     let mut chords = Vec::new();
     let mut s = 0.0;
@@ -520,56 +531,61 @@ pub fn glass_break_release_crater(g: &mut crate::game::Game, st: &mut crate::gla
         chords.push(gp_chord_pt(s_, s, 0.0));
         s += 1.0;
     }
-    let hull = gp_clip_rect(&gp_hull(&chords), st.hu, st.hv);
+    let hull = gp_clip_rect(&gp_hull(&chords), hu, hv);
     if hull.len() < 3 { return 0.0; }
     let pa = gp_poly_area(&hull);
     let (area, cen) = (pa.area, pa.cen);
-    let n = glass_break_normal_of(g, st);
-    let out_sign = if v3::dot(n, st.last_dir) >= 0.0 { 1.0 } else { -1.0 };
+    let n = glass_break_normal_of(g, bi);
+    let (last_dir, type_, ht, box_, last_who) = { let st = row(g, bi); (st.last_dir, st.type_, st.ht, st.box_, st.last_who) };
+    let out_sign = if v3::dot(n, last_dir) >= 0.0 { 1.0 } else { -1.0 };
     let nn = v3::scale(n, out_sign);
     let h = crate::debris::hash01(s_.seed);
-    glass_break_plog(g, st, &format!("crater {} out", i));
+    glass_break_plog(g, &format!("crater {} out", i), bi);
     let f = GlassFragment {
-        pane: st.bi,
-        type_: st.type_,
+        pane: bi,
+        type_,
         kind: GlassFragmentKind::Piece,
-        outline: glass_break_outline(g, st, &hull, out_sign),
-        centre: glass_break_to_world(g, st, cen[0], cen[1], None),
+        outline: glass_break_outline(g, &hull, out_sign, bi),
+        centre: glass_break_to_world(g, cen[0], cen[1], None, bi),
         normal: nn,
-        thickness: 2.0 * st.ht,
+        thickness: 2.0 * ht,
         area,
         velocity: v3::add(v3::scale(nn, 2.5 + 2.0 * h), [0.0, -0.2, 0.0]),
         spin: [0.0, 0.0, 0.0],
-        tint: g.col.boxes[st.box_].albedo,
+        tint: seam_box(g, box_).albedo,
         grain: 0.004,
         cause: crater_fragment_cause(cause),
-        who: st.last_who,
+        who: last_who,
         seed: xor_u32(s_.seed, 0xC2A7E5 as f64),
     };
-    glass_break_emit(g, st, &f, i * GP_FRAGS_PER_SITE);
-    glass_break_after_release(g, st);
+    glass_break_emit(g, &f, i * GP_FRAGS_PER_SITE, bi);
+    glass_break_after_release(g, bi);
     1.0
 }
 
 /// a piece lets go (glassbreak.ts GlassBreak.releaseFrag)
-pub fn glass_break_release_frag(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, f: &crate::glass_pattern::GpFrag, cause: crate::glassbreak::GlassBreakReleaseFragCause, from: Option<V3>, k: f64) {
+pub fn glass_break_release_frag(g: &mut crate::game::Game, f: &crate::glass_pattern::GpFrag, cause: crate::glassbreak::GlassBreakReleaseFragCause, from: Option<V3>, k: f64, bi: f64) {
     let fid = f.fid as usize;
-    if st.open[fid] != 0 { return; }
-    st.open[fid] = 1;
-    st.n_open += 1.0;
+    let (st_key, last_dir, type_, ht, box_, last_who) = {
+        let st = row(g, bi);
+        if st.open[fid] != 0 { return; }
+        st.open[fid] = 1;
+        st.n_open += 1.0;
+        (st.key, st.last_dir, st.type_, st.ht, st.box_, st.last_who)
+    };
     g.stats.glassbreak.dropped += 1;
-    let n = glass_break_normal_of(g, st);
-    let cw = glass_break_to_world(g, st, f.cen[0], f.cen[1], None);
-    let mut dir_out = st.last_dir;
+    let n = glass_break_normal_of(g, bi);
+    let cw = glass_break_to_world(g, f.cen[0], f.cen[1], None, bi);
+    let mut dir_out = last_dir;
     if let Some(from) = from {
         let d = v3::sub(cw, from);
         if v3::len(d) > 1e-6 { dir_out = v3::normalize(d); }
     }
     let out_sign = if v3::dot(n, dir_out) >= 0.0 { 1.0 } else { -1.0 };
     let nn = v3::scale(n, out_sign);
-    let h1 = crate::debris::hash01(st.key * 7919.0 + f.fid * 131.0);
-    let h2 = crate::debris::hash01(st.key * 104729.0 + f.fid * 193.0);
-    let h3 = crate::debris::hash01(f.fid * 7.0 + st.key);
+    let h1 = crate::debris::hash01(st_key * 7919.0 + f.fid * 131.0);
+    let h2 = crate::debris::hash01(st_key * 104729.0 + f.fid * 193.0);
+    let h3 = crate::debris::hash01(f.fid * 7.0 + st_key);
     let (out, spin, blast_out) = (g.k.glassbreak.out, g.k.glassbreak.spin, g.k.glassbreak.blast_out);
     let speed = match cause {
         GlassBreakReleaseFragCause::Blast => blast_out * k * (0.6 + 0.8 * h3),
@@ -580,61 +596,62 @@ pub fn glass_break_release_frag(g: &mut crate::game::Game, st: &mut crate::glass
     let aimed = (cause == GlassBreakReleaseFragCause::Blast || cause == GlassBreakReleaseFragCause::Rake) && from.is_some();
     let base = if aimed { v3::scale(v3::normalize(v3::add(v3::scale(dir_out, 0.7), v3::scale(nn, 0.5))), speed) } else { v3::scale(nn, speed) };
     let velocity = v3::add(base, [0.0, -0.2 - 0.6 * h1, 0.0]);
-    glass_break_plog(g, st, &format!("piece {}:{}:{} out ({})", f.i, f.b, f.s, cause.as_str()));
+    glass_break_plog(g, &format!("piece {}:{}:{} out ({})", f.i, f.b, f.s, cause.as_str()), bi);
     let frag = GlassFragment {
-        pane: st.bi,
-        type_: st.type_,
+        pane: bi,
+        type_,
         kind: if f.b >= 3.0 { GlassFragmentKind::Dagger } else { GlassFragmentKind::Piece },
-        outline: glass_break_outline(g, st, &f.pts, out_sign),
+        outline: glass_break_outline(g, &f.pts, out_sign, bi),
         centre: cw,
         normal: nn,
-        thickness: 2.0 * st.ht,
+        thickness: 2.0 * ht,
         area: f.area,
         velocity,
         spin: [(h1 - 0.5) * spin, (h2 - 0.5) * 2.0, (h3 - 0.5) * spin],
-        tint: g.col.boxes[st.box_].albedo,
+        tint: seam_box(g, box_).albedo,
         grain: 0.0,
         cause: frag_fragment_cause(cause),
-        who: st.last_who,
-        seed: xor_u32(crate::glass::point_seed(st.key, cw), f.fid),
+        who: last_who,
+        seed: xor_u32(crate::glass::point_seed(st_key, cw), f.fid),
     };
-    glass_break_emit(g, st, &frag, f.fid);
-    glass_break_after_release(g, st);
+    glass_break_emit(g, &frag, f.fid, bi);
+    glass_break_after_release(g, bi);
 }
 
 /// the walk rule asked again after a piece went (glassbreak.ts GlassBreak.afterRelease)
-pub fn glass_break_after_release(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) {
-    let w = glass_break_walkable_now(g, st);
-    if w != st.walkable {
-        st.walkable = w;
-        wrote_row(g, st);
+pub fn glass_break_after_release(g: &mut crate::game::Game, bi: f64) {
+    let w = glass_break_walkable_now(g, bi);
+    if w != row(g, bi).walkable {
+        row(g, bi).walkable = w;
+        crate::scene_collision::wrote(g);
     }
-    if st.exterior { g.glass_break.gust_dirty = true; }
+    if row(g, bi).exterior { g.glass_break.gust_dirty = true; }
 }
 
 /// a fragment has let go: the break heard, then the consumer or the stand-in (glassbreak.ts GlassBreak.emit)
-pub fn glass_break_emit(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, f: &crate::glassbreak::GlassFragment, key: f64) {
-    let heard = f.cause != GlassFragmentCause::Hit && g.time - st.sound_at >= g.k.glassbreak.crack_gap;
-    if heard { st.sound_at = g.time; }
-    sync_row(g, st);
-    if heard {
+pub fn glass_break_emit(g: &mut crate::game::Game, f: &crate::glassbreak::GlassFragment, key: f64, bi: f64) {
+    let now = g.time;
+    let crack_gap = g.k.glassbreak.crack_gap;
+    let (sound_at, st_key, box_, last_who) = { let st = row(g, bi); (st.sound_at, st.key, st.box_, st.last_who) };
+    if f.cause != GlassFragmentCause::Hit && now - sound_at >= crack_gap {
+        row(g, bi).sound_at = now;
         let dicing = f.kind == GlassFragmentKind::Clump || f.kind == GlassFragmentKind::Sheet;
-        let rate = if dicing { 0.7 } else { 1.25 + 0.3 * crate::debris::hash01(key + st.key) };
-        seam_audio_play(g, "glassCrack", f.centre, if dicing { 1.0 } else { 0.75 }, rate);
-        crate::glass::glass_event(g, st.box_, f.centre, 1.0, st.last_who);
+        let rate = if dicing { 0.7 } else { 1.25 + 0.3 * crate::debris::hash01(key + st_key) };
+        crate::audio_iface::game_audio_like_play(g, "glassCrack", Some(f.centre), Some(if dicing { 1.0 } else { 0.75 }), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+        crate::glass::glass_event(g, box_, f.centre, 1.0, last_who);
     }
     if g.glass_break.on_release.is_some() {
         g.stats.glassbreak.hooked += 1;
         crate::shards::glass_shards_on_release(g, &fragment_like(f));
         return;
     }
-    glass_break_stand_in(g, st, f, key);
+    glass_break_stand_in(g, f, key, bi);
 }
 
 /// no shards consumer attached: thin Debris boxes over the fragment and a burst of pale chips (glassbreak.ts GlassBreak.standIn)
-pub fn glass_break_stand_in(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, f: &crate::glassbreak::GlassFragment, key: f64) {
+pub fn glass_break_stand_in(g: &mut crate::game::Game, f: &crate::glassbreak::GlassFragment, key: f64, bi: f64) {
     let mut uv = Vec::with_capacity(f.outline.len());
-    for p in &f.outline { uv.push(glass_break_to_uv(g, st, *p)); }
+    for p in &f.outline { uv.push(glass_break_to_uv(g, *p, bi)); }
     let cen = gp_poly_area(&uv).cen;
     let grains = f.grain > 0.0;
     let sheet = f.kind == GlassFragmentKind::Sheet;
@@ -645,24 +662,25 @@ pub fn glass_break_stand_in(g: &mut crate::game::Game, st: &crate::glassbreak::P
     } else {
         m::max(1.0, m::min(3.0, m::round(f.area / 0.07)))
     };
-    let normal = glass_break_normal_of(g, st);
+    let normal = glass_break_normal_of(g, bi);
+    let (st_key, u_axis, ht, box_) = { let st = row(g, bi); (st.key, st.u_axis, st.ht, st.box_) };
     let out_sign = if v3::dot(normal, f.normal) >= 0.0 { 1.0 } else { -1.0 };
     let n_uv = uv.len() as f64;
     let mut k = 0.0;
     while k < n_sh {
-        let h1 = crate::debris::hash01(st.key * 7919.0 + key * 131.0 + k * 17.0);
-        let h2 = crate::debris::hash01(st.key * 104729.0 + key * 193.0 + k * 29.0);
+        let h1 = crate::debris::hash01(st_key * 7919.0 + key * 131.0 + k * 17.0);
+        let h2 = crate::debris::hash01(st_key * 104729.0 + key * 193.0 + k * 29.0);
         let vtx = uv.get(js::rem(k * m::max(1.0, m::floor(n_uv / n_sh)), n_uv) as usize).copied().unwrap_or(cen);
         let pu = cen[0] * (if n_sh == 1.0 { 1.0 } else { 0.6 }) + vtx[0] * (if n_sh == 1.0 { 0.0 } else { 0.4 });
         let pv = cen[1] * (if n_sh == 1.0 { 1.0 } else { 0.6 }) + vtx[1] * (if n_sh == 1.0 { 0.0 } else { 0.4 });
         let side = m::sqrt(f.area / n_sh) * (if grains { 0.35 } else { 0.92 });
         let su = side * (0.8 + 0.4 * h1);
         let sv = side * (0.8 + 0.4 * h2);
-        let hh: V3 = if st.u_axis == 0.0 { [su / 2.0, sv / 2.0, m::max(0.006, st.ht)] } else { [m::max(0.006, st.ht), sv / 2.0, su / 2.0] };
+        let hh: V3 = if u_axis == 0.0 { [su / 2.0, sv / 2.0, m::max(0.006, ht)] } else { [m::max(0.006, ht), sv / 2.0, su / 2.0] };
         let p = crate::scene_boxes::MakeBoxP {
-            c: glass_break_to_world(g, st, pu, pv, Some(out_sign * 0.02)),
+            c: glass_break_to_world(g, pu, pv, Some(out_sign * 0.02), bi),
             h: hh,
-            yaw: Some(g.col.boxes[st.box_].yaw),
+            yaw: Some(seam_box(g, box_).yaw),
             albedo: Some(v3::copy(g.k.glassbreak.shard_albedo)),
             flags: Some(crate::scene_boxes::box_flag().dynamic),
             ..Default::default()
@@ -671,27 +689,42 @@ pub fn glass_break_stand_in(g: &mut crate::game::Game, st: &crate::glassbreak::P
         let ch = crate::debris::debris_spawn(g, crate::debris::ChunkKind::Shard, bx, v3::copy(f.velocity), v3::copy(f.spin), Some(f.who), None);
         if let Some(ch) = ch {
             let chunk_box = g.tab.debris_chunk[ch].box_;
-            g.col.boxes[chunk_box].rough = Some(0.05);
+            seam_box(g, chunk_box).rough = Some(0.05);
             g.stats.glassbreak.shards += 1;
         } else {
             g.stats.glassbreak.refused += 1;
         }
         k += 1.0;
     }
-    if crate::particle_fx::gpu_fx(g).is_some() {
+    if crate::particle_fx::gpu_fx(g) {
         let n_chips = m::round(m::max(if grains { 3.0 } else { g.k.glassbreak.chips_min }, f.area * (if grains { g.k.glassbreak.dice_chips_per_m2 } else { g.k.glassbreak.chips_per_m2 })));
         let color = v3::copy(g.k.glassbreak.chip_color);
-        seam_chips_emit(g, f.centre, f.normal, n_chips, if grains { 0.012 } else { 0.008 }, m::sqrt(f.area) * 0.45, color);
+        let o = crate::render_particles::EmitOpts {
+            shape: Some(crate::render_particles::EmitShape::Cone),
+            speed: 1.1,
+            speed_jit: Some(0.8),
+            spread: Some(1.2),
+            life: 30.0,
+            life_jit: Some(0.4),
+            size: if grains { 0.012 } else { 0.008 },
+            size_jit: Some(0.6),
+            aspect: Some(1.4),
+            pos_jit: Some(m::sqrt(f.area) * 0.45),
+            color: Some(color),
+            ..Default::default()
+        };
+        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, f.centre, f.normal, n_chips, o);
         g.stats.glassbreak.chips += n_chips as i32;
     }
 }
 
 // ---------------------------------------------------------------- support
 /// which intact pieces of an annealed pane are held, grown outward from the frame and the uncut sheet (glassbreak.ts GlassBreak.heldSet)
-pub fn glass_break_held_set(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) -> JsSet<crate::Num> {
-    let frags = glass_break_frags_of(g, st);
+pub fn glass_break_held_set(g: &mut crate::game::Game, bi: f64) -> JsSet<crate::Num> {
+    let frags = glass_break_frags_of(g, bi);
     let (side, top, wedged) = (g.k.glassbreak.grip.side, g.k.glassbreak.grip.top, g.k.glassbreak.grip.wedged);
     let (stand_ny, balance_tol, stand_foot, hang_area) = (g.k.glassbreak.stand_ny, g.k.glassbreak.balance_tol, g.k.glassbreak.stand_foot, g.k.glassbreak.hang_area);
+    let st = row(g, bi);
     let mut by: JsMap<Num, usize> = JsMap::new();
     for (i, f) in frags.iter().enumerate() {
         if st.open[f.fid as usize] == 0 { by.set(Num(f.fid), i); }
@@ -735,20 +768,22 @@ pub fn glass_break_held_set(g: &mut crate::game::Game, st: &mut crate::glassbrea
 }
 
 /// queues what the last change left unheld, staggered (glassbreak.ts GlassBreak.supportPass)
-pub fn glass_break_support_pass(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) {
-    if st.type_ != GlassType::Annealed || st.n_open == 0.0 { return; }
-    let held = glass_break_held_set(g, st);
+pub fn glass_break_support_pass(g: &mut crate::game::Game, bi: f64) {
+    { let st = row(g, bi); if st.type_ != GlassType::Annealed || st.n_open == 0.0 { return; } }
+    let held = glass_break_held_set(g, bi);
     let mut n = 0;
-    let (stagger_per_m, stagger_jit) = (g.k.glassbreak.stagger_per_m, g.k.glassbreak.stagger_jit);
-    for f in glass_break_frags_of(g, st) {
+    let (stagger_per_m, stagger_jit, now) = (g.k.glassbreak.stagger_per_m, g.k.glassbreak.stagger_jit, g.time);
+    for f in glass_break_frags_of(g, bi) {
+        let st = row(g, bi);
         if st.open[f.fid as usize] != 0 || held.has(Num(f.fid)) || st.pending.iter().any(|p| p.fid == f.fid) { continue; }
         let d = m::hyp2(f.cen[0] - st.last_uv[0], f.cen[1] - st.last_uv[1]);
-        st.pending.push(Pending { fid: f.fid, at: g.time + d * stagger_per_m + stagger_jit * crate::debris::hash01(st.key * 31.0 + f.fid), cause: PendingCause::Support, from: None, k: 1.0 });
+        let at = now + d * stagger_per_m + stagger_jit * crate::debris::hash01(st.key * 31.0 + f.fid);
+        st.pending.push(Pending { fid: f.fid, at, cause: PendingCause::Support, from: None, k: 1.0 });
         n += 1;
     }
     if n != 0 {
-        glass_break_plog(g, st, &format!("{} pieces unheld", n));
-        js::sort_by(&mut st.pending, by_time);
+        glass_break_plog(g, &format!("{} pieces unheld", n), bi);
+        js::sort_by(&mut row(g, bi).pending, by_time);
     }
 }
 
@@ -767,94 +802,111 @@ pub fn glass_break_update(g: &mut crate::game::Game, _dt: f64) {
     let mut at = 0usize;
     while let Some(key) = g.glass_break.panes.next_key(&mut at) {
         if g.glass_break.panes.get(key).map_or(true, |s| s.gone) { continue; }
-        let mut st = match take_row(g, key.0) { Some(st) => st, None => continue };
-        update_pane(g, &mut st, now);
-        put_row(g, st);
+        update_pane(g, key.0, now);
     }
     crate::scene_collision::glass_end(g);
 }
-fn update_pane(g: &mut Game, st: &mut PaneState, now: f64) {
-    if st.dice.is_some() {
-        glass_break_step_dice(g, st);
+fn update_pane(g: &mut Game, bi: f64, now: f64) {
+    if row(g, bi).dice.is_some() {
+        glass_break_step_dice(g, bi);
         return;
     }
-    if !st.pending.is_empty() {
+    if !row(g, bi).pending.is_empty() {
         let mut went = false;
-        while !st.pending.is_empty() && st.pending[0].at <= now && g.glass_break.released_this_frame < g.k.glassbreak.releases_per_frame {
+        loop {
+            let budget = g.k.glassbreak.releases_per_frame;
+            let released = g.glass_break.released_this_frame;
+            let st = row(g, bi);
+            if st.pending.is_empty() || !(st.pending[0].at <= now) || !(released < budget) { break; }
             let p = st.pending.remove(0);
-            let f = glass_break_frags_of(g, st).into_iter().find(|x| x.fid == p.fid);
+            let f = glass_break_frags_of(g, bi).into_iter().find(|x| x.fid == p.fid);
             if let Some(f) = f {
-                if st.open[p.fid as usize] == 0 {
+                if row(g, bi).open[p.fid as usize] == 0 {
                     if f.b == 0.0 {
-                        glass_break_release_crater(g, st, f.i, crater_cause(p.cause));
+                        glass_break_release_crater(g, f.i, crater_cause(p.cause), bi);
                     } else {
-                        glass_break_release_frag(g, st, &f, frag_cause(p.cause), p.from, p.k);
+                        glass_break_release_frag(g, &f, frag_cause(p.cause), p.from, p.k, bi);
                     }
                     g.glass_break.released_this_frame += 1.0;
                     went = true;
                 }
             }
         }
-        if went && st.next_think <= 0.0 { st.next_think = now + g.k.glassbreak.think; }
+        let think = g.k.glassbreak.think;
+        let st = row(g, bi);
+        if went && st.next_think <= 0.0 { st.next_think = now + think; }
     }
-    if st.next_think > 0.0 && now >= st.next_think {
-        st.next_think = 0.0;
-        g.stats.glassbreak.thinks += 1;
-        glass_break_support_pass(g, st);
+    {
+        let st = row(g, bi);
+        if st.next_think > 0.0 && now >= st.next_think {
+            st.next_think = 0.0;
+            g.stats.glassbreak.thinks += 1;
+            glass_break_support_pass(g, bi);
+        }
     }
-    if st.run && !st.walkable && g.k.glassbreak.rake_open > 0.0 && st.type_ == GlassType::Annealed { glass_break_rake(g, st); }
+    let rake_open = g.k.glassbreak.rake_open;
+    let st = row(g, bi);
+    if st.run && !st.walkable && rake_open > 0.0 && st.type_ == GlassType::Annealed { glass_break_rake(g, bi); }
 }
 
 /// any player's man walking into what is left of a run pane (glassbreak.ts GlassBreak.rake)
-pub fn glass_break_rake(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) {
-    for pl in men_of(g) { glass_break_rake_by(g, st, pl); }
+pub fn glass_break_rake(g: &mut crate::game::Game, bi: f64) {
+    for pl in crate::seats::men(g) { glass_break_rake_by(g, pl, bi); }
 }
 
 /// one man's raking: the pieces in his way go, away from him, nearest first (glassbreak.ts GlassBreak.rakeBy)
-pub fn glass_break_rake_by(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, pl: PlayerId) {
+pub fn glass_break_rake_by(g: &mut crate::game::Game, pl: PlayerId, bi: f64) {
     if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].wall.is_some() { return; }
     let c = g.pl[pl].ch;
     let (pos, vel) = (g.ch[c].pos, g.ch[c].vel);
     let (rake_m, rake_open, walk_clear_h, tooth_area) = (g.k.glassbreak.rake_m, g.k.glassbreak.rake_open, g.k.glassbreak.walk_clear_h, g.k.glassbreak.tooth_area);
-    let n = glass_break_normal_of(g, st);
-    let bc = g.col.boxes[st.box_].c;
+    let n = glass_break_normal_of(g, bi);
+    let (box_, hu, hv, st_key) = { let st = row(g, bi); (st.box_, st.hu, st.hv, st.key) };
+    let bc = seam_box(g, box_).c;
     let w = v3::dot(v3::sub(pos, bc), n);
-    if m::abs(w) > rake_m || pos[1] >= bc[1] + st.hv { return; }
-    let mu = glass_break_to_uv(g, st, pos)[0];
-    if m::abs(mu) > st.hu + 0.1 { return; }
+    if m::abs(w) > rake_m || pos[1] >= bc[1] + hv { return; }
+    let mu = glass_break_to_uv(g, pos, bi)[0];
+    if m::abs(mu) > hu + 0.1 { return; }
     let vn = -v3::dot(vel, n) * m::sign(js::or(w, 1.0));
     let sp = m::hyp2(vel[0], vel[2]);
     if vn <= 0.3 || vn < 0.6 * sp { return; }
-    if st.pending.iter().any(|p| p.cause == PendingCause::Rake) || open_fraction_of(g, st) < rake_open { return; }
+    if row(g, bi).pending.iter().any(|p| p.cause == PendingCause::Rake) || glass_break_open_fraction(g, bi) < rake_open { return; }
     let v_clear = walk_clear_h - bc[1];
     let from: V3 = [pos[0], 1.0, pos[2]];
     let mut took = 0;
     let mut waiting: JsSet<Num> = JsSet::new();
-    for p in &st.pending { waiting.add(Num(p.fid)); }
-    for f in glass_break_frags_of(g, st) {
+    for p in &row(g, bi).pending { waiting.add(Num(p.fid)); }
+    let now = g.time;
+    for f in glass_break_frags_of(g, bi) {
+        let st = row(g, bi);
         if st.open[f.fid as usize] != 0 || f.v_min >= v_clear || waiting.has(Num(f.fid)) { continue; }
         if is_tooth(&f, tooth_area) { continue; }
-        st.pending.push(Pending { fid: f.fid, at: g.time + 0.04 + 0.12 * m::abs(f.cen[0] - mu) + 0.05 * crate::debris::hash01(st.key * 71.0 + f.fid), cause: PendingCause::Rake, from: Some(from), k: 1.0 });
+        st.pending.push(Pending { fid: f.fid, at: now + 0.04 + 0.12 * m::abs(f.cen[0] - mu) + 0.05 * crate::debris::hash01(st_key * 71.0 + f.fid), cause: PendingCause::Rake, from: Some(from), k: 1.0 });
         took += 1;
     }
     if took != 0 {
-        st.last_who = g.ch[c].id;
+        let who = g.ch[c].id;
+        let st = row(g, bi);
+        st.last_who = who;
         js::sort_by(&mut st.pending, by_time);
         g.stats.glassbreak.raked += took;
-        glass_break_plog(g, st, &format!("raked: {} pieces", took));
-        let bi = st.bi;
+        glass_break_plog(g, &format!("raked: {} pieces", took), bi);
         glass_break_note(g, &format!("pane {}: {} pieces raked out", bi, took));
     }
 }
 
 /// the movement rule: every piece reaching below walkClearH has fallen, but for teeth (glassbreak.ts GlassBreak.walkableNow)
-pub fn glass_break_walkable_now(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) -> bool {
-    if st.gone { return true; }
-    if st.dice.is_some() || st.type_ != GlassType::Annealed || !st.run { return false; }
-    let v_clear = g.k.glassbreak.walk_clear_h - g.col.boxes[st.box_].c[1];
+pub fn glass_break_walkable_now(g: &mut crate::game::Game, bi: f64) -> bool {
+    let box_ = {
+        let st = row(g, bi);
+        if st.gone { return true; }
+        if st.dice.is_some() || st.type_ != GlassType::Annealed || !st.run { return false; }
+        st.box_
+    };
+    let v_clear = g.k.glassbreak.walk_clear_h - seam_box(g, box_).c[1];
     let tooth_area = g.k.glassbreak.tooth_area;
-    for f in glass_break_frags_of(g, st) {
-        if f.v_min < v_clear && st.open[f.fid as usize] == 0 && !is_tooth(&f, tooth_area) { return false; }
+    for f in glass_break_frags_of(g, bi) {
+        if f.v_min < v_clear && row(g, bi).open[f.fid as usize] == 0 && !is_tooth(&f, tooth_area) { return false; }
     }
     true
 }
@@ -877,11 +929,9 @@ pub fn glass_break_update_gusts(g: &mut crate::game::Game) {
         let src = match src {
             Some(src) => src,
             None => {
-                let st = match take_row(g, bi) { Some(st) => st, None => continue };
-                let n = glass_break_normal_of(g, &st);
-                let c = g.col.boxes[st.box_].c;
-                let (hu, st_key) = (st.hu, st.key);
-                put_row(g, st);
+                let n = glass_break_normal_of(g, bi);
+                let (box_, hu, st_key) = { let st = row(g, bi); (st.box_, st.hu, st.key) };
+                let c = seam_box(g, box_).c;
                 let inward: V3 = if glass_break_sky_side(g, bi) > 0.0 { v3::scale(n, -1.0) } else { n };
                 let reach = g.k.wind.door_reach;
                 let d_max = crate::wind::wind_field().cut_k * reach;
@@ -925,7 +975,8 @@ fn seed_mix_gust(key: f64) -> f64 { seed_mix(0x61A55 as f64, key) }
 
 // ---------------------------------------------------------------- queries
 /// has the glass at (u, v) of this pane fallen out (glassbreak.ts GlassBreak.openUV)
-pub fn glass_break_open_uv(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, u: f64, v: f64) -> bool {
+pub fn glass_break_open_uv(g: &mut crate::game::Game, u: f64, v: f64, bi: f64) -> bool {
+    let st = row(g, bi);
     if st.gone { return true; }
     if let Some(d) = st.dice.as_ref() { return d.out[gp_dice_clump(gp_of(d), u, v) as usize] == 1; }
     if st.n_open == 0.0 { return false; }
@@ -935,11 +986,9 @@ pub fn glass_break_open_uv(g: &mut crate::game::Game, st: &crate::glassbreak::Pa
 
 /// is world point x on pane bi where a piece has fallen out (glassbreak.ts GlassBreak.openAt)
 pub fn glass_break_open_at(g: &mut crate::game::Game, bi: f64, x: V3) -> bool {
-    let st = match take_row(g, bi) { Some(st) => st, None => return false };
-    let [u, v] = glass_break_to_uv(g, &st, x);
-    let ans = glass_break_open_uv(g, &st, u, v);
-    put_row(g, st);
-    ans
+    if !g.glass_break.panes.has(Num(bi)) { return false; }
+    let [u, v] = glass_break_to_uv(g, x, bi);
+    glass_break_open_uv(g, u, v, bi)
 }
 
 /// the movement rule's answer for pane bi, false for a pane never hit (glassbreak.ts GlassBreak.walkable)
@@ -959,26 +1008,27 @@ pub fn glass_break_open_sig(g: &mut crate::game::Game) -> f64 {
 
 /// open fraction of pane bi by area, 0 = whole (glassbreak.ts GlassBreak.openFraction)
 pub fn glass_break_open_fraction(g: &mut crate::game::Game, bi: f64) -> f64 {
-    let mut st = match take_row(g, bi) { Some(st) => st, None => return 0.0 };
-    let ans = open_fraction_of(g, &mut st);
-    put_row(g, st);
-    ans
-}
-fn open_fraction_of(g: &mut Game, st: &mut PaneState) -> f64 {
-    if st.gone { return 1.0; }
-    if let Some(d) = st.dice.as_ref() { return d.next / d.clumps.len() as f64; }
-    if st.n_open == 0.0 { return 0.0; }
+    let (hu, hv) = match g.glass_break.panes.get(Num(bi)) {
+        None => return 0.0,
+        Some(st) => {
+            if st.gone { return 1.0; }
+            if let Some(d) = st.dice.as_ref() { return d.next / d.clumps.len() as f64; }
+            if st.n_open == 0.0 { return 0.0; }
+            (st.hu, st.hv)
+        }
+    };
     let mut a = 0.0;
-    for f in glass_break_frags_of(g, st) {
-        if st.open[f.fid as usize] != 0 { a += f.area; }
+    for f in glass_break_frags_of(g, bi) {
+        if row(g, bi).open[f.fid as usize] != 0 { a += f.area; }
     }
-    m::min(1.0, a / (4.0 * st.hu * st.hv))
+    m::min(1.0, a / (4.0 * hu * hv))
 }
 
 /// what a sibling needs to know about pane bi without touching it; None = not a sheet of glass (glassbreak.ts GlassBreak.paneInfo)
 pub fn glass_break_pane_info(g: &mut crate::game::Game, bi: f64) -> Option<crate::glassbreak::GlassBreakPaneInfo> {
     let type_ = glass_break_type_of_pane(g, bi)?;
-    let h = g.col.boxes[box_at(g, bi).unwrap()].h;
+    let b = box_at(g, bi).unwrap();
+    let h = seam_box(g, b).h;
     let exterior = glass_break_exterior_of(g, bi);
     let open_fraction = glass_break_open_fraction(g, bi);
     let walkable = glass_break_walkable(g, bi);
@@ -1057,7 +1107,7 @@ pub fn glass_break_break_test(g: &mut crate::game::Game) -> f64 {
         let o = v3::add(from, [0.0, 0.07 * k, 0.0]);
         let h = match crate::scene_collision::raycast(g, o, rd, l + 6.0) { Some(h) if !(h.index >= 1e6) => h, _ => return bi };
         let b = match box_at(g, h.index) { Some(b) => b, None => return bi };
-        let (flags, hh) = (g.col.boxes[b].flags, g.col.boxes[b].h);
+        let (flags, hh) = { let r = seam_box(g, b); (r.flags, r.h) };
         if js::to_i32(flags) & glass == 0 || m::min(hh[0], hh[2]) > 0.05 { return bi; }
         bi = h.index;
         crate::glass::glass_impact(g, bi, v3::mad(o, rd, h.t), Some(rd), 1.0, 0.0, None, None, None);
@@ -1105,7 +1155,7 @@ pub fn glass_break_reset(g: &mut crate::game::Game) {
 
 /// nearest point of a yawed box to p (glassbreak.ts nearestOn)
 pub fn nearest_on(g: &mut crate::game::Game, b: BoxId, p: V3) -> V3 {
-    let (c, h, yaw) = (g.col.boxes[b].c, g.col.boxes[b].h, g.col.boxes[b].yaw);
+    let (c, h, yaw) = { let r = seam_box(g, b); (r.c, r.h, r.yaw) };
     let (cs, sn) = (m::cos(yaw), m::sin(yaw));
     let (px, pz) = (p[0] - c[0], p[2] - c[2]);
     let lx = m::max(-h[0], m::min(h[0], cs * px - sn * pz));
@@ -1124,5 +1174,64 @@ mod tests {
         assert_eq!(seed_mix(4294901760.0, 4000000123.0).to_bits(), 0x41ecab2401600000);
         assert_eq!(seed_mix_gust(3735928559.0).to_bits(), 0x41e397dc0d400000);
         assert_eq!(xor_u32(4294901760.0, 0xC2A7E5 as f64).to_bits(), 0x41efe7b4fca00000);
+    }
+    // the TypeScript's openSig over the same two rows, from bun: s = (Math.imul(s, 31) + bi * 7 + nOpen + next + gone) | 0, in the map's order
+    const OPEN_SIG: f64 = 1115106832.0;
+    #[test]
+    fn open_sig_is_the_typescripts_and_goes_by_the_order_set() {
+        let mut g = crate::game::Game::blank();
+        g.glass_break.panes.set(Num(12.0), PaneState { bi: 12.0, n_open: 3.0, ..PaneState::zeroed() });
+        g.glass_break.panes.set(Num(2000000000.0), PaneState { bi: 2000000000.0, gone: true, dice: Some(Dice { next: 5.0, ..Dice::zeroed() }), ..PaneState::zeroed() });
+        assert_eq!(glass_break_open_sig(&mut g).to_bits(), f64::to_bits(OPEN_SIG));
+    }
+    // each hands on a pane with a piece out, a piece queued, coming down or gone, and no whole or merely cracked one
+    #[test]
+    fn each_passes_over_a_whole_pane() {
+        let mut g = crate::game::Game::blank();
+        let queued = Pending { fid: 8.0, ..Pending::zeroed() };
+        g.glass_break.panes.set(Num(1.0), PaneState { bi: 1.0, ..PaneState::zeroed() });
+        g.glass_break.panes.set(Num(2.0), PaneState { bi: 2.0, n_open: 1.0, ..PaneState::zeroed() });
+        g.glass_break.panes.set(Num(3.0), PaneState { bi: 3.0, pending: vec![queued], ..PaneState::zeroed() });
+        g.glass_break.panes.set(Num(4.0), PaneState { bi: 4.0, gone: true, ..PaneState::zeroed() });
+        g.glass_break.panes.set(Num(5.0), PaneState { bi: 5.0, dice: Some(Dice::zeroed()), ..PaneState::zeroed() });
+        let mut seen = Vec::new();
+        glass_break_each(&mut g, &mut |_, r| seen.push(r.bi));
+        assert_eq!(seen, vec![2.0, 3.0, 4.0, 5.0]);
+    }
+    // the rule of the burst's view off the row's own word: a pane gone or coming down answers without asking a box
+    #[test]
+    fn a_view_reads_the_view_of_and_none_answers_false() {
+        let mut g = crate::game::Game::blank();
+        g.glass_break.panes.set(Num(4.0), PaneState { bi: 4.0, gone: true, ..PaneState::zeroed() });
+        assert!(!glass_view_also(&mut g, 4.0, [0.0, 0.0, 0.0]));
+        g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Blown, from: [0.0, 0.0, 0.0], size: GlassBlastOpts::zeroed(), rows: None });
+        assert!(glass_view_also(&mut g, 4.0, [0.0, 0.0, 0.0]));
+        assert!(!glass_view_also(&mut g, 5.0, [0.0, 0.0, 0.0]));
+    }
+    // the queries by key: a pane never hit, a whole one, one gone, one half down by its clumps
+    #[test]
+    fn queries_go_by_the_key() {
+        let mut g = crate::game::Game::blank();
+        assert!(!glass_break_walkable(&mut g, 9.0));
+        assert_eq!(glass_break_open_fraction(&mut g, 9.0), 0.0);
+        assert!(!glass_break_going_at(&mut g, 9.0, [0.0, 0.0, 0.0]));
+        assert!(!glass_break_open_at(&mut g, 9.0, [0.0, 0.0, 0.0]));
+        g.glass_break.panes.set(Num(1.0), PaneState { bi: 1.0, ..PaneState::zeroed() });
+        assert_eq!(glass_break_open_fraction(&mut g, 1.0), 0.0);
+        assert!(!glass_break_open_uv(&mut g, 0.0, 0.0, 1.0));
+        g.glass_break.panes.set(Num(2.0), PaneState { bi: 2.0, gone: true, walkable: true, ..PaneState::zeroed() });
+        assert_eq!(glass_break_open_fraction(&mut g, 2.0), 1.0);
+        assert!(glass_break_walkable(&mut g, 2.0) && glass_break_open_uv(&mut g, 0.0, 0.0, 2.0) && glass_break_going_at(&mut g, 2.0, [0.0, 0.0, 0.0]));
+        let c = Clump::zeroed();
+        g.glass_break.panes.set(Num(3.0), PaneState { bi: 3.0, dice: Some(Dice { next: 1.0, clumps: vec![c, c, c, c], ..Dice::zeroed() }), ..PaneState::zeroed() });
+        assert_eq!(glass_break_open_fraction(&mut g, 3.0), 0.25);
+    }
+    // off the list, negative, fractional, NaN: undefined in the TypeScript
+    #[test]
+    fn box_at_goes_by_place() {
+        let mut g = crate::game::Game::blank();
+        g.col.boxes = vec![BoxId::from_ix(7), BoxId::from_ix(3)];
+        assert!(box_at(&g, 1.0) == Some(BoxId::from_ix(3)));
+        for i in [2.0, -1.0, 0.5, f64::NAN] { assert!(box_at(&g, i).is_none()); }
     }
 }

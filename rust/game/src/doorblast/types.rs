@@ -145,7 +145,7 @@ pub struct DoorblastStats {
     pub doorblast_landed: i32,
     pub doorblast_back: i32,
     pub doorblast_nudged: i32,
-    pub doorblast_nudge_max: i32,
+    pub doorblast_nudge_max: f64,
     pub doorblast_laid: i32,
     pub doorshot_rounds: i32,
     pub doorshot_splintered: i32,

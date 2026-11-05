@@ -1,4 +1,4 @@
-//! src/game/wallcharge.ts lines 1139 to 1234
+//! src/game/wallcharge.ts lines 1140 to 1235
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,6 +6,11 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
+
+/// A box's row (Box.* in the TypeScript): the index says g.col.boxes[id], but skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box")
+}
 
 /// holeAt's `open`: no solid thing on the rays through the wall at a man's shin and chest
 fn hole_open(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {
@@ -51,7 +56,7 @@ pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
     let (step, r) = (0.125, 2.5);
     let mut best: Option<WallChargeHoleAt> = None;
     let mut run = f64::NAN;
-    let (bc, bh) = (g.col.boxes[w.box_].c, g.col.boxes[w.box_].h);
+    let (bc, bh) = { let b = seam_box(g, w.box_); (b.c, b.h) };
     let c = if w.along_x { bc[0] } else { bc[2] };
     let l = if w.along_x { bh[0] } else { bh[2] };
     let lo = m::max(-r, c - l - w.u);
@@ -77,8 +82,8 @@ pub fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: 
     let fa = g.gd[gd].weapon;
     g.fa[fa].burst = None;
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.6);
-    if g.gd[gd].state != crate::game::GuardState::Alert { g.gd[gd].last_known = Some(v3::copy(at)); }
-    g.gd[gd].path = Vec::new();
+    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
+    crate::game::guard_set_path(g, gd, Vec::new());
     g.gd[gd].path_goal = None;
     g.gd[gd].speed = 0.0;
     let c = g.gd[gd].ch;
@@ -91,9 +96,9 @@ pub fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at:
     g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, now + secs);
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, 0.6);
-    if g.gd[gd].state != crate::game::GuardState::Alert { g.gd[gd].last_known = Some(v3::copy(at)); }
+    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
     if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
-    g.gd[gd].path = Vec::new();
+    crate::game::guard_set_path(g, gd, Vec::new());
     g.gd[gd].path_goal = None;
     g.gd[gd].speed = 0.0;
     let c = g.gd[gd].ch;
@@ -167,7 +172,7 @@ pub fn wall_charge_sam_fatal(g: &mut crate::game::Game, c_2: WallChargeId) -> bo
 }
 
 /// With the cursor on a partition and Sam at its foot, the marker and its row (wallcharge.ts WallCharge.samRows)
-pub fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeSamRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
+pub fn wall_charge_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::wallcharge::WallChargeRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     g.wall_charge.offered = None;
     g.wall_charge.marker = None;
     if !wall_charge_on(g) || !g.wall_charge.seated { return; }

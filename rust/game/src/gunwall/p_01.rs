@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `GUNWALL_STATS.loweredS += dt`: the counter's field came out `i32`, it sums seconds (gunwall.ts:218).
-fn seam_stats_lowered_s(g: &mut Game, dt: f64) {
-    todo!("needs: GunwallStats.lowered_s as f64")
-}
-
 /// The row of a man the rule has already asked about: the one truth behind every `S` of the TypeScript.
 fn row(g: &mut Game, c: CharId) -> &mut St {
     g.m.gunwall.st.get_mut(c).unwrap()
@@ -145,8 +140,8 @@ pub fn wood_between(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     let l = v3::len(d);
     let h = if l > 1e-3 { crate::scene_collision::raycast(g, a, v3::scale(d, 1.0 / l), l) } else { None };
     match h {
-        Some(h) => !(h.index < 1e6 && js::to_i32(g.col.boxes[BoxId(h.index as u32)].flags) & js::to_i32(crate::scene_boxes::box_flag().glass) != 0),
-        None => true,
+        Some(h) if h.index < 1e6 => { let b = g.col.boxes[h.index as usize]; !crate::glass::is_pane(g, Some(b)) }
+        _ => true,
     }
 }
 
@@ -263,7 +258,7 @@ pub fn gun_walled(g: &mut crate::game::Game, c_2: CharId, up: Option<crate::gunw
         if !low { r.hold = None; }
         r.rose = was && !low;
         if low {
-            seam_stats_lowered_s(g, dt);
+            g.stats.gunwall.lowered_s += dt;
             if !was { g.stats.gunwall.lowered += 1; }
         }
     }

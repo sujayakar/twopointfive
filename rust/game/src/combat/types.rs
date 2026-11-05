@@ -12,14 +12,13 @@ pub enum BodyHitContact {
     Flight { radius: f64 },
 }
 
-/// (TypeScript: FireOpts, src/game/combat.ts:76)
+/// (TypeScript: FireOpts, src/game/combat.ts:77)
 #[derive(Clone, Debug)]
 pub struct FireOpts {
     pub spread: Option<f64>,
     pub weapon: Option<crate::weapons::WeaponDef>,
     pub steady: Option<bool>,
     pub blind: Option<bool>,
-    pub pellet: Option<crate::shotgun::Shell>,
 }
 impl FireOpts {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -29,13 +28,12 @@ impl FireOpts {
             weapon: None,
             steady: None,
             blind: None,
-            pellet: None,
         }
     }
 }
 impl Default for FireOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/combat.ts:324 acrossArm ->, src/game/combat.ts:324)
+/// (TypeScript: inline at src/game/combat.ts:325 acrossArm ->, src/game/combat.ts:325)
 #[derive(Clone, Copy, Debug)]
 pub struct AcrossArm {
     pub index: f64,
@@ -84,7 +82,7 @@ impl DropFromHandKind {
     }
 }
 
-/// (TypeScript: inline at src/game/combat.ts:504 hammerSide ->, src/game/combat.ts:504)
+/// (TypeScript: inline at src/game/combat.ts:505 hammerSide ->, src/game/combat.ts:505)
 #[derive(Clone, Copy, Debug)]
 pub struct HammerSide {
     pub o: V3,
@@ -101,7 +99,7 @@ impl HammerSide {
 }
 impl Default for HammerSide { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/combat.ts:602 laserReach ->, src/game/combat.ts:602)
+/// (TypeScript: inline at src/game/combat.ts:603 laserReach ->, src/game/combat.ts:603)
 #[derive(Clone, Copy, Debug)]
 pub struct LaserReach {
     pub from: V3,
@@ -124,7 +122,7 @@ impl LaserReach {
 }
 impl Default for LaserReach { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/combat.ts:684 detonateStun(sam), src/game/combat.ts:684)
+/// (TypeScript: inline at src/game/combat.ts:685 detonateStun(sam), src/game/combat.ts:685)
 #[derive(Clone, Copy, Debug)]
 pub struct DetonateStunSam {
     pub side: Option<crate::teams::Team>,
@@ -141,7 +139,7 @@ impl DetonateStunSam {
 }
 impl Default for DetonateStunSam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/combat.ts:685 detonateStunRaw(sam), src/game/combat.ts:685)
+/// (TypeScript: inline at src/game/combat.ts:686 detonateStunRaw(sam), src/game/combat.ts:686)
 #[derive(Clone, Copy, Debug)]
 pub struct DetonateStunRawSam {
     pub side: Option<crate::teams::Team>,
@@ -161,7 +159,7 @@ impl Default for DetonateStunRawSam { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct CombatMod {
-    /// (src/game/combat.ts:99 strayGun)
+    /// (src/game/combat.ts:100 strayGun)
     pub stray_gun: Option<FirearmId>,
 }
 impl CombatMod {
@@ -172,11 +170,11 @@ impl CombatMod {
     }
 }
 
-/// (src/game/combat.ts:358 solidScratch: a table nothing writes)
+/// (src/game/combat.ts:359 solidScratch: a table nothing writes)
 pub fn solid_scratch() -> Vec<i32> { alloc::vec![0; 64] }
 
-/// (src/game/combat.ts:426 GUN_ITEM_LIFE)
+/// (src/game/combat.ts:427 GUN_ITEM_LIFE)
 pub const GUN_ITEM_LIFE: f64 = 240.0;
 
-/// (src/game/combat.ts:453 handOrd: a table nothing writes)
+/// (src/game/combat.ts:454 handOrd: a table nothing writes)
 pub fn hand_ord() -> Vec<u16> { alloc::vec![0; 256] }

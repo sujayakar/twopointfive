@@ -16,11 +16,11 @@ pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
     let mut at = 0;
     // A live walk: closeUnseat deletes the row the walk stands on, as under the TypeScript's `for … of` over a Map.
     while let Some(gd) = g.m.close.seated.as_ref().and_then(|seated| seated.next_key(&mut at)) {
+        let Some(st) = g.m.close.seated.as_ref().and_then(|seated| seated.get(gd).copied()) else { continue };
         if !g.guards.contains(&gd) || !calm(g, gd) {
             close_unseat(g, gd, None);
             continue;
         }
-        let st = seam_seat_row(g, gd);
         let c = g.gd[gd].ch;
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, st.face, 3.0 * dt);
         let settled = m::abs(v3::wrap_angle(g.ch[c].body_yaw - st.face)) < 0.35;
@@ -36,9 +36,13 @@ pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
         g.gd[gd].speed = 0.0;
         g.ch[c].vel = [0.0, 0.0, 0.0];
         g.gd[gd].path = Vec::new();
+        g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
         g.gd[gd].path_goal = None;
+        g.gd[gd].path_goal_orbit = false;
         let down = settled && crate::character::anim_act_shown(g, c) > 0.5;
-        seam_seat_set_down(g, gd, down);
+        if let Some(row) = g.m.close.seated.as_mut().and_then(|seated| seated.get_mut(gd)) {
+            row.down = down;
+        }
     }
 }
 
@@ -64,11 +68,11 @@ pub fn close_summary(g: &mut crate::game::Game) -> String {
     let (mode, mode_d) = (s.mode, s.mode_d);
     let o = if s.t == now { s.best.clone() } else { None };
     let in_mode = match mode {
-        Some(gd) => alloc::format!("in the mode on {} {} m", g.gd[gd].callsign, to_fixed_2(mode_d)),
+        Some(gd) => alloc::format!("in the mode on {} {} m", g.gd[gd].callsign, js::to_fixed(mode_d, 2)),
         None => String::from("not in the mode"),
     };
     let best = match &o {
-        Some(o) => alloc::format!("{} {} {} m", g.gd[o.guard].callsign, close_kind_of(Some(o)).as_str(), to_fixed_2(o.dist)),
+        Some(o) => alloc::format!("{} {} {} m", g.gd[o.guard].callsign, close_kind_of(Some(o)).as_str(), js::to_fixed(o.dist, 2)),
         None => String::from("\u{2014}"),
     };
     let (t, gr) = (g.stats.close.takes, g.stats.close.grabs);
@@ -85,51 +89,4 @@ pub fn close_summary(g: &mut crate::game::Game) -> String {
         gr[CloseKind::Seat as usize],
         seated,
     )
-}
-
-/// A seated man's row of SEATED (close.ts:148 `Map<Guard, Seat>`).
-fn seam_seat_row(g: &mut crate::game::Game, gd: GuardId) -> crate::close::Seat {
-    todo!("needs: g.m.close.seated's value to be close::Seat, not cmd's SeatId")
-}
-
-/// The write `st.down = …` through the row (close.ts:474).
-fn seam_seat_set_down(g: &mut crate::game::Game, gd: GuardId, down: bool) {
-    todo!("needs: g.m.close.seated's value to be close::Seat, not cmd's SeatId")
-}
-
-/// `x.toFixed(2)`: the nearest hundredth, and of two equally near the larger (Rust's `{:.2}` takes the even one, on an exact tie: an odd number of eighths)
-fn to_fixed_2(x: f64) -> String {
-    if x.is_nan() {
-        return String::from("NaN");
-    }
-    let a = m::abs(x);
-    let sign = if x < 0.0 { "-" } else { "" };
-    if !a.is_finite() {
-        return alloc::format!("{}Infinity", sign);
-    }
-    let eighths = a * 8.0;
-    let tie = m::floor(eighths) == eighths && js::rem(eighths, 2.0) == 1.0;
-    if tie {
-        alloc::format!("{}{:.2}", sign, m::floor(a * 100.0 + 0.5) / 100.0)
-    } else {
-        alloc::format!("{}{:.2}", sign, a)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn to_fixed_2_matches_the_typescript() {
-        // the language's own answers (bun: x.toFixed(2))
-        let cases: [(f64, &str); 18] = [
-            (0.125, "0.13"), (0.375, "0.38"), (0.625, "0.63"), (0.875, "0.88"), (1.125, "1.13"), (2.5, "2.50"),
-            (0.005, "0.01"), (0.015, "0.01"), (1.005, "1.00"), (0.0, "0.00"), (-0.0, "0.00"), (-0.125, "-0.13"),
-            (-0.001, "-0.00"), (12.345, "12.35"), (1.999, "2.00"), (0.994999, "0.99"), (f64::INFINITY, "Infinity"), (100.125, "100.13"),
-        ];
-        for (x, want) in cases {
-            assert_eq!(to_fixed_2(x), want, "{}", x);
-        }
-    }
 }

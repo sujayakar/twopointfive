@@ -261,7 +261,7 @@ impl Default for SideBindDims { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct PacksideMod {
     /// (src/game/packside.ts:49 memo)
-    pub memo: JsMap<crate::ObjKey, crate::packside::Memo>,
+    pub memo: JsMap<RigId, crate::packside::Memo>,
 }
 impl PacksideMod {
     pub fn blank() -> Self {

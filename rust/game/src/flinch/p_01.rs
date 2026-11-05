@@ -1,4 +1,4 @@
-//! src/game/flinch.ts lines 1 to 125
+//! src/game/flinch.ts lines 1 to 126
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -32,7 +32,7 @@ pub fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<GuardId>,
     let c = c_2;
     if near < g.k.flinch.least || !hostile || g.quiet_utility { return; }
     match gd {
-        Some(man) => { if crate::runner::runner_owns(g, man) || !free(g, man) { return; } }
+        Some(man) => { if crate::owner::has_him(g, man, crate::owner::own().runner) || !free(g, man) { return; } }
         None => { if g.touring || g.pl[g.player].down { return; } }
     }
     let share = duck_share(g.k.flinch.far, g.k.flinch.least, g.k.flinch.full, near);
@@ -90,7 +90,7 @@ pub fn mate_by(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || !staff(g, o) || g.gd[o].team != g.gd[gd].team || g.gd[o].held.is_some() || crate::runner::runner_owns(g, o) { continue; }
+        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || !staff(g, o) || g.gd[o].team != g.gd[gd].team || g.gd[o].held.is_some() || crate::owner::has_him(g, o, crate::owner::own().runner) { continue; }
         let oc = g.gd[o].ch;
         if v3::dist_xz(g.ch[oc].pos, g.ch[c].pos) <= g.k.morale.alone_m {
             let chest = g.ch[oc].bones.get(crate::character::Bone::Chest).copied().unwrap_or_else(|| v3::add(g.ch[oc].pos, [0.0, 1.2, 0.0]));
@@ -108,7 +108,7 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
         let gd = g.guards[i];
         i += 1;
         let Some(t) = g.m.flinch.state_of.get(gd).copied() else { continue };
-        if !on || g.gd[gd].state == crate::game::GuardState::Dead || crate::runner::runner_owns(g, gd) || !green(g, gd) {
+        if !on || g.gd[gd].state == crate::game::GuardState::Dead || crate::owner::has_him(g, gd, crate::owner::own().runner) || !green(g, gd) {
             g.m.flinch.state_of.delete(gd);
             continue;
         }
@@ -193,7 +193,7 @@ mod tests {
         }
     }
 
-    /// flinch.ts:102: with the run's gates down nobody keeps a count, and a man with none is passed over.
+    /// flinch.ts:103: with the run's gates down nobody keeps a count, and a man with none is passed over.
     #[test]
     fn the_tick_with_the_run_off_clears_the_count() {
         let (mut g, gd) = one_man();
@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(flinch_under(&mut g, gd), 0.0);
     }
 
-    /// flinch.ts:59: the page's least travel is inclusive.
+    /// flinch.ts:60: the page's least travel is inclusive.
     #[test]
     fn inside_counts_from_the_least_travel() {
         let mut g = Box::new(Game::blank());

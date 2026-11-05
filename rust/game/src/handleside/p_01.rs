@@ -1,4 +1,4 @@
-//! src/game/handleside.ts lines 1 to 361
+//! src/game/handleside.ts lines 1 to 359
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,11 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
-// ---- seams: the steps the skeleton cannot do yet (notes.md, ## Skeleton) ----
-
-/// `swing.sweeps(x, z, pad)` (doors.ts:559): the closure on DoorSwing has no Rust name.
-fn seam_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool { crate::doors::p_02::swing_sweeps(s, x, z, pad) } // SKELETON-GAP: crate::doors::door_swing_sweeps(&DoorSwing, x, z, pad) (doors.ts:559); the body is doors/p_02.rs swing_sweeps
 
 // ---- local helpers ----
 
@@ -122,7 +117,7 @@ pub fn at_handle(g: &mut crate::game::Game, d: DoorId, p: V3, reach: Option<f64>
     if along < f.w / 2.0 || flat(p, handle_at(g, d)) > reach { return false; }
     if !crate::doors::doors_pull_face(g, d, p) { return true; }
     let s = crate::doors::doors_swing_of(g, d);
-    !seam_sweeps(&s, p[0], p[2], g.k.handle.body)
+    !crate::doors::door_swing_sweeps(&s, p[0], p[2], Some(g.k.handle.body))
 }
 
 /// A face's places, found once a face. (handleside.ts faceOf)
@@ -181,9 +176,9 @@ pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::hand
         while off <= 1.0 + 1e-6 {
             let p = pt_of(g, d, a, off, side);
             let r = flat(p, hd);
-            if r <= k.reach {
+            if !(r > k.reach) {
                 let c = r + if a < w { 0.25 } else { 0.0 };   // beside the jamb before in front of the opening
-                if !(c >= bc || seam_sweeps(&s, p[0], p[2], k.body + k.slack) || !ok_at(g, ref_, p, true)) {
+                if !(c >= bc || crate::doors::door_swing_sweeps(&s, p[0], p[2], Some(k.body + k.slack)) || !ok_at(g, ref_, p, true)) {
                     best = Some(p);
                     bc = c;
                 }
@@ -202,7 +197,7 @@ pub fn find_face(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::hand
         while off <= 1.8 + 1e-6 {
             let p = pt_of(g, d, a, off, side);
             let r = flat(p, hd);
-            if !(r > k.far_reach || r >= bc) && !(seam_sweeps(&s, p[0], p[2], k.body + k.slack) || !ok_at(g, ref_, p, false)) {
+            if !(r > k.far_reach || r >= bc) && !(crate::doors::door_swing_sweeps(&s, p[0], p[2], Some(k.body + k.slack)) || !ok_at(g, ref_, p, false)) {
                 best = Some(p);
                 bc = r;
             }
@@ -257,7 +252,7 @@ pub fn ahead(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::handleside
             if m::abs(fc[0] - a[0]) > seg + 2.0 || m::abs(fc[2] - a[2]) > seg + 2.0 { continue; }
             if let Some(x) = crate::guards::crosses_door(g, a, b, d) {
                 let dist = len + seg * x.t;
-                return if dist <= look { Some(crate::handleside::Ahead { d, k: k as f64, at: x.at, dist }) } else { None };
+                return if dist <= look { Some(crate::handleside::Ahead { d, k, at: x.at, dist }) } else { None };
             }
         }
         len += seg;
@@ -291,14 +286,14 @@ pub fn pull_open(g: &mut crate::game::Game, gd: GuardId, d: DoorId, far: bool) {
 pub fn bend(g: &mut crate::game::Game, gd: GuardId, d: DoorId, a: crate::handleside::BendA, a_2: V3, b: V3) -> bool {
     let c = g.ch[g.gd[gd].ch].pos;
     if flat(c, a_2) < 0.3 || off_at(g, d, c) < off_at(g, d, a_2) - 0.05 { return false; }
-    let k = a.k as usize;
+    let k = a.k;
     let on_it = slice_path(&g.gd[gd].path, g.gd[gd].path_i, k + 1).iter().any(|p| flat(*p, b) < 0.2);
     if on_it { return false; }
     let mut rest = slice_path(&g.gd[gd].path, k, g.gd[gd].path.len());
     while rest.len() > 1 && flat(rest[0], b) < 0.7 { rest.remove(0); }   // the walk's own first step beyond the frame is this one
     let mut path = vec![a_2, b];
     path.extend(rest);
-    g.gd[gd].path = path;
+    crate::game::guard_set_path(g, gd, path);
     g.gd[gd].path_i = 0;
     true
 }
@@ -316,13 +311,14 @@ pub fn halt(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 /// The gate followPath and the scripted strafe ask: true = this file has his feet this frame. (handleside.ts handleGate)
 pub fn handle_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: Option<bool>) -> bool {
     let mine = gate(g, gd, dt, speed, strafe.unwrap_or(false));
-    if mine { let now = g.time; g.m.handleside.feet.set(gd, now); }
+    if mine { g.gd[gd].handle_gate_t = g.time; }
     mine
 }
 
-/// Did this file have his feet this frame or the last. (handleside.ts handleHeld)
-pub fn handle_held(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    match g.m.handleside.feet.get(gd).copied() { Some(t) => g.time >= t && g.time - t < 0.05, None => false }
+/// Did this file have his feet this frame or the last. (handleside.ts handleGateStopped)
+pub fn handle_gate_stopped(g: &mut crate::game::Game, gd: GuardId) -> bool {
+    let t = g.gd[gd].handle_gate_t;
+    g.time >= t && g.time - t < 0.05
 }
 
 /// The gate's body: finds him a place at a leaf, or walks and works the one he has. (handleside.ts gate)
@@ -352,7 +348,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
             let s = crate::doors::doors_swing_of(g, d);
             let f = crate::guards::frame_of(g, d);
             let pad = k.body + 0.1;
-            if seam_sweeps(&s, pos[0], pos[2], pad) {   // in it already: a step straight back off the door, where there is floor
+            if crate::doors::door_swing_sweeps(&s, pos[0], pos[2], Some(pad)) {   // in it already: a step straight back off the door, where there is floor
                 let bx = pos[0] + f.nx * side * 0.3;
                 let bz = pos[2] + f.nz * side * 0.3;
                 if !crate::scene_collision::nav_grid_is_blocked(g, bx, bz) {
@@ -375,7 +371,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
             let dx = wp[0] - pos[0];
             let dz = wp[2] - pos[2];
             let l = js::or(m::hyp2(dx, dz), 1.0);
-            if seam_sweeps(&s, pos[0] + dx / l * 0.25, pos[2] + dz / l * 0.25, pad) {
+            if crate::doors::door_swing_sweeps(&s, pos[0] + dx / l * 0.25, pos[2] + dz / l * 0.25, Some(pad)) {
                 halt(g, gd, dt);
                 g.stats.handleside.held += 1;
                 return true;
@@ -442,11 +438,11 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
         let via = face_of(g, d, side).via;
         if let (Some(a_), Some(via)) = (a_, via) {
             if a_.d == d {
-                let mut rest = slice_path(&g.gd[gd].path, a_.k as usize, g.gd[gd].path.len());
+                let mut rest = slice_path(&g.gd[gd].path, a_.k, g.gd[gd].path.len());
                 while rest.len() > 1 && flat(rest[0], via[1]) < 0.7 { rest.remove(0); }
                 let mut path = vec![via[1]];
                 path.extend(rest);
-                g.gd[gd].path = path;
+                crate::game::guard_set_path(g, gd, path);
                 g.gd[gd].path_i = 0;
                 g.stats.handleside.lined += 1;
             }
@@ -479,7 +475,7 @@ pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe:
                 let close = flat(pos, spot) < 0.3;   // a man of his shoulder to shoulder with him at the jamb: as good as there
                 let takes = side_at(g, d, pos) == side && along >= f.w / 2.0 && flat(pos, hd) <= k.far_reach && {
                     let s = crate::doors::doors_swing_of(g, d);
-                    !seam_sweeps(&s, pos[0], pos[2], if close { k.body - 0.08 } else { k.body + 0.05 })
+                    !crate::doors::door_swing_sweeps(&s, pos[0], pos[2], Some(if close { k.body - 0.08 } else { k.body + 0.05 }))
                 } && {
                     let r = pt_of(g, d, f.w - k.handle_in, 0.2, side);
                     !walled(g, pos, r)

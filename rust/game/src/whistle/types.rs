@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WhistleMem, src/game/whistle.ts:75)
+/// (TypeScript: WhistleMem, src/game/whistle.ts:76)
 #[derive(Clone, Copy, Debug)]
 pub struct WhistleMem {
     pub responded_at: f64,
@@ -38,7 +38,7 @@ impl WhistleMem {
 }
 impl Default for WhistleMem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Blower, src/game/whistle.ts:99)
+/// (TypeScript: Blower, src/game/whistle.ts:100)
 #[derive(Clone, Copy, Debug)]
 pub struct Blower {
     pub ready_at: f64,
@@ -57,7 +57,7 @@ impl Blower {
 }
 impl Default for Blower { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Heard, src/game/whistle.ts:127)
+/// (TypeScript: Heard, src/game/whistle.ts:128)
 #[derive(Clone, Copy, Debug)]
 pub struct Heard {
     pub d: f64,
@@ -78,7 +78,7 @@ impl Heard {
 }
 impl Default for Heard { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Resolution, src/game/whistle.ts:128)
+/// (TypeScript: Resolution, src/game/whistle.ts:129)
 #[derive(Clone, Debug)]
 pub struct Resolution {
     pub hearers: JsMap<GuardId, crate::whistle::Heard>,
@@ -99,7 +99,7 @@ impl Resolution {
 }
 impl Default for Resolution { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WhistleSnap, src/game/whistle.ts:244)
+/// (TypeScript: WhistleSnap, src/game/whistle.ts:245)
 #[derive(Clone, Debug)]
 pub struct WhistleSnap {
     pub blower: crate::whistle::Blower,
@@ -116,7 +116,7 @@ impl WhistleSnap {
 }
 impl Default for WhistleSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/whistle.ts:131 WHISTLE_LOG, src/game/whistle.ts:131)
+/// (TypeScript: inline at src/game/whistle.ts:132 WHISTLE_LOG, src/game/whistle.ts:132)
 #[derive(Clone, Debug)]
 pub struct WhistleModWHISTLELOGItem {
     pub t: f64,
@@ -158,7 +158,7 @@ impl WhistleLinesKind {
     }
 }
 
-/// (TypeScript: inline at src/game/whistle.ts:96 whistleMem ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at quiet whistleMem ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Copy, Debug)]
 pub struct WhistleMem2 {
     pub responded_at: f64,
@@ -211,13 +211,13 @@ impl PickKey {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct WhistleMod {
-    /// (src/game/whistle.ts:87 memOf)
+    /// (src/game/whistle.ts:88 memOf)
     pub mem_of: JsMap<GuardId, crate::whistle::WhistleMem>,
-    /// (src/game/whistle.ts:100 blowerOf)
+    /// (src/game/whistle.ts:101 blowerOf)
     pub blower_of: JsMap<PlayerId, crate::whistle::Blower>,
-    /// (src/game/whistle.ts:129 resOf)
+    /// (src/game/whistle.ts:130 resOf)
     pub res_of: JsMap<u32, crate::whistle::Resolution>,
-    /// (src/game/whistle.ts:131 WHISTLE_LOG)
+    /// (src/game/whistle.ts:132 WHISTLE_LOG)
     pub whistle_log: Vec<crate::whistle::WhistleModWHISTLELOGItem>,
 }
 impl WhistleMod {
@@ -244,32 +244,32 @@ pub struct WhistleStats {
     pub unanswered: i32,
 }
 
-/// (src/game/whistle.ts:54 WHISTLE_DEFAULTS: a table nothing writes)
+/// (src/game/whistle.ts:55 WHISTLE_DEFAULTS: a table nothing writes)
 pub fn whistle_defaults() -> crate::knobs::WhistleK { crate::knobs::WhistleK { level: 0.35, reach_k: 8.0, horizon: 12.0, cooldown: 2.0, twice_window: 60.0, awareness: 0.45, react_t: 0.5, walk_floor: 0.32, glance_secs: 1.5, glance_max: 1.2, gain: 0.55 } }
 
-/// (src/game/whistle.ts:59 WHISTLE_SOFT_UPPER)
+/// (src/game/whistle.ts:60 WHISTLE_SOFT_UPPER)
 pub const WHISTLE_SOFT_UPPER: &str = "torch";
 
-/// (src/game/whistle.ts:62 LOOK_LINES: a table nothing writes)
+/// (src/game/whistle.ts:63 LOOK_LINES: a table nothing writes)
 pub fn look_lines() -> Vec<String> { alloc::vec![String::from("hello?"), String::from("someone there?"), String::from("…what was that?"), String::from("who's that whistling?"), String::from("somebody down there?")] }
 
-/// (src/game/whistle.ts:63 TWICE_LINES: a table nothing writes)
+/// (src/game/whistle.ts:64 TWICE_LINES: a table nothing writes)
 pub fn twice_lines() -> Vec<String> { alloc::vec![String::from("right — who's messing about?"), String::from("that's twice now. come on out."), String::from("okay. not funny. where are you?")] }
 
-/// (src/game/whistle.ts:65 TWICE_NOW: a table nothing writes)
+/// (src/game/whistle.ts:66 TWICE_NOW: a table nothing writes)
 pub fn twice_now() -> Vec<String> { alloc::vec![String::from("all right — who's messing around?"), String::from("that's twice now. come on out."), String::from("okay. not funny. where are you?")] }
 
-/// (src/game/whistle.ts:67 LOOK_FOE: a table nothing writes)
+/// (src/game/whistle.ts:68 LOOK_FOE: a table nothing writes)
 pub fn look_foe() -> Vec<String> { alloc::vec![String::from("…quiet. listen."), String::from("you hear that?"), String::from("something's there.")] }
 
-/// (src/game/whistle.ts:68 TWICE_FOE: a table nothing writes)
+/// (src/game/whistle.ts:69 TWICE_FOE: a table nothing writes)
 pub fn twice_foe() -> Vec<String> { alloc::vec![String::from("that's no bird. going to look."), String::from("someone's close. eyes up.")] }
 
-/// (src/game/whistle.ts:74 NEVER)
+/// (src/game/whistle.ts:75 NEVER)
 pub const NEVER: f64 = -1000000000.0;
 
-/// (src/game/whistle.ts:225 LS_KEY)
+/// (src/game/whistle.ts:226 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.whistle";
 
-/// (src/game/whistle.ts:226 KEPT: a table nothing writes)
+/// (src/game/whistle.ts:227 KEPT: a table nothing writes)
 pub fn kept() -> Vec<String> { alloc::vec![String::from("level"), String::from("reachK"), String::from("cooldown"), String::from("twiceWindow")] }

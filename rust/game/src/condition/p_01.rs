@@ -121,8 +121,7 @@ fn word(c: Condition) -> String {
 /// Every frame, after the stun poses are dealt: each man's condition to his figure, by one rule.   (condition.ts conditionPose)
 pub fn condition_pose(g: &mut crate::game::Game) {
     let on = !g.touring && !crate::director::director_showing(g);
-    let view = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &view) { deal(g, on, Man::Player(pl)); }
+    for pl in crate::seats::men(g) { deal(g, on, Man::Player(pl)); }
     // deal changes no list: a copy walks the same men.
     for gd in g.guards.clone() {
         if g.gd[gd].civ.is_none() { deal(g, on, Man::Guard(gd)); }

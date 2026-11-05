@@ -201,27 +201,6 @@ impl DozeSnapMenItem {
 }
 impl Default for DozeSnapMenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doze.ts:97 DOZE_LOG, src/game/doze.ts:97)
-#[derive(Clone, Debug)]
-pub struct DozeModDOZELOGItem {
-    pub t: f64,
-    pub who: String,
-    pub why: crate::doze::DozeWhy,
-    pub secs: f64,
-}
-impl DozeModDOZELOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DozeModDOZELOGItem {
-            t: 0.0,
-            who: String::new(),
-            why: crate::doze::DozeWhy::Light,
-            secs: 0.0,
-        }
-    }
-}
-impl Default for DozeModDOZELOGItem { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WakeWhy {
@@ -294,12 +273,8 @@ pub struct DozeMod {
     pub pulls_m: f64,
     /// (src/game/doze.ts:87 PULLS_E)
     pub pulls_e: f64,
-    /// (src/game/doze.ts:97 DOZE_LOG)
-    pub doze_log: Vec<crate::doze::DozeModDOZELOGItem>,
     /// (src/game/doze.ts:117 LEFT)
     pub left: Option<JsMap<FixtureId, f64>>,
-    /// (src/game/doze.ts:334 EARS)
-    pub ears: [f64; 2],
 }
 impl DozeMod {
     pub fn blank() -> Self {
@@ -309,9 +284,7 @@ impl DozeMod {
             pulls: None,
             pulls_m: -1.0,
             pulls_e: -1.0,
-            doze_log: Vec::new(),
             left: None,
-            ears: [1.0, 1.0],
         }
     }
 }

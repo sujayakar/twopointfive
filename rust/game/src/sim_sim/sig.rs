@@ -38,14 +38,14 @@ pub fn f32() -> Vec<f32> { todo!() }
 /// (src/sim/sim.ts:208 mathsOfRust)
 pub fn maths_of_rust() -> crate::math_exact::Maths { todo!() }
 
-/// (src/sim/sim.ts:331 callers)
+/// (src/sim/sim.ts:311 callers)
 pub fn callers(skip: f64, n: f64, not: crate::Opaque, span: Option<f64>) -> String { todo!() }
 
-/// (src/sim/sim.ts:335 fell)
+/// (src/sim/sim.ts:315 fell)
 pub fn fell(row: &str, why: &str) { todo!() }
 
-/// (src/sim/sim.ts:363 ruleFell)
+/// (src/sim/sim.ts:341 ruleFell)
 pub fn rule_fell(row: &str, why: &str) { todo!() }
 
-/// (src/sim/sim.ts:367 ruleRed)
+/// (src/sim/sim.ts:345 ruleRed)
 pub fn rule_red(row: &str) -> bool { todo!() }

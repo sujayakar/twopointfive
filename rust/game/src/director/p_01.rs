@@ -12,138 +12,92 @@ pub fn lifted_budget(g: &mut crate::game::Game) -> Option<f64> {
     if crate::rails::rails_live(g) { Some(16.0) } else { None }
 }
 
-/// Run a script's define pass against a recording api: everything it names and declares; beat bodies are kept, not run.   (director.ts manifestOf)
-pub fn manifest_of(script: &crate::scene_level::LevelScriptFn) -> crate::director::Manifest {
+/// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.   (director.ts manifestOf)
+pub fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::director::Manifest, String> {
     let mut manifest = Manifest::zeroed();
-    seam_script_define(script, &mut manifest);
-    manifest
+    seam_script_define(script, &mut manifest)?;
+    Ok(manifest)
 }
 
-// ---- the recording api of manifestOf: DirectorApi and ProgramApi are gone as objects, D.<verb> is d_<verb>(manifest, ...) and P.<verb> is p_<verb>(program, ...)
+/// (levels/<name>.script.ts, `script(D)`: the define pass of the level this names; its verbs are the manifest_* and program_* below)
+fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { todo!("needs: the by-hand scripts' define pass for each LevelScriptFn (no module of the skeleton holds it)") }
 
-/// (levels/<name>.script.ts, `script(D)`: the define pass of the level this names)
-fn seam_script_define(script: &crate::scene_level::LevelScriptFn, manifest: &mut Manifest) { todo!("needs: the by-hand script part's define pass for each LevelScriptFn") }
-/// (director.ts:304, 313 throw: caught by the Director's constructor at :442, which then runs with no manifest)
-fn seam_script_throw(what: String) -> ! { todo!("needs: manifest_of to return an error the constructor can read: {}", what) }
-
-fn d_mark(manifest: &mut Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> MarkRef {
-    if !manifest.marks.has(id.into()) || pos.is_some() {
+/// D.mark: a named place; a mark named again keeps its pos unless given one.   (director.ts:295)
+pub fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {
+    if !m.marks.has(id.into()) || pos.is_some() {
         let pos = match pos {
             Some(p) => Some(v3::copy(p)),
-            None => manifest.marks.get(id.into()).and_then(|row| row.pos),
+            None => m.marks.get(id.into()).and_then(|row| row.pos),
         };
-        manifest.marks.set(id.into(), ManifestMarksValue { pos, yaw });
+        m.marks.set(id.into(), ManifestMarksValue { pos, yaw });
     }
     MarkRef { kind: MarkRefKind::Mark, id: id.into() }
 }
-fn d_volume(manifest: &mut Manifest, id: &str) -> VolumeRef {
-    manifest.volumes.add(id.into());
+/// D.volume.   (director.ts:296)
+pub fn manifest_volume(m: &mut crate::director::Manifest, id: &str) -> crate::director::VolumeRef {
+    m.volumes.add(id.into());
     VolumeRef { kind: VolumeRefKind::Volume, id: id.into() }
 }
-fn d_route(manifest: &mut Manifest, id: &str) -> RouteRef {
-    manifest.routes.add(id.into());
-    RouteRef { kind: RouteRefKind::Route, id: id.into() }
-}
-fn d_door(manifest: &mut Manifest, id: &str) -> DoorRef {
-    manifest.doors.add(id.into());
+/// D.door.   (director.ts:298)
+pub fn manifest_door(m: &mut crate::director::Manifest, id: &str) -> crate::director::DoorRef {
+    m.doors.add(id.into());
     DoorRef { kind: DoorRefKind::Door, id: id.into() }
 }
-fn d_device(manifest: &mut Manifest, id: &str) -> DeviceRef {
-    manifest.devices.add(id.into());
-    DeviceRef { kind: DeviceRefKind::Device, id: id.into() }
-}
-fn d_plan(manifest: &mut Manifest, id: &str) -> PlanRef {
-    let plan = if id == "breach" { PlanKind::Breach } else { PlanKind::RoomClear };
-    manifest.plans.set(id.into(), plan);
-    PlanRef { kind: PlanRefKind::Plan, id: id.into(), plan }
-}
-fn d_loadout(manifest: &mut Manifest, id: &str, spec: LoadoutSpec) -> LoadoutRef {
-    manifest.loadouts.set(id.into(), spec);
+/// D.loadout.   (director.ts:301)
+pub fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate::director::LoadoutSpec) -> crate::director::LoadoutRef {
+    m.loadouts.set(id.into(), spec);
     LoadoutRef { kind: LoadoutRefKind::Loadout, id: id.into() }
 }
-fn d_light_group(manifest: &mut Manifest, id: &str) -> GroupRef {
-    manifest.groups.add(id.into());
-    GroupRef { kind: GroupRefKind::Group, id: id.into() }
-}
-fn d_variant(manifest: &mut Manifest, id: VariantRefId) -> VariantRef {
-    manifest.variants.add(id.as_str().into());
-    VariantRef { kind: VariantRefKind::Variant, id }
-}
-fn d_program(manifest: &mut Manifest, name: &str, body: &mut dyn FnMut(&mut ProgramDef), opts: Option<ProgramOpts>) {
-    if manifest.programs.has(name.into()) { seam_script_throw(format!("script: program '{}' declared twice", name)); }
+/// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.   (director.ts:304-318)
+pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>, opts: Option<crate::director::ProgramOpts>) -> Result<(), String> {
+    if m.programs.has(name.into()) { return Err(format!("script: program '{}' declared twice", name)); }
     let mut program = ProgramDef { name: name.into(), opts: opts.unwrap_or_else(ProgramOpts::zeroed), beats: JsMap::new(), triggers: Vec::new() };
-    body(&mut program);
-    manifest.programs.set(name.into(), program);
+    body(&mut program)?;
+    m.programs.set(name.into(), program);
+    Ok(())
 }
-fn d_expect_order(manifest: &mut Manifest, program: &str, beats: &[String]) {
-    manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), beats: Some(beats.to_vec()), ..ManifestExpectsItem::zeroed() });
+/// P.onStart.   (director.ts:308)
+pub fn program_on_start(p: &mut crate::director::ProgramDef, beat: &str) {
+    p.triggers.push(TriggerDef { kind: TriggerDefKind::Start, beat: beat.into(), ..TriggerDef::zeroed() });
 }
-fn d_expect_within(manifest: &mut Manifest, program: &str, a: &str, b: &str, max: f64) {
-    manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some(program.into()), a: Some(a.into()), b: Some(b.into()), max: Some(max), ..ManifestExpectsItem::zeroed() });
+/// P.onSignal.   (director.ts:311)
+pub fn program_on_signal(p: &mut crate::director::ProgramDef, sig: &str, beat: &str) {
+    p.triggers.push(TriggerDef { kind: TriggerDefKind::Signal, beat: beat.into(), name: Some(sig.into()), ..TriggerDef::zeroed() });
 }
-fn d_expect_never(manifest: &mut Manifest, what: &str) {
-    manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Never, what: Some(what.into()), ..ManifestExpectsItem::zeroed() });
-}
-fn d_systems_qrf(manifest: &mut Manifest, on: bool) { manifest.systems.set("qrf", on); }
-fn d_systems_needs(manifest: &mut Manifest, on: bool) { manifest.systems.set("needs", on); }
-fn d_systems_civilians(manifest: &mut Manifest, on: bool) { manifest.systems.set("civilians", on); }
-fn d_systems_autosave(manifest: &mut Manifest, on: bool) { manifest.systems.set("autosave", on); }
-fn d_systems_their_frags(manifest: &mut Manifest, on: bool) { manifest.systems.set("theirFrags", on); }
-
-fn p_on_start(program: &mut ProgramDef, beat: &str) {
-    program.triggers.push(TriggerDef { kind: TriggerDefKind::Start, beat: beat.into(), ..TriggerDef::zeroed() });
-}
-fn p_after(program: &mut ProgramDef, secs: f64, beat: &str) {
-    program.triggers.push(TriggerDef { kind: TriggerDefKind::After, beat: beat.into(), secs: Some(secs), ..TriggerDef::zeroed() });
-}
-fn p_on_event(program: &mut ProgramDef, event: EventKind, beat: &str) {
-    program.triggers.push(TriggerDef { kind: TriggerDefKind::Event, beat: beat.into(), event: Some(event), ..TriggerDef::zeroed() });
-}
-fn p_on_signal(program: &mut ProgramDef, sig: &str, beat: &str) {
-    program.triggers.push(TriggerDef { kind: TriggerDefKind::Signal, beat: beat.into(), name: Some(sig.into()), ..TriggerDef::zeroed() });
-}
-fn p_on_enter(program: &mut ProgramDef, v: &VolumeRef, beat: &str, who: Option<TriggerDefWho>, once: Option<bool>) {
-    program.triggers.push(TriggerDef { kind: TriggerDefKind::Enter, beat: beat.into(), volume: Some(v.id.clone()), who: Some(who.unwrap_or(TriggerDefWho::Sam)), once: Some(once.unwrap_or(true)), ..TriggerDef::zeroed() });
-}
-fn p_when(program: &mut ProgramDef, beat: &str, label: Option<&str>) {
-    program.triggers.push(TriggerDef { kind: TriggerDefKind::When, beat: beat.into(), label: Some(label.unwrap_or("when").into()), ..TriggerDef::zeroed() });
-}
-fn p_beat(program: &mut ProgramDef, bn: &str, fn_: crate::FnField, atomic: Option<bool>) {
-    if program.beats.has(bn.into()) { seam_script_throw(format!("script: beat '{}' declared twice in program '{}'", bn, program.name)); }
-    program.beats.set(bn.into(), ProgramDefBeatsValue { fn_, atomic: atomic.unwrap_or(true) });
+/// P.beat: `script` is whose match holds this beat's code. Err = declared twice.   (director.ts:314)
+pub fn program_beat(p: &mut crate::director::ProgramDef, name: &str, script: &crate::scene_level::LevelScriptFn, atomic: Option<bool>) -> Result<(), String> {
+    if p.beats.has(name.into()) { return Err(format!("script: beat '{}' declared twice in program '{}'", name, p.name)); }
+    p.beats.set(name.into(), ProgramDefBeatsValue { fn_: *script, atomic: atomic.unwrap_or(true) });
+    Ok(())
 }
 
-/// small pure helpers so a script needs no runtime import for arithmetic on places.   (director.ts UTIL)
+/// (director.ts UTIL.yawTo)
+pub fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
+/// (director.ts UTIL.distXZ)
+pub fn dist_xz(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
+/// (director.ts UTIL.lerp)
+pub fn lerp(a: V3, b: V3, t: f64) -> [f64; 3] {
+    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
+}
+/// (director.ts UTIL.add)
+pub fn add(a: V3, b: V3) -> [f64; 3] { [a[0] + b[0], a[1] + b[1], a[2] + b[2]] }
+/// (director.ts UTIL.ahead)
+pub fn ahead(p: V3, yaw: f64, d: f64, y: Option<f64>) -> [f64; 3] {
+    let y = y.unwrap_or(p[1]);
+    [p[0] + m::sin(yaw) * d, y, p[2] + m::cos(yaw) * d]
+}
+/// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.   (director.ts UTIL)
 pub mod util {
-    use super::*;
-    /// (director.ts UTIL.yawTo)
-    pub fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
-    /// (director.ts UTIL.distXZ)
-    pub fn dist_xz(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-    /// (director.ts UTIL.lerp)
-    pub fn lerp(a: V3, b: V3, t: f64) -> [f64; 3] {
-        [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
-    }
-    /// (director.ts UTIL.add)
-    pub fn add(a: V3, b: V3) -> [f64; 3] { [a[0] + b[0], a[1] + b[1], a[2] + b[2]] }
-    /// (director.ts UTIL.ahead)
-    pub fn ahead(p: V3, yaw: f64, d: f64, y: Option<f64>) -> [f64; 3] {
-        let y = y.unwrap_or(p[1]);
-        [p[0] + m::sin(yaw) * d, y, p[2] + m::cos(yaw) * d]
-    }
+    pub use super::{add, ahead, dist_xz, lerp, yaw_to};
 }
 
 fn err(out: &mut Vec<LintProblem>, what: String) { out.push(LintProblem { level: LintProblemLevel::Error, what }); }
 fn warn(out: &mut Vec<LintProblem>, what: String) { out.push(LintProblem { level: LintProblemLevel::Warn, what }); }
-/// `${x}` of a number that may be undefined. (A number past 1e21 or under 1e-6 prints without JavaScript's exponent: this text is only ever read by a person.)
+/// `${x}` of a number that may be undefined
 fn num_text(x: Option<f64>) -> String {
     match x {
         None => "undefined".into(),
-        Some(x) if x.is_nan() => "NaN".into(),
-        Some(x) if x == f64::INFINITY => "Infinity".into(),
-        Some(x) if x == f64::NEG_INFINITY => "-Infinity".into(),
-        Some(x) if x == 0.0 => "0".into(),
-        Some(x) => format!("{}", x),
+        Some(x) => js::num_str(x),
     }
 }
 fn device_name(d: &crate::scene_level::DeviceDef) -> &str {
@@ -227,7 +181,7 @@ fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[Stri
         }
     }
     for (id, l) in m.loadouts.iter() {
-        if !matches!(l.team, crate::teams::Team::Guard | crate::teams::Team::Operative | crate::teams::Team::Hostile) {
+        if !teams().iter().any(|team| team == l.team.as_str()) {
             err(&mut out, format!("loadout '{}': team '{}' cannot be spawned (guard / operative / hostile)", id, l.team.as_str()));
         }
         for t in [l.tint, l.tint2] {
@@ -296,64 +250,40 @@ fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[Stri
     out
 }
 
-/// (director.ts:384 String(B.fn): a beat's source text)
-fn seam_beat_source(fn_: &crate::FnField) -> String { todo!("needs: a beat's source text, or the scan moved to where beats are written (FnField holds nothing)") }
-
-/// `/\/\*[\s\S]*?\*\//g` then `/\/\/[^\n]*/g`: a mention in prose is not a use
-fn strip_comments(src: &str) -> String {
-    let mut no_blocks = String::new();
-    let mut rest = src;
-    while let Some(open) = rest.find("/*") {
-        let Some(len) = rest[open + 2..].find("*/") else { break };
-        no_blocks.push_str(&rest[..open]);
-        rest = &rest[open + 2 + len + 2..];
-    }
-    no_blocks.push_str(rest);
-    let mut out = String::new();
-    let mut rest = no_blocks.as_str();
-    while let Some(open) = rest.find("//") {
-        out.push_str(&rest[..open]);
-        rest = &rest[open..];
-        rest = match rest.find('\n') { Some(end) => &rest[end..], None => "" };
-    }
-    out.push_str(rest);
-    out
-}
-/// a regular expression's `\s`
-fn is_js_space(c: char) -> bool {
-    matches!(c, '\t' | '\n' | '\u{b}' | '\u{c}' | '\r' | ' ' | '\u{a0}' | '\u{1680}' | '\u{2000}'..='\u{200a}' | '\u{2028}' | '\u{2029}' | '\u{202f}' | '\u{205f}' | '\u{3000}' | '\u{feff}')
-}
-/// `/\.\s*view\b/` for 'view' (a property, read bare), else `\.\s*<verb>\s*[.(]`
-fn uses_verb(src: &str, verb: &str) -> bool {
-    src.match_indices('.').any(|(dot, _)| {
-        let Some(after) = src[dot + 1..].trim_start_matches(is_js_space).strip_prefix(verb) else { return false };
-        if verb == "view" { !after.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_') }
-        else { after.trim_start_matches(is_js_space).starts_with(['.', '(']) }
-    })
-}
-
-/// For every program not declared showcase, every beat's source searched for a showcase-only verb.   (director.ts scanShowcaseVerbs)
-pub fn scan_showcase_verbs(m: &crate::director::Manifest) -> Vec<crate::director::ScanShowcaseVerbsItem> {
-    let mut hits: Vec<ScanShowcaseVerbsItem> = Vec::new();
-    let verbs = showcase_verbs();
-    for (pn, p) in m.programs.iter() {
-        if p.opts.showcase == Some(true) { continue; }
-        for (bn, b) in p.beats.iter() {
-            let src = strip_comments(&seam_beat_source(&b.fn_));
-            for verb in verbs.iter() {
-                if uses_verb(&src, verb) { hits.push(ScanShowcaseVerbsItem { program: pn.clone(), beat: bn.clone(), verb: verb.clone() }); }
-            }
-        }
-    }
-    hits
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     const A: V3 = [1.25, 0.7, -3.3];
     const B: V3 = [-4.1, 2.2, 9.75];
     fn bits(v: [f64; 3]) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
+
+    // ---- the verbs of D and P that no script of the nine calls and sig.rs has no name for (director.ts:297, 299, 300, 302, 303, 309, 310, 312, 313, 320-322): what the lint's other rows need to be reached
+    fn d_route(manifest: &mut Manifest, id: &str) { manifest.routes.add(id.into()); }
+    fn d_device(manifest: &mut Manifest, id: &str) { manifest.devices.add(id.into()); }
+    fn d_plan(manifest: &mut Manifest, id: &str) { manifest.plans.set(id.into(), if id == "breach" { PlanKind::Breach } else { PlanKind::RoomClear }); }
+    fn d_light_group(manifest: &mut Manifest, id: &str) { manifest.groups.add(id.into()); }
+    fn d_variant(manifest: &mut Manifest, id: VariantRefId) { manifest.variants.add(id.as_str().into()); }
+    fn d_expect_order(manifest: &mut Manifest, program: &str, beats: &[String]) {
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), beats: Some(beats.to_vec()), ..ManifestExpectsItem::zeroed() });
+    }
+    fn d_expect_within(manifest: &mut Manifest, program: &str, a: &str, b: &str, max: f64) {
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some(program.into()), a: Some(a.into()), b: Some(b.into()), max: Some(max), ..ManifestExpectsItem::zeroed() });
+    }
+    fn d_expect_never(manifest: &mut Manifest, what: &str) {
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Never, what: Some(what.into()), ..ManifestExpectsItem::zeroed() });
+    }
+    fn p_after(program: &mut ProgramDef, secs: f64, beat: &str) {
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::After, beat: beat.into(), secs: Some(secs), ..TriggerDef::zeroed() });
+    }
+    fn p_on_event(program: &mut ProgramDef, event: EventKind, beat: &str) {
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::Event, beat: beat.into(), event: Some(event), ..TriggerDef::zeroed() });
+    }
+    fn p_on_enter(program: &mut ProgramDef, v: &VolumeRef, beat: &str) {
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::Enter, beat: beat.into(), volume: Some(v.id.clone()), who: Some(TriggerDefWho::Sam), once: Some(true), ..TriggerDef::zeroed() });
+    }
+    fn p_when(program: &mut ProgramDef, beat: &str) {
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::When, beat: beat.into(), label: Some("when".into()), ..TriggerDef::zeroed() });
+    }
 
     /// the TypeScript's own bits: UTIL through manifestOf's D.util, under bun with EXACT.on
     #[test]
@@ -366,94 +296,75 @@ mod tests {
         assert_eq!(bits(util::ahead(A, 0.83, 2.6, Some(5.5))), [0x400959564354aeaf, 0x4016000000000000, 0xbff8b9a4a290a3ca]);
     }
 
-    /// each source and what the TypeScript's own regular expressions said of it, under bun
-    #[test]
-    fn the_scan_matches_the_typescript_regular_expressions() {
-        let table: &[(&str, &str, &[&str])] = &[
-            ("c.stage(x)", "c.stage(x)", &["stage"]),
-            ("c . puppet (x)", "c . puppet (x)", &["puppet"]),
-            ("/* c.stage( */ q", " q", &[]),
-            ("// c.fade(\n", "\n", &[]),
-            ("c.view.hover", "c.view.hover", &["view"]),
-            ("const V = c.view;", "const V = c.view;", &["view"]),
-            ("c.viewer", "c.viewer", &[]),
-            ("c.camera.pin(s)", "c.camera.pin(s)", &["camera"]),
-            ("c.cameraX(s)", "c.cameraX(s)", &[]),
-            ("c.fade", "c.fade", &[]),
-            ("x.select\u{a0}(", "x.select\u{a0}(", &["select"]),
-            ("/* a */ c.press(k) // c.click(\n c.mission(on)", " c.press(k) \n c.mission(on)", &["press", "mission"]),
-            ("c.view_", "c.view_", &[]),
-            ("c.view", "c.view", &["view"]),
-            ("/* open c.shift(", "/* open c.shift(", &["shift"]),
-            ("c.chaos\n.x", "c.chaos\n.x", &["chaos"]),
-            ("c.\n\tweather(o)", "c.\n\tweather(o)", &["weather"]),
-        ];
-        for (src, stripped, verbs) in table {
-            let got = strip_comments(src);
-            assert_eq!(got, *stripped);
-            let table = showcase_verbs();
-            let hits: Vec<&str> = table.iter().map(|verb| verb.as_str()).filter(|verb| uses_verb(&got, verb)).collect();
-            assert_eq!(hits, *verbs, "{}", src);
-        }
-    }
-
     /// a mark named again with no position keeps the one it has, and the yaw it has
     #[test]
     fn a_mark_named_again_keeps_its_place() {
         let mut manifest = Manifest::zeroed();
-        d_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), Some(0.5));
-        d_mark(&mut manifest, "m1", None, None);
-        d_mark(&mut manifest, "m2", None, None);
+        manifest_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), Some(0.5));
+        manifest_mark(&mut manifest, "m1", None, None);
+        manifest_mark(&mut manifest, "m2", None, None);
         let row = manifest.marks.get("m1".into()).unwrap();
         assert_eq!((row.pos, row.yaw), (Some([1.0, 0.0, 2.0]), Some(0.5)));
         assert_eq!(manifest.marks.get("m2".into()).unwrap().pos, None);
-        d_mark(&mut manifest, "m1", Some([3.0, 0.0, 4.0]), None);
+        manifest_mark(&mut manifest, "m1", Some([3.0, 0.0, 4.0]), None);
         let row = manifest.marks.get("m1".into()).unwrap();
         assert_eq!((row.pos, row.yaw), (Some([3.0, 0.0, 4.0]), None));
     }
 
-    /// a program's body records into its row, the row lands under its name; D.systems sets by the TypeScript's own word, absent stays absent
+    /// a program's body records into its row, and the row lands under its name after the body
     #[test]
-    fn a_program_and_the_systems_are_recorded() {
+    fn a_program_is_recorded() {
         let mut manifest = Manifest::zeroed();
-        d_program(&mut manifest, "tutorial", &mut |p| { p_on_start(p, "go"); p_beat(p, "go", crate::FnField, None); }, None);
+        let script = crate::scene_level::LevelScriptFn::TutSky;
+        manifest_program(&mut manifest, "tutorial", &mut |p| { program_on_start(p, "go"); program_on_signal(p, "lesson:a", "go"); program_beat(p, "go", &script, None) }, None).unwrap();
         let row = manifest.programs.get("tutorial".into()).unwrap();
         assert_eq!(row.name, "tutorial");
-        assert_eq!(row.triggers.len(), 1);
+        assert_eq!(row.triggers.len(), 2);
+        assert_eq!(row.triggers[1].name.as_deref(), Some("lesson:a"));
         assert!(row.beats.get("go".into()).unwrap().atomic);
-        d_systems_their_frags(&mut manifest, false);
-        assert_eq!(manifest.systems.get("theirFrags"), Some(&false));
-        assert_eq!(manifest.systems.get("qrf"), None);
+    }
+
+    /// the define pass's two throws, in the TypeScript's words (director.ts:305, :314); a body that fails leaves no row
+    #[test]
+    fn a_name_declared_twice_is_the_err() {
+        let mut manifest = Manifest::zeroed();
+        let script = crate::scene_level::LevelScriptFn::TutSky;
+        let got = manifest_program(&mut manifest, "p", &mut |p| { program_beat(p, "b", &script, None)?; program_beat(p, "b", &script, None) }, None);
+        assert_eq!(got, Err(String::from("script: beat 'b' declared twice in program 'p'")));
+        assert!(!manifest.programs.has("p".into()));
+        manifest_program(&mut manifest, "p", &mut |_| Ok(()), None).unwrap();
+        let got = manifest_program(&mut manifest, "p", &mut |_| Ok(()), None);
+        assert_eq!(got, Err(String::from("script: program 'p' declared twice")));
     }
 
     /// the same script and level given to the TypeScript's lintManifest under bun: the same rows in the same order
     #[test]
     fn the_lint_says_what_the_typescript_says() {
         let mut manifest = Manifest::zeroed();
-        for id in ["a", "b"] { d_door(&mut manifest, id); }
+        for id in ["a", "b"] { manifest_door(&mut manifest, id); }
         for id in ["kp", "zz"] { d_device(&mut manifest, id); }
         d_route(&mut manifest, "r");
-        d_volume(&mut manifest, "v");
+        manifest_volume(&mut manifest, "v");
         for id in ["breach", "room1", "nope"] { d_plan(&mut manifest, id); }
-        d_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), Some(0.5));
-        d_mark(&mut manifest, "m1", None, None);
-        d_mark(&mut manifest, "m2", None, None);
-        d_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
-        d_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), god: Some(true), ..LoadoutSpec::zeroed() });
-        d_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, ..LoadoutSpec::zeroed() });
+        manifest_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), Some(0.5));
+        manifest_mark(&mut manifest, "m1", None, None);
+        manifest_mark(&mut manifest, "m2", None, None);
+        manifest_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
+        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), god: Some(true), ..LoadoutSpec::zeroed() });
+        manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, ..LoadoutSpec::zeroed() });
         for id in ["ceil", "security", "gone"] { d_light_group(&mut manifest, id); }
         d_variant(&mut manifest, VariantRefId::Daylight);
         manifest.programs.set("empty".into(), ProgramDef { name: "empty".into(), ..ProgramDef::zeroed() });
         let mut p = ProgramDef { name: "p".into(), opts: ProgramOpts { end_veil: Some(0.0), end_hold: Some(-1.0), ..ProgramOpts::zeroed() }, ..ProgramDef::zeroed() };
-        p_on_start(&mut p, "x");
+        program_on_start(&mut p, "x");
         p_after(&mut p, -1.0, "x");
         p_after(&mut p, 1.5, "nobeat");
         p_on_event(&mut p, EventKind::Shot, "nobeat2");
-        p_on_signal(&mut p, "sg", "nobeat3");
-        p_on_enter(&mut p, &VolumeRef { kind: VolumeRefKind::Volume, id: "vv".into() }, "nobeat4", None, None);
-        p_when(&mut p, "nobeat5", None);
-        p_beat(&mut p, "x", crate::FnField, None);
-        for _ in 0..33 { p_when(&mut p, "x", None); }
+        program_on_signal(&mut p, "sg", "nobeat3");
+        p_on_enter(&mut p, &VolumeRef { kind: VolumeRefKind::Volume, id: "vv".into() }, "nobeat4");
+        p_when(&mut p, "nobeat5");
+        program_beat(&mut p, "x", &crate::scene_level::LevelScriptFn::TutSky, None).unwrap();
+        for _ in 0..33 { p_when(&mut p, "x"); }
         manifest.programs.set("p".into(), p);
         d_expect_order(&mut manifest, "ghost", &["x".into()]);
         d_expect_within(&mut manifest, "p", "x", "x", 0.0);

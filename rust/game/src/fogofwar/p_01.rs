@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// The field every eye has this frame, degrees in plan: the cone's rows under FOG.cone, else fovDeg.   (fogofwar.ts fieldDeg)
 pub fn field_deg(g: &mut crate::game::Game) -> f64 {

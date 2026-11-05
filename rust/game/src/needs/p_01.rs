@@ -1,4 +1,4 @@
-//! src/game/needs.ts lines 1 to 453
+//! src/game/needs.ts lines 1 to 455
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -24,14 +24,10 @@ macro_rules! trip {
     };
 }
 
-/// NEED_KINDS, in the order the deal ranks them from (needs.ts:34; the enum's own order differs).
-const NEED_KINDS: [NeedKind; 4] = [NeedKind::Coffee, NeedKind::Smoke, NeedKind::Water, NeedKind::Stretch];
-
-/// Seam: `g.audio.play(name, at, gain, { rate })` (needs.ts:270).
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) {
-    todo!("needs: game_audio_like_play's opts hold crate::Opaque, which cannot carry a rate")
+/// `memOf.get(gd)?.trip` is there: he has a trip under way. Makes no row.
+fn on_trip(g: &Game, gd: GuardId) -> bool {
+    g.m.needs.mem_of.get(gd).map_or(false, |r| r.trip.is_some())
 }
-
 /// `g.level.scenarios?.quiet` is there
 fn has_quiet(g: &Game) -> bool {
     g.level.scenarios.as_ref().map_or(false, |s| s.quiet.is_some())
@@ -122,11 +118,6 @@ pub fn needs_trip(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::needs
     })
 }
 
-/// Is he telegraphing a need or off his route on one? (needs.ts needsBusy)
-pub fn needs_busy(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.m.needs.mem_of.get(gd).map_or(false, |r| r.trip.is_some())
-}
-
 /// When anybody last walked off; made if new. (needs.ts floor)
 pub fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsModFloorOfValue {
     g.m.needs.floor_of.get_or_insert_with(|| NeedsModFloorOfValue { last_depart_at: -1e9 })
@@ -174,11 +165,11 @@ pub fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::nee
 /// Deal this man his needs, once, off his callsign. (needs.ts deal)
 pub fn deal(g: &mut crate::game::Game, gd: GuardId) {
     mem(g, gd).dealt = true;
-    if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() {
+    if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() || g.gd[gd].route_i < 0 {
         return;
     }
     let cs = g.gd[gd].callsign.clone();
-    let mut ranked: Vec<(NeedKind, f64)> = NEED_KINDS.iter().map(|&k| (k, crate::math_dice::hash_str(&format!("{}:{}:rank", cs, k.as_str())))).collect();
+    let mut ranked: Vec<(NeedKind, f64)> = need_kinds().iter().map(|&k| (k, crate::math_dice::hash_str(&format!("{}:{}:rank", cs, k.as_str())))).collect();
     js::sort_by(&mut ranked, |a, b| a.1 - b.1);
     let want = 2.0 + js::rem(crate::math_dice::hash_str(&format!("{}:count", cs)), 2.0);
     for &(k, _) in ranked.iter() {
@@ -205,7 +196,7 @@ pub fn deal(g: &mut crate::game::Game, gd: GuardId) {
     let list: Vec<String> = mem(g, gd)
         .needs
         .iter()
-        .map(|n| format!("{} (fills in {:.1} min, at {:.2}, from wp{} {:.0} m)", n.kind.as_str(), n.fill_min, n.level, n.wp, n.trip_m))
+        .map(|n| format!("{} (fills in {} min, at {}, from wp{} {} m)", n.kind.as_str(), js::to_fixed(n.fill_min, 1), js::to_fixed(n.level, 2), n.wp, js::to_fixed(n.trip_m, 0)))
         .collect();
     let list = if list.is_empty() { String::from("nothing") } else { list.join(", ") };
     log(g, gd, &format!("dealt {}", list));
@@ -318,7 +309,7 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
         while i < g.guards.len() {
             let gd = g.guards[i];
             i += 1;
-            if needs_busy(g, gd) {
+            if on_trip(g, gd) {
                 cancel_trip(g, gd, "switched off");
             }
         }
@@ -334,7 +325,7 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if needs_busy(g, gd) {
+        if on_trip(g, gd) {
             match interrupt_of(g, gd) {
                 Some(why) => cancel_trip(g, gd, &why),
                 None => away += 1,
@@ -429,6 +420,7 @@ pub fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs:
     let lead = g.k.needs.announce_lead;
     let wp = g.gd[gd].wp;
     let name = spot.name.clone();
+    crate::owner::claim_man(g, gd, crate::owner::own().needs, now, None);
     mem(g, gd).trip = Some(Trip {
         kind,
         spot,
@@ -461,7 +453,7 @@ pub fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs:
     log(
         g,
         gd,
-        &format!("{} {} → {} from wp{} ({:.0} m); walks at +{} s", if forced { "SENT" } else { "schedules" }, kind.as_str(), name, wp, path_len(pos, &path), lead),
+        &format!("{} {} → {} from wp{} ({} m); walks at +{} s", if forced { "SENT" } else { "schedules" }, kind.as_str(), name, wp, js::to_fixed(path_len(pos, &path), 0), lead),
     );
     true
 }
@@ -479,6 +471,11 @@ pub fn path_len(from: V3, p: &[V3]) -> f64 {
 
 /// Break the trip off wherever he is; nothing is resumed. (needs.ts cancelTrip)
 pub fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
+    if !on_trip(g, gd) {
+        return;
+    }
+    let now = g.time;
+    crate::owner::release_man(g, gd, crate::owner::own().needs, now);
     let Some(t) = mem(g, gd).trip.take() else { return };
     mem(g, gd).cancels += 1.0;
     g.stats.needs.cancelled += 1;
@@ -561,7 +558,7 @@ pub fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Tr
         crate::game::game_say(g, gd, &t.line, None, None, None);
         let d = v3::dist_xz(g.ch[g.gd[p].ch].pos, g.ch[g.gd[gd].ch].pos);
         let pcs = g.gd[p].callsign.clone();
-        log(g, gd, &format!("tells {} ({:.1} m): \"{}\"", pcs, d, t.line));
+        log(g, gd, &format!("tells {} ({} m): \"{}\"", pcs, js::to_fixed(d, 1), t.line));
     } else {
         t.radio = true;
         g.stats.needs.radioed += 1;
@@ -574,7 +571,7 @@ pub fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Tr
             Some(h) => *h,
             None => g.ch[c].pos,
         };
-        seam_audio_play(g, "radio", at, 0.4, 1.05);
+        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.4), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
         log(g, gd, &format!("radios it: \"{}\"", t.line));
     }
 }
@@ -595,7 +592,7 @@ pub fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::need
         || mid_line
         || crate::doze::doze_asleep(g, p)
     {
-        log(g, gd, &format!("{} says nothing back ({}, aw {:.2})", pcs, state.as_str(), aw));
+        log(g, gd, &format!("{} says nothing back ({}, aw {})", pcs, state.as_str(), js::to_fixed(aw, 2)));
         return;
     }
     let third = g.guards.iter().copied().find(|&x| x != gd && x != p && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none() && g.gd[x].state != GuardState::Dead);
@@ -628,7 +625,7 @@ fn stand(g: &mut Game, gd: GuardId, dt: f64) {
 
 /// If a trip owns his feet this frame, run them and return true; false = the branch walks his route. (needs.ts needsPatrol)
 pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
-    if !needs_busy(g, gd) {
+    if !on_trip(g, gd) {
         return false;
     }
     let c = g.gd[gd].ch;
@@ -727,7 +724,7 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                         if loop_i < 0.0 {
                             trip!(g, gd).arrived_at = now;
                             g.stats.needs.arrived += 1;
-                            log(g, gd, &format!("at {} after {:.1} s — round the loop", name, now - left_at));
+                            log(g, gd, &format!("at {} after {} s — round the loop", name, js::to_fixed(now - left_at, 1)));
                         }
                         let next = {
                             let t = trip!(g, gd);
@@ -745,7 +742,7 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                     };
                     let back = route_point(g, gd, wp);
                     crate::guards::go_to(g, gd, back, Some(true));
-                    log(g, gd, &format!("loop walked in {:.1} s — heading back", now - arrived_at));
+                    log(g, gd, &format!("loop walked in {} s — heading back", js::to_fixed(now - arrived_at, 1)));
                     return true;
                 }
                 let dwell = g.k.needs.dwell.get(kind).copied().unwrap_or(20.0);
@@ -757,7 +754,7 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                 }
                 g.stats.needs.arrived += 1;
                 let until = trip!(g, gd).dwell_until;
-                log(g, gd, &format!("at {} after {:.1} s — {:.0} s here", name, now - left_at, until - now));
+                log(g, gd, &format!("at {} after {} s — {} s here", name, js::to_fixed(now - left_at, 1), js::to_fixed(until - now, 0)));
             } else if crate::guards::not_getting_anywhere(g, gd, dt, g.k.needs.stuck_secs) {
                 g.stats.needs.stuck += 1;
                 cancel_trip(g, gd, "stuck on the way");
@@ -800,6 +797,7 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                     t.back_at = now;
                     (t.left_at, t.arrived_at, t.dwell_until)
                 };
+                crate::owner::release_man(g, gd, crate::owner::own().needs, now);
                 {
                     let r = row!(g, gd);
                     r.trip = None;
@@ -825,13 +823,13 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                     g,
                     gd,
                     &format!(
-                        "back on wp{} — away {} s ({}: out {:.0} s, there {:.0} s, back {:.0} s)",
+                        "back on wp{} — away {} s ({}: out {} s, there {} s, back {} s)",
                         wp,
                         away,
                         kind.as_str(),
-                        arrived_at - left_at,
-                        dwell_until - arrived_at,
-                        now - dwell_until
+                        js::to_fixed(arrived_at - left_at, 0),
+                        js::to_fixed(dwell_until - arrived_at, 0),
+                        js::to_fixed(now - dwell_until, 0)
                     ),
                 );
                 return false;
@@ -900,15 +898,13 @@ pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::need
 }
 
 /// Keep the switch and the fairness knobs per machine. This crate has no browser storage: the TypeScript's "no storage, nothing to keep". (needs.ts saveNeeds)
-pub fn save_needs(g: &mut crate::game::Game, tune: crate::needs::SaveNeedsTune) {}
+pub fn save_needs(g: &mut crate::game::Game) {}
 
 /// Read back what `save_needs` kept. Nothing is stored here: the TypeScript's "nothing stored, the shipped values stand". (needs.ts loadNeeds)
-pub fn load_needs(g: &mut crate::game::Game, tune: &mut crate::needs::LoadNeedsTune) {}
+pub fn load_needs(g: &mut crate::game::Game) {}
 
 /// The switch back on and the knobs back to the shipped values; no stored copy to drop. (needs.ts resetNeeds)
-pub fn reset_needs(g: &mut crate::game::Game, tune: &mut crate::needs::ResetNeedsTune) {
-    // `tune` is game.tune in the TypeScript, and this type is a copy of it: both are written.
-    tune.needs = true;
+pub fn reset_needs(g: &mut crate::game::Game) {
     g.tune.needs = true;
     let d = needs_defaults();
     g.k.needs.rate_k = d.rate_k;
@@ -945,17 +941,17 @@ pub fn needs_summary(g: &mut crate::game::Game) -> String {
                     } else {
                         format!(" (told {})", t.partner.map_or("?", |p| g.gd[p].callsign.as_str()))
                     };
-                    format!("about to go — {} in {:.0} s{}", t.kind.as_str(), m::max(0.0, t.depart_at - now), told)
+                    format!("about to go — {} in {} s{}", t.kind.as_str(), js::to_fixed(m::max(0.0, t.depart_at - now), 0), told)
                 }
                 TripPhase::Going => format!("walking to {}", t.spot.name),
-                TripPhase::Dwell => format!("at {}, {:.0} s left", t.spot.name, m::max(0.0, t.dwell_until - now)),
+                TripPhase::Dwell => format!("at {}, {} s left", t.spot.name, js::to_fixed(m::max(0.0, t.dwell_until - now), 0)),
                 TripPhase::Returning => format!("coming back to wp{}", t.wp),
             };
             parts.push(format!("{} AWAY {}{}", cs, s, if t.forced { " [sent]" } else { "" }));
         } else {
             let mut full: Vec<Need> = r.needs.iter().copied().filter(|n| n.level >= 1.0).collect();
             js::sort_by(&mut full, |a, b| b.level - a.level);
-            let levels: Vec<String> = r.needs.iter().map(|n| format!("{} {:.2}", n.kind.as_str(), n.level)).collect();
+            let levels: Vec<String> = r.needs.iter().map(|n| format!("{} {}", n.kind.as_str(), js::to_fixed(n.level, 2))).collect();
             let waits = full.first().map_or(String::new(), |n| format!(" — waits for wp{}", n.wp));
             let rests = if now - r.last_back_at < rest_secs { format!(" (rests {} s)", m::ceil(rest_secs - (now - r.last_back_at))) } else { String::new() };
             parts.push(format!("{} {}{}{}", cs, levels.join(" "), waits, rests));

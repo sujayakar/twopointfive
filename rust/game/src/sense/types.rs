@@ -32,7 +32,7 @@ impl Blob {
 }
 impl Default for Blob { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SmokeGrid, src/game/sense.ts:104)
+/// (TypeScript: SmokeGrid, src/game/sense.ts:98)
 #[derive(Clone, Debug)]
 pub struct SmokeGrid {
     pub clock: f64,
@@ -55,7 +55,7 @@ impl SmokeGrid {
 }
 impl Default for SmokeGrid { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: GridOwner, src/game/sense.ts:172)
+/// (TypeScript: GridOwner, src/game/sense.ts:166)
 #[derive(Clone, Copy, Debug)]
 pub struct GridOwner {
 }
@@ -68,7 +68,7 @@ impl GridOwner {
 }
 impl Default for GridOwner { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LightField, src/game/sense.ts:193)
+/// (TypeScript: LightField, src/game/sense.ts:187)
 #[derive(Clone, Copy, Debug)]
 pub struct LightField {
 }
@@ -81,7 +81,7 @@ impl LightField {
 }
 impl Default for LightField { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CpuSmoke, src/game/sense.ts:197)
+/// (TypeScript: CpuSmoke, src/game/sense.ts:191)
 #[derive(Clone, Debug)]
 pub struct CpuSmoke {
     pub blobs: Vec<crate::sense::Blob>,
@@ -100,7 +100,7 @@ impl CpuSmoke {
 }
 impl Default for CpuSmoke { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/sense.ts:184 GRID, src/game/sense.ts:184)
+/// (TypeScript: inline at src/game/sense.ts:178 GRID, src/game/sense.ts:178)
 #[derive(Clone, Copy, Debug)]
 pub struct GRID {
     pub step: f64,
@@ -158,8 +158,8 @@ impl Default for GRID { fn default() -> Self { Self::zeroed() } }
 /// (src/game/sense.ts:90 PI15)
 pub const PI15: f64 = 5.568327996831708;
 
-/// (src/game/sense.ts:184 GRID: a table nothing writes)
+/// (src/game/sense.ts:178 GRID: a table nothing writes)
 pub fn grid() -> crate::sense::GRID { crate::sense::GRID { step: 0.1, head: 8.0, emitters: 64.0, emit: 7.0, bricks: 160.0, cells: 128.0, vol: 0.125, out: 4.0, given: 5.0, lost: 6.0, nbx: 2.0, nbz: 3.0, side: 2.0, glow_max: 2048.0, chest: 1.2, glow_d: 776.0, glow_b: 2824.0, glow_x: 4872.0, glow_z: 6920.0, glow_lamps: 8968.0, rho: 8969.0 } }
 
-/// (src/game/sense.ts:194 GRID_STEP)
+/// (src/game/sense.ts:188 GRID_STEP)
 pub const GRID_STEP: f64 = 0.1;

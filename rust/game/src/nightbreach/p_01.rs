@@ -19,48 +19,11 @@ fn layout_team(g: &mut Game, layout: Option<&NightBreachLayout>) -> Option<crate
     if layout.is_some() { crate::roomclear::room_clear_scenario_start_now(g) } else { None }
 }
 
-/// `layout.budget`, the room clear's getter: it has no stub in roomclear, so its one reader holds it. (roomclear.ts:269)
-fn room_clear_budget(g: &mut Game) -> Option<f64> {
-    let n = match crate::roomclear::room_clear_scenario_structure(g) {
-        Some(s) if s.max_men.is_some_and(js::truthy) => s.rooms.iter().fold(0.0, |k, r| k + r.garrison),
-        _ => 0.0,
-    };
-    if n > 5.0 { Some(5.0 + n) } else { None }
-}
-
-/// `layout.stagedLine()`, the room clear's closure: it has no stub in roomclear, so its one reader holds it. (roomclear.ts:271)
-fn room_clear_staged_line(g: &mut Game) -> String {
-    let names: Vec<String> = g.room_clear.rooms.iter().map(|r| r.def.name.clone()).collect();
-    let placed = g.room_clear.placement.len();
-    let tail = if !g.night_breach.no_drill {
-        let room = crate::roomclear::room_clear_scenario_drill_room(g).map(|r| r.name).unwrap_or_else(|| String::from("door"));
-        format!("Press F to stack up on the {}, or X for orders (door tools on any door)", room)
-    } else if !g.night_breach.ops.is_empty() {
-        String::from("X for your orders (door tools on any door)")
-    } else {
-        String::from("You're alone")
-    };
-    format!("room clear. {} armed enemies hold {} rooms: {}. {}", placed, names.len(), names.join(", "), tail)
-}
-
-/// A pass about one seat's view: the Game itself in a game of one, else that seat's set swapped on. (seats.ts:129, 132)
-fn in_seat<R>(g: &mut Game, s: SeatId, f: &mut dyn FnMut(&mut Game) -> R) -> R {
-    if g.seats.len() == 1 { return f(g); }
-    let man = crate::cmd::seat_man(g, s);
-    crate::seats::with_seat(g, man, f)
-}
-
-/// `ordersOf(g, gd).has(gd)`: his seat's book. (seats.ts:246)
+/// `ordersOf(g, gd).has(gd)`: orders_of answers whose book it is, and the has is asked over that man's seat. (nightbreach.ts:359, seats.ts:246)
 fn in_his_book(g: &mut Game, gd: GuardId) -> bool {
-    if crate::seats::one_book(g) { return crate::orders::squad_orders_has(g, gd); }
-    let s = crate::seats::seat_of(g, gd);
-    let man = crate::cmd::seat_man(g, s);
-    crate::seats::with_seat(g, man, &mut |v| crate::orders::squad_orders_has(v, gd))
-}
-
-/// The roster's pair word as the unit's papers hold it. (nightbreach.ts:88)
-fn pair_of(word: &str) -> crate::game::PairId {
-    if word == "red" { crate::game::PairId::Red } else { crate::game::PairId::Blue }
+    let man = crate::seats::orders_of(g, gd);
+    let s = crate::seats::seat_of_man(g, man);
+    crate::seats::with_seat(g, s, &mut |v| crate::orders::squad_orders_has(v, gd))
 }
 
 /// Teammate i's mark; Err is the TypeScript's throw. (nightbreach.ts:248 mark)
@@ -121,7 +84,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
 
     let n = g.k.nightbreach.squad;
     let four = n > 2.0;
-    let layout_budget = if layout.is_some() { room_clear_budget(g) } else { None };
+    let layout_budget = if layout.is_some() { crate::roomclear::room_clear_scenario_budget(g) } else { None };
     let budget = if four { Some(m::max(SQUAD4_BUDGET, layout_budget.unwrap_or(0.0))) } else { layout_budget };
     let yaw = team.as_ref().and_then(|s| s.ops_yaw).unwrap_or(m::PI / 2.0);
     if !four {
@@ -137,7 +100,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
                 pair: Some(crate::game::PairId::Blue),
                 ..Default::default()
             };
-            let man = crate::guards::spawn_unit(g, &opts);
+            let man = crate::guards::spawn_unit(g, &opts)?;
             g.night_breach.ops.push(man);
         }
     } else {
@@ -163,13 +126,13 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
                 yaw: Some(yaw),
                 name: Some(man.name.clone()),
                 light: Some(true),
-                pair: Some(pair_of(&man.pair)),
+                pair: Some(man.pair),
                 tint: Some(man.tint),
                 tint2: Some(man.tint2),
                 budget,
                 ..Default::default()
             };
-            let spawned = crate::guards::spawn_unit(g, &opts);
+            let spawned = crate::guards::spawn_unit(g, &opts)?;
             g.night_breach.ops.push(spawned);
         }
     }
@@ -193,7 +156,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
             budget,
             ..Default::default()
         };
-        let man = crate::guards::spawn_unit(g, &opts);
+        let man = crate::guards::spawn_unit(g, &opts)?;
         g.night_breach.hostiles.push(man);
         g.gd[man].hold = true;
         g.gd[man].pinned = true;
@@ -271,7 +234,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     crate::issue::issue_stage(g);
     crate::startfile::team_starts_fallen_in(g, &ops);
     night_breach_note(g, "staged");
-    let own_line = if layout.is_some() { Some(room_clear_staged_line(g)) } else { None };
+    let own_line = if layout.is_some() { Some(crate::roomclear::room_clear_scenario_staged_line(g)) } else { None };
     let line = match own_line {
         Some(l) => l,
         None => {
@@ -312,24 +275,10 @@ fn live_stun_off(g: &mut Game) {
     if let Some(l) = g.night_breach.drill.as_mut().and_then(|d| d.live.as_mut()) { l.stun = false; }
 }
 
-/// `g.engine.lights.add(l)`: the set is lent out of g for the call, as add touches only its own list. (lights.ts:171)
-fn lights_add(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_add(g, &mut set, l);
-    g.engine.lights = set;
-}
-
-/// `g.engine.lights.remove(l)`: the same. (lights.ts:172)
-fn lights_remove(g: &mut Game, l: LightId) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_remove(g, &mut set, l);
-    g.engine.lights = set;
-}
-
 /// Every man of the list down or fled. (nightbreach.ts:352, 381)
 fn all_taken(g: &mut Game) -> bool {
     for h in g.night_breach.hostiles.clone() {
-        if !(g.gd[h].state == crate::game::GuardState::Dead || crate::runner::runner_fled(g, h)) { return false; }
+        if !(g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].fled) { return false; }
     }
     true
 }
@@ -361,7 +310,7 @@ pub fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut crate::
         b.n = 0.0;
         b.next = g.time + bl.after + k * bl.stagger;
     }
-    if g.gd[h].held.is_none() { g.gd[h].last_known = Some([door[0], 0.0, door[2]]); }
+    if g.gd[h].held.is_none() { crate::belief::cover(g, h, [door[0], 0.0, door[2]]); }
     if b.n >= bl.rounds || g.time < b.next { return false; }
     b.n += 1.0;
     b.next = g.time + bl.every;
@@ -456,7 +405,7 @@ pub fn night_breach_stop(g: &mut crate::game::Game) {
     if let Some(benched) = g.night_breach.benched.take() {
         for gd in benched.iter() {
             let l = g.gd[*gd].flashlight;
-            if !g.engine.lights.lights.contains(&l) { lights_add(g, l); }
+            if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(g, l); }
         }
         let mut guards = benched;
         guards.extend_from_slice(&g.guards);
@@ -499,7 +448,7 @@ pub fn night_breach_bench(g: &mut crate::game::Game) {
     for gd in staff.iter() {
         let l = g.gd[*gd].flashlight;
         g.tab.light[l].enabled = false;
-        lights_remove(g, l);
+        crate::render_lights::light_set_remove(g, l);
     }
     let mut benched = g.night_breach.benched.take().unwrap_or_default();
     benched.extend_from_slice(&staff);
@@ -550,17 +499,11 @@ pub fn night_breach_order(g: &mut crate::game::Game) -> Option<crate::nightbreac
     if live_of(g).orders == 1.0 {
         live_set_orders(g, 2.0);
         night_breach_note(g, "order:go");
-        for s in g.seats.clone() {
-            in_seat(g, s, &mut |v| crate::holdfire::hold_fire_drill(v, None));
-        }
+        crate::seats::each_seat(g, &mut |v| crate::holdfire::hold_fire_drill(v, None));
         if live_of(g).stun {
-            let mut by = None;
-            for s in g.seats.clone() {
-                if in_seat(g, s, &mut |v| crate::doortools::door_tools_take(v, crate::doortools::DoorToolsTakeWhat::Bang)) {
-                    by = Some(s);
-                    break;
-                }
-            }
+            let by = crate::seats::first_of(g, &mut |v| {
+                if crate::doortools::door_tools_take(v, crate::doortools::DoorToolsTakeWhat::Bang) { Some(v.seat) } else { None }
+            });
             g.night_breach.bang_by = by;
             if by.is_some() {
                 g.night_breach.bang_taken = true;
@@ -600,7 +543,7 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
             if g.night_breach.bang_taken {
                 g.night_breach.bang_taken = false;
                 if let Some(s) = g.night_breach.bang_by {
-                    in_seat(g, s, &mut |v| crate::doortools::door_tools_refund(v, crate::doortools::DoorToolsRefundWhat::Bang));
+                    crate::seats::with_seat(g, s, &mut |v| crate::doortools::door_tools_refund(v, crate::doortools::DoorToolsRefundWhat::Bang));
                 }
                 g.night_breach.bang_by = None;
             }
@@ -632,7 +575,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
         let mut cast = g.night_breach.ops.clone();
         cast.extend_from_slice(&g.night_breach.hostiles);
         for x in cast {
-            if !g.guards.contains(&x) && !crate::runner::runner_fled(g, x) {
+            if !g.guards.contains(&x) && !g.gd[x].fled {
                 gone = true;
                 break;
             }
@@ -855,13 +798,13 @@ mod tests {
         let bl = crate::nightbreach::blind();
         let mut man = crate::game::Guard::blank();
         man.dazzled_until = 3.0;
+        man.held = Some(crate::game::GuardHeld::zeroed());   // (cover at :114 is another part's: in Sam's arm it is not asked)
         let h = g.gd.push(man);
         g.time = 1.0;
         let mut b = BlindBurst { until: -1.0, n: 5.0, next: 0.0 };
         assert!(!blind_turn(&mut g, h, 2.0, &mut b, [4.0, 1.0, 6.0]));
         assert_eq!((b.until, b.n), (3.0, 0.0));
         assert_eq!(b.next.to_bits(), (1.0 + bl.after + 2.0 * bl.stagger).to_bits());
-        assert_eq!(g.gd[h].last_known, Some([4.0, 0.0, 6.0]));
         g.time = 3.0;
         let mut over = b;
         assert!(!blind_turn(&mut g, h, 2.0, &mut over, [4.0, 1.0, 6.0]));

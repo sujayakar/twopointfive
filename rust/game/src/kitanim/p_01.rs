@@ -529,7 +529,7 @@ fn reload_plan(t: &BeatTable, row_dur: f64, long: bool, keeps: bool, racks: bool
         },
     );
     let (out, in_) = (b.out * k, b.in_ * k);
-    let row = crate::weapons::WeaponDefReload { dur, out: Some(out), in_: Some(in_), rack, shell: None };
+    let row = crate::weapons::WeaponDefReload { dur, out: Some(out), in_: Some(in_), rack, shell: None, exact: None };
     let beat = crate::character::ReloadBeat { dur, out: Some(out), in_: Some(in_), rack: Some(rack), keep: b.keep.map(|x| x * k), hand: Some(!long), exact: None };
     crate::kitanim::KitReload { kind, row, beat }
 }

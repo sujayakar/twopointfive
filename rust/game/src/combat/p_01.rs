@@ -7,20 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ the seam: what skeleton 4 still cannot give
-
-/// what the round wrote on its shell goes back to the shell the caller holds (`o` is lent read-only, FireOpts.pellet is by value)
-fn seam_shell_back(g: &mut Game, o: &FireOpts, shell: crate::shotgun::Shell) { todo!("needs: FireOpts.pellet that writes through (a ShellId, or &mut FireOpts)") }
-
 // ------------------------------------------------------------ shooting
-
-/// `g.engine.lights.flash(…)`: the set is lent out of g for the call (LightSet's methods take g and the set) and goes back with the new light.
-fn flash(g: &mut Game, pos: V3, color: V3, intensity: f64, range: f64, ttl: f64, owner: f64) -> LightId {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    let l = crate::render_lights::light_set_flash(g, &mut set, pos, color, intensity, range, ttl, owner);
-    g.engine.lights = set;
-    l
-}
 
 /// The Firearm this character carries: the player's gun in hand, else his pistol; a guard's weapon; a stray's 9 mm. (combat.ts firearmOf)
 pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId, is_player: bool) -> FirearmId {
@@ -37,8 +24,8 @@ pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId, is_player: bool) -
 }
 
 /// a thing run in the game as this seat has it: with_seat, or as it stands when that seat is already on Game (viewOfBody's "a view handed in is kept")
-fn in_seat(g: &mut Game, seat: PlayerId, run: &mut dyn FnMut(&mut Game)) {
-    if seat == g.player { run(g); } else { crate::seats::with_seat(g, seat, run); }
+fn in_seat(g: &mut Game, seat: SeatId, run: &mut dyn FnMut(&mut Game)) {
+    if seat == g.seat { run(g); } else { crate::seats::with_seat(g, seat, run); }
 }
 
 /// the weapon's row by its key (a Firearm holds the key; WEAPONS the row)
@@ -80,12 +67,22 @@ pub fn ai_wide(g: &mut crate::game::Game, sg: Option<GuardId>, shooter: CharId, 
 pub fn fire_weapon(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: Option<&crate::combat::FireOpts>) {
     let none = FireOpts::default();
     let o = o.unwrap_or(&none);
+    round_in_view(g, shooter, target, is_player, o, None);
+}
+
+/// fireWeapon for one pellet of a shell, the shell lent so the round writes on it. (shotgun.ts:88, :95; combat.ts:120)
+pub fn fire_pellet(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, shell: &mut crate::shotgun::Shell) {
+    round_in_view(g, shooter, target, is_player, o, Some(shell));
+}
+
+/// fireWeapon's one line: the view, the fog's begin, the round, the bars unmet, the fog's done.
+fn round_in_view(g: &mut Game, shooter: CharId, target: V3, is_player: bool, o: &FireOpts, mut pel: Option<&mut crate::shotgun::Shell>) {
     let id = g.ch[shooter].id;
     let seat = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
     in_seat(g, seat, &mut |g: &mut Game| {
         let who = g.ch[shooter].id;
         let was = crate::fogofwar::fog_of_war_begin(g, Some(who));
-        fire_weapon_raw(g, shooter, target, is_player, o);
+        fire_weapon_raw(g, shooter, target, is_player, o, pel.as_deref_mut());
         crate::winbars::bars_unmeet(g);
         crate::fogofwar::fog_of_war_done(g, was);
     });
@@ -104,21 +101,19 @@ fn st_of(h: crate::scene_collision::Raycast) -> crate::glasspen::RoundPathSt {
 /// `fly` of fireWeapon: the same flight over panes and thin things alike, from what st0 is at this call.
 fn fly(g: &mut Game, wall_live: bool, pen_live: bool, muzzle: V3, dir: V3, e_muzzle: f64, st0: Option<crate::glasspen::RoundPathSt>, arm_panes: f64) -> Option<Pen> {
     if wall_live {
-        let first = st0.map(|s| crate::wallpen::StaticHit2 { t: s.t, index: s.index, n: s.n });
-        return crate::wallpen::thin_path(g, muzzle, dir, 60.0, e_muzzle, first, Some(arm_panes)).map(|p| Pen {
+        return crate::wallpen::thin_path(g, muzzle, dir, 60.0, e_muzzle, Some(st0), Some(arm_panes)).map(|p| Pen {
             path: crate::glasspen::RoundPath { segs: p.segs, cross: p.cross, st: p.st, len: p.len },
             walls: Some(p.walls),
         });
     }
     if pen_live {
-        let first = st0.map(|s| crate::glasspen::StaticHit2 { t: s.t, index: s.index, n: s.n });
-        return crate::glasspen::round_path(g, muzzle, dir, 60.0, e_muzzle, first, Some(arm_panes)).map(|p| Pen { path: p, walls: None });
+        return crate::glasspen::round_path(g, muzzle, dir, 60.0, e_muzzle, Some(st0), Some(arm_panes)).map(|p| Pen { path: p, walls: None });
     }
     None
 }
 
 /// A Shell handed on as the ShellGlass it is in the TypeScript: its `glass` is lent for the call and comes back with what the call wrote.
-fn with_glass<R>(pel: &mut Option<crate::shotgun::Shell>, run: impl FnOnce(Option<&mut crate::glasspen::ShellGlass>) -> R) -> R {
+fn with_glass<R>(pel: &mut Option<&mut crate::shotgun::Shell>, run: impl FnOnce(Option<&mut crate::glasspen::ShellGlass>) -> R) -> R {
     match pel {
         None => run(None),
         Some(p) => {
@@ -179,8 +174,8 @@ fn scan(g: &mut Game, f: &ScanOf, t_hit: f64, c: CharId, own: bool) -> f64 {
     -1.0
 }
 
-/// What a round in a man does: at once for a single round, once the whole pattern has flown for a pellet. (fireWeapon's manDown and samHit, the rows of Shell.late)
-fn run_shell_late(g: &mut Game, late: &crate::shotgun::ShellLate) {
+/// What a round in a man does, in the shooter's seat: at once for a single round, once the whole pattern has flown for a pellet. (fireWeapon's manDown and samHit, the rows of Shell.late)
+pub fn run_shell_late(g: &mut crate::game::Game, late: &crate::shotgun::ShellLate) {
     match *late {
         crate::shotgun::ShellLate::ManDown { hit_guard, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p } =>
             man_down(g, hit_guard, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p),
@@ -242,7 +237,8 @@ fn sam_hit(g: &mut Game, pl: PlayerId, sg: Option<GuardId>, dir: V3, hit_p: V3) 
     if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(hit_p), Some(0.9), None);
     if !g.god_mode {
-        in_seat(g, pl, &mut |g: &mut Game| hit_player(g, dir));
+        let seat = crate::seats::seat_of_man(g, pl);
+        in_seat(g, seat, &mut |g: &mut Game| hit_player(g, dir));
         let by = sg.map(|s| g.gd[s].callsign.clone());
         crate::chronicle::chron_hit(g, by.as_deref());
     }
@@ -255,7 +251,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     let pos = g.tab.sim_lightshome_fixture[t].pos;
     let break_ = crate::sim_lightshome::light_in().break_;
     if kind == FixtureKind::Breaker {
-        flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
+        crate::render_lights::light_set_flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
         crate::game::game_set_blackout(g, f64::INFINITY, crate::game::GameSetBlackoutCause::Shot);
         crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
@@ -276,7 +272,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     crate::game::game_msg(g, &alloc::format!("shot out {}", name));
     crate::game::game_light_event(g, t, None, None);
     crate::chronicle::chron_light_shot(g, t);
-    flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
+    crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
     crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
@@ -300,7 +296,7 @@ fn lamp_own(g: &Game, t: FixtureId) -> Vec<f64> {
 }
 
 /// The round itself, the shooter's muzzle to where it stops: what it found, what it broke, what the floor heard. (combat.ts fireWeaponRaw)
-pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts) {
+pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, pel: Option<&mut crate::shotgun::Shell>) {
     use crate::game::GuardState;
     use crate::glasspen::{path_at, seg_at, spent_in_pane};
     use crate::sim_lightshome::FixtureKind;
@@ -312,7 +308,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let def: crate::weapons::WeaponDef = match &o.weapon { Some(d) => d.clone(), None => { let f = firearm_of(g, shooter, is_player); let id = g.fa[f].def; weapon_row(g, id) } };
     let mut spread = o.spread.unwrap_or(0.0);
     let steady = o.steady.unwrap_or(false);
-    let mut pel: Option<crate::shotgun::Shell> = o.pellet.clone();
+    let mut pel = pel;
     let pellets = def.pellets;
     let who = g.ch[shooter].id;
 
@@ -357,7 +353,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
         g.fx.push(crate::game::GameFxItem { box_: b, ttl: card.ttl });
     }
     // gas, light and powder: the shot from effects.ts
-    let gpu = crate::particle_fx::gpu_fx(g).is_some();
+    let gpu = crate::particle_fx::gpu_fx(g);
     if lead {
         let seed = g.fx_seed;
         g.fx_seed += 1.0;
@@ -372,7 +368,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             gas: Some(gas),
         });
         for l in lights {
-            flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, who);
+            crate::render_lights::light_set_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, who);
         }
     }
     if gpu && lead { crate::particle_fx::muzzle_sparks_fx(g, muzzle, dir, shooter); crate::particle_fx::casing_fx(g, shooter, &def); }
@@ -388,7 +384,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let mut st = st0;
     let pen_live = crate::glasspen::glass_pen_live(g);
     let wall_live = crate::wallpen::wall_pen_live(g);
-    let e0 = if pen_live || wall_live { crate::glasspen::round_energy(g, &def) } else { 1.0 };
+    let e0 = if pen_live || wall_live { crate::glasspen::round_energy(g, def.id) } else { 1.0 };
     let mut e_k = 1.0;
     let mut through = arm_through(g, shooter);
     let bar_live = crate::winbars::bars_live(g);
@@ -533,7 +529,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     if let Some(p) = &pen {
         dir = seg_at(&p.path, t_hit).d;
         with_glass(&mut pel, |sh| crate::glasspen::commit_crossings(g, &p.path.cross, t_hit, who, sh));
-        if let Some(w) = &p.walls { crate::wallpen::commit_walls(g, w, t_hit, shooter, &def, lead, third, pel.as_mut()); }
+        if let Some(w) = &p.walls { crate::wallpen::commit_walls(g, w, t_hit, shooter, &def, lead, third, pel.as_deref_mut()); }
     }
     // (st, stopped there: the round's end is in that static, not a man, not the panel at the muzzle)
     let st_stop = st.filter(|s| m::abs(t_hit - s.t) < 1e-6);
@@ -597,7 +593,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             let p = match &pen { Some(q) => path_at(&q.path, d), None => v3::mad(muzzle, dir, d) };
             if crate::smoke_types::smoke_system_like_in_smoke_domain(g, p) {
                 let along = match &pen { Some(q) => seg_at(&q.path, d).d, None => dir };
-                crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos: p, dir: along, speed: 5.5, radius: 0.07 });
+                crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos: p, dir: along, speed: 5.5, radius: 0.07, ..Default::default() });
             }
             d += 0.28;
         }
@@ -606,15 +602,16 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let blind = match hit_guard { Some(h) => crate::fogofwar::fog_of_war_hidden(g, h), None => false };
     if blind { crate::fogofwar::fog_of_war_hush(g); }
     if lead {
-        let fl = flash(g, v3::mad(hit_p, dir, -0.05), [1.0, 0.8, 0.5], 1.5, 2.5, 0.05, 0.0);
+        let fl = crate::render_lights::light_set_flash(g, v3::mad(hit_p, dir, -0.05), [1.0, 0.8, 0.5], 1.5, 2.5, 0.05, 0.0);
         if !blind { crate::fogofwar::fog_of_war_light_by(g, fl, Some(who)); }
     }
     let mut in_glass = false;
     if !through {
         if let Some(s) = st_stop {
             if s.index < 1e6 {
-                let flags = match g.level.boxes.get(s.index as usize) { Some(b) => b.flags, None => 0.0 };
-                in_glass = (js::to_i32(flags) & js::to_i32(crate::scene_boxes::box_flag().glass)) != 0;
+                // (`g.level.boxes` is `g.col.boxes`; `(b?.flags ?? 0) & BoxFlag.Glass` is glass.ts:70 isPane, word for word)
+                let b = g.col.boxes.get(s.index as usize).copied();
+                in_glass = crate::glass::is_pane(g, b);
             }
         }
     }
@@ -638,12 +635,12 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     if bare_stop && third {
         use crate::destruction::DestructionRoundHit as Hit;
-        let mut hit = match (ph_met, st) {
+        let hit = match (ph_met, st) {
             (Some(h), _) => Hit { n: h.n, index: None, prop: Some(h.prop), box_: Some(h.box_) },
             (None, Some(s)) => Hit { n: s.n, index: Some(s.index), prop: None, box_: None },
             (None, None) => Hit { n: [0.0, 1.0, 0.0], index: None, prop: None, box_: None },
         };
-        crate::destruction::destruction_round(g, shooter, hit_p, dir, &mut hit, &def);
+        crate::destruction::destruction_round(g, shooter, hit_p, dir, &hit, &def);
     }
     if def.tracer.is_some() && g.tune.tracers {
         use crate::tracers::TracerImpact;
@@ -808,10 +805,9 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     if is_player && lead {
         let p = g.player;
         g.pl[p].noise = m::max(g.pl[p].noise, report.level);
-        let short = crate::gear::plain_short(&crate::gear::PlainShortDef { id: String::from(def.id.as_str()), short: def.short.clone() });
+        let short = crate::gear::plain_short(&def);
         crate::chronicle::chron_shot(g, &short, hit_guard, hit_p);
     }
-    if let Some(p) = pel { seam_shell_back(g, o, p); }
 }
 
 /// What the arm is through and where: a leaf's index (>= 1e6) is what the lock rule wants of a muzzle pressed to the keep. (combat.ts acrossArm)
@@ -862,10 +858,11 @@ mod tests {
     /// what a call writes on the lent glass is on the shell afterwards (the pellets of one shell share it)
     #[test]
     fn a_shell_gets_its_glass_back() {
-        let mut pel = Some(crate::shotgun::Shell::zeroed());
+        let mut shell = crate::shotgun::Shell::zeroed();
+        let mut pel = Some(&mut shell);
         with_glass(&mut pel, |sh| { sh.unwrap().glass.set(crate::Num(7.0), vec![1.0]); });
-        assert_eq!(pel.unwrap().glass.get(crate::Num(7.0)).map(|v| v.len()), Some(1));
-        let mut none: Option<crate::shotgun::Shell> = None;
+        assert_eq!(shell.glass.get(crate::Num(7.0)).map(|v| v.len()), Some(1));
+        let mut none: Option<&mut crate::shotgun::Shell> = None;
         assert!(with_glass(&mut none, |sh| sh.is_none()));
     }
 }

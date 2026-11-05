@@ -264,12 +264,12 @@ impl Default for QuietWords { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct QuietMod {
     /// (src/game/quiet.ts:60 holder)
-    pub holder: Option<crate::quiet::QuietMission>,
+    pub holder: bool,
 }
 impl QuietMod {
     pub fn blank() -> Self {
         QuietMod {
-            holder: None,
+            holder: false,
         }
     }
 }

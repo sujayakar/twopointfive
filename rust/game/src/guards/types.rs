@@ -10,7 +10,7 @@ pub enum LitSeenTgt {
     Pt,
 }
 
-/// (TypeScript: Engagement, src/game/guards.ts:3571)
+/// (TypeScript: Engagement, src/game/guards.ts:3526)
 #[derive(Clone, Debug)]
 pub struct Engagement {
     pub operatives: Vec<GuardId>,
@@ -41,7 +41,7 @@ impl Engagement {
 }
 impl Default for Engagement { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EngageResult, src/game/guards.ts:3570)
+/// (TypeScript: EngageResult, src/game/guards.ts:3525)
 #[derive(Clone, Debug)]
 pub struct EngageResult {
     pub outcome: crate::guards::EngageResultOutcome,
@@ -87,7 +87,7 @@ impl EngageResultOutcome {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:3570 EngageResult.kills, src/game/guards.ts:3570)
+/// (TypeScript: inline at src/game/guards.ts:3525 EngageResult.kills, src/game/guards.ts:3525)
 #[derive(Clone, Debug)]
 pub struct EngageResultKillsItem {
     pub victim: String,
@@ -108,7 +108,7 @@ impl EngageResultKillsItem {
 }
 impl Default for EngageResultKillsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3570 EngageResult.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/guards.ts:3525 EngageResult.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct EngageResultRounds {
     pub guard: Option<f64>,
@@ -131,7 +131,7 @@ impl EngageResultRounds {
 }
 impl Default for EngageResultRounds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3573 Engagement.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/guards.ts:3528 Engagement.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct EngagementRounds {
     pub guard: Option<f64>,
@@ -154,7 +154,7 @@ impl EngagementRounds {
 }
 impl Default for EngagementRounds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Standoff, src/game/guards.ts:851)
+/// (TypeScript: Standoff, src/game/guards.ts:854)
 #[derive(Clone, Copy, Debug)]
 pub struct Standoff {
     pub pair: GuardId,
@@ -197,7 +197,7 @@ impl Standoff {
 }
 impl Default for Standoff { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pair, src/game/guards.ts:856)
+/// (TypeScript: Pair, src/game/guards.ts:859)
 #[derive(Clone, Copy, Debug)]
 pub struct Pair {
     pub key: u32,
@@ -266,7 +266,7 @@ impl StandoffMoment {
     }
 }
 
-/// (TypeScript: Eye, src/game/guards.ts:1319)
+/// (TypeScript: Eye, src/game/guards.ts:1322)
 #[derive(Clone, Copy, Debug)]
 pub struct Eye {
     pub pos: V3,
@@ -293,7 +293,7 @@ impl Eye {
 }
 impl Default for Eye { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: UnstickLeg, src/game/guards.ts:1375)
+/// (TypeScript: UnstickLeg, src/game/guards.ts:1363)
 #[derive(Clone, Copy, Debug)]
 pub struct UnstickLeg {
     pub to: V3,
@@ -312,7 +312,7 @@ impl UnstickLeg {
 }
 impl Default for UnstickLeg { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SearchSpot, src/game/guards.ts:1788)
+/// (TypeScript: SearchSpot, src/game/guards.ts:1776)
 #[derive(Clone, Debug)]
 pub struct SearchSpot {
     pub pos: V3,
@@ -376,7 +376,7 @@ impl SearchSpotKind {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:1802 SearchSpot.samples, src/game/guards.ts:1802)
+/// (TypeScript: inline at src/game/guards.ts:1790 SearchSpot.samples, src/game/guards.ts:1790)
 #[derive(Clone, Copy, Debug)]
 pub struct SearchSpotSamplesItem {
     pub t: f64,
@@ -393,7 +393,7 @@ impl SearchSpotSamplesItem {
 }
 impl Default for SearchSpotSamplesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SearchPlan, src/game/guards.ts:1804)
+/// (TypeScript: SearchPlan, src/game/guards.ts:1792)
 #[derive(Clone, Debug)]
 pub struct SearchPlan {
     pub fix: V3,
@@ -449,7 +449,7 @@ impl SearchPlanPhase {
     }
 }
 
-/// (TypeScript: Pieing, src/game/guards.ts:2005)
+/// (TypeScript: Pieing, src/game/guards.ts:1993)
 #[derive(Clone, Copy, Debug)]
 pub struct Pieing {
     pub door: DoorId,
@@ -497,7 +497,7 @@ impl PieingPhase {
     }
 }
 
-/// (TypeScript: Rollcall, src/game/guards.ts:3073)
+/// (TypeScript: Rollcall, src/game/guards.ts:3028)
 #[derive(Clone, Copy, Debug)]
 pub struct Rollcall {
     pub next_at: f64,
@@ -541,7 +541,7 @@ impl RollcallStage {
     }
 }
 
-/// (TypeScript: UnitOpts, src/game/guards.ts:3498)
+/// (TypeScript: UnitOpts, src/game/guards.ts:3453)
 #[derive(Clone, Debug)]
 pub struct UnitOpts {
     pub team: crate::teams::Team,
@@ -576,7 +576,7 @@ impl UnitOpts {
 }
 impl Default for UnitOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:267 groundTrack, src/game/guards.ts:267)
+/// (TypeScript: inline at src/game/guards.ts:270 groundTrack, src/game/guards.ts:270)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModGroundTrackValue {
     pub pos: V3,
@@ -595,7 +595,7 @@ impl GuardsModGroundTrackValue {
 }
 impl Default for GuardsModGroundTrackValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:365 BODY_LIGHT_DEFAULTS, src/game/guards.ts:365)
+/// (TypeScript: inline at src/game/guards.ts:368 BODY_LIGHT_DEFAULTS, src/game/guards.ts:368)
 #[derive(Clone, Copy, Debug)]
 pub struct BODYLIGHTDEFAULTS {
     pub lit: f64,
@@ -618,7 +618,7 @@ impl BODYLIGHTDEFAULTS {
 }
 impl Default for BODYLIGHTDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:367 bodyMeters, src/game/guards.ts:367)
+/// (TypeScript: inline at src/game/guards.ts:370 bodyMeters, src/game/guards.ts:370)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModBodyMetersValue {
     pub vis: f64,
@@ -637,7 +637,7 @@ impl GuardsModBodyMetersValue {
 }
 impl Default for GuardsModBodyMetersValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:372 bodyProbeN, src/game/guards.ts:372)
+/// (TypeScript: inline at src/game/guards.ts:375 bodyProbeN, src/game/guards.ts:375)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModBodyProbeNValue {
     pub t: f64,
@@ -654,7 +654,7 @@ impl GuardsModBodyProbeNValue {
 }
 impl Default for GuardsModBodyProbeNValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:671 LINE_DEBUG, src/game/guards.ts:671)
+/// (TypeScript: inline at src/game/guards.ts:674 LINE_DEBUG, src/game/guards.ts:674)
 #[derive(Clone, Copy, Debug)]
 pub struct LINEDEBUG {
 }
@@ -667,7 +667,7 @@ impl LINEDEBUG {
 }
 impl Default for LINEDEBUG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:853 STANDOFF_DEBUG, src/game/guards.ts:853)
+/// (TypeScript: inline at src/game/guards.ts:856 STANDOFF_DEBUG, src/game/guards.ts:856)
 #[derive(Clone, Copy, Debug)]
 pub struct STANDOFFDEBUG {
 }
@@ -680,7 +680,7 @@ impl STANDOFFDEBUG {
 }
 impl Default for STANDOFFDEBUG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:911 HELD_METER, src/game/guards.ts:911)
+/// (TypeScript: inline at src/game/guards.ts:914 HELD_METER, src/game/guards.ts:914)
 #[derive(Clone, Copy, Debug)]
 pub struct HELDMETER {
     pub gap_secs: f64,
@@ -697,7 +697,7 @@ impl HELDMETER {
 }
 impl Default for HELDMETER { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:912 heldMeters, src/game/guards.ts:912)
+/// (TypeScript: inline at src/game/guards.ts:915 heldMeters, src/game/guards.ts:915)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModHeldMetersValue {
     pub vis: f64,
@@ -716,7 +716,7 @@ impl GuardsModHeldMetersValue {
 }
 impl Default for GuardsModHeldMetersValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1000 STANDOFF_LINES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/guards.ts:1003 STANDOFF_LINES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct STANDOFFLINESValue {
     pub steady: Option<Vec<String>>,
@@ -737,7 +737,7 @@ impl STANDOFFLINESValue {
 }
 impl Default for STANDOFFLINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1017 STANDOFF_NAMELESS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/guards.ts:1020 STANDOFF_NAMELESS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct STANDOFFNAMELESS {
     pub lost: Option<String>,
@@ -766,7 +766,7 @@ impl STANDOFFNAMELESS {
 }
 impl Default for STANDOFFNAMELESS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1383 UNSTICK, src/game/guards.ts:1383)
+/// (TypeScript: inline at src/game/guards.ts:1371 UNSTICK, src/game/guards.ts:1371)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModUNSTICK {
     pub legs: f64,
@@ -787,7 +787,7 @@ impl GuardsModUNSTICK {
 }
 impl Default for GuardsModUNSTICK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1557 litSeen, src/game/guards.ts:1557)
+/// (TypeScript: inline at src/game/guards.ts:1545 litSeen, src/game/guards.ts:1545)
 #[derive(Clone, Debug)]
 pub struct GuardsModLitSeenValue {
     pub t: f64,
@@ -808,7 +808,7 @@ impl GuardsModLitSeenValue {
 }
 impl Default for GuardsModLitSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1575 darkSeen, src/game/guards.ts:1575)
+/// (TypeScript: inline at src/game/guards.ts:1563 darkSeen, src/game/guards.ts:1563)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModDarkSeenValue {
     pub t: f64,
@@ -825,7 +825,7 @@ impl GuardsModDarkSeenValue {
 }
 impl Default for GuardsModDarkSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1591 wallSeen, src/game/guards.ts:1591)
+/// (TypeScript: inline at src/game/guards.ts:1579 wallSeen, src/game/guards.ts:1579)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModWallSeenValue {
     pub t: f64,
@@ -846,7 +846,7 @@ impl GuardsModWallSeenValue {
 }
 impl Default for GuardsModWallSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1654 torchLowSeen, src/game/guards.ts:1654)
+/// (TypeScript: inline at src/game/guards.ts:1642 torchLowSeen, src/game/guards.ts:1642)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModTorchLowSeenValue {
     pub t: f64,
@@ -863,7 +863,7 @@ impl GuardsModTorchLowSeenValue {
 }
 impl Default for GuardsModTorchLowSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1677 litManSeen, src/game/guards.ts:1677)
+/// (TypeScript: inline at src/game/guards.ts:1665 litManSeen, src/game/guards.ts:1665)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardsModLitManSeenValue {
     pub t: f64,
@@ -882,7 +882,7 @@ impl GuardsModLitManSeenValue {
 }
 impl Default for GuardsModLitManSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2612 NO_SIGHT, src/game/guards.ts:2612)
+/// (TypeScript: inline at src/game/guards.ts:2601 NO_SIGHT, src/game/guards.ts:2601)
 #[derive(Clone, Copy, Debug)]
 pub struct NOSIGHT {
     pub visible: bool,
@@ -901,7 +901,7 @@ impl NOSIGHT {
 }
 impl Default for NOSIGHT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3630 BREACH_HOOKS, src/game/guards.ts:3630)
+/// (TypeScript: inline at src/game/guards.ts:3585 BREACH_HOOKS, src/game/guards.ts:3585)
 #[derive(Clone, Copy, Debug)]
 pub struct BREACHHOOKS {
 }
@@ -914,17 +914,17 @@ impl BREACHHOOKS {
 }
 impl Default for BREACHHOOKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:219 shotRelation(e), src/game/guards.ts:219)
-#[derive(Clone, Debug)]
+/// (TypeScript: inline at src/game/guards.ts:222 shotRelation(e), src/game/guards.ts:222)
+#[derive(Clone, Copy, Debug)]
 pub struct ShotRelationE {
-    pub kind: String,
+    pub kind: crate::director::EventKind,
     pub who: Option<f64>,
 }
 impl ShotRelationE {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ShotRelationE {
-            kind: String::new(),
+            kind: crate::director::EventKind::Shot,
             who: None,
         }
     }
@@ -948,7 +948,7 @@ impl ShotRelation {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:226 colleagueFirePos(e), src/game/guards.ts:226)
+/// (TypeScript: inline at src/game/guards.ts:229 colleagueFirePos(e), src/game/guards.ts:229)
 #[derive(Clone, Copy, Debug)]
 pub struct ColleagueFirePosE {
     pub who: Option<f64>,
@@ -969,7 +969,7 @@ impl ColleagueFirePosE {
 }
 impl Default for ColleagueFirePosE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:249 stepIsThreat(e), src/game/guards.ts:249)
+/// (TypeScript: inline at src/game/guards.ts:252 stepIsThreat(e), src/game/guards.ts:252)
 #[derive(Clone, Copy, Debug)]
 pub struct StepIsThreatE {
     pub who: Option<f64>,
@@ -984,52 +984,7 @@ impl StepIsThreatE {
 }
 impl Default for StepIsThreatE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:401 loadBodyLight(tune), src/game/guards.ts:401)
-#[derive(Clone, Copy, Debug)]
-pub struct LoadBodyLightTune {
-    pub body_light: bool,
-}
-impl LoadBodyLightTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LoadBodyLightTune {
-            body_light: false,
-        }
-    }
-}
-impl Default for LoadBodyLightTune { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:408 saveBodyLight(tune), src/game/guards.ts:408)
-#[derive(Clone, Copy, Debug)]
-pub struct SaveBodyLightTune {
-    pub body_light: bool,
-}
-impl SaveBodyLightTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveBodyLightTune {
-            body_light: false,
-        }
-    }
-}
-impl Default for SaveBodyLightTune { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:409 resetBodyLight(tune), src/game/guards.ts:409)
-#[derive(Clone, Copy, Debug)]
-pub struct ResetBodyLightTune {
-    pub body_light: bool,
-}
-impl ResetBodyLightTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResetBodyLightTune {
-            body_light: false,
-        }
-    }
-}
-impl Default for ResetBodyLightTune { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:431 lightOutSeen(e), src/game/guards.ts:431)
+/// (TypeScript: inline at src/game/guards.ts:434 lightOutSeen(e), src/game/guards.ts:434)
 #[derive(Clone, Copy, Debug)]
 pub struct LightOutSeenE {
     pub pos: V3,
@@ -1080,7 +1035,7 @@ impl DoorTamper {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:551 bodyAftermath ->, src/game/guards.ts:551)
+/// (TypeScript: inline at src/game/guards.ts:554 bodyAftermath ->, src/game/guards.ts:554)
 #[derive(Clone, Copy, Debug)]
 pub struct BodyAftermath {
     pub move_: f64,
@@ -1097,7 +1052,7 @@ impl BodyAftermath {
 }
 impl Default for BodyAftermath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:677 lineGeom ->, src/game/guards.ts:677)
+/// (TypeScript: inline at src/game/guards.ts:680 lineGeom ->, src/game/guards.ts:680)
 #[derive(Clone, Copy, Debug)]
 pub struct LineGeom {
     pub t: f64,
@@ -1135,7 +1090,7 @@ impl LineStep {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:988 flankShot ->, src/game/guards.ts:988)
+/// (TypeScript: inline at src/game/guards.ts:991 flankShot ->, src/game/guards.ts:991)
 #[derive(Clone, Copy, Debug)]
 pub struct FlankShot {
     pub ok: bool,
@@ -1163,7 +1118,7 @@ pub enum StandoffBarkForce {
     Always,
 }
 
-/// (TypeScript: inline at src/game/guards.ts:1136 standoffAlert ->, src/game/guards.ts:1136)
+/// (TypeScript: inline at src/game/guards.ts:1139 standoffAlert ->, src/game/guards.ts:1139)
 #[derive(Clone, Copy, Debug)]
 pub struct StandoffAlert {
     pub move_: f64,
@@ -1182,7 +1137,7 @@ impl StandoffAlert {
 }
 impl Default for StandoffAlert { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1239 canSee ->, src/game/guards.ts:1239)
+/// (TypeScript: inline at src/game/guards.ts:1242 canSee ->, src/game/guards.ts:1242)
 #[derive(Clone, Copy, Debug)]
 pub struct CanSee {
     pub visible: bool,
@@ -1201,7 +1156,7 @@ impl CanSee {
 }
 impl Default for CanSee { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1245 canSeeChar ->, src/game/guards.ts:1245)
+/// (TypeScript: inline at src/game/guards.ts:1248 canSeeChar ->, src/game/guards.ts:1248)
 #[derive(Clone, Copy, Debug)]
 pub struct CanSeeChar {
     pub visible: bool,
@@ -1220,7 +1175,7 @@ impl CanSeeChar {
 }
 impl Default for CanSeeChar { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1327 eyeContact ->, src/game/guards.ts:1327)
+/// (TypeScript: inline at src/game/guards.ts:1330 eyeContact ->, src/game/guards.ts:1330)
 #[derive(Clone, Copy, Debug)]
 pub struct EyeContact {
     pub visible: bool,
@@ -1238,25 +1193,6 @@ impl EyeContact {
     }
 }
 impl Default for EyeContact { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:1342 eyeContactHere ->, src/game/guards.ts:1342)
-#[derive(Clone, Copy, Debug)]
-pub struct EyeContactHere {
-    pub visible: bool,
-    pub dist: f64,
-    pub in_cone: bool,
-}
-impl EyeContactHere {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EyeContactHere {
-            visible: false,
-            dist: 0.0,
-            in_cone: false,
-        }
-    }
-}
-impl Default for EyeContactHere { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -1307,7 +1243,7 @@ impl UnstickStep {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:1830 floodFrom ->, src/game/guards.ts:1830)
+/// (TypeScript: inline at src/game/guards.ts:1818 floodFrom ->, src/game/guards.ts:1818)
 #[derive(Clone, Debug)]
 pub struct FloodFrom {
     pub secs: Vec<f32>,
@@ -1324,7 +1260,7 @@ impl FloodFrom {
 }
 impl Default for FloodFrom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2015 crossesDoor ->, src/game/guards.ts:2015)
+/// (TypeScript: inline at src/game/guards.ts:2003 crossesDoor ->, src/game/guards.ts:2003)
 #[derive(Clone, Copy, Debug)]
 pub struct CrossesDoor {
     pub t: f64,
@@ -1343,7 +1279,7 @@ impl CrossesDoor {
 }
 impl Default for CrossesDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2032 pieDoorway ->, src/game/guards.ts:2032)
+/// (TypeScript: inline at src/game/guards.ts:2020 pieDoorway ->, src/game/guards.ts:2020)
 #[derive(Clone, Copy, Debug)]
 pub struct PieDoorway {
     pub speed: f64,
@@ -1360,7 +1296,7 @@ impl PieDoorway {
 }
 impl Default for PieDoorway { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2099 chaseFix ->, src/game/guards.ts:2099)
+/// (TypeScript: inline at src/game/guards.ts:2087 chaseFix ->, src/game/guards.ts:2087)
 #[derive(Clone, Copy, Debug)]
 pub struct ChaseFix {
     pub move_: f64,
@@ -1492,25 +1428,6 @@ impl PlanClearsCause {
     }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:3595 engage(opts), src/game/guards.ts:3595)
-#[derive(Clone, Copy, Debug)]
-pub struct EngageOpts {
-    pub timeout: Option<f64>,
-    pub pin: Option<bool>,
-    pub surprise: Option<f64>,
-}
-impl EngageOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EngageOpts {
-            timeout: None,
-            pin: None,
-            surprise: None,
-        }
-    }
-}
-impl Default for EngageOpts { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum EndEngagementOutcome {
@@ -1535,47 +1452,47 @@ impl EndEngagementOutcome {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct GuardsMod {
-    /// (src/game/guards.ts:267 groundTrack)
+    /// (src/game/guards.ts:270 groundTrack)
     pub ground_track: JsMap<PlayerId, crate::guards::GuardsModGroundTrackValue>,
-    /// (src/game/guards.ts:367 bodyMeters)
+    /// (src/game/guards.ts:370 bodyMeters)
     pub body_meters: JsMap<GuardId, crate::guards::GuardsModBodyMetersValue>,
-    /// (src/game/guards.ts:372 bodyProbeN)
+    /// (src/game/guards.ts:375 bodyProbeN)
     pub body_probe_n: Option<crate::guards::GuardsModBodyProbeNValue>,
-    /// (src/game/guards.ts:871 holdsCalled)
+    /// (src/game/guards.ts:874 holdsCalled)
     pub holds_called: JsSet<u32>,
-    /// (src/game/guards.ts:871 floorBarkT)
+    /// (src/game/guards.ts:874 floorBarkT)
     pub floor_bark_t: Option<f64>,
-    /// (src/game/guards.ts:871 lastBark)
+    /// (src/game/guards.ts:874 lastBark)
     pub last_bark: JsMap<GuardId, String>,
-    /// (src/game/guards.ts:912 heldMeters)
+    /// (src/game/guards.ts:915 heldMeters)
     pub held_meters: JsMap<u32, crate::guards::GuardsModHeldMetersValue>,
-    /// (src/game/guards.ts:1376 unstickLegs)
+    /// (src/game/guards.ts:1364 unstickLegs)
     pub unstick_legs: JsMap<GuardId, crate::guards::UnstickLeg>,
-    /// (src/game/guards.ts:1378 unstickRetryAt)
+    /// (src/game/guards.ts:1366 unstickRetryAt)
     pub unstick_retry_at: JsMap<GuardId, f64>,
-    /// (src/game/guards.ts:1380 heldLastFrame)
+    /// (src/game/guards.ts:1368 heldLastFrame)
     pub held_last_frame: JsSet<GuardId>,
-    /// (src/game/guards.ts:1383 UNSTICK)
+    /// (src/game/guards.ts:1371 UNSTICK)
     pub unstick: crate::guards::GuardsModUNSTICK,
-    /// (src/game/guards.ts:1557 litSeen)
+    /// (src/game/guards.ts:1545 litSeen)
     pub lit_seen: JsMap<GuardId, crate::guards::GuardsModLitSeenValue>,
-    /// (src/game/guards.ts:1575 darkSeen)
+    /// (src/game/guards.ts:1563 darkSeen)
     pub dark_seen: JsMap<GuardId, crate::guards::GuardsModDarkSeenValue>,
-    /// (src/game/guards.ts:1589 litUntil)
+    /// (src/game/guards.ts:1577 litUntil)
     pub lit_until: JsMap<GuardId, f64>,
-    /// (src/game/guards.ts:1591 wallSeen)
+    /// (src/game/guards.ts:1579 wallSeen)
     pub wall_seen: JsMap<GuardId, crate::guards::GuardsModWallSeenValue>,
-    /// (src/game/guards.ts:1654 torchLowSeen)
+    /// (src/game/guards.ts:1642 torchLowSeen)
     pub torch_low_seen: JsMap<GuardId, crate::guards::GuardsModTorchLowSeenValue>,
-    /// (src/game/guards.ts:1677 litManSeen)
+    /// (src/game/guards.ts:1665 litManSeen)
     pub lit_man_seen: JsMap<GuardId, crate::guards::GuardsModLitManSeenValue>,
-    /// (src/game/guards.ts:1813 doorCellsOf)
+    /// (src/game/guards.ts:1801 doorCellsOf)
     pub door_cells_of: Option<JsMap<crate::Num, DoorId>>,
-    /// (src/game/guards.ts:3074 rollcalls)
+    /// (src/game/guards.ts:3029 rollcalls)
     pub rollcalls: Option<crate::guards::Rollcall>,
-    /// (src/game/guards.ts:3511 unitSerial)
+    /// (src/game/guards.ts:3466 unitSerial)
     pub unit_serial: f64,
-    /// (src/game/guards.ts:3574 engagements)
+    /// (src/game/guards.ts:3529 engagements)
     pub engagements: Option<crate::guards::Engagement>,
 }
 impl GuardsMod {
@@ -1606,395 +1523,392 @@ impl GuardsMod {
     }
 }
 
-/// (src/game/guards.ts:59 OCP_MUTTER: a table nothing writes)
+/// (src/game/guards.ts:58 OCP_MUTTER: a table nothing writes)
 pub fn ocp_mutter() -> Vec<String> { alloc::vec![String::from("light's on the blink again"), String::from("hm — bulb's going"), String::from("power dip?"), String::from("these fittings…"), String::from("that light again")] }
 
-/// (src/game/guards.ts:258 MOTION_STILL)
+/// (src/game/guards.ts:261 MOTION_STILL)
 pub const MOTION_STILL: f64 = 0.35;
 
-/// (src/game/guards.ts:258 MOTION_LO)
+/// (src/game/guards.ts:261 MOTION_LO)
 pub const MOTION_LO: f64 = 0.05;
 
-/// (src/game/guards.ts:258 MOTION_HI)
+/// (src/game/guards.ts:261 MOTION_HI)
 pub const MOTION_HI: f64 = 1.2;
 
-/// (src/game/guards.ts:258 MOTION_LIT_LO)
+/// (src/game/guards.ts:261 MOTION_LIT_LO)
 pub const MOTION_LIT_LO: f64 = 0.3;
 
-/// (src/game/guards.ts:258 MOTION_LIT_HI)
+/// (src/game/guards.ts:261 MOTION_LIT_HI)
 pub const MOTION_LIT_HI: f64 = 0.75;
 
-/// (src/game/guards.ts:260 MOTION_RADIAL)
+/// (src/game/guards.ts:263 MOTION_RADIAL)
 pub const MOTION_RADIAL: f64 = 0.4;
 
-/// (src/game/guards.ts:263 MOTION_SPRINT)
+/// (src/game/guards.ts:266 MOTION_SPRINT)
 pub const MOTION_SPRINT: f64 = 1.6;
 
-/// (src/game/guards.ts:263 MOTION_SPRINT_MS)
+/// (src/game/guards.ts:266 MOTION_SPRINT_MS)
 pub const MOTION_SPRINT_MS: f64 = 3.5;
 
-/// (src/game/guards.ts:263 MOTION_NEAR_M)
+/// (src/game/guards.ts:266 MOTION_NEAR_M)
 pub const MOTION_NEAR_M: f64 = 2.5;
 
-/// (src/game/guards.ts:263 MOTION_NEAR_FLOOR)
+/// (src/game/guards.ts:266 MOTION_NEAR_FLOOR)
 pub const MOTION_NEAR_FLOOR: f64 = 0.8;
 
-/// (src/game/guards.ts:263 MOTION_HUNT_FLOOR)
+/// (src/game/guards.ts:266 MOTION_HUNT_FLOOR)
 pub const MOTION_HUNT_FLOOR: f64 = 0.7;
 
-/// (src/game/guards.ts:365 BODY_LIGHT_DEFAULTS: a table nothing writes)
+/// (src/game/guards.ts:368 BODY_LIGHT_DEFAULTS: a table nothing writes)
 pub fn body_light_defaults() -> crate::guards::BODYLIGHTDEFAULTS { crate::guards::BODYLIGHTDEFAULTS { lit: 0.22, lit_near: 0.04, near_m: 2.0, far_m: 5.0, smoke: 0.3 } }
 
-/// (src/game/guards.ts:371 BODY_PROBE_BUDGET)
+/// (src/game/guards.ts:374 BODY_PROBE_BUDGET)
 pub const BODY_PROBE_BUDGET: f64 = 6.0;
 
-/// (src/game/guards.ts:400 BODY_LIGHT_LS)
+/// (src/game/guards.ts:403 BODY_LIGHT_LS)
 pub const BODY_LIGHT_LS: &str = "twopointsix.bodyLight";
 
-/// (src/game/guards.ts:490 BODY_DUTY_CAP)
+/// (src/game/guards.ts:493 BODY_DUTY_CAP)
 pub const BODY_DUTY_CAP: f64 = 45.0;
 
-/// (src/game/guards.ts:658 MUZZLE_CLEAR_M)
+/// (src/game/guards.ts:661 MUZZLE_CLEAR_M)
 pub const MUZZLE_CLEAR_M: f64 = 0.35;
 
-/// (src/game/guards.ts:658 MUZZLE_LEAD_SECS)
+/// (src/game/guards.ts:661 MUZZLE_LEAD_SECS)
 pub const MUZZLE_LEAD_SECS: f64 = 0.3;
 
-/// (src/game/guards.ts:658 MUZZLE_LEAD_MAX_M)
+/// (src/game/guards.ts:661 MUZZLE_LEAD_MAX_M)
 pub const MUZZLE_LEAD_MAX_M: f64 = 0.4;
 
-/// (src/game/guards.ts:658 MUZZLE_PAST_M)
+/// (src/game/guards.ts:661 MUZZLE_PAST_M)
 pub const MUZZLE_PAST_M: f64 = 1.0;
 
-/// (src/game/guards.ts:658 MUZZLE_REACH_M)
+/// (src/game/guards.ts:661 MUZZLE_REACH_M)
 pub const MUZZLE_REACH_M: f64 = 8.0;
 
-/// (src/game/guards.ts:658 MUZZLE_UP_SECS)
+/// (src/game/guards.ts:661 MUZZLE_UP_SECS)
 pub const MUZZLE_UP_SECS: f64 = 0.2;
 
-/// (src/game/guards.ts:661 LINE_STEP_MARGIN_M)
+/// (src/game/guards.ts:664 LINE_STEP_MARGIN_M)
 pub const LINE_STEP_MARGIN_M: f64 = 0.12;
 
-/// (src/game/guards.ts:661 LINE_STEP_MAX_M)
+/// (src/game/guards.ts:664 LINE_STEP_MAX_M)
 pub const LINE_STEP_MAX_M: f64 = 2.2;
 
-/// (src/game/guards.ts:661 LINE_PUSH_MIN_M)
+/// (src/game/guards.ts:664 LINE_PUSH_MIN_M)
 pub const LINE_PUSH_MIN_M: f64 = 2.5;
 
-/// (src/game/guards.ts:661 LINE_BARK_SECS)
+/// (src/game/guards.ts:664 LINE_BARK_SECS)
 pub const LINE_BARK_SECS: f64 = 10.0;
 
-/// (src/game/guards.ts:665 LINE_STUCK_SECS)
+/// (src/game/guards.ts:668 LINE_STUCK_SECS)
 pub const LINE_STUCK_SECS: f64 = 0.4;
 
-/// (src/game/guards.ts:665 LINE_FAIL_SECS)
+/// (src/game/guards.ts:668 LINE_FAIL_SECS)
 pub const LINE_FAIL_SECS: f64 = 5.0;
 
-/// (src/game/guards.ts:665 LINE_FAIL_M)
+/// (src/game/guards.ts:668 LINE_FAIL_M)
 pub const LINE_FAIL_M: f64 = 0.75;
 
-/// (src/game/guards.ts:668 LINE_WALK_CLEAR_M)
+/// (src/game/guards.ts:671 LINE_WALK_CLEAR_M)
 pub const LINE_WALK_CLEAR_M: f64 = 0.5;
 
-/// (src/game/guards.ts:671 LINE_DEBUG: a table nothing writes)
+/// (src/game/guards.ts:674 LINE_DEBUG: a table nothing writes)
 pub fn line_debug() -> crate::guards::LINEDEBUG { crate::guards::LINEDEBUG {  } }
 
-/// (src/game/guards.ts:823 STANDOFF_MIN_M)
+/// (src/game/guards.ts:826 STANDOFF_MIN_M)
 pub const STANDOFF_MIN_M: f64 = 3.5;
 
-/// (src/game/guards.ts:823 STANDOFF_MAX_M)
+/// (src/game/guards.ts:826 STANDOFF_MAX_M)
 pub const STANDOFF_MAX_M: f64 = 7.0;
 
-/// (src/game/guards.ts:823 STANDOFF_ORBIT_M)
+/// (src/game/guards.ts:826 STANDOFF_ORBIT_M)
 pub const STANDOFF_ORBIT_M: f64 = 4.5;
 
-/// (src/game/guards.ts:823 STANDOFF_SETTLE_DEG)
+/// (src/game/guards.ts:826 STANDOFF_SETTLE_DEG)
 pub const STANDOFF_SETTLE_DEG: f64 = 22.0;
 
-/// (src/game/guards.ts:823 STANDOFF_FIRE_MAX_M)
+/// (src/game/guards.ts:826 STANDOFF_FIRE_MAX_M)
 pub const STANDOFF_FIRE_MAX_M: f64 = 5.0;
 
-/// (src/game/guards.ts:828 STANDOFF_REAR_DEG)
+/// (src/game/guards.ts:831 STANDOFF_REAR_DEG)
 pub const STANDOFF_REAR_DEG: f64 = 70.0;
 
-/// (src/game/guards.ts:828 STANDOFF_CLEAR_M)
+/// (src/game/guards.ts:831 STANDOFF_CLEAR_M)
 pub const STANDOFF_CLEAR_M: f64 = 0.45;
 
-/// (src/game/guards.ts:828 STANDOFF_SHOT_SECS)
+/// (src/game/guards.ts:831 STANDOFF_SHOT_SECS)
 pub const STANDOFF_SHOT_SECS: f64 = 1.2;
 
-/// (src/game/guards.ts:828 STANDOFF_AIM_Y)
+/// (src/game/guards.ts:831 STANDOFF_AIM_Y)
 pub const STANDOFF_AIM_Y: f64 = 1.42;
 
-/// (src/game/guards.ts:830 SAM_R)
+/// (src/game/guards.ts:833 SAM_R)
 pub const SAM_R: f64 = 0.28;
 
-/// (src/game/guards.ts:834 STANDOFF_VIEW_M)
+/// (src/game/guards.ts:837 STANDOFF_VIEW_M)
 pub const STANDOFF_VIEW_M: f64 = 16.0;
 
-/// (src/game/guards.ts:834 STANDOFF_VIEW_DEG)
+/// (src/game/guards.ts:837 STANDOFF_VIEW_DEG)
 pub const STANDOFF_VIEW_DEG: f64 = 60.0;
 
-/// (src/game/guards.ts:834 STANDOFF_LOSE_SECS)
+/// (src/game/guards.ts:837 STANDOFF_LOSE_SECS)
 pub const STANDOFF_LOSE_SECS: f64 = 4.0;
 
-/// (src/game/guards.ts:834 STANDOFF_REPLAN_SECS)
+/// (src/game/guards.ts:837 STANDOFF_REPLAN_SECS)
 pub const STANDOFF_REPLAN_SECS: f64 = 1.0;
 
-/// (src/game/guards.ts:834 STANDOFF_STALL_SECS)
+/// (src/game/guards.ts:837 STANDOFF_STALL_SECS)
 pub const STANDOFF_STALL_SECS: f64 = 2.5;
 
-/// (src/game/guards.ts:834 STANDOFF_REST_SECS)
+/// (src/game/guards.ts:837 STANDOFF_REST_SECS)
 pub const STANDOFF_REST_SECS: f64 = 1.5;
 
-/// (src/game/guards.ts:836 STANDOFF_BARK_SECS)
+/// (src/game/guards.ts:839 STANDOFF_BARK_SECS)
 pub const STANDOFF_BARK_SECS: f64 = 6.0;
 
-/// (src/game/guards.ts:836 STANDOFF_BARK_FLOOR_SECS)
+/// (src/game/guards.ts:839 STANDOFF_BARK_FLOOR_SECS)
 pub const STANDOFF_BARK_FLOOR_SECS: f64 = 3.0;
 
-/// (src/game/guards.ts:843 SHIELD_RELEASE_BEAT_MIN)
+/// (src/game/guards.ts:846 SHIELD_RELEASE_BEAT_MIN)
 pub const SHIELD_RELEASE_BEAT_MIN: f64 = 0.35;
 
-/// (src/game/guards.ts:843 SHIELD_RELEASE_BEAT_JITTER)
+/// (src/game/guards.ts:846 SHIELD_RELEASE_BEAT_JITTER)
 pub const SHIELD_RELEASE_BEAT_JITTER: f64 = 0.3;
 
-/// (src/game/guards.ts:853 STANDOFF_DEBUG: a table nothing writes)
+/// (src/game/guards.ts:856 STANDOFF_DEBUG: a table nothing writes)
 pub fn standoff_debug() -> crate::guards::STANDOFFDEBUG { crate::guards::STANDOFFDEBUG {  } }
 
-/// (src/game/guards.ts:897 PAIR_LEGIBLE)
+/// (src/game/guards.ts:900 PAIR_LEGIBLE)
 pub const PAIR_LEGIBLE: f64 = 3.0;
 
-/// (src/game/guards.ts:911 HELD_METER: a table nothing writes)
+/// (src/game/guards.ts:914 HELD_METER: a table nothing writes)
 pub fn held_meter() -> crate::guards::HELDMETER { crate::guards::HELDMETER { gap_secs: 0.5, moved_m: 1.0 } }
 
-/// (src/game/guards.ts:1000 STANDOFF_LINES: a table nothing writes)
+/// (src/game/guards.ts:1003 STANDOFF_LINES: a table nothing writes)
 pub fn standoff_lines() -> JsMap<String, crate::guards::STANDOFFLINESValue> { { let mut t = JsMap::new(); t.set(String::from("enter"), crate::guards::STANDOFFLINESValue { steady: Some(alloc::vec![String::from("{held}, hold still — we've got you"), String::from("easy. easy. nobody has to get hurt here")]), nervy: Some(alloc::vec![String::from("{held}! —jesus— okay, okay, nobody shoot!"), String::from("oh god— he's got {held}—")]), hard: Some(alloc::vec![String::from("let {him} go. now."), String::from("you. hands off {him}.")]), under: None }); t.set(String::from("noShot"), crate::guards::STANDOFFLINESValue { steady: Some(alloc::vec![String::from("let {him} go and we talk about it"), String::from("{held}, stay loose — I'm coming round")]), nervy: Some(alloc::vec![String::from("{held}! —I can't— I haven't got a line—"), String::from("don't you hurt {him}— don't—")]), hard: Some(alloc::vec![String::from("you've got nowhere to take {him}"), String::from("the second {he} slips, you're done")]), under: Some(alloc::vec![String::from("let {him} go!"), String::from("drop {him} — NOW"), String::from("{held}, don't move"), String::from("I don't have a shot"), String::from("no shot — {held}'s square in front of him")]) }); t.set(String::from("line"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("I— I think I have him—")]), hard: Some(alloc::vec![String::from("there you are.")]), under: Some(alloc::vec![String::from("I have him."), String::from("got a line —")]) }); t.set(String::from("cornered"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("just— just let {him} go, please—")]), hard: Some(alloc::vec![String::from("one way out of this for you. through us.")]), under: Some(alloc::vec![String::from("can't get round him — hold what you've got"), String::from("no way round. {held}, hang on"), String::from("nowhere for either of us to go — let {him} walk and this ends quiet")]) }); t.set(String::from("dropped"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("{held}! —he's— shoot, SHOOT—")]), hard: None, under: Some(alloc::vec![String::from("he's dropped {held} — TAKE HIM"), String::from("{held}'s down — light him up!")]) }); t.set(String::from("freed"), crate::guards::STANDOFFLINESValue { steady: None, nervy: None, hard: None, under: Some(alloc::vec![String::from("{held}, DOWN — get clear!"), String::from("he's loose — {held}, out of the way!")]) }); t.set(String::from("lost"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("where— where did they go—")]), hard: None, under: Some(alloc::vec![String::from("lost them — where'd he take {him}?"), String::from("I've lost sight — moving up")]) }); t.set(String::from("hitHim"), crate::guards::STANDOFFLINESValue { steady: None, nervy: Some(alloc::vec![String::from("no— no no no— {held}—")]), hard: Some(alloc::vec![String::from("…{held}'s hit. that's on him. keep on him—")]), under: Some(alloc::vec![String::from("…christ— I hit {him}. I hit {held}—")]) }); t } }
 
-/// (src/game/guards.ts:1011 STANDOFF_NOW: a table nothing writes)
-pub fn standoff_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("{held}, stay loose — I\\m coming round"), String::from("{held}, stay loose — I'm coming around")); t.set(String::from("{held}! —I can\\t— I haven\\t got a line—"), String::from("{held}! —I can't— I don't have a shot—")); t.set(String::from("I have him."), String::from("I've got him.")); t.set(String::from("I— I think I have him—"), String::from("I— I think I've got him—")); t.set(String::from("can\\t get round him — hold what you\\ve got"), String::from("can't get around him — hold what you've got")); t.set(String::from("no way round. {held}, hang on"), String::from("no way around. {held}, hang on")); t } }
+/// (src/game/guards.ts:1014 STANDOFF_NOW: a table nothing writes)
+pub fn standoff_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("{held}, stay loose — I'm coming round"), String::from("{held}, stay loose — I'm coming around")); t.set(String::from("{held}! —I can't— I haven't got a line—"), String::from("{held}! —I can't— I don't have a shot—")); t.set(String::from("I have him."), String::from("I've got him.")); t.set(String::from("I— I think I have him—"), String::from("I— I think I've got him—")); t.set(String::from("can't get round him — hold what you've got"), String::from("can't get around him — hold what you've got")); t.set(String::from("no way round. {held}, hang on"), String::from("no way around. {held}, hang on")); t } }
 
-/// (src/game/guards.ts:1017 STANDOFF_NAMELESS: a table nothing writes)
+/// (src/game/guards.ts:1020 STANDOFF_NAMELESS: a table nothing writes)
 pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { lost: None, enter: None, line: None, cornered: None, no_shot: None, dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
 
-/// (src/game/guards.ts:1315 SIGHTS_COS)
+/// (src/game/guards.ts:1318 SIGHTS_COS)
 pub const SIGHTS_COS: f64 = 0.866;
 
-/// (src/game/guards.ts:1372 UNSTICK_REACH_M)
+/// (src/game/guards.ts:1360 UNSTICK_REACH_M)
 pub const UNSTICK_REACH_M: f64 = 2.4;
 
-/// (src/game/guards.ts:1372 UNSTICK_STALL_SECS)
+/// (src/game/guards.ts:1360 UNSTICK_STALL_SECS)
 pub const UNSTICK_STALL_SECS: f64 = 1.0;
 
-/// (src/game/guards.ts:1372 UNSTICK_DONE_M)
+/// (src/game/guards.ts:1360 UNSTICK_DONE_M)
 pub const UNSTICK_DONE_M: f64 = 0.08;
 
-/// (src/game/guards.ts:1372 UNSTICK_SNAP_REACH_M)
+/// (src/game/guards.ts:1360 UNSTICK_SNAP_REACH_M)
 pub const UNSTICK_SNAP_REACH_M: f64 = 3.5;
 
-/// (src/game/guards.ts:1372 UNSTICK_BODY_R)
+/// (src/game/guards.ts:1360 UNSTICK_BODY_R)
 pub const UNSTICK_BODY_R: f64 = 0.15;
 
-/// (src/game/guards.ts:1590 WALL_BREAK)
+/// (src/game/guards.ts:1578 WALL_BREAK)
 pub const WALL_BREAK: bool = false;
 
-/// (src/game/guards.ts:1597 FLOOR_BREAK)
+/// (src/game/guards.ts:1585 FLOOR_BREAK)
 pub const FLOOR_BREAK: bool = false;
 
-/// (src/game/guards.ts:1598 FLOOR_TOP)
+/// (src/game/guards.ts:1586 FLOOR_TOP)
 pub const FLOOR_TOP: f64 = 0.249;
 
-/// (src/game/guards.ts:1653 TORCH_WALL_BREAK)
+/// (src/game/guards.ts:1641 TORCH_WALL_BREAK)
 pub const TORCH_WALL_BREAK: bool = false;
 
-/// (src/game/guards.ts:1771 SEARCH_RADIUS_M)
+/// (src/game/guards.ts:1759 SEARCH_RADIUS_M)
 pub const SEARCH_RADIUS_M: f64 = 9.0;
 
-/// (src/game/guards.ts:1771 SEARCH_SPOTS)
+/// (src/game/guards.ts:1759 SEARCH_SPOTS)
 pub const SEARCH_SPOTS: f64 = 12.0;
 
-/// (src/game/guards.ts:1771 SEARCH_CONTROLS)
+/// (src/game/guards.ts:1759 SEARCH_CONTROLS)
 pub const SEARCH_CONTROLS: f64 = 3.0;
 
-/// (src/game/guards.ts:1771 SEARCH_SPACING_M)
+/// (src/game/guards.ts:1759 SEARCH_SPACING_M)
 pub const SEARCH_SPACING_M: f64 = 1.5;
 
-/// (src/game/guards.ts:1774 SEARCH_SWEEP0_SECS)
+/// (src/game/guards.ts:1762 SEARCH_SWEEP0_SECS)
 pub const SEARCH_SWEEP0_SECS: f64 = 1.2;
 
-/// (src/game/guards.ts:1774 SEARCH_LOOK_SECS)
+/// (src/game/guards.ts:1762 SEARCH_LOOK_SECS)
 pub const SEARCH_LOOK_SECS: f64 = 1.5;
 
-/// (src/game/guards.ts:1774 SEARCH_LOOK_DIST_M)
+/// (src/game/guards.ts:1762 SEARCH_LOOK_DIST_M)
 pub const SEARCH_LOOK_DIST_M: f64 = 1.9;
 
-/// (src/game/guards.ts:1777 SEARCH_MIN_SECS)
+/// (src/game/guards.ts:1765 SEARCH_MIN_SECS)
 pub const SEARCH_MIN_SECS: f64 = 12.0;
 
-/// (src/game/guards.ts:1777 SEARCH_CAP_SECS)
+/// (src/game/guards.ts:1765 SEARCH_CAP_SECS)
 pub const SEARCH_CAP_SECS: f64 = 26.0;
 
-/// (src/game/guards.ts:1777 SEARCH_REFLOOD_SECS)
+/// (src/game/guards.ts:1765 SEARCH_REFLOOD_SECS)
 pub const SEARCH_REFLOOD_SECS: f64 = 2.0;
 
-/// (src/game/guards.ts:1781 PROBE_BUDGET)
+/// (src/game/guards.ts:1769 PROBE_BUDGET)
 pub const PROBE_BUDGET: f64 = 8.0;
 
-/// (src/game/guards.ts:1781 PROBE_HEIGHT)
+/// (src/game/guards.ts:1769 PROBE_HEIGHT)
 pub const PROBE_HEIGHT: f64 = 0.5;
 
-/// (src/game/guards.ts:1781 DARK_WINDOW_SECS)
+/// (src/game/guards.ts:1769 DARK_WINDOW_SECS)
 pub const DARK_WINDOW_SECS: f64 = 3.0;
 
-/// (src/game/guards.ts:1784 LATCH_SECS)
+/// (src/game/guards.ts:1772 LATCH_SECS)
 pub const LATCH_SECS: f64 = 5.5;
 
-/// (src/game/guards.ts:1786 PLAUS_SLACK_SECS)
+/// (src/game/guards.ts:1774 PLAUS_SLACK_SECS)
 pub const PLAUS_SLACK_SECS: f64 = 1.2;
 
-/// (src/game/guards.ts:1786 PLAUS_RAMP_SECS)
+/// (src/game/guards.ts:1774 PLAUS_RAMP_SECS)
 pub const PLAUS_RAMP_SECS: f64 = 2.5;
 
-/// (src/game/guards.ts:2002 PIE_DETECT_M)
+/// (src/game/guards.ts:1990 PIE_DETECT_M)
 pub const PIE_DETECT_M: f64 = 3.2;
 
-/// (src/game/guards.ts:2002 PIE_SLOW_M)
+/// (src/game/guards.ts:1990 PIE_SLOW_M)
 pub const PIE_SLOW_M: f64 = 1.5;
 
-/// (src/game/guards.ts:2002 PIE_SLICE_M)
+/// (src/game/guards.ts:1990 PIE_SLICE_M)
 pub const PIE_SLICE_M: f64 = 1.7;
 
-/// (src/game/guards.ts:2002 PIE_SLICE_SECS)
+/// (src/game/guards.ts:1990 PIE_SLICE_SECS)
 pub const PIE_SLICE_SECS: f64 = 1.0;
 
-/// (src/game/guards.ts:2002 PIE_CORNER_SECS)
+/// (src/game/guards.ts:1990 PIE_CORNER_SECS)
 pub const PIE_CORNER_SECS: f64 = 0.4;
 
-/// (src/game/guards.ts:2002 PIE_AGAIN_SECS)
+/// (src/game/guards.ts:1990 PIE_AGAIN_SECS)
 pub const PIE_AGAIN_SECS: f64 = 6.0;
 
-/// (src/game/guards.ts:2002 PIE_CAP_SECS)
+/// (src/game/guards.ts:1990 PIE_CAP_SECS)
 pub const PIE_CAP_SECS: f64 = 7.0;
 
-/// (src/game/guards.ts:2004 PIE_EYES_SECS)
+/// (src/game/guards.ts:1992 PIE_EYES_SECS)
 pub const PIE_EYES_SECS: f64 = 1.0;
 
-/// (src/game/guards.ts:2560 GUARD_SWEEP_STEP)
+/// (src/game/guards.ts:2549 GUARD_SWEEP_STEP)
 pub const GUARD_SWEEP_STEP: f64 = 0.2;
 
-/// (src/game/guards.ts:2562 SEP_MAX_M)
+/// (src/game/guards.ts:2551 SEP_MAX_M)
 pub const SEP_MAX_M: f64 = 0.25;
 
-/// (src/game/guards.ts:2566 SEP_SETTLE_MIN)
+/// (src/game/guards.ts:2555 SEP_SETTLE_MIN)
 pub const SEP_SETTLE_MIN: f64 = 0.02;
 
-/// (src/game/guards.ts:2612 NO_SIGHT: a table nothing writes)
+/// (src/game/guards.ts:2601 NO_SIGHT: a table nothing writes)
 pub fn no_sight() -> crate::guards::NOSIGHT { crate::guards::NOSIGHT { visible: false, dist: 99.0, in_cone: false } }
 
-/// (src/game/guards.ts:2614 METER_NORMALS: a table nothing writes)
-pub fn meter_normals() -> Vec<V3> { alloc::vec![[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]] }
-
-/// (src/game/guards.ts:2838 BURST_BROKEN_CD)
+/// (src/game/guards.ts:2793 BURST_BROKEN_CD)
 pub const BURST_BROKEN_CD: f64 = 0.4;
 
-/// (src/game/guards.ts:2838 SUPPRESS_FIRST_MIN_M)
+/// (src/game/guards.ts:2793 SUPPRESS_FIRST_MIN_M)
 pub const SUPPRESS_FIRST_MIN_M: f64 = 10.0;
 
-/// (src/game/guards.ts:2838 SUPPRESS_FIRST_OFF_M)
+/// (src/game/guards.ts:2793 SUPPRESS_FIRST_OFF_M)
 pub const SUPPRESS_FIRST_OFF_M: f64 = 0.6;
 
-/// (src/game/guards.ts:2838 SUPPRESS_FIRST_JITTER_M)
+/// (src/game/guards.ts:2793 SUPPRESS_FIRST_JITTER_M)
 pub const SUPPRESS_FIRST_JITTER_M: f64 = 0.4;
 
-/// (src/game/guards.ts:2838 SUPPRESS_FIRST_UP_M)
+/// (src/game/guards.ts:2793 SUPPRESS_FIRST_UP_M)
 pub const SUPPRESS_FIRST_UP_M: f64 = 0.3;
 
-/// (src/game/guards.ts:2838 SUPPRESS_FIRST_WALK_M)
+/// (src/game/guards.ts:2793 SUPPRESS_FIRST_WALK_M)
 pub const SUPPRESS_FIRST_WALK_M: f64 = 0.07;
 
-/// (src/game/guards.ts:2838 SUPPRESS_FIRST_COVER_M)
+/// (src/game/guards.ts:2793 SUPPRESS_FIRST_COVER_M)
 pub const SUPPRESS_FIRST_COVER_M: f64 = 2.5;
 
-/// (src/game/guards.ts:2838 SUPPRESS_FIRST_LAPSE)
+/// (src/game/guards.ts:2793 SUPPRESS_FIRST_LAPSE)
 pub const SUPPRESS_FIRST_LAPSE: f64 = 8.0;
 
-/// (src/game/guards.ts:2998 HEIGHTENED_SECS)
+/// (src/game/guards.ts:2953 HEIGHTENED_SECS)
 pub const HEIGHTENED_SECS: f64 = 75.0;
 
-/// (src/game/guards.ts:2998 LOCKDOWN_SECS)
+/// (src/game/guards.ts:2953 LOCKDOWN_SECS)
 pub const LOCKDOWN_SECS: f64 = 120.0;
 
-/// (src/game/guards.ts:2998 STEPDOWN_SECS)
+/// (src/game/guards.ts:2953 STEPDOWN_SECS)
 pub const STEPDOWN_SECS: f64 = 45.0;
 
-/// (src/game/guards.ts:3000 KEEN)
+/// (src/game/guards.ts:2955 KEEN)
 pub const KEEN: f64 = 1.25;
 
-/// (src/game/guards.ts:3062 ROLLCALL_CALM_SECS)
+/// (src/game/guards.ts:3017 ROLLCALL_CALM_SECS)
 pub const ROLLCALL_CALM_SECS: f64 = 90.0;
 
-/// (src/game/guards.ts:3062 ROLLCALL_ALARMED_SECS)
+/// (src/game/guards.ts:3017 ROLLCALL_ALARMED_SECS)
 pub const ROLLCALL_ALARMED_SECS: f64 = 45.0;
 
-/// (src/game/guards.ts:3062 ROLLCALL_JITTER)
+/// (src/game/guards.ts:3017 ROLLCALL_JITTER)
 pub const ROLLCALL_JITTER: f64 = 0.1;
 
-/// (src/game/guards.ts:3064 ROLLCALL_ANSWER_SECS)
+/// (src/game/guards.ts:3019 ROLLCALL_ANSWER_SECS)
 pub const ROLLCALL_ANSWER_SECS: f64 = 2.2;
 
-/// (src/game/guards.ts:3064 ROLLCALL_ASK_SECS)
+/// (src/game/guards.ts:3019 ROLLCALL_ASK_SECS)
 pub const ROLLCALL_ASK_SECS: f64 = 4.0;
 
-/// (src/game/guards.ts:3064 ROLLCALL_SEND_SECS)
+/// (src/game/guards.ts:3019 ROLLCALL_SEND_SECS)
 pub const ROLLCALL_SEND_SECS: f64 = 8.0;
 
-/// (src/game/guards.ts:3067 ROLLCALL_BUSY_RETRY_SECS)
+/// (src/game/guards.ts:3022 ROLLCALL_BUSY_RETRY_SECS)
 pub const ROLLCALL_BUSY_RETRY_SECS: f64 = 15.0;
 
-/// (src/game/guards.ts:3067 ROLLCALL_QUIET_AFTER_SECS)
+/// (src/game/guards.ts:3022 ROLLCALL_QUIET_AFTER_SECS)
 pub const ROLLCALL_QUIET_AFTER_SECS: f64 = 30.0;
 
-/// (src/game/guards.ts:3067 ROLLCALL_SEND_GIVEUP_SECS)
+/// (src/game/guards.ts:3022 ROLLCALL_SEND_GIVEUP_SECS)
 pub const ROLLCALL_SEND_GIVEUP_SECS: f64 = 40.0;
 
-/// (src/game/guards.ts:3069 CHECK_LOOK_SECS)
+/// (src/game/guards.ts:3024 CHECK_LOOK_SECS)
 pub const CHECK_LOOK_SECS: f64 = 1.2;
 
-/// (src/game/guards.ts:3069 CHECK_CAP_SECS)
+/// (src/game/guards.ts:3024 CHECK_CAP_SECS)
 pub const CHECK_CAP_SECS: f64 = 150.0;
 
-/// (src/game/guards.ts:3071 PARTNER_UNSEEN_SECS)
+/// (src/game/guards.ts:3026 PARTNER_UNSEEN_SECS)
 pub const PARTNER_UNSEEN_SECS: f64 = 20.0;
 
-/// (src/game/guards.ts:3071 PARTNER_SPOT_M)
+/// (src/game/guards.ts:3026 PARTNER_SPOT_M)
 pub const PARTNER_SPOT_M: f64 = 2.5;
 
-/// (src/game/guards.ts:3244 RECLEAR_SECS)
+/// (src/game/guards.ts:3199 RECLEAR_SECS)
 pub const RECLEAR_SECS: f64 = 60.0;
 
-/// (src/game/guards.ts:3246 TAMPER_MEMORY_SECS)
+/// (src/game/guards.ts:3201 TAMPER_MEMORY_SECS)
 pub const TAMPER_MEMORY_SECS: f64 = 120.0;
 
-/// (src/game/guards.ts:3380 PARTNER_TRUST_SECS)
+/// (src/game/guards.ts:3335 PARTNER_TRUST_SECS)
 pub const PARTNER_TRUST_SECS: f64 = 3.0;
 
-/// (src/game/guards.ts:3506 MAX_CHARACTERS)
+/// (src/game/guards.ts:3461 MAX_CHARACTERS)
 pub const MAX_CHARACTERS: f64 = 8.0;
 
-/// (src/game/guards.ts:3508 MAX_SKINNED)
+/// (src/game/guards.ts:3463 MAX_SKINNED)
 pub const MAX_SKINNED: f64 = 16.0;
 
-/// (src/game/guards.ts:3510 UNIT_ID0)
+/// (src/game/guards.ts:3465 UNIT_ID0)
 pub const UNIT_ID0: f64 = 20.0;
 
-/// (src/game/guards.ts:3510 UNIT_ID1)
+/// (src/game/guards.ts:3465 UNIT_ID1)
 pub const UNIT_ID1: f64 = 250.0;
 
-/// (src/game/guards.ts:3513 TEAM_TINT: a table nothing writes)
+/// (src/game/guards.ts:3468 TEAM_TINT: a table nothing writes)
 pub fn team_tint() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.42, 0.36, 0.25]); t.set(String::from("operative"), [0.07, 0.09, 0.1]); t.set(String::from("hostile"), [0.36, 0.33, 0.24]); t.set(String::from("player"), [0.05, 0.06, 0.07]); t.set(String::from("civilian"), [0.75, 0.62, 0.08]); t } }
 
-/// (src/game/guards.ts:3514 TEAM_TINT2: a table nothing writes)
+/// (src/game/guards.ts:3469 TEAM_TINT2: a table nothing writes)
 pub fn team_tint2() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.02, 0.02, 0.025]); t.set(String::from("operative"), [0.05, 0.07, 0.06]); t.set(String::from("hostile"), [0.09, 0.08, 0.05]); t.set(String::from("player"), [0.1, 0.32, 0.18]); t.set(String::from("civilian"), [0.05, 0.06, 0.1]); t } }
 
-/// (src/game/guards.ts:3630 BREACH_HOOKS: a table nothing writes)
+/// (src/game/guards.ts:3585 BREACH_HOOKS: a table nothing writes)
 pub fn breach_hooks() -> crate::guards::BREACHHOOKS { crate::guards::BREACHHOOKS {  } }

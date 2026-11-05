@@ -277,7 +277,7 @@ impl Verb {
     }
 }
 
-/// (TypeScript: Game, src/game/game.ts:776)
+/// (TypeScript: Game, src/game/game.ts:785)
 #[derive(Clone, Debug)]
 pub struct Game {
     pub col: crate::scene_collision::StaticCollision,
@@ -303,7 +303,7 @@ pub struct Game {
     pub dice: Option<crate::math_dice::SimDice>,
     pub men: crate::Opaque,
     pub light_home: crate::sim_lightshome::LightHome,
-    pub pose_sets: Vec<crate::Opaque>,
+    pub pose_sets: Vec<PoseSetId>,
     pub falls: crate::sim_fallshome::FallStore,
     pub ai_enabled: bool,
     pub god_mode: bool,
@@ -326,15 +326,7 @@ pub struct Game {
     pub door_deals: Vec<crate::doorswing::SwingDeal>,
     pub props: crate::props::PropSystem,
     pub use_door: Option<DoorId>,
-    pub reach_stats: crate::game::GameReachStats,
     pub reach_interior: Option<Vec<u8>>,
-    pub reach_solid: Option<Vec<u8>>,
-    pub reach_lights: Vec<LightId>,
-    pub reach_queue: Vec<crate::game::GameReachQueueItem>,
-    pub reach_solid_boot: Option<Vec<u8>>,
-    pub reach_boot: JsMap<LightId, Vec<u32>>,
-    pub reach_held: Vec<[f64; 4]>,
-    pub reach_hold: f64,
     pub touring: bool,
     pub hover: Option<crate::game::Interactable>,
     pub interactables: Vec<crate::game::Interactable>,
@@ -432,6 +424,10 @@ pub struct Game {
     pub serial_next: u32,
     /// INVENTED: a second cast of the squad is on Game (squadcast::with_cast): seats.ts:240 CAST_VIEW
     pub in_cast: bool,
+    /// INVENTED: the rows box_frame has dealt since boxes_frame_reset
+    pub box_frame_rows: Vec<BoxId>,
+    /// INVENTED: rows box_frame may deal again
+    pub box_frame_free: Vec<BoxId>,
     /// the table of these things: never shrinks
     pub ch: Tab<CharId, crate::character::Character>,
     /// the table of these things: never shrinks
@@ -505,15 +501,7 @@ impl Game {
             door_deals: Vec::new(),
             props: crate::props::PropSystem::blank(),
             use_door: None,
-            reach_stats: crate::game::GameReachStats { lights: 0.0, mean_fraction: 1.0, ms: 0.0 },
             reach_interior: None,
-            reach_solid: None,
-            reach_lights: Vec::new(),
-            reach_queue: Vec::new(),
-            reach_solid_boot: None,
-            reach_boot: JsMap::new(),
-            reach_held: Vec::new(),
-            reach_hold: 0.0,
             touring: false,
             hover: None,
             interactables: Vec::new(),
@@ -609,6 +597,8 @@ impl Game {
             door_hand_recs: JsMap::new(),
             serial_next: 1,
             in_cast: false,
+            box_frame_rows: Vec::new(),
+            box_frame_free: Vec::new(),
             ch: Tab::new(),
             dr: Tab::new(),
             gd: Tab::new(),
@@ -625,7 +615,7 @@ impl Game {
 }
 impl Default for Game { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/game.ts:814 Game.rigFits, src/game/game.ts:814)
+/// (TypeScript: inline at src/game/game.ts:823 Game.rigFits, src/game/game.ts:823)
 #[derive(Clone, Debug)]
 pub struct GameRigFitsValue {
     pub r0: Vec<f32>,
@@ -642,7 +632,7 @@ impl GameRigFitsValue {
 }
 impl Default for GameRigFitsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:815 Game.rigFitOf, src/game/game.ts:815)
+/// (TypeScript: inline at src/game/game.ts:824 Game.rigFitOf, src/game/game.ts:824)
 #[derive(Clone, Debug)]
 pub struct GameRigFitOfValue {
     pub r0: Vec<f32>,
@@ -726,7 +716,7 @@ impl GameEventCause {
     }
 }
 
-/// (TypeScript: inline at quiet Game.smokeOwned, src/game/game.ts:830)
+/// (TypeScript: inline at quiet Game.smokeOwned, src/game/game.ts:839)
 #[derive(Clone, Copy, Debug)]
 pub struct GameSmokeOwned {
 }
@@ -859,6 +849,7 @@ pub struct WitnessHeard {
     pub bang: f64,
     pub small: f64,
     pub small_where: Option<V3>,
+    pub loud_at: Option<V3>,
     pub last_t: f64,
 }
 impl WitnessHeard {
@@ -871,6 +862,7 @@ impl WitnessHeard {
             bang: 0.0,
             small: 0.0,
             small_where: None,
+            loud_at: None,
             last_t: 0.0,
         }
     }
@@ -1070,49 +1062,7 @@ impl MissionStats {
 }
 impl Default for MissionStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:888 Game.reachStats, src/game/game.ts:888)
-#[derive(Clone, Copy, Debug)]
-pub struct GameReachStats {
-    pub lights: f64,
-    pub mean_fraction: f64,
-    pub ms: f64,
-}
-impl GameReachStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameReachStats {
-            lights: 0.0,
-            mean_fraction: 0.0,
-            ms: 0.0,
-        }
-    }
-}
-impl Default for GameReachStats { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/game.ts:893 Game.reachQueue, src/game/game.ts:893)
-#[derive(Clone, Debug)]
-pub struct GameReachQueueItem {
-    pub l: LightId,
-    pub rects: Option<Vec<[f64; 4]>>,
-    pub boxes: Vec<[f64; 4]>,
-    pub job: Option<crate::render_reach::ReachJob>,
-    pub restarts: f64,
-}
-impl GameReachQueueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GameReachQueueItem {
-            l: LightId(0),
-            rects: None,
-            boxes: Vec::new(),
-            job: None,
-            restarts: 0.0,
-        }
-    }
-}
-impl Default for GameReachQueueItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/game.ts:1031 Game.puppet, src/game/game.ts:1031)
+/// (TypeScript: inline at src/game/game.ts:912 Game.puppet, src/game/game.ts:912)
 #[derive(Clone, Copy, Debug)]
 pub struct GamePuppet {
     pub goal: Option<V3>,
@@ -1139,7 +1089,7 @@ impl GamePuppet {
 }
 impl Default for GamePuppet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1040 Game.alarm, src/game/game.ts:1040)
+/// (TypeScript: inline at src/game/game.ts:921 Game.alarm, src/game/game.ts:921)
 #[derive(Clone, Copy, Debug)]
 pub struct GameAlarm {
     pub episode: bool,
@@ -1162,7 +1112,7 @@ impl GameAlarm {
 }
 impl Default for GameAlarm { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1054 Game.beacons, src/game/game.ts:1054)
+/// (TypeScript: inline at src/game/game.ts:935 Game.beacons, src/game/game.ts:935)
 #[derive(Clone, Copy, Debug)]
 pub struct GameBeaconsItem {
     pub light: LightId,
@@ -1181,7 +1131,7 @@ impl GameBeaconsItem {
 }
 impl Default for GameBeaconsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1056 Game.fx, src/game/game.ts:1056)
+/// (TypeScript: inline at src/game/game.ts:937 Game.fx, src/game/game.ts:937)
 #[derive(Clone, Copy, Debug)]
 pub struct GameFxItem {
     pub box_: BoxId,
@@ -1198,7 +1148,7 @@ impl GameFxItem {
 }
 impl Default for GameFxItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1070 Game.messages, src/game/game.ts:1070)
+/// (TypeScript: inline at src/game/game.ts:951 Game.messages, src/game/game.ts:951)
 #[derive(Clone, Debug)]
 pub struct GameMessagesItem {
     pub text: String,
@@ -1218,7 +1168,7 @@ impl GameMessagesItem {
 }
 impl Default for GameMessagesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1160 Game.markLights, src/game/game.ts:1160)
+/// (TypeScript: inline at src/game/game.ts:1041 Game.markLights, src/game/game.ts:1041)
 #[derive(Clone, Debug)]
 pub struct GameMarkLightsItem {
     pub target: String,
@@ -1245,7 +1195,7 @@ impl GameMarkLightsItem {
 }
 impl Default for GameMarkLightsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1161 Game.tune, src/game/game.ts:1161)
+/// (TypeScript: inline at src/game/game.ts:1042 Game.tune, src/game/game.ts:1042)
 #[derive(Clone, Copy, Debug)]
 pub struct GameTune {
     pub devices: bool,
@@ -1401,7 +1351,7 @@ pub enum GameViewProj {
     Float32Array(Vec<f32>),
 }
 
-/// (TypeScript: Roll, src/game/game.ts:775)
+/// (TypeScript: Roll, src/game/game.ts:784)
 #[derive(Clone, Copy, Debug)]
 pub struct Roll {
     pub p: PropId,
@@ -1441,7 +1391,7 @@ impl AsideOwn {
 }
 impl Default for AsideOwn { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/game.ts:1992 Game.fogHeld, src/game/game.ts:1992)
+/// (TypeScript: inline at src/game/game.ts:1864 Game.fogHeld, src/game/game.ts:1864)
 #[derive(Clone, Debug)]
 pub struct GameFogHeld {
     pub dyn_: Vec<BoxId>,
@@ -1458,7 +1408,7 @@ impl GameFogHeld {
 }
 impl Default for GameFogHeld { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:2254 Game.doorHandRecs, src/game/game.ts:2254)
+/// (TypeScript: inline at src/game/game.ts:2126 Game.doorHandRecs, src/game/game.ts:2126)
 #[derive(Clone, Copy, Debug)]
 pub struct GameDoorHandRecsValue {
     pub door: DoorId,
@@ -2314,13 +2264,16 @@ pub struct Guard {
     pub skill: Option<crate::game::GuardSkill>,
     pub visibility: f64,
     pub irradiance: f64,
-    pub route_i: usize,
+    pub route_i: i32,
     pub wp: usize,
     pub wait: f64,
     pub awareness: f64,
     /// written whole. doze.ts:244 asks whether a new fix was written: see fix_stamp
     pub last_known: Option<V3>,
     pub last_seen_t: f64,
+    pub covers: Option<V3>,
+    pub word_t: f64,
+    pub led_at: Option<V3>,
     pub hold: bool,
     pub pinned: bool,
     pub god: bool,
@@ -2354,6 +2307,9 @@ pub struct Guard {
     pub body_fan: f64,
     pub body_duty: Option<crate::game::GuardBodyDuty>,
     pub dropped: Option<ItemId>,
+    pub handle_gate_t: f64,
+    pub stays_in_rooms: bool,
+    pub fled: bool,
     pub gun_lost_at: f64,
     pub torch_lost_at: f64,
     /// compared by identity in doorway.ts, doorpath.ts, guards.ts: see path_serial
@@ -2465,6 +2421,9 @@ impl Guard {
             awareness: 0.0,
             last_known: None,
             last_seen_t: -100.0,
+            covers: None,
+            word_t: -100.0,
+            led_at: None,
             hold: false,
             pinned: false,
             god: false,
@@ -2474,7 +2433,7 @@ impl Guard {
             down_kind: None,
             down_by: None,
             wound: None,
-            witness: crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 },
+            witness: crate::game::Witness { heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 }, peak_awareness: 0.0, alerted_by: None, alert_t: -1.0, saw_act: None, saw_body: None, called_to_body: None, saw_held: None, was_held: 0.0, dazzled: 0.0 },
             talk: GameTalkId(0),
             keys: JsSet::new(),
             missed_at: -1.0,
@@ -2498,6 +2457,9 @@ impl Guard {
             body_fan: 0.0,
             body_duty: None,
             dropped: None,
+            handle_gate_t: f64::NEG_INFINITY,
+            stays_in_rooms: false,
+            fled: false,
             gun_lost_at: -1.0,
             torch_lost_at: -1.0,
             path: Vec::new(),
@@ -2596,7 +2558,7 @@ impl GuardSkill {
 }
 impl Default for GuardSkill { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:632 Guard.held, src/game/game.ts:632)
+/// (TypeScript: inline at src/game/game.ts:638 Guard.held, src/game/game.ts:638)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardHeld {
     pub by: crate::game::GuardHeldBy,
@@ -2632,7 +2594,7 @@ impl GuardHeldBy {
     }
 }
 
-/// (TypeScript: inline at src/game/game.ts:633 Guard.bubble, src/game/game.ts:633)
+/// (TypeScript: inline at src/game/game.ts:639 Guard.bubble, src/game/game.ts:639)
 #[derive(Clone, Debug)]
 pub struct GuardBubble {
     pub text: String,
@@ -2653,7 +2615,7 @@ impl GuardBubble {
 }
 impl Default for GuardBubble { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:663 Guard.lineFail, src/game/game.ts:663)
+/// (TypeScript: inline at src/game/game.ts:669 Guard.lineFail, src/game/game.ts:669)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardLineFail {
     pub pos: V3,
@@ -2672,7 +2634,7 @@ impl GuardLineFail {
 }
 impl Default for GuardLineFail { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:672 Guard.bodyDuty, src/game/game.ts:672)
+/// (TypeScript: inline at src/game/game.ts:678 Guard.bodyDuty, src/game/game.ts:678)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardBodyDuty {
     pub body: GuardId,
@@ -2729,7 +2691,7 @@ impl GuardBodyDutyStage {
     }
 }
 
-/// (TypeScript: inline at src/game/game.ts:696 Guard.slung, src/game/game.ts:696)
+/// (TypeScript: inline at src/game/game.ts:705 Guard.slung, src/game/game.ts:705)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardSlung {
     pub own: FirearmId,
@@ -2754,7 +2716,7 @@ impl GuardSlung {
 }
 impl Default for GuardSlung { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:699 Guard.second, src/game/game.ts:699)
+/// (TypeScript: inline at src/game/game.ts:708 Guard.second, src/game/game.ts:708)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardSecond {
     pub gun: FirearmId,
@@ -2781,7 +2743,7 @@ impl GuardSecond {
 }
 impl Default for GuardSecond { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:702 Guard.bigOut, src/game/game.ts:702)
+/// (TypeScript: inline at src/game/game.ts:711 Guard.bigOut, src/game/game.ts:711)
 #[derive(Clone, Debug)]
 pub struct GuardBigOut {
     pub t0: f64,
@@ -2802,7 +2764,7 @@ impl GuardBigOut {
 }
 impl Default for GuardBigOut { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:705 Guard.workStow, src/game/game.ts:705)
+/// (TypeScript: inline at src/game/game.ts:714 Guard.workStow, src/game/game.ts:714)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardWorkStow {
     pub up_t: f64,
@@ -2819,7 +2781,7 @@ impl GuardWorkStow {
 }
 impl Default for GuardWorkStow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:769 ROLL_VOICE, src/game/game.ts:769)
+/// (TypeScript: inline at src/game/game.ts:778 ROLL_VOICE, src/game/game.ts:778)
 #[derive(Clone, Copy, Debug)]
 pub struct ROLLVOICE {
     pub gain: f64,
@@ -2840,7 +2802,7 @@ impl ROLLVOICE {
 }
 impl Default for ROLLVOICE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:773 SMOKE_STIR, src/game/game.ts:773)
+/// (TypeScript: inline at src/game/game.ts:782 SMOKE_STIR, src/game/game.ts:782)
 #[derive(Clone, Copy, Debug)]
 pub struct SMOKESTIR {
     pub body: f64,
@@ -2871,7 +2833,7 @@ impl SMOKESTIR {
 }
 impl Default for SMOKESTIR { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:752 constructor(look), src/game/game.ts:752)
+/// (TypeScript: inline at src/game/game.ts:761 constructor(look), src/game/game.ts:761)
 #[derive(Clone, Debug)]
 pub struct GuardNewLook {
     pub tint2: Option<V3>,
@@ -2892,7 +2854,7 @@ impl GuardNewLook {
 }
 impl Default for GuardNewLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1201 constructor(opts), src/game/game.ts:1201)
+/// (TypeScript: inline at src/game/game.ts:1082 constructor(opts), src/game/game.ts:1082)
 #[derive(Clone, Copy, Debug)]
 pub struct GameNewOpts {
     pub seats: Option<f64>,
@@ -2956,7 +2918,7 @@ impl GameLightEventCause {
     }
 }
 
-/// (TypeScript: inline at src/game/game.ts:1988 viewPx(cam), src/game/game.ts:1988)
+/// (TypeScript: inline at src/game/game.ts:1860 viewPx(cam), src/game/game.ts:1860)
 #[derive(Clone, Copy, Debug)]
 pub struct GameViewPxCam {
     pub distance: f64,
@@ -2973,7 +2935,7 @@ impl GameViewPxCam {
 }
 impl Default for GameViewPxCam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/game.ts:1988 viewPx(canvas), src/game/game.ts:1988)
+/// (TypeScript: inline at src/game/game.ts:1860 viewPx(canvas), src/game/game.ts:1860)
 #[derive(Clone, Copy, Debug)]
 pub struct GameViewPxCanvas {
     pub height: f64,
@@ -3023,11 +2985,14 @@ impl GameSelectVerbKind {
     }
 }
 
-/// (src/game/game.ts:41 MARK_LIGHT_MIN_I0)
+/// (src/game/game.ts:341 PLAYER_MAX_HITS)
+pub const PLAYER_MAX_HITS: f64 = 1.0;
+
+/// (src/game/game.ts:42 MARK_LIGHT_MIN_I0)
 pub const MARK_LIGHT_MIN_I0: f64 = 0.05;
 
 /// (src/game/game.ts:249 KIT_ORDER: a table nothing writes)
-pub fn kit_order() -> Vec<String> { alloc::vec![String::from("pistol"), String::from("rifle"), String::from("smoke"), String::from("flash"), String::from("frag")] }
+pub fn kit_order() -> Vec<crate::game::SlotKind> { alloc::vec![crate::game::SlotKind::Pistol, crate::game::SlotKind::Rifle, crate::game::SlotKind::Smoke, crate::game::SlotKind::Flash, crate::game::SlotKind::Frag] }
 
 /// (src/game/game.ts:296 BODY_DOOR_PARTICLES: a table nothing writes)
 pub fn body_door_particles() -> Vec<f64> { alloc::vec![0.0, 1.0, 3.0, 12.0, 13.0, 14.0, 15.0] }
@@ -3039,17 +3004,17 @@ pub fn callsigns() -> Vec<String> { alloc::vec![String::from("Kowalski"), String
 pub fn carbine_deals() -> Vec<String> { alloc::vec![String::from("none"), String::from("reyes"), String::from("all")] }
 
 /// (src/game/game.ts:516 TEMPERAMENT: a table nothing writes)
-pub fn temperament() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("Kowalski"), String::from("steady")); t.set(String::from("Novak"), String::from("nervy")); t.set(String::from("Reyes"), String::from("hard")); t.set(String::from("Okafor"), String::from("steady")); t.set(String::from("Lindqvist"), String::from("nervy")); t.set(String::from("Brandt"), String::from("hard")); t.set(String::from("Marsh"), String::from("steady")); t } }
+pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[("Kowalski", crate::game::Temperament::Steady), ("Novak", crate::game::Temperament::Nervy), ("Reyes", crate::game::Temperament::Hard), ("Okafor", crate::game::Temperament::Steady), ("Lindqvist", crate::game::Temperament::Nervy), ("Brandt", crate::game::Temperament::Hard), ("Marsh", crate::game::Temperament::Steady)] }
 
-/// (src/game/game.ts:769 ROLL_VOICE: a table nothing writes)
+/// (src/game/game.ts:778 ROLL_VOICE: a table nothing writes)
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
-/// (src/game/game.ts:773 SMOKE_STIR: a table nothing writes)
+/// (src/game/game.ts:782 SMOKE_STIR: a table nothing writes)
 pub fn smoke_stir() -> crate::game::SMOKESTIR { crate::game::SMOKESTIR { body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kick_r: 0.17, kick: 0.9, most: 2.2, gap: 0.35 } }
 
 impl Guard {
     /// (game.ts Guard's constructor) look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. foe goes None for a side not hostile to the player. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
-    pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: usize, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
+    pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: i32, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
         let mut g = Guard::blank();
         g.ch = ch; g.look_phase = look_phase; g.last_pos = pos; g.route_i = route_i; g.route = route; g.flashlight = flashlight; g.callsign = callsign;
         if let Some(t) = team { g.team = t; }
@@ -3097,11 +3062,13 @@ impl Game {
 /// the tables of things that are not at Game's top level
 #[derive(Clone, Debug)]
 pub struct Tabs {
+    pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
     pub clip: Tab<ClipId, crate::anim_gltf::Clip>,
     pub anim_gltf_mesh_data: Tab<AnimGltfMeshDataId, crate::anim_gltf::MeshData>,
     pub anim_gltf_cast_variant: Tab<AnimGltfCastVariantId, crate::anim_gltf::CastVariant>,
     pub anim_gltf_cast_info: Tab<AnimGltfCastInfoId, crate::anim_gltf::CastInfo>,
     pub rig: Tab<RigId, crate::anim_gltf::GltfCharacter>,
+    pub pose_set: Tab<PoseSetId, crate::anim_skeleton::PoseSet>,
     pub ragdoll: Tab<RagdollId, crate::ragdoll::Ragdoll>,
     pub props_prop: Tab<PropId, crate::props::Prop>,
     pub input: Tab<InputId, crate::input::Input>,
@@ -3116,8 +3083,6 @@ pub struct Tabs {
     pub wallbreak_breakable: Tab<WallbreakBreakableId, crate::wallbreak::Breakable>,
     pub furnblast_member: Tab<FurnblastMemberId, crate::furnblast::Member>,
     pub wind_wind_source: Tab<WindWindSourceId, crate::wind::WindSource>,
-    pub roomfight_def: Tab<RoomfightDefId, crate::roomfight::Def>,
-    pub roomfight_room: Tab<RoomfightRoomId, crate::roomfight::Room>,
     pub stickycam_sticky_cam: Tab<StickyCamId, crate::stickycam::StickyCam>,
     pub doortools_door_op: Tab<DoorOpId, crate::doortools::DoorOp>,
     pub orders_assignment: Tab<OrdersAssignmentId, crate::orders::Assignment>,
@@ -3127,8 +3092,11 @@ pub struct Tabs {
     pub doortools_known_threat: Tab<DoortoolsKnownThreatId, crate::doortools::KnownThreat>,
     pub doortools_set_charge: Tab<ChargeId, crate::doortools::SetCharge>,
     pub orders_order_def: Tab<OrdersOrderDefId, crate::orders::OrderDef>,
+    pub roomfight_def: Tab<RoomfightDefId, crate::roomfight::Def>,
+    pub roomfight_room: Tab<RoomfightRoomId, crate::roomfight::Room>,
     pub cover_opening: Tab<CoverOpeningId, crate::cover::Opening>,
     pub wallreact_breach: Tab<WallreactBreachId, crate::wallreact::Breach>,
+    pub lanes_lane: Tab<LanesLaneId, crate::lanes::Lane>,
     pub tactics_role: Tab<TacticsRoleId, crate::tactics::Role>,
     pub tactics_plan: Tab<TacticsPlanId, crate::tactics::Plan>,
     pub tactics_danger_rec: Tab<TacticsDangerRecId, crate::tactics::DangerRec>,
@@ -3148,11 +3116,13 @@ pub struct Tabs {
 impl Tabs {
     pub fn blank() -> Self {
         Tabs {
+            boxes: Tab::new(),
             clip: Tab::new(),
             anim_gltf_mesh_data: Tab::new(),
             anim_gltf_cast_variant: Tab::new(),
             anim_gltf_cast_info: Tab::new(),
             rig: Tab::new(),
+            pose_set: Tab::new(),
             ragdoll: Tab::new(),
             props_prop: Tab::new(),
             input: Tab::new(),
@@ -3167,8 +3137,6 @@ impl Tabs {
             wallbreak_breakable: Tab::new(),
             furnblast_member: Tab::new(),
             wind_wind_source: Tab::new(),
-            roomfight_def: Tab::new(),
-            roomfight_room: Tab::new(),
             stickycam_sticky_cam: Tab::new(),
             doortools_door_op: Tab::new(),
             orders_assignment: Tab::new(),
@@ -3178,8 +3146,11 @@ impl Tabs {
             doortools_known_threat: Tab::new(),
             doortools_set_charge: Tab::new(),
             orders_order_def: Tab::new(),
+            roomfight_def: Tab::new(),
+            roomfight_room: Tab::new(),
             cover_opening: Tab::new(),
             wallreact_breach: Tab::new(),
+            lanes_lane: Tab::new(),
             tactics_role: Tab::new(),
             tactics_plan: Tab::new(),
             tactics_danger_rec: Tab::new(),
@@ -3214,6 +3185,7 @@ pub struct Mods {
     pub scene_markings: crate::scene_markings::SceneMarkingsMod,
     pub scene_round: crate::scene_round::SceneRoundMod,
     pub scene_materials: crate::scene_materials::SceneMaterialsMod,
+    pub scene_stuff: crate::scene_stuff::SceneStuffMod,
     pub thinline: crate::thinline::ThinlineMod,
     pub scene_look: crate::scene_look::SceneLookMod,
     pub anim_gltf: crate::anim_gltf::AnimGltfMod,
@@ -3228,37 +3200,33 @@ pub struct Mods {
     pub render_char_materials: crate::render_char_materials::RenderCharMaterialsMod,
     pub render_mesh_shadows: crate::render_mesh_shadows::RenderMeshShadowsMod,
     pub anim_skeleton: crate::anim_skeleton::AnimSkeletonMod,
-    pub sim_men_store: crate::sim_men_store::SimMenStoreMod,
     pub packside: crate::packside::PacksideMod,
     pub rig_props: crate::rig_props::RigPropsMod,
-    pub math_dice: crate::math_dice::MathDiceMod,
     pub character: crate::character::CharacterMod,
     pub sim_doorshome: crate::sim_doorshome::SimDoorshomeMod,
     pub sim_slabshome: crate::sim_slabshome::SimSlabshomeMod,
-    pub props: crate::props::PropsMod,
     pub teams: crate::teams::TeamsMod,
     pub host_keymap: crate::host_keymap::HostKeymapMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
     pub kitload: crate::kitload::KitloadMod,
     pub holdfire: crate::holdfire::HoldfireMod,
+    pub owner: crate::owner::OwnerMod,
+    pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,
     pub dress: crate::dress::DressMod,
     pub sim_fallshome: crate::sim_fallshome::SimFallshomeMod,
-    pub look_decals: crate::look_decals::LookDecalsMod,
     pub sim_lightshome: crate::sim_lightshome::SimLightshomeMod,
+    pub edge_look: crate::edge_look::EdgeLookMod,
     pub wallbreak: crate::wallbreak::WallbreakMod,
     pub furnblast: crate::furnblast::FurnblastMod,
     pub doorblast: crate::doorblast::DoorblastMod,
     pub fire: crate::fire::FireMod,
-    pub edge_look: crate::edge_look::EdgeLookMod,
     pub winbars: crate::winbars::WinbarsMod,
     pub destruction: crate::destruction::DestructionMod,
     pub glass: crate::glass::GlassMod,
     pub glasspen: crate::glasspen::GlasspenMod,
-    pub netquietfeed: crate::netquietfeed::NetquietfeedMod,
-    pub netquiet: crate::netquiet::NetquietMod,
-    pub laststand: crate::laststand::LaststandMod,
+    pub wallpen: crate::wallpen::WallpenMod,
     pub doorway: crate::doorway::DoorwayMod,
     pub difficulty: crate::difficulty::DifficultyMod,
     pub stickycam: crate::stickycam::StickycamMod,
@@ -3266,9 +3234,11 @@ pub struct Mods {
     pub nightbreach: crate::nightbreach::NightbreachMod,
     pub handleside: crate::handleside::HandlesideMod,
     pub doornames: crate::doornames::DoornamesMod,
+    pub netquietfeed: crate::netquietfeed::NetquietfeedMod,
+    pub netquiet: crate::netquiet::NetquietMod,
+    pub laststand: crate::laststand::LaststandMod,
     pub stackroom: crate::stackroom::StackroomMod,
     pub rearwatch: crate::rearwatch::RearwatchMod,
-    pub wallpen: crate::wallpen::WallpenMod,
     pub coverfire: crate::coverfire::CoverfireMod,
     pub wallreact: crate::wallreact::WallreactMod,
     pub lanes: crate::lanes::LanesMod,
@@ -3276,7 +3246,6 @@ pub struct Mods {
     pub pressure: crate::pressure::PressureMod,
     pub digin: crate::digin::DiginMod,
     pub runner: crate::runner::RunnerMod,
-    pub picture: crate::picture::PictureMod,
     pub flinch: crate::flinch::FlinchMod,
     pub suppression: crate::suppression::SuppressionMod,
     pub buddy: crate::buddy::BuddyMod,
@@ -3336,8 +3305,8 @@ pub struct Mods {
     pub kit: crate::kit::KitMod,
     pub wandorder: crate::wandorder::WandorderMod,
     pub fogofwar: crate::fogofwar::FogofwarMod,
-    pub needs: crate::needs::NeedsMod,
     pub darkdoor: crate::darkdoor::DarkdoorMod,
+    pub needs: crate::needs::NeedsMod,
     pub startle: crate::startle::StartleMod,
     pub doorforce: crate::doorforce::DoorforceMod,
     pub gunhold: crate::gunhold::GunholdMod,
@@ -3361,6 +3330,7 @@ pub struct Mods {
     pub snow_fx: crate::snow_fx::SnowFxMod,
     pub rain_fx: crate::rain_fx::RainFxMod,
     pub smokebreak: crate::smokebreak::SmokebreakMod,
+    pub render_reach: crate::render_reach::RenderReachMod,
     pub snow_marks: crate::snow_marks::SnowMarksMod,
     pub showwhy: crate::showwhy::ShowwhyMod,
     pub samlook: crate::samlook::SamlookMod,
@@ -3368,7 +3338,6 @@ pub struct Mods {
     pub rollback: crate::rollback::RollbackMod,
     pub savestate: crate::savestate::SavestateMod,
     pub fixture_break: crate::fixture_break::FixtureBreakMod,
-    pub render_reach: crate::render_reach::RenderReachMod,
     pub rustknobs: crate::rustknobs::RustknobsMod,
     pub weapons: crate::weapons::WeaponsMod,
     pub smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod,
@@ -3389,6 +3358,7 @@ impl Mods {
             scene_markings: crate::scene_markings::SceneMarkingsMod::blank(),
             scene_round: crate::scene_round::SceneRoundMod::blank(),
             scene_materials: crate::scene_materials::SceneMaterialsMod::blank(),
+            scene_stuff: crate::scene_stuff::SceneStuffMod::blank(),
             thinline: crate::thinline::ThinlineMod::blank(),
             scene_look: crate::scene_look::SceneLookMod::blank(),
             anim_gltf: crate::anim_gltf::AnimGltfMod::blank(),
@@ -3403,37 +3373,33 @@ impl Mods {
             render_char_materials: crate::render_char_materials::RenderCharMaterialsMod::blank(),
             render_mesh_shadows: crate::render_mesh_shadows::RenderMeshShadowsMod::blank(),
             anim_skeleton: crate::anim_skeleton::AnimSkeletonMod::blank(),
-            sim_men_store: crate::sim_men_store::SimMenStoreMod::blank(),
             packside: crate::packside::PacksideMod::blank(),
             rig_props: crate::rig_props::RigPropsMod::blank(),
-            math_dice: crate::math_dice::MathDiceMod::blank(),
             character: crate::character::CharacterMod::blank(),
             sim_doorshome: crate::sim_doorshome::SimDoorshomeMod::blank(),
             sim_slabshome: crate::sim_slabshome::SimSlabshomeMod::blank(),
-            props: crate::props::PropsMod::blank(),
             teams: crate::teams::TeamsMod::blank(),
             host_keymap: crate::host_keymap::HostKeymapMod::blank(),
             opening: crate::opening::OpeningMod::blank(),
             weather_kinds: crate::weather_kinds::WeatherKindsMod::blank(),
             kitload: crate::kitload::KitloadMod::blank(),
             holdfire: crate::holdfire::HoldfireMod::blank(),
+            owner: crate::owner::OwnerMod::blank(),
+            picture: crate::picture::PictureMod::blank(),
             destruction_switch: crate::destruction_switch::DestructionSwitchMod::blank(),
             dress: crate::dress::DressMod::blank(),
             sim_fallshome: crate::sim_fallshome::SimFallshomeMod::blank(),
-            look_decals: crate::look_decals::LookDecalsMod::blank(),
             sim_lightshome: crate::sim_lightshome::SimLightshomeMod::blank(),
+            edge_look: crate::edge_look::EdgeLookMod::blank(),
             wallbreak: crate::wallbreak::WallbreakMod::blank(),
             furnblast: crate::furnblast::FurnblastMod::blank(),
             doorblast: crate::doorblast::DoorblastMod::blank(),
             fire: crate::fire::FireMod::blank(),
-            edge_look: crate::edge_look::EdgeLookMod::blank(),
             winbars: crate::winbars::WinbarsMod::blank(),
             destruction: crate::destruction::DestructionMod::blank(),
             glass: crate::glass::GlassMod::blank(),
             glasspen: crate::glasspen::GlasspenMod::blank(),
-            netquietfeed: crate::netquietfeed::NetquietfeedMod::blank(),
-            netquiet: crate::netquiet::NetquietMod::blank(),
-            laststand: crate::laststand::LaststandMod::blank(),
+            wallpen: crate::wallpen::WallpenMod::blank(),
             doorway: crate::doorway::DoorwayMod::blank(),
             difficulty: crate::difficulty::DifficultyMod::blank(),
             stickycam: crate::stickycam::StickycamMod::blank(),
@@ -3441,9 +3407,11 @@ impl Mods {
             nightbreach: crate::nightbreach::NightbreachMod::blank(),
             handleside: crate::handleside::HandlesideMod::blank(),
             doornames: crate::doornames::DoornamesMod::blank(),
+            netquietfeed: crate::netquietfeed::NetquietfeedMod::blank(),
+            netquiet: crate::netquiet::NetquietMod::blank(),
+            laststand: crate::laststand::LaststandMod::blank(),
             stackroom: crate::stackroom::StackroomMod::blank(),
             rearwatch: crate::rearwatch::RearwatchMod::blank(),
-            wallpen: crate::wallpen::WallpenMod::blank(),
             coverfire: crate::coverfire::CoverfireMod::blank(),
             wallreact: crate::wallreact::WallreactMod::blank(),
             lanes: crate::lanes::LanesMod::blank(),
@@ -3451,7 +3419,6 @@ impl Mods {
             pressure: crate::pressure::PressureMod::blank(),
             digin: crate::digin::DiginMod::blank(),
             runner: crate::runner::RunnerMod::blank(),
-            picture: crate::picture::PictureMod::blank(),
             flinch: crate::flinch::FlinchMod::blank(),
             suppression: crate::suppression::SuppressionMod::blank(),
             buddy: crate::buddy::BuddyMod::blank(),
@@ -3511,8 +3478,8 @@ impl Mods {
             kit: crate::kit::KitMod::blank(),
             wandorder: crate::wandorder::WandorderMod::blank(),
             fogofwar: crate::fogofwar::FogofwarMod::blank(),
-            needs: crate::needs::NeedsMod::blank(),
             darkdoor: crate::darkdoor::DarkdoorMod::blank(),
+            needs: crate::needs::NeedsMod::blank(),
             startle: crate::startle::StartleMod::blank(),
             doorforce: crate::doorforce::DoorforceMod::blank(),
             gunhold: crate::gunhold::GunholdMod::blank(),
@@ -3536,6 +3503,7 @@ impl Mods {
             snow_fx: crate::snow_fx::SnowFxMod::blank(),
             rain_fx: crate::rain_fx::RainFxMod::blank(),
             smokebreak: crate::smokebreak::SmokebreakMod::blank(),
+            render_reach: crate::render_reach::RenderReachMod::blank(),
             snow_marks: crate::snow_marks::SnowMarksMod::blank(),
             showwhy: crate::showwhy::ShowwhyMod::blank(),
             samlook: crate::samlook::SamlookMod::blank(),
@@ -3543,7 +3511,6 @@ impl Mods {
             rollback: crate::rollback::RollbackMod::blank(),
             savestate: crate::savestate::SavestateMod::blank(),
             fixture_break: crate::fixture_break::FixtureBreakMod::blank(),
-            render_reach: crate::render_reach::RenderReachMod::blank(),
             rustknobs: crate::rustknobs::RustknobsMod::blank(),
             weapons: crate::weapons::WeaponsMod::blank(),
             smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod::blank(),
@@ -3559,12 +3526,13 @@ pub struct Stats {
     pub cmdring: crate::cmdring::CmdringStats,
     pub workstow: crate::workstow::WorkstowStats,
     pub holdfire: crate::holdfire::HoldfireStats,
+    pub picture: crate::picture::PictureStats,
     pub shards: crate::shards::ShardsStats,
     pub carlamps: crate::carlamps::CarlampsStats,
+    pub edge_look: crate::edge_look::EdgeLookStats,
     pub wallbreak: crate::wallbreak::WallbreakStats,
     pub furnblast: crate::furnblast::FurnblastStats,
     pub doorblast: crate::doorblast::DoorblastStats,
-    pub edge_look: crate::edge_look::EdgeLookStats,
     pub winbars: crate::winbars::WinbarsStats,
     pub destruction: crate::destruction::DestructionStats,
     pub floormess: crate::floormess::FloormessStats,
@@ -3572,23 +3540,22 @@ pub struct Stats {
     pub wind: crate::wind::WindStats,
     pub glassbreak: crate::glassbreak::GlassbreakStats,
     pub glasspen: crate::glasspen::GlasspenStats,
-    pub netquiet: crate::netquiet::NetquietStats,
+    pub wallpen: crate::wallpen::WallpenStats,
     pub doorway: crate::doorway::DoorwayStats,
     pub gunroles: crate::gunroles::GunrolesStats,
     pub stickycam: crate::stickycam::StickycamStats,
     pub handleside: crate::handleside::HandlesideStats,
     pub aimcost: crate::aimcost::AimcostStats,
+    pub netquiet: crate::netquiet::NetquietStats,
     pub stackroom: crate::stackroom::StackroomStats,
     pub rearwatch: crate::rearwatch::RearwatchStats,
     pub roomfit: crate::roomfit::RoomfitStats,
-    pub wallpen: crate::wallpen::WallpenStats,
     pub gunslots: crate::gunslots::GunslotsStats,
     pub coverfire: crate::coverfire::CoverfireStats,
     pub wallreact: crate::wallreact::WallreactStats,
     pub tactics: crate::tactics::TacticsStats,
     pub digin: crate::digin::DiginStats,
     pub runner: crate::runner::RunnerStats,
-    pub picture: crate::picture::PictureStats,
     pub flinch: crate::flinch::FlinchStats,
     pub condition: crate::condition::ConditionStats,
     pub clearline: crate::clearline::ClearlineStats,
@@ -3639,8 +3606,8 @@ pub struct Stats {
     pub squad40: crate::squad40::Squad40Stats,
     pub wandorder: crate::wandorder::WandorderStats,
     pub peeksight: crate::peeksight::PeeksightStats,
-    pub needs: crate::needs::NeedsStats,
     pub darkdoor: crate::darkdoor::DarkdoorStats,
+    pub needs: crate::needs::NeedsStats,
     pub startle: crate::startle::StartleStats,
     pub doorforce: crate::doorforce::DoorforceStats,
     pub civilians: crate::civilians::CiviliansStats,

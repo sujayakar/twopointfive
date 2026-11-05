@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn sponge_boxes(out: &mut Vec<BoxId>, c_2: V3, rot: Quat, yaw: f64) { todo!() }
 
 /// (src/game/throwables.ts:140 Item.constructor)
-pub fn item_new(g: &mut crate::game::Game, r: f64, things: &[PropId]) -> ItemId { todo!() }
+pub fn item_new(g: &mut crate::game::Game, r: f64) -> ItemId { todo!() }
 
 /// (src/game/throwables.ts:142 Item.row)
 pub fn item_row(g: &mut crate::game::Game, id: ItemId) -> f64 { todo!() }

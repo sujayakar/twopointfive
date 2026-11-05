@@ -68,7 +68,7 @@ pub fn start_key(g: &mut crate::game::Game) -> String {
         None => "none",
     };
     let cast: Vec<String> = crate::orders::squad_orders_squad(g).iter().map(|m| g.gd[*m].callsign.clone()).collect();
-    format!("{}|{}|{},{}", scenario, cast.join(","), round_words(m::round(p[0] * 2.0)), round_words(m::round(p[2] * 2.0)))
+    format!("{}|{}|{},{}", scenario, cast.join(","), js::num_str(m::round(p[0] * 2.0)), js::num_str(m::round(p[2] * 2.0)))
 }
 
 /// The living men of the squad a laid order names. (planlay.ts layMen)
@@ -98,9 +98,9 @@ pub fn lay_point(g: &mut crate::game::Game, o: &crate::planlay::LaidOrder) -> Op
 }
 
 /// A laid order's target as the menu would hand it to give() now (None: its door or man is gone). (planlay.ts targetOf)
-pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::planlay::TargetOf> {
-    use crate::orders::{OrderTargetDoor, OrderTargetFloor, OrderTargetNone};
-    use crate::planlay::{LaidWhereFound, LaidWhereKind, TargetOf};
+pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::orders::OrderTarget> {
+    use crate::orders::{OrderTarget, OrderTargetDoor, OrderTargetFloor, OrderTargetNone};
+    use crate::planlay::{LaidWhereFound, LaidWhereKind};
     let at: V3 = [o.at[0], 0.0, o.at[2]];
     if o.kind == LaidWhereKind::Door {
         let d = door_at(g, o.door)?;
@@ -108,42 +108,36 @@ pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Op
         let ch = g.pl[g.player].ch;
         let p = g.ch[ch].pos;
         let side = crate::orders::side_of(g, d, p);
-        return Some(TargetOf::Door(OrderTargetDoor { at: [c[0], 0.0, c[2]], door: d, side }));
+        return Some(OrderTarget::Door(OrderTargetDoor { at: [c[0], 0.0, c[2]], door: d, side }));
     }
     if o.kind == LaidWhereKind::None {
         let man = match o.man.as_deref() {
-            None | Some("") => return Some(TargetOf::None(OrderTargetNone { at, man: None })),
+            None | Some("") => return Some(OrderTarget::None(OrderTargetNone { at, man: None })),
             Some(man) => man,
         };
         let s = crate::orders::squad_orders_squad(g);
         let m = s.iter().copied().find(|x| g.gd[*x].callsign == man && g.gd[*x].state != crate::game::GuardState::Dead)?;
         let p = g.ch[g.gd[m].ch].pos;
-        return Some(TargetOf::None(OrderTargetNone { at: [p[0], 0.0, p[2]], man: Some(m) }));
+        return Some(OrderTarget::None(OrderTargetNone { at: [p[0], 0.0, p[2]], man: Some(m) }));
     }
     // a wall's or a thing's own order is found again by the point ON it (serial 0: a target made here is no menu's own)
     if let (Some(LaidWhereFound::Wall), Some(pick)) = (o.found, o.pick) {
         let w = crate::wallcharge::wall_at(g, pick, None)?;
-        return Some(TargetOf::Floor(OrderTargetFloor { at, wall: Some(w), thing: None, serial: 0 }));
+        return Some(OrderTarget::Floor(OrderTargetFloor { at, wall: Some(w), thing: None, serial: 0 }));
     }
     if let (Some(LaidWhereFound::Thing), Some(pick)) = (o.found, o.pick) {
         let w = crate::workthings::work_near(g, pick)?;
         return match w.target {
-            crate::orders::OrderTarget::Floor(f) if f.thing.is_some() => Some(TargetOf::Floor(f)),
+            OrderTarget::Floor(f) if f.thing.is_some() => Some(OrderTarget::Floor(f)),
             _ => None,
         };
     }
-    Some(TargetOf::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 }))
+    Some(OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 }))
 }
 
 /// `target_of`, for the other modules. (planlay.ts layTarget)
-pub fn lay_target(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::planlay::LayTarget> {
-    use crate::planlay::{LayTarget, TargetOf};
-    target_of(g, o).map(|t| match t {
-        TargetOf::Floor(x) => LayTarget::Floor(x),
-        TargetOf::Door(x) => LayTarget::Door(x),
-        TargetOf::None(x) => LayTarget::None(x),
-        TargetOf::Foe(x) => LayTarget::Foe(x),
-    })
+pub fn lay_target(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Option<crate::orders::OrderTarget> {
+    target_of(g, o)
 }
 
 /// Those callsigns off every laid order; one with nobody left is gone. Returns how many orders lost a name. (planlay.ts strike)
@@ -183,7 +177,7 @@ pub fn lay_order(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orde
         return Some(String::from("nobody to take it"));
     }
     if g.tab.orders_order_def[d].only.is_some() {
-        let o = seam_order_def_only(g, d, &asked, t);
+        let o = crate::orders::order_only(g, d, &asked, t);
         if !o.is_empty() {
             asked = o;
         }
@@ -194,7 +188,7 @@ pub fn lay_order(g: &mut crate::game::Game, d: OrdersOrderDefId, t: &crate::orde
     let all: Vec<GuardId> = if g.tab.orders_order_def[d].can.is_some() {
         let mut able = Vec::new();
         for m in asked.iter().copied() {
-            match seam_order_def_can(g, d, m, &tm) {
+            match crate::orders::order_can(g, d, m, &tm) {
                 None => able.push(m),
                 Some(w) => cant.push((m, w)),
             }
@@ -303,7 +297,7 @@ pub fn lay_send(g: &mut crate::game::Game) -> f64 {
     let mut items: Vec<Item> = Vec::with_capacity(plan.len());
     for o in plan {
         let men = lay_men(g, &o);
-        let t = target_of(g, &where_of(&o)).map(order_target);
+        let t = target_of(g, &where_of(&o));
         let d = g.orders.defs.iter().copied().find(|x| g.tab.orders_order_def[*x].id == o.id);
         let on_word = d.map_or(false, |d| g.tab.orders_order_def[d].on_word.unwrap_or(false));
         let tool = on_word && crate::orders::squad_orders_big(g) && matches!(t, Some(crate::orders::OrderTarget::Door(_)));
@@ -326,7 +320,7 @@ pub fn lay_send(g: &mut crate::game::Game) -> f64 {
             }
         };
         let tail = g.orders.log.last().map(|r| r.serial);
-        let who = give_who(g.orders.who);
+        let who = g.orders.who;
         let opts = crate::orders::GiveOpts { ack: None, on_word: Some(x.tool && wait), men: Some(x.men.clone()) };
         let no = crate::orders::squad_orders_give(g, &x.o.id, Some(t), Some(who), Some(&opts));
         if no.is_some() {
@@ -473,28 +467,6 @@ fn where_of(o: &crate::planlay::LaidOrder) -> crate::planlay::LaidWhere {
     }
 }
 
-/// The order book's own word for a target.
-fn order_target(t: crate::planlay::TargetOf) -> crate::orders::OrderTarget {
-    use crate::planlay::TargetOf;
-    match t {
-        TargetOf::Floor(x) => crate::orders::OrderTarget::Floor(x),
-        TargetOf::Door(x) => crate::orders::OrderTarget::Door(x),
-        TargetOf::None(x) => crate::orders::OrderTarget::None(x),
-        TargetOf::Foe(x) => crate::orders::OrderTarget::Foe(x),
-    }
-}
-
-/// `S.who` as give() takes it.
-fn give_who(w: crate::orders::Who) -> crate::orders::SquadOrdersGiveWho {
-    use crate::orders::{SquadOrdersGiveWho, Who};
-    match w {
-        Who::Num(n) => SquadOrdersGiveWho::Num(n),
-        Who::All => SquadOrdersGiveWho::All,
-        Who::Red => SquadOrdersGiveWho::Red,
-        Who::Blue => SquadOrdersGiveWho::Blue,
-    }
-}
-
 /// Every man of this door tool is already on its door, and the door's men are set. (planlay.ts laySend there)
 fn there(g: &mut Game, x: &Item) -> bool {
     let Some(crate::orders::OrderTarget::Door(t)) = &x.t else { return false };
@@ -515,21 +487,6 @@ fn without_count(label: &str) -> &str {
         }
     }
     label
-}
-
-/// `${x}` of a whole number below 1e21: −0 is written "0".
-fn round_words(x: f64) -> String {
-    if x == 0.0 { String::from("0") } else { format!("{}", x) }
-}
-
-/// `d.only(S, men, t)`: OrderOnly has its arms, but skeleton 4 has no function that runs them. (planlay.ts:107)
-fn seam_order_def_only(g: &mut Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    todo!("needs: a function of crate::orders that runs OrderDef.only's arm")
-}
-
-/// `d.can(S, m, t)`: None is `true`, Some is the man's word for why not; OrderCan has its arms, but skeleton 4 has no function that runs them. (planlay.ts:110)
-fn seam_order_def_can(g: &mut Game, d: OrdersOrderDefId, m: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
-    todo!("needs: a function of crate::orders that runs OrderDef.can's arm")
 }
 
 #[cfg(test)]
@@ -583,13 +540,5 @@ mod tests {
             assert_eq!(js::to_fixed(x, 1), s, "{x}");
         }
         assert_eq!(js::to_fixed(f64::NAN, 1), "NaN");
-    }
-
-    #[test]
-    fn a_round_number_is_written_as_the_language_does() {
-        assert_eq!(round_words(-0.0), "0");
-        assert_eq!(round_words(0.0), "0");
-        assert_eq!(round_words(3.0), "3");
-        assert_eq!(round_words(-14.0), "-14");
     }
 }

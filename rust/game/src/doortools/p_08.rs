@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 2963 to 3312
+//! src/game/doortools.ts lines 2964 to 3313
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -28,30 +28,6 @@ fn where_of(g: &mut Game, m: GuardId) -> V3 {
 fn pods_of(g: &Game, m: GuardId, out: &mut Vec<V3>) {
     for &o in g.door_tools.ops.iter() {
         if let Some(q) = g.tab.doortools_door_op[o].pod.get(m) { out.push(q.pos); }
-    }
-}
-
-/// Number.prototype.toFixed(2): exact, a tie going away from zero, -0 without its sign
-fn fixed2(x: f64) -> String {
-    let a = m::abs(x);
-    let e = a * 8.0;
-    let tie = m::floor(e) == e && js::rem(e, 2.0) == 1.0;
-    format!("{}{:.2}", if x < 0.0 { "-" } else { "" }, if tie { a + 0.001 } else { a })
-}
-
-/// the walks' memo of one deal (the closure DoorTools.walks answers)
-struct Walks { memo: JsMap<String, f64>, lim: f64 }
-impl Walks {
-    fn new(g: &Game) -> Walks {
-        let k = &g.k.doortools;
-        Walks { memo: JsMap::new(), lim: m::max_n(&[k.buddy_m, k.buddy_pair_m, k.buddy_left_m]) }
-    }
-    fn len(&mut self, g: &mut Game, a: V3, b: V3) -> f64 {
-        let key = format!("{},{}>{},{}", fixed2(a[0]), fixed2(a[2]), fixed2(b[0]), fixed2(b[2]));
-        if let Some(l) = self.memo.get(key.clone()) { return *l; }
-        let l = door_tools_walk_len(g, a, b, self.lim);
-        self.memo.set(key, l);
-        l
     }
 }
 
@@ -151,8 +127,26 @@ pub fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) ->
     if l > lim { f64::INFINITY } else { l }
 }
 
-/// walkLen for one deal's questions, each pair measured once (doortools.ts DoorTools.walks). The answer is a closure: this file's `Walks` is it.
-pub fn door_tools_walks(g: &mut crate::game::Game) -> crate::FnField { todo!("needs: a return type that holds the memo (FnField cannot be called)") }
+/// walkLen for one deal's questions, each pair measured once, to the longest reach DOORTOOLS.buddy asks about (doortools.ts DoorTools.walks)
+pub fn door_tools_walks(g: &mut crate::game::Game) -> crate::doortools::Walks {
+    let k = &g.k.doortools;
+    Walks::Memo { memo: JsMap::new(), lim: m::max_n(&[k.buddy_m, k.buddy_pair_m, k.buddy_left_m]) }
+}
+
+/// walks: the memo's key: `${k(a)}>${k(b)}`, k being `${p[0].toFixed(2)},${p[2].toFixed(2)}`
+fn walk_key(a: V3, b: V3) -> String {
+    format!("{},{}>{},{}", js::to_fixed(a[0], 2), js::to_fixed(a[2], 2), js::to_fixed(b[0], 2), js::to_fixed(b[2], 2))
+}
+
+/// the call of what walks answers: a pair of places measured once a deal (doortools.ts DoorTools.walks, its closure)
+pub fn door_tools_walks_len(g: &mut crate::game::Game, w: &mut crate::doortools::Walks, a: V3, b: V3) -> f64 {
+    let Walks::Memo { memo, lim } = w;
+    let key = walk_key(a, b);
+    if let Some(l) = memo.get(key.clone()) { return *l; }
+    let l = door_tools_walk_len(g, a, b, *lim);
+    memo.set(key, l);
+    l
+}
 
 /// away(): mateOf: the man of `m`'s pair among the squad and `gd`
 fn mate_of(g: &mut Game, squad: &[GuardId], gd: GuardId, m: GuardId) -> Option<GuardId> {
@@ -248,7 +242,7 @@ pub fn door_tools_away(g: &mut crate::game::Game, gd: GuardId, p: V3, pool: &[Gu
     let others: Vec<GuardId> = base.iter().copied().filter(|&m| Some(m) != mate).collect();
     if mate.is_some() && others.is_empty() { g.door_tools.away_why = String::from("nobody would stay behind the two"); return DoorToolsAway::No; }
     if (!others.is_empty() || !sam.is_empty()) && !reach(g, &others, buddy_pair_m, &sam, p, where_, len) {
-        g.door_tools.away_why = format!("past {} m from the rest", buddy_pair_m);
+        g.door_tools.away_why = format!("past {} m from the rest", js::num_str(buddy_pair_m));
         g.door_tools.away_far = true;
         return DoorToolsAway::No;
     }
@@ -299,18 +293,16 @@ pub fn door_tools_beside_pod(g: &mut crate::game::Game, p: V3, face: f64, mate: 
     Some(pod_at(best, yaw))
 }
 
-/// an entry's man sent on to a point of the room it is still looking over (doortools.ts DoorTools.sendOn). `this.assign` written out: `shy: null` over its `shy: op.door`, which DoorToolsAssignA cannot say
+/// an entry's man sent on to a point of the room it is still looking over (doortools.ts DoorTools.sendOn)
 pub fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod: &mut crate::entrypoints::Pod, going: &str) {
-    let (door, kind) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.kind) };
+    let door = g.tab.doortools_door_op[op].door;
     g.tab.doortools_door_op[op].pod.set(gd, *pod);
     g.tab.doortools_door_op[op].on_pod.delete(gd);
-    let a = crate::orders::SquadOrdersAssignA {
-        order: String::from(kind.as_str()),
-        door: Some(door),
+    let a = crate::doortools::DoorToolsAssignA {
         post: Some(pod.pos),
         face: Some(pod.face),
         watch: None,
-        shy: None,
+        shy: Some(None),
         thru: Some(door),
         pace: Some(g.orders.knobs.entry),
         stance: Some(crate::character::Stance::None),
@@ -321,9 +313,7 @@ pub fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, 
         there: String::from("holding the room"),
         ..Default::default()
     };
-    crate::orders::squad_orders_assign(g, gd, &a);
-    let mine = crate::orders::squad_orders_of(g, gd).unwrap();
-    g.tab.doortools_door_op[op].mine.set(gd, mine);
+    door_tools_assign(g, op, gd, &a);
 }
 
 /// is this room's floor one the whole-room rule works? A room past the size is said once an order (doortools.ts DoorTools.flows)
@@ -333,7 +323,7 @@ pub fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRo
     if !(flow_max > 0.0) || cells as f64 <= flow_max { return true; }
     if !g.door_tools.big_said.has(op) {
         g.door_tools.big_said.add(op);
-        door_tools_beat(g, op, &format!("flow: no · a room of {} cells is looked over, not gone through (flowMax {})", cells, flow_max));
+        door_tools_beat(g, op, &format!("flow: no · a room of {} cells is looked over, not gone through (flowMax {})", cells, js::num_str(flow_max)));
     }
     false
 }
@@ -528,8 +518,8 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
             two = Some((ca.p, cb.p));
         }
     }
-    let mut walks = Walks::new(g);
-    let mut len = |g: &mut Game, a: V3, b: V3| walks.len(g, a, b);
+    let mut walks = door_tools_walks(g);
+    let mut len = |g: &mut Game, a: V3, b: V3| door_tools_walks_len(g, &mut walks, a, b);
     let mut where_ = |g: &mut Game, who: GuardId| where_of(g, who);
     let mut on_door = |g: &mut Game, who: GuardId| alive(g, who) && g.tab.doortools_door_op[op].men.contains(&who) && !has_over(g, who) && door_tools_on_other(g, op, who);
     let mut in_room = |g: &mut Game, p: V3| cell_of(g, at, p[0], p[2]).is_some();
@@ -674,8 +664,8 @@ pub fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Doortools
         let c = crate::scene_collision::nav_grid_idx(g, m::floor(q[0] / cell), m::floor(q[2] / cell));
         g.tab.roomfight_room[room].cells.has(crate::Num(c))
     };
-    let mut walks = Walks::new(g);
-    let mut len = |g: &mut Game, a: V3, b: V3| walks.len(g, a, b);
+    let mut walks = door_tools_walks(g);
+    let mut len = |g: &mut Game, a: V3, b: V3| door_tools_walks_len(g, &mut walks, a, b);
     let mut where_ = |g: &mut Game, who: GuardId| where_of(g, who);
     let mut refused = false;
     let mut seen_at: JsMap<usize, f64> = JsMap::new();
@@ -728,8 +718,7 @@ pub fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: Doortools
         let chosen = if swap { cl.unwrap() } else { top };
         let best = chosen.p;
         let mut pod = pod_at([best[0], 0.0, best[2]], v3::yaw_to(best, mid));
-        // (swapped takes a copy: the mark it stands for is on the point, read by dealt)
-        if swap { pod.moved = true; crate::entrypoints::entry_points_swapped(g, pod); }
+        if swap { crate::entrypoints::entry_points_swapped(g, &mut pod); }
         crate::entrypoints::entry_points_dealt(g, pod, None);
         {
             let s = search(g, sr);
@@ -1021,11 +1010,14 @@ pub fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// the TypeScript's own strings: node, (x).toFixed(2)
+    /// the TypeScript's own strings: node, `${a[0].toFixed(2)},${a[2].toFixed(2)}>${b[0].toFixed(2)},${b[2].toFixed(2)}`
     #[test]
-    fn fixed2_is_to_fixed() {
-        for (x, s) in [(0.125, "0.13"), (-0.125, "-0.13"), (0.375, "0.38"), (1.125, "1.13"), (1.005, "1.00"), (2.5, "2.50"), (-0.0, "0.00"), (-0.001, "-0.00"), (12.345, "12.35"), (0.0, "0.00"), (7.0625, "7.06")] {
-            assert_eq!(fixed2(x), s);
-        }
+    fn walk_key_is_the_typescripts() {
+        for (a, b, s) in KEYS { assert_eq!(walk_key(a, b), s); }
     }
+    const KEYS: [(V3, V3, &str); 3] = [
+        ([0.125, 9.0, -0.125], [1.005, 0.0, 2.5], "0.13,-0.13>1.00,2.50"),
+        ([-0.0, 1.0, -0.001], [12.345, 0.0, 7.0625], "0.00,-0.00>12.35,7.06"),
+        ([0.375, 0.0, 1.125], [100.0, 0.0, -3.14159], "0.38,1.13>100.00,-3.14"),
+    ];
 }

@@ -1,4 +1,4 @@
-//! src/game/tactics.ts lines 446 to 875
+//! src/game/tactics.ts lines 447 to 876
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -19,9 +19,13 @@ fn plan_role_kind(g: &Game, plan: TacticsPlanId, m: GuardId) -> Option<RoleKind>
     Some(g.tab.tactics_role[r].kind)
 }
 
+/// `gd.path = []; gd.pathGoal = null`: a whole new path is a new serial, and the standoff's point is no longer his goal
 fn clear_path(g: &mut Game, gd: GuardId) {
-    g.gd[gd].path = Vec::new();
-    g.gd[gd].path_goal = None;
+    let m = &mut g.gd[gd];
+    m.path = Vec::new();
+    m.path_serial = m.path_serial.wrapping_add(1);
+    m.path_goal = None;
+    m.path_goal_orbit = false;
 }
 
 fn pos_of(g: &Game, gd: GuardId) -> V3 {
@@ -42,8 +46,8 @@ fn head_or_pos(g: &Game, gd: GuardId) -> V3 {
     }
 }
 
-/// what tacticsPenalty's answer charges for stepping into cell (ix, iz)   (tactics.ts tacticsPenalty, the closure it returns)
-fn penalty_price(p: &TacticsPenalty, ix: f64, iz: f64) -> f64 {
+/// what tacticsPenalty's answer charges for stepping into cell (ix, iz)   (tactics.ts:361 tacticsPenalty, the closure it returns)
+pub fn tactics_penalty_price(p: &crate::tactics::TacticsPenalty, ix: f64, iz: f64) -> f64 {
     let TacticsPenalty::Cells { w, door_idx, door_mult, avoid } = p;
     let i = crate::Num(iz * *w + ix);
     let mut price = 1.0;
@@ -54,11 +58,6 @@ fn penalty_price(p: &TacticsPenalty, ix: f64, iz: f64) -> f64 {
         price = m::max(price, CORRIDOR_COST);
     }
     price
-}
-
-/// a member still fit to hold a role: free, alert, a fix, his man not down   (tactics.ts fitForRole)
-pub fn fit_for_role(g: &mut crate::game::Game, m: GuardId) -> bool {
-    free_man(g, m) && g.gd[m].state == crate::game::GuardState::Alert && g.gd[m].last_known.is_some() && !crate::teams::foe_down(g, m) && !(g.time < g.gd[m].dazzled_until)
 }
 
 /// Once a frame: keep every plan honest and deal new ones.   (tactics.ts tickPlans)
@@ -111,7 +110,7 @@ pub fn tick_plans(g: &mut crate::game::Game) {
         if flat(fix, g.tab.tactics_plan[plan].target) > REPLAN_M && now - g.tab.tactics_plan[plan].replanned_at > REPLAN_GAP_SECS {
             for &m in &live {
                 if m != fresh {
-                    g.gd[m].last_known = Some(v3::copy(fix));
+                    crate::belief::word(g, m, fix);
                 }
             }
             if now - g.tab.tactics_plan[plan].last_radio_t > 4.0 {
@@ -215,7 +214,7 @@ pub fn tick_plans(g: &mut crate::game::Game) {
         for &o in &group {
             used.add(o);
             if o != seed && flat(g.gd[o].last_known.unwrap(), seed_fix) > SHARE_M {
-                g.gd[o].last_known = Some(v3::copy(seed_fix));
+                crate::belief::word(g, o, seed_fix);
             }
         }
         plan_approach(g, &group, seed_fix, Some("formed"), None);
@@ -511,7 +510,7 @@ pub fn lone_corner(g: &mut crate::game::Game, gd: GuardId, fix: V3) -> crate::ta
     let pen = tactics_penalty(g, gd, fix);
     let path = match &pen {
         Some(p) => {
-            let mut price = |_: &mut Game, ix: f64, iz: f64| penalty_price(p, ix, iz);
+            let mut price = |_: &mut Game, ix: f64, iz: f64| tactics_penalty_price(p, ix, iz);
             crate::scene_collision::nav_grid_find_path(g, from, fix, Some(6000.0), Some(&mut price))
         }
         None => crate::scene_collision::nav_grid_find_path(g, from, fix, Some(6000.0), None),
@@ -601,7 +600,7 @@ pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics:
         let was_calm = matches!(man.state, crate::game::GuardState::Patrol | crate::game::GuardState::Suspicious | crate::game::GuardState::Search);
         g.gd[o].awareness = m::max(g.gd[o].awareness, 0.92);
         if was_calm || g.gd[o].last_known.is_none() {
-            g.gd[o].last_known = Some(v3::copy(l.fix));
+            crate::belief::word(g, o, l.fix);
         }
         if was_calm {
             let near = m::min(1.2, flat(pos_of(g, o), pos_of(g, gd)) / 25.0);
@@ -1075,10 +1074,13 @@ pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
     {
         let b = &mut g.gd[best];
         b.last_known = Some(v3::copy(spot));
+        b.fix_stamp = b.fix_stamp.wrapping_add(1);
         b.awareness = m::max(b.awareness, 0.5);
         b.search_t = 0.0;
         b.path = Vec::new();
+        b.path_serial = b.path_serial.wrapping_add(1);
         b.path_goal = None;
+        b.path_goal_orbit = false;
         b.stall_ref = None;
         b.body_duty = None;
         b.search_plan = None;
@@ -1328,15 +1330,15 @@ mod tests {
     fn a_cell_costs_the_dearer_of_its_two_lists() {
         // a grid 4 wide: cell (1, 1) is 5, (2, 1) is 6, (3, 1) is 7
         let p = TacticsPenalty::Cells { w: 4.0, door_idx: Some(cells(&[5.0, 7.0])), door_mult: 20.0, avoid: Some(cells(&[6.0, 7.0])) };
-        assert_eq!(penalty_price(&p, 1.0, 1.0), 20.0);
-        assert_eq!(penalty_price(&p, 2.0, 1.0), CORRIDOR_COST);
-        assert_eq!(penalty_price(&p, 3.0, 1.0), 20.0);
-        assert_eq!(penalty_price(&p, 0.0, 0.0), 1.0);
+        assert_eq!(tactics_penalty_price(&p, 1.0, 1.0), 20.0);
+        assert_eq!(tactics_penalty_price(&p, 2.0, 1.0), CORRIDOR_COST);
+        assert_eq!(tactics_penalty_price(&p, 3.0, 1.0), 20.0);
+        assert_eq!(tactics_penalty_price(&p, 0.0, 0.0), 1.0);
     }
 
     #[test]
     fn a_price_with_no_lists_is_plain_floor() {
         let p = TacticsPenalty::Cells { w: 4.0, door_idx: None, door_mult: 20.0, avoid: None };
-        assert_eq!(penalty_price(&p, 3.0, 2.0), 1.0);
+        assert_eq!(tactics_penalty_price(&p, 3.0, 2.0), 1.0);
     }
 }

@@ -15,7 +15,7 @@ pub fn loud_now(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn impulses_on(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/destruction.ts:165 loadChaos)
-pub fn load_chaos(g: &mut crate::game::Game, tune: &mut crate::destruction::ChaosTune) { todo!() }
+pub fn load_chaos(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/destruction.ts:170 saveChaos)
 pub fn save_chaos(g: &mut crate::game::Game) { todo!() }
@@ -36,7 +36,7 @@ pub fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 { todo!() }
 pub fn dlog(g: &mut crate::game::Game, s: &str) { todo!() }
 
 /// (src/game/destruction.ts:197 RateCap.constructor)
-pub fn rate_cap_new(n: &crate::destruction::RateCapN) -> crate::destruction::RateCap { todo!() }
+pub fn rate_cap_new(n: crate::destruction::RateCapN) -> crate::destruction::RateCap { todo!() }
 
 /// (src/game/destruction.ts:198 RateCap.take)
 pub fn rate_cap_take(this: &mut crate::destruction::RateCap, t: f64, k: &crate::knobs::ChaosK) -> bool { todo!() }
@@ -96,7 +96,7 @@ pub fn destruction_reset(g: &mut crate::game::Game) { todo!() }
 pub fn destruction_clear_moving(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/destruction.ts:391 Destruction.round)
-pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &mut crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) { todo!() }
+pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) { todo!() }
 
 /// (src/game/destruction.ts:441 Destruction.blast)
 pub fn destruction_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> crate::wallbreak::BlastResult { todo!() }
@@ -120,7 +120,7 @@ pub fn destruction_furn_blast(g: &mut crate::game::Game, at: V3, src: crate::fur
 pub fn destruction_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> { todo!() }
 
 /// (src/game/destruction.ts:495 Destruction.onBlast)
-pub fn destruction_on_blast(g: &mut crate::game::Game, fn_: &crate::destruction::BlastListener) { todo!() }
+pub fn destruction_on_blast(g: &mut crate::game::Game, fn_: crate::destruction::BlastListener) { todo!() }
 
 /// (src/game/destruction.ts:499 Destruction.dropItem)
 pub fn destruction_drop_item(g: &mut crate::game::Game, i: f64, dirn: V3, who: Option<f64>, quiet: Option<bool>) -> bool { todo!() }

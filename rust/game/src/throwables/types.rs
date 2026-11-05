@@ -120,7 +120,6 @@ pub struct Item {
     pub on_bounce: Option<crate::throwables::ItemBounce>,
     pub clatters: Option<f64>,
     pub hand: Option<bool>,
-    pub things: Vec<PropId>,
 }
 impl Item {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -132,7 +131,6 @@ impl Item {
             on_bounce: None,
             clatters: None,
             hand: None,
-            things: Vec::new(),
         }
     }
 }

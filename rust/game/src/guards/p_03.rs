@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 806 to 1128
+//! src/game/guards.ts lines 809 to 1131
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -64,7 +64,7 @@ pub fn forget_guard_clocks(g: &mut crate::game::Game) {
 }
 
 /// The pair in this man's open view: either body's chest or head inside his cone and range with nothing solid between. (guards.ts pairInView)
-pub fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &mut crate::guards::Pair) -> bool {
+pub fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair) -> bool {
     if g.player_invisible || g.time < g.gd[gd].dazzled_until || g.gd[gd].smoke_trans < 0.3 || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd) {
         return false;
     }
@@ -107,7 +107,7 @@ pub fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &mut crate::guard
 }
 
 /// What a watching man's eye gets off the pair. (guards.ts pairSightRate)
-pub fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &mut crate::guards::Pair, dist: f64) -> f64 {
+pub fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair, dist: f64) -> f64 {
     let pl = g.player;
     let seen = g.pl[pl].visibility;
     let light = m::max(seen, held_visibility(g, p));
@@ -136,7 +136,7 @@ pub fn forget_held_meter(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// The held man's own light meter while he is held, kept per hold; started over for a new hold and for a pair unmetered for a gap that has moved. (guards.ts heldVisibility)
-pub fn held_visibility(g: &mut crate::game::Game, p: &mut crate::guards::Pair) -> f64 {
+pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     let hd = p.held;
     let hc = g.gd[hd].ch;
     let now = g.time;
@@ -185,7 +185,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     if g.quiet_utility || g.gd[gd].hold || g.gd[gd].pinned {
         return false;
     }
-    let mut p = match pair_of(g) {
+    let p = match pair_of(g) {
         Some(p) if p.held != gd => p,
         _ => return false,
     };
@@ -193,7 +193,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     if (held_team != g.gd[gd].team && held_team != crate::teams::Team::Civilian) || !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
         return false;
     }
-    if !pair_in_view(g, gd, &mut p) {
+    if !pair_in_view(g, gd, &p) {
         return false;
     }
     let now = g.time;
@@ -203,7 +203,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
     let pos = g.ch[c].pos;
     let eye = bone(g, c, crate::character::Bone::Head).unwrap_or_else(|| v3::add(pos, [0.0, 1.65, 0.0]));
     let dist = v3::dist(eye, p.centre);
-    let rate = pair_sight_rate(g, gd, &mut p, dist);
+    let rate = pair_sight_rate(g, gd, &p, dist);
     let in_it = match g.gd[gd].standoff {
         Some(s) => g.tab.guards_standoff[s].pair == p.held,
         None => false,
@@ -309,7 +309,7 @@ pub fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
         let state = g.gd[o].state;
         let was_calm = state == crate::game::GuardState::Patrol || state == crate::game::GuardState::Suspicious;
         g.gd[o].awareness = m::max(g.gd[o].awareness, 0.92);
-        fix_on(g, o, p.sam);
+        crate::belief::word(g, o, p.sam);
         if was_calm {
             let d = v3::dist(g.ch[g.gd[o].ch].pos, p.sam);
             let roll = crate::math_dice::sim_random(g);
@@ -816,6 +816,11 @@ mod tests {
         assert_eq!(nameless.dropped.as_deref(), nameless_line(StandoffMoment::Dropped));
         assert_eq!(nameless.freed.as_deref(), nameless_line(StandoffMoment::Freed));
         assert_eq!(nameless.hit_him.as_deref(), nameless_line(StandoffMoment::HitHim));
+        let now = standoff_now();
+        for (was, said) in STANDOFF_NOW {
+            assert_eq!(now.get(String::from(*was)).map(|l| l.as_str()), Some(*said), "{}", was);
+        }
+        assert_eq!(now.len(), STANDOFF_NOW.len());
     }
 
     /// from, to, the man's axis, soles, crown, and what the TypeScript's own arithmetic gives under EXACT (bun)

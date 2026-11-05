@@ -17,8 +17,6 @@ pub struct RearPin {
     pub a: OrdersAssignmentId,
     pub going: Option<bool>,
     pub raised: Option<bool>,
-    pub held: Option<bool>,
-    pub late: Option<bool>,
     pub out: Option<bool>,
     pub to: Option<V3>,
 }
@@ -37,8 +35,6 @@ impl RearPin {
             a: OrdersAssignmentId(0),
             going: None,
             raised: None,
-            held: None,
-            late: None,
             out: None,
             to: None,
         }

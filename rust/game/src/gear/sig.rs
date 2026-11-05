@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/game/gear.ts:33 plainShort)
-pub fn plain_short(def: &crate::gear::PlainShortDef) -> String { todo!() }
+pub fn plain_short(def: &crate::weapons::WeaponDef) -> String { todo!() }
 
 /// (src/game/gear.ts:35 gearFromQuery)
 pub fn gear_from_query(g: &mut crate::game::Game, q: crate::Opaque) { todo!() }

@@ -45,7 +45,7 @@ pub fn empty_thing(g: &mut Game) -> Option<crate::interact::EmptyThing> {
         let door = it.door;
         // (a door's reach is its distance and his feet: its `inReach` is also the big tool's, from where a stack stands)
         let r = if door.is_some() {
-            if d >= seam_doors_use_reach() { 2 } else if g.pl[pl].sprinting { 1 } else { 0 }
+            if d >= crate::doors::DOORS_USE_REACH { 2 } else if g.pl[pl].sprinting { 1 } else { 0 }
         } else if it.in_reach { 0 } else { 3 };
         if r == 3 { other = m::min(other, d); continue; }
         let why_of = crate::handring::empty_why();
@@ -359,12 +359,6 @@ fn ring_on_own(g: &mut Game, input: InputId, cam: CameraId, view: crate::host_hu
     lend_ring(g, |g, r| ring_on_thing(g, r, input, cam, view, open))
 }
 
-/// `input.backHit`: read, not taken; `Keys` is its own type, so it is handed a copy of the frame's presses
-fn input_back_hit(g: &mut Game, input: InputId) -> bool {
-    let keys = crate::backkey::Keys { pressed: g.tab.input[input].pressed.clone() };
-    crate::backkey::back_hit(g, &keys)
-}
-
 /// `x &= ~bits` on one of the Input's words of bits
 fn off_bits(x: f64, bits: i32) -> f64 { (js::to_i32(x) & !bits) as f64 }
 
@@ -375,7 +369,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     let key = crate::consts::INTERACT_KEY;
     let down = crate::input::input_down(g, input, key);
     let hit = crate::input::input_hit(g, input, key);
-    let esc = input_back_hit(g, input);
+    let esc = crate::backkey::back_hit(g, input);
     let wheel = g.tab.input[input].wheel;
     let wheeled = js::truthy(wheel);
     if g.pl[pl].f_held && !down && !hit { g.pl[pl].f_held = false; }   // a spent press has come up: Space is live again
@@ -564,10 +558,6 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     if quick && crate::ownblow::own_blow_held(g, row_now.as_ref()) { return; }
     give(g, row_now.as_ref());
 }
-
-/// (interact.ts:54 `Doors.USE_REACH`, doors.ts:1183) a class's static the skeleton has no entry for
-const DOORS_USE_REACH: f64 = 1.35; // SKELETON-GAP: crate::doors::DOORS_USE_REACH (doors.ts:1183)
-fn seam_doors_use_reach() -> f64 { DOORS_USE_REACH }
 
 #[cfg(test)]
 mod tests {

@@ -14,10 +14,9 @@ pub enum Walks {
     Memo { memo: JsMap<String, f64>, lim: f64 },
 }
 
-/// (TypeScript: DoorTools, src/game/doortools.ts:770)
+/// (TypeScript: DoorTools, src/game/doortools.ts:771)
 #[derive(Clone, Debug)]
 pub struct DoorTools {
-    pub knobs: crate::knobs::DoortoolsK,
     pub charges: f64,
     pub bangs: f64,
     pub frags: f64,
@@ -25,7 +24,7 @@ pub struct DoorTools {
     pub big_next: bool,
     pub big_row: Option<bool>,
     pub ops: Vec<DoorOpId>,
-    pub done: Vec<crate::doortools::DoorToolsDoneItem>,
+    pub done: Vec<DoorOpId>,
     pub set: Vec<ChargeId>,
     pub linked: Vec<DoorId>,
     pub lights: Option<bool>,
@@ -35,12 +34,12 @@ pub struct DoorTools {
     pub seen: Option<crate::floorseen::FloorSeen>,
     pub seen_watch: bool,
     pub led: crate::doortools::DoorToolsLed,
-    pub go_key: Option<String>,
+    pub go_key: Option<Option<String>>,
     pub words: Vec<WordId>,
     pub word_key_t: f64,
     pub thr_key: Option<String>,
     pub thr_sig: f64,
-    pub sam_of: Option<crate::doortools::DoorToolsSamOf>,
+    pub sam_of: Option<PlayerId>,
     pub sam_spent: f64,
     pub tried: JsMap<DoorId, f64>,
     pub close_at: JsMap<ChargeId, crate::doortools::DoorToolsCloseAtValue>,
@@ -55,7 +54,6 @@ impl DoorTools {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         DoorTools {
-            knobs: crate::knobs::DoortoolsK { charges: 2.0, bangs: 3.0, blow_key: String::from("KeyF"), word_on_key: true, word_tap: 0.6, thr_hold_first: true, thr_bang_first: true, thr_outside_row: true, thr_leave_fall_in: false, thr_hands_off: false, thr_held_all: false, thr_menu_word: true, stack_cap: 60.0, still_secs: 2.5, kick_cap: 5.0, in_cap: 9.0, shove: 5.5, hold_open: 10.0, toss_after_open: 0.15, bang_in: 2.4, fuse_after_land: 0.35, air_in: 1.6, air_h: 1.2, toss_cap: 1.6, toss_after_kick: 0.05, second_throws: true, throw_reach: 4.0, toss_turn: 0.0, frag_way: true, frag_way_wait: 1.0, frag_way_open: 1.15, frag_way_ajar: 0.6, bang_way: true, open_hand: true, gate_hand: true, last_out: true, last_out_m: 3.0, after_bang: 0.6, quiet: 0.15, entry_cap: 2.8, second: 0.25, sweep_rad: 0.9, sweep_secs: 0.6, corners: true, corner_secs: 0.3, corner_rad: 0.3, corner_cap: 1.6, corner_owed: true, collapse: true, corner_turn: true, lead_seen: true, lead_seen_min: 12.0, lead_seen_secs: 30.0, lead_seen_m: 11.0, sectors: true, sector_secs: 0.6, search: true, scan_rate: 1.4, look_rad: 0.3, look_m: 11.0, dead_cells: 8.0, search_moves: 3.0, search_cap: 24.0, search_cells: 900.0, tuck: 0.4, edge_out: 0.4, bang_file: 1.1, set_secs: 2.0, standoff: alloc::vec![2.6, 2.0, 1.5], knock_m: 2.0, stun_m: 8.0, stun_secs: alloc::vec![6.0, 2.5], stagger_secs: 2.0, backblast_m: 1.6, backblast_secs: 1.5, blow_vel: 12.0, slice_back: 1.0, slice_look: 0.35, slice_edge: 0.12, slice_deep: 3.5, slice_pace: 0.9, word_stack: 20.0, word_in: 6.0, room_back: alloc::vec![2.8, 3.7, 4.6, 5.5], pod_apart: 1.2, thr_pull: true, thr_pull_at: alloc::vec![0.45, 1.8], thr_still: alloc::vec![0.45, 1.2], thr_arc: alloc::vec![alloc::vec![-0.45, 1.2], alloc::vec![0.25, 1.8]], thr_min: 4.0, thr_quiet: 2.0, thr_cap: 25.0, thr_bangs: 2.0, thr_pocket: 12.0, thr_shot_m: 8.0, thr_throw_m: 5.0, thr_flash_m: 7.0, thr_turn: 0.5, thr_next: 0.3, thr_cover: true, thr_slice: false, thr_light: 1.0, thr_in: 4.0, thr_pie: false, thr_pie_arc: alloc::vec![alloc::vec![-0.2, 1.4], alloc::vec![-0.05, 1.6], alloc::vec![0.08, 1.8]], thr_pie_apart: 0.65, thr_lean: false, thr_lean_m: 0.15, thr_knee_in: -0.1, thr_pie_one: false, thr_lean_look: 1.1, thr_doors: true, thr_doors_m: 5.5, thr_doors_lit: true, thr_doors_walk: 16.0, thr_doors_stay: 1.0, other_door_m: 9.0, own_can: true, buddy: true, buddy_m: 5.0, buddy_pair_m: 12.0, buddy_left_m: 8.0, flow_on: true, flow_cells: 28.0, flow_moves: 5.0, flow_reach: 5.5, flow_deep: 3.0, flow_bound: 8.0, flow_secs: 10.0, flow_fight: 20.0, open_air: true, flow_max: 400.0, test_door: false, outside_plain: false, word_no_can: false, word_cuts: false, word_cuts_cap: 8.0, word_small: false, bang_into: false, bang_into_min: 1.5, bang_into_lit: 0.9, bang_into_deep: 6.0, bang_into_wide: 4.2, bang_hand_m: 0.9, bang_pass_v: 6.5, halt_back: false, behind_sam: false, toss_mate: false, charge_answer: false, pod_frames: false, pod_frame_m: 0.55, thr_hand: false, thr_hand_wait: 6.0, thr_hand_every: 0.25, thr_no_can: false, thr_frag_hold: false, thr_doors_leaf: false, frag_hold: false, frag_hold_cap: 8.0, threat_first: true, threat_secs: 12.0, threat_cap: 1.5, threat_near_m: 1.5, threat_stuck: 1.0, buddy_doors: false, thr_set: false, thr_set_secs: 1.5, thr_tube: true, thr_dark: true, thr_first: 1.0, thr_first_min: 2.0, thr_first_stale: 0.0, thr_first_in: 0.0, thr_first_only: true, thr_last: true, thr_last_m: 2.0, thr_last_fresh: 3.0 },
             charges: 2.0,
             bangs: 3.0,
             frags: 2.0,
@@ -93,7 +91,7 @@ impl DoorTools {
 }
 impl Default for DoorTools { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:775 DoorTools.done, src/game/doortools.ts:775 DoorTools.done)
+/// (TypeScript: inline at quiet DoorTools.done, quiet DoorTools.done)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItem {
     pub kind: crate::doortools::DoorToolKind,
@@ -249,7 +247,7 @@ impl DoorToolKind {
     }
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:636 DoorToolsDoneItem.lane, src/game/doortools.ts:636)
+/// (TypeScript: inline at src/game/doortools.ts:637 DoorToolsDoneItem.lane, src/game/doortools.ts:637)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemLane {
     pub gd: GuardId,
@@ -272,7 +270,7 @@ impl DoorToolsDoneItemLane {
 }
 impl Default for DoorToolsDoneItemLane { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:636 DoorToolsDoneItemLane.back, src/game/doortools.ts:636 DoorToolsDoneItemLane.back)
+/// (TypeScript: inline at src/game/doortools.ts:637 DoorToolsDoneItemLane.back, src/game/doortools.ts:637 DoorToolsDoneItemLane.back)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemLaneBack {
     pub post: Option<V3>,
@@ -565,7 +563,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:654 DoorToolsDoneItem.kick, src/game/doortools.ts:654)
+/// (TypeScript: inline at src/game/doortools.ts:655 DoorToolsDoneItem.kick, src/game/doortools.ts:655)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemKick {
     pub pos: V3,
@@ -602,7 +600,7 @@ impl DoorToolsDoneItemKick {
 }
 impl Default for DoorToolsDoneItemKick { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:654 DoorToolsDoneItemKick.gun, src/game/doortools.ts:654)
+/// (TypeScript: inline at src/game/doortools.ts:655 DoorToolsDoneItemKick.gun, src/game/doortools.ts:655)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemKickGun {
     pub by: GuardId,
@@ -631,7 +629,7 @@ impl DoorToolsDoneItemKickGun {
 }
 impl Default for DoorToolsDoneItemKickGun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:663 DoorToolsDoneItem.queue, src/game/doortools.ts:663)
+/// (TypeScript: inline at src/game/doortools.ts:664 DoorToolsDoneItem.queue, src/game/doortools.ts:664)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemQueueItem {
     pub gd: GuardId,
@@ -650,7 +648,7 @@ impl DoorToolsDoneItemQueueItem {
 }
 impl Default for DoorToolsDoneItemQueueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:669 DoorToolsDoneItem.slice, src/game/doortools.ts:669)
+/// (TypeScript: inline at src/game/doortools.ts:670 DoorToolsDoneItem.slice, src/game/doortools.ts:670)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemSliceValue {
     pub pts: Vec<V3>,
@@ -677,7 +675,7 @@ impl DoorToolsDoneItemSliceValue {
 }
 impl Default for DoorToolsDoneItemSliceValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:669 DoorToolsDoneItemSliceValue.pie, src/game/doortools.ts:669)
+/// (TypeScript: inline at src/game/doortools.ts:670 DoorToolsDoneItemSliceValue.pie, src/game/doortools.ts:670)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemSliceValuePie {
     pub eyes: Vec<V3>,
@@ -716,7 +714,7 @@ impl DoorToolsDoneItemSliceValuePie {
 }
 impl Default for DoorToolsDoneItemSliceValuePie { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:674 DoorToolsDoneItem.corner, src/game/doortools.ts:674)
+/// (TypeScript: inline at src/game/doortools.ts:675 DoorToolsDoneItem.corner, src/game/doortools.ts:675)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemCornerValue {
     pub pts: Vec<V3>,
@@ -741,7 +739,7 @@ impl DoorToolsDoneItemCornerValue {
 }
 impl Default for DoorToolsDoneItemCornerValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:678 DoorToolsDoneItem.aim, src/game/doortools.ts:678)
+/// (TypeScript: inline at src/game/doortools.ts:679 DoorToolsDoneItem.aim, src/game/doortools.ts:679)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemAim {
     pub at: V3,
@@ -758,7 +756,7 @@ impl DoorToolsDoneItemAim {
 }
 impl Default for DoorToolsDoneItemAim { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:678 DoorToolsDoneItem.pass, src/game/doortools.ts:678)
+/// (TypeScript: inline at src/game/doortools.ts:679 DoorToolsDoneItem.pass, src/game/doortools.ts:679)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemPass {
     pub to: V3,
@@ -777,7 +775,7 @@ impl DoorToolsDoneItemPass {
 }
 impl Default for DoorToolsDoneItemPass { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:679 DoorToolsDoneItem.beats, src/game/doortools.ts:679)
+/// (TypeScript: inline at src/game/doortools.ts:680 DoorToolsDoneItem.beats, src/game/doortools.ts:680)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemBeatsItem {
     pub t: f64,
@@ -794,7 +792,7 @@ impl DoorToolsDoneItemBeatsItem {
 }
 impl Default for DoorToolsDoneItemBeatsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Threshold, src/game/doortools.ts:711)
+/// (TypeScript: Threshold, src/game/doortools.ts:712)
 #[derive(Clone, Debug)]
 pub struct Threshold {
     pub jamb: Vec<GuardId>,
@@ -898,7 +896,7 @@ impl ThresholdFirst {
     }
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:688 DoorToolsDoneItem.thrPre, src/game/doortools.ts:688)
+/// (TypeScript: inline at src/game/doortools.ts:689 DoorToolsDoneItem.thrPre, src/game/doortools.ts:689)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemThrPre {
     pub far: GuardId,
@@ -915,7 +913,7 @@ impl DoorToolsDoneItemThrPre {
 }
 impl Default for DoorToolsDoneItemThrPre { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:694 DoorToolsDoneItem.other, src/game/doortools.ts:694)
+/// (TypeScript: inline at src/game/doortools.ts:695 DoorToolsDoneItem.other, src/game/doortools.ts:695)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemOtherValue {
     pub gd: GuardId,
@@ -932,7 +930,7 @@ impl DoorToolsDoneItemOtherValue {
 }
 impl Default for DoorToolsDoneItemOtherValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:697 DoorToolsDoneItem.threat, src/game/doortools.ts:697)
+/// (TypeScript: inline at src/game/doortools.ts:698 DoorToolsDoneItem.threat, src/game/doortools.ts:698)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemThreat {
     pub known: Vec<DoortoolsKnownThreatId>,
@@ -955,7 +953,7 @@ impl DoorToolsDoneItemThreat {
 }
 impl Default for DoorToolsDoneItemThreat { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet DoorToolsDoneItemThreat.room, src/game/doortools.ts:697)
+/// (TypeScript: inline at quiet DoorToolsDoneItemThreat.room, src/game/doortools.ts:698)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemThreatRoom {
     pub cells: JsSet<crate::Num>,
@@ -970,7 +968,7 @@ impl DoorToolsDoneItemThreatRoom {
 }
 impl Default for DoorToolsDoneItemThreatRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ThreatWatch, src/game/doortools.ts:703)
+/// (TypeScript: ThreatWatch, src/game/doortools.ts:704)
 #[derive(Clone, Copy, Debug)]
 pub struct ThreatWatch {
     pub th: DoortoolsKnownThreatId,
@@ -1001,7 +999,7 @@ impl ThreatWatch {
 }
 impl Default for ThreatWatch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:781 DoorTools.log, src/game/doortools.ts:781)
+/// (TypeScript: inline at src/game/doortools.ts:782 DoorTools.log, src/game/doortools.ts:782)
 #[derive(Clone, Debug)]
 pub struct DoorToolsLogItem {
     pub t: f64,
@@ -1018,7 +1016,7 @@ impl DoorToolsLogItem {
 }
 impl Default for DoorToolsLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:782 DoorTools.stats, src/game/doortools.ts:782)
+/// (TypeScript: inline at src/game/doortools.ts:783 DoorTools.stats, src/game/doortools.ts:783)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsStats {
     pub orders: f64,
@@ -1089,7 +1087,7 @@ impl DoorToolsStats {
 }
 impl Default for DoorToolsStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:789 DoorTools.led, src/game/doortools.ts:789)
+/// (TypeScript: inline at src/game/doortools.ts:790 DoorTools.led, src/game/doortools.ts:790)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsLed {
     pub entries: f64,
@@ -1106,7 +1104,7 @@ impl DoorToolsLed {
 }
 impl Default for DoorToolsLed { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:949 DoorTools.samOf, src/game/doortools.ts:949 DoorTools.samOf)
+/// (TypeScript: inline at quiet DoorTools.samOf, quiet DoorTools.samOf)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsSamOf {
 }
@@ -1119,7 +1117,7 @@ impl DoorToolsSamOf {
 }
 impl Default for DoorToolsSamOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:1438 DoorTools.closeAt, src/game/doortools.ts:1438)
+/// (TypeScript: inline at src/game/doortools.ts:1439 DoorTools.closeAt, src/game/doortools.ts:1439)
 #[derive(Clone, Debug)]
 pub struct DoorToolsCloseAtValue {
     pub t: f64,
@@ -1136,7 +1134,7 @@ impl DoorToolsCloseAtValue {
 }
 impl Default for DoorToolsCloseAtValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:2792 DoorTools.held, src/game/doortools.ts:2792)
+/// (TypeScript: inline at src/game/doortools.ts:2793 DoorTools.held, src/game/doortools.ts:2793)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsHeldValue {
     pub a: OrdersAssignmentId,
@@ -1163,7 +1161,7 @@ impl DoorToolsHeldValue {
 }
 impl Default for DoorToolsHeldValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Word, src/game/doortools.ts:617)
+/// (TypeScript: Word, src/game/doortools.ts:618)
 #[derive(Clone, Copy, Debug)]
 pub struct Word {
     pub t0: f64,
@@ -1182,7 +1180,7 @@ impl Word {
 }
 impl Default for Word { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DoorOp, src/game/doortools.ts:623)
+/// (TypeScript: DoorOp, src/game/doortools.ts:624)
 #[derive(Clone, Debug)]
 pub struct DoorOp {
     pub kind: crate::doortools::DoorToolKind,
@@ -1245,6 +1243,8 @@ pub struct DoorOp {
     pub last_tossed: Option<f64>,
     pub other: Option<JsMap<DoorId, crate::doortools::DoorToolsDoneItemOtherValue>>,
     pub threat: Option<crate::doortools::DoorToolsDoneItemThreat>,
+    /// INVENTED by a review: see the proposals
+    pub ended: Option<String>,
 }
 impl DoorOp {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -1310,12 +1310,13 @@ impl DoorOp {
             last_tossed: None,
             other: None,
             threat: None,
+            ended: None,
         }
     }
 }
 impl Default for DoorOp { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KnownThreat, src/game/doortools.ts:700)
+/// (TypeScript: KnownThreat, src/game/doortools.ts:701)
 #[derive(Clone, Copy, Debug)]
 pub struct KnownThreat {
     pub at: V3,
@@ -1351,7 +1352,7 @@ impl KnownThreatHow {
     }
 }
 
-/// (TypeScript: RoomSearch, src/game/doortools.ts:740)
+/// (TypeScript: RoomSearch, src/game/doortools.ts:741)
 #[derive(Clone, Debug)]
 pub struct RoomSearch {
     pub room: RoomfightRoomId,
@@ -1396,7 +1397,7 @@ impl RoomSearch {
 }
 impl Default for RoomSearch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:740 RoomSearch.los, src/game/doortools.ts:740)
+/// (TypeScript: inline at src/game/doortools.ts:741 RoomSearch.los, src/game/doortools.ts:741)
 #[derive(Clone, Debug)]
 pub struct RoomSearchLosValue {
     pub at: V3,
@@ -1413,7 +1414,7 @@ impl RoomSearchLosValue {
 }
 impl Default for RoomSearchLosValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DoorGate, src/game/doortools.ts:744)
+/// (TypeScript: DoorGate, src/game/doortools.ts:745)
 #[derive(Clone, Debug)]
 pub struct DoorGate {
     pub ops: Vec<DoorOpId>,
@@ -1432,7 +1433,7 @@ impl DoorGate {
 }
 impl Default for DoorGate { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SetCharge, src/game/doortools.ts:746)
+/// (TypeScript: SetCharge, src/game/doortools.ts:747)
 #[derive(Clone, Debug)]
 pub struct SetCharge {
     pub door: DoorId,
@@ -1453,7 +1454,7 @@ impl SetCharge {
 }
 impl Default for SetCharge { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:613 PIE_GUN, src/game/doortools.ts:613)
+/// (TypeScript: inline at src/game/doortools.ts:614 PIE_GUN, src/game/doortools.ts:614)
 #[derive(Clone, Copy, Debug)]
 pub struct PIEGUN {
     pub after: f64,
@@ -1474,7 +1475,7 @@ impl PIEGUN {
 }
 impl Default for PIEGUN { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:760 SKY, src/game/doortools.ts:760)
+/// (TypeScript: inline at src/game/doortools.ts:761 SKY, src/game/doortools.ts:761)
 #[derive(Clone, Copy, Debug)]
 pub struct DoortoolsModSKYValue {
     pub n: f64,
@@ -1491,7 +1492,7 @@ impl DoortoolsModSKYValue {
 }
 impl Default for DoortoolsModSKYValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:761 underSky(room), src/game/doortools.ts:761)
+/// (TypeScript: inline at src/game/doortools.ts:762 underSky(room), src/game/doortools.ts:762)
 #[derive(Clone, Debug)]
 pub struct UnderSkyRoom {
     pub cells: JsSet<crate::Num>,
@@ -1506,7 +1507,7 @@ impl UnderSkyRoom {
 }
 impl Default for UnderSkyRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:768 openFloor(room), src/game/doortools.ts:768)
+/// (TypeScript: inline at src/game/doortools.ts:769 openFloor(room), src/game/doortools.ts:769)
 #[derive(Clone, Debug)]
 pub struct OpenFloorRoom {
     pub cells: JsSet<crate::Num>,
@@ -1577,7 +1578,7 @@ impl DoorToolsBigWord {
     }
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:998 bootSpot ->, src/game/doortools.ts:998)
+/// (TypeScript: inline at src/game/doortools.ts:999 bootSpot ->, src/game/doortools.ts:999)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsBootSpot {
     pub pos: V3,
@@ -1594,7 +1595,7 @@ impl DoorToolsBootSpot {
 }
 impl Default for DoorToolsBootSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:1114 stackLeft(post), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
+/// (TypeScript: inline at src/game/doortools.ts:1115 stackLeft(post), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsStackLeftPostValue {
     pub lead: bool,
@@ -1632,7 +1633,7 @@ impl DoorToolsEntryVerb {
     }
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:1138 assign(a), src/game/doortools.ts:1138 assign(a))
+/// (TypeScript: inline at src/game/doortools.ts:1139 assign(a), src/game/doortools.ts:1139 assign(a))
 #[derive(Clone, Debug)]
 pub struct DoorToolsAssignA {
     pub post: Option<V3>,
@@ -1670,7 +1671,7 @@ pub struct DoorToolsAssignA {
     pub mark_t: Option<f64>,
     pub had: Option<V3>,
     pub back_n: Option<f64>,
-    pub shy: Option<DoorId>,
+    pub shy: Option<Option<DoorId>>,
     pub thru: Option<DoorId>,
     pub via_for: Option<V3>,
     pub via_t: Option<f64>,
@@ -1926,7 +1927,7 @@ pub enum DoorToolsStandoffFits {
     Bool(bool),
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:1464 samJob ->, src/game/doortools.ts:1464)
+/// (TypeScript: inline at src/game/doortools.ts:1465 samJob ->, src/game/doortools.ts:1465)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsSamJob {
     pub p: V3,
@@ -1945,7 +1946,7 @@ impl DoorToolsSamJob {
 }
 impl Default for DoorToolsSamJob { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:1712 dealStack ->, src/game/doortools.ts:1712)
+/// (TypeScript: inline at src/game/doortools.ts:1713 dealStack ->, src/game/doortools.ts:1713)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDealStack {
     pub posts: Vec<crate::orders::StackPost>,
@@ -1969,7 +1970,7 @@ pub enum DoorToolsWaiting4Item {
     Arm1(crate::doortools::DoorToolsWaiting4ItemArm1),
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:1774 waiting4 ->, src/game/doortools.ts:1774)
+/// (TypeScript: inline at src/game/doortools.ts:1775 waiting4 ->, src/game/doortools.ts:1775)
 #[derive(Clone, Debug)]
 pub struct DoorToolsWaiting4ItemArm1 {
     pub stack: DoorId,
@@ -1986,7 +1987,7 @@ impl DoorToolsWaiting4ItemArm1 {
 }
 impl Default for DoorToolsWaiting4ItemArm1 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:1781 stacksOf ->, src/game/doortools.ts:1781)
+/// (TypeScript: inline at src/game/doortools.ts:1782 stacksOf ->, src/game/doortools.ts:1782)
 #[derive(Clone, Debug)]
 pub struct DoorToolsStacksOfItem {
     pub stack: DoorId,
@@ -2003,7 +2004,7 @@ impl DoorToolsStacksOfItem {
 }
 impl Default for DoorToolsStacksOfItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:1791 stackWaits ->, src/game/doortools.ts:1791)
+/// (TypeScript: inline at src/game/doortools.ts:1792 stackWaits ->, src/game/doortools.ts:1792)
 #[derive(Clone, Debug)]
 pub struct DoorToolsStackWaitsItem {
     pub stack: DoorId,
@@ -2027,7 +2028,7 @@ pub enum DoorToolsWaitingAnyItem {
     Arm1(crate::doortools::DoorToolsWaitingAnyItemArm1),
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:1801 waitingAny ->, src/game/doortools.ts:1801)
+/// (TypeScript: inline at src/game/doortools.ts:1802 waitingAny ->, src/game/doortools.ts:1802)
 #[derive(Clone, Debug)]
 pub struct DoorToolsWaitingAnyItemArm1 {
     pub stack: DoorId,
@@ -2044,7 +2045,7 @@ impl DoorToolsWaitingAnyItemArm1 {
 }
 impl Default for DoorToolsWaitingAnyItemArm1 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:1804 waitsOn ->, src/game/doortools.ts:1804)
+/// (TypeScript: inline at src/game/doortools.ts:1805 waitsOn ->, src/game/doortools.ts:1805)
 #[derive(Clone, Debug)]
 pub struct DoorToolsWaitsOn {
     pub kind: crate::doortools::DoorToolsWaitsOnKind,
@@ -2078,7 +2079,7 @@ impl DoorToolsWaitsOnKind {
     }
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:1876 goMen(only), src/game/doortools.ts:1876)
+/// (TypeScript: inline at src/game/doortools.ts:1877 goMen(only), src/game/doortools.ts:1877)
 #[derive(Clone, Debug)]
 pub struct DoorToolsGoMenOnlyItem {
     pub stack: DoorId,
@@ -2095,7 +2096,7 @@ impl DoorToolsGoMenOnlyItem {
 }
 impl Default for DoorToolsGoMenOnlyItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:2613 bangSpot ->, src/game/doortools.ts:2613)
+/// (TypeScript: inline at src/game/doortools.ts:2614 bangSpot ->, src/game/doortools.ts:2614)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsBangSpot {
     pub at: V3,
@@ -2122,7 +2123,7 @@ pub enum DoorToolsAway {
     No,
 }
 
-/// (TypeScript: inline at src/game/doortools.ts:3212 offSwing(P), src/game/doortools.ts:3212)
+/// (TypeScript: inline at src/game/doortools.ts:3213 offSwing(P), src/game/doortools.ts:3213)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsOffSwingP {
     pub pos: V3,
@@ -2139,7 +2140,7 @@ impl DoorToolsOffSwingP {
 }
 impl Default for DoorToolsOffSwingP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3312 blow ->, src/game/doortools.ts:3312)
+/// (TypeScript: inline at src/game/doortools.ts:3313 blow ->, src/game/doortools.ts:3313)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsBlow {
     pub knocked: f64,
@@ -2158,7 +2159,7 @@ impl DoorToolsBlow {
 }
 impl Default for DoorToolsBlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3313 blowRaw ->, src/game/doortools.ts:3313)
+/// (TypeScript: inline at src/game/doortools.ts:3314 blowRaw ->, src/game/doortools.ts:3314)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsBlowRaw {
     pub knocked: f64,
@@ -2177,7 +2178,7 @@ impl DoorToolsBlowRaw {
 }
 impl Default for DoorToolsBlowRaw { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3378 pieNext(s), src/game/doortools.ts:3378)
+/// (TypeScript: inline at src/game/doortools.ts:3379 pieNext(s), src/game/doortools.ts:3379)
 #[derive(Clone, Debug)]
 pub struct DoorToolsPieNextS {
     pub pts: Vec<V3>,
@@ -2196,7 +2197,7 @@ impl DoorToolsPieNextS {
 }
 impl Default for DoorToolsPieNextS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3378 DoorToolsPieNextS.pie, src/game/doortools.ts:3378)
+/// (TypeScript: inline at src/game/doortools.ts:3379 DoorToolsPieNextS.pie, src/game/doortools.ts:3379)
 #[derive(Clone, Debug)]
 pub struct DoorToolsPieNextSPie {
     pub eyes: Vec<V3>,
@@ -2213,7 +2214,7 @@ impl DoorToolsPieNextSPie {
 }
 impl Default for DoorToolsPieNextSPie { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3464 thrSpot ->, src/game/doortools.ts:3464)
+/// (TypeScript: inline at src/game/doortools.ts:3465 thrSpot ->, src/game/doortools.ts:3465)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsThrSpot {
     pub q: V3,
@@ -2230,7 +2231,7 @@ impl DoorToolsThrSpot {
 }
 impl Default for DoorToolsThrSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3471 thrFar ->, src/game/doortools.ts:3471)
+/// (TypeScript: inline at src/game/doortools.ts:3472 thrFar ->, src/game/doortools.ts:3472)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsThrFar {
     pub far: GuardId,
@@ -2249,7 +2250,7 @@ impl DoorToolsThrFar {
 }
 impl Default for DoorToolsThrFar { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3742 pocketOf ->, src/game/doortools.ts:3742)
+/// (TypeScript: inline at src/game/doortools.ts:3743 pocketOf ->, src/game/doortools.ts:3743)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsPocketOf {
     pub at: Option<V3>,
@@ -2266,7 +2267,7 @@ impl DoorToolsPocketOf {
 }
 impl Default for DoorToolsPocketOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doortools.ts:3827 cornerNotes ->, src/game/doortools.ts:3827)
+/// (TypeScript: inline at src/game/doortools.ts:3828 cornerNotes ->, src/game/doortools.ts:3828)
 #[derive(Clone, Debug)]
 pub struct DoorToolsCornerNotesItem {
     pub key: String,
@@ -2286,7 +2287,7 @@ impl Default for DoorToolsCornerNotesItem { fn default() -> Self { Self::zeroed(
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct DoortoolsMod {
-    /// (src/game/doortools.ts:760 SKY)
+    /// (src/game/doortools.ts:761 SKY)
     pub sky: JsMap<RoomfightRoomId, crate::doortools::DoortoolsModSKYValue>,
 }
 impl DoortoolsMod {
@@ -2297,59 +2298,59 @@ impl DoortoolsMod {
     }
 }
 
-/// (src/game/doortools.ts:113 WORDCUTS_BREAK)
+/// (src/game/doortools.ts:114 WORDCUTS_BREAK)
 pub const WORDCUTS_BREAK: bool = false;
 
-/// (src/game/doortools.ts:600 LEAF_EDGE)
+/// (src/game/doortools.ts:601 LEAF_EDGE)
 pub const LEAF_EDGE: f64 = 0.1;
 
-/// (src/game/doortools.ts:600 LEAF_FROM)
+/// (src/game/doortools.ts:601 LEAF_FROM)
 pub const LEAF_FROM: f64 = 1.45;
 
-/// (src/game/doortools.ts:600 LEAF_STEP)
+/// (src/game/doortools.ts:601 LEAF_STEP)
 pub const LEAF_STEP: f64 = 0.1;
 
-/// (src/game/doortools.ts:600 LEAF_COST)
+/// (src/game/doortools.ts:601 LEAF_COST)
 pub const LEAF_COST: f64 = 4.0;
 
-/// (src/game/doortools.ts:600 LEAF_POSTS: a table nothing writes)
+/// (src/game/doortools.ts:601 LEAF_POSTS: a table nothing writes)
 pub fn leaf_posts() -> Vec<Vec<f64>> { alloc::vec![alloc::vec![0.2, 2.4], alloc::vec![0.5, 2.4]] }
 
-/// (src/game/doortools.ts:602 SAM_SHIFT)
+/// (src/game/doortools.ts:603 SAM_SHIFT)
 pub const SAM_SHIFT: f64 = 0.35;
 
-/// (src/game/doortools.ts:606 TOOLS_PAGE)
+/// (src/game/doortools.ts:607 TOOLS_PAGE)
 pub const TOOLS_PAGE: &str = "tools";
 
-/// (src/game/doortools.ts:608 BIG_ORDER)
+/// (src/game/doortools.ts:609 BIG_ORDER)
 pub const BIG_ORDER: &str = "bigClear";
 
-/// (src/game/doortools.ts:608 BIG_KEY)
+/// (src/game/doortools.ts:609 BIG_KEY)
 pub const BIG_KEY: &str = "KeyH";
 
-/// (src/game/doortools.ts:611 THR_PAGE)
+/// (src/game/doortools.ts:612 THR_PAGE)
 pub const THR_PAGE: &str = "thr";
 
-/// (src/game/doortools.ts:611 HELD_PAGE)
+/// (src/game/doortools.ts:612 HELD_PAGE)
 pub const HELD_PAGE: &str = "held";
 
-/// (src/game/doortools.ts:613 PIE_WAIT)
+/// (src/game/doortools.ts:614 PIE_WAIT)
 pub const PIE_WAIT: f64 = 2.5;
 
-/// (src/game/doortools.ts:613 KNEE_EYE)
+/// (src/game/doortools.ts:614 KNEE_EYE)
 pub const KNEE_EYE: f64 = 0.95;
 
-/// (src/game/doortools.ts:613 PIE_GUN: a table nothing writes)
+/// (src/game/doortools.ts:614 PIE_GUN: a table nothing writes)
 pub fn pie_gun() -> crate::doortools::PIEGUN { crate::doortools::PIEGUN { after: 0.2, step: 0.12, most: 3.0, every: 0.4 } }
 
-/// (src/game/doortools.ts:621 PRE: a table nothing writes)
+/// (src/game/doortools.ts:622 PRE: a table nothing writes)
 pub fn pre() -> Vec<String> { alloc::vec![String::from("stack"), String::from("ready"), String::from("place"), String::from("standoff"), String::from("armed")] }
 
-/// (src/game/doortools.ts:756 OPEN_RAD)
+/// (src/game/doortools.ts:757 OPEN_RAD)
 pub const OPEN_RAD: f64 = 0.6;
 
-/// (src/game/doortools.ts:758 N4: a table nothing writes)
+/// (src/game/doortools.ts:759 N4: a table nothing writes)
 pub fn n4() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [-1.0, 0.0], [0.0, 1.0], [0.0, -1.0]] }
 
-/// (src/game/doortools.ts:3854 WORD_LEAD)
+/// (src/game/doortools.ts:3855 WORD_LEAD)
 pub const WORD_LEAD: f64 = 0.15;

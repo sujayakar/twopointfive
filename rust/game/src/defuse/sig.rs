@@ -63,7 +63,7 @@ pub fn defuse_blow(g: &mut crate::game::Game, d: &crate::scene_scenarios::Defuse
 pub fn defuse_draw(g: &mut crate::game::Game, d: &crate::scene_scenarios::DefuseData) { todo!() }
 
 /// (src/game/defuse.ts:185 Defuse.samRows)
-pub fn defuse_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::defuse::DefuseSamRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) { todo!() }
+pub fn defuse_sam_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::defuse::DefuseRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) { todo!() }
 
 /// (src/game/defuse.ts:203 Defuse.samTick)
 pub fn defuse_sam_tick(g: &mut crate::game::Game, d: &crate::scene_scenarios::DefuseData) { todo!() }

@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Calm, src/game/powerout.ts:94)
+/// (TypeScript: Calm, src/game/powerout.ts:93)
 #[derive(Clone, Debug)]
 pub struct Calm {
     pub awareness: f64,
@@ -55,7 +55,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: Man, src/game/powerout.ts:96)
+/// (TypeScript: Man, src/game/powerout.ts:95)
 #[derive(Clone, Debug)]
 pub struct Man {
     pub gd: GuardId,
@@ -105,7 +105,7 @@ impl ManRole {
     }
 }
 
-/// (TypeScript: PowerOutEvent, src/game/powerout.ts:97)
+/// (TypeScript: PowerOutEvent, src/game/powerout.ts:96)
 #[derive(Clone, Debug)]
 pub struct PowerOutEvent {
     pub t: f64,
@@ -161,7 +161,7 @@ impl PowerOutEventWhat {
     }
 }
 
-/// (TypeScript: State, src/game/powerout.ts:98)
+/// (TypeScript: State, src/game/powerout.ts:97)
 #[derive(Clone, Debug)]
 pub struct State {
     pub since: f64,
@@ -202,7 +202,7 @@ impl State {
 }
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:106 State.seen, src/game/powerout.ts:106)
+/// (TypeScript: inline at src/game/powerout.ts:105 State.seen, src/game/powerout.ts:105)
 #[derive(Clone, Copy, Debug)]
 pub struct StateSeenItem {
     pub i: f64,
@@ -219,7 +219,7 @@ impl StateSeenItem {
 }
 impl Default for StateSeenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CalmSnap, src/game/powerout.ts:222)
+/// (TypeScript: CalmSnap, src/game/powerout.ts:221)
 #[derive(Clone, Debug)]
 pub struct CalmSnap {
     pub hold: bool,
@@ -252,7 +252,7 @@ impl CalmSnap {
 }
 impl Default for CalmSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PowerOutSnap, src/game/powerout.ts:403)
+/// (TypeScript: PowerOutSnap, src/game/powerout.ts:405)
 #[derive(Clone, Debug)]
 pub struct PowerOutSnap {
     pub since: f64,
@@ -291,7 +291,7 @@ impl PowerOutSnap {
 }
 impl Default for PowerOutSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:403 PowerOutSnap.seen, src/game/powerout.ts:403)
+/// (TypeScript: inline at src/game/powerout.ts:405 PowerOutSnap.seen, src/game/powerout.ts:405)
 #[derive(Clone, Copy, Debug)]
 pub struct PowerOutSnapSeenItem {
     pub i: f64,
@@ -308,11 +308,11 @@ impl PowerOutSnapSeenItem {
 }
 impl Default for PowerOutSnapSeenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:404 PowerOutSnap.men, src/game/powerout.ts:404)
+/// (TypeScript: inline at src/game/powerout.ts:406 PowerOutSnap.men, src/game/powerout.ts:406)
 #[derive(Clone, Debug)]
 pub struct PowerOutSnapMenItem {
     pub i: f64,
-    pub role: crate::powerout::PowerOutSnapMenItemRole,
+    pub role: crate::powerout::ManRole,
     pub phase: crate::powerout::Phase,
     pub goal: V3,
     pub from: V3,
@@ -328,7 +328,7 @@ impl PowerOutSnapMenItem {
     pub fn zeroed() -> Self {
         PowerOutSnapMenItem {
             i: 0.0,
-            role: crate::powerout::PowerOutSnapMenItemRole::Cover,
+            role: crate::powerout::ManRole::Cover,
             phase: crate::powerout::Phase::Out,
             goal: [0.0; 3],
             from: [0.0; 3],
@@ -393,7 +393,7 @@ impl EventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/powerout.ts:183 wayTo ->, src/game/powerout.ts:183)
+/// (TypeScript: inline at src/game/powerout.ts:182 wayTo ->, src/game/powerout.ts:182)
 #[derive(Clone, Debug)]
 pub struct WayTo {
     pub path: Vec<V3>,
@@ -410,7 +410,7 @@ impl WayTo {
 }
 impl Default for WayTo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/powerout.ts:190 coverSpot ->, src/game/powerout.ts:190)
+/// (TypeScript: inline at src/game/powerout.ts:189 coverSpot ->, src/game/powerout.ts:189)
 #[derive(Clone, Copy, Debug)]
 pub struct CoverSpot {
     pub spot: V3,
@@ -430,7 +430,7 @@ impl Default for CoverSpot { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct PoweroutMod {
-    /// (src/game/powerout.ts:112 STATES)
+    /// (src/game/powerout.ts:111 STATES)
     pub states: Option<crate::powerout::State>,
 }
 impl PoweroutMod {

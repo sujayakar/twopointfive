@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 1128 to 1500
+//! src/game/guards.ts lines 1131 to 1502
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -37,58 +37,15 @@ fn set_goal(g: &mut Game, gd: GuardId, s: GuardsStandoffId, p: Option<V3>) {
     g.tab.guards_standoff[s].orbit_goal = Some(p);
 }
 
-/// lanePenalty(g, gd, base) where base is the price tacticsPenalty made: asked with no base, lanes.ts answers None (it leaves him to `base`) or the mask's own price, and the base goes under it
-fn lane_over(asked: Option<crate::lanes::LanePenalty>, base: Option<crate::tactics::TacticsPenalty>) -> Option<crate::lanes::LanePenalty> {
-    match (asked, base) {
-        (None, None) => None,
-        (None, Some(base)) => Some(crate::lanes::LanePenalty::Base { base }),
-        (Some(crate::lanes::LanePenalty::Dear { m, w, dear }), Some(base)) => Some(crate::lanes::LanePenalty::DearOver { base, m, w, dear }),
-        (Some(p), _) => Some(p),
-    }
-}
-
-/// tacticsPenalty's closure
-fn price_tactics(p: &crate::tactics::TacticsPenalty, ix: f64, iz: f64) -> f64 {
-    let crate::tactics::TacticsPenalty::Cells { w, door_idx, door_mult, avoid } = p;
-    let i = crate::Num(iz * *w + ix);
-    let mut cost = 1.0;
-    if let Some(d) = door_idx { if d.has(i) { cost = *door_mult; } }
-    if let Some(a) = avoid { if a.has(i) { cost = m::max(cost, crate::tactics::CORRIDOR_COST); } }
-    cost
-}
-
-/// `m[iz * W + ix] ? dear : 1` (past the end is undefined, so 1)
-fn price_mask(mask: &[u8], w: f64, dear: f64, ix: f64, iz: f64) -> f64 {
-    let lit = mask.get((iz * w + ix) as usize).map_or(false, |v| *v != 0);
-    if lit { dear } else { 1.0 }
-}
-
-/// priceOf's closures
-fn price_lane(p: &crate::lanes::LanePenalty, ix: f64, iz: f64) -> f64 {
-    match p {
-        crate::lanes::LanePenalty::Dear { m: mask, w, dear } => price_mask(mask, *w, *dear, ix, iz),
-        crate::lanes::LanePenalty::DearOver { base, m: mask, w, dear } => m::max(price_tactics(base, ix, iz), price_mask(mask, *w, *dear, ix, iz)),
-        crate::lanes::LanePenalty::Base { base } => price_tactics(base, ix, iz),
-    }
-}
-
-/// propPenalty's closure
-fn price_prop(g: &mut Game, p: &crate::orders::PropPenalty, ix: f64, iz: f64) -> f64 {
-    let crate::orders::PropPenalty::Dear { dear, cost, pen } = p;
-    let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
-    let here = if dear.has(crate::Num(i)) { *cost } else { 1.0 };
-    here * match pen { Some(q) => price_lane(q, ix, iz), None => 1.0 }
-}
-
 /// goTo's plan. `round` None is the TypeScript's `round === pen`: no second search.
 fn go_to_plan(g: &mut Game, gd: GuardId, goal: V3, pen: Option<&crate::lanes::LanePenalty>, round: Option<&crate::orders::PropPenalty>) -> Option<Vec<V3>> {
     let from = g.ch[g.gd[gd].ch].pos;
     let mut p = match pen {
-        Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &mut Game, ix: f64, iz: f64| price_lane(q, ix, iz))),
+        Some(q) => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |_g: &mut Game, ix: f64, iz: f64| crate::lanes::lane_penalty_at(q, ix, iz))),
         None => crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), None),
     };
     if let (Some(plain), Some(q)) = (p.as_ref(), round) {
-        let r = crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| price_prop(g, q, ix, iz)));
+        let r = crate::scene_collision::nav_grid_find_path(g, from, goal, Some(6000.0), Some(&mut |g: &mut Game, ix: f64, iz: f64| crate::orders::prop_penalty_at(g, q, ix, iz)));
         p = Some(crate::orders::prop_way(g, from, plain, r.as_deref()));
     }
     if p.is_some() { return p; }
@@ -251,7 +208,7 @@ pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::
         Some("state")
     } else if p.map_or(true, |q| q.held != pair) {
         Some(if g.gd[pair].state == crate::game::GuardState::Dead { "dead" } else if g.pl[g.player].down { "samDown" } else { "free" })
-    } else if g.time - g.tab.guards_standoff[s].seen_t > STANDOFF_LOSE_SECS && !crate::gunhold::gun_hold_keeps(g, gd) {
+    } else if g.time - g.tab.guards_standoff[s].seen_t > STANDOFF_LOSE_SECS && !crate::gunhold::standoff_fix_kept(g, gd) {
         Some("lost")
     } else {
         None
@@ -341,7 +298,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
     let id = g.ch[c].id;
     let seat = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
     // (a game of one seat, or a view handed in: the seat is already the one on Game, and there is nothing to swap)
-    let r = if seat == g.player {
+    let r = if seat == g.seat {
         let pc = g.pl[g.player].ch;
         can_see_char(g, gd, pc, true)
     } else {
@@ -470,7 +427,7 @@ pub fn eye_blocked(g: &mut crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
-/// THE line-of-sight test, whoever's eye it is. RUST.sight answers through the collision's wrapper; None = this file answers.   (guards.ts eyeContact)
+/// THE line-of-sight test, whoever's eye it is: one question to the module; what hides Sam is read last, of a man the eye would otherwise see.   (guards.ts eyeContact)
 pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId, is_player: bool, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
     let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag().glass };
     let tgt = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[pc].pos, [0.0, 1.1, 0.0]) };
@@ -478,36 +435,10 @@ pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId,
     let smoked = is_player && smoke_trans < 0.3;
     let unseen = blind || (!is_player && !g.ch[pc].alive);
     let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
-    let r = match crate::scene_collision::eye_contact(g, lens, tgt, tgt2, unseen, smoked, through) {
-        Some(r) => r,
-        None => {
-            let t = eye_contact_here(g, e, pc, is_player, tgt, tgt2, blind, smoked, through);
-            return crate::guards::EyeContact { visible: t.visible, dist: t.dist, in_cone: t.in_cone };
-        }
-    };
+    let r = crate::scene_collision::eye_contact(g, lens, tgt, tgt2, unseen, smoked, through);
     let mut visible = r.visible;
     if visible && is_player && (g.player_invisible || g.pl[g.player].down) { visible = false; }
     crate::guards::EyeContact { visible, dist: r.dist, in_cone: r.in_cone }
-}
-
-/// eyeContact as this file answers it, wherever the module does not.   (guards.ts eyeContactHere)
-pub fn eye_contact_here(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId, is_player: bool, tgt: V3, tgt2: V3, blind: bool, smoked: bool, through: f64) -> crate::guards::EyeContactHere {
-    let eye = e.pos;
-    let to = v3::sub(tgt, eye);
-    let dist = v3::len(to);
-    let dir_to = v3::scale(to, 1.0 / m::max(dist, 1e-4));
-    let look = e.look;
-    let cos_a = v3::dot([look[0], 0.0, look[2]], v3::normalize([dir_to[0], 0.0, dir_to[2]]));
-    let fov = if dist < e.near_m { m::cos(e.near_deg * v3::DEG) } else { m::cos(e.half_deg * v3::DEG) };
-    let mut in_cone = cos_a > fov && dist < e.range;
-    if in_cone {
-        if let Some(v) = e.v_half_deg {
-            in_cone = m::abs(m::asin(v3::clamp(dir_to[1], -1.0, 1.0)) - m::asin(v3::clamp(look[1], -1.0, 1.0))) < v * v3::DEG;
-        }
-    }
-    if !in_cone || (if is_player { g.player_invisible || g.pl[g.player].down } else { !g.ch[pc].alive }) || blind { return crate::guards::EyeContactHere { visible: false, dist, in_cone }; }
-    let blocked = (crate::scene_collision::segment_blocked(g, eye, tgt, Some(0.02), Some(through), None) && crate::scene_collision::segment_blocked(g, eye, tgt2, Some(0.02), Some(through), None)) || smoked;
-    crate::guards::EyeContactHere { visible: !blocked, dist, in_cone }
 }
 
 /// Is the nav cell under (x, z) one no plan can leave?   (guards.ts strandedAt)
@@ -704,8 +635,7 @@ pub fn go_to(g: &mut crate::game::Game, gd: GuardId, goal: V3, force: Option<boo
         return;
     }
     let tactics = crate::tactics::tactics_penalty(g, gd, goal);
-    let asked = crate::lanes::lane_penalty(g, gd, None);
-    let pen = lane_over(asked, tactics);
+    let pen = crate::lanes::lane_penalty(g, gd, tactics.as_ref());
     let round = if crate::teampace::team_at_walk(g, gd) { crate::orders::prop_penalty(g, gd, pen.as_ref()) } else { None };
     let mut p = go_to_plan(g, gd, goal, pen.as_ref(), round.as_ref());
     if p.is_none() {
@@ -776,45 +706,6 @@ mod tests {
         ] {
             assert_eq!(reach_of(&k, l).to_bits(), bits, "{}", l);
         }
-    }
-
-    fn doors() -> crate::tactics::TacticsPenalty {
-        let mut door_idx = JsSet::new();
-        door_idx.add(crate::Num(5.0));   // W 4: cell (1, 1)
-        door_idx.add(crate::Num(6.0));   // (2, 1), which is also in the flank's way
-        let mut avoid = JsSet::new();
-        avoid.add(crate::Num(6.0));
-        avoid.add(crate::Num(7.0));      // (3, 1)
-        crate::tactics::TacticsPenalty::Cells { w: 4.0, door_idx: Some(door_idx), door_mult: 3.0, avoid: Some(avoid) }
-    }
-
-    #[test]
-    fn the_tactics_price_is_the_dearer_of_door_and_flank() {
-        let p = doors();
-        assert_eq!(price_tactics(&p, 0.0, 0.0), 1.0);
-        assert_eq!(price_tactics(&p, 1.0, 1.0), 3.0);
-        assert_eq!(price_tactics(&p, 2.0, 1.0), crate::tactics::CORRIDOR_COST);
-        assert_eq!(price_tactics(&p, 3.0, 1.0), crate::tactics::CORRIDOR_COST);
-    }
-
-    #[test]
-    fn a_lane_goes_over_the_tactics_price() {
-        use crate::lanes::LanePenalty;
-        let mask = vec![0u8, 1, 0, 0, 0, 1, 0, 0];   // (1, 0) and (1, 1)
-        let dear = || LanePenalty::Dear { m: mask.clone(), w: 4.0, dear: 4.0 };
-        // the rule leaves him alone: nothing, or the base as it was
-        assert!(lane_over(None, None).is_none());
-        match lane_over(None, Some(doors())) { Some(LanePenalty::Base { .. }) => {}, x => panic!("{:?}", x) }
-        // the mask alone
-        let only = lane_over(Some(dear()), None).unwrap();
-        assert_eq!(price_lane(&only, 1.0, 0.0), 4.0);
-        assert_eq!(price_lane(&only, 0.0, 0.0), 1.0);
-        // Math.max(base, mask): the dearer, whichever it is
-        let both = lane_over(Some(dear()), Some(doors())).unwrap();
-        assert_eq!(price_lane(&both, 1.0, 0.0), 4.0);                              // mask, base 1
-        assert_eq!(price_lane(&both, 1.0, 1.0), 4.0);                              // mask 4 over door 3
-        assert_eq!(price_lane(&both, 2.0, 1.0), crate::tactics::CORRIDOR_COST);    // flank 6 over a clear cell
-        assert_eq!(price_lane(&both, 0.0, 0.0), 1.0);
     }
 
     #[test]

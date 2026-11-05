@@ -11,11 +11,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 #[inline]
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 
-// ---------------------------------------------------------------- the seams: what the skeleton has yet to give
-
-/// O.of(m) of a man of stackViewFix's `men`: the parameter's type holds a position, the caller hands Guards
-fn seam_man_assignment(g: &mut Game, m: &crate::stackroom::StackViewFixMenItem) -> Option<OrdersAssignmentId> { todo!("needs: stackViewFix men to carry the GuardId (ts:275)") }
-
 // ---------------------------------------------------------------- the book
 
 /// keeps which of the book's floors and doorway cells have been read, for an ask made only to be looked at   (stackroom.ts stackRoomBookKeep)
@@ -24,6 +19,27 @@ pub fn stack_room_book_keep(g: &mut crate::game::Game) -> crate::stackroom::Stac
     let mut floors: JsMap<DoorId, [bool; 2]> = JsMap::new();
     for (d, pair) in k.floors.iter() { floors.set(d, [pair[0].is_some(), pair[1].is_some()]); }
     crate::stackroom::StackRoomBookKeep::Back { sig: k.sig, doors: k.doors, near: k.near.is_some(), floors }
+}
+
+/// puts back what the keep took: the closure stackRoomBookKeep answers   (stackroom.ts:93,95)
+pub fn stack_room_book_put_back(g: &mut crate::game::Game, keep: crate::stackroom::StackRoomBookKeep) {
+    let (sig, doors, near, floors) = match keep {
+        crate::stackroom::StackRoomBookKeep::Forget => { g.m.stackroom.books = None; return; }
+        crate::stackroom::StackRoomBookKeep::Back { sig, doors, near, floors } => (sig, doors, near, floors),
+    };
+    // the book was rebuilt during the ask: the old one put back would be rebuilt empty at the next bookOf
+    let same = match &g.m.stackroom.books { Some(k) => k.sig == sig && k.doors == doors, None => false };
+    if !same { g.m.stackroom.books = None; return; }
+    let k = g.m.stackroom.books.as_mut().unwrap();
+    if !near { k.near = None; }
+    // only the doors kept, in the order kept, as the copied map of ts:94 has them
+    let mut back = JsMap::new();
+    for (d, read) in floors.iter() {
+        let mut pair = k.floors.delete(d).unwrap_or([None, None]);
+        for at in 0..2 { if !read[at] { pair[at] = None; } }
+        back.set(d, pair);
+    }
+    k.floors = back;
 }
 
 /// this game's book of floors, new if the grid's cells or the doors changed   (stackroom.ts bookOf)
@@ -98,11 +114,18 @@ fn near_cells(g: &mut Game) -> Vec<u8> {
 
 /// the floor before face `side` of `d`; None: that face has none   (stackroom.ts floorOf)
 pub fn floor_of(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate::stackroom::Floor> {
+    floor_read(g, d, side);
+    let at = if side > 0.0 { 0 } else { 1 };
+    g.m.stackroom.books.as_ref().unwrap().floors.get(d).unwrap()[at].as_ref().unwrap().clone()
+}
+
+/// floods that face if it has not been read, leaving the answer in the book's row   (stackroom.ts floorOf)
+fn floor_read(g: &mut Game, d: DoorId, side: f64) {
     let at = if side > 0.0 { 0 } else { 1 };
     {
         let k = book_of(g);
         match k.floors.get(d) {
-            Some(pair) => { if let Some(f) = &pair[at] { return f.clone(); } }
+            Some(pair) => { if pair[at].is_some() { return; } }
             None => { k.floors.set(d, [None, None]); }
         }
     }
@@ -128,7 +151,7 @@ pub fn floor_of(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate
     }
     if seed < 0.0 {
         g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at] = Some(None);
-        return None;
+        return;
     }
     let mut dist = vec![-1i16; (nw * nh) as usize];
     let mut cells = vec![seed];
@@ -153,8 +176,7 @@ pub fn floor_of(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crate
         qi += 1;
     }
     let f = crate::stackroom::Floor { seed, dist, cells };
-    g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at] = Some(Some(f.clone()));
-    Some(f)
+    g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at] = Some(Some(f));
 }
 
 /// steps of walking from the doorway to `p` on that floor (−1: not on it)   (stackroom.ts stepsTo)
@@ -194,7 +216,13 @@ pub fn on_floor(g: &mut crate::game::Game, f: &crate::stackroom::Floor, p: V3) -
 
 /// is `p` on the floor of that face of `d`: true for a face with no floor at all   (stackroom.ts stackRoomHas)
 pub fn stack_room_has(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> bool {
-    match floor_of(g, d, side) { None => true, Some(f) => on_floor(g, &f, p) }
+    floor_read(g, d, side);
+    // the face out of its row for the one question, not a copy of its W*H cells: on_floor never reads the book
+    let at = if side > 0.0 { 0 } else { 1 };
+    let f = g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at].take();
+    let ok = match &f { Some(Some(f)) => on_floor(g, f, p), _ => true };
+    g.m.stackroom.books.as_mut().unwrap().floors.get_mut(d).unwrap()[at] = f;
+    ok
 }
 
 /// … the same, counted: a tuck or a step back not taken for it   (stackroom.ts stackRoomKeeps)
@@ -522,7 +550,7 @@ fn view_deal(g: &mut Game, r: &mut ViewDeal, i: usize, fixed: &[V3]) -> Option<D
 }
 
 /// a plain 'stack up' on a door standing open: the marks in view, and those across the opening from `men`, dealt again along the door's wall   (stackroom.ts stackViewFix)
-pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, taken: &[V3], men: &[crate::stackroom::StackViewFixMenItem]) -> Option<Vec<crate::orders::StackPost>> {
+pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Option<&[crate::orders::StackPost]>, taken: &[V3], men: &[GuardId]) -> Option<Vec<crate::orders::StackPost>> {
     let posts = posts?;
     let s = g.k.stackroom;
     if !stack_view_open(g, d) { return Some(posts.to_vec()); }
@@ -536,12 +564,12 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     let mut pre: JsMap<usize, V3> = JsMap::new();
     {
         let mut stood: Vec<V3> = Vec::new();
-        for man in men {
-            let a = seam_man_assignment(g, man);
+        for &man in men {
+            let a = crate::orders::squad_orders_of(g, man);
             let Some(a) = a else { continue };
             if g.tab.orders_assignment[a].order != "stack" || g.tab.orders_assignment[a].door != Some(d) { continue; }
             let Some(post) = g.tab.orders_assignment[a].post else { continue };
-            if flat(man.char.pos, post) < 0.6 && crate::doortools::off_of(g, d, post, side) > 0.0 { stood.push(post); }
+            if flat(g.ch[g.gd[man].ch].pos, post) < 0.6 && crate::doortools::off_of(g, d, post, side) > 0.0 { stood.push(post); }
         }
         let loose: Vec<usize> = (0..posts.len()).filter(|i| !stood.iter().any(|q| flat(*q, posts[*i].pos) < SAME_M)).collect();
         // only a place this rule could have dealt: by the door's own wall, no further along it than the rule reaches
@@ -582,8 +610,8 @@ pub fn stack_view_fix(g: &mut crate::game::Game, d: DoorId, side: f64, posts: Op
     // ACROSS: a hand dealt more places than it has men to take them without crossing gives up the ones nearest the frame
     {
         let mut hs: Vec<f64> = Vec::new();
-        for man in men {
-            let p = man.char.pos;
+        for &man in men {
+            let p = g.ch[g.gd[man].ch].pos;
             if crate::doortools::off_of(g, d, p, side) > 0.0 && flat(p, c) <= s.view_men {
                 let a = crate::doortools::along_of(g, d, p);
                 hs.push(if a >= w + s.view_out { 1.0 } else if a <= -s.view_out { -1.0 } else { 0.0 });
@@ -782,10 +810,10 @@ pub fn stack_room_summary(g: &mut crate::game::Game) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{book_of, floor_of, on_wall, stack_room_book_keep};
+    use super::{book_of, floor_of, on_wall, stack_room_book_keep, stack_room_book_put_back, stack_room_has};
     use crate::game::Game;
     use crate::ids::DoorId;
-    use crate::stackroom::StackRoomBookKeep;
+    use crate::stackroom::{Floor, StackRoomBookKeep};
     use alloc::vec;
 
     /// ts:119: a null in a pair is remembered. A flood would reach door_pt, a stub, and panic
@@ -822,6 +850,83 @@ mod tests {
             }
             StackRoomBookKeep::Forget => panic!("there is a book"),
         }
+    }
+
+    fn a_floor() -> Floor { Floor { seed: 0.0, dist: vec![-1], cells: vec![0.0] } }
+
+    /// ts:93: no book when kept, none after
+    #[test]
+    fn put_back_of_no_book_drops_the_book() {
+        let mut g = Game::blank();
+        let keep = stack_room_book_keep(&mut g);
+        book_of(&mut g).near = Some(vec![1]);
+        stack_room_book_put_back(&mut g, keep);
+        assert!(g.m.stackroom.books.is_none());
+    }
+
+    /// ts:94-95: what was read stays, what was read since is forgotten: a face, a door, the doorway cells
+    #[test]
+    fn put_back_forgets_only_what_was_read_since() {
+        let mut g = Game::blank();
+        let (d0, d1) = (DoorId(0), DoorId(1));
+        book_of(&mut g).floors.set(d0, [Some(Some(a_floor())), None]);
+        let keep = stack_room_book_keep(&mut g);
+        let k = book_of(&mut g);
+        k.near = Some(vec![1]);
+        k.floors.get_mut(d0).unwrap()[1] = Some(None);
+        k.floors.set(d1, [Some(None), None]);
+        stack_room_book_put_back(&mut g, keep);
+        let k = g.m.stackroom.books.as_ref().unwrap();
+        assert!(k.near.is_none());
+        assert!(k.floors.get(d1).is_none());
+        let pair = k.floors.get(d0).unwrap();
+        assert!(matches!(&pair[0], Some(Some(_))));
+        assert!(pair[1].is_none());
+    }
+
+    /// ts:95,101: doorway cells made before the keep stay made
+    #[test]
+    fn put_back_keeps_doorway_cells_already_made() {
+        let mut g = Game::blank();
+        book_of(&mut g).near = Some(vec![1]);
+        let keep = stack_room_book_keep(&mut g);
+        stack_room_book_put_back(&mut g, keep);
+        assert!(g.m.stackroom.books.as_ref().unwrap().near.is_some());
+    }
+
+    /// ts:99-101: rebuilt during the ask, so the book kept would be stale at the next bookOf
+    #[test]
+    fn put_back_after_a_rebuild_drops_the_book() {
+        let mut g = Game::blank();
+        book_of(&mut g);
+        let keep = stack_room_book_keep(&mut g);
+        g.engine.world.geom_serial += 1.0;
+        book_of(&mut g);
+        stack_room_book_put_back(&mut g, keep);
+        assert!(g.m.stackroom.books.is_none());
+    }
+
+    /// ts:157: no floor is true, and the remembered null is still in its row after the ask
+    #[test]
+    fn has_with_no_floor_is_true_and_leaves_the_row() {
+        let mut g = Game::blank();
+        let d = DoorId(0);
+        book_of(&mut g).floors.set(d, [Some(None), None]);
+        assert!(stack_room_has(&mut g, d, 1.0, [0.0; 3]));
+        assert!(matches!(&g.m.stackroom.books.as_ref().unwrap().floors.get(d).unwrap()[0], Some(None)));
+    }
+
+    /// ts:142,151,157: a point off the grid is off the floor, and the floor taken out for the question is back in its row
+    #[test]
+    fn has_puts_the_floor_back_after_the_question() {
+        let mut g = Game::blank();
+        g.col.nav.w = 1.0;
+        g.col.nav.h = 1.0;
+        g.col.nav.cell = 1.0;
+        let d = DoorId(0);
+        book_of(&mut g).floors.set(d, [None, Some(Some(a_floor()))]);
+        assert!(!stack_room_has(&mut g, d, -1.0, [-5.0, 0.0, 0.0]));
+        assert!(matches!(&g.m.stackroom.books.as_ref().unwrap().floors.get(d).unwrap()[1], Some(Some(_))));
     }
 
     /// (th, side, hand, face's bits, stackSide) from the TypeScript's own onWall, under bun with EXACT.on

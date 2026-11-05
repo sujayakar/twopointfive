@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// the time a list's memory of its last landing holds when nothing has landed yet (fallshome.ts, the constructor and clear)
 const NEVER: f64 = -1e9;
@@ -177,6 +177,11 @@ pub fn fall_store_clear(g: &mut crate::game::Game, list_only: Option<bool>, l: O
 pub fn fall_store_rule<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, what: &str, there: &mut dyn FnMut(&mut crate::game::Game) -> T, here: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     took_there(g);
     there(g)
+}
+
+/// The replacer of the both-ways arm's JSON, the one tool nothing in Rust takes: an Opaque holds no number, so only the road that hands `v` back exists. (fallshome.ts nanSafe)
+pub fn nan_safe(_k: &str, v: crate::Opaque) -> crate::Opaque {
+    v
 }
 
 /// The cell (x, z) is in, or NCELLS where the world has no floor under it. (fallshome.ts cell)

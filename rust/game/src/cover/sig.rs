@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/game/cover.ts:197 gapsOf)
-pub fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: Option<crate::knobs::CoverK>, solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<CoverOpeningId> { todo!() }
+pub fn gaps_of(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<crate::cover::Opening> { todo!() }
 
 /// (src/game/cover.ts:267 Cover.constructor)
 pub fn cover_new(g: &mut crate::game::Game) -> crate::cover::Cover { todo!() }

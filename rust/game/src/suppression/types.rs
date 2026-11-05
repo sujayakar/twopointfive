@@ -79,63 +79,6 @@ impl SupMoment {
     }
 }
 
-/// (TypeScript: SamPass, src/game/suppression.ts:104)
-#[derive(Clone, Copy, Debug)]
-pub struct SamPass {
-    pub from: V3,
-    pub to: V3,
-    pub closest: V3,
-    pub travelled: f64,
-    pub d_near: f64,
-    pub d_hit: f64,
-    pub add: f64,
-    pub shooter_id: f64,
-}
-impl SamPass {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamPass {
-            from: [0.0; 3],
-            to: [0.0; 3],
-            closest: [0.0; 3],
-            travelled: 0.0,
-            d_near: 0.0,
-            d_hit: 0.0,
-            add: 0.0,
-            shooter_id: 0.0,
-        }
-    }
-}
-impl Default for SamPass { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/suppression.ts:99 SUPPRESSION_DEBUG, src/game/suppression.ts:99)
-#[derive(Clone, Copy, Debug)]
-pub struct SUPPRESSIONDEBUG {
-}
-impl SUPPRESSIONDEBUG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SUPPRESSIONDEBUG {
-        }
-    }
-}
-impl Default for SUPPRESSIONDEBUG { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/suppression.ts:105 SUPPRESSION_FX, src/game/suppression.ts:105)
-#[derive(Clone, Copy, Debug)]
-pub struct SUPPRESSIONFX {
-    pub fx_range: f64,
-}
-impl SUPPRESSIONFX {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SUPPRESSIONFX {
-            fx_range: 0.0,
-        }
-    }
-}
-impl Default for SUPPRESSIONFX { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HeadDown {
@@ -189,12 +132,6 @@ impl SuppressionMod {
         }
     }
 }
-
-/// (src/game/suppression.ts:99 SUPPRESSION_DEBUG: a table nothing writes)
-pub fn suppression_debug() -> crate::suppression::SUPPRESSIONDEBUG { crate::suppression::SUPPRESSIONDEBUG {  } }
-
-/// (src/game/suppression.ts:105 SUPPRESSION_FX: a table nothing writes)
-pub fn suppression_fx() -> crate::suppression::SUPPRESSIONFX { crate::suppression::SUPPRESSIONFX { fx_range: 4.0 } }
 
 /// (src/game/suppression.ts:149 RANK: a table nothing writes)
 pub fn rank() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("recover"), 0.0); t.set(String::from("friendly"), 1.0); t.set(String::from("flinch"), 1.0); t.set(String::from("pinned"), 2.0); t.set(String::from("displace"), 3.0); t } }

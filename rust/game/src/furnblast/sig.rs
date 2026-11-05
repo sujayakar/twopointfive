@@ -134,6 +134,10 @@ pub fn furniture_note_reset(g: &mut crate::game::Game, cause: crate::furnblast::
 /// (src/game/furnblast.ts:681 Furniture.summary)
 pub fn furniture_summary(g: &mut crate::game::Game) -> String { todo!() }
 
+
+/// INVENTED, for FURN_BREAK[cls] (src/game/furnblast.ts:104): the row of a class, owned, so a caller can hold it across a call that takes g. Nothing writes the table.
+pub fn furn_break_row(cls: crate::scene_materials::BreakClass) -> crate::furnblast::BreakRow { crate::furnblast::furn_break().into_iter().find(|e| e.0 == cls).unwrap().1 }
+
 pub mod none_done {
     #[allow(unused_imports)]
     use crate::{ids::*, js::*, Quat, V3};

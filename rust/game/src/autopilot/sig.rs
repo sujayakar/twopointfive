@@ -9,10 +9,10 @@ use alloc::{string::String, vec::Vec};
 pub fn in_sight(g: &mut crate::game::Game, o: GuardId) -> bool { todo!() }
 
 /// (src/game/autopilot.ts:84 contactBehind)
-pub fn contact_behind(g: &mut crate::game::Game, t: crate::autopilot::DoorTarget, far: f64) -> bool { todo!() }
+pub fn contact_behind(g: &mut crate::game::Game, t: crate::orders::OrderTargetDoor, far: f64) -> bool { todo!() }
 
 /// (src/game/autopilot.ts:93 autoEntries)
-pub fn auto_entries(g: &mut crate::game::Game, t: crate::autopilot::DoorTarget, shut: Option<bool>) -> crate::autopilot::AutoEntries { todo!() }
+pub fn auto_entries(g: &mut crate::game::Game, t: crate::orders::OrderTargetDoor, shut: Option<bool>) -> crate::autopilot::AutoEntries { todo!() }
 
 /// (src/game/autopilot.ts:106 autoPick)
 pub fn auto_pick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, check: Option<bool>, men: Option<&[GuardId]>) -> crate::autopilot::AutoPick { todo!() }

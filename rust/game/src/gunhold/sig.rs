@@ -24,13 +24,13 @@ pub fn gun_hold_see(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pa
 pub fn learn_shot(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, shot_t: f64, sensed: bool) { todo!() }
 
 /// (src/game/gunhold.ts:117 partOf)
-pub fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::gunhold::PartOf> { todo!() }
+pub fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> { todo!() }
 
-/// (src/game/gunhold.ts:124 gunHoldKeeps)
-pub fn gun_hold_keeps(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/gunhold.ts:124 standoffFixKept)
+pub fn standoff_fix_kept(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/gunhold.ts:130 gunHoldRuns)
-pub fn gun_hold_runs(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/gunhold.ts:130 standoffOnFeet)
+pub fn standoff_on_feet(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/gunhold.ts:136 gunHoldFree)
 pub fn gun_hold_free(g: &mut crate::game::Game, p: crate::guards::Pair) -> bool { todo!() }
@@ -52,9 +52,6 @@ pub fn front(g: &mut crate::game::Game, k: &crate::gunhold::Known, p: V3) -> boo
 
 /// (src/game/gunhold.ts:162 shown)
 pub fn shown(g: &mut crate::game::Game, k: &crate::gunhold::Known, p: V3, low: bool) -> bool { todo!() }
-
-/// (src/game/gunhold.ts:168 price)
-pub fn price(g: &mut crate::game::Game, k: &mut crate::gunhold::Known) { todo!() }
 
 /// (src/game/gunhold.ts:177 wayTo)
 pub fn way_to(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, goal: V3) -> Option<crate::gunhold::WayTo> { todo!() }

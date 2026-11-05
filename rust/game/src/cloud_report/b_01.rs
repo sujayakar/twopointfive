@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/cloud/report.ts:70 hand)
-pub fn hand(g: &mut crate::game::Game, r: crate::cloud_report::Report) {}
+pub fn hand(g: &mut crate::game::Game, r: &crate::cloud_report::Report) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/cloud/report.ts:84 say)
 pub fn say(g: &mut crate::game::Game, where_: &str, level: crate::cloud_report::ReportLevel, parts: &[crate::Opaque], data: Option<&JsMap<String, crate::Opaque>>, every_time: bool) {}

@@ -1,4 +1,4 @@
-//! src/game/launcher.ts lines 1 to 253
+//! src/game/launcher.ts lines 1 to 254
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -12,8 +12,10 @@ fn ballistics_of(k: &crate::knobs::RingK) -> Ballistics {
     Ballistics { speed: k.speed, gravity: k.gravity, drag: k.drag, radius: k.radius, life: k.life, substeps: k.substeps, solve_iters: k.solve_iters }
 }
 
-/// g.audio.play(name, at, gain, { rate }): the only sound here the skeleton cannot say yet.
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate, crate::Opaque holds nothing (launcher.ts:168,172,185,187,192,208)") }
+/// g.audio.play(name, at, gain, { rate }).
+fn play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) {
+    crate::audio_iface::game_audio_like_play(g, name, Some(at), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+}
 
 /// A 'prop' noise in the room's business, dealt its serial here at its birth.
 fn prop_event(g: &mut Game, pos: V3, level: f64, who: f64, lure: Option<bool>) {
@@ -22,8 +24,7 @@ fn prop_event(g: &mut Game, pos: V3, level: f64, who: f64, lure: Option<bool>) {
 }
 
 /// The launch velocity to pass through `target`: dead at it, raised by however far a simulated flight falls short, solveIters times. (launcher.ts launchVel)
-pub fn launch_vel(from: V3, target: V3, r: Option<crate::launcher::Ballistics>) -> V3 {
-    let r = match r { Some(r) => r, None => ballistics_of(&crate::knobs::page_ring()) };
+pub fn launch_vel(from: V3, target: V3, r: crate::launcher::Ballistics) -> V3 {
     let d = v3::sub(target, from);
     let l = v3::len(d);
     if l < 1e-3 { return [0.0, 0.0, r.speed]; }
@@ -67,7 +68,7 @@ pub fn ring_solve(g: &mut crate::game::Game, from: V3, target: V3) -> crate::thr
 
 /// ringSolve for anything the tube throws: stepped as a live ring at 60 Hz, until it meets a static, a leaf, a prop or the floor. (launcher.ts arcSolve)
 pub fn arc_solve(g: &mut crate::game::Game, from: V3, target: V3, r: crate::launcher::Ballistics) -> crate::throwables::ThrowSolution {
-    let v0 = launch_vel(from, target, Some(r));
+    let v0 = launch_vel(from, target, r);
     let mut points: Vec<V3> = Vec::new();
     let mut p = v3::copy(from);
     let mut v = v3::copy(v0);
@@ -129,7 +130,7 @@ pub fn ring_aim_point(g: &mut crate::game::Game, from: V3) -> V3 {
 
 /// Let one ring go: in the air from this frame, the launcher's sound at the tube, a 'prop' noise at the shooter. (launcher.ts fireRing)
 pub fn fire_ring(g: &mut crate::game::Game, shooter: CharId, from: V3, target: V3) -> crate::launcher::Ring {
-    let vel = launch_vel(from, target, Some(ballistics_of(&g.k.ring)));
+    let vel = launch_vel(from, target, ballistics_of(&g.k.ring));
     let spin = crate::math_dice::sim_random(g) * m::PI;
     let ring = Ring { pos: v3::copy(from), vel, age: 0.0, shooter, spin };
     g.rings.push(ring);
@@ -270,7 +271,7 @@ pub fn spend(g: &mut crate::game::Game, r: crate::launcher::Ring, at: V3, vel: V
 /// The ring meeting something hard: a clack, sparks, and a noise the room goes to look at. (launcher.ts clack)
 pub fn clack(g: &mut crate::game::Game, at: V3, k: Option<f64>) {
     let k = k.unwrap_or(1.0);
-    seam_audio_play_rate(g, "canisterBounce", at, 0.55 * k, 1.5);
+    play_rate(g, "canisterBounce", at, 0.55 * k, 1.5);
     crate::particle_fx::clack_fx(g, at);
     let level = g.k.ring.clack_noise * k;
     prop_event(g, [at[0], 0.0, at[2]], level, 0.0, Some(true));
@@ -286,14 +287,14 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
     match gd {
         None => {
             crate::character::anim_hit(g, c);
-            seam_audio_play_rate(g, "bodyHit", at, 0.5, 1.1);
+            play_rate(g, "bodyHit", at, 0.5, 1.1);
             let text = crate::gear::gear_text(g, if high { "a ring airfoil off the side of your head — from a friend, luckily" } else { "a ring airfoil in the ribs" });
             crate::game::game_msg(g, &text);
         }
         Some(gd) if g.gd[gd].civ.is_some() && !high => {
             crate::character::anim_hit(g, c);
             let thump = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
-            seam_audio_play_rate(g, "bodyHit", thump, 0.55, 1.05);
+            play_rate(g, "bodyHit", thump, 0.55, 1.05);
             if g.gd[gd].held.is_none() {
                 let back = g.k.ring.stagger_back;
                 let p = g.ch[c].pos;
@@ -304,7 +305,7 @@ pub fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, 
             if by_player { let pl = g.player; g.pl[pl].noise = m::max(g.pl[pl].noise, level); }
         }
         Some(gd) if high => {
-            seam_audio_play_rate(g, "bodyHit", at, 0.6, 0.75);
+            play_rate(g, "bodyHit", at, 0.6, 0.75);
             let line = match g.gd[gd].civ {
                 Some(cv) => format!("ring to the head — {}, the {}, is out cold. breathing — but a civilian: that costs, and they may find {}", g.cv[cv].name, g.cv[cv].label, g.cv[cv].her),
                 None => format!("ring to the head — {} is out cold", g.gd[gd].callsign),
@@ -330,7 +331,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let c = g.gd[gd].ch;
     crate::character::anim_hit(g, c);
     let thump = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
-    seam_audio_play_rate(g, "bodyHit", thump, 0.55, 1.05);
+    play_rate(g, "bodyHit", thump, 0.55, 1.05);
     if g.gd[gd].held.is_some() { return; }
     if g.gd[gd].script.is_some() {
         use crate::squad::EndGuardScriptState as End;
@@ -344,7 +345,9 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let weapon = g.gd[gd].weapon;
     g.fa[weapon].burst = None;
     g.gd[gd].path = Vec::new();
+    g.gd[gd].path_serial = g.gd[gd].path_serial.wrapping_add(1);
     g.gd[gd].path_goal = None;
+    g.gd[gd].path_goal_orbit = false;
     g.gd[gd].stall_ref = None;
     g.gd[gd].speed = 0.0;
     g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -354,7 +357,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
         if crate::scene_collision::nav_grid_is_blocked(g, back[0], back[2]) {
             back = match crate::scene_collision::nav_grid_nearest_free_point(g, back[0], back[2]) { Some(q) => q, None => v3::copy(g.ch[c].pos) };
         }
-        g.gd[gd].last_known = Some(back);
+        crate::belief::word(g, gd, back);
     }
     g.gd[gd].awareness = m::max(g.gd[gd].awareness, aware);
     if g.ai_enabled { g.gd[gd].witness.heard.small += 1.0; }
@@ -375,8 +378,20 @@ pub fn stagger_lines() -> Vec<String> {
     stagger_lines_table()
 }
 
-/// Rings in flight as boxes. Picture-only (triage: dress): not translated, the skeleton's stub. (launcher.ts ringBoxes)
-pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) { todo!("picture-only: left to the picture's side (conventions 6)") }
+/// Rings in flight as boxes: under the issue kit (GEAR.on, settled) the sponge round nose first along its flight, rolling about it. The tick's gathering of dynamic boxes calls this. (launcher.ts ringBoxes)
+pub fn ring_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+    for r in &g.rings {
+        let sp = v3::len(r.vel);
+        if sp < 1e-3 { continue; }
+        let z = v3::scale(r.vel, 1.0 / sp);
+        let up: V3 = if m::abs(z[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
+        let x0 = v3::normalize(v3::cross(up, z));
+        let y0 = v3::cross(z, x0);
+        let (ca, sa) = (m::cos(r.spin), m::sin(r.spin));
+        let rot = v3::quat::from_basis(v3::mad(v3::scale(x0, ca), y0, sa), v3::mad(v3::scale(x0, -sa), y0, ca), z);
+        crate::throwables::sponge_boxes(out, v3::copy(r.pos), rot, v3::yaw_of(z));
+    }
+}
 
 /// The panel's line of rings. Host only (triage: host): not translated, the skeleton's stub. (launcher.ts ringSummary)
 pub fn ring_summary(g: &mut crate::game::Game) -> String { todo!("host only: panel / QA text (conventions 6)") }
@@ -388,7 +403,7 @@ mod tests {
     const R: Ballistics = Ballistics { speed: 30.0, gravity: 9.81, drag: 0.4, radius: 0.04, life: 1.5, substeps: 4.0, solve_iters: 2.0 };
 
     fn same(from: V3, target: V3, r: Ballistics, bits: [u64; 3]) {
-        let v = launch_vel(from, target, Some(r));
+        let v = launch_vel(from, target, r);
         assert_eq!([v[0].to_bits(), v[1].to_bits(), v[2].to_bits()], bits, "{:?} to {:?}", from, target);
     }
 

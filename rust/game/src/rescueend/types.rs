@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: RescueEnd, src/game/rescueend.ts:48)
+/// (TypeScript: RescueEnd, src/game/rescueend.ts:47)
 #[derive(Clone, Copy, Debug)]
 pub struct RescueEnd {
     pub lead: Option<CharId>,
@@ -22,7 +22,7 @@ impl RescueEnd {
 }
 impl Default for RescueEnd { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: RescueEndSnap, src/game/rescueend.ts:46)
+/// (TypeScript: RescueEndSnap, src/game/rescueend.ts:45)
 #[derive(Clone, Copy, Debug)]
 pub struct RescueEndSnap {
     pub lead: Option<f64>,
@@ -41,7 +41,7 @@ impl RescueEndSnap {
 }
 impl Default for RescueEndSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueend.ts:69 rows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/rescueend.ts:68 rows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct RescueEndRowsRowOver {
     pub kind: Option<crate::rescueend::RescueEndRowsRowOverKind>,
@@ -134,7 +134,7 @@ impl RescueEndWon {
     }
 }
 
-/// (TypeScript: inline at src/game/rescueend.ts:107 objective ->, src/game/rescueend.ts:107)
+/// (TypeScript: inline at src/game/rescueend.ts:106 objective ->, src/game/rescueend.ts:106)
 #[derive(Clone, Debug)]
 pub struct RescueEndObjective {
     pub text: String,
@@ -151,7 +151,7 @@ impl RescueEndObjective {
 }
 impl Default for RescueEndObjective { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueend.ts:124 rescueEndRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/rescueend.ts:123 rescueEndRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct RescueEndRows2RowOver {
     pub kind: Option<crate::rescueend::RescueEndRows2RowOverKind>,

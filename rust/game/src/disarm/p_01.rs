@@ -34,7 +34,7 @@ pub fn disarm_begin(g: &mut crate::game::Game) {
 pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
     let s = g.pl[g.player].holding.as_ref().and_then(|h| h.strip);
     if leads(g, s) { return; }
-    seam_audio_play_rate(g, "grabCatch", at, disarm_gain().catch, 1.0);
+    crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
 }
 
 /// The disarm leads for this move: a gun to take with an empty hand, not the pistol hold's rap. (disarm.ts leads)
@@ -88,7 +88,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
             g.pl[pl].catch_due = None;
             let c = match h.as_ref() { Some(h) => g.gd[h.g].ch, None => pl_ch };
             let at = v3::add(g.ch[c].pos, [0.0, 1.4, 0.0]);
-            seam_audio_play_rate(g, "grabCatch", at, disarm_gain().catch, 1.0);
+            crate::audio_iface::game_audio_like_play(g, "grabCatch", Some(at), Some(disarm_gain().catch), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.0 }));
         }
     }
     let (Some(h), Some(mut s)) = (h, s0) else { return };
@@ -110,7 +110,7 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
     if let Some(item) = s.item {
         let (k_drop, k_fall) = (g.k.hold.strip.drop, g.k.hold.strip.fall);
         if s.t < k_drop {
-            carry(g, &mut s, pl_ch);
+            carry(g, &s, pl_ch);
         } else {
             // the disarm leading lets it go sooner: the fall is longer by that many whole steps, and the knock on the frame it was
             let fall = if k_fall > 0.0 {
@@ -158,7 +158,7 @@ pub fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Stri
     g.gd[gd].gun_lost_at = g.time;
     let gains = disarm_gain();
     let rate = (if long(s.kind.as_str()) { gains.long } else { 1.0 }) * (if s.rap { 1.12 } else { 1.0 });
-    seam_audio_play_rate(g, "gunStrip", s.at, gains.strip, rate);
+    crate::audio_iface::game_audio_like_play(g, "gunStrip", Some(s.at), Some(gains.strip), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     if s.rap {
         let_go(g, it, c, None);
         s.gone = true;
@@ -171,7 +171,7 @@ pub fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Stri
 }
 
 /// The gun in Sam's hand this frame: a hand's length ahead of his wrist, swung out to his right and muzzle-down as he tears it clear. (disarm.ts carry)
-pub fn carry(g: &mut crate::game::Game, s: &mut crate::disarm::Strip, sam: CharId) {
+pub fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let it = s.item.unwrap();
     let Some(w) = g.ch[sam].bones.get(crate::character::Bone::HandR).copied() else { return };
     let tip = g.ch[sam].bones.get(crate::character::Bone::FingerR).copied().unwrap_or(w);
@@ -246,7 +246,7 @@ pub fn gun_down(g: &mut crate::game::Game, sp: f64, p: V3, it: ItemId, n: V3) {
     if clatters > 1.0 { return; }
     let gains = disarm_gain();
     let rate = if long(crate::throwables::item_kind(g, it).as_str()) { gains.long } else { 1.0 };
-    seam_audio_play_rate(g, "gunDown", p, gains.down * m::min(1.0, 0.5 + sp / 8.0), rate);
+    crate::audio_iface::game_audio_like_play(g, "gunDown", Some(p), Some(gains.down * m::min(1.0, 0.5 + sp / 8.0)), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
 /// `S` is one object in the TypeScript, shared with the hold: a copy here, so each write is put back through the table.
@@ -261,8 +261,7 @@ fn clear_strip(g: &mut Game, pl: PlayerId) {
 
 /// `men(g).some(o => o.holding?.strip?.item === it)`
 fn any_man_carries(g: &mut Game, it: ItemId) -> bool {
-    let of = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    let men = crate::seats::men(g, &of);
+    let men = crate::seats::men(g);
     men.iter().any(|&o| g.pl[o].holding.as_ref().and_then(|h| h.strip).and_then(|s| s.item) == Some(it))
 }
 
@@ -270,9 +269,6 @@ fn any_man_carries(g: &mut Game, it: ItemId) -> bool {
 fn item_kind_of(kind: crate::slotsetup::SetupGun) -> crate::throwables::ItemKind {
     match kind { crate::slotsetup::SetupGun::Pistol => crate::throwables::ItemKind::Pistol, crate::slotsetup::SetupGun::Rifle => crate::throwables::ItemKind::Rifle }
 }
-
-/// `g.audio.play(name, at, gain, { rate })` (disarm.ts:56, 76, 99, 136): `game_audio_like_play`'s opts hold `crate::Opaque`, which cannot carry a rate.
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
 
 #[cfg(test)]
 mod tests {

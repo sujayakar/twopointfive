@@ -3,7 +3,49 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Box, src/scene/boxes.ts:51)
+/// (TypeScript: PlanBox, src/scene/boxes.ts:58)
+#[derive(Clone, Copy, Debug)]
+pub struct PlanBox {
+    pub c: V3,
+    pub h: V3,
+    pub yaw: f64,
+    pub flags: f64,
+    pub rot: Option<Quat>,
+    pub cut: Option<crate::scene_boxes::PlanBoxCut>,
+    pub round: Option<bool>,
+}
+impl PlanBox {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        PlanBox {
+            c: [0.0; 3],
+            h: [0.0; 3],
+            yaw: 0.0,
+            flags: 0.0,
+            rot: None,
+            cut: None,
+            round: None,
+        }
+    }
+}
+impl Default for PlanBox { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/scene/boxes.ts:58 PlanBox.cut, src/scene/boxes.ts:58)
+#[derive(Clone, Copy, Debug)]
+pub struct PlanBoxCut {
+    pub length: f64,
+}
+impl PlanBoxCut {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        PlanBoxCut {
+            length: 0.0,
+        }
+    }
+}
+impl Default for PlanBoxCut { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: Box, src/scene/boxes.ts:65)
 #[derive(Clone, Debug)]
 pub struct Box {
     pub c: V3,
@@ -90,7 +132,7 @@ impl Box {
 }
 impl Default for Box { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:140 Box.was, src/scene/boxes.ts:140)
+/// (TypeScript: inline at src/scene/boxes.ts:154 Box.was, src/scene/boxes.ts:154)
 #[derive(Clone, Debug)]
 pub struct BoxWas {
     pub c: V3,
@@ -113,12 +155,13 @@ impl BoxWas {
 }
 impl Default for BoxWas { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BoxWorld, src/scene/boxes.ts:247)
+/// (TypeScript: BoxWorld, src/scene/boxes.ts:261)
 #[derive(Clone, Debug)]
 pub struct BoxWorld {
     pub statics: Vec<BoxId>,
     pub dynamics: Vec<BoxId>,
     pub hide_primary: Option<JsSet<BoxId>>,
+    pub undrawn: Option<crate::scene_boxes::BoxWorldUndrawn>,
     pub motion_ids: bool,
     pub mkey_prev: JsMap<crate::Num, f64>,
     pub mkey_cur: JsMap<crate::Num, f64>,
@@ -169,6 +212,8 @@ pub struct BoxWorld {
     pub draw_rank: Vec<u32>,
     pub draw_slot: Vec<u32>,
     pub draw_rank_n: f64,
+    pub draw_waits: bool,
+    pub draw_asked_undrawn: bool,
     pub statics_dirty: bool,
     pub geom_serial: f64,
     pub stat_shadow: Vec<f64>,
@@ -240,6 +285,7 @@ impl BoxWorld {
             statics: Vec::new(),
             dynamics: Vec::new(),
             hide_primary: None,
+            undrawn: None,
             motion_ids: true,
             mkey_prev: JsMap::new(),
             mkey_cur: JsMap::new(),
@@ -290,6 +336,8 @@ impl BoxWorld {
             draw_rank: alloc::vec![0; 0],
             draw_slot: alloc::vec![0; 0],
             draw_rank_n: -1.0,
+            draw_waits: false,
+            draw_asked_undrawn: false,
             statics_dirty: true,
             geom_serial: 0.0,
             stat_shadow: alloc::vec![0.0; 0],
@@ -358,7 +406,20 @@ impl BoxWorld {
 }
 impl Default for BoxWorld { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:259 BoxWorld.mkeyStats, src/scene/boxes.ts:259)
+/// (TypeScript: inline at src/scene/boxes.ts:270 BoxWorld.undrawn, src/scene/boxes.ts:270)
+#[derive(Clone, Copy, Debug)]
+pub struct BoxWorldUndrawn {
+}
+impl BoxWorldUndrawn {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        BoxWorldUndrawn {
+        }
+    }
+}
+impl Default for BoxWorldUndrawn { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/scene/boxes.ts:279 BoxWorld.mkeyStats, src/scene/boxes.ts:279)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldMkeyStats {
     pub matched: f64,
@@ -377,7 +438,7 @@ impl BoxWorldMkeyStats {
 }
 impl Default for BoxWorldMkeyStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:275 BoxWorld.gridStats, src/scene/boxes.ts:275)
+/// (TypeScript: inline at src/scene/boxes.ts:295 BoxWorld.gridStats, src/scene/boxes.ts:295)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldGridStats {
     pub cells: f64,
@@ -400,7 +461,7 @@ impl BoxWorldGridStats {
 }
 impl Default for BoxWorldGridStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:301 BoxWorld.glassScratch, src/scene/boxes.ts:301)
+/// (TypeScript: inline at src/scene/boxes.ts:321 BoxWorld.glassScratch, src/scene/boxes.ts:321)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldGlassScratchItem {
     pub i: f64,
@@ -417,7 +478,7 @@ impl BoxWorldGlassScratchItem {
 }
 impl Default for BoxWorldGlassScratchItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:341 BoxWorld.rig, src/scene/boxes.ts:341)
+/// (TypeScript: inline at src/scene/boxes.ts:361 BoxWorld.rig, src/scene/boxes.ts:361)
 #[derive(Clone, Debug)]
 pub struct BoxWorldRig {
     pub r0: Vec<f32>,
@@ -438,7 +499,7 @@ impl BoxWorldRig {
 }
 impl Default for BoxWorldRig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:341 BoxWorldRig.byOwner, src/scene/boxes.ts:341)
+/// (TypeScript: inline at src/scene/boxes.ts:361 BoxWorldRig.byOwner, src/scene/boxes.ts:361)
 #[derive(Clone, Debug)]
 pub struct BoxWorldRigByOwnerValue {
     pub r0: Vec<f32>,
@@ -457,7 +518,7 @@ impl BoxWorldRigByOwnerValue {
 }
 impl Default for BoxWorldRigByOwnerValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:384 BoxWorld.gridBuilds, src/scene/boxes.ts:384)
+/// (TypeScript: inline at src/scene/boxes.ts:413 BoxWorld.gridBuilds, src/scene/boxes.ts:413)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldGridBuilds {
     pub built: f64,
@@ -474,7 +535,7 @@ impl BoxWorldGridBuilds {
 }
 impl Default for BoxWorldGridBuilds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:412 BoxWorld.rayGridStats, src/scene/boxes.ts:412)
+/// (TypeScript: inline at src/scene/boxes.ts:441 BoxWorld.rayGridStats, src/scene/boxes.ts:441)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldRayGridStats {
     pub statics: f64,
@@ -493,7 +554,7 @@ impl BoxWorldRayGridStats {
 }
 impl Default for BoxWorldRayGridStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:422 BoxWorld.markByKey, src/scene/boxes.ts:422)
+/// (TypeScript: inline at src/scene/boxes.ts:451 BoxWorld.markByKey, src/scene/boxes.ts:451)
 #[derive(Clone, Debug)]
 pub struct BoxWorldMarkByKeyValue {
     pub slot: f64,
@@ -522,7 +583,7 @@ impl BoxWorldMarkByKeyValue {
 }
 impl Default for BoxWorldMarkByKeyValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:423 BoxWorld.markOfBox, src/scene/boxes.ts:423)
+/// (TypeScript: inline at src/scene/boxes.ts:452 BoxWorld.markOfBox, src/scene/boxes.ts:452)
 #[derive(Clone, Debug)]
 pub struct BoxWorldMarkOfBoxValue {
     pub key: String,
@@ -549,7 +610,7 @@ impl BoxWorldMarkOfBoxValue {
 }
 impl Default for BoxWorldMarkOfBoxValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:424 BoxWorld.markStatsInfo, src/scene/boxes.ts:424)
+/// (TypeScript: inline at src/scene/boxes.ts:453 BoxWorld.markStatsInfo, src/scene/boxes.ts:453)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldMarkStatsInfo {
     pub lists: f64,
@@ -611,7 +672,7 @@ impl BoxFlag {
 }
 impl Default for BoxFlag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:162 MKEY, src/scene/boxes.ts:162)
+/// (TypeScript: inline at src/scene/boxes.ts:176 MKEY, src/scene/boxes.ts:176)
 #[derive(Clone, Copy, Debug)]
 pub struct MKEY {
     pub door: f64,
@@ -623,6 +684,7 @@ pub struct MKEY {
     pub test: f64,
     pub debris: f64,
     pub look: f64,
+    pub skin: f64,
 }
 impl MKEY {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -637,12 +699,13 @@ impl MKEY {
             test: 0.0,
             debris: 0.0,
             look: 0.0,
+            skin: 0.0,
         }
     }
 }
 impl Default for MKEY { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:182 makeBox(p), src/scene/boxes.ts:182 makeBox(p))
+/// (TypeScript: inline at src/scene/boxes.ts:196 makeBox(p), src/scene/boxes.ts:196 makeBox(p))
 #[derive(Clone, Debug)]
 pub struct MakeBoxP {
     pub c: V3,
@@ -729,7 +792,7 @@ impl MakeBoxP {
 }
 impl Default for MakeBoxP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:198 wordOf(b), src/scene/boxes.ts:198)
+/// (TypeScript: inline at src/scene/boxes.ts:212 wordOf(b), src/scene/boxes.ts:212)
 #[derive(Clone, Copy, Debug)]
 pub struct WordOfB {
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
@@ -746,7 +809,7 @@ impl WordOfB {
 }
 impl Default for WordOfB { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:198 wordOf ->, src/scene/boxes.ts:198)
+/// (TypeScript: inline at src/scene/boxes.ts:212 wordOf ->, src/scene/boxes.ts:212)
 #[derive(Clone, Copy, Debug)]
 pub struct WordOf {
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
@@ -763,7 +826,7 @@ impl WordOf {
 }
 impl Default for WordOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:205 solidGlassBox(b), src/scene/boxes.ts:205)
+/// (TypeScript: inline at src/scene/boxes.ts:219 solidGlassBox(b), src/scene/boxes.ts:219)
 #[derive(Clone, Copy, Debug)]
 pub struct SolidGlassBoxB {
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
@@ -780,7 +843,7 @@ impl SolidGlassBoxB {
 }
 impl Default for SolidGlassBoxB { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:403 rayAside(own), src/scene/boxes.ts:403)
+/// (TypeScript: inline at src/scene/boxes.ts:432 rayAside(own), src/scene/boxes.ts:432)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldRayAsideOwn {
     pub w: Option<crate::scene_boxes::BoxWorldRayAsideOwnW>,
@@ -795,7 +858,7 @@ impl BoxWorldRayAsideOwn {
 }
 impl Default for BoxWorldRayAsideOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:403 BoxWorldRayAsideOwn.w, src/scene/boxes.ts:403 BoxWorldRayAsideOwn.w)
+/// (TypeScript: inline at src/scene/boxes.ts:432 BoxWorldRayAsideOwn.w, src/scene/boxes.ts:432 BoxWorldRayAsideOwn.w)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldRayAsideOwnW {
 }
@@ -808,7 +871,7 @@ impl BoxWorldRayAsideOwnW {
 }
 impl Default for BoxWorldRayAsideOwnW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:501 packList(ent), src/scene/boxes.ts:501)
+/// (TypeScript: inline at src/scene/boxes.ts:530 packList(ent), src/scene/boxes.ts:530)
 #[derive(Clone, Debug)]
 pub struct BoxWorldPackListEnt {
     pub slot: f64,
@@ -842,7 +905,7 @@ pub enum BoxWorldAddCharacterCapsulesAlbedo {
     Array(Vec<V3>),
 }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1029 raycast ->, src/scene/boxes.ts:1029)
+/// (TypeScript: inline at src/scene/boxes.ts:1066 raycast ->, src/scene/boxes.ts:1066)
 #[derive(Clone, Copy, Debug)]
 pub struct BoxWorldRaycast {
     pub t: f64,
@@ -861,7 +924,7 @@ impl BoxWorldRaycast {
 }
 impl Default for BoxWorldRaycast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1107 rayBox ->, src/scene/boxes.ts:1107)
+/// (TypeScript: inline at src/scene/boxes.ts:1144 rayBox ->, src/scene/boxes.ts:1144)
 #[derive(Clone, Copy, Debug)]
 pub struct RayBox {
     pub t: f64,
@@ -878,7 +941,7 @@ impl RayBox {
 }
 impl Default for RayBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1133 rayBoxRot ->, src/scene/boxes.ts:1133)
+/// (TypeScript: inline at src/scene/boxes.ts:1170 rayBoxRot ->, src/scene/boxes.ts:1170)
 #[derive(Clone, Copy, Debug)]
 pub struct RayBoxRot {
     pub t: f64,
@@ -895,7 +958,7 @@ impl RayBoxRot {
 }
 impl Default for RayBoxRot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1154 rayBoxCut ->, src/scene/boxes.ts:1154)
+/// (TypeScript: inline at src/scene/boxes.ts:1191 rayBoxCut ->, src/scene/boxes.ts:1191)
 #[derive(Clone, Copy, Debug)]
 pub struct RayBoxCut {
     pub t: f64,
@@ -912,7 +975,7 @@ impl RayBoxCut {
 }
 impl Default for RayBoxCut { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1184 rayBoxRound ->, src/scene/boxes.ts:1184)
+/// (TypeScript: inline at src/scene/boxes.ts:1221 rayBoxRound ->, src/scene/boxes.ts:1221)
 #[derive(Clone, Copy, Debug)]
 pub struct RayBoxRound {
     pub t: f64,
@@ -929,6 +992,57 @@ impl RayBoxRound {
 }
 impl Default for RayBoxRound { fn default() -> Self { Self::zeroed() } }
 
+/// (src/scene/boxes.ts:303 BOX_WORLD_MAX_CAST)
+pub const BOX_WORLD_MAX_CAST: f64 = 16.0;
+
+/// (src/scene/boxes.ts:306 BOX_WORLD_castCap)
+pub const BOX_WORLD_castCap: f64 = 16.0;
+
+/// (src/scene/boxes.ts:307 BOX_WORLD_CAPS_PER_CHAR)
+pub const BOX_WORLD_CAPS_PER_CHAR: f64 = 15.0;
+
+/// (src/scene/boxes.ts:307 BOX_WORLD_MAX_CAPSULES)
+pub const BOX_WORLD_MAX_CAPSULES: f64 = 240.0;
+
+/// (src/scene/boxes.ts:309 BOX_WORLD_INFO_BOUNDS)
+pub const BOX_WORLD_INFO_BOUNDS: f64 = 24.0;
+
+/// (src/scene/boxes.ts:309 BOX_WORLD_INFO_GLOBALS_Y)
+pub const BOX_WORLD_INFO_GLOBALS_Y: f64 = 88.0;
+
+/// (src/scene/boxes.ts:309 BOX_WORLD_INFO_GRID)
+pub const BOX_WORLD_INFO_GRID: f64 = 120.0;
+
+/// (src/scene/boxes.ts:309 BOX_WORLD_INFO_GLOBALS_B)
+pub const BOX_WORLD_INFO_GLOBALS_B: f64 = 124.0;
+
+/// (src/scene/boxes.ts:310 BOX_WORLD_GLASS_WORD)
+pub const BOX_WORLD_GLASS_WORD: f64 = 252.0;
+
+/// (src/scene/boxes.ts:347 BOX_WORLD_GLOBAL_PAD)
+pub const BOX_WORLD_GLOBAL_PAD: f64 = 0.005;
+
+/// (src/scene/boxes.ts:352 BOX_WORLD_ITEM_PAD_KEEP)
+pub const BOX_WORLD_ITEM_PAD_KEEP: f64 = 0.005;
+
+/// (src/scene/boxes.ts:362 BOX_WORLD_RB_QUANT)
+pub const BOX_WORLD_RB_QUANT: f64 = 0.001;
+
+/// (src/scene/boxes.ts:393 BOX_WORLD_SS)
+pub const BOX_WORLD_SS: f64 = 24.0;
+
+/// (src/scene/boxes.ts:422 BOX_WORLD_RAY_PAD)
+pub const BOX_WORLD_RAY_PAD: f64 = 0.001;
+
+/// (src/scene/boxes.ts:426 BOX_WORLD_RS)
+pub const BOX_WORLD_RS: f64 = 12.0;
+
+/// (src/scene/boxes.ts:671 BOX_WORLD_TIE_PLANE)
+pub const BOX_WORLD_TIE_PLANE: f64 = 0.00025;
+
+/// (src/scene/boxes.ts:673 BOX_WORLD_TIE_PATCH)
+pub const BOX_WORLD_TIE_PATCH: f64 = 0.0005;
+
 /// (src/scene/boxes.ts:13 BoxFlag: a table nothing writes)
 pub fn box_flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::BoxFlag { no_primary: 1.0, no_shadow: 2.0, cutaway: 4.0, dynamic: 8.0, emissive: 16.0, area_lit: 32.0, rot: 64.0, gloss: 128.0, sound_seal: 65536.0, glass: 131072.0, thin: 262144.0, bar: 524288.0 } }
 
@@ -938,17 +1052,17 @@ pub const SHEET_MASK: f64 = 131083.0;
 /// (src/scene/boxes.ts:43 MAX_GLASS)
 pub const MAX_GLASS: f64 = 32.0;
 
-/// (src/scene/boxes.ts:162 MKEY: a table nothing writes)
-pub fn mkey() -> crate::scene_boxes::MKEY { crate::scene_boxes::MKEY { door: 16777216.0, prop: 33554432.0, item: 50331648.0, rig: 67108864.0, device: 83886080.0, ring: 100663296.0, test: 117440512.0, debris: 134217728.0, look: 150994944.0 } }
+/// (src/scene/boxes.ts:176 MKEY: a table nothing writes)
+pub fn mkey() -> crate::scene_boxes::MKEY { crate::scene_boxes::MKEY { door: 16777216.0, prop: 33554432.0, item: 50331648.0, rig: 67108864.0, device: 83886080.0, ring: 100663296.0, test: 117440512.0, debris: 134217728.0, look: 150994944.0, skin: 167772160.0 } }
 
-/// (src/scene/boxes.ts:222 GEO_STRIDE)
+/// (src/scene/boxes.ts:236 GEO_STRIDE)
 pub const GEO_STRIDE: f64 = 8.0;
 
-/// (src/scene/boxes.ts:228 GB_STRIDE)
+/// (src/scene/boxes.ts:242 GB_STRIDE)
 pub const GB_STRIDE: f64 = 36.0;
 
-/// (src/scene/boxes.ts:228 GB_ROWS)
+/// (src/scene/boxes.ts:242 GB_ROWS)
 pub const GB_ROWS: f64 = 1152.0;
 
-/// (src/scene/boxes.ts:229 MAT_STRIDE)
+/// (src/scene/boxes.ts:243 MAT_STRIDE)
 pub const MAT_STRIDE: f64 = 16.0;

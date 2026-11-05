@@ -7,21 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// `x.toFixed(1)`: on an exact tie (only an odd multiple of a quarter can be one) the larger digit, where `{:.1}` takes the even; −0 has no sign, a small negative keeps it.
-fn to_fixed_1(x: f64) -> String {
-    if x.is_nan() { return String::from("NaN"); }
-    let a = m::abs(x);
-    if a == f64::INFINITY { return String::from(if x < 0.0 { "-Infinity" } else { "Infinity" }); }
-    let sign = if x < 0.0 { "-" } else { "" };
-    let q = a * 4.0;
-    if q == m::floor(q) && js::rem(q, 2.0) == 1.0 {
-        let n = m::floor(a * 10.0) + 1.0;   // (a tie's tenths end in .5, exactly: this is the digit above)
-        let tenths = js::rem(n, 10.0);
-        return format!("{}{}.{}", sign, (n - tenths) / 10.0, tenths);
-    }
-    format!("{}{:.1}", sign, a)
-}
-
 /// The spot of any target: every arm of the union has `at`.
 fn target_at(t: &crate::orders::OrderTarget) -> V3 {
     match t {
@@ -167,7 +152,7 @@ pub fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -
     None
 }
 
-/// The order's row on the menu: its four functions are the arms `Smoke` of orders' enums, whose bodies are `row_smoke_*` below. (squadsmoke.ts row)
+/// The order's row on the menu: its four functions are the arms `Smoke` of orders' enums; the match over them is orders', the issue arm's body `row_smoke_issue` below. (squadsmoke.ts row)
 pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     let def = crate::orders::OrderDef {
         id: String::from(SMOKE_ORDER),
@@ -183,24 +168,8 @@ pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     g.tab.orders_order_def.push(def)
 }
 
-/// The row's words: the arm `OrderLabel::Smoke`. (squadsmoke.ts:131 label)
-pub(crate) fn row_smoke_label(g: &mut Game) -> String {
-    format!("smoke there · {} left", squad_smoke_left(g))
-}
-
-/// The order is one man's, the thrower's: the arm `OrderOnly::Smoke`. (squadsmoke.ts:133 only)
-pub(crate) fn row_smoke_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    match squad_smoke_thrower(g, men, target_at(t)) { Some(th) => vec![th.gd], None => Vec::new() }
-}
-
-/// Ok is true, Err(Some) the words: the arm `OrderValid::Smoke`. (squadsmoke.ts:134 valid)
-pub(crate) fn row_smoke_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> {
-    if squad_smoke_left(g) <= 0.0 { return Err(Some(String::from("no smoke left."))); }
-    if squad_smoke_thrower(g, men, target_at(t)).is_some() { Ok(()) } else { Err(Some(String::from("no throw from here."))) }
-}
-
 /// The throw: one can off the count, on its arc from the nearest man's hand, and a row in the squad's log. None: given. The arm `OrderIssue::Smoke`. (squadsmoke.ts:135 issue)
-pub(crate) fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
+pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget, o: Option<&crate::orders::GiveOpts>) -> Option<String> {
     let key = crate::seats::view_key(g);
     let at = target_at(t);
     let has_cans = match g.m.squadsmoke.states.get(key) { Some(s) => s.cans > 0.0, None => false };
@@ -228,7 +197,7 @@ pub(crate) fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::
         t: g.time,
         order: String::from(SMOKE_ORDER),
         who: vec![callsign.clone()],
-        target: format!("floor:{},{}", to_fixed_1(at[0]), to_fixed_1(at[2])),
+        target: format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1)),
         auto: None,
         laid: None,
         serial,
@@ -245,7 +214,7 @@ pub(crate) fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::
 pub fn notes(g: &mut crate::game::Game) -> Vec<crate::orders::OrderNote> {
     let key = crate::seats::view_key(g);
     match g.m.squadsmoke.states.get(key) {
-        Some(s) if s.brought > 0.0 => vec![crate::orders::OrderNote::Text(format!("smoke {}", s.cans))],
+        Some(s) if s.brought > 0.0 => vec![crate::orders::OrderNote::Text(format!("smoke {}", js::num_str(s.cans)))],
         _ => Vec::new(),
     }
 }
@@ -270,7 +239,7 @@ pub fn squad_smoke_key(g: &mut crate::game::Game, input: InputId) -> bool {
 pub fn squad_smoke_summary(g: &mut crate::game::Game) -> String {
     let key = crate::seats::view_key(g);
     match g.m.squadsmoke.states.get(key) {
-        Some(s) if js::truthy(s.brought) => format!("{} of {} left · {} with the menu up on a spot of floor", s.cans, s.brought, squadsmoke().order_key.replacen("Key", "", 1)),
+        Some(s) if js::truthy(s.brought) => format!("{} of {} left · {} with the menu up on a spot of floor", js::num_str(s.cans), js::num_str(s.brought), squadsmoke().order_key.replacen("Key", "", 1)),
         _ => String::from("none brought (no card carries smoke)"),
     }
 }
@@ -291,35 +260,11 @@ mod tests {
         }
     }
 
-    #[test]
-    fn to_fixed_is_the_languages() {
-        for (x, want) in FIXED { assert_eq!(to_fixed_1(*x), *want, "{}", x); }
-    }
-
     const REST: &[(V3, V3, V3, Option<f64>, [u64; 3])] = &[
         ([1.3, 1.6, -2.7], [3.1, 4.2, -5.5], [6.2, 0.02, -9.9], None, [0x401e134658ef2aa8, 0x3f947ae147ae147b, 0xc0287acd44fbcd7a]),
         ([0.0, 1.3, 0.0], [8.9, 1.1, 0.3], [7.77, 0.0, 0.33], None, [0x402526f89febef44, 0x0000000000000000, 0x3fdb2c73d8560c8e]),
         ([-4.25, 0.9, 11.1], [-1.7, -6.3, 8.8], [-5.5, 0.1, 12.34], Some(0.04), [0xc0180636b376779e, 0x3fb999999999999a, 0x402deb56c3d7aa74]),
         ([2.0, 0.5, 2.0], [0.1, -0.2, 0.3], [2.1, 3.0, 2.2], None, [0x4000cccccccccccd, 0x4008000000000000, 0x400199999999999a]),
         ([10.1, 1.25, 3.3], [2.2, 5.5, -1.1], [13.3, 0.035, 1.9], Some(0.02989), [0x402b91360ee13e27, 0x3fa1eb851eb851ec, 0x3ffa87f49147d430]),
-    ];
-    const FIXED: &[(f64, &str)] = &[
-        (0.25, "0.3"),
-        (-0.25, "-0.3"),
-        (0.75, "0.8"),
-        (0.35, "0.3"),
-        (1.05, "1.1"),
-        (-0.04, "-0.0"),
-        (-0.0, "0.0"),
-        (0.0, "0.0"),
-        (12.75, "12.8"),
-        (3.45, "3.5"),
-        (1234.56, "1234.6"),
-        (-7.25, "-7.3"),
-        (0.05, "0.1"),
-        (99.95, "100.0"),
-        (2.5, "2.5"),
-        (-1.75, "-1.8"),
-        (100.25, "100.3"),
     ];
 }

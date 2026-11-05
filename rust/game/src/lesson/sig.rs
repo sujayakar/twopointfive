@@ -27,22 +27,10 @@ pub fn lesson_token_faults(w: &str, line: &str, cap: f64, row: Option<&str>, alw
 pub fn lesson_line(g: &mut crate::game::Game, written: &str) -> String { todo!() }
 
 /// (src/game/lesson.ts:108 passes)
-pub fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &crate::lesson::StepSeen) -> bool { todo!() }
+pub fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &mut crate::lesson::StepSeen) -> bool { todo!() }
 
 /// (src/game/lesson.ts:113 after)
 pub fn after(log: &[u32], last: Option<u32>) -> usize { todo!() }
-
-/// (src/game/lesson.ts:114 num)
-pub fn num(v: crate::Opaque) { todo!() }
-
-/// (src/game/lesson.ts:115 str)
-pub fn str(v: crate::Opaque) { todo!() }
-
-/// (src/game/lesson.ts:116 rect)
-pub fn rect(v: crate::Opaque) { todo!() }
-
-/// (src/game/lesson.ts:117 vec)
-pub fn vec(v: crate::Opaque) { todo!() }
 
 /// (src/game/lesson.ts:118 inside)
 pub fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { todo!() }

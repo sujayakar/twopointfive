@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A step's `after` line as its order stands: given (1), or given and waiting on his word (2). (rails.ts said)
-pub fn said(a: &crate::rails::SaidA, gave: f64) -> Option<String> {
+pub fn said(a: &crate::scene_scenarios::LessonStepAfter, gave: f64) -> Option<String> {
     if gave == 2.0 { a.word.clone().or_else(|| a.line.clone()) } else { a.line.clone() }
 }
 
@@ -168,7 +168,7 @@ pub fn rails_faults(l: &crate::scene_scenarios::LessonData) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scene_scenarios::{LessonData, LessonStep, RailsData, RailsDataSky, RailsDataSkyEye, RailsDataWaits};
+    use crate::scene_scenarios::{LessonData, LessonStep, LessonStepAfter, RailsData, RailsDataSky, RailsDataSkyEye, RailsDataWaits};
 
     fn words(list: &[&str]) -> Vec<String> {
         list.iter().map(|s| String::from(*s)).collect()
@@ -186,8 +186,8 @@ mod tests {
 
     #[test]
     fn said_takes_the_word_only_at_two() {
-        let both = SaidA { line: Some(String::from("line")), word: Some(String::from("word")) };
-        let no_word = SaidA { line: Some(String::from("line")), word: None };
+        let both = LessonStepAfter { line: Some(String::from("line")), on: None, word: Some(String::from("word")) };
+        let no_word = LessonStepAfter { line: Some(String::from("line")), on: None, word: None };
         assert_eq!(said(&both, 1.0).as_deref(), Some("line"));
         assert_eq!(said(&both, 2.0).as_deref(), Some("word"));
         assert_eq!(said(&no_word, 2.0).as_deref(), Some("line"));

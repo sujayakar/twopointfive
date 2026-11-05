@@ -1,4 +1,4 @@
-//! src/game/darkfoe.ts lines 1 to 258
+//! src/game/darkfoe.ts lines 1 to 257
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -19,8 +19,8 @@ pub fn id_share(g: &mut crate::game::Game, gd: GuardId, salt: Option<f64>) -> f6
     frac((g.ch[c].id + salt) * 0.6180339887)
 }
 
-/// Does he carry a light of his own to switch on.   (darkfoe.ts darkFoeCarries)
-pub fn dark_foe_carries(g: &mut crate::game::Game, gd: GuardId) -> bool {
+/// Does he carry a light of his own to switch on.   (darkfoe.ts carriesDarkLamp)
+pub fn carries_dark_lamp(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].unit.is_some() && id_share(g, gd, None) < g.k.darkfoe.carry
 }
 
@@ -44,13 +44,10 @@ pub fn dark_foe_ruled(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// His lamp burns by this rule this frame: a read, nothing counted.   (darkfoe.ts darkFoeLit)
 pub fn dark_foe_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.m.darkfoe.state_of.get(gd).map_or(false, |s| s.lit) && dark_foe_carries(g, gd) && dark_foe_ruled(g, gd)
+    g.m.darkfoe.state_of.get(gd).map_or(false, |s| s.lit) && carries_dark_lamp(g, gd) && dark_foe_ruled(g, gd)
 }
 
-/// A light filter naming his own lamp: making it does nothing, and the stub returns nothing, so `dark_foe_blind` makes the closure itself.   (darkfoe.ts mine)
-pub fn mine(g: &mut crate::game::Game, gd: GuardId) {}
-
-/// A light filter that skips no light.   (darkfoe.ts placeOnly)
+/// A light filter that leaves out every carried lamp.   (darkfoe.ts placeOnly)
 pub fn place_only() -> bool {
     true
 }
@@ -114,8 +111,7 @@ pub fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
         i += 1;
         if o == gd || g.gd[o].team != team || g.gd[o].state == crate::game::GuardState::Dead { continue; }
         if !g.m.darkfoe.state_of.get(o).map_or(false, |s| s.knows) || !dark_foe_lit(g, o) { continue; }
-        let light = g.gd[o].flashlight;
-        if !seam_light_enabled(g, light) { continue; }
+        if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
         let op = g.ch[oc].pos;
         let dx = op[0] - pos[0];
@@ -237,7 +233,7 @@ fn free(g: &mut Game, d: RoomfightDefId, threat: V3, far: f64, p: V3) -> bool {
         return false;
     }
     if fenced(g, gd) && !in_room(g, d, p) { return false; }
-    if crate::lanes::lane_warns(g, gd, Some(p)) { return false; }
+    if crate::lanes::lane_known_at(g, gd, Some(p)) { return false; }
     if let Some(room) = g.tab.roomfight_def[d].room {
         if g.tab.roomfight_room[room].entries.iter().any(|e| v3::dist_xz(p, e.at) < 1.2) { return false; }
     }
@@ -283,8 +279,7 @@ pub fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<cra
         let o = g.guards[i];
         i += 1;
         if o == gd || g.gd[o].team != team || g.gd[o].state == crate::game::GuardState::Dead || !dark_foe_lit(g, o) { continue; }
-        let light = g.gd[o].flashlight;
-        if !seam_light_enabled(g, light) { continue; }
+        if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
         let op = g.ch[oc].pos;
         let dist = v3::dist_xz(op, pos);
@@ -349,14 +344,15 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
         return Some(String::from("in a fight"));
     }
     if crate::digin::dig_in_phase(g, gd) != "idle" { return Some(String::from("dug in")); }
-    if crate::enemysquads::squad_defers(g, gd) { return Some(String::from("his squad's")); }
-    if crate::lanes::lane_holds(g, gd, None) { return Some(String::from("holds a lane")); }
-    // pressOwns may stop his rally clock as it answers: asked here it changes nothing.
-    let rally = g.tab.roomfight_def[d].rally_at;
-    let press = crate::pressure::press_owns(g, d);
-    g.tab.roomfight_def[d].rally_at = rally;
-    if press || crate::buddy::buddy_owns(g, d) { return Some(String::from("the press's")); }
-    if crate::rescue::rescue_captor(g) == Some(gd) || crate::laststand::last_stand_man(g, gd) {
+    let own = crate::owner::own();
+    if crate::owner::has_him(g, gd, own.squad_word) { return Some(String::from("his squad's")); }
+    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has_him(g, gd, own.lane) { return Some(String::from("holds a lane")); }
+    let man = g.tab.roomfight_def[d].gd;
+    let hands = (js::to_i32(own.press) | js::to_i32(own.buddy)) as f64;
+    if crate::owner::has_him(g, man, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) || crate::buddy::buddy_paired(g, d) {
+        return Some(String::from("the press's"));
+    }
+    if crate::rescue::rescue_captor(g) == Some(gd) || crate::owner::has_him(g, gd, own.stand) {
         return Some(String::from("the captor / last stand"));
     }
     None
@@ -407,10 +403,10 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
             let blind = (knows || word) && dark_foe_blind(g, gd);
             g.m.darkfoe.state_of.get_mut(gd).unwrap().blind = blind;
         }
-        if !dark_foe_carries(g, gd) {
+        if !carries_dark_lamp(g, gd) {
             g.m.darkfoe.state_of.get_mut(gd).unwrap().lit = false;
         }
-        if dark_foe_carries(g, gd) {
+        if carries_dark_lamp(g, gd) {
             let row = *g.m.darkfoe.state_of.get(gd).unwrap();
             if row.blind == row.lit {
                 g.m.darkfoe.state_of.get_mut(gd).unwrap().against = 0.0;
@@ -485,7 +481,7 @@ pub fn dark_foe_summary(g: &mut crate::game::Game) -> String {
         i += 1;
         if !dark_foe_ruled(g, gd) { continue; }
         let s = g.m.darkfoe.state_of.get(gd).copied();
-        let has = dark_foe_carries(g, gd);
+        let has = carries_dark_lamp(g, gd);
         let what = match s {
             Some(s) if s.knows || s.word => {
                 if s.lit {
@@ -515,11 +511,6 @@ pub fn dark_foe_summary(g: &mut crate::game::Game) -> String {
     }
     let list = men.join(" \u{b7} ");
     alloc::format!("dark \u{25b8} {}", if list.is_empty() { "no defender with a dark light" } else { list.as_str() })
-}
-
-/// (darkfoe.ts:120, 174 o.flashlight.enabled) RtLight's `enabled` has no accessor over a LightId.
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool {
-    g.tab.light[l].enabled // (skeleton 4 has the row)
 }
 
 #[cfg(test)]

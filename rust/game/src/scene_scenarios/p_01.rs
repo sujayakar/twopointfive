@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A squad's barricade doors: the file's own list if it names one (an empty list means never), else every door of its rooms
 /// except one shared by two of its own rooms.   (scenarios.ts squadBarricade)

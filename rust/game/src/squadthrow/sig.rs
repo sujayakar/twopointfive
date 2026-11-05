@@ -32,8 +32,8 @@ pub fn roll_of(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKin
 /// (src/game/squadthrow.ts:169 tossing)
 pub fn tossing(g: &mut crate::game::Game, s: Option<&crate::squadthrow::State>, gd: GuardId) -> bool { todo!() }
 
-/// (src/game/squadthrow.ts:173 handsBusy)
-pub fn hands_busy(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/squadthrow.ts:173 handsAtWork)
+pub fn hands_at_work(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/squadthrow.ts:181 squadThrower)
 pub fn squad_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Option<crate::squadthrow::SquadThrower2> { todo!() }
@@ -127,3 +127,16 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool { todo
 
 /// (src/game/squadthrow.ts:604 squadThrowSummary)
 pub fn squad_throw_summary(g: &mut crate::game::Game) -> String { todo!() }
+
+
+/// INVENTED: the body of OrderLabel::ThrowRow, the row's words with any warning valid left for this spot; crate::orders matches the arm and calls it. (src/game/squadthrow.ts:554 one.label)
+pub fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String { todo!() }
+
+/// INVENTED: the body of OrderOnly::ThrowRow, the one man who throws, or nobody. (src/game/squadthrow.ts:556 one.only)
+pub fn row_only(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Vec<GuardId> { todo!() }
+
+/// INVENTED: the body of OrderValid::ThrowRow. Err: why not, in words; it also sets the row's warning. (src/game/squadthrow.ts:557 one.valid)
+pub fn row_valid(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Result<(), String> { todo!() }
+
+/// INVENTED: the body of OrderIssue::ThrowRow. Some: the refusal, in words. (src/game/squadthrow.ts:563 one.issue)
+pub fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) -> Option<String> { todo!() }

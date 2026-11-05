@@ -122,7 +122,7 @@ impl SamBigFar {
     }
 }
 
-/// (TypeScript: inline at src/game/bigkit.ts:154 samBigPose ->, src/game/bigkit.ts:156)
+/// (TypeScript: inline at quiet samBigPose ->, src/game/bigkit.ts:156)
 #[derive(Clone, Debug)]
 pub struct SamBigPose {
     pub kind: crate::bigkit::SamBigPoseKind,

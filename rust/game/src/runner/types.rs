@@ -24,12 +24,11 @@ impl RunPhase {
     }
 }
 
-/// (TypeScript: Run, src/game/runner.ts:97)
+/// (TypeScript: Run, src/game/runner.ts:99)
 #[derive(Clone, Copy, Debug)]
 pub struct Run {
     pub phase: crate::runner::RunPhase,
     pub t: f64,
-    pub fled: bool,
     pub from: V3,
     pub goal: Option<V3>,
     pub mate: Option<GuardId>,
@@ -53,7 +52,6 @@ impl Run {
         Run {
             phase: crate::runner::RunPhase::Low,
             t: 0.0,
-            fled: false,
             from: [0.0; 3],
             goal: None,
             mate: None,
@@ -90,7 +88,7 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: Foe, src/game/runner.ts:133)
+/// (TypeScript: Foe, src/game/runner.ts:136)
 #[derive(Clone, Copy, Debug)]
 pub struct Foe {
     pub pos: V3,
@@ -109,7 +107,7 @@ impl Foe {
 }
 impl Default for Foe { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RunnerSnap, src/game/runner.ts:419)
+/// (TypeScript: RunnerSnap, src/game/runner.ts:418)
 #[derive(Clone, Debug)]
 pub struct RunnerSnap {
     pub men: Vec<Option<Vec<f64>>>,
@@ -124,7 +122,7 @@ impl RunnerSnap {
 }
 impl Default for RunnerSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:105 LINES, src/game/runner.ts:105)
+/// (TypeScript: inline at src/game/runner.ts:108 LINES, src/game/runner.ts:108)
 #[derive(Clone, Debug)]
 pub struct LINESValue {
     pub say: Vec<String>,
@@ -143,7 +141,7 @@ impl LINESValue {
 }
 impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:213 flood ->, src/game/runner.ts:213)
+/// (TypeScript: inline at src/game/runner.ts:216 flood ->, src/game/runner.ts:216)
 #[derive(Clone, Copy, Debug)]
 pub struct Flood {
     pub out: Option<V3>,
@@ -164,7 +162,7 @@ impl Flood {
 }
 impl Default for Flood { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:288 planOut(F), src/game/runner.ts:288)
+/// (TypeScript: inline at src/game/runner.ts:291 planOut(F), src/game/runner.ts:291)
 #[derive(Clone, Copy, Debug)]
 pub struct PlanOutF {
     pub out: Option<V3>,
@@ -181,7 +179,7 @@ impl PlanOutF {
 }
 impl Default for PlanOutF { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:410 runnerOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at src/game/runner.ts:409 runnerOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Copy, Debug)]
 pub struct RunnerOf {
     pub at: V3,
@@ -198,10 +196,9 @@ pub struct RunnerOf {
     pub mate: Option<GuardId>,
     pub drive_t: f64,
     pub stall: f64,
-    pub bold: bool,
-    pub fled: bool,
     pub unseen: f64,
     pub is_out: bool,
+    pub bold: bool,
 }
 impl RunnerOf {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -221,10 +218,9 @@ impl RunnerOf {
             mate: None,
             drive_t: 0.0,
             stall: 0.0,
-            bold: false,
-            fled: false,
             unseen: 0.0,
             is_out: false,
+            bold: false,
         }
     }
 }
@@ -233,9 +229,9 @@ impl Default for RunnerOf { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct RunnerMod {
-    /// (src/game/runner.ts:99 stateOf)
+    /// (src/game/runner.ts:101 stateOf)
     pub state_of: JsMap<GuardId, crate::runner::Run>,
-    /// (src/game/runner.ts:191 rects)
+    /// (src/game/runner.ts:194 rects)
     pub rects: Option<[f64; 4]>,
 }
 impl RunnerMod {
@@ -260,8 +256,8 @@ pub struct RunnerStats {
     pub bold: i32,
 }
 
-/// (src/game/runner.ts:91 PHASES: a table nothing writes)
+/// (src/game/runner.ts:93 PHASES: a table nothing writes)
 pub fn phases() -> Vec<String> { alloc::vec![String::from("say"), String::from("mates"), String::from("out"), String::from("low"), String::from("gone")] }
 
-/// (src/game/runner.ts:105 LINES: a table nothing writes)
+/// (src/game/runner.ts:108 LINES: a table nothing writes)
 pub fn lines() -> JsMap<String, crate::runner::LINESValue> { { let mut t = JsMap::new(); t.set(String::from("done"), crate::runner::LINESValue { say: alloc::vec![String::from("no. no, I'm done. I'm done!"), String::from("that's it — I'm done! I'm done!"), String::from("no more! I'm finished here!")], he: None, they: None }); t.set(String::from("mates"), crate::runner::LINESValue { say: alloc::vec![String::from("don't shoot — it's me! it's me!")], he: Some(alloc::vec![String::from("don't shoot, it's me! he's right behind me!"), String::from("it's me! hold your fire — he's coming!")]), they: Some(alloc::vec![String::from("don't shoot, it's me! they're right behind me!"), String::from("it's me! hold your fire — they're coming!")]) }); t } }

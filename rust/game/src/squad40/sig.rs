@@ -45,7 +45,7 @@ pub fn caught(g: &mut crate::game::Game, a: &crate::squad40::Shot, at: V3) -> Op
 pub fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3, asker: Option<crate::squad40::Asker>) -> crate::squad40::Plan { todo!() }
 
 /// (src/game/squad40.ts:176 fire)
-pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &mut crate::squad40::Shot, at: V3, turned: bool) { todo!() }
+pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, at: V3, turned: bool) { todo!() }
 
 /// (src/game/squad40.ts:184 turnTick)
 pub fn turn_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) { todo!() }

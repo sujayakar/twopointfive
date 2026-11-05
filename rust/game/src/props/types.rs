@@ -158,7 +158,6 @@ pub struct PropSystem {
     pub enabled: bool,
     pub friction_scale: f64,
     pub stats: crate::props::PropSystemStats,
-    pub near: Vec<i32>,
     pub by_box: JsMap<BoxId, PropId>,
     pub muted: bool,
     pub said: Vec<crate::props::PropEvent>,
@@ -175,7 +174,6 @@ impl PropSystem {
             enabled: true,
             friction_scale: 1.0,
             stats: crate::props::PropSystemStats { awake: 0.0, ms: 0.0 },
-            near: alloc::vec![0; 256],
             by_box: JsMap::new(),
             muted: true,
             said: Vec::new(),
@@ -225,52 +223,6 @@ impl PropSystemDoorwaysItem {
     }
 }
 impl Default for PropSystemDoorwaysItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/props.ts:136 sat, src/game/props.ts:136)
-#[derive(Clone, Copy, Debug)]
-pub struct PropsModSat {
-    pub nx: f64,
-    pub nz: f64,
-    pub depth: f64,
-    pub px: f64,
-    pub pz: f64,
-}
-impl PropsModSat {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropsModSat {
-            nx: 0.0,
-            nz: 0.0,
-            depth: 0.0,
-            px: 0.0,
-            pz: 0.0,
-        }
-    }
-}
-impl Default for PropsModSat { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/props.ts:587 cc, src/game/props.ts:587)
-#[derive(Clone, Copy, Debug)]
-pub struct PropsModCc {
-    pub nx: f64,
-    pub nz: f64,
-    pub pen: f64,
-    pub px: f64,
-    pub pz: f64,
-}
-impl PropsModCc {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropsModCc {
-            nx: 0.0,
-            nz: 0.0,
-            pen: 0.0,
-            px: 0.0,
-            pz: 0.0,
-        }
-    }
-}
-impl Default for PropsModCc { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/props.ts:263 raycast ->, src/game/props.ts:263)
 #[derive(Clone, Copy, Debug)]
@@ -362,23 +314,6 @@ impl PropSystemHandOverT {
     }
 }
 impl Default for PropSystemHandOverT { fn default() -> Self { Self::zeroed() } }
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct PropsMod {
-    /// (src/game/props.ts:136 sat)
-    pub sat: crate::props::PropsModSat,
-    /// (src/game/props.ts:587 cc)
-    pub cc: crate::props::PropsModCc,
-}
-impl PropsMod {
-    pub fn blank() -> Self {
-        PropsMod {
-            sat: crate::props::PropsModSat { nx: 0.0, nz: 0.0, depth: 0.0, px: 0.0, pz: 0.0 },
-            cc: crate::props::PropsModCc { nx: 0.0, nz: 0.0, pen: 0.0, px: 0.0, pz: 0.0 },
-        }
-    }
-}
 
 /// (src/game/props.ts:41 KIND: a table nothing writes)
 pub fn kind() -> JsMap<String, crate::props::KindTune> { { let mut t = JsMap::new(); t.set(String::from("chair"), crate::props::KindTune { decel: 1.6, visc: 0.5, rest: 0.25, scrape_rate: 1.35, thud_rate: 1.15 }); t.set(String::from("cardboard"), crate::props::KindTune { decel: 3.2, visc: 0.8, rest: 0.12, scrape_rate: 1.0, thud_rate: 0.8 }); t.set(String::from("bin"), crate::props::KindTune { decel: 3.0, visc: 0.8, rest: 0.3, scrape_rate: 1.2, thud_rate: 1.5 }); t.set(String::from("plant"), crate::props::KindTune { decel: 4.5, visc: 1.0, rest: 0.1, scrape_rate: 0.8, thud_rate: 0.95 }); t } }

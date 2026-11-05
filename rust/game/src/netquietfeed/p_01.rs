@@ -1,4 +1,4 @@
-//! src/game/netquietfeed.ts lines 1 to 31
+//! src/game/netquietfeed.ts lines 1 to 26
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -22,16 +22,6 @@ pub fn net_feed_asked(g: &mut crate::game::Game, asker: Option<GuardId>, who: Gu
 pub fn net_feed_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &[GuardId]) {
     if !g.m.netquietfeed.netfeed.live { return; }
     file(g, NetFeed { what: NetFeedWhat::Body, by: finder, who: None, men: men.to_vec() });
-}
-
-/// Marks or clears the last man at his act.   (netquietfeed.ts netFeedHold)
-pub fn net_feed_hold(g: &mut crate::game::Game, gd: GuardId, on: bool) {
-    if on { g.m.netquietfeed.holding.add(gd); } else { g.m.netquietfeed.holding.delete(gd); }
-}
-
-/// Is he the last man at his act; false while the feed is not `live`.   (netquietfeed.ts netFeedHolds)
-pub fn net_feed_holds(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.m.netquietfeed.netfeed.live && g.m.netquietfeed.holding.has(gd)
 }
 
 /// What was filed since the last take; the book is left empty.   (netquietfeed.ts netFeedTake)

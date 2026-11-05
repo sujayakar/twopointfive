@@ -22,7 +22,7 @@ macro_rules! id {
     )* };
 }
 id! {
-    /// Box: no table here
+    /// Box: g.tab.boxes
     BoxId,
     /// Clip: g.tab.clip
     ClipId,
@@ -34,6 +34,8 @@ id! {
     AnimGltfCastInfoId,
     /// GltfCharacter: g.tab.rig
     RigId,
+    /// PoseSet: g.tab.pose_set
+    PoseSetId,
     /// Ragdoll: g.tab.ragdoll
     RagdollId,
     /// Character: g.ch
@@ -74,10 +76,6 @@ id! {
     FurnblastMemberId,
     /// WindSource: g.tab.wind_wind_source
     WindWindSourceId,
-    /// Def: g.tab.roomfight_def
-    RoomfightDefId,
-    /// Room: g.tab.roomfight_room
-    RoomfightRoomId,
     /// StickyCam: g.tab.stickycam_sticky_cam
     StickyCamId,
     /// DoorOp: g.tab.doortools_door_op
@@ -96,10 +94,16 @@ id! {
     ChargeId,
     /// OrderDef: g.tab.orders_order_def
     OrdersOrderDefId,
+    /// Def: g.tab.roomfight_def
+    RoomfightDefId,
+    /// Room: g.tab.roomfight_room
+    RoomfightRoomId,
     /// Opening: g.tab.cover_opening
     CoverOpeningId,
     /// Breach: g.tab.wallreact_breach
     WallreactBreachId,
+    /// Lane: g.tab.lanes_lane
+    LanesLaneId,
     /// Role: g.tab.tactics_role
     TacticsRoleId,
     /// Plan: g.tab.tactics_plan

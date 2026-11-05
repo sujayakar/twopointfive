@@ -7,11 +7,11 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A weapon row's short name as it is written down: the two renamed rows by their old names, every other row its own.   (gear.ts plainShort)
-pub fn plain_short(def: &crate::gear::PlainShortDef) -> String {
-    if def.id == "fn2000" || def.id == "mk18bare" {
+pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
+    if def.id == crate::weapons::WeaponId::Fn2000 || def.id == crate::weapons::WeaponId::Mk18bare {
         return crate::gear::old_names().rifle;
     }
-    if def.id == "fiveseven" || def.id == "g19bare" {
+    if def.id == crate::weapons::WeaponId::Fiveseven || def.id == crate::weapons::WeaponId::G19bare {
         return crate::gear::old_names().pistol;
     }
     def.short.clone()
@@ -117,11 +117,11 @@ mod tests {
 
     #[test]
     fn plain_short_writes_the_old_names_down() {
-        let row = |id: &str| plain_short(&crate::gear::PlainShortDef { id: String::from(id), short: String::from("own") });
-        assert_eq!(row("fn2000"), "FN2000");
-        assert_eq!(row("mk18bare"), "FN2000");
-        assert_eq!(row("fiveseven"), "Five-seveN");
-        assert_eq!(row("g19bare"), "Five-seveN");
-        assert_eq!(row("shotgun"), "own");
+        let row = |id: crate::weapons::WeaponId| plain_short(&crate::weapons::WeaponDef { id, short: String::from("own"), ..crate::weapons::WeaponDef::zeroed() });
+        assert_eq!(row(crate::weapons::WeaponId::Fn2000), "FN2000");
+        assert_eq!(row(crate::weapons::WeaponId::Mk18bare), "FN2000");
+        assert_eq!(row(crate::weapons::WeaponId::Fiveseven), "Five-seveN");
+        assert_eq!(row(crate::weapons::WeaponId::G19bare), "Five-seveN");
+        assert_eq!(row(crate::weapons::WeaponId::M870), "own");
     }
 }

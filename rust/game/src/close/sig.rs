@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn note(g: &mut crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) { todo!() }
 
 /// (src/game/close.ts:149 seatedOf)
-pub fn seated_of(g: &mut crate::game::Game) -> JsMap<GuardId, SeatId> { todo!() }
+pub fn seated_of(g: &mut crate::game::Game) -> &mut JsMap<GuardId, crate::close::Seat> { todo!() }
 
 /// (src/game/close.ts:150 stateOf)
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::close::State { todo!() }

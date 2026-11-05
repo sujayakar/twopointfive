@@ -1,4 +1,4 @@
-//! src/game/sense.ts lines 1 to 285
+//! src/game/sense.ts lines 1 to 260
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,27 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// erf(x), Abramowitz & Stegun 7.1.26, on the game's own exp.   (sense.ts erf)
-pub fn erf(x: f64) -> f64 {
-    let s = if x < 0.0 { -1.0 } else { 1.0 };
-    let a = if x < 0.0 { -x } else { x };
-    let t = 1.0 / (1.0 + 0.3275911 * a);
-    s * (1.0 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * m::exp(-a * a))
-}
-
 /// The grid over a block.   (sense.ts SmokeGrid.constructor)
 pub fn smoke_grid_new(g: &mut crate::game::Game, sim: crate::Opaque) -> crate::sense::SmokeGrid {
     crate::sense::SmokeGrid { clock: 0.0, pending: Vec::new(), stands: false, fed: false, sim }
-}
-
-/// A grid that is no game's: tooling, see notes.   (sense.ts SmokeGrid.make)
-pub fn smoke_grid_make(g: &mut crate::game::Game) {
-    todo!("tooling: host/modelerr.ts and the checks only, which stay on the TypeScript tick; the stub also has no return where the TypeScript gives SmokeGrid | null")
-}
-
-/// A tool's own grid is done with: tooling, see notes.   (sense.ts SmokeGrid.free)
-pub fn smoke_grid_free(g: &mut crate::game::Game) {
-    todo!("tooling: host/modelerr.ts and the checks only; never a game's grid")
 }
 
 /// Where the state row starts in the block, in doubles.   (sense.ts SmokeGrid.row0)
@@ -65,7 +47,7 @@ pub fn smoke_grid_emit(g: &mut crate::game::Game, x: f64, y: f64, z: f64, radius
 }
 
 /// `dt` seconds of the game: the steps come due are taken, four at most.   (sense.ts SmokeGrid.step)
-pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: Option<&mut dyn FnMut(&mut crate::game::Game, crate::scene_collision::StaticCollision) -> bool>, wind: Option<&mut dyn FnMut(&mut crate::game::Game) -> Option<crate::scene_collision::GridWind>>) {
+pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: bool, wind: Option<&mut dyn FnMut(&mut crate::game::Game) -> Option<crate::scene_collision::GridWind>>) {
     let gr = g.cpu_smoke.grid.as_mut().unwrap();
     gr.clock += dt;
     if gr.clock < GRID_STEP {
@@ -79,10 +61,10 @@ pub fn smoke_grid_step(g: &mut crate::game::Game, dt: f64, lamps: Option<&mut dy
     }
     let s = g.k.sense.smoke;
     let k = crate::scene_collision::GridStepK { decay: s.decay, spread: s.spread, rise: s.rise, rise_rate: s.rise_rate, gone: s.gone, in_wind: s.in_wind };
-    // (`lamps` says only whether: GridStepGlow.lamps is a unit FnField, and grid_step itself calls guards::steady_lamps, the one lamps there is.)
-    let glow = if lamps.is_some() {
+    // (`lamps` says only whether: grid_step itself calls guards::steady_lamps, the one lamps there is.)
+    let glow = if lamps {
         let gk = g.k.sense.glow;
-        Some(crate::scene_collision::GridStepGlow { k: crate::scene_collision::GridStepGlowK { albedo: gk.albedo, share: gk.share, passes: gk.passes, sweep: gk.sweep }, lamps: crate::FnField })
+        Some(crate::scene_collision::GridStepGlow { k: crate::scene_collision::GridStepGlowK { albedo: gk.albedo, share: gk.share, passes: gk.passes, sweep: gk.sweep } })
     } else {
         None
     };
@@ -140,9 +122,9 @@ pub fn smoke_grid_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     sim::bricks::trans(g.sim, stamp, a, b, g.k.sense.smoke.sigma)
 }
 
-/// The stamp of the game's block (SimState.stamp): bricks' tables are remade when it differs. No guess will do: 0 never remakes them after a reset.   (sense.ts:156)
+/// The stamp of the game's block (SimState.stamp): bricks' tables are remade when it differs. No guess will do: 0 never remakes them after a reset.   (sense.ts:150)
 fn seam_sim_stamp(g: &mut crate::game::Game) -> f64 {
-    todo!("needs: SimState.stamp of the game's block (sense.ts:156; SmokeGrid.sim is Opaque, and neither the skeleton nor rust/sim's state.rs holds a stamp)")
+    todo!("needs: SimState.stamp of the game's block (sense.ts:150; SmokeGrid.sim is Opaque, and neither the skeleton nor rust/sim's state.rs holds a stamp)")
 }
 
 /// The light that comes round on a point: the nearest square metre in clear sight, else 0.   (sense.ts SmokeGrid.glowAt)
@@ -173,31 +155,30 @@ pub fn smoke_grid_glow_at(g: &mut crate::game::Game, p: V3) -> f64 {
     0.0
 }
 
-/// Does the grid's state have a home in this game's block.   (sense.ts:178, the tenant's wants)
-fn tenant_wants(g: &mut crate::game::Game) -> bool {
-    g.k.sense.cpu && g.k.sense.grid && crate::sim_sim::sim_why_not().is_empty()
+/// As a tick opens the grid comes, empty, or goes, by SENSE's switches: this file's one tenant.   (sense.ts:171-174, by state.ts SimState.settle)
+pub fn settle_grid(g: &mut crate::game::Game) {
+    let want = g.k.sense.cpu && g.k.sense.grid && crate::sim_sim::sim_why_not().is_empty();
+    let have = g.cpu_smoke.grid.is_some();
+    if want == have {
+        return;
+    }
+    if want {
+        sim::bricks::reset(g.sim, true);
+        let made = smoke_grid_new(g, crate::Opaque);
+        g.cpu_smoke.grid = Some(made);
+    } else {
+        g.cpu_smoke.grid = None;
+        sim::bricks::reset(g.sim, false);
+    }
 }
 
-/// The grid comes, empty, as a tick opens.   (sense.ts:179, the tenant's into)
-fn tenant_into(g: &mut crate::game::Game, st: crate::Opaque) {
-    sim::bricks::reset(g.sim, true);
-    let made = smoke_grid_new(g, st);
-    g.cpu_smoke.grid = Some(made);
-}
-
-/// The grid goes as a tick opens; its part zeros again and the blobs answer.   (sense.ts:180, the tenant's outOf)
-fn tenant_out_of(g: &mut crate::game::Game) {
-    g.cpu_smoke.grid = None;
-    sim::bricks::reset(g.sim, false);
-}
-
-/// What a blob holds and has still to let out.   (sense.ts:212 worth)
+/// What a blob holds and has still to let out.   (sense.ts:206 worth)
 fn worth(b: &crate::sense::Blob) -> f64 {
     b.mass + b.rate * m::max(0.0, b.ttl - b.age)
 }
 
 /// An emitter handed to the solver: what it will let out, as one blob where it stands.   (sense.ts CpuSmoke.emit)
-pub fn cpu_smoke_emit(g: &mut crate::game::Game, e: crate::smoke_types::SmokeEmitter) {
+pub fn cpu_smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitter) {
     if e.look == Some(true) {
         return;
     }
@@ -245,7 +226,7 @@ pub fn cpu_smoke_step(g: &mut crate::game::Game, dt: f64) {
     step_lists(&k, &mut own.lives, &mut own.blobs, dt);
 }
 
-/// `step`'s statements over the two lists.   (sense.ts:222)
+/// `step`'s statements over the two lists.   (sense.ts:217-223)
 fn step_lists(k: &crate::knobs::SenseKSmoke, lives: &mut Vec<f64>, blobs: &mut Vec<crate::sense::Blob>, dt: f64) {
     let keep = m::exp(-k.decay * dt);
     let mut w = 0;
@@ -281,53 +262,6 @@ pub fn cpu_smoke_clear(g: &mut crate::game::Game) {
     }
 }
 
-/// How much of the light along a → b comes through the blobs; `blocked`: a wall between two points.   (sense.ts CpuSmoke.trans)
-pub fn cpu_smoke_trans(g: &mut crate::game::Game, a: V3, b: V3, blocked: &mut dyn FnMut(&mut crate::game::Game, V3, V3) -> bool) -> f64 {
-    let k = g.k.sense.smoke;
-    let blobs = core::mem::take(&mut g.cpu_smoke.blobs);
-    let t = trans_over(&k, &blobs, a, b, &mut |p, q| blocked(g, p, q));
-    g.cpu_smoke.blobs = blobs;
-    t
-}
-
-/// `trans`'s statements over a list of blobs.   (sense.ts:235)
-fn trans_over(k: &crate::knobs::SenseKSmoke, blobs: &[crate::sense::Blob], a: V3, b: V3, blocked: &mut dyn FnMut(V3, V3) -> bool) -> f64 {
-    if blobs.is_empty() {
-        return 1.0;
-    }
-    let (dx, dy, dz) = (b[0] - a[0], b[1] - a[1], b[2] - a[2]);
-    let l = m::sqrt(dx * dx + dy * dy + dz * dz);
-    if l < 1e-6 {
-        return 1.0;
-    }
-    let (ux, uy, uz) = (dx / l, dy / l, dz / l);
-    let mut tau = 0.0;
-    for bl in blobs {
-        if bl.mass <= 0.0 {
-            continue;
-        }
-        let s2 = m::min(bl.r2 + 2.0 * k.spread * bl.age, k.widest * k.widest);
-        let s = m::sqrt(s2);
-        let cy = bl.y0 + m::min(k.rise, k.rise_rate * bl.age);
-        let (px, py, pz) = (bl.x - a[0], cy - a[1], bl.z - a[2]);
-        let t = px * ux + py * uy + pz * uz;
-        let d2 = px * px + py * py + pz * pz - t * t;
-        if d2 > 9.0 * s2 || t < -3.0 * s || t > l + 3.0 * s {
-            continue;
-        }
-        let tc = if t < 0.0 { 0.0 } else if t > l { l } else { t };
-        if blocked([bl.x, cy, bl.z], [a[0] + ux * tc, a[1] + uy * tc, a[2] + uz * tc]) {
-            continue;
-        }
-        tau += k.sigma * bl.mass / (m::PI * s2) * m::exp(-m::max(d2, 0.0) / s2) * 0.5 * (erf((l - t) / s) - erf(-t / s));
-    }
-    if tau <= 0.0 {
-        1.0
-    } else {
-        m::exp(-tau)
-    }
-}
-
 /// The smoke along a sight line in the game's own box world: the grid first, then the blobs.   (sense.ts CpuSmoke.along)
 pub fn cpu_smoke_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     if g.cpu_smoke.grid.is_some() {
@@ -336,33 +270,31 @@ pub fn cpu_smoke_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
             return t;
         }
     }
+    cpu_smoke_blobs_along(g, a, b)
+}
+
+/// By the blobs, whatever a grid would say; asked between ticks, the whole question stands in one window over the copy.   (sense.ts CpuSmoke.blobsAlong)
+pub fn cpu_smoke_blobs_along(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
     if g.cpu_smoke.blobs.is_empty() {
         return 1.0;
     }
-    crate::scene_collision::window(g, &mut |g: &mut crate::game::Game| cpu_smoke_along_in(g, a, b))
-}
-
-/// The blobs' answer: the module's sum, else the loop here.   (sense.ts CpuSmoke.alongIn)
-pub fn cpu_smoke_along_in(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
-    let n = g.cpu_smoke.blobs.len();
-    if crate::scene_collision::blobs_begin(g, n as f64) {
-        for i in 0..n {
-            let bl = g.cpu_smoke.blobs[i];
-            crate::scene_collision::blob(g, bl.x, bl.y0, bl.z, bl.r2, bl.age, bl.mass);
-        }
-        let k = g.k.sense.smoke;
-        let r = crate::scene_collision::blobs_along(g, a, b, k.sigma, k.spread, k.widest, k.rise, k.rise_rate);
-        if r != -1.0 {
-            return r;
-        }
+    if g.col.mirror.live {
+        cpu_smoke_blobs_ask(g, a, b)
+    } else {
+        crate::scene_collision::window(g, &mut |g: &mut crate::game::Game| cpu_smoke_blobs_ask(g, a, b))
     }
-    cpu_smoke_trans(g, a, b, &mut |g, p, q| crate::scene_collision::segment_blocked(g, p, q, None, None, None))
 }
 
-/// The game's own smoke put in front of the solver: nothing to wrap in Rust. The solver is one boundary, and `smoke_system_like_emit`, `_clear_all`
-/// and `_budget` feed `cpu_smoke_emit`, `cpu_smoke_clear` and `cpu_smoke_budget` while `g.smoke_owned` is set; so the undo has nothing to do.   (sense.ts ownSmoke)
-pub fn own_smoke(g: &mut crate::game::Game) -> crate::FnField {
-    crate::FnField
+/// The module's sum over these blobs, written there for the one question.   (sense.ts CpuSmoke.blobsAsk)
+pub fn cpu_smoke_blobs_ask(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
+    let n = g.cpu_smoke.blobs.len();
+    let k = g.k.sense.smoke;
+    crate::scene_collision::blobs_begin(g, n as f64);
+    for i in 0..n {
+        let bl = g.cpu_smoke.blobs[i];
+        crate::scene_collision::blob(g, bl.x, bl.y0, bl.z, bl.r2, bl.age, bl.mass);
+    }
+    crate::scene_collision::blobs_along(g, a, b, k.sigma, k.spread, k.widest, k.rise, k.rise_rate)
 }
 
 #[cfg(test)]
@@ -397,28 +329,19 @@ mod tests {
         assert_eq!(blobs[1].mass.to_bits(), 0x3fca1c0c360036e2);
     }
 
-    #[test]
-    fn trans_matches_the_typescripts_bits() {
-        let (_, blobs) = stepped();
-        let (a, b) = ([0.0, 1.5, 0.0], [6.0, 1.2, -2.0]);
-        assert_eq!(trans_over(&k(), &blobs, a, b, &mut |_, _| false).to_bits(), 0x3fd2059479e8ac03);
-        assert_eq!(trans_over(&k(), &blobs, a, b, &mut |p, _| p[0] < 5.0).to_bits(), 0x3ff0000000000000);
-        assert_eq!(trans_over(&k(), &blobs, [1.0; 3], [1.0; 3], &mut |_, _| false), 1.0);
-    }
-
     /// The TypeScript's own run: a look-only source, two too small to be blobs, seventy that overflow the cap, and one worth less than every blob.
     #[test]
     fn emit_matches_the_typescript() {
         let mut g = crate::game::Game::blank();
         g.k.sense.smoke = k();
-        let e = |x: f64, radius: f64, density: f64, ttl: f64, look: Option<bool>| crate::smoke_types::SmokeEmitter { pos: [x, 0.5, -x], radius, density, ttl, look };
-        cpu_smoke_emit(&mut g, e(1.0, 0.3, 2.0, 5.0, Some(true)));
-        cpu_smoke_emit(&mut g, e(2.0, 0.01, 1.0, 0.001, None));
-        cpu_smoke_emit(&mut g, e(3.0, 0.02, 2.0, 1.0, None));
+        let e = |x: f64, radius: f64, density: f64, ttl: f64, look: Option<bool>| crate::smoke_types::SmokeEmitter { pos: [x, 0.5, -x], radius, density, ttl, look, ..crate::smoke_types::SmokeEmitter::zeroed() };
+        cpu_smoke_emit(&mut g, &e(1.0, 0.3, 2.0, 5.0, Some(true)));
+        cpu_smoke_emit(&mut g, &e(2.0, 0.01, 1.0, 0.001, None));
+        cpu_smoke_emit(&mut g, &e(3.0, 0.02, 2.0, 1.0, None));
         for i in 0..70 {
-            cpu_smoke_emit(&mut g, e(10.0 + i as f64, 0.4 + i as f64 * 0.01, 1.0, 3.0, None));
+            cpu_smoke_emit(&mut g, &e(10.0 + i as f64, 0.4 + i as f64 * 0.01, 1.0, 3.0, None));
         }
-        cpu_smoke_emit(&mut g, e(99.0, 0.4, 0.001, 3.0, None));
+        cpu_smoke_emit(&mut g, &e(99.0, 0.4, 0.001, 3.0, None));
         assert_eq!((g.cpu_smoke.blobs.len(), g.cpu_smoke.lives.len()), (48, 73));
         assert_eq!(cpu_smoke_budget(&mut g), 0.0);
         for (i, b) in g.cpu_smoke.blobs.iter().enumerate() {
@@ -440,7 +363,7 @@ mod tests {
         }
         let gr = g.cpu_smoke.grid.as_ref().unwrap();
         assert_eq!((gr.pending.len(), gr.pending[0], gr.fed), (384, 1.0, true));
-        smoke_grid_step(&mut g, 0.05, None, None);
+        smoke_grid_step(&mut g, 0.05, false, None);
         let gr = g.cpu_smoke.grid.as_ref().unwrap();
         assert_eq!((gr.clock, gr.pending.len(), gr.stands), (0.05, 384, false));
     }

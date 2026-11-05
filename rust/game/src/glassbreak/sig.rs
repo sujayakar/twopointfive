@@ -27,7 +27,7 @@ pub fn glass_break_new(g: &mut crate::game::Game) -> crate::glassbreak::GlassBre
 pub fn glass_break_note(g: &mut crate::game::Game, s: &str) { todo!() }
 
 /// (src/game/glassbreak.ts:224 GlassBreak.plog)
-pub fn glass_break_plog(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, s: &str) { todo!() }
+pub fn glass_break_plog(g: &mut crate::game::Game, s: &str, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:231 GlassBreak.skySide)
 pub fn glass_break_sky_side(g: &mut crate::game::Game, bi: f64) -> f64 { todo!() }
@@ -51,25 +51,25 @@ pub fn glass_break_set_type(g: &mut crate::game::Game, bi: f64, type_: Option<cr
 pub fn glass_break_state_of<'g>(g: &'g mut crate::game::Game, bi: f64) -> Option<&'g mut crate::glassbreak::PaneState> { todo!() }
 
 /// (src/game/glassbreak.ts:279 GlassBreak.toUV)
-pub fn glass_break_to_uv(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, x: V3) -> [f64; 2] { todo!() }
+pub fn glass_break_to_uv(g: &mut crate::game::Game, x: V3, bi: f64) -> [f64; 2] { todo!() }
 
 /// (src/game/glassbreak.ts:285 GlassBreak.toUVIn)
-pub fn glass_break_to_uv_in(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, x: V3) -> [f64; 2] { todo!() }
+pub fn glass_break_to_uv_in(g: &mut crate::game::Game, x: V3, bi: f64) -> [f64; 2] { todo!() }
 
 /// (src/game/glassbreak.ts:287 GlassBreak.toWorld)
-pub fn glass_break_to_world(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, u: f64, v: f64, w: Option<f64>) -> V3 { todo!() }
+pub fn glass_break_to_world(g: &mut crate::game::Game, u: f64, v: f64, w: Option<f64>, bi: f64) -> V3 { todo!() }
 
 /// (src/game/glassbreak.ts:293 GlassBreak.normalOf)
-pub fn glass_break_normal_of(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState) -> V3 { todo!() }
+pub fn glass_break_normal_of(g: &mut crate::game::Game, bi: f64) -> V3 { todo!() }
 
 /// (src/game/glassbreak.ts:294 GlassBreak.fragsOf)
-pub fn glass_break_frags_of(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) -> Vec<crate::glass_pattern::GpFrag> { todo!() }
+pub fn glass_break_frags_of(g: &mut crate::game::Game, bi: f64) -> Vec<crate::glass_pattern::GpFrag> { todo!() }
 
 /// (src/game/glassbreak.ts:298 GlassBreak.addSite)
-pub fn glass_break_add_site(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, u: f64, v: f64, e: f64, seed32: f64) -> f64 { todo!() }
+pub fn glass_break_add_site(g: &mut crate::game::Game, u: f64, v: f64, e: f64, seed32: f64, bi: f64) -> f64 { todo!() }
 
 /// (src/game/glassbreak.ts:313 GlassBreak.nearestSite)
-pub fn glass_break_nearest_site(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, u: f64, v: f64) -> f64 { todo!() }
+pub fn glass_break_nearest_site(g: &mut crate::game::Game, u: f64, v: f64, bi: f64) -> f64 { todo!() }
 
 /// (src/game/glassbreak.ts:322 GlassBreak.impact)
 pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option<V3>, energy: f64, who: f64, through: Option<bool>) -> crate::glassbreak::GlassImpact { todo!() }
@@ -84,10 +84,10 @@ pub fn glass_break_hit(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option<V3
 pub fn glass_break_widen(g: &mut crate::game::Game, bi: f64, x: V3) -> f64 { todo!() }
 
 /// (src/game/glassbreak.ts:387 GlassBreak.knockOut)
-pub fn glass_break_knock_out(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, fid: f64) -> f64 { todo!() }
+pub fn glass_break_knock_out(g: &mut crate::game::Game, fid: f64, bi: f64) -> f64 { todo!() }
 
 /// (src/game/glassbreak.ts:394 GlassBreak.setRun)
-pub fn glass_break_set_run(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, why: &str) { todo!() }
+pub fn glass_break_set_run(g: &mut crate::game::Game, why: &str, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:403 GlassBreak.blast)
 pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>) -> f64 { todo!() }
@@ -120,67 +120,67 @@ pub fn glass_break_would_give(g: &mut crate::game::Game, bi: f64, at: V3, opts: 
 pub fn glass_break_bang(g: &mut crate::game::Game, at: V3, who: f64) -> f64 { todo!() }
 
 /// (src/game/glassbreak.ts:533 GlassBreak.startDice)
-pub fn glass_break_start_dice(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, u: f64, v: f64, seed: f64, why: &str) { todo!() }
+pub fn glass_break_start_dice(g: &mut crate::game::Game, u: f64, v: f64, seed: f64, why: &str, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:545 GlassBreak.diceDone)
-pub fn glass_break_dice_done(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) { todo!() }
+pub fn glass_break_dice_done(g: &mut crate::game::Game, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:546 GlassBreak.stepDice)
-pub fn glass_break_step_dice(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) { todo!() }
+pub fn glass_break_step_dice(g: &mut crate::game::Game, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:553 GlassBreak.releaseClump)
-pub fn glass_break_release_clump(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, d: &mut crate::glassbreak::Dice, c_2: crate::glassbreak::Clump) { todo!() }
+pub fn glass_break_release_clump(g: &mut crate::game::Game, c_2: crate::glassbreak::Clump, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:568 GlassBreak.dropAll)
-pub fn glass_break_drop_all(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, d: &mut crate::glassbreak::Dice) { todo!() }
+pub fn glass_break_drop_all(g: &mut crate::game::Game, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:587 GlassBreak.releaseSheet)
-pub fn glass_break_release_sheet(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, away: V3, k: f64) { todo!() }
+pub fn glass_break_release_sheet(g: &mut crate::game::Game, away: V3, k: f64, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:598 GlassBreak.dirUV)
-pub fn glass_break_dir_uv(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, du: f64, dv: f64) -> V3 { todo!() }
+pub fn glass_break_dir_uv(g: &mut crate::game::Game, du: f64, dv: f64, bi: f64) -> V3 { todo!() }
 
 /// (src/game/glassbreak.ts:600 GlassBreak.outline)
-pub fn glass_break_outline(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, pts: &[[f64; 2]], out_sign: f64) -> Vec<V3> { todo!() }
+pub fn glass_break_outline(g: &mut crate::game::Game, pts: &[[f64; 2]], out_sign: f64, bi: f64) -> Vec<V3> { todo!() }
 
 /// (src/game/glassbreak.ts:606 GlassBreak.releaseCrater)
-pub fn glass_break_release_crater(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, i: f64, cause: crate::glassbreak::GlassBreakReleaseCraterCause) -> f64 { todo!() }
+pub fn glass_break_release_crater(g: &mut crate::game::Game, i: f64, cause: crate::glassbreak::GlassBreakReleaseCraterCause, bi: f64) -> f64 { todo!() }
 
 /// (src/game/glassbreak.ts:621 GlassBreak.releaseFrag)
-pub fn glass_break_release_frag(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, f: &crate::glass_pattern::GpFrag, cause: crate::glassbreak::GlassBreakReleaseFragCause, from: Option<V3>, k: f64) { todo!() }
+pub fn glass_break_release_frag(g: &mut crate::game::Game, f: &crate::glass_pattern::GpFrag, cause: crate::glassbreak::GlassBreakReleaseFragCause, from: Option<V3>, k: f64, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:635 GlassBreak.afterRelease)
-pub fn glass_break_after_release(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) { todo!() }
+pub fn glass_break_after_release(g: &mut crate::game::Game, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:637 GlassBreak.emit)
-pub fn glass_break_emit(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, f: &crate::glassbreak::GlassFragment, key: f64) { todo!() }
+pub fn glass_break_emit(g: &mut crate::game::Game, f: &crate::glassbreak::GlassFragment, key: f64, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:649 GlassBreak.standIn)
-pub fn glass_break_stand_in(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, f: &crate::glassbreak::GlassFragment, key: f64) { todo!() }
+pub fn glass_break_stand_in(g: &mut crate::game::Game, f: &crate::glassbreak::GlassFragment, key: f64, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:671 GlassBreak.heldSet)
-pub fn glass_break_held_set(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) -> JsSet<crate::Num> { todo!() }
+pub fn glass_break_held_set(g: &mut crate::game::Game, bi: f64) -> JsSet<crate::Num> { todo!() }
 
 /// (src/game/glassbreak.ts:693 GlassBreak.supportPass)
-pub fn glass_break_support_pass(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) { todo!() }
+pub fn glass_break_support_pass(g: &mut crate::game::Game, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:705 GlassBreak.update)
 pub fn glass_break_update(g: &mut crate::game::Game, _dt: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:734 GlassBreak.rake)
-pub fn glass_break_rake(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) { todo!() }
+pub fn glass_break_rake(g: &mut crate::game::Game, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:735 GlassBreak.rakeBy)
-pub fn glass_break_rake_by(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState, pl: PlayerId) { todo!() }
+pub fn glass_break_rake_by(g: &mut crate::game::Game, pl: PlayerId, bi: f64) { todo!() }
 
 /// (src/game/glassbreak.ts:756 GlassBreak.walkableNow)
-pub fn glass_break_walkable_now(g: &mut crate::game::Game, st: &mut crate::glassbreak::PaneState) -> bool { todo!() }
+pub fn glass_break_walkable_now(g: &mut crate::game::Game, bi: f64) -> bool { todo!() }
 
 /// (src/game/glassbreak.ts:768 GlassBreak.updateGusts)
 pub fn glass_break_update_gusts(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/glassbreak.ts:791 GlassBreak.openUV)
-pub fn glass_break_open_uv(g: &mut crate::game::Game, st: &crate::glassbreak::PaneState, u: f64, v: f64) -> bool { todo!() }
+pub fn glass_break_open_uv(g: &mut crate::game::Game, u: f64, v: f64, bi: f64) -> bool { todo!() }
 
 /// (src/game/glassbreak.ts:800 GlassBreak.openAt)
 pub fn glass_break_open_at(g: &mut crate::game::Game, bi: f64, x: V3) -> bool { todo!() }

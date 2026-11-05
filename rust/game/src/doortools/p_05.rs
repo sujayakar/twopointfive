@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 1743 to 2146
+//! src/game/doortools.ts lines 1744 to 2147
 #![allow(non_snake_case)]
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
@@ -82,16 +82,6 @@ fn splice_out<T: PartialEq>(list: &mut Vec<T>, x: &T) {
             list.pop();
         }
     }
-}
-fn recipients_of(g: &mut Game, t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    use crate::orders::{OrderTarget as O, SquadOrdersRecipientsT as R};
-    let r = match t.clone() {
-        O::Floor(x) => R::Floor(x),
-        O::Door(x) => R::Door(x),
-        O::None(x) => R::None(x),
-        O::Foe(x) => R::Foe(x),
-    };
-    crate::orders::squad_orders_recipients(g, Some(&r), None)
 }
 /// `S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men })`
 fn give_go(g: &mut Game, p: V3, men: &[GuardId]) -> Option<String> {
@@ -480,7 +470,7 @@ pub fn door_tools_word_owed(g: &mut crate::game::Game, op: DoorOpId) -> bool {
         let text = if T.sliced {
             String::from("the cuts are done · in")
         } else if t - T.owed_t.unwrap_or(-1e9) >= cap {
-            format!("the cuts not done in {} s · in", cap)
+            format!("the cuts not done in {} s · in", js::num_str(cap))
         } else {
             String::from("the cuts are not waited for · in")
         };
@@ -1000,24 +990,6 @@ fn standoff_fix(g: &mut Game, d: DoorId, side: f64, posts: Option<&[crate::order
     let min_m = g.k.doortools.backblast_m + 0.2;
     crate::stackroom::stack_room_fix(g, d, side, posts, &taken, Some(min_m))
 }
-/// picture.ts safestSets over whole deals: the indices of `whole`, safest first. Its stub is typed on `{pos}` alone: each deal it hands back is found again by its marks, the first not yet taken (safestSets keeps its own order among equals, and equal marks weigh equal)
-fn safest_order(g: &mut Game, men: &[GuardId], whole: &[Vec<crate::orders::StackPost>]) -> Vec<usize> {
-    use crate::picture::SafestSetsSetsItemItem as Q;
-    let sets: Vec<Vec<Q>> = whole.iter().map(|F| F.iter().map(|P| Q { pos: P.pos }).collect()).collect();
-    let ranked = crate::picture::safest_sets(g, men, &sets);
-    let mut used = vec![false; whole.len()];
-    let mut out = Vec::new();
-    for R in &ranked {
-        for (i, F) in whole.iter().enumerate() {
-            if !used[i] && F.len() == R.len() && F.iter().zip(R.iter()).all(|(a, b)| a.pos == b.pos) {
-                used[i] = true;
-                out.push(i);
-                break;
-            }
-        }
-    }
-    out
-}
 /// n marks in file along the wall, `standoff` metres past a jamb on face `side`, nearest the door first; None: no wall has the floor (doortools.ts standoffPosts)
 pub fn door_tools_standoff_posts(g: &mut crate::game::Game, d: DoorId, side: f64, n: f64, men: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let men: &[GuardId] = men.unwrap_or(&[]);
@@ -1036,7 +1008,7 @@ pub fn door_tools_standoff_posts(g: &mut crate::game::Game, d: DoorId, side: f64
     if whole.is_empty() {
         return standoff_fix(g, d, side, first.as_deref(), men);
     }
-    let ranked = safest_order(g, men, &whole);
+    let ranked = crate::picture::safest_sets(g, men, &whole);
     let mut pick = 0usize;
     for i in ranked {
         let F = &whole[i];
@@ -1287,7 +1259,7 @@ pub fn door_tools_input(g: &mut crate::game::Game, input: InputId) {
         }
         let up = g.orders.menu.as_ref().map(|M| M.target.clone());
         let men = match up {
-            Some(t) => recipients_of(g, &t),
+            Some(t) => crate::orders::squad_orders_recipients(g, Some(&t), None),
             None => door_tools_word_men(g),
         };
         if !door_tools_stack_waits(g, &men).is_empty() || (g.time - g.door_tools.word_key_t >= tap && !door_tools_frag_held(g, &men).is_empty()) {
@@ -1303,7 +1275,7 @@ pub fn door_tools_input(g: &mut crate::game::Game, input: InputId) {
     }
     let men: Vec<GuardId> = if four {
         if row >= 0 {
-            recipients_of(g, target.as_ref().unwrap())
+            crate::orders::squad_orders_recipients(g, target.as_ref(), None)
         } else {
             door_tools_word_men(g)
         }
@@ -1448,9 +1420,9 @@ pub fn door_tools_tick(g: &mut crate::game::Game) {
         let s = crate::floorseen::floor_seen_new(g);
         g.door_tools.seen = Some(s);
     }
-    let mut roster = g.door_tools.roster.clone();
+    let roster = g.door_tools.roster.clone();
     let seen_m = g.k.doortools.lead_seen_m;
-    crate::floorseen::floor_seen_tick(g, &mut roster, seen_m);
+    crate::floorseen::floor_seen_tick(g, &roster, seen_m);
     door_tools_keep_sectors(g);
     door_tools_test_stacks(g);
     door_tools_walk_tried(g);

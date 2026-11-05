@@ -51,7 +51,7 @@ pub fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, c
     for d in near.iter() {
         if d.kind != DKind::Clutter && d.kind != DKind::Binder { continue; }
         let b = d.box_;
-        let (c, h) = (g.col.boxes[b].c, g.col.boxes[b].h);
+        let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
         if m::hyp3(c[0] - hit_p[0], (c[1] - hit_p[1]) * 0.7, c[2] - hit_p[2]) > g.k.chaos.knock_reach_m + m::max(h[0], h[2]) { continue; }
         let top = top_of(g, b);
         if crate::scene_collision::solid_blocked(g, v3::mad(hit_p, dir, -0.05), top, None) { continue; }   // (not through the partition the round stopped in)
@@ -81,10 +81,21 @@ pub fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destruction::
     destruction_hide(g, d);
     if c.is_none() {   // the pool is full of moving chunks: it still goes, as a burst of chips of its colour
         g.stats.destruction.destr_knocks_demoted += 1;
-        if let Some(mut p) = crate::particle_fx::gpu_fx(g) {
-            let (bc, bh, albedo) = (g.col.boxes[b].c, g.col.boxes[b].h, g.col.boxes[b].albedo);
-            let size = m::max(0.008, m::min_n(&[bh[0], bh[1], bh[2]]) * 0.6);
-            seam_emit_debris(g, &mut p, v3::copy(bc), v3::normalize([hz[0], 1.0, hz[2]]), 24.0, 2.5, 0.7, 1.2, 16.0, 0.3, size, 0.5, Some(1.5), m::min(bh[0], bh[2]), v3::copy(albedo));
+        if crate::particle_fx::gpu_fx(g) {
+            let (bc, bh, albedo) = (seam_box(g, b).c, seam_box(g, b).h, seam_box(g, b).albedo);
+            crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, v3::copy(bc), v3::normalize([hz[0], 1.0, hz[2]]), 24.0, crate::render_particles::EmitOpts {
+                speed: 2.5,
+                speed_jit: Some(0.7),
+                spread: Some(1.2),
+                life: 16.0,
+                life_jit: Some(0.3),
+                size: m::max(0.008, m::min_n(&[bh[0], bh[1], bh[2]]) * 0.6),
+                size_jit: Some(0.5),
+                aspect: Some(1.5),
+                pos_jit: Some(m::min(bh[0], bh[2])),
+                color: Some(v3::copy(albedo)),
+                ..Default::default()
+            });
         }
     }
     if kind == crate::debris::ChunkKind::Housing {
@@ -140,8 +151,8 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
         let mut k = 0usize;
         while (k as f64) < n {
             let ix = scratch[k];
-            let b = BoxId::from_ix(ix as usize);
-            let (yaw, bh, bc) = (g.col.boxes[b].yaw, g.col.boxes[b].h, g.col.boxes[b].c);
+            let b = g.col.boxes[ix as usize];
+            let (yaw, bh, bc) = (seam_box(g, b).yaw, seam_box(g, b).h, seam_box(g, b).c);
             let ac = m::abs(m::cos(yaw));
             let as_ = m::abs(m::sin(yaw));
             let ex = ac * bh[0] + as_ * bh[2];
@@ -187,9 +198,32 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
     g.destr.tile_count += 1.0;
     g.stats.destruction.destr_tiles += 1;
     dlog(g, &format!("tile {} dropped", key));
-    if let Some(mut pf) = crate::particle_fx::gpu_fx(g) {
-        seam_emit_debris(g, &mut pf, [cx, y - 0.05, cz], [0.0, -1.0, 0.0], 18.0, 1.2, 0.8, 1.3, 20.0, 0.3, 0.009, 0.6, None, 0.25, [0.8, 0.79, 0.75]);   // crumbs of the tile's edge
-        seam_emit_dust(g, &mut pf, [cx, y - 0.12, cz], [0.0, -1.0, 0.0], 10.0, 0.7, 0.5, -0.3, 2.2, 0.3, 0.2, 0.35, 0.3, [0.78, 0.76, 0.72]);
+    if crate::particle_fx::gpu_fx(g) {
+        crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, [cx, y - 0.05, cz], [0.0, -1.0, 0.0], 18.0, crate::render_particles::EmitOpts {   // crumbs of the tile's edge
+            speed: 1.2,
+            speed_jit: Some(0.8),
+            spread: Some(1.3),
+            life: 20.0,
+            life_jit: Some(0.3),
+            size: 0.009,
+            size_jit: Some(0.6),
+            pos_jit: Some(0.25),
+            color: Some([0.8, 0.79, 0.75]),
+            ..Default::default()
+        });
+        crate::particle_fx::emit_dust(g, [cx, y - 0.12, cz], [0.0, -1.0, 0.0], 10.0, crate::render_particles::EmitOpts {
+            shape: Some(crate::render_particles::EmitShape::Puff),
+            speed: 0.7,
+            speed_jit: Some(0.5),
+            lift: Some(-0.3),
+            life: 2.2,
+            life_jit: Some(0.3),
+            size: 0.2,
+            size_jit: Some(0.35),
+            pos_jit: Some(0.3),
+            color: Some([0.78, 0.76, 0.72]),
+            ..Default::default()
+        });
     }
     destruction_dust_puff(g, [cx, y - 0.2, cz], [0.0, -1.0, 0.0], 1.4, crate::scene_materials::Surf::Drywall);
     true
@@ -228,9 +262,7 @@ pub fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V
     let name = g.tab.sim_lightshome_fixture[t].name.clone();
     dlog(g, &format!("fixture {} out ({})", name, why));
     let pos = g.tab.sim_lightshome_fixture[t].pos;
-    let mut lights = core::mem::take(&mut g.engine.lights);   // (the set is lent while g is lent: flash touches only the new light's row and this list)
-    crate::render_lights::light_set_flash(g, &mut lights, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
-    g.engine.lights = lights;
+    crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
     crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
         lens_shatter(g, t, from);
@@ -287,9 +319,9 @@ pub fn destruction_fixture_round(g: &mut crate::game::Game, muzzle: V3, dir: V3,
 /// The panel's one line of what the lane has done.   (destruction.ts summary)
 pub fn destruction_summary(g: &mut crate::game::Game) -> String {
     let inv = destruction_inventory(g);
-    let ps = match crate::particle_fx::gpu_fx(g) {
-        Some(p) => format!(" · particle impulses {} queued / {} merged / {} dropped, {} kicks", p.stats.imp_queued, p.stats.imp_merged, p.stats.imp_dropped, p.stats.kicked),
-        None => String::new(),
+    let ps = match (crate::particle_fx::gpu_fx(g), &g.engine.particles) {
+        (true, Some(p)) => format!(" · particle impulses {} queued / {} merged / {} dropped, {} kicks", p.stats.imp_queued, p.stats.imp_merged, p.stats.imp_dropped, p.stats.kicked),
+        _ => String::new(),
     };
     let chaos = chaos_of(g);
     let imp = if impulses_on(g) { "" } else { " (impulses off)" };
@@ -320,9 +352,9 @@ fn knock_kind(kind: DKind) -> crate::debris::ChunkKind {
     if kind == DKind::Binder { crate::debris::ChunkKind::Binder } else { crate::debris::ChunkKind::Clutter }
 }
 
-/// The key of a tile's square: JavaScript writes a -0 as "0", Rust's format as "-0", so through an integer.   (destruction.ts tileDrop `${tx},${tz}`)
+/// The key of a tile's square, in the language's own words for a number (a -0 is "0").   (destruction.ts tileDrop `${tx},${tz}`)
 fn tile_key(tx: f64, tz: f64) -> String {
-    format!("{},{}", tx as i64, tz as i64)
+    format!("{},{}", js::num_str(tx), js::num_str(tz))
 }
 
 /// A vehicle lamp's glass, from the fixture's row.   (destruction.ts killFixture, two sites)
@@ -331,10 +363,10 @@ fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
 
-/// `P.emit('debris', pos, dir, count, { speed, speedJit, spread, life, lifeJit, size, sizeJit, aspect, posJit, color })` (destruction.ts:812,850).
-fn seam_emit_debris(g: &mut Game, p: &mut crate::render_particles::Particles, pos: V3, dir: V3, count: f64, speed: f64, speed_jit: f64, spread: f64, life: f64, life_jit: f64, size: f64, size_jit: f64, aspect: Option<f64>, pos_jit: f64, color: V3) { todo!("needs: EmitOpts.speedJit, spread, lifeJit, sizeJit, aspect, color") }
-/// `emitDust(P, pos, dir, count, { shape: 'puff', speed, speedJit, lift, life, lifeJit, size, sizeJit, posJit, color })` (destruction.ts:851).
-fn seam_emit_dust(g: &mut Game, p: &mut crate::render_particles::Particles, pos: V3, dir: V3, count: f64, speed: f64, speed_jit: f64, lift: f64, life: f64, life_jit: f64, size: f64, size_jit: f64, pos_jit: f64, color: V3) { todo!("needs: EmitOpts.shape, speedJit, lifeJit, sizeJit, color") }
+/// `b.…` for any box: a box's row, statics and made boxes alike. Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once there is a table the body is the row, and no other line changes.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
+}
 
 #[cfg(test)]
 mod tests {

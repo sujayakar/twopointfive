@@ -184,6 +184,9 @@ impl DEFAULTSValue {
 }
 impl Default for DEFAULTSValue { fn default() -> Self { Self::zeroed() } }
 
+/// (src/render/decals.ts:143 DECALS_CAP)
+pub const DECALS_CAP: f64 = 512.0;
+
 /// (src/render/decals.ts:38 DECAL_ANY_BOX)
 pub const DECAL_ANY_BOX: f64 = 65535.0;
 

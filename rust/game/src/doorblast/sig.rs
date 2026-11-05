@@ -63,7 +63,7 @@ pub fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate
 pub fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::SlabThere> { todo!() }
 
 /// (src/game/doorblast.ts:370 stepThere)
-pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::StepThereW) -> crate::doorblast::SlabMet { todo!() }
+pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet { todo!() }
 
 /// (src/game/doorblast.ts:396 stepSlab) TWIN → sim::slabs::step(g, w) -> u32
 pub fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome::SlabNow, dt: f64, t: &mut crate::doorblast::SlabMet) { todo!() }

@@ -5,19 +5,11 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// FINISHES[i].mat as the word it is: the skeleton's row holds a String where the TypeScript has FloorMat. (floor.ts:38)
-fn seam_finish_mat(word: &str) -> FloorMat {
-    match word {
-        "carpet" => FloorMat::Carpet,
-        "lino" => FloorMat::Lino,
-        "stone" => FloorMat::Stone,
-        "tile" => FloorMat::Tile,
-        "asphalt" => FloorMat::Asphalt,
-        "grass" => FloorMat::Grass,
-        _ => unreachable!("FINISHES holds only FloorMat's words"),
-    }
+/// FLOOR[mat]: the table's row for a material, walked in the written order. (floor.ts:22)
+fn floor_row(mat: FloorMat) -> FLOORValue {
+    floor().iter().find(|(m, _)| *m == mat).unwrap().1
 }
 
 /// The material under a point on the floor (y ignored): the level's `surfaces` block, or without one the office's map. (floor.ts floorAt)
@@ -38,7 +30,7 @@ pub fn floor_at(p: V3, s: Option<&crate::scene_level_data::SurfacesData>) -> cra
         return if x < GRASS_EDGE || z < GRASS_EDGE { FloorMat::Grass } else { FloorMat::Asphalt };
     }
     for f in finishes().iter() {
-        if x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1 { return seam_finish_mat(&f.mat); }
+        if x >= f.x0 && x <= f.x1 && z >= f.z0 && z <= f.z1 { return f.mat; }
     }
     FloorMat::Carpet
 }
@@ -62,12 +54,12 @@ pub fn floor_of(g: &mut crate::game::Game, pos: V3) -> crate::floor::FloorMat {
 pub fn tread(g: &mut crate::game::Game, pos: V3, base: f64, is_player: bool) -> f64 {
     if !g.tune.floor_materials {
         let real = floor_of(g, pos);
-        let hard = floor().get(String::from(real.as_str())).unwrap().hard;
+        let hard = floor_row(real).hard;
         crate::audio_iface::game_audio_like_footstep(g, pos, base * (if hard { 1.0 } else { 0.8 }), is_player, Some(real));
         return crate::shards::glass_shards_step(g, pos, base);
     }
     let mat = floor_of(g, pos);
-    let level = base * floor().get(String::from(mat.as_str())).unwrap().loud;
+    let level = base * floor_row(mat).loud;
     crate::audio_iface::game_audio_like_footstep(g, pos, level, is_player, Some(mat));
     crate::shards::glass_shards_step(g, pos, level)
 }
@@ -93,18 +85,16 @@ mod tests {
         for &(x, z, want) in cases { assert_eq!(floor_at([x, 7.0, z], None), want, "{} {}", x, z); }
     }
 
-    // tread's two lookups by word: every material has its row, with floor.ts's numbers.
+    // tread's lookup: every material has its row, with floor.ts's numbers.
     #[test]
     fn every_material_has_its_row() {
         use FloorMat::*;
         let cases: &[(FloorMat, f64, bool)] = &[
             (Carpet, 0.6, false), (Lino, 1.0, true), (Stone, 1.1, true), (Tile, 1.05, true), (Asphalt, 0.9, true), (Grass, 0.45, false),
         ];
-        let t = floor();
         for &(mat, loud, hard) in cases {
-            let row = t.get(String::from(mat.as_str())).unwrap();
+            let row = floor_row(mat);
             assert_eq!((row.loud.to_bits(), row.hard), (loud.to_bits(), hard), "{}", mat.as_str());
-            assert_eq!(seam_finish_mat(mat.as_str()), mat);
         }
     }
 

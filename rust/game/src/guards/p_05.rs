@@ -1,4 +1,4 @@
-//! src/game/guards.ts lines 1500 to 1861
+//! src/game/guards.ts lines 1502 to 1917
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,10 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `gd.flashlight.pos`: a light's row has no accessor (guards.ts 1632, 1644)
-fn seam_light_pos(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].pos } // (skeleton 4 has the row)
-/// `gd.flashlight.dir`: a light's row has no accessor (guards.ts 1644)
-fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // (skeleton 4 has the row)
 /// `was.tgt === key`: the man by his ID, 'pt' by its word, null by None (guards.ts 1562)
 fn same_key(a: &Option<LitSeenTgt>, b: &Option<LitSeenTgt>) -> bool {
     match (a, b) {
@@ -166,7 +162,7 @@ pub fn beam_lens(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     let c = g.gd[gd].ch;
     let held = g.ch[c].bones.get(crate::character::Bone::UpperArmR).copied()?;
     let l = g.gd[gd].flashlight;
-    let p = seam_light_pos(g, l);
+    let p = g.tab.light[l].pos;
     Some(burns_from(g, held, p))
 }
 
@@ -191,8 +187,8 @@ pub fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bo
     }
     let Some(held) = held else { return false };
     let l = g.gd[gd].flashlight;
-    let p = seam_light_pos(g, l);
-    let d = seam_light_dir(g, l);
+    let p = g.tab.light[l].pos;
+    let d = g.tab.light[l].dir;
     let t = g.time;
     let o = burns_from(g, held, p);
     let fan = beam_fan(d);
@@ -280,8 +276,8 @@ pub fn dark_on_lit_man(g: &mut crate::game::Game, gd: GuardId, tgt: GuardId) -> 
     v
 }
 
-/// LIGHTS.litMan, asked of a teammate the light rule has: is he in the dark on a man who stands lit (guards.ts onLitMan)
-pub fn on_lit_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
+/// LIGHTS.litMan, asked of a teammate the light rule has: is he in the dark on a man who stands lit (guards.ts gunOnLitMan)
+pub fn gun_on_lit_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !light_ruled(g, gd) {
         return false;
     }
@@ -311,7 +307,7 @@ pub fn on_lit_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// does his weapon light burn this frame, asked only of a man the rule has (guards.ts teamLit)
 pub fn team_lit(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if on_lit_man(g, gd) {
+    if gun_on_lit_man(g, gd) {
         return false;
     }
     let t = g.time;
@@ -398,22 +394,22 @@ pub fn follow_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) 
     if unstick_first(g, gd, dt) {
         return false;
     }
-    if g.tune.tactics && !crate::runner::runner_fled(g, gd) && crate::tactics::door_gate(g, gd, dt, speed) {
+    if g.tune.tactics && !g.gd[gd].fled && crate::tactics::door_gate(g, gd, dt, speed) {
         return false;
     }
-    if !crate::runner::runner_fled(g, gd) && crate::lanes::lane_gate(g, gd) {
+    if !g.gd[gd].fled && crate::lanes::lane_gate(g, gd) {
         return false;
     }
     if crate::handleside::handle_gate(g, gd, dt, speed, None) {
         return false;
     }
-    if !crate::runner::runner_fled(g, gd) {
+    if !g.gd[gd].fled {
         match crate::doorway::doorway_gate(g, gd, dt, speed) {
             None => return false,
             Some(sp) => speed = sp,
         }
     }
-    if !crate::runner::runner_fled(g, gd) {
+    if !g.gd[gd].fled {
         match crate::darkdoor::dark_door_gate(g, gd, dt, speed) {
             None => return false,
             Some(sp) => speed = sp,
@@ -612,6 +608,162 @@ pub fn flood_from(g: &mut crate::game::Game, from: V3, max_m: f64, keyed: Option
         }
     }
     FloodFrom { secs, metres }
+}
+
+/// A cell of the deal.   (guards.ts dealSpots, local type Cand)
+#[derive(Clone, Copy, Debug)]
+struct Cand { cell: usize, pos: V3, kind: crate::guards::SearchSpotKind, cheap: f64, m: f64, hidden: bool, cover: f64 }
+
+/// Every one of `list` at least `r` from `p`.   (guards.ts dealSpots, farFrom)
+fn far_from(p: V3, list: &[Cand], r: f64) -> bool { list.iter().all(|k| v3::dist_xz(k.pos, p) >= r) }
+
+/// Deal the spots of the man's plan (his row) round its fix: flood, count what stands about every reached cell, keep the best covered a spacing apart, ask the
+/// line from the fix, take the top spots by cover and a few well-spread cells of open floor.   (guards.ts dealSpots)
+pub fn deal_spots(g: &mut crate::game::Game, gd: GuardId) {
+    let (w, hn, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
+    let n = (w * hn) as usize;
+    let gi = g.guards.iter().position(|&o| o == gd).unwrap_or(0);
+    let fix = g.gd[gd].search_plan.as_ref().unwrap().fix;
+    let crate::guards::FloodFrom { secs, metres } = flood_from(g, fix, SEARCH_RADIUS_M, None);
+    // props: every cell within reach of a chair / carton / plant / bin counts it
+    let mut prop_n: Vec<u8> = vec![0; n];
+    for i in 0..g.props.props.len() {
+        let id = g.props.props[i];
+        let r = g.tab.props_prop[id].radius + 0.7;
+        let (px, pz) = (crate::props::prop_x(g, id), crate::props::prop_z(g, id));
+        let (x0, x1, z0, z1) = (
+            m::max(0.0, m::floor((px - r) / cs)),
+            m::min(w - 1.0, m::floor((px + r) / cs)),
+            m::max(0.0, m::floor((pz - r) / cs)),
+            m::min(hn - 1.0, m::floor((pz + r) / cs)),
+        );
+        let mut z = z0;
+        while z <= z1 {
+            let mut x = x0;
+            while x <= x1 {
+                if m::hyp2((x + 0.5) * cs - px, (z + 0.5) * cs - pz) < r {
+                    let at = (z * w + x) as usize;
+                    prop_n[at] = if prop_n[at] == 255 { 255 } else { prop_n[at] + 1 };
+                }
+                x += 1.0;
+            }
+            z += 1.0;
+        }
+    }
+    // open leaves: the cells close along a leaf standing well open, off the doorway itself: behind the door
+    let mut leaf_n: Vec<u8> = vec![0; n];
+    for i in 0..g.doors.list.len() {
+        let d = g.doors.list[i];
+        if m::abs(crate::doors::door_angle(g, d)) < 0.7 || crate::doors::door_off(g, d) { continue; }
+        let [hx, hz] = g.dr[d].def.hinge;
+        let u = crate::doors::door_dir(g, d);
+        let fc = g.dr[d].frame_centre;
+        let width = g.dr[d].def.width;
+        let mut a = 0.2;
+        while a <= width {
+            for s in [-0.55, 0.55] {
+                let (x, z) = (hx + u[0] * a - u[1] * s, hz + u[1] * a + u[0] * s);
+                if m::hyp2(x - fc[0], z - fc[2]) < 0.7 || crate::scene_collision::nav_grid_is_blocked(g, x, z) { continue; }
+                let at = crate::scene_collision::nav_grid_idx(g, m::floor(x / cs), m::floor(z / cs)) as usize;
+                leaf_n[at] = 1;
+            }
+            a += 0.25;
+        }
+    }
+    // every reached cell a stride or more off the fix: what stands about it
+    let (mut cands, mut opens): (Vec<Cand>, Vec<Cand>) = (Vec::new(), Vec::new());
+    for i in 0..n {
+        let met = metres[i] as f64;
+        if !secs[i].is_finite() || met > SEARCH_RADIUS_M || met < 1.5 { continue; }
+        let (cx, cz) = ((i % w as usize) as f64, (i / w as usize) as f64);
+        let mut n_wall = 0;
+        for dz in [-1.0, 0.0, 1.0] {
+            for dx in [-1.0, 0.0, 1.0] {
+                if dx == 0.0 && dz == 0.0 { continue; }
+                let (nx, nz): (f64, f64) = (cx + dx, cz + dz);
+                if nx < 0.0 || nz < 0.0 || nx >= w || nz >= hn { n_wall += 1; continue; }
+                let at = crate::scene_collision::nav_grid_idx(g, nx, nz) as usize;
+                if g.col.nav.blocked[at] != 0 { n_wall += 1; }
+            }
+        }
+        let (n_prop, n_leaf) = (prop_n[i], leaf_n[i]);
+        let cheap = 0.12 * m::min(n_wall as f64, 5.0) + 0.2 * m::min(n_prop as f64, 2.0) + 0.45 * (n_leaf as f64);
+        let kind = if n_leaf != 0 { SearchSpotKind::Leaf } else if n_wall >= 5 { SearchSpotKind::Corner } else if n_prop != 0 { SearchSpotKind::Prop } else if n_wall != 0 { SearchSpotKind::Wall } else { SearchSpotKind::Open };
+        let c = Cand { cell: i, pos: [(cx + 0.5) * cs, 0.0, (cz + 0.5) * cs], kind, cheap, m: met, hidden: false, cover: 0.0 };
+        if cheap > 0.0 { cands.push(c); } else { opens.push(c); }
+    }
+    js::sort_by(&mut cands, |a, b| js::or(b.cheap - a.cheap, a.m - b.m));
+    let mut kept: Vec<Cand> = Vec::new();
+    for c in cands.iter() {
+        if kept.len() >= 40 { break; }
+        if far_from(c.pos, &kept, SEARCH_SPACING_M) { kept.push(*c); }
+    }
+    let eye_fix: V3 = [fix[0], 1.0, fix[2]];
+    for c in kept.iter_mut() {
+        c.hidden = crate::scene_collision::segment_blocked(g, eye_fix, [c.pos[0], 0.6, c.pos[2]], None, None, None);
+        c.cover = v3::clamp(c.cheap + (if c.hidden { 0.3 } else { 0.0 }), 0.05, 1.0);
+    }
+    js::sort_by(&mut kept, |a, b| js::or(b.cover - a.cover, a.m - b.m));
+    let mut chosen: Vec<Cand> = kept.iter().take(SEARCH_SPOTS as usize).copied().collect();
+    js::sort_by(&mut opens, |a, b| b.m - a.m);   // controls: open floor, as far out and as far apart as the place allows
+    let mut controls = 0.0;
+    for c in opens.iter_mut() {
+        if controls >= SEARCH_CONTROLS { break; }
+        if far_from(c.pos, &chosen, 2.5) {
+            c.hidden = crate::scene_collision::segment_blocked(g, eye_fix, [c.pos[0], 0.6, c.pos[2]], None, None, None);
+            c.cover = if c.hidden { 0.3 } else { 0.1 };
+            chosen.push(*c);
+            controls += 1.0;
+        }
+    }
+    let mut spots: Vec<crate::guards::SearchSpot> = Vec::with_capacity(chosen.len());
+    for (i, c) in chosen.iter().enumerate() {
+        let key = alloc::format!("srch:{}:{}", gi, i);
+        crate::game::game_light_forget(g, &key);   // (the last plan's answer under this key was for another spot)
+        spots.push(crate::guards::SearchSpot { pos: c.pos, cell: c.cell as f64, key, kind: c.kind, hidden: c.hidden, cover: c.cover, dark: 0.5, e: None, need: secs[c.cell] as f64, plaus: 1.0, score: 0.0, visited: false, by: -1.0, unreachable: false, samples: Vec::new() });
+    }
+    let now = g.time;
+    let p = g.gd[gd].search_plan.as_mut().unwrap();
+    p.spots = spots;
+    p.flood_at = now;
+    p.current = -1.0;
+    p.rr = 0.0;
+}
+
+/// The plan for this man's search, on his row: built on its first frame round his fix (his feet if he has none), rebuilt if the fix has moved a couple of
+/// metres, plausibility re-flooded every SEARCH_REFLOOD_SECS.   (guards.ts searchPlanFor)
+pub fn search_plan_for(g: &mut crate::game::Game, gd: GuardId) {
+    let c = g.gd[gd].ch;
+    let at = g.ch[c].pos;
+    let fix: V3 = match g.gd[gd].last_known { Some(k) => [k[0], 0.0, k[2]], None => [at[0], 0.0, at[2]] };
+    let standing = match &g.gd[gd].search_plan { Some(q) => !(v3::dist_xz(q.fix, fix) > 2.0), None => false };   // a new place to search: deal again round it
+    if !standing {
+        let p = crate::guards::SearchPlan {
+            fix,
+            t0: if g.gd[gd].last_known.is_some() { g.gd[gd].fix_t } else { g.time },
+            serial: (match &g.gd[gd].search_plan { Some(q) => q.serial, None => 0.0 }) + 1.0,
+            built_at: g.time,
+            flood_at: g.time,
+            spots: Vec::new(),
+            current: -1.0,
+            phase: SearchPlanPhase::Sweep,
+            phase_t: 0.0,
+            visits: 0.0,
+            rr: 0.0,
+            said: false,
+        };
+        g.gd[gd].search_plan = Some(p);   // (before the deal, which works on the row: nothing it calls reads this man's plan)
+        deal_spots(g, gd);
+        return;
+    }
+    let (flood_at, plan_fix) = { let q = g.gd[gd].search_plan.as_ref().unwrap(); (q.flood_at, q.fix) };
+    if g.time - flood_at > SEARCH_REFLOOD_SECS {   // time has passed, leaves have moved: how long Sam would need to each spot NOW
+        let secs = flood_from(g, plan_fix, SEARCH_RADIUS_M, None).secs;
+        let now = g.time;
+        let q = g.gd[gd].search_plan.as_mut().unwrap();
+        for s in q.spots.iter_mut() { s.need = secs[s.cell as usize] as f64; }
+        q.flood_at = now;
+    }
 }
 
 #[cfg(test)]

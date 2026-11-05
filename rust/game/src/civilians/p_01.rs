@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// character ids: clear of Sam's 1, the staff's 10..15 and the units' 20..   (civilians.ts CIV_ID0)
-const CIV_ID0: f64 = 40.0;
-
 /// The office's phones and ways off the floor: every level with no places of its own reads these.   (civilians.ts CIV_SPOTS)
 fn office_spots() -> crate::civilians::CivSpots {
     let t = crate::civilians::civ_spots_table();
@@ -19,11 +16,24 @@ fn office_spots() -> crate::civilians::CivSpots {
 /// The phones and the ways off this level's floor: the snatch's or the quiet mission's own, else the office's.   (civilians.ts civSpots)
 pub fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots {
     let Some(sc) = g.level.scenarios.as_ref() else { return office_spots(); };
+    if sc.snatch.is_none() && sc.quiet.is_none() {
+        return office_spots();
+    }
+    if let Some(o) = g.m.civilians.own_spots.as_ref() {
+        return o.clone();
+    }
+    let o = own_spots_of(sc);
+    g.m.civilians.own_spots = Some(o.clone());
+    o
+}
+
+/// The level's own places, as civSpots keeps them in ownSpots: the snatch's if it has one, else the quiet mission's.   (civilians.ts:73,75)
+fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians::CivSpots {
     if let Some(n) = sc.snatch.as_ref() {
         let exits = n.exits.iter().map(|e| crate::civilians::CivSpot { name: e.name.clone(), pos: e.pos, face: 0.0 }).collect();
         return crate::civilians::CivSpots { phones: Vec::new(), exits };
     }
-    let Some(q) = sc.quiet.as_ref() else { return office_spots(); };
+    let Some(q) = sc.quiet.as_ref() else { return crate::civilians::CivSpots { phones: Vec::new(), exits: Vec::new() }; };
     let stands = |list: &Option<Vec<crate::scene_scenarios::QuietStand>>| -> Vec<crate::civilians::CivSpot> {
         match list {
             Some(l) => l.iter().map(|s| crate::civilians::CivSpot { name: s.name.clone(), pos: s.pos, face: s.face }).collect(),
@@ -33,36 +43,42 @@ pub fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots {
     crate::civilians::CivSpots { phones: stands(&q.phones), exits: stands(&q.wayouts) }
 }
 
+/// (civilians.ts withDice) Has no `g` to hand `fn_` or to reach the die with: make_civilian, its one caller, goes through with_dice_on.
+pub fn with_dice<T: Clone + core::fmt::Debug>(seed: f64, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+    todo!("needs: g as with_dice's first parameter; with_dice_on is the body")
+}
+
 /// Runs `fn_` with a private seeded die in the game die's place, so a civilian's construction moves the game's stream by no draw.   (civilians.ts withDice)
-pub fn with_dice<T: Clone + core::fmt::Debug>(seed: f64, fn_: &mut dyn FnMut() -> T) -> T {
-    let displaced = seam_swap_math_random(crate::math_dice::mulberry32(seed));
-    let out = fn_();
-    seam_swap_math_random(displaced);
+fn with_dice_on<T>(g: &mut Game, seed: f64, fn_: &mut dyn FnMut(&mut Game) -> T) -> T {
+    let private = crate::math_dice::mulberry32(seed);
+    let stood = g.dice;
+    let block = &mut ::sim::state::state(g.sim).dice;
+    let (word, count) = (block.s, block.n);
+    block.s = private.s;
+    block.n = private.n;
+    let mut stand_in = crate::math_dice::sim_dice_new(seed);
+    stand_in.home = stood.and_then(|d| d.home);
+    g.dice = Some(stand_in);
+    let out = fn_(g);
+    g.dice = stood;
+    let block = &mut ::sim::state::state(g.sim).dice;
+    block.s = word;
+    block.n = count;
     out
-}
-
-/// `Math.random = die`, returning the one displaced: with_dice has no `g`, and the die simRandom draws is the game's (civilians.ts:127).
-fn seam_swap_math_random(die: crate::FnField) -> crate::FnField {
-    todo!("needs: with_dice to reach the die sim_random draws (no g in its signature, and its closure holds g)")
-}
-
-/// Number.prototype.toFixed(1) of a time (x >= 0): Rust's rounding differs only on an exact tie, x = m/4 with m odd, where JavaScript takes the larger.
-fn to_fixed_1(x: f64) -> String {
-    let q = x * 4.0;
-    if m::floor(q) == q && js::rem(q, 2.0) != 0.0 {
-        let n = m::ceil(x * 10.0) as i64;
-        return format!("{}.{}", n / 10, n % 10);
-    }
-    format!("{:.1}", x)
 }
 
 /// One line of what happened to her, kept on the record, the last few only.   (civilians.ts log)
 pub fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
-    let line = format!("{} {}", to_fixed_1(g.time), what);
+    let line = format!("{} {}", js::to_fixed(g.time, 1), what);
     let c = g.gd[gd].civ.unwrap();
     g.cv[c].log.push(line);
     if g.cv[c].log.len() > 40 {
         g.cv[c].log.drain(0..10);
+    }
+    let row = crate::civilians::CiviliansModCIVLOGItem { t: g.time, who: g.cv[c].name.clone(), what: String::from(what) };
+    g.m.civilians.civ_log.push(row);
+    if g.m.civilians.civ_log.len() > 200 {
+        g.m.civilians.civ_log.drain(0..50);
     }
 }
 
@@ -108,7 +124,7 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
         }
         if let Some(d) = g.pl[pl].dragging {
             if g.gd[d].civ.is_some() {
-                crate::seats::with_seat(g, pl, &mut |g: &mut Game| crate::game::game_toggle_drag(g, None));
+                crate::seats::with_seat(g, s, &mut |g: &mut Game| crate::game::game_toggle_drag(g, None));
             }
         }
         if let Some(t) = g.pl[pl].takedown.as_ref().map(|t| t.g) {
@@ -119,18 +135,12 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
     }
     for cv in g.civilians.clone() {
         forget_meter(g, cv);
-        seam_man_leaves(g, cv);
     }
     let floor = floor_of(g);
     floor.evac_told = false;
     floor.greet_at = -1e9;
     floor.pending.clear();
     spawn_civilians(g);
-}
-
-/// `manLeaves(cv.char, cv)`: man_leaves takes `&mut ManCols`, still an empty struct no Guard or Character holds, so neither a CharId nor a GuardId can be handed to it (civilians.ts:206).
-fn seam_man_leaves(g: &mut Game, cv: GuardId) {
-    todo!("needs: man_leaves to take the man's body and record by ID (ManCols is empty)")
 }
 
 /// Why no autosave may be written on the civilians' account; None = they are no objection.   (civilians.ts civilianCompromise)
@@ -179,7 +189,8 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
         keys: Some(Vec::new()),
     };
     let fl = crate::rig_props::torch_light_def(&format!("civlight{}", id), id, 0.0, 10.0, 20.0);
-    seam_light_off(g, fl);
+    g.tab.light[fl].enabled = false;
+    g.tab.light[fl].intensity = 0.0;
     let yaw = match def.face.as_ref().and_then(|f| f.first().copied()) {
         Some(y) => y,
         None if route.points.len() > 1 => v3::yaw_to(route.points[0], route.points[1 % route.points.len()]),
@@ -196,7 +207,7 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
     let tint = v3::copy(def.tint);
     let seed = crate::math_dice::hash_str(&format!("civ:{}:{}", def.name, i));
     let (men, rig) = (g.men, g.rig);
-    let gd = with_dice(seed, &mut || crate::game::guard_new(g, men, rig, id, route, -1.0, fl, tint, Some(&look)));
+    let gd = with_dice_on(g, seed, &mut |g: &mut Game| crate::game::guard_new(g, men, rig, id, route, -1, fl, tint, Some(&look)));
     g.gd[gd].foe = None;
     g.gd[gd].drawn = false;
     g.gd[gd].heard_up_to = g.event_seq;
@@ -265,11 +276,6 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
     gd
 }
 
-/// `fl.enabled = false; fl.intensity = 0`: LightId has no table and no setters in the skeleton (civilians.ts:347).
-fn seam_light_off(g: &mut Game, fl: LightId) {
-    g.tab.light[fl].enabled = false; g.tab.light[fl].intensity = 0.0; // (skeleton 4 has the row)
-}
-
 /// A hostage: a civilian of the usual make at `pos`, down and told to stay down with no end to it.   (civilians.ts spawnHostage)
 pub fn spawn_hostage(g: &mut crate::game::Game, def: &crate::civilians::SpawnHostageDef) -> GuardId {
     let kind = match def.kind {
@@ -299,7 +305,7 @@ pub fn spawn_hostage(g: &mut crate::game::Game, def: &crate::civilians::SpawnHos
 }
 
 /// The man a snatch is for: a civilian of the usual make at his own marks, working them until something frightens him.   (civilians.ts spawnTarget)
-pub fn spawn_target(g: &mut crate::game::Game, def: &crate::civilians::SpawnTargetDef) -> GuardId {
+pub fn spawn_target(g: &mut crate::game::Game, def: &crate::scene_scenarios::SnatchDataMan) -> GuardId {
     let pts: Vec<V3> = match def.points.as_ref() {
         Some(p) if !p.is_empty() => p.clone(),
         _ => vec![def.pos],
@@ -405,17 +411,6 @@ pub fn civilian_tie(g: &mut crate::game::Game, gd: GuardId) {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// The expected strings are node's own `x.toFixed(1)`.
-    #[test]
-    fn to_fixed_1_rounds_as_javascript_does() {
-        for (x, js) in [
-            (0.0, "0.0"), (0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (1.75, "1.8"), (2.5, "2.5"),
-            (0.35, "0.3"), (1.05, "1.1"), (0.05, "0.1"), (0.15, "0.1"), (99.95, "100.0"), (123.25, "123.3"), (1000.0 / 60.0, "16.7"),
-        ] {
-            assert_eq!(to_fixed_1(x), js, "{}", x);
-        }
-    }
 
     #[test]
     fn the_office_table_is_as_written() {

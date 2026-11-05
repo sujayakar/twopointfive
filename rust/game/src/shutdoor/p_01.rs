@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `x.toFixed(d)`: −0 prints as 0, as there. For a log's words and a cache's key only.
-fn to_fixed(x: f64, d: usize) -> String {
-    let x = if x == 0.0 { 0.0 } else { x };
-    alloc::format!("{:.*}", d, x)
-}
 /// where a man stands (his body's position)
 fn pos_of(g: &Game, gd: GuardId) -> V3 {
     g.ch[g.gd[gd].ch].pos
@@ -130,7 +125,7 @@ pub fn shut_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> Option<crat
 /// Both faces' places for the leaf as it stands, kept for the frame. (shutdoor.ts spotsOf)
 pub fn spots_of(g: &mut crate::game::Game, d: DoorId) -> Vec<Option<crate::shutdoor::Spot>> {
     let angle = crate::doors::door_angle(g, d);
-    let key = alloc::format!("{}|{}|{}", g.time, g.dr[d].def.name, to_fixed(angle, 3));
+    let key = alloc::format!("{}|{}|{}", js::num_str(g.time), g.dr[d].def.name, js::to_fixed(angle, 3));
     if let Some(hit) = &g.m.shutdoor.spotted {
         if hit.key == key { return hit.spots.clone(); }
     }
@@ -366,7 +361,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         if j.phase == JobPhase::Go {
             end(g, gd, d, j, Some("it's shut."), "shut before he got there", true);
         } else {
-            end(g, gd, d, j, Some("door's shut."), &alloc::format!("shut · {} s", to_fixed(t - j.t0, 1)), true);
+            end(g, gd, d, j, Some("door's shut."), &alloc::format!("shut · {} s", js::to_fixed(t - j.t0, 1)), true);
         }
         return;
     }
@@ -392,7 +387,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
                     j.near = None;
                     store(g, gd, j);
                     send(g, gd, d, now);
-                    note(g, gd, d, &alloc::format!("the leaf moved: sent on to ({}, {})", to_fixed(now.pos[0], 2), to_fixed(now.pos[2], 2)));
+                    note(g, gd, d, &alloc::format!("the leaf moved: sent on to ({}, {})", js::to_fixed(now.pos[0], 2), js::to_fixed(now.pos[2], 2)));
                     return;
                 }
             }
@@ -455,32 +450,8 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     }
 }
 
-/// The def's standsIn.when: on a door that stands open with no charge on it.
-pub(crate) fn order_when(g: &mut Game, t: &crate::orders::OrderTarget) -> bool {
-    match t {
-        crate::orders::OrderTarget::Door(t) => stands_open(g, t.door) && crate::doortools::door_tools_charge_on(g, t.door).is_none(),
-        _ => false,
-    }
-}
-/// The def's `only`: the one man of `plan` (where nobody can, the men as addressed go on to `valid`, which says why).
-pub(crate) fn order_only(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
-    let d = match t { crate::orders::OrderTarget::Door(t) => t.door, _ => return men.to_vec() };
-    if crate::doors::door_off(g, d) || !stands_open(g, d) { return men.to_vec(); }
-    match plan(g, d, men) {
-        Plan::Text(_) => men.to_vec(),
-        Plan::Arm1(p) => vec![p.gd],
-    }
-}
-/// The def's `valid`: `boolean | string` is Ok(the boolean) or Err(the word).
-pub(crate) fn order_valid(g: &mut Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Result<bool, String> {
-    let d = match t { crate::orders::OrderTarget::Door(t) => t.door, _ => return Ok(false) };
-    match why_not_shut(g, d, men) {
-        Some(why) => Err(why),
-        None => Ok(true),
-    }
-}
-/// The def's `issue`: the man is sent and his job set; Some: why it cannot be done.
-pub(crate) fn order_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
+/// The def's `issue`: the man is sent and his job set; Some: why it cannot be done. (shutdoor.ts registerShutDoor issue)
+pub fn order_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Option<String> {
     let d = match t { crate::orders::OrderTarget::Door(t) => t.door, _ => return Some(String::from("no door")) };
     let (gd, spot) = match plan(g, d, men) {
         Plan::Text(why) => return Some(why),
@@ -493,8 +464,8 @@ pub(crate) fn order_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::Orde
     g.stats.shutdoor.given += 1;
     let what = alloc::format!(
         "sent to ({}, {}) on its {} face{}",
-        to_fixed(spot.pos[0], 2),
-        to_fixed(spot.pos[2], 2),
+        js::to_fixed(spot.pos[0], 2),
+        js::to_fixed(spot.pos[2], 2),
         if spot.side > 0.0 { "+" } else { "−" },
         if back { " · from the file" } else { "" },
     );

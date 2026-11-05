@@ -10,7 +10,7 @@ pub enum StoredTuneRow {
     Num { v: f64 },
 }
 
-/// (TypeScript: Marks, src/game/qrf.ts:114)
+/// (TypeScript: Marks, src/game/qrf.ts:115)
 #[derive(Clone, Debug)]
 pub struct Marks {
     pub door: Option<String>,
@@ -104,9 +104,9 @@ pub enum Phase {
     Drill,
     Fight,
     Flow,
+    Regroup,
     Landing,
     File,
-    Regroup,
 }
 impl Phase {
     pub const fn as_str(self) -> &'static str {
@@ -121,14 +121,14 @@ impl Phase {
             Phase::Drill => "drill",
             Phase::Fight => "fight",
             Phase::Flow => "flow",
+            Phase::Regroup => "regroup",
             Phase::Landing => "landing",
             Phase::File => "file",
-            Phase::Regroup => "regroup",
         }
     }
 }
 
-/// (TypeScript: Target, src/game/qrf.ts:197)
+/// (TypeScript: Target, src/game/qrf.ts:198)
 #[derive(Clone, Debug)]
 pub struct Target {
     pub kind: crate::qrf::TargetKind,
@@ -166,7 +166,7 @@ impl TargetKind {
     }
 }
 
-/// (TypeScript: Perimeter, src/game/qrf.ts:199)
+/// (TypeScript: Perimeter, src/game/qrf.ts:200)
 #[derive(Clone, Debug)]
 pub struct Perimeter {
     pub state: crate::qrf::PerimeterState,
@@ -208,7 +208,7 @@ impl PerimeterState {
     }
 }
 
-/// (TypeScript: inline at src/game/qrf.ts:199 Perimeter.men, src/game/qrf.ts:199)
+/// (TypeScript: inline at src/game/qrf.ts:200 Perimeter.men, src/game/qrf.ts:200)
 #[derive(Clone, Debug)]
 pub struct PerimeterMenItem {
     pub gd: GuardId,
@@ -229,7 +229,7 @@ impl PerimeterMenItem {
 }
 impl Default for PerimeterMenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Qrf, src/game/qrf.ts:202)
+/// (TypeScript: Qrf, src/game/qrf.ts:203)
 #[derive(Clone, Debug)]
 pub struct Qrf {
     pub state: crate::qrf::QrfState,
@@ -366,7 +366,7 @@ impl Qrf {
 }
 impl Default for Qrf { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:222 Qrf.log, src/game/qrf.ts:222)
+/// (TypeScript: inline at src/game/qrf.ts:223 Qrf.log, src/game/qrf.ts:223)
 #[derive(Clone, Debug)]
 pub struct QrfLogItem {
     pub t: f64,
@@ -383,7 +383,7 @@ impl QrfLogItem {
 }
 impl Default for QrfLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:239 Qrf.spent, src/game/qrf.ts:239)
+/// (TypeScript: inline at src/game/qrf.ts:240 Qrf.spent, src/game/qrf.ts:240)
 #[derive(Clone, Debug)]
 pub struct QrfSpent {
     pub room: String,
@@ -407,7 +407,7 @@ pub enum QrfWordKey {
     Player,
 }
 
-/// (TypeScript: inline at src/game/qrf.ts:247 Qrf.word, src/game/qrf.ts:247)
+/// (TypeScript: inline at src/game/qrf.ts:248 Qrf.word, src/game/qrf.ts:248)
 #[derive(Clone, Debug)]
 pub struct QrfWordValue {
     pub at: V3,
@@ -426,7 +426,7 @@ impl QrfWordValue {
 }
 impl Default for QrfWordValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ResponseWordSnap, src/game/qrf.ts:363)
+/// (TypeScript: ResponseWordSnap, src/game/qrf.ts:364)
 #[derive(Clone, Debug)]
 pub struct ResponseWordSnap {
     pub who: f64,
@@ -447,7 +447,7 @@ impl ResponseWordSnap {
 }
 impl Default for ResponseWordSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:70 QRF_MARKS, src/game/qrf.ts:70)
+/// (TypeScript: inline at src/game/qrf.ts:71 QRF_MARKS, src/game/qrf.ts:71)
 #[derive(Clone, Debug)]
 pub struct QRFMARKS {
     pub door: String,
@@ -472,7 +472,7 @@ impl QRFMARKS {
 }
 impl Default for QRFMARKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:80 QRFMARKS.posts, src/game/qrf.ts:81)
+/// (TypeScript: inline at src/game/qrf.ts:81 QRFMARKS.posts, src/game/qrf.ts:82)
 #[derive(Clone, Debug)]
 pub struct QRFMARKSPostsItem {
     pub name: String,
@@ -493,7 +493,7 @@ impl QRFMARKSPostsItem {
 }
 impl Default for QRFMARKSPostsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:279 QRF_TUNE_DEFAULTS, src/game/qrf.ts:279)
+/// (TypeScript: inline at src/game/qrf.ts:280 QRF_TUNE_DEFAULTS, src/game/qrf.ts:280)
 #[derive(Clone, Copy, Debug)]
 pub struct QRFTUNEDEFAULTS {
     pub qrf: bool,
@@ -544,7 +544,7 @@ pub enum BudgetOf {
     Arm1(crate::qrf::BudgetOfArm1),
 }
 
-/// (TypeScript: inline at src/game/qrf.ts:155 budgetOf ->, src/game/qrf.ts:155)
+/// (TypeScript: inline at src/game/qrf.ts:156 budgetOf ->, src/game/qrf.ts:156)
 #[derive(Clone, Copy, Debug)]
 pub struct BudgetOfArm0 {
     pub budget: f64,
@@ -559,7 +559,7 @@ impl BudgetOfArm0 {
 }
 impl Default for BudgetOfArm0 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:155 budgetOf ->, src/game/qrf.ts:155)
+/// (TypeScript: inline at src/game/qrf.ts:156 budgetOf ->, src/game/qrf.ts:156)
 #[derive(Clone, Copy, Debug)]
 pub struct BudgetOfArm1 {
     pub budget: Option<()>,
@@ -574,7 +574,7 @@ impl BudgetOfArm1 {
 }
 impl Default for BudgetOfArm1 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:320 bestFix ->, src/game/qrf.ts:320)
+/// (TypeScript: inline at src/game/qrf.ts:321 bestFix ->, src/game/qrf.ts:321)
 #[derive(Clone, Copy, Debug)]
 pub struct BestFix {
     pub pos: V3,
@@ -591,7 +591,7 @@ impl BestFix {
 }
 impl Default for BestFix { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:349 netWord ->, src/game/qrf.ts:349)
+/// (TypeScript: inline at src/game/qrf.ts:350 netWord ->, src/game/qrf.ts:350)
 #[derive(Clone, Copy, Debug)]
 pub struct NetWord {
     pub pos: V3,
@@ -610,7 +610,7 @@ impl NetWord {
 }
 impl Default for NetWord { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:356 fixOf ->, src/game/qrf.ts:356)
+/// (TypeScript: inline at src/game/qrf.ts:357 fixOf ->, src/game/qrf.ts:357)
 #[derive(Clone, Copy, Debug)]
 pub struct FixOf {
     pub pos: V3,
@@ -627,7 +627,7 @@ impl FixOf {
 }
 impl Default for FixOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:426 responseWords ->, src/game/qrf.ts:426)
+/// (TypeScript: inline at src/game/qrf.ts:427 responseWords ->, src/game/qrf.ts:427)
 #[derive(Clone, Debug)]
 pub struct ResponseWords {
     pub site: String,
@@ -646,7 +646,7 @@ impl ResponseWords {
 }
 impl Default for ResponseWords { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:431 dealt ->, src/game/qrf.ts:431)
+/// (TypeScript: inline at src/game/qrf.ts:432 dealt ->, src/game/qrf.ts:432)
 #[derive(Clone, Copy, Debug)]
 pub struct Dealt {
     pub way: f64,
@@ -665,7 +665,7 @@ impl Dealt {
 }
 impl Default for Dealt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:779 sweepPlaces ->, src/game/qrf.ts:779)
+/// (TypeScript: inline at src/game/qrf.ts:780 sweepPlaces ->, src/game/qrf.ts:780)
 #[derive(Clone, Debug)]
 pub struct SweepPlacesItem {
     pub name: String,
@@ -682,7 +682,7 @@ impl SweepPlacesItem {
 }
 impl Default for SweepPlacesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:986 flowLegs ->, src/game/qrf.ts:986)
+/// (TypeScript: inline at src/game/qrf.ts:987 flowLegs ->, src/game/qrf.ts:987)
 #[derive(Clone, Debug)]
 pub struct FlowLegs {
     pub pts: Vec<V3>,
@@ -701,7 +701,7 @@ impl FlowLegs {
 }
 impl Default for FlowLegs { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:1110 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/qrf.ts:1111 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct RoutePatch {
     pub goal: Option<V3>,
@@ -748,110 +748,110 @@ impl RoutePatch {
 }
 impl Default for RoutePatch { fn default() -> Self { Self::zeroed() } }
 
-/// (src/game/qrf.ts:70 QRF_MARKS: a table nothing writes)
+/// (src/game/qrf.ts:71 QRF_MARKS: a table nothing writes)
 pub fn qrf_marks() -> crate::qrf::QRFMARKS { crate::qrf::QRFMARKS { door: String::from("stairwell"), landing: alloc::vec![[3.1, 0.0, 11.25], [2.25, 0.0, 11.25], [3.1, 0.0, 10.3], [2.25, 0.0, 10.3]], entry: alloc::vec![[6.7, 0.0, 11.2], [5.9, 0.0, 10.55], [5.9, 0.0, 11.8], [5.4, 0.0, 11.25]], entry_face: alloc::vec![1.5707963267948966, 2.4, 0.75, 1.5707963267948966], posts: alloc::vec![crate::qrf::QRFMARKSPostsItem { name: String::from("fire exit"), pos: [38.9, 0.0, 24.2], yaw: -2.48, sweep: alloc::vec![[36.15, 1.0, 19.9], [36.15, 1.0, 21.5]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("break-room door"), pos: [27.4, 0.0, 25.7], yaw: 1.95, sweep: alloc::vec![[30.9, 1.0, 24.15], [32.4, 1.0, 24.15]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("lobby front"), pos: [2.3, 0.0, 20.6], yaw: 1.5707963267948966, sweep: alloc::vec![[3.9, 1.0, 17.6], [3.9, 1.0, 22.4]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("south lot"), pos: [17.4, 0.0, 26.4], yaw: 3.141592653589793, sweep: alloc::vec![[14.5, 1.2, 24.15], [23.5, 1.2, 24.15]] }], outside_spawn: alloc::vec![[38.6, 0.0, 26.6], [37.4, 0.0, 26.9], [38.8, 0.0, 25.4], [37.2, 0.0, 25.6]] } }
 
-/// (src/game/qrf.ts:162 CHAR_BUDGET)
+/// (src/game/qrf.ts:163 CHAR_BUDGET)
 pub const CHAR_BUDGET: f64 = 8.0;
 
-/// (src/game/qrf.ts:164 LOUD_MEMORY_SECS)
+/// (src/game/qrf.ts:165 LOUD_MEMORY_SECS)
 pub const LOUD_MEMORY_SECS: f64 = 180.0;
 
-/// (src/game/qrf.ts:167 SILENT_CHECK_SECS)
+/// (src/game/qrf.ts:168 SILENT_CHECK_SECS)
 pub const SILENT_CHECK_SECS: f64 = 6.0;
 
-/// (src/game/qrf.ts:167 SILENT_GO_SECS)
+/// (src/game/qrf.ts:168 SILENT_GO_SECS)
 pub const SILENT_GO_SECS: f64 = 14.0;
 
-/// (src/game/qrf.ts:170 ANSWER_SECS)
+/// (src/game/qrf.ts:171 ANSWER_SECS)
 pub const ANSWER_SECS: f64 = 1.6;
 
-/// (src/game/qrf.ts:170 CALL30)
+/// (src/game/qrf.ts:171 CALL30)
 pub const CALL30: f64 = 30.0;
 
-/// (src/game/qrf.ts:170 CALL10)
+/// (src/game/qrf.ts:171 CALL10)
 pub const CALL10: f64 = 10.0;
 
-/// (src/game/qrf.ts:172 FILE_GAP)
+/// (src/game/qrf.ts:173 FILE_GAP)
 pub const FILE_GAP: f64 = 0.55;
 
-/// (src/game/qrf.ts:172 ENTRY_HOLD)
+/// (src/game/qrf.ts:173 ENTRY_HOLD)
 pub const ENTRY_HOLD: f64 = 1.6;
 
-/// (src/game/qrf.ts:175 MOVE_SPEED)
+/// (src/game/qrf.ts:176 MOVE_SPEED)
 pub const MOVE_SPEED: f64 = 2.15;
 
-/// (src/game/qrf.ts:175 RUSH_SPEED)
+/// (src/game/qrf.ts:176 RUSH_SPEED)
 pub const RUSH_SPEED: f64 = 2.6;
 
-/// (src/game/qrf.ts:175 FILE_SPACING)
+/// (src/game/qrf.ts:176 FILE_SPACING)
 pub const FILE_SPACING: f64 = 1.3;
 
-/// (src/game/qrf.ts:175 FILE_OFFSET)
+/// (src/game/qrf.ts:176 FILE_OFFSET)
 pub const FILE_OFFSET: f64 = 0.42;
 
-/// (src/game/qrf.ts:175 STATION_SECS)
+/// (src/game/qrf.ts:176 STATION_SECS)
 pub const STATION_SECS: f64 = 0.35;
 
-/// (src/game/qrf.ts:177 RETARGET_M)
+/// (src/game/qrf.ts:178 RETARGET_M)
 pub const RETARGET_M: f64 = 4.0;
 
-/// (src/game/qrf.ts:177 RETARGET_SECS)
+/// (src/game/qrf.ts:178 RETARGET_SECS)
 pub const RETARGET_SECS: f64 = 20.0;
 
-/// (src/game/qrf.ts:177 RECLEAR_SECS)
+/// (src/game/qrf.ts:178 RECLEAR_SECS)
 pub const RECLEAR_SECS: f64 = 90.0;
 
-/// (src/game/qrf.ts:180 STACK_CAP)
+/// (src/game/qrf.ts:181 STACK_CAP)
 pub const STACK_CAP: f64 = 5.5;
 
-/// (src/game/qrf.ts:180 BANG_DEPTH)
+/// (src/game/qrf.ts:181 BANG_DEPTH)
 pub const BANG_DEPTH: f64 = 2.3;
 
-/// (src/game/qrf.ts:180 BANG_FUSE)
+/// (src/game/qrf.ts:181 BANG_FUSE)
 pub const BANG_FUSE: f64 = 0.7;
 
-/// (src/game/qrf.ts:180 FLOW_GAP)
+/// (src/game/qrf.ts:181 FLOW_GAP)
 pub const FLOW_GAP: f64 = 0.42;
 
-/// (src/game/qrf.ts:180 FLOW_CAP)
+/// (src/game/qrf.ts:181 FLOW_CAP)
 pub const FLOW_CAP: f64 = 6.5;
 
-/// (src/game/qrf.ts:180 HOLD360_SECS)
+/// (src/game/qrf.ts:181 HOLD360_SECS)
 pub const HOLD360_SECS: f64 = 1.6;
 
-/// (src/game/qrf.ts:183 DRILL_CAP)
+/// (src/game/qrf.ts:184 DRILL_CAP)
 pub const DRILL_CAP: f64 = 120.0;
 
-/// (src/game/qrf.ts:185 REGROUP_SECS)
+/// (src/game/qrf.ts:186 REGROUP_SECS)
 pub const REGROUP_SECS: f64 = 8.0;
 
-/// (src/game/qrf.ts:185 HUNT_AWARENESS)
+/// (src/game/qrf.ts:186 HUNT_AWARENESS)
 pub const HUNT_AWARENESS: f64 = 0.7;
 
-/// (src/game/qrf.ts:188 GUNFIGHT_SHOTS)
+/// (src/game/qrf.ts:189 GUNFIGHT_SHOTS)
 pub const GUNFIGHT_SHOTS: f64 = 3.0;
 
-/// (src/game/qrf.ts:188 GUNFIGHT_WINDOW)
+/// (src/game/qrf.ts:189 GUNFIGHT_WINDOW)
 pub const GUNFIGHT_WINDOW: f64 = 20.0;
 
-/// (src/game/qrf.ts:188 SETTLE_IN_SECS)
+/// (src/game/qrf.ts:189 SETTLE_IN_SECS)
 pub const SETTLE_IN_SECS: f64 = 8.0;
 
-/// (src/game/qrf.ts:188 DOWN_FOR_PERIMETER)
+/// (src/game/qrf.ts:189 DOWN_FOR_PERIMETER)
 pub const DOWN_FOR_PERIMETER: f64 = 3.0;
 
-/// (src/game/qrf.ts:190 WALKOUT_ENGAGE_M)
+/// (src/game/qrf.ts:191 WALKOUT_ENGAGE_M)
 pub const WALKOUT_ENGAGE_M: f64 = 6.0;
 
-/// (src/game/qrf.ts:192 POST_SPEED)
+/// (src/game/qrf.ts:193 POST_SPEED)
 pub const POST_SPEED: f64 = 2.6;
 
-/// (src/game/qrf.ts:192 SWEEP_SECS)
+/// (src/game/qrf.ts:193 SWEEP_SECS)
 pub const SWEEP_SECS: f64 = 5.0;
 
-/// (src/game/qrf.ts:260 TUNE_KEY)
+/// (src/game/qrf.ts:261 TUNE_KEY)
 pub const TUNE_KEY: &str = "twopointsix.qrf";
 
-/// (src/game/qrf.ts:279 QRF_TUNE_DEFAULTS: a table nothing writes)
+/// (src/game/qrf.ts:280 QRF_TUNE_DEFAULTS: a table nothing writes)
 pub fn qrf_tune_defaults() -> crate::qrf::QRFTUNEDEFAULTS { crate::qrf::QRFTUNEDEFAULTS { qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true } }

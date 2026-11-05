@@ -29,7 +29,7 @@ pub fn fin(p: &crate::scene_stuff::Paint) -> String {
         None => "plain",
     };
     let finish = match p.rough {
-        Some(r) => format!(" at {}{}", r, if p.metal == Some(true) { ", metal" } else { "" }),
+        Some(r) => format!(" at {}{}", js::num_str(r), if p.metal == Some(true) { ", metal" } else { "" }),
         None => String::new(),
     };
     let does = match p.does {
@@ -47,7 +47,7 @@ pub fn refuse(g: &mut crate::game::Game, row: &[f64], was: &crate::scene_stuff::
             if i > 0 {
                 nums.push_str(", ");
             }
-            nums.push_str(&format!("{}", n));
+            nums.push_str(&js::num_str(*n));
         }
         let was_name = if !was.name.is_empty() { format!(" '{}'", was.name) } else { String::new() };
         let next_name = if !next.name.is_empty() && next.name != was.name { format!(" ('{}')", next.name) } else { String::new() };
@@ -117,18 +117,19 @@ pub fn word_for(g: &mut crate::game::Game, albedo: Option<&[f64]>, said: Option<
     }
 }
 
-/// PAINTS.get(row) (stuff.ts:110, 141, 196): the table and the array's identity are not in the skeleton.
+/// PAINTS.get(row) (stuff.ts:110, 141, 196): the skeleton still has no table (see notes.md, ## Skeleton).
 fn seam_paints_get(g: &mut Game, row: &[f64]) -> Option<Paint> {
-    // TEMP-BRINGUP, SKELETON-GAP: the PAINTS table (stuff.ts:110, a WeakMap by the ARRAY's identity) and a name for a paint (an ID or a word, not its numbers).
-    // Until then NO paint is known: a box made as the game runs gets no finish and no stuff word from its colour (its maker's own `stuff` still stands).
-    // Wrong wherever a made box's material is read by a rule (what a round does to it, its sound).
+    // TEMP-BRINGUP, SKELETON-GAP: g.m.scene_stuff.paints (stuff.ts:110). Review 5 settled it, keyed on the numbers' bits, and it did not land in skeleton 5.
+    // Until it does NO paint is known: a box made as the game runs gets no finish and no stuff word from its colour (its maker's own `stuff` still stands).
+    // When it lands this body is: g.m.scene_stuff.paints.get([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()]).cloned()
     let _ = (g, row);
     None
 }
 
 /// PAINTS.set(row, next) (stuff.ts:142): as seam_paints_get.
 fn seam_paints_set(g: &mut Game, row: &[f64], next: Paint) {
-    todo!("needs: the PAINTS table on g.m.scene_stuff and a key for a paint's array (TypeScript keys by the array's identity; a slice has none)")
+    // When the table lands this body is: g.m.scene_stuff.paints.set([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()], next);
+    todo!("needs: the PAINTS table on g.m.scene_stuff (stuff.ts:110)")
 }
 
 #[cfg(test)]
@@ -159,5 +160,8 @@ mod tests {
         assert_eq!(fin(&p), "mud wall at 0.3, metal, doing dark glass");
         p = record("", Some(Finish { rough: Some(1.0), metal: None }), None, None);
         assert_eq!(fin(&p), "plain at 1");
+        // the language's own number words, not Rust's (`at ${p.rough}`)
+        p = record("", Some(Finish { rough: Some(1e-7), metal: None }), None, None);
+        assert_eq!(fin(&p), "plain at 1e-7");
     }
 }

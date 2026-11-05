@@ -25,7 +25,7 @@ pub enum OrderLabel {
     PairGo,
 }
 /// OrderDef.can: this man can do his part (true in the TypeScript), or the word for why not. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum OrderCan {
     Move,
     Cover,
@@ -107,7 +107,7 @@ pub enum OrderIssue {
     PairGo,
 }
 /// OrderDef.tick: once a frame for each man under the order, before he is posed. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum OrderTick {
     Move,
     ShutDoor,
@@ -120,21 +120,21 @@ pub enum OrderTick {
     PairDark,
 }
 /// OrderDef.standsIn.when: the row stands in for the other one now. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum OrderWhen {
     ShutDoor,
     Loud,
     PairDark,
 }
 /// OrderDef.gone: the flat ring does not offer the row on this target at all. The arm's body lives in the module that wrote the closure; the match sits where orders.ts calls the field. Rows off the page's path have no arm.
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum OrderGone {
     DoorCharge,
     DoorBigClear,
     WallRow,
 }
 /// SquadOrders.notes: who has a line for the squad's HUD block, in the order they were pushed. Read only by hud() (triage: dress).
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum OrderNoteFn {
     DoorToolsHud,
     DoorToolsWord,
@@ -1260,34 +1260,34 @@ impl OrdersModFOLLOWWORDValue {
 impl Default for OrdersModFOLLOWWORDValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2629 LOW, src/game/orders.ts:2629)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct LOW {
-    pub stance: String,
-    pub upper: String,
+    pub stance: crate::character::Stance,
+    pub upper: crate::character::UpperMode,
 }
 impl LOW {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         LOW {
-            stance: String::new(),
-            upper: String::new(),
+            stance: crate::character::Stance::None,
+            upper: crate::character::UpperMode::None,
         }
     }
 }
 impl Default for LOW { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2630 AIM, src/game/orders.ts:2630)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct AIM {
-    pub stance: String,
-    pub upper: String,
+    pub stance: crate::character::Stance,
+    pub upper: crate::character::UpperMode,
 }
 impl AIM {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         AIM {
-            stance: String::new(),
-            upper: String::new(),
+            stance: crate::character::Stance::None,
+            upper: crate::character::UpperMode::None,
         }
     }
 }
@@ -1539,7 +1539,7 @@ impl SquadOrdersRingUpG {
 }
 impl Default for SquadOrdersRingUpG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/orders.ts:1211 goalPart ->, src/game/orders.ts:1211)
+/// (TypeScript: inline at quiet goalPart ->, src/game/orders.ts:1211)
 #[derive(Clone, Debug)]
 pub struct SquadOrdersGoalPart {
     pub men: Vec<GuardId>,
@@ -2119,13 +2119,13 @@ pub fn compass_table() -> Vec<String> { alloc::vec![String::from("south"), Strin
 pub const WORD_HEAD: &str = "on your word";
 
 /// (src/game/orders.ts:2629 LOW: a table nothing writes)
-pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: String::from("lowReady"), upper: String::from("none") } }
+pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::character::Stance::LowReady, upper: crate::character::UpperMode::None } }
 
 /// (src/game/orders.ts:2630 AIM: a table nothing writes)
-pub fn aim() -> crate::orders::AIM { crate::orders::AIM { stance: String::from("none"), upper: String::from("aim") } }
+pub fn aim() -> crate::orders::AIM { crate::orders::AIM { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim } }
 
 /// (src/game/orders.ts:2631 LANE_ORDERS: a table nothing writes)
-pub fn lane_orders() -> Vec<String> { alloc::vec![String::from("cover"), String::from("stack"), String::from("move"), String::from("hold")] }
+pub fn lane_orders() -> &'static [&'static str] { &["cover", "stack", "move", "hold"] }
 
 /// (src/game/orders.ts:2634 OFF_M)
 pub const OFF_M: f64 = 0.3;

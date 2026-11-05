@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 970 to 1351
+//! src/game/doortools.ts lines 971 to 1352
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,12 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ------------------------------------------------------------ what the skeleton does not give yet
-
-/// (doortools.ts:1139 `shy: op.door, ...a`) the shy an order's assignment ends with: `a.shy`, or the door when `a` does not name it. Three callers say `shy: null`
-/// (doortools.ts:2343, 2933, 3062), which an Option cannot tell from not naming it
-fn seam_assign_shy(a: &crate::doortools::DoorToolsAssignA, door: DoorId) -> Option<DoorId> { todo!("needs: DoorToolsAssignA.shy as Option<Option<DoorId>>") }
 
 // ------------------------------------------------------------ small readers of this file
 
@@ -83,8 +77,8 @@ fn can_t_then(t: &crate::doortools::DoorToolsThresholdThenT) -> crate::doortools
 /// the door of a target, none off a door
 fn door_of_t(t: &crate::orders::OrderTarget) -> Option<DoorId> { match t { crate::orders::OrderTarget::Door(x) => Some(x.door), _ => None } }
 
-/// (doortools.ts:1139) `{ order: op.kind, door: op.door, shy, ...a }`
-fn merged_assign(kind: &str, door: DoorId, shy: Option<DoorId>, a: &crate::doortools::DoorToolsAssignA) -> crate::orders::SquadOrdersAssignA {
+/// (doortools.ts:1139) `{ order: op.kind, door: op.door, shy: op.door, ...a }`; three callers say `shy: null` (doortools.ts:2344, 2934, 3063), which stays null
+fn merged_assign(kind: &str, door: DoorId, a: &crate::doortools::DoorToolsAssignA) -> crate::orders::SquadOrdersAssignA {
     crate::orders::SquadOrdersAssignA {
         post: a.post,
         going: a.going.clone(),
@@ -121,7 +115,7 @@ fn merged_assign(kind: &str, door: DoorId, shy: Option<DoorId>, a: &crate::doort
         mark_t: a.mark_t,
         had: a.had,
         back_n: a.back_n,
-        shy,
+        shy: match a.shy { Some(named) => named, None => Some(door) },
         thru: a.thru,
         via_for: a.via_for,
         via_t: a.via_t,
@@ -144,13 +138,6 @@ fn post_at(posts: &[crate::orders::StackPost], used: &mut [bool], p: V3) -> crat
 }
 
 // ------------------------------------------------------------ the frame, the boot
-
-/// locked against the team on the face the door opens toward: shut in its frame, which a boot only drives it onto (doortools.ts DoorTools.frameHeld)
-pub fn door_tools_frame_held(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
-    if is_steel(g, d) || is_open(g, d) || !door_tools_locked_out(g, d, side) { return false; }
-    let at = door_pt(g, d, g.dr[d].def.width / 2.0, 0.6, side, None);
-    crate::doors::doors_boot_holds(g, d, at)
-}
 
 /// what a man says to an entry order there when no pick opens it (doortools.ts DoorTools.noBoot)
 pub fn door_tools_no_boot(g: &mut crate::game::Game, d: DoorId) -> String {
@@ -301,7 +288,7 @@ pub fn door_tools_test_stacks(g: &mut crate::game::Game) {
         if row.order != "stack" || !row.arrived || row.stance != crate::character::Stance::Stack { continue; }
         let (Some(door), Some(post)) = (row.door, row.post) else { continue };
         if v3::dist_xz(at, post) > 0.6 { continue; }
-        if crate::holdfire::hold_fire_on_man(g, gd) || door_tools_stack_held(g, door) { continue; }
+        if crate::holdfire::hold_fire_holds_target(g, gd) || door_tools_stack_held(g, door) { continue; }
         if g.tab.orders_assignment[a].held_set.unwrap_or(false) { continue; }
         let side = crate::orders::side_of(g, door, at);
         door_tools_test(g, door, side, gd, true);
@@ -534,7 +521,7 @@ pub fn door_tools_beat(g: &mut crate::game::Game, op: DoorOpId, what: &str) {
 /// hand a man this op's next assignment, and remember it as ours (doortools.ts DoorTools.assign)
 pub fn door_tools_assign(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, a: &crate::doortools::DoorToolsAssignA) {
     let (kind, door) = (g.tab.doortools_door_op[op].kind, g.tab.doortools_door_op[op].door);
-    let merged = merged_assign(kind.as_str(), door, seam_assign_shy(a, door), a);
+    let merged = merged_assign(kind.as_str(), door, a);
     crate::orders::squad_orders_assign(g, gd, &merged);
     let now = crate::orders::squad_orders_of(g, gd).unwrap();
     g.tab.doortools_door_op[op].mine.set(gd, now);
@@ -587,7 +574,7 @@ pub fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortools::Door
         gate: None,
         coded: None, fled: None, fled_w: None, fled_t: None, fled_said: None, fled_go: None, lane: None, frag: None, frag_way_t: None, leaf_a: None, leaf_t: None,
         no_gun: None, big: None, stow_off_t: None, first: None, threw: None, aim: None, pass: None, thr: None, thr_hold: None, thr_pre: None, worded: None,
-        last_stack: None, last_hold: None, last_tossed: None, other: None, threat: None,
+        last_stack: None, last_hold: None, last_tossed: None, other: None, threat: None, ended: None,
     };
     let op = g.tab.doortools_door_op.push(row);
     g.door_tools.ops.push(op);
@@ -843,7 +830,7 @@ pub fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorT
     let crate::orders::OrderTarget::Door(target) = t else { return crate::doortools::DoorToolsStart::Text(String::from("no door")) };
     let (d, t_side) = (target.door, target.side);
     door_tools_sync(g);
-    let Some(deal) = door_tools_deal_stack(g, d, t_side, men) else { return crate::doortools::DoorToolsStart::Text(crate::orders::squad_orders_no_room_words(g, "no room to stack on that door", &mut |g: &mut Game, _: &mut Game| door_tools_deal_stack(g, d, t_side, men).is_some())) };
+    let Some(deal) = door_tools_deal_stack(g, d, t_side, men) else { return crate::doortools::DoorToolsStart::Text(crate::orders::squad_orders_no_room_words(g, "no room to stack on that door", &mut |g: &mut Game| door_tools_deal_stack(g, d, t_side, men).is_some())) };
     let posts = deal.posts;
     let frag = kind == crate::doortools::DoorToolKind::BangClear && g.door_tools.frag_next;
     if kind == crate::doortools::DoorToolKind::BangClear && !door_tools_take(g, if frag { crate::doortools::DoorToolsTakeWhat::Frag } else { crate::doortools::DoorToolsTakeWhat::Bang }) {
@@ -1160,12 +1147,12 @@ mod tests {
     #[test]
     fn assign_spread_the_row_wins_over_the_order() {
         let a = crate::doortools::DoorToolsAssignA { going: String::from("g"), there: String::from("t"), ..Default::default() };
-        let m = merged_assign("openClear", DoorId(3), Some(DoorId(3)), &a);
+        let m = merged_assign("openClear", DoorId(3), &a);
         assert_eq!(m.order, "openClear");
         assert_eq!(m.door, Some(DoorId(3)));
         assert_eq!(m.shy, Some(DoorId(3)));
-        let b = crate::doortools::DoorToolsAssignA { order: Some(String::from("stack")), door: Some(DoorId(7)), ..a };
-        let n = merged_assign("openClear", DoorId(3), None, &b);
+        let b = crate::doortools::DoorToolsAssignA { order: Some(String::from("stack")), door: Some(DoorId(7)), shy: Some(None), ..a };
+        let n = merged_assign("openClear", DoorId(3), &b);
         assert_eq!(n.order, "stack");
         assert_eq!(n.door, Some(DoorId(7)));
         assert_eq!(n.shy, None);

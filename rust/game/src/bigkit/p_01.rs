@@ -221,18 +221,18 @@ pub fn sam_big_walk(g: &mut crate::game::Game, dt: f64) -> f64 {
 }
 
 /// What the animator is told of the beat this frame.   (bigkit.ts samBigPose)
-pub fn sam_big_pose(g: &mut crate::game::Game) -> Option<crate::bigkit::SamBigPose> {
+pub fn sam_big_pose(g: &mut crate::game::Game) -> Option<crate::character::AnimBigTool> {
     let pid = g.player;
     let t = g.pl[pid].kick.as_ref()?.tool.as_ref()?;
     let mv = t.moves.as_ref()?;
     let (tool_kind, t_now, blows, end, at) = (t.kind, t.t, mv.blows.clone(), mv.end, mv.at);
     let (kind, equip) = match tool_kind {
-        crate::game::PlayerKickToolKind::Shotgun => (SamBigPoseKind::Shotgun, big_equip(g, BigEquipKind::Shotgun)),
-        crate::game::PlayerKickToolKind::Hammer => (SamBigPoseKind::Hammer, big_equip(g, BigEquipKind::Hammer)),
+        crate::game::PlayerKickToolKind::Shotgun => (crate::character::AnimBigToolKind::Shotgun, big_equip(g, BigEquipKind::Shotgun)),
+        crate::game::PlayerKickToolKind::Hammer => (crate::character::AnimBigToolKind::Hammer, big_equip(g, BigEquipKind::Hammer)),
     };
     let windup = big_wind(g);
     let stow = big_stow(g);
-    Some(SamBigPose { kind, t: t_now, equip, windup, stow, blows, end, at, snug: true })
+    Some(crate::character::AnimBigTool { kind, t: t_now, equip, windup, stow, blows, end, at, snug: Some(true) })
 }
 
 /// The tool changes hands with the weight of a gun swap: on, on the page.   (bigkit.ts weighed)
@@ -654,14 +654,14 @@ pub fn hammer_blow(g: &mut crate::game::Game, gd: GuardId, d: DoorId, last: bool
     gave
 }
 
-/// The hammer off a teammate's back; every frame he is its door's man. Returns a COPY: a caller that writes the record does so at `g.gd[gd].big_out`.   (bigkit.ts hammerOut)
-pub fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> crate::game::GuardBigOut {
+/// The hammer off a teammate's back; every frame he is its door's man. Returns the record's `t0`: a caller that writes the record does so at `g.gd[gd].big_out`.   (bigkit.ts hammerOut)
+pub fn hammer_out(g: &mut crate::game::Game, gd: GuardId, at: V3) -> f64 {
     if g.gd[gd].big_out.as_ref().map_or(true, |h| h.end >= 0.0) {
         let t0 = g.time;
         g.gd[gd].big_out = Some(crate::game::GuardBigOut { t0, blows: Vec::new(), end: -1.0, at });
         g.stats.bigkit.hammers_out += 1;
     }
-    g.gd[gd].big_out.clone().unwrap()
+    g.gd[gd].big_out.as_ref().unwrap().t0
 }
 
 /// … and put back: begun now or as the blow just landed is followed through; `hard`, on his back at once.   (bigkit.ts hammerIn)

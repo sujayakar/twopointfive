@@ -32,8 +32,8 @@ pub fn unseen_live(g: &mut crate::game::Game) -> bool { todo!() }
 /// (src/game/unseen.ts:141 cue)
 pub fn cue(g: &mut crate::game::Game, pl: PlayerId) { todo!() }
 
-/// (src/game/unseen.ts:147 unseenMan)
-pub fn unseen_man(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
+/// (src/game/unseen.ts:147 underUnseen)
+pub fn under_unseen(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/unseen.ts:150 entering)
 pub fn entering(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }

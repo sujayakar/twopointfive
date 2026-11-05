@@ -163,6 +163,19 @@ impl ParSaidRow {
 }
 impl Default for ParSaidRow { fn default() -> Self { Self::zeroed() } }
 
+/// (TypeScript: inline at src/game/par.ts:103 fresh(tail), src/game/par.ts:103 fresh(tail))
+#[derive(Clone, Copy, Debug)]
+pub struct ParFreshTail {
+}
+impl ParFreshTail {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ParFreshTail {
+        }
+    }
+}
+impl Default for ParFreshTail { fn default() -> Self { Self::zeroed() } }
+
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]
 pub struct ParStats {

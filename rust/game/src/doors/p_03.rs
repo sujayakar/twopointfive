@@ -5,10 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-/// The hearing level of a key's clack; only `doors_use` reads it.   (doors.ts Doors.KEY_LEVEL)
-const KEY_LEVEL: f64 = 0.12;
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `doorMem()[at]`: one double of the step's hand-over, where `at` is an index as `door_io` gives them, a byte address / 8.   (doors.ts:694, 722)
 fn mem(at: f64) -> f64 {
@@ -16,32 +13,35 @@ fn mem(at: f64) -> f64 {
     unsafe { core::ptr::read((at as usize * 8) as *const f64) }
 }
 
-// ---- the module's numbers for a word: its place in doorshome.ts DOOR_SOUNDS and STRIKE_TIERS
+/// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once the table is back, the body is that row.   (doors.ts:725)
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
+}
 
-/// `DOOR_SOUNDS[n]` (doorshome.ts:26): the enum's own numbering is not the module's promise, the list's order is.
+/// `DOOR_SOUNDS[n]`: the module's number is a place in that list, and the word is the variant.   (doors.ts:715)
 fn sound_at(n: f64) -> crate::doors::DoorSound {
-    match n as i32 {
-        0 => DoorSound::Creak,
-        1 => DoorSound::Bang,
-        2 => DoorSound::Latch,
-        3 => DoorSound::Bash,
-        4 => DoorSound::Rattle,
-        5 => DoorSound::Pick,
-        6 => DoorSound::Unlock,
-        7 => DoorSound::Kick,
-        8 => DoorSound::Clang,
-        9 => DoorSound::Thud,
-        _ => unreachable!("no door sound has this place"),
+    match crate::sim_doorshome::door_sounds()[n as usize].as_str() {
+        "creak" => DoorSound::Creak,
+        "bang" => DoorSound::Bang,
+        "latch" => DoorSound::Latch,
+        "bash" => DoorSound::Bash,
+        "rattle" => DoorSound::Rattle,
+        "pick" => DoorSound::Pick,
+        "unlock" => DoorSound::Unlock,
+        "kick" => DoorSound::Kick,
+        "clang" => DoorSound::Clang,
+        "thud" => DoorSound::Thud,
+        w => unreachable!("no door sound is called {}", w),
     }
 }
 
-/// `STRIKE_TIERS[n]` (doorshome.ts:28): open 0, slam 1, boot 2. The Rust enum declares them in another order.
+/// `STRIKE_TIERS[n]`, the same way. The Rust enum declares them in another order, so never cast.   (doors.ts:699)
 fn strike_tier_at(n: f64) -> crate::doors::DoorStrikeTier {
-    match n as i32 {
-        0 => DoorStrikeTier::Open,
-        1 => DoorStrikeTier::Slam,
-        2 => DoorStrikeTier::Boot,
-        _ => unreachable!("no strike tier has this place"),
+    match crate::sim_doorshome::strike_tiers()[n as usize].as_str() {
+        "open" => DoorStrikeTier::Open,
+        "slam" => DoorStrikeTier::Slam,
+        "boot" => DoorStrikeTier::Boot,
+        w => unreachable!("no strike tier is called {}", w),
     }
 }
 
@@ -172,16 +172,18 @@ pub fn doors_follow(g: &mut crate::game::Game, i: f64) {
 /// A leaf's two handle boxes placed.   (doors.ts Doors.handles)
 pub fn doors_handles(g: &mut crate::game::Game, d: DoorId, yaw: f64, x1: f64, z1: f64, x2: f64, z2: f64) {
     let (h0, h1) = (g.dr[d].handle_boxes[0], g.dr[d].handle_boxes[1]);
-    g.col.boxes[h0].c = [x1, 1.0, z1];
-    g.col.boxes[h0].yaw = yaw;
-    g.col.boxes[h1].c = [x2, 1.0, z2];
-    g.col.boxes[h1].yaw = yaw;
+    let b = seam_box(g, h0);
+    b.c = [x1, 1.0, z1];
+    b.yaw = yaw;
+    let b = seam_box(g, h1);
+    b.c = [x2, 1.0, z2];
+    b.yaw = yaw;
 }
 
 /// The doors' step: the twin's one call. The hand-over must already be written.   (doors.ts Doors.updateHere)
 pub fn doors_update_here(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors::DoorContact]) {
     let w = g.col.mirror.slot as usize;
-    let _ = sim::doors::update(g.sim, w);
+    let _ = ::sim::doors::update(g.sim, w);
 }
 
 /// Hold-to-crack: ease a near-closed leaf open silently, up to `max_angle`.   (doors.ts Doors.crack)
@@ -224,7 +226,7 @@ pub fn doors_use(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, keys:
     }
     if doors_key_opens(g, d, from, keys) {
         let pos = door_pos(g, d);
-        doors_sound(g, d, DoorSound::Unlock, pos, who, KEY_LEVEL);
+        doors_sound(g, d, DoorSound::Unlock, pos, who, DOORS_KEY_LEVEL);
     }
     let [hx, hz] = g.dr[d].def.hinge;
     let u = door_dir(g, d);
@@ -251,11 +253,11 @@ mod tests {
 
     #[test]
     fn a_noise_is_named_by_the_modules_own_numbers() {
-        assert_eq!(sound_at(sim::doors::S_CREAK), DoorSound::Creak);
-        assert_eq!(sound_at(sim::doors::S_BANG), DoorSound::Bang);
-        assert_eq!(sound_at(sim::doors::S_LATCH), DoorSound::Latch);
-        assert_eq!(sound_at(sim::doors::S_BASH), DoorSound::Bash);
-        assert_eq!(sound_at(sim::doors::S_RATTLE), DoorSound::Rattle);
+        assert_eq!(sound_at(::sim::doors::S_CREAK), DoorSound::Creak);
+        assert_eq!(sound_at(::sim::doors::S_BANG), DoorSound::Bang);
+        assert_eq!(sound_at(::sim::doors::S_LATCH), DoorSound::Latch);
+        assert_eq!(sound_at(::sim::doors::S_BASH), DoorSound::Bash);
+        assert_eq!(sound_at(::sim::doors::S_RATTLE), DoorSound::Rattle);
         assert_eq!(sound_at(9.0), DoorSound::Thud);
     }
 

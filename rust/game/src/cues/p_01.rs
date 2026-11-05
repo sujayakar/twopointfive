@@ -151,19 +151,17 @@ fn squads_note(what: &str) -> Option<(&str, SquadSaid, Option<&str>)> {
     if rest.starts_with("quiet:") { return Some((name, SquadSaid::Quiet, None)); }
     None
 }
-/// `+t.toFixed(2)`: the hundredth nearest the exact value, a tie going up (only a time in odd eighths can tie).
+/// `+t.toFixed(2)`: the language's text, read back as a number.
 fn fixed2(t: f64) -> f64 {
-    let e = t * 8.0;
-    if e == m::floor(e) && js::rem(e, 2.0) != 0.0 { return m::ceil(t * 100.0) / 100.0; }
-    alloc::format!("{:.2}", t).parse().unwrap_or(t)
+    js::to_fixed(t, 2).parse().unwrap_or(t)
 }
-/// A hole of the sparse `classT` / `squadT` is a NaN (no clock is ever NaN).
-fn sparse_get(v: &[f64], i: usize) -> Option<f64> {
-    v.get(i).copied().filter(|x| !x.is_nan())
+/// A read of the sparse `classT` / `squadT`: past the end or a hole is None.
+fn sparse_get(v: &[Option<f64>], i: usize) -> Option<f64> {
+    v.get(i).copied().flatten()
 }
-fn sparse_set(v: &mut Vec<f64>, i: usize, x: f64) {
-    if v.len() <= i { v.resize(i + 1, f64::NAN); }
-    v[i] = x;
+fn sparse_set(v: &mut Vec<Option<f64>>, i: usize, x: f64) {
+    if v.len() <= i { v.resize(i + 1, None); }
+    v[i] = Some(x);
 }
 /// `kindT[kind]`, the place of a kind's clock.
 fn kind_t_of(v: &mut CuesKindT, k: CueKind) -> &mut Option<f64> {
@@ -475,8 +473,7 @@ pub fn cues_call(g: &mut crate::game::Game, gd: GuardId, text: &str) -> bool {
 pub fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
     let at = |p: V3| -> V3 { [p[0], p[1] + 1.6, p[2]] };
     let mut out = Vec::new();
-    let who = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    for pl in crate::seats::men(g, &who) {
+    for pl in crate::seats::men(g) {
         if !g.pl[pl].down { out.push(at(g.ch[g.pl[pl].ch].pos)); }
     }
     let mut i = 0;
@@ -592,7 +589,7 @@ fn at_vars(a: &CuesAt) -> JsMap<String, String> {
 /// His row of `men`, made the first time he is asked after: the row itself.   (cues.ts Cues.man)
 pub fn cues_man<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::cues::Man {
     if !g.cues.men.has(gd) {
-        let row = Man { state: String::from(g.gd[gd].state.as_str()), alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
+        let row = Man { state: g.gd[gd].state, alert_t: g.time, said_t: -100.0, again_t: -100.0, stood_t: -100.0, moved: None, from: String::new(), noise_t: -100.0, ep: -1.0, rally_at: f64::NAN, covered: false };
         g.cues.men.set(gd, row);
     }
     g.cues.men.get_mut(gd).unwrap()
@@ -683,7 +680,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
         cues_man(g, gd);
         let state = g.gd[gd].state;
         if state == crate::game::GuardState::Dead { continue; }
-        if state == crate::game::GuardState::Alert && cues_man(g, gd).state != "alert" { cues_man(g, gd).alert_t = t; }
+        if state == crate::game::GuardState::Alert && cues_man(g, gd).state != crate::game::GuardState::Alert { cues_man(g, gd).alert_t = t; }
         let c = g.gd[gd].ch;
         let sight = t - g.gd[gd].last_seen_t;
         let still = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]) < 0.3;
@@ -693,7 +690,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             let f = crate::seats::faced_man(g, gd);
             if g.pl[f].down { Some(f) } else { None }
         };
-        if state == crate::game::GuardState::Patrol && cues_man(g, gd).state != "patrol" && hold && t - cues_man(g, gd).stood_t > 15.0 {
+        if state == crate::game::GuardState::Patrol && cues_man(g, gd).state != crate::game::GuardState::Patrol && hold && t - cues_man(g, gd).stood_t > 15.0 {
             if cues_cue(g, gd, CueKind::Calm, None) { cues_man(g, gd).stood_t = t; }
         } else if on_player && faced_down(g).is_some() && state == crate::game::GuardState::Alert && !cues_man(g, gd).covered && still && {
             let f = crate::seats::faced_man(g, gd);
@@ -720,7 +717,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             let drawn_again = !m_rally.is_nan() && !d_rally.is_nan() && d_rally > m_rally + 1.0;
             if !hold || t - noise_t > 6.0 {
                 cues_man(g, gd).ep = -1.0;
-            } else if !crate::enemysquads::squad_owns(g, gd) && !crate::pressure::press_owns(g, d) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
+            } else if !crate::owner::has_him(g, gd, crate::owner::own().squad) && !crate::owner::has_him(g, gd, crate::owner::own().press) && !crate::pressure::press_keeps_home(g, d, None) && sight > 3.0 && t - cues_man(g, gd).again_t > g.k.cues.again_secs && noise_at.is_some()
                 && (drawn_again || (d_rally.is_nan() && t - cues_man(g, gd).ep >= g.k.cues.stay_secs && t - noise_t < 1.5))
             {
                 let at = cues_at(g, noise_at.unwrap());
@@ -728,10 +725,11 @@ pub fn cues_tick(g: &mut crate::game::Game) {
                 cues_man(g, gd).ep = -1.0;
             }
         }
-        let now = String::from(g.gd[gd].state.as_str());
+        // (read again: pressKeepsHome above can have written the def's rallyAt to NaN)
+        let (now, rally_now) = (g.gd[gd].state, g.tab.roomfight_def[d].rally_at);
         let M = cues_man(g, gd);
         M.noise_t = noise_t;
-        M.rally_at = d_rally;
+        M.rally_at = rally_now;
         M.state = now;
     }
     if g.cues.squelch_due {
@@ -830,8 +828,8 @@ pub fn cues_note(g: &mut crate::game::Game, who: &str, what: &str) {
 pub fn cues_summary(g: &mut crate::game::Game) -> String {
     let S = &g.cues.stats;
     let (drawn, of) = (S.heard_drawn + S.cue_drawn, S.heard + S.cue_net);
-    let held = if js::truthy(S.dup + S.gap + S.full) { alloc::format!(" · held back: {} said already, {} too soon, {} outranked", S.dup, S.gap, S.full) } else { String::new() };
-    alloc::format!("{} of {} net lines drawn · {} new lines{}", drawn, of, S.cues, held)
+    let held = if js::truthy(S.dup + S.gap + S.full) { alloc::format!(" · held back: {} said already, {} too soon, {} outranked", js::num_str(S.dup), js::num_str(S.gap), js::num_str(S.full)) } else { String::new() };
+    alloc::format!("{} of {} net lines drawn · {} new lines{}", js::num_str(drawn), js::num_str(of), js::num_str(S.cues), held)
 }
 
 /// The strip's rows this frame as 'radio: …' rows, and at most one 'heard: …' row in a place no other row wants, oldest first.   (cues.ts stripRows)

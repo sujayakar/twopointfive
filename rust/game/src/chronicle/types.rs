@@ -647,6 +647,58 @@ pub enum ChronicleRecentKey {
     Num(f64),
 }
 
+/// (TypeScript: inline at src/game/chronicle.ts:146 heardRow(e), src/game/chronicle.ts:146 heardRow(e))
+#[derive(Clone, Copy, Debug)]
+pub struct ChronicleHeardRowE {
+}
+impl ChronicleHeardRowE {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ChronicleHeardRowE {
+        }
+    }
+}
+impl Default for ChronicleHeardRowE { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/chronicle.ts:147 bindHeard(e), src/game/chronicle.ts:147 bindHeard(e))
+#[derive(Clone, Copy, Debug)]
+pub struct ChronicleBindHeardE {
+}
+impl ChronicleBindHeardE {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ChronicleBindHeardE {
+        }
+    }
+}
+impl Default for ChronicleBindHeardE { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/chronicle.ts:148 heardCounted(e), src/game/chronicle.ts:148 heardCounted(e))
+#[derive(Clone, Copy, Debug)]
+pub struct ChronicleHeardCountedE {
+}
+impl ChronicleHeardCountedE {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ChronicleHeardCountedE {
+        }
+    }
+}
+impl Default for ChronicleHeardCountedE { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/chronicle.ts:149 markHeardCounted(e), src/game/chronicle.ts:149 markHeardCounted(e))
+#[derive(Clone, Copy, Debug)]
+pub struct ChronicleMarkHeardCountedE {
+}
+impl ChronicleMarkHeardCountedE {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        ChronicleMarkHeardCountedE {
+        }
+    }
+}
+impl Default for ChronicleMarkHeardCountedE { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum ChronicleDataValue {

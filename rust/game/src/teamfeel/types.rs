@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// one kept feel row's value: a switch or a number (teamfeel.ts read, Table's unknown)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum FeelValue {
     Num { v: f64 },
     Flag { v: bool },

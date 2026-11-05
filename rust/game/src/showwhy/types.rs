@@ -50,23 +50,23 @@ impl Default for WhyNote { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: ShowWhyStats, src/game/showwhy.ts:89)
 #[derive(Clone, Copy, Debug)]
 pub struct ShowWhyStats {
-    pub waves: f64,
-    pub squeezes: f64,
-    pub fists: f64,
-    pub ways: f64,
-    pub lines: f64,
-    pub holds: f64,
+    pub waves: i32,
+    pub squeezes: i32,
+    pub fists: i32,
+    pub ways: i32,
+    pub lines: i32,
+    pub holds: i32,
 }
 impl ShowWhyStats {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ShowWhyStats {
-            waves: 0.0,
-            squeezes: 0.0,
-            fists: 0.0,
-            ways: 0.0,
-            lines: 0.0,
-            holds: 0.0,
+            waves: 0,
+            squeezes: 0,
+            fists: 0,
+            ways: 0,
+            lines: 0,
+            holds: 0,
         }
     }
 }
@@ -100,7 +100,7 @@ pub struct Mem {
     pub line_on: bool,
     pub line_end_t: f64,
     pub wave_t: f64,
-    pub waves: f64,
+    pub waves: i32,
     pub line_b: f64,
     pub door_t0: f64,
     pub door_seen_t: f64,
@@ -108,7 +108,7 @@ pub struct Mem {
     pub door_t: f64,
     pub hurt_said: f64,
     pub lag_t: f64,
-    pub lag_n: f64,
+    pub lag_n: i32,
     pub keep_t0: f64,
     pub keep_said: bool,
     pub keep_said_t: f64,
@@ -124,7 +124,7 @@ impl Mem {
             line_on: false,
             line_end_t: 0.0,
             wave_t: 0.0,
-            waves: 0.0,
+            waves: 0,
             line_b: 0.0,
             door_t0: 0.0,
             door_seen_t: 0.0,
@@ -132,7 +132,7 @@ impl Mem {
             door_t: 0.0,
             hurt_said: 0.0,
             lag_t: 0.0,
-            lag_n: 0.0,
+            lag_n: 0,
             keep_t0: 0.0,
             keep_said: false,
             keep_said_t: 0.0,
@@ -148,7 +148,7 @@ pub struct OpMem {
     pub t: f64,
     pub turns: Vec<crate::showwhy::OpMemTurnsItem>,
     pub fist_t: f64,
-    pub fists: f64,
+    pub fists: i32,
 }
 impl OpMem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -157,7 +157,7 @@ impl OpMem {
             t: 0.0,
             turns: Vec::new(),
             fist_t: 0.0,
-            fists: 0.0,
+            fists: 0,
         }
     }
 }

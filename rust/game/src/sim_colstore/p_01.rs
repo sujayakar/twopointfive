@@ -7,12 +7,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Where each column starts: a double column as an index into doubles, a word column into words, from the part's start; `bytes` the part's length. (colstore.ts colsOf)
+/// The part's length behind a head of `head` bytes, columns `cap` rows long, the doubles first, then the words. The columns' starts have no field
+/// to go in (`ColsOf2` holds `bytes` alone): each family's own walk gives them (prop_cols, slab_cols, item_cols). (colstore.ts colsOf)
 pub fn cols_of<F: Clone + core::fmt::Debug, U: Clone + core::fmt::Debug>(head: f64, f64: &[F], u32: &[U], cap: f64) -> crate::sim_colstore::ColsOf2 {
     let mut o = ColsOf2::zeroed();
     let mut at = head;
-    for k in f64 { seam_set_col(&mut o, k, at / 8.0); at += cap * 8.0; }
-    for k in u32 { seam_set_col(&mut o, k, at / 4.0); at += cap * 4.0; }
+    for _ in f64 { at += cap * 8.0; }
+    for _ in u32 { at += cap * 4.0; }
     o.bytes = at;
     o
 }
@@ -34,7 +35,7 @@ pub fn col_diff<F: Clone + core::fmt::Debug, U: Clone + core::fmt::Debug>(o: cra
             if let (Some(&x), Some(&y)) = (da.get(col + r), db.get(col + r)) {
                 if !object_is(x, y) {
                     let whom = who(ua.clone(), r as f64);
-                    out.push(format!("row {} ({}).{} {} | {}", r, whom, seam_col_name(k), num_str(x), num_str(y)));
+                    out.push(format!("row {} ({}).{} {} | {}", r, whom, seam_col_name(k), js::num_str(x), js::num_str(y)));
                 }
             }
             r += 1;
@@ -51,11 +52,6 @@ pub fn col_diff<F: Clone + core::fmt::Debug, U: Clone + core::fmt::Debug>(o: cra
         }
     }
     out.clone()
-}
-
-/// `o[k] = at`, a column's start by the column's name
-fn seam_set_col<K>(o: &mut ColsOf2, k: &K, at: f64) {
-    todo!("needs: ColsOf2 to hold the start of each column, and a way from a column's name K to its field")
 }
 
 /// `O[k]`, a column's start by the column's name
@@ -83,53 +79,16 @@ fn object_is(x: f64, y: f64) -> bool {
     (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
 }
 
-/// A number in a template string, as the language writes it (Number::toString, radix 10): `{}` differs at −0, the infinities and large or small exponents
-fn num_str(x: f64) -> String {
-    if x.is_nan() { return String::from("NaN"); }
-    if x == 0.0 { return String::from("0"); }
-    if x < 0.0 { return format!("-{}", num_str(-x)); }
-    if x == f64::INFINITY { return String::from("Infinity"); }
-    // `{:e}` writes the same shortest digits that round-trip, as `d.ddde<exp>`
-    let sci = format!("{:e}", x);
-    let (mantissa, exp) = sci.split_once('e').unwrap();
-    let digits: String = mantissa.chars().filter(|c| *c != '.').collect();
-    let k = digits.len() as i32;
-    let n = exp.parse::<i32>().unwrap() + 1;
-    if k <= n && n <= 21 {
-        let mut s = digits;
-        for _ in 0..(n - k) { s.push('0'); }
-        return s;
-    }
-    if 0 < n && n <= 21 {
-        return format!("{}.{}", &digits[..n as usize], &digits[n as usize..]);
-    }
-    if -6 < n && n <= 0 {
-        let mut s = String::from("0.");
-        for _ in 0..-n { s.push('0'); }
-        s.push_str(&digits);
-        return s;
-    }
-    let e = n - 1;
-    let sign = if e < 0 { '-' } else { '+' };
-    let size = if e < 0 { -e } else { e };
-    if k == 1 { return format!("{}e{}{}", digits, sign, size); }
-    format!("{}.{}e{}{}", &digits[..1], &digits[1..], sign, size)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// The right-hand sides are node's own output for `${x}`.
+    /// colsOf(16, ['x', 'y'], ['a'], 10).bytes and colsOf(8, ['x'], [], 3.5).bytes, by the TypeScript's own sum.
     #[test]
-    fn numbers_read_as_the_language_writes_them() {
-        let cases: &[(f64, &str)] = &[
-            (0.0, "0"), (-0.0, "0"), (1.0, "1"), (-1.5, "-1.5"), (1e21, "1e+21"), (1e-7, "1e-7"),
-            (123456789012345680000.0, "123456789012345680000"), (1.7976931348623157e308, "1.7976931348623157e+308"),
-            (5e-324, "5e-324"), (f64::NAN, "NaN"), (f64::INFINITY, "Infinity"), (f64::NEG_INFINITY, "-Infinity"),
-            (0.000001, "0.000001"), (1.5e300, "1.5e+300"), (100.0, "100"), (0.1, "0.1"), (2.5e-7, "2.5e-7"), (1e20, "100000000000000000000"),
-        ];
-        for (x, want) in cases { assert_eq!(num_str(*x), *want); }
+    fn bytes_is_the_head_and_every_column() {
+        assert_eq!(cols_of(16.0, &["x", "y"], &["a"], 10.0).bytes, 216.0);
+        let none: &[&str] = &[];
+        assert_eq!(cols_of(8.0, &["x"], none, 3.5).bytes, 36.0);
     }
 
     #[test]

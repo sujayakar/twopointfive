@@ -119,13 +119,6 @@ pub fn tip_of(g: &mut crate::game::Game, c_2: CharId) -> Option<V3> {
     Some([h[0] + d[0] * k.tip_out, h[1] + d[1] * k.tip_out + k.tip_up, h[2] + d[2] * k.tip_out])
 }
 
-/// `g.engine.lights.flash(…)`: the set is lent out of g for the call, since its method takes g and the set (lights.ts flash touches only this list and the new light).
-fn flash(g: &mut Game, pos: V3, color: V3, intensity: f64, range: f64, ttl: f64, owner: f64) {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    crate::render_lights::light_set_flash(g, &mut set, pos, color, intensity, range, ttl, owner);
-    g.engine.lights = set;
-}
-
 /// One smoking man's frame: everything of the loop's body after he is counted (a `continue` there is a return here).
 fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mut SmokeBreakStats) {
     let was = hand_at(g, mn.t);
@@ -141,7 +134,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         mn.flamed = true;
         let a = mouth_of(g, c);
         let k = g.k.smokebreak;
-        flash(g, [a.pos[0] + a.dir[0] * 0.06, a.pos[1], a.pos[2] + a.dir[2] * 0.06], k.flame_color, k.flame_k, k.flame_range, k.flame, id);
+        crate::render_lights::light_set_flash(g, [a.pos[0] + a.dir[0] * 0.06, a.pos[1], a.pos[2] + a.dir[2] * 0.06], k.flame_color, k.flame_k, k.flame_range, k.flame, id);
         t.flames += 1.0;
     }
     // the end: a low glow all the while it is lit, bright at a draw
@@ -150,7 +143,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
         if mn.ember_t <= 0.0 {
             let k = g.k.smokebreak;
             mn.ember_t = k.ember_every;
-            flash(g, tip, k.ember_color, if now.drawn { k.ember_draw_k } else { k.ember_k }, k.ember_range, k.ember_every * 1.6, id);
+            crate::render_lights::light_set_flash(g, tip, k.ember_color, if now.drawn { k.ember_draw_k } else { k.ember_k }, k.ember_range, k.ember_every * 1.6, id);
             t.embers += 1.0;
         }
     }

@@ -1,4 +1,4 @@
-//! src/game/doortools.ts lines 1351 to 1743
+//! src/game/doortools.ts lines 1352 to 1744
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,11 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
-
-// ---- seam: the one step skeleton 3 still cannot express; the next skeleton changes this and not the bodies
-
-/// g.orders.ownMarkFirst: generic over P in the TypeScript; the stub's item has only `pos`, so a post cannot pass through it whole.
-fn seam_own_mark_first(g: &mut Game, d: DoorId, side: f64, men: &[GuardId], ask: &mut dyn FnMut(&mut Game) -> Option<Vec<crate::orders::StackPost>>) -> Option<Vec<crate::orders::StackPost>> { todo!("needs: squad_orders_own_mark_first generic over the post type") }
 
 // ---- small private helpers
 
@@ -699,7 +694,7 @@ pub fn door_tools_hammer_step(g: &mut crate::game::Game, op: DoorOpId) {
     let gun = k.gun.unwrap();
     let by = gun.by;
     let c = g.gd[by].ch;
-    let h = crate::bigkit::hammer_out(g, by, gun.at);
+    let h_t0 = crate::bigkit::hammer_out(g, by, gun.at);
     let (p, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
     let on = flat(p, k.pos) < 0.4 && m::abs(v3::wrap_angle(yaw - v3::yaw_to(p, gun.at))) < 0.35;
     if !on {
@@ -707,7 +702,7 @@ pub fn door_tools_hammer_step(g: &mut crate::game::Game, op: DoorOpId) {
         return;
     }
     if gun.next_t == 0.0 {
-        let by_t = h.t0 + crate::bigkit::big_out_by(g, crate::bigkit::BigOutByKind::Hammer);
+        let by_t = h_t0 + crate::bigkit::big_out_by(g, crate::bigkit::BigOutByKind::Hammer);
         let next = m::max(t, by_t) + crate::bigkit::big_wind(g);
         with_gun(g, op, |x| x.next_t = next);
         g.tab.doortools_door_op[op].t0 = t;
@@ -823,7 +818,7 @@ pub fn door_tools_new_lead(g: &mut crate::game::Game, op: DoorOpId) {
 /// The stack for this module's entries: orders.ts's marks, each `tuck` further along the wall where the floor allows.   (doortools.ts stackPosts)
 pub fn door_tools_stack_posts(g: &mut crate::game::Game, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
-    seam_own_mark_first(g, d, side, men, &mut |g: &mut Game| door_tools_stack_tucked(g, d, side, men, ignore))
+    crate::orders::squad_orders_own_mark_first(g, d, side, men, &mut |g: &mut Game| door_tools_stack_tucked(g, d, side, men, ignore))
 }
 
 /// tuckedIn of stackTucked: the tuck does not take a man off his mark to put him on Sam, nor put a mark where a leaf swings.

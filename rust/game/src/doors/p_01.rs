@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A door's slab as its row holds it: the handle's ID is the door's number, and the row is found at each read.   (doors.ts SlabRow.constructor)
 pub fn slab_row_new(g: &mut crate::game::Game, door: f64) -> SlabRowId {
@@ -148,14 +148,15 @@ pub fn drive_cols_set_dir(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
 }
 
 /// How it was driven.   (doors.ts DriveCols.kind)
-pub fn drive_cols_kind(g: &mut crate::game::Game, id: DriveColsId) -> crate::doors::DriveColsKind {
+pub fn drive_cols_kind(g: &mut crate::game::Game, id: DriveColsId) -> crate::doors::DoorDriveKind {
     let n = drive_cols_g(g, id, crate::sim_doorshome::dc().drive_kind);
     kind_at(n)
 }
 
-/// (doors.ts DriveCols.kind)
-pub fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate::doors::DriveColsSetKindV) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_kind, place_of(v))
+/// Answers what it wrote: the skeleton's signature gives the setter the word back.   (doors.ts DriveCols.kind)
+pub fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate::doors::DoorDriveKind) -> crate::doors::DoorDriveKind {
+    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_kind, place_of(v));
+    v
 }
 
 /// Seconds since.   (doors.ts DriveCols.t)
@@ -279,23 +280,23 @@ fn flag(f: f64, bit: f64) -> bool {
 }
 
 /// `DRIVE_KINDS[n]`: the column holds the word's place in sim/doorshome.ts DRIVE_KINDS, not the Rust enum's order.
-fn kind_at(n: f64) -> crate::doors::DriveColsKind {
+fn kind_at(n: f64) -> crate::doors::DoorDriveKind {
     match n as usize {
-        0 => DriveColsKind::Boot,
-        1 => DriveColsKind::Swing,
-        2 => DriveColsKind::Body,
-        3 => DriveColsKind::Hand,
+        0 => DoorDriveKind::Boot,
+        1 => DoorDriveKind::Swing,
+        2 => DoorDriveKind::Body,
+        3 => DoorDriveKind::Hand,
         _ => unreachable!("a drive's kind is a place in DRIVE_KINDS"),
     }
 }
 
 /// `DRIVE_KINDS.indexOf(v)`.
-fn place_of(v: crate::doors::DriveColsSetKindV) -> f64 {
+fn place_of(v: crate::doors::DoorDriveKind) -> f64 {
     match v {
-        DriveColsSetKindV::Boot => 0.0,
-        DriveColsSetKindV::Swing => 1.0,
-        DriveColsSetKindV::Body => 2.0,
-        DriveColsSetKindV::Hand => 3.0,
+        DoorDriveKind::Boot => 0.0,
+        DoorDriveKind::Swing => 1.0,
+        DoorDriveKind::Body => 2.0,
+        DoorDriveKind::Hand => 3.0,
     }
 }
 
@@ -310,7 +311,7 @@ mod tests {
         for (i, w) in words.iter().enumerate() {
             assert_eq!(kind_at(i as f64).as_str(), w.as_str());
         }
-        for v in [DriveColsSetKindV::Boot, DriveColsSetKindV::Swing, DriveColsSetKindV::Body, DriveColsSetKindV::Hand] {
+        for v in [DoorDriveKind::Boot, DoorDriveKind::Swing, DoorDriveKind::Body, DoorDriveKind::Hand] {
             assert_eq!(words[place_of(v) as usize].as_str(), v.as_str());
         }
     }
@@ -350,7 +351,7 @@ mod tests {
         let id = drive_cols_new(&mut g, 5.0);
         drive_cols_set_who(&mut g, id, 1.0);
         drive_cols_set_dir(&mut g, id, -1.0);
-        drive_cols_set_kind(&mut g, id, DriveColsSetKindV::Hand);
+        assert_eq!(drive_cols_set_kind(&mut g, id, DoorDriveKind::Hand), DoorDriveKind::Hand);
         drive_cols_set_t(&mut g, id, 4.0);
         drive_cols_set_from(&mut g, id, 5.0);
         drive_cols_set_quiet(&mut g, id, true);
@@ -365,7 +366,7 @@ mod tests {
             [1.0, -1.0, 3.0, 4.0, 5.0, 1.0, 7.0, 8.0, 9.0, 10.0, 11.0]
         );
         assert_eq!(c[d::DRIVE_WHO][4], 0.0);
-        assert_eq!(drive_cols_kind(&mut g, id), DriveColsKind::Hand);
+        assert_eq!(drive_cols_kind(&mut g, id), DoorDriveKind::Hand);
         assert!(drive_cols_quiet(&mut g, id));
         assert_eq!(drive_cols_hit(&mut g, id), 11.0);
         assert_eq!(crate::doors::drive_cols(), [d::DRIVE_WHO, d::DRIVE_DIR, d::DRIVE_KIND, d::DRIVE_T, d::DRIVE_FROM, d::DRIVE_QUIET, d::DRIVE_SIDE, d::DRIVE_RATE, d::DRIVE_PX, d::DRIVE_PZ, d::DRIVE_HIT].map(|k| k as f64));

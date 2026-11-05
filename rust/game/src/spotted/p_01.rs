@@ -88,7 +88,7 @@ pub fn has_them(g: &mut crate::game::Game, h: GuardId) -> bool {
 
 /// the switch on, under the silent posture, alive (spotted.ts live)
 pub fn live(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.k.spotted.on && crate::silent::silent_man(g, gd) && g.gd[gd].state != crate::game::GuardState::Dead
+    g.k.spotted.on && crate::silent::under_silence(g, gd) && g.gd[gd].state != crate::game::GuardState::Dead
 }
 
 /// his mode this frame (spotted.ts spottedMode)
@@ -107,9 +107,9 @@ pub fn spotted_by(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     }
 }
 
-/// roomfight.ts's fire gate, beside silent.ts's own: this round is held (spotted.ts spottedHolds)
-pub fn spotted_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
-    if !g.k.spotted.on || !crate::silent::silent_man(g, gd) || crate::silent::reached(g, gd) || crate::silent::quiet_gun(g, gd) || crate::silent::urgent(g) { return false; }
+/// roomfight.ts's fire gate, beside silent.ts's own: this round is held (spotted.ts spottedHoldsRound)
+pub fn spotted_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool {
+    if !g.k.spotted.on || !crate::silent::under_silence(g, gd) || crate::silent::reached(g, gd) || crate::silent::quiet_gun(g, gd) || crate::silent::urgent(g) { return false; }
     if g.m.spotted.men.get(gd).and_then(|r| r.take).map(|t| t.foe) == Some(h) { return true; }
     let st = g.gd[h].state;
     if st == crate::game::GuardState::Suspicious { g.stats.spotted.held += 1; return true; }
@@ -144,7 +144,7 @@ pub fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
 
 /// roomfight.ts's eyes: caught, he shoots on a sighting (spotted.ts spottedKeen)
 pub fn spotted_keen(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !g.k.spotted.on || g.m.spotted.men.get(gd).map(|r| r.mode) != Some(crate::spotted::SpottedMode::Caught) || !crate::silent::silent_man(g, gd) { return false; }
+    if !g.k.spotted.on || g.m.spotted.men.get(gd).map(|r| r.mode) != Some(crate::spotted::SpottedMode::Caught) || !crate::silent::under_silence(g, gd) { return false; }
     g.stats.spotted.keen += 1;
     true
 }
@@ -156,7 +156,7 @@ pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, asid
         Some(r) => (r.take, r.mode, r.by, r.eyes, r.spot, r.what, r.exposed),
         None => return None,
     };
-    if !crate::silent::silent_man(g, gd) { return None; }
+    if !crate::silent::under_silence(g, gd) { return None; }
     let pace = g.k.silent.pace;
     if let Some(tk) = take {
         if !aside {
@@ -210,11 +210,8 @@ pub fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>)
     crate::game::game_say(g, gd, text, None, None, None);
 }
 
-/// (spotted.ts ring) a generator: the skeleton's return type cannot hold it; `ring_spots` is its whole body
-pub fn ring(g: &mut crate::game::Game, p: V3, max_m: f64) -> crate::Opaque { todo!("needs: ring to return Vec<V3>; then its body is ring_spots") }
-
 /// candidate spots round `p`, nearest first: on the floor, a straight walk from where he stands, off every doorway and off Sam (spotted.ts ring)
-fn ring_spots(g: &mut Game, p: V3, max_m: f64) -> Vec<V3> {
+pub fn ring(g: &mut crate::game::Game, p: V3, max_m: f64) -> Vec<V3> {
     let sam = sam_pos(g);
     let mut spots = Vec::new();
     let mut r = 0.8;
@@ -280,7 +277,7 @@ pub fn hide(g: &mut crate::game::Game, gd: GuardId) {
     if !seen.is_empty() && real_t >= 0.0 && g.time - real_t >= k.slip_wait && lit_at(g, &p) >= k.lit_at {
         let mut best: Option<V3> = None;
         let mut bs = f64::INFINITY;
-        for q in ring_spots(g, p, k.slip_m) {
+        for q in ring(g, p, k.slip_m) {
             if flat(&q, &sam) > k.leash_m || wary.iter().any(|&h| in_sams_line(g, q, h)) { continue; }
             let out = !any_in_line(g, &wary, &q);
             if !out && lit_at(g, &q) >= k.lit_at { continue; }
@@ -345,7 +342,7 @@ pub fn cover(g: &mut crate::game::Game, gd: GuardId) {
     if shot_from(g, gd, &p, hp) { let r = man(g, gd); r.spot = None; r.what = None; return; }
     let mut best: Option<V3> = None;
     let mut bs = f64::INFINITY;
-    for q in ring_spots(g, p, k.step_m) {
+    for q in ring(g, p, k.step_m) {
         if !shot_from(g, gd, &q, hp) || in_sams_line(g, q, h) || flat(&q, &hp) < 2.5 { continue; }
         let cost = flat(&p, &q) + if lit_at(g, &q) >= k.lit_at { 1.5 } else { 0.0 };
         if cost < bs { bs = cost; best = Some(q); }
@@ -458,7 +455,7 @@ pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
 /// asked for by an order layer whose stalk on `foe` has just been blown: go on and take him by hand (spotted.ts spottedTake)
 pub fn spotted_take(g: &mut crate::game::Game, gd: GuardId, foe: GuardId) -> bool {
     let k = g.k.spotted;
-    if !k.on || !crate::silent::silent_man(g, gd) { return false; }
+    if !k.on || !crate::silent::under_silence(g, gd) { return false; }
     let Some(row) = g.m.spotted.men.get(gd) else { return false };
     let (take, take_no) = (row.take, row.take_no);
     if let Some(tk) = take { return tk.foe == foe; }
@@ -486,7 +483,7 @@ pub fn spotted_gripped(g: &mut crate::game::Game, h: GuardId) -> bool {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::silent::silent_man(g, gd) { continue; }
+        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::silent::under_silence(g, gd) { continue; }
         if let Some(tk) = g.m.spotted.men.get(gd).and_then(|r| r.take) {
             if tk.foe == h && tk.t0 >= 0.0 && g.time >= tk.t0 && g.time - tk.t0 < g.k.spotted.take_secs + 0.5 { return true; }
         }
@@ -521,7 +518,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
     let k = g.k.spotted;
     let t = g.time;
     for gd in crate::orders::squad_orders_squad(g) {
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::silent::silent_man(g, gd) { continue; }
+        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::silent::under_silence(g, gd) { continue; }
         if !g.m.spotted.men.has(gd) { g.m.spotted.men.set(gd, new_man(t)); }
         let r = man(g, gd);
         if t - r.tick_t > 0.25 || t < r.tick_t { r.take = None; r.take_no = None; }

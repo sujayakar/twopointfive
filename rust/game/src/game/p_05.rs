@@ -1,4 +1,4 @@
-//! src/game/game.ts lines 1199 to 1544
+//! src/game/game.ts lines 1271 to 1582
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,497 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Makes a game, in `g`: the caller has set `g.engine`, `g.level`, `g.smoke` and `g.sim` on a blank Game, and takes the made game from the answer (a blank is left in `g`). (game.ts Game.constructor)
-pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::GameNewOpts>) -> crate::game::Game {
-    let level = g.level.clone();   // (read below while `g` is lent; a write to a box goes through mark_area_lit, to both holders)
-    g.rig = ch;
-    g.light_home = crate::sim_lightshome::light_home_new(g, crate::Opaque);   // (field initialisers: game.ts:855)
-    g.falls = crate::sim_fallshome::fall_store_new(g, crate::Opaque);         // (game.ts:859)
-    // the level's boxes as rows of the collision's table: the TypeScript's two names for one list (level.boxes, col.boxes), and every list of boxes below is of these IDs
-    let ids: Vec<BoxId> = level.boxes.iter().map(|b| g.col.boxes.push(b.clone())).collect();
-    if let Some(over) = crate::levelfit::level_over(g, &level_counts_of(&level, &ids)) { panic!("{}", over); }
-    let n_seats = opts.and_then(|o| o.seats).unwrap_or(1.0);
-    g.seats = crate::seats::seats_stand(g, n_seats);
-    g.local_seat = Some(g.seats[0]);
-    crate::difficulty::levers_fog(g, &mut |_g: &mut Game| {});   // (leversFog(loadTeamFeel): the load is panel storage, the lever's hand on FOG.own is the rule)
-    let tune_chaos = g.k.chaos.def;   // (loadChaos' first line: its storage half is the host's)
-    g.tune.chaos = tune_chaos;
-    let tune_wind = g.k.wind.def;     // (loadWind's first line: ditto)
-    g.tune.wind = tune_wind;
-    let name = crate::scene_level_load::level_name_of(g);
-    g.col = crate::scene_collision::new(g, &ids, name.as_deref());
-    let (men, fn2000) = (g.men, g.fn2000);
-    let spawn = level.player_spawn;
-    g.player = crate::game::player_new(g, men, ch, spawn, Some(fn2000), None);   // (first.player: g.seat is seats[0] all through the constructor)
-    // loose furniture and thrown things: never collision occluders
-    g.props = crate::props::prop_system_new(g, &level.props, &mut game_on_prop_event, Some(crate::Opaque));
-    g.items = crate::throwables::throwables_new(g, Some(crate::Opaque));
-    g.tracers = crate::tracers::tracers_new(g, None);   // (its lights and its sparks are reached by path)
-    let device = g.engine.device;
-    g.decals = crate::render_decals::decals_new(g, device);
-    if !g.engine.settings.decals { g.decals.enabled = false; }
-    g.weather = crate::weather::weather_new(g);
-    let p = g.player;
-    let player_light = g.tune.player_light;
-    let rail = crate::rig_props::rail_light_def(crate::consts::PLAYER_ID, player_light);
-    g.pl[p].light = lights_add(g, rail);
-    // light targets from analytic lights + switchables; contactor groups restrike staggered by order of first appearance
-    let mut group_stagger: JsMap<String, f64> = JsMap::new();
-    let lights: Vec<LightId> = g.engine.lights.lights.clone();
-    for &l in lights.iter() {
-        let group = g.tab.light[l].group.clone();
-        if g.tab.light[l].ttl >= 0.0 || g.tab.light[l].kind == 2.0 || group == "player" || group == "flashlights" { continue; }
-        let name = g.tab.light[l].name.clone();
-        let mains = light_def_mains(&level, &name);
-        let fixture_box = g.tab.light[l].fixture_box;
-        let def = crate::sim_lightshome::FixtureDef {
-            name,
-            pos: v3::copy(g.tab.light[l].pos),
-            light: Some(l),
-            boxes: if fixture_box >= 0.0 { vec![fixture_box] } else { Vec::new() },
-            base_emissive: if fixture_box >= 0.0 { level.boxes[fixture_box as usize].emissive } else { [0.0, 0.0, 0.0] },
-            base_intensity: g.tab.light[l].intensity,
-            on: g.tab.light[l].enabled,
-            broken: false,
-            disabled_until: -1.0,
-            fluorescent_flicker: false,
-            factor: 1.0,
-            mains,
-            stagger: stagger_of(g, &mut group_stagger, &group),
-            interactive: true,
-            kind: crate::sim_lightshome::FixtureDefKind::Analytic,
-            group,
-            area_lights: None,
-            lens: None,
-        };
-        let t = crate::sim_lightshome::light_home_add(g, &def);
-        g.targets.push(t);
-    }
-    for sw in level.switchables.iter() {
-        let b = &level.boxes[sw.boxes[0] as usize];
-        let def = crate::sim_lightshome::FixtureDef {
-            name: sw.name.clone(),
-            group: sw.group.clone(),
-            kind: crate::sim_lightshome::FixtureDefKind::Emissive,
-            pos: b.c,
-            light: None,
-            boxes: sw.boxes.clone(),
-            base_emissive: sw.base_emissive,
-            base_intensity: 0.0,
-            on: sw.on,
-            broken: false,
-            disabled_until: -1.0,
-            fluorescent_flicker: sw.flicker == Some(true),
-            factor: if sw.on { 1.0 } else { 0.0 },
-            mains: sw.mains != Some(false),
-            stagger: stagger_of(g, &mut group_stagger, &sw.group),
-            interactive: sw.group != "server_leds" && sw.group != "server_glow",
-            area_lights: None,
-            lens: None,
-        };
-        let t = crate::sim_lightshome::light_home_add(g, &def);
-        g.targets.push(t);
-    }
-    let car_lamps = crate::carlamps::car_lamp_targets(g, &ids);   // (the lamps of the level's cars: one target each, no die, none on the mains)
-    for def in car_lamps.iter() {
-        let t = crate::sim_lightshome::light_home_add(g, def);
-        g.targets.push(t);
-    }
-    // flat emissive fixtures light the scene through analytic one-sided area lights; their boxes keep glowing, rays ignore the emissive term
-    let targets: Vec<FixtureId> = g.targets.clone();
-    for &t in targets.iter() {
-        let (kind, group, name, boxes, e) = {
-            let f = &g.tab.sim_lightshome_fixture[t];
-            (f.kind, f.group.clone(), f.name.clone(), f.boxes.clone(), f.base_emissive)
-        };
-        if kind != crate::sim_lightshome::FixtureKind::Emissive || group == "server_leds" || group == "emergency" || group == crate::carlamps::VEHICLE_GROUP { continue; }
-        for &bi in boxes.iter() {
-            let b = &level.boxes[bi as usize];
-            let (h, c) = (b.h, b.c);
-            let thin: usize = if h[0] <= h[1] && h[0] <= h[2] { 0 } else if h[1] <= h[2] { 1 } else { 2 };
-            if h[thin] > 0.06 { continue; }
-            let (a0, a1) = ((thin + 1) % 3, (thin + 2) % 3);
-            let area = 4.0 * h[a0] * h[a1];
-            if area < 0.01 { continue; }
-            // emitting side: ceiling fixtures face down; wall / desk fixtures whichever side is open
-            let n: V3 = if thin == 1 {
-                [0.0, if c[1] > 1.5 { -1.0 } else { 1.0 }, 0.0]
-            } else {
-                let (cs, sn) = (m::cos(b.yaw), m::sin(b.yaw));
-                let ax: V3 = if thin == 0 { [cs, 0.0, -sn] } else { [sn, 0.0, cs] };
-                let front = !crate::scene_collision::segment_blocked(g, c, v3::mad(c, ax, h[thin] + 0.35), None, None, None);
-                let back = !crate::scene_collision::segment_blocked(g, c, v3::mad(c, ax, -(h[thin] + 0.35)), None, None, None);
-                if front && !back { ax } else if !front && back { v3::scale(ax, -1.0) } else { ax }
-            };
-            let maxc = m::max_n(&[e[0], e[1], e[2], 1e-3]);
-            let i0 = maxc * area;   // radiance x area = on-axis intensity
-            let on = crate::sim_lightshome::fixture_on(g, t);
-            let light = add_light(g, &format!("{}_area{}", name, bi as i64), &group, 3.0, v3::mad(c, n, h[thin] + 0.07), n, [e[0] / maxc, e[1] / maxc, e[2] / maxc], i0,
-                v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
-                m::max(0.1, m::min(m::sqrt(area / m::PI), m::min(h[a0], h[a1]) + 0.02)), 0.0, on, i0);
-            g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
-            mark_area_lit(g, bi as usize, ids[bi as usize]);
-        }
-    }
-    // emissive markings are lights: a switchable box's marking with `emit` registers an emitter over its rect, on the same target's supply
-    if g.engine.settings.markings {
-        for &t in targets.iter() {
-            let (kind, group, name, boxes) = {
-                let f = &g.tab.sim_lightshome_fixture[t];
-                (f.kind, f.group.clone(), f.name.clone(), f.boxes.clone())
-            };
-            if kind != crate::sim_lightshome::FixtureKind::Emissive || group == "emergency" { continue; }
-            for &bi in boxes.iter() {
-                let b = &level.boxes[bi as usize];
-                let Some(marks) = b.marks.as_ref() else { continue };
-                if marks.is_empty() || b.rot.is_some() { continue; }
-                let mk_texel = g.engine.settings.marking_texel;
-                let (albedo, c, h, yaw) = (b.albedo, b.c, b.h, b.yaw);
-                for (k, mk) in marks.iter().enumerate() {
-                    let st = crate::scene_markings::mark_stats(mk, albedo, Some(mk_texel));
-                    if !js::truthy(st.emask) { continue; }
-                    let maxc = m::max_n(&[st.mean_l[0], st.mean_l[1], st.mean_l[2]]);
-                    let i0 = maxc * st.area;
-                    if st.area < 0.01 || i0 < crate::game::MARK_LIGHT_MIN_I0 { continue; }   // LED rows, UI bars, buttons: they glow, they light nothing
-                    let r = crate::scene_markings::mark_world_rect(mk, c, h, yaw, Some(mk_texel));
-                    let n = r.n;
-                    let on = crate::sim_lightshome::fixture_on(g, t);
-                    let light = add_light(g, &format!("{}_mark{}_{}", name, bi as i64, k), &group, 3.0, v3::mad(r.centre, n, 0.07), n, [st.mean_l[0] / maxc, st.mean_l[1] / maxc, st.mean_l[2] / maxc], i0,
-                        v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
-                        m::max(0.1, m::min(m::sqrt(st.area / m::PI), m::min(r.hu, r.hv) + 0.02)), 0.0, on, i0);
-                    g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
-                    g.mark_lights.push(crate::game::GameMarkLightsItem { target: name.clone(), box_: bi, face: String::from(mk.face.as_str()), pos: v3::mad(r.centre, n, 0.07), i0, area: st.area, mean_l: st.mean_l });
-                }
-            }
-        }
-    }
-    for b in level.beacons.iter() { mark_area_lit(g, b.box_ as usize, ids[b.box_ as usize]); }   // dome glow is screen-only; the beam is the spot light
-    // mains breaker (OCP: temporary blackout, bullet: permanent) and the emergency beacons it brings up
-    let breaker = crate::sim_lightshome::FixtureDef {
-        name: String::from("breaker"),
-        group: String::from("mains"),
-        kind: crate::sim_lightshome::FixtureDefKind::Breaker,
-        pos: level.breaker.pos,
-        light: None,
-        boxes: vec![level.breaker.boxes[1]],
-        base_emissive: [0.3, 4.0, 0.6],
-        base_intensity: 0.0,
-        on: true,
-        broken: false,
-        disabled_until: -1.0,
-        fluorescent_flicker: false,
-        factor: 1.0,
-        mains: false,
-        stagger: 0.0,
-        interactive: true,
-        area_lights: None,
-        lens: None,
-    };
-    let t = crate::sim_lightshome::light_home_add(g, &breaker);
-    g.targets.push(t);
-    for (i, b) in level.beacons.iter().enumerate() {
-        let mut target: Option<FixtureId> = None;
-        for &t in g.targets.iter() {
-            let f = &g.tab.sim_lightshome_fixture[t];
-            if f.kind == crate::sim_lightshome::FixtureKind::Emissive && f.boxes.contains(&b.box_) { target = Some(t); break; }
-        }
-        let Some(target) = target else { panic!("beacon {}: no switchable owns box {}", i, b.box_) };
-        let (name, group) = { let f = &g.tab.sim_lightshome_fixture[target]; (f.name.clone(), f.group.clone()) };
-        let light = add_light(g, &name, &group, 1.0, b.pos, [1.0, 0.0, 0.0], [1.0, 0.22, 0.06], 55.0, 14.0, 9.0, 24.0, 0.06, 1.0, false, 55.0);
-        g.beacons.push(crate::game::GameBeaconsItem { light, phase: i as f64 * 1.7, target });
-    }
-    // the ceiling's cells (game.ts:1314,1321, of the reach block, which is otherwise picture): the walls' and the furniture's rules read them
-    let statics: Vec<BoxId> = g.engine.world.statics.clone();
-    let interior = crate::render_reach::build_interior_cells(g, &statics);
-    g.reach_interior = Some(interior);
-    // doors: leaves are dynamic occluders for sight / sound / projectiles
-    let door_defs: Vec<crate::doors::DoorDef> = level.doors.iter().map(|d| crate::doors::DoorDef {
-        name: d.name.clone(),
-        hinge: d.hinge,
-        closed_dir: d.closed_dir,
-        width: d.width,
-        min_angle: d.min_angle,
-        max_angle: d.max_angle,
-        angle: d.angle,
-        swing: d.swing,
-        albedo: if d.exterior == Some(true) { Some([0.2, 0.22, 0.25]) } else { None },
-        closer: d.closer,
-        exterior: d.exterior,
-        locked: d.locked,
-        key_side: d.key_side,
-        lock: d.lock.clone(),
-        steel: d.steel,
-        height: None,
-        thickness: None,
-    }).collect();
-    g.doors = crate::doors::doors_new(g, &door_defs, &mut game_on_door_event, Some(crate::Opaque));
-    let list: Vec<DoorId> = g.doors.list.clone();
-    g.props.doorways = list.iter().map(|&d| {
-        let (cc, dir, width) = (g.dr[d].frame_centre, g.dr[d].def.closed_dir, g.dr[d].def.width);
-        crate::props::PropSystemDoorwaysItem { cx: cc[0], cz: cc[2], ux: m::cos(dir), uz: m::sin(dir), half: width / 2.0 - 0.02 }
-    }).collect();
-    let office = crate::dialogue::is_office(g);
-    crate::doornames::name_doors(g, office, &list);
-    g.door_deals = crate::doorswing::deal_swings(g);   // the side each leaf opens into: geometry only, no dice
-    let leaves = crate::doors::doors_leaf_boxes(g);
-    g.col.dynamic_boxes = leaves;
-    let _ = crate::doors::doors_on_torn(g, &mut door_torn_note);   // a torn leaf is a row in the one feed of what the level no longer is
-    g.devices = crate::devices::devices_new(g);   // cameras + emitters join `targets`, before the authored switch states are said, below
-    // guards
-    let tints: [V3; 3] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
-    for (i, &r) in level.routes.iter().enumerate() {
-        let id = 10.0 + i as f64;
-        let def = crate::rig_props::torch_light_def(&format!("flashlight{}", i), id, g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-        let fl = lights_add(g, def);
-        let gd = crate::game::guard_new(g, men, ch, id, r, i as f64, fl, tints[i % tints.len()], None);
-        g.guards.push(gd);
-    }
-    crate::opening::opening_start(g);   // a man whose route starts on top of the way in is found down his beat instead
-    let n = level.mission.rack.index;
-    let (leds, glow) = (format!("rack{}_leds", n), format!("rack{}_glow", n));
-    let targets: Vec<FixtureId> = g.targets.clone();
-    g.rack_targets = targets.iter().copied().filter(|&t| { let f = &g.tab.sim_lightshome_fixture[t]; f.name == leds || f.name == glow }).collect();
-    g.destr = crate::destruction::destruction_new(g);   // after the targets and devices exist: a lit screen dies through its target
-    g.glass_break = crate::glassbreak::glass_break_new(g);
-    crate::winbars::boot_bars(g);
-    g.shards = crate::shards::glass_shards_new(g);
-    g.wind = crate::wind::wind_new(g);            // after the doors exist
-    g.air_dust = crate::air_dust::air_dust_new(g);   // after the weather, the doors and the collision exist
-    for &t in g.targets.clone().iter() {
-        let on = if crate::sim_lightshome::fixture_on(g, t) { 1.0 } else { 0.0 };
-        crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().authored, Some(t), Some(on), None, None, None);   // the level as authored, for resetLevelState()
-    }
-    let list_now: Vec<LightId> = g.engine.lights.lights.clone();
-    let targets_now: Vec<FixtureId> = g.targets.clone();
-    let beacons_now: Vec<crate::sim_lightshome::BeaconFact> = g.beacons.iter().map(|b| crate::sim_lightshome::BeaconFact { light: b.light, phase: b.phase, target: b.target }).collect();
-    let cones: Vec<crate::sim_lightshome::LightHomeStandConesItem> = g.devices.cameras.iter().map(|&c| { let r = &g.tab.devices_camera_rt[c]; crate::sim_lightshome::LightHomeStandConesItem { light: r.cone, target: r.target, slot: r.slot } }).collect();
-    crate::sim_lightshome::light_home_stand(g, &list_now, &targets_now, &beacons_now, &cones);
-    crate::civilians::spawn_civilians(g);   // after the shift, whose construction and dice they must not disturb
-    g.fog_of_war = crate::fogofwar::fog_of_war_new(g);
-    g.quiet = crate::quiet::quiet_mission_new(g);
-    g.rails = crate::rails::rails_new(g);
-    g.lesson = crate::lesson::lesson_new(g);
-    g.snatch = crate::snatch::snatch_new(g);
-    g.defuse = crate::defuse::defuse_new(g);
-    g.night_breach = crate::nightbreach::night_breach_new(g);
-    g.room_clear = crate::roomclear::room_clear_scenario_new(g);
-    stand_each_seat(g, &mut |v: &mut Game| { v.orders = crate::orders::squad_orders_new(v, None); });
-    g.fight = crate::roomfight::room_fight_new(g);
-    g.cues = crate::cues::cues_new(g);
-    g.squad_net = crate::squadnet::squad_net_new(g);
-    g.cover = crate::cover::cover_new(g);
-    g.entry = crate::entrypoints::entry_points_new(g);
-    g.cleared = crate::cleared::cleared_rooms_new(g);
-    g.rescue = crate::rescue::rescue_new(g);
-    stand_each_seat(g, &mut |v: &mut Game| { v.door_tools = crate::doortools::door_tools_new(v); });   // after the orders: its rows are registered on their menu
-    crate::pairup::pair_up_apply(g, None);
-    g.pair = crate::pairorders::pair_orders_new(g);
-    stand_each_seat(g, &mut |v: &mut Game| { v.work = crate::workthings::work_things_new(v); });
-    stand_each_seat(g, &mut |v: &mut Game| { v.wall_charge = crate::wallcharge::wall_charge_new(v); });   // after the door tools: it spends their charges
-    stand_each_seat(g, &mut |v: &mut Game| { crate::shutdoor::register_shut_door(v); });
-    crate::seats::stand_men(g);   // a second seat's man and his light, made last
-    g.director = crate::director::director_new(g, level.script.as_ref());   // the level's script: its define pass run and linted here, programs start on demand
-    let stood = stood_of(g, &level, &ids);
-    let tables = crate::scene_box_mirror::box_mirror_tables(g);
-    if let Some(over) = crate::levelfit::stood_over(g, &stood, &tables) { panic!("{}", over); }
-    core::mem::replace(g, Game::blank())
-}
-
-/// `engine.lights.add(l)`: the stub takes g and the set inside it, so the set is out of g for the call.
-fn lights_add(g: &mut Game, l: LightId) -> LightId {
-    let mut set = core::mem::take(&mut g.engine.lights);
-    let l = crate::render_lights::light_set_add(g, &mut set, l);
-    g.engine.lights = set;
-    l
-}
-
-/// `engine.lights.add` of the constructor's literals: owner 0, fixtureBox -1, ttl -1, age 0. (`flicker`, `broad`, `markRef` have no field: notes, Skeleton)
-fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, enabled: bool, peak_intensity: f64) -> LightId {
-    let l = g.tab.light.push(crate::render_lights::RtLight {
-        name: String::from(name),
-        group: String::from(group),
-        kind,
-        pos,
-        dir,
-        color,
-        intensity,
-        range,
-        inner_deg,
-        outer_deg,
-        radius,
-        volumetric,
-        owner: 0.0,
-        enabled,
-        fixture_box: -1.0,
-        ttl: -1.0,
-        age: 0.0,
-        peak_intensity,
-        ..crate::render_lights::RtLight::zeroed()
-    });
-    lights_add(g, l)
-}
-
-/// (game.ts constructor, `b.flags |= BoxFlag.AreaLit`) One box in the TypeScript, two holders here: the level's row and the collision's.
-fn mark_area_lit(g: &mut Game, bi: usize, id: BoxId) {
-    let bit = js::to_i32(crate::scene_boxes::box_flag().area_lit);
-    g.level.boxes[bi].flags = (js::to_i32(g.level.boxes[bi].flags) | bit) as f64;
-    g.col.boxes[id].flags = (js::to_i32(g.col.boxes[id].flags) | bit) as f64;
-}
-
-/// (game.ts:1202 levelOver(level)) What levelfit reads of a level, as the skeleton has it: lengths, a switchable's boxes, a device's kind.
-fn level_counts_of(level: &crate::scene_level::Level, ids: &[BoxId]) -> crate::levelfit::LevelCountsLevel {
-    crate::levelfit::LevelCountsLevel {
-        doors: vec![crate::Opaque; level.doors.len()],
-        props: stood_level_props(level),
-        boxes: ids.to_vec(),
-        lights: Some(vec![crate::Opaque; level.lights.len()]),
-        switchables: Some(stood_level_switchables(level)),
-        beacons: Some(vec![crate::Opaque; level.beacons.len()]),
-        devices: stood_level_devices(level),
-    }
-}
-
-fn stood_level_props(level: &crate::scene_level::Level) -> Vec<crate::levelfit::StoodLevelPropsItem> {
-    level.props.iter().map(|p| crate::levelfit::StoodLevelPropsItem { parts: vec![crate::Opaque; p.parts.len()] }).collect()
-}
-
-fn stood_level_switchables(level: &crate::scene_level::Level) -> Vec<crate::levelfit::StoodLevelSwitchablesItem> {
-    level.switchables.iter().map(|s| crate::levelfit::StoodLevelSwitchablesItem { boxes: s.boxes.clone(), group: s.group.clone() }).collect()
-}
-
-fn stood_level_devices(level: &crate::scene_level::Level) -> Option<Vec<crate::levelfit::StoodLevelDevicesItem>> {
-    use crate::scene_level::DeviceDef;
-    level.devices.as_ref().map(|list| list.iter().map(|d| crate::levelfit::StoodLevelDevicesItem {
-        kind: String::from(match d { DeviceDef::Camera(_) => "camera", DeviceDef::Keypad(_) => "keypad", DeviceDef::Laser(_) => "laser" }),
-    }).collect())
-}
-
-/// (game.ts:1389 stoodOver(this, ...)) What levelfit reads of the game as it stands. `boxes`: the level's own rows, which is what col.boxes is in the TypeScript (see notes).
-fn stood_of(g: &Game, level: &crate::scene_level::Level, ids: &[BoxId]) -> crate::levelfit::Stood {
-    crate::levelfit::Stood {
-        level: crate::levelfit::StoodLevel {
-            doors: vec![crate::Opaque; level.doors.len()],
-            props: stood_level_props(level),
-            boxes: ids.to_vec(),
-            lights: Some(vec![crate::Opaque; level.lights.len()]),
-            switchables: Some(stood_level_switchables(level)),
-            beacons: Some(vec![crate::Opaque; level.beacons.len()]),
-            devices: stood_level_devices(level),
-            civilians: level.civilians.as_ref().map(|c| vec![crate::Opaque; c.len()]),
-        },
-        col: crate::levelfit::StoodCol { boxes: ids.to_vec(), dynamic_boxes: g.col.dynamic_boxes.clone() },
-        props: Some(crate::levelfit::StoodProps {
-            all: g.props.all.iter().map(|&p| crate::levelfit::StoodPropsAllItem { boxes: vec![crate::Opaque; g.tab.props_prop[p].boxes.len()] }).collect(),
-        }),
-        player: Some(g.player),
-        guards: Some(g.guards.clone()),
-        civilians: Some(g.civilians.clone()),
-        seats: Some(g.seats.clone()),
-    }
-}
-
-/// (game.ts:1373,1381,1384-1386 `for (const s of this.seats) s.view.x = ...`) As the game is built a later seat has no man yet, so with_seat (keyed by a man) cannot name it: its set is swapped onto Game by its seat.
-fn stand_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    for s in g.seats.clone() {
-        if g.seat == s { f(g); continue; }   // (the Game's own fields are the first seat's set: seats_stand)
-        let mut own = g.tab.cmd_seat[s].own.take().expect("a seat of a game of several has its own set");
-        swap_seat_set(g, &mut own);
-        f(g);
-        swap_seat_set(g, &mut own);
-        g.tab.cmd_seat[s].own = Some(own);
-    }
-}
-
-/// seats.ts SEAT_KEYS, between Game and a seat's set.
-fn swap_seat_set(g: &mut Game, own: &mut crate::seats::SeatSet) {
-    use core::mem::swap;
-    swap(&mut g.seat, &mut own.seat);
-    swap(&mut g.player, &mut own.player);
-    swap(&mut g.orders, &mut own.orders);
-    swap(&mut g.door_tools, &mut own.door_tools);
-    swap(&mut g.work, &mut own.work);
-    swap(&mut g.wall_charge, &mut own.wall_charge);
-    swap(&mut g.aim_point, &mut own.aim_point);
-    swap(&mut g.aim_target, &mut own.aim_target);
-    swap(&mut g.aim_guard, &mut own.aim_guard);
-    swap(&mut g.aim_friend, &mut own.aim_friend);
-    swap(&mut g.aim_snap, &mut own.aim_snap);
-    swap(&mut g.hover, &mut own.hover);
-    swap(&mut g.interactables, &mut own.interactables);
-    swap(&mut g.nearby, &mut own.nearby);
-    swap(&mut g.act, &mut own.act);
-    swap(&mut g.use_door, &mut own.use_door);
-    swap(&mut g.view_proj, &mut own.view_proj);
-    swap(&mut g.threat_proximity, &mut own.threat_proximity);
-    swap(&mut g.torch_on_t, &mut own.torch_on_t);
-}
-
-/// `eachSeat(g, v => ...)` of a stood game: each_seat's closure takes two `&mut Game`, so its body is here, through with_seat. (seats.ts eachSeat)
-fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 { f(g); return; }
-    for s in g.seats.clone() {
-        let man = crate::cmd::seat_man(g, s);
-        crate::seats::with_seat(g, man, &mut *f);
-    }
-}
-
-/// (game.ts constructor, lightDefs) A light's def by name, the last of a name winning as a Map's does: is it on the mains.
-fn light_def_mains(level: &crate::scene_level::Level, name: &str) -> bool {
-    match level.lights.iter().rev().find(|d| d.name == name) {
-        Some(d) => d.mains != Some(false),
-        None => true,
-    }
-}
-
-/// (game.ts constructor, staggerOf) A contactor group's restrike stagger: the die is drawn at the group's first appearance.
-fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 {
-    if !stagger.has(String::from(grp)) {
-        let v = stagger.len() as f64 * 0.45 + crate::math_dice::sim_random(g) * 0.5;
-        stagger.set(String::from(grp), v);
-    }
-    *stagger.get(String::from(grp)).unwrap()
-}
-
-/// (game.ts constructor, doors.onTorn) A torn leaf as a row of the destruction's change feed.
-fn door_torn_note(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsOnTornFnCause) {
-    let c = g.dr[d].frame_centre;
-    let r = g.dr[d].def.width / 2.0 + 0.1;
-    let id = match g.doors.list.iter().position(|&x| x == d) { Some(i) => i as f64, None => -1.0 };
-    let row = crate::wallbreak::WallBreakNoteC {
-        kind: crate::wallbreak::LevelChangeKind::Door,
-        cause: match cause {
-            crate::doors::DoorsOnTornFnCause::Blast => crate::wallbreak::WallBreakNoteCCause::Blast,
-            crate::doors::DoorsOnTornFnCause::Fire => crate::wallbreak::WallBreakNoteCCause::Fire,
-        },
-        id,
-        name: Some(g.dr[d].def.name.clone()),
-        pos: [c[0], c[1], c[2]],
-        rect: [c[0] - r, c[2] - r, c[0] + r, c[2] + r],
-        opened: Vec::new(),
-        walkable: true,
-        sight: true,
-        dead: true,
-        who,
-    };
-    let _ = crate::wallbreak::wall_break_note(g, &row);
-}
-
-/// A line for the player's log; the log keeps five. (game.ts Game.msg)
-pub fn game_msg(g: &mut crate::game::Game, text: &str) {
-    let (t, serial) = (g.time, g.serial());
-    g.messages.push(crate::game::GameMessagesItem { text: String::from(text), t, serial });
-    if g.messages.len() > 5 { g.messages.remove(0); }
-    crate::cues::cues_raw(g, text);
-}
-
-/// A man says something. (game.ts Game.say)
-pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) {
-    crate::guards::say(g, g_2, text, radio, force, row);
-}
-
-/// A utility or sandbox confirmation: the showcase's own plumbing stays out of the log. (game.ts Game.note)
-pub fn game_note(g: &mut crate::game::Game, text: &str) {
-    if !g.quiet_utility { game_msg(g, text); }
+/// A cut: `lens.target = copy(at); lens.desired = copy(at)`. A whole write of `desired` is what Seat.takeCut watches for, here by its serial.   (game.ts:1485, :1536, :1554)
+fn cut_lens(g: &mut Game, cam: CameraId, at: V3) {
+    let lens = &mut g.tab.camera[cam];
+    lens.target = at;
+    lens.desired = at;
+    lens.desired_serial += 1;
 }
 
 /// What a door's noise does: the man who made it is that loud, the sound plays, and it is filed for the men to hear. (game.ts Game.onDoorEvent)
@@ -510,13 +25,13 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
         DoorSound::Latch => audio_play(g, "doorLatch", e.pos, 0.6),
         DoorSound::Bash => {
             // (under 1: a leaf ripped round by its handle at a run, the same slam, lighter and shorter)
-            if e.level < 1.0 { seam_audio_play_rate(g, "doorBash", e.pos, 0.6, 1.15); } else { audio_play(g, "doorBash", e.pos, 0.9); }
+            if e.level < 1.0 { audio_play_rate(g, "doorBash", e.pos, 0.6, 1.15); } else { audio_play(g, "doorBash", e.pos, 0.9); }
         }
         DoorSound::Rattle => audio_play(g, "doorRattle", e.pos, 0.35 + 2.0 * e.level),
-        DoorSound::Pick => { let rate = 0.9 + crate::math_dice::sim_random(g) * 0.25; seam_audio_play_rate(g, "lockPick", e.pos, 0.5, rate); }
+        DoorSound::Pick => { let rate = 0.9 + crate::math_dice::sim_random(g) * 0.25; audio_play_rate(g, "lockPick", e.pos, 0.5, rate); }
         DoorSound::Unlock => audio_play(g, "lockOpen", e.pos, 0.4 + 1.3 * e.level),
         DoorSound::Kick => {
-            seam_audio_play_rate(g, "doorBash", e.pos, 1.0, 0.9);
+            audio_play_rate(g, "doorBash", e.pos, 1.0, 0.9);
             audio_play(g, "lockBreak", e.pos, 0.95);
             let kicker = match crate::seats::man_by_id(g, e.who) {
                 Some(p) => Some(g.pl[p].ch),
@@ -532,7 +47,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
         }
         DoorSound::Thud => {
             // a boot at the face a shut door opens toward: the slam of it, nothing splintered
-            seam_audio_play_rate(g, "doorBash", e.pos, 1.0, 0.8);
+            audio_play_rate(g, "doorBash", e.pos, 1.0, 0.8);
             if let Some(p) = crate::seats::man_by_id(g, e.who) {
                 let tool = match &g.pl[p].kick { Some(k) => k.tool.is_some(), None => false };
                 if !tool { game_msg(g, "it opens toward you, so the frame took the kick. that was loud"); }
@@ -540,8 +55,8 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
         }
         DoorSound::Clang => {
             // a boot on the steel stair door: the ring of it, no keep to splinter
-            seam_audio_play_rate(g, "doorBash", e.pos, 1.0, 0.7);
-            seam_audio_play_rate(g, "stairDoor", e.pos, 0.55, 1.3);
+            audio_play_rate(g, "doorBash", e.pos, 1.0, 0.7);
+            audio_play_rate(g, "stairDoor", e.pos, 0.55, 1.3);
             if crate::seats::is_man_id(g, e.who) { game_msg(g, "it's a steel fire door, so it won't give. that was loud"); }
         }
     }
@@ -583,7 +98,7 @@ pub fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
                 g.roll_seq += 1.0;
                 let tok = g.roll_seq;
                 g.rolls[i].voice = tok;
-                seam_audio_play_follow(g, "chairRoll", [px, 0.05, pz], voice.gain, tok, p);
+                crate::audio_iface::game_audio_like_play(g, "chairRoll", Some([px, 0.05, pz]), Some(voice.gain), Some(&crate::audio_iface::PlayOpts::ChairRoll { tok }));   // (the `follow` closure: audio_follow_now answers by the token)
             }
         } else if js::truthy(g.rolls[i].voice) && (!here || g.time - g.rolls[i].move_t > voice.grace || g.time < g.rolls[i].move_t) {
             g.rolls[i].voice = 0.0;
@@ -605,10 +120,10 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
     let (thud_rate, scrape_rate) = { let t = &g.tab.props_prop[e.prop].tune; (t.thud_rate, t.scrape_rate) };
     let jitter = 0.95 + crate::math_dice::sim_random(g) * 0.1;
     if e.sound == PropEventSound::Thud {
-        seam_audio_play_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
+        audio_play_rate(g, "propThud", e.pos, v3::clamp(0.35 + 0.15 * e.speed, 0.3, 1.0), thud_rate * jitter);
         crate::destruction::destruction_thud(g, e.pos, Some(0.4 + 0.3 * e.speed), Some(e.who));
     } else if !e.rolling {
-        seam_audio_play_rate(g, "propScrape", e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
+        audio_play_rate(g, "propScrape", e.pos, v3::clamp(0.25 + 0.18 * e.speed, 0.25, 1.0), scrape_rate * jitter);
     }
     let (time, serial) = (g.time, g.serial());
     g.events.push(crate::game::GameEvent {
@@ -628,7 +143,7 @@ pub fn game_reset_guards(g: &mut crate::game::Game) {
     crate::powerout::power_out_reset(g);
     crate::rescuecheck::rescue_check_reset(g);
     crate::doze::doze_reset(g, None);
-    on_each_seat(g, &mut |v: &mut Game| {
+    crate::seats::each_seat(g, &mut |v: &mut Game| {
         crate::close::close_reset(v);
         crate::stalk::stalk_reset(v);
         crate::tapstep::tap_reset(v);
@@ -680,8 +195,9 @@ pub fn game_search_summary(g: &mut crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();
     for gd in g.guards.clone() {
         if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
-        let n = match g.level.routes.get(g.gd[gd].route_i) {
-            Some(&r) => g.tab.route[r].name.clone(),
+        let route = usize::try_from(g.gd[gd].route_i).ok().and_then(|i| g.level.routes.get(i).copied());   // (routeI -1, a man of no route, is undefined there)
+        let n = match route {
+            Some(r) => g.tab.route[r].name.clone(),
             None => g.gd[gd].callsign.clone(),
         };
         let s = crate::guards::search_summary(g, gd);
@@ -744,7 +260,7 @@ pub fn game_witness_summary(g: &mut crate::game::Game) -> String {
     let mut parts: Vec<String> = Vec::new();
     for gd in g.guards.clone() {
         let callsign = g.gd[gd].callsign.clone();
-        let temper = match temperament.get(callsign.clone()) { Some(t) => t.as_str(), None => "?" };
+        let temper = match temperament.iter().find(|(name, _)| *name == callsign) { Some((_, t)) => t.as_str(), None => "?" };
         let state = if g.gd[gd].state == crate::game::GuardState::Dead {
             if g.gd[gd].wound.is_some() { ", wounded" } else if crate::game::is_breathing(g, gd) { ", out cold" } else { ", dead" }
         } else { "" };
@@ -817,7 +333,7 @@ pub fn game_nearest_living_guard(g: &mut crate::game::Game, reach: Option<f64>, 
 pub fn game_interrogate_nearest(g: &mut crate::game::Game, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
     if g.pl[g.player].down { game_note(g, "you're down \u{2014} nobody answers to a man on the floor"); return None; }
     let Some(gd) = game_nearest_living_guard(g, Some(crate::dialogue::INTERROGATE_REACH), Some(true)) else {
-        game_note(g, &format!("nobody hostile within {} m to lean on \u{2014} walk up to a living guard", crate::dialogue::INTERROGATE_REACH));
+        game_note(g, &format!("nobody hostile within {} m to lean on \u{2014} walk up to a living guard", js::num_str(crate::dialogue::INTERROGATE_REACH)));
         return None;
     };
     let pick = game_interrogate(g, gd, rnd);
@@ -833,7 +349,7 @@ pub fn game_dialogue_summary(g: &mut crate::game::Game) -> String {
     let Some(gd) = game_nearest_living_guard(g, Some(m::INF), Some(true)) else { return String::from("dialogue: nobody left standing"); };
     let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[g.player].ch].pos);
     let s = crate::dialogue::dialogue_summary(g, gd);
-    if d <= crate::dialogue::INTERROGATE_REACH { format!("dialogue \u{25B8} {} \u{B7} in reach", s) } else { format!("dialogue \u{25B8} {} \u{B7} {:.1} m off", s, d) }
+    if d <= crate::dialogue::INTERROGATE_REACH { format!("dialogue \u{25B8} {} \u{B7} in reach", s) } else { format!("dialogue \u{25B8} {} \u{B7} {} m off", s, js::to_fixed(d, 1)) }
 }
 
 /// `g.audio.play(name, pos, gain)`.
@@ -841,53 +357,341 @@ fn audio_play(g: &mut Game, name: &str, pos: V3, gain: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), None);
 }
 
-// ---- seams: each step still blocked in skeleton 4, in the TypeScript's own arguments (notes.md, Skeleton)
+/// `g.audio.play(name, pos, gain, { rate })`.
+fn audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
+    crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
+}
 
-/// g.audio.play with `{ rate }`.
-fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts is JsMap<String, Opaque>, which cannot hold the number `rate`") }
-/// audio.play with `follow`: the voice lives while the roll's voice is still `tok`, and asks the prop where it is and the roll how loud (roll row by its prop).
-fn seam_audio_play_follow(g: &mut Game, name: &str, at: V3, gain: f64, tok: f64, p: PropId) { todo!("needs: game_audio_like_play's opts to carry a follow keyed by token (a closure in the TypeScript)") }
+// ------------------------------------------------------------ the panel's handles and small doors
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// The rooms queued for the pair, the panel's line.   (game.ts clearQueueSummary)
+pub fn game_clear_queue_summary(g: &mut crate::game::Game) -> String { crate::guards::clear_queue_summary(g) }
 
-    fn blank_game() -> Box<Game> { Box::new(Game::blank()) }
+/// (game.ts clearNearestRoom)
+pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force_clear(g) }
 
-    /// A later seat's set is on Game for its pass and back in its row after; the first seat's is the Game's own.
-    #[test]
-    fn stand_each_seat_walks_every_set() {
-        let mut g = blank_game();
-        let s0 = g.tab.cmd_seat.push(crate::cmd::Seat::blank());
-        let s1 = g.tab.cmd_seat.push(crate::cmd::Seat::blank());
-        let mut own = crate::seats::SeatSet::zeroed();
-        own.seat = s1;
-        g.tab.cmd_seat[s1].own = Some(own);
-        g.seats = vec![s0, s1];
-        g.seat = s0;
-        let mut seen: Vec<SeatId> = Vec::new();
-        stand_each_seat(&mut g, &mut |v: &mut Game| {
-            seen.push(v.seat);
-            v.threat_proximity = if v.seat.ix() == 0 { 10.0 } else { 20.0 };
+/// Camera follow position: a spectated guard, a rail's look, `at`, else the player.   (game.ts followPos)
+pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
+    let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
+    if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
+    if let Some(p) = crate::rails::rails_look(g) { return p; }
+    if let Some(a) = at { return a; }
+    let c = g.pl[g.player].ch;
+    g.ch[c].pos
+}
+
+/// (game.ts teleportPlayer)
+pub fn game_teleport_player(g: &mut crate::game::Game, p: V3) { crate::player::teleport_player(g, p) }
+
+/// What the player's feet are on as the hearing model has it.   (game.ts floorUnderPlayer)
+pub fn game_floor_under_player(g: &mut crate::game::Game) -> crate::floor::FloorMat {
+    let c = g.pl[g.player].ch;
+    let p = g.ch[c].pos;
+    crate::floor::step_mat(g, p)
+}
+
+/// The thud of a ragdoll's trunk or head meeting something, polled after the body's update.   (game.ts bodyThud)
+pub fn game_body_thud(g: &mut crate::game::Game, c_2: CharId) {
+    let hit = match g.ch[c_2].ragdoll { Some(r) => crate::ragdoll::ragdoll_take_impact(g, r, None, None), None => 0.0 };
+    if hit > 1.4 {
+        let at = match g.ch[c_2].bones.get(crate::character::Bone::Spine2) { Some(b) => *b, None => g.ch[c_2].pos };
+        crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(v3::clamp(0.35 + hit * 0.13, 0.4, 1.0)), None);
+        crate::destruction::destruction_thud(g, at, Some(0.5 + hit * 0.15), None);
+    }
+}
+
+/// (game.ts repairLights)
+pub fn game_repair_lights(g: &mut crate::game::Game) { crate::lighting::repair_lights(g) }
+
+/// Everything still in the air or the sound queue from what just happened: fresh guards must not inherit it.   (game.ts clearAftermath)
+pub fn game_clear_aftermath(g: &mut crate::game::Game) {
+    crate::frag::frag_reset(g);
+    crate::morale::morale_reset(g, None);
+    g.items.items.clear();
+    g.rings.clear();
+    g.shells.clear();
+    crate::sparks::sparks_clear(g);
+    crate::tracers::tracers_clear(g);
+    crate::particle_fx::clear_particle_fx(g);
+    crate::moths::moths_clear(g);
+    crate::destruction::destruction_clear_moving(g);
+    crate::shards::glass_shards_clear(g);
+    g.events.clear();
+    let seats = g.seats.clone();
+    for s in seats {
+        let pl = crate::cmd::seat_man(g, s);
+        g.pl[pl].pending_throw = None;
+        g.pl[pl].throw_held = false;
+        g.pl[pl].throw_preview = None;
+    }
+}
+
+/// The FN2000 in or out of the kit, applied to the man standing there now.   (game.ts setLoadout)
+pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
+    g.fn2000 = with_rifle;
+    let pl = g.player;
+    if !with_rifle && g.pl[pl].slot == crate::game::SlotKind::Rifle {
+        g.pl[pl].slot = crate::game::SlotKind::Pistol;
+        let rifle = g.pl[pl].rifle;
+        if crate::weapons::firearm_reloading(g, rifle) {
+            let c = g.pl[pl].ch;
+            crate::character::anim_cancel_reload(g, c);
+        }
+        crate::weapons::firearm_cancel_reload(g, rifle);
+    }
+    g.pl[pl].has_rifle = with_rifle;
+}
+
+/// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
+pub fn game_authored_on(g: &mut crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
+
+/// The level as authored: every switch back, every door, the marks, the panes, the debris.   (game.ts resetLevelState)
+pub fn game_reset_level_state(g: &mut crate::game::Game) {
+    let targets = g.targets.clone();
+    for t in targets {
+        let a = crate::sim_lightshome::fixture_authored(g, t);
+        crate::sim_lightshome::light_home_in(g, crate::sim_lightshome::light_in().on, Some(t), Some(if a { 1.0 } else { 0.0 }), None, None, None);
+    }
+    let doors = g.doors.list.clone();
+    for d in doors { crate::doors::door_reset(g, d); }
+    crate::render_decals::decals_clear(g);
+    crate::glass::reset_glass(g);
+    crate::glasspen::reset_glass_pen(g);
+    crate::winbars::reset_bars(g);
+    crate::glassbreak::glass_break_reset(g);   // (before the destruction's: the walls' nav re-bake in there must see whole panes)
+    crate::destruction::destruction_reset(g);
+    crate::shards::glass_shards_reset(g);
+    crate::wet::clear_wet_prints(g);
+    crate::snow_blast::clear_snow_blast(g);
+    crate::snow_marks::clear_snow_marks(g);
+    if let Some(mut t) = g.snow_tracks.take() {   // (the stub takes g and the tracks inside it: out of g for the call)
+        crate::snow_tracks::clear_snow_tracks(g, &mut t);
+        g.snow_tracks = Some(t);
+    }
+    crate::hours::hour_after_reset(g);
+    crate::air_dust::air_dust_reset(g);
+}
+
+/// (game.ts crackTest)
+pub fn game_crack_test(g: &mut crate::game::Game) -> f64 { crate::glass::crack_test(g) }
+
+/// (game.ts glassSummary)
+pub fn game_glass_summary(g: &mut crate::game::Game) -> String { crate::glass::glass_summary(g) }
+
+/// (game.ts wetSummary)
+pub fn game_wet_summary(g: &mut crate::game::Game) -> String { crate::wet::wet_summary(g) }
+
+/// (game.ts rainSummary)
+pub fn game_rain_summary(g: &mut crate::game::Game) -> String { crate::rain_fx::rain_summary(g) }
+
+/// The clocks the last try left running, as a new Game has them.   (game.ts cleanSlate)
+pub fn game_clean_slate(g: &mut crate::game::Game) {
+    g.alarm.raised_at = -100.0;
+    g.alarm.pos = [0.0, 0.0, 0.0];
+    let seats = g.seats.clone();
+    for &s in &seats { crate::seats::with_seat(g, s, &mut |g| g.torch_on_t = -100.0); }
+    g.last_sting_t = -100.0;
+    crate::gunwall::gun_wall_fresh(g);
+    crate::seats::each_seat(g, &mut |v: &mut Game| crate::guards::ground_fresh(v));
+    crate::wind::wind_fresh(g);
+}
+
+/// The player's restart: restartEncounter, the camera cut to the fresh man, the host told to start the picture's histories from nothing.   (game.ts restart)
+pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
+    game_restart_encounter(g);
+    if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }   // (after it: restartEncounter takes the old encounter's lines off the HUD)
+    if !g.touring && !crate::director::director_showing(g) && g.spectate < 0.0 {
+        let seats = g.seats.clone();
+        for s in seats {
+            let lens = g.tab.cmd_seat[s].cam;
+            let p = crate::seats::with_seat(g, s, &mut |g| game_follow_pos(g, None));
+            cut_lens(g, lens, p);
+        }
+        g.restart_cut = true;
+        g.stats.cleanrestart.cuts += 1;
+    }
+    crate::host_api::host_api_restart_picture(g, "level restarted");
+    g.stats.cleanrestart.pictures += 1;
+}
+
+/// Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored.   (game.ts restartEncounter)
+pub fn game_restart_encounter(g: &mut crate::game::Game) {
+    crate::math_dice::use_dice(g);
+    crate::sensors::sensors_own_reset(g);
+    crate::quiet::quiet_mission_current(g);
+    g.stats.cleanrestart.restarts += 1;
+    g.stats.cleanrestart.lines += g.messages.len() as i32;
+    g.messages.clear();   // (the lines of the encounter that ended go before anything below speaks)
+    crate::quiet::quiet_mission_before_restart(g);   // deals this encounter's start BEFORE the fresh Player and Guards read it
+    let seats = g.seats.clone();
+    for &s in &seats {
+        let old = crate::cmd::seat_man(g, s);
+        let light = g.pl[old].light;
+        // (manLeaves(v.player.char, v.player): not in the game, notInTheGame.txt)
+        let spawn = g.level.player_spawn;
+        let index = g.tab.cmd_seat[s].index;
+        let at = crate::seats::spot_beside(g, spawn, index);
+        let fn2000 = g.fn2000;
+        let (men, rig) = (g.men, g.rig);
+        let pl = crate::game::player_new(g, men, rig, at, Some(fn2000), Some(index));
+        crate::seats::with_seat(g, s, &mut |g| {
+            g.player = pl;
+            g.pl[pl].light = light;
+            crate::kit::kit_fresh(g);
+            let c = g.pl[pl].ch;
+            crate::character::character_update(g, c, 0.0);   // pose and bones exist before this frame's capsule upload
         });
-        assert_eq!(seen, vec![s0, s1]);
-        assert_eq!(g.seat, s0);
-        assert_eq!(g.threat_proximity, 10.0);
-        let own = g.tab.cmd_seat[s1].own.as_ref().unwrap();
-        assert_eq!(own.seat, s1);
-        assert_eq!(own.threat_proximity, 20.0);
     }
+    crate::cues::cues_reset(g);
+    crate::squadnet::squad_net_reset(g);
+    crate::seats::each_seat(g, &mut |v: &mut Game| { crate::holdfire::hold_fire_reset(v); crate::showwhy::reset_show_why(v); });
+    crate::dialogue::ambient_restart(g);
+    crate::fogofwar::fog_of_war_reset(g);
+    crate::game::game_reset_guards(g);
+    if let Some(last) = g.messages.last() { if last.text == "guards reset" { g.messages.pop(); } }
+    if crate::lighting::fresh_lights(g) { g.stats.cleanrestart.relit += 1; }
+    game_reset_level_state(g);
+    crate::lightswitch::light_switch_reset(g);
+    crate::props::prop_system_reset(g);
+    for r in g.rolls.iter_mut() { r.voice = 0.0; }
+    g.rolls.clear();
+    g.events.clear();
+    for &s in &seats { crate::seats::with_seat(g, s, &mut |g| g.use_door = None); }
+    g.called_in = false;
+    g.stood_down = false;
+    // anything still in the air or venting belongs to the encounter that just ended
+    game_clear_aftermath(g);
+    crate::smoke_types::smoke_system_like_clear_all(g);
+    if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
+    g.engine.host_books = None;
+    for &s in &seats {
+        crate::seats::with_seat(g, s, &mut |g| { g.hover = None; g.interactables = Vec::new(); g.nearby = Vec::new(); g.act = None; });
+    }
+    game_clean_slate(g);
+    crate::devices::devices_reset(g);
+    let t = g.time;
+    g.mission = crate::game::new_mission(t);
+    g.mission.serial = g.serial();   // (a whole write of g.mission is a new run: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity)
+    g.chronicle = crate::chronicle::Chronicle::blank();
+    crate::director::director_on_encounter_restart(g);
+    crate::nightbreach::night_breach_on_encounter_restart(g);
+    crate::rescue::rescue_on_encounter_restart(g);
+    crate::quiet::quiet_mission_on_encounter_restart(g);
+    crate::lighting::update_targets(g, 0.0);   // the lights painted as they now stand: what the next tick reads before its own paint
+    crate::fire::update_fire(g, 0.0);
+}
 
-    /// One box in the TypeScript: the bit lands in both holders and leaves the other bits.
-    #[test]
-    fn mark_area_lit_writes_both_holders() {
-        let mut g = blank_game();
-        let mut b = crate::scene_boxes::Box::zeroed();
-        b.flags = 2.0;
-        g.level.boxes.push(b.clone());
-        let id = g.col.boxes.push(b);
-        mark_area_lit(&mut g, 0, id);
-        assert_eq!(g.level.boxes[0].flags, 34.0);
-        assert_eq!(g.col.boxes[id].flags, 34.0);
+/// (game.ts setGroup)
+pub fn game_set_group(g: &mut crate::game::Game, group: &str, on: bool) { crate::lighting::set_group(g, group, on) }
+
+/// (game.ts toggleTarget)
+pub fn game_toggle_target(g: &mut crate::game::Game, t: FixtureId) { crate::lighting::toggle_target(g, t) }
+
+/// (game.ts setBlackout)
+pub fn game_set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::game::GameSetBlackoutCause) {
+    let cause = match cause {
+        crate::game::GameSetBlackoutCause::Shot => crate::lighting::SetBlackoutCause::Shot,
+        crate::game::GameSetBlackoutCause::Ocp => crate::lighting::SetBlackoutCause::Ocp,
+        crate::game::GameSetBlackoutCause::Debug => crate::lighting::SetBlackoutCause::Debug,
+        crate::game::GameSetBlackoutCause::Hand => crate::lighting::SetBlackoutCause::Hand,
+    };
+    crate::lighting::set_blackout(g, seconds, cause)
+}
+
+/// (game.ts endBlackout)
+pub fn game_end_blackout(g: &mut crate::game::Game) { crate::lighting::end_blackout(g) }
+
+/// `cause` defaults to 'shot' here, as the TypeScript's parameter does.   (game.ts lightEvent)
+pub fn game_light_event(g: &mut crate::game::Game, t: FixtureId, cause: Option<crate::game::GameLightEventCause>, sw_at: Option<V3>) {
+    let cause = match cause.unwrap_or(crate::game::GameLightEventCause::Shot) {
+        crate::game::GameLightEventCause::Shot => crate::lighting::LightEventCause::Shot,
+        crate::game::GameLightEventCause::Ocp => crate::lighting::LightEventCause::Ocp,
+    };
+    crate::lighting::light_event(g, t, Some(cause), sw_at)
+}
+
+/// (game.ts ocp)
+pub fn game_ocp(g: &mut crate::game::Game, t: Option<FixtureId>) { crate::lighting::ocp(g, t) }
+
+/// (game.ts toggleDrag)
+pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { crate::player::toggle_drag(g, which) }
+
+// ------------------------------------------------------------ update
+
+/// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.   (game.ts update)
+pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+    crate::math_dice::use_dice(g);
+    crate::quiet::quiet_mission_current(g);
+    let me = game_host_seat(g);
+    if g.restart_cut {
+        g.restart_cut = false;
+        let cut = crate::cmd::seat_take_cut(g, me);
+        if let Some(cut) = cut {
+            if g.tab.camera[cam].pin.is_none() {
+                cut_lens(g, cam, cut);
+                crate::camera::follow_camera_rebuild(g, cam);
+            }
+        }
     }
+    crate::director::director_inject_input(g, input);
+    game_host_before(g, input);
+    crate::director::director_attach(g, crate::director::DirectorAttachO { cam: Some(cam), input: Some(input) });
+    let into = g.cmd_buf.take();
+    let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
+    g.cmd_buf = Some(c.clone());
+    if g.seats.len() == 1 {
+        game_step(g, dt, &c);
+    } else {
+        let seats = g.seats.clone();
+        let mut cmds = Vec::with_capacity(seats.len());
+        for s in seats {
+            if Some(s) == g.local_seat { cmds.push(c.clone()); } else { cmds.push(crate::cmd::seat_handed(g, s, &c)); }
+        }
+        game_step_seats(g, dt, &cmds);
+    }
+    game_host_after(g, input, cam, canvas);
+}
+
+/// What the host's input is told before a step: a held press's cursor is followed off the view only while the creep reads the mouse as a stick.   (game.ts hostBefore)
+pub fn game_host_before(g: &mut crate::game::Game, input: InputId) {
+    g.tab.input[input].drag_off = g.k.stalk.drag;
+}
+
+/// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.   (game.ts hostAfter)
+pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+    let me = game_host_seat(g);
+    let me_cam = g.tab.cmd_seat[me].cam;
+    let (peek, kick) = (g.tab.camera[me_cam].peek_offset, g.tab.camera[me_cam].kick);
+    g.tab.camera[cam].peek_offset = peek;
+    g.tab.camera[cam].kick = kick;
+    if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
+    let vp = g.tab.camera[cam].view_proj;
+    crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
+    crate::rails::rails_host_view(g, cam);
+    crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
+}
+
+/// The tick for a game of one seat.   (game.ts step)
+pub fn game_step(g: &mut crate::game::Game, dt: f64, cmd: &crate::cmd::PlayerCmd) {
+    let buf = vec![cmd.clone()];
+    game_step_seats(g, dt, &buf);
+}
+
+/// The local seat, or the first for a host that shows nobody.   (game.ts hostSeat)
+pub fn game_host_seat(g: &mut crate::game::Game) -> SeatId { g.local_seat.unwrap_or(g.seats[0]) }
+
+/// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
+pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+    // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, boxes.ts rayAside, collision.ts aside)
+    let mut ray_own = crate::scene_boxes::BoxWorldRayAsideOwn::zeroed();
+    let mut col_own = crate::scene_collision::AsideOwn::zeroed();
+    crate::scene_boxes::box_world_ray_aside(g, &mut ray_own, &mut |g| crate::scene_collision::aside(g, &mut col_own, &mut *fn_))
+}
+
+/// A lens of the host's to put a record's view on while it asks aside (cmd.ts loadLens): scratch, in no snapshot.   (game.ts asideLens)
+pub fn game_aside_lens(g: &mut crate::game::Game) -> CameraId {
+    if let Some(lens) = g.alone_own.lens { return lens; }
+    let lens = g.tab.camera.push(crate::camera::FollowCamera::blank());
+    g.alone_own.lens = Some(lens);
+    lens
 }

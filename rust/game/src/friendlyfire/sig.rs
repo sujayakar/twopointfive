@@ -15,7 +15,7 @@ pub fn ff_body(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 pub fn ff_side(g: &mut crate::game::Game, sg: Option<GuardId>) -> bool { todo!() }
 
 /// (src/game/friendlyfire.ts:63 friendInCone)
-pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<&crate::weapons::WeaponDef>, on: Option<CharId>) -> Option<crate::friendlyfire::FriendInCone> { todo!() }
+pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<crate::friendlyfire::FriendInCone> { todo!() }
 
 /// (src/game/friendlyfire.ts:92 ffUnpressed)
 pub fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzle: V3, to: V3, spread: f64, def: &crate::weapons::WeaponDef) -> bool { todo!() }

@@ -13,10 +13,6 @@ fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: V3) -> V3 {
     match g.ch[c].bones.get(bone) { Some(p) => *p, None => v3::add(g.ch[c].pos, up) }
 }
 
-// ---------------------------------------------------------------- seam: what skeleton 3 still cannot say
-/// civilians.ts:424,514 g.audio.play(name, at, vol, { rate }): `opts` of game_audio_like_play holds `crate::Opaque`, which cannot carry the rate
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: Option<V3>, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
-
 /// `s.view.viewProj` and `g.viewProj`, as in_view reads them
 fn as_in_view(vp: &Option<crate::game::GameViewProj>) -> Option<InViewVp> {
     match vp {
@@ -49,7 +45,7 @@ pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialog
         let c = g.gd[gd].ch;
         let head = bone_or(g, c, crate::character::Bone::Head, [0.0, 0.4, 0.0]);
         let rate = if g.cv[cv].def.kind == crate::scene_level::CivilianDefKind::Worker { 1.15 } else { 1.5 };
-        seam_audio_play_rate(g, "heldProtest", Some(head), 0.5, rate);
+        crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(head), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     }
     true
 }
@@ -68,7 +64,7 @@ pub fn civilians_on_floor(g: &mut crate::game::Game) -> bool {
 
 /// The ones to draw and collide with this frame.   (civilians.ts civiliansShown)
 pub fn civilians_shown(g: &mut crate::game::Game) -> Vec<GuardId> {
-    if !civilians_on_floor(g) { return Vec::new(); }
+    if !civilians_on_floor(g) { return crate::civilians::none(); }
     let mut out = Vec::new();
     for &cv in g.civilians.iter() { if g.cv[civ_of(g, cv)].state != CivState::Gone { out.push(cv); } }
     out
@@ -76,8 +72,7 @@ pub fn civilians_shown(g: &mut crate::game::Game) -> Vec<GuardId> {
 
 /// The living ones a round can find and Sam cannot walk through.   (civilians.ts civilianBodies)
 pub fn civilian_bodies(g: &mut crate::game::Game) -> Vec<GuardId> {
-    let arg = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    let men = crate::seats::men(g, &arg);
+    let men = crate::seats::men(g);
     let shown = civilians_shown(g);
     let mut out = Vec::new();
     for cv in shown {
@@ -113,7 +108,7 @@ pub fn later(g: &mut crate::game::Game, secs: f64, p: &crate::civilians::LaterP)
 fn on_shift(g: &Game, o: Option<GuardId>) -> Option<GuardId> { o.filter(|x| g.guards.contains(x)) }
 
 /// The doing itself, when its time comes.   (civilians.ts runPending)
-pub fn run_pending(g: &mut crate::game::Game, p: &mut crate::civilians::Pending) {
+pub fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
     use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue as D, ChronicleNDataValue as N};
     use crate::game::GuardState;
     use crate::guards::RaiseEscalationCause as Why;
@@ -242,8 +237,7 @@ pub fn on_screen_head(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
         for s in seats {
-            let man = crate::cmd::seat_man(g, s);
-            let vp = crate::seats::with_seat(g, man, &mut |g| as_in_view(&g.view_proj));
+            let vp = crate::seats::with_seat(g, s, &mut |g| as_in_view(&g.view_proj));
             if in_view(vp.as_ref(), p) { return true; }
         }
         return false;
@@ -325,7 +319,7 @@ pub fn scream(g: &mut crate::game::Game, gd: GuardId, shout: Option<&str>) {
     g.cv[cv].scream_at = g.time;
     let head = bone_or(g, g.gd[gd].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
     let rate = if g.cv[cv].def.kind == crate::scene_level::CivilianDefKind::Worker { 1.15 } else { 1.5 };
-    seam_audio_play_rate(g, "heldProtest", Some(head), 0.7, rate);
+    crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(head), Some(0.7), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
     if let Some(s) = shout { if !s.is_empty() { civ_say(g, gd, s, None, None); } }
     hear_scream(g, gd);
 }
@@ -342,8 +336,8 @@ pub fn update_civilians(g: &mut crate::game::Game, dt: f64) {
         let now = g.time;
         let row = floor_of(g);
         if now >= row.pending[i].at {
-            let mut p = row.pending.remove(i);
-            run_pending(g, &mut p);
+            let p = row.pending.remove(i);
+            run_pending(g, &p);
         }
     }
     evacuation_check(g);
@@ -671,21 +665,9 @@ pub fn civilian_seated(g: &mut crate::game::Game, gd: GuardId) -> bool {
     v3::dist_xz(mark, g.ch[g.gd[gd].ch].pos) < 1.6
 }
 
-/// A row of TASK_CLIP: the whole-figure clip a task plays (every one loops), and how long it takes to get up out of it.
-#[derive(Clone, Copy)]
-struct TaskClip { clip: &'static str, rate: f64, fade_in: f64, fade_out: f64, rise: Option<f64> }
-/// TASK_CLIP   (civilians.ts:675)
-fn task_clip(task: crate::scene_level::CivilianTask) -> Option<TaskClip> {
-    use crate::scene_level::CivilianTask as T;
-    match task {
-        T::Stand => None,
-        T::Wipe => Some(TaskClip { clip: "Interact", rate: 0.85, fade_in: 0.4, fade_out: 0.4, rise: None }),
-        T::Bin => Some(TaskClip { clip: "Fixing_Kneeling", rate: 0.8, fade_in: 0.6, fade_out: 0.7, rise: Some(0.8) }),
-        T::Sit => Some(TaskClip { clip: "Sitting_Idle_Loop", rate: 1.0, fade_in: 0.7, fade_out: 0.8, rise: Some(1.0) }),
-        T::Cooler => Some(TaskClip { clip: "Interact", rate: 0.6, fade_in: 0.4, fade_out: 0.4, rise: None }),
-        T::Printer => Some(TaskClip { clip: "Interact", rate: 0.7, fade_in: 0.4, fade_out: 0.4, rise: None }),
-        T::Shelf => Some(TaskClip { clip: "PickUp_Table", rate: 0.7, fade_in: 0.4, fade_out: 0.5, rise: None }),
-    }
+/// `TASK_CLIP[task]`: the whole-figure clip a task plays, and how long it takes to get up out of it.
+fn clip_of(task: crate::scene_level::CivilianTask) -> Option<TASKCLIPValue> {
+    crate::civilians::task_clip().get(String::from(task.as_str())).cloned().flatten()
 }
 /// `C.def.face?.[gd.wp]`
 fn face_at(g: &Game, cv: CivId, wp: usize) -> Option<f64> { g.cv[cv].def.face.as_ref().and_then(|f| f.get(wp).copied()) }
@@ -720,12 +702,12 @@ pub fn work(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::civilians
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
         g.ch[c].vel = [0.0, 0.0, 0.0];
         let task = task_at(g, gd);
-        let k = task_clip(task);
+        let k = clip_of(task);
         let face = face_at(g, cv, wp);
         if let Some(f) = face { if f.is_finite() { g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, f, 3.0 * dt); } }
         let settled = match face { None => true, Some(f) => m::abs(v3::wrap_angle(g.ch[c].body_yaw - f)) < 0.35 };
         g.ch[c].anim.act = match k {
-            Some(k) if settled => Some(crate::character::AnimAct { clip: String::from(k.clip), loop_: Some(true), rate: Some(k.rate), in_: Some(k.fade_in), out: Some(k.fade_out) }),
+            Some(k) if settled => Some(crate::character::AnimAct { clip: k.clip, loop_: k.loop_, rate: k.rate, in_: k.in_, out: k.out }),
             _ => None,
         };
         g.cv[cv].seated = task == T::Sit && settled;
@@ -791,7 +773,8 @@ pub fn work(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::civilians
 pub fn end_task(g: &mut crate::game::Game, gd: GuardId) {
     let cv = civ_of(g, gd);
     let c = g.gd[gd].ch;
-    let k = task_clip(task_at(g, gd));
+    let task = task_at(g, gd);
+    let k = clip_of(task);
     g.ch[c].anim.act = None;
     let up = g.cv[cv].seated || crate::character::anim_act_shown(g, c) > 0.5;
     g.cv[cv].rise_t = if up { k.and_then(|k| k.rise).unwrap_or(0.0) } else { 0.0 };
@@ -848,7 +831,7 @@ pub fn to_startled(g: &mut crate::game::Game, gd: GuardId, at: V3, sound: bool) 
     let pool = no_security(g, &lines.glimpse);
     let s = pick(g, gd, &pool);
     civ_say(g, gd, &s, None, None);
-    let line = format!("startled by {} at ({:.1}, {:.1})", if sound { "a noise" } else { "a glimpse" }, at[0], at[2]);
+    let line = format!("startled by {} at ({}, {})", if sound { "a noise" } else { "a glimpse" }, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     log(g, gd, &line);
     set_state(g, gd, CivState::Startled);
 }
@@ -1248,9 +1231,9 @@ mod tests {
     #[test]
     fn only_chair_and_bin_take_time_to_rise_from() {
         use crate::scene_level::CivilianTask as T;
-        assert!(task_clip(T::Stand).is_none());
-        assert_eq!(task_clip(T::Sit).unwrap().rise, Some(1.0));
-        assert_eq!(task_clip(T::Bin).unwrap().rise, Some(0.8));
-        assert_eq!(task_clip(T::Wipe).unwrap().rise, None);
+        assert!(clip_of(T::Stand).is_none());
+        assert_eq!(clip_of(T::Sit).unwrap().rise, Some(1.0));
+        assert_eq!(clip_of(T::Bin).unwrap().rise, Some(0.8));
+        assert_eq!(clip_of(T::Wipe).unwrap().rise, None);
     }
 }

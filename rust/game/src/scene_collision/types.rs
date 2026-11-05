@@ -9,27 +9,27 @@ pub enum GridWindShare {
     Under { roofs: Option<Vec<Vec<f64>>> },
 }
 /// is this point of a pane open (glassbreak.ts:213): glass_break_open_at(g, bi, p), or the burst's view `also` where one is on
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum PaneRule {
     GlassBreak,
 }
 /// what the module's copy judges panes by (glassbreak.ts:213, () => this): g.glassBreak
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum PaneRows {
     GlassBreak,
 }
 /// is this pane open along a walker's whole height (glassbreak.ts:215): glass_break_walkable(g, bi)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum GlassWalkable {
     GlassBreak,
 }
 /// the flags a line of fire passes (winbars.ts:79): BoxFlag.Bar if crate::winbars::bars_live(g), else 0
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum FirePass {
     Bars,
 }
 
-/// (TypeScript: BlobRow, src/scene/collision.ts:108)
+/// (TypeScript: BlobRow, src/scene/collision.ts:115)
 #[derive(Clone, Copy, Debug)]
 pub struct BlobRow {
     pub x: f64,
@@ -54,7 +54,7 @@ impl BlobRow {
 }
 impl Default for BlobRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SmokeNumbers, src/scene/collision.ts:109)
+/// (TypeScript: SmokeNumbers, src/scene/collision.ts:116)
 #[derive(Clone, Copy, Debug)]
 pub struct SmokeNumbers {
     pub sigma: f64,
@@ -77,7 +77,7 @@ impl SmokeNumbers {
 }
 impl Default for SmokeNumbers { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GridWind, src/scene/collision.ts:123)
+/// (TypeScript: GridWind, src/scene/collision.ts:130)
 #[derive(Clone, Debug)]
 pub struct GridWind {
     pub x: f64,
@@ -102,7 +102,7 @@ impl GridWind {
 }
 impl Default for GridWind { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: StaticCollision, src/scene/collision.ts:126)
+/// (TypeScript: StaticCollision, src/scene/collision.ts:135)
 #[derive(Clone, Debug)]
 pub struct StaticCollision {
     pub cells: Vec<Vec<f64>>,
@@ -111,7 +111,7 @@ pub struct StaticCollision {
     pub cs: f64,
     pub nav: crate::scene_collision::NavGrid,
     pub sound: crate::scene_collision::SoundPaths,
-    pub boxes: Tab<BoxId, crate::scene_boxes::Box>,
+    pub boxes: Vec<BoxId>,
     pub mirror: crate::scene_box_mirror::BoxMirror,
     pub windowed: bool,
     pub stamp: Vec<i32>,
@@ -139,7 +139,7 @@ impl StaticCollision {
             cs: 1.0,
             nav: crate::scene_collision::NavGrid::blank(),
             sound: crate::scene_collision::SoundPaths::blank(),
-            boxes: Tab::new(),
+            boxes: Vec::new(),
             mirror: crate::scene_box_mirror::BoxMirror::blank(),
             windowed: false,
             stamp: Vec::new(),
@@ -161,14 +161,13 @@ impl StaticCollision {
 }
 impl Default for StaticCollision { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: NavGrid, src/scene/collision.ts:960)
+/// (TypeScript: NavGrid, src/scene/collision.ts:947)
 #[derive(Clone, Debug)]
 pub struct NavGrid {
     pub cell: f64,
     pub w: f64,
     pub h: f64,
     pub blocked: Vec<u8>,
-    pub scratch: Option<crate::scene_collision::NavScratch>,
 }
 impl NavGrid {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -178,38 +177,12 @@ impl NavGrid {
             w: 0.0,
             h: 0.0,
             blocked: Vec::new(),
-            scratch: None,
         }
     }
 }
 impl Default for NavGrid { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: NavScratch, src/scene/collision.ts:1188)
-#[derive(Clone, Debug)]
-pub struct NavScratch {
-    pub g: Vec<f32>,
-    pub f: Vec<f32>,
-    pub came: Vec<i32>,
-    pub closed: Vec<u8>,
-    pub open: Vec<i32>,
-    pub seen: Vec<i32>,
-}
-impl NavScratch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NavScratch {
-            g: Vec::new(),
-            f: Vec::new(),
-            came: Vec::new(),
-            closed: Vec::new(),
-            open: Vec::new(),
-            seen: Vec::new(),
-        }
-    }
-}
-impl Default for NavScratch { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: SoundPaths, src/scene/collision.ts:867)
+/// (TypeScript: SoundPaths, src/scene/collision.ts:900)
 #[derive(Clone, Debug)]
 pub struct SoundPaths {
     pub cache: JsMap<String, crate::scene_collision::SoundPathsCacheValue>,
@@ -228,7 +201,7 @@ impl SoundPaths {
 }
 impl Default for SoundPaths { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:868 SoundPaths.cache, src/scene/collision.ts:868)
+/// (TypeScript: inline at src/scene/collision.ts:901 SoundPaths.cache, src/scene/collision.ts:901)
 #[derive(Clone, Copy, Debug)]
 pub struct SoundPathsCacheValue {
     pub t: f64,
@@ -245,7 +218,7 @@ impl SoundPathsCacheValue {
 }
 impl Default for SoundPathsCacheValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Propagation, src/scene/collision.ts:859)
+/// (TypeScript: Propagation, src/scene/collision.ts:892)
 #[derive(Clone, Copy, Debug)]
 pub struct Propagation {
     pub direct: bool,
@@ -272,7 +245,7 @@ impl Propagation {
 }
 impl Default for Propagation { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:582 StaticCollision.lampQ, src/scene/collision.ts:582)
+/// (TypeScript: inline at src/scene/collision.ts:611 StaticCollision.lampQ, src/scene/collision.ts:611)
 #[derive(Clone, Copy, Debug)]
 pub struct StaticCollisionLampQ {
     pub on: bool,
@@ -316,7 +289,7 @@ impl ShotPanesItem {
 }
 impl Default for ShotPanesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:100 BOTH, src/scene/collision.ts:100)
+/// (TypeScript: inline at src/scene/collision.ts:101 BOTH, src/scene/collision.ts:101)
 #[derive(Clone, Debug)]
 pub struct SceneCollisionModBOTH {
     pub on: bool,
@@ -341,7 +314,7 @@ impl SceneCollisionModBOTH {
 }
 impl Default for SceneCollisionModBOTH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:104 ANYTIME, src/scene/collision.ts:104)
+/// (TypeScript: inline at src/scene/collision.ts:105 ANYTIME, src/scene/collision.ts:105)
 #[derive(Clone, Debug)]
 pub struct SceneCollisionModANYTIME {
     pub on: bool,
@@ -362,7 +335,7 @@ impl SceneCollisionModANYTIME {
 }
 impl Default for SceneCollisionModANYTIME { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:106 SENSED, src/scene/collision.ts:106)
+/// (TypeScript: inline at src/scene/collision.ts:107 SENSED, src/scene/collision.ts:107)
 #[derive(Clone, Copy, Debug)]
 pub struct SceneCollisionModSENSED {
     pub sight: f64,
@@ -385,7 +358,22 @@ impl SceneCollisionModSENSED {
 }
 impl Default for SceneCollisionModSENSED { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:111 LAMPS, src/scene/collision.ts:111)
+/// (TypeScript: inline at src/scene/collision.ts:113 SENSE_WATCH, src/scene/collision.ts:113)
+#[derive(Clone, Copy, Debug)]
+pub struct SENSEWATCH {
+    pub see: Option<crate::FnField>,
+}
+impl SENSEWATCH {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        SENSEWATCH {
+            see: None,
+        }
+    }
+}
+impl Default for SENSEWATCH { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/scene/collision.ts:118 LAMPS, src/scene/collision.ts:118)
 #[derive(Clone, Copy, Debug)]
 pub struct SceneCollisionModLAMPS {
     pub parts: f64,
@@ -400,7 +388,7 @@ impl SceneCollisionModLAMPS {
 }
 impl Default for SceneCollisionModLAMPS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:113 RAYS, src/scene/collision.ts:113)
+/// (TypeScript: inline at src/scene/collision.ts:120 RAYS, src/scene/collision.ts:120)
 #[derive(Clone, Copy, Debug)]
 pub struct SceneCollisionModRAYS {
     pub n: f64,
@@ -417,7 +405,7 @@ impl SceneCollisionModRAYS {
 }
 impl Default for SceneCollisionModRAYS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:117 PRICED, src/scene/collision.ts:117)
+/// (TypeScript: inline at src/scene/collision.ts:124 PRICED, src/scene/collision.ts:124)
 #[derive(Clone, Copy, Debug)]
 pub struct SceneCollisionModPRICED {
     pub n: f64,
@@ -438,7 +426,7 @@ impl SceneCollisionModPRICED {
 }
 impl Default for SceneCollisionModPRICED { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:120 bothPanes, src/scene/collision.ts:120)
+/// (TypeScript: inline at src/scene/collision.ts:127 bothPanes, src/scene/collision.ts:127)
 #[derive(Clone, Copy, Debug)]
 pub struct BothPanesItem {
     pub bi: f64,
@@ -474,37 +462,22 @@ impl LineBox {
 }
 impl Default for LineBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:239 aside(own), src/scene/collision.ts:239)
+/// (TypeScript: inline at src/scene/collision.ts:248 aside(own), src/scene/collision.ts:248)
 #[derive(Clone, Debug)]
 pub struct AsideOwn {
-    pub s: Option<crate::scene_collision::NavScratch>,
     pub q: Option<crate::scene_collision::AsideOwnQ>,
 }
 impl AsideOwn {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         AsideOwn {
-            s: None,
             q: None,
         }
     }
 }
 impl Default for AsideOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet AsideOwn.s, quiet AsideOwn.s)
-#[derive(Clone, Copy, Debug)]
-pub struct AsideOwnS {
-}
-impl AsideOwnS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AsideOwnS {
-        }
-    }
-}
-impl Default for AsideOwnS { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:239 AsideOwn.q, src/scene/collision.ts:239 AsideOwn.q)
+/// (TypeScript: inline at src/scene/collision.ts:248 AsideOwn.q, src/scene/collision.ts:248 AsideOwn.q)
 #[derive(Clone, Debug)]
 pub struct AsideOwnQ {
     /// INVENTED by a review: see the proposals
@@ -538,7 +511,7 @@ impl AsideOwnQ {
 }
 impl Default for AsideOwnQ { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:442 thingsRay ->, src/scene/collision.ts:442)
+/// (TypeScript: inline at quiet thingsRay ->, src/scene/collision.ts:451)
 #[derive(Clone, Copy, Debug)]
 pub struct ThingsRay {
     pub row: f64,
@@ -559,7 +532,7 @@ impl ThingsRay {
 }
 impl Default for ThingsRay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:446 thingsAsk ->, src/scene/collision.ts:446)
+/// (TypeScript: inline at quiet thingsAsk ->, src/scene/collision.ts:455)
 #[derive(Clone, Copy, Debug)]
 pub struct ThingsAsk {
     pub row: f64,
@@ -580,7 +553,7 @@ impl ThingsAsk {
 }
 impl Default for ThingsAsk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:456 thingsBoth(t), src/scene/collision.ts:456)
+/// (TypeScript: inline at src/scene/collision.ts:465 thingsBoth(t), src/scene/collision.ts:465)
 #[derive(Clone, Copy, Debug)]
 pub struct ThingsBothT {
     pub t: f64,
@@ -601,7 +574,7 @@ impl ThingsBothT {
 }
 impl Default for ThingsBothT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:498 segmentBlocked(panes), src/scene/collision.ts:498)
+/// (TypeScript: inline at src/scene/collision.ts:507 segmentBlocked(panes), src/scene/collision.ts:507)
 #[derive(Clone, Copy, Debug)]
 pub struct SegmentBlockedPanesItem {
     pub bi: f64,
@@ -618,7 +591,7 @@ impl SegmentBlockedPanesItem {
 }
 impl Default for SegmentBlockedPanesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:502 segmentBlockedAsk(panes), src/scene/collision.ts:502)
+/// (TypeScript: inline at src/scene/collision.ts:511 segmentBlockedAsk(panes), src/scene/collision.ts:511)
 #[derive(Clone, Copy, Debug)]
 pub struct SegmentBlockedAskPanesItem {
     pub bi: f64,
@@ -635,7 +608,7 @@ impl SegmentBlockedAskPanesItem {
 }
 impl Default for SegmentBlockedAskPanesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:562 eyeContact(E), src/scene/collision.ts:562)
+/// (TypeScript: inline at src/scene/collision.ts:591 eyeContact(E), src/scene/collision.ts:591)
 #[derive(Clone, Copy, Debug)]
 pub struct EyeContactE {
     pub pos: V3,
@@ -662,7 +635,7 @@ impl EyeContactE {
 }
 impl Default for EyeContactE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:562 eyeContact ->, src/scene/collision.ts:562)
+/// (TypeScript: inline at src/scene/collision.ts:591 eyeContact ->, src/scene/collision.ts:591)
 #[derive(Clone, Copy, Debug)]
 pub struct EyeContact {
     pub visible: bool,
@@ -681,7 +654,7 @@ impl EyeContact {
 }
 impl Default for EyeContact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:567 eyeContactAsk(E), src/scene/collision.ts:567)
+/// (TypeScript: inline at src/scene/collision.ts:596 eyeContactAsk(E), src/scene/collision.ts:596)
 #[derive(Clone, Copy, Debug)]
 pub struct EyeContactAskE {
     pub pos: V3,
@@ -708,7 +681,7 @@ impl EyeContactAskE {
 }
 impl Default for EyeContactAskE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:567 eyeContactAsk ->, src/scene/collision.ts:567)
+/// (TypeScript: inline at src/scene/collision.ts:596 eyeContactAsk ->, src/scene/collision.ts:596)
 #[derive(Clone, Copy, Debug)]
 pub struct EyeContactAsk {
     pub visible: bool,
@@ -727,7 +700,7 @@ impl EyeContactAsk {
 }
 impl Default for EyeContactAsk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:583 lampsBegin(shade), src/scene/collision.ts:583)
+/// (TypeScript: inline at src/scene/collision.ts:612 lampsBegin(shade), src/scene/collision.ts:612)
 #[derive(Clone, Debug)]
 pub struct LampsBeginShade {
     pub grid: crate::scene_collision::LampsBeginShadeGrid,
@@ -744,7 +717,7 @@ impl LampsBeginShade {
 }
 impl Default for LampsBeginShade { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:583 LampsBeginShade.grid, src/scene/collision.ts:583)
+/// (TypeScript: inline at src/scene/collision.ts:612 LampsBeginShade.grid, src/scene/collision.ts:612)
 #[derive(Clone, Copy, Debug)]
 pub struct LampsBeginShadeGrid {
     pub sim: crate::Opaque,
@@ -761,7 +734,39 @@ impl LampsBeginShadeGrid {
 }
 impl Default for LampsBeginShadeGrid { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:637 gridStep(K), src/scene/collision.ts:637)
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum SenseForRow {
+    Sound,
+    Paths,
+}
+impl SenseForRow {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            SenseForRow::Sound => "sound",
+            SenseForRow::Paths => "paths",
+        }
+    }
+}
+
+/// (TypeScript: inline at src/scene/collision.ts:658 senseFor ->, src/scene/collision.ts:658)
+#[derive(Clone, Copy, Debug)]
+pub struct SenseFor {
+    pub set: f64,
+    pub ask: f64,
+}
+impl SenseFor {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        SenseFor {
+            set: 0.0,
+            ask: 0.0,
+        }
+    }
+}
+impl Default for SenseFor { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/scene/collision.ts:670 gridStep(K), src/scene/collision.ts:670)
 #[derive(Clone, Copy, Debug)]
 pub struct GridStepK {
     pub decay: f64,
@@ -786,24 +791,22 @@ impl GridStepK {
 }
 impl Default for GridStepK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:638 gridStep(glow), src/scene/collision.ts:638)
+/// (TypeScript: inline at src/scene/collision.ts:671 gridStep(glow), src/scene/collision.ts:671)
 #[derive(Clone, Copy, Debug)]
 pub struct GridStepGlow {
     pub k: crate::scene_collision::GridStepGlowK,
-    pub lamps: crate::FnField,
 }
 impl GridStepGlow {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         GridStepGlow {
             k: crate::scene_collision::GridStepGlowK::zeroed(),
-            lamps: crate::FnField,
         }
     }
 }
 impl Default for GridStepGlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:638 GridStepGlow.K, src/scene/collision.ts:638)
+/// (TypeScript: inline at src/scene/collision.ts:671 GridStepGlow.K, src/scene/collision.ts:671)
 #[derive(Clone, Copy, Debug)]
 pub struct GridStepGlowK {
     pub albedo: f64,
@@ -824,7 +827,7 @@ impl GridStepGlowK {
 }
 impl Default for GridStepGlowK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:663 segmentBlockedHere(panes), src/scene/collision.ts:663)
+/// (TypeScript: inline at src/scene/collision.ts:696 segmentBlockedHere(panes), src/scene/collision.ts:696)
 #[derive(Clone, Copy, Debug)]
 pub struct SegmentBlockedHerePanesItem {
     pub bi: f64,
@@ -841,7 +844,7 @@ impl SegmentBlockedHerePanesItem {
 }
 impl Default for SegmentBlockedHerePanesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:803 raycast ->, src/scene/collision.ts:803)
+/// (TypeScript: inline at src/scene/collision.ts:836 raycast ->, src/scene/collision.ts:836)
 #[derive(Clone, Copy, Debug)]
 pub struct Raycast {
     pub t: f64,
@@ -860,7 +863,7 @@ impl Raycast {
 }
 impl Default for Raycast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:808 raycastAsk ->, src/scene/collision.ts:808)
+/// (TypeScript: inline at src/scene/collision.ts:841 raycastAsk ->, src/scene/collision.ts:841)
 #[derive(Clone, Copy, Debug)]
 pub struct RaycastAsk {
     pub t: f64,
@@ -879,7 +882,7 @@ impl RaycastAsk {
 }
 impl Default for RaycastAsk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:826 raycastHere ->, src/scene/collision.ts:826)
+/// (TypeScript: inline at src/scene/collision.ts:859 raycastHere ->, src/scene/collision.ts:859)
 #[derive(Clone, Copy, Debug)]
 pub struct RaycastHere {
     pub t: f64,
@@ -898,76 +901,20 @@ impl RaycastHere {
 }
 impl Default for RaycastHere { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/collision.ts:1001 findPathAside(own), src/scene/collision.ts:1001)
-#[derive(Clone, Debug)]
-pub struct NavGridFindPathAsideOwn {
-    pub s: Option<crate::scene_collision::NavScratch>,
-}
-impl NavGridFindPathAsideOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NavGridFindPathAsideOwn {
-            s: None,
-        }
-    }
-}
-impl Default for NavGridFindPathAsideOwn { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at quiet NavGridFindPathAsideOwn.s, quiet NavGridFindPathAsideOwn.s)
-#[derive(Clone, Copy, Debug)]
-pub struct NavGridFindPathAsideOwnS {
-}
-impl NavGridFindPathAsideOwnS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NavGridFindPathAsideOwnS {
-        }
-    }
-}
-impl Default for NavGridFindPathAsideOwnS { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/scene/collision.ts:1003 aside(own), src/scene/collision.ts:1003)
-#[derive(Clone, Debug)]
-pub struct NavGridAsideOwn {
-    pub s: Option<crate::scene_collision::NavScratch>,
-}
-impl NavGridAsideOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NavGridAsideOwn {
-            s: None,
-        }
-    }
-}
-impl Default for NavGridAsideOwn { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at quiet NavGridAsideOwn.s, quiet NavGridAsideOwn.s)
-#[derive(Clone, Copy, Debug)]
-pub struct NavGridAsideOwnS {
-}
-impl NavGridAsideOwnS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NavGridAsideOwnS {
-        }
-    }
-}
-impl Default for NavGridAsideOwnS { fn default() -> Self { Self::zeroed() } }
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SceneCollisionMod {
-    /// (src/scene/collision.ts:100 BOTH)
+    /// (src/scene/collision.ts:101 BOTH)
     pub both: crate::scene_collision::SceneCollisionModBOTH,
-    /// (src/scene/collision.ts:104 ANYTIME)
+    /// (src/scene/collision.ts:105 ANYTIME)
     pub anytime: crate::scene_collision::SceneCollisionModANYTIME,
-    /// (src/scene/collision.ts:106 SENSED)
+    /// (src/scene/collision.ts:107 SENSED)
     pub sensed: crate::scene_collision::SceneCollisionModSENSED,
-    /// (src/scene/collision.ts:111 LAMPS)
+    /// (src/scene/collision.ts:118 LAMPS)
     pub lamps: crate::scene_collision::SceneCollisionModLAMPS,
-    /// (src/scene/collision.ts:113 RAYS)
+    /// (src/scene/collision.ts:120 RAYS)
     pub rays: crate::scene_collision::SceneCollisionModRAYS,
-    /// (src/scene/collision.ts:117 PRICED)
+    /// (src/scene/collision.ts:124 PRICED)
     pub priced: crate::scene_collision::SceneCollisionModPRICED,
 }
 impl SceneCollisionMod {
@@ -995,8 +942,11 @@ pub const BAKE_Y: f64 = 0.25;
 /// (src/scene/collision.ts:90 shotPanes: a table nothing writes)
 pub fn shot_panes() -> Vec<crate::scene_collision::ShotPanesItem> { Vec::new() }
 
-/// (src/scene/collision.ts:119 SIGHT_EYES)
+/// (src/scene/collision.ts:113 SENSE_WATCH: a table nothing writes)
+pub fn sense_watch() -> crate::scene_collision::SENSEWATCH { crate::scene_collision::SENSEWATCH { see: None } }
+
+/// (src/scene/collision.ts:126 SIGHT_EYES)
 pub const SIGHT_EYES: f64 = 7.0;
 
-/// (src/scene/collision.ts:120 bothPanes: a table nothing writes)
+/// (src/scene/collision.ts:127 bothPanes: a table nothing writes)
 pub fn both_panes() -> Vec<crate::scene_collision::BothPanesItem> { Vec::new() }

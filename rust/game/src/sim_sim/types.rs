@@ -18,7 +18,7 @@ impl SimExports {
 }
 impl Default for SimExports { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/sim.ts:288 RUST, src/sim/sim.ts:288)
+/// (TypeScript: inline at src/sim/sim.ts:280 RUST, src/sim/sim.ts:280)
 #[derive(Clone, Copy, Debug)]
 pub struct SimSimModRUST {
 }
@@ -31,7 +31,7 @@ impl SimSimModRUST {
 }
 impl Default for SimSimModRUST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/sim.ts:334 FELL, src/sim/sim.ts:334)
+/// (TypeScript: inline at src/sim/sim.ts:314 FELL, src/sim/sim.ts:314)
 #[derive(Clone, Debug)]
 pub struct SimSimModFELL {
     pub on: bool,
@@ -90,37 +90,25 @@ pub struct SimSimMod {
     pub lines_on: bool,
     /// (src/sim/sim.ts:227 circlesOn)
     pub circles_on: bool,
-    /// (src/sim/sim.ts:227 fogOn)
-    pub fog_on: bool,
     /// (src/sim/sim.ts:227 posesOn)
     pub poses_on: bool,
     /// (src/sim/sim.ts:227 diceOn)
     pub dice_on: bool,
-    /// (src/sim/sim.ts:228 sightOn)
-    pub sight_on: bool,
-    /// (src/sim/sim.ts:228 lightOn)
-    pub light_on: bool,
-    /// (src/sim/sim.ts:228 smokeOn)
-    pub smoke_on: bool,
-    /// (src/sim/sim.ts:228 soundOn)
-    pub sound_on: bool,
-    /// (src/sim/sim.ts:228 pathsOn)
-    pub paths_on: bool,
-    /// (src/sim/sim.ts:229 doorsOn)
+    /// (src/sim/sim.ts:228 doorsOn)
     pub doors_on: bool,
-    /// (src/sim/sim.ts:229 fallsOn)
+    /// (src/sim/sim.ts:228 fallsOn)
     pub falls_on: bool,
-    /// (src/sim/sim.ts:229 propsOn)
+    /// (src/sim/sim.ts:228 propsOn)
     pub props_on: bool,
-    /// (src/sim/sim.ts:229 slabsOn)
+    /// (src/sim/sim.ts:228 slabsOn)
     pub slabs_on: bool,
-    /// (src/sim/sim.ts:229 itemsOn)
+    /// (src/sim/sim.ts:228 itemsOn)
     pub items_on: bool,
-    /// (src/sim/sim.ts:229 raysOn)
+    /// (src/sim/sim.ts:228 raysOn)
     pub rays_on: bool,
-    /// (src/sim/sim.ts:288 RUST)
+    /// (src/sim/sim.ts:280 RUST)
     pub rust: crate::sim_sim::SimSimModRUST,
-    /// (src/sim/sim.ts:334 FELL)
+    /// (src/sim/sim.ts:314 FELL)
     pub fell: crate::sim_sim::SimSimModFELL,
 }
 impl SimSimMod {
@@ -138,14 +126,8 @@ impl SimSimMod {
             maths_on: false,
             lines_on: true,
             circles_on: true,
-            fog_on: true,
             poses_on: true,
             dice_on: true,
-            sight_on: true,
-            light_on: true,
-            smoke_on: true,
-            sound_on: true,
-            paths_on: true,
             doors_on: true,
             falls_on: true,
             props_on: true,
@@ -159,10 +141,10 @@ impl SimSimMod {
 }
 
 /// (src/sim/sim.ts:21 SIM_ABI)
-pub const SIM_ABI: f64 = 29.0;
+pub const SIM_ABI: f64 = 30.0;
 
-/// (src/sim/sim.ts:354 RULES_ROW)
+/// (src/sim/sim.ts:332 RULES_ROW)
 pub const RULES_ROW: &str = "a rule's step (doors, furniture, leaves, thrown things)";
 
-/// (src/sim/sim.ts:380 OWN_MATHS: a table nothing writes)
-pub fn own_maths() -> Vec<String> { alloc::vec![String::from("maths"), String::from("fog"), String::from("poses"), String::from("sight"), String::from("light"), String::from("smoke"), String::from("sound"), String::from("paths"), String::from("doors"), String::from("props"), String::from("slabs"), String::from("items")] }
+/// (src/sim/sim.ts:358 OWN_MATHS: a table nothing writes)
+pub fn own_maths() -> Vec<String> { alloc::vec![String::from("maths"), String::from("poses"), String::from("doors"), String::from("props"), String::from("slabs"), String::from("items")] }

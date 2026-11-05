@@ -1,4 +1,4 @@
-//! src/game/fogofwar.ts lines 355 to 796
+//! src/game/fogofwar.ts lines 355 to 806
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -10,12 +10,23 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `MKEY.<system> >>> 24`
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
+/// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`: once the table stands, this one line is that row.
+fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: g.col.boxes is Vec<BoxId> and Tabs has no Box, while index/properties.txt says g.col.boxes[id].c")
+}
+
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone. (fogofwar.ts thingKeyOf)
 pub fn thing_key_of(g: &mut crate::game::Game, b: BoxId) -> f64 {
-    let k = seam_box_mkey(g, b);
+    let k = bx(g, b).mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:364 `b.mkey!`)");
+    key_of_mkey(g, k)
+}
+
+/// thingKeyOf from the key itself.
+fn key_of_mkey(g: &Game, k: f64) -> f64 {
     let sys = sys_of(k);
     let low = js::to_u32(k) & 0xFFFFFF;
-    if g.m.fogofwar.thing_pass.has(crate::Num(sys as f64)) { return -1.0; }
+    // (the second test is THING_PASS's `MKEY.skin >>> 24`, line 355: the skeleton's first value of the set stops at device: notes, Skeleton)
+    if g.m.fogofwar.thing_pass.has(crate::Num(sys as f64)) || sys == sys_of(crate::scene_boxes::mkey().skin) { return -1.0; }
     if sys as f64 == THING_TEST {
         if low >= 0x4000 && low < 0x5000 { return -1.0; }
         let part = if low >= FIXTURE_LO as u32 && low < FIXTURE_HI as u32 && (low & 31) < FIXTURE_BODY as u32 { low >> 5 } else { low };
@@ -52,12 +63,9 @@ pub fn fog_of_war_page_look(g: &mut crate::game::Game) {
     g.fog_of_war.look_frames = 3.0;
 }
 
-/// (FogOfWar constructor)
+/// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
 pub fn fog_of_war_new(g: &mut crate::game::Game) -> crate::fogofwar::FogOfWar {
-    let mut f = crate::fogofwar::FogOfWar::blank();
-    f.frame = crate::render_fogofwar::make_fog_frame();
-    f.knobs = g.k.fog.clone();
-    f
+    crate::fogofwar::FogOfWar::blank()
 }
 
 /// The switch, and no show running. (FogOfWar.active)
@@ -84,24 +92,9 @@ fn bone_or(g: &crate::game::Game, c: CharId, b: crate::character::Bone, y: f64) 
 fn chest_of(g: &crate::game::Game, c: CharId) -> V3 { bone_or(g, c, crate::character::Bone::Chest, 1.1) }
 
 /// `men as players`
-fn players(g: &mut crate::game::Game) -> Vec<PlayerId> {
-    let p = crate::seats::MenG { player: g.player, seats: g.seats.clone() };
-    crate::seats::men(g, &p)
-}
+fn players(g: &mut crate::game::Game) -> Vec<PlayerId> { crate::seats::men(g) }
 
 fn is_dead(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
-
-/// eachSeat(g, v => …) over one view: the skeleton's each_seat lends two `&mut Game` (see notes), so its body is here, through with_seat.
-fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
-    if g.seats.len() == 1 { f(g); return; }
-    let mut i = 0;
-    while i < g.seats.len() {
-        let s = g.seats[i];
-        i += 1;
-        let man = crate::cmd::seat_man(g, s);
-        crate::seats::with_seat(g, man, &mut *f);
-    }
-}
 
 /// `fow…` key of one eye's smoke line to one man: 'W' for the player's lens, 'W' + id for a teammate's ordered one. (fogofwar.ts:539)
 fn smoke_key(e: &crate::fogofwar::FogEye, pid: f64, man: f64) -> String {
@@ -113,15 +106,19 @@ fn smoke_key(e: &crate::fogofwar::FogEye, pid: f64, man: f64) -> String {
 /// One man's lines waiting on the smoke (update()'s jobs).
 struct Job { gd: GuardId, chest: V3, pairs: Vec<(String, crate::fogofwar::FogEye)> }
 
-/// Once a frame after everybody has moved: the eyes, then seen or not for every man off the team. (FogOfWar.update)
-pub fn fog_of_war_update(g: &mut crate::game::Game, _dt: f64) {
+/// Once a frame after everybody has moved; asked outside a tick, the pass stands the copy of the box world for itself. (FogOfWar.update)
+pub fn fog_of_war_update(g: &mut crate::game::Game, dt: f64) {
+    if g.col.mirror.live { fog_of_war_pass(g, dt); } else { crate::scene_collision::window(g, &mut |g| fog_of_war_pass(g, dt)); }
+}
+
+/// The eyes, then seen or not for every man off the team, then the doors. (FogOfWar.pass)
+pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     if !fog_of_war_active(g) {
         if g.fog_of_war.frame.on || g.fog_of_war.loaded {
             let f = &mut g.fog_of_war;
             f.loaded = false; f.props_loaded = false; f.frame.on = false; f.eyes = Vec::new(); f.hidden_chars.clear(); f.pending.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear();
-            f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear(); f.face_recs.clear();
-            // (what fullClear does of the game's state; its lights and the faces are the picture's)
-            if f.full_on { f.full_on = false; f.full_stats.hidden = 0.0; f.full_stats.ghosts = 0.0; f.full_stats.held = 0.0; }
+            f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0; f.lamp_recs.clear(); f.face_recs.clear(); f.frame.full = false;
+            fog_of_war_full_clear(g);
         }
         return;
     }
@@ -133,7 +130,7 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, _dt: f64) {
     let mut eyes: Vec<crate::fogofwar::FogEye> = Vec::new();
     let cap = m::min(crate::render_fogofwar::FOG_EYES, fog_eye_count(g.k.fog.eyes) + g.seats.len() as f64 - 1.0);
     if !crate::rails::rails_sky_on(g) {
-        on_each_seat(g, &mut |g| {
+        crate::seats::each_seat(g, &mut |g| {
             if g.seats.len() != 1 && eyes.len() as f64 >= cap { return; }   // (v !== g: only a view differs, and a game of one lends itself)
             let c = g.pl[g.player].ch;
             let own = fog_of_war_eye_of(g, c);
@@ -159,14 +156,14 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, _dt: f64) {
         }
     } else {
         // (only my own eyes: an ordered lens is a device feed, as a sticky camera's is)
-        on_each_seat(g, &mut |g| {
+        crate::seats::each_seat(g, &mut |g| {
             for e in crate::wandorder::mate_wand_eyes(g) {
                 if eyes.len() as f64 >= cap { break; }
                 eyes.push(e);
             }
         });
     }
-    on_each_seat(g, &mut |g| {
+    crate::seats::each_seat(g, &mut |g| {
         for e in crate::stickycam::sticky_eyes(g) {
             if eyes.len() as f64 >= cap { g.stats.stickycam.blind += 1; break; }
             eyes.push(e);
@@ -253,19 +250,19 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, _dt: f64) {
     }
     let mut lines: JsMap<GuardId, bool> = JsMap::new();
     let mut jobs: Vec<Job> = Vec::new();
-    let k_ = fog_of_war_hand_eyes(g, &eyes);
+    fog_of_war_hand_eyes(g, &eyes);
     for &gd in men.iter() {
         let dead = is_dead(g, gd);
         if held == Some(gd) || held_too == Some(gd) { lines.set(gd, true); continue; }
         if dead {
-            let seen = if k_ { fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, None) >= ONE_EYE } else { eyes.iter().any(|e| fog_of_war_eye_on_body(g, *e, gd)) };
+            let seen = fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, None) >= ONE_EYE;
             lines.set(gd, seen);
             continue;
         }
         let c = g.gd[gd].ch;
         let chest = chest_of(g, c);
         if g.k.fog.smoke <= 0.0 {
-            let seen = if k_ { fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, Some(chest)) >= ONE_EYE } else { eyes.iter().any(|e| fog_of_war_line_to_man(g, *e, gd, chest)) };
+            let seen = fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, Some(chest)) >= ONE_EYE;
             lines.set(gd, seen);
             continue;
         }
@@ -280,18 +277,11 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, _dt: f64) {
             near[k] = ei; near_d[k] = d;
         }
         let mut clear: Vec<usize> = Vec::new();
-        if k_ {
-            let mut order: i32 = 0;
-            for (k, &ei) in near.iter().enumerate() { order |= (ei as i32).wrapping_shl(4 * k as u32); }
-            let r = js::to_u32(fog_of_war_sees(g, &eyes, order as f64, SMOKE_EYES, gd, Some(chest)));
-            let c_n = r >> 28;
-            for k in 0..c_n { clear.push(((r >> (4 * k)) & 15) as usize); }
-        } else {
-            for &ei in near.iter() {
-                if clear.len() as f64 >= SMOKE_EYES { break; }
-                if fog_of_war_line_to_man(g, eyes[ei], gd, chest) { clear.push(ei); }
-            }
-        }
+        let mut order: i32 = 0;
+        for (k, &ei) in near.iter().enumerate() { order |= (ei as i32).wrapping_shl(4 * k as u32); }
+        let r = js::to_u32(fog_of_war_sees(g, &eyes, order as f64, SMOKE_EYES, gd, Some(chest)));
+        let c_n = r >> 28;
+        for k in 0..c_n { clear.push(((r >> (4 * k)) & 15) as usize); }
         lines.set(gd, !clear.is_empty());
         if !clear.is_empty() {
             let man = g.ch[c].id;
@@ -375,12 +365,18 @@ pub fn fog_of_war_update(g: &mut crate::game::Game, _dt: f64) {
             g.fog_of_war.doors_held += 1.0;
         }
     }
-    // ---- the renderer's block is the picture's, but for what the game reads of it: that it is up, and that the full picture stands (fullBlock, FOG.full)
+    // ---- the renderer's block is the picture's (notes, Dropped), but for the page's look a replay asks for, that the block is up, and the full picture's team, which FOG.ours reads
+    if g.fog_of_war.look_frames > 0.0 {
+        g.fog_of_war.look_frames -= 1.0;
+        let page = g.m.fogofwar.fog_page;
+        g.k.fog.desat = page.desat; g.k.fog.edge = page.edge; g.k.fog.air = page.air; g.k.fog.kept = page.kept;
+    }
     g.fog_of_war.frame.on = true;
-    g.fog_of_war.full_on = true;
+    let full = fog_of_war_full_block(g);
+    g.fog_of_war.frame.full = full;
 }
 
-/// update()'s verdict on one man.
+/// pass()'s verdict on one man.
 fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, view: Option<&[crate::fogofwar::FogEye]>) {
     g.fog_of_war.stats.tested += 1.0;
     let rt = g.fog_of_war.recs.get_or_insert_with(gd, fresh_rec).t;
@@ -506,7 +502,7 @@ fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfW
 }
 
 /// `+x.toFixed(2)`, for the QA's log only.
-fn to_fixed2(x: f64) -> f64 { alloc::format!("{:.2}", x).parse().unwrap_or(x) }
+fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(x) }
 
 /// What the cone hides is called: a contact from a teammate's eyes, else a step in his ears. Under cones or own eyes only (hard). (FogOfWar.tellCalls)
 pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
@@ -585,7 +581,7 @@ pub fn fog_of_war_flush_asks(g: &mut crate::game::Game) {
     if g.fog_of_war.pending.is_empty() { return; }
     let pending = core::mem::take(&mut g.fog_of_war.pending);
     for p in pending.iter() {
-        let room = if g.sensors.own.is_some() { None } else { seam_probe_room(g) };
+        let room = if g.sensors.own.is_some() { None } else { Some(crate::sensors::probe_like_room(g)) };
         let full = match room { Some(r) => r <= 0.0, None => false };
         crate::sensors::sensors_ask_segment(g, &p.key, p.a, p.b);
         if full { crate::sensors::sensors_forget(g, &p.key); }
@@ -607,17 +603,17 @@ pub fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
-/// The picture's half of FOG.thin: which statics are marked, as bits by box index. Picture-only, and update() does not call it (see notes). (FogOfWar.thinBlock)
-pub fn fog_of_war_thin_block(g: &mut crate::game::Game, f: &mut crate::render_fogofwar::FogFrame) {
-    f.thin = true;
-    for w in f.thin_bits.iter_mut() { *w = 0; }
-    f.thin_serial = g.engine.world.geom_serial;
+/// The picture's half of FOG.thin: which statics are marked, as bits by box index. Picture-only, and pass() does not call it (notes, Dropped). (FogOfWar.thinBlock)
+pub fn fog_of_war_thin_block(g: &mut crate::game::Game) {
+    g.fog_of_war.frame.thin = true;
+    for w in g.fog_of_war.frame.thin_bits.iter_mut() { *w = 0; }
+    g.fog_of_war.frame.thin_serial = g.engine.world.geom_serial;
     let st = g.engine.world.statics.clone();
-    f.thin_count = st.len() as f64;
+    g.fog_of_war.frame.thin_count = st.len() as f64;
     let thin = js::to_i32(crate::scene_boxes::box_flag().thin);
-    let n = core::cmp::min(st.len(), f.thin_bits.len() * 32);
+    let n = core::cmp::min(st.len(), g.fog_of_war.frame.thin_bits.len() * 32);
     for i in 0..n {
-        if js::to_i32(seam_box_flags(g, st[i])) & thin != 0 { f.thin_bits[i >> 5] |= 1u32 << (i & 31); }
+        if js::to_i32(bx(g, st[i]).flags) & thin != 0 { g.fog_of_war.frame.thin_bits[i >> 5] |= 1u32 << (i & 31); }
     }
 }
 
@@ -634,7 +630,7 @@ pub fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::Fog
     !fog_of_war_sight_blocked(g, e.pos, head)
 }
 
-/// The eyes with a line to a man (`chest` given) or his body (None), asked of the module; here where it declines. (FogOfWar.sees)
+/// The eyes with a line to a man (`chest` given) or his body (None), one question to the module: how many × 2^28 + those eyes, four bits each. (FogOfWar.sees)
 pub fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
     let pc = g.gd[gd].ch;
     let (a, b, kind): (V3, V3, f64) = match chest {
@@ -646,36 +642,18 @@ pub fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEy
         }
     };
     let through = fog_through(g);
-    let r = crate::scene_collision::eyes_see(g, order, eyes.len() as f64, want, kind, through, a, b);
-    if r < 0.0 { return fog_of_war_sees_here(g, eyes, order, want, gd, chest); }
-    r
+    crate::scene_collision::eyes_see(g, order, eyes.len() as f64, want, kind, through, a, b)
 }
 
-/// The eyes of a pass handed to the module; false = it does not take this pass. (FogOfWar.handEyes)
-pub fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye]) -> bool {
-    if !crate::scene_collision::sight_open(g, eyes.len() as f64) { return false; }
+/// The eyes of a pass handed to the module, each with the field `in_field` holds it to. (FogOfWar.handEyes)
+pub fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye]) {
+    crate::scene_collision::sight_open(g, eyes.len() as f64);
     for (k, e) in eyes.iter().enumerate() {
         let fov = match e.fov { Some(f) => f, None => field_deg(g) };
         let near = match e.near { Some(n) => n, None => field_near(g) };
         let look_len = js::or(m::hyp2(e.look[0], e.look[2]), 1.0);
         crate::scene_collision::sight_eye(g, k as f64, e.pos, e.look, look_len, m::cos(fov * 0.5 * DEG), near, fov >= 360.0);
     }
-    true
-}
-
-/// This file's own answer to `sees`. (FogOfWar.seesHere)
-pub fn fog_of_war_sees_here(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
-    let order = js::to_u32(order);
-    let (mut out, mut found): (i32, u32) = (0, 0);
-    let mut k: u32 = 0;
-    while (k as usize) < eyes.len() && (found as f64) < want {
-        let i = order.wrapping_shr(4 * k) & 15;
-        let e = eyes[i as usize];
-        let got = match chest { Some(c) => fog_of_war_line_to_man(g, e, gd, c), None => fog_of_war_eye_on_body(g, e, gd) };
-        if got { out |= (i as i32).wrapping_shl(4 * found); found += 1; }
-        k += 1;
-    }
-    found as f64 * ONE_EYE + out as f64
 }
 
 /// One eye on a body: a clear line to a hand's height over where it lies, inside the eye's field. (FogOfWar.eyeOnBody)
@@ -771,53 +749,69 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
         i += 1;
-        let (bx, h0, h1) = { let r = &g.dr[d]; (r.box_, r.handle_boxes[0], r.handle_boxes[1]) };
+        let (bx_, h0, h1) = { let r = &g.dr[d]; (r.box_, r.handle_boxes[0], r.handle_boxes[1]) };
         let angle = crate::doors::door_angle(g, d);
         let shown = match g.fog_of_war.door_recs.get(d).map(|r| r.shown) {
             Some(s) if m::abs(angle - s) > DOOR_EPS => s,
-            _ => { out.push(bx); out.push(h0); out.push(h1); continue; }
+            _ => { out.push(bx_); out.push(h0); out.push(h1); continue; }
         };
         let pose = crate::doors::door_pose_at(g, d, shown);
         let had = g.fog_of_war.door_recs.get(d).and_then(|r| r.ghost.clone());
         let gh = match had {
             Some(gh) => gh,
             None => {
-                let gh = vec![crate::scene_boxes::copy_box(g, bx), crate::scene_boxes::copy_box(g, h0), crate::scene_boxes::copy_box(g, h1)];
+                let gh = vec![crate::scene_boxes::copy_box(g, bx_), crate::scene_boxes::copy_box(g, h0), crate::scene_boxes::copy_box(g, h1)];
                 g.fog_of_war.door_recs.get_mut(d).unwrap().ghost = Some(gh.clone());
                 gh
             }
         };
-        seam_box_pose(g, gh[0], pose.c, pose.yaw);
-        seam_box_take_flags(g, gh[0], bx);
-        if crate::doors::door_off(g, d) || seam_box_has_rot(g, gh[0]) {
-            seam_box_hung(g, gh[0], d);
-            seam_box_clear_rot(g, gh[1]);
-            seam_box_clear_rot(g, gh[2]);
+        let flags = bx(g, bx_).flags;
+        let q = bx(g, gh[0]);
+        q.c = pose.c; q.yaw = pose.yaw; q.flags = flags;
+        let had_rot = q.rot.is_some();
+        if crate::doors::door_off(g, d) || had_rot {
+            let (h, marks) = (g.dr[d].leaf_h, g.dr[d].leaf_marks.clone());
+            let q = bx(g, gh[0]);
+            q.h = h; q.marks = marks; q.rot = None;
+            bx(g, gh[1]).rot = None;
+            bx(g, gh[2]).rot = None;
         }
-        for s in 0..2 { seam_box_pose(g, gh[1 + s], pose.handles[s], pose.yaw); }
+        for s in 0..2 { let q = bx(g, gh[1 + s]); q.c = pose.handles[s]; q.yaw = pose.yaw; }
         out.push(gh[0]); out.push(gh[1]); out.push(gh[2]);
     }
     g.fog_of_war.door_n = out.len() as f64 - g.fog_of_war.door_from;
 }
 
-// ---------------------------------------------------------------- what the skeleton lacks: each one line in notes.md
-
-/// g.probe.room (fogofwar.ts:680)
-fn seam_probe_room(g: &mut Game) -> Option<f64> { let _ = g; Some(crate::sensors::b_01::host_probe_room()) }   // TEMP-BRINGUP, SKELETON-GAP: sensors::ProbeLike.room (the bring-up counts the asks: sensors/b_01.rs)
-/// b.mkey! (fogofwar.ts:365)
-fn seam_box_mkey(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:365 `b.mkey!`)") } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
-/// st[i].flags (fogofwar.ts:697)
-fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).flags } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
-/// G.c = c; G.yaw = yaw (fogofwar.ts:790, 792)
-fn seam_box_pose(g: &mut Game, b: BoxId, c: V3, yaw: f64) { let x = crate::scene_boxes::b_01::any_box_mut(g, b); x.c = c; x.yaw = yaw; } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
-/// G[0].flags = d.box.flags (fogofwar.ts:790)
-fn seam_box_take_flags(g: &mut Game, to: BoxId, from: BoxId) { let f = crate::scene_boxes::b_01::any_box(g, from).flags; crate::scene_boxes::b_01::any_box_mut(g, to).flags = f; } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
-/// G[0].rot truthy (fogofwar.ts:791)
-fn seam_box_has_rot(g: &mut Game, b: BoxId) -> bool { crate::scene_boxes::b_01::any_box(g, b).rot.is_some() } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
-/// G[0].h = d.leafH; G[0].marks = d.leafMarks; G[0].rot = undefined (fogofwar.ts:791)
-fn seam_box_hung(g: &mut Game, b: BoxId, d: DoorId) { todo!("needs: a writer of a BoxId's row: h, marks, rot") }
-/// G.rot = undefined (fogofwar.ts:791)
-fn seam_box_clear_rot(g: &mut Game, b: BoxId) { crate::scene_boxes::b_01::any_box_mut(g, b).rot = None; } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
+/// Has the team a look at this fixture: an eye on the floor under it, a line to the fixture itself, or seen floor within two metres that it lights. (FogOfWar.lampSeen)
+pub fn fog_of_war_lamp_seen(g: &mut crate::game::Game, t: FixtureId) -> bool {
+    let pos = g.tab.sim_lightshome_fixture[t].pos;
+    let (x, y, z) = (pos[0], pos[1], pos[2]);
+    if fog_of_war_spot_seen(g, x, z) { return true; }
+    let mut n = 0;
+    while n < g.fog_of_war.eyes.len() {
+        let e = g.fog_of_war.eyes[n];
+        n += 1;
+        if !fog_of_war_in_field(g, e, pos) { continue; }
+        let dx = x - e.at[0];
+        let dy = y - e.at[1];
+        let dz = z - e.at[2];
+        let d = m::hyp3(dx, dy, dz);
+        if d < 0.5 { return true; }
+        let k = 1.0 - 0.3 / d;
+        if !fog_of_war_sight_blocked(g, e.at, [e.at[0] + dx * k, e.at[1] + dy * k, e.at[2] + dz * k]) { return true; }
+    }
+    let from: V3 = [x, m::max(0.3, y - 0.3), z];
+    let mut i = 0;
+    while i < 8 {
+        let a = i as f64 * m::PI / 4.0;
+        let r = if i & 1 != 0 { 2.0 } else { 1.0 };
+        let px = x + m::cos(a) * r;
+        let pz = z + m::sin(a) * r;
+        if !crate::scene_collision::segment_blocked(g, from, [px, 0.3, pz], None, None, None) && fog_of_war_spot_seen(g, px, pz) { return true; }
+        i += 1;
+    }
+    false
+}
 
 #[cfg(test)]
 mod tests {
@@ -857,9 +851,31 @@ mod tests {
         assert!(!is_prop(-1.0));
     }
 
+    /// The keys thingKeyOf gives, as the snapshot's own function gives them under bun (values in the test).
+    #[test]
+    fn thing_keys_are_the_typescripts() {
+        let g = Game::blank();
+        const SYS: f64 = 0x1000000 as f64;
+        for (k, want) in [
+            (1.0 * SYS + 5.0, -1.0),                   // a leaf
+            (4.0 * SYS + 5.0, -1.0),                   // what a man carries
+            (5.0 * SYS + 5.0, -1.0),                   // a wall device
+            (10.0 * SYS + 5.0, -1.0),                  // a holed wall's paint (line 355)
+            (7.0 * SYS + 0x4001 as f64, -1.0),         // a moth
+            (2.0 * SYS + 35.0, 2.0 * SYS + 2.0),       // a prop's parts share a key
+            (3.0 * SYS + 35.0, 3.0 * SYS + 4.0),       // an item's
+            (8.0 * SYS + 35.0, 8.0 * SYS + 35.0),      // debris: a thing by itself
+            (7.0 * SYS + (0x5000 + (3 << 5) + 2) as f64, 7.0 * SYS + ((0x5000 + (3 << 5) + 2) >> 5) as f64), // a broken fixture's body
+            (7.0 * SYS + (0x5000 + (3 << 5) + 6) as f64, 7.0 * SYS + (0x5000 + (3 << 5) + 6) as f64),        // what came off it
+            (7.0 * SYS + 0x8000 as f64, 7.0 * SYS + 0x8000 as f64),                                          // main.ts's cut test pieces
+        ] { assert_eq!(key_of_mkey(&g, k), want, "mkey {}", k); }
+    }
+
+    /// `+x.toFixed(2)`: a tie goes up, as the language has it, not to even.
     #[test]
     fn to_fixed2_rounds_as_the_log_shows() {
         assert_eq!(to_fixed2(12.3456), 12.35);
         assert_eq!(to_fixed2(3.0), 3.0);
+        assert_eq!(to_fixed2(0.125), 0.13);
     }
 }

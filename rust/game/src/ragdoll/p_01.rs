@@ -37,6 +37,15 @@ fn world_gather(g: &mut Game, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f
     crate::scene_collision::gather(g, x0, z0, x1, z1, y0, y1, out)
 }
 
+/// `b.c`, `b.h`, `b.yaw` of a box (ragdoll.ts:345, :354). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows ("BoxId: no table here"), while the index says `g.col.boxes[id].c`.
+/// Once the rows have a table this is the row's three fields. In a test, a stand-in for the table.
+fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
+    #[cfg(test)]
+    return tests::box_row(b);
+    #[cfg(not(test))]
+    todo!("needs: a table of Box rows; skeleton 5 has g.col.boxes as Vec<BoxId> and the index says g.col.boxes[id].c")
+}
+
 /// A body seeded from pts (RAG_COUNT world positions) and vel (m/s) or none.   (ragdoll.ts Ragdoll.constructor)
 pub fn ragdoll_new(g: &mut crate::game::Game, pts: &[V3], vel: Option<&[V3]>, world: Option<&crate::ragdoll::RagdollWorld>) -> RagdollId {
     let id = g.tab.ragdoll.push(crate::ragdoll::Ragdoll::blank());
@@ -605,35 +614,37 @@ pub fn ragdoll_gather_near(g: &mut crate::game::Game, id: RagdollId) {
     // (the list is lent to the grid: the row cannot be held across a call that takes g)
     let mut near = core::mem::take(&mut this.near);
     let n = world_gather(g, x0, z0, x1, z1, Y_MIN, y1, &mut near) as usize;
-    let this = &mut g.tab.ragdoll[id];
     let mut kept = 0;
     for k in 0..n {   // keep only footprints that overlap the body's box
-        let b = &g.col.boxes[BoxId(near[k] as u32)];
-        let (c, s) = (m::cos(b.yaw), m::sin(b.yaw));
-        let (ex, ez) = (m::abs(c) * b.h[0] + m::abs(s) * b.h[2], m::abs(s) * b.h[0] + m::abs(c) * b.h[2]);
-        if b.c[0] + ex < x0 || b.c[0] - ex > x1 || b.c[2] + ez < z0 || b.c[2] - ez > z1 || b.c[1] - b.h[1] > y1 { continue; }
+        let (bc, bh, yaw) = seam_box_row(g, g.col.boxes[near[k] as usize]);   // (near holds places in the list wd.boxes)
+        let (c, s) = (m::cos(yaw), m::sin(yaw));
+        let (ex, ez) = (m::abs(c) * bh[0] + m::abs(s) * bh[2], m::abs(s) * bh[0] + m::abs(c) * bh[2]);
+        if bc[0] + ex < x0 || bc[0] - ex > x1 || bc[2] + ez < z0 || bc[2] - ez > z1 || bc[1] - bh[1] > y1 { continue; }
         near[kept] = near[k];
+        let this = &mut g.tab.ragdoll[id];
         this.near_cs[kept * 2] = c; this.near_cs[kept * 2 + 1] = s;
         let o = kept * 6;
-        this.near_b[o] = b.c[0]; this.near_b[o + 1] = b.c[1]; this.near_b[o + 2] = b.c[2];
-        this.near_b[o + 3] = b.h[0]; this.near_b[o + 4] = b.h[1]; this.near_b[o + 5] = b.h[2];
+        this.near_b[o] = bc[0]; this.near_b[o + 1] = bc[1]; this.near_b[o + 2] = bc[2];
+        this.near_b[o + 3] = bh[0]; this.near_b[o + 4] = bh[1]; this.near_b[o + 5] = bh[2];
         kept += 1;
     }
+    let this = &mut g.tab.ragdoll[id];
     this.near = near;
     this.n_near = kept as f64;
-    let dbs = &g.col.dynamic_boxes;
+    let room = this.dyn_.len();
     let mut nd = 0;
     let mut j = 0;
-    while j < dbs.len() && nd < this.dyn_.len() {
-        let b = &g.col.boxes[dbs[j]];
-        let reach = m::hyp2(b.h[0], b.h[2]);
+    while j < g.col.dynamic_boxes.len() && nd < room {
+        let (bc, bh, yaw) = seam_box_row(g, g.col.dynamic_boxes[j]);
+        let reach = m::hyp2(bh[0], bh[2]);
         j += 1;
-        if b.c[0] + reach < x0 || b.c[0] - reach > x1 || b.c[2] + reach < z0 || b.c[2] - reach > z1 { continue; }
+        if bc[0] + reach < x0 || bc[0] - reach > x1 || bc[2] + reach < z0 || bc[2] - reach > z1 { continue; }
+        let this = &mut g.tab.ragdoll[id];
         this.dyn_[nd] = (j - 1) as i32;
-        this.dyn_cs[nd * 2] = m::cos(b.yaw); this.dyn_cs[nd * 2 + 1] = m::sin(b.yaw);
+        this.dyn_cs[nd * 2] = m::cos(yaw); this.dyn_cs[nd * 2 + 1] = m::sin(yaw);
         let o = nd * 6;
-        this.dyn_b[o] = b.c[0]; this.dyn_b[o + 1] = b.c[1]; this.dyn_b[o + 2] = b.c[2];
-        this.dyn_b[o + 3] = b.h[0]; this.dyn_b[o + 4] = b.h[1]; this.dyn_b[o + 5] = b.h[2];
+        this.dyn_b[o] = bc[0]; this.dyn_b[o + 1] = bc[1]; this.dyn_b[o + 2] = bc[2];
+        this.dyn_b[o + 3] = bh[0]; this.dyn_b[o + 4] = bh[1]; this.dyn_b[o + 5] = bh[2];
         nd += 1;
         this.n_dyn = nd as f64;
     }
@@ -855,11 +866,15 @@ mod tests {
     /// The grid's stand-in, as world.ts's world answers: every static, in order. (The real gather is the collision part's.)
     pub(super) fn every_static(g: &mut Game, out: &mut Vec<i32>) -> f64 {
         let mut n = 0;
-        for (id, b) in g.col.boxes.iter() {
-            if n < out.len() && b.flags == 0.0 { out[n] = id.ix() as i32; n += 1; }
-        }
+        while n < g.col.boxes.len() && n < out.len() { out[n] = n as i32; n += 1; }
         n as f64
     }
+
+    std::thread_local! {
+        /// The box rows' stand-in (the skeleton has no table of them yet): centre, half sizes, yaw.
+        static BOX_ROWS: std::cell::RefCell<Vec<(V3, V3, f64)>> = std::cell::RefCell::new(Vec::new());
+    }
+    pub(super) fn box_row(b: BoxId) -> (V3, V3, f64) { BOX_ROWS.with(|t| t.borrow()[b.ix()]) }
 
     /// A blank Game is deep: its tests want a big stack.
     fn on_a_big_stack(f: fn(&mut Game)) {
@@ -984,16 +999,15 @@ mod tests {
         *at += 1;
     }
 
-    fn put_box(g: &mut Game, c: V3, h: V3, yaw: f64) -> BoxId {
-        let mut b = crate::scene_boxes::Box::zeroed();
-        b.c = c; b.h = h; b.yaw = yaw;
-        g.col.boxes.push(b)
+    /// a row in the stand-in's table
+    fn put_row(c: V3, h: V3, yaw: f64) -> BoxId {
+        BOX_ROWS.with(|t| { let mut t = t.borrow_mut(); t.push((c, h, yaw)); BoxId(t.len() as u32 - 1) })
     }
 
-    /// (a leaf's mark, for every_static alone)
-    fn put_leaf(g: &mut Game, c: V3, h: V3, yaw: f64) -> BoxId {
-        let b = put_box(g, c, h, yaw);
-        g.col.boxes[b].flags = 1.0;
+    /// a static: a row, and a place in wd.boxes
+    fn put_box(g: &mut Game, c: V3, h: V3, yaw: f64) -> BoxId {
+        let b = put_row(c, h, yaw);
+        g.col.boxes.push(b);
         b
     }
 
@@ -1005,8 +1019,8 @@ mod tests {
         put_box(g, [3.45, 1.2, -1.2], [0.06, 1.2, 0.8], -0.2);
         put_box(g, [30.0, 1.0, 30.0], [1.0, 1.0, 1.0], 0.0);
         put_box(g, [3.7, 9.0, -1.2], [1.0, 0.5, 1.0], 0.0);
-        let leaf = put_leaf(g, [4.5, 1.0, -1.3], [0.45, 1.0, 0.02], 0.7);
-        let far = put_leaf(g, [40.0, 1.0, 40.0], [0.45, 1.0, 0.02], 0.0);
+        let leaf = put_row([4.5, 1.0, -1.3], [0.45, 1.0, 0.02], 0.7);
+        let far = put_row([40.0, 1.0, 40.0], [0.45, 1.0, 0.02], 0.0);
         g.col.dynamic_boxes = vec![leaf, far];
         let pts = pose();
         let vel: Vec<V3> = (0..16).map(|i| { let i = i as f64; [1.5 * (1.0 + i * 0.01), 0.3, -0.8 * (1.0 + i * 0.01)] }).collect();
@@ -1017,7 +1031,7 @@ mod tests {
         let (mut h, mut at) = (0xcbf29ce484222325u64, 0);
         world_mark(g, r, &mut h, &mut at);
         for f in 0..400 {
-            if f % 10 == 0 { g.col.boxes[leaf].yaw += 0.05; }
+            if f % 10 == 0 { BOX_ROWS.with(|t| t.borrow_mut()[leaf.ix()].2 += 0.05); }
             ragdoll_step(g, r, 1.0 / 60.0);
             let v = ragdoll_take_impact(g, r, None, None);
             let mut t = Marks { h, at: 0 }; t.mix(v); h = t.h;
@@ -1025,7 +1039,7 @@ mod tests {
         }
         // more leaves in reach than the list holds
         let (x, z) = (g.tab.ragdoll[r].x[0], g.tab.ragdoll[r].x[2]);
-        g.col.dynamic_boxes = (0..35).map(|i| { let i = i as f64; put_leaf(g, [x + i * 0.01, 1.0, z], [0.3, 1.0, 0.02], i * 0.1) }).collect();
+        g.col.dynamic_boxes = (0..35).map(|i| { let i = i as f64; put_row([x + i * 0.01, 1.0, z], [0.3, 1.0, 0.02], i * 0.1) }).collect();
         ragdoll_gather_near(g, r);
         assert_eq!(g.tab.ragdoll[r].n_dyn, 32.0);
         world_mark(g, r, &mut h, &mut at);

@@ -1,4 +1,4 @@
-//! src/game/qrf.ts lines 877 to 1202
+//! src/game/qrf.ts lines 878 to 1203
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,14 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ---------------------------------------------------------------- seams: what skeleton 3 does not have yet
-/// `g.audio.play(name, at, vol, { rate })`: `opts` is a map of crate::Opaque, which holds no number
-fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) { todo!("needs: a rate in game_audio_like_play's opts") }
-/// `(op as DoorOp & { ended?: string }).ended`: DoorTools' end() writes it on the op; the row has no such field, and a DoorToolsDoneItem does not say which op it was
-fn seam_op_ended(g: &mut Game, op: DoorOpId) -> Option<String> { todo!("needs: DoorOp.ended on g.tab.doortools_door_op") }
-/// `try { spawnUnit(g, o) } catch (e)`: spawn_unit throws on a full budget and on no light or id left; it returns a GuardId and cannot say so
-fn seam_try_spawn_unit(g: &mut Game, o: &crate::guards::UnitOpts) -> Result<GuardId, String> { todo!("needs: spawn_unit returning a Result") }
 
 // ---------------------------------------------------------------- small reads
 fn man_pos(g: &Game, m: GuardId) -> V3 { g.ch[g.gd[m].ch].pos }
@@ -113,11 +105,11 @@ pub fn start_stack(g: &mut crate::game::Game, el: &[GuardId]) {
     for (i, &man) in el.iter().enumerate() {
         let mark = g.qrf.stack_marks[i];
         let row = if i < 1 { i } else { 1 };
-        route(g, man, &[mark], Some(RoutePatch {
-            speed: Some(1.7 - i as f64 * 0.08), face: Some(p.stack_face[row]),
-            stance: Some(if i == 0 { crate::character::Stance::Stack } else { crate::character::Stance::HighReady }),
-            stack_side: Some(p.stack_side), upper: Some(crate::character::UpperMode::None), aim_at: Some(v3::copy(p.stack_aim[row])),
-            crouch: Some(false), strafe: Some(false), ..Default::default()
+        route(g, man, &[mark], Some(crate::squad::OrderPatch {
+            speed: Some(Some(1.7 - i as f64 * 0.08)), face: Some(Some(p.stack_face[row])),
+            stance: Some(Some(if i == 0 { crate::character::Stance::Stack } else { crate::character::Stance::HighReady })),
+            stack_side: Some(Some(p.stack_side)), upper: Some(Some(crate::character::UpperMode::None)), aim_at: Some(Some(v3::copy(p.stack_aim[row]))),
+            crouch: Some(Some(false)), strafe: Some(Some(false)), ..Default::default()
         }));
     }
     let room = target_room(g);
@@ -138,12 +130,10 @@ pub fn phase_stack(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let d = crate::doors::doors_by_name(g, &p.door);
         if let Some(d) = d {
             if crate::doors::door_is_closed(g, d) {
-                route(g, el[0], &[p.kick_from], Some(RoutePatch {
-                    speed: Some(1.3), face: Some(p.kick_face), stance: Some(crate::character::Stance::HighReady),
-                    upper: Some(crate::character::UpperMode::None), ..Default::default()
+                route(g, el[0], &[p.kick_from], Some(crate::squad::OrderPatch {
+                    speed: Some(Some(1.3)), face: Some(Some(p.kick_face)), stance: Some(Some(crate::character::Stance::HighReady)),
+                    upper: Some(Some(crate::character::UpperMode::None)), aim_at: Some(None), ..Default::default()
                 }));
-                // (`aimAt: null`: all order does with it is the assign; RoutePatch cannot say null)
-                if let Some(s) = g.gd[el[0]].script.as_mut() { s.aim_at = None; }
             }
         }
         note(g, "squeeze");
@@ -173,7 +163,7 @@ pub fn phase_breach(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
                 let who = g.ch[g.gd[lead].ch].id;
                 crate::doors::door_set_last_who(g, d, who);
                 let at = crate::doors::door_pos(g, d);
-                seam_audio_play_rate(g, "doorBash", at, 0.6, 1.1);
+                crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.1 }));
                 say(g, lead, "door!");
             }
         }
@@ -296,9 +286,9 @@ pub fn phase_flow(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         let k = g.qrf.flowed;
         let man = match el.get(k as usize) { Some(&man) => man, None => break };
         let l = flow_legs(&p, k);
-        route(g, man, &l.pts, Some(RoutePatch {
-            speed: Some(if k < 2.0 { 2.4 } else { 2.1 }), face: Some(l.face), stance: Some(crate::character::Stance::None),
-            upper: Some(crate::character::UpperMode::Aim), aim_at: Some(l.aim), crouch: Some(false), strafe: Some(false), ..Default::default()
+        route(g, man, &l.pts, Some(crate::squad::OrderPatch {
+            speed: Some(Some(if k < 2.0 { 2.4 } else { 2.1 })), face: Some(Some(l.face)), stance: Some(Some(crate::character::Stance::None)),
+            upper: Some(Some(crate::character::UpperMode::Aim)), aim_at: Some(Some(l.aim)), crouch: Some(Some(false)), strafe: Some(Some(false)), ..Default::default()
         }));
         g.qrf.flowed += 1.0;
     }
@@ -386,7 +376,7 @@ pub fn drop_drill(g: &mut crate::game::Game) {
         let bangs = cast(g).tools.bangs;
         if cast(g).tools.ops.contains(&op) {
             g.qrf.bangs = bangs + (if g.tab.doortools_door_op[op].bang_held { 1.0 } else { 0.0 });   // let go of while it ran: the can in a hand comes back
-        } else if seam_op_ended(g, op).is_some() {
+        } else if g.tab.doortools_door_op[op].ended.is_some() {
             g.qrf.bangs = bangs;   // ended by the tools: their count is the count
         }
         // (neither: the tools started afresh under it: the element's own count, as last read, stands)
@@ -447,7 +437,7 @@ pub fn phase_drill(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
         g.qrf.bangs = cast(g).tools.bangs + (if g.tab.doortools_door_op[op].bang_held { 1.0 } else { 0.0 });
         return;
     }
-    let why: String = if running { String::from("too long") } else { seam_op_ended(g, op).unwrap_or_else(|| String::from("gone")) };
+    let why: String = if running { String::from("too long") } else { g.tab.doortools_door_op[op].ended.clone().unwrap_or_else(|| String::from("gone")) };
     drop_drill(g);
     note(g, &format!("drill-end:{}", why));
     if why != "gone" { g.qrf.spent = Some(QrfSpent { room: t.room.clone(), fix_t: g.qrf.fix_t }); }
@@ -487,7 +477,7 @@ pub fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId) {
         g.gd[man].state = crate::game::GuardState::Alert;
         g.gd[man].awareness = m::max(g.gd[man].awareness, if is_seer { 1.0 } else { 0.95 });
         let known = match g.gd[man].last_known { Some(k) if is_seer => k, _ => fix };
-        g.gd[man].last_known = Some(v3::copy(known));
+        crate::belief::word(g, man, known);
         let react = if is_seer { 0.12 } else { 0.2 + crate::math_dice::sim_random(g) * 0.25 };
         g.gd[man].react_t = react;
         g.gd[man].fire_cd = m::max(g.gd[man].fire_cd, 0.35);
@@ -536,7 +526,7 @@ pub fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
                 g.gd[man].state = crate::game::GuardState::Alert;
                 g.gd[man].awareness = m::max(g.gd[man].awareness, 0.9);
                 g.gd[man].react_t = 0.15;
-                if let Some(bf) = bf { g.gd[man].last_known = Some(v3::copy(bf.pos)); }
+                if let Some(bf) = bf { crate::belief::word(g, man, bf.pos); }
                 g.gd[man].search_t = 0.0;
                 g.gd[man].search_plan = None;
                 crate::guards::reset_chase(g, man);
@@ -569,9 +559,9 @@ pub fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
             let off = if k == 1 { 0.5 } else if k == 2 { -0.5 } else { 0.0 };
             let st: V3 = [lp[0] - m::sin(f) * n * 1.1 + m::cos(f) * off, 0.0, lp[2] - m::cos(f) * n * 1.1 - m::sin(f) * off];
             let spot = nearest_free(g, st).unwrap_or(st);
-            route(g, man, &[spot], Some(RoutePatch {
-                speed: Some(2.2), face: Some(yaw), strafe: Some(false), stance: Some(crate::character::Stance::None), upper: Some(crate::character::UpperMode::Aim),
-                crouch: Some(false), aim_at: Some(sector_point(st, yaw, None, None)), ..Default::default()
+            route(g, man, &[spot], Some(crate::squad::OrderPatch {
+                speed: Some(Some(2.2)), face: Some(Some(yaw)), strafe: Some(Some(false)), stance: Some(Some(crate::character::Stance::None)), upper: Some(Some(crate::character::UpperMode::Aim)),
+                crouch: Some(Some(false)), aim_at: Some(Some(sector_point(st, yaw, None, None))), ..Default::default()
             }));
         }
     }
@@ -583,17 +573,13 @@ pub fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
 }
 
 /// A man's waypoint queue is set from `pts` and his goal is its head. (qrf.ts route)
-pub fn route(g: &mut crate::game::Game, m: GuardId, pts: &[V3], patch: Option<crate::qrf::RoutePatch>) {
+pub fn route(g: &mut crate::game::Game, m: GuardId, pts: &[V3], patch: Option<crate::squad::OrderPatch>) {
     let w: Vec<V3> = pts.iter().map(|p| v3::copy(*p)).collect();
-    let goal = w.first().copied();   // (`w[0] ?? null`: None halts him. A new leg, even at the same spot: `held` stays false, every goal here is a new object)
+    let goal = w.first().copied();   // (`w[0] ?? null`: None halts him. A new leg, even at the same spot: every goal here is a new object, so `held` stays as the patch has it)
     g.qrf.wps.set(m, w);
-    let patch = patch.unwrap_or_default();
-    crate::squad::order(g, m, crate::squad::OrderPatch {
-        goal: Some(goal), speed: patch.speed.map(Some), face: patch.face.map(Some), strafe: patch.strafe.map(Some), aim_at: patch.aim_at.map(Some),
-        stance: patch.stance.map(Some), stack_side: patch.stack_side.map(Some), crouch: patch.crouch.map(Some), lean: patch.lean.map(Some), upper: patch.upper.map(Some),
-        light: patch.light.map(Some), arrived: patch.arrived.map(Some), hot: patch.hot.map(Some), flinch: patch.flinch.map(Some), direct: patch.direct.map(Some),
-        smoke: patch.smoke.map(Some), over: patch.over.map(Some), held: false,
-    });
+    let mut patch = patch.unwrap_or_default();
+    patch.goal = Some(goal);
+    crate::squad::order(g, m, patch);
 }
 
 /// Past a waypoint, on to the next; true when on the last one and arrived. (qrf.ts advance)
@@ -666,7 +652,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
             team: crate::teams::Team::Guard, pos: outside[i], yaw: Some(m::PI), weapon: Some(crate::weapons::WeaponId::Aks74u), name: Some(format!("GATE-{}", i + 1)),
             light: Some(true), tint: Some(crate::consts::qrf_tint()), tint2: Some(crate::consts::qrf_tint2()), budget, carbine_rig: None, pair: None,
         };
-        match seam_try_spawn_unit(g, &o) {
+        match crate::guards::spawn_unit(g, &o) {
             Ok(gd) => {
                 g.gd[gd].trained = true;
                 g.gd[gd].hold = false;
@@ -708,11 +694,7 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
     let out: Vec<GuardId> = g.qrf.perim.as_ref().unwrap().men.iter().map(|p| p.gd).collect();
     g.qrf.men.retain(|man| !out.contains(man));   // (peeled men leave the element's order; they stay 'owned' through perim)
     for &man in out.iter() { g.qrf.wps.delete(man); g.qrf.stations.delete(man); }
-    for i in 0..out.len() {
-        let mut row = g.qrf.perim.as_ref().unwrap().men[i].clone();
-        to_post(g, &mut row);
-        g.qrf.perim.as_mut().unwrap().men[i] = row;
-    }
+    for i in 0..out.len() { to_post(g, i); }
     if on_drill { let left = alive(g); hold360(g, &left); }
     if let Some(&first) = out.first() {
         let names: Vec<String> = out.iter().map(|&man| g.gd[man].callsign.clone()).collect();
@@ -728,14 +710,15 @@ pub fn call_perimeter(g: &mut crate::game::Game, why: Option<&str>) -> bool {
 }
 
 /// An outside man's walk to his post. (qrf.ts toPost)
-pub fn to_post(g: &mut crate::game::Game, p: &mut crate::qrf::PerimeterMenItem) {
-    let gd = p.gd;
+pub fn to_post(g: &mut crate::game::Game, p: usize) {
+    let row = &mut g.qrf.perim.as_mut().unwrap().men[p];
+    row.fighting = false;
+    let (gd, post) = (row.gd, row.post.clone());
     g.gd[gd].pinned = false;
     g.gd[gd].hold = false;
-    p.fighting = false;
     crate::squad::order(g, gd, crate::squad::OrderPatch {
-        goal: Some(Some(v3::copy(p.post.pos))), speed: Some(Some(POST_SPEED)), face: Some(Some(p.post.yaw)), strafe: Some(Some(false)), stance: Some(Some(crate::character::Stance::None)),
-        upper: Some(Some(crate::character::UpperMode::Aim)), crouch: Some(Some(false)), aim_at: Some(Some(v3::copy(p.post.sweep[0]))), ..Default::default()
+        goal: Some(Some(v3::copy(post.pos))), speed: Some(Some(POST_SPEED)), face: Some(Some(post.yaw)), strafe: Some(Some(false)), stance: Some(Some(crate::character::Stance::None)),
+        upper: Some(Some(crate::character::UpperMode::Aim)), crouch: Some(Some(false)), aim_at: Some(Some(v3::copy(post.sweep[0]))), ..Default::default()
     });
 }
 
@@ -796,9 +779,7 @@ pub fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 g.gd[gd].awareness = HUNT_AWARENESS;
                 g.gd[gd].standoff = None;
                 g.gd[gd].search_plan = None;
-                let mut row = g.qrf.perim.as_ref().unwrap().men[idx].clone();
-                to_post(g, &mut row);
-                g.qrf.perim.as_mut().unwrap().men[idx] = row;
+                to_post(g, idx);
                 if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at >= 0.0 && flat(man_pos(g, gd), post.pos) < 1.0 { g.gd[gd].pinned = true; }
             }
         }

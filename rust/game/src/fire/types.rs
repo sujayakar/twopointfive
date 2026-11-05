@@ -156,7 +156,7 @@ impl FIRELOOKSMOKESnow {
 }
 impl Default for FIRELOOKSMOKESnow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:230 fireShown ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
+/// (TypeScript: inline at quiet fireShown ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
 #[derive(Clone, Debug)]
 pub struct FireShown2 {
     pub n: f64,

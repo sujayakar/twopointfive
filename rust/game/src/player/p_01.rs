@@ -1,4 +1,4 @@
-//! src/game/player.ts lines 1 to 392
+//! src/game/player.ts lines 1 to 393
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -6,16 +6,6 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-// ------------------------------------------------------------ what skeleton 4 still blocks (each is a line in notes.md)
-
-/// player.ts:266 Rifle.attachment: the getter's stub `rifle_attachment()` takes neither `g` nor the rifle. The fields are there, so this is the getter's own line (weapons.ts:533)
-fn seam_rifle_attachment(g: &mut crate::game::Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> {
-    let i = g.fa[rifle].att_idx;
-    if i >= 0 { g.fa[rifle].attachments.get(i as usize).copied() } else { None }
-}
-/// player.ts:265 `rf.attachments[(rf.attIdx + 1) % Math.max(1, rf.attachments.length)]`: next_load's signature has `rf` and no `g`
-fn seam_next_attachment(rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!("needs: next_load(g, rf)") }
 
 /// a gun's row of WEAPONS (TypeScript: `gun.def`, the object itself)
 fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
@@ -169,13 +159,19 @@ pub fn item_name(g: &mut crate::game::Game, pl: PlayerId) -> String {
 }
 
 /// what 2 pressed again puts on the right button after the load that is up (player.ts nextLoad)
-pub fn next_load(rf: FirearmId) -> String {
-    let a = seam_next_attachment(rf);
+pub fn next_load(g: &mut crate::game::Game, rf: FirearmId) -> String {
+    let a = next_attachment(&g.fa[rf].attachments, g.fa[rf].att_idx);
     String::from(match a {
         Some(crate::weapons::RifleAttachment::Cam) => "the sticky cameras",
         Some(crate::weapons::RifleAttachment::He40) => "the 40 mm",
         _ => "the ring airfoil",
     })
+}
+
+/// `attachments[(attIdx + 1) % Math.max(1, attachments.length)]`: None where the TypeScript reads undefined (player.ts nextLoad)
+fn next_attachment(attachments: &[crate::weapons::RifleAttachment], att_idx: i32) -> Option<crate::weapons::RifleAttachment> {
+    let i = (att_idx + 1) % core::cmp::max(1, attachments.len() as i32);
+    if i >= 0 { attachments.get(i as usize).copied() } else { None }
 }
 
 /// the rifle as the HUD line names it (player.ts rifleName)
@@ -184,11 +180,11 @@ pub fn rifle_name(g: &mut crate::game::Game, pl: PlayerId) -> String {
     let def = g.fa[rifle].def;
     let short = def_of(g, def).short.clone();
     let mode = g.fa[rifle].mode.as_str().to_uppercase();
-    let att = seam_rifle_attachment(g, rifle);
+    let att = crate::weapons::rifle_attachment(g, rifle);
     let tail = match att {
-        Some(crate::weapons::RifleAttachment::Ring) => { let tag = crate::gear::ring_tag(g); format!(" · {} ×{}", tag, g.fa[rifle].rings) }
-        Some(crate::weapons::RifleAttachment::He40) => format!(" · 40 MM ×{}", g.fa[rifle].shells),
-        Some(crate::weapons::RifleAttachment::Cam) => format!(" · CAM ×{}", g.fa[rifle].cams),
+        Some(crate::weapons::RifleAttachment::Ring) => { let tag = crate::gear::ring_tag(g); format!(" · {} ×{}", tag, js::num_str(g.fa[rifle].rings)) }
+        Some(crate::weapons::RifleAttachment::He40) => format!(" · 40 MM ×{}", js::num_str(g.fa[rifle].shells)),
+        Some(crate::weapons::RifleAttachment::Cam) => format!(" · CAM ×{}", js::num_str(g.fa[rifle].cams)),
         None => String::new(),
     };
     format!("{} · {}{}", short, mode, tail)
@@ -367,7 +363,7 @@ fn wall_not_stack(g: &crate::game::Game, pl: PlayerId) -> bool {
 
 /// a tube gun's beat as the weapon's row (TypeScript: the one object, ShellRow being WeaponDef['reload'] & { exact: true })
 fn shell_row_as_weapon_row(r: &crate::gunreload::ShellRow) -> crate::weapons::WeaponDefReload {
-    crate::weapons::WeaponDefReload { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack, shell: r.shell }
+    crate::weapons::WeaponDefReload { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack, shell: r.shell, exact: Some(r.exact) }
 }
 
 /// a tube gun's beat as the animator's (the same object in the TypeScript; `exact` is what tells it from a magazine change's)
@@ -442,7 +438,7 @@ pub fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>, bolt_o
                 }
                 None => {
                     let r = def_of(g, def).reload.clone();
-                    let b = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: if rack_it { r.rack.map(Some) } else { Some(None) }, keep: None, hand: None, exact: None };
+                    let b = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: if rack_it { r.rack.map(Some) } else { Some(None) }, keep: None, hand: None, exact: r.exact };
                     crate::character::anim_reload(g, c, Some(r.dur), Some(b));
                 }
             }
@@ -483,6 +479,16 @@ mod tests {
         assert_eq!(sam_beat(0.0).to_bits(), 0.9f64.to_bits());
         assert_eq!(sam_beat(20.0).to_bits(), 0x3ff0f5c28f5c28f6);
         assert_eq!(sam_beat(100.0).to_bits(), 1.4f64.to_bits());
+    }
+
+    /// the load after the one up: round the list; nothing issued reads undefined, which next_load names as the ring
+    #[test]
+    fn next_attachment_goes_round() {
+        use crate::weapons::RifleAttachment::{Cam, He40, Ring};
+        assert_eq!(next_attachment(&[Ring, He40, Cam], 0), Some(He40));
+        assert_eq!(next_attachment(&[Ring, He40, Cam], 2), Some(Ring));
+        assert_eq!(next_attachment(&[Ring, He40, Cam], -1), Some(Ring));
+        assert_eq!(next_attachment(&[], 0), None);
     }
 
     /// a plain walk files at each edge of the cycle, none between

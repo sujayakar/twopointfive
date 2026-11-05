@@ -1,4 +1,4 @@
-//! src/game/morale.ts lines 1 to 452
+//! src/game/morale.ts lines 1 to 456
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -168,9 +168,9 @@ pub fn training_of(g: &mut crate::game::Game, gd: GuardId) -> crate::morale::Tra
     let men = match band_of(g, gd) {
         Some(men) => men,
         None => {
-            let t = crate::game::temperament().get(g.gd[gd].callsign.clone()).cloned();
+            let t = crate::game::temperament().iter().find(|(name, _)| *name == g.gd[gd].callsign.as_str()).map(|(_, t)| *t);
             let green = match t {
-                Some(t) => t == "nervy",
+                Some(t) => t == crate::game::Temperament::Nervy,
                 None => g.guards.iter().position(|o| *o == gd).map_or(false, |i| i % 2 == 1),
             };
             return if green { TrainingOf::Green } else { TrainingOf::Steady };
@@ -307,7 +307,14 @@ pub fn morale_reset(g: &mut crate::game::Game, men: Option<bool>) {
     g.m.morale.blasts_of = None;
     if men.unwrap_or(false) {
         let mut i = 0;
-        while i < g.guards.len() { let gd = g.guards[i]; i += 1; g.m.morale.state_of.delete(gd); }
+        let rule = crate::owner::own().morale;
+        while i < g.guards.len() {
+            let gd = g.guards[i];
+            i += 1;
+            g.m.morale.state_of.delete(gd);
+            let t = g.time;
+            crate::owner::release_man(g, gd, rule, t);
+        }
     }
 }
 
@@ -655,6 +662,15 @@ pub fn morale_tick(g: &mut crate::game::Game, dt: f64) {
         r.rung = rung;
         if r.act != MoraleAct::None { step(g, gd, dt); }
     }
+    // who this file's script has this frame, as it stands when the sequences have all been stepped
+    let rule = crate::owner::own().morale;
+    let mut i = 0;
+    while i < g.guards.len() {
+        let gd = g.guards[i];
+        i += 1;
+        let t = g.time;
+        if g.m.morale.state_of.get(gd).map_or(false, |s| s.drive) { crate::owner::claim_man(g, gd, rule, t, None); } else { crate::owner::release_man(g, gd, rule, t); }
+    }
 }
 
 #[cfg(test)]
@@ -682,6 +698,25 @@ mod tests {
     fn every_kind_has_lines() {
         for k in [LineKind::Duck, LineKind::Call, LineKind::Again, LineKind::Out, LineKind::Spent, LineKind::Clear, LineKind::Lost, LineKind::Order, LineKind::Okay] {
             assert_eq!(lines_of(k).say.len() == 0, k == LineKind::Call);
+        }
+    }
+    /// this file's static says what the skeleton's table (read off the TypeScript) says, kind by kind and in the written order
+    #[test]
+    fn the_static_is_the_skeletons_table() {
+        fn same(a: Option<Pool>, b: &Option<Vec<String>>) {
+            let a: Vec<&str> = a.unwrap_or(&[]).to_vec();
+            let b: Vec<&str> = b.as_ref().map_or(Vec::new(), |v| v.iter().map(|t| t.as_str()).collect());
+            assert_eq!(a, b);
+        }
+        let table = crate::morale::lines();
+        for (k, l) in LINES.iter() {
+            let row = table.get(String::from(k.as_str())).unwrap();
+            same(Some(l.say), &Some(row.say.clone()));
+            same(l.he, &row.he);
+            same(l.they, &row.they);
+            same(l.dark, &row.dark);
+            same(l.lit, &row.lit);
+            same(l.now, &row.now);
         }
     }
 }

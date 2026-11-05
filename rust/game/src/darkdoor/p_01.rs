@@ -18,10 +18,6 @@ static LINES: [(crate::darkdoor::LineKind, Pool, Pool, Pool); 6] = [
     (LineKind::Alone, &["fine. fine — I'll do it myself.", "nobody ever comes. going in.", "all right. slow. going in."], &[], &[]),
 ];
 
-// ---- the seam: the one step the skeleton still cannot do (notes.md, ## Skeleton)
-/// `g.audio.play(name, at, gain, { rate })` (darkdoor.ts:102): `game_audio_like_play`'s opts hold `crate::Opaque`, which cannot carry a rate
-fn seam_audio_play(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to hold rate") }
-
 // ---- the private helpers
 /// a new row   (darkdoor.ts:134, the literal in mind)
 fn fresh_fear() -> crate::darkdoor::Fear {
@@ -66,7 +62,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineK
     crate::game::game_say(g, gd, pool[i], Some(radio), None, None);
     if radio {
         let at = head_of(g, c);
-        seam_audio_play(g, "radio", at, 0.5, 1.05);
+        crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.05 }));
     }
 }
 
@@ -105,7 +101,7 @@ pub fn alarmed(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// nobody's but his own.   (darkdoor.ts own)
 pub fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !rescued(g, gd) && !crate::morale::morale_owns(g, gd) && !crate::netquietfeed::net_feed_holds(g, gd)
+    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !rescued(g, gd) && !crate::owner::has_him(g, gd, crate::owner::own().morale) && !crate::owner::has_him(g, gd, crate::owner::own().last_man)
 }
 
 /// may the rule have him at all this frame.   (darkdoor.ts able)
@@ -128,7 +124,7 @@ pub fn fight_walk(g: &mut crate::game::Game, gd: GuardId) -> crate::darkdoor::Fi
 pub fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
     if !ours(g, o) { return false; }
     let st = g.gd[o].state;
-    if (st != crate::game::GuardState::Patrol && st != crate::game::GuardState::Suspicious) || !own(g, o) || g.gd[o].leader.is_some() || g.gd[o].post.is_some() || crate::needs::needs_busy(g, o) { return false; }
+    if (st != crate::game::GuardState::Patrol && st != crate::game::GuardState::Suspicious) || !own(g, o) || g.gd[o].leader.is_some() || g.gd[o].post.is_some() || crate::owner::has_him(g, o, crate::owner::own().needs) { return false; }
     match g.m.darkdoor.state_of.get(o) { None => true, Some(so) => so.act == DarkDoorAct::None }
 }
 
@@ -383,8 +379,8 @@ pub fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     fear(g, gd).other = Some(m);
     g.stats.darkdoor.calls += 1;
     let here = pos_of(g, gd);
+    crate::belief::word(g, m, here);
     let x = &mut g.gd[m];
-    x.last_known = Some(v3::copy(here));
     x.awareness = crate::m::max(x.awareness, 0.42);
     if x.state != crate::game::GuardState::Suspicious {
         x.state = crate::game::GuardState::Suspicious;
@@ -394,7 +390,9 @@ pub fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     }
     x.search_t = 0.0;
     x.path = Vec::new();
+    x.path_serial = x.path_serial.wrapping_add(1);
     x.path_goal = None;
+    x.path_goal_orbit = false;
     x.stall_ref = None;
     let s = fear(g, gd);
     if !s.called {
@@ -573,6 +571,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
         if g.gd[gd].state == crate::game::GuardState::Alert {
             crate::guards::drop_to_search(g, gd, None);
             g.gd[gd].last_known = Some(v3::copy(g.ch[c].pos));
+            g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
         } else {
             g.gd[gd].stall_ref = Some(v3::copy(g.ch[c].pos));
             g.gd[gd].stall_t = 1e3;
@@ -615,7 +614,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
 /// the eyes' seam: where his aim goes this frame, None = his own.   (darkdoor.ts darkDoorLook)
 pub fn dark_door_look(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
     let (act, door, t) = match g.m.darkdoor.state_of.get(gd) { Some(s) => (s.act, s.door, s.t), None => return None };
-    if (act != DarkDoorAct::Balk && act != DarkDoorAct::Solo) || crate::netquietfeed::net_feed_holds(g, gd) { return None; }
+    if (act != DarkDoorAct::Balk && act != DarkDoorAct::Solo) || crate::owner::has_him(g, gd, crate::owner::own().last_man) { return None; }
     let d = door_at(g, door)?;
     let sweep = g.k.darkdoor.sweep_secs;
     let f = crate::guards::frame_of(g, d);
@@ -634,7 +633,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     if act == DarkDoorAct::Balk || act == DarkDoorAct::Solo {
         let s = fear(g, gd);
         s.idle += dt;
-        if s.idle > k.keep_secs || crate::netquietfeed::net_feed_holds(g, gd) { end(g, gd, Some(true)); }
+        if s.idle > k.keep_secs || crate::owner::has_him(g, gd, crate::owner::own().last_man) { end(g, gd, Some(true)); }
         return;
     }
     let s = fear(g, gd);
@@ -674,14 +673,19 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
         return;
     }
     let far = match g.gd[gd].last_known { Some(l) => flat(l, goal) > 0.5, None => true };
-    if far { g.gd[gd].last_known = Some(v3::copy(goal)); }
+    if far {
+        g.gd[gd].last_known = Some(v3::copy(goal));
+        g.gd[gd].fix_stamp = g.gd[gd].fix_stamp.wrapping_add(1);
+    }
     let x = &mut g.gd[gd];
     if x.state != crate::game::GuardState::Suspicious {
         x.state = crate::game::GuardState::Suspicious;
         x.search_plan = None;
         x.pieing = None;
         x.path = Vec::new();
+        x.path_serial = x.path_serial.wrapping_add(1);
         x.path_goal = None;
+        x.path_goal_orbit = false;
     }
     x.awareness = m::max(x.awareness, 0.42);
     x.search_t = 0.0;
@@ -746,7 +750,7 @@ pub fn dark_door_summary(g: &mut crate::game::Game) -> String {
         let mut line = alloc::format!("{} {}", g.gd[gd].callsign, act.as_str());
         if act == DarkDoorAct::Balk || act == DarkDoorAct::Solo {
             let name = match door_at(g, door) { Some(d) => g.dr[d].def.name.clone(), None => String::from("?") };
-            line.push_str(&alloc::format!(" {:.1} s at {}", t, name));
+            line.push_str(&alloc::format!(" {} s at {}", js::to_fixed(t, 1), name));
         }
         if let Some(o) = other {
             let who = &g.gd[o].callsign;
@@ -772,6 +776,18 @@ mod tests {
         let copy = dark_door_lines(Some(LineKind::Copy));
         assert_eq!(copy.len(), 3);
         assert_eq!(copy[2], "hold there — coming to you.");
+    }
+
+    /// the static here and the skeleton's `lines()` are the same words in the same order
+    #[test]
+    fn lines_are_the_skeletons() {
+        let t = crate::darkdoor::lines();
+        for &(k, say, he, they) in LINES.iter() {
+            let row = t.get(String::from(k.as_str())).unwrap();
+            assert_eq!(row.say, say.iter().map(|l| String::from(*l)).collect::<Vec<_>>());
+            assert_eq!(row.he.clone().unwrap_or_default(), he.iter().map(|l| String::from(*l)).collect::<Vec<_>>());
+            assert_eq!(row.they.clone().unwrap_or_default(), they.iter().map(|l| String::from(*l)).collect::<Vec<_>>());
+        }
     }
 
     #[test]

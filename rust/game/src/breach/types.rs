@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: BreachDrill, src/game/breach.ts:75)
+/// (TypeScript: BreachDrill, src/game/breach.ts:74)
 #[derive(Clone, Debug)]
 pub struct BreachDrill {
     pub phase: crate::breach::Phase,
@@ -117,7 +117,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: inline at src/game/breach.ts:78 BreachDrill.beats, src/game/breach.ts:78)
+/// (TypeScript: inline at src/game/breach.ts:77 BreachDrill.beats, src/game/breach.ts:77)
 #[derive(Clone, Debug)]
 pub struct BreachDrillBeatsItem {
     pub t: f64,
@@ -134,7 +134,7 @@ impl BreachDrillBeatsItem {
 }
 impl Default for BreachDrillBeatsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: OpFlow, src/game/breach.ts:65)
+/// (TypeScript: OpFlow, src/game/breach.ts:64)
 #[derive(Clone, Debug)]
 pub struct OpFlow {
     pub st: crate::breach::FlowSt,
@@ -142,8 +142,8 @@ pub struct OpFlow {
     pub wps: Vec<V3>,
     pub sweep: crate::squad::Sweep,
     pub aim: V3,
-    pub q: Vec<f64>,
-    pub on: f64,
+    pub q: Vec<usize>,
+    pub on: i32,
     pub since: f64,
     pub n: f64,
     pub next: f64,
@@ -162,7 +162,7 @@ impl OpFlow {
             sweep: crate::squad::Sweep::blank(),
             aim: [0.0; 3],
             q: Vec::new(),
-            on: 0.0,
+            on: 0,
             since: 0.0,
             n: 0.0,
             next: 0.0,
@@ -196,7 +196,7 @@ impl FlowSt {
     }
 }
 
-/// (TypeScript: BreachLive, src/game/breach.ts:54)
+/// (TypeScript: BreachLive, src/game/breach.ts:53)
 #[derive(Clone, Copy, Debug)]
 pub struct BreachLive {
     pub orders: f64,
@@ -219,7 +219,7 @@ impl BreachLive {
 }
 impl Default for BreachLive { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breach.ts:98 constructor(opts), src/game/breach.ts:98)
+/// (TypeScript: inline at src/game/breach.ts:97 constructor(opts), src/game/breach.ts:97)
 #[derive(Clone, Copy, Debug)]
 pub struct BreachDrillNewOpts {
     pub guarantee_downs: Option<bool>,
@@ -236,7 +236,7 @@ impl BreachDrillNewOpts {
 }
 impl Default for BreachDrillNewOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breach.ts:116 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
+/// (TypeScript: inline at src/game/breach.ts:115 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Copy, Debug)]
 pub struct BreachDrillRoutePatch {
     pub goal: Option<V3>,
@@ -283,62 +283,62 @@ impl BreachDrillRoutePatch {
 }
 impl Default for BreachDrillRoutePatch { fn default() -> Self { Self::zeroed() } }
 
-/// (src/game/breach.ts:27 RUN)
+/// (src/game/breach.ts:26 RUN)
 pub const RUN: f64 = 3.4;
 
-/// (src/game/breach.ts:27 HOLD_OPEN)
+/// (src/game/breach.ts:26 HOLD_OPEN)
 pub const HOLD_OPEN: f64 = 2.6;
 
-/// (src/game/breach.ts:29 SET_HOLD)
+/// (src/game/breach.ts:28 SET_HOLD)
 pub const SET_HOLD: f64 = 2.4;
 
-/// (src/game/breach.ts:31 TOSS_AFTER_IMPACT)
+/// (src/game/breach.ts:30 TOSS_AFTER_IMPACT)
 pub const TOSS_AFTER_IMPACT: f64 = 0.15;
 
-/// (src/game/breach.ts:31 FUSE_AFTER_LAND)
+/// (src/game/breach.ts:30 FUSE_AFTER_LAND)
 pub const FUSE_AFTER_LAND: f64 = 0.45;
 
-/// (src/game/breach.ts:34 CHOP_LEAD)
+/// (src/game/breach.ts:33 CHOP_LEAD)
 pub const CHOP_LEAD: f64 = 0.4;
 
-/// (src/game/breach.ts:36 GO_AFTER_BANG)
+/// (src/game/breach.ts:35 GO_AFTER_BANG)
 pub const GO_AFTER_BANG: f64 = 0.4;
 
-/// (src/game/breach.ts:36 TWO_AFTER_ONE)
+/// (src/game/breach.ts:35 TWO_AFTER_ONE)
 pub const TWO_AFTER_ONE: f64 = 0.5;
 
-/// (src/game/breach.ts:38 CENTRE_SECS)
+/// (src/game/breach.ts:37 CENTRE_SECS)
 pub const CENTRE_SECS: f64 = 0.32;
 
-/// (src/game/breach.ts:40 SETTLE)
+/// (src/game/breach.ts:39 SETTLE)
 pub const SETTLE: f64 = 0.14;
 
-/// (src/game/breach.ts:40 PAIR)
+/// (src/game/breach.ts:39 PAIR)
 pub const PAIR: f64 = 0.16;
 
-/// (src/game/breach.ts:40 SHIFT)
+/// (src/game/breach.ts:39 SHIFT)
 pub const SHIFT: f64 = 0.3;
 
-/// (src/game/breach.ts:42 FIRE_INSIDE_M)
+/// (src/game/breach.ts:41 FIRE_INSIDE_M)
 pub const FIRE_INSIDE_M: f64 = 0.3;
 
-/// (src/game/breach.ts:44 NEXT_AFTER_CLEAR)
+/// (src/game/breach.ts:43 NEXT_AFTER_CLEAR)
 pub const NEXT_AFTER_CLEAR: f64 = 2.2;
 
-/// (src/game/breach.ts:44 RESTACK_HOLD)
+/// (src/game/breach.ts:43 RESTACK_HOLD)
 pub const RESTACK_HOLD: f64 = 1.5;
 
-/// (src/game/breach.ts:44 RESTACK_CAP)
+/// (src/game/breach.ts:43 RESTACK_CAP)
 pub const RESTACK_CAP: f64 = 7.5;
 
-/// (src/game/breach.ts:58 LIVE_LINES: a table nothing writes)
+/// (src/game/breach.ts:57 LIVE_LINES: a table nothing writes)
 pub fn live_lines() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("clear1"), String::from("right side — clear.")); t.set(String::from("clear2"), String::from("left clear. i have the door.")); t.set(String::from("roomClear1"), String::from("room clear.")); t } }
 
-/// (src/game/breach.ts:61 LIVE_GUIDE: a table nothing writes)
+/// (src/game/breach.ts:60 LIVE_GUIDE: a table nothing writes)
 pub fn live_guide() -> JsMap<String, Option<String>> { { let mut t = JsMap::new(); t.set(String::from("clear1"), Some(String::from("right side — clear. i've got the door."))); t } }
 
-/// (src/game/breach.ts:62 LIVE_NOW: a table nothing writes)
+/// (src/game/breach.ts:61 LIVE_NOW: a table nothing writes)
 pub fn live_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("clear1"), String::from("right side — clear. i have the door.")); t.set(String::from("clear2"), String::from("left clear.")); t } }
 
-/// (src/game/breach.ts:64 LIVE_NO_CHARGE: a table nothing writes)
+/// (src/game/breach.ts:63 LIVE_NO_CHARGE: a table nothing writes)
 pub fn live_no_charge() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("stack1"), String::from("stack on me — side door. on my boot.")); t.set(String::from("stack2"), String::from("set.")); t } }

@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which level's script this is, by the level file's name (scene/levelScripts.ts LEVEL_SCRIPTS); the body is levels/<name>.script.ts, its define pass called by a match
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum LevelScriptFn {
     TutSky,
     TutTeam,
@@ -509,7 +509,6 @@ impl RoomClearPlanBreach {
 /// (TypeScript: Level, src/scene/level.ts:150)
 #[derive(Clone, Debug)]
 pub struct Level {
-    pub boxes: Vec<crate::scene_boxes::Box>,
     pub props: Vec<crate::scene_level::PropDef>,
     pub lights: Vec<crate::scene_level::LightDef>,
     pub switchables: Vec<crate::scene_level::LevelSwitchablesItem>,
@@ -539,7 +538,6 @@ impl Level {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Level {
-            boxes: Vec::new(),
             props: Vec::new(),
             lights: Vec::new(),
             switchables: Vec::new(),

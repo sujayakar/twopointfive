@@ -44,7 +44,7 @@ pub fn agitation_of(g: &mut crate::game::Game, gd: GuardId) -> f64 { agitation_t
 fn add(a: &mut f64, why: &mut Vec<String>, v: f64, label: &str) {
     if m::abs(v) < 1e-6 { return; }
     *a += v;
-    if m::abs(v) >= 0.005 { why.push(format!("{} {}{:.2}", label, if v > 0.0 { "+" } else { "" }, v)); }
+    if m::abs(v) >= 0.005 { why.push(format!("{} {}{}", label, if v > 0.0 { "+" } else { "" }, js::to_fixed(v, 2))); }
 }
 
 /// The sum of what has rattled this man, clamped, with its terms for the panel and the probes.   (dialogue.ts agitationTerms)
@@ -96,11 +96,7 @@ pub fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogu
 pub fn temperament_of(g: &mut crate::game::Game, gd: GuardId) -> crate::game::Temperament {
     if g.gd[gd].unit.is_some() { return crate::game::Temperament::Hard; }
     let callsign = g.gd[gd].callsign.clone();
-    match crate::game::temperament().get(callsign).map(String::as_str) {
-        Some("nervy") => crate::game::Temperament::Nervy,
-        Some("hard") => crate::game::Temperament::Hard,
-        _ => crate::game::Temperament::Steady,
-    }
+    crate::game::temperament().iter().find(|(k, _)| *k == callsign.as_str()).map(|(_, t)| *t).unwrap_or(crate::game::Temperament::Steady)
 }
 
 /// The stages at which this temperament gives the useful thing.   (dialogue.ts givesAt)
@@ -114,16 +110,13 @@ pub fn gives_at(t: crate::game::Temperament, band: crate::dialogue::Band) -> Vec
 
 // ---------------------------------------------------------------- tokens, the line table
 
-/// Every token, to read a table's word back as its Token.
-const TOKEN_ALL: [Token; 23] = [Token::Partner, Token::Victim, Token::Body, Token::Missing, Token::Room, Token::SawWhere, Token::HeardWhere, Token::Route, Token::PartnerRoute, Token::Post, Token::Door, Token::Caller, Token::Checker, Token::Checked, Token::ClearRoom, Token::BreakerRoom, Token::CheckEta, Token::Minutes, Token::N, Token::Up, Token::Badge, Token::Code, Token::PadDoor];
-
 /// The longest value each token can take, as the page has it: TOKEN_WORST with TOKEN_WORST_NOW laid over. Only the lint reads it.   (dialogue.ts tokenWorst)
 pub fn token_worst(g: &mut crate::game::Game) -> JsMap<crate::dialogue::Token, String> { token_worst_of() }
 
 fn token_worst_of() -> JsMap<Token, String> {
     let mut t = JsMap::new();
     for (word, v) in crate::dialogue::token_worst_table().iter() {
-        if let Some(k) = TOKEN_ALL.iter().find(|k| k.as_str() == word.as_str()) { t.set(*k, v.clone()); }
+        if let Some(k) = crate::dialogue::tokens().iter().find(|k| k.as_str() == word.as_str()) { t.set(*k, v.clone()); }
     }
     if let Some(door) = crate::dialogue::token_worst_now().door { t.set(Token::Door, door); }
     t
@@ -145,155 +138,136 @@ fn said_of(l: &crate::dialogue::SaidTextL, ctx: &crate::dialogue::DialogueCtx) -
 
 // ---------------------------------------------------------------- intel
 
-/// The useful things' texts by kind and by who says them, as the page has them: INTEL_TEXT with INTEL_NOW and INTEL_GUIDE laid over. (dialogue.ts INTEL_TEXT, INTEL_NOW, INTEL_GUIDE)
-static INTEL_TABLE: &[(IntelKind, &[(&str, &str)])] = &[
-    (IntelKind::CheckOn, &[
-        ("*", "{Checker}'s walking {checked}'s route — he went quiet. He'll come past here."),
-        ("nervy", "{Checker}'s out looking for {checked}— he went quiet— he'll walk right into us—"),
-        ("hard", "{Checker}'s walking {checked}'s route. This way. Soon."),
-    ]),
-    (IntelKind::Clearing, &[
-        ("*", "They're clearing rooms off your last position. {ClearRoom} first."),
-        ("hard", "Rooms are being cleared. {ClearRoom} first. Then this one."),
-    ]),
-    (IntelKind::RollcallLive, &[
-        ("*", "That's a check now. If one of us doesn't answer, {caller} sends someone over."),
-        ("hard", "That's the check. If I don't answer, {caller} sends somebody here."),
-    ]),
-    (IntelKind::Blackout, &[
-        ("*", "Lights die, one of us goes to the breaker in {breakerRoom} — armed."),
-        ("hard", "If the lights go out, somebody goes to the breaker in {breakerRoom}. Armed."),
-    ]),
-    (IntelKind::Door, &[
-        ("*", "{Door} is on a key. We all carry one. Mine's on my belt."),
-        ("hard", "{Door} is keyed. We all carry one. Take mine and get out."),
-        ("selfown:steady", "…Belt. The key's on my belt. Well played, I suppose."),
-        ("selfown:nervy", "…belt. It's on my belt. Please don't make it a whole thing."),
-        ("sc:selfown-s1", "…On my belt. The key's on my belt. Eleven years, for this."),
-        ("sc:selfown-s2", "…Belt. Left side. Take it— you were going to anyway."),
-        ("sc:selfown-s3", "…Belt clip. Under the hi-vis. Nicely done, I suppose."),
-        ("sc:selfown-n2", "…This one. On my belt. I heard it as I said it. I HEARD it."),
-        ("sc:selfown-n3", "…key. Belt, left side. I don't feel better. You said I would."),
-        ("con", "{Door}'s keyed; every belt carries one. Here— inspect mine."),
-        ("fan", "{Door}'s keyed— key's on my belt. Do yours open anything? No?"),
-    ]),
-    (IntelKind::Code, &[
-        ("*", "{PadDoor} is on a pad — {code}. Same four digits every night."),
-        ("nervy", "The pad by {padDoor}— it's {code}— {code}— don't make me say it twice—"),
-        ("hard", "{PadDoor}: {code} on the pad. Now you know what I know."),
-        ("con", "{PadDoor} takes {code} on the pad, sir. Logged monthly, changed never."),
-        ("fan", "The pad on {padDoor} is {code}— do YOU get codes, or is it all wire?"),
-    ]),
-    (IntelKind::Rollcall, &[
-        ("*", "Radio check {checkEta}. Miss it, they send a man down your route."),
-        ("nervy", "A check— {checkEta}— I don't answer, somebody comes looking."),
-        ("nervy:sawHurt", "The check's {checkEta}— {victim} won't answer it— then they ALL come—"),
-        ("hard", "Radio check {checkEta}. No answer, they send somebody. Do the math."),
-        ("con", "Radio check {checkEta}, sir. No answer, a man walks that route. By the book."),
-        ("fan", "Radio check's {checkEta}— miss it, they send someone. Do YOU have checks?"),
-    ]),
-    (IntelKind::LockdownPosts, &[
-        ("*", "We're paired now. One man holds {post}. Nobody walks alone."),
-        ("hard", "Pairs. A man on {post}. Nobody alone — except you."),
-    ]),
-    (IntelKind::Routes, &[
-        ("*", "{N} of us tonight. I've got {route}, {partner} has {partnerRoute}."),
-        ("nervy", "It's {n} of us— me on {route}, {partner} on {partnerRoute}— that's it—"),
-        ("hard", "{N}. Me, {route}. {Partner}, {partnerRoute}. Happy?"),
-        ("con", "{N} on shift: I take {route}, {partner} {partnerRoute}. All logged, sir."),
-        ("fan", "{N} of us— I do {route}, {partner} {partnerRoute}. What's YOUR route like?"),
-    ]),
-    (IntelKind::Missing, &[
-        ("*", "Nobody can raise {missing}. His route turns up empty, this all locks down."),
-        ("hard", "{Missing} is off the air. His route comes up empty, we lock down."),
-    ]),
-    (IntelKind::Drive, &[
-        ("*", "Your rack dropped off the board. Somebody's already been sent to look at it."),
-        ("hard", "Your rack went dark on the board. Somebody's on his way to it."),
-    ]),
-];
-
-/// What a kind's row of the table holds, in the written order; a kind always has one.
-fn intel_rows(kind: IntelKind) -> &'static [(&'static str, &'static str)] {
-    for (k, rows) in INTEL_TABLE { if *k == kind { return rows; } }
-    &[]
+/// Calls a macro with every field a kind's row can hold, but the script's own (`sc`).
+macro_rules! intel_fields {
+    ($m:ident; $($a:tt)*) => { $m!($($a)*; steady nervy hard under pedant selfown folder ramble fan stoic con game menace steady_none steady_heard steady_glimpsed steady_saw steady_saw_hurt nervy_none nervy_heard nervy_glimpsed nervy_saw nervy_saw_hurt hard_none hard_heard hard_glimpsed hard_saw hard_saw_hurt __none __heard __glimpsed __saw __saw_hurt pedant_steady pedant_nervy pedant_hard selfown_steady selfown_nervy selfown_hard folder_steady folder_nervy folder_hard ramble_steady ramble_nervy ramble_hard fan_steady fan_nervy fan_hard stoic_steady stoic_nervy stoic_hard con_steady con_nervy con_hard game_steady game_nervy game_hard menace_steady menace_nervy menace_hard) };
 }
 
-fn intel_get(rows: &[(&'static str, &'static str)], key: &str) -> Option<&'static str> {
-    for (k, v) in rows { if *k == key { return Some(*v); } }
-    None
+/// A row of INTEL_TEXT as the struct of a kind's table.
+macro_rules! text_row {
+    ($row:ident; $($f:ident)*) => { crate::dialogue::IntelTable { $($f: $row.$f,)* sc: $row.sc } };
 }
 
-/// A kind's rows as the skeleton's struct. It has no field for the `sc:` rows: `shaped_of` reads those off the rows.
-fn table_of(rows: &[(&'static str, &'static str)]) -> crate::dialogue::IntelTable {
-    let v = |key: &str| intel_get(rows, key).map(st);
-    crate::dialogue::IntelTable {
-        steady: v("steady"),
-        nervy: v("nervy"),
-        hard: v("hard"),
-        under: v("*"),
-        pedant: v("pedant"),
-        selfown: v("selfown"),
-        folder: v("folder"),
-        ramble: v("ramble"),
-        fan: v("fan"),
-        stoic: v("stoic"),
-        con: v("con"),
-        game: v("game"),
-        menace: v("menace"),
-        steady_none: v("steady:none"),
-        steady_heard: v("steady:heard"),
-        steady_glimpsed: v("steady:glimpsed"),
-        steady_saw: v("steady:saw"),
-        steady_saw_hurt: v("steady:sawHurt"),
-        nervy_none: v("nervy:none"),
-        nervy_heard: v("nervy:heard"),
-        nervy_glimpsed: v("nervy:glimpsed"),
-        nervy_saw: v("nervy:saw"),
-        nervy_saw_hurt: v("nervy:sawHurt"),
-        hard_none: v("hard:none"),
-        hard_heard: v("hard:heard"),
-        hard_glimpsed: v("hard:glimpsed"),
-        hard_saw: v("hard:saw"),
-        hard_saw_hurt: v("hard:sawHurt"),
-        __none: v("*:none"),
-        __heard: v("*:heard"),
-        __glimpsed: v("*:glimpsed"),
-        __saw: v("*:saw"),
-        __saw_hurt: v("*:sawHurt"),
-        pedant_steady: v("pedant:steady"),
-        pedant_nervy: v("pedant:nervy"),
-        pedant_hard: v("pedant:hard"),
-        selfown_steady: v("selfown:steady"),
-        selfown_nervy: v("selfown:nervy"),
-        selfown_hard: v("selfown:hard"),
-        folder_steady: v("folder:steady"),
-        folder_nervy: v("folder:nervy"),
-        folder_hard: v("folder:hard"),
-        ramble_steady: v("ramble:steady"),
-        ramble_nervy: v("ramble:nervy"),
-        ramble_hard: v("ramble:hard"),
-        fan_steady: v("fan:steady"),
-        fan_nervy: v("fan:nervy"),
-        fan_hard: v("fan:hard"),
-        stoic_steady: v("stoic:steady"),
-        stoic_nervy: v("stoic:nervy"),
-        stoic_hard: v("stoic:hard"),
-        con_steady: v("con:steady"),
-        con_nervy: v("con:nervy"),
-        con_hard: v("con:hard"),
-        game_steady: v("game:steady"),
-        game_nervy: v("game:nervy"),
-        game_hard: v("game:hard"),
-        menace_steady: v("menace:steady"),
-        menace_nervy: v("menace:nervy"),
-        menace_hard: v("menace:hard"),
+/// A row of INTEL_NOW or INTEL_GUIDE laid over: what it writes wins, as a spread.
+macro_rules! lay_over {
+    ($t:ident, $row:ident; $($f:ident)*) => { $(if $row.$f.is_some() { $t.$f = $row.$f; })* };
+}
+
+/// A kind's texts as the page has them: INTEL_TEXT with INTEL_NOW and INTEL_GUIDE laid over.   (dialogue.ts intelTable)
+fn table_of(kind: IntelKind) -> crate::dialogue::IntelTable {
+    let row = crate::dialogue::intel_text_table().get(st(kind.as_str())).cloned().unwrap_or_default();
+    let mut t = intel_fields!(text_row; row);
+    let (now, guide) = (crate::dialogue::intel_now(), crate::dialogue::intel_guide());
+    macro_rules! over {
+        ($row:expr) => { if let Some(r) = $row { intel_fields!(lay_over; t, r); } };
+    }
+    match kind {
+        IntelKind::CheckOn => { over!(now.check_on); over!(guide.check_on); }
+        IntelKind::Clearing => { over!(now.clearing); over!(guide.clearing); }
+        IntelKind::RollcallLive => { over!(now.rollcall_live); over!(guide.rollcall_live); }
+        IntelKind::Blackout => { over!(now.blackout); over!(guide.blackout); }
+        IntelKind::Door => { over!(now.door); over!(guide.door); }
+        IntelKind::Code => { over!(now.code); over!(guide.code); }
+        IntelKind::Rollcall => { over!(now.rollcall); over!(guide.rollcall); }
+        IntelKind::LockdownPosts => { over!(now.lockdown_posts); over!(guide.lockdown_posts); }
+        IntelKind::Routes => { over!(now.routes); over!(guide.routes); }
+        IntelKind::Missing => { over!(now.missing); over!(guide.missing); }
+        IntelKind::Drive => { over!(now.drive); over!(guide.drive); }
+    }
+    t
+}
+
+/// T[`${t}:${k}`]
+fn of_t_k(x: &crate::dialogue::IntelTable, t: crate::game::Temperament, k: Knowledge) -> Option<&String> {
+    use crate::game::Temperament as T;
+    match (t, k) {
+        (T::Steady, Knowledge::None) => x.steady_none.as_ref(),
+        (T::Steady, Knowledge::Heard) => x.steady_heard.as_ref(),
+        (T::Steady, Knowledge::Glimpsed) => x.steady_glimpsed.as_ref(),
+        (T::Steady, Knowledge::Saw) => x.steady_saw.as_ref(),
+        (T::Steady, Knowledge::SawHurt) => x.steady_saw_hurt.as_ref(),
+        (T::Nervy, Knowledge::None) => x.nervy_none.as_ref(),
+        (T::Nervy, Knowledge::Heard) => x.nervy_heard.as_ref(),
+        (T::Nervy, Knowledge::Glimpsed) => x.nervy_glimpsed.as_ref(),
+        (T::Nervy, Knowledge::Saw) => x.nervy_saw.as_ref(),
+        (T::Nervy, Knowledge::SawHurt) => x.nervy_saw_hurt.as_ref(),
+        (T::Hard, Knowledge::None) => x.hard_none.as_ref(),
+        (T::Hard, Knowledge::Heard) => x.hard_heard.as_ref(),
+        (T::Hard, Knowledge::Glimpsed) => x.hard_glimpsed.as_ref(),
+        (T::Hard, Knowledge::Saw) => x.hard_saw.as_ref(),
+        (T::Hard, Knowledge::SawHurt) => x.hard_saw_hurt.as_ref(),
+    }
+}
+
+/// T[t]
+fn of_t(x: &crate::dialogue::IntelTable, t: crate::game::Temperament) -> Option<&String> {
+    use crate::game::Temperament as T;
+    match t { T::Steady => x.steady.as_ref(), T::Nervy => x.nervy.as_ref(), T::Hard => x.hard.as_ref() }
+}
+
+/// T[`*:${k}`]
+fn of_k(x: &crate::dialogue::IntelTable, k: Knowledge) -> Option<&String> {
+    match k {
+        Knowledge::None => x.__none.as_ref(),
+        Knowledge::Heard => x.__heard.as_ref(),
+        Knowledge::Glimpsed => x.__glimpsed.as_ref(),
+        Knowledge::Saw => x.__saw.as_ref(),
+        Knowledge::SawHurt => x.__saw_hurt.as_ref(),
+    }
+}
+
+/// T[shape]
+fn of_shape(x: &crate::dialogue::IntelTable, shape: ShapeKey) -> Option<&String> {
+    match shape {
+        ShapeKey::Pedant => x.pedant.as_ref(),
+        ShapeKey::Selfown => x.selfown.as_ref(),
+        ShapeKey::Folder => x.folder.as_ref(),
+        ShapeKey::Ramble => x.ramble.as_ref(),
+        ShapeKey::Fan => x.fan.as_ref(),
+        ShapeKey::Stoic => x.stoic.as_ref(),
+        ShapeKey::Con => x.con.as_ref(),
+        ShapeKey::Game => x.game.as_ref(),
+        ShapeKey::Menace => x.menace.as_ref(),
+    }
+}
+
+/// T[`${shape}:${t}`]
+fn of_shape_t(x: &crate::dialogue::IntelTable, shape: ShapeKey, t: crate::game::Temperament) -> Option<&String> {
+    use crate::game::Temperament as T;
+    match (shape, t) {
+        (ShapeKey::Pedant, T::Steady) => x.pedant_steady.as_ref(),
+        (ShapeKey::Pedant, T::Nervy) => x.pedant_nervy.as_ref(),
+        (ShapeKey::Pedant, T::Hard) => x.pedant_hard.as_ref(),
+        (ShapeKey::Selfown, T::Steady) => x.selfown_steady.as_ref(),
+        (ShapeKey::Selfown, T::Nervy) => x.selfown_nervy.as_ref(),
+        (ShapeKey::Selfown, T::Hard) => x.selfown_hard.as_ref(),
+        (ShapeKey::Folder, T::Steady) => x.folder_steady.as_ref(),
+        (ShapeKey::Folder, T::Nervy) => x.folder_nervy.as_ref(),
+        (ShapeKey::Folder, T::Hard) => x.folder_hard.as_ref(),
+        (ShapeKey::Ramble, T::Steady) => x.ramble_steady.as_ref(),
+        (ShapeKey::Ramble, T::Nervy) => x.ramble_nervy.as_ref(),
+        (ShapeKey::Ramble, T::Hard) => x.ramble_hard.as_ref(),
+        (ShapeKey::Fan, T::Steady) => x.fan_steady.as_ref(),
+        (ShapeKey::Fan, T::Nervy) => x.fan_nervy.as_ref(),
+        (ShapeKey::Fan, T::Hard) => x.fan_hard.as_ref(),
+        (ShapeKey::Stoic, T::Steady) => x.stoic_steady.as_ref(),
+        (ShapeKey::Stoic, T::Nervy) => x.stoic_nervy.as_ref(),
+        (ShapeKey::Stoic, T::Hard) => x.stoic_hard.as_ref(),
+        (ShapeKey::Con, T::Steady) => x.con_steady.as_ref(),
+        (ShapeKey::Con, T::Nervy) => x.con_nervy.as_ref(),
+        (ShapeKey::Con, T::Hard) => x.con_hard.as_ref(),
+        (ShapeKey::Game, T::Steady) => x.game_steady.as_ref(),
+        (ShapeKey::Game, T::Nervy) => x.game_nervy.as_ref(),
+        (ShapeKey::Game, T::Hard) => x.game_hard.as_ref(),
+        (ShapeKey::Menace, T::Steady) => x.menace_steady.as_ref(),
+        (ShapeKey::Menace, T::Nervy) => x.menace_nervy.as_ref(),
+        (ShapeKey::Menace, T::Hard) => x.menace_hard.as_ref(),
     }
 }
 
 /// A kind's table of texts.   (dialogue.ts intelTable)
 pub fn intel_table(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind) -> crate::dialogue::IntelTable {
-    table_of(intel_rows(kind))
+    table_of(kind)
 }
 
 /// The words for what was taken, off the office: DRIVE_AWAY with DRIVE_AWAY_GUIDE laid over.   (dialogue.ts driveAway)
@@ -309,30 +283,24 @@ fn drive_away_of() -> crate::dialogue::DriveAway {
     }
 }
 
-fn intel_text_of(kind: IntelKind, t: crate::game::Temperament, k: Knowledge) -> &'static str {
-    let rows = intel_rows(kind);
-    intel_get(rows, &format!("{}:{}", t.as_str(), k.as_str()))
-        .or_else(|| intel_get(rows, t.as_str()))
-        .or_else(|| intel_get(rows, &format!("*:{}", k.as_str())))
-        .or_else(|| intel_get(rows, "*"))
-        .unwrap_or("")
+fn intel_text_of(kind: IntelKind, t: crate::game::Temperament, k: Knowledge) -> String {
+    let x = table_of(kind);
+    of_t_k(&x, t, k).or_else(|| of_t(&x, t)).or_else(|| of_k(&x, k)).or(x.under.as_ref()).cloned().unwrap_or_default()
 }
 
 /// The text a man of this temperament and knowledge gives for `kind`, the most specific variant written.   (dialogue.ts intelText)
 pub fn intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, t: crate::game::Temperament, k: crate::dialogue::Knowledge) -> String {
-    st(intel_text_of(kind, t, k))
+    intel_text_of(kind, t, k)
 }
 
-fn shaped_of(kind: IntelKind, id: &str, shape: ShapeKey, t: crate::game::Temperament) -> Option<&'static str> {
-    let rows = intel_rows(kind);
-    intel_get(rows, &format!("sc:{}", id))
-        .or_else(|| intel_get(rows, &format!("{}:{}", shape.as_str(), t.as_str())))
-        .or_else(|| intel_get(rows, shape.as_str()))
+fn shaped_of(kind: IntelKind, id: &str, shape: ShapeKey, t: crate::game::Temperament) -> Option<String> {
+    let x = table_of(kind);
+    x.sc.get(st(id)).or_else(|| of_shape_t(&x, shape, t)).or_else(|| of_shape(&x, shape)).cloned()
 }
 
 /// The script's own or the shape-voiced variant of `kind`, or None when none is written.   (dialogue.ts shapedIntelText)
 pub fn shaped_intel_text(g: &mut crate::game::Game, kind: crate::dialogue::IntelKind, sc: &crate::dialogue::ShapedIntelTextSc, t: crate::game::Temperament) -> Option<String> {
-    shaped_of(kind, &sc.id, sc.shape, t).map(st)
+    shaped_of(kind, &sc.id, sc.shape, t)
 }
 
 /// The checker's own words when he is the man walking the silent colleague's route.   (dialogue.ts checkOnSelf)
@@ -397,8 +365,8 @@ mod tests {
     #[test]
     fn intel_text_matches_the_typescript() {
         let mut all = String::new();
-        for (kind, _) in INTEL_TABLE {
-            for t in TS { for k in KS { all.push_str(intel_text_of(*kind, t, k)); all.push('\n'); } }
+        for kind in crate::dialogue::intel_kinds() {
+            for t in TS { for k in KS { all.push_str(&intel_text_of(kind, t, k)); all.push('\n'); } }
         }
         assert_eq!(fnv(&all), 0xcc8530bf);
     }
@@ -407,9 +375,9 @@ mod tests {
     #[test]
     fn shaped_text_matches_the_typescript() {
         let mut all = String::new();
-        for (kind, _) in INTEL_TABLE {
+        for kind in crate::dialogue::intel_kinds() {
             for id in ["selfown-s1", "selfown-s2", "selfown-s3", "selfown-n2", "selfown-n3", "nope"] {
-                for shape in SH { for t in TS { all.push_str(shaped_of(*kind, id, shape, t).unwrap_or("<null>")); all.push('\n'); } }
+                for shape in SH { for t in TS { all.push_str(shaped_of(kind, id, shape, t).as_deref().unwrap_or("<null>")); all.push('\n'); } }
             }
         }
         assert_eq!(fnv(&all), 0x7e8f96ae);
@@ -662,12 +630,13 @@ mod tests {
     /// The struct holds every row of a kind but the script's own, under the field its key names.
     #[test]
     fn table_of_puts_each_key_in_its_field() {
-        let door = table_of(intel_rows(IntelKind::Door));
+        let door = table_of(IntelKind::Door);
         assert_eq!(door.under.as_deref(), Some("{Door} is on a key. We all carry one. Mine's on my belt."));
         assert_eq!(door.selfown_steady.as_deref(), Some("…Belt. The key's on my belt. Well played, I suppose."));
         assert_eq!(door.con.as_deref(), Some("{Door}'s keyed; every belt carries one. Here— inspect mine."));
         assert_eq!(door.steady, None);
-        let check = table_of(intel_rows(IntelKind::Rollcall));
+        assert_eq!(door.sc.get(st("selfown-s1")).map(String::as_str), Some("…On my belt. The key's on my belt. Eleven years, for this."));
+        let check = table_of(IntelKind::Rollcall);
         assert_eq!(check.nervy_saw_hurt.as_deref(), Some("The check's {checkEta}— {victim} won't answer it— then they ALL come—"));
     }
 

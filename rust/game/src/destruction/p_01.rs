@@ -7,16 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// `x.toFixed(2)`: JavaScript takes the larger of two equally near hundredths, Rust's `{:.2}` the even one; a tie is an odd multiple of 1/8.
-fn to_fixed2(x: f64) -> String {
-    if x.is_nan() {
-        return String::from("NaN");
-    }
-    let a = m::abs(x);
-    let t = a * 8.0;
-    let tie = t == m::floor(t) && js::rem(t, 2.0) == 1.0;
-    let s = if tie { format!("{:.2}", a + 0.005) } else { format!("{:.2}", a) };
-    if x < 0.0 { format!("-{}", s) } else { s }
+/// A box's row (`Box.*`). Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
+    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
 }
 
 /// A word of a box's flags against a mask.
@@ -26,8 +19,8 @@ fn has_flag(flags: f64, mask: i32) -> bool {
 
 /// What a box does, by its word.
 fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
-    let word = crate::scene_materials::DoesOfB { does: g.col.boxes[b].does.map(|w| String::from(w.as_str())) };
-    crate::scene_materials::does_of(g, Some(&word))
+    let word = seam_box(g, b).does;
+    crate::scene_materials::does_of(g, word)
 }
 
 /// The knob as the systems read it: a showcase program's own, 0 under the tour, else tune.chaos clamped.   (destruction.ts chaosOf)
@@ -53,8 +46,8 @@ pub fn impulses_on(g: &mut crate::game::Game) -> bool {
 }
 
 /// What of the kept knob is the game's: the first value. What a machine kept is the browser's storage, the host's.   (destruction.ts loadChaos)
-pub fn load_chaos(g: &mut crate::game::Game, tune: &mut crate::destruction::ChaosTune) {
-    tune.chaos = Some(g.k.chaos.def);
+pub fn load_chaos(g: &mut crate::game::Game) {
+    g.tune.chaos = g.k.chaos.def;
 }
 
 /// Nothing of the game's: the TypeScript only writes the browser's storage, the host's.   (destruction.ts saveChaos)
@@ -83,13 +76,13 @@ pub fn indoors(p: V3) -> bool {
 
 /// The point just over a box's top, where line-of-sight targets aim.   (destruction.ts topOf)
 pub fn top_of(g: &mut crate::game::Game, b: BoxId) -> V3 {
-    let (c, h) = (g.col.boxes[b].c, g.col.boxes[b].h);
+    let (c, h) = (seam_box(g, b).c, seam_box(g, b).h);
     [c[0], c[1] + h[1] + 0.05, c[2]]
 }
 
 /// The lane's capped log, for the panel and the probes.   (destruction.ts dlog)
 pub fn dlog(g: &mut crate::game::Game, s: &str) {
-    let line = format!("{} {}", to_fixed2(g.time), s);
+    let line = format!("{} {}", js::to_fixed(g.time, 2), s);
     let log = &mut g.m.destruction.destr_log;
     log.push(line);
     if log.len() > 200 {
@@ -98,8 +91,8 @@ pub fn dlog(g: &mut crate::game::Game, s: &str) {
 }
 
 /// A cap of n() events in any one-second window.   (destruction.ts RateCap.constructor)
-pub fn rate_cap_new(n: &crate::destruction::RateCapN) -> crate::destruction::RateCap {
-    RateCap { n: n.clone(), ..RateCap::blank() }
+pub fn rate_cap_new(n: crate::destruction::RateCapN) -> crate::destruction::RateCap {
+    RateCap { n, ..RateCap::blank() }
 }
 
 /// One more event at time t, if the window has room.   (destruction.ts RateCap.take)
@@ -187,15 +180,15 @@ pub fn destruction_index(g: &mut crate::game::Game) {
     let mut screens: Vec<usize> = Vec::new();
     for i in 0..boxes_len {
         let b = BoxId::from_ix(i);
-        let h = g.col.boxes[b].h;
+        let h = seam_box(g, b).h;
         let max_h = m::max_n(&h);
         let min_h = m::min_n(&h);
-        let flags = g.col.boxes[b].flags;
-        if has_flag(flags, skip) || g.col.boxes[b].piece == Some(true) {
+        let flags = seam_box(g, b).flags;
+        if has_flag(flags, skip) || seam_box(g, b).piece == Some(true) {
             continue;
         }
-        let bottom = g.col.boxes[b].c[1] - h[1];
-        let e = g.col.boxes[b].emissive;
+        let bottom = seam_box(g, b).c[1] - h[1];
+        let e = seam_box(g, b).emissive;
         let dark = e[0] + e[1] + e[2] == 0.0;
         let does = does_of_box(g, b);
         let kind = if has_flag(flags, no_shadow) && h[1] <= 0.03 && does.paper.unwrap_or(false) && max_h >= 0.08 && max_h <= 0.2 && bottom > 0.3 && dark {
@@ -222,7 +215,7 @@ pub fn destruction_index(g: &mut crate::game::Game) {
     // each desk screen with the housing slab just behind it
     for si in screens {
         let s = BoxId::from_ix(si);
-        let (s_yaw, s_h, s_c) = (g.col.boxes[s].yaw, g.col.boxes[s].h, g.col.boxes[s].c);
+        let (s_yaw, s_h, s_c) = (seam_box(g, s).yaw, seam_box(g, s).h, seam_box(g, s).c);
         let mut best: Option<usize> = None;
         let mut bd = 0.08;
         for i in si.saturating_sub(6)..core::cmp::min(boxes_len, si + 6) {
@@ -230,11 +223,11 @@ pub fn destruction_index(g: &mut crate::game::Game) {
                 continue;
             }
             let b = BoxId::from_ix(i);
-            let h = g.col.boxes[b].h;
-            if m::abs(g.col.boxes[b].yaw - s_yaw) > 1e-3 || h[0] < s_h[0] || h[1] < s_h[1] || h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
+            let h = seam_box(g, b).h;
+            if m::abs(seam_box(g, b).yaw - s_yaw) > 1e-3 || h[0] < s_h[0] || h[1] < s_h[1] || h[2] > 0.05 || !does_of_box(g, b).casing.unwrap_or(false) {
                 continue;
             }
-            let dd = v3::dist(g.col.boxes[b].c, s_c);
+            let dd = v3::dist(seam_box(g, b).c, s_c);
             if dd < bd {
                 bd = dd;
                 best = Some(i);
@@ -250,7 +243,7 @@ pub fn destruction_index(g: &mut crate::game::Game) {
             let had = g.destr.items.get(best_key).cloned();
             let mut hd = match had {
                 Some(d) => d,
-                None => Destructible { i: best as f64, kind: DKind::Housing, box_: BoxId::from_ix(best), flags0: g.col.boxes[BoxId::from_ix(best)].flags, mate: None, target: None, group: None },
+                None => Destructible { i: best as f64, kind: DKind::Housing, box_: BoxId::from_ix(best), flags0: seam_box(g, BoxId::from_ix(best)).flags, mate: None, target: None, group: None },
             };
             hd.kind = DKind::Housing;
             hd.mate = Some(si as f64);
@@ -262,7 +255,7 @@ pub fn destruction_index(g: &mut crate::game::Game) {
     let mut fixtures: Vec<(V3, V3, f64)> = Vec::new();
     for fi in fixture_boxes.iter() {
         if (fi.0 as usize) < boxes_len {
-            let f = &g.col.boxes[BoxId::from_ix(fi.0 as usize)];
+            let f = &seam_box(g, BoxId::from_ix(fi.0 as usize));
             fixtures.push((f.c, f.h, f.yaw));
         }
     }
@@ -271,7 +264,7 @@ pub fn destruction_index(g: &mut crate::game::Game) {
     let mut smalls: Vec<(f64, V3, V3)> = Vec::new();
     let small_rows: Vec<(f64, BoxId)> = g.destr.items.values().filter(|d| d.kind == DKind::Clutter || d.kind == DKind::Binder).map(|d| (d.i, d.box_)).collect();
     for (i, b) in small_rows {
-        smalls.push((i, g.col.boxes[b].c, g.col.boxes[b].h));
+        smalls.push((i, seam_box(g, b).c, seam_box(g, b).h));
     }
     for d in 0..smalls.len() {
         for o in 0..smalls.len() {
@@ -292,7 +285,7 @@ pub fn destruction_index(g: &mut crate::game::Game) {
     // the 1 m cells
     let rows: Vec<(f64, BoxId)> = g.destr.items.iter().map(|(i, d)| (i.0, d.box_)).collect();
     for (i, b) in rows {
-        let c = g.col.boxes[b].c;
+        let c = seam_box(g, b).c;
         let cx = m::floor((c[0] - world.min[0]) / g.destr.cs);
         let cz = m::floor((c[2] - world.min[2]) / g.destr.cs);
         if cx >= 0.0 && cz >= 0.0 && cx < g.destr.w && cz < world.grid_h {
@@ -309,7 +302,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
             let d = g.destr.items.get(i).unwrap();
             (d.box_, d.kind)
         };
-        let c = g.col.boxes[b].c;
+        let c = seam_box(g, b).c;
         if destruction_roof_y(g, c[0], c[2]).is_none() {
             g.destr.items.delete(i);
             continue;
@@ -331,7 +324,7 @@ fn index_prune(g: &mut Game, fixtures: &[(V3, V3, f64)]) {
         }
         let housings: Vec<BoxId> = g.destr.items.values().filter(|o| o.kind == DKind::Housing).map(|o| o.box_).collect();
         for hb in housings {
-            let oc = g.col.boxes[hb].c;
+            let oc = seam_box(g, hb).c;
             if m::hyp2(oc[0] - c[0], oc[2] - c[2]) < 0.12 && oc[1] > c[1] {
                 g.destr.items.delete(i);
                 break;
@@ -498,7 +491,7 @@ pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
         crate::debris::debris_update(g, dt);
     }
     crate::break_table::breaks_tick(g);
-    crate::edge_look::edge_look_update(g, dt);
+    crate::edge_look::edge_look_update(g, dt); // (:351's walls.skins.update() is wallskin.ts, the picture's: not called, see notes)
     g.destr.thuds_this_frame = 0.0;
     if chaos_of(g) <= 0.0 && !g.destr.any_heat {
         return;
@@ -557,14 +550,14 @@ pub fn destruction_on_foot(g: &mut crate::game::Game) -> Vec<CharId> {
 /// The rigid debris' and the blown walls' shadow-casting boxes, for the picture.   (destruction.ts Destruction.boxes)
 pub fn destruction_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
     crate::debris::debris_boxes(g, out);
-    crate::edge_look::edge_look_boxes(g, out);
+    crate::edge_look::edge_look_boxes(g, out); // (:371's walls.skins.boxes(out) is wallskin.ts, the picture's: not called, see notes)
 }
 
 /// Level reset: every hidden static back as authored, pools emptied, heat, caps and the counter back to the start.   (destruction.ts Destruction.reset)
 pub fn destruction_reset(g: &mut crate::game::Game) {
     for i in g.destr.hidden.keys() {
         let f = *g.destr.hidden.get(i).unwrap();
-        g.col.boxes[BoxId::from_ix(i.0 as usize)].flags = f;
+        seam_box(g, BoxId::from_ix(i.0 as usize)).flags = f;
     }
     crate::scene_collision::wrote(g);
     g.destr.hidden.clear();
@@ -608,15 +601,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn to_fixed2_matches_node() {
-        // node: x.toFixed(2)
-        let rows: [(f64, &str); 11] = [(0.125, "0.13"), (0.375, "0.38"), (0.625, "0.63"), (0.875, "0.88"), (1.125, "1.13"), (12.345, "12.35"), (0.0, "0.00"), (-0.125, "-0.13"), (-0.001, "-0.00"), (2.5, "2.50"), (100.005, "100.00")];
-        for (x, want) in rows {
-            assert_eq!(to_fixed2(x), want, "{}", x);
-        }
-    }
-
-    #[test]
     fn rate_cap_holds_n_in_any_second() {
         let mut c = RateCap::blank();
         assert!(rate_cap_take_n(&mut c, 0.0, 2.0));
@@ -640,7 +624,7 @@ mod tests {
         let mut k = crate::knobs::ChaosK::zeroed();
         k.papers_per_sec = 1.0;
         k.puffs_per_sec = 5.0;
-        let mut c = rate_cap_new(&RateCapN::Paper);
+        let mut c = rate_cap_new(RateCapN::Paper);
         assert!(rate_cap_take(&mut c, 0.0, &k));
         assert!(!rate_cap_take(&mut c, 0.5, &k));
         // the panel raised the cap: the window starts afresh

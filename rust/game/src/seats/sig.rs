@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn seats_of_search(g: &mut crate::game::Game, search: Option<&str>) -> f64 { todo!() }
 
 /// (src/game/seats.ts:68 seatView)
-pub fn seat_view(g: &mut crate::game::Game, own: &mut crate::seats::SeatSet) -> PlayerId { todo!() }
+pub fn seat_view(g: &mut crate::game::Game, own: &mut crate::seats::SeatSet) -> SeatId { todo!() }
 
 /// (src/game/seats.ts:78 seatsStand)
 pub fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> { todo!() }
@@ -18,7 +18,7 @@ pub fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> { todo!() }
 pub fn miss(g: &mut crate::game::Game, k: &str) { todo!() }
 
 /// (src/game/seats.ts:103 rawGame)
-pub fn raw_game(g: &mut crate::game::Game) -> PlayerId { todo!() }
+pub fn raw_game(g: &mut crate::game::Game) -> SeatId { todo!() }
 
 /// (src/game/seats.ts:107 seatManId)
 pub fn seat_man_id(i: f64) -> f64 { todo!() }
@@ -27,7 +27,7 @@ pub fn seat_man_id(i: f64) -> f64 { todo!() }
 pub fn is_man_id(g: &mut crate::game::Game, id_2: f64) -> bool { todo!() }
 
 /// (src/game/seats.ts:111 men)
-pub fn men(g: &mut crate::game::Game, g_2: &crate::seats::MenG) -> Vec<PlayerId> { todo!() }
+pub fn men(g: &mut crate::game::Game) -> Vec<PlayerId> { todo!() }
 
 /// (src/game/seats.ts:113 menUp)
 pub fn men_up(g: &mut crate::game::Game) -> Vec<PlayerId> { todo!() }
@@ -51,10 +51,10 @@ pub fn host_man(g: &mut crate::game::Game) -> PlayerId { todo!() }
 pub fn man_here(g: &mut crate::game::Game) -> PlayerId { todo!() }
 
 /// (src/game/seats.ts:129 eachSeat)
-pub fn each_seat(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game, &mut crate::game::Game)) { todo!() }
+pub fn each_seat(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game)) { todo!() }
 
 /// (src/game/seats.ts:132 firstOf)
-pub fn first_of<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game, &mut crate::game::Game) -> Option<T>) -> Option<T> { todo!() }
+pub fn first_of<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> Option<T>) -> Option<T> { todo!() }
 
 /// (src/game/seats.ts:134 seatOfChar)
 pub fn seat_of_char(g: &mut crate::game::Game, c_2: Option<CharId>) -> Option<SeatId> { todo!() }
@@ -69,7 +69,7 @@ pub fn seat_of_id(g: &mut crate::game::Game, id_2: f64) -> Option<SeatId> { todo
 pub fn man_by_id(g: &mut crate::game::Game, id_2: f64) -> Option<PlayerId> { todo!() }
 
 /// (src/game/seats.ts:141 viewOfId)
-pub fn view_of_id(g: &mut crate::game::Game, id_2: f64) -> Option<PlayerId> { todo!() }
+pub fn view_of_id(g: &mut crate::game::Game, id_2: f64) -> Option<SeatId> { todo!() }
 
 /// (src/game/seats.ts:143 seatOfMan)
 pub fn seat_of_man(g: &mut crate::game::Game, pl: PlayerId) -> SeatId { todo!() }
@@ -102,13 +102,13 @@ pub fn faced_seat(g: &mut crate::game::Game, gd: GuardId) -> SeatId { todo!() }
 pub fn faced_man(g: &mut crate::game::Game, gd: GuardId) -> PlayerId { todo!() }
 
 /// (src/game/seats.ts:208 facedView)
-pub fn faced_view(g: &mut crate::game::Game, gd: GuardId) -> PlayerId { todo!() }
+pub fn faced_view(g: &mut crate::game::Game, gd: GuardId) -> SeatId { todo!() }
 
 /// (src/game/seats.ts:212 viewOfBody)
-pub fn view_of_body(g: &mut crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> PlayerId { todo!() }
+pub fn view_of_body(g: &mut crate::game::Game, c_2: crate::seats::ViewOfBodyC) -> SeatId { todo!() }
 
 /// (src/game/seats.ts:218 viewFor)
-pub fn view_for(g: &mut crate::game::Game, gd: GuardId) -> PlayerId { todo!() }
+pub fn view_for(g: &mut crate::game::Game, gd: GuardId) -> SeatId { todo!() }
 
 /// (src/game/seats.ts:224 dealSeats)
 pub fn deal_seats(g: &mut crate::game::Game) -> bool { todo!() }
@@ -116,8 +116,8 @@ pub fn deal_seats(g: &mut crate::game::Game) -> bool { todo!() }
 /// (src/game/seats.ts:235 seatOf)
 pub fn seat_of(g: &mut crate::game::Game, gd: GuardId) -> SeatId { todo!() }
 
-/// (src/game/seats.ts:237 seatHas)
-pub fn seat_has(g: &mut crate::game::Game, s: SeatId, gd: GuardId) -> bool { todo!() }
+/// (src/game/seats.ts:237 inSeat)
+pub fn in_seat(g: &mut crate::game::Game, s: SeatId, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/seats.ts:240 oneBook)
 pub fn one_book(g: &mut crate::game::Game) -> bool { todo!() }
@@ -126,10 +126,10 @@ pub fn one_book(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn leader_of(g: &mut crate::game::Game, gd: GuardId) -> PlayerId { todo!() }
 
 /// (src/game/seats.ts:244 viewOf)
-pub fn view_of(g: &mut crate::game::Game, gd: GuardId) -> PlayerId { todo!() }
+pub fn view_of(g: &mut crate::game::Game, gd: GuardId) -> SeatId { todo!() }
 
 /// (src/game/seats.ts:246 ordersOf)
-pub fn orders_of(g: &mut crate::game::Game, gd: GuardId) { todo!() }
+pub fn orders_of(g: &mut crate::game::Game, gd: GuardId) -> PlayerId { todo!() }
 
 /// (src/game/seats.ts:248 orderOf)
 pub fn order_of(g: &mut crate::game::Game, gd: GuardId) -> Option<OrdersAssignmentId> { todo!() }
@@ -156,7 +156,7 @@ pub fn last_order(g: &mut crate::game::Game) -> Option<crate::orders::SquadOrder
 pub fn team_books(g: &mut crate::game::Game) -> Vec<crate::orders::SquadOrders> { todo!() }
 
 /// (conventions, SEATS) a pass about another seat: its SEAT_KEYS fields are swapped onto Game for the call, and back
-pub fn with_seat<R>(g: &mut crate::game::Game, seat: PlayerId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R { todo!() }
+pub fn with_seat<R>(g: &mut crate::game::Game, seat: SeatId, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R { todo!() }
 /// INVENTED: which row of a table kept per view (seats.ts SEAT_TABLES) this pass reads: the seat on Game, or CAST_KEY while g.in_cast
 pub fn view_key(g: &mut crate::game::Game) -> PlayerId { todo!() }
 /// the row a second cast of the squad's code keeps in a table kept per view

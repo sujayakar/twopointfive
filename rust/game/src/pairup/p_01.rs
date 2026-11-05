@@ -7,18 +7,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// What a part's own store holds for its `on`: the browser's storage is the host's, so here it is what the TypeScript answers with no store.   (pairup.ts keptOn)
-pub fn kept_on(ls: &str) -> Option<bool> {
-    None
-}
-
 /// A rule is in force: the switch, and its own row (settled on, on the page).   (pairup.ts pairUp)
 pub fn pair_up(g: &mut crate::game::Game, k: crate::pairup::PairUpRule) -> bool {
     g.k.pairup.on
 }
-
-/// Keeps the pair's rows in the browser's storage: the host's, so here it does what the TypeScript does with no store, nothing.   (pairup.ts savePairUp)
-pub fn save_pair_up(g: &mut crate::game::Game) {}
 
 /// The switch reaches the three parts: on, all three on unless this visit put one back; `off` (the row turned off), all three off and out of their stores.   (pairup.ts pairUpApply)
 pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
@@ -31,7 +23,6 @@ pub fn pair_up_apply(g: &mut crate::game::Game, off: Option<bool>) {
         g.k.spotted.on = false;
         g.k.sneak.on = false;
         g.k.pair.on = false;
-        crate::teamfeel::save_team_feel(g, "PAIR.on");
         crate::sneak::save_sneak(g);
         crate::spotted::save_spotted(g);
     }

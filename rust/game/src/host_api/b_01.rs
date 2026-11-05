@@ -18,10 +18,10 @@ pub fn host_api_restart_picture(g: &mut crate::game::Game, why: &str) {}
 pub fn host_api_set_mesh_shadows(g: &mut crate::game::Game, m: Option<&crate::render_mesh_shadows::MeshShadows>) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:85 HostApi.setRigFit)
-pub fn host_api_set_rig_fit(g: &mut crate::game::Game, fit: Option<crate::render_sdfrig::RigFit>) {}
+pub fn host_api_set_rig_fit(g: &mut crate::game::Game, fit: Option<&crate::render_sdfrig::RigFit>) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:86 HostApi.setParticles)
-pub fn host_api_set_particles(g: &mut crate::game::Game, p: Option<&crate::render_particles::Particles>) {}
+pub fn host_api_set_particles(g: &mut crate::game::Game) {}
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/host/api.ts:87 HostApi.setDecals)
 pub fn host_api_set_decals(g: &mut crate::game::Game) {}

@@ -12,7 +12,7 @@ pub fn cleared_rooms_new(g: &mut crate::game::Game) -> crate::cleared::ClearedRo
 pub fn cleared_rooms_reset(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/cleared.ts:44 ClearedRooms.build)
-pub fn cleared_rooms_build(g: &mut crate::game::Game) -> Vec<u16> { todo!() }
+pub fn cleared_rooms_build(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/cleared.ts:63 ClearedRooms.roomAt)
 pub fn cleared_rooms_room_at(g: &mut crate::game::Game, p: V3) -> f64 { todo!() }
@@ -44,11 +44,12 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) { todo!() }
 /// (src/game/cleared.ts:98 ClearedRooms.dearFor)
 pub fn cleared_rooms_dear_for(g: &mut crate::game::Game, from: V3, to: V3, dear: f64, also: Option<&[f64]>) -> Option<crate::cleared::DearPrice> { todo!() }
 
-/// (src/game/cleared.ts:105 ClearedRooms.dearOnly)
-pub fn cleared_rooms_dear_only(g: &mut crate::game::Game, room: f64, dear: f64) -> crate::FnField { todo!() }
-
 /// (src/game/cleared.ts:107 ClearedRooms.dearAlong)
 pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3], pen: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> f64) -> f64 { todo!() }
 
 /// (src/game/cleared.ts:114 ClearedRooms.summary)
 pub fn cleared_rooms_summary(g: &mut crate::game::Game) -> String { todo!() }
+
+
+/// INVENTED, what a DearPrice answers for a cell, so a caller can hand one to nav_grid_find_path or cleared_rooms_dear_along: |g, ix, iz| dear_price(g, &price, ix, iz). The room map and known rooms are read live from g.cleared, as the closure's shared arrays were; a cell off the grid costs 1 (cleared.ts:102 the closure dearFor returns)
+pub fn dear_price(g: &mut crate::game::Game, price: &crate::cleared::DearPrice, ix: f64, iz: f64) -> f64 { todo!() }

@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// who answers a sight line while the senses are on the CPU (game.ts senseStep); None = the probe
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum SensorsOwn {
     CpuSmokeAlong,
 }
@@ -30,12 +30,27 @@ impl SensorMode {
 #[derive(Clone, Debug)]
 pub struct ProbeLike {
     pub results: JsMap<String, [f64; 3]>,
+    /// INVENTED by a review: see the proposals
+    pub pending: Vec<crate::sensors::ProbeAsk>,
+    /// INVENTED by a review: see the proposals
+    pub answered: JsMap<String, f64>,
+    /// INVENTED by a review: see the proposals
+    pub serial: f64,
+    /// INVENTED by a review: see the proposals
+    pub tight: bool,
+    /// INVENTED: the room left in the probe's table of asks this frame: the host fills it (fogofwar.ts flushAsks reads it)
+    pub room: f64,
 }
 impl ProbeLike {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ProbeLike {
             results: JsMap::new(),
+            pending: Vec::new(),
+            answered: JsMap::new(),
+            serial: 0.0,
+            tight: false,
+            room: 64.0,
         }
     }
 }
@@ -64,7 +79,7 @@ pub enum SensorRecItem {
 #[derive(Clone, Debug)]
 pub struct SensorJournal {
     pub keys: Vec<String>,
-    pub recs: Vec<Vec<Option<crate::sensors::SensorJournalRecsItemItem>>>,
+    pub recs: Vec<Vec<Option<crate::sensors::SensorRecItem>>>,
     pub frames: f64,
 }
 impl SensorJournal {
@@ -163,7 +178,7 @@ pub struct SensorStream {
     pub divergence_log: Vec<crate::sensors::SensorDivergence>,
     pub keys: Vec<String>,
     pub key_idx: JsMap<String, f64>,
-    pub recs: Vec<Vec<Option<crate::sensors::SensorStreamRecsItemItem>>>,
+    pub recs: Vec<Vec<Option<crate::sensors::SensorRecItem>>>,
     pub bytes: f64,
     pub prev_seq: Vec<f64>,
     pub prev_vals: Vec<Option<f64>>,

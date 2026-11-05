@@ -450,7 +450,7 @@ pub struct CloseMod {
     /// (src/game/close.ts:146 STATE)
     pub state: JsMap<PlayerId, crate::close::State>,
     /// (src/game/close.ts:148 SEATED)
-    pub seated: Option<JsMap<GuardId, SeatId>>,
+    pub seated: Option<JsMap<GuardId, crate::close::Seat>>,
 }
 impl CloseMod {
     pub fn blank() -> Self {

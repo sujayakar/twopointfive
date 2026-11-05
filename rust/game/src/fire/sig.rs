@@ -21,7 +21,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireSt
 pub fn fire_stats(g: &mut crate::game::Game) -> crate::fire::FireStats { todo!() }
 
 /// (src/game/fire.ts:230 fireShown)
-pub fn fire_shown(g: &mut crate::game::Game) -> Option<crate::fire::FireShown2> { todo!() }
+pub fn fire_shown(g: &mut crate::game::Game) -> Option<crate::fire::FireShown> { todo!() }
 
 /// (src/game/fire.ts:233 h01)
 pub fn h01(x: f64) -> f64 { todo!() }

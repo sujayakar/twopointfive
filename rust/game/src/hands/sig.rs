@@ -18,7 +18,7 @@ pub fn hands_busy(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn mid(a: V3, b: V3) -> V3 { todo!() }
 
 /// (src/game/hands.ts:121 endDist)
-pub fn end_dist(g: &mut crate::game::Game, gd: GuardId, end: crate::hands::EndDistEnd) -> f64 { todo!() }
+pub fn end_dist(g: &mut crate::game::Game, gd: GuardId, end: crate::hands::HaulEnd) -> f64 { todo!() }
 
 /// (src/game/hands.ts:127 bodyGripDist)
 pub fn body_grip_dist(g: &mut crate::game::Game, gd: GuardId, within: f64) -> f64 { todo!() }
@@ -111,7 +111,7 @@ pub fn crosses_leaf(g: &mut crate::game::Game, d: DoorId, angle: f64, p: V3, q: 
 pub fn open_side(g: &mut crate::game::Game, d: DoorId, a1: f64, q: V3) -> f64 { todo!() }
 
 /// (src/game/hands.ts:367 clearSpot)
-pub fn clear_spot(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> Option<V3> { todo!() }
+pub fn clear_spot(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> Option<Option<V3>> { todo!() }
 
 /// (src/game/hands.ts:397 limpInSweep)
 pub fn limp_in_sweep(g: &mut crate::game::Game, d: DoorId, a0: f64, a1: f64) -> bool { todo!() }

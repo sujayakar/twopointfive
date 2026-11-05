@@ -19,15 +19,23 @@ impl ReportLevel {
 }
 
 /// (TypeScript: Report, src/cloud/report.ts:23)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Report {
+    pub where_: String,
+    pub message: String,
+    pub stack: Vec<String>,
     pub level: crate::cloud_report::ReportLevel,
+    pub data: Option<JsMap<String, crate::Opaque>>,
 }
 impl Report {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Report {
+            where_: String::new(),
+            message: String::new(),
+            stack: Vec::new(),
             level: crate::cloud_report::ReportLevel::Error,
+            data: None,
         }
     }
 }

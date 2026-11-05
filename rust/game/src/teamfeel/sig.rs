@@ -23,8 +23,5 @@ pub fn read(key: &str, k: &crate::knobs::Knobs, n: crate::teamfeel::FeelName) ->
 /// (src/game/teamfeel.ts:95 split)
 pub fn split(name: &str) -> Option<(crate::teamfeel::FeelName, String)> { todo!() }
 
-/// (src/game/teamfeel.ts:106 saveTeamFeel)
-pub fn save_team_feel(g: &mut crate::game::Game, name: &str) { todo!() }
-
 /// (src/game/teamfeel.ts:116 loadTeamFeel)
 pub fn load_team_feel(g: &mut crate::game::Game) { todo!() }

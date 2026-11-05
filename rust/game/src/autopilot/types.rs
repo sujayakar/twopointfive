@@ -3,34 +3,6 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
-pub enum DoorTarget {
-    Arm0,
-    Door(crate::autopilot::DoorTargetDoor),
-    Arm2,
-    Arm3,
-}
-
-/// (TypeScript: inline at src/game/autopilot.ts:73 DoorTarget, src/game/autopilot.ts:73 DoorTarget)
-#[derive(Clone, Copy, Debug)]
-pub struct DoorTargetDoor {
-    pub at: V3,
-    pub door: DoorId,
-    pub side: f64,
-}
-impl DoorTargetDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorTargetDoor {
-            at: [0.0; 3],
-            door: DoorId(0),
-            side: 0.0,
-        }
-    }
-}
-impl Default for DoorTargetDoor { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: AutoPick, src/game/autopilot.ts:76)
 #[derive(Clone, Debug)]
 pub struct AutoPick {
@@ -87,11 +59,39 @@ impl AutoPickWhy {
     }
 }
 
+/// (TypeScript: a union)
+#[derive(Clone, Copy, Debug)]
+pub enum DoorTarget {
+    Arm0,
+    Door(crate::autopilot::DoorTargetDoor),
+    Arm2,
+    Arm3,
+}
+
+/// (TypeScript: inline at src/game/autopilot.ts:84 contactBehind(t), src/game/autopilot.ts:84 contactBehind(t))
+#[derive(Clone, Copy, Debug)]
+pub struct DoorTargetDoor {
+    pub at: V3,
+    pub door: DoorId,
+    pub side: f64,
+}
+impl DoorTargetDoor {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        DoorTargetDoor {
+            at: [0.0; 3],
+            door: DoorId(0),
+            side: 0.0,
+        }
+    }
+}
+impl Default for DoorTargetDoor { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: inline at src/game/autopilot.ts:93 autoEntries ->, src/game/autopilot.ts:93)
 #[derive(Clone, Debug)]
 pub struct AutoEntries {
     pub ids: Vec<String>,
-    pub why: crate::autopilot::AutoEntriesWhy,
+    pub why: crate::autopilot::AutoPickWhy,
     pub kept: Option<bool>,
 }
 impl AutoEntries {
@@ -99,7 +99,7 @@ impl AutoEntries {
     pub fn zeroed() -> Self {
         AutoEntries {
             ids: Vec::new(),
-            why: crate::autopilot::AutoEntriesWhy::Set,
+            why: crate::autopilot::AutoPickWhy::Set,
             kept: None,
         }
     }

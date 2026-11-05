@@ -7,9 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Yaw 0 = +z = south, pi/2 = +x = east.   (orders.ts COMPASS)
-static COMPASS: [&str; 8] = ["south", "south-east", "east", "north-east", "north", "north-west", "west", "south-west"];
-
 /// A row's digit off its key code: `Digit1` to `Digit9`, else 0.   (orders.ts digitOf)
 pub fn digit_of(code: &str) -> f64 {
     match code.strip_prefix("Digit").map(str::as_bytes) {
@@ -29,7 +26,7 @@ pub fn compass(yaw: f64) -> String {
     if at.is_nan() {
         return String::from("undefined");
     }
-    String::from(COMPASS[at as usize])
+    crate::orders::compass_table().swap_remove(at as usize)
 }
 
 /// A store for one asker of `hover` (the page's, a check's).   (orders.ts hoverStore)

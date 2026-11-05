@@ -7,16 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `x.toFixed(1)`: the nearest tenth by the double's exact value, and of two equally near the larger (Rust's own `{:.1}` takes the even one); −0 has no sign.
-fn to_fixed_1(x: f64) -> String {
-    let a = m::abs(x);
-    // a double is exactly half way between two tenths only as an odd number of quarters
-    let q = a * 4.0;
-    let tie = m::floor(q) == q && js::rem(q, 2.0) == 1.0;
-    let s = if tie { alloc::format!("{:.1}", a + 0.01) } else { alloc::format!("{:.1}", a) };
-    if x < 0.0 { alloc::format!("-{}", s) } else { s }
-}
-
 /// The bearing's name of a yaw. (roomfit.ts compass)
 pub fn compass(yaw: f64) -> String {
     let i = js::rem(js::rem(m::round(yaw / (m::PI / 4.0)), 8.0) + 8.0, 8.0);
@@ -105,7 +95,7 @@ pub fn threats_of(g: &mut crate::game::Game, r: &crate::roomread::RoomRead, at: 
         let w = k.sector_k * m::min(1.0, (t - k.sector_m + 1.5) / 9.0)
             * (if known { if t > k.sector_far_m { k.sector_far_k } else { k.known_k } } else { 1.0 })
             * front_of(k.front_k, yaw, front);
-        let key = alloc::format!("floor:{}@{},{}", b, to_fixed_1(at[0]), to_fixed_1(at[2]));
+        let key = alloc::format!("floor:{}@{},{}", b, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
         let words = run_words(g, at, far, yaw);
         out.push(crate::roomfit::Threat { at: p, w, way: None, key, words });
     }
@@ -372,7 +362,7 @@ pub fn spare_run(g: &mut crate::game::Game, q: V3, front: f64, mates: &[crate::r
             * (1.0 + k.front_k * m::cos((b as f64) * step));
         let better = match &best { None => true, Some(best) => w > best.w + 1e-9 };
         if better {
-            let key = alloc::format!("run:{}@{},{}", b, to_fixed_1(q[0]), to_fixed_1(q[2]));
+            let key = alloc::format!("run:{}@{},{}", b, js::to_fixed(q[0], 1), js::to_fixed(q[2], 1));
             let words = run_words(g, q, [q[0] + m::sin(yaw) * (t - 0.8), 0.0, q[2] + m::cos(yaw) * (t - 0.8)], yaw);
             best = Some(crate::roomfit::Threat { at: p, w, way: None, key, words });
         }
@@ -445,7 +435,7 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         if let (Some(fit), Some(pos)) = (row.fit.as_ref(), row.post) { mates.push((pos, fit.key.clone())); }
     }
     let keys: Vec<&str> = mates.iter().map(|o| o.1.as_deref().unwrap_or("-")).collect();
-    let mut sig = alloc::format!("{}|{}|", g.cleared.known, keys.join(","));
+    let mut sig = alloc::format!("{}|{}|", js::num_str(g.cleared.known), keys.join(","));
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
         if crate::doors::door_off(g, d) {
@@ -453,8 +443,7 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
         } else if crate::doors::door_latched(g, d) {
             sig.push(if crate::doors::door_locked(g, d) { 'l' } else { 's' });
         } else {
-            // (`+ 0.0`: String(-0) is "0")
-            sig.push_str(&alloc::format!("{}", m::round(crate::doors::door_angle(g, d) * 4.0) + 0.0));
+            sig.push_str(&js::num_str(m::round(crate::doors::door_angle(g, d) * 4.0)));
         }
     }
     {
@@ -493,7 +482,7 @@ pub fn fit_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
 mod tests {
     use super::*;
 
-    // the bits below are the TypeScript's own: bun with EXACT.on, roomfit.ts's offLine and compass, Number.toFixed, and roomfit.ts's exported fitGroups
+    // the bits below are the TypeScript's own: bun with EXACT.on, roomfit.ts's offLine and compass, and roomfit.ts's exported fitGroups
     #[test]
     fn off_line_has_the_typescripts_bits() {
         let cases: [(V3, V3, V3, u64); 5] = [
@@ -516,17 +505,6 @@ mod tests {
         ];
         for (yaw, name) in cases {
             assert_eq!(compass(yaw), name);
-        }
-    }
-
-    #[test]
-    fn to_fixed_rounds_as_javascript_does() {
-        let cases: [(f64, &str); 16] = [
-            (0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (-1.25, "-1.3"), (-0.25, "-0.3"), (0.35, "0.3"), (12.05, "12.1"), (-0.04, "-0.0"),
-            (-0.0, "0.0"), (0.0, "0.0"), (3.15, "3.1"), (7.45, "7.5"), (100.75, "100.8"), (0.05, "0.1"), (0.15, "0.1"), (33.333, "33.3"),
-        ];
-        for (x, s) in cases {
-            assert_eq!(to_fixed_1(x), s, "{}", x);
         }
     }
 

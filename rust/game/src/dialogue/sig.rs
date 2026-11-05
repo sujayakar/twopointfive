@@ -147,7 +147,7 @@ pub fn giving_stage(t: crate::game::Temperament, band: crate::dialogue::Band, s:
 pub fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, band: crate::dialogue::Band, t: crate::game::Temperament, s: crate::dialogue::StageKey, use_t: bool, use_a: bool) -> bool { todo!() }
 
 /// (src/game/dialogue.ts:671 needsHold)
-pub fn needs_hold(g: &mut crate::game::Game, l: &crate::dialogue::Line, facts: crate::dialogue::NeedsHoldFacts) -> bool { todo!() }
+pub fn needs_hold(g: &mut crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool { todo!() }
 
 /// (src/game/dialogue.ts:675 pendingIntel)
 pub fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Vec<crate::dialogue::PendingIntelItem> { todo!() }
@@ -225,7 +225,7 @@ pub fn line_length_report(g: &mut crate::game::Game) -> crate::dialogue::LineLen
 pub fn force_script(g: &mut crate::game::Game, talk: GameTalkId, id_2: Option<&str>) { todo!() }
 
 /// (src/game/dialogue.ts:1281 forcedScriptOf)
-pub fn forced_script_of(g: &mut crate::game::Game, talk: GameTalkId) -> Option<String> { todo!() }
+pub fn forced_script_of(g: &mut crate::game::Game, talk: GameTalkId) -> Option<Option<String>> { todo!() }
 
 /// (src/game/dialogue.ts:1283 peekScript)
 pub fn peek_script(g: &mut crate::game::Game, talk: GameTalkId) -> Option<crate::dialogue::Script> { todo!() }
@@ -247,9 +247,6 @@ pub fn beat_for(sc: &crate::dialogue::Script, s: crate::dialogue::StageKey, ctx:
 
 /// (src/game/dialogue.ts:1324 himOf)
 pub fn him_of(b: &crate::dialogue::Beat, ctx: &crate::dialogue::DialogueCtx) -> Option<crate::dialogue::HimOf> { todo!() }
-
-/// (src/game/dialogue.ts:1650 registerScriptLines)
-pub fn register_script_lines(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/dialogue.ts:1715 radioState)
 pub fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::RadioState { todo!() }
@@ -304,3 +301,19 @@ pub fn pair_said(l: &crate::dialogue::PairTalkLinesItem, own: bool) -> String { 
 
 /// (src/game/dialogue.ts:2019 updateAmbient)
 pub fn update_ambient(g: &mut crate::game::Game, dt: f64) { todo!() }
+
+
+/// INVENTED: `===` on two StageKeys (dialogue.ts:662, 665). By hand because a union derives PartialEq only as a Map or Set key (skel.cjs:128, 501) and this one holds an f64, so it cannot be Eq.
+impl PartialEq for crate::dialogue::StageKey {
+    fn eq(&self, o: &Self) -> bool {
+        match (self, o) { (Self::Num(a), Self::Num(b)) => a == b, (Self::X, Self::X) => true, _ => false }
+    }
+}
+
+/// INVENTED: DialogueCtx.tokens as the table `expand` reads, keyed by the words of TOKENS (`sawWhere`, as Token::as_str), a null token None. The TypeScript hands the one object to expand (dialogue.ts:683, 726, 971, 995, 1311, 1331); Rust has a struct there and a map here.
+pub fn ctx_tokens_map(t: &crate::dialogue::DialogueCtxTokens) -> JsMap<String, Option<String>> {
+    let mut o = JsMap::new();
+    let rows: [(&str, &Option<String>); 23] = [("partner", &t.partner), ("victim", &t.victim), ("body", &t.body), ("missing", &t.missing), ("room", &t.room), ("sawWhere", &t.saw_where), ("heardWhere", &t.heard_where), ("route", &t.route), ("partnerRoute", &t.partner_route), ("post", &t.post), ("door", &t.door), ("caller", &t.caller), ("checker", &t.checker), ("checked", &t.checked), ("clearRoom", &t.clear_room), ("breakerRoom", &t.breaker_room), ("checkEta", &t.check_eta), ("minutes", &t.minutes), ("n", &t.n), ("up", &t.up), ("badge", &t.badge), ("code", &t.code), ("padDoor", &t.pad_door)];
+    for (k, v) in rows { o.set(String::from(k), v.clone()); }
+    o
+}

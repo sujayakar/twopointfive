@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/game/particleFx.ts:25 gpuFx)
-pub fn gpu_fx(g: &mut crate::game::Game) -> Option<crate::render_particles::Particles> { todo!() }
+pub fn gpu_fx(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/particleFx.ts:42 loadDust)
 pub fn load_dust(g: &mut crate::game::Game) { todo!() }
@@ -18,10 +18,10 @@ pub fn save_dust(g: &mut crate::game::Game) { todo!() }
 pub fn reset_dust(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/particleFx.ts:51 applyDustLook)
-pub fn apply_dust_look(g: &mut crate::game::Game, p: Option<&mut crate::render_particles::Particles>) { todo!() }
+pub fn apply_dust_look(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/particleFx.ts:56 emitDust)
-pub fn emit_dust(g: &mut crate::game::Game, p: &mut crate::render_particles::Particles, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 { todo!() }
+pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 { todo!() }
 
 /// (src/game/particleFx.ts:68 surfAt)
 pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::Surf { todo!() }
@@ -63,7 +63,7 @@ pub fn lock_splinter_fx(g: &mut crate::game::Game, d: DoorId, from: V3) { todo!(
 pub fn clack_fx(g: &mut crate::game::Game, at: V3) { todo!() }
 
 /// (src/game/particleFx.ts:259 emberFx)
-pub fn ember_fx(g: &mut crate::game::Game, p: &mut crate::render_particles::Particles, at: V3, dir: V3, o: crate::particle_fx::EmberFxO) { todo!() }
+pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_fx::EmberFxO) { todo!() }
 
 /// (src/game/particleFx.ts:288 casingOf)
 pub fn casing_of(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> { todo!() }

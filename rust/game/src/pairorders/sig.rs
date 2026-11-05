@@ -33,7 +33,7 @@ pub fn pair_orders_noticed(g: &mut crate::game::Game, h: GuardId) -> bool { todo
 pub fn pair_orders_waiting(g: &mut crate::game::Game) -> Vec<(GuardId, crate::pairorders::Job)> { todo!() }
 
 /// (src/game/pairorders.ts:181 PairOrders.jobOf)
-pub fn pair_orders_job_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::pairorders::PairOrdersJobOf> { todo!() }
+pub fn pair_orders_job_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::pairorders::Job> { todo!() }
 
 /// (src/game/pairorders.ts:183 PairOrders.gripped)
 pub fn pair_orders_gripped(g: &mut crate::game::Game, h: GuardId) -> bool { todo!() }
@@ -146,5 +146,5 @@ pub fn pair_grip_body(g: &mut crate::game::Game, h: GuardId) -> bool { todo!() }
 /// (src/game/pairorders.ts:629 pairGripped)
 pub fn pair_gripped(g: &mut crate::game::Game, h: GuardId) -> bool { todo!() }
 
-/// (src/game/pairorders.ts:631 pairHolds)
-pub fn pair_holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool { todo!() }
+/// (src/game/pairorders.ts:631 pairHoldsRound)
+pub fn pair_holds_round(g: &mut crate::game::Game, gd: GuardId, h: GuardId) -> bool { todo!() }

@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: LightSet, src/render/lights.ts:123)
+/// (TypeScript: LightSet, src/render/lights.ts:118)
 #[derive(Clone, Debug)]
 pub struct LightSet {
     pub lights: Vec<LightId>,
@@ -30,7 +30,7 @@ impl LightSet {
 }
 impl Default for LightSet { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/render/lights.ts:198 LightSet.fogTeam, src/render/lights.ts:198)
+/// (TypeScript: inline at src/render/lights.ts:193 LightSet.fogTeam, src/render/lights.ts:193)
 #[derive(Clone, Debug)]
 pub struct LightSetFogTeam {
     pub on: bool,
@@ -67,15 +67,18 @@ pub struct RtLight {
     pub owner: f64,
     pub enabled: bool,
     pub fixture_box: f64,
+    pub flicker: f64,
     pub row: Option<f64>,
     pub ttl: f64,
     pub age: f64,
     pub peak_intensity: f64,
     pub steady: Option<crate::render_lights::RtLightSteady>,
     pub transient: Option<bool>,
-    pub reach: Option<Vec<u32>>,
-    pub reach_dir: Option<Vec<u32>>,
+    pub broad: bool,
+    pub mark_ref: Option<f64>,
+    pub card: bool,
     pub slot: Option<f64>,
+    pub glass_mask: Option<f64>,
     pub fog: Option<f64>,
     pub fog_ghost: Option<f64>,
     pub fog_by: Option<f64>,
@@ -100,15 +103,18 @@ impl RtLight {
             owner: 0.0,
             enabled: false,
             fixture_box: 0.0,
+            flicker: 0.0,
             row: None,
             ttl: 0.0,
             age: 0.0,
             peak_intensity: 0.0,
             steady: None,
             transient: None,
-            reach: None,
-            reach_dir: None,
+            broad: false,
+            mark_ref: None,
+            card: false,
             slot: None,
+            glass_mask: None,
             fog: None,
             fog_ghost: None,
             fog_by: None,
@@ -143,7 +149,7 @@ impl RtLightSteady {
 }
 impl Default for RtLightSteady { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/lights.ts:65 RtLight.portal, src/render/lights.ts:65)
+/// (TypeScript: inline at src/render/lights.ts:60 RtLight.portal, src/render/lights.ts:60)
 #[derive(Clone, Copy, Debug)]
 pub struct RtLightPortal {
     pub half_wide: f64,
@@ -164,11 +170,11 @@ impl RtLightPortal {
 }
 impl Default for RtLightPortal { fn default() -> Self { Self::zeroed() } }
 
-/// (src/render/lights.ts:81 MAX_LIGHTS)
+/// (src/render/lights.ts:76 MAX_LIGHTS)
 pub const MAX_LIGHTS: f64 = 64.0;
 
-/// (src/render/lights.ts:88 REACH_BYTES: a table nothing writes)
+/// (src/render/lights.ts:83 REACH_BYTES: a table nothing writes)
 pub fn reach_bytes() -> f64 { todo!() }
 
-/// (src/render/lights.ts:90 REACH_VEC4S: a table nothing writes)
+/// (src/render/lights.ts:85 REACH_VEC4S: a table nothing writes)
 pub fn reach_vec4_s() -> f64 { todo!() }

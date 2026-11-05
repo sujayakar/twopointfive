@@ -35,8 +35,8 @@ pub fn cut_statics(g: &mut crate::game::Game, boxes: &[BoxId]) -> f64 { todo!() 
 /// (src/game/levelfit.ts:93 breakRoom)
 pub fn break_room(g: &mut crate::game::Game, col: &crate::levelfit::StoodCol, tables: &JsMap<String, f64>) -> crate::levelfit::BreakRoom { todo!() }
 
-/// (src/game/levelfit.ts:112 fitRows)
+/// (src/game/levelfit.ts:113 fitRows)
 pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Vec<crate::levelfit::FitRow> { todo!() }
 
-/// (src/game/levelfit.ts:150 stoodOver)
+/// (src/game/levelfit.ts:152 stoodOver)
 pub fn stood_over(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Option<String> { todo!() }

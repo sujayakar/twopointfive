@@ -3,6 +3,44 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
+/// (TypeScript: FootBook, src/game/debris.ts:57)
+#[derive(Clone, Copy, Debug)]
+pub struct FootBook {
+    pub shoves: f64,
+    pub stats: crate::debris::FootBookStats,
+}
+impl FootBook {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        FootBook {
+            shoves: 0.0,
+            stats: crate::debris::FootBookStats::zeroed(),
+        }
+    }
+}
+impl Default for FootBook { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/debris.ts:57 FootBook.stats, src/game/debris.ts:57)
+#[derive(Clone, Copy, Debug)]
+pub struct FootBookStats {
+    pub kicked: f64,
+    pub off_man: f64,
+    pub walled: f64,
+    pub gave_up: f64,
+}
+impl FootBookStats {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        FootBookStats {
+            kicked: 0.0,
+            off_man: 0.0,
+            walled: 0.0,
+            gave_up: 0.0,
+        }
+    }
+}
+impl Default for FootBookStats { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: Debris, src/game/debris.ts:81)
 #[derive(Clone, Debug)]
 pub struct Debris {
@@ -87,44 +125,6 @@ impl DebrisFeetStats {
     }
 }
 impl Default for DebrisFeetStats { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: FootBook, src/game/debris.ts:57)
-#[derive(Clone, Copy, Debug)]
-pub struct FootBook {
-    pub shoves: f64,
-    pub stats: crate::debris::FootBookStats,
-}
-impl FootBook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FootBook {
-            shoves: 0.0,
-            stats: crate::debris::FootBookStats::zeroed(),
-        }
-    }
-}
-impl Default for FootBook { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/debris.ts:57 FootBook.stats, src/game/debris.ts:57)
-#[derive(Clone, Copy, Debug)]
-pub struct FootBookStats {
-    pub kicked: f64,
-    pub off_man: f64,
-    pub walled: f64,
-    pub gave_up: f64,
-}
-impl FootBookStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FootBookStats {
-            kicked: 0.0,
-            off_man: 0.0,
-            walled: 0.0,
-            gave_up: 0.0,
-        }
-    }
-}
-impl Default for FootBookStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

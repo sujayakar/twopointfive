@@ -181,6 +181,19 @@ impl EndDistEnd {
     }
 }
 
+/// (TypeScript: inline at src/game/hands.ts:177 lieOf(rag), src/game/hands.ts:177)
+#[derive(Clone, Copy, Debug)]
+pub struct LieOfRag {
+}
+impl LieOfRag {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LieOfRag {
+        }
+    }
+}
+impl Default for LieOfRag { fn default() -> Self { Self::zeroed() } }
+
 /// (TypeScript: inline at src/game/hands.ts:189 carryRides(c), src/game/hands.ts:189)
 #[derive(Clone, Copy, Debug)]
 pub struct CarryRidesC {
@@ -197,6 +210,32 @@ impl CarryRidesC {
     }
 }
 impl Default for CarryRidesC { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/hands.ts:189 carryRides(rag), src/game/hands.ts:189)
+#[derive(Clone, Copy, Debug)]
+pub struct CarryRidesRag {
+}
+impl CarryRidesRag {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        CarryRidesRag {
+        }
+    }
+}
+impl Default for CarryRidesRag { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/hands.ts:197 liePins(rag), src/game/hands.ts:197)
+#[derive(Clone, Copy, Debug)]
+pub struct LiePinsRag {
+}
+impl LiePinsRag {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        LiePinsRag {
+        }
+    }
+}
+impl Default for LiePinsRag { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/hands.ts:212 layLie ->, src/game/hands.ts:212)
 #[derive(Clone, Copy, Debug)]

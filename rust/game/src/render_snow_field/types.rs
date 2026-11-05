@@ -9,6 +9,7 @@ pub struct SnowField {
     pub data: Vec<u16>,
     pub w: f64,
     pub h: f64,
+    pub quads: Vec<u32>,
     pub slab: f64,
     pub statics: f64,
     pub paint: [f64; 3],
@@ -17,9 +18,13 @@ pub struct SnowField {
     pub cover: Vec<f32>,
     pub packed: Vec<f32>,
     pub old: Vec<f32>,
+    pub roof: Vec<f32>,
+    pub wall: Vec<u8>,
+    pub hard: Vec<f32>,
     pub base: Option<Vec<f32>>,
     pub kept: Option<Vec<crate::render_snow_field::SnowFieldKeptItem>>,
     pub walks: Option<f64>,
+    pub stats: crate::render_snow_field::SnowFieldStats,
 }
 impl SnowField {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -28,6 +33,7 @@ impl SnowField {
             data: Vec::new(),
             w: 0.0,
             h: 0.0,
+            quads: Vec::new(),
             slab: 0.0,
             statics: 0.0,
             paint: [0.0; 3],
@@ -36,9 +42,13 @@ impl SnowField {
             cover: Vec::new(),
             packed: Vec::new(),
             old: Vec::new(),
+            roof: Vec::new(),
+            wall: Vec::new(),
+            hard: Vec::new(),
             base: None,
             kept: None,
             walks: None,
+            stats: crate::render_snow_field::SnowFieldStats::zeroed(),
         }
     }
 }
@@ -66,6 +76,31 @@ impl SnowFieldKeptItem {
     }
 }
 impl Default for SnowFieldKeptItem { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/render/snowField.ts:66 SnowField.stats, src/render/snowField.ts:66)
+#[derive(Clone, Copy, Debug)]
+pub struct SnowFieldStats {
+    pub mounds: f64,
+    pub lays: f64,
+    pub bare: f64,
+    pub roofs: f64,
+    pub quads: f64,
+    pub max_mound: f64,
+}
+impl SnowFieldStats {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        SnowFieldStats {
+            mounds: 0.0,
+            lays: 0.0,
+            bare: 0.0,
+            roofs: 0.0,
+            quads: 0.0,
+            max_mound: 0.0,
+        }
+    }
+}
+impl Default for SnowFieldStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/snowField.ts:25 SNOW_SURF, src/render/snowField.ts:25)
 #[derive(Clone, Copy, Debug)]
@@ -128,46 +163,6 @@ impl SnowPaintOfB {
     }
 }
 impl Default for SnowPaintOfB { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/render/snowField.ts:108 buildSnowField(opts), src/render/snowField.ts:108)
-#[derive(Clone, Copy, Debug)]
-pub struct BuildSnowFieldOpts {
-    pub wind: Option<[f64; 2]>,
-    pub break_it: Option<bool>,
-    pub roll: Option<f64>,
-}
-impl BuildSnowFieldOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BuildSnowFieldOpts {
-            wind: None,
-            break_it: None,
-            roll: None,
-        }
-    }
-}
-impl Default for BuildSnowFieldOpts { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/render/snowField.ts:305 snowFieldAt ->, src/render/snowField.ts:305)
-#[derive(Clone, Copy, Debug)]
-pub struct SnowFieldAt {
-    pub mound: f64,
-    pub cover: f64,
-    pub packed: f64,
-    pub old: f64,
-}
-impl SnowFieldAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnowFieldAt {
-            mound: 0.0,
-            cover: 0.0,
-            packed: 0.0,
-            old: 0.0,
-        }
-    }
-}
-impl Default for SnowFieldAt { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

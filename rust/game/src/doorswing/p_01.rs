@@ -60,30 +60,36 @@ pub fn area(r: crate::doorswing::Rect) -> f64 {
     m::abs((r.x1 - r.x0) * (r.z1 - r.z0))
 }
 
-/// How many of ROOF_PTS points just off face `s` of a door have a roof over them.   (doorswing.ts roofOver)
-pub fn roof_over(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
-    let c = g.dr[d].def.closed_dir;
+/// What roofOver reads of a static: c, h, yaw, flags.
+type BoxNumbers = (V3, V3, f64, f64);
+
+/// A static's numbers by its ID (doorswing.ts:56 `level.boxes`, which is `g.col.boxes`).
+fn seam_box_numbers(g: &mut Game, b: BoxId) -> BoxNumbers {
+    todo!("needs: the table of Box rows: g.col.boxes is Vec<BoxId> and no Tab holds a Box")
+}
+
+/// roofOver's count over the statics' numbers.
+fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64 {
+    let c = def.closed_dir;
     let ux = m::cos(c);
     let uz = m::sin(c);
-    let hinge = g.dr[d].def.hinge;
-    let width = g.dr[d].def.width;
-    let mx = hinge[0] + ux * width / 2.0;
-    let mz = hinge[1] + uz * width / 2.0;
+    let mx = def.hinge[0] + ux * def.width / 2.0;
+    let mz = def.hinge[1] + uz * def.width / 2.0;
     let no_shadow = js::to_i32(crate::scene_boxes::box_flag().no_shadow);
     let mut n = 0.0;
     for off in [0.8, 1.5] {
         for al in [-0.4, 0.0, 0.4] {
             let x = mx - uz * off * s + ux * al;
             let z = mz + ux * off * s + uz * al;
-            let some = g.level.boxes.iter().any(|b| {
-                if js::to_i32(b.flags) & no_shadow != 0 || b.c[1] - b.h[1] < ROOF_UNDER {
+            let some = boxes.iter().any(|&(bc, bh, yaw, flags)| {
+                if js::to_i32(flags) & no_shadow != 0 || bc[1] - bh[1] < ROOF_UNDER {
                     return false;
                 }
-                let dx = x - b.c[0];
-                let dz = z - b.c[2];
-                let cy = m::cos(b.yaw);
-                let sy = m::sin(b.yaw);
-                m::abs(dx * cy - dz * sy) <= b.h[0] && m::abs(dx * sy + dz * cy) <= b.h[2]
+                let dx = x - bc[0];
+                let dz = z - bc[2];
+                let cy = m::cos(yaw);
+                let sy = m::sin(yaw);
+                m::abs(dx * cy - dz * sy) <= bh[0] && m::abs(dx * sy + dz * cy) <= bh[2]
             });
             if some {
                 n += 1.0;
@@ -93,13 +99,15 @@ pub fn roof_over(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
     n
 }
 
-/// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.   (doorswing.ts outsideOf)
-pub fn outside_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
-    if !g.dr[d].def.exterior.unwrap_or(false) {
-        return 0.0;
-    }
-    let p = roof_over(g, d, 1.0);
-    let mi = roof_over(g, d, -1.0);
+/// How many of ROOF_PTS points just off face `s` of a door have a roof over them.   (doorswing.ts roofOver)
+pub fn roof_over(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
+    let list = g.col.boxes.clone();
+    let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
+    roof_points(&boxes, &g.dr[d].def, s)
+}
+
+/// outsideOf's answer from the roofed points of the + and the - face.
+fn outside_side(p: f64, mi: f64) -> f64 {
     let inn = ROOF_PTS - 2.0;
     let out = 2.0;
     if p >= inn && mi <= out {
@@ -109,6 +117,16 @@ pub fn outside_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
     } else {
         0.0
     }
+}
+
+/// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.   (doorswing.ts outsideOf)
+pub fn outside_of(g: &mut crate::game::Game, d: DoorId) -> f64 {
+    if !g.dr[d].def.exterior.unwrap_or(false) {
+        return 0.0;
+    }
+    let p = roof_over(g, d, 1.0);
+    let mi = roof_over(g, d, -1.0);
+    outside_side(p, mi)
 }
 
 /// floors' `flood`: the component of `start`, flooded and its size kept on the first asking.   (doorswing.ts floors)
@@ -388,12 +406,6 @@ fn rect_of(r: &crate::scene_scenarios::Rect) -> crate::doorswing::Rect {
 fn plan_rect(r: &crate::scene_level::BreachPlanBounds) -> crate::doorswing::Rect {
     crate::doorswing::Rect { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }
 }
-/// `n.toFixed(1)` of a number >= 0. Only a multiple of a quarter that is odd is an exact tie; JavaScript takes the upper of the two, Rust the even.
-fn to_fixed_1(x: f64) -> String {
-    let t = x * 4.0;
-    let tie = m::floor(t) == t && js::rem(t, 2.0) != 0.0;
-    alloc::format!("{:.1}", if tie { x + 0.01 } else { x })
-}
 
 /// dealSwings' `tries`, in order: the first rule that speaks for this door.
 fn first_rule(g: &mut Game, given: &Given, fl: &mut Option<JsMap<DoorId, crate::doorswing::FloorsValue>>, d: DoorId, name: &str) -> Option<crate::doorswing::SwingDeal> {
@@ -463,7 +475,7 @@ fn first_rule(g: &mut Game, given: &Given, fl: &mut Option<JsMap<DoorId, crate::
     let f = fl.as_ref().and_then(|t| t.get(d)).copied();
     if let Some(f) = f {
         if f.plus > 0.0 && f.minus > 0.0 && f.plus != f.minus {
-            let into = alloc::format!("{} cells against {}", m::min(f.plus, f.minus), m::max(f.plus, f.minus));
+            let into = alloc::format!("{} cells against {}", js::num_str(m::min(f.plus, f.minus)), js::num_str(m::max(f.plus, f.minus)));
             return deal(g, d, if f.plus < f.minus { 1.0 } else { -1.0 }, SwingWhy::Floor, Some(&into));
         }
     }
@@ -537,7 +549,7 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
                     door: name.clone(),
                     swing: -got.swing,
                     why: SwingWhy::LeafRoom,
-                    into: Some(alloc::format!("{} m² of floor shut off by its leaf the other way", to_fixed_1(cut))),
+                    into: Some(alloc::format!("{} m² of floor shut off by its leaf the other way", js::to_fixed(cut, 1))),
                     out: None,
                     clear: None,
                 });
@@ -579,14 +591,6 @@ mod tests {
         assert_eq!(comp, [0, 0, -1, 1, 1, 0, 0, -1, 1, 1]);
     }
 
-    /// The same strings as bun's `toFixed(1)`, its ties among them.
-    #[test]
-    fn to_fixed_1_matches_javascript() {
-        for (x, s) in [(0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (1.75, "1.8"), (2.25, "2.3"), (1.0, "1.0"), (1.2000000000000002, "1.2"), (3.1400000000000006, "3.1"), (1.35, "1.4"), (12.5, "12.5")] {
-            assert_eq!(to_fixed_1(x), s, "{}", x);
-        }
-    }
-
     /// Spots of leafCut's grid, as the TypeScript's alOf and peOf.
     #[test]
     fn leaf_grid_spots() {
@@ -608,11 +612,6 @@ mod tests {
         row.key_side = 1.0;
         let id = g.dr.push(row);
         g.doors.list.push(id);
-    }
-    fn roof(c: V3, h: V3, yaw: f64, flags: f64) -> crate::scene_boxes::Box {
-        let mut b = crate::scene_boxes::Box::zeroed();
-        (b.c, b.h, b.yaw, b.flags) = (c, h, yaw, flags);
-        b
     }
     fn room(id: &str, name: &str, x0: f64, x1: f64, z0: f64, z1: f64, door: &str) -> crate::scene_scenarios::StructureRoom {
         let mut r = crate::scene_scenarios::StructureRoom::zeroed();
@@ -658,7 +657,7 @@ mod tests {
             }
         }
         (g.col.nav.w, g.col.nav.h, g.col.nav.cell, g.col.nav.blocked) = (40.0, 40.0, 0.5, blocked);
-        g.level.boxes = vec![roof([8.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 0.0), roof([12.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 2.0), roof([12.0, 1.0, 4.5], [2.0, 0.2, 3.0], 0.3, 0.0)];
+        let roofs: [BoxNumbers; 3] = [([8.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 0.0), ([12.0, 3.0, 4.5], [2.0, 0.2, 3.0], 0.0, 2.0), ([12.0, 1.0, 4.5], [2.0, 0.2, 3.0], 0.3, 0.0)];
         let mut breach = crate::scene_level::BreachPlan::zeroed();
         breach.door = String::from("plan");
         breach.fling = -3.0;
@@ -710,7 +709,8 @@ mod tests {
                 None => (if g.dr[d].max_auth >= -g.dr[d].min_auth { 1.0 } else { -1.0 }, "wider", String::new()),
             };
             let out = if why != "authored" && why != "folds" {
-                let side = outside_of(&mut g, d);
+                let def = &g.dr[d].def;
+                let side = if def.exterior.unwrap_or(false) { outside_side(roof_points(&roofs, def, 1.0), roof_points(&roofs, def, -1.0)) } else { 0.0 };
                 deal(&g, d, side, crate::doorswing::SwingWhy::Outside, Some("the open air")).map_or(0.0, |o| o.swing)
             } else {
                 0.0
