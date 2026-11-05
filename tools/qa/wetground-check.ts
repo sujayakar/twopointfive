@@ -32,7 +32,7 @@ export async function wetGroundCheck(): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { BoxFlag, SHEET_MASK } = await import(`${ROOT}/src/scene/boxes.ts`);
-  const { gwotSimOf } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
+  const { lookPaintOf } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
   const { gwotKit, gwotOfOffice } = await import(`${ROOT}/src/scene/gwotKit.ts`);
   const { officeKit } = await import(`${ROOT}/src/scene/officeGen.ts`);
   const { DRESS } = await import(`${ROOT}/src/game/dress.ts`);
@@ -58,7 +58,7 @@ export async function wetGroundCheck(): Promise<boolean> {
   /** THE PAGE'S OLD STEP, AS IT WAS (scene/lookTidy.ts find's ground half and wetTidy, until 11-04): each ground sheet and the topmost flat under its middle; a
    *  sheet was wet when that flat was. Only on a level that wears one of the look's paints. Returns the pairs. */
   function oldSheets(st: B[]): { d: B; g: B }[] {
-    if (!st.some(b => gwotSimOf(b.albedo) !== undefined)) return [];
+    if (!st.some(b => lookPaintOf(b.albedo, 0.004) !== undefined)) return [];
     const grounds = st.filter(b => !(b.flags & SHEET_MASK) && !b.yaw && top(b) <= 0.06 && b.h[0] > 0.4 && b.h[2] > 0.4), out: { d: B; g: B }[] = [];
     for (const d of st) { if ((d.flags & SHEET_MASK) !== BoxFlag.NoShadow || d.h[1] > 0.02 || top(d) > 0.03 || d.c[1] - d.h[1] < 0) continue;
       let g: B | undefined, at = -1e9; for (const b of grounds) if (Math.abs(b.c[0] - d.c[0]) <= b.h[0] && Math.abs(b.c[2] - d.c[2]) <= b.h[2] && top(b) > at) { at = top(b); g = b; }
