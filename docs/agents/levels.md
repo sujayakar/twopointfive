@@ -1156,3 +1156,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   window on the look page; six boots, every program compiled (119 of 119; the block's 118 of 118), no page, console or GPU error. The front's pieces
   stand where the trial's stood but for the pipes, the wood and the bench; the windows are open; lying rounds, billets and beam ends draw round;
   `drumDown` draws as the two boxes it is. NEVER SEEN ON A GPU, and nobody has played either level since.
+- **Walls and frames that said cloth by a borrowed paint say what they are** (level data and the look's skin, no new switch; 2026-11-05; found by the
+  step that draws a hit by what the thing says it is made of: a round knocked tufts out of them). TWO CASES, ONE CAUSE: a paint taken for its COLOUR brings
+  its row's stuff with it. THE DEPOT's hut walls wear the office's tan partition paint, whose row says cloth: `tools/levels/depot.ts` says `stucco` over it
+  (`saidAs`, the compound's own line), 32 boxes of `walls.huts`, a word each and nothing else. THE CONSULATE's look file framed its doors and windows in a
+  blanket's brown for want of a dark wood: 55 door frame boxes and 10 window jambs were cloth. A SKIN MAY NOW SAY WHAT A PAINT IS ON A THING
+  (`tools/levels/gwotSkin.ts` `Said`: a palette row to the eye and to a round, another stuff and its finish), and `VARNISH` is dark varnished wood, named
+  for what it is: the consulate's `frameOut` and `frameIn` are it, 65 boxes change `stuff` (wood) and `rough` (0.95 to 0.6) and no colour moves. NOT A NEW
+  PALETTE ROW, on purpose: the palette is written whole into every level file built on the kit (a row makes each of them stale), and a row in the
+  blanket's numbers would be the blanket to a round, which knows a paint by its numbers. Both level files differ from the step before only by those
+  words and that finish; `depot-gwot.json` and `consulate.json` do not move; each changed file's base rides (`fixtures/level-base/depot.txt`,
+  `consulate-gwot.txt`). MEANT AND LEFT: walls of sacks are cloth (the kill house's and the road lesson's sandbags, 44 boxes). NOT IN THIS STEP, said to
+  the dress goal: the painted wall bands a skin lays as decals in a cloth's paint (the consulate's madder wainscot, the registry's brown dado: no ray
+  meets a decal, so it is the picture's alone), and a gear screen's backdrop walls in the tan (the compound's set). CHECK `stuff-check` line 15: in every
+  level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet but for sacks in their own paint; it finds a made-up hut wall and frame;
+  `STUFF_BREAK=1` fails it; on the step before it is red on exactly these 97 boxes.
+  `hitstuff-check`, `wallfurn-check` (the depot 880 and 752, the consulate 857 and 725, held), `second-way-check`, `lived-check`, `wayround-check` and
+  `level-needs --run` for both levels: green on both stands. PLAY: nothing in the simulation reads a word. The three play-through reads (frozen; shipped with lived rooms off; shipped), seeds 1 and 2,
+  against the step before on the same box: 42 of 42 each on the step this was first written on, and again 4 of 4 each for the depot's and the consulate's
+  missions on the step it is cut on. SEEN: the look page boots on the consulate's rescue with this in, on the software adapter, with no page or GPU error; in its
+  night still no frame is legible, so the varnish itself is seen by nobody, and never on a GPU. The depot shows nothing on the look page (with the look on it
+  opens its look file, which does not move): its change is the picture of a hit with the look off.
