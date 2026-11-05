@@ -302,14 +302,6 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
         { const rs = data.scenarios?.response, wrs = was.scenarios?.response;
           if (JSON.stringify(rs) !== JSON.stringify(wrs)) { console.log(`  (the response team's block, scenarios.response, is not ${base}'s: ${wrs === undefined ? 'new' : rs === undefined ? 'gone' : 're-tuned'} since — not held to the base)`);
             if (rs !== undefined) (was.scenarios ??= {}).response = JSON.parse(JSON.stringify(rs)); else { delete was.scenarios.response; if (!Object.keys(was.scenarios).length && data.scenarios === undefined) delete was.scenarios; } } }
-        // (WHAT A BOX SAYS IT IS MADE OF — a material row's, a box's or a prop part's `stuff`, src/scene/stuff.ts. Picture only: the look's word reads it and no rule of the game does,
-        //  and furniture cannot change it. A kit piece given its word re-writes every level that lays it, so a word takes no new base revision: the base's box
-        //  is read with today's word and said so, in either direction. Every other key of the box is still held. What holds a file's words is its generator
-        //  (export --check, the level probes: the file is what the generator writes); a word typed into a file by hand is held by nothing but the reader's list)
-        { let said = 0; const give = (w: any, t: any) => { if (!w || !t || w.stuff === t.stuff) return; said++; if (t.stuff !== undefined) w.stuff = t.stuff; else delete w.stuff; };
-          bare.boxes.forEach((b: any, i: number) => give(was.boxes?.[i], b)); bare.props.forEach((q: any, i: number) => (q.parts ?? []).forEach((part: any, k: number) => give(was.props?.[i]?.parts?.[k], part)));
-          for (const [k, m] of Object.entries(bare.materials ?? {})) give(was.materials?.[k], m);   // (a row says what its paint is made of since 11-04: a base from before says nothing there)
-          if (said) console.log(`  (${said} of its rows and boxes say what they are made of and ${base}'s do not, or say another word: picture only, not held to the base)`); }
         // (the exporter numbers generated box ids by place in the list, so every box after the lived ones — the dressing, the look's decals — has another NUMBER than it
         //  had; nothing names those boxes — export.ts refuses a kept thing that does — so past the first lived box the ids are not compared)
         const first = data.boxes.findIndex((b: any) => isLived(b.group)), noId = (l: any[]) => first < 0 ? l : l.map((b, i) => i < first ? b : { ...b, id: undefined });

@@ -2,7 +2,7 @@
 
 WRITTEN BY `bun run tools/levels/library.ts --write` FROM THE KITS. Do not edit: change the kit, then write it again (`--check` is red when this page is stale).
 
-168 pieces in 6 kits, 115 named paints in 6 tables.
+167 pieces in 6 kits, 115 named paints in 6 tables.
 A piece is something a level asks a kit for by name. Each row is one call laid alone: the call a showroom makes.
 
 - **To a man**, read off the boxes as laid: *solid to h* = feet, sight, rounds and sound meet it, up to h metres; *off the floor* = solid, but nothing of it comes
@@ -19,7 +19,7 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 
 | Kit | File | Pieces | Its sections |
 |---|---|---|---|
-| gwotKit | `src/scene/gwotKit.ts` | 65 | walls · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
+| gwotKit | `src/scene/gwotKit.ts` | 64 | walls · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
 | officeKit | `src/scene/officeGen.ts` | 19 | glass · walls · props · loose props · set dressing helpers · lights · doors |
 | livedKit | `tools/levels/livedKit.ts` | 18 | the floor · furniture · clutter · loose things |
 | livedPieces | `tools/levels/livedPieces.ts` | 37 | carcasses · paper, plans, books · instruments and tools · safes · on a wall · on a desk · on the floor · loose |
@@ -146,9 +146,8 @@ It is no second way of building the name.
 | **generator**(x, z, yaw = 0, colour = 'genYellow') | COVER (waist): a diesel GENERATOR on its skid, 1.5 × 0.75 × 1.0: louvred sides, a control panel on local −Z, the exhaust stack | solid to 1.32 | 1.6 × 0.8 × 1.32 | 4 solid, 4 markings | GWOT_PALETTE.iron, genYellow, rust | gwot-yard |
 | **waterTank**(x, z, colour = 'plasticBlue', plinth = 1.1) | COVER (full): a WATER TANK — a 1 000 l plastic tank on a mud-brick plinth (`plinth` m high; 0 = on the ground) | solid to 2.2 | 1.32 × 1.32 × 2.26 | 7 solid, 1 round, 16 markings | plasticBlue, galv, mud, plasticBlack | gwot-yard |
 | **pump**(x, z, yaw = 0) | COVER: a hand PUMP on its concrete pad (the pad a walk-over) with a bucket | solid to 1.08 | 2.82 × 2.4 × 1.08 | 6 solid, 2 drawn | paintGreen, damp, block, GWOT_PALETTE.iron, plasticBlue | gwot-yard |
-| **pickup**(x, z, yaw = 0, body = 'truckWhite', opts = {}) | COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal gun in the bed (the "technical") | solid to 1.71 | 5.04 × 1.82 × 1.71 | 32 solid, 3 round, 2 markings | drumBlue, truckWhite, GWOT_PALETTE.rubber, rust, plasticBlack, plasticWhite, truckRed, glassDark | gwot-yard |
+| **pickup**(x, z, yaw = 0, body = 'truckWhite', opts = {}) | COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal gun in the bed (the "technical") | solid to 1.71 | 5.04 × 1.82 × 1.71 | 32 solid, 3 round, 3 markings | drumBlue, truckWhite, GWOT_PALETTE.rubber, rust, plasticBlack, plasticWhite, truckRed, glassDark | gwot-yard |
 | **van**(x, z, yaw = 0, body = 'truckWhite') | COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is local (−3.2, 0): where a man is put in) | solid to 1.95 | 5.63 × 2.65 × 1.95 | 23 solid | truckWhite, GWOT_PALETTE.rubber, plasticBlack, plasticWhite, truckRed, glassDark | library-hall |
-| **lorry**(x, z, yaw = 0) | COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` | solid to 1.95 | 6.68 × 2.34 × 2.2 | 20 solid | GWOT_PALETTE.rubber, poplar, truckRed, GWOT_PALETTE.iron, plasticWhite, glassDark, GWOT_PALETTE.canvas, woodGrey | gwot-yard |
 | **motorbike**(x, z, yaw = 0, tank = 'truckRed') | COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X | solid to 1.04 | 1.96 × 0.64 × 1.04 | 10 solid | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, galv, plasticBlack, truckRed | gwot-yard |
 | **handcart**(x, z, yaw = 0, load = 'none') | COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing | solid to 0.97 | 2.52 × 1.11 × 0.97 | 9 solid, 2 markings | sack, woodGrey, GWOT_PALETTE.rubber, poplar | gwot-yard |
 | **stall**(x, z, yaw = 0, w = 2.2, awning = 'tarpBlue') | COVER (waist at the counter): a MARKET STALL `w` wide: a skirted counter of produce trays on local −Z, the keeper's striped awning on four poles behind it | solid to 2.15 | 2.5 × 2.13 × 2.18 | 15 solid, 10 markings | ply, woodGrey, GWOT_PALETTE.canvas, poplar, tarpBlue | gwot-yard |
@@ -195,14 +194,14 @@ It is no second way of building the name.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **chair**(x, z, yaw, albedo = C.chair, made) | PROP (chair): an office CHAIR on casters: seat, back, gas lift, star base | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
+| **chair**(x, z, yaw, albedo = C.chair) | PROP (chair): an office CHAIR on casters: seat, back, gas lift, star base | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
 | **cardboardBox**(x, z, s, yaw, y = 0) | PROP (cardboard): a CARTON of side s; with y over 0 it is stacked on the carton already standing there and moves with it | loose | 0.5 × 0.5 × 0.5 | 1 loose (1 part), 4 markings | cardboard | library-hall |
 
 ### officeKit: set dressing helpers
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **rug**(x, z, w, d, albedo, yaw = 0) | DECAL: a plain RUG w × d in the colour given: cloth. Floor paint and a dirt track are no rugs and are laid as their own flat boxes | drawn only | 2.4 × 1.6 × 0.01 | 1 drawn | carpetBlue | library-hall |
+| **rug**(x, z, w, d, albedo, yaw = 0) | DECAL: a plain RUG w × d in the colour given | drawn only | 2.4 × 1.6 × 0.01 | 1 drawn | carpetBlue | library-hall |
 | **plant**(x, z, s = 1) | PROP (plant): a potted PLANT, scale s: a pot and two masses of leaves | loose | 0.58 × 0.56 × 1.26 | 1 loose (3 parts) | plant, (0.138, 0.345, 0.11), (0.36, 0.3, 0.26) | library-hall |
 | **bin**(x, z) | PROP (bin): a waste BIN | loose | 0.26 × 0.26 × 0.4 | 1 loose (1 part) | (0.12, 0.12, 0.13) | library-hall |
 | **cabinet**(x, z, yaw) | COVER: a FILING CABINET 0.46 × 0.6 × 1.32, drawer fronts on local −Z | solid to 1.32 | 0.6 × 0.46 × 1.32 | 1 solid, 1 marking | (0.58, 0.58, 0.56) | library-hall |
@@ -439,7 +438,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | rugCream | 0.6, 0.52, 0.38 | rough 0.95 | carpet | carpet | 2 |
 | rugOchre | 0.5, 0.33, 0.1 | rough 0.95 | carpet |  | 0 |
 | rugGreen | 0.09, 0.22, 0.13 | rough 0.95 | carpet |  | 0 |
-| canvas | 0.33, 0.31, 0.2 | rough 0.95 | chair |  | 4 |
+| canvas | 0.33, 0.31, 0.2 | rough 0.95 | chair |  | 3 |
 | blanketGrey | 0.3, 0.3, 0.31 | rough 0.95 | chair |  | 2 |
 | blanketBrown | 0.27, 0.18, 0.12 | rough 0.95 | chair |  | 1 |
 | tarpBlue | 0.05, 0.17, 0.48 | rough 0.95 | chair |  | 1 |
@@ -450,25 +449,25 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | coyote | 0.4, 0.31, 0.2 | rough 0.85 | chair |  | 2 |
 | stencil | 0.62, 0.5, 0.1 | rough 0.7 | metal |  | 0 |
 | rust | 0.28, 0.12, 0.06 | rough 0.85 | metal |  | 6 |
-| iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | metal |  | 13 |
+| iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | metal |  | 12 |
 | galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | metal |  | 11 |
 | tin | 0.56, 0.55, 0.52 | rough 0.42, bare metal | metal |  | 9 |
 | drumBlue | 0.06, 0.15, 0.33 | rough 0.5 | metal |  | 3 |
 | drumRed | 0.4, 0.07, 0.05 | rough 0.5 | metal |  | 2 |
 | genYellow | 0.6, 0.42, 0.04 | rough 0.5 | metal |  | 2 |
-| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | ~plastic |  | 7 |
+| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | ~plastic |  | 6 |
 | plasticGreen | 0.08, 0.28, 0.14 | rough 0.45 | ~plastic |  | 1 |
 | plasticBlue | 0.03, 0.12, 0.36 | rough 0.45 | ~plastic |  | 5 |
 | plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | ~plastic |  | 10 |
 | jerryYellow | 0.62, 0.46, 0.05 | rough 0.45 | ~plastic |  | 0 |
-| rubber | 0.03, 0.03, 0.033 | rough 0.85 | ~plastic |  | 13 |
-| poplar | 0.47, 0.36, 0.22 | rough 0.8 | wood |  | 10 |
-| woodGrey | 0.33, 0.29, 0.23 | rough 0.85 | wood |  | 18 |
+| rubber | 0.03, 0.03, 0.033 | rough 0.85 | ~plastic |  | 12 |
+| poplar | 0.47, 0.36, 0.22 | rough 0.8 | wood |  | 9 |
+| woodGrey | 0.33, 0.29, 0.23 | rough 0.85 | wood |  | 17 |
 | ply | 0.55, 0.43, 0.27 | rough 0.75 | wood |  | 3 |
 | truckWhite | 0.68, 0.68, 0.65 | rough 0.35 | metal |  | 2 |
 | truckTan | 0.5, 0.42, 0.29 | rough 0.4 | metal |  | 0 |
-| truckRed | 0.42, 0.06, 0.05 | rough 0.35 | metal |  | 5 |
-| glassDark | 0.05, 0.06, 0.08 | rough 0.1 | ~glass |  | 3 |
+| truckRed | 0.42, 0.06, 0.05 | rough 0.35 | metal |  | 4 |
+| glassDark | 0.05, 0.06, 0.08 | rough 0.1 | ~glass |  | 2 |
 | prodOrange | 0.7, 0.3, 0.04 | rough 0.95 | plant |  | 0 |
 | prodGreen | 0.22, 0.4, 0.1 | rough 0.95 | plant |  | 2 |
 | prodRed | 0.5, 0.07, 0.05 | rough 0.95 | plant |  | 0 |

@@ -27,7 +27,6 @@ import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'killhouse';
 export const NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
@@ -120,7 +119,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the corridor's east end) and one emergency beacon ----
   grp('breaker');
-  const brk = add({ c: [27.84, 1.35, 13.25], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [27.84, 1.35, 13.25], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [27.79, 1.62, 13.07], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20, H - 0.06, 13.25], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

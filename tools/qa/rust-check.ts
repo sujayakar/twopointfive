@@ -71,10 +71,9 @@
 //             glass breaks and where things break: the `module` and `snapshot` lines of tools/qa/glassfall-check.ts and tools/qa/debrisfall-check.ts (a
 //             scene with the row on against off, and a snapshot put back while things are in the air). `missions` raises the row with the rest, but the
 //             five missions break nothing that falls: there the row is only shown to do no harm.
-//   stand     both stands have the rows of src/sim/sim.ts RUST_ON on, and the game's own maths, as the page (TPS_RUST<ROW>=1 raises a row on either, =0
-//             puts a default one off, TPS_RUST=0 every one unless its own word raises it; TPS_EXACT=0 TPS_RUST=0 is the stand as it was recorded before the
-//             rows); FROZEN_HOLDS holds no row and no maths; and the address's words (profile.ts pageRows: ?rust=0, ?rust<row>, ?rust<row>=0) write what
-//             they say, also over rows a recipe wrote
+//   stand     the frozen stand leaves every row off; the shipped stand has the rows of src/sim/sim.ts RUST_ON on, as the page (TPS_RUST<ROW>=1 raises a row on
+//             either, =0 puts a default one off); FROZEN_HOLDS has their rows; and the address's words (profile.ts pageRows: ?rust=0, ?rust<row>, ?rust<row>=0)
+//             write what they say, also over rows a recipe wrote
 //   server    the game server's own stand (tools/mp/stand.ts): a setup that asks for the row makes a recipe that carries it, the game stood from that recipe in
 //             another process ticks with the module's maths in Math's place, and after 600 ticks of a walking, shooting seat its state word is the word of
 //             the same setup without the row. `server as the page`: a setup that says nothing of the rows makes a recipe with the page's own (RUST_ON),
@@ -198,7 +197,7 @@ if (args[0] === '--rows') {
   await import(`${ROOT}/tools/qa/headless.ts`);
   const H: any = await import(`${ROOT}/src/host/standup.ts`), S: any = await import(`${ROOT}/src/sim/sim.ts`), P: any = await import(`${ROOT}/src/host/profile.ts`);
   H.pinMaths(); H.pinRust();
-  console.log('RUST-ROWS ' + JSON.stringify({ profile: P.harnessProfile(), maths: S.RUST.maths, exact: (await import(`${ROOT}/src/math/exact.ts`)).EXACT.on, on: S.rustRows().filter((r: string) => S.RUST[r]), rows: S.rustRows() }));
+  console.log('RUST-ROWS ' + JSON.stringify({ profile: P.harnessProfile(), maths: S.RUST.maths, on: S.rustRows().filter((r: string) => S.RUST[r]), rows: S.rustRows() }));
   process.exit(0);
 }
 
@@ -416,16 +415,14 @@ let wordOwn = '', wordRust = '';
       const na = nums(a), nb = nums(b); if (/\bG\b/.test(strip(b)) && !/const G\b/.test(b)) { nb.push(there('G')); nb.sort((x, y) => x - y); }
       shared += na.length; if (na.join() !== nb.join()) off.push(`the numbers written in ${here_}: ${na.join(' ')} here, ${nb.join(' ')} in ${there_}`);
     } }
-  // …and the step is what the TypeScript's was before a slab's numbers were columns (tools/qa/slab-asitwas.ts: the words it folded then), on both stands,
-  // by the module (the rows as the stand has them) and by the TypeScript (TPS_RUST=0), and on the frozen stand as it was recorded before the rows
-  const wasOn = (stand: string, env: Record<string, string | undefined> = {}, ...more: string[]) => child(['bun', 'run', 'tools/qa/slab-asitwas.ts', ...more], { TPS_PROFILE: stand, TPS_RUST: undefined, ...env });
-  const wases = [wasOn('shipped'), wasOn('frozen'), wasOn('shipped', { TPS_RUST: '0' }), wasOn('frozen', { TPS_RUST: '0' }), wasOn('frozen', {}, '--recorded')];
+  // …and the TypeScript's own step is what it was before a slab's numbers were columns (tools/qa/slab-asitwas.ts: the words it folded then)
+  const wasOn = (stand: string) => child(['bun', 'run', 'tools/qa/slab-asitwas.ts'], { TPS_PROFILE: stand }), wases = [wasOn('shipped'), wasOn('frozen')];
   const was = { status: wases.every(w => w.status === 0) ? 0 : 1, out: wases.map(w => w.out).join('\n') }, wasRows = was.out.split('\n').filter(l => / (PASS|FAIL) — \d+ leaves, /.test(l));
-  const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== slab-ident: PASS/.test(r.out) && off.length === 0 && shared > 50 && was.status === 0 && wasRows.length >= 20;
+  const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== slab-ident: PASS/.test(r.out) && off.length === 0 && shared > 50 && was.status === 0 && wasRows.length >= 8;
   verdict(ok, 'slabs: every loose slab the Rust module steps ends where the TypeScript\'s step leaves it — its row, its box, the slam, the tallies — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${shared} numbers shared with the Rust source (slabshome.ts, doorblast.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`
-    + `\n    as it was (both stands by the module and by the TypeScript, and the frozen stand as recorded before the rows, against the words folded before the columns): ${was.status === 0 ? `${wasRows.length} runs the same` : (wasRows.filter(l => / FAIL /.test(l)).map(l => l.replace(/\s+/g, ' ').trim()).join(' / ') || `exit ${was.status}`).slice(0, 400)}`);
+    + `\n    as it was (rows off, both stands, against the words folded before the columns): ${was.status === 0 ? `${wasRows.length} runs the same` : (wasRows.filter(l => / FAIL /.test(l)).map(l => l.replace(/\s+/g, ' ').trim()).join(' / ') || `exit ${was.status}`).slice(0, 400)}`);
 }
 
 // ---- items
@@ -511,21 +508,14 @@ let wordOwn = '', wordRust = '';
 
 // ---- stand
 {
-  const all: string[] = S.rustRows(), word = (r: string) => 'TPS_RUST' + r.toUpperCase(), none: Record<string, undefined> = { TPS_PROFILE: undefined, TPS_EXACT: undefined, TPS_RUST: undefined }; for (const r of all) none[word(r)] = undefined;
+  const all: string[] = S.rustRows(), word = (r: string) => 'TPS_RUST' + r.toUpperCase(), none: Record<string, undefined> = { TPS_PROFILE: undefined, TPS_EXACT: undefined }; for (const r of all) none[word(r)] = undefined;
   const rows = (env: Record<string, string | undefined>) => marked(child(['bun', 'run', 'tools/qa/rust-check.ts', '--rows'], { ...none, ...env }).out, 'RUST-ROWS ');
   const DEF: string[] = all.filter(r => S.rustOn(r)), plus = (r: string) => all.filter(q => q === r || DEF.includes(q)).join();
-  const BOTH = ['frozen', 'shipped'] as const, on = (st: string, env: Record<string, string | undefined> = {}) => rows({ TPS_PROFILE: st, ...env });
-  const fr = on('frozen'), sh = on('shipped'); let ok = !!fr && !!sh && fr.profile === 'frozen' && sh.profile === 'shipped' && fr.on.join() === DEF.join() && sh.on.join() === DEF.join() && fr.exact === true && sh.exact === true && DEF.length === S.RUST_ON.length && DEF.length > 0; const notes: string[] = [];
-  for (const r of all) { const got = BOTH.map(st => on(st, { [word(r)]: '1' })), good = got.every(g => !!g && g.on.join() === plus(r)); if (!good) ok = false; if (!good || !DEF.includes(r)) notes.push(`${word(r)}=1: frozen [${got[0]?.on ?? '?'}] shipped [${got[1]?.on ?? '?'}]`); }
-  { const bad: string[] = []; for (const r of DEF) { const got = BOTH.map(st => on(st, { [word(r)]: '0' })); if (!got.every(g => !!g && g.on.join() === DEF.filter(q => q !== r).join())) bad.push(`${word(r)}=0: frozen [${got[0]?.on ?? '?'}] shipped [${got[1]?.on ?? '?'}]`); }
-    if (bad.length) ok = false; notes.push(bad.length ? bad.join(' · ') : `each of the ${DEF.length} default rows' own word =0 drops it and it alone, on both stands`); }
-  // (every row down by one word, a row's own word over it, and the stand as it was recorded before the rows: the engine's maths and no row)
-  { const o = all.find(r => !DEF.includes(r))!, d0 = DEF[0];
-    const down = BOTH.map(st => on(st, { TPS_RUST: '0' })), one = BOTH.map(st => on(st, { TPS_RUST: '0', [word(d0)]: '1', [word(o)]: '1' })), old = BOTH.map(st => on(st, { TPS_RUST: '0', TPS_EXACT: '0' }));
-    const good = down.every(g => !!g && g.on.length === 0 && g.exact === true) && one.every(g => !!g && g.on.join() === all.filter(q => q === d0 || q === o).join()) && old.every(g => !!g && g.on.length === 0 && g.exact === false);
-    if (!good) ok = false; notes.push(`TPS_RUST=0: frozen [${down[0]?.on ?? '?'}] shipped [${down[1]?.on ?? '?'}] · with two rows' own words: [${one[0]?.on ?? '?'}] [${one[1]?.on ?? '?'}] · TPS_EXACT=0 TPS_RUST=0, the stand as recorded before the rows: maths ${old.map(g => g?.exact === false ? 'the engine\'s' : 'NOT the engine\'s').join(', ')}, rows [${old[0]?.on ?? '?'}] [${old[1]?.on ?? '?'}]`); }
+  const fr = rows({}), sh = rows({ TPS_PROFILE: 'shipped' }); let ok = !!fr && !!sh && fr.profile === 'frozen' && sh.profile === 'shipped' && fr.on.length === 0 && sh.on.join() === DEF.join() && DEF.length === S.RUST_ON.length && DEF.length > 0; const notes: string[] = [];
+  for (const r of all) { const a = rows({ [word(r)]: '1' }), b = rows({ TPS_PROFILE: 'shipped', [word(r)]: '1' }), good = !!a && !!b && a.on.join() === r && b.on.join() === plus(r); if (!good) ok = false; notes.push(`${word(r)}=1: frozen [${a?.on ?? '?'}] shipped [${b?.on ?? '?'}]`); }
+  for (const r of DEF) { const b = rows({ TPS_PROFILE: 'shipped', [word(r)]: '0' }), good = !!b && b.on.join() === DEF.filter(q => q !== r).join(); if (!good) ok = false; notes.push(`${word(r)}=0: shipped [${b?.on ?? '?'}]`); }
   const P: any = await import(`${ROOT}/src/host/profile.ts`);
-  { const more = Object.keys(P.FROZEN_HOLDS).filter(k => k.startsWith('RUST.') || k === 'EXACT.on'); if (more.length) { ok = false; notes.push(`FROZEN_HOLDS still holds [${more}]: the stands do not differ there`); } }
+  { const miss = DEF.filter(r => P.FROZEN_HOLDS[`RUST.${r}`] !== word(r) + '=1'), more = Object.keys(P.FROZEN_HOLDS).filter(k => k.startsWith('RUST.') && !DEF.includes(k.slice(5))); if (miss.length || more.length) { ok = false; notes.push(`FROZEN_HOLDS: no row for [${miss}], a row too many for [${more}]`); } }
   // (the ADDRESS's words, profile.ts pageRows, in this process and put back: what a page opens with, and the address read again over rows a recipe wrote)
   { const was: [string, boolean][] = all.map(r => [r, !!S.RUST[r]]), now = () => all.filter(r => S.RUST[r]).join(), set = (v: boolean) => { for (const r of all) S.rustRow(r, v); };
     const other = all.find(r => !DEF.includes(r))!, d0 = DEF[0], cases: [string, string, boolean | null, string][] = [   // (address · read over rows all on / all off / not over · the rows wanted)
@@ -543,7 +533,7 @@ let wordOwn = '', wordRust = '';
     const a = sent(`playtape=1&mute&rust=0&rust${d0}=0&rust${other}=1`), b = sent('playtape=1&mute'), listed = S.rustWords().every((w: string) => RK.VISIT_FLAGS.includes(w)) && S.rustWords().length === all.length + 1;
     const good = listed && a.get('rust') === '0' && a.get('rust' + d0) === '0' && a.get('rust' + other) === '1' && a.has('roomclear') && a.has('mute') && !b.has('rust') && !b.has('rust' + other) && b.has('roomclear');
     if (!good) ok = false; notes.push(`a page sent on to a recipe's address ${good ? 'keeps the visit\'s words about the rows and drops the recipe\'s own' : `LOSES OR TAKES A WORD: the visit's [${a}] · a visit with none [${b}] · every word a visit word ${listed}`}`); }
-  verdict(ok, 'stand: both stands have the rows of RUST_ON on and the game\'s own maths, as the page; a row\'s own word raises it or drops it — and it alone — on either; TPS_RUST=0 drops them all; TPS_EXACT=0 TPS_RUST=0 is the stand as it was recorded', `frozen [${fr?.on ?? '?'}] maths ${fr?.exact} · shipped [${sh?.on ?? '?'}] maths ${sh?.exact} · ${notes.join(' · ')} · rows: ${all.join(' ')}`);
+  verdict(ok, 'stand: the frozen stand leaves every row off; the shipped stand has the rows of RUST_ON on, as the page; a row\'s own word raises it — and it alone — on either, and puts a default one off', `frozen [${fr?.on ?? '?'}] · shipped [${sh?.on ?? '?'}] · ${notes.join(' · ')} · rows: ${all.join(' ')}`);
 }
 
 // ---- server

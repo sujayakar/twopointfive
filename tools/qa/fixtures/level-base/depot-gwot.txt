@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-785f99b7267757f9eadb3b64d3dcca8e0febdda0
+# the depot in the look: the hardstanding and the raised floor are slab, the lino rooms boards, its own colours given their palette rows, the yard's wear and the track outside laid
+4cca9520c48dbb0bf938b0009e77e39797a896e7

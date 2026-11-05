@@ -1353,40 +1353,6 @@ first system across (the game's own maths). No rule of play has changed and noth
   NOT DONE: never seen on a GPU, and nobody has played with a row on. No NETWORKED page was opened with an off word in a browser (the replay's page was;
   a client takes the same two steps, and a server with the rows on and a seat with them off agreed on 30 of 30 state words in one headless run by the
   multiplayer task). `tour` and `soak` were not run again after the review's mends.
-- **All on** (2026-11-04; the maintainer: "the plan is rust/wasm only", "let's get the rust merged asap and delete the typescript and we can always
-  look at git history if needed"). `RUST_ON` is now EVERY ROW BUT `maths`: lines, circles, fog, poses, dice, sight, light, smoke, sound, paths, doors,
-  falls, walk, props, slabs, items, rays. The bullet above is the list as it was the day before and why; this one is what stands.
-  THE TWO STANDS NO LONGER DIFFER IN A ROW OR IN THE MATHS. Until this step the frozen stand held every row off and played on the engine's own
-  `Math` (`EXACT.on` off), because every frozen digest was recorded so. But the rows that work lengths and angles out answer only under the game's own
-  maths, and the TypeScript behind them is going: a stand that cannot run the game the way it will be kept holds nothing. So `standup.ts pinMaths` and
-  `pinRust` put the game's own maths and the rows of `RUST_ON` on on BOTH stands, the `FROZEN_HOLDS` lines `EXACT.on` and `RUST.<row>` are gone, and the
-  frozen stand's pins that fold a run were recorded again, once (below).
-  THE STAND AS IT WAS RECORDED IS STILL ASKED FOR BY WORDS, in this step: `TPS_EXACT=0 TPS_RUST=0` in front of a frozen tool. `TPS_RUST=0` = every row
-  down unless its own word raises it (the page's `?rust=0`); `TPS_RUST<ROW>=0|1` = that one (`?rust<row>`). The deletions end that: with the TypeScript
-  twins gone a row cannot be put down, `?rust=0` does nothing and the old frozen stand cannot be raised.
-  A ROW IS STILL NEVER A RULE OF PLAY: the page's stand reads the digests it read (42 of 42 missions, seeds 1 and 2 of 21). What moved the frozen
-  stand's digests is the MATHS under it (the engine's sine against the game's own, in the last place), not a row.
-  NOT ALL OF IT IS CHEAPER YET. A row whose callers are TypeScript pays a crossing a question. Measured with nothing else running (`tickcost.ts --each
-  --list`, one round, five missions, a 4-core cloud box, this step's own head): a tick is 2.23 ms with lines, circles and fog alone and 2.14 ms with
-  every row on the frozen stand, 2.24 and 2.13 ms on the page's, every run the same to the bit; the same measurement taken twice differs by 1 %. The
-  rows are on because the game must be played the way it will be kept, not because each one pays today.
-  `SENSE.*` (gameplay smoke and light on the coarse CPU model) is a rule of play and is NOT part of this: off, as it was.
-  THE 42 (seeds 1 and 2 of 21 missions, `playthrough.ts` with digests), this step against the build before it: the page's stand 42 of 42 equal; the
-  frozen stand under `TPS_EXACT=0 TPS_RUST=0` 42 of 42 equal; the frozen stand as it now is, 30 equal and 12 on other words (no ending changes kind;
-  compound-four:2 is taken at 139.2 s where it was 153.8, barracks-four:1 at 144 for 143.4, mousehole-four:2 is wiped at 145.3 for 145.6).
-  WHAT WAS RECORDED AGAIN (the frozen stand):
-  - `tools/qa/fixtures/threshold-identity.json`: five of fourteen runs fold to other words, with the same endings at the same seconds; the other nine
-    read the words they had. Under `TPS_EXACT=0 TPS_RUST=0` the fixture as it was is still green.
-  - `tools/qa/slab-asitwas.ts`: the pin of the torn leaves follows its stand and keeps the recorded one askable (four levels' words).
-  CHECKS THAT STOOD ON A ROW BEING OFF were mended to say their own words: `simstate-check` (stands on no row by its own word), `sense-ident` and
-  `posemath-check` (put the rows of the copy down for their TypeScript arm: a red path had stopped going red once the lines' row was up by default),
-  `rust-check` (its `stand` section holds both stands to the one list, each row's own word, `TPS_RUST=0` and the stand as recorded; the torn leaves'
-  pin is read five ways: each stand by the module and by the TypeScript, and the frozen stand as recorded). `RUST_BREAK=1` is red for every section and row.
-  THE FAMILY SWEEPS (`probes.ts all-quick`, 424 probes, each stand): on the page's stand every failing line reads word for word what it read without
-  this step; on the frozen stand the one probe this step turned red is `threshold-identity`, recorded again as above.
-  THE PAGE (`rust-page.cjs`, headless Chromium on the software adapter; never seen on a GPU): `plain` and `systems` play with the seventeen rows up,
-  240 frames, the game in TypeScript to the bit; `nojit` still boots and plays with every row off. THE DAY THE TWINS GO, A PAGE WITH NO WEBASSEMBLY
-  CANNOT PLAY, and says so on a card instead.
 - **The data's layout** (2026-11-03; the maintainer: "we should also start changing our data layout to be more cache and simd friendly"). MEASURED
   FIRST, one blend of two 55-node poses in a module, an x86 cloud box, bun 1.4 | node 24: as it stood (ten singles a node, worked in doubles) 1334 |
   1391 ns · the same arithmetic over columns 1334 | 1390 · columns, two lanes of doubles, THE SAME BITS 1204 | 964 · doubles, the length a plain root

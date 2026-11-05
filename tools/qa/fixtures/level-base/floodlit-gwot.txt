@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-6125f121e0f0405bd62eb79e9168a8575e6461b7
+# dressed: the generator's own colours say what they are, and the look file lays the ground's wear
+fb1516ec93da6f3dd79c81238875be7f65c32d86

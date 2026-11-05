@@ -24,8 +24,7 @@ export const ROOT = resolve(import.meta.dir, '../..');
 // the page's boot writes over those defaults. First, before any level is built.
 const { pinned, harnessProfile, shippedBoot } = await import(`${ROOT}/src/host/profile.ts`);
 if (harnessProfile() === 'shipped') shippedBoot();
-{ const { EXACT } = await import(`${ROOT}/src/math/exact.ts`); if (pinned('TPS_EXACT')) EXACT.on = (process.env.TPS_EXACT ?? '1') !== '0'; }   // TPS_EXACT=1 = the game's own maths (src/math/exact.ts): same bits on every engine. Here as well as in standGame, so a level a tool builds before it stands a game is built on the same functions
-(await import(`${ROOT}/src/host/standup.ts`)).pinRust();   // …and the rows of the Rust module as this run's stand and words have them (src/sim/sim.ts RUST_ON; TPS_RUST=0, TPS_RUST<ROW>), from here and not only from the first stand-up: a tool that asks the module before it stands a game asks it on its stand
+{ const { EXACT } = await import(`${ROOT}/src/math/exact.ts`); if (pinned('TPS_EXACT')) EXACT.on = process.env.TPS_EXACT === '1'; }   // TPS_EXACT=1 = the game's own maths (src/math/exact.ts): same bits on every engine. Here as well as in standGame, so a level a tool builds before it stands a game is built on the same functions
 const { EXACT: EXACT_SWITCH } = await import(`${ROOT}/src/math/exact.ts`);
 /** `fn` run as a level's EXPORTER runs (tools/level-export.ts and its kin raise no stand): on the engine's own maths, whatever this run's stand — then the stand's
  *  maths back. For a check that holds a level file against the generator that wrote it: under the game's own maths a generator's sin / cos round a last bit

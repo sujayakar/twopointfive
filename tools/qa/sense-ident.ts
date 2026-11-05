@@ -121,11 +121,8 @@ for (const file of files) {
     for (const k of KINDS) {
       const Q = ask[k](), n0 = asked(k);
       const r = flat(Q.run()); if (asked(k) > n0) there[k]++;
-      // (here: the same function with EVERY row of the copy down for the one call — the senses' own and the lines, rays and circles their TypeScript walks
-      //  with: a stand has those up too, and a "TypeScript's answer" that asked the module its lines would be the module's answer twice)
-      const rows = M.rowSenses, sight = M.rowSight, ln = M.rowLines, ry = M.rowRays, ci = M.rowCircles;
-      M.senses = 0; M.rowSenses = 0; M.sight = M.rowSight = false; M.lines = M.rowLines = false; M.rays = M.rowRays = false; M.circles = M.rowCircles = false; const h = flat(Q.run());
-      M.rowSenses = rows; M.rowSight = sight; M.rowLines = ln; M.rowRays = ry; M.rowCircles = ci; { const up = !(M.owes || !M.live); M.senses = up ? rows : 0; M.sight = up && sight; M.lines = up && ln; M.rays = up && ry; M.circles = up && ci; }
+      const rows = M.rowSenses, sight = M.rowSight; M.senses = 0; M.rowSenses = 0; M.sight = M.rowSight = false; const h = flat(Q.run());   // (here: the same function with the copy's rows down for the one call)
+      M.rowSenses = rows; M.rowSight = sight; { const up = !(M.owes || !M.live); M.senses = up ? rows : 0; M.sight = up && sight; }
       if (!same(r, h)) { diff[k]++; first ||= `${k}: ${Q.q}: here ${JSON.stringify(h).slice(0, 200)}, the module ${JSON.stringify(r).slice(0, 200)}`; }
     }
   }
@@ -133,7 +130,7 @@ for (const file of files) {
   if (argv.includes('--bench') && !UNSAID) {   // the same questions through both, a block each way, three times over
     const parts: string[] = [];
     for (const k of KINDS) { const qs = Array.from({ length: 3000 }, () => ask[k]().run); let tThere = 0, tHere = 0;
-      for (let rep = 0; rep < 3; rep++) { col.tickOpen(); let t = performance.now(); for (const q of qs) q(); tThere += performance.now() - t; M.senses = 0; M.rowSenses = 0; M.lines = M.rowLines = false; M.rays = M.rowRays = false; M.circles = M.rowCircles = false; t = performance.now(); for (const q of qs) q(); tHere += performance.now() - t; }
+      for (let rep = 0; rep < 3; rep++) { col.tickOpen(); let t = performance.now(); for (const q of qs) q(); tThere += performance.now() - t; M.senses = 0; M.rowSenses = 0; t = performance.now(); for (const q of qs) q(); tHere += performance.now() - t; }
       parts.push(`${k} ${(tHere / 9).toFixed(2)} → ${(tThere / 9).toFixed(2)} µs`); }
     bench = `\n${''.padEnd(20)} bench (a question, TypeScript → the module): ${parts.join(' · ')}`;
   }

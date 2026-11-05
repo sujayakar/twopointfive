@@ -307,8 +307,10 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/scene/cut.ts cutConfig': 'CONFIG · written by cutBoxesInit from the URL / store (cut.ts:44-47) and the knob roads; read by boxes.ts, wallpen.ts',
   'src/scene/gwotPalette.ts simByAlbedo': 'CACHE · built once from the palettes (constants) on first ask (gwotPalette.ts:113-123)',
   'src/scene/level.ts bootedLocalLevel': 'CONFIG · written by the boot\'s level load (level.ts:210-219); read by main.ts',
+  'src/scene/levelKit.ts FINISH_BY_ALBEDO': 'CONST · filled by a top-level block at module load (levelKit.ts:44) from constant palettes; only read afterwards',
   'src/scene/look.ts lookPlace': 'CONFIG · written by setLookPlace only (look.ts:36: the page says it once at boot)',
   'src/scene/look.ts suitAsked': 'CONFIG · (no initialiser). Written by setSuitAs only (look.ts:24: a window\'s host says it for its own picture)',
+  'src/scene/officeGen.ts FINISH_BY_ALBEDO': 'CONST · filled by a top-level block at module load (officeGen.ts:65) from constant palettes; only read afterwards',
   'src/scene/picks.ts PICKS_UI': 'CONFIG · written from the URL at boot (picks.ts:86: ?nopicks, ?pickstraight)',
   'src/game/aim.ts AIM_HOOKS': 'CONST · its one write is a top-level statement of player.ts:176 (installs the function at module load); aim.ts:308 only calls it',
   'src/game/attention.ts ATTENTION_LOG': 'TALLY · pushed (and trimmed) in attention.ts; no file under src/game, src/scene or src/anim reads a row back',
@@ -353,7 +355,6 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
 export const RAW_WEAK_OK: Record<string, string> = {
   'src/math/side.ts CLOCKED': 'which objects hold a wall-clock reading and in which fields: a mark set where the holder is made (wallClock), read by the state\'s word alone, carried to the object a restore makes for it; no rule reads it',
   'src/game/rollback.ts BROUGHT': 'the snapshot\'s own bookkeeping across two games (which functions a cross-game restore carried over), not the game\'s state',
-  'src/scene/stuff.ts PAINTS': 'what a kit said of each of its paints, keyed by the palette row\'s own array: filled as a palette\'s module loads and where a generator or a maker tones or names a colour; a memo of what was said, read only when a box is made, never by a tick',
   'src/scene/levelLoad.ts levelFileOf': 'filled while a level file is read, keyed by the level: never written by a tick',
   'src/scene/levelLoad.ts levelNames': 'filled while a level file is read',
   'src/scene/lookTidy.ts tidies': 'a memo of a look file\'s tidy pass, keyed by the look file (load-time data)',

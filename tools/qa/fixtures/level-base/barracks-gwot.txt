@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-315c26cf68fb138232fa5c231a1cfb945bbfb2b6
+# the look file's own part was repainted when the level was dressed from the library (its paints are materials)
+8a939b8f96f75b7259d9c403bc9972ad03c7368a
