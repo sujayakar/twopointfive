@@ -1063,3 +1063,58 @@ but synthetic writes still work.
   lines of the check's own first. `PASSTIMER_BREAK=1` (the table read as empty) must fail. ADDING A PASS: hand its descriptor
   `timestampWrites: ts?.('name')`, the engine's `ts` handed in (`docs/agents/render.md`, GPU timing), and say `timer.idle('name')` on a frame it rests; or add the row. Why it exists, and what was measured:
   that same section.
+- **DOOR TALLIES BEFORE AGAINST AFTER: `tools/qa/bang-tally-diff.ts <scenario> --before <a worktree of the commit before>`** (2026-11-05; tools only; it
+  DECLARES and gates nothing: it is in no family and no gate's list; `--self` checks its arithmetic in a second). For a step that adds or moves a solid
+  thing that stops feet (over 0.19 m) near a door. WHY: a log laid across two others by the pass's chopping block shut a square metre of the walk grid
+  in front of two doors, no check of a dressing saw it (`lived-stack-check` reads where a stack STANDS, `wallfurn-check` where a charge goes), and
+  `bang-tally.ts`'s rows read by eye on 24 seeds then blamed one door and a direction that 48 seeds did not bear out. THE RULE: it plays the tally on
+  the scenario in both trees, the plain door and the bang at every door of every held room, and reads door by door over the entries both trees played
+  (it puts `TPS_PROFILE=shipped` in front of every tally it plays, so a BEFORE tree from before one stand is read on the page's stand too). An entry went
+  WORSE (the room no longer held, or the same ending and more men lost) or BETTER; an arm's `chance` is the exact two-sided sign test on that split.
+  TWO BLOCKS: an arm at 1 in 20 or less on seeds 1-24 is SUSPECT; then (or when an arm has some but under `FEW` = 12 common entries), and only then,
+  seeds 25-48 are played in both trees and a door is NAMED when an arm is at 1 in 200 or less over all 48 (`SUSPECT_P`, `NAMED_P`; `--more none` makes
+  one block the whole reading). An entry that was made before and cannot be made now (no floor outside the door for the team, or an order taken before
+  and refused now) names its door outright, and its line says how many of those were staged on other floor. A tally already played is taken as its JSON
+  (`--before a.json,b.json`) and held to what it says of itself: every run it was asked given back, none thrown, the page's stand, no knob set, not
+  crated, each seed once, a block whole or not at all. `--keep dir` keeps what it plays. Five minutes a tree a block at four jobs on an idle machine; a
+  tree from before the stand-up's collection (`standUp`, above) loses workers past about six seeds a process, so play it in pieces and hand over the
+  JSON (a short one is refused, not read). Exit 0 no door named · 1 a door named · 2 usage · 3 NO READING (a suspect door not read further, nothing
+  both trees played, a door in one tree only, a tally not whole, a checkout that changed while it was played).
+  THE SAME ENTRY IN BOTH TREES. The tally stands the team on free floor 2.4 to 6.2 m out from the door and Sam beside them, and takes anybody with a
+  line to them off the floor, so a thing laid there changes the STAGING, and two trees staged differently did not fight the same entry. `bang-tally.ts`
+  writes into every result its staging (`at`: the spots, Sam's last, and how many were taken off the floor) and what became of the entry as a word
+  (`outcome`: played, refused, no-floor, nobody, threw), and takes another tree's staging (`--stand-as`) wherever every spot of it is free floor. The
+  reader stands the AFTER tree as the BEFORE tree stood each entry, prints door by door how many entries were `staged alike`, and a verdict on a door
+  that could not be stood alike says so. A tally handed over as JSON was staged as it was. A tally from before `outcome` is read by its notes and cannot
+  say a refusal (such an entry is a fight to it, as to the tally's own table), so no door is named for a refusal one of the two could not say.
+  WHAT A NAMED DOOR SAYS, AND DOES NOT. It says the entry at that door comes out differently after the change, more often one way than chance allows,
+  on that tree; staged alike, the difference is in the walk and the fight. It does not say why: the verdict's line gives the commands that print one
+  moved entry as it was counted (`bang-tally.ts trace <scenario>:<door>:<arm>:<seed>:<room>`, with `--stand-as` in the after tree), to read in both
+  trees before a cause is written. THE WORKED CASE, the pass's bunk room door, the log across the pile against the log on the block. Each tree on its
+  own staging (19707a2b): NAMED over 48 seeds, the bang 4 worse and 18 better (the team's loss 50 to 34 of 192; 1 in 230), the plain door 6 and 17. The
+  four men stood on the same spots in both trees and never crossed the log's cell; Sam's spot (23.80, 12.65) lay IN it, and with the log there he was
+  stood at (23.25, 13.25). Stood alike (62006070, 48 seeds, Sam on that spot in both trees, 48 of 48 staged alike): 14 worse and 12 better, 12 and 13:
+  nothing. What had been named was where an unseen Sam stood, 0.8 m. The other way round (the log laid by the step, so that Sam's spot is shut after
+  it) the door cannot be stood alike, 0 of 24, and its line says so.
+  WHY NOT A MARGIN: the tool's first form named a door when losses rose in six more entries of 24 than they fell. Measured on one tree's own tallies with
+  its 48 seeds split at random 24 against 24 (3000 splits each of three trees: no change at all, only other dice), that rule named a door in 84 to 88 %
+  of splits. A door's entries, once re-rolled, scatter that much. On the same splits the sign test has a suspect arm in 31 to 35 % and an arm at 1 in 200
+  on one block in 3 %. HOW OFTEN THE TWO BLOCKS CRY WOLF, by the binomial (each moved entry a fair coin): a step that re-rolls nine door arms (the pass's
+  case) plays the second block 1 time in 5 and names a door 1 time in 70; one that re-rolled all twenty, 4 in 10 and 1 in 24. WHAT IT MISSES: a true
+  nine-to-one effect at a door where four entries in ten move is named 7 times in 10, a four-to-one effect 3 in 10. A door NOT named is not a door
+  proved untouched.
+  MEASURED on the pass (`pass-four`), each reading on the commit it names. A crate far from every door (19707a2b), the posts and van bay sides' step
+  (ea36b58b against the same with the step that joined as b8ff78b3) and the lying drum's (19e99a2b), each tree on its own staging: 480 of 480 entries
+  identical each, no arm suspect: a harmless step does not move a staged entry at all (a whole mission's digest moves far sooner). The pass's dressing
+  (2d9e7315 against its parent, 48 seeds, every entry, own staging): the kitchen's plain door 9 worse and 1 better on seeds 1-24 (1 in 47, suspect), 12
+  and 6 over 48 (1 in 4): NOT named, nor is any door of that step. The dressed tree against the same with the log on the block, stood alike, 48 seeds
+  (62006070): no door named; the kitchen's plain door 4 worse and 12 better (the team's loss 53 to 41 of 192; 1 in 13), its bang 4 and 6, the bunk's as
+  above, and ten of the other sixteen arms the same entry for entry. ON dad3c1a1 (one stand, no word in front): a tree against its own tally, stood as
+  it, 480 of 480 identical; unasked, the tally plays as the tip's own does, 60 of 60 results of seeds 1-3 the same field for field; `bangway-check`
+  (which imports it) green; `--self` 7 of 7.
+  `TALLYDIFF_BREAK=1` (the AFTER tree is played with a crate half a metre across a stride and a half outside each face of the door an entry is played
+  on, `bang-tally.ts stage`; a row with no level file of its own, or a tally from before the crate, is refused): red on dad3c1a1, exit 1, as on
+  62006070. The inner door between the bunk room and the store is NAMED on both arms over 48 seeds, the plain door 16 worse and 1 better (the team's
+  loss 3 to 36 of 192; 1 in 3641), the bang 18 and 4 (6 to 34; 1 in 230), staged alike in all 48: a thing on the walk, with the same staging, is what
+  the tool is for. (Nine other doors were crated the same way and not named: see WHAT IT MISSES.) On `room-clear-pair`, a row with no level file, it
+  exits 3 with the crate refused by name (62006070).
