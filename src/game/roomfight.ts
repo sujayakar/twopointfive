@@ -60,10 +60,9 @@ import { wallReactLook } from './wallreact';
 import { squadsLive, squadRally } from './enemysquads';
 import { PRESSURE, pressTick, pressStop, pressSay, pressStopsClock, run as pressRun, charge as pressCharge } from './pressure';
 import { buddyTick, buddyStop, buddySay } from './buddy';
-import { silentHolds, silentGlassHolds } from './silent';
-import { pairHolds, pairPasses } from './pairorders';
+import { pairPasses } from './pairorders';
 import { workPasses } from './workthings';
-import { spottedHolds, spottedKeen } from './spotted';
+import { spottedKeen } from './spotted';
 import { coverSeen, coverOp } from './coverfire';
 import { lastStandTick, lastStandStop } from './laststand';
 import { netQuietLook } from './netquiet';
@@ -81,6 +80,7 @@ import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
 import { hasHim, OWN } from './owner';
+import { roundHeld, roundHeldGlass } from './roundheld';
 
 /** The module's switches and the few numbers that are not a side's. */
 /** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
@@ -1071,11 +1071,11 @@ export class RoomFight {
     O.wallT = 0;
     if (!on) O.blockT = Math.max(0, O.blockT - dt);   // (no shot is counted only while his gun is on the man: off him, the count runs back down)
     if (O.track < P.acquireMin - 1e-9 || g.time < O.next || g.time < O.reloadUntil || sideLocked(g, gd) || !on) return;
-    if (silentHolds(g, gd, h) || pairHolds(g, gd, h) || spottedHolds(g, gd, h)) { this.speak(O, 'eyes on. holding.', 8); return; }   // (silent.ts: the man has not noticed the team — the gun stays on him, no round goes)
+    if (roundHeld(g, gd, h)) { this.speak(O, 'eyes on. holding.', 8); return; }   // (silent.ts: the man has not noticed the team — the gun stays on him, no round goes)
     let to = chest;
     if (!clearShot(g, c, to)) { const head = hc.bones.head ?? v3.add(hc.pos, [0, 1.6, 0]); if (clearShot(g, c, head)) to = head; else if (!coverSeen(g, gd, h, chest)) { O.heldForLine++; O.blockT += dt; this.walkOn(O); return; } }   // (coverfire.ts: no line, and what blocks it is breakable and worth the rounds — they go into it)
     O.blockT = 0;
-    if (silentGlassHolds(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
+    if (roundHeldGlass(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
     const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
     const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
     const str = gunString(gd);   // (gunroles.ts: a belt-fed gun's string, the Mk 12's single aimed round — 0: the controlled pair, as ever)
