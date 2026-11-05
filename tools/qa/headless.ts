@@ -169,7 +169,14 @@ export interface Headless {
  *  tool's Math.random, as it always has (a tool that re-seeds Math.random afterwards gets the game's dice either way: dice.ts's one rule). */
 /** TPS_SEED: a whole number names the game's own die; anything else stops the tool (a typo must not quietly become seed 0) */
 function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Error(`TPS_SEED=${v}: want a whole number`); return Number(v) >>> 0; }
+/** A GAME STOOD UP HAS DONE WITH THE LAST ONE (2026-11-05). bun does not collect its old generation in time for a tool that stands games up back to back: a
+ *  dropped game is some 40 MB that is garbage and stays (measured: one worker of bang-tally.ts from 0.4 GB to 6.4 GB in two and a half minutes, 2.4 GB a
+ *  minute; the merge's box lost two such workers at a 12 GB limit). Nothing holds those games: after ONE full collection a process that has played forty-two
+ *  missions is the size of one that has played two. So the stand-up asks for that collection itself, before it builds: about 65 ms, and the tool is no slower for
+ *  it (32 tally missions: 91 s with it, 93 without). `QA_STANDUP_GC=0` = as it was, for measuring it (tools/qa/standupgc-check.ts holds it, both ways). */
+export const STANDUP_COLLECTS = process.env.QA_STANDUP_GC !== '0';
 export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string } = {}): Promise<Headless> {
+  if (STANDUP_COLLECTS) Bun.gc(true);
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins

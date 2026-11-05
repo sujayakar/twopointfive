@@ -3175,6 +3175,7 @@ if (on('flashweight-lights', 'flashweight', 'all')) await run('flashweight-light
 if (on('flashweight-corners', 'flashweight', 'all')) await run('flashweight-corners', async () => (await import('./flashweight-probes.ts')).flashweightCorners());
 if (on('flashweight-feel', 'flashweight', 'ui', 'all')) await run('flashweight-feel', async () => (await import('./flashweight-probes.ts')).flashweightFeel());
 if (on('flashweight-entry', 'flashweight', 'all')) await run('flashweight-entry', async () => (await import('./flashweight-probes.ts')).flashweightEntry());
+if (on('standupgc', 'perf', 'all')) await run('standupgc', async () => (await import('./standupgc-check.ts')).standupGcCheck());   // a game stood up has done with the last one: twenty-four of the tally's missions back to back in a process of their own must not grow the heap (bun does not collect dropped games in time; headless.ts standUp asks for the collection)
 // ---------------------------------------------------------------- the team's night vision: goggles while nobody knows, lights once it is loud, Sam's lead both ways (nvg-probes.ts; game/nvg.ts)
 if (on('nvg-quiet', 'nvg', 'all')) await run('nvg-quiet', async () => (await import('./nvg-probes.ts')).nvgQuiet());
 if (on('nvg-lead', 'nvg', 'all')) await run('nvg-lead', async () => (await import('./nvg-probes.ts')).nvgLead());

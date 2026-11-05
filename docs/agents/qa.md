@@ -955,3 +955,18 @@ but synthetic writes still work.
   the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
   IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
   Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.
+- **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
+  harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
+  process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from
+  0.4 GB to 6.4 GB in two and a half minutes. WHAT IT IS NOT: a mission's world being held, or the tally. After ONE forced full collection a process that
+  has played forty-two missions over twenty-one scenarios is 350 to 450 MB, the size of one that has played two. bun leaves a dropped game (30 to 45 MB of heap on
+  the page's stand, about 7 on the frozen one) in its old generation and does not collect it in time; the heap itself grows, not only what lies outside it.
+  THE CURE is in the one place every tool stands a game up: `Bun.gc(true)` at the head of `standUp`. About 65 ms a stand-up; 32 tally missions took 91 s
+  with it and 93 without, and the same worker then stays at 0.5 to 0.7 GB. `QA_STANDUP_GC=0` = the stand-up as it was, for measuring.
+  **Check**: `bun run tools/qa/standupgc-check.ts` (`probes.ts standupgc`, family `perf`), both stands, about 25 s: twenty-four of the tally's own missions
+  back to back in a process of its own, nothing collected by the check; the heap may grow 110 MB from the second mission to the last. Measured: 10 MB
+  (frozen) and 46 (the page's stand) with the collection, 156 and 574 without. `STANDUPGC_BREAK=1` (the child run with `QA_STANDUP_GC=0`) must fail.
+  THE PAGE: not this. In a browser a mission is a page load and its world goes with the page; the page's own way to play again without a load, the
+  restart in place, keeps nothing (one game restarted thirty times under bun with four seconds of play between: 116 MB to 121 after a full collection).
+  Nobody has watched a browser's heap through a long session; nothing here says it grows. A TOOL THAT KEEPS GAMES ALIVE ON PURPOSE (two stood side by
+  side, a list of them) is not helped by this and is as big as its games.
