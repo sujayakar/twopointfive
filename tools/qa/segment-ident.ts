@@ -70,7 +70,6 @@ const N = Number(flag('--n') ?? 200000), SEED = Number(flag('--seed') ?? 1);
 const files = (flag('--levels') ?? readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).join(',')).split(',');
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const RUSTED = argv.includes('--rust'), UNSAID = RUSTED && process.env.RUST_BREAK === '1';
-if (RUSTED) process.env.TPS_EXACT = '1';   // (the game's own maths: the module judges a pane's pieces by angles of its own, and answers a line that may meet one under no other)
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), GLASS: any = await import(`${ROOT}/src/game/glass.ts`);
 if (RUSTED) { const no = SIM.simWhyNot(); if (no) { console.log(`=== segment-ident --rust: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const RAYED = { n: 0, there: 0, hit: 0, leaf: 0, tilted: 0, round: 0, cut: 0, roundT: 0, cutT: 0, swapped: 0, turned: 0, long: 0 };   // (the rays over every level: asked, the module's, and what they hit)

@@ -20,7 +20,7 @@
 // as it stood (no stale row).
 // GLASS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed each pane with the word "its cracks have run" turned and its last clump's key
 // halved, and the run must FAIL.
-process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTLINES = '1'; process.env.TPS_RUSTRAYS = '1';   // (the game's own maths: a pane's pieces are found by angles)
+process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
