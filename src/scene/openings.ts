@@ -50,9 +50,17 @@ export const LOOK_OPENINGS = {
   settle: 4,      // drawn frames the walls must have stood still for before the openings are found again (a blast's own frame is the long one: not on it)
   keep: 32,       // openings a level keeps (the biggest, if it has more) …
   lit: 12,        // … and how many are lit at once: the nearest to Sam (engine.ts)
+  worth: 0.04,    // HOW FAR AN OPENING'S OWN LIGHT IS WORTH A RAY (openingReach): as far as it alone would still show this much, of white, on a floor that faces
+                  // it squarely: what it looks out on × the frame's exposure (the product `seen` asks) × its area ∕ the distance squared. One rule at
+                  // every hour. Past that its light has faded out (common.wgsl lightWindow) and the bounce's rays that leave by the opening keep the
+                  // rest of the sky (skyKeep). Until 11-05 this was 0.003 (0.0015 before the exposure) and an opening reached 11 to 18 m on a night
+                  // and the cap by day. NOT ASKED: what a dark place's own gain then makes of it (place_common.wgsl lookExpoFor: up to four times)
+  near: 3, far: 26,   // … never under or over these, m (over: the light record's own reach) …
+  past: 2,        // … and never less than this past the rectangle's own corner (a wide opening on a dim night would fade out under its own ends)
 };
 
 export interface Opening {
+  /** the open area of the whole stretch this is a piece of, m² (a long opening is lit as several lights and reaches as one: openingReach) */ of: number;
   /** where the open part's weight lies */ pos: Vec3; /** into the room */ dir: Vec3; /** half the lesser of its width and height, m: how near two finds of one opening lie (planOpenings) */ radius: number;
   /** what the walls leave open, m² */ full: number;
   /** what is open NOW, m²: the narrowest way through it past whatever hangs in it (ajarOf: a leaf a hand's width off its frame is open by that hand's
@@ -230,6 +238,7 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
       const n = L + r.sign * hang, midY = (loY + hiY + 1) * 0.5 * K.dy, out2 = (e: Pt[] | null) => e ? Math.max(...e.map(([d]) => r.sign * (n - d))) : Infinity;
       const reach = Math.min(out2(jamb(s0 + (a - 0.5) * K.ds, midY)), out2(jamb(s0 + (b + 1.5) * K.ds, midY))), holeDeep = Number.isFinite(reach) ? Math.max(reach, K.proud) : K.proud;
       const lowS0 = r.axis === 1 ? r.sign > 0 : r.sign < 0;   // (is the end at the low place along the wall the one toward −(dir.z, 0, −dir.x), the shader's first axis)
+      const first0 = out.length;
       for (let p = 0; p < parts; p++) {
         const qa = a + Math.round((b - a + 1) * p / parts), qb = a + Math.round((b - a + 1) * (p + 1) / parts) - 1; if (qb < qa) continue;
         let cells = 0, sumS = 0, sumY = 0, loS = Infinity, hiS = -Infinity, lo = Infinity, hi = -Infinity;
@@ -237,9 +246,10 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
           for (let v = 0; v < nY; v++) if (cols[w] & (1 << v)) { const y = (v + 0.5) * K.dy; cells++; sumS += s; sumY += y; loS = Math.min(loS, s); hiS = Math.max(hiS, s); lo = Math.min(lo, y); hi = Math.max(hi, y); } }
         const full = cells * K.ds * K.dy; if (full < K.small) continue;
         const s = sumS / cells, y = sumY / cells, hw = (hiS - loS + K.ds) * 0.5, hh = (hi - lo + K.dy) * 0.5, first = p === 0, last = p === parts - 1;
-        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, ajar: full, mid: r.axis === 0 ? [n, (lo + hi) / 2, (loS + hiS) / 2] : [(loS + hiS) / 2, (lo + hi) / 2, n], half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),
+        out.push({ pos: r.axis === 0 ? [n, y, s] : [s, y, n], dir: r.axis === 0 ? [r.sign, 0, 0] : [0, 0, r.sign], radius: Math.max(0.1, Math.min(Math.sqrt(full / Math.PI), Math.min(hw, hh) + 0.02)), full, ajar: full, mid: r.axis === 0 ? [n, (lo + hi) / 2, (loS + hiS) / 2] : [(loS + hiS) / 2, (lo + hi) / 2, n], of: full, half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),
           cut: { axis: r.axis, L, a: wa, b: wb, in: dIn, out: dOut, jambs: [jamb(s0 + (qa - 0.5) * K.ds, (lo + hi) / 2), jamb(s0 + (qb + 1.5) * K.ds, (lo + hi) / 2)], s0: s0 + qa * K.ds, nY, cols: cols.slice(qa, qb + 1) } });
       }
+      { let sum = 0; for (let i = first0; i < out.length; i++) sum += out[i].full; for (let i = first0; i < out.length; i++) out[i].of = sum; }
     }
   }
   // the biggest first; one found twice (on two lines of the grid, by a wall a little off its square) is kept once, the bigger
@@ -290,6 +300,13 @@ export function openAreas(list: readonly Opening[], dynamics: readonly Box[]): v
     if (!near.length) { o.ajar = o.full; continue; }
     o.ajar = ajarOf(o, near);
   }
+}
+
+/** HOW FAR AN OPENING'S OWN LIGHT REACHES, m (LOOK_OPENINGS.worth): where `shown` (what it looks out on × the frame's exposure) × `whole` (the open
+ *  area of the whole stretch it is a piece of, m²) ∕ distance², what it would show on a floor facing it straight out, falls to `worth`; never
+ *  less than `past` beyond its own rectangle's corner (`radius` = the piece's half diagonal). One rule at every hour. */
+export function openingReach(shown: number, whole: number, radius: number, worth: number = LOOK_OPENINGS.worth): number {
+  const K = LOOK_OPENINGS; return Math.min(K.far, Math.max(K.near, radius + K.past, Math.sqrt(shown * whole / worth)));
 }
 
 /** WHAT AN OPENING LOOKS OUT ON, as one radiance (linear RGB, the picture's units): half of what it sees is the sky, low down (common.wgsl skyRadiance's
