@@ -74,20 +74,6 @@ export const TEAMPACE = {
    *  than a walk. A man falling in keeps teamFollow's paces; the silent squad's and the unseen squad's own caps still stand over it. The player's pace is
    *  the one his legs are asked for (char.vel): pressed against a wall he still counts as moving. Off = the walk as it was (teamWalkOf answers teamWalk) */
   pacing: false, paceNear: 12, paceGap: 1, paceCos: 0.5,
-  /** `walkAim` (ON in the page — `?walkaim=0` — off here and on the frozen harness stand, `TPS_WALKAIM=1`; a FROZEN_HOLDS row) = ON THE WALK TO A MARK A
-   *  MAN LOOKS WHERE HE WALKS UNTIL HE CAN SEE WHAT HE WAS SENT TO WATCH. An order that sends a man to a mark hands him its watch point (the door he is
-   *  to stack on) from his first step, and its walking carriage — the gun up and leading, orders.ts tick — carried the gun on that point through whatever
-   *  stood between: walking along a wall with the door beyond it, his muzzle was 0.2 to 1 m off the plaster for a third to a half of the walk (and his
-   *  weapon light, rightly, dark for it: guards.ts LIGHTS.wallOff). Now, in the walking carriage and with no line from his gun to the order's watch (to
-   *  short of it: a door's own leaf stands in its frame), the tick hands his gun a point straight ahead of his chest instead, and he walks his path
-   *  facing it (no side-step with his chest to a point he cannot see); once he has the line the watch is his again and the gun comes round to it at the
-   *  ordered gun's own rate (guards.ts PACE.turn). ONLY the order's own watch in the walking carriage (Assignment.move: a stack, a walk to a door, a
-   *  cover mark, a lane to cover, a stand-off) is asked: a point the unasked cover dealt him (cover.ts, dealt on a line of sight), spotted.ts's, the
-   *  fight's (GuardScript.over: his own eyes) and the legs of an entry or a slice — which have no walking carriage: their point is the corner the
-   *  muzzle leads him round to — are as they were, and so is every drill (squad.ts is not touched). doorpath.ts hands the same kind of point, the way he
-   *  goes, for a gun that would cross an open leaf. `walkAimOff` / `walkAimOn`: how long the line must have been shut before the watch is given up, and clear before it is
-   *  his again (s). Off = the gun on the order's watch from the first step, as it was (walkLead answers null) */
-  walkAim: false, walkAimOff: 0.25, walkAimOn: 0.5,
   /** m/s from which a teammate is running: the gun goes low, nothing is fired, the boots are a sprinter's (character.ts BLEND.jogAt) */
   runAt: 2.7,
   /** m/s² a man with leave to run picks pace up at (guards.ts PACE.accel is 2.6: a walker leaning into a walk) */
@@ -103,7 +89,6 @@ export const TEAMPACE_STATS = { follow: 0, blast: 0, cover: 0, told: 0, secs: 0 
 export const TEAMPACE_DEBUG: { log?: (s: string) => void } = {};
 const PACING_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PACING_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.pacing's own check must fail with the rule's body out)
 const DOORBRISK_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.DOORBRISK_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.doorBrisk's own check must fail with the rule's body out)
-const WALKAIM_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALKAIM_BREAK ?? '') === '1'; } catch { return false; } })();   // (QA: TEAMPACE.walkAim's own check must fail with the rule's body out)
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMPACE_BREAK ?? '') === '1'; } catch { return false; } })();
 
 /** what a man has leave for — 'close' a follower closing on his place, 'fight' a move the fight asks (neither is a run) — the most his legs may be asked
@@ -121,25 +106,6 @@ const FRAME = 0.1;
 
 /** this teammate's pace is the rule's this frame */
 export function teamSlow(g: Game, gd: Guard): boolean { return TEAMPACE.on && !BREAK && teamPaced(g, gd); }
-/** how far short of an order's watch point the line to it is asked (m: a door's own leaf stands in its frame, and a mark on a wall is on the wall), and
- *  how far ahead of his chest the point his gun is handed instead lies (m) */
-const AIM_SHORT = 0.5, WALK_AHEAD = 3;
-/** the watch as last asked of a man: when, where it was, the answer, and since when the line has said otherwise */
-const aimSeen = new SideMap<Guard, { t: number; x: number; z: number; blind: boolean; since: number }>('teampace.aimSeen');
-/** TEAMPACE.walkAim (orders.ts tick, of a man in an order's walking carriage with the order's own watch point `aim` in hand): the point his gun leads to
- *  instead while he has no line to the watch — straight ahead of his chest, the way he walks — or null while he sees it (and for everybody with the
- *  switch off). One line a frame from his gun's height to short of the watch. The answer has a little weight, so a gun does not flick between the watch
- *  and his front as a jamb or a pillar passes: the watch is given up once the line has been shut for `walkAimOff` seconds and is his again once it has
- *  been clear for `walkAimOn` (a watch somewhere else, or a man not asked a moment ago, is read at once). */
-export function walkLead(g: Game, gd: Guard, aim: Vec3): Vec3 | null {
-  if (!TEAMPACE.walkAim || WALKAIM_BREAK || !teamPaced(g, gd)) return null;
-  const c = gd.char, y = 1.45 - 0.45 * c.anim.crouch, dx = aim[0] - c.pos[0], dy = aim[1] - y, dz = aim[2] - c.pos[2], l = Math.hypot(dx, dy, dz), t = g.time;
-  const k = l > AIM_SHORT + 0.1 ? (l - AIM_SHORT) / l : 0, shut = k > 0 && g.col.segmentBlocked([c.pos[0], y, c.pos[2]], [c.pos[0] + dx * k, y + dy * k, c.pos[2] + dz * k]);   // (inside the last half metre he is at it)
-  const was = aimSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 && Math.hypot(was.x - aim[0], was.z - aim[2]) < 0.5 ? was : { blind: shut, since: t };
-  const since = shut === s.blind ? t : s.since, blind = shut !== s.blind && t - since >= (shut ? TEAMPACE.walkAimOff : TEAMPACE.walkAimOn) - 1e-9 ? shut : s.blind;
-  aimSeen.set(gd, { t, x: aim[0], z: aim[2], blind, since: blind === s.blind ? since : t });
-  return blind ? [c.pos[0] + Math.sin(c.bodyYaw) * WALK_AHEAD, y, c.pos[2] + Math.cos(c.bodyYaw) * WALK_AHEAD] : null;
-}
 /** a teammate's walk, m/s */
 export function teamWalk(g: Game): number { return g.tune.playerWalk * TEAMPACE.k; }
 /** THIS teammate's walk this frame, m/s (TEAMPACE.pacing: paced on the player — the header of the knob has the rule; off: teamWalk) */

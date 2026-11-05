@@ -18,9 +18,8 @@
 //! for the host to say; what its settling did, for the host's tallies).
 //!
 //! THE SLAB'S OWN BOX IS NOT A WALL TO IT: every ray here leaves one leaf of the world's copy out (`lines::ray_but`), the slab's own.
-//! A RAY THE MODULE CANNOT WALK IS THE HOST'S (one of no length or no number: lines.rs ray_rule). The step then writes nothing and says so (HOST),
-//! and the TypeScript takes this slab's step for this tick; the step works on a copy of its row for that. A pane of glass is no such case: a ray
-//! meets it or flies on through a hole in it here (glass.rs).
+//! A RAY THAT ENDS ON A PANE IS THE HOST'S: a pane may be open where the ray meets it, and only the host can say (collision.ts glassOpen). The step
+//! then writes nothing and says so (HOST), and the TypeScript takes this slab's step for this tick. The step works on a copy of its row for that.
 use crate::collide;
 use crate::lines::{ray_rule, RAY_HOST};
 use crate::maths::{cos, exp, hypot2, sin};
@@ -227,7 +226,7 @@ fn hit_at(d: &mut Leaf, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64) -> 
     d.rays += 1.0;
     let k = ray_rule(d.w, x, y, z, ex, 0.0, ez, tmax, 0, d.but, d.ask, &mut out);
     if k == RAY_HOST {
-        d.host = true; // (a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
+        d.host = true; // (a pane, or a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
         return None;
     }
     if k < 0 {

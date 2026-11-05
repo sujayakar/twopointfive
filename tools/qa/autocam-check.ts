@@ -43,7 +43,6 @@
 // FAIL.   AUTOLOCK_BREAK=1 = the soft lock left off: 21 and 22 must FAIL.
 // exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
-import { standWall, wallBetween } from './standwall.ts';
 
 export async function autocamCheck(): Promise<boolean> {
   const BREAK = process.env.AUTOCAM_BREAK === '1', SWAYBREAK = process.env.AUTOSWAY_BREAK === '1', TUNEBREAK = process.env.AUTOTUNE_BREAK === '1', LOCKBREAK = process.env.AUTOLOCK_BREAK === '1';
@@ -251,7 +250,7 @@ export async function autocamCheck(): Promise<boolean> {
         let most = 0, prev = y0; const hold = () => { gd.char.pos[0] = at![0]; gd.char.pos[2] = at![2]; most = Math.max(most, Math.abs(wrap(W.cam.yaw - prev))); prev = W.cam.yaw; };
         run(ctx, 480, hold); const lean = Math.abs(wrap(W.cam.yaw - y0)), u1 = up(), seen = ctx.auto?.scene?.threats.length ?? 0;
         // a second out of his line (a wall the level does not have, put between them): still a man of the fight, and the yaw does not start back
-        const yl = W.cam.yaw, down = standWall(g, [wallBetween(c.pos, at)]); run(ctx, 60, hold); down();   // (standwall.ts: a box, half way between them)
+        const sb = g.col.segmentBlocked, yl = W.cam.yaw; g.col.segmentBlocked = (p: number[], q: number[]) => (Math.hypot(q[0] - at![0], q[2] - at![2]) < 0.1 && q[1] === 1.3) || sb.call(g.col, p, q); run(ctx, 60, hold); g.col.segmentBlocked = sb;
         const lineNow = ctx.auto?.scene?.threats.length ?? 0, fightNow = ctx.auto?.scene?.fight.length ?? 0, peek = Math.abs(wrap(W.cam.yaw - yl)); run(ctx, 30, hold);
         const fog = g.fogOfWar, hidden0 = fog.hidden; fog.hidden = (x: any) => x === gd; run(ctx, 1080, hold); fog.hidden = hidden0; const home = Math.abs(W.cam.yaw - y0) < 1e-9;
         const good = on ? seen === 1 && lean > 0.17 && u1 > u0 + 0.05 && most <= cap && lineNow === 0 && fightNow === 1 && peek < 0.03 && home && AUTOVIEW.on : most === 0 && lean === 0 && seen === 1; if (!good) ok = false;
@@ -347,18 +346,16 @@ export async function autocamCheck(): Promise<boolean> {
         // a wall hides him (one the level does not have, a metre toward the lens): the view comes round by the eased turn, the mouse moved in the middle of it
         F.setAutoView(false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char, I = W.input; K.on = !BREAK; K.turn = true; K.tune = !TUNEBREAK; A.setAutoMode('gentle'); A.setAutoTune('swing', false);
         for (const o of g.guards) { o.char.pos[0] = 1; o.char.pos[2] = 1; } run(ctx, 10); T.tap(); run(ctx, 5);
-        // (the wall: a box 0.9 m from him toward `yaw`, square to it, as wide as hides everything within acos 0.9 of that way from where he stands — standwall.ts)
-        const hide = (yaw: number) => standWall(g, [wallBetween(c.pos, [c.pos[0] + Math.sin(yaw), 0, c.pos[2] + Math.cos(yaw)], 0.9, 0.9 * Math.tan(Math.acos(0.9)))]);
-        const y0 = W.cam.yaw, turns0 = ST.turns; let down = hide(y0);
+        const fake = (yaw: number) => { const sx = Math.sin(yaw), cz = Math.cos(yaw); return (a: number[], b: number[]) => { const dx = b[0] - a[0], dz = b[2] - a[2], d = Math.hypot(dx, dz); return a[1] === 1.3 && b[1] === 1.3 && Math.hypot(a[0] - c.pos[0], a[2] - c.pos[2]) < 1e-6 ? d > 0.9 && (dx * sx + dz * cz) / d > 0.9 : sb.call(g.col, a, b); }; };
+        const y0 = W.cam.yaw, sb = g.col.segmentBlocked, turns0 = ST.turns; g.col.segmentBlocked = fake(y0);
         const cap = K.turnCap * DT + 1e-12; let most = 0, prev = y0, jerk = 0, ps = 0, f = 0, atMouse = -1; const each = () => { const s = Math.abs(wrap(W.cam.yaw - prev)); most = Math.max(most, s); jerk = Math.max(jerk, Math.abs(s - ps)); ps = s; prev = W.cam.yaw; if (atMouse < 0 && Math.abs(wrap(W.cam.yaw - y0)) > 0.15) { atMouse = f; I.mouseX += 240; I.mouseY += 60; } f++; };   // (the hand moves the mouse a fifth of the way round)
         run(ctx, 60 * 10, each); each(); const round = Math.abs(wrap(W.cam.yaw - y0)), turns = ST.turns - turns0;
         // …again, and a walk key a second into it
-        down(); g.teleportPlayer([c.pos[0], 0, c.pos[2]]); const y1 = W.cam.yaw; down = hide(y1);
+        g.col.segmentBlocked = sb; g.teleportPlayer([c.pos[0], 0, c.pos[2]]); const y1 = W.cam.yaw; g.col.segmentBlocked = fake(y1);
         let began = -1; for (let i = 0; i < 60 * 6 && began < 0; i++) { run(ctx, 1, each); if (Math.abs(wrap(W.cam.yaw - y1)) > 1e-4) began = i; } run(ctx, 45, each); const mid = Math.abs(wrap(W.cam.yaw - y1)), v = ps;
         I.keys.add('KeyW'); let stepUp = false, pv = v, after = 0, c1 = -1; for (let i = 0; i < 90; i++) { const yb = W.cam.yaw; stepFrame(ctx, DT); const s = Math.abs(wrap(W.cam.yaw - yb)); if (c1 < 0) c1 = s; if (s > pv + 1e-9) stepUp = true; pv = s; after += s; } I.keys.clear(); const stopped = pv < 1e-6;
         // …and he stops again, still hidden: the next turn waits out the gap from where that one ended, not from where it began
-        down(); down = hide(y1);   // (he has walked on from behind the wall: it is stood again where he is as the key comes up, the same way round — a wall does not follow a man, as the function laid over the line test did)
-        const y2 = W.cam.yaw; let next = -1; for (let i = 0; i < 60 * 6 && next < 0; i++) { stepFrame(ctx, DT); if (Math.abs(wrap(W.cam.yaw - y2)) > 1e-4) next = i; } down();
+        const y2 = W.cam.yaw; let next = -1; for (let i = 0; i < 60 * 6 && next < 0; i++) { stepFrame(ctx, DT); if (Math.abs(wrap(W.cam.yaw - y2)) > 1e-4) next = i; } g.col.segmentBlocked = sb;
         const good = quiet.on && quiet.moved < 1e-9 && quiet.off0 > 0.2 && swung.on && swung.there && swung.most <= 1 + 1e-9 && swung.first < 0.05 && shot.before > 0 && shot.left0 > 0.1 && !shot.stepUp && shot.still && shot.short && shot.after > 0 && shot.after < 0.1
           && Math.abs(round - Math.PI / 4) < 0.01 && atMouse > 0 && turns === 1 && most <= cap && most > 0.5 * cap && jerk <= cap * 0.2 && began >= 0 && mid > 0.02 && mid < Math.PI / 4 - 0.05 && v > 0 && !stepUp && c1 > 0.5 * v && stopped && after > 0.003 && after < 0.1
           && next >= 60 && next < 60 * (K.gap + 0.2); if (!good) ok = false;
@@ -452,7 +449,7 @@ export async function autocamCheck(): Promise<boolean> {
           const near2 = stalked && plain && Math.hypot(stalked.at![0] - gp[0], stalked.at![2] - gp[1]) < 0.05 && stalked.stalk && Math.hypot(plain.at![0] - p2[0], plain.at![2] - p2[1]) < 0.05 && !plain.stalk;
           p2 = null; run(ctx, 20, pin);
           // behind a pillar for half a second it is still his man, and for a second and a half it is nobody's; with the rifle up it is nobody's, but for a stalk
-          const pillar = standWall(g, [wallBetween(c.pos, gd.char.pos)]); run(ctx, 30, pin); const half = au.lockGd; run(ctx, 60, pin); const gone = au.lockGd; pillar(); run(ctx, 20, pin);   // (standwall.ts: a box half way between them)
+          const blocked0 = g.col.segmentBlocked; g.col.segmentBlocked = () => true; run(ctx, 30, pin); const half = au.lockGd; run(ctx, 60, pin); const gone = au.lockGd; g.col.segmentBlocked = blocked0; run(ctx, 20, pin);
           const pl = g.player; Object.defineProperty(pl, 'rifleUp', { get: () => true, configurable: true }); const up = pl.rifleUp, rifle = A.autoLock(au, g, null), rifleStalk = A.autoLock(au, g, gd); delete pl.rifleUp;
           const drag0 = pl.dragging; pl.dragging = {} as any; const tow = A.autoLock(au, g, null); pl.dragging = drag0; const corner = A.autoLock(au, g, null, true);
           const extra = half === gd && gone === null && au.lockGd === gd && up && rifle === null && !!rifleStalk && tow === null && !!corner && corner.stalk;

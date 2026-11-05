@@ -18,8 +18,8 @@
 //! read by a later row's step: furniture is met by where it STANDS, which an impulse does not move.
 //!
 //! WHAT ONLY THE HOST CAN JUDGE HANDS A ROW BACK. The step works on a copy of the row, and where it comes to a question this module has no answer
-//! to — a bounce on ground that may be lying snow (the snow is the host's map: snowBog.ts), a ray of no length or no number — it writes nothing of
-//! that row, lists nothing of it, and returns HOST with the row (a pane of glass is judged here, glass.rs): the TypeScript takes that
+//! to — a ray that ends on a pane of glass (open or shut is the host's: collision.ts glassOpen), a bounce on ground that may be lying snow (the snow
+//! is the host's map: snowBog.ts) — it writes nothing of that row, lists nothing of it, and returns HOST with the row: the TypeScript takes that
 //! row's step and calls again for the rows under it.
 use crate::lines::{ray_rule, ray_things, RAY_HOST};
 use crate::maths::{atan2, hypot2, hypot3, round_half_up};
@@ -225,7 +225,7 @@ fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
     d.rays += 1.0;
     let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out);
     if k == RAY_HOST {
-        d.host = true; // (a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
+        d.host = true; // (a pane, or a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
         return None;
     }
     let st = if k >= 0 { Some((out[0], out[1], out[2], out[3])) } else { None };

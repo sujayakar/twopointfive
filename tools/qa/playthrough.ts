@@ -174,8 +174,6 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 import { pinned } from '../../src/host/profile.ts';
-import { FELL } from '../../src/sim/sim.ts';
-import { ANYTIME, PRICED } from '../../src/scene/collision.ts';
 import { GLASSPEN_HOOKS, GLASSPEN } from '../../src/game/glasspen.ts';
 import { GLASSBREAK } from '../../src/game/glassbreak.ts';
 import { SHARDS } from '../../src/game/shards.ts';
@@ -800,11 +798,9 @@ class Player {
       if (process.env.PT_NOTES && this.verbose) { const L = g.fight.log as { t: number; who: string; what: string }[]; for (; this.fnSeen < L.length; this.fnSeen++) this.say(`   » ${L[this.fnSeen].who}: ${L[this.fnSeen].what}`); if (L.length < this.fnSeen) this.fnSeen = L.length; }   // PT_NOTES=1: the room fight's own notes as they are made
       if (this.kind === 'rescue') { const L = g.rescue.log as { t: number; what: string }[]; for (; this.rsSeen < L.length; this.rsSeen++) { const w = L[this.rsSeen].what; if (/^(step|act|executed|teamfire|secured|unsecured|clear|crew)/.test(w)) this.say(`   ~ rescue: ${w}`); } if (L.length < this.rsSeen) this.rsSeen = L.length; }
       for (const h of this.hostiles) { const was = this.theirs.get(h); if (was !== undefined && was !== 'dead' && h.state === 'dead') { const k = g.guards.find((x: any) => x.char.id === h.killerId); this.say(`   + ${h.callsign} (theirs) down ${at(h.char.pos)} · by ${k?.callsign ?? (h.killerId === PLAYER_ID ? 'Sam' : '?')}`); } this.theirs.set(h, h.state); }
-      this.g.col.window(() => {   // (the watcher's own lines and ways, asked between two ticks and writing nothing: one proof of the module's copy for the lot — collision.ts window)
       this.watch.tick(this.team, off || held ? null : this.goal);   // (stood off his men's line he is not 'walking and getting nowhere')
       this.tally.tick(this.team, this.hostiles);
       this.defw.tick(this.t, this.team, this.hostiles, this.tally.entries);
-      });
       this.endw.tick(this.t, this.team, this.hostiles); this.search?.tick();
       this.handw?.tick(this.t);
       this.sayw?.tick(this.t); this.ways?.tick(this.t, this.team); this.paths?.tick(this.t, this.team); this.lightw?.tick(this.t); this.gunw?.tick(this.t); this.fogw?.tick(this.t); this.holes?.tick(this.t, this.team, this.hostiles); this.doorw?.tick(this.t);
@@ -1763,7 +1759,7 @@ if (import.meta.main) {
   for (const id of ids) if (!entryOf(id)) { console.error(NO_SCN(id)); process.exit(2); }
   for (const one of [flag('--trace'), flag('--one')]) if (one && !entryOf(one.split(':')[0])) { console.error(NO_SCN(one.split(':')[0])); process.exit(2); }
   if (flag('--trace')) { const [scn, seed] = flag('--trace')!.split(':'); const r = await play(scn, Number(seed ?? 1), cap, true, set); console.log(`\n${r.scn}:${r.seed} ${r.end} at ${r.t} s — ${r.why} · team ${r.team}/${r.of} · theirs ${r.hostiles}/${r.hostilesOf} up · ${r.orders} orders · ${r.smells.length} smells`); process.exit(r.end === 'error' || r.end === 'stalled' ? 1 : 0); }
-  if (flag('--one')) { const [scn, seed] = flag('--one')!.split(':'); const r = await play(scn, Number(seed), cap, false, set); const { trace: _t, ...rest } = r; writeFileSync(flag('--out')!, JSON.stringify(process.env.TPS_FELL ? { ...rest, fell: FELL.n, alone: [ANYTIME.proofs, ANYTIME.who ?? {}], priced: [PRICED.n, PRICED.needs, PRICED.cells] } : rest)); process.exit(0); }   // (to a file: a long line on stdout is cut short by the exit)
+  if (flag('--one')) { const [scn, seed] = flag('--one')!.split(':'); const r = await play(scn, Number(seed), cap, false, set); const { trace: _t, ...rest } = r; writeFileSync(flag('--out')!, JSON.stringify(rest)); process.exit(0); }   // (to a file: a long line on stdout is cut short by the exit)
   const seeds = seedsOf(flag('--seeds') ?? '1-6'), jobs = Math.max(1, Number(flag('--jobs') ?? 4));
   const todo = ids.flatMap(scn => seeds.map(seed => ({ scn, seed }))), runs: RunOut[] = []; let next = 0; const t0 = Date.now();
   const worker = async () => { for (;;) { const j = todo[next++]; if (!j) return;
@@ -1771,11 +1767,6 @@ if (import.meta.main) {
     const pr = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.scn}:${j.seed}`, '--out', file, '--cap', String(cap), '--set', JSON.stringify(set)], { stdout: 'ignore', stderr: 'pipe' });
     const errText = await new Response(pr.stderr).text(); await pr.exited;
     let r: RunOut; try { r = JSON.parse(readFileSync(file, 'utf8')); rmSync(file); } catch { r = { scn: j.scn, seed: j.seed, end: 'error', why: `the run left no result — ${errText.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`, t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '' }; }
-    { const c = r as RunOut & { fell?: Record<string, number>; alone?: [number, Record<string, number>]; priced?: [number, number, number] };   // (TPS_FELL: a run is a process of its own, so its count comes home in its file and is added to this one's, which headless.ts prints as the tool ends)
-      for (const [k, v] of Object.entries(c.fell ?? {})) FELL.n[k] = (FELL.n[k] ?? 0) + v;
-      if (c.alone) { ANYTIME.proofs += c.alone[0]; if (ANYTIME.who) for (const [k, v] of Object.entries(c.alone[1])) ANYTIME.who[k] = (ANYTIME.who[k] ?? 0) + v; }
-      if (c.priced) { PRICED.n += c.priced[0]; PRICED.needs += c.priced[1]; PRICED.cells += c.priced[2]; }
-      delete c.fell; delete c.alone; delete c.priced; }
     runs.push(r); console.error(`  ${j.scn}:${j.seed} ${r.end} ${r.t} s · team ${r.team}/${r.of} · ${r.smells.length} smells${r.end === 'error' ? ` — ${r.why.split('\n')[0]}` : ''}`); } };
   await Promise.all(Array.from({ length: jobs }, worker));
   runs.sort((a, b) => ids.indexOf(a.scn) - ids.indexOf(b.scn) || a.seed - b.seed);

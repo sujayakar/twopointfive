@@ -11,7 +11,6 @@
 //            TypeScript, by digest and by every frame's bits
 //   systems  the same with every row but the maths raised by name (?rustlines&rustcircles&rustfog …: whatever src/sim/sim.ts RUST lists): the box world's
 //            questions are asked of the module's copy inside every tick (src/scene/boxMirror.ts), and the game is the same game, as `plain`
-//            …and with ?fell the page counts the questions its TypeScript answered while a row was up: none may be of a row that is one way in (sim.ts SEALED)
 //   words    ?rust<row>=0 for the first default row: that row, and it alone, is off (the page is not played)
 //   replay   `plain`'s frames as a replay file, opened as ?playtape=<file>: with no word the page stands on the recipe's rows (the three), with ?rust=0 the
 //            word is still on the address the page is sent on to, every row is off, and the tape plays to its end on its trace either way
@@ -104,15 +103,11 @@ const FOLD = async (brk) => {
     if (up.includes('fog') && !(k.sees > 0)) throw new Error(`the fog's pass asked no man of the module in ${FRAMES} frames (${JSON.stringify(k)})`);
     if (!played) throw new Error('`loads` did not play: nothing to hold this game to (run both jobs)');
     if (d.digest !== played.digest || d.bits !== played.bits) throw new Error(`${what} (${up.join(', ')} in the module) is not the game in TypeScript: digest ${d.digest} · ${played.digest}, bits ${d.bits} · ${played.bits}`);
-    // (ONE WAY IN: with ?fell on the address the page counts every question its TypeScript answered while the row was up, from the level's building on — src/sim/sim.ts FELL.
-    //  A count on a row of SEALED is a way back into TypeScript that a boot or a tick of the real page still takes)
-    const fellSay = name !== 'systems' ? '' : await page.evaluate(() => { const L = window.__sim.fell(), sealed = window.__sim.fellSealed(); return (sealed.length ? 'SEALED ' + sealed.join(', ') + ' · ' : '') + (L.length ? L.join(' | ') : 'none'); });
-    if (fellSay.startsWith('SEALED')) throw new Error(`a sealed row's question was answered by the TypeScript in the page: ${fellSay.slice(0, 600)}`);
     if (name === 'plain') tapeText = await page.evaluate(() => JSON.stringify(window.__replay?.file?.('rust-page') ?? null)).catch(() => '');   // (the replay of these frames, recorded with the rows on: `replay` plays it)
-    pass(name, `${s.say} · ${FRAMES} frames, ${k.lines} ticks on the module's lines, ${k.circles} on its circles, ${k.fog} with its sight pass (${k.sees} men asked): digest ${d.digest}, bits ${d.bits} — the game in TypeScript, to the bit${fellSay ? ` · the TypeScript answered: ${fellSay.slice(0, 400)}` : ''}`);
+    pass(name, `${s.say} · ${FRAMES} frames, ${k.lines} ticks on the module's lines, ${k.circles} on its circles, ${k.fog} with its sight pass (${k.sees} men asked): digest ${d.digest}, bits ${d.bits} — the game in TypeScript, to the bit`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); };
   if (want('plain')) await boxJob('plain', (rows, def) => rows.filter(r => def.includes(r)), () => '', 'the page as a player opens it');
-  if (want('systems')) await boxJob('systems', (rows) => rows.filter(r => r !== 'maths'), (up) => up.map(r => '&rust' + r).join('') + '&fell', 'the address that names every row but the maths');
+  if (want('systems')) await boxJob('systems', (rows) => rows.filter(r => r !== 'maths'), (up) => up.map(r => '&rust' + r).join(''), 'the address that names every row but the maths');
 
   if (want('words')) { const name = 'words', { browser, page, errs } = await open(); try {
     if (!rowNames || !defNames || !defNames.length) throw new Error('`loads` did not say which rows there are (run both jobs)');

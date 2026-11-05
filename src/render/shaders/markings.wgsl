@@ -154,12 +154,12 @@ fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
 fn markSoftNear(wT: vec2f) -> f32 { return 1.0 - smoothstep(0.75, 1.75, max(wT.x, wT.y)); }
 /** how far an old paint keeps its own colour from the surface under it (× the frame's marking contrast): 0.82 at the row's 1, 0.64 at 2 */
 fn markTone(soft: f32, near: f32) -> f32 { return 1.0 - 0.18 * min(soft, 2.0) * near; }
-fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32, ws: vec3f, t: f32, trod: f32) -> vec3f {
+fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32, ws: vec3f, t: f32) -> vec3f {
   let foot = max(wT.x, wT.y); let near = markSoftNear(wT);
   let amt = min(soft, 1.0) * near; let age = min(soft, 2.0) * near;
   if (amt <= 0.0) { return w; }
   let pm = vec2f(x, y) * t;                                            // (metres on the face: the hand and the wear are the painter's and the years', not the bitmap's)
-  let worn = smoothstep(-0.16, 0.16, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.72 - 0.12 * age - 0.16 * trod));   // (`trod`: how much the floor here is walked, the look layer's: paint goes first where feet go)
+  let worn = smoothstep(-0.16, 0.16, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.72 - 0.12 * age));
   let keep = 1.0 - 0.85 * min(age, 1.0) * worn;
   let s = ws.x + ws.y + ws.z;
   if (s <= 0.0) { return w * (1.0 - amt); }
@@ -178,7 +178,7 @@ struct MarkGB { albedo: vec3f, rough: f32 };
 /** THE G-BUFFER's evaluation at the primary hit: every record of the box's list on this fragment's face, composited in order over the albedo / roughness the
  *  fragment has so far (contrast = frame.markCfg.y lerps entry albedos from the pixel's own). dwx / dwy = the world position's screen derivatives (fsBox takes
  *  them in uniform control flow); slot = the 1-based first row. */
-fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32, soft: f32, trod: f32) -> MarkGB {
+fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32, soft: f32) -> MarkGB {
   var o: MarkGB; o.albedo = albedoIn; o.rough = roughIn;
   let g = boxGeo[bi]; let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);
   let lp = quatRotate(qi, wp - g.c); let ln = quatRotate(qi, n);
@@ -199,7 +199,7 @@ fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f
           let near = markSoftNear(wT);
           if (near > 0.0) {
             let ws = markSoftRead(m, x, y);   // (the module's one call site: the software adapter builds a copy of the walk for each)
-            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws, t, trod);
+            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws, t);
             tone = markTone(soft, near);
           }
         }

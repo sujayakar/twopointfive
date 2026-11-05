@@ -406,7 +406,7 @@ export class Door {
     this.leafH = leafH;
     this.box = makeBox({ c: [0, 0, 0], h: leafH, albedo: def.albedo ?? [0.42, 0.3, 0.19], flags: BoxFlag.Dynamic, name: 'door_' + def.name, ...(def.steel ? { rough: 0.3, metal: true } : { rough: 0.55, marks: doorLeafMarks(leafH) }) });   // finish for the reflection pass (Box.rough): a painted steel fire door has a satin sheen, the veneered leaves only just (ultra); MARKINGS: kick plates both faces + a push plate by the latch (the markings lane — a steel door is its own plate)
     // push plate + lever handle (raster only)
-    this.handleBoxes = [0, 1].map(() => makeBox({ c: [0, 0, 0], h: [0.06, 0.012, 0.012], albedo: [0.55, 0.55, 0.52], stuff: 'paint', flags: BoxFlag.Dynamic | BoxFlag.NoShadow, rough: 0.25, metal: true }));   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
+    this.handleBoxes = [0, 1].map(() => makeBox({ c: [0, 0, 0], h: [0.06, 0.012, 0.012], albedo: [0.55, 0.55, 0.52], flags: BoxFlag.Dynamic | BoxFlag.NoShadow, rough: 0.25, metal: true }));
     this.leafMarks = this.box.marks;
     this.frameCentre = [def.hinge[0] + Math.cos(def.closedDir) * def.width * 0.5, 1.0, def.hinge[1] + Math.sin(def.closedDir) * def.width * 0.5];
     this.place();

@@ -2,9 +2,9 @@
 import { Mat4, Quat, Vec3, m4, quat, clamp } from '../math/vec';
 import { Clip, GltfCharacter } from './gltf';
 import { hyp3, hyp4 } from '../math/vec';
-import { RUST, sim, f32, f64, i32, u32, u8, type SimExports, FELL, fell } from '../sim/sim';
+import { RUST, sim, f32, f64, i32, u32, u8, type SimExports } from '../sim/sim';
 import { EXACT } from '../math/exact';
-import { simPart, P_POSES, SimState } from '../sim/state';
+import { simPart, P_POSES, type SimState } from '../sim/state';
 import { SideMap } from '../math/side';
 
 // ---- RUST.poses (src/sim/sim.ts): the functions of this file asked of the module (rust/sim/src/skeleton.rs: each of them statement for statement).
@@ -20,7 +20,7 @@ const BENCH_NODES = 128, BENCH_SLOT = BENCH_NODES * 10;
 export const POSE_BENCH = { x: null as SimExports | null, rot: 0, pos: 0, args: 0, pose: 0, mask: 0, parent: 0, order: 0, rig: null as GltfCharacter | null, asked: 0, inPlace: 0 };
 /** the module, if it answers a question about a pose of `n` nodes now */
 function benchFor(n: number): SimExports | null {
-  if (!RUST.poses || !EXACT.on || n > BENCH_NODES) { if (FELL.on && RUST.poses) fell('poses', !EXACT.on ? 'the engine\'s maths' : 'a pose of more nodes than the bench holds'); return null; }
+  if (!RUST.poses || !EXACT.on || n > BENCH_NODES) return null;
   if (!POSE_BENCH.x) { const x = POSE_BENCH.x = sim(); POSE_BENCH.rot = x.pose_addr(0) / 8; POSE_BENCH.pos = x.pose_addr(1) / 8; POSE_BENCH.args = x.pose_addr(2) / 8; POSE_BENCH.pose = x.pose_addr(3) / 4; POSE_BENCH.mask = x.pose_addr(4) / 4; POSE_BENCH.parent = x.pose_addr(5) / 4; POSE_BENCH.order = x.pose_addr(6) / 4; }
   POSE_BENCH.asked++; return POSE_BENCH.x;
 }
@@ -31,35 +31,25 @@ function benchFor(n: number): SimExports | null {
 export const LAYERS = { knobs: null as (() => void) | null, ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[]; nums: string[] } | null, lists: [] as Int32Array[] };
 /** what the animator says of its rig for the module's two lists of names (rust/sim/src/knobs.rs): which node plays each role, and its lists of nodes to run forward */
 export interface LayerCast { nodes: Readonly<Record<string, number>>; lists: Readonly<Record<string, Int32Array>>; nums: Readonly<Record<string, ArrayLike<number>>>; poses: PoseSet }
-/** A SIZE A LAYER OF THE MODULE IS HANDED AT MOST (a list of the rig's nodes, a table of its numbers, the keys of a blow or a swing, the blows of a beat):
- *  the module's arrays are of a fixed length, so one thing longer than its array is a mistake in the game's own tables or records, and it is said here, by
- *  name, the first time it is met. There is no second way to pose it. */
-export function layerFits(what: string, n: number, max: number, min = 0): void {
-  if (!(n >= min && n <= max)) throw new Error(`posing: ${what} has ${n} entries and a layer of the Rust module takes ${min > 0 ? `${min} to ${max}` : `at most ${max}`} (rust/sim/src/layers.rs and knobs.rs hold the lengths)`);
-}
 const benchNames = (x: SimExports, table: number): string[] => { const at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); return s.split('\n').filter(l => l.length > 0); };
 /** THE SLOT TO ASK A LAYER OF `pose` IN, or −1 = the TypeScript runs it: the row is on, the pose lives in a block that stands in the module now AND SO DOES
  *  EVERY OTHER POSE OF ITS ANIMATOR (`cast.poses`: a layer is handed its other poses by their places, so one the pool had no room for is a man the
  *  TypeScript poses), the module answers posing questions (benchFor: the game's own maths), and `ch`'s rig, its named nodes and its lists (`cast`) are on
- *  the bench — a list or a table longer than the module holds is a mistake, said by name (layerFits). A layer's own numbers then go on the bench's `args`
+ *  the bench — a list or a table longer than the module holds is a rig its layers are not asked about. A layer's own numbers then go on the bench's `args`
  *  (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
 export function layerSlot(ch: GltfCharacter, pose: Pose, cast: LayerCast): number {
-  if (!RUST.walk) return -1;
-  // (what is counted is a question the module could have been asked: with the poses' row put down by its own word every layer is the TypeScript's by that
-  //  word, which is no way back in)
-  if (cast.poses.stray !== 0) { if (FELL.on && RUST.poses) fell('walk', 'a man with a pose the pool had no room for'); return -1; }
-  const g = slotOf(pose); if (g < 0) { if (FELL.on && RUST.poses) fell('walk', 'a pose that is not at home in a block (no game\'s tick has opened over it)'); return -1; }
-  const x = benchRig(ch); if (!x) { if (FELL.on && RUST.poses) fell('walk', 'the module does not answer posing questions now, or the rig is not on the bench'); return -1; }
+  if (!RUST.walk || cast.poses.stray !== 0) return -1;
+  const g = slotOf(pose); if (g < 0) return -1;
+  const x = benchRig(ch); if (!x) return -1;
   if (LAYERS.roles !== ch) {   // (the roles and the lists go with the rig: rust/sim/src/knobs.rs names them, the animator says which nodes each is)
     const names = LAYERS.names ?? (LAYERS.names = { roles: benchNames(x, 3), lists: benchNames(x, 5), nums: benchNames(x, 8) });
     const w = u32(), at = x.knob_addr(2) / 4, la = x.knob_addr(4) / 4, ln = x.knob_addr(6) / 4, max = x.knob_len(4) / Math.max(1, x.knob_len(6)), nmax = x.knob_len(7) / Math.max(1, x.knob_len(9));
-    // (a name the animator does not have is a mistake in one of the two lists, and so is a list or a table longer than the module holds: no second
-    //  way poses that rig. Both are found before a word is written, so the rig that was there stays whole)
+    // (a name the animator does not have is a mistake in one of the two lists; a list or a table too long for the module is a rig the TypeScript poses.
+    //  Both are found before a word is written, so the rig that was there stays whole)
     for (const r of names.roles) if (typeof cast.nodes[r] !== 'number') throw new Error(`posing: the Rust module asks for the node "${r}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
     for (const l of names.lists) if (!cast.lists[l]) throw new Error(`posing: the Rust module asks for the list "${l}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
     for (const t of names.nums) if (!cast.nums[t]) throw new Error(`posing: the Rust module asks for the table "${t}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
-    for (const l of names.lists) layerFits(`the rig's list of nodes "${l}"`, cast.lists[l].length, max);
-    for (const t of names.nums) layerFits(`the rig's table of numbers "${t}"`, cast.nums[t].length, nmax);
+    if (names.lists.some(l => cast.lists[l].length > max) || names.nums.some(t => cast.nums[t].length > nmax)) { POSE_BENCH.asked--; return -1; }   // (…and the question benchRig counted is not one the module was asked)
     for (let i = 0; i < names.roles.length; i++) w[at + i] = cast.nodes[names.roles[i]];
     for (let i = 0; i < names.lists.length; i++) {
       const l = cast.lists[names.lists[i]];
@@ -191,31 +181,6 @@ function poseOut(p: Pose): void { if (p.home === null) return; const own = new F
 export function poseSetIn(s: PoseSet, st: SimState): boolean { s.home = st; let stray = 0; for (const p of s.list) if (!poseIn(p, st)) stray++; s.stray = stray; return stray === 0; }
 /** …and out again, each into an array of its own */
 export function poseSetOut(s: PoseSet): void { s.home = null; s.stray = 0; for (const p of s.list) poseOut(p); }
-/** THE STAGE — an animator's update runs over poses that STAND IN A BLOCK OF THE MODULE (RUST.walk: its layers are handed their poses by their places in
- *  one pool). A character of a ticking game has his in the game's block (game/posehome.ts moves them as a tick opens). Every other update has none: a man
- *  posed as he is spawned, before any tick has opened over him; a figure of a menu, who is in no game; a game whose block another game's tick has parked.
- *  So an update OPENS by seeing to it: a set at home has its block bound (and a pose made while it stood parked is put in); a set with no home is lent the
- *  stage, a block of this file's that holds one animator's poses for the length of his update, and takes them back into arrays of his own as it shuts.
- *  The floats are the same floats either way, so it is the same pose to the bit; what it buys is that no update is one the module cannot run.
- *  `stageOpen` answers whether the stage was lent (the caller then owes `stageShut`); an update inside an update (a character's, then his animator's)
- *  finds the set standing and lends nothing. A pool with no room is loud: a game's holds some 130 men and the stage one, so it is a mistake, not a case. */
-const STAGE = { st: null as SimState | null, lent: 0 };
-export function stageOpen(s: PoseSet): boolean {
-  if (!RUST.walk) return false;
-  const h = s.home;
-  if (h !== null) {
-    if (h === STAGE.st) return false;
-    if (h.where < 0) h.bind();
-    if (s.stray !== 0 && !poseSetIn(s, h)) throw new Error(`posing: the pose pool of a game has no room for a man's ${s.stray} pose(s) (rust/sim/src/poses.rs: the pool is sized for the largest game)`);
-    return false;
-  }
-  const st = STAGE.st ?? (STAGE.st = new SimState());
-  if (!poseSetIn(s, st)) throw new Error('posing: one animator\'s poses do not fit the stage (rust/sim/src/poses.rs: the pool)');
-  STAGE.lent++; return true;
-}
-export function stageShut(s: PoseSet): void { poseSetOut(s); sim().pose_clear(STAGE.st!.bind()); }
-/** how many updates were lent the stage (a tool's count) */
-export const stageLent = (): number => STAGE.lent;
 /** WHERE THE MODULE FINDS A POSE, for a question: the slot of the block it lives in — or −1, the bench (the pose is an array of its own, or its block
  *  stands parked: a question never moves a block, because the caller may be holding the pose's `cols`) */
 const slotOf = (p: Pose): number => p.home === null ? -1 : p.home.where;
@@ -262,14 +227,9 @@ function clipIn(x: SimExports, clip: Clip): ClipSide {
   return c;
 }
 /** THE NUMBER A LAYER OF THE MODULE SAMPLES `clip` BY (rust/sim/src/layers.rs sample_on_rest: a layer that samples for itself is handed it with its own
- *  numbers), the clip written into the module now if it never was. A clip the module does not hold (its store has no room, or a track is of a shape it
- *  cannot take), or one that writes a node its pose does not have, is a mistake in the character file or the store's size, said by name: no second way
- *  samples it for a layer. −1 only with the bench down (asked after `layerSlot`, it is up). */
-export function clipNo(clip: Clip, nodes: number): number {
-  const x = POSE_BENCH.x; if (!x) return -1; const c = clipIn(x, clip); if (c.at >= 0 && c.need <= nodes) return c.at;
-  throw new Error(c.at < 0 ? `posing: a layer samples the clip "${clip.name}" and the Rust module does not hold it (rust/sim/src/clips.rs: no room in the store, or a track it cannot take)`
-    : `posing: a layer samples the clip "${clip.name}", which writes node ${c.need - 1}, over a pose of ${nodes} nodes`);
-}
+ *  numbers), the clip written into the module now if it never was · −1 = the module does not hold it, or a pose of `nodes` nodes cannot take it: the
+ *  TypeScript runs that layer. Asked after `layerSlot` (the bench is up). */
+export function clipNo(clip: Clip, nodes: number): number { const x = POSE_BENCH.x; if (!x) return -1; const c = clipIn(x, clip); return c.at >= 0 && c.need <= nodes ? c.at : -1; }
 /** where the module keeps `clip` (−1 = it does not), for the check that reads the copy back; a clip never sampled with the row up is not asked for here */
 export function clipHeld(clip: Clip): number { return Math.max(-1, CLIP_SIDE.get(clip)?.at ?? -1); }
 
@@ -297,7 +257,7 @@ export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
   // (RUST.poses: one question to the module, its answer written into the pose where it lives — rust/sim/src/clips.rs `sample`, this function statement for statement)
   { const n = out.numNodes, x = benchFor(n); if (x) { const c = clipIn(x, clip);
       if (c.at >= 0 && c.need <= n) { const g = lend(out, 0); known(x.pose_sample(g, g < 0 ? 0 : out.at, n, c.at, t, (loop ? 1 : 0) | (POSEMATH.singles ? 2 : 0))); if (g < 0) benchGet(out, 0); return; }
-      POSE_BENCH.asked--; if (FELL.on) fell('poses', c.at < 0 ? 'a clip the module does not hold' : 'a clip of more nodes than its pose'); } }
+      POSE_BENCH.asked--; } }
   const dur = clip.duration;
   if (loop) { t = t % dur; if (t < 0) t += dur; } else t = Math.min(Math.max(t, 0), dur);
   const d = out.cols, N = out.rows, tracks = clip.tracks, lines = sideOf(clip).lines;

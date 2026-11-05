@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-866bd63b2ec354e796137ddcbec82ec954aedc50
+# the look file's own part was repainted when the level was dressed from the library (its paints are materials)
+8a939b8f96f75b7259d9c403bc9972ad03c7368a

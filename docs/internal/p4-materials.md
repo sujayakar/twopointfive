@@ -47,7 +47,7 @@ phases zeroed, grain off). ReSTIR (P2a) merged into this branch at 72bd2ed befor
   settled, 2.2× + 1.5 px young; taps stop at a roughness step and at no-term texels) — contact hardening. `passes.ts`: refl / reflScratch / reflHist[2] / reflMom[2]
   / reflFast[2] at the reflection grid, pooled and resampled across a resize or divisor change like the gather's (`setRt`, `reallocRefl`), 'reflect' + 'rdenoise'
   compute passes after 'temporal', composite bindings 12 (refl, filterable) + 13 (the material target).
-- **Composite** (`composite.wgsl`): `reflK` = (1 − smoothstep(maxR − 0.12, maxR, rough)) × strength off the pixel's own material; `refl` = (since 11-04 the four texels round the pixel, weighed by depth and stored normal: `docs/agents/render.md`, A REFLECTION TEXEL OF ANOTHER SURFACE HAS NO SAY; before that) ONE bilinear fetch of the
+- **Composite** (`composite.wgsl`): `reflK` = (1 − smoothstep(maxR − 0.12, maxR, rough)) × strength off the pixel's own material; `refl` = ONE bilinear fetch of the
   reflection texture at the pixel's position on its grid (the branch's 3×3 joint-bilateral over depth / normal / material cost 36 loads a pixel and ~0.5 ms of
   wall-clock at high on a screen of lino for the same picture under TAAU — measured, §2) × reflK × the decals' gloss-keep, through the pane's transmission; a
   metal's diffuse × (1 − 0.7·metalness) only while rays are traced; debug view 10 = every specular term, 14 = the traced term, 15 = the material target.

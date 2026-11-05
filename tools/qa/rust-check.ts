@@ -28,11 +28,6 @@
 //             which face — over leaves, tilted, round and cut boxes): tools/qa/segment-ident.ts --rust — random segments
 //             over whole levels (door leaves swung, walls broken into pieces and re-shaped, tilted and cut boxes, panes with holes) answered by the module,
 //             by the TypeScript walk as it is and by the walk as it first was: every answer and every pane's place the same bits
-//   glass     where a pane of glass is open (rust/sim/src/glass.rs over the copy of every pane that is no longer whole; src/game/glassbreak.ts openAt, goingAt
-//             and a burst's reckoning of glass it has not broken; glassPattern.ts's pieces and clumps): tools/qa/glass-ident.ts — the glass of four levels broken
-//             by the game's own rule (rounds, pellets, blasts, the glass's step, panes made another glass and made whole), and points on and off every pane
-//             asked of the rule and of the module under each view a burst judges by, with a solid line and a ray through each asked of both walks. It is no row of
-//             RUST: the lines' and the ray's rows answer by it wherever they meet a pane. The shared numbers are read out of both sources.
 //   circles   a circle against the box world (rust/sim/src/collide.rs, the same copy): the same run — a body's footprint pushed out, what it touches, what
 //             is gathered under it: where it ends to the bit, and every list the same
 //   fog       the fog of war's sight pass (rust/sim/src/fog.rs: which eyes have a line to a man, to a body): the sixth kind of question of `senses` — a team's
@@ -67,7 +62,7 @@
 //             parts): tools/qa/item-ident.ts — things of every kind thrown, dropped, set down on chairs, sent at panes and over made-up snow, taken in a
 //             hand, their time run out, the pool driven past the module's rows, the furniture shoved from under them — both ways and as twins
 //             panes of glass, their doors hung again, stepped both ways from the same rows: every column, the rows' tables, every box, noise, tally and
-//             log line the same bits, and a run fair only if it met everything the step does (a ray through a pane that is gone among them). The
+//             log line the same bits, and a run fair only if it met everything the step does (a step the module hands back for a pane among them). The
 //             shared numbers are read out of both sources. `missions` and `both` hold it in play where a mission takes a leaf off.
 //   falls     what falls and what it leaves (rust/sim/src/falls.rs against src/sim/fallshome.ts: the landings the simulation has scheduled and the litter
 //             map of broken glass, a part of the game's block): tools/qa/falls-ident.ts — two hundred thousand rules (schedule past the list's cap, deposit,
@@ -76,10 +71,9 @@
 //             glass breaks and where things break: the `module` and `snapshot` lines of tools/qa/glassfall-check.ts and tools/qa/debrisfall-check.ts (a
 //             scene with the row on against off, and a snapshot put back while things are in the air). `missions` raises the row with the rest, but the
 //             five missions break nothing that falls: there the row is only shown to do no harm.
-//   stand     both stands have the rows of src/sim/sim.ts RUST_ON on, and the game's own maths, as the page (TPS_RUST<ROW>=1 raises a row on either, =0
-//             puts a default one off, TPS_RUST=0 every one unless its own word raises it; TPS_EXACT=0 TPS_RUST=0 is the stand as it was recorded before the
-//             rows); FROZEN_HOLDS holds no row and no maths; and the address's words (profile.ts pageRows: ?rust=0, ?rust<row>, ?rust<row>=0) write what
-//             they say, also over rows a recipe wrote
+//   stand     the frozen stand leaves every row off; the shipped stand has the rows of src/sim/sim.ts RUST_ON on, as the page (TPS_RUST<ROW>=1 raises a row on
+//             either, =0 puts a default one off); FROZEN_HOLDS has their rows; and the address's words (profile.ts pageRows: ?rust=0, ?rust<row>, ?rust<row>=0)
+//             write what they say, also over rows a recipe wrote
 //   server    the game server's own stand (tools/mp/stand.ts): a setup that asks for the row makes a recipe that carries it, the game stood from that recipe in
 //             another process ticks with the module's maths in Math's place, and after 600 ticks of a walking, shooting seat its state word is the word of
 //             the same setup without the row. `server as the page`: a setup that says nothing of the rows makes a recipe with the page's own (RUST_ON),
@@ -203,7 +197,7 @@ if (args[0] === '--rows') {
   await import(`${ROOT}/tools/qa/headless.ts`);
   const H: any = await import(`${ROOT}/src/host/standup.ts`), S: any = await import(`${ROOT}/src/sim/sim.ts`), P: any = await import(`${ROOT}/src/host/profile.ts`);
   H.pinMaths(); H.pinRust();
-  console.log('RUST-ROWS ' + JSON.stringify({ profile: P.harnessProfile(), maths: S.RUST.maths, exact: (await import(`${ROOT}/src/math/exact.ts`)).EXACT.on, on: S.rustRows().filter((r: string) => S.RUST[r]), rows: S.rustRows() }));
+  console.log('RUST-ROWS ' + JSON.stringify({ profile: P.harnessProfile(), maths: S.RUST.maths, on: S.rustRows().filter((r: string) => S.RUST[r]), rows: S.rustRows() }));
   process.exit(0);
 }
 
@@ -231,7 +225,7 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
  *  die's did not reach them until 2026-11-03. */
 const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', walk: 'layers', rays: 'lines, circles' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; const k = label.split(':')[0]; said[k] = (said[k] ?? true) && ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -297,29 +291,6 @@ let wordOwn = '', wordRust = '';
   verdict(ok && rays !== '', 'lines, circles: every line through the box world, every ray into it and every circle against it gets the TypeScript\'s answer from the Rust module', rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + rays : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
-// ---- glass
-{
-  // (on both stands: toughened glass comes down in a wave on the frozen one and drops after a beat on the page's)
-  const on = (stand: string) => child(['bun', 'run', 'tools/qa/glass-ident.ts', '--n', flag('--glassrounds') ?? '1000'], { TPS_PROFILE: stand, GLASS_BREAK: BREAK ? '1' : undefined }), both = [on('shipped'), on('frozen')];
-  const r = { status: both.every(x => x.status === 0) ? 0 : 1, out: both.map(x => x.out).join('\n'), err: both.map(x => x.err).join('\n') };
-  const rows = r.out.split('\n').filter(l => / (PASS|FAIL) — \d+ sheets/.test(l)), sum = r.out.split('\n').filter(l => /^glass-ident: /.test(l)).join('\n    ');
-  const fs = await import('node:fs'), rd = (f: string) => fs.readFileSync(resolve(ROOT, f), 'utf8'), rs = rd('rust/sim/src/glass.rs') + rd('rust/sim/src/world.rs'), mirror = rd('src/scene/boxMirror.ts'), pattern = rd('src/game/glassPattern.ts');
-  const there = (name: string): number => { const m = new RegExp(`(?:pub )?const ${name}: \\w+ = ([^;]+);`).exec(rs); return m ? Number(eval(m[1].replace(/_/g, ''))) : NaN; };
-  const inTs = (src: string, name: string): number => Number(new RegExp(`\\b${name} = (-?[\\d.]+)`).exec(src)?.[1] ?? NaN), off: string[] = []; let shared = 0;
-  // the row's places and the tables' numbers as boxMirror.ts writes them, and the pattern's own numbers, each against the Rust source
-  for (const [h, t] of [['GD', 'GD'], ['GW', 'GW'], ['G_SITE', 'G_SITE'], ['G_DICE_AT', 'G_DICE_AT'], ['GW_FLAGS', 'GW_FLAGS'], ['GW_COLS', 'GW_COLS'], ['GW_ROWS', 'GW_ROWS'], ['GW_DSEED', 'GW_DSEED'], ['GW_N', 'GW_N'], ['GW_SEED', 'GW_SEED'],
-    ['GW_OPEN', 'GW_OPEN'], ['GW_GOING', 'GW_GOING'], ['GW_CRATER', 'GW_CRATER'], ['G_GONE', 'G_GONE'], ['G_DICE', 'G_DICE'], ['G_RUN', 'G_RUN'], ['VD', 'VD'], ['FRAGS_PER_SITE', 'FRAGS_PER_SITE'], ['SECTORS', 'MAX_SECTORS']]) { shared++; if (inTs(mirror, h) !== there(t)) off.push(`${h} ${inTs(mirror, h)} in boxMirror.ts, ${t} ${there(t)} there`); }
-  for (const [h, t] of [['GP_MAX_SECTORS', 'MAX_SECTORS'], ['GP_ANG_JIT', 'ANG_JIT'], ['GP_RHO_LO', 'RHO_LO'], ['GP_RHO_SPAN', 'RHO_SPAN'], ['GP_SPLIT_LO', 'SPLIT_LO'], ['GP_SPLIT_SPAN', 'SPLIT_SPAN'], ['GP_CUT_NONE', 'CUT_NONE'], ['GP_CUT_LO', 'CUT_LO'],
-    ['GP_CUT_SPAN', 'CUT_SPAN'], ['GP_CUT_TILT', 'CUT_TILT'], ['GP_DICE_JIT', 'DICE_JIT'], ['GP_DICE_DELAY', 'DICE_DELAY'], ['GP_REMAINDER', 'REMAINDER']]) { shared++; if (inTs(pattern, h) !== there(t)) off.push(`${h} ${inTs(pattern, h)} in glassPattern.ts, ${t} ${there(t)} there`); }
-  { shared++; const sites = inTs(pattern, 'GP_MAX_SITES'), bands = inTs(pattern, 'GP_BANDS'), gs = inTs(mirror, 'G_SITES'), bits = inTs(mirror, 'GW_BITS');   // (a row holds every site a pane can have, and a bit a piece of each)
-    if (gs !== sites || bands * there('MAX_SECTORS') !== there('FRAGS_PER_SITE') || bits * 32 !== sites * there('FRAGS_PER_SITE') || there('G_DICE_AT') !== sites * there('G_SITE') || there('GW_OPEN') - there('GW_SEED') !== sites) off.push(`a row's room: ${sites} sites of ${bands} bands, ${gs} in a row, ${bits} words of bits`); }
-  for (const k of ['VIEW_NONE', 'VIEW_BLOWN', 'VIEW_GIVES']) { shared++; if (!(there(k) >= 0) || there(k) !== inTs(mirror, k)) off.push(`${k} ${inTs(mirror, k)} in boxMirror.ts, ${there(k)} there`); }
-  const ok = r.status === 0 && rows.length >= 8 && rows.every(l => / PASS /.test(l)) && (r.out.match(/=== glass-ident \(the (page's|frozen) stand\): PASS/g) ?? []).length === 2 && off.length === 0 && shared > 30;
-  verdict(ok, 'glass: every point of every pane is open or shut in the Rust module as the game\'s rule says, under every view a burst judges by, and a line and a ray through it end the same — and the two sides name their numbers alike',
-    (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 1800) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
-    + `\n    ${shared} numbers shared with the Rust source (boxMirror.ts, glassPattern.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`);
-}
-
 // ---- senses
 {
   const r = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', flag('--questions') ?? '12000', '--levels', flag('--levels') ?? 'office.json,warehouse.json,compound.json,glasshouse.json']);
@@ -328,17 +299,10 @@ let wordOwn = '', wordRust = '';
   const fs = await import('node:fs'), face = /export const FACE = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '';
   const rust = ['light', 'smoke', 'hear', 'sight'].map(f => fs.readFileSync(resolve(ROOT, `rust/sim/src/${f}.rs`), 'utf8')).join('\n');
   const pairs = [...face.matchAll(/(\w+):\s*(\d+)/g)].map(m => ({ name: m[1], here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (\\d+);`).exec(rust)?.[1] ?? NaN) }));
-  { const nav = /export const NAV = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '', there = fs.readFileSync(resolve(ROOT, 'rust/sim/src/nav.rs'), 'utf8');   // (boxMirror.ts NAV: what a search answers that is no count)
-    for (const m of nav.matchAll(/(\w+):\s*(-?\d+)/g)) pairs.push({ name: `nav ${m[1]}`, here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (-?\\d+);`).exec(there)?.[1] ?? NaN) }); }
-  // (the order a priced search asks its prices in: the same check with the host pricing last first must end with the paths differing and nothing else,
-  //  exit 1. Not under RUST_BREAK, which is another red path of the same tool)
-  const order = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '3000', '--levels', 'office.json,compound.json'], { PRICED_BREAK: '1' });
-  const orderRed = !order || (order.status === 1 && /the paths differed and nothing else/.test(order.out));
-  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 18 && off.length === 0 && orderRed;
+  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 15 && off.length === 0;
   { const d = marked(r.out, 'SENSE-IDENT '); for (const k of [...SENSES, 'fog']) red[k] = !!d && d[k] > 0; }
   verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
-    + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
-    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : ''));
+    + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`);
 }
 
 // ---- poses
@@ -451,16 +415,14 @@ let wordOwn = '', wordRust = '';
       const na = nums(a), nb = nums(b); if (/\bG\b/.test(strip(b)) && !/const G\b/.test(b)) { nb.push(there('G')); nb.sort((x, y) => x - y); }
       shared += na.length; if (na.join() !== nb.join()) off.push(`the numbers written in ${here_}: ${na.join(' ')} here, ${nb.join(' ')} in ${there_}`);
     } }
-  // …and the step is what the TypeScript's was before a slab's numbers were columns (tools/qa/slab-asitwas.ts: the words it folded then), on both stands,
-  // by the module (the rows as the stand has them) and by the TypeScript (TPS_RUST=0), and on the frozen stand as it was recorded before the rows
-  const wasOn = (stand: string, env: Record<string, string | undefined> = {}, ...more: string[]) => child(['bun', 'run', 'tools/qa/slab-asitwas.ts', ...more], { TPS_PROFILE: stand, TPS_RUST: undefined, ...env });
-  const wases = [wasOn('shipped'), wasOn('frozen'), wasOn('shipped', { TPS_RUST: '0' }), wasOn('frozen', { TPS_RUST: '0' }), wasOn('frozen', {}, '--recorded')];
+  // …and the TypeScript's own step is what it was before a slab's numbers were columns (tools/qa/slab-asitwas.ts: the words it folded then)
+  const wasOn = (stand: string) => child(['bun', 'run', 'tools/qa/slab-asitwas.ts'], { TPS_PROFILE: stand }), wases = [wasOn('shipped'), wasOn('frozen')];
   const was = { status: wases.every(w => w.status === 0) ? 0 : 1, out: wases.map(w => w.out).join('\n') }, wasRows = was.out.split('\n').filter(l => / (PASS|FAIL) — \d+ leaves, /.test(l));
-  const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== slab-ident: PASS/.test(r.out) && off.length === 0 && shared > 50 && was.status === 0 && wasRows.length >= 20;
+  const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== slab-ident: PASS/.test(r.out) && off.length === 0 && shared > 50 && was.status === 0 && wasRows.length >= 8;
   verdict(ok, 'slabs: every loose slab the Rust module steps ends where the TypeScript\'s step leaves it — its row, its box, the slam, the tallies — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${shared} numbers shared with the Rust source (slabshome.ts, doorblast.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`
-    + `\n    as it was (both stands by the module and by the TypeScript, and the frozen stand as recorded before the rows, against the words folded before the columns): ${was.status === 0 ? `${wasRows.length} runs the same` : (wasRows.filter(l => / FAIL /.test(l)).map(l => l.replace(/\s+/g, ' ').trim()).join(' / ') || `exit ${was.status}`).slice(0, 400)}`);
+    + `\n    as it was (rows off, both stands, against the words folded before the columns): ${was.status === 0 ? `${wasRows.length} runs the same` : (wasRows.filter(l => / FAIL /.test(l)).map(l => l.replace(/\s+/g, ' ').trim()).join(' / ') || `exit ${was.status}`).slice(0, 400)}`);
 }
 
 // ---- items
@@ -546,21 +508,14 @@ let wordOwn = '', wordRust = '';
 
 // ---- stand
 {
-  const all: string[] = S.rustRows(), word = (r: string) => 'TPS_RUST' + r.toUpperCase(), none: Record<string, undefined> = { TPS_PROFILE: undefined, TPS_EXACT: undefined, TPS_RUST: undefined }; for (const r of all) none[word(r)] = undefined;
+  const all: string[] = S.rustRows(), word = (r: string) => 'TPS_RUST' + r.toUpperCase(), none: Record<string, undefined> = { TPS_PROFILE: undefined, TPS_EXACT: undefined }; for (const r of all) none[word(r)] = undefined;
   const rows = (env: Record<string, string | undefined>) => marked(child(['bun', 'run', 'tools/qa/rust-check.ts', '--rows'], { ...none, ...env }).out, 'RUST-ROWS ');
   const DEF: string[] = all.filter(r => S.rustOn(r)), plus = (r: string) => all.filter(q => q === r || DEF.includes(q)).join();
-  const BOTH = ['frozen', 'shipped'] as const, on = (st: string, env: Record<string, string | undefined> = {}) => rows({ TPS_PROFILE: st, ...env });
-  const fr = on('frozen'), sh = on('shipped'); let ok = !!fr && !!sh && fr.profile === 'frozen' && sh.profile === 'shipped' && fr.on.join() === DEF.join() && sh.on.join() === DEF.join() && fr.exact === true && sh.exact === true && DEF.length === S.RUST_ON.length && DEF.length > 0; const notes: string[] = [];
-  for (const r of all) { const got = BOTH.map(st => on(st, { [word(r)]: '1' })), good = got.every(g => !!g && g.on.join() === plus(r)); if (!good) ok = false; if (!good || !DEF.includes(r)) notes.push(`${word(r)}=1: frozen [${got[0]?.on ?? '?'}] shipped [${got[1]?.on ?? '?'}]`); }
-  { const bad: string[] = []; for (const r of DEF) { const got = BOTH.map(st => on(st, { [word(r)]: '0' })); if (!got.every(g => !!g && g.on.join() === DEF.filter(q => q !== r).join())) bad.push(`${word(r)}=0: frozen [${got[0]?.on ?? '?'}] shipped [${got[1]?.on ?? '?'}]`); }
-    if (bad.length) ok = false; notes.push(bad.length ? bad.join(' · ') : `each of the ${DEF.length} default rows' own word =0 drops it and it alone, on both stands`); }
-  // (every row down by one word, a row's own word over it, and the stand as it was recorded before the rows: the engine's maths and no row)
-  { const o = all.find(r => !DEF.includes(r))!, d0 = DEF[0];
-    const down = BOTH.map(st => on(st, { TPS_RUST: '0' })), one = BOTH.map(st => on(st, { TPS_RUST: '0', [word(d0)]: '1', [word(o)]: '1' })), old = BOTH.map(st => on(st, { TPS_RUST: '0', TPS_EXACT: '0' }));
-    const good = down.every(g => !!g && g.on.length === 0 && g.exact === true) && one.every(g => !!g && g.on.join() === all.filter(q => q === d0 || q === o).join()) && old.every(g => !!g && g.on.length === 0 && g.exact === false);
-    if (!good) ok = false; notes.push(`TPS_RUST=0: frozen [${down[0]?.on ?? '?'}] shipped [${down[1]?.on ?? '?'}] · with two rows' own words: [${one[0]?.on ?? '?'}] [${one[1]?.on ?? '?'}] · TPS_EXACT=0 TPS_RUST=0, the stand as recorded before the rows: maths ${old.map(g => g?.exact === false ? 'the engine\'s' : 'NOT the engine\'s').join(', ')}, rows [${old[0]?.on ?? '?'}] [${old[1]?.on ?? '?'}]`); }
+  const fr = rows({}), sh = rows({ TPS_PROFILE: 'shipped' }); let ok = !!fr && !!sh && fr.profile === 'frozen' && sh.profile === 'shipped' && fr.on.length === 0 && sh.on.join() === DEF.join() && DEF.length === S.RUST_ON.length && DEF.length > 0; const notes: string[] = [];
+  for (const r of all) { const a = rows({ [word(r)]: '1' }), b = rows({ TPS_PROFILE: 'shipped', [word(r)]: '1' }), good = !!a && !!b && a.on.join() === r && b.on.join() === plus(r); if (!good) ok = false; notes.push(`${word(r)}=1: frozen [${a?.on ?? '?'}] shipped [${b?.on ?? '?'}]`); }
+  for (const r of DEF) { const b = rows({ TPS_PROFILE: 'shipped', [word(r)]: '0' }), good = !!b && b.on.join() === DEF.filter(q => q !== r).join(); if (!good) ok = false; notes.push(`${word(r)}=0: shipped [${b?.on ?? '?'}]`); }
   const P: any = await import(`${ROOT}/src/host/profile.ts`);
-  { const more = Object.keys(P.FROZEN_HOLDS).filter(k => k.startsWith('RUST.') || k === 'EXACT.on'); if (more.length) { ok = false; notes.push(`FROZEN_HOLDS still holds [${more}]: the stands do not differ there`); } }
+  { const miss = DEF.filter(r => P.FROZEN_HOLDS[`RUST.${r}`] !== word(r) + '=1'), more = Object.keys(P.FROZEN_HOLDS).filter(k => k.startsWith('RUST.') && !DEF.includes(k.slice(5))); if (miss.length || more.length) { ok = false; notes.push(`FROZEN_HOLDS: no row for [${miss}], a row too many for [${more}]`); } }
   // (the ADDRESS's words, profile.ts pageRows, in this process and put back: what a page opens with, and the address read again over rows a recipe wrote)
   { const was: [string, boolean][] = all.map(r => [r, !!S.RUST[r]]), now = () => all.filter(r => S.RUST[r]).join(), set = (v: boolean) => { for (const r of all) S.rustRow(r, v); };
     const other = all.find(r => !DEF.includes(r))!, d0 = DEF[0], cases: [string, string, boolean | null, string][] = [   // (address · read over rows all on / all off / not over · the rows wanted)
@@ -578,7 +533,7 @@ let wordOwn = '', wordRust = '';
     const a = sent(`playtape=1&mute&rust=0&rust${d0}=0&rust${other}=1`), b = sent('playtape=1&mute'), listed = S.rustWords().every((w: string) => RK.VISIT_FLAGS.includes(w)) && S.rustWords().length === all.length + 1;
     const good = listed && a.get('rust') === '0' && a.get('rust' + d0) === '0' && a.get('rust' + other) === '1' && a.has('roomclear') && a.has('mute') && !b.has('rust') && !b.has('rust' + other) && b.has('roomclear');
     if (!good) ok = false; notes.push(`a page sent on to a recipe's address ${good ? 'keeps the visit\'s words about the rows and drops the recipe\'s own' : `LOSES OR TAKES A WORD: the visit's [${a}] · a visit with none [${b}] · every word a visit word ${listed}`}`); }
-  verdict(ok, 'stand: both stands have the rows of RUST_ON on and the game\'s own maths, as the page; a row\'s own word raises it or drops it — and it alone — on either; TPS_RUST=0 drops them all; TPS_EXACT=0 TPS_RUST=0 is the stand as it was recorded', `frozen [${fr?.on ?? '?'}] maths ${fr?.exact} · shipped [${sh?.on ?? '?'}] maths ${sh?.exact} · ${notes.join(' · ')} · rows: ${all.join(' ')}`);
+  verdict(ok, 'stand: the frozen stand leaves every row off; the shipped stand has the rows of RUST_ON on, as the page; a row\'s own word raises it — and it alone — on either, and puts a default one off', `frozen [${fr?.on ?? '?'}] · shipped [${sh?.on ?? '?'}] · ${notes.join(' · ')} · rows: ${all.join(' ')}`);
 }
 
 // ---- server

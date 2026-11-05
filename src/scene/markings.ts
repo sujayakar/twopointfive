@@ -201,90 +201,11 @@ export const GEN = {
     return c;
   },
   /** a 5×7 glyph (GLYPHS row masks, top first) at cell (i0, j0) = its bottom-left, × scale, entry ink */
-  glyph(c: CellCanvas, g: number, i0 = 0, j0 = 0, scale = 1, ink = 1) { const rows = GLYPHS[g]; if (rows) blit57(c, rows, i0, j0, scale, ink); return c; },
-  /** STENCILLED LETTERS (the STENCIL face below: 5 × 7 a letter, a column between two): `text` from cell (i0, j0) = its bottom-left, × scale, entry ink. A
-   *  character the face does not have is a gap a letter wide. A FIGURE at scale 2 and over is DRAWN in its box (NUMERAL: strokes, not blown-up cells: a 7 a
-   *  metre tall made of 20 cm squares is a staircase). What does not fit the canvas is cut (stencilWidth says how wide a text is) */
-  text(c: CellCanvas, text: string, i0 = 0, j0 = 0, scale = 1, ink = 1) {
-    let i = i0;
-    for (const ch of text.toUpperCase()) {
-      const pen = scale >= 2 ? NUMERAL[ch] : undefined, rows = STENCIL[ch];
-      if (pen) strokes(c, pen, i, j0, 5 * scale, 7 * scale, 0.5 + 0.75 * scale, ink); else if (rows) blit57(c, rows, i, j0, scale, ink);
-      i += 6 * scale;
-    }
+  glyph(c: CellCanvas, g: number, i0 = 0, j0 = 0, scale = 1, ink = 1) {
+    const rows = GLYPHS[g]; if (!rows) return c;
+    for (let gr = 0; gr < 7; gr++) for (let gc = 0; gc < 5; gc++) if ((rows[gr] >> (4 - gc)) & 1) c.fill(ink, i0 + gc * scale, j0 + (6 - gr) * scale, i0 + (gc + 1) * scale, j0 + (7 - gr) * scale);
     return c;
   },
-  /** WARNING STRIPES at 45°: bands `w` cells wide of entries a and b in turn, leaning to the right going up. `ph` = where the pattern starts (the canvas's own
-   *  lattice place, so two bitmaps side by side carry one run of stripes across the join) */
-  stripes(c: CellCanvas, w = 2, a = 1, b = 2, ph = 0) {
-    for (let j = 0; j < c.H; j++) for (let i = 0; i < c.W; i++) c.set(i, j, (((i - j + ph) % (2 * w)) + 2 * w) % (2 * w) < w ? a : b);
-    return c;
-  },
-  /** a painted OUTLINE `w` cells wide round the canvas (a hatch's edge, a bay on a floor), entry ink; `gap` > 0 leaves that many cells out of the middle of
-   *  each of its four sides, so only the corners are drawn. Only the outline's own cells are written: what the canvas holds inside it stays */
-  frame(c: CellCanvas, w = 1, ink = 1, gap = 0) {
-    const W = c.W, H = c.H, gu = Math.min(gap, Math.max(W - 2 * w, 0)), gv = Math.min(gap, Math.max(H - 2 * w, 0)), u0 = idiv(W - gu, 2), v0 = idiv(H - gv, 2);
-    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
-      const onU = j < w || j >= H - w, onV = i < w || i >= W - w;
-      if ((onU && !(i >= u0 && i < u0 + gu)) || (onV && !(j >= v0 && j < v0 + gv))) c.set(i, j, ink);
-    }
-    return c;
-  },
-};
-/** a 5 × 7 letter's rows (top first, bit 4 = its left column) onto the canvas at (i0, j0) = its bottom-left, × scale */
-function blit57(c: CellCanvas, rows: readonly number[], i0: number, j0: number, scale: number, ink: number) {
-  for (let gr = 0; gr < 7; gr++) for (let gc = 0; gc < 5; gc++) if ((rows[gr] >> (4 - gc)) & 1) c.fill(ink, i0 + gc * scale, j0 + (6 - gr) * scale, i0 + (gc + 1) * scale, j0 + (7 - gr) * scale);
-}
-/** strokes drawn in a w × h cell box at (i0, j0): each a run of points in the box's own 0‥1 (y up), a cell painted where its middle is within half a pen of one */
-function strokes(c: CellCanvas, runs: readonly (readonly (readonly [number, number])[])[], i0: number, j0: number, w: number, h: number, pen: number, ink: number) {
-  const r = pen / 2;
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-    const px = i + 0.5, py = j + 0.5; let hit = false;
-    for (const run of runs) { for (let k = 0; k + 1 < run.length && !hit; k++) {
-      const ax = r + run[k][0] * (w - pen), ay = r + run[k][1] * (h - pen), bx = r + run[k + 1][0] * (w - pen), by = r + run[k + 1][1] * (h - pen);   // (the pen's middle stays half a pen inside the box, so a stroke along its edge is whole)
-      const dx = bx - ax, dy = by - ay, t = Math.min(1, Math.max(0, ((px - ax) * dx + (py - ay) * dy) / Math.max(dx * dx + dy * dy, 1e-9)));
-      hit = Math.hypot(px - ax - t * dx, py - ay - t * dy) <= r;
-    } if (hit) break; }
-    if (hit) c.set(i0 + i, j0 + j, ink);
-  }
-}
-const arc = (cx: number, cy: number, rx: number, ry: number, a0: number, a1: number, n = 12): [number, number][] => Array.from({ length: n + 1 }, (_, k) => { const a = (a0 + (a1 - a0) * k / n) * Math.PI / 180; return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)] as [number, number]; });
-/** THE FIGURES AS A SIGN PAINTER DRAWS THEM: each a few strokes in a box of 0‥1 (y up), drawn at whatever size the stencil is cut (GEN.text, scale 2 and over) */
-export const NUMERAL: Readonly<Record<string, readonly (readonly (readonly [number, number])[])[]>> = {
-  0: [arc(0.5, 0.5, 0.5, 0.5, 0, 360, 20)],
-  1: [[[0.12, 0.72], [0.5, 1], [0.5, 0]], [[0.12, 0], [0.88, 0]]],
-  2: [[...arc(0.5, 0.7, 0.5, 0.3, 175, -35, 10), [0, 0], [1, 0]]],
-  3: [arc(0.48, 0.74, 0.46, 0.26, 150, -90, 10), arc(0.48, 0.26, 0.52, 0.26, 90, -150, 10)],
-  4: [[[0.74, 0], [0.74, 1], [0, 0.32], [1, 0.32]]],
-  5: [[[0.92, 1], [0.12, 1], [0.06, 0.56], ...arc(0.46, 0.32, 0.54, 0.32, 105, -150, 10)]],
-  6: [[...arc(0.56, 0.5, 0.56, 0.5, 55, 195, 10), ...arc(0.5, 0.3, 0.5, 0.3, 180, -180, 16)]],
-  7: [[[0, 1], [1, 1], [0.36, 0]]],
-  8: [arc(0.5, 0.75, 0.42, 0.25, 0, 360, 16), arc(0.5, 0.26, 0.5, 0.26, 0, 360, 16)],
-  9: [[...arc(0.5, 0.7, 0.5, 0.3, 0, 360, 16), ...arc(0.44, 0.5, 0.56, 0.5, 15, -125, 10)]],
-};
-/** cells a stencilled text is wide at a scale (its last letter's spare column left off) */
-export const stencilWidth = (text: string, scale = 1) => Math.max(text.length * 6 - 1, 0) * scale;
-const face5 = (rows: string): readonly number[] => rows.split(' ').map(r => parseInt(r.replace(/#/g, '1').replace(/\./g, '0'), 2));
-/** THE STENCIL FACE: capitals, figures, a few signs and four arrows, each 5 × 7 cells drawn by hand (rows top first, '#' = paint). What a painter sprays on a
- *  wall through a cut sheet: a bay's number, a level, the way to a stair. Plain block shapes with no bridges: at one cell a stroke a bridge is a hole, and the
- *  look's old-paint read (markings.wgsl markSoft) is what breaks them up */
-export const STENCIL: Readonly<Record<string, readonly number[]>> = {
-  A: face5('.###. #...# #...# ##### #...# #...# #...#'), B: face5('####. #...# #...# ####. #...# #...# ####.'), C: face5('.#### #.... #.... #.... #.... #.... .####'),
-  D: face5('####. #...# #...# #...# #...# #...# ####.'), E: face5('##### #.... #.... ####. #.... #.... #####'), F: face5('##### #.... #.... ####. #.... #.... #....'),
-  G: face5('.#### #.... #.... #.### #...# #...# .####'), H: face5('#...# #...# #...# ##### #...# #...# #...#'), I: face5('.###. ..#.. ..#.. ..#.. ..#.. ..#.. .###.'),
-  J: face5('..### ...#. ...#. ...#. ...#. #..#. .##..'), K: face5('#...# #..#. #.#.. ##... #.#.. #..#. #...#'), L: face5('#.... #.... #.... #.... #.... #.... #####'),
-  M: face5('#...# ##.## #.#.# #.#.# #...# #...# #...#'), N: face5('#...# ##..# #.#.# #.#.# #..## #...# #...#'), O: face5('.###. #...# #...# #...# #...# #...# .###.'),
-  P: face5('####. #...# #...# ####. #.... #.... #....'), Q: face5('.###. #...# #...# #...# #.#.# #..#. .##.#'), R: face5('####. #...# #...# ####. #.#.. #..#. #...#'),
-  S: face5('.#### #.... #.... .###. ....# ....# ####.'), T: face5('##### ..#.. ..#.. ..#.. ..#.. ..#.. ..#..'), U: face5('#...# #...# #...# #...# #...# #...# .###.'),
-  V: face5('#...# #...# #...# #...# #...# .#.#. ..#..'), W: face5('#...# #...# #...# #.#.# #.#.# ##.## #...#'), X: face5('#...# #...# .#.#. ..#.. .#.#. #...# #...#'),
-  Y: face5('#...# #...# .#.#. ..#.. ..#.. ..#.. ..#..'), Z: face5('##### ....# ...#. ..#.. .#... #.... #####'),
-  0: face5('.###. #...# #...# #...# #...# #...# .###.'), 1: face5('..#.. .##.. ..#.. ..#.. ..#.. ..#.. .###.'), 2: face5('.###. #...# ....# ...#. ..#.. .#... #####'),
-  3: face5('####. ....# ....# .###. ....# ....# ####.'), 4: face5('...#. ..##. .#.#. #..#. ##### ...#. ...#.'), 5: face5('##### #.... ####. ....# ....# #...# .###.'),
-  6: face5('.###. #.... #.... ####. #...# #...# .###.'), 7: face5('##### ....# ...#. ..#.. ..#.. ..#.. ..#..'), 8: face5('.###. #...# #...# .###. #...# #...# .###.'),
-  9: face5('.###. #...# #...# .#### ....# ....# .###.'),
-  '-': face5('..... ..... ..... ##### ..... ..... .....'), '/': face5('....# ....# ...#. ..#.. .#... #.... #....'), '.': face5('..... ..... ..... ..... ..... .##.. .##..'),
-  '→': face5('..... ..#.. ...#. ##### ...#. ..#.. .....'), '←': face5('..... ..#.. .#... ##### .#... ..#.. .....'),
-  '↑': face5('..#.. .###. #.#.# ..#.. ..#.. ..#.. ..#..'), '↓': face5('..#.. ..#.. ..#.. ..#.. #.#.# .###. ..#..'),
 };
 export const GLYPH_NAMES = ['this side up', 'fragile', 'keep dry', 'cross', 'mark'];
 /** 5×7 pictograms, row 0 = TOP, bit 4 = leftmost column */

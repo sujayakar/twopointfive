@@ -23,12 +23,11 @@ import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
-import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'glasshouse';
 export const NOTES = 'The glasshouse: a seed station whose front and inside partitions are glass, seven men in four rooms, a blank back wall with the back door into the store. The forecourt is floodlit, the glazed rooms dark. Two ways in, both from the dark and out of sight: the side of the building round the corner from the glass, and the back lot. Regenerate: bun run tools/levels/export.ts glasshouse';
@@ -130,7 +129,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), G = gwotKit(gwotOfOffice(K)), P = GWOT_PALETTE, H = WORLD.ceilingY;
   const { grp, add, slab, doorFrame, lights, switchables } = K;
-  const INNER: Vec3 = OFFICE_PALETTE.glass;                                                    // clear float glass (the office kit's partition tint)
+  const INNER: Vec3 = [0.8, 0.87, 0.83];                                                      // clear float glass (the office kit's partition tint)
   /** the glazed front: one pane per bay, 0.3 m off the ground to 2.4 */
   const bank = (a: number, b: number): GwotOpening => ({ a, b, y0: 0.3, y1: 2.4, mullions: 3, glass: 'bay' });
   /** an inside partition's glass: 0.5 m off the floor to 2.4 */
@@ -208,11 +207,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     pipe([30.135, Y, 13.0], [R, R, 5.15]);                                                    // the end wall
     pipe([20.775, Y, 7.865], [9.375, R, R]);                                                  // the back
     pipe([11.4, 2.12, 7.865], [R, 0.5, R]);                                                   // down to the meter
-    add({ c: [11.4, 1.35, 7.83], h: [0.18, 0.27, 0.05], albedo: PANEL_GREY, name: 'meter_box' }); }
+    add({ c: [11.4, 1.35, 7.83], h: [0.18, 0.27, 0.05], albedo: [0.42, 0.44, 0.45], name: 'meter_box' }); }
 
   // ---- the breaker (the store's back wall, inside) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [11.4, 1.35, 8.16], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [11.4, 1.35, 8.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [11.22, 1.62, 8.21], h: [0.015, 0.015, 0.01], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [21, H - 0.06, 15.5], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

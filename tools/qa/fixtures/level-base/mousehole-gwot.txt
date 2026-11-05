@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-f76f29401917c666b8cdaaced6aa23e08198d27c
+# the clinic in the look: its own colours given their palette rows (floor, car, tank, kerbs), white things enamel or cloth, the ground's wear laid
+ac54494b6f9f6f45377e03f8164b15b0f41edba8

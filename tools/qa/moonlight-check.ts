@@ -18,7 +18,6 @@
 // tools/qa/modelerr.ts's row `moonlit`, against the kept report.)
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
-import { noWalls } from './standwall.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const S: any = await import(`${ROOT}/src/game/sense.ts`), NV: any = await import(`${ROOT}/src/game/nvg.ts`), GD: any = await import(`${ROOT}/src/game/guards.ts`), HR: any = await import(`${ROOT}/src/game/hours.ts`), ME: any = await import(`${ROOT}/src/host/modelerr.ts`), RB: any = await import(`${ROOT}/src/game/rollback.ts`);
 type Vec3 = [number, number, number];
@@ -40,9 +39,8 @@ if (!moon) { log('=== moonlight-check: the level has no moon — FAIL ==='); pro
 const to: Vec3 = [-moon.dir[0], -moon.dir[1], -moon.dir[2]], I = (0.2126 * moon.color[0] + 0.7152 * moon.color[1] + 0.0722 * moon.color[2]) * moon.intensity, direct = I * Math.max(Math.abs(to[0]), Math.abs(to[1]), Math.abs(to[2]));
 const real = g.col.segmentBlocked.bind(g.col);
 const est = (P: Vec3, m?: boolean) => GD.lightEstimateAt(g, P, undefined, false, null, m);
-/** what the switch adds at P (the red path: asked of a level with no static standing, wall, roof or floor — standwall.ts noWalls: every box hidden, as
- *  the Rust module's copy reads it too; a question asked at once, no game is played under it) */
-const adds = (P: Vec3) => { const back = BREAK ? noWalls(g) : null; try { return est(P, true) - est(P, false); } finally { back?.(); } };
+/** what the switch adds at P (the red path: asked with nothing in anybody's way) */
+const adds = (P: Vec3) => { if (BREAK) g.col.segmentBlocked = () => false; try { return est(P, true) - est(P, false); } finally { g.col.segmentBlocked = real; } };
 const sees = (P: Vec3) => !real(P, [P[0] + to[0] * 40, P[1] + to[1] * 40, P[2] + to[2] * 40]), open = (P: Vec3) => !g.weather.underRoof(P[0], P[2]);
 
 // ---- switch

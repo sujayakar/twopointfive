@@ -157,7 +157,7 @@ export class BreachDrill {
     const yaw = Math.atan2(axis[0], axis[2]); const up: Vec3 = Math.abs(axis[1]) > 0.95 ? [1, 0, 0] : [0, 1, 0];
     const x = v3.normalize(v3.cross(up, axis)), y = v3.cross(axis, x); const rot = quat.fromBasis(x, y, axis);
     const owner = c.id & 0xff;
-    g.fx.push({ box: makeBox({ c: centre, h: [0.032, 0.032, 0.07], yaw, rot, albedo: [0.07, 0.075, 0.08], stuff: 'metal', flags: BoxFlag.Dynamic, owner }), ttl: 1e-3 });   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
+    g.fx.push({ box: makeBox({ c: centre, h: [0.032, 0.032, 0.07], yaw, rot, albedo: [0.07, 0.075, 0.08], flags: BoxFlag.Dynamic, owner }), ttl: 1e-3 });
     g.fx.push({ box: makeBox({ c: v3.mad(centre, axis, 0.045), h: [0.034, 0.034, 0.012], yaw, rot, albedo: [0.7, 0.7, 0.66], flags: BoxFlag.Dynamic | BoxFlag.NoShadow, owner }), ttl: 1e-3 });
   }
 

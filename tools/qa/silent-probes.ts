@@ -170,15 +170,13 @@ export const silentHud = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the walk
-/** SILENTWALK_BREAK=1: the pace line asks a pace 0.6 m/s under the rule's own number — the silent men's legs are then over it, and it must FAIL */
-const WALK_BREAK = process.env.SILENTWALK_BREAK === '1';
-interface Walk { top: number; lit: number; frames: number; steps: number[]; gog: number; arrived: boolean; /** the most the game would give a teammate's legs on this walk, whatever was asked (guards.ts teamPace: the team's cap, a silent squad's under it) */ cap: number }
+interface Walk { top: number; lit: number; frames: number; steps: number[]; gog: number; arrived: boolean }
 async function walk(silent: boolean, o: RigOpts = {}): Promise<{ R: any; w: Walk }> {
   const R = await rig(7, { empty: true, nvg: false, ...o }); const { game, O, W } = R; const team: any[] = R.team;
   if (silent) R.give('silent', AISLE);
   R.give('move', AISLE_FAR); R.until(() => team.every(x => O.of(x)?.arrived), 25); R.step(30);
-  W.audioLog = []; const w: Walk = { top: 0, lit: 0, frames: 0, steps: [], gog: 0, arrived: false, cap: 0 };
-  R.post = () => { w.frames++; for (const x of team) { w.top = Math.max(w.top, x.speed); w.cap = Math.max(w.cap, GDM.teamPace(game, x, 99)); if (x.flashlight?.enabled) w.lit++; if (NVM.nvgDown(game, x)) w.gog++; } };
+  W.audioLog = []; const w: Walk = { top: 0, lit: 0, frames: 0, steps: [], gog: 0, arrived: false };
+  R.post = () => { w.frames++; for (const x of team) { w.top = Math.max(w.top, x.speed); if (x.flashlight?.enabled) w.lit++; if (NVM.nvgDown(game, x)) w.gog++; } };
   R.give('move', [7.5, 0, 17.6]); w.arrived = R.until(() => team.every(x => O.of(x)?.arrived), 30); R.post = null;
   w.steps = (W.audioLog as any[]).filter(c => c.name === 'footstep' && !c.opts?.isPlayer).map(c => c.gain / (FLOOR as any)[c.opts.mat].loud); W.audioLog = null;
   return { R, w };
@@ -187,12 +185,8 @@ export const silentWalk = guarded(async () => {
   const { verdict, done } = family('silent-walk: the same walk, loud and silent — the legs, the lights, the feet');
   const { w: L } = await walk(false), { R, w: S } = await walk(true); const { game } = R; const man = R.team[0];
   const mean = (a: number[]) => a.reduce((s, x) => s + x, 0) / Math.max(1, a.length), maxOf = (a: number[]) => a.reduce((m, x) => Math.max(m, x), 0);
-  // (THE ORDER'S PACE IS THE GAME'S OWN: what guards.ts teamPace gives a teammate's legs on the walk. Where that is over the silent pace the two walks differ and
-  //  the loud one must show it; where the squad's own walk is already under it — the page's squad walks at the player's pace — the silent pace has nothing to
-  //  take, and the line holds the legs to the lower of the two.)
-  const pace = SILENT.pace - (WALK_BREAK ? 0.6 : 0), faster = L.cap > SILENT.pace + 0.2;
-  verdict(L.arrived && S.arrived && L.top <= L.cap + 0.02 && (!faster || L.top > SILENT.pace + 0.2) && S.top <= Math.min(pace, L.cap) + 0.02 && S.cap <= SILENT.pace + 1e-6, 'loud they move at the order\'s pace; silent no man\'s legs go above SILENT.pace — and they still get there',
-    `top speed loud ${f2(L.top)} m/s (the order's pace ${f2(L.cap)}) · silent ${f2(S.top)} (the pace asked ${f2(pace)}, the game's own cap then ${f2(S.cap)}) · ${faster ? 'the loud walk is the faster' : 'the squad\'s own walk is under the silent pace: nothing for it to take'} · arrived ${L.arrived} / ${S.arrived} in ${L.frames} / ${S.frames} frames`);
+  verdict(L.arrived && S.arrived && L.top > SILENT.pace + 0.2 && S.top <= SILENT.pace + 0.02, 'loud they move at the order\'s pace; silent no man\'s legs go above SILENT.pace — and they still get there',
+    `top speed loud ${f2(L.top)} m/s · silent ${f2(S.top)} (cap ${SILENT.pace}) · arrived ${L.arrived} / ${S.arrived} in ${L.frames} / ${S.frames} frames`);
   verdict(L.lit > 0 && S.lit === 0, 'loud their weapon lights burn on the way (goggles switched off for this walk); silent not one light for one frame', `man-frames lit: loud ${L.lit} · silent ${S.lit}`);
   verdict(L.steps.length > 8 && S.steps.length > 8 && maxOf(S.steps) <= SILENT.step + 1e-6 && mean(L.steps) > SILENT.step + 0.1, 'every silent footfall is at SILENT.step (floor for floor), under the loud walk\'s',
     `footfalls loud ${L.steps.length}, base level mean ${f2(mean(L.steps))} · silent ${S.steps.length}, max ${f2(maxOf(S.steps))} (SILENT.step ${SILENT.step})`);
