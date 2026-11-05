@@ -1,13 +1,13 @@
 // `bun run tools/qa/hitseed-check.ts` (probes.ts hitseed): A HIT'S SEED IS THE BOX'S OWN, NEVER ITS PLACE IN THE LEVEL'S LIST (src/game/glass.ts boxSeed, hitSeed).
 //
-// The fault it holds off: a pane's break, a round's turn through glass and its turn through a thin wall were seeded by the box's index in the level. One box
+// The fault it holds off: a pane's break, a round's turn through glass, its turn through a thin wall and a window bar's break were seeded by the box's index in the level. One box
 // written into a level's file ahead of a pane moved every index after it, so the same shot rolled another star, another break and another turn, and every run
 // that met glass or a thin wall read another digest with no change of play.
 //
 // THE STAGE: the office stood up twice from its file. Game A is the file. Game B is the file with ONE INERT BOX written first (a speck inside the ground slab
 // that no ray, eye or body meets), so every box of B stands one place later in the list than its twin in A. Every line asks the two games the same thing and
 // wants the same answer to the last bit. The check raises what it needs itself (rounds through glass, the fracture model, rounds through thin walls), so it
-// says the same on the frozen stand and under TPS_PROFILE=shipped.
+// says the same on the frozen stand and under TPS_PROFILE=shipped. The last line stands the barracks up the same two ways for a window's bar (the office has none).
 //
 // HITSEED_BREAK=1: B's glass and thin things stand a millimetre higher than A's, so each is another box to the seed. Every line must then FAIL, and by the
 // seed alone: every blow is given from the struck box's own middle and every answer is read from it (to the thousandth of a millimetre), so a box that
@@ -26,27 +26,29 @@ export async function hitseedCheck(): Promise<boolean> {
   const { GLASSPEN, roundEnergy } = await import(`${ROOT}/src/game/glasspen.ts`);
   const { WALLPEN, thinPath, thinThing } = await import(`${ROOT}/src/game/wallpen.ts`);
   const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
+  const { WINBARS, barsStanding, barMeet, barsSettle } = await import(`${ROOT}/src/game/winbars.ts`);
   const DT = 1 / 60; const f2 = (x: number) => x.toFixed(2);
   let failed = false; const line = (ok: boolean, s: string) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
   const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   /** a record as one comparable line: every number to the thousandth of a millimetre (a seed is a whole number and stays what it is) */
   const said = (x: unknown): string => JSON.stringify(x, (_k, v) => typeof v === 'number' && !Number.isInteger(v) ? Math.round(v * 1e6) / 1e6 : v);
   const from = (b: any, p: ArrayLike<number>): Vec3 => [p[0] - b.c[0], p[1] - b.c[1], p[2] - b.c[2]];
-  const was = { fx: GLASSFX.on, pen: GLASSPEN.on, wall: WALLPEN.on }, random = Math.random;
+  const was = { fx: GLASSFX.on, pen: GLASSPEN.on, wall: WALLPEN.on, bars: WINBARS.on }, random = Math.random;
   /** the seed as it was until this check: the box's place in the list, then the point */
   const seedByPlace = (bi: number, p: Vec3) => { let h = Math.imul(bi + 1, 0x9E3779B1) >>> 0; for (const x of p) { h = Math.imul(h ^ (Math.round(x * 1000) | 0), 0x85EBCA77) >>> 0; h = (h ^ (h >>> 13)) >>> 0; } return Math.imul(h, 0xC2B2AE3D) >>> 0; };
 
   // ------------------------------------------------------------ the two files
-  const fileA = JSON.parse(readFileSync(`${ROOT}/levels/office.json`, 'utf8'));
-  const fileB = JSON.parse(JSON.stringify(fileA));
-  { const slab = fileB.boxes[0];   // (the ground: the speck stands in the middle of it, hidden from every ray as a painted line is)
-    fileB.boxes.unshift({ id: 'box_inert_first', floor: slab.floor, group: slab.group, c: [slab.c[0], slab.c[1], slab.c[2]], h: [0.01, Math.min(0.01, slab.h[1] / 2), 0.01], material: slab.material, flags: ['NoShadow'] });
-    if (BREAK) for (const b of fileB.boxes) if (b.flags?.includes('Glass') || (Math.min(b.h[0], b.h[2]) <= 0.12 && b.h[1] >= 0.5 && !b.flags?.includes('NoShadow'))) b.c = [b.c[0], b.c[1] + 0.001, b.c[2]]; }
+  /** a level's file, and the same file with the inert box written first (and, under the break word, its glass and thin things a millimetre up) */
+  const twoFiles = (name: string) => { const A = JSON.parse(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8')), B = JSON.parse(JSON.stringify(A)), slab = B.boxes[0];   // (the ground: the speck stands in the middle of it, hidden from every ray as a painted line is)
+    B.boxes.unshift({ id: 'box_inert_first', floor: slab.floor, group: slab.group, c: [slab.c[0], slab.c[1], slab.c[2]], h: [0.01, Math.min(0.01, slab.h[1] / 2), 0.01], material: slab.material, flags: ['NoShadow'] });
+    if (BREAK) for (const b of B.boxes) if (b.flags?.includes('Glass') || (Math.min(b.h[0], b.h[2]) <= 0.12 && b.h[1] >= 0.5 && !b.flags?.includes('NoShadow'))) b.c = [b.c[0], b.c[1] + 0.001, b.c[2]];
+    return [A, B]; };
+  const [fileA, fileB] = twoFiles('office');
   /** a fresh game on one of the two files, the same die, the parts the lines ask raised, nobody acting */
   const world = async (file: unknown, opts: { chaos?: number } = {}) => {
     Math.random = mulberry32(4242);
     const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(JSON.stringify(file))) })); const g = W.game;
-    GLASSFX.on = true; GLASSPEN.on = true; WALLPEN.on = true;   // AFTER standUp: the stand-up writes its own
+    GLASSFX.on = true; GLASSPEN.on = true; WALLPEN.on = true; WINBARS.on = true;   // AFTER standUp: the stand-up writes its own
     g.tune.glassBreak = true; g.tune.chaos = opts.chaos ?? 0.5; g.godMode = true; g.playerInvisible = true; g.aiEnabled = false;
     for (let i = 0; i < 3; i++) W.step(DT);
     // every fragment the game's glass lets go, as it goes (a bystander on the fracture model's one way out): the frame, the pane by where it stands on the
@@ -127,8 +129,19 @@ export async function hitseedCheck(): Promise<boolean> {
       const thin = a.col.boxes.filter((_: unknown, i: number) => thinThing(a, i)).length;
       line(flights > 200 && panes >= 20 && walls >= 100 && leaves >= 10 && turned > (panes + walls + leaves) / 2 && parted === 0,
         `the turn: 6000 rifle flights over the floor, ${flights} of them through something (${panes} sheets of glass, ${walls} thin walls and things of the office's ${thin}, ${leaves} door leaves; ${turned} crossings turned the round): ${parted} flights left the two games by another way${eg ? ` (${turnOnly} of them went into the first thing they met at the same spot with the same energy left: the turn alone parts them) — e.g. ${eg}` : ''}`); }
+
+    // ------------------------------------------------------------ 6. a window's bar (the barracks: bars and no glass): one round, and the pieces it leaves as
+    { const [barA, barB] = twoFiles('barracks'); const WA4 = await world(barA, { chaos: 0 }), WB4 = await world(barB, { chaos: 0 }); const a = WA4.game, b = WB4.game;
+      const bars: number[] = barsStanding(a), twins = bars.map(i => twinOf(b, a.level.boxes[i])); let broke = 0;
+      const pieces = (g: any, i: number) => { const X = g.col.boxes[i], n0 = g.destr.debris.list.length, dir: Vec3 = X.h[0] > X.h[2] ? [Math.cos(X.yaw), 0, -Math.sin(X.yaw)] : [Math.sin(X.yaw), 0, Math.cos(X.yaw)];
+        const at: Vec3 = [X.c[0], X.c[1] + 0.21 * X.h[1], X.c[2]]; broke += barsSettle(g, [barMeet(g, i, 1, at, dir)], 1, 0, false);
+        return said(g.destr.debris.list.slice(n0).map((c: any) => [from(X, c.box.c), c.box.h, c.v, c.w])); };
+      let same = 0, tried = 0, eg = '', sets = new Set<string>();
+      for (let k = 0; k < Math.min(6, bars.length); k++) { if (twins[k] < 0) continue; tried++; const pa = pieces(a, bars[k]), pb = pieces(b, twins[k]); sets.add(pa); if (pa === pb && pa !== '[]') same++; else if (!eg) eg = `bar ${bars[k]} / ${twins[k]}: ${pa.slice(0, 200)} against ${pb.slice(0, 200)}`; }
+      line(bars.length >= 6 && twins.every(t => t >= 0) && tried === 6 && broke === 12 && same === 6 && sets.size > 1,
+        `a window's bar: the barracks stands ${bars.length} bars, each found again in the twin game; one round into each of six broke ${broke} bars in the two games and ${same} of 6 left as the same pieces (their lengths, where each starts from, how fast and how it spins; ${sets.size} different sets of pieces among the six)${eg ? ` — ${eg}` : ''}`); }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
-  finally { GLASSFX.on = was.fx; GLASSPEN.on = was.pen; WALLPEN.on = was.wall; Math.random = random; }
+  finally { GLASSFX.on = was.fx; GLASSPEN.on = was.pen; WALLPEN.on = was.wall; WINBARS.on = was.bars; Math.random = random; }
   console.log(failed ? '=== hitseed-check: FAIL ===' : '=== hitseed-check: ALL PASS ===');
   return !failed;
 }
