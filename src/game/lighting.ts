@@ -195,7 +195,7 @@ export function setDaylight(g: Game, on: boolean) {
     const bo = g.blackout; const blackout = bo.active && bo.permanent ? { active: true, permanent: true, until: bo.until, since: bo.since } : null;   // (recorded BEFORE it is lifted, and only the PERMANENT one — the breaker shot to scrap: nothing the show does can mend that, so Off puts it back; a timed trip lifted here is simply over, as if the man sent to the panel had got there — tools/qa breach-daylight holds that half)
     if (bo.active) { g.endBlackout(); g.lightHome.in(LIGHT_IN.mains, null, 0, bo.until, bo.since, -100); for (const t of g.targets) g.lightHome.in(LIGHT_IN.blind, t, -1); }   // (an INSTANT restore for the show: no staggered restrike, no beacons sweeping the 'every fluorescent on' establishing shot — review 08-10 #8)
     const st: DayState = { targets: new Map(), lightsOff: [], sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, sun: L.add(lightFromDef(D.sun)), blackout, hour, hourSunK, hourSunGiven };
-    g.buildDirReach(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
+    g.engine.reach?.dir(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
     for (const t of g.targets) st.targets.set(t, t.on);
     for (const grp of D.groupsOn) setGroup(g, grp, true);
     for (const grp of D.groupsOff) setGroup(g, grp, false);

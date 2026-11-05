@@ -570,8 +570,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dust / screen / hearing / reset / identity / determinism / bounds; identity also under `weapons`).
 - **The blast frame's picture-only work is paced** (`destructionSwitch.ts BLAST_PACE {on, reachHold 1, dripSamples 16, dripHold 8}`, ON on every stand; `?blastpace=old` /
   `TPS_BLASTPACE=old` in front of a headless tool = all of it on the blast frame, as it was; play is the same either way by run digest, so the switch is on knobs-check's
-  `UNREGISTERED` list as picture-only): (1) `game.ts reachChanged(rect)` only NOTES the rect; `reachTick` reads the wall raster one frame later (`reachRead`) and decides masks from
-  the frame after — masks land exactly 2 frames later (`reachPending` counts the notes too; `REACH_PACE.whole` and a null rect = a reset still read at once); (2) `rainFx.ts` re-finds
+  `UNREGISTERED` list as picture-only): (1) the lights' reach masks (SINCE 11-05 THE PICTURE'S KEEPER'S, `render/reachKeep.ts`, stepped on drawn frames and not in the tick: `docs/agents/render.md`; until then `game.ts reachChanged` / `reachTick`): `changed(rect, hold)` only NOTES the rect; a step reads the wall raster one frame later and decides masks from
+  the frame after — masks land exactly 2 frames later (`pending` counts the notes too; under `REACH_PACE.whole` the read is the next step's; a null rect = the authored walls again: the boot's masks at once); (2) `rainFx.ts` re-finds
   the drip lines `dripSamples` edge samples a frame (`dripWalk` over a `DripJob` of plain numbers, in the host's book since 10-23: `docs/agents/weather.md`; an indoor sample costs 1/16) once the statics' count and `geomSerial` have stood still `dripHold` frames,
   the old lines dripping meanwhile (`rainDripPending`; `rainDripPoints` finishes a walk whole); (3) `destr.furn.warm()` makes the furniture index when a wall charge is SET
   (wallcharge.ts, both set sites) — other blast sources still make it on their first blast. Exact and unswitched: `roomfight.ts roomAt`'s flood allocates nothing per cell.
