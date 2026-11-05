@@ -7,7 +7,7 @@
 //   bun run tools/qa/probes.ts lookworkers     (also under `render`)
 // No GPU and no browser: tools/qa/lookworkers-page.cjs does the bytes in Chromium; what the page's boot gains is in docs/agents/render.md.
 import { LOOK_WORKERS, LookPool, lookWorkerText, lookWorkersGaveUp, lookWorkersAgain } from '../../src/render/lookWorkers';
-import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, lookLayer } from '../../src/render/lookTex';
+import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, lookLayer, lookMip } from '../../src/render/lookTex';
 import { GBuffer, lookNeed, lookForget } from '../../src/render/gbuffer';
 import { EXACT } from '../../src/math/exact';
 import { sameMaps as same } from './lookworkers-same';
@@ -32,7 +32,8 @@ export async function lookWorkersCheck(): Promise<boolean> {
     // ---- every layer, made on workers and made here, on the engine's maths and on the game's own (math/exact.ts: the page's)
     LOOK_WORKERS.on = true;
     { const N = LOOK_NAMES.length, wrong = text.replace('lookLayer(d.layer, d.n, d.even)', `lookLayer((d.layer + 1) % ${N}, d.n, d.even)`);
-      const layers = LOOK_NAMES.map((_, l) => l), times: string[] = [], bad: string[] = []; let workers = 0; const heres: ReturnType<typeof lookLayer>[][] = [];
+      const layers = LOOK_NAMES.map((_, l) => l), times: string[] = [], bad: string[] = []; let workers = 0, smaller = 0; const sizesOf = Math.log2(LOOK_N) + 1;
+      const sameBytes = (x: Uint8Array, y: Uint8Array | undefined) => { if (!y || x.length !== y.length) return false; for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false; return true; }; const heres: ReturnType<typeof lookLayer>[][] = [];
       for (const exact of [false, true]) {
         EXACT.on = exact;
         const pool = await LookPool.open(N, BREAK ? wrong : text);
@@ -41,12 +42,15 @@ export async function lookWorkersCheck(): Promise<boolean> {
         const made = await Promise.all([...layers.map(l => pool.make(l, LOOK_N, true)), ...[0, 8, 15].map(l => pool.make(l, LOOK_N, false))].map(p => p.then(m => m, (e: unknown) => String(e))));
         const tW = performance.now() - t0; workers = pool.size; pool.close();
         const t1 = performance.now(), here = layers.map(l => lookLayer(l, LOOK_N, true)); heres.push(here);
-        layers.forEach(l => { const m = made[l]; if (typeof m === 'string') bad.push(`${LOOK_NAMES[l]}: ${m}`); else if (!same(m, here[l])) bad.push(`${LOOK_NAMES[l]}${exact ? ' (the game\'s maths)' : ''}`); });
+        layers.forEach(l => { const m = made[l]; if (typeof m === 'string') bad.push(`${LOOK_NAMES[l]}: ${m}`); else if (!same(m, here[l])) bad.push(`${LOOK_NAMES[l]}${exact ? ' (the game\'s maths)' : ''}`);
+          else { let a = here[l].a, b = here[l].b, ok = m.sizes.a.length === sizesOf && m.sizes.b.length === sizesOf && m.sizes.a[0] === m.a && m.sizes.b[0] === m.b;   // (its smaller sizes: the page's own lookMip of each, down to one texel)
+            for (let n = LOOK_N, k = 1; ok && n > 1; n >>= 1, k++) { a = lookMip(a, n, false); b = lookMip(b, n, true); ok = sameBytes(a, m.sizes.a[k]) && sameBytes(b, m.sizes.b[k]); smaller += 2; }
+            if (!ok) bad.push(`${LOOK_NAMES[l]}'s smaller sizes${exact ? ' (the game\'s maths)' : ''}`); } });
         [0, 8, 15].forEach((l, k) => { const m = made[N + k]; if (typeof m === 'string' || !same(m, lookLayer(l, LOOK_N, false))) bad.push(`${LOOK_NAMES[l]} (not evened)`); });
         times.push(`${exact ? 'the game\'s own maths' : 'the engine\'s maths'}: ${(tW / 1000).toFixed(1)} s on the workers, ${((performance.now() - t1) / 1000).toFixed(1)} s here`);
       }
       const differ = heres.length === 2 ? layers.filter(l => !same(heres[0][l], heres[1][l])).length : -1;   // (why a worker is told which maths)
-      check(bad.length === 0, `bytes — all ${N} layers, and three as their materials wrote them, are the same maps made on ${workers} workers as made here (both arrays, the tone and the hollow), on either maths${bad.length ? `: NOT ${bad.slice(0, 6).join(', ')}${bad.length > 6 ? ` and ${bad.length - 6} more` : ''}` : ''} · ${times.join(' · ')} · ${differ} of the layers come out differently on the two maths, so a worker is told which${BREAK && wrong === text ? ' · THE BREAK DID NOT APPLY (the text no longer holds the call it swaps)' : ''}`);
+      check(bad.length === 0, `bytes — all ${N} layers, and three as their materials wrote them, are the same maps made on ${workers} workers as made here (both arrays, the tone and the hollow, and the ${smaller} smaller maps a worker hands back with them against the page's own), on either maths${bad.length ? `: NOT ${bad.slice(0, 6).join(', ')}${bad.length > 6 ? ` and ${bad.length - 6} more` : ''}` : ''} · ${times.join(' · ')} · ${differ} of the layers come out differently on the two maths, so a worker is told which${BREAK && wrong === text ? ' · THE BREAK DID NOT APPLY (the text no longer holds the call it swaps)' : ''}`);
     }
     EXACT.on = maths0;
 

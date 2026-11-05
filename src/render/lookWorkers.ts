@@ -29,8 +29,12 @@ export const lookWorkersGaveUp = (): string => remembered();
 export function lookWorkersAgain(): void { gaveUp = ''; asked = false; try { tabStore()?.removeItem(GAVE_UP_KEY); } catch { /* no storage here */ } }
 function giveUp(why: string): void { if (remembered()) return; gaveUp = why; try { tabStore()?.setItem(GAVE_UP_KEY, why); } catch { /* no storage here */ } console.warn(`look maps: made on the page's own thread from here on (${why})`); }
 
-interface Job { id: number; layer: number; n: number; even: boolean; exact: boolean; res: (m: LookMaps) => void; rej: (why: Error) => void; timer?: ReturnType<typeof setTimeout> }
-interface Reply { id: number; a?: Uint8Array; b?: Uint8Array; tone?: number; hollow?: number; error?: string }
+interface Job { id: number; layer: number; n: number; even: boolean; exact: boolean; res: (m: WorkerMaps) => void; rej: (why: Error) => void; timer?: ReturnType<typeof setTimeout> }
+interface Reply { id: number; a?: Uint8Array[]; b?: Uint8Array[]; tone?: number; hollow?: number; error?: string }
+/** a layer as a worker hands it back: its maps, and each map's smaller sizes after it (`sizes.a[0]` is `a`; then n/2, n/4 … 1, lookTex.ts lookMip of the one before) */
+export type WorkerMaps = LookMaps & { sizes: { a: Uint8Array[]; b: Uint8Array[] } };
+/** is this a map of n by n and every size under it, down to one texel */
+function whole(l: unknown, n: number): l is Uint8Array[] { if (!Array.isArray(l) || l.length === 0) return false; let k = 0; for (let s = n; s >= 1; s >>= 1, k++) { const x: unknown = l[k]; if (!(x instanceof Uint8Array) || x.length !== s * s * 4) return false; } return k === l.length; }
 
 /** a few workers for one batch of layers: await open(), make() each layer, close(). A job's promise is refused where its worker failed; the caller makes that layer itself */
 export class LookPool {
@@ -58,8 +62,8 @@ export class LookPool {
     return pool;
   }
   /** the layer's maps, made on a worker (lookTex.ts lookLayer's own arguments), on the maths this thread computes on now (math/exact.ts) */
-  make(layer: number, n: number, even: boolean): Promise<LookMaps> {
-    return new Promise<LookMaps>((res, rej) => { if (!this.all.length) { rej(new Error('no look map worker is left')); return; } this.queue.push({ id: this.ids++, layer, n, even, exact: EXACT.on, res, rej }); this.pump(); });
+  make(layer: number, n: number, even: boolean): Promise<WorkerMaps> {
+    return new Promise<WorkerMaps>((res, rej) => { if (!this.all.length) { rej(new Error('no look map worker is left')); return; } this.queue.push({ id: this.ids++, layer, n, even, exact: EXACT.on, res, rej }); this.pump(); });
   }
   /** stop every worker; a job still out is refused */
   close(): void {
@@ -80,8 +84,8 @@ export class LookPool {
     const j = this.at.get(w); if (!j || j.id !== r.id) return;
     clearTimeout(j.timer); this.at.delete(w); this.idle.push(w);
     // (a layer the GENERATOR threw on is that layer's own trouble, refused alone; the worker is sound)
-    if (r.error !== undefined || !(r.a instanceof Uint8Array) || !(r.b instanceof Uint8Array) || r.a.length !== j.n * j.n * 4 || r.b.length !== j.n * j.n * 4 || typeof r.tone !== 'number' || typeof r.hollow !== 'number') j.rej(new Error(`a look map worker did not make layer ${j.layer}: ${r.error ?? 'its answer is not two maps'}`));
-    else j.res({ a: r.a, b: r.b, tone: r.tone, hollow: r.hollow });
+    if (r.error !== undefined || !whole(r.a, j.n) || !whole(r.b, j.n) || typeof r.tone !== 'number' || typeof r.hollow !== 'number') j.rej(new Error(`a look map worker did not make layer ${j.layer}: ${r.error ?? 'its answer is not two maps and their smaller sizes'}`));
+    else j.res({ a: r.a[0], b: r.b[0], tone: r.tone, hollow: r.hollow, sizes: { a: r.a, b: r.b } });
     this.pump();
   }
   /** a worker that failed is not used again, here or in a later batch: its job is refused, and with no worker left so is every job waiting */

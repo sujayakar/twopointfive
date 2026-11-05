@@ -234,13 +234,13 @@ export class GBuffer {
     try { for (let k = 0; k < make.length; k++) {
       const l = make[k];
       await nextTask();
-      let got: Awaited<ReturnType<typeof lookLayerSliced>> | null = null;
-      if (asked) { try { got = await asked[k]; this.lookBy.workers++; } catch { got = null; } asked[k] = null; }   // (… and let go of: a batch's maps are not all held to its end)
+      let got: Awaited<ReturnType<typeof lookLayerSliced>> | null = null, sizes: { a: Uint8Array[]; b: Uint8Array[] } | null = null;   // (`sizes`: a worker's layer comes with every smaller size made)
+      if (asked) { try { const w = await asked[k]!; got = w; sizes = w.sizes; this.lookBy.workers++; } catch { got = null; } asked[k] = null; }   // (… and let go of: a batch's maps are not all held to its end)
       if (!got) { got = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask); this.lookBy.here++; }
       const m = got, slot = this.lookSlots; let lv = [m.a, m.b];
       for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) {
         for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, slot] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
-        if (n > 1) lv = [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
+        if (n > 1) lv = sizes ? [sizes.a[mip + 1], sizes.b[mip + 1]] : [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
       }
       if (l === LOOK_NAMES.indexOf('cloth')) this.lookMen = [m.tone, m.hollow];   // (the men's cloth was tuned against this layer as it fell: look.wgsl lookMan takes the evening back out)
       this.lookSlots++; this.lookMade.push(LOOK_NAMES[l]);

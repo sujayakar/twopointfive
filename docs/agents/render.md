@@ -1875,6 +1875,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
     `twopointsix.lookWorkersGaveUp`), because a mission is a page load and a place whose workers start and never answer would wait the 30 s at every one; a layer the
     generator itself throws on is refused alone. A macro that cannot bundle hands over an empty text (no workers), never a failed build.
     `__engine.gbuffer.lookBy` counts the layers made each way.
+    THE SMALLER SIZES COME FROM THE WORKER TOO (11-05, a step after the first): a worker hands back each map with its nine smaller sizes made (the
+    same `lookMip`, each from the size above, down to one texel), so a layer from a worker costs the page's thread its twenty texture writes and nothing
+    else. WHY: a batch asked for IN PLAY (`needLook(LOOK_SLICE.play)`, when a blast shows a stuff no box had been) goes through the same pool, and the
+    page making the smaller sizes itself was 5 to 12 ms of one frame a layer. A layer made on the page's own thread makes its sizes there, as before.
+    `lookworkers-check` holds every smaller size a worker hands back to the page's own, byte for byte (30 layers, both maths). NOT TIMED on a GPU: on
+    the office no blast makes a map in play (nine wall charges profiled on the cloud box: none), so there was nothing there to time it on.
     **Switch**: `LOOK_WORKERS.on`: ON in the page (`?lookworkers=0` = every layer on the page's own thread, as it was), OFF in the module, so the headless
     harness makes its maps as it did on either stand. Not a rule of the game: NO REGISTRY ROW, no journal key, no `FROZEN_HOLDS` row (the maps are the same
     bytes either way, and nothing of the simulation reads them). So `knobs-check` does not hold it (it reads `src/game`'s tables) and a recording cannot
@@ -1949,7 +1955,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   squared distance and only the two nearest are rooted. Compared once, layer by layer: all 30 byte for byte the same at 512, 128 and 64 texels, evened and
   not. Under bun on one thread the thirty took 8.9 s and take 6.2 (tarmac 609 to 362 ms, grass 695 to 444). The check is `lookcells` (family render;
   `LOOKCELLS_BREAK=1` fails two of its three lines): cells2 against the plain way written out again, 1.7 million answers to the bit, and a lattice that is
-  not whole cells is refused aloud. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
+  not whole cells is refused aloud. A LAYER MADE IN PLAY (a blast shows a stuff no box had been) also breathes in its last passes now: made in 3 ms
+  slices its longest unbroken stretch was 22 to 41 ms (the evening, the blurs, the normals after the rows) and is 4 to 7; same bytes; the check's
+  fourth line counts the stops. Its mip chain is still built in one go (5 to 12 ms): the workers step's to move. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
   (making them on workers is the performance goal's). Nobody has timed a look page's boot with its shaders already cached, in a browser.
 - **A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT** (11-05; the look's page only; `render/lookTex.ts STUFFS`' two new
   words `rolled` and `mirrors`, `look.wgsl lookRoll` / `lookRollUp`, the reflection texts' `coat`). The maintainer, of the cars: "we don't need to go full

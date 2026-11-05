@@ -496,8 +496,8 @@ impl Step {
         sat_rects(ax, az, acs, asn, ahx, ahz, self.s.x[i], self.s.z[i], cs, sn, self.def(D_HX, i), self.def(D_HZ, i))
     }
 
-    /// PropSystem.solvePairs(true)
-    fn solve_pairs(&mut self) {
+    /// PropSystem.solvePairs(dynamic): `dynamic` false = the two are pushed apart and nothing else (the level's settle)
+    fn solve_pairs(&mut self, dynamic: bool) {
         let n = self.n;
         for a in 0..n {
             for b in a + 1..n {
@@ -524,6 +524,9 @@ impl Step {
                     c.z[b] += nz * corr * (1.0 - wa);
                     c.flags[a] |= F_DIRTY;
                     c.flags[b] |= F_DIRTY;
+                }
+                if !dynamic {
+                    continue;
                 }
                 let c = &*self.s;
                 let (rax, raz, rbx, rbz) = (sat.px - c.x[a], sat.pz - c.z[a], sat.px - c.x[b], sat.pz - c.z[b]);
@@ -568,8 +571,9 @@ impl Step {
         }
     }
 
-    /// PropSystem.solveStatics(p, true): a thing pushed out of the statics round it, its turn and its speed answering the wall, and the knock
-    fn solve_statics(&mut self, i: usize) {
+    /// PropSystem.solveStatics(p, dynamic): a thing pushed out of the statics round it and — `dynamic` — its turn and its speed answering the wall, and the
+    /// knock; `dynamic` false = pushed out and nothing else (the level's settle)
+    fn solve_statics(&mut self, i: usize, dynamic: bool) {
         let (radius, height, im, ii, rest) = (self.def(D_RADIUS, i), self.def(D_HEIGHT, i), self.def(D_INV_MASS, i), self.def(D_INV_I, i), self.def(D_REST, i));
         for _ in 0..3 {
             let rr = radius + 0.02;
@@ -596,6 +600,9 @@ impl Step {
                 c.x[i] += nx * sat.depth;
                 c.z[i] += nz * sat.depth;
                 c.flags[i] |= F_DIRTY;
+                if !dynamic {
+                    continue;
+                }
                 let (rx, rz) = (sat.px - c.x[i], sat.pz - c.z[i]);
                 let (vpx, vpz) = (c.vx[i] + c.w[i] * rz, c.vz[i] - c.w[i] * rx);
                 let vn = vpx * nx + vpz * nz;
@@ -746,7 +753,7 @@ impl Step {
         }
         if self.enabled {
             // 3. thing against thing
-            self.solve_pairs();
+            self.solve_pairs(true);
             // 4. the leaves sweep them aside
             let t = self.s.time;
             for l in 0..self.nl {
@@ -816,7 +823,7 @@ impl Step {
             // 5. the statics, last of what moves a thing
             for i in 0..n {
                 if !self.is(F_ASLEEP, i) || self.is(F_DIRTY, i) {
-                    self.solve_statics(i);
+                    self.solve_statics(i, true);
                 }
             }
         }
@@ -883,4 +890,34 @@ pub fn update(g: usize, w: usize) -> u32 {
         st.io.par[P_WRONG] = 1.0;
     }
     st.ev as u32
+}
+
+/// THE PASSES OF THE LEVEL'S SETTLE (props.ts PropSystem.settle): authoring overlaps — a chair tucked under a table's edge, a bin grazing a desk's corner —
+/// are resolved once, silently, as the level is stood up, and where a thing comes to stand is its home.
+pub const SETTLE_PASSES: usize = 12;
+/// PropSystem.settle's passes for the game in slot `g`, over world `w`: every thing against the statics, then thing against thing, SETTLE_PASSES times,
+/// with no speed answered and no noise made. The host has written the level's facts of each thing by row (`def`) and how many there are (P_PROPS), and
+/// marked each to be considered (F_DIRTY); it makes the settled poses home when the call is back. No man, no leaf and no door frame is read. Returns how
+/// many times a thing was pushed out of a static (P_WALLS says the same); P_WRONG = 3 if the count is not the part's own.
+pub fn settle(g: usize, w: usize) -> u32 {
+    let io = io();
+    let n = io.par[P_PROPS] as usize;
+    let mut k = P_EVENTS;
+    while k < NPAR {
+        io.par[k] = 0.0;
+        k += 1;
+    }
+    let s = &mut state(g).props;
+    if n != s.n as usize || n > CAP || s.total as usize > CAP {
+        io.par[P_WRONG] = 3.0;
+        return 0;
+    }
+    let mut st = Step { s, io, w, enabled: true, castor: false, n, nc: 0, nl: 0, nw: 0, ev: 0, wrong: false };
+    for _ in 0..SETTLE_PASSES {
+        for i in 0..n {
+            st.solve_statics(i, false);
+        }
+        st.solve_pairs(false);
+    }
+    st.io.par[P_WALLS] as u32
 }
