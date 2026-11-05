@@ -26,7 +26,7 @@
 import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter, SmokeSystemLike } from '../smoke/types';
 import { BOTH, type StaticCollision, type GridWind } from '../scene/collision';
-import { SENSES } from '../scene/boxMirror';
+import { SENSES, FACE } from '../scene/boxMirror';
 import { sim, simWhyNot } from '../sim/sim';
 import { simTenant, simPart, P_SMOKE, SimState } from '../sim/state';
 
@@ -78,7 +78,8 @@ export const SENSE = {
     least: 0.05,
     /** a blob thinner than this (unit·m³) after its emitter has stopped is gone */
     gone: 0.02,
-    /** the most blobs kept (the one with the least in it and still to come goes first) */
+    /** the most blobs kept (the one with the least in it and still to come goes first) — and never more than the Rust module's table holds, whatever
+     *  is written here (boxMirror.ts FACE.MAX_BLOBS; `emit`) */
     cap: 48,
     /** the emitters a solver holds at once, and how many of those it keeps back from `budget` (smoke.ts MAX_EMITTERS, and its budget()'s reserve) */
     emitters: 64, reserve: 12,
@@ -207,7 +208,7 @@ export class CpuSmoke {
     if (e.ttl > 0) { this.lives.push(e.ttl); if (this.lives.length > 2 * K.emitters) this.lives.shift(); }
     if (!(rate * e.ttl >= K.least)) return;
     this.grid?.emit(e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl);
-    if (this.blobs.length >= K.cap) {   // full: the one worth least goes — what it holds and what it has still to let out — and that may be the newcomer
+    if (this.blobs.length >= Math.min(K.cap, FACE.MAX_BLOBS)) {   // (no more than the module's table holds, whatever the knob says: a question about the smoke carries every blob at once — smoke.rs, and light.rs for a lamp's shadow) full: the one worth least goes — what it holds and what it has still to let out — and that may be the newcomer
       const worth = (b: Blob) => b.mass + b.rate * Math.max(0, b.ttl - b.age);
       let k = 0; for (let i = 1; i < this.blobs.length; i++) if (worth(this.blobs[i]) < worth(this.blobs[k])) k = i;
       if (worth(this.blobs[k]) >= rate * e.ttl) return;

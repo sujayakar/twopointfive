@@ -2668,11 +2668,12 @@ const CARRIED = (): boolean => true;
  *  carries (it moves faster than a sweep, and lights a man directly in the estimate). False = the module cannot take them: the field stands as it was. */
 export function steadyLamps(g: Game, col: StaticCollision): boolean { return writeLamps(g, col, null, CARRIED, true); }
 /** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
- *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
+ *  point is written, and the module sums them — in as many parts as the lamps need (collision.ts lamp), one sum in lampsHere's order. False = lampsHere's
+ *  loop, from the start (`acc` is untouched). The smoke's shadow is the grid's cells and, where the grid cannot answer, the field's own blobs, as
+ *  `field.along` has it: both the module's (light.rs, smoke.rs). */
 function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
-  const col = g.col; if (!col.lampsBegin()) return false;
-  if (!writeLamps(g, col, P, skipOwner, steadyOnly)) { col.lampsFell(); return false; }
-  return col.lampsOn(P, acc, field && field.grid.fed ? field.grid.sim : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
+  const col = g.col;   // (a grid nothing was let out into dims nothing: not asked)
+  return col.lampsBegin(P, field !== null && field.grid.fed ? field : null, SENSE.smoke) && writeLamps(g, col, P, skipOwner, steadyOnly) && col.lampsOn(acc);
 }
 /** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
 function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): void {

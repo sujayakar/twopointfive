@@ -98,6 +98,11 @@ export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '', thing
 export const ANYTIME = { on: true, proofs: 0, windows: 0, who: null as Record<string, number> | null };   // (`who`: a tool's table of who asked alone, when it wants one)
 /** the same check's count of the senses' questions the module answered, a row each (RUST.sight … paths; boxMirror.ts SENSES): a row that is on and never asked proves nothing */
 export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
+/** a blob of the smoke as a question carries it (sense.ts Blob's six; rust/sim/src/smoke.rs BLOB), and the model's numbers that go with them (SENSE.smoke's) */
+export interface BlobRow { x: number; y0: number; z: number; r2: number; age: number; mass: number }
+export interface SmokeNumbers { sigma: number; spread: number; widest: number; rise: number; riseRate: number }
+/** …and of the times a light question's lamps did not fit the module's table and a part was sent on ahead (RUST.light: `lamp`) */
+export const LAMPS = { parts: 0 };
 /** …and of the rays the module answered (RUST.rays: raycast) */
 export const RAYS = { n: 0, host: 0 };
 /** …and of the searches with a penalty the module answered (RUST.paths: NavGrid.findPath; rust/sim/src/nav.rs find_priced): how many, how many times one
@@ -535,30 +540,52 @@ export class StaticCollision {
     if (r === -1) { if (FELL.on) fell('sight', 'the module handed the eye back (a line too long to be one)'); return null; }
     SENSED.sight++; return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
   }
-  /** RUST.light — guards.ts lightEstimateAt's lamps: `begin` (→ may they go to the module), then a `lamp` each that passed the caller's own gates, then
-   *  `lampsOn` the point, which leaves the six faces in `acc` (false = the caller's own loop, from the start). */
-  lampsBegin(): boolean { const M = this.mirror; M.lampSet = this.senseSet(SENSES.light); M.lampN = 0; return M.lampSet !== -2; }
-  /** the light estimate's lamps did not fit a question (`lamp` said false) and its caller's own loop runs: counted here, for that caller alone */
-  lampsFell(): void { if (FELL.on) fell('light', 'more lamps in reach of a point than a question carries'); }
+  /** RUST.light — guards.ts lightEstimateAt's lamps: `lampsBegin` the question (→ may it go to the module), then a `lamp` each that passed the caller's
+   *  own gates, then `lampsOn`, which leaves the six faces in `acc` (false anywhere = the caller's own loop, from the start).
+   *  IN PARTS: the module's table holds `lampCap` lamps; a lamp past that sends the table as a PART and begins it again, and the module keeps the six
+   *  faces from part to part (light.rs SUM), so any number of lamps in reach of a point is one sum in one order.
+   *  `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed along the line to it by the smoke of `shade.grid`, and
+   *  where that grid cannot answer (or none `stands`: sense.ts SmokeGrid.along) by `shade.blobs`, written here for the module's own smoke.rs under
+   *  the model's numbers `K` (its table holds them all: the game keeps no more, sense.ts CpuSmoke.emit, and more is an error by name) */
+  private readonly lampQ: { on: boolean; P: Vec3 | null; sim: SimState | null; stands: number; K: SmokeNumbers | null; nb: number; parts: number } = { on: false, P: null, sim: null, stands: 0, K: null, nb: 0, parts: 0 };
+  lampsBegin(P: Vec3, shade: { grid: { sim: SimState; stands: boolean }; blobs: readonly BlobRow[] } | null = null, K: SmokeNumbers | null = null): boolean {
+    const M = this.mirror, Q = this.lampQ; this.lampsOver(); M.lampSet = this.senseSet(SENSES.light); M.lampN = 0; if (M.lampSet === -2) return false;
+    if (shade && K) { this.blobsFit(shade.blobs.length); M.blobN = 0; for (const b of shade.blobs) this.blob(b.x, b.y0, b.z, b.r2, b.age, b.mass);
+      Q.sim = shade.grid.sim; Q.stands = shade.grid.stands ? 1 : 0; Q.K = K; Q.nb = M.blobN; }
+    Q.P = P; Q.on = true; return true;
+  }
+  /** no question about the light stands (and nothing of the last one is held) */
+  private lampsOver(): void { const Q = this.lampQ; Q.on = false; Q.P = null; Q.sim = null; Q.K = null; Q.stands = 0; Q.nb = 0; Q.parts = 0; }
+  /** the lamps written so far, asked as a part of the question (false = the module handed it back: the caller's own loop, and the question is over) */
+  private lampsPart(): boolean {
+    const M = this.mirror, Q = this.lampQ, P = Q.P!, st = Q.sim, K = Q.K, more = Q.parts > 0 ? 1 : 0;   // (the grid's block is bound a part: a call that reads state says where it stands NOW, sim/state.ts)
+    const r = st && K ? M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], K.sigma, st.bind(), st.stamp, Q.stands, more, Q.nb, K.spread, K.widest, K.rise, K.riseRate)
+      : M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], 0, 0, 0, 0, more, 0, 0, 0, 0, 0);
+    Q.parts++; M.lampN = 0;
+    if (r === -1) { if (FELL.on) fell('light', 'the module handed the lamps back (a line too long to be one)'); this.lampsOver(); return false; }
+    return true;
+  }
   lamp(pos: Vec3, range: number, radius: number, kind: number, dir: Vec3, outerDeg: number, innerDeg: number, color: Vec3, intensity: number): boolean {
-    const M = this.mirror; if (M.lampN >= M.lampCap) return false;   // (the estimate's caller counts it, lampsFell: the grid's sweep writes lamps here too and has no TypeScript to fall to)
+    const M = this.mirror;
+    if (M.lampN >= M.lampCap) { if (!this.lampQ.on) return false;   // (no question stands: the grid's sweep writes its lamps here too, and takes no more than the table — a level's limit)
+      LAMPS.parts++; if (!this.lampsPart()) return false; }
     const m = f64(), o = M.lamps + M.lampN++ * FACE.LAMP;
     m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = range; m[o + 4] = radius; m[o + 5] = kind; m[o + 6] = dir[0]; m[o + 7] = dir[1]; m[o + 8] = dir[2]; m[o + 9] = outerDeg; m[o + 10] = innerDeg;
     m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity;
     return true;
   }
-  /** `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed along the line to it, under `sigma`, by the smoke of the grid
-   *  whose state is in this block (sense.ts SmokeGrid.sim) */
-  lampsOn(P: Vec3, acc: number[], shade?: SimState | null, sigma = 0): boolean {
-    const M = this.mirror; let g = 0, stamp = 0; if (shade) { g = shade.bind(); stamp = shade.stamp; }
-    if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], shade ? sigma : 0, g, stamp) === -1) { if (FELL.on) fell('light', shade ? 'the module handed the lamps back (a line too long to be one, or the grid\'s smoke cannot answer)' : 'the module handed the lamps back (a line too long to be one)'); return false; }
+  /** …the last part asked, and the six faces of the whole question read */
+  lampsOn(acc: number[]): boolean {
+    const M = this.mirror; if (!this.lampQ.on || !this.lampsPart()) return false; this.lampsOver();
     const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
     SENSED.light++; return true;
   }
   /** RUST.smoke — game/sense.ts CpuSmoke.trans: `begin` (→ may it go to the module, with this many blobs), a `blob` each, then the transmittance along
    *  a → b under the model's numbers (−1 = the caller's own loop). */
   blobsBegin(n: number): boolean { const M = this.mirror; M.blobSet = this.senseSet(SENSES.smoke); M.blobN = 0; if (M.blobSet === -2) return false;   // (senseSet has counted it)
-    if (n > M.blobCap) { if (FELL.on) fell('smoke', 'more blobs than a question carries'); return false; } return true; }
+    this.blobsFit(n); return true; }
+  /** a game keeps no more blobs than the module's table holds (sense.ts CpuSmoke.emit holds its knob to the table), so more is no content: a mistake, by name */
+  private blobsFit(n: number): void { const cap = this.mirror.blobCap; if (n > cap) throw new Error(`${n} blobs of smoke and the Rust module's table holds ${cap}: a game keeps no more than that (sense.ts CpuSmoke.emit), so somebody else filled the list`); }
   blob(x: number, y0: number, z: number, r2: number, age: number, mass: number): void { const M = this.mirror, m = f64(), o = M.blobs + M.blobN++ * FACE.BLOB; m[o] = x; m[o + 1] = y0; m[o + 2] = z; m[o + 3] = r2; m[o + 4] = age; m[o + 5] = mass; }
   blobsAlong(a: Vec3, b: Vec3, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number {
     const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) { if (FELL.on) fell('smoke', 'the module handed the line back (a line too long to be one)'); return -1; }
@@ -585,7 +612,7 @@ export class StaticCollision {
       const set = M.leaves(this.dynamicBoxes); if (set === -2) return false;
       // (THE LIGHT THAT COMES ROUND, rust/sim/src/glow.rs: the step sweeps it from the level's steady lamps, which `glow.lamps` writes as for a question
       // about the light. More lamps than a question carries: the field stands as it was.)
-      let lamps = -1; if (glow) { M.lampN = 0; if (glow.lamps(this)) lamps = M.lampN; }
+      let lamps = -1; if (glow) { M.lampN = 0; this.lampsOver(); if (glow.lamps(this)) lamps = M.lampN; }
       // (the emitters go in the scratch, written last: the step takes them once it knows a grid stands here, so one that does nothing has taken none.
       // A step carries as many as the scratch holds, 170, the LATEST of them: the grid's own list holds 64, and `pending` is kept to that many by
       // whoever fills it, sense.ts SmokeGrid.emit)

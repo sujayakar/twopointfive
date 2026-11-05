@@ -99,6 +99,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/scene/collision.ts BOTH': 'TALLY · a check\'s switch and its counts (tools/qa/rust-check.ts: every question sent to the module answered here too); nothing a rule reads',
   'src/scene/collision.ts PRICED': 'TALLY · the same check\'s count of the searches with a penalty the module answered, and whether one waits for prices inside this very call (never across a tick or a snapshot: it is resumed to its end or dropped before the call returns): no answer reads it, and the one thing that does is the error for a way or a sound asked from inside a price',
   'src/scene/collision.ts RAYS': 'TALLY · the same check\'s count of the rays the module answered; nothing a rule reads',
+  'src/scene/collision.ts LAMPS': 'TALLY · the same check\'s count of the parts a light question\'s lamps were sent ahead in; nothing a rule reads',
   'src/scene/collision.ts SENSED': 'TALLY · the same check\'s count of the senses\' questions the module answered, a row each; nothing a rule reads',
   'src/math/side.ts PUT_BACKS': 'TALLY · how many snapshots have been put back in this process: read by the host\'s copy of the box world to know its grid was written from outside the game\'s code, by no rule',
   'src/math/hyp.ts hyp2': 'CONFIG · which length function stands (this runtime\'s or the Kahan sum): set by the EXACT switch alone (math/exact.ts)',
