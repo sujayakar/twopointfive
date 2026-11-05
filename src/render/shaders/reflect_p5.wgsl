@@ -355,7 +355,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let mat = textureLoad(gMat, full, 0);                                    // (roughness, metalness) as the g-buffer wrote them: the finish + the detail layer's wear
   let rough = mat.x; let metalness = mat.y;
   let maxR = frame.rtCfg.x;
-  if (rough > maxR) { textureStore(outRefl, gid.xy, none); if (noRec) { textureStore(hitOut, gid.xy, vec4u(0u)); } return; }
+  if (rough > select(maxR, max(min(maxR + SHEEN_PAST, 0.999), maxR + 0.001), SHEEN_PAST > 0.0)) { textureStore(outRefl, gid.xy, none); if (noRec) { textureStore(hitOut, gid.xy, vec4u(0u)); } return; }
   var aniso = false;
   if (bidx != 0xFFFFFu) { aniso = boxFinish(bidx).aniso; }
   let P = worldFromDepth(vec2f(full) + 0.5, depth);
@@ -394,7 +394,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     wetF = 1.0 + beams.k.y * wetOut;
   }
   let Po = P + N * 0.02;
-  let rays = min(u32(frame.rtCfg.y), 4u);
+  // A HIGHLIGHT OUTLIVES THE RAYS' CUT-OFF, as reflect.wgsl main says it (SHEEN_PAST): the rays fade under the cut-off here, the highlights go on past it
+  var rayK = 1.0; var rays = min(u32(frame.rtCfg.y), 4u);
+  if (SHEEN_PAST > 0.0) { rayK = 1.0 - smoothstep(maxR - 0.12, maxR + 0.001, rough); if (rough > maxR) { rays = 0u; } }   // (past the cut-off no ray of the lobe: what the one test said by leaving the texel out)
   let lamV = smithLambda(Ve, ax, ay);
   let kEmit = emitTraceK(rough);                                            // area-lit fixtures: traced on a polish, analytic (rtGlints) on a rough finish, one panel either way
   let reflWalls = select(0u, 0x100u | owner, REFL_WALLS && metalness > 0.25);   // REFL WALLS, as reflect.wgsl: a metal's rays take the walled read at every hit (0 = the read as it was, else bit 8 and this pixel's owner)
@@ -460,6 +462,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   }
   if (reuse) { textureStore(hitOut, gid.xy, outRec); }
   var Lspec = Lsum / f32(max(rays, 1u));
+  if (SHEEN_PAST > 0.0) { Lspec *= rayK; }
   if ((frame.flags & FLAG_DIRECT) != 0u && frame.matCfg.x > 0.0) {
     let g = rtGlints(P, Po, N, V, T, B, ax, ay, F0, owner, select(1.0 - kEmit, 1.0, rays == 0u), fract(cpx + f32(frame.frameIdx % 4096u) * 0.7548777));   // (no rays: every panel comes through its analytic light)
     Lspec += g.xyz * frame.matCfg.x;
