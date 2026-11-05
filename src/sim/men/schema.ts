@@ -110,7 +110,7 @@ export const MEN_FIELDS: readonly MenField[] = [
   {"name": "paceShownT", "on": "player", "group": "cold", "type": "f64", "digest": false, "init": -10, "why": "with pace"},
   {"name": "nv", "on": "player", "group": "cold", "type": "bool", "digest": false},
   {"name": "nvAmount", "on": "player", "group": "cold", "type": "f64", "digest": false},
-  // WHAT HE KNOWS: what he has seen and heard, and how he has been reacting to it (lastKnown and covers join when the belief part has landed)
+  // WHAT HE KNOWS: what he has seen and heard, and how he has been reacting to it (lastKnown stays on the record: its row in MEN_KEPT says why, and the plan for it)
   {"name": "team", "on": "guard", "group": "hot", "type": ["guard", "operative", "hostile", "player", "civilian"], "digest": false, "why": "SIDES (teams.ts): which side he is on — 'guard' for every man the level's routes stand up (hostile to Sam and nobody else: the game as it was); the showcase spawns 'operative' / 'hostile' units (guards.ts spawnUnit). Read wherever \"the player\" used to be the only possible enemy and \"every other guard\" the only possible colleague."},
   {"name": "visibility", "on": "man", "group": "hot", "type": "f64", "digest": false, "why": "an AI target's light meter (guards.ts unitLightMeter — only ever fed for a man some other AI side can be hostile to, i.e. never for staff): the renderer's irradiance at his chest / head when the probe answers (the browser), the CPU estimate of the same direct light otherwise (headless, or the first frames), mapped and eased exactly as Sam's meter is (Game.visibilityOf, damp 6). What a hostile AI e"},
   {"name": "irradiance", "on": "man", "group": "hot", "type": "f64", "digest": false, "why": "with visibility"},
@@ -236,7 +236,10 @@ export const MEN_KEPT: readonly MenKept[] = [
   {"name": "unit", "on": "guard", "stays": "object"},
   {"name": "civ", "on": "guard", "stays": "object"},
   {"name": "skill", "on": "guard", "stays": "object"},
-  {"name": "lastKnown", "on": "guard", "stays": "object", "why": "joins the columns when the belief part has landed (today it holds the room fight's own array by identity, and its in-place writes)"},
+  // (THE PLAN FOR IT: a `vec3?` column once nothing holds it by identity. The room fight's point stops being an array and becomes the man's own column `watch`, with a truth bit
+  //  `covering`, so what his duty covers reads as covering ? watch : null, no alias and no copy. Then the two questions "was a new fix written" (roomfight's evidence, doze's wake) ask
+  //  by value, and the digests judge them. A bit that imitated the alias would be a special case kept for the old path.)
+  {"name": "lastKnown", "on": "guard", "stays": "object", "why": "stays on the record while it can hold the room fight's own array by identity, moved in place, and be compared by identity, which only an object can do"},
   {"name": "held", "on": "guard", "stays": "object"},
   {"name": "bubble", "on": "guard", "stays": "object"},
   {"name": "wound", "on": "guard", "stays": "object"},
