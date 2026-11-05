@@ -23,6 +23,7 @@ export async function portalCheck(): Promise<boolean> {
   console.log(`\n=== portal: daylight counted once${BRK ? ' (the bounce keeps the sky it leaves by: must fail)' : ''} ===`);
   const { rayBox, BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`), { planOpenings, openAreas, openingLooks, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
   const { LIGHT_PORTAL, packLight } = await import(`${ROOT}/src/render/lights.ts`);
+  const { WAY } = await import(`${ROOT}/src/scene/wayThrough.ts`);
   const text = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
 
   // ---- the room: 6 by 5 m under a roof at 3 m, a doorway 0.9 by 2.05 m in its east wall, a 3 m wall across the yard 3 m outside it
@@ -139,7 +140,7 @@ export async function portalCheck(): Promise<boolean> {
     const crate = { c: [16.42, 0.6, 11.75], h: [0.3, 0.6, 0.3], yaw: 0, flags: 0 }, cabinet = { c: [15.68, 0.9, 13.1], h: [0.2, 0.9, 0.25], yaw: 0, flags: 0 };   // (one outside against the wall by the jamb, one inside)
     const rooms: [string, any[]][] = [['the bare wall', B], ['a crate outside by the jamb, listed before the walls', [crate, ...B]], ['a cabinet inside by the other, listed first', [cabinet, ...B]]];
     const rows = rooms.map(([name, boxes]) => ({ name, shut: open(boxes, 0), a: [0.3, 0.6, 1.0, 1.5].map(x => open(boxes, x)) })), full = plan[0].full;
-    const play = LOOK_OPENINGS.play; LOOK_OPENINGS.play = 0; const noPlay = open(B, 0); LOOK_OPENINGS.play = play;
+    const play = WAY.play; WAY.play = 0; const noPlay = open(B, 0); WAY.play = play;
     verdict(rows.every(r => r.shut === 0 && r.a[0] > 0 && r.a[0] < 0.2 * full && r.a.every((v, i) => i === 0 || v > r.a[i - 1]) && r.a[3] > 0.75 * full) && noPlay > 0 && noPlay < 0.2,
       'a shut leaf is shut and an open one open, by the narrowest way through: whatever stands by the door, the jambs are the wall\'s; the gap grows with the swing; a leaf swung wide leaves the doorway all but its own thickness',
       rows.map(r => `${r.name}: shut ${r.shut.toFixed(3)}, at 0.3, 0.6, 1.0 and 1.5 rad ${r.a.map(v => v.toFixed(2)).join(', ')} of ${full.toFixed(2)} m²`).join(' · ') + ` · with no play allowed the shut leaf reads ${noPlay.toFixed(3)} m² (the two gaps at its jambs)`); }

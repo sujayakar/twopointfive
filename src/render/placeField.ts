@@ -79,7 +79,7 @@ export class PlaceField {
   }
 
   /** the map follows the level as it stands: drawn again only when a wall, a pane's box or a leaf has changed. True when it was drawn. */
-  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean { this.own.update(statics, dynamics, gaps); return this.setMap(this.own); }
+  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = [], byDegrees = false): boolean { this.own.update(statics, dynamics, gaps, byDegrees); return this.setMap(this.own); }
   /** … from a map the caller keeps (the engine's, which the wall sides read too). True when it was sent. */
   setMap(map: PlaceMap): boolean {
     if (this.dead || (map === this.sentMap && map.drawn === this.sentDrawn)) return false;
