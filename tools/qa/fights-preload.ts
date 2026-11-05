@@ -82,8 +82,8 @@ process.on('exit', () => { flush(); if (process.env.FIGHTS_OUT) writeFileSync(pr
 plugin({ name: 'fights', setup(b) { b.onLoad({ filter: /src\/game\/game\.ts$/ }, async (a: { path: string }) => {
   let t = await Bun.file(a.path).text();
   const head = t.match(/export class Guard\b[^{]*\{/);
-  if (!head || !t.includes('this.ticking = true;')) throw new Error('fights-preload: game.ts no longer has the lines it hangs on (export class Guard, this.ticking = true)');
-  t = t.replace(head[0], head[0].replace('export class Guard', 'class FightGuard')).replace('this.ticking = true;', 'this.ticking = true; (globalThis as any).__fightTick++; (globalThis as any).__fightOn = true;');
+  if (!head || !t.includes('this.ticking = true;') || !t.includes('\n    this.ticking = false;')) throw new Error('fights-preload: game.ts no longer has the lines it hangs on (export class Guard, this.ticking = true / false)');
+  t = t.replace(head[0], head[0].replace('export class Guard', 'class FightGuard')).replace('this.ticking = true;', 'this.ticking = true; (globalThis as any).__fightTick++; (globalThis as any).__fightOn = true;').replace('\n    this.ticking = false;', '\n    (globalThis as any).__fightOn = false; this.ticking = false;');
   const end = t.indexOf('\n}\n', t.indexOf('class FightGuard')) + 3;
   t = `${t.slice(0, end)}export class Guard extends (FightGuard as any) { constructor(...a: any[]) { super(...a); (globalThis as any).__fightMan(this); } }\n${t.slice(end)}`;
   return { contents: t, loader: 'ts' };

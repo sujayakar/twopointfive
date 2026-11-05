@@ -59,6 +59,8 @@ import { digInPhase } from './digin';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { gunKeepsPost } from './gunroles';
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { pressKeepsHome } from './pressure';
+import { buddyPaired } from './buddy';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nopowerout = the garrison stands in the dark, as it did)
  *  and by the shipped stand; the harness's frozen stand leaves it off (TPS_POWEROUT=1 turns it on). UNTUNED by play: nobody has played against it. */
@@ -167,7 +169,7 @@ export function powerOutKept(g: Game, D: Def): string | null {
   if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (!POWEROUT.stayers && gd.staysInRooms) return 'his squad stays in its rooms';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane | OWN.lastMan)) return 'holds a lane / the last man';
-  if (hasHim(D.gd, OWN.press | OWN.buddy)) return 'the press\'s';
+  if (hasHim(D.gd, OWN.press | OWN.buddy) || pressKeepsHome(g, D, false) || buddyPaired(g, D)) return 'the press\'s';
   return null;
 }
 /** where the man at the lever stands (workthings.ts: the panel's own face; the fixed spot with that rule off, as lighting.ts has it) */

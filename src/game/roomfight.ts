@@ -58,8 +58,8 @@ import { BLIND } from './nightbreach';
 import { DIGIN, digInTick, digInStays, digInReset, digInBraced, digInLook } from './digin';
 import { wallReactLook } from './wallreact';
 import { squadsLive, squadRally } from './enemysquads';
-import { PRESSURE, pressTick, pressStop, pressSay, pressStopsClock, run as pressRun, charge as pressCharge } from './pressure';
-import { buddyTick, buddyStop, buddySay } from './buddy';
+import { PRESSURE, pressTick, pressStop, pressKeepsHome, run as pressRun, charge as pressCharge } from './pressure';
+import { buddyTick, buddyStop, buddyPaired } from './buddy';
 import { pairPasses } from './pairorders';
 import { workPasses } from './workthings';
 import { spottedKeen } from './spotted';
@@ -515,7 +515,6 @@ export class RoomFight {
     }
     while (this.reports.length && g.time - this.reports[0].t > 2) this.reports.shift();
     this.smoke();
-    pressSay(g, this); buddySay(g, this);   // (the record of who they have, as this frame opens: src/game/owner.ts)
     this.defs.forEach((D, k) => { if (D.gd.state !== 'dead') this.tickDef(D, dt, k); });
     for (const O of this.ops) this.tickOp(O, dt);
     pressTick(g, this, dt);
@@ -908,12 +907,12 @@ export class RoomFight {
     const g = this.g, gd = D.gd, S = FIGHT_SKILL.hostile;
     if (!ROOMFIGHT.rally || !D.noiseAt) return;
     if (hasHim(gd, OWN.squad)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
-    pressStopsClock(g, D); if (hasHim(gd, OWN.press)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
+    if (hasHim(gd, OWN.press) || pressKeepsHome(g, D)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
     if (DIGIN.on && digInStays(g, gd)) return;             // digin.ts: digging in, he holds his room
     if (laneBars(g, gd, D.noiseAt) || laneKnownAt(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
     if (hasHim(D.gd, OWN.stand)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
     if (hasHim(gd, OWN.lastMan)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
-    if (hasHim(D.gd, OWN.buddy)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
+    if (hasHim(D.gd, OWN.buddy) || buddyPaired(g, D)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
     const fresh = g.time - D.noiseT < 1.5 && g.time - gd.lastSeenT > 3;
     if (!fresh) { if (g.time - D.noiseT > 4) D.rallyAt = NaN; return; }
     const at = D.noiseAt;
