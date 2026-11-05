@@ -305,7 +305,7 @@ async function identityWords(): Promise<{ off: string; look: string; on: string 
   return { off, look, on: wordOf(B) };
 }
 /** frozen on the one build at 0ee0094 (`bun run tools/qa/pellets-probes.ts --words` there, this file copied in) */
-const WORDS_0EE0094 = { off: 'bd326bb7', look: 'bd326bb7', on: '5f9627eb', shotgunOn: 'bafe643' };   // (off / look / on TAKEN AGAIN with `--words` on the real-doors step: the word hashes the office's own walls, which that step moved — on 0ee0094's office they were 7538cb56 · 7538cb56 · 1828dc78, and this file passed there until the walls changed; shotgunOn stays 0ee0094's own, the red path's 'not this')
+const WORDS_0EE0094 = { off: '852e4b4f', look: '852e4b4f', on: 'e44887a2', shotgunOn: 'bafe643' };   // (off / look / on TAKEN A THIRD TIME with `--words`, on the frozen stand, the day a hit's seed became the box's own and not its place in the level's list (glass.ts boxSeed): the word folds every star's reach, which is another roll — before it they were bd326bb7 · bd326bb7 · 5f9627eb. off / look / on TAKEN AGAIN with `--words` on the real-doors step: the word hashes the office's own walls, which that step moved — on 0ee0094's office they were 7538cb56 · 7538cb56 · 1828dc78, and this file passed there until the walls changed; shotgunOn stays 0ee0094's own, the red path's 'not this')
 export const pelletsIdentity = guarded(async () => {
   const { verdict, done } = family('pellets-identity: glass parts off, and glass on with no shotgun, are the runs they were on 0ee0094');
   const w = await identityWords();

@@ -32,14 +32,14 @@
 //     boxes of kind 'shard' + chip particles), so the build is whole without it. blast() is what destruction's blast entry point calls; a stun charge reaches it weaker
 //     through glass.ts updateGlass.
 //   • Bounded: ≤ maxSites a pane, ≤ releasesPerFrame queued pieces and ≤ clumpsPerFrame clumps let go a frame (a round's own piece is never deferred), the debris pool's
-//     cap in the stand-in; deterministic: every choice hashes the pane index, the impact point (glass.ts hitSeed) or a piece's id — never Math.random. reset() = every pane
+//     cap in the stand-in; deterministic: every choice hashes the pane's own word (glass.ts boxSeed: what the box is, never its place in the level's list), the impact point (glass.ts pointSeed; a blast's by blastSeed) or a piece's id — never Math.random. reset() = every pane
 //     whole (resetLevelState; a checkpoint load is a restart, so holes are never saved — and no static is appended, so savestate's levelFingerprint is untouched).
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { VIEW_BLOWN, VIEW_GIVES, type PaneRow, type PaneView } from '../scene/boxMirror';
 import type { Game, Player } from './game';
 import { men } from './seats';
-import { hitSeed, glassImpact, glassEvent, GLASSFX, glassPanes, isSheet } from './glass';
+import { boxSeed, pointSeed, blastSeed, glassImpact, glassEvent, GLASSFX, glassPanes, isSheet } from './glass';
 import { hash01 } from './debris';
 import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
@@ -184,7 +184,7 @@ interface Clump { /** r × cols + c */ k: number; c: number; r: number; /** its 
 interface Dice extends GpDice { t0: number; /** sorted by key */ clumps: Clump[]; next: number; out: Uint8Array }
 interface Pending { fid: number; at: number; cause: GlassFragment['cause']; from: Vec3 | null; k: number }
 export interface PaneState {
-  bi: number; box: Box; type: GlassType; uAxis: 0 | 2; hu: number; hv: number; ht: number; exterior: boolean;
+  bi: number; box: Box; /** the pane's own word (glass.ts boxSeed: what the box IS): every hash of this pane's break starts from it, none from `bi`, its place in the level's list */ key: number; type: GlassType; uAxis: 0 | 2; hu: number; hv: number; ht: number; exterior: boolean;
   sites: GpSite[]; run: boolean; open: Uint8Array; nOpen: number;
   hits: number; energy: number; damage: number;
   frags: GpFrag[] | null; pending: Pending[]; nextThink: number;
@@ -269,7 +269,7 @@ export class GlassBreak {
     let st = this.panes.get(bi); if (st) return st;
     const type = this.typeOfPane(bi); if (!type) return null;   // (a Glass box thicker than a sheet — solid glass — never comes apart)
     const b = this.g.level.boxes[bi]; const uAxis: 0 | 2 = b.h[0] >= b.h[2] ? 0 : 2;
-    st = { bi, box: b, type, uAxis, hu: b.h[uAxis], hv: b.h[1], ht: Math.min(b.h[0], b.h[2]), exterior: this.exteriorOf(bi),
+    st = { bi, box: b, key: boxSeed(b), type, uAxis, hu: b.h[uAxis], hv: b.h[1], ht: Math.min(b.h[0], b.h[2]), exterior: this.exteriorOf(bi),
       sites: [], run: false, open: new Uint8Array(GP_MAX_SITES * GP_FRAGS_PER_SITE), nOpen: 0, hits: 0, energy: 0, damage: 0, frags: null, pending: [], nextThink: 0, soundAt: -1e9,
       dice: null, gone: false, lastDir: [0, 0, 1], lastWho: 0, lastUV: [0, 0], walkable: false, log: [] };
     this.panes.set(bi, st); GB_STATS.panes++;
@@ -335,7 +335,7 @@ export class GlassBreak {
     st.hits++; st.energy += energy; st.damage = Math.min(1, st.damage + 0.12 * energy); st.lastWho = who; st.lastUV = [u, v];
     if (dir && v3.len(dir) > 1e-6) st.lastDir = v3.normalize(dir);
     GB_STATS.impacts++;
-    const seed = hitSeed(bi, X);
+    const seed = pointSeed(st.key, X);
     if (st.type === 'tempered') {
       if (st.energy >= GLASSBREAK.breakE.tempered || through === true) { /* (a round that went THROUGH toughened glass has broken it, whatever it had left) */ const started = !st.dice; this.startDice(st, u, v, seed, 'hit'); res.diced = true; res.punched = this.openUV(st, u, v); res.released = started ? 1 : 0; res.cracked = true; }   // (a round into a pane already coming down: the clump under it may still stand — punched says so)
       return res;
@@ -362,7 +362,7 @@ export class GlassBreak {
       if (hard && !this.openUV(st, u, v)) { fid = gpClassify(st.sites, true, u, v); if (fid >= 0) res.released += this.knockOut(st, fid); }   // the dagger the blow landed on
       const j = hard ? this.nearestSite(st, u, v) : -1;   // …and its star's rings go after the crater over the next few frames; what that leaves unheld is the support rule's
       if (j >= 0 && GLASSBREAK.runStar > 0) {
-        for (const f of this.fragsOf(st)) if (f.i === j && f.b >= 1 && f.b <= Math.min(2, GLASSBREAK.runStar) && !st.open[f.fid] && !st.pending.some(p => p.fid === f.fid)) st.pending.push({ fid: f.fid, at: g.time + GLASSBREAK.runRingSecs * (f.b + hash01(st.bi * 53 + f.fid)), cause: 'hit', from: null, k: 1 });
+        for (const f of this.fragsOf(st)) if (f.i === j && f.b >= 1 && f.b <= Math.min(2, GLASSBREAK.runStar) && !st.open[f.fid] && !st.pending.some(p => p.fid === f.fid)) st.pending.push({ fid: f.fid, at: g.time + GLASSBREAK.runRingSecs * (f.b + hash01(st.key * 53 + f.fid)), cause: 'hit', from: null, k: 1 });
         st.pending.sort((x, y) => x.at - y.at || x.fid - y.fid);
       }
     }
@@ -423,11 +423,11 @@ export class GlassBreak {
       twin.k.set(bi, k);   // (noted only once the pane HAS taken it: `prev` below is then exactly what this charge already did to this pane, and the stronger arrival adds the difference — the pane ends where the stronger blow alone would have put it, whichever came first)
       const away: Vec3 = d > 1e-6 ? v3.normalize(v3.sub(q, at)) : this.normalOf(st);
       st.lastDir = away; st.lastWho = who; const [qu, qv] = this.toUV(st, q); st.lastUV = [qu, qv]; st.damage = Math.min(1, st.damage + 0.3 * (k - prev));
-      if (st.type === 'tempered') { if (k > GLASSBREAK.blastDiceK && !st.dice) { st.energy += 1 + 2 * k; this.startDice(st, qu, qv, hitSeed(bi, at), 'blast'); changed++; } continue; }
+      if (st.type === 'tempered') { if (k > GLASSBREAK.blastDiceK && !st.dice) { st.energy += 1 + 2 * k; this.startDice(st, qu, qv, blastSeed(st.key, twin.at), 'blast'); changed++; } continue; }
       changed++;
       // stars toward the blast: glass.ts crackNear's construction (a hashed point on the face inside its frame by a tenth, pulled a third of the way to the nearest point), so the first two sit on its decals
       const starsOf = (kk: number) => st.type === 'laminated' ? 3 : 1 + Math.round(2 * Math.min(1, kk));
-      let s = hitSeed(bi, at); const stars = starsOf(k), had = prev > 0 ? starsOf(prev) : 0;   // (had: the stars this charge's weaker arrival already put here)
+      let s = blastSeed(st.key, twin.at); const stars = starsOf(k), had = prev > 0 ? starsOf(prev) : 0;   // (had: the stars this charge's weaker arrival already put here)
       for (let n = 0; n < stars; n++) {
         s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0; if (n < had) continue;
         const fu = ((s & 0xffff) / 65535) * 2 - 1, fv = ((s >>> 16) / 65535) * 2 - 1;
@@ -555,7 +555,7 @@ export class GlassBreak {
     const pts = gpDicePoly(D, c.c, c.r); if (pts.length < 3) return;
     const { area, cen } = gpPolyArea(pts); if (area < 1e-8) return;
     const n = this.normalOf(st); const outSign = v3.dot(n, st.lastDir) >= 0 ? 1 : -1; const N = v3.scale(n, outSign);
-    const h1 = hash01(st.bi * 7919 + c.k * 131), h2 = hash01(st.bi * 104729 + c.k * 193), h3 = hash01(c.k * 7 + st.bi);
+    const h1 = hash01(st.key * 7919 + c.k * 131), h2 = hash01(st.key * 104729 + c.k * 193), h3 = hash01(c.k * 7 + st.key);
     const rad = Math.max(1e-3, Math.hypot(cen[0] - D.u, cen[1] - D.v));
     const spread = this.dirUV(st, (cen[0] - D.u) / rad, (cen[1] - D.v) / rad);   // a little outward in the pane's plane from the blow: the sheet opens like a curtain
     const velocity = v3.add(v3.add(v3.scale(N, GLASSBREAK.out * (0.3 + 0.9 * h1)), v3.scale(spread, 0.5 * h2)), [0, -0.3 - 0.5 * h3, 0]);
@@ -577,7 +577,7 @@ export class GlassBreak {
     for (let b = 0; b < n.length; b++) {
       if (!n[b]) continue; const c0 = (b % bc) * m, r0 = Math.floor(b / bc) * m;
       const u0 = -D.hu + c0 * du, u1 = Math.min(D.hu, u0 + m * du), v0 = -D.hv + r0 * dv, v1 = Math.min(D.hv, v0 + m * dv); const cu = su[b] / n[b], cv = sv[b] / n[b];
-      const h1 = hash01(st.bi * 7919 + b * 131), h3 = hash01(b * 7 + st.bi); const near = Math.max(0, 1 - Math.hypot(cu - D.u, cv - D.v) / 0.6);
+      const h1 = hash01(st.key * 7919 + b * 131), h3 = hash01(b * 7 + st.key); const near = Math.max(0, 1 - Math.hypot(cu - D.u, cv - D.v) / 0.6);
       this.emit(st, { pane: st.bi, type: st.type, kind: 'clump', outline: this.outline(st, [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], outSign), centre: this.toWorld(st, cu, cv), normal: N, thickness: 2 * st.ht, area: n[b] * du * dv,
         velocity: v3.add(v3.scale(N, GLASSBREAK.out * (0.1 + 0.25 * h1 + 0.8 * near)), [0, -0.3 - 0.5 * h3, 0]), spin: [(h1 - 0.5) * GLASSBREAK.spin, 0, (h3 - 0.5) * GLASSBREAK.spin], tint: v3.copy(st.box.albedo), grain: GLASSBREAK.diceGrain, cause: 'dice', who: st.lastWho, seed: (D.seed ^ Math.imul(b + 1, 0x9E3779B1)) >>> 0 }, b);
     }
@@ -591,7 +591,7 @@ export class GlassBreak {
     const pts: Pt[] = [[-st.hu, -st.hv], [st.hu, -st.hv], [st.hu, st.hv], [-st.hu, st.hv]];
     this.note(`pane ${st.bi}: the laminated sheet leaves its frame`); this.plog(st, 'sheet blown out');
     this.emit(st, { pane: st.bi, type: st.type, kind: 'sheet', outline: this.outline(st, pts, outSign), centre: v3.copy(st.box.c), normal: N, thickness: 2 * st.ht, area: 4 * st.hu * st.hv,
-      velocity: v3.add(v3.scale(N, GLASSBREAK.blastOut * k * 0.6), [0, 0.4, 0]), spin: [1.5 * k, 0, 0.4], tint: v3.copy(st.box.albedo), grain: 0, cause: 'blast', who: st.lastWho, seed: hitSeed(st.bi, st.box.c) }, 0);
+      velocity: v3.add(v3.scale(N, GLASSBREAK.blastOut * k * 0.6), [0, 0.4, 0]), spin: [1.5 * k, 0, 0.4], tint: v3.copy(st.box.albedo), grain: 0, cause: 'blast', who: st.lastWho, seed: pointSeed(st.key, st.box.c) }, 0);
   }
 
   // ---------------------------------------------------------------- pieces letting go
@@ -624,12 +624,12 @@ export class GlassBreak {
     const n = this.normalOf(st); const cw = this.toWorld(st, f.cen[0], f.cen[1]);
     let dirOut = st.lastDir; if (from) { const d = v3.sub(cw, from); if (v3.len(d) > 1e-6) dirOut = v3.normalize(d); }
     const outSign = v3.dot(n, dirOut) >= 0 ? 1 : -1; const N = v3.scale(n, outSign);
-    const h1 = hash01(st.bi * 7919 + f.fid * 131), h2 = hash01(st.bi * 104729 + f.fid * 193), h3 = hash01(f.fid * 7 + st.bi);
+    const h1 = hash01(st.key * 7919 + f.fid * 131), h2 = hash01(st.key * 104729 + f.fid * 193), h3 = hash01(f.fid * 7 + st.key);
     const speed = cause === 'blast' ? GLASSBREAK.blastOut * k * (0.6 + 0.8 * h3) : cause === 'hit' ? GLASSBREAK.out * (0.8 + 1.2 * h3) : cause === 'rake' ? GLASSBREAK.out * (1.2 + 0.8 * h3) : GLASSBREAK.out * (0.15 + 0.5 * h3);   // what a round knocks out leaves smartly; what merely lost its hold tips out and drops
     const velocity = v3.add((cause === 'blast' || cause === 'rake') && from ? v3.scale(v3.normalize(v3.add(v3.scale(dirOut, 0.7), v3.scale(N, 0.5))), speed) : v3.scale(N, speed), [0, -0.2 - 0.6 * h1, 0]);
     this.plog(st, `piece ${f.i}:${f.b}:${f.s} out (${cause})`);
     this.emit(st, { pane: st.bi, type: st.type, kind: f.b >= 3 ? 'dagger' : 'piece', outline: this.outline(st, f.pts, outSign), centre: cw, normal: N, thickness: 2 * st.ht, area: f.area,
-      velocity, spin: [(h1 - 0.5) * GLASSBREAK.spin, (h2 - 0.5) * 2, (h3 - 0.5) * GLASSBREAK.spin], tint: v3.copy(st.box.albedo), grain: 0, cause, who: st.lastWho, seed: (hitSeed(st.bi, cw) ^ f.fid) >>> 0 }, f.fid);
+      velocity, spin: [(h1 - 0.5) * GLASSBREAK.spin, (h2 - 0.5) * 2, (h3 - 0.5) * GLASSBREAK.spin], tint: v3.copy(st.box.albedo), grain: 0, cause, who: st.lastWho, seed: (pointSeed(st.key, cw) ^ f.fid) >>> 0 }, f.fid);
     this.afterRelease(st);
   }
   private afterRelease(st: PaneState) { const w = this.walkableNow(st); if (w !== st.walkable) { st.walkable = w; this.g.col.wrote(); } if (st.exterior) this.gustDirty = true; }
@@ -638,7 +638,7 @@ export class GlassBreak {
     const g = this.g;
     if (f.cause !== 'hit' && g.time - st.soundAt >= GLASSBREAK.crackGap) {   // a round's own piece was heard as the round (glass.ts glassImpact); what falls LATER — by support, a blast, the dice — is heard here, once per pane per crackGap: a diced window is dozens of clumps a frame, and every event costs every man a propagation
       st.soundAt = g.time; const dicing = f.kind === 'clump' || f.kind === 'sheet';
-      g.audio.play('glassCrack', f.centre, dicing ? 1.0 : 0.75, { rate: dicing ? 0.7 : 1.25 + 0.3 * hash01(key + st.bi) });
+      g.audio.play('glassCrack', f.centre, dicing ? 1.0 : 0.75, { rate: dicing ? 0.7 : 1.25 + 0.3 * hash01(key + st.key) });
       glassEvent(g, st.box, f.centre, 1.0, st.lastWho);
     }
     if (this.onRelease) { GB_STATS.hooked++; this.onRelease(f); return; }
@@ -652,7 +652,7 @@ export class GlassBreak {
     const nSh = grains ? (f.kind === 'clump' && key % GLASSBREAK.crumbEvery === 0 ? 1 : 0) : sheet ? 3 : Math.max(1, Math.min(3, Math.round(f.area / 0.07)));
     const outSign = v3.dot(this.normalOf(st), f.normal) >= 0 ? 1 : -1;
     for (let k = 0; k < nSh; k++) {
-      const h1 = hash01(st.bi * 7919 + key * 131 + k * 17), h2 = hash01(st.bi * 104729 + key * 193 + k * 29);
+      const h1 = hash01(st.key * 7919 + key * 131 + k * 17), h2 = hash01(st.key * 104729 + key * 193 + k * 29);
       const vtx = uv[(k * Math.max(1, Math.floor(uv.length / nSh))) % uv.length] ?? cen;
       const pu = cen[0] * (nSh === 1 ? 1 : 0.6) + vtx[0] * (nSh === 1 ? 0 : 0.4), pv = cen[1] * (nSh === 1 ? 1 : 0.6) + vtx[1] * (nSh === 1 ? 0 : 0.4);
       const side = Math.sqrt(f.area / nSh) * (grains ? 0.35 : 0.92); const su = side * (0.8 + 0.4 * h1), sv = side * (0.8 + 0.4 * h2);
@@ -696,7 +696,7 @@ export class GlassBreak {
     for (const f of this.fragsOf(st)) {
       if (st.open[f.fid] || held.has(f.fid) || st.pending.some(p => p.fid === f.fid)) continue;
       const d = Math.hypot(f.cen[0] - st.lastUV[0], f.cen[1] - st.lastUV[1]);
-      st.pending.push({ fid: f.fid, at: this.g.time + d * GLASSBREAK.staggerPerM + GLASSBREAK.staggerJit * hash01(st.bi * 31 + f.fid), cause: 'support', from: null, k: 1 }); n++;
+      st.pending.push({ fid: f.fid, at: this.g.time + d * GLASSBREAK.staggerPerM + GLASSBREAK.staggerJit * hash01(st.key * 31 + f.fid), cause: 'support', from: null, k: 1 }); n++;
     }
     if (n) { this.plog(st, `${n} pieces unheld`); st.pending.sort((a, b) => a.at - b.at || a.fid - b.fid); }
   }
@@ -748,7 +748,7 @@ export class GlassBreak {
     for (const f of this.fragsOf(st)) {
       if (st.open[f.fid] || f.vMin >= vClear || waiting.has(f.fid)) continue;
       if (f.area < K.toothArea && f.frame.bottom + f.frame.left + f.frame.right + f.frame.top > 1e-4) continue;   // teeth: shouldered through, as the walk rule has it
-      st.pending.push({ fid: f.fid, at: g.time + 0.04 + 0.12 * Math.abs(f.cen[0] - mu) + 0.05 * hash01(st.bi * 71 + f.fid), cause: 'rake', from, k: 1 }); took++;
+      st.pending.push({ fid: f.fid, at: g.time + 0.04 + 0.12 * Math.abs(f.cen[0] - mu) + 0.05 * hash01(st.key * 71 + f.fid), cause: 'rake', from, k: 1 }); took++;
     }
     if (took) { st.lastWho = c.id; st.pending.sort((a, b) => a.at - b.at || a.fid - b.fid); GB_STATS.raked += took; this.plog(st, `raked: ${took} pieces`); this.note(`pane ${st.bi}: ${took} pieces raked out`); }
   }
@@ -779,7 +779,7 @@ export class GlassBreak {
         const inward: Vec3 = this.skySide(st.bi) > 0 ? v3.scale(n, -1) : n;   // away from the face the sky is over (the level's own geometry, as exterior itself)
         const reach = WIND.doorReach, dMax = WIND_FIELD.cutK * reach, tanSpread = Math.tan(WIND.doorSpreadDeg * Math.PI / 180), r0 = st.hu * 0.7;
         const pos: Vec3 = [c[0] - inward[0] * 0.15, c[1], c[2] - inward[2] * 0.15];
-        src = { kind: 'jet', why: 'glass', name: `glass:${st.bi}`, pos, dir: inward, speed: 0, base: 0, on: 1, gust: 1, reach, tanSpread, r0, dMax, bound: { c: v3.mad(pos, inward, dMax / 2), r: Math.hypot(dMax / 2, r0 + dMax * tanSpread) + 0.3 }, seed: (0x61A55 ^ (st.bi * 2654435761)) >>> 0 } as WindSource;
+        src = { kind: 'jet', why: 'glass', name: `glass:${st.bi}`, pos, dir: inward, speed: 0, base: 0, on: 1, gust: 1, reach, tanSpread, r0, dMax, bound: { c: v3.mad(pos, inward, dMax / 2), r: Math.hypot(dMax / 2, r0 + dMax * tanSpread) + 0.3 }, seed: (0x61A55 ^ Math.imul(st.key, 2654435761)) >>> 0 } as WindSource;
         g.wind.all.push(src); this.gusts.set(st.bi, src); this.note(`gust source through pane ${st.bi}`);
       }
       const facing = Math.max(0, (sw![0] * src.dir[0] + sw![1] * src.dir[2]) / Math.max(1e-3, stormSpeed));
