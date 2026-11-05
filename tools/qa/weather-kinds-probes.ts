@@ -153,10 +153,10 @@ export async function wxHearing() {
     const p = await heard('downpour', OUT, shot(OUT));
     F.verdict(p.aw >= 0.92 && p.fix, 'a gunshot 25 m off is heard in a downpour as in anything (the weather buys the small noises, never a report)', `awareness ${f2(p.aw)}`); }
   { const a = await heard('downpour', OUT, step(OUT, 2.5)); const g = a.W.game, w = g.weather; const m0 = w.hearMask([20, 1.5, 2]);
-    w.thunders.push({ at: g.time, distKm: 0.4, bearing: 0, loud: 1 }); a.W.step(DT); const m1 = w.hearMask([20, 1.5, 2]);
+    w.thunder({ at: g.time, distKm: 0.4, bearing: 0, loud: 1 }); a.W.step(DT); const m1 = w.hearMask([20, 1.5, 2]);
     for (let i = 0; i < (WX.WX_SIM.thunderSecs + 0.2) / DT; i++) a.W.step(DT); const m2 = w.hearMask([20, 1.5, 2]);
-    const far = await born('downpour'); far.step(DT); far.game.weather.thunders.push({ at: far.game.time, distKm: 4, bearing: 0, loud: 0.27 }); far.step(DT); const mf = far.game.weather.hearMask([20, 1.5, 2]);
-    const none = await born(null); none.step(DT); none.game.weather.thunders.push({ at: none.game.time, distKm: 0.4, bearing: 0, loud: 1 }); none.step(DT);
+    const far = await born('downpour'); far.step(DT); far.game.weather.thunder({ at: far.game.time, distKm: 4, bearing: 0, loud: 0.27 }); far.step(DT); const mf = far.game.weather.hearMask([20, 1.5, 2]);
+    const none = await born(null); none.step(DT); none.game.weather.thunder({ at: none.game.time, distKm: 0.4, bearing: 0, loud: 1 }); none.step(DT);
     F.verdict(m1 > m0 + 1 && Math.abs(m2 - m0) < 1e-9 && Math.abs(mf - m0) < 1e-9 && none.game.weather.hearMask([20, 1.5, 2]) === 1, `a near thunderclap drowns more for ${WX.WX_SIM.thunderSecs} s and then it is the rain alone; a far roll does not; with no kind picked thunder masks nothing`, `path × ${f2(m0)} → ${f2(m1)} under the clap → ${f2(m2)} after · far roll ${f2(mf)}`); }
   return F.done();
 }
