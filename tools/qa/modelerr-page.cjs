@@ -63,14 +63,14 @@ const STEP = async (n) => {
     if (eyes.length < 2) fail(`the report's plan asks its sight lines at ${eyes.length} height${eyes.length === 1 ? '' : 's'}: a plan has more than one`);
     if (heights.reduce((n, e) => n + e.asked, 0) !== smoke.length) fail('the report has sight lines at a height its plan does not name');
     for (const e of heights) { if (!e.asked) fail(`no sight line was asked at ${e.h} m`); else if (!e.got) fail(`no sight line at ${e.h} m was answered by the picture (${e.asked} asked)`); else if (!e.smoked) fail(`the picture has no smoke on any sight line at ${e.h} m`); }
-    if (!R.level) fail('the report does not say its level (src/host/modelerr.ts levelOf)');
+    if (!R.look) fail('the report does not say what its questions look out on (src/host/modelerr.ts lookOf)');
     // THE WAIT (the walk clears a station's smoke only when the picture has answered its last age): held at a station the walk MOVED ON FROM — nothing is
     // cleared after the last one, so a plan of one station (tiny) cannot tell a walk that waits from one that does not. PLAN=quick has two.
     const lastAge = Math.max(...smoke.map(s => s.t)), moved = R.stations.length - 1, lastSmoked = smoke.filter(s => s.t === lastAge && s.s < moved && s.pic !== null && s.pic < 0.99).length;
     if (moved > 0 && !lastSmoked) fail(`the picture has no smoke on any line of the last age (${lastAge} s) at a station the walk moved on from: it cleared the room before it asked`);
     if (R.v !== 2) fail(`the report is version ${R.v}: a walk that waits for the picture writes 2`);
     if (!card) fail('the page showed no card');
-    console.log(`- the picture answered ${got(light)} of ${light.length} light points and ${got(smoke)} of ${smoke.length} sight lines (${heights.map(e => `${e.got} of ${e.asked} at ${e.h} m, ${e.smoked} with smoke on them`).join('; ')}${moved > 0 ? `, ${lastSmoked} of them at the last age of a station the walk moved on from` : '; ONE STATION: the wait before a move is not held on this plan'}) · ${R.unanswered} never answered · world ${R.world} · level ${R.level} · ${JSON.stringify(R.where || {})}`);
+    console.log(`- the picture answered ${got(light)} of ${light.length} light points and ${got(smoke)} of ${smoke.length} sight lines (${heights.map(e => `${e.got} of ${e.asked} at ${e.h} m, ${e.smoked} with smoke on them`).join('; ')}${moved > 0 ? `, ${lastSmoked} of them at the last age of a station the walk moved on from` : '; ONE STATION: the wait before a move is not held on this plan'}) · ${R.unanswered} never answered · world ${R.world} · look ${R.look} · ${JSON.stringify(R.where || {})}`);
   } catch (e) { fail(String(e && e.message || e)); }
   if (errs.length) { red++; console.log(`- FAIL — the page said:\n    ${[...new Set(errs)].slice(0, 12).join('\n    ')}`); }
   await browser.close().catch(() => {});

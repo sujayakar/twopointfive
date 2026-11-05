@@ -3026,26 +3026,16 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   flags, as a show has it, so NO CHECKPOINT is written while the lab is open (`savestate.ts runNo`): a file with the lab's unseen player in it could
   be loaded later with nothing to put the flag down. `window.__charlab` = `{ state, open, leave, wear, worn, outfits }`. Sam keeps his own
   weapon in any outfit. Never seen on a GPU.
-- **A HOUSE FRONT DRESSED BY HAND, A TRIAL** (`src/scene/frontTry.ts dressFront`; the look page only; the maintainer, 10-23, of the pass's tea house seen
-  from over its yard: "this looks a bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just
-  needs a lot of iteration. right now it does look a bit procedural"). The answer tried is AUTHORING, not another layer of noise: one wall gone over
-  piece by piece after the level loads (as the geometry trial does; `levels/pass.json` is not touched), every number placed by hand. The three windows
-  differ (boards, shutters, a blanket nailed over), the two red panels differ (one worn, one plastered over), mends of other mud, a spout with its
-  streak and ice, beam ends under the roof line, split wood under a window, a ladder leaned over the level's own planks, a plank bench with a can and
-  a pot, a few mud bricks at the wall's end. Made of what the engine has: plain and tilted boxes (`Box.rot`), twelve-sided prisms for round timber
-  (`cutRound` about z, a thin picture-only disc for the end grain) and thin cut boxes for flat shapes with an uneven outline. ONE MODEL: what closes a
-  window is a REAL box (sight, a round and the room's lamp stop at a board, a shutter, the blanket and pass between the boards), as is what stands on
-  the ground (none within a stride of a door; the swung shutter stands out at head height beside the planks) and the beam ends over every head; only
-  what lies flat on the wall is picture only, as the level's own panels are. COLOURS are the level palette's rows darkened in one piece (`of(row, k)`,
-  0.55 < k < 0.99), so `lookClass` gives each piece its map: a hand-picked colour between two rows gets none. Traps met: the wall past x = 28 at that
-  z is a partition INSIDE the bunk room, and the yard wall there has a door between its two panels; the level already stacks planks at x 21.4 to 22.85.
-  KNOWN: a tilted box takes no map and no clinging snow from the look (`lookSurface` leaves `BOX_ROT` alone) and a cut piece takes snow only about y;
-  a wall charge there leaves the pieces above a hand's height hanging (`scene/lookTidy.ts` takes a decal with its wall only from the foot). It knows
-  the house by three of its file's boxes (the two red panels, the second window's pane) and does nothing on any other level. Switch: `?front=0` or the
-  look panel's 'Dressed by hand' button (kept on the machine as `twopointsix.fronttry`; the page loads again); needs cut boxes on, and holds the cut
-  programs in from boot as the geometry trial does. Not a rule of the game: no knob, no journal key; the men's routes and sight along that wall change
-  on that page. If the look goes to the build this belongs in the level's file or its kit, not in code. Checked: 98 pieces placed, none malformed,
-  none in the level's own solids or by a door (a script over the loaded level); drawn on the software adapter only.
+- **A HOUSE FRONT DRESSED BY HAND: WAS A TRIAL, IS THE KIT'S** (the maintainer, 10-23, of the pass's tea house seen from over its yard: "this looks a
+  bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just needs a lot of iteration. right
+  now it does look a bit procedural"). The answer tried was AUTHORING, not another layer of noise: one wall gone over piece by piece on the look page
+  (`src/scene/frontTry.ts`, with `?front=0` and a panel button). On 11-05 the trial went into the kit and the level's file, as its bullet said it
+  should: `src/scene/gwotKit.ts` has the pieces (what is done to a wall's face: `boards`, `shutters`, `windowBlanket`, `wallPatch`, `spout`,
+  `beamEnds`, `splitWood`, `ladder`; and `plankBench`, `pot`, `bricks`), `tools/levels/pass.ts` lays them, and `frontTry.ts`, its address word and its
+  button are gone. `docs/agents/levels.md` ("The pass's dressing is the kit's") has the rule that came with it: a window a defender watches through
+  keeps its open form. KEPT FROM THE TRIAL: what closes a window is a REAL box, as is what stands on the ground and the beam ends over every head;
+  only what lies flat on the wall is picture only. A tilted box (`Box.rot`) takes no map and no clinging snow from the look and says no shape; a wall
+  charge there leaves the pieces above a hand's height hanging (`scene/lookTidy.ts` takes a decal with its wall only from the foot).
 - **A LORRY WITH CURVES, A TRIAL** (`src/scene/lorryTry.ts dressLorry`; the look page only, with cut boxes on; `?lorry=0` = the lorry as its file has
   it, or the look panel's 'Curved' button, kept on the machine as `twopointsix.lorrytry`; the page loads again). The maintainer, 10-24, on a GPU picture of the pass's yard: "some curved surfaces on the truck would go a long way". The
   pass's lorry (twenty boxes under four flat slabs of snow) is gone over by hand after the level loads, as the house front is; `levels/pass.json` is not
@@ -3078,25 +3068,15 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   SEEN on the software adapter only (midday, 480 × 300, from over the cab and from behind): the stack, the beacon, the mirrors, the stakes, the air
   cleaner and the racked cans read; the winch, the steps and the spare were not in those two frames. NEVER SEEN ON A GPU; its cost there is not measured
   (`?lorrykit=0` against the page as it opens is the pair).
-- **THE PASS DRESSED WITH ROUND THINGS, A TRIAL** (`src/scene/passTry.ts dressPass`; the look page only, with cut boxes on; `?dress=0` = the pass as its
-  file has it, or the look panel's 'Dressed' button, kept on the machine as `twopointsix.passtry`; the page loads again). The maintainer, 10-29, asking what
-  rounds cost and whether to use them through a level: "dressing up the pass level we have would be another good experiment". Gone over by hand after the
-  level loads, as the lorry is; `levels/pass.json` is not touched and the chopping block is the test that this is the pass (not found = nothing touched).
-  Three pipes stacked along the bunk room's wall (two iron, one rust) with snow along their tops; three fuel drums standing in the pocket of yard by the
-  lean-to and one on its side; the chopping block made round, four logs by it and two along the wood pile; a loose tyre by the cart. 35 boxes added: the
-  page as it opens (the shapes, house front and lorry trials on too) goes from 607 boxes with 131 cut to 642 with 167, none with more than eight planes.
-  WHAT STANDS IS A CUT PRISM (`cutRound` about y, `lorryTry.ring(r, 2)`, as `geoTry.ts roundStacks` makes one), NOT `Box.round`: on the look page with a
-  geometry trial on, `roundConfig.gpu` is off (main.ts) and a `Box.round` is drawn and traced as the square box round it, which the first stills showed
-  (three square drums). So a body meets the box round each new piece and a ray meets the prism. Paints are the palette's own rows as they are (a row
-  darkened under 0.55 of itself is no row to the look's material maps, `gbuffer.ts classWgsl`, nor to what a round throws off it); the olive drum is
-  `gwotAs('olive', 'metal')`. No knob and no journal key, as the other trials.
-  TRIED AND TAKEN OUT: the file's 93 low heaps of snow with their tops cut to arcs (the page's snow surface already draws a smooth hill over each, so
-  nothing showed and 93 cut boxes bought nothing), and discs of snow on the drums' lids (a round's own end gets a drum's dark rim and no snow finish).
-  KNOWN: the snow along a lying round is a hand-fitted arc each time, because the cut pass's clinging snow knows a round about y only (the lorry's bullet
-  says the same); the look panel's trials are five positional arguments and four copies of one predicate.
-  SEEN on the software adapter only (midday, 480 x 300 drawn up to 960 x 600): the page boots with every program (119 of 119) and no error; the logs and
-  the lying drum read as round with their snow on the top line; the standing drums are round and show their twelve sides close up; the pipes read as
-  pipes. NEVER SEEN ON A GPU and NOT TIMED ANYWHERE: the page's fps with `?dress=0` and without is the reading asked of the maintainer.
+- **THE PASS DRESSED WITH ROUND THINGS: WAS A TRIAL, IS THE KIT'S** (the maintainer, 10-29, asking what rounds cost and whether to use them through a
+  level: "dressing up the pass level we have would be another good experiment"). It was `src/scene/passTry.ts`, on the look page only (`?dress=0`, a
+  panel button). On 11-05 it went into the kit and the level's file: `gwotKit.ts pipes`, `log` and `choppingBlock` are pieces, the fuel drums, the
+  drum on its side and the loose tyre are the kit's own `drum`, `drumDown` and `tyres`, `tools/levels/pass.ts` lays them, and `passTry.ts`, its word
+  and its button are gone (`docs/agents/levels.md`, "The pass's dressing is the kit's"). A THING LYING ROUND IS ONE BOX THAT SAYS `round: 1`
+  (`gwotKit.ts lying`), not a hand-cut prism: with shapes off it is the plain box, and what walks meets the box either way. THE SNOW ALONG IT is laid by
+  the one rule for a bowed top (`scene/carShapes.ts layOn`, which takes a lying round for a bowed top), no longer a hand-fitted arc each time.
+  TRIED AND TAKEN OUT in the trial, still true: the file's 93 low heaps of snow with their tops cut to arcs (the page's snow surface already draws a
+  smooth hill over each), and discs of snow on the drums' lids (a round's own end gets a drum's dark rim and no snow finish).
 - **THE MEN ON THE LOOK PAGE, A FIRST ROUND** (`shaders/look.wgsl lookMan`, called from `gbuffer.wgsl fsSkin`; the maintainer, 10-23: "we need to spend a
   LOT of time using these layers to make the characters look awesome. I think that's the next big frontier"). A man was one flat colour a material
   slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
@@ -3293,8 +3273,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   CUT_CORE_STUFF`, bits 12..16). A SHAPE'S PIECE (`scene/shapes.ts`, a box's `shape.with`) says its word as a box does, its own or its
   paint's row's, and the box stood up for it carries it. A TONE OF A PALETTE ROW is made of what the row is: the kit's `toned` (`gwotKit.ts`)
   and the snow levels' rock (`tools/levels/snowRock.ts`) hand their numbers through `tonedAs`, which is how ground dressing, stains, worn
-  paths and cut rock keep their earth, gravel and slab. The look page's hand-built pieces (`frontTry`, `lorryTry`, `passTry`) are made of
-  palette rows and say their words. The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
+  paths and cut rock keep their earth, gravel and slab. The kit's wall-face and yard pieces (the look page's hand-built trials until 11-05) are made of
+  palette rows and say their words, their trim in a paint of its own included (`gwotKit.ts trimIn`; `stuff-check` line 12). The editor keeps, copies, sets and shows a paint's word (`editor/paint.ts`, the paint panel's 'made of' row), a
   said plain included; a blank document's paints say theirs.
   LEVEL FILES: every level file of the build is its generator's output, so each was written again by its generator
   (`tools/levels/export.ts`, `tools/level-export.ts`). `tools/levels/stuff-bake.ts` brings forward a file laid WITHOUT its generator (the

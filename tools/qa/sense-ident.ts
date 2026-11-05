@@ -16,11 +16,13 @@
 // SoundPaths.propagate, nothing remembered between questions) · a way from anywhere to anywhere, under a few different caps on the search (NavGrid.findPath)
 // · one to seven of a team's eyes, each with a wedge and a near field of its own or the team's (all round), handed over as a pass hands them (fogofwar.ts
 // handEyes), on a man (his chest and head) or a body, tried in an order and until so many have a line (fogofwar.ts sees).
+// PRICED_BREAK=1 is the red path of the priced search's ORDER: the host prices the cells the module asks for last first, so the prices are the same and
+// the way is the same but the cells are priced in another order than the TypeScript search reads them: `paths` must FAIL and no other sense may.
 // The last lines: `SENSE-IDENT {…}` is each row's count of differing answers for a caller to read; exit 3 = the red path left a row green (named).
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1';   // (the game's own maths: the rows answer under no other)
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
-import { standUp } from './headless.ts';
+const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
 const ROOT = resolve(import.meta.dir, '../..');
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -29,9 +31,10 @@ const G: any = await import(`${ROOT}/src/game/guards.ts`), F: any = await import
 type Vec3 = [number, number, number];
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
-const N = Number(flag('--n') ?? 20000), SEED = Number(flag('--seed') ?? 1), UNSAID = process.env.RUST_BREAK === '1';
+const N = Number(flag('--n') ?? 20000), SEED = Number(flag('--seed') ?? 1), UNSAID = process.env.RUST_BREAK === '1', BACKWARD = process.env.PRICED_BREAK === '1';
 const files = (flag('--levels') ?? readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).join(',')).split(',');
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+if (UNSAID && BACKWARD) { console.log('=== sense-ident: RUST_BREAK and PRICED_BREAK are two red paths: one at a time ==='); process.exit(2); }
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== sense-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);
 type Sense = keyof typeof import('../../src/scene/boxMirror.ts').SENSES; const SENSES = Object.keys(BM.SENSES) as Sense[];   // (the senses are boxMirror.ts's list: one added there and not asked below does not typecheck)
@@ -91,7 +94,15 @@ for (const file of files) {
     },
     paths: () => {
       const a = pick(), b = rnd() < 0.6 ? near(a, 1 + rnd() * 20) : pick(), cap = [6000, 6000, 6000, 400, 40, 3][Math.floor(rnd() * 6)];
-      return { q: `way ${a} → ${b} within ${cap}`, run: () => col.nav.findPath(a, b, cap) };
+      if (rnd() < 0.5) return { q: `way ${a} → ${b} within ${cap}`, run: () => col.nav.findPath(a, b, cap) };
+      // …half of them WITH A PENALTY: a price a cell (plain floor mostly, some dear, some all but a wall, some under 1, in blocks of a cell or of four by
+      // four), a function of the cell alone as every penalty of the game's is. The answer is the way AND the cells the search asked the price of, in the
+      // order it first asked for each: the module must come to need the cells the TypeScript search reads, when it reads them (nav.rs find_priced)
+      const salt = Math.floor(rnd() * 0x7fffffff), shift = rnd() < 0.5 ? 0 : 2, W = col.nav.W;
+      const price = (ix: number, iz: number) => { let h = Math.imul((ix >> shift) + 1, 73856093) ^ Math.imul((iz >> shift) + 1, 19349663) ^ salt; h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d); h = (h ^ (h >>> 12)) >>> 0; const r = h % 16; return r < 9 ? 1 : r < 12 ? 6 : r < 14 ? 20 : r === 14 ? 0.5 : 200; };
+      return { q: `way ${a} → ${b} within ${cap}, priced (salt ${salt}, blocks of ${1 << shift})`, run: () => { const order: number[] = [], met = new Set<number>();
+        const way = col.nav.findPath(a, b, cap, (ix: number, iz: number) => { const i = iz * W + ix; if (!met.has(i)) { met.add(i); order.push(i); } return price(ix, iz); });
+        return [way, order]; } };
     },
     fog: () => {
       // a team's eyes round a man: most within a room or two of him, half of them looking his way give or take, each with the team's field (absent: all
@@ -109,6 +120,7 @@ for (const file of files) {
   };
   // a share of the statics is re-shaped half way: in place, and said (or, on the red path, not)
   const movers = boxes.filter(b => !b.rot && b.h[1] > 0.4 && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && rnd() < 0.15);
+  if (BACKWARD) col.nav.priceThese = (m: any, k: number, pen: (ix: number, iz: number) => number) => { const w = col.nav.W; for (let i = k - 1; i >= 0; i--) { const c = SIM.u32()[m.navWant + i]; SIM.f64()[m.navPrice + c] = pen(c % w, (c / w) | 0); } };
   const diff = none(), there = none(); let first = '';
   col.sound.invalidate(); col.tickOpen();
   for (const k of SENSES) C.SENSED[k] = 0;
@@ -129,6 +141,16 @@ for (const file of files) {
       if (!same(r, h)) { diff[k]++; first ||= `${k}: ${Q.q}: here ${JSON.stringify(h).slice(0, 200)}, the module ${JSON.stringify(r).slice(0, 200)}`; }
     }
   }
+  // THE RULE THE MODULE'S ONCE-A-CELL PRICING RESTS ON, held by the both-ways check (collision.ts findPathAsk, which rust-check --both runs over the
+  // missions): a penalty gives a cell one price all through a search. Here that check's own two paths: an honest price is the same answer, and a price
+  // that is another number at every ask must be counted as a differ.
+  let onePrice = '', twoPriced = true;
+  if (!UNSAID && !BACKWARD) { const B = C.BOTH, was = { ...B }; let honest = 0, caught = 0, asked = 0; B.on = true;
+    for (let k = 0; k < 12; k++) { const a = pick(), b = near(a, 4 + rnd() * 16); let n = 0, d = B.differ, q = B.asked;
+      col.nav.findPath(a, b, 6000, (ix: number, iz: number) => (ix * 7 + iz * 13) % 5 === 0 ? 6 : 1); honest += B.differ - d; d = B.differ;
+      col.nav.findPath(a, b, 6000, () => 1 + (n++ % 7)); caught += B.differ - d; asked += B.asked - q; }
+    Object.assign(B, was); twoPriced = honest === 0 && caught > 0;
+    onePrice = ` · one price a cell: 24 priced searches (${asked} questions compared), an honest price differs ${honest} times, a price that changes at every ask is caught ${caught} times${twoPriced ? '' : ' — NOT AS IT MUST BE'}`; }
   let bench = '';
   if (argv.includes('--bench') && !UNSAID) {   // the same questions through both, a block each way, three times over
     const parts: string[] = [];
@@ -139,11 +161,13 @@ for (const file of files) {
   }
   col.tickShut(); L.length = own;
   const total = KINDS.reduce((n, k) => n + diff[k], 0), thin = KINDS.filter(k => there[k] < per * 0.5);   // (a sound that meets an open pane, a line too long to be one: the host's own — but not most of them)
-  const fail = total > 0 || (!UNSAID && thin.length > 0);
-  log(`${file.padEnd(20)} ${per} questions a sense (to the Rust module: ${KINDS.map(k => `${k} ${there[k]}`).join(', ')}) · ${boxes.length} statics, ${movers.length} re-shaped${UNSAID ? ' UNSAID' : ''}, ${regrid} cells of the floor's grid changed · ${col.dynamicBoxes.length} leaves · ${own} + 14 lamps · ${smoke.blobs.length} blobs · ${fail ? `FAIL — ${total ? `${KINDS.filter(k => diff[k]).map(k => `${k} ${diff[k]}`).join(', ')} differ, first: ${first}` : `too few questions went to the module (${thin.join(', ')})`}` : 'PASS — every answer the same to the bit'}${bench}`);
+  const fail = total > 0 || (!UNSAID && thin.length > 0) || !twoPriced;
+  log(`${file.padEnd(20)} ${per} questions a sense (to the Rust module: ${KINDS.map(k => `${k} ${there[k]}`).join(', ')}) · ${boxes.length} statics, ${movers.length} re-shaped${UNSAID ? ' UNSAID' : ''}, ${regrid} cells of the floor's grid changed · ${col.dynamicBoxes.length} leaves · ${own} + 14 lamps · ${smoke.blobs.length} blobs · ${fail ? `FAIL — ${total ? `${KINDS.filter(k => diff[k]).map(k => `${k} ${diff[k]}`).join(', ')} differ, first: ${first}` : thin.length ? `too few questions went to the module (${thin.join(', ')})` : 'the one-price check below'}` : 'PASS — every answer the same to the bit'}${onePrice}${bench}`);
   if (fail) bad++; for (const k of KINDS) ever[k] += diff[k];
 }
-const blind = UNSAID ? KINDS.filter(k => !ever[k]) : [];   // (the red path must turn every sense red on some level)
+const blind = UNSAID ? KINDS.filter(k => !ever[k]) : BACKWARD ? KINDS.filter(k => (k === 'paths') !== !!ever[k]) : [];   // (the red path must turn every sense red on some level; the order's red path, the paths and nothing else)
 log('SENSE-IDENT ' + JSON.stringify(ever));
-log(bad ? `=== sense-ident: ${bad} level(s) FAIL${UNSAID ? blind.length ? ` — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : ' — every sense differed somewhere, as the red path must' : ''} ===` : '=== sense-ident: ALL PASS ===');
+const redSay = BACKWARD ? (blind.length ? `THE ORDER'S RED PATH IS WRONG ABOUT ${blind.join(', ')} (the paths must differ, and nothing else)` : 'the paths differed and nothing else, as the order\'s red path must')
+  : UNSAID ? (blind.length ? `THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : 'every sense differed somewhere, as the red path must') : '';
+log(bad || blind.length ? `=== sense-ident: ${bad} level(s) FAIL${redSay ? ' — ' + redSay : ''} ===` : '=== sense-ident: ALL PASS ===');
 process.exit(blind.length ? 3 : bad ? 1 : 0);

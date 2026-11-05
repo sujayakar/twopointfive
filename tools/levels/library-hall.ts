@@ -93,6 +93,22 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     [x, z] = bayGwot(5.4); G.plantBed(x, z);
     [x, z] = bayGwot(2.6); G.hearth(x, z, 0.3, 'dust');
     [x, z] = bayGwot(2.8); G.table(x, z, 1.6, 0.75); G.seedTray(x, z);                          // a seed tray stands on a bench
+    [x, z] = bayGwot(2.6); { const tops = G.pipes(x, z, 0, 3, 1.8); G.lay(x, z, 0, tops[2], tops[2].c[0], 0, tops[2].c[1] + tops[2].h[1], tops[2].c[1] + tops[2].h[1] + 0.03, 0.8, 0.1, G.M.dust); }   // round things that lie, and dust along one (the kit's one rule for a bowed top)
+    [x, z] = bayGwot(2.4); G.log(x, z - 0.35, 0.2, 1.0); G.log(x, z + 0.3, -0.15, 1.2, 0.13); G.choppingBlock(x + 0.9, z + 0.1, 0.4);
+  }
+  // A WALL'S FACE, and what the kit does to one: a stretch of mud wall with six windows along the hall's north edge. Each of the three ways to dress a window
+  // stands twice, SHUT and OPEN (a level lays the open one where a defender watches: tools/qa/marksight-check.ts); the mends, the spout, the roof's beam
+  // ends, the split wood, the ladder; and by its foot the bench, the pot and the loose bricks
+  grp('front.gwot');
+  { const Z = 0.6, wins: [number, number][] = [[13.0, 14.2], [15.4, 16.6], [17.8, 19.0], [20.2, 21.4], [22.6, 23.8], [25.0, 26.2]];
+    G.wallX(Z, 12.2, 27.2, 'mud', wins.map(([a, b]) => ({ a, b, y0: 0.9, y1: 1.85, mullions: 2, glass: 'bay' as const })));
+    G.boards('x', Z, wins[0][0], wins[0][1], 1, 'shut'); G.boards('x', Z, wins[1][0], wins[1][1], 1, 'open');
+    G.shutters('x', Z, wins[2][0], wins[2][1], 1, 'shut'); G.shutters('x', Z, wins[3][0], wins[3][1], 1, 'open', 'paintBlue');
+    G.windowBlanket('x', Z, wins[4][0], wins[4][1], 1, 'shut'); G.windowBlanket('x', Z, wins[5][0], wins[5][1], 1, 'open', 'blanketBrown');
+    G.wallPatch('x', Z, 14.8, 1, 0.8, 1.0, 1.1, 'mudLight', 0.9); G.wallPatch('x', Z, 22.0, 1, 2.2, 1.6, 0.7, 'mud', 0.8);
+    G.spout('x', Z, 12.6, 1); G.beamEnds('x', Z, 12.2, 27.2, 1);
+    G.splitWood('x', Z, 26.3, 27.15, 1, 3); G.ladder('x', Z, 24.4, 1);
+    G.plankBench(17.0, Z + 0.5, 0); G.pot(17.25, Z + 0.5, 0.41); G.bricks(12.7, Z + 0.45, 0.1, 6);
   }
   // the hall's own light: the moon, and four floodlights that all throw the same way (one key: no lamp fills another's shadows), so the pieces stand lit at night too
   grp('exterior.lamps');

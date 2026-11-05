@@ -13,13 +13,12 @@
 //          left compared here
 // A run is FAIR only if it met what the step does: slabs torn forward and ones that fall back through their doorway, two in the air at once, the slam,
 // coming to rest, a slab moved clear of a static and one laid in its own doorway for want of a spot, a slab found in the middle of a wall, one six seconds
-// in the air, a lock rail, doors hung again, a slab thrown at a pane, a step the module handed back for one and a pane that was open where a ray met it,
-// and a
+// in the air, a lock rail, doors hung again, a slab thrown at a pane and a pane that was open where a ray met it, and a
 // listener that put the game's block out of the module while a noise was said.
 // SLABS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one unit in the last place too long, and the run must FAIL.
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTSLABS = '1';   // (the game's own maths: the step runs in the module under no other)
 import { resolve } from 'path';
-import { standUp } from './headless.ts';
+const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`), BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);
@@ -29,7 +28,7 @@ type Vec3 = [number, number, number];
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const N = Number(flag('--n') ?? 4000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.SLABS_BREAK === '1' || process.env.RUST_BREAK === '1';
-const files = (flag('--levels') ?? 'office.json,compound.json,consulate-gwot.json,mousehole.json,office.json:panes,compound.json:panes').split(',');   // (`:panes` = the level with three statics in ten made panes of glass, a quarter of their cells fallen out: rays end on panes all the time, open and shut)
+const files = (flag('--levels') ?? 'office.json,compound.json,consulate-gwot.json,mousehole.json,office.json:panes,compound.json:panes').split(',');   // (`:panes` = the level with three statics in ten made panes of glass, a quarter of them gone: rays end on panes all the time, open and shut)
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== slab-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
@@ -37,7 +36,7 @@ const log = console.log, err = console.error; const hush = (on: boolean) => { co
 if (BREAK) { const io = SH.slabIo(), x = io.x, m = () => SH.slabMem(); io.x = { slabs_step: (g: number, w: number) => { m()[io.par + SH.SP.dt] *= 1 + 2 ** -52; return x.slabs_step(g, w); } }; }   // (the red path: a tick a hair too long for the module alone)
 const is = Object.is;
 
-const MET = { atPane: 0, torn: 0, back: 0, two: 0, landed: 0, rested: 0, nudged: 0, laid: 0, buried: 0, capped: 0, rails: 0, rehung: 0, host: 0, open: 0, parked: 0, there: 0, rays: 0, gathers: 0 };
+const MET = { atPane: 0, torn: 0, back: 0, two: 0, landed: 0, rested: 0, nudged: 0, laid: 0, buried: 0, capped: 0, rails: 0, rehung: 0, open: 0, parked: 0, there: 0, rays: 0, gathers: 0 };
 let bad = 0, steps = 0, differ = 0; const firsts: string[] = [];
 // enough other games to put any game's block out of the module (a listener below binds them: whoever hears a noise may do as much)
 const others: any[] = Array.from({ length: ST.simLayout().games + 1 }, () => new ST.SimState());
@@ -52,7 +51,11 @@ for (const entry of files) {
   const panes: any[] = col.boxes.filter((b: any) => (b.flags & BX.BoxFlag.Glass) && !(b.flags & BX.BoxFlag.NoShadow) && !b.rot);
   if (mode === 'panes') {   // (made before the first tick opens, so the module's copy has them as the boxes do)
     let q = 12345; for (const b of col.boxes) { q = (Math.imul(q, 1103515245) + 12345) >>> 0; if ((q >>> 16) % 10 < 3 && !(b.flags & BX.BoxFlag.NoShadow)) b.flags |= BX.BoxFlag.Glass; }
-    col.glassWalkable = null; col.glassOpen = (bi: number, p: number[]) => { const o = ((bi * 7919 + Math.floor(p[0] * 3) * 31 + Math.floor(p[1] * 3) * 17 + Math.floor(p[2] * 3)) & 3) === 0; if (o) MET.open++; return o; }; }
+    // (a quarter of the made panes GONE — a made-up state of the glass, said twice as the game's own is: the rule a walk of this side asks, and the rows the
+    //  module's copy holds, boxMirror.ts PaneSource. Where a pane is open piece by piece is tools/qa/glass-ident.ts's to hold.)
+    const goneOf = (bi: number) => (((bi * 7919) >>> 2) & 3) === 0, rows: any[] = [];
+    col.boxes.forEach((b: any, bi: number) => { if ((b.flags & BX.BoxFlag.Glass) && goneOf(bi)) rows.push({ bi, gone: true, run: false, sites: [], open: new Uint8Array(0), pending: [], dice: null }); });
+    col.glassWalkable = null; const said = { each: (to: (r: any) => void) => { for (const r of rows) to(r); }, view: null }; col.glassRule((bi: number) => { const o = goneOf(bi); if (o) MET.open++; return o; }, () => said); }
   const walls: any[] = col.boxes.filter((b: any) => !(b.flags & BX.BoxFlag.NoShadow) && b.c[1] + b.h[1] > 1 && b.c[1] - b.h[1] < 0.3);
   const thick: any[] = [...walls].sort((a, b) => Math.min(b.h[0], b.h[2]) - Math.min(a.h[0], a.h[2])).slice(0, 8);   // (the widest of them: no clear spot within reach of their middles, so a slab found there is laid in its own doorway)
   const ids: number[] = [g.player.char.id, ...g.guards.map((x: any) => x.char.id)];
@@ -115,7 +118,7 @@ for (const entry of files) {
   if (levelBad || here > N / 10) bad++;
   log(`${entry.padEnd(22)} ${levelBad || here > N / 10 ? 'FAIL' : 'PASS'} — ${wood.length} leaves a blast can take, ${N} steps (${twins} of them the twin${here ? `; ${here} with a slab the module could not take` : ''}): ${levelBad} differ${why ? ` · a rule worked between steps threw: ${why.slice(0, 300)}` : ''}`);
 }
-{ const T = SH.SLABS_STEPPED; MET.host = T.host; MET.there = T.there; MET.rays = T.rays; MET.gathers = T.gathers; MET.rested = T.rested; }
+{ const T = SH.SLABS_STEPPED; MET.there = T.there; MET.rays = T.rays; MET.gathers = T.gathers; MET.rested = T.rested; }
 for (const f of firsts) log(`    ${f}`);
 const thin = (Object.keys(MET) as (keyof typeof MET)[]).filter(k => MET[k] === 0);
 log(`slab-ident: ${steps} steps over ${files.length} levels, ${differ} differ · met: ${(Object.keys(MET) as (keyof typeof MET)[]).map(k => `${k} ${MET[k]}`).join(', ')}`);
