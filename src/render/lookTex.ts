@@ -719,7 +719,10 @@ export async function lookLayerSliced(layer: number, N: number, even: boolean, s
   const it = lookLayerSteps(layer, N, even), now = () => typeof performance !== 'undefined' ? performance.now() : 0; let t0 = now();
   for (;;) { const r = it.next(); if (r.done) return r.value; if (now() - t0 >= sliceMs) { await breath(); t0 = now(); } }
 }
-/** lookLayer's body, stopping after every row of the material's own arithmetic (the long part) and between the passes after it */
+/** lookLayer's body, stopping after every row of the material's own arithmetic (the long part) and, in the passes after it (the evening, the two blurs, the
+ *  hollows, the normals), every few rows: those passes are 15 to 20 ms together, which made in play on the page's own thread was a frame dropped. A stop
+ *  changes no number: the same statements run in the same order. */
+const ROWS = 31, BREATH = 16384;   // (a stop every 32 rows of a pass, or every 16,384 texels of a flat one: about a tenth of a millisecond apart)
 function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<void, LookMaps, void> {
   const mat = MATS[layer], H = new Float32Array(N * N), a = new Uint8Array(N * N * 4), b = new Uint8Array(N * N * 4), R = new Float32Array(N * N), P = new Float32Array(N * N * 3);
   const t: Tex = { h: 0, r: 1, g: 1, b: 1, rough: 1 };
@@ -734,23 +737,23 @@ function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<voi
   } }
   yield;
   const mean = sum / (N * N), tone = even && layer < LOOK_PAINTED && mean > 0 ? mean : 1, kv = 1 / tone;
-  for (let i = 0; i < N * N * 3; i++) a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5));
+  for (let i = 0; i < N * N * 3; i++) { a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5)); if (i % BREATH === BREATH - 1) yield; }
   // cavity: how far a texel sits under the mean of its neighbourhood (a box blur of ±R texels, periodic, two passes)
   const rad = Math.max(2, Math.round(N / 85)), tmp = new Float32Array(N * N), blur = new Float32Array(N * N), w = 1 / (2 * rad + 1);
-  for (let y = 0; y < N; y++) { let s = 0; for (let k = -rad; k <= rad; k++) s += H[y * N + wrap(k, N)]; for (let x = 0; x < N; x++) { tmp[y * N + x] = s * w; s += H[y * N + wrap(x + rad + 1, N)] - H[y * N + wrap(x - rad, N)]; } }
-  for (let x = 0; x < N; x++) { let s = 0; for (let k = -rad; k <= rad; k++) s += tmp[wrap(k, N) * N + x]; for (let y = 0; y < N; y++) { blur[y * N + x] = s * w; s += tmp[wrap(y + rad + 1, N) * N + x] - tmp[wrap(y - rad, N) * N + x]; } }
+  for (let y = 0; y < N; y++) { let s = 0; for (let k = -rad; k <= rad; k++) s += H[y * N + wrap(k, N)]; for (let x = 0; x < N; x++) { tmp[y * N + x] = s * w; s += H[y * N + wrap(x + rad + 1, N)] - H[y * N + wrap(x - rad, N)]; } if ((y & ROWS) === ROWS) yield; }
+  for (let x = 0; x < N; x++) { let s = 0; for (let k = -rad; k <= rad; k++) s += tmp[wrap(k, N) * N + x]; for (let y = 0; y < N; y++) { blur[y * N + x] = s * w; s += tmp[wrap(y + rad + 1, N) * N + x] - tmp[wrap(y - rad, N) * N + x]; } if ((x & ROWS) === ROWS) yield; }
   const open = blur; let openSum = 0;   // (in place: how open each texel is, 0‥1, 1 = not in a hollow)
-  for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); }
+  for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); if (i % BREATH === BREATH - 1) yield; }
   const hollow = even && sum > 0 ? 0.5 - 0.5 * openSum / sum : 0;   // (weighed by the paint: where a material's high places are also its pale ones, as on worn wood, an even count of texels left the two together 3 % bright)
   yield;
   const texel = LOOK_TILE / N, k = RELIEF[layer] / (2 * texel), span = Math.max(hi - lo, 1e-6);
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  for (let y = 0; y < N; y++) { if (y && (y & ROWS) === 0) yield; for (let x = 0; x < N; x++) {
     const i = y * N + x;
     const sx = (H[y * N + wrap(x + 1, N)] - H[y * N + wrap(x - 1, N)]) * k, sy = (H[wrap(y + 1, N) * N + x] - H[wrap(y - 1, N) * N + x]) * k, il = 1 / Math.hypot(sx, sy, 1);
     a[i * 4 + 3] = Math.round(255 * (H[i] - lo) / span);
     b[i * 4] = Math.round(255 * (0.5 - 0.5 * sx * il)); b[i * 4 + 1] = Math.round(255 * (0.5 - 0.5 * sy * il));
     b[i * 4 + 2] = Math.round(255 * clamp01(R[i])); b[i * 4 + 3] = Math.round(255 * clamp01(0.5 * open[i] + hollow));
-  }
+  } }
   cellTables.length = 0;
   return { a, b, tone, hollow };
 }

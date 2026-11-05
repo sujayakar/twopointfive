@@ -42,6 +42,16 @@ export async function lookCellsCheck(): Promise<boolean> {
   { const f: string[] = []; const refuses = (p: number, q: number, seed: number, jitter: number) => { try { cells2(0.3, 0.3, p, q, seed, jitter); return false; } catch { return true; } };
     if (!refuses(2.5, 2.5, 901, 0.85)) f.push('a lattice of 2.5 cells was made'); if (!refuses(4, 0, 902, 0.85)) f.push('a lattice of no cells was made'); if (!refuses(4, 4, NaN, 0.85)) f.push('a seed that is no number was taken'); if (!refuses(4, 4, 903, NaN)) f.push('a jitter that is no number was taken');
     verdict(f.length === 0, 'a lattice that is not whole cells, or a seed or jitter that is no number, is refused aloud, never answered from a table read between its rows', f.join('; ') || 'all four refused'); }
+  { // A LAYER MADE IN PLAY BREATHES IN ITS LAST PASSES TOO. Made in slices, a layer stopped after every row of its material and then ran the evening, the two
+    // blurs, the hollows and the normals in two unbroken stretches of 20 to 40 ms: on the page's own thread, in play, a dropped frame or two. They stop
+    // every few rows now. Asked by count, not by the clock: with a slice of nothing every stop is a breath
+    const f: string[] = []; const N = 256, l = (T.LOOK_NAMES as string[]).indexOf('plaster'); let stops = 0;
+    const sliced = await T.lookLayerSliced(l, N, true, 0, async () => { stops++; }), whole = T.lookLayer(l, N, true);
+    const same = (x: Uint8Array, y: Uint8Array) => x.length === y.length && x.every((v, k) => v === y[k]);
+    if (!(same(sliced.a, whole.a) && same(sliced.b, whole.b) && Object.is(sliced.tone, whole.tone) && Object.is(sliced.hollow, whole.hollow))) f.push('made in slices, the layer is not the layer made in one go');
+    const rowsOnly = N + 2;   // (as it was: a stop a row and one between each of the three passes after them)
+    if (!(stops >= rowsOnly + 5 * (N >> 5) - 2)) f.push(`${stops} stops in a ${N} map (want the ${rowsOnly} of its rows and at least ${5 * (N >> 5) - 2} more in the five passes after them)`);
+    verdict(f.length === 0, 'a layer made in slices is the layer made in one go, to the byte, and its last passes stop every few rows as its first does every row', f.join('; ') || `plaster at ${N}: ${stops} stops, ${rowsOnly} of them the rows'`); }
   console.log(`=== lookcells: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
