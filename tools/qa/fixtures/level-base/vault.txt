@@ -1,3 +1,4 @@
 # 11-05, the kit's drums: a drum is steel to a round in any paint (an olive one was dark wood), and a drum on its side is one box that says its round; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-a151e1d9926fcfe6dd9bf99da80ff38a39548b01
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+0f2ab2c9d087c99bdcbb016e199fc3b81ccdf3fc

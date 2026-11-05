@@ -1,3 +1,4 @@
 # the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-12666be1f7cc908b902e2d74b512178299f5c476
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+328e718c04eecd0146e9b76a0db2c4861beb1b4b

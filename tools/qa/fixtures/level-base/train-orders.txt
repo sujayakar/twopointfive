@@ -1,2 +1,3 @@
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-807348f614848c75b5500005cd40f7840ef754ca
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+b067c868648013ef2d67c5e1919765f1743bd3fd
