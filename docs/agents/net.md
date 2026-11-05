@@ -353,7 +353,10 @@ line).
   night's exposure and the tube's gain, equal to the picture's defaults. `exposureOf(g)` is the exposure the game's scene is taken at now: the show's
   day's while that is in, else the hour's own, else the night's — WORKED OUT from what the game already keeps (which hour is in, whether the day is),
   so there is no second copy to fall out of step and nothing new for a snapshot or a save to carry; hours.ts and lighting.ts tell the picture as they
-  always did and are otherwise untouched. NO SWITCH, a call for the merge to weigh: with nobody touching Brightness every number is the one it was (the
+  always did and are otherwise untouched. Both rows are the WORLD's (`hours.states`, `lighting.dayStates`: math/side.ts `GameSideMap`), so a seat's view
+  of a game of two asks the Game's: the day's was a plain table until the evening of 11-05, and under a seat's view the show's day answered the night's
+  (seats-check's `tables` line was red on it from this bullet's own step; settings-check's `hour` line now asks both seats' views).
+  NO SWITCH, a call for the merge to weigh: with nobody touching Brightness every number is the one it was (the
   42 play-through digests on seed 1, both stands, equal to step 1515's); with it turned, the build before is the bug (a run that turns on the slider),
   and there is no word that brings that back. What a player sees change: nothing at default; with Brightness turned, his men's goggles and lights no
   longer follow his slider (they follow the mission's hour), and an illuminator's flood is brighter or dimmer in his picture with everything else.
