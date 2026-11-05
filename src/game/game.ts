@@ -327,10 +327,6 @@ export class Player extends PlayerCols {
   /** what Sam is saying right now — his side of an exchange with the man in his arm (player.ts askHeld: his line first, the man's answer when it ends) — drawn
    *  over HIS head like a guard's line, in his own tint (ui/bubbles.ts); the same shape as Guard.bubble */
   bubble: { text: string; t: number; dur: number; radio: boolean } | null = null;
-  visibility = 0;          // 0..1 from light meter
-  irradiance = 0;
-  /** a blast that left him up (samstun.ts): folded until / blind until, on the game clock, and where the flash was — the same two stamps a Guard carries */
-  dazzledAt: Vec3 | null = null; 
   /** suppression (suppression.ts, docs/internal/sc20k-design.md §4): the rounds passing / striking close to him — the same scalar and rule the guards duck under.
    *  This lane reads it for one thing only, the cone his own rounds open up by (player.ts fire sites, samSpread); the picture, the mix and the reticle are R4's. */
   sup = new Sup();
@@ -580,10 +576,6 @@ export class Guard extends GuardCols {
   char: Character; 
   /** his name on the net (CALLSIGNS by roster index; a spawned unit's given name) */
   callsign: string;
-  /** SIDES (teams.ts): which side he is on — 'guard' for every man the level's routes stand up (hostile to Sam and nobody else: the game as it was); the
-   *  showcase spawns 'operative' / 'hostile' units (guards.ts spawnUnit). Read wherever "the player" used to be the only possible enemy and "every other guard"
-   *  the only possible colleague. */
-  team: Team = 'guard';
   /** his foe right now (see Foe): 'player' from birth for the guard side (never anything else — no unit is hostile to staff), chosen each frame by salience among
    *  the hostile characters in his sight for the other sides (guards.ts acquireFoe), null = nobody acquired yet / his man is dead and no other shows */
   foe: Foe = 'player';
@@ -600,11 +592,7 @@ export class Guard extends GuardCols {
   /** in a room fight (roomfight.ts sets it every frame he is in one): his side's multipliers on the aim model's settle time and cone — takes TRAINED's place, and a
    *  pinned man with it earns his track like anybody instead of standing on 1 */
   skill: { settleK: number; spreadK: number } | null = null;
-  /** an AI target's light meter (guards.ts unitLightMeter — only ever fed for a man some other AI side can be hostile to, i.e. never for staff): the renderer's
-   *  irradiance at his chest / head when the probe answers (the browser), the CPU estimate of the same direct light otherwise (headless, or the first frames),
-   *  mapped and eased exactly as Sam's meter is (Game.visibilityOf, damp 6). What a hostile AI eye reads where it reads player.visibility for Sam. */
-  visibility = 0; irradiance = 0;
-  routeI: number; wp = 0; wait = 0; awareness = 0; lastKnown: Vec3 | null = null; lastSeenT = -100;
+  routeI: number; wp = 0; wait = 0; lastKnown: Vec3 | null = null; 
   hold = false;                  // scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over)
   pinned = false;                // scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in
   /** Sam has him from behind (player.ts Hold — docs/internal/grab-interrogate-design.md §2.1): NOT a state — his `state` stays what it was so what he knew survives
@@ -631,12 +619,6 @@ export class Guard extends GuardCols {
    *  about `pos` lately (bit 0 = −, bit 1 = +, stamped `t`) — not offered again from there until he has moved off or it has lapsed, so a blocked side and a
    *  colleague-fouled other side make 'none' (push past / wait) instead of the same quarter-metre into the same chair every second for as long as the scrum holds */
   lineSide = 0; lineGain = -1; lineStepM = 0; lineStuckT = 0; lineFail: { pos: Vec3; sides: number; t: number } | null = null;
-  /** lockdown follower: when he last had his leader in plain sight (no wall between, inside 16 m) and where the man was then — twenty seconds without, and the
-   *  man nowhere near that spot, and he reports him missing (guards.ts partnerWatch) */
-  leaderSeenT = -1; leaderSeenPos: Vec3 = [0, 0, 0];
-  /** (dead, found) the aftermath script's bookkeeping ON the body (guards.ts bodyAftermath): how many living men have reached it (1 = the finder covering it, 2 = the
-   *  one who says '…christ') and when the last did, whether that second-man line and the one closing line have been said, and a counter dealing the directions they widen out along */
-  bodyVisits = 0; bodyVisitT = -1; bodyRemarked = false; bodyClosed = false; bodyFan = 0;
   /** (living) the found body this man's current suspicion is about, and where he is in its short script: walking up ('to' his own spot short of it), covering it,
    *  widening out to a search point away from it ('fan'); null = ordinary suspicion. Cleared whenever he leaves 'suspicious'. */
   bodyDuty: { body: Guard; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: Vec3 | null } | null = null;
@@ -653,9 +635,7 @@ export class Guard extends GuardCols {
   /** the aim-settle model (aim.ts): his track on Sam (0‥1 — no round under AIM.guard.acquireMin of it, his cone × up to unsettledK short of 1), Sam's bearing
    *  rate across him, whether he is braking for a shot, the last round's numbers. guards.ts trackGuard feeds it once a frame; the three fire sites read it. */
   aim = new AimState();
-  reactT = 0; searchT = 0; lookPhase = simRandom() * 10;
-  flashlight: RtLight; sweep = 0; beamDir: Vec3 = [0, -0.3, 1];
-  heardUpTo = -1; smokeTrans = 1; 
+  flashlight: RtLight; 
   /** a teammate's breaching shotgun out of his big slot and in his hands for a lock (bigkit.ts gunUp / gunDown): the gun he put down for it, to take up again */
   slung: { own: Firearm; ownId: WeaponId | undefined; ahead: number; gun: Firearm; out: boolean; t: number } | null = null;
   /** a teammate's second gun (gunslots.ts GUNSLOTS: his card's other slot) — `gun` / `id` / `ahead` are the one that is NOT in his hands; `out`: that is his
@@ -667,20 +647,9 @@ export class Guard extends GuardCols {
   /** a teammate's gun let go of for a two-handed job (workstow.ts mateStow / mateStowTick): the game time his hands left it, the time it is back up (−1: the job
    *  still runs) and whether the job fed it this frame. null = it is in his hands. Not saved: a load finds it there. */
   workStow: { upT: number; fed: boolean } | null = null;
-  dazzledAt: Vec3 | null = null;   // where the charge that blinded him went off (the motion pass turns him away from it — character.ts MOVES; not saved)
-  sawPlayerThisFrame = false; stuckT = 0; stuckN = 0;
-  /** a real sighting of his FOE this frame, whoever that is (teams) — sawPlayerThisFrame stays what its name says: eyes on Sam (what the mission's 'spotted' count
-   *  and the witnesses read), which for the staff is the same thing */
-  sawFoeThisFrame = false;
-  sawBodyT = -100;                     // game time he last discovered a body: a short refractory before he can call in another (two lying together are one 'man down', not two in two frames)
-  leaderStillT = 0;                    // lockdown follower: seconds the man he trails has not moved (planted beside a leader who never moves again, he turns to look at him — guards.ts followLeader)
-  alertBest = 1e9; alertStallT = 0; alertRef: Vec3 | null = null; chaseT = 0;   // alert with a fix: nearest he has got to it, how long without getting nearer, the fix that was measured against (a no-progress exit into 'search', guards.ts — re-based when the fix moves), and the seconds this chase has run without eyes on Sam (its hard backstop)
-  shotBlockedT = 0;                    // alert with eyes on the player: seconds his line of FIRE (not sight) has been stopped short by something solid — a jamb on his gun-hand side, a leaf, the desk Sam is behind (guards.ts: he closes along the path instead of emptying magazines into the frame)
-  sightPos: Vec3 = [0, 0, 0]; sightVel: Vec3 = [0, 0, 0]; sightT = -100; ledT = -100;   // where and how fast Sam was going the last frame this man had him in view (even faintly), when that was, and the sighting whose loss has already been led (guards.ts leadFix: the fix he is left with runs on the way Sam was going, once, the frame he loses him)
-  /** when the fix he is working from was PLACED (guards.ts updateGuard stamps it whenever lastKnown jumps): the search reasons about how far Sam can have got since then */
-  fixT = -100; fixRef: Vec3 | null = null;
+  stuckT = 0; stuckN = 0;
   /** stamp fixT if the fix has moved since last looked at (called once a frame by updateGuard; a fix that creeps with a man in view moves it along too) */
-  trackFix(now: number) { const lk = this.lastKnown; if (!lk) { this.fixRef = null; return; } if (!this.fixRef || Math.hypot(lk[0] - this.fixRef[0], lk[2] - this.fixRef[2]) > 0.5) { this.fixRef = v3.copy(lk); this.fixT = now; } }
+  trackFix(now: number) { const lk = this.lastKnown; if (!lk) { this.fixRef = null; return; } if (!this.fixRef || Math.hypot(lk[0] - this.fixRefX, lk[2] - this.fixRefZ) > 0.5) { this.fixRef = v3.copy(lk); this.fixT = now; } }
   /** the search that reasons about darkness (guards.ts searchPlanFor): the hide spots dealt round the fix, scored dark × cover × plausible off the renderer's own
    *  irradiance readings, visited best-first — null outside 'search' (built on its first frame, dropped on leaving it). The panel / HUD / QA read it. */
   searchPlan: SearchPlan | null = null;
@@ -703,9 +672,10 @@ export class Guard extends GuardCols {
    *  first leg to face down), the name he answers to, his side. */
   constructor(men: MenStore, ch: GltfCharacter, id: number, route: PatrolRoute, routeI: number, flashlight: RtLight, tint: Vec3, look?: { tint2?: Vec3; yaw?: number; name?: string; team?: Team }) {
     super();
+    const lookPhase = simRandom() * 10;   // (the die is asked first: the draws of a game's making are in the order they always were)
     const pos = v3.copy(route.points[0]); const p1 = route.points[1 % route.points.length];
     this.char = new Character(ch, { id, tint, tint2: look?.tint2 ?? [0.02, 0.02, 0.025], pos, yaw: look?.yaw ?? v3.yawTo(pos, p1), men });   // facing down the first leg
-    sameMan(this, this.char); this.initGuard(); this.fireCd = 1;
+    sameMan(this, this.char); this.initGuard(); this.fireCd = 1; this.beamDir = [0, -0.3, 1]; this.lookPhase = lookPhase;
     this.lastPos = v3.copy(pos); this.routeI = routeI; this.route = route; this.flashlight = flashlight; this.callsign = look?.name ?? CALLSIGNS[Math.max(0, id - 10) % CALLSIGNS.length];
     if (look?.team) this.team = look.team;
     if (this.team !== 'guard' && this.team !== 'hostile') this.foe = null;   // a side not hostile to Sam has nobody until a hostile man shows himself (a hostile unit starts on Sam like the staff, and re-targets by salience)
