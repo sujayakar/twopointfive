@@ -27,7 +27,10 @@ const RULES = [
   { name: 'lastMan', why: ['the last man up, at his act'] },
   { name: 'lane', why: ['held short of a covered lane, or looking round its corner'] },
   { name: 'press', why: ['the press has him, or he stays to keep the room it leaves'] },
+  { name: 'walk', why: ['walking to the post of a mate who does not answer, nothing learned of the team by it'] },
+  { name: 'breaker', why: ['out for the lights, or waiting to be sent'] },
   { name: 'buddy', why: ['a colleague is on his way to him, or the two have just paired up'] },
+  { name: 'needs', why: ['off for a coffee, a smoke, some water or a stretch'] },
   { name: 'squad', why: ['his squad\'s man at rest: where he goes for a fight elsewhere is its call'] },
 ] as const;
 export type OwnerRule = typeof RULES[number]['name'];
@@ -100,12 +103,13 @@ export function ownerSummary(men: readonly Guard[], t: number): string {
 
 // ---------------------------------------------------------------- the check's
 /** what a rule's own state says, one line in the rule's file: tools/qa/owner-check.ts holds the record to it at every read. Nothing in the game calls these */
-const WITNESSES: { rule: number; name: string; says: (gd: Guard, g: never) => boolean }[] = [];
-export function ownerWitness<G>(name: OwnerRule, says: (gd: Guard, g: G) => boolean): void { WITNESSES.push({ rule: OWN[name], name, says: says as (gd: Guard, g: never) => boolean }); }
+const WITNESSES: { rule: number; name: string; says: (gd: Guard, g: never) => boolean; atRead: boolean }[] = [];
+/** `atRead`: the rule's answer turns on what moves between its reads (a man's awareness), so the rule says it just before they come and it is held to its state only there */
+export function ownerWitness<G>(name: OwnerRule, says: (gd: Guard, g: G) => boolean, atRead = false): void { WITNESSES.push({ rule: OWN[name], name, says: says as (gd: Guard, g: never) => boolean, atRead }); }
 /** every rule the record and its own state disagree about for this man */
-export function ownerDisagrees<G>(gd: Guard, g: G, rules = ~0): { name: string; record: boolean; rule: boolean }[] {
+export function ownerDisagrees<G>(gd: Guard, g: G, rules = ~0, reading = true): { name: string; record: boolean; rule: boolean }[] {
   const out: { name: string; record: boolean; rule: boolean }[] = [];
-  for (const W of WITNESSES) { if (!(W.rule & rules)) continue; const record = (gd.owner & W.rule) !== 0, rule = W.says(gd, g as never); if (record !== rule) out.push({ name: W.name, record, rule }); }
+  for (const W of WITNESSES) { if (!(W.rule & rules) || (W.atRead && !reading)) continue; const record = (gd.owner & W.rule) !== 0, rule = W.says(gd, g as never); if (record !== rule) out.push({ name: W.name, record, rule }); }
   return out;
 }
 /** the names of the rules with a witness, and the table's order (the check's) */

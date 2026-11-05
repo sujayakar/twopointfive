@@ -22,7 +22,7 @@ OWNER_QA.read = (gd, rules) => {
 G.__ownerEnd = g => {
   out.ticks++;
   for (const gd of g.guards) {
-    const D = ownerDisagrees(gd, g); if (D.length) note('end of the tick', gd, D);
+    const D = ownerDisagrees(gd, g, ~0, false); if (D.length) note('end of the tick', gd, D);
     for (const name of ownerWitnessed()) if (gd.owner & (OWN as Record<string, number>)[name]) out.held[name] = (out.held[name] ?? 0) + 1;
   }
 };
