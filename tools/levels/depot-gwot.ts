@@ -48,7 +48,8 @@ export const YARD_N: YardPaints = { paver: 'limePaver', panel: 'limePanel', skim
 export const yardOf = (Y: YardPaints): Readonly<Record<GwotMat, CoastMat>> => ({ ...COAST_QUIET_OF,
   slab: Y.paver, dust: Y.paver, mudFloor: Y.floor, tWall: Y.panel, block: 'paleGravel', render: Y.skim, whitewash: Y.skim, paintCream: Y.skim, mudLight: Y.skim,
   olive: Y.field, paintRust: Y.field, genYellow: Y.second, drumRed: Y.field, paintGreen: Y.fieldWall, paintBlue: Y.secondWall,
-  oil: 'yardTarmac', dirt: 'yardTarmac', iron: 'graphite', drumBlue: 'graphite', rust: 'graphite', galv: 'brushedSteel', tin: 'brushedSteel' });
+  oil: 'yardTarmac', dirt: 'yardTarmac', scrub: 'soil', straw: 'soil', prodGreen: 'soil',   // (the scrub outside the wall: the look has no leaf yet, so it is a dark clump at the wall's foot and not a green block)
+  iron: 'graphite', drumBlue: 'graphite', rust: 'graphite', galv: 'brushedSteel', tin: 'brushedSteel' });
 
 export const yardSkin = (Y: YardPaints): Skin => ({
   of: yardOf(Y),
@@ -72,7 +73,7 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     const piece = (x0: number, z0: number, x1: number, z1: number, paint = T.floorAt((x0 + x1) / 2, (z0 + z1) / 2)!) => T.flat((x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0, paint, 0, 0.0116);
     const rectTop = (i: number, x0: number, z0: number, x1: number, z1: number): [number, number, number, number] => [x0 - B[i].c[0], B[i].c[2] - z1, x1 - B[i].c[0], B[i].c[2] - z0];
     /** stencilled text on a piece's top, its middle at x, its foot (the south end: the camera reads a top from the south) at z */
-    const stencil = (i: number, text: string, x: number, z: number, pal: MarkPal, scale: number) => T.mark(i, MD.stencilMarks('+y', text, x - stencilWidth(text, scale) * MARKING_TEXEL - B[i].c[0], B[i].c[2] - z, pal, scale));
+    const stencil = (i: number, text: string, x: number, z: number, pal: MarkPal, scale: number, res: 'base' | 'coarse' = 'coarse') => T.mark(i, MD.stencilMarks('+y', text, x - stencilWidth(text, scale) * MARKING_TEXEL * (res === 'coarse' ? 1 : 0.5) - B[i].c[0], B[i].c[2] - z, pal, scale, res));
     /** a figure or a letter on the ground, on a piece of its own: ink on the pale ground, chalk on a dark field (`on`: that field's paint) */
     const figure = (text: string, x: number, z: number, scale = 3, on?: Vec3) => { const w = stencilWidth(text, scale) * MARKING_TEXEL + 0.1, h = 7 * scale * 2 * MARKING_TEXEL + 0.1; return stencil(piece(x - w, z - h, x + w, z + 0.1, on), text, x, z, on ? CHALK : INK, scale); };
     /** a hatched square where nothing may stand, an edge round it */
@@ -123,7 +124,7 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     // edge to its open sides, and its load limit along that edge at the size a load limit is
     { const dock = piece(21.2, 10.95, 23.75, 12.9, FIELD);
       M.hazard(21.05, 10.95, 21.2, 13.05, INKP, CHALKP, 0.3); M.hazard(21.2, 12.9, 23.75, 13.05, INKP, CHALKP, 0.3);
-      stencil(dock, '3.5T', 22.9, 12.75, CHALK, 1); }
+      stencil(dock, '3.5T', 23.2, 12.78, CHALK, 1, 'base'); }   // (letters a hand and a half tall: what a floor's load limit is painted at)
     // ---- THE FUEL POINT in the east yard: a pad of the second colour, an edge to it
     field(26.4, 22.2, 28.8, 23.86, SECOND);
     M.hazard(26.25, 22.05, 28.8, 22.2, INKP, CHALKP, 0.3); M.hazard(26.25, 22.2, 26.4, 23.86, INKP, CHALKP, 0.3);
