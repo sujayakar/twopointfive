@@ -2302,17 +2302,28 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   fourth ray is one pick a frame and is drawn as it falls, where the denoiser used to even it; without that word the small lamps past the four
   strongest are still credited at half, unshadowed, and on a broad lobe that half is not small; one ray at a light's middle is a hard edge in
   its highlight where its own shadow is half-light (above), softened over two texels by the read and no further; the mirror's fade, though asked the finish's roughness, is still 0.12 wide; with the highlights off (the panel's
-  strength at 0) an opening's sky and a lit panel are still split, and the analytic share is drawn by nobody. WHAT IT COSTS, not yet timed on a
-  GPU: the highlights' sum and its rays on every texel of a finish up to 0.75 where it ran up to the preset's cut-off; four or nine reads of the
-  material target a texel that is not matte; nine texels of three reads each a pixel in the composite on every finish up to 0.85; one target more
-  at the reflection's size. Check: `bun run tools/qa/probes.ts highlights` (family `render`; six lines: the rule by its text in five shader
+  strength at 0) an opening's sky and a lit panel are still split, and the analytic share is drawn by nobody. WHAT IT COSTS: the highlights' sum and its rays on every texel of a finish up to 0.75 where it ran up to the
+  preset's cut-off; four or nine reads of the material target a texel that is not matte; up to nine texels of three reads each a pixel in the
+  composite on every finish up to 0.85 (a texel whose spline weight or finish has no say is passed over before its depth and normal are read);
+  one target more at the reflection's size. TIMED on a cloud NVIDIA card (11-05, High, 1368 by 770, medians of the pass timers, against the tree
+  before it; read them one against the other, never as a frame rate): the compound's opening, all passes 9.02 to 9.21 ms (the composite 0.49
+  to 0.58, the reflection pass 0.22 to 0.25); the worst case, a satin floor filling the picture (the white roof's service room, the camera
+  close), 14.5 to 15.2 ms (the composite 0.82 to 1.17, the reflection pass 0.61 to 0.87). Timed before the pass-over above; not timed on an
+  Apple or an AMD card. Check: `bun run tools/qa/probes.ts highlights` (family `render`; six lines: the rule by its text in five shader
   texts, the passes and the device; the fade's pair and the page's word; a floor of the skim's grains made and read as the pass and the composite
   do (as it was a pixel's share of the term ran from none to 0.63, deviation 0.19; now the highlights' share is 1 everywhere and the mirror's has a
   deviation of 0.03); the block's mean and the nine-texel read written again; an opening's sky counted once, which is the text of its two halves
   and an identity; a metal's highlights. `HIGHLIGHTS_BREAK=1` and `PORTALMIRROR_BREAK=1` each fail), `reflup-check` and
   `sunglint-check` (their pins moved with the text), `shaderrows-check` (re-stamped), `shaderinline-check`, all 213 shader texts compile, `tsc`
-  both. NEVER SEEN ON A GPU as it stands; an earlier shape of it was drawn on the software adapter (the white roof's service room: the grains a
-  pool of sheen with the floor's stipple soft in it, by day and under its lamp; the highlights' shadow edges ramps, not stairs).
+  both. SEEN ON A CLOUD NVIDIA CARD (11-05, fourteen boots of this
+  tree, no shader, pipeline or device error): the white roof's service room with its door shut on an overcast day, as played and its specular
+  view: the grains are an even pool of sheen with the floor's own stipple soft in it; with `&hireach=0` soft blobs are left (the finish sits at
+  the mirror's fade); the same room at night, the specular view of two separate boots: the stipple is the floor's, the same in both (their
+  fine detail agrees at 0.84), not noise from frame to frame; by the open service door at midday and at dusk the played picture is the tree
+  before it; the office's server room without the look is the tree before it but for the highlights its satin finishes gained. IN THE SPECULAR
+  VIEW ALONE at midday the sun's glint on the floor by the door has a speckled band at its upper flank and scalloped edges (one sample a texel
+  of a sharp lobe): the played picture hides it in the burnt patch; not chased. NOT SEEN: any of it in motion, by anyone; on an Apple or an AMD
+  card; Medium and Ultra.
 - **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (11-04; the look's page, where the openings' lights are; no switch
   and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
   `portalMean`, `portalSolid`, `portalAbove`; `direct_common.wgsl shadowSample`). The maintainer on his M4 at dusk: "orange door has horizontal

@@ -87,7 +87,7 @@ export async function highlightsCheck(): Promise<boolean> {
     const pins = comps.every(f => { const t = sh(f); return t.includes('  let c = floor(t + 0.5); let d = t - c; let di = i32(rdiv); let gi = i32(goff);')
       && t.includes('  var wx = vec3f(0.5 * (0.5 - d.x) * (0.5 - d.x), 0.75 - d.x * d.x, 0.5 * (0.5 + d.x) * (0.5 + d.x));') && t.includes('  var wy = vec3f(0.5 * (0.5 - d.y) * (0.5 - d.y), 0.75 - d.y * d.y, 0.5 * (0.5 + d.y) * (0.5 + d.y));')
       && t.includes('    let o = vec2i(k % 3, k / 3); let h = vec2i(c) + o - 1;') && t.includes('    let hi = textureLoad(hiTex, h);\n    if (hi.a <= 0.0) { continue; }')
-      && t.includes(' * (1.0 - smoothstep(0.1, 0.2, abs(hi.a - 1.0 - r0)));\n    acc += vec4f(hi.xyz, hi.a - 1.0) * w; wsum += w;') && t.includes('  return vec4f(acc.xyz / max(wsum, 0.2), select(-1.0, acc.w / max(wsum, 1e-9), wsum >= 0.2));\n}'); }) && c0.length > 0;
+      && t.includes('    let wf = wx[o.x] * wy[o.y] * (1.0 - smoothstep(0.1, 0.2, abs(hi.a - 1.0 - r0)));') && t.includes('    let w = wf * exp(-dz * dz) * pow(max(dot(textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0, N), 0.0), 8.0);\n    acc += vec4f(hi.xyz, hi.a - 1.0) * w; wsum += w;') && t.includes('  return vec4f(acc.xyz / max(wsum, 0.2), select(-1.0, acc.w / max(wsum, 1e-9), wsum >= 0.2));\n}'); }) && c0.length > 0;
     const W = (d: number) => [0.5 * (0.5 - d) * (0.5 - d), 0.75 - d * d, 0.5 * (0.5 + d) * (0.5 + d)];
     const ds = [-0.5, -0.31, -0.1, 0, 0.2, 0.44, 0.5], sums = ds.map(d => W(d).reduce((a, b) => a + b, 0)), least = Math.min(...ds.flatMap(W));
     // one row of texels, a highlight with a hard shadow's edge in it (1, 1, 1, 0, 0, 0), read at every tenth of a texel: a ramp with no step in it
