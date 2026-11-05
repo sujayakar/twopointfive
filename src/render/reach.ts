@@ -30,8 +30,9 @@
 // the break-room wall (commit 1170839); so the ring is OFF by default: a deliberate trade of a few dim far-panel slivers for no cell-edge
 // arcs. Turning it back on wants the consumer side changed first (level 1 = tail-only, never a leader, in direct.wgsl).
 import { SideMap } from '../math/side';
+import { whole } from './steps';
 import { WORLD } from '../scene/world';
-import { BoxFlag, type Box } from '../scene/boxes';
+import { BoxFlag, type Box, type PlanBox } from '../scene/boxes';
 import { cutConfig } from '../scene/cut';
 import type { Vec3 } from '../math/vec';
 
@@ -50,7 +51,7 @@ export interface ReachDoor { hinge: [number, number]; closedDir: number; width: 
 
 /** Full-height wall raster over the fine grid: 1 = a wall covers (any part of) this sub-cell, 2 = a doorway's gap (open ground, but light
  *  that only arrives through it is down-ranked: the leaf may well be shut, and even open it is a sliver of the emitter). Built once. */
-export function buildWallRaster(statics: Box[], doors: ReachDoor[] = []): Uint8Array {
+export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] = []): Uint8Array {
   const solid = new Uint8Array(FW * FH);
   for (const d of doors) {   // gaps first, walls after (a jamb post inside the gap's end sub-cell stays a wall)
     const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (doors.ts / level.ts convention)
@@ -108,23 +109,28 @@ export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, num
   return d.box;
 }
 /** one scan for both: the box of sub-cells that differ, and whether any went from open ground to a wall or a doorway's gap (`closed`: only then can a
- *  distance to the nearest of them have shrunk, and an old jump field step over something a sight line must read) */
-function rasterScan(prev: Uint8Array, next: Uint8Array): { box: [number, number, number, number] | null; closed: boolean } {
+ *  distance to the nearest of them have shrunk, and an old jump field step over something a sight line must read). IN STEPS (render/steps.ts: a quarter
+ *  of a million cells, 4 to 5 ms cold in a browser), a stop every `SCAN_ROWS` rows: the game's own asks run it to its end (rasterScan). */
+const SCAN_ROWS = 32;
+function* rasterScanSteps(prev: Uint8Array, next: Uint8Array): Generator<void, { box: [number, number, number, number] | null; closed: boolean }, void> {
   let x0 = FW, z0 = FH, x1 = -1, z1 = -1, closed = false;
-  for (let z = 0, i = 0; z < FH; z++) for (let x = 0; x < FW; x++, i++) {
-    if (prev[i] === next[i]) continue;
-    if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z;
-    if (next[i] && !prev[i]) closed = true;
-  }
+  for (let z = 0, i = 0; z < FH; z++) { if (z > 0 && z % SCAN_ROWS === 0) yield;
+    for (let x = 0; x < FW; x++, i++) {
+      if (prev[i] === next[i]) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z;
+      if (next[i] && !prev[i]) closed = true;
+    } }
   return { box: x1 < 0 ? null : [x0, z0, x1, z1], closed };
 }
+const rasterScan = (prev: Uint8Array, next: Uint8Array) => whole(rasterScanSteps(prev, next));
 /** The same for a raster that is NOBODY'S STATE (ReachJob.own: the look page's daylight at openings keeps its own walls and their jump field, and neither
  *  side table of this file knows them): true where `next` differs from `prev`, and where its walls only OPENED (a wall holed: every blast) prev's jump
  *  field is HANDED ON to next, as wallRasterDiff hands the game's. Where any cell closed (a wall put back by a restart, a box set down) it is not, and
- *  the next mask makes the field fresh. Until 11-05 the look made the field again, whole, on the frame it read a blast's walls. */
-export function wallRasterHandOn(prev: { solid: Uint8Array; jumps?: Uint8Array }, next: { solid: Uint8Array; jumps?: Uint8Array }): boolean {
+ *  the next mask makes the field fresh. Until 11-05 the look made the field again, whole, on the frame it read a blast's walls. In steps: the scan's
+ *  own; `prev`'s field is handed on as it stands at the last step. */
+export function* wallRasterHandOnSteps(prev: { solid: Uint8Array; jumps?: Uint8Array }, next: { solid: Uint8Array; jumps?: Uint8Array }): Generator<void, boolean, void> {
   if (prev.solid.length !== next.solid.length) return true;
-  const d = rasterScan(prev.solid, next.solid);
+  const d = yield* rasterScanSteps(prev.solid, next.solid);
   if (d.box && !d.closed && prev.jumps) next.jumps = prev.jumps;
   return d.box !== null;
 }

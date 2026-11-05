@@ -2,6 +2,7 @@
 // (docs/agents/render.md has the rule and what was timed).
 //   bun run tools/qa/probes.ts draworder        (family `render`)
 //   DRAWORDER_BREAK=1   on each level two boxes that share a face's plane have their places swapped behind the world's back: must FAIL
+//   PLANPACE_BREAK=1    the order is given no pace (ranked on the frame a static moves, as ?planpace=old): must FAIL
 //   DRAWORDER_ALL=1     every level file, not the six below (two minutes a stand)
 // Why: the g-buffer drew the static boxes in the list's order, so a ground slab laid first under a whole level was shaded over the whole screen and then
 // drawn over by the floor. Under the look that slab is a built surface, and the pass cost a third more wherever the camera stood. The camera looks down,
@@ -101,7 +102,30 @@ export async function drawOrderCheck(): Promise<boolean> {
       const r0 = w.drawRanked as number, a0 = b.albedo; b.albedo = [a0[0] * 0.5, a0[1], a0[2]]; W.step(DT); b.albedo = a0; b.flags = keep.flags ^ 128; W.step(DT); b.flags = keep.flags ^ 2; W.step(DT); b.flags = keep.flags; W.step(DT);   // (128 = Gloss, as a wet floor is given; 2 = NoShadow)
       for (let i = 0; i < 300; i++) W.step(DT);
       if ((w.drawRanked as number) !== r0) ff.push(`paint, a floor's gloss, the shadow flag and five seconds of the shift made the order ${(w.drawRanked as number) - r0} times`);
-      did.push(`box ${hi} waits for box ${lo}, place ${at0 + 1} of ${base.length}`); }
+      did.push(`box ${hi} waits for box ${lo}, place ${at0 + 1} of ${base.length}`);
+      // THE ORDER MAY WAIT (render/planPace.ts, the page's pace; BoxWorld.upload's DrawWait). Ranking is cold code in a browser, 2 to 6 ms of the frame a wall is
+      // blown. Under the pace a stale order is made again only when the statics have stood still, and until then they are drawn in the list's own order,
+      // which is the order every tie is defined by. PLANPACE_BREAK=1 leaves the pace off: must FAIL.
+      { const { PLAN_PACE } = await import(`${ROOT}/src/render/planPace.ts`), PB = process.env.PLANPACE_BREAK === '1', fp: string[] = [], rising = (xs: number[]) => xs.every((v, k) => k === 0 || xs[k - 1] < v);
+        // (the engine's side of it, done by hand: nothing draws here. A drawn pack is upload(false, wait); the harness's own step packs with no wait, at once)
+        const wait = { calm: PLAN_PACE.calm as number, still: 0 }, drawn = () => w.upload(false, PB ? null : wait), ranked = () => w.drawRanked as number;
+        w.drawWaits = !PB; drawn(); if (!same(read(), base)) fp.push('the pace put on with nothing changed: the order moved');
+        const r1 = ranked(), up = () => { b.c = [keep.c[0], b.c[1] + 50, keep.c[2]]; };
+        up(); drawn(); if (ranked() !== r1) fp.push('the order was made on the frame a static moved'); else if (!rising(read())) fp.push('while the order waits the statics are not drawn in the list\'s own order');
+        for (let i = 0; i < PLAN_PACE.calm - 1; i++) drawn(); if (ranked() !== r1) fp.push(`the order was made before the statics had stood still for ${PLAN_PACE.calm} drawn packs`);
+        for (let i = 0; i < 30; i++) { up(); drawn(); drawn(); } if (ranked() !== r1) fp.push(`a static moved every other frame: the order was made ${ranked() - r1} times in 60 frames`);
+        // a pack with no draw after it never makes the order, however long the statics have stood still; and a change such a pack finds starts the wait again
+        for (let i = 0; i < 8; i++) w.upload(true); if (ranked() !== r1) fp.push('a pack with no draw after it made the order');
+        drawn(); up(); w.upload(true); drawn(); if (ranked() !== r1) fp.push('a static moved under a pack with no draw: the order was made on the next drawn frame');
+        let n = 0; while (ranked() === r1 && n++ < 12) drawn(); const got = read(), took = n; w.drawRankN = -1; w.drawWaits = false; w.upload(); const fresh = read(); w.drawWaits = !PB;
+        if (!PB && (took !== PLAN_PACE.calm || ranked() !== r1 + 2)) fp.push(`the statics still: the order was made ${took} drawn packs after the one that saw the change, ${ranked() - r1 - 1} time(s) (want ${PLAN_PACE.calm}, once)`); if (!same(got, fresh) || rising(got)) fp.push('the order made once they stood still is not the one made fresh');
+        // a static that moves after the order was last made starts the wait from nothing (the count of still packs is as high as it last got: a wait that
+        // only counted up ranked on the frame of the next change)
+        { const r3 = ranked(); up(); drawn(); if (!PB && ranked() !== r3) fp.push('a static moved after the order was last made: the order was made on that frame'); for (let i = 0; i < PLAN_PACE.calm + 2; i++) drawn(); }
+        // a list that only grows or shrinks is a change too
+        { const extra = { ...B[hi], c: [B[hi].c[0], B[hi].c[1] + 60, B[hi].c[2]], marks: undefined, name: undefined }, r2 = ranked(); w.addStatic(extra); drawn(); w.statics.pop(); w.staticsDirty = true; for (let i = 0; i < PLAN_PACE.calm; i++) drawn(); if (!PB && ranked() !== r2) fp.push('a static added and one taken away on the next frame: the order was made before the list had stood still'); }
+        w.drawWaits = false; b.c = keep.c; W.step(DT); if (!same(read(), base)) fp.push('the pace put off and the static put back: the order is not the one it was');
+        verdict(fp.length === 0, 'under the page\'s pace a stale order waits for the statics to stand still: on the frame a static moves, and while one keeps moving, they are drawn in the list\'s own order and nothing is ranked; never on a pack with no draw after it; then once, as an order made fresh would have it', fp.join('; ') || `still for ${PLAN_PACE.calm} drawn frames, then ranked once`); } }
     verdict(ff.length === 0, 'the order is made again the same frame when a static is moved aside, raised, made taller, turned, tilted, taken out of the picture, cut down or added, each as an order made fresh would have it and back as it was after; paint, a floor\'s gloss, the shadow flag and five seconds of the shift make nothing',
       ff.join('; ') || did.join(' · ')); }
   console.log(`=== draworder: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

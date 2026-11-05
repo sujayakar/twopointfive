@@ -4,6 +4,7 @@
 //   bun run tools/qa/wallsides-check.ts                    exit 0 = every line passed, 1 = one failed
 //   WALLSIDES_BREAK=1 bun run tools/qa/wallsides-check.ts  the store's outer wall is left out of the map (the store and the yard are one place): must FAIL
 //   SIDEDOOR_BREAK=1  …                                     the words are made with no door told (a door's cells know no line of their own): must FAIL
+//   PLANPACE_BREAK=1  …                                     the words are given no pace (made whole on the frame a doorway changes, as ?planpace=old): must FAIL
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -104,6 +105,55 @@ const ROOMS: Record<string, [number, number]> = { tea: [17, 8], kitchen: [25, 8]
   for (let j = 0; j < 56; j++) for (let i = 0; i < 80; i++) { const k = j * 80 + i, c = (big.cols[k >> 3] >>> ((k & 7) * 4)) & 15; if (c !== sideAt(big.words, ox + (i + 0.5) * 0.5, oz + (j + 0.5) * 0.5)) wrongBig++; }
   const huge = new WallSides(); upd(huge, 120, 84);
   check(ws.fits && wrong === 0 && sided > 500 && big.fits && wrongBig === 0 && !huge.fits && huge.cols.every((v: number) => v === 0), 'the column table says what the plan says at each probe column, at a metre a probe and at the finest cascade the debugger offers; one it cannot hold leaves the flag down', `40 × 28: ${wrong} columns that differ, ${sided} in a known place; 80 × 56: ${wrongBig} that differ; 120 × 84: fits ${huge.fits}`); }
+
+// 6b. THE WORDS ARE MADE OVER SEVERAL FRAMES where the map only opened (render/steps.ts, render/planPace.ts): never whole on that frame, in a browser 13
+//     to 18 ms of it. One stop a frame here, which no clock can change.
+{ const PB = process.env.PLANPACE_BREAK === '1', bit = (): any => PB ? undefined : { left: 1 }, f: string[] = [];
+  const { Steps } = await import(`${ROOT}/src/render/steps.ts`);
+  const same = (a: ArrayLike<number>, b: ArrayLike<number>) => { for (let k = 0; k < a.length; k++) if (a[k] !== b[k]) return false; return true; };
+  const names = g.doors.list.map((d: any) => d.def.name), A = names[0], B = names[1];
+  const frame = (ws: any, pace: any, nx = 40, nz = 28): boolean => { PM.update(statics(), world.dynamics, GAPS); return ws.update(statics(), BRK_DOOR ? [] : GAPS, nx, nz, PM, pace); };
+  const rest = (ws: any, nx = 40, nz = 28) => { let n = 0; do frame(ws, bit(), nx, nz); while ((ws.busy || !same(ws.words, build().s)) && ++n < 600); return n < 600; };
+  for (const d of g.doors.list) hang(d.def.name, 0); settle();
+  // (a) the old words serve until the new are whole, and the new are the words made at once
+  const ws = new WallSides(); frame(ws, bit()); const shut = ws.words.slice(); if (ws.made !== 1) f.push('the first words were not made at once');
+  hang(A, 1.4); settle(); let calls = 0, early = 0; while (ws.made === 1 && calls < 600) { frame(ws, bit()); calls++; if (ws.made === 1 && !same(ws.words, shut)) early++; }
+  if (calls < 4) f.push(`a doorway opened and the words were whole after ${calls} frame(s) of one stop each`); if (early) f.push(`${early} frames showed words half made`);
+  if (!same(ws.words, build().s)) f.push('made in steps they are not the words made at once'); if (same(ws.words, shut)) f.push('the doorway that opened changed no word (this part asks nothing)');
+  { const at = new WallSides(); frame(at, undefined); if (!same(at.cols, ws.cols) || at.fits !== ws.fits) f.push('the columns made in steps are not those made at once'); }
+  // (b) one begun is finished on the level as it took it, whatever opens meanwhile (a second doorway, a wall cut short as a charge cuts one, its numbers changed
+  //     in place); then made again for what changed
+  const wl = world.statics.find((x: any) => Math.abs(x.c[0] - 34) < 0.2 && x.h[0] < 0.3 && x.h[2] > 1), wh2 = wl.h[2];
+  hang(B, 1.4); settle(); frame(ws, bit()); const wantA = build().s, m0 = ws.made;   // (one stop in: all it takes of the level it has taken)
+  wl.h[2] = wh2 * 0.4; let n = 0; while (ws.made === m0 && n++ < 600) frame(ws, bit());
+  if (!same(ws.words, wantA)) f.push('a wall cut short while the words were being made is in them, or they are of neither level');
+  const wantAB = build().s; n = 0; while (ws.made === m0 + 1 && n++ < 600) frame(ws, bit());
+  if (!same(ws.words, wantAB)) f.push('the words were not made again for what changed meanwhile'); if (same(wantA, wantAB)) f.push('the wall cut short changed no word (this part asks nothing)');
+  // (c) WHERE THE MAP CLOSED A CELL THEY ARE MADE AT ONCE: the wall put back, a door's line shut (the old words know nothing of a cell that is a wall now)
+  { wl.h[2] = wh2; const m1 = ws.made, back = frame(ws, bit()); if (!back || ws.made !== m1 + 1 || ws.busy || !same(ws.words, build().s)) f.push('a wall put back: the words were not made at once');
+    hang(B, 0); settle(); const m2 = ws.made, shutB = frame(ws, bit()); if (!shutB || ws.made !== m2 + 1 || ws.busy || !same(ws.words, build().s)) f.push('a door\'s line shut: the words were not made at once');
+    hang(B, 1.4); settle(); frame(ws, bit()); const inHand = ws.busy; hang(A, 0); settle(); const shutA = frame(ws, bit());
+    if (!PB && !inHand) f.push('no making was in hand to shut a door under'); if (!shutA || ws.busy || !same(ws.words, build().s)) f.push('a door\'s line shut while the words were being made: they were not made at once for the map as it is'); }
+  // (d) a job in hand takes a step every frame whatever is left of the frame's allowance: nothing the other planners do can hold it up
+  { hang(A, 1.4); settle(); const m3 = ws.made; let k = 0; while (ws.made === m3 && k++ < 600) frame(ws, PB ? undefined : (k % 2 ? { left: 0 } : { left: Infinity, ms: 0 }));
+    if (ws.made !== m3 + 1 || !same(ws.words, build().s)) f.push(`with nothing left of any frame's allowance the words were never made (${k} frames)`); else if (!PB && (k < calls / 2 || k > calls * 2)) f.push(`with nothing left of any frame's allowance a making took ${k} frames (a stop a frame was ${calls})`); }
+  // (e) at once, as ever: the cascade changes size (the columns are numbered by it), a new level, no pace given; and one in hand can be given up
+  hang(A, 0); settle(); frame(ws, bit()); hang(A, 1.4); settle(); frame(ws, bit()); const inHand2 = ws.busy, big = frame(ws, bit(), 80, 56), ref = new WallSides(); frame(ref, undefined, 80, 56);
+  if (!PB && !inHand2) f.push('no making was in hand to change the cascade under'); if (!big || ws.busy || !same(ws.words, ref.words) || !same(ws.cols, ref.cols)) f.push('the cascade changed size while the words were being made: they were not made at once for the new size');
+  { hang(B, 0); settle(); frame(ws, bit(), 80, 56); hang(B, 1.4); settle(); frame(ws, bit(), 80, 56); const inHand3 = ws.busy, st = world.statics, s0 = st[0]; st[0] = { ...s0 }; const lvl = frame(ws, bit(), 80, 56); st[0] = s0; if (!PB && !inHand3) f.push('no making was in hand to change the level under'); if (!lvl || ws.busy || !same(ws.words, build().s)) f.push('a new level: its words were not made at once'); hang(B, 0); settle(); if (!frame(ws, bit(), 80, 56) || ws.busy) f.push('the first level again, a door shut: its words were not made at once'); }
+  { hang(A, 0); settle(); frame(ws, bit(), 80, 56); hang(A, 1.4); settle(); const m4 = ws.made; frame(ws, bit(), 80, 56); if (!PB && (ws.made !== m4 || !ws.busy)) f.push('a doorway opened: no making in hand to give up'); ws.drop(); if (ws.busy) f.push('a making given up is still in hand');
+    if (!frame(ws, undefined, 80, 56) || !same(ws.words, build().s)) f.push('after a making was given up the words asked for at once were not made'); }
+  // (f) a long allowance of time makes them in the frame that asked (warm code in the page), and the time is taken off it
+  { rest(ws, 80, 56); hang(B, 0); settle(); frame(ws, bit(), 80, 56); hang(B, 1.4); settle(); const m5 = ws.made, long = { left: Infinity, ms: 1e6 }; frame(ws, long, 80, 56); if (ws.made !== m5 + 1 || ws.busy || !(long.ms < 1e6)) f.push('a long allowance of time: not made in the frame that asked, or no time taken off it'); }
+  // (g) a step that throws ends the job, and the words are not asked for again for the same map: the last made serve (the key was kept before the work, once)
+  { for (const d of g.doors.list) hang(d.def.name, 0); settle(); const tw = new WallSides(); frame(tw, bit(), 80, 56); const kept = tw.words.slice(), bad: any[] = [world.statics[0], new Proxy({}, { get() { throw new Error('thrown'); } })];
+    let threw = 0, again = 0; const ask = () => { PM.update(statics(), world.dynamics, GAPS); try { return tw.update(bad, GAPS, 80, 56, PM, bit()); } catch { threw++; return null; } };
+    hang(A, 1.4); settle(); ask(); for (let i = 0; i < 4; i++) if (ask() !== false) again++;   // (a doorway opened: the job's first step throws)
+    hang(A, 0); settle(); ask(); for (let i = 0; i < 4; i++) if (ask() !== false) again++;     // (its line shut: made at once, and that throws)
+    if (threw !== 2 || again || tw.busy || !same(tw.words, kept)) f.push(`a planner that throws: thrown ${threw} time(s) for two changes of the map, asked again ${again} time(s) for the same map, ${tw.busy ? 'still in hand' : 'not in hand'}`); }
+  { const J = new Steps(); J.begin((function* (): Generator<void, number, void> { yield; throw new Error('thrown'); })()); let threw = 0; J.go({ left: 1 }); try { J.go({ left: 1 }); } catch { threw++; } if (!threw || J.busy || J.go({ left: 1 }) !== undefined) f.push('a step that threw: the job is still in hand, or the throw was swallowed'); }
+  for (const d of g.doors.list) hang(d.def.name, 0); settle();
+  check(f.length === 0, 'where the map only opens (a doorway, a wall cut short) the words are made over several frames: the old serve until the new are whole, the new are the words made at once, one begun is finished on the level as it took it and made again for what changed since, a step every frame whatever the frame has left; at once where the map closed a cell, on a first frame, a new level and a cascade of another size; one that throws is thrown once and not asked again', f.length ? f.join(' · ') : `a doorway opened: whole after ${calls} frames of one stop each, the old words on every frame before`); }
 
 // 7. the shader's own numbers for the plan are the map's (common.wgsl says them as constants: a map of another size would have every word read from the wrong cell)
 { const c = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), num = (n: string) => +(c.match(new RegExp(`const ${n}: \\w+ = ([0-9.]+)u?;`))?.[1] ?? NaN);

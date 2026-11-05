@@ -2026,6 +2026,74 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   frame's masks, a second level, the old pace). Five one-line breaks of the rule each turn it red.
   NEVER SEEN ON A GPU: the hole's daylight coming on five frames late. LEFT: `wallSides.update → placeSides` (18 to 19 ms on that box at a first blast,
   on the frame the charge goes) and `wallsKey` hashing the statics every frame (0.2 ms); `rankStatics` reads 6 to 10 ms on that box on a blast's frame.
+- **THE PICTURE'S PLANNERS HAVE A PACE** (11-05; ON in the page, `?planpace=old` = each made whole on the frame that asks for it, as they were, to
+  the frame; OFF in the module, so a tool or a check under bun gets every plan at once unless it asks for a pace; `render/planPace.ts PLAN_PACE`,
+  `render/steps.ts`). WHY: a planner that reads the whole level runs only when a wall changes, so in a browser it runs COLD every time. The
+  performance goal's recorder, with a player's wall charge blown inside the tick on a rented card: the first charge of a mission is one frame of 70 to
+  89 ms of CPU, 35 to 40 of it `engine.render`. In Chromium here (software adapter, the CPU's side only, the office under the look) that frame's
+  render was 26 to 31 ms: 13 to 18 `wallSides.update`, 4 to 6 `rankStatics`, 2 to 6 the place map; and the frame that read the walls four later was 14
+  to 19, 9 to 15 of it `lookOpeningLights` (the plan, the raster, its scan). Warm under bun each of those is under 2 ms: tuning them does nothing, so
+  the rule is about WHEN.
+  THE RULE. A planner is a generator that stops every quarter to half a millisecond of cold code; a drawn frame gives the planners ONE allowance of
+  time between them (`PLAN_PACE.ms`, 2: warm code is whole in the frame that asked, as it always was, and cold code takes the frames it needs); what a
+  planner last made serves until what it is making is whole. A JOB IN HAND TAKES ONE STEP EVERY FRAME AT LEAST, whatever is left of the allowance, so
+  nothing the other planners do can hold one up. EVERYTHING THAT CAN CHANGE UNDER A JOB IS TAKEN IN THE CALL THAT BEGINS IT, so one begun is finished
+  whatever moves after and lands the plan of the level as it stood then; if the level has moved on, the next begins. Nothing half made is shown, and a
+  plan made over ten frames is byte for byte the plan made in one. Planning that is still made whole (the place map, the draw order) has its time
+  taken off the frame's allowance.
+  (1) WHICH SIDE OF A WALL (`wallSides.ts placeSidesSteps`, `WallSides.update(…, pace)`): it takes the map's cells, the doors' lines and six numbers
+  of each wall box before its first stop. PACED ONLY WHERE THE MAP OPENED (a wall holed, a door's line opened): for those frames a read by the hole
+  keeps to its own side as before the blast, and the cache it reads takes longer than that to hear of the hole. AT ONCE WHERE THE MAP CLOSED A CELL
+  (`placePlan.ts PlaceMap.closed`: a door's line shut, a wall put back, a box set down): the old words know nothing of a cell that has become a wall
+  while the map and the place field are fresh that frame, and a pixel at the foot of the new wall would be shown by the brightest place near it. Also
+  at once: the first time, a new level, a cascade of another size (the columns are numbered by it; a making in hand is given up for it, as the words
+  always were made again for it).
+  (2) THE OPENINGS, THE WALLS' RASTER AND ITS SCAN (`engine.ts openReplan`: `openings.ts planOpeningsSteps`, `reach.ts buildWallRaster`,
+  `wallRasterHandOnSteps` over the one scan `rasterScanSteps`): it works on COPIES of what a planner may ask of a box (`boxes.ts PlanBox`,
+  `planBoxes`: place, size, turn, flags, tilt, whether it is cut, round; a planner that reads another field does not compile until the copy carries
+  it; nothing of a copy is shared with its box). `openPlanned` is then the key the boxes had when it began, so boxes that moved meanwhile are found
+  again after the next stillness, as they always were. A first cut dropped the finding whenever a box moved: a crate shot to bits every six frames
+  then starved it for good, where the code before found the openings four frames after each change. With no pace the schedule is the old one to the
+  frame (a first cut asked the boxes' key once more on the frame a plan was due, and a code review traced plans landing frames later for it, or
+  never).
+  (3) THE ORDER THE STATICS ARE DRAWN IN (`boxes.ts upload(between, wait)`, `DrawWait`, `drawWaits`): not in steps (the box world is the simulation's
+  state too and a generator is in no snapshot: `rollback-check --static` is red on one kept there; the count of still frames is the engine's for the
+  same reason, and all the world keeps for it is two words that count nothing: `drawWaits` and whether a pack with no draw found a change). Under the
+  pace a stale order is made again only on a drawn pack, once the statics have stood still for `PLAN_PACE.calm` drawn packs, and never on a pack with
+  no draw after it; until then THE STATICS ARE DRAWN IN THE LIST'S OWN ORDER, which is the order every tie is defined by. The same picture; what comes
+  back for those frames is the shading of what the order hides (the g-buffer pass read 0.90 against 0.42 ms indoors on the rented card, High, when the
+  order was timed), and it stays back for as long as some static changes more often than every ten frames, where before each such change paid 2 to 7
+  ms of CPU to rank. TEN, not three: the order is made whole, and for eight or so frames after a blast the game's own update is still long (the pieces
+  falling); at three it landed on a frame of 30 ms here, at ten on one of 12.
+  WHEN THE PICTURE STARTS OVER (`engine.ts invalidateWorldCache`: a restart, a save put back, the light rig swapped) what is in hand is dropped and
+  for `LOOK_OPENINGS.settle + 2` drawn frames every plan is made at once, as on a page's first frames (`planFresh`): the level is then not the one the
+  plans in use were made for. A restart that does not tell the host (`CLEANRESTART.picture` off) gets the sides at once by the closed-cell rule and
+  the other two at the pace.
+  NOT THE PICTURE'S ALONE: the game's light meter reads the cache (probe.wgsl) and the cache keeps to a wall's side by the words, so for the few
+  frames a plan is late the meter, and a guard, read what the picture shows, which is the rule (one model). When that is depends on the clock in the
+  page; sensor answers are journaled, so a replay is the same.
+  MEASURED in Chromium here (software adapter: the CPU's side only), the code as it stands, the pace on (two runs) against `?planpace=old` (one),
+  three wall charges blown inside the tick on the office under the look, one seed. RENDER ms on the charge's own frame: 8.1 to 10.0 against 31.0, 4.1
+  against 20.6, 5.0 to 5.4 against 12.3 (that whole frame, the game's update with it: 39 to 41 against 65, 19 to 20 against 36, 15 against 23). The
+  dearest render frame of the twenty-nine after it: 6.1 to 7.6 against 15.6, 5.4 to 10.0 against 16.8, 4.4 to 4.5 against 5.3; the 10.0 is the order
+  made whole and cold (7.2 ms) ten frames on, the rest of those the same making at 1.4 to 5.3. Each stop timed in the page: the sides 69 stops and 6
+  to 9 ms in all, the openings 36 to 49 stops and 2 to 12, none over 3 ms. What is later for it: the hole's daylight, about five frames; the order,
+  ten after the statics stand still. The game's own side of that frame (30 ms of update on the first charge here) is untouched.
+  HELD by one new line in each of `wallsides-check`, `openings-check` and `draworder-check` (a count of stops, which no clock changes): the old serves
+  and nothing goes dark, what lands is what is made at once, one begun lands the level as it took it (boxes changed in place under it) and is made
+  again for what moved, a crate every six frames cannot stop it, a step every frame with nothing left of the allowance, at once where it must be, a
+  new level never gets the old one's plan, a planner that throws is thrown once and not asked again for the same level. `PLANPACE_BREAK=1` gives no
+  pace and each fails; twenty one-line breaks of the code each turn their line red. The harness never calls `Engine.render`: the wiring in it (the one
+  allowance, the time taken off, the frames at once after the picture starts over) is exercised only by the page. TWO CODE REVIEWS: the first found
+  fifteen things in the first cut (a restart not told to the planners, the no-pace schedule a frame or more off the old one, a wall changing every
+  frame holding the sides back, three assertions that could not fail), the second found the mends hold (the no-pace path the same frame for frame over
+  1,400 frames; 210 real blasts on 21 levels all paced) and one hole after a save put back, mended.
+  NEVER SEEN ON A GPU, and not timed on a real card yet: asked of the performance goal's recorder. LEFT: the place map's own draw (2 to 6 ms cold on
+  the charge's frame); the order's 2 to 7 ms on its calm frame (in steps it would need its boxes copied and a key held from its first step to its
+  last, as the openings have); a planner in a wasm module would run at one speed cold or warm, which is the better cure if the picture gets a module
+  of its own (the lamps' reach masks, still in the tick, are the first to weigh it for); `lookTex.ts` keeps its own copy of the run-to-the-end loop
+  (it has no imports, for its workers); `PLAN_PACE` is in no knob registry and no recording says which pace a run was made under (as `REACH_PACE` and
+  `LOOK_WORKERS` are not); a cascade that changes size while the sides are being made has them made whole on that frame, as it always did.
 - **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
   it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
   unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk
