@@ -121,7 +121,6 @@ export class CameraMachine {
     d[C.cam_yaw + s] = yaw; d[C.cam_phase + s] = phase; d[C.cam_seen + s] = seen; d[C.cam_reported + s] = reportedAt; w[C.cam_state + s] = CAMERA_STATES.indexOf(state);
     d[C.cam_lx + s] = lastSeen ? lastSeen[0] : 0; d[C.cam_ly + s] = lastSeen ? lastSeen[1] : 0; d[C.cam_lz + s] = lastSeen ? lastSeen[2] : 0;
     w[C.cam_bits + s] = (w[C.cam_bits + s] & CB.sweep) | (lastSeen ? CB.last : 0) | (deadCalled ? CB.dead : 0);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(null, 'camera-put', [s], 0);
   }
 }
 /** A TRIPWIRE'S OWN MACHINE, read (devices.ts LaserRt) */
@@ -139,7 +138,6 @@ export class LaserMachine {
   /** …the machine's own as a file has it, or a fresh encounter (devices.ts) */
   put(lastTripAt: number, trips: number, deadCalled: boolean, held: boolean): void {
     const s = this.slot, w = this.st.w; this.st.d[C.las_last + s] = lastTripAt; w[C.las_trips + s] = trips; w[C.las_bits + s] = (deadCalled ? LB.dead : 0) | (held ? LB.held : 0);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(null, 'laser-put', [s], 0);
   }
 }
 /** a beacon as the rows take it */
@@ -210,21 +208,17 @@ export class LightHome {
     d[C.r + r] = l.color[0]; d[C.g + r] = l.color[1]; d[C.b + r] = l.color[2]; d[C.intensity + r] = l.intensity;
     d[C.sx + r] = s ? s.pos[0] : 0; d[C.sy + r] = s ? s.pos[1] : 0; d[C.sz + r] = s ? s.pos[2] : 0; d[C.s_radius + r] = s ? s.radius : 0; d[C.s_intensity + r] = s ? s.intensity : 0;
     w[C.row_bits + r] = (w[C.row_bits + r] & ~(ROW_BIT.on | ROW_BIT.steady)) | (l.enabled ? ROW_BIT.on : 0) | (s ? ROW_BIT.steady : 0);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'feed', [r], 0);
   }
 
   /** …of a lamp somebody moves each tick (a fire's): only while it burns. Out, its record is the picture's alone (the fog keeps a fire's lamp lit where the team has not seen it go, fire.ts `held`), no question reads a row that is out, and what the picture does stays out of the block. */
   feedBurning(l: RtLight): void {
     if (l.enabled) { this.feed(l); return; }
     const r = l.row; if (r !== undefined) this.st.w[C.row_bits + r] &= ~ROW_BIT.on;
-    if (LIGHTS_WATCH.fn && r !== undefined) LIGHTS_WATCH.fn(this, 'feed', [r], 0);
   }
 
   /** EVERY EVENT FROM OUTSIDE (lights.rs input): a kind, a fixture where it has one, its numbers. → the kind's own answer. */
   in(kind: number, t: Fixture | null, a = 0, b = 0, c = 0, d = 0): number {
-    const out = X.lights_in(this.st.bind(), kind, t ? t.i : 0, a, b, c, d);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'in', [kind, t ? t.i : -1, a, b, c, d], out);
-    return out;
+    return X.lights_in(this.st.bind(), kind, t ? t.i : 0, a, b, c, d);
   }
   /** …as a check stages a fixture by hand: its switch, whether it is broken, blind until */
   stage(t: Fixture, on: boolean | null, broken: boolean | null, until: number | null = null): void {
@@ -237,13 +231,10 @@ export class LightHome {
     const slot = this.st.bind(), ids = new Uint32Array(X.memory.buffer, X.lights_ids(), targets.length);
     for (let i = 0; i < targets.length; i++) ids[i] = targets[i].i;
     X.lights_flip(slot, on ? 1 : 0, time, strike ? 1 : 0, targets.length);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'flip', [on ? 1 : 0, time, strike ? 1 : 0, ...targets.map(t => t.i)], 0);
   }
   /** ONE TICK (lights.rs step). → LIGHT_EV bits. */
   step(time: number, dt: number, near: boolean, fumble: number, emissiveScale: number): number {
-    const out = X.lights_step(this.st.bind(), time, dt, near ? 1 : 0, fumble, emissiveScale);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'step', [time, dt, near ? 1 : 0, fumble, emissiveScale], out);
-    return out;
+    return X.lights_step(this.st.bind(), time, dt, near ? 1 : 0, fumble, emissiveScale);
   }
   /** WHAT THE MODULE WORKED OUT, TO WHAT THE PICTURE READS: a lamp's burning, and a beacon's turn */
   paint(): void {
@@ -258,27 +249,20 @@ export class LightHome {
   /** a camera before its picture (lights.rs camera_pan), and its cone to what the picture reads. → CAM bits. */
   cameraPan(slot: number, cone: RtLight | null, dt: number, live: boolean, cones: boolean): number {
     const out = X.camera_pan(this.st.bind(), slot, dt, live ? 1 : 0, cones ? 1 : 0);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'pan', [slot, dt, live ? 1 : 0, cones ? 1 : 0], out);
     if (cone && cone.row !== undefined) { const st = this.st, d = st.d, r = cone.row; cone.enabled = (st.w[C.row_bits + r] & ROW_BIT.on) !== 0; cone.pos = [d[C.x + r], d[C.y + r], d[C.z + r]]; cone.dir = [d[C.dx + r], d[C.dy + r], d[C.dz + r]]; }
     return out;
   }
   /** …and after it (lights.rs camera_see). → CAM bits. */
   cameraSee(slot: number, time: number, dt: number, visible: boolean, gain: number, p: Vec3, suspicion: number, alarm: number): number {
-    const out = X.camera_see(this.st.bind(), slot, time, dt, visible ? 1 : 0, gain, p[0], p[1], p[2], suspicion, alarm);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'see', [slot, time, dt, visible ? 1 : 0, gain, p[0], p[1], p[2], suspicion, alarm], out);
-    return out;
+    return X.camera_see(this.st.bind(), slot, time, dt, visible ? 1 : 0, gain, p[0], p[1], p[2], suspicion, alarm);
   }
   /** a tripwire before what is in its beam (lights.rs laser_open). → LASER bits. */
   laserOpen(slot: number): number {
-    const out = X.laser_open(this.st.bind(), slot);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'open', [slot], out);
-    return out;
+    return X.laser_open(this.st.bind(), slot);
   }
   /** …and after it (lights.rs laser_close). → LASER bits. */
   laserClose(slot: number, time: number, live: boolean, cut: number, sense: number, held: boolean): number {
-    const out = X.laser_close(this.st.bind(), slot, time, live ? 1 : 0, cut, sense, held ? 1 : 0);
-    if (LIGHTS_WATCH.fn) LIGHTS_WATCH.fn(this, 'close', [slot, time, live ? 1 : 0, cut, sense, held ? 1 : 0], out);
-    return out;
+    return X.laser_close(this.st.bind(), slot, time, live ? 1 : 0, cut, sense, held ? 1 : 0);
   }
   /** where a column stands in the block, for a check (`st.d` or `st.w` by WORD_COLS) */
   col(name: Col): number { return C[name]; }
@@ -289,5 +273,3 @@ export class LightHome {
 const LIGHTS_BIT = 1024;
 simTenant({ name: 'lights', bit: LIGHTS_BIT, wants: () => true, into: () => {}, outOf: () => {} });
 
-/** WHO IS WATCHING THE WAY IN (tools/qa/lights-ident.ts, which runs the TypeScript's arithmetic beside the module's on the same calls). None in play. */
-export const LIGHTS_WATCH: { fn: ((home: LightHome | null, what: string, args: readonly number[], out: number) => void) | null } = { fn: null };
