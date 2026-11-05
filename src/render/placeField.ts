@@ -97,7 +97,7 @@ export class PlaceField {
 
   /** this frame's sweeps and the eye, encoded on `enc` AFTER the radiance cache's own pass (`dice` = its volume's view as it is this frame). `sam` = where Sam stands (world x, z; null = nobody: the eye
    *  keeps what it has); `snap` = the eye takes its reading outright, and the field is solved to rest first (a first frame, a restart, a still). */
-  step(enc: GPUCommandEncoder, dice: GPUTextureView, dt: number, sam: readonly [number, number] | null, snap: boolean): void {
+  step(enc: GPUCommandEncoder, dice: GPUTextureView, dt: number, sam: readonly [number, number] | null, snap: boolean, ts?: (name: string) => GPUComputePassTimestampWrites | undefined): void {
     if (this.dead || !this.sweep || !this.sky || !this.eye) return;
     this.bindTo(dice);
     const P = PLACE, first = this.fresh || snap; this.fresh = false;
@@ -109,7 +109,9 @@ export class PlaceField {
       this.device.queue.writeBuffer(this.ubo[k], 0, this.u);
     }
     const n = first ? P.settle : P.sweeps, gx = Math.ceil(PLACE_W / 8), gy = Math.ceil(PLACE_H / 8);
-    const pass = enc.beginComputePass({ label: 'place' }); pass.setPipeline(this.sweep);
+    // (THE PASS'S TIMER, gpu/timer.ts: it had none until 11-05 and hid 2 ms of the frame. The frame the field is solved to rest in one go is not stamped: a
+    //  timer's row starts from its first reading, and that frame is forty frames' sweeps)
+    const pass = enc.beginComputePass({ label: 'place', timestampWrites: first ? undefined : ts?.('place') }); pass.setPipeline(this.sweep);
     for (let i = 0; i < n; i++) for (let k = 0; k < 2; k++) { pass.setBindGroup(0, this.bind[k]); pass.dispatchWorkgroups(gx, gy); }
     pass.setPipeline(this.sky); pass.setBindGroup(0, this.bind[0]); pass.dispatchWorkgroups(gx, gy);   // (the open air counted by every cell at once, into the table the eye reads)
     pass.setPipeline(this.eye); pass.dispatchWorkgroups(1);   // (every frame: it also keeps the live word and the brightest place)

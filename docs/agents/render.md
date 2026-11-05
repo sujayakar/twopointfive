@@ -45,6 +45,30 @@ docs/internal/p2a-restir.md for per-pass tables (the pre-v3 frame was ~20 ms: di
 maintainer's own tab): a take that overlaps someone else's measurement is worthless — `sh tools/qa/gpu-quiet.sh` waits for `ioreg` Device Utilization to sit under 8 % before a take, rounds are
 interleaved and filtered to their quiet minimum, and a row whose p75 sits far above its median is quoted as contended, never as a result.
 
+**A PASS WITH NO TIMER IS NOBODY'S COST (2026-11-05).** A pass opened with no `timestampWrites` is in no HUD row, no recording, no column of a sweep, no
+price table, and not in the ladder's reading. One hid 2 ms: the look's `place` pass (`render/placeField.ts step`; "Eyes adjust to shade"), 1.7 ms of
+the tunnel's frame on a rented card and 2.0 on an M4 Max, found only because a sweep's row gave back more than every pass it could name (the walk
+inside it and its cut: the look's own notes). THE RULE: every `beginComputePass` and `beginRenderPass` under `src/` carries `timestampWrites` in its
+own descriptor, or its file and label have a row with the reason in `tools/qa/passtimer-exempt.ts` (an encoder of its own, a clear on the one frame a
+setting flips, a tool's readback, a render pass); `bun run tools/qa/passtimer-check.ts` (`probes.ts passtimer`, families `perf` and `render`;
+`PASSTIMER_BREAK=1` must fail) is red on a pass with neither and on a row no pass uses. HOW A PASS IS HANDED ITS TIMER: the engine hands the module its
+`ts` function (`engine.ts`) and the module asks `ts?.('name')` in the descriptor, so the slot is taken only where the pass is really opened (a slot
+asked for and never written reads as a phantom cost) and the name stands beside the label. A PASS THAT RESTS SOME FRAMES SAYS SO
+(`timer.idle('name')`, as the air does): `powder` between two steps of the air's clock, `diceRing` on the light cache's rest frames; unsaid, its row
+would stay at its last step's time and every total would count it whole. Given theirs in this step: `place`, `powder` (the blown snow's field),
+`diceRing` (the steady bounce's mean, the pass labelled `dice ring mean`), `fogSight` (the fog of war's sight table). `place` is NOT stamped on the
+frame its field is solved to rest in one go (a first frame, a restart, a still: 160 sweeps where a frame has 4), because a timer's row starts from
+its first reading and that one would stand forty times high through the ladder's first measure. All four are of fixed size, so the ladder counts them
+with the work that does not shrink with the picture (`ui/quality.ts`, the `fixed` pattern). THE HUD'S PASS ROWS (`main.ts`) are the ordered list as it
+was and then EVERY OTHER pass the timer holds that ran this frame, so a timed pass has a row whoever adds it (`fogofwar`, timed since it was written,
+had none). TWO RENDER PASSES STAY WITHOUT, by a row each: `gdown` and `outline` (a render pass's stamps on Metal can read as a frame and would be in
+every total, the reason `particlesTimeDraw` is off). MEASURED on the rented card (NVIDIA A10G through Vulkan, relative only; the passes timed by their
+labels from a page script, the office mission and the tunnel, High at ×0.77): `place` 1.75 ms before its cut and 0.10 after, `fogSight` 0.08 with the
+fog of war on, `gdown` 0.09, `outline` 0.04. WHAT THIS CHANGES FOR A PLAYER: the ladder's GPU reading now holds these passes, as it should have. No
+switch: it is the reading made true, not a rule of the game. Never seen on an Apple chip, where the frame's union already rose and fell with the
+untimed pass (the sweep that found it), so the reading there may move less than the card's. What the check cannot see: a pass whose
+`timestampWrites` is undefined at run time (a caller that hands no `ts`); the headless device has no timer to ask.
+
 <!-- was CLAUDE.md lines 2403–2406 -->
 - **Markings = object legibility** — palette-indexed bitmaps on box faces, packed in the tail of `boxMat` (no texture); `settings.markings` default ON, `?nomarkings` (+ `?level=relief` = main's frame), `__mark`; emissive markings are LIGHTS; the art rules (flat colour per cell, ≤ 3 entries, no gradients, no baked lighting) — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.
 - **Materials, RT reflections, the detail layer** (renderer v3 phase 4) — every box carries a finish (`Box.rough / metal / aniso`), `reflect.wgsl` traces under `settings.rtReflect` (`?nortreflect`, `frame.rtCfg.w` 0 = off), the detail layer under `settings.detail` (`?detail=0‥1`; art rule: variation from geometry, never a painted texture); `__rt`, `__hotReflect` — the full bullet moved word for word to `docs/internal/claude-md-renderer-systems.md`.

@@ -824,22 +824,22 @@ export class Engine {
     const timer = this.timer; timer.beginFrame();
     const enc = this.device.createCommandEncoder({ label: 'frame' });
     const ts = (n: string) => timer.pass(n);
-    this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
+    this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!, ts); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
     if (this.smoke.encode) this.smoke.encode(enc, ts);
     if (meshOn && this.world.charCount > 0) this.meshShadows!.encode(enc, Math.min(this.world.charCount, MESH_MAX_CHARS), ts('mesh'));   // skin + refit every listed character's tree from this frame's joint matrices — before the cascades, the first pass that traces
     this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount, this.cutWhole);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);
-    if (ring && this.rc.diceBaked) ring.step(enc, this.rc.dice, ringAt, ringN, ringFresh);   // (the bake just made, kept as its point, and the mean of the points held written back: what every pass below reads)
-    if (place) { place.setMap(this.placeMap); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
+    if (ring && this.rc.diceBaked) ring.step(enc, this.rc.dice, ringAt, ringN, ringFresh, ts); else if (ring) timer.idle('diceRing');   // (the bake just made, kept as its point, and the mean of the points held written back: what every pass below reads)
+    if (place) { place.setMap(this.placeMap); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap, ts); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
     const airRuns = !!this.air && this.airOn && s.airSim && this.air.ready !== false;   // THE AIR (above): at most one step a drawn frame, on its own clock; a paused frame (dt 0) steps nothing
     if (airRuns || powder) {
       this.airAcc += dt;
       if (dt > 0 && this.airAcc >= 0.8 / 60 * Math.max(1, s.airEvery || 1)) {
         const h = Math.min(this.airAcc, 1 / 30); this.airAcc = 0;
         if (airRuns) this.air!.step(enc, h, time, this.airWind, ts('air'));
-        powder?.step(enc, h, time, airRuns ? Math.hypot(this.airWind[0], this.airWind[1]) : 0, Math.min(1, lookConfig.veil), airRuns);   // (the look prototype's powder rides the air as it now stands: stepped on the air's clock, and in air that has come to rest too, where a boot's puff still rises and falls)
-      } else if (airRuns) timer.idle('air');   // (a frame between two steps — a fast display, airEvery — costs nothing: said, or the pass would go on showing its last step's time)
+        powder?.step(enc, h, time, airRuns ? Math.hypot(this.airWind[0], this.airWind[1]) : 0, Math.min(1, lookConfig.veil), airRuns, ts);   // (the look prototype's powder rides the air as it now stands: stepped on the air's clock, and in air that has come to rest too, where a boot's puff still rises and falls)
+      } else { if (airRuns) timer.idle('air'); if (powder) timer.idle('powder'); }   // (a frame between two steps — a fast display, airEvery — costs nothing: said, or the pass would go on showing its last step's time)
     }
     if (partOn) this.particles!.setAir(airRuns ? this.air!.view : null);   // (what the particle step reads: the field while it is stepped — its stand-in, still air, otherwise)
     if (partOn && this.particles!.hasWork) this.particles!.encodeUpdate(enc, this.sceneBG!, this.rc.diceView, ts('particles'));   // (only ask the timer for a slot when the pass WILL encode: an allocated-but-unwritten timestamp pair resolves to stale garbage — ultra summed a fictional 7–12 ms 'particles' with nothing alive, 08-10 measurements)   // births + the step (collide against this frame's boxes, shade off this frame's lights and dice) — a return with nothing live
