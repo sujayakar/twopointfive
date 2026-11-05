@@ -1187,6 +1187,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A PLAY MOVE, DECLARED. New cover stands in the pass's yard (three fuel drums and one on its side in the pocket by the lean-to, pipes in the far
   corner south of the bunk room, split wood under the first window's sill, a bench, a ladder; the chopping block is round) and on the block's west
   wall (split wood under a sill), so the missions on those floors may play otherwise.
+  THE PIPES ARE OUT OF THE PASS AGAIN (11-05, the same day): the 'far corner' is the pocket, 6 m by 2.5 m between the bunk room's south wall and the yard
+  wall, that the squad bunches in to breach that wall, and the pile lay two metres straight behind the man who sets the charge. `menclear-check` (the men
+  with Sam step back from a set wall charge: the maintainer's own case, on this wall) read red on its lines 3 and 3s from that step on: one man of the four
+  was dealt no mark he could reach, straight back was the pile, and he stood IN the blast. The check was not in the step's list. Without the pipes the
+  lines read as they did before the dressing (clear after 2.5 s, three marks west along the wall). WHAT IT TEACHES A LEVEL'S AUTHOR: floor within a
+  charge's stand-off of a wall the squad breaches is the squad's, though no stack mark and no place for a charge is on it; run `menclear-check` and the
+  wall charge's family on both stands after standing anything in a yard. `pipes` stays a piece of the kit and stands in the showroom.
   MEASURED 2026-11-05, the joined head `dd81d0de` against this step, by the scripted play-through's digest (`PT_DIGEST=1 tools/qa/playthrough.ts`):
   21 missions x seeds 1 and 2, the frozen stand 40 of 42 runs the same (the two that move are the pass's); the shipped stand 36 of 42 (the six are
   the pass's, the block's and the three-squad block's); the shipped stand with lived rooms off 37 of 42 (the same six less one, and the block's four
