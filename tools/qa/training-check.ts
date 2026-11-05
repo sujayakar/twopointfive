@@ -52,7 +52,7 @@ export async function trainingCheck(): Promise<boolean> {
   const { standUp } = (await import('./headless.ts')) as any;
   const M = await import(`${ROOT}/src/game/morale.ts`);
   const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
-  const { MORALE, MORALE_AT, TRAININGS, NERVES, moraleOf, rungOf, dreadOf, moraleLines, inTheDark, trainingOf, leaderOf, sawLeaderFall, moraleShock, moraleTick, moraleRoster, moraleSnapshot, moraleRestore, moraleManDown, moraleOwns, moraleFromQuery, moraleKeep, moraleReset, moraleSummary, MORALE_STATS } = M;
+  const { MORALE, MORALE_AT, TRAININGS, NERVES, moraleOf, rungOf, dreadOf, moraleLines, inTheDark, trainingOf, leaderOf, sawLeaderFall, moraleShock, moraleTick, moraleRoster, moraleSnapshot, moraleRestore, moraleManDown, moraleFromQuery, moraleKeep, moraleReset, moraleSummary, MORALE_STATS } = M;
   const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
   const { RUNNER } = await import(`${ROOT}/src/game/runner.ts`);
   const { DARKDOOR } = await import(`${ROOT}/src/game/darkdoor.ts`);
