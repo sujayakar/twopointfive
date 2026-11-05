@@ -460,7 +460,7 @@ function tickPlans(g: Game) {
     let fresh: Guard = live[0]; for (const m of live) if (m.fixT > fresh.fixT) fresh = m;
     const fix = fresh.lastKnown!;
     if (flat(fix, plan.target) > REPLAN_M && now - plan.replannedAt > REPLAN_GAP_SECS) {
-      for (const m of live) if (m !== fresh) word(g, m, v3.copy(fix));
+      for (const m of live) if (m !== fresh) word(g, m, fix);
       if (now - plan.lastRadioT > 4) { g.say(fresh, `${defenderWords(fresh) ? "they've" : "he's"} moved — ${placeName(g.level, fix)}`, true); plan.lastRadioT = now; }
       const far = live.filter(m => flat(m.char.pos, fix) > JOIN_M && !inContact(g, m));
       endPlan(g, plan, 'the fix moved');
@@ -488,7 +488,7 @@ function tickPlans(g: Game) {
     if (near) { const men = [...near.members.filter(m => !inContact(g, m)), seed]; used.add(seed); endPlan(g, near, `${seed.callsign} joins`); planApproach(g, men, seed.lastKnown!, `${seed.callsign} joins`); continue; }
     const group = cands.filter(o => !used.has(o) && o.team === seed.team && (o === seed || flat(o.lastKnown!, seed.lastKnown!) <= SHARE_M || o.leader === seed || seed.leader === o));
     if (group.length < 2) continue;
-    for (const o of group) { used.add(o); if (o !== seed && flat(o.lastKnown!, seed.lastKnown!) > SHARE_M) o.lastKnown = v3.copy(seed.lastKnown!); }   // (a lockdown pair on two fixes works the leader's… the seed's: they are one unit)
+    for (const o of group) { used.add(o); if (o !== seed && flat(o.lastKnown!, seed.lastKnown!) > SHARE_M) word(g, o, seed.lastKnown!); }   // (a lockdown pair on two fixes works the leader's… the seed's: they are one unit)
     planApproach(g, group, seed.lastKnown!, 'formed');
   }
 }
@@ -639,7 +639,7 @@ function loneCall(g: Game, gd: Guard, L: Lone) {
     if (o === gd || o.state === 'dead' || o.held || o.hold || o.pinned || o.team !== gd.team || o.script) continue;   // (his own side, free to come: not the man in Sam's arm, not one on choreographed marks)
     const wasCalm = o.state === 'patrol' || o.state === 'suspicious' || o.state === 'search';
     o.awareness = Math.max(o.awareness, 0.92);
-    if (wasCalm || !o.lastKnown) o.lastKnown = v3.copy(L.fix);
+    if (wasCalm || !o.lastKnown) word(g, o, L.fix);
     if (wasCalm) o.reactT = Math.max(o.reactT, 0.25 + Math.min(1.2, flat(o.char.pos, gd.char.pos) / 25) + simRandom() * 0.4);
     if (o.foe === null && gd.foe && gd.foe !== 'player' && !railsDown(g, gd.foe)) o.foe = gd.foe;   // (a unit with nobody yet takes his colleague's man)
   }

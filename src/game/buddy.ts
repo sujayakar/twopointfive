@@ -94,7 +94,7 @@ function teamKnown(g: Game, F: RoomFight): Vec3[] {
   const out: Vec3[] = [];
   for (const D of F.defs) {
     const gd = D.gd; if (!alive(D)) continue;
-    if (g.time - gd.lastSeenT < 4 && eyesFix(gd, D.pt)) out.push(gd.lastKnown!);
+    const seen = g.time - gd.lastSeenT < 4 ? eyesFix(gd, D.pt) : null; if (seen) out.push(seen);
     if (D.noiseAt && g.time - D.noiseT < 4) out.push(D.noiseAt);
   }
   return out;

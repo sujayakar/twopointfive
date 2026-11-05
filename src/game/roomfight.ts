@@ -68,7 +68,7 @@ import { coverSeen, coverOp } from './coverfire';
 import { lastStandTick, lastStandStop, lastStandMan, lastStandOwns } from './laststand';
 import { moraleOwns } from './morale';
 import { runnerOwns, runnerFled } from './runner';
-import { BELIEF, cover, eyesFix, uncover } from './belief';
+import { BELIEF, cover, eyesFix, uncover, word } from './belief';
 import { netQuietLook, netQuietHolds } from './netquiet';
 import { laneHolds, laneWarns, laneThrows } from './lanes';
 import { shotEnergy } from './glasspen';
@@ -303,8 +303,6 @@ interface Def {
   ev: number[]; watch: number; want: number; wantAt: number; glanceTo: number; glanceUntil: number; glanceNext: number;
   /** what he watches, on the floor — the ONE object written into his fix (lastKnown === pt ⇒ the fix is this module's, anything else is his senses'); with BELIEF on it is what he covers and is never in his fix */
   pt: Vec3;
-  /** BELIEF on: the belief evidence() last looked at, so that what is in lastKnown now tells it what his ears have just put there and an older belief does not pass for that */
-  fixRead?: Vec3 | null;
   heardT: number; cnt: { shots: number; kick: number; bang: number; small: number }; noiseAt: Vec3 | null; noiseT: number; noiseOut: boolean;
   lastState: string; lastSeen: number; fixKeep: number; pre: boolean;
   nerve: number; lostAt: number; movedAt: number;
@@ -531,7 +529,7 @@ export class RoomFight {
     for (const D of this.defs) {   // every man as this module found him: a mover's script ended (nobody is left walking on legs nothing watches), the pin it put on taken off
       if (D.mode === 'move' && D.gd.script && D.gd.state !== 'dead') endGuardScript(D.gd, 'alert');
       if (D.mode === 'free' && D.gd.state !== 'dead') D.gd.hold = true;
-      D.gd.pinned = D.pinned0; uncover(D.gd);
+      D.gd.pinned = D.pinned0;
     }
     for (const x of [...this.defs.map(d => d.gd), ...this.ops.map(o => o.gd)]) x.skill = null;
     for (const k of this.trans.keys()) this.g.sensors.forget(k);
@@ -622,11 +620,11 @@ export class RoomFight {
     if (gd.script && g.director?.lessonRuns) { D.staged = true; return; }   // a staged moment of a tutorial mission's own script has him (director.ts lessonRuns): his body is its, and he stays this roster's man
     if (D.staged) {                                                        // …and is a man holding a post again the moment it lets him go (a script's order takes `hold` off a man):
       D.staged = false; gd.hold = true;
-      if (v3.distXZ(gd.char.pos, D.station) > 1.5) { this.defs = this.defs.filter(d => d !== D); uncover(gd); this.note(gd, 'left on a new post by the lesson\'s script'); return; }   // his old post where it left him there; where it walked him to, as a held man this roster does not know is taken up (tick: `adopt`)
+      if (v3.distXZ(gd.char.pos, D.station) > 1.5) { this.defs = this.defs.filter(d => d !== D); this.note(gd, 'left on a new post by the lesson\'s script'); return; }   // his old post where it left him there; where it walked him to, as a held man this roster does not know is taken up (tick: `adopt`)
     }
     if (gd.script) endGuardScript(gd, gd.state === 'dead' ? 'patrol' : gd.state);   // (somebody else's script on a man holding a room: he is the fight AI's)
     if (!gd.hold) {   // somebody else has let him off his post (guards.ts engage() — the Director's drill.exchange —, a stager): he is theirs — off this roster, and taken up again only if he is put to hold again
-      gd.skill = null; this.defs = this.defs.filter(d => d !== D); uncover(gd);   // (his pin is whatever they wrote with it: engage() always writes one)
+      gd.skill = null; this.defs = this.defs.filter(d => d !== D);   // (his pin is whatever they wrote with it: engage() always writes one)
       this.note(gd, 'let off his post by somebody else: not this module\'s man'); return;
     }
     gd.pinned = true;                                      // he holds where he stands and fights from there (the fight AI's own flag for it)
@@ -643,7 +641,7 @@ export class RoomFight {
     const k = Math.exp(-dt / ROOMFIGHT.evidenceSecs * Math.log(3)); for (let i = 0; i < D.ev.length; i++) D.ev[i] *= k;
     if (H.lastT > D.heardT) {
       const loud = H.shots > D.cnt.shots || H.kick > D.cnt.kick || H.bang > D.cnt.bang;
-      const fix = gd.lastKnown && gd.lastKnown !== D.pt && gd.lastKnown !== D.fixRead ? gd.lastKnown : null;   // where his own ears put it (hearingCheck's write this frame)
+      const fix = BELIEF.on ? H.loudAt : gd.lastKnown && gd.lastKnown !== D.pt ? gd.lastKnown : null;   // where his own ears put it (hearingCheck)
       const at = loud ? fix ?? D.noiseAt : H.small > D.cnt.small && H.smallWhere ? H.smallWhere : fix;
       if (at) {
         const e = this.entryToward(D, at); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + (loud ? 1 : 0.45));
@@ -654,8 +652,7 @@ export class RoomFight {
       }
       D.heardT = H.lastT; D.cnt = { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small };
     }
-    if (g.time - gd.lastSeenT < 0.3 && eyesFix(gd, D.pt)) { const e = this.entryToward(D, gd.lastKnown!); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1.2 * dt); }   // an enemy in his sight: the way he came is the way to fear
-    if (BELIEF.on) D.fixRead = gd.lastKnown;
+    const seen = g.time - gd.lastSeenT < 0.3 ? eyesFix(gd, D.pt) : null; if (seen) { const e = this.entryToward(D, seen); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1.2 * dt); }   // an enemy in his sight: the way he came is the way to fear
   }
   /** runner.ts (called only with its switch on): a man of his own side has run in and TOLD him where they are — what evidence() does for a loud noise his own
    *  ears put there: the entry that way is the one to fear, the noise record reads the place, and whatever glance he was on ends. False = no post of this file's */
@@ -663,6 +660,7 @@ export class RoomFight {
     const D = this.defs.find(X => X.gd === gd); if (!D) return false;
     const e = this.entryToward(D, at); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1);
     D.noiseAt = v3.copy(at); D.noiseT = this.g.time; D.noiseOut = !this.inRoom(D.room, at); D.glanceUntil = -1;
+    if (BELIEF.on) word(this.g, gd, at);
     return true;
   }
   private entryToward(D: Def, at: Vec3): number {
@@ -699,7 +697,7 @@ export class RoomFight {
     wallReactLook(g, gd, D.pt);                            // wallreact.ts: a port or a hole in a wall that he knows of and has more against than that door takes his gun (a return on its first line with nothing broken)
     if (gd.state === 'patrol') { c.bodyYaw = approachAngle(c.wantBody, v3.yawTo(c.pos, D.pt), S.turn * dt); return; }   // (wantBody: his body yaw — or, turning under weight (character.ts TURN), where this easing left it)
     if (g.time - gd.lastSeenT < 0.6) { uncover(gd); return; }   // eyes on a man: the fix is the man, and the fight AI's
-    if (eyesFix(gd, D.pt) && g.time - gd.sightT < 1 && this.inRoom(D.room, gd.lastKnown!)) D.fixKeep = g.time + 3;   // he has just lost a man INSIDE the room: that spot is covered a while before the doors are
+    const seen = eyesFix(gd, D.pt); if (seen && g.time - gd.sightT < 1 && this.inRoom(D.room, seen)) D.fixKeep = g.time + 3;   // he has just lost a man INSIDE the room: that spot is covered a while before the doors are
     if (g.time >= D.fixKeep) cover(gd, D.pt); else uncover(gd);
   }
   /** the untrained man's beats: slower off the mark, slower still when the man shows where he was not looking */

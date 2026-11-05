@@ -430,7 +430,7 @@ function teamKnown(g: Game): Vec3[] {
   const out: Vec3[] = [];
   for (const D of g.fight.defs) {
     const gd = D.gd; if (!alive(gd)) continue;
-    if (g.time - gd.lastSeenT < 4 && eyesFix(gd, D.pt)) out.push(gd.lastKnown!);
+    const seen = g.time - gd.lastSeenT < 4 ? eyesFix(gd, D.pt) : null; if (seen) out.push(seen);
     if (D.noiseAt && g.time - D.noiseT < 4) out.push(D.noiseAt);
   }
   return out;
@@ -492,7 +492,7 @@ function teamKnownHow(g: Game): Known[] {
   const out: Known[] = [];
   for (const D of g.fight.defs) {
     const gd = D.gd; if (!alive(gd)) continue;
-    if (g.time - gd.lastSeenT < 4 && eyesFix(gd, D.pt)) out.push({ p: gd.lastKnown!, firm: true });
+    const seen = g.time - gd.lastSeenT < 4 ? eyesFix(gd, D.pt) : null; if (seen) out.push({ p: seen, firm: true });
     if (D.noiseAt && g.time - D.noiseT < 4) { const c = gd.char.pos; out.push({ p: D.noiseAt, firm: !g.col.solidBlocked([c[0], 1.5, c[2]], [D.noiseAt[0], 1, D.noiseAt[2]]) }); }
   }
   return out;

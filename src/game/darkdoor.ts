@@ -48,6 +48,7 @@ import { foeDown } from './teams';
 import { w } from './words';
 import { netFeedHolds } from './netquietfeed';   // (the leaf, not netquiet.ts: false on its first line with that rule off)
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
+import { word } from './belief';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkdoor = every man walks into the dark as he did) and by
  *  the shipped stand; the harness's frozen stand leaves it off (TPS_DARKDOOR=1 turns it on — with TPS_MORALE=1: it acts only under MORALE.on). `who` = who is
@@ -225,7 +226,7 @@ function end(g: Game, S: Fear, unresolved = false) {
  *  is the call — spoken if he is in earshot, on the net otherwise */
 function call(g: Game, gd: Guard, S: Fear, m: Guard) {
   const M = mind(m); M.act = 'come'; M.t = 0; M.other = gd; M.told = false; M.spot = v3.copy(m.char.pos); M.lag = 0; S.other = m; DARKDOOR_STATS.calls++;
-  m.lastKnown = v3.copy(gd.char.pos); m.awareness = Math.max(m.awareness, 0.42);
+  word(g, m, gd.char.pos); m.awareness = Math.max(m.awareness, 0.42);
   if (m.state !== 'suspicious') { m.state = 'suspicious'; m.reactT = 0.8; m.searchPlan = null; m.pieing = null; }
   m.searchT = 0; m.path = []; m.pathGoal = null; m.stallRef = null;
   if (!S.called) { S.called = true; bark(g, gd, S, 'call', flat(m.char.pos, gd.char.pos) > DARKDOOR.earM); }

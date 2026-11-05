@@ -108,6 +108,7 @@ import { OWNCHARGE } from './owncharge';   // (a leaf: the player's own charges'
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { PICTURE, PICTURE_STATS, anyIdea, safestSets } from './picture';
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
+import { word } from './belief';
 
 /** `WORDCUTS_BREAK=1` (a check's own word): the rule's body left out, everything else as it is */
 const WORDCUTS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WORDCUTS_BREAK === '1';
@@ -3309,7 +3310,7 @@ export class DoorTools {
 
   // ------------------------------------------------------------ the charge
   /** Sam's trigger: the set charge nearest him (or the one given) goes. Returns what it did, null with none set. */
-  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c)); }   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
+  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.col.window(() => this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
   private blowRaw(c: SetCharge | null): { knocked: number; stunned: number; backblast: number } | null {
     if (!c) return null;
     const g = this.g, K = DOORTOOLS, d = c.door, side = c.side, W = d.def.width, into = -side as 1 | -1;
@@ -3359,7 +3360,7 @@ export class DoorTools {
   private dazzle(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.dazzledUntil = Math.max(gd.dazzledUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs);
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     if (g.aiEnabled) gd.witness.dazzled++;
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.dazzledAt = v3.copy(at); gd.char.anim.hitFrom(v3.sub(gd.char.pos, at));
   }

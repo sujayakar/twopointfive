@@ -27,8 +27,32 @@ if (harnessProfile() === 'shipped') shippedBoot();
 /** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
  *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
 const STAND_AT_LOAD: string = harnessProfile();
-{ const { EXACT } = await import(`${ROOT}/src/math/exact.ts`); if (pinned('TPS_EXACT')) EXACT.on = (process.env.TPS_EXACT ?? '1') !== '0'; }   // TPS_EXACT=1 = the game's own maths (src/math/exact.ts): same bits on every engine. Here as well as in standGame, so a level a tool builds before it stands a game is built on the same functions
-(await import(`${ROOT}/src/host/standup.ts`)).pinRust();   // …and the rows of the Rust module as this run's stand and words have them (src/sim/sim.ts RUST_ON; TPS_RUST=0, TPS_RUST<ROW>), from here and not only from the first stand-up: a tool that asks the module before it stands a game asks it on its stand
+// The game's own maths and the Rust module's rows, as the page has them, from here and not only from the first stand-up: a level a tool builds before it
+// stands a game is built on the same functions, and a tool that asks the module before it stands a game asks it as the build does. Neither is a switch
+// (TPS_EXACT, TPS_RUST and TPS_RUST<ROW> are retired and stop the tool that says them).
+const STANDUP = await import(`${ROOT}/src/host/standup.ts`), SIM = await import(`${ROOT}/src/sim/sim.ts`);
+/** A CHECK'S OWN ARM (src/host/standup.ts HELD): rows this process keeps down, or up, over the build's, and `exact: false` = the engine's maths for a red
+ *  path. `rows: false` = every row down. Called before a game is stood up; it holds for every stand-up after it. A row the module does not have is an
+ *  error by name (a family whose TypeScript is gone has no row to hold). QA_HOLD is the same arm said to a child process, since a play-through's workers
+ *  are children: `QA_HOLD=rows=0,dice=1,exact=0` (in that order: all down, then a row by name, then the maths). A run that holds anything says so on
+ *  stderr as it starts and `held()` is its own words for it: such a run is no stand's run, and nothing recorded from one is a fixture. */
+export function hold(arm: { rows?: Record<string, boolean> | false; exact?: boolean }): void {
+  const all: string[] = SIM.rustRows(), H = STANDUP.HELD;
+  if (arm.rows === false) for (const r of all) H.rows[r] = false;
+  else for (const [r, on] of Object.entries(arm.rows ?? {})) { if (!all.includes(r)) throw new Error(`hold: the module has no row "${r}" (rows: ${all.join(' ')})`); H.rows[r] = on; }
+  if (arm.exact !== undefined) H.maths = arm.exact;
+  STANDUP.pinMaths(); STANDUP.pinRust();
+  if (!saidHeld) { saidHeld = true; queueMicrotask(() => console.error(`HELD, no stand's run: ${held()}`)); }
+}
+let saidHeld = false;
+export function held(): string { const H = STANDUP.HELD, all: string[] = SIM.rustRows(), down = all.filter(r => H.rows[r] === false), up = all.filter(r => H.rows[r] === true && !SIM.rustOn(r));
+  return [down.length === all.length ? 'every row down' : down.length ? `down ${down.join(' ')}` : '', up.length ? `up ${up.join(' ')}` : '', H.maths === false ? 'the engine\'s maths' : ''].filter(Boolean).join(' · '); }
+{ const w = process.env.QA_HOLD; if (w) { const rows: Record<string, boolean> = {}; let none = false, exact: boolean | undefined;
+    for (const t of w.split(',')) { const m = /^([a-z]+)=([01])$/.exec(t.trim()); if (!m) throw new Error(`QA_HOLD: "${t}" is not row=0, row=1, rows=0 or exact=0`);
+      if (m[1] === 'rows') { if (m[2] !== '0') throw new Error('QA_HOLD: rows=0 puts every row down; there is no rows=1 (the build has them up)'); none = true; }
+      else if (m[1] === 'exact') exact = m[2] === '1'; else rows[m[1]] = m[2] === '1'; }
+    if (none) hold({ rows: false }); hold({ rows, exact }); } }
+STANDUP.pinMaths(); STANDUP.pinRust();
 const { EXACT: EXACT_SWITCH } = await import(`${ROOT}/src/math/exact.ts`);
 // TPS_FELL=1 counts every question the TypeScript answered while its row of the Rust module was up (src/sim/sim.ts FELL) and prints the count as the tool
 // ends, one line `FELL <n> × <row> · <why>` each and `FELL none` when there was none; TPS_FELL=throw stops at the first, TPS_FELL=who adds who asked (the first two callers; who6 = six). A count on a row of sim.ts SEALED ends the tool red (exit 1, `FELL SEALED ROW REACHED`). FELL_BREAK=1 with it = the red path, which must end red. A tool of the build's: no answer changes.

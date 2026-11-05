@@ -1061,7 +1061,7 @@ export class WallCharge {
   // ------------------------------------------------------------ the blast
   /** Sam's trigger on one charge (F, the menu's 'blow the charge', a probe): the wall opened through the engine's blast entry point, the stun charge's report
    *  and flash with nobody on its list, the door charge's rule for the men near it — and the squad that set it goes in behind it */
-  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null { return this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c, pressed)); }   // (the whole blast — the hole, the pall, the mess — is the team's doing: fogofwar.ts FOG.ours)
+  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null { return this.g.col.window(() => this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c, pressed))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (the whole blast — the hole, the pall, the mess — is the team's doing: fogofwar.ts FOG.ours)
   private blowRaw(c: SetWallCharge | null, pressed: boolean): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null {
     if (!c) return null; const g = this.g, K = DOORTOOLS, W = c.wall, i = this.set.indexOf(c); if (i < 0) return null; this.set.splice(i, 1);
     holdFireOrder(g, 'wallCharge', { blown: true });   // (holdfire.ts: a charge starts the fight when it GOES, not when it is set)
@@ -1159,13 +1159,13 @@ export class WallCharge {
   private shock(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.staggerUntil = Math.max(gd.staggerUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs); gd.weapon.burst = null;
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, v3.copy(at));
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.char.anim.hit();
   }
   private dazzle(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.dazzledUntil = Math.max(gd.dazzledUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs);
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, v3.copy(at));
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     if (g.aiEnabled) gd.witness.dazzled++;
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.char.anim.hit();
   }

@@ -294,7 +294,7 @@ export function lying(gd: Guard): Vec3[] {
 }
 /** how much of those points a burst at `from` has a line to (0‥1), through the glass as `view` reckons it */
 export const lyingShows = (g: Game, from: Vec3, pts: Vec3[], view: GlassView): number => throughGlass(g, from, view, () => { let n = 0; for (const p of pts) if (!burstBlocked(g, from, p)) n++; return n / pts.length; });
-export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport { return g.fogOfWar.doing(spec.who, () => blastRaw(g, at, spec)); }   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
+export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport { return g.col.window(() => g.fogOfWar.doing(spec.who, () => blastRaw(g, at, spec))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
 function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   const F = FRAG, lethal = spec.lethalM ?? F.lethalM, wound = Math.max(lethal, spec.woundM ?? F.woundM), serial = spec.serial ?? Math.floor(g.time * 1000);
   const from: Vec3 = [at[0], at[1] + F.lift, at[2]]; const name = spec.name ?? 'frag grenade';
@@ -395,7 +395,7 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
       if (!gd.civ) {
         const u = clamp(j.d / wound, 0, 1); const secs = lerp(F.stagger[0], F.stagger[1], u);
         gd.staggerUntil = Math.max(gd.staggerUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs); gd.weapon.burst = null;
-        gd.awareness = Math.max(gd.awareness, 0.92); if (gd.state !== 'alert') word(g, gd, v3.copy(at));
+        gd.awareness = Math.max(gd.awareness, 0.92); if (gd.state !== 'alert') word(g, gd, at);
         gd.path = []; gd.pathGoal = null; gd.speed = 0;
         if (j.r === 'wounded') conditionHurt(g, gd);   // (condition.ts: it reached him and left him up — hurt from now; a return on its first line with the switch off)
       }

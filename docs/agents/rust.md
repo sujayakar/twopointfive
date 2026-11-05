@@ -6,6 +6,10 @@ running this elsewhere". The game's update (`Game.update`, about 100,000 lines o
 time. What is built so far is the ground: the crate, its build, its one way into the page, the server and the tools, the switch table, the checks, and the
 first system across (the game's own maths). No rule of play has changed and nothing a player sees is different.
 
+**The rows and the maths are NOT SWITCHES any more** (the bullet "Not switches", near the end, 2026-11-05). Every `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT`,
+`?rust`, `?rust<row>` and `?noexact` in the bullets below is how that step was measured on its day. None of them is a word now: in a tool's environment
+one stops the tool by name, on an address one does nothing and says so in the console. What a check still needs of them is its own arm, `QA_HOLD`.
+
 - **Where it lives.** `rust/` is a Cargo workspace (`rust-toolchain.toml` names the compiler and the WebAssembly target; no crate from outside, so no network
   at build time). `rust/sim` is the simulation: `src/lib.rs` (what every line owes the game, and the C exports, named `<module>_<thing>`), `src/maths.rs`,
   `src/pow10.rs` (the decimal powers as the language reads them, written by `bun run tools/sim/pow10.ts`: the Rust side never parses a decimal). `rust/prim`
@@ -27,16 +31,16 @@ first system across (the game's own maths). No rule of play has changed and noth
   thread up to 8 MB (measured: 6 MB compiles, 9 MB is refused with a RangeError); the build is red at 6 MB. If the whole update ever outgrows that, the
   answer is a boot step that waits, decided then. The page starts the module at boot and says so once on the console (`rust simulation: …`, `simSay`).
 - **A browser with no WebAssembly.** A browser whose policy turns its JIT off has no `WebAssembly` at all. `simWhyNot()` is the one answer to "can this
-  runtime run the module" (no WebAssembly, a compile the page's policy refuses, a `built.ts` of another version: asked once, by starting it); where it
-  cannot, the page says NOT RUNNING on its console and plays on the TypeScript simulation, and a row of `RUST` asked for there stays off (`rust-page.cjs nojit`). THE DAY THE UPDATE IS IN RUST ALONE
-  SUCH A PAGE CANNOT PLAY. That is a cost of the goal the maintainer should know before the TypeScript update is taken out.
+  runtime run the module" (no WebAssembly, a compile the page's policy refuses, a `built.ts` of another version: asked once, by starting it). Where it
+  cannot, THE PAGE DOES NOT PLAY: `main.ts` asks before any game is built and shows a card in the maintainer's words, "This game needs WebAssembly, and
+  it's turned off in this browser. Try another browser." (`sim.ts NO_WASM_WORDS`, `NoWasmError`; a module that fails for another reason says that
+  reason as an ordinary fatal). `rust-page.cjs nojit` opens the page with `WebAssembly` taken away and reads the card. Until 2026-11-05 such a page
+  played on the TypeScript simulation; the maintainer chose the card on a decision card of that day.
 - **`RUST`: a row a system** (`src/sim/sim.ts`). On = that system of the update runs in the module; off = in TypeScript as it always did. THE TWO ARE THE SAME
-  GAME TO THE BIT, which is what lets a system move at all. So a row is never a rule of play: it joins no pin list and moves no digest (the frozen stand
-  leaves every row off; the rows of `RUST_ON` are on in the page and so on the shipped stand, with a `FROZEN_HOLDS` line each: "Rows that are on", below),
-  a recording made with one on replays the same with it off, and the journal carries the table so that a recording says which ran (a file from
-  before the table replays with every row off, as it was made: `journal.ts applyKnobs`). It is in the knob registry, so a recipe carries it and a server and its clients run the same rows, unless a client's own address says
-  otherwise (`profile.ts pageRows`: what the address says of the rows is written again over a recipe's). A row
-  goes ON in the page (`RUST_ON`) once its system is proven and costs nothing there; until then a check raises it. Rows are setters: writing one moves the system.
+  GAME TO THE BIT, which is what lets a system move at all. So a row is never a rule of play: it joins no pin list and moves no digest. SINCE 2026-11-05 A ROW IS NOT A SWITCH EITHER ("Not switches"): the
+  rows of `RUST_ON` are up wherever the game is played, `sim.ts rowsUp` is the one writer in play, the table is in no knob registry, no recording, no
+  recipe and no address, and it stays a table only so that a check of the two languages can hold its own row down in its own process until that
+  family's TypeScript is deleted. Rows are setters: writing one moves the system.
   - `maths` — the game's own maths (`src/math/exact.ts`, when `EXACT.on` has put them in `Math`'s place) from the module: `exact.ts mathsFrom` takes the
     same fourteen functions and the three lengths of `math/hyp.ts` from elsewhere. `?rustmaths` in the page, `TPS_RUSTMATHS=1` headless. OFF EVERYWHERE, and
     meant to stay off: from TypeScript the crossing costs more than the dozen operations it saves (bun 1.4: sin 27 ns in TypeScript, 44 ns across; exp 34 and
@@ -1574,9 +1578,8 @@ first system across (the game's own maths). No rule of play has changed and noth
   maths, and the TypeScript behind them is going: a stand that cannot run the game the way it will be kept holds nothing. So `standup.ts pinMaths` and
   `pinRust` put the game's own maths and the rows of `RUST_ON` on on BOTH stands, the `FROZEN_HOLDS` lines `EXACT.on` and `RUST.<row>` are gone, and the
   frozen stand's pins that fold a run were recorded again, once (below).
-  THE STAND AS IT WAS RECORDED IS STILL ASKED FOR BY WORDS, in this step: `TPS_EXACT=0 TPS_RUST=0` in front of a frozen tool. `TPS_RUST=0` = every row
-  down unless its own word raises it (the page's `?rust=0`); `TPS_RUST<ROW>=0|1` = that one (`?rust<row>`). The deletions end that: with the TypeScript
-  twins gone a row cannot be put down, `?rust=0` does nothing and the old frozen stand cannot be raised.
+  THE STAND AS IT WAS RECORDED WAS STILL ASKED FOR BY WORDS in this step (`TPS_EXACT=0 TPS_RUST=0` in front of a frozen tool). "Not switches" ended
+  that the next day: the words are retired and that stand cannot be raised.
   A ROW IS STILL NEVER A RULE OF PLAY: the page's stand reads the digests it read (42 of 42 missions, seeds 1 and 2 of 21). What moved the frozen
   stand's digests is the MATHS under it (the engine's sine against the game's own, in the last place), not a row.
   NOT ALL OF IT IS CHEAPER YET. A row whose callers are TypeScript pays a crossing a question. Measured with nothing else running (`tickcost.ts --each
@@ -1630,6 +1633,12 @@ first system across (the game's own maths). No rule of play has changed and noth
     single line, circle or ray asked outside every window proves the copy for itself and shuts it behind the answer (`collision.ts lone`; `ANYTIME.proofs`
     counts those: code that asks many in a row opens a window). A tick's open is still a tick's: the window and the lone question stand the copy by
     a step of their own (`stand`), so a check that counts ticks by `tickOpen` counts ticks.
+    A BLOW IS ONE WINDOW (`wallcharge.ts blow`, `doortools.ts blow`, `destruction.ts blast`, `frag.ts blast`). In play each is entered inside a
+    tick and the window is nothing (a wall charge there: no lone question, 3 to 31 compares of the statics, under a millisecond). Called BETWEEN
+    ticks (a check, a page's hook, the debugger's button, a profile's script) a wall charge asked 587 to 946 lines alone, a bare blast 669, a
+    frag's burst 1,366 and a door charge 47 to 64, each proving the copy for itself: two thirds of the call. In one window: none alone, 1 to 16
+    compares. Measured on the office on the page's stand (a wall charge 33 to 48 ms before, about 6 after the first; a frag's burst 49 ms to 8),
+    the game the same by digest. A profile of a blow taken from a page's script before this measured its own way in, not play.
   - THE GRID WRITTEN INSIDE A TICK (`boxMirror.ts wroteGrid`). A wall holed (`addStatic`) or the list cut back used to SHUT the copy for what was
     left of the tick, and every later question of that tick, the senses' and the rules' steps among them, was the TypeScript's. It is a debt now, as
     `wrote` is, and the compare that pays it copies the cells first.
@@ -1888,6 +1897,50 @@ first system across (the game's own maths). No rule of play has changed and noth
   `FELL none` on both; the tour and the soak on both stands, nothing of a sense counted (the soak's one line is a rule's step, 22 on the page's
   stand and 6 on the frozen one); a run on the stand as it was recorded (`TPS_EXACT=0 TPS_RUST=0`) counts nothing; `FELL_BREAK=sound` and
   `FELL_BREAK=paths` each end red; `sense-ident` and its two red paths; both typechecks.
+- **Not switches** (2026-11-05; the maintainer: "the plan is rust/wasm only", "let's get the rust merged asap and delete the typescript", "yep breaking
+  replays is fine"; and, on the card for a browser with no WebAssembly, the short line). After "All on" and "One way in" every row of `RUST_ON` was
+  up everywhere and no question fell back, but each row and the maths were still switches: a word on an address, a word in a tool's environment, a
+  table a recording and a recipe carried. A switch nobody may use is a second game nobody tests. This step takes them out and leaves the twins, which
+  the deletions take a family at a time.
+  WHAT IS GONE. The game's own maths are on wherever a game is played and no word takes them out: the page's boot writes them (`sim.ts mathsUp`, from
+  `profile.ts pageRows`) and the harness's stand-up does (`standup.ts pinMaths`). `EXACT.on` is still OFF AS `math/exact.ts` LOADS, on purpose: a
+  tool that stands no game, the level exporters above all, works on the engine's own functions, and the level files in the repo are what those gave
+  (with the maths on at load every exporter read every level as stale: a review of this step found it). `sim.ts rowsUp()` puts every row where the
+  build has it and is the one writer in play (the page's boot; the harness, `standup.ts pinRust`). `RUST` and `EXACT` are out of the knob
+  registry, so no journal, recipe or save carries them (`journal.ts`, `recipestand.ts`: the "file from before" lines went with them), and
+  `net/wire.ts NET_TABLES` no longer names `EXACT` (every game plays on the game's own maths). A recording from before replays on today's rows and
+  maths whatever it was made on: BREAKING OLD RECORDINGS IS RULED FINE.
+  THE WORDS. `TPS_RUST`, `TPS_RUST<ROW>`, `TPS_EXACT` in a tool's environment STOP the tool by name (`standup.ts retiredEnv`, `sim.ts
+  retiredEnvWord`): a word that is silently nothing is a run that is not what its caller thinks. `?rust`, `?rust<row>` (a row the module has),
+  `?noexact` on an address do nothing and say so on the console, once a page and a word, as a note (`console.info`: a warning there is filed as a
+  fault of the page's, `cloud/report.ts tapConsole`; `sim.ts retiredAddressWord`, `profile.ts RETIRED_SAID`). A tape from before that carries such a
+  word is walked on today's rows and maths (`tools/qa/rerun.ts` does not say the word again). (`standEnv.ts STAND_ENV` is a line other work extends: the old names are left in it, harmless. `replaykey.ts VISIT_FLAGS`
+  no longer spreads the rows' words, and `fell` is a word of the list itself.)
+  A CHECK'S OWN ARM. While a family's TypeScript stands, its check must still run it: `tools/qa/headless.ts hold({ rows, exact })` writes
+  `standup.ts HELD` in the tool's own process, and `QA_HOLD=rows=0,<row>=0|1,exact=0` says the same to a child (a play-through's workers are
+  children). A run that holds anything prints `HELD, no stand's run: …` on stderr; `held()` is its words; it writes `QA_HOLD` into the words of any tape it
+  records (`game/runtape.ts`) and the re-run refuses such a tape, so nothing recorded under an arm can pass for a recording of the game. A row the module has not is an error by
+  name, which is what a held row becomes the day its family is deleted. Users: `rust-check` (missions and `--both`: each side's rows by name; the
+  server's two arms; the torn leaves by the TypeScript), `simstate-check` (stands on no row), `item-ident` (the box world's rows down for both arms),
+  `posemath-check` / `pose-fold`, `coop-check` and `samefight-page` (the red path: the engine's maths; the page has no word for it, so the break is
+  the re-run's), `exact-check --load` (the watch needs the engine's functions in place while the game loads).
+  NO WEBASSEMBLY: the card, above. Outside the boot three places still ask `simWhyNot()` (`collision.ts` once, `sense.ts` twice): dead where a game
+  is played, and the families' own to take out with their deletions.
+  THE CHECKS. `rust-check` `stand`: both stands have the build's rows and the game's own maths; six retired words each stop the tool on both stands;
+  `QA_HOLD` holds what it names and it alone; the knob registry and `FROZEN_HOLDS` hold no row and no maths; twelve addresses with old words, also
+  over rows a recipe wrote, leave the build's rows. `server`: a setup that asks for a `RUST` table is refused; the recipe's game is the game with
+  every row held down and with the maths' row held up. `exact-check` `stand`: on on both stands, `TPS_EXACT` stops the tool, the arm takes the maths
+  out. `rust-page.cjs`: `words` (the old words on the address change nothing and are said), `nojit` (the card, no game built). `RUST_BREAK=1` is red
+  for every section and every row.
+  WHAT WAS MEASURED (this step against the build before it; one 4-core cloud box, bun 1.4.4): the 42 (21 missions, seeds 1 and 2) equal on both
+  stands with the fallback count at none; two missions played with every row held down (`QA_HOLD=rows=0`) end on the frozen stand's own digests,
+  the TypeScript game being the Rust game; `rust-check` on both stands all pass and its red path red for every section and row; `--missions` (three
+  runs, one on Hard, one with frags through doors) and `--both` (two runs) pass; `coop-check` four runs to the bit on bun and node, and all four
+  differ on its red path; the page's five jobs pass and `samefight-page` plays the compound to the bit against the tape's re-run (41 words over 1,230
+  steps) and differs on its red path; the level exporters read every level as up to date; `exact-check` all pass.
+  WHAT NOBODY HAS SEEN: the card in a real browser whose policy turns its JIT off (it has been read only in headless Chromium with `WebAssembly`
+  taken away, on the software adapter); anything of this on a GPU. Old replay links that carry `?rust=0` or `?noexact` have not been opened by a
+  person: by the checks they play on today's rows and say so in the console.
 - **The data's layout** (2026-11-03; the maintainer: "we should also start changing our data layout to be more cache and simd friendly"). MEASURED
   FIRST, one blend of two 55-node poses in a module, an x86 cloud box, bun 1.4 | node 24: as it stood (ten singles a node, worked in doubles) 1334 |
   1391 ns · the same arithmetic over columns 1334 | 1390 · columns, two lanes of doubles, THE SAME BITS 1204 | 964 · doubles, the length a plain root

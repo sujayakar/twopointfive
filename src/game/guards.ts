@@ -65,7 +65,7 @@ import { needsPatrol } from './needs';
 import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
 import { coverSeen, coverBlind } from './coverfire';
 import { startleSight, startleHolds, startleTorch, startleLeft, startleScript } from './startle';
-import { gunPoint, wordNow } from './belief';
+import { fixAtSight, gunPoint, word, wordStands } from './belief';
 import { doorForce, doorForceHear, doorForceOwnBoot } from './doorforce';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
@@ -102,7 +102,6 @@ export function eyesOn(g: Game, gd: Guard, at: Vec3) { gd.lastKnown = v3.copy(at
 export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ear) {   // (doze.ts — `ear`: a man asleep in his chair, or at his screen with headphones on, hears the small noises at a share of this, and a footfall at `foot`; `eyes` false: asleep, he sees no light go out)
   const keen = escalationOf(g) >= 1 ? KEEN : 1, dull = keen * ear;   // an alarmed floor listens harder: the small noises (a creak, a scrape, a footfall) count for a quarter more
   const H = gd.witness.heard;   // what reached him and counted goes in his memory too (Witness): the same gates as the awareness it raises, nothing more
-  const placed = wordNow(g, gd);   // (belief.ts: a blast, a mate's word has already placed his belief this tick: that report stands, and what he hears of the same moment does not write over it)
   let cur: GameEvent | null = null;   // (the event being weighed: attention.ts is told which small thing it was)
   const small = (where: Vec3) => { H.small++; H.smallWhere = v3.copy(where); H.lastT = g.time; if (cur) attentionHeard(g, gd, cur, where); };   // (attention.ts — a return on its first line with its switch off: a small thing that makes a calm man look takes his attention to where he puts it)
   for (const e of g.events) {
@@ -110,6 +109,7 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
     if (e.id === undefined) e.id = ++g.eventSeq;          // sequence ids: events raised by guards later in the update order are still heard next frame
     if (e.id <= gd.heardUpTo) continue;
     gd.heardUpTo = Math.max(gd.heardUpTo, e.id);
+    const placed = wordStands(gd, e.time);   // (belief.ts: a blast or a mate's word has placed his belief since this was made: that report stands)
     const dStraight = v3.dist(e.pos, gd.char.pos);
     if (e.kind === 'lightOut') {
       if (eyes && dStraight < 10 && gd.awareness < 0.4 && lightOutSeen(g, gd, e)) {
@@ -169,9 +169,9 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
       if (rel === 'own') { const at = colleagueFirePos(g, gd, e); if (at && !placed) gd.lastKnown = v3.copy(at); }   // (null: PICTURE.shot, and his own word on the man is the newer)
       else if (gd.state !== 'alert' || !gd.lastKnown || prop.direct || g.time - gd.lastSeenT > 1.0) {
         const err = prop.direct ? 0 : Math.min(4, 0.6 + dLoud * 0.08) * (1.3 - 0.3 * carry); const a = simRandom() * Math.PI * 2; const cand: Vec3 = [e.pos[0] + Math.cos(a) * err, 0, e.pos[2] + Math.sin(a) * err];
-        const reachable = !g.col.nav.isBlocked(cand[0], cand[2]) && !!g.col.nav.findPath(gd.char.pos, cand);   // a free-but-unreachable pocket would have him grind a wall forever
-        if (!placed) gd.lastKnown = reachable ? cand : v3.copy(e.pos);
+        if (!placed) gd.lastKnown = !g.col.nav.isBlocked(cand[0], cand[2]) && !!g.col.nav.findPath(gd.char.pos, cand) ? cand : v3.copy(e.pos);   // (reachable: a free-but-unreachable pocket would have him grind a wall forever)
       }
+      H.loudAt = gd.lastKnown;   // (what the report came to in his head, written or not: the room fight's evidence reads it. belief.ts)
       if (wasCalm) gd.reactT = Math.max(gd.reactT, 0.25 + Math.min(1.2, dLoud / 25) + simRandom() * 0.4);   // the far end of the floor takes a moment to place it (once: a colleague's continuing fire must not keep re-rooting men already on the move)
       if (wasCalm && !e.announced && !(WORDS.on && kick && ownNoise(g, gd, e.who))) { e.announced = true; g.say(gd, e.kind === 'bang' ? (e.frag ? 'grenade! that was a grenade!' : WORDS.on && e.charge ? (defenderWords(gd) ? 'that was a charge — they\'re breaching!' : 'that was a charge!') : WORDS.on && (gd.hold || gd.pinned) ? 'flashbang!' : 'flashbang! go, go!') : kick ? 'that was a door going in — someone\'s inside!' : rel === 'own' ? 'shots fired! on me!' : defenderWords(gd) ? 'that was a shot — find them!' : 'that was a shot — find him!', e.kind !== 'bang'); }   // (words.ts: a man posted on a mark goes nowhere; a defender is after a team; a door or wall CHARGE is no flashbang — GameEvent.charge; and a door his OWN side's blast or boot took — doorblast.ts files the frame letting go as a 'kick' under the thrower's id — is nobody 'inside': no line)
     }
@@ -959,7 +959,7 @@ function hostageCall(g: Game, gd: Guard, P: Pair) {
   for (const o of g.guards) {
     if (o === gd || o === P.held || o.state === 'dead' || o.held || o.team !== gd.team) continue;   // (teams: his own side answers the call — all of them staff, in the game as it was)
     const wasCalm = o.state === 'patrol' || o.state === 'suspicious';
-    o.awareness = Math.max(o.awareness, 0.92); o.lastKnown = v3.copy(P.sam);
+    o.awareness = Math.max(o.awareness, 0.92); word(g, o, P.sam);
     if (wasCalm) o.reactT = Math.max(o.reactT, 0.25 + Math.min(1.2, v3.dist(o.char.pos, P.sam) / 25) + simRandom() * 0.4);   // (the far end of the floor takes a moment to place it, as for a shot)
   }
   if (gd.team !== 'guard') return;   // (the building's alarm and its lockdown are the STAFF's: a unit's call reaches his own side and no further)
@@ -2175,9 +2175,9 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
     // doorway, round a corner; not his own head sweeping off him, the range running out, a dazzle or the light dropping — lead the fix he leaves behind along the way
     // Sam was going (leadFix). Once per sighting, only a fresh one, and only if it still IS the sight fix (a noise placed since is its own place, not a point to march from).
     if (gd.sightT < g.time && gd.sightT > gd.ledT) {
-      if (g.time - gd.sightT < 0.25 && gd.lastKnown && v3.distXZ(gd.lastKnown, gd.sightPos) < 0.01 && fc) {
+      if (g.time - gd.sightT < 0.25 && fixAtSight(gd) && fc) {
         const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]); const pc = fc;
-        if (eyeBlocked(g, gd, eye, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0])) && eyeBlocked(g, gd, eye, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]))) gd.lastKnown = leadFix(g, gd.sightPos, gd.sightVel);
+        if (eyeBlocked(g, gd, eye, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0])) && eyeBlocked(g, gd, eye, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]))) gd.lastKnown = gd.ledAt = leadFix(g, gd.sightPos, gd.sightVel);
       }
       gd.ledT = gd.sightT;
     }
@@ -2210,7 +2210,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
           other.awareness = Math.max(other.awareness, 0.45);
           other.witness.calledToBody = { victim: o.callsign, t: g.time, breathing: isBreathing(o) };   // everybody on the net heard the call, and heard what was found (errand or not, sent over or not)
           if (other.task) continue;   // on an errand (the breaker, the rack): he hears it on the net, sharpens up, and keeps going — his fix stays the errand's
-          other.lastKnown = v3.copy(body);
+          word(g, other, body);
           if (!g.quietUtility && !other.hold && !other.held && !other.bodyDuty && (other.state === 'patrol' || other.state === 'suspicious' || !!other.script)) other.bodyDuty = { body: o, role: 'called', stage: 'to', t: 0, t0: g.time, spot: null };   // (a scripted man — the clearing pair — breaks off on the news and comes over like the rest; an alert or searching one keeps hunting, he only learns where; the man in Sam's arm goes nowhere)
         }
       }
