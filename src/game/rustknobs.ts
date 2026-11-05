@@ -8,6 +8,7 @@
 // its name. Nothing here is a rule of play.
 import { sim, f64, u8, RUST } from '../sim/sim';
 import { LAYERS } from '../anim/skeleton';
+import { WX_KNOBS } from '../sim/weatherhome';
 import { knobRegistry } from './knobs';
 import { animTables } from './character';
 
@@ -49,3 +50,10 @@ export function knobsToRust(): void {
  *  is written. */
 export function knobsNow(): void { if (RUST.walk && !RUST_KNOBS.tick) knobsToRust(); }
 LAYERS.knobs = knobsNow;
+/** …the knobs the weather's rules read and no others (rust/sim/src/weather.rs READS, by place in the list): a question outside a tick pays for what it can read */
+function weatherKnobsToRust(): void {
+  if (!RUST_KNOBS.lines) rustKnobLines();
+  const L = RUST_KNOBS.lines!, m = f64(), AT = RUST_KNOBS.at, x = sim();
+  for (let n = 0, i = x.weather_read(0); i >= 0; i = x.weather_read(++n)) { const v = num(value(L[i])); if (v === null) throw new Error(`rust knobs: "${L[i].path}" is no longer a number`); m[AT + i] = RUST_KNOBS.hand(i, v); }
+}
+WX_KNOBS.here = () => { if (!RUST_KNOBS.tick || !RUST.walk) weatherKnobsToRust(); };   // (the weather's questions are asked outside a tick too, and whatever row is up: as they stand, unless this tick has handed the list)

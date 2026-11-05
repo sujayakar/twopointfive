@@ -26,6 +26,8 @@ import type { LevelScenarios } from './scenarios';
 import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
 import { CIVILIAN_TASKS } from './level';
 import { BoxFlag, type Box } from './boxes';
+import { roofsOver } from '../sim/weatherhome';
+import { WORLD } from './world';
 import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './markings';
 import { shapeErrors, formOf, type ShapeForm } from './shapes';
 import { findOctagons } from './round';
@@ -364,6 +366,8 @@ export function validateLevelData(d: LevelData): string[] {
   }
   // boxes
   const boxes = recs('boxes', d.boxes);
+  // (HOW MANY ROOFS: the weather's table, rust/sim/src/weather.rs ROOFS; game/levelfit.ts refuses the level as it loads)
+  { const whole = boxes.filter(b => isVec((b as any)?.c, 3) && isVec((b as any)?.h, 3)) as unknown as { c: number[]; h: number[] }[], over = roofsOver(whole, WORLD.ceilingY); if (over) err('boxes', `too many ceiling slabs: ${over}`); }
   const boxIds = uniq('boxes', boxes.map(b => (b as any)?.id));
   // (ONE BOX'S RULE — the level's own boxes, and the boxes a Team & kit way adds for its picture: scenarios.kitView below)
   const boxRule = (w: string, b: (typeof boxes)[number]) => {

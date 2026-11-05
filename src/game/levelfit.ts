@@ -49,6 +49,8 @@ export const civMost = (): number => menHeld() - menMost(0);
 /** WHAT ONE STEP IS HANDED OF THEM, AT MOST. At the doors a man is one contact, two while he lies wounded, and — his body near a doorway — a few of his
  *  ragdoll's particles (game.ts BODY_DOOR_PARTICLES): never more than those and his own. At the furniture a man is one. */
 export const handOverMost = (civilians: number): { doorMen: number; propMen: number } => ({ doorMen: menMost(civilians) * (BODY_DOOR_PARTICLES.length + 1), propMen: menMost(civilians) });
+import { roofsCounted, roofsOver, wxCap } from '../sim/weatherhome';
+import { WORLD } from '../scene/world';
 
 /** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass */
 export interface LevelFit { doors: number; things: number; parts: number; sheets: number }
@@ -67,6 +69,7 @@ export function levelOver(level: Parameters<typeof levelCounts>[0]): string | nu
   if (has.things > cap.things) over.push(`${has.things} loose things of furniture (${cap.things})`);
   if (has.parts > cap.parts) over.push(`loose furniture of ${has.parts} boxes (${cap.parts})`);
   if (has.sheets > cap.sheets) over.push(`${has.sheets} sheets of glass (${cap.sheets})`);
+  const roofs = roofsOver(level.boxes, WORLD.ceilingY); if (roofs) over.push(roofs);   // (rust/sim/src/weather.rs ROOFS: the weather's table)
   return over.length ? levelTooBig(level, over.join(', ')) : null;
 }
 
@@ -123,6 +126,7 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'propmen', what: 'men one step of the furniture is handed at most', has: most.propMen, cap: pio?.maxContacts ?? Infinity, table: null },
     { row: 'frames', what: 'door frames one step of the furniture is handed (a frame a door)', has: L.doors, cap: pio?.maxWays ?? Infinity, table: null },
     { row: 'sweeps', what: 'leaves one step of the furniture is handed (a leaf a door)', has: L.doors, cap: pio?.maxLeaves ?? Infinity, table: null },
+    { row: 'roofs', what: 'roofs (ceiling slabs, the weather\'s table)', has: roofsCounted(g.level.boxes, WORLD.ceilingY), cap: wxCap(0), table: null },
   ];
 }
 

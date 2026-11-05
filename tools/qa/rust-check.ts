@@ -69,6 +69,7 @@
 //             panes of glass, their doors hung again, stepped both ways from the same rows: every column, the rows' tables, every box, noise, tally and
 //             log line the same bits, and a run fair only if it met everything the step does (a ray through a pane that is gone among them). The
 //             shared numbers are read out of both sources. `missions` and `both` hold it in play where a mission takes a leaf off.
+//   weather   the weather that play reads (rust/sim/src/wind.rs, weather.rs, air.rs, snow.rs): tools/qa/weather-ident.ts — thirteen runs with every answer of the module folded, held to a recording
 //   falls     what falls and what it leaves (rust/sim/src/falls.rs against src/sim/fallshome.ts: the landings the simulation has scheduled and the litter
 //             map of broken glass, a part of the game's block): tools/qa/falls-ident.ts — two hundred thousand rules (schedule past the list's cap, deposit,
 //             the landings due, a footfall's step, the floor told, clear, the row dropped and raised) each taken both ways and against a twin store that
@@ -230,7 +231,7 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
  *  die's did not reach them until 2026-11-03. */
 const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props', slabs: 'slabs', items: 'items', walk: 'layers', rays: 'lines, circles' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'weather', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; const k = label.split(':')[0]; said[k] = (said[k] ?? true) && ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -533,6 +534,13 @@ let wordOwn = '', wordRust = '';
   { shared++; const max = /max: \[(\d+), \d+, (\d+)\]/.exec(world), min = /min: \[(-?[\d.]+), -?[\d.]+, (-?[\d.]+)\]/.exec(world); if (!max || !min || Number(min[1]) !== 0 || Number(min[2]) !== 0 || Number(max[1]) !== there('CELLS_X') * there('CELL') || Number(max[2]) !== there('CELLS_Z') * there('CELL')) off.push('the cells are not the world\'s floor (scene/world.ts WORLD)'); }
   verdict(r.status === 0 && /=== falls-ident: PASS/.test(r.out) && off.length === 0 && shared >= 22, 'falls: every landing scheduled, every bit of glass laid and every footfall on it is the TypeScript\'s in the Rust module, and the two sides name their numbers alike',
     (row ? row.replace(/^falls-ident: /, '') + '\n' + met : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`) + `\n    ${shared} numbers shared with the Rust source${off.length ? ` — NOT THE SAME: ${off.join(', ')}` : ', each the same'}`);
+}
+
+// ---- weather
+{
+  const r = child(['bun', 'run', 'tools/qa/weather-ident.ts'], { WEATHER_BREAK: BREAK ? '1' : undefined }), last = r.out.trim().split('\n').slice(-1)[0] ?? '';
+  red.weather = r.status === 1;
+  verdict(r.status === 0 && /^PASS — the weather is the module's/.test(last), 'weather: the weather that play reads is the module\'s, every answer of a run held to its recording', (r.out.trim().split('\n').filter(l => /^- (PASS|FAIL)/.test(l)).map(l => l.slice(0, 150)).join('\n    ') || `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`));
 }
 
 // ---- state

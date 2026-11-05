@@ -175,6 +175,8 @@ export class BoxMirror extends HostOwned {
   scratch = 0; scratchLen = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; wind = 0; windCap = 0; navShut = 0; navCap = 0; way = 0; navWant = 0; navPrice = 0;
   /** one question's lamps and blobs as they are written (collision.ts lampsBegin … lampsOn, blobsBegin … blobsAlong): the leaves' list to ask with, how many so far */
   lampSet = -2; lampN = 0; blobSet = -2; blobN = 0;
+  /** what a rule that asks its own lines hands them (collision.ts ruleOpen): which list of leaves, which pane rule */
+  ruleSet = -1; rulePanes = 0;
   /** WHAT A SMOKE GRID THAT STEPS OVER THIS COPY GOES BY (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): the copy's NUMBER, given anew whenever every
    *  row of it is written afresh (the world newly this game's, another maths, a snapshot put back), so a grid whose faces were asked of an earlier copy
    *  asks them all again; and whether a grid has stepped over this one (`gridCopy`), from when on a row that is written is said to it (`grid_dirty`). */
