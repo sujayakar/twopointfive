@@ -89,7 +89,8 @@ did not.
 - **Every room they can shut has another way in.** The maintainer: "maybe we just need to design levels so there's always
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
   rooms that could only be opened with a charge or a 40 mm. **check** `bun run tools/qa/second-way-check.ts <name>.json`
-  (export runs it too; a changed swing moves that level's tallies and par times).
+  (export runs it too: red fails the export of a level a squad row plays and is a note on one with no row yet; a changed
+  swing moves that level's tallies and par times).
 - **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
   stays see-through"; the maintainer: "we don't want them to feel dumb". Dress such a window with the kit's OPEN form
   (`gwotKit` `boards`, `shutters`, `windowBlanket` take `'shut'` or `'open'`), and stand no cover in a mark's line. **seen**
