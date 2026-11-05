@@ -45,10 +45,10 @@ export type LookName = typeof LOOK_NAMES[number];
  *  ground  bare ground: within a stride of lying snow it freezes (ice in the low places, rime over the rest)
  *  sheds   snow does not lie on it or cling to it (bare iron on a snow level is a stove, a flue, a brazier)
  *  rolled  a thing of it is PRESSED OR MOULDED, and its arrises are rolled: metres over which a face's shading normal turns toward the face it meets (a car's
- *          panel: a hand and a half). Shading only (look.wgsl lookRoll, the Edges row): no ray and no body meets it. A flank turns up into the top and
+ *          panel: a hand and a half). Shading only (look.wgsl lookRoll, the Pressed panels row): no ray and no body meets it. A flank turns up into the top and
  *          round an upright arris, never down at its foot; a top turns out at every edge. Absent = a sharp arris (and a small thing's rubbed one, below)
  *  mirrors how much of what it faces its outer coat mirrors seen head-on (a lacquer, a glaze). Absent = 0.04, what any coat of paint or bare stone does.
- *          The reflection pass reads it by the box's own word (the prelude's LOOK_MIRRORS, reflect.wgsl), under the Finish row */
+ *          The reflection pass reads it by the box's own word (the prelude's LOOK_MIRRORS, reflect.wgsl), under the Pressed panels row */
 interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; untiles?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number]; bay?: readonly [along: number, up: number];
   runs?: 'long' | 'flat'; least?: number; under?: { readonly plinth: LookName; readonly core: LookName; readonly long: number; readonly tall: number }; foot?: LookName; ground?: true; sheds?: true; rolled?: number; mirrors?: number }
 const STUFFS: Readonly<Record<LookName, Stuff>> = {
