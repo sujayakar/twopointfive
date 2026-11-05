@@ -206,7 +206,7 @@ export const PANES: { both: null | ((what: string, twin: GlassBreakTwin, answers
 const TYPES: readonly GlassType[] = ['annealed', 'tempered', 'laminated'];
 const CAUSES: readonly GlassFragment['cause'][] = ['hit', 'support', 'blast', 'dice', 'rake'];
 const KINDS: readonly GlassFragment['kind'][] = ['piece', 'dagger', 'clump', 'sheet'];
-const NO_TYPE = 9, NO_OVER = 3;
+const NO_TYPE = 9, NO_OVER = 3, SKY_UNKNOWN = 2;
 // rust/sim/src/panes.rs: a fragment's doubles, and the places in them
 const OUT_LEN = 32, O_PANE = 0, O_TYPE = 1, O_KIND = 2, O_PTS = 3, O_NPTS = 4, O_CX = 5, O_NX = 8, O_THICK = 11, O_AREA = 12, O_VX = 13, O_SX = 16, O_GRAIN = 19, O_CAUSE = 20, O_WHO = 21, O_SEED = 22, O_KEY = 23, O_HEARD = 24, O_FALL_T = 25, O_FALL_X = 26, O_LANDED = 29;
 // …a row's fields (panes_field), found once
@@ -253,18 +253,23 @@ export class GlassBreak {
       if (!RUST_KNOBS.tick) knobsToRust();
       const set = M.leaves(c.dynamicBoxes); if (set === -2) throw new Error('glass: more leaves than a list of the module holds');
       const x = M.x, s = g.sim.bind();
-      if (!x.panes_booted(s)) this.boot(x, s);
       x.panes_ctx(s, M.slot, set, g.time, this.hook !== null && (g.tune as { glassShards?: boolean }).glassShards !== false && glassBreakLive(g) ? 1 : 0, SHARD.gravity);
       const r = fn(x, s, M.slot);
       if (x.panes_take_wrote()) c.wrote();
       return r;
     });
   }
-  /** this game's glass, for the block: every sheet of the level, ascending, with how far it stands on the plan from the nearest door's opening */
-  private boot(x: SimExports, s: number): void {
-    const boxes = this.g.level.boxes, list = glassPanes(this.g).filter(bi => isSheet(boxes[bi])), m = f64(), at = x.sim_scratch() / 8;
-    for (let i = 0; i < list.length; i++) { m[at + 2 * i] = list[i]; m[at + 2 * i + 1] = this.doorGap(boxes[list[i]]); }
-    x.panes_boot(s, list.length);
+  /** THE LEVEL'S SHEETS OF GLASS, for the copy of its box world (scene/boxMirror.ts PaneSource: no state of the game's, so a game that never touches glass has nothing of it in its block): each its static, how far it stands on the plan from the nearest door's opening, and which face has the sky */
+  get sheets(): readonly number[] {
+    if (this.sheetList === null) { const boxes = this.g.level.boxes, out: number[] = []; for (const bi of glassPanes(this.g)) if (isSheet(boxes[bi])) out.push(bi, this.doorGap(boxes[bi]), SKY_UNKNOWN); this.sheetList = out; }
+    return this.sheetList;
+  }
+  private sheetList: number[] | null = null;
+  /** the level has stood up (Game's constructor, last): which glass each pane is, settled as the level stands. Never again: statics do not move, and no line has to ask a line of its own from inside its walk */
+  stood(): void {
+    this.sheetList = null; const l = (this.sheets as number[]).slice(); this.g.col.glassWrote();
+    this.ask((x) => { for (let i = 0; i < l.length; i += 3) l[i + 2] = x.panes_sky(l[i]); });
+    this.sheetList = l; this.g.col.glassWrote();
   }
   /** metres on the floor plan from pane b to the nearest door's opening (the closed leaf's line, hinge to latch) — Infinity on a level with no door: the level's own fact, read as it is stood up (a door's frame does not move) */
   private doorGap(b: Box): number {
@@ -392,7 +397,7 @@ export class GlassBreak {
     let changed = 0;
     if (radius > 0 && power > 0) this.ask((x, s) => {
       x.panes_blast_begin(at[0], at[1], at[2]);
-      for (let i = 0, n = x.panes_sheets(s); i < n; i++) { if (x.panes_blast_sheet(i, at[0], at[1], at[2], radius, power, who)) changed++; if (x.panes_take_wrote()) this.g.col.wrote(); this.drain(x, kept); }
+      for (let i = 0, n = x.panes_sheets(); i < n; i++) { if (x.panes_blast_sheet(i, at[0], at[1], at[2], radius, power, who)) changed++; if (x.panes_take_wrote()) this.g.col.wrote(); this.drain(x, kept); }
     });
     if (sh) PANES.both!('blast', this.twin, [sh.a, changed], sh.fr, kept!);
     return changed;
@@ -408,7 +413,6 @@ export class GlassBreak {
   get home(): SimState | null { return this.g.sim; }
   /** For the length of `fn`, every solid walk and every ray ALSO passes a pane where a burst at `from` of this size sees no glass, by the `view` the burst's judgment is made in (frag.ts GlassView: 'blown' = goingAt, 'wary' = wouldGive of the whole pane, 'counted' = wouldGive at the point met). Nothing is filed and nothing is kept: the view is gone when fn returns (or throws). */
   seeThrough<T>(view: 'blown' | 'wary' | 'counted', from: Vec3, size: GlassBlastOpts, fn: () => T): T {
-    this.ask((x) => x.panes_settle_sky());   // (which glass each pane is, settled BEFORE the view is on: a first answer casts solid rays of its own — never from inside a walk, and never through this view)
     const was = this.viewOf; this.viewOf = { kind: view, from, size }; this.g.col.glassViewed();
     const on = () => { try { return fn(); } finally { this.viewOf = was; this.g.col.glassViewed(); } };
     return PANES.both ? this.twin.seeThrough(view, from, size, on) : on();

@@ -172,7 +172,7 @@ function stateOf(g: Game): PenState { let s = states.get(g); if (!s) { s = { hol
 export function resetGlassPen(g: Game) { const s = states.get(g); if (s) { s.holes.clear(); s.log.length = 0; s.rev++; } if (g.sim.open) simX().pen_clear_holes(g.sim.bind()); }
 /** A number that moves whenever what a round has to pay at ANY pane may have moved: a through-hole made or cleared here, a piece out of a pane / a pane gone /
  *  every pane whole again in the fracture model. For whoever keeps an answer that was worked out through the toll (orders.ts behindGlass). */
-export function glassTollSig(g: Game): number { return simX().pen_rev(g.sim.bind()) * 65537 + (g.glassBreak ? g.glassBreak.openSig() : 0); }
+export function glassTollSig(g: Game): number { return (states.get(g)?.rev ?? 0) * 65537 + (g.glassBreak ? g.glassBreak.openSig() : 0); }
 function nearHole(g: Game, bi: number, p: Vec3): boolean {
   const h = states.get(g)?.holes.get(bi); if (!h) return false; const r2 = GLASSPEN.holeR * GLASSPEN.holeR;
   for (let i = 0; i < h.length; i += 3) { const dx = h[i] - p[0], dy = h[i + 1] - p[1], dz = h[i + 2] - p[2]; if (dx * dx + dy * dy + dz * dz < r2) return true; }

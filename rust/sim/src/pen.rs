@@ -296,8 +296,8 @@ pub fn round_path(c: &Ctx, from: [f64; 3], dir: [f64; 3], range: f64, energy: f6
 /// glasspen.ts armInHole: the arm's line met nothing: is that because every sheet of glass across it has fallen where the line crosses it (and there is one)?
 fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64) -> bool {
     let mut any = false;
-    for s in 0..panes::sheet_count(c.g) as usize {
-        let bi = panes::sheet_bi(c.g, s) as usize;
+    for s in 0..panes::sheet_count(c) as usize {
+        let bi = panes::sheet_bi(c, s) as usize;
         let o = world(c.w);
         let b = &o.rec[bi * REC..bi * REC + REC];
         let s = match line_box(o, from[0], from[1], from[2], rd[0], rd[1], rd[2], b) {
@@ -383,6 +383,7 @@ pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes_list: &[f64], energ
 /// glasspen.ts addHole: a crossing remembered on the pane, the oldest forgotten past GLASSPEN.holes
 pub fn add_hole(g: usize, bi: u32, p: [f64; 3]) {
     let ps = crate::panes::pn(g);
+    ps.stand();
     let row = panes_hole_row(g, bi);
     let cap = js_min(panes::HOLE_PTS as f64, k(PEN_HOLES)) as usize;
     let h = ps.hole(row);
@@ -395,7 +396,6 @@ pub fn add_hole(g: usize, bi: u32, p: [f64; 3]) {
     h.p[3 * n + 1] = p[1];
     h.p[3 * n + 2] = p[2];
     h.n += 1;
-    ps.rev = ps.rev.wrapping_add(1);
 }
 /// pane `bi`'s row of holes, made if it has none
 pub fn panes_hole_row(g: usize, bi: u32) -> usize {

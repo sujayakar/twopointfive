@@ -1393,6 +1393,7 @@ export class Game {
     for (const s of this.seats) registerShutDoor(s.view);                     // (after the door tools: 'shut that door' stands in for their charge row on a door that stands open)
     standMen(this);   // (seats.ts: a second seat's man and his light, made last — a game of one makes nothing here)
     this.director = new Director(this, level.script ?? null);   // the level's script: its define pass run and linted against this level here (nothing of the world touched); programs start on demand
+    this.glassBreak.stood();   // (which glass each pane is, settled as the level stands)
     { const over = stoodOver(this, this.col.mirror.tables); if (over) throw new Error(over); }   // (levelfit.ts: the game as it stands, against every table and pool that holds it — one over is not a game)
   }
 

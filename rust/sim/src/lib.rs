@@ -154,6 +154,16 @@ pub extern "C" fn lines_leaves(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1:
 pub extern "C" fn world_glass(w: usize, n: u32) {
     world::world(w).glass_n = if (n as usize) < world::MAX_GLASS { n } else { world::MAX_GLASS as u32 };
 }
+/// the level's sheets of glass for world `w` (scratch: a static, how far it stands from a door's opening, which face has the sky, each)
+#[no_mangle]
+pub extern "C" fn world_sheets(w: usize, n: usize) {
+    let (o, d) = (world::world(w), scratch());
+    let n = if n < world::MAX_SHEETS { n } else { world::MAX_SHEETS };
+    for i in 0..n {
+        o.sheets[i] = world::Sheet { bi: d[3 * i] as u32, gap: d[3 * i + 1], sky: d[3 * i + 2] as i32 };
+    }
+    o.sheet_n = n as u32;
+}
 /// a burst's view of the glass of world `w` for the judgment in hand (glass.rs VIEW_*; 0 = none), and how many panes its rows name
 #[no_mangle]
 pub extern "C" fn world_view(w: usize, kind: u32, n: u32) {
@@ -941,23 +951,9 @@ fn cx() -> panes::Ctx {
 pub extern "C" fn panes_ctx(g: usize, w: usize, set: i32, now: f64, shards: u32, gravity: f64) {
     unsafe { PANE_CTX = panes::Ctx { g, w, set, now, shards: shards != 0, gravity } };
 }
-/// the level's glass (scratch: a static and how far it stands from the nearest door's opening, each)
-#[no_mangle]
-pub extern "C" fn panes_boot(g: usize, n: usize) {
-    panes::boot(g, &scratch()[..2 * n]);
-}
-#[no_mangle]
-pub extern "C" fn panes_booted(g: usize) -> u32 {
-    panes::booted(g) as u32
-}
 #[no_mangle]
 pub extern "C" fn panes_world(w: usize, g: i32) {
     world::world(w).panes_g = (g + 1) as u32;
-}
-/// a burst's view for world `w`: its kind (glass.rs VIEW_*), the point, how far, how hard, whether a man counts on it. Which face of each sheet has the sky was settled first (`panes_settle_sky`).
-#[no_mangle]
-pub extern "C" fn panes_settle_sky() {
-    panes::settle_sky(&cx());
 }
 #[no_mangle]
 pub extern "C" fn panes_view(w: usize, kind: u32, x: f64, y: f64, z: f64, radius: f64, power: f64, sure: f64) {
@@ -985,8 +981,8 @@ pub extern "C" fn panes_blast_sheet(s: usize, x: f64, y: f64, z: f64, radius: f6
     panes::blast_sheet(&cx(), s, [x, y, z], radius, power, who) as u32
 }
 #[no_mangle]
-pub extern "C" fn panes_sheets(g: usize) -> u32 {
-    panes::sheet_count(g)
+pub extern "C" fn panes_sheets() -> u32 {
+    panes::sheet_count(&cx())
 }
 #[no_mangle]
 pub extern "C" fn panes_frame_begin(g: usize) {
@@ -1272,10 +1268,6 @@ pub extern "C" fn pen_hole_n(g: usize, r: usize) -> u32 {
 #[no_mangle]
 pub extern "C" fn pen_hole_pt(g: usize, r: usize, i: usize) -> f64 {
     panes::hole_pt(g, r, i)
-}
-#[no_mangle]
-pub extern "C" fn pen_rev(g: usize) -> u32 {
-    panes::holes_rev(g)
 }
 #[no_mangle]
 pub extern "C" fn pen_clear_holes(g: usize) {

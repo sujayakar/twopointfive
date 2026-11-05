@@ -3,7 +3,7 @@
 //! same maths (maths.rs), the same compares, in the same order. tools/qa/pane-ident.ts held the two together, every call both ways in one run.
 //!
 //! WHAT IS STATE. A pane's state is the `panes` part of the game's block (state.rs): a POOL, its first word the bytes of it in use. It is laid out dense, in
-//! four runs closed up by their counts: the level's sheets, a row a pane that has been touched (in the order they were first touched: the rule's own, which
+//! three runs closed up by their counts: a row a pane that has been touched (in the order they were first touched: the rule's own, which
 //! serves them a frame's budget in that order), the through-holes rounds have left (pen.rs), and the pieces queued to leave. So a level with no glass broken
 //! carries a few kilobytes, and a snapshot of it no more. No address in it, no padding the compiler chose.
 //!
@@ -27,12 +27,13 @@ use crate::world::{js_abs, js_ceil, js_max, js_min, sign_or_one, world, World, G
 use core::mem::{offset_of, size_of};
 use prim::{floor, sqrt};
 
-pub const MAX_SHEETS: usize = 256;
 pub const MAX_ROWS: usize = 256;
 pub const MAX_HOLES: usize = 256;
 pub const MAX_Q: usize = 4096;
 /// the window's bars one level can lose (src/game/levelfit.ts refuses a level of more; the barracks stands 22)
 pub const MAX_BARS: usize = 128;
+/// words of a level's on a pane's glass (setType: tools today)
+const MAX_OVERS: usize = 32;
 /// the crossings one pane remembers (GLASSPEN.holes: its knob is under this)
 pub const HOLE_PTS: usize = 24;
 const MAX_SITES: usize = 8;
@@ -76,17 +77,6 @@ const S_RHO: usize = 3;
 const S_RZ: usize = 7;
 const S_MERGE: usize = 8;
 
-/// A SHEET OF THE LEVEL: which static, which face of it has the sky (asked once, the first time it matters, of the level as it then stands), the word it has been
-/// given on what glass it is, and how far it is on the plan from the nearest door's opening (the host's, worked out as the level is stood up)
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct Sheet {
-    pub bi: u32,
-    pub sky: i32,
-    pub over: u32,
-    pub spare: u32,
-    pub gap: f64,
-}
 /// A PANE THAT HAS BEEN TOUCHED (glassbreak.ts PaneState)
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -147,11 +137,10 @@ pub struct Q {
     pub fid: u32,
     pub cause: u32,
 }
-const SHEET_W: usize = size_of::<Sheet>() / 8;
 const ROW_W: usize = size_of::<Row>() / 8;
 const HOLE_W: usize = size_of::<Hole>() / 8;
 const Q_W: usize = size_of::<Q>() / 8;
-const BODY: usize = MAX_SHEETS * SHEET_W + MAX_ROWS * ROW_W + MAX_HOLES * HOLE_W + MAX_Q * Q_W;
+const BODY: usize = MAX_ROWS * ROW_W + MAX_HOLES * HOLE_W + MAX_Q * Q_W;
 const EVENTS: usize = 32;
 const CHARGES: usize = 16;
 /// the head's flags: a pane on an outside wall has changed (the wind's gusts ask again)
@@ -161,12 +150,12 @@ pub const FL_GUST: u32 = 1;
 pub struct Panes {
     /// bytes of this part in use (state.rs: a pool's first word)
     pub used: u32,
-    pub sheets: u32,
+    /// a word of the level's on a pane's glass (setType): how many, and which pane and which glass
+    pub nover: u32,
     pub n: u32,
     pub nh: u32,
     pub nq: u32,
-    /// counts every change to the through-holes (glasspen.ts glassTollSig)
-    pub rev: u32,
+    pub spare: u32,
     /// pieces let go this frame (a frame's budget, across the panes)
     pub released: u32,
     pub flags: u32,
@@ -178,6 +167,7 @@ pub struct Panes {
     /// the window's bars a round or a blast has taken, and which (ascending: a static and its flags as it stood)
     pub nbars: u32,
     pub bars: [[u32; 2]; MAX_BARS],
+    pub overs: [[u32; 2]; MAX_OVERS],
     pub ev: [f64; 2 * EVENTS],
     /// the charges in hand: when, where, and the charge's number
     pub bl: [f64; 5 * CHARGES],
@@ -185,7 +175,7 @@ pub struct Panes {
 }
 const HEAD: usize = offset_of!(Panes, body);
 const _: () = assert!(HEAD % 8 == 0);
-const _: () = assert!(size_of::<Row>() % 8 == 0 && size_of::<Hole>() % 8 == 0 && size_of::<Q>() % 8 == 0 && size_of::<Sheet>() % 8 == 0);
+const _: () = assert!(size_of::<Row>() % 8 == 0 && size_of::<Hole>() % 8 == 0 && size_of::<Q>() % 8 == 0);
 const _: () = assert!(size_of::<Panes>() == HEAD + BODY * 8);
 
 /// a game's panes. A POOL WITH NOTHING IN USE HAS NOTHING IN IT, whatever the slot's memory still says past its first word (another game's, or a put of a take from
@@ -201,11 +191,10 @@ pub fn pn(g: usize) -> &'static mut Panes {
 impl Panes {
     #[cold]
     fn counts_none(&mut self) {
-        self.sheets = 0;
+        self.nover = 0;
         self.n = 0;
         self.nh = 0;
         self.nq = 0;
-        self.rev = 0;
         self.released = 0;
         self.flags = 0;
         self.nev = 0;
@@ -213,14 +202,32 @@ impl Panes {
         self.seq = 0;
         self.nbars = 0;
     }
+    /// something of a pane's is about to be written where nothing stood: the part stands up, its head's arrays empty (the memory past a first word of nought is anybody's)
+    #[inline]
+    pub fn stand(&mut self) {
+        if self.used == 0 {
+            self.bars = [[0; 2]; MAX_BARS];
+            self.overs = [[0; 2]; MAX_OVERS];
+            self.ev = [0.0; 2 * EVENTS];
+            self.bl = [0.0; 5 * CHARGES];
+            self.mark();
+        }
+    }
+    /// the last thing that was a pane's has gone: the part is as a game that never touched glass has it, to the bit
+    fn settle(&mut self) {
+        if self.n == 0 && self.nh == 0 && self.nq == 0 && self.nbars == 0 && self.nev == 0 && self.nbl == 0 && self.nover == 0 {
+            self.used = 0;
+            self.counts_none();
+        }
+    }
     #[inline]
     fn mark(&mut self) {
-        let words = self.sheets as usize * SHEET_W + self.n as usize * ROW_W + self.nh as usize * HOLE_W + self.nq as usize * Q_W;
+        let words = self.n as usize * ROW_W + self.nh as usize * HOLE_W + self.nq as usize * Q_W;
         self.used = (HEAD + words * 8) as u32;
     }
     #[inline]
     fn rows_at(&self) -> usize {
-        self.sheets as usize * SHEET_W
+        0
     }
     #[inline]
     fn holes_at(&self) -> usize {
@@ -229,10 +236,6 @@ impl Panes {
     #[inline]
     fn q_at(&self) -> usize {
         self.holes_at() + self.nh as usize * HOLE_W
-    }
-    #[inline]
-    fn sheet(&mut self, s: usize) -> &mut Sheet {
-        unsafe { &mut *(self.body.as_mut_ptr().add(s * SHEET_W) as *mut Sheet) }
     }
     #[inline]
     pub fn row(&mut self, r: usize) -> &mut Row {
@@ -268,24 +271,6 @@ impl Panes {
         }
         None
     }
-    /// which of the level's sheets is static `bi` (they are listed in ascending order)
-    #[inline]
-    fn sheet_of(&mut self, bi: u32) -> Option<usize> {
-        let (mut lo, mut hi) = (0usize, self.sheets as usize);
-        while lo < hi {
-            let m = (lo + hi) / 2;
-            let v = self.sheet(m).bi;
-            if v == bi {
-                return Some(m);
-            }
-            if v < bi {
-                lo = m + 1;
-            } else {
-                hi = m;
-            }
-        }
-        None
-    }
     /// a new row, the last: what stands after the rows moves up. Zeros but for its static.
     fn add_row(&mut self, bi: u32) -> usize {
         let (at, end) = (self.holes_at(), self.end());
@@ -317,7 +302,6 @@ impl Panes {
         self.body.copy_within(from..end, to);
         self.nh = 0;
         self.mark();
-        self.rev = self.rev.wrapping_add(1);
     }
     /// a piece onto a pane's run, in its order (by when, then by which)
     fn q_put(&mut self, r: usize, e: Q) -> bool {
@@ -612,41 +596,13 @@ fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3]) -> bool {
     lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2]).unwrap_or(true)
 }
 
-/// the level's sheets, as the host has them: in scratch, a static and its door gap each
-pub fn boot(g: usize, list: &[f64]) {
-    let p = pn(g);
-    p.n = 0;
-    p.nh = 0;
-    p.nq = 0;
-    p.rev = 0;
-    p.released = 0;
-    p.flags = 0;
-    p.nev = 0;
-    p.nbl = 0;
-    p.seq = 0;
-    p.nbars = 0;
-    p.bars = [[0; 2]; MAX_BARS];
-    p.ev = [0.0; 2 * EVENTS];
-    p.bl = [0.0; 5 * CHARGES];
-    let n = list.len() / 2;
-    p.sheets = (if n < MAX_SHEETS { n } else { MAX_SHEETS }) as u32;
-    for s in 0..p.sheets as usize {
-        *p.sheet(s) = Sheet { bi: list[2 * s] as u32, sky: SKY_UNKNOWN, over: NO_OVER, spare: 0, gap: list[2 * s + 1] };
-    }
-    p.mark();
-}
-/// is this game's part stood up
-#[inline]
-pub fn booted(g: usize) -> bool {
-    pn(g).used != 0
-}
 
 // ---- which glass a pane is
 /// glassbreak.ts skySide: which face of the pane has the open sky (+1 the side its normal points to, −1 the other, 0 neither or both). Asked of the level's own
 /// geometry once, and kept: statics do not move.
 pub fn sky_side(c: &Ctx, s: usize) -> i32 {
     let (bi, known) = {
-        let h = pn(c.g).sheet(s);
+        let h = &world(c.w).sheets[s];
         (h.bi as usize, h.sky)
     };
     if known != SKY_UNKNOWN {
@@ -680,13 +636,39 @@ pub fn sky_side(c: &Ctx, s: usize) -> i32 {
     } else {
         -1
     };
-    pn(c.g).sheet(s).sky = e;
     e
+}
+/// which of the level's sheets is static `bi` (they are listed in ascending order)
+#[inline]
+fn sheet_of(o: &World, bi: u32) -> Option<usize> {
+    let (mut lo, mut hi) = (0usize, o.sheet_n as usize);
+    while lo < hi {
+        let m = (lo + hi) / 2;
+        let v = o.sheets[m].bi;
+        if v == bi {
+            return Some(m);
+        }
+        if v < bi {
+            lo = m + 1;
+        } else {
+            hi = m;
+        }
+    }
+    None
+}
+/// a word of the level's on this pane's glass, or none
+fn over_of(p: &Panes, bi: u32) -> u32 {
+    for i in 0..p.nover as usize {
+        if p.overs[i][0] == bi {
+            return p.overs[i][1];
+        }
+    }
+    NO_OVER
 }
 /// glassbreak.ts typeOf: the type a pane breaks as when nobody has said. Outside walls are safety glass, a low clerestory strip laminated; inside, a narrow
 /// sidelight is laminated and a partition float; under GLASSREAL.place the pane's own place decides between toughened and float.
 fn type_by_place(c: &Ctx, s: usize, h0: f64, h1: f64, h2: f64, cy: f64) -> u32 {
-    place_rule(sky_side(c, s) != 0, h0, h1, h2, cy, pn(c.g).sheet(s).gap)
+    place_rule(sky_side(c, s) != 0, h0, h1, h2, cy, world(c.w).sheets[s].gap)
 }
 /// the rule itself, on a pane's sizes, the wall it is in and how far it stands from a door
 pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -> u32 {
@@ -706,7 +688,7 @@ pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -
 /// glassbreak.ts typeOfPane: the type of static `bi` as it will break, or NONE: it is no sheet of glass
 pub const NO_TYPE: u32 = 9;
 pub fn type_of_pane(c: &Ctx, bi: u32) -> u32 {
-    let s = match pn(c.g).sheet_of(bi) {
+    let s = match sheet_of(world(c.w), bi) {
         Some(s) => s,
         None => return NO_TYPE,
     };
@@ -718,7 +700,7 @@ pub fn type_of_pane(c: &Ctx, bi: u32) -> u32 {
         }
         (b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1])
     };
-    let over = pn(c.g).sheet(s).over;
+    let over = over_of(pn(c.g), bi);
     if over != NO_OVER {
         return over;
     }
@@ -727,13 +709,26 @@ pub fn type_of_pane(c: &Ctx, bi: u32) -> u32 {
 /// glassbreak.ts setType: pane `bi` breaks as this from here on, made whole first (NO_OVER: back to its place's word)
 pub fn set_type(g: usize, bi: u32, ty: u32) {
     let p = pn(g);
-    if let Some(s) = p.sheet_of(bi) {
-        p.sheet(s).over = ty;
+    p.stand();
+    let n = p.nover as usize;
+    let at = p.overs[..n].iter().position(|o| o[0] == bi);
+    match at {
+        Some(i) if ty == NO_OVER => {
+            p.overs.copy_within(i + 1..n, i);
+            p.nover -= 1;
+        }
+        Some(i) => p.overs[i][1] = ty,
+        None if ty != NO_OVER && n < MAX_OVERS => {
+            p.overs[n] = [bi, ty];
+            p.nover += 1;
+        }
+        None => {}
     }
     if let Some(r) = p.row_of(bi) {
         p.drop_row(r);
     }
     p.nbl = 0;
+    p.settle();
 }
 /// glassbreak.ts reset: every pane whole (a word a level's table gave a pane stands, and which face has the sky)
 pub fn reset(g: usize) {
@@ -741,7 +736,7 @@ pub fn reset(g: usize) {
     if p.used == 0 {
         return;
     }
-    // (the holes are the next run: they close up onto the sheets)
+    // (the holes are the next run: they close up onto where the rows began)
     let (from, to, nh) = (p.holes_at(), p.rows_at(), p.nh as usize);
     p.body.copy_within(from..from + nh * HOLE_W, to);
     p.n = 0;
@@ -750,6 +745,7 @@ pub fn reset(g: usize) {
     p.flags = 0;
     p.released = 0;
     p.mark();
+    p.settle();
 }
 
 // ---- a pane's first touch
@@ -762,7 +758,7 @@ fn state_of(c: &Ctx, bi: u32) -> Option<usize> {
     if ty == NO_TYPE {
         return None;
     }
-    let s = pn(c.g).sheet_of(bi)?;
+    let s = sheet_of(world(c.w), bi)?;
     let exterior = sky_side(c, s) != 0;
     let o = world(c.w);
     let b = rec(o, bi as usize);
@@ -1658,6 +1654,7 @@ pub fn widen(c: &Ctx, bi: u32, x: [f64; 3]) -> u32 {
 // ---- a blast
 /// the charges in hand: is this arrival one already seen. → which of them, and its number
 fn charge_of(p: &mut Panes, now: f64, at: [f64; 3]) -> (usize, f64) {
+    p.stand();
     let mut w = 0;
     for i in 0..p.nbl as usize {
         let t = p.bl[5 * i];
@@ -1733,7 +1730,7 @@ static mut BLAST_SEQ: f64 = 0.0;
 static mut BLAST_AT: [f64; 3] = [0.0; 3];
 /// glassbreak.ts blastIn over one sheet of the level. → it took the blow (blast()'s count of panes changed)
 pub fn blast_sheet(c: &Ctx, s: usize, at: [f64; 3], radius: f64, power: f64, who: f64) -> bool {
-    let bi = pn(c.g).sheet(s).bi;
+    let bi = world(c.w).sheets[s].bi;
     let (seq, twin_at) = unsafe { (BLAST_SEQ, BLAST_AT) };
     let q = {
         let o = world(c.w);
@@ -2160,7 +2157,7 @@ pub fn row_for(g: usize, bi: u32) -> Option<(&'static [f64], &'static [u32])> {
 pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
     let (at, radius, power, sure) = ([o.view_at[0], o.view_at[1], o.view_at[2]], o.view_at[3], o.view_at[4], o.view_at[5] != 0.0);
     let p = pn(g);
-    let s = match p.sheet_of(bi as u32) {
+    let s = match sheet_of(o, bi as u32) {
         Some(s) => s,
         None => return false,
     };
@@ -2173,12 +2170,9 @@ pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
     if kk < js_min(js_min(k(GB_BLAST_DICE_K), k(GB_BLAST_SHEET_K)), if sure { k(GB_TOOTH_K) } else { BLAST_MIN_K }) {
         return false;
     }
-    let (over, sky) = {
-        let h = p.sheet(s);
-        (h.over, h.sky)
-    };
-    // (every sheet's sky was settled as the view went on: panes_view)
-    let ty = if over != NO_OVER { over } else { place_rule(sky != 0 && sky != SKY_UNKNOWN, b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1], p.sheet(s).gap) };
+    let (over, sky, gap) = (over_of(p, bi as u32), o.sheets[s].sky, o.sheets[s].gap);
+    // (every sheet's sky was settled as the level stood up: a line asks no line of its own here)
+    let ty = if over != NO_OVER { over } else { place_rule(sky != 0 && sky != SKY_UNKNOWN, b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1], gap) };
     if ty == TEMPERED {
         return kk > k(GB_BLAST_DICE_K);
     }
@@ -2191,22 +2185,16 @@ pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
     let reach = blast_reach(kk);
     kk >= k(GB_TOOTH_K) && reach >= 0.0 && hypot3(x - q[0], y - q[1], z - q[2]) <= reach
 }
-/// as a view goes on: which glass each pane is, settled before any line is judged through it (a first answer casts solid rays of its own)
-pub fn settle_sky(c: &Ctx) {
-    for s in 0..pn(c.g).sheets as usize {
-        sky_side(c, s);
-    }
-}
 /// the sheet's numbers for the host: its static · sky · word · gap
-pub fn sheet_count(g: usize) -> u32 {
-    pn(g).sheets
+pub fn sheet_count(c: &Ctx) -> u32 {
+    world(c.w).sheet_n
 }
-pub fn sheet_bi(g: usize, s: usize) -> u32 {
-    pn(g).sheet(s).bi
+pub fn sheet_bi(c: &Ctx, s: usize) -> u32 {
+    world(c.w).sheets[s].bi
 }
 /// is `bi` a sheet the wind should ask of: its face to the sky, or 0
 pub fn sky_known(c: &Ctx, bi: u32) -> i32 {
-    match pn(c.g).sheet_of(bi) {
+    match sheet_of(world(c.w), bi) {
         Some(s) => sky_side(c, s),
         None => 0,
     }
@@ -2221,6 +2209,7 @@ pub fn take_gust(g: usize) -> bool {
 /// the floor's last 'glass' event per pane per shooter (glass.ts liveGap): a hit on this pane by this shooter may be told now. Entries past the gap say nothing and go.
 pub fn heard_gap(g: usize, pane: u32, who: f64, now: f64, gap: f64) -> bool {
     let p = pn(g);
+    p.stand();
     let key = pane as f64 * 1024.0 + (int32(who) & 1023) as f64;
     let mut w = 0;
     let mut said = false;
@@ -2251,6 +2240,7 @@ pub fn forget_heard(g: usize) {
     let p = pn(g);
     if p.used != 0 {
         p.nev = 0;
+        p.settle();
     }
 }
 /// where each of a row's fields stands (bytes from its start), for the host's reads, and how long a row is
@@ -2328,18 +2318,16 @@ pub fn hole_n(g: usize, r: usize) -> u32 {
 pub fn hole_pt(g: usize, r: usize, i: usize) -> f64 {
     pn(g).hole(r).p[i]
 }
-pub fn holes_rev(g: usize) -> u32 {
-    pn(g).rev
-}
 pub fn clear_holes(g: usize) {
     let p = pn(g);
     if p.used != 0 {
         p.clear_holes();
+        p.settle();
     }
 }
 /// glassbreak.ts typeOf
 pub fn type_place(c: &Ctx, bi: u32) -> u32 {
-    let s = match pn(c.g).sheet_of(bi) {
+    let s = match sheet_of(world(c.w), bi) {
         Some(s) => s,
         None => return ANNEALED,
     };
@@ -2383,6 +2371,7 @@ fn bar_stands(o: &World, bi: usize) -> bool {
 /// winbars.ts breakBar's first question: bar `bi` goes, unless it is gone already or is no standing bar. `flags`: the box's flags as it stands (the copy keeps a part of them)
 pub fn bar_take(c: &Ctx, bi: u32, flags: u32) -> bool {
     let p = pn(c.g);
+    p.stand();
     let (n, b) = (p.nbars as usize, bi as usize);
     let at = p.bars[..n].iter().position(|r| r[0] >= bi).unwrap_or(n);
     if (at < n && p.bars[at][0] == bi) || !bar_stands(world(c.w), b) || n >= MAX_BARS {
@@ -2465,5 +2454,6 @@ pub fn bars_clear(g: usize) {
     let p = pn(g);
     if p.used != 0 {
         p.nbars = 0;
+        p.settle();
     }
 }
