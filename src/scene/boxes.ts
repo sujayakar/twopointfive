@@ -341,6 +341,15 @@ export class BoxWorld {
   rig: { r0: Float32Array; r1: Float32Array; kPad: number; byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }> } | null = null;
   static readonly RB_QUANT = 0.001;   // = render/sdfrig.ts RB_QUANT (shaders/sdfrig.wgsl coneRb decodes it)
   visible: Uint32Array; visibleCount = 0; visibleBuf: GPUBuffer;
+  /** THE STATICS ARE DRAWN FROM THE TOP DOWN. The camera looks down, so what stands higher is nearly always nearer: drawn first, it takes the depth and
+   *  what lies under it (the floor under a desk, the ground slab under the floor) fails the depth test before it is shaded, whatever it is made of.
+   *  AND NO FACE CHANGES HANDS. Where two boxes' faces lie in one plane the depth test keeps the first drawn, which was always the earlier box in the list
+   *  (a plinth running across a pier's foot stays the plinth's). So a box is never drawn before an earlier box it shares such a face with (rankStatics):
+   *  only boxes that cannot tie are put in another order. `drawTop[i]` = static i's top as it is drawn (a single float); `drawRank[i]` = its place in the
+   *  order; ranked again only when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does (`drawRankN`,
+   *  -1 = stale). `drawSlot` is scratch: the sort's list, then the frame's laying out of the drawn statics by rank. The dynamics and the cut list follow
+   *  as they did. */
+  private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
   staticsDirty = true;
   /** bumped by game/wallbreak.ts whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
@@ -576,6 +585,65 @@ export class BoxWorld {
     const cs = Math.abs(Math.cos(b.yaw)), sn = Math.abs(Math.sin(b.yaw));
     return [cs * b.h[0] + sn * b.h[2], sn * b.h[0] + cs * b.h[2]];
   }
+  /** THE ORDER THE STATICS ARE DRAWN IN (drawRank). Tops falling, the list's own order between equal tops, EXCEPT that a box waits for every earlier box
+   *  it shares a face's plane with. Two faces share a plane when they look the same way, lie within `TIE_PLANE` of one plane and their bounds lie over one
+   *  another by more than `TIE_PATCH`: those are the faces whose depths the depth test cannot tell apart, where the first drawn is kept. Held to the list's
+   *  order, each is won by the box that always won it. A box that waits takes the turn of the latest box it waits for (and comes after it), never an
+   *  earlier one, so the low wide things (floors, the ground) still come last.
+   *  ONE RULE FOR EVERY BOX: a face is its plane (the unit normal and how far along it) and its bounds in the world, whatever the box's turn or tilt, so
+   *  there is no frame to match and no bin to fall either side of. The faces are sorted by how far along their normals they lie and each is asked only of
+   *  those within TIE_PLANE of it. Bounds for a turned face are wider than the face: that only ever asks a box to wait that need not.
+   *  Faces that look down are not asked (the camera never sees one). A CUTAWAY box is asked as it is drawn: stopped at its cutHeight. */
+  private rankStatics(nStat: number) {
+    const all = this.all, top = this.drawTop, ord = this.drawSlot.subarray(0, nStat);
+    for (let i = 0; i < nStat; i++) ord[i] = i;
+    ord.sort((a, b) => top[b] - top[a] || a - b);
+    const turn = new Uint32Array(nStat); for (let r = 0; r < nStat; r++) turn[ord[r]] = r;   // a static's turn by its top alone
+    // every face that can be seen: FW numbers each: box, along, normal xyz, bounds lo xyz, bounds hi xyz
+    const FW = 11, F: number[] = [], X: Vec3 = [1, 0, 0], Y: Vec3 = [0, 1, 0], Z: Vec3 = [0, 0, 1];
+    for (let i = 0; i < nStat; i++) {
+      const b = all[i]; if (b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) continue;
+      const c = b.c, rot = b.rot; let ax: Vec3, ay: Vec3, az: Vec3;
+      if (rot) { ax = quat.rotate(rot, X); ay = quat.rotate(rot, Y); az = quat.rotate(rot, Z); }
+      else if (b.yaw === 0) { ax = X; ay = Y; az = Z; }
+      else { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); ax = [cs, 0, -sn]; ay = Y; az = [sn, 0, cs]; }   // (the box's own x and z in the world: rayBox's world-to-local, turned back)
+      const cut = !rot && (b.flags & BoxFlag.Cutaway) !== 0 && b.cutHeight < c[1] + b.h[1];   // (drawn only below its cutHeight: its top is there, and its sides stop there)
+      const hy = cut ? Math.max(0, (b.cutHeight - (c[1] - b.h[1])) / 2) : b.h[1], cy = cut ? c[1] - b.h[1] + hy : c[1];
+      const A = [ax, ay, az], H = [b.h[0], hy, b.h[2]];
+      for (let u = 0; u < 3; u++) for (let sg = -1; sg <= 1; sg += 2) {
+        const n = A[u]; if (n[1] * sg < -0.5) continue;
+        const v = A[(u + 1) % 3], w = A[(u + 2) % 3], hv = H[(u + 1) % 3], hw = H[(u + 2) % 3];
+        const mx = c[0] + sg * H[u] * n[0], my = cy + sg * H[u] * n[1], mz = c[2] + sg * H[u] * n[2];
+        const ex = Math.abs(v[0]) * hv + Math.abs(w[0]) * hw, ey = Math.abs(v[1]) * hv + Math.abs(w[1]) * hw, ez = Math.abs(v[2]) * hv + Math.abs(w[2]) * hw;
+        F.push(i, sg * (n[0] * mx + n[1] * my + n[2] * mz), sg * n[0], sg * n[1], sg * n[2], mx - ex, my - ey, mz - ez, mx + ex, my + ey, mz + ez);
+      }
+    }
+    // who waits for whom: a later box for each earlier one whose face it shares
+    const at = new Uint32Array(F.length / FW); for (let k = 0; k < at.length; k++) at[k] = k * FW; at.sort((p, q) => F[p + 1] - F[q + 1]);
+    const after: number[][] = [], PLANE = BoxWorld.TIE_PLANE, PATCH = BoxWorld.TIE_PATCH; let ties = 0;
+    for (let m = 0; m < at.length; m++) { const p = at[m], far = F[p + 1] + PLANE;
+      for (let k = m + 1; k < at.length && F[at[k] + 1] <= far; k++) { const q = at[k];
+        if (F[p] === F[q] || F[p + 2] * F[q + 2] + F[p + 3] * F[q + 3] + F[p + 4] * F[q + 4] < 1 - 1e-9) continue;   // (the same box, or not looking the same way)
+        let over = 0, apart = false;
+        for (let d = 0; d < 3; d++) { const o = Math.min(F[p + 8 + d], F[q + 8 + d]) - Math.max(F[p + 5 + d], F[q + 5 + d]); if (o > PATCH) over++; else if (o < -PLANE) apart = true; }
+        if (apart || over < 2) continue;
+        const first = Math.min(F[p], F[q]), then = Math.max(F[p], F[q]); (after[first] ??= []).push(then); ties++; } }
+    const rank = this.drawRank; this.drawTies = ties; this.drawRanked++;
+    if (ties === 0) { rank.set(turn); return; }
+    // a box takes the turn of the latest box it waits for. Every wait is for an earlier box, so walked in the list's order each box's turn is settled
+    // before those that wait for it are told; then by turn, and by the list between a box and those that took its turn
+    for (let i = 0; i < nStat; i++) { const l = after[i]; if (l !== undefined) for (let k = 0; k < l.length; k++) if (turn[l[k]] < turn[i]) turn[l[k]] = turn[i]; }
+    for (let i = 0; i < nStat; i++) ord[i] = i;
+    ord.sort((a, b) => turn[a] - turn[b] || a - b);
+    for (let r = 0; r < nStat; r++) rank[ord[r]] = r;
+  }
+  /** two faces are in one plane when they lie this near along their normal (m). The depth buffer (near 0.5 m, single floats) tells surfaces about
+   *  0.05 mm apart at the camera's usual 21 m and about 0.2 mm at its farthest 40 m; nearer than that, the first drawn is what is seen. */
+  static readonly TIE_PLANE = 0.00025;
+  /** and when their bounds lie over one another by more than this, two ways (m): a hair, so that faces which only meet at an edge are not a tie */
+  static readonly TIE_PATCH = 0.0005;
+  /** how many times a box waits for an earlier one in the order as last made, and how many times the order has been made (a check reads both) */
+  drawTies = 0; drawRanked = 0;
   /** World Y half extent (yawed boxes: h.y; fully rotated ones: the |R|·h row, like footprint()). */
   static heightExtent(b: Box): number {
     if (!b.rot) return b.h[1];
@@ -620,6 +688,7 @@ export class BoxWorld {
     let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
     const SS = BoxWorld.SS; let staticsChanged = false;
+    if (this.drawTop.length < this.maxBoxes) { this.drawTop = new Float32Array(this.maxBoxes); this.drawRank = new Uint32Array(this.maxBoxes); this.drawSlot = new Uint32Array(this.maxBoxes); this.drawRankN = -1; }
     if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
     const forceAll = this.statEpoch !== this.packEpoch || this.statMarksOn !== marksOn || this.statShadowN !== nStat;
     const S = this.statShadow, SM = this.statShadowMarks, SK = this.statMarked;
@@ -637,6 +706,10 @@ export class BoxWorld {
         if (SK[i]) marked++;
       } else {
         staticsChanged = true;
+        this.drawTop[i] = !rot && (b.flags & BoxFlag.Cutaway) && b.cutHeight < c[1] + h[1] ? Math.fround(b.cutHeight) : Math.fround(Math.fround(c[1]) + Math.fround(rot ? BoxWorld.heightExtent(b) : h[1]));
+        if (S[so] !== c[0] || S[so + 1] !== c[1] || S[so + 2] !== c[2] || S[so + 3] !== b.yaw || S[so + 4] !== h[0] || S[so + 5] !== h[1] || S[so + 6] !== h[2] || S[so + 15] !== b.cutHeight
+          || ((S[so + 7] ^ b.flags) & (BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Cutaway)) !== 0
+          || (rot ? !(S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3]) : S[so + 18] !== 0)) this.drawRankN = -1;   // (its place, size, turn, or whether and how far it is drawn: the order is asked again. Said here, not kept in a local: an upload that throws further on has still said it. Paint, rain's gloss and every other flag ask nothing.)
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
         S[so + 9] = a0; S[so + 10] = a1; S[so + 11] = a2; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
@@ -649,6 +722,10 @@ export class BoxWorld {
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
     }
+    if (this.drawRankN !== nStat) { this.rankStatics(nStat); this.drawRankN = nStat; }
+    if (nv > 0) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
+      for (let k = 0; k < nv; k++) slot[rank[vis[k]]] = vis[k];
+      for (let r = 0, w = 0; w < nv; r++) if (slot[r] !== 0xFFFFFFFF) vis[w++] = slot[r]; }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
     if (forceAll || staticsChanged) { this.gridStatN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid and the statics' rows go up again from these words below)
     // ---- dynamics: packed every frame, as ever

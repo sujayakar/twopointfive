@@ -1864,6 +1864,34 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **THE STATICS ARE DRAWN FROM THE TOP DOWN, AND NO FACE CHANGES HANDS** (11-05; every page; no switch and no second path: it is the order of one
+  draw). The g-buffer drew the static boxes in the list's order with the depth test at "less", so a ground slab laid first under a whole level (the
+  office kit's box 0, 40 by 28 m) was shaded over the whole screen and then drawn over by the floor. Free while that slab was plain; once car parks said
+  tarmac the pass cost a third more under the look, indoors as much as outside (the performance goal's timing). `scene/boxes.ts BoxWorld` now keeps a
+  rank a static (`drawRank`, made by `rankStatics`) and lays the drawn plain statics out by it each upload. No shader text, pipeline or buffer changes.
+  THE ORDER: tops falling, the list's own order between equal tops, EXCEPT that a box waits for every earlier box it shares a face's plane with.
+  Where two faces lie in one plane the depth test keeps the first drawn, and that was always the earlier box: on the white roof an orange plinth,
+  written before the piers, runs across their feet; a look's ground sheets lie a fiftieth of a millimetre apart and show in the order written. Tops
+  falling alone handed thousands of such patches to the taller box (124 of a centimetre or more in different paint over the 59 files). So two faces that
+  look the same way, lie within a quarter of a millimetre along their normal (`TIE_PLANE`: what the depth buffer cannot tell apart at the camera's
+  farthest) and whose bounds lie over one another by more than half a millimetre (`TIE_PATCH`) keep the list's order: the later box takes the turn of
+  the latest box it waits for. ONE RULE FOR EVERY BOX: a face is its plane and its bounds in the world, whatever the turn or tilt; no frames, no bins.
+  A cutaway box is asked as it is drawn. Bounds of a turned face are wider than the face, which only makes a box wait that need not.
+  COUNTED over all 59 level files on the shipped stand by the check's own finder (`DRAWORDER_ALL=1`): 13,036 shared faces among 32,872 drawn statics,
+  none won by the later box, and on every level the ground is drawn after every static that stands above it.
+  WHAT IT KEEPS OF THE SAVING: counting the fragments a depth test lets through on a CPU, through the game's camera (a proxy, not a timing), the order
+  with waits shades 3 to 13 percent more than tops falling alone and still about 60 percent less than the list's order (office 2.70 M, 0.96 M, 1.08 M).
+  WHEN IT IS MADE: when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does; never for paint, a wet
+  floor's gloss or any other flag. 1.5 to 3 ms for 800 to 1,350 statics under bun; none in fifteen seconds of the office's shift. A wall coming down
+  makes it again on the frames its pieces are added.
+  TIMED on a rented NVIDIA A10 (relative; the office under the look, High) for the PLAIN tops-falling order, an earlier commit, against its parent on
+  like boxes: the g-buffer where the page frames Sam indoors 0.89 ms to 0.34, over the car park 0.91 to 0.64, every other pass and the sum the same;
+  Medium indoors 0.72 to 0.28. The order with waits is to be timed the same way: see the merge's book for its numbers.
+  NOT KNOWN: what an Apple GPU gains (it hides covered fragments by itself, so likely little). Whether a GPU gives two faces in one plane the same depth
+  at every pixel: where it does not the pair fights whatever the order, as before. The dynamics are still drawn after the floor they stand on, and a
+  plain box never waits for a cut one (the cut pass is drawn after). The check is `draworder` (family render; `DRAWORDER_BREAK=1` fails two lines;
+  `DRAWORDER_ALL=1` asks all 59 levels): shared faces found a second way, every face against every other with the patch cut out exactly, any turn or
+  tilt, and every reason to make the order again asked against an order made fresh.
 - **A LOOK MAP'S LATTICES ARE HASHED ONCE A LAYER** (11-05; the look's page only, at its boot and whenever a level names a new stuff; no switch, because
   no map moves by a byte). `render/lookTex.ts cells2` asked nine cells where their points lie for every texel: three hashes and a square root a cell, most
   of what a layer cost. A lattice (size, seed, jitter) now fills a table once (`cellTable`, emptied as a layer starts and ends), the nine are told apart by
