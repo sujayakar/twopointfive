@@ -20,7 +20,7 @@
 // as it stood (no stale row).
 // GLASS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed each pane with the word "its cracks have run" turned and its last clump's key
 // halved, and the run must FAIL.
-process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTLINES = '1'; process.env.TPS_RUSTRAYS = '1';   // (the game's own maths: a pane's pieces are found by angles)
+process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -74,7 +74,7 @@ for (const file of files) {
         const P: Vec3 = f.centre, bx = boxes[f.pane], wide = bx.h[0] >= bx.h[2], cs = Math.cos(bx.yaw), sn = Math.sin(bx.yaw), nx = wide ? sn : cs, nz = wide ? cs : -sn, ux = wide ? cs : sn, uz = wide ? -sn : cs, th = (rnd() - 0.5) * 0.3;
         const A: Vec3 = [P[0] + nx * 0.6, P[1], P[2] + nz * 0.6], B: Vec3 = [P[0] - nx * 0.6, P[1], P[2] - nz * 0.6], L: Vec3 = [P[0] + (ux * Math.cos(th) + nx * Math.sin(th)) * 3, Math.max(P[1], 0.9), P[2] + (uz * Math.cos(th) + nz * Math.sin(th)) * 3];
         const d0 = C.BOTH.differ, s0 = C.BOTH.stale, was = C.BOTH.on; C.BOTH.on = true; C.BOTH.first = '';
-        try { col.segmentBlocked(A, B, 0.02, 0); lines++; col.sound.invalidate(); col.sound.propagate(P, L, false); MET.midHeard++; } finally { C.BOTH.on = was; }
+        try { col.segmentBlocked(A, B, 0.02, 0); lines++; col.sound.invalidate(); col.sound.propagate(P, L, false); MET.midHeard++; } finally { C.BOTH.on = was; }   // (the line is compared; the sound's way is the module's alone and is asked here so that a sense asked half way through the rule's writes is ANSWERED — what it answers past a hole is tools/qa/sense-ident.ts's made-up glass to hold)
         if (C.BOTH.differ > d0 || C.BOTH.stale > s0) { stale += C.BOTH.stale - s0; mid ||= `as a ${f.kind} of pane ${f.pane} lets go: ${C.BOTH.first}`; } }
     } catch (e) { mid ||= `inside a release: ${String((e as Error).message).slice(0, 200)}`; } finally { inside = false; } }
     if (shards) shards(f);

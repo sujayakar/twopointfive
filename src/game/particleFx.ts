@@ -7,10 +7,9 @@
 // rounds by it): the particles hash their own serial. The one sound it adds — a case landing — is scheduled off the shot on the CPU (the GPU cannot call
 // back), and is deliberately NOT a hearing event: the report it follows already is one, at the same spot, an order of magnitude louder.
 import { SideMap } from '../math/side';
-import { BoxFlag, type Box, type BoxStuff } from '../scene/boxes';
+import { BoxFlag, solidGlassBox, type Box, type BoxStuff } from '../scene/boxes';
 import { Vec3, v3 } from '../math/vec';
-import { OFFICE_DATA } from '../scene/level';
-import { gwotSimOf } from '../scene/gwotPalette';
+import { doesOf, doesWet, type Surf } from '../scene/materials';
 import type { Particles, EmitOpts } from '../render/particles';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -62,48 +61,20 @@ export function emitDust(P: Particles, pos: Vec3, dir: Vec3, count: number, o: E
 }
 
 // ------------------------------------------------------------------ what a surface is made of (for what a round knocks out of it)
-export type Surf = 'metal' | 'plastic' | 'glass' | 'wood' | 'cardboard' | 'drywall' | 'concrete' | 'carpet' | 'fabric' | 'foliage';
-/** the level's paint palette by name (levels/office.json materials) → the stuff behind the paint. 'black' is the server racks, bezels and chair bases: metal
- *  as far as a round is concerned (the racks are what gets shot in the dark); the coloured partitions chip like plasterboard. */
-const MAT_SURF: Record<string, Surf> = {
-  metal: 'metal', glassFrame: 'metal', black: 'metal', red: 'metal', screenOff: 'glass',
-  wood: 'wood', woodDark: 'wood', cardboard: 'cardboard', chair: 'fabric', plant: 'foliage',
-  wall: 'drywall', white: 'drywall', ceiling: 'drywall', partRed: 'drywall', partBlue: 'drywall', partTan: 'drywall',
-  concrete: 'concrete', wallDark: 'concrete', stone: 'concrete', asphalt: 'concrete', lino: 'concrete',
-  carpet: 'carpet', carpetBlue: 'carpet', carpetRed: 'carpet', grass: 'carpet',
-};
-/** albedo (exact palette value) → material name, built once off the bundled level data — the runtime Box carries no material key, but the loader copied every
- *  palette albedo verbatim, so an exact match names the paint (levelLoad.ts levelToData does the same trick to write the file back) */
-let matByAlbedo: Map<string, string> | null = null;
-export function paletteName(albedo: Vec3): string | undefined {
-  if (!matByAlbedo) { matByAlbedo = new Map(); for (const [k, m] of Object.entries(OFFICE_DATA.materials ?? {})) { const key = (m.albedo as number[]).join(','); if (!matByAlbedo.has(key)) matByAlbedo.set(key, k); } }
-  const key = albedo.join(','), hit = matByAlbedo.get(key); if (hit !== undefined) return hit;
-  const look = gwotSimOf(albedo, key); return look !== undefined && look[0] !== '~' ? look : undefined;   // (a paint of the default look says which office paint it stands for: scene/gwotPalette.ts)
-}
-/** what a surface of this albedo is, by palette name when it has one, else by how bright it is (pale = plaster, dark = metal / plastic, between = concrete) */
-export function surfOf(albedo: Vec3): Surf {
-  const name = paletteName(albedo); if (name && MAT_SURF[name]) return MAT_SURF[name];
-  if (!name) { const look = gwotSimOf(albedo); if (look !== undefined && look[0] === '~') return look === '~steel' ? 'concrete' : look === '~steelPale' ? 'drywall' : look.slice(1) as Surf; }
-  const lum = 0.2126 * albedo[0] + 0.7152 * albedo[1] + 0.0722 * albedo[2];
-  return lum > 0.5 ? 'drywall' : lum < 0.1 ? 'metal' : 'concrete';
-}
-/** the colour a rule that reads the PAINT ITSELF should read (how grey a steel cabinet is): the box's own — but for a paint of the default look, the office
- *  paint it stands for (scene/gwotPalette.ts), so a locker in olive drab is the steel locker it was */
-export function paintStandsFor(albedo: Vec3): Vec3 {
-  const look = gwotSimOf(albedo); if (look === undefined) return albedo;
-  if (look === '~steel' || look === '~steelPale') return look === '~steel' ? [0.36, 0.36, 0.36] : [0.58, 0.58, 0.58];
-  if (look[0] === '~') return albedo;
-  return (OFFICE_DATA.materials?.[look]?.albedo as Vec3 | undefined) ?? albedo;
-}
+// A BOX SAYS IT (scene/materials.ts): the row of the table of materials its word names, `surf` among its columns. Nothing here asks a colour.
+export type { Surf } from '../scene/materials';
+/** WHAT A ROUND KNOCKS OUT OF A STATIC: its word's surface, and, of the one slab the weather has soaked (the lot: weather.ts), its word's wet row.
+ *  Nothing is kept for the wet lot: it is asked of the weather's own state each time. */
+export const surfAt = (g: Game, b: Box): Surf => (g.weather.lot === b ? doesWet(b) : doesOf(b)).surf;
 const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard', bin: 'metal', plant: 'foliage' };
 
 // ------------------------------------------------------------------ what a hit LOOKS like goes by what the thing says it is made of
-// HITSTUFF (2026-11-04). What a round has hit was read from the COLOUR of its paint (surfOf above: a palette name where the numbers have one, else how
-// bright it is), so a white car was plasterboard — pale chips and a puff of gypsum — a blue one concrete, its dark glass and its tyres metal: a round into a
-// parked car threw rubble. A box can SAY what it is made of (Box.stuff, scene/stuff.ts), and with this on THE PICTURE OF A HIT reads that word first; the colour
-// is asked only of a box that says nothing, or whose word is not one thing to a round (the table below).
-// A RULE OF THE PICTURE, AND OF NOTHING ELSE. The word is the look's: a level's plain file and its look twin say different words of the same box (whoever
-// repaints a box drops its word, stuff.ts), and the two are one simulation. So the word is read only where no number of the game moves:
+// HITSTUFF (2026-11-04). What a round has hit is what the box DOES (surfAt above: Box.does, the rules' word), and many a box's word is still the answer
+// its colour once gave: a white car is plasterboard there — pale chips and a puff of gypsum — a blue one concrete, its dark glass and its tyres metal, and a
+// round into a parked car throws rubble. A box also SAYS what it is DRAWN as (Box.stuff, scene/stuff.ts), and with this on THE PICTURE OF A HIT reads that
+// word first; what the box does is asked only of a box that says no stuff, or whose stuff is not one thing to a round (the table below).
+// A RULE OF THE PICTURE, AND OF NOTHING ELSE. `stuff` is the look's: a level's plain file and its look twin say different words of the same box (whoever
+// repaints a box drops its word, stuff.ts), and the two are one simulation. So that word is read only where no number of the game moves:
 //   · what a round knocks out — sparks, chips, dust: GPU particles (impactFx, through hitLook: the one place a hit's picture is worked out);
 //   · the mark where it stopped (marks.ts bulletMark): GLASS THAT IS NOT A PANE — a solid thing that says 'glass', with nothing modelled behind it — takes
 //     the crack the screens have, every round, and stays; a pane (BoxFlag.Glass) is the pane engine's as it was, and fractures;
@@ -112,28 +83,28 @@ const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard
 //     run's digest counts them, and the lane's dice and its bucket move as they did).
 // With it on METAL THROWS NO CHIPS, anywhere. NOT read: everything the simulation makes of a hit — whether the chaos lane lays a mark at all, its dice and
 // its puffs into the smoke (destruction.ts round), what a round goes through, what a blast breaks, where a charge may be set (wallpen.ts, wallbreak.ts, wallcharge.ts,
-// furnblast.ts). Those read the paint, as they did. So a white car that says 'carpaint' can still cough the chaos lane's pale puff into the smoke under
-// sustained fire: the simulation hearing a box's word is another change, and needs a level and its look twin to say the same words first.
+// furnblast.ts). Those read what the box DOES (scene/materials.ts), which a level and its look twin say alike. So a white car drawn as 'carpaint' can
+// still cough the chaos lane's pale puff into the smoke under sustained fire, until somebody says it does what steel does: one word in its generator.
 // A THING THE WALL ENGINE BREAKS SHOULD NOT SAY 'glass': its wear rides a round's hole (wallwear.ts), and solid glass is given a crack in the hole's place.
-// THE SWITCH: HITSTUFF.on — ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (FROZEN_HOLDS;
+// THE SWITCH: HITSTUFF.on — ON in the page (`?hitstuff=0` = by what the box does, as it was), OFF in the module and on the frozen stand (FROZEN_HOLDS;
 // TPS_HITSTUFF=1 raises it there); in the registry (game/knobs.ts) and the journal. On or off the run is the same run by digest.
 // CHECK: tools/qa/hitstuff-check.ts (HITSTUFF_BREAK=1 must fail), both stands. Never seen on a GPU.
 export const HITSTUFF = { on: false };
 /** what each stuff a box may say is to a round ('cloth', the look's coarse weave, is a carpet, a rug, a sandbag and a tarpaulin: the soft thing that gives
  *  its own colour's tufts and dust and never a spark; 'fabric', the fine weave, is a seat or a screen on a frame) — only the stuffs that are ONE thing to a round: 'paint' and 'enamel' are a coat on a door, a drum, a pipe
- *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says */
+ *  or a line on a floor, 'plain' and 'waits' say nothing, and the ground (earth, gravel) is what its paint already says; a lot's tarmac is stone wet or dry (its wet paint's tone read as metal; the row the cars' part asked for), and a lawn's grass has no row: no round meets a lawn, a strip no ray meets */
 const STUFF_SURF: Partial<Record<BoxStuff, Surf>> = {
   carpaint: 'metal', steel: 'metal', metal: 'metal', sheet: 'metal', brushed: 'metal', louvre: 'metal',
   glass: 'glass', rubber: 'plastic', plastic: 'plastic', wood: 'wood', veneer: 'wood', fabric: 'fabric', cloth: 'carpet', carpet: 'carpet',
-  plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete',
+  plaster: 'drywall', skim: 'drywall', stucco: 'concrete', 'mud wall': 'concrete', block: 'concrete', 'gloss block': 'concrete', 'board concrete': 'concrete', 'cast panel': 'concrete', slab: 'concrete', paver: 'concrete', tarmac: 'concrete',
 };
 /** the words the picture of a hit reads (the check holds each to be a stuff a box may say) */
 export const HIT_STUFFS: readonly string[] = Object.keys(STUFF_SURF);
 /** what `b` SAYS it is, for the picture of a hit, or undefined: the rule is off, it says nothing, its word is not one thing to a round, or it is a PANE
- *  (BoxFlag.Glass: the pane engine's, whatever it says) — then what the hit was always read by is asked (surfOf). (A word is looked up as its own key only: a file opened leniently can carry any string.) */
+ *  (BoxFlag.Glass: the pane engine's, whatever it says) — then what the hit was always read by is asked (surfAt). (A word is looked up as its own key only: a file opened leniently can carry any string.) */
 export function saidSurf(b: Box | null | undefined): Surf | undefined { return HITSTUFF.on && b && b.stuff !== undefined && (b.flags & BoxFlag.Glass) === 0 && Object.hasOwn(STUFF_SURF, b.stuff) ? STUFF_SURF[b.stuff] : undefined; }
 /** a solid thing of glass that is not a pane, by its own word: a round cracks it and it stays (a pane is the pane engine's) */
-export function solidGlass(b: Box | null | undefined): boolean { return saidSurf(b) === 'glass'; }
+export function solidGlass(b: Box | null | undefined): boolean { return HITSTUFF.on && !!b && solidGlassBox(b); }   // (the one test of solid glass: scene/boxes.ts solidGlassBox; the word 'glass' is glass to a round by STUFF_SURF)
 /** the chips a round knocks out of solid glass that only cracks: a pinch (a pane that breaks throws the row's nine, and the pane engine its shards) */
 export const SOLID_GLASS_CHIPS = 3;
 /** the crack a round leaves in it: the 'damage' mark's own look for it (decals.wgsl damageMark 9: a dead screen's star drawn pale, because black hairlines
@@ -142,7 +113,7 @@ export const SOLID_GLASS_CHIPS = 3;
 export const SOLID_GLASS_CRACK = { look: 9, pistol: 0.085, rifle: 0.11, pellet: 0.035, strength: 0.9 };
 /** WHAT A HIT LOOKS LIKE: the surface a round's sparks, chips and dust are chosen by, the colour they are tinted from, and whether it is solid glass —
  *  for a prop's part (`box`: the very part, where the caller knows it), a door's leaf, a static, or nothing but a normal. The box's own word first (the
- *  rule on: `said`), then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, a static's paint. */
+ *  rule on: `said`), then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, what a static does. */
 export function hitLook(g: Game, hit: { index?: number; prop?: Prop; box?: Box }): { surf: Surf; albedo: Vec3; solid: boolean; said: boolean } {
   const leaf = !hit.prop && hit.index !== undefined && hit.index >= 1e6, st = !hit.prop && !leaf && hit.index !== undefined ? g.col.boxes[hit.index] : undefined;
   const b: Box | undefined = hit.prop ? hit.box ?? hit.prop.boxes[0] : leaf ? g.col.dynamicBoxes[hit.index! - 1e6] : st;
@@ -150,7 +121,7 @@ export function hitLook(g: Game, hit: { index?: number; prop?: Prop; box?: Box }
   if (said) return { surf: said, albedo: b!.albedo, solid: said === 'glass', said: true };   // (a part that speaks is tinted by its own paint; the paint is not asked what it is)
   if (hit.prop) return { surf: PROP_SURF[hit.prop.def.kind] ?? 'plastic', albedo: hit.prop.boxes[0]?.albedo ?? [0.5, 0.5, 0.5], solid: false, said: false };
   if (leaf) return { surf: 'wood', albedo: b?.albedo ?? [0.42, 0.3, 0.19], solid: false, said: false };
-  if (st) return { surf: (st.flags & BoxFlag.Glass) ? 'glass' : surfOf(st.albedo), albedo: st.albedo, solid: false, said: false };   // (a pane / the solid-glass bottle: glass chips, no gypsum puff — review 08-12)
+  if (st) return { surf: (st.flags & BoxFlag.Glass) ? 'glass' : surfAt(g, st), albedo: st.albedo, solid: false, said: false };   // (a pane / the solid-glass bottle: glass chips, no gypsum puff — review 08-12)
   return { surf: 'concrete', albedo: [0.5, 0.5, 0.5], solid: false, said: false };
 }
 

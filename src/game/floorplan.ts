@@ -40,7 +40,7 @@
 // PLAN.on: on on every stand (it is picture only: with nobody asking `floorPlan` nothing runs; asked, a run's digest is the same — tools/qa/plan-check.ts);
 // `?noplan` in the page = nothing drawn, the HUD as it was. IT KEEPS NOTHING OF ITS OWN: the nav grid's answer for a leg, kept between asks, lives with
 // whoever asks (`PlanKept`: the overlay's own table in ui/planfloor.ts, a check's own Map — attention.ts attentionWay's rule), and the grid is searched
-// on the asker's tables too (`kept.nav`, NavGrid.findPathAside), so asking for the men's ways and the laid orders writes nothing of the game's. The
+// with tables that are the Rust module's own (scratch of the one question), so asking for the men's ways and the laid orders writes nothing of the game's. The
 // throw page's preview, read through squadthrow.ts `squadThrowPlans`, is asked aside in the same way, on the store this one carries for it
 // (`kept.throws`, squadthrow.ts SquadThrowKept; tools/qa/throwview-check.ts).
 import type { Vec3 } from '../math/vec';
@@ -153,16 +153,16 @@ export function planTag(callsign: string): string {
 
 /** the nav grid's answer for one leg of a man's way, kept PLAN.reaskSecs */
 export interface PlanLeg { key: string; t: number; pts: Vec3[] | null; /** where the leg was asked from */ from: Vec3 }
-/** WHERE THE KEPT LEGS LIVE: with the one who asks, never in the game (see the head). `nav` = the tables the grid is searched on, made at the first search */
-export interface PlanKept { get(gd: Guard): PlanLeg[] | undefined; set(gd: Guard, L: PlanLeg[]): unknown; nav: { s?: object }; /** the throw page's preview, kept for squadthrow.ts (made at the first ask) */ throws?: SquadThrowKept }
+/** WHERE THE KEPT LEGS LIVE: with the one who asks, never in the game (see the head) */
+export interface PlanKept { get(gd: Guard): PlanLeg[] | undefined; set(gd: Guard, L: PlanLeg[]): unknown; /** the throw page's preview, kept for squadthrow.ts (made at the first ask) */ throws?: SquadThrowKept }
 /** a store for one asker (a check, a tool) of ONE game: its own Map, gone with it (it holds its men: make one a game, never one for many) */
-export function planKept(): PlanKept { const m = new Map<Guard, PlanLeg[]>(); return { get: gd => m.get(gd), set: (gd, L) => m.set(gd, L), nav: {} }; }
+export function planKept(): PlanKept { const m = new Map<Guard, PlanLeg[]>(); return { get: gd => m.get(gd), set: (gd, L) => m.set(gd, L) }; }
 function leg(g: Game, kept: PlanKept, gd: Guard, k: number, a: Vec3, b: Vec3, iters = 3000): PlanLeg {
   let L = kept.get(gd); if (!L) kept.set(gd, L = []);
   const key = `${b[0].toFixed(1)},${b[2].toFixed(1)}`, c = L[k], dt = c ? g.time - c.t : -1;
   // (dt < 0: the clock went back on a load · asked from somewhere else: an answer from a time line a restore left behind, the store being the picture's)
   if (c && c.key === key && dt >= 0 && dt < PLAN.reaskSecs && flat(a, c.from) < 2.5) return c;
-  const pts = g.col.nav.findPathAside(kept.nav, a, b, iters);   // (null: the floor has no way — nothing is drawn, never a line through a wall)
+  const pts = g.col.nav.findPath(a, b, iters);   // (null: the floor has no way — nothing is drawn, never a line through a wall)
   return L[k] = { key, t: g.time, pts, from: [a[0], 0, a[2]] };
 }
 

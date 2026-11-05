@@ -11,7 +11,7 @@
 //      sky); a glass pane crossed on the way tints what lies beyond and adds the sky / cache it mirrors × its Fresnel. (Secondary hits are diffuse-only by
 //      decision: the specular lobe's transport at a second vertex is one more narrow lobe found by one ray — variance the cache cannot settle — for a term worth
 //      a few per cent of a dielectric's outgoing light; metals bounce their F0 as albedo, which is what the level authors as their paint.)
-//   3. weight it by the VNDF estimator F(v·h) · G2/G1 (Schlick on F0 = 0.04, or the albedo for a metal — mixed by metalness; height-correlated Smith), average;
+//   3. weight it by the VNDF estimator F(v·h) · G2/G1 (Schlick on the coat's F0: 0.04, or what its stuff says a lacquer mirrors, `coat` below; or the albedo for a metal — mixed by metalness; height-correlated Smith), average;
 //   4. add the ANALYTIC image of the emitters (rtGlints) — the primary-hit specular response to the level's lights through the same GGX D · Smith G · Schlick F:
 //      every steady point / spot light's lens (no ray can find those: NoShadow glow cards or no geometry) and, on finishes too rough to trace it cleanly, each
 //      area-lit panel's kind-3 light, all widened by the emitter's angular size, the four strongest shadow-rayed (+ smoke) — noise-free (but under GLINT_PICK, rtGlints' head), so a walking guard's
@@ -25,7 +25,8 @@
 @group(1) @binding(3) var directTex: texture_2d<f32>;    // denoised on-screen direct, both classes (directAtPoint reuses them at visible hits)
 @group(1) @binding(4) var softTex: texture_2d<f32>;
 @group(1) @binding(5) var diceTex: texture_3d<f32>;
-@group(1) @binding(6) var outRefl: texture_storage_2d<rgba16float, write>;   // rgb = outgoing specular radiance toward the eye, a = hit distance of ray 0 (RT_TMAX on a miss, −1 = no term)
+@group(1) @binding(6) var outRefl: texture_storage_2d<rgba16float, write>;   // THE MIRROR: rgb = what the lobe's rays bring back toward the eye, a = hit distance of ray 0 (RT_TMAX on a miss, −1 = no term). The denoiser's (its specular client)
+@group(1) @binding(12) var outHi: texture_storage_2d<rgba16float, write>;    // THE HIGHLIGHTS: rgb = the lamps', the panels' and the sun's (rtGlints) and a beam's image toward the eye, a = 0 on a texel of neither term (matte, a man, the sky), else 1 + the roughness the texel stands for (its block's mean: main), with rgb 0 where the finish is past the highlights' fade. No ray of the lobe is in them and no filter comes after: the composite reads this as it is (main's tail says why they are a target of their own)
 @group(1) @binding(7) var gAlbedo: texture_2d<f32>;      // the g-buffer's base colour (after the detail layer + decals): F0 of a metal
 @group(1) @binding(8) var gMat: texture_2d<f32>;         // (roughness, metalness) per pixel — gbuffer.wgsl
 
@@ -71,7 +72,9 @@ fn sampleGGXVNDF(Ve: vec3f, ax: f32, ay: f32, u1: f32, u2: f32) -> vec3f {
  *  shape past recognition there, and one ray in the GGX tail finding a 6 W/m²/sr panel is exactly the outlier that mottles a soft reflection. */
 fn emitTraceK(rough: f32) -> f32 { return 1.0 - smoothstep(0.2, 0.3, rough); }
 
-/** What the reflected ray brings back from where it went: sky (+ the stroke-lit sky) on a miss; the fixture's own radiance if it is emissive (area-lit
+/** What the reflected ray brings back from where it went: sky (+ the stroke-lit sky) on a miss (less what an opening that is a light already sends of it, on a finish that
+ *  takes its lit panels from their analytic image: the share of the sky the ray left by that the portal's light covers, common.wgsl skyKeep, × 1 − kEmit; until
+ *  11-05 a doorway's sky was in the mirror and in the highlights both, whole, on every finish of 0.3 and over); the fixture's own radiance if it is emissive (area-lit
  *  ones × kEmit, see emitTraceK — the diffuse paths take those through their analytic light entirely, a mirror shows the panel itself); albedo/π ×
  *  (direct + bounce) otherwise; through any glass pane on the segment: tinted, plus what the pane itself mirrors (the sky / the cache) × its Fresnel.
  *  Bounded per ray by matCfg.z (luminance). */
@@ -79,7 +82,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3
   var L = vec3f(0.0);
   var segT = RT_TMAX;
   if (hit.idx < 0) {
-    L = skyRadiance(dir) + frame.weatherB.xyz;                            // (weatherB.rgb = what a lightning stroke's lit sky adds this frame; 0 otherwise)
+    L = skyRadiance(dir) * (1.0 - (1.0 - kEmit) * (1.0 - skyKeep(Po, dir))) + frame.weatherB.xyz;                            // (weatherB.rgb = what a lightning stroke's lit sky adds this frame; 0 otherwise)
   } else if (!hit.inside) {
     segT = hit.t;
     let Ph = Po + dir * hit.t;
@@ -129,7 +132,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3
 //     on a metal, a pixel-wide line at the day's bound on every round thing's rim; and its width is never under RT_SUN_ALPHA, against sparks off a
 //     relief's normals under the jitter.
 // Known, left: one ray at the disc's middle shadows it, so under cloud (a wide disc) its edge in a shadow is harder than the shade's own; through a pane it
-// is untinted, as a lamp's is; with rays traced the denoiser places it at the first ray's hit, as it does a lamp's.
+// is untinted, as a lamp's is.
 const RT_SUN_FAR: f32 = 80.0;      // m: the direction's stand-in for a place (its ray is cut at the world's top, short of this but at a low sun)
 const RT_SUN_CUT: f32 = 0.02;
 const RT_SUN_PEAK: f32 = 2.0;
@@ -139,8 +142,9 @@ const RT_SUN_ALPHA: f32 = 0.07;
 // share the traced ray does not take) — widened by the emitter's angular size (alpha' = alpha + half its angular radius per axis — the widened D is still
 // normalised, no extra factor), Schlick F, height-correlated Smith; the RT_GLINT_RAYS strongest by luminance get a shadow ray (their carrier never hides
 // them: the light's owner byte in the skip word) and the smoke on the segment, the rest — off the lobe, where D has already made them small, and reach-masked
-// — are credited at half, unshadowed (the dust glow's rule). The sun and the moon: the head above (without its word they stay the sky's). Returns radiance in .xyz and the strongest highlight's distance in .w
-// (0 = none) — the virtual depth the denoiser reprojects a highlight by when no ray was traced.
+// — are credited at half, unshadowed (the dust glow's rule). The sun and the moon: the head above (without its word they stay the sky's). Returns radiance
+// toward the eye, written to a target of its own that no filter touches (main's tail): a sum with no noise in it, but under GLINT_PICK, whose one pick a
+// frame is drawn as it falls.
 // NO LAMP IS CREDITED UNSEEN (the scene prelude's `const GLINT_PICK`, render/frame.ts glintPickConfig; false = the lines above, as they were). A fifth lamp
 // behind a wall glinted at half strength, and a fifth in plain sight was drawn at half. With the word the three strongest keep their rays and the fourth ray
 // goes to ONE lamp picked from all the rest by its weight (`pick` = the caller's number for this pixel and frame; one number, handed on down the walk), and
@@ -152,7 +156,7 @@ const RT_SUN_ALPHA: f32 = 0.07;
 // cycle), so a still pixel walks through its lamps; it is no new draw of the kernel's stream. No ray more than
 // before. NOT NOISE-FREE with the word: the lamps past the third are one sample a frame, and the bound below is then on a sample, not on the sum.
 struct Glint { L: vec3f, spec: vec3f, dist: f32, w: f32, i: i32 };
-fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32, ay: f32, F0: vec3f, owner: u32, kAna: f32, pick: f32) -> vec4f {
+fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32, ay: f32, F0: vec3f, owner: u32, kAna: f32, pick: f32) -> vec3f {
   var g0: Glint; var g1: Glint; var g2: Glint; var g3: Glint; g0.w = 0.0; g1.w = 0.0; g2.w = 0.0; g3.w = 0.0; g0.i = -1; g1.i = -1; g2.i = -1; g3.i = -1;
   var gs: Glint; gs.w = 0.0; gs.i = -1;                                    // the sun's (or a moon's): the fifth candidate, outside the lamps' contest
   var rest = vec3f(0.0);
@@ -216,9 +220,8 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
     }
     if (w > g0.w) { rest += g3.spec; g3 = g2; g2 = g1; g1 = g0; g0 = g; } else if (w > g1.w) { rest += g3.spec; g3 = g2; g2 = g1; g1 = g; } else if (w > g2.w) { rest += g3.spec; g3 = g2; g2 = g; } else if (w > g3.w) { rest += g3.spec; g3 = g; } else { rest += spec; }
   }
-  if (GLINT_PICK) { g3.spec = rest; rest = vec3f(0.0); }                 // the one's ray answers for the rest's whole sum (its own weight stays its own: what the denoiser's distance is chosen by)
+  if (GLINT_PICK) { g3.spec = rest; rest = vec3f(0.0); }                 // the one's ray answers for the rest's whole sum (its own weight stays its own)
   var G = rest * 0.5;
-  var sunW = 0.0; var lampW = 0.0;                                         // the sun's glint and the strongest lamp's AS DRAWN (0 in shadow): whose distance the denoiser is handed
   for (var k = 0u; k < RT_GLINT_RAYS + 1u; k++) {                           // (the last turn is the sun's: gs, empty without the word)
     var g = g0; if (k == RT_GLINT_RAYS) { g = gs; } else if (k == 1u) { g = g1; } else if (k == 2u) { g = g2; } else if (k == 3u) { g = g3; }
     if (g.i < 0 || g.w <= 0.0) { continue; }
@@ -227,10 +230,9 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
     var tr = 1.0;
     if (frame.numSmoke > 0u) { tr = smokeTransmittance(Po, g.L, min(max(g.dist, 0.0), 30.0)); }
     G += g.spec * tr;
-    if (k == RT_GLINT_RAYS) { sunW = g.w * tr; } else { lampW = max(lampW, g.w * tr); }
   }
   let lg = luminance(G);
-  return vec4f(select(G, G * (RT_GLINT_MAX * dayBound / lg), lg > RT_GLINT_MAX * dayBound), select(select(0.0, max(g0.dist, 0.05), g0.i >= 0), RT_SUN_FAR, sunW > lampW));
+  return select(G, G * (RT_GLINT_MAX * dayBound / lg), lg > RT_GLINT_MAX * dayBound);
 }
 
 // ---- LASERS / TRACERS IN THE REFLECTION (render/passes.ts setBeams; settings.beamReflect). A weapon laser's beam and a tracer's streak are NoShadow boxes: no
@@ -291,14 +293,28 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let rdiv = max(u32(frame.rtCfg.w), 1u);
   let full = min(gid.xy * rdiv + (rdiv - 1u) / 2u, vec2u(frame.screen) - 1u);   // the full-res pixel this texel is computed at (its own at div 1; the top-left of its 2×2 at div 2, the centre of its 3×3 — as the gather picks its pixel)
   let depth = textureLoad(gDepth, full, 0);
-  if (depth >= 1.0 || frame.rtCfg.w < 1.0) { textureStore(outRefl, gid.xy, none); return; }
+  if (depth >= 1.0 || frame.rtCfg.w < 1.0) { textureStore(outRefl, gid.xy, none); textureStore(outHi, gid.xy, vec4f(0.0)); return; }
   let id = textureLoad(gId, full, 0).x;
   let bidx = id & 0xFFFFFu;
-  if (((id >> 28u) & 1u) != 0u || ((id >> 29u) & 1u) != 0u) { textureStore(outRefl, gid.xy, none); return; }   // a character (his coat is composite's) or a section cap
+  if (((id >> 28u) & 1u) != 0u || ((id >> 29u) & 1u) != 0u) { textureStore(outRefl, gid.xy, none); textureStore(outHi, gid.xy, vec4f(0.0)); return; }   // a character (his coat is composite's) or a section cap
   let mat = textureLoad(gMat, full, 0);                                    // (roughness, metalness) as the g-buffer wrote them: the finish + the detail layer's wear
   let rough = mat.x; let metalness = mat.y;
   let maxR = frame.rtCfg.x;
-  if (rough > select(maxR, max(min(maxR + SHEEN_PAST, 0.999), maxR + 0.001), SHEEN_PAST > 0.0)) { textureStore(outRefl, gid.xy, none); return; }
+  let hf = rtHiFade(maxR);                                                 // the highlights' own fade (common.wgsl)
+  if (rough > max(maxR, hf.y) + 0.15) { textureStore(outRefl, gid.xy, none); textureStore(outHi, gid.xy, vec4f(0.0)); return; }   // matte: neither term, and no block worth reading
+  // THE HIGHLIGHTS' ROUGHNESS IS THE TEXEL'S, NOT ONE PIXEL'S. A texel stands for every pixel of its block (four, or nine), and a highlight's height goes by the
+  // fourth power of roughness: made with the one pixel's, a finish with a grain in its gloss (a rolled skim's stipple, 0.38 to 0.51) had texels three times as
+  // bright as their neighbours, a glitter the size of a texel. So the highlights are made with the mean of the block's pixels of this finish (those within 0.15
+  // of this pixel's own: a polished floor's texel at a matte wall's foot keeps the floor's), which is what a smaller picture of the gloss map would hold. The
+  // rays keep the pixel's own: their texel goes on to the denoiser, which has its own tests of roughness.
+  var roughH = rough;
+  if (rdiv > 1u) {
+    var rs = 0.0; var rn = 0.0;
+    for (var j = 0u; j < rdiv * rdiv; j++) { let r = textureLoad(gMat, min(gid.xy * rdiv + vec2u(j % rdiv, j / rdiv), vec2u(frame.screen) - 1u), 0).x; if (abs(r - rough) < 0.15) { rs += r; rn += 1.0; } }
+    roughH = rs / max(rn, 1.0);                                             // (never none: the texel's own pixel is one of the block's)
+  }
+  let mirror = rough <= maxR; let lit = roughH <= hf.y;                    // which of the two terms this finish takes: the lobe's rays (the preset's cut-off: what a ray costs) and the highlights (common.wgsl rtHiFade: where one is too faint to draw)
+  if (!mirror && !lit) { textureStore(outRefl, gid.xy, none); textureStore(outHi, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0 + roughH)); return; }   // (neither term; the roughness is handed on all the same: outHi's .a)
   var aniso = false;
   if (bidx != 0xFFFFFu) { aniso = boxFinish(bidx).aniso; }
   let P = worldFromDepth(vec2f(full) + 0.5, depth);
@@ -306,7 +322,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   dayBound = dayBoundK(P, N);   // (lighting_common.wgsl: the ray's and the highlights' bounds by day)
   let toEye = frame.camPos - P; let z = length(toEye);
   let V = toEye / max(z, 1e-4);
-  if (dot(N, V) <= 0.01) { textureStore(outRefl, gid.xy, none); return; }
+  if (dot(N, V) <= 0.01) { textureStore(outRefl, gid.xy, none); textureStore(outHi, gid.xy, vec4f(0.0)); return; }
   let owner = (id >> 20u) & 0xffu;
   // per-pixel Cranley-Patterson offsets for the lobe samples: WHITE over the screen (two draws of a pixel-seeded hash, the same every frame), stepped through
   // the frames by R2 below — every pixel stratifies its lobe over consecutive frames, and neighbours' errors stay uncorrelated so the à-trous can average
@@ -324,9 +340,18 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   var ax = alpha; var ay = alpha;
   let an = frame.rtCfg.z - 2.0 * floor(frame.rtCfg.z * 0.5);              // (.z also carries the wet ground's break-up as 2 × tenths, read by the g-buffer: with none this is .z itself)
   if (aniso && an > 0.0) { ax = alpha * (1.0 - 0.6 * an); ay = min(alpha * (1.0 + 5.0 * an), 1.0); }   // wet ground: tight across the view, long along it
+  let kH = max(roughH * roughH, 0.0009) / alpha; let axh = ax * kH; let ayh = min(ay * kH, 1.0);   // the highlights' lobe: the same shape at the texel's roughness
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let base = textureLoad(gAlbedo, full, 0).xyz;                            // base colour (a metal's F0; brighter on a worn edge — the detail layer)
-  let F0 = mix(vec3f(0.04), base, metalness);
+  // WHAT ITS COAT MIRRORS HEAD-ON IS THE STUFF'S WORD (lookTex.ts STUFFS' `mirrors` → the prelude's LOOK_MIRRORS, by the word the box says: common.wgsl
+  // boxStuff, which reads the word's five bits whether or not the box moves; beams.k.z = the look's Pressed panels row, 0 on any other page). Every coat was
+  // a plain one, four hundredths; a lacquer says more, and a box that says no word reads the plain coat's.
+  var coat = LOOK_MIRROR_PLAIN; if (LOOK && bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - LOOK_MIRROR_PLAIN) * beams.k.z; }
+  let F0 = mix(vec3f(coat), base, metalness);
+  // … and the highlights': a metal's are a conductor's only as far as its paint is stepped back for its mirror (composite.wgsl metalK: by the mirror's fade
+  // and its strength, and only while rays are traced). Where the paint stands in whole for the metal, a highlight on top of it is a coat's: at a conductor's
+  // strength it was more than the paint itself.
+  let F0h = mix(vec3f(coat), base, metalness * select(0.0, (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, roughH)) * min(frame.matCfg.y, 1.0), frame.rtCfg.y >= 1.0));
   // THE WET FILM'S SHARE (settings.wetMirror → beams.k.y; 0 = off: wetF stays 1 and the lines below multiply by exactly what they did). The older gloss path (fgather.wgsl
   // glossReflection: what low / verylow draw in a storm) strengthens the film's Fresnel by the ground's wetness; this pass never did, so on the wet lot a traced image came
   // out a third as strong here as there — a lit man's too faint to read, beside a laser's image that had a floor of its own. Traced hits only: the lamps' glints are as they were.
@@ -337,18 +362,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     wetF = 1.0 + beams.k.y * wetOut;
   }
   let Po = P + N * 0.02;
-  // A HIGHLIGHT OUTLIVES THE RAYS' CUT-OFF, A TRIAL (the scene prelude's SHEEN_PAST, render/frame.ts sheenConfig; the look's page with `&sheen=1`, 0
-  // anywhere else = every line below as it is without it). The cut-off (rtCfg.x) is what a RAY costs: a lobe too wide for one ray a pixel. It was the whole term's: past it a finish had no
-  // lamp's highlight either, and the composite faded the term to nothing over the 0.12 of roughness under it. A fade that steep draws whatever grain a
-  // finish has in its gloss: at the cut-off, one twentieth less roughness was thirty times the highlight, pixel by pixel, and in a dark room shown a
-  // hundred times up those were sparkles (the maintainer on his GPU, 11-04: "overcast dark room has specular sparkles"; measured on the white roof's
-  // rolled skim, finish 0.45 against High's 0.45: the highlight follows the roughness map at r = −0.72). So the two parts of the term part ways. THE
-  // RAYS fade out under the cut-off as they did, here, a texel at a time, where the denoiser's own filter is still to come. THE HIGHLIGHTS (rtGlints:
-  // the lamps', the panels', the sun's; and a beam's image) are sums with no ray of the lobe: they go on SHEEN_PAST rougher, at full strength, and the
-  // composite fades the term over that whole reach (composite.wgsl reflK), a quarter of the roughness scale wide: a grain is then seen as its lobe
-  // makes it, a little wider or narrower. A texel past the rays' cut-off traces none: its highlights' shadow rays are all it costs.
-  var rayK = 1.0; var rays = min(u32(frame.rtCfg.y), 4u);
-  if (SHEEN_PAST > 0.0) { rayK = 1.0 - smoothstep(maxR - 0.12, maxR + 0.001, rough); if (rough > maxR) { rays = 0u; } }   // (past the cut-off no ray of the lobe: what the one test said by leaving the texel out)
+  let rays = select(0u, min(u32(frame.rtCfg.y), 4u), mirror);               // (past the cut-off no ray of the lobe: the texel is here for its highlights)
   let lamV = smithLambda(Ve, ax, ay);
   let kEmit = emitTraceK(rough);                                            // area-lit fixtures: traced on a polish, analytic (rtGlints) on a rough finish, one panel either way
   // REFL WALLS (the scene prelude's REFL_WALLS, render/frame.ts reflWallsConfig; lighting_common.wgsl diceWalledPoint): a METAL mirrors the bounce at its hit at full strength
@@ -372,13 +386,18 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     let wG = (1.0 + lamV) / (1.0 + lamV + smithLambda(Ls, ax, ay));      // G2 / G1(v), height-correlated: the VNDF estimator's remaining weight
     Lsum += Li * min(Fr * wetF, vec3f(1.0)) * wG;
   }
-  var Lspec = Lsum / f32(max(rays, 1u));
-  if (SHEEN_PAST > 0.0) { Lspec *= rayK; }
-  if ((frame.flags & FLAG_DIRECT) != 0u && frame.matCfg.x > 0.0) {
-    let g = rtGlints(P, Po, N, V, T, B, ax, ay, F0, owner, select(1.0 - kEmit, 1.0, rays == 0u), fract(cpx + f32(frame.frameIdx % 4096u) * 0.7548777));   // (no rays: every panel comes through its analytic light)
-    Lspec += g.xyz * frame.matCfg.x;
-    if (rays == 0u) { hitT0 = select(RT_TMAX, g.w, g.w > 0.0); }          // highlights only: the strongest one's distance places the image for the denoiser
+  // THE MIRROR AND THE HIGHLIGHTS ARE TWO TERMS IN TWO TARGETS. They were one sum in one texel: one cut-off (a finish past it had no lamp's highlight either), one
+  // denoiser (a highlight, which is a sum, was blurred and held over frames with the rays, placed by a made-up depth where no ray was traced),
+  // and one fade in the composite, over the 0.12 of roughness under the cut-off. A fade that steep draws whatever grain a finish has in its gloss: at the cut-off
+  // one twentieth less roughness was thirty times the highlight, pixel by pixel, and in a dark room shown a hundred times up those were sparkles (the maintainer
+  // on his GPU, 11-04: "overcast dark room has specular sparkles"; on the white roof's rolled skim the highlight followed the roughness map at r = −0.72). What a
+  // ray costs says nothing of a highlight. So: the rays' texel is the denoiser's, as it was, and the cut-off and its fade are the rays' alone; the highlights go
+  // to outHi for every finish they can be seen on (rtHiFade), and the composite adds them as they are, under that fade (composite.wgsl upsampleHi).
+  textureStore(outRefl, gid.xy, select(none, vec4f(Lsum / f32(max(rays, 1u)), hitT0), mirror));
+  var Lhi = vec3f(0.0);
+  if (lit) {
+    if ((frame.flags & FLAG_DIRECT) != 0u && frame.matCfg.x > 0.0) { Lhi += rtGlints(P, Po, N, V, T, B, axh, ayh, F0h, owner, select(1.0 - kEmit, 1.0, rays == 0u), fract(cpx + f32(frame.frameIdx % 4096u) * 0.7548777)) * frame.matCfg.x; }   // (no rays: every panel comes through its analytic light)
+    if (beams.n > 0u && (beams.p0 & 1u) != 0u) { Lhi += beamImage(Po, N, V, axh, ayh, F0h, 2.0 * frame.post.w * frame.invScreen.y * f32(rdiv), owner, wetF); }   // lasers / tracers (no ray meets them): their analytic image
   }
-  if (beams.n > 0u && (beams.p0 & 1u) != 0u) { Lspec += beamImage(Po, N, V, ax, ay, F0, 2.0 * frame.post.w * frame.invScreen.y * f32(rdiv), owner, wetF); }   // lasers / tracers (no ray meets them): their analytic image
-  textureStore(outRefl, gid.xy, vec4f(Lspec, hitT0));
+  textureStore(outHi, gid.xy, vec4f(Lhi, 1.0 + roughH));                    // (.a: 0 = no surface of either term, else 1 + the roughness the texel stands for, which the composite fades both terms by)
 }

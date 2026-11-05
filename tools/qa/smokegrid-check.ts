@@ -93,7 +93,7 @@ const RATE = 3 * 5.568327996831708 * 0.125;   // (what that canister lets out a 
   let n = 0; for (let z = 1.5; z < nav.H * nav.cell; z += 3) for (let x = 1.5; x < nav.W * nav.cell; x += 3) if (!nav.isBlocked(x, z) && n < 60) { canister(g, [x, 0.2, z], 60); n++; }
   run(W, 30);
   const G = C.grid, bricks = bricksOf(G.row()), a: Vec3 = [1.5, 1, 1.5], b: Vec3 = [nav.W * nav.cell - 1.5, 1, nav.H * nav.cell - 1.5];
-  const grid = G.along(a, b), both = C.along(g.col, a, b), blobs = C.trans(a, b, (p: Vec3, q: Vec3) => g.col.segmentBlocked(p, q));
+  const grid = G.along(a, b), both = C.along(g.col, a, b), blobs = C.blobsAlong(g.col, a, b);
   // …and one more where no brick is: it can let nothing out, and the book says how much that was
   const st0 = G.row(), has = (x: number, z: number) => { const st = st0; for (let k = 0; k < L.bricks; k++) if (st[HEAD + EMITS + k * 2] === Math.floor(x / 2) + 1 && st[HEAD + EMITS + k * 2 + 1] === Math.floor(z / 2) + 1) return true; return false; };
   let spot: Vec3 | null = null; for (let z = 1; z < nav.H * nav.cell && !spot; z += 2) for (let x = 1; x < nav.W * nav.cell; x += 2) if (!nav.isBlocked(x, z) && !has(x, z)) { spot = [x, 0.2, z]; break; }

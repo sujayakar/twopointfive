@@ -4,8 +4,8 @@
 // footprint is fitted by levelLoad.ts fitPropFootprint, as officeKit's are; officeGen.ts does not import this file. Units: metres. +X east, +Z south, +Y up. Floor top y = 0.
 import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, madeOf } from './stuff';
-import { carShapes, hubPaint } from './carShapes';
+import { saidFor, namePaints, paintOf, worded, type BoxStuff, PANEL_GREY, RACK_BLACK, KEY_BLACK, madeOf } from './stuff';
+import { carShapes, hubPaint, carSays } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, LevelDoorDef, PropKind, PropPart, PropDef } from './level';
 import { MarkingDef, MARKING_TEXEL } from './markings';
@@ -178,7 +178,7 @@ export function monitor(k: LevelKit, x: number, z: number, yaw: number, on: bool
   add(k, { c: at(0, baseY + 0.32, 0), h: [0.27, 0.17, 0.02], yaw, albedo: C.black });
   const scr = add(k, { c: at(0, baseY + 0.32, 0.022), h: [0.25, 0.15, 0.004], yaw, albedo: C.screenOff, emissive: on ? [0.9, 1.3, 2.2] : [0, 0, 0], ...mk(k, MD.monitorMarks([0.25, 0.15, 0.004], on, k.texel)) });
   if (on) k.switchables.push({ name: `monitor${k.switchables.length}`, boxes: [scr], group: 'monitors', on: true, baseEmissive: [0.9, 1.3, 2.2] });
-  if (keyboard) add(k, { c: at(0, baseY + 0.01, 0.28), h: [0.2, 0.012, 0.07], yaw, albedo: drawnAs('metal', [0.08, 0.08, 0.09]), ...mk(k, MD.keyboardMarks([0.2, 0.012, 0.07], k.texel)) });
+  if (keyboard) add(k, { c: at(0, baseY + 0.01, 0.28), h: [0.2, 0.012, 0.07], yaw, albedo: KEY_BLACK, ...mk(k, MD.keyboardMarks([0.2, 0.012, 0.07], k.texel)) });
   return scr;
 }
 /** a filing cabinet (0.46 × 1.32 × 0.6), drawer fronts on local −Z */
@@ -203,11 +203,11 @@ export function bench(k: LevelKit, x: number, z: number, yaw: number): void {
 /** a parked car, 4.4 × 1.7 m, local +X forward. Hands back the shapes its boxes say */
 export function car(k: LevelKit, x: number, z: number, yaw: number, body: Vec3) {
   const at = frameAt(x, z, yaw);
-  const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) });   // (S: the shape each box says — scene/carShapes.ts)
-  add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body, shape: S.body });
-  add(k, { c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: [0.07, 0.08, 0.1], shape: S.glass });
-  add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: body, shape: S.roof });
-  for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add(k, { c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: C.black, shape: S.wheel(Math.sign(lz)) });
+  const S = carShapes({ hub: hubPaint([0.5, 0.52, 0.53]) }), { paint, glass, tyre } = carSays(body, C.black);   // (S: the shape each box says — scene/carShapes.ts)
+  add(k, { c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: paint, shape: S.body });
+  add(k, { c: at(-0.25, 1.2, 0), h: [1.25, 0.27, 0.8], yaw, albedo: glass, shape: S.glass });
+  add(k, { c: at(-0.25, 1.49, 0), h: [1.15, 0.03, 0.76], yaw, albedo: paint, shape: S.roof });
+  for (const [lx, lz] of [[1.35, 0.8], [1.35, -0.8], [-1.4, 0.8], [-1.4, -0.8]]) add(k, { c: at(lx, 0.3, lz), h: [0.32, 0.3, 0.12], yaw, albedo: tyre, shape: S.wheel(Math.sign(lz)) });
   for (const lz of [0.62, -0.62]) { add(k, { c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow, shape: S.head(Math.sign(lz)) }); add(k, { c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow, shape: S.tail(Math.sign(lz)) }); }
   return S;   // (the shapes it says, its `tops` among them: what a level stands on its roof is fitted by carShapes.ts feetOn / layOn)
 }
@@ -232,7 +232,7 @@ export function sofa(k: LevelKit, x: number, z: number, yaw: number, albedo: Vec
 export function rack(k: LevelKit, x: number, z: number, index: number, flicker = false): Vec3 {
   const slots: { u: number; y: number; amber: boolean }[] = [];
   for (let u = 0; u < 10; u++) { if (((u * 7 + index * 3) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + index) % 7 === 3 }); }
-  const body = add(k, { c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(k, MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), k.texel)) });
+  const body = add(k, { c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: RACK_BLACK, ...mk(k, MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), k.texel)) });
   let lo = 10, hi = -10; for (const sl of slots) { lo = Math.min(lo, sl.y); hi = Math.max(hi, sl.y); }
   if (slots.length) {
     k.switchables.push({ name: `rack${index}_leds`, boxes: [body], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker, mains: false });

@@ -163,6 +163,7 @@ import { diceInUse } from '../math/dice';
 import { sprintDoorTurning } from './sprintdoor';
 import { seenReset } from './seenwalk';
 import { takeSnapshot, restoreSnapshot, type Snapshot } from './rollback';   // (called inside Checkpoints only)
+import { LIGHT_IN, MAINS } from '../sim/lightshome';
 
 // ================================================================================================================================ the schema
 export const SAVE_VERSION = 1;
@@ -685,7 +686,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
-  g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.breakerFixT = fin(s.breakerFixT); g.lastStingT = fin(s.lastStingT, -100);
+  g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.lightHome.in(LIGHT_IN.fix, null, fin(s.breakerFixT)); g.lastStingT = fin(s.lastStingT, -100);
   g.aiEnabled = s.flags.aiEnabled !== false; g.godMode = !!s.flags.godMode; g.infiniteAmmo = !!s.flags.infiniteAmmo; g.playerInvisible = !!s.flags.playerInvisible;
   loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (game/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
   g.spectate = -1;
@@ -791,11 +792,13 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     if (D.off) slabRestore(d, D.off, fin(D.angle));   // off its hinges: the slab where it lay (the reset above hung every leaf)
     d.place();
   }
-  g.col.dynamicBoxes = g.doors.leafBoxes();
+  // (THE SAME LIST, FILLED ANEW, never another array in its place: the box world's copy in the Rust module knows the game's own leaves by this array —
+  //  boxMirror.ts `own` — and a state put back inside a tick, a restart's, would leave every rule of that tick's rest without the copy)
+  { const L = g.col.dynamicBoxes, B = g.doors.leafBoxes(); L.length = 0; for (const b of B) L.push(b); }
   s.props.forEach((P, i) => { const p = g.props.all[i]; if (!p) return; p.x = fin(P.x, p.home[0]); p.z = fin(P.z, p.home[1]); p.yaw = fin(P.yaw, p.home[2]); p.vx = fin(P.vx); p.vz = fin(P.vz); p.w = fin(P.w); p.asleep = !!P.asleep; p.idle = fin(P.idle); p.lastWho = P.lastWho | 0; p.noiseT = fin(P.noiseT, -10); p.pushT = fin(P.pushT, -10); p.dirty = true; p.place(); });
   g.props.time = fin(s.propsTime, g.props.time);
-  { const byName = new Map(g.targets.map(t => [t.name, t] as [string, LightTarget])); for (const T of s.targets) { const t = byName.get(T.name); if (!t) continue; t.on = !!T.on; t.broken = !!T.broken; t.disabledUntil = fin(T.disabledUntil, -1); t.handOff = typeof T.hand === 'number' ? fin(T.hand) : undefined; } }
-  { const B = s.blackout, bo = g.blackout; bo.active = !!B.active; bo.until = infIn(B.until); bo.since = fin(B.since, -1); bo.permanent = !!B.permanent; bo.restoredAt = fin(B.restoredAt, -100); }
+  { const byName = new Map(g.targets.map(t => [t.name, t] as [string, LightTarget])); for (const T of s.targets) { const t = byName.get(T.name); if (!t) continue; g.lightHome.in(LIGHT_IN.put, t, T.on ? 1 : 0, T.broken ? 1 : 0, fin(T.disabledUntil, -1), typeof T.hand === 'number' ? fin(T.hand) : NaN); } }
+  { const B = s.blackout; g.lightHome.in(LIGHT_IN.mains, null, (B.active ? MAINS.active : 0) | (B.permanent ? MAINS.permanent : 0), infIn(B.until), fin(B.since, -1), fin(B.restoredAt, -100)); }
   if (s.devices && g.devices) g.devices.restore(g, s.devices);
   // ---- the floor's memory
   g.escalation = s.escalation === 2 ? 2 : s.escalation === 1 ? 1 : 0; g.escalationT = fin(s.escalationT, -1);

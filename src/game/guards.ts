@@ -7,11 +7,11 @@ import { openingStart } from './opening';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
 import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
+import { manLeaves } from '../sim/men/store';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
-import { BOTH, BAKE_Y, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
+import { BAKE_Y, type StaticCollision } from '../scene/collision';
 import { SENSE, type LightField } from './sense';   // (read inside functions only: the light model's switch and its field)
-import { SENSES } from '../scene/boxMirror';
 import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
@@ -78,6 +78,7 @@ import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } fro
 import { TAPSTEP, tapHears } from './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a tutorial mission's spared teammate is a man down to the enemy's eye: asked inside acquireFoe only)
+import { LIGHT_IN } from '../sim/lightshome';
 
 /** A/B switches for the AI passes (the QA probes flip them to print before / after off the same build; play never touches them): motion acuity in the sight
  *  gain, the search that deals hide spots and reads the renderer's light (off: the old sweep-and-wander), threshold discipline at doorways (off: straight through). */
@@ -1325,29 +1326,14 @@ export interface Eye { pos: Vec3; look: Vec3; range: number; halfDeg: number; ne
 export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, blind: boolean, smokeTrans: number, through: number = BoxFlag.Glass): { visible: boolean; dist: number; inCone: boolean } {
   const tgt = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]); const tgt2 = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
   const smoked = isPlayer && smokeTrans < 0.3;
-  // RUST.sight (rust/sim/src/sight.rs: the statements of eyeContactHere below, as one question to the module). WHAT HIDES SAM IS READ LAST, of a man the eye
-  // would otherwise see, and never before the cone: a game of two seats has a man under every eye of the floor, and "the player" can be asked only where a
-  // seat's view was handed in (seats.ts). So the module is told of the eye that is out and of an AI man who is not alive, and Sam's own two are asked here.
-  const r = g.col.eyeContact(E, tgt, tgt2, blind || (!isPlayer && !pc.alive), smoked, through); if (r === null) return eyeContactHere(g, E, pc, isPlayer, tgt, tgt2, blind, smoked, through);
+  // ONE QUESTION TO THE RUST MODULE, and the module's alone (rust/sim/src/sight.rs, through collision.ts eyeContact): the cone and the reach in plan, the
+  // elevation window where the eye is a lens, then the two lines, his chest first and his head behind a blocked chest. WHAT HIDES SAM IS READ LAST, of a
+  // man the eye would otherwise see, and never before the cone: a game of two seats has a man under every eye of the floor, and "the player" can be asked
+  // only where a seat's view was handed in (seats.ts). So the module is told of the eye that is out and of an AI man who is not alive, and Sam's own two
+  // are asked here.
+  const r = g.col.eyeContact(E, tgt, tgt2, blind || (!isPlayer && !pc.alive), smoked, through);
   if (r.visible && isPlayer && (g.playerInvisible || g.player.down)) r.visible = false;
-  if (!BOTH.on) return r;
-  const t = eyeContactHere(g, E, pc, isPlayer, tgt, tgt2, blind, smoked, through);
-  g.col.senseCompared(g.col.senseSet(SENSES.sight), t.visible === r.visible && t.inCone === r.inCone && Object.is(t.dist, r.dist), 'sight', E.pos, tgt);
-  return t;
-}
-/** eyeContact as this file answers it (and the whole of it wherever the module does not): the eye on his chest `tgt` and his head `tgt2`; `blind` = the eye
- *  is out; `smoked` = the smoke between them hides him. Whether he is hidden, down or dead is asked only of a man in the cone */
-function eyeContactHere(g: Game, E: Eye, pc: Character, isPlayer: boolean, tgt: Vec3, tgt2: Vec3, blind: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } {
-  const eye = E.pos;
-  const to = v3.sub(tgt, eye); const dist = v3.len(to); const dirTo = v3.scale(to, 1 / Math.max(dist, 1e-4));
-  const look = E.look;
-  const cosA = v3.dot([look[0], 0, look[2]], v3.normalize([dirTo[0], 0, dirTo[2]]));
-  const fov = dist < E.nearM ? Math.cos(E.nearDeg * DEG) : Math.cos(E.halfDeg * DEG);
-  let inCone = cosA > fov && dist < E.range;
-  if (inCone && E.vHalfDeg !== undefined) inCone = Math.abs(Math.asin(clamp(dirTo[1], -1, 1)) - Math.asin(clamp(look[1], -1, 1))) < E.vHalfDeg * DEG;   // (a lens: the elevation to his chest within the cone's own about its pitch — straight under a wall camera is under its picture)
-  if (!inCone || (isPlayer ? g.playerInvisible || g.player.down : !pc.alive) || blind) return { visible: false, dist, inCone };
-  const blocked = (g.col.segmentBlocked(eye, tgt, 0.02, through) && g.col.segmentBlocked(eye, tgt2, 0.02, through)) || smoked;
-  return { visible: !blocked, dist, inCone };
+  return r;
 }
 
 // ------------------------------------------------------------ un-stick: a living man standing where the nav grid has no way out
@@ -2608,10 +2594,6 @@ function sweepStatics(g: Game, c: Character, fx: number, fz: number, dbg: ((m: s
 // ------------------------------------------------------------ sides (teams.ts): the AI target's light meter, and which enemy a unit's senses are on
 /** no foe, nothing seen: the perception block's stand-in for canSee when a unit has nobody yet */
 const NO_SIGHT = { visible: false, dist: 99, inCone: false };
-/** the six axis normals the renderer's meter takes its best face over (probe.wgsl) */
-const METER_NORMALS: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
-/** the shader's range window (common.wgsl lightWindow): (1 − (d/range)⁴)², clamped */
-function lightWindow(d: number, range: number): number { const x = d / range; const w = clamp(1 - x * x * x * x, 0, 1); return w * w; }
 /** The CPU's estimate of the renderer's light meter at world point P (probe.wgsl: the best, over the six axis normals, of the luminance of the SHADOWED DIRECT
  *  irradiance) — every enabled analytic light the engine holds this frame (fixtures' area lights, lamps, torches and weapon lights, the beacons, muzzle flashes)
  *  through the shader's own terms (evalLight: 1/max(d², r²), the range window, the spot cone's smoothstep, the panel's emitter cosine, the receiving cosine),
@@ -2630,9 +2612,7 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
 }
 function lightEstimateIn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, field: LightField | null, moon: boolean): number {
   const acc = [0, 0, 0, 0, 0, 0];
-  // RUST.light (rust/sim/src/light.rs: lampsHere's statements from the distance on, as one question a point)
-  if (!lampsThere(g, P, skipOwner, steadyOnly, acc, field)) lampsHere(g, P, skipOwner, steadyOnly, acc, field);
-  else if (BOTH.on) { const t = [0, 0, 0, 0, 0, 0]; lampsHere(g, P, skipOwner, steadyOnly, t, field); let ok = true; for (let k = 0; k < 6; k++) { ok = ok && Object.is(t[k], acc[k]); acc[k] = t[k]; } g.col.senseCompared(g.col.senseSet(SENSES.light), ok, 'light', P, P); }
+  lampsOn(g, P, skipOwner, steadyOnly, acc, field);   // (the lamps: one question a point to the Rust module, rust/sim/src/light.rs)
   hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
   if (moon) moonLight(g, P, acc);   // …and at night the moon where it has a line to P (sense.ts SENSE.moon; the error tool asks both ways)
   if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
@@ -2645,14 +2625,14 @@ export function lightField(g: Game): LightField | null { const C = g.cpuSmoke; r
 type Lamp = Game['engine']['lights']['lights'][number];
 /** is this lamp one of a light question's: on, not the moon, not one of an owner the asker leaves out, and, to who asks what the PLACE lights
  *  (`steadyOnly`, LIGHTS.litMan), nobody's passing flash: a round's impact, a tracer's lamp, a stun charge, a blackout beacon sweeping past. THE ONE COPY
- *  of the gates: the estimate's two loops and the light model's sweep take the same lamps. */
+ *  of the gates: the estimate and the light model's sweep take the same lamps. */
 function lampAsked(g: Game, l: Lamp, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
   if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) return false;
   return !(steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l)));
 }
 /** a light question's lamps written to the module (collision.ts lamp), each as the question takes it: a fixture somebody flickers is its authored self
  *  to who asks what the PLACE lights. `P`: a lamp whose reach cannot hold that point is not sent (a lamp further off along one axis than its range is
- *  further off than its range: the sum's own first test would pass it by). False = the module cannot take them. */
+ *  further off than its range: the sum's own first test would pass it by). False = no question stands and the table is full: the sweep's (steadyLamps). */
 function writeLamps(g: Game, col: StaticCollision, P: Vec3 | null, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
   const lights = g.engine.lights.lights;
   for (let i = 0; i < lights.length; i++) {
@@ -2667,45 +2647,18 @@ const CARRIED = (): boolean => true;
 /** the level's own steady lamps, written for the light that comes round to be swept from (glow.rs): what the PLACE lights, less every lamp somebody
  *  carries (it moves faster than a sweep, and lights a man directly in the estimate). False = the module cannot take them: the field stands as it was. */
 export function steadyLamps(g: Game, col: StaticCollision): boolean { return writeLamps(g, col, null, CARRIED, true); }
-/** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
- *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
-function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
-  const col = g.col; if (!col.lampsBegin()) return false;
-  if (!writeLamps(g, col, P, skipOwner, steadyOnly)) { col.lampsFell(); return false; }
-  return col.lampsOn(P, acc, field && field.grid.fed ? field.grid.sim : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
-}
-/** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
-function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): void {
-  const lights = g.engine.lights.lights, smoky = field !== null && field.grid.fed;   // (a grid nothing was let out into dims nothing: not asked)
-  for (let i = 0; i < lights.length; i++) {
-    const l = lights[i]; if (!lampAsked(g, l, skipOwner, steadyOnly)) continue;
-    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos;   // (a fixture somebody flickers — an open fire, fire.ts — is its authored self, where the level hung it, to who asks what the PLACE lights)
-    const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
-    if (dist > l.range || dist < 1e-3) continue;
-    const Lx = dx / dist, Ly = dy / dist, Lz = dz / dist;
-    const lr = sp ? sp.radius : l.radius;   // (… and the size the level gave it)
-    let att = lightWindow(dist, l.range) / Math.max(dist2, lr * lr);
-    if (l.kind === 1) {
-      const cd = -(Lx * l.dir[0] + Ly * l.dir[1] + Lz * l.dir[2]); const cosOuter = Math.cos(l.outerDeg * DEG), cosInner = Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG);
-      if (cd < cosOuter) continue;
-      att *= smoothstep(cosOuter, cosInner, cd);
-    } else if (l.kind === 3) {
-      const ce = -(Lx * l.dir[0] + Ly * l.dir[1] + Lz * l.dir[2]);
-      if (ce <= 0) continue;
-      att *= ce;
-    }
-    if (att <= 0) continue;
-    const c = l.color, I = sp ? sp.intensity : l.intensity;
-    if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;                                    // (the probe's own floor for a light worth a shadow ray)
-    let lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
-    const tmax = dist - lr - 0.02;
-    if (tmax > 0.05) {
-      const end: Vec3 = [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax];
-      if (g.col.segmentBlocked(P, end)) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
-      if (smoky) lum *= field.along(g.col, P, end);   // (the smoke's shadow, SENSE.bounce: the game's own smoke along the very line the wall test took: the grid's cells, the blobs where the grid cannot answer)
-    }
-    for (let k = 0; k < 6; k++) { const N = METER_NORMALS[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += lum * cs; }
-  }
+/** THE MOST LAMPS THE SWEEP CAN COME TO TAKE of the game as it stands: every lamp nobody carries that is no flash, no passing light and no beacon's,
+ *  lit now or not (a breaker thrown back lights them all). Held to the module's table as a level loads (game/levelfit.ts, the row `steady`): the sweep
+ *  is one table, not parts, until it reads the lights' own rows. */
+export function steadyMost(g: Game): number { let n = 0; for (const l of g.engine.lights.lights) if (l.kind !== 2 && !l.owner && !(l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) n++; return n; }
+/** THE LAMPS' PART OF lightEstimateAt: the shadowed direct light of every lamp, onto the six faces in `acc`. The Rust module's (rust/sim/src/light.rs):
+ *  every lamp that passes the gates above and whose reach can hold the point is written, in the list's order, and the module sums them, in as many
+ *  parts as the lamps need (collision.ts lamp) and in that one order. A lamp there: the shader's own terms (1/max(d², r²), the range window, the spot
+ *  cone's smoothstep, the panel's emitter cosine, the probe's floor for a light worth a shadow ray), then one line to it — a wall, a partition, a desk,
+ *  a shut leaf between him and it: dark from that one — and the receiving cosine on each face. The smoke's shadow (`field`, SENSE.bounce) is the grid's
+ *  cells along that very line and, where the grid cannot answer, the field's own blobs (smoke.rs). A grid nothing was let out into dims nothing: not asked. */
+function lampsOn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): void {
+  const col = g.col; col.lampsBegin(P, field !== null && field.grid.fed ? field : null, SENSE.smoke); writeLamps(g, col, P, skipOwner, steadyOnly); col.lampsOn(acc);
 }
 /** The chest + head light-meter pair of one character (a held man's 'held', a unit's 'unit', a civilian's 'civ'): two probe queries under `${prefix}C${id}` /
  *  `${prefix}H${id}` with his own proxies skipped, asked chest then head through g.lightQuery and read back through g.lightAt (the hooks the harness swaps); the
@@ -2972,10 +2925,12 @@ export function resetGuards(g: Game) {
   for (const pl of men(g)) if (pl) { pl.dragging = null; pl.takedown = null; pl.holding = null; pl.char.anim.holdPose = null; }   // the old bodies / targets are gone — the man in his arm with them
   for (const gd of g.guards) if (gd.unit) releaseUnit(g, gd);
   endEngagement(g, 'reset');
-  g.guards = g.guards.filter(gd => !gd.unit).map(gd => new Guard(g.ch, gd.char.id, gd.route, gd.routeI, gd.flashlight, gd.char.tint));
+  const old = g.guards, fresh = old.filter(gd => !gd.unit).map(gd => ({ id: gd.char.id, route: gd.route, routeI: gd.routeI, fl: gd.flashlight, tint: gd.char.tint }));
+  for (const gd of old) manLeaves(gd.char, gd);   // (the old shift's rows are free before the new shift takes them)
+  g.guards = fresh.map(o => new Guard(g.men, g.ch, o.id, o.route, o.routeI, o.fl, o.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
   openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
-  g.breakerFixT = 0; eachSeat(g, v => { v.aimGuard = null; });
+  g.lightHome.in(LIGHT_IN.fix, null, 0); eachSeat(g, v => { v.aimGuard = null; });
   g.escalation = 0; g.escalationT = -1; g.alarm.episode = false; g.alarm.placed = false; g.alarm.apartT = 0;   // fresh men have no memory of an alarm: calm floor, torches out (the pairing / posts lived on the old Guard objects)
   g.clearing = null; g.clearedAt.clear();   // (so did the scripts of a pair that was clearing rooms, and their ledger of rooms done)
   const R = rollcallState(g); R.stage = 'idle'; R.nextAt = -1; R.caller = null; R.missing = null;   // and the net's radio check starts its clock again with them
@@ -3524,7 +3479,7 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard {
   const weapon: WeaponId = o.carbineRig ? 'aks74u' : o.weapon ?? (o.team === 'operative' ? 'fn2000' : o.team === 'hostile' ? 'aks74u' : 'guard9mm');
   const route: PatrolRoute = { name, points: [[o.pos[0], 0, o.pos[2]]], wait: [0], weapon, keys: [] };   // his one-point stand: nothing to walk, nothing on his belt
   const T = g.tune; const fl = g.engine.lights.add(torchLightDef(`unitlight${id}`, id, T.flashIntensity, T.flashInner, T.flashOuter));
-  const gd = new Guard(g.ch, id, route, -1, fl, o.tint ?? TEAM_TINT[o.team], { tint2: o.tint2 ?? TEAM_TINT2[o.team], yaw: o.yaw ?? 0, name, team: o.team });
+  const gd = new Guard(g.men, g.ch, id, route, -1, fl, o.tint ?? TEAM_TINT[o.team], { tint2: o.tint2 ?? TEAM_TINT2[o.team], yaw: o.yaw ?? 0, name, team: o.team });
   gd.unit = { name, spawnedAt: g.time, light: o.light !== false }; if (o.pair) gd.unit.pair = o.pair; gd.hold = true;
   gd.heardUpTo = g.eventSeq;   // (deaf to what was in the air before he existed; the ids run on from here)
   gd.char.update(0);           // a pose — bones — before anybody's sight test or the frame's capsule upload reads him
@@ -3553,6 +3508,7 @@ export function despawnUnit(g: Game, gd: Guard): boolean {
     if (o.leader === gd) o.leader = null;
     if (o.task?.kind === 'checkOn' && o.task.who === gd) o.task = null;
   }
+  manLeaves(gd.char, gd);
   return true;
 }
 export function despawnUnits(g: Game) { for (const gd of [...g.guards]) if (gd.unit) despawnUnit(g, gd); }

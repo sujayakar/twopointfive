@@ -22,6 +22,7 @@
 // showcase tour, the breach's daylight and the attract loop they are not on the floor at all. Authored as data (levels/office.json `civilians`, scene/level.ts
 // CivilianDef: her loop, the task and facing at each waypoint, her tints); the phones and the ways out are CIV_SPOTS below (TODO(LevelData), checked headless
 // like qrf.ts QRF_MARKS). Lines: dialogue.ts CIV_LINES. QA: tools/qa/civilians-probes.ts (`probes.ts civilians`), soak.ts --civilians on|off.
+import { manLeaves } from '../sim/men/store';
 import { men, viewFor } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
@@ -34,6 +35,7 @@ import { responseWords } from './qrf';
 import { CIV_LINES, CIV_COUNT, HOSTAGE_LINES, SNATCH_LINES, hashStr, roomName, isOffice } from './dialogue';
 import type { HostageMoment } from './dialogue';
 import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { civMost, levelTooBig } from './levelfit';
 import { goTo, followPath, notGettingAnywhere, eyeContact, sightGain, sightGainOn, escalationOf, raiseEscalation, say, pointInView, bodyPos, meterOf, glassHeard } from './guards';
 import { torchLightDef } from './rigProps';
 import { isDaylight } from './lighting';
@@ -180,12 +182,19 @@ export const CIV_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 function log(g: Game, gd: Guard, what: string) { const C = gd.civ!; C.log.push(`${g.time.toFixed(1)} ${what}`); if (C.log.length > 40) C.log.splice(0, 10); CIV_LOG.push({ t: g.time, who: C.name, what }); if (CIV_LOG.length > 200) CIV_LOG.splice(0, 50); CIV_DEBUG.log?.(`${g.time.toFixed(2)}s ${C.name}: ${what}`); }
 
 // ================================================================ standing them up / down
+/** A CIVILIAN COMES INTO A GAME HERE AND NOWHERE ELSE (the level's own as it is stood up, a rescue's hostages, the man a snatch is for). A game holds as
+ *  many as one step of the doors can be handed beside every other man it may hold (levelfit.ts civMost), and one more is a level too big for the game,
+ *  said by name as he would join: so "more men than a step is handed" stays arithmetic whoever adds a civilian, and when. */
+function join(g: Game, gd: Guard): Guard {
+  const most = civMost(); if (g.civilians.length >= most) throw new Error(levelTooBig(g.level, `more than ${most} civilians at once (its own, a rescue's hostages, the man a snatch is for), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)`));
+  g.civilians.push(gd); return gd;
+}
 /** Fresh civilians on their first marks (game.ts: at construction after the shift, and resetCivilians). Nothing with the switch off or none authored. */
 export function spawnCivilians(g: Game) {
   g.civilians = [];
   if (!g.tune.civilians || g.nightBreach?.active || g.rescue?.active) return;   // (the night breach playtest clears the floor of everybody but its cast — nightbreach.ts)
   const defs = g.level.civilians ?? [];
-  defs.forEach((def, i) => { g.civilians.push(makeCivilian(g, def, i)); CIV_STATS.spawned++; });
+  defs.forEach((def, i) => { join(g, makeCivilian(g, def, i)); CIV_STATS.spawned++; });
 }
 /** restartEncounter / resetGuards: whoever Sam has hold of or is hauling let go of, then fresh civilians (or none, the switch off since) */
 export function resetCivilians(g: Game) {
@@ -194,7 +203,7 @@ export function resetCivilians(g: Game) {
     if (pl.dragging?.civ) s.view.toggleDrag();
     if (pl.takedown?.g.civ) pl.takedown = null;
   }
-  for (const cv of g.civilians) forgetMeter(g, cv);
+  for (const cv of g.civilians) { forgetMeter(g, cv); manLeaves(cv.char, cv); }
   const F = floorOf(g); F.evacTold = false; F.greetAt = -1e9; F.pending.length = 0;   // (a word due from a man of the old shift is nobody's now)
   spawnCivilians(g);
 }
@@ -338,7 +347,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
   const fl = torchLightDef(`civlight${id}`, id, 0, 10, 20); fl.enabled = false; fl.intensity = 0;                            // a light record for the plumbing that reads one (the grab asks was it lit): never in the engine, never lit
   const p0 = route.points[0], p1 = route.points[1 % route.points.length];
   const yaw = def.face?.[0] ?? (route.points.length > 1 ? v3.yawTo(p0, p1) : 0);
-  const gd = withDice(hashStr(`civ:${def.name}:${i}`), () => new Guard(g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' }));
+  const gd = withDice(hashStr(`civ:${def.name}:${i}`), () => new Guard(g.men, g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' }));
   gd.foe = null; gd.drawn = false; gd.heardUpTo = g.eventSeq;   // (deaf to what was in the air before she existed)
   const worker = def.kind === 'worker';
   gd.civ = {
@@ -361,7 +370,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
  *  is (toAlarmed's own rule for a civilian who was told). On Game.civilians like the cleaner, so the rounds, the pose and the body are the civilians' own. */
 export function spawnHostage(g: Game, def: { name: string; kind: CivilianDef['kind']; tint: Vec3; tint2?: Vec3; pos: Vec3; face: number }): Guard {
   const gd = makeCivilian(g, { name: def.name, kind: def.kind, tint: def.tint, tint2: def.tint2, points: [v3.copy(def.pos)], wait: [0], face: [def.face] }, g.civilians.length);
-  g.civilians.push(gd);
+  join(g, gd);
   toCower(g, gd, true); gd.civ!.complyUntil = Infinity; gd.civ!.cause = 'gun'; gd.civ!.armed = true;
   if (WORDS.on) gd.civ!.label = 'hostage';   // (what a row or a message calls her: no cleaner, no late worker — the dialogue pass)
   return gd;
@@ -371,7 +380,7 @@ export function spawnHostage(g: Game, def: { name: string; kind: CivilianDef['ki
 export function spawnTarget(g: Game, def: { name: string; pos: Vec3; face: number; tint: Vec3; tint2?: Vec3; points?: Vec3[]; wait?: number[] }): Guard {
   const pts = def.points?.length ? def.points : [def.pos];
   const gd = makeCivilian(g, { name: def.name, kind: 'worker', tint: def.tint, tint2: def.tint2, points: pts.map(p => v3.copy(p)), wait: pts.map((_, i) => def.wait?.[i] ?? 30), face: pts.map(() => def.face) }, g.civilians.length);
-  g.civilians.push(gd);
+  join(g, gd);
   gd.civ!.label = 'man you came for';   // (no article: its readers write 'the ' in front of the label)
   return gd;
 }

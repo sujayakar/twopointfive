@@ -825,7 +825,8 @@ pub const RAY_HOST: i32 = -2;
 pub const RAY_LEAF: i32 = 1_000_000;
 
 /// collision.ts raycast: the nearest thing the ray from a along the unit r meets within tmax — the leaves of list `set` first (−1: none), then the statics of
-/// the cells round the ray, walked in half-metre steps. → RAY_NONE · RAY_HOST · the
+/// the cells round the ray, walked in half-metre steps UNTIL THE RAY HAS LEFT THE LEVEL FOR GOOD (so no length is too long: a ray of a thousand
+/// kilometres is walked as far as the level reaches and no farther; one straight up or down is one sample). → RAY_NONE · RAY_HOST (a ray that is no number: there is no answer to give) · the
 /// static's index, or RAY_LEAF + the leaf's; and into `out` how far along, then the face's normal. `ask` = the game has a rule for an open pane: a pane
 /// met where it is open is passed, and the ray flies on to what stands beyond.
 #[allow(clippy::too_many_arguments)]
@@ -866,7 +867,13 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
         }
         let (x, z) = (floor((a0 + r0 * t) / cs), floor((a2 + r2 * t) / cs));
         if x != x || z != z {
-            return RAY_HOST; // (a ray that is not a number: the host's walk fails on it loudly, and goes on doing so)
+            return RAY_HOST; // (a ray that is not a number — or of no finite length, whose samples are none: the caller's mistake, which the host says by name)
+        }
+        // (the cells round this sample lie off the grid on the side the ray is going, or it does not go that way at all: so does every later sample's,
+        //  a sample's cell moving one way only along a ray. Nothing more can be met. Or it goes nowhere in plan: every later sample's cells are the
+        //  first's, whose statics have each been asked the whole ray.)
+        if (r0 >= 0.0 && x - 1.0 >= gw) || (r0 <= 0.0 && x + 1.0 < 0.0) || (r2 >= 0.0 && z - 1.0 >= gh) || (r2 <= 0.0 && z + 1.0 < 0.0) || (i > 0.0 && r0 == 0.0 && r2 == 0.0) {
+            break;
         }
         let mut dz = -1.0;
         while dz <= 1.0 {
@@ -915,13 +922,14 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
     bi
 }
 
-/// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it, with what only the
-/// host can answer said as RAY_HOST — a ray of no length or of no number (collision.ts walks those itself). `set`, `but` and `ask` as ray_but takes
-/// them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the leaf's; `out` as ray writes it.
+/// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it. A RAY OF NO LENGTH
+/// MEETS NOTHING, as collision.ts raycast says it once for both walks; one that is no number has no answer (RAY_HOST: the rule writes nothing and says
+/// so, and the host names the mistake). `set`, `but` and `ask` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the
+/// leaf's; `out` as ray writes it.
 #[allow(clippy::too_many_arguments)]
 pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
-    if !(tmax > 0.0 && tmax < 1e6) {
-        return RAY_HOST;
+    if !(tmax > 0.0) {
+        return RAY_NONE;
     }
     ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, ask, out)
 }

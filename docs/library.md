@@ -2,7 +2,7 @@
 
 WRITTEN BY `bun run tools/levels/library.ts --write` FROM THE KITS. Do not edit: change the kit, then write it again (`--check` is red when this page is stale).
 
-182 pieces in 6 kits, 115 named paints in 6 tables.
+186 pieces in 6 kits, 115 named paints in 6 tables.
 A piece is something a level asks a kit for by name. Each row is one call laid alone: the call a showroom makes.
 
 - **To a man**, read off the boxes as laid: *solid to h* = feet, sight, rounds and sound meet it, up to h metres; *off the floor* = solid, but nothing of it comes
@@ -20,7 +20,7 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 | Kit | File | Pieces | Its sections |
 |---|---|---|---|
 | gwotKit | `src/scene/gwotKit.ts` | 79 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
-| officeKit | `src/scene/officeGen.ts` | 19 | glass · walls · props · loose props · set dressing helpers · lights · doors |
+| officeKit | `src/scene/officeGen.ts` | 23 | glass · walls · props · loose props · set dressing helpers · lights · doors · what is fixed to a wall's face |
 | livedKit | `tools/levels/livedKit.ts` | 18 | the floor · furniture · clutter · loose things |
 | livedPieces | `tools/levels/livedPieces.ts` | 37 | carcasses · paper, plans, books · instruments and tools · safes · on a wall · on a desk · on the floor · loose |
 | livedQuiet | `tools/levels/lived-quiet.ts` | 11 |  |
@@ -139,9 +139,9 @@ It is no second way of building the name.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **drum**(x, z, colour = 'drumBlue', yaw = 0) | COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid | solid to 0.88 | 0.56 × 0.56 × 0.88 | 4 solid, 1 round, 16 markings | drumRed | library-hall |
+| **drum**(x, z, colour = 'drumBlue', yaw = 0) | COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid. Steel in any paint (`steelIn`) | solid to 0.88 | 0.56 × 0.56 × 0.88 | 4 solid, 1 round, 16 markings | drumRed | library-hall |
 | **drums**(x, z, n = 3, yaw = 0) | a group of drums: n standing in a tight cluster from (x, z), colours dealt by position | solid to 0.88 | 1.54 × 1.18 × 0.88 | 16 solid, 4 round, 64 markings | rust, drumBlue, olive | gwot-yard |
-| **drumDown**(x, z, yaw = 0, colour = 'rust') | COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked | solid to 0.58 | 0.89 × 0.64 × 0.58 | 4 solid, 1 marking | rust, woodGrey | gwot-yard |
+| **drumDown**(x, z, yaw = 0, colour = 'rust') | COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked, 0.88 long along local X. Steel in any paint (`steelIn`). Hands back its top, so a level lays snow or dust along it with `lay` | solid to 0.58 | 0.88 × 0.64 × 0.58 | 3 solid | woodGrey, rust | gwot-yard |
 | **jerryCan**(x, z, yaw = 0, colour = 'olive') | PROP (bin): a JERRY CAN, 20 l — olive steel, or the yellow / blue plastic ones that carry everything | loose | 0.34 × 0.16 × 0.45 | 1 loose (3 parts), 2 markings | olive, GWOT_PALETTE.iron | gwot-yard |
 | **gasBottle**(x, z, colour = 'drumRed') | PROP (bin): a GAS BOTTLE (LPG), 0.3 across with its collar | loose | 0.4 × 0.4 × 0.62 | 1 loose (3 parts) | drumRed, GWOT_PALETTE.iron | gwot-yard |
 | **crates**(x, z, yaw = 0, n = 2, colour = 'olive') | COVER: wooden AMMUNITION CRATES, 0.9 × 0.4 × 0.3 each, n stacked (1 = shin, 3 = a waist-high rest): olive, battens across the lid, a stencil block | solid to 0.9 | 0.94 × 0.47 × 0.9 | 3 solid, 12 markings | olive | gwot-yard |
@@ -244,6 +244,15 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **doorFrame**(d) | the frame round one doorway that gets a leaf: jambs + head slightly proud of the wall, and the frame's stops (the comment at the office's door list says why) | solid to 2.05 | 0.98 × 0.26 × 2.12 | 5 solid | (0.2, 0.21, 0.23) | gwot-yard, library-hall |
+
+### officeKit: what is fixed to a wall's face
+
+| Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
+|---|---|---|---|---|---|---|
+| **band**(axis, line, a, b, side, y0, y1, paint, t = 0.24, proud = 0.008, solid = false) | DECAL: a BAND on a wall's face from a to b, y0‥y1: a painted dado or plinth (hand it the WALL'S OWN stuff in the new colour, `saidAs`: the wall's joints run on under the colour's edge), a plate, a door's skin. 8 mm proud, the other kit's dado's: under a door frame's 12, so a band laid door to door ends beneath the jambs. Returns its box, for what is painted on it | drawn only | 2.3 × 0.01 × 1 | 1 drawn | partBlue | library-hall |
+| **vent**(axis, line, a, b, side, y0, y1, paint, t = 0.24, proud = 0.02, solid = false) | DECAL: a VENT on a wall's face from a to b, y0‥y1: a louvred panel two fingers proud (hand it a paint that says `louvre`) | drawn only | 0.6 × 0.02 × 0.4 | 1 drawn | (0.5, 0.51, 0.52) | library-hall |
+| **conduit**(axis, line, a, b, side, y, paint, clip, drop, t = 0.24, solid = false) | DECAL: a run of CONDUIT on a wall's face from a to b at height y, a clip (`clip`: its paint) every metre and a half; `drop` = a branch down to that height at b, into a box that hangs under it (the box stands 11 cm past b). The run, its clips and its branch are always drawn only; `solid` = the box stands | drawn only | 4.61 × 0.09 × 0.75 | 6 drawn | metal, (0.7, 0.71, 0.72) | library-hall |
+| **pipe**(x, z, y0, y1, r, paint, rings = [], solid = false) | a PIPE standing at (x, z) from y0 to y1, radius r: four slabs turned an eighth each. SOLID, the game stands it up as one round (scene/round.ts); drawn only, it stays the eight-sided post the four slabs make (the round rule takes plain boxes). `rings` = what is round it, each [y0, y1, r]: a flange at its foot, a collar half way | drawn only | 0.23 × 0.23 × 3 | 12 drawn | (0.7, 0.71, 0.72) | library-hall |
 
 ## livedKit
 
@@ -428,159 +437,159 @@ It is no second way of building the name.
 
 ## Paints
 
-Every colour with a name, by table. *Stands for* is what the simulation reads the paint as (a round, a charge and a blast go by it); *underfoot* is its footstep surface.
+Every colour with a name, by table. *Does* is what a box of the paint is to a round, a charge and a blast unless the box says its own word: a row of the table of materials (`src/scene/materials.ts`); *underfoot* is its footstep surface.
 Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid above.
 
 ### GWOT_PALETTE
 
 `src/scene/gwotPalette.ts`: the look's own paints: the only table the look draws as materials.
 
-| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |
+| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
 | mud | 0.42, 0.32, 0.21 | rough 0.97 | concrete |  | 11 |
 | mudDark | 0.29, 0.22, 0.15 | rough 0.97 | concrete |  | 5 |
-| mudLight | 0.56, 0.46, 0.33 | rough 0.95 | wall |  | 8 |
+| mudLight | 0.56, 0.46, 0.33 | rough 0.95 | plasterboard |  | 8 |
 | render | 0.57, 0.53, 0.45 | rough 0.9 | concrete |  | 1 |
-| whitewash | 0.72, 0.69, 0.61 | rough 0.88 | wall |  | 8 |
+| whitewash | 0.72, 0.69, 0.61 | rough 0.88 | plasterboard |  | 8 |
 | block | 0.4, 0.39, 0.37 | rough 0.92 | concrete |  | 8 |
 | tWall | 0.46, 0.45, 0.43 | rough 0.9 | concrete |  | 2 |
-| paintBlue | 0.06, 0.19, 0.32 | rough 0.6 | metal |  | 3 |
-| paintGreen | 0.08, 0.24, 0.16 | rough 0.6 | metal |  | 5 |
-| paintRust | 0.3, 0.075, 0.04 | rough 0.65 | metal |  | 1 |
-| paintCream | 0.66, 0.6, 0.44 | rough 0.7 | wall |  | 0 |
-| dust | 0.205, 0.145, 0.085 | rough 1 | asphalt | asphalt | 2 |
-| dirt | 0.135, 0.09, 0.05 | rough 1 | asphalt | asphalt | 5 |
-| gravel | 0.15, 0.135, 0.115 | rough 1 | asphalt | asphalt | 1 |
+| paintBlue | 0.06, 0.19, 0.32 | rough 0.6 | steel |  | 3 |
+| paintGreen | 0.08, 0.24, 0.16 | rough 0.6 | steel |  | 5 |
+| paintRust | 0.3, 0.075, 0.04 | rough 0.65 | steel |  | 1 |
+| paintCream | 0.66, 0.6, 0.44 | rough 0.7 | plasterboard |  | 0 |
+| dust | 0.205, 0.145, 0.085 | rough 1 | tarmac | asphalt | 2 |
+| dirt | 0.135, 0.09, 0.05 | rough 1 | tarmac | asphalt | 5 |
+| gravel | 0.15, 0.135, 0.115 | rough 1 | tarmac | asphalt | 1 |
 | mudFloor | 0.17, 0.115, 0.07 | rough 0.97 | stone | stone | 0 |
 | slab | 0.3, 0.285, 0.26 | rough 0.9 | concrete | stone | 0 |
-| damp | 0.075, 0.052, 0.034 | rough 0.7 | asphalt |  | 2 |
-| oil | 0.11, 0.095, 0.08 | rough 0.35 | asphalt |  | 1 |
-| rugRed | 0.3, 0.052, 0.04 | rough 0.95 | carpetRed | carpet | 3 |
-| rugNavy | 0.04, 0.06, 0.15 | rough 0.95 | carpetBlue | carpet | 1 |
+| damp | 0.075, 0.052, 0.034 | rough 0.7 | tarmac |  | 2 |
+| oil | 0.11, 0.095, 0.08 | rough 0.35 | tarmac |  | 1 |
+| rugRed | 0.3, 0.052, 0.04 | rough 0.95 | carpet | carpet | 3 |
+| rugNavy | 0.04, 0.06, 0.15 | rough 0.95 | dark carpet | carpet | 1 |
 | rugCream | 0.6, 0.52, 0.38 | rough 0.95 | carpet | carpet | 2 |
 | rugOchre | 0.5, 0.33, 0.1 | rough 0.95 | carpet |  | 0 |
 | rugGreen | 0.09, 0.22, 0.13 | rough 0.95 | carpet |  | 0 |
-| canvas | 0.33, 0.31, 0.2 | rough 0.95 | chair |  | 4 |
-| blanketGrey | 0.3, 0.3, 0.31 | rough 0.95 | chair |  | 3 |
-| blanketBrown | 0.27, 0.18, 0.12 | rough 0.95 | chair |  | 1 |
-| tarpBlue | 0.05, 0.17, 0.48 | rough 0.95 | chair |  | 1 |
-| sack | 0.62, 0.58, 0.48 | rough 0.95 | chair |  | 4 |
+| canvas | 0.33, 0.31, 0.2 | rough 0.95 | fabric |  | 4 |
+| blanketGrey | 0.3, 0.3, 0.31 | rough 0.95 | fabric |  | 3 |
+| blanketBrown | 0.27, 0.18, 0.12 | rough 0.95 | fabric |  | 1 |
+| tarpBlue | 0.05, 0.17, 0.48 | rough 0.95 | fabric |  | 1 |
+| sack | 0.62, 0.58, 0.48 | rough 0.95 | fabric |  | 4 |
 | sandbag | 0.45, 0.39, 0.27 | rough 0.95 | concrete |  | 1 |
 | hesco | 0.47, 0.44, 0.36 | rough 0.95 | concrete |  | 1 |
-| olive | 0.15, 0.17, 0.09 | rough 0.75 | woodDark |  | 7 |
-| coyote | 0.4, 0.31, 0.2 | rough 0.85 | chair |  | 2 |
-| stencil | 0.62, 0.5, 0.1 | rough 0.7 | metal |  | 0 |
-| rust | 0.28, 0.12, 0.06 | rough 0.85 | metal |  | 7 |
-| iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | metal |  | 16 |
-| galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | metal |  | 11 |
-| tin | 0.56, 0.55, 0.52 | rough 0.42, bare metal | metal |  | 9 |
-| drumBlue | 0.06, 0.15, 0.33 | rough 0.5 | metal |  | 3 |
-| drumRed | 0.4, 0.07, 0.05 | rough 0.5 | metal |  | 2 |
-| genYellow | 0.6, 0.42, 0.04 | rough 0.5 | metal |  | 2 |
-| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | ~plastic |  | 7 |
-| plasticGreen | 0.08, 0.28, 0.14 | rough 0.45 | ~plastic |  | 1 |
-| plasticBlue | 0.03, 0.12, 0.36 | rough 0.45 | ~plastic |  | 5 |
-| plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | ~plastic |  | 10 |
-| jerryYellow | 0.62, 0.46, 0.05 | rough 0.45 | ~plastic |  | 0 |
-| rubber | 0.03, 0.03, 0.033 | rough 0.85 | ~plastic |  | 13 |
+| olive | 0.15, 0.17, 0.09 | rough 0.75 | wood |  | 7 |
+| coyote | 0.4, 0.31, 0.2 | rough 0.85 | fabric |  | 2 |
+| stencil | 0.62, 0.5, 0.1 | rough 0.7 | steel |  | 0 |
+| rust | 0.28, 0.12, 0.06 | rough 0.85 | steel |  | 7 |
+| iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | steel |  | 16 |
+| galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | steel |  | 11 |
+| tin | 0.56, 0.55, 0.52 | rough 0.42, bare metal | steel |  | 9 |
+| drumBlue | 0.06, 0.15, 0.33 | rough 0.5 | steel |  | 3 |
+| drumRed | 0.4, 0.07, 0.05 | rough 0.5 | steel |  | 2 |
+| genYellow | 0.6, 0.42, 0.04 | rough 0.5 | steel |  | 2 |
+| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | grey plastic |  | 7 |
+| plasticGreen | 0.08, 0.28, 0.14 | rough 0.45 | plastic |  | 1 |
+| plasticBlue | 0.03, 0.12, 0.36 | rough 0.45 | plastic |  | 5 |
+| plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | dark plastic |  | 10 |
+| jerryYellow | 0.62, 0.46, 0.05 | rough 0.45 | plastic |  | 0 |
+| rubber | 0.03, 0.03, 0.033 | rough 0.85 | dark plastic |  | 13 |
 | poplar | 0.47, 0.36, 0.22 | rough 0.8 | wood |  | 15 |
 | woodGrey | 0.33, 0.29, 0.23 | rough 0.85 | wood |  | 24 |
 | ply | 0.55, 0.43, 0.27 | rough 0.75 | wood |  | 4 |
-| truckWhite | 0.68, 0.68, 0.65 | rough 0.35 | metal |  | 2 |
-| truckTan | 0.5, 0.42, 0.29 | rough 0.4 | metal |  | 0 |
-| truckRed | 0.42, 0.06, 0.05 | rough 0.35 | metal |  | 5 |
-| glassDark | 0.05, 0.06, 0.08 | rough 0.1 | ~glass |  | 3 |
+| truckWhite | 0.68, 0.68, 0.65 | rough 0.35 | steel |  | 2 |
+| truckTan | 0.5, 0.42, 0.29 | rough 0.4 | steel |  | 0 |
+| truckRed | 0.42, 0.06, 0.05 | rough 0.35 | steel |  | 5 |
+| glassDark | 0.05, 0.06, 0.08 | rough 0.1 | dark glass |  | 3 |
 | prodOrange | 0.7, 0.3, 0.04 | rough 0.95 | plant |  | 0 |
 | prodGreen | 0.22, 0.4, 0.1 | rough 0.95 | plant |  | 2 |
 | prodRed | 0.5, 0.07, 0.05 | rough 0.95 | plant |  | 0 |
 | prodYellow | 0.7, 0.55, 0.1 | rough 0.95 | plant |  | 1 |
 | straw | 0.51, 0.43, 0.22 | rough 0.95 | plant |  | 2 |
 | scrub | 0.24, 0.26, 0.13 | rough 0.95 | plant |  | 1 |
-| rugMadder | 0.1, 0.03, 0.035 | rough 0.95 | carpetRed | carpet | 1 |
+| rugMadder | 0.1, 0.03, 0.035 | rough 0.95 | dark carpet | carpet | 1 |
 
 ### SNOW_PALETTE
 
 `src/scene/gwotPalette.ts`: lying snow as paint, for a level built in winter.
 
-| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |
+| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
-| snow | 0.66, 0.71, 0.78 |  | asphalt |  | 0 |
-| snowPacked | 0.43, 0.47, 0.53 |  | asphalt |  | 0 |
-| snowOld | 0.27, 0.3, 0.34 |  | asphalt |  | 0 |
+| snow | 0.66, 0.71, 0.78 |  | snow |  | 0 |
+| snowPacked | 0.43, 0.47, 0.53 |  | packed snow |  | 0 |
+| snowOld | 0.27, 0.3, 0.34 |  | old snow |  | 0 |
 
 ### OFFICE_PALETTE
 
-`src/scene/officeGen.ts`: the office's paints: the names the simulation reads a box's stuff by.
+`src/scene/officeGen.ts`: the office's paints.
 
-| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |
+| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
-| carpet | 0.13, 0.14, 0.17 |  |  |  | 0 |
-| carpetBlue | 0.09, 0.11, 0.2 |  |  |  | 1 |
-| carpetRed | 0.22, 0.07, 0.07 |  |  |  | 0 |
-| lino | 0.33, 0.33, 0.31 |  |  |  | 0 |
-| stone | 0.38, 0.37, 0.35 |  |  |  | 0 |
-| asphalt | 0.09, 0.09, 0.1 |  |  |  | 4 |
-| grass | 0.1, 0.16, 0.08 |  |  |  | 0 |
-| wall | 0.66, 0.64, 0.6 |  |  |  | 0 |
-| wallDark | 0.36, 0.38, 0.4 |  |  |  | 0 |
-| concrete | 0.42, 0.41, 0.4 |  |  |  | 2 |
-| ceiling | 0.72, 0.72, 0.7 |  |  |  | 0 |
-| partRed | 0.5, 0.13, 0.1 |  |  |  | 0 |
-| partBlue | 0.13, 0.17, 0.42 |  |  |  | 1 |
-| partTan | 0.55, 0.47, 0.35 |  |  |  | 0 |
-| wood | 0.52, 0.4, 0.27 |  |  |  | 12 |
-| woodDark | 0.25, 0.18, 0.12 |  |  |  | 15 |
-| metal | 0.3, 0.31, 0.33 |  |  |  | 14 |
-| black | 0.04, 0.04, 0.045 |  |  |  | 7 |
-| chair | 0.14, 0.2, 0.45 |  |  |  | 2 |
-| cardboard | 0.58, 0.44, 0.26 |  |  |  | 3 |
-| white | 0.8, 0.8, 0.78 |  |  |  | 10 |
-| plant | 0.12, 0.3, 0.1 |  |  |  | 1 |
-| glassFrame | 0.2, 0.22, 0.25 |  |  |  | 0 |
-| screenOff | 0.02, 0.02, 0.025 |  |  |  | 1 |
-| red | 0.55, 0.08, 0.06 |  |  |  | 4 |
-| glass | 0.8, 0.87, 0.83 |  |  |  | 0 |
-| glassExt | 0.7, 0.75, 0.79 |  |  |  | 2 |
+| carpet | 0.13, 0.14, 0.17 |  | carpet |  | 0 |
+| carpetBlue | 0.09, 0.11, 0.2 |  | carpet |  | 1 |
+| carpetRed | 0.22, 0.07, 0.07 |  | carpet |  | 0 |
+| lino | 0.33, 0.33, 0.31 |  | lino |  | 0 |
+| stone | 0.38, 0.37, 0.35 |  | stone |  | 0 |
+| asphalt | 0.09, 0.09, 0.1 |  | tarmac |  | 4 |
+| grass | 0.1, 0.16, 0.08 |  | grass |  | 0 |
+| wall | 0.66, 0.64, 0.6 |  | plasterboard |  | 0 |
+| wallDark | 0.36, 0.38, 0.4 |  | concrete |  | 0 |
+| concrete | 0.42, 0.41, 0.4 |  | concrete |  | 2 |
+| ceiling | 0.72, 0.72, 0.7 |  | ceiling |  | 0 |
+| partRed | 0.5, 0.13, 0.1 |  | partition |  | 0 |
+| partBlue | 0.13, 0.17, 0.42 |  | partition |  | 2 |
+| partTan | 0.55, 0.47, 0.35 |  | partition |  | 0 |
+| wood | 0.52, 0.4, 0.27 |  | wood |  | 12 |
+| woodDark | 0.25, 0.18, 0.12 |  | wood |  | 15 |
+| metal | 0.3, 0.31, 0.33 |  | steel |  | 15 |
+| black | 0.04, 0.04, 0.045 |  | casing |  | 7 |
+| chair | 0.14, 0.2, 0.45 |  | fabric |  | 2 |
+| cardboard | 0.58, 0.44, 0.26 |  | card |  | 3 |
+| white | 0.8, 0.8, 0.78 |  | laminate |  | 10 |
+| plant | 0.12, 0.3, 0.1 |  | plant |  | 1 |
+| glassFrame | 0.2, 0.22, 0.25 |  | frame |  | 0 |
+| screenOff | 0.02, 0.02, 0.025 |  | screen |  | 1 |
+| red | 0.55, 0.08, 0.06 |  | enamel |  | 4 |
+| glass | 0.8, 0.87, 0.83 |  | pane |  | 0 |
+| glassExt | 0.7, 0.75, 0.79 |  | pane |  | 2 |
 
 ### KIT_PALETTE
 
 `src/scene/levelKit.ts`: the map kit's copy of the office's paints.
 
-| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |
+| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
-| carpet | 0.13, 0.14, 0.17 |  |  |  | the same colour as OFFICE_PALETTE.carpet |
-| carpetBlue | 0.09, 0.11, 0.2 |  |  |  | the same colour as OFFICE_PALETTE.carpetBlue |
-| carpetRed | 0.22, 0.07, 0.07 |  |  |  | the same colour as OFFICE_PALETTE.carpetRed |
-| lino | 0.33, 0.33, 0.31 |  |  |  | the same colour as OFFICE_PALETTE.lino |
-| stone | 0.38, 0.37, 0.35 |  |  |  | the same colour as OFFICE_PALETTE.stone |
-| asphalt | 0.09, 0.09, 0.1 |  |  |  | the same colour as OFFICE_PALETTE.asphalt |
-| grass | 0.1, 0.16, 0.08 |  |  |  | the same colour as OFFICE_PALETTE.grass |
-| wall | 0.66, 0.64, 0.6 |  |  |  | the same colour as OFFICE_PALETTE.wall |
-| wallDark | 0.36, 0.38, 0.4 |  |  |  | the same colour as OFFICE_PALETTE.wallDark |
-| concrete | 0.42, 0.41, 0.4 |  |  |  | the same colour as OFFICE_PALETTE.concrete |
-| ceiling | 0.72, 0.72, 0.7 |  |  |  | the same colour as OFFICE_PALETTE.ceiling |
-| partRed | 0.5, 0.13, 0.1 |  |  |  | the same colour as OFFICE_PALETTE.partRed |
-| partBlue | 0.13, 0.17, 0.42 |  |  |  | the same colour as OFFICE_PALETTE.partBlue |
-| partTan | 0.55, 0.47, 0.35 |  |  |  | the same colour as OFFICE_PALETTE.partTan |
-| wood | 0.52, 0.4, 0.27 |  |  |  | the same colour as OFFICE_PALETTE.wood |
-| woodDark | 0.25, 0.18, 0.12 |  |  |  | the same colour as OFFICE_PALETTE.woodDark |
-| metal | 0.3, 0.31, 0.33 |  |  |  | the same colour as OFFICE_PALETTE.metal |
-| black | 0.04, 0.04, 0.045 |  |  |  | the same colour as OFFICE_PALETTE.black |
-| chair | 0.14, 0.2, 0.45 |  |  |  | the same colour as OFFICE_PALETTE.chair |
-| cardboard | 0.58, 0.44, 0.26 |  |  |  | the same colour as OFFICE_PALETTE.cardboard |
-| white | 0.8, 0.8, 0.78 |  |  |  | the same colour as OFFICE_PALETTE.white |
-| plant | 0.12, 0.3, 0.1 |  |  |  | the same colour as OFFICE_PALETTE.plant |
-| glassFrame | 0.2, 0.22, 0.25 |  |  |  | the same colour as OFFICE_PALETTE.glassFrame |
-| screenOff | 0.02, 0.02, 0.025 |  |  |  | the same colour as OFFICE_PALETTE.screenOff |
-| red | 0.55, 0.08, 0.06 |  |  |  | the same colour as OFFICE_PALETTE.red |
-| glass | 0.8, 0.87, 0.83 |  |  |  | the same colour as OFFICE_PALETTE.glass |
-| glassExt | 0.7, 0.75, 0.79 |  |  |  | the same colour as OFFICE_PALETTE.glassExt |
+| carpet | 0.13, 0.14, 0.17 |  | carpet |  | the same colour as OFFICE_PALETTE.carpet |
+| carpetBlue | 0.09, 0.11, 0.2 |  | carpet |  | the same colour as OFFICE_PALETTE.carpetBlue |
+| carpetRed | 0.22, 0.07, 0.07 |  | carpet |  | the same colour as OFFICE_PALETTE.carpetRed |
+| lino | 0.33, 0.33, 0.31 |  | lino |  | the same colour as OFFICE_PALETTE.lino |
+| stone | 0.38, 0.37, 0.35 |  | stone |  | the same colour as OFFICE_PALETTE.stone |
+| asphalt | 0.09, 0.09, 0.1 |  | tarmac |  | the same colour as OFFICE_PALETTE.asphalt |
+| grass | 0.1, 0.16, 0.08 |  | grass |  | the same colour as OFFICE_PALETTE.grass |
+| wall | 0.66, 0.64, 0.6 |  | plasterboard |  | the same colour as OFFICE_PALETTE.wall |
+| wallDark | 0.36, 0.38, 0.4 |  | concrete |  | the same colour as OFFICE_PALETTE.wallDark |
+| concrete | 0.42, 0.41, 0.4 |  | concrete |  | the same colour as OFFICE_PALETTE.concrete |
+| ceiling | 0.72, 0.72, 0.7 |  | ceiling |  | the same colour as OFFICE_PALETTE.ceiling |
+| partRed | 0.5, 0.13, 0.1 |  | partition |  | the same colour as OFFICE_PALETTE.partRed |
+| partBlue | 0.13, 0.17, 0.42 |  | partition |  | the same colour as OFFICE_PALETTE.partBlue |
+| partTan | 0.55, 0.47, 0.35 |  | partition |  | the same colour as OFFICE_PALETTE.partTan |
+| wood | 0.52, 0.4, 0.27 |  | wood |  | the same colour as OFFICE_PALETTE.wood |
+| woodDark | 0.25, 0.18, 0.12 |  | wood |  | the same colour as OFFICE_PALETTE.woodDark |
+| metal | 0.3, 0.31, 0.33 |  | steel |  | the same colour as OFFICE_PALETTE.metal |
+| black | 0.04, 0.04, 0.045 |  | casing |  | the same colour as OFFICE_PALETTE.black |
+| chair | 0.14, 0.2, 0.45 |  | fabric |  | the same colour as OFFICE_PALETTE.chair |
+| cardboard | 0.58, 0.44, 0.26 |  | card |  | the same colour as OFFICE_PALETTE.cardboard |
+| white | 0.8, 0.8, 0.78 |  | laminate |  | the same colour as OFFICE_PALETTE.white |
+| plant | 0.12, 0.3, 0.1 |  | plant |  | the same colour as OFFICE_PALETTE.plant |
+| glassFrame | 0.2, 0.22, 0.25 |  | frame |  | the same colour as OFFICE_PALETTE.glassFrame |
+| screenOff | 0.02, 0.02, 0.025 |  | screen |  | the same colour as OFFICE_PALETTE.screenOff |
+| red | 0.55, 0.08, 0.06 |  | enamel |  | the same colour as OFFICE_PALETTE.red |
+| glass | 0.8, 0.87, 0.83 |  | pane |  | the same colour as OFFICE_PALETTE.glass |
+| glassExt | 0.7, 0.75, 0.79 |  | pane |  | the same colour as OFFICE_PALETTE.glassExt |
 
 ### LIVED_PAINT
 
 `tools/levels/livedKit.ts`: colours of the older levels' lived things that the office has no name for.
 
-| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |
+| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
 | oliveDrab | 0.24, 0.235, 0.14 |  |  |  | 1 |
 | oxide | 0.42, 0.15, 0.1 |  |  |  | 2 |
@@ -596,7 +605,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 
 `tools/levels/livedPieces.ts`: accents of the older levels' furniture.
 
-| Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |
+| Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
 | cream | 0.86, 0.84, 0.76 |  |  |  | 6 |
 | paper | 0.9, 0.89, 0.84 |  |  |  | 6 |
@@ -633,6 +642,7 @@ A colour a kit writes by hand, in no table. The look can give such a box no mate
 
 | Colour (linear) | Pieces |
 |---|---|
+| (0.7, 0.71, 0.72) | officeKit.conduit, officeKit.pipe |
 | (0.9, 0.88, 0.8) | officeKit.papers, livedKit.papers |
 | (0.07, 0.08, 0.1) | officeKit.car |
 | (0.08, 0.08, 0.09) | officeKit.monitor |
@@ -642,6 +652,7 @@ A colour a kit writes by hand, in no table. The look can give such a box no mate
 | (0.2, 0.21, 0.23) | officeKit.doorFrame |
 | (0.3, 0.02, 0.02) | officeKit.car |
 | (0.36, 0.3, 0.26) | officeKit.plant |
+| (0.5, 0.51, 0.52) | officeKit.vent |
 | (0.58, 0.58, 0.56) | officeKit.cabinet |
 | (0.594, 0.54, 0.41) | livedPieces.sack |
 | (0.8, 0.8, 0.75) | officeKit.car |

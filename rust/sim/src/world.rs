@@ -15,9 +15,14 @@ pub const WORLDS: usize = 4;
 pub const ASK_HOST: u32 = 0xffff_ffff;
 /// statics a world can hold
 pub const MAX_BOXES: usize = 8192;
+/// what snow a static is (the table `snow`; snowBog.ts SNOW_KIND)
+pub const SNOW_BARE: u8 = 1;
+pub const SNOW_PACKED: u8 = 2;
+pub const SNOW_OLD: u8 = 3;
+pub const SNOW_BANK: u8 = 4;
 /// loose boxes in one list of them, and how many lists are kept: the game's own leaves, the leaves a question swaps in for itself, and THE FURNITURE'S
 /// PARTS (list THING_SET: every part box of every thing in the level, the things in the order of the furniture's own list, a thing's parts together)
-pub const MAX_LEAVES: usize = 256;
+pub const MAX_LEAVES: usize = 512;
 pub const LEAF_SETS: usize = 3;
 pub const THING_SET: usize = 2;
 /// things of furniture a world can hold (props.rs CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
@@ -119,6 +124,9 @@ pub struct World {
     pub view_bi: [u32; MAX_VIEW],
     pub view_n: u32,
     pub view_kind: u32,
+    /// WHAT SNOW A STATIC IS, a byte a static (snowBog.ts ground: 0 none · SNOW_BARE ground somebody cleared · SNOW_PACKED trodden · SNOW_OLD old · SNOW_BANK snow
+    /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (items.rs bog_at)
+    pub snow: [u8; MAX_BOXES],
     pub w: u32,
     pub h: u32,
     pub boxes: u32,
@@ -156,6 +164,7 @@ const BLANK: World = World {
     view_bi: [0; MAX_VIEW],
     view_n: 0,
     view_kind: 0,
+    snow: [0; MAX_BOXES],
     w: 0,
     h: 0,
     boxes: 0,
@@ -221,6 +230,7 @@ pub fn addr(w: usize, table: u32) -> usize {
         18 => o.glass_of.as_ptr() as usize,
         19 => o.view.as_ptr() as usize,
         20 => o.view_bi.as_ptr() as usize,
+        21 => o.snow.as_ptr() as usize,
         _ => 0,
     }
 }
@@ -240,6 +250,7 @@ pub fn cap(table: u32) -> usize {
         14 => MAX_THINGS,
         16 => MAX_GLASS,
         19 => MAX_VIEW,
+        21 => MAX_BOXES,
         _ => 0,
     }
 }

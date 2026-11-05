@@ -30,6 +30,10 @@ import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './m
 import { shapeErrors, formOf, type ShapeForm } from './shapes';
 import { findOctagons } from './round';
 import { BOX_STUFFS, boxStuffOk } from './stuff';
+import { DOES_WORDS, doesWordOk } from './materials';
+import { DOOR_CAP } from '../sim/doorshome';
+import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
+import { LIGHT_CAPS } from '../sim/lightshome';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 1 as const;
@@ -59,9 +63,12 @@ export interface FloorData { id: string; name?: string; /** world Y of the walka
 /** A named paint: linear diffuse albedo. Boxes and prop parts reference materials by key OR carry an inline albedo (one-offs). `rough` / `metal` = the FINISH the
  *  ray-traced reflection pass reads (boxes.ts Box.rough / metal; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
  *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before.
- *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain' or 'waits'): every box and prop's part that wears the row is that,
- *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it. */
-export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; notes?: string; }
+ *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain', 'waits', or the two a round's hit reads, 'glass' and 'rubber'): every box and prop's part that wears the row is that,
+ *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it.
+ *  `does` = WHAT THE PAINT IS TO A ROUND, A CHARGE AND A BLAST (scene/materials.ts: a row of the table of materials that has a `does`): every box and
+ *  prop's part that wears the row does that, unless it says its own (BoxData.does). Absent = the default row. The rules' alone, never worked out from
+ *  `stuff` or from the colour: the loader writes it onto each box, and from then on the box says it. */
+export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string; }
 /** What is underfoot for everyone who listens to a footstep (game/floor.ts: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
  *  rectangles over the interior's default; outside the building it is `outside` except where x or z < grassEdge. TODAY floor.ts still owns its copy of these
  *  numbers (FINISHES / BUILDING / GRASS_EDGE) — level-probes.ts 'level-validate' asserts the two agree; wiring floor.ts to read this is a follow-up. */
@@ -92,6 +99,9 @@ export interface BoxData {
    *  'rubber'); absent = what its material's row says, and plain for a box with an inline albedo. Nothing is read off the colour. The picture's alone (the
    *  look, and what a round's hit looks like: game/particleFx.ts HITSTUFF): no rule of the game reads it. */
   stuff?: string;
+  /** Box.does: what the box does, where its material's row does not say it (scene/materials.ts); absent = what its material's row says, and the default
+   *  row for a box with an inline albedo. 'unnamed' (the default row) is written only over a row that says something else. */
+  does?: string;
   flags?: FlagName[];
   /** Box.cutHeight (viewer stage back wall only); absent = never cut */
   cutHeight?: number;
@@ -110,9 +120,9 @@ export interface BoxData {
 export type PropKindName = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** one piece of a shape (BoxData.shape.with): TRIM, drawn and nothing else — `off` (its centre from the box's, in the box's own frame), half size, yaw from
  *  the box's own, paint (exactly one of material / albedo), finish — and a form. It says no flags: a piece always stands NoShadow */
-export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** at most one of material / albedo; neither = the box's own paint, finish and word */ material?: string; albedo?: Vec3; rough?: number; metal?: boolean; /** as BoxData.stuff: what the piece is made of where its paint's row does not say it */ stuff?: string }
+export interface ShapePieceData extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** at most one of material / albedo; neither = the box's own paint, finish and word */ material?: string; albedo?: Vec3; rough?: number; metal?: boolean; /** as BoxData.does */ does?: string; /** as BoxData.stuff: what the piece is made of where its paint's row does not say it */ stuff?: string }
 export interface ShapeData extends ShapeForm { with?: ShapePieceData[] }
-export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
+export interface PropPartData { off: Vec3; h: Vec3; /** relative to the prop's heading; absent = 0 */ yaw?: number; material?: string; albedo?: Vec3; /** as BoxData.stuff */ stuff?: string; /** as BoxData.does */ does?: string; /** markings on the part's faces (as BoxData.markings) */ markings?: MarkingDef[]; }
 /** Loose furniture (game/props.ts): a rigid group of parts standing on the floor at (x, z). `half` / `height` are normally FITTED from the parts by the loader
  *  (levelLoad.ts fitPropFootprint — the generator's own rule); store them only to override the fit (a plant's footprint is its foliage's flat sides). */
 export interface PropData { id: string; kind: PropKindName; /** PropDef.name; absent = id */ name?: string; floor?: string; x: number; z: number; /** heading; absent = 0 */ yaw?: number; mass: number; parts: PropPartData[]; half?: [number, number]; height?: number; }
@@ -148,6 +158,9 @@ export interface ChokepointData { id: string; name?: string; floor?: string; pos
 /** One of the building's night people (scene/level.ts CivilianDef — game/civilians.ts): her loop is a route's shape (points walked, wait stood at each) plus what
  *  she does at each waypoint (`tasks`, one per point, CIVILIAN_TASKS) facing which way (`face`, yaws, one per point). `name` = what the men call her (the id if absent). */
 export interface CivilianData { id: string; name?: string; kind: 'cleaner' | 'worker'; floor?: string; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; notes?: string; }
+/** A NAMED MARK (scene/level.ts MarkDef): a place on the floor a level names, where a person stands to use a thing. Read by name: the end of a `walked`
+ *  way (scene/ways.ts) and a level script's place (game/director.ts). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
+export interface MarkData { id: string; pos: Vec3; yaw?: number; }
 /** Authored volumes (none in the office yet): a hide spot the AI treats as cover-dark, a utility closet, a scripted trigger. Oriented box on a floor. */
 export interface VolumeData { id: string; kind: 'hide' | 'utility' | 'trigger'; floor?: string; c: Vec3; h: Vec3; yaw?: number; notes?: string; }
 
@@ -204,7 +217,7 @@ export type BreachPlanData = BreachPlan & { id: string };
 export interface LevelData {
   version: typeof LEVEL_DATA_VERSION;
   name: string;
-  meta: { /** editor snap (m) */ grid?: number; /** the traceable world this level must fit (scene/world.ts WORLD.min/max at export) */ bounds?: { min: Vec3; max: Vec3 }; generator?: string; notes?: string; /** the base texel (m) the file's marking bitmaps were generated for (scene/markings.ts MARKING_TEXEL when absent) */ markTexel?: number };
+  meta: { /** editor snap (m) */ grid?: number; /** the traceable world this level must fit (scene/world.ts WORLD.min/max at export) */ bounds?: { min: Vec3; max: Vec3 }; generator?: string; notes?: string; /** the base texel (m) the file's marking bitmaps were generated for (scene/markings.ts MARKING_TEXEL when absent) */ markTexel?: number; /** HOW KEPT THE PLACE IS, 0‥1 (absent = 0, every level before the key): 0 = left to the weather and the years, 1 = cleaned and painted last night. One word for the whole level, read by the look's surfaces and its painted marks (render/shaders/look.wgsl lookKept) */ kept?: number };
   floors: FloorData[];
   materials: Record<string, MaterialData>;
   surfaces?: SurfacesData;
@@ -218,6 +231,8 @@ export interface LevelData {
   /** the cleaner / the late worker (game/civilians.ts) — absent = nobody but the shift on the floor */
   civilians?: CivilianData[];
   volumes: VolumeData[];
+  /** named marks — optional block: absent = the level names none (every file before the key) */
+  marks?: MarkData[];
   devices: DeviceData[];
   /** HVAC supply vents (game/wind.ts) — optional block: absent = still air indoors */
   vents?: VentData[];
@@ -241,17 +256,17 @@ export interface LevelData {
  *  hand-edit typo like "emmisive" must fail loudly, not vanish on the next save) and canonicalLevelData (which keeps exactly these). Adding a field to the
  *  format = add it to its interface above, to this list, and to both directions in levelLoad.ts. The drill plans are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
-  meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
-  floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'notes'],
+  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
+  meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
+  floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
-  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'flags', 'cutHeight', 'markings', 'shape'],
-  prop: ['id', 'kind', 'name', 'floor', 'x', 'z', 'yaw', 'mass', 'parts', 'half', 'height'], part: ['off', 'h', 'yaw', 'material', 'albedo', 'stuff', 'markings'],
+  box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'does', 'flags', 'cutHeight', 'markings', 'shape'],
+  prop: ['id', 'kind', 'name', 'floor', 'x', 'z', 'yaw', 'mass', 'parts', 'half', 'height'], part: ['off', 'h', 'yaw', 'material', 'albedo', 'stuff', 'does', 'markings'],
   marking: ['face', 'res', 'at', 'size', 'pal', 'cells'], markpal: ['albedo', 'mul', 'rough', 'emit'],   // (scene/markings.ts marking() / palEntry() write exactly these, in this order)
   light: ['id', 'kind', 'pos', 'dir', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'group', 'enabled', 'volumetric', 'radius', 'mains', 'broad', 'fixture'],
   switchable: ['id', 'boxes', 'group', 'on', 'baseEmissive', 'flicker', 'mains'],
   door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'],
-  route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'],
+  route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'], mark: ['id', 'pos', 'yaw'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'],
   connector: ['id', 'kind', 'from', 'to', 'cost', 'mat', 'notes'], connEnd: ['floor', 'c', 'h'],
@@ -263,7 +278,7 @@ export const KEYS = {
 /** the keys a shape's piece (BoxData.shape.with) may carry beside its form, in the order they are written. ITS OWN LIST, read by hand in three places
  *  (levelLoad.ts loadLevel and levelToData, canonShape below): a key a box gains for its paint is added here and there together, or a piece would be allowed
  *  a word nobody reads */
-export const PIECE_KEYS: readonly string[] = ['off', 'h', 'yaw', 'material', 'albedo', 'rough', 'metal', 'stuff'];
+export const PIECE_KEYS: readonly string[] = ['off', 'h', 'yaw', 'material', 'albedo', 'rough', 'metal', 'stuff', 'does'];
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ validation
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -307,6 +322,7 @@ export function validateLevelData(d: LevelData): string[] {
     const b = d.meta.bounds; if (b !== undefined) { if (!(isObj(b) && isVec(b.min) && isVec(b.max))) err('meta.bounds', '{ min: Vec3, max: Vec3 }'); else known('meta.bounds', b, KEYS.bounds); }
     if (d.meta.generator !== undefined && typeof d.meta.generator !== 'string') err('meta.generator', 'string'); if (d.meta.notes !== undefined && typeof d.meta.notes !== 'string') err('meta.notes', 'string');
     if (d.meta.markTexel !== undefined && !(isNum(d.meta.markTexel) && d.meta.markTexel >= 0.005 && d.meta.markTexel <= 0.2)) err('meta.markTexel', 'metres in [0.005, 0.2]');
+    if (d.meta.kept !== undefined && !(isNum(d.meta.kept) && d.meta.kept >= 0 && d.meta.kept <= 1)) err('meta.kept', 'a number in [0, 1]');
   }
   // floors / materials
   const floors = recs('floors', d.floors); if (!floors.length) err('floors', 'at least one floor');
@@ -317,7 +333,9 @@ export function validateLevelData(d: LevelData): string[] {
   /** the finish fields, wherever they sit (a material or a box): rough a number in [0, 1], metal a boolean */
   const finishOk = (where: string, o: { rough?: unknown; metal?: unknown }) => { if (o.rough !== undefined && !(isNum(o.rough) && o.rough >= 0 && o.rough <= 1)) err(where, 'rough must be a number in [0, 1]'); if (o.metal !== undefined && typeof o.metal !== 'boolean') err(where, 'metal must be a boolean'); };
   /** what a material's row, a box, a prop's part or a picture's box says it is made of is a word a box may say (scene/stuff.ts BOX_STUFFS) */
-  const stuffOk = (where: string, o: { stuff?: unknown }) => { if (o.stuff !== undefined && !boxStuffOk(o.stuff)) err(where, `stuff '${show(o.stuff)}' is not a thing a box can be made of (${BOX_STUFFS.join(', ')})`); };
+  /** … and what it says it DOES is a word of the table of materials that has a `does` (scene/materials.ts) */
+  const stuffOk = (where: string, o: { stuff?: unknown; does?: unknown }) => { if (o.stuff !== undefined && !boxStuffOk(o.stuff)) err(where, `stuff '${show(o.stuff)}' is not a thing a box can be made of (${BOX_STUFFS.join(', ')})`);
+    if (o.does !== undefined && !doesWordOk(o.does)) err(where, `does '${show(o.does)}' is not a row of the table of materials that says what a thing does (${DOES_WORDS.join(', ')})`); };
   for (const [k, m] of Object.entries(mats)) { if (!isObj(m) || !isVec(m.albedo) || m.albedo.some(x => x < 0)) err(`materials.${k}`, 'albedo must be a Vec3 ≥ 0'); else { known(`materials.${k}`, m, KEYS.material); finishOk(`materials.${k}`, m); stuffOk(`materials.${k}`, m); if (m.notes !== undefined && typeof m.notes !== 'string') err(`materials.${k}.notes`, 'string'); } }
   const paintOk = (where: string, o: { material?: string; albedo?: Vec3 }) => {
     const hasM = o.material !== undefined, hasA = o.albedo !== undefined;
@@ -370,7 +388,7 @@ export function validateLevelData(d: LevelData): string[] {
       if (isVec(b.h)) for (const e of shapeErrors(b.shape, b.h, PIECE_KEYS)) err(`${w}.shape`, e);
       const ws: any[] = isObj(b.shape) && Array.isArray((b.shape as any).with) ? (b.shape as any).with : [];
       ws.forEach((q, j) => { if (isObj(q)) { const wq = `${w}.shape.with[${j}]`;   // (a piece's paint, finish and word as a box's — or no paint: it then wears its box's paint, finish and word, and says none of its own)
-        if (q.material !== undefined || q.albedo !== undefined) { paintOk(wq, q); finishOk(wq, q); stuffOk(wq, q); } else if (q.rough !== undefined || q.metal !== undefined || q.stuff !== undefined) err(wq, 'a piece that says no paint wears its box\'s finish and word too: no rough / metal / stuff'); } });
+        if (q.material !== undefined || q.albedo !== undefined) { paintOk(wq, q); finishOk(wq, q); stuffOk(wq, q); } else if (q.rough !== undefined || q.metal !== undefined || q.stuff !== undefined || q.does !== undefined) err(wq, 'a piece that says no paint wears its box\'s finish and words too: no rough / metal / stuff / does'); } });
     }
   };
   boxes.forEach((b, i) => { if (isObj(b)) boxRule(`boxes[${i}] '${show(b.id)}'`, b); });
@@ -384,6 +402,9 @@ export function validateLevelData(d: LevelData): string[] {
   const boxOk = (where: string, id: unknown, more?: ReadonlySet<string>) => { if (!isStr(id) || !(boxIds.has(id) || more?.has(id))) err(where, `unknown box '${show(id)}'`); };
   // props
   const props = recs('props', d.props); uniq('props', props.map(p => (p as any)?.id));
+  // (HOW BIG A LEVEL MAY BE — docs/level-format.md; game/levelfit.ts refuses the level as it loads. Said here of the document whole, lived-in things and all)
+  if (props.length > PROP_CAP) err('props', `at most ${PROP_CAP} loose things of furniture (${props.length})`);
+  { let parts = 0; for (const p of props) parts += Array.isArray((p as any)?.parts) ? (p as any).parts.length : 0; if (parts > PROP_PARTS) err('props', `at most ${PROP_PARTS} boxes in all the loose furniture (${parts})`); }
   props.forEach((p, i) => {
     if (!isObj(p)) return; const w = `props[${i}] '${show(p.id)}'`; known(w, p, KEYS.prop);
     if (!['chair', 'cardboard', 'bin', 'plant'].includes(p.kind)) err(w, `kind '${show(p.kind)}'`); floorOk(w, p.floor);
@@ -419,6 +440,7 @@ export function validateLevelData(d: LevelData): string[] {
   });
   // doors
   const doors = recs('doors', d.doors); const doorIds = uniq('doors', doors.map(x => (x as any)?.id));
+  if (doors.length > DOOR_CAP) err('doors', `at most ${DOOR_CAP} (${doors.length})`);
   doors.forEach((o, i) => {
     if (!isObj(o)) return; const w = `doors[${i}] '${show(o.id)}'`; known(w, o, KEYS.door); floorOk(w, o.floor);
     if (!isVec(o.hinge, 2)) err(w, 'hinge [x, z]'); if (!isNum(o.closedDir)) err(w, 'closedDir'); if (!(isNum(o.width) && o.width > 0)) err(w, 'width > 0');
@@ -455,6 +477,10 @@ export function validateLevelData(d: LevelData): string[] {
   }
   const vols = recs('volumes', d.volumes); uniq('volumes', vols.map(v => (v as any)?.id));
   vols.forEach((v, i) => { if (!isObj(v)) return; const w = `volumes[${i}]`; known(w, v, KEYS.volume); if (!['hide', 'utility', 'trigger'].includes(v.kind)) err(w, `kind '${show(v.kind)}'`); floorOk(w, v.floor); if (!isVec(v.c) || !isVec(v.h)) err(w, 'c/h Vec3'); if (v.yaw !== undefined && !isNum(v.yaw)) err(w, 'yaw'); });
+  if (d.marks !== undefined) {   // (optional block: absent = none)
+    const ms = recs('marks', d.marks); uniq('marks', ms.map(m => (m as any)?.id));
+    ms.forEach((m, i) => { if (!isObj(m)) return; const w = `marks[${i}] '${show(m.id)}'`; known(w, m, KEYS.mark); if (!isStr(m.id)) err(w, 'id: a non-empty string'); if (!isVec(m.pos)) err(w, 'pos Vec3'); if (m.yaw !== undefined && !isNum(m.yaw)) err(w, 'yaw'); });
+  }
   // devices (game/devices.ts) / connectors (stub: shapes only)
   const devs = recs('devices', d.devices); uniq('devices', devs.map(v => (v as any)?.id));
   const padDoors = new Map<string, string>();   // door id → the keypad that claims it (one per door)
@@ -525,6 +551,8 @@ export function validateLevelData(d: LevelData): string[] {
   // breaker / beacons / sky
   if (!isObj(d.breaker) || !isVec(d.breaker.pos)) err('breaker', 'pos Vec3'); else { known('breaker', d.breaker, KEYS.breaker); boxOk('breaker.panel', d.breaker.panel); boxOk('breaker.led', d.breaker.led); if (d.breaker.fumble !== undefined && !(isNum(d.breaker.fumble) && d.breaker.fumble > 0 && d.breaker.fumble <= 7)) err('breaker.fumble', 'seconds, over 0 and 7 at most (a room fight\'s lever party gives the panel up at 8)'); }
   const bcs = recs('beacons', d.beacons); uniq('beacons', bcs.map(b => (b as any)?.id));
+  if (bcs.length > LIGHT_CAPS.beacons) err('beacons', `at most ${LIGHT_CAPS.beacons} (${bcs.length})`);
+  { const n = (k: string) => devs.filter(v => (v as any)?.kind === k).length; if (n('camera') > LIGHT_CAPS.cameras) err('devices', `at most ${LIGHT_CAPS.cameras} cameras (${n('camera')})`); if (n('laser') > LIGHT_CAPS.lasers) err('devices', `at most ${LIGHT_CAPS.lasers} tripwires (${n('laser')})`); if (lights.length + sws.length + n('camera') + n('laser') + 1 > LIGHT_CAPS.targets) err('switchables', `at most ${LIGHT_CAPS.targets} light fixtures, lights and switchables and cameras and tripwires and the breaker together`); }
   bcs.forEach((b, i) => { if (!isObj(b)) return; const w = `beacons[${i}]`; known(w, b, KEYS.beacon); if (!isVec(b.pos)) err(w, 'pos Vec3'); boxOk(`${w}.box`, b.box); if (isStr(b.box) && boxIds.has(b.box) && !swBox.has(b.box)) err(w, `box '${show(b.box)}' is not owned by any switchable (game.ts slaves the beacon's beam to that target)`); });
   const skyOk = (w: string, s: SkyData | undefined) => { if (!isObj(s) || !isVec(s!.zenith) || !isVec(s!.horizon)) err(w, 'zenith / horizon Vec3'); else known(w, s, KEYS.sky); };
   skyOk('sky', d.sky);
@@ -1052,6 +1080,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     chokepoints: d.chokepoints.map(c => pick(c, KEYS.chokepoint)),
     ...(d.civilians ? { civilians: d.civilians.map(c => pick(c, KEYS.civilian)) } : {}),
     volumes: d.volumes.map(v => pick(v, KEYS.volume)),
+    ...(d.marks?.length ? { marks: d.marks.map(m => pick(m, KEYS.mark)) } : {}),
     devices: d.devices.map(v => v.kind === 'camera' ? pick(v, KEYS.camera) : v.kind === 'keypad' ? pick(v, KEYS.keypad) : pick(v, KEYS.laser)),
     ...(d.vents ? { vents: d.vents.map(v => pick(v, KEYS.vent)) } : {}),
     connectors: d.connectors.map(c => ({ ...pick(c, KEYS.connector), from: pick(c.from, KEYS.connEnd), to: pick(c.to, KEYS.connEnd) })),

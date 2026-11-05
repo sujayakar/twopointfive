@@ -10,8 +10,9 @@ import { leafWrote, MIRRORED, type BoxMirror } from '../scene/boxMirror';
 import { BOTH, type StaticCollision } from '../scene/collision';
 import { WORLD } from '../scene/world';
 import { EXACT } from '../math/exact';
-import { RUST } from '../sim/sim';
+import { RUST, ruleFell, ruleRed } from '../sim/sim';
 import { DoorStore, DC, DD, DO, DK, KF, DE, DOOR_EV, DP, DF, MAN_UNASKED, DOOR_CAP, DOOR_COLS, DOOR_OUTS, DOOR_CONS, DOOR_PARS, DRIVE_KINDS, DOOR_SOUNDS, STRIKE_TIERS, DOORS_STEPPED, doorIo, doorMem } from '../sim/doorshome';
+import { SimState } from '../sim/state';
 import { SlabStore, SLF, type SLAB_F64, type SlabNow } from '../sim/slabshome';
 
 /** ONE-WAY LEAVES (the maintainer, 10-08: "doors could use some work too. only open one direction"). Every door has a hinge jamb, a handle jamb and ONE side it opens
@@ -295,8 +296,8 @@ const DRIVE_COLS: readonly number[] = (Object.keys(DC) as (keyof typeof DC)[]).f
 export function driveOf(d: Door): DoorDrive | null { const D = d.drive; return D ? { who: D.who, dir: D.dir, kind: D.kind, t: D.t, from: D.from, quiet: D.quiet, side: D.side, rate: D.rate, px: D.px, pz: D.pz, hit: D.hit } : null; }
 
 export class Door {
-  /** THIS DOOR'S OWN NUMBERS ARE COLUMNS (sim/doorshome.ts DoorStore: a column a number, a door an index — in an array of the game's, or at home in the Rust
-   *  module's block while RUST.doors is on, where the doors' step runs): every field below that changes as the game runs is an accessor over them, so whoever
+  /** THIS DOOR'S OWN NUMBERS ARE COLUMNS (sim/doorshome.ts DoorStore: a column a number, a door an index — a part of the game's block from
+   *  the moment the doors are made, where the doors' step runs whichever side takes it): every field below that changes as the game runs is an accessor over them, so whoever
    *  reads or writes a door reads and writes the same values wherever they stand. `S` the columns, `i` this door's index in them. */
   readonly S: DoorStore; readonly i: number;
   private g(K: number): number { const S = this.S; return S.d[S.base + K * S.stride + this.i]; }
@@ -392,7 +393,8 @@ export class Door {
   readonly leafH: Vec3; readonly leafMarks: Box['marks'];
   get creakArmed(): boolean { return this.g(DC.creakArmed) !== 0; } set creakArmed(v: boolean) { this.p(DC.creakArmed, v ? 1 : 0); }
   constructor(readonly def: DoorDef, store?: DoorStore, index = 0, slabs?: SlabStore) {
-    this.S = store ?? new DoorStore(1); this.i = index; this.slabs = slabs ?? new SlabStore(index + 1); this.slabRow = new SlabRow(this.slabs, index); this.driveCols = new DriveCols(this.S, index);
+    const lone = store && slabs ? null : new SimState();   // (a lone door — the level editor's, a check's — has a block of its own: a store is a part of one)
+    this.S = store ?? new DoorStore(lone!, 1); this.i = index; this.slabs = slabs ?? new SlabStore(lone!, index + 1); this.slabRow = new SlabRow(this.slabs, index); this.driveCols = new DriveCols(this.S, index);
     // (what the fields' own initialisers were)
     this.vel = 0; this.quietT = 10; this.lastWho = -1; this.sinceBash = 10; this.closing = false; this.lockBroken = false; this.noticed = false; this.noticedT = -1000; this.pick = 0; this.picking = false;
     this.pickIdle = 0; this.pickClock = 0; this.pickN = 0; this.rattleT = 0; this.guardT = -100; this.passers = 0; this.outward = 0; this.clearway = 0; this.pullT = 0; this.p(DC.velSeen, 0); this.swept = false;
@@ -525,13 +527,13 @@ const FLOOR_Y0 = 0.2;
 
 export class Doors {
   list: Door[];
-  /** the leaves' own numbers, a column each (sim/doorshome.ts): in this array, or at home in the Rust module's block while RUST.doors is on */
+  /** the leaves' own numbers, a column each (sim/doorshome.ts): a part of the game's block */
   readonly store: DoorStore;
-  /** the leaves off their hinges, a row each (sim/slabshome.ts): in its own array, or at home in the module's block while RUST.slabs is on */
+  /** the leaves off their hinges, a row each (sim/slabshome.ts): a part of the game's block */
   readonly slabs: SlabStore;
   /** the Game's hand-over for the step in the module (null: no game — the step is this file's) */
   host: DoorsHost | null = null;
-  constructor(defs: DoorDef[], private emit: (e: DoorEvent) => void) { this.store = new DoorStore(defs.length); this.slabs = new SlabStore(defs.length); this.list = defs.map((d, i) => new Door(d, this.store, i, this.slabs)); this.list.forEach((d, i) => { d.box.mkey = MKEY.door + i * 4; d.handleBoxes[0].mkey = MKEY.door + i * 4 + 1; d.handleBoxes[1].mkey = MKEY.door + i * 4 + 2; }); }   // motion identity for the leaf and its handles (scene/boxes.ts MKEY)
+  constructor(defs: DoorDef[], private emit: (e: DoorEvent) => void, st: SimState = new SimState()) { this.store = new DoorStore(st, defs.length); this.slabs = new SlabStore(st, defs.length); this.list = defs.map((d, i) => new Door(d, this.store, i, this.slabs)); this.list.forEach((d, i) => { d.box.mkey = MKEY.door + i * 4; d.handleBoxes[0].mkey = MKEY.door + i * 4 + 1; d.handleBoxes[1].mkey = MKEY.door + i * 4 + 2; }); }   // motion identity for the leaf and its handles (scene/boxes.ts MKEY)
 
   byName(n: string) { return this.list.find(d => d.def.name === n); }
 
@@ -641,16 +643,20 @@ export class Doors {
   }
 
   // ---------------------------------------------------------------- the step in the Rust module (rust/sim/src/doors.rs)
-  /** CAN THIS STEP RUN IN THE MODULE: the row on and the leaves' columns at home in the game's block; the game's own maths in Math's place (the step works its
+  /** CAN THIS STEP RUN IN THE MODULE: the row on (the leaves' columns are in the game's block always); the game's own maths in Math's place (the step works its
    *  angles and lengths out there); the Game's hand-over, with the floor asked as the module asks it; this file's own step not replaced on this instance (a
    *  check that puts its own over one gets ITS step); the box world's copy standing with the game's own leaves in it, a door's leaf at the door's index; and
    *  no more contacts than the hand-over holds. → the copy to step over, or null: this file steps, on the same columns. */
   private there(contacts: DoorContact[]): BoxMirror | null {
-    const H = this.host;
-    if (!RUST.doors || this.store.home === null || !EXACT.on || H === null || this.standable !== H.standable || this.settle !== H.settle || this.updateHere !== Doors.prototype.updateHere) return null;
-    if (contacts.length > doorIo().maxContacts) return null;
-    const dyn = H.col.dynamicBoxes, L = this.list, n = L.length; if (dyn.length !== n) return null;
-    for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return null;
+    const H = this.host; if (!RUST.doors || this.list.length === 0) return null;   // (a level with no door has no step, here or there: its columns are no tenant of the block)
+    // (each way back to this file's step is said, for the count of questions the TypeScript took: sim.ts FELL)
+    if (!EXACT.on) return null;   // (idle: a row that works lengths out answers under the game's own maths alone — sim.ts OWN_MATHS)
+    if (ruleRed('doors')) return null;
+    if (H === null) return ruleFell('doors', 'no game stands behind these doors');
+    if (this.standable !== H.standable || this.settle !== H.settle || this.updateHere !== Doors.prototype.updateHere) return ruleFell('doors', 'a check\'s own step in the rule\'s place');
+    if (contacts.length > doorIo().maxContacts) throw new Error(`${contacts.length} contacts at the doors in one step: its hand-over holds ${doorIo().maxContacts}, and a game holds no more men than that many are of (game/levelfit.ts handOverMost)`);   // (cannot happen: tools/qa/copyfit-check.ts holds the arithmetic)
+    const dyn = H.col.dynamicBoxes, L = this.list, n = L.length; if (dyn.length !== n) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
+    for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
     return H.col.rulesWorld(dyn);
   }
   /** the step's hand-over written (the level's doors, the contacts, the rules' numbers) and the step taken: how many noises it listed. Nothing of the game
@@ -677,7 +683,7 @@ export class Doors {
     m[P + DP.handRate] = T.handRate; m[P + DP.minSpeed] = T.minSpeed; m[P + DP.floorRad] = T.floorRad; m[P + DP.rate] = T.rate; m[P + DP.slide] = T.slide; m[P + DP.again] = T.again;
     m[P + DP.wminX] = WORLD.min[0]; m[P + DP.wmaxX] = WORLD.max[0]; m[P + DP.wminZ] = WORLD.min[2]; m[P + DP.wmaxZ] = WORLD.max[2];
     const H = this.host!; m[P + DP.foot] = H.col.footOf(FLOOR_Y0); m[P + DP.settleY1] = H.settleY1();
-    const ev = io.x.doors_update(this.store.home!.bind(), slot);
+    const ev = io.x.doors_update(this.store.home.bind(), slot);
     const wrong = doorMem()[P + DP.wrong]; if (wrong) throw new Error(`the doors' step in the Rust module could not be what it was handed (${wrong === 1 ? 'more noises than its list holds' : wrong === 2 ? 'the man of a door\'s last hand was not asked of the game' : 'more doors or contacts than its tables hold'})`);
     return ev;
   }

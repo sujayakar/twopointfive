@@ -1854,6 +1854,63 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   static, door or prop was (a held thing, a thrown one) costs no frame: it draws plain for the second or so its map takes. The `even` row is read once, at the
   making of the arrays. They take the `kept` rule BY NAME: a stuff added later says in `look.wgsl` how it is laid and whether the weather touches it. `lookmaps-check.ts` holds the names against the
   shader's, the float, the slots and the block. Drawn as tiles (rebuild pictures); a software boot; never seen on a GPU.
+  - **The maps are made on workers (2026-11-05; `render/lookWorkers.ts`, `lookWorkerMain.ts`, `lookWorkerSource.ts`, `lookWorkerText.ts`; `gbuffer.ts makeLayers`)**.
+    WHY: the boot waits for the level's maps beside the pipelines (`main.ts`, one `Promise.all`), and a level names about twenty: the office's 21 are 5.9 s of
+    one thread's arithmetic under bun on the engine's maths, more on the game's own. Behind half a minute of shader compiles nobody saw it. On a SECOND load in
+    one browser, with the shaders cached, the maps were the last thing the start card waited for: on a rented cloud box (an NVIDIA A10G, 24 cores) every pipeline
+    group was in by 2.5 to 8.5 s and the maps at 10 to 14 s (`__boot.spans.pipelines_materials`).
+    HOW: the layers do not depend on each other. `makeLayers` asks a `LookPool` for the whole batch at once and takes the layers in the batch's own order, so
+    the slots, `lookMade` and the moment a stuff is pointed at its slot are what they were. A worker is started from TEXT: `lookWorkerMain.ts` (the generator,
+    `math/exact.ts`, the few lines that answer) bundled by itself by a bundle-time macro (`lookWorkerSource.ts` runs this bun's `build` as a command, the way
+    bun gives a macro; `lookWorkerText.ts` holds the string and is imported only when a worker is about to start, so a tool under bun that starts none never
+    bundles it). So every build carries the worker (the dev server, `dist`, the one-file page) with no second entry point and no file beside the page. The
+    text is a PLAIN SCRIPT and the worker a classic one: a module worker started from a blob is refused on a page opened from disk, which is how the one-file
+    page is opened. One core is left to the page, eight workers at the most (`LOOK_WORKERS.most`), and they are stopped when the batch is in.
+    THE SAME BYTES, AND THE MATHS: a worker starts on the engine's `Math`; the page computes on the game's own (`EXACT`). Two of the thirty layers come out
+    different in a byte here and there between the two, so each ask carries which maths the asking thread is on and the worker puts itself on it first.
+    WHERE THERE IS NO WORKER (none in this place, one that will not start, a layer a worker failed on) the layer is made on the page's own thread in slices,
+    as above: the workers are only ever a faster way to the same maps. A worker that holds a layer for `LOOK_WORKERS.waitMs` (30 s; a layer is under a second
+    of work) is taken for dead, so a boot never waits on one that will not answer. A place where a worker failed AS A WORKER (would not start, did not
+    answer) says so once on the console ("look maps: made on the page's own thread from here on") and starts no more; THE TAB REMEMBERS it (sessionStorage
+    `twopointsix.lookWorkersGaveUp`), because a mission is a page load and a place whose workers start and never answer would wait the 30 s at every one; a layer the
+    generator itself throws on is refused alone. A macro that cannot bundle hands over an empty text (no workers), never a failed build.
+    `__engine.gbuffer.lookBy` counts the layers made each way.
+    THE SMALLER SIZES COME FROM THE WORKER TOO (11-05, a step after the first): a worker hands back each map with its nine smaller sizes made (the
+    same `lookMip`, each from the size above, down to one texel), so a layer from a worker costs the page's thread its twenty texture writes and nothing
+    else. WHY: a batch asked for IN PLAY (`needLook(LOOK_SLICE.play)`, when a blast shows a stuff no box had been) goes through the same pool, and the
+    page making the smaller sizes itself was 5 to 12 ms of one frame a layer. A layer made on the page's own thread makes its sizes there, as before.
+    `lookworkers-check` holds every smaller size a worker hands back to the page's own, byte for byte (30 layers, both maths). NOT TIMED on a GPU: on
+    the office no blast makes a map in play (nine wall charges profiled on the cloud box: none), so there was nothing there to time it on.
+    **Switch**: `LOOK_WORKERS.on`: ON in the page (`?lookworkers=0` = every layer on the page's own thread, as it was), OFF in the module, so the headless
+    harness makes its maps as it did on either stand. Not a rule of the game: NO REGISTRY ROW, no journal key, no `FROZEN_HOLDS` row (the maps are the same
+    bytes either way, and nothing of the simulation reads them). So `knobs-check` does not hold it (it reads `src/game`'s tables) and a recording cannot
+    carry it; what holds it is its own check.
+    **Check**: `bun run tools/qa/lookworkers-check.ts` (`probes.ts lookworkers`, family `render`), both stands: the worker's text is whole and a plain
+    script (nothing to fetch, no import); the rule is down in the module and no pool opens where there is no Worker; ALL THIRTY LAYERS made on workers are
+    the layers made here to the byte, on the engine's maths and on the game's own; one layer the generator throws on is refused alone, workers that cannot
+    start are given up on (said once, none started after, and none at the tab's next page load), and one that never answers is given up on after its wait; THE PAGE'S OWN LOOP (`makeLayers`,
+    over a counting device) makes the same layers in the same order into the same slots as the same writes of the same bytes with the workers down, up,
+    and up where there is no Worker. `LOOKWORKERS_BREAK=1` (the workers answer with the next layer) must fail, on the bytes line alone.
+    `node tools/qa/lookworkers-page.cjs` does the bytes in headless Chromium, on both maths, served and with the bundle OPENED FROM DISK: a plain worker
+    does start there from the bundled text.
+    MEASURED (a rented cloud box, an NVIDIA A10G through Vulkan under headless Chrome, 24 cores so 8 workers; the office's look page on High, 21 layers;
+    relative only, never a player's seconds; the page loaded once cold, then again and again in a frame of itself with the shaders cached, the workers off
+    and on in turn, four boxes on the joined build of 11-05 with the lattice tables in): THE MAPS take 2.2 to 2.8 s on the workers in every one of 10
+    warm loads, and 6.5 to 10.7 s on the page's own thread in every one of 10 (`lookFillMs`; `lookBy` 21 / 0 and 0 / 21, the same 21 names in the same
+    order). THE WARM BOOT without workers was 8.3 to 12.7 s in all 10. With them it was 3.3 to 4.2 s in the 4 loads where nothing else was late, and
+    6.8 to 14.0 s in the other 6, where something else was: one pipeline group (`passes` or `particles`) took 7 to 10 s to come back although the shaders
+    were cached, or the page's own script took 3.6 s to arrive. Both happen without the workers too (a slow group in 4 of the 10 loads without them, 5 of
+    the 10 with; the late script on the second warm load of a box whichever way that load made its maps). The script is late before a worker exists, and
+    the slow group comes back 4 to 7 s after the workers have stopped, so neither is the workers'; both were hidden under the maps before. WHY A CACHED PIPELINE GROUP IS SOMETIMES SLOW IS NOT KNOWN and is now the warm boot's longest
+    wait on that box. Before the lattice tables, on the first cut of this, 8 warm loads without workers were 10.9 to 14.8 s and 8 with them 3.5 to 3.7 s
+    (6) and 7.8, 8.2 s (2, a slow `passes`). THE COLD BOOT does not move: 27.5 to 29.4 s either way, the pipelines being the wait (the maps 6.0 to
+    6.3 s on workers while the compiles hold the cores). THE PICTURE: three stills held at 40 s of game time, the workers off twice and on once: the
+    workers' still differs from a base still by less than the two bases differ from each other (mean a channel 1.02 and 1.03 of 255 against 1.13).
+    Under bun on four cores, three workers: 30 layers in 2.4 to 2.6 s against 7.2 to 8.4 s here; in headless Chromium 2.1 to 2.4 s against 7.6 to 14.0 s.
+    NOT SEEN: any Apple chip, Windows, a player's own second visit (a fresh tab, not a frame of a page still open; whether his browser keeps its
+    compiled shaders between loads of the address he plays at decides what he feels of this, and nobody has looked), the one-file page on a GPU (its
+    worker text is in the file and a plain worker starts from a bundle opened from disk in headless Chromium, which has no adapter to draw with). What a
+    machine with four cores gains is three workers' worth; one with two cores gets one worker and little.
 - **CAR PAINT IS A STUFF; ITS SHINE IS THE BOX'S** (11-04; `render/lookTex.ts carpaint`, stuff 16, `look.wgsl LOOK_CARPAINT`; the look's page only). The
   maintainer, of the rounded cars in the dressed showroom: "i think the materials could use some work though. we already have some metal shaders right? maybe
   we want a car paint material too?". A truck's body drew as old `paint` (chips and rust specks all over), a saloon's as nothing. The layer is an enamel
@@ -1864,6 +1921,111 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **THE STATICS ARE DRAWN FROM THE TOP DOWN, AND NO FACE CHANGES HANDS** (11-05; every page; no switch and no second path: it is the order of one
+  draw). The g-buffer drew the static boxes in the list's order with the depth test at "less", so a ground slab laid first under a whole level (the
+  office kit's box 0, 40 by 28 m) was shaded over the whole screen and then drawn over by the floor. Free while that slab was plain; once car parks said
+  tarmac the pass cost a third more under the look, indoors as much as outside (the performance goal's timing). `scene/boxes.ts BoxWorld` now keeps a
+  rank a static (`drawRank`, made by `rankStatics`) and lays the drawn plain statics out by it each upload. No shader text, pipeline or buffer changes.
+  THE ORDER: tops falling, the list's own order between equal tops, EXCEPT that a box waits for every earlier box it shares a face's plane with.
+  Where two faces lie in one plane the depth test keeps the first drawn, and that was always the earlier box: on the white roof an orange plinth,
+  written before the piers, runs across their feet; a look's ground sheets lie a fiftieth of a millimetre apart and show in the order written. Tops
+  falling alone handed thousands of such patches to the taller box (124 of a centimetre or more in different paint over the 59 files). So two faces that
+  look the same way, lie within a quarter of a millimetre along their normal (`TIE_PLANE`: what the depth buffer cannot tell apart at the camera's
+  farthest) and whose bounds lie over one another by more than half a millimetre (`TIE_PATCH`) keep the list's order: the later box takes the turn of
+  the latest box it waits for. ONE RULE FOR EVERY BOX: a face is its plane and its bounds in the world, whatever the turn or tilt; no frames, no bins.
+  A cutaway box is asked as it is drawn. Bounds of a turned face are wider than the face, which only makes a box wait that need not.
+  COUNTED over all 59 level files on the shipped stand by the check's own finder (`DRAWORDER_ALL=1`): 13,036 shared faces among 32,872 drawn statics,
+  none won by the later box, and on every level the ground is drawn after every static that stands above it.
+  WHAT IT KEEPS OF THE SAVING: counting the fragments a depth test lets through on a CPU, through the game's camera (a proxy, not a timing), the order
+  with waits shades 3 to 13 percent more than tops falling alone and still about 60 percent less than the list's order (office 2.70 M, 0.96 M, 1.08 M).
+  WHEN IT IS MADE: when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does; never for paint, a wet
+  floor's gloss or any other flag. 1.5 to 3 ms for 800 to 1,350 statics under bun; none in fifteen seconds of the office's shift. A wall coming down
+  makes it again on the frames its pieces are added.
+  TIMED on a rented NVIDIA A10 (relative; the office under the look, High) for the PLAIN tops-falling order, an earlier commit, against its parent on
+  like boxes: the g-buffer where the page frames Sam indoors 0.89 ms to 0.34, over the car park 0.91 to 0.64, every other pass and the sum the same;
+  Medium indoors 0.72 to 0.28. The order with waits is to be timed the same way: see the merge's book for its numbers.
+  NOT KNOWN: what an Apple GPU gains (it hides covered fragments by itself, so likely little). Whether a GPU gives two faces in one plane the same depth
+  at every pixel: where it does not the pair fights whatever the order, as before. The dynamics are still drawn after the floor they stand on, and a
+  plain box never waits for a cut one (the cut pass is drawn after). The check is `draworder` (family render; `DRAWORDER_BREAK=1` fails two lines;
+  `DRAWORDER_ALL=1` asks all 59 levels): shared faces found a second way, every face against every other with the patch cut out exactly, any turn or
+  tilt, and every reason to make the order again asked against an order made fresh.
+- **A LOOK MAP'S LATTICES ARE HASHED ONCE A LAYER** (11-05; the look's page only, at its boot and whenever a level names a new stuff; no switch, because
+  no map moves by a byte). `render/lookTex.ts cells2` asked nine cells where their points lie for every texel: three hashes and a square root a cell, most
+  of what a layer cost. A lattice (size, seed, jitter) now fills a table once (`cellTable`, emptied as a layer starts and ends), the nine are told apart by
+  squared distance and only the two nearest are rooted. Compared once, layer by layer: all 30 byte for byte the same at 512, 128 and 64 texels, evened and
+  not. Under bun on one thread the thirty took 8.9 s and take 6.2 (tarmac 609 to 362 ms, grass 695 to 444). The check is `lookcells` (family render;
+  `LOOKCELLS_BREAK=1` fails two of its three lines): cells2 against the plain way written out again, 1.7 million answers to the bit, and a lattice that is
+  not whole cells is refused aloud. A LAYER MADE IN PLAY (a blast shows a stuff no box had been) also breathes in its last passes now: made in 3 ms
+  slices its longest unbroken stretch was 22 to 41 ms (the evening, the blurs, the normals after the rows) and is 4 to 7; same bytes; the check's
+  fourth line counts the stops. Its mip chain is still built in one go (5 to 12 ms): the workers step's to move. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
+  (making them on workers is the performance goal's). Nobody has timed a look page's boot with its shaders already cached, in a browser.
+- **A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT** (11-05; the look's page only; `render/lookTex.ts STUFFS`' two new
+  words `rolled` and `mirrors`, `look.wgsl lookRoll` / `lookRollUp`, the reflection texts' `coat`). The maintainer, of the cars: "we don't need to go full
+  hyperrealistic but we should sell it more", and "how reflective is the car material, btw? it does feel like it should reflect more of the environment
+  and be quite dynamic as we move around it". WHAT WAS FOUND FIRST, on a GPU (four rounds of stills of the white pickup: a yard at midday and dusk, a
+  crossing at night under its lamps): a stronger coat and a smoother one changed NOTHING, and the car drawn as a FULL mirror at finish 0.05 barely
+  changed either. The camera looks down about 50 degrees, so a face whose normal stands e degrees up mirrors at 2e − 50: a flat top mirrors the empty
+  sky, a flat flank the ground at its foot, and what a car is seen to reflect (the horizon: walls, lamps, a man's torch, whose highlight wants a normal
+  25 degrees up) is on normals a stack of boxes does not have. So the gain is in the FORM, and the form is the stuff's to say:
+  `rolled` = metres over which a face's shading normal turns toward the face it meets (car paint 0.16), asked in lookSurface before the tilt is held. A flank turns UP into its top and round an upright arris, never down at its foot;
+  a top turns out at every edge; a rail or a slab thinner than the roll is rolled all across; and a roll is taken back wherever it would turn the
+  face from the eye that sees it (a flank seen along its length: a normal turned away takes no ray and no highlight). It is the look's own tilt (held
+  to LOOK_MAX_TILT, 29 degrees, and marked), so every pass that wants the face itself finds it and the fog of war's test of a top (N.y over 0.5) is as
+  it was. WHICH FACES: one of a box's own six, on a plain box and on a cut one (`rolls`, lookSurface's last word); and under shapes an UPRIGHT cut
+  plane (a body's rounded corner) turns up into the top by the same measure (`lookRollUp`, asked by the plane's own normal, unmarked as every cut
+  plane's relief is, at most 0.48 of up). A round, an arc and a leaning cut plane (a wheel, a wheel arch, the crowned bonnet, a window post) are NOT
+  rolled: the look is asked of them as the box face they lean to, which is not where their own edges are. SHADING ONLY: no box, outline, ray, body or
+  digest moves, no level file and no vehicle says anything, and it is every vehicle at once. The vehicles' maker would have built it as geometry (a
+  half-round strip on each outer arris, a cut plane under it: true outline, but a cut row a shoulder, coarser crowns under them, digests moved) and
+  chose this on the stills; that commit of theirs is kept as a study. `mirrors` = how much of what it faces a stuff's outer coat mirrors head-on (car
+  paint 0.08; anything else the 0.04 every coat was), by the word a box says (the scene prelude's `LOOK_MIRRORS`, 32 words' room, read by reflect.wgsl,
+  reflect_p5.wgsl and the compact twin for the rays and the highlights alike; `beams.k.z`, 0 on any other page). ONE ROW FOR BOTH, "Pressed panels"
+  (`&look=pressed:0` = the build without either: no arris rolled, every coat a plain one; first sent riding the Edges and the Finish rows, which
+  left nothing to compare it by alone; the row alone keeps the look's surface from standing down, the plain-boxes hold lowers it with the
+  layers, and its slot in the look's block (c.y) is held by number in `lookmaps-check`). The row at 0 against 1 was drawn on the cloud GPU at dusk
+  (errors 0): flat edges and a plain coat against the belt line, the rolled rails and a cooler bonnet; that was the commit before the row learnt to
+  keep the surface awake by itself, a change no still of the page as it opens can show. KNOWN, LEFT:
+  ONE RULE OVER A CUT SOLID'S OWN PLANES (turn toward each plane it meets by how near that edge is, the box's six among them) would roll a round, an
+  arc and a post too and be one rule where this is two (lookRoll for a box's faces, lookRollUp for upright planes): not built, it wants the cut
+  pass's own distances and a test of which plane is really met; the two rolls meet at the arris 33 degrees apart (the cap: each side turns 29 of the 90), so a highlight steps over the arris itself; a stack's INNER seam
+  rolls too (the pickup's base slab under its cab reads as a belt line: on the stills a styling line, not a fault); the paint under the coat is not
+  stepped back by what the coat mirrors (4 hundredths more light at most); glass on vehicles is still matte (the vehicles' paint rows). **Check**:
+  `bun run tools/qa/probes.ts rolled` (family `render`), 3 lines: the table; the rule written again and asked (never down, a thin rail, whole as the
+  page opens, the summed tilt held, the eye's guard over 5,868 views, an upright plane's share of up); the texts. What it buys at the game's camera
+  is said in line 2's detail and not barred. `ROLLED_BREAK=1` fails 2. `highlights`' pin of the highlights' F0 moved with the text. SEEN ON A GPU (the cloud's, High, 11-05, stills only, the rule as it stands here with the vehicles' coat finish laid over
+  it in a study build): at dusk the white pickup's cab and tub rails read rolled and its flank has a belt line where the base slab meets what stands
+  on it; at night a red pickup's roof edge and rails catch the lamps softly; the player's weapon light walked along the tub puts a tight highlight
+  on the rail that moves with him; one still with the fog of war on showed no fault. It is a quiet change: the form reads, the paint does not shout.
+  NEVER SEEN: in motion, on his GPU, in rain, a van or a lorry close up. A first study that turned each side 45 degrees, unmarked, through every
+  face of a shaped vehicle read rounder; it would have told the fog of war a tall van's flank was a top, and a review found it measured a cut
+  plane's roll to edges the plane is not at.
+- **A BLAST'S OPENING LIGHTS ARE PACED** (11-05; the look's page only; `?reachpace=old`, the game's own word for the pace as it was, decides a
+  hole's first mask whole at once here too). The performance goal profiled three wall charges on the office under the look (Chrome's own CPU profile
+  on a rented box, relative): `engine.ts lookOpeningLights` took 80 to 90, about 50 and about 45 ms of the 0.7 s after each charge, against under 2
+  percent of a calm stretch, and the frame that read the first blast's walls was 63 ms of render alone. Two causes, both on that frame.
+  (1) THE JUMP FIELD. The look keeps its own wall raster for its reach masks (`ReachJob.own`: a picture's light is nobody's state) and made that
+  raster's field again whole (`reach.ts jumpsFor`), though a blast only opens walls and the old field is still safe; the game's own raster has always
+  handed its field on. `wallRasterHandOn` now hands the look's on the same way (one scan serves both, `rasterScan`): ONLY where no sub-cell went from
+  open ground to a wall or a doorway's gap. A wall put back by a restart or a rollback, or a box set down, closes cells: then it is not handed on and the
+  next mask makes the field fresh. A door shutting moves no cell (a doorway is in the raster by its frame, not its leaf). A handed-on field is a little
+  too careful near the hole (its own first mask took 6 percent more steps in one measure) and is not brought up to date until a cell closes.
+  (2) WHOLE AT ONCE. A light with no mask was decided whole on the spot, 150 to 330 thousand sight-line steps where a frame's share is 60,000
+  (`REACH_PACE`). Now the masks' FIRST FRAME (a level's first, a new level on the same engine, the rooms row put on) gives EVERY opening its mask, the
+  shut and the far too, and in play nothing is decided whole. So that nothing lit goes dark for it, the rule is in the REPLAN: an opening that is new
+  where another stood (a second hole beside the first makes one opening of the two; a hole takes in a window; a wall put back) takes the mask of the
+  nearest it lies over as its OLD mask, and that one's light if it is free; a job in hand is kept across a replan that moved no wall, and after one that
+  did it is finished against the walls it began with and its mask then counts as old. Only an opening where NONE was has no mask: it is first in line for
+  each frame's share and its daylight comes on about five frames after it is found (itself `LOOK_OPENINGS.settle` frames after the walls stood still).
+  A first cut of this (e23b74ff) had none of the replan's rule and a code review showed what that cost: a widened hole dark for five frames, a hole's
+  light starved for good by a crate shot to bits every five frames, doors opened in a level's second frame lit one every six frames.
+  TIMED by the performance goal on the FIRST cut (the same box, a frame recorder): the frame that reads a blast's walls 63 ms to 16 and 17 on a first
+  blast, 19 to 22 to 10 to 20 on later ones; `jumpsFor` gone from the profile. The mended cut is to be timed the same way. Under bun the first frame of a
+  level decides more masks than it did (the office 7 to 11: 2.6 million steps, behind the start card).
+  HELD by `tools/qa/openings-check.ts`: the wall-holed line (the most steps in a frame, the fields made) and "what is lit stays lit and no job is lost"
+  (the openings found again every five frames, a hole widened, a box set down with every mask against a fresh raster's, the wall put back, the first
+  frame's masks, a second level, the old pace). Five one-line breaks of the rule each turn it red.
+  NEVER SEEN ON A GPU: the hole's daylight coming on five frames late. LEFT: `wallSides.update → placeSides` (18 to 19 ms on that box at a first blast,
+  on the frame the charge goes) and `wallsKey` hashing the statics every frame (0.2 ms); `rankStatics` reads 6 to 10 ms on that box on a blast's frame.
 - **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
   it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
   unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk
@@ -2070,6 +2232,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`). (The rows the model
   replaced went in the step after this one: the next bullet.) MEASURED on the software adapter and the CPU only: THE ROWS ON
   HAVE NEVER BEEN SEEN ON A GPU.
+  KNOWN, LEFT (11-05; `shaders/place_common.wgsl lookExpoFor`, `lookRoll`, `EXPO_LAMP`; `render/lookexpo.ts LOOK_EXPO.lamp`): THE MODEL BRINGS A
+  DARK PLACE UP AND NO BRIGHT PLACE DOWN. A place's gain is never under 1, and the shoulder acts only on a place the model has brought up, so
+  a room lit well over the night's white is drawn burnt at night whatever the eyes are doing: the white roof's two rooms were, on a cloud
+  NVIDIA card, under a lamp of 60 (the floor under it held 1.75 times the night's white before any bounce). It was mended in the level
+  (`docs/agents/levels.md`, THE WHITE ROOF, ITS ROOMS AT NIGHT) and a lit room's lamps are therefore authored to the night's white. The rule
+  that would mend it here is the dark rule's twin (a place whose floor sends back more than the night's white is shown down by a share of
+  its excess); it wants a measure the place field does not hold, what a floor sends back with the lamps' own beams in it.
+  THE SAME MISSING MEASURE BY DAY, seen on the same card and read from the code, not measured: the field holds what a face that looks up gets
+  from the cache, so a room lit by fixtures that face down (the kit's tubes) has a level far under the light on its floor, and with the eyes
+  in it by day or at dusk its floor is drawn over the place's white (the white roof's service room, doors shut: floor 233 of 255 at midday and
+  217 at dusk, a black suit 34 and 32). A lamp that also lit the ceiling had hidden it there.
 - **A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, NEVER GUESSED** (11-04; the look page only, no row: it is the only path. (LATER THE SAME DAY the
   rule's text, `lookPlaceLevels` with `placeBlend` and `placeSideCell`, moved word for word from the composite's two writings into
   `place_common.wgsl`, the one text they are built with, when the particles' splat came to ask it: A LIT PARTICLE IS SHOWN BY ITS PLACE.) `composite.wgsl` and
@@ -2251,45 +2424,84 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a foot at a right angle, where the plain blend read 330; a brick's face beside a bevel 25° off takes 3.8 of 10 where it took 5.5;
   `REFLUP_BREAK=1` = the plain blend, fails), `shaderrows-check` (the compact composite re-stamped), all 69 shader texts compile. DRAWN, software adapter, the service door's jamb from
   inside at midday, the specular view: the white bar up the jamb (a neighbour's sunlit texel under the room's gain) went from 88 bright pixels to 2; a shorter bar lower on the same jamb is unchanged at 75, so it is the jamb's own highlight and not a neighbour's texel, and the bricks' hooks beside the door stay as said above. The page booted and drew with no page or GPU error (120 programs; that boot also carried the daylight pieces of the bullet below). NEVER SEEN ON A GPU, and not timed there.
-- **SPARKLES IN A DARK ROOM ARE THE FLOOR'S GLOSS MAP AT THE REFLECTION'S CUT-OFF, AND A TRIAL OF THE CURE** (11-05; the look's page with
-  `&sheen=1`, OFF unless asked: without the word the picture is as it was to the bit; the scene prelude's `const SHEEN_PAST`, `render/frame.ts
-  sheenConfig`, `reflect.wgsl` main and its two other writings, `composite.wgsl` reflK in both writings, `engine.ts` the denoiser's bound). The
-  maintainer on his GPU, 11-04: "overcast dark room has specular sparkles". WHAT THEY ARE, measured on the white roof's service room with its
-  door shut: not noise in time. The floor is a rolled skim, finish 0.45, and its stuff has a grain in its gloss (0.38 to 0.51, one pixel in ten
-  past 0.45). High stops the reflection term at roughness 0.45 and the composite fades the whole term out over the 0.12 under that. So the fade,
-  not the lobe, draws the grain: in the still the highlight follows the roughness map pixel for pixel (r = −0.72), from 33 to 1 over a twentieth
-  of roughness, and the one exposure model shows a dark room a hundred times up. With each part of the term put out in turn (the rig's script,
-  `settings.rtGlints = 0`, then `rtRays = 0`), two thirds of the grains are the lamps' highlights and a third the rays. Any finish from 0.33 to
-  0.45 on High with a grain in its gloss does it, and "a brick's own gloss at a time" beside a door is the same fade. WHAT DID NOT CURE IT, so
-  nobody tries again: (1) widening the lobe by how the stored normal turns across a reflection texel (specular anti-aliasing, as the men's coats
-  have): the floor's normals are flat, nothing moved. (2) Fading the term in the reflection pass, a texel at a time before the denoiser, with
-  the composite taking like texels: in the dark room an even faint sheen, but in a bright highlight (the sun's on the floor by the door) the
-  grains came back as blocks the size of a texel, which the denoiser's edge stop keeps. THE TRIAL, the one that drew clean: the cut-off is what
-  a RAY costs, so it is the rays' alone. The rays fade under it in the reflection pass. The highlights (`rtGlints`: lamps, lit panels, an
-  opening's light, the sun; a beam's image) are sums with no ray of the lobe: they go on a quarter of the roughness scale past the cut-off at
-  full strength and the composite fades the term over that whole reach, where a highlight is broad and faint. WHY IT IS A TRIAL AND NOT THE
-  RULE: both parts still share one texel and one filter, and a review found what that costs. A texel that holds highlights alone is a term to
-  the denoiser: it enters the clamp's statistics and the tile's stand-in of a polished neighbour in the same plane (a painted line on a polished
-  floor), where a texel with no term was filled; the composite's upsample no longer masks a satin pixel beside a polished texel in one plane; a
-  metal's paint is stepped back by the pixel while its rays are faded by the texel; the denoiser's passes run on every finish to 0.70 on High;
-  the snow crust's glaze (0.56, chosen to be past every cut-off) takes highlights. Without `&glintpick=1` the lamps past the four
-  strongest are still credited at half, unshadowed, and on a broad lobe that half is no longer small; the lit panel's analytic image was fitted
-  for finishes of 0.3 to 0.45; on Medium, where the rays' fade overlaps the panels' own hand-over, a twentieth of a lit panel's image is dropped
-  in the band. And the fade's hard end has moved, not gone: a finish near the
-  far end of the reach (0.60 to 0.70 on High) with a grain in its gloss has the same edge there, on a highlight about nine times fainter; and the
-  rays under the cut-off keep their steep fade, a third of the grains by the still's measure. THE RULE IT WANTS, if the maintainer likes the picture: the
-  highlights in a target of their own, added by the composite under the gentle fade, and the mirror's chain left exactly as it is (the
-  composite's binding 9 is free whenever reflections are traced). On his no, all of it goes. WHAT THE TRIAL COSTS: a finish from 0.45 to 0.70
-  on High runs the highlights' sum and its shadow rays (four at most, and the sun's) and the denoiser, where it ran nothing. WHAT IT CHANGES
-  THAT WAS NOT ASKED, with the word: every finish from 0.33 to 0.70 on High holds lamp, panel, doorway and sun highlights it had faded or not at
-  all. Check: `bun run tools/qa/probes.ts sheen` (family `render`; the rule by its text in five shader texts and the page's wiring; the trial
-  ships DOWN; the arithmetic: the brightest highlight a twentieth of roughness can put out is 7.1 lobe heights at High's cut-off and 0.80 with
-  the word, 13.1 and 1.15 on Medium, 4.0 and 0.58 on Ultra; `SHEEN_BREAK=1` = the word refused, fails), `shaderrows-check` (re-stamped), all 69
-  shader texts compile, `tsc` both. DRAWN, software adapter, the white roof's service room on an overcast day with its door shut (two boots of
-  one tree, 120 programs each, no page or GPU error): without the word four frames are the frames of the tree before, pixel for pixel; with
-  it the specular view's grains (0 to 68 about a mean of 8, in a patch of the floor) are an even pool of sheen (42 to 93 about 73, no pixel
-  out). NEVER SEEN ON A GPU, and its cost never timed.
-- **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (11-04; the look's page, where the openings' lights are; no switch
+- **THE MIRROR AND THE HIGHLIGHTS ARE TWO TERMS IN TWO TARGETS** (11-05; EVERY PAGE THAT TRACES REFLECTIONS, medium and up. One path; the address's
+  `&hireach=0` is the same path with the highlights fading where the mirror does, the reach they had, to hold the two pictures side by side on one
+  card: `render/frame.ts highlightConfig`, the prelude's `RT_HI_REACH`. It took the place of the `&sheen=1` trial of the hour before, whose word,
+  constant and check are gone). The maintainer on his GPU, 11-04: "overcast dark room has specular sparkles". WHAT THEY WERE, measured on the white
+  roof's service room with its door shut: not noise in time. The floor is a rolled skim, finish 0.45, and its stuff has a grain in its gloss (0.38
+  to 0.51). High stops the reflection term at roughness 0.45 and the composite faded the whole term out over the 0.12 under that, by each pixel's
+  own roughness. So the fade, not the lobe, drew the grain: in the still the highlight followed the roughness map pixel for pixel (r = −0.72), from
+  33 to 1 over a twentieth of roughness, and the one exposure model shows a dark room a hundred times up. Two thirds of the grains were the lamps'
+  highlights and a third the rays. Seen again on a cloud NVIDIA card (11-05): the grains without the trial's word, an even pool with it. WHAT IT IS
+  NOW, five rules.
+  (1) TWO TARGETS. The reflection pass (`reflect.wgsl` and its two other writings) writes what the lobe's rays bring back to the mirror's target
+  (`outRefl`, the denoiser's, exactly as before: its cut-off `settings.rtMaxRough` is what a RAY costs) and the highlights (`rtGlints`: lamps, lit
+  panels, an opening's light, the sun; a beam's image) to a target of their own at the same size (`outHi`, `passes.ts reflHi`), which no filter
+  touches: the made-up depth the denoiser was handed to place them by is gone. The composite reads it as a read-only storage texture (binding 18:
+  the stage has no sampled texture left, and binding 9 is the glass path's). That is a shader language feature (Chrome since 124):
+  `gpu/device.ts openDevice` says so in words to a browser that lists its features and lacks it, where the composite would have failed to parse.
+  (2) ONE FADE FOR THE HIGHLIGHTS ON EVERY PRESET (`common.wgsl RT_HI_FADE`, 0.5 to 0.75, through `rtHiFade`): whole on every finish up to 0.5,
+  gone at 0.75, where a lamp's highlight at its peak is 6% of what the paint beside it sends back. So a preset changes the mirror and nothing of
+  the lamps' highlights (on Medium a lino at 0.40 had none).
+  (3) BOTH FADES ASK THE FINISH'S ROUGHNESS ABOUT THE PIXEL, NOT THE PIXEL'S OWN. A texel makes its highlights with the mean roughness of its own
+  block of pixels (those within 0.15 of its own pixel's, so another finish in the block has no say) and hands that on in the target's fourth
+  number, for every texel that is not matte; the composite fades the mirror and the highlights by that, read as it reads the highlights. No fade
+  is asked a grain.
+  (4) THE HIGHLIGHTS ARE READ OFF NINE TEXELS by a quadratic spline's weights × the nearness of surface and likeness of normal the mirror's read
+  asks × how like the texel's finish is to the pixel's (`composite.wgsl upsampleHi`: a texel within a tenth of the pixel's roughness is its finish
+  and its grain, one two tenths off is another finish in the same plane, a polished inlay in a satin floor, and has no say). A shadow's edge in a
+  highlight is a hard edge on a grid of a half or a third, which four texels blended by distance drew as a staircase. Where the nine have under a
+  fifth of a whole weight between them (a table's edge over a floor, a thing thinner than a texel) the sliver is not scaled up: no fill.
+  (5) AN OPENING'S SKY IS COUNTED ONCE. A mirror ray that left by an opening that is a light brought the sky back whole while the opening's
+  analytic image was also whole in the highlights on every finish of 0.3 and over: twice in a satin floor, since openings became lights. A missed
+  ray now gives up the share of its sky the portal's light covers (`common.wgsl skyKeep`, the bounce's own rule) × the finish's share of analytic
+  image (1 − `emitTraceK`), as a lit panel's is split. What the ray HITS past the opening it keeps, as the bounce does.
+  AND A METAL'S HIGHLIGHTS (`F0h`): a conductor's only as far as its paint is stepped back for its mirror (the composite's `metalK`: the same
+  fade, strength and test of rays); where the paint stands in whole for the metal, a coat's. At a conductor's strength a lamp's highlight on a satin
+  steel on Medium would have been four times the paint under it.
+  WHAT DID NOT CURE THE SPARKLES, so nobody tries again: widening the lobe by how the stored normal turns across a texel (the floor's normals are
+  flat); fading the term in the pass a texel at a time before the denoiser (blocks the size of a texel in a bright highlight, which the denoiser's
+  edge stop keeps). AND TWO WAYS OF SHADOWING A HIGHLIGHT THAT WERE BUILT AND TAKEN OUT THE SAME DAY (a lamp's highlight has one ray at the lamp's
+  middle, so a door's leaf cuts a hard wedge out of the pool of sheen a lamp of some size lays on the floor behind it, where the lamp's own
+  shadow is half-light): (a) no ray for a light of the direct light's broad class, its highlight drawn × that class's own answer, what arrives
+  over what would: the unshadowed sum keeps the lights the reach mask walls off, so one panel's highlight was drawn at a quarter under three
+  walled neighbours, and one answer for a class is no light's own; (b) the ray thrown at the point of the emitter the floor mirrors, held inside
+  its disc or its opening: for most of a floor the mirrored point is over a doorway's head, the ray is then thrown at the hole's rim and dies on
+  the lintel, and the highlight was gone where the old ray drew it. The ray is the one it was. WHAT IT CHANGES THAT WAS NOT ASKED: every finish from the preset's cut-off to 0.75 now holds lamp, panel, doorway and sun
+  highlights it had faded or not at all (a satin floor by a bright doorway has a pool of sheen, a painted wall by a lamp a soft one; the snow
+  crust's glaze, 0.56, takes them): `&hireach=0` takes that back. Highlights on a polish are no longer blurred and held over frames by the
+  denoiser, so they are sharper and do not trail. KNOWN, LEFT: a highlight is one sample a texel with no history, so a thing thinner than a texel
+  (a chair's leg at a third) has its highlight come and go with the jitter until the resolve's own history evens it; under `&glintpick=1` the
+  fourth ray is one pick a frame and is drawn as it falls, where the denoiser used to even it; without that word the small lamps past the four
+  strongest are still credited at half, unshadowed, and on a broad lobe that half is not small; one ray at a light's middle is a hard edge in
+  its highlight where its own shadow is half-light (above), softened over two texels by the read and no further; the mirror's fade, though asked the finish's roughness, is still 0.12 wide; with the highlights off (the panel's
+  strength at 0) an opening's sky and a lit panel are still split, and the analytic share is drawn by nobody. WHAT IT COSTS: the highlights' sum and its rays on every texel of a finish up to 0.75 where it ran up to the
+  preset's cut-off; four or nine reads of the material target a texel that is not matte; up to nine texels of three reads each a pixel in the
+  composite on every finish up to 0.85 (a texel whose spline weight or finish has no say is passed over before its depth and normal are read);
+  one target more at the reflection's size. TIMED on a cloud NVIDIA card (11-05, High, 1368 by 770, medians of the pass timers, against the tree
+  before it; read them one against the other, never as a frame rate): the compound's opening, all passes 9.02 to 9.21 ms (the composite 0.49
+  to 0.58, the reflection pass 0.22 to 0.25); the worst case, a satin floor filling the picture (the white roof's service room, the camera
+  close), 14.5 to 15.2 ms (the composite 0.82 to 1.17, the reflection pass 0.61 to 0.87). Timed before the pass-over above; not timed on an
+  Apple or an AMD card. Check: `bun run tools/qa/probes.ts highlights` (family `render`; six lines: the rule by its text in five shader
+  texts, the passes and the device; the fade's pair and the page's word; a floor of the skim's grains made and read as the pass and the composite
+  do (as it was a pixel's share of the term ran from none to 0.63, deviation 0.19; now the highlights' share is 1 everywhere and the mirror's has a
+  deviation of 0.03); the block's mean and the nine-texel read written again; an opening's sky counted once, which is the text of its two halves
+  and an identity; a metal's highlights. `HIGHLIGHTS_BREAK=1` and `PORTALMIRROR_BREAK=1` each fail), `reflup-check` and
+  `sunglint-check` (their pins moved with the text), `shaderrows-check` (re-stamped), `shaderinline-check`, all 213 shader texts compile, `tsc`
+  both. SEEN ON A CLOUD NVIDIA CARD (11-05, fourteen boots of this
+  tree, no shader, pipeline or device error): the white roof's service room with its door shut on an overcast day, as played and its specular
+  view: the grains are an even pool of sheen with the floor's own stipple soft in it; with `&hireach=0` soft blobs are left (the finish sits at
+  the mirror's fade); the same room at night, the specular view of two separate boots: the stipple is the floor's, the same in both (their
+  fine detail agrees at 0.84), not noise from frame to frame; by the open service door at midday and at dusk the played picture is the tree
+  before it; the office's server room without the look is the tree before it but for the highlights its satin finishes gained. IN THE SPECULAR
+  VIEW ALONE at midday the sun's glint on the floor by the door has a speckled band at its upper flank and scalloped edges (one sample a texel
+  of a sharp lobe): the played picture hides it in the burnt patch; not chased. NOT SEEN: any of it in motion, by anyone; on an Apple or an AMD
+  card; Medium and Ultra.
+  (SINCE 11-05 the white roof's rooms are lit by their ceiling tubes alone, `docs/agents/levels.md`: every record above of its service room at
+  NIGHT, the grains under its lamp and the two boots' specular view among them, was drawn with a point lamp of 60 in the room that is no longer
+  there. The overcast and midday records stand.)
+- **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (SINCE 11-05 THE PIECES ARE THREE, the sky one stretch along the wall and
+  not two halves: AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, below; this bullet is as written with five. 11-04; the look's page, where the openings' lights are; no switch
   and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
   `portalMean`, `portalSolid`, `portalAbove`; `direct_common.wgsl shadowSample`). The maintainer on his M4 at dusk: "orange door has horizontal
   banding when open, not when closed". DRAWN FIRST: the white roof's service door at dusk, its leaf swung into the room, on the software adapter:
@@ -2415,7 +2627,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   of it does. By the arithmetic a finish of 0.2 at the mirror is about four white walls and one at 0.45 under half of one. ONLY WHERE THE
   REFLECTION PASS RUNS: a finish under the preset's roughness cut (0.55 ultra, 0.45 high, 0.35 medium, none on low), at that pass's resolution
   and through its denoiser. No game table. KNOWN, LEFT: one ray at the disc's middle, so under cloud its edge in a shadow is harder than the
-  shade's; untinted through glass, as a lamp's; with rays traced the denoiser places it at the first ray's hit. CHECK `tools/qa/probes.ts
+  shade's; untinted through glass, as a lamp's. (Since 11-05 no highlight goes through the denoiser: they are a target of their own.) CHECK `tools/qa/probes.ts
   sunglint` (family `render`; `SUNGLINT_BREAK=1` must fail), both stands; `shaderrows-check` holds the compact pass's text. Never timed, never
   seen on a GPU, night included: the three numbers are first guesses.
 - **NO LAMP'S HIGHLIGHT IS CREDITED UNSEEN** (11-04; the scene prelude's `GLINT_PICK`, `render/frame.ts glintPickConfig`, `rtGlints` in the
@@ -2477,7 +2689,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `scenarios.walked`, `docs/level-format.md`), each the number of ways over the cell, not summed and not saturated; beside them `paths`, the same
   ways as the lines they were traced along, and `lost`, the ways the search found no path for (a straight line then; no level has one). A name is
   looked for as a door's id first. Pure, no module state; its
-  path searches are on tables of its own (`findPathAside`); nothing in `src/game` imports it. Cost: 2 to 7 ms on `block`, 3 on `compound`, under 1
+  path searches are the module's (`NavGrid.findPath`, on scratch of the one question); nothing in `src/game` imports it. Cost: 2 to 7 ms on `block`, 3 on `compound`, under 1
   on the office. THE READER: on the look's page the traffic map's lanes are those paths, traced as a route's legs always were, by `wear.ts WAY` (a route
   1, a team's way 0.45, door to door 0.3, a hint its own weight); a level with no routes had no lane at all, and a raid's yard now has the trodden line from where the team comes in to the doors it
   goes for. Every other page's map is to the byte what it was. WHAT A SURFACE SHOWS OF IT: wild ground is beaten flat and pale along a lane (as it
@@ -2515,6 +2727,200 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **A LEVEL SAYS HOW KEPT IT IS, ONE WORD** (11-05; the look's page; level data, absent = 0 = every level as it was drawn, so no picture moves
+  until a level says it. `scene/levelData.ts meta.kept`, `scene/level.ts Level.kept`, `scene/look.ts lookKeptOf`, `main.ts hostLevel`,
+  `render/frame.ts lookConfig.kept`, `render/gbuffer.ts setLook` (the look's uniform, c's first number), `shaders/look.wgsl lookKept`,
+  `lookSurface`'s `left` / `wild`, `lookMarkSoft`, `shaders/markings.wgsl markSoft`, `markTone`; the address's `&kept=<0 to 1>` is the word
+  for a visit). Asked by the level pass: an office's half-metre wall numerals drew "blotched and broken, like chipped paint or dirt",
+  because whether a surface looked looked-after was said STUFF BY STUFF (a stuff with no `fades` is "a place somebody keeps") and every
+  painted mark was old paint by one number for the whole game. A place that should read as cleaned last night had to say every wall again
+  as a kept cousin of its stuff, and its signs still drew rubbed. THE RULE: a level says ONE number, from 0 (left to the weather and the
+  years) to 1 (cleaned and painted last night). `lookSurface` reads it once (`left` = 1 − kept), and HOW WILD A SURFACE IS becomes its
+  stuff's word × the place's (`wild` = the stuff's `fades` > 0 × `left`), where it was the stuff's word alone. Four things follow.
+  (1) THE WEATHER'S AMOUNT on a weathered stuff is the panel's Weather row × `left`: the slow blotches and the drift of hue of a stuff that
+  `fades`, the damp foot, the tide mark, the bleached head and the dark runs of one that `soaks`, the rubbish that gathers at a wall's foot
+  where nobody treads. A mud wall's render that has let go (the masonry rule's patches of bare brick) shrinks with it and is gone at 1; the
+  stone plinth is how the wall was built and stays. (2) WHAT THE WEATHER GIVES UP THE KEPT RULES TAKE, by the same share, so a weathered
+  stuff in a kept place is drawn as a kept one and never as neither: the detail layer's dust band at a wall's foot and its shoe marks on a
+  skirting come in by 1 − `wild`, and so does the No repeat row's drift of three in a hundred. (First built with the weather's amount
+  scaled and the choice of rules left on the stuff alone: at 1 a mud wall had no damp foot AND no skirting marks, the review's find. The
+  dust band's share is `detailFloorWear`'s third number, × its squared nearness, so it is linear in the share: scaling the nearness that
+  goes in gave the square of it, the band weakest half way.) (3) WHAT USE DOES TO A STUFF (`worn`: a piece stained or changed, a wall's
+  foot knocked, the dirt feet bring in) shows by 1 − `wild` too, where it was gated on the stuff having no `fades`. So a weathered stuff
+  may now say `worn`, and plaster, block and slab do, each with its kept cousin's number (skim, cast panel, paver): in a kept office a
+  plaster wall has its knocked foot, in a ruin the weather has it. No picture moves for it until a level says the word.
+  `lookmaps-check`'s line "use shows on kept stuffs only and on none of the older sixteen" is CHANGED for this: it now lists the three by
+  name beside their cousins and refuses any other. (4) A MARK'S PAINT: the years' share of its wear and the colour gone a shade into its wall are × `left`; the brushed shape and the
+  painter's hand stay, so a kept place's sign is whole and its own colour and still paint, not square cells. WHAT DOES NOT ASK IT: where feet go. A
+  trodden lane on bare ground, a floor's scuffed lane, and paint trodden off a floor (a mark's wear is the greater of the years' share and
+  how much its floor is walked) are in a kept place as in a ruin. On a floor whose stuff says `worn` the lane has one answer by share: the
+  weather's (beaten pale) by `wild`, the kept one (the dirt feet bring in, a shade darker) by 1 − `wild`; first built with both whole on
+  a kept slab floor, where they cancelled to a mottle, the third review's find. A knocked foot is a WALL's: a box that moves has none (its
+  run of knocks is laid along the face's plane and hopped as a leaf swung; that was so of any kept stuff before this and is mended here,
+  the one picture this change moves with no word said, if a moving box of stucco, skim or pavers stands on a floor anywhere). WHAT IT CANNOT DO: change a
+  stuff's own picture. The rust and streaks of `metal` are drawn into that stuff's map (the Paint row), so racks that "draw speckled like
+  rust" in a kept office are cured by saying them as `steel`, `enamel` or `brushed`, not by this word. A stuff's own `fades` and `soaks`
+  now say what it does where nobody keeps it, and the kept cousins (stucco and skim of plaster, cast panel and gloss block of block, paver
+  of slab) are no longer the only way to a clean wall; folding each pair into one stuff is not done. WHO SAYS IT: a generator, `export
+  const KEPT = 0.8`; the exporter writes the file's `meta.kept`, and gives a look's second file (`<name>-gwot.ts`, what the look's page
+  loads) the word of the level it dresses unless it says its own (`tools/levels/keptWord.ts`, which the check runs too); a level built on
+  another's floor with no `DRESS_AS` re-exports the word; the office would say it as `level.kept` in its builder (`levelToData` writes
+  the file's meta from the Level and drops either key from a caller's `meta`, a marks' texel the same way now). Every way a level enters
+  the page goes through `main.ts hostLevel`, so the bundled office that stands in for an editor level that cannot stand takes its own
+  word, and its own marks' texel (2.5 cm said outright, where the failed level's stayed). The page logs the word in force when
+  a level or the address says one. ONE WORD A LEVEL: a room's own (a kept office over a derelict cellar) would ride the place field and is
+  not built. Picture only: nothing in the game reads it, and a level's fingerprint (`game/savestate.ts levelFingerprint`: names, counts
+  and the boxes' geometry) does not take it in, so saying the word refuses no checkpoint or recording. With no word the frame is the frame
+  as it was: every new term is × 1 or + 0 at kept 0, written so that holds to the bit. SEEN ON A CLOUD NVIDIA CARD, TWICE. First, the
+  weather's amount and a mark's wear only, the same build with `&kept=0` and `&kept=1`: on the white roof's block wall the red FIRE
+  stencil and its bar, pink and rubbed through at 0, are whole and red at 1, and the chalk 1 on its orange plate is whole, both still
+  brushed; the knocked foot of the orange plinth under them is there in both; the roof's deck, all kept stuffs, does not move (mean
+  difference 0.07 of 255). On the compound at midday the mud walls lose their blotches and their damp foot and the band of stones along
+  the wall is gone, the trodden paths stay. Second, with `wild` by the place (the first review's mends), the compound's start at 0, 0.5
+  and 1: AT 0 IT IS THE FIRST BUILD'S PICTURE AT 0 to the card's own noise (mean difference 0.75 of 255, scattered, on the men's idle
+  and the panel's frame counter, no line along a wall or its foot), which is the one measure there is of "no word, no change"; 0.5 lies
+  between; at 1 the ground along the wall is one pale tone and the wall's stones stay. No error or warning on ten boots. NOT SEEN ON ANY
+  GPU: the second review's mends (the dust band's share made linear; the knocked foot of plaster, block and slab in a kept place; the
+  share on a kept stuff's lane dirt); a mark on a walked floor in a kept place; Metal, where "to the bit" also rests on the driver
+  keeping the order of a product; a level that says the word in its file (none does yet; the office is to be the first). KNOWN, NOT LOOKED AT: block's and slab's own maps hold a slow tone three to four times what the
+  kept stuffs are held to (0.055 and 0.042 against a bar of 0.015, `lookmaps-check`'s measure), and neither untiles. Left to the weather
+  the blotch hides it; at kept 1 a long block wall or slab floor has only the drift of three in a hundred, and may show its 2 m tile. If
+  it does the mend is in the two maps or their rows, not here. Between 0 and 1 a weathered surface pays for both families of rules
+  (about twice the noise reads of either end): a level that settles part way is the look's dearest setting, unmeasured. Check: `bun run tools/qa/probes.ts kept` (family
+  `render`; five lines: the word there and back through the file, the page's rule, the rule by its text in the shaders, their uniform's
+  writer, the page and the exporter, a second writing of the places it acts, the word in each look's second FILE against its
+  generator's; `KEPT_BREAK=1` fails two). It holds the rule by its text and a second writing: nothing in it draws a frame, so that kept 0
+  is the frame as it was rests on the reading of each term and the card pair above, on both
+  stands; the render family's gate, `shaderrows-check`, `shaderinline-check` (both settings), `look-check`, `stuff-check`,
+  `lookmaps-check`, `ways`, `materials`, `level`, `frame-layout`, all 213 shader texts compile, `tsc` both, every level file's export
+  unchanged.
+- **WHAT DAYLIGHT THROUGH OPENINGS STILL COSTS, SPLIT ON ONE CARD** (11-05; a measurement, no code: read it before trying to cut the openings'
+  cost again). After the reach rule and the three pieces (the two bullets below), one cloud NVIDIA box a level, High, 1368 by 770, the render
+  size held (`adapt=0`), the clock stopped, every word flipped in the running page (two boxes of one commit differ by 1 to 2 ms, so only a flip
+  inside one page is a timing). Whole frame GPU ms, the direct pass in brackets. THE OFFICE AT MIDDAY, twelve openings lit, their reaches 9 to
+  23 m: 19.9 (8.4) against 13.3 (3.9) with the Daylight at openings row off; before the two mends 24.4 to 24.9 (10.2 to 10.5). THE CONSULATE AT
+  NIGHT: 13.45 (4.74) against 10.7 (3.06); before 20.0 (10.1 to 10.6). The white roof at midday with its doors shut lights no opening and pays
+  nothing (9.1 both ways). WHERE THE OFFICE'S 6.6 ms GOES, each found by a run-time switch on a timing-only tree: the exact sum in pieces
+  against one point, 1.8 in the direct pass and 0.4 in the sharp resolve; the part of a shadow ray that runs on past the opening to the sky,
+  0.8; what is left of the direct pass with the sum as one point and the ray stopped, 1.9 (twelve more lights a pixel through the candidate
+  loop, and the class's rays to them: two rays a pixel for four saves 1.25 with the openings and 0.66 without); the sharp resolve's own share
+  of scoring them, 0.3; THE CACHE'S FOUR CASCADES, 1.07 (3.54 against 2.47), and the reflection pass 0.14: a bounce ray's hit gives every light
+  that reaches its cell a shadow ray (`directIrradiance`, to which an opening is an area light, `evalLightRaw`), and by day every opening is
+  over that loop's threshold; the cache's dice 0.1. The final gather and the fog move by under 0.1. Listing the openings and never scoring them
+  costs nothing (3.93 against 3.86). WHY THE REST STAYS, each lever weighed: (1) a shorter reach by day: the reach is where an opening's own
+  light stops being worth a ray, and past it the bounce carries the sky only as far as its firefly bound lets it, which is relative to what the
+  cache says a point receives and so is no fault of the hour: at 2.5 times the worth a room's far wall drew a step greyer by day. (2) The ray
+  past the opening is what lets a wall across the yard, a shutter and a man outside stand between a room and its sky; the walk already skips
+  empty cells and culls by height, and what is left is the forty cells themselves. (3) At a bounce ray's hit a per-light threshold cannot
+  thin twelve openings of like strength without losing the room's bounced daylight, and drawing them by lot puts noise into the cache, which
+  nobody has judged (a still does not show a boil). (4) Fewer pieces was tried (one point from far off: 20 to 100 % out; one sky piece: five times
+  the error). (5) Two shadow rays a pixel for four is the quality ladder's own number, not a mend. WHAT WOULD BE A LADDER ROW, if one is ever
+  wanted: how many openings are lit at once (`LOOK_OPENINGS.lit`, twelve): the cost by day is near half a millisecond an opening. NOT
+  MEASURED: any other card (Metal, D3D12), a level with more glass than the office, dawn and dusk.
+- **THE MEN'S NOISE HOLDS NO LOOP AND NO LOCAL ARRAY, ON PURPOSE** (11-05; `look.wgsl manNoise`, `manH4`; every look page with men in it: the Men,
+  Kit detail and Printed cloth rows. The same picture by the same arithmetic; no word.) The men's fragment program was 325 KB as a compiler
+  pastes it against a bar of 200: its value noise called a one-corner hash eight times, at each of ninety-two places (195 KB). First mend, the
+  same day: the eight corners filled by one call in a LOOP over a local array (151 KB; drawn on a cloud NVIDIA card, the same man; timed there
+  with a man filling the picture on two boxes a commit, g-buffer 0.49 ms before and after, and by the performance task in a played picture, 1.47
+  and 1.46). It was replaced within the hour all the same, on the performance task's advice: that night a loop inside a function the box walks
+  inline had DOUBLED the fog march on the NVIDIA compiler, with one turn as with eight, and a loop's price is a mode of the compiler that no
+  size tool sees and that nobody here can time on DXC, the AMD driver or Metal; a local array indexed in a loop is what a compiler keeps in
+  memory when it gives up. NOW: the cell's four corners along x and y are folded once as a vec4u, and each of the cell's floor and lid is
+  finished by `manH4`, the old hash's own integer steps a lane (178 KB). DO NOT PUT A LOOP BACK to save text: take call sites out another way.
+  Check: probe `charmats-shader` (its last line: no `for`, no `array<` in the two functions, their text, and 32,000 corners hashed both ways
+  in integer arithmetic with none differing; `MANLOOP_BREAK=1` changes one constant of the four-at-a-time hash and fails it), both stands;
+  `shaderinline-check --setting look`. NOT SEEN on a GPU as this text (the loop form was); stills are asked.
+- **AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, WHERE IT WAS FIVE** (11-05; `common.wgsl PORTAL_PIECES` 3, `portalPiece`; every pass that
+  asks an opening's sum: the direct estimators, the sharp upscale, the cache's dice. THE DAY'S HALF of the openings' cost, after the reach
+  below. NO WORD ON THE ADDRESS, and why: the five-piece text would have to stay in every direct kernel beside the three, which is the second
+  path the shaders' rule forbids and what their size rows are about; the two were held side by side by a timing-only commit and by the check.)
+  The sum cut the part of an opening a point sees into the ground's piece and the sky's in two halves along the wall, each half at its ramp's
+  end: five. IT IS A TRADE, AND THE NUMBERS ARE ITS PRICE. Against a sum over the opening's own points at 2,778 places (eight kinds of face: a
+  floor, a table top, a wall facing the opening, faces that lean and tilt along the wall, a diagonal wall, a side wall; 0.4 to 12 m in and to
+  6 m either side of a door, a window, a glass wall and a long strip of high glass) the error goes as the sky's unevenness: under an even sky
+  both are exact; under the most uneven sky an hour has (dusk, its horizon 2.28 times its zenith by luminance; a night is 2.03, midday 1.70,
+  a grey day 1.07) THREE pieces are off by 1.18% of a place's own light on the mean, nineteen places in twenty under 4.8%, the worst 13.8% (a
+  side wall); FIVE were 0.59%, 2.3% and 11.8%. So the halves halved an error of about a hundredth, on every kind of face alike (the first
+  sample here had no leaning faces and only one side of the opening and read "bought nothing": a review caught it). The error is smooth: a
+  shade, never a band or an edge. WHAT THE HALVES COST, a cloud NVIDIA card, High, 1368 by 770, one box flipping the piece count in the
+  running page (a timing-only commit that still walked five and returned two empty, so the build's own is a little better), at the reach every
+  opening had before the rule below: the office at MIDDAY, direct 10.5 to 9.1 ms, the sharp upscale 2.85 to 1.94, all passes 24.9 to 22.5;
+  the consulate's night, direct 10.6 to 9.6, the upscale 1.64 to 1.25, all passes 20.7 to 19.3. At a quarter of that reach (about the rule's
+  own on a night) it is 0.3 ms. NOT TIMED: the two mends together on one box, by day. TRIED AND DROPPED on the way, so nobody builds them: the
+  sky as ONE piece with no cut at its ramp's end (five times the error); a piece taken as its middle point from far off (20 to 100% off
+  wherever a face's own horizon cuts the piece: a side wall, a table's top); a slanted cut along the ramp's end (worse: the ramp's end is a
+  hollow curve along the wall and a straight edge across it overshoots in the middle); an opening that a wall hides from a pixel's cell scored
+  the cheap way or not at all (timed: 0.2 ms, the pixels behind walls are not the cost); the eight points a ray is aimed by left unweighed
+  (timed: nothing). IF DUSK EVER SHOWS IT (a shade on a leaning face by a long window): the slanted cut SPLIT AT THE RECEIVER'S OWN FOOT where
+  the foot lies inside the stretch measured 0.70%, 2.7% and 9.8% on the same places, at three pieces' cost for every pixel that is not
+  straight in front of the opening; not built. WHAT IS STILL OWED BY DAY and is not waste: the class's rays (two for four a pixel is 2.0 ms)
+  and the sum itself for every pixel in plain sight of an opening; with both mends the office at midday is still some 5 ms over the row off.
+  Check: `bun run tools/qa/probes.ts portal` (the line above by its numbers beside five's, the shader's text, and every older line of the sum,
+  which hold as they did; `PORTALPIECES_BREAK=1` is the sky as one piece, asked of that line alone, and fails it), both stands. NOT SEEN on a
+  GPU as this text: the timing-only twin drew without error; stills of the build's own are asked.
+- **AN OPENING'S OWN LIGHT REACHES AS FAR AS IT IS WORTH A RAY** (11-05; the look's page, wherever an opening is a portal: `scene/openings.ts
+  openingReach`, `LOOK_OPENINGS.worth` 0.04, `.near` 3 m, `.far` 26 m, `.past` 2 m; `engine.ts lookOpeningLights` sets the light's range by it. ONE
+  RULE AT EVERY HOUR, no test of the hour and no second path: the address's `&portalworth=<number>` is the same rule with another worth for the
+  visit, and `&portalworth=0.003` is the reach every opening had until this day, to hold the two pictures and the two costs side by side). IT IS
+  THE NIGHT'S MEND AND ONLY A TENTH OF THE DAY'S: read WHAT IS LEFT before promising a bright interior at speed. WHAT WAS FOUND: a pricing walk of
+  all 29 levels on a cloud card read the look's layers at 3 to 6 ms in the DIRECT pass on indoor levels at night, where they had been 0.3 to 1.1
+  before the light series; one row off at a time named Daylight at openings (the consulate's night: direct 10.1 ms with it, 3.1 without). Split
+  on one box by words flipped in the running page (timing-only commits, not in the build): an opening's sum taken as one point, 2.5 to 3.3 ms
+  less in direct and 0.7 to 1.4 in the sharp upscale; the eight points a ray's aim is weighed by, nothing; the ray stopped at the opening and
+  not 40 m on to the sky, 0.6 less; two rays a pixel for four, 2.0 less; the dim-class trade, nothing; openings listed and never scored, the
+  cost of none; AN OPENING A WALL HIDES FROM A PIXEL'S CELL scored as one point or not at all, 0.2 less (so it is NOT the pixels behind walls:
+  it is the pixels in plain sight, by their number). And their number was the whole building: the range was where the light fell to 0.0015 on a
+  floor facing it, 0.3 of a per cent of white, which on a night is 11 to 18 m from a window (26 from a glass wall) and by day the cap for every
+  opening. THE RULE: the reach is where what the opening alone would SHOW on a floor facing it straight out (what it looks out on × the frame's
+  exposure, the product that already says whether it is lit at all, × the open area of the whole stretch it is a piece of ∕ the distance
+  squared) falls to `worth`, 4% of white; and never less than 2 m past its own rectangle's corner. A long opening lit as several lights reaches
+  as one (`Opening.of`). Past the reach the light has faded out (`lightWindow`) and the bounce's rays that leave by the opening keep the rest of
+  the sky (`skyKeep`), as they did for every opening before 11-04. THAT HAND-OVER IS NOT WHOLE, and a review said why: by day the gather bounds
+  each ray at four times the cache's level (`giFireflyK`), and a ray that leaves by a door carries the sky at many times that, so part of what
+  the bounce is handed is cut; and the cache finds a doorway by its own few rays. So past the reach a deep room is a little darker than it was
+  and has no shadow of a man in the sky's light there; on the look's page the GPU light meter's reading past the reach is the cache's, not a
+  shadowed ray's. WHAT IT COSTS NOW, the same card, High, 1368 by 770, medians on one box, the rule against the old worth and against the row
+  off (timed at the same reaches, before the exposure, the stretch and the corner were in the rule): the consulate's night, direct 10.1 to
+  5.05 ms (3.05 off), all passes 20.0 to 13.9 (10.8 off); the office's night, direct 9.2 to 5.85 (4.2 off), all passes 19.6 to 15.3 (12.9
+  off); THE OFFICE AT MIDDAY, direct 10.2 to 9.1 (3.9 off), all passes 24.4 to 21.6 (14.05 off): by day what an opening looks out on is twenty
+  times a night's, a glass wall still reaches 25 m, and the rooms' light IS the openings'. WHAT IS LEFT, in the order it would pay: the sum made
+  as fine as the angle the opening covers from the pixel (DONE the same day as three pieces for five, the bullet above: by measure it is the sky's unevenness
+  and not the angle that asks for pieces); the sky ray no further than the level's roofs (0.6); and the class's rays, which by day are the
+  room's light and are owed. THE PICTURE, stills on the cloud card at the reach as it was, a half, a quarter, and at three worths: the consulate's and the
+  office's night starts are the same picture at every one (their floors' pools are the moon's); the office at midday and the white roof's
+  service room with its door open are the same at this worth, and at two and a half times it the white roof room's far wall goes a step greyer
+  (the hand-over above). KNOWN, LEFT: a dark place's own gain (up to four times) is not in the rule; dragging the sky's or the sun's sliders by
+  day now moves a reach, and the reservoirs' memory is cut across the band while it moves; the reach masks are still decided over the whole
+  grid. Check: `bun run tools/qa/probes.ts portal` (its last line: the consulate's widest opening 4.9 m where it was 17.9, a door at midday
+  8.7 m, the bounds, a wide opening never short of its own corners, a strip's piece reaching as its strip, the engine's one line, the page's
+  word in both lists; `PORTALREACH_BREAK=1` is the old worth and fails it), both stands. NOT SEEN: any of it in motion; a deep room by day; on
+  the maintainer's GPU. NOT RUN: the digests (nothing under the simulation's folders; the meter's reading above is the look page's only).
+- **TARMAC AND GRASS ARE STUFFS** (11-05; `render/lookTex.ts` `tarmac`, `grass`: two rows of `STUFFS`, two maps, 28 painted layers where there were
+  26. EVERY LEVEL NAMES THEM SINCE THE STEP AFTER (the same day; `docs/agents/levels.md`, "Lots and lawns say tarmac and grass": the two rows say them and every level file was exported again). As this bullet was written, NO LEVEL NAMED THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
+  its own word a material (`levels/<name>.json materials`), so the page reads the file's word and a change to the table alone moves nothing until the
+  level is exported again. Naming them is the dressing's step, a level at a time.) The dress goal's ask: the lot under every office-kit level and its
+  verges were the two biggest flat colours left in a picture. TARMAC is rolled asphalt years down: black binder with stone chips of two sizes rolled
+  flat into it; the binder has worn off the tops of some (an eighth to four tenths of them, in drifts a stride across: asked where the CHIP lies, so
+  no chip is half worn, and only of the chip that stands highest at a texel) and each of those shows its own grey, a step over the binder and never
+  a white fleck; pits where a chip was plucked out, with no chip in them; a hairline craze. Finish 0.86, a worn top 0.74: under the
+  highlights' fade it takes next to none. No wheel line and no patch: those are a level's own marks. GRASS is a lawn nobody waters, seen from a
+  roof's height: four layers of blades a finger long, each its own green and its own lean about the way its patch leans (the patches lean every way
+  and swirl where two meet); thick in drifts and thin between them, where the thatch shows darker; a tenth of the blades straw, more in drifts of
+  their own; a bare place here and there with the earth showing, darker than the grass round it. No blade is drawn thinner than a texel and a third
+  (thinner, a point-sampled map draws it as a dotted line and its normals as noise). Both are ground (`ground: true`), fade with weather, break their repeat (`untiles`), and keep their
+  paint's brightness by one number a layer like every map (the grass's first cut did not: its brightest blades ran past what a map can hold and the
+  mean came back 3% under, which `lookmaps-check` caught; its greens were narrowed, and four texels in a thousand still sit at the map's top).
+  KNOWN, LEFT: whether a blade is there, and whether it is straw, is asked of the drifts at the texel and not at the blade, so about a blade in
+  fifty is cut short along a drift's edge; grass is the dearest painted layer to make after the mud wall (about 0.7 s of arithmetic at 512 under
+  bun, tarmac 0.55, a middling layer 0.3), paid once a boot by a level that names it. WHAT A FIRST LOCAL STILL TAUGHT: with the table
+  alone changed the office drew exactly as before, flat, because of the file's own words above. Check: `bun run tools/qa/lookmaps-check.ts` and
+  `stuff-check.ts`, both stands; `look-check`, `lookunits-check`, `shaderrows-check`, `shaderinline-check`, `tsc` both. SEEN ON A CLOUD NVIDIA CARD
+  (11-05, stills in three rounds from still-only commits in which the office's file names the two; no shader or pipeline error): the car park
+  as played and close at midday, the lawn's corner as played and close at midday and at dusk. The first round's tarmac was too pale and speckled
+  like terrazzo and its grass flat with pale blotches; the second read right (a mottled lawn, a worn dark lot; at dusk the blades' relief is strong
+  under the low sun); the third is the maps as they are here, after a review's mends (the chips' wear, four layers of blades, the swirl). NOT SEEN: either in motion, in rain or snow, at night, on any
+  level but the office, by the maintainer. A lawn stood on by a player the page left indoors is exposed for his dark room and reads pastel: stand
+  him in the sun before judging a ground's colour.
 - **TEN KEPT STUFFS, AND A STUFF SAYS ITS OWN ROW** (11-04; `render/lookTex.ts` stucco, skim, gloss block, board concrete, cast panel, paver, brushed,
   louvre, enamel, carpet; the level `white-roof`, `docs/agents/levels.md`). The maintainer, of a game whose pictures he sent: "it has some very
   tastefully done high frequency detail but overall quite flat", "an antidote to our repeating textures that look generated", and, after trying the
@@ -3288,8 +3694,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the lived kit's rubber ink rubber, a quarry-tile floor slab, a gravel hardstanding gravel, sandbags cloth, an exhaust metal; a picture on
   a wall, black file folders, mugs, a planter trough, pull strips and three vehicles' bodies say nothing (the vehicles' words are the
   vehicles task's); the registry's lacquered leaves say paint and the consulate's varnished ones wood.
-  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (14 lines;
-  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13 and 14; line 14 is a shape's piece; line 10 holds that in `src/game` a box's word is READ in at
+  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (16 lines;
+  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13, 14 and 15; line 14 is a shape's piece; line 15 holds that no wall and no door frame is cloth by a borrowed paint; line 16 that no generator writes a word or a finish by hand beside a paint; line 10 holds that in `src/game` a box's word is READ in at
   most one place, the picture of a hit) and `bun run tools/qa/stuff-audit.ts --before <ref>`, which prints what every box was and is, by
   kind and file, and exits 1 where one lost or moved its material: against the head before this series it lists the 1,046 below and exits
   1, by design.
@@ -3336,7 +3742,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   text has no stuff's constant and no class test but against plain, and that for each of the 28 stuffs of that day the row says exactly
   what the named rules said, six words each, the old rules written out in the check (`was`: a row changed on purpose changes it there);
   `wgsl-compile`, all 68 texts. Never seen on a GPU by a person.
-- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
+- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()`, whose first number is `lookCfg.g.x` (its second, since 11-05, is how far the place's paint is old: A LEVEL SAYS HOW KEPT IT IS), 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
   (noise by box and marking, so two signs do not share an edge), the shares sharpened so two colours meet in a line and not a blur, and thin rubbed

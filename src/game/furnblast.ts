@@ -37,7 +37,9 @@ import { WORLD } from '../scene/world';
 import type { Game } from './game';
 import type { Destruction } from './destruction';
 import type { Prop } from './props';
-import { gpuFx, paletteName, paintStandsFor, surfOf, type Surf } from './particleFx';
+import { gpuFx, type Surf } from './particleFx';
+import { doesOf, type BreakClass } from '../scene/materials';
+export type { BreakClass } from '../scene/materials';
 import { hash01 } from './debris';
 import { NOBODY_ID } from './consts';
 import { cutBoxesOn } from '../scene/cut';
@@ -98,7 +100,6 @@ export const FURN = {
  *  `strips` (only where that side is ≥ 0.3 m) — wood goes to long slats, board to slabs, sheet metal to a couple of plates and, further out, over whole; `uneven`
  *  0‥1 moves each cut off the even split; `fly` / `spin` scale how its pieces are thrown and tumble; `land` = what a piece is heard doing (debris.ts: the 'prop'
  *  hearing level and the sounds). */
-export type BreakClass = 'wood' | 'board' | 'metal' | 'hard' | 'soft';
 export interface BreakRow { shatter: { len: number; max: number; strips: number }; apart: { len: number; max: number; strips: number }; uneven: number; fly: number; spin: number; land: { level: number; sfx: { name: string; rate: number; gain: number }[] } }
 export const FURN_BREAK: Record<BreakClass, BreakRow> = {
   wood:  { shatter: { len: 0.9, max: 2, strips: 3 }, apart: { len: 1.2, max: 2, strips: 2 }, uneven: 0.6, fly: 1.0, spin: 1.0, land: { level: 0.25, sfx: [{ name: 'propThud', rate: 1.15, gain: 0.5 }] } },
@@ -107,27 +108,14 @@ export const FURN_BREAK: Record<BreakClass, BreakRow> = {
   hard:  { shatter: { len: 0.4, max: 3, strips: 2 }, apart: { len: 0.8, max: 2, strips: 1 }, uneven: 0.5, fly: 1.0, spin: 1.0, land: { level: 0.2, sfx: [{ name: 'propThud', rate: 1.3, gain: 0.4 }] } },
   soft:  { shatter: { len: 9, max: 1, strips: 1 }, apart: { len: 9, max: 1, strips: 1 }, uneven: 0, fly: 1.2, spin: 1.3, land: { level: 0.1, sfx: [{ name: 'propThud', rate: 0.9, gain: 0.3 }] } },
 };
-/** PAINTED AS ONE in a plain grey — no hue to speak of, neither the dark of a rack / a screen's housing nor white — that no other material's palette claims: a
- *  steel cabinet (`steel()` below). Read off the paint the box's paint stands for (particleFx.ts paintStandsFor). */
-export function steelGrey(albedo: Vec3): boolean {
-  const a = paintStandsFor(albedo), hi = Math.max(a[0], a[1], a[2]), lo = Math.min(a[0], a[1], a[2]); const named = paletteName(albedo);
-  return !((named && named !== 'metal') || hi - lo > STEEL_GREY.chroma || hi < STEEL_GREY.value[0] || hi > STEEL_GREY.value[1]);
-}
-/** which row a box is: by its paint's name where it has one (an unnamed paint on a piece of furniture is a steel cabinet, a locker, a machine) */
-export function breakClassOf(albedo: Vec3): BreakClass {
-  const name = paletteName(albedo); if (!name) return 'metal';
-  if (name === 'wood' || name === 'woodDark') return 'wood'; if (name === 'cardboard') return 'board'; if (name === 'metal' || name === 'red') return 'metal';
-  if (name === 'chair' || name === 'plant') return 'soft';
-  return 'hard';
-}
+/** which row a box is: its word's (scene/materials.ts `breaks`). A box that says nothing is the default row's: a steel cabinet, a locker, a machine */
+export const breakClassOf = (b: { does?: string }): BreakClass => doesOf(b).breaks;
 /** A checkpoint's slice (savestate.ts `furn`): `s` = the statics of furniture a blast took, `p` = the ids of the props that came apart. Absent = none. */
 /** `m` = statics the mouth rule took that are in neither engine's index (absent when none: a file without one is byte for byte the slice as it was) */
 export interface FurnSave { v: 1; s: number[]; p: number[]; m?: number[] }
 export const FURN_STATS = { blasts: 0, merged: 0, groups: 0, shielded: 0, statics: 0, razed: 0, items: 0, chunks: 0, demoted: 0, left: 0, propsThrown: 0, propsBroken: 0, propsShielded: 0, navOpened: 0, mouth: 0, mouthLeft: 0 };
 export const FURN_LOG: string[] = [];
 
-/** paints that are the building, never furniture */
-const STRUCT = new Set(['carpet', 'carpetBlue', 'carpetRed', 'lino', 'stone', 'asphalt', 'grass', 'wall', 'wallDark', 'concrete', 'ceiling', 'white', 'glassFrame', 'glass', 'glassExt', 'partRed', 'partBlue', 'partTan']);
 const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 /** a steel box this far through on every side (m) is a CARCASS — sheet on a frame (a cabinet, a locker) — to the cut pieces; thinner steel is a plate already */
 const STEEL_CARCASS_M = 0.25;
@@ -137,7 +125,7 @@ const STEEL_SHEETS_ROOM = 16;
 /** one part of a steel carcass on its way: a torn-off sheet, or (`open`) the carcass itself, open on that face of its own frame */
 interface SteelPart { box: Box; open?: { axis: 0 | 2; sign: 1 | -1 }; seed?: number }
 /** … no side longer than this (m), and painted a plain mid grey: at most this much between its colour's channels, its brightest inside this range */
-const STEEL_CARCASS_MOST = 2.2, STEEL_GREY = { chroma: 0.07, value: [0.3, 0.8] as [number, number] };
+const STEEL_CARCASS_MOST = 2.2;
 interface AABB { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number }
 function aabbOf(b: Box): AABB {
   const cs = Math.abs(Math.cos(b.yaw)), sn = Math.abs(Math.sin(b.yaw)); const ex = cs * b.h[0] + sn * b.h[2], ez = sn * b.h[0] + cs * b.h[2];
@@ -193,11 +181,11 @@ export class Furniture {
       if (b.c[0] < WORLD.min[0] || b.c[0] > WORLD.max[0] || b.c[2] < WORLD.min[2] || b.c[2] > WORLD.max[2] || !roofed(b.c[0], b.c[2])) { others.push(a); continue; }
       const vol = volOf(b), long = Math.max(b.h[0], b.h[2]) * 2; const ghost = (f0 & BoxFlag.NoShadow) !== 0;
       const br = walls.breakableAt(i); if (br && br.kind === 'wall') { others.push(a); continue; }
-      const name = paletteName(b.albedo); const lit = b.emissive[0] + b.emissive[1] + b.emissive[2] > 0;
+      const does = doesOf(b); const lit = b.emissive[0] + b.emissive[1] + b.emissive[2] > 0;   // (what the box DOES, scene/materials.ts: `cover` = a panel or a carton, `struct` = the building)
       let root = false;
       if (!ghost && !b.rot && !lit && !fixture.has(i) && !this.destr.itemOf(i) && a.y0 <= 0.25 && a.y1 >= R.minTop && a.y1 <= R.maxTop && long <= R.maxLong && vol <= R.maxVol) {
-        if (br) root = (name === 'wood' || name === 'woodDark' || name === 'cardboard') && (Math.min(b.h[0], b.h[2]) * 2 <= 0.12 || vol <= 0.25);   // (a desk's panel, a small carton — a crate that is real cover stays the wall engine's alone)
-        else root = !(name && STRUCT.has(name));
+        if (br) root = does.cover !== undefined && (Math.min(b.h[0], b.h[2]) * 2 <= 0.12 || vol <= 0.25);   // (a desk's panel, a small carton — a crate that is real cover stays the wall engine's alone)
+        else root = !does.struct;
       }
       if (!root && !(a.y0 > 0.06 && a.y1 <= Rd.maxTop && vol <= Rd.maxVol && long <= R.maxLong && !br)) { if (!ghost) others.push(a); continue; }
       cand.push({ i, a, root, ghost, nb: [], sup: [], group: null });
@@ -225,7 +213,7 @@ export class Furniture {
       // THE LOAD RULE: something that is not furniture stands ON it (a table top too big to be a rider, a machine's body on its plinth, a crate of real cover on a
       // cabinet) — breaking what is under it would leave that in the air, so the whole thing is left to stand
       if (others.some(o => o.x0 < a.x1 - 0.01 && o.x1 > a.x0 + 0.01 && o.z0 < a.z1 - 0.01 && o.z1 > a.z0 + 0.01 && L.some(m => Math.abs(o.y0 - m.a.y1) <= e && o.x0 < m.a.x1 - 0.01 && o.x1 > m.a.x0 + 0.01 && o.z0 < m.a.z1 - 0.01 && o.z1 > m.a.z0 + 0.01))) continue;
-      const G: Group = { id: L[0].i, members: L, a, heavy, surf: surfOf(boxes[(big ?? L[0]).i].albedo) };
+      const G: Group = { id: L[0].i, members: L, a, heavy, surf: doesOf(boxes[(big ?? L[0]).i]).surf };
       for (const m of L) { m.group = G; this.memberAt.set(m.i, m); }
       out.push(G);
     }
@@ -408,7 +396,7 @@ export class Furniture {
     if (m.ghost) return false;   // (a drawn-only sheet / placard: it just goes)
     if (FURN.mouth.snow && snowPaintOf(b) !== null) {   // lying snow: a spray from where the blast met it, never rigid pieces (a bank 15 m long cut in a dozen would be slabs metres long, tumbling)
       const a = aabbOf(b), near: Vec3 = [Math.min(a.x1, Math.max(a.x0, at[0])), b.c[1], Math.min(a.z1, Math.max(a.z0, at[2]))]; this.chips(near, [dir[0], 0.9, dir[2]], b, who, 36); return true; }
-    const cls = breakClassOf(b.albedo), row = FURN_BREAK[cls];
+    const cls = breakClassOf(b), row = FURN_BREAK[cls];
     const steel = cls === 'metal' && cutBoxesOn() ? this.steel(b, mode === 'shatter' && budget.chunks < STEEL_SHEETS_ROOM ? 'apart' : mode, dir, m.i) : null;   // (a cabinet, a locker: sheet steel on a frame — never with the cut switch off)
     if (steel) for (const p of steel) this.throwPiece(p.box, at, mode, kk, row, who, budget, b, p);
     else for (const f of this.fragments(b, row, mode)) this.throwPiece(f, at, mode, kk, row, who, budget, b);
@@ -444,7 +432,7 @@ export class Furniture {
    *  (the `board` row; `wood` where the paint is wood). The slabs are the lane's rigid debris — heard landing, in the way of a prop — and like all of it
    *  nothing a checkpoint keeps; where the pool is full a slab goes as splinters (the quality tier's pool decides chunk or chips, as for every piece). */
   hungGoes(b: Box, at: Vec3, n: Vec3, who: number) {
-    const K = FURN.hung, base = FURN_BREAK[breakClassOf(b.albedo) === 'wood' ? 'wood' : 'board'], row: BreakRow = { ...base, shatter: { len: K.len, max: K.max, strips: K.strips } };
+    const K = FURN.hung, base = FURN_BREAK[breakClassOf(b) === 'wood' ? 'wood' : 'board'], row: BreakRow = { ...base, shatter: { len: K.len, max: K.max, strips: K.strips } };
     const t: Vec3 = [-n[2], 0, n[0]]; let left = K.chunks;
     for (const f of this.fragments(b, row, 'shatter')) {
       const s = (f.c[0] - at[0]) * t[0] + (f.c[2] - at[2]) * t[2], h1 = this.hash(), h2 = this.hash(), h3 = this.hash(); let v: Vec3;
@@ -468,7 +456,7 @@ export class Furniture {
     if (b.rot || Math.min(b.h[0], b.h[1], b.h[2]) * 2 < STEEL_CARCASS_M || Math.max(b.h[0], b.h[1], b.h[2]) * 2 > STEEL_CARCASS_MOST) return null;
     // … and PAINTED AS ONE: a plain grey — no hue to speak of, neither the dark of a rack / a screen's housing nor white — that no other material's palette claims.
     // (The break class 'metal' is also where every unnamed and every red paint lands: a vending machine, a coloured crate, a dark rack keep the row's own cut.)
-    if (!steelGrey(b.albedo)) return null;
+    if (!doesOf(b).steel) return null;
     const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); const t = BREAKS.steel.sheet;
     const deep: 0 | 2 = b.h[0] <= b.h[2] ? 0 : 2, wide: 0 | 2 = deep === 0 ? 2 : 0;   // the door is on a broad upright face
     const ax: Vec3 = deep === 0 ? [cs, 0, -sn] : [sn, 0, cs]; const sign: 1 | -1 = ax[0] * dir[0] + ax[2] * dir[2] > 0 ? -1 : 1;   // (the broad face that LOOKS AT the blast is the sheet torn off: the carcass goes over away from it, so its open side ends up or sideways — seen — never under it)
@@ -509,7 +497,7 @@ export class Furniture {
   }
   private breakProp(p: Prop, at: Vec3, fall: number, who: number, budget: { chunks: number }) {
     const g = this.g;
-    for (const b of p.boxes) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) }), at, 'shatter', fall, FURN_BREAK[breakClassOf(b.albedo)], who, budget, b);   // (its parts are already its pieces: each thrown whole)
+    for (const b of p.boxes) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) }), at, 'shatter', fall, FURN_BREAK[breakClassOf(b)], who, budget, b);   // (its parts are already its pieces: each thrown whole)
     for (const c of this.destr.debris.list) if (c.on === p) { c.on = null; c.rest = false; c.stillT = 0; }   // what lay on it falls
     for (const it of g.items.items) if (it.on === p) { it.on = null; it.settled = false; it.vel = [0, 0, 0]; }   // (a can, a dropped magazine: its own rule only looks again when the prop MOVES)
     g.props.remove(p); this.goneProps++; FURN_STATS.propsBroken++;
@@ -546,8 +534,8 @@ export class Furniture {
   private mouthMine(i: number, b: Box, a: AABB): boolean {
     if (this.memberAt.has(i)) return true;
     if (FURN.mouth.snow && snowPaintOf(b) !== null) return true;   // (lying snow banked at the wall's foot, under a roof or not: the blast that opens the wall throws it — mouthOk's size bars still stand)
-    const name = paletteName(b.albedo), post = Math.min(b.h[0], b.h[2]) < 0.1 && a.y1 > 1.5 && a.y1 - a.y0 > 1.0;   // (tall in itself: a binder on a top shelf is thin and high up, and no post)
-    return !post && this.roofed(b.c[0], b.c[2]) && (!name || !STRUCT.has(name) || (name === 'white' && a.y1 <= 2.0));
+    const does = doesOf(b), post = Math.min(b.h[0], b.h[2]) < 0.1 && a.y1 > 1.5 && a.y1 - a.y0 > 1.0;   // (tall in itself: a binder on a top shelf is thin and high up, and no post)
+    return !post && this.roofed(b.c[0], b.c[2]) && (!does.struct || (!!does.counter && a.y1 <= 2.0));
   }
   /** WOULD mouth() TAKE THE STATIC `i` from `r`, the two mouths of a hole not blown yet? Its own tests, reading only (wallcharge.ts asks before it promises
    *  floor behind a wall — the furniture index is not the whole of what a blown hole clears: a cot a hair over the index's size bar goes with the wall all
@@ -636,7 +624,7 @@ export class Furniture {
     walls.note({ kind: 'cover', cause: 'blast', id: hid[0], pos, rect, opened, walkable: opened.length > 0, sight: true, dead: true, who });
   }
   private away(at: Vec3, p: Vec3): Vec3 { const dx = p[0] - at[0], dz = p[2] - at[2]; const L = Math.hypot(dx, dz); if (L > 0.05) return [dx / L, 0, dz / L]; const a = this.hash() * Math.PI * 2; return [Math.cos(a), 0, Math.sin(a)]; }
-  private chips(c: Vec3, v: Vec3, b: Box, who: number, n: number) { const P = gpuFx(this.g); if (!P) return; const wood = surfOf(b.albedo) === 'wood'; P.emit('debris', c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), n, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: wood ? 0.006 : 0.01, sizeJit: 0.6, aspect: wood ? 3 : 1, color: v3.copy(b.albedo), owner: who }); }
+  private chips(c: Vec3, v: Vec3, b: Box, who: number, n: number) { const P = gpuFx(this.g); if (!P) return; const wood = doesOf(b).surf === 'wood'; P.emit('debris', c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), n, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: wood ? 0.006 : 0.01, sizeJit: 0.6, aspect: wood ? 3 : 1, color: v3.copy(b.albedo), owner: who }); }
   private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; this.g.col.wrote(); }
 
   /** Level reset (Destruction.reset, after the walls'): every static this module hid back as authored and the level's nav / sound / smoke told; nothing at all when it broke nothing. (The props it took out of the list come back with PropSystem.reset.) */

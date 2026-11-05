@@ -18,7 +18,7 @@
 // piece with a front faces local −Z unless its line says otherwise; vehicles point +X.
 import { quat, type Quat, type Vec3 } from '../math/vec';
 import { Box, BoxFlag } from './boxes';
-import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type BowedTop } from './carShapes';
+import { pickupShapes, vanShapes, bikeShapes, lorryShapes, hubPaint, layOn, type BowedTop, coated } from './carShapes';
 import type { BoxShape, ShapePiece } from './shapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PropKind, PropPart, PropDef } from './level';
@@ -26,10 +26,11 @@ import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanva
 
 const H = WORLD.ceilingY;
 
-import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
+import { GWOT_PALETTE, GWOT_FINISH, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat } from './gwotPalette';
+import type { DoesWord } from './materials';
 import { pieces } from './library';
-import { tonedAs, wordFor } from './stuff';
-export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
+import { tonedAs, wordFor, saidAs, stuffOfName, doesOfName } from './stuff';
+export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, gwotAs, lookPaintOf, type GwotMat } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
 export type GwotOpening = { a: number; b: number; y0?: number; y1?: number; mullions?: number; glass?: 'bay' | 'whole'; tint?: Vec3 };
@@ -64,6 +65,8 @@ const matOf = (n: GwotMat): Mat => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINIS
 const palOf = (n: GwotMat): MarkPal => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH });
 const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.cos(yaw), sn = Math.sin(yaw); return (lx: number, ly: number, lz: number): Vec3 => [x + cs * lx + sn * lz, ly, z - sn * lx + cs * lz]; };
 const DECAL = BoxFlag.NoShadow;
+/** the gap left between two cloths on one line that would have lapped, and how far a gate's post reaches past the end of the wall it closes, each way (m) */
+const CLOTH_GAP = 0.02, POST_OVER = 0.006;   // (six millimetres, off the centimetre grid levels are laid on: at a whole centimetre a post grew into the plane of a lamp a tutorial hangs on it)
 
 /** MARKINGS OVER A WHOLE FACE: f(i, j, W, H) → 0 (the box's own paint) | 1‥3 (pal entry) for every cell of the face's lattice at `res`, i left → right and j
  *  bottom → top as seen from outside (+y: i along +x, j along −z), cut into ≤ `maxTiles` bitmaps of ≤ 32 × 32 cells (a face over 64 cells a side keeps its
@@ -117,17 +120,23 @@ const TONE = { lo: 0.55, hi: 0.99, near: 0.006 };
 export function gwotKit(host: GwotHost) {
   const TX = host.texel;
   const M = Object.fromEntries((Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => [n, matOf(n)])) as Record<GwotMat, Mat>;
-  /** the paint `m` standing for something else to rounds and blasts (gwotPalette.ts gwotAs): `b(…, G.as('mud', 'wall'))` */
-  const as = (m: GwotMat, sim: GwotSim): Mat => ({ ...M[m], albedo: gwotAs(m, sim) });
+  const coat = (m: Mat): Mat => coated(m);   // (a vehicle's body says it is a car's coat itself: scene/carShapes.ts carCoat)
+  /** the paint `m` on a thing that does something else to rounds and blasts (gwotPalette.ts gwotAs; a word of scene/materials.ts): `b(…, G.as('mud', 'plasterboard'))` */
+  const as = (m: GwotMat, does: DoesWord): Mat => ({ ...M[m], albedo: gwotAs(m, does) });
   /** the paint `m` DARKER IN ONE PIECE, k of it (TONE: 0.55‥0.99): how wear, wet and shade are written — the ground's own paint, never a colour laid on it.
-   *  A tone is made of what its row is made of: it keeps the row's word (scene/stuff.ts tonedAs). For DRAWN-ONLY things: to a round a toned row is no palette colour (gwotPalette.ts
-   *  gwotSimOf knows a paint by its exact colour). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
+   *  A tone is made of what its row is made of: it keeps the row's word (scene/stuff.ts tonedAs). For DRAWN-ONLY things: a tone says nothing of what it does (stuff.ts tonedAs: to a round a toned row
+   *  was never its row). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
   const toned = (m: GwotMat, k: number): Vec3 => {
     if (!(k > TONE.lo && k < TONE.hi)) throw new Error(`gwotKit: a tone of ${m} at ${k} is outside ${TONE.lo}‥${TONE.hi}`);
-    const p = GWOT_PALETTE[m], a: Vec3 = [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4];
-    for (const n of Object.keys(GWOT_PALETTE) as GwotMat[]) { const q = GWOT_PALETTE[n]; if (n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near) throw new Error(`gwotKit: ${m} × ${k} is the colour of ${n}: pick another k`); }
-    return tonedAs(p, a);
+    const a = toneOf(m, k), clash = (Object.keys(GWOT_PALETTE) as GwotMat[]).find(n => { const q = GWOT_PALETTE[n]; return n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near; });
+    if (clash) throw new Error(`gwotKit: ${m} × ${k} is the colour of ${clash}: pick another k`);
+    return tonedAs(GWOT_PALETTE[m], a);
   };
+  const toneOf = (m: GwotMat, k: number): Vec3 => { const p = GWOT_PALETTE[m]; return [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4]; };
+  /** … and the same FOR A SHAPE'S TRIM, in any paint a caller hands the piece (a drum's ribs in the drum's paint): k of the paint, the row's word kept.
+   *  `toned` refuses a tone that is another row's colour because a box of it would be taken for that row (a file's writer names a row by its numbers); a trim
+   *  is drawn only and says its own word, and the piece need not send its caller back for another k */
+  const trimTone = (m: GwotMat, k: number): Vec3 => tonedAs(GWOT_PALETTE[m], toneOf(m, k));
   type CellFn = (i: number, j: number, W: number, Hc: number) => number;
   /** one face's markings, not yet cut to a box: resolved against the box's own half extents when the box is added (so a bitmap can never leave its face) */
   type Art = { f: MarkFace; res: MarkRes; pal: MarkPal[]; fn: CellFn; inset: number; max: number };
@@ -159,13 +168,14 @@ export function gwotKit(host: GwotHost) {
   };
   /** TRIM IN A PAINT OF ITS OWN (a log's pale end, a pipe's bore, the ties on a rolled blanket): the paint, its finish, and WHAT THAT PAINT IS MADE OF — a
    *  shape's piece is of its box's stuff unless it says another (scene/shapes.ts ShapePiece), and nothing reads a word off a colour */
-  const trimIn = (albedo: Vec3, rough: number) => ({ albedo, rough, ...wordFor(albedo) });
+  const trimIn = (albedo: Vec3, rough: number, metal?: boolean) => ({ albedo, rough, ...(metal ? { metal: true } : {}), ...wordFor(albedo) });
   /** A ROUND THING LYING, the one way the kit writes it: ONE box along the piece's local X, square across it, that says `round: 1` (scene/shapes.ts: a
    *  twelve-sided prism with shapes on, the plain box with them off — so what walks meets the box either way). `ends` = its two ends as trim in another paint
-   *  (a pipe's dark bore, a log's pale grain). Its middle is `y` over the floor. Hands back its top, so a level lays snow or dust along it with `lay` */
-  const lying = (b: Put, lx: number, lz: number, y: number, len: number, r: number, m: Mat, ends?: { albedo: Vec3; rough: number }, inset = 0.9): BowedTop => {
-    const caps: ShapePiece[] = ends ? [-1, 1].map(s => ({ off: [s * (len / 2 + 0.003), 0, 0] as Vec3, h: [0.003, r * inset, r * inset] as Vec3, round: 1 as const, ...trimIn(ends.albedo, ends.rough) })) : [];
-    const shape: BoxShape = { round: 1, ...(caps.length ? { with: caps } : {}) };
+   *  (a pipe's dark bore, a log's pale grain); `more` = other trim it wears (a drum's ribs). Its middle is `y` over the floor. Hands back its top, so a
+   *  level lays snow or dust along it with `lay` */
+  const lying = (b: Put, lx: number, lz: number, y: number, len: number, r: number, m: Mat, ends?: { albedo: Vec3; rough: number; metal?: boolean }, inset = 0.9, more: ShapePiece[] = []): BowedTop => {
+    const caps: ShapePiece[] = ends ? [-1, 1].map(s => ({ off: [s * (len / 2 + 0.003), 0, 0] as Vec3, h: [0.003, r * inset, r * inset] as Vec3, round: 1 as const, ...trimIn(ends.albedo, ends.rough, ends.metal) })) : [];
+    const trim = [...caps, ...more], shape: BoxShape = { round: 1, ...(trim.length ? { with: trim } : {}) };
     b(lx, lz, y - r, y + r, len / 2, r, m, { shape });
     return { c: [lx, y, lz], h: [len / 2, r, r], shape };
   };
@@ -177,8 +187,8 @@ export function gwotKit(host: GwotHost) {
   const wallX = (z: number, x0: number, x1: number, kind: WallKind = 'mud', openings: GwotOpening[] = [], height = H) => host.wallX(z, x0, x1, GW_SHELL, gwotAs(kind, 'concrete'), openings, { rough: M[kind].rough }, height);
   const wallZ = (x: number, z0: number, z1: number, kind: WallKind = 'mud', openings: GwotOpening[] = [], height = H) => host.wallZ(x, z0, z1, GW_SHELL, gwotAs(kind, 'concrete'), openings, { rough: M[kind].rough }, height);
   /** an interior PARTITION (0.12 thick) */
-  const partX = (z: number, x0: number, x1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallX(z, x0, x1, GW_PART, gwotAs(kind, 'wall'), openings, { rough: M[kind].rough }, height);
-  const partZ = (x: number, z0: number, z1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallZ(x, z0, z1, GW_PART, gwotAs(kind, 'wall'), openings, { rough: M[kind].rough }, height);
+  const partX = (z: number, x0: number, x1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallX(z, x0, x1, GW_PART, gwotAs(kind, 'plasterboard'), openings, { rough: M[kind].rough }, height);
+  const partZ = (x: number, z0: number, z1: number, kind: WallKind = 'mudLight', openings: GwotOpening[] = [], height = H) => host.wallZ(x, z0, z1, GW_PART, gwotAs(kind, 'plasterboard'), openings, { rough: M[kind].rough }, height);
   /** the solid runs of a wall between the openings that reach its top */
   const runs = (a: number, b: number, openings: GwotOpening[], height: number): [number, number][] => {
     const out: [number, number][] = []; let cur = a;
@@ -329,9 +339,9 @@ export function gwotKit(host: GwotHost) {
       const ci = Math.abs(i - (W - 1) / 2), cj = Math.abs(j - (rail - 1) / 2), d = ci + cj; return d > 4.4 && d <= 5.6 ? 2 : 0;   // the lower: a diamond
     };
     for (const s of [-1, 1] as const) {
-      const px = s * (width / 2 + 0.17);
-      b(px, 0, 0, height + 0.1, 0.17, 0.17, M.render); b(px, 0, height + 0.1, height + 0.18, 0.2, 0.2, M.mudLight);
-      // the leaf: hinged at the post's inner face, swung by a toward `side` (local +z · side)
+      const px = s * (width / 2 + 0.17);   // (a post is six millimetres FATTER each way along the wall than the 0.34 it stands in: flush with the wall's end its face and the wall's were one plane and flickered — the patch beside the pass's gate. Its middle stays where a level that caps or lights it expects it)
+      b(px, 0, 0, height + 0.1, 0.17 + POST_OVER, 0.17, M.render); b(px, 0, height + 0.1, height + 0.18, 0.2, 0.2, M.mudLight);
+      // the leaf: hinged at the opening's edge (a centimetre inside the post's face), swung by a toward `side` (local +z · side)
       const hx = s * width / 2, cx = hx - s * Math.cos(a) * lw / 2, cz = side * Math.sin(a) * lw / 2, dy = s * side * a;
       b(cx, cz, 0.06, 2.1, lw / 2, 0.02, M[paint], mk([...face('+z', 'coarse', pal, leafArt, 0, 2), ...face('-z', 'coarse', pal, leafArt, 0, 2)]), dy);
     }
@@ -376,7 +386,7 @@ export function gwotKit(host: GwotHost) {
    *  a round, so a scatter is one thing in two tones and never a second paint; a stone has the row's whole finish (bits of tin sheet are metal). (Those
    *  three were mudDark whatever was asked: pale clods among dark gravel, mud among offcuts of poplar.) */
   const rubble = (x: number, z: number, r = 0.8, n = 7, mat: GwotMat = 'mud') => {
-    const s = seedOf(x, z), darker = GWOT_DARKER[mat], second = darker ? as(darker, GWOT_SIM[mat]) : M[mat];
+    const s = seedOf(x, z), darker = GWOT_DARKER[mat], second = darker ? as(darker, doesOfName(mat)!) : M[mat];   // (the darker stones do what the row's do)
     for (let k = 0; k < n; k++) {
       const a = h01(s, k, 1) * Math.PI * 2, d = Math.sqrt(h01(s, k, 2)) * r, w = 0.07 + h01(s, k, 3) * 0.13, hgt = 0.05 + h01(s, k, 4) * 0.12, m = h01(s, k, 5) < 0.3 ? second : M[mat];
       host.add({ c: [x + Math.cos(a) * d, hgt / 2, z + Math.sin(a) * d], h: [w, hgt / 2, w * (0.6 + h01(s, k, 6) * 0.6)], yaw: h01(s, k, 7) * Math.PI, albedo: m.albedo, rough: m.rough, ...(m.metal ? { metal: true } : {}) });
@@ -468,7 +478,12 @@ export function gwotKit(host: GwotHost) {
     if (posts) for (const e of [-1, 1]) b(e * L / 2, 0, 0, 2.0, 0.03, 0.03, M.woodGrey);   // (posts = false: strung between two walls — then every box of it is a decal)
     b(0, 0, 1.94, 1.95, L / 2, 0.004, M.iron, { flags: DECAL });
     const cols: GwotMat[] = ['rugCream', 'paintBlue', 'whitewash', 'rugOchre', 'blanketBrown', 'paintGreen'];
-    for (let k = 0; k < n; k++) { const u = -L / 2 + (k + 0.5 + (h01(s, k, 1) - 0.5) * 0.4) * L / n, w = 0.22 + h01(s, k, 2) * 0.2, drop = 0.45 + h01(s, k, 3) * 0.35; b(u, 0, 1.94 - drop, 1.94, w, 0.006, M[cols[mkHash(s, k, 4) % cols.length]], { flags: DECAL }); }
+    // the cloths are sheets in ONE plane: two that lapped flickered front, back and along the top. So each is dealt its place and width first, and two that
+    // would lap are both cut back to a finger short of where they would have met (a cloth nothing reaches is laid by the numbers it always was)
+    const cloths = Array.from({ length: n }, (_, k) => { const u = -L / 2 + (k + 0.5 + (h01(s, k, 1) - 0.5) * 0.4) * L / n, w = 0.22 + h01(s, k, 2) * 0.2; return { k, u, w, lo: u - w, hi: u + w, cut: false, drop: 0.45 + h01(s, k, 3) * 0.35 }; });
+    for (let k = 0; k + 1 < n; k++) { const a = cloths[k], c = cloths[k + 1]; if (a.hi + CLOTH_GAP <= c.lo) continue; const mid = (a.hi + c.lo) / 2; a.hi = mid - CLOTH_GAP / 2; c.lo = mid + CLOTH_GAP / 2; a.cut = c.cut = true; }
+    const short = cloths.find(c => c.hi - c.lo < 2 * CLOTH_GAP); if (short) throw new Error(`washLine: ${n} cloths do not hang on ${L.toFixed(2)} m of line without lapping (cloth ${short.k} is left ${(short.hi - short.lo).toFixed(3)} m): ask for fewer`);   // (never fewer cloths than asked, and never one squeezed to a sliver that laps both neighbours)
+    for (const c of cloths) b(c.cut ? (c.lo + c.hi) / 2 : c.u, 0, 1.94 - c.drop, 1.94, c.cut ? (c.hi - c.lo) / 2 : c.w, 0.006, M[cols[mkHash(s, c.k, 4) % cols.length]], { flags: DECAL });
   };
 
   // ------------------------------------------------------------ furniture ----
@@ -528,13 +543,24 @@ export function gwotKit(host: GwotHost) {
   };
 
   // ------------------------------------------------------- stores & cover ----
-  /** COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid */
+  /** A DRUM IS STEEL, WHATEVER IT IS PAINTED, and says so itself, the word and the finish together (scene/stuff.ts saidAs). To a round, a charge and a
+   *  blast it is metal in any row: a row that is something else to them (olive is an ammunition crate's wood) stands in a hair off, which the simulation
+   *  reads as metal and the eye as the row (gwotPalette.ts gwotAs). To the picture it is what the row says where the row is a coat or bare metal
+   *  already (the drum enamels, olive, rust, galvanised: `paint` is a coat, and says nothing of what is under it); in ANY OTHER row (a mud, a cloth,
+   *  a wood) it is that colour as a coat of enamel: `paint`, with a drum enamel's finish, never the row's stuff. So no level picks a drum's colour for
+   *  what a round does at it or how a hit on it looks */
+  const steelIn = (colour: GwotMat): Mat => {
+    const P = as(colour, 'steel'), word = stuffOfName(colour);
+    if (word === 'paint' || word === 'enamel' || doesOfName(colour) === 'steel') return P;
+    const enamel = { rough: M.drumBlue.rough }; return { albedo: saidAs('paint', P.albedo, enamel), ...enamel };
+  };
+  /** COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid. Steel in any paint (`steelIn`) */
   const drum = (x: number, z: number, colour: GwotMat = 'drumBlue', yaw = 0) => {
     const b = piece(x, z, yaw), s = 0.29 * 0.93, rib = [{ mul: 0.62 } as MarkPal];
     const ribs = (f: MarkFace) => face(f, 'coarse', rib, (i, j, W, Hc) => j === Math.floor(Hc / 3) || j === Math.floor(2 * Hc / 3) ? 1 : 0, 0, 1);
     const sides = mk([...ribs('+x'), ...ribs('-x'), ...ribs('+z'), ...ribs('-z')]);
     const lid = mk([...face('+y', 'base', [{ mul: 0.55 } as MarkPal, palOf('tin')], (i, j, W, Hc) => Math.min(i, W - 1 - i, j, Hc - 1 - j) === 1 ? 1 : i === W - 6 && j === Hc - 6 ? 2 : 0, 0, 1), ...ribs('+x'), ...ribs('-x'), ...ribs('+z')]);
-    round(b, 0, 0, 0, 0.88, 0.29, M[colour], lid, sides);
+    round(b, 0, 0, 0, 0.88, 0.29, steelIn(colour), lid, sides);
   };
   /** a group of drums: n standing in a tight cluster from (x, z), colours dealt by position */
   const drums = (x: number, z: number, n = 3, yaw = 0) => {
@@ -542,11 +568,16 @@ export function gwotKit(host: GwotHost) {
     const spots: [number, number][] = [[0, 0], [0.64, 0.06], [0.3, 0.6], [-0.36, 0.56], [0.94, 0.62], [1.28, 0.04]];
     for (let k = 0; k < Math.min(n, spots.length); k++) { const p = at(spots[k][0], 0, spots[k][1]); drum(p[0], p[2], cols[mkHash(s, k, 1) % cols.length], h01(s, k, 2) * 0.7); }
   };
-  /** COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked */
+  /** COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked, 0.88 long along local X. Steel in any paint (`steelIn`). Hands back
+   *  its top, so a level lays snow or dust along it with `lay` */
   const drumDown = (x: number, z: number, yaw = 0, colour: GwotMat = 'rust') => {
-    const b = piece(x, z, yaw);
-    b(0, 0, 0.02, 0.58, 0.44, 0.27, M[colour], mk(face('+y', 'coarse', [{ mul: 0.62 }], (i, j, W) => i === Math.floor(W / 3) || i === Math.floor(2 * W / 3) ? 1 : 0)));
-    b(0, 0, 0.1, 0.5, 0.445, 0.29, M[colour]); for (const s of [-1, 1]) b(s * 0.25, 0.3, 0, 0.08, 0.08, 0.05, M.woodGrey);
+    const b = piece(x, z, yaw), P = steelIn(colour), r = 0.29, len = 0.88, say = wordFor(P.albedo);   // (its trim is made of what the drum is: a tone of the row would say the row's stuff)
+    // (ONE box that says its round, as a pipe and a log are: with shapes off it is the plain box 0.58 square on, and what walks meets the box either way.
+    // Its two ribs are rings of trim a finger proud of it, its ends a rim's width in: all drawn only, in the paint a shade down, bare where the paint is)
+    const ribs: ShapePiece[] = [-1, 1].map(s => ({ off: [s * len / 6, 0, 0] as Vec3, h: [0.012, r + 0.008, r + 0.008] as Vec3, round: 1 as const, ...trimIn(trimTone(colour, 0.62), P.rough, P.metal), ...say }));
+    const top = lying(b, 0, 0, r, len, r, P, { albedo: saidAs(say.stuff ?? 'plain', trimTone(colour, 0.8)), rough: P.rough, metal: P.metal }, 0.88, ribs);
+    for (const s of [-1, 1]) b(s * 0.25, 0.26, 0, 0.08, 0.08, 0.09, M.woodGrey);   // (its chocks, wedged under the round: 8 cm up, the belly's flank is 20 cm out and they reach in to 17; with shapes off they stand 6 cm proud of the box's side)
+    return top;
   };
   /** PROP (bin): a JERRY CAN, 20 l — olive steel, or the yellow / blue plastic ones that carry everything */
   const jerryCan = (x: number, z: number, yaw = 0, colour: GwotMat = 'olive') => {
@@ -695,7 +726,7 @@ export function gwotKit(host: GwotHost) {
   /** COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal
    *  gun in the bed (the "technical") */
   const pickup = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite', opts: { load?: 'none' | 'drums' | 'sacks' | 'crates'; mount?: boolean } = {}) => {
-    const b = piece(x, z, yaw), P = M[body], S = pickupShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = coat(M[body]), S = pickupShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
     for (const sx of [-1.5, 1.52]) for (const sz of [-1, 1]) b(sx, sz * 0.78, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.8, 2.45, 0.86, P, { shape: S.tub });                                     // the body tub, sill to waistline
     b(2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperFront }); b(-2.47, 0, 0.36, 0.58, 0.05, 0.88, M.plasticBlack, { shape: S.bumperRear });   // bumpers
@@ -715,14 +746,14 @@ export function gwotKit(host: GwotHost) {
   /** COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is
    *  local (−3.2, 0): where a man is put in) */
   const van = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite') => {
-    const b = piece(x, z, yaw), P = M[body], S = vanShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
+    const b = piece(x, z, yaw), P = coat(M[body]), S = vanShapes({ hub: hubPaint(GWOT_PALETTE.galv) });   // (S: the shape each box says — scene/carShapes.ts)
     for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber, { shape: S.wheel(sz) });
     b(0, 0, 0.3, 0.86, 2.4, 0.9, P, { shape: S.body });                                     // the body, sill to waistline
-    b(2.43, 0, 0.36, 0.58, 0.05, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step
+    b(2.44, 0, 0.36, 0.58, 0.04, 0.9, M.plasticBlack, { shape: S.bumper }); b(-2.44, 0, 0.3, 0.44, 0.04, 0.9, M.plasticBlack, { shape: S.step });   // bumper, the rear step (each BEGINS at the body's end: two centimetres into it, their sides lay in the body's sides and flickered)
     b(2.0, 0, 0.86, 1.06, 0.4, 0.86, P, { shape: S.bonnet });                               // bonnet
     b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P, { shape: S.doors }); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark, { shape: S.glass }); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P, { shape: S.brow });   // the cab: doors, glass, the roof's brow
     b(-0.5, 0, 0.86, 1.95, 1.4, 0.9, P, { shape: S.load });                                 // the load box
-    for (const sz of [-1, 1]) b(-2.15, sz * 0.87, 0.86, 1.95, 0.25, 0.03, P, { shape: S.baySide(sz) });   // the open bay: its sides, roof, the dark inside
+    for (const sz of [-1, 1]) b(-2.145, sz * 0.87, 0.86, 1.95, 0.245, 0.03, P, { shape: S.baySide(sz) });   // the open bay: its sides (each ENDS at its tail lamp: a centimetre round it, the side's face and the lamp's were one plane and flickered; the lamp is not moved, a level hangs a light on it and the game finds it by its size), roof, the dark inside
     b(-2.15, 0, 1.89, 1.95, 0.25, 0.9, P, { shape: S.bayRoof }); b(-1.89, 0, 0.86, 1.89, 0.02, 0.84, M.plasticBlack); b(-2.15, 0, 0.86, 0.88, 0.25, 0.84, M.plasticBlack);
     for (const sz of [-1, 1]) b(-2.77, sz * 1.1, 0.5, 1.9, 0.42, 0.025, P, {}, sz * 0.5);   // the two back doors, swung out
     for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite, { shape: S.head(sz) }); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed, { shape: S.tail(sz) }); }
@@ -731,14 +762,14 @@ export function gwotKit(host: GwotHost) {
   /** COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every
    *  vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` */
   const lorry = (x: number, z: number, yaw = 0) => {
-    const L = piece(x, z, yaw), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
+    const L = piece(x, z, yaw), red = coat(M.truckRed), S = lorryShapes({ red: M.truckRed, canvas: M.canvas, iron: M.iron, galv: M.galv, rust: M.rust, rubber: M.rubber, poplar: M.poplar, white: M.plasticWhite, glass: M.glassDark, jerry: M.jerryYellow, olive: M.olive, orange: M.prodOrange });
     for (const lx of [2.2, -1.2, -2.25]) for (const s of [-1, 1]) L(lx, s * 0.98, 0, 0.96, 0.48, 0.15, M.rubber, { shape: S.wheel(s) });
     L(-0.1, 0, 0.5, 0.74, 3.1, 0.42, M.iron, { shape: S.chassis });                            // the chassis
     L(3.42, 0, 0.5, 0.78, 0.06, 1.12, M.iron, { shape: S.bumper });                            // bumper
-    L(2.75, 0, 0.74, 1.5, 0.62, 0.98, M.truckRed, { shape: S.bonnet });                        // bonnet
-    L(1.55, 0, 0.74, 1.5, 0.62, 1.12, M.truckRed, { shape: S.cab });                           // the cab: doors
+    L(2.75, 0, 0.74, 1.5, 0.62, 0.98, red, { shape: S.bonnet });                        // bonnet
+    L(1.55, 0, 0.74, 1.5, 0.62, 1.12, red, { shape: S.cab });                           // the cab: doors
     L(1.55, 0, 1.5, 2.08, 0.58, 1.06, M.glassDark, { shape: S.glass });                        // … glass
-    L(1.5, 0, 2.08, 2.2, 0.62, 1.1, M.truckRed, { shape: S.roof });                            // … roof
+    L(1.5, 0, 2.08, 2.2, 0.62, 1.1, red, { shape: S.roof });                            // … roof
     for (const s of [-1, 1]) L(3.38, s * 0.7, 0.86, 1.02, 0.02, 0.1, M.plasticWhite, { shape: S.lamp(s) });   // headlamps
     L(-1.15, 0, 0.74, 0.9, 2.05, 1.16, M.woodGrey);                                            // the bed
     for (const s of [-1, 1]) L(-1.15, s * 1.14, 0.9, 1.45, 2.05, 0.03, M.poplar, { shape: S.side(s) });   // sideboards
@@ -750,7 +781,7 @@ export function gwotKit(host: GwotHost) {
   const motorbike = (x: number, z: number, yaw = 0, tank: GwotMat = 'truckRed') => {
     const b = piece(x, z, yaw), S = bikeShapes();   // (S: the shape each box says — scene/carShapes.ts)
     b(0.66, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel }); b(-0.62, 0, 0, 0.6, 0.3, 0.05, M.rubber, { shape: S.wheel });
-    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, M[tank], { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
+    b(0.02, 0, 0.26, 0.56, 0.2, 0.12, M.iron); b(0.18, 0, 0.56, 0.84, 0.24, 0.12, coat(M[tank]), { shape: S.tank }); b(-0.36, 0, 0.62, 0.8, 0.34, 0.11, M.plasticBlack, { shape: S.seat });
     b(0.6, 0, 0.6, 1.02, 0.03, 0.03, M.galv); b(0.56, 0, 1.0, 1.04, 0.02, 0.32, M.iron, { shape: S.bars }); b(0.74, 0, 0.78, 0.94, 0.05, 0.07, M.iron, { shape: S.lamp });
     b(-0.84, 0, 0.66, 0.7, 0.16, 0.13, M.iron); b(-0.4, 0.16, 0.28, 0.36, 0.42, 0.035, M.iron, { shape: S.exhaust });   // (nothing pale on it: from above a bike is two black wheels in line and one tank of colour)
     return S;
@@ -758,7 +789,7 @@ export function gwotKit(host: GwotHost) {
   /** COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing */
   const handcart = (x: number, z: number, yaw = 0, load: 'none' | 'sacks' | 'produce' = 'none') => {
     const b = piece(x, z, yaw), s = seedOf(x, z), prod: GwotMat[] = ['prodOrange', 'prodGreen', 'prodRed', 'prodYellow'];
-    for (const sz of [-1, 1]) { b(-0.1, sz * 0.52, 0, 0.66, 0.33, 0.035, M.rubber); b(1.25, sz * 0.36, 0.52, 0.57, 0.42, 0.02, M.woodGrey); }
+    for (const sz of [-1, 1]) { b(-0.1, sz * 0.52, 0, 0.66, 0.33, 0.035, M.rubber); b(1.26, sz * 0.36, 0.52, 0.57, 0.41, 0.02, M.woodGrey); }   // (the shafts END at the bed: their tops are in its top's plane, and lapping it they flickered)
     b(0, 0, 0.5, 0.57, 0.85, 0.47, M.poplar, mk(face('+y', 'coarse', [{ mul: 0.6 }], (i, j) => j % 4 === 3 ? 1 : 0, 0, 2))); b(0.7, 0, 0, 0.5, 0.03, 0.03, M.woodGrey);
     if (load === 'sacks') { b(-0.3, -0.1, 0.57, 0.77, 0.38, 0.25, M.sack); b(0.35, 0.12, 0.57, 0.77, 0.38, 0.25, M.sack); b(0, 0, 0.77, 0.97, 0.38, 0.25, M.sack, {}, 0.4); }
     if (load === 'produce') for (let k = 0; k < 6; k++) b(-0.56 + (k % 3) * 0.56, k < 3 ? -0.22 : 0.22, 0.57, 0.71, 0.25, 0.19, M.ply, mk(face('+y', 'base', [palOf(prod[mkHash(s, k, 1) % 4])], (i, j, W, Hc) => Math.min(i, W - 1 - i, j, Hc - 1 - j) >= 1 ? 1 : 0, 0, 1)));

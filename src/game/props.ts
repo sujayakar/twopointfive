@@ -15,8 +15,9 @@ import { BOTH, StaticCollision } from '../scene/collision';
 import { thingWrote, type BoxMirror } from '../scene/boxMirror';
 import { PropDef, PropKind } from '../scene/level';
 import { EXACT, mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
-import { RUST } from '../sim/sim';
+import { RUST, ruleFell, ruleRed } from '../sim/sim';
 import { PropStore, PT, PD, PK, PY, PE, PP, PF, PROP_CAP, PROP_EV, PROP_SOUNDS, PROPS_STEPPED, propIo, propMem, propDiff } from '../sim/propshome';
+import { SimState } from '../sim/state';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A character as the prop solver sees it: a kinematic-ish circle whose position may be corrected (held back) in place, like doors do. */
@@ -46,6 +47,7 @@ const KIND: Record<PropKind, KindTune> = {
 const MAX_V = 5, MAX_W = 9;              // speed caps: with 1/60 s substeps a prop moves ≤ 8 cm per step, far below footprint + thinnest static panel → no tunnelling
 const SLEEP_V = 0.04, SLEEP_W = 0.06, SLEEP_T = 0.3;
 const DOOR_GUIDE = 1.2;                    // m/s a shoved prop is slid along the wall toward the middle of a door frame it fits through (PropSystem.doorways)
+const SETTLE_PASSES = 12;                 // the passes of a level's settle (PropSystem.settle; rust/sim/src/props.rs SETTLE_PASSES)
 const Y_MIN = 0.04;                       // static boxes entirely below this are floor finishes, not obstacles
 /** statics one gather round a thing can list (rust/sim/src/props.rs NEAR: tools/qa/rust-check.ts holds the two together) */
 const NEAR = 256;
@@ -69,19 +71,21 @@ function turnRow(d: Float64Array, YAW: number, CS: number, SN: number, r: number
 }
 
 export class Prop {
-  /** THIS THING'S OWN NUMBERS ARE COLUMNS (sim/propshome.ts PropStore: a column a number, in an array of the game's or at home in the Rust module's block
-   *  while RUST.props is on, where the furniture's step runs): every field below that changes as the game runs is an accessor over them, by the row its
+  /** THIS THING'S OWN NUMBERS ARE COLUMNS (sim/propshome.ts PropStore: a column a number, a part of the game's block from the moment the
+   *  furniture is made, where its step runs whichever side takes it): every field below that changes as the game runs is an accessor over them, by the row its
    *  id stands in, so whoever reads or writes a chair reads and writes the same values wherever they stand. (The step itself reads the columns by row,
    *  not through these: PropSystem.step.) */
   private f(o: number): number { const S = this.S; return S.d[S.b8 + o + S.rowOf(this.id)]; }
   private pf(o: number, v: number): void { const S = this.S; S.d[S.b8 + o + S.rowOf(this.id)] = v; }
   private bit(m: number): boolean { const S = this.S; return (S.u[S.b4 + S.O.flags + S.rowOf(this.id)] & m) !== 0; }
   private setBit(m: number, v: boolean): void { const S = this.S, i = S.b4 + S.O.flags + S.rowOf(this.id); if (v) S.u[i] |= m; else S.u[i] &= ~m; }
-  get x(): number { return this.f(this.S.O.x); } set x(v: number) { this.pf(this.S.O.x, v); }
-  get z(): number { return this.f(this.S.O.z); } set z(v: number) { this.pf(this.S.O.z, v); }
+  // (WHERE A THING STANDS, WRITTEN BY ANYBODY BUT THE STEP, IS SAID — `thingWrote`: the Rust module's copy of the furniture keeps each thing's place beside
+  //  its parts, for the ray's first test, and a ray asked before the thing is placed again must read the place it was just given, as the walk here did)
+  get x(): number { return this.f(this.S.O.x); } set x(v: number) { this.pf(this.S.O.x, v); thingWrote(); }
+  get z(): number { return this.f(this.S.O.z); } set z(v: number) { this.pf(this.S.O.z, v); thingWrote(); }
   /** its yaw — and, written with it whenever it is written another value, the cos and sin of it (`cs`, `sn`: columns beside it, for the step) */
   get yaw(): number { return this.f(this.S.O.yaw); }
-  set yaw(v: number) { const S = this.S, O = S.O, B = S.b8; freshTrig(S); turnRow(S.d, B + O.yaw, B + O.cs, B + O.sn, S.rowOf(this.id), v); }
+  set yaw(v: number) { const S = this.S, O = S.O, B = S.b8; freshTrig(S); turnRow(S.d, B + O.yaw, B + O.cs, B + O.sn, S.rowOf(this.id), v); thingWrote(); }   // (the copy keeps the yaw too: a thrown thing at rest on this one asks it)
   get vx(): number { return this.f(this.S.O.vx); } set vx(v: number) { this.pf(this.S.O.vx, v); }
   get vz(): number { return this.f(this.S.O.vz); } set vz(v: number) { this.pf(this.S.O.vz, v); }
   get w(): number { return this.f(this.S.O.w); } set w(v: number) { this.pf(this.S.O.w, v); }
@@ -106,7 +110,7 @@ export class Prop {
     this.mass = def.mass; this.invMass = 1 / def.mass;
     this.invI = 1 / (def.mass * (this.hx * this.hx + this.hz * this.hz) / 3 * 1.5);   // slab inertia ×1.5: a little sluggish in yaw reads as weight and keeps corner contacts calm
     this.tune = KIND[def.kind];
-    this.boxes = def.parts.map((p, j) => makeBox({ c: [0, 0, 0], h: [p.h[0], p.h[1], p.h[2]], yaw: 0, albedo: p.albedo, flags: BoxFlag.Dynamic, name: def.name, mkey: MKEY.prop + id * 16 + j, ...(p.marks?.length ? { marks: p.marks } : {}), ...(p.stuff !== undefined ? { stuff: p.stuff } : {}) }));   // (mkey: motion identity per part — scene/boxes.ts)   // (the part's markings ride on its box: the tape and glyphs on a carton turn with it)
+    this.boxes = def.parts.map((p, j) => makeBox({ c: [0, 0, 0], h: [p.h[0], p.h[1], p.h[2]], yaw: 0, albedo: p.albedo, flags: BoxFlag.Dynamic, name: def.name, mkey: MKEY.prop + id * 16 + j, ...(p.marks?.length ? { marks: p.marks } : {}), ...(p.stuff !== undefined ? { stuff: p.stuff } : {}), ...(p.does !== undefined ? { does: p.does } : {}) }));   // (mkey: motion identity per part — scene/boxes.ts)   // (the part's markings ride on its box: the tape and glyphs on a carton turn with it)
     this.place();
   }
   /** the cos and sin of its yaw (columns beside it: written where the yaw is) */
@@ -187,8 +191,8 @@ export class PropSystem {
    *  whose middle is not before the opening are left alone. Level data only: no state of its own. */
   doorways: { cx: number; cz: number; ux: number; uz: number; half: number }[] = [];
 
-  constructor(defs: PropDef[], private col: StaticCollision, private emit: (e: PropEvent) => void) {
-    this.store = new PropStore(defs.length);
+  constructor(defs: PropDef[], private col: StaticCollision, private emit: (e: PropEvent) => void, st: SimState = new SimState()) {
+    this.store = new PropStore(st, defs.length);
     this.all = defs.map((d, i) => new Prop(d, i, this.store)); this.props = this.all.slice();
     for (const p of this.props) for (const b of p.boxes) this.byBox.set(b, p);
     this.settle();
@@ -209,16 +213,62 @@ export class PropSystem {
   scatter(strength = 1.5) {
     for (const p of this.props) { const a = simRandom() * Math.PI * 2, s = strength * (0.5 + simRandom()); p.vx += Math.cos(a) * s; p.vz += Math.sin(a) * s; p.w += (simRandom() - 0.5) * 6 * strength; p.wake(); }
   }
-  /** Authoring overlaps (a chair tucked 5 cm under a table edge, a bin grazing a desk corner) are resolved once, silently; the settled pose becomes home. */
+  /** Authoring overlaps (a chair tucked 5 cm under a table edge, a bin grazing a desk corner) are resolved once, silently; the settled pose becomes home.
+   *  THE PASSES RUN IN THE RUST MODULE where they can (`settleWorld`: props.rs settle, over the things' columns in the game's block and the box world's
+   *  copy, proven once for the lot — StaticCollision.window), and here otherwise, which is counted (sim.ts FELL): a level's furniture stands where the
+   *  module left it, to the bit the same (tools/qa/prop-ident.ts takes every level's settle both ways). */
   private settle() {
     this.muted = true; for (const p of this.props) p.dirty = true;   // dirty = "consider me" for the pair pass (everything starts asleep and freshly placed)
-    for (let it = 0; it < 12; it++) { for (let r = 0; r < this.props.length; r++) this.solveStatics(r, false); this.solvePairs(false); }
+    if (this.props.length) this.col.window(() => {
+      const M = this.settleWorld();
+      if (M === null) { PROPS_STEPPED.settledHere++; this.settleHere(); }
+      else if (BOTH.on) { const bad = this.settleBoth(M); BOTH.asked++; PROPS_STEPPED.asked++; if (bad) { BOTH.differ++; PROPS_STEPPED.differ++; if (!BOTH.first) BOTH.first = bad; if (!PROPS_STEPPED.first) PROPS_STEPPED.first = bad; } }
+      else this.settleThere(M);
+    });
     for (const p of this.props) { p.vx = p.vz = p.w = 0; p.asleep = true; p.home = [p.x, p.z, p.yaw]; p.place(); }
     this.muted = false;
   }
+  /** the passes as this file takes them: every thing against the statics, then thing against thing, with no speed answered and no noise made */
+  private settleHere(): void { for (let it = 0; it < SETTLE_PASSES; it++) { for (let r = 0; r < this.props.length; r++) this.solveStatics(r, false); this.solvePairs(false); } }
+  /** CAN THE PASSES RUN IN THE MODULE: the row on, the game's own maths in Math's place (the passes work lengths out), and the box world's copy standing
+   *  (no leaf of it is asked for: a level's furniture is settled against its statics alone). → the copy, or null: this file takes them, and says so */
+  private settleWorld(): BoxMirror | null {
+    if (!RUST.props) return null;
+    if (!EXACT.on) return null;   // (idle: sim.ts OWN_MATHS)
+    return this.col.rulesStatics() ?? ruleFell('props', 'the furniture settled as a level stood up, with no copy of the box world standing');
+  }
+  /** the passes taken in the module: the level's facts of each thing written by row, the call, and how often a thing was pushed out of a static */
+  private settleThere(M: BoxMirror): void {
+    const io = propIo(); this.facts(); propMem()[io.par + PP.props] = this.props.length;
+    const walls = io.x.props_settle(this.store.home.bind(), M.slot);
+    if (propMem()[io.par + PP.wrong]) throw new Error(`the furniture's settle in the Rust module could not be what it was handed (another count of things than its rows: ${this.props.length} handed)`);
+    PROPS_STEPPED.settled++; PROPS_STEPPED.settleWalls += walls;
+  }
+  /** THE SETTLE BOTH WAYS, COMPARED (collision.ts BOTH; tools/qa/prop-ident.ts): the module's passes with nothing of them kept, then this file's from the
+   *  same columns — which the level goes on with — and every column held against the other. → what differed, in words, or '' */
+  private settleBoth(M: BoxMirror): string {
+    const S = this.store, was = S.bytes();
+    this.settleThere(M); const there = S.bytes();
+    S.put(was); this.settleHere();
+    const here = S.bytes(); let moved = 0; { const O = S.O, a = new Float64Array(was.buffer, was.byteOffset, O.z + S.total), b = new Float64Array(here.buffer, here.byteOffset, O.z + S.total); for (let r = 0; r < S.total; r++) if (!Object.is(a[O.x + r], b[O.x + r]) || !Object.is(a[O.z + r], b[O.z + r])) moved++; }
+    PROPS_STEPPED.settleMoved += moved;
+    const bad = propDiff(S, here, there, 4).map(t => `${t} (here | there)`);
+    return bad.length ? `the furniture's settle: ${bad.join(' · ')}` : '';
+  }
 
-  /** Closest part box of any prop along the ray (t < tmax), for bullets / thrown items; `box` = the part that was hit (a mark left on it rides that part: marks.ts). */
+  /** Closest part box of any prop along the ray (t < tmax), for bullets / thrown items; `box` = the part that was hit (a mark left on it rides that part: marks.ts).
+   *  THE RAY IS THE RUST MODULE'S where it can be (the row on, the game's own maths standing — a part is met by angles — and the box world's copy
+   *  standing with these things' parts in it: collision.ts thingsRay, lines.rs ray_things), and this file's walk otherwise, which is counted (sim.ts
+   *  FELL); the same answer to the bit either way (tools/qa/rust-check.ts --both, tools/qa/item-ident.ts). */
   raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; n: Vec3; prop: Prop; box: Box } | null {
+    if (BOTH.on) { const hit = this.raycastHere(ro, rd, tmax); this.col.thingsBoth(this, ro, rd, tmax, hit); return hit; }   // (the check's, whatever the row says: this file's walk, which the game goes on with, and the module's asked the same and compared)
+    if (!RUST.props || !EXACT.on || this.props.length === 0) return this.raycastHere(ro, rd, tmax);   // (idle: sim.ts OWN_MATHS; a level with no furniture has no part to meet, here or there)
+    const h = this.col.thingsRay(this, ro, rd, tmax);
+    if (h === undefined) { ruleFell('props', 'a ray into the furniture with no copy of it standing'); return this.raycastHere(ro, rd, tmax); }
+    return h === null ? null : { t: h.t, n: h.n, prop: this.props[h.row], box: h.box };
+  }
+  /** raycast as this file answers it */
+  raycastHere(ro: Vec3, rd: Vec3, tmax: number): { t: number; n: Vec3; prop: Prop; box: Box } | null {
     let best = tmax; let bp: Prop | null = null; let bn: Vec3 = [0, 1, 0]; let bb: Box | null = null;
     const fl = Math.hypot(rd[0], rd[2]), S = this.store, d = S.d, X = S.b8 + S.O.x, Z = S.b8 + S.O.z, L = this.props;
     for (let r = 0; r < L.length; r++) { const p = L[r];
@@ -228,9 +278,7 @@ export class PropSystem {
       const perp2 = ox * ox + oz * oz - along * along; if (perp2 > (p.radius + 0.05) * (p.radius + 0.05)) continue;
       for (const b of p.boxes) { const h = rayBox(ro, rd, b, best); if (h && h.t < best) { best = h.t; bp = p; bn = h.n; bb = b; } }
     }
-    const hit = bp && bb ? { t: best, n: bn, prop: bp, box: bb } : null;
-    if (BOTH.on) this.col.thingsBoth(this, ro, rd, tmax, hit);   // (the check's: the Rust module's ray over its copy of these parts, asked the same and compared)
-    return hit;
+    return bp && bb ? { t: best, n: bn, prop: bp, box: bb } : null;
   }
 
   /** Planar impulse J (N·s, y ignored) applied at world point `point`; `who` is blamed for the noise. thud=true reports it as an impact (bullet strike). */
@@ -281,26 +329,36 @@ export class PropSystem {
   }
 
   // ---------------------------------------------------------------- the step in the Rust module (rust/sim/src/props.rs)
-  /** CAN THIS STEP RUN IN THE MODULE: the row on and the things' columns at home in the game's block; the game's own maths in Math's place (the step works
+  /** CAN THIS STEP RUN IN THE MODULE: the row on (the things' columns are in the game's block always); the game's own maths in Math's place (the step works
    *  its angles and lengths out there); noises being made (a system still settling its level makes none, and is not the game's yet); this file's own step
    *  not replaced on this instance (a check that puts its own over one gets ITS step); the box world's copy standing with the game's own leaves in it (or
    *  none in the level), and every leaf handed in one of them; and no more men, leaves or frames than the hand-over holds. → the copy to step over and
    *  which of its leaves sweep, or null: this file steps, on the same columns. */
   private there(contacts: PropContact[], leaves: Box[]): { M: BoxMirror; leaves: number[] | null; n: number } | null {
-    if (!RUST.props || this.store.home === null || !EXACT.on || this.muted || this.step !== PropSystem.prototype.step || this.updateHere !== PropSystem.prototype.updateHere) return null;
+    if (!RUST.props || this.all.length === 0) return null;   // (a level with no loose furniture has no step, here or there: its columns are no tenant of the block)
+    // (each way back to this file's step is said, for the count of questions the TypeScript took: sim.ts FELL)
+    if (!EXACT.on) return null;   // (idle: a row that works lengths out answers under the game's own maths alone — sim.ts OWN_MATHS)
+    if (ruleRed('props')) return null;
+    if (this.muted) throw new Error('the furniture was stepped while its level was still being settled');   // (the settle is the module's own now, and nothing steps under it)
+    if (this.step !== PropSystem.prototype.step || this.updateHere !== PropSystem.prototype.updateHere) return ruleFell('props', 'a check\'s own step in the rule\'s place');
     const io = propIo(), dyn = this.col.dynamicBoxes;
-    if (contacts.length > io.maxContacts || leaves.length > io.maxLeaves || this.doorways.length > io.maxWays) return null;
+    if (contacts.length > io.maxContacts || leaves.length > io.maxLeaves || this.doorways.length > io.maxWays) throw new Error(`the furniture's step was handed ${contacts.length} men, ${leaves.length} leaves and ${this.doorways.length} door frames: its hand-over holds ${io.maxContacts}, ${io.maxLeaves} and ${io.maxWays}, and a game holds no more men, and a level no more doors, than those (game/levelfit.ts handOverMost)`);   // (cannot happen: tools/qa/copyfit-check.ts holds the arithmetic)
     let idx: number[] | null = null;
-    if (leaves !== dyn) { idx = []; for (const b of leaves) { const i = dyn.indexOf(b); if (i < 0) return null; idx.push(i); } }
+    if (leaves !== dyn) { idx = []; for (const b of leaves) { const i = dyn.indexOf(b); if (i < 0) return ruleFell('props', 'a leaf handed in that is not in the box world'); idx.push(i); } }
     const M = this.col.rulesWorld(dyn); return M ? { M, leaves: idx, n: leaves.length } : null;
+  }
+  /** the level's facts of each thing, written by row into the hand-over (a step's, and the settle's) */
+  private facts(): void {
+    const io = propIo(), m = propMem(), L = this.props, n = L.length, C = PROP_CAP;
+    for (let r = 0, o = io.def; r < n; r++, o++) { const p = L[r], t = p.tune;
+      m[o + PD.hx * C] = p.hx; m[o + PD.hz * C] = p.hz; m[o + PD.radius * C] = p.radius; m[o + PD.height * C] = p.height; m[o + PD.mass * C] = p.mass; m[o + PD.invMass * C] = p.invMass; m[o + PD.invI * C] = p.invI;
+      m[o + PD.decel * C] = t.decel; m[o + PD.visc * C] = t.visc; m[o + PD.rest * C] = t.rest; m[o + PD.chair * C] = p.def.kind === 'chair' ? 1 : 0; }
   }
   /** the step's hand-over written (the level's facts of each thing by row, the men, the leaves, the door frames, the rules' numbers) and the step taken:
    *  how many noises it listed. Nothing of the game outside the things' columns is written until `takeBack`. */
   private handOver(dt: number, contacts: PropContact[], T: { M: BoxMirror; leaves: number[] | null; n: number }): number {
-    const io = propIo(), m = propMem(), L = this.props, n = L.length, nc = contacts.length, C = PROP_CAP, K = io.maxContacts, W = io.maxWays, F = this.doorways;
-    for (let r = 0, o = io.def; r < n; r++, o++) { const p = L[r], t = p.tune;
-      m[o + PD.hx * C] = p.hx; m[o + PD.hz * C] = p.hz; m[o + PD.radius * C] = p.radius; m[o + PD.height * C] = p.height; m[o + PD.mass * C] = p.mass; m[o + PD.invMass * C] = p.invMass; m[o + PD.invI * C] = p.invI;
-      m[o + PD.decel * C] = t.decel; m[o + PD.visc * C] = t.visc; m[o + PD.rest * C] = t.rest; m[o + PD.chair * C] = p.def.kind === 'chair' ? 1 : 0; }
+    const io = propIo(), m = propMem(), L = this.props, n = L.length, nc = contacts.length, K = io.maxContacts, W = io.maxWays, F = this.doorways;
+    this.facts();
     for (let c = 0, o = io.con; c < nc; c++, o++) { const k = contacts[c];
       m[o + PK.x * K] = k.pos[0]; m[o + PK.z * K] = k.pos[2]; m[o + PK.vx * K] = k.vel[0]; m[o + PK.vz * K] = k.vel[2]; m[o + PK.radius * K] = k.radius; m[o + PK.who * K] = k.who; m[o + PK.mass * K] = k.mass; m[o + PK.quiet * K] = k.quiet ? 1 : 0; }
     for (let l = 0; l < T.n; l++) m[io.leaf + l] = T.leaves ? T.leaves[l] : l;
@@ -309,7 +367,7 @@ export class PropSystem {
     m[P + PP.dt] = dt; m[P + PP.props] = n; m[P + PP.contacts] = nc; m[P + PP.leaves] = T.n; m[P + PP.ways] = F.length;
     m[P + PP.flags] = (this.enabled ? PF.enabled : 0) | (CASTOR.on ? PF.castor : 0); m[P + PP.friction] = this.frictionScale;
     m[P + PP.casDecel] = CASTOR.decel; m[P + PP.casVisc] = CASTOR.visc; m[P + PP.casSpin] = CASTOR.spin; m[P + PP.casStart] = CASTOR.startV; m[P + PP.casStop] = CASTOR.stopV;
-    const ev = io.x.props_update(this.store.home!.bind(), T.M.slot);
+    const ev = io.x.props_update(this.store.home.bind(), T.M.slot);
     { const q = propMem(), S = PROPS_STEPPED; S.swept += q[P + PP.swept]; S.guided += q[P + PP.guided]; S.pairs += q[P + PP.pairs]; S.walls += q[P + PP.walls]; S.held += q[P + PP.held]; S.substeps += q[P + PP.substeps]; }
     const wrong = propMem()[P + PP.wrong]; if (wrong) throw new Error(`the furniture's step in the Rust module could not be what it was handed (${wrong === 1 ? 'more noises than its list holds' : 'more things, men, leaves or frames than its tables hold, or another count of things than its rows'})`);
     return ev;

@@ -25,8 +25,8 @@
 // (src/game is one import cycle: nothing here is built from another game module's export as the file loads.)
 import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter, SmokeSystemLike } from '../smoke/types';
-import { BOTH, type StaticCollision, type GridWind } from '../scene/collision';
-import { SENSES } from '../scene/boxMirror';
+import { type StaticCollision, type GridWind } from '../scene/collision';
+import { FACE } from '../scene/boxMirror';
 import { sim, simWhyNot } from '../sim/sim';
 import { simTenant, simPart, P_SMOKE, SimState } from '../sim/state';
 
@@ -78,7 +78,8 @@ export const SENSE = {
     least: 0.05,
     /** a blob thinner than this (unit·m³) after its emitter has stopped is gone */
     gone: 0.02,
-    /** the most blobs kept (the one with the least in it and still to come goes first) */
+    /** the most blobs kept (the one with the least in it and still to come goes first) — and never more than the Rust module's table holds, whatever
+     *  is written here (boxMirror.ts FACE.MAX_BLOBS; `emit`) */
     cap: 48,
     /** the emitters a solver holds at once, and how many of those it keeps back from `budget` (smoke.ts MAX_EMITTERS, and its budget()'s reserve) */
     emitters: 64, reserve: 12,
@@ -87,12 +88,6 @@ export const SENSE = {
 
 interface Blob { x: number; y0: number; z: number; r2: number; rate: number; ttl: number; age: number; mass: number; }
 const PI15 = 5.568327996831708;   // π^1.5: a gaussian exp(−ρ²/r²) holds this much × r³
-
-/** erf(x), Abramowitz & Stegun 7.1.26 (|error| < 1.5e-7) — on the game's own exp, so the same bits wherever it runs */
-function erf(x: number): number {
-  const s = x < 0 ? -1 : 1, a = x < 0 ? -x : x, t = 1 / (1 + 0.3275911 * a);
-  return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a));
-}
 
 /** THE GAME'S OWN SMOKE ON A COARSE GRID (SENSE.grid; the model is rust/sim/src/bricks.rs, and its head says what it is). This is the game's side of it.
  *  THE STATE IS A PART OF THE GAME'S BLOCK IN THE MODULE (sim/state.ts; bricks.rs Smoke): the cells, the emitters, the book, the light that comes round.
@@ -207,7 +202,7 @@ export class CpuSmoke {
     if (e.ttl > 0) { this.lives.push(e.ttl); if (this.lives.length > 2 * K.emitters) this.lives.shift(); }
     if (!(rate * e.ttl >= K.least)) return;
     this.grid?.emit(e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl);
-    if (this.blobs.length >= K.cap) {   // full: the one worth least goes — what it holds and what it has still to let out — and that may be the newcomer
+    if (this.blobs.length >= Math.min(K.cap, FACE.MAX_BLOBS)) {   // (no more than the module's table holds, whatever the knob says: a question about the smoke carries every blob at once — smoke.rs, and light.rs for a lamp's shadow) full: the one worth least goes — what it holds and what it has still to let out — and that may be the newcomer
       const worth = (b: Blob) => b.mass + b.rate * Math.max(0, b.ttl - b.age);
       let k = 0; for (let i = 1; i < this.blobs.length; i++) if (worth(this.blobs[i]) < worth(this.blobs[k])) k = i;
       if (worth(this.blobs[k]) >= rate * e.ttl) return;
@@ -228,44 +223,25 @@ export class CpuSmoke {
     }
   }
   clear(): void { this.blobs.length = 0; this.lives.length = 0; this.grid?.clear(); }
-  /** how much of the light along a → b comes through (1 = clear air). `blocked(p, q)`: is there a wall between the two points (the smoke of the next room is not
-   *  in this one's sight lines) */
-  trans(a: Vec3, b: Vec3, blocked: (p: Vec3, q: Vec3) => boolean): number {
-    if (!this.blobs.length) return 1;
-    const K = SENSE.smoke, dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.sqrt(dx * dx + dy * dy + dz * dz);
-    if (L < 1e-6) return 1;
-    const ux = dx / L, uy = dy / L, uz = dz / L; let tau = 0;
-    for (const bl of this.blobs) {
-      if (bl.mass <= 0) continue;
-      const s2 = Math.min(bl.r2 + 2 * K.spread * bl.age, K.widest * K.widest), s = Math.sqrt(s2), cy = bl.y0 + Math.min(K.rise, K.riseRate * bl.age);
-      const px = bl.x - a[0], py = cy - a[1], pz = bl.z - a[2], t = px * ux + py * uy + pz * uz;   // the blob's middle, along the line
-      const d2 = px * px + py * py + pz * pz - t * t;
-      if (d2 > 9 * s2 || t < -3 * s || t > L + 3 * s) continue;
-      const tc = t < 0 ? 0 : t > L ? L : t;
-      if (blocked([bl.x, cy, bl.z], [a[0] + ux * tc, a[1] + uy * tc, a[2] + uz * tc])) continue;
-      tau += K.sigma * bl.mass / (Math.PI * s2) * Math.exp(-Math.max(d2, 0) / s2) * 0.5 * (erf((L - t) / s) - erf(-t / s));
-    }
-    return tau <= 0 ? 1 : Math.exp(-tau);
-  }
-  /** `trans` in the game's own box world: a wall between a blob and the line is anything a sight line stops at (col.segmentBlocked). With RUST.smoke the sum
-   *  is the module's (rust/sim/src/smoke.rs: trans's statements over the same blobs, written there for the one question). */
+  /** HOW MUCH OF THE LIGHT ALONG a → b COMES THROUGH (1 = clear air), in the game's own box world: the grid's cells where a grid stands and can answer,
+   *  else the blobs. */
   along(col: StaticCollision, a: Vec3, b: Vec3): number {
     if (this.grid) { const t = this.grid.along(a, b); if (t !== -1) return t; }
+    return this.blobsAlong(col, a, b);
+  }
+  /** …by THE BLOBS, whatever a grid would say (the error tool's own model of them; `along` where no grid answers). The Rust module's sum (rust/sim/src/
+   *  smoke.rs) over these blobs, written there for the one question: each blob a gaussian that widens with its age and rises from where it was let out,
+   *  its share of the line by the error function, and none of it counted through a wall — a wall between a blob's middle and the line's nearest point
+   *  to it is anything a sight line stops at (the smoke of the next room is not in this one's sight lines). */
+  blobsAlong(col: StaticCollision, a: Vec3, b: Vec3): number {
     if (!this.blobs.length) return 1;
     // (the blobs are one question in several calls: asked between ticks, the whole of it stands in one window over the module's copy, collision.ts window)
-    return col.mirror.live ? this.alongIn(col, a, b) : col.window(() => this.alongIn(col, a, b));
+    return col.mirror.live ? this.blobsAsk(col, a, b) : col.window(() => this.blobsAsk(col, a, b));
   }
-  private alongIn(col: StaticCollision, a: Vec3, b: Vec3): number {
-    const B = this.blobs;
-    if (col.blobsBegin(B.length)) {
-      for (let i = 0; i < B.length; i++) { const bl = B[i]; col.blob(bl.x, bl.y0, bl.z, bl.r2, bl.age, bl.mass); }
-      const K = SENSE.smoke, r = col.blobsAlong(a, b, K.sigma, K.spread, K.widest, K.rise, K.riseRate);
-      if (r !== -1) {
-        if (!BOTH.on) return r;
-        const t = this.trans(a, b, (p, q) => col.segmentBlocked(p, q)); col.senseCompared(col.senseSet(SENSES.smoke), Object.is(t, r), 'smoke', a, b); return t;
-      }
-    }
-    return this.trans(a, b, (p, q) => col.segmentBlocked(p, q));
+  private blobsAsk(col: StaticCollision, a: Vec3, b: Vec3): number {
+    const B = this.blobs, K = SENSE.smoke; col.blobsBegin(B.length);
+    for (let i = 0; i < B.length; i++) { const bl = B[i]; col.blob(bl.x, bl.y0, bl.z, bl.r2, bl.age, bl.mass); }
+    return col.blobsAlong(a, b, K.sigma, K.spread, K.widest, K.rise, K.riseRate);
   }
 }
 

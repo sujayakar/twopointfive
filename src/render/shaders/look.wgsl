@@ -17,21 +17,55 @@
 //   RELIEF    the map's normal, stood on the face. The g-buffer keeps the TILTED normal with alpha 0 (the target's spare code); gdown hands every working-size
 //             pass the box's own face back (common.wgsl lookGeoN), so the filters, the gather and the reservoirs see the flat wall they always saw, and only the
 //             screen-size direct light (sharp_direct.wgsl) and the composite's sky share light the relief.
-//   EDGES     a small box's arrises are rounded in the normal and rubbed pale: a crate stops being twelve triangles.
+//   EDGES     a small box's arrises are rounded in the normal and rubbed pale: a crate stops being twelve triangles. And a stuff that is pressed or
+//             moulded (its own word, `rolled`) has its arrises rolled over a hand or more, whatever its size: a car's panel turns into its roof.
 //   SNOW      on a snow level (snow.wgsl's field is live), lookSnow below: snow blown against the foot of what stands in the open, and lying on what was left out.
 // Numbers the page's panel moves live: lookCfg (render/gbuffer.ts setLook).
 @group(1) @binding(11) var lookA: texture_2d_array<f32>;
 @group(1) @binding(12) var lookB: texture_2d_array<f32>;
 @group(1) @binding(13) var lookSamp: sampler;
-struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f, h: vec4f, s: array<vec4f, 9> };   // s = each layer's SLOT in the two arrays, −1 = not made: a level has the maps it draws and no others (render/gbuffer.ts needLook) ·   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = free (the layers' base roughness is the prelude's LOOK_BASE) · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w = the cast's part ids the men's webbing is told apart by (manWeb: 1 + the suit's + 64 × (1 + the chest rig's)) · h.x, h.y = the cloth layer's tone and hollow before it was evened (lookTex.ts lookLayer; 1 and 0 = it was not): lookMan's cloth
+struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f, h: vec4f, s: array<vec4f, 9> };   // s = each layer's SLOT in the two arrays, −1 = not made: a level has the maps it draws and no others (render/gbuffer.ts needLook) ·   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c.x = how kept the place is (lookKept below) · c.y = pressed panels (lookRoll below) · c.zw, d, e.xyz = free (the layers' base roughness is the prelude's LOOK_BASE) · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w = the cast's part ids the men's webbing is told apart by (manWeb: 1 + the suit's + 64 × (1 + the chest rig's)) · h.x, h.y = the cloth layer's tone and hollow before it was evened (lookTex.ts lookLayer; 1 and 0 = it was not): lookMan's cloth
 @group(1) @binding(14) var<uniform> lookCfg: LookCfg;
 
 const LOOK_TILE: f32 = 2.0;        // metres a map covers (render/lookTex.ts LOOK_TILE)
 const LOOK_MAX_TILT: f32 = 0.48;   // the tangent part of the shading normal is held under this (29°): lookGeoN's snap back to the face must never pick a neighbour, and a wall's facet never reads as a top (fogofwar.wgsl asks N.y > 0.5)
 const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, unmarked (a flat stretch of a map costs no second light score)
 
-/** how far a box's markings are drawn as brushed paint in place of square cells (the panel's Painted marks row) */
-fn lookMarkSoft() -> f32 { return lookCfg.g.x; }
+/** HOW KEPT THE PLACE IS (the block's c, first number: the level's own word, its file's meta.kept, or the address's &kept; scene/look.ts lookKeptOf): 0 = left to the weather
+ *  and the years, as every level was drawn before the word; 1 = cleaned and painted last night. The weather's rules below, a mud wall's fallen render and
+ *  the age of a mark's paint ask it, and by it a weathered stuff's surface passes from the weather's rules to the kept ones (lookSurface's `wild`): the
+ *  detail layer's dust and shoe marks, and what the stuff's `worn` says use does to it (a knocked foot, the dirt feet bring in). Where feet go is not
+ *  the word's to say: a lane is trodden and paint is walked off a floor in a kept place as in a ruin. */
+fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }
+/** ROLLED ARRISES (the stuff's own word: lookTex.ts STUFFS' `rolled`, metres; the Pressed panels row, lookCfg.c.y). A thing pressed or moulded has no knife edge: over its last
+ *  `r` metres a face's shading normal turns toward the face it meets, as far as the look lets a normal lean (LOOK_MAX_TILT, so every pass that wants the
+ *  face itself still finds it). An upright side turns UP into the top and round an upright arris, never down at its foot; a top turns out at all four
+ *  edges. Shading only: the box, its outline and every ray are as they were.
+ *  `p` = the point along the face's two box axes, metres from its middle; `h` = the face's half sizes; `up` = how far each axis points up in the world
+ *  (a top's are 0 and 0). → how far the normal leans along each axis (a sine). */
+fn lookRoll(r: f32, p: vec2f, h: vec2f, up: vec2f) -> vec2f {
+  if (r <= 0.0) { return vec2f(0.0); }
+  var e = vec2f(0.0);
+  for (var a = 0; a < 2; a++) {
+    if (abs(up[a]) > 0.5) { e[a] = clamp(1.0 - (h[a] - p[a] * sign(up[a])) / min(r, 2.0 * h[a]), 0.0, 1.0) * sign(up[a]); }   // (rolled at its top end alone, so over its whole height if it is that short)
+    else { e[a] = clamp(1.0 - (h[a] - abs(p[a])) / min(r, h[a]), 0.0, 1.0) * sign(p[a]); }
+  }
+  return e * LOOK_MAX_TILT * clamp(lookCfg.c.y, 0.0, 1.0);   // (the Pressed panels row: 0 = no arris is rolled)
+}
+/** … and on an UPRIGHT face that is none of its box's six (a cut plane: a body's rounded corner, gbuffer_cut.wgsl): the same turn up into the top, by
+ *  the same measure. `y`, `hy` = the point's height in the box and the box's half height; `upW` = the box's own up in the world. Not marked as a tilt
+ *  (no box axis is this face), and it adds at most LOOK_MAX_TILT of up to a normal that had none, so no pass that asks whether a normal is a top's
+ *  (the fog of war's N.y > 0.5) is told it is. A LEANING cut plane, a round and an arc are not asked: they turn already, and what they meet is not
+ *  the box's edge (KNOWN, LEFT: one rule over a cut solid's own planes would roll those too). */
+fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f {
+  if (cls == 0u) { return n; }
+  let s = lookRoll(LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)], vec2f(y, 0.0), vec2f(hy, 1.0), vec2f(1.0, 1.0)).x;
+  if (s <= 0.0) { return n; }
+  return normalize(n * sqrt(1.0 - s * s) + upW * s);
+}
+/** how a box's markings are drawn: x = how far as brushed paint in place of square cells (the panel's Painted marks row), y = how far that paint is OLD
+ *  (rubbed thin by the years, gone a shade into its wall: 1 − lookKept; a kept place's sign is brushed and whole but where feet go, markings.wgsl markSoft) */
+fn lookMarkSoft() -> vec2f { return vec2f(lookCfg.g.x, 1.0 - lookKept()); }
 /** how much the FLOOR at the pixel lookSurface last dressed is walked and how close a wall's foot is (the level's traffic map; zeros where the pixel is no
  *  floor or the layer read none), and the first of the two for the paint drawn on that floor after it (markings.wgsl markSoft) */
 var<private> lookWay: vec2f;
@@ -56,8 +90,9 @@ fn lookFin(v: vec2f) -> vec2f { return select(vec2f(0.0), clamp(v, vec2f(-4096.0
 fn lookSlot(layer0: i32) -> i32 { let layer = clamp(layer0, 0, LOOK_LAYERS - 1); return i32(lookCfg.s[layer / 4][layer % 4]); }
 fn lookBase(layer: i32) -> f32 { return LOOK_BASE[clamp(layer, 0, LOOK_LAYERS - 1)]; }
 /** a stuff's own row (the prelude's LOOK_KEEP: lookTex.ts STUFFS): x = laid in place, its map lies by the world; y = how far sun and years blotch it
- *  (0 = a place somebody keeps: no blotch, no drift of hue, none of the weather's traffic dirt); z = it takes a damp foot and a bleached head; w = how hard USE shows
- *  on it where it is kept (`worn`: a piece stained, chipped or changed, a wall's foot knocked) */
+ *  where nobody keeps it (0 = never: no blotch, no drift of hue, none of the weather's traffic dirt); z = it takes a damp foot and a bleached head; w = how hard USE shows
+ *  on it where it is kept (`worn`: a piece stained, chipped or changed, a wall's foot knocked). WHICH OF THE TWO A SURFACE SHOWS is not the stuff's to say alone:
+ *  lookSurface's `wild` is y's word × how far the PLACE is left to the weather (lookKept) */
 fn lookKeep(layer: i32) -> vec4f { return LOOK_KEEP[clamp(layer, 0, LOOK_LAYERS - 1)]; }
 /** A STUFF MADE OF PIECES (the prelude's LOOK_UNIT; lookTex.ts STUFFS' unit): what a piece of the WORLD at map place `uvm` (metres) on face `face` does to its
  *  paint (x: times it) and its finish (y: added to it), so a wall of eighty panels is not a tile's eight shades over and over, and two walls that look the
@@ -144,11 +179,13 @@ fn lookClots(p: vec2f, fp: f32, dens: f32, salt0: u32) -> f32 {
   let ctr = ext + (1.0 - 2.0 * ext) * vec2f(snowHash(cell, salt), snowHash(cell, salt + 1u));
   return 1.0 - smoothstep(rad * 0.45, rad, length((fract(q) - ctr) * vec2f(1.0, 0.75)));
 }
-fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool) -> LookOut {
+fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool, rolls: bool) -> LookOut {
   let cls = select(cls0, 0u, cls0 != 0u && lookSlot(i32(max(cls0, 1u)) - 1) < 0);   // (a stuff whose map is not made yet is drawn plain)
-  let keep = lookKeep(i32(max(cls, 1u)) - 1); let wild = step(0.001, keep.y);   // (the stuff's own row, lookTex.ts: nothing below names a stuff to say whether weather touches it. wild 0 = a place somebody keeps)
+  let keep = lookKeep(i32(max(cls, 1u)) - 1); let wildS = step(0.001, keep.y);   // (the stuff's own row, lookTex.ts: nothing below names a stuff to say whether weather touches it. wildS 0 = a stuff somebody keeps)
+  let left = 1.0 - lookKept();   // HOW FAR THE PLACE IS LEFT TO THE WEATHER (the level's word, lookKept): the one read of it in this function
+  let wild = select(0.0, wildS * left, cls != 0u);   // … and how far THIS surface is: its stuff's word × the place's (a box of no stuff: 0). 1 = the weather's rules answer for it, 0 = the kept rules do (the detail layer's dust and shoe marks, the No repeat row's drift, what the stuff's `worn` says of use), and between the two each has its share: a weathered stuff in a place cleaned last night is drawn as a kept one, never as neither
   var o: LookOut; o.albedo = albedoIn; o.n = n; o.rough = roughIn; o.tilted = false; lookWay = vec2f(0.0);
-  if (!lookDresses(n, bi, hf) || (all(lookCfg.a == vec4f(0.0)) && all(lookCfg.b.xyz == vec3f(0.0)))) { return o; }   // (every amount at 0: the box as the game draws it, and none of the reads below)
+  if (!lookDresses(n, bi, hf) || (all(lookCfg.a == vec4f(0.0)) && all(lookCfg.b.xyz == vec3f(0.0)) && lookCfg.c.y <= 0.0)) { return o; }   // (every amount this function reads at 0, the Pressed panels row among them: the box as the game draws it, and none of the reads below)
   let b = boxGeo[bi];
   let lying = abs(n.y) > 0.9;
   let q = boxRot(bi);
@@ -159,10 +196,13 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
   var T: vec3f; var B: vec3f; var uv: vec2f;
   var alb = albedoIn; var rough = roughIn;
   let k = lookCfg.a; let k2 = lookCfg.b;
+  let kw = k.w * left;   // THE WEATHER'S AMOUNT HERE: the panel's row × how far the place is left to it. The rules for a stuff the weather touches ask this; the rules of use ask k.w
   let word = boxLook(bi); let moves = (word & 32u) != 0u;        // not one of the level's statics: rebuilt every frame, wherever the game has it now
   let salt = word >> 6u;                                          // the box's own number (0‥44; render/gbuffer.ts lookWordOf): never its place in the list, which moves when a wall is breached
   // ---- USE AND DIRT: ONE ANSWER A MARK. The level's traffic map is read ONCE a pixel, here (a floor where it is; a kept wall's foot a stride out on the
-  // floor it stands on), whoever dresses the pixel. Three marks come of it, and each has one answer, by what the surface is:
+  // floor it stands on), whoever dresses the pixel. Three marks come of it, and each has one answer, by HOW WILD THE SURFACE IS (`wild`, above: its stuff's
+  // word × the place's). `wild` is 0 or 1 on every level that says nothing of itself, and there each mark has one of the two answers below; in a place
+  // kept part way the two SHARE a mark, the weather's by `wild` and the kept one by 1 − `wild`, which sum to one answer and are never both whole:
   //   A LANE where feet go: on a floor with a finish to wear, the detail layer's scuff (matte, a little grey); on wild ground with none, the weather's
   //        further down (beaten flat and pale); and on a floor somebody keeps, by its stuff's `worn`, the dirt feet bring in on top (the look's own);
   //   THE BAND AT A WALL'S FOOT: on wild ground the weather's (stones come up, the earth darker); on any other floor the detail layer's dust;
@@ -171,19 +211,19 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
   // they are then CALLED, detail.wgsl's own functions with its own numbers, on the sample read here with what the weather answers for left out. Before
   // this both layers read the map and both ran: a wild floor's band was double, and a wild wall's foot.
   let stands = b.c.y - b.h.y < 0.05; var beside = 0.0;   // (beside: how much the floor a stride out from a kept wall's foot is walked)
-  let raw = cls != 0u && wild > 0.0;                      // (the weather's own rules below answer for it)
   if (k.w > 0.0) {
     if (lying && n.y > 0.0 && wp.y < 0.25) { lookWay = lookWayAt(wp.xz); }
-    else if (!lying && stands && cls != 0u && wild == 0.0 && keep.w > 0.0 && wp.y < 0.3 && !moves) { beside = lookWayAt(wp.xz + n.xz * 0.45).x; }
+    else if (!lying && stands && cls != 0u && wild < 1.0 && keep.w > 0.0 && wp.y < 0.3 && !moves) { beside = lookWayAt(wp.xz + n.xz * 0.45).x; }
   }
   if (wears) {
     let dk = frame.matCfg.w;
     if (n.y > 0.9 && wp.y < 0.15) {
       let uneven = 0.65 + 0.7 * detailNoise(wp.xz * (1.0 / 0.7));
-      let w = detailFloorWear(alb, rough, roughIn, vec2f(lookWay.x, select(lookWay.y, 0.0, raw)), dk, uneven); alb = w.albedo; rough = w.rough;
-      if (cls != 0u && wild == 0.0) { alb *= 1.0 - 0.2 * keep.w * min(k.w, 1.0) * clamp(lookWay.x * uneven, 0.0, 1.0); }   // (the dirt feet bring in: a kept floor's lane a shade darker, ragged at arm's length, so a way reads on a pale deck from the play camera)
-    } else if (abs(n.y) < 0.3 && wp.y < 0.14 && wp.y > -0.02 && stands && !raw) {
-      let w = detailSkirtWear(alb, rough, wp.y, dk, 0.65 + 0.7 * detailNoise(wp.xz * (1.0 / 0.7))); alb = w.albedo; rough = w.rough;
+      let w = detailFloorWear(alb, rough, roughIn, vec3f(lookWay, 1.0 - wild), dk, uneven); alb = w.albedo; rough = w.rough;
+      if (cls != 0u && wild < 1.0) { alb *= 1.0 - 0.2 * keep.w * (1.0 - wild) * min(k.w, 1.0) * clamp(lookWay.x * uneven, 0.0, 1.0); }   // (the dirt feet bring in: a kept floor's lane a shade darker, ragged at arm's length, so a way reads on a pale deck from the play camera)
+    } else if (abs(n.y) < 0.3 && wp.y < 0.14 && wp.y > -0.02 && stands && wild < 1.0) {
+      let w = detailSkirtWear(alb, rough, wp.y, dk, 0.65 + 0.7 * detailNoise(wp.xz * (1.0 / 0.7))); let t = 1.0 - wild;
+      alb = alb * (1.0 - t) + w.albedo * t; rough = rough * (1.0 - t) + w.rough * t;   // (written out, not mix(): at t = 1 this is the detail layer's answer to the bit, whatever a driver makes of mix)
     }
     o.albedo = alb; o.rough = rough;
   }
@@ -233,7 +273,8 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       }
       tn.y -= 0.85 * smoothstep(-0.004, 0.01, e) * (1.0 - smoothstep(0.01, 0.034, e));           // the lip, turned down onto the stones
       let pq = uv * vec2f(1.3, 1.6) + vec2f(3.1, 8.6);                                        // (patches up to half a metre: at 2 m a cell a whole wall was bare brick or none of it)
-      let thr = 0.75 - 0.04 * min(km, 1.5) - 0.1 * (1.0 - smoothstep(0.2, 1.1, e));             // (most just above the plinth, where the splash works on it)
+      let thr0 = 0.75 - 0.04 * min(km, 1.5) - 0.1 * (1.0 - smoothstep(0.2, 1.1, e));            // (most just above the plinth, where the splash works on it)
+      let thr = thr0 + (1.2 - thr0) * (1.0 - left);                                             // (render that has let go is the years' work, not the mason's: the patches shrink as a place is kept and at 1 there are none, 1.2 being over anything pm reaches. The plinth is how the wall was built, and stays)
       let pm = lookSlow(pq) + 0.1 * (tp.a.a - 0.5) + 0.06 * (detailNoise(uv * 11.0) - 0.5);       // ragged by the render's own lumps
       if (pm > thr - 0.04 && stone < 1.0) {
         let bv = lookTap(i32(under.y), st + vec2f(0.0, 0.031), dx, dy);   // (… and the core's)
@@ -246,11 +287,11 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       }
     }
     // ---- WEATHER on the ground: the level's traffic map (r = walked, g = close to a wall)
-    if (k.w > 0.0 && wild > 0.0 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.x) {   // (wild: not on a floor somebody keeps; LOOK_GROUND: a top this low is ground)
+    if (k.w > 0.0 && wildS > 0.0 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.x) {   // (wildS: not on a floor of a stuff somebody keeps; LOOK_GROUND: a top this low is ground)
       let wm = lookWay;   // (read once, above)
       let rag = lookSlow(uv * 0.9);
-      let walked = clamp(wm.x * (0.5 + rag), 0.0, 1.0) * k.w * select(1.0, step(0.6, roughIn), wears);   // (a floor with a finish has its lane from the detail layer's scuff, above: one answer a mark)
-      let lee = smoothstep(0.25, 0.75, wm.y * (0.55 + 0.9 * rag)) * k.w;      // against the walls, where nobody treads
+      let walked = clamp(wm.x * (0.5 + rag), 0.0, 1.0) * k.w * select(1.0, step(0.6, roughIn), wears) * (1.0 - (1.0 - wild) * step(0.001, keep.w));   // (a floor with a finish has its lane from the detail layer's scuff, above: one answer a mark. And where the stuff says what feet do to it in a kept place — `worn`: the dirt they bring in, above — that answer has taken 1 − wild of the lane, and this one has what is left: a slab floor's lane is beaten pale in a ruin and a shade darker in a kept hall, never both. Bare earth says no `worn`, and its path is this one however kept)
+      let lee = smoothstep(0.25, 0.75, wm.y * (0.55 + 0.9 * rag)) * kw;      // against the walls, where nobody treads and nobody sweeps (kw: a kept place has none; the lane above is use, and stays)
       if (thing.y >= 0.0 && lee > 0.02) {                                      // the stuff's `foot`: stones and rubbish work their way to the wall's foot, another stuff's map coming up through this one by height
         let gv = lookTap(i32(thing.y), st * 1.3 + vec2f(0.21, 0.43), dx * 1.3, dy * 1.3);
         let up = smoothstep(0.45, 0.75, lee * 0.9 + (gv.a.a - 0.55) * 0.9);
@@ -259,7 +300,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       mult *= 1.0 - 0.3 * lee;
       mult *= 1.0 + 0.24 * walked; tn *= 1.0 - 0.55 * walked; cav = mix(cav, 0.5, 0.6 * walked); dr -= 0.1 * walked;   // beaten flat and pale
     }
-    if (k2.x > 0.0 && wild == 0.0) { mult *= 1.0 + 0.06 * min(k2.x, 2.0) * (lookSlow(uv * 0.11 + vec2f(4.2 + 13.0 * f32(ax), 7.7)) - 0.5); }   // (a kept place has no blotch, but no forty metres of anything are one shade: a drift of three in a hundred over ten metres, the No repeat row's)
+    if (k2.x > 0.0 && wild < 1.0) { mult *= 1.0 + 0.06 * min(k2.x, 2.0) * (1.0 - wild) * (lookSlow(uv * 0.11 + vec2f(4.2 + 13.0 * f32(ax), 7.7)) - 0.5); }   // (a kept place has no blotch, but no forty metres of anything are one shade: a drift of three in a hundred over ten metres, the No repeat row's)
     alb *= mix(vec3f(1.0), mult, k.x) * mix(1.0, 0.5 + cav, k2.z);   // (the hollows: ½ = neither a hollow nor a high place, and a tile averages ½ — lookTex.ts lookLayer)
     rough = rough + dr * k.z;
     tilt = tn * k.y;
@@ -281,24 +322,24 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     T = quatRotate(q, ea); B = quatRotate(q, eb); uv = vec2f(dot(wp, T), dot(wp, B));
   }
   // ---- WEATHER on anything that stands on the ground or lies in the open: slow blotches; a wall's foot and head
-  if (k.w > 0.0 && cls != 0u && wild > 0.0) {   // (wild: none of it on what somebody keeps. Every stuff that soaks also fades: lookTex.ts STUFFS)
+  if (kw > 0.0 && cls != 0u && wildS > 0.0) {   // (wildS: none of it on a stuff somebody keeps; kw: nor in a place somebody does. Every stuff that soaks also fades: lookTex.ts STUFFS)
     let slow = lookSlow(uv * 0.33 + vec2f(5.0, 2.0)); let slower = detailNoise(uv * 0.09 + vec2f(1.3, 8.1));
-    alb *= 1.0 + k.w * select(1.0, 1.7, lying) * keep.y * (0.3 * (slow - 0.5) + 0.2 * (slower - 0.5));   // (the ground most of all: forty metres of one paint)
-    alb *= mix(vec3f(1.0), mix(vec3f(1.05, 1.0, 0.93), vec3f(0.95, 1.0, 1.06), smoothstep(0.3, 0.7, detailNoise(uv * 0.13 + vec2f(9.7, 4.2)))), 0.6 * k.w);   // … and no two stretches quite one hue
+    alb *= 1.0 + kw * select(1.0, 1.7, lying) * keep.y * (0.3 * (slow - 0.5) + 0.2 * (slower - 0.5));   // (the ground most of all: forty metres of one paint)
+    alb *= mix(vec3f(1.0), mix(vec3f(1.05, 1.0, 0.93), vec3f(0.95, 1.0, 1.06), smoothstep(0.3, 0.7, detailNoise(uv * 0.13 + vec2f(9.7, 4.2)))), 0.6 * kw);   // … and no two stretches quite one hue
     if (!lying && keep.z > 0.5) {   // (lookTex.ts LOOK_SOAKS: not boards, not what a factory made, not a place somebody keeps)
       let foot0 = b.c.y - b.h.y;
       if (foot0 < LOOK_GROUND.z) {                                              // the wall stands on the ground: splash, damp and the dirt the rain throws up, to a ragged line
         let line = 0.18 + 0.55 * detailNoise(vec2f(uv.x * 0.7, 3.3)) + 0.16 * detailNoise(vec2f(uv.x * 6.0, 9.1)) + 0.05 * detailNoise(uv * vec2f(23.0, 9.0));
-        let foot = (1.0 - smoothstep(0.0, line, wp.y)) * k.w;
-        let rim = smoothstep(line * 0.72, line, wp.y) * (1.0 - smoothstep(line, line * 1.18, wp.y)) * k.w;   // the tide mark: salts left where the damp stops
+        let foot = (1.0 - smoothstep(0.0, line, wp.y)) * kw;
+        let rim = smoothstep(line * 0.72, line, wp.y) * (1.0 - smoothstep(line, line * 1.18, wp.y)) * kw;   // the tide mark: salts left where the damp stops
         alb = mix(alb, alb * vec3f(0.6, 0.55, 0.5), foot * 0.85); rough = rough - 0.07 * foot;
         alb *= 1.0 + 0.16 * rim;
       }
       let top = b.c.y + b.h.y;
       if (b.h.y > 0.6 && top < CEIL_Y + 0.6) {                                  // its head: bleached and worn back, and the dark runs the rain leaves under it
         let dTop = top - wp.y;
-        let bleach = (1.0 - smoothstep(0.05, 0.3 + 0.35 * detailNoise(vec2f(uv.x * 1.3, 6.6)), dTop)) * k.w;
-        let run = pow(detailNoise(vec2f(uv.x * 7.0, 1.7)), 3.0) * smoothstep(0.45, 0.7, detailNoise(vec2f(uv.x * 0.55, 12.3))) * (1.0 - smoothstep(0.2, 1.3 + 1.2 * detailNoise(vec2f(uv.x * 2.1, 4.4)), dTop)) * smoothstep(0.02, 0.12, dTop) * k.w;
+        let bleach = (1.0 - smoothstep(0.05, 0.3 + 0.35 * detailNoise(vec2f(uv.x * 1.3, 6.6)), dTop)) * kw;
+        let run = pow(detailNoise(vec2f(uv.x * 7.0, 1.7)), 3.0) * smoothstep(0.45, 0.7, detailNoise(vec2f(uv.x * 0.55, 12.3))) * (1.0 - smoothstep(0.2, 1.3 + 1.2 * detailNoise(vec2f(uv.x * 2.1, 4.4)), dTop)) * smoothstep(0.02, 0.12, dTop) * kw;
         alb *= 1.0 + 0.22 * bleach; alb *= 1.0 - 0.3 * run;   // (runs come in stretches, under where the head sheds, never as a fence of stripes)
       }
     }
@@ -306,31 +347,48 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
   // ---- USE on a wall somebody keeps (the stuff's `worn`), where it stands on the floor: boots, a trolley and a mop's bucket knock the coat off its foot in
   // STRETCHES, to a ragged line a finger to a hand high, the stuff under the coat showing grey and dull. In metres along the wall, so it does not stop
   // where two boxes of one wall meet, and each face's plane has its own run of it. (The dirt in the crease and on the floor along it is the detail layer's,
-  // detail.wgsl, on every page. A wild wall has the weather's damp foot in this one's place.)
-  if (k.w > 0.0 && cls != 0u && wild == 0.0 && keep.w > 0.0 && !lying && stands && wp.y < 0.3) {
+  // detail.wgsl, on every page. A wild wall has the weather's damp foot in this one's place, and a wall part way between has its share of each: this
+  // one by 1 − `wild`, if its stuff says `worn` at all.)
+  if (k.w > 0.0 && cls != 0u && wild < 1.0 && keep.w > 0.0 && !lying && stands && !moves && wp.y < 0.3) {   // (!moves: the run of knocks is laid along the face's own plane, which a thing that moves changes every centimetre: they hopped along a swinging leaf's foot. A wall's foot is a wall's)
     let along = uv.x + 31.7 * snowHash(vec2i(plane, i32(ax)), 5u);
     let stretch = smoothstep(0.44 - 0.22 * beside, 0.6 - 0.22 * beside, detailNoise(vec2f(along * 0.55, 4.1)));   // (more of them beside where feet go)
     let high = (0.035 + 0.12 * detailNoise(vec2f(along * 2.7, 8.3))) * mix(0.75, 0.3 + 0.9 * detailNoise(vec2f(along * 37.0, 1.9)), 1.0 - smoothstep(0.008, 0.02, fp));   // (its teeth are finer than a far pixel: there the line is plain)
-    let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0);
+    let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0) * (1.0 - wild);
     alb = mix(alb, mix(alb, vec3f(0.4, 0.39, 0.38), 0.75), knock); rough += 0.22 * knock;
   }
-  // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge)
-  if (k2.y > 0.0 && max(b.h.x, b.h.z) < LOOK_HANDLED.x && b.h.y < LOOK_HANDLED.y && min(b.h.x, min(b.h.y, b.h.z)) > LOOK_HANDLED.z) {   // (lookTex.ts LOOK_HANDLED: what a hand moves, by its size, as half-extents)
+  // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge; the Edges
+  // row); and the arrises of a stuff that is PRESSED OR MOULDED rolled over its own measure, a thing of any size (its word `rolled`, lookRoll above, the
+  // Pressed panels row; never an underside, and only where the caller says this face is one of the box's own six: `rolls`)
+  let handled = max(b.h.x, b.h.z) < LOOK_HANDLED.x && b.h.y < LOOK_HANDLED.y && min(b.h.x, min(b.h.y, b.h.z)) > LOOK_HANDLED.z;   // (lookTex.ts LOOK_HANDLED: what a hand moves, by its size, as half-extents)
+  var rolled = 0.0; if (rolls && cls != 0u && n.y > -0.5 && lookCfg.c.y > 0.0) { rolled = LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)]; }
+  let rubs = handled && k2.y > 0.0;
+  if (rubs || rolled > 0.0) {
     let ha = dot(abs(ea), hf.xyz); let hb = dot(abs(eb), hf.xyz);
     let pa = dot(lc, ea); let pb = dot(lc, eb);
-    let da = ha - abs(pa); let db = hb - abs(pb);                              // metres in from the face's two pairs of edges
-    let r = clamp(1.7 * fp, 0.012, 0.045);
-    let wa = 1.0 - smoothstep(0.0, r, da); let wb = 1.0 - smoothstep(0.0, r, db);
-    if (wa + wb > 0.0) {
-      let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
-      let floorEdge = !lying && stands;                                         // where a face meets the ground there is no arris to round
-      var e = vec2f(wa * wa * sign(pa), wb * wb * sign(pb)) * 0.6 * k2.y;
-      var wear = max(wa, wb);
-      if (floorEdge) { if (abs(TA.y) > 0.5 && pa * TA.y < 0.0) { e.x = 0.0; wear = wb; } if (abs(TB.y) > 0.5 && pb * TB.y < 0.0) { e.y = 0.0; wear = wa; } }
-      if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); }
-      let chip = smoothstep(0.35, 0.75, detailNoise(vec2f(pa + pb, pa - pb) * 23.0 + vec2f(f32(salt % 13u))));
-      alb *= 1.0 + 0.3 * wear * wear * chip * k2.y; rough = rough + 0.08 * wear * k2.y;
+    let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
+    var e = vec2f(0.0);
+    if (rubs) {
+      let da = ha - abs(pa); let db = hb - abs(pb);                            // metres in from the face's two pairs of edges
+      let r = clamp(1.7 * fp, 0.012, 0.045);
+      let wa = 1.0 - smoothstep(0.0, r, da); let wb = 1.0 - smoothstep(0.0, r, db);
+      if (wa + wb > 0.0) {
+        let floorEdge = !lying && stands;                                       // where a face meets the ground there is no arris to round
+        e = vec2f(wa * wa * sign(pa), wb * wb * sign(pb)) * 0.6 * k2.y;
+        var wear = max(wa, wb);
+        if (floorEdge) { if (abs(TA.y) > 0.5 && pa * TA.y < 0.0) { e.x = 0.0; wear = wb; } if (abs(TB.y) > 0.5 && pb * TB.y < 0.0) { e.y = 0.0; wear = wa; } }
+        let chip = smoothstep(0.35, 0.75, detailNoise(vec2f(pa + pb, pa - pb) * 23.0 + vec2f(f32(salt % 13u))));
+        alb *= 1.0 + 0.3 * wear * wear * chip * k2.y; rough = rough + 0.08 * wear * k2.y;
+      }
     }
+    if (rolled > 0.0) {
+      var er = lookRoll(rolled, vec2f(pa, pb), vec2f(ha, hb), vec2f(TA.y, TB.y));
+      // … and never so far that the face turns from the eye that sees it (a flank seen along its length, at its far arris): a normal turned away
+      // takes no ray and no highlight (reflect.wgsl), on the very strip that should catch them
+      let V = normalize(frame.camPos - wp); let away = dot(TA * er.x + TB * er.y, V);
+      if (away < 0.0) { er *= clamp((sqrt(1.0 - LOOK_MAX_TILT * LOOK_MAX_TILT) * dot(n, V) - 0.05) / -away, 0.0, 1.0); }
+      e += er;
+    }
+    if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); }
   }
   let tl = length(tilt); if (tl > LOOK_MAX_TILT) { tilt *= LOOK_MAX_TILT / tl; }
   if (tl > LOOK_MIN_TILT) {
@@ -436,12 +494,18 @@ fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround {
 //             side a shirt's placket and buttons, long folds in loose trousers, a wool waistcoat and cap
 // lookCfg.f.z = how much of it (the panel's Men row; 0 = the men as the build draws them). Derivatives are taken by the caller: nothing below needs uniform flow.
 struct LookMan { albedo: vec3f, n: vec3f, rough: f32, gain: f32 };
-fn manH(i: vec3i) -> f32 { var h = (u32(i.x + 4096) * 73856093u) ^ (u32(i.y + 4096) * 19349663u) ^ (u32(i.z + 4096) * 83492791u); h = h * 747796405u + 2891336453u; h = ((h >> ((h >> 28u) + 4u)) ^ h) * 277803737u; return f32((h ^ (h >> 22u)) >> 8u) * (1.0 / 16777216.0); }
+/** the hash of a lattice corner, FOUR CORNERS AT A TIME (h0: each corner's three coordinates already folded together, as the one-corner hash began): the
+ *  same integer steps a lane as one corner's ever were, so the same values. THE MEN'S PROGRAM HOLDS NO LOOP AND NO LOCAL ARRAY ON PURPOSE: written as eight calls of a one-corner hash this was pasted eight
+ *  times at each of ninety-two places (195 KB of the program's 325 as a compiler pastes it); a loop over a local array fixed the size and timed the
+ *  same on one card, but a loop's price is a mode of the compiler that no size tool sees, and nobody here can time DXC, the AMD driver or Metal */
+fn manH4(h0: vec4u) -> vec4f { var h = h0 * 747796405u + vec4u(2891336453u); h = ((h >> ((h >> vec4u(28u)) + vec4u(4u))) ^ h) * 277803737u; return vec4f((h ^ (h >> vec4u(22u))) >> vec4u(8u)) * (1.0 / 16777216.0); }
 /** value noise in the bind pose's space, 0‥1, one lattice cell a unit */
 fn manNoise(p: vec3f) -> f32 {
   let fl = floor(p); let i = vec3i(fl); let f = p - fl; let u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(mix(manH(i), manH(i + vec3i(1, 0, 0)), u.x), mix(manH(i + vec3i(0, 1, 0)), manH(i + vec3i(1, 1, 0)), u.x), u.y),
-             mix(mix(manH(i + vec3i(0, 0, 1)), manH(i + vec3i(1, 0, 1)), u.x), mix(manH(i + vec3i(0, 1, 1)), manH(i + vec3i(1, 1, 1)), u.x), u.y), u.z);
+  // (the cell's four corners along x and y, shared by its floor and its lid; then each of the two by its own z)
+  let xy = (vec4u(vec4i(i.x, i.x + 1, i.x, i.x + 1) + vec4i(4096)) * 73856093u) ^ (vec4u(vec4i(i.y, i.y, i.y + 1, i.y + 1) + vec4i(4096)) * 19349663u);
+  let a = manH4(xy ^ vec4u(u32(i.z + 4096) * 83492791u)); let b = manH4(xy ^ vec4u(u32(i.z + 4097) * 83492791u));
+  return mix(mix(mix(a.x, a.y, u.x), mix(a.z, a.w, u.x), u.y), mix(mix(b.x, b.y, u.x), mix(b.z, b.w, u.x), u.y), u.z);
 }
 fn manBump(x: f32, c: f32, w: f32) -> f32 { return 1.0 - smoothstep(0.0, w, abs(x - c)); }
 /** a disruptive print cut from `base`: a dark and a pale shape over the ground colour and dark twigs over the dark, wider than tall, soft-edged to the pixel */

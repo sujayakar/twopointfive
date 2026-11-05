@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-8987085ccb1e1379b95a406b0784de40ba749816
+# 11-05, a gate's posts stand 6 mm fatter each way along the wall they close and a van's bay sides end at its tail lamps: solid boxes move by millimetres, none added or removed; before it: 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+3f6548c2063264f2a06efe95fa87307963e7db01

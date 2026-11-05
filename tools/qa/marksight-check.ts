@@ -30,25 +30,15 @@
 import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 import { quiet } from './answers.ts';
+import { saidIn } from './said.ts';
 
 const BREAK = process.env.MARKSIGHT_BREAK === '1', COL = process.env.TPS_PROFILE === 'shipped' ? 1 : 0, STAND = COL ? 'shipped' : 'frozen';
 const EYE = 1.5, HEIGHTS = [0.5, 1.0, 1.5], ACROSS = [-1.5, -1, -0.5, 0, 0.5, 1, 1.5], FAN = HEIGHTS.length * ACROSS.length, DIR = `${ROOT}/tools/qa/fixtures/marksight`;
 
 interface Man { id: string; pos: number[]; aimAt: number[] }
-/** every man the file stands with something to watch: whatever, outside the boxes and the props, says a `pos` and an `aimAt`. He is named by where the
- *  file has him, under `scenarios` without that word; one of a list by his place in it (`rescue.guards#0`), and a thing of a list that says an `id` by
- *  its id in place of the list's name (`roomClear.tea.marks#0`: the tea room's first mark, wherever the room stands in the list) */
-function menOf(data: any): Man[] {
-  const out: Man[] = [], triple = (v: unknown): v is number[] => Array.isArray(v) && v.length === 3 && v.every(x => typeof x === 'number');
-  const walk = (o: any, path: string): void => {
-    if (!o || typeof o !== 'object') return;
-    if (Array.isArray(o)) { o.forEach((x, k) => walk(x, typeof x?.id === 'string' ? `${path.slice(0, path.lastIndexOf('.') + 1)}${x.id.replace(/\s/g, '_')}` : `${path}#${k}`)); return; }
-    if (triple(o.pos) && triple(o.aimAt)) out.push({ id: path, pos: o.pos, aimAt: o.aimAt });
-    for (const [k, v] of Object.entries(o)) walk(v, path ? `${path}.${k}` : k);
-  };
-  for (const [k, v] of Object.entries(data)) if (k === 'scenarios') walk(v, ''); else if (k !== 'boxes' && k !== 'props') walk(v, k);
-  return out;
-}
+const triple = (v: unknown): v is number[] => Array.isArray(v) && v.length === 3 && v.every(x => typeof x === 'number');
+/** every man the file stands with something to watch: whatever says a `pos` and an `aimAt` */
+const menOf = (data: any): Man[] => saidIn(data, o => triple(o.pos) && triple(o.aimAt) ? { pos: o.pos as number[], aimAt: o.aimAt as number[] } : null).map(({ id, v }) => ({ id, ...v }));
 
 export async function markSightCheck(args: string[] = []): Promise<number> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);

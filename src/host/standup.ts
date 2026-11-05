@@ -126,7 +126,7 @@ import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow, rustOn } from '../sim/sim';
+import { rustRows, rustRow, rustOn, retiredEnvWord } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -153,6 +153,8 @@ import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
 import { HITSTUFF } from '../game/particleFx';
+import { MARKCUT, MARKSIT } from '../render/decals';
+import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -227,20 +229,23 @@ export function populateHost(host: HostApi, level: Level): void {
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
 
-/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: ON on both stands, as the page (TPS_EXACT=0 = the engine's own functions, the page's ?noexact:
- *  the stand every frozen digest, tally and fixture was recorded on before the Rust module's rows went on, which answer only under the game's own). Written
- *  BEFORE anything is built — a level's boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
-export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '1') !== '0'; }
+/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: on, as the page, and no word takes them out (TPS_EXACT is retired: the Rust module's rows
+ *  answer under no other maths, and they are how the game is played). Written BEFORE anything is built — a level's boxes and a Game's constructor keep
+ *  what they work out — so a tool that builds a level itself calls this first. */
+export function pinMaths(): void { retiredEnv(); EXACT.on = HELD.maths ?? true; }
+/** A CHECK'S OWN ARM, held in the tool's own process and nowhere else: the rows a check of the two languages keeps down for its TypeScript arm (or the
+ *  maths' row up), and the game's own maths taken out for a red path. No word of a stand, an address, a recipe or a recording reaches this: a tool writes
+ *  it (tools/qa/headless.ts hold), says so out loud, and a run that holds anything is no stand's run. It goes with the last TypeScript twin. */
+export const HELD: { rows: Record<string, boolean>; maths: boolean | null } = { rows: {}, maths: null };
+/** a retired word in a tool's environment stops the tool, by name (sim.ts retiredEnvWord) */
+function retiredEnv(): void { const env = ((globalThis as any).process?.env ?? {}) as Record<string, string | undefined>;
+  for (const k of Object.keys(env)) if (retiredEnvWord(k)) throw new Error(`${k}=${env[k]}: the Rust module's rows and the game's own maths are not switches any more (src/sim/sim.ts rowsUp). Take the word out; a check that holds the two languages against each other writes its own row in its own process`); }
 /** A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH) on the harness: off on the frozen stand (TPS_POSESINGLES=1 raises it); the shipped stand
  *  keeps the page's (on), and TPS_POSESINGLES=0 there is the page's ?posesingles=0. Written BEFORE the game is built: an animator measures its clips as it is made. */
 export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.singles = String((globalThis as any).process?.env?.TPS_POSESINGLES ?? '') === '1'; }
-/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: the rows of RUST_ON are on on both stands, as the page (every row but the maths).
- *  TPS_RUST<ROW>=0 puts one off and =1 raises one (TPS_RUSTMATHS=1), the page's ?rust<row>; TPS_RUST=0 = every row down unless its own word raises it, the
- *  page's ?rust=0. A row is never a rule of play: the same game to the bit on or off. THE STAND AS IT WAS RECORDED BEFORE THE ROWS: TPS_EXACT=0 TPS_RUST=0. */
-export function pinRust(): void {
-  const env = ((globalThis as any).process?.env ?? {}) as Record<string, string | undefined>, plain = env.TPS_RUST === '0';
-  for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(), said = env[w]; if (said !== undefined) rustRow(r, said === '1'); else if (plain) rustRow(r, false); else if (pinned(w)) rustRow(r, rustOn(r)); }
-}
+/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row of RUST_ON, on both stands, as the page. No word of the environment moves
+ *  one (TPS_RUST, TPS_RUST<ROW> are retired and stop the tool that says them); a check's own arm is HELD, above. */
+export function pinRust(): void { for (const r of rustRows()) rustRow(r, HELD.rows[r] ?? rustOn(r)); }   // (one write a row: a held row is never raised and dropped again, which would remake every constant kept from the maths twice — pinMaths, called beside this, is what reads the environment)
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
   if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
@@ -258,6 +263,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   const smoke = opts.smoke ?? nullSmoke();
   if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
   if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
+  if (opts.harness && pinned('TPS_COATFINISH')) COATFINISH.on = String((globalThis as any).process?.env?.TPS_COATFINISH ?? '') === '1';   // a named coat's finish goes wherever its word goes (src/scene/stuff.ts; a picture only, read where a box's finish is handed to the GPU): off, so a vehicle's body has the finish its file gives it, as it was
+  if (opts.harness && pinned('TPS_SOLIDGLASS')) SOLIDGLASS.on = String((globalThis as any).process?.env?.TPS_SOLIDGLASS ?? '') === '1';   // a thing of solid glass is dark and smooth (src/scene/stuff.ts; a picture only, read where a box's colour and finish are handed to the GPU): off, so a vehicle's window is the grey its file gives it, as it was
   if (opts.populate !== false) populateHost(host, level);
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
@@ -279,9 +286,15 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_BREATHSTEAM')) SNOW_LOOK.steam = String((globalThis as any).process?.env?.TPS_BREATHSTEAM ?? '') === '1';   // … and where it does, it is the puffs of sprite, not gas in the smoke solver
   if (opts.harness && pinned('TPS_CARLAMPS')) CARLAMPS.on = String((globalThis as any).process?.env?.TPS_CARLAMPS ?? '') === '1';   // a vehicle's lamps are light targets (src/game/carlamps.ts; read when the Game is built, so written before it): off, so no level has one and no round breaks one
   if (opts.harness && pinned('TPS_HITSTUFF')) HITSTUFF.on = String((globalThis as any).process?.env?.TPS_HITSTUFF ?? '') === '1';   // a round reads what a thing says it is made of (src/game/particleFx.ts): off, so every hit is read by the colour of the paint, as it was
+  if (opts.harness && pinned('TPS_MARKCUT')) MARKCUT.on = String((globalThis as any).process?.env?.TPS_MARKCUT ?? '') === '1';   // a mark on a cut or a round face lies where the round met it (src/render/decals.ts): off, so a mark is pulled to the plain box's face, as it was
+  if (opts.harness && pinned('TPS_MARKSIT')) MARKSIT.on = String((globalThis as any).process?.env?.TPS_MARKSIT ?? '') === '1';   // a blast's marks sit in the surface (src/render/decals.ts; a picture only): off, so the decal buffer's header is the old one and every mark is drawn as it was
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
   const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
+  // THE GAME'S STATE THAT STILL MOVES IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is
+  // made, and after its die is hung): the die and the poses go into the game's block now, so a roll of the die before the first tick is the Rust
+  // module's like any other. (The doors, the falls, the furniture, the slabs and the thrown things were made over the block and need no move.)
+  game.sim.settle(game);
   if (opts.audio) game.audio = opts.audio;
   if (!opts.harness) game.saves.onPutBack = () => hostAfterPutBack(game);   // (a save kept in memory put back — savestate.ts SAVETIMELINE: the GPU's buffers are told so; host/putback.ts)
   if (opts.harness) {

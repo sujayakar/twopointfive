@@ -4,8 +4,8 @@
 //   P.room('staff'); P.table(26, 10.4, 1.8, 0.9, 0); …
 // Every box a piece adds goes in the group 'lived.<room>' of the room last named with P.room(id); every loose prop is renamed 'lived.<room>.<thing><n>' — the two
 // tags the loader drops with the switch off. A generator calls these LAST (after its last kept box, prop, light and fixture: tools/levels/export.ts holds the order).
-// No lights, no emissive boxes, no dice but the hash of an index. Bodies wear the kit's palette (the simulation reads paint: game/particleFx.ts paletteName,
-// game/furnblast.ts breakClassOf); the colours named here are accents only.
+// No lights, no emissive boxes, no dice but the hash of an index. Bodies wear the kit's palette (a paint of it says what the thing does: scene/stuff.ts PAINT_DOES,
+// scene/materials.ts); the colours named here are accents only.
 // A piece's FRONT is its local +Z and its back −Z (the wall side): yaw 0 = on a north wall facing south, π = on a south wall, π/2 = on a west wall facing east,
 // −π/2 = on an east wall. Heights are metres off the floor. What the destruction finds by SHAPE (game/destruction.ts index): a pale thin NoShadow sheet with its
 // longer half 0.08‥0.2 above 0.3 m is PAPER (flies); a small solid (half ≤ 0.17, ≤ 20 l) standing 0.7‥1.6 m up is CLUTTER (knocked off) — the pieces say which they make.
@@ -174,7 +174,7 @@ export function livedPieces(H: LivedHost, C: LivedPalette) {
     /** a stool */
     stool(x: number, z: number, albedo: Vec3 = C.woodDark) { return loose('stool', 'chair', x, z, 0.3, 5, [part(0, 0.44, 0, 0.32, 0.04, 0.32, albedo), part(0, 0.03, 0, 0.05, 0.41, 0.05, C.black), part(0, 0, 0, 0.36, 0.03, 0.06, C.black), part(0, 0, 0, 0.06, 0.03, 0.36, C.black)]); },
     /** an armchair (heavy: it is cover you can shove) */
-    armchair(x: number, z: number, yaw = 0, albedo: Vec3 = INK.oxblood) { return loose('armchair', 'chair', x, z, yaw, 28, [part(0, 0.1, 0, 0.7, 0.34, 0.7, albedo), part(0, 0.44, 0.28, 0.7, 0.46, 0.14, albedo), part(-0.3, 0.44, -0.04, 0.1, 0.2, 0.56, tone(albedo, 0.85)), part(0.3, 0.44, -0.04, 0.1, 0.2, 0.56, tone(albedo, 0.85)), part(0, 0, 0, 0.6, 0.1, 0.6, C.woodDark)]); },
+    armchair(x: number, z: number, yaw = 0, albedo: Vec3 = INK.oxblood) { return loose('armchair', 'chair', x, z, yaw, 28, [part(0, 0.1, 0, 0.7, 0.34, 0.7, albedo), part(0, 0.44, 0.28, 0.7, 0.46, 0.14, albedo), part(-0.3, 0.44, -0.055, 0.1, 0.2, 0.53, tone(albedo, 0.85)), part(0.3, 0.44, -0.055, 0.1, 0.2, 0.53, tone(albedo, 0.85)), part(0, 0, 0, 0.6, 0.1, 0.6, C.woodDark)]); },   // (an arm ENDS at the back's front: three centimetres into it, its outer face lay in the back's side and flickered)
     /** a wooden crate of side s (a tea chest, a parts crate): slats across its lid; `tops` stand on it (bottles, insulators) */
     crate(x: number, z: number, s = 0.5, yaw = 0, albedo: Vec3 = C.wood, tops: Vec3 | null = null, thing = 'crate') { const ps: PropPart[] = [part(0, 0, 0, s, s * 0.8, s, albedo), part(0, s * 0.8, -s * 0.28, s, 0.02, s * 0.16, tone(albedo, 0.75)), part(0, s * 0.8, s * 0.28, s, 0.02, s * 0.16, tone(albedo, 0.75))];
       if (tops) for (const [ix, iz] of [[-1, -1], [0, -1], [1, -1], [-1, 1], [0, 1], [1, 1]]) ps.push(part(ix * s * 0.28, s * 0.8, iz * s * 0.1, s * 0.16, 0.09, s * 0.16, tops));

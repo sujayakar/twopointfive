@@ -14,6 +14,7 @@ import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 
 const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
+const { LIGHT_IN, MAINS } = await import(`${ROOT}/src/sim/lightshome.ts`);
 const D = await import(`${ROOT}/src/game/dialogue.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -34,7 +35,7 @@ async function night(file: string | null, key: boolean, secs = 12): Promise<{ he
   g.godMode = true; g.playerInvisible = true; g.player.visibility = 0.02; for (const x of g.guards) x.hold = true;
   for (let i = 0; i < 10; i++) W.step(DT);
   const from = g.messages.length;
-  g.blackout.active = true; g.blackout.permanent = true; g.blackout.since = g.time; g.blackout.until = g.time + 1e6;   // (the edge tickRadio reads: the lights dying)
+  g.lightHome.in(LIGHT_IN.mains, null, MAINS.active | MAINS.permanent, g.time + 1e6, g.time, g.blackout.restoredAt);   // (the edge tickRadio reads: the lights dying)
   for (let i = 0; i < Math.round(secs * 60); i++) { W.step(DT); for (const x of g.guards) if (x.state === 'alert') x.state = 'patrol'; }
   const said = g.messages.slice(from).map((m: any) => String(m.text));
   const asked = D.handlerBeat(g, 'bodyKo');   // (a beat nothing in this run has sounded)

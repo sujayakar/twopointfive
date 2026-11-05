@@ -7,7 +7,7 @@
 // Each piece is laid alone in a kit stood up empty, as tools/levels/library.ts lays a piece for the catalogue. WHAT IS HELD, over EVERY row of the palette
 // (a row added tomorrow is asked the same):
 //   1 a scatter   rubble in a row is that row: every stone wears the row's paint or its darker row's (gwotPalette.ts GWOT_DARKER) with the row's finish,
-//                 bare metal included, and to a round every stone is what the row is (gwotSimOf); a row with a darker row shows both tones
+//                 bare metal included, and to a round every stone does what the row does (Box.does: scene/materials.ts); a row with a darker row shows both tones
 //   2 the ground  groundAt answers what `ground` laid: the higher finish where two overlap, the later of two as high, nothing where it laid none
 //   3 a hearth    on every finish `ground` lays the trodden ash is that ground's own paint darker (no channel under half of it, none over it: never a
 //                 black square on pale earth); on ground the kit did not lay it takes the ground it is told, and told nothing it THROWS
@@ -18,30 +18,26 @@
 // judged here.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
-import { officeKit } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, gwotAs, gwotSimOf, type GwotMat } from '../../src/scene/gwotPalette';
+import { GWOT_PALETTE, GWOT_FINISH, GWOT_DARKER, type GwotMat } from '../../src/scene/gwotPalette';
+import { doesOfName } from '../../src/scene/stuff';
+import { DOES_DEFAULT } from '../../src/scene/materials';
+import { standKit as stand, laid, lines, ROWS, type Kit } from './kit-stand';
 import { isLived } from '../../src/scene/lived';
 import { livedTail } from '../levels/livedKit';
 
 const BREAK = process.env.GROUNDPIECES_BREAK === '1';
-let failed = 0;
-const check = (ok: boolean, what: string, detail = '') => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
-type Kit = ReturnType<typeof gwotKit>;
-/** a kit stood up empty, with the group of every box it is handed */
-const stand = () => { const groups: string[] = [], K = officeKit({ groups }); return { K, G: gwotKit(gwotOfOffice(K)), groups }; };
+const { check, failed } = lines();
 /** what one call of `lay` adds to a kit stood up empty (after `before`, which is not counted) */
-const laidBy = (lay: (G: Kit) => void, before?: (G: Kit) => void): Box[] => { const { K, G } = stand(); before?.(G); const n = K.boxes.length; lay(G); return K.boxes.slice(n); };
+const laidBy = (lay: (G: Kit) => void, before?: (G: Kit) => void): Box[] => laid(lay, before).boxes;
 const same = (a: readonly number[], b: readonly number[]) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 const top = (b: Box) => b.c[1] + b.h[1], mm = (y: number) => `${(y * 1000).toFixed(1)} mm`;
-const ROWS = Object.keys(GWOT_PALETTE) as GwotMat[];
 
 // 1. a scatter is one row in two tones at most, with the row's finish, and one thing to a round
 { const wrong: string[] = []; let two = 0, metal = 0;
   for (const row of ROWS) {
     const stones = laidBy(G => G.rubble(0, 0, 0.8, 40, BREAK && row !== 'mud' && row !== 'mudDark' ? 'mud' : row));   // (the red path: a scatter of mud judged as this row's, as three stones in ten once were)
-    const darker = GWOT_DARKER[row], second: Vec3 | undefined = darker ? gwotAs(darker, GWOT_SIM[row]) : undefined, isMetal = !!GWOT_FINISH[row]?.metal;
-    const odd = stones.filter(b => !same(b.albedo, GWOT_PALETTE[row]) && !(second && same(b.albedo, second))), mis = stones.filter(b => gwotSimOf(b.albedo) !== GWOT_SIM[row]);
+    const darker = GWOT_DARKER[row], second: Vec3 | undefined = darker ? GWOT_PALETTE[darker] : undefined, isMetal = !!GWOT_FINISH[row]?.metal;
+    const odd = stones.filter(b => !same(b.albedo, GWOT_PALETTE[row]) && !(second && same(b.albedo, second))), mis = stones.filter(b => (b.does ?? DOES_DEFAULT) !== doesOfName(row));
     const dull = stones.filter(b => !!b.metal !== (same(b.albedo, GWOT_PALETTE[row]) ? isMetal : !!(darker && GWOT_FINISH[darker]?.metal)));
     if (stones.length !== 40 || odd.length || mis.length || dull.length) wrong.push(`${row}: ${stones.length} stones, ${odd.length} in another paint, ${mis.length} another thing to a round, ${dull.length} with another finish`);
     if (second && stones.some(b => same(b.albedo, second)) && stones.some(b => same(b.albedo, GWOT_PALETTE[row]))) two++;
@@ -85,5 +81,5 @@ const ROWS = Object.keys(GWOT_PALETTE) as GwotMat[];
   check(isLived(groups[a]) && !isLived(groups[b]) && stray === b, '5 when a lived tail is done the generator is in no lived group: a box laid after it is not a lived thing by accident, and is the stray the exporter refuses',
     `in the room: ${groups[a]} · after done(): ${groups[b]}`); }
 
-console.log(failed ? `=== ground pieces: ${failed} FAILED ===` : '=== ground pieces: ALL PASS ===');
-process.exit(failed ? 1 : 0);
+console.log(failed() ? `=== ground pieces: ${failed()} FAILED ===` : '=== ground pieces: ALL PASS ===');
+process.exit(failed() ? 1 : 0);

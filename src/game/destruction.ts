@@ -35,14 +35,16 @@
 import { isManId, menUp } from './seats';
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, boxOf } from '../scene/boxes';
+import { doesOf } from '../scene/materials';
 import type { Door } from './doors';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
 import type { Game, LightTarget } from './game';
+import { LIGHT_IN } from '../sim/lightshome';
 import type { WeaponDef } from './weapons';
 import type { Prop } from './props';
 import type { Character } from './character';
-import { gpuFx, emitDust, paletteName, surfOf, hitLook, saidSurf, HITSTUFF, SOLID_GLASS_CRACK, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
+import { gpuFx, emitDust, surfAt, hitLook, saidSurf, HITSTUFF, SOLID_GLASS_CRACK, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
 import { lampGlass } from './carlamps';
 import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not put a fire out (FIRE.hardy)
 import { Debris, hash01, type ChunkKind } from './debris';
@@ -174,9 +176,6 @@ export function impK(chaos: number): number { return chaos <= 0.5 ? 1 : 1 + (CHA
 // ------------------------------------------------------------------ the destructible statics, found by shape once
 type DKind = 'paper' | 'screen' | 'housing' | 'clutter' | 'binder' | 'tv';
 interface Destructible { i: number; kind: DKind; box: Box; flags0: number; /** screen ↔ housing pairing (indices into the statics) */ mate?: number; /** the light target lighting this screen, if it is a lit one */ target?: LightTarget; /** clutter standing on / against this one: knocked off with it */ group?: number[]; }
-const SCREEN_OFF: Vec3 = [0.02, 0.02, 0.025];
-const lum = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
-const near3 = (a: Vec3, b: Vec3, e: number) => Math.abs(a[0] - b[0]) < e && Math.abs(a[1] - b[1]) < e && Math.abs(a[2] - b[2]) < e;
 /** under the ceiling slab: the building's footprint (weather.ts INTERIOR [4, 4, 36, 24]) less a tile's width */
 const indoors = (p: Vec3) => p[0] > 4.3 && p[0] < 35.7 && p[2] > 4.3 && p[2] < 23.7;
 /** the point just over a box's top (line-of-sight targets aim here: a segment ending INSIDE the box would report the box itself as the wall in the way) */
@@ -264,10 +263,10 @@ export class Destruction {
       if ((b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary)) || b.piece === true) continue;   // (a shape's piece, scene/shapes.ts: trim of the box that says it, never a thing of its own)
       const bottom = b.c[1] - h[1];
       let kind: DKind | null = null;
-      const dark = b.emissive[0] + b.emissive[1] + b.emissive[2] === 0;
-      if ((b.flags & BoxFlag.NoShadow) && h[1] <= 0.03 && lum(b.albedo) > 0.7 && maxH >= 0.08 && maxH <= 0.2 && bottom > 0.3 && dark) kind = 'paper';
-      else if (near3(b.albedo, SCREEN_OFF, 0.004) && minH <= 0.012) kind = maxH > 0.35 || (bottom > 1.2 && maxH > 0.3) ? 'tv' : 'screen';   // (lit or not: a lit one is a light target too, and dies through it)
-      else if (!(b.flags & BoxFlag.NoShadow) && !fixtureBoxes.has(i) && maxH <= 0.17 && h[0] * h[1] * h[2] * 8 <= 0.02 && bottom >= 0.7 && bottom <= 1.6 && dark && lum(b.albedo) < 0.95) kind = h[1] >= 0.1 && h[1] > 2.5 * Math.min(h[0], h[2]) ? 'binder' : 'clutter';
+      const dark = b.emissive[0] + b.emissive[1] + b.emissive[2] === 0, does = doesOf(b);   // (what the thing is, by its word: scene/materials.ts `paper`, `screen`, `casing`. Until 11-05 by how bright its paint was and by the dead screen's colour)
+      if ((b.flags & BoxFlag.NoShadow) && h[1] <= 0.03 && does.paper && maxH >= 0.08 && maxH <= 0.2 && bottom > 0.3 && dark) kind = 'paper';
+      else if (does.screen && minH <= 0.012) kind = maxH > 0.35 || (bottom > 1.2 && maxH > 0.3) ? 'tv' : 'screen';   // (lit or not: a lit one is a light target too, and dies through it)
+      else if (!(b.flags & BoxFlag.NoShadow) && !fixtureBoxes.has(i) && maxH <= 0.17 && h[0] * h[1] * h[2] * 8 <= 0.02 && bottom >= 0.7 && bottom <= 1.6 && dark) kind = h[1] >= 0.1 && h[1] > 2.5 * Math.min(h[0], h[2]) ? 'binder' : 'clutter';   // (until 11-05 a thing brighter than 0.95 was no clutter. No level has one and no column of the table says it: a white mug is a mug)
       if (!kind) continue;
       const d: Destructible = { i, kind, box: b, flags0: b.flags };
       if (kind === 'screen' || kind === 'tv') { const t = targetOf.get(i); if (t) d.target = t; if (kind === 'screen') screens.push(i); }
@@ -278,7 +277,7 @@ export class Destruction {
       const s = boxes[si]; let best = -1, bd = 0.08;
       for (let i = Math.max(0, si - 6); i < Math.min(boxes.length, si + 6); i++) {
         if (i === si) continue; const b = boxes[i];
-        if (Math.abs(b.yaw - s.yaw) > 1e-3 || b.h[0] < s.h[0] || b.h[1] < s.h[1] || b.h[2] > 0.05 || lum(b.albedo) > 0.1) continue;
+        if (Math.abs(b.yaw - s.yaw) > 1e-3 || b.h[0] < s.h[0] || b.h[1] < s.h[1] || b.h[2] > 0.05 || !doesOf(b).casing) continue;
         const dd = v3.dist(b.c, s.c); if (dd < bd) { bd = dd; best = i; }
       }
       if (best >= 0) {
@@ -290,14 +289,14 @@ export class Destruction {
     // small dark parts right under a housing are the monitor's foot and neck, not clutter; a part standing under / beside a FIXTURE (the desk lamp's base under its lit
     // head, a valve head by an indicator) is that fixture's, not clutter; nothing outside the building counts (the lot's machines stay whole)
     const fixtures = [...fixtureBoxes].map(fi => boxes[fi]).filter(Boolean);
-    for (const [i, d] of [...this.items]) {
+    g.col.window(() => { for (const [i, d] of [...this.items]) {   // (a roof's height a thing, by rays and nothing written: one proof of the Rust module's copy for the lot)
       const c = d.box.c;
       if (DESTRUCTION.on ? this.roofY(c[0], c[2]) === null : (c[0] < 4 || c[0] > 36 || c[2] < 4 || c[2] > 24)) { this.items.delete(i); continue; }   // (the switch on: 'inside' is whatever has a roof over it — a loud level's buildings stand anywhere in the world; off: the office's footprint, as ever)
       if (d.kind !== 'clutter' && d.kind !== 'binder') continue;
       if (fixtures.some(f => { const ac = Math.abs(Math.cos(f.yaw)), as = Math.abs(Math.sin(f.yaw)); return Math.abs(f.c[0] - c[0]) < ac * f.h[0] + as * f.h[2] + 0.12 && Math.abs(f.c[2] - c[2]) < as * f.h[0] + ac * f.h[2] + 0.12 && Math.abs(f.c[1] - c[1]) < 0.7; })) { this.items.delete(i); continue; }
-      if (lum(d.box.albedo) > 0.1) continue;
+      if (!doesOf(d.box).casing) continue;
       for (const [, o] of this.items) if (o.kind === 'housing' && Math.hypot(o.box.c[0] - c[0], o.box.c[2] - c[2]) < 0.12 && o.box.c[1] > c[1]) { this.items.delete(i); break; }
-    }
+    } });
     // things standing on / against each other go together (a pot and its plant, the phone and its handset, a mug on a saucer): knock one, knock the group
     const smalls = [...this.items.values()].filter(d => d.kind === 'clutter' || d.kind === 'binder');
     for (const d of smalls) for (const o of smalls) {
@@ -377,7 +376,7 @@ export class Destruction {
     this.g.col.wrote();
     this.hidden.clear(); this.debris.clear(); this.heat.fill(0); this.anyHeat = false; this.tilesDown.clear(); this.lastTileT = -100; this.tileCount = 0; this.serial = 1; this.knocks = 0;
     for (const c of Object.values(this.caps)) c.reset(); this.freeKnocks = 0;
-    for (const t of this.broke) t.broken = false; this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
+    for (const t of this.broke) this.g.lightHome.in(LIGHT_IN.mend, t); this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
     this.fixtureCount = 0; this.lastFixtureT = -100; this.dustQueue.length = 0; this.pallAt.length = 0;
     this.breaks.reset();
     this.edgeLook.clear();
@@ -397,10 +396,10 @@ export class Destruction {
     const rifle = def.cls !== 'pistol'; const k = rifle ? 1.4 : 1;
     const n = v3.normalize(hit.n);
     // what was hit
-    let surf: Surf = 'concrete'; let albedo: Vec3 = [0.5, 0.5, 0.5]; let mat: string | undefined; let box: Box | null = null; let bi = -1;
+    let surf: Surf = 'concrete'; let albedo: Vec3 = [0.5, 0.5, 0.5]; let box: Box | null = null; let bi = -1;
     if (hit.prop) { surf = hit.prop.def.kind === 'chair' ? 'fabric' : hit.prop.def.kind === 'cardboard' ? 'cardboard' : hit.prop.def.kind === 'bin' ? 'metal' : 'foliage'; box = hit.box ?? hit.prop.boxes[0] ?? null; albedo = box?.albedo ?? albedo; }   // (the very PART the round met: a shred aimed at a chair back lands on the back, not the seat's rim)
     else if (hit.index !== undefined && hit.index >= 1e6) { surf = 'wood'; box = g.col.dynamicBoxes[hit.index - 1e6] ?? null; albedo = box?.albedo ?? albedo; }
-    else if (hit.index !== undefined) { bi = hit.index; box = g.col.boxes[bi] ?? null; if (box) { albedo = box.albedo; mat = paletteName(albedo); surf = surfOf(albedo); if (mat === 'partRed' || mat === 'partBlue' || mat === 'partTan') surf = 'fabric'; } }
+    else if (hit.index !== undefined) { bi = hit.index; box = g.col.boxes[bi] ?? null; if (box) { albedo = box.albedo; surf = doesOf(box).wall === 'screen' ? 'fabric' : surfAt(g, box); } }   // (what it DOES, scene/materials.ts: a cubicle's partition is cloth over board; the lot, soaked, by its wet row)
     const item = bi >= 0 ? this.items.get(bi) : undefined;
     // (1) damage decals by material
     if (E >= CHAOS.tDecal && box) this.damageDecal(hitP, n, surf, box, !!hit.prop || (hit.index !== undefined && hit.index >= 1e6), rifle, item);
@@ -439,7 +438,7 @@ export class Destruction {
    *  It hurts nobody, flashes nothing and files no hearing event: the caller does its own. With THE ONE SWITCH off it is the old bang(at, who) and nothing else
    *  (returns zeros; nothing at all with `chaos: false` or at chaos 0), so a grenade that calls this is the grenade it was before the engine;
    *  with only tune.wallBreak off, steps 1 and 3 still run. */
-  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts)); }   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
+  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.col.window(() => this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
   private blastRaw(at: Vec3, opts: BlastOpts): BlastResult {
     const g = this.g; const chaos = chaosOf(g); const res: BlastResult = { walls: 0, cover: 0, doors: 0, panes: 0, opened: 0, serial: this.walls.serial };
     if (chaos <= 0 || !DESTRUCTION.on) { if (opts.chaos !== false) this.bang(at, opts.who); return res; }   // (off: a caller that used to call bang() and now calls blast() — a grenade — gets exactly the bang() it had; at chaos 0 that returns on its first line)
@@ -607,7 +606,7 @@ export class Destruction {
   }
 
   /** a lit screen's light target out (the OCP / round rule's own bit: updateTargets takes its emissive and its markings' gain to 0 the same frame), remembered for reset() */
-  private breakTarget(t: LightTarget): boolean { if (t.broken) return false;  const wasLit = t.interactive && (t.on || t.factor > 0); t.broken = true; this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
+  private breakTarget(t: LightTarget): boolean { if (t.broken) return false;  const wasLit = t.interactive && (t.on || t.factor > 0); this.g.lightHome.in(LIGHT_IN.break, t); this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
 
   private killScreen(item: Destructible, hitP: Vec3, n: Vec3, byPlayer: boolean) {
     const g = this.g;
