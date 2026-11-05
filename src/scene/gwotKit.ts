@@ -808,6 +808,56 @@ export function gwotKit(host: GwotHost) {
     { off: [0, 0.22 * s, 0], h: [0.3 * s, 0.22 * s, 0.3 * s], yaw: 0.5, albedo: GWOT_PALETTE.scrub }, { off: [0.05 * s, 0.42 * s, -0.04 * s], h: [0.2 * s, 0.16 * s, 0.2 * s], yaw: 0.1, albedo: GWOT_PALETTE.straw },
   ], [0.3 * s, 0.3 * s]);
 
+  // ---------------------------------------- street and garden furniture ----
+  // (of no one setting: a planter stands in a compound's yard and on a sea front. Written in the kit's rows as every piece is; a level that wears another
+  //  skin lays them over that skin's host, tools/levels/coastSkin.ts)
+  /** COVER (waist; chest with its hedge): a PLANTER — a trough `len` × `wid` and 0.55 high in `colour`, soil in it, and a clipped hedge standing in the
+   *  soil to 1.05 m unless `hedge` is false (then low plants, and it is cover to the waist only) */
+  const planter = (x: number, z: number, yaw = 0, len = 1.8, wid = 0.6, colour: GwotMat = 'render', hedge = true) => {
+    const b = piece(x, z, yaw), hl = len / 2, hw = wid / 2, s = seedOf(x, z);
+    b(0, 0, 0, 0.55, hl, hw, M[colour], mk(face('+y', 'base', [palOf('dirt')], (i, j, W, Hc) => Math.min(i, W - 1 - i, j, Hc - 1 - j) >= 2 ? 1 : 0, 0, 1)));
+    if (hedge) b(0, 0, 0.55, 1.05, hl - 0.1, hw - 0.1, M.scrub);
+    else for (let k = 0; k < Math.max(2, Math.round(len / 0.5)); k++) b(-hl + 0.3 + k * (len - 0.6) / Math.max(1, Math.round(len / 0.5) - 1), (h01(s, k, 1) - 0.5) * (wid - 0.3), 0.55, 0.7 + h01(s, k, 2) * 0.1, 0.12, 0.1, M.prodGreen, {}, h01(s, k, 3) * 3);
+  };
+  /** COVER (waist): a round TUB with a shrub in it — a pot 0.7 across and 0.5 high in `colour`, the shrub to 1.1 m */
+  const tub = (x: number, z: number, colour: GwotMat = 'paintRust') => {
+    const b = piece(x, z, 0);
+    round(b, 0, 0, 0, 0.5, 0.35, M[colour], mk(face('+y', 'base', [palOf('dirt')], (i, j, W, Hc) => Math.hypot(i - (W - 1) / 2, j - (Hc - 1) / 2) < W / 2 - 2 ? 1 : 0, 0, 1)), {});
+    b(0, 0, 0.5, 0.9, 0.3, 0.3, M.scrub, {}, 0.5); b(0.03, -0.02, 0.9, 1.1, 0.2, 0.2, M.scrub, {}, 0.1);
+  };
+  /** COVER (none to a man, a stop to a vehicle): n BOLLARDS 0.9 m high and `gap` apart along local X, each a post in `colour` with a pale band under its cap */
+  const bollard = (x: number, z: number, n = 1, gap = 1.5, yaw = 0, colour: GwotMat = 'iron') => {
+    const b = piece(x, z, yaw);
+    for (let k = 0; k < n; k++) { const lx = (k - (n - 1) / 2) * gap; round(b, lx, 0, 0, 0.9, 0.09, M[colour]); round(b, lx, 0, 0.7, 0.78, 0.098, M.plasticWhite, { flags: DECAL }); }
+  };
+  /** COVER (chest): a WHEELED BIN 0.58 × 0.74 and 1.07 high in `colour`, its lid shut, on two wheels at the back (local +Z) */
+  const wheelieBin = (x: number, z: number, yaw = 0, colour: GwotMat = 'plasticGreen') => {
+    const b = piece(x, z, yaw);
+    b(0, 0, 0.1, 0.98, 0.27, 0.33, M[colour]); b(0, 0.02, 0.98, 1.07, 0.29, 0.37, M[colour], mk(face('+y', 'base', [{ mul: 0.7 }], (i, j, W, Hc) => j === 2 || (j === Hc - 3 && i > 3 && i < W - 4) ? 1 : 0)));
+    b(0, 0.36, 0.92, 0.97, 0.22, 0.02, M.plasticBlack); for (const sx of [-1, 1]) b(sx * 0.215, 0.3, 0, 0.2, 0.03, 0.1, M.rubber, { shape: { round: 1 } });   // (inside the body's width: no face of a wheel lies in the plane of a side)
+  };
+  /** SHADE (no cover: a pole): a PARASOL — a canopy `r` across its half in `cloth`, 2.2 m up on a steel pole in a concrete foot. A man walks under it,
+   *  a round from above is stopped by it, and it shades what stands under it */
+  const parasol = (x: number, z: number, r = 1.3, cloth: GwotMat = 'canvas') => {
+    const b = piece(x, z, 0);
+    round(b, 0, 0, 0, 0.08, 0.26, M.tWall); b(0, 0, 0.08, 2.2, 0.025, 0.025, M.galv);
+    round(b, 0, 0, 2.2, 2.26, r, M[cloth]); round(b, 0, 0, 2.26, 2.34, r * 0.45, M[cloth]);
+  };
+  /** COVER (none: thin): a BICYCLE on its stand, 1.75 long along local X, its frame in `colour` */
+  const bicycle = (x: number, z: number, yaw = 0, colour: GwotMat = 'drumBlue') => {
+    const b = piece(x, z, yaw), P = M[colour];
+    for (const lx of [-0.52, 0.52]) b(lx, 0, 0, 0.68, 0.34, 0.018, M.rubber, { shape: { round: 3 } });
+    b(-0.02, 0, 0.78, 0.82, 0.3, 0.015, P); b(-0.3, 0, 0.3, 0.9, 0.018, 0.013, P); b(0.34, 0, 0.34, 1.0, 0.018, 0.014, P); b(0.02, 0, 0.3, 0.34, 0.32, 0.012, P);   // (each tube a hair off the next one's thickness: no two share a face's plane)
+    b(-0.32, 0, 0.9, 0.95, 0.12, 0.05, M.plasticBlack); b(0.36, 0, 1.0, 1.03, 0.02, 0.24, M.iron); b(-0.1, 0.1, 0, 0.32, 0.012, 0.012, M.iron);
+  };
+  /** COVER (knee, lying behind it): a SUN LOUNGER 1.9 × 0.66 of slats, its head end (local +X) raised, a towel in `cloth` along it */
+  const lounger = (x: number, z: number, yaw = 0, cloth: GwotMat = 'rugCream') => {
+    const b = piece(x, z, yaw);
+    for (const lx of [-0.8, 0.5]) for (const lz of [-0.27, 0.27]) b(lx, lz, 0, 0.28, 0.03, 0.03, M.poplar);
+    b(-0.2, 0, 0.28, 0.33, 0.75, 0.33, M.poplar, mk(face('+y', 'coarse', [{ mul: 0.7 }], (i) => i % 4 === 3 ? 1 : 0, 0, 2)));
+    b(0.74, 0, 0.28, 0.62, 0.19, 0.32, M.poplar); b(-0.1, 0, 0.33, 0.345, 0.6, 0.26, M[cloth], { flags: DECAL });
+  };
+
   // --------------------------------------------------------------- lights ----
   /** DECAL: overhead WIRE from (x0, z0) at y0 to (x1, z1) (level: the sag is not drawn) */
   const wire = (x0: number, z0: number, x1: number, z1: number, y = 2.7) => { const L = Math.hypot(x1 - x0, z1 - z0) || 1; host.add({ c: [(x0 + x1) / 2, y, (z0 + z1) / 2], h: [L / 2, 0.006, 0.006], yaw: Math.atan2(-(z1 - z0), x1 - x0), ...M.plasticBlack, flags: DECAL }); };
@@ -851,6 +901,7 @@ export function gwotKit(host: GwotHost) {
     // furniture
     lowTable, table, seedTray, plasticChair, chairAs, trunk, stove, tandoor,
     // stores & cover
+    planter, tub, bollard, wheelieBin, parasol, bicycle, lounger,
     drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile, pipes, log, choppingBlock, plankBench, bricks, pot,
     // a wall's face
     boards, shutters, windowBlanket, wallPatch, spout, beamEnds, splitWood, ladder,

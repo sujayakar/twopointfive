@@ -76,6 +76,49 @@ export const SNOW_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: numb
   (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => [n, { albedo: SNOW_PALETTE[n], rough: SNOW_FINISH[n].rough }]));
 /** what each snow paint is to a round and a blast (an office paint name, as GWOT_SIM) */
 export const SNOW_SIM: Readonly<Record<SnowMat, GwotSim>> = { snow: 'asphalt', snowPacked: 'asphalt', snowOld: 'asphalt' };
+/** THE COAST PALETTE — A SECOND SKIN'S PAINTS: a neutral, sunlit place by the sea (rendered and painted walls, fair concrete, paving, timber decks,
+ *  sand, enamel and canvas), for the levels that leave the 2010s setting. A TABLE OF ITS OWN, as the snow's is and for the same reason. Nothing lays a
+ *  row of it by itself: the kit's pieces are written in the kit's own rows, and a level that wears this skin builds them over a host that changes their
+ *  clothes as they are laid (tools/levels/coastSkin.ts: which coast row each kit row wears). So a piece is written once and has two skins.
+ *  EVERY ROW SAYS A STUFF THE LOOK HAS (scene/stuff.ts COAST_STUFF): the look's table of stuffs is nearly full, and a skin is a choice of rows from it,
+ *  never a new one. Two rows wait for a stuff the look does not have yet and say the nearest honest one meanwhile: `sand` (earth) and `roofTile` (sheet).
+ *  NO ROW HAS THE NUMBERS OF ANOTHER PALETTE'S ROW or of one of its stand-ins (a round knows a paint by its numbers: tools/qa/coast-check.ts holds it). */
+export const COAST_PALETTE = {
+  // walls: render in three colours, a smooth skim, fair concrete, precast panels, pale block
+  stuccoWhite: [0.74, 0.725, 0.69] as Vec3, stuccoSand: [0.63, 0.55, 0.43] as Vec3, terracotta: [0.53, 0.27, 0.17] as Vec3, skimWhite: [0.79, 0.78, 0.755] as Vec3,
+  fairConcrete: [0.49, 0.485, 0.47] as Vec3, castPanel: [0.585, 0.58, 0.565] as Vec3, paleBlock: [0.535, 0.52, 0.495] as Vec3,
+  // ground: two pavings, the road, a pale slab, pale gravel, sand, soil, a lawn. As in the first skin the ground sits under every wall's value
+  paverWarm: [0.345, 0.3, 0.245] as Vec3, paverGrey: [0.285, 0.283, 0.275] as Vec3, roadTarmac: [0.072, 0.073, 0.078] as Vec3, paleSlab: [0.405, 0.4, 0.385] as Vec3,
+  paleGravel: [0.325, 0.305, 0.275] as Vec3, sand: [0.585, 0.505, 0.37] as Vec3, soil: [0.098, 0.068, 0.046] as Vec3, lawn: [0.125, 0.215, 0.075] as Vec3,
+  // timber, roof
+  deck: [0.395, 0.285, 0.185] as Vec3, deckGrey: [0.415, 0.385, 0.335] as Vec3, roofTile: [0.445, 0.195, 0.115] as Vec3,
+  // paint and enamel: one sea colour, one warm, a yellow, a navy, a white
+  paintTeal: [0.045, 0.295, 0.315] as Vec3, paintCoral: [0.615, 0.195, 0.135] as Vec3, paintSun: [0.715, 0.545, 0.075] as Vec3, paintNavy: [0.038, 0.078, 0.195] as Vec3, enamelWhite: [0.755, 0.755, 0.735] as Vec3,
+  // metal, plastic, rubber, cloth, leaves
+  brushedSteel: [0.525, 0.545, 0.555] as Vec3, darkSteel: [0.088, 0.093, 0.102] as Vec3, binGreen: [0.058, 0.205, 0.118] as Vec3, plasticPale: [0.715, 0.71, 0.675] as Vec3, plasticDark: [0.052, 0.052, 0.058] as Vec3,
+  tyreRubber: [0.034, 0.034, 0.038] as Vec3, canvasWhite: [0.705, 0.685, 0.625] as Vec3, canvasBlue: [0.095, 0.245, 0.495] as Vec3, towelStripe: [0.655, 0.305, 0.215] as Vec3, foliage: [0.098, 0.235, 0.078] as Vec3,
+};
+export type CoastMat = keyof typeof COAST_PALETTE;
+namePaints(COAST_PALETTE);
+export const COAST_FINISH: Readonly<Record<CoastMat, { rough: number; metal?: boolean }>> = {
+  stuccoWhite: { rough: 0.9 }, stuccoSand: { rough: 0.92 }, terracotta: { rough: 0.9 }, skimWhite: { rough: 0.8 }, fairConcrete: { rough: 0.85 }, castPanel: { rough: 0.8 }, paleBlock: { rough: 0.92 },
+  paverWarm: { rough: 0.9 }, paverGrey: { rough: 0.9 }, roadTarmac: { rough: 0.95 }, paleSlab: { rough: 0.88 }, paleGravel: { rough: 1 }, sand: { rough: 1 }, soil: { rough: 1 }, lawn: { rough: 1 },
+  deck: { rough: 0.8 }, deckGrey: { rough: 0.88 }, roofTile: { rough: 0.85 },
+  paintTeal: { rough: 0.55 }, paintCoral: { rough: 0.55 }, paintSun: { rough: 0.5 }, paintNavy: { rough: 0.55 }, enamelWhite: { rough: 0.4 },
+  brushedSteel: { rough: 0.4, metal: true }, darkSteel: { rough: 0.5, metal: true }, binGreen: { rough: 0.5 }, plasticPale: { rough: 0.45 }, plasticDark: { rough: 0.5 },
+  tyreRubber: { rough: 0.85 }, canvasWhite: { rough: 0.95 }, canvasBlue: { rough: 0.95 }, towelStripe: { rough: 0.95 }, foliage: { rough: 1 },
+};
+export const COAST_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
+  (Object.keys(COAST_PALETTE) as CoastMat[]).map(n => [n, { albedo: COAST_PALETTE[n], rough: COAST_FINISH[n].rough, ...(COAST_FINISH[n].metal ? { metal: true } : {}) }]));
+/** what each coast paint is to a round and a blast where it is laid as itself (an office paint name or a surface, as GWOT_SIM) */
+export const COAST_SIM: Readonly<Record<CoastMat, GwotSim>> = {
+  stuccoWhite: 'concrete', stuccoSand: 'concrete', terracotta: 'concrete', skimWhite: 'wall', fairConcrete: 'concrete', castPanel: 'concrete', paleBlock: 'concrete',
+  paverWarm: 'stone', paverGrey: 'stone', roadTarmac: 'asphalt', paleSlab: 'concrete', paleGravel: 'asphalt', sand: 'asphalt', soil: 'asphalt', lawn: 'grass',
+  deck: 'wood', deckGrey: 'wood', roofTile: 'concrete',
+  paintTeal: 'metal', paintCoral: 'metal', paintSun: 'metal', paintNavy: 'metal', enamelWhite: 'metal',
+  brushedSteel: 'metal', darkSteel: 'metal', binGreen: '~plastic', plasticPale: '~plastic', plasticDark: '~plastic',
+  tyreRubber: '~plastic', canvasWhite: 'chair', canvasBlue: 'chair', towelStripe: 'chair', foliage: 'plant',
+};
 /** the palette + finishes as the exporter's `materials` rows (tools/levels/export.ts: a generator's `MATERIALS` export) */
 export const GWOT_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
   (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => [n, { albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, ...(GWOT_FINISH[n]?.metal ? { metal: true } : {}) }]));
@@ -116,6 +159,11 @@ export function gwotAs(m: GwotMat, sim: GwotSim): Vec3 {
   if (sim === GWOT_SIM[m]) return GWOT_PALETTE[m];
   const a = shifted(GWOT_PALETTE[m], 1 + GWOT_SIM_NAMES.indexOf(sim)); namePaint(a, m); return a;   // (the same paint to the eye is the same stuff: the stand-in is known as the row it stands in for)
 }
+/** … and a coast paint standing for `sim`, the same way (tools/levels/coastSkin.ts: a kit's box in its coast clothes is to a round what it was) */
+export function coastAs(m: CoastMat, sim: GwotSim): Vec3 {
+  if (sim === COAST_SIM[m]) return COAST_PALETTE[m];
+  const a = shifted(COAST_PALETTE[m], 1 + GWOT_SIM_NAMES.indexOf(sim)); namePaint(a, m); return a;
+}
 /** the lot's slab as the storm wets it (game/weather.ts setWet soak — the same arithmetic, so the same doubles) */
 export const gwotWet = (a: Vec3): Vec3 => [a[0] * 0.5, a[1] * 0.5, a[2] * 0.5 * 1.04];
 let simByAlbedo: Map<string, GwotSim> | null = null;
@@ -131,6 +179,9 @@ export function gwotSimOf(albedo: Vec3, key: string = albedo.join(',')): GwotSim
     // THE SNOW PAINTS, last and only where the key is free: nothing above reads differently because they are here
     for (const m of Object.keys(SNOW_PALETTE) as SnowMat[]) { const k = SNOW_PALETTE[m].join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, SNOW_SIM[m]); }
     // … and soaked (the switch off: a snow level stands under the storm any level has, and weather.ts setWet darkens its ground slab in place) they say what every wet lot says
-    for (const m of Object.keys(SNOW_PALETTE) as SnowMat[]) { const k = gwotWet(SNOW_PALETTE[m]).join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, '~metal'); } }
+    for (const m of Object.keys(SNOW_PALETTE) as SnowMat[]) { const k = gwotWet(SNOW_PALETTE[m]).join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, '~metal'); }
+    // THE COAST PAINTS and their stand-ins, after everything and only where the key is free, so that nothing above reads differently because they are here
+    // (tools/qa/coast-check.ts holds that every one of their keys WAS free: a row whose numbers another palette has would be that palette's stuff to a round)
+    for (const m of Object.keys(COAST_PALETTE) as CoastMat[]) { GWOT_SIM_NAMES.forEach((s, i) => { const k = shifted(COAST_PALETTE[m], 1 + i).join(','); if (!simByAlbedo!.has(k)) simByAlbedo!.set(k, s); }); const k = COAST_PALETTE[m].join(','); if (!simByAlbedo.has(k)) simByAlbedo.set(k, COAST_SIM[m]); } }
   return simByAlbedo.get(key);
 }
