@@ -22,6 +22,7 @@
 import { resolve } from 'node:path';
 import { readFileSync, existsSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
+import { asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const WD = await import(`${ROOT}/src/game/wand.ts`);
@@ -637,10 +638,6 @@ export async function wandQuick(): Promise<boolean> {
   return F.done();
 }
 
-export async function wandCheck(only?: string): Promise<boolean> {
-  let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['kit', wandKit], ['tile', wandTile], ['look', wandLook], ['costs', wandCosts], ['doors', wandDoors], ['mate', wandMate], ['quick', wandQuick], ['off', wandOff]];
-  for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;
-  return ok;
-}
-if (import.meta.main) { const ok = await wandCheck(process.argv[2]); process.exit(ok ? 0 : 1); }
+/** the file's probes, by the names the runner calls them */
+const PROBES = { 'wand-kit': wandKit, 'wand-tile': wandTile, 'wand-look': wandLook, 'wand-costs': wandCosts, 'wand-doors': wandDoors, 'wand-mate': wandMate, 'wand-quick': wandQuick, 'wand-off': wandOff };
+if (import.meta.main) process.exit(exitCode(await asProbes(PROBES, wanted())));

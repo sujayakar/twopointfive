@@ -352,7 +352,7 @@ const DOOR_EPS = 0.01;
  *  item's serial × 8 + part; every other keyed box is a thing by itself) · the systems the rule leaves alone: the leaves (4b's own memory), what a man carries
  *  (it goes with the man: combat.ts handProps), the wall devices and the staging boxes (bolted on or ambient: a camera's pan and a moth give nobody away) */
 const THING_BITS: Record<number, number> = { [MKEY.prop >>> 24]: 4, [MKEY.item >>> 24]: 3 };
-const THING_PASS = new Set<number>([MKEY.door >>> 24, MKEY.rig >>> 24, MKEY.device >>> 24]);
+const THING_PASS = new Set<number>([MKEY.door >>> 24, MKEY.rig >>> 24, MKEY.device >>> 24, MKEY.skin >>> 24]);   // (skin: what stands of a holed wall's paint is the static level's, as the wall's own pieces are — wallskin.ts)
 const THING_TEST = MKEY.test >>> 24;
 /** A BROKEN FIXTURE's boxes (fixtureBreak.ts keys them MKEY.test + 0x5000 + serial << 5 + part, serial < 256: lows 0x5000‥0x6FFF). Parts 0‥5 are its BODY (its
  *  `hang` list: tray, cover, face, two tubes, the lead — one rigid thing); the parts after them are what came off it (the diffuser's halves, the glass), each lying

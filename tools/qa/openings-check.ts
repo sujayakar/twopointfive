@@ -7,6 +7,7 @@
 // No GPU: the picture is never SEEN here.
 //   bun run tools/qa/openings-check.ts                    exit 0 = every line passed, 1 = one failed (run it on both stands: TPS_PROFILE=shipped in front)
 //   OPENINGS_BREAK=1 bun run tools/qa/openings-check.ts   glass is taken for wall: must FAIL
+//   PLANPACE_BREAK=1  …                                    the openings are found again with no pace (whole on one frame, as ?planpace=old): must FAIL
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -20,6 +21,7 @@ const { reachMaskFor, buildWallRaster } = await import(`${ROOT}/src/render/reach
 const { HOURS } = await import(`${ROOT}/src/game/hours.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
+const { Steps } = await import(`${ROOT}/src/render/steps.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const BRK = process.env.OPENINGS_BREAK === '1'; let red = false;
 const check = (ok: boolean, what: string, detail = '') => { red ||= !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
@@ -128,7 +130,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
   // (the harness's engine is a stand-in with the real light list and world: the real method is run on one that borrows both)
   { const { Engine } = await import(`${ROOT}/src/engine.ts`), { REACH_PACE, REACH_WORK } = await import(`${ROOT}/src/render/reach.ts`), { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`), { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
     const LS = g.engine.lights;
-    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null }) as any;
+    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null, openJob: new Steps() }) as any;
     const E = mk();
     const was = { on: lookConfig.on, windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
     const quiet = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
@@ -228,6 +230,88 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
           REACH_PACE.whole = false; st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); settle();
           if (!(found > 0 && litOn === found)) f.push(`with the old pace asked for, the hole was found on frame ${found} and lit on frame ${litOn} (want the same frame)`); else said.push('the old pace asked for: the hole lit on the frame it is found'); }
         check(f.length === 0, 'what is lit stays lit and no job is lost: a hole\'s light comes on though the openings are found again every five frames; a hole widened, and the wall put back, never show fewer lit; a box set down makes the field fresh and every mask a fresh raster\'s; the first frame masks every opening, on a second level too; the old pace asked for is the old pace', f.join('; ') || said.join(' · ')); }
+      // THE OPENINGS ARE FOUND AGAIN A LITTLE A FRAME (render/steps.ts, render/planPace.ts): the plan, the walls' raster and its scan were 9 to 15 ms of one
+      // frame in a browser, cold each time a wall changed. Three stops a frame here, which no clock can change. PLANPACE_BREAK=1 gives no pace: must FAIL.
+      { const PB = process.env.PLANPACE_BREAK === '1', bit = (): any => PB ? undefined : { left: 3 }, st = g.engine.world.statics as any[], bump = () => { (g.engine.world as any).geomSerial = ((g.engine.world as any).geomSerial ?? 0) + 1; }, f: string[] = [], said: string[] = [];
+        const E5 = mk(), recs = () => E5.openRecs as any[], go = (pace = bit()) => quiet(() => E5.lookOpeningLights(pace));
+        const sig = (os: any[]) => os.map(o => `${o.pos.map((v: number) => v.toFixed(3)).join(',')}/${o.full.toFixed(4)}`).sort().join(' '), planNow = () => sig(planOpenings(st)), shown = () => sig(recs().map(r => r.o)), litN = () => (E5.dayLights as any[]).filter(l => l.enabled).length;
+        const rest = () => { let k = 0; do go(); while ((E5.openJob.busy || E5.openPlanned !== E5.openSeen || recs().some(r => !r.mask || r.old || r.job)) && k++ < 3000); return k < 3000; };
+        go(); if (!recs().length || shown() !== planNow() || E5.openJob.busy) f.push('a level\'s first frame: its openings were not all found on it');
+        if (!rest()) f.push('never at rest (the level as it stands)');
+        const wall = st.find(b => !b.rot && b.h[0] < 0.2 && b.h[1] > 1.2 && b.h[2] > 1.6 && Math.abs(b.c[0] - 34) < 0.2 && Math.abs(b.c[2] - 8) < b.h[2] - 1.2), c0 = wall.c[2], h0 = wall.h[2], z0 = c0 - h0, z1 = c0 + h0;
+        // (a) a hole: found over several frames with the old plan serving and nothing going dark, and what lands is the plan made at once
+        const before = shown(), n0 = litN(); wall.c[2] = (z0 + c0 - 0.75) / 2; wall.h[2] = (c0 - 0.75 - z0) / 2; const second = { ...wall, c: [wall.c[0], wall.c[1], (c0 + 0.75 + z1) / 2], h: [wall.h[0], wall.h[1], (z1 - c0 - 0.75) / 2] }; st.push(second); bump();
+        let began = -1, landed = -1, fewest = n0, neither = 0; for (let k = 1; k <= 600 && landed < 0; k++) { go(); if (began < 0 && E5.openJob.busy) began = k; fewest = Math.min(fewest, litN()); const s = shown(); if (s !== before) { if (s === planNow()) landed = k; else neither++; } }
+        const took = landed - began;
+        if (landed < 0) f.push('a hole: never found in 600 frames'); else if (!(began > LOOK_OPENINGS.settle && took >= 2)) f.push(`a hole: begun on frame ${began}, landed on frame ${landed} (want it begun once the walls have stood still and landed frames later)`); else said.push(`a hole found over ${took + 1} frames of three stops, from frame ${began}`);
+        if (neither) f.push(`${neither} frame(s) showed a plan that is neither the old one nor the new`); if (fewest < n0) f.push(`${n0} lit before the hole, ${fewest} on some frame while it was being found`);
+        if (!rest()) f.push('never at rest (the hole)');
+        // (b) one begun is finished on the level as it took it, whatever moves after; then found again for what moved
+        { const a2 = c0 + 0.75 + 1.5, was = shown(); second.c = [second.c[0], second.c[1], (a2 + z1) / 2]; second.h = [second.h[0], second.h[1], (z1 - a2) / 2]; bump();
+          let k = 0; while (!E5.openJob.busy && k++ < 60) go(); go(); const wantA = planNow();
+          const a3 = a2 + 1; second.c[2] = (a3 + z1) / 2; second.h[2] = (z1 - a3) / 2; bump(); const wantAB = planNow();   // (the hole a metre wider still, under the finding, the box's own numbers changed in place as the game changes them)
+          k = 0; while (shown() === was && k++ < 600) go();
+          if (wantA === wantAB) f.push('the hole made wider changed no opening (this part asks nothing)');
+          if (shown() !== wantA) f.push('boxes that moved while the openings were being found are in the plan that landed, or it is of neither level');
+          if (!rest() || shown() !== wantAB) f.push('the openings were not found again for what moved meanwhile'); else said.push('one begun lands the level as it took it, then the level as it is');
+}
+        // (c) a static that is no wall, moved every six frames (a crate shot to bits): the openings are still found, where a finding dropped at every change never would be
+        { const crate = st.find(b => b !== wall && b !== second && b.h[1] < 0.6 && b.c[1] < 1.2), y0 = crate.c[1], was = shown(); second.c = [second.c[0], second.c[1], (c0 + 0.75 + z1) / 2]; second.h = [second.h[0], second.h[1], (z1 - c0 - 0.75) / 2]; bump();
+          let at = -1, flip = false; for (let k = 1; k <= 600 && at < 0; k++) { if (k % 6 === 0) { flip = !flip; crate.c[1] = y0 + (flip ? 0.02 : 0); bump(); } go(); if (shown() !== was && shown() === planNow()) at = k; }
+          crate.c[1] = y0; bump();
+          if (at < 0) f.push('with a crate moved every six frames the openings were never found again in 600 frames'); else said.push(`a crate moved every six frames: found again by frame ${at}`);
+          if (!rest()) f.push('never at rest (the crate still)'); }
+        // (d) a finding takes a step every frame whatever is left of the frame's allowance (nothing the other planners do can hold it up), and no more than one
+        if (!PB) { const was = shown(); st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); let b0 = -1, at = -1; for (let k = 1; k <= 900 && at < 0; k++) { go(k % 2 ? { left: 0 } : { left: Infinity, ms: 0 }); if (b0 < 0 && E5.openJob.busy) b0 = k; if (shown() !== was) at = k; }
+          if (at < 0 || shown() !== planNow()) f.push('with nothing left of any frame\'s allowance the openings were never found again'); else if (at - b0 < 2 * took) f.push(`with nothing left of any frame's allowance a finding took ${at - b0 + 1} frames (three stops a frame took ${took + 1}: a step a frame should take near three times that)`); else said.push(`a step a frame with nothing left: ${at - b0 + 1} frames`);
+          if (!rest()) f.push('never at rest (the wall back, a step a frame)');
+          // (e) a new level drops what is in hand and has its own openings whole on its first frame; what was in hand never lands on it
+          wall.c[2] = (z0 + c0 - 0.75) / 2; wall.h[2] = (c0 - 0.75 - z0) / 2; st.push(second); second.c[2] = (c0 + 0.75 + z1) / 2; second.h[2] = (z1 - c0 - 0.75) / 2; bump();
+          let k = 0; while (!E5.openJob.busy && k++ < 60) go(); const inHand = E5.openJob.busy, holed = planNow();
+          st.pop(); wall.c[2] = c0; wall.h[2] = h0; const s0 = st[0]; st[0] = { ...s0 }; bump(); go(); const whole = planNow(); let wrong = shown() !== whole || E5.openJob.busy ? 1 : 0; for (let n = 0; n < 60; n++) { go(); if (shown() !== whole) wrong++; }
+          if (!inHand) f.push('no finding was in hand to change the level under'); if (holed === whole) f.push('the new level has the old one\'s openings (this part asks nothing)');
+          if (wrong) f.push(`a new level while the openings were being found: on ${wrong} of its first 61 frames its openings were not its own`);
+          st[0] = s0; bump(); go();
+          // … and with the row put off, what is in hand is given up with the lights
+          wall.c[2] = (z0 + c0 - 0.75) / 2; wall.h[2] = (c0 - 0.75 - z0) / 2; st.push(second); bump(); k = 0; while (!E5.openJob.busy && k++ < 60) go(); const inHand2 = E5.openJob.busy, w0 = lookConfig.windows; lookConfig.windows = 0; go(); if (!inHand2) f.push('no finding was in hand to put the row off under'); if (E5.openJob.busy || recs().length) f.push('the row put off: a finding is still in hand, or lights are'); lookConfig.windows = w0;
+          st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); go(); if (!rest()) f.push('never at rest (the row on again)');
+          // … and a finding that throws is not begun again for the same boxes: the plan in use serves (the key was kept before the work, once)
+          { const real = E5.openReplan, was = shown(); E5.openReplan = function* () { yield; throw new Error('thrown'); }; wall.c[2] = (z0 + c0 - 0.75) / 2; wall.h[2] = (c0 - 0.75 - z0) / 2; st.push(second); bump();
+            let threw = 0; for (let n = 0; n < 40; n++) { try { go(); } catch { threw++; } } if (threw !== 1 || E5.openJob.busy || shown() !== was) f.push(`a finding that throws: thrown ${threw} time(s) in 40 frames (want once), ${E5.openJob.busy ? 'still in hand' : 'not in hand'}`);
+            E5.openReplan = real; st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); go(); } }
+        else { st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); }
+        if (!rest() || shown() !== planNow()) f.push('never at rest (the wall back)');
+        check(f.length === 0, 'the openings are found again a little a frame once the walls have stood still: the old plan serves and nothing goes dark, what lands is the plan made at once, one begun lands the level as it took it whatever moves after, a crate moved every six frames cannot stop it, and it takes a step every frame whatever the frame has left; whole on a level\'s first frame, and a new level never gets the old one\'s', f.join('; ') || said.join(' · ')); }
+      // THE ENGINE'S OWN WORDS ON THE PACE (engine.ts framePace, startPlansOver; nothing here calls render): a page's first frames have every plan at once, then
+      // the frame's allowance and the draw order's wait; a restart or a save put back gives up what is in hand and has the frames at once again
+      { const { PLAN_PACE } = await import(`${ROOT}/src/render/planPace.ts`), { WallSides } = await import(`${ROOT}/src/render/wallSides.ts`), was = PLAN_PACE.on, first = LOOK_OPENINGS.settle + 2, f: string[] = [];
+        const EP = Object.assign(mk(), { planFresh: first, drawWait: { calm: 0, still: 0 }, wallSides: new WallSides() }), atOnce = (p: any) => p.wait === null && p.plan.left === Infinity && p.plan.ms === undefined;
+        PLAN_PACE.on = true; let n = 0; while (n < 40 && atOnce(EP.framePace())) n++;
+        if (n !== first) f.push(`a page's first frames: ${n} at once (want ${first})`);
+        const p1 = EP.framePace(); if (atOnce(p1) || p1.plan.ms !== PLAN_PACE.ms || p1.wait !== EP.drawWait || p1.wait.calm !== PLAN_PACE.calm) f.push('after them: not the frame\'s allowance and the order\'s wait');
+        EP.openJob.begin((function* (): Generator<void, any, void> { yield; return null; })()); EP.startPlansOver(); n = 0; while (n < 40 && atOnce(EP.framePace())) n++;
+        if (EP.openJob.busy || EP.wallSides.busy || n !== first) f.push(`the level put back to another state: ${EP.openJob.busy ? 'a finding still in hand, ' : ''}${n} frames at once (want ${first})`);
+        PLAN_PACE.on = false; if (!atOnce(EP.framePace())) f.push('the pace off: a frame not at once'); PLAN_PACE.on = was;
+        // … and the switch is one the stands, the registry and a recording know (host/profile.ts pageSwitches and FROZEN_HOLDS, host/standEnv.ts, game/knobs.ts,
+        // game/journal.ts applyKnobs): down on the frozen stand, up on the page's, or as its own word says; a recording with no table for it replays with it down
+        { const PR = await import(`${ROOT}/src/host/profile.ts`), SE = await import(`${ROOT}/src/host/standEnv.ts`), KN = await import(`${ROOT}/src/game/knobs.ts`), J = await import(`${ROOT}/src/game/journal.ts`);
+          const shipped = (process.env.TPS_PROFILE ?? '') === 'shipped', said = process.env.TPS_PLANPACE, want = said !== undefined ? said === '1' : shipped;
+          if (was !== want) f.push(`this stand (${shipped ? 'the page\'s' : 'frozen'}) stood the pace ${was ? 'on' : 'off'} (want ${want ? 'on' : 'off'})`);
+          if (PR.FROZEN_HOLDS['PLAN_PACE.on'] !== 'TPS_PLANPACE=1 (a picture only)' || !SE.STAND_ENV.includes('TPS_PLANPACE') || !KN.JOURNAL_KNOBS.includes('PLAN_PACE') || KN.knobRegistry().PLAN_PACE !== PLAN_PACE) f.push('the row, the stand\'s word, the recording\'s list or the registry lacks it');
+          const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))); PLAN_PACE.on = true; const old = snap(); delete old.tables.PLAN_PACE; J.applyKnobs(g, old); const before = PLAN_PACE.on; PLAN_PACE.on = true; const rec = snap(); PLAN_PACE.on = false; J.applyKnobs(g, rec); const kept = PLAN_PACE.on; PLAN_PACE.on = was;
+          if (before !== false || kept !== true) f.push(`a recording from before the table replays with the pace ${before ? 'on' : 'off'} (want off), one made with it on with it ${kept ? 'on' : 'off'} (want on)`); }
+        // … and so is the reach masks' pace (render/reach.ts REACH_PACE, `?reachpace=old`): the same on both stands, so no row, but in the registry and on a
+        // recording. BOTH WORDS ARE READ WITH THE PAGE'S OTHER SWITCHES (host/profile.ts pageSwitches, which a server's stand runs on a recipe's address) and
+        // main.ts reads neither by itself. Asked in a process of its own: pageSwitches writes every switch of the page
+        { const KN = await import(`${ROOT}/src/game/knobs.ts`), J = await import(`${ROOT}/src/game/journal.ts`), wasW = REACH_PACE.whole;
+          if (wasW !== false || !KN.JOURNAL_KNOBS.includes('REACH_PACE') || KN.knobRegistry().REACH_PACE !== REACH_PACE) f.push('the reach masks\' pace: up on this stand with no word, or not in the registry or the recording\'s list');
+          const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))); REACH_PACE.whole = true; const rec = snap(), old = snap(); delete old.tables.REACH_PACE; J.applyKnobs(g, old); const before = REACH_PACE.whole; J.applyKnobs(g, rec); const kept = REACH_PACE.whole; REACH_PACE.whole = wasW;
+          if (before !== false || kept !== true) f.push(`the reach masks' pace: a recording with no table replays with it ${before ? 'whole' : 'in shares'} (want shares), one made whole with it ${kept ? 'whole' : 'in shares'} (want whole)`);
+          const ask = `const P = await import('${ROOT}/src/host/profile.ts'), A = await import('${ROOT}/src/render/planPace.ts'), R = await import('${ROOT}/src/render/reach.ts'); const out = []; for (const q of ['', 'planpace=old', 'reachpace=old', 'planpace=old&reachpace=old']) { P.pageSwitches(new URLSearchParams(q)); out.push((A.PLAN_PACE.on ? 1 : 0) + '' + (R.REACH_PACE.whole ? 1 : 0)); } console.log('WORDS ' + out.join(' '));`;
+          const r = Bun.spawnSync(['bun', '-e', ask], { cwd: ROOT, stdout: 'pipe', stderr: 'pipe' }), got = (/WORDS (.*)/.exec(r.stdout.toString()) ?? [])[1] ?? `no answer (${r.stderr.toString().slice(0, 120)})`;
+          if (got !== '10 00 11 01') f.push(`the page's switches read with '', planpace=old, reachpace=old, both (the planners' pace, then the masks' whole): ${got} (want 10 00 11 01)`);
+          if (/q\.get\('(planpace|reachpace)'\)/.test(readFileSync(`${ROOT}/src/main.ts`, 'utf8'))) f.push('main.ts reads a pace\'s word by itself'); }
+        check(f.length === 0, 'the engine gives every plan at once on a page\'s first frames and after a restart or a save put back (what is in hand given up), and the frame\'s allowance and the draw order\'s wait otherwise; at once always with the pace off; the planners\' pace and the reach masks\' are switches the stands, the registry and a recording know, read with the page\'s other switches', f.join('; ') || `${first} frames at once, then ${PLAN_PACE.ms} ms a frame and ${PLAN_PACE.calm} still frames for the order`); }
       // the rooms row put off and on, and put on for the first time in the middle of a level: no frame with the rooms dark
       { const n0 = lit().length; lookConfig.rooms = 0; frames(1); const off = lit().length, bare = lit().every(l => !l.reach); lookConfig.rooms = 1; frames(1); const on = lit().length, masked = lit().every(l => !!l.reach);
         lookConfig.rooms = 0; const E2 = mk(); quiet(() => { E2.lookOpeningLights(); E2.lookOpeningLights(); }); const a2 = (E2.dayLights as any[]).filter(l => l.enabled).length; lookConfig.rooms = 1; quiet(() => E2.lookOpeningLights()); const b2 = (E2.dayLights as any[]).filter(l => l.enabled && l.reach).length;

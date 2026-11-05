@@ -44,7 +44,7 @@
       const g = G(), w = W();
       g.aiEnabled = false;
       window.__stage(v.pin, { park: true, player: { holstered: true, invisible: false, crouch: false, ...v.player, ...(o.player || {}) } });
-      const lw = g.targets.find(t => t.name === 'street_lamp_w'); if (lw) lw.on = !!v.lampW;
+      const lw = g.targets.find(t => t.name === 'street_lamp_w'); if (lw) g.lightHome.stage(lw, !!v.lampW, null);
       { const tl = P.installTorch(); const T = o.torch || v.torch; if (T) { tl.pos = [...T.pos]; const d = T.dir; const l = Math.hypot(d[0], d[1], d[2]) || 1; tl.dir = [d[0] / l, d[1] / l, d[2] / l]; tl.enabled = true; } else { tl.enabled = false; tl.pos = [0, -50, 0]; } }
       w.setEnabled(true); w.seed(o.seed ?? 4242); w.storm = o.storm ?? 0; w.rainRate = o.rate ?? 0.55; w.wind = [o.windX ?? 1.1, o.windZ ?? 0.45];
       if (window.__wind?.set) window.__wind.set({ gusts: !!o.gusts });   // (v2: the wind's gusting is a noise of the GAME clock, which a stage does not rewind — off for a still so two takes agree; the gust strip asks for it)
@@ -162,7 +162,7 @@
       const v = P.views[vn]; const g = G(), w = W();
       g.aiEnabled = false;
       window.__stage(v.pin, { park: true, player: { holstered: true, invisible: false, crouch: false, ...v.player } });
-      const lw = g.targets.find(t => t.name === 'street_lamp_w'); if (lw) lw.on = !!v.lampW;
+      const lw = g.targets.find(t => t.name === 'street_lamp_w'); if (lw) g.lightHome.stage(lw, !!v.lampW, null);
       w.setEnabled(true); w.seed(4242); w.storm = 0; w.rainRate = 0.55; w.wind = [1.1, 0.45];
       if (window.__wind?.set) window.__wind.set({ gusts: false });
       Math.random = seeded(99); if (window.__rain?.seed) window.__rain.seed(7);

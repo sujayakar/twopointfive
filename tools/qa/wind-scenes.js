@@ -64,7 +64,7 @@
     async paper(opts = {}) {
       const { wind = 1, ventK = 1, tag = `w${opts.wind ?? 1}${(opts.ventK ?? 1) !== 1 ? 'k' + opts.ventK : ''}` } = opts;
       const g = begin(22); g.tune.wind = 0; const ventK0 = W().knobs.ventK; W().knobs.ventK = ventK;
-      for (const t of g.targets) if (t.group === 'cubicles' && t.kind === 'emissive' && Math.hypot(t.pos[0] - 16.5, t.pos[2] - 15.2) < 1) t.on = true;   // the panel over the red cluster lit (authored off): light to see the desk by
+      for (const t of g.targets) if (t.group === 'cubicles' && t.kind === 'emissive' && Math.hypot(t.pos[0] - 16.5, t.pos[2] - 15.2) < 1) g.lightHome.stage(t, true, null);   // the panel over the red cluster lit (authored off): light to see the desk by
       window.__stage({ look: [15.35, 0.8, 14.6], yaw: -90 * DEG, pitch: 36 * DEG, dist: 2.7 }, park({ pos: [13.6, 0, 22.6], yaw: 1.57 }));   // from the west aisle, over the partition, down at the desk top
       torchAt([13.3, 1.7, 16.9], [0.6, -0.32, -0.73], true, 55, 24);
       run(10);
@@ -74,7 +74,7 @@
       g.tune.wind = wind; let f = 0;
       for (const s of [1, 2, 4, 6, 8]) { const n = s * 60 - f; run(n); f += n; await settle(); out.push(await shot(`paper-${tag}_t${s}`)); }
       const st = window.__particles.stats; const res = { shots: out, woken: st.windWoken, kicked: st.kicked, alive: st.alive, asleep: st.asleep, wind: W().summary(), airAtDesk: W().at([15.5, 0.8, 14.5]) };
-      W().knobs.ventK = ventK0; for (const t of g.targets) if (t.group === 'cubicles' && t.kind === 'emissive') t.on = g.initialOn?.get(t) ?? t.on;
+      W().knobs.ventK = ventK0; for (const t of g.targets) if (t.group === 'cubicles' && t.kind === 'emissive') g.lightHome.stage(t, t.authored, null);
       end(); return res;
     },
     /** DOOR: the fire exit (x 36, z 20‥21.2) held wide open in the storm (wind from the east, 3 m/s), a smoke can a metre and a half inside it: still air = the plume stands;
@@ -137,7 +137,7 @@
       const out = []; out.push(await shot(`breaker${tag}_0pre`));
       window.__destr.burst([bp[0], bp[1], bp[2] - 0.05], 1, 1); run(2); await settle(); out.push(await shot(`breaker${tag}_f02`));
       for (const [n, name] of [[6, 'f08'], [10, 'f18'], [30, 'f48'], [72, 'f120']]) { run(n); await settle(); out.push(await shot(`breaker${tag}_${name}`)); }
-      const res = { shots: out, blackout: { ...g.blackout } };
+      const res = { shots: out, blackout: g.blackout.toJSON() };
       end(); g.repairLights?.(); return res;
     },
     /** ONE MODEL: Novak planted 4 m WEST of the aisle vent looking east through the plume's ground at Sam standing 3 m east of it (both pinned, AI off); a can popped where

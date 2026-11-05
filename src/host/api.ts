@@ -76,6 +76,8 @@ export interface HostApi {
   /** the level was put back to its start under the picture (game/cleanrestart.ts): every temporal history and the radiance cache start from nothing, as on a boot's
    *  first frame — nothing of the level as it stood is blended into the fresh one. Picture only; absent on a stand-in */
   restartPicture?(why: string): void;
+  /** the level is another state of itself under the picture (a save put back): the picture's planners give up what they have in hand and make their next plans at once (engine.ts startPlansOver; a restart's restartPicture says it too) */
+  startPlansOver?(): void;
   // ---- boot-time attach points (game.ts constructor)
   /** the skinned characters' drawable — `engine.skin = this.chars` */
   skin: SkinnedDrawable | null;

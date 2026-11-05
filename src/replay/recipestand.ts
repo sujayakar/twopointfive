@@ -12,6 +12,7 @@ import * as K from '../game/knobs';
 import * as Kt from '../game/kit';
 import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from '../game/sense';
+import { envAsBuilt } from '../game/env';
 import { CMDCHECK } from '../game/cmd';
 import { carLampsTape } from '../game/carlamps';
 import { roundTape } from '../scene/round';
@@ -38,6 +39,7 @@ export class RecipeStand {
     const kn = rc.knobs as { tables?: Plain } | null, src: Plain = { ...(kn?.tables ?? {}), ...(rc.tables ?? {}) }, into = (rc.tables ? K.knobsPlayed() : J.knobTables()) as Record<string, Plain>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
     if (!plain(src.POSEMATH)) POSEMATH.singles = false;   // (… and one from before a pose's arithmetic could be in singles was recorded in doubles: said BEFORE the game is built, whose animators measure their clips as they are made)
+    if (!plain(src.ENV)) envAsBuilt();   // (… and one from before the game's own exposure and tube gain, game/env.ts, was made on the build's)
     if (!plain(src.SENSE)) SENSE.cpu = false;  // (… and one from before these keys was played on the renderer's senses, its records believed as they came)
     if (!plain(src.CMDCHECK)) CMDCHECK.on = false;
     rowsetTape(src);   // (… and one from before a row had an hour and weather of its own: main.ts lays them on its query before the game exists — game/rowset.ts)

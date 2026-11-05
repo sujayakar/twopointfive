@@ -264,6 +264,115 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   room, 4 through), no page error; under `?hungcharge=0` the same charge opens nothing and the board hangs on. NOBODY HAS SEEN IT on a GPU and nobody has
   played it: the stills (`STILLS=<dir>`, `EXTRA='hour=midday&wallsafe=0'`, the camera on the charge's side facing the wall) are the software adapter's
   at verylow; the picture goes dark between about 0.3 and 0.7 s after the blast in them, as after any wall charge (not looked into here).
+- **What is painted on a wall goes with the wall** (`src/game/wallskin.ts`, `WALLSKIN`, 2026-11-05; found by the office's hand pass: a 2.2 m blast on
+  four partitions took the vent over the hole and left every painted band from the floor hanging across its foot, and a length of conduit that carries a
+  branch hanging across the breach with its clips gone). A level's walls carry drawn-only boxes on their faces (the look kit's `skirt` and `dado`, a
+  damp foot, a mend, a stripe, conduit, card boards and the papers on them). `wallbreak.ts hangers` takes what is MOUNTED on the stretch that opened, only
+  from 0.25 m up, only once half of what holds it is gone, and only what rests on nothing: so a band from the floor, a long stripe over a short hole and a
+  conduit run resting on its own branch stayed whole, paint and pipe in the air and a man walking through them. ONE RULE, FOR EVERY SHEET AND EVERY
+  SOLID: A SHEET IS DRAWN WHERE THE SURFACE IT LAY ON STILL STANDS. A SHEET is an authored static that is drawn and nothing else (NoShadow), upright
+  (no deeper than `thick` 4 cm across one of its level axes and no thinner up than across: a sheet lying FLAT, a rug, a decal on the ground, a paper
+  on a desk, is not this rule's and is left exactly as it was), unturned or square to what it lies on, lightless. WHAT IT LIES ON, as the level was
+  authored: every solid static (met by rays and drawn; not tilted, not round) it lies square against, proud of that box's face, its near side within
+  `off` 8 cm of the face; its BACK is the side more of it lies against (a crate stood against a wall does not claim the wall's band), and each part of it
+  lies on THE NEAREST solid behind that part, and on any other within 2 mm of that (two walls' faces in one plane at a corner). So not by a piece's name, a
+  kit, a group or a level, and not by the kind of thing behind. ASKED OF STATICS ONLY: a door leaf, a chair, a body, a thing that rolls are in no
+  sheet's list, and a sheet on one of them is that thing's own business. WHAT STANDS of a solid is the solid's to say: a thing `wallbreak.ts` opens (a
+  partition, a hard wall a charge took on, COVER) by its cells, the layer at the face the sheet lies on; any other solid whole, until something hides
+  it. A part of a sheet goes out of the picture when it lay on something and nothing it lay on stands behind that part: cut square at the cell's
+  edge, and at a corner where two walls overlap the band on the standing wall is whole and so is the opened wall's band over the standing one's end. A
+  part that lay on nothing as authored (a band run across a doorway) stays as authored. WHERE WHAT STANDS ENDS RAGGED (a standing piece under a cut
+  record, which is how cover breaks under the cut switch), the part of the sheet on that piece takes the outline of the piece's FACE, by the piece's
+  own planes stood square to the face (paint is on the face: where the broken core runs on behind it there is none). THE RULE IS TOLD OF CELLS OPENING
+  AND OF NOTHING ELSE (`skins.opened`, the one hook, in `openCells`: rounds, a blast, a charge on a hard wall, a collapse, cover razed, a checkpoint's
+  load), and cuts again once a frame however many cells opened, as the frame's boxes are handed over. SO A SHEET THAT LIES ONLY ON A THING ANOTHER LANE
+  DESTROYS (a label on a crate the furniture lane takes: 5 in the 59 levels) is never asked and stays drawn as before; and a sheet that lies on such a
+  thing AND on something the wall breaker opens keeps the part on the hidden thing until a cell of that wall next opens, then loses it. The same rule
+  would cover both with one more telling (the world's geometry serial moves when the wall breaker, the furniture lane or the window bars hide a
+  box); it is not told today. HIDDEN, NOT THROWN, AND NO FLAG WRITTEN: the authored box is left out of the picture by
+  `BoxWorld.undrawn` (`scene/boxes.ts`: the world's own list of what it draws; `staticDrawn(i)` asks it, `boxDrawn` reads a box's flags alone and does
+  not know), and what stands of it is handed to the frame's dynamic list as boxes of its paint under a key of their own (`MKEY.skin` + the sheet × 16 +
+  one of 16 places, so no two share a key and a piece a later cut leaves alone keeps its; the fog of war passes them as it passes a wall device,
+  `fogofwar.ts THING_PASS`; the look's word says they do not move, `BoxWorld.packBox`, so a stuff laid in place is mapped by the world as on the
+  authored box). A frame whose box list has no room for what stands of a sheet draws the authored sheet whole for that frame: never neither (the room is
+  `edgeLook.ts frameRoom`, one rule for both picture lanes, and no more than the list has left as it stands when the pieces are handed over). Nothing
+  falls, nothing enters the debris pool, no counter of the lane's is drawn from, and the simulation reads every box exactly as it did: what the hangers
+  throw, they throw as before (a sheet they take is hidden by its flags and its pieces go with it). A TOOL THAT ASKS "IS THIS BOX GONE" BY ITS FLAGS
+  will say a cut band stays: ask `game.destr.walls.skins.cut.has(i)` or `world.staticDrawn(i)`. WHY 8 CM: bands are authored on the face or a few
+  millimetres proud, but not all (the snatch's blue dado stands 6 cm off its partition and an office cork board 1.5 cm off its, with nothing between);
+  with each part on the nearest solid, a paper on the front of a solid board is the board's and a floor slab's edge inside a wall's thickness is behind
+  the wall, not under the paint. BY THE RULE AS IT STANDS (the shipped stand, all 59 levels): 1637 sheets in 51 levels: 547 on partitions, 988 on hard walls a charge can take on, 102 on cover alone; 217 of them stand more than 1 cm off the solid behind them, 128 lie on solids that run two ways (a corner), 40 carry markings. A SHEET THAT CARRIES MARKINGS (a band with
+  stripes, a number on a plate, a sign) is cut where the wall is with every mark where it was: a marking is laid out in whole texels from the middle
+  of the box's face, so what stands of such a sheet is THE WHOLE BOX AGAIN (same middle, same size, same markings) under a cut record of the rectangle
+  that stands, four planes at most (`scene/cut.ts`), not a smaller box. That needs the cut switch, which is what draws a record (on in the page; off on
+  the frozen stand): with it off, or on a shaped box with no room for four more planes, a marked sheet is left as it was and counted (`stats.uncut`). A
+  plain sheet that says a cut shape is cut into smaller boxes, each under the shape's own planes. CAPS: `perSkin` 12 pieces of one sheet (16 at most),
+  `maxPieces` 256 in all; past either a sheet first gives up ragged ends, then is cut by whole columns (fewer, taller pieces: the sill under a port is
+  given up), and past that is left as it last stood (`stats.coarse`, `stats.capped`). KNOWN SEAMS: on a WALL the cut is square at the column's edge,
+  where the wall's standing piece ends under the edge look, and `edgeLook.ts`'s plates stand up to a hand into the opening past it in the wall's own
+  paint, bare of the band; a card board cut at a hole's edge is a board sawn square; a sheet the hangers throw AFTER it was cut comes off as the whole
+  box it was authored as (the pool's chunk is not this rule's to size); the pieces are packed with the frame's boxes every frame (256 at most); a stuff
+  that is the box's own (cloth, boards) is laid on each piece afresh; a drawn-only BODY deeper than 4 cm (a duct, a cabinet's front) is the hangers'
+  alone as before, and a thin face on such a body, within 8 cm of the wall, is cut with the wall while the body may hang; what stands of a sheet is
+  drawn AFTER every static, so where two sheets share a plane (14 of the levels' sheets do, a plate over a damp foot) the one that is cut and the one
+  that is not may change which is seen; trim a sheet SAYS (`piece` / `of`) that is not itself a sheet of the rule would stay when its sheet is cut to
+  nothing (no level has such trim today). THE SWITCH: `WALLSKIN.on`, ON
+  in the page (`?wallskin=0` = the bands as they were), OFF in the module and on the frozen stand (`FROZEN_HOLDS`; `TPS_WALLSKIN=1` raises it there), in
+  the registry and the journal (a recording from before the table replays with it down). Raised under a standing game, every wall that has opened is
+  asked again; put down, every sheet is whole again. `stats` says what stands as it is read (sheets cut now, pieces in the last frame's list), not
+  what a run did: a level put back reads nought. State hangs off the Game (`destr.walls.skins`: walked by a snapshot, dropped by `reset()`,
+  re-derived by a checkpoint's load); the world's list is written again every frame (`skins.boxes`), so a tick put back leaves nothing stale. No row in
+  `dress.ts` (edgeLook has none either): a host that draws nothing still runs it. IT TAKES THE PLACE OF `scene/lookTidy.ts lookTidy` on the page: that
+  hid the look's floor decals WHOLE with a holed wall's box (a hole in one cell bared the wall's foot along its length), only on a level in the look's
+  paints, only on the page, and by writing their flags. The page asks it to hide now only where the rule is not in force (`?wallskin=0`; the cut
+  switch down, where no record can be drawn for a marked decal; a level an error put the rule down on) and to rest otherwise (which puts back whatever
+  it hid while the rule was down); it goes when the switch is retired. THE RUST MODULE: the cut lives in TypeScript, in the picture's part of
+  the tick; it reads cells where `wallbreak.ts` opens them and the statics' boxes, asks the collision's copy nothing, adds no static, no cut row and no
+  entry to its tables.
+  THE CHECK: `tools/qa/wallskin-check.ts` (probe `wallskin`, family destruction; `WALLSKIN_BREAK=1` must fail, 20 of its 32 lines; both stands, and each with the
+  cut switch the other way: `CUTBOXES=1` on the frozen stand, `CUTBOXES=0` on the shipped one). ITS ORACLE IS THE LEVEL'S OWN COLLISION and knows
+  nothing of the rule's rectangles or of what the rule thinks a sheet lies on: every sheet's face is sampled every 23.7 mm; a point is DRAWN if
+  `BoxWorld.visible` after the world's own upload covers it (the static by number, the sheet's own pieces by key); what it LAY ON is the first solid
+  surface a short ray straight in met as the floor stood; it has LOST ITS WALL when no solid surface stands at that depth now. No point that has lost
+  its wall may be drawn and none that has not may be lost. It lays its own paint, conduit, board, marked band, a sheet 4 cm off the wall and things
+  that are not the rule's on the office's walls and asks after a blast, a second beside it, rounds for a port and then the sill under it, a
+  checkpoint's load, a tick put back, a charge on a hard wall and a blast on each of two walls in one line; PLAY IS ONE RUN on two floors, the rule up
+  and down, at all ten stages (digest, cells, the feed's serial, the lane's hash counter, the debris and its places, the count of statics, every
+  authored box's flags); the caps, a frame with no room, the switch turned under a standing floor, every piece under a key of its own; and THREE
+  LEVELS' OWN PAINT (lines 6): a corner of the block where two partitions overlap, one's end column opened; a decal on cover on the mousehole, the
+  cover razed; paint on cover on the consulate, the cover opened in part and its standing piece ragged. THE SAME FILE SWEEPS A LEVEL'S OWN PAINT
+  (`bun run tools/qa/wallskin-check.ts --sweep <level.json …|all>`, a tool, no probe runs it): every partition and piece of cover blasted at three
+  places, every hard wall that carries a sheet taken on and breached once, one at a time, every thin drawn-only sheet near (a quarter-turned one too)
+  asked by the same oracle three times coarser; sheets that lay only on a thing another lane took are counted apart. `tools/qa/wallskin-page.cjs` asks the heart of it of the real page (headless Chromium, the software adapter), on and under
+  `?wallskin=0`, with stills (`STILLS=<dir>`; `CORNER=1` = at a corner where two walls overlap). `hole-watch.ts` (every play-through's JSON,
+  `destr.skins`) says how many sheets stood cut as a run ended, so "no digest moved" can say whether the rule was met.
+  MEASURED (11-05, twice: fifteen joined steps before the tip the change is cut on, and eight before it; those steps touch the rule's files only in
+  the switch lists, two lines of `destruction.ts` and the pace of the statics' draw order in `scene/boxes.ts`, and the numbers below are the same both
+  times; 42 scripted play-throughs = 21 scenarios, seeds 1 and 2, `PT_DIGEST=1 playthrough.ts --seeds 1-2`). THE PAGE'S STAND, the rule up
+  against down (`TPS_WALLSKIN=0`), and each against the tree before the change: 42 of 42 digests the same every way; sheets stood cut at the end of 4
+  of those runs (13 sheets, 4 with nothing left standing, 11 pieces). With every held room taken by a wall charge where one fits (`PT_DESTR=1
+  PT_WALL=1`), up against down: 42 of 42 the same; sheets stood cut at the end of 24 of the runs (67 sheets, 31 with nothing left standing, 79 pieces,
+  no cap reached, none left uncut). THE FROZEN STAND: the check and its break word, the families, `rollback-check`; no play-through arm (destruction is
+  off on that stand in a play-through, so the rule is never met there). EVERY LEVEL'S OWN PAINT (`--sweep all`, the page's stand): 59 levels, 3571
+  blasts (457 of them hard walls breached), 7.6 million points of 15,695 sheets asked, 478,873 lost what they lay on: none drawn there, none lost with
+  it still there. Counted apart, 520 points of the 5 sheets that lay only on a thing another lane took, still drawn: the consulate's `box_0458` on
+  `box_0455` (in both its files), the office relief's `box_0751` and `box_0752` on `box_0750`, and its `box_0614` on `box_0590`. ON THE PAGE
+  (`wallskin-page.cjs`, the block's room clear, the software adapter): at a 5.6 m partition with three bands from the floor, two blasts: 16,452 points
+  asked, 5460 lost their wall, none drawn there and none lost, 4 sheets into 8 pieces, no page error; at a corner where two partitions overlap
+  (`CORNER=1`), one's two end columns opened: 23,904 points, 2736 lost their wall, none drawn there and none lost; under `?wallskin=0` both read as the
+  build was (the band gone whole from the holed wall, by `lookTidy`). WHAT IT COSTS (headless, the CPU's side, a cloud box, medians of six runs; three
+  wall charges each on the office, the block and the compound, each blown inside a window as a tick's input is): on a frame where nothing broke,
+  nothing measurable (the rule's two calls read the timer's floor with the rule up and down, and while nothing is cut the world asks no list); on a
+  blast, 0.3 to 0.9 ms inside the blast's own call (finding what each sheet near the wall lies on, the first time that wall opens; 2 ms on a session's
+  first blast) and 0.1 to 0.4 ms on the next frame (the cut); after, about 0.01 ms a frame. The page's own profile of a blast frame was not taken.
+  THE FAMILIES `wallskin wallbreak outerwall hungcharge fog-things shapes cleanrestart statediff journal-knobs shipped wallfurn wallreact` green on both
+  stands with it, `rollback-check` in full and `--static` on both, `dress-check`. No tour, no soak.
+  SEEN ON A GPU IN STILLS, and only so: the page script ran on a rented card (an A10G, headless Chromium, quality high, midday) eight joined steps
+  before the tip the change is cut on: at the block's partition, at its corner (`CORNER=1`) and on the snatch (`LEVEL=snatch.json`, a blue dado 6 cm
+  off its partition), every verdict passes with the software adapter's numbers and no page error. In the frames the band stands to the hole's edge and
+  is gone where the wall opened; at the corner it stays on the end of the wall that still stands (a strip a hand wide: hard to read); on the snatch
+  nothing blue hangs in the hole. Three places, once each, about four frames a still. Never seen moving; the maintainer has not seen it and nobody has
+  played it. No still of a band that carries markings or of cover that ends ragged.
 - **A blast's pall: a wall charge, a hand grenade and a 40 mm raise a real cloud of dust and smoke** (`CHAOS.pall`, `destruction.ts`, 10-14; his words:
   "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). BEFORE: a blast raised the bullet's puff a few times over
   (`CHAOS.puff`: radius 0.2, a third of a second, under the round's caps of 2 a frame and 8 a second) and `WALL_BLAST.dust`, particles the picture alone
@@ -1065,7 +1174,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The player's grenade and 40 mm checks run on the loud card** (`frag-player`, `he40-*`, `burst-breaks`; no game code). A night alone on the page
   wears your STEALTH card (`kit.ts KITDEAL.stealth`), which issues no frag and no HE round, so on the shipped stand these stood a Sam with nothing
   to throw or fire and were red from the step that brought that card. They ask the grenade and the round, which only the loud card issues: they
-  are on the probe runner's hold for checks written against one card (`probes.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
+  are on the probe runner's hold for checks written against one card (`tools/qa/holds.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
   stealth run is issued is `kitstealth-check.ts`'s. `he40-keys` (d) also said 'teammates have no such row': a teammate's card has the row where
   his one round can be fired on your order (the card as a tree and `squad40.ts`; `kittree-check.ts` holds it), and the line now asks exactly that.
 - **A burst kills a man who is down and breathing** (`frag.ts FRAG.downKill`, 10-22; from play: two men put out with sponge rounds, a 40 mm burst
