@@ -298,7 +298,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let mat = textureLoad(gMat, full, 0);                                    // (roughness, metalness) as the g-buffer wrote them: the finish + the detail layer's wear
   let rough = mat.x; let metalness = mat.y;
   let maxR = frame.rtCfg.x;
-  if (rough > maxR) { textureStore(outRefl, gid.xy, none); return; }
+  if (rough > select(maxR, max(min(maxR + SHEEN_PAST, 0.999), maxR + 0.001), SHEEN_PAST > 0.0)) { textureStore(outRefl, gid.xy, none); return; }
   var aniso = false;
   if (bidx != 0xFFFFFu) { aniso = boxFinish(bidx).aniso; }
   let P = worldFromDepth(vec2f(full) + 0.5, depth);
@@ -337,7 +337,18 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     wetF = 1.0 + beams.k.y * wetOut;
   }
   let Po = P + N * 0.02;
-  let rays = min(u32(frame.rtCfg.y), 4u);
+  // A HIGHLIGHT OUTLIVES THE RAYS' CUT-OFF, A TRIAL (the scene prelude's SHEEN_PAST, render/frame.ts sheenConfig; the look's page with `&sheen=1`, 0
+  // anywhere else = every line below as it is without it). The cut-off (rtCfg.x) is what a RAY costs: a lobe too wide for one ray a pixel. It was the whole term's: past it a finish had no
+  // lamp's highlight either, and the composite faded the term to nothing over the 0.12 of roughness under it. A fade that steep draws whatever grain a
+  // finish has in its gloss: at the cut-off, one twentieth less roughness was thirty times the highlight, pixel by pixel, and in a dark room shown a
+  // hundred times up those were sparkles (the maintainer on his GPU, 11-04: "overcast dark room has specular sparkles"; measured on the white roof's
+  // rolled skim, finish 0.45 against High's 0.45: the highlight follows the roughness map at r = −0.72). So the two parts of the term part ways. THE
+  // RAYS fade out under the cut-off as they did, here, a texel at a time, where the denoiser's own filter is still to come. THE HIGHLIGHTS (rtGlints:
+  // the lamps', the panels', the sun's; and a beam's image) are sums with no ray of the lobe: they go on SHEEN_PAST rougher, at full strength, and the
+  // composite fades the term over that whole reach (composite.wgsl reflK), a quarter of the roughness scale wide: a grain is then seen as its lobe
+  // makes it, a little wider or narrower. A texel past the rays' cut-off traces none: its highlights' shadow rays are all it costs.
+  var rayK = 1.0; var rays = min(u32(frame.rtCfg.y), 4u);
+  if (SHEEN_PAST > 0.0) { rayK = 1.0 - smoothstep(maxR - 0.12, maxR + 0.001, rough); if (rough > maxR) { rays = 0u; } }   // (past the cut-off no ray of the lobe: what the one test said by leaving the texel out)
   let lamV = smithLambda(Ve, ax, ay);
   let kEmit = emitTraceK(rough);                                            // area-lit fixtures: traced on a polish, analytic (rtGlints) on a rough finish, one panel either way
   // REFL WALLS (the scene prelude's REFL_WALLS, render/frame.ts reflWallsConfig; lighting_common.wgsl diceWalledPoint): a METAL mirrors the bounce at its hit at full strength
@@ -362,6 +373,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     Lsum += Li * min(Fr * wetF, vec3f(1.0)) * wG;
   }
   var Lspec = Lsum / f32(max(rays, 1u));
+  if (SHEEN_PAST > 0.0) { Lspec *= rayK; }
   if ((frame.flags & FLAG_DIRECT) != 0u && frame.matCfg.x > 0.0) {
     let g = rtGlints(P, Po, N, V, T, B, ax, ay, F0, owner, select(1.0 - kEmit, 1.0, rays == 0u), fract(cpx + f32(frame.frameIdx % 4096u) * 0.7548777));   // (no rays: every panel comes through its analytic light)
     Lspec += g.xyz * frame.matCfg.x;

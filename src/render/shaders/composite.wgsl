@@ -1031,6 +1031,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       let mt = textureLoad(gMat, sPix, 0); let maxR = frame.rtCfg.x;
       reflK = (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, mt.x)) * frame.matCfg.y;
       metalK = select(0.0, reflK * mt.y, frame.rtCfg.y >= 1.0);
+      if (SHEEN_PAST > 0.0) { reflK = (1.0 - smoothstep(maxR, max(min(maxR + SHEEN_PAST, 0.999), maxR + 0.001), mt.x)) * frame.matCfg.y; }   // (A HIGHLIGHT OUTLIVES THE RAYS' CUT-OFF, reflect.wgsl main: the rays are faded there, under the cut-off; what is faded here is the term the highlights are still in, over the whole reach past it. A metal's paint is stepped back by the rays' fade, above)
     }
     // glass (FLAG_GLASS): is there a pane between the eye and this pixel's surface? Then what the G-buffer shaded is the TRANSMITTED picture: tinted by every pane
     // crossed (albedo^(depth ÷ cos of the crossing angle): more glass along a slanting path), less the share the nearest pane reflects instead (Schlick, at most
