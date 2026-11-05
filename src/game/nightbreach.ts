@@ -41,7 +41,6 @@ import type { Input } from './input';
 import type { FollowCamera } from './camera';
 import { BreachDrill, type BreachLive } from './breach';
 import { spawnUnit, despawnUnit } from './guards';
-import { runnerFled } from './runner';   // (asked inside the ending checks only: false with its switch off)
 import { HOLD } from './character';   // (read inside the tick only: HOLD.oneFacing)
 import { endGuardScript, order } from './squad';
 import { fireWeapon } from './combat';
@@ -330,7 +329,7 @@ export class NightBreach {
   tick(dt: number, input: Input, cam: FollowCamera | null) {
     if (!this.active) return;
     const g = this.g;
-    if ((!this.drill && !this.noDrill) || [...this.ops, ...this.hostiles].some(x => !g.guards.includes(x) && !runnerFled(x))) {   // the cast was despawned under it by something short of a restart (a bare resetGuards — the panel's reset, a console): a full restart, which stages
+    if ((!this.drill && !this.noDrill) || [...this.ops, ...this.hostiles].some(x => !g.guards.includes(x) && !x.fled)) {   // the cast was despawned under it by something short of a restart (a bare resetGuards — the panel's reset, a console): a full restart, which stages
       g.restartEncounter(); if (!this.active || (!this.drill && !this.noDrill)) return;
     }
     if (this.cut && cam) { this.cut = false; cutToMen(g); }
@@ -349,7 +348,7 @@ export class NightBreach {
     });
     D?.tick(dt);
     if (own) this.blindRounds = g.fight.blindRounds; else if (this.blind) this.blindFire();
-    if (!D) { if (!this.layout && this.hostiles.length && this.hostiles.every(h => h.state === 'dead' || runnerFled(h))) this.once('clear', 'room clear. press Shift+Enter to restart'); return; }   // (no breach plan on this level, or fewer than two teammates: no drill — the team is the order menu's, the layout keeps the score; the break room alone says its own end)
+    if (!D) { if (!this.layout && this.hostiles.length && this.hostiles.every(h => h.state === 'dead' || h.fled)) this.once('clear', 'room clear. press Shift+Enter to restart'); return; }   // (no breach plan on this level, or fewer than two teammates: no drill — the team is the order menu's, the layout keeps the score; the break room alone says its own end)
     for (; this.beatsSeen < D.beats.length; this.beatsSeen++) this.note(D.beats[this.beatsSeen].what);
     switch (this.state) {
       case 'set': this.once('set', 'stacked and set. press F to send them in'); break;
@@ -378,7 +377,7 @@ export class NightBreach {
   objective(): { text: string; pos: Vec3 | null } | null {
     if (!this.active || this.layout || !this.hostiles.length) return null;
     const g = this.g, P = g.level.breach, room = P?.room ?? 'room';
-    const taken = this.hostiles.every(h => h.state === 'dead' || runnerFled(h));
+    const taken = this.hostiles.every(h => h.state === 'dead' || h.fled);
     if (this.objOf && this.objOf.taken === taken) return this.objOf.o;
     const o = { text: taken ? `${room} taken — press shift+enter to restart` : `objective ▸ take the ${room}`, pos: taken ? null : (P ? g.doors.byName(P.door)?.frameCentre ?? null : null) };
     this.objOf = { taken, o }; return o;

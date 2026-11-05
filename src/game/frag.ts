@@ -56,7 +56,6 @@ import { shotEnergy } from './glasspen';
 import { w } from './words';
 import { SAMSTUN, foldCancels } from './samstun';
 import { DESTRUCTION } from './destructionSwitch';
-import { runnerOwns } from './runner';   // (asked inside fragThrowTick only)
 import { missionLive } from './mission';   // (asked inside blast only)
 import { conditionHurt, conditionPace } from './condition';   // (called inside blast only)
 import { moraleBlast } from './morale';   // (called inside blast only: src/game is one import cycle)
@@ -64,6 +63,7 @@ import { chaosOf } from './destruction';   // (called inside blast only: src/gam
 import { PICTURE, PICTURE_STATS, exposureAsker } from './picture';   // (asked inside fleeSpot only)
 import type { Box } from '../scene/boxes';
 import { railsDown } from './rails';   // (a spared teammate on his knee is not one of the men a defender counts for his grenade)
+import { hasHim, OWN } from './owner';
 
 /** Every number of the grenade. fuse: seconds from leaving the hand (the player's); orderFuse: a teammate's on an order — cooked a beat, it has less far to go.
  *  lethalM / woundM: the two radii of the model above; woundKill: the chance of a kill at the very edge of lethalM for an exposed man, falling to 0 at woundM;
@@ -837,7 +837,7 @@ export function fragThrowTick(g: Game, dt: number) {
   if (!B || B.men.length !== men.length || B.men.some((m, i) => m !== men[i])) { if (!men.length) return; B = dealCarriers(g, B); }
   for (const C of B.carriers) {
     const gd = C.gd, c = gd.char; if (!C.frags) continue;
-    if (gd.state === 'dead' || gd.held || runnerOwns(gd)) { C.wind = null; continue; }   // (runner.ts, false with its switch off: a man who has said he is done throws nothing — a wind-up under way ends with the grenade on his belt)
+    if (gd.state === 'dead' || gd.held || hasHim(gd, OWN.runner)) { C.wind = null; continue; }   // (runner.ts, false with its switch off: a man who has said he is done throws nothing — a wind-up under way ends with the grenade on his belt)
     const out = g.time < gd.staggerUntil || g.time < gd.dazzledUntil;
     const head = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
     if (C.wind) {   // the second it takes him: shot, folded or blinded in it and the grenade stays on his belt
@@ -943,7 +943,7 @@ export function armRound(g: Game, p: Vec3, to: Vec3): Vec3 {
 function free(g: Game, gd: Guard): { B: DefBook; C: Carrier } | null {
   const F = FRAG; if (!F.on || !F.defenders || !g.aiEnabled || !fightLive(g) || g.director?.theirFragsOff) return null;
   const B = defBooks.get(g), C = B?.carriers.find(x => x.gd === gd); if (!B || !C || !C.frags || C.wind) return null;
-  if (gd.state === 'dead' || gd.held || runnerOwns(gd) || g.time < gd.staggerUntil || g.time < gd.dazzledUntil || fragFlee(g, gd) || g.time - B.lastT < F.defGap) return null;
+  if (gd.state === 'dead' || gd.held || hasHim(gd, OWN.runner) || g.time < gd.staggerUntil || g.time < gd.dazzledUntil || fragFlee(g, gd) || g.time - B.lastT < F.defGap) return null;
   return { B, C };
 }
 /** may he start a throw at the place `at` this moment — everything `fragThrowAt` asks but the arc and his own side (so nobody is walked anywhere to find an

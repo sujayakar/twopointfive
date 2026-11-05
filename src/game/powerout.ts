@@ -60,7 +60,6 @@ import { laneHolds } from './lanes';
 import { digInPhase } from './digin';
 import { lastStandMan } from './laststand';
 import { buddyOwns } from './buddy';
-import { runnerFled } from './runner';
 import { netQuietHolds } from './netquiet';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
@@ -115,7 +114,7 @@ const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const frac = (x: number) => x - Math.floor(x);
 /** his id's share of 0‥1 (no dice) */
 const idShare = (gd: Guard) => frac(gd.char.id * 0.6180339887);
-const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !runnerFled(gd);
+const alive = (gd: Guard) => gd.state !== 'dead' && gd.char.alive && !gd.fled;
 const fit = (g: Game, gd: Guard) => alive(gd) && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
 const roused = (gd: Guard) => gd.state === 'alert' || gd.state === 'search';
 const loudHeard = (gd: Guard) => { const H = gd.witness.heard; return H.shots + H.kick + H.bang; };

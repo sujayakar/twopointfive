@@ -22,7 +22,6 @@ import type { Game, Guard, Interactable, Player, Verb } from './game';
 import type { Character } from './character';
 import type { Rescue } from './rescue';
 import { hostageLead } from './civilians';
-import { runnerFled } from './runner';
 import { hostileTo } from './teams';
 
 export const RESCUEEND = {
@@ -60,7 +59,7 @@ export class RescueEnd {
   get out(): Vec3 | null { const T = this.R.data?.team; return T ? [T.sam[0], 0, T.sam[2]] : null; }
   /** the men of theirs still to be dealt with: not down, and not run off with the gun dropped. EVERY man on the floor hostile to the team, not the rescue's
    *  cast alone: a team another rule has brought in is counted the moment it stands on the floor (one called and not yet arrived is that rule's to add here) */
-  left(): Guard[] { return this.g.guards.filter(h => !h.civ && hostileTo(h, 'player') && h.state !== 'dead' && !runnerFled(h)); }
+  left(): Guard[] { return this.g.guards.filter(h => !h.civ && hostileTo(h, 'player') && h.state !== 'dead' && !h.fled); }
   private alive(): Guard[] { return this.R.hostages.filter(h => h.state !== 'dead'); }
   /** a word can be given to the hostages: the rule is up, the run is on, and nobody of theirs has them */
   private get free(): boolean { const R = this.R; return RESCUEEND.on && R.active && !R.result && !R.captor(); }

@@ -52,8 +52,8 @@ import { CUES } from './cues';
 import { placeIn } from './dialogue';
 import { WORDS, wg } from './words';
 import { digInOrder, digInPhase, digInEntered, digInWedged, digInRelease } from './digin';
-import { runnerFled, runnerOwns } from './runner';   // (both false with its switch off)
 import { NETQUIET, netQuietClosed } from './netquiet';
+import { hasHim, OWN } from './owner';
 
 export const LASTSTAND = {
   /** REGROUP AND DIG IN LOUDLY (shipped off): the last defenders gather in one room on a spoken order, wedge it and hold it to the end */
@@ -169,13 +169,13 @@ export interface Hint { key: string; rooms: Set<string>; /** `places`: named pla
 const STATES = new SideMap<Game, State>('laststand.STATES');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const alive = (D: Def) => D.gd.state !== 'dead' && !runnerOwns(D.gd);   // (runner.ts: a man who has broken and run is off the net from his shout on — he leads no check, answers none and is not one of the few)
+const alive = (D: Def) => D.gd.state !== 'dead' && !hasHim(D.gd, OWN.runner);   // (runner.ts: a man who has broken and run is off the net from his shout on — he leads no check, answers none and is not one of the few)
 const pick = (st: State, r: [number, number]) => r[0] + roll(st.die) * (r[1] - r[0]);
 const cellOf = (g: Game, p: Vec3) => { const nav = g.col.nav; return nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)); };
 const inRoom = (g: Game, R: Room | null, p: Vec3) => !!R && R.cells.has(cellOf(g, p));
 const note = (g: Game, F: RoomFight, gd: Guard | null, what: string) => { F.log.push({ t: g.time, who: gd ? gd.callsign : '-', what: `[last] ${what}` }); if (F.log.length > 600) F.log.splice(0, 200); };
 /** fit to speak or be spoken to: up, not held, his wits about him */
-const fitGd = (g: Game, gd: Guard) => gd.state !== 'dead' && !gd.held && !runnerOwns(gd) && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
+const fitGd = (g: Game, gd: Guard) => gd.state !== 'dead' && !gd.held && !hasHim(gd, OWN.runner) && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
 const fit = (g: Game, D: Def) => fitGd(g, D.gd);
 /** … and nobody of the team in his sight these `quiet` seconds */
 const calm = (g: Game, D: Def) => fit(g, D) && g.time - D.gd.lastSeenT > LASTSTAND.quiet;
@@ -569,7 +569,7 @@ export function lastStandTick(g: Game, F: RoomFight) {
   let st = STATES.get(g);
   if (!st || st.stale) {
     const all = g.nightBreach.hostiles, few = Math.min(K.few, Math.floor(all.length / 3));   // (three of eleven; two of the block's eight; the last man of five)
-    let up = 0; for (const h of all) if (h.state !== 'dead' && !runnerFled(h)) up++;   // (runner.ts, false with its switch off: a man who dropped it and ran is not one of the few left)
+    let up = 0; for (const h of all) if (h.state !== 'dead' && !h.fled) up++;   // (runner.ts, false with its switch off: a man who dropped it and ran is not one of the few left)
     if (up > few || up === 0) return;
     st = fresh(g); STATES.set(g, st);
     st.stats.t0 = g.time; st.stats.up0 = up; st.nextAt = g.time + pick(st, K.first);

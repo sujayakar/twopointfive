@@ -67,7 +67,6 @@ import { spottedHolds, spottedKeen } from './spotted';
 import { coverSeen, coverOp } from './coverfire';
 import { lastStandTick, lastStandStop, lastStandMan, lastStandOwns } from './laststand';
 import { moraleOwns } from './morale';
-import { runnerOwns, runnerFled } from './runner';
 import { netQuietLook, netQuietHolds } from './netquiet';
 import { laneHolds, laneWarns, laneThrows } from './lanes';
 import { shotEnergy } from './glasspen';
@@ -82,6 +81,7 @@ import { friendInCone, ffHeld } from './friendlyfire';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
+import { hasHim, OWN } from './owner';
 
 /** The module's switches and the few numbers that are not a side's. */
 /** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
@@ -612,7 +612,7 @@ export class RoomFight {
     gd.skill = FIGHT_SKILL.hostile;
     if (gd.held) { this.blind(D, k); return; }             // in Sam's arm: nothing of his is his own (the burst's clock still runs: its turns are lost, not kept)
     if (moraleOwns(gd)) return;                            // morale.ts (false with its switch off): a blast has him ducked or broken — that file's sequence has his body and his rounds until it lets him go
-    if (runnerOwns(gd)) return;                            // runner.ts (false with its switch off): he has said he is done — dropping it, running, gone: nothing of the fight's is his
+    if (hasHim(gd, OWN.runner)) return;                            // runner.ts (false with its switch off): he has said he is done — dropping it, running, gone: nothing of the fight's is his
     if ((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
     if (D.mode === 'move') { this.tickMove(D, dt); return; }
     if (D.mode === 'free') { this.tickFree(D); return; }
@@ -1004,7 +1004,7 @@ export class RoomFight {
       if (h.team === gd.team || !isHostile(gd.team, h.team)) continue;
       let M = O.meters.get(h); if (!M) { M = { m: 0, seenT: -100 }; O.meters.set(h, M); }
       if (h.state === 'dead') { M.m = 0; continue; }
-      if (runnerFled(h)) { M.m = 0; continue; }   // (runner.ts, false with its switch off: a man who dropped it and ran is nobody's target — the team's eyes pass over him)
+      if (h.fled) { M.m = 0; continue; }   // (runner.ts, false with its switch off: a man who dropped it and ran is nobody's target — the team's eyes pass over him)
       let noShot = false;
       if (O.pass && O.pass.h === h) { if (g.time >= O.pass.until) O.pass = null; else if (!O.pass.noShot) continue; else noShot = true; }   // a masked man let go of (letGo): not his again for that long
       const vis = blind ? null : canSeeChar(g, gd, h.char, false); const rate = vis?.visible ? this.rateOn(gd, h, vis.dist, M.m >= S.notice) : 0;
