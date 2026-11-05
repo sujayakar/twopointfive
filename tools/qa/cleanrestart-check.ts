@@ -55,7 +55,7 @@ const ALLOW: [RegExp, string][] = [
   [/^world\.(?!statics\b)/, 'the host world\'s packed buffers, grids and serials (the statics themselves are compared box by box, line 3)'],
   [/^game\.(eventSeq|fxSeed|rollSeq|items\.serial|decals\.serial|devices\.seq|verdict\.wallSerial)\b/, 'serial numbers: they count up and name nothing that stands'],
   [/^game\.civilians\[\d+\]\.heardUpTo\b/, 'a place in the event list, which is numbered by the serial above'],
-  [/^game\.(props\.near|reachHold|tmpV)\b/, 'scratch written before it is read'],
+  [/^game\.(props\.near|tmpV)\b/, 'scratch written before it is read'],
   [/^game\.destr\.(debris\.(serial0?|frame|stats)|walls\.(serial|changes|scratch\w*|wear\.(stats|log))|edgeLook\.room|furn\.(groups|memberAt|kept|fronts|fling)|roofs|gatherScratch|caps\.\w+\.ts)\b/, 'destruction\'s serials, logs, per-level tables found on first use and rate caps\' stamps of a time now past'],
   [/^game\.wind\.all\[\d+\]\.gust\b/, 'the gust of a source that is not blowing (written the next time it does)'],
   [/^game\.glassBreak\.(log|ext)\b/, 'the glass log and the panes\' extents, found on first use'],
@@ -77,7 +77,7 @@ const menDiff = (a: any, b: any): string[] => { const out: string[] = [];
   a.seats.forEach((s: any, i: number) => man(s.view.player, b.seats[i].view.player, 'player', `game.seats[${i}].player`));
   for (const k of ['guards', 'civilians']) { if (a[k].length !== b[k].length) out.push(`game.${k}: ${a[k].length} men | ${b[k].length}`); else a[k].forEach((x: any, i: number) => man(x, b[k][i], 'guard', `game.${k}[${i}]`)); }
   return out; };
-const audit = (a: any, b: any) => { a.col.nav.scratch = null; b.col.nav.scratch = null; const all: string[] = RB.stateAlike(a, b, 20000); const left = [...all.filter(d => !ALLOW.some(([re]) => re.test(d))), ...menDiff(a, b)]; return { n: all.length, left }; };
+const audit = (a: any, b: any) => { const all: string[] = RB.stateAlike(a, b, 20000); const left = [...all.filter(d => !ALLOW.some(([re]) => re.test(d))), ...menDiff(a, b)]; return { n: all.length, left }; };
 const group = (d: string[]) => { const m = new Map<string, number>(); for (const x of d) { const k = x.split(':')[0].replace(/\[\d+\]/g, '[]').replace(/\{[^}]*\}/g, '{}').replace(/<[^>]*>/g, '<>'); m.set(k, (m.get(k) ?? 0) + 1); } return [...m].slice(0, 8).map(([k, n]) => `${n}× ${k}`).join(' · '); };
 const group2 = (d: string[]) => { const m = new Map<string, number>(); for (const x of d) { const k = x.split(':')[0].replace(/\[\d+\]/g, '[]').replace(/\{[^}]*\}/g, '{}').replace(/<[^>]*>/g, '<>'); m.set(k, (m.get(k) ?? 0) + 1); } return [...m].map(([k, n]) => `${n}× ${k}`).join(' · '); };
 const paint = (s: any) => JSON.stringify([s.c, s.h, s.flags, s.rot ?? null, s.albedo, s.emissive, s.markGain ?? null]);

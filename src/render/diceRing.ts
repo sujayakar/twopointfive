@@ -73,14 +73,14 @@ export class DiceRing {
   fits(dice: GPUTexture): boolean { return dice.height * RING_MAX <= (this.device.limits?.maxTextureDimension3D ?? 2048); }
   /** After the cache baked this frame WHOLE into `dice` (its own mean off): keep that bake as point `slot` of `n` and write the mean of the points held
    *  back into `dice`. `fresh` = the cache started over this frame (rc.reprimed, read before its encode): what was held is dropped. False = not ready. */
-  step(enc: GPUCommandEncoder, dice: GPUTexture, slot: number, n: number, fresh: boolean): boolean {
+  step(enc: GPUCommandEncoder, dice: GPUTexture, slot: number, n: number, fresh: boolean, ts?: (name: string) => GPUComputePassTimestampWrites | undefined): boolean {
     if (!this.ready || !this.pipe || n < 2 || n > RING_MAX || !this.fits(dice)) return false;
     this.bindTo(dice);
     this.mask = ringMask(this.mask, slot, n, fresh || n !== this.points); this.points = n;
     const w = dice.width, h = dice.height, d = dice.depthOrArrayLayers;
     enc.copyTextureToTexture({ texture: dice }, { texture: this.ring!, origin: [0, slot * h, 0] }, [w, h, d]);
     this.u[0] = n; this.u[1] = this.mask; this.u[2] = h; this.u[3] = 0; this.device.queue.writeBuffer(this.ubo, 0, this.u);
-    const pass = enc.beginComputePass({ label: 'dice ring mean' }); pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind!);
+    const pass = enc.beginComputePass({ label: 'dice ring mean', timestampWrites: ts?.('diceRing') }); pass.setPipeline(this.pipe); pass.setBindGroup(0, this.bind!);
     pass.dispatchWorkgroups(Math.ceil(w / 4), Math.ceil(h / 4), Math.ceil(d / 4)); pass.end(); this.stepped++;
     return true;
   }

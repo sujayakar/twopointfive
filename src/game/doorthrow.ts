@@ -10,7 +10,7 @@
 //                      civilian: a leaf he opens short of a boot moves nobody)
 //   doorThrowAfter     game.ts updateDoors, after the leaves are stepped: a carried man is settled against the walls, and a struck man gets —
 //     a leaf OPENED into him (walked, handed, pushed, shoved, flung: tier 'open')
-//       a defender             STARTLED: if he was at his round he jolts toward the door (startle.ts startleMan, the start every startled man gets), stops
+//       a defender             STARTLED: if he was at his round he jolts toward the door (startle.ts giveStartle, the start every startled man gets), stops
 //                              for DOORTHROW.startle s with his gun down and then goes to see what is at the door (suspicious, the
 //                              doorway his place to look, awareness DOORTHROW.wary — the decoy's own numbers); whatever he was at is over. He keeps his
 //                              feet, his gun and his eyes: what he finds at the door is his to see. A man already suspicious has the doorway for his
@@ -35,8 +35,9 @@ import { v3, type Vec3 } from '../math/vec';
 import { SAMSTUN, samStaggered, staggerPlayer } from './samstun';
 import { endGuardScript } from './squad';
 import { toAlarmed } from './civilians';
-import { startleMan as giveStart } from './startle';
+import { giveStartle as giveStart } from './startle';
 import { isHostile, type Team } from './teams';
+import { word } from './belief';
 
 /** QA: since the last reset — defenders a leaf opened into them startled · men thrown by a shouldered leaf · by a boot · of those, put on a knee · and
  *  frames a leaf carried a man */
@@ -99,7 +100,7 @@ function throwMan(g: Game, gd: Guard, s: DoorStrike): void {
   gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.speed = 0; c.vel = [0, 0, 0];
   if (s.floor) gd.doorDownUntil = Math.max(gd.doorDownUntil, until);
   const by = teamOf(g, s.by);
-  if (by && isHostile(by, gd.team)) { gd.awareness = Math.max(gd.awareness, T.aware); if (gd.state !== 'alert' || !gd.lastKnown) gd.lastKnown = [at[0], 0, at[2]]; }   // (a foe's leaf: he comes back alert toward the doorway — his own side's only folds him)
+  if (by && isHostile(by, gd.team)) { gd.awareness = Math.max(gd.awareness, T.aware); if (gd.state !== 'alert' || !gd.lastKnown) word(g, gd, [at[0], 0, at[2]]); }   // (a foe's leaf: he comes back alert toward the doorway — his own side's only folds him)
 }
 
 function throwSam(g: Game, s: DoorStrike): void {

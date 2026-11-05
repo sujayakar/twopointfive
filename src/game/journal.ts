@@ -42,6 +42,7 @@ import { digestGame } from './digest';
 import { simDie } from '../math/dice';
 import type { SimDie } from '../math/dice';
 import type { GameDigest } from './digest';
+import { envAsBuilt } from './env';   // (a leaf: it imports nothing, so it moves nobody's place in the order)
 import { knobsNamed, assignDeep, JOURNAL_KNOBS } from './knobs';   // THE list of knob tables (knobs.ts): it imports the tables' modules in the order this file always did
 import { WALLS, WALLS_DEFAULTS } from './wallbreak';
 import { WALLCHARGE, WALLSHOT, WALLKILL } from './wallcharge';
@@ -148,6 +149,7 @@ import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
 import { RAILS } from './rails';
 import { DOORFORCE } from './doorforce';
+import { BELIEF } from './belief';
 import { SLOTSETUP } from './slotsetup';
 import { GLASSREAL } from './glassbreak';
 import { AIMCOST } from './aimcost';
@@ -158,7 +160,10 @@ import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { PLAN_PACE } from '../render/planPace';
+import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
+import { WALLSKIN } from './wallskin';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -269,6 +274,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   g.godMode = !!k.flags.godMode; g.aiEnabled = k.flags.aiEnabled !== false; g.infiniteAmmo = !!k.flags.infiniteAmmo; g.playerInvisible = !!k.flags.playerInvisible; if (typeof k.flags.fn2000 === 'boolean' && g.fn2000 !== k.flags.fn2000) g.setLoadout(k.flags.fn2000);
   if (g.fogOfWar) g.fogOfWar.on = !!k.flags.fog;   // (the fog of war asks the sensors and bends say() / the reticle: a recording made under it replays under it — a file from before it has no flag = off)
   if (g.saves && typeof k.flags.autosave === 'boolean') g.saves.enabled = k.flags.autosave;   // (the field, not setEnabled: nothing to persist on a replay's machine)
+  if (!k.tables.ENV) envAsBuilt();   // (a recording from before the game had numbers of its own for the scene's exposure and the tube's gain, env.ts: it was made on the picture's defaults, which are the build's — whatever a recipe or a --set left in the table)
   if (!(k.tables.DOORWAY && typeof (k.tables.DOORWAY as Record<string, unknown>).frameHolds === 'boolean')) DOORWAY.frameHolds = false;   // (a recording from before a frame held a boot — its DOORWAY row has no such key — replays without the rule, whatever this process had on)
   if (typeof (k.tables.CLOSE as { heldClicks?: boolean } | undefined)?.heldClicks !== 'boolean') CLOSE.heldClicks = false;   // (a recording from before a click did anything in the arm hold — its CLOSE row has no such key — replays with both buttons dead there)
   if (typeof (k.tables.CLOSE as { handsLow?: boolean } | undefined)?.handsLow !== 'boolean') CLOSE.handsLow = false;   // (a recording from before his hands stayed low at the crouch: the grab's tell reached from there too)
@@ -453,6 +459,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (typeof T?.pop !== 'boolean') SLOTSETUP.pop = false;   // (…and one from before the setup was a mode with no clock on it: there it shut by itself after its seconds)
     if (typeof T?.mags !== 'boolean') SLOTSETUP.mags = false;   // (…and one from before the box counted the gun's rounds over its magazine's size: its box said the rounds in all the spares)
     if (typeof T?.draw !== 'boolean') SLOTSETUP.draw = false; }   // (…nor has one from before a double tap off another slot opened it: there the second press was the draw and no more)
+  if (!k.tables.BELIEF) BELIEF.on = false;   // (a file from before a man's belief and what he covers were two things: the door he watches is written over his fix every tick)
+  if ((k.tables.DOORFORCE as { postEnds?: boolean } | undefined)?.postEnds === undefined) DOORFORCE.postEnds = false;   // (a file from before a man put on a post gave up his walk to a door: he crept on under the post)
   if (!k.tables.DOORFORCE) DOORFORCE.on = false;   // (a file from before an alerted man fired through a shut door and booted it in: its defenders waited at the leaf or went to its handle)
   if (!k.tables.RAILS) RAILS.on = false;
   else { const R = k.tables.RAILS as Record<string, unknown>; if (R.snapPx === undefined) RAILS.snapPx = 0; if (R.keep === undefined) RAILS.keep = 0; if (R.keepDeep === undefined) { RAILS.keepDeep = 1; RAILS.keepUp = 0; } if (R.wayM === undefined) RAILS.wayM = 0; if (R.afterSecs === undefined) RAILS.afterSecs = 0; if (R.shiftTap === undefined) RAILS.shiftTap = false; if (R.lineClear === undefined) RAILS.lineClear = false; if (R.eyeFirst === undefined) RAILS.eyeFirst = false; if (R.eyeView === undefined) RAILS.eyeView = false; if (R.wayRun === undefined) RAILS.wayRun = false; }   // (a tutorial run recorded before the ring was the place and the mark was kept in the picture)   // (a file from before a tutorial mission had a frame: nothing in its ticks was locked)
@@ -477,9 +485,12 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
   if (!k.tables.MARKCUT) MARKCUT.on = false;   // (a file with no table for the rule that a mark on a cut face lies where the round met it: its marks there are pulled to the plain box's face, as before the rule. A picture only — and that is also a tape of the hours on 11-05 when the page raised the rule by hand with no table to record it)
   if (!k.tables.MARKSIT) MARKSIT.on = false;   // (a file with no table for the word for marks that sit in the surface: its blast marks are drawn as before the rule. A picture only — and that is also a tape of 11-04 and 11-05, when the page raised the word by hand with no table to record it)
+  if (!k.tables.PLAN_PACE) PLAN_PACE.on = false;   // (a file with no table for the planners' pace: each plan of the picture's was made whole on its frame. A picture only)
+  if (!k.tables.REACH_PACE) REACH_PACE.whole = false;   // (a file with no table for the reach masks' pace: the shares, which is what the page plays with no word)
   if (!k.tables.COATFINISH) COATFINISH.on = false;   // (a file with no table for a named coat's finish: its vehicles' bodies have the finish their level files give them, as before the rule. A picture only)
   if (!k.tables.SOLIDGLASS) SOLIDGLASS.on = false;   // (a file with no table for solid glass's dark: its vehicles' windows are the grey their level files give them, as before the rule. A picture only)
   if (!k.tables.HITSTUFF) HITSTUFF.on = false;   // (a file from before a round read what a thing says it is made of: every hit in it was read by the paint's colour)
+  if (!k.tables.WALLSKIN) WALLSKIN.on = false;   // (a file from before the paint on a wall went with the wall: its holed walls' bands were drawn whole)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
   if ((k.tables.THROWBACK as Partial<typeof THROWBACK> | undefined)?.reach === undefined) THROWBACK.reach = false;   // (…and a file from before the throw preview showed what the thing would reach: its arcs had the small ring alone)

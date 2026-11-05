@@ -16,11 +16,11 @@
 //     a man whose nerve has gone (out by a door nothing has come at, to hold it from the far side — else to cover: roomfight.ts bolt, with that file's own
 //     shout); any other man turns and runs, bent low and his hands down, for the cover the suppression model picks off that man's line (coverFrom), holds it
 //     the few seconds a man shifted under fire holds his, and fights from there. Nowhere to go: he draws.
-//   · startleMan is the START alone, for anybody who has one to give (a door opened into a man): the jolt, his gun down, and — for a man the fight AI has
+//   · giveStartle is the START alone, for anybody who has one to give (a door opened into a man): the jolt, his gun down, and — for a man the fight AI has
 //     looking or fighting (suspicious, alert) — his feet still and no round for it; nothing decided after it. A man still on his round walks on under the
 //     jolt: rousing him is the caller's. It asks no switch of this file's — the caller's own rule is what is on or off.
 // By behaviour, never by hit points; nothing is written or drawn for the player but the man himself. This file draws no die and reads no wall clock: the
-// clocks are game seconds. The switch is off in the module and on the frozen stand: with it off (and nobody calling startleMan) no man has a record here and
+// clocks are game seconds. The switch is off in the module and on the frozen stand: with it off (and nobody calling giveStartle) no man has a record here and
 // every seam returns on its first lines. Like its neighbours it stands aside for a show on the floor and the utility stages. Type-only game imports but for
 // the functions below, used inside calls only (src/game is one import cycle).
 import { SideMap } from '../math/side';
@@ -29,8 +29,8 @@ import { Vec3, v3 } from '../math/vec';
 import { isHostile } from './teams';
 import { MORALE, trainingOf, hasMate } from './morale';
 import { coverFrom, endDisplace } from './suppression';
-import { runnerOwns } from './runner';
 import { handCarry } from './guards';
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?startle=0 = a man who sees you goes for his gun at once,
  *  as he did). `beat` s of the start; `draw` s after it for the gun to come up before a round can leave it (a man who draws: his feet still, his gun rising); `fresh` s since he last stood calm inside which a sighting still catches him unaware; `late` s past the end of a beat
@@ -38,7 +38,7 @@ import { handCarry } from './guards';
  *  m and not inside `nearM` (at arm's length nobody turns his back: he draws), runs for it instead of drawing; `clearSecs`: how long a man running off a post is let run before the man he ran from can stop him to fight; `runSecs`:
  *  the longest a run for cover lasts, and `stuckSecs` gaining under `stuckM` m ends it where he is */
 export const STARTLE = { on: false, beat: 0.5, draw: 0.3, fresh: 1.0, late: 0.25, run: true, runM: 8, nearM: 2.5, clearSecs: 1.5, runSecs: 4, stuckSecs: 0.75, stuckM: 0.3 };
-/** QA: men startled by what they saw · starts given by a caller (startleMan, all of them) · of the first: drew after the beat · ran */
+/** QA: men startled by what they saw · starts given by a caller (giveStartle, all of them) · of the first: drew after the beat · ran */
 export const STARTLE_STATS = { seen: 0, given: 0, drew: 0, ran: 0 };
 
 interface St {
@@ -62,13 +62,14 @@ interface St {
   run: Vec3 | null; runAt: number; ref: Vec3 | null; refT: number; script: GuardScript | null;
 }
 const stateOf = new SideMap<Guard, St>('startle.stateOf');
+ownerWitness('startle', gd => !!stateOf.get(gd)?.run);
 const blank = (): St => ({ calmT: -100, calmTorch: false, bySight: false, at: -1, until: -1, toward: [0, 0, 0], pre: false, torch: false, choose: false, call: false, drawUntil: -1, run: null, runAt: -1, ref: null, refT: -1, script: null });
 
 /** THE START, for any caller: he jolts toward `at`, and for `secs` his gun stays down and — a man looking or fighting — his feet are still and no round
  *  leaves him (startleLeft floors the fight AI's reaction clock each frame). `torch`: the hand torch was in his hand and stays there for it (left out: asked
  *  of him as he stands). False = not given: a dead or held man, a civilian, a man of the runner's, or one still in a start. */
-export function startleMan(g: Game, gd: Guard, at: Vec3, secs = STARTLE.beat, torch?: boolean): boolean {
-  if (gd.state === 'dead' || gd.held || gd.civ || runnerOwns(gd)) return false;
+export function giveStartle(g: Game, gd: Guard, at: Vec3, secs = STARTLE.beat, torch?: boolean): boolean {
+  if (gd.state === 'dead' || gd.held || gd.civ || hasHim(gd, OWN.runner)) return false;
   let S = stateOf.get(gd); if (!S) stateOf.set(gd, S = blank());
   if (g.time < S.until) return false;
   const c = gd.char;
@@ -100,7 +101,7 @@ export function startleSight(g: Game, gd: Guard, prev: GuardState, seen: boolean
   if (!unaware || gd.state !== 'alert' || !seen) return;   // (whatever took him to alert — his eyes, or the shot that came through the door a moment ahead of the man)
   if (g.time < gd.dazzledUntil || g.time < gd.staggerUntil) return;
   const at = g.time - gd.sightT < 0.1 ? gd.sightPos : gd.lastKnown ?? gd.sightPos;
-  if (startleMan(g, gd, at, STARTLE.beat, S.calmTorch)) {
+  if (giveStartle(g, gd, at, STARTLE.beat, S.calmTorch)) {
     S.choose = true; STARTLE_STATS.seen++;
     // a man who has just jumped out of his skin does not report crisply on the same frame: the shout this frame's contact put over his head comes down, and goes
     // up as he draws (the log's row and the net's click stay where they were: one row a second of it is the log's rule, not his mouth)
@@ -109,7 +110,7 @@ export function startleSight(g: Game, gd: Guard, prev: GuardState, seen: boolean
 }
 
 /** guards.ts updateGuard, at the pose write: his gun is held down this frame (in the start, a plain sight on its way to one, or the frame he turns to run) */
-export function startleHolds(g: Game, gd: Guard): boolean { const S = stateOf.get(gd); return !!S && (g.time < S.until || S.pre || !!S.run); }
+export function startleGunDown(g: Game, gd: Guard): boolean { const S = stateOf.get(gd); return !!S && (g.time < S.until || S.pre || !!S.run); }
 /** guards.ts handCarry: the hand torch is still what he carries (he had it when the start took him). A man grabbed inside it is a man grabbed with his
  *  torch, as on his round: it is what the arm knocks out of his hand, and his until the first frame he is his own again */
 export function startleTorch(gd: Guard): boolean { const S = stateOf.get(gd); return !!S && S.torch && (gd.state === 'alert' || gd.state === 'suspicious') && !gd.script; }
@@ -125,7 +126,7 @@ export function startleRunning(gd: Guard): boolean { return !!stateOf.get(gd)?.r
  *  shifted under fire holds his (suppression.ts endDisplace) */
 export function startleScript(g: Game, gd: Guard): GuardScript | null {
   const S = stateOf.get(gd); if (!S || !S.run) return null;
-  const K = STARTLE, c = gd.char, stop = (hold: boolean) => { S.run = null; S.ref = null; S.script = null; if (hold) endDisplace(g, gd, 'ran for it'); return null; };
+  const K = STARTLE, c = gd.char, stop = (hold: boolean) => { S.run = null; releaseMan(gd, OWN.startle, g.time); S.ref = null; S.script = null; if (hold) endDisplace(g, gd, 'ran for it'); return null; };
   if (!K.on || !g.aiEnabled || g.touring || g.quietUtility || gd.state !== 'alert' || gd.held || gd.script || g.time < gd.dazzledUntil || g.time < gd.staggerUntil) return stop(false);
   if (!S.ref) { S.ref = v3.copy(c.pos); S.refT = g.time; }
   else if (g.time - S.refT >= K.stuckSecs) { if (v3.distXZ(c.pos, S.ref) < K.stuckM) return stop(true); S.ref = v3.copy(c.pos); S.refT = g.time; }
@@ -146,7 +147,7 @@ function runs(g: Game, gd: Guard, S: St): boolean {
   const post = g.fight.bolt(gd, K.clearSecs); if (post !== null) return post;   // a post of the room fight's: its own way out, or none
   if (gd.pinned || gd.standoff || !g.tune.suppression) return false;
   const p = coverFrom(g, gd, threat); if (!p || !g.col.nav.findPath(c.pos, p)?.length) return false;
-  S.run = p; S.runAt = g.time; S.ref = null; S.script = null;
+  S.run = p; claimMan(gd, OWN.startle, g.time); S.runAt = g.time; S.ref = null; S.script = null;
   gd.path = []; gd.pathGoal = null; gd.stallRef = null;
   return true;
 }
@@ -164,7 +165,8 @@ export function startleSnapshot(g: Game): StartleSnap | undefined {
 export function startleRestore(g: Game, s: StartleSnap | null | undefined) {
   const f = (x: unknown, d = 0) => typeof x === 'number' && Number.isFinite(x) ? x : d;
   g.guards.forEach((gd, i) => { const M = s?.men?.[i];
-    if (!M) { stateOf.delete(gd); return; }
+    releaseMan(gd, OWN.startle, g.time); if (!M) { stateOf.delete(gd); return; }
+    if (M.length >= 15) claimMan(gd, OWN.startle, g.time);
     stateOf.set(gd, { ...blank(), calmT: f(M[0], -100), calmTorch: !!M[1], bySight: !!M[2], at: f(M[3], -1), until: f(M[4], -1), toward: [f(M[5]), 0, f(M[6])], pre: !!M[7], torch: !!M[8], choose: !!M[9], call: !!M[10], drawUntil: f(M[11], -1),
       ...(M.length >= 15 ? { run: [f(M[12]), 0, f(M[13])] as Vec3, runAt: f(M[14], -1) } : null) }); });
 }

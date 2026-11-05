@@ -36,6 +36,7 @@ import type { RtLight } from '../render/lights';
 import { rayBox, BoxFlag, type Box } from '../scene/boxes';
 import type { WeatherSnap } from './weather';
 import { isDaylight } from './lighting';
+import { ENV } from './env';
 import { SENSE } from './sense';
 import { LIGHT_IN } from '../sim/lightshome';
 
@@ -144,6 +145,13 @@ const nights = new GameSideMap<Game, SkyState>('hours.nights');
 export const SUN_NAME = 'sun', SUN_GROUP = 'hour';
 /** the hour this game stands at ('night' = the level as authored) */
 export function hourOf(g: Game): HourId { return states.get(g)?.def.id ?? 'night'; }
+/** THE EXPOSURE THE GAME'S SCENE IS TAKEN AT NOW (env.ts): the show's day's while it is in (lighting.ts setDaylight), else the hour's own, else the level's
+ *  night's (ENV.exposure) — the numbers putIn and setDaylight write to the picture, read here from what the game keeps and never from the picture's
+ *  settings, which a player's Brightness turns. Never 0: a sum divides by it. */
+export function exposureOf(g: Game): number {
+  const e = isDaylight(g) ? g.level.daylight?.exposure ?? ENV.exposure : states.get(g)?.def.exposure ?? ENV.exposure;
+  return e > 0 ? e : 1;
+}
 /** the hour's sun in this game's light set (null at night) */
 export function hourSun(g: Game): RtLight | null { return states.get(g)?.sun ?? null; }
 export function isHourSun(g: Game, l: RtLight): boolean { return states.get(g)?.sun === l; }
@@ -228,7 +236,7 @@ function underWeather(g: Game, st: HourState) {
   if (soft === st.soft && skyK === st.skyK) return;
   st.soft = soft; st.skyK = skyK;
   st.sun.color = greyed(d.sun.color, soft); st.sun.volumetric = d.sun.volumetric * (1 - soft);
-  const r = d.sun.radius + (Math.max(d.sun.radius, SOFT_RADIUS) - d.sun.radius) * soft; if (r !== st.sun.radius) { st.sun.radius = r; sunReach(g, st.sun, r); }
+  const r = d.sun.radius + (Math.max(d.sun.radius, SOFT_RADIUS) - d.sun.radius) * soft; if (r !== st.sun.radius) { st.sun.radius = r; g.engine.reach?.sun(st.sun, r); }
   S.skyZenith = greyed(d.sky.zenith, soft, skyK); S.skyHorizon = greyed(d.sky.horizon, soft, skyK);
 }
 /** weather.ts Weather.setKind, last: the weather under a running game changed — the hour's storm switch, sun and sky follow (nothing at night) */
@@ -265,7 +273,7 @@ function putIn(g: Game, def: HourDef, from?: HourState) {
   S.skyZenith = v3.copy(def.sky.zenith); S.skyHorizon = v3.copy(def.sky.horizon); S.hazeDensity = def.haze; S.exposure = def.exposure;
   states.set(g, st);
   underWeather(g, st);   // the storm held off — or a picked weather kept, with its cloud over this sun and sky
-  if (!st.sun.reachDir) sunReach(g, st.sun, st.sun.radius);   // which indoor cells see the sky its way (the direct estimator's candidate domain) — asked once, for the disc the cloud left it
+  g.engine.reach?.sun(st.sun, st.sun.radius);   // which indoor cells see the sky its way (the direct estimator's candidate domain): the picture's to keep (render/reachKeep.ts), asked once, for the disc the cloud left it
   lampsOut(g, st);
 }
 function takeOut(g: Game, st: HourState) {
@@ -277,17 +285,6 @@ function takeOut(g: Game, st: HourState) {
   S.exposure = st.exposure * (S.exposure / st.def.exposure);   // (the Brightness slider moved under the hour: the same turn of it carried back; untouched = exactly what was found)
   states.delete(g); if (g.weather) g.weather.fogGlow = 1;
   if (st.storm && g.weather && !g.weather.enabled) { g.weather.setEnabled(true); g.weather.restore(st.storm); }   // the storm back where it stood: its dice, its next stroke, the thunder it still owed
-}
-/** A directional light's reach mask is asked along ONE direction (game.ts buildDirReach). A wide sun — the overcast's disc is a soft box some twenty degrees
- *  across — reaches cells its centre does not: the mask is the union over the centre and four directions on the disc's rim (a cell wrongly dark there would
- *  get no candidate at all; one wrongly lit only costs a ray). */
-function sunReach(g: Game, sun: RtLight, radius: number) {
-  g.buildDirReach(sun);
-  if (!(radius > 0.05) || !sun.reachDir) return;
-  const acc = new Uint32Array(sun.reachDir), d0 = v3.copy(sun.dir), u = v3.normalize(v3.cross(d0, Math.abs(d0[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0])), w = v3.cross(d0, u), k = Math.tan(radius);
-  for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2; sun.dir = v3.normalize([d0[0] + (u[0] * Math.cos(a) + w[0] * Math.sin(a)) * k, d0[1] + (u[1] * Math.cos(a) + w[1] * Math.sin(a)) * k, d0[2] + (u[2] * Math.cos(a) + w[2] * Math.sin(a)) * k]);
-    g.buildDirReach(sun); const m = sun.reachDir!; for (let j = 0; j < acc.length; j++) acc[j] |= m[j]; }
-  sun.dir = d0; sun.reachDir = acc;
 }
 /** the photocell: with the lamps out for the hour, every outside fixture's switch recorded as it stands and opened */
 function lampsOut(g: Game, st: HourState) {
@@ -304,7 +301,7 @@ export function hourWorldChanged(g: Game) { nights.delete(g); const st = states.
 function castersOf(g: Game): number { const S = g.engine.world.statics; let h = S.length * 7919; for (let i = 0; i < S.length; i++) if (S[i].flags & BoxFlag.NoShadow) h = (h + (i + 1) * 31) | 0; return h; }
 
 // ================================================================================================================================ the meter's stand-in
-const N6: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // guards.ts METER_NORMALS (probe.wgsl's six)
+const N6: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];   // (probe.wgsl's six: the faces the lamps' sum is on too, rust/sim/src/light.rs)
 /** the sample directions of the ambient: the sky's dome in three bands (zenith cap above 70°, six at 50°, eight at 16° — each weighted by its band's solid
  *  angle) and eight just under the horizon, which end on the floor some six metres out: the ground's one bounce (a sunlit yard through a doorway) */
 const SKY: Ray[] = [], GND: Ray[] = [];

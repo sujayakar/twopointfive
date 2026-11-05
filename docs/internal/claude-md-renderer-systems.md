@@ -185,7 +185,7 @@ Paths such as "Tab ▸ X" and numbers are as of the date each bullet was written
   3/2 · verylow 2/1, cap 20); Tab ▸ Direct light ▸ restir rows (+ `restirRadius / GradK / Young / SpatialAll / Coherent / SampleHue / KnownDark / Audit` A/B knobs); debug views 11 (history M
   per class, gradient resets) / 12 (rays · taps · neighbour-shaded per pixel) — the filter chain steps aside for both; `__hotRestir(src)` / `__hotDirect(src)`
   hot-swap either estimator against a staged scene; `tools/qa/restir-bench.js` (`__rb`: measure / ab / diag / hot / slope / quality / dyn* / stressAll /
-  meter). The moon and the breach's sun carry a DIRECTIONAL reach mask (`reach.ts reachMaskForDirectional`, `game.buildDirReach`: outdoor cells + indoor cells
+  meter). The moon and the breach's sun carry a DIRECTIONAL reach mask (`reach.ts reachMaskForDirectional`, `game.buildDirReach`, since 11-05 `render/reachKeep.ts dir`: outdoor cells + indoor cells
   with a static path skyward) used only while restir is on. Ignored by this path: CheckerDirect, dimRays, directSamplesTop/Other/AdaptiveMin (the OFF path's
   knobs). **HYBRID (08-12, docs/internal/direct-quality.md): lights carried by characters (owner byte ≠ 0 — torches, Sam's rail / gun light, muzzle flashes,
   tracer heads) BYPASS the reservoirs at the pixels they reach and take `settings.heldRays` (`Preset.restir.held` 8/6/4/3/2) STRATIFIED emitter samples each from

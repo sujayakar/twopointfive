@@ -1771,3 +1771,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands: `stuff`, `rollback-check --static`, `hitstuff` (its break path fails 5), `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
   `probes.ts kept` and `materials`, `wallfurn`, `wayround`, `look-check`, `coatfinish`, `glassreal`, `kit-stores`, `does-check`, `does-audit`; the
   senses' error tool on the office on the page's stand; every export's `--check`. NOT SEEN: a rack, a keyboard or a hit on one, on a GPU.
+- **The pass's log lies on the block** (2026-11-05; `tools/levels/pass.ts`, `levels/pass.json`; a level file, no switch). The pass's dressing laid one
+  log across two others by the chopping block, a hand above the snow. It shut four half-metre cells of the walk grid (x 23.5 to 24.5, z 12 to 13) in
+  front of the kitchen's door, which a dressing is never meant to do. It lies on the block now, in cells the block shut already: two boxes move (the log
+  and its snow), none added or removed. MEASURED on 62006070, the walk grid sampled every 5 cm: dressed against mended, 400 samples differ over the
+  whole level, all in those four cells, all open again, nothing newly shut; outdoors within 3 m of each of the seven doors the mended grid equals the
+  grid of the dressing's parent (34351e2c) at every sample (the dressed one differs from it in those four cells only; indoors both differ from it alike,
+  by later steps' furniture). NO COST IN PLAY IS SHOWN, and none is claimed: the cell is on the team's walk to the kitchen's door and entries there
+  re-roll, the log the worse side in 23 entries and the better in 11 with a plain door and 16 against 6 with a bang over 48 seeds on each of two trees
+  (`tools/qa/door-tally-diff.ts`: 1 in 17 and 1 in 19, named on neither). The tally names the bunk room's door for it and that is the tally's staging of
+  Sam, not the walk (docs/agents/qa.md, DOOR TALLIES BEFORE AGAINST AFTER). WHAT IT COSTS: the pass's entries re-roll (on 19707a2b its 64 seeds read 61
+  taken for 59 and none the same run; of all missions on two seeds only the pass's two rows move, endings the same), and a save or a recording made on
+  the pass before it is refused (the level's fingerprint). Green on the page's stand on 62006070: `export.ts pass --check`, `library.ts --check`,
+  `lived-check pass`, `zfight-check pass`, `pass-check`, `stuff`, `dress-check`, `rollback-check --static`, `level-needs pass`, `probes.ts level`,
+  `lived-stack-check` and `stack-marks-check pass-four`, `wallfurn-check`. Never seen on a GPU.

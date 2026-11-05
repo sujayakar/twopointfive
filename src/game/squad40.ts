@@ -11,7 +11,7 @@
 // THE COUNT is each man's own: what his card carries rides in his pouches and goes down his tube, so a man with none fires none whoever else has one, and a
 // man down takes his with him. The row and the squad block show what the men on their feet have between them.
 // WHO FIRES: of the men the menu goes to, one with a round, a long gun in his hands that has the launcher under it (weapons.ts `launcher`), a hand free
-// (squadsmoke.ts squadHandFree, squadthrow.ts handsBusy), the tube closed again after his last (LAUNCHER40.cd), and A SHOT: the arc he40.ts would fly from
+// (squadsmoke.ts squadHandFree, squadthrow.ts handsAtWork), the tube closed again after his last (LAUNCHER40.cd), and A SHOT: the arc he40.ts would fly from
 // his tube to the spot (shellSolve — statics, leaves, furniture, the bodies a round stops on: the player, the unarmed, the other side — and, to the plan, a
 // teammate: nobody fires one through a friend's back) goes off within
 // `nearM` of the spot and is ARMED there, a margin over (`armSlack`). A man of the other side standing in the line is where it goes off instead — if it is
@@ -46,7 +46,7 @@ import { civilianBodies } from './civilians';
 import { FRAG } from './frag';
 import { LAUNCHER40 } from './weapons';
 import { squadHandFree } from './squadsmoke';
-import { THROW_OPEN, THROW_PAGE, handsBusy, mayWalk, squadFragCatches, squadHandBack, squadLend, squadLogRow, type Lent } from './squadthrow';
+import { THROW_OPEN, THROW_PAGE, handsAtWork, mayWalk, squadFragCatches, squadHandBack, squadLend, squadLogRow, type Lent } from './squadthrow';
 import { isHostile } from './teams';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
@@ -152,7 +152,7 @@ const none = 'no 40 mm left.';
 function plan(g: Game, men: Guard[], at: Vec3, asker: Asker | null): { a: Shot; who: string | null } | string {
   const s = states.get(g); if (!s || squad40Left(g) <= 0) return none;
   // (kept while the spot, the men asked — where each stands, his gun, his hands, his rounds — and everybody of ours stay as they were)
-  const ready = (gd: Guard) => { const t = s.last.get(gd) ?? -1e9; return tubeUp(gd) && squadHandFree(g, gd) && !handsBusy(g, gd) && !s.turns.has(gd) && !(g.time >= t && g.time - t < LAUNCHER40.cd); };   // (the last: the tube still open on his last round)
+  const ready = (gd: Guard) => { const t = s.last.get(gd) ?? -1e9; return tubeUp(gd) && squadHandFree(g, gd) && !handsAtWork(g, gd) && !s.turns.has(gd) && !(g.time >= t && g.time - t < LAUNCHER40.cd); };   // (the last: the tube still open on his last round)
   const q = (p: Vec3) => `${Math.round(p[0] * 4)},${Math.round(p[2] * 4)}`;
   const key = `${at[0].toFixed(2)},${at[2].toFixed(2)}|${men.map(m => `${m.char.id}:${q(m.char.pos)},${gunOn(g, m, at) ? 1 : 0}${ready(m) ? 1 : 0}${s.rounds.get(m) ?? 0}`).join(';')}|${g.player.down ? '' : q(g.player.char.pos)}|${g.guards.map(m => m.team === 'operative' ? q(m.char.pos) : '').join(';')}`;
   const c = asker && s.kept.get(asker);
@@ -190,7 +190,7 @@ function turnTick(g: Game, S: SquadOrders, gd: Guard, A: Assignment) {
   if (W.firedT >= 0) { if (now < W.firedT || now - W.firedT >= K.afterSecs) end(null); return; }
   if (!squad40Here()) return end(null);
   if (now < W.t0 || now - W.t0 > K.aimSecs) return end('no shot from here.');
-  if (!squadHandFree(g, gd) || handsBusy(g, gd) || !tubeUp(gd)) return;   // (blinded, reeling, a magazine out, his sidearm up: he waits — the clock runs)
+  if (!squadHandFree(g, gd) || handsAtWork(g, gd) || !tubeUp(gd)) return;   // (blinded, reeling, a magazine out, his sidearm up: he waits — the clock runs)
   if (!onIt(gd, W.at) || now - W.t0 < K.raiseSecs) return;   // (turning, his gun coming up)
   // the order's own sense, asked of the floor as it stands NOW — nothing is spent on a refusal
   if (!(s.rounds.get(gd)! > 0)) return end(none);

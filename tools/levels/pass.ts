@@ -346,9 +346,11 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   grp('yard');
   G.woodPile(22.1, 11.47, 0, 1.4);                                                            // the winter's wood, against the range between a window and the kitchen's door
   G.choppingBlock(22.9, 12.5, 0.4);                                                           // the chopping block
-  // logs by the block waiting to be split (stepped over), one thrown across two of them, and two along the top of the pile
+  // logs by the block waiting to be split (stepped over), one put on the block for the axe, and two along the top of the pile. (That one lay across two of
+  // the others at first, a hand above the snow, and shut a cell of the walk grid on the way from the yard to the kitchen's door and the bunk room's yard
+  // door, which a dressing is never meant to do. On the block it stands in cells the block shut already: docs/agents/levels.md, the pass's log.)
   G.log(23.69, 12.22, 0.25, 1.0); G.log(23.84, 12.59, -0.2, 0.9, 0.09); G.log(23.2, 13.5, 0.6, 1.05);
-  const logOn = G.log(23.76, 12.39, 0.05, 0.85, 0.09, 0.19);
+  const LOG_ON = { x: 22.9, z: 12.5, yaw: 1.2, len: 0.6 }, logOn = G.log(LOG_ON.x, LOG_ON.z, LOG_ON.yaw, LOG_ON.len, 0.09, 0.32);
   for (const z of [11.385, 11.565]) G.log(22.1, z, 0, 1.3, 0.07, 0.42);
   add({ c: [23.5, 0.05, 12.9], h: [0.22, 0.05, 0.06], yaw: 0.9, ...M.woodGrey }); add({ c: [22.4, 0.05, 13.0], h: [0.2, 0.05, 0.06], yaw: -0.5, ...M.woodGrey });   // split billets (walk-over)
   G.crates(27.5, 17.5, HALF, 3, 'coyote');                                                    // crates under snow against the bunk room, south of its window
@@ -420,7 +422,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   for (const [x, z] of [[7.7, 9.85], [8.36, 9.72], [8.02, 10.4]]) { cap(x, z, 0.36, 0.36, 0.88, 0, 0.05); cap(x, z, 0.36, 0.36, 0.878, Math.PI / 4, 0.05); }   // the fuel drums' lids
   // snow ALONG a round that lies, by the kit's one rule for a bowed top (G.lay): a ridge kept to the crown, and a sheet that follows the round under it
   G.lay(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, drumTop, 0, 0, drumTop.c[1] + drumTop.h[1], drumTop.c[1] + drumTop.h[1] + 0.04, 0.37, drumTop.h[2] * 0.6, S.snow);   // the drum on its side
-  G.lay(23.76, 12.39, 0.05, logOn, 0, 0, logOn.c[1] + logOn.h[1], logOn.c[1] + logOn.h[1] + 0.03, 0.385, logOn.h[2] * 0.55, S.snow);   // the log thrown across the others
+  G.lay(LOG_ON.x, LOG_ON.z, LOG_ON.yaw, logOn, 0, 0, logOn.c[1] + logOn.h[1], logOn.c[1] + logOn.h[1] + 0.03, LOG_ON.len / 2 - 0.04, logOn.h[2] * 0.55, S.snow);   // the log on the block
   cap(27.5, 24.1, 1.86, 0.2, 0.81, 0.22, 0.05); cap(31.2, 25.9, 1.86, 0.2, 0.81, -0.18, 0.05);   // the barriers
   // ---- BANKS (they stop feet: against a wall, out of every route, none within 1.4 m of a door) ----
   grp('snow.banks');

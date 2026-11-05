@@ -3,6 +3,10 @@
 // place) nothing takes the decal off it: no ray or query ever returned a decal, so the destruction never knew it was there, and a painted sheet would hang
 // across the hole. `lookTidy(world)` hides each such decal while its wall is hidden and puts it back with it (a restart restores the wall: the decal follows).
 // Called by the PAGE once a frame (main.ts); it reads and writes the flags of drawn-only boxes and nothing else — the game cannot tell it ran.
+// SUPERSEDED (2026-11-05) by game/wallskin.ts, which cuts what is painted on ANY wall of ANY level at the hole's edge, on every stand, and writes no flag:
+// the page asks `lookTidy` to hide only where that rule is not in force (?wallskin=0, the build as it was; or the cut switch down, where the rule
+// cannot draw what stands of a marked decal); where it is, `lookTidy` is told to rest, which puts back whatever it hid while the rule was down (a
+// switch turned under a standing page). When that switch is retired this function goes with it.
 import { BoxFlag, SHEET_MASK as DECAL_MASK, type Box } from './boxes';
 import { GWOT_PALETTE, lookPaintOf } from './gwotPalette';
 import { paintOf } from './stuff';
@@ -10,7 +14,7 @@ import type { LookDoorStuff } from './look';
 import type { Vec3 } from '../math/vec';
 import { hashStr } from '../math/dice';
 
-interface Tidy { pairs: [decal: number, walls: number[]][]; flags0: number[]; serial: number }
+interface Tidy { pairs: [decal: number, walls: number[]][]; flags0: number[]; serial: number; rest?: boolean }
 const tidies = new WeakMap<object, Tidy | null>();
 const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
@@ -31,12 +35,12 @@ function find(statics: Box[]): Tidy | null {
 }
 /** once a frame, from the page: cheap while nothing has broken (one compare of the world's geometry serial). A wall's decals go and come back WHOLE with the wall's box — a hole in one cell bares that wall's foot along its length, and the frame the
  *  wall breaks on still shows the sheet (the page tidies before it steps). */
-export function lookTidy(world: { statics: Box[]; geomSerial: number }): void {
-  let T = tidies.get(world.statics); if (T === undefined) { T = find(world.statics); tidies.set(world.statics, T); }
+export function lookTidy(world: { statics: Box[]; geomSerial: number }, rest = false): void {
+  let T = tidies.get(world.statics); if (T === undefined) { T = find(world.statics); tidies.set(world.statics, T); }   // (found as the level stands when the page first asks, at rest or not: a wall holed since would not be read as a wall)
   if (!T) return;
-  if (T.serial === world.geomSerial) return;
-  let changed = false;
-  T.pairs.forEach(([d, ws], k) => { const box = world.statics[d]; if (!box) return; const want = ws.some(w => world.statics[w] && world.statics[w].flags & BoxFlag.NoPrimary) ? T!.flags0[k] | BoxFlag.NoPrimary : T!.flags0[k]; if (box.flags !== want) { box.flags = want; changed = true; } });
+  if (T.serial === world.geomSerial && T.rest === rest) return;
+  let changed = false; T.rest = rest;
+  T.pairs.forEach(([d, ws], k) => { const box = world.statics[d]; if (!box) return; const want = !rest && ws.some(w => world.statics[w] && world.statics[w].flags & BoxFlag.NoPrimary) ? T!.flags0[k] | BoxFlag.NoPrimary : T!.flags0[k]; if (box.flags !== want) { box.flags = want; changed = true; } });
   if (changed) world.geomSerial++;
   T.serial = world.geomSerial;
 }

@@ -182,7 +182,7 @@ function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Err
 function envCollects(v: string | undefined): boolean { if (v === undefined || v === '1') return true; if (v === '0') return false; throw new Error(`QA_STANDUP_GC=${v}: want 0 (the stand-up as it was) or 1`); }
 export const STANDUP_COLLECTS = envCollects(process.env.QA_STANDUP_GC);
 let stoodBefore = false;
-export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string } = {}): Promise<Headless> {
+export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string; /** stand the picture's keeper of the lights' reach masks up too (render/reachKeep.ts), as a page's engine has one, and step it once a frame: for the tools that read masks. Absent = none, and no mask is ever made */ reach?: boolean } = {}): Promise<Headless> {
   if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
@@ -191,8 +191,13 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     else if (!pinned('CUTBOXES')) (await import(`${ROOT}/src/scene/cut.ts`)).cutConfig.on = true; }   // (the shipped stand, no word given: on, as the page opens — main.ts initCutSwitch)   // (a recording made with cut boxes on replays with them on: rayBox / lineBox answer the cut solids — read before the BoxWorld below latches it)
   if (process.env.TPS_BLASTPACE === 'old') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).BLAST_PACE.on = false;   // TPS_BLASTPACE=old in front of any headless tool = the page's ?blastpace=old: a wall's reach masks, drip lines and furniture index all on the frame it goes, as before
   const engine: any = stubMod.stubHost();   // device fake, sceneLayout fake, skin null, an empty LightSet + BoxWorld on the fake, default settings, effectiveScale 1 — and nothing more (src/host/stub.ts)
+  { const w = process.env.QA_PICTURE;   // QA_PICTURE='{"exposure":0.5}' in front of any headless tool: the PICTURE's settings as a player has turned them (his Brightness, a panel's slider), laid over the stand-in's before the game is built. No sum of the simulation may read them (src/game/env.ts): tools/qa/settings-check.ts plays one run under several and holds them one run
+    if (w) { let turn: Record<string, unknown>; try { turn = JSON.parse(w); } catch (e) { throw new Error(`QA_PICTURE is not JSON (${(e as Error).message}): QA_PICTURE='{"exposure":0.5}'`); }
+      const bad = Object.keys(turn).filter(k => !(k in engine.settings)); if (bad.length) throw new Error(`QA_PICTURE: the engine has no setting ${bad.join(', ')} (src/settings.ts): a turn of nothing would read as a run that did not move`);
+      Object.assign(engine.settings, turn); } }
   if (opts.env) { const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); DESTRUCTION.on = !!opts.env.destruction?.on; const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); LIVED.on = !!opts.env.lived; }   // (a recording made with the destruction switch on replays with it on: the roof rule, the dressing, the loud rules)
   if (opts.env) { const { applyEnvSettings } = await import(`${ROOT}/src/game/journal.ts`); applyEnvSettings(engine.settings, opts.env); if (typeof opts.env.glassFracture === 'boolean') engine.glassFracture = opts.env.glassFracture;   /* (the recording's renderer drew the glass fracture's cracks, or said it could not: glass.ts's star decal and glassBreakLive read it) */ if (opts.env.particlesOn) { engine.settings.gpuParticles = true; engine.setParticles = () => { engine.particles = fake('particles'); }; } }
+  if (opts.reach) { const { ReachKeep } = await import(`${ROOT}/src/render/reachKeep.ts`); engine.reach = new ReachKeep(engine.world, engine.lights); }
   const smoke: any = standMod.nullSmoke();
   if (opts.env?.canister) smoke.params = { ...opts.env.canister };
   // the ONE stand-up (src/host/standup.ts): the level's boxes + lights into the stand-in, then `new Game`, then the harness trio — chaos 0 (the game byte for byte as it was before the
@@ -216,6 +221,7 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
+      if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view; cam.update(dt, follow ?? me.followPos(), follow || game.spectate >= 0 ? null : me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;

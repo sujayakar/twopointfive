@@ -214,7 +214,7 @@ export interface GuardSnap {
   weapon: FirearmSnap; fireCd: number; reactT: number; searchT: number; lookPhase: number; speed: number; stepPhase: number; heardUpTo: number;
   diedAt: number; dazzledUntil: number; staggerUntil: number; hurtAt?: number; doorDownU?: number; lastPos: V3; stuckT: number; stuckN: number; killerId: number; sawBodyT: number;
   alertBest: number; alertStallT: number; alertRef: V3 | null; chaseT: number; shotBlockedT: number;
-  sightPos: V3; sightVel: V3; sightT: number; ledT: number; fixT: number; fixRef: V3 | null;
+  sightPos: V3; sightVel: V3; sightT: number; ledT: number; fixT: number; fixRef: V3 | null; ledAt?: V3 | null; wordT?: number;
   pieLast: number; pieLastT: number; piePrev: V3 | null; piePrevT: number;   // pieLast: door index, −1 none
   stallRef: V3 | null; stallT: number;
   task: TaskSnap | null; drawn: boolean; leader: number; followT: number; followGoal: V3; post: string | null;   // leader: guard index (−1); post: chokepoint name
@@ -558,7 +558,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
       weapon: firearmSnap(gd.weapon), fireCd: gd.fireCd, reactT: gd.reactT, searchT: gd.searchT, lookPhase: gd.lookPhase, speed: scripted ? 0 : gd.speed, stepPhase: gd.stepPhase, heardUpTo: gd.heardUpTo,
       diedAt: gd.diedAt, dazzledUntil: gd.dazzledUntil, staggerUntil: gd.staggerUntil, ...(gd.hurtAt >= 0 ? { hurtAt: gd.hurtAt } : {}), ...(gd.doorDownUntil > g.time ? { doorDownU: gd.doorDownUntil } : {}), lastPos: c3(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, killerId: gd.killerId, sawBodyT: gd.sawBodyT,
       alertBest: gd.alertBest, alertStallT: gd.alertStallT, alertRef: c3n(gd.alertRef), chaseT: gd.chaseT, shotBlockedT: gd.shotBlockedT,
-      sightPos: c3(gd.sightPos), sightVel: c3(gd.sightVel), sightT: gd.sightT, ledT: gd.ledT, fixT: gd.fixT, fixRef: c3n(gd.fixRef),
+      sightPos: c3(gd.sightPos), sightVel: c3(gd.sightVel), sightT: gd.sightT, ledT: gd.ledT, fixT: gd.fixT, fixRef: c3n(gd.fixRef), ledAt: c3n(gd.ledAt), wordT: gd.wordT,
       pieLast: gd.pieLast ? g.doors.list.indexOf(gd.pieLast) : -1, pieLastT: gd.pieLastT, piePrev: c3n(gd.piePrev), piePrevT: gd.piePrevT,
       stallRef: c3n(gd.stallRef), stallT: gd.stallT,
       task, drawn: gd.drawn, leader: gi(gd.leader), followT: gd.followT, followGoal: c3(gd.followGoal), post: gd.post?.name ?? null,
@@ -742,7 +742,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     gd.fireCd = fin(S.fireCd, 1); gd.reloadT = -1; gd.reactT = fin(S.reactT); gd.searchT = fin(S.searchT); gd.lookPhase = fin(S.lookPhase); gd.speed = dead ? 0 : fin(S.speed); gd.stepPhase = fin(S.stepPhase); gd.heardUpTo = fin(S.heardUpTo, -1);
     gd.diedAt = fin(S.diedAt, -1); gd.dazzledUntil = fin(S.dazzledUntil, -1); gd.staggerUntil = fin(S.staggerUntil, -1); gd.doorDownUntil = fin(S.doorDownU ?? -1, -1); gd.hurtAt = fin(S.hurtAt ?? -1, -1); gd.lastPos = c3(S.lastPos ?? S.pos); gd.stuckT = fin(S.stuckT); gd.stuckN = S.stuckN | 0; gd.killerId = S.killerId ?? -1; gd.sawBodyT = fin(S.sawBodyT, -100);
     gd.alertBest = fin(S.alertBest, 1e9); gd.alertStallT = fin(S.alertStallT); gd.alertRef = c3n(S.alertRef); gd.chaseT = fin(S.chaseT); gd.shotBlockedT = fin(S.shotBlockedT);
-    gd.sightPos = c3(S.sightPos ?? [0, 0, 0]); gd.sightVel = c3(S.sightVel ?? [0, 0, 0]); gd.sightT = fin(S.sightT, -100); gd.ledT = fin(S.ledT, -100); gd.fixT = fin(S.fixT, -100); gd.fixRef = c3n(S.fixRef);
+    gd.sightPos = c3(S.sightPos ?? [0, 0, 0]); gd.sightVel = c3(S.sightVel ?? [0, 0, 0]); gd.sightT = fin(S.sightT, -100); gd.ledT = fin(S.ledT, -100); gd.fixT = fin(S.fixT, -100); gd.fixRef = c3n(S.fixRef); gd.ledAt = c3n(S.ledAt ?? null); gd.wordT = fin(S.wordT ?? -100, -100);
     gd.searchPlan = null; gd.pieing = null; gd.standoff = null; gd.script = null; gd.hold = false; gd.pinned = false; gd.held = null;
     gd.pieLast = S.pieLast >= 0 ? g.doors.list[S.pieLast] ?? null : null; gd.pieLastT = fin(S.pieLastT, -100); gd.piePrev = c3n(S.piePrev); gd.piePrevT = fin(S.piePrevT, -100);
     gd.stallRef = c3n(S.stallRef); gd.stallT = fin(S.stallT);
