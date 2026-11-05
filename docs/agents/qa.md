@@ -955,3 +955,8 @@ but synthetic writes still work.
   the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
   IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
   Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.
+- **`tools/qa/settings-check.ts`: THE PICTURE'S SETTINGS ARE NOT THE GAME'S** (2026-11-05; the rule and its first two numbers: `docs/agents/net.md`, "A
+  player's Brightness is his picture's alone"). A read of a setting of the engine's by a file under `src/game` is red unless it has a row saying why
+  (the picture's own, carried by a recording, or to move, with a date). Its static lines run as `probes.ts settings-reads` (family journal, so every gate
+  that runs journal runs them); run the whole check after adding a setting a player can move. `QA_PICTURE='{"key":value}'` in front of any headless
+  tool plays it with a player's settings laid over the stand-in engine's (a key the engine has no setting for is refused by name).

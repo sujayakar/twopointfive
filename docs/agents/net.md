@@ -343,6 +343,34 @@ line).
   lines the second client is a watcher; two seats and the look ahead have lines of their own (the look ahead's bullet above). BY HAND, once: a recipe with `CMDCHECK.on` off is refused; a
   setup naming `constructor`, a knob the build lacks or a null for a number is refused; with the player put down the stood game's `ended()` answers
   `{won: false, end: 'DOWN'}` one tick later. No check plays a mission to its end over the wire.
+- **A player's Brightness is his picture's alone: THE GAME'S OWN NUMBERS** (2026-11-05; `src/game/env.ts`: the knob table `ENV` and `tubeGain()`;
+  `hours.ts exposureOf(g)`; read by `nvg.ts tubeVis` / `tubeSig` and `irlight.ts`). What a goggled man's tube makes of a dark floor, and how strong his
+  illuminator is, were worked out at `engine.settings.exposure` and `settings.nvGain`: the PICTURE's numbers, which a player moves (Options > Display >
+  Brightness, the bracket keys, the debugger's two sliders), which no recipe, recording or save ever carried, and of which two players have two and a
+  server its own. Found by the review of 11-05, then seen through a real server on step 1334: one scripted client of a two seat night game at exposure
+  0.5 (the slider's end) had its first different state word at tick 239 and lost its seat. Now the game has its own. `ENV` (registered in knobs.ts and
+  on JOURNAL_KNOBS: a recipe, a recording and a server's setup carry it; a file from before the table gets the build's back, `envAsBuilt`) is the
+  night's exposure and the tube's gain, equal to the picture's defaults. `exposureOf(g)` is the exposure the game's scene is taken at now: the show's
+  day's while that is in, else the hour's own, else the night's — WORKED OUT from what the game already keeps (which hour is in, whether the day is),
+  so there is no second copy to fall out of step and nothing new for a snapshot or a save to carry; hours.ts and lighting.ts tell the picture as they
+  always did and are otherwise untouched. NO SWITCH, a call for the merge to weigh: with nobody touching Brightness every number is the one it was (the
+  42 play-through digests on seed 1, both stands, equal to step 1515's); with it turned, the build before is the bug (a run that turns on the slider),
+  and there is no word that brings that back. What a player sees change: nothing at default; with Brightness turned, his men's goggles and lights no
+  longer follow his slider (they follow the mission's hour), and an illuminator's flood is brighter or dimmer in his picture with everything else.
+  THE RULE THIS BEGINS: no sum of the simulation reads the engine's settings. CHECK: `bun run tools/qa/settings-check.ts` (`--static` = its first three
+  lines, also `probes.ts settings-reads` in the journal family): `base` the table equals the picture's defaults · the scan reads its own twelve forms ·
+  `reads` a scan of src/game for every READ of a setting (55 today), each on a named list of 32 rows that says PICTURE, CARRIED (journal.ts EnvSnap,
+  laid over a networked page before every tick) or TO MOVE with a date — a new read is red, and so is a row nothing reads · `hour` a game stood on the
+  stand asked: the night's with the picture at a quarter, the hour's own at midday with the picture told the same, the show's day's, the night's again
+  each way back · `one run` barracks-four:1 played plain and with the picture turned three ways (`QA_PICTURE='{"exposure":0.5}'` in front of any
+  headless tool lays a player's settings over the stand-in's; a key the engine lacks is refused) is one digest, and with the game's own exposure turned
+  (`--set '{"ENV":{"exposure":0.5}}'`) another, so the line can go red; its runs are the shipped stand's whichever stand the check is run on (the frozen
+  one has no goggles on anybody). `SETTINGS_BREAK=1`: `reads` and `one run` fail. Two older probes now ask the game's own numbers where they asked the
+  picture's (nvg-probes `nvg-sight`, irlight-probes). STILL TO MOVE, named on that list: the sky's colours for the hour (hours.ts skyLum),
+  `emissiveScale` and `flashlightRadius` (carried, so a co-op page cannot part by them), `debrisCap`, irlight.ts's `indirectScale`. NOT a line of
+  mpserver-check: its scripted hands are timed by the wall clock, and only one run in several comes near a tube's threshold (a dimmed client parted 1
+  run of 1 on step 1334 and 0 of 4 on 1515; with the game's own number turned on purpose, 1 of 8), so a red path there would not be red. Nobody has
+  looked at a picture: no GPU, no page was opened for this.
 - **What nobody has seen or measured**: a page a person plays as a client (the page check is a script's); two machines; a real network; a Mac; a client through a sandbox's tunnel; two PEOPLE in two seats; the look ahead by eye (its bullet says what); a game longer than
   twenty seconds over the wire; a mission ENDING on a server (the verdict's answer was read by hand, never over the wire); the run's memory on a long
   game (its text is kept for joiners: about 20 KB a second with two seats sending every tick, 80 MB over the longest life); a real socket backing up (the

@@ -42,6 +42,7 @@ import { digestGame } from './digest';
 import { simDie } from '../math/dice';
 import type { SimDie } from '../math/dice';
 import type { GameDigest } from './digest';
+import { envAsBuilt } from './env';   // (a leaf: it imports nothing, so it moves nobody's place in the order)
 import { knobsNamed, assignDeep, JOURNAL_KNOBS } from './knobs';   // THE list of knob tables (knobs.ts): it imports the tables' modules in the order this file always did
 import { WALLS, WALLS_DEFAULTS } from './wallbreak';
 import { WALLCHARGE, WALLSHOT, WALLKILL } from './wallcharge';
@@ -268,6 +269,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   g.godMode = !!k.flags.godMode; g.aiEnabled = k.flags.aiEnabled !== false; g.infiniteAmmo = !!k.flags.infiniteAmmo; g.playerInvisible = !!k.flags.playerInvisible; if (typeof k.flags.fn2000 === 'boolean' && g.fn2000 !== k.flags.fn2000) g.setLoadout(k.flags.fn2000);
   if (g.fogOfWar) g.fogOfWar.on = !!k.flags.fog;   // (the fog of war asks the sensors and bends say() / the reticle: a recording made under it replays under it — a file from before it has no flag = off)
   if (g.saves && typeof k.flags.autosave === 'boolean') g.saves.enabled = k.flags.autosave;   // (the field, not setEnabled: nothing to persist on a replay's machine)
+  if (!k.tables.ENV) envAsBuilt();   // (a recording from before the game had numbers of its own for the scene's exposure and the tube's gain, env.ts: it was made on the picture's defaults, which are the build's — whatever a recipe or a --set left in the table)
   if (!(k.tables.DOORWAY && typeof (k.tables.DOORWAY as Record<string, unknown>).frameHolds === 'boolean')) DOORWAY.frameHolds = false;   // (a recording from before a frame held a boot — its DOORWAY row has no such key — replays without the rule, whatever this process had on)
   if (typeof (k.tables.CLOSE as { heldClicks?: boolean } | undefined)?.heldClicks !== 'boolean') CLOSE.heldClicks = false;   // (a recording from before a click did anything in the arm hold — its CLOSE row has no such key — replays with both buttons dead there)
   if (typeof (k.tables.CLOSE as { handsLow?: boolean } | undefined)?.handsLow !== 'boolean') CLOSE.handsLow = false;   // (a recording from before his hands stayed low at the crouch: the grab's tell reached from there too)
