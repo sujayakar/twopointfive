@@ -17,6 +17,7 @@ import { PropDef, PropKind } from '../scene/level';
 import { EXACT, mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
 import { RUST, ruleFell, ruleRed } from '../sim/sim';
 import { PropStore, PT, PD, PK, PY, PE, PP, PF, PROP_CAP, PROP_EV, PROP_SOUNDS, PROPS_STEPPED, propIo, propMem, propDiff } from '../sim/propshome';
+import { SimState } from '../sim/state';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A character as the prop solver sees it: a kinematic-ish circle whose position may be corrected (held back) in place, like doors do. */
@@ -69,8 +70,8 @@ function turnRow(d: Float64Array, YAW: number, CS: number, SN: number, r: number
 }
 
 export class Prop {
-  /** THIS THING'S OWN NUMBERS ARE COLUMNS (sim/propshome.ts PropStore: a column a number, in an array of the game's or at home in the Rust module's block
-   *  while RUST.props is on, where the furniture's step runs): every field below that changes as the game runs is an accessor over them, by the row its
+  /** THIS THING'S OWN NUMBERS ARE COLUMNS (sim/propshome.ts PropStore: a column a number, a part of the game's block from the moment the
+   *  furniture is made, where its step runs whichever side takes it): every field below that changes as the game runs is an accessor over them, by the row its
    *  id stands in, so whoever reads or writes a chair reads and writes the same values wherever they stand. (The step itself reads the columns by row,
    *  not through these: PropSystem.step.) */
   private f(o: number): number { const S = this.S; return S.d[S.b8 + o + S.rowOf(this.id)]; }
@@ -187,8 +188,8 @@ export class PropSystem {
    *  whose middle is not before the opening are left alone. Level data only: no state of its own. */
   doorways: { cx: number; cz: number; ux: number; uz: number; half: number }[] = [];
 
-  constructor(defs: PropDef[], private col: StaticCollision, private emit: (e: PropEvent) => void) {
-    this.store = new PropStore(defs.length);
+  constructor(defs: PropDef[], private col: StaticCollision, private emit: (e: PropEvent) => void, st: SimState = new SimState()) {
+    this.store = new PropStore(st, defs.length);
     this.all = defs.map((d, i) => new Prop(d, i, this.store)); this.props = this.all.slice();
     for (const p of this.props) for (const b of p.boxes) this.byBox.set(b, p);
     this.settle();
@@ -283,7 +284,7 @@ export class PropSystem {
   }
 
   // ---------------------------------------------------------------- the step in the Rust module (rust/sim/src/props.rs)
-  /** CAN THIS STEP RUN IN THE MODULE: the row on and the things' columns at home in the game's block; the game's own maths in Math's place (the step works
+  /** CAN THIS STEP RUN IN THE MODULE: the row on (the things' columns are in the game's block always); the game's own maths in Math's place (the step works
    *  its angles and lengths out there); noises being made (a system still settling its level makes none, and is not the game's yet); this file's own step
    *  not replaced on this instance (a check that puts its own over one gets ITS step); the box world's copy standing with the game's own leaves in it (or
    *  none in the level), and every leaf handed in one of them; and no more men, leaves or frames than the hand-over holds. → the copy to step over and
@@ -293,7 +294,6 @@ export class PropSystem {
     // (each way back to this file's step is said, for the count of questions the TypeScript took: sim.ts FELL)
     if (!EXACT.on) return null;   // (idle: a row that works lengths out answers under the game's own maths alone — sim.ts OWN_MATHS)
     if (ruleRed('props')) return null;
-    if (this.store.home === null) return ruleFell('props', 'the furniture is not at home in a block of the module');
     if (this.muted) return ruleFell('props', 'a step while the level is still being settled');
     if (this.step !== PropSystem.prototype.step || this.updateHere !== PropSystem.prototype.updateHere) return ruleFell('props', 'a check\'s own step in the rule\'s place');
     const io = propIo(), dyn = this.col.dynamicBoxes;
@@ -317,7 +317,7 @@ export class PropSystem {
     m[P + PP.dt] = dt; m[P + PP.props] = n; m[P + PP.contacts] = nc; m[P + PP.leaves] = T.n; m[P + PP.ways] = F.length;
     m[P + PP.flags] = (this.enabled ? PF.enabled : 0) | (CASTOR.on ? PF.castor : 0); m[P + PP.friction] = this.frictionScale;
     m[P + PP.casDecel] = CASTOR.decel; m[P + PP.casVisc] = CASTOR.visc; m[P + PP.casSpin] = CASTOR.spin; m[P + PP.casStart] = CASTOR.startV; m[P + PP.casStop] = CASTOR.stopV;
-    const ev = io.x.props_update(this.store.home!.bind(), T.M.slot);
+    const ev = io.x.props_update(this.store.home.bind(), T.M.slot);
     { const q = propMem(), S = PROPS_STEPPED; S.swept += q[P + PP.swept]; S.guided += q[P + PP.guided]; S.pairs += q[P + PP.pairs]; S.walls += q[P + PP.walls]; S.held += q[P + PP.held]; S.substeps += q[P + PP.substeps]; }
     const wrong = propMem()[P + PP.wrong]; if (wrong) throw new Error(`the furniture's step in the Rust module could not be what it was handed (${wrong === 1 ? 'more noises than its list holds' : 'more things, men, leaves or frames than its tables hold, or another count of things than its rows'})`);
     return ev;

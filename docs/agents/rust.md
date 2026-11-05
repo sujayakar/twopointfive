@@ -322,7 +322,7 @@ first system across (the game's own maths). No rule of play has changed and noth
   - `doors` — THE FIRST RULE OF THE THINGS: the doors' step (`game/doors.ts Doors.update` and `Door.place` at its end: what was written onto each leaf
     since the last tick, the men and bodies in its swing, its swing, stops, closer, latch and lock's clocks, where its box stands) from
     `rust/sim/src/doors.rs`, statement for statement. `?rustdoors`, `TPS_RUSTDOORS=1`. The leaves' own numbers are COLUMNS (`src/sim/doorshome.ts DC`,
-    48 of them, a door an index) at home in the game's block while the row is on (bit 4; a tenant of "State in the module"), on either maths;
+    48 of them, a door an index), a part of the game's block from the moment the doors are made (bit 4; "State in the module"), on either maths;
     the STEP runs in the module only inside a tick, where the game's own maths stand, the box world's copy stands with the game's own leaves in it, and the
     Game's two floor functions are still the Game's (`Doors.there`). Anywhere else the TypeScript steps the same columns where they are (`updateHere`): a
     tick whose box world changed shape before the doors' turn (a static added: `wroteGrid`), the frozen stand, a level of more than 64 doors (those keep
@@ -349,7 +349,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     men who walk into it and holding back the man it cannot yield to, knocking its neighbours, swept by a swinging leaf, guided through a door frame,
     stopped by the statics, and the scrapes, knocks and castor rolls of all that) from `rust/sim/src/props.rs`, statement for statement. `?rustprops`,
     `TPS_RUSTPROPS=1`. A thing's own numbers are COLUMNS laid for the cache (`src/sim/propshome.ts PropStore`,
-    `props.rs Props`: see the data layout below) at home in the game's block while the row is on (bit 32), on either maths; the STEP runs in the module only inside a tick, where the
+    `props.rs Props`: see the data layout below), a part of the game's block from the moment the furniture is made (bit 32), on either maths; the STEP runs in the module only inside a tick, where the
     game's own maths stand and the box world's copy stands with the game's own leaves in it (`PropSystem.there`); anywhere else the TypeScript steps
     the same columns (`updateHere`). Handed in for the call (`handOver`): the level's facts of each thing by row, the men, which of the box world's leaves may sweep (a leaf off its hinges is
     none), the door frames, the switches (`CASTOR`, the friction, the system frozen). Back (`takeBack`): where the furniture leaves each man, and the
@@ -371,7 +371,7 @@ first system across (the game's own maths). No rule of play has changed and noth
   - `slabs` — A LEAF OFF ITS HINGES, IN THE AIR (`game/doorblast.ts stepSlab`: the loose slab a blast, a charge or a boot at a run sends out of its frame,
     flying, dragging its foot, toppling, stopped dead by what its rays find, pushed out of what its toppling reaches, slamming flat, sliding out and
     coming to rest clear of every static) from `rust/sim/src/slabs.rs`, statement for statement. `?rustslabs`, `TPS_RUSTSLABS=1`. A slab's numbers are
-    A ROW of the slabs' columns (`src/sim/slabshome.ts SlabStore`, `slabs.rs Slabs`; at home in the game's block while the row is on, bit 64):
+    A ROW of the slabs' columns (`src/sim/slabshome.ts SlabStore`, `slabs.rs Slabs`; a part of the game's block from the moment the doors are made, bit 64):
     152 bytes a row, the eleven doubles a slab in the air reads every substep first, six cold ones, four words. `Door.slab` READS THE ROW AS IT STANDS
     (`doors.ts SlabRow`, read-only by its type: one held across a step is the slab after the step) and is set whole. ONE SLAB A CALL: the host steps them in the order of their
     doors and poses each one's box before the next is stepped, as it always did, so a slab's rays meet the ones before it where this tick left them;
@@ -396,7 +396,7 @@ first system across (the game's own maths). No rule of play has changed and noth
   - `items` — WHAT IS THROWN OR DROPPED (`game/throwables.ts Throwables.update`: a can, a grenade, a magazine, a gun out of a dying hand, ageing,
     falling, meeting walls, leaves and furniture by a ray from its middle, bouncing, handing a chair a share of what it lost, coming to rest, and
     dropping off a thing that moved from under it) from `rust/sim/src/items.rs`, statement for statement. `?rustitems`, `TPS_RUSTITEMS=1`. AN ITEM
-    IS A HANDLE ON A ROW (`throwables.ts Item`, `src/sim/itemshome.ts ItemStore`, `items.rs Items`; at home in the game's block while the row is on,
+    IS A HANDLE ON A ROW (`throwables.ts Item`, `src/sim/itemshome.ts ItemStore`, `items.rs Items`; a part of the game's block from the moment the pool is made,
     bit 128): 184 bytes a row, the twelve doubles read for every row on every tick first, then what a bounce reads and writes, then the fuse, the
     venting and what a magazine holds (other rules' own, carried), six words. `it.pos`, `it.fuse`, `it.settled` read and write the row whoever
     asks; `pos` and `vel` are given as new arrays and taken whole. THE ROWS ARE THE GAME'S LIST IN ITS ORDER (the order is the rule's: a full
@@ -683,10 +683,10 @@ first system across (the game's own maths). No rule of play has changed and noth
     - **What a step met is said after the step, with the boxes as the step had them.** The slam was said in the middle of the step, with the slab's
       own box out of the dynamic list. Both sides now list what the step met (`SlabMet`: the slam and where, coming to rest, what the settling
       did) and `flySlab` says it once the step is over, the slam with that box out of the list again.
-    - **A store of columns is ONE class** (`src/sim/colstore.ts ColStore`: the one array and its word view, where the bytes stand, a swap of two rows,
-      the bytes taken and put, the tenant's two moves, the diff in words). `PropStore` and `SlabStore` are that plus what their ROWS mean (which are
+    - **A store of columns is ONE class** (`src/sim/colstore.ts ColStore`: the game's block and where the family's part of it starts, a swap of two
+      rows, the bytes taken and put, the diff in words). `PropStore`, `SlabStore` and `ItemStore` are that plus what their ROWS mean (which are
       live, in what order, which tables say who is where). The next family extends it; the doors' and the falls' stores are older than it and are not
-      on it yet.
+      on it yet (they are parts of the block the same way: "A game's block is taken as the game is made").
     - **The numbers written in the rule itself are held too.** A rung of a ladder, a reach, a margin (`0.45`, `1.2`, `6`) has no table to compare, and
       the differential meets some of them once in ten thousand steps. `rust-check`'s slabs section reads the numbers out of each function's body on
       both sides (`stepSlab` | `step`, `pushOut` | `push_out`, …) and is red where the two lists differ.
@@ -712,8 +712,9 @@ first system across (the game's own maths). No rule of play has changed and noth
       end, and `item-ident`'s callback stands another item up and takes one out of the list to hold it.
     - **An item that leaves keeps its numbers in itself** (`Item.kept`, a plain array by the columns' places): a door op holds its can and a guard
       the gun he dropped long after the pool gave the row up.
-    - **A pool that can outgrow the module's rows grows in TypeScript** (`ColStore.widen`): the columns come out of the block, twice as long, and
-      the family's tenant no longer wants them home. `item-ident` drives a pool past thirty-two (`:many`).
+    - **No pool outgrows its rows** (until 2026-11-04 `ColStore.widen` took the columns out of the block, twice as long, and the TypeScript stepped
+      them from there on): the thrown things' columns have twice the game's rule of thirty-two, and at that many live cans the oldest gives way
+      (`itemshome.ts`). `item-ident` drives a pool past thirty-two (`:many`).
     - **What the module does not have is asked for by handing the row back, and the host says up front whether it can come up**: the snow's map
       is the host's, so a bounce on ground is the host's wherever `BogGround.may()` says snow may lie, and nowhere else. ONE hook answers both
       questions (`may`, `at`), so the two cannot disagree.
@@ -822,14 +823,36 @@ first system across (the game's own maths). No rule of play has changed and noth
     whole memory. The snapshot counts any it meets (`Snapshot.simViews`, carried on by every take since), `restoreSnapshot` THROWS on such a snapshot
     (in place, its bytes would land on whichever game holds the slot now) and `rollback-check` is red on one. A slot that is not one traps in the module
     (`state.rs state`): it never answers for another game's block.
-  - **At home, or not.** While a system has a TypeScript twin its state is in the block only with its row on. Which, for THIS game, is a bit in the
-    block's head (state like the rest), and as a tick opens every system whose row and bit disagree is moved (`SimState.settle`, called by
+  - **A game's block is taken as the game is made** (2026-11-05; `SimState.keep`, `sim/colstore.ts`, the five stores beside it). A family whose state
+    is COLUMNS — the doors, what falls, the furniture, the leaves off their hinges, the thrown things — is made OVER the game's `SimState`
+    (`new PropStore(game.sim, …)`: `Game` hands `this.sim` to `FallStore`, `PropSystem`, `Throwables` and `Doors`) and its columns are that family's
+    part of the block from the store's first line to the game's last. THE STORE HAS NO ARRAY OF ITS OWN: no `own`, no `into` / `outOf`, no
+    `home === null`, and "the store is not at home" is not a way back to the TypeScript any more — it cannot happen. Which side STEPS the columns
+    (the module's rule, or its TypeScript twin over the same bytes) is the family's row of RUST and nothing else. `keep(bit, name)` takes the block
+    if the game had none — zeros, PARKED in the SimState's own buffer, no call into the module — and raises the family's bit in the head for good,
+    so `settle` never shuts a block under a store (a second store over the same part of one block throws by name). A block is BOUND as its first
+    tick or its first question of the module opens, like any parked block. A SYSTEM MADE WITH NO GAME (a check's lone `PropSystem`, the level
+    editor's lone `Door`) has a `SimState`, and so a block, of its own: the constructors' last argument, a fresh one by default.
+    WITH NO WEBASSEMBLY there is no module to say how a block is laid out, and the game plays on the TypeScript for as long as there is one, so
+    a block is then laid out from what the stores say (`simRoom(part, bytes)`, a top-level statement of each store's file: the head, then each
+    part end to end in `SIM_PARTS`' order, a part no store lives in nothing) and is never bound. Where the module runs, its layout is held to
+    those same numbers as it is first asked. That road goes when a page with no WebAssembly shows a card instead of playing.
+    HELD BY: `simstate-check` on both stands — `tenantLines` for each of the four stepped families (the columns in the game's block at every
+    tick with the row up, down, and flipped every 40; a snapshot put back, put into a fresh game, and put back across a change of the row) and
+    `a crowd`: one game more than the module has slots, every family worked in each, stepped turn about, each the game one is alone after every
+    tick though each opens every tick parked (`SIMSTATE_BREAK=park`, a parked block left behind, must fail `slots`, `parked poses` and
+    `a crowd`); `falls-ident`, whose store's block is parked under the run 2,692 times and found bound again by its next rule in the module;
+    the 42 by digest on both stands; `rollback-check` whole; the page with no WebAssembly (`rust-page.cjs nojit`). Still moving: the die, the
+    poses, the smoke grid (below).
+  - **At home, or not: the systems that still move.** A system with a TypeScript twin that keeps its state in fields of its own objects (the die, the
+    poses) has it in the block only with its row on. Which, for THIS game, is a bit in the
+    block's head (state like the rest), and as a tick opens every such system whose row and bit disagree is moved (`SimState.settle`, called by
     `Game.stepSeats`, inside the tick's own `try`). A system registers `simTenant({ name, bit, wants, into, outOf, tend? })`. `wants(g)` is the system's own
     reason, whole: a system with a TypeScript twin says its row of RUST and that THIS game has such state at all (the die: `RUST.dice` and a die of its
     own, so a game with none is never given a block for it); a rule that lives only in the module says its own switch (the smoke grid, the tenant in
     `game/sense.ts`, whose `into` is an empty grid and whose `outOf` is zeros, there being no TypeScript copy to move). `tend`, if it has one, is called
     each tick the system is at home, for what has come or gone since (the poses' is the rule of who is in the pool). So a row may be raised or dropped under a running game, a snapshot
-    holds where things were, and a game with no system at home has no block at all (an empty take, nothing in a slot).
+    holds where things were. (A `SimState` nothing was ever kept or moved into has no block at all: an empty take, nothing in a slot. No game is such a one.)
   - **The snapshot** knows a `SimState` by its make (`K_SIM`): taken as the block in 4 KB pieces, a piece unchanged since the last take shared;
     put back into the block where it stands; put into ANOTHER game's own block; folded into `stateHash` and laid out by `stateDiff` a part at a time
     (`sim.dice[2]: … | …`). The saves kept in memory are snapshots, so they carry it with no line of their own.
@@ -1627,6 +1650,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     rule that acted before it was the TypeScript's: a level staged or restarted (`FallStore.clear`, four a run), a leaf shot apart on a game just
     loaded, a checkpoint filed before a tick, a roll of the die. A change to WHEN a block is born, for every tenant, the die and the poses among
     them; no answer changes (the 42 by digest, both stands; a snapshot taken before any tick and put back replays to the same bits).
+    (2026-11-05: for the five families of columns this is no longer a move at all — their stores are made over the block, "A game's block is
+    taken as the game is made" — and the statement in `standGame` is the die's and the poses'.)
   - THE LEAVES' LIST IS ONE ARRAY FOR THE GAME'S LIFE (`savestate.ts`, where a state is put back). The copy knows the game's own leaves by the array
     that stood in `col.dynamicBoxes` as the tick opened; a state put back made a new array of the same boxes, and a restart taken INSIDE a tick left
     every rule of that tick's rest without the copy (the doors', the furniture's, the thrown things'). No run of the 42 does it; a twelve-minute soak
