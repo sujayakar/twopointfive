@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..');
-const { FRAME_BYTES, FrameFlags } = await import(`${ROOT}/src/render/frame.ts`);
+const { FRAME_BYTES, FRAME_HEAD_BYTES, FrameFlags } = await import(`${ROOT}/src/render/frame.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const common = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8');
 const frameTs = readFileSync(`${ROOT}/src/render/frame.ts`, 'utf8');
@@ -68,7 +68,7 @@ const writers: [string, RegExp][] = [
   ['eyeCfg', /f\[(\d+)\] = ey\[0\];/],   // (written through `ey = p.eyeCfg ?? ZERO4`: the look prototype's Eyes follow Sam row)
   ['gradeCfg', /f\[(\d+)\] = gr\[0\];/],   // (written through `gr = p.gradeCfg ?? ZERO4`: the look prototype's Contrast row, undone under a roof)
   ['lampCfg', /f\[(\d+)\] = lc\[0\];/],   // (written through `lc = p.lampCfg ?? ZERO4`: the look prototype's Light stays in its room row by day)
-  ['sideCfg', /u\[(\d+)\] = sd \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/],   // (the look prototype's Walls have two sides row: the flag, then render/wallSides.ts's words)
+  ['sideCfg', /u\[(\d+)\] = sd \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/], ['placeCfg', /f\[(\d+)\] = pc\[0\];/],   // (the look prototype's Walls have two sides row: the flag, then render/wallSides.ts's words)
 ];
 { const rows: string[] = []; let bad = 0, missing = 0;
   for (const [name, re] of writers) {
@@ -77,6 +77,8 @@ const writers: [string, RegExp][] = [
     const at = +w[1] * 4; if (at !== mem.offset) { bad++; rows.push(`${name}: written at byte ${at}, read at ${mem.offset}`); }
   }
   verdict(bad === 0 && missing === 0, `writeFrame puts all ${writers.length} checked members where the shader reads them`, rows.join(' · '));
+  { const tables = ['sides', 'sideCols'], first = members.find(m => m.name === 'sides'), late = members.filter(m => !tables.includes(m.name) && first && m.offset >= first.offset).map(m => m.name);   // (engine.ts sends FRAME_HEAD_BYTES a frame and the tables only when they change: a member after them reaches the GPU when a door comes to rest)
+    verdict(!!first && first.offset === FRAME_HEAD_BYTES && late.length === 0, `the head a frame sends (${FRAME_HEAD_BYTES} bytes) ends where the two tables begin, and no other member comes after them`, late.join(', ')); }
   const unchecked = members.filter(m => !writers.some(([n]) => n === m.name) && /^vec4|^array/.test(m.type)).map(m => m.name);
   verdict(unchecked.length === 0, 'every vec4 / array member of the struct has a checked writer (add a row to tools/qa/frame-layout.ts when you add a member)', unchecked.join(', '));
 }

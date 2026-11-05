@@ -6,7 +6,7 @@
 // door throws a shadow into the room and the light falls off from the doorway.
 // ONE RULE FINDS THEM ALL, from the level's boxes as they stand (the maintainer, 11-01, of windows and open doors as real openings: "yep let's do it. blowing
 // holes in walls should work too!"). Before it a window was an upright Glass box of the level, found once, so a door and a hole were nothing and a broken wall
-// changed nothing. The rule, on the renderer's floor plan (render/placeField.ts's cells and its test of what is a roof):
+// changed nothing. The rule, on the renderer's floor plan (scene/placePlan.ts's cells and its test of what is a roof):
 //   AN OPENING IS WHERE FLOOR UNDER A ROOF MEETS FLOOR UNDER THE SKY WITH NO WALL BETWEEN THEM, AND WALL ON BOTH HANDS.
 // Glass is no wall to light. What is left of a wall round a hole is one. "Wall on both hands" is what tells a hole in a wall from an open side: a stall's
 // awning on four posts and a canopy with one wall behind it are open sides, and the cache's probes carry what comes in there. A passage's mouth between its
@@ -17,9 +17,9 @@
 // doorway's light stays where it is while its door swings, and only its strength moves.
 // Nothing here knows a level, a door or a window by name, and it imports nothing from src/game. The check: tools/qa/openings-check.ts.
 import type { Vec3 } from '../math/vec';
-import { BoxFlag, type Box } from '../scene/boxes';
-import { WORLD } from '../scene/world';
-import { PLACE, PLACE_W, PLACE_H, PLACE_RES, placeWall, placeSolid, placeRoof, stampCells } from './placeField';
+import { BoxFlag, type Box } from './boxes';
+import { WORLD } from './world';
+import { PLACE, PLACE_W, PLACE_H, PLACE_RES, placeWall, placeSolid, placeRoof, stampCells } from './placePlan';
 
 export const LOOK_OPENINGS = {
   ground: 0.5,    // what the ground outside sends back of the light on it (snow more, a shaded yard less)
@@ -123,7 +123,7 @@ const count = (cols: Int32Array): number => { let n = 0; for (let q = 0; q < col
 export function planOpenings(statics: readonly Box[]): Opening[] {
   const W = PLACE_W, H = PLACE_H, N = W * H, K = LOOK_OPENINGS, cell = 1 / PLACE_RES, ox = WORLD.rcMin[0], oz = WORLD.rcMin[2], top = WORLD.ceilingY, SL = 8, step = top / SL;
   // THE PLAN: which eighths of the height from the floor to the ceiling something that stops light fills in each cell, which of them glass fills, and how
-  // high the roof over the cell is (render/placeField.ts's own plan is cut between a man's shin and his head, for which room a point is in: a strip of glass
+  // high the roof over the cell is (scene/placePlan.ts's own plan is cut between a man's shin and his head, for which room a point is in: a strip of glass
   // over a door's height is nothing to it, and it is a window)
   const solid = new Uint8Array(N), glass = new Uint8Array(N), under = new Uint8Array(N).fill(255), roofY = new Float32Array(N).fill(Infinity);
   const bitsOf = (y0: number, y1: number): number => { let m = 0; for (let i = 0; i < SL; i++) { const y = (i + 0.5) * step; if (y0 - 0.02 <= y && y <= y1 + 0.02) m |= 1 << i; } return m; };

@@ -1127,13 +1127,18 @@ first system across (the game's own maths). No rule of play has changed and noth
     take them all: the grid then says it cannot answer and the blobs do (`smokegrid-check.ts full`), which neither drift nor stay low nor know
     walls, so a line's answer would jump between two smokes: this is not to come on before there are bricks enough that it does not happen. More
     bricks (the index is a byte: 255 at most without widening it) is a change to the state's layout and the Rust goal's to place.
-  - AGAINST THE PICTURE (the kept report; `adrift` in the tool's rows, `adrift:roof` and `adrift:sky` in `BUDGET`): under the open sky 0.000 at the
+  - AGAINST THE PICTURE (the kept report; `adrift` in the tool's rows, `adrift:roof@1.5` and `adrift:sky@1.5` in `BUDGET`: rows of the 1.5 m
+    lines, the only height that report has): under the open sky 0.000 at the
     middle, 0.250 at the 95th and 2.7 % deciding the other way on 443 lines, where the grid in still air has 0.883, 1.000 and 64.8 %; under a
-    roof the two are one smoke (0.019, 0.526, 10.3 %). WHAT THAT DOES NOT SAY: every line of the plan runs at eye height, and out of doors the
+    roof the two are one smoke (0.019, 0.526, 10.3 %). WHAT THAT DOES NOT SAY: every line of that report runs at 1.5 m, and out of doors the
     picture's smoke stays under it, so the agreement is that neither hides a standing man, and smoke gone
-    altogether or blown the wrong way would read as well (the check above is what holds those). What a line at a crouching man's height reads through
-    the plume, on either, nobody has measured: the plan wants lines at more than one height before this comes on. The report is one machine's
-    (Apple Metal), made before the walk waited for its last reading.
+    altogether or blown the wrong way would read as well (the check above is what holds those). AND IT IS AN AGREEMENT ON A KNIFE'S EDGE (found
+    2026-11-05): 1.5 m is a face between two layers of the grid's half-metre cells, a level line on it reads the layer above alone, and this
+    smoke fills the layer below — the same lines asked one centimetre lower let 0.21 of the light through at 8 s, not 0.93, and hide 74 % of
+    them, not 4 %. So the 2.7 % says the grid's smoke stops at 1.5 m and nothing about whether the picture's is there under it. What a line
+    at a standing man's chest or a crouching man's eye reads through the plume in the picture, nobody has measured: the plan now asks those
+    heights (the model against the picture, LINES AT FOUR HEIGHTS), and a run of it on a GPU is wanted before this comes on. The report is one
+    machine's (Apple Metal), made before the walk waited for its last reading.
   - MEASURED (2026-11-04, a 4-core cloud box, headless). THE SWITCH DOWN IS THE BUILD AS IT WAS: `tickcost.ts --each --list` over five missions,
     36,859 ticks, every run to the bit against the tree before, and the same 80 games by digest on the server's stand (below). WITH IT UP, the
     server's stand with the grid and the light model (`TPS_PROFILE=shipped TPS_CPUSENSE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1`), compound-four,
@@ -1153,8 +1158,8 @@ first system across (the game's own maths). No rule of play has changed and noth
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
   and the picture are two models of one world and neither drives the other; this says how far apart they stand.
   - WHAT IT ASKS. One plan walked over whichever level is open: stations picked from the free floor (the one nearest the start, then each the farthest
-    from those picked), at each a set of LIGHT POINTS at chest and head height and, round a canister it sets off there, SIGHT LINES at eye height with
-    no wall across them, read at fixed ages of the smoke. Every sample is one question put to both sides: the probe's meter or its transmittance
+    from those picked), at each a set of LIGHT POINTS at chest and head height and, round a canister it sets off there, level SIGHT LINES with
+    nothing across them AT EACH HEIGHT OF THE PLAN (`EYES`: 1.6, 1.2, 0.95 and 0.4 m — LINES AT FOUR HEIGHTS, below), read at fixed ages of the smoke. Every sample is one question put to both sides: the probe's meter or its transmittance
     (`Game.probe`, asked under the tool's own keys at the last rank, eight places left to the game) and each model's answer (`MODELS`, a row a model:
     `estimate` = `lightEstimateAt`, `blobs`, `grid`; a new model is a row there and a row of `BUDGET`). The models are stepped on a fixed sixtieth
     whatever the page's frame rate, and the tool keeps its own smoke, so the game's is as it was whatever `SENSE` says. The player is stood at each
@@ -1166,8 +1171,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     opposite decisions a model; a model past either is red. It bounds getting WORSE on the recorded scenes; it does not say the numbers are good.
     EVERY SAMPLE SAYS WHERE IT STANDS (`Sample.o`: under the open sky or a roof, by `weather.ts underRoof`, the footprints the rain and the wind go
     by — the light point; a line is under a roof only when its canister and both its ends are), and a report that says so is judged A PART AT A TIME
-    by the rows of that part (`estimate:roof`, `grid:sky`; `partsOf`), its whole said and not judged: the first GPU run was the two parts apart, and
-    a whole would hide either in the other. A report that does not say is judged whole by the plain rows, and one where some samples say and some do
+    by the rows of that part (`partsOf`: the light there, `estimate:roof`; the sight lines there a height at a time, `grid:sky@1.5`), its whole
+    said and not judged: the first GPU run was the two places apart, and a whole would hide either in the other. A report that does not say is judged whole by the plain rows, and one where some samples say and some do
     not is a fault.
   - THE WALK CHANGES THE PICTURE ONLY WHEN THE PICTURE HAS ANSWERED (`ModelErr.changes`, `frame`): before the tick that lets the canister out, and
     before the one that clears the smoke and moves on, the plan's clock stands (the models are not stepped either) until everything asked has come
@@ -1177,6 +1182,61 @@ first system across (the game's own maths). No rule of play has changed and noth
     and those lines are in the file and not counted (`counted`); a walk that waits writes 2. Held headless by a stand-in picture (`waits`, below)
     and on the page by `PLAN=quick tools/qa/modelerr-page.cjs` (two stations: 14 of the first station's 16 last-age lines came back with smoke on
     them, on the software adapter). No walk that waits has been run on a GPU.
+  - LINES AT FOUR HEIGHTS (2026-11-05; `EYES`, `Plan.eyes`, `linesOf`). Every line of the first walks was at 1.5 m, and that said little: out of
+    doors the picture's smoke stays under a standing head (the smoke grid's drift bullet above), so the lines that decide whether a crouching man
+    is hidden were never asked; AND 1.5 m IS A FACE BETWEEN TWO LAYERS OF THE GRID'S HALF-METRE CELLS, where a level line reads the layer above
+    alone (`bricks.rs rho_at`), so the grid's answer there was not the answer of the air a centimetre under it (under the sky, `adrift` at 8 s:
+    0.93 of the light at 1.5 m, 0.21 at 1.49). A plan now asks its lines at 1.6 m and 1.2 m (a standing man's head and chest, the heights of the
+    light points: a guard's eye on a standing man runs between the two), 0.95 m (a crouching man's eye: `fogofwar.ts EYE_CROUCH`) and 0.4 m (low
+    over the floor) — one height inside each of the grid's four lowest layers, none on a face — the same count at each. They are dealt by one
+    die, each height keeping the first pairs clear AT IT (of the full plan's 144 lines a height on the office, 131 to 143 are shared by two
+    heights), asked both ways round and kept inside the level (the first walks kept 3 of their 192 lines an age with an end inside a box,
+    lines through a canister near the level's edge that ended off the map, and 8 pairs dealt twice: none now, and `walks` is red on a line
+    asked twice), and put to the picture a line of each height by turns, so that no
+    height is asked later than another when an age does not fit one frame of the probe (`waits` holds it with places for a third of an age a
+    frame: the first line of each height, the second of each and so on reach the picture within a frame of each other — in the same frame,
+    measured; `MODELERR_BREAK=turns` queues a height at a time, the lowest height's lines are then two frames behind the highest's, and it must
+    fail). The spread is said A HEIGHT AT A TIME and `BUDGET`'s smoke rows are rows of a
+    height (`grid:roof@1.5`): every row there is from the 1.5 m lines of the first GPU run and judges that kept report alone; THE FOUR HEIGHTS
+    OF A PLAN HAVE NO ROW, said and not judged, until a walk that asks them is run on a GPU. MEASURED HEADLESS, the models alone (no picture:
+    this says the lines are worth asking, not that a model is right): the full plan on the office asks 576 lines at each height on both stands,
+    552 to 556 of each with smoke on them by the grid. On the page's stand, seed 1, UNDER THE SKY the grid with the wind in it (`adrift`) lets
+    0.97 to 0.90 of the light along the 1.6 m lines from 3 to 25 s and hides 3 to 7 % of them; at 1.2 m it lets 0.58 through at 3 s and 0.24
+    from 8 s on and hides 34 % and then 71 %; at 0.95 m 0.29 to 0.23 and 67 to 75 %; at 0.4 m 0.23 and 74 %. So in the model a standing
+    man's head shows over the smoke and his chest does not, and whether the picture's plume reaches a chest is the first thing a GPU run of
+    this plan will say. Under a roof the grid is thinner high up early (0.45 of the light at 1.6 m at 3 s, 0.31 at 1.2 m, 0.23 at 0.95 m,
+    0.21 at 0.4 m: each over that height's own lines) and near one smoke at every height by 15 s (0.12 to 0.07). ON THE PAGE, THE SOFTWARE ADAPTER ONLY
+    (`PLAN=quick tools/qa/modelerr-page.cjs`, headless Chromium, Very low, seed 1; never seen on a GPU): the picture answered all 46 light
+    points and all 192 lines, 48 at each height, with smoke on 16, 26, 30 and 30 of them from the highest down, 44 of them at the last age of
+    the station the walk moved on from; no page error. Its second station is under the sky, 12 lines a height at 3 and 6 s, the mean light let
+    through, picture / `adrift` / `grid`: at 1.6 m 1.00 / 1.00 / 0.68 and 1.00 / 1.00 / 0.37; at 1.2 m 1.00 / 0.72 / 0.49 and 0.77 / 0.45 /
+    0.27; at 0.95 m 0.74 / 0.44 / 0.35 and 0.58 / 0.43 / 0.23; at 0.4 m 0.58 / 0.37 / 0.30 and 0.50 / 0.40 / 0.22. So that picture does have
+    smoke under a standing head out of doors, thinning upward, the drifting grid has the shape and is thicker than it at every height below
+    the head (deciding the other way on 0 %, 19 %, 12 % and 4 % of the 26, 26, 26 and 24 lines under the sky), and the grid in still air is far thicker (38 %,
+    38 %, 31 %, 38 %). One station, one adapter at Very low, two early ages: a first look and no row. NOT DONE: no GPU has been asked a line at any of the four heights; their rows are to be set from the first such run.
+  - A KEPT REPORT IS ASKED AGAIN BY ITS OWN QUESTIONS (2026-11-05; `ModelErr`'s `again`, `planAgain`, `Report.asked`, `Report.level`, `levelOf`).
+    A report used to be held to the models as they are now by walking its plan again and finding the walk dealt the very same questions (the
+    `world` word), so any change to what a plan deals (a height, a count, the rule for a line) left every kept report judged 'as recorded' and
+    still green. A walk handed a report now asks ITS stations, points, lines and ages again, in its order, dealing nothing: all of that is read
+    from the report's own samples, and from the plan's row it carries (`asked`) only how long a station is stood at first. WHERE IT IS ASKED
+    AGAIN: where the stand is the one it was made on, as far as the tool can say — its `level` word is this stand's (`levelOf`: the level as
+    authored, `savestate.ts levelFingerprint`, and every door leaf as it stands, to the millimetre; nothing the picture alone reads — a first
+    version took each static's flags whole and the word moved with the wet ground's shine), its scene names a seed (who carries a lamp where
+    is dealt by the die) and names nothing but the plain page's words (`seed`, `solo`, `paused`, `mute`, `quality`: the tool stands up no
+    other world). The two stands of the office differ by two door leaves (the manager's and the break room's stand otherwise), so the frozen
+    stand asks no page's report again, as it could not ask the full one before; it did ask the one-station software report, whose lines pass
+    neither door, and that is given up for the rule. A REPORT THAT IS NOT ASKED AGAIN IS NOT RED: its verdict line reads AS RECORDED ONLY,
+    the reason is printed, and the tool's last line counts the reports that hold nothing here — so the default (frozen) run is green and says
+    `0 of 2`, and THE MODELS ARE HELD TO THE RECORDED PICTURE ON THE PAGE'S STAND ALONE (`TPS_PROFILE=shipped`: `2 of 2`). When the office is
+    edited the word moves and the kept pictures hold nothing anywhere until a GPU records a new one: that is said on the last line and is
+    nobody's red check, because only a machine with a GPU can mend it. The two reports kept from before had their row and level written into
+    the file by hand (the rows as the plans stood: 6 stations, 40 points, 32 lines at 1.5 m, ages 3, 8, 15 and 25 s, settle 2 s; 1, 24, 16,
+    3 and 6 s, 0.5 s; the level word the page's stand's), nothing else in them touched; asked again by their own questions on the page's
+    stand, every model answers what it answered when the plan was dealt again (the same verdict lines, but for the height in a part's name).
+    A page's own level word is the headless page's stand's (the software adapter's page said `de68dc84.8ttrl8`, the word in the two kept
+    reports; no page on a GPU has said its word yet). `--keep` is gone: it added where each sample stands to a report from
+    before the walk said, and a page's report is now a fixture as it comes. The `world` word is still written (a word for the questions) and
+    decides nothing.
   - THE PAGE: `localhost:5173/?modelerr&seed=1&solo` (`=quick` two stations, `=tiny` one; `solo` is the solo night straight in — any mission's own
     words do as well). The walk does not begin under a menu (`ModelErrPage.held`: the start page, with the title's reel playing behind it, is one),
     and on an address that opens the start page the tool says so on a note at the foot of the page that takes no click (seen in a headless
@@ -1184,19 +1244,19 @@ first system across (the game's own maths). No rule of play has changed and noth
     Hands off
     for about three minutes: a card shows the table, `window.__modelerr` is the report, and it goes out by the page's door as kind `modelerr`
     (`host/savefile.ts`: to the backend where the page has one, no download).
-  - HEADLESS: `bun run tools/qa/modelerr.ts` on both stands walks the plan with the models alone (`walks`: every model answers and a second walk is the
-    first to the bit; the grid against the blobs is said), plants pictures and reads them back exactly (`planted`), judges a second walk against the
+  - HEADLESS: `bun run tools/qa/modelerr.ts` on both stands walks the plan with the models alone (`walks`: lines at every height of the plan, each
+    height with smoke on some of them, no line twice, every model answers and a second walk is the first to the bit; the grid against the blobs is said), plants pictures and reads them back exactly (`planted`), judges a second walk against the
     first under a tight budget (`budget`; `MODELERR_BREAK=1` makes that walk's smoke three times as thick and it must fail), walks once with a
-    stand-in picture that answers 45 frames late and knows only whether the walk's smoke is in the room (`waits`: no light point read with smoke out,
-    no line read from a cleared room, the models' answers those of a walk with no picture to the bit; `MODELERR_BREAK=move` = the walk does not wait
-    and it must fail), and judges every report
-    under `tools/qa/fixtures/modelerr/` (and `--report f`): as recorded, and, where the stand here asks the very questions the report did (its `world`
-    word), WITH THE MODELS AS THEY ARE NOW against the recorded picture. So a picture recorded once on a GPU holds the models to their budget from
-    then on with no GPU. `--report f --keep g` writes the report again with where each sample stands added from this stand's walk of the same
-    questions: how a page's report from before the walk said becomes a fixture.
+    stand-in picture that answers 45 frames late, has places for a third of an age's lines a frame and knows only whether the walk's smoke is in the
+    room (`waits`: no light point read with smoke out, no line read from a cleared room, no height's lines put to the picture later than
+    another's, the models' answers those of a walk with no picture to the bit; `MODELERR_BREAK=move` = the walk does not wait
+    and it must fail, `=turns` = it queues its lines a height at a time and it must fail), and judges every report
+    under `tools/qa/fixtures/modelerr/` (and `--report f`): as recorded, and, where the stand here is the one the report was made on, WITH THE
+    MODELS AS THEY ARE NOW against the recorded picture, the report's own questions asked again (the sub-bullet above: on the page's stand,
+    while the office stands as it was recorded). So a picture recorded once on a GPU holds the models to their budget from then on with no GPU.
   - MEASURED ON A GPU, 2026-11-04 (the maintainer's run: Apple Metal, the office at night, `?modelerr&seed=1&solo`, plan full, build aa4360cd; kept
-    as `tools/qa/fixtures/modelerr/office-full-metal.json`, a version 1 report with where its samples stand added by `--keep`; its world is the
-    SHIPPED stand's, where the models answer as the page's did — smoke to the bit, light within 0.004 — and the frozen stand asks other questions
+    as `tools/qa/fixtures/modelerr/office-full-metal.json`, a version 1 report with where its samples stand added by a flag since removed; its level is the
+    SHIPPED stand's, where the models answer as the page's did — smoke to the bit, light within 0.004 — and the frozen stand's level is another
     and reads it as recorded). All 944 answered. UNDER A ROOF the models are close: `estimate` off by 0.076 of the meter at the middle, 0.145 at
     the 95th, the other side of the lit bar on 4.5 %; `lit` (the light that comes round) 0.029, 0.136 and 2.3 %; smoke at 3, 8 and 15 s over 165
     lines of the two roofed stations, `blobs` 0.009 of the light at the middle, 0.903 at the 95th, the other side of the hiding bar on 13.9 %;
@@ -1353,6 +1413,40 @@ first system across (the game's own maths). No rule of play has changed and noth
   NOT DONE: never seen on a GPU, and nobody has played with a row on. No NETWORKED page was opened with an off word in a browser (the replay's page was;
   a client takes the same two steps, and a server with the rows on and a seat with them off agreed on 30 of 30 state words in one headless run by the
   multiplayer task). `tour` and `soak` were not run again after the review's mends.
+- **All on** (2026-11-04; the maintainer: "the plan is rust/wasm only", "let's get the rust merged asap and delete the typescript and we can always
+  look at git history if needed"). `RUST_ON` is now EVERY ROW BUT `maths`: lines, circles, fog, poses, dice, sight, light, smoke, sound, paths, doors,
+  falls, walk, props, slabs, items, rays. The bullet above is the list as it was the day before and why; this one is what stands.
+  THE TWO STANDS NO LONGER DIFFER IN A ROW OR IN THE MATHS. Until this step the frozen stand held every row off and played on the engine's own
+  `Math` (`EXACT.on` off), because every frozen digest was recorded so. But the rows that work lengths and angles out answer only under the game's own
+  maths, and the TypeScript behind them is going: a stand that cannot run the game the way it will be kept holds nothing. So `standup.ts pinMaths` and
+  `pinRust` put the game's own maths and the rows of `RUST_ON` on on BOTH stands, the `FROZEN_HOLDS` lines `EXACT.on` and `RUST.<row>` are gone, and the
+  frozen stand's pins that fold a run were recorded again, once (below).
+  THE STAND AS IT WAS RECORDED IS STILL ASKED FOR BY WORDS, in this step: `TPS_EXACT=0 TPS_RUST=0` in front of a frozen tool. `TPS_RUST=0` = every row
+  down unless its own word raises it (the page's `?rust=0`); `TPS_RUST<ROW>=0|1` = that one (`?rust<row>`). The deletions end that: with the TypeScript
+  twins gone a row cannot be put down, `?rust=0` does nothing and the old frozen stand cannot be raised.
+  A ROW IS STILL NEVER A RULE OF PLAY: the page's stand reads the digests it read (42 of 42 missions, seeds 1 and 2 of 21). What moved the frozen
+  stand's digests is the MATHS under it (the engine's sine against the game's own, in the last place), not a row.
+  NOT ALL OF IT IS CHEAPER YET. A row whose callers are TypeScript pays a crossing a question. Measured with nothing else running (`tickcost.ts --each
+  --list`, one round, five missions, a 4-core cloud box, this step's own head): a tick is 2.23 ms with lines, circles and fog alone and 2.14 ms with
+  every row on the frozen stand, 2.24 and 2.13 ms on the page's, every run the same to the bit; the same measurement taken twice differs by 1 %. The
+  rows are on because the game must be played the way it will be kept, not because each one pays today.
+  `SENSE.*` (gameplay smoke and light on the coarse CPU model) is a rule of play and is NOT part of this: off, as it was.
+  THE 42 (seeds 1 and 2 of 21 missions, `playthrough.ts` with digests), this step against the build before it: the page's stand 42 of 42 equal; the
+  frozen stand under `TPS_EXACT=0 TPS_RUST=0` 42 of 42 equal; the frozen stand as it now is, 30 equal and 12 on other words (no ending changes kind;
+  compound-four:2 is taken at 139.2 s where it was 153.8, barracks-four:1 at 144 for 143.4, mousehole-four:2 is wiped at 145.3 for 145.6).
+  WHAT WAS RECORDED AGAIN (the frozen stand):
+  - `tools/qa/fixtures/threshold-identity.json`: five of fourteen runs fold to other words, with the same endings at the same seconds; the other nine
+    read the words they had. Under `TPS_EXACT=0 TPS_RUST=0` the fixture as it was is still green.
+  - `tools/qa/slab-asitwas.ts`: the pin of the torn leaves follows its stand and keeps the recorded one askable (four levels' words).
+  CHECKS THAT STOOD ON A ROW BEING OFF were mended to say their own words: `simstate-check` (stands on no row by its own word), `sense-ident` and
+  `posemath-check` (put the rows of the copy down for their TypeScript arm: a red path had stopped going red once the lines' row was up by default),
+  `rust-check` (its `stand` section holds both stands to the one list, each row's own word, `TPS_RUST=0` and the stand as recorded; the torn leaves'
+  pin is read five ways: each stand by the module and by the TypeScript, and the frozen stand as recorded). `RUST_BREAK=1` is red for every section and row.
+  THE FAMILY SWEEPS (`probes.ts all-quick`, 424 probes, each stand): on the page's stand every failing line reads word for word what it read without
+  this step; on the frozen stand the one probe this step turned red is `threshold-identity`, recorded again as above.
+  THE PAGE (`rust-page.cjs`, headless Chromium on the software adapter; never seen on a GPU): `plain` and `systems` play with the seventeen rows up,
+  240 frames, the game in TypeScript to the bit; `nojit` still boots and plays with every row off. THE DAY THE TWINS GO, A PAGE WITH NO WEBASSEMBLY
+  CANNOT PLAY, and says so on a card instead.
 - **The data's layout** (2026-11-03; the maintainer: "we should also start changing our data layout to be more cache and simd friendly"). MEASURED
   FIRST, one blend of two 55-node poses in a module, an x86 cloud box, bun 1.4 | node 24: as it stood (ten singles a node, worked in doubles) 1334 |
   1391 ns · the same arithmetic over columns 1334 | 1390 · columns, two lanes of doubles, THE SAME BITS 1204 | 964 · doubles, the length a plain root

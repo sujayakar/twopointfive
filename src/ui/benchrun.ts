@@ -62,11 +62,7 @@ const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|sh
  *  asked on shows and the report's address says which. These words DO change the fight (the look's geometry is part of the level it plays): the first scene's
  *  page says so in the report's notes (main.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
  *  A word is judged decoded, as the page reads it, and carried as it was written */
-/** a word of the look page's own, as an address wrote it (scene/look.ts lookPageWord): the benchmark's scenes and a pricing run's pages (ui/pricerun.ts) carry the same */
-export const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
-/** the visitor's flags of an address that ride along a run's pages, as they were written: the benchmark's scenes carry them, and so does a run of any other
- *  kind (ui/pricerun.ts) — ONE list, so a flag that changes how the page is built or where its file goes is the same on both */
-export const carriedWords = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
+const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
 const flags = (search: string): string[] => { const q = new URLSearchParams(search), look = lookPageOn(q);
   const keep = search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p) || (look && lookWord(p)));
   return look ? [...keep, ...lookTrialsKept(q)] : keep; };
