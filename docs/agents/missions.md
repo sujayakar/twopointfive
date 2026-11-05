@@ -3031,3 +3031,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   The check's "rule off: a man is sent after every take" line now reads the same test at the take and, on a level that carries a lesson block with no man
   free, wants nobody sent and says so in the row. Any other level with nobody free is still a FAIL. Run: `probes.ts takecheck` ALL PASS on both stands
   (22 spots, that one row marked on the shipped stand); `TAKECHECK_BREAK=1` exits 1 on both. Headless only.
+- **Where these notes say the simulation reads a paint** (`paletteName`, `surfOf`, `breakClassOf`, `steelGrey`, `gwotSimOf`, a stand-in `gwotAs`
+  a hair off its row): since 2026-11-05 it reads the box's word (`src/scene/materials.ts`, `Box.does`), which every level file carries, and a paint
+  is any colour. `docs/agents/levels.md`, "What a box does is said in a word".

@@ -35,9 +35,9 @@ export async function passCheck(): Promise<boolean> {
   const { nvgPlaceLight } = await import(`${ROOT}/src/game/nvg.ts`);
   const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
   const { roofsOf } = await import(`${ROOT}/src/game/weather.ts`);
-  const { SNOW_PALETTE, gwotSimOf } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
-  const { paletteName, surfOf } = await import(`${ROOT}/src/game/particleFx.ts`);
-  const { steelGrey, breakClassOf } = await import(`${ROOT}/src/game/furnblast.ts`);
+  const { SNOW_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
+  const { doesOfName } = await import(`${ROOT}/src/scene/stuff.ts`);
+  const { doesOf, doesOfWord } = await import(`${ROOT}/src/scene/materials.ts`);
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   let ok = true;
@@ -91,12 +91,13 @@ export async function passCheck(): Promise<boolean> {
       line(open / n >= 1 / 3, `open sky: ${(100 * open / n).toFixed(0)} % of the ground inside the yard wall has no roof over it (a third or more)`); }
 
     // 5 — the paint
-    const reads = Object.entries(SNOW_PALETTE).map(([n, a]) => ({ n, sim: gwotSimOf(a), name: paletteName(a), surf: surfOf(a), steel: steelGrey(a), cls: breakClassOf(a) }));
+    const reads = Object.keys(SNOW_PALETTE).map(n => { const w = doesOfName(n), d = doesOfWord(w); return { n, word: w, surf: d.surf, steel: !!d.steel, cls: d.breaks, struct: !!d.struct, snow: d.snow }; });   // (what each snow paint's name says a box of it does: scene/stuff.ts PAINT_DOES, scene/materials.ts)
     const snowBoxes = boxes.map((b, i) => ({ b, i })).filter(({ i }) => groups[i]?.startsWith('snow.'));
-    const odd = snowBoxes.filter(({ b }) => !paintOf(b) && paletteName(b.albedo) !== 'asphalt');
-    line(reads.every(r => r.sim === 'asphalt' && r.name === 'asphalt' && r.surf === 'concrete' && !r.steel && r.cls === 'hard') && odd.length === 0 && snowBoxes.length > 100,
-      'the snow paints read as the ground to a round and a blast (asphalt → concrete, no steel cabinet), and every box of the snow groups wears one or bare earth',
-      `${reads.map(r => `${r.n}: ${r.sim} / ${r.surf}${r.steel ? ' STEEL' : ''}`).join(' · ')} · ${snowBoxes.length} snow boxes${odd.length ? ` · ${odd.length} in another paint` : ''}`);
+    const odd = snowBoxes.filter(({ b }) => !paintOf(b) && b.does !== 'tarmac');   // (bare earth: the ground's own word)
+    const unsaid = snowBoxes.filter(({ b }) => !!paintOf(b) && doesOf(b).snow !== paintOf(b));   // (a box in a snow paint says it is that snow)
+    line(reads.every(r => r.snow === r.n && r.struct && r.surf === 'concrete' && !r.steel && r.cls === 'hard') && odd.length === 0 && unsaid.length === 0 && snowBoxes.length > 100,
+      'the snow paints say they are the ground to a round and a blast (concrete, structure, no steel cabinet) and which snow they are, every box of the snow groups wears one or bare earth, and each in a snow paint says it is that snow',
+      `${reads.map(r => `${r.n}: ${r.word} / ${r.surf}${r.steel ? ' STEEL' : ''}`).join(' · ')} · ${snowBoxes.length} snow boxes${odd.length ? ` · ${odd.length} in another paint` : ''}${unsaid.length ? ` · ${unsaid.length} that do not say their snow` : ''}`);
 
     // 6 — feet
     const solid = (b: any) => !(b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass));

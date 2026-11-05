@@ -1,2 +1,3 @@
 # 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-cbcf310b1f0c923becf747473f2855d7a5b16e9b
+# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+f969dc661a31aa6204ea1c2baae57d8f57ce634e
