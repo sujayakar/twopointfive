@@ -43,7 +43,6 @@ import { crossesDoor, frameOf, dropToSearch } from './guards';
 import { placeLight, workLit } from './calmtorch';
 import { hourOf } from './hours';
 import { MORALE, trainingOf } from './morale';
-import { needsBusy } from './needs';
 import { foeDown } from './teams';
 import { w } from './words';
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
@@ -126,7 +125,7 @@ function fightWalk(g: Game, gd: Guard): 'chase' | 'seen' | 'other' {
 /** free to come to a mate, or to go in with one: his own man, calm or merely suspicious, not following a leader, holding a post or off on a need of his own,
  *  in no act of this file's */
 function canCome(g: Game, o: Guard): boolean {
-  if (!ours(o) || (o.state !== 'patrol' && o.state !== 'suspicious') || !own(g, o) || o.leader || o.post || needsBusy(o)) return false;
+  if (!ours(o) || (o.state !== 'patrol' && o.state !== 'suspicious') || !own(g, o) || o.leader || o.post || hasHim(o, OWN.needs)) return false;
   const So = stateOf.get(o); return !So || So.act === 'none';
 }
 function mind(gd: Guard): Fear {
