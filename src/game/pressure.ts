@@ -1,6 +1,6 @@
 // Defenders that PRESS a room their side has lost, come ROUND through a second door of it, and FALL BACK to fight again — the loud squad scenarios' harder
 // defenders, each behaviour behind its own switch and the whole of it behind `PRESSURE.on` (default OFF: nothing here runs, no die is drawn, and the room fight is
-// roomfight.ts exactly as it was — its three seams are `pressOwns` at the head of rally(), `pressTick` at the tail of tick() and `pressStop` in stop()).
+// roomfight.ts exactly as it was — its three seams are `OWN.press` at the head of rally(), `pressTick` at the tail of tick() and `pressStop` in stop()).
 //
 // Nothing here is more hit points, a faster trigger, a truer aim or a die on the outcome. It is the SAME men with the SAME senses doing something less dumb with
 // what they hear, and each thing they do says so first — one model for the picture and the AI: a call is `g.say` on their radio net (the '<callsign> (radio):'
@@ -12,7 +12,7 @@
 //    on, a fight at a post of his side's in another room is a thing he ACTS on for `memorySecs` after he heard it: after the same beat of his own (FIGHT_SKILL
 //    rally) he calls it ('they've hit the others — get in there!' / 'with you — moving!') and goes at it, the fight AI's man exactly as the stock rally's is.
 //    Who goes is situation, not dice: a lone garrison goes, a room of several leaves its farthest man at home, at most `maxMen` to a press. A man this file
-//    does not take is the stock rally's as before (`pressOwns`): the hook never leaves a man standing who would have gone.
+//    does not take is the stock rally's as before (`OWN.press`): the hook never leaves a man standing who would have gone.
 //    `gather` (off) is the other way to press, kept for A/B: they RUN to spots outside that room's doors, off their lines, hold them from outside ('hold the
 //    doors — let them come to us!') until a fight inside, the trap sprung at one door (`converge`) or `siegeSecs`, and go together on a word ('go — go — go!').
 //    One man by himself never goes in on that road: he holds the door from outside and says so. Measured: a formed-up push into a room four rifles hold LOSES
@@ -49,18 +49,19 @@ import { order, endGuardScript } from './squad';
 import { isHostile } from './teams';
 import { sideShotEnergy } from './glasspen';
 import { DIGIN, digInStays, digInSet, digInRefuge, digInPhase } from './digin';
-import { squadOwns, squadStaysIn, squadsLive } from './enemysquads';
+import { squadsLive } from './enemysquads';
 import { silentStep } from './silent';
-import { lastStandMan } from './laststand';
 import { bang } from './effects';
 import { DOORTOOLS } from './doortools';
 import { giveStuns, stunsOf, markDanger, dangerAt, dangerDoors } from './tactics';
 import { hearPath } from './weather';
 import { WORDS, wg } from './words';
-import { laneExposed, laneHolds, laneWarns } from './lanes';
+import { laneExposed, laneBars, laneKnownAt } from './lanes';
 import { teamTread } from './teampace';
 import { loadGait, loadHeard } from './kitload';   // (a teammate's card in the defenders' ears: his footfall as the mixer has it)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { word } from './belief';
 
 export const PRESSURE = {
   /** the master switch: off = none of this file runs */
@@ -294,6 +295,7 @@ interface State {
   stats: ReturnType<typeof newStats>;
 }
 const STATES = new SideMap<Game, State>('pressure.STATES');
+ownerWitness<Game>('press', (gd, g) => { if (!PRESSURE.on || !PRESSURE.press) return false; const st = STATES.get(g), D = g.fight.defs.find(X => X.gd === gd); return !!st && !!D && (st.of.has(D) || st.think.has(D)); });
 const stateOf = (g: Game): State => { let s = STATES.get(g); if (!s) { s = { presses: [], of: new Map(), outs: [], serial: 0, stale: false, think: new Map(), stay: new Map(), called: new Map(), stoodT: -100, sent: new Set(), doneAt: new Map(), last: new Map(), tried: new Map(), ear: new Map(), warn: null, told: new Map(), heard: [], evSeen: new SideSet(), marks: new Map(), bangs: new SideMap(), lastHeld: new Set(), word: null, swept: -Infinity, look: null, out: null, lookLost: false, lookT: -Infinity, stats: newStats() }; STATES.set(g, s); } return s; };
 
 /** PRESSURE.wayOut on a floor whose structure asks for it: the press forms up and holds the lost room's doors from back off them */
@@ -382,15 +384,20 @@ export function picketMarks<M extends { pos: Vec3; aimAt: Vec3; drill?: boolean 
 /** …and once he is spawned on it (nightbreach.ts): `room` = what picketMarks put on his mark */
 export function postPicket(gd: Guard, room: object) { PICKETS.set(gd, room as Room); }
 
-/** roomfight.ts rally() asks this first: true = this module has the man — he is in a press, on his beat toward one, or the one of his room who stays to keep
- *  it — so the stock walk-over-by-himself does not start. Anybody this module has NOT taken (a fight out on the open floor, the press switch off, a man it turned
- *  down) is the stock rally's exactly as before: the hook never leaves a man standing who would have gone. */
-export function pressOwns(g: Game, D: Def): boolean {
+/** WHO THE PRESS HAS (src/game/owner.ts): in a press, or on his beat toward one. Its lists change only inside its own tick, so the record is written as that tick ends */
+function pressSay(g: Game): void {
+  const st = PRESSURE.on && PRESSURE.press ? STATES.get(g) : undefined;
+  for (const gd of g.guards) { const D = st && g.fight.defs.find(X => X.gd === gd); if (st && D && (st.of.has(D) || st.think.has(D))) claimMan(gd, OWN.press, g.time); else releaseMan(gd, OWN.press, g.time); }
+}
+/** AND WHOM IT KEEPS AT HOME, worked out as it is asked because it turns on what changes between its ticks (who is still alive, what he has just heard): the last of them alive (PRESSURE.lastHolds: nobody is left to go to,
+ *  and the other askers read it the same way and lose nothing: no mate is alive to call him (buddy.ts), laststand.ts leaves him be, and cues.ts gives no 'staying' word to an empty net), everybody while a report is stood to, and
+ *  the man who stays to keep his room. Whoever the press has not taken or kept (a fight out on the open floor, the press switch off, a man it turned down) is the stock rally's exactly as before.
+ *  STOOD TO, NOBODY WALKS OFF TO A REPORT BY HIMSELF, AND WITH `standPress` THE STOCK WALK'S CLOCK DOES NOT RUN ON UNDER IT: that happens as he is asked. `stopClock` false: the asker only wants the word (powerout.ts, darkfoe.ts) */
+export function pressKeepsHome(g: Game, D: Def, stopClock = true): boolean {
   if (!PRESSURE.on || !PRESSURE.press) return false;
   const st = stateOf(g);
-  if (st.of.has(D) || st.think.has(D)) return true;
-  if (lastAlone(g.fight, D)) return true;   // (PRESSURE.lastHolds: nor does the stock rally walk him off — nobody is left to go to. The other askers of this read it the same way and lose nothing: no mate is alive to call him (buddy.ts), laststand.ts leaves him be, and cues.ts gives no 'staying' word to an empty net)
-  if (awaiting(st)) { if (PRESSURE.standPress) D.rallyAt = NaN; return true; }   // (stood to: nobody walks off to a report by himself — and with standPress the stock walk's clock does not run on under it)
+  if (lastAlone(g.fight, D)) return true;
+  if (awaiting(st)) { if (stopClock && PRESSURE.standPress) D.rallyAt = NaN; return true; }
   const keep = st.stay.get(D); return !!keep && aim(st, g.fight, D)?.T === keep && staysHome(g.fight, st, D);
 }
 /** digin.ts asks this before a man starts on his room: true = he is in a press or on his beat toward one (the press has him first; the man LEFT to keep a room
@@ -571,7 +578,7 @@ export function loose(g: Game, D: Def, at: Vec3) {
   const gd = D.gd;
   if (gd.script) endGuardScript(gd, 'alert');
   D.mode = 'free'; D.freeAt = g.time; D.rallyAt = NaN; gd.hold = false; gd.pinned = false;
-  gd.state = 'alert'; gd.awareness = Math.max(gd.awareness, 0.92); if (g.time - gd.lastSeenT > 1) gd.lastKnown = v3.copy(at); gd.path = []; gd.pathGoal = null;
+  gd.state = 'alert'; gd.awareness = Math.max(gd.awareness, 0.92); if (g.time - gd.lastSeenT > 1) word(g, gd, at); gd.path = []; gd.pathGoal = null;
 }
 /** a man on a scripted leg files his own boots (the fight AI's men do it in guards.ts; a script's tread is sound only), so the team's ears get them */
 export function boots(g: Game, gd: Guard, last: number): number {
@@ -608,9 +615,9 @@ function consider(g: Game, F: RoomFight, st: State, D: Def) {
   const ok0 = D.mode === 'hold' && !st.of.has(D) && (D.noiseOut || !!picketHears(F, D)) && !gd.held && D.rallyAt !== Infinity && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil
     && g.time - D.noiseT < PRESSURE.memorySecs && g.time - gd.lastSeenT > 3
     && g.time - (st.doneAt.get(D) ?? -100) > PRESSURE.againSecs && !st.outs.some(o => o.def === D)
-    && !lastStandMan(g, gd)                // (laststand.ts, default off: a man of the last stand is not the press's)
-    && !laneHolds(g, gd, D.noiseAt)        // (lanes.ts: held short of a covered lane, and this fight is at its guns — he keeps its mouth)
-    && !squadOwns(g, gd)                   // (enemysquads.ts: on a squads level who leaves his room for a fight elsewhere is his squad's call)
+    && !hasHim(gd, OWN.stand)                // (laststand.ts, default off: a man of the last stand is not the press's)
+    && !laneBars(g, gd, D.noiseAt)        // (lanes.ts: held short of a covered lane, and this fight is at its guns — he keeps its mouth)
+    && !hasHim(gd, OWN.squad)                   // (enemysquads.ts: on a squads level who leaves his room for a fight elsewhere is his squad's call)
     && !(DIGIN.on && digInStays(g, gd));   // (digin.ts's reach rule: the fight is too far for him to join in time — his room is his job, and he digs in)
   // PRESSURE.lastHolds: the last of them alive has no others to go to, and nobody on the net to call — he keeps his room (counted once, the first time he would have gone)
   const ok = ok0 && !lastAlone(F, D);
@@ -841,8 +848,8 @@ function lastMan(g: Game, F: RoomFight, st: State, D: Def) {
   const ok = D.mode === 'hold' && !st.of.has(D) && D.room && D.room.cells.size <= ROOM_CELLS && !gd.held && !(D.lostAt > g.time) && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil
     && g.time - D.movedAt > 6 && g.time - (st.tried.get(D) ?? -100) > 6 && !st.outs.some(o => o.def === D)
     && !F.defs.some(X => X !== D && alive(X) && X.room === D.room && X.mode !== 'free')
-    && !squadStaysIn(g, gd)    // (enemysquads.ts: a squad told to stay in its rooms — mayLeave false — gives none up)
-    && !lastStandMan(g, gd);   // (laststand.ts: nor does a man of the last stand)
+    && !gd.staysInRooms    // (enemysquads.ts: a squad told to stay in its rooms — mayLeave false — gives none up)
+    && !hasHim(gd, OWN.stand);   // (laststand.ts: nor does a man of the last stand)
   if (!ok) { st.last.delete(D); return; }
   const R = D.room!; let why: 'seen' | 'door' | null = null, threat: Vec3 = gd.sightPos, shut = -1;
   if (gd.state === 'alert' && g.time - gd.lastSeenT < 1.5) {
@@ -1026,7 +1033,7 @@ function goLook(g: Game, F: RoomFight, st: State) {
   const w = st.word; if (!w || st.lookLost) return;
   const dug = (D: Def) => { const ph = digInPhase(g, D.gd); return ph !== 'idle' && ph !== 'set'; };   // (on his way to cover or at a door with a wedge: busy. Set on his door, he has done getting ready)
   const free = (D: Def) => alive(D) && D.mode === 'hold' && !st.of.has(D) && !D.gd.held && D.rallyAt !== Infinity && g.time >= D.gd.dazzledUntil && g.time >= D.gd.staggerUntil
-    && !st.outs.some(o => o.def === D) && !lastStandMan(g, D.gd) && !squadOwns(g, D.gd) && !dug(D) && !laneHolds(g, D.gd, w.p) && !laneWarns(g, D.gd, w.p);
+    && !st.outs.some(o => o.def === D) && !hasHim(D.gd, OWN.stand) && !hasHim(D.gd, OWN.squad) && !dug(D) && !laneBars(g, D.gd, w.p) && !laneKnownAt(g, D.gd, w.p);
   const L = st.look;
   if (L) {
     if (w.t > L.w || !L.men.every(free)) { st.look = null; st.stats.lookOff++; if (w.t <= L.w) st.swept = -Infinity; return; }   // (word of them in the beat, or a man of the pair taken: nobody goes on the old call — the next quiet spell is its own)
@@ -1053,7 +1060,8 @@ function goLook(g: Game, F: RoomFight, st: State) {
 }
 
 /** once a frame from RoomFight.tick, after the defenders' and the teammates' own ticks */
-export function pressTick(g: Game, F: RoomFight, _dt: number) {
+export function pressTick(g: Game, F: RoomFight, dt: number) { stepPress(g, F, dt); pressSay(g); }
+function stepPress(g: Game, F: RoomFight, _dt: number) {
   // (THE KIT IS ITS OWN LEVER — difficulty.ts `kit`: what a defender carries is handed out whether or not the press is on. With the press off nobody is sent at
   // a door charge first; a man with one uses it where the doorway drill has him go in by a door his side holds dangerous — tactics.ts)
   if (PRESSURE.stuns > 0) { for (const D of F.defs) if (!KITTED.has(D.gd)) { KITTED.add(D.gd); giveStuns(D.gd, PRESSURE.stuns); } }
@@ -1073,6 +1081,7 @@ export function pressTick(g: Game, F: RoomFight, _dt: number) {
 /** the fight is over (RoomFight.stop): every press forgotten. The counts stay for whoever reads them after the run; a new fight starts them again. */
 export function pressStop(g: Game) {
   const st = STATES.get(g); if (!st) return;
+  for (const gd of g.guards) releaseMan(gd, OWN.press, g.time);
   st.presses = []; st.of.clear(); st.outs = []; st.think.clear(); st.stay.clear(); st.called.clear(); st.stoodT = -100; st.sent.clear(); st.doneAt.clear(); st.last.clear(); st.tried.clear(); st.ear.clear(); st.warn = null; st.told.clear(); st.heard = []; st.marks.clear(); st.lastHeld.clear(); st.word = null; st.swept = -Infinity; st.look = null; st.out = null; st.lookLost = false; st.lookT = -Infinity; st.stale = true;
 }
 /** the counts of this run (tools/qa/playthrough.ts files them per run), with the stock room fight's own beside them */

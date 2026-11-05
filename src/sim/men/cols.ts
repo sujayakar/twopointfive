@@ -13,13 +13,13 @@ export const MEN_GEN = 132;
 /** what every man is: which store his columns are in and his row. Character and Guard extend these, so a column reads as a field */
 export class ManCols {
   S!: MenStore; r = -1;
-  /** which rule has him (0: nobody) */
+  /** a bit for each rule with a hand on him, the highest set has him (0: nobody): src/game/owner.ts */
   get owner(): number { const S = this.S; return S.u[S.b4 + 196 + this.r]; } set owner(v: number) { const S = this.S; S.u[S.b4 + 196 + this.r] = v; }
-  /** how hard that rule holds him against another */
+  /** the place of that top bit in the ranks (1 the weakest, 0 nobody): who is shown as having him, never who may take him */
   get rank(): number { const S = this.S; return S.u[S.b4 + 260 + this.r]; } set rank(v: number) { const S = this.S; S.u[S.b4 + 260 + this.r] = v; }
-  /** why it has him */
+  /** which of the top rule's reasons it gave */
   get reason(): number { const S = this.S; return S.u[S.b4 + 324 + this.r]; } set reason(v: number) { const S = this.S; S.u[S.b4 + 324 + this.r] = v; }
-  /** the game time it took him */
+  /** the game time the claim now on top came to the top (a lower claim surfacing counts from then) */
   get since(): number { const S = this.S; return S.d[S.b8 + 2 + this.r]; } set since(v: number) { const S = this.S; S.d[S.b8 + 2 + this.r] = v; }
 }
 /** a Guard record's own columns (a guard, a teammate, a civilian) */

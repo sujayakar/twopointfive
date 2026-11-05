@@ -48,6 +48,7 @@ import type { DoorContact } from './doors';
 import type { Character } from './character';
 import { hearPath, airTrans } from './weather';
 import { simRandom, mulberry32, rollOn } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { word } from './belief';
 
 // ================================================================ authored spots (TODO(LevelData): the phones and the ways off the floor belong in the level file beside the
 // civilians block — like qrf.ts QRF_MARKS / needs.ts NEED_SPOTS they are checked headlessly against levels/office.json: free nav cells, reachable from every civilian's marks)
@@ -876,7 +877,7 @@ function toReport(g: Game, gd: Guard, o: Guard) {
 /** a man about to be told / rung about a spot: off whatever calm thing he was on, suspicious toward it, rooted for `beat` seconds (no 'huh?': she is the huh) */
 function primeGuard(g: Game, o: Guard, pos: Vec3, beat: number) {
   if (o.state === 'dead' || o.held || o.state === 'alert') return;
-  o.awareness = Math.max(o.awareness, 0.5); o.lastKnown = v3.copy(pos);
+  o.awareness = Math.max(o.awareness, 0.5); word(g, o, pos);
   if (o.state === 'patrol') { o.state = 'suspicious'; o.searchT = 0; o.bodyDuty = null; }
   o.reactT = Math.max(o.reactT, beat); o.path = []; o.pathGoal = null; o.stallRef = null;
 }
@@ -898,7 +899,7 @@ function deliverReport(g: Game, gd: Guard, o: Guard, how: 'told' | 'found') {
   const C = gd.civ!; if (C.reported) return;
   C.reported = true; C.reportTo = o; CIV_STATS.reports++;
   const pos = C.causePos ?? gd.char.pos; const armed = C.armed || C.cause === 'body';
-  o.awareness = Math.max(o.awareness, armed ? 0.8 : 0.55); o.lastKnown = v3.copy(pos); o.bodyDuty = null; o.task = null; o.path = []; o.pathGoal = null; o.stallRef = null;
+  o.awareness = Math.max(o.awareness, armed ? 0.8 : 0.55); word(g, o, pos); o.bodyDuty = null; o.task = null; o.path = []; o.pathGoal = null; o.stallRef = null;
   if (armed) { o.state = 'search'; o.searchT = 0; o.searchPlan = null; o.reactT = 0.6; }
   else { if (o.state === 'patrol' || o.state === 'suspicious') { o.state = 'suspicious'; o.searchT = 0; } o.reactT = 0.9; }
   o.trackFix(g.time);
@@ -1154,7 +1155,7 @@ function guardsNotice(g: Game, dt: number) {
         if (!heard && !seen) continue;
         C.told.set(o, C.alarmN); CIV_STATS.noticed++;
         const from = C.causePos ?? c.pos;
-        o.awareness = Math.max(o.awareness, 0.5); if (!o.lastKnown || o.state === 'patrol') o.lastKnown = v3.copy(from);
+        o.awareness = Math.max(o.awareness, 0.5); if (!o.lastKnown || o.state === 'patrol') word(g, o, from);
         if (o.state === 'patrol') { o.state = 'suspicious'; o.searchT = 0; o.reactT = Math.max(o.reactT, 0.7); o.path = []; o.pathGoal = null; o.stallRef = null; }
         if (!(o.bubble && g.time - o.bubble.t < 1.5)) say(g, o, seen ? `${C.name}? — hey. HEY. what is it —` : `— that was ${C.name} —`);
         log(g, cv, `${o.callsign} ${heard ? 'heard her' : 'saw her running'} (${d.toFixed(1)} m) → looks toward (${from[0].toFixed(1)}, ${from[2].toFixed(1)})`);
@@ -1190,7 +1191,7 @@ function foundDown(g: Game, cv: Guard, o: Guard) {
   chronicle(g, 'bodyFound', { who: C.name, by: o.callsign, breathing: !dead, civilian: true }, body);
   o.witness.sawBody = { victim: C.name, t: g.time, breathing: !dead };
   if (!o.script) {   // (a man on a drill calls her in and keeps his place in it: squad.ts / qrf.ts own his feet)
-    o.awareness = Math.max(o.awareness, 0.7); o.lastKnown = v3.copy(body); o.reactT = 1.2; o.bodyDuty = null; o.task = null; o.path = []; o.pathGoal = null;
+    o.awareness = Math.max(o.awareness, 0.7); word(g, o, body); o.reactT = 1.2; o.bodyDuty = null; o.task = null; o.path = []; o.pathGoal = null;
     if (o.state === 'patrol' || o.state === 'search') { o.state = 'suspicious'; o.searchT = 0; o.searchPlan = null; o.pieing = null; }   // (a searcher's plan and his doorway go with the search: this runs after his own update, which would only drop them a frame late)
   }
   say(g, o, fill(g, cv, dead ? CIV_LINES.foundDown.dead : away(g) ? wg(CIV_LINES.guide.own.foundCold, CIV_LINES.own.foundCold) : CIV_LINES.foundDown.cold, o), true); g.audio.play('radio', o.char.bones.head ?? o.char.pos, 0.9);

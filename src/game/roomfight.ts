@@ -46,7 +46,7 @@ import type { Game, Guard, Foe } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
 import { teamFight, teamSprinting } from './teampace';   // (read inside methods only)
-import { canSee, canSeeChar, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, onLitMan, eyeBlocked } from './guards';
+import { canSee, canSeeChar, eyesOn, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, gunOnLitMan, eyeBlocked } from './guards';
 import { order, endGuardScript } from './squad';
 import { fireWeapon } from './combat';
 import { squadSkill, squadDrill } from './enemysquads';   // (hard on a squads level: the defenders' row as a drilled garrison has it — the same object otherwise)
@@ -57,19 +57,17 @@ import { AIM } from './aim';
 import { BLIND } from './nightbreach';
 import { DIGIN, digInTick, digInStays, digInReset, digInBraced, digInLook } from './digin';
 import { wallReactLook } from './wallreact';
-import { squadsLive, squadOwns, squadStaysIn, squadRally } from './enemysquads';
-import { PRESSURE, pressOwns, pressTick, pressStop, run as pressRun, charge as pressCharge } from './pressure';
-import { buddyTick, buddyStop, buddyOwns } from './buddy';
-import { silentHolds, silentGlassHolds } from './silent';
-import { pairHolds, pairPasses } from './pairorders';
+import { squadsLive, squadRally } from './enemysquads';
+import { PRESSURE, pressTick, pressStop, pressKeepsHome, run as pressRun, charge as pressCharge } from './pressure';
+import { buddyTick, buddyStop, buddyPaired } from './buddy';
+import { pairPasses } from './pairorders';
 import { workPasses } from './workthings';
-import { spottedHolds, spottedKeen } from './spotted';
+import { spottedKeen } from './spotted';
 import { coverSeen, coverOp } from './coverfire';
-import { lastStandTick, lastStandStop, lastStandMan, lastStandOwns } from './laststand';
-import { moraleOwns } from './morale';
-import { runnerOwns, runnerFled } from './runner';
-import { netQuietLook, netQuietHolds } from './netquiet';
-import { laneHolds, laneWarns, laneThrows } from './lanes';
+import { lastStandTick, lastStandStop } from './laststand';
+import { netQuietLook } from './netquiet';
+import { laneBars, laneThrows, laneKnownAt } from './lanes';
+import { BELIEF, cover, eyesFix, uncover, word } from './belief';
 import { shotEnergy } from './glasspen';
 import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
@@ -82,6 +80,8 @@ import { friendInCone, ffHeld } from './friendlyfire';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a spared teammate on his knee stops no defender on the move: asked inside tickMove only)
+import { hasHim, OWN } from './owner';
+import { silentHoldsGlass, roundHeld } from './silent';
 
 /** The module's switches and the few numbers that are not a side's. */
 /** the check's own break word (tools/qa coverkeep-probes.ts): the cover rule's switch reads on and the rule does nothing */
@@ -300,7 +300,7 @@ interface Def {
   staged?: boolean;
   /** evidence per entry of `room`; the entry watched (−1 = home), the one he is coming round to and when, the wandering eye */
   ev: number[]; watch: number; want: number; wantAt: number; glanceTo: number; glanceUntil: number; glanceNext: number;
-  /** what he watches, on the floor — the ONE object written into his fix (lastKnown === pt ⇒ the fix is this module's, anything else is his senses') */
+  /** what he watches, on the floor — the ONE object written into his fix (lastKnown === pt ⇒ the fix is this module's, anything else is his senses'); with BELIEF on it is what he covers and is never in his fix */
   pt: Vec3;
   heardT: number; cnt: { shots: number; kick: number; bang: number; small: number }; noiseAt: Vec3 | null; noiseT: number; noiseOut: boolean;
   lastState: string; lastSeen: number; fixKeep: number; pre: boolean;
@@ -313,7 +313,7 @@ interface Def {
 }
 /** how long a man held for the glass stays passed over for anybody else his teammate may shoot (the scoring in tickOp; re-stamped every frame the hold lasts) */
 const GLASS_LOOK = 4;
-interface Meter { m: number; seenT: number; /** when he last held a round at this man for the standing glass in the way (silent.ts silentGlassHolds; unset = never) */ glassT?: number }
+interface Meter { m: number; seenT: number; /** when he last held a round at this man for the standing glass in the way (silent.ts silentHoldsGlass; unset = never) */ glassT?: number }
 interface Op {
   gd: Guard; meters: Map<Guard, Meter>;
   tgt: Guard | null; turn: { to: Guard; at: number; until: number; pt?: Vec3 | null; t0?: number; door?: Door | null } | null; pass: { h: Guard; until: number; noShot?: boolean } | null; kept: { h: Guard; track: number; t: number } | null; track: number; pre: boolean; readyAt: number; n: number; next: number; lostAt: number; fell?: boolean; first: boolean;
@@ -611,9 +611,9 @@ export class RoomFight {
     const g = this.g, gd = D.gd;
     gd.skill = FIGHT_SKILL.hostile;
     if (gd.held) { this.blind(D, k); return; }             // in Sam's arm: nothing of his is his own (the burst's clock still runs: its turns are lost, not kept)
-    if (moraleOwns(gd)) return;                            // morale.ts (false with its switch off): a blast has him ducked or broken — that file's sequence has his body and his rounds until it lets him go
-    if (runnerOwns(gd)) return;                            // runner.ts (false with its switch off): he has said he is done — dropping it, running, gone: nothing of the fight's is his
-    if ((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
+    if (hasHim(gd, OWN.morale)) return;                            // morale.ts (false with its switch off): a blast has him ducked or broken — that file's sequence has his body and his rounds until it lets him go
+    if (hasHim(gd, OWN.runner)) return;                            // runner.ts (false with its switch off): he has said he is done — dropping it, running, gone: nothing of the fight's is his
+    if ((DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
     if (D.mode === 'move') { this.tickMove(D, dt); return; }
     if (D.mode === 'free') { this.tickFree(D); return; }
     if (gd.script && g.director?.lessonRuns) { D.staged = true; return; }   // a staged moment of a tutorial mission's own script has him (director.ts lessonRuns): his body is its, and he stays this roster's man
@@ -640,18 +640,18 @@ export class RoomFight {
     const k = Math.exp(-dt / ROOMFIGHT.evidenceSecs * Math.log(3)); for (let i = 0; i < D.ev.length; i++) D.ev[i] *= k;
     if (H.lastT > D.heardT) {
       const loud = H.shots > D.cnt.shots || H.kick > D.cnt.kick || H.bang > D.cnt.bang;
-      const fix = gd.lastKnown && gd.lastKnown !== D.pt ? gd.lastKnown : null;   // where his own ears put it (hearingCheck's write this frame)
+      const fix = BELIEF.on ? H.loudAt : gd.lastKnown && gd.lastKnown !== D.pt ? gd.lastKnown : null;   // where his own ears put it (hearingCheck)
       const at = loud ? fix ?? D.noiseAt : H.small > D.cnt.small && H.smallWhere ? H.smallWhere : fix;
       if (at) {
         const e = this.entryToward(D, at); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + (loud ? 1 : 0.45));
         if (loud) { D.noiseAt = v3.copy(at); D.noiseT = g.time; D.noiseOut = !this.inRoom(D.room, at); D.glanceUntil = -1; }
         if (H.kick > D.cnt.kick && e >= 0 && flat(E[e].at, at) < 2.5 && g.time >= gd.dazzledUntil) {   // a door of HIS room booted in: the flinch (FIGHT_SKILL startle)
-          const S = FIGHT_SKILL.hostile; if (S.startle[1] > 0 && !((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && digInBraced(g, gd, E[e].door))) { gd.reactT = Math.max(gd.reactT, pick(S.startle) * (this.drilled() ? DRILLED.shaken : 1)); this.stats.startled++; this.note(gd, `flinches: ${E[e].door.def.name} booted in`); } }
+          const S = FIGHT_SKILL.hostile; if (S.startle[1] > 0 && !((DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) && digInBraced(g, gd, E[e].door))) { gd.reactT = Math.max(gd.reactT, pick(S.startle) * (this.drilled() ? DRILLED.shaken : 1)); this.stats.startled++; this.note(gd, `flinches: ${E[e].door.def.name} booted in`); } }
         this.note(gd, `heard ${loud ? 'loud' : 'small'} → ${e >= 0 ? E[e].door.def.name : 'nowhere'}`);
       }
       D.heardT = H.lastT; D.cnt = { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small };
     }
-    if (g.time - gd.lastSeenT < 0.3 && gd.lastKnown && gd.lastKnown !== D.pt) { const e = this.entryToward(D, gd.lastKnown); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1.2 * dt); }   // an enemy in his sight: the way he came is the way to fear
+    const seen = g.time - gd.lastSeenT < 0.3 ? eyesFix(gd, D.pt) : null; if (seen) { const e = this.entryToward(D, seen); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1.2 * dt); }   // an enemy in his sight: the way he came is the way to fear
   }
   /** runner.ts (called only with its switch on): a man of his own side has run in and TOLD him where they are — what evidence() does for a loud noise his own
    *  ears put there: the entry that way is the one to fear, the noise record reads the place, and whatever glance he was on ends. False = no post of this file's */
@@ -659,6 +659,7 @@ export class RoomFight {
     const D = this.defs.find(X => X.gd === gd); if (!D) return false;
     const e = this.entryToward(D, at); if (e >= 0) D.ev[e] = Math.min(3, D.ev[e] + 1);
     D.noiseAt = v3.copy(at); D.noiseT = this.g.time; D.noiseOut = !this.inRoom(D.room, at); D.glanceUntil = -1;
+    if (BELIEF.on) word(this.g, gd, at);
     return true;
   }
   private entryToward(D: Def, at: Vec3): number {
@@ -689,14 +690,14 @@ export class RoomFight {
     const g = this.g, gd = D.gd, c = gd.char, S = FIGHT_SKILL.hostile, E = D.room?.entries ?? [];
     const e = g.time < D.glanceUntil ? D.glanceTo : D.watch; const tgt = e >= 0 && E[e] ? E[e].at : D.home;
     D.pt[0] = tgt[0]; D.pt[1] = 0; D.pt[2] = tgt[2];
-    if (DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) digInLook(g, gd, D.pt);                  // digin.ts: dug in off a door's line, his gun rests on the floor they must cross
+    if (DIGIN.on || squadsLive(g) || hasHim(gd, OWN.stand)) digInLook(g, gd, D.pt);                  // digin.ts: dug in off a door's line, his gun rests on the floor they must cross
     if (g.rescue?.active) g.rescue.crewLook(gd, D.pt);     // rescue.ts, Hard's crew: a man with a line of fire to the hostage door's outside rests his gun there
     netQuietLook(gd, D.pt);                                // netquiet.ts (a return on its first line with its switch off): the last man low on his spot watches the arc his doors sit in; a jumpy man has the noise he has just heard
     wallReactLook(g, gd, D.pt);                            // wallreact.ts: a port or a hole in a wall that he knows of and has more against than that door takes his gun (a return on its first line with nothing broken)
     if (gd.state === 'patrol') { c.bodyYaw = approachAngle(c.wantBody, v3.yawTo(c.pos, D.pt), S.turn * dt); return; }   // (wantBody: his body yaw — or, turning under weight (character.ts TURN), where this easing left it)
-    if (g.time - gd.lastSeenT < 0.6) return;               // eyes on a man: the fix is the man, and the fight AI's
-    if (gd.lastKnown !== D.pt && g.time - gd.sightT < 1 && gd.lastKnown && this.inRoom(D.room, gd.lastKnown)) D.fixKeep = g.time + 3;   // he has just lost a man INSIDE the room: that spot is covered a while before the doors are
-    if (g.time >= D.fixKeep) gd.lastKnown = D.pt;
+    if (g.time - gd.lastSeenT < 0.6) { uncover(gd); return; }   // eyes on a man: the fix is the man, and the fight AI's
+    const seen = eyesFix(gd, D.pt); if (seen && g.time - gd.sightT < 1 && this.inRoom(D.room, seen)) D.fixKeep = g.time + 3;   // he has just lost a man INSIDE the room: that spot is covered a while before the doors are
+    if (g.time >= D.fixKeep) cover(gd, D.pt); else uncover(gd);
   }
   /** the untrained man's beats: slower off the mark, slower still when the man shows where he was not looking */
   private reactions(D: Def) {
@@ -725,7 +726,7 @@ export class RoomFight {
       B.until = h.dazzledUntil; B.n = 0; B.next = g.time + BLIND.after + k * BLIND.stagger; B.broke = simRandom() < S.bangBreak; B.daze = S.daze[1] > 0 ? pick(S.daze) * (this.drilled() ? DRILLED.shaken : 1) : 0;
       if (B.broke) { this.stats.broke++; this.note(h, 'breaks under the bang'); }
     }
-    if (!h.held) h.lastKnown = D.pt;
+    if (!h.held) cover(h, D.pt);
     if (B.broke) { if (g.tune.suppression) h.sup.downT = Math.max(h.sup.downT, 0.2); return; }   // head down (suppression.ts headDown: crouched, gun lowered) for as long as he cannot see
     if (!this.blindFire || B.n >= BLIND.rounds || g.time < B.next) return;
     B.n++; B.next = g.time + gunBlindGap(h, BLIND.every);   // (gunroles.ts: a dealt pistol fires at a pistol's rate; BLIND.every with its switch off)
@@ -790,7 +791,7 @@ export class RoomFight {
   private breakOff(D: Def) {
     const g = this.g, gd = D.gd, c = gd.char, nav = g.col.nav; const threat = this.threatOf(D);
     D.movedAt = g.time;
-    const stays = lastStandOwns(g, D);   // (laststand.ts, default off: a man of the last stand gives his room up through no door — cover inside it)
+    const stays = hasHim(D.gd, OWN.stand);   // (laststand.ts, default off: a man of the last stand gives his room up through no door — cover inside it)
     const rp = stays ? null : squadRally(g, gd, threat);   // enemysquads.ts: his squad's rally point in another of its rooms, when he can get there (no squads: null on its first line)
     if (rp) {
       pressRun(g, D, rp, null, 0.3);   // (pressure.ts's leg on a script: the move this file's own fall-back makes, with no door behind him to hold)
@@ -811,7 +812,7 @@ export class RoomFight {
       return L > 18 || toward || flat(q, spot) > 0.8 ? null : L;
     };
     const here = ask ? ask(c.pos) : 0;
-    (stays || squadStaysIn(g, gd) ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
+    (stays || gd.staysInRooms ? [] : D.room?.entries ?? []).forEach((e, i) => {   // (a squad whose men stay in its rooms gives none up through a door: cover)
       if (D.ev[i] > 0.3 || flat(e.at, threat) < 3 || e.door.def.steel || g.doors.lockedOut(e.door, c.pos)) return;
       // a spot beyond the door, off its line (to either side of the opening) so the doorway is his to shoot into and not to stand in
       const F = frameOf(e.door); let spot: Vec3 | null = null, safe: Vec3 | null = null;
@@ -862,7 +863,7 @@ export class RoomFight {
     }
     if (contact) {
       const fc = contact === 'player' ? facedView(g, gd).player.char : contact.char;
-      gd.foe = contact; gd.aim.clear(); this.plant(D, 'contact'); gd.awareness = 1; gd.reactT = pick(S.react); gd.lastKnown = v3.copy(fc.pos); gd.sightPos = v3.copy(fc.pos); gd.sightT = g.time; gd.lastSeenT = g.time;
+      gd.foe = contact; gd.aim.clear(); this.plant(D, 'contact'); gd.awareness = 1; gd.reactT = pick(S.react); eyesOn(g, gd, fc.pos);
       return;
     }
     if (flat(c.pos, D.stallAt) > 0.4) { D.stallAt = v3.copy(c.pos); D.stallT = 0; } else D.stallT += dt;
@@ -876,7 +877,7 @@ export class RoomFight {
     const gd = D.gd, fix = gd.lastKnown;
     D.moveKind = 'fallback'; D.cameBy = null; D.rallyAt = NaN;
     this.plant(D, 'stands and fights');
-    if (fix && fix !== D.pt) { gd.lastKnown = fix; if (set) { D.pt[0] = fix[0]; D.pt[2] = fix[2]; } }
+    if (fix && fix !== D.pt) { gd.lastKnown = fix; uncover(gd); if (set) { D.pt[0] = fix[0]; D.pt[2] = fix[2]; } }
     D.lastState = gd.state; if (!set) D.lastSeen = gd.lastSeenT;
   }
   /** lanes.ts: a man whose way lies down a lane his side knows is covered stops short of it — where he stands is his post now, his gun on `look` (where the
@@ -886,7 +887,7 @@ export class RoomFight {
     D.moveKind = 'fallback'; D.cameBy = null; D.rallyAt = NaN;
     this.plant(D, 'a covered lane ahead');
     if (D.room) D.ev = D.room.entries.map(() => 0);
-    D.watch = D.want = -1; D.home = [look[0], 0, look[2]]; D.pt[0] = look[0]; D.pt[1] = 0; D.pt[2] = look[2]; gd.lastKnown = D.pt;
+    D.watch = D.want = -1; D.home = [look[0], 0, look[2]]; D.pt[0] = look[0]; D.pt[1] = 0; D.pt[2] = look[2]; cover(gd, D.pt);
     return true;
   }
   /** where he has got to is his post now: held and pinned there, roused, watching the door he came through (or the way the trouble was) */
@@ -899,7 +900,7 @@ export class RoomFight {
     const e = through && D.cameBy && D.room ? D.room.entries.findIndex(x => x.door === D.cameBy) : this.entryToward(D, threat);
     if (e >= 0 && (D.moveKind === 'fallback' || !through)) { D.ev[e] = Math.max(D.ev[e], 1.5); D.watch = D.want = e; }
     D.home = e >= 0 && D.room ? v3.copy(D.room.entries[e].at) : [threat[0], 0, threat[2]];
-    D.pt[0] = D.home[0]; D.pt[1] = 0; D.pt[2] = D.home[2]; gd.lastKnown = D.pt;
+    D.pt[0] = D.home[0]; D.pt[1] = 0; D.pt[2] = D.home[2]; cover(gd, D.pt);
     if (D.moveKind === 'cover' && g.tune.suppression) gd.sup.downT = Math.max(gd.sup.downT, 1.0);   // into cover: a breath with his head down before he looks again
     this.note(gd, `plants (${why}) room ${D.room?.id ?? '-'} watching ${e >= 0 && D.room ? D.room.entries[e].door.def.name : 'the threat'}`);
   }
@@ -907,13 +908,13 @@ export class RoomFight {
   private rally(D: Def) {
     const g = this.g, gd = D.gd, S = FIGHT_SKILL.hostile;
     if (!ROOMFIGHT.rally || !D.noiseAt) return;
-    if (squadOwns(g, gd)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
-    if (pressOwns(g, D)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
+    if (hasHim(gd, OWN.squad)) return;  // (enemysquads.ts: a squad's man goes to another squad's fight on his squad's word, not his own)
+    if (hasHim(gd, OWN.press) || pressKeepsHome(g, D)) return;   // (pressure.ts, off by default: with it on he forms up outside that room with the others instead of walking over by himself)
     if (DIGIN.on && digInStays(g, gd)) return;             // digin.ts: digging in, he holds his room
-    if (laneHolds(g, gd, D.noiseAt) || laneWarns(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
-    if (lastStandOwns(g, D)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
-    if (netQuietHolds(gd)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
-    if (buddyOwns(g, D)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
+    if (laneBars(g, gd, D.noiseAt) || laneKnownAt(g, gd, D.noiseAt)) { if (D.rallyAt !== Infinity) D.rallyAt = NaN; return; }   // (lanes.ts: held short of a lane his side knows is covered — he keeps its mouth; and nobody walks over ALONE to a fight at such a lane's guns)
+    if (hasHim(D.gd, OWN.stand)) { D.rallyAt = NaN; return; }   // (laststand.ts, default off: the last stand holds its room — no man of it walks off to a noise next door)
+    if (hasHim(gd, OWN.lastMan)) { D.rallyAt = NaN; return; }   // (netquiet.ts, false on its first line with its switch off: the last man up, who knows nobody answers him, does not walk off to a fight next door)
+    if (hasHim(D.gd, OWN.buddy) || buddyPaired(g, D)) { D.rallyAt = NaN; return; }   // (buddy.ts, off by default: a colleague is on his way to him, or the two have just paired up — he waits, and no rally clock is left running to send him the frame he is let go)
     const fresh = g.time - D.noiseT < 1.5 && g.time - gd.lastSeenT > 3;
     if (!fresh) { if (g.time - D.noiseT > 4) D.rallyAt = NaN; return; }
     const at = D.noiseAt;
@@ -1004,7 +1005,7 @@ export class RoomFight {
       if (h.team === gd.team || !isHostile(gd.team, h.team)) continue;
       let M = O.meters.get(h); if (!M) { M = { m: 0, seenT: -100 }; O.meters.set(h, M); }
       if (h.state === 'dead') { M.m = 0; continue; }
-      if (runnerFled(h)) { M.m = 0; continue; }   // (runner.ts, false with its switch off: a man who dropped it and ran is nobody's target — the team's eyes pass over him)
+      if (h.fled) { M.m = 0; continue; }   // (runner.ts, false with its switch off: a man who dropped it and ran is nobody's target — the team's eyes pass over him)
       let noShot = false;
       if (O.pass && O.pass.h === h) { if (g.time >= O.pass.until) O.pass = null; else if (!O.pass.noShot) continue; else noShot = true; }   // a masked man let go of (letGo): not his again for that long
       const vis = blind ? null : canSeeChar(g, gd, h.char, false); const rate = vis?.visible ? this.rateOn(gd, h, vis.dist, M.m >= S.notice) : 0;
@@ -1071,11 +1072,11 @@ export class RoomFight {
     O.wallT = 0;
     if (!on) O.blockT = Math.max(0, O.blockT - dt);   // (no shot is counted only while his gun is on the man: off him, the count runs back down)
     if (O.track < P.acquireMin - 1e-9 || g.time < O.next || g.time < O.reloadUntil || sideLocked(g, gd) || !on) return;
-    if (silentHolds(g, gd, h) || pairHolds(g, gd, h) || spottedHolds(g, gd, h)) { this.speak(O, 'eyes on. holding.', 8); return; }   // (silent.ts: the man has not noticed the team — the gun stays on him, no round goes)
+    if (roundHeld(g, gd, h)) { this.speak(O, 'eyes on. holding.', 8); return; }   // (silent.ts: the man has not noticed the team — the gun stays on him, no round goes)
     let to = chest;
     if (!clearShot(g, c, to)) { const head = hc.bones.head ?? v3.add(hc.pos, [0, 1.6, 0]); if (clearShot(g, c, head)) to = head; else if (!coverSeen(g, gd, h, chest)) { O.heldForLine++; O.blockT += dt; this.walkOn(O); return; } }   // (coverfire.ts: no line, and what blocks it is breakable and worth the rounds — they go into it)
     O.blockT = 0;
-    if (silentGlassHolds(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
+    if (silentHoldsGlass(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
     const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
     const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
     const str = gunString(gd);   // (gunroles.ts: a belt-fed gun's string, the Mk 12's single aimed round — 0: the controlled pair, as ever)
@@ -1153,7 +1154,7 @@ export class RoomFight {
    *  short() and asks his legs for nothing; the order, its mark and its carriage are untouched and are his again a quarter of a second after this stops being stamped) */
   private holdShort(O: Op) {
     const g = viewOf(this.g, O.gd), R = ROOMFIGHT, gd = O.gd, s = gd.script, h = O.tgt, p = gd.char.pos;
-    if (!h || !s || !s.goal || s.arrived || O.step || flat(s.goal, h.char.pos) > flat(p, h.char.pos) - 0.3 || !onLitMan(g, gd) || this.funnelOf(p)) return;
+    if (!h || !s || !s.goal || s.arrived || O.step || flat(s.goal, h.char.pos) > flat(p, h.char.pos) - 0.3 || !gunOnLitMan(g, gd) || this.funnelOf(p)) return;
     if (g.time - O.shortSeen > 1 || g.time < O.shortSeen) { O.shortSince = g.time; this.note(gd, `holds short of ${h.callsign} in the dark: the player in his line`); }
     O.shortSeen = g.time;
     if (g.time - O.shortSince < R.holdShortSecs) O.shortT = g.time;

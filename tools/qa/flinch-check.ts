@@ -27,10 +27,11 @@ const BREAK = process.env.FLINCH_BREAK === '1';
 export async function flinchCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { FLINCH, FLINCH_STATS, flinchUnder } = await import(`${ROOT}/src/game/flinch.ts`);
+  const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
   const { noteRound, SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
   const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
   const { MORALE, hasMate, trainingOf } = await import(`${ROOT}/src/game/morale.ts`);
-  const { RUNNER, RUNNER_STATS, runnerOwns, runnerBreak } = await import(`${ROOT}/src/game/runner.ts`);
+  const { RUNNER, RUNNER_STATS, runnerBreak } = await import(`${ROOT}/src/game/runner.ts`);
   const { saveState, loadState } = await import(`${ROOT}/src/game/savestate.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -122,13 +123,13 @@ export async function flinchCheck(): Promise<boolean> {
       const fire = async (training: string, o: { mate?: boolean; run?: boolean; burst?: boolean; own?: 'too' | 'only'; fled?: boolean } = {}, secs = 5) => {
         const s = await world(true, training), { g, A, P } = s; T.run = o.run !== false; const c = A.char;
         if (o.mate) { const m = g.guards[1], f = c.forward(), q = [0, 1, 2, 3, 4, 5, 6, 7].map((i): Vec3 => { const a = i * Math.PI / 4, x = f[0] * Math.cos(a) - f[2] * Math.sin(a), z = f[0] * Math.sin(a) + f[2] * Math.cos(a); return [c.pos[0] + x * 1.5, 0, c.pos[2] + z * 1.5]; }).find(p => !g.col.segmentBlocked([c.pos[0], 1.6, c.pos[2]], [p[0], 1.2, p[2]]) && !g.col.segmentBlocked([c.pos[0], 0.4, c.pos[2]], [p[0], 0.4, p[2]])); if (q) { m.char.pos = q; m.char.vel = [0, 0, 0]; m.path = []; m.pathGoal = null; m.char.update(0); s.step(5); } }
-        const fledOk = o.fled ? runnerBreak(g, g.guards[1]) && runnerOwns(g.guards[1]) : false;
+        const fledOk = o.fled ? runnerBreak(g, g.guards[1]) && hasHim(g.guards[1], OWN.runner) : false;
         const lone = !hasMate(g, A), p0: Vec3 = [c.pos[0], 0, c.pos[2]]; let tookAt = NaN, most = 0, far = 0; const said0 = RUNNER_STATS.said, t0 = g.time;
         for (let i = 0; i < secs * 60; i++) {
-          if (i % 15 === 0 && (!o.burst || i < 45) && !runnerOwns(A) && o.own !== 'only') pass(g, P, c, 0.4);
-          if (o.own && i % 15 === (o.own === 'too' ? 1 : 0) && !runnerOwns(A)) pass(g, g.guards[2].char, c, 0.2);   // (a colleague's round, the frame after the enemy's: the last on his suppression record)
+          if (i % 15 === 0 && (!o.burst || i < 45) && !hasHim(A, OWN.runner) && o.own !== 'only') pass(g, P, c, 0.4);
+          if (o.own && i % 15 === (o.own === 'too' ? 1 : 0) && !hasHim(A, OWN.runner)) pass(g, g.guards[2].char, c, 0.2);   // (a colleague's round, the frame after the enemy's: the last on his suppression record)
           s.step(); most = Math.max(most, flinchUnder(A)); far = Math.max(far, flat(c.pos, p0));
-          if (isNaN(tookAt) && runnerOwns(A)) tookAt = g.time - t0;
+          if (isNaN(tookAt) && hasHim(A, OWN.runner)) tookAt = g.time - t0;
         }
         return { lone, fledOk, tookAt, most, far, broke: FLINCH_STATS.broke, said: RUNNER_STATS.said - said0, rounds: A.weapon.shotsFired, under: flinchUnder(A), sup: A.sup.v as number };
       };

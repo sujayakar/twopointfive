@@ -159,7 +159,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/doorforce.ts DOORFORCE_STATS': 'TALLY · counted in doorforce.ts; read only by its summary string and by tools/qa/doorforce-check.ts',
   'src/game/doorforce.ts DOORFORCE_LOG': 'TALLY · written in doorforce.ts log(); read only by its summary string and the check',
   'src/game/doorblast.ts DOORSHOT_STATS': 'TALLY · counted in doorblast.ts (leafRound 261, splinter 297-310); read by the log line it writes (311) and by tools/qa/doorshot-check.ts',
-  'src/game/startle.ts STARTLE_STATS': 'TALLY · counted in startle.ts (startleMan, startleSight, choose); read by tools/qa/startle-check.ts only',
+  'src/game/startle.ts STARTLE_STATS': 'TALLY · counted in startle.ts (giveStartle, startleSight, choose); read by tools/qa/startle-check.ts only',
   'src/game/flinch.ts FLINCH_STATS': 'TALLY · counted in flinch.ts (flinchRound, flinchTick); read by tools/qa/flinch-check.ts only',
   'src/game/doorthrow.ts DOORTHROW_STATS': 'TALLY · counted in doorthrow.ts (doorThrowAfter, count); read by tools/qa/doorthrow-check.ts only',
   'src/game/doorway.ts DOORMANNERS_STATS': 'TALLY · counted in doorway.ts; orders.ts:1398/1443-1449/1466 copies and puts back the counts round a trial ask; shown by main.ts — no rule reads a value',
@@ -224,6 +224,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/moths.ts MOTH_STATS': 'TALLY · counted in moths.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/needs.ts NEEDS_STATS': 'TALLY · counted in needs.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/netquiet.ts NETQUIET_STATS': 'TALLY · counted in netquiet.ts; no read in src/game, src/scene or src/anim',
+  'src/game/owner.ts WITNESSES': 'CONSTANT · one line from the file of each rule as the module loads: what its own state says, for tools/qa/owner-check.ts. Nothing in a run writes it',
   'src/game/netquietfeed.ts NETFEED': 'CACHE · NETFEED.live = NETQUIET.on && MORALE.on, written at the top of every netQuietTick (netquiet.ts:324) and on a load (508): two switches\' AND, the same value every tick of a run',
   'src/game/nvg.ts NVG_LOG': 'TALLY · counted in nvg.ts; no read in src/game, src/scene or src/anim',
   'src/game/opening.ts urlRead': 'CONFIG · once-only latch of readUrl (?fairstart=0, opening.ts:32): the page\'s URL read once per process',
@@ -354,7 +355,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/math/side.ts ROOTS': 'CONST · the registry itself: filled as the modules load',
   'src/math/vec.ts v3': 'CONST · a namespace of functions (`v3.set(out, …)` is one of them, not a write to it)',
   'src/render/reach.ts REACH_OPTS': 'CONFIG · set once from the page\'s address (`?sunlooks=old`, main.ts) or by a check before it builds a mask; which looks a mask is made with, never moved by play',
-  'src/render/reach.ts REACH_WORK': 'TALLY · read by game.ts, reach.ts and engine.ts (the look page\'s opening lights) only as how much it GREW inside one call (a budget of sight-line steps): where it stands between ticks decides nothing',
+  'src/render/reach.ts REACH_WORK': 'TALLY · read by reachKeep.ts (the lamps\' masks, on drawn frames), reach.ts and engine.ts (the look page\'s opening lights) only as how much it GREW inside one call (a budget of sight-line steps): where it stands between ticks decides nothing',
 };
 
 /** plain WeakMaps / WeakSets that may stand in the simulation's folders: `file name` → why no snapshot needs to list it */

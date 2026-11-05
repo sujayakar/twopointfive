@@ -457,7 +457,11 @@ but synthetic writes still work.
   `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`) was the same case and is registered the same way, in a commit of its own: the game's tick
   reads it (to pace the lamps' reach masks, which are the picture's: no sense, rule or run digest reads them, and the 42 play-through digests are the
   same with it forced either way on both stands), so a host's page and its server paced that bookkeeping differently. It is the same on both stands
-  with no word (the shares), so it has no `FROZEN_HOLDS` row. A PAGE RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the
+  with no word (the shares), so it has no `FROZEN_HOLDS` row. SINCE THE MASKS LEFT THE TICK (11-05, `render/reachKeep.ts`; `docs/agents/render.md`)
+  NEITHER `?reachpace` NOR `?planpace` DECIDES ANYTHING INSIDE THE TICK: the picture's keeper paces the masks on drawn frames, and a stand with no
+  picture (the harness, a server) makes no mask and never reads `REACH_PACE`. Both stay registered: a recording still says which pace its page drew at.
+  `?planpace=old` is also the masks' step on the count of sight-line steps (`ReachKeep.tick`, `REACH_PACE.steps`) and not on the clock (`tickTimed`, `KEEP_MS`): a
+  page rig that must land masks on fixed frames asks for it, as it does for the planners. A PAGE RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the
   clock's: after the first six drawn frames a plan lands when the clock lets it. A rig that reads a frame a fixed number of frames after a door or a
   wall changes puts `planpace=old` on its address (`tools/qa/draw-equal.cjs` does). Neither word is a visit's flag: a joiner's page takes the
   recipe's. `docs/agents/render.md` has both rules.

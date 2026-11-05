@@ -56,7 +56,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 33;
+pub const ABI: u32 = 34;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]

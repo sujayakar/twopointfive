@@ -30,10 +30,10 @@ export const MEN_ROWS = 64;
 
 export const MEN_FIELDS: readonly MenField[] = [
   // WHO HAS THIS MAN: the one record the "does X have this man?" questions become. Written and read by the game's owner rules (they are not moved here: they arrive empty).
-  { name: 'owner', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'which rule has him (0: nobody)' },
-  { name: 'rank', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'how hard that rule holds him against another' },
-  { name: 'reason', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'why it has him' },
-  { name: 'since', on: 'man', group: 'cold', type: 'f64', digest: false, why: 'the game time it took him' },
+  { name: 'owner', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'a bit for each rule with a hand on him, the highest set has him (0: nobody): src/game/owner.ts' },
+  { name: 'rank', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'the place of that top bit in the ranks (1 the weakest, 0 nobody): who is shown as having him, never who may take him' },
+  { name: 'reason', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'which of the top rule\'s reasons it gave' },
+  { name: 'since', on: 'man', group: 'cold', type: 'f64', digest: false, why: 'the game time the claim now on top came to the top (a lower claim surfacing counts from then)' },
 ];
 
 export const MEN_KEPT: readonly MenKept[] = [];

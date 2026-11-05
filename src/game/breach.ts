@@ -20,7 +20,6 @@ import { fireWeapon, killGuard, detonateStun } from './combat';
 import { kickDustFx } from './particleFx';
 import { shotEnergy } from './glasspen';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { runnerFled } from './runner';   // (asked inside the ending check only: false with its switch off)
 
 /** the approach: a run with the rifles at the LOW ready — both hands on the gun, muzzle down (the runner's stance 'lowReady' → the long gun's 'lowLong'
  *  carriage) — begun HOLD_OPEN seconds in: the establishing shot opens on the empty sunlit floor and they come into it (guards walk their routes at 1.15, chase at 2.7) */
@@ -400,12 +399,12 @@ export class BreachDrill {
   /** both men holding their sectors and every hostile down (a beat after the last of those) — or 14 s of entry, when whoever is somehow still standing is put down so the calls are true */
   private roomClear(te: number): boolean {
     const own = !!this.live && this.g.fight.on;   // (the room fight: a defender who has got OUT of the room is not in it — the room is called on the men left inside)
-    const H = this.hostiles, allDown = H.every(h => h.state === 'dead' || runnerFled(h) || (own && !this.insideRoom(h.char.pos, -0.3)));
+    const H = this.hostiles, allDown = H.every(h => h.state === 'dead' || h.fled || (own && !this.insideRoom(h.char.pos, -0.3)));
     const up = (i: 0 | 1) => (i === 0 ? this.a : this.b).state !== 'dead';
     const holding = this.live ? (!up(0) || this.flows[0].st === 'hold') && (!up(1) || this.flows[1].st === 'hold') : this.flows[0].st === 'hold' && this.flows[1].st === 'hold';
     if (holding && allDown) { if (isNaN(this.tAllDone)) this.tAllDone = this.t; return this.t > this.tAllDone + 0.5; }
     if (this.live) return false;   // live: nobody calls a room with a man still up in it, whatever the clock says
-    if (te > 14) { H.forEach((h, k) => { if (h.state !== 'dead' && this.guaranteeDowns && !runnerFled(h)) { this.beat(`guaranteed:${k}`); killGuard(this.g, h, [1, 0, 0], false, 'shot', 'guard', 'hostile down'); } }); return true; }
+    if (te > 14) { H.forEach((h, k) => { if (h.state !== 'dead' && this.guaranteeDowns && !h.fled) { this.beat(`guaranteed:${k}`); killGuard(this.g, h, [1, 0, 0], false, 'shot', 'guard', 'hostile down'); } }); return true; }
     return false;
   }
   private tAllDone = NaN;
@@ -413,10 +412,10 @@ export class BreachDrill {
   private pickable(i: 0 | 1): boolean {
     if (this.live && this.g.fight.on) return this.g.fight.contact(i === 0 ? this.a : this.b);   // live, the room fight on: what HE has in his sight (light, smoke, cone — roomfight.ts), not a list
     const F = this.flows[i], H = this.hostiles, c = (i === 0 ? this.a : this.b).char;
-    while (F.q.length && (H[F.q[0]]?.state === 'dead' || (!!H[F.q[0]] && runnerFled(H[F.q[0]])))) F.q.shift();
+    while (F.q.length && (H[F.q[0]]?.state === 'dead' || (!!H[F.q[0]] && H[F.q[0]].fled))) F.q.shift();
     const eye = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
     if (this.live) {   // live: any living man inside he has a line to is his to take — his own list's first, then anybody (his mate may be down, the plan's lists were written for puppets): the one found goes to the front
-      const seen = (k: number) => { const hk = H[k]; return !!hk && hk.state !== 'dead' && !runnerFled(hk) && !this.g.col.shotBlocked(eye, hk.char.bones.chest ?? v3.add(hk.char.pos, [0, 1.1, 0]), 0.02, shotEnergy(this.g, c)); };
+      const seen = (k: number) => { const hk = H[k]; return !!hk && hk.state !== 'dead' && !hk.fled && !this.g.col.shotBlocked(eye, hk.char.bones.chest ?? v3.add(hk.char.pos, [0, 1.1, 0]), 0.02, shotEnergy(this.g, c)); };
       const k = [...F.q, ...H.map((_, j) => j).filter(j => !F.q.includes(j))].find(seen);
       if (k === undefined) return false;
       F.q = [k, ...F.q.filter(j => j !== k)]; return true;
@@ -436,7 +435,7 @@ export class BreachDrill {
     if (this.live && g.fight.on) return g.fight.engaged(op);   // live, the room fight on (roomfight.ts): nothing is staged — each man shoots at what he sees when he has it, and this only tells the sweep to wait
     if (F.st === 'wait' || op.state === 'dead') return false;
     if (F.st === 'into' && !this.insideRoom(c.pos, FIRE_INSIDE_M)) return false;   // through the frame first — then the first man on his list who stands in his line gets the pair AS HE MOVES (08-13: no stop in the middle, no beat with the laser resting on a living man)
-    if (F.on >= 0 && F.n === 0 && (H[F.on].state === 'dead' || runnerFled(H[F.on]))) { F.on = -1; F.next = t + SHIFT; }   // his man went before he fired (his mate's round across the room): the next one — but a pair begun is a pair finished, into the man as he falls
+    if (F.on >= 0 && F.n === 0 && (H[F.on].state === 'dead' || H[F.on].fled)) { F.on = -1; F.next = t + SHIFT; }   // his man went before he fired (his mate's round across the room): the next one — but a pair begun is a pair finished, into the man as he falls
     if (F.on < 0 && t >= F.next && this.pickable(i)) { F.on = F.q[0]; F.since = t; F.n = 0; this.beat(`eyes${i + 1}:${F.on}`); }
     if (F.on < 0) return false;
     const h = H[F.on]; const chest = h.char.bones.chest ?? v3.add(h.char.pos, [0, 1.1, 0]);
@@ -448,7 +447,7 @@ export class BreachDrill {
         const dir = v3.normalize(v3.sub(chest, c.muzzle));
         fireWeapon(g, c, chest, false, { steady: true, spread: 0.01 });
         F.n++; this.rounds[i]++; this.beat(`shot${i + 1}`);
-        if (F.n >= 2) { if (h.state !== 'dead' && this.guaranteeDowns && !runnerFled(h)) { this.beat(`guaranteed:${F.on}`); killGuard(g, h, dir, false, 'shot', 'guard', 'hostile down'); } F.q = F.q.filter(k => k !== F.on); F.on = -1; F.next = t + SHIFT; }
+        if (F.n >= 2) { if (h.state !== 'dead' && this.guaranteeDowns && !h.fled) { this.beat(`guaranteed:${F.on}`); killGuard(g, h, dir, false, 'shot', 'guard', 'hostile down'); } F.q = F.q.filter(k => k !== F.on); F.on = -1; F.next = t + SHIFT; }
         else F.next = t + PAIR;
       } else op.weapon.rearm();   // (cannot happen inside thirty rounds; a dry gun would stall the beat, so it is simply full again)
     }

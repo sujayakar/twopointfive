@@ -94,7 +94,7 @@ const B_SMOKE = bucket('step: smoke solver update (CPU half)'), B_RENDER = bucke
   R_SMOKE = bucket('render: smoke solver encode'), R_GB = bucket('render: g-buffer + mesh shadows encode, motion snapshot'), R_RC = bucket('render: cascades encode'), R_ENC = bucket('render: lighting passes encode');
 const S_ANIM = bucket('svc: animation + skeleton (Character.update)'), S_PATH = bucket('svc: nav paths (A*, walkable, nearest free)'), S_SOUND = bucket('svc: sound propagation'),
   S_LINE = bucket('svc: static line tests (sight, fire, reach)'), S_COLLIDE = bucket('svc: circle collide (feet vs walls)'), S_RAY = bucket('svc: box world raycast (cursor, lasers, rounds)'),
-  S_REACH = bucket('destruction: light reach masks re-decided after a wall breaks (Game.reachTick)'),
+  S_REACH = bucket('destruction: light reach masks re-decided after a wall breaks (the keeper of the picture, render/reachKeep.ts tick: none on a stand with no picture)'),
   S_WALL = bucket('destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)');   // (the wall engine's two ways in, wherever in the frame a round or a blast lands)
 // HEADLESS ONLY — left OUT of the frame by tools/qa/framecost.ts: where the light probe has not answered, a meter falls back to a CPU estimate of the same direct light
 // (guards.ts lightEstimateAt: every light × a line test). Headless the probe NEVER answers, so that estimate runs for every armed man every frame; on the page the GPU answers
@@ -153,7 +153,7 @@ const FC = {
     wrap(g.col, 'segmentBlocked', S_LINE); wrap(g.col, 'segmentBlockedDynamic', S_LINE); wrap(g.col, 'shotBlocked', S_LINE); wrap(g.col, 'raycast', S_LINE);
     wrap(g.col, 'collideCircle', S_COLLIDE);
     wrap(W.engine.world, 'raycast', S_RAY);
-    if (g.destr?.walls) { wrap(g.destr.walls, 'round', S_WALL); wrap(g.destr.walls, 'blast', S_WALL); if (typeof g.reachTick === 'function') wrap(g, 'reachTick', S_REACH); }   // (a build with the wall engine)
+    if (g.destr?.walls) { wrap(g.destr.walls, 'round', S_WALL); wrap(g.destr.walls, 'blast', S_WALL); if (typeof W.engine.reach?.tick === 'function') wrap(W.engine.reach, 'tick', S_REACH); }   // (a build with the wall engine)
     if (GPU) {   // the engine's CPU half, by part (each comes out of 'render: … the rest')
       const e = W.engine;
       wrap(e.world, 'upload', B_UPLOAD); wrap(e.lights, 'upload', R_LIGHTS); wrap(e, 'glassLightMasks', R_LIGHTS);

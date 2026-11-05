@@ -9,11 +9,11 @@
 //     killed in his view).
 //   · SAY, THEN DO: he shouts it — spoken, not on the net — and holds, low, gun down, for `beatSecs`; then the weapon leaves his hand and lies on the floor where
 //     he dropped it (combat.ts dropFromHand: the item a dying hand lets go of), and he runs.
-//   · UNARMED FROM THEN ON, and FLED (`runnerFled`): his gun's own count is kept at nothing and no magazine change is ever his again, so no fire site has a
+//   · UNARMED FROM THEN ON, and FLED (`gd.fled`): his gun's own count is kept at nothing and no magazine change is ever his again, so no fire site has a
 //     round of his; guards.ts inHand says his hand is empty, so killGuard has nothing more to drop; he is drawn with empty hands (combat.ts guardProps: the
 //     rifleman's sidearm stays on his thigh, never drawn — with `anyway` it is on the floor beside the rifle and the thigh is empty; the pistol man's holster
 //     is empty); his light went with the gun. He perceives nothing and fights
-//     nobody: guards.ts runs this file's GuardScript every frame from the shout on, the room fight's defender tick yields (`runnerOwns`), and morale.ts's own
+//     nobody: guards.ts runs this file's GuardScript every frame from the shout on, the room fight's defender tick yields (`OWN.runner`), and morale.ts's own
 //     sequence is let go of (moraleRelease) and kept let go of.
 //   · WHERE HE RUNS, at the guards' own chase pace (Game.tune.guardChase) and no faster: to a living armed MATE first — the nearest BY THE FLOOR, inside
 //     `mateM` of path — and inside `tellM` of him with a clear line he shouts it and the mates in earshot (`toldM`) are TOLD through the game's own records:
@@ -48,7 +48,7 @@
 //     roster is never removed (a checkpoint is poured over that roster): he stays low where he got to. With no way out he goes to the reachable corner
 //     farthest from every enemy and stays low there, his face to the wall, silent, still fled — and looks again for a way out every `retrySecs`, until
 //     `retries` runs at a way that would not let him through (a door that will not open) have come to nothing: then he stays.
-//   · COUNTING: a fled man is nobody's living hostile — every ending that counts them asks `runnerFled`, a scenario's "my cast was taken away" test passes
+//   · COUNTING: a fled man is nobody's living hostile — every ending that counts them asks `gd.fled`, a scenario's "my cast was taken away" test passes
 //     over him, his squad counts him out (enemysquads.ts alive); the team's eyes pass over him (roomfight.ts tickOp, guards.ts acquireFoe, the breach's
 //     target queue). He is nobody's calm colleague either (Guard.hold + pinned: no chat, no need, no greeting, no errand is his). A grenade he was winding up
 //     stays on his belt (frag.ts). The player may shoot him: it is a kill like any other, and nothing here scores or answers it.
@@ -58,6 +58,7 @@
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
 import { facedMan } from './seats';
 import { SideMap } from '../math/side';
+import { claimMan, releaseMan, ownerWitness, hasHim, OWN } from './owner';
 import type { Game, Guard, GuardScript } from './game';
 import type { Character } from './character';
 import { Vec3, v3 } from '../math/vec';
@@ -69,6 +70,7 @@ import { MORALE, moraleOf, rungOf, moraleRelease, sawLeaderFall } from './morale
 import { digInOrder } from './digin';
 import { w } from './words';
 import { PICTURE, PICTURE_STATS, ideasOf, pictureTell, type Who } from './picture';
+import { word } from './belief';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?norunner = a broken man stays and changes his magazine, as
  *  he did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_RUNNER=1 turns it on — and it needs TPS_MORALE=1 beside it). Metres:
@@ -89,14 +91,15 @@ export const RUNNER_STATS = { said: 0, dropped: 0, toMates: 0, told: 0, out: 0, 
 /** where a man's run stands: the shout's beat (gun still in his hand) · to a mate · out of the building · low (the corner, or a roster man who got out) · gone */
 export type RunPhase = 'say' | 'mates' | 'out' | 'low' | 'gone';
 const PHASES: RunPhase[] = ['say', 'mates', 'out', 'low', 'gone'];
-/** per man: the phase and its seconds `t`, whether the gun has left his hand (`fled`), where the enemy stood when he broke (`from`: what he tells them), where
+/** per man: the phase and its seconds `t`, where the enemy stood when he broke (`from`: what he tells them), where
  *  he is going, the mate he runs to, how many men he told, seconds out with no enemy's line on him, the stall watch (`at` / `stall`), whether he is out.
  *  `tries` = runs at a way out that would not let him through, `plan` = seconds since he last looked at the way ahead, `face` = where a man low in his
  *  corner looks (the wall: away from the nearest enemy). `bold` = the way he is on was found with nobody as a wall (`anyway`), `bare` = his sidearm went to the floor too. `drive` = this file's script has
  *  him this frame (stamped `driveT`). */
-interface Run { phase: RunPhase; t: number; fled: boolean; from: Vec3; goal: Vec3 | null; mate: Guard | null; told: number; unseen: number; at: Vec3; stall: number; isOut: boolean;
+interface Run { phase: RunPhase; t: number; from: Vec3; goal: Vec3 | null; mate: Guard | null; told: number; unseen: number; at: Vec3; stall: number; isOut: boolean;
   tries: number; plan: number; face: number | null; bold: boolean; bare: boolean; drive: boolean; driveT: number; script: GuardScript; }
 const stateOf = new SideMap<Guard, Run>('runner.stateOf');
+ownerWitness('runner', gd => RUNNER.on && stateOf.has(gd));
 
 /** THE LINES (placeholders in the register of the defenders' own — the writing pass is the maintainer's). done: shouted at the enemy in front of him, the
  *  beat before the gun goes down. mates: shouted to his own as he runs in on them — `he` as the night staff have it (their intruder is one man), `they` a
@@ -174,8 +177,8 @@ function lost(g: Game, gd: Guard): boolean {
 /** the shout: from here his body is this file's, and morale.ts's sequence is over */
 function start(g: Game, gd: Guard, from: Vec3) {
   const c = gd.char;
-  stateOf.set(gd, { phase: 'say', t: 0, fled: false, from: [from[0], 0, from[2]], goal: null, mate: null, told: 0, unseen: 0, at: v3.copy(c.pos), stall: 0, isOut: false, tries: 0, plan: 0, face: null, bold: false, bare: false, drive: false, driveT: -1, script: { goal: null } });
-  moraleRelease(gd); gd.reloadT = -1; c.anim.cancelReload(); gd.weapon.burst = null;   // (the magazine change he was in ends with it: the count and the clip both)
+  claimMan(gd, OWN.runner, g.time); stateOf.set(gd, { phase: 'say', t: 0, from: [from[0], 0, from[2]], goal: null, mate: null, told: 0, unseen: 0, at: v3.copy(c.pos), stall: 0, isOut: false, tries: 0, plan: 0, face: null, bold: false, bare: false, drive: false, driveT: -1, script: { goal: null } });
+  moraleRelease(g, gd); gd.reloadT = -1; c.anim.cancelReload(); gd.weapon.burst = null;   // (the magazine change he was in ends with it: the count and the clip both)
   bark(g, gd, 'done'); RUNNER_STATS.said++;
 }
 /** A LATER SLICE'S SEAM: start the sequence on this man directly (a broken man whose leader is killed in his view), whatever his magazine holds and whoever
@@ -271,7 +274,7 @@ function drop(g: Game, gd: Guard, S: Run) {
   const c = gd.char, W = gd.weapon.def;
   gd.dropped = dropFromHand(g, c, W.drop, c.gunDir, [0, 0, 0], W.suppressed);
   if (RUNNER.anyway && W.drop === 'rifle') { dropFromHand(g, c, 'pistol', c.gunDir, [0, 0, 0], false, true, c.bones.thighR ?? v3.add(c.pos, [0, 0.85, 0])); S.bare = true; }   // (…and the sidearm off his thigh with it: he keeps nothing)
-  S.fled = true; RUNNER_STATS.dropped++;
+  gd.fled = true; claimMan(gd, OWN.runner, g.time, 1); RUNNER_STATS.dropped++;
   gd.state = 'patrol'; gd.awareness = 0; gd.foe = null; gd.aim.clear(); gd.pieing = null; gd.searchPlan = null; gd.standoff = null; gd.muzzleDown = false;
   gd.hold = true; gd.pinned = true;   // (…and nobody's calm colleague: every reader that asks for a free man on his round — a chat, a need, a greeting, an errand — passes over a held one)
   const E = known(g, gd), m = pickMate(g, gd);
@@ -304,7 +307,7 @@ function tell(g: Game, gd: Guard, S: Run) {
     if (!mateOf(g, gd, o) || flat(o.char.pos, gd.char.pos) > K.toldM) continue;
     const D = g.fight?.defs.find(X => X.gd === o);
     if (D && g.fight!.told(o, S.from)) digInOrder(g, D, S.from, K.tellBeat);
-    else { o.lastKnown = v3.copy(S.from); o.awareness = Math.max(o.awareness, K.tellAware); }
+    else { word(g, o, S.from); o.awareness = Math.max(o.awareness, K.tellAware); }
     S.told++; RUNNER_STATS.told++;
   }
 }
@@ -315,13 +318,13 @@ function pose(g: Game, gd: Guard, S: Run) {
   const s = S.script, say = S.phase === 'say', there = !!s.arrived && S.phase === 'low';
   s.goal = say ? null : S.goal; s.speed = g.tune.guardChase; s.strafe = false; s.face = say ? v3.yawTo(gd.char.pos, S.from) : there ? S.face : null;   // (low and there: his face to the wall — never his hands up, never a word)
   s.aimAt = null; s.upper = 'none'; s.stance = say ? 'lowReady' : 'none'; s.crouch = say || (!!s.arrived && (S.phase === 'low' || (S.phase === 'out' && S.unseen === 0))); s.over = null;
-  if (S.fled) s.light = false;
+  if (gd.fled) s.light = false;
 }
 
 /** ONCE A FRAME, right after morale.ts's tick (game.ts update) and before anybody moves: the men who are ripe are asked for the enemy in their eyes, and
  *  every man in a run is taken a step through it. A return on its first line with the switch off. */
 export function runnerTick(g: Game, dt: number) {
-  if (!RUNNER.on) return;
+  if (!RUNNER.on) { for (const gd of g.guards) if (gd.owner & OWN.runner) { stateOf.delete(gd); gd.fled = false; releaseMan(gd, OWN.runner, g.time); } return; }   // (the switch put down under a run, from the debugger: nobody's any more)
   for (let i = g.guards.length - 1; i >= 0; i--) {   // (backwards: a man gone leaves the list under it)
     const gd = g.guards[i], S = stateOf.get(gd);
     if (S) { S.drive = false; if (gd.state !== 'dead') step(g, gd, S, dt); continue; }
@@ -332,9 +335,9 @@ export function runnerTick(g: Game, dt: number) {
 /** one frame of a man's run */
 function step(g: Game, gd: Guard, S: Run, dt: number) {
   const K = RUNNER, c = gd.char;
-  moraleRelease(gd); if (gd.reloadT >= 0) { gd.reloadT = -1; c.anim.cancelReload(); }   // (a blast since may have begun morale.ts's sequence on him again: it is let go of before it has said or fired anything)
+  moraleRelease(g, gd); if (gd.reloadT >= 0) { gd.reloadT = -1; c.anim.cancelReload(); }   // (a blast since may have begun morale.ts's sequence on him again: it is let go of before it has said or fired anything)
   if (S.phase === 'say') {
-    if (!reacts(g, gd)) { stateOf.delete(gd); return; }   // (Sam's arm, a show — before the gun left his hand: nothing has happened)
+    if (!reacts(g, gd)) { stateOf.delete(gd); releaseMan(gd, OWN.runner, g.time); return; }   // (Sam's arm, a show — before the gun left his hand: nothing has happened)
     S.t += dt; if (S.t < K.beatSecs) { drive(g, gd, S); return; }
     drop(g, gd, S);
   }
@@ -393,19 +396,15 @@ export function runnerScript(g: Game, gd: Guard): GuardScript | null {
   const S = stateOf.get(gd); if (!S || !S.drive || S.driveT !== g.time) return null;
   return S.script;
 }
-/** has a run of this file's got him, from the shout on (the other drivers yield: roomfight.ts tickDef) */
-export function runnerOwns(gd: Guard): boolean { return RUNNER.on && stateOf.has(gd); }
-/** HAS THE WEAPON LEFT HIS HAND: unarmed, out of the fight and nobody's living hostile from that frame on — running, low in a corner, gone or since shot */
-export function runnerFled(gd: Guard): boolean { return RUNNER.on && !!stateOf.get(gd)?.fled; }
 /** …AND HIS SIDEARM WITH IT (`anyway`): a rifleman who put the pistol on his thigh down beside his rifle — combat.ts guardKit draws the thigh empty */
 export function runnerBare(gd: Guard): boolean { return RUNNER.on && !!stateOf.get(gd)?.bare; }
 /** A MAN WHO HAS RUN IS NOBODY'S ENEMY ON THE BOOKS (`nobody`; off = as it was, false here). His own script runs and nothing else of his does, but every
  *  module that walks the roster from outside still met a calm, living man in state 'patrol': a teammate called 'contact' on him, a room was not called clear
  *  with him in it, a mate beside him was 'not alone', his own side's cues picked him to speak. Two questions for those readers —
  *  COUNTS FOR NOTHING, from the drop: nobody's contact, nobody's company, no reason a floor is not clear */
-export function runnerNobody(gd: Guard): boolean { return RUNNER.nobody && runnerFled(gd); }
+export function runnerNobody(gd: Guard): boolean { return RUNNER.nobody && gd.fled; }
 /** …and SPEAKS FOR NOBODY, from the shout: no cue of his side's, no bark under fire (his own lines are this file's) */
-export function runnerMute(gd: Guard): boolean { return RUNNER.nobody && runnerOwns(gd); }
+export function runnerMute(gd: Guard): boolean { return RUNNER.nobody && hasHim(gd, OWN.runner); }
 /** QA: what the rule has of a man (null = never taken) */
 export function runnerOf(gd: Guard): Readonly<Omit<Run, 'script'>> | null { return stateOf.get(gd) ?? null; }
 /** 'runner ▸ Tango 2 out (told 2) · Tango 5 say' — every man it has on the floor; '' with the switch off */
@@ -420,15 +419,15 @@ export interface RunnerSnap { men: (number[] | null)[] }
 /** nothing (no key in the file) with the switch off or before anybody has run */
 export function runnerSnapshot(g: Game): RunnerSnap | undefined {
   if (!RUNNER.on) return undefined;
-  const men = g.guards.map(gd => { const S = stateOf.get(gd); return S ? [PHASES.indexOf(S.phase), S.t, S.fled ? 1 : 0, S.told, S.unseen, S.isOut ? 1 : 0, S.mate ? g.guards.indexOf(S.mate) : -1, S.from[0], S.from[1], S.from[2], ...(S.goal ?? [NaN, NaN, NaN]), S.tries, S.bold ? 1 : 0, S.bare ? 1 : 0] : null; });
+  const men = g.guards.map(gd => { const S = stateOf.get(gd); return S ? [PHASES.indexOf(S.phase), S.t, gd.fled ? 1 : 0, S.told, S.unseen, S.isOut ? 1 : 0, S.mate ? g.guards.indexOf(S.mate) : -1, S.from[0], S.from[1], S.from[2], ...(S.goal ?? [NaN, NaN, NaN]), S.tries, S.bold ? 1 : 0, S.bare ? 1 : 0] : null; });
   return men.some(m => m) ? { men } : undefined;
 }
 /** …onto the fresh roster (a file without the slice: nobody has run). A man mid-run thinks again from where he stands on his first frame */
 export function runnerRestore(g: Game, s: RunnerSnap | null | undefined) {
   const f = (x: unknown, d = 0) => typeof x === 'number' && Number.isFinite(x) ? x : d;
   g.guards.forEach((gd, i) => { const M = s?.men?.[i];
-    if (!M) { stateOf.delete(gd); return; }
+    if (!M) { stateOf.delete(gd); gd.fled = false; releaseMan(gd, OWN.runner, g.time); return; }
     const goal: Vec3 | null = Number.isFinite(M[10]) ? [M[10], f(M[11]), f(M[12])] : null;
-    stateOf.set(gd, { phase: PHASES[f(M[0])] ?? 'low', t: Math.max(0, f(M[1])), fled: !!M[2], from: [f(M[7]), f(M[8]), f(M[9])], goal, mate: g.guards[f(M[6], -1)] ?? null, told: f(M[3]), unseen: Math.max(0, f(M[4])), at: v3.copy(gd.char.pos), stall: 0, isOut: !!M[5],
+    gd.fled = !!M[2]; claimMan(gd, OWN.runner, g.time, gd.fled ? 1 : 0); stateOf.set(gd, { phase: PHASES[f(M[0])] ?? 'low', t: Math.max(0, f(M[1])), from: [f(M[7]), f(M[8]), f(M[9])], goal, mate: g.guards[f(M[6], -1)] ?? null, told: f(M[3]), unseen: Math.max(0, f(M[4])), at: v3.copy(gd.char.pos), stall: 0, isOut: !!M[5],
       tries: Math.max(0, f(M[13])), plan: 0, face: null, bold: !!M[14], bare: !!M[15], drive: false, driveT: -1, script: { goal: null } }); });
 }
