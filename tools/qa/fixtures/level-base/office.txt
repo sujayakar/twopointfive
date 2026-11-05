@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-5f9440f89b44f17460a9b3289c01b01451c56b47
+# the hand pass: paint on the office's own walls and floors as markings (door numbers, keep-clear bays, the stair tower's name); its drawn-only fittings and floor names are its lived tier; no box of its own moved
+0b611ed30c0d815feae853cc8950b1dc4f173c27
