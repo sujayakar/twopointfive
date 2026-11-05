@@ -47,11 +47,12 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
 { const T: Schema = { rows: 8, fields: [
     { name: 'a', on: 'man', group: 'hot', type: 'f64', digest: true }, { name: 'b', on: 'man', group: 'cold', type: 'u32', digest: false }, { name: 'c', on: 'guard', group: 'hot', type: 'i32', digest: true },
     { name: 'd', on: 'guard', group: 'cold', type: 'bool', digest: false }, { name: 'e', on: 'player', group: 'hot', type: 'vec3', digest: true }, { name: 'f', on: 'guard', group: 'hot', type: 'vec3?', digest: true },
-    { name: 'g', on: 'man', group: 'cold', type: ['one', 'two', 'three'], digest: false }, { name: 'h', on: 'anim', group: 'animator', type: 'f64', digest: false }, { name: 'i', on: 'guard', group: 'hot', type: 'bool', digest: true } ] };
+    { name: 'g', on: 'man', group: 'cold', type: ['one', 'two', 'three'], digest: false }, { name: 'h', on: 'anim', group: 'animator', type: 'f64', digest: false }, { name: 'i', on: 'guard', group: 'hot', type: 'bool', digest: true },
+    { name: 'j', on: 'guard', group: 'hot', type: { man: 'Guard', also: ['player'] }, digest: false, init: 'player' }, { name: 'k', on: 'man', group: 'cold', type: 'f64', digest: false, init: 2.5 } ] };
   const dir = mkdtempSync(join(tmpdir(), 'men-gen-')), file = join(dir, 'cols.ts');
-  writeFileSync(file, tsText(T).replace(`import type { MenStore } from './store';\n`, 'type MenStore = any;\n').replace(`import type { Vec3 } from '../../math/vec';\n`, 'type Vec3 = [number, number, number];\n'));
+  writeFileSync(file, tsText(T).replace(`import type { MenStore } from './store';\n`, 'type MenStore = any;\n').replace(`import type { Vec3 } from '../../math/vec';\n`, 'type Vec3 = [number, number, number];\n').replace(/import type \{ Guard \}[^\n]*\n/, 'type Guard = any;\n'));
   const G: any = await import(file); rmSync(dir, { recursive: true });
-  const { cols } = layOut(T), bytes = 16 + cols.reduce((n, c) => n + T.rows * (c.kind === 'f64' ? 8 : 4), 0), own = new Float64Array(bytes >>> 3), store = { d: own, u: new Uint32Array(own.buffer), b8: 0, b4: 0 };
+  const { cols } = layOut(T), bytes = 16 + cols.reduce((n, c) => n + T.rows * (c.kind === 'f64' ? 8 : 4), 0), own = new Float64Array(bytes >>> 3), store: any = { d: own, u: new Uint32Array(own.buffer), b8: 0, b4: 0, handleOf: (r: number) => r << 8 | 1, manAt: (h: number) => (h >>> 8 === 3 ? 'row three' : null) };
   const mk = (K: any) => { const o = new K(); o.S = store; o.r = 3; return o; };
   const gd = mk(G.GuardCols), pl = mk(G.PlayerCols), an = mk(G.AnimCols), bad: string[] = [], eq = (n: string, a: unknown, b: unknown) => { if (JSON.stringify(a) !== JSON.stringify(b) || (typeof a === 'number' && !Object.is(a, b))) bad.push(`${n}: ${JSON.stringify(a)} ≠ ${JSON.stringify(b)}`); };
   gd.a = -0; eq('f64 -0', gd.a, -0); gd.a = 1 / 3; eq('f64', gd.a, 1 / 3); gd.b = 0xfffffffe; eq('u32', gd.b, 0xfffffffe); gd.c = -7; eq('i32', gd.c, -7);
@@ -59,6 +60,9 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
   pl.e = [1, 2, 3]; eq('vec3', pl.e, [1, 2, 3]); pl.eY = 9; eq('vec3 by part', pl.e, [1, 9, 3]); { const p = pl.e; p[0] = 77; eq('vec3 is a copy', pl.eX, 1); }
   eq('vec3? none', gd.f, null); gd.f = [4, 5, 6]; eq('vec3?', gd.f, [4, 5, 6]); gd.f = null; eq('vec3? none again', gd.f, null); eq('vec3? zeros', gd.fX, 0); eq('truth kept', gd.i, true);
   gd.g = 'three'; eq('words', gd.g, 'three'); an.h = 2.5; eq('anim', an.h, 2.5);
+  eq('no such word', throwsName(() => { gd.g = 'four'; }, 'no such word') !== '', true);
+  eq('a man: nobody', gd.j, null); gd.j = 'player'; eq('a man: a word', gd.j, 'player'); gd.j = gd; eq('a man: a man', gd.j, 'row three'); gd.j = null; eq('a man: nobody again', gd.j, null);
+  gd.initMan(); gd.initGuard(); eq('init', gd.k, 2.5); eq('init a word', gd.j, 'player');
   const R = rustText(T), hasAll = cols.every(c => R.includes(`pub ${c.rust}: [${c.kind}; ROWS]`)), hash = schemaHash(T) !== schemaHash({ ...T, rows: 12 });
   if (BREAK) bad.push('the red path');
   verdict(bad.length === 0 && hasAll && hash, 'generator: every kind of column on every kind of record reads back what was written, and the Rust struct has those columns', bad.length ? bad.join(' · ') : `${T.fields.length} fields, ${cols.length} columns; the animator's kept state among them; the hash moves with the rows`); }

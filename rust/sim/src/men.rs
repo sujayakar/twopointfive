@@ -5,7 +5,7 @@ use core::mem::{offset_of, size_of};
 /// rows of each column (src/sim/men/schema.ts MEN_ROWS)
 pub const ROWS: usize = 64;
 /// the hash of the layout: src/sim/men/cols.ts MEN_SCHEMA is the same number
-pub const SCHEMA: u32 = 0xfe3adf7b;
+pub const SCHEMA: u32 = 0xd0f4ad2b;
 
 #[repr(C)]
 pub struct Men {
@@ -42,6 +42,13 @@ pub struct Men {
     pub sight_t: [f64; ROWS],
     pub react_t: [f64; ROWS],
     pub heard_up_to: [f64; ROWS],
+    pub wp: [f64; ROWS],
+    pub wait: [f64; ROWS],
+    pub path_i: [f64; ROWS],
+    pub repath_t: [f64; ROWS],
+    pub path_goal_x: [f64; ROWS],
+    pub path_goal_y: [f64; ROWS],
+    pub path_goal_z: [f64; ROWS],
     pub step_travel: [f64; ROWS],
     pub step_owed: [f64; ROWS],
     pub step_at: [f64; ROWS],
@@ -108,21 +115,43 @@ pub struct Men {
     pub beam_dir_y: [f64; ROWS],
     pub beam_dir_z: [f64; ROWS],
     pub look_phase: [f64; ROWS],
+    pub route_i: [f64; ROWS],
+    pub follow_t: [f64; ROWS],
+    pub follow_goal_x: [f64; ROWS],
+    pub follow_goal_y: [f64; ROWS],
+    pub follow_goal_z: [f64; ROWS],
+    pub stuck_t: [f64; ROWS],
+    pub stuck_n: [f64; ROWS],
+    pub stall_ref_x: [f64; ROWS],
+    pub stall_ref_y: [f64; ROWS],
+    pub stall_ref_z: [f64; ROWS],
+    pub stall_t: [f64; ROWS],
+    pub line_side: [f64; ROWS],
+    pub line_gain: [f64; ROWS],
+    pub line_step_m: [f64; ROWS],
+    pub line_stuck_t: [f64; ROWS],
+    pub pie_last_t: [f64; ROWS],
+    pub pie_prev_x: [f64; ROWS],
+    pub pie_prev_y: [f64; ROWS],
+    pub pie_prev_z: [f64; ROWS],
+    pub pie_prev_t: [f64; ROWS],
     pub gen: [u32; ROWS],
     pub truths0: [u32; ROWS],
     pub state: [u32; ROWS],
     pub team: [u32; ROWS],
+    pub foe: [u32; ROWS],
     pub owner: [u32; ROWS],
     pub rank: [u32; ROWS],
     pub reason: [u32; ROWS],
     pub down_kind: [u32; ROWS],
     pub down_by: [u32; ROWS],
     pub truths1: [u32; ROWS],
+    pub leader: [u32; ROWS],
 }
-const _: () = assert!(size_of::<Men>() == 52752);
+const _: () = assert!(size_of::<Men>() == 67088);
 
 /// where each column is in the part, in bytes, in the order of the schema's layout (the host checks these against its own)
-pub const COLS: [usize; 108] = [offset_of!(Men, pos_x), offset_of!(Men, pos_y), offset_of!(Men, pos_z), offset_of!(Men, vel_x), offset_of!(Men, vel_y), offset_of!(Men, vel_z), offset_of!(Men, body_yaw), offset_of!(Men, aim_yaw), offset_of!(Men, aim_pitch), offset_of!(Men, radius), offset_of!(Men, step_phase), offset_of!(Men, speed), offset_of!(Men, last_pos_x), offset_of!(Men, last_pos_y), offset_of!(Men, last_pos_z), offset_of!(Men, speed_sm), offset_of!(Men, hits_left), offset_of!(Men, fire_cd), offset_of!(Men, noise), offset_of!(Men, visibility), offset_of!(Men, irradiance), offset_of!(Men, awareness), offset_of!(Men, last_seen_t), offset_of!(Men, sight_pos_x), offset_of!(Men, sight_pos_y), offset_of!(Men, sight_pos_z), offset_of!(Men, sight_vel_x), offset_of!(Men, sight_vel_y), offset_of!(Men, sight_vel_z), offset_of!(Men, sight_t), offset_of!(Men, react_t), offset_of!(Men, heard_up_to), offset_of!(Men, step_travel), offset_of!(Men, step_owed), offset_of!(Men, step_at), offset_of!(Men, since), offset_of!(Men, hurt_at), offset_of!(Men, stagger_until), offset_of!(Men, dazzled_until), offset_of!(Men, muzzle_ahead), offset_of!(Men, died_at), offset_of!(Men, killer_id), offset_of!(Men, missed_at), offset_of!(Men, muzzle_clear_t), offset_of!(Men, muzzle_eval_t), offset_of!(Men, line_bark_t), offset_of!(Men, line_in_t), offset_of!(Men, gun_lost_at), offset_of!(Men, torch_lost_at), offset_of!(Men, light_dead_until), offset_of!(Men, door_down_until), offset_of!(Men, reload_t), offset_of!(Men, last_fire_t), offset_of!(Men, friend_t), offset_of!(Men, hit_flash), offset_of!(Men, door_bash_at), offset_of!(Men, door_bash_lean), offset_of!(Men, door_rip_until), offset_of!(Men, door_head), offset_of!(Men, door_head_t), offset_of!(Men, drag_yaw), offset_of!(Men, drag_noise_t), offset_of!(Men, drag_stuck_t), offset_of!(Men, equip_t), offset_of!(Men, pace), offset_of!(Men, pace_shown_t), offset_of!(Men, nv_amount), offset_of!(Men, dazzled_at_x), offset_of!(Men, dazzled_at_y), offset_of!(Men, dazzled_at_z), offset_of!(Men, led_t), offset_of!(Men, fix_t), offset_of!(Men, fix_ref_x), offset_of!(Men, fix_ref_y), offset_of!(Men, fix_ref_z), offset_of!(Men, search_t), offset_of!(Men, smoke_trans), offset_of!(Men, saw_body_t), offset_of!(Men, alert_best), offset_of!(Men, alert_stall_t), offset_of!(Men, alert_ref_x), offset_of!(Men, alert_ref_y), offset_of!(Men, alert_ref_z), offset_of!(Men, chase_t), offset_of!(Men, shot_blocked_t), offset_of!(Men, leader_seen_t), offset_of!(Men, leader_seen_pos_x), offset_of!(Men, leader_seen_pos_y), offset_of!(Men, leader_seen_pos_z), offset_of!(Men, leader_still_t), offset_of!(Men, body_visits), offset_of!(Men, body_visit_t), offset_of!(Men, body_fan), offset_of!(Men, sweep), offset_of!(Men, beam_dir_x), offset_of!(Men, beam_dir_y), offset_of!(Men, beam_dir_z), offset_of!(Men, look_phase), offset_of!(Men, gen), offset_of!(Men, truths0), offset_of!(Men, state), offset_of!(Men, team), offset_of!(Men, owner), offset_of!(Men, rank), offset_of!(Men, reason), offset_of!(Men, down_kind), offset_of!(Men, down_by), offset_of!(Men, truths1)];
+pub const COLS: [usize; 137] = [offset_of!(Men, pos_x), offset_of!(Men, pos_y), offset_of!(Men, pos_z), offset_of!(Men, vel_x), offset_of!(Men, vel_y), offset_of!(Men, vel_z), offset_of!(Men, body_yaw), offset_of!(Men, aim_yaw), offset_of!(Men, aim_pitch), offset_of!(Men, radius), offset_of!(Men, step_phase), offset_of!(Men, speed), offset_of!(Men, last_pos_x), offset_of!(Men, last_pos_y), offset_of!(Men, last_pos_z), offset_of!(Men, speed_sm), offset_of!(Men, hits_left), offset_of!(Men, fire_cd), offset_of!(Men, noise), offset_of!(Men, visibility), offset_of!(Men, irradiance), offset_of!(Men, awareness), offset_of!(Men, last_seen_t), offset_of!(Men, sight_pos_x), offset_of!(Men, sight_pos_y), offset_of!(Men, sight_pos_z), offset_of!(Men, sight_vel_x), offset_of!(Men, sight_vel_y), offset_of!(Men, sight_vel_z), offset_of!(Men, sight_t), offset_of!(Men, react_t), offset_of!(Men, heard_up_to), offset_of!(Men, wp), offset_of!(Men, wait), offset_of!(Men, path_i), offset_of!(Men, repath_t), offset_of!(Men, path_goal_x), offset_of!(Men, path_goal_y), offset_of!(Men, path_goal_z), offset_of!(Men, step_travel), offset_of!(Men, step_owed), offset_of!(Men, step_at), offset_of!(Men, since), offset_of!(Men, hurt_at), offset_of!(Men, stagger_until), offset_of!(Men, dazzled_until), offset_of!(Men, muzzle_ahead), offset_of!(Men, died_at), offset_of!(Men, killer_id), offset_of!(Men, missed_at), offset_of!(Men, muzzle_clear_t), offset_of!(Men, muzzle_eval_t), offset_of!(Men, line_bark_t), offset_of!(Men, line_in_t), offset_of!(Men, gun_lost_at), offset_of!(Men, torch_lost_at), offset_of!(Men, light_dead_until), offset_of!(Men, door_down_until), offset_of!(Men, reload_t), offset_of!(Men, last_fire_t), offset_of!(Men, friend_t), offset_of!(Men, hit_flash), offset_of!(Men, door_bash_at), offset_of!(Men, door_bash_lean), offset_of!(Men, door_rip_until), offset_of!(Men, door_head), offset_of!(Men, door_head_t), offset_of!(Men, drag_yaw), offset_of!(Men, drag_noise_t), offset_of!(Men, drag_stuck_t), offset_of!(Men, equip_t), offset_of!(Men, pace), offset_of!(Men, pace_shown_t), offset_of!(Men, nv_amount), offset_of!(Men, dazzled_at_x), offset_of!(Men, dazzled_at_y), offset_of!(Men, dazzled_at_z), offset_of!(Men, led_t), offset_of!(Men, fix_t), offset_of!(Men, fix_ref_x), offset_of!(Men, fix_ref_y), offset_of!(Men, fix_ref_z), offset_of!(Men, search_t), offset_of!(Men, smoke_trans), offset_of!(Men, saw_body_t), offset_of!(Men, alert_best), offset_of!(Men, alert_stall_t), offset_of!(Men, alert_ref_x), offset_of!(Men, alert_ref_y), offset_of!(Men, alert_ref_z), offset_of!(Men, chase_t), offset_of!(Men, shot_blocked_t), offset_of!(Men, leader_seen_t), offset_of!(Men, leader_seen_pos_x), offset_of!(Men, leader_seen_pos_y), offset_of!(Men, leader_seen_pos_z), offset_of!(Men, leader_still_t), offset_of!(Men, body_visits), offset_of!(Men, body_visit_t), offset_of!(Men, body_fan), offset_of!(Men, sweep), offset_of!(Men, beam_dir_x), offset_of!(Men, beam_dir_y), offset_of!(Men, beam_dir_z), offset_of!(Men, look_phase), offset_of!(Men, route_i), offset_of!(Men, follow_t), offset_of!(Men, follow_goal_x), offset_of!(Men, follow_goal_y), offset_of!(Men, follow_goal_z), offset_of!(Men, stuck_t), offset_of!(Men, stuck_n), offset_of!(Men, stall_ref_x), offset_of!(Men, stall_ref_y), offset_of!(Men, stall_ref_z), offset_of!(Men, stall_t), offset_of!(Men, line_side), offset_of!(Men, line_gain), offset_of!(Men, line_step_m), offset_of!(Men, line_stuck_t), offset_of!(Men, pie_last_t), offset_of!(Men, pie_prev_x), offset_of!(Men, pie_prev_y), offset_of!(Men, pie_prev_z), offset_of!(Men, pie_prev_t), offset_of!(Men, gen), offset_of!(Men, truths0), offset_of!(Men, state), offset_of!(Men, team), offset_of!(Men, foe), offset_of!(Men, owner), offset_of!(Men, rank), offset_of!(Men, reason), offset_of!(Men, down_kind), offset_of!(Men, down_by), offset_of!(Men, truths1), offset_of!(Men, leader)];
 // every column is whole vectors from a 16-byte boundary: the part starts on one (state.rs), the head is 16 bytes, the rows a multiple of four
 const _: () = assert!(ROWS % 4 == 0);
 const _: () = { let mut i = 0; while i < COLS.len() { assert!(COLS[i] % 16 == 0); i += 1; } };
@@ -171,6 +200,13 @@ pub extern "C" fn men_fold(g: u32, row: u32) -> u32 {
     let b = m.sight_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     let b = m.react_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     let b = m.heard_up_to[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.wp[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.wait[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.path_i[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.repath_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.path_goal_x[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.path_goal_y[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.path_goal_z[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     let b = m.step_travel[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     let b = m.step_owed[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     let b = m.step_at[r].to_bits(); w(b as u32); w((b >> 32) as u32);
@@ -237,15 +273,37 @@ pub extern "C" fn men_fold(g: u32, row: u32) -> u32 {
     let b = m.beam_dir_y[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     let b = m.beam_dir_z[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     let b = m.look_phase[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.route_i[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.follow_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.follow_goal_x[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.follow_goal_y[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.follow_goal_z[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.stuck_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.stuck_n[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.stall_ref_x[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.stall_ref_y[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.stall_ref_z[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.stall_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.line_side[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.line_gain[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.line_step_m[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.line_stuck_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.pie_last_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.pie_prev_x[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.pie_prev_y[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.pie_prev_z[r].to_bits(); w(b as u32); w((b >> 32) as u32);
+    let b = m.pie_prev_t[r].to_bits(); w(b as u32); w((b >> 32) as u32);
     w(m.gen[r]);
     w(m.truths0[r]);
     w(m.state[r]);
     w(m.team[r]);
+    w(m.foe[r]);
     w(m.owner[r]);
     w(m.rank[r]);
     w(m.reason[r]);
     w(m.down_kind[r]);
     w(m.down_by[r]);
     w(m.truths1[r]);
+    w(m.leader[r]);
     h
 }

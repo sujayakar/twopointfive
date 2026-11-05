@@ -847,7 +847,7 @@ const SHIELD_RELEASE_BEAT_MIN = 0.35, SHIELD_RELEASE_BEAT_JITTER = 0.3;
  *  line; lineOpen: the flank line stood open last frame (the 'I have him' is said on the edge); shots / orbitM: rounds fired and metres walked in this standoff
  *  (the QA soak reads both); way: the way round he is actually going now (0 = not yet; kept between re-plans so a walled arc's edge cannot see-saw him);
  *  cornered: no ring point either way round last time he looked; backing: inside the ring's edge last frame, backing off. */
-export interface Standoff { pair: Guard; since: number; side: -1 | 1; way: -1 | 0 | 1; orbitGoal: Vec3 | null; replanT: number; restT: number; seenT: number; lastBarkT: number; lineOpen: boolean; shots: number; orbitM: number; stalls: number; cornered: boolean; backing: boolean; }
+export interface Standoff { pair: Guard; since: number; side: -1 | 1; way: -1 | 0 | 1; orbitGoal: Vec3 | null; backedTo?: Vec3 | null; replanT: number; restT: number; seenT: number; lastBarkT: number; lineOpen: boolean; shots: number; orbitM: number; stalls: number; cornered: boolean; backing: boolean; }
 /** QA hook: set `log` and orbitGoalFor says what became of every ring point it looked at (the probes print it for a second or two round a re-plan they are chasing) */
 export const STANDOFF_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 /** the pair as the observers reason about it this frame: the held man, Sam's hit axis and his, the point between (the ring's centre), the pair's facing (Sam's:
@@ -1156,8 +1156,8 @@ function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number;
   let jogging = false; let lookAt = aim;   // on the jog over from across the floor: the legs have the body, and where his eyes and gun go (the pair if the run keeps them anywhere ahead of him, else up his path)
   if (GH) { move = GH.move; jogging = GH.run; if (GH.look) lookAt = GH.look; }
   else if (S.orbitGoal) {
-    if (backing) { if (gd.pathGoal !== S.orbitGoal) { gd.path = [S.orbitGoal]; gd.pathI = 0; gd.pathGoal = S.orbitGoal; } }   // (the back-off is a straight step over floor retreatGoal has checked, not a planned walk)
-    else goTo(g, gd, S.orbitGoal);
+    if (backing) { const was = gd.pathGoal, o = S.orbitGoal; if (S.backedTo !== o || !was || was[0] !== o[0] || was[1] !== o[1] || was[2] !== o[2]) { gd.path = [o]; gd.pathI = 0; gd.pathGoal = o; S.backedTo = o; } }   // (`backedTo`: this branch has already laid this step, and nothing has set a goal since. The back-off is a straight step over floor retreatGoal has checked, not a planned walk)
+    else { S.backedTo = null; goTo(g, gd, S.orbitGoal); }
     const done = far ? followPath(g, gd, dt, pace) : stepAlongPath(g, gd, dt, pace); move = gd.speed;   // from across the floor he simply comes over; inside the ring's reach he side-steps with his chest to them
     if (done) { setGoal(null); S.replanT = Math.min(S.replanT, 0.25); }
     else if (notGettingAnywhere(gd, dt, STANDOFF_STALL_SECS)) { setGoal(null); gd.stallRef = null; S.restT = STANDOFF_REST_SECS; if (++S.stalls % 2 === 0) { S.side = S.side > 0 ? -1 : 1; S.way = S.way > 0 ? -1 : S.way < 0 ? 1 : 0; } }   // (twice running: try the other way round)
@@ -3393,7 +3393,7 @@ function followLeader(g: Game, gd: Guard, dt: number, walk: number): boolean {
     if (nav.isBlocked(goal[0], goal[2]) || !nav.walkable(lp, goal)) { goal[0] = lp[0]; goal[2] = lp[2]; }                            // his back to a wall: on him (the separation push keeps them a body apart)
     else if (!nav.isBlocked(goal[0] + lv[0] * 0.6, goal[2] + lv[2] * 0.6)) { goal[0] += lv[0] * 0.6; goal[2] += lv[2] * 0.6; }        // led by the leader's stride: aim at where the station will be when this plan is walked, or he settles a metre adrift, forever arriving
     const off = Math.hypot(goal[0] - c.posX, goal[2] - c.posZ);
-    const stale = !gd.pathGoal || Math.hypot(gd.pathGoal[0] - goal[0], gd.pathGoal[2] - goal[2]) > 0.5 || (gd.pathI >= gd.path.length && off > 0.7);
+    const stale = !gd.pathGoal || Math.hypot(gd.pathGoalX - goal[0], gd.pathGoalZ - goal[2]) > 0.5 || (gd.pathI >= gd.path.length && off > 0.7);
     if (stale && off > 0.35) goTo(g, gd, goal, true);
   }
   const gap = Math.hypot(lp[0] - c.posX, lp[2] - c.posZ);
@@ -3412,7 +3412,7 @@ function followLeader(g: Game, gd: Guard, dt: number, walk: number): boolean {
 function holdPost(g: Game, gd: Guard, dt: number, walk: number): boolean {
   const P = gd.post!, c = gd.char;
   gd.followT -= dt;
-  if (gd.followT <= 0 && Math.hypot(P.pos[0] - c.posX, P.pos[2] - c.posZ) > 0.45 && (!gd.pathGoal || gd.pathI >= gd.path.length || Math.hypot(gd.pathGoal[0] - P.pos[0], gd.pathGoal[2] - P.pos[2]) > 0.5)) {
+  if (gd.followT <= 0 && Math.hypot(P.pos[0] - c.posX, P.pos[2] - c.posZ) > 0.45 && (!gd.pathGoal || gd.pathI >= gd.path.length || Math.hypot(gd.pathGoalX - P.pos[0], gd.pathGoalZ - P.pos[2]) > 0.5)) {
     gd.followT = 0.5; goTo(g, gd, P.pos, true);
     const last = gd.path[gd.path.length - 1]; if (!last || Math.hypot(last[0] - P.pos[0], last[2] - P.pos[2]) > 0.02) gd.path.push(v3.copy(P.pos));   // the spot itself, not its nav cell's centre
   }
