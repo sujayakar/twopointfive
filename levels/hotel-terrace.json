@@ -66,7 +66,7 @@
     "canvasBlue": { "albedo": [0.095, 0.245, 0.495], "rough": 0.95, "stuff": "cloth" },
     "towelStripe": { "albedo": [0.655, 0.305, 0.215], "rough": 0.95, "stuff": "cloth" },
     "foliage": { "albedo": [0.098, 0.235, 0.078], "rough": 1, "stuff": "waits" },
-    "stonePale": { "albedo": [0.47, 0.45, 0.405], "rough": 0.6, "stuff": "slab" },
+    "stonePale": { "albedo": [0.47, 0.45, 0.405], "rough": 0.6, "stuff": "paver" },
     "stoneShade": { "albedo": [0.37, 0.35, 0.315], "rough": 0.5, "stuff": "skim" },
     "stoneBand": { "albedo": [0.29, 0.27, 0.24], "rough": 0.5, "stuff": "skim" },
     "dryEarth": { "albedo": [0.2, 0.13, 0.078], "rough": 1, "stuff": "earth" },
@@ -76,7 +76,12 @@
     "sage": { "albedo": [0.17, 0.2, 0.12], "rough": 1, "stuff": "waits" },
     "poolDark": { "albedo": [0.02, 0.07, 0.075], "rough": 0.06, "stuff": "enamel" },
     "clay": { "albedo": [0.36, 0.13, 0.07], "rough": 0.5, "stuff": "skim" },
-    "saffron": { "albedo": [0.52, 0.31, 0.07], "rough": 0.95, "stuff": "cloth" }
+    "saffron": { "albedo": [0.52, 0.31, 0.07], "rough": 0.95, "stuff": "cloth" },
+    "limestone": { "albedo": [0.525, 0.5, 0.445], "rough": 0.7, "stuff": "cast panel" },
+    "cream": { "albedo": [0.53, 0.506, 0.436], "rough": 0.6, "stuff": "skim" },
+    "rubble": { "albedo": [0.33, 0.276, 0.206], "rough": 0.95, "stuff": "block" },
+    "cedar": { "albedo": [0.36, 0.2, 0.096], "rough": 0.8, "stuff": "wood" },
+    "poolPale": { "albedo": [0.17, 0.31, 0.276], "rough": 0.06, "stuff": "enamel" }
   },
   "surfaces": {
     "building": { "x0": 14, "x1": 26, "z0": 15, "z1": 21 },
