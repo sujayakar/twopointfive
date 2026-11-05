@@ -12,6 +12,7 @@ import { Level, PatrolRoute, Chokepoint } from '../scene/level';
 import { StaticCollision } from '../scene/collision';
 import { GltfCharacter } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
+import { dutiesAnew } from './belief';
 import { Character, MOVES, inDipLane } from './character';
 import type { Stance, HoldPhase, HoldVariant, KitItem } from './character';
 import { Input } from './input';
@@ -543,7 +544,7 @@ export function isBreathing(gd: Guard): boolean { return gd.state === 'dead' && 
 export interface Witness {
   /** sounds that actually reached him and raised him (hearingCheck): gunfire (anyone's), doors kicked in, stun charges, and the small stuff — a creak, a scrape, a
    *  footfall, a canister's pop, a light dying near him — with where the last small one seemed to come from (the doorway it spilled through if not direct) */
-  heard: { shots: number; lastShotT: number; kick: number; bang: number; small: number; smallWhere: Vec3 | null; lastT: number };
+  heard: { shots: number; lastShotT: number; kick: number; bang: number; small: number; smallWhere: Vec3 | null; loudAt: Vec3 | null; lastT: number };
   /** the highest his awareness has ever been */
   peakAwareness: number;
   /** what took him to 'alert' the last time he went (the guards.ts transition): eyes on Sam, a sound, word over the net (a colleague's contact, an order), a body —
@@ -561,7 +562,7 @@ export interface Witness {
   /** stun charges that went off in his open view (combat.ts detonateStun) */
   dazzled: number;
 }
-export const newWitness = (): Witness => ({ heard: { shots: 0, lastShotT: -1, kick: 0, bang: 0, small: 0, smallWhere: null, lastT: -1 }, peakAwareness: 0, alertedBy: null, alertT: -1, sawAct: null, sawBody: null, calledToBody: null, sawHeld: null, wasHeld: 0, dazzled: 0 });
+export const newWitness = (): Witness => ({ heard: { shots: 0, lastShotT: -1, kick: 0, bang: 0, small: 0, smallWhere: null, loudAt: null, lastT: -1 }, peakAwareness: 0, alertedBy: null, alertT: -1, sawAct: null, sawBody: null, calledToBody: null, sawHeld: null, wasHeld: 0, dazzled: 0 });
 /** Interrogation progress for this man (dialogue.ts, docs/internal/grab-interrogate-design.md §4): how many exchanges Sam has had out of him (stage: 0 = none yet,
  *  1 the reaction, 2 the pressure, 3 the useful thing or the refusal, 4+ nothing left — it never goes backwards this encounter), the line ids he has said (no
  *  repeats until his pool is dry; saidN counts the repeats after that), the useful things he has given (by kind), when he last spoke, and since when he has been
@@ -617,6 +618,12 @@ export class Guard extends GuardCols {
    *  mapped and eased exactly as Sam's meter is (Game.visibilityOf, damp 6). What a hostile AI eye reads where it reads player.visibility for Sam. */
   visibility = 0; irradiance = 0;
   routeI: number; wp = 0; wait = 0; awareness = 0; lastKnown: Vec3 | null = null; lastSeenT = -100;
+  /** belief.ts: the point his duty has his gun on while no man is in his eyes (the room fight's, the same object as its watched point); lastKnown is only ever where he believes the enemy to be. Always null with BELIEF off */
+  covers: Vec3 | null = null;
+  /** belief.ts word(): when a blast or a mate's word last placed his belief (what he hears of that moment or before does not write over it) */
+  wordT = -100;
+  /** where he worked out a man he lost had gone (guards.ts leadFix): still what his eyes gave him. belief.ts eyesFix */
+  ledAt: Vec3 | null = null;
   hold = false;                  // scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over)
   pinned = false;                // scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in
   /** scripted, SHOWCASE CAST ONLY (director.ts LoadoutSpec.god — the day showcase's two operatives): a round that would have found him passes through him as it passes a colleague (combat.ts
@@ -1595,6 +1602,7 @@ export class Game {
     if (n > 1) dealSeats(this);   // (seats.ts: a team staged or grown since the last tick is cut into the seats' pairs before anybody is ordered)
     for (const s of S) s.view.viewProj = s.cam.viewProj;
     this.time += dt; this.ocpCooldown = Math.max(0, this.ocpCooldown - dt); this.col.sound.tick(this.time);
+    dutiesAnew(this);   // what a man covers is said anew each tick (belief.ts)
     // EACH SEAT'S HALF OF THE TICK runs over that seat's view (seats.ts): `v.player` is its man, `v.orders` its menu — the lines are the ones a game of one always ran
     for (const s of S) { const v = s.view, input = s.input, cam = s.cam, canvas = s.canvas;
     updateAim(v, input, cam, canvas);   // (builds the interaction rows too: player.ts buildInteractables)

@@ -16,7 +16,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 const BREAK = process.env.FIGHTS_BREAK === '1';
 
 /** the pairs known today: why each is no fight of two rules over who has him, or whose it is to mend */
-const THE_FIGHT = 'THE ONE REAL FIGHT, the belief part\'s until it lands: the room fight writes the door he watches into what he believes, his eyes or ears write the enemy over it';
+const THE_FIGHT = 'the frozen stand only, where BELIEF is held off: the room fight writes the door he watches into what he believes, his eyes or ears write the enemy over it. With the rule on (the page; TPS_BELIEF=1) no such pair is met';
 const ORDER_THEN_PATH = 'call order, meant: an order drops his way and the squad or the door makes a new one in the same tick, no second opinion';
 const ORDER_THEN_POSE = 'call order, meant: the order sets the pose and the cover he has been dealt or the door he is going through refines it';
 const SENSES_THEN_FIGHT = 'call order, meant: his senses write the number and a rule of the fight raises it';
@@ -64,6 +64,13 @@ export const KNOWN_FIGHTS: Record<string, string> = {
   'pinned: pressure + roomfight': HANDOVER,
   'pinned: netquiet + roomfight': HANDOVER,
   'hold: guards + qrf': HANDOVER,
+  'lastKnown: belief + guards': 'meant (belief.ts word): a report places what he believes and his eyes, the newer, write over it in the same tick',
+  'pathGoal: doorpath + squad': ORDER_THEN_PATH,
+  'pathGoal: doorpath + orders + squad': ORDER_THEN_PATH,
+  'pathGoal: doorthrow + guards': ORDER_THEN_PATH,
+  'pathGoal: pressure + tactics': HANDOVER,
+  'script.speed: doorpath + orders + roomfight': ORDER_THEN_POSE,
+  'awareness: guards + netquiet': SENSES_THEN_FIGHT,
 };
 
 if (import.meta.main) {

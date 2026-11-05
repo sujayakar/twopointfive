@@ -144,6 +144,7 @@ import { NOSHOVE } from '../game/noshove';
 import { DOORMANNERS } from '../game/doorway';
 import { RAILS } from '../game/rails';
 import { DOORFORCE } from '../game/doorforce';
+import { BELIEF } from '../game/belief';
 import { SLOTSETUP } from '../game/slotsetup';
 import { GLASSREAL } from '../game/glassbreak';
 import { AIMCOST } from '../game/aimcost';
@@ -390,6 +391,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SLOTSETUP')) SLOTSETUP.pop = SLOTSETUP.on = String((globalThis as any).process?.env?.TPS_SLOTSETUP ?? '') === '1';   // the slot in hand pressed again opens its setup (src/game/slotsetup.ts): off, so 2 pressed with the rifle up steps the launcher's load, as every frozen probe, tape and lesson run has it; TPS_SLOTSETUP=1 raises it
     if (pinned('TPS_SETUPDRAW')) SLOTSETUP.draw = String((globalThis as any).process?.env?.TPS_SETUPDRAW ?? '') === '1';   // a gun's digit pressed again during its own draw opens the setup (src/game/slotsetup.ts `draw`): off, so a double-tapped digit is the draw and no more, as TPS_SLOTSETUP=1 alone has always stood the rule up; TPS_SETUPDRAW=1 raises it
     if (pinned()) SLOTSETUP.mags = false;   // the box's count as rounds in the gun over the magazine's size, a box a spare (slotsetup.ts `mags`): the box's alone, held off here like every newer rule
+    if (pinned('TPS_BELIEF')) BELIEF.on = String((globalThis as any).process?.env?.TPS_BELIEF ?? '') === '1';   // what a man believes and what he covers are two things (src/game/belief.ts): off, every frozen digest was recorded on the door written over his fix
+    if (pinned('TPS_POSTENDS')) DOORFORCE.postEnds = String((globalThis as any).process?.env?.TPS_POSTENDS ?? '') === '1';   // a man walking to boot a door who is put on a post stops (src/game/doorforce.ts)
     if (pinned('TPS_DOORFORCE')) DOORFORCE.on = String((globalThis as any).process?.env?.TPS_DOORFORCE ?? '') === '1';   // an alerted man does not wait at a shut door (src/game/doorforce.ts): off, so a defender who knows a man is behind a shut leaf rests his gun on it or goes to its handle, as in every frozen probe, digest and tally; TPS_DOORFORCE=1 raises it
     if (pinned('TPS_RAILS')) RAILS.on = String((globalThis as any).process?.env?.TPS_RAILS ?? '') === '1';   // a tutorial mission's frame (src/game/rails.ts): off, so a level whose lesson carries a rails record plays as a plain lesson on the frozen stand (no shipped level but the tutorial group's carries one)
     if (pinned('TPS_CARDBEAT')) RAILS.cardBeat = String((globalThis as any).process?.env?.TPS_CARDBEAT ?? '') === '1';   // the step before a card settles (rails.ts RAILS.cardBeat): off, so on a frozen run that raises the frame each step comes up the tick the deed before it is done, as every frozen tutorial fixture was recorded

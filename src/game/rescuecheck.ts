@@ -49,6 +49,7 @@ import { isBreathing } from './game';
 import { RESCUE } from './rescue';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { word } from './belief';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?norescuecheck = a rescue's men never miss each other,
  *  as it was) and by the shipped stand; the harness's frozen stand leaves it off (TPS_RESCUECHECK=1 turns it on). UNTUNED by play. */
@@ -143,7 +144,7 @@ function stepCheck(g: Game, _dt: number) {
   // post. A noise he has not spoken of (it came after his word, or he had no breath for one) is said as he goes.
   for (const c of cast) if (c.role === 'roamer' && c.released && !c.crewed && !st.kept.has(c.gd)) {
     st.kept.add(c.gd); const at = g.rescue.noiseAt, gd = c.gd; if (!fit(g, gd) || gd.state !== 'alert' || !unseen(g, c)) continue;
-    if (at) { if (st.worded.get(gd) !== 'noise') { st.worded.set(gd, 'noise'); net(g, gd, NOISE, 1); } gd.lastKnown = v3.copy(at); resetChase(gd); event(g, st, 'kept', gd, 'his fix is the noise'); }
+    if (at) { if (st.worded.get(gd) !== 'noise') { st.worded.set(gd, 'noise'); net(g, gd, NOISE, 1); } word(g, gd, at); resetChase(gd); event(g, st, 'kept', gd, 'his fix is the noise'); }
     else if (!st.worded.has(gd)) { st.worded.set(gd, 'door'); net(g, gd, DOOR, 1); }
   }
   const fight = cast.some(c => alive(c.gd) && roused(c.gd));
@@ -202,7 +203,7 @@ function tickOut(g: Game, st: State, cast: Cast, fight: boolean) {
     down.found = true; tally(g, 'bodies'); chronBodyFound(g, down, gd); st.known.add(down);
     gd.sawBodyT = g.time; gd.witness.sawBody = { victim: down.callsign, t: g.time, breathing: isBreathing(down) };
     if (gd.script) endGuardScript(gd, 'alert');
-    gd.state = 'alert'; gd.awareness = 1; gd.reactT = 0; gd.hold = false; gd.pinned = false; gd.lastKnown = [body[0], 0, body[2]]; resetChase(gd);
+    gd.state = 'alert'; gd.awareness = 1; gd.reactT = 0; gd.hold = false; gd.pinned = false; word(g, gd, [body[0], 0, body[2]]); resetChase(gd);
     D.mode = 'free'; D.freeAt = g.time; D.rallyAt = NaN;   // (the way the rescue lets a roamer go: he stays on the room fight's roster and holds again where he ends up)
     net(g, gd, `man down, ${place} — they're inside!`, 1); event(g, st, 'found', gd, `${down.callsign} on the floor in his eye, ${flat(gd.char.pos, body).toFixed(1)} m off: roused, and his own from here`);
     return drop();
