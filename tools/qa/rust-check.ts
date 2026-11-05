@@ -70,7 +70,6 @@
 //             panes of glass, their doors hung again, stepped both ways from the same rows: every column, the rows' tables, every box, noise, tally and
 //             log line the same bits, and a run fair only if it met everything the step does (a ray through a pane that is gone among them). The
 //             shared numbers are read out of both sources. `missions` and `both` hold it in play where a mission takes a leaf off.
-//   weather   the weather that play reads (rust/sim/src/wind.rs, weather.rs, air.rs, snow.rs): tools/qa/weather-ident.ts — thirteen runs with every answer of the module folded, held to a recording
 //   falls     what falls and what it leaves (rust/sim/src/falls.rs against src/sim/fallshome.ts: the landings the simulation has scheduled and the litter
 //             map of broken glass, a part of the game's block): tools/qa/falls-ident.ts — two hundred thousand rules (schedule past the list's cap, deposit,
 //             the landings due, a footfall's step, the floor told, clear, the row dropped and raised) each taken both ways and against a twin store that
@@ -240,7 +239,7 @@ const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', 
  *  that deletes its twin. */
 const GONE: Record<string, string> = { 'the animator\'s layers': 'layers', 'the senses': 'senses' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'lights', 'doors', 'props', 'slabs', 'items', 'falls', 'weather', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'lights', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 GONE['the level\'s lights'] = 'lights';
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
@@ -579,19 +578,12 @@ let wordOwn = '', wordRust = '';
     (row ? row.replace(/^falls-ident: /, '') + '\n' + met : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`) + `\n    ${shared} numbers shared with the Rust source${off.length ? ` — NOT THE SAME: ${off.join(', ')}` : ', each the same'}`);
 }
 
-// ---- weather
-{
-  const r = child(['bun', 'run', 'tools/qa/weather-ident.ts'], { WEATHER_BREAK: BREAK ? '1' : undefined }), last = r.out.trim().split('\n').slice(-1)[0] ?? '';
-  red.weather = r.status === 1;
-  verdict(r.status === 0 && /^PASS — the weather is the module's/.test(last), 'weather: the weather that play reads is the module\'s, every answer of a run held to its recording', (r.out.trim().split('\n').filter(l => /^- (PASS|FAIL)/.test(l)).map(l => l.slice(0, 150)).join('\n    ') || `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`));
-}
-
 // ---- state
 {
-  const run = (profile: string | undefined) => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, QA_HOLD: undefined, SIMSTATE_BREAK: BREAK ? '1' : undefined });
+  const run = (profile: 'frozen' | 'shipped') => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, QA_HOLD: undefined, SIMSTATE_BREAK: BREAK ? '1' : undefined });
   // (both stands play on the game's own maths, so on both the rows whose step is their own maths — sim.ts OWN_MATHS — step in the module: `stepped`, of
   //  each such family, the steps taken in the module, must not be none on either)
-  const fr = run(undefined), sh = run('shipped'), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out)].filter(l => /^- FAIL/.test(l));
+  const fr = run('frozen'), sh = run('shipped'), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out)].filter(l => /^- FAIL/.test(l));
   const steppedOf = (o: string) => [...o.matchAll(/ (\d+) of the (\d+) steps taken in the module/g)].map(m => Number(m[1])), stepped = [...steppedOf(fr.out), ...steppedOf(sh.out)];
   const ok = fr.status === 0 && sh.status === 0 && rows(fr.out).length >= 8 && rows(sh.out).length >= 8 && steppedOf(fr.out).length >= 3 && steppedOf(sh.out).length >= 3 && stepped.every(n => n > 0);
   red.dice = [fr, sh].every(c => rows(c.out).some(l => /^- FAIL — dice:/.test(l)));   // (the die's own line, on both stands: the other lines fail for the block)

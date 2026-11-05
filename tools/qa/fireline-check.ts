@@ -24,6 +24,7 @@
 // NOT here (read in the module, not staged): a door order past its stack, a man on a wall charge, a man in a doorway, a man stepping out of Sam's way or
 // mid-crossing for the silent squad, the gun swung onto a waiting man; the room fight's own lanes; the page (fireline-page.cjs).
 // FIRELINE_BREAK=1 = the switch left off where an arm asks for it: (3), (4), (5), (6), (8), (10), (11), (12) and (13) must fail.   exit 0 = all hold · 1 = one does not
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const DT = 1 / 60, BREAK = process.env.FIRELINE_BREAK === '1', VERBOSE = !!process.env.FIRELINE_VERBOSE;

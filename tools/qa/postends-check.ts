@@ -7,6 +7,7 @@
 //   4  the journal        a recording from before the key replays with the rule off; one that carries it keeps its own word
 // POSTENDS_BREAK=1 = the rule stays down where the check raises it: line 1 must fail.
 // exit 0 = all hold · 1 = one does not.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 type Vec3 = [number, number, number];
 
 export async function postendsCheck(): Promise<boolean> {

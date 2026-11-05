@@ -15,6 +15,7 @@
 //   uncovered  nothing under src/ calls a rounded Math function this file does not replace (cbrt, expm1, log1p, sinh, cosh, asinh, acosh, atanh) or uses `**`
 //   stand      both stands play on the game's own maths and no word takes them out: TPS_EXACT stops the tool that says it; a check's own arm
 //              (QA_HOLD=exact=0, tools/qa/headless.ts hold) is how a red path gets the engine's
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -178,7 +179,7 @@ const ulps = (a: number, b: number): number => {
 
 // ---- load
 {
-  const c = child([process.execPath, 'run', 'tools/qa/exact-check.ts', '--load'], { TPS_PROFILE: '' });   // (the child holds the game's own maths out itself while the harness loads: on, they stand over the watch)
+  const c = child([process.execPath, 'run', 'tools/qa/exact-check.ts', '--load'], { TPS_PROFILE: 'frozen' });   // (the child holds the game's own maths out itself while the harness loads: on, they stand over the watch)
   const all: string[] | null = marked(c.out, 'EXACT-LOAD '), un: { files: number; unloaded: string[] } | null = marked(c.out, 'EXACT-UNLOADED ');
   // (the SIMULATION's modules are held: the folders `uncovered` below holds, for the same reason. What they pull in from elsewhere — a sound's table, a
   //  viewer's curve — worked out at load on the engine's own functions is dressing: no digest reads it, and it is counted, not failed)
@@ -209,9 +210,9 @@ const ulps = (a: number, b: number): number => {
   const clear = { TPS_PROFILE: '', QA_HOLD: '' };
   const env = (o: Record<string, string>) => { const e: Record<string, string> = {}; for (const [k, v] of Object.entries({ ...clear, ...o })) if (v !== '') e[k] = v; return e; };
   const saved = { p: process.env.TPS_PROFILE, h: process.env.QA_HOLD }; delete process.env.TPS_PROFILE; delete process.env.QA_HOLD;
-  const frozen = ask(env({})), shipped = ask(env({ TPS_PROFILE: 'shipped' })), held = ask(env({ TPS_PROFILE: 'shipped', QA_HOLD: 'exact=0' }));
+  const frozen = ask(env({ TPS_PROFILE: 'frozen' })), shipped = ask(env({ TPS_PROFILE: 'shipped' })), held = ask(env({ TPS_PROFILE: 'shipped', QA_HOLD: 'exact=0' }));
   // (the word that was the switch stops a tool that says it, by name, on either stand and whatever it is set to)
-  const old = [env({ TPS_EXACT: '0' }), env({ TPS_PROFILE: 'shipped', TPS_EXACT: '1' })].map(e => stood(e)), stopped = old.every(c => c.status !== 0 && marked(c.out, 'EXACT-STAND ') === null && /TPS_EXACT=[01]: the Rust module's rows and the game's own maths are not switches/.test(c.err));
+  const old = [env({ TPS_PROFILE: 'frozen', TPS_EXACT: '0' }), env({ TPS_PROFILE: 'shipped', TPS_EXACT: '1' })].map(e => stood(e)), stopped = old.every(c => c.status !== 0 && marked(c.out, 'EXACT-STAND ') === null && /TPS_EXACT=[01]: the Rust module's rows and the game's own maths are not switches/.test(c.err));
   if (saved.p !== undefined) process.env.TPS_PROFILE = saved.p; if (saved.h !== undefined) process.env.QA_HOLD = saved.h;
   verdict(frozen === 'true' && shipped === 'true' && held === 'false' && stopped, 'stand: on on both stands, with no word; TPS_EXACT stops the tool that says it; a check\'s own arm (QA_HOLD=exact=0) takes the maths out for a red path',
     `frozen ${frozen} · shipped ${shipped} · shipped under QA_HOLD=exact=0 ${held} · TPS_EXACT=0 and =1: ${stopped ? 'each stopped the tool by name' : `NOT STOPPED (exits ${old.map(c => c.status).join(', ')}: ${old.map(c => c.err.trim().split('\n').slice(-1)[0]?.slice(0, 120)).join(' / ')})`}`);

@@ -62,6 +62,7 @@
 //                KNOWN: pair-sneak's script was written on round one's words; on the shipped stand its records-pair hits the time cap on seeds 1 and 2 and loses Sam on
 //                seed 3 (room-clear-pair plays through). A run that hit the cap is named after the arms' lines: its frames are a pair standing still, in the means
 //   pair5        … on round one's five words over the frozen stand (what `pair` was before the shipped stand; no defenders' frags, as then)
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, writeFileSync, rmSync, mkdirSync, existsSync } from 'node:fs';
 import { tmpdir, cpus } from 'node:os';
 import { resolve } from 'node:path';

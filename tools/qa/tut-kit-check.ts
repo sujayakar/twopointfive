@@ -15,6 +15,7 @@
 // Then THE SHOP'S LAMP: the ground beside the shop's door is lit by that lamp and dark without it (the line that has him shoot it out says the dark hides him).
 // Last, THE WALL: the wall the squad's charge is asked for is one a charge cuts (built at the shell's thickness it was refused as concrete).
 // Headless: no GPU, no smoke sight lines, nothing here saw a picture or heard a round.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { runLesson } from './lesson-run';
 
 process.env.TPS_RAILS ??= '1';   // (the level has a lesson only on the frame: off on the frozen stand unless raised. The scripted player's own `raises` bring the rest)

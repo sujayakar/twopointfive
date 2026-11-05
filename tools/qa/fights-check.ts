@@ -8,6 +8,7 @@
 //   FIGHTS_BREAK=1 bun run tools/qa/fights-check.ts …       the red path: the list without its pairs of the guards and the room fight, so the same runs must name them: must FAIL
 // What it does not see (the review's own list, 2026-11-05): aimYaw, bodyYaw and the animator's fields, doors, the player, solo stealth missions, god mode; a scripted player. A pair
 // is two modules in the tick, not who won it. Not game code; nothing here has been seen on a GPU.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';

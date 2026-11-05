@@ -1,8 +1,9 @@
-// THE TWO STANDS OF THE QA HARNESS, and the one list of what separates them.
+// THE STAND OF THE QA HARNESS, THE OLD ONE, and the one list of what separates them. Since 2026-11-05 a tool with no word stands SHIPPED (harnessProfile below).
 //
-//   frozen   (the default)   the stand every frozen digest, tally, probe bound and session fixture was recorded on: tools/qa/headless.ts and standGame's harness block
-//                            hold the newer rules off, each by its own line (`pinned()` below is asked by every one of them).
-//   shipped  (TPS_PROFILE=shipped in the environment)   the stand the PAGE gives a player who opens it with no URL flag on a machine that has kept nothing: none of
+//   frozen   (TPS_PROFILE=frozen; the default until 2026-11-05)   the stand every frozen digest, tally, probe bound and session fixture was recorded on:
+//                            tools/qa/headless.ts and standGame's harness block hold the newer rules off, each by its own line (`pinned()` below is asked by
+//                            every one of them). Kept by its one word for the switch cleanup until the off paths are gone.
+//   shipped  (no word, or TPS_PROFILE=shipped)   the stand the PAGE gives a player who opens it with no URL flag on a machine that has kept nothing: none of
 //                            those lines runs, so every table is left at its module's own default — which is what the page plays — and `shippedBoot()` writes the few
 //                            rows the page's boot (src/main.ts) writes over those defaults. A pin whose own env word IS given still holds (TPS_PROFILE=shipped
 //                            TPS_MOVES=0 = as shipped but for the movement pass), and `--set` rows land after either stand. One exception: a PLAY-THROUGH
@@ -183,16 +184,12 @@ import { SAVEPIC } from './savepic';
 import { EVENPACE, FLIGHT_PAGE } from './pace';
 import { FINDTUNED, findMeStarts } from './findme';
 
-export type Profile = 'frozen' | 'shipped';
+export type Profile = Stand;
 const envOf = (): Record<string, string | undefined> => (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 
-/** the stand this harness run asked for (TPS_PROFILE; unset = frozen). Anything else stops the tool: a mistyped arm must not be counted as the other one. */
-export function harnessProfile(): Profile {
-  const p = envOf().TPS_PROFILE ?? '';
-  if (p === '' || p === 'frozen') return 'frozen';
-  if (p === 'shipped') return 'shipped';
-  throw new Error(`TPS_PROFILE='${p}' not understood: shipped | frozen`);
-}
+/** the stand this harness run asked for (TPS_PROFILE; the rule is standEnv.ts standOf: no word or 'shipped' = the page's stand, 'frozen' = the old one, by
+ *  that one word, anything else stops the tool). tools/qa/stand.ts writes the word down for a tool as it loads and says a run on the old stand on stderr. */
+export function harnessProfile(): Profile { return standOf(envOf().TPS_PROFILE); }
 /** does a harness pin hold on this run? frozen: always. shipped: only where the run's environment names the pin's own word (`env`; a pin with none is the frozen stand's alone) */
 export function pinned(env?: string): boolean { return harnessProfile() === 'frozen' || (env !== undefined && envOf()[env] !== undefined); }
 
@@ -1010,4 +1007,5 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUADS.noticedEyes': 'SQUADS=radiocheck-call',
   'SQUADS.callBeat': 'SQUADS=radiocheck-call',
 };
-export { STAND_ENV } from './standEnv';   // (every environment word the two stands read — its own import-free file: a check clears them before the game loads)
+export { STAND_ENV } from './standEnv';
+import { standOf, type Stand } from './standEnv';   // (every environment word the two stands read — its own import-free file: a check clears them before the game loads)

@@ -13,6 +13,7 @@
 // rescueCheckOwns, powerOutOwns, needsBusy, standoffFixKept, standoffOnFeet, underSilence, underUnseen, digInStays. True only with those switches up: lastStandMan, pressOwns, buddyOwns. So this
 // check runs an arm with the switches up, and a rule the runs still never exercise says so in its `runs` line (`never held`).
 // Not game code; nothing here has been seen on a GPU.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';

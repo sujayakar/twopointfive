@@ -43,6 +43,7 @@
 // where he is (`wait`) and the way he is walking (`path`) — every plan times its moves off those, the lone arms as much as the pair. --moon adds the moon
 // to the PLAYER's meter only (the partner's is the stand-in's: he waits in the cage's shadow either way).
 // LIGHTSOUT_BREAK=1 = the check's own red path: `pair` never gives the breaker order and walks at the live door.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';

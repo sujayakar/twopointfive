@@ -43,6 +43,7 @@
 //                                       (PT_DESTR: '1' among them raises the destruction's one switch for the run, which no stand word reaches)
 //   pageKit?: boolean                 the run wears what the mission's own page deals him (kit.ts kitIssuedPage, then the solo card as main.ts deals it after
 //                                     the start): for a mission whose lines lean on its own card. Without it he is the Player as built, on either stand
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
