@@ -30,7 +30,7 @@ export type ColGroup = 'hot' | 'cold' | 'animator';
 export interface MenField { readonly name: string; readonly on: ColOn; readonly group: ColGroup; readonly type: ColType; readonly digest: boolean; readonly why?: string; readonly init?: number | boolean | string; readonly col?: string }
 export interface MenKept { readonly name: string; readonly on: ColOn; readonly stays: 'dressing' | 'object'; readonly why?: string }
 
-/** rows of the part: twice the men a game can hold at once (game/levelfit.ts menHeld, its `manrows` row: the doors' and the furniture's hand-over say 32), a multiple of four */
+/** rows of the part: more than every man a game can hold (game/levelfit.ts menHeld, 32 by the doors' and the furniture's hand-over, and MAX_SKINNED benched off the floor: the `manrows` row), a multiple of four */
 export const MEN_ROWS = 64;
 
 export const MEN_FIELDS: readonly MenField[] = [
