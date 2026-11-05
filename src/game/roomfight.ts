@@ -46,7 +46,7 @@ import type { Game, Guard, Foe } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
 import { teamFight, teamSprinting } from './teampace';   // (read inside methods only)
-import { canSee, canSeeChar, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, onLitMan, eyeBlocked } from './guards';
+import { canSee, canSeeChar, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, gunOnLitMan, eyeBlocked } from './guards';
 import { order, endGuardScript } from './squad';
 import { fireWeapon } from './combat';
 import { squadSkill, squadDrill } from './enemysquads';   // (hard on a squads level: the defenders' row as a drilled garrison has it — the same object otherwise)
@@ -1153,7 +1153,7 @@ export class RoomFight {
    *  short() and asks his legs for nothing; the order, its mark and its carriage are untouched and are his again a quarter of a second after this stops being stamped) */
   private holdShort(O: Op) {
     const g = viewOf(this.g, O.gd), R = ROOMFIGHT, gd = O.gd, s = gd.script, h = O.tgt, p = gd.char.pos;
-    if (!h || !s || !s.goal || s.arrived || O.step || flat(s.goal, h.char.pos) > flat(p, h.char.pos) - 0.3 || !onLitMan(g, gd) || this.funnelOf(p)) return;
+    if (!h || !s || !s.goal || s.arrived || O.step || flat(s.goal, h.char.pos) > flat(p, h.char.pos) - 0.3 || !gunOnLitMan(g, gd) || this.funnelOf(p)) return;
     if (g.time - O.shortSeen > 1 || g.time < O.shortSeen) { O.shortSince = g.time; this.note(gd, `holds short of ${h.callsign} in the dark: the player in his line`); }
     O.shortSeen = g.time;
     if (g.time - O.shortSince < R.holdShortSecs) O.shortT = g.time;

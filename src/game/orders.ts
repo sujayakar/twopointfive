@@ -56,7 +56,7 @@
 // ordering an operative under one of Sam's orders is not arbitrated; the stack's marks are geometry (stackPosts), not tactics.ts's authored clear-plan marks.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal, the order table is
 // built in the constructor.)
-import { seatHas } from './seats';
+import { inSeat } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, wrapAngle } from '../math/vec';
 import type { Game, Guard, GuardScript, Interactable, PairId } from './game';
@@ -75,7 +75,7 @@ import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { GLASSPEN, GLASSPEN_STATS, glassPenLive, shotThroughGlass, glassTollSig } from './glasspen';   // (GLASS IS NOT COVER: stackPosts → behindGlass; used at order time only, nothing touched at load)
 import { sneakFollow, sneakWay, sneaking, sneakLow, sneakPost, sneakTick, sneakWord } from './sneak';
-import { unseenMan, unseenLow, unseenFollow, unseenPost, unseenWallSlot, unseenWallLost } from './unseen';
+import { underUnseen, unseenLow, unseenFollow, unseenPost, unseenWallSlot, unseenWallLost } from './unseen';
 import { roomKept } from './rearwatch';
 import { gunFileCost, gunFileRanks } from './gunroles';   // (called inside pair only)
 import { pairUp } from './pairup';
@@ -85,10 +85,10 @@ import type { WallSpot } from './wallcharge';
 import { workNear, workOn, workRows } from './workthings';
 import type { WorkThing } from './workthings';
 import { SEENWALK, SEENWALK_STATS, seenPrice } from './seenwalk';
-import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayStand, doorwayFile, doorwayLane, doorwayOffLane, doorwayLanePrice, doorwayInWay, doorwayClearNear, doorwayHeld } from './doorway';
+import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayStand, doorwayFile, doorwayLane, doorwayOffLane, doorwayLanePrice, doorwayInWay, doorwayClearNear, doorGateStopped } from './doorway';
 import { PICTURE, PICTURE_STATS, anyIdea, exposedFor, pictureQuiet, pictureStep } from './picture';   // (asked inside stackSeen and the file's pose only: src/game is one import cycle)
 import { stackLinePace } from './stackline';
-import { handleHeld } from './handleside';
+import { handleGateStopped } from './handleside';
 import { clearLineFeet, clearLineLive } from './clearline';
 import { fireLineFeet, fireLineLive, fireLineTick } from './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
@@ -649,7 +649,7 @@ export class SquadOrders {
   /** IS HE ONE OF THE MEN THESE ORDERS MOVE: an operative unit — Sam's squad, the one cast there was. A second cast of this class and the door tools
    *  (squadcast.ts: the response team run through the squad's own door and room code) is built with its own answer (OtherCast); every roster here and in
    *  doortools.ts is read through this one test. */
-  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative' && seatHas(this.g.seat, gd); }   // (… of this book's seat, in a game of more than one: seats.ts)
+  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative' && inSeat(this.g.seat, gd); }   // (… of this book's seat, in a game of more than one: seats.ts)
   /** the player is one of these men's own — nobody stands in his line with a gun up, a can of theirs spares him on their side of the door (Sam's squad: yes) */
   get sams(): boolean { return !this.cast; }
   /** whose side a can of theirs is (combat.ts detonateStun) */
@@ -1401,13 +1401,13 @@ export class SquadOrders {
         let spread = false; if (K.fileSpread && stopped && !off && !onWall) { const q = this.apartSlot(gd, A, slot); spread = q !== slot; slot = q; }   // (two places on one spot: his is dealt again, a body's room from the men ahead of him)
         const aside = this.aside(gd); stepping = !!aside;   // Sam walking back down the file at him: he steps off Sam's line, lets him through, and falls in behind
         // Sam stopped and he is near enough already, in plain sight of him: where he stands is his place (no walking round Sam to the exact spot on the trail)
-        const st0 = stopped && !aside && !sneaking(g, gd) && !unseenMan(g, gd) ? g.cover.stepOf(gd, A) : null;   // (cover.ts COVER.step: Sam standing, he is a step or two off his place, where he sees through the open door he was dealt)
+        const st0 = stopped && !aside && !sneaking(g, gd) && !underUnseen(g, gd) ? g.cover.stepOf(gd, A) : null;   // (cover.ts COVER.step: Sam standing, he is a step or two off his place, where he sees through the open door he was dealt)
         // (picture.ts PICTURE.step: Sam standing, the place he has in the file — where he stands, when that is his place, else his slot — that he believes is in an
         //  enemy's line is left for cover a step or two off it. Not a man cover.ts has stepped to watch a door (that is a job), not the silent squad's men, not
         //  a man keeping a door or held short, never out of Sam's way)
         let nearV: boolean | null = null;
         const nearP = () => nearV ??= !aside && !onWall && stopped && toSam > K.nearM && toSam < backM + K.bandM && !this.inFrame(p) && !(doorwayLane(g, p) && (off || !DOORMANNERS.laneLeaf || !doorwayLane(g, slot))) && !g.col.solidBlocked([p[0], 0.45, p[2]], [sam.pos[0], 0.45, sam.pos[2]]) && !(doorwayFile() && this.onTop(gd, A));
-        const ps = !st0 && PICTURE.on && PICTURE.step && stopped && !aside && !onWall && !sneaking(g, gd) && !unseenMan(g, gd) && !roomKept(g, gd) && !g.fight.short(gd)
+        const ps = !st0 && PICTURE.on && PICTURE.step && stopped && !aside && !onWall && !sneaking(g, gd) && !underUnseen(g, gd) && !roomKept(g, gd) && !g.fight.short(gd)
           ? pictureStep(g, gd, A, nearP() ? p : slot, q => !(this.inFrame(q) || doorwayInWay(g, q) || !!doorwayLane(g, q)), g.fight.busy(gd, 0.5)) : null;
         const st = ps?.at ?? st0;
         const near = !st && nearP();
@@ -1443,7 +1443,7 @@ export class SquadOrders {
         //  silent squad and a squad nobody has found at a walk, low with Sam)
         const wb = aside || sn?.must ? null : g.wallCharge?.clearOf(gd, () => keep ? p : sGoal ?? st ?? (near ? p : slot)) ?? null;
         if (wb) { must = true; if (flat(wb, A.goal) > 0.05) A.goal = [wb[0], 0, wb[2]]; sGoal = null; keep = false; d = flat(p, wb); low = sneakLow(g, gd) || unseenLow(g, gd);
-          speed = sneaking(g, gd) || unseenMan(g, gd) ? (low ? K.onto : K.walk) : K.brisk; }
+          speed = sneaking(g, gd) || underUnseen(g, gd) ? (low ? K.onto : K.walk) : K.brisk; }
         if (!aside && !sn?.must && g.fight.short(gd)) speed = 0;   // (guards.ts LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — he does not close on him; stepping out of Sam's own way still comes first)
         // stopped: the first man looks on past Sam (never swinging with his reticle), the rest back the way they came
         face = !stopped || d > 0.6 ? null : toSam < 0.3 ? A.faceNow ?? sam.bodyYaw : A.follow === 0 ? yawTo(p, sam.pos) : yawTo(sam.pos, p);
@@ -1461,7 +1461,7 @@ export class SquadOrders {
         { const sp = sneakPost(g, gd, A.order) ?? unseenPost(g, gd, A.order); if (sp !== null) { low = true; speed = Math.min(speed, sp); } }   // (sneak.ts: sent to a mark while the silent squad sneaks, he goes there low with Sam — nothing with its switch off)
         const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
         if (short) { speed = 0; A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }
-        else if (DOORMANNERS.on && DOORMANNERS.shortClear && (doorwayHeld(g, gd) || handleHeld(g, gd)) && this.heldWait(A)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (doorway.ts SHORT: held at a frame for a man in it or beyond it, or by the handle rule for the man working the leaf, is a wait, not a shut way — the clocks that would call him stuck start when the hold ends)
+        else if (DOORMANNERS.on && DOORMANNERS.shortClear && (doorGateStopped(g, gd) || handleGateStopped(g, gd)) && this.heldWait(A)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (doorway.ts SHORT: held at a frame for a man in it or beyond it, or by the handle rule for the man working the leaf, is a wait, not a shut way — the clocks that would call him stuck start when the hold ends)
         if (clearLineLive(g, gd) || fireLineLive(g, gd)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (clearline.ts: off his mark on purpose, for a line to the man a friend masks — nobody calls him stuck)
         // has he MOVED (his commanded speed says nothing: a man grinding on a wall is still told to walk) — at all in the last second, beside his mark; 30 cm in
         // the last `stuckSecs`, short of it
@@ -1605,7 +1605,7 @@ export class SquadOrders {
       if (q) { A.goal = R.hold = q; R.holdFor = [trail[0], 0, trail[2]]; DOORMANNERS_STATS.rest++; }
       return;
     }
-    if (doorwayHeld(g, gd)) { R.t = t; return; }   // (short of a frame for a man in it: the gate's own patience runs, and its own step to a jamb)
+    if (doorGateStopped(g, gd)) { R.t = t; return; }   // (short of a frame for a man in it: the gate's own patience runs, and its own step to a jamb)
     if (t - R.t >= K.restSecs * (1 + R.n) && flat(p, A.goal) < 1.0 && doorwayInWay(g, p)) {   // (at rest by his place — a man still a walk from it who is slow in a swing is pushing the leaf open, or held by the gate: neither is resting · stepped off and come back to the same stand: each time he waits longer before he steps again)
       const q = doorwayClearNear(g, p, bad, others(), K.apart, g.player.char.pos);
       if (q) { R.step = q; R.until = t + 4; R.from = [trail[0], 0, trail[2]]; R.n = Math.min(R.n + 1, 4); A.goal = q; DOORMANNERS_STATS.rest++; } else R.t = t;
