@@ -1633,6 +1633,12 @@ one stops the tool by name, on an address one does nothing and says so in the co
     single line, circle or ray asked outside every window proves the copy for itself and shuts it behind the answer (`collision.ts lone`; `ANYTIME.proofs`
     counts those: code that asks many in a row opens a window). A tick's open is still a tick's: the window and the lone question stand the copy by
     a step of their own (`stand`), so a check that counts ticks by `tickOpen` counts ticks.
+    A BLOW IS ONE WINDOW (`wallcharge.ts blow`, `doortools.ts blow`, `destruction.ts blast`, `frag.ts blast`). In play each is entered inside a
+    tick and the window is nothing (a wall charge there: no lone question, 3 to 31 compares of the statics, under a millisecond). Called BETWEEN
+    ticks (a check, a page's hook, the debugger's button, a profile's script) a wall charge asked 587 to 946 lines alone, a bare blast 669, a
+    frag's burst 1,366 and a door charge 47 to 64, each proving the copy for itself: two thirds of the call. In one window: none alone, 1 to 16
+    compares. Measured on the office on the page's stand (a wall charge 33 to 48 ms before, about 6 after the first; a frag's burst 49 ms to 8),
+    the game the same by digest. A profile of a blow taken from a page's script before this measured its own way in, not play.
   - THE GRID WRITTEN INSIDE A TICK (`boxMirror.ts wroteGrid`). A wall holed (`addStatic`) or the list cut back used to SHUT the copy for what was
     left of the tick, and every later question of that tick, the senses' and the rules' steps among them, was the TypeScript's. It is a debt now, as
     `wrote` is, and the compare that pays it copies the cells first.
