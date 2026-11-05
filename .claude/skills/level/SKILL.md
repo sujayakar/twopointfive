@@ -454,6 +454,11 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   probes, the squad deal). A new level is in none of them until added: `grep -ln "depot" tools/qa/*.ts` shows which.
 - **Both stands, every check.** Frozen is the harness default; shipped is the page. A tool's own "as shipped" is not the
   shipped stand.
+- **The sound replays saved on the level.** `public/assets/replays` holds recorded runs the sounds page plays: the office
+  has four (office-loud, chairs, reloads, doors), Mousehole one (wall-charge). A step that moves the level's fingerprint
+  or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight. **check**
+  `PORT=<dev server> node tools/qa/sound-tapes.cjs --check` (a real page, minutes a replay). Red: record again with the
+  same tool, and say in the hand-over which were recorded and what each now plays.
 - **Boot the real page once** on the mission's link (`.claude/skills/verify`), no console errors. No GPU in the cloud: say
   "never seen on a GPU" of what was not, and name what nobody has played.
 - **Write it up** at the foot of `docs/agents/missions.md` or `levels.md`: the sentence, the hand placement, the checks and
