@@ -876,6 +876,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   re-exported; in each only boxes' `c` / `h` (and the van's two shapes) moved, 70 boxes, none added or removed, no light moved; 248 seen after. LEFT FOR THE SECOND STEP,
   because a solid box has to move: a van's bay sides round its tail lamps, and a gate's posts in the end of the wall they close (the patch the maintainer
   saw on the pass).
+  A LOOSE THING'S OWN PATCH (11-05, with the first step: it moves nothing either). `livedPieces.armchair`'s arms ran three centimetres into its back with
+  their outer faces in the back's sides. An arm now ENDS at the back's front; it gives up only what lay inside the back, so the chair fills the space it
+  filled. Seven files re-exported (consulate, defuse, registry, their looks, the showroom): 13 chairs, a line each, nothing added or removed.
 - **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
   mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
   suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
