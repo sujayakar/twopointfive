@@ -898,8 +898,8 @@ export class SoundPaths {
     const nav = col.nav, cs = nav.cell;
     const key = `${Math.floor(src[0] / cs)},${Math.floor(src[2] / cs)}>${Math.floor(dst[0] / cs)},${Math.floor(dst[2] / cs)}`;
     const hit = this.cache.get(key); if (hit && Math.abs(this.now - hit.t) < 0.5) return hit.r;
-    if (!nav.there(M)) { if (FELL.on) fell('sound', 'a floor of more cells than the module\'s table'); return null; }
-    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) { if (FELL.on) fell('sound', 'the module handed the way round back (a line too long to be one, a way of more waypoints than its table)'); return null; }
+    nav.there(M);
+    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) { if (FELL.on) fell('sound', 'the module handed the way round back (a line too long to be one)'); return null; }
     let r: Propagation; SENSED.sound++;
     if (k === FACE.SEALED) r = sealed();
     else {
@@ -1041,8 +1041,13 @@ export class NavGrid {
     this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, onePrice ? 'priced path' : 'priced path (the penalty gave one cell two prices in one search)', a, b);
     return t;
   }
-  /** THE GRID AS IT STANDS, WRITTEN TO THE MODULE for one question of its search (rust/sim/src/nav.rs). False = it is larger than the module's table. */
-  there(M: BoxMirror): boolean { if (this.blocked.length > M.navCap) return false; u8().set(this.blocked, M.navShut); return true; }
+  /** THE GRID AS IT STANDS, WRITTEN TO THE MODULE for one question of its search (rust/sim/src/nav.rs). The floor is the BUILD's (scene/world.ts WORLD:
+   *  every level has the same grid), so a floor of more cells than a search holds there is a mistake of the build, said by name: no level can make it,
+   *  and on a floor a search holds none of its tables can be outgrown (nav.rs MAX_FLOOR). */
+  there(M: BoxMirror): void {
+    if (this.blocked.length > M.navCap) throw new Error(`the floor's grid has ${this.blocked.length} cells and a search of the Rust module holds ${M.navCap} (rust/sim/src/nav.rs MAX_FLOOR): the floor is the build's (scene/world.ts WORLD), so the module's tables are to be made larger with it`);
+    u8().set(this.blocked, M.navShut);
+  }
   /** RUST.paths — findPath from the module: the same search and smoothing over the grid as it stands now. undefined = `findPathHere`'s.
    *  WITH A PENALTY the module's search stops wherever it comes to a cell it has no price for and says which (eight at most at a step of the search; a
    *  leg's cells in the smoothing); `priceThese` asks the caller's function for exactly those, once each, and the search goes on. So the function is
@@ -1052,7 +1057,7 @@ export class NavGrid {
   private findPathThere(a: Vec3, b: Vec3, maxIter: number, penalty?: (ix: number, iz: number) => number): Vec3[] | null | undefined {
     const col = this.col, set = col.senseSet(SENSES.paths); if (set === -2) return undefined;   // (senseSet has counted it)
     if ((maxIter >>> 0) !== maxIter) { if (FELL.on) fell('paths', 'a cap on the search that is no whole number'); return undefined; }
-    const M = col.mirror; if (!this.there(M)) { if (FELL.on) fell('paths', 'a floor of more cells than the module\'s table'); return undefined; }
+    const M = col.mirror; this.there(M);
     const x = M.x, ask = col.paneAsk; if (ask < 0) { col.paneFell('paths', ask); return undefined; }
     let n: number;
     if (!penalty) n = x.nav_path(M.slot, set, ask, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
@@ -1063,7 +1068,7 @@ export class NavGrid {
         finally { PRICED.waits = false; if (n === NAV.NEED) x.nav_drop(); } }
       if (n !== NAV.ASK_HOST) PRICED.n++;
     }
-    if (n === NAV.ASK_HOST) { if (FELL.on) fell('paths', 'the module handed the search back (a line too long to be one, a point that is no number, a way of more waypoints than its table)'); return undefined; }
+    if (n === NAV.ASK_HOST) { if (FELL.on) fell('paths', 'the module handed the search back (a line too long to be one, a point that is no number)'); return undefined; }
     SENSED.paths++; if (n === NAV.NO_WAY) return null;
     const m = f64(), out: Vec3[] = []; for (let i = 0, o = M.way; i < n; i++, o += 2) out.push([m[o], 0, m[o + 1]]);
     return out;

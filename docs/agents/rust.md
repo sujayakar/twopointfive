@@ -1949,7 +1949,12 @@ one stops the tool by name, on an address one does nothing and says so in the co
   ticks: that was `sight · outside a tick` until the eye proved the copy for itself). `sound` and `paths` were counted for the first time by this
   car on a tree without the panes in the copy (the straight lines handed back 493, frozen stand 1,989; the way round 102, 178; the search 32, 5):
   each was a line that came to a pane, and behind "A pane's open question" (`collision.ts paneAsk`) each reads zero. What the module can still
-  hand back of them is a line too long to be one, a point that is no number, a way of more waypoints than its table; none is met. The senses'
+  hand back of them is a line too long to be one and a point that is no number; none is met. (A WAY CANNOT OUTGROW ITS TABLE, nor a search its
+  lists, since `nav.rs MAX_FLOOR`: the floor is the build's, `scene/world.ts WORLD`, 4,480 cells on every level; a search closes a cell once and
+  lists eight more at most as it does, and a way has no more waypoints than the floor has cells; `MAX_FLOOR` is the least of what the three tables
+  reach, 8,192 cells, and is what `nav_cap(0)` tells the host. A floor over it is a mistake of the build, thrown by name at the first search,
+  `collision.ts NavGrid.there`; `rust-check`'s `senses` section holds the arithmetic and the build's floor to it. Before, a way stopped at 4,096
+  waypoints, under the floor's cells, and a search with a cap past 16,383 could fill its lists: both handed the question back.) The senses'
   TypeScript (`eyeContactHere`, `lampsHere`, the smoke's own loop, `propagateHere`, `findPathHere`) can go in the step after.
   THE CHECKS: `tools/qa/sense-ident.ts` asks half its ways with a price a cell (1, 6, 20, 0.5 or 200 by a hash, in blocks of one cell or four) and
   compares the way AND the cells each side priced in the order it first asked for them; `PRICED_BREAK=1` prices the module's cells last first and
