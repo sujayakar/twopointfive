@@ -65,7 +65,7 @@ export type LookDoorStuff = BoxStuff | { out?: BoxStuff; in?: BoxStuff };
 export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: LookDoorStuff }>> = {
   'white-roof.json': { out: [0.88, 0.24, 0.03], in: [0.74, 0.74, 0.73], stuff: 'enamel' },
   'depot.json': { out: [0.02, 0.26, 0.2], in: [0.66, 0.64, 0.58], stuff: 'enamel' },   // DRAFT (the depot's rework): the haulier's yard, its doors in the firm's jade outside, the huts' own pale inside
-  'depot-roof-n.json': { out: [0.3, 0.27, 0.21], in: [0.66, 0.64, 0.58], stuff: 'enamel' }, 'depot-roof-b.json': { out: [0.28, 0.06, 0.22], in: [0.64, 0.65, 0.62], stuff: 'enamel' }, 'depot-roof-c.json': { out: [0.024, 0.21, 0.33], in: [0.65, 0.665, 0.675], stuff: 'enamel' },   // DRAFT: the two palettes beside it   // the look study's roof: orange gloss outside, white inside, kept
+  'depot-roof-d.json': { out: [0.03, 0.14, 0.1], in: [0.46, 0.432, 0.372], stuff: 'enamel' }, 'depot-roof-n.json': { out: [0.3, 0.27, 0.21], in: [0.66, 0.64, 0.58], stuff: 'enamel' }, 'depot-roof-b.json': { out: [0.28, 0.06, 0.22], in: [0.64, 0.65, 0.62], stuff: 'enamel' }, 'depot-roof-c.json': { out: [0.024, 0.21, 0.33], in: [0.65, 0.665, 0.675], stuff: 'enamel' },   // DRAFT: the two palettes beside it   // the look study's roof: orange gloss outside, white inside, kept
   'block.json': { out: [0.22, 0.4, 0.1] }, 'block-squads.json': { out: [0.22, 0.4, 0.1] },   // the telephone exchange: pistachio gloss
   'warehouse.json': { out: [0.6, 0.42, 0.04], stuff: { out: 'paint' } },         // the customs shed: safety yellow
   'registry.json': { out: [0.1, 0.1, 0.105], stuff: { out: 'paint' } },          // the records office: black lacquer
