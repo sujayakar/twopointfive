@@ -66,8 +66,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, t], yaw: k * Math.PI / 4, albedo: C[m], ...row(m) });
   };
   /** A CYPRESS: a spire of three rounds, a metre across at the foot and four and a half metres tall. From above it hides almost no floor and throws a long
-   *  shadow. Solid: a man can stand behind it. Its green is flat (the look has no leaves yet) */
-  const cypress = (x: number, z: number, tall = 4.5) => { round(x, z, 0, tall * 0.5, 0.5, 'foliage'); round(x, z, tall * 0.5, tall * 0.82, 0.38, 'foliage'); round(x, z, tall * 0.82, tall, 0.22, 'foliage'); };
+   *  shadow. Solid: a man can stand behind it. Its green is dark and flat (the look has no leaves yet) */
+  const cypress = (x: number, z: number, tall = 4.5) => { const tiers: [number, number][] = [[0.12, 0.34], [0.5, 0.5], [0.72, 0.42], [0.88, 0.32], [1, 0.2]]; let y = 0; for (const [k, r] of tiers) { round(x, z, y, tall * k, r, 'cypress'); y = tall * k; } };
   /** a skin on a wall's south face: a band of another row a finger proud of it */
   const skinS = (x0: number, x1: number, y0: number, y1: number, zFace: number, m: CoastMat, proud = 0.012) => slab(x0, y0, zFace, x1, y1, zFace + proud, C[m], row(m));
   /** a pool: a glossy plane inside a smooth coping, a grated channel along its south side. NOT water (the head) */
@@ -120,7 +120,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- RECEPTION: cast panels, a door to the terrace and one to the forecourt, a side door; inside, the one warm wall ----
   grp('walls.reception');
-  G.wallX(15, 13.88, 26.12, 'mud', [{ a: 19.4, b: 20.6 }]);
+  G.wallX(15, 13.88, 26.12, 'mud', [{ a: 15.0, b: 18.6, y0: 0, y1: 2.6 }, { a: 21.4, b: 25.0, y0: 0, y1: 2.6 }]);   // OPEN to the colonnade: two bays of daylight either side of one pier (a shut house was a black hole in a sunlit picture)
   G.wallX(21, 13.88, 26.12, 'mud', [{ a: 19.4, b: 20.6 }, { a: 15.4, b: 17.6, y0: 0.95, y1: 2.1 }, { a: 22.4, b: 24.6, y0: 0.95, y1: 2.1 }]);
   G.wallZ(14, 15.12, 20.88, 'mud'); G.wallZ(26, 15.12, 20.88, 'mud', [{ a: 17.4, b: 18.6 }]);
   grp('floors.reception');
@@ -128,7 +128,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('ceiling');
   slab(13.88, H, 14.88, 26.12, H + 0.2, 21.12, C.skimWhite, { flags: BoxFlag.NoPrimary, rough: COAST_FINISH.skimWhite.rough });
   grp('room.reception');
-  skinS(14.12, 19.3, 0, H, 15.12, 'skimRed', 0.01); skinS(20.7, 25.88, 0, H, 15.12, 'skimRed', 0.01);                    // the warm wall: the first thing through the door
+  skinS(18.6, 21.4, 0, H, 15.12, 'skimRed', 0.01); slab(25.87, 0, 15.12, 25.88, H, 17.3, C.skimRed, row('skimRed')); slab(25.87, 0, 18.7, 25.88, H, 20.88, C.skimRed, row('skimRed'));   // the warm wall: the pier between the bays and the east wall, what the camera sees through the open side
   G.table(17.0, 16.6, 2.6, 0.8, 0); G.plankBench(23.0, 19.6, 0, 1.8); G.plankBench(23.0, 16.4, 0, 1.8); G.tub(14.8, 20.2, 'whitewash'); G.tub(25.2, 20.2, 'whitewash');
   // its door's number, a louvre and a plate on the forecourt side: paint and fittings on the wall that faces the camera
   mark(skinS(18.55, 19.15, 1.35, 1.95, 21.12, 'enamelWhite', 0.01), MD.stencilMarks('+z', '1', -0.125, -0.175, INK, 2, 'base'));   // the door's number on a plate (no word names a place: a number, a depth, a bay, a line are the place's own)
@@ -180,8 +180,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (reception's north wall, inside) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [24.6, 1.35, 15.17], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
-  const brkLed = add({ c: [24.42, 1.62, 15.22], h: [0.015, 0.015, 0.01], albedo: C.plasticDark, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
+  const brk = add({ c: [14.9, 1.35, 20.83], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brkLed = add({ c: [14.72, 1.62, 20.78], h: [0.015, 0.015, 0.01], albedo: C.plasticDark, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20, H - 0.06, 18], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });
   const dome = add({ c: [20, H - 0.19, 18], h: [0.055, 0.07, 0.055], albedo: [0.35, 0.08, 0.05], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });
@@ -189,7 +189,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- doors (closedDir 0: the leaf runs +x from its hinge; π/2: +z) ----
   const doors: LevelDoorDef[] = [
-    { name: 'r_pool', hinge: [19.42, 15.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'r_front', hinge: [19.42, 21.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'r_side', hinge: [26.0, 17.42], closedDir: HALF, width: 1.16, exterior: true },
     { name: 's_court', hinge: [5.02, 15.0], closedDir: 0, width: 1.16, exterior: true },
@@ -202,14 +201,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     boxes: K.boxes, props: K.props, lights, switchables,
     doors,
     devices: [],
-    breaker: { pos: [24.6, 1.35, 15.32], boxes: [brk, brkLed] },
+    breaker: { pos: [14.9, 1.35, 20.68], boxes: [brk, brkLed] },
     beacons: [{ pos: [20, H - 0.3, 18], box: dome }],
     playerSpawn: [16.0, 0, 11.6],
     routes: [], chokepoints: [], clearPlans: [],
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.045, 0.05, 0.07] },
     // the stealth mission's three places, because the level format wants them
-    mission: { serverRoom: { ...RECEPTION }, entryDoor: 'r_front', rack: { index: 0, front: [24.6, 1.0, 16.2], halfW: 0.3 }, exfilDoor: 'r_side', exfilX: 27.6, exfilZ: 18.0, exfilOut: [1, 0] },
+    mission: { serverRoom: { ...RECEPTION }, entryDoor: 'r_front', rack: { index: 0, front: [14.9, 1.0, 19.8], halfW: 0.3 }, exfilDoor: 'r_side', exfilX: 27.6, exfilZ: 18.0, exfilOut: [1, 0] },
   };
   const surfaces: SurfacesData = { building: { x0: 14, x1: 26, z0: 15, z1: 21 }, grassEdge: 0, inside: 'stone', outside: 'stone', verge: 'stone', zones: [] };
-  return { level, scenarios: { doorNames: [{ door: 'r_pool', name: 'pool door' }, { door: 'r_front', name: 'front door' }, { door: 'r_side', name: 'side door' }, { door: 's_court', name: 'spa door' }, { door: 's_side', name: 'spa side door' }] }, groups: trace.groups, surfaces };
+  return { level, scenarios: { doorNames: [{ door: 'r_front', name: 'front door' }, { door: 'r_side', name: 'side door' }, { door: 's_court', name: 'spa door' }, { door: 's_side', name: 'spa side door' }] }, groups: trace.groups, surfaces };
 }

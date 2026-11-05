@@ -38,7 +38,7 @@ const COAST_STUFF = {
   paintTeal: 'paint', paintCoral: 'paint', paintSun: 'paint', paintNavy: 'paint', enamelWhite: 'enamel',
   brushedSteel: 'brushed', darkSteel: 'steel', binGreen: 'plastic', plasticPale: 'plastic', plasticDark: 'plastic',
   tyreRubber: 'rubber', canvasWhite: 'cloth', canvasBlue: 'cloth', towelStripe: 'cloth', foliage: 'waits',
-  paverWhite: 'paver', skimRed: 'skim', accentRed: 'enamel', accentBlue: 'enamel',
+  paverWhite: 'paver', skimRed: 'skim', accentRed: 'enamel', accentBlue: 'enamel', cypress: 'waits',
 } as const satisfies Record<CoastMat, Stuff>;
 
 export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {

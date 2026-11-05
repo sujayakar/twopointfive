@@ -59,7 +59,7 @@ export const COAST_QUIET_OF: Readonly<Record<GwotMat, CoastMat>> = { ...COAST_OF
   plasticGreen: 'plasticPale', plasticBlue: 'plasticPale', jerryYellow: 'enamelWhite',
   poplar: 'enamelWhite', woodGrey: 'enamelWhite', ply: 'enamelWhite',
   truckTan: 'enamelWhite', truckRed: 'enamelWhite',
-  prodOrange: 'enamelWhite', prodRed: 'enamelWhite', prodYellow: 'enamelWhite', straw: 'canvasWhite',
+  prodOrange: 'enamelWhite', prodRed: 'enamelWhite', prodYellow: 'enamelWhite', straw: 'canvasWhite', prodGreen: 'cypress', scrub: 'cypress',
 };
 
 /** tools/qa/coast-check.ts's red path: every coast row laid as itself, standing for nothing */
