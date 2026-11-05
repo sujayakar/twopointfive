@@ -56,7 +56,7 @@ import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
 import { buildLookPanel, LOOK_SNOW_COVER } from './ui/lookpanel';
 import { lookAmounts, lookParts, lookSync } from './render/gbuffer';
-import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, glintPickConfig, sheenConfig, wallSidesConfig, smokeLabConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
+import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, glintPickConfig, highlightConfig, wallSidesConfig, smokeLabConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
@@ -100,6 +100,8 @@ import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
 import { sharpCapConfig } from './render/frame';
 import { benchBegin, benchLegOfPage, benchSceneWaits, BENCH_RUN_KEY } from './ui/benchrun';
+import { priceLevelsPage } from './ui/pricerun';
+import { heldPage, ownPage, runPage } from './host/runpage';
 import { BENCH_SCENES } from './host/benchScenes';
 import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
@@ -193,9 +195,10 @@ import * as mothsMod from './game/moths';
 import * as saveMod from './game/savestate';
 import { PICTURE, PICTURE_STATS, pictureSummary, pictureViews, pictureTell, ideasOf } from './game/picture';
 import { RUNNER, RUNNER_STATS, runnerOf, runnerBreak } from './game/runner';
-import { sim, RUST, RUST_ON, simSay, simWhyNot, mathsOfRust } from './sim/sim';
+import { sim, RUST, RUST_ON, simSay, simWhyNot, mathsOfRust, fellLines, fellSealed } from './sim/sim';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
+import { RENDER_PASSES } from './gpu/timer';
 import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
 import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
@@ -222,7 +225,7 @@ async function main() {
   const q = new URLSearchParams(location.search);
   // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
   // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
-  const keep = keepPageBoot(q, q.has('bench') || q.has(BENCH_RUN_KEY) || kitViewOn);
+  const keep = keepPageBoot(q, ownPage(q) || kitViewOn);   // (a run of any kind keeps its own page: host/runpage.ts)
   if (keep.role === 'shell') { boot.stopRafProbe(); readyResolve(); return; }
   if (keep.role === 'leave') return;
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
@@ -241,6 +244,7 @@ async function main() {
   // page goes there BEFORE anything boots: that scene's load is then this machine's first, and it is the one the report times. Never in ?kitview's own window.
   let benchRefused: string | null = null;
   if (q.has('bench') && !q.has(BENCH_RUN_KEY) && !kitViewOn) { benchRefused = benchBegin(false); if (benchRefused === null) return; console.info(`benchmark: ${benchRefused}`); }   // (a refusal — a tab with no session store — is said on the HUD's line once the page is up)
+  if (!kitViewOn && priceLevelsPage(q)) return;   // `?pricelevels` (ui/pricerun.ts): the look's layers off against on, on every level of the mission list, a page a level, hands off
   // `?playtape=<shelf id | file>` (replay/engineplay.ts): a saved replay played on THIS page — the real renderer and mixer — off its run tape. The page is first sent to
   // the tape's own query (so this boot is the recording's boot); `tape` then lays the tape's knob tables and kit over this machine's at each point below. Absent = nothing.
   const tapePlay = q.has(PLAYTAPE) ? await tapeFromUrl(q) : null; if (tapePlay === 'moved') return;
@@ -293,7 +297,7 @@ async function main() {
   if (q.has('nobouncewalls')) bounceWallsConfig.on = false;   // ?nobouncewalls: the radiance cache read a probe spacing along a man's normal whatever stands there — a man by a lit room's outer wall takes the room's bounce and mirrors its lamps, as it was (render/frame.ts bounceWallsConfig)
   if (q.get('sharpcap') === '0') sharpCapConfig.on = false;   // ?sharpcap=0: sharp direct gives a class the ratio its taps carry with no bound by its live lights, as it was (render/frame.ts sharpCapConfig)
   if (q.get('glintpick') === '1') glintPickConfig.on = true;   // &glintpick=1 (the look's page only: the prelude asks lookConfig.on too): the lamps' highlights past the three strongest by one weighted pick, none credited unseen (render/frame.ts glintPickConfig; a const of the shaders, so read here)
-  if (q.get('sheen') === '1') sheenConfig.on = true;   // &sheen=1 (the look's page only: the prelude asks lookConfig.on too), a trial: the lamps' and the sun's highlights go on a quarter of the roughness scale past the reflection rays' cut-off (render/frame.ts sheenConfig; a const of the shaders, so read here)
+  if (q.get('hireach') === '0') highlightConfig.reach = 0;   // &hireach=0 (any page): the lamps' highlights fade where the mirror does, the reach they had before 11-05 (render/frame.ts highlightConfig; a const of the shaders, so read here)
   if (q.has('nosunglint')) sunGlintConfig.on = false;   // ?nosunglint: no directional light gives a smooth finish a highlight, as it was (render/frame.ts sunGlintConfig; a const of the shaders, so read here, before the first pipeline)
   if (q.has('noreflwalls')) reflWallsConfig.on = false;   // ?noreflwalls: a metal's reflection rays read the cache a probe spacing along the hit's normal whatever stands there, as it was (render/frame.ts reflWallsConfig; the picture from before both rules is ?nobouncewalls&noreflwalls: with this one on, a man mirrored in steel takes the walled read whatever the other word says)
   if (q.get('allproxies') === '0') BoxWorld.castCap = MESH_MAX_CHARS;   // ?allproxies=0: the shadow / reflection / bounce proxies stop at the first eight men drawn, as they did (scene/boxes.ts BoxWorld.castCap)
@@ -301,12 +305,12 @@ async function main() {
   if (q.has('norainshadow')) rainShadowConfig.on = false;   // ?norainshadow: the rain lit by the reach masks alone — through a shut door, through the wall a weapon light is pointed at — as it was (render/frame.ts rainShadowConfig)
   initHour(q);   // ?hour=dawn|midday|overcast|dusk (+ ?sun=0‥1): the level at another hour than its own night (src/game/hours.ts) — standGame lays it over the level; no flag = the level as authored
   recipeTables();
-  const brief = tape || net || kitViewOn || q.has('paused') || q.has(BENCH_RUN_KEY) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, ?kitview's window, the automation boot, a benchmark's scene)
+  const brief = tape || net || kitViewOn || q.has('paused') || runPage(q) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, ?kitview's window, the automation boot, a benchmark's scene)
   const card = brief ?? bootCard(); loading.textContent = '';
   const tick = () => document.hidden ? Promise.resolve() : new Promise<void>(r => setTimeout(r, 0));   // (a hidden pane / background tab services timers about once a second and paints nothing anyway: no yield there)
   await tick();
   const tGpu = performance.now();
-  const rigPage = q.has('bench') || q.has(BENCH_RUN_KEY) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
+  const rigPage = q.has('bench') || runPage(q) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
   const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn, keeper: keep.keeper });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   startCallClock(gpu.device);   // (the load's clock on its buffer, texture and submit calls, to the boot's freeze: gpu/keep.ts)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
@@ -541,14 +545,14 @@ async function main() {
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
   // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
-  if (!benchSceneWaits()) loadSandbox(game);
+  if (!benchSceneWaits() && !heldPage(q)) loadSandbox(game);   // (… nor on a level's page of the pricing run, host/runpage.ts: it stands the row off the same way, for its whole life)
   // THE LOOK PROTOTYPE's kit (the maintainer, 11-01: "unlimited ammo and all equipment? want to play with smoke grenades", and "turning off fog of war would also
   // be good for /look too"; ?lookkit=0 = the kit as dealt, the sandbox row as saved and the fog as the link has it): the unlimited ammunition row is up from the
   // start (not saved from here: the debugger's box still puts it down), Sam is never without two cans of smoke, two stun charges and two frags whatever card he
   // was dealt, and the fog of war is down unless the link asks for it by name (?fow). The page's alone; looked at a frame, since a mission deals its kit and
   // writes its fog late, and again at every restart.
   { const lq = new URLSearchParams(location.search);
-    if (lookConfig.on && lq.get('lookkit') !== '0' && !lq.has(BENCH_RUN_KEY)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
+    if (lookConfig.on && lq.get('lookkit') !== '0' && !runPage(lq)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
       const fog = lq.has('fow') || lq.has('fogofwar');
       game.infiniteAmmo = true;
       const top = () => { const pl = game.player; pl.canisters = Math.max(pl.canisters, 2); pl.flashbangs = Math.max(pl.flashbangs, 2); pl.frags = Math.max(pl.frags, 2);
@@ -733,7 +737,7 @@ async function main() {
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → the one door (host/savefile.ts: a backend's intake, no download) + shot server
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch (e) { reportError('page.note', e); } });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
-  const GPU_RENDER_PASSES = ['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present'];   // the passes the GPU union leaves out (render passes: their timestamps are not to be trusted on Metal); the backend's records list them apart
+  const GPU_RENDER_PASSES = [...RENDER_PASSES];   // the passes the GPU union leaves out (gpu/timer.ts: the one list); the backend's records list them apart
   let cloudCallsAt = NaN;   // (the page's running ms inside its GPU calls when this frame's timer started — gpu/keep.ts CALLS.play; NaN = no clock then)
   let cloudGpuMs = NaN;   // this frame's GPU union where the ladder's sample below had a new one (the backend's records read the same number: cloud/telemetry.ts)
   let lastTimerResolved = -1;   // engine.timer.resolved when the ladder was last fed a GPU union (a sample gets 0 = 'no timings' unless a NEW readback resolved since)
@@ -786,7 +790,7 @@ async function main() {
     const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1250, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
     if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }   // (sceneCapMs: the scene's own cap is the hands-off player's, on the game's clock; the benchmark's cut on the wall's clock stands a quarter behind it)
   else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
-  (window as any).__sim = { sim, RUST, RUST_ON, say: simSay, whyNot: simWhyNot, maths: mathsOfRust }; console.info(simSay());   // THE RUST SIMULATION (src/sim/sim.ts): the module, which systems run in it, and one line at boot saying it started (tools/qa/rust-page.cjs reads these)
+  (window as any).__sim = { sim, RUST, RUST_ON, say: simSay, whyNot: simWhyNot, maths: mathsOfRust, fell: fellLines, fellSealed }; console.info(simSay());   // THE RUST SIMULATION (src/sim/sim.ts): the module, which systems run in it, and one line at boot saying it started (tools/qa/rust-page.cjs reads these)
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
   // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
   // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file goes out by the one door, host/savefile.ts (+ the shot server's /session sink)
@@ -844,6 +848,7 @@ async function main() {
   // first shot of the night. Everything else tried (night vision, a lightning stroke, decals, glass cracks, debug views) costs nothing extra the first time: Metal compiles at
   // pipeline creation, which all happens at boot. Not under ?paused — scripts own every frame there; __prewarm() does it by hand — and never twice.
   let prewarmAt = -3;   // −3 never asked · ≥ 0 the frame it ran · −2 done
+  (window as any).__prewarmed = false;   // (true once the warm-up's throwaway can and spark are cleared, below: a run that plays the page by steps waits for it, ui/pricerun.ts)
   (window as any).__prewarm = () => { if (prewarmAt !== -3) return false; smoke.spawnCanister([0.7, 0, 0.7], 0.05); engine.particles?.emit('spark', [-60, 0.3, -60], [0, 1, 0], 1, { speed: 1, life: 0.25, size: 0.01 }); prewarmAt = frameCount; return true; };
   // __pace(): the page's pace on this display (host/pace.ts): the switch, the display's rate as the pacer reads it, how many display frames one drawn frame takes right now, how many were passed over and worked, the rate the ladder holds, the rate shown
   (window as any).__pace = () => ({ on: EVENPACE.on, hz: pace.hz, every: pace.every, skipped: pace.skipped, worked: pace.worked, target: quality.adaptive || quality.auto ? quality.bands.target : 0, fps: fpsSm,
@@ -1051,7 +1056,7 @@ async function main() {
     simSm = simSm * 0.95 + loop.updateMs * 0.05;   // (the read-out's 'sim ms': Game.update on the CPU, eased as the fps row is)
 
     frameCount++;
-    if (prewarmAt >= 0 && frameCount >= prewarmAt + 12) { smoke.clearAll(); engine.particles?.clear(); prewarmAt = -2; }   // the warm-up's throwaway can / spark (above; the can goes in the smoke lattice's own far corner — off the lattice nothing would be made and no reader would meet smoke): everything they touch has been touched
+    if (prewarmAt >= 0 && frameCount >= prewarmAt + 12) { smoke.clearAll(); engine.particles?.clear(); prewarmAt = -2; (window as any).__prewarmed = true; }   // the warm-up's throwaway can / spark (above; the can goes in the smoke lattice's own far corner — off the lattice nothing would be made and no reader would meet smoke): everything they touch has been touched
     hudReadout();
     tourVeil.style.opacity = String(demo.active ? demo.fade : game.director.showing ? (game.director.frame?.fade ?? 0) : attract.fade); document.body.classList.toggle('touring', !!show()); document.body.classList.toggle('attract', attract.active);   // (attract mode cuts under the same veil — its fade is 0 whenever it is not running — and thins the card's vignette while it runs: index.html body.attract)
   }
@@ -1578,6 +1583,7 @@ function characterRigFlagsAndHooks(engine: Engine, game: Game) {
 /** ?meshShadows / ?nodecals / ?noparticles / ?nosparkbounce (written over the applied preset, as they were), __mark, __marks, __particles */
 function marksParticlesFlagsAndHooks(engine: Engine, game: Game) {
   if (new URLSearchParams(location.search).has('meshShadows')) engine.settings.meshShadows = true;   // ?meshShadows: on by hand whatever the preset (ultra carries it anyway; auto's ladder re-applies presets and will clear it — pin ?quality= to keep it)
+  game.decals.onCut = new URLSearchParams(location.search).get('markcut') !== '0';   // A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (render/decals.ts onCut): on in the page, ?markcut=0 = pulled to the plain box's face, where the shader drops it, as it was
   game.decals.setSit(new URLSearchParams(location.search).get('marksit') !== '0');   // MARKS THAT SIT IN THE SURFACE (render/decals.ts sit): on in the page, ?marksit=0 = a blast's marks as they were drawn
   if (new URLSearchParams(location.search).has('nodecals')) { engine.settings.decals = false; game.decals.enabled = false; }   // ?nodecals: the decal experiment (E1, on by default in its branch) off from boot — nothing recorded, nothing uploaded, the g-buffer as it was
   // __mark: the MARKINGS lane (scene/markings.ts) for the console / automation — on/off, the knobs, a box's packed records, the table's stats, the lights registered for emissive markings

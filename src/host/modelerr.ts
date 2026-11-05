@@ -14,7 +14,7 @@
 // THE PLAN IS THE LEVEL'S OWN: stations are picked from its free floor by one rule (the farthest from those already picked), the points round a station by
 // another, and the models are stepped on a fixed sixtieth whatever the page's frame rate. A REPORT KEEPS ITS QUESTIONS (every station, point, line and
 // age) beside the picture's answers, so a report made on a GPU judges the models as they are LATER, with no GPU: a walk is handed the report and asks
-// its questions again, whatever a plan deals today (`ModelErr`'s `again`), on a stand whose level is the one the report was made on (its `level` word).
+// its questions again, whatever a plan deals today (`ModelErr`'s `again`), on a stand where they look out on the world they did (its `look` word).
 //
 // A MODEL IS A ROW of `MODELS`: a new one (a light model with bounce) is a row here and a row of `BUDGET`, and everything below carries it.
 // The plan stands the player at each station (the picture is at its best round the camera), unseen and unhurt, with the AI held still, so that nothing
@@ -27,7 +27,6 @@ import { CpuSmoke, SmokeGrid, SENSE, GRID, type LightField } from '../game/sense
 import { lightEstimateAt, steadyLamps, LIGHTS } from '../game/guards';
 import { moonForget } from '../game/hours';
 import { smokeParams } from '../game/combat';
-import { levelFingerprint } from '../game/savestate';
 import { saveFile, type SavedKind } from './savefile';
 
 export const MODELERR = { on: false };
@@ -70,11 +69,12 @@ export interface Report {
    *  same things of the same floor. Not a word for the answers: what a lamp gives moves from tick to tick, and a model is there to be changed */
   world: string;
   stations: Vec3[];
-  /** THE PLAN'S ROW AS IT WAS WALKED (the table's rows change; the report's own does not), and A WORD FOR THE LEVEL IT WAS WALKED ON (`levelOf`: the
-   *  level as authored and every door leaf as it stood). With both, a walk can ask the report's questions again (`planAgain`, `ModelErr`'s `again`)
-   *  wherever the level is that one. Absent in a report of a page from before 2026-11-05: it is judged as it was recorded and cannot be asked again
-   *  (the two kept from then had theirs written in: docs/agents/rust.md, the model against the picture) */
-  asked?: Plan; level?: string;
+  /** THE PLAN'S ROW AS IT WAS WALKED (the table's rows change; the report's own does not), and A WORD FOR THE WORLD ITS QUESTIONS LOOKED OUT ON
+   *  (`lookOf`: the lamps, and the walls and door leaves its points, lines and stations meet). With both, a walk can ask the report's questions
+   *  again (`planAgain`, `ModelErr`'s `again`) wherever they look out on that world. Absent in a report of a page from before 2026-11-05: it is
+   *  judged as it was recorded and cannot be asked again (the two kept from then had theirs written in: docs/agents/rust.md, the model against
+   *  the picture) */
+  asked?: Plan; look?: string;
   /** was the picture asked at all (false: a headless run, the models alone) */
   picture: boolean;
   /** the light meter's curve and its line for a lit man, as the game had them (Game.tune, guards.ts LIGHTS.litAt) */
@@ -213,21 +213,40 @@ function worldOf(R: Report, boxes: number): string {
   for (const s of R.samples) for (const v of s.p ?? [...s.a!, ...s.b!, s.t!]) h = fnv(h, v);
   return (h >>> 0).toString(36);
 }
-/** A WORD FOR THE LEVEL AS IT STANDS: the level as it was authored (savestate.ts levelFingerprint: its statics' places and sizes, its doors, routes,
- *  lights and props — what a checkpoint is refused by) and every leaf that moves in it as it stands now, to the millimetre and the milliradian (a
- *  door open on one stand and shut on another is another floor to draw sight lines over). Two stands with one word are one place to ask a report's
- *  questions. Nothing the picture alone reads is in it (a wet floor's shine is a flag on a static), nor the light, nor who walks there: the stand's
- *  own rules and the seed decide those, and the tool that asks a report again holds them itself (tools/qa/modelerr.ts) */
-export function levelOf(g: Game): string {
-  let h = g.col.dynamicBoxes.length | 0; const mix = (x: number) => { h = Math.imul(h ^ Math.round(x * 1000), 0x01000193); };
-  for (const b of g.col.dynamicBoxes) { for (const x of b.c) mix(x); for (const x of b.h) mix(x); mix(b.yaw); }
-  return `${levelFingerprint(g).fp}.${(h >>> 0).toString(36)}`;
+/** A WORD FOR THE WORLD A REPORT'S QUESTIONS LOOK OUT ON, read off the box world by the CPU's own lines (collision.ts segmentBlocked, raycast: the
+ *  walls, the furniture and the door leaves as they stand, shaped as a line meets them) — and so the same word wherever those questions would be
+ *  answered of the same place:
+ *    · the lamps that are things of the level — an emitting surface (a ceiling panel, a screen) or a lamp with its fixture — where each hangs and
+ *      how far it reaches. Not a lamp somebody carries, a passing flash, or a device's own (a camera's cone sweeps: it is never twice where it was);
+ *      and not whether a lamp is on (a switch thrown, a bulb shot out: the stand's and the seed's);
+ *    · every light point: of those lamps in reach of it, which a wall stands before;
+ *    · every sight line: is it a line still, each way;
+ *    · every station: the room where its canister stands as the smoke meets it — how far a level ray runs before a wall, eight ways round at two
+ *      heights, to a quarter metre and no further than `NEAR`.
+ *  Two stands with one word are one place to ask the report's questions. A wall moved, cut or opened near a question moves the word, a lamp moved
+ *  or a door stood otherwise where a question passes; NOT what no line of these meets: a box drawn and nothing else, what a box is made of, a car
+ *  dressed at the far end of the yard, a door two rooms away, a mark a rule sets on a box for another reader. Nor the hour, the weather, or who
+ *  carries a lamp where: the stand's rules and the seed decide those, and the tool that asks a report again holds them itself
+ *  (tools/qa/modelerr.ts). It says 'these questions look out on the same walls and lamps', not 'the same picture': the picture also reads paint, and
+ *  a report asked again prints how far each model's answers have moved from the ones it recorded */
+export function lookOf(g: Game, R: Pick<Report, 'stations' | 'samples'>): string {
+  let h = 0x811c9dc5; const mix = (n: number) => { h = Math.imul(h ^ (n | 0), 0x01000193); }, cm = (x: number) => mix(Math.round(x * 100));
+  const col = g.col, shut = (a: Vec3, b: Vec3) => mix(col.segmentBlocked(a, b) ? 1 : 0);
+  const lamps = g.engine.lights.lights.filter(l => (l.kind === 3 || l.fixtureBox >= 0) && !l.owner && l.ttl < 0 && !l.transient).map(l => ({ pos: l.steady ? l.steady.pos : l.pos, range: l.range }));
+  for (const l of lamps) { for (const x of l.pos) cm(x); cm(l.range); }
+  for (const s of R.samples) if (s.k === 'light') for (const l of lamps) if (Math.hypot(l.pos[0] - s.p![0], l.pos[1] - s.p![1], l.pos[2] - s.p![2]) <= l.range) shut(l.pos, s.p!);
+  const t0 = Math.min(...R.samples.filter(s => s.k === 'smoke').map(s => s.t!));   // (every age asks a station's lines again: the first age's are the lines)
+  for (const s of R.samples) if (s.k === 'smoke' && s.t === t0) { shut(s.a!, s.b!); shut(s.b!, s.a!); }
+  for (const st of R.stations) for (const y of [0.25, 1.25]) for (const [dx, dz] of ROUND) { const hit = col.raycast([st[0], y, st[2]], [dx, 0, dz], NEAR); mix(Math.round((hit ? hit.t : NEAR) * 4)); }
+  return (h >>> 0).toString(36);
 }
+/** how far round a station its room is read (m: a canister's smoke in the plan's ages), and the eight ways (no sine: the same doubles in every engine) */
+const NEAR = 6, ROUND: [number, number][] = [[1, 0], [Math.SQRT1_2, Math.SQRT1_2], [0, 1], [-Math.SQRT1_2, Math.SQRT1_2], [-1, 0], [-Math.SQRT1_2, -Math.SQRT1_2], [0, -1], [Math.SQRT1_2, -Math.SQRT1_2]];
 /** THE PLAN A REPORT IS ASKED AGAIN BY (`ModelErr`'s `again`): what its own samples say — its stations, the heights and the ages of its lines — and,
  *  of its row, the one thing they do not: how long a station is stood at before the first question. Null: it cannot be asked again (no row or no
- *  level word: a page's report from before reports carried them) */
+ *  word for its look: a page's report from before reports carried them) */
 export function planAgain(R: Report): Plan | null {
-  if (!R.asked || typeof R.asked.settle !== 'number' || !R.level) return null;
+  if (!R.asked || typeof R.asked.settle !== 'number' || !R.look) return null;
   const ages = [...new Set(R.samples.filter(s => s.k === 'smoke').map(s => s.t!))].sort((a, b) => a - b);
   return { ...R.asked, stations: R.stations.length, eyes: eyesOf(R), ages };
 }
@@ -323,7 +342,7 @@ export class ModelErr {
   private open(x: number, z: number): 0 | 1 { const w = this.g.weather; return w && !w.underRoof(x, z) ? 1 : 0; }
   /** `again` = A REPORT WHOSE QUESTIONS THIS WALK ASKS AGAIN, in the report's own order: its stations, its light points and its lines at each (`plan`
    *  is then `planAgain(again)`: the report's ages and its settle). Nothing is dealt, so what a plan would deal today does not matter. The caller
-   *  says whether the level here is the report's (`levelOf` against `Report.level`) */
+   *  says whether its questions look out here on the world they did (`lookOf` against `Report.look`) */
   constructor(readonly g: Game, readonly plan: Plan, planName: string, scene: string, readonly picture: boolean, private readonly again: Report | null = null) {
     this.grid.grid = SmokeGrid.make(); if (g.wind.stormDrift()) this.adrift.grid = SmokeGrid.make(); this.was = { unseen: g.playerInvisible, god: g.godMode, ai: g.aiEnabled };
     // (the light model's field as it stands once it has swept the plan and come to rest: two sweeps' worth of steps at once, so that the walk reads its
@@ -331,8 +350,8 @@ export class ModelErr {
     { const own = new CpuSmoke(); own.grid = SmokeGrid.make(); if (own.grid) this.lit = own as LightField; }
     if (this.lit) for (let n = 0; n < 2 * SENSE.glow.sweep; n += 4) this.lit.grid.step(g.col, 4 * GRID.step, col => steadyLamps(g, col));
     this.stations = again ? again.stations : stationsOf(g, plan.stations); this.seen = g.time;
-    this.report = { v: 2, plan: planName, scene, world: '', stations: this.stations, asked: plan, level: levelOf(g), picture, meter: { slope: g.tune.visSlope, floor: g.tune.visFloor, litAt: LIGHTS.litAt }, unanswered: 0, samples: [] };
-    if (!this.stations.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); } else this.next();
+    this.report = { v: 2, plan: planName, scene, world: '', stations: this.stations, asked: plan, picture, meter: { slope: g.tune.visSlope, floor: g.tune.visFloor, litAt: LIGHTS.litAt }, unanswered: 0, samples: [] };
+    if (!this.stations.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); this.report.look = lookOf(g, this.report); } else this.next();
   }
   get station(): number { return this.at; }
   /** the walk is over: its grids give back the blocks they stood in (sense.ts SmokeGrid.free: each held one of the module's slots) */
@@ -390,7 +409,7 @@ export class ModelErr {
       else if (q.frames > 120) { this.report.unanswered++; this.asks.splice(i, 1); } }
     for (const q of this.asks) { if (room <= 0) break; if (q.asked && q.frames % 4) continue;   // (an ask the probe let go of for a higher rank is asked again every fourth frame until it is answered)
       const s = q.sample; if (q.line) P.querySegment(q.key, s.a!, s.b!, 3); else P.query(q.key, s.p!, g.player.char.id, 3); q.asked = true; room--; }
-    if (this.at >= this.stations.length && !this.asks.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); g.playerInvisible = this.was.unseen; g.godMode = this.was.god; g.aiEnabled = this.was.ai; }   // (the game is handed back as it was found)
+    if (this.at >= this.stations.length && !this.asks.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); this.report.look = lookOf(g, this.report); g.playerInvisible = this.was.unseen; g.godMode = this.was.god; g.aiEnabled = this.was.ai; }   // (the game is handed back as it was found)
   }
 }
 

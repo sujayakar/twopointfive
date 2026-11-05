@@ -305,14 +305,16 @@ export class Throwables {
    *  at home in the game's block, and the copy standing with the game's own leaves and the furniture in it */
   private world(g: Game | null): BoxMirror | null {
     if (!RUST.items || g === null || this.store.home === null || !EXACT.on) return null;
-    const M = this.col.rulesWorld(this.col.dynamicBoxes);
-    return M !== null && M.things(this.props) ? M : null;
+    const M = this.col.rulesWorld(this.col.dynamicBoxes); if (M === null) return null;
+    if (this.col.rulesPanes() < 0) return null;   // (this file's rays ask the pane's rule; each walk below asks it again)
+    return M.things(this.props) ? M : null;
   }
   /** THE MODULE'S WALK from row `from` down (rust/sim/src/items.rs update): the hand-over written, the walk asked, the tallies kept, what it listed
    *  copied out of the module's memory onto `ev`. → the row it hands back for this side to step, or −1 */
   private walkThere(dt: number, M: BoxMirror, from: number, ev: number[]): number {
+    const ask = this.col.rulesPanes(); if (ask < 0) return from;   // (a row this side stepped broke more glass than the copy holds: every row from here is this side's)
     const io = itemIo(), m = itemMem(), P = io.par, B = this.bog;
-    m[P + IP.dt] = dt; m[P + IP.from] = from; m[P + IP.ask] = this.col.glassOpen ? 1 : 0; m[P + IP.bog] = B !== null && B.may() ? 1 : 0; m[P + IP.rifleShare] = RIFLE_ITEM.propShare;
+    m[P + IP.dt] = dt; m[P + IP.from] = from; m[P + IP.ask] = ask; m[P + IP.bog] = B !== null && B.may() ? 1 : 0; m[P + IP.rifleShare] = RIFLE_ITEM.propShare;
     const a = io.x.items_update(this.store.home!.bind(), M.slot), m2 = itemMem(), T = ITEMS_STEPPED;
     if (a !== ITEMS_HOST && a !== 0) throw new Error(`the Rust module would not walk the thrown things from row ${from} of ${this.store.n}`);
     const n = m2[P + IP.events];

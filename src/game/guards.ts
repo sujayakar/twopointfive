@@ -2624,6 +2624,11 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). `moon` = the level's
  *  moon is in it too (the switch's word unless the asker says). */
 export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g), moon: boolean = SENSE.moon): number {
+  // (the lamps are one question in several calls, and the sun's, the moon's and the stroke's lines follow it: asked outside a tick — an order given
+  //  between ticks prices its walk by the light of the floor — the whole of it stands in one window over the module's copy, scene/collision.ts window)
+  return g.col.mirror.live ? lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon) : g.col.window(() => lightEstimateIn(g, P, skipOwner, steadyOnly, field, moon));
+}
+function lightEstimateIn(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, field: LightField | null, moon: boolean): number {
   const acc = [0, 0, 0, 0, 0, 0];
   // RUST.light (rust/sim/src/light.rs: lampsHere's statements from the distance on, as one question a point)
   if (!lampsThere(g, P, skipOwner, steadyOnly, acc, field)) lampsHere(g, P, skipOwner, steadyOnly, acc, field);
@@ -2665,7 +2670,8 @@ export function steadyLamps(g: Game, col: StaticCollision): boolean { return wri
 /** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
  *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
 function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
-  const col = g.col; if (!col.lampsBegin() || !writeLamps(g, col, P, skipOwner, steadyOnly)) return false;
+  const col = g.col; if (!col.lampsBegin()) return false;
+  if (!writeLamps(g, col, P, skipOwner, steadyOnly)) { col.lampsFell(); return false; }
   return col.lampsOn(P, acc, field && field.grid.fed ? field.grid.sim : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
 }
 /** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
