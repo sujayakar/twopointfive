@@ -56,12 +56,12 @@ import { breakerResetNear } from './lighting';
 import { lightEstimateAt } from './guards';
 import { darkFoeCarries } from './darkfoe';
 import { squadDefers, squadStaysIn } from './enemysquads';
-import { laneHolds } from './lanes';
 import { digInPhase } from './digin';
 import { lastStandMan } from './laststand';
 import { buddyOwns } from './buddy';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { hasHim, OWN } from './owner';
+import { gunKeepsPost } from './gunroles';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nopowerout = the garrison stands in the dark, as it did)
  *  and by the shipped stand; the harness's frozen stand leaves it off (TPS_POWEROUT=1 turns it on). UNTUNED by play: nobody has played against it. */
@@ -168,7 +168,7 @@ export function powerOutKept(g: Game, D: Def): string | null {
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
   if (squadDefers(g, gd)) return 'his squad\'s';
   if (!POWEROUT.stayers && squadStaysIn(g, gd)) return 'his squad stays in its rooms';
-  if (laneHolds(g, gd) || hasHim(gd, OWN.lastMan)) return 'holds a lane / the last man';
+  if (gunKeepsPost(gd) || hasHim(gd, OWN.lane | OWN.lastMan)) return 'holds a lane / the last man';
   const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
   if (press || buddyOwns(g, D)) return 'the press\'s';
   return null;

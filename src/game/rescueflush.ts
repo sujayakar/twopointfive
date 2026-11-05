@@ -13,7 +13,7 @@
 //                 outside each door: his turn's door in their line of fire and the other not, he takes the other); nobody is kept back for being
 //                 warned off — where he is sent is where the team's guns are, so a man kept back for a lane at those guns never came at all.
 //                 Stopped short of a covered corridor on his way he is that rule's (he looks, goes round or throws as its men do), and while it
-//                 holds him there no word takes him off it for what lies at that corridor's guns (laneHolds).
+//                 holds him there no word takes him off it for what lies at that corridor's guns (laneBars).
 //     AND AGAIN   a man who has come to rest with nobody in his sights (the room fight planted him again) is sent again `againSecs` after his last word.
 //     THEY'RE GONE   the first of them to stand in the hostage room and find no hostage in it says so on the net, and from then on they go where a man
 //                 taking people out of the building goes: the team's last loud thing and the way out (the team's own way in), in turn.
@@ -32,7 +32,7 @@ import type { Game, Guard } from './game';
 import type { Rescue } from './rescue';
 import { endGuardScript, inBounds } from './squad';
 import { resetChase } from './guards';
-import { laneCovers, laneHolds, laneWarns } from './lanes';
+import { laneCovers, laneBars, laneKnownAt } from './lanes';
 import { rescueCheckOwns } from './rescuecheck';
 import { w, wg } from './words';
 import { hasHim, OWN } from './owner';
@@ -148,7 +148,7 @@ export class RescueFlush {
       if (!K.lanesChoose) {   // the build before: a man the lanes warned off where he was sent was kept back — at the team's own guns, that was every man
         let went = false;
         for (const goal of a === b ? [a] : [a, b]) {
-          const via = goal === 'side' ? R.sideWay : [], at = via[0] ?? this.pointOf(goal, alive); if (!at || laneHolds(g, h, at) || laneWarns(g, h, at)) continue;
+          const via = goal === 'side' ? R.sideWay : [], at = via[0] ?? this.pointOf(goal, alive); if (!at || laneBars(g, h, at) || laneKnownAt(g, h, at)) continue;
           this.send(h, goal, at, n, via); this.barred.delete(h); went = true; break;
         }
         if (went) { this.nextAt = g.time + K.gapSecs; return; }
@@ -159,9 +159,9 @@ export class RescueFlush {
       // other door's is not (lanes.ts laneCovers). The lanes only CHOOSE: where he is sent is where the team's guns are, so a man kept back for a lane
       // at those guns never came at all. Sent, he walks by that rule's own price for covered floor and is stopped short of it by that rule's own gate,
       // where he looks, goes round or throws as its men do — and a man it already holds at a corridor's mouth is not taken off it for what lies at
-      // that corridor's guns (laneHolds, as the press and the rally ask it): his word waits, the next man's turn comes
+      // that corridor's guns (laneBars, as the press and the rally ask it): his word waits, the next man's turn comes
       const ways = (a === b ? [a] : [a, b]).map(goal => { const via = goal === 'side' ? R.sideWay : [], at = via[0] ?? this.pointOf(goal, alive); return { goal, via, at, door: goal === 'side' ? via[via.length - 1] ?? null : goal === 'room' ? room : at }; })
-        .filter(w => !!w.at && !laneHolds(g, h, w.at));
+        .filter(w => !!w.at && !laneBars(g, h, w.at));
       if (!ways.length) continue;
       const covered = (w: typeof ways[number]) => !!w.door && laneCovers(g, h, w.door);
       const turned = ways.length > 1 && covered(ways[0]) && !covered(ways[1]), W = ways[turned ? 1 : 0];
