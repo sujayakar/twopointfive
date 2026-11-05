@@ -103,6 +103,18 @@ function box<T extends Partial<Box>>(of: CoastTable, b: T): T {
   return out;
 }
 
+/** A BOX ALREADY MADE, in its coast clothes, IN PLACE (tools/levels/gwotSkin.ts: a look's second file that wears this skin finds kit pieces the plain
+ *  generator laid, and they change with the rest). True if it wore a row of the kit's. (DRAFT, the depot's rework: the skin of a level's second file and
+ *  the host a generator builds over are one table read by one function.) */
+export function coastInPlace(of: Readonly<Record<GwotMat, CoastMat>>, b: Partial<Box>): boolean {
+  if (!dressed(of, b.albedo)) return false;
+  const out = box(of, b); b.albedo = out.albedo; if (out.rough !== undefined) b.rough = out.rough; if (out.metal) b.metal = true; else delete b.metal;
+  if (out.stuff !== undefined) b.stuff = out.stuff; else delete b.stuff; if (out.shape) b.shape = out.shape; if (out.marks) b.marks = out.marks;
+  return true;
+}
+/** … and a prop's part */
+export function coastPart<T extends { albedo: Vec3 }>(of: Readonly<Record<GwotMat, CoastMat>>, p: T): T { const d = dressed(of, p.albedo); return d ? { ...p, albedo: d.albedo } : p; }
+
 /** A HOST THAT LAYS THE KIT'S PIECES IN THE COAST SKIN: everything the kit hands it goes on to `host` in its coast clothes. `of`: which coast row each row
  *  of the kit wears (COAST_OF; COAST_QUIET_OF is the same skin with fewer colours and quieter surfaces) */
 export function coastHost(host: GwotHost, of: CoastTable = COAST_OF): GwotHost {
