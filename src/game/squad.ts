@@ -24,6 +24,7 @@ import { DOORMANNERS, doorwayGate } from './doorway';
 import { silentStep } from './silent';
 import { handleGate } from './handleside';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { word } from './belief';
 
 /** Within this of the goal the nav path is dropped and he settles straight onto the exact spot (paths end on half-metre cell centres, and a
  *  choreographer's marks — a kicking distance off a door, a shoulder on a jamb — are not on cell centres). */
@@ -522,7 +523,7 @@ export class Clearing {
     if (a.state === 'dead' || (b && b.state === 'dead')) {   // whoever is left goes to where his partner was — and finds him (still mustering: nothing to hand back, the pair simply is no more)
       if (this.stage !== 'muster') {
         const dead = a.state === 'dead' ? a : b!, left = dead === a ? b : a;
-        if (left && left.state !== 'dead') { endGuardScript(left, 'suspicious'); left.awareness = Math.max(left.awareness, 0.6); left.lastKnown = v3.copy(dead.char.pos); left.reactT = 0.7; left.searchT = 0; g.say(left, 'hey — you with me? …say something.'); }
+        if (left && left.state !== 'dead') { endGuardScript(left, 'suspicious'); left.awareness = Math.max(left.awareness, 0.6); word(g, left, dead.char.pos); left.reactT = 0.7; left.searchT = 0; g.say(left, 'hey — you with me? …say something.'); }
       }
       this.stage = 'done'; return false;
     }
@@ -537,12 +538,12 @@ export class Clearing {
       this.stage = 'done'; return false;
     }
     if (worst === 'body') {   // one of them has a colleague on the floor in view: both come off the drill facing it, quietly — the one who saw him calls it next frame (updateGuard's discovery: 'man down!', the alarm, the body script), and that call hands the other his part; nobody says 'huh?' at a corpse
-      for (const gd of this.men()) { endGuardScript(gd, 'suspicious'); gd.awareness = Math.max(gd.awareness, 0.5); if (fix) gd.lastKnown = v3.copy(fix); gd.reactT = 0.6; gd.searchT = 0; }
+      for (const gd of this.men()) { endGuardScript(gd, 'suspicious'); gd.awareness = Math.max(gd.awareness, 0.5); if (fix) word(g, gd, fix); gd.reactT = 0.6; gd.searchT = 0; }
       this.stage = 'done'; return false;
     }
     if (worst) {   // something to look at: the point man's 'huh?', and his #2 takes it exactly as seriously without one of his own (as a trailing man does on the corridor)
       breakOff(a, SUSPECT + 0.05, fix ?? a.lastKnown);
-      if (b) { endGuardScript(b, 'suspicious'); b.awareness = Math.max(b.awareness, SUSPECT); if (fix) b.lastKnown = v3.copy(fix); b.reactT = 1.2; b.searchT = 0; }
+      if (b) { endGuardScript(b, 'suspicious'); b.awareness = Math.max(b.awareness, SUSPECT); if (fix) word(g, b, fix); b.reactT = 1.2; b.searchT = 0; }
       this.stage = 'done'; return false;
     }
     if (g.blackout.active && !this.dark) {   // the mains went mid-clear: off it, edgy like everyone else — and the one setBlackout may have sent to the breaker keeps his errand and his fix

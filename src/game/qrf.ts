@@ -61,6 +61,7 @@ import { chronRadio, chronicle } from './chronicle';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a spared teammate on his knee is nobody the response makes out: asked inside its sight loop only)
 import { hasHim, OWN } from './owner';
+import { word } from './belief';
 
 // ================================================================ authored marks (TODO(level-format lane): these belong in LevelData beside routes / chokepoints / clearPlans)
 /** Everything the response needs from THIS level: the door it comes through, where the men stand on the landing behind it (in element order: #1 at the bar), the
@@ -1071,7 +1072,7 @@ function toFight(g: Game, Q: Qrf, el: Guard[], seer: Guard) {
   const fix = seer.lastKnown ? v3.copy(seer.lastKnown) : v3.copy(g.player.char.pos);
   for (const m of el) {
     if (m.script) endGuardScript(m, 'alert');
-    m.hold = false; m.pinned = false; m.state = 'alert'; m.awareness = Math.max(m.awareness, m === seer ? 1 : 0.95); m.lastKnown = v3.copy(m === seer && m.lastKnown ? m.lastKnown : fix);
+    m.hold = false; m.pinned = false; m.state = 'alert'; m.awareness = Math.max(m.awareness, m === seer ? 1 : 0.95); word(g, m, m === seer && m.lastKnown ? m.lastKnown : fix);
     m.reactT = m === seer ? 0.12 : 0.2 + simRandom() * 0.25; m.fireCd = Math.max(m.fireCd, 0.35); m.searchT = 0; m.foe = RESPONSE.on && seer.foe ? seer.foe : 'player'; resetChase(m);
     m.witness.alertedBy = m === seer ? 'sight' : 'radio'; m.witness.alertT = g.time;
   }
@@ -1089,7 +1090,7 @@ function phaseFight(g: Game, Q: Qrf, el: Guard[]) {
   // a man the chase has dropped to the search while it is still warm goes straight back on the freshest fix (no 'CONTACT!' — he never left it)
   if (g.time - contactT <= REGROUP_SECS) {
     const bf = fixOf(g);
-    for (const m of el) if (m.state !== 'alert') { m.state = 'alert'; m.awareness = Math.max(m.awareness, 0.9); m.reactT = 0.15; if (bf) m.lastKnown = v3.copy(bf.pos); m.searchT = 0; m.searchPlan = null; resetChase(m); }
+    for (const m of el) if (m.state !== 'alert') { m.state = 'alert'; m.awareness = Math.max(m.awareness, 0.9); m.reactT = 0.15; if (bf) word(g, m, bf.pos); m.searchT = 0; m.searchPlan = null; resetChase(m); }
     return;
   }
   if (seeing) return;

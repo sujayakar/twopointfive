@@ -33,6 +33,7 @@ import { run, boots, pressKeepsHome } from './pressure';
 import { DIGIN, digInSet } from './digin';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { eyesFix } from './belief';
 
 export const BUDDY = {
   /** the switch: off = none of this file runs. SHIPPED OFF, the maintainer's call: on, a scripted team keeps clearly MORE men on the compound and the barracks
@@ -93,7 +94,7 @@ function teamKnown(g: Game, F: RoomFight): Vec3[] {
   const out: Vec3[] = [];
   for (const D of F.defs) {
     const gd = D.gd; if (!alive(D)) continue;
-    if (g.time - gd.lastSeenT < 4 && gd.lastKnown && gd.lastKnown !== D.pt) out.push(gd.lastKnown);
+    const seen = g.time - gd.lastSeenT < 4 ? eyesFix(gd, D.pt) : null; if (seen) out.push(seen);
     if (D.noiseAt && g.time - D.noiseT < 4) out.push(D.noiseAt);
   }
   return out;
