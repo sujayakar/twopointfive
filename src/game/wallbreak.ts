@@ -33,7 +33,8 @@
 // A ROUND NEVER GOES ON PAST WHAT IT HIT here: the one place a round is stopped stays combat.ts fireWeapon's `g.col.raycast` — an opened cell is simply not there
 // for the NEXT round's ray. Nothing in this module continues, splits or re-fires a round (no second round loop to keep in step with the glass goal's).
 //
-// BOUNDED: ≤ WALLS.maxPieces appended statics (a change that would need more is REFUSED — the round only scars — and counted), the lane's debris pool for what
+// BOUNDED: ≤ WALLS.maxPieces appended statics, and no more than the level left room for in the Rust module's copy of the box world as it loaded
+// (WallBreak.room: the smaller of the two; a change that would need more is REFUSED — the round only scars — and counted), the lane's debris pool for what
 // falls, ≤ WALLS.maxChanges rows. DETERMINISTIC: no Math.random, every choice hashes the module's own counter. RESET with the level (Destruction.reset): authored
 // boxes back as they were, appended statics cut off, nav re-baked. CHECKPOINTS carry it: savestate.ts files `snapshot()` and re-applies it after the restart; the
 // level fingerprint is taken over the AUTHORED statics only.
@@ -53,6 +54,7 @@ import type { ShedBudget } from './breakTable';
 import { WallWear } from './wallwear';
 import { messOpened } from './floormess';
 import { leafRound } from './doorblast';
+import { breakRoom, type BreakRoom } from './levelfit';
 
 // ------------------------------------------------------------------ knobs
 export const WALLS = {
@@ -181,9 +183,33 @@ export class WallBreak {
   /** LOOK ONLY (wallwear.ts): what a cell shows while it is being shot — marks that grow with its count, on both faces of a thin wall */
   readonly wear = new WallWear();
 
+  /** THE ROOM THIS LEVEL LEFT FOR ITS PIECES, taken once as it loaded (levelfit.ts breakRoom): what the Rust module's copy of the box world holds beyond the
+   *  level as authored, in statics, in entries of the grid's cells and in cut rows. `rebuild` stands no piece up past it, as it stands none up past
+   *  WALLS.maxPieces: the smaller of the knob as it reads now and this. So no knob and no level walks a game past the copy's tables: a level with little
+   *  room breaks less (the round only scars, and it is counted), and it is the level's own number for its whole life, whatever is broken or put back. */
+  readonly room: BreakRoom;
   constructor(private g: Game, private destr: Destruction) {
     this.authored = g.col.boxes.length;
     this.index();
+    this.room = breakRoom(g.col, g.col.mirror.tables);
+  }
+  /** would `need` more pieces of B be more than this level may stand up? Every piece is a static, at most one cut row, and an entry in each cell of the
+   *  box it was cut from (StaticCollision.addStatic files it by that box): the three tables of the copy a piece takes room in. */
+  private over(B: Breakable, need: number): boolean {
+    const col = this.g.col, n = col.boxes.length - this.authored + need, R = this.room;
+    if (n > WALLS.maxPieces || n > R.boxes || n > R.cuts) return true;   // (every piece is counted a cut row, whatever the cut-pieces switch says now: with it off no piece takes one, and a level under a knob raised past its cut rows' room breaks a little less than the copy could hold — the switch may be turned in play, and the room was taken once)
+    if (R.items === Infinity) return false;
+    let filed = need * col.footEntries(B.box); for (const b of this.list) if (b.slots.length) filed += b.slots.length * col.footEntries(b.box);
+    return filed > R.items;
+  }
+  /** HOW MANY PIECES THE ROOM SURELY HOLDS, whichever things are broken: by the statics, by the cut rows, and by the entries if every piece were cut from
+   *  the broadest thing that can break (a breakable of the index, or a wall a charge could take on). A level where this is no less than WALLS.maxPieces
+   *  never has a piece refused for the copy's sake: the count of the shipped levels holds each to it (levelfit.ts fitRows `pieces`, copyfit-check). */
+  piecesSure(): number {
+    const col = this.g.col, R = this.room; if (R.items === Infinity) return Infinity;
+    let foot = 1; for (const b of this.list) foot = Math.max(foot, col.footEntries(b.box));
+    for (let i = 0; i < this.authored; i++) if (this.adoptable(i)) foot = Math.max(foot, col.footEntries(col.boxes[i]));
+    return Math.max(0, Math.min(R.boxes, R.cuts, Math.floor(R.items / foot)));
   }
 
   // ---------------------------------------------------------------- index
@@ -320,14 +346,14 @@ export class WallBreak {
     }
     return out;
   }
-  /** Rebuild B's standing pieces from its cells. false = it would take more appended statics than the cap allows (nothing changed). */
+  /** Rebuild B's standing pieces from its cells. false = it would take more appended statics than the cap or the level's room allows (`over`; nothing changed). */
   private rebuild(B: Breakable): boolean {
     const g = this.g; const world = g.engine.world;
     if (B.nOpen === 0) { B.box.flags = B.flags0; for (let k = 0; k < B.live; k++) g.col.boxes[B.slots[k]].flags |= HIDE; B.live = 0; this.bump(); return true; }
     const rects = B.nOpen === B.open.length ? [] : this.pieces(B);
     const studs = this.destr.breaks.studs(B);   // (the cut switch: the metal uprights a shot-through partition keeps — none with it off)
     const need = rects.length + studs.length - B.slots.length;
-    if (need > 0 && (g.col.boxes.length - this.authored + need > WALLS.maxPieces || world.statics.length + need > world.maxBoxes - 768)) return false;
+    if (need > 0 && (this.over(B, need) || world.statics.length + need > world.maxBoxes - 768)) return false;
     for (let k = 0; k < rects.length; k++) {
       const { c, h } = this.rectBox(B, rects[k]);
       const cut = this.destr.breaks.ragged(B, rects[k], h);   // (the cut switch: a ragged end where the piece looks into the opening — undefined with it off)

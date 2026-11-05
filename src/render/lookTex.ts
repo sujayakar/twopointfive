@@ -126,16 +126,32 @@ const cellOut: Cell = { f1: 0, f2: 0, id: 0, dx: 0, dy: 0 };
 /** the nearest two feature points of a jittered `p` × `p` lattice: distances in CELLS, the nearest one's hash and the offset to it (cells) */
 function cells(u: number, v: number, p: number, seed: number, jitter = 0.85): Cell { return cells2(u, v, p, p, seed, jitter); }
 /** the same on a `p` × `q` lattice (a cell wider than tall when p < q) */
-function cells2(u: number, v: number, p: number, q: number, seed: number, jitter = 0.85): Cell {
-  const x = u * p, y = v * q, ix = Math.floor(x), iy = Math.floor(y);
-  let f1 = 9, f2 = 9, id = 0, bx = 0, by = 0;
-  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const cx = wrap(ix + i, p), cy = wrap(iy + j, q);
-    const px = ix + i + 0.5 + (hash(cx, cy, seed) - 0.5) * jitter, py = iy + j + 0.5 + (hash(cx, cy, seed + 1) - 0.5) * jitter;
-    const dx = px - x, dy = py - y, d = Math.hypot(dx, dy);
-    if (d < f1) { f2 = f1; f1 = d; id = hash(cx, cy, seed + 2); bx = dx; by = dy; } else if (d < f2) f2 = d;
+export function cells2(u: number, v: number, p: number, q: number, seed: number, jitter = 0.85): Cell {
+  const x = u * p, y = v * q, ix = Math.floor(x), iy = Math.floor(y), T = cellTable(p, q, seed, jitter);
+  let d1 = 99, d2 = 99, id = 0, bx = 0, by = 0, sx = 0, sy = 0;
+  for (let j = -1; j <= 1; j++) {
+    const row = wrap(iy + j, q) * p;
+    for (let i = -1; i <= 1; i++) {
+      const o = (row + wrap(ix + i, p)) * 3;
+      const px = ix + i + 0.5 + T[o], py = iy + j + 0.5 + T[o + 1];
+      const dx = px - x, dy = py - y, d = dx * dx + dy * dy;
+      if (d < d1) { d2 = d1; sx = bx; sy = by; d1 = d; id = T[o + 2]; bx = dx; by = dy; } else if (d < d2) { d2 = d; sx = dx; sy = dy; }
+    }
   }
-  cellOut.f1 = f1; cellOut.f2 = f2; cellOut.id = id; cellOut.dx = bx; cellOut.dy = by; return cellOut;
+  cellOut.f1 = Math.hypot(bx, by); cellOut.f2 = Math.hypot(sx, sy); cellOut.id = id; cellOut.dx = bx; cellOut.dy = by; return cellOut;
+}
+/** A LATTICE'S FEATURE POINTS, WORKED OUT ONCE. A texel asks its nine neighbouring cells where their points lie, and a cell is asked by every texel near
+ *  it: three hashes a cell a texel was most of what a layer cost. Here a lattice (its size, its seed, its jitter) hashes each cell once: two offsets and an id.
+ *  The few lattices one material asks for are found by looking down a short list; the list is emptied as a layer starts and as it ends (lookLayerSteps):
+ *  a table found is always the right one (its key is all it is made from), so two layers made in turns only make each other's again.
+ *  Only the two nearest points' distances are rooted: the nine are told apart by their squares (tools/qa/lookcells-check.ts holds this to the plain way). */
+const cellTables: { p: number; q: number; seed: number; jitter: number; t: Float64Array }[] = [];
+function cellTable(p: number, q: number, seed: number, jitter: number): Float64Array {
+  for (let k = 0; k < cellTables.length; k++) { const c = cellTables[k]; if (c.p === p && c.q === q && c.seed === seed && c.jitter === jitter) return c.t; }
+  if (!(Number.isInteger(p) && Number.isInteger(q) && p > 0 && q > 0 && Number.isFinite(seed) && Number.isFinite(jitter))) throw new Error(`look map: a lattice of ${p} by ${q} cells, seed ${seed}, jitter ${jitter} (whole cells and finite numbers only)`);
+  const t = new Float64Array(p * q * 3);
+  for (let cy = 0, o = 0; cy < q; cy++) for (let cx = 0; cx < p; cx++, o += 3) { t[o] = (hash(cx, cy, seed) - 0.5) * jitter; t[o + 1] = (hash(cx, cy, seed + 1) - 0.5) * jitter; t[o + 2] = hash(cx, cy, seed + 2); }
+  cellTables.push({ p, q, seed, jitter, t }); return t;
 }
 
 /** one texel as a material writes it: height (m), paint multiplier, roughness */
@@ -703,11 +719,15 @@ export async function lookLayerSliced(layer: number, N: number, even: boolean, s
   const it = lookLayerSteps(layer, N, even), now = () => typeof performance !== 'undefined' ? performance.now() : 0; let t0 = now();
   for (;;) { const r = it.next(); if (r.done) return r.value; if (now() - t0 >= sliceMs) { await breath(); t0 = now(); } }
 }
-/** lookLayer's body, stopping after every row of the material's own arithmetic (the long part) and between the passes after it */
+/** lookLayer's body, stopping after every row of the material's own arithmetic (the long part) and, in the passes after it (the evening, the two blurs, the
+ *  hollows, the normals), every few rows: those passes are 15 to 20 ms together, which made in play on the page's own thread was a frame dropped. A stop
+ *  changes no number: the same statements run in the same order. */
+const ROWS = 31, BREATH = 16384;   // (a stop every 32 rows of a pass, or every 16,384 texels of a flat one: about a tenth of a millisecond apart)
 function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<void, LookMaps, void> {
   const mat = MATS[layer], H = new Float32Array(N * N), a = new Uint8Array(N * N * 4), b = new Uint8Array(N * N * 4), R = new Float32Array(N * N), P = new Float32Array(N * N * 3);
   const t: Tex = { h: 0, r: 1, g: 1, b: 1, rough: 1 };
   let lo = 1e9, hi = -1e9, sum = 0;
+  cellTables.length = 0;   // (the last layer's lattices are not this one's)
   for (let y = 0; y < N; y++) { if (y) yield; for (let x = 0; x < N; x++) {
     t.h = 0; t.r = t.g = t.b = 1; t.rough = LOOK_ROUGH[layer];
     mat((x + 0.5) / N, (y + 0.5) / N, t);
@@ -717,23 +737,24 @@ function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<voi
   } }
   yield;
   const mean = sum / (N * N), tone = even && layer < LOOK_PAINTED && mean > 0 ? mean : 1, kv = 1 / tone;
-  for (let i = 0; i < N * N * 3; i++) a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5));
+  for (let i = 0; i < N * N * 3; i++) { a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5)); if (i % BREATH === BREATH - 1) yield; }
   // cavity: how far a texel sits under the mean of its neighbourhood (a box blur of ±R texels, periodic, two passes)
   const rad = Math.max(2, Math.round(N / 85)), tmp = new Float32Array(N * N), blur = new Float32Array(N * N), w = 1 / (2 * rad + 1);
-  for (let y = 0; y < N; y++) { let s = 0; for (let k = -rad; k <= rad; k++) s += H[y * N + wrap(k, N)]; for (let x = 0; x < N; x++) { tmp[y * N + x] = s * w; s += H[y * N + wrap(x + rad + 1, N)] - H[y * N + wrap(x - rad, N)]; } }
-  for (let x = 0; x < N; x++) { let s = 0; for (let k = -rad; k <= rad; k++) s += tmp[wrap(k, N) * N + x]; for (let y = 0; y < N; y++) { blur[y * N + x] = s * w; s += tmp[wrap(y + rad + 1, N) * N + x] - tmp[wrap(y - rad, N) * N + x]; } }
+  for (let y = 0; y < N; y++) { let s = 0; for (let k = -rad; k <= rad; k++) s += H[y * N + wrap(k, N)]; for (let x = 0; x < N; x++) { tmp[y * N + x] = s * w; s += H[y * N + wrap(x + rad + 1, N)] - H[y * N + wrap(x - rad, N)]; } if ((y & ROWS) === ROWS) yield; }
+  for (let x = 0; x < N; x++) { let s = 0; for (let k = -rad; k <= rad; k++) s += tmp[wrap(k, N) * N + x]; for (let y = 0; y < N; y++) { blur[y * N + x] = s * w; s += tmp[wrap(y + rad + 1, N) * N + x] - tmp[wrap(y - rad, N) * N + x]; } if ((x & ROWS) === ROWS) yield; }
   const open = blur; let openSum = 0;   // (in place: how open each texel is, 0‥1, 1 = not in a hollow)
-  for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); }
+  for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); if (i % BREATH === BREATH - 1) yield; }
   const hollow = even && sum > 0 ? 0.5 - 0.5 * openSum / sum : 0;   // (weighed by the paint: where a material's high places are also its pale ones, as on worn wood, an even count of texels left the two together 3 % bright)
   yield;
   const texel = LOOK_TILE / N, k = RELIEF[layer] / (2 * texel), span = Math.max(hi - lo, 1e-6);
-  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  for (let y = 0; y < N; y++) { if (y && (y & ROWS) === 0) yield; for (let x = 0; x < N; x++) {
     const i = y * N + x;
     const sx = (H[y * N + wrap(x + 1, N)] - H[y * N + wrap(x - 1, N)]) * k, sy = (H[wrap(y + 1, N) * N + x] - H[wrap(y - 1, N) * N + x]) * k, il = 1 / Math.hypot(sx, sy, 1);
     a[i * 4 + 3] = Math.round(255 * (H[i] - lo) / span);
     b[i * 4] = Math.round(255 * (0.5 - 0.5 * sx * il)); b[i * 4 + 1] = Math.round(255 * (0.5 - 0.5 * sy * il));
     b[i * 4 + 2] = Math.round(255 * clamp01(R[i])); b[i * 4 + 3] = Math.round(255 * clamp01(0.5 * open[i] + hollow));
-  }
+  } }
+  cellTables.length = 0;
   return { a, b, tone, hollow };
 }
 /** the next mip of one map (a 2 × 2 mean; for B the normal is left SHORT where its four texels disagree, and that shortfall is put into the roughness: relief too fine

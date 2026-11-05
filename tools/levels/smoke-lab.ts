@@ -89,7 +89,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('yard.fronts');
   for (const [kind, x, name] of [['red', 17.05, 'front_red'], ['blue', 18.02, 'front_blue']] as const) {
     const V = vendingSpec(kind, K.TX), z = 10.12 + V.h[2], rw = V.h[0] - V.colW;   // (the dispenser's recess under the lit field, a flush block under the control column: the office's own three boxes)
-    const box = add({ c: [x, 1.125, z], h: V.h, albedo: V.body, rough: 0.5, ...K.mk(V.marks) });
+    const box = add({ c: [x, 1.125, z], h: V.h, albedo: V.body, ...K.mk(V.marks) });
     add({ c: [x - V.colW, 0.175, z - 0.03], h: [rw, 0.175, V.h[2] - 0.03], albedo: V.plinth, ...K.mk(MD.dispenserMarks([rw, 0.175, V.h[2] - 0.03], K.TX)) });
     add({ c: [x + rw, 0.175, z], h: [V.colW, 0.175, V.h[2]], albedo: V.plinth });
     switchables.push({ name, boxes: [box], group: 'fronts', on: true, baseEmissive: [0, 0, 0] });
