@@ -58,7 +58,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit, LIVED_PAINT } from './livedKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { drawnAs, PANEL_GREY, madeOf, saidAs } from '../../src/scene/stuff';
+import { drawnAs, PANEL_GREY, madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'depot';
 export const NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
@@ -164,7 +164,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the huts' own walls (0.24 where a face is on a yard, 0.12 between two rooms) ----------------
   grp('walls.huts');
-  const hut = saidAs('stucco', C.partTan), iw = C.wall;   // (the huts' walls wear the office's tan partition paint, whose row says cloth: they say stucco, the word the compound's house says over the same paint)
+  const hut = C.partTan, iw = C.wall;
   const OPEN_W = { y0: 0.95, y1: 2.1 };                         // a window with no glass in it: shutters back, a man's chest and head over the sill
   // the north bar's yard wall, z=9.5: the duty office's door, the crew room's, the battery room's — and, east of x 24, the wall between the generator room
   // and the signals hut with the hut's ONLY door in it

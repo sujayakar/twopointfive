@@ -8,7 +8,7 @@
 import { build as buildPlain, NOTES as PLAIN_NOTES, CONSULATE_ROOMS, CONSULATE_SPLIT } from './consulate';
 import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
-import { skinLevel, LOOK_NOTE, VARNISH, type Skin } from './gwotSkin';
+import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
 import type { Vec3 } from '../../src/math/vec';
@@ -23,7 +23,7 @@ const R = CONSULATE_ROOMS, SPLIT = CONSULATE_SPLIT;
  *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: src/scene/look.ts LOOK_DOORS */
 const PLUM: Vec3 = [0.15, 0.035, 0.075];
 const SKIN: Skin = {
-  wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: VARNISH, frameIn: VARNISH, dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,
+  wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: 'blanketBrown', frameIn: 'blanketBrown', dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,
   floor: { stone: 'slab', lino: 'slab', carpet: 'blanketBrown', carpetBlue: 'poplar' },   // (the consul's office: bare boards round its two carpets — a fitted carpet in the dark madder read 0.045, a hole in the floor)
   metals: ['woodGrey', 'iron'],
   // THE LIVED ROOMS' OWN FLOORS (consulate.ts lays one wall to wall in each staff room in a colour of its own): each as the stuff it is, and none of them a
