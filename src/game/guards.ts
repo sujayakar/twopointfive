@@ -2158,7 +2158,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       const rate = F === 'player' ? sightGain(g, gd, dist) : sightGainOn(g, gd, F as Guard, dist);
       if (rate > 0.05) {   // a faint glimpse updates where to look — and which way he is actually going: displacement over the last sighting, not the pace he is asking of his legs (held by a leaf or a desk he 'sprints' on the spot) — only a real sighting refreshes the licence to shoot
         const pp = fc.pos; const since = g.time - gd.sightT;
-        gd.sightVel = since > 1e-4 && since < 0.1 ? [(pp[0] - gd.sightPos[0]) / since, 0, (pp[2] - gd.sightPos[2]) / since] : [0, 0, 0];
+        gd.sightVel = since > 1e-4 && since < 0.1 ? [(pp[0] - gd.sightPosX) / since, 0, (pp[2] - gd.sightPosZ) / since] : [0, 0, 0];
         const was = gd.awareness; gd.awareness = clamp(gd.awareness + rate * dt, 0, 1); if (!farFaint(gd, dist, was) && !attentionAside(g, gd, pp, gd.awareness - was)) gd.lastKnown = v3.copy(pp); gd.sightPos = v3.copy(pp); gd.sightT = g.time; seen = rate > 0.25; if (seen) gd.lastSeenT = g.time;   // (farFaint: a glimpse from past the old reach is no place to walk to until it is what has him looking)
         gd.alertBest = 1e9; gd.alertStallT = 0; gd.alertRef = null; gd.chaseT = 0;   // (eyes on him: whatever chase follows starts its no-progress clocks from here, not from a stale count)
       }
