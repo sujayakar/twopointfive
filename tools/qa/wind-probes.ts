@@ -278,8 +278,11 @@ export async function windLevel(): Promise<boolean> {
   { const errs: string[] = validateLevelData(D);
     const grille = D.boxes.filter((b: any) => b.group === 'ceiling.vents');
     const under = (D.vents ?? []).every((v: any) => grille.some((b: any) => Math.abs(b.c[0] - v.pos[0]) < 1e-9 && Math.abs(b.c[2] - v.pos[2]) < 1e-9 && (b.flags ?? []).includes('NoPrimary')));
-    const last = D.boxes.slice(-grille.length).every((b: any) => b.group === 'ceiling.vents');
-    F.verdict(errs.length === 0 && grille.length === (D.vents ?? []).length && under && last, 'the file validates clean; one NoPrimary grille box per vent right over its face (group ceiling.vents), and those boxes are the LAST in the list (no older index moved)', `${errs.length} errors · ${grille.length} grille boxes · under every vent ${under} · last ${last}`);
+    // (the file's LIVED TIER — groups `lived.*`, the tail a stand may load without: scene/lived.ts — comes after every box of the level's own, the grilles too.
+    //  The office had none when this line was written, and the hand pass's 62 boxes after the grilles turned it red)
+    const lived = (b: any) => String(b.group ?? '').startsWith('lived.'), own = D.boxes.filter((b: any) => !lived(b));
+    const last = D.boxes.slice(own.length).every(lived) && own.slice(-grille.length).every((b: any) => b.group === 'ceiling.vents');
+    F.verdict(errs.length === 0 && grille.length === (D.vents ?? []).length && under && last, 'the file validates clean; one NoPrimary grille box per vent right over its face (group ceiling.vents), and those boxes are the LAST of its own boxes in the list (no older index moved; only the lived tier comes after)', `${errs.length} errors · ${grille.length} grille boxes · under every vent ${under} · last ${last} · ${D.boxes.length - own.length} boxes of the lived tier after them`);
   }
   { const back = levelToData(L, { name: 'rt', materials: D.materials }); const L2 = loadLevel(back);
     const same = JSON.stringify(L.vents) === JSON.stringify(L2.vents) && JSON.stringify(back.vents) === JSON.stringify(D.vents);
