@@ -45,7 +45,7 @@ export const MAX_GLASS = 32;
  *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
 export const BOX_ROUND_BIT = 8;
 
-import { coatRough } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
+import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
 export interface Box {
@@ -57,7 +57,7 @@ export interface Box {
   flags: number;
   owner: number;      // 0 = world, 1..255 = character id (rays from a character skip its own proxies)
   cutHeight: number;  // world Y above which the box is hidden from primary visibility when Cutaway
-  /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK, while `albedo` itself stays as authored (no rule reads a material from it: what a
+  /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK (sentAlbedo below; for a thing of solid glass, glass's dark × wetK), while `albedo` itself stays as authored (no rule reads a material from it: what a
    *  box does is its word, scene/materials.ts; the wet lot's answer is the row's own `wet`). weather.ts darkens rained-on ground with it. */
   wetK?: number;
   /** optional full 3D orientation (unit quaternion, world) for the few things that tilt: hand props, goggles, spark streaks, tumbling
@@ -200,10 +200,22 @@ export const wordOf = (b: { stuff?: BoxStuff; does?: DoesWord }): { stuff?: BoxS
 
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
 export const ROUGH_DEFAULT = 1.0;
+/** a thing of solid glass: it says 'glass' and is no pane (a pane, BoxFlag.Glass, is the glass engine's whatever it says). The one test: what cracks
+ *  as solid glass (game/particleFx.ts solidGlass) and what is drawn as it (below) ask it. */
+export const solidGlassBox = (b: { stuff?: BoxStuff; flags: number }): boolean => b.stuff === 'glass' && (b.flags & BoxFlag.Glass) === 0;
+/** the neutral dark a thing of solid glass is sent as in place of its own colour (scene/stuff.ts SOLIDGLASS), or −1 where it is sent as it is: the rule
+ *  down, no solid glass, a face that carries markings, a colour that dark already */
+export function glassDark(b: Box): number {
+  if (!SOLIDGLASS.on || b.marks !== undefined || !solidGlassBox(b)) return -1;
+  const a = b.albedo; return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2] > SOLIDGLASS.lum ? SOLIDGLASS.lum : -1;
+}
+/** THE COLOUR A BOX IS SENT IN, channel c (render-only, the one place: the packed albedo, the folded secondary albedo's base and the static slice's
+ *  compare): its own × its wetness (Box.wetK), and for a thing of solid glass the neutral dark × its wetness. `albedo` itself is never touched. */
+export const sentAlbedo = (b: Box, c: 0 | 1 | 2, dark = glassDark(b)): number => (dark >= 0 ? dark : b.albedo[c]) * (b.wetK ?? 1);
 /** The finish as the one f32 the GPU gets (boxMat[3i+1].w): roughness clamped to 0‥1, + 2 if metal, + 4 if anisotropic — three plain floats' worth in
  *  disjoint ranges, so common.wgsl boxFinish() peels them off with two compares (no bit tricks on a float the driver may renormalise). */
 export function matWord(b: Box): number {
-  const own = b.rough ?? ROUGH_DEFAULT, coat = coatRough(b.stuff), r = coat !== undefined && coat < own ? coat : own;   // (a box that says a named coat is no rougher than the coat: scene/stuff.ts COATFINISH)
+  const own = b.rough ?? ROUGH_DEFAULT, coat = coatRough(b.stuff) ?? (SOLIDGLASS.on && solidGlassBox(b) ? SOLIDGLASS.rough : undefined), r = coat !== undefined && coat < own ? coat : own;   // (a box that says a named coat is no rougher than the coat, and a thing of solid glass no rougher than glass: scene/stuff.ts COATFINISH, SOLIDGLASS)
   return (r < 0 ? 0 : r > 1 ? 1 : r) + (b.metal ? 2 : 0) + (b.aniso ? 4 : 0);
 }
 
@@ -617,9 +629,9 @@ export class BoxWorld {
     const cv = this.cutVisible;
     for (let i = 0; i < nStat; i++) {
       const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.fogEmit ?? b.emissive, rot = b.rot, marks = b.marks;
-      const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, wk = b.wetK ?? 1, ml = marks === undefined ? -1 : marks.length;
+      const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, gd = glassDark(b), a0 = sentAlbedo(b, 0, gd), a1 = sentAlbedo(b, 1, gd), a2 = sentAlbedo(b, 2, gd), ml = marks === undefined ? -1 : marks.length;
       if (!forceAll && S[so] === c[0] && S[so + 1] === c[1] && S[so + 2] === c[2] && S[so + 3] === b.yaw && S[so + 4] === h[0] && S[so + 5] === h[1] && S[so + 6] === h[2]
-        && S[so + 7] === b.flags && S[so + 8] === b.owner && S[so + 9] === al[0] * wk && S[so + 10] === al[1] * wk && S[so + 11] === al[2] * wk && S[so + 12] === em[0] && S[so + 13] === em[1] && S[so + 14] === em[2]
+        && S[so + 7] === b.flags && S[so + 8] === b.owner && S[so + 9] === a0 && S[so + 10] === a1 && S[so + 11] === a2 && S[so + 12] === em[0] && S[so + 13] === em[1] && S[so + 14] === em[2]
         && S[so + 15] === b.cutHeight && S[so + 16] === mw && S[so + 17] === mg && S[so + 23] === ml && SM[i] === marks && (!cutOn || SC[i] === b.cut)
         && (rot ? S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3] : S[so + 18] === 0)) {
         if (SK[i]) marked++;
@@ -627,7 +639,7 @@ export class BoxWorld {
         staticsChanged = true;
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
-        S[so + 9] = al[0] * wk; S[so + 10] = al[1] * wk; S[so + 11] = al[2] * wk; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
+        S[so + 9] = a0; S[so + 10] = a1; S[so + 11] = a2; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
         if (rot) { S[so + 18] = 1; S[so + 19] = rot[0]; S[so + 20] = rot[1]; S[so + 21] = rot[2]; S[so + 22] = rot[3]; } else { S[so + 18] = 0; S[so + 19] = 0; S[so + 20] = 0; S[so + 21] = 0; S[so + 22] = 0; }
         S[so + 23] = ml; SM[i] = marks; if (cutOn) SC[i] = b.cut;
       }
@@ -711,8 +723,8 @@ export class BoxWorld {
     let flags = (b.flags & (this.roundOn ? 0xf7 : 0xff)) | (round ? BOX_ROUND_BIT : 0) | ((b.owner & 0xff) << 8) | (b.rot ? BoxFlag.Rot : 0) | (b.flags & BoxFlag.Glass);   // GPU word: flag bits 0-7, owner byte 8-15 (boxOwner() in common.wgsl), Glass at bit 17 (the one CPU flag ≥ 1<<16 that is passed through: BOX_GLASS), the marking slot in 18-31 (below); everything else up there is CPU-only and never reaches the GPU
     const em = b.fogEmit ?? b.emissive;   // (the picture's emission: Box.fogEmit)
     if (em[0] + em[1] + em[2] > 0) flags |= BoxFlag.Emissive;
-    const wk = b.wetK ?? 1;   // (render-only: see Box.wetK)
-    let s0 = b.albedo[0] * wk, s1 = b.albedo[1] * wk, s2a = b.albedo[2] * wk;   // the secondary albedo (4th mat row): the albedo itself unless markings fold in
+    const wk = b.wetK ?? 1, gd = glassDark(b), a0 = sentAlbedo(b, 0, gd), a1 = sentAlbedo(b, 1, gd), a2 = sentAlbedo(b, 2, gd);   // (render-only: Box.wetK, and solid glass's dark — sentAlbedo; a marked face is never glass's dark, so `wk` alone is the marks' factor)
+    let s0 = a0, s1 = a1, s2a = a2;   // the secondary albedo (4th mat row): the albedo itself unless markings fold in
     if (marksOn && b.marks !== undefined && b.marks.length > 0 && !b.rot) {   // (a tilted box never carries markings: the face frame assumes yaw only)
       const mk = this.markSlotOf(b);
       if (mk.slot > 0 && mk.slot <= MARK_SLOT_MAX) { flags |= mk.slot << MARK_SLOT_SHIFT; s0 = mk.sec[0] * wk; s1 = mk.sec[1] * wk; s2a = mk.sec[2] * wk; marked = true; }
@@ -727,7 +739,7 @@ export class BoxWorld {
     gf[o] = b.c[0]; gf[o + 1] = b.c[1]; gf[o + 2] = b.c[2]; gu[o + 3] = pack2x16f(Math.cos(b.yaw), Math.sin(b.yaw));
     gf[o + 4] = b.h[0]; gf[o + 5] = b.h[1]; gf[o + 6] = b.h[2]; gu[o + 7] = flags >>> 0;
     const m = i * MAT_STRIDE;
-    mf[m] = b.albedo[0] * wk; mf[m + 1] = b.albedo[1] * wk; mf[m + 2] = b.albedo[2] * wk; mf[m + 3] = b.cutHeight;
+    mf[m] = a0; mf[m + 1] = a1; mf[m + 2] = a2; mf[m + 3] = b.cutHeight;
     mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
     if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
     else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
