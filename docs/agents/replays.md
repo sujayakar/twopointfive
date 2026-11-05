@@ -422,7 +422,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   red if it parts or asks the mixer for other sounds, `--dry`, `--cover` = which of `SfxName`'s rows each replay plays and which none reaches, with why — `index.json`'s `why`): the seven
   Training lessons played by their own scripted players on the page (`tools/qa/tapes/page-bot.ts` over tools/qa/lessons/*.ts) + three scripts for what no lesson makes a sound of
   (`tools/qa/tapes/office-loud.ts`, `wall-charge.ts`, `whip.ts`) + three to LISTEN THROUGH, each one family of sounds on the office's night floor, alone (`chairs.ts` = furniture leaned on,
-  shoved and sent into walls; `reloads.ts` = both guns run dry and reloaded each way; `doors.ts` = a door worked every way: steel booted, pushed, eased, rattled, picked, a keypad refused,
+  shoved and sent into walls; `reloads.ts` = both guns run dry and reloaded each way; `doors.ts` = a door worked every way: steel's bar tried and the door booted, pushed, eased, picked, a keypad refused,
   a lock kicked in, a fire exit by hand and at a run; `mode.noAi` = the guards' SENSES off — they still walk their beats and work their own doors — and `?nocivilians`, both carried by the
   tape). `TPS_PROFILE=shipped bun run tools/qa/tapes/dry.ts <name> [--seed N] [--lines] [--when sound,…] [--info]` plays one of those scripts headless in seconds (the sounds asked for,
   each line with its time; `--info` = the level's doors, props and walk grid) — where a script is written; the page's cursor and canvas differ, so the recording is the verdict. The listening page (`/sounds`) lists them under 'In play' and links each sound to the replay and step it is first heard

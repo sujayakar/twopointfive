@@ -108,7 +108,7 @@ export async function audioHold() {
     const q1 = voicesIn(log, tQ1 - DT, game.time);
     if (!asked1 || A.talk.stage !== st0) fails.push(`staging: the first tap did not open an exchange (ask ${asked1}, stage ${st0} → ${A.talk.stage} — he answers a beat later, not now)`);
     if (count(q1, 'murmur') !== 1 || q1.length !== 1) fails.push(`question 1, the tap's frame: ${tally(q1)} (want murmur×1 alone — the muffle comes with the answer)`);
-    const mu1 = q1.find(c => c.name === 'murmur'); if (mu1?.pos && Math.hypot(mu1.pos[0] - game.player.char.posX, mu1.pos[2] - game.player.char.posZ) > 0.3) fails.push(`murmur ${f2(Math.hypot(mu1.pos[0] - game.player.char.posX, mu1.pos[2] - game.player.char.posZ))} m off Sam`);
+    const mu1 = q1.find(c => c.name === 'murmur'); if (mu1?.pos && Math.hypot(mu1.pos[0] - game.player.char.pos[0], mu1.pos[2] - game.player.char.pos[2]) > 0.3) fails.push(`murmur ${f2(Math.hypot(mu1.pos[0] - game.player.char.pos[0], mu1.pos[2] - game.player.char.pos[2]))} m off Sam`);
     // a tap 0.4 s later, while Sam is still speaking: nothing at all (his line is never cut; the answer is already on its way)
     for (let i = 0; i < 23; i++) W.step(DT);
     const tMid = game.time; tapKey(W, IK); W.step(DT);

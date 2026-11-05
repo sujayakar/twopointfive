@@ -62,9 +62,9 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
     return { W, g, lvl, up };
   }
   /** put a man at a spot, standing, still */
-  const put = (c: any, x: number, z: number) => { c.posX = x; c.posY = 0; c.posZ = z; c.vel = [0, 0, 0]; c.update(0); };
+  const put = (c: any, x: number, z: number) => { c.pos[0] = x; c.pos[1] = 0; c.pos[2] = z; c.vel = [0, 0, 0]; c.update(0); };
   /** hold `key` for `secs`: the player's path (x, z each frame) */
-  const walk = (W: any, key: string, secs: number) => { const path: [number, number][] = []; W.input.keys.add(key); for (let t = 0; t < secs; t += DT) { W.step(DT); path.push([W.game.player.char.posX, W.game.player.char.posZ]); } W.input.keys.delete(key); for (let i = 0; i < 20; i++) W.step(DT); return path; };
+  const walk = (W: any, key: string, secs: number) => { const path: [number, number][] = []; W.input.keys.add(key); for (let t = 0; t < secs; t += DT) { W.step(DT); path.push([W.game.player.char.pos[0], W.game.player.char.pos[2]]); } W.input.keys.delete(key); for (let i = 0; i < 20; i++) W.step(DT); return path; };
   const len = (p: [number, number][]) => p.length ? Math.hypot(p[p.length - 1][0] - p[0][0], p[p.length - 1][1] - p[0][1]) : 0;
   /** pressed texels (byte ≥ 128: inside a print's outline) within `r` m of a path — and their count over the whole plan */
   const near = (T: any, path: [number, number][], r: number) => { let n = 0; const seen = new Set<number>(); for (const [x, z] of path) { const x0 = Math.floor((x - r - WORLD.min[0]) * R), x1 = Math.ceil((x + r - WORLD.min[0]) * R), z0 = Math.floor((z - r - WORLD.min[2]) * R), z1 = Math.ceil((z + r - WORLD.min[2]) * R); for (let tz = Math.max(0, z0); tz <= Math.min(T.h - 1, z1); tz++) for (let tx = Math.max(0, x0); tx <= Math.min(T.w - 1, x1); tx++) { const i = tz * T.w + tx; if (T.data[i] >= 128 && !seen.has(i)) { seen.add(i); n++; } } } return n; };
@@ -83,7 +83,7 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
         if (all(true, 2) && [-2, -1, 0, 1, 2].every(dx => [-2, -1, 0, 1, 2].every(dz => at(x + dx, z + dz).cover < 0.05))) roofs.push([x, z]);
       }
       // (… one a man can stand on: a building nobody enters is roofed too, and puts him back outside)
-      const stands = (x: number, z: number) => { put(g.player.char, x, z); for (let i = 0; i < 30; i++) W.step(DT); return Math.hypot(g.player.char.posX - x, g.player.char.posZ - z) < 0.3; };
+      const stands = (x: number, z: number) => { put(g.player.char, x, z); for (let i = 0; i < 30; i++) W.step(DT); return Math.hypot(g.player.char.pos[0] - x, g.player.char.pos[2] - z) < 0.3; };
       if (!open || !roofs.length) verdict(false, 'pressed — the pass has open snow to walk and a roofed floor', `open ${open} · roofed ${roofs.length}`);
       else {
         const pc = g.player.char; const KEYS = ['KeyW', 'KeyD', 'KeyS', 'KeyA'];
@@ -227,7 +227,7 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
     { const H = await rig('pass.json', true, true); const g2 = H.g, T2 = g2.snowTracks;
       await quiet(() => startFromQuery(g2, '?levelFile=pass.json&roomclear=0&squad4')); for (let i = 0; i < 60; i++) H.W.step(DT);
       g2.fogOfWar.on = false;
-      const man = (g2.guards as any[]).find(x => x.team === 'operative' && x.char.alive && SF.snowFieldAt(g2.snowField, x.char.posX, x.char.posZ).cover > 0.9);
+      const man = (g2.guards as any[]).find(x => x.team === 'operative' && x.char.alive && SF.snowFieldAt(g2.snowField, x.char.pos[0], x.char.pos[2]).cover > 0.9);
       if (!T2 || !man) verdict(false, 'hollow — the pass has a man standing on snow to put down', `texture ${T2 ? 'held' : T2} · ${g2.guards.length} men, ${man ? 'one' : 'none'} of the team on snow`);
       else {
         const c = man.char, h0 = T2.hollows; let at = -1, hipsThen: number[] | null = null;
@@ -237,7 +237,7 @@ export async function snowTracksCheck(o: { verbose?: boolean; fast?: boolean } =
         for (let t = 0; t <= 1.0001; t += 0.1) { const x = b.hips[0] + (head[0] - b.hips[0]) * t, z = b.hips[2] + (head[2] - b.hips[2]) * t; n++; if (T2.data[Math.floor((z - WORLD.min[2]) * R) * T2.w + Math.floor((x - WORLD.min[0]) * R)] >= 128) on++; }
         const slid = hipsThen ? Math.hypot(b.hips[0] - hipsThen[0], b.hips[2] - hipsThen[2]) : 9;
         verdict(T2.hollows === h0 + 1 && at > 30 && slid < 0.1 && on >= n - 1, 'hollow — a man put down on snow leaves one hollow, where he comes to rest',
-          `#${c.id} put down at (${c.posX.toFixed(1)}, ${c.posZ.toFixed(1)}): ${T2.hollows - h0} hollow(s), pressed ${at} frames after the shot · his hips ${slid.toFixed(2)} m from there six seconds on · ${on} of ${n} points along his trunk lie on pressed snow`);
+          `#${c.id} put down at (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)}): ${T2.hollows - h0} hollow(s), pressed ${at} frames after the shot · his hips ${slid.toFixed(2)} m from there six seconds on · ${on} of ${n} points along his trunk lie on pressed snow`);
       } }
     // ---- same
     if (!o.fast) {

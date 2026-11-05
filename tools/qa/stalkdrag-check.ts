@@ -37,15 +37,15 @@ async function world(drag: boolean, gap = 3) {
   for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
   A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - gap, 0, AT[2]]); g.player.crouch = true;
-  const c = g.player.char, chest = () => [A.char.posX, 1.2, A.char.posZ];
+  const c = g.player.char, chest = () => [A.char.pos[0], 1.2, A.char.pos[2]];
   const step = (n = 1) => { for (let i = 0; i < n; i++) { STALK.drag = drag; STALK.orbit = false; A.char.vel = [0, 0, 0]; W.step(DT); g.player.visibility = 0.02; } };
   step(40); W.cursorAt(chest()); W.input.buttons |= 1; W.input.clicked |= 1; step(1);
   const mid = [W.input.mouseX, W.input.mouseY];
   /** the screen's way from Sam to the man, a unit vector in px */
-  const toward = () => { W.cursorAt([c.posX, 0.6, c.posZ]); const s = [W.input.mouseX, W.input.mouseY]; W.cursorAt([A.char.posX, 0.6, A.char.posZ]); const a = [W.input.mouseX, W.input.mouseY]; const L = Math.hypot(a[0] - s[0], a[1] - s[1]) || 1; return [(a[0] - s[0]) / L, (a[1] - s[1]) / L]; };
+  const toward = () => { W.cursorAt([c.pos[0], 0.6, c.pos[2]]); const s = [W.input.mouseX, W.input.mouseY]; W.cursorAt([A.char.pos[0], 0.6, A.char.pos[2]]); const a = [W.input.mouseX, W.input.mouseY]; const L = Math.hypot(a[0] - s[0], a[1] - s[1]) || 1; return [(a[0] - s[0]) / L, (a[1] - s[1]) / L]; };
   const dir = toward(); W.input.mouseX = mid[0]; W.input.mouseY = mid[1];
   const hold = (dx: number, dy: number) => { W.input.mouseX = mid[0] + dx; W.input.mouseY = mid[1] + dy; };
-  const gapNow = () => Math.hypot(c.posX - A.char.posX, c.posZ - A.char.posZ), speed = () => Math.hypot(c.velX, c.velZ);
+  const gapNow = () => Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]), speed = () => Math.hypot(c.vel[0], c.vel[2]);
   return { W, g, A, c, step, hold, dir, gapNow, speed, on: () => stalkOn(g) === A };
 }
 async function still() {
@@ -65,7 +65,7 @@ async function toward() {
 async function side() {
   console.log('\n=== side: dragged across ===');
   const C = await world(up(), 2.2), n = [-C.dir[1], C.dir[0]]; C.hold(n[0] * STALK.dragFull, n[1] * STALK.dragFull); const g0 = C.gapNow(); C.step(20);   // (a third of a second: a straight line across opens the gap a little as it goes, and his turn follows the man a beat behind)
-  const v = C.c.vel, ux = C.A.char.posX - C.c.pos[0], uz = C.A.char.posZ - C.c.pos[2], L = Math.hypot(ux, uz), into = (v[0] * ux + v[2] * uz) / (L * (Math.hypot(v[0], v[2]) || 1));
+  const v = C.c.vel, ux = C.A.char.pos[0] - C.c.pos[0], uz = C.A.char.pos[2] - C.c.pos[2], L = Math.hypot(ux, uz), into = (v[0] * ux + v[2] * uz) / (L * (Math.hypot(v[0], v[2]) || 1));
   const face = Math.abs(Math.atan2(Math.sin(C.c.aimYaw - Math.atan2(ux, uz)), Math.cos(C.c.aimYaw - Math.atan2(ux, uz)))) * 180 / Math.PI, body = Math.abs(Math.atan2(Math.sin(C.c.bodyYaw - Math.atan2(ux, uz)), Math.cos(C.c.bodyYaw - Math.atan2(ux, uz)))) * 180 / Math.PI;
   verdict(C.on() && C.speed() > 0.3 && Math.abs(into) < 0.4 && Math.abs(C.gapNow() - g0) < 0.25 && face < 40,
     'dragged across the screen: he goes across, not in or out (the way he moves is within a quarter turn either side of square to the man), and he keeps facing the man, within 40°',

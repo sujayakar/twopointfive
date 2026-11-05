@@ -43,7 +43,7 @@ function recorder(att: any, vic: any) {
   const dir = (d: P3): P3 => [d[0] * L[0] + d[2] * L[2], d[1], d[0] * f[0] + d[2] * f[2]];
   const rel = (p: P3): P3 => dir([p[0] - o[0], p[1], p[2] - o[2]]);
   return { moments,
-    begin() { o = [vic.char.posX, 0, vic.char.posZ]; const y = vic.char.bodyYaw; f = [Math.sin(y), 0, Math.cos(y)]; L = [f[2], 0, -f[0]]; },
+    begin() { o = [vic.char.pos[0], 0, vic.char.pos[2]]; const y = vic.char.bodyYaw; f = [Math.sin(y), 0, Math.cos(y)]; L = [f[2], 0, -f[0]]; },
     snap(label: string) { moments.push({ label, a: manOf(att.char, rel, dir), v: manOf(vic.char, rel, dir) }); } };
 }
 
@@ -58,8 +58,8 @@ async function lobby(seed: number) {
   const [A, B, C] = g.guards; park(B, 0); park(C, 1); place(A, LOBBY, EAST); A.wp = 1; A.hold = true;
   W.cam.yaw = 0; W.cam.rebuild?.();
   const step = (n = 1) => { for (let i = 0; i < n; i++) { W.step(DT); g.player.visibility = 0.02; } };
-  const samAt = (bDeg: number, d: number, crouch = false) => { const a = A.char.bodyYaw + bDeg * DEG; g.teleportPlayer([A.char.posX + Math.sin(a) * d, 0, A.char.posZ + Math.cos(a) * d]); g.player.crouch = crouch;
-    const pl = g.player.char; pl.bodyYaw = pl.aimYaw = Math.atan2(A.char.posX - pl.posX, A.char.posZ - pl.posZ); W.cursorAt([A.char.posX, 1.2, A.char.posZ]); step(20); };
+  const samAt = (bDeg: number, d: number, crouch = false) => { const a = A.char.bodyYaw + bDeg * DEG; g.teleportPlayer([A.char.pos[0] + Math.sin(a) * d, 0, A.char.pos[2] + Math.cos(a) * d]); g.player.crouch = crouch;
+    const pl = g.player.char; pl.bodyYaw = pl.aimYaw = Math.atan2(A.char.pos[0] - pl.pos[0], A.char.pos[2] - pl.pos[2]); W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); step(20); };
   return { W, g, A, step, samAt };
 }
 /** the seconds after the blow starts at which a blow's strip looks (contact is 0.28 s, control back 0.62 s — player.ts) */
@@ -73,7 +73,7 @@ async function blow(bDeg: number, dist: number, lethal: boolean) {
 }
 async function hold(end: 'choke' | 'whip' | 'kill', beats = false) {
   const S = await lobby(7002), { W, g, A } = S; S.samAt(180, 0.8, true); g.player.holstered = end !== 'whip'; S.step(2);
-  const ahead = () => { const c = g.player.char; W.cursorAt([c.posX + Math.sin(c.bodyYaw) * 6, 1.0, c.posZ + Math.cos(c.bodyYaw) * 6]); };
+  const ahead = () => { const c = g.player.char; W.cursorAt([c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6]); };
   const R = recorder(g.player, A); R.begin(); R.snap('behind him');
   startGrab(g, A); let f = 0; const to = (t: number, label: string) => { const n = Math.round(t * 60); for (; f < n; f++) { ahead(); S.step(1); } R.snap(label); };
   if (end === 'kill') {   // the kill's own clock, the cut marked; then the fall
@@ -104,9 +104,9 @@ async function partner() {
   const O = g.orders, step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };
   step(30); SLM.setSilent(g, true); step(2);
   const mate = O.squad()[0], foe = g.guards.find((h: any) => h.callsign === 'Tango 1');
-  const put = (gd: any, p: P3, yaw: number) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; };
+  const put = (gd: any, p: P3, yaw: number) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; };
   put(foe, [22, 0, 17.6], EAST); foe.hold = true; put(mate, [19, 0, 17.6], EAST); g.teleportPlayer([11, 0, 18.5]); step(30);
-  const no = O.give('pairTake', { kind: 'foe', at: [foe.char.posX, 0, foe.char.posZ], foe }); if (no) throw new Error(`partner: 'take him now' refused: ${no}`);
+  const no = O.give('pairTake', { kind: 'foe', at: [foe.char.pos[0], 0, foe.char.pos[2]], foe }); if (no) throw new Error(`partner: 'take him now' refused: ${no}`);
   const R = recorder(mate, foe); const hands = () => PM.PAIR_LOG.some((x: any) => String(x.what).startsWith('hands:'));
   let n = 0; while (!hands() && n++ < 900) { step(1); if (n % 20 === 0 && flat(mate.char.pos, foe.char.pos) < 2.2 && R.moments.length < 2) { R.begin(); R.snap('closing'); } }
   if (!hands()) throw new Error(`partner: his hands never went on (${PM.PAIR_LOG.map((x: any) => x.what).join(' | ')})`);

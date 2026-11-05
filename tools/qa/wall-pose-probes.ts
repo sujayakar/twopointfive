@@ -100,11 +100,11 @@ export async function wallPose(opts: { report?: boolean } = {}) {
     const rounds0 = pl.pistol.roundsReady; const shots0 = (W.audioCounts.get('pistolSuppressed') ?? 0) + (W.audioCounts.get('pistolLoud') ?? 0) + (W.audioCounts.get('dryFire') ?? 0);   // (the pistol's report voices as sfx names them — 'pistol'/'shot' never existed, which made this check vacuous: review finding)
     input.pressed.add('KeyQ'); W.step(DT);
     const fails: string[] = [];
-    if (!pl.wall) { report(c.note, ['Q did not take hold'], `at (${f2(pl.char.posX)}, ${f2(pl.char.posZ)})`); continue; }
+    if (!pl.wall) { report(c.note, ['Q did not take hold'], `at (${f2(pl.char.pos[0])}, ${f2(pl.char.pos[2])})`); continue; }
     let drawnOnWall = 0;
     for (let i = 0; i < 60; i++) { W.step(DT); if (!pl.holstered) drawnOnWall++; }
     // a left click on the wall: nothing leaves the pistol (cursor out in the corridor so no takedown / fixture is under it)
-    W.cursorAt([pl.char.posX + c.n[0] * 3, 1.0, pl.char.posZ + c.n[1] * 3]); W.step(DT); input.clicked |= 1; input.buttons = 1; W.step(DT); input.buttons = 0;
+    W.cursorAt([pl.char.pos[0] + c.n[0] * 3, 1.0, pl.char.pos[2] + c.n[1] * 3]); W.step(DT); input.clicked |= 1; input.buttons = 1; W.step(DT); input.buttons = 0;
     for (let i = 0; i < 20; i++) { W.step(DT); if (!pl.holstered) drawnOnWall++; }
     const S = sampleWallPose(game)!;
     fails.push(...judgeParked(S, c.crouch));

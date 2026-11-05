@@ -60,7 +60,7 @@ async function rig(seed: number, o: { squad?: 2 | 4; blind?: string[] } = {}) {
     /** a room's garrison out cold, quietly — the room as it stands once it has been taken */
     empty(id: string) { for (const h of R.room(id).defenders) if (h.state !== 'dead') killGuard(game, h, [0, 0, 1], true, 'struck'); R.step(5); },
     /** Sam and the men stood on these spots (Sam's first) */
-    place(P: number[][]) { game.teleportPlayer(P[0]); R.up.forEach((m: any, i: number) => { const p = P[1 + i]; m.char.posX = p[0]; m.char.posZ = p[2]; }); R.step(10); },
+    place(P: number[][]) { game.teleportPlayer(P[0]); R.up.forEach((m: any, i: number) => { const p = P[1 + i]; m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; }); R.step(10); },
     give(id: string, name: string, who: any = 'all'): string | null { return O.give(id, O.targetAt(R.door(name).frameCentre), who); },
     lostTo(): string { return R.downs.filter(x => x.who.team === 'operative').map(x => `${x.who.callsign} by ${x.by?.callsign ?? '?'}`).join(', ') || 'nobody'; },
   };

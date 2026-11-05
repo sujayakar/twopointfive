@@ -123,7 +123,7 @@ export async function squad40Check(): Promise<boolean> {
       O.of(who).face = yawTo(who.char.pos, spot); O.of(who).watch = [spot[0], 1.2, spot[2]]; O.of(who).upper = 'aim'; R.step(90);   // (his hold now covers that way, gun at his shoulder)
       // (a teammate stood in his line is no shot — asked below: here they are stood behind him)
       { const q = who.char.pos, dl = dist(q, spot), ux = (spot[0] - q[0]) / dl, uz = (spot[2] - q[2]) / dl; let k = 0;
-        for (const m of R.team) { if (m === who) continue; const ax = (m.char.posX - q[0]) * ux + (m.char.posZ - q[2]) * uz, off = Math.abs((m.char.posX - q[0]) * uz - (m.char.posZ - q[2]) * ux);
+        for (const m of R.team) { if (m === who) continue; const ax = (m.char.pos[0] - q[0]) * ux + (m.char.pos[2] - q[2]) * uz, off = Math.abs((m.char.pos[0] - q[0]) * uz - (m.char.pos[2] - q[2]) * ux);
           if (ax > -0.3 && off < 1) { k++; place(m, [q[0] - ux * 1.2 * k, 0, q[2] - uz * 1.2 * k], yawTo(q, spot)); } }
         R.step(2); }
       const log1 = SQUAD40_LOG.length, was = O.of(who)?.order; R.pageAt(spot); R.press('Digit3');
@@ -152,7 +152,7 @@ export async function squad40Check(): Promise<boolean> {
       // behind a wall from everybody with a round
       let walled: number[] | null = null;
       for (let x = 2.25; x <= 38 && !walled; x += 1) for (let z = 2.25; z <= 26 && !walled; z += 1) { const t = O.targetAt([x, 0, z]);
-        if (t.kind === 'floor' && men.every((x: any) => dist(x.char.pos, t.at) > HE40.armM + 2 && game.col.solidBlocked([x.char.posX, 1.3, x.char.posZ], [t.at[0], 0.5, t.at[2]]))) walled = t.at; }
+        if (t.kind === 'floor' && men.every((x: any) => dist(x.char.pos, t.at) > HE40.armM + 2 && game.col.solidBlocked([x.char.pos[0], 1.3, x.char.pos[2]], [t.at[0], 0.5, t.at[2]]))) walled = t.at; }
       const wWall = walled ? why(R, walled) : '—';
       verdict(!!walled && wWall === 'no shot from here.', 'a spot with a wall between it and every man with a round: "no shot from here." — nobody walks for it', `spot ${walled ? p2(walled) : 'none'} · row: ${wWall}`);
       // the player in its burst, then a teammate, then a civilian

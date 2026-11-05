@@ -42,7 +42,7 @@ function armAlert(gd: any, game: any, fireCd = 0.3, reactT = 0, pinned = false) 
 function verdict(ok: boolean, label: string, detail: string) { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); return ok; }
 /** the angle (rad) between the round's flight (from → to off the guardShot / shot event) and the line from its muzzle to `at` — how far off the point it went */
 function missAngle(e: any, at: Vec3): number { const d = v3.normalize(v3.sub(e.to, e.from)), w = v3.normalize(v3.sub(at, e.from)); return Math.acos(Math.max(-1, Math.min(1, v3.dot(d, w)))); }
-const trunkOf = (game: any): Vec3 => { const pc = game.player.char; const t = pc.bones.spine2 ?? pc.bones.hips; return [t ? t[0] : pc.posX, pc.posY + (game.player.crouch ? 0.8 : 1.25), t ? t[2] : pc.posZ]; };
+const trunkOf = (game: any): Vec3 => { const pc = game.player.char; const t = pc.bones.spine2 ?? pc.bones.hips; return [t ? t[0] : pc.pos[0], pc.pos[1] + (game.player.crouch ? 0.8 : 1.25), t ? t[2] : pc.pos[2]]; };
 
 // ================================================================ (a) the model, driven
 export async function aimUnit() {
@@ -55,7 +55,7 @@ export async function aimUnit() {
   const pl = game.player; game.teleportPlayer([24.0, 0, 11.4]); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false; W.step(DT); W.step(DT);
   place(A, [14.0, 0, 11.3], Math.PI / 2); armAlert(A, game, 0.3, 0, false);   // 10 m west of Sam down the corridor, facing him, free
   const fails: string[] = []; const rows: string[] = [];
-  const brgTo = () => { const t = trunkOf(game); return Math.atan2(t[0] - A.char.posX, t[2] - A.char.posZ); };
+  const brgTo = () => { const t = trunkOf(game); return Math.atan2(t[0] - A.char.pos[0], t[2] - A.char.pos[2]); };
   const drive = (n: number, cfg: () => void) => { for (let i = 0; i < n; i++) { cfg(); game.time += DT; trackGuard(game, A, DT); } };   // (the model alone: nothing else moves, the clock does)
   // climb: eyes on him (lastSeenT now), gun on him → +dt/settleSecs a frame, 1 at settleSecs (± a frame)
   A.aim.clear(); let tAt55 = -1, tAt1 = -1;
@@ -66,7 +66,7 @@ export async function aimUnit() {
   // nearer than rangeRef it goes quicker (× dist / rangeRef, floored at nearK): Sam put 3.2 m off him, then at arm's length
   { const spot = v3.copy(pl.char.pos);
     for (const [d, label] of [[3.2, '3.2 m'], [1.2, '1.2 m (floor)']] as [number, string][]) {
-      game.teleportPlayer([A.char.posX + d, 0, A.char.posZ]); A.aim.clear(); let t1 = -1;
+      game.teleportPlayer([A.char.pos[0] + d, 0, A.char.pos[2]]); A.aim.clear(); let t1 = -1;
       for (let i = 0; i < 200 && t1 < 0; i++) { A.lastSeenT = game.time + DT; A.char.aimYaw = brgTo(); game.time += DT; trackGuard(game, A, DT); if (A.aim.track >= 1 - 1e-9) t1 = (i + 1) * DT; }
       const dist = v3.distXZ(A.char.pos, pl.char.pos); const want = G.settleSecs * Math.min(1, Math.max(G.nearK, dist / G.rangeRef));
       rows.push(`near: at ${label} (${f2(dist)} m) → 1 at ${f3(t1)} s (settleSecs × ${f2(want / G.settleSecs)} = ${f3(want)})`); if (Math.abs(t1 - want) > 1.5 * DT + 1e-9) fails.push(`settle at ${f2(dist)} m took ${t1} s (want ${want})`);
@@ -129,7 +129,7 @@ export async function aimUnit() {
     if (gated) fails.push('aimReady true at track 0.3'); if (!r.steady || Math.abs(r.spread - (planted + 0.02)) > 1e-9) fails.push(`guardRound gave ${JSON.stringify(r)} (want spread ${planted + 0.02}, steady)`); if (!ls || ls.t !== game.time) fails.push('guardRound did not stamp lastShot'); }
   // ---- Sam
   { const P = pl.aim; game.aimGuard = null; pl.sprinting = false; pl.crouch = false; pl.char.vel = [0, 0, 0]; P.clear();
-    const pdrive = (n: number, cfg: () => void) => { for (let i = 0; i < n; i++) { cfg(); pl.char.pos = [pl.char.posX + pl.char.velX * DT, pl.char.posY, pl.char.posZ + pl.char.velZ * DT]; game.time += DT; playerGroundVel(game); trackPlayer(game, DT); } };   // (Sam actually COVERS the ground his velocity claims, and the ground sample is taken each step: since review 08-10 #5 the model reads motion over the ground, not the commanded pace)
+    const pdrive = (n: number, cfg: () => void) => { for (let i = 0; i < n; i++) { cfg(); pl.char.pos = [pl.char.pos[0] + pl.char.vel[0] * DT, pl.char.pos[1], pl.char.pos[2] + pl.char.vel[2] * DT]; game.time += DT; playerGroundVel(game); trackPlayer(game, DT); } };   // (Sam actually COVERS the ground his velocity claims, and the ground sample is taken each step: since review 08-10 #5 the model reads motion over the ground, not the commanded pace)
     let t1 = -1; for (let i = 0; i < 200 && t1 < 0; i++) { game.time += DT; trackPlayer(game, DT); if (P.track >= 1 - 1e-9) t1 = (i + 1) * DT; }
     rows.push(`Sam: free aim, still → track 1 at ${f3(t1)} s (settleSecs ${Y.settleSecs})`); if (Math.abs(t1 - Y.settleSecs) > 1.5 * DT + 1e-9) fails.push(`Sam settled at ${t1} s (want ${Y.settleSecs})`);
     playerGroundVel(game);   // (prime the ground sampler at rest so the first driven frame measures a real displacement)
@@ -186,7 +186,7 @@ async function fight(seed: number, o: { model: boolean; gPos: Vec3; sPos: Vec3; 
       W.step(DT);
       for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time && e.from && e.to) {
         const ls = A.aim.lastShot; const hit = pl.hitFlash > 0.9;
-        R.rounds.push({ t: game.time - t0, miss: missAngle(e, trunk), cone: ls && ls.t === game.time ? ls.spread : handsCone(game, A, 0), track: ls && ls.t === game.time ? ls.track : NaN, speed: Math.hypot(A.char.velX, A.char.velZ), hit, dist: v3.distXZ(A.char.pos, pl.char.pos) });
+        R.rounds.push({ t: game.time - t0, miss: missAngle(e, trunk), cone: ls && ls.t === game.time ? ls.spread : handsCone(game, A, 0), track: ls && ls.t === game.time ? ls.track : NaN, speed: Math.hypot(A.char.vel[0], A.char.vel[2]), hit, dist: v3.distXZ(A.char.pos, pl.char.pos) });
         if (hit) R.hits++; if (R.firstT < 0) R.firstT = game.time - t0;
       }
       if (f % 15 === 0) R.trace.push(`${f2(game.time - t0)}s ${A.state} track ${f2(A.aim.track)} brg ${f2(A.aim.bearingRate)} feet ${f2(A.aim.speedSm)} speed ${f2(A.speed)} fireCd ${f2(A.fireCd)} reactT ${f2(A.reactT)} dist ${f1(v3.distXZ(A.char.pos, pl.char.pos))}${A.aim.braking ? ' BRAKE' : ''} seen ${f2(game.time - A.lastSeenT)}s rounds ${R.rounds.length}`);
@@ -257,7 +257,7 @@ export async function aimMotion() {
     return { W, game, input, pl, A };
   };
   type Case = { rounds: number; hits: number; cones: number[]; brs: number[]; dists: number[]; speeds: number[] };
-  const collect = (game: any, pl: any, A: any, K: Case) => { for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time) { K.rounds++; if (pl.hitFlash > 0.9) K.hits++; const ls = A.aim.lastShot; K.cones.push(ls && ls.t === game.time ? ls.spread : handsCone(game, A, 0)); K.brs.push(A.aim.bearingRate); K.dists.push(v3.distXZ(A.char.pos, pl.char.pos)); K.speeds.push(Math.hypot(pl.char.velX, pl.char.velZ)); } };
+  const collect = (game: any, pl: any, A: any, K: Case) => { for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time) { K.rounds++; if (pl.hitFlash > 0.9) K.hits++; const ls = A.aim.lastShot; K.cones.push(ls && ls.t === game.time ? ls.spread : handsCone(game, A, 0)); K.brs.push(A.aim.bearingRate); K.dists.push(v3.distXZ(A.char.pos, pl.char.pos)); K.speeds.push(Math.hypot(pl.char.vel[0], pl.char.vel[2])); } };
   const runCases = async (model: boolean) => {
     const out: Record<string, Case> = {}; let exc = '';
     const traces: string[] = [];
@@ -270,10 +270,10 @@ export async function aimMotion() {
         let goalZ = LAT_Z1; game.puppet = { goal: [LAT_X, 0, goalZ], aim: null }; input.keys.add('ShiftLeft');
         for (let f = 0; f < 60 * 75; f++) {
           pl.visibility = 0.9; pl.hitFlash = 0;
-          if (Math.abs(pl.char.posZ - goalZ) < 0.6) { goalZ = goalZ > LAT_G[2] ? LAT_Z0 : LAT_Z1; game.puppet.goal = [LAT_X, 0, goalZ]; }
+          if (Math.abs(pl.char.pos[2] - goalZ) < 0.6) { goalZ = goalZ > LAT_G[2] ? LAT_Z0 : LAT_Z1; game.puppet.goal = [LAT_X, 0, goalZ]; }
           W.step(DT);
-          const near = Math.abs(pl.char.posZ - LAT_G[2]) < 3.5; collect(game, pl, A, near ? K : all);
-          if (f % 30 === 0) traces.push(`across ${f2(f * DT)}s Sam (${f1(pl.char.posX)}, ${f1(pl.char.posZ)}) ${f1(Math.hypot(pl.char.velX, pl.char.velZ))} m/s · ${A.state} track ${f2(A.aim.track)} brg ${f2(A.aim.bearingRate)} seen ${f2(game.time - A.lastSeenT)}s fireCd ${f2(A.fireCd)} blockedT ${f2(A.shotBlockedT)} dist ${f1(v3.distXZ(A.char.pos, pl.char.pos))} rounds ${K.rounds}+${all.rounds}`);
+          const near = Math.abs(pl.char.pos[2] - LAT_G[2]) < 3.5; collect(game, pl, A, near ? K : all);
+          if (f % 30 === 0) traces.push(`across ${f2(f * DT)}s Sam (${f1(pl.char.pos[0])}, ${f1(pl.char.pos[2])}) ${f1(Math.hypot(pl.char.vel[0], pl.char.vel[2]))} m/s · ${A.state} track ${f2(A.aim.track)} brg ${f2(A.aim.bearingRate)} seen ${f2(game.time - A.lastSeenT)}s fireCd ${f2(A.fireCd)} blockedT ${f2(A.shotBlockedT)} dist ${f1(v3.distXZ(A.char.pos, pl.char.pos))} rounds ${K.rounds}+${all.rounds}`);
         }
         input.keys.delete('ShiftLeft'); game.puppet = null; out.across = K; out.acrossEnds = all; }
       // at him: down the corridor — Sam sprints from 8.9 m straight up the bore to 4 m off him, is put back at the top, again — 45 s; rounds with him between 4.5 and 9 m count
@@ -281,10 +281,10 @@ export async function aimMotion() {
         game.puppet = { goal: v3.copy(COR_GOAL), aim: null }; input.keys.add('ShiftLeft');
         for (let f = 0; f < 60 * 45; f++) {
           pl.visibility = 0.9; pl.hitFlash = 0;
-          if (pl.char.posX < COR_GOAL[0] + 0.6) { game.teleportPlayer(v3.copy(COR_TOP)); A.aim.lastBearing = NaN; A.lastSeenT = game.time; }   // (back to the top of the run: the same line, so spare the model the frame's blip — and his sight, which the teleport's frame would otherwise cost him)
+          if (pl.char.pos[0] < COR_GOAL[0] + 0.6) { game.teleportPlayer(v3.copy(COR_TOP)); A.aim.lastBearing = NaN; A.lastSeenT = game.time; }   // (back to the top of the run: the same line, so spare the model the frame's blip — and his sight, which the teleport's frame would otherwise cost him)
           W.step(DT);
           const d = v3.distXZ(A.char.pos, pl.char.pos); if (d > 4.5 && d < 9) collect(game, pl, A, K);
-          if (f % 30 === 0) traces.push(`atHim ${f2(f * DT)}s Sam (${f1(pl.char.posX)}, ${f1(pl.char.posZ)}) ${f1(Math.hypot(pl.char.velX, pl.char.velZ))} m/s · ${A.state} track ${f2(A.aim.track)} brg ${f2(A.aim.bearingRate)} seen ${f2(game.time - A.lastSeenT)}s fireCd ${f2(A.fireCd)} dist ${f1(d)} rounds ${K.rounds}`);
+          if (f % 30 === 0) traces.push(`atHim ${f2(f * DT)}s Sam (${f1(pl.char.pos[0])}, ${f1(pl.char.pos[2])}) ${f1(Math.hypot(pl.char.vel[0], pl.char.vel[2]))} m/s · ${A.state} track ${f2(A.aim.track)} brg ${f2(A.aim.bearingRate)} seen ${f2(game.time - A.lastSeenT)}s fireCd ${f2(A.fireCd)} dist ${f1(d)} rounds ${K.rounds}`);
         }
         input.keys.delete('ShiftLeft'); game.puppet = null; out.atHim = K; }
       // standing at 6.8 m in the corridor too (the at-him case's own reference: the middle of its run)
@@ -387,7 +387,7 @@ export async function aimPlayer() {
       for (let f = 0; f < 60 * 5; f++) { W.step(DT); if (v3.distXZ(pl.char.pos, FROM) < 0.35) { stopF = f; break; } }
       input.keys.delete('ShiftLeft'); game.puppet = null;
     } else { for (let f = 0; f < 90; f++) { W.cursorAt(WALL); W.step(DT); } }   // 1.5 s standing still with the point under the cursor
-    const speedAtStop = Math.hypot(pl.char.velX, pl.char.velZ); const trackAtStop = pl.aim.track;
+    const speedAtStop = Math.hypot(pl.char.vel[0], pl.char.vel[2]); const trackAtStop = pl.aim.track;
     const rounds: { miss: number; cone: number; track: number; own: number; t: number }[] = []; let fired = 0, snapped = 0; const t0 = game.time;
     for (let f = 0; f < 60 * 4 && rounds.length < 10; f++) {
       const onScr = W.cursorAt(WALL);
@@ -433,7 +433,7 @@ export async function aimOff() {
   for (let f = 0; f < 60 * 15; f++) {
     pl.visibility = 0.9; W.step(DT);
     maxTrack = Math.max(maxTrack, A.aim.track); maxPl = Math.max(maxPl, pl.aim.track); if (A.aim.braking) brakes++; if (guardAcquired(game, A)) marks++;
-    for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time) { rounds++; if (Math.hypot(A.char.velX, A.char.velZ) > AIM.guard.stopToShoot) running++; if (A.aim.lastShot) steadyLeaks++; }
+    for (const e of game.events) if (e.kind === 'guardShot' && e.time === game.time) { rounds++; if (Math.hypot(A.char.vel[0], A.char.vel[2]) > AIM.guard.stopToShoot) running++; if (A.aim.lastShot) steadyLeaks++; }
   }
   const r = guardRound(game, A, 0.03); const ready = (A.aim.track = 0, aimReady(game, A)); const brk = aimBrake(game, A, 12, false); const sa = samAim(game); const pa = playerAim(game);
   if (maxTrack !== 0 || maxPl !== 0) fails.push(`tracks moved with the model off: guard ${maxTrack}, Sam ${maxPl}`);
@@ -491,7 +491,7 @@ export async function aimSnap() {
       const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
       const chest = (): Vec3 => A.char.bones.chest ?? v3.add(A.char.pos, [0, 1.2, 0]);
       const spot = (): Vec3 => { const q = px(panel.pos); const r = cam.ray((q[0] - (L0 + 42)) / canvas.clientWidth, q[1] / canvas.clientHeight); const t = (1.2 - r.ro[1]) / r.rd[1]; return [r.ro[0] + r.rd[0] * t, 0, r.ro[2] + r.rd[2] * t]; };
-      for (let k = 0; k < 4; k++) { const want = spot(), c = chest(); place(A, [A.char.posX + want[0] - (k ? c[0] : A.char.posX), 0, A.char.posZ + want[2] - (k ? c[2] : A.char.posZ)], Math.PI); park2(A); W.step(DT); }   // (his chest bone, not his feet, onto the spot)
+      for (let k = 0; k < 4; k++) { const want = spot(), c = chest(); place(A, [A.char.pos[0] + want[0] - (k ? c[0] : A.char.pos[0]), 0, A.char.pos[2] + want[2] - (k ? c[2] : A.char.pos[2])], Math.PI); park2(A); W.step(DT); }   // (his chest bone, not his feet, onto the spot)
       let onHim = 0, onPanel = 0, onBody = 0, n = 0, dChest = 0;
       const frame = (click: boolean, count = true) => { const q = px(panel.pos), c = px(chest()); input.mouseX = q[0] - dDot; input.mouseY = q[1];
         const r = cam.ray(input.mouseX / canvas.clientWidth, input.mouseY / canvas.clientHeight);

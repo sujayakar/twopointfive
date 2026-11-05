@@ -258,7 +258,7 @@ export const offHingesWalk = guarded(async () => {
     const slab = () => `${d.box.c.join(',')}|${d.box.h.join(',')}|${d.box.yaw}`, st = () => `${d.off}|${d.angle}|${d.latched}|${d.vel}`, slab0 = slab(), st0 = st();
     order(gd, { goal: [B[0], 0, B[2]] });
     let crossed = false, t = 0, moved = false; const s0 = Math.sign(offOfFrame(d, gd.char.pos));
-    const there = () => Math.hypot(gd.char.posX - B[0], gd.char.posZ - B[2]) <= 0.5;
+    const there = () => Math.hypot(gd.char.pos[0] - B[0], gd.char.pos[2] - B[2]) <= 0.5;
     for (; t < 15 * 60 && !there(); t++) { R.step(); if (Math.sign(offOfFrame(d, gd.char.pos)) !== s0) crossed = true; moved ||= st() !== st0; }
     return { d, gd, arrived: there(), crossed, secs: t / 60, moved, slabMoved: slab() !== slab0 };
   };
@@ -285,7 +285,7 @@ export const offHingesAfter = guarded(async () => {
       const A = off(d, pullSide, 2.2, 0), B = off(d, -pullSide as 1 | -1, 2.2, 0);
       gd.char.pos = [A[0], 0, A[2]]; gd.path = []; gd.pathGoal = null;
       const h0 = { ...HANDLE_STATS }; order(gd, { goal: [B[0], 0, B[2]] });
-      const there = () => Math.hypot(gd.char.posX - B[0], gd.char.posZ - B[2]) <= 0.5; let t = 0;
+      const there = () => Math.hypot(gd.char.pos[0] - B[0], gd.char.pos[2] - B[2]) <= 0.5; let t = 0;
       for (; t < 15 * 60 && !there(); t++) R.step();
       return { off: d.off, arrived: there(), secs: t / 60, held: HANDLE_STATS.held - h0.held, bent: HANDLE_STATS.bent - h0.bent, lined: HANDLE_STATS.lined - h0.lined, pulls: HANDLE_STATS.pulls - h0.pulls };
     };

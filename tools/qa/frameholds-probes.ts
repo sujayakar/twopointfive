@@ -182,7 +182,7 @@ export const frameholdsTools = guarded(async () => {
   // (b) no cylinder (a keypad's bolt): the entry rows greyed with the reason, the order refused in the same words, the charge row live
   /** the keypad door between the manager's office and the server room, come at from the office (its keyed face), the office's own door unlocked: Sam stands in the office, so the order lands on that face */
   const padStage = (R: any) => { const g = R.game, d = R.door('server_manager'), ks = d.keySide as 1 | -1; R.door('manager').locked = false; hangToward(g, d, ks);
-    for (const o of [2.0, 1.7, 1.4]) { g.teleportPlayer(off(d, ks, o)); R.step(90); if (g.doors.side(d, g.player.char.pos) === ks && Math.hypot(g.player.char.posX - d.frameCentre[0], g.player.char.posZ - d.frameCentre[2]) > 1.2) break; }
+    for (const o of [2.0, 1.7, 1.4]) { g.teleportPlayer(off(d, ks, o)); R.step(90); if (g.doors.side(d, g.player.char.pos) === ks && Math.hypot(g.player.char.pos[0] - d.frameCentre[0], g.player.char.pos[2] - d.frameCentre[2]) > 1.2) break; }
     return { d, side: R.target('server_manager').side as 1 | -1, ks }; };
   const pad = async (on: boolean, charges?: number) => { const R = await rig(7, on, { charges }); const { d, side, ks } = padStage(R); const staged = side === ks && d.locked;
     const rows = R.tools('server_manager'); const row = (id: string) => rows.find((r: any) => r.id === id);
@@ -242,11 +242,11 @@ export const frameholdsSam = guarded(async () => {
     const tap = { had, kicked, broken: !!d.lockBroken, open: Math.abs(d.angle) };
     // a sprint into it: the camera turned so W runs him square at the leaf, W + Shift held from 1.8 m off (the corridor's furniture allows no more)
     at(); g.teleportPlayer(off(d, ks, 1.8, d.def.width * 0.7)); W.step(DT);
-    const c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), out = (): number => Math.abs(-(g.player.char.posX - d.def.hinge[0]) * uz + (g.player.char.posZ - d.def.hinge[1]) * ux);   // (metres off the plane of the shut leaf)
+    const c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), out = (): number => Math.abs(-(g.player.char.pos[0] - d.def.hinge[0]) * uz + (g.player.char.pos[2] - d.def.hinge[1]) * ux);   // (metres off the plane of the shut leaf)
     const want = [uz * ks, -ux * ks], far = out(); { let best = -2; for (let i = 0; i < 360; i++) { W.cam.yaw = i * Math.PI / 180; W.cam.rebuild(); const f = W.cam.planarBasis().fwd, dot = f[0] * want[0] + f[2] * want[1]; if (dot > best) { best = dot; yaw = W.cam.yaw; } } }
     let sprintKick = false, near = Infinity, fastest = 0;
     W.input.keys.add('KeyW'); W.input.keys.add('ShiftLeft');
-    for (let i = 0; i < 90; i++) { W.cam.yaw = yaw; W.cam.rebuild(); W.step(DT); sprintKick ||= !!g.player.kick; fastest = Math.max(fastest, g.player.char.velX * want[0] + g.player.char.velZ * want[1]); near = Math.min(near, out()); }
+    for (let i = 0; i < 90; i++) { W.cam.yaw = yaw; W.cam.rebuild(); W.step(DT); sprintKick ||= !!g.player.kick; fastest = Math.max(fastest, g.player.char.vel[0] * want[0] + g.player.char.vel[2] * want[1]); near = Math.min(near, out()); }
     W.input.keys.delete('KeyW'); W.input.keys.delete('ShiftLeft'); for (let i = 0; i < 100; i++) W.step(DT);
     const ran = far > 1.2 && near < 0.75 && fastest > 1.5 ? 1 : 0, sprint = `from ${f2(far)} m off the leaf to ${f2(near)} m at up to ${f2(fastest)} m/s into it`;
     // the pick still works from that face
@@ -292,7 +292,7 @@ async function standWedges(seed: number, on: boolean, hang: 'out' | 'in' | numbe
         if (room) for (const [i, e] of room.entries.entries()) { const inside: [number, number, number] = [e.at[0] - e.out[0] * 0.8, 0, e.at[2] - e.out[1] * 0.8], toward = g.doors.pullFace(e.door, inside), wantOut = typeof hang === 'number' ? i === hang : hang === 'out';
           if (toward === wantOut && Math.abs(e.door.angle) < 0.05) e.door.setSwing(-e.door.swing); hung.push(`${e.door.def.name} ${g.doors.pullFace(e.door, inside) ? 'in' : 'out'}`); } }
       if (noise >= 0 && room?.entries[noise]) { const e = room.entries[noise]; for (const D of g.fight.defs as any[]) if (D.room === room && D.gd.state !== 'dead') { D.noiseAt = [e.at[0] + e.out[0], 0, e.at[2] + e.out[1]]; D.noiseT = g.time; D.noiseOut = true; } }
-      if (ship && hand && room) for (const e of room.entries) if (!e.door.latched && !e.door.off && !g.guards.some((h: any) => h.state !== 'dead' && Math.hypot(h.char.posX - e.at[0], h.char.posZ - e.at[2]) < 2)) g.doors.pullTo(e.door, 0);
+      if (ship && hand && room) for (const e of room.entries) if (!e.door.latched && !e.door.off && !g.guards.some((h: any) => h.state !== 'dead' && Math.hypot(h.char.pos[0] - e.at[0], h.char.pos[2] - e.at[2]) < 2)) g.doors.pullTo(e.door, 0);
       if (setT < 0 && R.said.some((l: any) => l.kind.startsWith('set'))) setT = n / 60; });
     const d = (k: string) => (DIGIN_STATS as any)[k] - (s0 as any)[k];
     const doors = room ? (room.entries as any[]).map(e => `${e.door.def.name} ${e.door.latched ? 'shut' : `open ${f2(Math.abs(e.door.angle))} rad`}`) : [], open = room ? (room.entries as any[]).filter(e => !e.door.latched).length : -1;

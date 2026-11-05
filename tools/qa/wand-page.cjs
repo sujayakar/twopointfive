@@ -75,7 +75,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       // a shut door the wand fits with a living defender within 5 m on one face: Sam goes to the other
       let pick = null;
       for (const d of g.doors.list) { if (d.off || !d.isClosed() || d.def.steel) continue;
-        for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile') continue; const dist = Math.hypot(x.char.posX - d.pos[0], x.char.posZ - d.pos[2]); if (dist < 5 && (!pick || dist < pick.dist)) pick = { d, x, dist }; } }
+        for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile') continue; const dist = Math.hypot(x.char.pos[0] - d.pos[0], x.char.pos[2] - d.pos[2]); if (dist < 5 && (!pick || dist < pick.dist)) pick = { d, x, dist }; } }
       if (!pick) return { ...out, why: 'no shut door with a defender behind it' };
       const { d, x } = pick, side = -g.doors.side(d, x.char.pos), u = d.dir(), [hx, hz] = d.def.hinge, w = d.def.width * 0.5, nx = u[1] * side, nz = -u[0] * side;
       g.aiEnabled = false; g.teleportPlayer([hx + u[0] * w - nx * 0.9, 0, hz + u[1] * w - nz * 0.9]);
@@ -146,7 +146,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       // a shut door the wand fits with a living defender within 5 m of it (the office's server room first: the headless check's own door)
       let pick = null;
       for (const d of g.doors.list) { if (d.off || !d.isClosed() || d.def.steel) continue;
-        for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile') continue; const dist = Math.hypot(x.char.posX - d.pos[0], x.char.posZ - d.pos[2]) - (d.def.name === 'server' ? 100 : 0); if (dist < 5 && (!pick || dist < pick.dist)) pick = { d, x, dist }; } }
+        for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile') continue; const dist = Math.hypot(x.char.pos[0] - d.pos[0], x.char.pos[2] - d.pos[2]) - (d.def.name === 'server' ? 100 : 0); if (dist < 5 && (!pick || dist < pick.dist)) pick = { d, x, dist }; } }
       if (!pick) return { ...out, why: 'no shut door with a defender behind it' };
       const { d, x } = pick; g.aiEnabled = false;
       window.__wandStep(60);   // nobody was ordered: nobody looks

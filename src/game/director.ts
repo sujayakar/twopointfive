@@ -1100,7 +1100,7 @@ export function samViewOf(g: Game): SamView {
   const pl = g.player, c = pl.char, hv = g.hover, H = pl.holding, m = g.mission;
   const whoOf = (r: Interactable | null) => r ? (r.guard?.callsign ?? r.door?.def.name ?? r.target?.name ?? null) : null;
   return {
-    pos: v3.copy(c.pos), yaw: c.bodyYaw, speed: Math.hypot(c.velX, c.velZ), crouch: pl.crouch, holstered: pl.holstered, slot: pl.slot, nv: pl.nv,
+    pos: v3.copy(c.pos), yaw: c.bodyYaw, speed: Math.hypot(c.vel[0], c.vel[2]), crouch: pl.crouch, holstered: pl.holstered, slot: pl.slot, nv: pl.nv,
     hover: hv ? { kind: hv.kind, verb: hv.verb ?? null, inReach: hv.inReach, who: whoOf(hv), running: !!hv.running } : null,
     rows: g.nearby.map(r => `${r.kind}:${r.verb ?? ''}${r.inReach ? '' : '(far)'}`),
     holding: H ? { who: H.g.callsign, phase: H.phase, variant: H.variant, t: H.t } : null,

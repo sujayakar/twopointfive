@@ -50,9 +50,9 @@ async function world(on: boolean, gap = 0, walks = false) {
   /** `n` frames with `keys` down: the footfalls filed (frame, level) and a line of where he was */
   const go = (n: number, keys: string[] = []) => { const steps: { i: number; level: number }[] = [], path: { x: number; ph: number; v: number }[] = []; W.input.keys.clear(); for (const k of keys) W.input.keys.add(k);
     for (let i = 0; i < n; i++) { keep(); if (!walks) A.char.vel = [0, 0, 0]; W.step(DT); for (const e of g.events) if (!seen.has(e)) { seen.add(e); if (e.kind === 'step' && e.who === undefined) steps.push({ i, level: e.level }); }
-      path.push({ x: (c.posX - AT[0]) * right[0] + (c.posZ - AT[2]) * right[2], ph: c.anim.phase, v: Math.hypot(c.velX, c.velZ) }); }
+      path.push({ x: (c.pos[0] - AT[0]) * right[0] + (c.pos[2] - AT[2]) * right[2], ph: c.anim.phase, v: Math.hypot(c.vel[0], c.vel[2]) }); }
     W.input.keys.clear(); return { steps, path }; };
-  const along = () => (c.posX - AT[0]) * right[0] + (c.posZ - AT[2]) * right[2], gapNow = () => Math.hypot(c.posX - A.char.posX, c.posZ - A.char.posZ);
+  const along = () => (c.pos[0] - AT[0]) * right[0] + (c.pos[2] - AT[2]) * right[2], gapNow = () => Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]);
   go(40); TAPSTEP_STATS.steps = TAPSTEP_STATS.scuffs = TAPSTEP_STATS.beats = TAPSTEP_STATS.masked = TAPSTEP_STATS.lands = 0;
   return { W, g, A, c, go, along, gapNow };
 }
@@ -104,7 +104,7 @@ async function land() {
   const C = await world(up(), 1.6); const g0 = C.gapNow(); C.go(5, D); C.go(90); const gap = C.gapNow(), man = C.A, took = TAPSTEP_STATS.lands;
   verdict(Math.abs(gap - STALK.keyM) < 0.08 && took === 1, `from ${f2(g0)} m one tap lands ${STALK.keyM} m behind him`, `gap ${f2(gap)} m · ${took} landed`);
   // away: every key off the spot
-  const went: string[] = []; let least = 9; for (const k of ['KeyA', 'KeyW', 'KeyS', 'KeyD']) { const a = [C.c.pos[0], C.c.pos[2]]; C.go(50, [k]); C.go(30); const d = Math.hypot(C.c.pos[0] - a[0], C.c.pos[2] - a[1]); went.push(`${k.slice(3)} ${f2(d)}`); if (k !== 'KeyD') least = Math.min(least, d); C.g.teleportPlayer([C.A.char.posX - (C.A.char.posX - AT[0]) / Math.max(1e-3, Math.hypot(C.A.char.posX - AT[0], C.A.char.posZ - AT[2])) * STALK.keyM, 0, C.A.char.posZ - (C.A.char.posZ - AT[2]) / Math.max(1e-3, Math.hypot(C.A.char.posX - AT[0], C.A.char.posZ - AT[2])) * STALK.keyM]); C.g.player.crouch = true; C.go(20); }
+  const went: string[] = []; let least = 9; for (const k of ['KeyA', 'KeyW', 'KeyS', 'KeyD']) { const a = [C.c.pos[0], C.c.pos[2]]; C.go(50, [k]); C.go(30); const d = Math.hypot(C.c.pos[0] - a[0], C.c.pos[2] - a[1]); went.push(`${k.slice(3)} ${f2(d)}`); if (k !== 'KeyD') least = Math.min(least, d); C.g.teleportPlayer([C.A.char.pos[0] - (C.A.char.pos[0] - AT[0]) / Math.max(1e-3, Math.hypot(C.A.char.pos[0] - AT[0], C.A.char.pos[2] - AT[2])) * STALK.keyM, 0, C.A.char.pos[2] - (C.A.char.pos[2] - AT[2]) / Math.max(1e-3, Math.hypot(C.A.char.pos[0] - AT[0], C.A.char.pos[2] - AT[2])) * STALK.keyM]); C.g.player.crouch = true; C.go(20); }
   verdict(least > 0.3, 'on the spot behind him each key walks him off it', went.join(' · '));
   C.g.selectVerb('guard', 'grab'); C.W.input.pressed.add('Space'); let held = false; for (let i = 0; i < 60 && !held; i++) { C.W.step(DT); held = C.g.player.holding?.g === man; }
   verdict(BREAK || held, 'the grab\'s key takes him from there', `in his arm ${held}`);
@@ -112,9 +112,9 @@ async function land() {
 async function letgo() {
   console.log('\n=== letgo: the held click let go mid-stride ===');
   const C = await world(up(), 3); const { W, g, c, A } = C; STALK.drag = false; C.go(5);
-  W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.input.buttons |= 1; W.input.clicked |= 1; const before = c.anim.phase; let n = 0, moved = 0; while (n++ < 200 && (moved < 0.8 || Math.abs(((c.anim.phase * 2) % 1) - 0.25) > 0.1)) { W.step(DT); g.player.visibility = 0.02; moved = 3 - C.gapNow(); }
+  W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.input.buttons |= 1; W.input.clicked |= 1; const before = c.anim.phase; let n = 0, moved = 0; while (n++ < 200 && (moved < 0.8 || Math.abs(((c.anim.phase * 2) % 1) - 0.25) > 0.1)) { W.step(DT); g.player.visibility = 0.02; moved = 3 - C.gapNow(); }
   const at = c.anim.phase; W.input.buttons &= ~1; let most = 0, last = at; const seq: number[] = []; for (let i = 0; i < 40; i++) { g.player.visibility = 0.02; W.step(DT); const d = Math.abs(c.anim.phase - last); most = Math.max(most, Math.min(d, 1 - d)); last = c.anim.phase; seq.push(last); }
-  const speedAt = Math.hypot(c.velX, c.velZ), drift = Math.min(Math.abs(last - at), 1 - Math.abs(last - at));
+  const speedAt = Math.hypot(c.vel[0], c.vel[2]), drift = Math.min(Math.abs(last - at), 1 - Math.abs(last - at));
   verdict(n < 200 && before !== at && most < 0.03 && drift < 0.08 && speedAt < 0.02, 'the legs stay on the frame they had when the button came up', `walked ${f2(moved)} m in ${n} frames · phase ${f2(at)} then ${f2(last)} · the most in a frame ${most.toFixed(3)} · speed ${f2(speedAt)}`);
   const p0 = last; let jump = 0, l = p0; const r = C.go(30, D); for (const q of r.path) { const d = Math.abs(q.ph - l); jump = Math.max(jump, Math.min(d, 1 - d)); l = q.ph; }
   verdict(jump < 0.05 && Math.abs(l - p0) > 0.03, 'the next step goes on from that frame', `the most in a frame ${jump.toFixed(3)} · phase ${f2(p0)} to ${f2(l)}`);
@@ -122,7 +122,7 @@ async function letgo() {
 async function walker() {
   console.log('\n=== walker: the key held behind a man walking ===');
   const C = await world(up(), 3.5, true), g0 = C.gapNow(); C.go(240, D); const g1 = C.gapNow();
-  verdict(g1 < g0 - 0.5, 'the gap closes at the safe pace', `gap ${f2(g0)} m to ${f2(g1)} m over 4 s · he at ${f2(Math.hypot(C.A.char.velX, C.A.char.velZ))} m/s`);
+  verdict(g1 < g0 - 0.5, 'the gap closes at the safe pace', `gap ${f2(g0)} m to ${f2(g1)} m over 4 s · he at ${f2(Math.hypot(C.A.char.vel[0], C.A.char.vel[2]))} m/s`);
 }
 async function others() {
   console.log('\n=== crouch: only a crouch\'s plain keys are steps ===');

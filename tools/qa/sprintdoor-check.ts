@@ -60,16 +60,16 @@ export async function sprintdoorCheck(): Promise<boolean> {
       pl.doorBashAt = -10; pl.doorRipUntil = -1; pl.doorBashLean = 0;
       g.teleportPlayer(off(d, face, opt.from ?? 3)); pl.crouch = false; for (let i = 0; i < 5; i++) W.step(DT);
       const a = d.def.closedDir, ux = Math.cos(a), uz = Math.sin(a), dirIn = [uz * face, -ux * face];
-      const out = () => (-(c.posX - d.def.hinge[0]) * uz + (c.posZ - d.def.hinge[1]) * ux) * face;
+      const out = () => (-(c.pos[0] - d.def.hinge[0]) * uz + (c.pos[2] - d.def.hinge[1]) * ux) * face;
       let yaw = 0, best = -2; for (let i = 0; i < 720; i++) { W.cam.yaw = i * Math.PI / 360; W.cam.rebuild(); const f = W.cam.planarBasis().fwd, dot = f[0] * dirIn[0] + f[2] * dirIn[1]; if (dot > best) { best = dot; yaw = W.cam.yaw; } }
       const heard: Run['heard'] = []; const emit0 = g.doors.emit; g.doors.emit = (e: any) => { if (e.door === d) heard.push({ sound: e.sound, level: e.level }); emit0.call(g.doors, e); };
       W.input.keys.add('KeyW'); W.input.keys.add('ShiftLeft');
       const R: Run = { before: 0, slow: 99, back: -1, cross: -1, heard, kick: false, angle: 0, wide: 0, leafVel: 0, headMax: 0, headRun: 0, pitch: 0, look: 0, loud: [], broken: false, bashes: 0, rips: 0, kicks: 0, off: false, kickEv: false, reel: 0, slabOut: 0, fellBack: false, leanMax: 0, leanEnd: 0, latchLed: 0, ripU: -1, bashAt: -10 };
-      let last = [c.posX, c.posZ], hit = -1, lastO = out(); const runYaw = Math.atan2(dirIn[0], dirIn[1]);
+      let last = [c.pos[0], c.pos[2]], hit = -1, lastO = out(); const runYaw = Math.atan2(dirIn[0], dirIn[1]);
       const wrap = (x: number) => x - Math.round(x / (2 * Math.PI)) * 2 * Math.PI;
       for (let i = 0; i < 170; i++) {
         W.cam.yaw = yaw; W.cam.rebuild(); W.step(DT);
-        const v = ((c.posX - last[0]) * dirIn[0] + (c.posZ - last[1]) * dirIn[1]) / DT; last = [c.posX, c.posZ]; const o = out(); R.kick ||= !!pl.kick; if (pl.kick) R.reel = Math.max(R.reel, o - lastO); lastO = o;   // (reel: the furthest one frame of a kick carried him back off the leaf)
+        const v = ((c.pos[0] - last[0]) * dirIn[0] + (c.pos[2] - last[1]) * dirIn[1]) / DT; last = [c.pos[0], c.pos[2]]; const o = out(); R.kick ||= !!pl.kick; if (pl.kick) R.reel = Math.max(R.reel, o - lastO); lastO = o;   // (reel: the furthest one frame of a kick carried him back off the leaf)
         if (o > 0.6 && hit < 0) R.before = v;
         if (hit < 0 && (heard.length || pl.kick || (o < 0.6 && v < R.before - 0.5))) hit = i;
         if (hit >= 0 && i - hit < 40) R.slow = Math.min(R.slow, v);
@@ -84,7 +84,7 @@ export async function sprintdoorCheck(): Promise<boolean> {
         if (hit >= 0 && i - hit <= 2) { R.ripU = Math.max(R.ripU, pl.doorRipUntil - g.time); R.bashAt = Math.max(R.bashAt, pl.doorBashAt); }
         if (hit >= 0 && i - hit < 30) { const lean = wrap(c.bodyYaw - runYaw); if (Math.abs(lean) > Math.abs(R.leanMax)) { R.leanMax = lean;
           // a turn of +δ swings his front toward e = (cos yaw, −sin yaw): the shoulder on e's side falls back and the other one leads
-          const latch = [d.def.hinge[0] + ux * d.def.width, d.def.hinge[1] + uz * d.def.width], side = Math.sign((latch[0] - c.posX) * Math.cos(runYaw) - (latch[1] - c.posZ) * Math.sin(runYaw));
+          const latch = [d.def.hinge[0] + ux * d.def.width, d.def.hinge[1] + uz * d.def.width], side = Math.sign((latch[0] - c.pos[0]) * Math.cos(runYaw) - (latch[1] - c.pos[2]) * Math.sin(runYaw));
           R.latchLed = Math.sign(lean) === -side ? 1 : -1; } }   // +1: the shoulder on the latch's side of his run is the one ahead
         if (hit >= 0 && i - hit === 45) R.leanEnd = wrap(c.bodyYaw - runYaw);
       }

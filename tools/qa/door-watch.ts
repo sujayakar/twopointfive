@@ -51,7 +51,7 @@ export class DoorWatch {
     const touchNow = new Set<string>();
     for (const side of ['team', 'theirs'] as Side[]) {
       const S = this.sides[side], men = all.filter(m => (m.team === 'operative') === (side === 'team')); if (!men.length) continue;
-      for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) if (Math.hypot(men[i].char.posX - men[j].char.posX, men[i].char.posZ - men[j].char.posZ) < TOUCH_M) S.contactAll += DT;
+      for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) if (Math.hypot(men[i].char.pos[0] - men[j].char.pos[0], men[i].char.pos[2] - men[j].char.pos[2]) < TOUCH_M) S.contactAll += DT;
       const nearAny = new Set<any>();
       for (const G of this.geo) { const F = G.F, name = G.d.def.name as string, cx = F.hx + F.ux * F.W / 2, cz = F.hz + F.uz * F.W / 2;
         const here: { m: any; along: number; perp: number; open: boolean; sweep: boolean; near: boolean }[] = [];
@@ -69,9 +69,9 @@ export class DoorWatch {
         if (inOpen.length >= 2) { S.open2 += DT; S.open2Max = Math.max(S.open2Max, inOpen.length); this.bump(this.where, `${side}|${name}`, 'open2', DT); for (const h of inOpen) this.bump(this.doing, `${side}|${this.doingOf(h.m)}`, 'open2', DT / inOpen.length); this.note(t, side, name, `open2 ${inOpen.map(h => `${h.m.callsign} (${this.doingOf(h.m)})`).join(' + ')}`); }
         // standing in the opening / in the leaf's swing — and in whose way
         for (const h of here) { if (!(h.open || h.sweep) || !standing(h.m)) { if (this.men.get(h.m)!.blocking === G.d) this.men.get(h.m)!.blocking = null; continue; }
-          const col = h.open ? 'openStand' : 'sweepStand'; S[col] += DT; if (!h.m.script && (h.m.pinned || h.m.hold)) S[h.open ? 'openHeld' : 'sweepHeld'] += DT; if (!h.open && G.d.latched) S.sweepShut += DT; this.note(t, side, name, `${col} ${h.m.callsign} (${this.doingOf(h.m)}) at ${h.m.char.posX.toFixed(1)},${h.m.char.posZ.toFixed(1)} leaf ${G.d.angle.toFixed(2)}${G.d.latched ? ' shut' : ''}`); this.bump(this.where, `${side}|${name}`, col, DT); this.bump(this.doing, `${side}|${this.doingOf(h.m)}`, col, DT);
+          const col = h.open ? 'openStand' : 'sweepStand'; S[col] += DT; if (!h.m.script && (h.m.pinned || h.m.hold)) S[h.open ? 'openHeld' : 'sweepHeld'] += DT; if (!h.open && G.d.latched) S.sweepShut += DT; this.note(t, side, name, `${col} ${h.m.callsign} (${this.doingOf(h.m)}) at ${h.m.char.pos[0].toFixed(1)},${h.m.char.pos[2].toFixed(1)} leaf ${G.d.angle.toFixed(2)}${G.d.latched ? ' shut' : ''}`); this.bump(this.where, `${side}|${name}`, col, DT); this.bump(this.doing, `${side}|${this.doingOf(h.m)}`, col, DT);
           if (!h.open) continue;
-          const p = h.m.char.pos, wants = men.find(o => o !== h.m && Math.hypot(o.char.posX - p[0], o.char.posZ - p[2]) <= BLOCK_M && this.pathThrough(o, G.d));
+          const p = h.m.char.pos, wants = men.find(o => o !== h.m && Math.hypot(o.char.pos[0] - p[0], o.char.pos[2] - p[2]) <= BLOCK_M && this.pathThrough(o, G.d));
           const M = this.men.get(h.m)!;
           if (wants) { S.block += DT; this.bump(this.where, `${side}|${name}`, 'block', DT); this.bump(this.doing, `${side}|${this.doingOf(h.m)}`, 'block', DT);
             if (M.blocking !== G.d) { M.blocking = G.d; S.blockEvents++; this.note(t, side, name, `block ${h.m.callsign} (${this.doingOf(h.m)}) stands in the opening, ${wants.callsign} (${this.doingOf(wants)}) wants through`); } }
@@ -86,13 +86,13 @@ export class DoorWatch {
           if (!this.touching.has(key)) { S.shoves++; this.note(t, side, name, `shove ${a.m.callsign} (${this.doingOf(a.m)}) × ${b.m.callsign} (${this.doingOf(b.m)})${a.open || b.open ? ' in the opening' : ''}`); } }
         // waiting at it: two or more standing on one face, off the opening
         for (const face of [1, -1]) { const w = here.filter(h => h.near && !h.open && (h.perp >= 0 ? 1 : -1) === face && standing(h.m)); if (w.length < 2) continue;
-          let min = 1e9; for (let i = 0; i < w.length; i++) for (let j = i + 1; j < w.length; j++) min = Math.min(min, Math.hypot(w[i].m.char.posX - w[j].m.char.posX, w[i].m.char.posZ - w[j].m.char.posZ));
+          let min = 1e9; for (let i = 0; i < w.length; i++) for (let j = i + 1; j < w.length; j++) min = Math.min(min, Math.hypot(w[i].m.char.pos[0] - w[j].m.char.pos[0], w[i].m.char.pos[2] - w[j].m.char.pos[2]));
           S.wait += DT; S.waitMinSum += min * DT; if (min < CLOSE_M) { S.waitClose += DT; this.bump(this.where, `${side}|${name}`, 'waitClose', DT); for (const h of w) this.bump(this.doing, `${side}|${this.doingOf(h.m)}`, 'waitClose', DT / w.length); } }
       }
       S.near += nearAny.size * DT;
     }
     this.touching = touchNow;
-    for (const m of all) { const M = this.men.get(m)!; M.was = [m.char.posX, m.char.posZ]; }
+    for (const m of all) { const M = this.men.get(m)!; M.was = [m.char.pos[0], m.char.pos[2]]; }
   }
   /** does his path (from where he stands) run through this door's frame */
   private pathThrough(m: any, d: any): boolean { const path = m.path as number[][] | undefined; if (!path || !(m.pathI < path.length)) return false; let prev = m.char.pos; for (let i = m.pathI; i < path.length; i++) { if (crossesDoor(prev, path[i] as any, d)) return true; prev = path[i]; } return false; }

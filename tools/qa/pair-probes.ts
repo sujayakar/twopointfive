@@ -78,9 +78,9 @@ async function rig(o: RigOpts = {}) {
       const hud = O.hud().menu; return { kind: O.menu?.target.kind as string | undefined, rows: (hud?.rows ?? []).slice(1).filter((r: any) => r.kind !== 'cancel').map((r: any) => ({ head: r.label as string, key: r.opts[0]?.key as string, text: r.opts[0]?.text as string, off: !!r.off })) }; },
     esc() { for (let i = 0; i < 3 && O.menu; i++) R.press('Escape'); },
     /** a man stood somewhere by hand, facing `yaw` */
-    put(gd: any, p: number[], yaw: number) { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; },
-    chest(h: any): number[] { return [h.char.posX, 1.2, h.char.posZ]; },
-    foe(h: any) { return { kind: 'foe', at: [h.char.posX, 0, h.char.posZ], foe: h }; },
+    put(gd: any, p: number[], yaw: number) { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; },
+    chest(h: any): number[] { return [h.char.pos[0], 1.2, h.char.pos[2]]; },
+    foe(h: any) { return { kind: 'foe', at: [h.char.pos[0], 0, h.char.pos[2]], foe: h }; },
     silent(): boolean { return SLM.squadSilent(game); },
     status(): string { return O.statusOf(R.mate); },
     log(): string { return PM.PAIR_LOG.map((x: any) => `${f1(x.t)} ${x.what}`).join(' | '); },
@@ -140,12 +140,12 @@ export const pairWait = guarded(async () => {
   const { verdict, done } = family("pair-wait: 'wait here' and 'on me' — hold position and fall in, from a person's menu and from the floor's");
   const { R, foe, mate } = await scene(); const { O, game } = R; const sam = game.player.char;
   // hold, from the floor's menu
-  R.menu([mate.char.posX + 1.5, 0, mate.char.posZ + 0.8]); R.press('Digit4'); R.step(5); const p0 = [...mate.char.pos];
+  R.menu([mate.char.pos[0] + 1.5, 0, mate.char.pos[2] + 0.8]); R.press('Digit4'); R.step(5); const p0 = [...mate.char.pos];
   const given1 = R.last()?.order === 'hold' && O.of(mate)?.order === 'hold';
   game.teleportPlayer([8, 0, 20]); R.step(60 * 4);
   verdict(given1 && flat(mate.char.pos, p0) < 0.4, "'wait here' (4 on the floor's menu): given, and he stays where he is while Sam goes six metres off for four seconds", `log ${JSON.stringify(R.last())} · moved ${f2(flat(mate.char.pos, p0))} m · ${R.status()} · said: ${R.said.slice(-2).join(' / ')}`);
   // fall in, from the floor's menu
-  R.menu([sam.posX + 1, 0, sam.posZ]); R.press('Digit3'); R.step(5);
+  R.menu([sam.pos[0] + 1, 0, sam.pos[2]]); R.press('Digit3'); R.step(5);
   const given2 = R.last()?.order === 'fallIn' && O.of(mate)?.order === 'fallIn'; const came = R.until(() => flat(mate.char.pos, sam.pos) < 2.6, 12);
   verdict(given2 && came, "'on me' (3): given — the hold is cancelled — and he comes to Sam", `log ${JSON.stringify(R.last())} · ${f1(flat(mate.char.pos, sam.pos))} m from Sam · ${R.status()}`);
   // from a PERSON's menu, over a take job
@@ -191,7 +191,7 @@ export const pairDark = guarded(async () => {
   verdict(m3.rows[0]?.off && /nowhere dark there\.|no dark spot there\./.test(m3.rows[0].text) && O.log.length === n3 && (R.said.includes(`[${mate.callsign}] nowhere dark there.`) || R.said.includes(`[${mate.callsign}] no dark spot there.`)) && flat(mate.char.pos, p3) < 0.3 && O.of(mate)?.order === 'pairDark',
     'on lit floor with no dark in reach the row is greyed with the reason — and given by B it is refused in his own words; he stays on the order he had', `menu: ${show(m3.rows.slice(0, 1))} · said: ${R.said.slice(-1).join('')} · moved ${f2(flat(mate.char.pos, p3))} m · ${R.status()}`);
   // refused: no way there
-  const t5 = R.tango(5), inRoom = [t5.char.posX + 0.6, 0, t5.char.posZ + 0.6], w4 = O.give('pairDark', { kind: 'floor', at: inRoom });
+  const t5 = R.tango(5), inRoom = [t5.char.pos[0] + 0.6, 0, t5.char.pos[2] + 0.6], w4 = O.give('pairDark', { kind: 'floor', at: inRoom });
   verdict(w4 !== null && /locked|get there/.test(w4), 'a spot behind a locked door: refused with the reason', `give → ${w4}`);
   // the place lit under him (the probe moves the bar, not a lamp: the spot now reads over it)
   const lit0 = PM.PAIR_STATS.lit; PAIR.darkVis = -1; R.step(60 * 4); const saidLit = R.said.includes(`[${mate.callsign}] lit up here.`), st = R.status(); PAIR.darkVis = K;
@@ -214,7 +214,7 @@ export const pairMark = guarded(async () => {
     R.cursor(R.chest(foe)); R.press(ORDERS.quickKey); R.step(3);
     verdict(R.last()?.order === 'pairMark' && P.jobOf(mate)?.foe === foe && ['your', 'my'].some(w => R.said.some(s => s.startsWith(`you: ${mate.callsign} — take him · on ${w} mark`))), 'given (B on the man): the partner has the job and answers', `log ${JSON.stringify(R.last())} · said: ${R.said.slice(-2).join(' / ')}`);
     // obeyed: round to his back, set, and WAITS
-    let seenFront = 0; R.post = () => { const [lx, lz] = [Math.sin(foe.char.bodyYaw), Math.cos(foe.char.bodyYaw)], dx = mate.char.posX - foe.char.posX, dz = mate.char.posZ - foe.char.posZ; if (foe.state !== 'dead' && Math.hypot(dx, dz) < 2.6 && dx * lx + dz * lz > 0) seenFront++; };
+    let seenFront = 0; R.post = () => { const [lx, lz] = [Math.sin(foe.char.bodyYaw), Math.cos(foe.char.bodyYaw)], dx = mate.char.pos[0] - foe.char.pos[0], dz = mate.char.pos[2] - foe.char.pos[2]; if (foe.state !== 'dead' && Math.hypot(dx, dz) < 2.6 && dx * lx + dz * lz > 0) seenFront++; };
     const set = R.until(() => !!P.jobOf(mate)?.set, 30), tSet = game.time, dSet = flat(mate.char.pos, foe.char.pos), crouched = mate.char.anim.crouch;
     R.step(60 * 5);
     const still = !!P.jobOf(mate)?.set && foe.state !== 'dead' && flat(mate.char.pos, foe.char.pos) > PAIR.reach, note = O.hud().status[0]?.opts.find((o: any) => o.key === 'F')?.text ?? '';
@@ -235,7 +235,7 @@ export const pairMark = guarded(async () => {
     // partner's hands landed hung on the frame the partner happened to set on (the check passed or failed by the game clock, with the rules as they were too).
     // The check is about the mark, not Sam's own sneaking, so nobody senses him here.
     game.playerInvisible = true;
-    game.teleportPlayer([two.char.posX - 0.6, 0, two.char.posZ]); R.step(2); const t0 = game.time; startTakedown(game, two);
+    game.teleportPlayer([two.char.pos[0] - 0.6, 0, two.char.pos[2]]); R.step(2); const t0 = game.time; startTakedown(game, two);
     const both = R.until(() => foe.state === 'dead' && two.state === 'dead', 6), gap = Math.abs((foe.diedAt ?? 0) - (two.diedAt ?? 0)); R.step(60 * 2);
     verdict(set && both && foe.downKind === 'struck' && foe.downBy === 'guard' && PM.PAIR_LOG.some((x: any) => x.what === 'go:hands') && R.opShots === 0 && R.roused().length === 0 && R.silent() && !SLM.silentCompromised(game),
       "Sam's own takedown on the man beside is the mark: both men down, no round, nobody else roused, the squad still silent", `set ${set} · ${two.callsign} down at +${f2((two.diedAt ?? 0) - t0)} s (Sam), ${foe.callsign} at +${f2((foe.diedAt ?? 0) - t0)} s (${mate.callsign}, ${foe.downKind}): ${f2(gap)} s apart · rounds ${R.opShots} · roused ${R.roused().map((h: any) => h.callsign).join(', ') || 'nobody'} · silent ${R.silent()}${SLM.silentCompromised(game) ? ' (compromised)' : ''} · ${R.log()}`); }
@@ -280,11 +280,11 @@ export const pairMark = guarded(async () => {
 
 // ---------------------------------------------------------------- he's watched
 /** a second defender stood in front of the man, facing him — put there AFTER the partner is set, and (the rule under test is the partner's) his own noticing held at nought */
-function witness(R: any, foe: any, yaw: number, m = 4.5) { const w = R.tango(2); w.__yaw = yaw; w.hold = true; R.put(w, [foe.char.posX + m, 0, foe.char.posZ], yaw); return w; }
+function witness(R: any, foe: any, yaw: number, m = 4.5) { const w = R.tango(2); w.__yaw = yaw; w.hold = true; R.put(w, [foe.char.pos[0] + m, 0, foe.char.pos[2]], yaw); return w; }
 export const pairWatched = guarded(async () => {
   const { verdict, done } = family("pair-watched: the mark with another defender looking — he says who, waits for a clear moment, or goes on a second mark");
   // (… and his feet and his facing held where the probe put them: a defender of this staging turns back to his own door within a second)
-  const calm = (R: any, w: any) => { const at = [w.char.posX, 0, w.char.posZ]; R.post = () => { if (w.state !== 'dead') { w.awareness = 0; if (w.state !== 'patrol') w.state = 'patrol'; R.put(w, at, w.__yaw); w.char.chestDir = [Math.sin(w.__yaw), 0, Math.cos(w.__yaw)]; } }; };
+  const calm = (R: any, w: any) => { const at = [w.char.pos[0], 0, w.char.pos[2]]; R.post = () => { if (w.state !== 'dead') { w.awareness = 0; if (w.state !== 'patrol') w.state = 'patrol'; R.put(w, at, w.__yaw); w.char.chestDir = [Math.sin(w.__yaw), 0, Math.cos(w.__yaw)]; } }; };
   const staged = async (o: any = {}) => { const { R, foe, mate } = await scene(o); R.O.give('pairMark', R.foe(foe), 'all'); const set = R.until(() => !!R.P.jobOf(mate)?.set, 30); return { R, foe, mate, set }; };
   { const { R, foe, mate, set } = await staged(); const { P, O } = R;
     const none = P.watcher(foe, mate);
@@ -388,7 +388,7 @@ export const pairWatch = guarded(async () => {
     R.put(mate, [AISLE_MID[0] - 6, 0, AISLE_MID[2]], EAST); R.step(5);
     const w = order === 'pairWatch' ? (R.menu(R.chest(foe)), R.press('Digit2'), R.last()?.order === 'pairWatch' ? null : 'not given') : O.give('hold', O.targetAt(mate.char.pos));
     R.step(3); SILENT.holdFire = false;   // (from here on only this row holds his fire)
-    R.step(60 * 6); const quiet = { shots: R.opShots, foe: foe.state, onHim: Math.abs(Math.atan2(Math.sin(mate.char.aimYaw - Math.atan2(foe.char.posX - mate.char.posX, foe.char.posZ - mate.char.posZ)), Math.cos(mate.char.aimYaw - Math.atan2(foe.char.posX - mate.char.posX, foe.char.posZ - mate.char.posZ)))), status: R.status(), held: PM.PAIR_STATS.held };
+    R.step(60 * 6); const quiet = { shots: R.opShots, foe: foe.state, onHim: Math.abs(Math.atan2(Math.sin(mate.char.aimYaw - Math.atan2(foe.char.pos[0] - mate.char.pos[0], foe.char.pos[2] - mate.char.pos[2])), Math.cos(mate.char.aimYaw - Math.atan2(foe.char.pos[0] - mate.char.pos[0], foe.char.pos[2] - mate.char.pos[2])))), status: R.status(), held: PM.PAIR_STATS.held };
     if (foe.state !== 'dead') { foe.state = 'alert'; foe.awareness = 1; foe.foe = mate; } R.step(60 * 4);
     return { w, quiet, after: { shots: R.opShots, foe: foe.state }, name: foe.callsign, held: R.held }; };
   const a = await run('pairWatch'), b = await run('hold');
@@ -406,7 +406,7 @@ export const pairWatch = guarded(async () => {
 async function minute(o: RigOpts, use: false | 'move' | 'pairDark' = false): Promise<string> {
   const R = await rig({ quiet: false, ...o }); const { game, O } = R; let h = 0x811c9dc5 >>> 0;
   const eat = (s: string) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } };
-  const frame = (n: number) => { for (let f = 0; f < n; f++) { R.step(); eat(JSON.stringify(digestGame(game, true))); for (const x of game.guards) eat(`${x.state[0]}${x.char.posX.toFixed(4)},${x.char.posZ.toFixed(4)},${x.char.aimYaw.toFixed(4)},${x.bubble?.text ?? ''}`); } };   // (the squad block's own words are NOT in it: silent, its B hint reads 'hold in the dark' with the switch on — the row's name, by design)
+  const frame = (n: number) => { for (let f = 0; f < n; f++) { R.step(); eat(JSON.stringify(digestGame(game, true))); for (const x of game.guards) eat(`${x.state[0]}${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)},${x.bubble?.text ?? ''}`); } };   // (the squad block's own words are NOT in it: silent, its B hint reads 'hold in the dark' with the switch on — the row's name, by design)
   const sam = game.player.char.pos, door = (n: string) => O.targetAt(game.doors.list.find((d: any) => d.def.name === n).frameCentre);
   O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all'); frame(120);
   // (the second move is given LOUD when nothing of these is to be used: silent, with the switch on, the floor's 1 IS 'hold in the dark' — that is the feature)

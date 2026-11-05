@@ -6,7 +6,7 @@
 // lanes at a time. The first word column is the row's generation, which is the store's own (src/sim/men/store.ts): odd = a man stands in the row.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { MEN_FIELDS, MEN_KEPT, MEN_ROWS, type ColGroup, type ColOn, type ColType, type ManRef, type MenField } from '../../src/sim/men/schema';
+import { MEN_FIELDS, MEN_KEPT, MEN_ROWS, type ColGroup, type ColOn, type MenField } from '../../src/sim/men/schema';
 
 export interface Schema { rows: number; fields: readonly MenField[] }
 /** a column as both languages see it */
@@ -21,7 +21,6 @@ export function layOut(S: Schema): { cols: Col[]; laid: Laid[] } {
   const f64: Col[] = [], u32: Col[] = [], laid: Laid[] = [];
   const add = (to: Col[], name: string, group: ColGroup) => { to.push({ name, rust: snake(name), kind: to === f64 ? 'f64' : 'u32', group }); return name; };
   const fields = [...S.fields].sort((a, b) => RANK[a.group] - RANK[b.group]);   // (a stable sort: within a group, the table's order)
-  const colOf = (f: MenField) => f.col ?? f.name;
   /** a truth wants a bit: the current word of its group's, or a new word */
   const words = new Map<ColGroup, { col: string; used: number }>(); let nw = 0;
   const bit = (g: ColGroup) => {
@@ -29,12 +28,12 @@ export function layOut(S: Schema): { cols: Col[]; laid: Laid[] } {
     const mask = (1 << w.used++) >>> 0; return { col: w.col, mask };
   };
   for (const f of fields) {
-    if (f.type === 'f64') laid.push({ field: f, cols: [add(f64, colOf(f), f.group)] });
+    if (f.type === 'f64') laid.push({ field: f, cols: [add(f64, f.name, f.group)] });
     else if (f.type === 'vec3' || f.type === 'vec3?') {
-      const cols = ['X', 'Y', 'Z'].map(a => add(f64, colOf(f) + a, f.group));
+      const cols = ['X', 'Y', 'Z'].map(a => add(f64, f.name + a, f.group));
       laid.push({ field: f, cols, ...(f.type === 'vec3?' ? { has: bit(f.group) } : {}) });
     } else if (f.type === 'bool') laid.push({ field: f, cols: [], bit: bit(f.group) });
-    else laid.push({ field: f, cols: [add(u32, colOf(f), f.group)] });   // (a word: a place in a list of words, a word of its own, or a man)
+    else laid.push({ field: f, cols: [add(u32, f.name, f.group)] });
   }
   const cols = [...f64, { name: 'gen', rust: 'gen', kind: 'u32' as const, group: 'hot' as const }, ...u32];
   return { cols, laid };
@@ -55,46 +54,37 @@ function offsets(S: Schema, cols: Col[]): Map<string, number> {
   for (const c of cols) { out.set(c.name, c.kind === 'f64' ? at / 8 : at / 4); at += S.rows * (c.kind === 'f64' ? 8 : 4); }
   return out;
 }
-const INIT: Record<ColOn, string> = { man: 'initMan', guard: 'initGuard', player: 'initPlayer', anim: 'initAnim', sup: 'initSup', aim: 'initAim' };
-const isManRef = (t: ColType): t is ManRef => typeof t === 'object' && !Array.isArray(t);
-const initText = (f: MenField) => (typeof f.init === 'number' && Number.isNaN(f.init) ? 'NaN' : JSON.stringify(f.init));
+const CLASS: Record<ColOn, string> = { man: 'ManCols', guard: 'GuardCols', player: 'PlayerCols', anim: 'AnimCols' };
 
 function accessors(l: Laid, O: Map<string, number>): string[] {
   const f = l.field, n = f.name, t = f.type, doc = f.why ? [`  /** ${f.why} */`] : [];
-  const c0 = l.cols[0], d = (c: string) => `S.d[S.b8 + ${O.get(c)} + this.r]`, u = (c: string) => `S.u[S.b4 + ${O.get(c)} + this.r]`;
+  const d = (c: string) => `S.d[S.b8 + ${O.get(c)} + this.r]`, u = (c: string) => `S.u[S.b4 + ${O.get(c)} + this.r]`;
   const num = (name: string, read: string, write: string, type = 'number') => `  get ${name}(): ${type} { const S = this.S; return ${read}; } set ${name}(v: ${type}) { const S = this.S; ${write}; }`;
-  if (t === 'f64') return [...doc, num(n, d(c0), `${d(c0)} = v`)];
-  if (t === 'u32') return [...doc, num(n, u(c0), `${u(c0)} = v`)];
-  if (t === 'i32') return [...doc, num(n, `${u(c0)} | 0`, `${u(c0)} = v`)];
+  if (t === 'f64') return [...doc, num(n, d(n), `${d(n)} = v`)];
+  if (t === 'u32') return [...doc, num(n, u(n), `${u(n)} = v`)];
+  if (t === 'i32') return [...doc, num(n, `${u(n)} | 0`, `${u(n)} = v`)];
   if (t === 'bool') { const b = l.bit!; return [...doc, num(n, `(${u(b.col)} & ${b.mask}) !== 0`, `const w = ${u(b.col)}; ${u(b.col)} = v ? w | ${b.mask} : w & ${~b.mask >>> 0}`, 'boolean')]; }
   if (t === 'vec3' || t === 'vec3?') {
-    const [x, y, z] = l.cols, each = l.cols.map((c, i) => num(n + 'XYZ'[i], d(c), `${d(c)} = v`));
+    const [x, y, z] = l.cols, each = l.cols.map(c => num(c, d(c), `${d(c)} = v`));
     if (t === 'vec3') return [...doc, `  get ${n}(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + ${O.get(x)}], S.d[i + ${O.get(y)}], S.d[i + ${O.get(z)}]]; }`,
       `  set ${n}(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + ${O.get(x)}] = v[0]; S.d[i + ${O.get(y)}] = v[1]; S.d[i + ${O.get(z)}] = v[2]; }`, ...each];
     const h = l.has!;
     return [...doc, `  get ${n}(): Vec3 | null { const S = this.S; if ((${u(h.col)} & ${h.mask}) === 0) return null; const i = S.b8 + this.r; return [S.d[i + ${O.get(x)}], S.d[i + ${O.get(y)}], S.d[i + ${O.get(z)}]]; }`,
       `  set ${n}(v: Readonly<Vec3> | null) { const S = this.S, w = ${u(h.col)}, i = S.b8 + this.r; if (v === null) { ${u(h.col)} = w & ${~h.mask >>> 0}; S.d[i + ${O.get(x)}] = 0; S.d[i + ${O.get(y)}] = 0; S.d[i + ${O.get(z)}] = 0; return; } ${u(h.col)} = w | ${h.mask}; S.d[i + ${O.get(x)}] = v[0]; S.d[i + ${O.get(y)}] = v[1]; S.d[i + ${O.get(z)}] = v[2]; }`, ...each];
   }
-  if (isManRef(t)) {   // a word that names a man: 0 nobody · 1, 2 … a word of its list · else a handle (never under 256: a live row's generation is odd)
-    const also = t.also, ty = [...also.map(w => `'${w}'`), t.man, 'null'].join(' | '), rd = also.map((w, i) => `h === ${i + 1} ? '${w}' : `).join(''), wr = also.map((w, i) => `v === '${w}' ? ${i + 1} : `).join('');
-    return [...doc, `  get ${n}(): ${ty} { const S = this.S, h = ${u(c0)}; return h === 0 ? null : ${rd}S.manAt(h) as ${t.man}; } set ${n}(v: ${ty}) { const S = this.S; ${u(c0)} = v === null ? 0 : ${wr}S.handleOf((v as ${t.man}).r); }`];
-  }
   const V = `${n.toUpperCase()}_WORDS`;
-  return [...doc, `  get ${n}(): (typeof ${V})[number] { const S = this.S; return ${V}[${u(c0)}]; } set ${n}(v: (typeof ${V})[number]) { const S = this.S, i = ${V}.indexOf(v); if (i < 0) throw new Error(\`${n}: no such word: \${v}\`); ${u(c0)} = i; }`];
+  return [...doc, `  get ${n}(): (typeof ${V})[number] { const S = this.S; return ${V}[${u(n)}]; } set ${n}(v: (typeof ${V})[number]) { const S = this.S; ${u(n)} = ${V}.indexOf(v); }`];
 }
 
 /** the TypeScript side */
 export function tsText(S: Schema): string {
   const { cols, laid } = layOut(S), O = offsets(S, cols), f64 = cols.filter(c => c.kind === 'f64'), u32 = cols.filter(c => c.kind === 'u32');
   const body = (on: ColOn) => laid.filter(l => l.field.on === on).flatMap(l => accessors(l, O));
-  /** what a new man's columns start at, other than zero: a method of the class his row is read through, which his object's constructor calls */
-  const inits = (on: ColOn) => { const rows = S.fields.filter(f => f.on === on && f.init !== undefined); return rows.length ? [`  ${INIT[on]}(): void { ${rows.map(f => `this.${f.name} = ${initText(f)};`).join(' ')} }`] : []; };
   const lists = laid.filter(l => Array.isArray(l.field.type)).map(l => `const ${l.field.name.toUpperCase()}_WORDS = ${JSON.stringify(l.field.type)} as const;`);
-  const uses3 = laid.some(l => l.field.type === 'vec3' || l.field.type === 'vec3?'), mans = [...new Set(laid.flatMap(l => (isManRef(l.field.type) ? [l.field.type.man] : [])))];
+  const uses3 = laid.some(l => l.field.type === 'vec3' || l.field.type === 'vec3?');
   return [
     `// WRITTEN BY tools/sim/men.ts FROM src/sim/men/schema.ts — never by hand (tools/qa/men-check.ts is red on a difference). A man's columns, as the game reads and writes them.`,
     uses3 ? `import type { Vec3 } from '../../math/vec';` : ``,
-    ...(mans.length ? [`import type { ${mans.join(', ')} } from '../../game/game';   // (a type alone: nothing of the game is loaded from here)`] : []),
     `import type { MenStore } from './store';`,
     ``,
     `/** the hash of the layout; the module holds the same one (rust/sim/src/men.rs SCHEMA), and store.ts holds the two to each other as a game starts */`,
@@ -110,26 +100,20 @@ export function tsText(S: Schema): string {
     `export class ManCols {`,
     `  S!: MenStore; r = -1;`,
     ...body('man'),
-    ...inits('man'),
     `}`,
     `/** a Guard record's own columns (a guard, a teammate, a civilian) */`,
     `export class GuardCols extends ManCols {`,
     ...body('guard'),
-    ...inits('guard'),
     `}`,
     `/** the player's own columns */`,
     `export class PlayerCols extends ManCols {`,
     ...body('player'),
-    ...inits('player'),
     `}`,
-    ...([['anim', 'AnimCols', `the animator's kept state`], ['sup', 'SupCols', `what suppression keeps of him (game/suppression.ts)`], ['aim', 'AimCols', `his aim's track (game/aim.ts)`]] as const).flatMap(([on, name, what]) => [
-      `/** ${what}: a record of its own, on his row */`,
-      `export class ${name} {`,
-      `  S!: MenStore; r = -1;`,
-      ...body(on),
-      ...inits(on),
-      `}`,
-    ]),
+    `/** the animator's kept state */`,
+    `export class AnimCols {`,
+    `  S!: MenStore; r = -1;`,
+    ...body('anim'),
+    `}`,
     ``,
   ].filter((l, i) => l !== '' || i > 0).join('\n');
 }
@@ -187,8 +171,7 @@ export const MEN_TABLE: Schema = { rows: MEN_ROWS, fields: MEN_FIELDS };
 export function schemaFaults(S: Schema, kept: readonly { name: string; on: ColOn }[] = MEN_KEPT): string[] {
   const out: string[] = [], seen = new Set<string>();
   if (S.rows % 4 !== 0) out.push(`${S.rows} rows is no multiple of four`);
-  const cols = new Set<string>();
-  for (const f of S.fields) { const k = `${f.on}.${f.name}`, c = f.col ?? f.name; if (seen.has(k)) out.push(`${k} is in the table twice`); seen.add(k); if (cols.has(c)) out.push(`the column ${c} (${k}) is in the table twice`); cols.add(c); if (f.name === 'S' || f.name === 'r' || c === 'gen') out.push(`${k}: the name is the store's`); }
+  for (const f of S.fields) { const k = `${f.on}.${f.name}`; if (seen.has(k)) out.push(`${k} is in the table twice`); seen.add(k); if (f.name === 'S' || f.name === 'r' || f.name === 'gen') out.push(`${k}: the name is the store's`); }
   for (const f of kept) if (seen.has(`${f.on}.${f.name}`)) out.push(`${f.on}.${f.name} is a column and kept on the object`);
   return out;
 }

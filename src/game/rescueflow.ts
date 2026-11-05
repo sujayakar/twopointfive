@@ -253,7 +253,7 @@ export class RescueFlow {
       if (g.fight.engaged(gd) || (RK.holdHot && J.saidHot && g.fight.busy(gd, 2))) continue;   // (the man he was holding on has just gone from his sight, or he is turning to him: not released on that frame)
       const samPast = !onRoute || sam[0] > o.at[0] + K.past;
       const done = isNaN(J.onT) ? t - J.t0 > K.giveUp : t - J.onT >= o.look && (samPast || t - J.onT >= K.maxCover);
-      if (!J.saidWait && J.chain.length && onRoute && sam[0] - gd.char.posX > K.waitM) { J.saidWait = true; g.say(gd, 'wait one.'); R.note(`flow:wait:${gd.callsign}`); }
+      if (!J.saidWait && J.chain.length && onRoute && sam[0] - gd.char.pos[0] > K.waitM) { J.saidWait = true; g.say(gd, 'wait one.'); R.note(`flow:wait:${gd.callsign}`); }
       if (!done) continue;
       R.note(`flow:done:${o.id}:${gd.callsign}`);
       let next = J.chain.shift(); while (next && this.settled(next)) next = J.chain.shift();

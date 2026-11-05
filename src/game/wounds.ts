@@ -102,7 +102,7 @@ export function woundDown(g: Game, gd: Guard, dir: Vec3, zone: 'side' | 'leg' = 
   const c = gd.char;
   c.turnDrop();   // (TURN: he goes down as the body that was drawn, and nothing turns him from here — character.ts update leaves a wounded figure's yaws alone)
   const f = c.forward(), fromFront = f[0] * dir[0] + f[2] * dir[2] < -0.25;
-  const room = (y: number) => { const a: Vec3 = [c.posX, y, c.posZ], b: Vec3 = [c.posX - f[0] * WOUND.backRoom, y, c.posZ - f[2] * WOUND.backRoom]; return !g.col.solidBlocked(a, b) && !g.col.segmentBlockedDynamic(a, b); };
+  const room = (y: number) => { const a: Vec3 = [c.pos[0], y, c.pos[2]], b: Vec3 = [c.pos[0] - f[0] * WOUND.backRoom, y, c.pos[2] - f[2] * WOUND.backRoom]; return !g.col.solidBlocked(a, b) && !g.col.segmentBlockedDynamic(a, b); };
   const pose: Wound['pose'] = zone === 'leg' && fromFront && room(0.25) && room(0.9) ? 'back' : 'knee';
   gd.wound = { zone, pose, t: g.time };
   lay(gd, false);

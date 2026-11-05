@@ -27,7 +27,7 @@ function segToAxis(a: Vec3, b: Vec3, ax: number, az: number, y0: number, y1: num
   const px = a[0] + dx * t, py = a[1] + dy * t, pz = a[2] + dz * t; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
   return Math.hypot(px - ax, pz - az, ddy);
 }
-const axisOf = (o: any) => { const h = o.char.bones.hips ?? o.char.pos; return { x: h[0], z: h[2], y0: o.char.posY + 0.05, y1: o.char.bones.headTop?.[1] ?? 1.75 }; };
+const axisOf = (o: any) => { const h = o.char.bones.hips ?? o.char.pos; return { x: h[0], z: h[2], y0: o.char.pos[1] + 0.05, y1: o.char.bones.headTop?.[1] ?? 1.75 }; };
 
 /** (1) The tour's own stack on the conference door (demo.ts CONFERENCE_CLEAR, run staged by squad.ts RoomClear): no. 2 tucked in 0.85 m behind no. 1 with his
  *  ordered aim high over the man's shoulder — the line from his gun shoulder to that point runs through no. 1's head. While both are planted in the stack: is
@@ -87,7 +87,7 @@ export async function muzzle() {
         W.step(DT);
         if (follower.state !== 'patrol' || leader.state !== 'patrol') continue;
         const gap = v3.distXZ(follower.char.pos, leader.char.pos); const lf = leader.char.forward();
-        const behind = ((follower.char.posX - leader.char.posX) * lf[0] + (follower.char.posZ - leader.char.posZ) * lf[2]) < -0.3;
+        const behind = ((follower.char.pos[0] - leader.char.pos[0]) * lf[0] + (follower.char.pos[2] - leader.char.pos[2]) * lf[2]) < -0.3;
         const walking = follower.speed > 0.4; if (walking) walkFrames++;
         if (gap < 2.6 && behind && walking) { inFile++; if (follower.muzzleDown) { downInFile++; pitchSum += follower.char.gunDir[1]; pitchN++; } }
         const o = colleagueInLine(game, follower, aimAhead(follower.char));
@@ -143,12 +143,12 @@ export async function muzzle() {
       W.step(DT);
       if (A.muzzleDown) downFrames++;
       if (A.path !== lastPathRef) { lastPathRef = A.path; if (A.path.length === 1 && blockedAt >= 0) steps++; }
-      if (f % 30 === 29) rows.push(`    ${t.toFixed(1).padStart(4)}s A ${A.state} (${A.char.posX.toFixed(2)}, ${A.char.posZ.toFixed(2)}) down ${A.muzzleDown ? 'Y' : 'n'} spd ${A.speed.toFixed(2)} stance ${A.char.anim.stance}/${A.char.anim.upper} · B (${B.char.posX.toFixed(2)}, ${B.char.posZ.toFixed(2)}) ${B.script ? 'walking' : 'planted'} · shots ${shots} bad ${badRounds}`);
+      if (f % 30 === 29) rows.push(`    ${t.toFixed(1).padStart(4)}s A ${A.state} (${A.char.pos[0].toFixed(2)}, ${A.char.pos[2].toFixed(2)}) down ${A.muzzleDown ? 'Y' : 'n'} spd ${A.speed.toFixed(2)} stance ${A.char.anim.stance}/${A.char.anim.upper} · B (${B.char.pos[0].toFixed(2)}, ${B.char.pos[2].toFixed(2)}) ${B.script ? 'walking' : 'planted'} · shots ${shots} bad ${badRounds}`);
     }
     game.audio.play = play; game.puppet = null;
     const ok = blockedAt >= 0 && badRounds === 0 && firstAfterBlock >= 0 && firstAfterBlock < F.want && shots >= 6;
     verdict(ok, `(3${F.key}) a fight with a colleague ${F.label}`,
-      `${shots} rounds in 24 s, ${badRounds} within 0.3 m of the colleague's axis (want 0; nearest ${isFinite(worst) ? worst.toFixed(2) : '—'} m); blocked at +${blockedAt >= 0 ? (blockedAt - t0).toFixed(1) : '—'} s, first round after that +${firstAfterBlock >= 0 ? firstAfterBlock.toFixed(2) : 'never'} s (want < ${F.want}); side-steps taken ${steps}; A lowered ${(downFrames * DT).toFixed(1)} s of the run; A ends at (${A.char.posX.toFixed(2)}, ${A.char.posZ.toFixed(2)}), ${v3.distXZ(A.char.pos, GA).toFixed(2)} m off his spot`);
+      `${shots} rounds in 24 s, ${badRounds} within 0.3 m of the colleague's axis (want 0; nearest ${isFinite(worst) ? worst.toFixed(2) : '—'} m); blocked at +${blockedAt >= 0 ? (blockedAt - t0).toFixed(1) : '—'} s, first round after that +${firstAfterBlock >= 0 ? firstAfterBlock.toFixed(2) : 'never'} s (want < ${F.want}); side-steps taken ${steps}; A lowered ${(downFrames * DT).toFixed(1)} s of the run; A ends at (${A.char.pos[0].toFixed(2)}, ${A.char.pos[2].toFixed(2)}), ${v3.distXZ(A.char.pos, GA).toFixed(2)} m off his spot`);
     console.log(rows.filter((_, i) => i < 24).join('\n'));
   }
   console.log(`=== muzzle: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
@@ -251,7 +251,7 @@ export async function missing() {
         W.step(DT);
         const t = game.time;
         if (tCall < 0 && !preLeak) {   // the premise: until the net calls its check, nothing whatever has come of the two deaths
-          if (n.found || r.found) preLeak = `${(t - t0).toFixed(1)} s: ${n.found ? n.callsign : r.callsign}'s body seen — by ${name(k)} at (${k.char.posX.toFixed(1)}, ${k.char.posZ.toFixed(1)})`;
+          if (n.found || r.found) preLeak = `${(t - t0).toFixed(1)} s: ${n.found ? n.callsign : r.callsign}'s body seen — by ${name(k)} at (${k.char.pos[0].toFixed(1)}, ${k.char.pos[2].toFixed(1)})`;
           else if (game.escalation !== 0) preLeak = `${(t - t0).toFixed(1)} s: escalation ${game.escalation}`;
           else if (k.state !== 'patrol' || k.task || k.bodyDuty) preLeak = `${(t - t0).toFixed(1)} s: ${name(k)} ${k.state}${k.task ? ' task:' + k.task.kind : ''}${k.bodyDuty ? ' bodyDuty' : ''}`;
         }

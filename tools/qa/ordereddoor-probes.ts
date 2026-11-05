@@ -71,12 +71,12 @@ async function rig(seed: number, o: { open?: string[]; spots?: number[][] } = {}
     open(name: string) { const d = R.door(name); d.locked = false; d.latched = false; d.angle = 1.45; d.vel = 0; d.closing = false; d.quietT = -3600; d.place(); },
     step(n = 1) { for (let i = 0; i < n; i++) { game.player.visibility = 0.05;
       for (const h of R.room('manager').defenders) if (h.state !== 'dead') h.dazzledUntil = game.time + 5;
-      const was = R.up.map((m: any) => [m, [m.char.posX, 0, m.char.posZ]] as const); W.step(DT);
+      const was = R.up.map((m: any) => [m, [m.char.pos[0], 0, m.char.pos[2]]] as const); W.step(DT);
       for (const [m, p] of was) { if (dist(p as any, m.char.pos) > 1.5) continue;
         for (const d of game.doors.list) if (crossesDoor(p, m.char.pos, d)) { const l = R.walked.get(m) ?? []; l.push(d.def.name); R.walked.set(m, l); }
         if (inB(R.room('manager').def.bounds, m.char.pos, -0.1)) R.inOffice.set(m, (R.inOffice.get(m) ?? 0) + 1); } } },
     until(pred: () => boolean, secs: number) { for (let i = 0; i < secs * 60 && !pred(); i++) R.step(); return pred(); },
-    place(P: number[][]) { game.teleportPlayer(P[0]); R.up.forEach((m: any, i: number) => { const p = P[1 + i]; m.char.posX = p[0]; m.char.posZ = p[2]; }); R.step(30); R.walked.clear(); R.inOffice.clear(); },
+    place(P: number[][]) { game.teleportPlayer(P[0]); R.up.forEach((m: any, i: number) => { const p = P[1 + i]; m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; }); R.step(30); R.walked.clear(); R.inOffice.clear(); },
     give(id: string, name: string, who: any = 'all'): string | null { return O.give(id, O.targetAt(R.door(name).frameCentre), who); },
     ways(): string { return R.up.map((m: any) => `${m.callsign}: ${(R.walked.get(m) ?? []).join(' → ') || 'no door'}`).join(' · '); },
     through(name: string): any[] { return R.up.filter((m: any) => (R.walked.get(m) ?? []).includes(name)); },
@@ -212,7 +212,7 @@ export const ordereddoorRound = guarded(async () => {
     const SAM = [23.78, 0, 13.81], MEN = [[21.39, 0, 13.61], [20.10, 0, 14.17], [18.37, 0, 14.16], [22.6, 0, 14.9]], WALL = [27.5, 1.05, 10.21], OPEN: Record<string, number> = { front: -1.77, guard_room: -1.51, radio_room: -1.48, back: -1.09 };
     const yard = async (cap: number, walk: boolean, storeKnown = false) => {
       restore(); const R = await WP.rig('floodlit-four', 5); const g = R.game, O = R.O, C = g.cleared, nav = g.col.nav; Object.assign(ORDERS, { cleared: true, clearedDear: 20, roundCap: cap });
-      for (const h of R.hostiles) R.put(h, [h.char.posX + 400, 0, h.char.posZ]);   // (feet, not the fight: nobody of the other side on the level's floor)
+      for (const h of R.hostiles) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);   // (feet, not the fight: nobody of the other side on the level's floor)
       for (const [n, a] of Object.entries(OPEN)) { const d = g.doors.byName(n); d.locked = false; d.latched = false; d.angle = a; d.vel = 0; d.closing = false; d.quietT = -3600; d.place(); }
       { const d = g.doors.byName('store'); d.locked = false; d.latched = true; d.angle = 0; d.vel = 0; d.place(); }
       g.teleportPlayer(SAM); R.up.forEach((m: any, i: number) => R.put(m, MEN[i])); O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(20);
@@ -258,12 +258,12 @@ export const ordereddoorRound = guarded(async () => {
   { const FROM: number[][] = [[27.5, 0, 11.4], [20.8, 0, 8.4], [20.2, 0, 7.6], [20.2, 0, 9.0], [19.6, 0, 8.4]], FAR: number[][] = [[24.7, 0, 10.9], [24.0, 0, 10.5], [23.2, 0, 10.6], [19.5, 0, 11.4]];   // (the order is given with the men in the server room, as above — 'behind Sam' is the side his men are on when his trail is seeded: into the manager's door — and then the men are PUT in the corridor)
     const stage = async (on: boolean) => { restore(); const R = await rig(5, { open: ALL, spots: FROM }); const { O } = R, sam = R.game.player.char.pos; ORDERS.backEnd = on;   // (after the stand-up: the frozen stand pins it off, the page's raises it)
       const held = (n: number) => { for (let i = 0; i < n; i++) { R.open('manager'); R.step(); } };   // (the manager's leaf HELD open: the frozen stand's men walk to the place in its frame and shoulder the leaf shut, and with it shut there is no frame to stand off)
-      const why = O.give('fallIn', O.targetAt(sam), 'all'); R.step(2); R.up.forEach((m: any, i: number) => { m.char.posX = FAR[i][0]; m.char.posZ = FAR[i][2]; }); R.walked.clear(); R.inOffice.clear(); held(60 * 2);
+      const why = O.give('fallIn', O.targetAt(sam), 'all'); R.step(2); R.up.forEach((m: any, i: number) => { m.char.pos[0] = FAR[i][0]; m.char.pos[2] = FAR[i][2]; }); R.walked.clear(); R.inOffice.clear(); held(60 * 2);
       // every man's place, and his file distance, with the key off and on at this very frame (clearBack keeps a frame's answers: asked afresh each way, and left asked afresh for the run's own word)
       const ask = (key: boolean) => { ORDERS.backEnd = key; O.clearT = -1; return R.up.map((m: any) => { const A = O.of(m); if (!A || A.post !== null) return null; const back = O.backOf(A.follow) + O.clearBack(A.follow); return { back, q: O.slot(back) as number[] }; }); };
       const a = ask(false), b = ask(true); ORDERS.backEnd = on; O.clearT = -1;
       const moved = Math.max(0, ...a.map((x: any, i: number) => x && b[i] ? dist(x.q, b[i]!.q) : 99)), backs = (l: any[]) => l.map(x => x ? x.back.toFixed(1) : '-').join(' / ');
-      held(60 * 11); const was = R.up.map((m: any) => [m.char.posX, 0, m.char.posZ]); held(60);
+      held(60 * 11); const was = R.up.map((m: any) => [m.char.pos[0], 0, m.char.pos[2]]); held(60);
       const men = R.up.map((m: any, i: number) => ({ name: m.callsign, d: dist(m.char.pos, sam), arrived: !!O.of(m)?.arrived, walked: dist(was[i], m.char.pos) }));
       return { why, n: men.length, far: men.filter((m: any) => m.d >= 6 && m.arrived).length, near: men.filter((m: any) => m.d < 6).length, arrived: men.every((m: any) => m.arrived), movers: men.filter((m: any) => m.walked > 0.05).length, moved, shorter: a.some((x: any, i: number) => x && b[i] && b[i]!.back < x.back - 0.25),
         say: `give → ${why} · after 14 s ${men.map((m: any) => `${m.name} ${m.d.toFixed(1)} m${m.arrived ? '' : ', still walking'}`).join(' · ')} · file distances key off ${backs(a)} m, key on ${backs(b)} m · a place differs by the key by at most ${moved.toFixed(3)} m` }; };

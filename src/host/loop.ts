@@ -227,7 +227,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       // THE CAMERA RUNNING ITSELF (host/autocam.ts): with the mode on and the view Sam's own — no show, no pin, no spectated man, not the sky
       // seat's — the look-at is the frame's (his feet, shifted toward what the game knows he is about), nothing leans on the cursor, and a turn of its own may begin
       const hs = cam.hostShift;   // (a page with a panel over one side of the view — host/sneaklab.ts: the look-at moves over, whoever chose it)
-      const mine = !!auto && AUTOVIEW.on && !frozen && !shot && viewFree() && v3.same(follow, game.player.char.pos) && autoFree(game);
+      const mine = !!auto && AUTOVIEW.on && !frozen && !shot && viewFree() && follow === game.player.char.pos && autoFree(game);
       if (mine) {
         if (!(auto!.base > 0)) autoBegin(auto!, cam);   // (kept on from an earlier visit: the zoom as the page opened is the hand's own)
         const S = autoRead(auto!, game, input, cdt), look = autoFrame(auto!, S, cam, cdt), yaw = turnGoal(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b));

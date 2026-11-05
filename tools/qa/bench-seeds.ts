@@ -58,7 +58,7 @@ async function playOne(id: string, seed: number, o: { cap?: number; hz?: number;
     while (!H.end) {
       const dt = (1 / hz) * (o.jitter ? 1 + o.jitter * Math.sin(++k * 1.7) : 1);
       H.tick(dt); if (H.end) break;
-      { const pl = g.player, c = pl.char, Ev = Math.max(lightEstimateAt(g, c.bones.chest ?? [c.posX, 1.2, c.posZ]), lightEstimateAt(g, c.bones.head ?? [c.posX, 1.6, c.posZ]));   // (the light on Sam: the CPU estimate where the page has the picture's meter)
+      { const pl = g.player, c = pl.char, Ev = Math.max(lightEstimateAt(g, c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]]), lightEstimateAt(g, c.bones.head ?? [c.pos[0], 1.6, c.pos[2]]));   // (the light on Sam: the CPU estimate where the page has the picture's meter)
         vis += (g.visibilityOf(Ev) - vis) * (1 - Math.exp(-6 * dt)); pl.irradiance = Ev; pl.visibility = vis; }
       W.step(dt);
       for (const e of g.events) { if (seenEv.has(e)) continue; seenEv.add(e); if ((e.kind === 'shot' && e.loud !== false) || e.kind === 'guardShot') out.rounds++; }

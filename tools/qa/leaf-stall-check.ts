@@ -35,7 +35,7 @@ interface Case { why: string | null; spot: number; thru: number; counted: number
 async function leaf(on: boolean, what: 'thru' | 'hold' | 'away', secs: number): Promise<Case> {
   DOORWAY.oneWay = true; LIVED.on = true; TEAMPACE.on = true;   // (before the level is built: the leaves take their stops from the one, the corridor its things from the other)
   const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORSTAY.on = true; TEAMPACE.on = true; DOORMANNERS.on = true; DOORMANNERS.leafRound = true; DOORMANNERS.leafStall = on; DOORWAY.leafWay = false;   // (the case as it was found: c_n's leaf on the side the room rules deal it. With DOORWAY.leafWay that door opens the other way: leafway-check's)   // (after: standing a game up puts the stand's own rows back)
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const d = g.doors.list.find((x: any) => x.def.name === 'c_n'), men: any[] = O.squad().filter((x: any) => x.state !== 'dead'), man = men[0], idx = O.squad().indexOf(man);
   const open = () => { d.latched = false; d.closing = false; d.locked = false; d.angle = OPEN; d.vel = 0; d.pullT = 0; d.pressT = 0; d.passers = 0; d.openT = 10; d.place?.(); };
   O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(3);
@@ -48,7 +48,7 @@ async function leaf(on: boolean, what: 'thru' | 'hold' | 'away', secs: number): 
     if (man.speed > 0.5 && trail.length > 36 && flat(trail[trail.length - 37], p) < 0.12) spot++;
     if (isNaN(thru) && p[2] < 14.2 && p[0] > 30.3) thru = (f + 1) / 60;
   }
-  return { why, spot: spot / 60, thru, counted: DOORMANNERS_STATS.leafStall - n0, least, end: [man.char.posX, 0, man.char.posZ] };
+  return { why, spot: spot / 60, thru, counted: DOORMANNERS_STATS.leafStall - n0, least, end: [man.char.pos[0], 0, man.char.pos[2]] };
 }
 
 /** 2: the rule's own question, asked every frame for a second of a man kept at `at` (told to hold: the game itself does not ask it of a man who stands) with
@@ -56,7 +56,7 @@ async function leaf(on: boolean, what: 'thru' | 'hold' | 'away', secs: number): 
 async function asked(at: number[], vel: number[]): Promise<boolean> {
   DOORWAY.oneWay = true; LIVED.on = true; TEAMPACE.on = true;
   const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORSTAY.on = true; TEAMPACE.on = true; DOORMANNERS.on = true; DOORMANNERS.leafRound = true; DOORMANNERS.leafStall = true; DOORWAY.leafWay = false;
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const d = g.doors.list.find((x: any) => x.def.name === 'c_n'), man = O.squad().filter((x: any) => x.state !== 'dead')[0];
   O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(3); let yes = false;
   for (let f = 0; f < 60; f++) {

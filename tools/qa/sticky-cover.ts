@@ -156,13 +156,13 @@ class Cover {
       c.floor = this.floorSeen(c); this.seen.set(key, c); this.cands.push(c); }
     for (const c of this.cands) { if (flat(c.lens, o) > SHOOT_M || (o[0] - c.lens[0]) * c.n[0] + (o[2] - c.lens[2]) * c.n[2] < 0.05) continue; if (!g.col.segmentBlocked(o, c.lens)) c.hits.push(this.t); } }
   private sample() {
-    const g = this.g, pl = g.player, c = pl.char, eye: Vec3 = c.bones.head ?? [c.posX, c.posY + 1.65, c.posZ], gaze = this.M.gazeOf(c), F = this.M.FOG; let n = 0; const men: { gi: number; chest: Vec3; head: Vec3 }[] = [];
+    const g = this.g, pl = g.player, c = pl.char, eye: Vec3 = c.bones.head ?? [c.pos[0], c.pos[1] + 1.65, c.pos[2]], gaze = this.M.gazeOf(c), F = this.M.FOG; let n = 0; const men: { gi: number; chest: Vec3; head: Vec3 }[] = [];
     for (const gd of g.guards) { const gc = gd.char; if (!this.M.hostileTo(gd, 'player') || gd.state === 'dead' || !gc.alive || gd.ko || gd.held) continue; n++;
-      const chest: Vec3 = gc.bones.chest ?? [gc.posX, gc.posY + 1.1, gc.posZ], head: Vec3 = gc.bones.head ?? [gc.posX, gc.posY + 1.6, gc.posZ];
+      const chest: Vec3 = gc.bones.chest ?? [gc.pos[0], gc.pos[1] + 1.1, gc.pos[2]], head: Vec3 = gc.bones.head ?? [gc.pos[0], gc.pos[1] + 1.6, gc.pos[2]];
       const line = this.line(eye, chest, head), cone = line && this.inField(eye, gaze, F.coneDeg, F.coneNearM, chest), j = this.gsS.length;
       this.gsS.push(this.nS); this.gsT.push(this.t); this.gsLine.push(+line); this.gsCone.push(+cone); this.gsNear.push(+(flat(c.pos, gc.pos) <= NEAR_M));
       let gi = this.gid.get(gd); if (gi === undefined) { gi = this.gid.size; this.gid.set(gd, gi); } this.gsG.push(gi); this.gsD.push(flat(c.pos, gc.pos)); men.push({ gi, chest, head });
-      { const st = String(gd.state); this.names[gi] ??= String(gd.callsign ?? `guard ${gi}`); this.gsSt.push(st); this.gsGX.push(gc.posX); this.gsGZ.push(gc.posZ); this.gsPX.push(c.posX); this.gsPZ.push(c.posZ); this.gsTk.push(gd.task ? String(gd.task.kind) : ''); this.gsAw.push(Number(gd.awareness) || 0);
+      { const st = String(gd.state); this.names[gi] ??= String(gd.callsign ?? `guard ${gi}`); this.gsSt.push(st); this.gsGX.push(gc.pos[0]); this.gsGZ.push(gc.pos[2]); this.gsPX.push(c.pos[0]); this.gsPZ.push(c.pos[2]); this.gsTk.push(gd.task ? String(gd.task.kind) : ''); this.gsAw.push(Number(gd.awareness) || 0);
         if (this.lastSt[gi] !== undefined && this.lastSt[gi] !== st && this.stateLog.length < 600) this.stateLog.push({ t: +this.t.toFixed(2), guard: this.names[gi], from: this.lastSt[gi], to: st }); this.lastSt[gi] = st; }
       if (!cone) for (const k of this.cands) if (k.from <= this.t && this.inField(k.lens, k.look, k.fov, 0, chest) && this.line(k.lens, chest, head)) k.sees.push(j); }
     let room = 0; try { room = Number(g.cleared?.roomAt(c.pos)) || 0; } catch { room = 0; } this.smT.push(this.t); this.smRoom.push(room);
@@ -451,7 +451,7 @@ async function ghostRun(levelFile: string, seed: number, cap: number): Promise<C
     if (best) return best; a = b; } return null; };
   const everyone = (): any[] => [...g.guards, ...(g.civilians ?? [])];
   const inWay = (wp: number[]): any | null => { const me = pos(); let best: any = null, bd = 1.1; for (const x of everyone()) { const c = x.char; if (c.alive === false || x.state === 'dead') continue; const d = flat(c.pos, me);
-    if (d < bd && (c.posX - me[0]) * (wp[0] - me[0]) + (c.posZ - me[2]) * (wp[2] - me[2]) > 0) { bd = d; best = x; } } return best; };
+    if (d < bd && (c.pos[0] - me[0]) * (wp[0] - me[0]) + (c.pos[2] - me[2]) * (wp[2] - me[2]) > 0) { bd = d; best = x; } } return best; };
   const pathRound = (p: number[], man: any): number[][] | null => { const c = g.col.nav.cell, m = man.char.pos; return g.col.nav.findPath(pos(), p, 8000, (ix: number, iz: number) => Math.hypot((ix + 0.5) * c - m[0], (iz + 0.5) * c - m[2]) < 1.0 ? 60 : 1); };
   const passes = (path: number[][], m: number[]): number => { let a = pos(), best = Infinity; for (const b of path) { const ux = b[0] - a[0], uz = b[2] - a[2], L2 = ux * ux + uz * uz, k = L2 > 1e-9 ? Math.max(0, Math.min(1, ((m[0] - a[0]) * ux + (m[2] - a[2]) * uz) / L2)) : 0;
     best = Math.min(best, Math.hypot(m[0] - a[0] - ux * k, m[2] - a[2] - uz * k)); a = b; } return best; };

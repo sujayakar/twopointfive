@@ -43,7 +43,7 @@ export async function selfBodyCheck(): Promise<boolean> {
     if (why || N !== 4) { line(false, 'the room clear on the office with its squad of four', String(why ?? `${N} men`)); return false; }
     /** what the cursor is on with its ray through `p`: put there until the view has stopped moving under it (the view leans to the cursor), then read with no tick between */
     const under = (p: number[]) => { for (let k = 0; k < 8; k++) { W.cursorAt(p); step(1); } W.cursorAt(p); return O.targetUnder(I, W.cam, W.canvas); };
-    const chest = () => [pl.char.posX, 1.0, pl.char.posZ], feet = () => [pl.char.posX, 0.05, pl.char.posZ];
+    const chest = () => [pl.char.pos[0], 1.0, pl.char.pos[2]], feet = () => [pl.char.pos[0], 0.05, pl.char.pos[2]];
     const says = (t: any) => !t ? 'nothing' : t.kind === 'door' ? `door ${t.door.def.name}` : t.kind === 'none' ? `nobody's floor at (${t.at[0].toFixed(1)}, ${t.at[2].toFixed(1)})${t.man ? ` · ${t.man.callsign}` : ''}` : `${t.kind} at (${t.at[0].toFixed(1)}, ${t.at[2].toFixed(1)})`;
     const self = (t: any) => !!t && t.kind === 'none' && !t.man && dist(t.at, pl.char.pos) < ORDERS.selfM;
     // the place: in front of a door on the camera's side of it, where — the rule off — the cursor on his chest is that door
@@ -78,7 +78,7 @@ export async function selfBodyCheck(): Promise<boolean> {
       line(!!got, '4. the rule on: the cursor on the doorway itself, off his body, is still that door', `${got ? says(got) : `not the door at any of ${tried} points of its doorway`}`); }
     // 5
     { g.teleportPlayer(home); O.give('hold', O.targetAt([home[0] + 3, 0, home[2]]), 'all'); step(45); ORDERS.selfBody = true; const m = all()[0], { fwd } = W.cam.planarBasis(), p = [home[0] - fwd[0] * 0.45, 0, home[2] - fwd[2] * 0.45];   // (half a pace nearer the camera: the ray through his chest goes on through Sam's legs)
-      const put = () => { m.char.posX = p[0]; m.char.posZ = p[2]; }; put(); step(1); put();
+      const put = () => { m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; }; put(); step(1); put();
       W.cursorAt([p[0], 1.0, p[2]]); step(1); put(); const ray = W.cam.ray(I.mouseX / Math.max(1, W.canvas.clientWidth), I.mouseY / Math.max(1, W.canvas.clientHeight));
       const tm = m.char.rayHit(ray.ro, ray.rd, 200), ts = pl.char.rayHit(ray.ro, ray.rd, 200), t = O.targetUnder(I, W.cam, W.canvas);
       line(tm >= 0 && ts > tm && t?.kind === 'none' && dist(t.at, p) < 0.2 && dist(t.at, pl.char.pos) > 0.3, '5. the rule on, back where he started: a teammate between the camera and him, the cursor on that teammate: the teammate\'s place, not his own',

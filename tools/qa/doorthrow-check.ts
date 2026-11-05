@@ -68,7 +68,7 @@ export async function doorthrowCheck(): Promise<boolean> {
     return W;
   };
   /** stand a parked man at `p`, awake and whole, of `team` */
-  const stand = (g: any, i: number, p: Vec3, team?: string) => { const o = g.guards[i]; o.dazzledUntil = -1; o.staggerUntil = -1; o.awareness = 0; if (team) o.team = team; o.char.posX = p[0]; o.char.posZ = p[2]; o.char.update(0); return o; };
+  const stand = (g: any, i: number, p: Vec3, team?: string) => { const o = g.guards[i]; o.dazzledUntil = -1; o.staggerUntil = -1; o.awareness = 0; if (team) o.team = team; o.char.pos[0] = p[0]; o.char.pos[2] = p[2]; o.char.update(0); return o; };
   const sam = (g: any, p: Vec3) => { g.teleportPlayer([p[0], 0, p[2]]); return g.player; };
   const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
   const folded = (g: any, o: any) => Math.min(o.staggerUntil, o.dazzledUntil) - g.time;
@@ -177,7 +177,7 @@ export async function doorthrowCheck(): Promise<boolean> {
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), m = stand(g, 0, p0, 'operative'), from = F.pt(F.W * 0.7, -0.76); sam(g, from);
       W.step(DT); d.latched = false; d.closing = false; d.vel = F.S * 5.5; d.quietT = -1; d.lastWho = PLAYER_ID; for (let i = 0; i < 60; i++) W.step(DT);
       const flung = DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked + DOORTHROW_STATS.startled + DOORTHROW_STATS.carried, calm = m.staggerUntil < 0;
-      d.angle = 0; d.vel = 0; d.latched = true; d.drive = null; d.place(); m.char.posX = p0[0]; m.char.posZ = p0[2]; m.char.update(0); W.step(DT); g.doors.kickIn(d, from, PLAYER_ID); for (let i = 0; i < 30; i++) W.step(DT);
+      d.angle = 0; d.vel = 0; d.latched = true; d.drive = null; d.place(); m.char.pos[0] = p0[0]; m.char.pos[2] = p0[2]; m.char.update(0); W.step(DT); g.doors.kickIn(d, from, PLAYER_ID); for (let i = 0; i < 30; i++) W.step(DT);
       line(flung === 0 && calm && DOORTHROW_STATS.kicked === 1 && folded(g, m) > 0, `Sam's own leaf and one of his men behind it: flung at 5.5 rad/s nobody is moved, startled or thrown (${flung}) · BOOTED he is (${DOORTHROW_STATS.kicked}): only a boot throws a man of the kicker's own side`); }
 
     // ------------------------------------------------------------ not a throw

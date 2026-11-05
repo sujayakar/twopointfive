@@ -50,8 +50,8 @@ export async function squadfireCheck(): Promise<boolean> {
   const spawn = [...g.player.char.pos] as number[];
   const nav = g.col.nav ?? g.nav; const walk = (x: number, z: number) => { const cx = Math.floor(x / nav.cell), cz = Math.floor(z / nav.cell); return cx >= 0 && cz >= 0 && cx < nav.W && cz < nav.H && !nav.blocked[cz * nav.W + cx]; };
   const foesOf = () => g.guards.filter((x: any) => x.team !== 'operative') as any[];
-  const chestOf = (h: any) => [h.char.posX, 1.2, h.char.posZ];
-  const samLine = (h: any) => !g.col.segmentBlocked([spawn[0], 1.6, spawn[2]], chestOf(h)) || !g.col.segmentBlocked([spawn[0], 1.6, spawn[2]], [h.char.posX, 1.6, h.char.posZ]);
+  const chestOf = (h: any) => [h.char.pos[0], 1.2, h.char.pos[2]];
+  const samLine = (h: any) => !g.col.segmentBlocked([spawn[0], 1.6, spawn[2]], chestOf(h)) || !g.col.segmentBlocked([spawn[0], 1.6, spawn[2]], [h.char.pos[0], 1.6, h.char.pos[2]]);
   /** the scene, found once on the level as it deals: a defender the player has no line to from his start, and floor 3‥6 m from him with a line of fire */
   const scene = (): { name: string; P: number[] } | null => { for (const H of foesOf()) { if (H.state === 'dead' || samLine(H)) continue; const hp = H.char.pos, chest = chestOf(H);
     for (let r = 3; r <= 6; r += 0.5) for (let a = 0; a < 16; a++) { const x = hp[0] + Math.cos(a * Math.PI / 8) * r, z = hp[2] + Math.sin(a * Math.PI / 8) * r;
@@ -71,9 +71,9 @@ export async function squadfireCheck(): Promise<boolean> {
     const men = g.orders.men('all'), M = men[0], foes = foesOf(), H = foes.find(x => x.callsign === SC!.name); if (!M || !H || samLine(H)) return R;   // (the scene is not the one found: no rounds, and the lines below say so)
     const sam = g.player.char, lastF = new Map<any, number>(), sawF = new Map<any, number>(), opN = new Map<any, number>(); let last = 0, f = 0, downAt = -1, down: any = null;
     const hold = (fire: boolean) => { for (const x of foes) { x.hold = true; x.pinned = true; x.heardUpTo = 1e12; x.god = !o.mortal; }
-      sam.posX = spawn[0]; sam.posZ = spawn[2]; sam.aimYaw = sam.bodyYaw = Math.atan2(-(H.char.posX - spawn[0]), -(H.char.posZ - spawn[2]));
-      M.god = true; if (fire) { M.char.posX = SC!.P[0]; M.char.posZ = SC!.P[1]; if (f < 5) M.char.aimYaw = M.char.bodyYaw = Math.atan2(H.char.posX - SC!.P[0], H.char.posZ - SC!.P[1]); }
-      else { M.char.posX = spawn[0] + 0.8; M.char.posZ = spawn[2]; M.dazzledUntil = g.time + 5; } };
+      sam.pos[0] = spawn[0]; sam.pos[2] = spawn[2]; sam.aimYaw = sam.bodyYaw = Math.atan2(-(H.char.pos[0] - spawn[0]), -(H.char.pos[2] - spawn[2]));
+      M.god = true; if (fire) { M.char.pos[0] = SC!.P[0]; M.char.pos[2] = SC!.P[1]; if (f < 5) M.char.aimYaw = M.char.bodyYaw = Math.atan2(H.char.pos[0] - SC!.P[0], H.char.pos[2] - SC!.P[1]); }
+      else { M.char.pos[0] = spawn[0] + 0.8; M.char.pos[2] = spawn[2]; M.dazzledUntil = g.time + 5; } };
     const watch = () => { const O = g.fight.opOf(M), n = O?.rounds ?? 0;
       if (O && n > last && O.tgt) { const T = O.tgt; R.rounds.push({ f, at: T.callsign, seen: FW.seen(T), drawn: FW.drawn(T), hidden: FW.hidden(T) }); lastF.set(T, f); R.lastAt = T.callsign; }
       last = n; R.byFire += FW.stats.byFire;

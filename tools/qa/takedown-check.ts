@@ -83,8 +83,8 @@ async function lobby(seed: number, on: boolean) {
   const [A, B, C] = g.guards; park(B, 0); park(C, 1); place(A, LOBBY, EAST); A.wp = 1; A.hold = true;
   W.cam.yaw = 0; W.cam.rebuild?.();
   const step = (n = 1) => { for (let i = 0; i < n; i++) { W.step(DT); g.player.visibility = 0.02; } };
-  const samAt = (bDeg: number, d: number, crouch = false) => { const a = A.char.bodyYaw + bDeg * DEG; g.teleportPlayer([A.char.posX + Math.sin(a) * d, 0, A.char.posZ + Math.cos(a) * d]); g.player.crouch = crouch;
-    const pl = g.player.char; pl.bodyYaw = pl.aimYaw = Math.atan2(A.char.posX - pl.posX, A.char.posZ - pl.posZ); W.cursorAt([A.char.posX, 1.2, A.char.posZ]); step(20); };
+  const samAt = (bDeg: number, d: number, crouch = false) => { const a = A.char.bodyYaw + bDeg * DEG; g.teleportPlayer([A.char.pos[0] + Math.sin(a) * d, 0, A.char.pos[2] + Math.cos(a) * d]); g.player.crouch = crouch;
+    const pl = g.player.char; pl.bodyYaw = pl.aimYaw = Math.atan2(A.char.pos[0] - pl.pos[0], A.char.pos[2] - pl.pos[2]); W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); step(20); };
   return { W, g, A, D, step, samAt };
 }
 async function blow(on: boolean, bDeg: number, dist: number, lethal: boolean): Promise<Stage> {
@@ -112,7 +112,7 @@ function watchFall(c: any): { last: string | null } {
 }
 async function hold(on: boolean, end: 'choke' | 'whip' | 'kill'): Promise<Stage> {
   const S = await lobby(7002, on), { W, g, A, D } = S; S.samAt(180, 0.8, true); g.player.holstered = end !== 'whip'; S.step(2);
-  const ahead = () => { const c = g.player.char; W.cursorAt([c.posX + Math.sin(c.bodyYaw) * 6, 1.0, c.posZ + Math.cos(c.bodyYaw) * 6]); };
+  const ahead = () => { const c = g.player.char; W.cursorAt([c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6]); };
   const behind = () => { S.samAt(180, 0.8, true); g.player.holstered = end !== 'whip'; S.step(2); };
   if (end === 'kill') return { W, g, D, att: g.player, vic: A, step: () => { ahead(); S.step(1); killEnd(g); }, begin: () => startGrab(g, A), during: f => { if (f === KILL_TAP) setHoldPhase(g, 'kill'); }, cap: KILL_TAP + 360, behind };
   return { W, g, D, att: g.player, vic: A, step: () => { ahead(); S.step(1); }, begin: () => startGrab(g, A), during: f => { if (f === 90) { g.selectVerb('held', end); W.input.pressed.add('Space'); } }, cap: 90 + 360, behind };
@@ -126,10 +126,10 @@ async function partner(on: boolean): Promise<Stage> {
   const O = g.orders, step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };
   step(30); SLM.setSilent(g, true); step(2);
   const mate = O.squad()[0], foe = g.guards.find((h: any) => h.callsign === 'Tango 1'); if (!mate || !foe) throw new Error('partner: no teammate / no Tango 1 on the floor');
-  const put = (gd: any, p: P3, yaw: number) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; };
+  const put = (gd: any, p: P3, yaw: number) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.lastPos = [p[0], 0, p[2]]; gd.path = []; gd.pathGoal = null; };
   put(foe, [22, 0, 17.6], EAST); foe.hold = true; put(mate, [19, 0, 17.6], EAST); g.teleportPlayer([11, 0, 18.5]); step(30); PM.PAIR_LOG.length = 0;
   return { W, g, D, att: mate, vic: foe, step: () => step(1), cap: 960, hands: () => PM.PAIR_LOG.some((x: any) => String(x.what).startsWith('hands:')),
-    begin: () => { const no = O.give('pairTake', { kind: 'foe', at: [foe.char.posX, 0, foe.char.posZ], foe }); if (no) throw new Error(`partner: 'take him now' refused: ${no}`); } };
+    begin: () => { const no = O.give('pairTake', { kind: 'foe', at: [foe.char.pos[0], 0, foe.char.pos[2]], foe }); if (no) throw new Error(`partner: 'take him now' refused: ${no}`); } };
 }
 /** what each move should count and leave: a blow of Sam's own (the hold's ends have none) · the fall's style · whether the man is out cold (breathes) or dead */
 interface Move { title: string; stage: (on: boolean) => Promise<Stage>; blow: boolean; fall: string; kind: string; sam: boolean }
@@ -175,7 +175,7 @@ async function runOnce(move: string, on: boolean): Promise<Run> {
   try {
     const S = await M.stage(on), { g, vic, att } = S, vc = vic.char;
     const seen = new Set<any>(g.events), chron0 = g.chronicle.events.length, d0 = drawn(S.D, g);
-    const feet: P3 = [vc.posX, 0, vc.posZ], fwd: P3 = [Math.sin(vc.bodyYaw), 0, Math.cos(vc.bodyYaw)];
+    const feet: P3 = [vc.pos[0], 0, vc.pos[2]], fwd: P3 = [Math.sin(vc.bodyYaw), 0, Math.cos(vc.bodyYaw)];
     let head0: P3 | null = null, f = 0; const heads: P3[] = [];
     const look = () => {   // (between frames: what stands on anybody)
       for (const c of chars(g)) { if (c.anim?.blowing) R.blowAny++; if (c.fallAs) R.fallSeen++; if (c.breathe) R.breathSeen++; }
@@ -550,7 +550,7 @@ async function riseRun(end: 'choke' | 'kill', half: boolean, walk: boolean | 'ai
     for (let f = 0; f < 600 && vic.state !== 'dead'; f++) { if (end === 'kill') { if (f === KILL_TAP) setHoldPhase(g, 'kill'); } else S.during?.(f); if (f === 89) held = sam.bones.head[1]; S.step(); if (end === 'kill') killEnd(g); if (vic.state !== 'dead') head[0] = sam.bones.head[1]; }
     if (vic.state !== 'dead') throw new Error('he was never out');
     for (let k = 1; k <= 120; k++) { if (walk === true) S.W.input.keys.add('KeyW'); if (walk === 'aim') { g.player.holstered = false; S.W.input.buttons |= 2; }
-      S.step(); head.push(sam.bones.head[1]); speed = Math.max(speed, Math.hypot(sam.velX, sam.velZ)); if (seen < 0 && sam.anim.upper !== 'none') { seen = k; upper = String(sam.anim.upper); } }
+      S.step(); head.push(sam.bones.head[1]); speed = Math.max(speed, Math.hypot(sam.vel[0], sam.vel[2])); if (seen < 0 && sam.anim.upper !== 'none') { seen = k; upper = String(sam.anim.upper); } }
     S.W.input.keys.delete('KeyW'); S.W.input.buttons &= ~2;
   } catch (e) { err = e instanceof Error ? e.message : String(e); }
   finally { KN.knobsBack(knobs); Math.random = rnd; }

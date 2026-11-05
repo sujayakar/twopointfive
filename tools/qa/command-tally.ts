@@ -113,7 +113,7 @@ class Run {
   get up(): any[] { return this.team.filter((x: any) => x.state !== 'dead'); }
   get hostiles(): any[] { return this.g.guards.filter((x: any) => x.team === 'hostile'); }
   get left(): any[] { return this.hostiles.filter((h: any) => h.state !== 'dead'); }
-  private chest(x: any): Vec3 { return x.char.bones.chest ?? [x.char.posX, 1.2, x.char.posZ]; }
+  private chest(x: any): Vec3 { return x.char.bones.chest ?? [x.char.pos[0], 1.2, x.char.pos[2]]; }
   private screen(p: Vec3): [number, number, boolean] { const cv = this.W.canvas; const [sx, sy, front] = this.cam.project(p, cv.clientWidth, cv.clientHeight); return [sx, sy, front && sx > 30 && sx < cv.clientWidth - 30 && sy > 30 && sy < cv.clientHeight - 30]; }
   onScreen(p: Vec3): boolean { return this.screen(p)[2]; }
 
@@ -124,7 +124,7 @@ class Run {
     I.buttons &= ~1; this.target = null;
     if (pl.down) return;
     if (this.fight) {
-      const eye: Vec3 = [c.posX, 1.45, c.posZ]; let best: any = null, bd = 1e9;
+      const eye: Vec3 = [c.pos[0], 1.45, c.pos[2]]; let best: any = null, bd = 1e9;
       for (const h of this.hostiles) {
         if (h.state === 'dead') { this.seen.delete(h); continue; }
         const ch = this.chest(h), d = flat(c.pos, h.char.pos);
@@ -138,9 +138,9 @@ class Run {
     }
     let ahead: Vec3 | null = null;
     if (this.goal) {
-      const dx = this.goal[0] - c.posX, dz = this.goal[2] - c.posZ, d = Math.hypot(dx, dz);
+      const dx = this.goal[0] - c.pos[0], dz = this.goal[2] - c.pos[2], d = Math.hypot(dx, dz);
       if (d > 0.2) {
-        ahead = [c.posX + dx / d * 6, 1.1, c.posZ + dz / d * 6];
+        ahead = [c.pos[0] + dx / d * 6, 1.1, c.pos[2] + dz / d * 6];
         if (!this.target) { const { fwd, right } = this.cam.planarBasis(); const a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827;
           if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); }
       }
@@ -152,7 +152,7 @@ class Run {
   }
   private meter() {
     const g = this.g, pl = g.player, c = pl.char;
-    const E = Math.max(lightEstimateAt(g, c.bones.chest ?? [c.posX, 1.2, c.posZ]), lightEstimateAt(g, c.bones.head ?? [c.posX, 1.6, c.posZ]));
+    const E = Math.max(lightEstimateAt(g, c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]]), lightEstimateAt(g, c.bones.head ?? [c.pos[0], 1.6, c.pos[2]]));
     this.vis += (g.visibilityOf(E) - this.vis) * (1 - Math.exp(-6 * DT)); pl.irradiance = E; pl.visibility = this.vis;
   }
   step(n = 1) {
@@ -393,7 +393,7 @@ class Run {
       this.fallIn();
       const path: Vec3[] = [[this.pos[0], 0, this.pos[2]], ...way, [hp[0], 0, hp[2]]]; let back = 5, p: Vec3 | null = null;
       for (let i = path.length - 1; i > 0 && !p; i--) { const a = path[i - 1], b = path[i], L = flat(a, b); if (L >= back) { const k = back / (L || 1); p = [b[0] + (a[0] - b[0]) * k, 0, b[2] + (a[2] - b[2]) * k]; } else back -= L; }
-      if (p) this.go(this.free(p) ?? p, 40, () => h.state === 'dead' || (this.onScreen([h.char.posX, 0.05, h.char.posZ]) && this.pathLen(this.pos, h.char.pos) < 14));   // (… from where his floor first comes into the picture: a commander does not walk onto him)
+      if (p) this.go(this.free(p) ?? p, 40, () => h.state === 'dead' || (this.onScreen([h.char.pos[0], 0.05, h.char.pos[2]]) && this.pathLen(this.pos, h.char.pos) < 14));   // (… from where his floor first comes into the picture: a commander does not walk onto him)
       if (h.state !== 'dead' && this.up.length) { const now = h.char.pos; this.look = [now[0], 0.05, now[2]]; this.step(2); const n = this.O.log.length; this.key(ORDERS.quickKey); this.b++; this.say(`B · floor by ${h.callsign} → ${this.O.log.length > n ? this.O.log[this.O.log.length - 1].order : 'nothing given'}`); this.look = null; this.until(() => h.state === 'dead', 14); }
     }
     this.wait(15); throw new Done('cap', 'nothing left to try');

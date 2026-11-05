@@ -44,7 +44,7 @@ type Tool = { kind: 'hammer' | 'shotgun'; t: number; equip: number; windup: numb
 /** the man's joints and prop boxes this frame in HIS frame: [to his right, up from the floor, forward], the origin under his pelvis */
 function measure(c: any, boxesW: any[], atW: P3): Frame {
   const yaw = c.bodyYaw, sn = Math.sin(yaw), cs = Math.cos(yaw), hp = c.bones.hips as P3; let bad = 0;
-  const rel = (p: ArrayLike<number>): P3 => { const dx = p[0] - hp[0], dz = p[2] - hp[2]; const r: P3 = [-(dx * cs - dz * sn), p[1] - c.posY, dx * sn + dz * cs]; if (!r.every(Number.isFinite)) bad++; return r; };
+  const rel = (p: ArrayLike<number>): P3 => { const dx = p[0] - hp[0], dz = p[2] - hp[2]; const r: P3 = [-(dx * cs - dz * sn), p[1] - c.pos[1], dx * sn + dz * cs]; if (!r.every(Number.isFinite)) bad++; return r; };
   const b: Record<string, P3> = {}; for (const k of BONES) b[k] = c.bones[k] ? rel(c.bones[k]) : [NaN, NaN, NaN];
   const headC: P3 = [(c.bones.head[0] + c.bones.headTop[0]) / 2, (c.bones.head[1] + c.bones.headTop[1]) / 2, (c.bones.head[2] + c.bones.headTop[2]) / 2];
   const boxes: BoxRec[] = [];
@@ -144,7 +144,7 @@ const want = (n: string) => !only || only.includes(n);
 /** when the hammer's first blow lands on a man already at his place: out (bigkit.ts bigOutBy — BIGSLOT.weight lets the wind-up begin a little before it is all out), then the wind-up */
 const B1 = (): number => bigOutBy('hammer') + BIGSLOT.heft;
 /** the point: `fwd` m in front of him and `side` m to his left, 1 m up */
-const pointOf = (c: any, fwd = 0.8, side = 0, h = 1.0): P3 => { const sn = Math.sin(c.bodyYaw), cs = Math.cos(c.bodyYaw); return [c.posX + sn * fwd + cs * side, c.posY + h, c.posZ + cs * fwd - sn * side]; };
+const pointOf = (c: any, fwd = 0.8, side = 0, h = 1.0): P3 => { const sn = Math.sin(c.bodyYaw), cs = Math.cos(c.bodyYaw); return [c.pos[0] + sn * fwd + cs * side, c.pos[1] + h, c.pos[2] + cs * fwd - sn * side]; };
 const NOTE = (T: Tool) => `equip ${T.equip} s · wind-up ${T.windup} s · ${T.kind === 'hammer' ? 'blows land' : 'shells go'} at ${T.blows.map(b => b.toFixed(2)).join(', ')} s · stowed from ${T.end.toFixed(2)} over ${T.stow} s · a cell every ${EVERY}${EVERY === 1 ? 'st' : EVERY === 2 ? 'nd' : EVERY === 3 ? 'rd' : 'th'} frame + each blow's own`;
 
 if (want('hammer')) { const { g } = await world(); const pl = g.player, c = pl.char; pl.bigKit = 'hammer';

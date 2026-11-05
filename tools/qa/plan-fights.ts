@@ -42,7 +42,7 @@ async function one(scn: string, seed: number, place: number | 'seed', ats: numbe
   const roomOf = (g: any, p: number[]): string => { const R = (g.roomClear?.structure?.rooms ?? []).find((r: any) => p[0] >= r.bounds.x0 - 0.3 && p[0] <= r.bounds.x1 + 0.3 && p[2] >= r.bounds.z0 - 0.3 && p[2] <= r.bounds.z1 + 0.3);
     if (R) return R.id; try { return String(DL.placeName(g.level, p)); } catch { return 'open'; } };
   const homeOf = (g: any, h: any): string | null => g.roomClear?.rooms?.find((r: any) => r.defenders.includes(h))?.def.id ?? null;
-  const spot = (g: any, h: any): Spot => ({ who: h.callsign ?? '?', room: roomOf(g, h.char.pos), at: [r1(h.char.posX), r1(h.char.posZ)], state: h.state === 'dead' ? (h.downKind === 'wounded' ? 'wounded' : 'down') : String(h.state), home: homeOf(g, h) });
+  const spot = (g: any, h: any): Spot => ({ who: h.callsign ?? '?', room: roomOf(g, h.char.pos), at: [r1(h.char.pos[0]), r1(h.char.pos[2])], state: h.state === 'dead' ? (h.downKind === 'wounded' ? 'wounded' : 'down') : String(h.state), home: homeOf(g, h) });
   const theirs = (g: any): any[] => g.guards.filter((x: any) => x.team === 'hostile'), ours = (g: any): any[] => g.guards.filter((x: any) => x.team === 'operative' && x.unit);
   const look = (g: any) => {
     if (!g.roomClear?.active && !g.rescue?.active && !g.nightBreach?.active) return;
@@ -53,7 +53,7 @@ async function one(scn: string, seed: number, place: number | 'seed', ats: numbe
     if (contact === null && (loud !== null || alert !== null)) contact = t;
     for (const m of [...theirs(g), ...ours(g)]) { const w = was.get(m); was.set(m, m.state); if (w === undefined || w === 'dead' || m.state !== 'dead') continue;
       const k = g.guards.find((x: any) => x.char.id === m.killerId), sam = m.killerId === g.player?.char?.id, kp: number[] | null = k ? k.char.pos : sam ? g.player.char.pos : null;
-      falls.push({ t: +t.toFixed(1), who: m.callsign ?? '?', side: m.team === 'hostile' ? 'theirs' : 'team', room: roomOf(g, m.char.pos), at: [r1(m.char.posX), r1(m.char.posZ)], by: k?.callsign ?? (sam ? 'Sam' : m.downBy ?? '—'), byAt: kp ? [r1(kp[0]), r1(kp[2])] : null, byRoom: kp ? roomOf(g, kp) : null, kind: String(m.downKind ?? 'shot') }); }
+      falls.push({ t: +t.toFixed(1), who: m.callsign ?? '?', side: m.team === 'hostile' ? 'theirs' : 'team', room: roomOf(g, m.char.pos), at: [r1(m.char.pos[0]), r1(m.char.pos[2])], by: k?.callsign ?? (sam ? 'Sam' : m.downBy ?? '—'), byAt: kp ? [r1(kp[0]), r1(kp[2])] : null, byRoom: kp ? roomOf(g, kp) : null, kind: String(m.downKind ?? 'shot') }); }
     if (contact !== null) for (const a of ats) if (!snaps.some(s => s.after === a) && t >= contact + a) snaps.push({ after: a, t: +t.toFixed(1), short: false, men: theirs(g).map(h => spot(g, h)) });
   };
   const update0 = GM.Game.prototype.update;

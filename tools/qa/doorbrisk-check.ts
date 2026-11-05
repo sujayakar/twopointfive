@@ -31,7 +31,7 @@ interface Leg { found: boolean; leg: number; top: number; low: number; runs: num
 async function leg(on: boolean, kind: 'stack' | 'move', hot: boolean): Promise<Leg> {
   TEAMPACE.on = true; PICTURE.on = true;
   const R = await rig('pass-four', 1), g = R.game, O = R.O as any; TEAMPACE.on = true; TEAMPACE.doorBrisk = on; PICTURE.on = true;   // (after: standing a game up puts the stand's own rows back)
-  for (const h of R.hostiles) R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const door = g.doors.list.find((d: any) => d.def.name === 'tea'); if (!door) throw new Error('doorbrisk: pass-four has no door named tea');
   const men = O.squad().filter((m: any) => m.state !== 'dead'), H = R.hostiles[0], open = (a: number[], b: number[]) => !g.col.solidBlocked([a[0], 0.45, a[2]], [b[0], 0.45, b[2]]);
   { const why = O.give('stack', O.targetAt(door.frameCentre), 'all'); if (why) throw new Error(`doorbrisk: 'stack' refused — ${why}`); R.step(2); }

@@ -135,8 +135,8 @@ export async function aimcostCheck(): Promise<boolean> {
       hold(far.pos, 120); const settled = gun();
       hold([24, 0, 12.2], 30); hold(far.pos, 2); const snap = gun();
       pl.crouch = true; hold(far.pos, 120); const crouched = gun(); pl.crouch = false; hold(far.pos, 30);
-      const x0 = c.posX; let key = 'KeyA'; hold(far.pos, 20, [key]); if (Math.abs(c.posX - x0) < 0.2) { for (const k of ['KeyW', 'KeyD', 'KeyS']) { const x = c.posX, z = c.posZ; hold(far.pos, 20, [k]); if (Math.hypot(c.posX - x, c.posZ - z) > 0.2) { key = k; break; } } }
-      hold(far.pos, 70, [key]); const speed = Math.hypot(c.velX, c.velZ); const walk = gun();
+      const x0 = c.pos[0]; let key = 'KeyA'; hold(far.pos, 20, [key]); if (Math.abs(c.pos[0] - x0) < 0.2) { for (const k of ['KeyW', 'KeyD', 'KeyS']) { const x = c.pos[0], z = c.pos[2]; hold(far.pos, 20, [k]); if (Math.hypot(c.pos[0] - x, c.pos[2] - z) > 0.2) { key = k; break; } } }
+      hold(far.pos, 70, [key]); const speed = Math.hypot(c.vel[0], c.vel[2]); const walk = gun();
       hold(far.pos, 21); const s35 = gun(); hold(far.pos, 21); const s70 = gun(); hold(far.pos, 48); const s150 = gun();
       return { settled, snap, crouched, walk, s35, s70, s150, speed };
     };
@@ -148,7 +148,7 @@ export async function aimcostCheck(): Promise<boolean> {
       `rule on:  ${fmt(pOn)}\n    rule off: ${fmt(pOff)}`);
     // the rifle
     input.pressed.add('Digit2'); hold([28, 1.2, 11.1], 60);
-    const rifle = () => rifleSpread(game, Math.hypot(c.velX, c.velZ)) + playerAim(game).spread;
+    const rifle = () => rifleSpread(game, Math.hypot(c.vel[0], c.vel[2])) + playerAim(game).spread;
     rule(true, true); const rOn = cones(rifle); rule(true, false); const rOff = cones(rifle); rule(true, true);
     line(pl.rifleUp && rOn.walk > rOff.walk * 1.5 && rOn.s35 > rOff.s35 * 1.5 && Math.abs(rOn.s150 - rOff.s150) < 1e-9 && Math.abs(rOn.settled - rOff.settled) < 1e-9,
       '5b the rifle: the same, through its brace',
@@ -193,7 +193,7 @@ export async function aimcostCheck(): Promise<boolean> {
       const run = () => {
         game.teleportPlayer([20, 0, 11.1]); for (let i = 0; i < 3; i++) W.step(DT);
         gc.pos = [27, 0, 11.1]; gd.state = 'alert'; gd.reactT = 0; gd.foe = 'player'; gd.pinned = false; gd.dazzledUntil = -1; gd.aim.clear();
-        const face = () => { const tr = c.bones.spine2 ?? c.bones.hips ?? c.pos; const y = Math.atan2(tr[0] - gc.posX, tr[2] - gc.posZ); gc.aimYaw = y; gc.bodyYaw = y; const tn = (gc as any).tn; if (tn) tn.aim = y; gd.lastSeenT = game.time; };   // (tn: under turn weight the fire gate reads where the gun has GOT to — put it there, this asks about feet)
+        const face = () => { const tr = c.bones.spine2 ?? c.bones.hips ?? c.pos; const y = Math.atan2(tr[0] - gc.pos[0], tr[2] - gc.pos[2]); gc.aimYaw = y; gc.bodyYaw = y; const tn = (gc as any).tn; if (tn) tn.aim = y; gd.lastSeenT = game.time; };   // (tn: under turn weight the fire gate reads where the gun has GOT to — put it there, this asks about feet)
         const tick = (n: number, v: number) => { for (let i = 0; i < n; i++) { face(); gc.vel = [-v, 0, 0]; trackGuard(game, gd, DT); } };
         tick(60, 2.5); const running = gd.aim.track; tick(15, 0); const q = gd.aim.track; tick(75, 0); const settled = gd.aim.track;
         return { running, q, settled };
@@ -253,7 +253,7 @@ export async function aimcostCheck(): Promise<boolean> {
       if (!bt || !panel || !at) line(false, '10 the breaker\'s panel', 'no breaker / no floor with a line to it');
       else {
         const shoot = (p: number[]) => { hold(p, 3); fireWeapon(game, c, p, true, { spread: 0 }); W.step(DT); };
-        const face = panel.c[2] + (c.posZ < panel.c[2] ? -panel.h[2] : panel.h[2]);
+        const face = panel.c[2] + (c.pos[2] < panel.c[2] ? -panel.h[2] : panel.h[2]);
         shoot([panel.c[0] + panel.h[0] + 0.25, panel.c[1], face]); const beside = game.blackout.active;
         const corner = [panel.c[0] + panel.h[0] - 0.04, panel.c[1] - panel.h[1] + 0.04, face]; shoot(corner); const struck = game.blackout.active;
         line(!beside && struck, '10 a round into the breaker\'s panel, off in its corner, takes the mains; one into the wall a hand beside the panel does not',

@@ -481,7 +481,7 @@ export function lightGroup(ctx: SheetCtx, name: string): GroupDef | null {
 export function boneGroup(ctx: SheetCtx, bone: string): GroupDef {
   const { rt } = ctx;
   return { id: 'bone', title: `Bone: ${bone}`, open: true, build: (p, sec) => {
-    p.text(sec, () => { const b = rt.char.bones[bone]; return b ? `world [${b.map(x => x.toFixed(3)).join(', ')}] · height ${b[1].toFixed(3)} m · ${Math.hypot(b[0] - rt.char.posX, b[2] - rt.char.posZ).toFixed(3)} m off the root` : '(not read this frame)'; });
+    p.text(sec, () => { const b = rt.char.bones[bone]; return b ? `world [${b.map(x => x.toFixed(3)).join(', ')}] · height ${b[1].toFixed(3)} m · ${Math.hypot(b[0] - rt.char.pos[0], b[2] - rt.char.pos[2]).toFixed(3)} m off the root` : '(not read this frame)'; });
     p.buttons(sec, '', [{ text: 'orbit about it', run: () => { rt.st.trackBone = bone; rt.st.track = 5; } }, { text: 'close up', run: () => { rt.st.trackBone = bone; rt.st.track = 5; rt.cam.desiredDistance = 0.9; } }, { text: 'deselect', run: () => ctx.select(null) }]);
     p.text(sec, () => 'read-only: bones are the animator\'s output (Character.bones, after char.update) — the layers that pose them have their constants in the groups below');
   } };

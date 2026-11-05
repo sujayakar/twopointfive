@@ -13,7 +13,6 @@
 //   rows       the lowest free row, zeros; a freed row is free once; a handle taken before a row changed hands throws by name; a man who left reads his numbers as they stood
 //   same bytes a game's men stand in its block once a tick has opened, and the module's fold of each row is the fold of what the accessors read
 //   snapshot   a snapshot put back brings a man's columns back; put into another game they are that game's
-//   fields     every field of a Guard, a Player and a Character is a column or is named in the schema as staying on his object
 //   levels     every level of levels/ fits the rows, and the fullest is named
 //   lint       no file of src/game writes the columns but through their accessors
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
@@ -26,14 +25,14 @@ import { MEN_OUT, MEN_TABLE, layOut, rustText, schemaFaults, schemaHash, tsText,
 const BREAK = process.env.MEN_BREAK === '1', DT = 1 / 60;
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), RB: any = await import(`${ROOT}/src/game/rollback.ts`), LF: any = await import(`${ROOT}/src/game/levelfit.ts`);
 const M: any = await import(`${ROOT}/src/sim/men/store.ts`), C: any = await import(`${ROOT}/src/sim/men/cols.ts`), SC: any = await import(`${ROOT}/src/sim/men/schema.ts`);
-const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), GD: any = await import(`${ROOT}/src/game/guards.ts`);
+const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 const throwsName = (f: () => unknown, word: string): string => { try { f(); return ''; } catch (e) { const m = String((e as Error).message); return m.includes(word) ? m : ''; } };
 console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · MEN_BREAK=1 (the red path)' : ''}`);
 
 { const f = schemaFaults(MEN_TABLE), bad = schemaFaults({ rows: 6, fields: [...MEN_TABLE.fields, MEN_TABLE.fields[0]] });
-  verdict(f.length === 0 && bad.length >= 2 && !BREAK, 'table: the schema has no name twice, and rows a multiple of four', f.length ? f.join(' · ') : `${MEN_TABLE.fields.length} fields, ${MEN_TABLE.rows} rows · ${SC.MEN_KEPT.length} fields kept on the object by name · a table with both faults is told both`); }
+  verdict(f.length === 0 && bad.length === 2 && !BREAK, 'table: the schema has no name twice, and rows a multiple of four', f.length ? f.join(' · ') : `${MEN_TABLE.fields.length} fields, ${MEN_TABLE.rows} rows · ${SC.MEN_KEPT.length} fields kept on the object by name · a table with both faults is told both`); }
 { const ts = readFileSync(MEN_OUT.ts, 'utf8'), rs = readFileSync(MEN_OUT.rust, 'utf8');
   const same = (BREAK ? ts + ' ' : ts) === tsText(MEN_TABLE) && rs === rustText(MEN_TABLE);
   verdict(same, 'written: the generated files are what the schema writes', same ? `${layOut(MEN_TABLE).cols.length} columns, hash ${schemaHash(MEN_TABLE).toString(16)}` : 'bun run tools/sim/men.ts'); }
@@ -48,12 +47,11 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
 { const T: Schema = { rows: 8, fields: [
     { name: 'a', on: 'man', group: 'hot', type: 'f64', digest: true }, { name: 'b', on: 'man', group: 'cold', type: 'u32', digest: false }, { name: 'c', on: 'guard', group: 'hot', type: 'i32', digest: true },
     { name: 'd', on: 'guard', group: 'cold', type: 'bool', digest: false }, { name: 'e', on: 'player', group: 'hot', type: 'vec3', digest: true }, { name: 'f', on: 'guard', group: 'hot', type: 'vec3?', digest: true },
-    { name: 'g', on: 'man', group: 'cold', type: ['one', 'two', 'three'], digest: false }, { name: 'h', on: 'anim', group: 'animator', type: 'f64', digest: false }, { name: 'i', on: 'guard', group: 'hot', type: 'bool', digest: true },
-    { name: 'j', on: 'guard', group: 'hot', type: { man: 'Guard', also: ['player'] }, digest: false, init: 'player' }, { name: 'k', on: 'man', group: 'cold', type: 'f64', digest: false, init: 2.5 } ] };
+    { name: 'g', on: 'man', group: 'cold', type: ['one', 'two', 'three'], digest: false }, { name: 'h', on: 'anim', group: 'animator', type: 'f64', digest: false }, { name: 'i', on: 'guard', group: 'hot', type: 'bool', digest: true } ] };
   const dir = mkdtempSync(join(tmpdir(), 'men-gen-')), file = join(dir, 'cols.ts');
-  writeFileSync(file, tsText(T).replace(`import type { MenStore } from './store';\n`, 'type MenStore = any;\n').replace(`import type { Vec3 } from '../../math/vec';\n`, 'type Vec3 = [number, number, number];\n').replace(/import type \{ Guard \}[^\n]*\n/, 'type Guard = any;\n'));
+  writeFileSync(file, tsText(T).replace(`import type { MenStore } from './store';\n`, 'type MenStore = any;\n').replace(`import type { Vec3 } from '../../math/vec';\n`, 'type Vec3 = [number, number, number];\n'));
   const G: any = await import(file); rmSync(dir, { recursive: true });
-  const { cols } = layOut(T), bytes = 16 + cols.reduce((n, c) => n + T.rows * (c.kind === 'f64' ? 8 : 4), 0), own = new Float64Array(bytes >>> 3), store: any = { d: own, u: new Uint32Array(own.buffer), b8: 0, b4: 0, handleOf: (r: number) => r << 8 | 1, manAt: (h: number) => (h >>> 8 === 3 ? 'row three' : null) };
+  const { cols } = layOut(T), bytes = 16 + cols.reduce((n, c) => n + T.rows * (c.kind === 'f64' ? 8 : 4), 0), own = new Float64Array(bytes >>> 3), store = { d: own, u: new Uint32Array(own.buffer), b8: 0, b4: 0 };
   const mk = (K: any) => { const o = new K(); o.S = store; o.r = 3; return o; };
   const gd = mk(G.GuardCols), pl = mk(G.PlayerCols), an = mk(G.AnimCols), bad: string[] = [], eq = (n: string, a: unknown, b: unknown) => { if (JSON.stringify(a) !== JSON.stringify(b) || (typeof a === 'number' && !Object.is(a, b))) bad.push(`${n}: ${JSON.stringify(a)} ≠ ${JSON.stringify(b)}`); };
   gd.a = -0; eq('f64 -0', gd.a, -0); gd.a = 1 / 3; eq('f64', gd.a, 1 / 3); gd.b = 0xfffffffe; eq('u32', gd.b, 0xfffffffe); gd.c = -7; eq('i32', gd.c, -7);
@@ -61,9 +59,6 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
   pl.e = [1, 2, 3]; eq('vec3', pl.e, [1, 2, 3]); pl.eY = 9; eq('vec3 by part', pl.e, [1, 9, 3]); { const p = pl.e; p[0] = 77; eq('vec3 is a copy', pl.eX, 1); }
   eq('vec3? none', gd.f, null); gd.f = [4, 5, 6]; eq('vec3?', gd.f, [4, 5, 6]); gd.f = null; eq('vec3? none again', gd.f, null); eq('vec3? zeros', gd.fX, 0); eq('truth kept', gd.i, true);
   gd.g = 'three'; eq('words', gd.g, 'three'); an.h = 2.5; eq('anim', an.h, 2.5);
-  eq('no such word', throwsName(() => { gd.g = 'four'; }, 'no such word') !== '', true);
-  eq('a man: nobody', gd.j, null); gd.j = 'player'; eq('a man: a word', gd.j, 'player'); gd.j = gd; eq('a man: a man', gd.j, 'row three'); gd.j = null; eq('a man: nobody again', gd.j, null);
-  gd.initMan(); gd.initGuard(); eq('init', gd.k, 2.5); eq('init a word', gd.j, 'player');
   const R = rustText(T), hasAll = cols.every(c => R.includes(`pub ${c.rust}: [${c.kind}; ROWS]`)), hash = schemaHash(T) !== schemaHash({ ...T, rows: 12 });
   if (BREAK) bad.push('the red path');
   verdict(bad.length === 0 && hasAll && hash, 'generator: every kind of column on every kind of record reads back what was written, and the Rust struct has those columns', bad.length ? bad.join(' · ') : `${T.fields.length} fields, ${cols.length} columns; the animator's kept state among them; the hash moves with the rows`); }
@@ -97,20 +92,12 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
   const there = [g2.player, ...g2.guards].every((m: any, i: number) => m.owner === 100 + i && m.S === g2.men) && g2.men !== g.men && g2.men.standing === men.length;
   verdict(back && there, 'snapshot: a snapshot put back brings a man\'s columns back; put into another game they are that game\'s', `back ${back} · another game ${there}`); }
 
-// ---- every field of a man is a column, or named as staying on his object
-{ const W: any = await standUp({ seed: 7 }), g = W.game, kept = (on: string) => new Set(SC.MEN_KEPT.filter((k: any) => k.on === on).map((k: any) => k.name)), bad: string[] = [];
-  const see = (o: any, on: string, what: string) => { const K = kept(on); for (const k of Object.keys(o)) if (k !== 'S' && k !== 'r' && !K.has(k)) bad.push(`${what}.${k}`); };
-  see(g.guards[0], 'guard', 'Guard'); see(g.player, 'player', 'Player'); see(g.player.char, 'man', 'Character');
-  if (BREAK) bad.push('the red path');
-  const cols = MEN_TABLE.fields.length, stay = SC.MEN_KEPT.length, dress = SC.MEN_KEPT.filter((k: any) => k.stays === 'dressing').length;
-  verdict(bad.length === 0, 'fields: every field of a Guard, a Player and a Character is a column, or named in the schema as staying on his object', bad.length ? bad.join(' · ') : `${cols} fields are columns · ${stay} stay on the object, ${dress} of them dressing`); }
-
 // ---- every level fits: a game holds at most menMost men, by the doors' and the furniture's hand-over, whatever its level
 { const files = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')); let most = 0, who = '', read = 0; const over: string[] = [];
-  const log = console.log, err = console.error, room = BREAK ? 5 : SC.MEN_ROWS, held = LF.menHeld() + GD.MAX_SKINNED;
+  const log = console.log, err = console.error, room = BREAK ? 5 : SC.MEN_ROWS, held = LF.menHeld();
   for (const f of files) { console.log = console.error = () => {}; let level: any = null; try { level = f === 'office.json' ? null : loadLevel(JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8'))); } catch { /* a document the loader refuses is the level check's */ } console.log = log; console.error = err;
-    if (!level) continue; read++; const n = LF.menMost(level.civilians?.length ?? 0) + GD.MAX_SKINNED; if (n > most) { most = n; who = f; } if (n > room) over.push(`${f} ${n}`); }
-  verdict(over.length === 0 && read > 10 && held <= room, `levels: every man a game can hold fits the ${SC.MEN_ROWS} rows`, `${read} levels read · the fullest ${most} men at most (${who}) · at most ${held} whatever the level: what a step's hand-over holds, and as many as the floor holds benched${over.length ? ` · over: ${over.slice(0, 4).join(', ')}` : ''}`); }
+    if (!level) continue; read++; const n = LF.menMost(level.civilians?.length ?? 0); if (n > most) { most = n; who = f; } if (n > room) over.push(`${f} ${n}`); }
+  verdict(over.length === 0 && read > 10 && held <= room, `levels: every man a game can hold fits the ${SC.MEN_ROWS} rows`, `${read} levels read · the fullest ${most} men at most (${who}) · at most ${held} by what a step's hand-over holds, whatever the level${over.length ? ` · over: ${over.slice(0, 4).join(', ')}` : ''}`); }
 
 // ---- the lint: nothing in src/game reaches the columns but through their accessors
 { const dir = resolve(ROOT, 'src/game'), bad: string[] = [];

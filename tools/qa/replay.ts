@@ -74,7 +74,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   // ---- invariants' memory
   let prevPl: Vec3 | null = null; const col = game.col;
   const violate = (f: number, kind: string, text: string) => { if (R.violations.length < 40) R.violations.push({ f, kind, text }); };
-  const finiteChar = (c: any) => [c.posX, c.posY, c.posZ, c.bodyYaw, c.aimYaw, c.aimPitch].every(Number.isFinite);
+  const finiteChar = (c: any) => [c.pos[0], c.pos[1], c.pos[2], c.bodyYaw, c.aimYaw, c.aimPitch].every(Number.isFinite);
   const p2 = (p: Vec3) => `(${p[0].toFixed(2)}, ${p[2].toFixed(2)})`;
   let playerRef = game.player;
   // ---- the frames
@@ -110,7 +110,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
       for (const gd of game.guards) {
         const c = gd.char;
         if (!finiteChar(c) || !Number.isFinite(gd.speed) || !Number.isFinite(gd.awareness)) violate(f, 'nan', `${gd.callsign} pos ${c.pos} speed ${gd.speed} aw ${gd.awareness}`);
-        if (c.posX < -0.5 || c.posX > 40.5 || c.posZ < -0.5 || c.posZ > 28.5) violate(f, 'out-of-world', `${gd.callsign} at ${p2(c.pos)} (${gd.state})`);
+        if (c.pos[0] < -0.5 || c.pos[0] > 40.5 || c.pos[2] < -0.5 || c.pos[2] > 28.5) violate(f, 'out-of-world', `${gd.callsign} at ${p2(c.pos)} (${gd.state})`);
         if (!['patrol', 'suspicious', 'alert', 'search', 'dead'].includes(gd.state)) violate(f, 'bad-state', `${gd.callsign} state ${gd.state}`);
         if (gd.awareness < -1e-6 || gd.awareness > 1 + 1e-6) violate(f, 'awareness-range', `${gd.callsign} awareness ${gd.awareness}`);
         if (Math.abs(gd.speed) > 6) violate(f, 'speed-range', `${gd.callsign} speed ${gd.speed}`);

@@ -135,9 +135,9 @@ export async function wordsOverheard(): Promise<boolean> {
           if (gd.state === 'dead' || !isHostile(gd.team, 'player')) continue;
           const hidden = g.fogOfWar.hidden(gd); ask(gd, hidden, i);   // where the player stands
           if (!hidden) continue;
-          const pc = g.player.char, was = pc.pos;   // …and with his ear brought two metres from the man, eight ways round (walls between or not: the law says)
-          for (const [dx, dz] of ROUND) { pc.posX = gd.char.posX + dx; pc.posZ = gd.char.posZ + dz; ask(gd, true, i); }
-          pc.pos = was;
+          const pp = g.player.char.pos, was = [pp[0], pp[1], pp[2]];   // …and with his ear brought two metres from the man, eight ways round (walls between or not: the law says)
+          for (const [dx, dz] of ROUND) { pp[0] = gd.char.pos[0] + dx; pp[2] = gd.char.pos[2] + dz; ask(gd, true, i); }
+          pp[0] = was[0]; pp[1] = was[1]; pp[2] = was[2];
         }
       }
       F.verdict(g.fogOfWar.on === true && near >= 20 && farN >= 20 && !wrong.length && seenRow === 0 && named === 0, 'the block under the fog: each defender shouts in turn, from where the player stands and with his ear brought beside the man — a row exactly where a path under the reach × its carry gets to an ear of the team\'s, none where it does not, none for a man in sight, never his name', `${frames} frames · ${near} shouts in earshot drew · ${farN} out of it drew none · ${seenRow} rows for a man in sight · wrong: ${wrong.length ? wrong.slice(0, 4).join(' ; ') : 'none'}`);
@@ -153,7 +153,7 @@ export async function wordsOverheard(): Promise<boolean> {
         for (let i = 0; i < 60 * 30; i++) { g.player.visibility = 1; W.step(DT);
           if (i === 600) {   // ten seconds in: the player is stood two metres from a hidden defender who then shouts through the game's own say()
             pick: for (const gd of g.guards as any[]) { if (gd.state === 'dead' || !isHostile(gd.team, 'player') || !g.fogOfWar.hidden(gd)) continue;
-              for (const [dx, dz] of ROUND) { g.teleportPlayer([gd.char.posX + dx, 0, gd.char.posZ + dz]);   // (the teleport stands him on free floor: the law is asked from where he ended up — the same tries, in the same order, switch down or up)
+              for (const [dx, dz] of ROUND) { g.teleportPlayer([gd.char.pos[0] + dx, 0, gd.char.pos[2] + dz]);   // (the teleport stands him on free floor: the law is asked from where he ended up — the same tries, in the same order, switch down or up)
                 if (law(g, gd)) { g.cues.rows = []; g.say(gd, 'over here!'); who = gd.callsign; ring = g.messages[g.messages.length - 1]?.text ?? ''; break pick; } } } }
           if (i % 30 === 0) moves += hashDigest(digestGame(g, true) as any) + ' ';
           if (i >= 600 && i < 600 + 60 * 3) for (const r of stripRows(g) as { text: string }[]) if (r.text === 'heard: over here!') row = true; }

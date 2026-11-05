@@ -132,7 +132,7 @@ function event(g: Game, st: State, what: PowerOutEvent['what'], gd: Guard | null
 
 /** a mains-fed fixture that was burning, in his plain view inside `seeM` */
 function sawThemDie(g: Game, gd: Guard): boolean {
-  const c = gd.char, eye: Vec3 = [c.posX, 1.5, c.posZ];
+  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]];
   for (const t of g.targets) {
     if (!t.mains || !t.on || t.broken || !(t.factor > 0.3) || t.kind === 'breaker' || t.kind === 'device') continue;   // (factor: last frame's supply — a fitting the OCP has knocked out is no light to see die)
     if (flat(t.pos, c.pos) > POWEROUT.seeM) continue;
@@ -143,8 +143,8 @@ function sawThemDie(g: Game, gd: Guard): boolean {
 /** the brightest floor he stands on, watches or has about him, by the place's own light (guards.ts lightEstimateAt, the CPU meter both the page and the harness run: nobody's
  *  carried lamp, no flash, no beacon) */
 function floorWatched(g: Game, gd: Guard): number {
-  const K = POWEROUT, c = gd.char, eye: Vec3 = [c.posX, 1.5, c.posZ], at = (x: number, z: number) => g.visibilityOf(lightEstimateAt(g, [x, 1.2, z], carried, true));
-  let best = at(c.posX, c.posZ);
+  const K = POWEROUT, c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], at = (x: number, z: number) => g.visibilityOf(lightEstimateAt(g, [x, 1.2, z], carried, true));
+  let best = at(c.pos[0], c.pos[2]);
   for (const off of [0, -K.fanRad, K.fanRad]) { const fx = Math.sin(c.aimYaw + off), fz = Math.cos(c.aimYaw + off);
     for (let r = K.stepM; r <= K.lookM + 1e-6; r += K.stepM) { const x = eye[0] + fx * r, z = eye[2] + fz * r;
       if (g.col.segmentBlocked(eye, [x, 1.5, z])) break;
@@ -323,7 +323,7 @@ export function powerOutTick(g: Game, _dt: number) {
     M.stepT = boots(g, gd, M.stepT);
     const atLever = M.role === 'lever' && M.phase === 'there';
     if (D.mode !== 'move') { event(g, st, 'abort', gd, 'the room fight has him where he stands'); return false; }   // (met on the way: tickMove planted him, roused — its man)
-    if (st.fell && ((M.phase === 'there' && !lever) || (flat(gd.char.pos, st.fell) <= POWEROUT.seeM && !g.col.segmentBlocked([gd.char.posX, 1.5, gd.char.posZ], [st.fell[0], 0.4, st.fell[2]])))) {   // his mate on the floor in his plain view — or he is set short of the lever, a line to it, and no mate at it
+    if (st.fell && ((M.phase === 'there' && !lever) || (flat(gd.char.pos, st.fell) <= POWEROUT.seeM && !g.col.segmentBlocked([gd.char.pos[0], 1.5, gd.char.pos[2]], [st.fell[0], 0.4, st.fell[2]])))) {   // his mate on the floor in his plain view — or he is set short of the lever, a line to it, and no mate at it
       st.fell = null; st.word = true; g.say(gd, "he's down at the breaker — that's them! Stay on your doors!", true);
       run(g, D, M.from, null); event(g, st, 'abort', gd, 'sees the man he came with on the floor: says so, and back to his post at a run'); return false;
     }
@@ -346,7 +346,7 @@ export function powerOutTick(g: Game, _dt: number) {
           for (const X of st.men) { const XD = defOf(g, X.gd); if (XD && XD.mode === 'move' && X.phase !== 'wait') { X.phase = 'back'; X.tries = 0; walk(g, XD, X.from); } }
           return true;
         }
-        const bp = g.level.breaker.pos; order(gd, { face: Math.atan2(bp[0] - gd.char.posX, bp[2] - gd.char.posZ), aimAt: null, upper: 'none' });
+        const bp = g.level.breaker.pos; order(gd, { face: Math.atan2(bp[0] - gd.char.pos[0], bp[2] - gd.char.pos[2]), aimAt: null, upper: 'none' });
         if (bo.permanent && g.time - M.thereT > POWEROUT.lookSecs) {
           st.word = true; g.say(gd, "breaker's wrecked — that's them! Stay on your doors!", true); event(g, st, 'wrecked', gd, 'the breaker is shot to scrap: no fault, and nothing to mend');
           for (const X of st.men) { const XD = defOf(g, X.gd); if (XD && XD.mode === 'move' && X.phase !== 'wait') { X.phase = 'back'; X.tries = 0; walk(g, XD, X.from); } }

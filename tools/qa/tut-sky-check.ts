@@ -136,7 +136,7 @@ const live = async (fn: (W: any, g: any) => void): Promise<string> => {
     if (!b.script) throw new Error('Tango 6 is not the beat\'s man six seconds into it');
     killGuard(g, a, [1, 0, 0]);
     for (let i = 0; i < 60 * 12; i++) { W.step(1 / 60); if (BROKEN && b.script) endGuardScript(b, 'alert'); }   // (the break: let go where he stands, as the beat let him go)
-    at = [b.char.posX, b.char.posZ]; free = !b.script; door = Math.abs(g.doors.byName('bunk').angle); dark = !!g.blackout.active; state = b.state;
+    at = [b.char.pos[0], b.char.pos[2]]; free = !b.script; door = Math.abs(g.doors.byName('bunk').angle); dark = !!g.blackout.active; state = b.state;
   });
   const B = L.scenarios.roomClear.rooms.find((r: any) => r.id === 'bunk')?.bounds, inside = !!B && at[0] > B.x0 && at[0] < B.x1 && at[1] > B.z0 && at[1] < B.z1;   // (the bunkhouse's own floor, by the level file)
   line(!why && inside && free && door < 0.1 && dark, 'with one of the two flashlight men shot on the way, the other is back inside his room and let go there inside twelve seconds, the door shut behind him and the mains still out',
@@ -153,13 +153,13 @@ const live = async (fn: (W: any, g: any) => void): Promise<string> => {
       for (let i = 0; i < 30; i++) W.step(1 / 60);
       g.setBlackout(86400, 'hand'); g.director.signal('lesson:torches');
       const B = L.scenarios.roomClear.rooms.find((r: any) => r.id === 'bunk').bounds, mate = g.guards.find((x: any) => x.unit && x.team === 'operative'), mid = [(B.x0 + B.x1) / 2, (B.z0 + B.z1) / 2];
-      const hold = () => { if (squadIn) { mate.char.posX = mid[0]; mate.char.posZ = mid[1]; } };
+      const hold = () => { if (squadIn) { mate.char.pos[0] = mid[0]; mate.char.pos[2] = mid[1]; } };
       // (shot before either has left: half a second in, both still stand in their room. The squad at the bunkhouse: six seconds in, a teammate stood in the room)
       for (let i = 0; i < (squadIn ? 360 : 30); i++) { W.step(1 / 60); if (i >= 340) hold(); }
       if (!b.script) throw new Error('Tango 6 is not the beat\'s man when his mate is shot');
       const t0 = g.time; killGuard(g, a, [1, 0, 0]);
       for (let i = 0; i < 180 && b.script && b.state !== 'dead'; i++) { W.step(1 / 60); hold(); }
-      free = !b.script || b.state === 'dead'; secs = g.time - t0; where = `${b.char.posX.toFixed(1)}, ${b.char.posZ.toFixed(1)}`;
+      free = !b.script || b.state === 'dead'; secs = g.time - t0; where = `${b.char.pos[0].toFixed(1)}, ${b.char.pos[2].toFixed(1)}`;
     });
     return { why, free, secs, where }; };
   const early = await arm(false), taken = await arm(true);

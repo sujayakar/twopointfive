@@ -49,8 +49,8 @@ async function held(K: { pie: boolean; lean: boolean; one?: boolean; blind?: boo
       if (m.state === 'dead') continue;
       if (isNaN(told)) { const ln = !!m.script?.lean; r.low = Math.max(r.low, m.char.anim.crouch); if (ln && !r.leaning) { r.leans++; if (r.leanAt < 0) r.leanAt = s ? s.i : 0; } r.leaning = ln; if (s && r.leanAt >= 0 && s.i > r.leanAt) r.cutAfterLean = true;
         if (ln) { r.leanFrames++; const u = inw(m), h = m.char.bones.head, hp = m.char.bones.hips ?? m.char.pos; if (h) r.leanHead = Math.max(r.leanHead, (h[0] - hp[0]) * u[0] + (h[2] - hp[2]) * u[2]); }
-        if (s && s.i > 0) cutting = true; if (cutting) { r.home ??= [m.char.posX, 0, m.char.posZ]; r.strayed = Math.max(r.strayed, flat(m.char.pos, r.home)); } }
-      if (isNaN(told)) { r.trail.push([m.char.posX, 0, m.char.posZ]); if (r.trail.length > 120) r.trail.shift(); }
+        if (s && s.i > 0) cutting = true; if (cutting) { r.home ??= [m.char.pos[0], 0, m.char.pos[2]]; r.strayed = Math.max(r.strayed, flat(m.char.pos, r.home)); } }
+      if (isNaN(told)) { r.trail.push([m.char.pos[0], 0, m.char.pos[2]]); if (r.trail.length > 120) r.trail.shift(); }
       if (!s) continue;
       r.sent.add(s.i); if (flat(m.char.pos, s.pts[s.i]) < 0.15) r.stood.add(s.i); r.across = Math.max(r.across, (inw(m), jambOf.get(m)! > 0 ? alongOf(d, m.char.pos) : W - alongOf(d, m.char.pos))); r.fin = !!s.pie?.fin; if (s.i === 0 && !s.pie?.fin && m.script?.lean) r.lean0 = true;
       const u = inw(m), c = m.char, h = c.bones.head, hp = c.bones.hips ?? c.pos, mz = c.muzzle;
@@ -71,7 +71,7 @@ async function held(K: { pie: boolean; lean: boolean; one?: boolean; blind?: boo
 /** a teammate stood in the open with his gun in his shoulder, leaned each way through an order's own field: where his head, his muzzle, the middle of his
  *  trunk and his hips are, to his right of where his hips were */
 async function pose() {
-  const E = yardRow(LEVEL), R = await stage(E, 1), g = R.g, m = R.team[0], c = m.char, p = [c.posX, 0, c.posZ];
+  const E = yardRow(LEVEL), R = await stage(E, 1), g = R.g, m = R.team[0], c = m.char, p = [c.pos[0], 0, c.pos[2]];
   let yaw = 0; const hold = (lean: number) => g.orders.assign(m, { order: 'move', post: p, face: yaw, watch: [p[0] + Math.sin(yaw) * 6, 1.2, p[2] + Math.cos(yaw) * 6], stance: 'none', upper: 'aim', going: 'x', there: 'x', ...(lean ? { lean } : {}) });
   for (const y of [0, 1.57, 3.14, -1.57, 0.8, -0.8, 2.4, -2.4]) { yaw = y; await quiet(() => { hold(0); R.step(60); }); if (!m.muzzleDown) break; }   // (a way to face with nobody and nothing in front of the gun)
   const h0 = [...(c.bones.hips ?? c.pos)], right = [-Math.cos(yaw), Math.sin(yaw)], lat = (q: number[] | undefined) => q ? (q[0] - h0[0]) * right[0] + (q[2] - h0[2]) * right[1] : NaN;

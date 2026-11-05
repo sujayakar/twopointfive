@@ -94,7 +94,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
     kit() { if (C.carried !== null) C.setCarried(2); },
     /** one wall's worth has gone since (bag, carried) was read — out of the bag on the frozen stand, off the carried count on the shipped one */
     spent(c0: number, k0: number | null) { return k0 !== null ? C.carried === k0 - 1 && D.charges === c0 : D.charges === c0 - WALLCHARGE.cost; },
-    put(gd: any, p: number[]) { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; },
+    put(gd: any, p: number[]) { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; },
   };
   R.kit(); R.step(20);
   return R;
@@ -157,7 +157,7 @@ async function probeSquad(scn: string): Promise<boolean> {
   F.note(`${P.from === 'yard' ? 'a yard wall' : 'a building\'s outer wall, worked from outside'}: wall ${P.W.index} at ${at(P.p)}, ${f2(thickOf(P.W))} m thick`);
   const gathered = R.gather(P.near); if (!gathered) F.note(`the squad did not all reach ${at(P.near)} in time — going on with who is there`);
   const W0 = P.W, T = thickOf(W0), a: Vec3 = wallPt(W0, 0, 1.2), b: Vec3 = wallPt(W0, 0, -(T + 1.2)), before = R.pathLen(a, b);
-  for (const h of R.hostiles) if (h.state !== 'dead' && flat(h.char.pos, wallPt(W0, 0, 0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
+  for (const h of R.hostiles) if (h.state !== 'dead' && flat(h.char.pos, wallPt(W0, 0, 0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   R.step(2);
   const t = O.targetAt(P.p), c0 = D.charges, k0 = C.carried; R.pick(P.top, 5, 3); let op = C.ops[0], by = 'X, 5, 3';
   if (!op) { const why = C.order(P.p, 'all'); op = C.ops[0]; by = `the order given by code (the presses found no wall under the cursor: ${why ?? R.said.slice(-1)[0] ?? ''})`; }

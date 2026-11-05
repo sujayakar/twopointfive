@@ -133,12 +133,12 @@ const aimSeen = new SideMap<Guard, { t: number; x: number; z: number; blind: boo
  *  been clear for `walkAimOn` (a watch somewhere else, or a man not asked a moment ago, is read at once). */
 export function walkLead(g: Game, gd: Guard, aim: Vec3): Vec3 | null {
   if (!TEAMPACE.walkAim || WALKAIM_BREAK || !teamPaced(g, gd)) return null;
-  const c = gd.char, y = 1.45 - 0.45 * c.anim.crouch, dx = aim[0] - c.posX, dy = aim[1] - y, dz = aim[2] - c.posZ, l = Math.hypot(dx, dy, dz), t = g.time;
-  const k = l > AIM_SHORT + 0.1 ? (l - AIM_SHORT) / l : 0, shut = k > 0 && g.col.segmentBlocked([c.posX, y, c.posZ], [c.posX + dx * k, y + dy * k, c.posZ + dz * k]);   // (inside the last half metre he is at it)
+  const c = gd.char, y = 1.45 - 0.45 * c.anim.crouch, dx = aim[0] - c.pos[0], dy = aim[1] - y, dz = aim[2] - c.pos[2], l = Math.hypot(dx, dy, dz), t = g.time;
+  const k = l > AIM_SHORT + 0.1 ? (l - AIM_SHORT) / l : 0, shut = k > 0 && g.col.segmentBlocked([c.pos[0], y, c.pos[2]], [c.pos[0] + dx * k, y + dy * k, c.pos[2] + dz * k]);   // (inside the last half metre he is at it)
   const was = aimSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 && Math.hypot(was.x - aim[0], was.z - aim[2]) < 0.5 ? was : { blind: shut, since: t };
   const since = shut === s.blind ? t : s.since, blind = shut !== s.blind && t - since >= (shut ? TEAMPACE.walkAimOff : TEAMPACE.walkAimOn) - 1e-9 ? shut : s.blind;
   aimSeen.set(gd, { t, x: aim[0], z: aim[2], blind, since: blind === s.blind ? since : t });
-  return blind ? [c.posX + Math.sin(c.bodyYaw) * WALK_AHEAD, y, c.posZ + Math.cos(c.bodyYaw) * WALK_AHEAD] : null;
+  return blind ? [c.pos[0] + Math.sin(c.bodyYaw) * WALK_AHEAD, y, c.pos[2] + Math.cos(c.bodyYaw) * WALK_AHEAD] : null;
 }
 /** a teammate's walk, m/s */
 export function teamWalk(g: Game): number { return g.tune.playerWalk * TEAMPACE.k; }
@@ -147,7 +147,7 @@ export function teamWalkOf(g: Game, gd: Guard): number {
   const T = TEAMPACE, slow = teamWalk(g); if (!T.pacing || PACING_BREAK) return slow;
   const own = g.tune.playerWalk, M = g.orders?.of(gd)?.post, pl = g.player; if (!M || !pl) return own;
   const p = gd.char.pos, s = pl.char.pos; if (Math.hypot(p[0] - s[0], p[2] - s[2]) > T.paceNear) return own;
-  const dm = Math.hypot(p[0] - M[0], p[2] - M[2]), ds = Math.hypot(s[0] - M[0], s[2] - M[2]), vx = pl.char.velX, vz = pl.char.velZ, v = Math.hypot(vx, vz);
+  const dm = Math.hypot(p[0] - M[0], p[2] - M[2]), ds = Math.hypot(s[0] - M[0], s[2] - M[2]), vx = pl.char.vel[0], vz = pl.char.vel[2], v = Math.hypot(vx, vz);
   const toward = (x: number, z: number) => { const L = Math.hypot(x - s[0], z - s[2]); return L > 1e-3 && v > 0.3 && (vx * (x - s[0]) + vz * (z - s[2])) / (L * v) >= T.paceCos; };   // (the player is moving, and at that spot)
   if (ds > dm + T.paceGap) return toward(p[0], p[2]) ? Math.max(slow * 0.5, Math.min(slow, T.k * v)) : own;   // (behind him and walking after him: he lets the player catch up — `k` of the player's own pace, so a player creeping after him gains too)
   if (ds < dm - T.paceGap) return toward(M[0], M[2]) ? Math.max(own, Math.min(v, PACE.max)) : own;   // (ahead of him and bound for the same mark: the player's pace, never a run — and no more than the order asks of his legs, ORDERS.brisk)

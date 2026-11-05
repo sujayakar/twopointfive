@@ -44,7 +44,7 @@ async function held(on: boolean, set: Record<string, unknown> = {}): Promise<Hel
     if (!H.g) { H.g = g; H.stood = !!ORDERS.trailDoors; ORDERS.trailDoors = on; Object.assign(ORDERS, set);
       const tw = O.trailWay.bind(O); O.trailWay = (...a: any[]) => { const r = tw(...a); if (r.length && a[0] === lead && phase === 2) H.took++; return r; }; }
     if (phase === 0 && inRoom(sam, COPY)) { phase = 1; lead = men.find((m: any) => O.of(m)?.follow === 0) ?? men[0]; H.who = lead.callsign; pin = [...lead.char.pos]; H.from = [...pin]; }
-    if (phase === 1) { const c = lead.char; c.posX = pin![0]; c.posZ = pin![2]; c.velX = c.velZ = 0; H.heldS += 1 / 60;
+    if (phase === 1) { const c = lead.char; c.pos[0] = pin![0]; c.pos[2] = pin![2]; c.vel[0] = c.vel[2] = 0; H.heldS += 1 / 60;
       if (inRoom(sam, HALL) && sam[0] > HALL.x0 + 1.5) { phase = 2; t1 = g.time; } }
     if (phase === 2) { if (inRoom(lead.char.pos, COPY)) H.inCopy++; H.gap = flat(lead.char.pos, sam); H.at = [...lead.char.pos]; if (g.time - t1 > AFTER) throw new Enough(); }
   }); } catch (e) { if (!(e instanceof Enough)) throw e; }

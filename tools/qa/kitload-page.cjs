@@ -62,7 +62,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   // ── walk: the card on the floor of a staged room clear — the same light card with the rule on and under ?nokitload
   if (PARTS.includes('walk')) { const walk = async (q) => { const { page, errors } = await open(q);
       const r = await page.evaluate(async () => { const g = window.__game, p = g.player, c = p.char; let best = 0;
-        for (const key of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) for (let f = 0; f < 24; f++) { const x = c.posX, z = c.posZ; await window.__runFrames(1, 1 / 60, [key], false); best = Math.max(best, Math.hypot(c.posX - x, c.posZ - z) * 60); }
+        for (const key of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) for (let f = 0; f < 24; f++) { const x = c.pos[0], z = c.pos[2]; await window.__runFrames(1, 1 / 60, [key], false); best = Math.max(best, Math.hypot(c.pos[0] - x, c.pos[2] - z) * 60); }
         return { best, load: p.kitLoad || null, team: g.guards.filter(m => m.team === 'operative' && m.state !== 'dead').length, long: !!p.hasRifle }; });
       await page.close().catch(() => {}); await Promise.race([browser.close(), new Promise(res => setTimeout(res, 15000))]).catch(() => {}); return { ...r, errors }; };   // (a browser a walk: closed here, opened afresh by the next)
     const LIGHT = JSON.stringify({ v: 2, members: [{ weapon: 'pistol', smoke: 0, bangs: 0, frags: 0, shells: 0, wand: false, cams: 0 }] });

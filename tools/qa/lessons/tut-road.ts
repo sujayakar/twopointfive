@@ -38,9 +38,9 @@ const trigger = (B: Bot, at: () => number[], secs: number, stop?: () => boolean)
   B.aim(at()); B.step(); B.I.clicked |= 1;
   try { for (let i = 0; i < secs * 60; i++) { B.aim(at()); B.I.buttons |= 1; if (i % 14 === 13) B.I.clicked |= 1; B.step(); if (stop && stop()) break; } } finally { B.I.buttons &= ~1; B.step(); }
 };
-const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.posX, 1.25, x.char.posZ];
+const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.pos[0], 1.25, x.char.pos[2]];
 const up = (x: any) => x.state !== 'dead';
-const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.posX, 1.5, P.posZ]; return !B.g.col.shotBlocked(a, chest(x)); };
+const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.pos[0], 1.5, P.pos[2]]; return !B.g.col.shotBlocked(a, chest(x)); };
 const gun = (B: Bot) => B.g.player.rifle;
 const downed = (B: Bot) => B.g.guards.filter((x: any) => !up(x)).length;
 const man = (B: Bot, route: string) => B.g.guards.find((x: any) => x.route?.name === route);
@@ -49,7 +49,7 @@ const fight = (B: Bot, n: number, secs: number, move?: () => void, who?: any[]) 
   const g = B.g, P = g.player, t0 = B.t();
   while (downed(B) < n && B.t() - t0 < secs && !P.down) {
     const w = gun(B); if (w.roundsReady === 0 && !w.reloading) { B.press('KeyR'); continue; }
-    const x = (who ?? g.guards).filter((y: any) => up(y) && line(B, y)).sort((a: any, b: any) => Math.hypot(a.char.posX - B.pos()[0], a.char.posZ - B.pos()[2]) - Math.hypot(b.char.posX - B.pos()[0], b.char.posZ - B.pos()[2]))[0];
+    const x = (who ?? g.guards).filter((y: any) => up(y) && line(B, y)).sort((a: any, b: any) => Math.hypot(a.char.pos[0] - B.pos()[0], a.char.pos[2] - B.pos()[2]) - Math.hypot(b.char.pos[0] - B.pos()[0], b.char.pos[2] - B.pos()[2]))[0];
     if (!x) { if (move) move(); else B.step(); continue; }
     trigger(B, () => chest(x), 1.2, () => !up(x) || !line(B, x));
   }
@@ -88,7 +88,7 @@ const handBack = (B: Bot, to: string) => {
 };
 /** the lane behind the sandbags, from the side door's lee to its far end */
 const lane = (B: Bot, o?: { stop?: () => boolean }) => { B.go([JAMB[0] + 0.1, 0, LANE_Z], 12, o); B.go(BAGS_END, 15, o); };
-const lastIn = (B: Bot) => { const men = B.g.guards.slice(3); return men.every((x: any, k: number) => !up(x) || Math.hypot(x.char.posX - LAST_MEN[k][0], x.char.posZ - LAST_MEN[k][2]) < 0.9); };
+const lastIn = (B: Bot) => { const men = B.g.guards.slice(3); return men.every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.9); };
 
 export const steps: Record<string, (B: Bot) => void> = {
   // THE ROAD: off the start mark, up the truck's near side and behind its cab, with the sentry's rounds going into its far side
@@ -204,7 +204,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     const g = B.g, x = man(B, 'hut'); if (!x || !up(x)) B.fail('the man behind the boards is down before his line');
     B.go([HUT.x0 - 0.7, 0, HUT_DOOR_Z + 0.15], 6, { near: 0.25 });
     B.wait(2.2); if (g.player.down) B.fail('he stood at the hut\'s doorway as the man behind the boards fired, and was hit');
-    if (!B.until(() => !up(x) || Math.hypot(x.char.posX - HUT_MAN[0], x.char.posZ - HUT_MAN[2]) < 0.5, 5)) B.fail(`the man in the back room did not come out of his nook to the boards (he is at ${x.char.posX.toFixed(2)}, ${x.char.posZ.toFixed(2)})`);
+    if (!B.until(() => !up(x) || Math.hypot(x.char.pos[0] - HUT_MAN[0], x.char.pos[2] - HUT_MAN[2]) < 0.5, 5)) B.fail(`the man in the back room did not come out of his nook to the boards (he is at ${x.char.pos[0].toFixed(2)}, ${x.char.pos[2].toFixed(2)})`);
     // (slant has put a magazine through the boards on the way to his nook: what is left of them is not asked)
     // (a burst at the door can chew the boards' near end: a line through a gap his own rounds made is his to have. What is asked is that the boards, where
     //  they still stand on the line between the two, hide the man)
@@ -259,7 +259,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   last: B => {
     const g = B.g;
     if (brk() === 'again' && !once.has('last')) { once.add('last');
-      handBack(B, 'watch'); if (g.guards.slice(3).some((x: any) => x.char.posX < POST.x1)) B.fail('again: one of the last three is inside the gate before their line (the checkpoint is from before they came)');
+      handBack(B, 'watch'); if (g.guards.slice(3).some((x: any) => x.char.pos[0] < POST.x1)) B.fail('again: one of the last three is inside the gate before their line (the checkpoint is from before they came)');
       if (downed(B) !== 3) B.fail(`again: ${downed(B)} men are down after the checkpoint at the gun (three were)`);
       replay(B, ['watch']); B.until(() => stepIs(B, 'last'), 4); B.step(30); }
     fight(B, 6, 60, () => { const x = g.guards.find(up); if (!x) return; const p = x.char.pos; if (!g.player.wall && Math.hypot(p[0] - B.pos()[0], p[2] - B.pos()[2]) > 12) B.go([p[0], 0, p[2]], 1.5, { stop: () => line(B, x) }); else B.step(10); });

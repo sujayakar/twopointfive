@@ -705,7 +705,7 @@ function phaseFile(g: Game, Q: Qrf, el: Guard[]) {
     Q.filed++; note(Q, g, `in:${i + 1}`);
   }
   for (const m of el) advance(Q, m);
-  const allIn = Q.filed >= el.length && el.every(m => (RESPONSE.on || m.char.posX > 4.4) && (m.script?.arrived || flat(m.char.pos, m.script?.goal ?? m.char.pos) < 0.9));
+  const allIn = Q.filed >= el.length && el.every(m => (RESPONSE.on || m.char.pos[0] > 4.4) && (m.script?.arrived || flat(m.char.pos, m.script?.goal ?? m.char.pos) < 0.9));
   if (allIn || Q.phaseT > FILE_GAP * el.length + (RESPONSE.on ? Math.max(6, flat(MK.muster[0] as Vec3, MK.entry[0] as Vec3) / 1.6) : 6)) { Q.phase = 'fan'; Q.phaseT = 0; note(Q, g, 'fan'); }
 }
 const sectorPoint = (p: Vec3, yaw: number, d = 5, y = 1.0): Vec3 => [p[0] + Math.sin(yaw) * d, y, p[2] + Math.cos(yaw) * d];
@@ -825,9 +825,9 @@ function startMove(g: Game, Q: Qrf, el: Guard[]) {
   route(Q, el[0], [goal], { speed: Q.moveSpeed, face: null, strafe: false, stance: 'none', upper: 'aim', aimAt: null, crouch: false });
   // the file: each man behind walks to ONE station point of his own that is moved under him a few times a second (the runner keeps a path whose goal has only
   // crept, so the walk stays a walk — squad.ts / guards.ts goTo — and re-plans when it jumps: a corner turned, a doorway threaded)
-  el.forEach((m, i) => { if (i > 0) { m.state = 'search'; const st = stationOf(Q, m); st[0] = m.char.posX; st[1] = 0; st[2] = m.char.posZ; Q.wps.delete(m); order(m, { goal: st, speed: Q.moveSpeed, face: null, strafe: false, stance: 'none', upper: 'aim', crouch: false, aimAt: aimOf(Q, m) }); } });
+  el.forEach((m, i) => { if (i > 0) { m.state = 'search'; const st = stationOf(Q, m); st[0] = m.char.pos[0]; st[1] = 0; st[2] = m.char.pos[2]; Q.wps.delete(m); order(m, { goal: st, speed: Q.moveSpeed, face: null, strafe: false, stance: 'none', upper: 'aim', crouch: false, aimAt: aimOf(Q, m) }); } });
 }
-function aimOf(Q: Qrf, m: Guard): Vec3 { let a = Q.aimPts.get(m); if (!a) { a = [m.char.posX, 1, m.char.posZ + 1]; Q.aimPts.set(m, a); } return a; }
+function aimOf(Q: Qrf, m: Guard): Vec3 { let a = Q.aimPts.get(m); if (!a) { a = [m.char.pos[0], 1, m.char.pos[2] + 1]; Q.aimPts.set(m, a); } return a; }
 function stationOf(Q: Qrf, m: Guard): Vec3 { let s = Q.stations.get(m); if (!s) { s = v3.copy(m.char.pos); Q.stations.set(m, s); } return s; }
 function phaseMove(g: Game, Q: Qrf, el: Guard[], dt: number) {
   const lead = el[0]; const T = Q.target; if (!T) { pickTarget(g, Q, el, true); return; }
@@ -854,7 +854,7 @@ function phaseMove(g: Game, Q: Qrf, el: Guard[], dt: number) {
       // sectors: two and three quarter out to their sides ahead, four looks back down the trail every few seconds
       const a = aimOf(Q, m); const yawF = Math.atan2(dir[0], dir[2]);
       const yaw = k === 3 ? (Math.sin(g.time * 0.9) > 0.3 ? yawF + Math.PI : yawF) : yawF + (k === 1 ? -1.0 : 1.0);
-      a[0] = m.char.posX + Math.sin(yaw) * 5; a[1] = 1.0; a[2] = m.char.posZ + Math.cos(yaw) * 5;
+      a[0] = m.char.pos[0] + Math.sin(yaw) * 5; a[1] = 1.0; a[2] = m.char.pos[2] + Math.cos(yaw) * 5;
       m.script!.aimAt = a;
     });
     // the point man eases off if the file has stretched (a door held them, a corner): nobody arrives alone
@@ -951,7 +951,7 @@ function phaseBreach(g: Game, Q: Qrf, el: Guard[]) {
     g.audio.play('throw', from, 0.7); lead.char.anim.tossItem(TOSS_QUICK); Q.bangs--; Q.canLandT = NaN;
     g.say(lead, 'bang out!'); note(Q, g, 'bang-out');
     // everybody's head off the doorway while it cooks
-    el.forEach((m, i) => { const away: Vec3 = [m.char.posX - n[0] * 3 + (i - 1.5) * n[2], 0.6, m.char.posZ - n[2] * 3 - (i - 1.5) * n[0]]; order(m, { aimAt: away }); });
+    el.forEach((m, i) => { const away: Vec3 = [m.char.pos[0] - n[0] * 3 + (i - 1.5) * n[2], 0.6, m.char.pos[2] - n[2] * 3 - (i - 1.5) * n[0]]; order(m, { aimAt: away }); });
     Q.phase = 'bang'; Q.phaseT = 0;
   } else { g.say(lead, 'no bang — going dry. go!'); startFlow(g, Q, el); }
 }
@@ -1100,7 +1100,7 @@ function phaseFight(g: Game, Q: Qrf, el: Guard[]) {
     m.standoff = null; m.pieing = null; m.searchPlan = null; m.state = 'search'; m.awareness = HUNT_AWARENESS;
     const yaw = f + [0, -Math.PI / 2, Math.PI / 2, Math.PI][k % 4];
     if (k === 0) order(m, { goal: null, face: f, strafe: false, stance: 'none', upper: 'aim', crouch: false, aimAt: sectorPoint(m.char.pos, f) });
-    else { const st: Vec3 = [lead.char.posX - Math.sin(f) * k * 1.1 + Math.cos(f) * (k === 1 ? 0.5 : k === 2 ? -0.5 : 0), 0, lead.char.posZ - Math.cos(f) * k * 1.1 - Math.sin(f) * (k === 1 ? 0.5 : k === 2 ? -0.5 : 0)]; route(Q, m, [nearestFree(g, st) ?? st], { speed: 2.2, face: yaw, strafe: false, stance: 'none', upper: 'aim', crouch: false, aimAt: sectorPoint(st, yaw) }); }
+    else { const st: Vec3 = [lead.char.pos[0] - Math.sin(f) * k * 1.1 + Math.cos(f) * (k === 1 ? 0.5 : k === 2 ? -0.5 : 0), 0, lead.char.pos[2] - Math.cos(f) * k * 1.1 - Math.sin(f) * (k === 1 ? 0.5 : k === 2 ? -0.5 : 0)]; route(Q, m, [nearestFree(g, st) ?? st], { speed: 2.2, face: yaw, strafe: false, stance: 'none', upper: 'aim', crouch: false, aimAt: sectorPoint(st, yaw) }); }
   });
   radio(g, lead, `lost him. on me — re-form, we clear toward ${w('', 'the ')}${roomName(g.level, fixOf(g)?.pos ?? lead.char.pos)}`);
   note(Q, g, 'regroup');

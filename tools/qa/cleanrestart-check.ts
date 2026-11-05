@@ -9,8 +9,6 @@
 // checkpoint laid over a restart (a load is not a restart: a file saved in the dark, far from the start, loads dark with the camera on its man), the switch
 // off (the fault as it was), the stands and a recording from before the table.
 //   bun run tools/qa/cleanrestart-check.ts          (probes.ts cleanrestart; CLEANRESTART_BREAK=1 must FAIL — the switch is left down where the check raises it)
-//   CLEANRESTART_BREAK=men                          one man's one column nudged in the restarted game before line 5's compare: line 5 must FAIL, naming the man and the column
-//   CLEANRESTART_BREAK=menrow                       a row taken in the restarted game's store that no man holds, before line 5's compare: line 5 must FAIL, saying how many stand
 // Both stands: the check raises the switch itself, and gives the stand the words that make a wall switch and a vehicle's lamp things to break on either.
 // Nothing here is a picture: the restart's first frames have not been seen on a GPU by this check (cleanrestart-page.cjs counts them on the software adapter).
 import { readFileSync } from 'node:fs';
@@ -26,7 +24,7 @@ const { VENT_DEFAULTS } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
-const DT = 1 / 60, BREAK = process.env.CLEANRESTART_BREAK === '1', BREAK_MEN = process.env.CLEANRESTART_BREAK === 'men', BREAK_ROW = process.env.CLEANRESTART_BREAK === 'menrow', VERBOSE = !!process.env.CLEANRESTART_VERBOSE;
+const DT = 1 / 60, BREAK = process.env.CLEANRESTART_BREAK === '1', VERBOSE = !!process.env.CLEANRESTART_VERBOSE;
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; console.error = err; } }
 const { MEN_FIELDS } = await import(`${ROOT}/src/sim/men/schema.ts`);
@@ -71,20 +69,10 @@ const ALLOW: [RegExp, string][] = [
   [/^(game\.destr\.furn\.mouthMemo|game\.col\.nav\.\w*[sS]cratch\w*)\b/, 'a memo of the last hole asked about and the path finder\'s scratch'],
 ];
 /** A MAN'S COLUMNS, FIELD BY FIELD (sim/men/schema.ts): his row may stand at another generation in a restarted game, and the store of those who left is a restart's alone, so the part is
- *  not compared as bytes (ALLOW). What is compared in its place:
- *   · how many men stand in each game's store: a row a restart leaked belongs to nobody on the lists below, and no column compare would reach him;
- *   · RAW, to the bit (a NaN is a NaN, -0 is not 0): every column that holds a number, a truth or a word of a list;
- *   · THROUGH THE MAN IT NAMES: every column of the schema's { man, also } type (MEN_THROUGH, read from the table). It holds a handle, and a handle carries a row's generation, so two games'
- *     handles to one man are different words: it is compared as what it reads as, the word or the man's id.
- *  A column on a record this compare does not walk is a difference by itself, by name: moving a new group of fields means walking it here. */
-const isThrough = (f: any) => typeof f.type === 'object' && !Array.isArray(f.type);
-const MEN_THROUGH: string[] = MEN_FIELDS.filter(isThrough).map((f: any) => f.name), MEN_RAW = MEN_FIELDS.length - MEN_THROUGH.length, MEN_WALKED = ['man', 'guard', 'player', 'sup', 'aim'];
+ *  not compared as bytes (ALLOW); every man's every column is compared here, as the fields on his objects were */
 const menDiff = (a: any, b: any): string[] => { const out: string[] = [];
-  for (const f of MEN_FIELDS) if (!MEN_WALKED.includes(f.on)) out.push(`the column ${f.on}.${f.name}: no compare here walks that record`);
-  if (a.men.standing !== b.men.standing) out.push(`game.men: ${a.men.standing} men stand in the store | ${b.men.standing}`);
-  const seen = (f: any, x: any) => { const v = x[f.name]; return isThrough(f) && v !== null && typeof v === 'object' ? `man ${v.char.id}` : v; };
-  const same = (u: any, v: any) => Array.isArray(u) ? Array.isArray(v) && u.length === v.length && u.every((n, i) => Object.is(n, v[i])) : Object.is(u, v);
-  const one = (x: any, y: any, on: string, at: string) => { for (const f of MEN_FIELDS) if (f.on === on && !(on === 'guard' && at.startsWith('game.civilians') && f.name === 'heardUpTo')) { const u = seen(f, x), v = seen(f, y); if (!same(u, v)) out.push(`${at}.${f.name}: ${String(u)} | ${String(v)}`); } };
+  const named = (v: any) => (v && typeof v === 'object' && v.char ? `man ${v.char.id}` : v);
+  const one = (x: any, y: any, on: string, at: string) => { for (const f of MEN_FIELDS) if (f.on === on && !(on === 'guard' && at.startsWith('game.civilians') && f.name === 'heardUpTo')) { const u = named(x[f.name]), v = named(y[f.name]); if (JSON.stringify(u) !== JSON.stringify(v)) out.push(`${at}.${f.name}: ${JSON.stringify(u)} | ${JSON.stringify(v)}`); } };
   const man = (x: any, y: any, on: string, at: string) => { one(x, y, on, at); one(x.char, y.char, 'man', `${at}.char`); one(x.sup, y.sup, 'sup', `${at}.sup`); one(x.aim, y.aim, 'aim', `${at}.aim`); };
   a.seats.forEach((s: any, i: number) => man(s.view.player, b.seats[i].view.player, 'player', `game.seats[${i}].player`));
   for (const k of ['guards', 'civilians']) { if (a[k].length !== b[k].length) out.push(`game.${k}: ${a[k].length} men | ${b[k].length}`); else a[k].forEach((x: any, i: number) => man(x, b[k][i], 'guard', `game.${k}[${i}]`)); }
@@ -135,7 +123,7 @@ export async function cleanrestartCheck(): Promise<boolean> {
       let nb = 0; const blast = (p: number[]) => { FR.blast(g, [p[0], 0.2, p[2]], { who: 0, serial: 900 + nb++, name: 'frag grenade', destr: { radius: FR.FRAG.destrM, power: 1 } }); steps([A, B], 20); };
       for (const d of g.doors.list.slice(0, 6)) blast([d.def.hinge[0] + 0.4, 0, d.def.hinge[1] + 0.4]);
       for (const d of g.doors.list.slice(6, 12)) { g.doors.use(d, c.pos, 0); did.opened++; }
-      for (const gd of g.guards.slice(0, 4)) blast([gd.char.posX + 0.5, 0, gd.char.posZ]);
+      for (const gd of g.guards.slice(0, 4)) blast([gd.char.pos[0] + 0.5, 0, gd.char.pos[2]]);
       g.setBlackout(86400, 'hand'); steps([A, B], 60); g.setBlackout(Infinity, 'shot'); steps([A, B], 60);   // the mains by hand, then the breaker shot
     });
     did.doorsOff = g.doors.list.filter((d: any) => d.off).length; did.dead = g.guards.filter((x: any) => x.state === 'dead').length; did.decals = g.decals.count; did.items = g.items.items.length;
@@ -179,14 +167,12 @@ export async function cleanrestartCheck(): Promise<boolean> {
         `wrecked ${JSON.stringify(a)} · fresh ${JSON.stringify(f)} · smoke cleared ${smokeCleared}× · the host told ${pictures.length}× (${pictures[0] ?? '-'}) · the camera ${camA.toFixed(3)} m from a fresh boot's (${did.far.toFixed(1)} m before) · ${vents.length} vents (${ventsSlow} run down by the blackout before), ${ventsOff} off their cycle after (${ventsRest} at rest in it), one turned round by hand put back: ${ventsWrong === 0} · tally ${JSON.stringify(st1)}`); }
 
     // ---- the whole state, one tick and ten seconds on; the run by digest
-    { const nudged = BREAK_MEN ? g.guards[0] : null; if (nudged) nudged.lastSeenT += 1;   // (the red path of the field-by-field compare: nothing but this column of this man is touched)
-      const leaked = BREAK_ROW ? g.men.enter() : -1;   // (and of the count: a row nobody holds)
-      const one = audit(g, gb); if (nudged) { console.log(`      CLEANRESTART_BREAK=men: ${one.left.filter(d => d.includes('.lastSeenT')).join(' · ') || 'the nudged column was NOT named'}`); nudged.lastSeenT -= 1; } if (leaked >= 0) { console.log(`      CLEANRESTART_BREAK=menrow: ${one.left.filter(d => d.startsWith('game.men:')).join(' · ') || 'the count was NOT compared'}`); g.men.leave(leaked); } const hashes: string[] = []; let split = -1, splitAt = '';
+    { const one = audit(g, gb); const hashes: string[] = []; let split = -1, splitAt = '';
       const run = (x: any) => { const d: any = digestGame(x, true); delete d.seq; for (const cv of d.civilians ?? []) delete cv.heard; return d; };   // (the digest less the event serial and each civilian's place in it: a number that counts up through a restart and names nothing that stands)
       for (let s = 0; s <= 10; s++) { const da = run(g), db = run(gb), ha = hashDigest(da) as string, hb = hashDigest(db) as string; hashes.push(ha); if (ha !== hb && split < 0) { split = s; splitAt = Object.keys(da).filter(k => JSON.stringify(da[k]) !== JSON.stringify(db[k])).join(', '); if (VERBOSE) for (const k of splitAt.split(', ')) console.log(`      digest ${k}:\n        ${JSON.stringify(da[k]).slice(0, 700)}\n        ${JSON.stringify(db[k]).slice(0, 700)}`); } if (s < 10) await hushed(() => steps([A, B], 60)); }
       const ten = audit(g, gb);
       line(one.left.length === 0 && ten.left.length === 0 && split < 0, '5 the game state of the wrecked level, restarted, is its untouched twin\'s one tick on and ten seconds on, and the run is the twin\'s by digest every second',
-        `one tick: ${one.n} differences, ${one.left.length} not on the list${one.left.length ? ` (${group(one.left)})` : ''} · ten seconds: ${ten.n}, ${ten.left.length} not on the list${ten.left.length ? ` (${group(ten.left)})` : ''} · digest ${split < 0 ? `the same at 0…10 s (${hashes[10]})` : `splits at ${split} s in ${splitAt}`} · the men: ${g.men.standing} stand, ${MEN_RAW} columns raw, ${MEN_THROUGH.join(' and ')} through the man they name`);
+        `one tick: ${one.n} differences, ${one.left.length} not on the list${one.left.length ? ` (${group(one.left)})` : ''} · ten seconds: ${ten.n}, ${ten.left.length} not on the list${ten.left.length ? ` (${group(ten.left)})` : ''} · digest ${split < 0 ? `the same at 0…10 s (${hashes[10]})` : `splits at ${split} s in ${splitAt}`}`);
       if (VERBOSE) for (const d of [...one.left, ...ten.left].slice(0, 60)) console.log(`      ${d.slice(0, 200)}`);
       if (VERBOSE) console.log(`      unlisted, grouped: ${group2(one.left)}`); }
 

@@ -25,7 +25,7 @@ const SET = () => {
   const def = O.defs.find(d => d.id === 'shellThere'), men = O.men('all'), who = O.squad()[0], nav = g.col.nav; let best = null;
   for (let z = 0; z < nav.H; z += 2) for (let x = 0; x < nav.W; x += 2) { if (nav.blocked[z * nav.W + x]) continue;
     const t = O.targetAt([(x + 0.5) * nav.cell, 0, (z + 0.5) * nav.cell]); if (!t || t.kind !== 'floor' || O.whyNot(def, t, men) !== null) continue;
-    const d = Math.hypot(t.at[0] - who.char.posX, t.at[2] - who.char.posZ); if (!best || d > best.d) best = { at: t.at, d }; }
+    const d = Math.hypot(t.at[0] - who.char.pos[0], t.at[2] - who.char.pos[2]); if (!best || d > best.d) best = { at: t.at, d }; }
   if (!best) return { ...r, err: 'no spot of this floor has a shot from where the team stands' };
   window.__s40 = best; r.spot = best.at; r.range = best.d;
   return r;
