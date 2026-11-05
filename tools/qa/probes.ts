@@ -20,7 +20,7 @@
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
 //     debrief: debrief-charge debrief-dom debrief-doorname debrief-loud debrief-rooms debrief-run debrief-score
-//     decals: decals-follow decals-identity decals-off decals-ring decals-sites
+//     decals: decals-follow decals-identity decals-off decals-ring decals-sit decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser
 //     dialogue: dialogue-exchange dialogue-heard dialogue-intel dialogue-lint dialogue-none dialogue-radio dialogue-sawhurt dialogue-seed dialogue-shapes
@@ -3606,6 +3606,7 @@ if (on('decals-ring', 'decals', 'all')) await run('decals-ring', async () => (aw
 if (on('decals-sites', 'decals', 'all')) await run('decals-sites', async () => (await import('./decals-probes.ts')).decalsSites());
 if (on('decals-follow', 'decals', 'all')) await run('decals-follow', async () => (await import('./decals-probes.ts')).decalsFollow());
 if (on('decals-off', 'decals', 'all')) await run('decals-off', async () => (await import('./decals-probes.ts')).decalsOff());
+if (on('decals-sit', 'decals', 'all')) await run('decals-sit', async () => (await import('./decals-probes.ts')).decalsSit());   // marks that sit in the surface (render/decals.ts MARKSIT): the stand, the header's word, a picture only, the rows; MARKSIT_BREAK=1 must fail it
 if (on('decals-identity', 'decals', 'weapons', 'all')) await run('decals-identity', async () => (await import('./decals-probes.ts')).decalsIdentity());   // (also under 'weapons': a round must be the round it was, marks or no marks)
 // ---------------------------------------------------------------- WIND (wind-probes.ts): the analytic field, the Game's sources, the particles' packing, vents[] in the level, the identity — 'wind' = the family
 if (on('wind-field', 'wind', 'all')) await run('wind-field', async () => (await import('./wind-probes.ts') as any).windField());

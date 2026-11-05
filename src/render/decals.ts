@@ -14,7 +14,7 @@
 // past CAP, resetLevelState() clears the lot.
 //
 // One buffer, four regions (word offsets exported to the shader by decalWgslConsts, so both sides read one layout):
-//   [0]                       header vec4u: count, list length, serial, 1 while marks SIT IN THE SURFACE (`sit` below; 0 = every mark drawn as it was)
+//   [0]                       header vec4u: count, list length, serial, 1 while marks SIT IN THE SURFACE (`MARKSIT` below; 0 = every mark drawn as it was)
 //   [CELL0, +CELLS_V4)        the cell table: one u32 per 1 m cell = start16 | count16 into the index list (4 cells a vec4)
 //   [LIST0, +LIST_V4)         the index list: decal indices per cell, oldest first (4 a vec4)
 //   [REC0, +3·CAP)            the records, 3 vec4 each: (pos.xyz, radius) (normal.xyz, param) (tangent.xyz, bits(kind3 | attached1 | seed12 | box16))
@@ -119,16 +119,21 @@ const SCUFF_HALF_W = 0.016;
  *  (FROZEN_HOLDS; TPS_MARKCUT=1 raises it there); in the registry (game/knobs.ts) and the journal. It was a field of one Decals that the page alone
  *  set, so the page's stand run headless did not have it (11-05). CHECK: tools/qa/hitstuff-check.ts lines 0, 5, 6 and 7 (MARKCUT_BREAK=1 fails 7). */
 export const MARKCUT = { on: false };
+/** MARKS THAT SIT IN THE SURFACE (decals.wgsl dkSit): a blast's scorch and its film of dust are drawn off round, broken by one field that every mark on a
+ *  surface shares, coloured by what they lie on, and wet where the ground is wet. The picture's alone: it is one word of the uploaded header, nothing the
+ *  game reads, so no run differs by it.
+ *  THE SWITCH: MARKSIT.on — ON in the page (`?marksit=0` = every mark as it was drawn), OFF in the module and on the frozen stand (FROZEN_HOLDS;
+ *  TPS_MARKSIT=1 raises it there); in the registry (game/knobs.ts) and the journal. It was a field of one Decals that the page alone set, so the page's stand
+ *  run headless packed the old header (11-05). CHECK: tools/qa/decals-probes.ts decalsSit (MARKSIT_BREAK=1 fails it); the picture itself:
+ *  tools/qa/marksit-page.cjs. */
+export const MARKSIT = { on: false };
 export class Decals {
   /** live decals, oldest first (the ring drops from the front) */
   readonly list: Decal[] = [];
   /** off: add() records nothing, frame() uploads nothing, the engine keeps FrameFlags.Decals down — the buffer stays exactly as it was (settings.decals mirrors in here) */
   enabled = true;
-  /** MARKS THAT SIT IN THE SURFACE (decals.wgsl dkSit; the page raises it, `?marksit=0` leaves it down): a blast's scorch and its film of dust are drawn off
-   *  round, broken by one field that every mark on a surface shares, coloured by what they lie on, and wet where the ground is wet. The picture's alone: it is
-   *  one word of the uploaded header, nothing the game reads. Set it with setSit. */
-  sit = false;
-  setSit(on: boolean) { if (this.sit !== on) { this.sit = on; this.dirty = true; } }
+  /** the header's fourth word as last UPLOADED (MARKSIT above): the table moved since = one more build and upload */
+  private sat = false;
   readonly buf: GPUBuffer;
   private data = new ArrayBuffer(DECAL_BYTES); private f32 = new Float32Array(this.data); private u32 = new Uint32Array(this.data);
   private dirty = true; private serial = 0;
@@ -196,10 +201,11 @@ export class Decals {
   frame(world: BoxWorld) {
     if (!this.enabled) return;
     this.sync(world);
+    if (MARKSIT.on !== this.sat) this.dirty = true;
     if (!this.dirty) return;
     this.build();
     this.device.queue.writeBuffer(this.buf, 0, this.data, 0, DECAL_BYTES);
-    this.stats.uploads++; this.dirty = false;
+    this.stats.uploads++; this.dirty = false; this.sat = this.u32[3] !== 0;
   }
 
   /** Pack the list: bucket every drawn decal into the 1 m cells its bounding circle overlaps (newest DECAL_MAX_PER_CELL per cell, DECAL_LIST_CAP entries in all —
@@ -235,7 +241,7 @@ export class Decals {
       u[o + 11] = (KIND_CODE[d.kind] | (d.box ? 8 : 0) | (d.seed << 4) | ((d.box ? d.boxIdx : d.pane >= 0 ? d.pane : DECAL_ANY_BOX) << 16)) >>> 0;   // box16: the ridden box, or the crack's own pane, or 'any'
       if (!d.hidden) drawn++;
     }
-    u[0] = list.length; u[1] = k; u[2] = this.serial >>> 0; u[3] = this.sit ? 1 : 0;
+    u[0] = list.length; u[1] = k; u[2] = this.serial >>> 0; u[3] = MARKSIT.on ? 1 : 0;
     this.stats.count = drawn; this.stats.listLen = k; this.stats.maxCell = maxCell; this.stats.dropped = dropped; this.stats.buildMs = performance.now() - t0;
   }
 
