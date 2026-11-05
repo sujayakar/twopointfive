@@ -7,11 +7,13 @@
 
 use crate::bricks;
 use crate::lines;
+use crate::smoke;
 use crate::maths::cos;
 use crate::world::{ASK_HOST, clamp, js_max, js_max3, js_min, smoothstep, DEG, F_GLASS};
 use prim::sqrt;
 
-/// lamps one question can carry (a level's whole list is some dozens; more is the host's own loop)
+/// lamps ONE PART of a question can carry (a level's whole list is some dozens). More lamps than this in reach of a point are asked IN PARTS: the host
+/// writes the next rows and asks again with `more`, and the six faces go on from where the part before left them (`estimate`)
 pub const MAX_LAMPS: usize = 256;
 /// DOUBLES A LAMP: where it is (x y z), its range, its radius, its kind (0 point · 1 spot · 3 panel), where it points (x y z), its outer and inner half-angles
 /// in degrees, its colour (r g b), its intensity
@@ -46,6 +48,19 @@ pub fn lamps_addr() -> usize {
     core::ptr::addr_of!(LAMPS) as usize
 }
 
+/// the six faces of the question being asked, kept from one part of its lamps to the next (`asked`): a question is asked whole, part after part, before
+/// another is begun, and whatever else the host asks of the module between two parts leaves this alone
+static mut SUM: [f64; 6] = [0.0; 6];
+/// `estimate` for the host's question (lib.rs light_estimate): the faces are summed in SUM and, as each part ends, copied to `out` for the host to read
+/// after the last
+#[allow(clippy::too_many_arguments)]
+pub fn asked(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, g: usize, stamp: f64, stands: bool, more: bool, nb: usize, k: [f64; 4], out: &mut [f64]) -> u32 {
+    let sum = unsafe { &mut *core::ptr::addr_of_mut!(SUM) };
+    let r = estimate(w, set, n, p, sigma, g, stamp, stands, more, nb, k, sum);
+    out[..6].copy_from_slice(sum);
+    r
+}
+
 /// the six axis normals the renderer's meter takes its best face over (guards.ts METER_NORMALS)
 const N6: [[f64; 3]; 6] = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]];
 
@@ -57,14 +72,21 @@ fn light_window(d: f64, range: f64) -> f64 {
     w * w
 }
 
-/// the first `n` lamps on the point `p`: the six faces go to `acc`. 0, or ASK_HOST (nothing in `acc` is then to be read). `sigma` > 0 = THE SMOKE'S
-/// SHADOW (sense.ts SENSE.bounce): a lamp no wall hides is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is
-/// `stamp`, along the very line the wall test took (bricks.rs trans under this much extinction a metre a unit of density); where the grid cannot
-/// answer the question is the host's, whose blobs can. 0 = the estimate as it always was, and neither is read.
-pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, g: usize, stamp: f64, acc: &mut [f64]) -> u32 {
+/// the first `n` lamps on the point `p`: the six faces go to `acc`. 0, or ASK_HOST (nothing in `acc` is then to be read).
+/// IN PARTS: `more` = these lamps are a later part of the question the call before began — `acc` is left as that part left it and summed on, so a list
+/// of any length is one sum in one order, the bits of a single loop over it (guards.ts lampsHere's). The faces are read after the last part alone.
+/// `sigma` > 0 = THE SMOKE'S SHADOW (sense.ts SENSE.bounce): a lamp no wall hides is dimmed by the smoke of the coarse grid of the game in slot `g`,
+/// whose block's stamp is `stamp`, along the very line the wall test took (bricks.rs trans under this much extinction a metre a unit of density). WHERE
+/// THE GRID CANNOT ANSWER THAT LINE — it holds more smoke than bricks, or `stands` is false: the host's last step found no grid standing on this level
+/// — the game's blobs do, as sense.ts CpuSmoke.along has it: the first `nb` blobs the host wrote (smoke.rs: none = clear air) under the model's numbers
+/// `k` (spread, widest, rise, rise rate; the extinction is `sigma`). 0 = the estimate as it always was, and none of these is read.
+#[allow(clippy::too_many_arguments)]
+pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, g: usize, stamp: f64, stands: bool, more: bool, nb: usize, k: [f64; 4], acc: &mut [f64]) -> u32 {
     let lamps = unsafe { &*core::ptr::addr_of!(LAMPS) };
-    for a in acc[..6].iter_mut() {
-        *a = 0.0;
+    if !more {
+        for a in acc[..6].iter_mut() {
+            *a = 0.0;
+        }
     }
     if n > MAX_LAMPS {
         return ASK_HOST;
@@ -114,9 +136,12 @@ pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, g: usize,
                 Some(false) => {}
             }
             if sigma > 0.0 {
-                let t = bricks::trans(g, stamp, p, end, sigma);
+                let mut t = if stands { bricks::trans(g, stamp, p, end, sigma) } else { -1.0 };
                 if t < 0.0 {
-                    return ASK_HOST;
+                    t = 1.0;
+                    if nb > 0 && smoke::trans(w, set, nb, p, end, sigma, k[0], k[1], k[2], k[3], &mut t) == ASK_HOST {
+                        return ASK_HOST;
+                    }
                 }
                 lum *= t;
             }

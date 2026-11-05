@@ -17,6 +17,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT, fake } from './headless.ts';
 import { probeRound, roundAnswered, roundAsked } from './round-lib.ts';
+import { cutPlanes } from './cut-rule.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { ROUND, ROUND_STATS, roundConfig, findOctagons, roundLevel, roundTape, packRoundRows, ROUND_CORE_W } = await import(`${ROOT}/src/scene/round.ts`);
@@ -51,8 +52,8 @@ async function stand(file: string, on: boolean, level?: any): Promise<any> {
 const KNOWN: Record<string, [number, number]> = {
   'bazaar.json': [6, 6], 'block-gwot.json': [0, 4], 'block-squads-gwot.json': [0, 4], 'block-squads.json': [0, 4], 'block.json': [0, 4], 'compound-gwot.json': [0, 3],
   'compound.json': [0, 3], 'consulate-gwot.json': [0, 1], 'consulate.json': [0, 1], 'crossing.json': [26, 28], 'depot-gwot.json': [0, 10], 'depot.json': [0, 10], 'glasshouse.json': [3, 5], 'gwot-yard.json': [18, 18],
-  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
-  'snatch.json': [12, 12], 'train-move.json': [13, 13], 'train-orders.json': [2, 2], 'tut-pair.json': [35, 35], 'tut-plan.json': [24, 24], 'tut-queue.json': [24, 24], 'tut-quiet.json': [14, 14],
+  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'library-hall.json': [1, 5], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
+  'snatch.json': [12, 12], 'train-move.json': [13, 13], 'train-orders.json': [2, 2], 'tut-pair.json': [35, 35], 'tut-queue.json': [24, 24], 'tut-quiet.json': [14, 14],
   'tut-road.json': [12, 12], 'tut-sky.json': [15, 22], 'tut-kit.json': [31, 31], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'tut-team.json': [15, 22], 'vault.json': [10, 10],
 };
 /** A LEVEL'S COUNT IN A FILE OF ITS OWN: `tools/qa/fixtures/round/<name>.txt` holds the two numbers of `levels/<name>.json`'s row (as its file has it, then with
@@ -110,13 +111,7 @@ function gpuIsectPrism(b: any, o: Vec3, d: Vec3, tmax: number, rows: Float32Arra
   const tmn = [0, 0, 0], tmx = [0, 0, 0]; let tN = -Infinity, tF = Infinity;
   for (let a = 0; a < 3; a++) { const inv = f(1 / (Math.abs(ld[a]) < 1e-8 ? (ld[a] < 0 ? -1e-8 : 1e-8) : ld[a])); const tA = f((-h[a] - lo[a]) * inv), tB = f((h[a] - lo[a]) * inv); tmn[a] = Math.min(tA, tB); tmx[a] = Math.max(tA, tB); tN = Math.max(tN, tmn[a]); tF = Math.min(tF, tmx[a]); }
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
-  let code = 7;
-  for (let k = 0; k < 8; k++) { const n = [rows[k * 4], rows[k * 4 + 1], rows[k * 4 + 2]], w = rows[k * 4 + 3];
-    if (n[0] === 0 && n[1] === 0 && n[2] === 0) break;
-    const den = f(dot(n, ld)), num = f(w - f(dot(n, lo)));
-    if (den < 0) { const t = f(num / den); if (t > tN) { tN = t; code = -1 - k; } }
-    else if (den > 0) tF = Math.min(tF, f(num / den));
-    else if (num < 0) return [-1, 0]; }
+  let code: number; [tN, tF, code] = cutPlanes(rows, lo, ld, tN, tF, f);   // (the two fours: tools/qa/cut-rule.ts)
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
   if (tN < 0) return [0, 7];
   if (code < 0) return [tN, code];
@@ -142,11 +137,11 @@ export async function roundCheck(): Promise<boolean> {
         const L = levelOf(f), n = findOctagons(L.boxes).length, kn = known(f); const file = flat(L.boxes), count = L.boxes.length;
         if (n !== kn) wrong.push(`${f}: ${n} found, known ${kn}`);
         { const took = new Set<number>(); for (const i of findOctagons(L.boxes)) for (let k = 0; k < 4; k++) took.add(i + k);   // a ring the rule did not take: four solid boxes in a row at one centre, each 45° on from the last
-          const B = L.boxes; for (let i = 0; i + 3 < B.length; i++) { if (took.has(i) || B[i].flags !== 0 || B[i].rot || B[i].h[0] < 0.19) continue; let ring = true; for (let k = 1; k < 4 && ring; k++) ring = B[i + k].flags === 0 && Math.hypot(B[i + k].c[0] - B[i].c[0], B[i + k].c[2] - B[i].c[2]) < 0.002 && Math.abs(B[i + k].yaw - B[i].yaw - k * Math.PI / 4) < 0.01 && Math.abs(B[i + k].h[0] - B[i].h[0]) < 0.005; if (ring) { loose++; wrong.push(`${f}: boxes ${i}‥${i + 3} are a ring of four the rule left`); } } }
+          const B = L.boxes; for (let i = 0; i + 3 < B.length; i++) { if (took.has(i) || B[i].flags !== 0 || B[i].rot) continue; let ring = true; for (let k = 1; k < 4 && ring; k++) ring = B[i + k].flags === 0 && Math.hypot(B[i + k].c[0] - B[i].c[0], B[i + k].c[2] - B[i].c[2]) < 0.002 && Math.abs(B[i + k].yaw - B[i].yaw - k * Math.PI / 4) < 0.01 && Math.abs(B[i + k].h[0] - B[i].h[0]) < 0.005; if (ring) { loose++; wrong.push(`${f}: boxes ${i}‥${i + 3} are a ring of four the rule left`); } } }
         if (n) files++; total += n;
         const made = roundLevel(L.boxes, true, L.markTexel), again = roundLevel(L.boxes, true, L.markTexel);
         const rounds = L.boxes.filter((b: any) => b.round === true), specks = L.boxes.filter((b: any) => b.was && !b.round);
-        const good = rounds.every((b: any) => b.h[0] === b.h[2] && b.h[0] > 0.19 && b.yaw === 0 && b.flags === 0 && !b.cut && !b.rot) && specks.every((b: any) => (b.flags & BoxFlag.NoPrimary) && (b.flags & BoxFlag.NoShadow) && b.h[0] === 0.01);
+        const good = rounds.every((b: any) => b.h[0] === b.h[2] && b.h[0] > 0 && b.yaw === 0 && b.flags === 0 && !b.cut && !b.rot) && specks.every((b: any) => (b.flags & BoxFlag.NoPrimary) && (b.flags & BoxFlag.NoShadow) && b.h[0] === 0.01);
         if (made !== n || again !== n || rounds.length !== n || specks.length !== 3 * n || L.boxes.length !== count || !good) { shape++; wrong.push(`${f}: ${made}/${again} made of ${n}, ${rounds.length} round, ${specks.length} specks`); }
         if (roundLevel(L.boxes, false) !== 0 || flat(L.boxes) !== file || L.boxes.some((b: any) => b.was || b.round)) { back++; wrong.push(`${f}: not put back`); }
       }
@@ -200,18 +195,28 @@ export async function roundCheck(): Promise<boolean> {
         '4 at the brazier, all the way round (nothing stands near it on any side): a line of sight that grazes the barrel just inside its radius is stopped and one a hair outside is free, a round fired at it from beside it and from across the yard stops on the curve with the normal straight out, and a man walked into it or put half way to its middle stands at the barrel\'s radius plus his own — where the kit\'s octagon lets some of the inner lines by, stops some of the outer ones, turns a round\'s normal and holds a man at different distances',
         `of ${N} sides: inside ${A.inStopped} stopped (octagon ${O.inStopped}), outside ${A.outStopped} stopped (octagon ${O.outStopped}) · ${A.shotGood} of ${A.shotOpen} rounds on the curve, the furthest ${A.shotOff.toExponential(1)} m from it (octagon ${O.shotGood} of ${O.shotOpen}, ${O.shotOff.toFixed(4)} m) · ${A.bodyOpen} men left at most ${A.sunk.toExponential(1)} m inside it and ${A.apart.toExponential(1)} m clear of it (octagon ${O.sunk.toFixed(4)} and ${O.apart.toFixed(4)})${open ? '' : ` · NOT OPEN all round: ${A.outOpen} lines, ${A.shotOpen} rounds, ${A.bodyOpen} men (octagon ${O.outOpen}, ${O.shotOpen}, ${O.bodyOpen})`}`); }
 
-    // (4b) the game's own: Sam put inside the barrel is stood outside it, a round thing the wall engine can chew is one cell, and a save
+    // (4b) the game's own: Sam put inside the barrel is stood outside it, a round thing the wall engine can chew (wood: never a drum) is one cell, and a save
     { const pl = game.player.char, c = drum.c; let lo = Infinity, hi = 0;
       for (let k = 0; k < 8; k++) { const a = (k + 0.3) / 8 * Math.PI * 2; game.teleportPlayer([c[0] + Math.cos(a) * 0.1, 0, c[2] + Math.sin(a) * 0.1]); for (let i = 0; i < 3; i++) W.step(DT); const d = Math.hypot(pl.pos[0] - c[0], pl.pos[2] - c[2]); lo = Math.min(lo, d); hi = Math.max(hi, d); }
       const want = drum.h[0] + pl.radius;
-      const T: any = await stand('tut-pair.json', true), T0: any = await stand('tut-pair.json', false);   // (a level whose kit has drums in a paint the wall engine reads as wood, on either stand)
-      const walls = T.game.destr.walls, chew: number[] = [], cells: number[] = []; T.game.col.boxes.forEach((b: any, i: number) => { const br = b.round === true ? walls.breakableAt(i) : null; if (br) { chew.push(i); cells.push(br.cells); } });
-      const offChew = [0, 1, 2, 3].filter(k => chew.length > 0 && T0.game.destr.walls.breakableAt(chew[0] + k)).length;
+      // (A ROUND THING OF WOOD, STOOD BY THE CHECK: a post of poplar a drum's size, written as the kit writes a round, on clear ground in the pass's yard. No
+      // level file has to hold one for this line to ask: until 11-05 twenty levels' olive drums were such things by their colour alone, and a drum is
+      // steel in any paint now, gwotKit.ts steelIn; what is left in the files are two lived things, which the frozen stand does not stand)
+      const { roundSlabs } = await import(`${ROOT}/src/scene/gwotKit.ts`), { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`), { wordFor } = await import(`${ROOT}/src/scene/stuff.ts`);
+      const POST = [22.0, 16.5] as const, atPost = (b: any) => Math.hypot(b.c[0] - POST[0], b.c[2] - POST[1]) < 0.01;
+      const withPost = () => { const L = levelOf('pass.json');
+        // (the ground it stands on is asked free: nothing a hand high or more within a drum's width of its rim, so what is found there below is the post)
+        const crowd = L.boxes.filter((b: any) => { if (b.c[1] + b.h[1] < 0.1) return false; const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), dx = POST[0] - b.c[0], dz = POST[1] - b.c[2]; return Math.hypot(Math.max(Math.abs(cs * dx - sn * dz) - b.h[0], 0), Math.max(Math.abs(sn * dx + cs * dz) - b.h[2], 0)) < 0.29 + 0.58; });
+        if (crowd.length) throw new Error(`round-check 4b: the post's ground at (${POST.join(', ')}) in the pass is not free any more (${crowd.length} things within a drum's width): stand it elsewhere`);
+        for (const sl of roundSlabs(0.29) as { hx: number; hz: number; yaw: number; drop: number }[]) L.boxes.push(makeBox({ c: [POST[0], (0.88 - sl.drop) / 2, POST[1]], h: [sl.hx, (0.88 - sl.drop) / 2, sl.hz], yaw: sl.yaw, albedo: GWOT_PALETTE.poplar, ...wordFor(GWOT_PALETTE.poplar) })); return L; };   // (… and says what it is, as a kit's box does: scene/stuff.ts wordFor)
+      const T: any = await stand('pass.json', true, withPost()), T0: any = await stand('pass.json', false, withPost());
+      const walls = T.game.destr.walls, chew: number[] = [], cells: number[] = []; T.game.col.boxes.forEach((b: any, i: number) => { const br = b.round === true && atPost(b) ? walls.breakableAt(i) : null; if (br) { chew.push(i); cells.push(br.cells); } });
+      const offChew = T0.game.col.boxes.filter((b: any, i: number) => atPost(b) && T0.game.destr.walls.breakableAt(i)).length;
       const SS: any = await import(`${ROOT}/src/game/savestate.ts`); let own = 'not asked', across = 'not asked';
       try { own = String(SS.canLoad(game, JSON.parse(JSON.stringify(SS.saveState(game))))); across = String(SS.canLoad(game, JSON.parse(JSON.stringify(SS.saveState(off.game))))); } catch (e) { own = `threw ${String(e).slice(0, 80)}`; }
-      line(lo >= want - 1e-3 && hi - lo < 0.005 && (BREAK || (chew.length > 0 && cells.every(n => n === 1) && offChew === 4)) && own === 'null' && across === 'null',
-        '4b in the game: Sam put inside the barrel from eight sides is stood outside it at one distance from its middle, its radius plus his own or more; on a level with drums the wall engine can chew, each is one breakable of one cell where the octagon was four, so it goes whole and never as pieces of the box round it; a checkpoint of the pass with its round things round loads, and so does one made with the switch down and nothing broken',
-        `he stands ${lo.toFixed(3)}‥${hi.toFixed(3)} m out, at least ${want.toFixed(3)} · tut-pair: ${chew.length} round things breakable, cells ${cells.join(',') || 'none'} (the octagon at the first: ${offChew} of its four slabs breakable) · canLoad its own: ${own} · one from the switch down: ${across}`); }
+      line(lo >= want - 1e-3 && hi - lo < 0.005 && (BREAK || (chew.length === 1 && cells[0] === 1 && offChew === 4)) && own === 'null' && across === 'null',
+        '4b in the game: Sam put inside the barrel from eight sides is stood outside it at one distance from its middle, its radius plus his own or more; a round thing of wood stood in the pass\'s yard, which the wall engine can chew, is one breakable of one cell where the octagon was four, so it goes whole and never as pieces of the box round it; a checkpoint of the pass with its round things round loads, and so does one made with the switch down and nothing broken',
+        `he stands ${lo.toFixed(3)}‥${hi.toFixed(3)} m out, at least ${want.toFixed(3)} · the post of poplar: ${chew.length} round thing breakable where it stands, cells ${cells.join(',') || 'none'} (with rounds off: ${offChew} slabs breakable there, the octagon's four) · canLoad its own: ${own} · one from the switch down: ${across}`); }
 
     // (4c) EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND: each level that holds one stood up with the switch, and every round box in it handed to the same routine,
     // its middle, half height and radius written out from what the level authored (Box.was). Asked twice: of this file's answers, and inside a tick with the Rust

@@ -246,7 +246,7 @@ export class Tween {
       if (this.capSave.length < words) this.capSave = new Float64Array(Math.max(words, 8 * CW));
       for (let w = 0; w < words; w++) this.capSave[w] = D[w];
       if (this.boundSave.length < cn * 4) this.boundSave = new Float64Array(Math.max(cn, 16) * 4);
-      this.capSaved = words; this.boundSaved = cn * 4; for (let w = 0; w < cn * 4; w++) this.boundSave[w] = W.infoF32[24 + w];
+      this.capSaved = words; this.boundSaved = cn * 4; for (let w = 0; w < cn * 4; w++) this.boundSave[w] = W.infoF32[BoxWorld.INFO_BOUNDS + w];
       for (let c = 0; c < cn; c++) {
         const id = W.capsuleU32[c * CW + 7] & 0xff; let pcI = -1; let dup = 0;
         for (let j = 0; j < P.capN; j++) if (P.capOwner[j] === id) { pcI = j; dup++; }
@@ -259,7 +259,7 @@ export class Tween {
           for (let j = 0; j < 6; j++) { const e = ENDS[j], was = this.capSave[o + e]; D[o + e] = pc[q + e] + (was - pc[q + e]) * a; }
           mx += D[o] - this.capSave[o]; my += D[o + 1] - this.capSave[o + 1]; mz += D[o + 2] - this.capSave[o + 2]; real++;
         }
-        if (real) { const bo = 24 + c * 4; W.infoF32[bo] += mx / real; W.infoF32[bo + 1] += my / real; W.infoF32[bo + 2] += mz / real; }   // (the game's own cull sphere rides with the mean move of his records; a rig fit rebuilds it from the ends at the upload)
+        if (real) { const bo = BoxWorld.INFO_BOUNDS + c * 4; W.infoF32[bo] += mx / real; W.infoF32[bo + 1] += my / real; W.infoF32[bo + 2] += mz / real; }   // (the game's own cull sphere rides with the mean move of his records; a rig fit rebuilds it from the ends at the upload)
       }
     }
   }
@@ -274,7 +274,7 @@ export class Tween {
     rl.length = 0; this.rlp.length = 0; this.rld.length = 0;
     const W = this.host.world, D = W.capsuleData;
     for (let o = 0; o < this.capSaved; o += 8) for (let j = 0; j < 6; j++) D[o + ENDS[j]] = this.capSave[o + ENDS[j]];
-    if (!W.rig) for (let w = 0; w < this.boundSaved; w++) W.infoF32[24 + w] = this.boundSave[w];
+    if (!W.rig) for (let w = 0; w < this.boundSaved; w++) W.infoF32[BoxWorld.INFO_BOUNDS + w] = this.boundSave[w];
     this.capSaved = 0; this.boundSaved = 0;
     if (this.spentAt >= 0) { const L = this.host.lights.lights; for (const l of this.spent) { const i = L.lastIndexOf(l); if (i >= this.spentAt) L.splice(i, 1); } }
     this.spent.length = 0; this.spentAt = -1;

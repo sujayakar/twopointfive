@@ -1,5 +1,5 @@
 // The 'wind' family (game/wind.ts — the building's air as ONE analytic field for the particles and the smoke solver), run through probes.ts:
-//   bun run tools/qa/probes.ts wind | wind-field | wind-sources | wind-caps | wind-level | wind-identity   [--verbose] [--print]
+//   bun run tools/qa/probes.ts wind | wind-field | wind-sources | wind-caps | wind-level   [--verbose]
 // PASS / FAIL each, all headless:
 //   wind-field     the field's numbers at known points off the CPU copy (jetVel / stormVel): full speed just under a diffuser's face, half at its reach on the axis,
 //                  nothing behind the face / past dMax / outside the Gaussian's 2.6 σ, the wall jet turning outward under WIND_FIELD.deflectH and nothing under the
@@ -16,12 +16,8 @@
 //                  speed-0 sources skipped; the WGSL side reads them the same way (windAir over [numImps, numImps+numWinds), P_KINDS agreeing with particles.ts, WindKnobs' three)
 //   wind-level     vents[] in the file: six parsed with their names / cycling / mains, validate clean, the Level → data → Level round trip keeps every optional
 //                  field, a level with no vents block loads with none and its Game has only the storm + doors
-//   wind-identity  the master OFF is the game byte for byte: three seeded minutes of the live floor (patrols, a smoke can popped, a shot into the wall, a door
-//                  kicked) digested per frame — tune.wind 0 ≡ tune.wind 1 ≡ moths off ≡ the digest FROZEN on the tree before wind.ts (headless the GPU
-//                  consumers do not exist, so this is the CPU game's identity: wind and the moths touch no game state and no dice)
 import { standUp, ROOT, fake } from './headless.ts';
 import type { Vec3 } from './headless.ts';
-// (game/wind.ts is imported LAZILY: wind-identity's run must also load on the tree from before the lane, where the file does not exist — see EXPECT_IDENTITY)
 let jetVel: any, stormVel: any, WIND: any, WIND_FIELD: any, WIND_STATS: any, Wind: any;
 async function windModule() { const m: any = await import(`${ROOT}/src/game/wind.ts`); ({ jetVel, stormVel, WIND, WIND_FIELD, WIND_STATS, Wind } = m); return m; }
 const { INTERIOR, ANNEX } = await import(`${ROOT}/src/game/weather.ts`);
@@ -34,7 +30,6 @@ const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
-const PRINT = process.argv.includes('--print');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x)), f3 = (x: number) => (Number.isFinite(x) ? x.toFixed(3) : String(x));
 const len = (v: number[]) => Math.hypot(v[0], v[1], v[2]);
@@ -100,6 +95,12 @@ export async function windField(): Promise<boolean> {
     const want: [string, number][] = [['WIND_DEFLECT_H', WIND_FIELD.deflectH], ['WIND_DEFLECT_LOSS', WIND_FIELD.deflectLoss], ['WIND_SUPPORT_SIG', WIND_FIELD.supportSigma], ['WIND_STORM_TOP', WIND_FIELD.stormTop], ['WIND_STORM_LEE', WIND_FIELD.stormLee]];
     const fails: string[] = [];
     for (const [k, v] of want) { const m = new RegExp(`const ${k}: f32 = ([0-9.]+);`).exec(wg); if (!m) fails.push(`${k} missing`); else if (Math.abs(parseFloat(m[1]) - v) > 1e-9) fails.push(`${k} = ${m[1]} ≠ ${v}`); }
+    // (…and the storm's rise with height, which the game's own smoke drifts by too — sense.ts SENSE.drift: written out in both of the shader's storm functions)
+    { const rise = [...wg.matchAll(/let hgt = ([0-9.]+) \+ ([0-9.]+) \* clamp\(p\.y \/ ([0-9.]+), 0\.0, 1\.0\);/g)];
+      if (rise.length !== 2) fails.push(`the storm's rise with height is written ${rise.length} times (want 2: windStorm, windStormRoofs)`);
+      for (const m of rise) if (parseFloat(m[1]) !== WIND_FIELD.stormLow || parseFloat(m[2]) !== WIND_FIELD.stormGain || parseFloat(m[3]) !== WIND_FIELD.stormFullAt) fails.push(`the storm's rise with height ${m[1]} + ${m[2]} × y / ${m[3]} ≠ WIND_FIELD ${WIND_FIELD.stormLow} + ${WIND_FIELD.stormGain} × y / ${WIND_FIELD.stormFullAt}`); }
+    { const pw = await Bun.file(`${ROOT}/src/render/shaders/particles.wgsl`).text(), m = /let h = \(([0-9.]+) \+ ([0-9.]+) \* clamp\(p\.y \/ ([0-9.]+), 0\.0, 1\.0\)\) \/ ([0-9.]+);/.exec(pw);   // (…and the wisps' share of it, particles.wgsl wispShare: the same three, over the first)
+      if (!m) fails.push('particles.wgsl wispShare: the storm\'s rise with height is not written as it was'); else if (parseFloat(m[1]) !== WIND_FIELD.stormLow || parseFloat(m[2]) !== WIND_FIELD.stormGain || parseFloat(m[3]) !== WIND_FIELD.stormFullAt || parseFloat(m[4]) !== WIND_FIELD.stormLow) fails.push(`particles.wgsl wispShare: (${m[1]} + ${m[2]} × y / ${m[3]}) / ${m[4]} ≠ WIND_FIELD`); }
     if (!/fn windJet\(pos: vec3f, dir: vec3f, speed: f32, reach: f32, tanSpread: f32, r0: f32, dMax: f32, floorY: f32, p: vec3f\) -> vec3f/.test(wg)) fails.push('windJet signature changed (particles.wgsl windAir and smoke/wind_force.wgsl both call it positionally)');
     if (!/fn windStorm\(windV: vec3f, interior: vec4f, annex: vec4f, p: vec3f\) -> vec3f/.test(wg)) fails.push('windStorm signature changed');
     const sm = await Bun.file(`${ROOT}/src/smoke/smoke.ts`).text(), pt = await Bun.file(`${ROOT}/src/render/particles.ts`).text();
@@ -277,8 +278,11 @@ export async function windLevel(): Promise<boolean> {
   { const errs: string[] = validateLevelData(D);
     const grille = D.boxes.filter((b: any) => b.group === 'ceiling.vents');
     const under = (D.vents ?? []).every((v: any) => grille.some((b: any) => Math.abs(b.c[0] - v.pos[0]) < 1e-9 && Math.abs(b.c[2] - v.pos[2]) < 1e-9 && (b.flags ?? []).includes('NoPrimary')));
-    const last = D.boxes.slice(-grille.length).every((b: any) => b.group === 'ceiling.vents');
-    F.verdict(errs.length === 0 && grille.length === (D.vents ?? []).length && under && last, 'the file validates clean; one NoPrimary grille box per vent right over its face (group ceiling.vents), and those boxes are the LAST in the list (no older index moved)', `${errs.length} errors · ${grille.length} grille boxes · under every vent ${under} · last ${last}`);
+    // (the file's LIVED TIER — groups `lived.*`, the tail a stand may load without: scene/lived.ts — comes after every box of the level's own, the grilles too.
+    //  The office had none when this line was written, and the hand pass's 62 boxes after the grilles turned it red)
+    const lived = (b: any) => String(b.group ?? '').startsWith('lived.'), own = D.boxes.filter((b: any) => !lived(b));
+    const last = D.boxes.slice(own.length).every(lived) && own.slice(-grille.length).every((b: any) => b.group === 'ceiling.vents');
+    F.verdict(errs.length === 0 && grille.length === (D.vents ?? []).length && under && last, 'the file validates clean; one NoPrimary grille box per vent right over its face (group ceiling.vents), and those boxes are the LAST of its own boxes in the list (no older index moved; only the lived tier comes after)', `${errs.length} errors · ${grille.length} grille boxes · under every vent ${under} · last ${last} · ${D.boxes.length - own.length} boxes of the lived tier after them`);
   }
   { const back = levelToData(L, { name: 'rt', materials: D.materials }); const L2 = loadLevel(back);
     const same = JSON.stringify(L.vents) === JSON.stringify(L2.vents) && JSON.stringify(back.vents) === JSON.stringify(D.vents);
@@ -290,62 +294,3 @@ export async function windLevel(): Promise<boolean> {
   }
   return F.done();
 }
-
-// ---------------------------------------------------------------- wind-identity
-/** Three seeded minutes of the live floor: the shift patrolling with the AI on, Sam invisible in the west aisle; at 5 s a smoke can popped under the aisle vent (the
- *  throwables → the smoke stand-in), at 40 s a suppressed round into the corridor partition, at 80 s the server door kicked in, at 120 s a stun can. Per frame: every
- *  man's state / position / yaws / awareness / waypoint / wait / path, Sam, the event / message / item counts, the escalation, every leaf's angle, the smoke
- *  stand-in's emit count. */
-async function identityRun(windK: number, extras: boolean): Promise<{ digest: string; frames: number; marks: string }> {
-  Math.random = seeded(6601);
-  const W = await standUp(); const { game } = W; const pl = game.player;
-  game.godMode = true; game.aiEnabled = true;
-  game.tune.wind = windK; game.tune.moths = extras;
-  game.tune.civilians = true; ((await import(`${ROOT}/src/game/civilians.ts`)) as any).CIV.greet = true;   // THE PROFILE the frozen digest was taken under, pinned rather than inherited (see the note over EXPECT_IDENTITY): civilians on the floor WITH greetings —
-                                                          // both were the defaults at the freeze and a probe run earlier in the same process can no longer tint them (probes.ts run() also restores the knob tables)
-  let emits = 0; const emit0 = W.smoke.emit; W.smoke.emit = (e: any) => { emits++; return emit0.call(W.smoke, e); };
-  for (let i = 0; i < 5; i++) W.step(DT);
-  game.teleportPlayer([13.4, 0, 17.5]); game.playerInvisible = true; pl.crouch = true;
-  const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-  const D = new Digest(); let marks = '';
-  const FRAMES = 180 * 60;
-  for (let frame = 0; frame < FRAMES; frame++) {
-    pl.visibility = 0.02;
-    if (frame === 5 * 60) game.items.spawn('smoke', [20.3, 1.0, 14.95], [0.2, 0, 0.1], { who: PLAYER_ID });    // a smoke can dropped under the aisle vent: its fuse, its plume into the smoke stand-in (the emit count is digested), the men who see it
-    if (frame === 40 * 60) fireWeapon(game, pl.char, [16.0, 1.2, 12.3], true);                              // a suppressed round into the corridor partition
-    if (frame === 80 * 60) { const d = game.doors.byName('server'); game.doors.kickIn(d, [17.7, 0, 10.9], PLAYER_ID); }   // the server door kicked through (heard floor-wide)
-    if (frame === 120 * 60) game.items.spawn('flash', [19.5, 1.0, 16.0], [0, 0, 0.2], { who: PLAYER_ID });   // a stun can on the aisle: the bang, the dazzle, the search
-    W.step(DT);
-    for (const gd of game.guards) { D.add(gd.state); D.vec(gd.char.pos); D.num(gd.char.bodyYaw); D.num(gd.char.aimYaw); D.num(gd.awareness); D.num(gd.wp); D.num(gd.wait); D.num(gd.path.length); D.num(gd.pathI); }
-    D.vec(pl.char.pos); D.num(game.events.length); D.num(game.messages.length); D.num(game.escalation); D.num(game.items.items.length); D.num(emits);
-    for (const d of game.doors.list) D.num(d.angle);
-    if (frame % 900 === 0) marks += game.guards.map((g: any) => `${g.state[0]}${g.wp}`).join('') + ' ';
-  }
-  return { digest: D.hex, frames: FRAMES, marks };
-}
-class Digest {
-  h = 0x811c9dc5 >>> 0; n = 0;
-  add(s: string) { for (let i = 0; i < s.length; i++) { this.h ^= s.charCodeAt(i); this.h = Math.imul(this.h, 0x01000193) >>> 0; } this.n++; }
-  num(x: number | null | undefined) { this.add(x === null || x === undefined ? '~' : String(x)); }
-  vec(p: number[] | null | undefined) { if (!p) { this.add('~'); return; } this.num(p[0]); this.num(p[1]); this.num(p[2]); }
-  get hex() { return this.h.toString(16).padStart(8, '0'); }
-}
-export async function windIdentity(): Promise<boolean> {
-  const F = family('wind-identity: tune.wind 0 ≡ tune.wind 1 ≡ moths off ≡ the digest frozen before wind.ts — three seeded minutes of the live floor (a can, a shot, a kick, a bang)');
-  const A = await identityRun(1, true), B = await identityRun(0, false), C = await identityRun(1, false);
-  if (PRINT) console.log(`\n--- measured (paste over EXPECT_IDENTITY) ---\nconst EXPECT_IDENTITY = ${JSON.stringify({ digest: B.digest, frames: B.frames, marks: B.marks })};\n`);
-  F.verdict(A.digest === B.digest && B.digest === C.digest, 'wind 1 + moths, wind 0, wind 1 alone: the same per-frame digest of everybody\'s state / position / yaws / awareness / waypoints / paths, Sam, events / messages / items / escalation, every leaf, the smoke emit count', `${A.digest} · ${B.digest} · ${C.digest} over ${A.frames} frames · ${A.marks}`);
-  const E = EXPECT_IDENTITY;
-  F.verdict(B.digest === E.digest && B.frames === E.frames, 'and equal to the digest FROZEN on main at the wind merge (2026-08-12; before that ac2c4aa): the CPU game is byte for byte what it was', `${B.digest}${B.digest === E.digest ? '' : ` — want ${E.digest} (marks then: ${E.marks}| now: ${B.marks})`}`);
-  return F.done();
-}
-// frozen by running this file's identityRun (`wind-identity --print` regenerates the literal): first on main @ ac2c4aa (4eeafb73), re-baselined at the wind merge into main on 2026-08-12 (354b99f6)
-// PROVENANCE / PROFILE of 354b99f6 (everything the seeded three minutes depend on besides wind — a change to any of these legitimately moves it; re-freeze with --print and say which):
-//   headless.ts standUp defaults: tune.chaos 0 (destruction off), aiEnabled, the office level at its 782-box export (levelFingerprint as at the wind merge), the smoke stand-in;
-//   PINNED in identityRun: tune.civilians true + CIV.greet true (Marta and Owen on the floor, greetings on — the defaults at the freeze; the wave-3 review found the run pinned
-//   neither and a CIV.greet left false by civilians-identity earlier in an `all` process would have moved it silently), godMode, Sam invisible + crouched at (13.4, 17.5);
-//   INHERITED defaults (not pinned, all ON at the freeze): tune.tactics, tune.needs, tune.devices / lasers, tune.bodyLight, tune.qrf (never triggers: nothing loud enough),
-//   tune.whistle, tune.aimModel, TALK_TUNE.scripts; Math.random = seeded(6601) for the whole run.
-//   History: 4eeafb73 on main @ ac2c4aa (pre-wind) → 354b99f6 at the wind merge; the move was BISECTED by the wave-3 review to game-core-A's intended changes alone (routed
-//   sub-gunshot placement, the capped colleague shove) — the tools / cleanup / game-B / world / gi / wind merges each left it untouched.
-const EXPECT_IDENTITY = {"digest":"354b99f6","frames":10800,"marks":"p0p0p0 s1p2s1 s1p5s1 s1s7s1 p3p2s1 p5p5p2 a6a6a2 s6s6s2 s6s6s2 s6s6s2 s6s6p2 s6p6s2 "};   // re-baselined at the merge into main (2026-08-12): the lane froze 4eeafb73 on main @ ac2c4aa, but the review fix lanes merged since (civilian hostage, bodies by light, sealed smoke, wall-exit sound propagation) legitimately move this seeded run — bisected by the wave-3 review: it is game-core-A's intended changes alone (the routed sub-gunshot placement and the capped colleague shove in the staged shot / kick / bang minutes); the tools, cleanup, game-B, world, gi and wind merges each left it untouched; the guard that matters — wind 0 ≡ wind 1 ≡ motes off — is the verdict above and held on the merged tree

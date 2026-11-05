@@ -108,7 +108,7 @@ export const seatManId = (i: number): number => i === 0 ? PLAYER_ID : NOBODY_ID 
 /** is `id` a player's man's (whoever's, whether or not that seat is in this game) */
 export const isManId = (id: number): boolean => id === PLAYER_ID || (id > NOBODY_ID && id < NOBODY_ID + SEATS.max);
 /** every seat's man, in seat order */
-export function men(g: Game): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
+export function men(g: Pick<Game, 'seats' | 'player'>): Player[] { const S = g.seats; if (S.length === 1) return [g.player]; const out: Player[] = []; for (const s of S) out.push(s.view.player); return out; }
 /** the men still up */
 export function menUp(g: Game): Player[] { return men(g).filter(p => !p.down); }
 /** is every player down (a game of one: its player is) */
@@ -162,7 +162,7 @@ export function nearestMan(g: Game, at: ArrayLike<number>): Player | null {
  *  adds its lights in the order it always did) */
 export function standMen(g: Game): void {
   for (const s of g.seats) { if (!s.index) continue; const v = s.view;
-    v.player = new PlayerMan(g.ch, spotBeside(g, v3.copy(g.level.playerSpawn), s.index), g.fn2000, s.index);
+    v.player = new PlayerMan(g.men, g.ch, spotBeside(g, v3.copy(g.level.playerSpawn), s.index), g.fn2000, s.index);
     v.player.light = g.engine.lights.add(railLightDef(v.player.char.id, g.tune.playerLight)); }
 }
 /** where seat `i`'s man stands when the first stands on `at`: `at` itself for the first; for a later one the first free floor a body fits round him, `SEATS.apart`

@@ -182,7 +182,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
         const f = frame = document.createElement('iframe'); f.className = 'kv'; f.tabIndex = -1; f.setAttribute('aria-hidden', 'true');
         key = k; sent = born = kitNow(ask.squad);
         const tier = (window as unknown as { __quality?: { current?: unknown } }).__quality?.current;   // (drawn at the tier this page stands at: no calibration of its own beside this one)
-        const raw = ask.search.replace(/^[^?]*\?/, '');
+        const raw = ask.search.replace(/^[^?]*\?/, '').split('&').filter(w => !/^adapt(=|$)/.test(w)).join('&');   // (the visit's `adapt` word stays behind: this frame is pinned to a tier, so the word would switch its whole ladder off, and its pacer counts on the ladder — ui/quality.ts visit)
         f.addEventListener('error', () => { if (frame === f) fail(k); });
         f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
         body.appendChild(f); place();

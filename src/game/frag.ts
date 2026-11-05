@@ -225,7 +225,7 @@ export type GlassView = 'blown' | 'wary' | 'counted' | 'whole';
 function throughGlass<T>(g: Game, from: Vec3, view: GlassView, fn: () => T): T {
   const gb = g.glassBreak; if (view === 'whole' || !gb || !glassBreakLive(g)) return fn();
   const size = { radius: FRAG.glassM, power: FRAG.glassPower };
-  return gb.seeThrough(view === 'blown' ? (bi, X) => gb.goingAt(bi, X) : view === 'wary' ? (bi) => gb.wouldGive(bi, from, size) : (bi, X) => gb.wouldGive(bi, from, size, X), fn);
+  return gb.seeThrough(view, from, size, fn);
 }
 /** is a burst's line from a to b stopped — by anything solid (the walk at the head of this file), and by glass as glass is to a burst */
 function burstBlocked(g: Game, a: Vec3, b: Vec3): boolean {
@@ -293,7 +293,7 @@ export function lying(gd: Guard): Vec3[] {
 }
 /** how much of those points a burst at `from` has a line to (0‥1), through the glass as `view` reckons it */
 export const lyingShows = (g: Game, from: Vec3, pts: Vec3[], view: GlassView): number => throughGlass(g, from, view, () => { let n = 0; for (const p of pts) if (!burstBlocked(g, from, p)) n++; return n / pts.length; });
-export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport { return g.fogOfWar.doing(spec.who, () => blastRaw(g, at, spec)); }   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
+export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport { return g.col.window(() => g.fogOfWar.doing(spec.who, () => blastRaw(g, at, spec))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (its sparks and dust are its thrower's doing: fogofwar.ts FOG.ours)
 function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   const F = FRAG, lethal = spec.lethalM ?? F.lethalM, wound = Math.max(lethal, spec.woundM ?? F.woundM), serial = spec.serial ?? Math.floor(g.time * 1000);
   const from: Vec3 = [at[0], at[1] + F.lift, at[2]]; const name = spec.name ?? 'frag grenade';

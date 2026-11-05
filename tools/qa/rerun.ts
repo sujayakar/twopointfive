@@ -55,6 +55,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const J = await import(`${ROOT}/src/game/journal.ts`), K = await import(`${ROOT}/src/game/knobs.ts`), { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
   const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
   const warnings: string[] = [], rc = tape.recipe as RunTape['recipe'] & { env: any; knobs: any };
+  if ((rc.words as Record<string, string> | undefined)?.QA_HOLD) return out(`this replay was recorded under a check's own arm (QA_HOLD=${(rc.words as Record<string, string>).QA_HOLD}): it is no recording of the game as it is played, and is not walked`);
   // ---- THE STAND the tape was made on: the real page plays the shipped rules, a headless tool the frozen ones unless it said TPS_PROFILE=shipped (src/host/profile.ts).
   // A page tape walked on the frozen stand parts on its first step (a room clear's fresh deal alone puts every defender on another mark), so the harness is
   // loaded and the game stood under the tape's own stand word and its other stand words (the harness reads them as it loads and as it stands), the page's boot
@@ -65,7 +66,8 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`), kept: Record<string, string | undefined> = { TPS_PROFILE: env.TPS_PROFILE };
   const setEnv = (k: string, v: string | undefined) => { if (v === undefined) delete env[k]; else env[k] = v; };
   setEnv('TPS_PROFILE', need === 'shipped' ? 'shipped' : undefined);
-  if (rc.words) for (const w of STAND_ENV as string[]) if (w !== 'TPS_PROFILE' && w !== 'TPS_SEED') { kept[w] = env[w]; setEnv(w, rc.words[w]); }
+  const { retiredEnvWord } = await import(`${ROOT}/src/sim/sim.ts`);   // (a tape from before the rows and the maths stopped being switches may carry their words: it is walked on today's rows and maths, and the word is not said again — said, it would stop this tool by name)
+  if (rc.words) for (const w of STAND_ENV as string[]) if (w !== 'TPS_PROFILE' && w !== 'TPS_SEED' && !retiredEnvWord(w)) { kept[w] = env[w]; setEnv(w, rc.words[w]); }
   let W: Headless, level: any;
   // ---- every knob table as the tape's game had it — BEFORE the game is built (a constructor may read one), after the stand-up's own writes, and after the scenario
   // is staged (a staging writes tables itself: the difficulty of the level it stands on) — and the kit cards the staging deals
@@ -73,12 +75,13 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   /** K.assignDeep, but a null on the tape is written too (a knob that is `number | null`: the wall charges carried) — only for tapes that carry their own tables */
   const put = (dst: Record<string, unknown>, src: Record<string, unknown>) => { for (const k of Object.keys(src)) { if (!(k in dst)) continue; const a = dst[k], b = src[k];
     if (plain(a) && plain(b)) put(a, b); else if (typeof a === typeof b || a === null || b === null) dst[k] = b !== null && typeof b === 'object' ? JSON.parse(JSON.stringify(b)) : b; } };
+  const SH = await import(`${ROOT}/src/scene/shapes.ts`);   // (a tape from before a box could say its shape: that switch is read as the level is stood up, too)
   const RD = await import(`${ROOT}/src/scene/round.ts`);   // (a tape from before round things were round: the switch is read as the level is stood up)
   const CL = await import(`${ROOT}/src/game/carlamps.ts`);   // (a tape from before a vehicle's lamps were light targets: the switch is read as the Game is built)
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
-    if (!plain(src.EXACT)) (reg.EXACT as { on: boolean }).on = false;
-    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); RD.roundTape(src); };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
+    if (!plain(src.POSEMATH)) (reg.POSEMATH as { singles: boolean }).singles = false;   // (a tape from before a pose's arithmetic had a rule: worked as it was — src/anim/skeleton.ts POSEMATH)
+    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); RD.roundTape(src); SH.shapesTape(src); };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
   const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown; own?: unknown; stealth?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
     Kt.kitMission(null);   // (no mission's card stands first in the table while the tape's cards are written into it)

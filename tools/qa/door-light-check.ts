@@ -2,6 +2,8 @@
 // hinge and latch jambs, over the sill), for the sun of each hour and for every lamp in range: a ray from inside the room through a point of that band to the
 // light, against the statics and the door leaves as the renderer's rays meet them (no shrink). Exit 1 if the sun of any hour crosses a shut EXTERIOR door.
 //   bun run tools/qa/door-light-check.ts [--level office.json] [--step 0.004] [--all]      (--all lists every door, not only the ones that leak)
+//   DOORLIGHT_BREAK=1 must be red: the outside doors' leaves are taken out of what the rays meet, so the sun comes through their doorways.
+//   DOORLIGHT_BREAK=alone must be red: one question is asked outside the window, and the check counts the questions that proved the copy for themselves.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -26,7 +28,13 @@ const NOSHADOW = 2, GLASS = 1 << 17, solids: any[] = [...g.engine.world.statics.
 const inSolid = (P: number[], near: any[]) => near.some((b: any) => { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), px = P[0] - b.c[0], pz = P[2] - b.c[2]; return Math.abs(P[1] - b.c[1]) < b.h[1] && Math.abs(cs * px - sn * pz) < b.h[0] && Math.abs(sn * px + cs * pz) < b.h[2]; });
 let skipped = 0;
 let red = 0, rows = 0;
-for (const d of g.doors.list) {
+const COL: any = await import(`${ROOT}/src/scene/collision.ts`), BREAK = process.env.DOORLIGHT_BREAK ?? '';
+if (BREAK === '1') { const out = new Set(g.doors.list.filter((d: any) => d.def.exterior).map((d: any) => d.box)); g.col.dynamicBoxes = g.col.dynamicBoxes.filter((b: any) => !out.has(b)); }
+const alone0 = COL.ANYTIME.proofs;
+if (BREAK === 'alone') g.col.segmentBlocked([0, 1, 0], [0, 1, 1], 0);
+// ONE WINDOW ROUND EVERY QUESTION (scene/collision.ts window): nothing below writes the box world, so the module's copy is proven once for the lot. Asked
+// one by one each line proved the copy for itself, and the check took half an hour of a core.
+g.col.window(() => { for (const d of g.doors.list) {
   const f = d.def; if (Math.abs(d.angle) > 1e-3 || d.slab) { if (ALL) log(`${f.name}: not home (angle ${d.angle.toFixed(2)}), skipped`); continue; }
   const u = [Math.cos(f.closedDir), Math.sin(f.closedDir)], w = f.width, top = d.height + 0.01;
   // the band: every point of the door's plane within BAND of the leaf's outline (inside or outside it)
@@ -57,6 +65,8 @@ for (const d of g.doors.list) {
       if (n && f.exterior && S.name.startsWith('sun')) red++; }
   }
   if (!any && ALL) log(`${f.name}: light-tight (${pts.length} band points × ${srcs.length} sources)`);
-}
+} });
+const alone = COL.ANYTIME.proofs - alone0;
+if (alone) { log(`FAIL — ${alone} question(s) of this check proved the module's copy of the box world alone: every one belongs inside the window (asked one by one the check takes half an hour)`); process.exit(1); }
 log(red ? `FAIL — the sun crosses ${red} shut exterior door × hour pairs` : `  PASS  no sun crosses a shut exterior door (${g.doors.list.length} doors, ${suns.length} hours; ${skipped} ray starts inside a solid skipped)`);
 process.exit(red ? 1 : 0);

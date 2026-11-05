@@ -112,11 +112,6 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
   'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'CMDRING', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLSHOT', 'WALLKILL', 'HARDBREATH', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT', 'RESCUEEND', 'RESCUEFLUSH', 'SNATCHOUT', 'KITLOAD', 'SQUAD40',
-  // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
-  'EXACT',
-  // which systems of the update run in the Rust module (src/sim/sim.ts): never a rule of play — a recording replays the same with a row off — but a
-  // recording says which ran, so a difference between the two is one flip to find
-  'RUST',
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
@@ -143,8 +138,20 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'FLINCH',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
+  // a round reads what a thing says it is made of (particleFx.ts HITSTUFF): a recording made with it on has its hits on a box that says its stuff read by that word, one from before by the paint's colour
+  'HITSTUFF',
+  // a mark on a cut or a round face lies where the round met it (render/decals.ts MARKCUT): a recording made with it on has such marks where the rounds went in, one from before on the plain box's face
+  'MARKCUT',
+  // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only): a recording made with it on draws its scorches and films of dust that way, one with no table for it as they were drawn before the rule
+  'MARKSIT',
+  // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
+  'COATFINISH',
+  // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a recording made with it on draws its vehicles' windows near black and polished, one with no table for it in the grey their files give them
+  'SOLIDGLASS',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
+  // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
+  'SHAPES',
   // the debris pool is dressing (debris.ts, destructionSwitch.ts DEBRIS): a recording made with it on replays the simulation's landings of thrown pieces, one from before
   // the pool's own (and so needs the pool's size it was made at)
   'DEBRIS',
@@ -198,7 +205,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // replays its squad loud through a brushed wall, and one from before the table was carried sneaks from the hold's first step
   'UNSEEN',
   // a window's bar breaks from one round (winbars.ts): a recording made with it on replays its bars going and its rounds flying on, one from before has every bar stop a round
-  'WINBARS'];
+  'WINBARS',
+  // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH): the last place of every blended and sampled pose turns on it, so a recording made with
+  // it on replays with it on, and one from before the table replays in doubles
+  'POSEMATH'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -254,8 +264,7 @@ import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
 import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
-import { EXACT } from '../math/exact';
-import { RUST } from '../sim/sim';
+import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
 import { SEATS } from './seats';
@@ -270,6 +279,9 @@ import { FRIENDS } from './friends';
 import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
+import { HITSTUFF } from './particleFx';
+import { MARKCUT, MARKSIT } from '../render/decals';
+import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -300,6 +312,7 @@ import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a 
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
 import { ROUND } from '../scene/round';   // (a scene table: no cycle)
+import { SHAPES } from '../scene/shapes';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
 /** A table's keys that are NOT knobs: data it was loaded with, or what it found at load. knobsCopy leaves them out, so putting a copy back never touches them.
@@ -352,6 +365,13 @@ export function knobRegistry(): Record<string, object> {
     LIGHTSWITCH,
     // a parked vehicle's lamps can be shot out (carlamps.ts): the switch, the broken lens's paint, how a lamp box is told from the level
     CARLAMPS,
+    // a round reads what a thing says it is made of (particleFx.ts): what it knocks out and the mark it leaves go by the box's own word before its paint's colour
+    HITSTUFF,
+    // a mark on a cut or a round face lies where the round met it (render/decals.ts): where a mark is drawn, never whether one is laid
+    MARKCUT,
+    MARKSIT,
+    COATFINISH,
+    SOLIDGLASS,
     CLEANRESTART,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,
@@ -460,10 +480,8 @@ export function knobRegistry(): Record<string, object> {
     RESCUEEND, RESCUEFLUSH,
     // a snatch ends with the man in the team's van, the squad covering the walk out by bounds (snatchout.ts)
     SNATCHOUT,
-    // the game's own maths (math/exact.ts EXACT.on: a setter — writing it puts the functions in Math's place or takes them out)
-    EXACT,
-    // which systems of the update run in the Rust module (src/sim/sim.ts RUST: setters — writing a row moves that system across)
-    RUST,
+    // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH.singles: blendPose and sampleClip's step, in both languages)
+    POSEMATH,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
@@ -499,6 +517,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
+    SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)

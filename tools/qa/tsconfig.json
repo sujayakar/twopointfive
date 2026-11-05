@@ -9,6 +9,7 @@
     "./**/*.ts",
     "../mp/**/*.ts",
     "../sim/**/*.ts",
+    "../retire/*.ts",
     "./types/**/*.d.ts",
     "../../types/**/*.d.ts",
     "../../src/debugHooks.ts"

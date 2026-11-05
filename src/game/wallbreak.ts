@@ -33,17 +33,19 @@
 // A ROUND NEVER GOES ON PAST WHAT IT HIT here: the one place a round is stopped stays combat.ts fireWeapon's `g.col.raycast` — an opened cell is simply not there
 // for the NEXT round's ray. Nothing in this module continues, splits or re-fires a round (no second round loop to keep in step with the glass goal's).
 //
-// BOUNDED: ≤ WALLS.maxPieces appended statics (a change that would need more is REFUSED — the round only scars — and counted), the lane's debris pool for what
+// BOUNDED: ≤ WALLS.maxPieces appended statics, and no more than the level left room for in the Rust module's copy of the box world as it loaded
+// (WallBreak.room: the smaller of the two; a change that would need more is REFUSED — the round only scars — and counted), the lane's debris pool for what
 // falls, ≤ WALLS.maxChanges rows. DETERMINISTIC: no Math.random, every choice hashes the module's own counter. RESET with the level (Destruction.reset): authored
 // boxes back as they were, appended statics cut off, nav re-baked. CHECKPOINTS carry it: savestate.ts files `snapshot()` and re-applies it after the restart; the
 // level fingerprint is taken over the AUTHORED statics only.
 import { Vec3, v3 } from '../math/vec';
-import { Box, BoxFlag, makeBox } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, shapeCut, wordOf } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import type { Game } from './game';
 import type { WeaponDef } from './weapons';
 import type { Destruction } from './destruction';
-import { gpuFx, paletteName, surfOf, type Surf } from './particleFx';
+import { gpuFx, type Surf } from './particleFx';
+import { doesOf } from '../scene/materials';
 import { hash01 } from './debris';
 import { NOBODY_ID } from './consts';
 import { DESTRUCTION } from './destructionSwitch';
@@ -52,6 +54,7 @@ import type { ShedBudget } from './breakTable';
 import { WallWear } from './wallwear';
 import { messOpened } from './floormess';
 import { leafRound } from './doorblast';
+import { breakRoom, type BreakRoom } from './levelfit';
 
 // ------------------------------------------------------------------ knobs
 export const WALLS = {
@@ -180,9 +183,33 @@ export class WallBreak {
   /** LOOK ONLY (wallwear.ts): what a cell shows while it is being shot — marks that grow with its count, on both faces of a thin wall */
   readonly wear = new WallWear();
 
+  /** THE ROOM THIS LEVEL LEFT FOR ITS PIECES, taken once as it loaded (levelfit.ts breakRoom): what the Rust module's copy of the box world holds beyond the
+   *  level as authored, in statics, in entries of the grid's cells and in cut rows. `rebuild` stands no piece up past it, as it stands none up past
+   *  WALLS.maxPieces: the smaller of the knob as it reads now and this. So no knob and no level walks a game past the copy's tables: a level with little
+   *  room breaks less (the round only scars, and it is counted), and it is the level's own number for its whole life, whatever is broken or put back. */
+  readonly room: BreakRoom;
   constructor(private g: Game, private destr: Destruction) {
     this.authored = g.col.boxes.length;
     this.index();
+    this.room = breakRoom(g.col, g.col.mirror.tables);
+  }
+  /** would `need` more pieces of B be more than this level may stand up? Every piece is a static, at most one cut row, and an entry in each cell of the
+   *  box it was cut from (StaticCollision.addStatic files it by that box): the three tables of the copy a piece takes room in. */
+  private over(B: Breakable, need: number): boolean {
+    const col = this.g.col, n = col.boxes.length - this.authored + need, R = this.room;
+    if (n > WALLS.maxPieces || n > R.boxes || n > R.cuts) return true;   // (every piece is counted a cut row, whatever the cut-pieces switch says now: with it off no piece takes one, and a level under a knob raised past its cut rows' room breaks a little less than the copy could hold — the switch may be turned in play, and the room was taken once)
+    if (R.items === Infinity) return false;
+    let filed = need * col.footEntries(B.box); for (const b of this.list) if (b.slots.length) filed += b.slots.length * col.footEntries(b.box);
+    return filed > R.items;
+  }
+  /** HOW MANY PIECES THE ROOM SURELY HOLDS, whichever things are broken: by the statics, by the cut rows, and by the entries if every piece were cut from
+   *  the broadest thing that can break (a breakable of the index, or a wall a charge could take on). A level where this is no less than WALLS.maxPieces
+   *  never has a piece refused for the copy's sake: the count of the shipped levels holds each to it (levelfit.ts fitRows `pieces`, copyfit-check). */
+  piecesSure(): number {
+    const col = this.g.col, R = this.room; if (R.items === Infinity) return Infinity;
+    let foot = 1; for (const b of this.list) foot = Math.max(foot, col.footEntries(b.box));
+    for (let i = 0; i < this.authored; i++) if (this.adoptable(i)) foot = Math.max(foot, col.footEntries(col.boxes[i]));
+    return Math.max(0, Math.min(R.boxes, R.cuts, Math.floor(R.items / foot)));
   }
 
   // ---------------------------------------------------------------- index
@@ -194,30 +221,30 @@ export class WallBreak {
     const roofed = (x: number, z: number) => { if (!interior) return true; const cx = Math.floor(x - WORLD.min[0]), cz = Math.floor(z - WORLD.min[2]); return cx >= 0 && cz >= 0 && cx < W && cz < H && interior[cz * W + cx] === 1; };
     for (let i = 0; i < boxes.length; i++) {
       const b = boxes[i];
-      if ((b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Dynamic)) === BoxFlag.NoShadow && b.c[1] - b.h[1] > 0.06 && b.c[0] > WORLD.min[0] && b.c[0] < WORLD.max[0] && b.c[2] > WORLD.min[2] && b.c[2] < WORLD.max[2]) this.ghosts.push(i);
+      if ((b.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Dynamic)) === BoxFlag.NoShadow && b.piece !== true && b.c[1] - b.h[1] > 0.06 && b.c[0] > WORLD.min[0] && b.c[0] < WORLD.max[0] && b.c[2] > WORLD.min[2] && b.c[2] < WORLD.max[2]) this.ghosts.push(i);
       if (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic)) continue;
       if (b.rot || b.emissive[0] + b.emissive[1] + b.emissive[2] > 0 || this.fixtureBoxes.has(i) || this.destr.itemOf(i)) continue;
       if (b.c[0] < WORLD.min[0] || b.c[0] > WORLD.max[0] || b.c[2] < WORLD.min[2] || b.c[2] > WORLD.max[2]) continue;
-      const name = paletteName(b.albedo); if (!name) continue;
+      const does = doesOf(b); if (does.wall === undefined && does.cover === undefined) continue;   // (what the box DOES, scene/materials.ts: the engine takes a wall's stuff and what is cover, by the box's word)
       const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1]; const sx = b.h[0] * 2, sz = b.h[2] * 2; const thin = Math.min(sx, sz), long = Math.max(sx, sz);
-      const part = name === 'partRed' || name === 'partBlue' || name === 'partTan';
+      const part = does.wall === 'screen';
       let kind: BKind | null = null; let surf: Surf = 'drywall';
-      if (y0 <= 0.1 && y1 >= WALLS.wallMinTop && (name === 'wall' || part)) {
+      if (y0 <= 0.1 && y1 >= WALLS.wallMinTop && does.wall !== undefined) {
         // full height in the wall paints: a partition if it is thin and has ceiling over both faces — else structure (scars only)
-        if (thin > WALLS.wallMaxThick || long < WALLS.wallMinLen || Math.abs(Math.sin(b.yaw)) > 1e-6) continue;
+        if (thin > WALLS.wallMaxThick || long < WALLS.wallMinLen || Math.abs(Math.sin(b.yaw)) > 1e-6 || shapeCut(b)) continue;   // (…or it says a SHAPE, scene/shapes.ts: a wall's cells are cut from the whole box, so a shaped one is structure)
         const alongX = sx >= sz; let in2 = 0, n = 0;
         for (const u of [-0.6, 0, 0.6]) { const px = b.c[0] + (alongX ? u * b.h[0] : 0), pz = b.c[2] + (alongX ? 0 : u * b.h[2]); n++; if (roofed(px + (alongX ? 0 : 0.6), pz + (alongX ? 0.6 : 0)) && roofed(px - (alongX ? 0 : 0.6), pz - (alongX ? 0.6 : 0))) in2++; }
         if (in2 * 2 <= n) continue;
         kind = 'wall';
       } else if (y0 <= 0.25 && y1 >= WALLS.coverMinTop && long >= WALLS.coverMinLen && thin >= 0.03) {
-        if (name === 'wood' || name === 'woodDark') surf = 'wood'; else if (name === 'cardboard') surf = 'cardboard'; else if (part && thin <= 0.13) surf = 'fabric'; else if (name === 'wall' && y1 < WALLS.wallMinTop) surf = 'drywall'; else continue;
+        if (does.cover !== undefined) surf = does.cover; else if (part && thin <= 0.13) surf = 'fabric'; else if (does.wall === 'board' && y1 < WALLS.wallMinTop) surf = 'drywall'; else continue;
         kind = 'cover';
       }
       if (!kind) continue;
       let nx = 1, ny = 1, nz = 1; const yb: number[] = [-b.h[1], b.h[1]];
       const div = (len: number) => Math.max(1, Math.round(len / WALLS.col));
       if (kind === 'wall') { if (sx >= sz) nx = Math.min(32, div(sx)); else nz = Math.min(32, div(sz)); ny = 2; yb.splice(1, 0, -b.h[1] + (WALLS.sill - y0)); }
-      else if (b.round !== true) { nx = div(sx); nz = div(sz); while (nx * nz > WALLS.coverMaxCells) { if (nx >= nz) nx--; else nz--; } }   // (ROUND THINGS, scene/round.ts: a round thing is one cell — it goes whole, for its pieces would be cut from the box round it)
+      else if (b.round !== true && !shapeCut(b)) { nx = div(sx); nz = div(sz); while (nx * nz > WALLS.coverMaxCells) { if (nx >= nz) nx--; else nz--; } }   // (ROUND THINGS, scene/round.ts: a round thing is one cell — it goes whole, for its pieces would be cut from the box round it; and so does a box that says its SHAPE, or a shape's piece, scene/shapes.ts)
       const n = nx * ny * nz;
       const B: Breakable = { id: i, kind, surf, box: b, flags0: b.flags, nx, ny, nz, yb, open: new Uint8Array(n), dmg: new Float32Array(n), slots: [], live: 0, nOpen: 0 };
       this.list.push(B); this.owner.set(i, B);
@@ -236,7 +263,7 @@ export class WallBreak {
   adoptable(index: number): boolean {
     const b = this.g.col.boxes[index]; if (!b || index < 0 || index >= this.authored || this.owner.has(index) || this.hidden.has(index)) return false;
     if (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic)) return false;
-    if (b.rot || Math.abs(Math.sin(b.yaw)) > 1e-6 || b.emissive[0] + b.emissive[1] + b.emissive[2] > 0 || this.fixtureBoxes.has(index) || this.destr.itemOf(index)) return false;
+    if (b.rot || Math.abs(Math.sin(b.yaw)) > 1e-6 || b.emissive[0] + b.emissive[1] + b.emissive[2] > 0 || this.fixtureBoxes.has(index) || this.destr.itemOf(index) || shapeCut(b)) return false;   // (…or it says a SHAPE: structure, as index has it)
     if (b.c[0] < WORLD.min[0] || b.c[0] > WORLD.max[0] || b.c[2] < WORLD.min[2] || b.c[2] > WORLD.max[2]) return false;   // (index's own bound)
     return b.c[1] - b.h[1] <= 0.1 && b.c[1] + b.h[1] >= WALLS.wallMinTop && Math.max(b.h[0], b.h[2]) * 2 >= WALLS.wallMinLen;
   }
@@ -250,7 +277,7 @@ export class WallBreak {
     if (!this.adoptable(index)) return false;
     const b = this.g.col.boxes[index], sx = b.h[0] * 2, sz = b.h[2] * 2, cols = this.hardCols(b);
     const nx = sx >= sz ? cols : 1, nz = sx >= sz ? 1 : cols, n = nx * 2 * nz;
-    const B: Breakable = { id: index, kind: 'wall', surf: surfOf(b.albedo), box: b, flags0: b.flags, nx, ny: 2, nz, yb: [-b.h[1], -b.h[1] + (WALLS.sill - (b.c[1] - b.h[1])), b.h[1]], open: new Uint8Array(n), dmg: new Float32Array(n), slots: [], live: 0, nOpen: 0, hard: true };
+    const B: Breakable = { id: index, kind: 'wall', surf: doesOf(b).surf, box: b, flags0: b.flags, nx, ny: 2, nz, yb: [-b.h[1], -b.h[1] + (WALLS.sill - (b.c[1] - b.h[1])), b.h[1]], open: new Uint8Array(n), dmg: new Float32Array(n), slots: [], live: 0, nOpen: 0, hard: true };
     this.list.push(B); this.owner.set(index, B);
     return true;
   }
@@ -298,7 +325,7 @@ export class WallBreak {
   /** the cell as a world box (for the chunk it sheds) */
   private cellBox(B: Breakable, ix: number, iy: number, iz: number): Box {
     const hx = (this.xb(B, ix + 1) - this.xb(B, ix)) / 2, hy = (B.yb[iy + 1] - B.yb[iy]) / 2, hz = (this.zb(B, iz + 1) - this.zb(B, iz)) / 2;
-    return makeBox({ c: this.cellCentre(B, ix, iy, iz), h: [hx, hy, hz], yaw: B.box.yaw, albedo: v3.copy(B.box.albedo) });
+    return makeBox({ c: this.cellCentre(B, ix, iy, iz), h: [hx, hy, hz], yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), ...wordOf(B.box) });
   }
   /** greedy boxes over the closed cells (y first: an untouched wall column stays ONE floor-to-top piece, which is what the reach masks' wall raster counts) */
   /** the world centre and half-extents of one rect of `pieces()`: what `rebuild` stands up and what `wouldOpen` forecasts, from one place so they cannot part */
@@ -319,20 +346,20 @@ export class WallBreak {
     }
     return out;
   }
-  /** Rebuild B's standing pieces from its cells. false = it would take more appended statics than the cap allows (nothing changed). */
+  /** Rebuild B's standing pieces from its cells. false = it would take more appended statics than the cap or the level's room allows (`over`; nothing changed). */
   private rebuild(B: Breakable): boolean {
     const g = this.g; const world = g.engine.world;
     if (B.nOpen === 0) { B.box.flags = B.flags0; for (let k = 0; k < B.live; k++) g.col.boxes[B.slots[k]].flags |= HIDE; B.live = 0; this.bump(); return true; }
     const rects = B.nOpen === B.open.length ? [] : this.pieces(B);
     const studs = this.destr.breaks.studs(B);   // (the cut switch: the metal uprights a shot-through partition keeps — none with it off)
     const need = rects.length + studs.length - B.slots.length;
-    if (need > 0 && (g.col.boxes.length - this.authored + need > WALLS.maxPieces || world.statics.length + need > world.maxBoxes - 768)) return false;
+    if (need > 0 && (this.over(B, need) || world.statics.length + need > world.maxBoxes - 768)) return false;
     for (let k = 0; k < rects.length; k++) {
       const { c, h } = this.rectBox(B, rects[k]);
       const cut = this.destr.breaks.ragged(B, rects[k], h);   // (the cut switch: a ragged end where the piece looks into the opening — undefined with it off)
-      if (k < B.slots.length) { const p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (cut || p.cut) { p.cut = cut; p.cutCore = cut ? this.destr.breaks.endCore(B.surf, B.box.albedo) : undefined; } if (p.name === 'stud') { p.name = 'piece'; p.albedo = v3.copy(B.box.albedo); p.rough = B.box.rough; p.metal = B.box.metal; } }
+      if (k < B.slots.length) { const p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (cut || p.cut) { p.cut = cut; p.cutCore = cut ? this.destr.breaks.endCore(B.surf, B.box.albedo) : undefined; } if (p.name === 'stud') { p.name = 'piece'; p.albedo = v3.copy(B.box.albedo); p.rough = B.box.rough; p.metal = B.box.metal; p.stuff = B.box.stuff; p.does = B.box.does; } }   // (a slot that was a stud is the wall's piece again: the wall's paint and both its words)
       else {
-        const p = makeBox({ c, h, yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), flags: B.flags0, name: 'piece', rough: B.box.rough, metal: B.box.metal, aniso: B.box.aniso }); if (cut) { p.cut = cut; p.cutCore = this.destr.breaks.endCore(B.surf, B.box.albedo); }
+        const p = makeBox({ c, h, yaw: B.box.yaw, albedo: v3.copy(B.box.albedo), flags: B.flags0, name: 'piece', rough: B.box.rough, metal: B.box.metal, aniso: B.box.aniso, ...wordOf(B.box) }); if (cut) { p.cut = cut; p.cutCore = this.destr.breaks.endCore(B.surf, B.box.albedo); }
         const i = g.col.addStatic(p, B.box); world.addStatic(p); B.slots.push(i); this.owner.set(i, B);
       }
     }
@@ -341,7 +368,7 @@ export class WallBreak {
       if (k < B.slots.length) { p = g.col.boxes[B.slots[k]]; p.c = c; p.h = h; p.flags = B.flags0; if (p.cut) { p.cut = undefined; p.cutCore = undefined; } }
       else { p = makeBox({ c, h, yaw: B.box.yaw, flags: B.flags0 }); const i = g.col.addStatic(p, B.box); world.addStatic(p); B.slots.push(i); this.owner.set(i, B); }
       p.name = 'stud'; p.flags |= BoxFlag.Thin;   // (a bare stud, 4 cm across in an opened wall: the fog of war's eye goes round it — scene/thin.ts, FOG.thin — and, under FOG.mates, a teammate's own; read by nothing else)
-      p.albedo = v3.copy(studs[j].albedo); p.rough = studs[j].rough; p.metal = studs[j].metal;
+      p.albedo = v3.copy(studs[j].albedo); p.rough = studs[j].rough; p.metal = studs[j].metal; p.does = studs[j].does;   // (its paint goes with its job, and so does what it does)
     }
     for (let k = rects.length + studs.length; k < B.slots.length; k++) g.col.boxes[B.slots[k]].flags |= HIDE;
     B.live = rects.length + studs.length; B.box.flags = B.flags0 | HIDE; this.bump();
@@ -442,7 +469,7 @@ export class WallBreak {
       const c: Vec3 = [cell.c[0] + (this.hash() - 0.5) * cell.h[0], cell.c[1] + (this.hash() - 0.3) * cell.h[1], cell.c[2] + (this.hash() - 0.5) * cell.h[2]];
       const sp = 1.2 + 2.2 * this.hash(); const v: Vec3 = [out[0] * sp + (this.hash() - 0.5) * 0.8, 0.6 + 1.4 * this.hash(), out[2] * sp + (this.hash() - 0.5) * 0.8];
       const w: Vec3 = [(this.hash() - 0.5) * 9, (this.hash() - 0.5) * 5, (this.hash() - 0.5) * 9];
-      const got = this.destr.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(cell.albedo) }), v, w, who);
+      const got = this.destr.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(cell.albedo), ...wordOf(cell) }), v, w, who);
       budget.chunks--;
       if (got) WALL_STATS.chunks++; else { WALL_STATS.chunksDemoted++; if (P) P.emit('debris', c, v3.normalize(v), 6, { speed: 2.2, speedJit: 0.7, spread: 1.0, life: 16, lifeJit: 0.3, size: 0.012, sizeJit: 0.6, color: v3.copy(cell.albedo), owner: who }); }
     }
@@ -705,7 +732,7 @@ export class WallBreak {
       const left: Box[] = [];
       if (B.nOpen + n < open.length) for (const rect of this.pieces(B, open)) {
         const { c, h } = this.rectBox(B, rect);
-        left.push(makeBox({ c, h, yaw: B.box.yaw, albedo: B.box.albedo, flags: B.flags0, name: 'piece' }));
+        left.push(makeBox({ c, h, yaw: B.box.yaw, albedo: B.box.albedo, flags: B.flags0, name: 'piece', ...wordOf(B.box) }));
       }
       out.push({ id: B.id, kind: B.kind, standing, left, cells: n, hole });
     }

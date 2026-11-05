@@ -24,6 +24,7 @@ pub mod dice;
 pub mod doors;
 pub mod falls;
 pub mod fog;
+pub mod glass;
 pub mod glow;
 pub mod hear;
 pub mod knobs;
@@ -31,12 +32,16 @@ pub mod layers;
 pub mod light;
 pub mod lines;
 pub mod maths;
+pub mod men;
 pub mod nav;
 pub mod poses;
+pub mod props;
 mod pow10;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
+pub mod items;
+pub mod slabs;
 pub mod smoke;
 pub mod state;
 pub mod world;
@@ -47,7 +52,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 15;
+pub const ABI: u32 = 28;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -126,6 +131,11 @@ pub extern "C" fn world_leaves(w: usize, set: usize, n: u32) {
         world::world(w).leaves[set] = n;
     }
 }
+/// how many things of furniture stand in world `w` now (their parts are list THING_SET of the leaves: world_leaves says how many)
+#[no_mangle]
+pub extern "C" fn world_things(w: usize, n: u32) {
+    world::world(w).things = if (n as usize) < world::MAX_THINGS { n } else { world::MAX_THINGS as u32 };
+}
 /// collision.ts segmentBlocked: −1 blocked · n ≥ 0 clear with n panes listed · −2 the pane list is full
 #[no_mangle]
 pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
@@ -135,6 +145,36 @@ pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1
 #[no_mangle]
 pub extern "C" fn lines_leaves(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32, set: i32) -> u32 {
     lines::leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set) as u32
+}
+/// how many panes of world `w` are no longer whole (the rows of its glass tables that are written: glass.rs)
+#[no_mangle]
+pub extern "C" fn world_glass(w: usize, n: u32) {
+    world::world(w).glass_n = if (n as usize) < world::MAX_GLASS { n } else { world::MAX_GLASS as u32 };
+}
+/// a burst's view of the glass of world `w` for the judgment in hand (glass.rs VIEW_*; 0 = none), and how many panes its rows name
+#[no_mangle]
+pub extern "C" fn world_view(w: usize, kind: u32, n: u32) {
+    let o = world::world(w);
+    o.view_kind = kind;
+    o.view_n = if (n as usize) < world::MAX_VIEW { n } else { world::MAX_VIEW as u32 };
+}
+/// glassbreak.ts `openAt(bi, X) || also(bi, X)`: is static `bi`, a pane of glass, open at the point (1) or not (0)
+#[no_mangle]
+pub extern "C" fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64) -> u32 {
+    let o = world::world(w);
+    ((bi as usize) < world::MAX_BOXES && glass::open(o, bi as usize, x, y, z)) as u32
+}
+/// collision.ts raycast: −1 nothing met · −2 the host answers (a ray that is not a number) · else the static's index, or 1e6 + the leaf's of list `set`;
+/// how far along and the face's normal → scratch 0 … 3. `ask` = 1 where the game has a rule for an open pane: a pane met where it is open is passed.
+#[no_mangle]
+pub extern "C" fn lines_ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: u32) -> i32 {
+    lines::ray(w, a0, a1, a2, r0, r1, r2, tmax, set, ask != 0, &mut scratch()[..4])
+}
+/// props.ts PropSystem.raycast over the furniture's parts as world `w` holds them: −1 nothing met · else which thing of the level's list; how far along,
+/// the face's normal and which part of the parts' list → scratch 0 … 4
+#[no_mangle]
+pub extern "C" fn lines_ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64) -> i32 {
+    lines::ray_things(w, a0, a1, a2, r0, r1, r2, tmax, &mut scratch()[..5])
 }
 
 // ---- a circle against the box world (collide.rs)
@@ -491,10 +531,11 @@ pub extern "C" fn pose_rig(nodes: u32, order: u32) -> u32 {
 }
 // A QUESTION OF A POSE says where the pose is (skeleton.rs): `g` = 0xffffffff → place `at` of the bench · else game `g`'s pool, the pose starting at single
 // `at` of the part. 1 = done · 0 = not a pose (or not a node), nothing written.
-/// skeleton.ts blendPose: poses `a`, `b` → `out`
+/// skeleton.ts blendPose: poses `a`, `b` → `out`. `how`: 1 = with the bench's mask · 2 = worked in singles (the rule POSEMATH.singles, said by whoever
+/// asks: the host reads its own switch as it asks, a layer of the module reads the tick's knob)
 #[no_mangle]
-pub extern "C" fn pose_blend(g: usize, a: usize, b: usize, w: f64, masked: u32, out: usize, n: usize) -> u32 {
-    skeleton::ask_blend(g, a, b, w, masked != 0, out, n) as u32
+pub extern "C" fn pose_blend(g: usize, a: usize, b: usize, w: f64, how: u32, out: usize, n: usize) -> u32 {
+    skeleton::ask_blend(g, a, b, w, how & 1 != 0, out, n, how & 2 != 0) as u32
 }
 /// PoseFK.run (root < 0) / runFrom
 #[no_mangle]
@@ -516,10 +557,11 @@ pub extern "C" fn pose_turn(g: usize, at: usize, nodes: usize, i: usize, how: u3
 pub extern "C" fn pose_ik(g: usize, at: usize, a: usize, b: usize, c: usize, flags: u32) -> u32 {
     skeleton::ask_ik(g, at, a, b, c, flags) as u32
 }
-/// skeleton.ts sampleClip: clip `clip` at time `t` into the pose (`nodes` = the pose's own count of nodes)
+/// skeleton.ts sampleClip: clip `clip` at time `t` into the pose (`nodes` = the pose's own count of nodes). `how`: 1 = the clip loops · 2 = the step
+/// between two keys worked in singles (POSEMATH.singles, as `pose_blend`)
 #[no_mangle]
-pub extern "C" fn pose_sample(g: usize, at: usize, nodes: usize, clip: usize, t: f64, looped: u32) -> u32 {
-    skeleton::ask_sample(g, at, nodes, clip, t, looped != 0) as u32
+pub extern "C" fn pose_sample(g: usize, at: usize, nodes: usize, clip: usize, t: f64, how: u32) -> u32 {
+    skeleton::ask_sample(g, at, nodes, clip, t, how & 1 != 0, how & 2 != 0) as u32
 }
 // ---- the clips a pose is sampled from (clips.rs: a character file's animations, copied in once by src/anim/skeleton.ts)
 /// a clip of `tracks` tracks is about to be written: 0 = no room, the host samples it itself
@@ -612,6 +654,67 @@ pub extern "C" fn doors_update(g: usize, w: usize) -> u32 {
     doors::update(g, w)
 }
 
+// ---- the furniture men shove (props.rs: each thing's state in the game's block, the men, the leaves and the door frames handed in)
+/// where a table of the step's hand-over is: 0 the level's facts of each thing, by row · 2 the men · 3 the leaves · 4 the door frames · 5 the noises ·
+/// 6 the step's numbers
+#[no_mangle]
+pub extern "C" fn props_addr(table: u32) -> usize {
+    props::addr(table)
+}
+/// how many rows a table holds (0, 2 … 6), how wide a row of one is (9 … 12: a thing's facts, a man, a frame, a noise), how long the part is (13), and
+/// where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn props_cap(table: u32) -> usize {
+    props::cap(table)
+}
+/// props.ts PropSystem.update for the game in slot `g`, over world `w`: how many noises were listed
+#[no_mangle]
+pub extern "C" fn props_update(g: usize, w: usize) -> u32 {
+    props::update(g, w)
+}
+/// props.ts PropSystem.settle's passes for the game in slot `g`, over world `w` (the level's furniture resolved out of its authoring overlaps as the
+/// level is stood up): how many times a thing was pushed out of a static
+#[no_mangle]
+pub extern "C" fn props_settle(g: usize, w: usize) -> u32 {
+    props::settle(g, w)
+}
+
+// ---- a leaf off its hinges, in the air (slabs.rs: each slab's state in the game's block, its door's facts handed in)
+/// where the hand-over of one slab's step is (0)
+#[no_mangle]
+pub extern "C" fn slabs_addr(table: u32) -> usize {
+    slabs::addr(table)
+}
+/// how many rows the part holds (0), how long the hand-over is (1), how long the part is (13), and where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn slabs_cap(table: u32) -> usize {
+    slabs::cap(table)
+}
+/// doorblast.ts stepSlab for one slab of the game in slot `g`, over world `w`: 0 = stepped · 1 = the host's to take (nothing written) · 2 = no such step
+#[no_mangle]
+pub extern "C" fn slabs_step(g: usize, w: usize) -> u32 {
+    slabs::step(g, w)
+}
+
+// ---- what is thrown or dropped (items.rs: each thing's state in the game's block, the pool walked in one call)
+/// where the hand-over of one walk is (0) and the events it lists (1)
+#[no_mangle]
+pub extern "C" fn items_addr(table: u32) -> usize {
+    items::addr(table)
+}
+/// how many rows the part holds (0), how long the hand-over is (1), how many events the list holds (2) and how wide one is (3), how long the part is
+/// (13), and where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn items_cap(table: u32) -> usize {
+    items::cap(table)
+}
+/// throwables.ts Throwables.update for the game in slot `g`, over world `w`, from the row the hand-over names down: 0 = every row taken · 1 = the
+/// hand-over's row is the host's to take (the rows above it were) · 2 = no such walk
+#[no_mangle]
+pub extern "C" fn items_update(g: usize, w: usize) -> u32 {
+    items::update(g, w)
+}
+
 // ---- what falls and what it leaves (falls.rs: the landings the simulation has scheduled, a list a kind of thing, and the glass lying on the floor, in the
 // game's block). `l` is the list; one the module does not have is answered as nothing.
 /// 1 = the landing waits · 0 = the list was at its cap, and its glass is laid now
@@ -690,11 +793,14 @@ pub extern "C" fn light_lamps() -> usize {
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
 }
-/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `sigma` > 0: each
-/// lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs); 0: neither is read
+/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later
+/// PART of the question the call before began (the faces are kept in light.rs SUM from part to part and summed on, not begun again).
+/// `sigma` > 0: each lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs; `stands` = 0:
+/// no grid stands there), and where the grid cannot answer by the first `nb` blobs written (smoke.rs) under `spread`, `widest`, `rise`, `rise_rate`;
+/// 0: none of those is read
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64) -> u32 {
-    light::estimate(w, set, n, [p0, p1, p2], sigma, g, stamp, &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
+    light::asked(w, set, n, [p0, p1, p2], sigma, g, stamp, stands != 0, more != 0, nb, [spread, widest, rise, rise_rate], &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
@@ -710,12 +816,15 @@ pub extern "C" fn smoke_cap() -> usize {
 pub extern "C" fn smoke_trans(w: usize, set: i32, n: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
     smoke::trans(w, set, n, [a0, a1, a2], [b0, b1, b2], sigma, spread, widest, rise, rise_rate, &mut scratch()[0])
 }
-/// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point)
+/// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point) · 2 the cells a
+/// priced search asks the price of · 3 the prices (a double a cell)
 #[no_mangle]
 pub extern "C" fn nav_addr(table: u32) -> usize {
     match table {
         0 => nav::shut_addr(),
         1 => nav::way_addr(),
+        2 => nav::need_addr(),
+        3 => nav::price_addr(),
         _ => 0,
     }
 }
@@ -731,6 +840,25 @@ pub extern "C" fn nav_cap(table: u32) -> usize {
 #[no_mangle]
 pub extern "C" fn nav_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
     nav::find_path(w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+}
+/// collision.ts NavGrid.findPath WITH a penalty: as `nav_path`, or −3 = the search has come to cells it has no price for: `nav_need` of them (a
+/// cell's index each, 32 bits) at `nav_addr(2)`. The host writes each one's price at `nav_addr(3)` (a double a cell, by index) and calls
+/// `nav_resume`, which answers as this does. While a search waits, every other search here answers −2; `nav_drop` lets a waiting one go.
+#[no_mangle]
+pub extern "C" fn nav_priced(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
+    nav::find_priced(w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+}
+#[no_mangle]
+pub extern "C" fn nav_need() -> usize {
+    nav::need_len()
+}
+#[no_mangle]
+pub extern "C" fn nav_resume() -> i32 {
+    nav::resume()
+}
+#[no_mangle]
+pub extern "C" fn nav_drop() {
+    nav::drop_run()
 }
 /// collision.ts SoundPaths.propagate, up to its memory of routed answers: hear::DIRECT (+ the grazes) / OVER / FAR / WALLED · 0xffffffff = ask the
 /// TypeScript. The straight distance → scratch 0.
@@ -766,16 +894,32 @@ pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
 /// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
 /// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs),
-/// from that many lamps written as for a question about the light
+/// from that many lamps written as for a question about the light. `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
+/// vector (m/s), by the shares of it written at `grid_wind` and its rise with height (`wind_low` of it at the ground, `wind_gain` more by
+/// `wind_full_at` metres up); there the smoke keeps `wind_keep` of its own spread
 #[no_mangle]
-pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64) -> u32 {
-    let k = bricks::K { decay, spread, rise, rise_rate, gone };
+pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64) -> u32 {
+    // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
+    let real = |v: f64| v - v == 0.0;
+    let windy = real(wind_x) && real(wind_z) && real(wind_low) && real(wind_gain) && real(wind_full_at) && real(wind_keep) && wind_low >= 0.0 && wind_gain >= 0.0 && wind_full_at > 0.0;
+    let (wind_x, wind_z) = if windy { (wind_x, wind_z) } else { (0.0, 0.0) };
+    let k = bricks::K { decay, spread, rise, rise_rate, gone, wind_x, wind_z, wind_low, wind_gain, wind_full_at, wind_keep };
     let emits = &scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }];
     if lamps < 0 {
         bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
     } else {
         bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
     }
+}
+/// where the host writes the wind's share of each square metre of the plan before a step that has wind (bricks.rs WIND: `grid_wind_cap` doubles, row
+/// by row, twice the plan's bricks to a row)
+#[no_mangle]
+pub extern "C" fn grid_wind() -> *mut f64 {
+    bricks::wind_addr()
+}
+#[no_mangle]
+pub extern "C" fn grid_wind_cap() -> usize {
+    bricks::MAX_GLOW
 }
 /// how much of the light along a → b comes through the grid's smoke (1 = clear air)
 #[no_mangle]

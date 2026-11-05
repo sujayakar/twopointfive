@@ -32,7 +32,7 @@
 // rectangles, statement for statement.
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import type { Quat } from '../math/vec';
-import { Box, BoxFlag, makeBox } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, wordOf } from '../scene/boxes';
 import type { Game } from './game';
 import type { Chunk } from './debris';
 import { hash01 } from './debris';
@@ -155,7 +155,7 @@ const cellName = (ix: number, iz: number) => (ix + 512) * 4096 + (iz + 512);
 
 export class GlassShards {
   /** THE GAMEPLAY HALF — the scheduled landings (sound + litter + at most one hearing event each) and the litter map — is the game's FallStore
-   *  (sim/fallshome.ts, `g.falls`: in TypeScript, or in the Rust module's block while RUST.falls is on). What a tool reads of it: the landings waiting … */
+   *  (sim/fallshome.ts, `g.falls`: a part of the game's block). What a tool reads of it: the landings waiting … */
   get pending(): Pending[] { const F = this.g.falls, out: Pending[] = []; for (let i = 0; i < F.waiting; i++) { const r = F.landing(i); out.push({ t: r.t, pos: [r.x, r.y, r.z], name: r.name ? 'glassShatter' : 'glassTinkle', gain: r.gain, rate: r.rate, amount: r.amount, who: r.who, event: r.event }); } return out; }
   /** births still alive, by expiry (the live estimate) */
   private lives: Life[] = []; private liveEst = 0;
@@ -486,7 +486,7 @@ export class GlassShards {
       const area = 4 * hh[long] * hh[short];
       if (area < SHARDS.childMinArea) { lost += area; continue; }
       const cc = v3.mad(b.c, L, ((a0 + a1) / 2 - 0.5) * 2 * b.h[long]);
-      const box = makeBox({ c: [cc[0], cc[1] + 0.004, cc[2]], h: hh, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), flags: BoxFlag.Dynamic });
+      const box = makeBox({ c: [cc[0], cc[1] + 0.004, cc[2]], h: hh, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), ...wordOf(b), flags: BoxFlag.Dynamic });
       const side = (j - (k - 1) / 2);
       const vel: Vec3 = v3.add(c.v, v3.add(v3.scale(L, side * (0.5 + 0.5 * h(20 + j))), [(h(30 + j) - 0.5) * 0.5, 0.3 + 0.5 * h(40 + j), (h(50 + j) - 0.5) * 0.5]));
       const w: Vec3 = [(h(60 + j) - 0.5) * 12, (h(70 + j) - 0.5) * 6, (h(80 + j) - 0.5) * 12];

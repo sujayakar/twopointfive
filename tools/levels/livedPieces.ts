@@ -4,8 +4,8 @@
 //   P.room('staff'); P.table(26, 10.4, 1.8, 0.9, 0); …
 // Every box a piece adds goes in the group 'lived.<room>' of the room last named with P.room(id); every loose prop is renamed 'lived.<room>.<thing><n>' — the two
 // tags the loader drops with the switch off. A generator calls these LAST (after its last kept box, prop, light and fixture: tools/levels/export.ts holds the order).
-// No lights, no emissive boxes, no dice but the hash of an index. Bodies wear the kit's palette (the simulation reads paint: game/particleFx.ts paletteName,
-// game/furnblast.ts breakClassOf); the colours named here are accents only.
+// No lights, no emissive boxes, no dice but the hash of an index. Bodies wear the kit's palette (a paint of it says what the thing does: scene/stuff.ts PAINT_DOES,
+// scene/materials.ts); the colours named here are accents only.
 // A piece's FRONT is its local +Z and its back −Z (the wall side): yaw 0 = on a north wall facing south, π = on a south wall, π/2 = on a west wall facing east,
 // −π/2 = on an east wall. Heights are metres off the floor. What the destruction finds by SHAPE (game/destruction.ts index): a pale thin NoShadow sheet with its
 // longer half 0.08‥0.2 above 0.3 m is PAPER (flies); a small solid (half ≤ 0.17, ≤ 20 l) standing 0.7‥1.6 m up is CLUTTER (knocked off) — the pieces say which they make.
@@ -13,6 +13,8 @@ import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
 import { roundSlabs } from '../../src/scene/gwotKit';
+import { pieces } from '../../src/scene/library';
+import { sayPaint, toned, madeOf } from '../../src/scene/stuff';
 
 export interface LivedHost {
   add: (b: Partial<Box> & { c: Vec3; h: Vec3 }) => number;
@@ -27,9 +29,11 @@ export const INK = {
   oxblood: [0.32, 0.09, 0.07] as Vec3, navy: [0.08, 0.1, 0.3] as Vec3, bottle: [0.25, 0.45, 0.7] as Vec3, rubber: [0.06, 0.06, 0.065] as Vec3, copper: [0.6, 0.3, 0.15] as Vec3,
   tin: [0.05, 0.055, 0.06] as Vec3, enamel: [0.2, 0.36, 0.3] as Vec3,
 };
+madeOf('rubber', INK.rubber);   // (until 11-04 its dark grey was drawn as bare iron, iron's grey darkened)
+sayPaint(INK.iron, 'iron', { stuff: 'metal', rough: 0.92 });   // (its numbers are the office's car-park paint: by them every iron fitting had that paint's finish and was drawn as bare iron. Said here as it was; scene/stuff.ts)
 /** a hash of an index in 0‥1 (the pieces' only dice) */
 export const h01 = (n: number, s = 0): number => { let x = Math.imul((n + 1) ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(s + 1, 0xc2b2ae35); x ^= x >>> 15; x = Math.imul(x, 0x2c1b3c6d); x ^= x >>> 12; return (x >>> 0) / 4294967296; };
-const tone = (c: Vec3, k: number): Vec3 => [c[0] * k, c[1] * k, c[2] * k];
+const tone = toned;   // (a paint toned is the same stuff: scene/stuff.ts keeps its word)
 
 export function livedPieces(H: LivedHost, C: LivedPalette) {
   let room = ''; const count = new Map<string, number>(); let n = 0;
@@ -170,7 +174,7 @@ export function livedPieces(H: LivedHost, C: LivedPalette) {
     /** a stool */
     stool(x: number, z: number, albedo: Vec3 = C.woodDark) { return loose('stool', 'chair', x, z, 0.3, 5, [part(0, 0.44, 0, 0.32, 0.04, 0.32, albedo), part(0, 0.03, 0, 0.05, 0.41, 0.05, C.black), part(0, 0, 0, 0.36, 0.03, 0.06, C.black), part(0, 0, 0, 0.06, 0.03, 0.36, C.black)]); },
     /** an armchair (heavy: it is cover you can shove) */
-    armchair(x: number, z: number, yaw = 0, albedo: Vec3 = INK.oxblood) { return loose('armchair', 'chair', x, z, yaw, 28, [part(0, 0.1, 0, 0.7, 0.34, 0.7, albedo), part(0, 0.44, 0.28, 0.7, 0.46, 0.14, albedo), part(-0.3, 0.44, -0.04, 0.1, 0.2, 0.56, tone(albedo, 0.85)), part(0.3, 0.44, -0.04, 0.1, 0.2, 0.56, tone(albedo, 0.85)), part(0, 0, 0, 0.6, 0.1, 0.6, C.woodDark)]); },
+    armchair(x: number, z: number, yaw = 0, albedo: Vec3 = INK.oxblood) { return loose('armchair', 'chair', x, z, yaw, 28, [part(0, 0.1, 0, 0.7, 0.34, 0.7, albedo), part(0, 0.44, 0.28, 0.7, 0.46, 0.14, albedo), part(-0.3, 0.44, -0.055, 0.1, 0.2, 0.53, tone(albedo, 0.85)), part(0.3, 0.44, -0.055, 0.1, 0.2, 0.53, tone(albedo, 0.85)), part(0, 0, 0, 0.6, 0.1, 0.6, C.woodDark)]); },   // (an arm ENDS at the back's front: three centimetres into it, its outer face lay in the back's side and flickered)
     /** a wooden crate of side s (a tea chest, a parts crate): slats across its lid; `tops` stand on it (bottles, insulators) */
     crate(x: number, z: number, s = 0.5, yaw = 0, albedo: Vec3 = C.wood, tops: Vec3 | null = null, thing = 'crate') { const ps: PropPart[] = [part(0, 0, 0, s, s * 0.8, s, albedo), part(0, s * 0.8, -s * 0.28, s, 0.02, s * 0.16, tone(albedo, 0.75)), part(0, s * 0.8, s * 0.28, s, 0.02, s * 0.16, tone(albedo, 0.75))];
       if (tops) for (const [ix, iz] of [[-1, -1], [0, -1], [1, -1], [-1, 1], [0, 1], [1, 1]]) ps.push(part(ix * s * 0.28, s * 0.8, iz * s * 0.1, s * 0.16, 0.09, s * 0.16, tops));
@@ -188,6 +192,8 @@ export function livedPieces(H: LivedHost, C: LivedPalette) {
     /** a bucket (a mop bucket, a fire bucket on the floor, a coal scuttle) */
     bucket(x: number, z: number, albedo: Vec3 = C.metal, thing = 'bucket') { return loose(thing, albedo === C.metal ? 'bin' : 'cardboard', x, z, 0.2, 2, [part(0, 0, 0, 0.26, 0.28, 0.26, albedo), part(0, 0.28, 0, 0.3, 0.02, 0.03, tone(albedo, 0.6))]); },
   };
-  return P;
+  // the TOOLS (a frame, a loose prop, a part, a tone, the room), then the PIECES by name (src/scene/library.ts)
+  const { at: _at, loose: _loose, part: _part, tone: _tone, room: _room, ...made } = P;
+  return { ...P, ...pieces('livedPieces', made) };
 }
 export type LivedPieces = ReturnType<typeof livedPieces>;

@@ -1,2 +1,4 @@
-# the kill house is dressed: its look file lays the range's ground under its marks
-1b59479eb5fd6632de6ecf761eff9aa1aa77df60
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+ecfbd68084874de0bb4cb519f69ebf67f45cc8ab
