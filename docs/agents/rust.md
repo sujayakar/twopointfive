@@ -520,6 +520,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   plays, and the frozen stand runs `lines` and `circles` only (the other two need the game's own maths). Probe families with the rows up: destruction,
   furnblast, breaks, winbars, wallbreak and wallcharge were run both ways before the last review's mends (3.3 million questions, none different); the
   door, glass and frag families were not.
+- **What a pane of glass is to play** (`rust/sim/src/panes.rs`, `pattern.rs`, `pen.rs`; the `panes` part, the block's last; 2026-11-05): the rule, a round through glass and the window's bars gone from TypeScript to the module, no row. The whole account, file by file and special case by special case, is `docs/agents/destruction.md`, the bullet of that name. The open question below is still the door lines and rays come by; it reads a row where it stands now, through `World.panes_g`.
 - **A pane's open question** (`rust/sim/src/glass.rs`; the copy's panes, `boxMirror.ts panes` / `PaneSource`; 2026-11-04). Whether a pane of glass
   is open where a line or a ray meets it (`glassbreak.ts openAt(bi, X) || also(bi, X)`, what `col.glassOpen` answers) is answered IN THE MODULE.
   Before it, every rule there that met a pane stopped and handed the question back: the ray was walked again in TypeScript (6,500 rays in twelve

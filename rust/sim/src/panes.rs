@@ -191,7 +191,7 @@ const _: () = assert!(size_of::<Panes>() == HEAD + BODY * 8);
 /// a game's panes. A POOL WITH NOTHING IN USE HAS NOTHING IN IT, whatever the slot's memory still says past its first word (another game's, or a put of a take from
 /// before any pane was touched): its counts read none until it is stood up
 #[inline(always)]
-fn pn(g: usize) -> &'static mut Panes {
+pub fn pn(g: usize) -> &'static mut Panes {
     let p = &mut state(g).panes;
     if p.used == 0 {
         p.counts_none();
@@ -625,6 +625,9 @@ pub fn boot(g: usize, list: &[f64]) {
     p.nbl = 0;
     p.seq = 0;
     p.nbars = 0;
+    p.bars = [[0; 2]; MAX_BARS];
+    p.ev = [0.0; 2 * EVENTS];
+    p.bl = [0.0; 5 * CHARGES];
     let n = list.len() / 2;
     p.sheets = (if n < MAX_SHEETS { n } else { MAX_SHEETS }) as u32;
     for s in 0..p.sheets as usize {
@@ -981,6 +984,7 @@ fn emit(c: &Ctx, ri: usize, f: Fr, pts: &[Pt], rev: bool) {
             }
             OUT_NP = np0 + np;
         }
+        let np = if np0 + np <= MAX_OUT_PTS { np } else { 0 };
         let o = &mut out[n * OUT_LEN..(n + 1) * OUT_LEN];
         o[O_PANE] = bi as f64;
         o[O_TYPE] = ty as f64;
@@ -2174,29 +2178,7 @@ pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
         (h.over, h.sky)
     };
     // (every sheet's sky was settled as the view went on: panes_view)
-    let ty = if over != NO_OVER {
-        over
-    } else {
-        let outside = sky != 0 && sky != SKY_UNKNOWN;
-        let (h0, h1, h2) = (b[R_H], b[R_H + 1], b[R_H + 2]);
-        if if outside { h1 < 0.4 } else { js_max(h0, h2) < 0.35 } {
-            LAMINATED
-        } else if !truthy(GR_PLACE) {
-            if outside {
-                TEMPERED
-            } else {
-                ANNEALED
-            }
-        } else {
-            let foot = b[R_C + 1] - h1;
-            let gap = p.sheet(s).gap;
-            if foot < k(GR_LOW_M) || (foot < k(GR_DOOR_FOOT_M) && gap <= k(GR_DOOR_M)) {
-                TEMPERED
-            } else {
-                ANNEALED
-            }
-        }
-    };
+    let ty = if over != NO_OVER { over } else { place_rule(sky != 0 && sky != SKY_UNKNOWN, b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1], p.sheet(s).gap) };
     if ty == TEMPERED {
         return kk > k(GB_BLAST_DICE_K);
     }
@@ -2377,13 +2359,15 @@ pub fn dice_threshold(g: usize, bi: u32) -> f64 {
     };
     let r = p.row(ri);
     let d = dice_of(r);
-    let order = order_of(&d);
     let next = r.d_next as usize;
-    if next >= order.len() {
-        1e9
-    } else if next == 0 {
-        -1.0
-    } else {
+    if next >= d.cols as usize * d.rows as usize {
+        return 1e9;
+    }
+    if next == 0 {
+        return -1.0;
+    }
+    let order = order_of(&d);
+    {
         (order[next - 1].key + order[next].key) / 2.0
     }
 }

@@ -39,7 +39,7 @@ import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { VIEW_BLOWN, VIEW_GIVES, type PaneRow, type PaneView } from '../scene/boxMirror';
 import type { Game } from './game';
 import { men } from './seats';
-import { glassImpact, glassEvent, GLASSFX, glassPanes } from './glass';
+import { glassImpact, glassEvent, GLASSFX, glassPanes, isSheet } from './glass';
 import { hash01 } from './debris';
 import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
@@ -196,7 +196,7 @@ export const GB_TWIN = { panes: 0, impacts: 0, sites: 0, runs: 0, dropped: 0, sh
 const TALLY_AT: Partial<Record<keyof typeof GB_TWIN, number>> = { panes: 0, impacts: 1, sites: 2, runs: 3, dropped: 4, diced: 5, clumps: 6, sheets: 7, blasts: 8, thinks: 9, raked: 10 };
 const tally = (i: number | undefined): number => { if (i === undefined) return 0; const x = simX(); return f64()[x.panes_tally() / 8 + i]; };
 /** the counts for a tool or a panel: the twin's own, and what the module has counted (no rule reads them back) */
-export const GB_STATS = new Proxy(GB_TWIN, { get: (t, k: string) => (t as Record<string, number>)[k] + tally(TALLY_AT[k as keyof typeof GB_TWIN]) });
+export const GB_STATS = new Proxy(GB_TWIN, { get: (t, k: string) => (t as Record<string, number>)[k] + tally(TALLY_AT[k as keyof typeof GB_TWIN]), set: (t, k: string, v: number) => { (t as Record<string, number>)[k] = v - tally(TALLY_AT[k as keyof typeof GB_TWIN]); return true; } });   // (a count set, a tool's reset: from here it counts on from that)
 /** rows of the GPU record per pane (scene/boxes.ts GB_STRIDE must equal it; common.wgsl reads the same layout) */
 export const GB_HEADER_ROWS = 4, GB_SITE_ROWS = 4, GB_RECORD_ROWS = GB_HEADER_ROWS + GP_MAX_SITES * GB_SITE_ROWS;
 
@@ -260,9 +260,9 @@ export class GlassBreak {
       return r;
     });
   }
-  /** this game's glass, for the block: every Glass static of the level, ascending, with how far it stands on the plan from the nearest door's opening */
+  /** this game's glass, for the block: every sheet of the level, ascending, with how far it stands on the plan from the nearest door's opening */
   private boot(x: SimExports, s: number): void {
-    const list = glassPanes(this.g), m = f64(), at = x.sim_scratch() / 8, boxes = this.g.level.boxes;
+    const boxes = this.g.level.boxes, list = glassPanes(this.g).filter(bi => isSheet(boxes[bi])), m = f64(), at = x.sim_scratch() / 8;
     for (let i = 0; i < list.length; i++) { m[at + 2 * i] = list[i]; m[at + 2 * i + 1] = this.doorGap(boxes[list[i]]); }
     x.panes_boot(s, list.length);
   }
@@ -450,8 +450,10 @@ export class GlassBreak {
     const g = this.g; const swv = g.wind.stormWind();   // wind.ts's ONE storm test (weather on, night, WIND.storm, the storm or rain actually running): a dead calm or the daylight breach blows nothing through a hole
     const sw = swv ? [swv[0], swv[2]] : null;
     const stormSpeed = sw ? Math.hypot(sw[0], sw[1]) : 0;
-    for (const st of this.panes.values()) {
-      if (!st.exterior) continue;
+    const x = simX(), s = g.sim.bind(), Fl = fields(x), w = g.sim.w, dd = g.sim.d;
+    for (let r = 0, n = x.panes_row_n(s); r < n; r++) {
+      const at = x.panes_row_addr(s, r); if (w[(at + Fl[F_EXT]) >>> 2] === 0) continue;   // (a row's few words, read where they stand: every tick of a storm)
+      const bi = w[(at + Fl[F_W]) >>> 2], st = { bi, key: w[(at + Fl[F_KEY]) >>> 2], box: g.level.boxes[bi], uAxis: w[(at + Fl[F_AXIS]) >>> 2] === 0 ? 0 : 2, hu: dd[(at + Fl[F_HU]) >>> 3] };
       const open = this.openFraction(st.bi);
       let src = this.gusts.get(st.bi);
       if (open < 0.25 || stormSpeed < 0.05) { if (src) src.base = 0; continue; }
@@ -492,7 +494,7 @@ export class GlassBreak {
   private handle(bi: number): PaneState {
     let last: PaneState | null = null;
     const now = (): PaneState => { const x = simX(), s = this.g.sim.bind(), r = x.panes_row_index(s, bi); if (r >= 0) last = this.rowState(x, s, r); return last!; };
-    return new Proxy({} as PaneState, { get: (_t, k) => (now() as unknown as Record<string | symbol, unknown>)[k], has: (_t, k) => k in now(), ownKeys: () => Reflect.ownKeys(now()), getOwnPropertyDescriptor: (_t, k) => Object.getOwnPropertyDescriptor(now(), k) });
+    return new Proxy({} as PaneState, { get: (_t, k) => k === 'bi' ? bi : k === 'box' ? this.g.level.boxes[bi] : (now() as unknown as Record<string | symbol, unknown>)[k], has: (_t, k) => k in now(), ownKeys: () => Reflect.ownKeys(now()), getOwnPropertyDescriptor: (_t, k) => Object.getOwnPropertyDescriptor(now(), k) });
   }
   private rowState(x: SimExports, s: number, r: number): PaneState {
     const Fl = fields(x), at = x.panes_row_addr(s, r), d = this.g.sim.d, w = this.g.sim.w, dAt = (f: number, i = 0) => d[((at + Fl[f]) >>> 3) + i], wAt = (f: number, i = 0) => w[((at + Fl[f]) >>> 2) + i];

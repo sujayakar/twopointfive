@@ -4,9 +4,8 @@
 //! STATEMENT FOR STATEMENT with the TypeScript: the same hashes, the same bearings and chords worked out by the same maths (maths.rs), the same compares.
 //! tools/qa/glass-ident.ts holds the two together over panes broken by a game.
 //!
-//! WHOSE THE STATE IS. Breaking glass is still a TypeScript rule: it owns each pane's cracks, which pieces have fallen and which are about to. What stands
-//! here is a copy, a row a pane that is no longer whole (world.rs `glass`), written by src/scene/boxMirror.ts whenever the box world's copy is proven and
-//! again when the glass says it wrote. A pane with no row is whole: shut everywhere.
+//! WHOSE THE STATE IS. The game's block's (panes.rs): a line or a ray reads a pane's row where it stands, through `World.panes_g`. A pane with no row is whole: shut
+//! everywhere. (A world with no game behind it, a tool's, has a copy here, written by src/scene/boxMirror.ts.)
 //!
 //! A ROW. Doubles (GD): nine a site, eight sites (u, v, the bearing of radial 0, the four base radii, the ring zone's radius, the share of merged
 //! sectors), then the dice of a toughened pane coming down (the blow's u and v, the pane's half sides, the key of the last clump out and which clump
@@ -16,10 +15,10 @@
 //!
 //! A BURST'S VIEW. A blast judges its own lines by glass as it is to a burst (game/frag.ts throughGlass): what the blast has just taken is no glass to its
 //! fragments (VIEW_BLOWN, answered here from the pieces queued to leave), and a man reckoning a burst that has not happened counts out the panes it
-//! would break (VIEW_GIVES: which panes, and for float glass how far round the pane's nearest point, are worked out by the rule that breaks them and
-//! handed over as the view's rows). The view stands for the length of one judgment and is none at every other time.
+//! would break (VIEW_GIVES: panes.rs `gives`, from the burst's numbers and the pane's own state, by the rule that breaks them). The view stands for the length of one
+//! judgment and is none at every other time.
 
-use crate::maths::{atan2, cos, hypot2, hypot3, sin};
+use crate::maths::{atan2, cos, hypot3, sin};
 use crate::world::*;
 use prim::floor;
 
@@ -71,8 +70,6 @@ const CUT_NONE: f64 = 0.45;
 const CUT_LO: f64 = 0.9;
 const CUT_SPAN: f64 = 1.0;
 const CUT_TILT: f64 = 0.9;
-const DICE_JIT: f64 = 0.6;
-const DICE_DELAY: f64 = 1.4;
 const PI: f64 = core::f64::consts::PI;
 /// gpClassify's answers that are no piece: no site on the pane · the uncut sheet past chord 2 of a pane that has not run
 const NO_SITE: i32 = -1;
@@ -224,51 +221,17 @@ fn bit(w: &[u32], at: usize, k: u32) -> bool {
     w[at + (k >> 5) as usize] >> (k & 31) & 1 != 0
 }
 
-// ---- toughened glass coming down (glassPattern.ts gpDice*)
-/// gpDiceCentre: the centre of clump (c, r)
-#[inline]
-fn dice_centre(d: &[f64], cols: f64, rows: f64, seed: u32, c: u32, r: u32) -> (f64, f64) {
-    let (hu, hv) = (d[D_HU], d[D_HV]);
-    let (du, dv) = (2.0 * hu / cols, 2.0 * hv / rows);
-    (-hu + (c as f64 + 0.5 + DICE_JIT * (jit(seed, c, r) - 0.5)) * du, -hv + (r as f64 + 0.5 + DICE_JIT * (jit(seed ^ 0x005b_d1e9, c, r) - 0.5)) * dv)
-}
-/// is the clump (u, v) belongs to out: gpDiceClump, then that clump's place in the order clumps let go against the last one out. The clumps go in the
-/// order of their keys (gpDiceKey), and of their numbers where two keys are one (glassbreak.ts startDice's sort), one at a time: so "out" is "no later
-/// in that order than the last one out", at any moment of a release.
+// ---- toughened glass coming down
+/// is the clump (u, v) belongs to out: that clump's place in the order clumps let go against the last one out, by their keys and by their numbers where two keys
+/// are one (pattern.rs Dice: gpDiceClump, gpDiceKey; glassbreak.ts startDice's sort). So this one number says "earlier in that order than the last one out", at any moment of a release.
 pub fn dice_out(d: &[f64], w: &[u32], u: f64, v: f64) -> bool {
-    let (ci, ri, seed) = (w[GW_COLS], w[GW_ROWS], w[GW_DSEED]);
-    let (cols, rows) = (ci as f64, ri as f64);
-    let (hu, hv) = (d[D_HU], d[D_HV]);
-    let c0 = js_max(0.0, js_min(cols - 1.0, floor((u + hu) / (2.0 * hu) * cols)));
-    let r0 = js_max(0.0, js_min(rows - 1.0, floor((v + hv) / (2.0 * hv) * rows)));
-    if c0 != c0 || r0 != r0 {
+    let dc = crate::pattern::Dice { u: d[D_U], v: d[D_V], cols: w[GW_COLS], rows: w[GW_ROWS], seed: w[GW_DSEED], hu: d[D_HU], hv: d[D_HV] };
+    if u != u || v != v {
         return false; // (a point that is no number is on no clump)
     }
-    let (c0, r0) = (c0 as u32, r0 as u32);
-    let (mut bc, mut br, mut bd) = (c0, r0, f64::INFINITY);
-    let (r_lo, r_hi) = (r0.saturating_sub(1), if r0 + 1 < ri { r0 + 1 } else { ri - 1 });
-    let (c_lo, c_hi) = (c0.saturating_sub(1), if c0 + 1 < ci { c0 + 1 } else { ci - 1 });
-    let mut r = r_lo;
-    while r <= r_hi {
-        let mut c = c_lo;
-        while c <= c_hi {
-            let p = dice_centre(d, cols, rows, seed, c, r);
-            let (eu, ev) = (p.0 - u, p.1 - v);
-            let dd = eu * eu + ev * ev;
-            if dd < bd {
-                bd = dd;
-                bc = c;
-                br = r;
-            }
-            c += 1;
-        }
-        r += 1;
-    }
-    // gpDiceKey of that clump
-    let p = dice_centre(d, cols, rows, seed, bc, br);
-    let cell = js_min(2.0 * hu / cols, 2.0 * hv / rows);
-    let key = hypot2(p.0 - d[D_U], p.1 - d[D_V]) + DICE_DELAY * cell * jit(seed ^ 0x003c_6ef3, bc, br);
-    key < d[D_LAST] || (key == d[D_LAST] && (br * ci + bc) as f64 <= d[D_LAST_K])
+    let k = dc.clump(u, v);
+    let key = dc.key(k % dc.cols, k / dc.cols);
+    key < d[D_LAST] || (key == d[D_LAST] && k as f64 <= d[D_LAST_K])
 }
 
 /// glassbreak.ts toUV: a world point in the pane's own (u along it, v up)

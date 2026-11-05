@@ -16,7 +16,7 @@ pub type Pt = (f64, f64);
 /// twenty-four neighbours at most, of which glassPattern.ts counts twelve as ever standing)
 pub const MAX_PTS: usize = 32;
 /// the most corners one piece of a site has, by the same count (4 + 7 + 2 + 1 + 1)
-pub const PIECE_PTS: usize = 16;
+pub const PIECE_PTS: usize = 20;
 pub const FRAGS_PER_SITE: usize = 84;
 pub const MAX_SITES: usize = 8;
 pub const MAX_FRAGS: usize = MAX_SITES * FRAGS_PER_SITE;

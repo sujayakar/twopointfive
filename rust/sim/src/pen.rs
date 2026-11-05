@@ -5,11 +5,10 @@
 //! WHAT IS STATE. The holes (panes.rs `Hole`): a part of the panes' run in the game's block, a row a pane a round has been through.
 use crate::collide;
 use crate::knobs::*;
-use crate::lines::{self, line_box, ASK_GLASS, ASK_PANES, RAY_LEAF};
+use crate::lines::{self, line_box, RAY_LEAF};
 use crate::maths::{acos, cos, hypot3, sin, tan};
 use crate::panes::{self, norm3, point_seed, type_of_pane, box_seed, Ctx, ANNEALED, LAMINATED, NO_TYPE, TEMPERED};
-use crate::state::state;
-use crate::world::{clamp, js_abs, js_max, js_min, world, F_GLASS, F_NO_SHADOW, MAX_PANES, REC, R_COS, R_H, R_SIN};
+use crate::world::{clamp, js_abs, js_max, js_min, world, F_GLASS, F_NO_SHADOW, REC, R_COS, R_H, R_SIN};
 use prim::sqrt;
 
 const PI: f64 = core::f64::consts::PI;
@@ -60,7 +59,7 @@ fn sheet_box(c: &Ctx, bi: usize) -> Option<&'static [f64]> {
 }
 /// glasspen.ts nearHole
 fn near_hole(g: usize, bi: u32, p: [f64; 3]) -> bool {
-    let ps = &mut state(g).panes;
+    let ps = crate::panes::pn(g);
     let r = k(PEN_HOLE_R);
     let r2 = r * r;
     for h in 0..ps.nh as usize {
@@ -381,38 +380,9 @@ pub fn shot_passes(c: &Ctx, a: [f64; 3], rd: [f64; 3], panes_list: &[f64], energ
     }
     true
 }
-/// StaticCollision.shotBlocked with rounds through glass live: the walk collects the panes across the line, and, nothing else being in the way, asks the round's own toll
-pub fn shot_blocked(c: &Ctx, a: [f64; 3], b: [f64; 3], shrink: f64, pass: u32, energy: f64) -> bool {
-    let d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    let len = hypot3(d[0], d[1], d[2]);
-    let r = lines::blocked(c.w, a[0], a[1], a[2], b[0], b[1], b[2], len, shrink, pass, c.set, ASK_GLASS | ASK_PANES);
-    if r == -1 {
-        return true;
-    }
-    if r <= 0 {
-        return false;
-    }
-    let n = r as usize;
-    let o = world(c.w);
-    let mut list = [0.0; 2 * MAX_PANES];
-    for i in 0..n {
-        // (in order of where each enters: a stable sort, as the host's)
-        let (bi, t) = (o.pane_bi[i] as f64, o.pane_t[i]);
-        let mut j = i;
-        while j > 0 && list[2 * (j - 1) + 1] > t {
-            list[2 * j] = list[2 * (j - 1)];
-            list[2 * j + 1] = list[2 * (j - 1) + 1];
-            j -= 1;
-        }
-        list[2 * j] = bi;
-        list[2 * j + 1] = t;
-    }
-    let sc = 1.0 / hypot3(d[0], d[1], d[2]);
-    !shot_passes(c, a, [d[0] * sc, d[1] * sc, d[2] * sc], &list[..2 * n], energy)
-}
 /// glasspen.ts addHole: a crossing remembered on the pane, the oldest forgotten past GLASSPEN.holes
 pub fn add_hole(g: usize, bi: u32, p: [f64; 3]) {
-    let ps = &mut state(g).panes;
+    let ps = crate::panes::pn(g);
     let row = panes_hole_row(g, bi);
     let cap = js_min(panes::HOLE_PTS as f64, k(PEN_HOLES)) as usize;
     let h = ps.hole(row);
@@ -429,7 +399,7 @@ pub fn add_hole(g: usize, bi: u32, p: [f64; 3]) {
 }
 /// pane `bi`'s row of holes, made if it has none
 pub fn panes_hole_row(g: usize, bi: u32) -> usize {
-    let ps = &mut state(g).panes;
+    let ps = crate::panes::pn(g);
     for h in 0..ps.nh as usize {
         if ps.hole(h).bi == bi {
             return h;

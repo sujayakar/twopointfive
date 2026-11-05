@@ -989,10 +989,6 @@ pub extern "C" fn panes_sheets(g: usize) -> u32 {
     panes::sheet_count(g)
 }
 #[no_mangle]
-pub extern "C" fn panes_sheet_bi(g: usize, s: usize) -> u32 {
-    panes::sheet_bi(g, s)
-}
-#[no_mangle]
 pub extern "C" fn panes_frame_begin(g: usize) {
     panes::frame_begin(g);
 }
@@ -1132,18 +1128,7 @@ pub extern "C" fn panes_box_seed(cx0: f64, cy: f64, cz: f64, hx: f64, hy: f64, h
 pub extern "C" fn panes_point_seed(word: u32, x: f64, y: f64, z: f64) -> u32 {
     panes::point_seed(word, x, y, z)
 }
-/// falling.ts fallOf for a thing of glass (four fifths of a vacuum's reach): how long → scratch 0, where → scratch 1 … 3
-#[no_mangle]
-pub extern "C" fn panes_fall(x: f64, y: f64, z: f64, vx: f64, vy: f64, vz: f64) {
-    let c = cx();
-    let (t, p) = panes::fall_of(&c, [x, y, z], [vx, vy, vz], c.gravity, 0.8);
-    let s = scratch();
-    s[0] = t;
-    s[1] = p[0];
-    s[2] = p[1];
-    s[3] = p[2];
-}
-/// shards.ts crossed under SHARDS.byFall: the far face's jet of a round through a sheet: its glass comes down where the jet does. `amount`: m² of it.
+/// shards.ts crossed: a round's exit jet, its glass comes down where the jet does. `amount`: m² of it.
 #[no_mangle]
 pub extern "C" fn panes_jet(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, speed: f64, amount: f64, who: f64) {
     panes::jet(&cx(), [x, y, z], [dx, dy, dz], speed, amount, who);
@@ -1266,10 +1251,6 @@ pub extern "C" fn pen_passes(ax: f64, ay: f64, az: f64, rx: f64, ry: f64, rz: f6
     let n = if n > world::MAX_PANES { world::MAX_PANES } else { n };
     list[..2 * n].copy_from_slice(&s[..2 * n]);
     pen::shot_passes(&cx(), [ax, ay, az], [rx, ry, rz], &list[..2 * n], energy) as u32
-}
-#[no_mangle]
-pub extern "C" fn pen_shot(ax: f64, ay: f64, az: f64, bx: f64, by: f64, bz: f64, shrink: f64, pass: u32, energy: f64) -> u32 {
-    pen::shot_blocked(&cx(), [ax, ay, az], [bx, by, bz], shrink, pass, energy) as u32
 }
 #[no_mangle]
 pub extern "C" fn pen_add_hole(g: usize, bi: u32, x: f64, y: f64, z: f64) {

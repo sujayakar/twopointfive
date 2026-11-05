@@ -112,9 +112,9 @@ const seedMix = (h: number, x: number): number => { h = Math.imul(h ^ (Math.roun
  *    first, so two panes written the other way round can still let their pieces go on other frames. And a few seeds outside glass, thin walls and window
  *    bars (winbars.ts starts from this word too) still read a place in a list (a door blown off, a wall's edge look): docs/agents/destruction.md, the hit
  *    seed's bullet, lists them. */
-export function boxSeed(b: Box): number { return simX().panes_box_seed(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2]); }
+export function boxSeed(b: Box): number { return simX().panes_box_seed(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2]) >>> 0; }
 /** a box's word (boxSeed) and a point to the millimetre, as one 32-bit word */
-export function pointSeed(word: number, p: Vec3): number { return simX().panes_point_seed(word, p[0], p[1], p[2]); }
+export function pointSeed(word: number, p: Vec3): number { return simX().panes_point_seed(word, p[0], p[1], p[2]) >>> 0; }
 /** a 32-bit hash of where a box was hit: a pane's crack pattern, a round's turn through glass or a thin wall — the same shot at the same spot of the same box
  *  rolls the same whatever else has happened, and whatever else the level holds */
 export function hitSeed(b: Box, p: Vec3): number { return pointSeed(boxSeed(b), p); }
