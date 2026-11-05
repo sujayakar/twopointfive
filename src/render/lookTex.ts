@@ -3,13 +3,13 @@
 //   A (rgba8): rgb = what the box's paint is multiplied by, ÷ 2 (128 = the paint as it is; so a map can also turn a hue), a = the height, 0‥1 of the layer's range
 //   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = the hollows: ½ of how open the texel is (1 = not in a hollow) + what puts the tile's paint-weighed mean at ½ (lookLayer)
 // Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a browser and under bun.
-export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 28;
+export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 30;
 /** the layers. A STUFF is a layer a box's paint can be drawn as, and its number is its place here and one (0 = plain). After the stuffs, the two layers of
  *  what a mud wall is made of under its coat, which no box is: NEW STUFFS GO IN FRONT OF THOSE TWO and nothing else moves. A box's word has room for 31
  *  stuffs (gbuffer.ts lookWordOf). Ask lookStuffOf for a name's number; never count places. EVERYTHING THE SHADER DOES BY STUFF IS A WORD IN THAT STUFF'S ROW
  *  below (STUFFS): how it is laid, what the weather and use do to it, which way its grain runs, what it is made of under its coat. look.wgsl names no
  *  stuff: it reads the rows (through the prelude, gbuffer.ts lookWgsl), so a new stuff is a row and its map and no line of shader. */
-export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'enamel', 'carpet', 'field stone', 'mud brick'] as const;
+export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint', 'veneer', 'plastic', 'fabric', 'steel', 'carpaint', 'stucco', 'skim', 'gloss block', 'board concrete', 'cast panel', 'paver', 'brushed', 'louvre', 'enamel', 'carpet', 'tarmac', 'grass', 'field stone', 'mud brick'] as const;
 export type LookName = typeof LOOK_NAMES[number];
 /** WHAT A STUFF IS, one row a name (a name with no row does not compile). The maps below and the shader (look.wgsl lookSurface, through the prelude:
  *  gbuffer.ts lookWgsl) both read these, and the shader names no stuff for any of them.
@@ -55,6 +55,7 @@ const STUFFS: Readonly<Record<LookName, Stuff>> = {
   'gloss block': { rough: 0.4, relief: 1.4, built: true, worn: 0.6, unit: [0.4, 0.2, true, 0.02] }, 'board concrete': { rough: 0.42, relief: 1.6, built: true, worn: 0.8 },
   'cast panel': { rough: 0.68, relief: 1.4, built: true, worn: 0.8, unit: [1.0, 0.5, true, 0.07], bay: [0, 3] }, paver: { rough: 0.5, relief: 1.4, built: true, worn: 1, unit: [0.5, 0.5, false, 0.018], bay: [6, 6] },
   brushed: { rough: 0.32, relief: 1.2 }, louvre: { rough: 0.45, relief: 1.0 }, enamel: { rough: 0.3, relief: 1.2 }, carpet: { rough: 0.95, relief: 1.4, untiles: true },
+  tarmac: { rough: 0.86, relief: 1.3, built: true, fades: 1, untiles: true, runs: 'flat', ground: true }, grass: { rough: 0.95, relief: 1.2, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', ground: true },
   'field stone': { rough: 0.8, relief: 1.0, fades: 1, soaks: true }, 'mud brick': { rough: 0.95, relief: 1.2, fades: 1, soaks: true },
 };
 /** the rows as the prelude and the checks read them, in LOOK_NAMES' order */
@@ -606,7 +607,56 @@ const carpet: Mat = (u, v, t) => {
   tint(t, (0.93 + 0.14 * c.id) * (0.9 + 0.1 * tuft));
   t.rough = 0.95 + 0.03 * (fine - 0.5);
 };
-const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, veneer, plastic, fabric, steel, carpaint, stucco, skim, glossBlock, boardConcrete, castPanel, paver, brushed, louvre, enamel, carpet, stone, brick];
+// ---- tarmac: rolled asphalt, years down. Black binder with stone chips a finger's width across rolled flat into it; the binder has worn off the tops of
+// some, and each of those shows its own grey; the fines between are darker and a hair lower; a slow mottle where the roller's passes and the weather left it
+// paler or darker; a chip plucked out here and there (a pit), and a hairline craze where the base under it moved. No wheel line and no patch: those are a
+// level's own marks, laid where its traffic goes, and a two-metre map would print them every two metres.
+const tarmac: Mat = (u, v, t) => {
+  const low = fbm(u, v, 3, 4, 411), fine = vn(u, v, 230, 230, 413);
+  const pit = cells(u, v, 40, 421), gone = pit.id < 0.07 ? smooth(0.2, 0.06, pit.f1) : 0;   // a chip plucked out: the hole has no chip in it
+  let h = 0, f = 0, shade = 1, hueK = 0;
+  for (let k = 0; k < 2; k++) {                                                     // the chips: two sizes, flat on top, a rounded shoulder
+    const p = k ? 150 : 96, s = cells(u, v, p, 414 + k * 5, 0.9), cellM = LOOK_TILE / p, r = 0.36 + 0.2 * s.id;
+    const top = smooth(r, r * 0.6, s.f1) * smooth(0.0, 0.12, s.f2 - s.f1), hk = 0.05 * cellM * top;
+    if (hk <= h) continue;                                                          // the chip that stands highest here is the one that is seen, worn or not
+    h = hk;
+    // whether its top is worn is the CHIP's, asked where the chip lies (a drift of wear a stride across), so no chip is half worn
+    const id = Math.floor(s.id * 5003), worn = 0.12 + 0.3 * smooth(0.3, 0.75, fbm(u + s.dx / p, v + s.dy / p, 14, 3, 412));
+    if (hash(id, k, 417) < worn) { f = top; shade = 0.8 + 0.5 * hash(Math.floor(s.id * 9973), k, 415); hueK = hash(Math.floor(s.id * 7919), k, 416); } else f = 0;
+  }
+  h *= 1 - gone; f *= 1 - gone;
+  t.h = h + 0.0015 * (low - 0.5) + 0.0002 * (fine - 0.5) - 0.003 * gone;
+  tint(t, mix(0.9, 1.3 * shade, f) * (1 + 0.18 * (low - 0.5)) * (0.95 + 0.1 * fine) * (1 - 0.35 * gone));
+  hue(t, 1.08, 1.0, 0.88, f * hueK * 0.6); hue(t, 0.94, 1.0, 1.1, f * (1 - hueK) * 0.4);
+  t.rough = mix(mix(0.9, 0.74, f), 0.95, gone);                                     // a worn chip's top is the smoothest thing in it; the binder and the fines are matt
+  const c = cells(u, v, 5, 422, 0.7), craze = smooth(0.02, 0.005, (c.f2 - c.f1) + 0.01 * (vn(u, v, 40, 40, 423) - 0.5)) * smooth(0.55, 0.75, fbm(u, v, 2, 2, 424));
+  t.h -= 0.002 * craze; tint(t, 1 - 0.4 * craze);
+};
+// ---- grass: a lawn nobody waters, seen from a roof's height. Blades a finger long, four layers of them lying over one another, every blade its own green and
+// its own way of leaning about the way its patch leans (the patches lean every way, and swirl where two meet); thicker and longer in drifts a stride across
+// and thin between, where the thatch shows; a tenth of it dried to straw, more in drifts of their own; and places where none took and the earth shows, with
+// ragged edges. A blade is never drawn thinner than a texel and a third of this map (it would come out a dotted line and its normals noise). Whether a
+// blade is there, and whether it is straw, is asked of the drifts at the texel, not at the blade: a blade in fifty is cut short where a drift ends.
+const grass: Mat = (u, v, t) => {
+  const low = fbm(u, v, 3, 4, 431), lush = smooth(0.3, 0.7, fbm(u, v, 9, 3, 432)), dry = smooth(0.35, 0.85, fbm(u, v, 4, 3, 433)), fine = vn(u, v, 240, 240, 434);
+  const bare = smooth(0.76, 0.86, fbm(u, v, 6, 4, 435) + 0.14 * (vn(u, v, 60, 60, 436) - 0.5)), lie = Math.atan2(vn(u, v, 3, 3, 438) - 0.5, vn(u, v, 3, 3, 437) - 0.5);
+  let h = 0, f = 0, green = 1, tip = 0, straw = 0;
+  for (let k = 0; k < 4; k++) {
+    const p = 44 + 11 * k, s = cells(u, v, p, 440 + 7 * k, 1.0), id = Math.floor(s.id * 9973);
+    if (hash(id, k, 441) < 0.75 * bare || hash(id, k, 447) < 0.4 * (1 - lush)) continue;   // none took here, or it is thin between the drifts
+    const th = lie + 1.6 * (hash(id, k, 442) - 0.5), cx = Math.cos(th), sy = Math.sin(th);
+    const across = -s.dx * sy + s.dy * cx, along = s.dx * cx + s.dy * sy, len = 0.38 + 0.26 * lush * hash(id, k, 443);   // from the blade's own middle, in cells: periodic because the cells are
+    const wide = Math.max(0.11, 1.3 * p / LOOK_N), m = smooth(wide, 0.3 * wide, Math.abs(across)) * smooth(len, 0.5 * len, Math.abs(along));
+    const hh = (0.012 + 0.02 * lush) * (0.5 + 0.5 * hash(id, k, 444)) * m * (0.6 + 0.4 * k / 3);   // the later layers lie over the earlier
+    if (hh > h) { h = hh; f = m; green = 0.78 + 0.32 * hash(id, k, 445); tip = smooth(-len, len, along); straw = hash(id, k, 446) < 0.08 + 0.55 * dry ? 1 : 0; }
+  }
+  t.h = h + 0.006 * (low - 0.5) - 0.004 * bare;
+  tint(t, mix(0.5, green * (0.88 + 0.16 * tip), f) * (1 + 0.26 * (low - 0.5)) * (0.96 + 0.08 * fine) * (0.8 + 0.3 * lush));
+  hue(t, 1.22, 1.08, 0.82, 0.6 * straw * f);
+  const soil = bare * (1 - f); t.r = mix(t.r, 0.74, 0.85 * soil); t.g = mix(t.g, 0.42, 0.85 * soil); t.b = mix(t.b, 0.4, 0.85 * soil);   // (on a green paint: a dull brown, darker than the grass round it)
+  t.rough = 0.96 - 0.05 * f;
+};
+const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint, veneer, plastic, fabric, steel, carpaint, stucco, skim, glossBlock, boardConcrete, castPanel, paver, brushed, louvre, enamel, carpet, tarmac, grass, stone, brick];
 const RELIEF: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].relief);
 
 /** the layers a box's own paint is drawn as (a class of look.wgsl); the rest are what a wall is made of UNDER its paint (the plinth's stone, the brick behind fallen render) */
