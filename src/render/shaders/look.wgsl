@@ -17,13 +17,14 @@
 //   RELIEF    the map's normal, stood on the face. The g-buffer keeps the TILTED normal with alpha 0 (the target's spare code); gdown hands every working-size
 //             pass the box's own face back (common.wgsl lookGeoN), so the filters, the gather and the reservoirs see the flat wall they always saw, and only the
 //             screen-size direct light (sharp_direct.wgsl) and the composite's sky share light the relief.
-//   EDGES     a small box's arrises are rounded in the normal and rubbed pale: a crate stops being twelve triangles.
+//   EDGES     a small box's arrises are rounded in the normal and rubbed pale: a crate stops being twelve triangles. And a stuff that is pressed or
+//             moulded (its own word, `rolled`) has its arrises rolled over a hand or more, whatever its size: a car's panel turns into its roof.
 //   SNOW      on a snow level (snow.wgsl's field is live), lookSnow below: snow blown against the foot of what stands in the open, and lying on what was left out.
 // Numbers the page's panel moves live: lookCfg (render/gbuffer.ts setLook).
 @group(1) @binding(11) var lookA: texture_2d_array<f32>;
 @group(1) @binding(12) var lookB: texture_2d_array<f32>;
 @group(1) @binding(13) var lookSamp: sampler;
-struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f, h: vec4f, s: array<vec4f, 9> };   // s = each layer's SLOT in the two arrays, −1 = not made: a level has the maps it draws and no others (render/gbuffer.ts needLook) ·   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c.x = how kept the place is (lookKept below) · c.yzw, d, e.xyz = free (the layers' base roughness is the prelude's LOOK_BASE) · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w = the cast's part ids the men's webbing is told apart by (manWeb: 1 + the suit's + 64 × (1 + the chest rig's)) · h.x, h.y = the cloth layer's tone and hollow before it was evened (lookTex.ts lookLayer; 1 and 0 = it was not): lookMan's cloth
+struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f, h: vec4f, s: array<vec4f, 9> };   // s = each layer's SLOT in the two arrays, −1 = not made: a level has the maps it draws and no others (render/gbuffer.ts needLook) ·   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c.x = how kept the place is (lookKept below) · c.y = pressed panels (lookRoll below) · c.zw, d, e.xyz = free (the layers' base roughness is the prelude's LOOK_BASE) · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w = the cast's part ids the men's webbing is told apart by (manWeb: 1 + the suit's + 64 × (1 + the chest rig's)) · h.x, h.y = the cloth layer's tone and hollow before it was evened (lookTex.ts lookLayer; 1 and 0 = it was not): lookMan's cloth
 @group(1) @binding(14) var<uniform> lookCfg: LookCfg;
 
 const LOOK_TILE: f32 = 2.0;        // metres a map covers (render/lookTex.ts LOOK_TILE)
@@ -36,6 +37,32 @@ const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, 
  *  detail layer's dust and shoe marks, and what the stuff's `worn` says use does to it (a knocked foot, the dirt feet bring in). Where feet go is not
  *  the word's to say: a lane is trodden and paint is walked off a floor in a kept place as in a ruin. */
 fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }
+/** ROLLED ARRISES (the stuff's own word: lookTex.ts STUFFS' `rolled`, metres; the Pressed panels row, lookCfg.c.y). A thing pressed or moulded has no knife edge: over its last
+ *  `r` metres a face's shading normal turns toward the face it meets, as far as the look lets a normal lean (LOOK_MAX_TILT, so every pass that wants the
+ *  face itself still finds it). An upright side turns UP into the top and round an upright arris, never down at its foot; a top turns out at all four
+ *  edges. Shading only: the box, its outline and every ray are as they were.
+ *  `p` = the point along the face's two box axes, metres from its middle; `h` = the face's half sizes; `up` = how far each axis points up in the world
+ *  (a top's are 0 and 0). → how far the normal leans along each axis (a sine). */
+fn lookRoll(r: f32, p: vec2f, h: vec2f, up: vec2f) -> vec2f {
+  if (r <= 0.0) { return vec2f(0.0); }
+  var e = vec2f(0.0);
+  for (var a = 0; a < 2; a++) {
+    if (abs(up[a]) > 0.5) { e[a] = clamp(1.0 - (h[a] - p[a] * sign(up[a])) / min(r, 2.0 * h[a]), 0.0, 1.0) * sign(up[a]); }   // (rolled at its top end alone, so over its whole height if it is that short)
+    else { e[a] = clamp(1.0 - (h[a] - abs(p[a])) / min(r, h[a]), 0.0, 1.0) * sign(p[a]); }
+  }
+  return e * LOOK_MAX_TILT * clamp(lookCfg.c.y, 0.0, 1.0);   // (the Pressed panels row: 0 = no arris is rolled)
+}
+/** … and on an UPRIGHT face that is none of its box's six (a cut plane: a body's rounded corner, gbuffer_cut.wgsl): the same turn up into the top, by
+ *  the same measure. `y`, `hy` = the point's height in the box and the box's half height; `upW` = the box's own up in the world. Not marked as a tilt
+ *  (no box axis is this face), and it adds at most LOOK_MAX_TILT of up to a normal that had none, so no pass that asks whether a normal is a top's
+ *  (the fog of war's N.y > 0.5) is told it is. A LEANING cut plane, a round and an arc are not asked: they turn already, and what they meet is not
+ *  the box's edge (KNOWN, LEFT: one rule over a cut solid's own planes would roll those too). */
+fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f {
+  if (cls == 0u) { return n; }
+  let s = lookRoll(LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)], vec2f(y, 0.0), vec2f(hy, 1.0), vec2f(1.0, 1.0)).x;
+  if (s <= 0.0) { return n; }
+  return normalize(n * sqrt(1.0 - s * s) + upW * s);
+}
 /** how a box's markings are drawn: x = how far as brushed paint in place of square cells (the panel's Painted marks row), y = how far that paint is OLD
  *  (rubbed thin by the years, gone a shade into its wall: 1 − lookKept; a kept place's sign is brushed and whole but where feet go, markings.wgsl markSoft) */
 fn lookMarkSoft() -> vec2f { return vec2f(lookCfg.g.x, 1.0 - lookKept()); }
@@ -152,13 +179,13 @@ fn lookClots(p: vec2f, fp: f32, dens: f32, salt0: u32) -> f32 {
   let ctr = ext + (1.0 - 2.0 * ext) * vec2f(snowHash(cell, salt), snowHash(cell, salt + 1u));
   return 1.0 - smoothstep(rad * 0.45, rad, length((fract(q) - ctr) * vec2f(1.0, 0.75)));
 }
-fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool) -> LookOut {
+fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32, wears: bool, rolls: bool) -> LookOut {
   let cls = select(cls0, 0u, cls0 != 0u && lookSlot(i32(max(cls0, 1u)) - 1) < 0);   // (a stuff whose map is not made yet is drawn plain)
   let keep = lookKeep(i32(max(cls, 1u)) - 1); let wildS = step(0.001, keep.y);   // (the stuff's own row, lookTex.ts: nothing below names a stuff to say whether weather touches it. wildS 0 = a stuff somebody keeps)
   let left = 1.0 - lookKept();   // HOW FAR THE PLACE IS LEFT TO THE WEATHER (the level's word, lookKept): the one read of it in this function
   let wild = select(0.0, wildS * left, cls != 0u);   // … and how far THIS surface is: its stuff's word × the place's (a box of no stuff: 0). 1 = the weather's rules answer for it, 0 = the kept rules do (the detail layer's dust and shoe marks, the No repeat row's drift, what the stuff's `worn` says of use), and between the two each has its share: a weathered stuff in a place cleaned last night is drawn as a kept one, never as neither
   var o: LookOut; o.albedo = albedoIn; o.n = n; o.rough = roughIn; o.tilted = false; lookWay = vec2f(0.0);
-  if (!lookDresses(n, bi, hf) || (all(lookCfg.a == vec4f(0.0)) && all(lookCfg.b.xyz == vec3f(0.0)))) { return o; }   // (every amount at 0: the box as the game draws it, and none of the reads below)
+  if (!lookDresses(n, bi, hf) || (all(lookCfg.a == vec4f(0.0)) && all(lookCfg.b.xyz == vec3f(0.0)) && lookCfg.c.y <= 0.0)) { return o; }   // (every amount this function reads at 0, the Pressed panels row among them: the box as the game draws it, and none of the reads below)
   let b = boxGeo[bi];
   let lying = abs(n.y) > 0.9;
   let q = boxRot(bi);
@@ -329,23 +356,39 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0) * (1.0 - wild);
     alb = mix(alb, mix(alb, vec3f(0.4, 0.39, 0.38), 0.75), knock); rough += 0.22 * knock;
   }
-  // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge)
-  if (k2.y > 0.0 && max(b.h.x, b.h.z) < LOOK_HANDLED.x && b.h.y < LOOK_HANDLED.y && min(b.h.x, min(b.h.y, b.h.z)) > LOOK_HANDLED.z) {   // (lookTex.ts LOOK_HANDLED: what a hand moves, by its size, as half-extents)
+  // ---- EDGES: a small box's arrises rounded and rubbed (a crate, a table, a sill — not a wall, whose boxes meet their neighbours edge to edge; the Edges
+  // row); and the arrises of a stuff that is PRESSED OR MOULDED rolled over its own measure, a thing of any size (its word `rolled`, lookRoll above, the
+  // Pressed panels row; never an underside, and only where the caller says this face is one of the box's own six: `rolls`)
+  let handled = max(b.h.x, b.h.z) < LOOK_HANDLED.x && b.h.y < LOOK_HANDLED.y && min(b.h.x, min(b.h.y, b.h.z)) > LOOK_HANDLED.z;   // (lookTex.ts LOOK_HANDLED: what a hand moves, by its size, as half-extents)
+  var rolled = 0.0; if (rolls && cls != 0u && n.y > -0.5 && lookCfg.c.y > 0.0) { rolled = LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)]; }
+  let rubs = handled && k2.y > 0.0;
+  if (rubs || rolled > 0.0) {
     let ha = dot(abs(ea), hf.xyz); let hb = dot(abs(eb), hf.xyz);
     let pa = dot(lc, ea); let pb = dot(lc, eb);
-    let da = ha - abs(pa); let db = hb - abs(pb);                              // metres in from the face's two pairs of edges
-    let r = clamp(1.7 * fp, 0.012, 0.045);
-    let wa = 1.0 - smoothstep(0.0, r, da); let wb = 1.0 - smoothstep(0.0, r, db);
-    if (wa + wb > 0.0) {
-      let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
-      let floorEdge = !lying && stands;                                         // where a face meets the ground there is no arris to round
-      var e = vec2f(wa * wa * sign(pa), wb * wb * sign(pb)) * 0.6 * k2.y;
-      var wear = max(wa, wb);
-      if (floorEdge) { if (abs(TA.y) > 0.5 && pa * TA.y < 0.0) { e.x = 0.0; wear = wb; } if (abs(TB.y) > 0.5 && pb * TB.y < 0.0) { e.y = 0.0; wear = wa; } }
-      if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); }
-      let chip = smoothstep(0.35, 0.75, detailNoise(vec2f(pa + pb, pa - pb) * 23.0 + vec2f(f32(salt % 13u))));
-      alb *= 1.0 + 0.3 * wear * wear * chip * k2.y; rough = rough + 0.08 * wear * k2.y;
+    let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
+    var e = vec2f(0.0);
+    if (rubs) {
+      let da = ha - abs(pa); let db = hb - abs(pb);                            // metres in from the face's two pairs of edges
+      let r = clamp(1.7 * fp, 0.012, 0.045);
+      let wa = 1.0 - smoothstep(0.0, r, da); let wb = 1.0 - smoothstep(0.0, r, db);
+      if (wa + wb > 0.0) {
+        let floorEdge = !lying && stands;                                       // where a face meets the ground there is no arris to round
+        e = vec2f(wa * wa * sign(pa), wb * wb * sign(pb)) * 0.6 * k2.y;
+        var wear = max(wa, wb);
+        if (floorEdge) { if (abs(TA.y) > 0.5 && pa * TA.y < 0.0) { e.x = 0.0; wear = wb; } if (abs(TB.y) > 0.5 && pb * TB.y < 0.0) { e.y = 0.0; wear = wa; } }
+        let chip = smoothstep(0.35, 0.75, detailNoise(vec2f(pa + pb, pa - pb) * 23.0 + vec2f(f32(salt % 13u))));
+        alb *= 1.0 + 0.3 * wear * wear * chip * k2.y; rough = rough + 0.08 * wear * k2.y;
+      }
     }
+    if (rolled > 0.0) {
+      var er = lookRoll(rolled, vec2f(pa, pb), vec2f(ha, hb), vec2f(TA.y, TB.y));
+      // … and never so far that the face turns from the eye that sees it (a flank seen along its length, at its far arris): a normal turned away
+      // takes no ray and no highlight (reflect.wgsl), on the very strip that should catch them
+      let V = normalize(frame.camPos - wp); let away = dot(TA * er.x + TB * er.y, V);
+      if (away < 0.0) { er *= clamp((sqrt(1.0 - LOOK_MAX_TILT * LOOK_MAX_TILT) * dot(n, V) - 0.05) / -away, 0.0, 1.0); }
+      e += er;
+    }
+    if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); }
   }
   let tl = length(tilt); if (tl > LOOK_MAX_TILT) { tilt *= LOOK_MAX_TILT / tl; }
   if (tl > LOOK_MIN_TILT) {

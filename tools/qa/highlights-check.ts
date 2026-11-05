@@ -114,10 +114,11 @@ export async function highlightsCheck(): Promise<boolean> {
       `the missed ray's line: ${sites.join(', ')} of 1, 2, 1 (none left plain: ${plain.every(v => v === 0)}) · the shares at finishes 0.1, 0.25, 0.3, 0.45 × the light's window 0, 0.4, 1: ${rows.map(v => v.toFixed(2)).join(' ')}`); }
   // 6. A METAL'S HIGHLIGHTS ARE A CONDUCTOR'S ONLY AS FAR AS ITS PAINT IS STEPPED BACK (reflect.wgsl F0h; composite.wgsl metalK: the same fade, strength and
   //    test of rays, written again from both)
-  { const pin = passes.every(n => sh(n).includes('  let F0h = mix(vec3f(0.04), base, metalness * select(0.0, (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, roughH)) * min(frame.matCfg.y, 1.0), frame.rtCfg.y >= 1.0));'))
+  { const pin = passes.every(n => sh(n).includes('  let F0h = mix(vec3f(coat), base, metalness * select(0.0, (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, roughH)) * min(frame.matCfg.y, 1.0), frame.rtCfg.y >= 1.0));'))
       && comps.every(n => sh(n).includes('      reflK = (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, rs)) * frame.matCfg.y;\n      metalK = select(0.0, reflK * mt.y, frame.rtCfg.y >= 1.0);'));
     const stepK = (r: number, m: number, strength: number, rays: number) => (rays >= 1 ? (1 - ss(m - 0.12, m + 0.001, r)) * Math.min(strength, 1) : 0);   // (the share of a metal's paint that is stepped back: metalK ∕ metalness)
-    const f0 = (base: number, metal: number, r: number, m: number, strength = 1, rays = 1) => 0.04 + (base - 0.04) * metal * stepK(r, m, strength, rays), MED = cuts[0]?.[1] ?? NaN;
+    const COAT = 0.04;   // (a plain coat's: `coat` in the reflection texts where the box's stuff says no `mirrors` of its own — the lacquer's is rolled-check's)
+    const f0 = (base: number, metal: number, r: number, m: number, strength = 1, rays = 1) => COAT + (base - COAT) * metal * stepK(r, m, strength, rays), MED = cuts[0]?.[1] ?? NaN;
     const polished = f0(0.7, 1, 0.2, MED), satin = f0(0.7, 1, 0.5, MED), paintOn = f0(0.7, 0, 0.2, MED), noRays = f0(0.7, 1, 0.2, MED, 1, 0), halfStrength = f0(0.7, 1, 0.2, MED, 0.5), peakSatin = satin * D(0.5) * 0.25, lambert = 0.7 / Math.PI;
     verdict(pin && Math.abs(polished - 0.7) < 1e-9 && satin === 0.04 && paintOn === 0.04 && noRays === 0.04 && Math.abs(halfStrength - 0.37) < 1e-9 && peakSatin < 0.25 * lambert,
       'a metal under the mirror\'s cut-off has a conductor\'s highlights and a stepped-back paint, as it had; where its paint stands in whole for the metal (past the cut-off, or with no ray traced) its highlights are a coat\'s, and at half the reflections\' strength half way: at a conductor\'s strength a lamp\'s highlight on a satin steel on Medium was more than the paint under it',

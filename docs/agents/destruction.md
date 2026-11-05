@@ -1171,7 +1171,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one, else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres
   metal. A box says what it is made of (`Box.stuff`, `scene/stuff.ts`: its own word or its paint's row's), and with the rule on THE PICTURE OF A HIT
   reads that word first (`saidSurf`, the table `STUFF_SURF`: car paint, steel, metal and sheet are metal; wood and veneer wood; plaster and skim
-  plasterboard; stucco, mud wall, block, slab and pavers concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
+  plasterboard; stucco, mud wall, block, slab, pavers and tarmac concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
   weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks; rubber and plastic plastic; glass glass). The colour is asked
   only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum, a pipe or a line on
   a floor; 'plain' and 'waits' say nothing; the ground is what its paint says).
@@ -1211,9 +1211,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   glass: no vehicle's window is a pane), a tyre gives plastic's chips and no dent. WHAT THAT CHANGED FOR A ROUND: the windows (by their colour a kit
   vehicle's was glass that took a hole and threw nine chips, the plain car's was metal), the plain car's body and tyres in its own colours and in a
   twin's skin (plasterboard, concrete or metal by tone), and the tanker's tank. The kit vehicles' bodies were metal to a round already, by their
-  enamel's colour: for them the word changes the look page only. A NAMED COAT STAYS UNDER A PLAIN ONE (`scene/stuff.ts COAT_KIND`, `repaintWord`,
+  enamel's colour: for them the word changes the look page only. A NAMED COAT STAYS UNDER A PLAIN ONE (`scene/stuff.ts NAMED_COATS`, `repaintWord`,
   `repainted`: the one place a thing is painted again, which the default look's skin calls for boxes and for props' parts): a repaint gives a thing
-  its new paint's word, as ever, but 'carpaint' is a kind of 'paint', so a twin's plain car in one of the skin's enamels is still car paint. A rule of
+  its new paint's word, as ever, but 'carpaint' is a kind of plain coat (`PLAIN_COATS`: 'paint' and 'enamel', the two words that are a coat on
+  anything; 'enamel' joined 11-05, when a level's second palette painted its lorries in a row that says enamel and they lost the word), so a twin's
+  plain car in one of the skin's enamels is still car paint. A rule of
   words, not of cars: the next named coat is a row of the table. (203 steel things the skin gives an enamel become 'paint', as the look wants them
   drawn, and are metal to a round by their colour: carrying every word through every repaint would be wrong.) `stuff-check` line 8, `COAT_BREAK=1`.
   ALSO SOLID GLASS NOW, by the same row: a phone shop's display case top (bazaar), a solar panel (police post) and a

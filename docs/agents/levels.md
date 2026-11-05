@@ -1112,7 +1112,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the server room's raised floor `paver` (laid in tiles), the lino `enamel` (one waxed sheet: the look's plain gloss coat), the extinguisher, its box and the
   agent cylinder `enamel`, the van and both cars `carpaint`. 95 boxes of 783 say a new word; NO box, colour, finish or number moved (the file differs from the
   one before only by `stuff` words), so the level's fingerprint holds and every checkpoint and tape of the office still loads. NOT SAID, on purpose: the lot (no
-  stuff the look has is tarmac; `gravel` drew it as cobbles and `slab` as cracked paving on the software adapter, so it stays plain) and the lawn (it waits).
+  stuff the look has is tarmac; `gravel` drew it as cobbles and `slab` as cracked paving on the software adapter, so it stays plain) and the lawn (it waits). (BOTH ARE SAID since 11-05, at their paints' rows: "Lots and lawns say tarmac and grass", below.)
   NOT TOUCHED: the kit's own pieces (mullions, door frames, rugs, the things written with `drawnAs`), which every level built on the kit shares; lamps and
   hours; nothing was laid (the office passes `level-needs` `ground` and `lived` as built, and one added box would part every recording made on this floor).
   `levels/office-relief.json` is exported with it and comes back in step (on the step before it lacked the vehicles' 22 shapes). CHECK `stuff-check` line 4
@@ -1188,6 +1188,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A PLAY MOVE, DECLARED. New cover stands in the pass's yard (three fuel drums and one on its side in the pocket by the lean-to, pipes in the far
   corner south of the bunk room, split wood under the first window's sill, a bench, a ladder; the chopping block is round) and on the block's west
   wall (split wood under a sill), so the missions on those floors may play otherwise.
+  THE PIPES ARE OUT OF THE PASS AGAIN (11-05, the same day): the 'far corner' is the pocket, 6 m by 2.5 m between the bunk room's south wall and the yard
+  wall, that the squad bunches in to breach that wall, and the pile lay two metres straight behind the man who sets the charge. `menclear-check` (the men
+  with Sam step back from a set wall charge: the maintainer's own case, on this wall) read red on its lines 3 and 3s from that step on: one man of the four
+  was dealt no mark he could reach, straight back was the pile, and he stood IN the blast. The check was not in the step's list. Without the pipes the
+  lines read as they did before the dressing (clear after 2.5 s, three marks west along the wall). WHAT IT TEACHES A LEVEL'S AUTHOR: floor within a
+  charge's stand-off of a wall the squad breaches is the squad's, though no stack mark and no place for a charge is on it; run `menclear-check` and the
+  wall charge's family on both stands after standing anything in a yard. `pipes` stays a piece of the kit and stands in the showroom.
   MEASURED 2026-11-05, the joined head `dd81d0de` against this step, by the scripted play-through's digest (`PT_DIGEST=1 tools/qa/playthrough.ts`):
   21 missions x seeds 1 and 2, the frozen stand 40 of 42 runs the same (the two that move are the pass's); the shipped stand 36 of 42 (the six are
   the pass's, the block's and the three-squad block's); the shipped stand with lived rooms off 37 of 42 (the same six less one, and the block's four
@@ -1462,6 +1469,92 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the five boxes at their new sizes and nothing in the console. Never seen on a GPU: the check reads the file, and nobody has watched the eight
   places for a flicker before or after.
 
+- **A named coat's finish goes wherever its word goes: a vehicle's body is a clear coat** (`scene/stuff.ts COATFINISH`, `coatRough`, `NAMED_COATS`; read
+  by `scene/boxes.ts matWord`; 11-05; the maintainer, playing the preview: "how reflective is the car material, btw? it does feel like it should reflect
+  more of the environment and be quite dynamic as we move around it"). WHAT WAS WRONG, read from the code: a vehicle's body took its finish from the
+  paint's ROW. The truck enamels are satin (0.35, 0.4: a cot's and a locker's finish too), so on High the traced mirror was part faded (it fades over
+  the 0.12 under `rtMaxRough` 0.45) and wide, and on Medium (0.35) there was none; the plain car and the office's van had no finish at all (matte, 1.0:
+  no reflection ray); a twin's skinned car wore its new row's (0.35 to 0.75); the bazaar's cab a 0.5 written by hand. THE RULE: a named coat's row in
+  the table of coats says how smooth it is (carpaint 0.2: under every preset's mirror cut-off less its fade, the number agreed with the look's car
+  paint map, render.md "CAR PAINT IS A STUFF"), and the ONE function that hands a box's finish to the GPU (`matWord`) sends a box that says a named
+  coat no rougher than the coat, whatever row painted it and whatever number stands beside the word. So it holds for a level's statics, a shape's
+  pieces, a piece blown off a car (which copies the word and no finish) and anything made later that says the word. NO BOX IS CHANGED AND NO LEVEL FILE
+  CHANGES: `Box.rough` is the file's, always. THE WORD DECIDES: a thing that should not shine like a car does not say it is car paint (the tanker's
+  burnt cab says plastic). Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: `metal` stays the paint's, because the game reads that flag
+  (`wallpen.ts`, `wallcharge.ts`) and reads no roughness. (Three cuts were thrown away on review, so nobody tries them again: 0.2 written beside the
+  word on 507 boxes in 40 level files; a rule in the level file's reader and writer; a pass over the level's boxes at stand-up that kept each box's own
+  number in a side table, which no snapshot can list.)
+  THE SWITCH: ON in the page (`?coatfinish=0` = every box sent the finish its file gives it, as it was: the A/B for its cost), OFF in the module and on
+  the frozen stand (`TPS_COATFINISH=1`), a `FROZEN_HOLDS` row (a picture only), `STAND_ENV`, pinned in `standup.ts` beside the shapes' word, in the
+  registry and the journal (a recording with no table plays with it down). It can be flipped on a live page: the statics' packed slice is compared by
+  this float each frame.
+  UNDER THE LOOK the car paint map varies the number (`rough + dr`, its delta taken against the look's own row 0.26): about 0.11 where the coat is
+  clean, 0.37 under road dust.
+  WHAT IT LOOKS LIKE, and it is LITTLE BY ITSELF. Stills on the software adapter (11-05, the yard's white pickup at midday and at night, High): the
+  body at its file's 0.35, at 0.2 and at 0.12 are the same picture to the eye (mean difference 0.08 to 0.22 of 255 a pixel). A non-metal mirrors 4 % face
+  on (`reflect.wgsl` F0), and a sharper 4 % does not show over a bright paint. What the maintainer asked for needs a clear coat as a term of its own
+  in the shader (the renderer's part took it, 11-05), which can key on this word. What this rule gives by itself: Medium traces the bodies at all, the
+  plain cars and the twins' stop being matte, and one number is the coat's. NEVER SEEN ON A GPU.
+  THE CHECK: `bun run tools/qa/probes.ts coatfinish` (`tools/qa/coatfinish-check.ts`, in the `shapes` family), both stands: the stand; the yard as
+  stood, up and down (every box and piece that says car paint sent at the coat's, nothing else moved, no box's own number or metal touched); the
+  cases by hand (a twin's skin-written number, a body smoother than the coat, a bare-metal row, a piece off a car, a plain paint, a word that is no
+  stuff); every level file through the rule (507 boxes in 40 files on the shipped stand); the same seeded run by digest up as down; the rows and an
+  old recording. `COATFINISH_BREAK=1` fails four lines on both stands.
+  NOT DONE: a plain car's and the office van's GLASS says no finish (matte glass; the kits' dark glass is 0.1); the plough lorry's tipper sides are
+  plain orange beside a coated cab; the editor's finish panel shows the file's number, not what is sent. COST: smooth finishes are what the reflection
+  pass traces, and the plain cars are new to it: NOT MEASURED ON A GPU.
+- **A LEVEL FILE NAMES ITS MARKS** (the format, no switch, no rule of play; 2026-11-05). A mark is a named place on the floor where a person stands to
+  use a thing: the end of a `walked` way and a script's place, read by name (`scene/ways.ts`, `game/director.ts`). Until now only the office had any, and
+  only as code joined on at load (`scene/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`
+  (`levelData.ts MarkData`, validated: an id once, `pos` a Vec3, `yaw` a number), loaded to `Level.marks` and written back by `levelToData`, as `volumes`
+  are. A GENERATOR RETURNS `marks` ON ITS LEVEL and the exporter writes them; absent = none, and no other file changes. THE OFFICE IS THE FIRST: its
+  builder puts `OFFICE_MARKS` (31) on its Level and both its files carry them; a Level's marks are an ordinary key now. An office saved in the editor
+  before the key has no marks until it is saved from a file that has them. DO NOT USE A `scenarios.places` AREA AS A MARK: the game reads places.
+  CHECK: `walked-check` is red on a mark standing where the walk grid is shut; `probes.ts ways` already is on a name that is two things. As measured on
+  the step: the office's two files differ from before by the `marks` key alone, and loaded with the office's script each gives the same 31 marks, the
+  same scenarios and every other key of the Level the same as the build before it. Nothing a page draws moves.
+- **Lots and lawns say tarmac and grass** (the two paints' rows and every level file; no switch of its own; 2026-11-05; the dress goal's ask, the
+  office's follow-up grown to every level, and the step the office's hand pass waits on). The look has had a tarmac and a grass since the same day
+  (`render/lookTex.ts`); the WORDS are said at the paints' rows, `scene/stuff.ts PAINT_STUFF`: `asphalt` was 'plain' and is 'tarmac', `grass` was 'waits'
+  and is 'grass'. A level's FILE carries its rows' words, so ALL 59 LEVEL FILES were exported again and each differs from the step before by exactly
+  those two words (proved file by file with the words struck out) and by nothing else, but for ONE BOX: the compound's mud at the hand pump was laid in
+  the asphalt paint for its darkness and says `earth` now (`compound.ts`, `saidAs`; the same box in its look file). No box, colour, finish or number
+  moves; no base file rides (`lived-check` holds every one as it stands).
+  WHAT A ROUND GETS, and the step's one line under `src/game`: `game/particleFx.ts STUFF_SURF` gains the row `tarmac: 'concrete'` (the row the cars'
+  part asked for; written here and nowhere else). DRY, nothing moves: a lot's paint was concrete to a round by its colour. WET, THE PICTURE OF A HIT
+  MOVES, on the page only (the row rides HITSTUFF: `?hitstuff=0`, `TPS_HITSTUFF=1` on the frozen stand): the storm halves the lot's paint and that tone
+  read as metal (`weather.ts` and `gwotPalette.ts` say so, "as measured", and both are still true of what the SIMULATION reads, `destruction.ts`), so a
+  round on the wet lot threw a metal's sparks and no chips. A lot that says tarmac is concrete wet or dry: a few sparks, chips and dust. Nobody has seen
+  it. A LAWN TAKES NO ROUND: every grass box is a strip no ray meets (`NoShadow`) lying on the lot's slab, so a round into the office's lawn is a round
+  into the slab under it, concrete before and now. A `grass` row would read nothing while lawns are laid so; a lawn that gives blades and earth is a
+  change to how a lawn is laid. One thing for later.
+  THE GROUNDS, READ: every office-kit level lays one 40 by 28 m slab in the asphalt paint under everything: twenty files. For the levels that stay on
+  the mission list each was read against its generator's own words: the office and its relief file (one generator; a car park: tarmac; its two strips
+  are a lawn: grass), the depot (hardstanding and the road: tarmac), the consulate (a street: tarmac; its strip a verge: grass), Mousehole (the yard is
+  grass, the rest asphalt) and the compound (the road south and east: tarmac; its yard has an earth slab of its own over it; its two strips are SCRUB
+  and say grass now: left, the compound is to be re-set). FLIPPED AND NOT READ, each a ground that may be no lot: barracks, block, block-squads, defuse,
+  floodlit, hall, killhouse, kit-yard, quiet-yard, records, registry, sneak-lab, test-rooms, warehouse (asphalt), and the grass of barracks, block,
+  block-squads, defuse, records, registry and warehouse. ALSO FLIPPED, stand-ins: eleven boxes of the gear screen's sets in four plain files (the
+  compound's eight, and the set ground of defuse, the registry and Mousehole) name their paint 'dirt|asphalt' and the like and fall back to the two
+  rows where the file has no look row; they are drawn by the plain file only and are not mended (`stuff-check` line 15's rule).
+  WHERE IT IS DRAWN: a stuff is drawn on the look's page (`?look`) and nowhere else. Fourteen of the twenty have a look file whose skin repaints the
+  ground, and the page draws that file unless the dress is put off, so their tarmac and grass are not drawn. OF THE 29 LEVELS ON THE MISSION LIST ONE
+  CHANGES, THE OFFICE (two rows): its slab (the car park round the building) is tarmac and its two strips, 207 m2, are grass, where both were flat
+  colour; and the compound's 1 m2 of mud is earth. Off the list: the office's relief file, kit-yard, quiet-yard, sneak-lab and test-rooms draw their
+  slab as tarmac. THE PRICE, not measured in a browser: the look makes a stuff's maps once a boot for a level that names it (`render.md`: grass about
+  0.7 s of arithmetic and tarmac 0.55, under bun), and the office names both now, the last two layers made.
+  CHECK: `stuff-check` line 4's bar moved with the word (the office's car park is tarmac where it was plain: a bar moved, not loosened) and asks the
+  lawn; its new line 17 holds the two words to the ground (in every file each box that takes tarmac or grass from its row is a flat box of the
+  `ground` or `floors` group: 20 lots, 22 strips; a mat and a kerb written in the car park's paint are found, one that says earth is not) and a lot
+  to concrete in the picture of a hit; `STUFF_BREAK=1` fails 17 with the rest. `hitstuff`, `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
+  `probes.ts kept`, `wallfurn` and `wayround` green on both stands; the senses' error tool green on the office on the page's stand.
+  PLAY: no move. The play-through's 42 runs (21 missions, seeds 1 and 2) on the frozen stand, the page's, and the page's with its lived tier off, the
+  step against the tip it is cut on (step 1459): 42 of 42 run digests the same, each. SEEN, on the software adapter only (unsettled frames: what is
+  laid where, not what a material looks like): the office opened under `?look` at midday with the lot and the lawn drawn in their stuffs, 120 of 120
+  pipelines, no page or GPU error. The look task's settled still of the two was drawn on its own branch. Never on a GPU here, and nobody has seen a
+  round on the wet lot.
+
+
 - **What a box does is said in a word, and no rule reads a colour** (the table of materials, 2026-11-05; the game's rules, the level tools and every
   level file; NO SWITCH: by run digest the game is the game it was. The maintainer, that day: "we should fix the color walls issue. breaking/penetration
   shouldn't depend on color at all."). UNTIL THEN the rules knew a thing by its paint's COLOUR: an exact match against the office's palette named the
@@ -1498,15 +1591,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   same (the office: 18 walls, 56 cover, 137 things a round goes through, each time); no level file from before. `tools/qa/does-audit.ts`: each box's
   columns by word against by colour (`--before <ref>`: word against word). `tools/qa/look-check.ts` line 3 now holds every box of a level and its
   twin to the same word.
-  MEASURED: on the files written that day with their words and the old colours, 37,503 boxes and 4,050 props' parts, none doing another thing by word
+  MEASURED: on the files written that day with their words and the old colours, 37,497 boxes and 4,050 props' parts, none doing another thing by word
   than by colour; after the stand-ins lost their shift every box and every prop's part says the word it said (40 files moved, colours only, at most 0.0024
   a channel). The ribs of sixteen oil drums (TRIM, two a drum) moved their word, `unnamed dark` by their tone and `steel` by their kit: trim is drawn
   and met by no rule (`destruction.ts`, `wallbreak.ts` and `furnblast.ts` pass a piece by), and the one thing asked of a piece's word is whether it is snow.
+  Every level stood up on the build before and on this one, on both stands: the same walls and cover of the same stuff, the same things a round goes
+  through, outer walls, furniture and index, the same snow, and for every box the same answer to a round and to a blast, 59 of 59 files.
   42 play-throughs (21 missions, seeds 1 and 2) give the digests of the build before on the frozen stand and on the shipped stand.
+  A LEVEL MOVER PINS: both steps that wrote the level files wrote each moved level's base file too (`tools/qa/fixtures/level-base`, the lived check's).
   STILL ASKED OF A PAINT, AND NOT A MATERIAL: which slabs are one round thing is "do they wear the same paint" (`scene/round.ts`, `geoTry.ts`); a
   vehicle's lamps are found by a size and a paint together (`game/carlamps.ts`: a lamp repainted is no lamp to a round); the snow SHADER knows the
   three snow paints by their numbers (`shaders/snow.wgsl`), so a level's snow wears the palette's whites; `scene/lookTidy.ts` asks whether a level
   wears the look by its paints (`gwotPalette.ts lookPaintOf`); the editor's writer names a box's row by its numbers. The editor keeps what a box does
   through a repaint and a cut and has no field to set it by hand.
   NOT SEEN: nothing here draws, and the 0.0024 the twins' colours moved has not been looked at on any adapter. Nobody has played it.
+
 
