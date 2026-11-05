@@ -149,8 +149,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     - A PATH OF KEYS A LAYER IS HANDED (the stations of a magazine change: `gunreload.ts feedPath`, the game's own timing, which the sound
       beats read too and which is not posing) rides the bench after the hand pass's columns: `LAYER_KEYS_AT` 264, `LAYER_KEY` 7 doubles a
       key, `LAYER_KEYS_MAX` 48 (`skeleton.ts`; `KEYS_AT`, `KEY`, `KEYS_MAX` in `layers.rs`; the bench's `ARGS` is 1,024). A path longer
-      than the room is the TypeScript's to pose: the dispatcher asks for no slot. Two more things ride the same place: the times of the
-      blows of a big tool's beat (one double each, `BIG_BLOWS_MAX` 64) and the throw's seventeen tables of keys (`throwLayerAsk`:
+      than the room is a mistake, said by name where the layer is asked (`skeleton.ts layerFits`): no second way poses it. Two more things ride the same place: the times of the
+      blows of a big tool's beat that the layer reads (one double each, at most two: the last landed and the next coming, `character.ts blowsNear`) and the throw's seventeen tables of keys (`throwLayerAsk`:
       seventeen counts, then eleven tables of two doubles a key and six of four, `THROW_KEYS_MAX` 16 keys a table), which are the
       TypeScript's own `THR` / `THR_LOW` handed over at each ask, so there is one copy of every key.
     - A CLIP A LAYER NEEDS it samples itself (`sample_on_rest`: the rest pose copied into a scratch pose and the clip over it; `clip_at`: the
@@ -169,11 +169,23 @@ first system across (the game's own maths). No rule of play has changed and noth
     - KNOBS OUTSIDE A TICK. The module's copy of the knobs is written as a tick opens. A pose made outside one (a teleport's re-pose) would
       read the last tick's: `CharacterAnimator.update` begins with `LAYERS.knobs?.()` (`rustknobs.ts knobsNow`: hands them over unless a tick
       already has). Found by the wall hold's probe, which flips a knob and teleports. `layer-ident`'s `changed` line holds it.
-    - WHO IS ASKED: `layerSlot` answers a slot only for a man whose every pose stands in the module (`PoseSet.stray` is 0: a layer is handed
-      its other poses by their places) and whose rig's lists and tables fit there; any other man is posed by the TypeScript, the same
-      game. A name the animator lacks is a mistake and throws, before a word of the rig is written. A layer that answers 0 was handed
-      something the module does not hold, which the dispatcher's own tests are there to prevent (`reloadArm` and `knifePose` fall back
-      on too many keys, `bigLayer` on a beat of more than 64 blows, `throwLayer` on a table of more than 16 keys): it throws. `layer-ident`'s `whole` line holds the first three.
+    - WHO IS ASKED: `layerSlot` answers a slot for a man whose every pose stands in the module (`PoseSet.stray` is 0: a layer is handed
+      its other poses by their places; the stage sees to it for an update outside a tick). A name the animator lacks, or a list of the
+      rig's nodes or a table of its numbers longer than the module holds, is a mistake and throws by name, before a word of the rig is
+      written (`layerFits`). So does everything else of a fixed length a layer is handed: a clip the module does not hold or one that
+      writes a node its pose lacks (`clipNo`), a reload of more stations than `LAYER_KEYS_MAX` (where
+      the layer is asked), a knife blow of more than 4 keys or a table of a throw outside 2 to 16 (`character.ts layerTablesFit`, read
+      as an animator is made, so a table that grew is found as the game loads; `throwTables` names a swing's tables once, for the layer
+      and for this). NO QUIET WAY ROUND ANY OF THEM: until 2026-11-04 each was a man or a layer the TypeScript posed instead (the rig
+      and the clip counted under `walk`, the other four not counted at all). A layer that answers 0 was handed something the module
+      does not hold all the same: it throws. `layer-ident`'s `whole` line holds the pose astray, the rig's table and the clips (each of
+      the character file's is held; one of no tracks and one that writes a node past the pose are refused by name); `caps` holds the
+      knife's and the throw's tables, the check's own edges and every gun's reload. A RECORD THAT PLAY MAKES IS NOT A TABLE: a teammate's
+      hammer keeps every blow it landed until it is stowed (`bigkit.ts hammerOut`), over as many doors as he breaks, and a layer that
+      took the whole record had room for 64. So the big tool's layer is handed what it reads, in both languages: the last blow landed
+      and the next one coming (`character.ts blowsNear`), two at most whatever the record holds. `layer-ident`'s `blows` line holds it:
+      on every call of the big tool's drills the module handed the whole record leaves the pose the two blows leave, and a hammer's
+      record of 70 blows is one more drill of `both` (`BLOWS_BREAK=1`, the coming blow not handed over, is red). A layer that reads a record takes the part it reads, never the record.
     - THE CHECK: `bun run tools/qa/layer-ident.ts` (shipped stand; `rust-check`'s `layers` section runs it). `both` plays `warehouse-four:1`
       and then the drives a mission deals too little of: a quiet walk round a guard (80 s, crouch and close-in coming and going, with and without the knife and with the kit's close-in pose
       off for a part), four kicks,
@@ -203,17 +215,17 @@ first system across (the game's own maths). No rule of play has changed and noth
       carried close (`RUNARMS` raised for the drive, the animator's ground speed HELD: up from a walk through the jog to a full sprint and
       back, a jog held, a sprint that comes and goes; nothing drawn, the pistol out, the rifle coming up into both arms and put away
       mid-run) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
-      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-04, one seed, bun, 0 differ of:
-      standPose 509,533 · lifeLayer 509,533 · mvPre 509,533 · handsPass 509,533 · gazeKeep 509,533 · turnWeigh 282,391 ·
-      mvPostBody 109,378 · longBody 87,904 · longArms 87,739 · mvTrunk 86,989 · stealthLayer 84,262 · crouchPose 74,159 · toesUp
-      73,805 · clutchArm 63,227 · actPose 62,301 · watchSlip 35,967 · watchLook 35,967 · stanceBody 23,823 · wallBody 15,591 ·
-      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · runPlant 10,376 · holdLayer 10,044 · heldLayer
-      9,972 · softKnees 8,460 · creepBody 8,162 · steadyLayer 5,970 · runArms 4,007 · creepArms 3,606 · workLayer 3,595 ·
-      doorLayer 3,528 · readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms
-      1,076 · watchArm 1,070 · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 ·
-      woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose
-      446 · catchArm 317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 ·
-      torchUpLayer 174.
+      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-04, every row on, one seed, 0 differ of:
+      standPose 495,915 · lifeLayer 495,915 · mvPre 495,915 · handsPass 495,915 · gazeKeep 495,915 · turnWeigh 273,404 ·
+      mvPostBody 109,340 · stealthLayer 79,577 · longBody 73,198 · longArms 73,044 · mvTrunk 72,665 · crouchPose 69,724 ·
+      toesUp 69,377 · clutchArm 63,227 · actPose 62,301 · watchSlip 35,967 · watchLook 35,967 · stanceBody 24,791 · wallBody
+      15,591 · wallArms 15,591 · carryArms 15,247 · sneakBody 15,144 · sneakArms 13,490 · runPlant 10,072 · holdLayer 10,044
+      · heldLayer 9,972 · softKnees 8,208 · creepBody 8,162 · steadyLayer 5,924 · runArms 4,112 · creepArms 3,606 ·
+      workLayer 3,595 · radioPose 3,391 · readyLayer 3,234 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · doorLayer
+      1,601 · mvPostArms 1,092 · watchArm 1,070 · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 ·
+      blowTrunk 610 · blowArms 610 · woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 ·
+      boundArms 522 · signalLayer 450 · cablePose 446 · catchArm 317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 ·
+      takenLayer 236 · leanBody 234 · nvPose 216 · torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
       in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
@@ -223,20 +235,30 @@ first system across (the game's own maths). No rule of play has changed and noth
       For the last five (the hold, the held man, the big tool, the throw) the counters named every input the drives above list, by phase
       and variant, and each was reached with the layer live and easing out; what they did NOT split, and so nobody counted: the hold's
       inner tests on its own clocks (the sway, a spring's rest), the big tool's point exactly on his pelvis, a chest pitched but not
-      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). `runArms`,
+      turned, and what was once a fall-back to the TypeScript (a hammer's record longer than the module's room; a throw table of more than 16 keys is refused as the game loads). `runArms`,
       counted the same way: the jog alone, the sprint's share part and whole, the run's share part and whole, each hand behind, through
       and past its lift, a long gun part of the way up; unreached, the two shoulder joints on one spot (no rig has them there). A review
       read two more that the counters had not split, each driven since: the disarm begun WITH the grab (the game begins every one
       there; the pistol hand's rap on his gun) and a blast's fold with `THROW_BY` off.
       `caps`: a size both languages write down (the most keys of a knife blow, blows of a beat, keys of a throw table; where the keys
-      ride the bench) is the same number in `character.ts` / `skeleton.ts` and in `layers.rs`, read from the sources; the crate
-      itself refuses to build if the blows or the throw's tables at their caps would not fit the bench's own numbers.
+      ride the bench, how many keys a path may be) is the same number in `character.ts` / `skeleton.ts` and in `layers.rs`, read from the
+      sources; the crate itself refuses to build if the blows or the throw's tables at their caps would not fit the bench's own numbers.
+      Its second line holds the game to them: the knife's blows and the throw's swings fit as they stand, a jab lengthened to one key
+      past its layer is refused by name, and every row of the weapons table with a model of its own, at every count of rounds its gun
+      holds and one more, makes no more stations than a path may be (34 of 48 at the most: the M1014, eight shells and the bolt run);
+      `layerFits` refuses a length under its least, over its most, or that is no number; a door's blows by the kit's own numbers
+      (`BIGSLOT.swings`, `.shells`) are within a beat's 64.
       `RUST_BREAK=1`: every knob handed a hundredth large AND the first of each layer's own numbers bent the same way: every layer differs
       somewhere, `rust-check` wants each to.
       THE MISSIONS, all of the above in: `rust-check --missions --rows poses,walk`, five runs, 38,634 ticks, the same game after every
       update with the rows on and off, under bun and under node (and every quick section green beside them). THE ROW OFF is the build
       before the layers to the bit, and the row on is too (`tickcost.ts --compare`, the five runs: 3.85 ms a tick before, 3.83 with the
-      row off, 3.68 with `poses` and `walk` on, one round each on a shared box, so no more than "no slower seen"). SNAPSHOTS with the
+      row off, 3.68 with `poses` and `walk` on, one round each on a shared box, so no more than "no slower seen"). WITH 61 OF THE 62 LAYERS
+      IN (2026-11-04, the build to play before the run's arms joined it, `tickcost.ts --each --list --rounds 2`, the five runs, 30,071
+      ticks, every run the same game to the bit): rows off 6.35 ms a tick, `poses` and `walk` on 6.40; a run by itself lies between 5 %
+      under and 9 % over (compound-four 5.91 → 6.07, warehouse-four 6.47 → 6.60, pass-four 6.20 → 5.86, hostage-rescue 6.06 → 5.76,
+      block-squads 7.95 → 8.63), which is the box's own noise. So the layers buy NO time while each ask crosses to the bench and back
+      (the next item); the box was slower than at the first measure, so the two sittings do not compare. SNAPSHOTS with the
       rows up: `TPS_RUSTPOSES=1 TPS_RUSTWALK=1 bun run tools/qa/rollback-check.ts` on both stands (a layer's state is the animator's own
       fields, so this is what holds that no layer keeps anything a snapshot cannot reach).
     - WHAT THE ROW COSTS WHILE THE ANIMATOR'S STATE IS STILL TYPESCRIPT'S (all of it goes when `update` moves): a layer's columns cross to the
@@ -1472,7 +1494,9 @@ first system across (the game's own maths). No rule of play has changed and noth
   was falling back anyway. A fallback site calls `if (FELL.on) fell('<row>', '<why in plain words>')`: A FALLBACK THAT IS NOT COUNTED IS NOT KNOWN.
   THE SEAL (`sim.ts SEALED`): the rows no run may reach the TypeScript of. A tool that counted one prints `FELL SEALED ROW REACHED` and exits 1, and
   `rust-page.cjs`'s `systems` job fails on one in the real page. `FELL_BREAK=1` with `TPS_FELL=1` is the red path (questions outside a tick go back to
-  the TypeScript; it must end red). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`. A family adds its row in the step that closes its last fallback,
+  the TypeScript; it must end red), and `FELL_BREAK=<row>` counts one question of that row by hand as the tool opens: red for a sealed row, not red
+  for another (a family's proof that its row is on the list; a name that is no row of `RUST` is refused, and under `TPS_FELL=throw` the count
+  throws like any other). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`, `walk`. A family adds its row in the step that closes its last fallback,
   and its TypeScript can go in the step after. `rays` joined with "A pane's open question": until then a ray whose nearest thing was a pane the
   host said was open there flew on in the TypeScript walk (some five hundred a mission with glass in it).
   WHAT WAS CLOSED FOR THE SEALED ROWS:
@@ -1490,6 +1514,16 @@ first system across (the game's own maths). No rule of play has changed and noth
     block. Every other update had none and was posed by the TypeScript: a man posed as he is spawned, before any tick has opened over him; a menu's
     figure, who is in no game; a game whose block another game's tick has parked. Now a set at home has its block bound as the update opens, and a set
     with no home is lent the stage, a block of that file's own, for the one update. The same floats either way. A pool with no room is an error.
+  - THE ANIMATOR'S LAYERS (the row `walk`, sealed with them). What was left under it after the stage were sizes: a rig with a list or a table
+    longer than the module holds, a layer's clip the module does not hold, a reload of more stations than a path may be, a knife blow of more
+    than 4 keys, a big tool's record of more than 64 blows, a table of a throw outside 2 to 16 keys. Each was a quiet "the TypeScript poses this one", and
+    the last four were not even counted. None of them happens in the game (the count read none over the 42, and `layer-ident`'s `caps` holds
+    the tables and every gun's reload to their sizes), so each is now a mistake said by name through one check (`anim/skeleton.ts layerFits`;
+    the row's bullet, "WHO IS ASKED"), but for the big tool's record, which play makes and no table bounds: its layer is handed the two blows it reads
+    (`character.ts blowsNear`), so no size is left to it. What `layerSlot` still counts: a pose the pool had no
+    room for, a pose not at home, the module not answering posing questions — each only with the `poses` row up, since a row put down by its
+    own word (`?rustposes=0`) makes every layer the TypeScript's by that word, which is no way back in. `layer-ident`'s `whole` line walks
+    those ways out on purpose and holds the count down while it does.
   EVERY LEVEL AGAINST THE COPY'S CAPS: `bun run tools/qa/copyfit-check.ts` (`COPYFIT_BREAK=1` its red path) stands each level of `levels/` up and reads
   what it holds against the module's tables: statics (the fullest level 16 % of 8,192 on the page's stand), cells, the cells' entries, tilted statics,
   the cut rows the copy spent, leaves, furniture (61 of 128, the tightest). A level that does not fit would be a level every question of which is the

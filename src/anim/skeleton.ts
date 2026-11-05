@@ -31,26 +31,35 @@ function benchFor(n: number): SimExports | null {
 export const LAYERS = { knobs: null as (() => void) | null, ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[]; nums: string[] } | null, lists: [] as Int32Array[] };
 /** what the animator says of its rig for the module's two lists of names (rust/sim/src/knobs.rs): which node plays each role, and its lists of nodes to run forward */
 export interface LayerCast { nodes: Readonly<Record<string, number>>; lists: Readonly<Record<string, Int32Array>>; nums: Readonly<Record<string, ArrayLike<number>>>; poses: PoseSet }
+/** A SIZE A LAYER OF THE MODULE IS HANDED AT MOST (a list of the rig's nodes, a table of its numbers, the keys of a blow or a swing, the blows of a beat):
+ *  the module's arrays are of a fixed length, so one thing longer than its array is a mistake in the game's own tables or records, and it is said here, by
+ *  name, the first time it is met. There is no second way to pose it. */
+export function layerFits(what: string, n: number, max: number, min = 0): void {
+  if (!(n >= min && n <= max)) throw new Error(`posing: ${what} has ${n} entries and a layer of the Rust module takes ${min > 0 ? `${min} to ${max}` : `at most ${max}`} (rust/sim/src/layers.rs and knobs.rs hold the lengths)`);
+}
 const benchNames = (x: SimExports, table: number): string[] => { const at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); return s.split('\n').filter(l => l.length > 0); };
 /** THE SLOT TO ASK A LAYER OF `pose` IN, or −1 = the TypeScript runs it: the row is on, the pose lives in a block that stands in the module now AND SO DOES
  *  EVERY OTHER POSE OF ITS ANIMATOR (`cast.poses`: a layer is handed its other poses by their places, so one the pool had no room for is a man the
  *  TypeScript poses), the module answers posing questions (benchFor: the game's own maths), and `ch`'s rig, its named nodes and its lists (`cast`) are on
- *  the bench — a list or a table longer than the module holds is a rig its layers are not asked about. A layer's own numbers then go on the bench's `args`
+ *  the bench — a list or a table longer than the module holds is a mistake, said by name (layerFits). A layer's own numbers then go on the bench's `args`
  *  (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
 export function layerSlot(ch: GltfCharacter, pose: Pose, cast: LayerCast): number {
   if (!RUST.walk) return -1;
-  if (cast.poses.stray !== 0) { if (FELL.on) fell('walk', 'a man with a pose the pool had no room for'); return -1; }
-  const g = slotOf(pose); if (g < 0) { if (FELL.on) fell('walk', 'a pose that is not at home in a block (no game\'s tick has opened over it, or the poses\' row is down)'); return -1; }
-  const x = benchRig(ch); if (!x) { if (FELL.on) fell('walk', 'the module does not answer posing questions now, or the rig is not on the bench'); return -1; }
+  // (what is counted is a question the module could have been asked: with the poses' row put down by its own word every layer is the TypeScript's by that
+  //  word, which is no way back in)
+  if (cast.poses.stray !== 0) { if (FELL.on && RUST.poses) fell('walk', 'a man with a pose the pool had no room for'); return -1; }
+  const g = slotOf(pose); if (g < 0) { if (FELL.on && RUST.poses) fell('walk', 'a pose that is not at home in a block (no game\'s tick has opened over it)'); return -1; }
+  const x = benchRig(ch); if (!x) { if (FELL.on && RUST.poses) fell('walk', 'the module does not answer posing questions now, or the rig is not on the bench'); return -1; }
   if (LAYERS.roles !== ch) {   // (the roles and the lists go with the rig: rust/sim/src/knobs.rs names them, the animator says which nodes each is)
     const names = LAYERS.names ?? (LAYERS.names = { roles: benchNames(x, 3), lists: benchNames(x, 5), nums: benchNames(x, 8) });
     const w = u32(), at = x.knob_addr(2) / 4, la = x.knob_addr(4) / 4, ln = x.knob_addr(6) / 4, max = x.knob_len(4) / Math.max(1, x.knob_len(6)), nmax = x.knob_len(7) / Math.max(1, x.knob_len(9));
-    // (a name the animator does not have is a mistake in one of the two lists; a list or a table too long for the module is a rig the TypeScript poses.
-    //  Both are found before a word is written, so the rig that was there stays whole)
+    // (a name the animator does not have is a mistake in one of the two lists, and so is a list or a table longer than the module holds: no second
+    //  way poses that rig. Both are found before a word is written, so the rig that was there stays whole)
     for (const r of names.roles) if (typeof cast.nodes[r] !== 'number') throw new Error(`posing: the Rust module asks for the node "${r}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
     for (const l of names.lists) if (!cast.lists[l]) throw new Error(`posing: the Rust module asks for the list "${l}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
     for (const t of names.nums) if (!cast.nums[t]) throw new Error(`posing: the Rust module asks for the table "${t}" (rust/sim/src/knobs.rs) and the animator has none of that name`);
-    if (names.lists.some(l => cast.lists[l].length > max) || names.nums.some(t => cast.nums[t].length > nmax)) { POSE_BENCH.asked--; if (FELL.on) fell('walk', 'a rig with a list of nodes or a table of numbers longer than the module holds'); return -1; }   // (…and the question benchRig counted is not one the module was asked)
+    for (const l of names.lists) layerFits(`the rig's list of nodes "${l}"`, cast.lists[l].length, max);
+    for (const t of names.nums) layerFits(`the rig's table of numbers "${t}"`, cast.nums[t].length, nmax);
     for (let i = 0; i < names.roles.length; i++) w[at + i] = cast.nodes[names.roles[i]];
     for (let i = 0; i < names.lists.length; i++) {
       const l = cast.lists[names.lists[i]];
@@ -253,11 +262,13 @@ function clipIn(x: SimExports, clip: Clip): ClipSide {
   return c;
 }
 /** THE NUMBER A LAYER OF THE MODULE SAMPLES `clip` BY (rust/sim/src/layers.rs sample_on_rest: a layer that samples for itself is handed it with its own
- *  numbers), the clip written into the module now if it never was · −1 = the module does not hold it, or a pose of `nodes` nodes cannot take it: the
- *  TypeScript runs that layer. Asked after `layerSlot` (the bench is up). */
+ *  numbers), the clip written into the module now if it never was. A clip the module does not hold (its store has no room, or a track is of a shape it
+ *  cannot take), or one that writes a node its pose does not have, is a mistake in the character file or the store's size, said by name: no second way
+ *  samples it for a layer. −1 only with the bench down (asked after `layerSlot`, it is up). */
 export function clipNo(clip: Clip, nodes: number): number {
   const x = POSE_BENCH.x; if (!x) return -1; const c = clipIn(x, clip); if (c.at >= 0 && c.need <= nodes) return c.at;
-  if (FELL.on) fell('walk', c.at < 0 ? 'a layer\'s clip the module does not hold' : 'a layer\'s clip of more nodes than its pose'); return -1;
+  throw new Error(c.at < 0 ? `posing: a layer samples the clip "${clip.name}" and the Rust module does not hold it (rust/sim/src/clips.rs: no room in the store, or a track it cannot take)`
+    : `posing: a layer samples the clip "${clip.name}", which writes node ${c.need - 1}, over a pose of ${nodes} nodes`);
 }
 /** where the module keeps `clip` (−1 = it does not), for the check that reads the copy back; a clip never sampled with the row up is not asked for here */
 export function clipHeld(clip: Clip): number { return Math.max(-1, CLIP_SIDE.get(clip)?.at ?? -1); }
