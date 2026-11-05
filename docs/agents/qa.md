@@ -996,3 +996,8 @@ but synthetic writes still work.
   restart in place, keeps nothing (one game restarted thirty times with four seconds of play between: 116 MB to 121 after a full collection, the
   page's stand). Nobody has watched a browser's heap through a long session; nothing here says it grows. A TOOL THAT KEEPS GAMES ALIVE ON PURPOSE
   (two stood side by side, a list of them) is not helped by this and is as big as its games.
+- **`tools/qa/settings-check.ts`: THE PICTURE'S SETTINGS ARE NOT THE GAME'S** (2026-11-05; the rule and its first two numbers: `docs/agents/net.md`, "A
+  player's Brightness is his picture's alone"). A read of a setting of the engine's by a file under `src/game` is red unless it has a row saying why
+  (the picture's own, carried by a recording, or to move, with a date). Its static lines run as `probes.ts settings-reads` (family journal, so every gate
+  that runs journal runs them); run the whole check after adding a setting a player can move. `QA_PICTURE='{"key":value}'` in front of any headless
+  tool plays it with a player's settings laid over the stand-in engine's (a key the engine has no setting for is refused by name).

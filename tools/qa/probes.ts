@@ -50,7 +50,7 @@
 //     glass: glass-blast glass-flags glass-lines glass-off glass-shot glass-sight glass-sound
 //     grab: grab-auto grab-choke grab-gate grab-release grab-rollcall grab-talk grab-walk
 //     gunhold: gunhold-cover gunhold-dialogue gunhold-fire gunhold-variant gunhold-whip
-//     journal: journal-fixtures journal-knob journal-knobs journal-pagelike journal-perturb journal-roundtrip
+//     journal: journal-fixtures journal-knob journal-knobs journal-pagelike journal-perturb journal-roundtrip settings-reads
 //     missions: missions-shipped secondway marksight walked rowset
 //     shipped: shipped-profile
 //     music: music   (the score's newer pieces: tools/qa/music-check.ts; MUSIC_BREAK=1 must fail)
@@ -3649,6 +3649,7 @@ if (on('journal-knob', 'journal', 'all')) await run('journal-knob', async () => 
 if (on('journal-fixtures', 'journal', 'all')) await run('journal-fixtures', async () => (await import('./journal-probes.ts')).journalFixtures());
 let journalKnobsRed = 0;
 if (on('journal-knobs', 'journal', 'all')) journalKnobsRed = (await run('journal-knobs', async () => (await import('./knobs-check.ts')).knobsCheck())) ? 0 : 1;   // THE list of knob tables (src/game/knobs.ts): the recording's set, the feel panel's tables, the copy / put-back round trip
+if (on('settings-reads', 'journal', 'all')) await run('settings-reads', async () => (await import('./settings-check.ts')).settingsReads());   // THE PICTURE'S SETTINGS ARE NOT THE GAME'S (src/game/env.ts): no file under src/game reads a setting of the engine's outside the named rows — the static lines of tools/qa/settings-check.ts
 // ---------------------------------------------------------------- a restart equals a fresh staging (restart-probes.ts): per mission — the solo night, the night breach, the room clear
 // with a pair, the hostage rescue — a game played 20 s (walked, nine rounds fired, a door worked, a can thrown) and then restarted the way the page's 'Restart' does must digest, over the
 // next 10 s, as the same mission staged fresh at that clock. One child bun per mission under TPS_PROFILE=shipped; the file's head has what is re-based and why (the clock, the event serial).
