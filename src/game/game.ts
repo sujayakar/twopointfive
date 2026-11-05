@@ -228,7 +228,6 @@ import { GuardCols, PlayerCols } from '../sim/men/cols';
 import { FallStore } from '../sim/fallshome';   // (below the game too)
 import '../sim/dicehome';   // (the die's home in the Rust module registers itself: sim/state.ts simTenant)
 import './posehome';   // (…and the poses': registered as it loads, by a statement that uses src/sim's export alone)
-import { RUST } from '../sim/sim';
 import { knobsToRust, RUST_KNOBS } from './rustknobs';
 
 // ---------------------------------------------------------------- light targets
@@ -1726,7 +1725,7 @@ export class Game {
     this.ticking = true; this.col.tickOpen();   // (the box world's copy in the Rust module, where a row of RUST asks it: scene/boxMirror.ts)
     try {   // (…shut however the step ends: a step that throws must not leave the copy answering for boxes nobody compares)
     this.sim.settle(this);   // (the block is bound for the tick; a system whose state is in it only while its row of RUST is on — the die, the poses, the smoke grid — moves in or out as the tick opens: sim/state.ts)
-    if (RUST.walk) { knobsToRust(); RUST_KNOBS.tick = true; }   // (…and the knobs the module's code reads, as they stand now, before anything of the tick reads one: game/rustknobs.ts)
+    knobsToRust(); RUST_KNOBS.tick = true;   // (…and the knobs the module's code reads, as they stand now, before anything of the tick reads one: game/rustknobs.ts)
     let cmd0 = cmds[0];
     if (CMDCHECK.on) for (let i = 0; i < n; i++) { const s = S[i], r = checkCmd(cmds[i], s.remote ? s.view.player.char.pos : null); if (!i) cmd0 = r.cmd; else if (r.cmd !== cmds[i]) (cmds = cmds.slice() as PlayerCmd[])[i] = r.cmd; if (r.fixed) { s.fixed += r.fixed; s.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
     this.replayTap?.(dt, cmd0);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only

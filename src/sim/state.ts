@@ -73,6 +73,8 @@ function layout(): Layout {
 }
 /** where part `p` of a block starts, in bytes from the block's own start (`st.d[simPart(P) >> 3]` is its first double) */
 export function simPart(p: number): number { return layout().off[p]; }
+/** …and how long part `p` is, in bytes */
+export function simPartLen(p: number): number { return layout().len[p]; }
 /** what the module says of its blocks, for a check: the layout's word, a block's bytes, the slots, each part's start and length */
 export function simLayout(): { word: number; bytes: number; games: number; parts: { name: string; off: number; len: number; pool: boolean }[] } {
   const l = layout(); return { word: l.word, bytes: l.words * 4, games: l.games, parts: l.off.map((off, i) => ({ name: SIM_PARTS[i] ?? `part${i}`, off, len: l.len[i], pool: l.pool[i] })) };

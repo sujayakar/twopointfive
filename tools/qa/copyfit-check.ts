@@ -3,7 +3,7 @@
 // TypeScript answers, and the day the TypeScript is gone it is a level that cannot be played; a level over a pool is not loaded at all. So each level
 // of levels/ is stood up as a game stands it, a tick's open is asked for, and what it holds is read against what holds it — BY THE GAME'S OWN COUNT
 // (src/game/levelfit.ts fitRows: one source for the game, the validator and this check): statics, grid cells, the cells' entries, tilted statics, the cut
-// rows the copy spent, leaves, the loose furniture and its part boxes, the glass a line can note, sheets of glass, doors. A TABLE OF THE COPY THAT NO
+// rows the copy spent, leaves, the loose furniture and its part boxes, the glass a line can note, sheets of glass, doors, the men's poses. A TABLE OF THE COPY THAT NO
 // ROW OF THAT COUNT IS HELD BY IS A FAIL: the list cannot fall behind the copy.
 //   bun run tools/qa/copyfit-check.ts [--levels a.json,b.json]   exit 0 = every level fits with the room below · 1 = one does not (named)
 //   COPYFIT_BREAK=1 …                                            the red path: every cap is read as a twentieth of itself, and the check must FAIL

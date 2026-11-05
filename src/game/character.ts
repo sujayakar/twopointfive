@@ -4,17 +4,17 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, POSEMATH, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerFits, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo, stageOpen, stageShut } from '../anim/skeleton';
+import { NodeOverride, POSEMATH, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, sampleClip, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerFits, layerRan, colsToBench, colsFromBench, colsJoin, clipNo, layerClipsFit, stageOpen, stageShut } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { ManCols } from '../sim/men/cols';
 import { standMan, loneMen, type MenStore } from '../sim/men/store';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
-import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
+import { RIG, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
 import { hyp2, hyp3 } from '../math/vec';
 import { WALLSNAP } from './wallsnap';
 import { STEALTHPOSE, type StealthFeed } from './stealthpose';   // (read inside methods only: the game's one import cycle)
 import type { GunLook } from './gunlook';
-import { feedPath, feedLive, type FeedKey } from './gunreload';   // (read inside methods only: the game's one import cycle)
+import { feedPath, feedLive } from './gunreload';   // (read inside methods only: the game's one import cycle)
 import type { GunModelId } from './weapons';
 import { INHAND, BELT_TORCH, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
 import { GUNHAND } from './gunhand';   // (a leaf: the switch and its keys)
@@ -325,7 +325,7 @@ export const HOLD = {
 };
 /** the whip's shape inside HOLD.secs.whip: wound up by WIND, the strike leaving at STRIKE and ARRIVING at secs.whip (fast, like the kick meeting the door); the
  *  follow-through runs THRU past it while the layer eases out */
-const WHIP_WIND = 0.36, WHIP_STRIKE = 0.42, WHIP_THRU = 0.14;
+const WHIP_THRU = 0.14;
 /** the hold's hand-over spring (both layers' eased share of the variant, 0 = arm ↔ 1 = gun, when E changes it mid-hold): at 14 it passes ½ — where the tools
  *  change hands behind the man's shoulder — about 0.12 s after the key and is all but across by HOLD.secs.swap */
 const SWAP_RATE = 14;
@@ -341,14 +341,6 @@ export function holdPolish(up: boolean) {
 }
 export const HOLD_SHOW = { kill: false, beats: false };
 rollbackRoot('character.HOLD_SHOW', HOLD_SHOW);   // (written by takedownTick once a frame, read by the hold's layers on the next)
-/** the kill's eased clock (hdKc / heKc): after the hold's own by a spring this stiff, its target led by the spring's lag so the cut lands where HOLD.kill.hit
- *  says; back out of a cancelled one at the slower rate */
-const KILL_RATE = 40, KILL_BACK = 9;
-/** the disarm's clock on the way IN (HOLD.strip, both layers' hand paths): the hand leaves gently and is at speed as it lands on the gun at `take` — past it, the clock itself */
-const stripIn = (t: number, take: number): number => { if (t >= take) return t; const x = t / take; return take * x * x * (2 - x); };
-function killEase(s: Spring, on: boolean, t: number, dt: number): number {
-  return clamp(s.step(on ? clamp((t + 2 / KILL_RATE) / HOLD.secs.kill, 0, 1) : 0, on ? KILL_RATE : KILL_BACK, dt), 0, 1);
-}
 /** the rate (1/s) Sam's hold layer lets go at once the controller has: 16 as ever — but out of the kill, or a choke run to its end, he was down over the man
  *  with a hand on him, and comes up at HOLD.kill.after / HOLD.beats.after for as long as he stands IDLE; the first step takes it back to 16, and so does
  *  anything else he is told to do (`busy`: CharacterAnimator.holdBusy) — control is his the whole time, only the pose lingers. The arm variant's, each behind its half. */
@@ -446,7 +438,7 @@ const DEGR = Math.PI / 180;
 const nodLift = (n: number) => 2 * DEGR - Math.hypot(n, 2 * DEGR);
 const AX: Vec3 = [1, 0, 0], AY: Vec3 = [0, 1, 0], AZ: Vec3 = [0, 0, 1];
 /** model-axis rotations: pitch (+ = bow forward), yaw (+ = turn to the figure's left), roll (+ = left shoulder up) */
-const qPitch = (a: number) => quat.axisAngle(AX, a), qYaw = (a: number) => quat.axisAngle(AY, a), qRoll = (a: number) => quat.axisAngle(AZ, a);
+const qYaw = (a: number) => quat.axisAngle(AY, a);
 
 /** STEALTH POSES (game/stealthpose.ts → CharacterAnimator.stealthLayer / stealthPicture): Sam's hands-empty crouch. Places in his own frame (left, up, forward —
  *  metres) for the LEFT arm, the right mirrors `left`. `idle`: each wrist hangs `fwd` in front of its own knee (never behind the front knee + `lead`), `below` the
@@ -467,19 +459,6 @@ class Spring {
   v = 0; constructor(public x = 0) {}
   step(target: number, w: number, dt: number) { const y = this.x - target, j = this.v + y * w, e = Math.exp(-w * dt); this.x = target + (y + j * dt) * e; this.v = (this.v - j * w * dt) * e; return this.x; }
 }
-/** The choke's lowering (HOLD.lower) on its way down follows its clock; let go of (the choke eased off, the half switched off) it comes back up on a spring of
- *  its own, `up` 1/s — the choke's own clock is back at rest in a tenth of a second, and nobody stands up out of a squat that fast. */
-function lowerEase(s: Spring, target: number, up: number, dt: number): number {
-  if (target >= s.x) { s.x = target; s.v = 0; return target; }
-  return Math.max(target, s.step(target, up, dt));
-}
-/** The haul's amount (HOLD.haul): the choke's own curve while it runs — its in and its out are eased already, and past the out it is exactly nothing —
- *  and let down on a spring, `down` 1/s, when the choke is let go of in the middle of one. */
-function haulEase(s: Spring, on: boolean, target: number, down: number, dt: number): number {
-  if (on) { s.x = target; s.v = 0; return target; }
-  if (s.x <= 1e-4) { s.x = 0; s.v = 0; return 0; }
-  return Math.max(0, s.step(0, down, dt));
-}
 /** One hand-animated channel of a one-shot: Catmull-Rom through (time s, value) keys — passes through every key with a continuous slope (no stop-start at the
  *  keys, a little natural overshoot between them), flat at the first and last key, clamped outside. */
 type Keys = readonly (readonly [number, number])[];
@@ -493,19 +472,6 @@ function curve(t: number, K: Keys): number {
 }
 /** the same spline for a keyed model-space vector (hand paths, palm / finger directions): one segment search, Catmull-Rom per component */
 type Keys3 = readonly (readonly [number, readonly number[]])[];
-function curve3(t: number, K: Keys3): Vec3 {
-  const n = K.length; if (t <= K[0][0]) { const p = K[0][1]; return [p[0], p[1], p[2]]; } if (t >= K[n - 1][0]) { const p = K[n - 1][1]; return [p[0], p[1], p[2]]; }
-  let i = 0; while (t > K[i + 1][0]) i++;
-  const t0 = K[i][0], t1 = K[i + 1][0], P0 = K[i][1], P1 = K[i + 1][1], Km = i > 0 ? K[i - 1] : null, Kp = i + 2 < n ? K[i + 2] : null;
-  const h = t1 - t0, u = (t - t0) / h, u2 = u * u, u3 = u2 * u;
-  const a = 2 * u3 - 3 * u2 + 1, b = (u3 - 2 * u2 + u) * h, c = 3 * u2 - 2 * u3, d = (u3 - u2) * h;
-  const out: Vec3 = [0, 0, 0];
-  for (let k = 0; k < 3; k++) {
-    const m0 = Km ? (P1[k] - Km[1][k]) / (t1 - Km[0]) : 0, m1 = Kp ? (Kp[1][k] - P0[k]) / (Kp[0] - t0) : 0;
-    out[k] = a * P0[k] + b * m0 + c * P1[k] + d * m1;
-  }
-  return out;
-}
 /** sampleClip(clip, 0, false, out) for the clips the aim layer samples there every frame: that call writes fixed numbers (each track's first key, read off the clip alone —
  *  a sample never reads the pose it writes) into fixed slots, so they are found once per clip — sampled into a pose of NaNs: a slot still NaN afterwards is one the clip
  *  does not key — and replayed: the same floats into the same slots, the rest of `out` left as it stands, exactly as the sample leaves it. */
@@ -538,19 +504,8 @@ function addPoseDelta(p: Pose, from: Pose, to: Pose, w: number, only: Float32Arr
     const l = hyp4(x, y, z, ww) || 1; P[3 * N + i] = x / l; P[4 * N + i] = y / l; P[5 * N + i] = z / l; P[6 * N + i] = ww / l;
   }
 }
-/** IK pole for an arm from a swivel angle: the direction square to the shoulder→hand offset `h` at angle `psi` in the basis (b1 = `ref` made ⊥ h, b2 = ĥ × b1).
- *  `ref` is a fixed direction the hand never points along (or against), so the basis — and with it the elbow — turns continuously wherever the hand goes. */
-function swivelPole(h: Vec3, ref: Vec3, psi: number): Vec3 {
-  const hn = v3.normalize(h); const b1 = v3.normalize(v3.mad(ref, hn, -v3.dot(ref, hn))); const b2 = v3.cross(hn, b1);
-  return v3.mad(v3.scale(b1, Math.cos(psi)), b2, Math.sin(psi));
-}
 /** those references for the right / left arm: across the body, a little up and back — ≥ 44° off every bearing either hand takes in the clips and layers here */
 const SWIV_REF_R: Vec3 = [0.92, 0.276, -0.276], SWIV_REF_L: Vec3 = [-0.92, 0.276, -0.276];
-/** cubic Hermite segment with explicit end slopes (a one-shot phase that must arrive at speed — the kick meeting the door — instead of easing in) */
-function hermite(t: number, t0: number, p0: number, m0: number, t1: number, p1: number, m1: number): number {
-  const h = t1 - t0, u = clamp((t - t0) / h, 0, 1), u2 = u * u, u3 = u2 * u;
-  return (2 * u3 - 3 * u2 + 1) * p0 + (u3 - 2 * u2 + u) * h * m0 + (3 * u2 - 2 * u3) * p1 + (u3 - u2) * h * m1;
-}
 /** smooth 0→1→0 window: rises over [a,b], falls over [c,d] (smoothstep flanks) */
 const bump = (t: number, a: number, b: number, c: number, d: number) => smoothstep(a, b, t) * (1 - smoothstep(c, d, t));
 
@@ -849,18 +804,6 @@ export const HAND = { can: { curl: [0.56, 0.58, 0.62, 0.68], thumb: 0.3 }, curl:
 /** the angle (rad) between the unit quaternions at a[i‥i+3] and b[k‥k+3] */
 /** the angle between the rotation at a[i] (its four numbers `s` apart: a pose's rows, or 1 in a plain list of rotations) and the one at b[k‥k+3] */
 const qAng = (a: ArrayLike<number>, i: number, s: number, b: ArrayLike<number>, k: number) => { const d = Math.abs(a[i] * b[k] + a[i + s] * b[k + 1] + a[i + 2 * s] * b[k + 2] + a[i + 3 * s] * b[k + 3]); return d >= 1 ? 0 : 2 * Math.acos(d); };
-/** q ← q · (x, y, z, w)^f, q the rotation at d[o], d[o + s], d[o + 2s], d[o + 3s] (a pose's columns: s = its rows) — a joint's local rotation turned on by the share f of a further local rotation, in place */
-function qTurnBy(d: Float32Array, o: number, s: number, x: number, y: number, z: number, w: number, f: number) {
-  if (w < 0) { x = -x; y = -y; z = -z; w = -w; }
-  const th = Math.acos(Math.min(1, w)); let sc = f, cw = 1; if (th > 1e-4) { sc = Math.sin(f * th) / Math.sin(th); cw = Math.cos(f * th); }
-  x *= sc; y *= sc; z *= sc; const qx = d[o], qy = d[o + s], qz = d[o + 2 * s], qw = d[o + 3 * s];
-  d[o] = qw * x + qx * cw + qy * z - qz * y; d[o + s] = qw * y - qx * z + qy * cw + qz * x; d[o + 2 * s] = qw * z + qx * y - qy * x + qz * cw; d[o + 3 * s] = qw * cw - qx * x - qy * y - qz * z;
-}
-/** the rotation at d[o] (its numbers s apart) turned the share f of the way to the local rotation at t[k‥k+3], in place */
-function qTurnTo(d: Float32Array, o: number, s: number, t: ArrayLike<number>, k: number, f: number) {
-  const cx = -d[o], cy = -d[o + s], cz = -d[o + 2 * s], cw = d[o + 3 * s];   // conj(q) · target
-  qTurnBy(d, o, s, cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1], cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k], cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3], cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2], f);
-}
 /** MOVES.entry's lane (THE rule, for the game and the strips alike): something (dx, dz) from a man stands before his muzzle — within arm's length-and-a-half
  *  down the line his GUN points (gunYaw) and inside a body's half-width of it */
 export function inDipLane(dx: number, dz: number, gunYaw: number): boolean { const L = MV2.dip.lane, fx = Math.sin(gunYaw), fz = Math.cos(gunYaw), along = dx * fx + dz * fz; return along > L[0] && along < L[1] && Math.abs(dx * fz - dz * fx) < L[2]; }
@@ -964,13 +907,6 @@ try {
   if (v !== null) { setTurn(v); console.info(`turn weight: ${turnFeel()}`); }
   if (q.has('noturn')) TURN.on = 0;
 } catch { /* no page (the harness) */ }
-/** one frame of a mass coming round: `w` its rate now, `err` what is left (signed), top rate `wMax`, acceleration `acc` → [the step, the rate after it] */
-function turnStep(w: number, err: number, wMax: number, acc: number, dt: number): [number, number] {
-  const a = Math.abs(err); if (a < 1e-5) return [err, 0];
-  const s = err < 0 ? -1 : 1, wt = s * Math.min(wMax, Math.sqrt(2 * acc * a));   // (the fastest it may be going with this much left to stop in)
-  let nw = w + clamp(wt - w, -acc * dt, acc * dt); if (s * nw > s * wt) nw = wt;  // … and never faster than that: it does not carry past the point
-  const d = nw * dt; return s * d >= a ? [err, s * Math.min(wMax, a / dt)] : [d, nw];
-}
 /** what mvPre hands the trunk layer: anything to do at all, the trained glide's weight (moving), the untrained share, the trained standing share */
 interface MvGait { live: boolean; g: number; u: number; st: number; }
 const MV_NONE: MvGait = { live: false, g: 0, u: 0, st: 0 };
@@ -1469,8 +1405,6 @@ export function bigOff(B: { t: number; equip: number; stow: number; end: number;
   if (B.end >= 0 && B.t >= B.end) return (B.t - B.end) / Math.max(1e-3, B.stow) < S.show;
   return B.t >= S.hide * B.equip;
 }
-/** a unit direction turned k of the way to another (the short way round) */
-function dirMix(a: Vec3, b: Vec3, k: number): Vec3 { return k <= 0 ? a : k >= 1 ? b : v3.normalize(quat.rotate(quat.slerp([0, 0, 0, 1], quat.fromTo(a, b), k), a)); }
 
 /** Animation graph producing a local pose + twist list each frame. */
 /** Where a ray enters a vertical column (centre cx,cz, radius r, y from bot to top) — through its side, its top or its bottom; −1 for a miss, an origin inside it, or beyond tmax. */
@@ -1487,6 +1421,9 @@ function columnEntry(ro: Vec3, rd: Vec3, tmax: number, cx: number, cz: number, r
   return tIn;
 }
 
+/** poses an animator keeps from one tick to the next, at most: the seven it is made with, and six made the first time a layer wants one (the arms before
+ *  the second pass, the hand before a swap, the two blended, the cable's picture, the swap's own, the sledge's). PoseSet stops a fourteenth by name. */
+const ANIM_POSES = 13;
 export class CharacterAnimator {
   pose: Pose; private pA: Pose; private pB: Pose; private pC: Pose; private pUpper: Pose; private rest: Pose; private pAim: Pose;
   twists: TwistSpec[] = [];
@@ -1725,7 +1662,6 @@ export class CharacterAnimator {
   /** IN: closer than ever by distance, 0‥1 (KIT.close) — or −1 = not dealt: the carriage and the hands exactly as they were */
   closeK = -1; private clK = 0; private clT = 0; private clL = 0;
   private mv2 = { bd: new Spring(), bdK: 1 as 1 | 2, cl: new Spring(), dip: new Spring(), rw: new Spring(), rlAt: 0 };
-  private mv2Mask: [Float32Array, Float32Array] | null = null;
   /** what the second pass shows this frame (QA / the strips; nothing reads them) */
   mv2Shown = { reload: 0, bound: 0, clutch: 0, dip: 0 };
   /** the pose UNDER the second pass's arms (mvArms: reload / clutch / bound), on the frames they show anything — else null. They are looks; what the game seeds from
@@ -1861,9 +1797,9 @@ export class CharacterAnimator {
    *  breach's point man boots the leaf beside its handle off the leg nearer the doorway, weight on the wall-side foot he then steps back onto) */
   private kickLeg: 'left' | 'right' = 'right';
   private clips: Record<string, Clip>;
-  private upperMask: Float32Array; private armRMask: Float32Array; private headMask: Float32Array; private armsMask: Float32Array; private dynMask: Float32Array;
+  private upperMask: Float32Array; private armRMask: Float32Array; private headMask: Float32Array; private armsMask: Float32Array;
   /** one arm each, clavicle to fingertips (the door hand) */
-  private armLOnly: Float32Array; private armROnly: Float32Array;
+  private armROnly: Float32Array;
   /** the aim clip's mask less both arms (upperMask − armsMask): the rifleman takes the clip's trunk and head and keeps the long gun's own arms */
   private torsoMask: Float32Array;
   private fk: PoseFK;
@@ -1890,7 +1826,7 @@ export class CharacterAnimator {
 
   /** every pose this animator keeps from one tick to the next, made through here so that they can live in the game's block of the Rust module
    *  (anim/skeleton.ts PoseSet; game/posehome.ts moves them as a tick opens under RUST.poses) */
-  readonly poses = new PoseSet();
+  readonly poses = new PoseSet(ANIM_POSES);
 
   constructor(public ch: GltfCharacter) {
     const n = ch.nodes.length;
@@ -1914,9 +1850,8 @@ export class CharacterAnimator {
     this.armRMask = buildMask(ch, [{ name: N.shoulderR, w: 1, subtree: true }, { name: N.spine3, w: 0.25, subtree: false }]);
     this.headMask = buildMask(ch, [{ name: N.neck, w: 1, subtree: true }]);
     this.armsMask = buildMask(ch, [{ name: N.shoulderL, w: 1, subtree: true }, { name: N.shoulderR, w: 1, subtree: true }]);   // both clavicles down to the fingertips: the procedural carries / lock work
-    this.armLOnly = buildMask(ch, [{ name: N.shoulderL, w: 1, subtree: true }]); this.armROnly = buildMask(ch, [{ name: N.shoulderR, w: 1, subtree: true }]);   // one arm at a time: the hand on a door
+    this.armROnly = buildMask(ch, [{ name: N.shoulderR, w: 1, subtree: true }]);   // the right arm alone
     this.torsoMask = this.upperMask.map((w, i) => this.armsMask[i] > 0 ? 0 : w);                                          // the aim clip's trunk + head without its arms (the long gun keeps its own)
-    this.dynMask = new Float32Array(n);                                                                                      // the signals' left-arm mask, rebuilt per frame with staggered weights (shoulder → elbow → hand)
     this.fk = new PoseFK(ch); { const nd = this.nodes; this.fkLegs = this.fkList([nd.hips, nd.thighL, nd.shinL, nd.footL, nd.toeL, nd.thighR, nd.shinR, nd.footR, nd.toeR]); this.fkArms = this.fkList([nd.spine3, nd.upperArmR, nd.forearmR, nd.handR, nd.middle1R, nd.upperArmL, nd.forearmL, nd.handL]); this.fkHead = this.fkList([nd.head]); }
     sampleClip(this.clips.Pistol_Aim_Neutral, 0, false, this.pAim);   // the two-hand grip every pistol carry below is built from (static clip)
     this.fk.run(this.rest); this.chestRestInv = quat.conj(this.fk.rot[this.nodes.spine3]); this.headRestInv = quat.conj(this.fk.rot[this.nodes.head]);
@@ -1955,7 +1890,7 @@ export class CharacterAnimator {
           if (ang > 0.3 * DEGR) this.jogSeam.push({ node: tr.node, axis: [q[0] / s, q[1] / s, q[2] / s], ang });
         }
       } }
-    layerTablesFit();
+    layerTablesFit(); layerClipsFit(ch.clips.values(), this.pA.numNodes);
     // (what a layer of the Rust module is handed with the rig — skeleton.ts layerSlot: the named nodes, the lists of nodes, and the tables of numbers worked out above)
     this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] }, poses: this.poses,
       nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.node, 0, e.d[0], e.d[1], e.d[2], 0] : [e.node, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
@@ -2240,7 +2175,7 @@ export class CharacterAnimator {
   update(dt: number) { const lent = stageOpen(this.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.poses); } }
   private updateStanding(dt: number) {
     const P = this.params; const c = this.clips; const nd = this.nodes;
-    LAYERS.knobs?.();   // (RUST.walk: a pose made outside a tick — a teleport's — reads the knobs as they stand, as a tick's does: game/rustknobs.ts knobsNow)
+    LAYERS.knobs?.();   // (a pose made outside a tick — a teleport's — reads the knobs as they stand, as a tick's does: game/rustknobs.ts knobsNow)
     if (this.rawClip) {   // raw clip preview: rest pose underneath so nodes the clip does not key stay sane; one-shots cancelled (nothing here would ever finish them)
       const r = this.rawClip; r.time += dt * r.rate;
       this.pose.copy(this.rest); sampleClip(r.clip, r.time, r.loop, this.pose); this.twists.length = 0;
@@ -2344,7 +2279,7 @@ export class CharacterAnimator {
     const surge = aL > 1e-5 ? -aL * SNEAK.surge * strideD * (1 + SNEAK.paceStride * pace) * P.crouchSpeed * c.Crouch_Fwd_Loop.duration / (4 * Math.PI) * Math.sin(th) * (this.reverse ? -1 : 1) : 0;   // (ground per cycle = stride factor × the clip's own; × the share of it the clip's stance really covers)
     // stand pose
     this.standPose(ph, wIdle, wWalk, wJog, wSprint);
-    if (RUNARMS.on && this.lg.run > 1e-3 && this.lg.w.x < 0.999) this.runArms(this.pA, this.lg.run, this.lg.sprint);   // the run's own arms carried close (RUNARMS), on the whole standing pose: by the run's share, so a sprint a heavy kit slows is not half the clip's wide arms again; not under a long gun that has both arms. (A layer of its own after the stand pose; with RUST.walk it is the module's run_arms)
+    if (RUNARMS.on && this.lg.run > 1e-3 && this.lg.w.x < 0.999) this.runArms(this.pA, this.lg.run, this.lg.sprint);   // the run's own arms carried close (RUNARMS), on the whole standing pose: by the run's share, so a sprint a heavy kit slows is not half the clip's wide arms again; not under a long gun that has both arms. (A layer of its own after the stand pose: rust/sim/src/layers.rs run_arms)
     if (wRun > 1e-3 && SOFT_KNEE.on > 0.5) this.softKnees(this.pA, wRun);   // ease the push-off leg short of dead straight (see SOFT_KNEE — its own switch, not the linger's) before the plant re-solves the stance leg
     // the run's stance feet pinned to the floor and the ground's speed through each stance window (after the whole stand pose is together: it re-solves the
     // stance leg under whatever the blend made of it; the crouch blend, the life layer and the stances that follow keep the feet where they find them).
@@ -2703,24 +2638,14 @@ export class CharacterAnimator {
   }
   /** the action's clip over the pose at weight `w`, and the slump (the clocks above are the animator's) */
   private actPose(clip: Clip, w: number, dt: number) {
-    const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), clip);   // (RUST.walk: rust/sim/src/layers.rs act_pose)
-    if (g < 0) this.actPoseOwn(clip, w, dt);
-    else if (!LAYERS.both) this.actPoseAsk(g, clip, w, dt);
-    else layerBoth('actPose', this.pA, this.fk, () => this.actPoseAsk(g, clip, w, dt), () => this.actPoseOwn(clip, w, dt), colsOf(CharacterAnimator.actCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs act_pose)
+    this.actPoseAsk(g, clip, w, dt);
+    if (LAYERS.watch) LAYERS.watch('actPose', this.pA, this.fk, colsOf(CharacterAnimator.actCols, this));
   }
   private static readonly actCols: LayerCols<CharacterAnimator> = { n: 1, get(c, o) { c[o] = this.slumpW; }, put(c, o) { this.slumpW = c[o]; } };
   private actPoseAsk(g: number, clip: Clip, w: number, dt: number) {
     const m = f64(), o = POSE_BENCH.args; m[o] = w; m[o + 1] = clipNo(clip, this.pA.numNodes); m[o + 2] = this.actT; m[o + 3] = this.actLoop ? 1 : 0; m[o + 4] = dt; m[o + 5] = this.slump;
     colsToBench(CharacterAnimator.actCols, this); layerRan(POSE_BENCH.x!.layer_act_pose(g, this.pA.at, this.pB.at, this.rest.at), this.fk); colsFromBench(CharacterAnimator.actCols, this);
-  }
-  private actPoseOwn(clip: Clip, w: number, dt: number) {
-    this.pB.copy(this.rest); sampleClip(clip, this.actT, this.actLoop, this.pB);
-    blendPose(this.pA, this.pB, w, null, this.pA);
-    if (this.slump > 0 || this.slumpW > 0) {   // (doze.ts: a man asleep in his chair)
-      const ds = this.slump - this.slumpW; this.slumpW += ds > 0 ? Math.min(ds, dt / 1.6) : Math.max(ds, -dt / 0.35);
-      const s = this.slumpW * w; if (s > 1e-4) { const nd = this.nodes, br = Math.sin(this.actT * 1.75);
-        this.fk.run(this.pA); this.turn(this.pA, nd.spine3, qPitch((10 + 1.5 * br) * DEGR * s)); this.turn(this.pA, nd.neck, qPitch(17 * DEGR * s)); this.turn(this.pA, nd.head, quat.mul(qPitch((25 + br) * DEGR * s), qRoll(8 * DEGR * s))); }
-    }
   }
   /** The wounded man's pose over the finished pA (see `wound`): the clip's own way down at its rate, then a slow breath back and forth across the hold window
    *  (never on to the clip's end), blended over every node; once he is most of the way down the support hand goes to the wound and — on his back — his head comes
@@ -2740,50 +2665,25 @@ export class CharacterAnimator {
   }
   /** the wound's clip over the pose at weight `w` and, `down` far enough, the head up to look at it (the clocks above are the animator's; the limbs follow) */
   private woundBody(clip: Clip, tt: number, w: number, down: number, head: number) {
-    const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), clip);   // (RUST.walk: rust/sim/src/layers.rs wound_body)
-    if (g < 0) this.woundBodyOwn(clip, tt, w, down, head);
-    else if (!LAYERS.both) this.woundBodyAsk(g, clip, tt, w, down, head);
-    else layerBoth('woundBody', this.pA, this.fk, () => this.woundBodyAsk(g, clip, tt, w, down, head), () => this.woundBodyOwn(clip, tt, w, down, head));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs wound_body)
+    this.woundBodyAsk(g, clip, tt, w, down, head);
+    if (LAYERS.watch) LAYERS.watch('woundBody', this.pA, this.fk, null);
   }
   private woundBodyAsk(g: number, clip: Clip, tt: number, w: number, down: number, head: number) {
     const m = f64(), o = POSE_BENCH.args; m[o] = w; m[o + 1] = clipNo(clip, this.pA.numNodes); m[o + 2] = tt; m[o + 3] = down; m[o + 4] = head;
     layerRan(POSE_BENCH.x!.layer_wound_body(g, this.pA.at, this.pB.at, this.rest.at), this.fk);
   }
-  private woundBodyOwn(clip: Clip, tt: number, w: number, down: number, head: number) {
-    const nd = this.nodes;
-    this.pB.copy(this.rest); sampleClip(clip, tt, false, this.pB);
-    blendPose(this.pA, this.pB, w, null, this.pA);
-    if (down > 0.003 && head !== 0) { this.fk.run(this.pA); this.turn(this.pA, nd.neck, qPitch(head * 0.45 * DEGR * down)); this.turn(this.pA, nd.head, qPitch(head * 0.55 * DEGR * down)); }
-  }
   /** the limbs the clip does not pose as a hurt man's: the support hand pressed to the wound — the ribs under the gun arm (WOUND_AT) or the top of the
    *  near thigh — and, on his back, that leg's knee drawn up off the floor and the gun hand in on his belly instead of flung out behind his head */
   private woundLimbs(w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wound_limbs)
-    if (g < 0) this.woundLimbsOwn(w, wd);
-    else if (!LAYERS.both) this.woundLimbsAsk(g, w, wd);
-    else layerBoth('woundLimbs', this.pA, this.fk, () => this.woundLimbsAsk(g, w, wd), () => this.woundLimbsOwn(w, wd), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs wound_limbs)
+    this.woundLimbsAsk(g, w, wd);
+    if (LAYERS.watch) LAYERS.watch('woundLimbs', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private woundLimbsAsk(g: number, w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
     const m = f64(), o = POSE_BENCH.args, F = this.handFix; m[o] = w; m[o + 1] = wd.pose === 'back' ? 1 : 0; m[o + 2] = wd.at === 'ribs' ? 1 : 0;
     for (let sd = 0; sd < 2; sd++) for (let i = 0; i < 4; i++) m[o + 3 + sd * 4 + i] = F[sd][i];
     this.handsAsk(() => POSE_BENCH.x!.layer_wound_limbs(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private woundLimbsOwn(w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
-    pB.copy(pA); fk.run(pB);
-    if (wd.pose === 'back') {
-      const h = fk.pos[nd.thighL], f = fk.pos[nd.footL];
-      twoBoneIK(fk, pB, nd.thighL, nd.shinL, nd.footL, [h[0] + (f[0] - h[0]) * 0.56, f[1] + 0.02, h[2] + (f[2] - h[2]) * 0.56], [0, 1, 0], 1, null);
-    }
-    const F = this.trunkFrame(), tk = (o: Vec3, x: number, y: number, z: number): Vec3 => v3.mad(v3.mad(v3.mad(o, F.left, x), F.up, y), F.fwd, z);
-    const p = wd.at === 'ribs' ? tk(fk.pos[nd.spine1], WOUND_AT[0], WOUND_AT[1], WOUND_AT[2]) : v3.mad(v3.mad(v3.lerp(fk.pos[nd.thighL], fk.pos[nd.shinL], wd.pose === 'back' ? 0.5 : 0.42), F.fwd, 0.085), F.left, 0.02);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, p, [0.6, -0.7, -0.3], 0.7, this.handRot(0, v3.mad(v3.scale(F.left, -1), F.up, -0.25), v3.mad(F.fwd, F.up, 0.2)));
-    this.hand(pB, 0, [0.3, 0.34, 0.38, 0.42], 0.3, 0.2);
-    if (wd.pose === 'back') {
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, tk(fk.pos[nd.spine1], -0.07, -0.04, 0.13), v3.mad(v3.scale(F.left, -1), F.up, -0.6), 0.8, this.handRot(1, v3.mad(F.left, F.up, -0.2), F.fwd));
-      this.hand(pB, 1, [0.25, 0.3, 0.34, 0.38], 0.25, 0.2);
-    }
-    blendPose(pA, pB, w, null, pA);
   }
   /** seconds into the action clip now playing (0 with none) — the probes, and a caller timing a one-shot such as 'Interact' */
   get actTime(): number { return this.actClip ? this.actT : 0; }
@@ -2797,29 +2697,21 @@ export class CharacterAnimator {
    *  IK'd back exactly where the cycle has them (the sneak layer's way: pole weight 0, so at no drop this is the identity). `moveW` = moving, upright, off the wall;
    *  `standW` = upright, off the wall. Returns what the trunk layer (mvTrunk) needs. */
   private mvPre(dt: number, moveW: number, standW: number): MvGait {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_pre)
-    if (g < 0) this.mvPreOwn(dt, moveW, standW);
-    else if (!LAYERS.both) this.mvPreAsk(g, dt, moveW, standW);
-    else layerBoth('mvPre', this.pA, this.fk, () => this.mvPreAsk(g, dt, moveW, standW), () => { this.mvPreOwn(dt, moveW, standW); }, colsOf(CharacterAnimator.mvPreCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs mv_pre)
+    this.mvPreAsk(g, dt, moveW, standW);
+    if (LAYERS.watch) LAYERS.watch('mvPre', this.pA, this.fk, colsOf(CharacterAnimator.mvPreCols, this));
     return this.mvOut;
   }
   /** A LEAN round an edge (anim.lean), eased: the trunk rolled over spine1‥3, the neck and head brought part of the way back */
   private static readonly leanCols: LayerCols<CharacterAnimator> = { n: 1, get(c, o) { c[o] = this.leanSm; }, put(c, o) { this.leanSm = c[o]; } };
   private leanBody(dt: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs lean_body)
-    if (g < 0) this.leanBodyOwn(dt);
-    else if (!LAYERS.both) this.leanBodyAsk(g, dt);
-    else layerBoth('leanBody', this.pA, this.fk, () => this.leanBodyAsk(g, dt), () => this.leanBodyOwn(dt), colsOf(CharacterAnimator.leanCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs lean_body)
+    this.leanBodyAsk(g, dt);
+    if (LAYERS.watch) LAYERS.watch('leanBody', this.pA, this.fk, colsOf(CharacterAnimator.leanCols, this));
   }
   private leanBodyAsk(g: number, dt: number) {
     const a = f64(), i = POSE_BENCH.args; a[i] = dt; a[i + 1] = this.lean;
     colsToBench(CharacterAnimator.leanCols, this); layerRan(POSE_BENCH.x!.layer_lean_body(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.leanCols, this);
-  }
-  private leanBodyOwn(dt: number) {
-    const L = LEAN_POSE, want = clamp(this.lean, -1, 1); this.leanSm += (want - this.leanSm) * Math.min(1, L.rate * dt); if (want === 0 && Math.abs(this.leanSm) < 0.01) this.leanSm = 0;
-    const r = this.leanSm * L.deg * DEGR;
-    if (r !== 0) { this.turn(this.pA, this.nodes.spine1, qRoll(r * 0.3)); this.turn(this.pA, this.nodes.spine2, qRoll(r * 0.35)); this.turn(this.pA, this.nodes.spine3, qRoll(r * 0.35));
-      this.turn(this.pA, this.nodes.neck, qRoll(-r * L.level * 0.5)); this.turn(this.pA, this.nodes.head, qRoll(-r * L.level * 0.5)); }
   }
   /** THE GAZE STABILISER's working out (the note where update calls it): eases its weight and, with any, measures the head off the finished pose and answers the
    *  yaw the neck and head take out this frame (the pitch they take is kept, eased: gz.pitch). It turns nothing itself. */
@@ -2829,10 +2721,10 @@ export class CharacterAnimator {
     put(c, o) { const G = this.gz; G.w = c[o]; G.pitch = c[o + 1]; G.yawRef = c[o + 2]; G.yawInit = c[o + 3] !== 0; },
   };
   private gazeKeep(dt: number, wantW: number, crouchPose: number, wSprint: number): number {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs gaze_keep)
-    if (g < 0) return this.gazeKeepOwn(dt, wantW, crouchPose, wSprint);
-    if (!LAYERS.both) return this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint);
-    let fix = 0; layerBoth('gazeKeep', this.pA, this.fk, () => [this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint)], () => [fix = this.gazeKeepOwn(dt, wantW, crouchPose, wSprint)], colsOf(CharacterAnimator.gazeCols, this)); return fix;
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs gaze_keep)
+    const fix = this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint);
+    if (LAYERS.watch) LAYERS.watch('gazeKeep', this.pA, this.fk, colsOf(CharacterAnimator.gazeCols, this), [], [fix]);
+    return fix;
   }
   private gazeKeepAsk(g: number, dt: number, wantW: number, crouchPose: number, wSprint: number): number {
     const a = f64(), i = POSE_BENCH.args, gl = this.gazeLocal;
@@ -2840,30 +2732,11 @@ export class CharacterAnimator {
     colsToBench(CharacterAnimator.gazeCols, this); layerRan(POSE_BENCH.x!.layer_gaze_keep(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.gazeCols, this);
     return f64()[POSE_BENCH.args + LAYER_COLS_AT + 4];
   }
-  private gazeKeepOwn(dt: number, wantW: number, crouchPose: number, wSprint: number): number {
-    const nd = this.nodes;
-    this.gz.w = damp(this.gz.w, wantW, 10, dt);
-    if (this.gz.w > 0.01) {
-      this.fkPart(this.pA, this.fkHead); const fk = this.fk; const g = quat.rotate(fk.rot[nd.head], this.gazeLocal);   // (the head's chain alone: nothing else is read)
-      const el = Math.asin(clamp(g[1], -1, 1)) + this.nvA, gyaw = Math.atan2(g[0], g[2]);   // (+ nvA, the nod as posed: a goggle nod is a meant tip of the head — measured without it, or the stabiliser takes most of it back out through the neck)
-      // (a man's condition bows his head on purpose — MV2.hurt, MV2.shaken: the eye line this keeps goes down with those looks by what they pose, or with the
-      //  gun carried it took four fifths of the bow back out through the neck; at rest both weights are 0 and the target is the gait's own)
-      const bow = (MV2.hurt.pitch + MV2.hurt.head) * clamp(this.mvs.hu.x, 0, 1) + (MV2.shaken.pitch + MV2.shaken.head) * clamp(this.mvs.sk.x, 0, 1);
-      const targetEl = -(GAZE_EL.stand + (GAZE_EL.crouch - GAZE_EL.stand) * crouchPose + (GAZE_EL.sprint - GAZE_EL.stand) * wSprint * (1 - crouchPose) + bow) * DEGR;
-      const wantPitch = clamp((el - targetEl) * GAZE.keep, -30 * DEGR, 30 * DEGR);   // (twist pitch + = chin down: looking too far down, el < target, gives a negative — chin-up — correction)
-      this.gz.pitch = damp(this.gz.pitch, wantPitch, 25, dt);
-      if (!this.gz.yawInit) { this.gz.yawRef = gyaw; this.gz.yawInit = true; }
-      this.gz.yawRef += wrapAngle(gyaw - this.gz.yawRef) * clamp(dt / 0.5, 0, 1);           // ½ s reference: what the head 'means' to look at
-      const yawFix = clamp(-wrapAngle(gyaw - this.gz.yawRef) * GAZE.yawDamp, -12 * DEGR, 12 * DEGR);
-      return yawFix;
-    }
-    this.gz.yawInit = false; this.gz.pitch = damp(this.gz.pitch, 0, 10, dt); return 0;
-  }
-  /** a rule of the character's that keeps no pose (Character.turnWeigh) is asked of the module where his layers are: the slot to ask in (−1: the TypeScript
-   *  runs it), what the export answered, and both ways from the same start */
+  /** a rule of the character's that keeps no pose (Character.turnWeigh) is asked of the module where his layers are: the slot to ask in, what the export
+   *  answered, and what a tool that watches the layers is shown of it */
   ruleSlot(): number { return layerSlot(this.ch, this.pA, this.cast); }
   ruleRan(code: number) { layerRan(code, this.fk); }
-  ruleBoth(name: string, ask: () => void, own: () => void, cols: ColsOf) { layerBoth(name, this.pA, this.fk, ask, own, cols); }
+  ruleWatch(name: string, cols: ColsOf) { LAYERS.watch?.(name, this.pA, this.fk, cols); }
   private mvPreAsk(g: number, dt: number, moveW: number, standW: number) {
     const a = f64(), i = POSE_BENCH.args;
     a[i] = dt; a[i + 1] = moveW; a[i + 2] = standW; a[i + 3] = this.trained; a[i + 4] = this.longGun ? 1 : 0; a[i + 5] = this.dip; a[i + 6] = this.lg.w.x; a[i + 7] = this.upperW.aim;
@@ -2883,68 +2756,20 @@ export class CharacterAnimator {
       G.g = c[o + 11]; G.u = c[o + 12]; G.st = c[o + 13]; G.live = c[o + 14] !== 0; this.mv2Shown.dip = c[o + 15]; this.sightsLift = c[o + 16];
     },
   };
-  private mvPreOwn(dt: number, moveW: number, standW: number): MvGait {
-    const m = this.mvs, o = this.mvOut, R = MV.recoil, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
-    const sum = m.back + m.climb + Math.abs(m.yaw) + m.rock + m.sho + m.head;
-    if (sum > 0) {
-      if (sum < 1e-4) m.back = m.climb = m.yaw = m.rock = m.sho = m.head = 0;
-      else { const eb = Math.exp(-dt / k(R.backTau)), ec = Math.exp(-dt / k(R.climbTau)), er = Math.exp(-dt / k(R.rockTau)); m.back *= eb; m.climb *= ec; m.yaw *= ec; m.rock *= er; m.sho *= er; m.head *= er; }
-    }
-    { const dp = this.mv2.dip, want = mvOn('entry') && this.longGun ? clamp(this.dip, 0, 1) : 0;   // MOVES.entry: the muzzle down past a friend's back, and up again the moment he is clear of it
-      if (want > 0 || dp.x !== 0) { dp.step(want, want > dp.x ? MV2.dip.rateIn : MV2.dip.rateOut, dt); if (want === 0 && dp.x < 0.01) dp.x = dp.v = 0; }
-      this.mv2Shown.dip = clamp(dp.x, 0, 1); this.sightsLift = 0; }   // (longArms writes this frame's lift when it dips the bore)
-    o.g = o.u = o.st = 0;
-    if (mvOn('gait')) {
-      const lgw = clamp(this.lg.w.x, 0, 1), tw = smoothstep(0.5, 1, this.trained), Gt = MV.gait;
-      o.g = clamp(m.glide.step(tw * moveW * lgw, 9, dt), 0, 1); o.u = (1 - smoothstep(0, 0.5, this.trained)) * lgw * standW; o.st = tw * lgw * standW;
-      const drop = Gt.drop * o.g + Gt.aimDrop * o.st * this.upperW.aim * (1 - o.g);
-      if (drop > 2e-4 || o.g > 0.003) {
-        const pA = this.pA, nd = this.nodes, fk = this.fk; this.fkPart(pA, this.fkLegs);   // (hips + legs: what this and mvHips read)
-        const hy = fk.pos[nd.hips][1]; m.hipY = Number.isFinite(m.hipY) ? m.hipY + (hy - m.hipY) * (1 - Math.exp(-dt / 0.35)) : hy;
-        const flat = clamp((m.hipY - hy) * Gt.bob * o.g, -0.03, 0.03);
-        this.mvHips([0, flat - drop, 0]);
-      } else m.hipY = NaN;
-    }
-    o.live = o.g > 0.003 || o.u > 0.003 || o.st > 0.003 || m.rock > 1e-4 || m.sho > 1e-4;
-    return o;
-  }
   /** The trunk's share, straight into pA right before the long gun's own trunk set (longBody) on each of its two passes — so the arms are then solved onto the
    *  weapon against the trunk where this leaves it and the bore stays where the carriage puts it. The carry pass: the trained lean into the walk (hips first, the
    *  head levelled back out), the untrained shoulders swinging and rocking with the stride. The aim pass: the trained man further over his gun, the untrained one
    *  stood back off it with his head up. Both: the recoil — the gun shoulder driven back and the chest rocked, the head jarred. */
   private mvTrunk(w: number, o: MvGait, aimPass: boolean) {
     if (w < 0.003) return;
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: the layer in the module, on the pose where it lives — rust/sim/src/layers.rs mv_trunk)
-    if (g < 0) this.mvTrunkOwn(w, o, aimPass);
-    else if (!LAYERS.both) this.mvTrunkAsk(g, w, o, aimPass);
-    else layerBoth('mvTrunk', this.pA, this.fk, () => this.mvTrunkAsk(g, w, o, aimPass), () => this.mvTrunkOwn(w, o, aimPass));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs mv_trunk)
+    this.mvTrunkAsk(g, w, o, aimPass);
+    if (LAYERS.watch) LAYERS.watch('mvTrunk', this.pA, this.fk, null);
   }
   private mvTrunkAsk(g: number, w: number, o: MvGait, aimPass: boolean) {
     const a = f64(), i = POSE_BENCH.args, m = this.mvs;
     a[i] = w; a[i + 1] = o.g; a[i + 2] = o.u; a[i + 3] = o.st; a[i + 4] = aimPass ? 1 : 0; a[i + 5] = this.phase; a[i + 6] = this.speed; a[i + 7] = m.rock; a[i + 8] = m.sho; a[i + 9] = m.head;
     layerRan(POSE_BENCH.x!.layer_mv_trunk(g, this.pA.at), this.fk);
-  }
-  private mvTrunkOwn(w: number, o: MvGait, aimPass: boolean) {
-    const pA = this.pA, nd = this.nodes, m = this.mvs, Gt = MV.gait;
-    let lean = 0, chin = 0, sway = 0, roll = 0;
-    if (aimPass) { lean = Gt.aimLean * o.st + Gt.lean * 0.5 * o.g - Gt.back * o.u; chin = Gt.chin * o.u; }
-    else { lean = Gt.lean * o.g; const ph = 2 * Math.PI * this.phase, mw = smoothstep(0.2, 0.8, Math.abs(this.speed)); sway = Gt.slouchSway * o.u * mw * Math.sin(ph); roll = Gt.slouchRoll * o.u * mw * Math.cos(ph); }
-    lean *= DEGR * w; chin *= DEGR * w; sway *= DEGR * w; roll *= DEGR * w;
-    if (Math.abs(lean) > 1e-5) {
-      this.turn(pA, nd.spine1, qPitch(lean * 0.45)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.2));
-      this.turn(pA, nd.neck, qPitch(-lean * 0.4)); this.turn(pA, nd.head, qPitch(-lean * 0.6));
-    }
-    if (Math.abs(sway) + Math.abs(roll) > 1e-5) {
-      const q = (kk: number) => quat.mul(qYaw(sway * kk), qRoll(roll * kk));
-      this.turn(pA, nd.spine2, q(0.45)); this.turn(pA, nd.spine3, q(0.55)); this.turn(pA, nd.neck, qYaw(-sway * 0.4)); this.turn(pA, nd.head, qYaw(-sway * 0.4));
-    }
-    if (chin > 1e-5) { this.turn(pA, nd.neck, qPitch(-chin * 0.4)); this.turn(pA, nd.head, qPitch(-chin * 0.6)); }
-    if (mvOn('recoil') && (m.rock > 1e-4 || m.sho > 1e-4)) {
-      const q = (kk: number) => quat.mul(qYaw(-m.sho * DEGR * w * kk), qPitch(-m.rock * DEGR * w * kk));
-      this.turn(pA, nd.spine2, q(0.4)); this.turn(pA, nd.spine3, q(0.6));
-      const hq = (kk: number) => quat.mul(qYaw(m.sho * 0.6 * DEGR * w * kk), qPitch((m.rock * 0.6 - m.head) * DEGR * w * kk));   // the head keeps most of its line, and is jarred back off the stock
-      this.turn(pA, nd.neck, hq(0.4)); this.turn(pA, nd.head, hq(0.6));
-    }
   }
   /** MOVES, the second pass — arms the fight does not read, AFTER every other layer, and only by what the first pass's own arm work leaves (`mvs.armL`: a blinded
    *  man's forearm over his eyes and a toss have the support arm whole — the toss is posed on the arm exactly as it was without this pass, so the hand a can leaves
@@ -2979,19 +2804,12 @@ export class CharacterAnimator {
     const up = v3.normalize(v3.sub(fk.pos[nd.spine3], fk.pos[nd.hips])); let left = v3.sub(fk.pos[nd.upperArmL], fk.pos[nd.upperArmR]); left = v3.normalize(v3.mad(left, up, -v3.dot(left, up)));
     return { left, up, fwd: v3.cross(left, up) };
   }
-  /** the support arm from the upper arm down (the collar bone stays the clip's), or both arms */
-  private armMask(both: boolean): Float32Array {
-    if (!this.mv2Mask) { const nd = this.nodes, mk = (roots: number[]) => { const a = new Float32Array(this.dynMask.length); const set = (i: number) => { a[i] = 1; for (const c of this.ch.nodes[i].children) set(c); }; roots.forEach(set); return a; };
-      this.mv2Mask = [mk([nd.upperArmL]), mk([nd.upperArmL, nd.upperArmR])]; }
-    return this.mv2Mask[both ? 1 : 0];
-  }
   private reloadArm(t: number, w: number) {
     const own = this.feed ? feedPath(this.feed, this.rlB, this.feedN, this.feedPort) : null;   // (a gun fed its own way — gunreload.ts: the hand's stations, or a magazine gun's own marks; null with that switch off)
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs reload_arm)
-    if (g >= 0 && own && 'keys' in own) layerFits('a reload\'s list of the hand\'s stations (gunreload.ts feedPath)', own.keys.length, LAYER_KEYS_MAX);
-    if (g < 0) this.reloadArmOwn(t, w, own);
-    else if (!LAYERS.both) this.reloadArmAsk(g, t, w, own);
-    else layerBoth('reloadArm', this.pA, this.fk, () => this.reloadArmAsk(g, t, w, own), () => this.reloadArmOwn(t, w, own), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs reload_arm)
+    if (own && 'keys' in own) layerFits('a reload\'s list of the hand\'s stations (gunreload.ts feedPath)', own.keys.length, LAYER_KEYS_MAX);
+    this.reloadArmAsk(g, t, w, own);
+    if (LAYERS.watch) LAYERS.watch('reloadArm', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   /** a reload's beat and the left hand's fix as the module's layers are handed them: args 3‥9 and 11‥14 */
   private beatToBench(a: Float64Array, o: number) {
@@ -3008,169 +2826,38 @@ export class CharacterAnimator {
       a[q] = k.t; a[q + 1] = at ? 0 : 1; a[q + 2] = at ? at[0] : 0; a[q + 3] = at ? at[1] : 0; a[q + 4] = at ? at[2] : 0; a[q + 5] = k.how === 'top' ? 1 : k.how === 'pouch' ? 2 : 0; a[q + 6] = k.grip; }
     this.handsAsk(() => POSE_BENCH.x!.layer_reload_arm(g, this.pA.at, this.pB.at, this.rest.at));
   }
-  private reloadArmOwn(t: number, w: number, own: ReturnType<typeof feedPath>) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, B = this.rlB, R = MV2.reload, T = clamp(this.trained, 0, 1);
-    const K = own && 'marks' in own ? own.marks ?? R.box : this.reloadBack ? R.back : R.box;
-    pB.copy(pA); fk.run(pB);
-    // the gun's frame where the trigger hand has it NOW (the clip's raised gun, the carriage it comes back down to): the support hand works on the weapon as drawn
-    const pR = fk.pos[nd.handR], d = v3.normalize(v3.sub(fk.pos[nd.middle1R], pR));
-    let yW = v3.mad(AY, d, -d[1]); yW = v3.len(yW) > 1e-4 ? v3.normalize(yW) : [0, 0, -1]; const xW = v3.cross(yW, d);
-    const dir = (p: readonly number[]): Vec3 => [xW[0] * p[0] + yW[0] * p[1] + d[0] * p[2], xW[1] * p[0] + yW[1] * p[1] + d[1] * p[2], xW[2] * p[0] + yW[2] * p[1] + d[2] * p[2]];
-    const at = (p: readonly number[]): Vec3 => v3.add(pR, dir(p));
-    const cur = v3.copy(fk.pos[nd.handL]), rot0 = [...fk.rot[nd.handL]] as Quat;
-    const F = this.trunkFrame(), tk = (o: Vec3, p: Vec3): Vec3 => v3.mad(v3.mad(v3.mad(o, F.left, p[0]), F.up, p[1]), F.fwd, p[2]);
-    // GUN HAND: the clip squared the shoulders over the belt, so "off the pelvis, trunk frame" was the belt's own frame; the carriage that now stays through a
-    // long gun's change blades them (36° at the shoulder), which would carry the hip's pouches round with the chest — those points go by the hips' own line
-    let hk = (p: Vec3): Vec3 => tk(fk.pos[nd.hips], p);
-    if (GUNHAND.on && GUNHAND.longReload && this.longGun) { const l = v3.sub(fk.pos[nd.thighL], fk.pos[nd.thighR]), hl = v3.normalize(v3.mad(l, F.up, -v3.dot(l, F.up))), hf = v3.cross(hl, F.up), H = fk.pos[nd.hips];
-      hk = p => v3.mad(v3.mad(v3.mad(H, hl, p[0]), F.up, p[1]), hf, p[2]); }
-    const pouch = T > 0.5 ? tk(fk.pos[nd.spine2], R.pouch[1]) : hk(R.pouch[0]);
-    if (own && 'keys' in own) { this.feedArm(t, w, own.keys, at, dir, pouch, F, cur, rot0); return; }
-    const o = B.out, i = B.in_, r = B.rack, D = B.dur, h = (o + i) * 0.5;
-    const mag = at(K.mag), strip = at(K.strip), hd = at(K.handle), pl = at(K.pull);
-    // the empty comes straight down out of the well and is let go there (`strip`: a hand's width under it — dropped, not thrown); the fresh one comes up from under.
-    // An untrained man's lands on the lip beside the well (`hit`), is backed off, then found; seated, he slaps it home; and the handle let go, the hand flies on back.
-    const wob = R.fumble * (1 - T), fum = wob > 0.004, hp = fum ? h - 0.1 : h, lw = (a: Vec3, b: Vec3, k: number): Vec3 => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
-    const FL = R.flare, slap = fum && B.pull && r - i >= 0.4, fl = fum ? (1 - T) * Math.max(bump(t, i - 0.36, i - 0.22, i - 0.09, i + 0.02), slap ? bump(t, i + 0.07, i + 0.15, i + 0.19, i + 0.27) : 0) : 0;
-    const hit = v3.mad(v3.mad(v3.mad(mag, yW, -0.035), xW, wob * 1.2), d, wob * 1.6), off = fum ? tk(lw(hit, strip, 0.65), v3.scale(FL.off, 1 - T)) : hit, tapP = slap ? tk(v3.mad(mag, yW, -R.tap * (1 - T)), v3.scale(FL.tap, 1 - T)) : mag;
-    const over = v3.mad(v3.mad(pl, d, -(R.fling + 0.1 * (1 - T))), xW, 0.04 + 0.05 * (1 - T));
-    const kp = B.keep, fr = B.fresh, dump = kp >= 0 ? hk(KIT.mag.dump) : pouch;   // (KIT: a magazine with rounds in it goes to the dump pouch on the hip before the hand goes for a fresh one)
-    const p = curve3(t, [[0, cur], [Math.max(0.1, o - 0.2), mag], [o, mag], [o + 0.12, strip], ...(kp >= 0 ? [[(o + 0.05 + kp) * 0.5, hk(KIT.mag.via)], [kp - 0.07, dump], [kp + 0.05, dump], [fr, pouch], [fr + 0.1, pouch]] : [[hp, pouch], [hp + 0.12, pouch]]) as [number, Vec3][],
-      ...(fum ? [[Math.max(hp + 0.13, i - 0.3), hit], [i - 0.14, off]] : [[i - 0.16, strip]]) as [number, Vec3][], [i, mag], [i + 0.08, mag],   // (the max: rlBeat's floor in_ − out ≥ 0.6 alone leaves the lip key 0.02 s before the pouch's; the shipped rows have a second between them and never reach it)
-      ...(B.pull ? [...(fum && r - i >= 0.4 ? [[i + 0.17, tapP], [i + 0.25, mag]] : []), [r - 0.1, hd], [r, hd], [r + 0.08, pl], [r + 0.17, over]] : [[i + 0.42, cur]]) as [number, Vec3][], [D - 0.03, cur]]);
-    // the hand: round the magazine from its front (fingers across it, palm toward him), fingers down into the pouch, hooked on the handle
-    const mf = dir([-1, 0.15, 0.1]), mb = dir([0.1, -0.35, 1]), pf: Vec3 = v3.mad(v3.mad(v3.scale(F.up, -0.9), F.left, -0.3), F.fwd, 0.1), pb: Vec3 = v3.mad(F.fwd, F.left, 0.3), hf = dir(K.hf), hb = dir(K.hb);
-    const hq = kp >= 0 ? kp - 0.07 : hp, hr = kp >= 0 ? fr + 0.1 : hp + 0.12;   // (the hand is down at the pouches from the first of them to the last)
-    const f = curve3(t, [[Math.max(0.1, o - 0.2), mf], [o + 0.12, mf], [hq, pf], [hr, pf], [i - 0.24, mf], [i + 0.08, mf], ...(B.pull ? [[r - 0.1, hf], [r + 0.16, hf]] as [number, Vec3][] : [])]);
-    const b = curve3(t, [[Math.max(0.1, o - 0.2), mb], [o + 0.12, mb], [hq, pb], [hr, pb], [i - 0.24, mb], [i + 0.08, mb], ...(B.pull ? [[r - 0.1, hb], [r + 0.16, hb]] as [number, Vec3][] : [])]);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, p, fl > 0 ? lw(R.pole, FL.pole, fl) : R.pole, R.poleW, this.handRot(0, f, b));
-    const grip = kp >= 0 ? Math.max(bump(t, o - 0.12, o - 0.02, kp - 0.02, kp + 0.06), bump(t, fr, fr + 0.08, i + 0.04, i + 0.12)) : bump(t, o - 0.12, o - 0.02, i + 0.04, i + 0.12), hook = B.pull ? bump(t, r - 0.14, r - 0.04, r + 0.14, r + 0.22) : 0, c = (k: number) => lerp(0.3, k, Math.max(grip, hook));
-    this.hand(pB, 0, [c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, grip), 0.1 * (1 - grip));
-    const wr = bump(t, 0, 0.12, D - 0.26, D - 0.05); if (wr < 0.999) { fk.run(pB); setModelRot(pB, nd.handL, quat.slerp(rot0, fk.rot[nd.handL], wr), fk.parentRot(pB, nd.handL)); }
-    blendPose(pA, pB, w, this.armMask(false), pA);
-  }
-  /** A GUN FED ITS OWN WAY (gunreload.ts feedPath: a belt gun's cover, box and tray; a tube gun's shells, a trip each): the support hand through `keys` — a wrist
-   *  station each, in the gun's frame as reloadArm has it (`at`, `dir`), or at the pouch — and back to where it was. The same solve, mask and ease as the
-   *  magazine change; the trigger hand, the gun and the body are not touched. */
-  private feedArm(t: number, w: number, keys: readonly FeedKey[], at: (p: readonly number[]) => Vec3, dir: (p: readonly number[]) => Vec3, pouch: Vec3, F: { left: Vec3; up: Vec3; fwd: Vec3 }, cur: Vec3, rot0: Quat) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, R = MV2.reload, D = this.rlB.dur, n = keys.length;
-    if (n < 2) return;
-    // the hand: round a thing from its front (fingers across it, palm toward him) · flat on top of the gun (fingers across it, the back of the hand up) · fingers down into the pouch
-    const fs = { mag: dir([-1, 0.15, 0.1]), top: dir([-1, 0, 0.15]), pouch: v3.mad(v3.mad(v3.scale(F.up, -0.9), F.left, -0.3), F.fwd, 0.1) }, bs = { mag: dir([0.1, -0.35, 1]), top: dir([0.1, 1, 0.1]), pouch: v3.mad(F.fwd, F.left, 0.3) };
-    const P: [number, Vec3][] = [[0, cur]], Fk: [number, Vec3][] = [], Bk: [number, Vec3][] = [];
-    for (const k of keys) { P.push([k.t, k.at === 'pouch' ? pouch : at(k.at)]); Fk.push([k.t, fs[k.how]]); Bk.push([k.t, bs[k.how]]); }
-    const end = keys[n - 1].t; if (end + 0.1 < D - 0.3) P.push([D - 0.3, P[P.length - 1][1]]); P.push([Math.max(D - 0.03, end + 0.02), cur]);   // (the hand rests where its last work was until the weapon is nearly done, then back to the gun)
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, curve3(t, P), R.pole, R.poleW, this.handRot(0, curve3(t, Fk), curve3(t, Bk)));
-    let g = t <= keys[0].t ? keys[0].grip * smoothstep(keys[0].t - 0.12, keys[0].t, t) : keys[n - 1].grip * (1 - smoothstep(end, end + 0.12, t));
-    for (let i = 0; i + 1 < n; i++) if (t > keys[i].t && t <= keys[i + 1].t) { g = lerp(keys[i].grip, keys[i + 1].grip, (t - keys[i].t) / (keys[i + 1].t - keys[i].t)); break; }
-    const c = (k: number) => lerp(0.3, k, g);
-    this.hand(pB, 0, [c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, g), 0.1 * (1 - g));
-    const wr = bump(t, 0, 0.12, D - 0.26, D - 0.05); if (wr < 0.999) { fk.run(pB); setModelRot(pB, nd.handL, quat.slerp(rot0, fk.rot[nd.handL], wr), fk.parentRot(pB, nd.handL)); }
-    blendPose(pA, pB, w, this.armMask(false), pA);
-  }
   /** KIT: a PISTOL's magazine change, the support hand's (KIT.mag), over the reload clip's pose in pA — the trigger hand, the gun and the body stay the clip's.
    *  An EMPTY gun: the hand comes to the butt as the magazine drops free, goes straight to the belt for a fresh one, seats it with the heel of the palm and comes
    *  over the top to run the slide. A magazine with rounds left (`keep`): the hand takes it out of the gun, puts it away at the hip, then the fresh one — and with
    *  a round still chambered the slide is left alone. Keys on the weapon's own beat (rlB: out / keep / in_ / rack). */
   private pistolReloadArm(t: number, w: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs pistol_reload_arm)
-    if (g < 0) this.pistolReloadArmOwn(t, w);
-    else if (!LAYERS.both) this.pistolReloadArmAsk(g, t, w);
-    else layerBoth('pistolReloadArm', this.pA, this.fk, () => this.pistolReloadArmAsk(g, t, w), () => this.pistolReloadArmOwn(t, w), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs pistol_reload_arm)
+    this.pistolReloadArmAsk(g, t, w);
+    if (LAYERS.watch) LAYERS.watch('pistolReloadArm', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private pistolReloadArmAsk(g: number, t: number, w: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = t; a[o + 1] = w; this.beatToBench(a, o);
     this.handsAsk(() => POSE_BENCH.x!.layer_pistol_reload_arm(g, this.pA.at, this.pB.at, this.rest.at));
   }
-  private pistolReloadArmOwn(t: number, w: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, B = this.rlB, M = KIT.mag;
-    pB.copy(pA); fk.run(pB);
-    const pR = fk.pos[nd.handR], d = v3.normalize(v3.sub(fk.pos[nd.middle1R], pR));
-    let yW = v3.mad(AY, d, -d[1]); yW = v3.len(yW) > 1e-4 ? v3.normalize(yW) : [0, 0, -1]; const xW = v3.cross(yW, d);
-    const dir = (q: readonly number[]): Vec3 => [xW[0] * q[0] + yW[0] * q[1] + d[0] * q[2], xW[1] * q[0] + yW[1] * q[1] + d[1] * q[2], xW[2] * q[0] + yW[2] * q[1] + d[2] * q[2]];
-    const at = (q: readonly number[]): Vec3 => v3.add(pR, dir(q));
-    const cur = v3.copy(fk.pos[nd.handL]), rot0 = [...fk.rot[nd.handL]] as Quat;
-    const F = this.trunkFrame(), tk = (o: Vec3, q: Vec3): Vec3 => v3.mad(v3.mad(v3.mad(o, F.left, q[0]), F.up, q[1]), F.fwd, q[2]);
-    const pouch = tk(fk.pos[nd.hips], M.pouch), dump = tk(fk.pos[nd.hips], M.dump);
-    const o = B.out, i = B.in_, r = B.rack, D = B.dur, kp = B.keep, fr = B.fresh;
-    const well = at(M.well), strip = at(M.strip), sl = at(M.slide), pl = at(M.pull), seat = v3.mad(well, yW, 0.012);   // (seated: the heel of the palm drives it the last centimetre)
-    const p = curve3(t, [[0, cur], [Math.max(0.08, o - 0.14), well], [o, well], [o + 0.1, strip],
-      ...(kp >= 0 ? [[(o + 0.04 + kp) * 0.5, tk(fk.pos[nd.hips], M.via)], [kp - 0.06, dump], [kp + 0.05, dump]] : []) as [number, Vec3][], [fr, pouch], [fr + 0.09, pouch], [i - 0.13, strip], [i, seat], [i + 0.07, well],
-      ...(B.pull ? [[r - 0.09, sl], [r, sl], [r + 0.07, pl], [r + 0.15, v3.mad(pl, yW, 0.03)]] : [[i + 0.3, cur]]) as [number, Vec3][], [D - 0.03, cur]]);
-    const wf = dir(M.wf), wb = dir(M.wb), sf = dir(M.sf), sb = dir(M.sb), pf: Vec3 = v3.mad(v3.mad(v3.scale(F.up, -0.9), F.left, -0.25), F.fwd, 0.15), pb: Vec3 = v3.mad(F.fwd, F.left, 0.4);
-    const hq = kp >= 0 ? kp - 0.06 : fr, hr = fr + 0.09;
-    const f = curve3(t, [[Math.max(0.08, o - 0.14), wf], [o + 0.1, wf], [hq, pf], [hr, pf], [i - 0.2, wf], [i + 0.07, wf], ...(B.pull ? [[r - 0.09, sf], [r + 0.14, sf]] as [number, Vec3][] : [])]);
-    const b = curve3(t, [[Math.max(0.08, o - 0.14), wb], [o + 0.1, wb], [hq, pb], [hr, pb], [i - 0.2, wb], [i + 0.07, wb], ...(B.pull ? [[r - 0.09, sb], [r + 0.14, sb]] as [number, Vec3][] : [])]);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, p, M.pole, M.poleW, this.handRot(0, f, b));
-    const grip = Math.max(kp >= 0 ? bump(t, o - 0.08, o, kp - 0.02, kp + 0.06) : 0, bump(t, fr, fr + 0.08, i - 0.02, i + 0.06)), pinch = B.pull ? bump(t, r - 0.1, r - 0.02, r + 0.08, r + 0.16) : 0, c = (k: number) => lerp(0.25, k, Math.max(grip, pinch));
-    this.hand(pB, 0, [c(0.6), c(0.66), c(0.7), c(0.76)], lerp(0.3, 0.65, Math.max(grip, pinch)), 0.1 * (1 - grip));
-    const wr = bump(t, 0, 0.1, D - 0.22, D - 0.05); if (wr < 0.999) { fk.run(pB); setModelRot(pB, nd.handL, quat.slerp(rot0, fk.rot[nd.handL], wr), fk.parentRot(pB, nd.handL)); }
-    blendPose(pA, pB, w, this.armMask(false), pA);
-  }
   private clutchArm(w: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs clutch_arm)
-    if (g < 0) this.clutchArmOwn(w);
-    else if (!LAYERS.both) this.clutchArmAsk(g, w);
-    else layerBoth('clutchArm', this.pA, this.fk, () => this.clutchArmAsk(g, w), () => this.clutchArmOwn(w), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs clutch_arm)
+    this.clutchArmAsk(g, w);
+    if (LAYERS.watch) LAYERS.watch('clutchArm', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private clutchArmAsk(g: number, w: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0]; a[o] = w; for (let i = 0; i < 4; i++) a[o + 1 + i] = F[i];
     this.handsAsk(() => POSE_BENCH.x!.layer_clutch_arm(g, this.pA.at, this.pB.at, this.rest.at));
   }
-  private clutchArmOwn(w: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = MV2.clutch;
-    pB.copy(pA); fk.run(pB);
-    const F = this.trunkFrame(), p = v3.mad(v3.mad(v3.mad(fk.pos[nd.spine1], F.left, C.at[0]), F.up, C.at[1]), F.fwd, C.at[2]);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, p, C.pole, 0.7, this.handRot(0, v3.mad(v3.scale(F.left, -1), F.up, -0.25), v3.mad(F.fwd, F.up, 0.2)));
-    this.hand(pB, 0, [0.3, 0.34, 0.38, 0.42], 0.3, 0.2);
-    blendPose(pA, pB, w, this.armMask(false), pA);
-  }
   private boundArms(w: number, kind: 1 | 2) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs bound_arms)
-    if (g < 0) this.boundArmsOwn(w, kind);
-    else if (!LAYERS.both) this.boundArmsAsk(g, w, kind);
-    else layerBoth('boundArms', this.pA, this.fk, () => this.boundArmsAsk(g, w, kind), () => this.boundArmsOwn(w, kind), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs bound_arms)
+    this.boundArmsAsk(g, w, kind);
+    if (LAYERS.watch) LAYERS.watch('boundArms', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private boundArmsAsk(g: number, w: number, kind: 1 | 2) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix, G = this.gazeLocal; a[o] = w; a[o + 1] = kind;
     for (let i = 0; i < 3; i++) a[o + 2 + i] = G[i];
     for (let i = 0; i < 4; i++) { a[o + 5 + i] = F[0][i]; a[o + 9 + i] = F[1][i]; }
     this.handsAsk(() => POSE_BENCH.x!.layer_bound_arms(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private boundArmsOwn(w: number, kind: 1 | 2) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, K = MV2.bound;
-    pB.copy(pA); fk.run(pB);
-    const F = this.trunkFrame(), tk = (o: Vec3, x: number, y: number, z: number): Vec3 => v3.mad(v3.mad(v3.mad(o, F.left, x), F.up, y), F.fwd, z);
-    const tv = (x: number, y: number, z: number): Vec3 => tk([0, 0, 0], x, y, z);
-    if (kind === 1) {   // wrists crossed in the small of the back, palms out, elbows back and a little out
-      const B = K.back, o = fk.pos[nd.hips];
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, tk(o, -B.out * 0.4, B.up, -B.behind), tv(0.8, 0.1, -0.6), 0.8, this.handRot(0, tv(-0.75, -0.6, -0.1), tv(0, 0, 1)));
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, tk(o, B.out * 0.4, B.up + 0.02, -B.behind - 0.02), tv(-0.8, 0.1, -0.6), 0.8, this.handRot(1, tv(0.75, -0.6, -0.1), tv(0, 0, 1)));
-      this.hand(pB, 0, B.curl, B.thumb); this.hand(pB, 1, B.curl, B.thumb);   // a loose half fist each: open, the two hands fanned out either side of the wrists like claws
-    } else {            // fingers laced on the crown, elbows wide
-      // (in the HEAD's own frame — up its crown, forward along its gaze — not the trunk's: kept down, the head is bowed, and hands placed off the trunk's forward
-      //  came to the temples with the forearms across the face. The wrists stand behind the ears, the open hands lie on the back of the skull with the fingers
-      //  toward each other, the elbows out to the sides and a little back.)
-      const H = K.head, hr = fk.rot[nd.head], hu = quat.rotate(hr, AY); let hf = quat.rotate(hr, this.gazeLocal); hf = v3.normalize(v3.mad(hf, hu, -v3.dot(hf, hu))); const hl = v3.cross(hu, hf);
-      const o = v3.mad(v3.mad(fk.pos[nd.head], hu, H.up), hf, -H.behind), hk = (x: number, y: number, z: number): Vec3 => v3.mad(v3.mad(v3.scale(hl, x), hu, y), hf, z);
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.mad(o, hl, H.out), tv(1, -0.15, H.elbow), 0.9, this.handRot(0, hk(-0.84, 0.5, 0.04), hk(0.2, 0.75, -0.6)));
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.mad(o, hl, -H.out), tv(-1, -0.15, H.elbow), 0.9, this.handRot(1, hk(0.84, 0.5, 0.04), hk(-0.2, 0.75, -0.6)));
-      this.hand(pB, 0, H.curl, H.thumb, 0.25); this.hand(pB, 1, H.curl, H.thumb, 0.25);   // open hands, the fingers a little apart: laced, not fists…
-      for (const sd of [0, 1]) for (const f of this.fingers[sd]) pB.setRot(f[0], quat.normalize(quat.mul(pB.rot(f[0]), quat.axisAngle(AX, H.knuckle[sd] * DEGR))));   // …and bent down at the knuckles onto the crown (`knuckle`° per SIDE, left then right — the right palm already lies lower on the skull, and at the left's angle its fingertips sank in: the palm rests on the back of the skull, and straight off it the fingers stood clear of the head like sticks)
-    }
-    blendPose(pA, pB, w, this.armMask(true), pA);
-  }
-  /** After every other layer: the reactions that move the whole upper body with the weapon in it. The flinch, the hit and the stun charge's hunch add up into one
-   *  trunk rotation (spread up the spine, the arms and the gun carried rigidly: the hands do not part) and one shove of the pelvis with the feet IK'd back where
-   *  they stood; the head takes its own share on top. Then the arms that leave the gun: the blinded man's support forearm across his eyes, and the toss. `gate`:
-   *  what the holds, lock work, the wall hold and the kick leave of the body. */
-  /** the pelvis moved by `d` (model space) with both feet held where the pose under it has them (fk must be current for pA — its legs at least: fkLegs) */
-  private mvHips(d: Vec3) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk;
-    const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-    this.shift(pA, nd.hips, d); this.fkPart(pA, this.fkLegs);
-    twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL);
-    twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true);
   }
   private mvPost(dt: number, gate: number) {
     if (this.dazzle) this.mvs.dzD = this.flatModel(v3.sub(this.dazzle.from, this.posIn), this.mvs.dzD);
@@ -3198,10 +2885,9 @@ export class CharacterAnimator {
   /** the reactions' BODY: the flinch, the start, the hit, the blinded hunch, the fold, a hurt man's and a shaken man's carriage and the toss's wind-up, summed into
    *  one turn of the trunk, one of the head and one move of the pelvis over planted feet */
   private mvPostBody(dt: number, gate: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_post_body)
-    if (g < 0) this.mvPostBodyOwn(dt, gate);
-    else if (!LAYERS.both) this.mvPostBodyAsk(g, dt, gate);
-    else layerBoth('mvPostBody', this.pA, this.fk, () => this.mvPostBodyAsk(g, dt, gate), () => this.mvPostBodyOwn(dt, gate), colsOf(CharacterAnimator.mvPostCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs mv_post_body)
+    this.mvPostBodyAsk(g, dt, gate);
+    if (LAYERS.watch) LAYERS.watch('mvPostBody', this.pA, this.fk, colsOf(CharacterAnimator.mvPostCols, this));
   }
   private mvPostBodyAsk(g: number, dt: number, gate: number) {
     const a = f64(), i = POSE_BENCH.args, m = this.mvs, dz = this.dazzle;
@@ -3211,98 +2897,13 @@ export class CharacterAnimator {
     a[i + 23] = this.hurt; a[i + 24] = this.hurtSide; a[i + 25] = this.upperW.aim; a[i + 26] = this.speed; a[i + 27] = this.phase; a[i + 28] = this.shaken; a[i + 29] = m.tsT; a[i + 30] = m.tsRel;
     colsToBench(CharacterAnimator.mvPostCols, this); layerRan(POSE_BENCH.x!.layer_mv_post_body(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.mvPostCols, this);
   }
-  private mvPostBodyOwn(dt: number, gate: number) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk, m = this.mvs, o = this.mvPo, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
-    o.gun = false;
-    let pitch = 0, yaw = 0, roll = 0, hp = 0, hy = 0, drop = 0, sx = 0, sz = 0;
-    if (m.flT >= 0) {
-      m.flK += (m.flKTo - m.flK) * Math.min(1, dt * 12);
-      const F = MV.flinch, D = k(F.dur), e = curve(m.flT / D, MV_FLINCH_ENV) * k(F.amp) * m.flK * gate;
-      const sd = m.flD[0] >= 0 ? 1 : -1, lat = Math.min(1, Math.abs(m.flD[0]) * 1.6);
-      pitch += F.pitch * e * (0.65 + 0.35 * Math.max(0, m.flD[2])); yaw -= sd * F.away * e * lat; roll += sd * 3 * e * lat;
-      hp += F.head * e; hy -= sd * F.away * e * lat; drop += F.drop * e; sx -= m.flD[0] * F.side * e; sz -= m.flD[2] * F.side * e;
-      m.flT += dt; if (m.flT > D) m.flT = -1;
-    }
-    let stw = 0, stn = 1;   // the start's arms: how far they are flung out this frame, and the side the thing is on (below, after the trunk)
-    if (m.stT >= 0) {
-      const S = MV_STARTLE, D = k(S.dur), lw = clamp(this.lg.w.x, 0, 1), d = m.stD;
-      const e = curve(m.stT / D, S.env) * lerp(k(S.amp), Math.max(k(S.amp), S.gunAmp), lw) * gate;   // (both hands on a long gun: the trunk has to say all of it, so a trained man's is not halved away)
-      const bh = clamp(-d[2], 0, 1), sd = d[0] >= 0 ? 1 : -1, lat = bh > 0 ? 1 : Math.min(1, Math.abs(d[0]) * 1.6);   // (a thing behind him: he comes ROUND to it — a turn, not a shove in the back)
-      pitch -= S.rear * (1 + S.gunRear * lw) * e * d[2] * (d[2] < 0 ? S.behindPitch : 1); yaw += sd * S.turn * (1 + S.behindTurn * bh) * e * lat; roll -= sd * S.lean * e * lat;   // (reared back off a thing in front, pitched a little on away from one behind; turned and tipped toward the side it is on)
-      hp -= S.head * e * Math.max(0.3, d[2]); hy += sd * S.headTurn * (1 + S.behindHead * bh) * e * lat; drop += S.drop * e; sx -= d[0] * S.back * (1 + S.gunBack * lw) * e; sz -= d[2] * S.back * (1 + S.gunBack * lw) * e;
-      stw = e; stn = sd; m.stT += dt; if (m.stT > D) m.stT = -1;   // (the curve never goes under zero: his head is his eye, and a start that ended leaning in toward the thing saw round a jamb the man standing straight does not)
-    }
-    if (m.htT >= 0) {
-      const H = MV.hit, d = m.htD, e = curve(m.htT, MV_HIT_ENV) * gate;
-      const fz = d[2] <= 0 ? 1 : -1, tp = d[2] * H.pitch * e, ty = m.htSide * fz * H.yaw * e * (0.4 + 0.6 * Math.abs(d[2]));
-      pitch += tp; yaw += ty; roll += (m.htSide * fz * H.roll * Math.abs(d[2]) - d[0] * H.roll * 2) * e;
-      hp -= tp * 0.5; hy -= ty * 0.5; drop += H.drop * Math.abs(e); sx += d[0] * H.shove * e; sz += d[2] * H.shove * e;
-      m.htT += dt; if (m.htT > H.dur) m.htT = -1;
-    }
-    const Z = MV.dazzle, dzT = this.dazzle && mvOn('dazzle') ? clamp(this.dazzle.k, 0, 1) : 0;
-    m.dz.step(dzT, dzT > m.dz.x ? Z.rateIn : Z.rateOut, dt); if (dzT === 0 && m.dz.x < 0.02) { m.dz.x = 0; m.dz.v = 0; }
-    const dzw = clamp(m.dz.x, 0, 1) * k(Z.amp) * gate;
-    if (m.dz.x <= 0) m.dzSd = 0; else if (m.dzSd === 0) m.dzSd = m.dzD[0] >= 0 ? 1 : -1;   // (the side he turns away to is chosen once, as it goes off: he sweeps while blind, and a live sign flipped the whole pose as the charge crossed dead ahead)
-    if (dzw > 0.003) {
-      m.dzT += dt; const sd = m.dzSd || 1;
-      pitch += Z.hunch * dzw; yaw -= sd * Z.away * dzw; roll += sd * Z.roll * dzw; hp += Z.head * dzw; hy -= sd * Z.headAway * dzw; drop += Z.drop * dzw;
-      sx += (-m.dzD[0] * Z.back + Z.swayX * Math.sin(m.dzT * 3.1)) * dzw; sz += (-m.dzD[2] * Z.back + Z.swayZ * Math.sin(m.dzT * 2.3 + 1)) * dzw;
-    } else m.dzT = 0;
-    // the clutch's fold (MOVES.fold): knocked about and still on his feet, he stays doubled over the hurt and sways for as long as the game roots him — the hit's own
-    // rock is gone in half a second, and a man upright again with a hand at his belt read as a low ready
-    // (under the blinded hunch the fold gives way by the hunch's own weight — the two never add to more than one fold)
-    let cfw = 0;
-    { const Fd = MV2.clutch.fold, want = this.clutch > 0 && foldOn(this.foldToo) ? clamp(this.clutch, 0, 1) * (1 - clamp(dzw, 0, 1)) : 0;
-      if (want > 0 || m.cf.x !== 0) { m.cf.step(want, Fd.rate, dt); if (want === 0 && m.cf.x < 0.01) m.cf.x = m.cf.v = 0; }
-      const cf = clamp(m.cf.x, 0, 1) * gate; cfw = cf;
-      if (cf > 0.003) { m.cfT += dt; const s = Math.sin(m.cfT * 2 * Math.PI * Fd.hz); pitch += (this.foldToo ? Fd.pitchToo : Fd.pitch) * cf; roll += Fd.sway * s * cf; hp += Fd.head * cf; drop += Fd.drop * cf; sx += 0.012 * s * cf; } else m.cfT = 0; }
-    // A MAN'S CONDITION (condition.ts deals `hurt` and `shaken`: both 0 with its switch off, and then neither block does anything). Under the fold and the
-    // blinded hunch both give way by those weights — never two folds added.
-    //   HURT: he keeps a hunch over the side he favours and sways a little standing; on the move every stride onto that side is short and heavy — the pelvis
-    //   dips and goes across, the trunk rolls and turns into it, the head drops. With the gun in his shoulder he braces: most of the trunk's hunch comes out (the lean stays: it is about
-    //   the bore).
-    { const H = MV2.hurt, want = clamp(this.hurt, 0, 1), under = (1 - clamp(dzw, 0, 1)) * (1 - cfw);
-      if (want > 0 || m.hu.x !== 0) { m.hu.step(want, H.rate, dt); if (want === 0 && m.hu.x < 0.01) m.hu.x = m.hu.v = 0; }
-      const hu = clamp(m.hu.x, 0, 1) * gate * under;
-      if (hu > 0.003) {
-        const sd = this.hurtSide, aimW = clamp(this.upperW.aim, 0, 1), brace = 1 - H.brace * aimW, mw = smoothstep(0.15, 0.7, Math.abs(this.speed));
-        const st = Math.max(0, -sd * Math.sin(2 * Math.PI * this.phase)), step = st * st * mw;   // (0‥1 once a cycle: the stride onto the side he favours — the walk plants his right foot on the sine's positive half)
-        m.huT += dt; const br = Math.sin(m.huT * 2 * Math.PI * H.hz) * (1 - mw);
-        pitch += (H.pitch + H.stepPitch * step) * brace * hu; roll -= sd * (H.lean + H.stepRoll * step + H.sway * br) * hu; yaw += sd * H.stepYaw * step * brace * hu;
-        hp += (H.head * (1 - H.headBrace * aimW) + H.stepHead * step) * hu; drop += (H.drop + H.stepDrop * step) * hu; sx += sd * H.stepSide * step * hu;
-      } else m.huT = 0;
-      //   SHAKEN: the head comes down between the shoulders and he sinks a little, for as long as the fire is on him
-      const K = MV2.shaken, wantK = clamp(this.shaken, 0, 1);
-      if (wantK > 0 || m.sk.x !== 0) { m.sk.step(wantK, wantK > m.sk.x ? K.rateIn : K.rateOut, dt); if (wantK === 0 && m.sk.x < 0.01) m.sk.x = m.sk.v = 0; }
-      const sk = clamp(m.sk.x, 0, 1) * gate * under;
-      if (sk > 0.003) { pitch += K.pitch * (1 - K.brace * clamp(this.upperW.aim, 0, 1)) * sk; hp += K.head * sk; drop += K.drop * sk; } }
-    const ts = m.tsT, R = m.tsRel, TD = R + TOSS_AFTER;
-    if (ts >= 0) {   // the toss's body English: the left shoulder goes back with the hand, then through with it; a dip of the knees under the swing
-      const wind = curve(ts, [[0, 0], [R * 0.8, 1], [R + 0.03, 0.2], [R + 0.2, -1], [R + 0.4, -0.6], [TD, 0]]) * gate;
-      yaw += 9 * wind; pitch += 5 * Math.max(0, -wind) + 2 * Math.max(0, wind); drop += 0.02 * Math.abs(wind);
-    }
-    if (drop > 2e-4 || Math.abs(sx) + Math.abs(sz) > 2e-4) { fk.run(pA); this.mvHips([sx, -drop, sz]); }
-    // a blinded man's GUN stays on the line it had (the trigger hand holds it out at the door while the rest of him turns away): the defenders' blind burst flies
-    // along the drawn bore (nightbreach.ts blindTurn), and a hunch that carried the rifle down with the trunk took the burst away from them
-    if (dzw > 0.003 && this.lg.w.x > 0.02) { fk.run(pA); o.gun = true; o.gunP = v3.copy(fk.pos[nd.handR]); o.gunR = [...fk.rot[nd.handR]] as Quat; }
-    if (Math.abs(pitch) + Math.abs(yaw) + Math.abs(roll) > 1e-3) {
-      const q = (ky: number, kp: number) => quat.mul(qYaw(yaw * DEGR * ky), quat.mul(qRoll(roll * DEGR * ky), qPitch(pitch * DEGR * kp)));
-      this.turn(pA, nd.spine1, q(0.3, 0.4)); this.turn(pA, nd.spine2, q(0.35, 0.35)); this.turn(pA, nd.spine3, q(0.35, 0.25));
-    }
-    if (Math.abs(hp) + Math.abs(hy) > 1e-3) {
-      const q = (kk: number) => quat.mul(qYaw(hy * DEGR * kk), qPitch(hp * DEGR * kk));
-      this.turn(pA, nd.neck, q(0.4)); this.turn(pA, nd.head, q(0.6));
-    }
-    o.stw = stw; o.stn = stn; o.dzw = dzw;
-  }
   /** the reactions' ARMS, after their body: the start's shoulders and elbows, a blinded man's gun held on its line and his hand over his eyes, the toss */
   private mvPostArms(dt: number, gate: number) {
     const m = this.mvs, P = this.mvPo;
     if (!(P.stw > 0.003) && !P.gun && !(P.dzw > 0.003) && !(m.tsT >= 0)) return;   // (nothing to pose: no start, no blinded man, no toss)
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_post_arms)
-    if (g < 0) this.mvPostArmsOwn(dt, gate);
-    else if (!LAYERS.both) this.mvPostArmsAsk(g, dt, gate);
-    else layerBoth('mvPostArms', this.pA, this.fk, () => this.mvPostArmsAsk(g, dt, gate), () => this.mvPostArmsOwn(dt, gate), this.withHands(CharacterAnimator.mvPostArmCols));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs mv_post_arms)
+    this.mvPostArmsAsk(g, dt, gate);
+    if (LAYERS.watch) LAYERS.watch('mvPostArms', this.pA, this.fk, this.withHands(CharacterAnimator.mvPostArmCols));
   }
   /** the columns of mvPostArms: the toss's clock, and how much of the left arm the reactions hold */
   private static readonly mvPostArmCols: LayerCols<CharacterAnimator> = { n: 2,
@@ -3316,49 +2917,6 @@ export class CharacterAnimator {
     for (let i = 0; i < 3; i++) { a[o + 5 + i] = gl[i]; a[o + 16 + i] = P.gunP[i]; }
     for (let i = 0; i < 4; i++) { a[o + 8 + i] = F[i]; a[o + 19 + i] = P.gunR[i]; }
     colsToBench(CharacterAnimator.mvPostArmCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_mv_post_arms(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.mvPostArmCols, this);
-  }
-  private mvPostArmsOwn(dt: number, gate: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, m = this.mvs, o = this.mvPo, Z = MV.dazzle, stw = o.stw, stn = o.stn, dzw = o.dzw, gunP = o.gun ? o.gunP : null, gunR = o.gun ? o.gunR : null;
-    const ts = m.tsT, R = m.tsRel, TD = R + TOSS_AFTER;
-    if (stw > 0.003) {   // the start's arms: shoulders up (a long gun's too: its hands are put back on it below), elbows wide and forearms half raised by what a long gun leaves of them — the arm on the thing's side thrown up more, the far one out less
-      const S = MV_STARTLE, a = stw * (1 - clamp(this.lg.w.x, 0, 1));
-      for (const [sh, up, fo, sg] of [[nd.shoulderL, nd.upperArmL, nd.forearmL, 1], [nd.shoulderR, nd.upperArmR, nd.forearmR, -1]] as const) {
-        const far = sg * stn < 0 ? 1 : 0;
-        this.turn(pA, sh, qRoll(sg * S.shrug * DEGR * stw));
-        if (a > 0.003) { this.turn(pA, up, qRoll(sg * S.wide[far] * DEGR * a)); this.turn(pA, fo, qPitch(-S.raise[far] * DEGR * a)); }
-      }
-    }
-    const setSub = (mk: Float32Array, i: number, wv: number) => { mk[i] = wv; for (const c of this.ch.nodes[i].children) setSub(mk, c, wv); };
-    if (gunP && gunR) {
-      pB.copy(pA); fk.run(pB); twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, gunP, [-0.3, -1, -0.4], 0.6, gunR);
-      const mk = this.dynMask; mk.fill(0); setSub(mk, nd.upperArmR, smoothstep(0.003, 0.15, dzw) * smoothstep(0.02, 0.6, this.lg.w.x)); blendPose(pA, pB, 1, mk, pA);   // (… by how much of a long gun he has up: the hold eases in with it)
-    }
-    if (dzw > 0.003) {   // blinded: the support hand leaves the fore-end and goes flat over the eyes — wrist by the near eye, fingers across to the far one, palm in
-      pB.copy(pA); this.turn(pB, nd.shoulderL, qRoll(9 * DEGR)); fk.run(pB);
-      const hr = fk.rot[nd.head], gz = quat.rotate(hr, this.gazeLocal), up = quat.rotate(hr, AY), left = v3.cross(up, gz);
-      const eyes = v3.mad(v3.mad(fk.pos[nd.head], up, 0.1), gz, 0.08);
-      const at = v3.mad(v3.mad(v3.mad(eyes, gz, Z.handOut), left, 0.04), up, 0.006 * Math.sin(m.dzT * 4.3) - Z.handDrop);
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, at, Z.handPole, 0.85, this.handRot(0, v3.mad(v3.scale(left, -1), up, Z.handTilt), v3.mad(gz, up, Z.handRoll)));
-      this.hand(pB, 0, [0.22, 0.28, 0.34, 0.4], 0.3, 0.3);
-      const wz = smoothstep(0.08, 0.6, dzw), mk = this.dynMask; mk.fill(0); setSub(mk, nd.shoulderL, wz); blendPose(pA, pB, 1, mk, pA); m.armL = Math.max(m.armL, wz);
-    }
-    if (ts >= 0) {   // the toss: the support hand off the gun, down beside the hip, through and up, back to the gun (shoulder-relative path; its ends are the live hand)
-      pB.copy(pA); fk.run(pB);
-      const sh = v3.copy(fk.pos[nd.upperArmL]), cur = v3.sub(fk.pos[nd.handL], sh), rot0 = [...fk.rot[nd.handL]] as Quat;
-      const wk = clamp(R / 0.3, 0.5, 1), back = v3.lerp(cur, [0.07, -0.47, -0.1], wk);   // (a quick release winds up less)
-      const mid = v3.lerp(cur, back, 0.5); mid[0] += 0.08 * wk; mid[2] += 0.06 * wk;   // (on the way down the hand swings OUT round the pouches on his front, not through them)
-      const off = curve3(ts, [[0, cur], [R * 0.36, mid], [R * 0.72, back], [R, [0.04, -0.43, 0.15]], [R + 0.1, [-0.02, -0.2, 0.45]], [R + 0.22, [-0.04, 0.0, 0.5]], [R + 0.4, [-0.03, -0.05, 0.46]], [TD, cur]]);
-      const fing = curve3(ts, [[0, [0, -0.7, 0.7]], [R * 0.72, [0, -1, 0.1]], [R, [0, -0.8, 0.6]], [R + 0.1, [0, -0.15, 1]], [R + 0.22, [-0.05, 0.3, 1]], [TD, [0, -0.2, 1]]]);
-      const bk = curve3(ts, [[0, [0.5, -0.6, -0.5]], [R, [0.3, -0.5, -0.8]], [R + 0.12, [0.25, -1, -0.2]], [TD, [0.3, -1, 0]]]);
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sh, off), [0.7, -0.45, -0.55], 0.8, this.handRot(0, fing, bk));
-      const open = smoothstep(R - 0.02, R + 0.04, ts), recup = smoothstep(R + 0.35, TD, ts), c = (grip: number, flat: number, cup: number) => lerp(lerp(grip, flat, open), cup, recup);
-      this.hand(pB, 0, [c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1 - recup));
-      const wA = bump(ts, 0, 0.05, TD - 0.2, TD) * gate, mk = this.dynMask; m.armL = Math.max(m.armL, bump(ts, 0, 0.05, TD - 0.2, TD)); mk.fill(0); setSub(mk, nd.shoulderL, wA); mk[nd.shoulderL] = 0;
-      // the wrist's rotation eases from / back to the grip it had on the gun at the ends (the path does the same for its position)
-      const wr = bump(ts, 0, 0.08, TD - 0.22, TD - 0.04); if (wr < 0.999) { fk.run(pB); setModelRot(pB, nd.handL, quat.slerp(rot0, fk.rot[nd.handL], wr), fk.parentRot(pB, nd.handL)); }
-      blendPose(pA, pB, 1, mk, pA);
-      m.tsT += dt; if (m.tsT > TD) m.tsT = -1;
-    }
   }
 
   // ================================================================ procedural layers
@@ -3394,10 +2952,6 @@ export class CharacterAnimator {
   private fkLegs!: Int32Array; private fkArms!: Int32Array; private fkHead!: Int32Array;
   /** the rig's named nodes and those lists, as the module's layers are handed them (anim/skeleton.ts layerSlot) */
   private cast!: LayerCast;
-  /** turn node i (and its subtree) about model axes, in place */
-  private turn(pose: Pose, i: number, q: Quat) { rotateModel(pose, i, q, this.fk.parentRot(pose, i)); }
-  /** shift node i's origin by a model-space offset (the hips: its parent 'root' is the Z-up armature frame) */
-  private shift(pose: Pose, i: number, off: Vec3) { const l = quat.rotate(quat.conj(this.fk.parentRot(pose, i)), off); const p = pose.pos(i); pose.setPos(i, [p[0] + l[0], p[1] + l[1], p[2] + l[2]]); }
   /** curl the four fingers (0 straight … 1 fist) and set the thumb (0 alongside … 1 folded over the fist) of one hand, from the rest (straight) hand */
   private hand(pose: Pose, side: 0 | 1, curl: readonly number[], thumb: number, spread = 0) {
     const J = [72, 92, 62];   // full-fist flexion per knuckle (°)
@@ -3419,25 +2973,11 @@ export class CharacterAnimator {
    *  the toe is back on the floor, laid away from the knee along the shin's own heading (the kneeling foot stretched back, instep down) unless the foot already
    *  points somewhere along the ground. A toe at or above the floor is not touched; nothing but the foot joint's rotation (and so the toe under it) changes. */
   private toesUp(w: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs toes_up)
-    if (g < 0) this.toesUpOwn(w);
-    else if (!LAYERS.both) this.toesUpAsk(g, w);
-    else layerBoth('toesUp', this.pA, this.fk, () => this.toesUpAsk(g, w), () => this.toesUpOwn(w));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs toes_up)
+    this.toesUpAsk(g, w);
+    if (LAYERS.watch) LAYERS.watch('toesUp', this.pA, this.fk, null);
   }
   private toesUpAsk(g: number, w: number) { f64()[POSE_BENCH.args] = w; layerRan(POSE_BENCH.x!.layer_toes_up(g, this.pA.at), this.fk); }
-  private toesUpOwn(w: number) {
-    const nd = this.nodes, fk = this.fk.run(this.pA);
-    for (const [shin, foot, toe] of [[nd.shinL, nd.footL, nd.toeL], [nd.shinR, nd.footR, nd.toeR]] as const) {
-      const a = fk.pos[foot], t = fk.pos[toe]; if (t[1] >= TOE_FLOOR_Y - 1e-4) continue;
-      const d = v3.sub(t, a), L = v3.len(d), dy = TOE_FLOOR_Y - a[1]; if (L < 1e-4 || Math.abs(dy) >= L) continue;   // (an ankle further off the floor than the foot is long: nothing a turn can do)
-      const k = fk.pos[shin]; let hx = d[0] / L, hz = d[2] / L; const bx = a[0] - k[0], bz = a[2] - k[2], bl = Math.hypot(bx, bz);
-      if (bl > 1e-4) { const own = Math.hypot(hx, hz), kb = 0.35 * (1 - own) * (1 - own); hx += bx / bl * kb; hz += bz / bl * kb; }   // (a foot already lying along the ground keeps its own heading: only one standing on end is laid back off the shin)
-      const hl = Math.hypot(hx, hz); if (hl < 1e-4) continue;
-      const r = Math.sqrt(L * L - dy * dy), to: Vec3 = [hx / hl * r, dy, hz / hl * r];
-      const q = quat.slerp([0, 0, 0, 1], quat.fromTo(v3.scale(d, 1 / L), v3.scale(to, 1 / L)), clamp(w, 0, 1));
-      this.pA.setRot(foot, quat.normalize(quat.mul(quat.conj(fk.rot[this.ch.nodes[foot].parent]), quat.mul(q, fk.rot[foot]))));
-    }
-  }
   /** this man's relaxed hands (HAND), as the turn from the library's fist on each digit joint — and the index laid straight, for the trigger hand */
   private handsBuild() {
     const H = this.hn, seed = H.seed, p = new Pose(this.pA.numNodes).copy(this.rest);   // (its own scratch, once a man: the layers' pB keeps what they left in it)
@@ -3465,10 +3005,9 @@ export class CharacterAnimator {
    *  nothing else at work on it. Digit joints of pA only. */
   private handsPass(dt: number, fullL: number, fullR: number, gunR: number) {
     if (this.hn.built !== this.hn.seed) this.handsBuild();   // (a man's own tables, built once: handed to either side as they are)
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs hands_pass)
-    if (g < 0) this.handsPassOwn(dt, fullL, fullR, gunR);
-    else if (!LAYERS.both) this.handsPassAsk(g, dt, fullL, fullR, gunR);
-    else layerBoth('handsPass', this.pA, this.fk, () => this.handsPassAsk(g, dt, fullL, fullR, gunR), () => this.handsPassOwn(dt, fullL, fullR, gunR), colsOf(CharacterAnimator.handsPassCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs hands_pass)
+    this.handsPassAsk(g, dt, fullL, fullR, gunR);
+    if (LAYERS.watch) LAYERS.watch('handsPass', this.pA, this.fk, colsOf(CharacterAnimator.handsPassCols, this));
   }
   /** the hand pass's own state as columns: the grips eased, seconds since he fired, the finger off the trigger, the gun eased */
   private static readonly handsPassCols: LayerCols<CharacterAnimator> = { n: 5,
@@ -3488,86 +3027,20 @@ export class CharacterAnimator {
     colsToBench(CharacterAnimator.handsPassCols, this); colsToBench(CharacterAnimator.handCols, this, HAND_COLS_AT); a.set(this.handTables(), o + LAYER_KEYS_AT);
     layerRan(POSE_BENCH.x!.layer_hands_pass(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.handsPassCols, this);
   }
-  private handsPassOwn(dt: number, fullL: number, fullR: number, gunR: number) {
-    const H = this.hn, d = this.pA.cols, N = this.pA.rows, far = HAND.far * DEGR;
-    for (let sd = 0; sd < 2; sd++) {
-      H.grip[sd] = damp(H.grip[sd], this.grip[sd] ? 1 : 0, 14, dt);
-      const free = (1 - clamp(sd ? fullR : fullL, 0, 1)) * (1 - H.grip[sd]); if (free <= 0.003) continue;
-      const ns = H.nodes[sd], fist = H.fist[sd], open = H.open[sd], b = H.base[sd], nt = H.note[sd], own = H.own[sd];
-      for (let g = 0; g < 5; g++) {
-        const k = g * 12, o0 = 3 * N + ns[g * 3], o1 = 3 * N + ns[g * 3 + 1], o2 = 3 * N + ns[g * 3 + 2];
-        const fistK = 1 - clamp((qAng(b, k, 1, fist, k) + qAng(b, k + 4, 1, fist, k + 4) + qAng(b, k + 8, 1, fist, k + 8)) / 3 / (own[g] * 0.85), 0, 1); if (fistK <= 0.003 && g > 0) continue;   // how much of the hand under the layers is the library's fist (none of it, crouched: that clip's hand is its own)
-        const moved = (qAng(d, o0, N, b, k) + qAng(d, o1, N, b, k + 4) + qAng(d, o2, N, b, k + 8)) / 3, D = nt[g] < Infinity ? nt[g] : far;
-        const lay = 1 - (D < 0.03 ? (nt[g] < Infinity ? 1 : 0) : clamp(moved / D, 0, 1)), f = fistK * free * lay;   // …less what a layer has made of it
-        if (f > 0.003) { qTurnBy(d, o0, N, open[k], open[k + 1], open[k + 2], open[k + 3], f); qTurnBy(d, o1, N, open[k + 4], open[k + 5], open[k + 6], open[k + 7], f); qTurnBy(d, o2, N, open[k + 8], open[k + 9], open[k + 10], open[k + 11], f); }
-        if (g === 0) { const t = (1 - fistK) * free * lay * HAND.thumbOwn, T = H.thumb[sd];   // the THUMB of a hand that is not the fist (the crouch clips' open hand holds it out straight): to the relaxed hand's thumb
-          if (t > 0.003) { qTurnTo(d, o0, N, T, 0, t); qTurnTo(d, o1, N, T, 4, t); qTurnTo(d, o2, N, T, 8, t); } }
-      }
-    }
-    // the trigger hand's index, a drilled man's: straight along the frame until he fires, on the trigger while he does and for a moment after
-    H.fired += dt; const offT = H.fired < HAND.trigHold ? 0 : 1; H.off = damp(H.off, offT, offT < H.off ? 40 : 9, dt);
-    H.gun = damp(H.gun, clamp(gunR, 0, 1), 18, dt);   // eased: the caller's gate for a throw / reload / strike is a step, and the finger snapped between straight and the clip's curl in a frame
-    const tr = H.gun * smoothstep(HAND.trigTrained, HAND.trigTrained + 0.1, this.trained) * H.off;
-    if (tr > 0.003) this.fingers[1][0].forEach((node, j) => { const o = 3 * N + node, t = H.trig, k = j * 4;
-      const cx = -d[o], cy = -d[o + N], cz = -d[o + 2 * N], cw = d[o + 3 * N];   // conj(q) · target: the turn from where the joint is to the straight finger
-      qTurnBy(d, o, N, cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1], cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k], cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3], cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2], tr); });
-  }
-  /** Model rotation for a hand given where its fingers point (`f`) and which way the back of the hand faces (`b`, made ⊥ f) — calibrated per side from the rest
-   *  pose (T-pose, palms down), so one description fits either hand. */
-  private handRot(side: 0 | 1, f: Vec3, b: Vec3): Quat {
-    const F = v3.normalize(f); const B = v3.normalize(v3.mad(b, F, -v3.dot(b, F)));
-    return quat.mul(quat.fromBasis(v3.cross(F, B), F, B), this.handFix[side]);
-  }
 
-  /** Turn neck (40 %) and head (60 %) so the gaze — the head direction that looks dead ahead in the standing idle — points at `target` (model space) from
-   *  where the eyes are; limited to what a neck does (±40° yaw, −35…+45° pitch), scaled by w, with an optional roll (head cocked) on top. */
-  private lookAt(pose: Pose, target: Vec3, w: number, roll = 0) {
-    const nd = this.nodes, fk = this.fk; fk.run(pose);
-    const hr = fk.rot[nd.head]; const gaze = quat.rotate(hr, this.gazeLocal); const eyes = v3.mad(v3.mad(fk.pos[nd.head], quat.rotate(hr, AY), 0.1), gaze, 0.08);
-    const want = v3.normalize(v3.sub(target, eyes));
-    const yawE = clamp(wrapAngle(Math.atan2(want[0], want[2]) - Math.atan2(gaze[0], gaze[2])), -0.7, 0.7);
-    const pitchE = clamp(Math.asin(clamp(gaze[1], -1, 1)) - Math.asin(clamp(want[1], -1, 1)), -0.6, 0.8);   // + = look further down = pitch forward
-    const look = (k: number) => quat.mul(qYaw(yawE * k * w), qPitch(pitchE * k * w));
-    this.turn(pose, nd.neck, look(0.4)); this.turn(pose, nd.head, roll ? quat.mul(qRoll(roll), look(0.6)) : look(0.6));
-  }
-  /** where a bending knee should head: forward, a quarter of the way toward the line of the (often turned-out) foot, and a little up */
-  private kneePole(footRot: Quat): Vec3 { const f = quat.rotate(footRot, AY); const h = v3.normalize([f[0], 0, f[2] + 1e-6]); return v3.normalize([h[0] * 0.25, 0.5, h[2] * 0.25 + 0.75]); }
   /** Stance, body half: pelvis bladed toward the wall and settled a few cm onto soft knees — over feet that are IK-pinned back exactly where the locomotion has
    *  them (so nothing slides: standing, the legs twist and bend under a turning pelvis; walking, the cycle's foot placement is untouched) — the upper spine
    *  countering ⅔ of the blade, a forward lean spread hips-first up the spine with the head levelled back onto the target, and the stance's own head yaw / chin.
    *  `stand` (0…1, the kick) takes the blade and the squat out and halves the lean: a kick is thrown standing square to the door. */
   private stanceBody(w: number, speed: number, stand: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs stance_body)
-    if (g < 0) this.stanceBodyOwn(w, speed, stand);
-    else if (!LAYERS.both) this.stanceBodyAsk(g, w, speed, stand);
-    else layerBoth('stanceBody', this.pA, this.fk, () => this.stanceBodyAsk(g, w, speed, stand), () => this.stanceBodyOwn(w, speed, stand));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs stance_body)
+    this.stanceBodyAsk(g, w, speed, stand);
+    if (LAYERS.watch) LAYERS.watch('stanceBody', this.pA, this.fk, null);
   }
   private stanceBodyAsk(g: number, w: number, speed: number, stand: number) {
     const a = f64(), i = POSE_BENCH.args, st = this.st;
     a[i] = w; a[i + 1] = speed; a[i + 2] = stand; a[i + 3] = st.blade.x; a[i + 4] = st.squat.x; a[i + 5] = st.lean.x; a[i + 6] = st.headPitch.x; a[i + 7] = st.headYaw.x; a[i + 8] = this.stackPressSm;
     layerRan(POSE_BENCH.x!.layer_stance_body(g, this.pA.at), this.fk);
-  }
-  private stanceBodyOwn(w: number, speed: number, stand: number) {
-    const pA = this.pA, nd = this.nodes, st = this.st, fk = this.fk;
-    const blade = st.blade.x * DEGR * w * (1 - stand) * lerp(1, 0.5, smoothstep(0.3, 1.3, speed)); const drop = Math.max(0, st.squat.x) * w * (1 - stand);
-    const replant = Math.abs(blade) > 1e-4 || drop > 1e-4;
-    let fL: Vec3 | null = null, fR: Vec3 | null = null, rL: Quat | null = null, rR: Quat | null = null;
-    if (replant) { this.fkPart(pA, this.fkLegs); fL = v3.copy(fk.pos[nd.footL]); fR = v3.copy(fk.pos[nd.footR]); rL = [...fk.rot[nd.footL]] as Quat; rR = [...fk.rot[nd.footR]] as Quat; }
-    if (Math.abs(blade) > 1e-4) {
-      this.turn(pA, nd.hips, qYaw(blade));                                                   // pelvis toward the wall…
-      this.turn(pA, nd.spine1, qYaw(-blade * 0.25)); this.turn(pA, nd.spine2, qYaw(-blade * 0.25)); this.turn(pA, nd.spine3, qYaw(-blade * 0.15));   // …chest comes ⅔ of the way back
-    }
-    if (drop > 1e-4) { this.shift(pA, nd.hips, [0, -drop, 0]); this.turn(pA, nd.hips, qPitch(drop * 40 * DEGR)); }   // sit a little into the knees, pelvis tipping forward with it (≈3° at 7 cm)
-    const lean = st.lean.x * DEGR * w * (1 - 0.5 * stand);
-    this.turn(pA, nd.spine1, qPitch(lean * 0.45)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.2));   // hips lead, chest follows
-    const hp = st.headPitch.x * DEGR * w, hy = st.headYaw.x * DEGR * w, unl = lean + drop * 40 * DEGR;
-    this.turn(pA, nd.neck, quat.mul(qYaw(hy * 0.4), qPitch(-unl * 0.4 + hp * 0.4))); this.turn(pA, nd.head, quat.mul(qYaw(hy * 0.6), qPitch(-unl * 0.6 + hp * 0.6)));   // level the head back out of the lean, then the stance's own chin / door look
-    if (replant) {   // feet back where they were, soles as they were, knees sent out over the toes
-      this.fkPart(pA, this.fkLegs);
-      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL!, this.kneePole(rL!), 0.6, rL!);
-      twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR!, this.kneePole(rR!), 0.6, rR!, true);
-    }
-    if (this.stackPressSm !== 0) this.shift(pA, nd.hips, [-this.stackPressSm * w * (1 - stand), 0, 0]);   // WALLSNAP: the whole figure, feet and all, a hand nearer the wall on stackSide (+ = on his right; model +x is his left)
   }
 
   /** Deliberate movement and the crouch's centre of gravity by pace (`deliberate`; the shares come from update(): Dl = deliberate × crouch-walking, pace = creep →
@@ -3589,12 +3062,11 @@ export class CharacterAnimator {
   /** The run clip as the game shows it: its 23 cm bounce flattened toward the mean by phase (BOB_KEEP kept), and — at a jog — its bounding stride warped shorter
    *  at the feet about the gait's middle (runK, set with the phase rate above so the ground speed holds). Applied wherever the run is sampled. */
   /** THE STAND POSE: the idle, and over it the cycle — the walk, the jog laid on it, or the jog and the sprint laid together, each run shaped as the game
-   *  shows it (jogShapeOwn, sprintShapeOwn) before the blend. The cycle's own poses stay in pB and pC for the layers that read them. */
+   *  shows it (rust/sim/src/layers.rs jog_shape, sprint_shape) before the blend. The cycle's own poses stay in pB and pC for the layers that read them. */
   private standPose(ph: number, wIdle: number, wWalk: number, wJog: number, wSprint: number) {
-    const c = this.clips, g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), c.Idle_Loop, c.Jog_Fwd_Loop, c.Sprint_Loop, c.Walk_Loop);   // (RUST.walk: rust/sim/src/layers.rs stand_pose)
-    if (g < 0) this.standPoseOwn(ph, wIdle, wWalk, wJog, wSprint);
-    else if (!LAYERS.both) this.standPoseAsk(g, ph, wIdle, wWalk, wJog, wSprint);
-    else layerBoth('standPose', this.pA, this.fk, () => this.standPoseAsk(g, ph, wIdle, wWalk, wJog, wSprint), () => this.standPoseOwn(ph, wIdle, wWalk, wJog, wSprint), null, [this.pB, this.pC]);
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs stand_pose)
+    this.standPoseAsk(g, ph, wIdle, wWalk, wJog, wSprint);
+    if (LAYERS.watch) LAYERS.watch('standPose', this.pA, this.fk, null, [this.pB, this.pC]);
   }
   private standPoseAsk(g: number, ph: number, wIdle: number, wWalk: number, wJog: number, wSprint: number) {
     const a = f64(), i = POSE_BENCH.args, c = this.clips, n = this.pA.numNodes, i0 = Math.floor(ph * 64) & 63;
@@ -3605,93 +3077,28 @@ export class CharacterAnimator {
     a[i + 19] = this.sprintMid; a[i + 20] = this.sprintFloorY;   // (sprintShape's)
     layerRan(POSE_BENCH.x!.layer_stand_pose(g, this.pA.at, this.pB.at, this.pC.at), this.fk);
   }
-  private standPoseOwn(ph: number, wIdle: number, wWalk: number, wJog: number, wSprint: number) {
-    const c = this.clips;
-    // (the idle is not sampled when the cycle's pose is about to replace ALL of it: blendPose at a weight ≥ 1 copies every float of every node from pB over pA,
-    // nothing reads pA in between, and a sample writes nothing but its pose — at a full walk / run that is one clip of the two not evaluated)
-    if (!(wWalk + wJog + wSprint > 0.001 && 1 - wIdle >= 1)) sampleClip(c.Idle_Loop, this.idleT, true, this.pA);
-    if (wWalk + wJog + wSprint > 0.001) {
-      if (wSprint > 0.001) {
-        this.sampleJog(ph, this.pB); this.jogShapeOwn(this.pB, ph);                                             // the same flattened, stride-warped run the walk→jog branch shows (no seam crossing BLEND.jogAt)
-        sampleClip(c.Sprint_Loop, ph * c.Sprint_Loop.duration, true, this.pC); this.sprintShapeOwn(this.pC);    // the sprint's own stride warp, on its pose before the two runs blend
-        blendPose(this.pB, this.pC, wSprint, null, this.pB);
-      } else {
-        sampleClip(c.Walk_Loop, (ph + WALK_PHASE) * c.Walk_Loop.duration, true, this.pB);   // phase-aligned to the jog it blends with (WALK_PHASE)
-        if (wJog > 0.001) {
-          this.sampleJog(ph, this.pC);
-          this.jogShapeOwn(this.pC, ph);
-          blendPose(this.pB, this.pC, wJog, null, this.pB);
-        }
-      }
-      blendPose(this.pA, this.pB, 1 - wIdle, null, this.pA);
-    }
-  }
   /** THE CROUCH LAID OVER THE STAND POSE: its idle, the crouch walk's cycle on it by `wMove`, and that over the pose by the crouch shown */
   private crouchLaid(ph: number, wMove: number, crouchPose: number) {
-    const c = this.clips, g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), c.Crouch_Idle_Loop, c.Crouch_Fwd_Loop);   // (RUST.walk: rust/sim/src/layers.rs crouch_pose)
-    if (g < 0) this.crouchLaidOwn(ph, wMove, crouchPose);
-    else if (!LAYERS.both) this.crouchLaidAsk(g, ph, wMove, crouchPose);
-    else layerBoth('crouchPose', this.pA, this.fk, () => this.crouchLaidAsk(g, ph, wMove, crouchPose), () => this.crouchLaidOwn(ph, wMove, crouchPose), null, [this.pB, this.pC]);
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs crouch_pose)
+    this.crouchLaidAsk(g, ph, wMove, crouchPose);
+    if (LAYERS.watch) LAYERS.watch('crouchPose', this.pA, this.fk, null, [this.pB, this.pC]);
   }
   private crouchLaidAsk(g: number, ph: number, wMove: number, crouchPose: number) {
     const a = f64(), i = POSE_BENCH.args, c = this.clips, n = this.pA.numNodes;
     a[i] = wMove; a[i + 1] = crouchPose; a[i + 2] = this.idleT; a[i + 3] = clipNo(c.Crouch_Idle_Loop, n); a[i + 4] = clipNo(c.Crouch_Fwd_Loop, n); a[i + 5] = ph * c.Crouch_Fwd_Loop.duration;
     layerRan(POSE_BENCH.x!.layer_crouch_pose(g, this.pA.at, this.pB.at, this.pC.at), this.fk);
   }
-  private crouchLaidOwn(ph: number, wMove: number, crouchPose: number) {
-    const c = this.clips;
-    if (!(wMove >= 1)) sampleClip(c.Crouch_Idle_Loop, this.idleT, true, this.pB);   // (at the full crouch pace the cycle's pose replaces every float of it, as the stand pose's idle above)
-    if (wMove > 0.001) { sampleClip(c.Crouch_Fwd_Loop, ph * c.Crouch_Fwd_Loop.duration, true, this.pC); blendPose(this.pB, this.pC, wMove, null, this.pB); }
-    blendPose(this.pA, this.pB, crouchPose, null, this.pA);
-  }
-  private jogShapeOwn(pose: Pose, ph: number) {
-    const nd = this.nodes;
-    const fi = ph * 64, i0 = Math.floor(fi) & 63, fr = fi - Math.floor(fi); const hy = this.jogHipsY[i0] * (1 - fr) + this.jogHipsY[(i0 + 1) & 63] * fr;
-    this.shift(pose, nd.hips, [0, -(hy - this.jogHipsMean) * (1 - BOB.keep), 0]);
-    if (this.runK < 0.999) {
-      const fk = this.fk; this.fkPart(pose, this.fkLegs); const K = this.runK, m = this.jogMid;
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      const tgt = (f: Vec3): Vec3 => [f[0], f[1] * lerp(1, K, 0.5), m + (f[2] - m) * K];
-      twoBoneIK(fk, pose, nd.thighL, nd.shinL, nd.footL, tgt(fL), this.kneePole(rL), 0, rL);
-      twoBoneIK(fk, pose, nd.thighR, nd.shinR, nd.footR, tgt(fR), this.kneePole(rR), 0, rR, true);
-    }
-  }
-  /** The sprint clip as the game shows it: its stride warped at the ankles about the gait's middle by SPRINT_WARP.stride — the fraction of its ~8 m/s bound
-   *  that the 4.7 m/s it is played at covers, so the planted foot holds the floor at the clip's own cadence — heights eased half way with it (as the jog's
-   *  are) but about the ankles' floor rather than the ground plane, so the stance foot keeps the clip's height instead of sinking a few centimetres further;
-   *  soles and knee planes as authored. Applied to the sprint pose before it blends with the (jog-shaped) run. */
-  private sprintShapeOwn(pose: Pose) {
-    const K = SPRINT_WARP.stride; if (K > 0.999) return;
-    const nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkLegs); const m = this.sprintMid, y0 = this.sprintFloorY, Ky = lerp(1, K, 0.5);
-    const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-    const tL0 = fk.pos[nd.toeL][1] - fL[1], tR0 = fk.pos[nd.toeR][1] - fR[1];   // toe height off the ankle as authored this frame (the foot's pitch is kept, so this carries over)
-    const tgt = (f: Vec3, toeOff: number): Vec3 => { let y = y0 + (f[1] - y0) * Ky; if (y + toeOff < TOE_FLOOR_Y) y = TOE_FLOOR_Y - toeOff; return [f[0], y, m + (f[2] - m) * K]; };   // (never an ankle so low its toe goes through the floor — the clip's stance foot points down and its eased height used to bury the toe 5 cm at 4.7 m/s)
-    twoBoneIK(fk, pose, nd.thighL, nd.shinL, nd.footL, tgt(fL, tL0), this.kneePole(rL), 0, rL);
-    twoBoneIK(fk, pose, nd.thighR, nd.shinR, nd.footR, tgt(fR, tR0), this.kneePole(rR), 0, rR, true);
-  }
   /** RUNARMS: the run's own arms carried close (the numbers and why: RUNARMS). `w` = the run's share of the standing pose, jog through sprint; `ws` = the
    *  sprint's. Each hand is read in the shoulder line's frame (to his left along the two shoulder joints, level; up; forward), its sideways travel drawn in
    *  by `w`, its fore-aft travel lengthened and its front lifted by `ws`, and the arm solved to it with the elbow behind him. The hand follows its forearm. */
   private runArms(pose: Pose, w: number, ws: number) {
-    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs run_arms)
-    if (g < 0) this.runArmsOwn(pose, w, ws);
-    else if (!LAYERS.both) this.runArmsAsk(g, pose, w, ws);
-    else layerBoth('runArms', pose, this.fk, () => this.runArmsAsk(g, pose, w, ws), () => this.runArmsOwn(pose, w, ws));
+    const g = layerSlot(this.ch, pose, this.cast);   // (rust/sim/src/layers.rs run_arms)
+    this.runArmsAsk(g, pose, w, ws);
+    if (LAYERS.watch) LAYERS.watch('runArms', pose, this.fk, null);
   }
   private runArmsAsk(g: number, pose: Pose, w: number, ws: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = w; a[o + 1] = ws;
     layerRan(POSE_BENCH.x!.layer_run_arms(g, pose.at), this.fk);
-  }
-  private runArmsOwn(pose: Pose, w: number, ws: number) {
-    const A = RUNARMS, nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkArms);
-    const a = fk.pos[nd.upperArmL], b = fk.pos[nd.upperArmR]; let lx = a[0] - b[0], lz = a[2] - b[2]; const ll = Math.hypot(lx, lz); if (ll < 1e-4) return; lx /= ll; lz /= ll;
-    const fx = -lz, fz = lx, keep = lerp(1, A.keep, w), pump = lerp(1, A.pump, ws);   // (forward, level: his left × up)
-    for (let k = 0; k < 2; k++) {   // (neither solve moves what the other reads: the second finds the skeleton current)
-      const sg = k ? -1 : 1, s = fk.pos[k ? nd.upperArmR : nd.upperArmL], h = fk.pos[k ? nd.handR : nd.handL], dx = h[0] - s[0], dz = h[2] - s[2];
-      const out = (dx * lx + dz * lz) * sg, fwd = dx * fx + dz * fz, o = A.at + (out - A.at) * keep, f = A.mid + (fwd - A.mid) * pump, y = h[1] - s[1] + A.lift * ws * clamp((fwd - A.mid) / A.swing, 0, 1);
-      const to: Vec3 = [s[0] + lx * sg * o + fx * f, s[1] + y, s[2] + lz * sg * o + fz * f], pole: Vec3 = [lx * sg * A.pole[0] + fx * A.pole[2], A.pole[1], lz * sg * A.pole[0] + fz * A.pole[2]];
-      if (k) twoBoneIK(fk, pose, nd.upperArmR, nd.forearmR, nd.handR, to, pole, A.poleW * w, null, true); else twoBoneIK(fk, pose, nd.upperArmL, nd.forearmL, nd.handL, to, pole, A.poleW * w, null);
-    }
   }
   /** A run clip's stances from its toes round the cycle (heights ty[side][i], fore-aft tz[side][i], M samples): per foot the circular mean of the samples with
    *  the toe within 2 cm of its lowest and travelling back, and the two folded onto the half-cycle (they sit half a cycle apart to within a sample or two);
@@ -3716,29 +3123,13 @@ export class CharacterAnimator {
   }
   /** SOFT_KNEE: re-solve each leg toward its own ankle with the hip→ankle reach eased below full extension (weight w). */
   private softKnees(pose: Pose, w: number) {
-    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs soft_knees)
-    if (g < 0) this.softKneesOwn(pose, w);
-    else if (!LAYERS.both) this.softKneesAsk(g, pose, w);
-    else layerBoth('softKnees', pose, this.fk, () => this.softKneesAsk(g, pose, w), () => this.softKneesOwn(pose, w));
+    const g = layerSlot(this.ch, pose, this.cast);   // (rust/sim/src/layers.rs soft_knees)
+    this.softKneesAsk(g, pose, w);
+    if (LAYERS.watch) LAYERS.watch('softKnees', pose, this.fk, null);
   }
   private softKneesAsk(g: number, pose: Pose, w: number) {
     f64()[POSE_BENCH.args] = w;
     layerRan(POSE_BENCH.x!.layer_soft_knees(g, pose.at), this.fk);
-  }
-  private softKneesOwn(pose: Pose, w: number) {
-    const nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkLegs);
-    let cur = false;   // (fk whole and current once a solve has run: the next may say so)
-    for (const [thigh, shin, foot] of [[nd.thighL, nd.shinL, nd.footL], [nd.thighR, nd.shinR, nd.footR]] as const) {
-      const ph = fk.pos[thigh], pk = fk.pos[shin], pa = fk.pos[foot];
-      const L = v3.dist(ph, pk) + v3.dist(pk, pa), d = v3.dist(ph, pa), r = d / L;
-      if (r <= SOFT_KNEE.from) continue;
-      const span = SOFT_KNEE.to - SOFT_KNEE.from, x = (r - SOFT_KNEE.from) / span;
-      const rEased = SOFT_KNEE.from + span * (1 - Math.exp(-x));                 // slope 1 at `from`, → `to` asymptotically
-      const rNew = r + (rEased - r) * w;
-      const ar = [...fk.rot[foot]] as Quat;
-      const tgt: Vec3 = [ph[0] + (pa[0] - ph[0]) * rNew / r, ph[1] + (pa[1] - ph[1]) * rNew / r, ph[2] + (pa[2] - ph[2]) * rNew / r];
-      twoBoneIK(fk, pose, thigh, shin, foot, tgt, this.kneePole(ar), 0, ar, cur); cur = true;   // (leaves fk current: the full run that followed here rewrote the same numbers)
-    }
   }
   /** The run's stance feet (RUN_LINGER, weight wRun): through each foot's stance window of the SAMPLED phase about its own mid-stance (sliding from the jog's to
    *  the sprint's with their blend) — easing on over R.on across heel-strike, full through mid-stance, easing off over R.off as the toe peels off — the toe is
@@ -3749,10 +3140,9 @@ export class CharacterAnimator {
    *  weight 0: outside the windows with nothing left to bleed this is skipped, and update() skips the layer outright at wRun 0 or R.depth 0). Model space, straight
    *  ahead — the cycle itself only runs along the figure's front; a backpedal (reverse) carries the toe forward instead. */
   private runPlant(ph: number, s: number, dt: number, wRun: number, wSprint: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs run_plant)
-    if (g < 0) this.runPlantOwn(ph, s, dt, wRun, wSprint);
-    else if (!LAYERS.both) this.runPlantAsk(g, ph, s, dt, wRun, wSprint);
-    else layerBoth('runPlant', this.pA, this.fk, () => this.runPlantAsk(g, ph, s, dt, wRun, wSprint), () => this.runPlantOwn(ph, s, dt, wRun, wSprint), colsOf(CharacterAnimator.runPlantCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs run_plant)
+    this.runPlantAsk(g, ph, s, dt, wRun, wSprint);
+    if (LAYERS.watch) LAYERS.watch('runPlant', this.pA, this.fk, colsOf(CharacterAnimator.runPlantCols, this));
   }
   private runPlantAsk(g: number, ph: number, s: number, dt: number, wRun: number, wSprint: number) {
     const a = f64(), i = POSE_BENCH.args, G = this.runGait;
@@ -3765,23 +3155,6 @@ export class CharacterAnimator {
     get(c, o) { c[o] = this.plantL.dev; c[o + 1] = this.plantL.pz; c[o + 2] = this.plantR.dev; c[o + 3] = this.plantR.pz; },
     put(c, o) { this.plantL.dev = c[o]; this.plantL.pz = c[o + 1]; this.plantR.dev = c[o + 2]; this.plantR.pz = c[o + 3]; },
   };
-  private runPlantOwn(ph: number, s: number, dt: number, wRun: number, wSprint: number) {
-    const nd = this.nodes, fk = this.fk, pA = this.pA, R = RUN_LINGER, g = this.runGait;
-    const dz = (this.reverse ? 1 : -1) * s * dt;   // the ground under him this frame, model z
-    this.fkPart(pA, this.fkLegs);
-    const legs: [number, number, number, number, number, { dev: number; pz: number }][] = [[nd.thighL, nd.shinL, nd.footL, nd.toeL, lerp(g.jog.cL, g.sprint.cL, wSprint), this.plantL], [nd.thighR, nd.shinR, nd.footR, nd.toeR, lerp(g.jog.cR, g.sprint.cR, wSprint), this.plantR]];
-    let cur = false;
-    for (const [thigh, shin, foot, toe, c, st] of legs) {
-      let x = ph - c; x -= Math.round(x);            // −½ ‥ ½ about this foot's mid-stance
-      const w = bump(x, R.on[0], R.on[1], R.off[0], R.off[1]) * wRun;
-      const tp = fk.pos[toe];
-      const miss = Number.isFinite(st.pz) ? dz - (tp[2] - st.pz) : 0; st.pz = tp[2];   // what the cycle's toe did this frame beyond the ground's own travel (a jump of 20 cm+ is a phase someone reset, not motion: let it go)
-      st.dev = clamp((st.dev + (Math.abs(miss) < 0.2 ? miss : 0) * w) * Math.exp(-(1 - w) * dt / Math.max(R.bleed, 1e-3)), -0.25, 0.25);   // (bleed 0 = gone within the frame; the max() keeps w = 1, bleed = 0 off 0/0)   // holds the ground by w; what it is left holding as the toe comes off bleeds away up the swing
-      if (w < 1e-3 && Math.abs(st.dev) < 5e-4) { st.dev = 0; continue; }
-      const ap = fk.pos[foot], ar = [...fk.rot[foot]] as Quat;
-      twoBoneIK(fk, pA, thigh, shin, foot, [ap[0], ap[1] - (tp[1] - TOE_FLOOR_Y) * w, ap[2] + st.dev], this.kneePole(ar), 0, ar, cur); cur = true;   // the ankle that puts the toe at [x, floor + (y − floor)·(1 − w), z + dev], sole unchanged — floored to the sole's level, not through it
-    }
-  }
   /** Idle life and weight, procedural, per-character desynced:
    *  - breathing: chest and shoulders on a slow sinus (4 s at rest), deeper and quicker for a while after hard running (exertion decays over ~8 s);
    *  - mass: the pelvis rides an acceleration-driven spring — it hangs back a couple of centimetres and the trunk tips into a start, carries on and dips
@@ -3791,10 +3164,9 @@ export class CharacterAnimator {
    *  Feet are IK-held where the pose had them, so none of it slides a sole. `w` gates the life motion out under stances / holds / one-shots; `wF` gates the
    *  standing foot LOCK out — the same but for the upper-body one-shots, through which the planted soles hold (update() builds both). */
   private lifeLayer(dt: number, s: number, crouchPose: number, w: number, wF: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs life_layer)
-    if (g < 0) this.lifeLayerOwn(dt, s, crouchPose, w, wF);
-    else if (!LAYERS.both) this.lifeLayerAsk(g, dt, s, crouchPose, w, wF);
-    else layerBoth('lifeLayer', this.pA, this.fk, () => this.lifeLayerAsk(g, dt, s, crouchPose, w, wF), () => this.lifeLayerOwn(dt, s, crouchPose, w, wF), colsOf(CharacterAnimator.lifeCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs life_layer)
+    this.lifeLayerAsk(g, dt, s, crouchPose, w, wF);
+    if (LAYERS.watch) LAYERS.watch('lifeLayer', this.pA, this.fk, colsOf(CharacterAnimator.lifeCols, this));
   }
   private lifeLayerAsk(g: number, dt: number, s: number, crouchPose: number, w: number, wF: number) {
     const a = f64(), i = POSE_BENCH.args, P0 = this.posIn;
@@ -3820,147 +3192,30 @@ export class CharacterAnimator {
       for (let k = 0, q = o + 22; k < 2; k++, q += 9) { const f = k === 0 ? F.L : F.R; f.p = [m[q], m[q + 1], m[q + 2]]; f.yaw = m[q + 3]; f.swing = m[q + 4]; f.from = [m[q + 5], m[q + 6], m[q + 7]]; f.fromYaw = m[q + 8]; }
     },
   };
-  private lifeLayerOwn(dt: number, s: number, crouchPose: number, w: number, wF: number) {
-    const L = this.life, pA = this.pA, nd = this.nodes, fk = this.fk;
-    // clocks
-    { const yin = this.bodyYawIn; if (!Number.isFinite(L.yawPrev)) L.yawPrev = yin; const yr = dt > 0 ? wrapAngle(yin - L.yawPrev) / dt : 0; L.yawPrev = yin; L.yawRate = damp(L.yawRate, clamp(yr, -8, 8), 8, dt); }
-    // the root's OWN planar motion (the controller moves pos with speed 0 in the takedown lunge / the grab reach / a colleague's shove, and teleports jump it):
-    // 'standing' below asks both the commanded speed and this; a jump of more than half a metre in a frame is a teleport — the feet re-lock where they land
-    let teleported = false;
-    { const pp = L.prevPos, P0 = this.posIn; if (!Number.isFinite(pp[0])) { L.prevPos = v3.copy(P0); } else { const d = hyp2(P0[0] - pp[0], P0[2] - pp[2]); teleported = d > 0.5; L.rootV = dt > 0 && !teleported ? damp(L.rootV, Math.min(d / dt, 8), 14, dt) : teleported ? 0 : L.rootV; L.prevPos = v3.copy(P0); } }
-    const HB = HARDBREATH.on ? HARDBREATH : null;   // (blown he heaves deeper, quicker and for longer: off = the four numbers as they were)
-    L.exert = clamp(L.exert + (s > 3.2 ? dt / (HB ? HB.chestUp : 4) : -dt / (HB ? HB.chestDown : 8)), 0, 1);
-    const bRate = lerp(LIFE.breathRate, HB ? HB.chestRate : LIFE.breathRateRun, L.exert), bAmp = lerp(LIFE.breathAmp, HB ? HB.chestAmp : LIFE.breathAmpRun, L.exert) * lerp(1, 0.35, clamp(s / 2, 0, 1)) * LIFE.on;   // running, the gait's own motion carries the chest
-    L.breath = (L.breath + dt * bRate * 2 * Math.PI) % (2 * Math.PI);
-    const accel = dt > 0 ? (s - L.prevS) / dt : 0; L.prevS = s; L.accel = damp(L.accel, clamp(accel, -12, 12), 10, dt);
-    L.mass.step(clamp(-L.accel * LIFE.massGain, -LIFE.massBack, LIFE.massFwd) * LIFE.on, 9, dt);            // fore-aft pelvis offset target: back under acceleration, forward (carrying on) under braking
-    L.massV.step(clamp(-Math.abs(L.accel) * LIFE.massDip, -LIFE.massDipMax, 0) * LIFE.on, 10, dt);   // and a dip either way
-    L.stillT = s < 0.12 && Math.abs(L.yawRate) < 0.5 ? L.stillT + dt : 0;
-    const resting = L.stillT > LIFE.restAfter && LIFE.on > 0 && !(this.crT > 0.5) ? 1 : 0;   // (not under the held gait: stopped mid-stride he stays as he stopped — the breath is all that moves)
-    if (resting) { L.shiftT -= dt; if (L.shiftT <= 0) { L.shiftSide = L.shiftSide > 0 ? -1 : 1; L.shiftN++; L.shiftT = LIFE.shiftMin + ((L.shiftN * 0.618034) % 1) * LIFE.shiftSpan; } }   // (4–9 s, a golden-ratio sequence: irregular but deterministic)
-    L.shift.step(resting * L.shiftSide, resting ? LIFE.shiftIn : LIFE.shiftOut, dt);          // −1 … +1: over the left / right foot (eases over ~0.8 s, snaps back out in ~0.25 s when he moves)
-    if (wF < 0.003) this.feet.w = 0;        // the LOCK gated out (a stance / hold has the body, or the kick the legs): released here so that coming back it re-locks where the feet ARE, not where they stood before the hold walked off with him
-    if (w < 0.003 && wF < 0.003) return;    // …and the life motion with it: nothing to pose, nothing to hold
-    // remember the feet, pose the body, put the feet back
-    this.fkPart(pA, this.fkLegs); const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;   // (the legs alone, here and after the life motion: all this layer reads of fk before the leg solves at its end run the whole skeleton — fkPart)
-    if (w >= 0.003) {   // the life motion itself — weighed out on its own under an upper-body one-shot (a flinch, the cross, a throw) while the lock below holds the soles
-      const br = Math.sin(L.breath), br2 = Math.sin(L.breath - 0.6);       // shoulders trail the chest a little
-      const sh = L.shift.x * w * Math.min(1, LIFE.on), side = LIFE.shiftTravel * sh * (1 - 0.5 * crouchPose);
-      const off: Vec3 = [side, L.massV.x * w + 0.004 * bAmp * br * w - Math.abs(sh) * 0.006, L.mass.x * w * (1 - 0.4 * crouchPose)];
-      this.shift(pA, nd.hips, off);
-      if (Math.abs(sh) > 1e-3) { this.turn(pA, nd.hips, qRoll(-sh * LIFE.hipDrop * DEGR)); this.turn(pA, nd.spine2, qRoll(sh * LIFE.spineCounter * DEGR)); this.turn(pA, nd.neck, qRoll(sh * LIFE.neckCounter * DEGR)); }   // hip drops on the free side, shoulders and head counter
-      const tip = clamp(L.accel * LIFE.tipGain, -LIFE.tipBack, LIFE.tipFwd) * DEGR * w * (1 - 0.5 * crouchPose) * LIFE.on;   // trunk tips into a start, back on a stop
-      if (Math.abs(tip) > 1e-4) { this.turn(pA, nd.spine1, qPitch(tip * 0.5)); this.turn(pA, nd.spine2, qPitch(tip * 0.3)); this.turn(pA, nd.neck, qPitch(-tip * 0.5)); }
-      const bp = bAmp * w * DEGR; this.turn(pA, nd.spine2, qPitch(-0.5 * bp * br)); this.turn(pA, nd.spine3, qPitch(-0.4 * bp * br2)); this.turn(pA, nd.neck, qPitch(0.5 * bp * br2));   // chest lifts and opens on the in-breath, the head stays put
-      for (const sd of [nd.shoulderL, nd.shoulderR]) if (sd !== undefined) this.turn(pA, sd, qRoll((sd === nd.shoulderL ? 1 : -1) * 0.9 * bp * br2));
-      this.fkPart(pA, this.fkLegs);
-    }
-    // ---- feet: planted in the WORLD while he stands (the pose's own spots, fL / fR, are where each foot WANTS to be; a locked foot stays where it was put
-    //      down until the body has turned or shifted out from over it, then steps across in a lifted 0.22 s arc — one foot at a time), released into the
-    //      cycle's feet as he moves off. Model ↔ world through the controller's pos / yaw fed in this frame.
-    const F = this.feet; const standing = Math.max(s, L.rootV) < 0.22 && wF > 0.5 && FEET.on > 0.5 && !(this.crT > 0 && this.crT < 1) ? 1 : 0;   // (a body being lunged half a metre with speed 0 is not standing)   // (nor is one whose held gait is coming or going: the feet cross between the idle's spots and the stride's with the blend — locked, the half metre between a crouch's two poses was a re-lock, a pop)
-    const wWas = F.w; F.w = damp(F.w, standing, standing ? 12 : 16 + 40 * L.rootV, dt);   // (released as fast as the body is being moved: a lunge at 3 m/s lets go in a couple of frames, so no foot is left a stride behind at full stretch)
-    if (w < 0.003 && F.w <= 0.01) return;   // nothing was posed and no lock is up (an upper-body one-shot on the move): the pose stands exactly as it is
-    const cy = Math.cos(this.bodyYawIn), sy = Math.sin(this.bodyYawIn), P0 = this.posIn;
-    const toWorld = (m: Vec3): Vec3 => [P0[0] + m[0] * cy + m[2] * sy, P0[1] + m[1], P0[2] - m[0] * sy + m[2] * cy];
-    const toModel = (wp: Vec3): Vec3 => { const dx = wp[0] - P0[0], dz = wp[2] - P0[2]; return [dx * cy - dz * sy, wp[1] - P0[1], dx * sy + dz * cy]; };
-    const footYaw = (r: Quat) => { const f = quat.rotate(r, AY); return Math.atan2(f[0], f[2]); };   // the foot bone's Y runs along the foot (see kneePole)
-    let tL = fL, tR = fR, qL = rL, qR = rR;
-    if (F.w > 0.01) {
-      const want = { L: { p: toWorld(fL), yaw: this.bodyYawIn + footYaw(rL) }, R: { p: toWorld(fR), yaw: this.bodyYawIn + footYaw(rR) } };
-      const relock = wWas <= 0.01 || teleported || v3.distXZ(F.L.p, want.L.p) > 0.45 || v3.distXZ(F.R.p, want.R.p) > 0.45;   // just came to rest, teleported, or either foot left impossibly far: lock both where they ARE (no half-metre lunges, no swing from the old room)
-      if (relock) { for (const k of ['L', 'R'] as const) { F[k].p = v3.copy(want[k].p); F[k].yaw = want[k].yaw; F[k].swing = -1; } }
-      const SWING = FEET.swing, LIFT = FEET.lift, DIST = FEET.dist, TURN = FEET.turnDeg * DEGR, PIVOT = FEET.pivot, LAG_CAP = FEET.lagCapDeg * DEGR;   // PIVOT rad/s: a planted sole may turn on the spot this fast (a mouse flick swings the body at 7–14 rad/s; one 0.22 s step at a time cannot keep up, a pivoting sole reads fine, a leg wound 130° under the hips does not)
-      const farOf = (k: 'L' | 'R') => v3.distXZ(F[k].p, want[k].p) > DIST || Math.abs(wrapAngle(F[k].yaw - want[k].yaw)) > TURN;
-      for (const k of ['L', 'R'] as const) {
-        const ok2 = k === 'L' ? 'R' : 'L'; const f = F[k], o = F[ok2], wt = want[k];
-        if (f.swing < 0) {
-          let errYaw = wrapAngle(wt.yaw - f.yaw);
-          if (Math.abs(errYaw) > LAG_CAP) { f.yaw += Math.sign(errYaw) * (Math.abs(errYaw) - LAG_CAP); errYaw = Math.sign(errYaw) * LAG_CAP; }   // never wound further than LAG_CAP behind the body, however fast it is flicked round: past that the sole simply turns with him
-          if (Math.abs(errYaw) > TURN) f.yaw += Math.sign(errYaw) * Math.min(Math.abs(errYaw) - TURN, PIVOT * dt);   // and pivots gently in place beyond what a step will soon take out
-          const myTurn = F.next === (k === 'L' ? 0 : 1);
-          if (farOf(k) && o.swing < 0 && (myTurn || !farOf(ok2))) { f.swing = 0; f.from = v3.copy(f.p); f.fromYaw = f.yaw; F.next = k === 'L' ? 1 : 0; }
-        }
-        if (f.swing >= 0) {
-          f.swing += dt / SWING; const e = smoothstep(0, 1, Math.min(1, f.swing));
-          f.p = v3.lerp(f.from, wt.p, e); f.p[1] = wt.p[1] + Math.sin(Math.PI * Math.min(1, f.swing)) * LIFT; f.yaw = f.fromYaw + wrapAngle(wt.yaw - f.fromYaw) * e;
-          if (f.swing >= 1) { f.swing = -1; f.p = v3.copy(wt.p); f.yaw = wt.yaw; }
-        }
-      }
-      const mk = (k: 'L' | 'R', restP: Vec3, restR: Quat): [Vec3, Quat] => {
-        const f = F[k]; const mp = toModel(f.p); const p: Vec3 = v3.lerp(restP, mp, F.w);
-        const dyaw = wrapAngle((f.yaw - this.bodyYawIn) - footYaw(restR)) * F.w; return [p, quat.mul(qYaw(dyaw), restR)];
-      };
-      [tL, qL] = mk('L', fL, rL); [tR, qR] = mk('R', fR, rR);
-    }
-    // put the feet back. The knee is steered over the toes (pole 0.6) only as far as the feet are LOCKED — a planted foot under a turning, shifting body needs
-    // it; in locomotion the clip's own knee plane is right, and at the run's dead-straight push-off the foot points steeply down, its flattened yaw is
-    // anyone's guess, and the swivel flung the knee 25 cm sideways for a frame twice a cycle (the 'knee spaz' at jog / chase speeds, tools/qa knee probes)
-    const poleW = this.crT > 0 ? 0.6 * F.w * (1 - smoothstep(0, 1, this.crT)) : 0.6 * F.w;   // (not under the held gait: a stride stopped mid-step keeps the knees the cycle gave it)
-    twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, tL, this.kneePole(qL), poleW, qL);
-    twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, tR, this.kneePole(qR), poleW, qR, true);
-  }
   private sneakLayer(Dl: number, pace: number, soft: number, armsIn: number, surge: number, dsh = 0) {
     this.sneakBody(Dl, pace, soft, surge, dsh);
     if (armsIn > 0.003) this.sneakArms(armsIn);
   }
   /** …its legs and trunk */
   private sneakBody(Dl: number, pace: number, soft: number, surge: number, dsh: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs sneak_body)
-    if (g < 0) this.sneakBodyOwn(Dl, pace, soft, surge, dsh);
-    else if (!LAYERS.both) this.sneakBodyAsk(g, Dl, pace, soft, surge, dsh);
-    else layerBoth('sneakBody', this.pA, this.fk, () => this.sneakBodyAsk(g, Dl, pace, soft, surge, dsh), () => this.sneakBodyOwn(Dl, pace, soft, surge, dsh));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs sneak_body)
+    this.sneakBodyAsk(g, Dl, pace, soft, surge, dsh);
+    if (LAYERS.watch) LAYERS.watch('sneakBody', this.pA, this.fk, null);
   }
   private sneakBodyAsk(g: number, Dl: number, pace: number, soft: number, surge: number, dsh: number) {
     const a = f64(), i = POSE_BENCH.args;
     a[i] = Dl; a[i + 1] = pace; a[i + 2] = soft; a[i + 3] = surge; a[i + 4] = dsh; a[i + 5] = this.upperW.aim; a[i + 6] = this.gait.mid;
     layerRan(POSE_BENCH.x!.layer_sneak_body(g, this.pA.at), this.fk);
   }
-  private sneakBodyOwn(Dl: number, pace: number, soft: number, surge: number, dsh: number) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk, S = SNEAK;
-    const K = (1 + S.stride * Dl) * (1 + S.paceStride * pace) * (1 + DASH.stride * dsh);
-    const drop = S.drop * Dl + S.paceDrop * pace + S.softDrop * soft + DASH.drop * dsh;
-    const tip = drop * 25 * DEGR;                                                    // ≈ 1.75° at 7 cm
-    const lean = (S.lean * Dl + S.paceLean * pace + DASH.lean * dsh) * DEGR * (1 - this.upperW.aim);
-    if (K > 1.0005 || drop > 2e-4 || Math.abs(surge) > 2e-4) {
-      this.fkPart(pA, this.fkLegs);
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      const m = this.gait.mid; const tgt = (f: Vec3): Vec3 => [f[0], f[1], m + (f[2] - m) * K + surge];
-      this.shift(pA, nd.hips, [0, -drop, surge]); if (tip > 1e-5) this.turn(pA, nd.hips, qPitch(tip));
-      this.fkPart(pA, this.fkLegs);   // feet: where the cycle had them but for the longer stride and the surge, soles as they were, in the clip's own knee plane (pole weight 0: at no stride / drop / surge this is the identity, so the layer fades to exactly nothing)
-      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, tgt(fL), this.kneePole(rL), 0, rL);
-      twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, tgt(fR), this.kneePole(rR), 0, rR, true);
-    }
-    if (lean + tip > 1e-5) {
-      this.turn(pA, nd.spine1, qPitch(lean * 0.45)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.2));   // hips lead, chest follows
-      const unl = lean + tip; this.turn(pA, nd.neck, qPitch(-unl * 0.4)); this.turn(pA, nd.head, qPitch(-unl * 0.6));                          // …and the head comes level back out of all of it
-    }
-  }
   /** …and its arms (in through the arms mask, on a copy) */
   private sneakArms(armsIn: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs sneak_arms)
-    if (g < 0) this.sneakArmsOwn(armsIn);
-    else if (!LAYERS.both) this.sneakArmsAsk(g, armsIn);
-    else layerBoth('sneakArms', this.pA, this.fk, () => this.sneakArmsAsk(g, armsIn), () => this.sneakArmsOwn(armsIn));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs sneak_arms)
+    this.sneakArmsAsk(g, armsIn);
+    if (LAYERS.watch) LAYERS.watch('sneakArms', this.pA, this.fk, null);
   }
   private sneakArmsAsk(g: number, armsIn: number) {
     const a = f64(), i = POSE_BENCH.args; a[i] = armsIn; a[i + 1] = this.crouch; a[i + 2] = this.upperW.relaxed;
     layerRan(POSE_BENCH.x!.layer_sneak_arms(g, this.pA.at, this.pB.at), this.fk);
-  }
-  private sneakArmsOwn(armsIn: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, S = SNEAK;
-    {
-      pB.copy(pA); this.fkPart(pB, this.fkArms);
-      const cr = clamp(this.crouch, 0, 1), r = clamp(this.upperW.relaxed, 0, 1), k = lerp(0.5, 1, cr);
-      const pR0 = v3.copy(fk.pos[nd.handR]), pL0 = v3.copy(fk.pos[nd.handL]); const rR0 = [...fk.rot[nd.handR]] as Quat, rL0 = [...fk.rot[nd.handL]] as Quat;
-      const gunR = v3.add(pR0, v3.lerp(S.gunInStand, S.gunIn, cr));
-      const freeR: Vec3 = [pR0[0] + Math.min(S.handIn, Math.max(0, -pR0[0])) * k, pR0[1] - 0.02 * k, pR0[2] - 0.03 * k];   // (the right hand lives at −x: in = toward the middle, never past it)
-      const freeL: Vec3 = [pL0[0] - Math.min(S.handIn, Math.max(0, pL0[0])) * k, pL0[1] - 0.02 * k, pL0[2] - 0.03 * k];
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(freeR, gunR, r), v3.lerp([-0.05, 0.4, -1], [-0.12, -1, -0.5], r), lerp(0.35, 0.7, r), rR0);   // elbow: back and a shade out hanging; down and in on the gun
-      const gunL = v3.add(fk.pos[nd.handR], v3.sub(pL0, pR0));                                                                                                // the support hand rigid with wherever the gun hand actually got to
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.lerp(freeL, gunL, r), v3.lerp([0.05, 0.4, -1], [0.2, -1, -0.35], r), lerp(0.35, 0.7, r), rL0, true);
-      blendPose(pA, pB, clamp(armsIn, 0, 1), this.armsMask, pA);
-    }
   }
 
   /** MOVES.steady (weight `w` = the crouch walk's share of the pose; called on the bare locomotion, the cycle's own sample of this frame still in pC): the
@@ -3978,41 +3233,14 @@ export class CharacterAnimator {
       for (let i = 0; i < N; i++) { sampleClip(clip, i / N * clip.duration, true, P); this.fkPart(P, this.fkLegs); roll += rollNow(); x += fk.pos[nd.hips][0]; }
       this.steadyMean = [roll / N, x / N];
     }
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs steady_layer)
-    if (g < 0) this.steadyLayerOwn(w, base, sunk);
-    else if (!LAYERS.both) this.steadyLayerAsk(g, w, base, sunk);
-    else layerBoth('steadyLayer', this.pA, this.fk, () => this.steadyLayerAsk(g, w, base, sunk), () => this.steadyLayerOwn(w, base, sunk));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs steady_layer)
+    this.steadyLayerAsk(g, w, base, sunk);
+    if (LAYERS.watch) LAYERS.watch('steadyLayer', this.pA, this.fk, null);
   }
   private steadyLayerAsk(g: number, w: number, base: number, sunk: number) {
     const a = f64(), i = POSE_BENCH.args, M = this.steadyMean!;
     a[i] = w; a[i + 1] = base; a[i + 2] = sunk; a[i + 3] = M[0]; a[i + 4] = M[1]; a[i + 5] = this.steadyUp;
     layerRan(POSE_BENCH.x!.layer_steady(g, this.pA.at, this.pC.at), this.fk);
-  }
-  private steadyLayerOwn(w: number, base: number, sunk: number) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk, K = MV.steady, steadyMean = this.steadyMean!;
-    const rollNow = () => { const a = fk.pos[nd.thighL], b = fk.pos[nd.thighR]; return Math.atan2(a[1] - b[1], a[0] - b[0]); };
-    this.fkPart(this.pC, this.fkLegs);
-    const dRoll = rollNow() - steadyMean[0], dX = fk.pos[nd.hips][0] - steadyMean[1];   // this frame's swing: the cycle's sample off the cycle's mean
-    this.fkPart(pA, this.fkLegs);
-    const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-    const tL = fk.pos[nd.thighL], tR = fk.pos[nd.thighR], sL = fk.pos[nd.shinL], sR = fk.pos[nd.shinR];
-    const oL: Vec3 = [sL[0] - tL[0], sL[1] - tL[1], sL[2] - tL[2]], oR: Vec3 = [sR[0] - tR[0], sR[1] - tR[1], sR[2] - tR[2]]; const yL = sL[1], yR = sR[1];   // each knee's set off its hip, and its height, as the cycle has them
-    const a = dRoll * K.roll * w, sx = dX * K.sway * w;
-    if (Math.abs(a) > 1e-6) { this.turn(pA, nd.hips, qRoll(-a)); this.turn(pA, nd.spine3, qRoll(a)); }   // (both about the model's fore-aft axis: the chest, neck, head and arms end the frame turned exactly as the pose had them)
-    if (Math.abs(sx) > 1e-6) this.shift(pA, nd.hips, [-sx, 0, 0]);
-    const kx = 1 - (1 - K.feet) * w * base;
-    this.fkPart(pA, this.fkLegs);
-    const aL: Vec3 = [fL[0] * kx, fL[1], fL[2]], aR: Vec3 = [fR[0] * kx, fR[1], fR[2]];
-    if (this.steadyUp > 0) {   // … and (setting 2) ridden higher: the pelvis up off the kneel, by as much as BOTH legs can pay out with the ankles where they are (a leg never past `reach` of its length)
-      let up = this.steadyUp;
-      for (const [hip, knee, foot, at] of [[nd.thighL, nd.shinL, nd.footL, aL], [nd.thighR, nd.shinR, nd.footR, aR]] as const) { const h = fk.pos[hip], len = (v3.dist(h, fk.pos[knee]) + v3.dist(fk.pos[knee], fk.pos[foot])) * K.reach;
-        const hx = h[0] - at[0], hy = h[1] - at[1], hz = h[2] - at[2], q = len * len - hx * hx - hz * hz; up = Math.min(up, q > 0 ? Math.sqrt(q) - hy : 0); }
-      if (up > 1e-5) { this.shift(pA, nd.hips, [0, up, 0]); this.fkPart(pA, this.fkLegs); }
-    }
-    const kn = K.knee * w * base, ko = K.kneeOut * w * sunk, hL = smoothstep(0.10, 0.22, yL), hR = smoothstep(0.10, 0.22, yR), kL = 1 - kn * lerp(K.kneeLow, 1, hL) + ko * (1 - hL), kR = 1 - kn * lerp(K.kneeLow, 1, hR) + ko * (1 - hR);   // the knees swung in over the ankles (less of it for one a hand off the floor)
-    const pL: Vec3 = [oL[0] * kL, oL[1], oL[2]], pR: Vec3 = [oR[0] * kR, oR[1], oR[2]];
-    twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, aL, pL, 1, rL);
-    twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, aR, pR, 1, rR, true);
   }
 
   /** Both arms onto the pistol: the right (gun) hand at chest + [side, up, fwd] (model axes), the muzzle at `pitch` and level in roll, the left hand keeping the
@@ -4020,46 +3248,14 @@ export class CharacterAnimator {
    *  swivelled down-and-in by `tuck`. Solved on a copy seeded with the aim clip's shoulders / hands / fingers, blended in through the arms mask. A little sway
    *  and, during a kick, a pump of the gun toward the chest keep it from reading as a still. */
   private carryArms(w: number, kickT: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs carry_arms)
-    if (g < 0) this.carryArmsOwn(w, kickT);
-    else if (!LAYERS.both) this.carryArmsAsk(g, w, kickT);
-    else layerBoth('carryArms', this.pA, this.fk, () => this.carryArmsAsk(g, w, kickT), () => this.carryArmsOwn(w, kickT));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs carry_arms)
+    this.carryArmsAsk(g, w, kickT);
+    if (LAYERS.watch) LAYERS.watch('carryArms', this.pA, this.fk, null);
   }
   private carryArmsAsk(g: number, w: number, kickT: number) {
     const a = f64(), i = POSE_BENCH.args, st = this.st, gu = this.gripUp;
     a[i] = w; a[i + 1] = kickT; a[i + 2] = this.idleT; a[i + 3] = st.fwd.x; a[i + 4] = st.up.x; a[i + 5] = st.side.x; a[i + 6] = st.pitch.x; a[i + 7] = st.blade.x; a[i + 8] = st.tuck.x; a[i + 9] = gu[0]; a[i + 10] = gu[1]; a[i + 11] = gu[2];
     layerRan(POSE_BENCH.x!.layer_carry_arms(g, this.pA.at, this.pB.at, this.pAim.at), this.fk);
-  }
-  private carryArmsOwn(w: number, kickT: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, st = this.st, fk = this.fk, t = this.idleT;
-    pB.copy(pA); blendPose(pB, this.pAim, 1, this.armsMask, pB);   // current body, aim-clip arms
-    this.fkPart(pB, this.fkArms);   // (chest joint + both arms: all that is read before the first solve runs the whole skeleton — the left wrist's rotation, read live below, included)
-    const chest = fk.pos[nd.spine3];
-    const pR0 = fk.pos[nd.handR], pL0 = fk.pos[nd.handL]; const rR0 = fk.rot[nd.handR], rL0 = fk.rot[nd.handL];
-    const g0 = v3.normalize(v3.sub(fk.pos[nd.middle1R], pR0));   // the clip's bore axis as posed on this spine (Character.gunDir's definition)
-    // where the gun goes: sway (slow figure-eight, mm) + kick pump
-    const pump = kickT >= 0 ? 0.05 * bump(kickT, 0.15, 0.36, 0.5, 0.85) : 0;
-    const fwd = st.fwd.x - pump, up = st.up.x + 0.004 * Math.sin(t * 2.1) + 0.02 * pump, sidew = st.side.x + 0.005 * Math.sin(t * 1.3 + 0.6);
-    const pitch = (st.pitch.x + 0.8 * Math.sin(t * 1.7 + 1.1)) * DEGR + pump * 4, yaw = 0.6 * Math.sin(t * 1.1) * DEGR + st.blade.x * DEGR * 0.2;   // (stack: bore drifts a touch toward the door edge)
-    const gd: Vec3 = [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
-    // rigid motion of the grip: rotation D (shortest arc bore → wanted bore, then unroll so the sights stay up), translation to the wanted hand point
-    const D = this.gripTurn(g0, rR0, gd, AY);
-    const pR: Vec3 = [chest[0] + sidew, chest[1] + up, chest[2] + fwd];
-    const grip = quat.rotate(D, v3.sub(pL0, pR0));   // support wrist relative to the gun wrist, turned with the gun
-    const tuck = st.tuck.x;
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, pR, [-0.12 - 0.6 * (1 - tuck), -1, -0.5], 0.4 + 0.55 * tuck, quat.mul(D, rR0));
-    const pL = v3.add(fk.pos[nd.handR], grip);        // from where the gun hand actually got to (an extended carry can sit at the edge of reach on some torsos: the hands must not part)
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, pL, [0.2 + 0.6 * (1 - tuck), -1, -0.35], 0.4 + 0.5 * tuck, quat.mul(D, rL0), true);   // (the support arm reaches across, so its elbow sits a little wider)
-    blendPose(pA, pB, w, this.armsMask, pA);
-  }
-  /** The rotation that carries the aim clip's grip (bore `g0`, gun hand at model rotation `rR0`) onto the wanted bore `gd`: the shortest arc, then unrolled about
-   *  the bore so the pistol's top strap faces `upRef` as nearly as the bore allows (AY: sights up, a level carry). */
-  private gripTurn(g0: Vec3, rR0: Quat, gd: Vec3, upRef: Vec3): Quat {
-    let D = quat.fromTo(g0, gd);
-    const up0 = quat.rotate(quat.mul(D, rR0), this.gripUp);
-    const want = v3.sub(upRef, v3.scale(gd, v3.dot(upRef, gd))), cur = v3.sub(up0, v3.scale(gd, v3.dot(up0, gd)));
-    if (v3.len(want) > 1e-4 && v3.len(cur) > 1e-4) { const wn = v3.normalize(want), cn = v3.normalize(cur); D = quat.mul(quat.axisAngle(gd, Math.atan2(v3.dot(v3.cross(cn, wn), gd), v3.dot(cn, wn))), D); }
-    return D;
   }
   /** which row of LONG_RELOAD this gun's carry takes (`reloadBack` is the second movement pass's input: nobody's with that pass off) */
   private rlRow() { return this.reloadBack && MOVES.on > 0.5 && !(this.feed !== null && feedLive()) ? LONG_RELOAD.back : LONG_RELOAD.box; }   // (a gun with a model of its own is never the bullpup: gunreload.ts)
@@ -4104,41 +3300,14 @@ export class CharacterAnimator {
    *  much the twist is measured and taken out about the trunk's own line instead of the model's upright (MOVES.steadyRun) — at 0, every jog, the hold as it was. */
   private longBody(w: number, run = 0, sprint = 0) {
     if (w < 0.003) return;
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs long_body)
-    if (g < 0) this.longBodyOwn(w, run, sprint);
-    else if (!LAYERS.both) this.longBodyAsk(g, w, run, sprint);
-    else layerBoth('longBody', this.pA, this.fk, () => this.longBodyAsk(g, w, run, sprint), () => this.longBodyOwn(w, run, sprint));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs long_body)
+    this.longBodyAsk(g, w, run, sprint);
+    if (LAYERS.watch) LAYERS.watch('longBody', this.pA, this.fk, null);
   }
   private longBodyAsk(g: number, w: number, run: number, sprint: number) {
     const a = f64(), i = POSE_BENCH.args, ch = this.lgChannels();
     a[i] = w; a[i + 1] = run; a[i + 2] = sprint; a[i + 3] = this.longSteady; a[i + 4] = ch[LC.blade].x; a[i + 5] = ch[LC.lean].x; a[i + 6] = ch[LC.headYaw].x; a[i + 7] = ch[LC.headPitch].x; a[i + 8] = ch[LC.headRoll].x;
     layerRan(POSE_BENCH.x!.layer_long_body(g, this.pA.at), this.fk);
-  }
-  private longBodyOwn(w: number, run: number, sprint: number) {
-    const pA = this.pA, nd = this.nodes, ch = this.lgChannels();
-    const hold = run * clamp(this.longSteady, 0, 1) * LONG_STEADY.runYaw * w;
-    if (hold > 0.003) {
-      this.fkPart(pA, this.fkArms); const fk = this.fk; const a = fk.pos[nd.upperArmL], b = fk.pos[nd.upperArmR];
-      const lv = mvOn('steady') && mvOn('steadyRun') ? clamp(sprint, 0, 1) : 0;   // (by the SPRINT's share of the pose: a jog — every teammate's run, who never sprints — is held as it always was, to the bit)
-      if (lv > 0) {   // MOVES.steady + MOVES.steadyRun: … about the TRUNK'S OWN LINE. A runner's trunk is pitched forward (the sprint clip's: ~25°) and its pumping is a twist about that line; taken out about the model's upright instead (below), what was left of ±25° of twist about a line 25° off upright was ±11° of the whole trunk rolling side to side — the head 17 cm across, three steps a second: the sprint's waddle with the rifle in his hands. The line runs spine1 → between the clavicle ROOTS (rigid on the chest: the arm ends they carry pump up and down with the arms and would rock the line itself); the twist is still read at the shoulder joints, which the gun hangs from; and the neck is handed the twist back, so the head keeps the clip's own carriage (the clip counter-turns it against a trunk twist that is no longer there)
-        const ca = fk.pos[nd.shoulderL], cb = fk.pos[nd.shoulderR], u = v3.sub(v3.lerp(ca, cb, 0.5), fk.pos[nd.spine1]), ul = v3.len(u);
-        if (ul > 1e-4) { const un = v3.scale(u, 1 / ul), s = v3.sub(a, b), sp = v3.mad(s, un, -v3.dot(s, un)), ref: Vec3 = [1 - un[0] * un[0], -un[0] * un[1], -un[0] * un[2]];   // (the shoulder line and the figure's own left, both square to the trunk's line)
-          const ty = Math.atan2(v3.dot(v3.cross(ref, sp), un), v3.dot(ref, sp)) * hold * lv;   // the twist about it off square, the share of it to take out
-          if (Math.abs(ty) > 1e-4) { this.turn(pA, nd.spine1, quat.axisAngle(un, -ty * 0.3)); this.turn(pA, nd.spine2, quat.axisAngle(un, -ty * 0.35)); this.turn(pA, nd.spine3, quat.axisAngle(un, -ty * 0.35)); this.turn(pA, nd.neck, quat.axisAngle(un, ty)); } }
-      }
-      if (lv < 1) {
-      const sy = Math.atan2(b[2] - a[2], a[0] - b[0]) * hold * (1 - lv);   // the shoulder line's yaw off square (+ = turned to the figure's left), the share of it to take out (both shares are read off the pose as the clip left it)
-      if (Math.abs(sy) > 1e-4) { this.turn(pA, nd.spine1, qYaw(-sy * 0.3)); this.turn(pA, nd.spine2, qYaw(-sy * 0.35)); this.turn(pA, nd.spine3, qYaw(-sy * 0.35)); }
-      }
-    }
-    const blade = ch[LC.blade].x * DEGR * w, lean = ch[LC.lean].x * DEGR * w;
-    const hy = ch[LC.headYaw].x * DEGR * w, hp = ch[LC.headPitch].x * DEGR * w, hr = ch[LC.headRoll].x * DEGR * w;
-    if (Math.abs(blade) > 1e-5) { this.turn(pA, nd.spine2, qYaw(blade * 0.4)); this.turn(pA, nd.spine3, qYaw(blade * 0.6)); this.turn(pA, nd.neck, qYaw(-blade * 0.5)); this.turn(pA, nd.head, qYaw(-blade * 0.5)); }
-    if (Math.abs(lean) > 1e-5) {
-      this.turn(pA, nd.spine1, qPitch(lean * 0.45)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.2));
-      this.turn(pA, nd.neck, qPitch(-lean * 0.4)); this.turn(pA, nd.head, qPitch(-lean * 0.6));
-    }
-    if (Math.abs(hy) + Math.abs(hp) + Math.abs(hr) > 1e-5) { this.turn(pA, nd.neck, quat.mul(qYaw(hy * 0.4), qPitch(hp * 0.4))); this.turn(pA, nd.head, quat.mul(qRoll(hr), quat.mul(qYaw(hy * 0.6), qPitch(hp * 0.6)))); }
   }
   /** The long gun, arms (weight w): the trigger hand's wrist put at the carriage's [side, up, fwd] (model axes) off the chest joint — or, by its `anchor`, off the gun
    *  shoulder joint (kept no further out than the aim clip's) — swung about the shoulders with the aim's share of the pitch, holding the weapon's grip exactly as it
@@ -4152,10 +3321,9 @@ export class CharacterAnimator {
    *  set and grips, blended in through the arms mask — or, on the pass after the aim clip (yieldDoor), arm by arm short of whatever a hand on a door still holds. */
   private longArms(w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
     if (w < 0.003) return;
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs long_arms)
-    if (g < 0) this.longArmsOwn(w, kickT, dt, yieldDoor, keep);
-    else if (!LAYERS.both) this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep);
-    else layerBoth('longArms', this.pA, this.fk, () => this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep), () => this.longArmsOwn(w, kickT, dt, yieldDoor, keep), this.withHands(CharacterAnimator.longArmCols));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs long_arms)
+    this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep);
+    if (LAYERS.watch) LAYERS.watch('longArms', this.pA, this.fk, this.withHands(CharacterAnimator.longArmCols));
   }
   /** what the long gun's arms keep between frames: the anchor's two low-pass poles, the hold-back, and (out) the sights' lift over a dipped muzzle */
   private static readonly longArmCols: LayerCols<CharacterAnimator> = { n: 6,
@@ -4170,81 +3338,6 @@ export class CharacterAnimator {
     for (let i = 0; i < 4; i++) m[o + 24 + i] = F[i];
     for (let i = 0; i < LC.count; i++) m[o + 37 + i] = ch[i].x;
     colsToBench(CharacterAnimator.longArmCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_long_arms(g, this.pA.at, this.pB.at, this.pAim.at, this.rest.at)); colsFromBench(CharacterAnimator.longArmCols, this);
-  }
-  private longArmsOwn(w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ch = this.lgChannels(), t = this.idleT, G = this.longGrip;
-    pB.copy(pA); blendPose(pB, this.pAim, 1, this.armsMask, pB);   // current body, the aim clip's clavicles / trigger grip / fingers to start from
-    this.fkPart(pB, this.fkArms);   // (chest joint + the arms: all that is read before solve()'s first twoBoneIK runs the whole skeleton)
-    const chest = v3.copy(fk.pos[nd.spine3]);
-    const pR0 = v3.copy(fk.pos[nd.handR]); const rR0 = [...fk.rot[nd.handR]] as Quat;
-    const g0 = v3.normalize(v3.sub(fk.pos[nd.middle1R], pR0));   // the clip's bore as posed on this spine (Character.gunDir's definition: wrist → middle finger)
-    // the bore, model space
-    const sway = ch[LC.sway].x, a = this.upperW.aim;
-    const rcl = mvOn('recoil'), mvs = this.mvs;   // MOVES: the recoil's climb and sideways throw on the bore, its drive back along it in place of the fixed pull
-    const yaw = (ch[LC.yaw].x + 0.6 * sway * Math.sin(t * 1.1) + (rcl ? mvs.yaw : 0)) * DEGR;
-    const dipW = this.mv2Shown.dip;   // MOVES.entry (0 unless that switch is on): the stock stays in the shoulder, the muzzle goes down past the man in front
-    const pitch0 = clamp((ch[LC.pitch].x + 0.8 * sway * Math.sin(t * 1.7 + 1.1) + (rcl ? mvs.climb : 0)) * DEGR + this.aimPitch * (ch[LC.aimK].x - 0.35 * a), -1.35, 1.35);
-    const dipK = dipW > 0 ? dipW * (1 - smoothstep(0.3, 0.6, pitch0)) : 0;   // (only ever DOWN, and only from a gun that is about level: a muzzle already lower stays where it is, one carried high is over him already)
-    const pitch = dipK > 0 ? lerp(pitch0, Math.min(pitch0, MV2.dip.pitch * DEGR), dipK) : pitch0;
-    if (dipK > 0 && w > 0.99 && mvOn('entryEyes')) this.sightsLift = pitch0 - pitch;   // (only while this pass has the whole gun: part-way into a hold, or with the wall arms, the bore shown is not this one)
-    const cp = Math.cos(pitch); const d: Vec3 = [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp];
-    const rR = quat.mul(this.gripTurn(g0, rR0, d, AY), rR0);
-    // the gun's own frame about that bore, as rigProps builds it to draw the weapon (frameFrom(hand, gunDir, −gunUnder)): y up out of the receiver, x to the figure's left
-    let yW = v3.mad(AY, d, -d[1]); yW = v3.len(yW) > 1e-4 ? v3.normalize(yW) : [Math.cos(yaw), 0, -Math.sin(yaw)]; const xW = v3.cross(yW, d);
-    const inGun = (p: Vec3): Vec3 => [xW[0] * p[0] + yW[0] * p[1] + d[0] * p[2], xW[1] * p[0] + yW[1] * p[1] + d[1] * p[2], xW[2] * p[0] + yW[2] * p[1] + d[2] * p[2]];
-    // the trigger hand: the carriage's point off the chest joint (+ sway), pumped toward the chest by a kick, pulled back along the bore by a shot — swung about the
-    // shoulders' pivot (LONG_PIVOT) by the aim's share of the pitch, the way an arm pointing up or down carries the hand with it (so a shouldered gun stays on the
-    // gun shoulder's own line to the target whatever the pitch: guards.ts clearShot reads that line), and, like the bore, turned back by what the chest twist
-    // will add about the chest joint after this pose
-    const kick = this.shootT >= 0 ? (this.shootT < 0.035 ? this.shootT / 0.035 : Math.max(0, 1 - (this.shootT - 0.035) / 0.2)) : 0;
-    const pump = kickT >= 0 ? 0.04 * bump(kickT, 0.15, 0.36, 0.5, 0.85) : 0;
-    const kA = clamp(ch[LC.anchor].x, 0, 1); const anchor = v3.lerp(chest, fk.pos[nd.upperArmR], kA);   // off the chest joint … off the gun shoulder (the clip's own, as it will show)
-    anchor[0] = Math.max(anchor[0], chest[0] - LONG_ANCHOR_SIDE_MAX);   // (a wide, easy shoulder set — the calm clips' — would carry the whole gun out with it, past the support arm's reach: no further out than the aim clip's own shoulder)
-    // steadied against the gait (longSteady × the carriage's `steady`): the anchor's side-to-side followed through a two-pole low-pass (LONG_STEADY.tau) instead of
-    // frame by frame — the trunk's rock once a stride (±6 cm at the chest crouch-walking, ±3 walking) stays in the trunk and the arms take it up, the gun riding the
-    // shoulders' mean line; the weight going onto one foot at rest, a second's business, still carries it. The poles always follow (so a carriage or a switch coming
-    // on finds them current); only the pass whose arms stay on show (keep) moves them on.
-    { const L = this.lg.lat; let l0 = L[0], l1 = L[1];
-      if (!Number.isFinite(l0) || !Number.isFinite(l1)) l0 = l1 = anchor[0];
-      else { const k = 1 - Math.exp(-dt / Math.max(1e-3, LONG_STEADY.tau)); l0 += (anchor[0] - l0) * k; l1 += (l0 - l1) * k; }
-      if (keep) { L[0] = l0; L[1] = l1; }
-      const iso = clamp(ch[LC.steady].x, 0, 1) * clamp(this.longSteady, 0, 1);
-      if (iso > 1e-3) anchor[0] = lerp(anchor[0], l1, iso); }
-    const off: Vec3 = [anchor[0] - chest[0] + ch[LC.side].x + 0.004 * sway * Math.sin(t * 1.3 + 0.6), anchor[1] - chest[1] + ch[LC.up].x + 0.003 * sway * Math.sin(t * 2.1), anchor[2] - chest[2] + ch[LC.fwd].x - pump];   // (chest-relative from here on)
-    if (this.rlc.k > 0) { const k = this.rlc.k, at = this.rlRow().at; off[0] += (at[0] - off[0]) * k; off[1] += (at[1] - off[1]) * k; off[2] += (at[2] - off[2]) * k; }   // (GUN HAND: the reload carry's own point)
-    { const py = lerp(LONG_PIVOT[1], anchor[1] - chest[1], kA), pz = lerp(LONG_PIVOT[2], anchor[2] - chest[2], kA);   // the swing's pivot: between the shoulders … the gun shoulder itself
-      const th = this.aimPitch * ch[LC.aimK].x, ry = off[1] - py, rz = off[2] - pz;                       // about it: up with the muzzle raised, down and back with it lowered
-      off[1] = py + ry * Math.cos(th) + rz * Math.sin(th); off[2] = pz - ry * Math.sin(th) + rz * Math.cos(th);
-      const ph = -0.35 * this.aimPitch * a, oy = off[1], oz = off[2];                                       // less the twist's tilt of the whole trunk about the chest joint
-      off[1] = oy * Math.cos(ph) + oz * Math.sin(ph); off[2] = -oy * Math.sin(ph) + oz * Math.cos(ph); }
-    let pR: Vec3 = v3.add(chest, off);
-    if (dipK > 0) { pR[1] -= MV2.dip.down * dipK; pR[2] -= MV2.dip.back * dipK; }
-    if (rcl) { if (mvs.back > 1e-5) pR = v3.mad(pR, d, -mvs.back); } else if (kick > 0) pR = v3.mad(pR, d, -LONG_KICK_BACK * kick);
-    const poleR: Vec3 = [ch[LC.elbowR].x, ch[LC.elbowR + 1].x, ch[LC.elbowR + 2].x], poleL: Vec3 = [ch[LC.elbowL].x, ch[LC.elbowL + 1].x, ch[LC.elbowL + 2].x], pw = clamp(ch[LC.poleW].x, 0, 1);
-    if (mvOn('gait')) {   // MOVES: the elbows by training, shouldered — a drilled man's tucked in under the gun, an untrained man's firing elbow winged out level with the shoulder
-      const tw = smoothstep(0.5, 1, this.trained) * a, uw = (1 - smoothstep(0, 0.5, this.trained)) * a, Gt = MV.gait;
-      poleR[0] += Gt.elbowIn * tw; poleL[0] -= Gt.elbowIn * 0.8 * tw; poleR[1] += Gt.wing * uw; poleR[0] -= 0.25 * uw;
-    }
-    const rL = this.handRot(0, inGun(G.fingers), inGun(G.back));
-    const solve = (at: Vec3): Vec3 => {   // → how far the support hand fell short of its point (zero when it reached)
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, at, poleR, pw, rR);
-      const pL = v3.add(fk.pos[nd.handR], inGun(G.wrist));   // from where the trigger hand actually got to
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, pL, poleL, pw, rL, true);
-      return v3.sub(fk.pos[nd.handL], pL);
-    };
-    // out of the support arm's reach (the walk's shoulder swung back under a long carriage): the gun comes back to where it can be held — at once, so the hands never
-    // part, and let out again over half a second (2/s), so a reach that comes and goes with the stride holds the gun near its most demanding point instead of pumping
-    // it the whole way, without one carriage's shortfall riding into the next; and never more than LONG_PULL_MAX — past that the support hand is let fall short of
-    // the handguard by the rest (a finger's gap there, sooner than the stock floating a hand off the shoulder)
-    // (keep: only the pass whose arms end up on show holds anything over — the pass at the carry while the aim clip is coming up poses against a trunk about to change)
-    const P: Vec3 = keep ? this.lg.pull : v3.copy(this.lg.pull); const m = solve(v3.add(pR, P));
-    if (v3.len(m) > 5e-4) {   // still short with what is held: take up the rest now (capped), and pose there
-      P[0] += m[0]; P[1] += m[1]; P[2] += m[2]; const l = v3.len(P); if (l > LONG_PULL_MAX) { const k = LONG_PULL_MAX / l; P[0] *= k; P[1] *= k; P[2] *= k; }
-      solve(v3.add(pR, P));
-    } else if (keep) { const k = Math.exp(-2 * dt); P[0] *= k; P[1] *= k; P[2] *= k; }   // reached: let a little out for next frame (short again there, it is taken straight back)
-    this.hand(pB, 0, [0.5, 0.55, 0.6, 0.68], 0.35);   // the support hand cupped round the handguard
-    if (yieldDoor) { const dl = clamp(this.dp.wL.x, 0, 1), dr = clamp(this.dp.wR.x, 0, 1); blendPose(pA, pB, w * (1 - dl), this.armLOnly, pA); blendPose(pA, pB, w * (1 - dr), this.armROnly, pA); }
-    else blendPose(pA, pB, w, this.armsMask, pA);
   }
 
   /** The wall hold, body half ('wall', weight w — everything below scales with it, so the way in and out is the master spring's), to WALL_POSE's numbers. In
@@ -4263,15 +3356,10 @@ export class CharacterAnimator {
    *    opened the way he looks (crouched: a compact squat, feet under the knees) — and on the move where the turned walk cycle has them, narrowed toward the wall
    *    (`slide`); blended by ground speed, swept across (with a small lift) when the side flips, and never through the face. */
   private wallBody(w: number) {
-    const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), this.clips.Idle_Loop, this.clips.Crouch_Idle_Loop);   // (RUST.walk: rust/sim/src/layers.rs wall_body)
-    if (g < 0) this.wallBodyOwn(w);
-    else if (!LAYERS.both) this.wallBodyAsk(g, w);
-    else layerBoth('wallBody', this.pA, this.fk, () => this.wallBodyAsk(g, w), () => this.wallBodyOwn(w), colsOf(CharacterAnimator.wallCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs wall_body)
+    this.wallBodyAsk(g, w);
+    if (LAYERS.watch) LAYERS.watch('wallBody', this.pA, this.fk, colsOf(CharacterAnimator.wallCols, this));
   }
-  /** the clips a layer samples for itself are written into the module BEFORE it is asked, so the ask that follows only looks their numbers up and writes
-   *  nothing into the module while it lays its own numbers on the bench (`g` = layerSlot's answer, handed on; clipNo: a clip the module does not hold is a
-   *  mistake, said by name) */
-  private clipsIn(g: number, ...clips: Clip[]): number { if (g >= 0) for (const c of clips) clipNo(c, this.pA.numNodes); return g; }
   private wallBodyAsk(g: number, w: number) {
     const a = f64(), i = POSE_BENCH.args, ws = this.wst, C = this.chestRestInv, GZ = this.gazeLocal, P0 = this.posIn, T = this.wallTakeFeet, I = this.idleFeet;
     a[i] = w; a[i + 1] = this.crouch; a[i + 2] = ws.side.x; a[i + 3] = ws.side.v; a[i + 4] = ws.peek.x; a[i + 5] = ws.park.x; a[i + 6] = this.upperW.aim; a[i + 7] = this.wallYaw;
@@ -4292,144 +3380,6 @@ export class CharacterAnimator {
     put(c, o) { this.wallGait = c[o]; this.wtkHold = c[o + 1] !== 0;
       this.wtk = c[o + 2] ? { L: { p: [c[o + 3], c[o + 4], c[o + 5]], yaw: c[o + 6] }, R: { p: [c[o + 7], c[o + 8], c[o + 9]], yaw: c[o + 10] }, first: c[o + 11] ? 1 : 0, last: c[o + 12] } : null; },
   };
-  private wallBodyOwn(w: number) {
-    const pA = this.pA, pC = this.pC, nd = this.nodes, fk = this.fk, ws = this.wst, P = WALL_POSE, K = P.peek;
-    const cr = clamp(this.crouch, 0, 1), s = clamp(ws.side.x, -1, 1), pk = clamp(ws.peek.x, 0, 1), e = pk * pk * (3 - 2 * pk);
-    const park = clamp(ws.park.x, 0, 1);                                            // 1 parked … 0 sidling (by ground speed, eased: update())
-    const aimW = this.upperW.aim;
-    const ny = this.wallYaw; const n: Vec3 = [Math.sin(ny), 0, Math.cos(ny)], tr: Vec3 = [-n[2], 0, n[0]];   // wall normal (into the room) and his right along the wall, model space
-    // ---- what is underneath: the clip's feet (targets on the move, and what the parked spots blend from)
-    fk.run(pA);
-    const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-    // ---- 1. spine toward the standing idle's, joint by joint (a rotation blend, so at w it is part way there — not a snap)
-    pC.copy(this.rest); sampleClip(this.clips.Idle_Loop, this.idleT, true, pC);
-    for (const [i, k] of [[nd.spine1, 0.9], [nd.spine2, 0.9], [nd.spine3, 0.9], [nd.neck, 0.85], [nd.head, 0.85], [nd.shoulderL, 0.7], [nd.shoulderR, 0.7]] as [number, number][])
-      pA.setRot(i, quat.nlerp(pA.rot(i), pC.rot(i), k * w));
-    // ---- 2. pelvis: a third of the way back to flat under turned legs, back onto the wall, down a little, and along the wall onto the lead foot in a peek
-    if (park > 0.995 || w < 0.01) this.wallGait = WALL_GAIT_REST;                   // (parked whole: the step clock back to rest, unseen — the spots have the feet)
-    const G = P.gait, gShare = WALLSNAP.on && WALLSNAP.pose ? lerp(G.share[0], G.share[1], cr) : 0, gw = gShare * (1 - park) * w;   // the sidle's own step: its share of the feet, and of the pelvis on the move
-    if (gw > 1e-4) {   // (under its own step the pelvis is carried, not rocked by a cycle the feet no longer follow: the idles' own pelvis, standing ↔ crouched)
-      const pB = this.pB; pB.copy(this.rest); sampleClip(this.clips.Crouch_Idle_Loop, this.idleT, true, pB);
-      pA.setRot(nd.hips, quat.nlerp(pA.rot(nd.hips), quat.nlerp(pC.rot(nd.hips), pB.rot(nd.hips), cr), gw));
-    }
-    fk.run(pA);
-    const hips = fk.pos[nd.hips];
-    const backOff = lerp(lerp(P.back[0], P.back[1], cr), P.back[2], 1 - park);       // hips joint off the plane
-    const out = v3.dot(hips, n) - (-WALL_ROOT_OFF + backOff);                        // + = further out in the room than wanted
-    const drop = lerp(P.drop[0], P.drop[1], cr) + 0.006 * (1 - park) * (1 - gShare) * (1 - Math.cos(this.phase * 4 * Math.PI)) + WALLSNAP.dip * this.wallHit;   // (a touch of bob on the move, twice a cycle)
-    this.shift(pA, nd.hips, v3.add(v3.add(v3.scale(n, -out * w), [0, -drop * w, 0]), v3.scale(tr, s * K.shift * e * w)));
-    if (gw > 1e-4) {   // …level at the step's own height, dipping at each double support, and no sway along the wall
-      const lvl = lerp(G.hips[0], G.hips[1], cr) - lerp(G.bob[0], G.bob[1], cr) * 0.5 * (1 + Math.cos((this.wallGait - 0.05) * 4 * Math.PI));
-      this.shift(pA, nd.hips, v3.add([0, (lvl - hips[1]) * gw, 0], v3.scale(tr, -v3.dot(hips, tr) * gw)));
-    }
-    this.turn(pA, nd.hips, quat.mul(quat.axisAngle(n, s * 3 * DEGR * e * w), qYaw(ny * 0.33 * w)));   // (about n: + tips the pelvis toward his right)
-    // ---- 3. the spine measured and put, twice over (the three corrections nudge one another): the chest's facing to n but for the counter-turn toward the lead
-    //         side (the peek's own turn toward the edge taking over as it comes in), less whatever of the controller's chest twist is still to be applied after
-    //         this pose while the hold is part way in (an aim's share is left to turn the chest) — then the spine's line to `lean` toward the room (the peek's
-    //         tilt taking over) and to the peek's side bend
-    const chestYawOf = () => { const l = quat.rotate(quat.mul(fk.rot[nd.spine3], this.chestRestInv), AX); return Math.atan2(-l[2], l[0]); };   // yaw of the chest's own left axis: 0 = square to the figure's front, + = turned to its left
-    const shoulderYawOf = () => { const a = fk.pos[nd.upperArmL], b = fk.pos[nd.upperArmR]; return Math.atan2(b[2] - a[2], a[0] - b[0]); };     // the same yaw read through the two shoulder joints: what the camera sees of 'parallel to the wall', the clips' uneven clavicles counted in
-    const axN: Vec3 = [n[2], 0, -n[0]];   // up × n: + about it bows toward the room (about n itself: + tips toward his right)
-    let hipShare = 0;
-    const twist = this.aimYawOffset * (1 - w * (1 - aimW));   // the chest twist update() will still apply after this pose: the hold scales the controller's idle twist off (an aim's share stays)
-    const turnDeg = lerp(P.chestTurn, K.turn, e), leanDeg = lerp(lerp(P.lean[0], P.lean[1], cr), K.tilt, e), gazeDeg = lerp(P.gaze, K.gaze, e);   // toward side / toward the room / toward side: the hold's own, handed to the peek's as it comes in
-    for (let pass = 0; pass < 2; pass++) {
-      fk.run(pA);
-      const dy = wrapAngle(ny - s * turnDeg * DEGR - (twist - this.aimYawOffset * aimW) - lerp(shoulderYawOf(), chestYawOf(), e)) * w;   // (yaw − = toward his right; side + = leads right; the hold squares the SHOULDER LINE to the wall, the peek was tuned on the chest's facing; the aim's share is the aim's to turn the chest with)
-      this.turn(pA, nd.spine1, qYaw(dy * 0.3)); this.turn(pA, nd.spine2, qYaw(dy * 0.35)); this.turn(pA, nd.spine3, qYaw(dy * 0.35));
-      fk.run(pA);
-      const d = v3.sub(fk.pos[nd.neck], fk.pos[nd.spine1]);
-      const tiltN = Math.atan2(v3.dot(d, n), d[1]), tiltT = Math.atan2(v3.dot(d, tr), d[1]);   // toward the room / toward his right, off vertical
-      const dN = (leanDeg * DEGR - tiltN) * w, dT = (s * K.lean * DEGR * e - tiltT) * w;   // (peeking, the chest comes round pivoting on the look-side shoulder blade: it rolls ON the wall, so the spine comes off it a hand)
-      const hs = clamp(dN, -0.45 * cr - hipShare, 0.45 * cr - hipShare); hipShare += hs;   // a crouch clip's forward pelvis tilt comes back AT the pelvis (up to ~25° in all): the back un-rounds from the bottom, not by arching the lumbar
-      if (Math.abs(hs) > 1e-5) this.turn(pA, nd.hips, quat.axisAngle(axN, hs));
-      const rest = dN - hs;
-      this.turn(pA, nd.spine1, quat.mul(quat.axisAngle(n, dT * 0.5), quat.axisAngle(axN, rest * 0.6)));
-      this.turn(pA, nd.spine2, quat.mul(quat.axisAngle(n, dT * 0.3), quat.axisAngle(axN, rest * 0.4)));
-      this.turn(pA, nd.spine3, quat.axisAngle(n, dT * 0.2));
-    }
-    // ---- 4. head: gaze along the wall toward side, from the wall (whatever the chest gives, the neck makes up — within ±80° of the chest, the controller's crane
-    //         counted in), level, chin down a touch; the peek's own yaw and half un-tilted out of its side bend in a peek; handed to the aim clip under the aim layer
-    fk.run(pA);
-    { const hw = w * (1 - aimW);
-      const g = quat.rotate(fk.rot[nd.head], this.gazeLocal); const gy = Math.atan2(g[0], g[2]);
-      const chestYaw = chestYawOf();
-      let want = ny - s * gazeDeg * DEGR - twist;   // (whatever chest twist is still to come turns the head with it; lookYawExtra cranes the neck on top — the controller's peek)
-      const lk = this.lookYawExtra; want = chestYaw - lk + clamp(wrapAngle(want + lk - chestYaw), -80 * DEGR, 80 * DEGR);   // a neck turns ~80° off the chest, crane included
-      const dyaw = wrapAngle(want - gy) * hw;
-      const el = Math.asin(clamp(g[1], -1, 1)); const dpitch = (el + (P.headPitch - WALLSNAP.nod * this.wallHit) * DEGR) * hw;   // + = look further down
-      const gh = v3.normalize([g[0], 0, g[2] + 1e-6]); const axP: Vec3 = [gh[2], 0, -gh[0]];  // up × gaze: + about it nods down
-      const unroll = -s * K.lean * DEGR * e * 0.5 * hw;
-      const q = (k: number) => quat.mul(quat.axisAngle(n, unroll * k), quat.mul(qYaw(dyaw * k), quat.axisAngle(axP, dpitch * k)));
-      this.turn(pA, nd.neck, q(0.4)); this.turn(pA, nd.head, q(0.6)); }
-    // ---- 5. feet: parked, the hold's own spots (lead = the side foot); on the move the clip's, narrowed toward the wall; blended by `park`; a flip of side sweeps
-    //         them across with a lift; the face stops a heel either way
-    const F = P.feet, I = this.idleFeet; const u = (1 + s) / 2;   // u: 1 = the right foot leads (side + = his right)
-    const spot = (lead: boolean, right: boolean): { p: Vec3; yaw: number } => {   // parked spot in the wall frame for one role of one foot: `a` is authored toward the side this role implies for it
-      const a = v3.lerp(lead ? F.lead : F.trail, lead ? F.leadCrouch : F.trailCrouch, cr); const sg = right === lead ? 1 : -1;   // the right foot leads when side is +1 and trails when it is −1 (the left, the reverse)
-      return { p: v3.add(v3.scale(tr, sg * a[0]), v3.scale(n, a[1] - WALL_ROOT_OFF)), yaw: -sg * a[2] * DEGR };             // (tr = his right; yaw + = toes to his left)
-    };
-    const mv = (1 - park) * w * (1 - gShare);   // the sidle's share: how much the narrowing applies (the hold's own step keeps its own tracks)
-    // the hold's own step (WALL_POSE.gait): where this sole is on its track at the step clock's phase, its rotation, and where its knee points
-    const gaitFoot = (right: boolean, rIdle: Quat, yIdle: number): { p: Vec3; r: Quat; pole: Vec3 } => {
-      const S = lerp(G.step[0], G.step[1], cr), D = G.duty, half = D * S, f = (this.wallGait + (right ? 0.5 : 0)) % 1;
-      let a: number, up = 0;
-      if (f < D) a = half * (1 - 2 * f / D);                           // down: carried back under him at the ground's own speed
-      else { const q = (f - D) / (1 - D), q2 = q * q, q3 = q2 * q, m = -2 * S * (1 - D);   // up: back to the front, leaving and landing at the ground's speed (a Hermite between the two ends of the stance)
-        a = (2 * q3 - 3 * q2 + 1) * -half + (q3 - 2 * q2 + q) * m + (-2 * q3 + 3 * q2) * half + (q3 - q2) * m; up = Math.sin(Math.PI * q); }
-      const heel = lerp(G.heel[0], G.heel[1], cr) * DEGR * smoothstep(0.1, 1, -a * clamp(s * 2, -1, 1) / half);   // (the heel comes up as the sole trails behind the way he goes; eased through a flip of side)
-      const lw = right ? u : 1 - u, off = lerp(lerp(G.far[0], G.far[1], cr), lerp(G.near[0], G.near[1], cr), lw);
-      const yawAbs = ny - s * lerp(G.toe[0], G.toe[1], cr) * DEGR * (0.5 + 0.5 * lw), h: Vec3 = [Math.sin(yawAbs), 0, Math.cos(yawAbs)];
-      const BALL = 0.12;                                               // ankle → ball of the foot along the sole (m): the heel rises about the ball
-      const al = a + s * lerp(G.ahead[0], G.ahead[1], cr) + (right ? 1 : -1) * lerp(G.apart[0], G.apart[1], cr);   // (its own side of him: the lead foot reaches, the other closes up and does not pass)
-      const p: Vec3 = [tr[0] * al + n[0] * (off - WALL_ROOT_OFF) + h[0] * BALL * (1 - Math.cos(heel)), yIdle + lerp(G.lift[0], G.lift[1], cr) * up + BALL * Math.sin(heel), tr[2] * al + n[2] * (off - WALL_ROOT_OFF) + h[2] * BALL * (1 - Math.cos(heel))];
-      const fwd = quat.rotate(rIdle, AY), yaw0 = Math.atan2(fwd[0], fwd[2]);
-      const r = quat.normalize(quat.mul(quat.axisAngle([h[2], 0, -h[0]], heel), quat.mul(qYaw(wrapAngle(yawAbs - yaw0)), rIdle)));
-      const kr = lerp(G.kneeRoom[0], G.kneeRoom[1], cr), d = v3.normalize([n[0] * kr, 0, (1 - kr) + n[2] * kr]);   // the knee: from the legs' own facing (model +z) toward square-out
-      return { p, r, pole: v3.normalize([h[0] * 0.25 + d[0] * 0.75, 0.5, h[2] * 0.25 + d[2] * 0.75]) };
-    };
-    const gL = gShare > 0 ? gaitFoot(false, I.rL, I.L[1]) : null, gR = gShare > 0 ? gaitFoot(true, I.rR, I.R[1]) : null;
-    const footTarget = (right: boolean, fClip0: Vec3, rClip0: Quat, rIdle: Quat, yIdle: number, full = false): { p: Vec3; r: Quat } => {
-      const gf = right ? gR : gL, gk = gf ? gShare * w : 0;           // (the cycle's sole, or by its share the hold's own step's)
-      const fClip = gf ? v3.lerp(fClip0, gf.p, gk) : fClip0, rClip = gf ? quat.nlerp(rClip0, gf.r, gk) : rClip0;
-      const lw = right ? u : 1 - u;                                     // how much this foot is the lead foot right now
-      const L = spot(true, right), T = spot(false, right);
-      const p = v3.lerp(T.p, L.p, lw); const yawRel = lerp(T.yaw, L.yaw, lw);
-      const onToes = cr * (1 - lw) * F.trailHeel;                      // the crouched trail foot keeps a share of the crouch clip's raised heel (his weight is back on the wall); a lead foot, and any standing foot, is flat (the idle's sole)
-      p[1] = lerp(yIdle, fClip[1], onToes) + 0.04 * (1 - s * s) * ((ws.side.v > 0) === right ? 1 : 0.25) + 0.08 * park * (1 - park) * (0.4 + 0.6 * lw);   // (mid-flip: the foot about to lead steps, the other shuffles; settling onto the spots from the cycle: a low step, the lead foot's the clearer)
-      const base = quat.nlerp(rIdle, rClip, onToes);
-      const fwd = quat.rotate(base, AY); const yaw0 = Math.atan2(fwd[0], fwd[2]);   // the foot bone's +Y runs heel → toes
-      const r = quat.normalize(quat.mul(qYaw(wrapAngle(ny + yawRel - yaw0)), base));
-      const k = full ? 1 : park * (this.wtkHold ? 1 : w);
-      let q = v3.lerp(fClip, p, k);
-      if (mv > 1e-4) { const offC = v3.dot(q, n) + WALL_ROOT_OFF; q = v3.mad(q, n, (P.slide.line + (offC - WALL_ROOT_OFF) * P.slide.narrow - offC) * mv); }   // sidling: the footfall pulled toward the slide line — across the wall only, its travel along it untouched
-      const into = -WALL_ROOT_OFF + 0.11 - v3.dot(q, n);                          // the wall stops a heel: a footfall of the turned cycle that would swing through the face slides along it instead (ankle ≥ 11 cm proud: the heel is 6 behind it)
-      return { p: into > 0 ? v3.mad(q, n, into * w) : q, r: quat.nlerp(rClip, r, k) };
-    };
-    if (this.wallTake >= 0 && this.wallTake < 1) this.wtkHold = true; else if (this.wtkHold && (w >= 0.98 || this.stance !== 'wall')) this.wtkHold = false;   // (a short take ends before the pose's weight is whole: the soles stay where they stepped to)
-    const tL = footTarget(false, fL, rL, I.rL, I.L[1]), tR = footTarget(true, fR, rR, I.rR, I.R[1]);
-    if (this.wallTake >= 0 && this.wallTake < 1) {   // WALLSNAP — the take: each sole stays where it stood in the WORLD (the body gliding and turning over it) until its turn, then steps to the hold's spot in a low arc — the far one first, the other closing as the back lands; never left further behind than a leg reaches
-      const tk = this.wallTake, cy = Math.cos(this.bodyYawIn), sy = Math.sin(this.bodyYawIn), P0 = this.posIn;
-      const toWorld = (m: Vec3): Vec3 => [P0[0] + m[0] * cy + m[2] * sy, P0[1] + m[1], P0[2] - m[0] * sy + m[2] * cy];
-      const footYaw = (r: Quat) => { const f = quat.rotate(r, AY); return Math.atan2(f[0], f[2]); };
-      const sL = footTarget(false, fL, rL, I.rL, I.L[1], true), sR = footTarget(true, fR, rR, I.rR, I.R[1], true);
-      if (!this.wtk || tk < this.wtk.last) this.wtk = { L: this.wallTakeFeet?.L ?? { p: toWorld(fL), yaw: this.bodyYawIn + footYaw(rL) }, R: this.wallTakeFeet?.R ?? { p: toWorld(fR), yaw: this.bodyYawIn + footYaw(rR) }, first: v3.distXZ(fL, sL.p) >= v3.distXZ(fR, sR.p) ? 0 : 1, last: tk };
-      const K = this.wtk; K.last = tk;
-      const step = (a: { p: Vec3; yaw: number }, sp: { p: Vec3; r: Quat }, rClip: Quat, t0: number, t1: number, out: { p: Vec3; r: Quat }) => {
-        const q = clamp((tk - t0) / (t1 - t0), 0, 1), e = q * q * (3 - 2 * q);
-        const m = this.toModelP(a.p); const dx = m[0] - sp.p[0], dz = m[2] - sp.p[2], dl = Math.hypot(dx, dz), mx = WALLSNAP.stepTrail;
-        if (t0 > 0 && dl > mx) { m[0] = sp.p[0] + dx * mx / dl; m[2] = sp.p[2] + dz * mx / dl; }   // (the foot still WAITING is dragged once the body has left it a leg's reach behind; the one already stepping flies from where it stood)
-        out.p = v3.lerp(m, sp.p, e); out.p[1] += WALLSNAP.stepLift * Math.sin(Math.PI * q);
-        out.r = quat.nlerp(quat.normalize(quat.mul(qYaw(wrapAngle(a.yaw - this.bodyYawIn - footYaw(rClip))), rClip)), sp.r, e);
-      };
-      const A: [number, number] = [0, 0.58], B: [number, number] = [0.42, 1];   // (the further foot goes at once — a half turn has it a metre to travel — the other waits, then closes as the back lands)
-      step(K.L, sL, rL, ...(K.first === 0 ? A : B), tL); step(K.R, sR, rR, ...(K.first === 1 ? A : B), tR);
-    } else if (this.wtk) this.wtk = null;
-    fk.run(pA);
-    const poleOf = (t: { r: Quat }, gf: { pole: Vec3 } | null): Vec3 => gf && gw > 1e-4 ? v3.normalize(v3.lerp(this.kneePole(t.r), gf.pole, gw)) : this.kneePole(t.r);
-    twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, tL.p, poleOf(tL, gL), 0.6, tL.r);
-    twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, tR.p, poleOf(tR, gR), 0.6, tR.r, true);
-  }
 
   /** The wall hold, arms (weight w through the arms mask), against the body wallBody left. The hands are always free here (the game holsters the pistol for the
    *  hold): both palms flat back against the wall 'feeling' it, a little behind the body line either side of the hips at hip height — the wrists IK'd ONTO the
@@ -4438,10 +3388,9 @@ export class CharacterAnimator {
    *  one description mirrored, so a flip of side moves nothing; a peek draws the lead hand in a little (hands.peekIn) so its palm stays on the plaster short of
    *  the corner he leans past. Solved from the arms as the locomotion has them (clavicles and all), so the way in and out is a plain blend. */
   private wallArms(w: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wall_arms)
-    if (g < 0) this.wallArmsOwn(w);
-    else if (!LAYERS.both) this.wallArmsAsk(g, w);
-    else layerBoth('wallArms', this.pA, this.fk, () => this.wallArmsAsk(g, w), () => this.wallArmsOwn(w), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs wall_arms)
+    this.wallArmsAsk(g, w);
+    if (LAYERS.watch) LAYERS.watch('wallArms', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private wallArmsAsk(g: number, w: number) {
     const m = f64(), o = POSE_BENCH.args, ws = this.wst, F = this.handFix;
@@ -4456,29 +3405,6 @@ export class CharacterAnimator {
     put(c, o) { const H = this.hn; for (let sd = 0; sd < 2; sd++) { const nt = H.note[sd]; for (let i = 0; i < 5; i++) nt[i] = c[o + 120 + sd * 5 + i]; } } };
   /** ask a layer that shapes a hand: the hand pass's columns over, the layer, the notes back */
   private handsAsk(layer: () => number) { colsToBench(CharacterAnimator.handCols, this, HAND_COLS_AT); layerRan(layer(), this.fk); colsFromBench(CharacterAnimator.handCols, this, HAND_COLS_AT); }
-  private wallArmsOwn(w: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ws = this.wst, P = WALL_POSE, H = P.hands, E = P.elbow;
-    const cr = clamp(this.crouch, 0, 1), s = clamp(ws.side.x, -1, 1), pk = clamp(ws.peek.x, 0, 1), e = pk * pk * (3 - 2 * pk);
-    const ny = this.wallYaw; const n: Vec3 = [Math.sin(ny), 0, Math.cos(ny)], tr: Vec3 = [-n[2], 0, n[0]];   // wall normal (into the room) and his right along the wall, model space
-    pB.copy(pA); fk.run(pB);
-    const M = WALLSNAP.on && WALLSNAP.pose ? P.mend : null;   // (the mend: the wrists down beside the hips, so the arms hang instead of folding)
-    const hips = fk.pos[nd.hips]; const hx = hips[0], hy = hips[1] + (M ? lerp(M.up[0], M.up[1], cr) : lerp(H.up, H.upCrouch, cr)), hz = hips[2];
-    const along0 = M ? lerp(M.along[0], M.along[1], cr) - M.sway * Math.cos(this.wallGait * 2 * Math.PI) * (1 - clamp(ws.park.x, 0, 1)) * lerp(P.gait.share[0], P.gait.share[1], cr) : lerp(H.along, H.alongCrouch, cr);   // (on the hold's own step the palms slide a little apart and together with the feet)
-    const EO = M ? M.elbow : E, splay = M ? M.splay : H.out;
-    for (const side of [0, 1] as const) {   // 0 = left, 1 = right
-      const sg = side ? 1 : -1;              // tr is his right: the right hand goes +tr, the left −tr
-      const along = along0 - H.peekIn * e * (side ? 1 + s : 1 - s) / 2;   // (the lead side's hand — the right's share of leading is (1 + s) / 2 — comes in with the peek)
-      const p: Vec3 = [hx + tr[0] * sg * along, hy, hz + tr[2] * sg * along];
-      const onto = (-WALL_ROOT_OFF + H.off) - v3.dot(p, n); p[0] += n[0] * onto; p[2] += n[2] * onto;   // carried square onto the plane, the wrist `off` proud of it (the palm lies on the face)
-      const r = this.handRot(side, [tr[0] * sg * splay, -1, tr[2] * sg * splay], n);                    // fingers down and out along the wall, back of the hand to the room
-      const pole: Vec3 = [tr[0] * sg * EO.out + n[0] * EO.room, -EO.down, tr[2] * sg * EO.out + n[2] * EO.room];
-      if (side) twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, p, pole, 0.9, r); else twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, p, pole, 0.9, r);
-      if (M) { this.hand(pB, side, M.curl, M.thumb, M.fan);     // (mended: a resting hand laid back on the wall, fingers together…
-        this.turn(pB, this.thumbs[side][0], quat.axisAngle(quat.rotate(fk.rot[side ? nd.handR : nd.handL], AY), sg * M.thumbIn * DEGR)); }   // …the thumb beside the index, out of the plaster)
-      else this.hand(pB, side, [0.05, 0.06, 0.08, 0.12], 0.1, 0.5);   // flat and a little spread on the wall
-    }
-    blendPose(pA, pB, w, this.armsMask, pA);
-  }
 
   /** The kick, body half (arms are carryArms' business): pelvis shift / dip / drive / lean-back / counter-yaw / hike as overlapping curves, spine and head
    *  counter so the eyes stay on the door, right foot flown along a chamber → strike → recoil → plant path by IK (knee up and forward), left foot IK-held from
@@ -4489,10 +3415,9 @@ export class CharacterAnimator {
    *  pelvis rides the door's reaction back so that the landing foot is under the hip, then the weight settles forward again with both soles planted.
    *  kickLeg 'left' is the same kick seen in a mirror: left foot flown, right foot held. */
   private kickBody(t: number, w: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs kick_body)
-    if (g < 0) this.kickBodyOwn(t, w);
-    else if (!LAYERS.both) this.kickBodyAsk(g, t, w);
-    else layerBoth('kickBody', this.pA, this.fk, () => this.kickBodyAsk(g, t, w), () => this.kickBodyOwn(t, w), colsOf(CharacterAnimator.kickCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs kick_body)
+    this.kickBodyAsk(g, t, w);
+    if (LAYERS.watch) LAYERS.watch('kickBody', this.pA, this.fk, colsOf(CharacterAnimator.kickCols, this));
   }
   private kickBodyAsk(g: number, t: number, w: number) {
     const a = f64(), i = POSE_BENCH.args, F = this.idleFeet;
@@ -4509,139 +3434,18 @@ export class CharacterAnimator {
       for (let k = 0; k < 4; k++) { c[o + 4 + k] = K ? K.rL[k] : 0; c[o + 11 + k] = K ? K.rR[k] : 0; } },
     put(c, o) { this.kickFrom = c[o] ? { L: [c[o + 1], c[o + 2], c[o + 3]], rL: [c[o + 4], c[o + 5], c[o + 6], c[o + 7]], R: [c[o + 8], c[o + 9], c[o + 10]], rR: [c[o + 11], c[o + 12], c[o + 13], c[o + 14]] } : null; },
   };
-  private kickBodyOwn(t: number, w: number) {
-    const pA = this.pA, pC = this.pC, nd = this.nodes, fk = this.fk, F = this.idleFeet;
-    // the mirror (kickLeg 'left'): m flips every lateral offset, yaw and roll below (a product with 1 is exact, so the right-leg kick computes bit for bit what it
-    // always did), and the swing / planted legs and their idle spots swap sides
-    const left = this.kickLeg === 'left'; const m = left ? -1 : 1;
-    const [thS, shS, ftS] = left ? [nd.thighL, nd.shinL, nd.footL] : [nd.thighR, nd.shinR, nd.footR];   // the swing leg…
-    const [thP, shP, ftP] = left ? [nd.thighR, nd.shinR, nd.footR] : [nd.thighL, nd.shinL, nd.footL];   // …and the planted one
-    fk.run(pA);
-    const K = this.kickFrom ??= { L: v3.copy(fk.pos[nd.footL]), rL: [...fk.rot[nd.footL]] as Quat, R: v3.copy(fk.pos[nd.footR]), rR: [...fk.rot[nd.footR]] as Quat };
-    const FS = left ? F.L : F.R, FSr = left ? F.rL : F.rR, FP = left ? F.R : F.L, FPr = left ? F.rR : F.rL;   // idle spots / sole rotations: swing, planted
-    const KS = left ? K.L : K.R, KP = left ? K.R : K.L, KPr = left ? K.rR : K.rL;                              // where the kick found them
-    pC.copy(pA);
-    // pelvis: onto the standing leg (left, +X — mirrored: right, −X), a small dip, drive through, lean back against the leg's mass, swing hip forward, swing side
-    // hiked; after the hit it is carried back (~12 cm behind its idle spot at the plant: the landing heel is under the hip) and comes forward again as the weight is shared out
-    const sx = m * curve(t, [[0, 0], [0.22, 0.05], [0.5, 0.045], [KICK_PLANT, 0.03], [1.0, 0]]);
-    const sy = curve(t, [[0, 0], [0.2, -0.02], [0.38, -0.01], [0.55, -0.02], [KICK_PLANT, -0.03], [1.0, 0]]);
-    const sz = curve(t, [[0, 0], [0.16, -0.015], [0.38, 0.09], [0.46, 0.04], [0.6, -0.06], [KICK_PLANT, -0.12], [0.86, -0.07], [1.0, 0]]);
-    const tilt = curve(t, [[0, 0], [0.16, 4], [0.4, -19], [0.56, -9], [KICK_PLANT, -2], [0.86, 1.5], [1.0, 0]]) * DEGR;   // + = forward: crunch into the chamber, lay back against the drive, sit back onto the plant, settle
-    const hyaw = m * curve(t, [[0, 0], [0.2, -3], [0.4, 9], [0.6, 4], [0.9, 0]]) * DEGR;                                 // + = right hip forward (the swing hip: mirrored, the left)
-    const roll = m * curve(t, [[0, 0], [0.25, -5], [0.5, -4], [KICK_PLANT, -1], [0.9, 0]]) * DEGR;                        // − = right side of the pelvis up (the swing side: mirrored, the left)
-    this.shift(pC, nd.hips, [sx, sy, sz]);
-    this.turn(pC, nd.hips, quat.mul(qYaw(hyaw), quat.mul(qRoll(roll), qPitch(tilt))));
-    // spine: a little more lay-back at the strike low down, shoulders squared against the hip yaw, head back onto the door
-    const lay = curve(t, [[0, 0], [0.2, 3], [0.39, -8], [0.47, -3.5], [0.6, -2.5], [0.85, 0]]) * DEGR;   // the jolt of the hit comes back up the spine
-    this.turn(pC, nd.spine1, quat.mul(qYaw(-hyaw * 0.3), quat.mul(qRoll(-roll * 0.4), qPitch(lay)))); this.turn(pC, nd.spine2, quat.mul(qYaw(-hyaw * 0.3), quat.mul(qRoll(-roll * 0.4), qPitch(lay * 0.7))));
-    this.turn(pC, nd.spine3, qYaw(-hyaw * 0.2));
-    this.turn(pC, nd.neck, qPitch(-(tilt + lay * 1.7) * 0.45)); this.turn(pC, nd.head, qPitch(-(tilt + lay * 1.7) * 0.55));
-    fk.run(pC);
-    // swing foot (the right; mirrored, the left): model-space path = a moving origin (its own spot → the idle's over the chamber; the same point when kicked from
-    // the idle) + offsets: forward and up under the rising knee from the first frame (no hanging back), strike ~0.86 m up / 0.75 m ahead of the root, recoil, plant on the idle's spot
-    const o = v3.lerp(KS, FS, smoothstep(0, 0.3, t)); const down = t < KICK_PLANT ? 1 : 0;   // (past the plant the offsets are exactly zero: the trailing phantom keys only shape the arrival, which is firm, not eased)
-    const cx = -0.07 * m - FS[0];   // the drive comes in toward the centre line from the (wide, turned-out) idle spot: 7 cm short of it on the swing leg's own side
-    const ox = down * curve(t, [[0, 0], [0.12, cx * 0.15], [0.26, cx * 0.6], [0.38, cx], [0.5, cx * 0.8], [0.64, cx * 0.3], [KICK_PLANT, 0], [1.0, 0]]);
-    // up + out in three pieces: chamber (spline; the phantom key past 0.26 only sets the hand-off slope), drive (Hermite that ARRIVES fast: ~9 m/s into the
-    // door, levelling off into a horizontal thrust), and from the impact on (spline starting at rest: ~50 ms on the door as it gives, recoil, re-plant)
-    const TC = 0.26, TI = KICK_IMPACT;
-    const oy = down * (t < TC ? curve(t, [[0, 0], [0.08, 0.03], [0.17, 0.14], [TC, 0.4], [0.32, 0.635]]) : t < TI ? hermite(t, TC, 0.4, 3.3, TI, 0.76, 0.5)
-      : curve(t, [[TI, 0.76], [0.43, 0.75], [0.5, 0.58], [0.62, 0.24], [KICK_PLANT, 0], [1.0, 0]]));
-    const oz = down * (t < TC ? curve(t, [[0, 0], [0.1, 0.04], [0.17, 0.13], [TC, 0.3], [0.32, 0.745]]) : t < TI ? hermite(t, TC, 0.3, 4.1, TI, 1.02, 9)
-      : curve(t, [[TI, 1.02], [0.43, 1.0], [0.5, 0.68], [0.62, 0.26], [KICK_PLANT, 0], [1.0, 0]]));
-    // the idle stands left foot forward: kicked off that (lead) leg the same offsets would meet the door a foot's length early and deep. So the mirrored swing is
-    // drawn back by the feet's stagger through the chamber and the drive — the knee comes up and BACK, the sole meets the leaf the same 0.75 m ahead of the root
-    // the rear-leg kick does — and let out again for the plant on its own (forward) spot. Exactly 0 for the right leg: nothing it computes changes.
-    const lead = left ? F.L[2] - F.R[2] : 0;
-    const target: Vec3 = [o[0] + ox, Math.max(o[1] + oy, FS[1]), o[2] + oz - lead * bump(t, 0, TC, 0.5, KICK_PLANT)];
-    const kneeUp: Vec3 = [-0.04 * m, 0.5, 1];   // knee points up-and-ahead through the swing
-    twoBoneIK(fk, pC, thS, shS, ftS, target, kneeUp, bump(t, 0.04, 0.2, 0.62, 0.8), null);
-    // ankle: toes drop as the knee comes up, heel drives through the door, relax (about the foot's own hinge — the rig's two feet share the hinge's sense, so the
-    // same angles serve the mirror); then the sole is levelled onto the idle's for the plant
-    rotateLocal(pC, ftS, quat.axisAngle(AX, curve(t, [[0, 0], [0.2, 14], [0.34, -16], [0.42, -18], [0.58, 4], [0.68, 0]]) * DEGR));
-    const flat = smoothstep(0.6, KICK_PLANT, t);
-    if (flat > 0) setModelRot(pC, ftS, quat.nlerp(quat.mul(fk.rot[shS], pC.rot(ftS)), FSr, flat), fk.rot[shS]);
-    // planted foot (the left; mirrored, the right): held from the first frame; if the kick found it off the idle's spot it is set down there in one short low step (0–0.24 s) and stays
-    const e = smoothstep(0, 0.24, t); const far = clamp(hyp2(KP[0] - FP[0], KP[2] - FP[2]) / 0.2, 0, 1);
-    const pin = v3.lerp(KP, FP, e); pin[1] += 0.05 * Math.sin(Math.PI * e) * far;
-    fk.run(pC);
-    twoBoneIK(fk, pC, thP, shP, ftP, pin, this.kneePole(FPr), 0.6 * smoothstep(0, 0.15, t), quat.nlerp(KPr, FPr, e));
-    blendPose(pA, pC, w, null, pA);
-  }
 
   /** Left-hand signals: the gesture arm is IK-posed against the current body each frame (so the hand holds its place by the head while the torso moves) and blended
    *  in with staggered per-segment envelopes — shoulder first, then elbow, then hand — and out the same way, so nothing starts or stops together. */
   private signalLayer(t: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs signal_layer)
-    if (g < 0) this.signalLayerOwn(t);
-    else if (!LAYERS.both) this.signalLayerAsk(g, t);
-    else layerBoth('signalLayer', this.pA, this.fk, () => this.signalLayerAsk(g, t), () => this.signalLayerOwn(t), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs signal_layer)
+    this.signalLayerAsk(g, t);
+    if (LAYERS.watch) LAYERS.watch('signalLayer', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private signalLayerAsk(g: number, t: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0], kind = this.sigKind;
     a[o] = t; a[o + 1] = SIGNAL_NO[kind]; a[o + 2] = SIGNAL_DUR[kind]; a[o + 3] = this.sigSide; for (let i = 0; i < 4; i++) a[o + 4 + i] = F[i];
     this.handsAsk(() => POSE_BENCH.x!.layer_signal_layer(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private signalLayerOwn(t: number) {
-    const kind = this.sigKind, D = SIGNAL_DUR[kind]; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
-    if (kind === 'go') {   // body English on the chop: the upper spine goes a few degrees with the hand — left shoulder forward and a touch down, chest tipping into it —
-      const ft = curve(t, [[0.22, 0], [0.46, 1], [0.62, 0.5], [0.9, 0]]);   // arriving with the chop (0.46), giving back half while the hand holds, gone before the arm comes down
-      if (ft > 1e-3) {
-        const q = (k: number) => quat.mul(qYaw(-3.5 * DEGR * ft * k), quat.mul(qRoll(-2 * DEGR * ft * k), qPitch(2.5 * DEGR * ft * k)));
-        this.turn(pA, nd.spine2, q(0.4)); this.turn(pA, nd.spine3, q(0.6));
-        this.turn(pA, nd.neck, q(-0.3)); this.turn(pA, nd.head, q(-0.4));   // the eyes stay on where the hand is sending people (head keeps ~30 % of the turn)
-      }
-    }
-    pB.copy(pA); fk.run(pB);
-    const sh = fk.pos[nd.upperArmL];   // shoulder joint (model)
-    let hand: Vec3, handRot: Quat, pole: Vec3, clav = 0, curl: number[], thumb: number, spread = 0;
-    // hands are described by where the fingers point and which way the back of the hand faces (handRot)
-    if (kind === 'hold') {
-      // fist snaps up beside the head, palm forward; tiny settle drift while held
-      const settle = 0.006 * Math.sin(t * 5.5) * bump(t, 0.3, 0.4, 0.6, 0.7);
-      hand = [sh[0] + 0.14, sh[1] + 0.19 + settle, sh[2] + 0.16]; handRot = this.handRot(0, [0.12, 1, 0.12], [0, 0.05, -1]); pole = [1, -0.4, 0.35]; clav = 8;
-      curl = [1, 1, 1, 1]; thumb = 1;
-    } else if (kind === 'go') {
-      // knife hand comes up by the ear (0 → 0.28), chops over and down to point the way (→ 0.46, overshoot, settle), holds, returns
-      const u = t;
-      const hx = curve(u, [[0, 0.1], [0.28, 0.1], [0.46, 0.04], [0.95, 0.04]]), hy = curve(u, [[0, 0.2], [0.28, 0.22], [0.36, 0.2], [0.46, -0.02], [0.54, 0.015], [0.95, 0.01]]), hz = curve(u, [[0, 0.1], [0.28, 0.08], [0.38, 0.3], [0.46, 0.43], [0.95, 0.42]]);
-      hand = [sh[0] + hx, sh[1] + hy, sh[2] + hz];
-      const chop = smoothstep(0.28, 0.46, u);   // fingers: up by the ear → forward and a little down at full chop; palm: facing the head → facing right/down
-      handRot = this.handRot(0, v3.lerp([0.1, 1, 0.25], [0.05, -0.18, 1], chop), v3.lerp([1, 0, -0.2], [0.6, 0.8, 0.1], chop)); pole = [1, -0.35, 0.1]; clav = 7 * (1 - 0.6 * chop);
-      curl = [0.05, 0.08, 0.12, 0.18]; thumb = 0.3; spread = 0;
-    } else if (kind === 'squeeze') {
-      // MOVES — the stack's "ready": the hand goes forward onto the shoulder of the man ahead (there by 0.28 s), squeezes twice, and comes back to the fore-end
-      const sq = bump(t, 0.3, 0.36, 0.4, 0.47) + bump(t, 0.52, 0.58, 0.62, 0.69);
-      hand = [sh[0] - 0.1, sh[1] + 0.04 - 0.012 * sq, sh[2] + 0.5 + 0.008 * sq]; handRot = this.handRot(0, [-0.15, -0.3, 1], [0.1, 1, 0.3]); pole = [0.8, -0.6, -0.1]; clav = 3;
-      curl = [0.3 + 0.4 * sq, 0.34 + 0.4 * sq, 0.38 + 0.4 * sq, 0.42 + 0.4 * sq]; thumb = 0.15 + 0.5 * sq; spread = 0.2;
-    } else if (kind === 'aside') {
-      // "off my line": the open hand comes off the fore-end to chest height in front of him, palm turned the way he wants the man gone, and pushes that way
-      // twice (there by 0.36 s and again by 0.72), then goes back to the gun — the gun hand keeps the gun where it was, low. To his own left the arm goes
-      // out wide to his side (the camera is overhead: a hand that only turns at the wrist is not seen from there); to his right it sweeps across his front.
-      const push = bump(t, 0.22, 0.36, 0.42, 0.56) + bump(t, 0.6, 0.72, 0.78, 0.94);
-      if (this.sigSide >= 0) { hand = [sh[0] + 0.02 + 0.4 * push, sh[1] - 0.12 + 0.05 * push, sh[2] + 0.3 - 0.14 * push]; handRot = this.handRot(0, [0.2 + 0.35 * push, 0.8, 0.55], [-1, 0.1, 0.2]); pole = [0.9, -0.7, -0.1]; }
-      else { hand = [sh[0] - 0.02 - 0.3 * push, sh[1] - 0.1 + 0.04 * push, sh[2] + 0.36 + 0.04 * push]; handRot = this.handRot(0, [-0.2 - 0.3 * push, 0.8, 0.55], [1, 0.1, 0.2]); pole = [0.8, -0.8, 0]; }
-      clav = 3;
-      curl = [0.04, 0.06, 0.08, 0.12]; thumb = 0.25; spread = 0.3;
-    } else {
-      // open hand goes up over the head and circles (≈2.2 Hz, the forearm coning from the elbow), then comes down
-      const circ = bump(t, 0.16, 0.32, D - 0.42, D - 0.26); const ph = (t - 0.16) * 2.2 * Math.PI * 2;
-      hand = [sh[0] + 0.08 + 0.12 * Math.cos(ph) * circ, sh[1] + 0.36 - 0.02 * circ * (1 - Math.cos(ph * 2)), sh[2] + 0.08 + 0.12 * Math.sin(ph) * circ];
-      handRot = this.handRot(0, [0.35 * Math.cos(ph) * circ, 1, 0.1 + 0.35 * Math.sin(ph) * circ], [-0.2, 0, -1]); pole = [1, 0.05, 0.3]; clav = 14;
-      curl = [0.1, 0.15, 0.2, 0.3]; thumb = 0.2; spread = 0.6;
-    }
-    if (clav) this.turn(pB, nd.shoulderL, qRoll(clav * DEGR));   // scapula comes up with a raised arm
-    fk.run(pB);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, hand, pole, 0.85, handRot);
-    this.hand(pB, 0, curl, thumb, spread);
-    // staggered envelopes: in — clavicle/upper arm lead, forearm +50 ms, hand +90 ms; out — same order, the hand trailing last
-    const tin = 0.2, tout = 0.26, e = D;
-    const seg = (lag: number) => bump(t, lag, lag + tin, e - tout + lag * 0.6 - 0.06, e - 0.06 + lag * 0.6);
-    const m = this.dynMask; m.fill(0);
-    const wUp = seg(0), wFore = seg(0.05), wHand = seg(0.09);
-    m[nd.shoulderL] = wUp; m[nd.upperArmL] = wUp; m[nd.forearmL] = wFore;
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.handL, wHand);
-    blendPose(pA, pB, 1, m, pA);
   }
   /** KIT.nv: one frame of a goggle flip over the finished pA. Advances the clip, says where the goggles are (nvShown), poses the left arm at them while the hand
    *  has the job and `free` says nothing else wants it (a hand flip whose arm is taken before the goggles have moved becomes a nod), and tips the head for a
@@ -4658,10 +3462,9 @@ export class CharacterAnimator {
   }
   /** the smoke's arm itself, by how far up it has got (smokeArm): the clock above is the animator's */
   private smokePose() {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs smoke_pose)
-    if (g < 0) this.smokePoseOwn();
-    else if (!LAYERS.both) this.smokePoseAsk(g);
-    else layerBoth('smokePose', this.pA, this.fk, () => this.smokePoseAsk(g), () => this.smokePoseOwn(), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs smoke_pose)
+    this.smokePoseAsk(g);
+    if (LAYERS.watch) LAYERS.watch('smokePose', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   /** what a hand brought to the head is handed after its own numbers: last frame's twists, the head's rest inverse, the left hand's fix */
   private headHandToBench(o: number) {
@@ -4671,21 +3474,6 @@ export class CharacterAnimator {
   private smokePoseAsk(g: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = this.smokeArm; this.headHandToBench(o + 1);
     this.handsAsk(() => POSE_BENCH.x!.layer_smoke_pose(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private smokePoseOwn() {
-    const K = SMOKEARM, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, x = this.smokeArm, e = x * x * (3 - 2 * x), tw = this.nvTw;
-    fk.run(pA);
-    const twq = (y: number, p: number): Quat => { let q = quat.yaw(y); if (p !== 0) q = quat.mul(quat.axisAngle(quat.rotate(q, [1, 0, 0]), p), q); return q; };
-    const Tn = twq(tw[0], tw[1]), hr = quat.mul(twq(tw[2], tw[3]), quat.mul(Tn, quat.mul(fk.rot[nd.head], this.headRestInv)));
-    const nk = fk.pos[nd.neck], hp = v3.add(nk, quat.rotate(Tn, v3.sub(fk.pos[nd.head], nk)));
-    const X = quat.rotate(hr, [1, 0, 0]), Y = quat.rotate(hr, [0, 1, 0]), Z = quat.rotate(hr, [0, 0, 1]);
-    const inHead = (p: Vec3): Vec3 => [X[0] * p[0] + Y[0] * p[1] + Z[0] * p[2], X[1] * p[0] + Y[1] * p[1] + Z[1] * p[2], X[2] * p[0] + Y[2] * p[1] + Z[2] * p[2]];
-    pB.copy(pA); this.turn(pB, nd.shoulderL, qRoll(K.shrug * DEGR)); fk.run(pB);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(hp, inHead(K.at)), K.pole, 0.85, this.handRot(0, inHead(K.fingers), inHead(K.back)));
-    this.hand(pB, 0, K.curl, K.thumb);
-    const m = this.dynMask; m.fill(0); m[nd.shoulderL] = e; m[nd.upperArmL] = e; m[nd.forearmL] = e;
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.handL, e);
-    blendPose(pA, pB, 1, m, pA);
   }
   private nvLayer(dt: number, free: boolean) {
     const n = this.nv!, N = KIT.nv, H = N.hand, O = N.nod;
@@ -4703,30 +3491,13 @@ export class CharacterAnimator {
   }
   /** the goggle flip's arm itself, by how much of it the flip has (nvArm) and where the goggles are (nvShown): the clock above is the animator's */
   private nvPose(k: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs nv_pose)
-    if (g < 0) this.nvPoseOwn(k);
-    else if (!LAYERS.both) this.nvPoseAsk(g, k);
-    else layerBoth('nvPose', this.pA, this.fk, () => this.nvPoseAsk(g, k), () => this.nvPoseOwn(k), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs nv_pose)
+    this.nvPoseAsk(g, k);
+    if (LAYERS.watch) LAYERS.watch('nvPose', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private nvPoseAsk(g: number, k: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = this.nvArm; a[o + 1] = k; this.headHandToBench(o + 2);
     this.handsAsk(() => POSE_BENCH.x!.layer_nv_pose(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private nvPoseOwn(k: number) {
-    const H = KIT.nv.hand, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, e = this.nvArm, tw = this.nvTw;
-    fk.run(pA);
-    // the head as it will be DRAWN: the twists the skeleton applies after the layers (the look, the gaze stabiliser), as last frame had them
-    const twq = (y: number, p: number): Quat => { let q = quat.yaw(y); if (p !== 0) q = quat.mul(quat.axisAngle(quat.rotate(q, [1, 0, 0]), p), q); return q; };
-    const Tn = twq(tw[0], tw[1]), hr = quat.mul(twq(tw[2], tw[3]), quat.mul(Tn, quat.mul(fk.rot[nd.head], this.headRestInv)));
-    const nk = fk.pos[nd.neck], hp = v3.add(nk, quat.rotate(Tn, v3.sub(fk.pos[nd.head], nk)));
-    const X = quat.rotate(hr, [1, 0, 0]), Y = quat.rotate(hr, [0, 1, 0]), Z = quat.rotate(hr, [0, 0, 1]);
-    const inHead = (p: Vec3): Vec3 => [X[0] * p[0] + Y[0] * p[1] + Z[0] * p[2], X[1] * p[0] + Y[1] * p[1] + Z[1] * p[2], X[2] * p[0] + Y[2] * p[1] + Z[2] * p[2]];
-    pB.copy(pA); this.turn(pB, nd.shoulderL, qRoll(H.shrug * DEGR)); fk.run(pB);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(hp, inHead(v3.lerp(H.up, H.down, k))), H.pole, 0.85, this.handRot(0, inHead(H.fingers), inHead(H.back)));
-    this.hand(pB, 0, H.curl, H.thumb);
-    const m = this.dynMask; m.fill(0); m[nd.shoulderL] = e; m[nd.upperArmL] = e; m[nd.forearmL] = e;
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.handL, e);
-    blendPose(pA, pB, 1, m, pA);
   }
   /** a goggle nod's tip of the HEAD joint on `pose` (+ = chin down): about the level axis square to where he faces — the head as it will be DRAWN, twists and all,
    *  as nvLayer's arm has it — so the gaze stays in its own upright plane */
@@ -4748,10 +3519,9 @@ export class CharacterAnimator {
    *  degrees into the stretch and the head tips forward and away; ~1.3 s. The right arm, the legs, the feet's lock and the torch's beam (off the chest heading) are
    *  untouched — it plays over the calm carry, the low ready or the long gun's support hand alike (that hand comes off the fore-end for the second and goes back). */
   private tellLayer(t: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs tell_layer)
-    if (g < 0) this.tellLayerOwn(t);
-    else if (!LAYERS.both) this.tellLayerAsk(g, t);
-    else layerBoth('tellLayer', this.pA, this.fk, () => this.tellLayerAsk(g, t), () => this.tellLayerOwn(t), this.withHands(CharacterAnimator.tellCols));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs tell_layer)
+    this.tellLayerAsk(g, t);
+    if (LAYERS.watch) LAYERS.watch('tellLayer', this.pA, this.fk, this.withHands(CharacterAnimator.tellCols));
   }
   /** how much of the arm the tell has, as a column: the layer answers it */
   private static readonly tellCols: LayerCols<CharacterAnimator> = { n: 1, get(c, o) { c[o] = this.tellShown; }, put(c, o) { this.tellShown = c[o]; } };
@@ -4759,42 +3529,6 @@ export class CharacterAnimator {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0], gl = this.gazeLocal, kind = this.tellK;
     a[o] = t; a[o + 1] = kind === 'watch' ? 0 : 1; a[o + 2] = TELL_DUR[kind]; a[o + 3] = gl[0]; a[o + 4] = gl[1]; a[o + 5] = gl[2]; for (let i = 0; i < 4; i++) a[o + 6 + i] = F[i];
     colsToBench(CharacterAnimator.tellCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_tell_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.tellCols, this);
-  }
-  private tellLayerOwn(t: number) {
-    const kind = this.tellK, D = TELL_DUR[kind]; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
-    const tin = kind === 'watch' ? 0.2 : 0.26, tout = kind === 'watch' ? 0.28 : 0.34;
-    const env = bump(t, 0, tin, D - tout, D);   // the body's share (head, chest): one smooth window over the whole tell
-    if (env <= 1e-4) { this.tellShown = 0; return; }
-    fk.run(pA);
-    if (kind === 'watch') {
-      // the wrist's spot first (off the shoulder as the body has it now), then the eyes onto it: down and a touch left — the authored look the gaze stabiliser leaves alone
-      const sh = fk.pos[nd.upperArmL];
-      const wrist: Vec3 = [sh[0] - 0.21, sh[1] - 0.21, sh[2] + 0.21];   // (the hand joint IS the wrist: just this side of the breastbone, lower-chest height, a forearm's length ahead)
-      this.lookAt(pA, [wrist[0] + 0.03, wrist[1] + 0.02, wrist[2] + 0.01], 0.9 * env);   // …and the eyes onto the watch on the back of it
-      pB.copy(pA); fk.run(pB);
-      this.turn(pB, nd.shoulderL, qRoll(3 * DEGR * env)); fk.run(pB);
-      // forearm level across the chest: fingers to the figure's right and a shade up, the back of the hand turned up toward the face; elbow out to the left and down
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, wrist, [1, -0.55, 0.18], 0.85, this.handRot(0, [-1, 0.14, 0.12], [0.05, 0.9, -0.42]));
-      this.hand(pB, 0, [0.35, 0.4, 0.45, 0.5], 0.4);   // a loose half-open hand
-    } else {
-      // the stretch: chest up a few degrees (spread over the two upper spine joints), the head forward and tipped right, away from the working hand
-      this.turn(pA, nd.spine2, qPitch(-1.6 * DEGR * env)); this.turn(pA, nd.spine3, qPitch(-1.8 * DEGR * env));
-      this.turn(pA, nd.neck, quat.mul(qPitch(5 * DEGR * env), qRoll(-3 * DEGR * env))); this.turn(pA, nd.head, quat.mul(qPitch(9 * DEGR * env), quat.mul(qRoll(-6 * DEGR * env), qYaw(-4 * DEGR * env))));
-      pB.copy(pA); fk.run(pB);
-      this.turn(pB, nd.shoulderL, qRoll(12 * DEGR * env)); fk.run(pB);   // the scapula comes up with the raised elbow
-      const nk = fk.pos[nd.neck]; const rub = 0.018 * Math.sin((t - tin) * 2 * Math.PI * 2.5) * bump(t, tin, tin + 0.15, D - tout - 0.1, D - tout);
-      const hand: Vec3 = [nk[0] + 0.085, nk[1] + 0.035 + rub, nk[2] - 0.075];   // round on the back-left of the neck, working up and down it
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, hand, [0.75, 0.35, 0.8], 0.9, this.handRot(0, [-0.55, 0.35, -0.75], [0.45, 0.55, 0.55]));
-      this.hand(pB, 0, [0.5, 0.55, 0.6, 0.65], 0.5);   // fingers curled onto the neck
-    }
-    // staggered envelopes, as the signals: in — clavicle / upper arm lead, forearm +50 ms, hand +90 ms; out in the same order, the hand trailing
-    const seg = (lag: number) => bump(t, lag, lag + tin, D - tout + lag * 0.6 - 0.06, D - 0.06 + lag * 0.6);
-    const m = this.dynMask; m.fill(0);
-    const wUp = seg(0), wFore = seg(0.05), wHand = seg(0.09);
-    m[nd.shoulderL] = wUp; m[nd.upperArmL] = wUp; m[nd.forearmL] = wFore;
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.handL, wHand);
-    blendPose(pA, pB, 1, m, pA);
-    this.tellShown = wUp;
   }
   /** the held gait for a checkpoint (savestate.ts PlayerSnap.heldGait): the walk's phase is in a file, and under the close-in mode it is these that advance it
    *  — a load that began the gait again from nothing put his first footfalls frames off the save's. Nothing to say outside the mode. */
@@ -4846,42 +3580,21 @@ export class CharacterAnimator {
   };
   /** the slip's body: pelvis and trunk. `m` = the man he gives room to, in the model, through the twist's inverse (null: nobody) */
   private watchSlip(dt: number, free: number, m: Vec3 | null) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_slip)
-    if (g < 0) this.watchSlipOwn(dt, free, m);
-    else if (!LAYERS.both) this.watchSlipAsk(g, dt, free, m);
-    else layerBoth('watchSlip', this.pA, this.fk, () => this.watchSlipAsk(g, dt, free, m), () => this.watchSlipOwn(dt, free, m), colsOf(CharacterAnimator.watchCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs watch_slip)
+    this.watchSlipAsk(g, dt, free, m);
+    if (LAYERS.watch) LAYERS.watch('watchSlip', this.pA, this.fk, colsOf(CharacterAnimator.watchCols, this));
   }
   private watchSlipAsk(g: number, dt: number, free: number, m: Vec3 | null) {
     const a = f64(), i = POSE_BENCH.args;
     a[i] = dt; a[i + 1] = free; a[i + 2] = m ? 1 : 0; a[i + 3] = m ? m[0] : 0; a[i + 4] = m ? m[1] : 0; a[i + 5] = m ? m[2] : 0; a[i + 6] = this.slipK; a[i + 7] = this.crouch; a[i + 8] = this.slipLean;
     colsToBench(CharacterAnimator.watchCols, this); layerRan(POSE_BENCH.x!.layer_watch_slip(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.watchCols, this);
   }
-  private watchSlipOwn(dt: number, free: number, m: Vec3 | null) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
-    // ---- the slip: pelvis, trunk
-    const sWant = m ? clamp(this.slipK, 0, 1) * free * clamp(this.crouch, 0, 1) : 0;
-    T.sw = Math.abs(sWant - T.sw) < 0.003 ? sWant : damp(T.sw, sWant, W.slipRate, dt);
-    if (m) { const L = hyp2(m[0], m[2]); if (L > 1e-4) { T.sx = m[0] / L; T.sz = m[2] / L; } if (T.side === 0 ? T.sx < -0.2 : T.sx > 0.2) T.side = T.sx > 0 ? 0 : 1;
-      const lw = clamp(this.slipLean, 0, 1); T.sl = Math.abs(lw - T.sl) < 0.003 ? lw : damp(T.sl, lw, W.slipRate, dt); }   // (between two men the lean goes and he only gets smaller: `squeeze`)
-    if (T.sw > 0.003) {
-      const k = T.sw * T.sw * (3 - 2 * T.sw), kl = k * T.sl, kd = k * (1 + W.squeeze * (1 - T.sl));
-      { this.fkPart(pA, this.fkLegs);
-        const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-        this.shift(pA, nd.hips, [-T.sx * W.away * kl, -W.drop * kd, 0]);
-        this.fkPart(pA, this.fkLegs);
-        twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true); }
-      const roll = T.sx * W.lean * DEGR * kl;   // (about his forward line: + tips the trunk to his right, away from a man on his left)
-      this.turn(pA, nd.spine1, qRoll(roll * 0.4)); this.turn(pA, nd.spine2, qRoll(roll * 0.35)); this.turn(pA, nd.spine3, qRoll(roll * 0.25));
-      this.turn(pA, nd.neck, qRoll(-roll * 0.4)); this.turn(pA, nd.head, qRoll(-roll * 0.6));
-    }
-  }
   /** the slip's arm: the one on the man's side goes out low toward him, the hand open (wL / wR = what nothing else has of each arm) */
   private watchArm(wL: number, wR: number) {
     if (!(this.wt.sw > 0.003)) return;   // (no slip: no arm)
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_arm)
-    if (g < 0) this.watchArmOwn(wL, wR);
-    else if (!LAYERS.both) this.watchArmAsk(g, wL, wR);
-    else layerBoth('watchArm', this.pA, this.fk, () => this.watchArmAsk(g, wL, wR), () => this.watchArmOwn(wL, wR), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs watch_arm)
+    this.watchArmAsk(g, wL, wR);
+    if (LAYERS.watch) LAYERS.watch('watchArm', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private watchArmAsk(g: number, wL: number, wR: number) {
     const a = f64(), o = POSE_BENCH.args, T = this.wt, F = this.handFix;
@@ -4889,53 +3602,16 @@ export class CharacterAnimator {
     for (let i = 0; i < 4; i++) { a[o + 7 + i] = F[0][i]; a[o + 11 + i] = F[1][i]; }
     this.handsAsk(() => POSE_BENCH.x!.layer_watch_arm(g, this.pA.at, this.pB.at, this.rest.at));
   }
-  private watchArmOwn(wL: number, wR: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
-    if (T.sw > 0.003) {
-      const k = T.sw * T.sw * (3 - 2 * T.sw), kl = k * T.sl;
-      const side = T.side, sgn = side === 0 ? 1 : -1, wArm = (side === 0 ? wL : wR) * kl * W.armW * smoothstep(W.armSide[0], W.armSide[1], sgn * T.sx);
-      if (wArm > 0.003) {
-        pB.copy(pA); fk.run(pB);
-        const sh = fk.pos[side === 0 ? nd.upperArmL : nd.upperArmR], at: Vec3 = [sh[0] + T.sx * W.armOut, sh[1] - W.armDown, sh[2] + T.sz * W.armOut];
-        const fing = v3.normalize([T.sx * 0.75, -0.55, T.sz * 0.75] as Vec3), rot = this.handRot(side, fing, [-T.sx * 0.3, 1, -T.sz * 0.3]);
-        twoBoneIK(fk, pB, side === 0 ? nd.upperArmL : nd.upperArmR, side === 0 ? nd.forearmL : nd.forearmR, side === 0 ? nd.handL : nd.handR, at, [sgn * 0.5, -0.3, -0.8], 0.6, rot);
-        this.hand(pB, side, [0.12, 0.15, 0.18, 0.22], 0.15, 0.35);
-        const m = this.dynMask; m.fill(0); const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
-        setSub(side === 0 ? nd.shoulderL : nd.shoulderR, wArm);
-        blendPose(pA, pB, 1, m, pA);
-      }
-    }
-  }
   /** the look: the chest a little, the neck, the head. `m` = the man he watches, in the model, through the twist's inverse (null: nobody) */
   private watchLook(dt: number, free: number, m: Vec3 | null) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_look)
-    if (g < 0) this.watchLookOwn(dt, free, m);
-    else if (!LAYERS.both) this.watchLookAsk(g, dt, free, m);
-    else layerBoth('watchLook', this.pA, this.fk, () => this.watchLookAsk(g, dt, free, m), () => this.watchLookOwn(dt, free, m), colsOf(CharacterAnimator.watchCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs watch_look)
+    this.watchLookAsk(g, dt, free, m);
+    if (LAYERS.watch) LAYERS.watch('watchLook', this.pA, this.fk, colsOf(CharacterAnimator.watchCols, this));
   }
   private watchLookAsk(g: number, dt: number, free: number, m: Vec3 | null) {
     const a = f64(), i = POSE_BENCH.args, G = this.gazeLocal;
     a[i] = dt; a[i + 1] = free; a[i + 2] = m ? 1 : 0; a[i + 3] = m ? m[0] : 0; a[i + 4] = m ? m[1] : 0; a[i + 5] = m ? m[2] : 0; a[i + 6] = this.watchK; a[i + 7] = G[0]; a[i + 8] = G[1]; a[i + 9] = G[2];
     colsToBench(CharacterAnimator.watchCols, this); layerRan(POSE_BENCH.x!.layer_watch_look(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.watchCols, this);
-  }
-  private watchLookOwn(dt: number, free: number, m: Vec3 | null) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
-    // ---- the look
-    const wWant = m ? clamp(this.watchK, 0, 1) * free : 0;
-    T.w = Math.abs(wWant - T.w) < 0.003 ? wWant : damp(T.w, wWant, W.wRate, dt);
-    if (m && wWant > 0) {
-      fk.run(pA);
-      const hr = fk.rot[nd.head], gaze = quat.rotate(hr, this.gazeLocal), eyes = v3.mad(v3.mad(fk.pos[nd.head], quat.rotate(hr, AY), 0.1), gaze, 0.08);
-      const want = v3.normalize(v3.sub(m, eyes));
-      const yawE = clamp(wrapAngle(Math.atan2(want[0], want[2]) - Math.atan2(gaze[0], gaze[2])), -W.yaw * DEGR, W.yaw * DEGR);
-      const pitchE = clamp(Math.asin(clamp(gaze[1], -1, 1)) - Math.asin(clamp(want[1], -1, 1)), -W.up * DEGR, W.down * DEGR);   // + = further down
-      if (T.w < 0.01) { T.yaw = yawE; T.pitch = pitchE; } else { T.yaw = damp(T.yaw, yawE, W.rate, dt); T.pitch = damp(T.pitch, pitchE, W.rate, dt); }   // (a look that begins is on its man from its first frame: only its weight comes up)
-    } else if (T.w <= 0) { T.yaw = 0; T.pitch = 0; }
-    if (T.w > 0.003) {
-      const yw = T.yaw * T.w, pw = T.pitch * T.w, S = W.share, rest = S[1] + S[2];
-      this.turn(pA, nd.spine3, qYaw(yw * S[0]));
-      this.turn(pA, nd.neck, quat.mul(qYaw(yw * S[1]), qPitch(pw * S[1] / rest))); this.turn(pA, nd.head, quat.mul(qYaw(yw * S[2]), qPitch(pw * S[2] / rest)));
-    }
   }
   private creepLayer(w: number, wL: number, wR: number, twY: number, twP: number, dt: number) {
     const cr = clamp(this.crouch, 0, 1);
@@ -4952,10 +3628,9 @@ export class CharacterAnimator {
    *  `cr` the crouch, `ck` / `cke` how close he is (−1: not dealt) and that eased, `ws` how wide, `ha` / `hg` the arms' share of his stride and his surge */
   private creepArms(w: number, wL: number, wR: number, e: number, cr: number, ck: number, cke: number, ws: number, ha: number, hg: number) {
     this.sheathRestInv();   // (found once, before the pose is lent)
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs creep_arms)
-    if (g < 0) this.creepArmsOwn(w, wL, wR, e, cr, ck, cke, ws, ha, hg);
-    else if (!LAYERS.both) this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg);
-    else layerBoth('creepArms', this.pA, this.fk, () => this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg), () => this.creepArmsOwn(w, wL, wR, e, cr, ck, cke, ws, ha, hg), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs creep_arms)
+    this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg);
+    if (LAYERS.watch) LAYERS.watch('creepArms', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private creepArmsAsk(g: number, w: number, wL: number, wR: number, e: number, cr: number, ck: number, cke: number, ws: number, ha: number, hg: number) {
     const a = f64(), o = POSE_BENCH.args, WS = this.wideShape, WP = this.widePole, F = this.handFix, rc = this.sheathRestInv();
@@ -4965,49 +3640,11 @@ export class CharacterAnimator {
     for (let i = 0; i < 4; i++) { a[o + 15 + i] = WS[i]; a[o + 23 + i] = F[0][i]; a[o + 27 + i] = F[1][i]; a[o + 31 + i] = rc[i]; }
     this.handsAsk(() => POSE_BENCH.x!.layer_creep_arms(g, this.pA.at, this.pB.at, this.rest.at));
   }
-  private creepArmsOwn(w: number, wL: number, wR: number, e: number, cr: number, ck: number, cke: number, ws: number, ha: number, hg: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = CREEP, KC = KIT.close, WD = C.wide, WS = this.wideShape, HS = this.heftShape;
-    pB.copy(pA); const rnd = C.round * DEGR * e;
-    if (wL > 0.003) this.turn(pB, nd.shoulderL, qYaw(-rnd)); if (wR > 0.003) this.turn(pB, nd.shoulderR, qYaw(rnd));
-    fk.run(pB);
-    const sl = v3.copy(fk.pos[nd.upperArmL]), sr = v3.copy(fk.pos[nd.upperArmR]);
-    let fx = -(sl[2] - sr[2]), fz = sl[0] - sr[0]; { const L = hyp2(fx, fz) || 1; fx /= L; fz /= L; }
-    const sq = (v: Vec3): Vec3 => [fz * v[0] + fx * v[2], v[1], fz * v[2] - fx * v[0]];   // (left, up, forward) off the shoulder line → model axes
-    const m = this.dynMask; m.fill(0);
-    const wUp = smoothstep(0, 0.75, w), wFore = smoothstep(0.08, 0.88, w), wHand = smoothstep(0.16, 1, w);
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
-    // KIT.close, the hands alive: a slow working of the fingers and a drift of the wrists on the layer's own clock (two rates per hand, never in step)
-    const lt = this.clT * Math.PI * 2 * KC.flex, flL = ck < 0 ? 0 : KC.flexAmp * (0.6 * Math.sin(lt) + 0.4 * Math.sin(lt * 1.63 + 1.1)), flR = ck < 0 ? 0 : KC.flexAmp * (0.6 * Math.sin(lt * 1.21 + 2.3) + 0.4 * Math.sin(lt * 0.71 + 0.4));
-    const drift = (ph: number): Vec3 => ck < 0 ? [0, 0, 0] : [KC.drift * Math.sin(lt * 0.83 + ph), KC.drift * Math.sin(lt * 1.17 + ph * 1.7), KC.drift * 0.6 * Math.sin(lt * 0.61 + ph * 0.6)];
-    if (wL > 0.003) { const H = C.L; let pole = H.pole, fing = H.fing, back = H.back, cu = H.curl, th = H.thumb, sp = H.spread;
-      let at = v3.add(v3.mad(v3.lerp(H.at, H.atC, cr), KC.lead, cke), v3.scale(drift(0), ck < 0 ? 1 : 1 / Math.max(0.38, lerp(KC.left, 1, ws))));   // (the drift at its full size through the part of this arm the layer has)
-      if (ws > 0) { const sw = -ha * HS[1], HC = C.heft; at = v3.lerp(at, [WS[0] + sw * HC.out, -WS[1] + Math.abs(sw) * HC.up, WS[2] + WS[3] + sw - hg * 0.1], ws); pole = v3.lerp(pole, this.widePole ?? WD.pole, ws); fing = v3.lerp(fing, WD.fing, ws); back = v3.lerp(back, WD.back, ws); cu = lerp(cu, WD.curl, ws); th = lerp(th, WD.thumb, ws); sp = lerp(sp, WD.spread, ws); }   // (CREEP.wide: out to its side, and still — the wide hand has no drift: a stop is a held frame)
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sl, sq(at)), sq(pole), 0.8, this.handRot(0, sq(fing), sq(back)));
-      this.hand(pB, 0, [cu + flL, cu + 0.05 + flL * 0.9, cu + 0.1 + flL * 0.8, cu + 0.15 + flL * 0.7], th + flL * 0.5, sp);
-      const lw = wL * (ck < 0 ? 1 : lerp(KC.left, 1, ws));   // (KIT.close: most of this arm is left to the crouch under it — it goes for the man only in reach, the tell's own reach)
-      m[nd.shoulderL] = m[nd.upperArmL] = wUp * lw; m[nd.forearmL] = wFore * lw; setSub(nd.handL, wHand * lw); }
-    if (wR > 0.003) { const H = C.R;
-      let a0 = v3.add(v3.lerp(H.at, H.atC, cr), drift(2.1)), p0 = H.pole, fing = H.fing, back = H.back, curl = H.curl, thb = H.thumb, spr = H.spread * (1 - cke);
-      if (ws > 0) { const mir = (v: Vec3): Vec3 => [-v[0], v[1], v[2]];   // (CREEP.wide: the left's mirror)
-        const sw = ha * HS[1], HC = C.heft; a0 = v3.lerp(a0, [-WS[0] - sw * HC.out, -WS[1] + Math.abs(sw) * HC.up, WS[2] - WS[3] + sw - hg * 0.1], ws); p0 = v3.lerp(p0, mir(this.widePole ?? WD.pole), ws); fing = v3.lerp(fing, mir(WD.fing), ws); back = v3.lerp(back, mir(WD.back), ws); curl = lerp(curl, WD.curl, ws); thb = lerp(thb, WD.thumb, ws); spr = lerp(spr, WD.spread, ws); }
-      let at = v3.add(sr, sq(a0)), rot = this.handRot(1, sq(fing), sq(back)), pole = sq(p0);
-      if (ck >= 0 && !this.grip[1] && !this.noKnife) {   // the knife hand by distance: from its guard up across the chest to hover off the hilt — where the reach (readyLayer) closes it on the handle
-        const S = this.sheathFist(0, KC.hover);
-        { const cp = cke + (ck - cke) * 0.5; at = v3.add(v3.mad(v3.lerp(at, S.at, cp), sq(KC.bow), Math.sin(Math.PI * cke)), v3.scale(sq(drift(2.1)), cke)); }   // (the travel half-eased: an eased-only one sat still over the first metre in, and the hand must be seen to go with every step)
-        rot = quat.slerp(rot, S.rot, cke); pole = v3.lerp(pole, S.pole, cke); curl = lerp(H.curl, KC.curl, cke);
-      }
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, at, pole, 0.8, rot);
-      if (!this.grip[1]) this.hand(pB, 1, [curl + flR, curl + 0.05 + flR * 0.9, curl + 0.1 + flR * 0.8, curl + 0.15 + flR * 0.7], thb + flR * 0.5, spr);
-      m[nd.shoulderR] = m[nd.upperArmR] = wUp * wR; m[nd.forearmR] = wFore * wR; setSub(nd.handR, wHand * wR); }
-    blendPose(pA, pB, 1, m, pA);
-  }
   /** …its body: the pelvis and the feet, the heft of his stride, the bow and the look. Answers [the arms' share of his stride, his surge]. */
   private creepBody(e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): readonly number[] {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs creep_body)
-    if (g < 0) return this.creepBodyOwn(e, free, cr, gw, twY, twP, dt);
-    if (!LAYERS.both) return this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt);
-    let o: readonly number[] = [0, 0];
-    layerBoth('creepBody', this.pA, this.fk, () => this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt), () => o = this.creepBodyOwn(e, free, cr, gw, twY, twP, dt), colsOf(CharacterAnimator.creepCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs creep_body)
+    const o = this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt);
+    if (LAYERS.watch) LAYERS.watch('creepBody', this.pA, this.fk, colsOf(CharacterAnimator.creepCols, this), [], o);
     return o;
   }
   private creepBodyAsk(g: number, e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): readonly number[] {
@@ -5025,38 +3662,15 @@ export class CharacterAnimator {
     get(c, o) { const H = this.hf; c[o] = H.t; c[o + 1] = H.s; c[o + 2] = H.sv; c[o + 3] = H.a; c[o + 4] = H.av; c[o + 5] = H.w; c[o + 6] = H.wv; c[o + 7] = H.v; c[o + 8] = H.vv; },
     put(c, o) { const H = this.hf; H.t = c[o]; H.s = c[o + 1]; H.sv = c[o + 2]; H.a = c[o + 3]; H.av = c[o + 4]; H.w = c[o + 5]; H.wv = c[o + 6]; H.v = c[o + 7]; H.vv = c[o + 8]; },
   };
-  private creepBodyOwn(e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): number[] {
-    const pA = this.pA, nd = this.nodes, fk = this.fk, C = CREEP, lo = this.lowS, LS = this.lowShape, HS = this.heftShape; let hs = 0, ha = 0, hw = 0, hg = 0;
-    { this.fkPart(pA, this.fkLegs);
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      if (gw > 0) { const Hf = this.hf, HC = C.heft, h = Math.min(dt, HC.dt); Hf.t += dt; const spring = (x: number, v: number, to: number, W: [number, number]): [number, number] => { const nv = v + (W[0] * W[0] * (to - x) - 2 * W[1] * W[0] * v) * h; return [x + nv * h, nv]; };   // (CREEP.heft: read off the feet as they are under him, each a beat behind the last)
-        [Hf.s, Hf.sv] = spring(Hf.s, Hf.sv, clamp((fL[2] - fR[2]) / HC.stride, -1, 1), HC.trunk); [Hf.a, Hf.av] = spring(Hf.a, Hf.av, Hf.s, HC.arm);
-        [Hf.w, Hf.wv] = spring(Hf.w, Hf.wv, clamp((fR[1] - fL[1]) / HC.lift, -1, 1), HC.body); [Hf.v, Hf.vv] = spring(Hf.v, Hf.vv, clamp(Math.abs(this.speed) / HC.run, 0, 1), HC.go);
-        hs = Hf.s * gw; ha = Hf.a * gw; hw = Hf.w * gw; hg = (clamp(Math.abs(this.speed) / HC.run, 0, 1) - Hf.v) * gw * HS[5]; }   // (hg: + he is setting off, his body not yet with him; − stopping, it carries on)
-      this.shift(pA, nd.hips, [hw * HS[2], -(lerp(C.drop[0], C.drop[1], cr) + LS[0] * lo) * e - Math.abs(hs) * HS[4], -(lerp(C.back[0], C.back[1], cr) + LS[1] * lo) * e * free]);
-      this.fkPart(pA, this.fkLegs);
-      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true); }
-    const lean = (lerp(C.lean[0], C.lean[1], cr) + LS[2] * lo + HS[3] * gw - hg * 9 + (gw > 0 ? C.heft.breath * gw * Math.sin(this.hf.t * Math.PI * 2 * C.heft.breathHz) : 0)) * DEGR * e * free;
-    if (gw > 0) { const tw = hs * HS[0] * DEGR, rl = hw * HS[0] * 0.3 * DEGR;   // (CREEP.heft: the shoulders come round against the step and over the foot he is on; the head stays where it was looking)
-      this.turn(pA, nd.spine1, quat.mul(qYaw(tw * 0.25), qRoll(rl * 0.3))); this.turn(pA, nd.spine2, quat.mul(qYaw(tw * 0.35), qRoll(rl * 0.35))); this.turn(pA, nd.spine3, quat.mul(qYaw(tw * 0.4), qRoll(rl * 0.35)));
-      this.turn(pA, nd.neck, quat.mul(qYaw(-tw * 0.5), qRoll(-rl * 0.5))); this.turn(pA, nd.head, quat.mul(qYaw(-tw * 0.5), qRoll(-rl * 0.5))); }
-    if (lean > 1e-5) {
-      this.turn(pA, nd.spine1, qPitch(lean * 0.4)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.25));
-      this.turn(pA, nd.neck, qPitch(-lean * 0.4)); this.turn(pA, nd.head, qPitch(-lean * 0.5));   // (a tenth of it left in the head: he looks out from under his brow)
-    }
-    { const lw = C.look * e * free * (1 - clamp(this.wt.w, 0, 1)); if (this.creepAt && lw > 0.003) { fk.run(pA); this.lookAt(pA, this.untwist(twY, twP)(this.toModelP(this.creepAt)), lw); } }   // (WATCH: his head is handed to that layer by its own eased share — last frame's, it runs after this one — so the two cross over and never both have it whole)
-    return [ha, hg];
-  }
   /** STEALTH POSES — the arms of Sam's hands-empty crouch (stealthpose.ts has what each part is). ARMS ONLY, clavicle to fingertips, by IK on a copy and blended
    *  in through dynMask, plus the idle's sway: the pelvis a centimetre to each side with the feet held where they were. The trunk and the head joint are not
    *  turned and the pelvis is never sunk, so `bones.head` / `bones.chest` stay within the sway of the pose under it. `busy` = something the animator knows has
    *  his arms or body; `fed.free` = the game's half of the same question. The weight is a straight ramp (STEALTH.inSecs in, outSecs out: gone inside 0.3 s) shown through a smoothstep, so it neither starts nor ends with a jump. */
   private stealthLayer(dt: number, busy: boolean, crouchPose: number, wMove: number, twY: number, twP: number) {
     this.sp ??= { wA: 0, t: 0, cr: crouchPose, fl: 0, lead: 0, fz: 0, sw: 0, wC: 0, wH: 0, pic: null, picOn: false };
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs stealth_layer)
-    if (g < 0) this.stealthLayerOwn(dt, busy, crouchPose, wMove, twY, twP);
-    else if (!LAYERS.both) this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP);
-    else layerBoth('stealthLayer', this.pA, this.fk, () => this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP), () => this.stealthLayerOwn(dt, busy, crouchPose, wMove, twY, twP), this.withHands(CharacterAnimator.stealthCols));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs stealth_layer)
+    this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('stealthLayer', this.pA, this.fk, this.withHands(CharacterAnimator.stealthCols));
   }
   /** the crouch's own arms' state as columns (rust/sim/src/layers.rs stealth_layer) */
   private static readonly stealthCols: LayerCols<CharacterAnimator> = { n: 7,
@@ -5067,64 +3681,6 @@ export class CharacterAnimator {
     a[o] = dt; a[o + 1] = f && f.free && !busy ? 1 : 0; a[o + 2] = crouchPose; a[o + 3] = wMove; a[o + 4] = twY; a[o + 5] = twP; a[o + 6] = this.creepShown; a[o + 7] = this.readyW; a[o + 8] = this.wideS; a[o + 9] = this.handsDown;
     for (let i = 0; i < 4; i++) { a[o + 10 + i] = F[0][i]; a[o + 14 + i] = F[1][i]; }
     colsToBench(CharacterAnimator.stealthCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_stealth_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.stealthCols, this);
-  }
-  private stealthLayerOwn(dt: number, busy: boolean, crouchPose: number, wMove: number, twY: number, twP: number) {
-    const S = this.sp ??= { wA: 0, t: 0, cr: crouchPose, fl: 0, lead: 0, fz: 0, sw: 0, wC: 0, wH: 0, pic: null, picOn: false };
-    const f = this.stealth, K = STEALTH, P = STEALTHPOSE, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
-    const want = f && f.free && !busy ? 1 : 0;
-    S.wA = clamp(S.wA + (want ? dt / K.inSecs : -dt / K.outSecs), 0, 1); const wA = S.wA * S.wA * (3 - 2 * S.wA);
-    // RISE: the arms' own crouch — down with him at once (the elbows flaring for as long as he is still sinking), up after him over riseSecs
-    const dc = crouchPose - S.cr;
-    if (!P.rise || dc >= 0) { S.fl += ((P.rise && dt > 0 ? clamp(dc / dt * 0.35, 0, 1) : 0) - S.fl) * Math.min(1, dt * 12); S.cr = P.rise ? Math.min(crouchPose, S.cr + dt * K.rise.down) : crouchPose; }
-    else { S.cr = Math.max(crouchPose, S.cr - dt / Math.max(0.05, P.riseSecs)); S.fl += (0 - S.fl) * Math.min(1, dt * 12); }
-    S.t += dt;
-    const cs = this.creepShown, wm = clamp(wMove, 0, 1), up = S.cr * S.cr * (3 - 2 * S.cr);
-    const mix = lerp(P.idle ? 1 : 0, P.walk ? 1 : 0, wm), W = wA * up * Math.max(mix, P.creep ? cs : 0);
-    if (S.wA <= 0.003 || up <= 0.003) { S.lead = 0; return; }
-    this.fkPart(pA, this.fkLegs);
-    // IDLE: never a held frame — the weight goes foot to foot, the feet where they were
-    const sway = P.idle ? wA * up * (1 - wm) * (1 - cs) * crouchPose : 0;
-    if (sway > 0.003) {
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      const ph = S.t * 2 * Math.PI / Math.max(0.5, P.swaySecs);
-      this.shift(pA, nd.hips, [P.swayM * sway * Math.sin(ph), 0, P.swayM * 0.35 * sway * Math.sin(ph * 2 + 0.6)]);
-      this.fkPart(pA, this.fkLegs);
-      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true);
-    }
-    if (W <= 0.003) { S.lead = 0; return; }
-    pB.copy(pA); const rnd = K.round * DEGR * W;
-    this.turn(pB, nd.shoulderL, qYaw(-rnd)); this.turn(pB, nd.shoulderR, qYaw(rnd));
-    fk.run(pB);
-    const un = this.untwist(twY, twP);
-    const kL = fk.pos[nd.shinL], kR = fk.pos[nd.shinR], kHi = Math.max(kL[1], kR[1]), kZ = Math.max(kL[2], kR[2]);
-    const fzL = fk.pos[nd.footL][2], fzR = fk.pos[nd.footR][2];
-    S.sw += ((P.walk ? clamp((fzR - fzL) / K.walk.stride, -1, 1) * wm : 0) - S.sw) * Math.min(1, dt * K.walk.rate); const s = S.sw;   // WALK: + = the right foot ahead, so the LEFT hand comes forward
-    // CREEP: the free hand leads its own foot — out as the left foot comes off the floor and forward, held while the foot is under it, back as he passes over it
-    { const vz = dt > 0 ? (fzL - S.fz) / dt : 0; S.fz = fzL;
-      const tgt = P.creep && cs > 0.003 ? (vz > 0.15 ? 1 : clamp((fzL + 0.25) / 0.55, 0, 1)) : 0; S.lead += (tgt - S.lead) * Math.min(1, dt * K.creep.rate); }
-    const lt = S.t * 2 * Math.PI / Math.max(0.5, P.swaySecs), dr = P.driftM * (1 - wm);
-    const m = this.dynMask; m.fill(0);
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
-    const I = K.idle;
-    for (let side = 0; side < 2; side++) {
-      const sg = side === 0 ? 1 : -1, kn = side === 0 ? kL : kR, a = sg * s;
-      const up_ = side === 0 ? nd.upperArmL : nd.upperArmR, fo = side === 0 ? nd.forearmL : nd.forearmR, ha = side === 0 ? nd.handL : nd.handR, sh = side === 0 ? nd.shoulderL : nd.shoulderR;
-      const wArm = W * (1 - this.readyW) * (side === 0 ? (P.creep ? 1 - cs * this.wideS * clamp(this.handsDown, 0, 1) : 1 - cs) : 1 - cs);   // (the knife hand is the close-in mode's; the tell takes either when it wants it; CREEP.wide: with his arms out the left is the creep's too)
-      if (wArm <= 0.003) continue;
-      const S0 = fk.pos[up_], L = (hyp3(fk.pos[fo][0] - S0[0], fk.pos[fo][1] - S0[1], fk.pos[fo][2] - S0[2]) + hyp3(fk.pos[ha][0] - fk.pos[fo][0], fk.pos[ha][1] - fk.pos[fo][1], fk.pos[ha][2] - fk.pos[fo][2])) * 0.97;
-      const d1 = dr * Math.sin(lt * 0.83 + side * 2.1), d2 = dr * Math.sin(lt * 1.31 + side * 1.3 + 0.7), d3 = dr * Math.sin(lt * 0.57 + side * 0.9 + 1.9);
-      let T = un([kn[0] + sg * I.out + d1, Math.max(I.floor, kHi - I.below) + d2, Math.max(kn[2] + I.fwd, kZ + I.lead) + d3]);
-      if (a > 0) T = v3.lerp(T, un([kn[0] * 0.6 + sg * K.walk.fwd[0], Math.max(I.floor, kHi + K.walk.fwd[1]), kZ + K.walk.fwd[2]]), a);
-      else if (a < 0) T = v3.lerp(T, [S0[0] + sg * K.walk.back[0], S0[1] + K.walk.back[1], S0[2] + K.walk.back[2]], -a);
-      if (side === 0 && cs > 0.003 && P.creep) { const C = K.creep, back: Vec3 = [S0[0] + K.walk.back[0], S0[1] + K.walk.back[1] + 0.06, S0[2] + K.walk.back[2] * C.swing];
-        T = v3.lerp(T, v3.lerp(back, un([kL[0] * 0.5 + C.at[0], Math.max(C.floor, kHi + C.at[1]), kZ + C.at[2]]), S.lead), cs); }
-      { const dx = T[0] - S0[0], dy = T[1] - S0[1], dz = T[2] - S0[2], D = hyp3(dx, dy, dz); if (D > L) T = [S0[0] + dx * L / D, S0[1] + dy * L / D, S0[2] + dz * L / D]; }   // (beyond the arm: reached toward, never locked out)
-      const flare = S.fl * K.walk.flarePole, bk = Math.max(0, -a) * K.walk.tuck;   // (the back arm's elbow goes BEHIND him, not out)
-      twoBoneIK(fk, pB, up_, fo, ha, T, [sg * (I.pole[0] + flare - bk), I.pole[1] + flare * 0.5 + bk * 0.4, I.pole[2] - bk], 0.8, this.handRot(side as 0 | 1, [sg * I.fing[0], I.fing[1], I.fing[2]], [sg * I.back[0], I.back[1], I.back[2]]));
-      this.hand(pB, side as 0 | 1, [I.curl, I.curl + 0.04, I.curl + 0.08, I.curl + 0.12], I.thumb, I.spread);
-      m[sh] = m[up_] = m[fo] = wArm; setSub(ha, wArm);
-    }
-    blendPose(pA, pB, 1, m, pA);
   }
   /** STEALTH POSES — the look under a door with the wand (stealthpose.ts CABLE), built on a copy of the finished pose and then MADE the pose (update(), right
    *  before `pose` is written): what is drawn is what the game reads — `bones`, the capsules, his gaze, a ragdoll's seed, the things bolted to him. So for the
@@ -5143,10 +3699,9 @@ export class CharacterAnimator {
   }
   /** the look under a door itself, on `pic` (a copy of the finished pose), by its eased weight e and the head's eh: the clocks above are the animator's */
   private cablePose(pic: Pose, e: number, eh: number) {
-    const g = layerSlot(this.ch, pic, this.cast);   // (RUST.walk: rust/sim/src/layers.rs cable_pose)
-    if (g < 0) this.cablePoseOwn(pic, e, eh);
-    else if (!LAYERS.both) this.cablePoseAsk(g, pic, e, eh);
-    else layerBoth('cablePose', pic, this.fk, () => this.cablePoseAsk(g, pic, e, eh), () => this.cablePoseOwn(pic, e, eh), this.withHands(CharacterAnimator.cableCols));
+    const g = layerSlot(this.ch, pic, this.cast);   // (rust/sim/src/layers.rs cable_pose)
+    this.cablePoseAsk(g, pic, e, eh);
+    if (LAYERS.watch) LAYERS.watch('cablePose', pic, this.fk, this.withHands(CharacterAnimator.cableCols));
   }
   /** a nod posed in the look, as columns: which way it goes, settled once a nod (−1 not yet, 0 chin down, 1 a lift), and the nod as posed */
   private static readonly cableCols: LayerCols<CharacterAnimator> = { n: 2,
@@ -5157,31 +3712,6 @@ export class CharacterAnimator {
     a[o] = e; a[o + 1] = eh; a[o + 2] = clamp(this.lpW.x, 0, 1); a[o + 3] = this.lockpickAt[2]; a[o + 4] = this.nvNod; a[o + 5] = gl[0]; a[o + 6] = gl[1]; a[o + 7] = gl[2];
     this.headHandToBench(o + 8); for (let i = 0; i < 4; i++) a[o + 20 + i] = F[1][i];
     colsToBench(CharacterAnimator.cableCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_cable_pose(g, pic.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.cableCols, this);
-  }
-  private cablePoseOwn(pic: Pose, e: number, eh: number) {
-    const S = this.sp!, K = STEALTH.cable, P = STEALTHPOSE, nd = this.nodes, fk = this.fk, pB = this.pB, at = this.lockpickAt;
-    this.shift(pic, nd.hips, [0, 0, P.cableStep * e]);   // (the shuffle in: all of him, feet and all)
-    { this.fkPart(pic, this.fkLegs);
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      this.shift(pic, nd.hips, [0, -K.sink * e, 0]); this.fkPart(pic, this.fkLegs);
-      twoBoneIK(fk, pic, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pic, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true); }
-    const bow = (K.undo * clamp(this.lpW.x, 0, 1) + P.cableBow) * DEGR * e;
-    this.turn(pic, nd.spine1, qPitch(bow * 0.36)); this.turn(pic, nd.spine2, qPitch(bow * 0.39)); this.turn(pic, nd.spine3, qPitch(bow * 0.25));
-    this.turn(pic, nd.neck, qPitch(-bow * 0.25 * (1 - eh))); this.turn(pic, nd.head, qPitch(-bow * 0.3 * (1 - eh)));   // (on the way out the head is level again before the back is)
-    this.turn(pic, nd.shoulderL, qYaw(-K.round * DEGR * e)); this.turn(pic, nd.shoulderR, qYaw(K.round * DEGR * e));
-    fk.run(pic); this.lookAt(pic, [0, 0.04, Math.max(at[2] + 0.05, fk.pos[nd.head][2] + K.ahead)], eh);
-    if (P.nod && this.nvNod !== 0) {   // (a goggle nod under way is posed HERE, after the look at the gap. Bowed over the gap his gaze is some 80° down: a chin-down nod from there goes through straight down and the head rolls over. So a nod that starts with the look's head mostly in is a LIFT of the head off the gap and back, as big; one the look came in over stays the chin-down nod it began as, kept short of straight down. Which is settled once a nod — blended by the look's weight the two cancel half way in. The head joint alone turns: bones.head stays where the look has it)
-      const n = this.nvNod; S.nodUp ??= eh > 0.3; let a = n;
-      if (S.nodUp) a = nodLift(n);   // (the nod's small counter-move first is a small lift too)
-      const G = this.nvHead(pic); if (!S.nodUp && n > 0) a = Math.min(n, Math.max(0, K.nodMax * DEGR - Math.asin(clamp(-quat.rotate(quat.mul(G, this.headRestInv), [0, 0, 1])[1], -1, 1))));
-      this.nvTip(pic, a, G); this.nvA = a;
-    }
-    pB.copy(pic); fk.run(pB);
-    const kL = fk.pos[nd.shinL];
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, [K.gap[0], K.gap[1], at[2] - K.short], [-0.6, 0.1, -0.75], 0.8, this.handRot(1, [0.05, -0.35, 0.94], [-0.3, 0.9, 0.3]));
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, [kL[0] + K.knee[0], kL[1] + K.knee[1], kL[2] + K.knee[2]], [0.8, 0, -0.6], 0.8, this.handRot(0, [-0.15, -0.85, 0.5], [0.45, 0.25, 0.85]));
-    this.hand(pB, 1, [0.5, 0.6, 0.7, 0.75], 0.5); this.hand(pB, 0, [0.2, 0.24, 0.28, 0.32], 0.15, 0.3);
-    blendPose(pic, pB, e, this.armsMask, pic);
   }
   /** The chest twist update() has the SkeletonInstance apply AFTER this pose (yaw twY spread .25 / .35 / .4 over spine1‥3, pitch twP at spine3), run backwards for a
    *  point: where to pose something below spine3 for it to END UP at H. doorLayer's own construction (it keeps its copy: its numbers are frozen by its probes);
@@ -5197,45 +3727,13 @@ export class CharacterAnimator {
     const P3t = v3.add(quat.rotate(E2, v3.sub(v3.add(quat.rotate(E1, v3.sub(P3, P1)), P1), P2t)), P2t);
     return (H: Vec3): Vec3 => { const x1 = v3.add(quat.rotate(iE3, v3.sub(H, P3t)), P3t); const x2 = v3.add(quat.rotate(iE2, v3.sub(x1, P2t)), P2t); return v3.add(quat.rotate(iE1, v3.sub(x2, P1)), P1); };
   }
-  /** … and run FORWARDS: where a point posed below spine3 ENDS UP after that twist, and where spine2 itself does (it turns with spine1's share alone). The same
-   *  construction; fk current on the pose asked about. */
-  private twisted(twY: number, twP: number): { at: (H: Vec3) => Vec3; spine2: Vec3 } {
-    const nd = this.nodes, fk = this.fk;
-    if (!twY && !twP) return { at: (H: Vec3) => H, spine2: v3.copy(fk.pos[nd.spine2]) };
-    const E1 = qYaw(twY * 0.25), E2 = qYaw(twY * 0.35); let E3 = qYaw(twY * 0.4);
-    if (twP) { const right = quat.rotate(E3, AX); E3 = quat.mul(quat.axisAngle(right, twP), E3); }
-    const P1 = v3.copy(fk.pos[nd.spine1]), P2 = fk.pos[nd.spine2], P3 = fk.pos[nd.spine3];
-    const P2t = v3.add(quat.rotate(E1, v3.sub(P2, P1)), P1);
-    const P3t = v3.add(quat.rotate(E2, v3.sub(v3.add(quat.rotate(E1, v3.sub(P3, P1)), P1), P2t)), P2t);
-    return { spine2: P2t, at: (H: Vec3): Vec3 => { const x1 = v3.add(quat.rotate(E1, v3.sub(H, P1)), P1); const x2 = v3.add(quat.rotate(E2, v3.sub(x1, P2t)), P2t); return v3.add(quat.rotate(E3, v3.sub(x2, P3t)), P3t); } };
-  }
-  /** untwist's rotation alone, for a direction (a hand's fingers / back that must END UP pointing somewhere after the chest twist) */
-  private untwistDir(twY: number, twP: number): (d: Vec3) => Vec3 {
-    if (!twY && !twP) return (d: Vec3) => d;
-    const E1 = qYaw(twY * 0.25), E2 = qYaw(twY * 0.35); let E3 = qYaw(twY * 0.4);
-    if (twP) { const right = quat.rotate(E3, AX); E3 = quat.mul(quat.axisAngle(right, twP), E3); }
-    const q = quat.mul(quat.conj(E1), quat.mul(quat.conj(E2), quat.conj(E3)));
-    return (d: Vec3): Vec3 => quat.rotate(q, d);
-  }
-  /** KIT: where the right wrist is, how the hand lies and where the elbow points with `it` in the fist AT THE PLACE IT LIVES (KIT's list) — off the pose `fk`
-   *  holds, in the pose's own space (the leg- and belt-borne places taken back through the chest twist still to come: `un` / `und`) */
-  private kitSpot(it: KitItem, dirT: (p: Vec3) => Vec3, un: (p: Vec3) => Vec3, und: (d: Vec3) => Vec3, front = false): { at: Vec3; rot: Quat; pole: Vec3 } {
-    const fk = this.fk, nd = this.nodes, K = KIT;
-    if (it === 'knife') return this.sheathFist();
-    if (it === 'rifle' && front) { const H = slingFrontHand(undefined, this.kitRest); return { at: v3.add(fk.pos[nd.spine2], dirT(H.at)), rot: this.handRot(1, dirT(H.fing), dirT(H.back)), pole: dirT(K.front.pole) }; }
-    if (it === 'rifle') { const A = K.apex; return { at: v3.add(fk.pos[nd.upperArmR], dirT(A.at)), rot: this.handRot(1, dirT(A.fing), dirT(A.back)), pole: dirT(A.pole) }; }
-    if (it === 'can') { const B = K.belt; return { at: un(v3.add(fk.pos[nd.hips], dirT(B.at))), rot: this.handRot(1, und(dirT(B.fing)), und(dirT(B.back))), pole: dirT(B.pole) }; }
-    const P = unAdj(holsterFrameOf(fk.pos[nd.thighR], fk.pos[nd.shinR], fk.pos[nd.hips], AZ), RIG.pistol.adj);   // the hand that holds the gun as it stands in the holster
-    return { at: un(P.o), rot: this.handRot(1, und(P.z), und(v3.scale(P.x, -1))), pole: dirT(K.holsterPole) };
-  }
   /** KIT: the swap's frame (KIT's doc; kitSwap). Both arms by IK on a copy of pA, whole from the upper arm down: the path begins on the hand as the pose under
    *  it had it when the swap began (kept body-relative: off its shoulder in the trunk's frame) and ends on the hand of the pose under it NOW, so it needs no
    *  cross-fade either end. Sets kitHold / kitStow / kitRoll for the drawer, then steps the clock. */
   private kitLayer(dt: number, twY: number, twP: number) {
-    const k = this.kit!, g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs kit_layer)
-    if (g < 0) this.kitLayerOwn(twY, twP);
-    else if (!LAYERS.both) this.kitLayerAsk(g, twY, twP);
-    else layerBoth('kitLayer', this.pA, this.fk, () => this.kitLayerAsk(g, twY, twP), () => this.kitLayerOwn(twY, twP), this.withHands(CharacterAnimator.kitCols));
+    const k = this.kit!, g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs kit_layer)
+    this.kitLayerAsk(g, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('kitLayer', this.pA, this.fk, this.withHands(CharacterAnimator.kitCols));
     k.t += dt; if (k.t >= k.D) this.kit = null;   // (this frame's outputs stand; the next frame's update lets go of them)
   }
   /** what the kit change's frame leaves for the drawer: what the hand holds, how far stowed, how far rolled, and the wrist's lie */
@@ -5253,83 +3751,6 @@ export class CharacterAnimator {
     a[q + 9] = H.down; a[q + 10] = H.out; a[q + 11] = H.fwd; a[q + 12] = H.adj ? 1 : 0; a[q + 19] = P ? 1 : 0;
     this.handsAsk(() => POSE_BENCH.x!.layer_kit_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.kitCols, this);   // (its columns are all written by the layer and none read: nothing to hand over)
   }
-  private kitLayerOwn(twY: number, twP: number) {
-    const k = this.kit!, K = KIT, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
-    pB.copy(pA); fk.run(pB);
-    const F = this.trunkFrame(), q3 = [...fk.rot[nd.spine3]] as Quat;
-    const dirT = (q: Vec3): Vec3 => [F.left[0] * q[0] + F.up[0] * q[1] + F.fwd[0] * q[2], F.left[1] * q[0] + F.up[1] * q[1] + F.fwd[1] * q[2], F.left[2] * q[0] + F.up[2] * q[1] + F.fwd[2] * q[2]];
-    type Spot = { at: Vec3; rot: Quat; pole?: Vec3 };
-    const sR = v3.copy(fk.pos[nd.upperArmR]), sL = v3.copy(fk.pos[nd.upperArmL]);
-    const uR: Spot = { at: v3.copy(fk.pos[nd.handR]), rot: [...fk.rot[nd.handR]] as Quat }, uL: Spot = { at: v3.copy(fk.pos[nd.handL]), rot: [...fk.rot[nd.handL]] as Quat };
-    const un = this.untwist(twY, twP), und = this.untwistDir(twY, twP), rifle = k.from === 'rifle' || k.to === 'rifle', elbowU = v3.copy(fk.pos[nd.forearmR]);
-    const st: Spot = { at: k.cap.mr ? un(k.cap.mr) : v3.add(sR, dirT(k.cap.r)), rot: k.cap.mf && k.cap.mb ? this.handRot(1, und(k.cap.mf), und(k.cap.mb)) : quat.mul(q3, k.cap.rq) };
-    const spot = (it: KitItem): Spot => this.kitSpot(it, dirT, un, und, k.front);
-    const back = rifle && !k.front, rarc = k.front ? K.front.arc : K.arc.rifle;   // (the rifle's home: over the shoulder onto his back, or let down on its sling in front)
-    const e3 = (u: number) => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
-    const eh = (u: number) => { u = clamp(u, 0, 1); return 0.5 * (u + u * u * (3 - 2 * u)); };   // (the elbow of a rifle errand: half of it at a steady rate, so it does not all move with the hand at the top of its speed)
-    const mix = (a: Spot, b: Spot, e: number, arc?: Vec3, via?: Quat): Spot => ({ at: arc ? v3.mad(v3.lerp(a.at, b.at, e), dirT(arc), Math.sin(Math.PI * e)) : v3.lerp(a.at, b.at, e),
-      rot: via ? quat.slerp(quat.slerp(a.rot, via, e), quat.slerp(via, b.rot, e), e) : quat.slerp(a.rot, b.rot, e) });
-    const top = back ? this.handRot(1, dirT(K.top.fing), dirT(K.top.back)) : undefined;   // (the empty hand going over the shoulder leads with its fingers: turned straight from hanging to the grip on his back it would pass through fingers-down on a forearm pointing up)
-    const t = k.t, ap = clamp(k.front ? K.front.handAt : K.apexAt, 0.05, 0.95), sl = clamp(k.front ? K.front.slingAt : K.slingAt, 0.05, ap); let tg: Spot, pole: Vec3 | null = null, poleW = 0, hold: KitItem | null = null, stow = 0, roll = 0, grip = 0, join = 0, free = 0;
-    if (k.from && t < k.tA) {                 // the item in the fist to where it lives
-      const it = k.from, u = t / k.tA, hu = it === 'rifle' ? clamp(u / ap, 0, 1) : u, e = e3(hu), S = spot(it);
-      tg = mix(st, S, e, it === 'rifle' ? rarc : K.arc[it]); pole = S.pole ?? null; poleW = 0.85 * (rifle ? eh(hu) : e3(hu * 1.6));
-      hold = it; grip = 1; roll = Math.max(smoothstep(0, it === 'rifle' ? K.rollIn : 0.35, hu), k.roll0);
-      stow = Math.max(k.s0, it === 'rifle' ? e3((u - sl) / (1 - sl)) : it === 'pistol' ? smoothstep(0.65, 1, u) : 0);
-    } else if (k.to && t < k.tR) {            // the empty hand to where the next one lives
-      const u = (t - k.tA) / Math.max(1e-3, k.tR - k.tA), e = e3(u), A = k.from ? spot(k.from) : st, S = spot(k.to);
-      tg = mix(A, S, e, back ? (k.from ? K.over : K.up) : k.to === 'rifle' ? rarc : k.from ? K.cross : K.arc[k.to], top); pole = S.pole ?? null; poleW = 0.85 * (k.from ? 1 : rifle ? eh(u) : e3(u * 1.6));
-      if (rifle && k.from && A.pole && pole) pole = v3.lerp(A.pole, pole, eh(u));   // (shoulder ↔ hip: the elbow goes with the hand, not ahead of it)
-      grip = smoothstep(0.65, 1, u);
-    } else if (k.to) {                        // …and up with it into the pose underneath
-      const it = k.to, u = (t - k.tR) / Math.max(1e-3, k.D - k.tR), S = k.re ? st : spot(it);
-      const hu = it === 'rifle' && !k.re ? clamp((u - (1 - ap)) / ap, 0, 1) : u, e = e3(hu);
-      tg = mix(S, uR, e, k.re ? undefined : it === 'rifle' ? rarc : K.arc[it]); pole = S.pole ?? null; poleW = 0.85 * (1 - (rifle ? eh(hu) : e3(hu * 1.25)));
-      hold = it; grip = 1; join = smoothstep(K.join, 1, hu);
-      roll = k.re ? k.roll0 * (1 - smoothstep(0.4, 1, hu)) : 1 - smoothstep(it === 'rifle' ? 1 - K.rollIn : 0.65, 1, hu);
-      free = e;
-      stow = k.re ? k.s0 * (1 - smoothstep(0, 0.6, u)) : it === 'rifle' ? 1 - e3(u / (1 - sl)) : it === 'pistol' ? 1 - smoothstep(0, 0.35, u) : 0;
-    } else {                                  // nothing next: the emptied hand back to the pose underneath
-      const u = (t - k.tA) / Math.max(1e-3, k.D - k.tA), e = e3(u), A = k.from ? spot(k.from) : st;
-      tg = mix(A, uR, e, back && k.from === 'rifle' ? K.over : undefined, k.from === 'rifle' ? top : undefined); pole = A.pole ?? null; poleW = 0.85 * (1 - e); grip = 1 - smoothstep(0, 0.45, u); free = e;
-    }
-    if (rifle && pole) {   // a rifle's errand: the elbow exactly where its pole says, the pole itself led over from where the pose underneath has the elbow (a part-weighted
-      // pole turns the elbow BY A SHARE of the angle to it, and with the wrist passing close over the shoulder that angle swings through a half turn: the elbow jumped)
-      const ax = v3.sub(uR.at, sR), al = v3.len(ax), eb = v3.sub(elbowU, sR); let pu = al > 1e-4 ? v3.mad(eb, ax, -v3.dot(eb, ax) / (al * al)) : eb;
-      pu = v3.len(pu) > 1e-3 ? v3.normalize(pu) : v3.normalize(pole);
-      const w = clamp(poleW / 0.85, 0, 1), pn = v3.normalize(pole), m = v3.lerp(pu, pn, w);
-      pole = v3.len(m) > 1e-3 ? v3.normalize(m) : pn; poleW = 1;
-    }
-    // what an arm can do (KIT.elbowMin / wristMax), by how much of the hand is the errand's and not the pose's under it — none on the first frames (the start is
-    // the hand as it was shown) nor as it lands (the end is the pose underneath, whatever that asks of the wrist)
-    const own = rifle ? clamp(t / 0.12, 0, 1) * (1 - free * free) : 0; this.kitLie = null;
-    if (own > 0) {
-      const la = v3.len(v3.sub(fk.pos[nd.forearmR], fk.pos[nd.upperArmR])), lb = v3.len(v3.sub(fk.pos[nd.handR], fk.pos[nd.forearmR]));
-      const rMin = Math.sqrt(Math.max(0, la * la + lb * lb - 2 * la * lb * Math.cos(K.elbowMin * Math.PI / 180))) * own;
-      const d = v3.sub(tg.at, sR), dl = v3.len(d);
-      if (dl < rMin) tg = { at: v3.mad(sR, dl > 1e-4 ? v3.scale(d, 1 / dl) : dirT([-0.4, 0.2, 0.9]), rMin), rot: tg.rot };
-    }
-    // the support hand, with a gun coming: off whatever it had to wait in front of him, onto the gun late
-    const gunNext = k.to === 'pistol' || k.to === 'rifle'; let tl: Spot | null = null;
-    const sL0 = (): Spot => ({ at: k.cap.ml ? un(k.cap.ml) : v3.add(sL, dirT(k.cap.l)), rot: quat.mul(q3, k.cap.lq) });
-    if (gunNext) { const s0 = sL0(); tl = mix(mix(s0, { at: v3.add(sL, dirT(K.rest)), rot: s0.rot }, e3(t / 0.22)), uL, join); }
-    else if (t < K.letGo) { join = e3(t / K.letGo); tl = mix(sL0(), uL, join); }   // …and no gun coming (a gun going away, or a draw called off with the support hand already out in front waiting): it lets go and falls away, not snapped off
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, tg.at, pole, pole ? poleW : 0, tg.rot);
-    if (own > 0) {   // the wrist: the hand's line brought back toward its forearm's where the path asked more of it than a wrist bends
-      const fa = v3.sub(fk.pos[nd.handR], fk.pos[nd.forearmR]), fl = v3.len(fa), fg = quat.rotate(quat.mul(tg.rot, quat.conj(this.handFix[1])), [0, 1, 0]);
-      if (fl > 1e-4) { const fd = v3.scale(fa, 1 / fl), ang = Math.acos(clamp(v3.dot(fd, fg), -1, 1)), kn = K.wristKnee * Math.PI / 180, mx = Math.max(kn + 0.01, K.wristMax * Math.PI / 180);
-        if (ang > kn) { const want = kn + (mx - kn) * (1 - Math.exp(-(ang - kn) / (mx - kn))), ax = v3.cross(fg, fd), al = v3.len(ax);
-          if (al > 1e-4) { const lim = quat.mul(quat.axisAngle(v3.scale(ax, 1 / al), (ang - want) * own), tg.rot);
-            twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, tg.at, pole, pole ? poleW : 0, lim); this.kitLie = quat.mul(quat.conj(lim), tg.rot); } } }
-    }
-    { const c = (i: number) => lerp(K.open[i], K.fist[i], grip); this.hand(pB, 1, [c(0), c(1), c(2), c(3)], lerp(0.25, 0.6, grip), 0.1 * (1 - grip)); }
-    if (tl) twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, tl.at, null, 0, tl.rot);
-    const m = this.dynMask; m.fill(0);
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
-    setSub(nd.upperArmR, 1); if (tl) { setSub(nd.upperArmL, 1); setSub(nd.handL, 1 - join); m[nd.handL] = 1; }   // (the support hand's fingers go back to the pose's as it joins)
-    blendPose(pA, pB, 1, m, pA);
-    this.kitHold = hold; this.kitStow = stow; this.kitRoll = roll;
-  }
   /** THE READY POSE (ready / READY) — a small layer, not an animation: Sam standing (or crouched) in an open hands-on window, saying so with his body before the
    *  row is read. Weight `w` (update()'s eased readyW), `live` = still asked for (else it is on its way out: the numbers stand, only the weight goes). First the
    *  TRUNK, straight into pA by the weight: the upper spine bowed toward the man (spine2 / spine3; the neck and head levelled back out of it so the eyes stay on
@@ -5346,19 +3767,14 @@ export class CharacterAnimator {
    *  them, coming over from wherever they left it in the grab's first frames; and while the reach is up with no hold, where it has the hand is noted — the
    *  grab's path starts there (holdLayer: hdFrom). Nothing runs with HOLD.catchShape down, or with a knife or a gun in the hold. */
   private catchArm(X: NonNullable<CharacterAnimator['hdFix']>) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs catch_arm)
-    if (g < 0) this.catchArmOwn(X);
-    else if (!LAYERS.both) this.catchArmAsk(g, X);
-    else layerBoth('catchArm', this.pA, this.fk, () => this.catchArmAsk(g, X), () => this.catchArmOwn(X));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs catch_arm)
+    this.catchArmAsk(g, X);
+    if (LAYERS.watch) LAYERS.watch('catchArm', this.pA, this.fk, null);
   }
   private catchArmAsk(g: number, X: NonNullable<CharacterAnimator['hdFix']>) {
     const a = f64(), o = POSE_BENCH.args;
     a[o] = X.w; a[o + 7] = X.poleW; a[o + 12] = X.rw; for (let i = 0; i < 3; i++) { a[o + 1 + i] = X.tgt[i]; a[o + 4 + i] = X.pole[i]; } for (let i = 0; i < 4; i++) a[o + 8 + i] = X.rot[i];
     layerRan(POSE_BENCH.x!.layer_catch_arm(g, this.pA.at), this.fk);
-  }
-  private catchArmOwn(X: NonNullable<CharacterAnimator['hdFix']>) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk;
-    fk.run(pA); const r0 = [...fk.rot[nd.handL]] as Quat; twoBoneIK(fk, pA, nd.upperArmL, nd.forearmL, nd.handL, v3.lerp(fk.pos[nd.handL], X.tgt, X.w), X.pole, X.poleW, quat.nlerp(r0, X.rot, X.rw));
   }
   private catchFix() {
     const X = this.hdFix; this.hdFix = null;
@@ -5368,10 +3784,9 @@ export class CharacterAnimator {
     else if (!this.holdPose) { if (this.readyW > 0.003 && this.readyK === 'grab') { fk.run(pA); this.rdHandL = v3.copy(fk.pos[nd.handL]); } else this.rdHandL = null; }
   }
   private readyLayer(w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs ready_layer)
-    if (g < 0) this.readyLayerOwn(w, kind, live, dt, twY, twP);
-    else if (!LAYERS.both) this.readyLayerAsk(g, w, kind, live, dt, twY, twP);
-    else layerBoth('readyLayer', this.pA, this.fk, () => this.readyLayerAsk(g, w, kind, live, dt, twY, twP), () => this.readyLayerOwn(w, kind, live, dt, twY, twP), this.withHands(CharacterAnimator.rdCols));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs ready_layer)
+    this.readyLayerAsk(g, w, kind, live, dt, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('readyLayer', this.pA, this.fk, this.withHands(CharacterAnimator.rdCols));
     this.readyShown = w;
   }
   /** the ready pose's columns: its eased numbers, the left arm's wait for the hilt, the hand on the hilt as shown, and whether it ran last frame */
@@ -5390,94 +3805,6 @@ export class CharacterAnimator {
     a[q + 24] = B.curl; a[q + 25] = B.thumb; a[q + 26] = B.spread; a[q + 39] = R2.curl; a[q + 40] = R2.thumb;
     colsToBench(CharacterAnimator.rdCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_ready_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.rdCols, this);
   }
-  private readyLayerOwn(w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, K = READY[kind], c = this.rd;
-    const k = !this.rdLive ? 1 : live ? 1 - Math.exp(-READY_RATE * dt) : 0;
-    const ease = (i: number, v: number, q = k) => { c[i] += (v - c[i]) * q; }, ease3 = (i: number, v: Vec3, q = k) => { ease(i, v[0], q); ease(i + 1, v[1], q); ease(i + 2, v[2], q); };
-    const get3 = (i: number): Vec3 => [c[i], c[i + 1], c[i + 2]];
-    const e = w * w * (3 - 2 * w);
-    // ---- the trunk: which way the man is from the chest (flat, within a radian of dead ahead), the bow toward him, the guard's blade
-    fk.run(pA);
-    const wp = this.rdAt ? this.toModelP(this.rdAt) : null;
-    { let a = 0; if (wp) { const g = this.untwist(twY, twP)(wp), o = fk.pos[nd.spine3]; a = clamp(Math.atan2(g[0] - o[0], g[2] - o[2]), -1, 1); }
-      ease(RD.into, Math.sin(a)); ease(RD.into + 1, Math.cos(a)); ease(RD.lean, K.lean * DEGR); ease(RD.blade, K.blade * DEGR); ease(RD.clav, K.clav * DEGR);
-      if (!this.rdLive) c[RD.up] = 0;   // (READY_UP: never snapped — it comes in from the reach as it was, at its own rate)
-      if (this.readyUp > 0 || c[RD.up] > 1e-4) { const to = this.readyUp > 0 && wp && kind === 'grab' ? this.readyUp * smoothstep(READY_UP.over[0], READY_UP.over[1], this.untwist(twY, twP)(wp)[1] - fk.pos[nd.upperArmL][1]) : 0;   // (the grab alone: a pistol that is up keeps its aim — 'grabGun' — and a seated man is under him)
-        ease(RD.up, to, live ? 1 - Math.exp(-READY_UP.rate * dt) : 0); if (to === 0 && c[RD.up] < 1e-4) c[RD.up] = 0; } }   // (READY_UP: how far over his own shoulder the point is)
-    const lean = c[RD.lean] * e, blade = c[RD.blade] * e, hi = c[RD.up] * e;
-    if (lean > 1e-4) {
-      const ax = v3.normalize(v3.cross(AY, [c[RD.into], 0, c[RD.into + 1] + 1e-6]));   // (bowing toward +Z is + about +X = up × Z)
-      this.turn(pA, nd.spine2, quat.axisAngle(ax, lean * 0.45)); this.turn(pA, nd.spine3, quat.axisAngle(ax, lean * 0.55));
-      this.turn(pA, nd.neck, quat.axisAngle(ax, -lean * 0.45)); this.turn(pA, nd.head, quat.axisAngle(ax, -lean * 0.55));
-    }
-    if (hi > 1e-4) {   // (READY_UP: up out of the crouch's bow toward the man who stands over him)
-      const ax = v3.normalize(v3.cross(AY, [c[RD.into], 0, c[RD.into + 1] + 1e-6])), r = hi * READY_UP.rise * DEGR;
-      this.turn(pA, nd.spine1, quat.axisAngle(ax, -r * 0.3)); this.turn(pA, nd.spine2, quat.axisAngle(ax, -r * 0.35)); this.turn(pA, nd.spine3, quat.axisAngle(ax, -r * 0.35));
-      this.turn(pA, nd.neck, quat.axisAngle(ax, r * READY_UP.look * 0.45)); this.turn(pA, nd.head, quat.axisAngle(ax, r * READY_UP.look * 0.55));
-    }
-    if (blade > 1e-4) {   // (− yaw swings his left shoulder toward +Z)
-      this.turn(pA, nd.spine1, qYaw(-blade * 0.25)); this.turn(pA, nd.spine2, qYaw(-blade * 0.35)); this.turn(pA, nd.spine3, qYaw(-blade * 0.4));
-      this.turn(pA, nd.neck, qYaw(blade * 0.4)); this.turn(pA, nd.head, qYaw(blade * 0.6));
-    }
-    // ---- the arms, on a copy: the left clavicle forward with a reach, then the shoulders' frame as it stands
-    pB.copy(pA); fk.run(pB);
-    if (c[RD.clav] * e > 1e-4) { this.turn(pB, nd.shoulderL, qYaw(-c[RD.clav] * e)); fk.run(pB); }
-    const sl = v3.copy(fk.pos[nd.upperArmL]), sr = v3.copy(fk.pos[nd.upperArmR]);
-    let fx = -(sl[2] - sr[2]), fz = sl[0] - sr[0]; { const L = hyp2(fx, fz) || 1; fx /= L; fz /= L; }   // forward, square to the shoulder line (his left = (fz, 0, −fx))
-    const bare = this.noKnife && kind === 'grab' && !this.grip[1];   // (READY_BARE: nothing of his is a knife — both hands are the move's)
-    if (live) {
-      const arm = v3.dist(sl, fk.pos[nd.forearmL]) + v3.dist(fk.pos[nd.forearmL], fk.pos[nd.handL]);
-      let az = 0, h = 0, up = 0, oL: Vec3; const R = K.L.reach;
-      const frame = (v: Vec3, t: number): Vec3 => { const ct = Math.cos(t), st = Math.sin(t), l = v[0] * ct + v[2] * st, f = v[2] * ct - v[0] * st; return [fz * l + fx * f, v[1], fz * f - fx * l]; };   // (left, up, forward) in the shoulders' frame turned t toward his left → model axes
-      if (wp) { const g = this.untwist(twY, twP)(wp), d = v3.sub(g, sl), a = d[0] * fx + d[2] * fz, b = d[0] * fz - d[2] * fx; h = hyp2(a, b); up = d[1]; if (h > 0.05) az = clamp(Math.atan2(b, a), -READY_AZ[0], READY_AZ[1]); }   // where the man is off the left shoulder: level run, height, bearing off square (+ = his left)
-      if (R) {
-        if (!wp) { h = R.h0; up = R.y0; }
-        const q = c[RD.up];   // (READY_UP: 0 unless fed — the bounds as they were)
-        const WY = READY_BARE.way, lift = bare && HOLD.wayShape ? smoothstep(WY.lift[0], WY.lift[1], this.rdA) : 1;   // (1 unless fed a part of the reach)
-        oL = bare ? frame([0, lerp(WY.low, clamp(READY_BARE.L.frac * up + R.bias, R.dy[0], READY_BARE.L.dy), lift), lerp(WY.near, clamp(R.frac * h, READY_BARE.L.r[0], Math.max(READY_BARE.L.r[0], Math.min(READY_BARE.L.r[1], h - READY_BARE.L.short))), lift)], az)   // (READY_BARE: out ahead of his own shoulder, never over his head)
-          : frame([0, clamp(R.frac * up + R.bias, R.dy[0], lerp(R.dy[1], READY_UP.dy, q)), clamp(R.frac * h, lerp(R.r[0], READY_UP.r[0], q), lerp(R.r[1], READY_UP.r[1], q))], az);
-        const l = v3.len(oL), cap = READY_REACH * arm; if (l > cap) oL = v3.scale(oL, cap / l);
-      } else oL = frame(K.L.at!, az);   // (a fixed spot is still turned to face him: the guard's lead hand is out toward the man)
-      const B = bare ? (HOLD.wayShape ? READY_BARE.L : READY_BARE_WAS.L) : K.L;
-      ease3(RD.l, oL); ease3(RD.lPole, frame(B.pole, az)); ease3(RD.lFing, frame(c[RD.up] > 1e-4 ? [B.fing[0], B.fing[1] + READY_UP.fing * c[RD.up], B.fing[2]] : B.fing, az)); ease3(RD.lBack, frame(B.back, az));
-      ease(RD.lCurl, B.curl); ease(RD.lThumb, B.thumb); ease(RD.lSpread, B.spread);
-      if (bare) { const R2 = HOLD.wayShape ? READY_BARE.R : READY_BARE_WAS.R, kr = c[RD.wR] < 1e-3 ? 1 : k;   // (the right hand's numbers snap when it had no share: it comes in from the arm as it is, by the weight)
-        ease3(RD.r, frame(R2.at, az), kr); ease3(RD.rPole, frame(R2.pole, az), kr); ease3(RD.rFing, frame(R2.fing, az), kr); ease3(RD.rBack, frame(R2.back, az), kr); ease(RD.rCurl, R2.curl, kr); ease(RD.rThumb, R2.thumb, kr); }
-      ease(RD.wR, bare ? 1 : 0);
-    }
-    else if (!this.rdLive) c[RD.wR] = 0;
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sl, get3(RD.l)), get3(RD.lPole), 0.85, this.handRot(0, get3(RD.lFing), get3(RD.lBack)));
-    { const q = c[RD.lCurl]; this.hand(pB, 0, [q, q + 0.04, q + 0.08, q + 0.12], c[RD.lThumb], c[RD.lSpread]); }
-    // ---- the right hand on the knife (REACH): u = the reach's clock, the arm's share its alone (not the pose's weight: the hand that leaves the hilt is seen
-    //      leaving it after the rest of the pose has gone). The fist closes on the sheathed handle where rigProps draws it; the knife stays where it is.
-    const wRb = this.rcT > 0 ? 0 : c[RD.wR] * this.rdOutR * (HOLD.wayShape ? smoothstep(READY_BARE.way.right[0], READY_BARE.way.right[1], this.rdA) : 1);   // (READY_BARE.way: the right hand comes off his ribs for the last stretch only)
-    if (wRb > 1e-3) {   // (READY_BARE: the right hand low and ahead of his hip — never under a hand that is on a hilt)
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.add(sr, get3(RD.r)), get3(RD.rPole), 0.85, this.handRot(1, get3(RD.rFing), get3(RD.rBack)));
-      const q = c[RD.rCurl]; this.hand(pB, 1, [q, q + 0.04, q + 0.08, q + 0.12], c[RD.rThumb]);
-    }
-    const u = this.rcT;
-    if (u > 0) {
-      const S = this.sheathFist();
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, S.at, S.pole, 0.9, S.rot);
-      if (this.closeK >= 0) {   // (KIT.close: the fist on the hilt is alive — every `regrip` s the fingers let go a little, little finger first, and close again; the thumb shifts with them)
-        const KC = KIT.close, ph = (this.clT % KC.regrip) / KC.regrip, g = (d: number) => bump(ph, 0.55 + d, 0.66 + d, 0.72 + d, 0.86 + d);
-        this.hand(pB, 1, [REACH.curl[0] - 0.14 * g(0.06), REACH.curl[1] - 0.2 * g(0.04), REACH.curl[2] - 0.26 * g(0.02), REACH.curl[3] - 0.3 * g(0)], REACH.thumb - 0.25 * g(0.03));
-      } else
-      this.hand(pB, 1, REACH.curl, REACH.thumb);   // a fist round the handle (the hold's own)
-    }
-    // staggered, as the signals: the clavicle / upper arm lead, the forearm and the hand a little behind — in, and out in the same order
-    const m = this.dynMask; m.fill(0);
-    const wUp = smoothstep(0, 0.75, w), wFore = smoothstep(0.08, 0.88, w), wHand = smoothstep(0.16, 1, w);
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
-    let lg = 1;   // KIT.close: the left arm's move for the man waits for the right hand to be on the hilt (a pistol in that hand: no wait — the reach is all the tell there is)
-    if (this.closeK >= 0 && K.knife && !this.noKnife) { const KC = KIT.close; if (!this.rdLive) this.clL = 0; this.clL = clamp(this.clL + (live && u >= KC.leftAt ? dt / (KC.leftIn * (1 + READY_UP.slow * c[RD.up])) : -dt / KC.leftOut), 0, 1);   /* (READY_UP: the longer way up takes that much longer — 1 unless fed) */ lg = this.clL * this.clL * (3 - 2 * this.clL); }
-    m[nd.shoulderL] = wUp * lg; m[nd.upperArmL] = wUp * lg; m[nd.forearmL] = wFore * lg; setSub(nd.handL, wHand * lg);
-    this.reachShown = smoothstep(0.16, 1, u);
-    if (u > 0) { m[nd.shoulderR] = m[nd.upperArmR] = smoothstep(0, 0.75, u); m[nd.forearmR] = smoothstep(0.08, 0.88, u); setSub(nd.handR, this.reachShown); }
-    else if (wRb > 1e-3) { m[nd.shoulderR] = m[nd.upperArmR] = wUp * wRb; m[nd.forearmR] = wFore * wRb; setSub(nd.handR, wHand * wRb); }
-    blendPose(pA, pB, 1, m, pA);
-    this.rdLive = true;
-  }
   /** THE HAND ON THE HILT (REACH; rigProps RIG.sheath — the one record the drawn sheath and this hand share): off the pose `fk` holds, the right wrist's spot,
    *  the fist's rotation and the elbow's pole (model space) with the fist closed on the sheathed handle — the knife's own line through the fist's thumb side,
    *  the back of the hand off the chest, the grip's middle (RIG.knife.grip) on the handle's. The chest joint's frame: its rotation off the rest pose's, so the
@@ -5486,13 +3813,6 @@ export class CharacterAnimator {
   private sheathRestInv(): Quat {
     if (!this.rcInv) { const f = new PoseFK(this.ch); f.run(restPose(this.ch, new Pose(this.ch.nodes.length))); this.rcInv = quat.conj(f.rot[this.nodes.spine3]); }
     return this.rcInv;
-  }
-  private sheathFist(pull = 0, off = 0): { at: Vec3; rot: Quat; pole: Vec3 } {
-    const fk = this.fk, nd = this.nodes, S = RIG.sheath, G = RIG.knife.grip;
-    const q = quat.mul(fk.rot[nd.spine3], this.sheathRestInv());
-    const T = v3.normalize(quat.rotate(q, S.along)), B0 = quat.rotate(q, S.out), B = v3.normalize(v3.mad(B0, T, -v3.dot(B0, T))), F = v3.cross(T, B);
-    const h = v3.mad(v3.mad(v3.add(fk.pos[nd.spine3], quat.rotate(q, S.at)), T, -pull), B, off);
-    return { at: v3.mad(v3.mad(v3.mad(h, F, -G.fwd), B, G.palm), T, -G.side), rot: this.knifeRot(T, B), pole: v3.mad(v3.normalize(quat.rotate(q, REACH.pole)), AY, lerp(REACH.poleUp[0], REACH.poleUp[1], clamp(this.crouch, 0, 1))) };
   }
   /** a takedown's clocks, ahead of the pose (update, where the crouch shown is decided): the move's and the reaction's own seconds, the blow's points riding
    *  the man, and the crouch they leave — the attacker RISES out of it through the wind-up and the hit (never under a ceiling: BlowRun.rise), then SINKS to a
@@ -5526,53 +3846,25 @@ export class CharacterAnimator {
    *  after the move's end (the sink of the tail takes over through the crouch shown). Nothing where he may not rise. */
   private blowLegs(B: BlowRun) {
     if (!B.rise) return;
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs blow_legs)
-    if (g < 0) this.blowLegsOwn(B);
-    else if (!LAYERS.both) this.blowLegsAsk(g, B);
-    else layerBoth('blowLegs', this.pA, this.fk, () => this.blowLegsAsk(g, B), () => this.blowLegsOwn(B));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs blow_legs)
+    this.blowLegsAsk(g, B);
+    if (LAYERS.watch) LAYERS.watch('blowLegs', this.pA, this.fk, null);
   }
   private blowLegsAsk(g: number, B: BlowRun) {
     const a = f64(), o = POSE_BENCH.args; a[o] = B.t; a[o + 1] = B.hit; a[o + 2] = B.end; a[o + 3] = B.tail;
     layerRan(POSE_BENCH.x!.layer_blow_legs(g, this.pA.at), this.fk);
   }
-  private blowLegsOwn(B: BlowRun) {
-    const L = BLOW.legs, u = smoothstep(0, 0.85 * B.hit, B.t), w = u * (1 - smoothstep(B.hit + 0.12, B.end + (B.tail > 0 ? 0.05 : 0), B.t)); if (w < 0.003) return;
-    const pA = this.pA, nd = this.nodes, fk = this.fk; this.fkPart(pA, this.fkLegs);
-    const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-    const back = fL[2] < fR[2] ? fL : fR, front = back === fL ? fR : fL, dz = front[2] - back[2] - L.gap;
-    if (dz > 0) { back[2] += dz * w; back[1] += (front[1] - back[1]) * w * 0.8 + L.lift * 4 * u * (1 - u) * Math.min(1, dz / 0.25); }   // (…and its heel comes down as it lands)
-    const hp = fk.pos[nd.hips], hz = ((fL[2] + fR[2]) / 2 - hp[2]) * L.fwd * w;
-    let up = L.up;
-    for (const [th, sh, ft, f] of [[nd.thighL, nd.shinL, nd.footL, fL], [nd.thighR, nd.shinR, nd.footR, fR]] as [number, number, number, Vec3][]) {
-      const a = fk.pos[th], len = (v3.dist(a, fk.pos[sh]) + v3.dist(fk.pos[sh], fk.pos[ft])) * L.straight, hx = a[0] - f[0], hzz = a[2] + hz - f[2], q = len * len - hx * hx - hzz * hzz;
-      up = Math.min(up, q > 0 ? Math.sqrt(q) - (a[1] - f[1]) : 0);
-    }
-    this.shift(pA, nd.hips, [0, Math.max(0, up) * w, hz]); this.fkPart(pA, this.fkLegs);
-    twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true);
-  }
   /** …the TRUNK's share of the move, on pA (every one is delivered by the body, the arm its last link): the chop rears back and round onto the cocked fist,
    *  then folds well down after it and stays over him; the palm heel loads low and drives up through, the chest opening behind the locked arm; the hand over
    *  the mouth leans in, hauls back, then bends over the man as he is let down; the slash unwinds across and up */
   private blowTrunk(B: BlowRun) {
-    const tl = B.tail > 0 ? this.blowTail(B) : 0, g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs blow_trunk)
-    if (g < 0) this.blowTrunkOwn(B, tl);
-    else if (!LAYERS.both) this.blowTrunkAsk(g, B, tl);
-    else layerBoth('blowTrunk', this.pA, this.fk, () => this.blowTrunkAsk(g, B, tl), () => this.blowTrunkOwn(B, tl));
+    const tl = B.tail > 0 ? this.blowTail(B) : 0, g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs blow_trunk)
+    this.blowTrunkAsk(g, B, tl);
+    if (LAYERS.watch) LAYERS.watch('blowTrunk', this.pA, this.fk, null);
   }
   private blowTrunkAsk(g: number, B: BlowRun, tl: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = B.t; a[o + 1] = B.hit; a[o + 2] = B.end; a[o + 3] = BLOW_NO[B.style]; a[o + 4] = tl;
     layerRan(POSE_BENCH.x!.layer_blow_trunk(g, this.pA.at), this.fk);
-  }
-  private blowTrunkOwn(B: BlowRun, tl: number) {
-    const t = B.t, H = B.hit, E = B.end, out = 1 - smoothstep(E - 0.2, E, t), nd = this.nodes, pA = this.pA; let pt = 0, yw = 0;
-    if (B.style === 'chop') { pt = -10 * bump(t, 0.05, 0.5 * H, 0.75 * H, H) + 40 * smoothstep(0.75 * H, H + 0.14, t) * Math.max(out, 0.55 * tl); yw = -16 * bump(t, 0, 0.5 * H, 0.72 * H, H) + 18 * smoothstep(0.72 * H, H + 0.04, t) * out; }
-    else if (B.style === 'palm') { pt = 14 * bump(t, 0, 0.45 * H, 0.7 * H, H) - 14 * bump(t, 0.8 * H, H + 0.08, E - 0.14, E) + 14 * tl; yw = -14 * bump(t, 0, 0.45 * H, 0.7 * H, H) + 24 * smoothstep(0.7 * H, H + 0.06, t) * out; }
-    else if (B.style === 'mouth') pt = 8 * bump(t, 0, 0.12, H - 0.06, H) - 8 * bump(t, H - 0.04, H + 0.08, H + 0.2, E) + 34 * tl;
-    else if (B.style === 'slash') { pt = -8 * smoothstep(H, H + 0.1, t) * out + 12 * tl; yw = 14 * bump(t, 0, 0.5 * H, 0.7 * H, H) - 26 * smoothstep(0.7 * H, H + 0.08, t) * out; }
-    else pt = 5 * bump(t, 0, 0.5 * H, H, H + 0.12) + 12 * tl;
-    if (!pt && !yw) return;
-    const q = quat.mul(qYaw(yw * 0.5 * DEGR), qPitch(pt * 0.5 * DEGR));
-    this.turn(pA, nd.spine2, q); this.turn(pA, nd.spine3, q); this.turn(pA, nd.neck, qPitch(-pt * 0.5 * DEGR));
   }
   /** …and the ARMS, by IK on a copy of pA (the knife styles' right arm is knifeBlow's own). The RIGHT: chop — the fist cocked behind the ear with the ELBOW the
    *  high point, held, then hammered down onto `at` and on down his back; palm — loaded low at his own centre, the heel of the open hand driven up onto `at`
@@ -5580,10 +3872,10 @@ export class CharacterAnimator {
    *  at `at2`, riding his head for the length of the knife's work and DOWN with him as he is lowered; the rest — thrown straight back and down, locked. The
    *  eyes stay on the mark. A gun arm at the aim keeps its gun (the layer gives way to it). Returns the layer's weight (the hand pass leaves its hands alone). */
   private blowArms(B: BlowRun, twY: number, twP: number): number {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs blow_arms)
-    if (g < 0) return this.blowArmsOwn(B, twY, twP);
-    if (!LAYERS.both) return this.blowArmsAsk(g, B, twY, twP);
-    let w = 0; layerBoth('blowArms', this.pA, this.fk, () => [this.blowArmsAsk(g, B, twY, twP)], () => [w = this.blowArmsOwn(B, twY, twP)], colsOf(CharacterAnimator.handCols, this)); return w;
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs blow_arms)
+    const w = this.blowArmsAsk(g, B, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('blowArms', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this), [], [w]);
+    return w;
   }
   private blowArmsAsk(g: number, B: BlowRun, twY: number, twP: number): number {
     const a = f64(), o = POSE_BENCH.args, T = this.toModelP(B.at), T2 = B.at2 ? this.toModelP(B.at2) : null, gl = this.gazeLocal, F = this.handFix;
@@ -5593,85 +3885,16 @@ export class CharacterAnimator {
     this.handsAsk(() => POSE_BENCH.x!.layer_blow_arms(g, this.pA.at, this.pB.at, this.rest.at));
     return f64()[POSE_BENCH.args + LAYER_COLS_AT];   // (its answer: the layer's weight)
   }
-  private blowArmsOwn(B: BlowRun, twY: number, twP: number): number {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, t = B.t, H = B.hit, E = B.end, st = B.style;
-    const free = 1 - clamp(this.upperW.aim, 0, 1), X = E + B.tail;
-    const wAll = smoothstep(0, 0.5 * H, t) * (1 - smoothstep(E - 0.16, E, t)) * free;
-    if (wAll <= 0 && !(st === 'mouth' && t < X)) return 0;
-    pB.copy(pA); fk.run(pB);
-    const un = this.untwist(twY, twP), T = un(this.toModelP(B.at)), T2 = B.at2 ? un(this.toModelP(B.at2)) : null;
-    const sl = v3.copy(fk.pos[nd.upperArmL]), sr = v3.copy(fk.pos[nd.upperArmR]);
-    const armR = v3.dist(sr, fk.pos[nd.forearmR]) + v3.dist(fk.pos[nd.forearmR], fk.pos[nd.handR]), armL = v3.dist(sl, fk.pos[nd.forearmL]) + v3.dist(fk.pos[nd.forearmL], fk.pos[nd.handL]);
-    const cap = (s: Vec3, p: Vec3, arm: number): Vec3 => { const o = v3.sub(p, s), l = v3.len(o), c = BLOW.reach * arm; return l > c ? v3.mad(s, o, c / l) : p; };
-    const lock = (s: Vec3, d: Vec3, arm: number): Vec3 => v3.mad(s, v3.normalize(d), BLOW.reach * arm);   // the arm thrown out straight along d
-    const m = this.dynMask; m.fill(0);
-    const setSub = (j: number, wv: number) => { m[j] = wv; for (const ch of this.ch.nodes[j].children) setSub(ch, wv); };
-    if ((st === 'chop' || st === 'palm') && wAll > 0) {
-      type AK = { t: number; at: Vec3; f: Vec3; b: Vec3; pole: Vec3 };
-      const thru = v3.sub(T, sr);
-      const keys: AK[] = st === 'chop' ? [
-        { t: 0.5 * H, at: v3.add(sr, [0.02, 0.12, -0.14]), f: [0.2, 0.3, -0.9], b: [-1, 0, 0], pole: [-0.7, 1, -0.4] },
-        { t: 0.72 * H, at: v3.add(sr, [0.03, 0.13, -0.17]), f: [0.2, 0.3, -0.9], b: [-1, 0, 0], pole: [-0.7, 1, -0.4] },
-        { t: H, at: cap(sr, T, armR), f: [0.1, -0.45, 0.9], b: [-1, 0.2, 0], pole: [-0.8, 0.1, -0.3] },
-        { t: H + 0.1, at: cap(sr, v3.add(T, [0, -0.32, 0.06]), armR), f: [0.1, -0.8, 0.6], b: [-1, 0.2, 0], pole: [-0.8, -0.2, -0.4] },
-        { t: H + 0.22, at: cap(sr, v3.add(T, [0, -0.5, 0.1]), armR), f: [0.1, -0.9, 0.4], b: [-1, 0.2, 0], pole: [-0.8, -0.2, -0.5] },
-      ] : [
-        { t: 0.5 * H, at: v3.add(sr, [0.16, -0.34, 0.2]), f: [0, 0.9, 0.3], b: [0, 0.3, -0.9], pole: [-0.4, -0.7, -0.5] },
-        { t: H, at: cap(sr, T, armR), f: [0, 0.9, -0.3], b: [0, -0.3, -0.9], pole: [-0.5, -0.8, -0.2] },
-        { t: H + 0.09, at: lock(sr, [thru[0] * 0.6, Math.max(thru[1], 0) + 0.34, Math.max(thru[2], 0.1) * 0.9], armR), f: [0, 0.8, -0.5], b: [0, -0.5, -0.8], pole: [-0.5, -0.8, -0.2] },
-        { t: E - 0.14, at: lock(sr, [thru[0] * 0.5, Math.max(thru[1], 0) + 0.4, Math.max(thru[2], 0.1) * 0.8], armR), f: [0, 0.8, -0.5], b: [0, -0.5, -0.8], pole: [-0.5, -0.8, -0.2] },
-      ];
-      let i = 0; while (i < keys.length - 1 && t >= keys[i + 1].t) i++;
-      const a = keys[i], b = keys[Math.min(i + 1, keys.length - 1)], u = b === a || t <= a.t ? 0 : clamp((t - a.t) / (b.t - a.t), 0, 1), e = b.t === H ? u * u : u * u * (3 - 2 * u);   // (into the hit it only gathers speed)
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(a.at, b.at, e), v3.lerp(a.pole, b.pole, e), 0.85, quat.slerp(this.handRot(1, a.f, a.b), this.handRot(1, b.f, b.b), e));
-      this.hand(pB, 1, st === 'chop' ? BLOW.fist : BLOW.open, st === 'chop' ? 0.6 : 0.2);
-      m[nd.shoulderR] = m[nd.upperArmR] = m[nd.forearmR] = wAll; setSub(nd.handR, wAll);
-    }
-    let wL = 0;
-    if (st === 'chop' && T2) {
-      wL = bump(t, 0.04, 0.5 * H, H - 0.02, H + 0.15) * free; fk.run(pB);
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, cap(sl, T2, armL), [0.6, -0.7, -0.2], 0.8, this.handRot(0, [0, 1, 0.2], [0, 0.2, -1]));
-      this.hand(pB, 0, BLOW.open, 0.2);
-    } else if (st === 'mouth' && T2) {
-      wL = bump(t, 0.03, 0.14, B.tail > 0 ? X - 0.5 : E - 0.18, B.tail > 0 ? X - 0.2 : E - 0.04) * free * (B.tail > 0 && t > E ? 1 - smoothstep(BLOW.walk[0], BLOW.walk[1], Math.abs(this.speed)) : 1); fk.run(pB);
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, cap(sl, T2, armL), [0.8, -0.5, 0], 0.8, this.handRot(0, [-1, 0, 0.1], [0.1, 0, 1]));
-      this.hand(pB, 0, BLOW.cup, 0.3);
-    } else if (st !== 'chop' && st !== 'mouth') {
-      wL = bump(t, 0.4 * H, H, E - 0.2, E) * free; fk.run(pB);
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, lock(sl, [0.16, -0.72, -0.68], armL), [0.5, 0.2, -0.8], 0.6, this.handRot(0, [0.15, -0.7, -0.7], [1, 0.2, 0.1]));
-      this.hand(pB, 0, BLOW.loose, 0.3);
-    }
-    if (wL > 0) { m[nd.shoulderL] = m[nd.upperArmL] = m[nd.forearmL] = wL; setSub(nd.handL, wL); }
-    blendPose(pA, pB, 1, m, pA);
-    if (wAll > 0) { fk.run(pA); this.lookAt(pA, T, 0.6 * wAll); }
-    return Math.max(wAll, wL);
-  }
   /** the man a takedown is done to, still on his feet (taken()): head, trunk and — hauled back — his arms; pitch only: where he looks on the plan does not turn */
   private takenLayer(T: { style: TakenStyle; t: number; delay: number; off: number }) {
     const u = T.t - T.delay; if (u <= 0) return;
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs taken_layer)
-    if (g < 0) this.takenLayerOwn(T, u);
-    else if (!LAYERS.both) this.takenLayerAsk(g, T, u);
-    else layerBoth('takenLayer', this.pA, this.fk, () => this.takenLayerAsk(g, T, u), () => this.takenLayerOwn(T, u));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs taken_layer)
+    this.takenLayerAsk(g, T, u);
+    if (LAYERS.watch) LAYERS.watch('takenLayer', this.pA, this.fk, null);
   }
   private takenLayerAsk(g: number, T: { style: TakenStyle; off: number }, u: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = u; a[o + 1] = T.off; a[o + 2] = T.style === 'arch' ? 0 : T.style === 'hunch' ? 1 : 2;
     layerRan(POSE_BENCH.x!.layer_taken_layer(g, this.pA.at), this.fk);
-  }
-  private takenLayerOwn(T: { style: TakenStyle; off: number }, u: number) {
-    const out = (1 - smoothstep(0.6, TAKEN.secs, u)) * (T.off < 0 ? 1 : 1 - smoothstep(0, 0.2, T.off)), nd = this.nodes, pA = this.pA, D = DEGR;
-    if (T.style === 'arch') {   // hauled back onto the knife man's shoulder: the whole back bowed, the head right over, the arms flung out in front of him
-      const a = smoothstep(0, 0.1, u) * out, r = smoothstep(0.02, 0.16, u) * out;
-      this.turn(pA, nd.spine1, qPitch(-8 * a * D)); this.turn(pA, nd.spine2, qPitch(-10 * a * D)); this.turn(pA, nd.spine3, qPitch(-10 * a * D)); this.turn(pA, nd.neck, qPitch(-10 * a * D)); this.turn(pA, nd.head, qPitch(-16 * a * D));
-      this.turn(pA, nd.upperArmL, qPitch(-38 * r * D)); this.turn(pA, nd.upperArmR, qPitch(-34 * r * D)); this.turn(pA, nd.forearmL, qPitch(-30 * r * D)); this.turn(pA, nd.forearmR, qPitch(-36 * r * D));
-    } else if (T.style === 'hunch') {   // struck on the base of the skull: the chin snaps to the chest, the shoulders come up round it, the trunk follows
-      const s = smoothstep(0, 0.06, u) * out, b = smoothstep(0, 0.2, u) * out;
-      this.turn(pA, nd.spine2, qPitch(8 * b * D)); this.turn(pA, nd.spine3, qPitch(8 * b * D)); this.turn(pA, nd.neck, qPitch(16 * s * D)); this.turn(pA, nd.head, qPitch(26 * s * D));
-      this.turn(pA, nd.shoulderL, qRoll(10 * s * D)); this.turn(pA, nd.shoulderR, qRoll(-10 * s * D));
-    } else {   // the heel of a hand under the chin: the head goes back, the trunk after it
-      const s = smoothstep(0, 0.05, u) * out, b = smoothstep(0, 0.18, u) * out;
-      this.turn(pA, nd.spine2, qPitch(-4.5 * b * D)); this.turn(pA, nd.spine3, qPitch(-4.5 * b * D)); this.turn(pA, nd.neck, qPitch(-12 * s * D)); this.turn(pA, nd.head, qPitch(-18 * s * D));
-    }
   }
   /** THE KNIFE'S BLOW (strike(kind, true); KNIFE_BLOW) — the right arm over the punch clip's pose in pA, by IK on a copy: to the hilt (at once if the tell had
    *  it there: kbR0), the knife drawn down out of the sheath, through the kind's keys — eased key to key, the wrist's spots off the right shoulder as the clip
@@ -5687,10 +3910,9 @@ export class CharacterAnimator {
   }
   /** …the blow's POSE, its clock being knifeBlow's: `t` the key time (0 = on the hilt), `t0` the seconds to the hilt */
   private knifePose(K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs knife_pose; a blow's keys fit the layer: layerTablesFit)
-    if (g < 0) this.knifePoseOwn(K, t, t0, total, twY, twP);
-    else if (!LAYERS.both) this.knifePoseAsk(g, K, t, t0, total, twY, twP);
-    else layerBoth('knifePose', this.pA, this.fk, () => this.knifePoseAsk(g, K, t, t0, total, twY, twP), () => this.knifePoseOwn(K, t, t0, total, twY, twP), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs knife_pose; a blow's keys fit the layer: layerTablesFit)
+    this.knifePoseAsk(g, K, t, t0, total, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('knifePose', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private knifePoseAsk(g: number, K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, at = this.rdAt ? this.toModelP(this.rdAt) : null, F = this.handFix[1], rc = this.sheathRestInv();
@@ -5700,75 +3922,19 @@ export class CharacterAnimator {
     for (let i = 0; i < K.keys.length; i++) { const k = K.keys[i], q = o + LAYER_KEYS_AT + i * 13; a[q] = k.t; for (let j = 0; j < 3; j++) { a[q + 1 + j] = k.at[j]; a[q + 4 + j] = k.blade[j]; a[q + 7 + j] = k.fing[j]; a[q + 10 + j] = k.pole[j]; } }
     this.handsAsk(() => POSE_BENCH.x!.layer_knife_pose(g, this.pA.at, this.pB.at, this.rest.at));
   }
-  private knifePoseOwn(K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, KB = KNIFE_BLOW;
-    pB.copy(pA); fk.run(pB);
-    const sl = fk.pos[nd.upperArmL], sr = v3.copy(fk.pos[nd.upperArmR]), arm = v3.dist(sr, fk.pos[nd.forearmR]) + v3.dist(fk.pos[nd.forearmR], fk.pos[nd.handR]);
-    let az = 0; if (this.rdAt) { const g = this.untwist(twY, twP)(this.toModelP(this.rdAt)), mx = (sl[0] + sr[0]) / 2, mz = (sl[2] + sr[2]) / 2; if (hyp2(g[0] - mx, g[2] - mz) > 0.05) az = clamp(Math.atan2(g[0] - mx, g[2] - mz), -KB.az, KB.az); }
-    const ca = Math.cos(az), sa = Math.sin(az), fr = (v: Vec3): Vec3 => [v[0] * ca + v[2] * sa, v[1], v[2] * ca - v[0] * sa];   // (left, up, forward) turned az toward his left → model axes
-    const stop = (i: number): { at: Vec3; rot: Quat; pole: Vec3 } => {   // 0 hilt · 1 clear of the sheath · 2‥ the keys · then clear · hilt
-      const n = K.keys.length;
-      if (i <= 0 || i >= n + 3) return this.sheathFist();
-      if (i === 1 || i === n + 2) return this.sheathFist(KB.clear[0], KB.clear[1]);
-      const k = K.keys[i - 2]; let o = fr(k.at); const l = v3.len(o), cap = KB.reach * arm; if (l > cap) o = v3.scale(o, cap / l);
-      const T = fr(k.blade); return { at: v3.add(sr, o), rot: this.knifeRot(T, v3.cross(fr(k.fing), T)), pole: fr(k.pole) };
-    };
-    const n = K.keys.length, ts = [0, KB.tClear, ...K.keys.map(k => k.t), K.end - KB.tClear, K.end];
-    let i = 0; while (i < n + 2 && t >= ts[i + 1]) i++;
-    const a = stop(i), b = stop(Math.min(i + 1, n + 3)), e = i >= n + 3 || t <= 0 ? 0 : smoothstep(ts[i], ts[i + 1], t);
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(a.at, b.at, e), v3.lerp(a.pole, b.pole, e), 0.9, quat.slerp(a.rot, b.rot, e));
-    this.hand(pB, 1, REACH.curl, REACH.thumb);
-    const under = this.rcT > 0 ? this.reachShown : 0;   // what the arm goes back to: the hand on the hilt, or nothing of this
-    const w = lerp(under, 1, Math.max(this.kbR0, smoothstep(0, t0 || 1e-6, this.kbT)) * (1 - smoothstep(total - KB.fade, total, this.kbT)));
-    const m = this.dynMask; m.fill(0);
-    const setSub = (j: number, wv: number) => { m[j] = wv; for (const ch of this.ch.nodes[j].children) setSub(ch, wv); };
-    m[nd.shoulderR] = m[nd.upperArmR] = m[nd.forearmR] = w; setSub(nd.handR, w);
-    blendPose(pA, pB, 1, m, pA);
-  }
   /** Lock work: over the forced crouch the back un-rounds enough to bring the eyes up level with the keyway (the crouch clip alone would leave the head below
    *  the hands), shoulders come up round the ears, and the head is aimed at the lock (look-at on neck + head) and cocked; both hands are IK'd to the keyway — a
    *  model-space point, so the body's breathing moves around still hands: right = the pick, raking / jiggling in an irregular 2–3 Hz rhythm, left = the tension
    *  wrench at the bottom of the keyway with a slow pressure wobble; now and then a pin sets (the pick pauses, the wrench gives a little). */
   private lockpickLayer(w: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs lockpick_layer)
-    if (g < 0) this.lockpickLayerOwn(w);
-    else if (!LAYERS.both) this.lockpickLayerAsk(g, w);
-    else layerBoth('lockpickLayer', this.pA, this.fk, () => this.lockpickLayerAsk(g, w), () => this.lockpickLayerOwn(w), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs lockpick_layer)
+    this.lockpickLayerAsk(g, w);
+    if (LAYERS.watch) LAYERS.watch('lockpickLayer', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private lockpickLayerAsk(g: number, w: number) {
     const a = f64(), o = POSE_BENCH.args, at = this.lockpickAt, gl = this.gazeLocal, F = this.handFix;
     a[o] = w; a[o + 1] = this.lpT; for (let i = 0; i < 3; i++) { a[o + 2 + i] = at[i]; a[o + 5 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 8 + i] = F[0][i]; a[o + 12 + i] = F[1][i]; }
     this.handsAsk(() => POSE_BENCH.x!.layer_lockpick_layer(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private lockpickLayerOwn(w: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, t = this.lpT; const at = this.lockpickAt;
-    // body, additive × w: extend the crouch clip's rounded spine so the torso sits up toward the lock, shoulders up, then aim the head
-    const ext = 28 * DEGR * w;
-    this.turn(pA, nd.spine1, qPitch(-ext * 0.36)); this.turn(pA, nd.spine2, qPitch(-ext * 0.39)); this.turn(pA, nd.spine3, qPitch(-ext * 0.25));
-    this.turn(pA, nd.neck, qPitch(ext * 0.45)); this.turn(pA, nd.head, qPitch(ext * 0.55));   // (the clip cranes the neck to look ahead from the crouch; sitting up, that crane comes off first)
-    this.turn(pA, nd.shoulderL, qRoll(10 * DEGR * w)); this.turn(pA, nd.shoulderR, qRoll(-10 * DEGR * w));
-    this.lookAt(pA, at, w, 9 * DEGR * w);
-    pB.copy(pA); fk.run(pB);
-    // irregular rhythm: a frequency-wobbled rake plus a faster jiggle that comes and goes; every few seconds a pin 'sets' (brief pause + twist of the wrench)
-    const rake = Math.sin(t * 2 * Math.PI * 2.3 + 1.4 * Math.sin(t * 2.1)), jig = Math.sin(t * 2 * Math.PI * 3.6) * (0.5 + 0.5 * Math.sin(t * 0.9 + 2));
-    const setEv = smoothstep(0.7, 1, Math.sin(t * 1.7) * Math.sin(t * 0.61 + 1));   // sparse 0…1 blips
-    const work = 1 - 0.8 * setEv;
-    // wrists sit a hand's length back from the door face: the pick reaches the keyway from below-right, the wrench hand lower and to the left
-    const pick: Vec3 = [at[0] - 0.04, at[1] - 0.035 + 0.004 * jig * work, at[2] - 0.135 + 0.01 * rake * work];
-    const wrench: Vec3 = [at[0] + 0.05, at[1] - 0.075, at[2] - 0.125];
-    // right hand: fingers forward into the lock, back of the hand up-and-right (pinch grip on the pick), rolling with the rake
-    const rollR = (11 * rake * work + 4 * jig * work - 8 * setEv) * DEGR;
-    const bR = quat.rotate(quat.axisAngle(AZ, rollR), v3.normalize([-0.6, 1, 0]));
-    const rotR = this.handRot(1, [-0.1, 0.15, 1], bR);
-    // left hand: below the keyway, fingers forward-up-right holding the wrench, palm up-ish; slow pressure wobble + the give when a pin sets
-    const rollL = (3 * Math.sin(t * 2 * Math.PI * 0.55) + 7 * setEv) * DEGR;
-    const fL = v3.normalize([-0.4, 0.5, 1]); const bL = quat.rotate(quat.axisAngle(fL, rollL), v3.normalize([0.35, -1, 0.55]));
-    const rotL = this.handRot(0, fL, bL);
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, pick, [-0.45, -1, -0.45], 0.75, rotR);
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, wrench, [0.3, -1, -0.45], 0.75, rotL, true);
-    this.hand(pB, 1, [0.55, 0.7, 0.9, 0.95], 0.75);   // pick pinched between thumb and index, the rest folded
-    this.hand(pB, 0, [0.75, 0.8, 0.85, 0.85], 0.6);   // wrapped round the wrench
-    blendPose(pA, pB, w, this.armsMask, pA);
   }
 
   /** Both hands on a body (haul, weight w — hands.ts has the timings): the trunk bows down toward the grip (spine1‥3, the neck and head levelled part of the way
@@ -5777,35 +3943,15 @@ export class CharacterAnimator {
    *  pose's `grip`; blended in clavicle to fingertips through armsMask. A spot beyond the arm's span is simply reached toward (the IK stops short of lock-out). */
   private haulLayer(w: number, twY: number, twP: number) {
     const H = this.hlLast; if (!H) return;
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs haul_layer)
-    if (g < 0) this.haulLayerOwn(H, w, twY, twP);
-    else if (!LAYERS.both) this.haulLayerAsk(g, H, w, twY, twP);
-    else layerBoth('haulLayer', this.pA, this.fk, () => this.haulLayerAsk(g, H, w, twY, twP), () => this.haulLayerOwn(H, w, twY, twP), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs haul_layer)
+    this.haulLayerAsk(g, H, w, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('haulLayer', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private haulLayerAsk(g: number, H: HaulPose, w: number, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, l = this.toModelP(H.l), r = this.toModelP(H.r), gl = this.gazeLocal, F = this.handFix;
     a[o] = w; a[o + 1] = twY; a[o + 2] = twP; a[o + 3] = H.bow; a[o + 4] = clamp(H.rw ?? 1, 0, 1); a[o + 5] = H.look ?? 0.7; a[o + 6] = H.tilt ?? 0; a[o + 7] = H.grip;
     for (let i = 0; i < 3; i++) { a[o + 8 + i] = l[i]; a[o + 11 + i] = r[i]; a[o + 14 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 17 + i] = F[0][i]; a[o + 21 + i] = F[1][i]; }
     this.handsAsk(() => POSE_BENCH.x!.layer_haul_layer(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private haulLayerOwn(H: HaulPose, w: number, twY: number, twP: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
-    const bow = H.bow * w, rw = clamp(H.rw ?? 1, 0, 1), look = H.look ?? 0.7, tilt = (H.tilt ?? 0) * w;
-    if (bow > 1e-4) {
-      this.turn(pA, nd.spine1, qPitch(bow * 0.4)); this.turn(pA, nd.spine2, qPitch(bow * 0.35)); this.turn(pA, nd.spine3, qPitch(bow * 0.25));
-      this.turn(pA, nd.neck, qPitch(-bow * 0.3)); this.turn(pA, nd.head, qPitch(-bow * 0.3));
-    }
-    if (Math.abs(tilt) > 1e-4) { this.turn(pA, nd.spine2, qRoll(tilt * 0.5)); this.turn(pA, nd.spine3, qRoll(tilt * 0.5)); this.turn(pA, nd.neck, qRoll(tilt * 0.8)); this.turn(pA, nd.head, qRoll(tilt * 0.8)); }   // the load on his left shoulder: trunk and head tipped off it
-    fk.run(pA); const un = this.untwist(twY, twP);
-    const tl = un(this.toModelP(H.l)), tr = un(this.toModelP(H.r));
-    if (look > 0.01) { const at = v3.lerp(tl, tr, 0.5 * rw); at[2] += 0.45; this.lookAt(pA, at, w * look); }   // (a stride beyond his hands: a grip straight under his eyes has no bearing, and the look's yaw flipped side to side with the walk's sway)
-    pB.copy(pA); fk.run(pB);
-    const g = clamp(H.grip, 0, 1);
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, tr, [-0.7, -0.25, -0.65], 0.75, this.handRot(1, [0.12, -0.55, 0.83], [-0.45, 1, 0.5]));
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, tl, [0.7, -0.25, -0.65], 0.75, this.handRot(0, [-0.12, -0.55, 0.83], [0.45, 1, 0.5]), true);
-    this.hand(pB, 1, [g * 0.85, g * 0.9, g * 0.95, g], g * 0.7); this.hand(pB, 0, [g * 0.85, g * 0.9, g * 0.95, g], g * 0.7);
-    if (rw >= 0.999) blendPose(pA, pB, w, this.armsMask, pA);
-    else { blendPose(pA, pB, w, this.armLOnly, pA); if (rw > 0.003) blendPose(pA, pB, w * rw, this.armROnly, pA); }
   }
 
   /** the controller's world placement ↔ the un-twisted model space the layers pose in (posIn / bodyYawIn, fed by Character.update): a point, and a direction */
@@ -5829,10 +3975,9 @@ export class CharacterAnimator {
     const S = this.dp, L = S.last;
     if (!L) { S.wL.x = S.wL.v = S.wR.x = S.wR.v = 0; S.reachOK = false; return; }   // never fed (or the viewer's raw clip wiped it): nothing to pose, nothing to ease
     if (!(intent > 0.003) && clamp(Math.max(S.wL.x, S.wR.x), 0, 1) <= 0.003) { S.reachOK = false; return; }
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs door_layer)
-    if (g < 0) this.doorLayerOwn(L, dt, intent, armed, twY, twP);
-    else if (!LAYERS.both) this.doorLayerAsk(g, L, dt, intent, armed, twY, twP);
-    else layerBoth('doorLayer', this.pA, this.fk, () => this.doorLayerAsk(g, L, dt, intent, armed, twY, twP), () => this.doorLayerOwn(L, dt, intent, armed, twY, twP), this.withHands(CharacterAnimator.doorCols));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs door_layer)
+    this.doorLayerAsk(g, L, dt, intent, armed, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('doorLayer', this.pA, this.fk, this.withHands(CharacterAnimator.doorCols));
   }
   /** the door hand's columns: the two weights' springs, whether the spot is in reach, and which hand */
   private static readonly doorCols: LayerCols<CharacterAnimator> = { n: 6,
@@ -5843,76 +3988,6 @@ export class CharacterAnimator {
     a[o] = dt; a[o + 1] = intent; a[o + 2] = !armed && this.upper !== 'torch' && this.throwT < 0 ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; a[o + 5] = L.hand; a[o + 6] = L.reach ? 1 : 0;
     for (let i = 0; i < 3; i++) { a[o + 7 + i] = n[i]; a[o + 10 + i] = p[i]; } for (let i = 0; i < 4; i++) { a[o + 13 + i] = F[0][i]; a[o + 17 + i] = F[1][i]; }
     colsToBench(CharacterAnimator.doorCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_door_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.doorCols, this);
-  }
-  private doorLayerOwn(L: DoorPush, dt: number, intent: number, armed: boolean, twY: number, twP: number) {
-    const S = this.dp, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
-    const live = intent > 0.003, wWas = clamp(Math.max(S.wL.x, S.wR.x), 0, 1);
-    if (live && L.hand >= 0) S.right = L.hand === 1 && !armed && this.upper !== 'torch' && this.throwT < 0;   // (game.ts only asks for a right it knows to be empty; the pistol / torch / throw veto is belt and braces)
-    // the chest twist still to come, and its inverse: E1 / E2 / E3 at spine1‥3 (SkeletonInstance.update's construction: yaw about model +Y, then pitch about the
-    // yawed X), each pivoting its subtree at that joint's ALREADY-TWISTED origin — so a hand posed at h ends up at E3·(E2·(E1·(h − P1) + P1 − P2ᵗ) + P2ᵗ − P3ᵗ) + P3ᵗ;
-    // run backwards, that is where to pose it for it to end up at the door. Directions and the hand's rotation just take (E3·E2·E1)⁻¹. Rigid on everything
-    // below spine3, so shoulder-to-spot distances measured un-twisted are the real ones. The pivots are read off pA as it stands (pivots() again after the lean).
-    const E1 = qYaw(twY * 0.25), E2 = qYaw(twY * 0.35); let E3 = qYaw(twY * 0.4);
-    if (twP) { const right = quat.rotate(E3, AX); E3 = quat.mul(quat.axisAngle(right, twP), E3); }
-    const iE1 = quat.conj(E1), iE2 = quat.conj(E2), iE3 = quat.conj(E3), iAll = quat.conj(quat.mul(E3, quat.mul(E2, E1)));
-    const unD = (D: Vec3): Vec3 => quat.rotate(iAll, D);
-    const pivots = (): ((H: Vec3) => Vec3) => {   // (fk current on pA)
-      const P1 = v3.copy(fk.pos[nd.spine1]), P2 = fk.pos[nd.spine2], P3 = fk.pos[nd.spine3];
-      const P2t = v3.add(quat.rotate(E1, v3.sub(P2, P1)), P1);
-      const P3t = v3.add(quat.rotate(E2, v3.sub(v3.add(quat.rotate(E1, v3.sub(P3, P1)), P1), P2t)), P2t);
-      return (H: Vec3): Vec3 => { const x1 = v3.add(quat.rotate(iE3, v3.sub(H, P3t)), P3t); const x2 = v3.add(quat.rotate(iE2, v3.sub(x1, P2t)), P2t); return v3.add(quat.rotate(iE1, v3.sub(x2, P1)), P1); };
-    };
-    // the hand's frame on the leaf per arm, model space: n out of the face toward him, fingers f up and ~25° out along the face (away from his middle on that
-    // arm's side: +X is his left), and the wrist target under the palm spot — the palm's middle sits ~8 cm up the hand from the wrist joint, and the mesh's palm
-    // surface lies 3.5 cm palm-ward of the bone line (measured off the skin), so the bone line rides 3.5 cm proud of the face for the palm to lie ON it
-    const n0 = v3.normalize(this.toModelD(L.n)), p0 = this.toModelP(L.p), n = unD(n0);
-    const fOf = (side: 0 | 1): Vec3 => { let t0 = v3.cross(AY, n0); if (v3.len(t0) < 1e-4) t0 = [1, 0, 0]; t0 = v3.normalize(t0); if ((side ? -1 : 1) * t0[0] < 0) t0 = v3.scale(t0, -1); return unD(v3.normalize(v3.add(v3.scale(AY, 0.9), v3.scale(t0, 0.42)))); };
-    const wristOf = (pTgt: Vec3, f: Vec3): Vec3 => v3.mad(v3.mad(pTgt, n, 0.035), f, -0.08);
-    const arm: 0 | 1 = S.right ? 1 : 0; const ua0 = S.right ? nd.upperArmR : nd.upperArmL;
-    // ---- the lean into a long reach, off the un-leaned pose: how far the wrist spot is from that shoulder → the spine bows toward the door (about up × into-it,
-    //      hips first, 8° at most) by last frame's weight; the head is levelled back out of it here (the gaze stabiliser after would only take most of it)
-    fk.run(pA);
-    let unP = pivots(); const f = fOf(arm);
-    const d0 = v3.dist(fk.pos[ua0], wristOf(unP(p0), f));
-    const lean = 8 * DEGR * smoothstep(0.4, 0.55, d0) * wWas;
-    if (lean > 1e-4) {
-      const into: Vec3 = v3.normalize([-n0[0], 0, -n0[2] + 1e-6]); const ax: Vec3 = v3.cross(AY, into);   // (bowing toward +Z is + about +X = up × Z)
-      this.turn(pA, nd.spine1, quat.axisAngle(ax, lean * 0.4)); this.turn(pA, nd.spine2, quat.axisAngle(ax, lean * 0.35)); this.turn(pA, nd.spine3, quat.axisAngle(ax, lean * 0.25));
-      this.turn(pA, nd.neck, quat.axisAngle(ax, -lean * 0.45)); this.turn(pA, nd.head, quat.axisAngle(ax, -lean * 0.55));
-      fk.run(pA); unP = pivots();
-    }
-    const pTgt = unP(p0);
-    // ---- which arm is up, and can it reach: the wrist spot within what the arm spans once leaned (asked inside 0.56 of the shoulder joint as it now is — un-leaned
-    //      while the hand is still down, so the lean then leaves the elbow soft — let go past 0.585, a finger past full stretch) and ahead of it; else he pushes
-    //      with his body and the hand stays off
-    let tgtL = 0, tgtR = 0;
-    if (live && L.hand >= 0) {   // (−1: game.ts has not settled which hand — he is still coming round to the door: nothing rises yet)
-      const sh = fk.pos[ua0], wr = wristOf(pTgt, f); const d = v3.dist(sh, wr), ahead = wr[2] - sh[2];
-      const far = L.reach ? 0.45 : 0;   // (reach — hands.ts, a door worked by hand: the arm goes out to a leaf a stride off too, as far as it spans, and meets it as it comes)
-      S.reachOK = S.reachOK ? d < 0.585 + far && d > 0.16 && ahead > 0.02 : d < 0.56 + far && d > 0.2 && ahead > 0.06;   // (nor with the shoulder itself on the leaf: no arm pushes from inside a hand's length)
-      if (S.reachOK) { if (S.right) tgtR = intent; else tgtL = intent; }
-    } else S.reachOK = false;
-    const rate = (t: number, x: number) => t > x ? 40 : 26;   // ≈ 0.15 s in, 0.25 s out (Spring: ≈ 6 / settle time)
-    const wL = clamp(S.wL.step(tgtL, rate(tgtL, S.wL.x), dt), 0, 1), wR = clamp(S.wR.step(tgtR, rate(tgtR, S.wR.x), dt), 0, 1);
-    // ---- the arm(s): the TARGET travels with the eased weight — from wherever the pose beneath has the wrist (the swinging walk hand, the support hand on the gun)
-    //      in a line to the spot on the door and back — with the hand's turn, the elbow's swivel and the clavicle's reach riding the same ease, and the joint blend
-    //      itself only let go over the last quarter (by when the solve is all but the pose beneath: at e → 0 the IK is the identity). A weight blend alone would
-    //      swing the hand from door to gun grip through joint space — an arc out through the leaf.
-    for (const side of [0, 1] as const) {
-      const e = side ? wR : wL; if (e < 0.003) continue;
-      const fs = side === arm ? f : fOf(side); const wrist = wristOf(pTgt, fs);
-      pB.copy(pA);
-      const shN = side ? nd.shoulderR : nd.shoulderL, ua = side ? nd.upperArmR : nd.upperArmL, fa = side ? nd.forearmR : nd.forearmL, hd = side ? nd.handR : nd.handL;
-      fk.run(pB);
-      const live0 = v3.copy(fk.pos[hd]), rot0: Quat = [...fk.rot[hd]] as Quat;
-      const far = smoothstep(0.38, 0.54, v3.dist(fk.pos[ua], wrist)) * e;
-      if (far > 1e-3) { this.turn(pB, shN, quat.mul(qYaw((side ? 1 : -1) * 10 * DEGR * far), qRoll((side ? -1 : 1) * 3 * DEGR * far))); fk.run(pB); }   // the shoulder reaches too: clavicle forward (its tip swings toward +Z: − yaw on the left, + on the right) and a touch up
-      const pole: Vec3 = [(side ? -1 : 1) * 0.4, -1, -0.35];   // elbow DOWN (below the wrist), out to the arm's side, a shade back — body-relative, so NOT un-twisted: it turns with the chest as an elbow does
-      twoBoneIK(fk, pB, ua, fa, hd, v3.lerp(live0, wrist, e), pole, e, quat.nlerp(rot0, this.handRot(side, fs, n), e));   // back of the hand toward him = palm flat on the face he pushes
-      this.hand(pB, side, [0.1, 0.1, 0.15, 0.2], 0.1, 0.35);                                                                       // open, the fingers a little apart…
-      this.turn(pB, this.thumbs[side][0], quat.axisAngle(quat.rotate(fk.rot[hd], AY), (side ? 1 : -1) * 40 * DEGR * e));          // …and the thumb up into the palm's plane: at rest it hangs 8 cm palm-ward of it (down and forward off a T-posed hand), which flat on a door is 4 cm into the wood — 40° about the fingers' axis (the hand bone's +Y) lays it alongside the index
-      blendPose(pA, pB, smoothstep(0, 0.25, e), side ? this.armROnly : this.armLOnly, pA);
-    }
   }
 
   // ================================================================ HANDWORK (game/handwork.ts feeds all three; nothing here knows what the thing is)
@@ -5951,29 +4026,13 @@ export class CharacterAnimator {
   }
   /** the swap's arm itself, by its envelope e and how far across k it has got, the pose as it stood kept in `sw`: the clock above is the animator's */
   private swapPose(e: number, k: number, weapon: boolean, twY: number, twP: number, sw: Pose) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs swap_pose)
-    if (g < 0) this.swapPoseOwn(e, k, weapon, twY, twP, sw);
-    else if (!LAYERS.both) this.swapPoseAsk(g, e, k, weapon, twY, twP, sw);
-    else layerBoth('swapPose', this.pA, this.fk, () => this.swapPoseAsk(g, e, k, weapon, twY, twP, sw), () => this.swapPoseOwn(e, k, weapon, twY, twP, sw), colsOf(CharacterAnimator.handCols, this), [sw]);
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs swap_pose)
+    this.swapPoseAsk(g, e, k, weapon, twY, twP, sw);
+    if (LAYERS.watch) LAYERS.watch('swapPose', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this), [sw]);
   }
   private swapPoseAsk(g: number, e: number, k: number, weapon: boolean, twY: number, twP: number, sw: Pose) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[1]; a[o] = e; a[o + 1] = k; a[o + 2] = weapon ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; for (let i = 0; i < 4; i++) a[o + 5 + i] = F[i];
     this.handsAsk(() => POSE_BENCH.x!.layer_swap_pose(g, this.pA.at, this.pB.at, this.rest.at, sw.at));
-  }
-  private swapPoseOwn(e: number, k: number, weapon: boolean, twY: number, twP: number, sw: Pose) {
-    const nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
-    fk.run(pA); const un = this.untwist(twY, twP);
-    const hp = fk.pos[nd.hips], th = fk.pos[nd.thighR];
-    const belt = un([hp[0] - 0.13, hp[1] + 0.1, hp[2] + 0.12]), hol = un([th[0] - 0.1, th[1] + 0.06, th[2] + 0.01]);   // the wrist over the torch's ring at the front of the right hip · over the sidearm's grip on the thigh
-    const first = weapon ? belt : hol, second = weapon ? hol : belt;
-    const P = v3.lerp(first, second, k);
-    pB.copy(pA); fk.run(pB);
-    const live0 = v3.copy(fk.pos[nd.handR]), rot0: Quat = [...fk.rot[nd.handR]] as Quat;
-    this.turn(pB, nd.shoulderR, qRoll(4 * DEGR * e)); fk.run(pB);   // (the shoulder drops a little with the reach down)
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(live0, P, e), [-0.5, 0.15, -1], e, quat.nlerp(rot0, this.handRot(1, [0.05, -1, 0.15], [-0.75, 0, 0.6]), e));   // fingers down onto it, the back of the hand out to his right; the elbow back
-    this.hand(pB, 1, [0.72, 0.78, 0.82, 0.85], 0.5);
-    sw.copy(pA);
-    blendPose(pA, pB, smoothstep(0, 0.25, e), this.armROnly, pA);
   }
 
   /** HANDS AT WORK ON A THING (work — see WorkPose): built like the door hand. The hand that is FREE does it — his right when that is empty (no pistol, torch,
@@ -5987,10 +4046,9 @@ export class CharacterAnimator {
     if (!L) { K.shown = 0; return; }
     const live = K.fed && free;
     if (!live && clamp(Math.max(K.wL.x, K.wR.x), 0, 1) <= 0.003) { K.wL.x = K.wL.v = K.wR.x = K.wR.v = 0; K.okL = K.okR = false; K.shown = 0; if (!K.fed && K.tw.x < 0.003) K.last = null; return; }
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs work_layer)
-    if (g < 0) this.workLayerOwn(L, dt, live, armed, twY, twP);
-    else if (!LAYERS.both) this.workLayerAsk(g, L, dt, live, armed, twY, twP);
-    else layerBoth('workLayer', this.pA, this.fk, () => this.workLayerAsk(g, L, dt, live, armed, twY, twP), () => this.workLayerOwn(L, dt, live, armed, twY, twP), this.withHands(CharacterAnimator.workCols));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs work_layer)
+    this.workLayerAsk(g, L, dt, live, armed, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('workLayer', this.pA, this.fk, this.withHands(CharacterAnimator.workCols));
   }
   /** the work hands' columns: the two weights' springs, whether each hand's spot is in reach, the lead hand, both hands?, and the weight shown */
   private static readonly workCols: LayerCols<CharacterAnimator> = { n: 9,
@@ -6004,97 +4062,6 @@ export class CharacterAnimator {
     for (let i = 0; i < nk; i++) { a[q + i * 2] = keys[i][0]; a[q + i * 2 + 1] = keys[i][1]; }
     colsToBench(CharacterAnimator.workCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_work_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.workCols, this);
   }
-  private workLayerOwn(L: WorkPose, dt: number, live: boolean, armed: boolean, twY: number, twP: number) {
-    const K = this.wk, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB, wWas = clamp(Math.max(K.wL.x, K.wR.x), 0, 1);
-    const done = L.t > L.dur;
-    if (live && !done) {   // (which hands: settled while the verb runs, kept while it comes away)
-      const rFree = L.hand !== 0 && !armed && this.upper !== 'torch' && (!this.longGun || this.stowed) && (!this.grip[1] || this.stowed) && this.throwT < 0 && this.sw.t < 0;
-      K.main = rFree ? 1 : 0; K.two = (L.kind === 'charge' || L.kind === 'take') && rFree;
-    }
-    const main = K.main, t = L.t, dur = L.dur;
-    fk.run(pA);
-    const p0 = this.toModelP(L.p), n0 = v3.normalize(this.toModelD(L.n));
-    // ---- the body: bowed to a low thing, leaned into a long reach (by last frame's weight; the head levelled back out of both), the eyes onto it
-    const ua0 = main ? nd.upperArmR : nd.upperArmL;
-    const into: Vec3 = v3.normalize([-n0[0], 0, -n0[2] + 1e-6]), ax: Vec3 = v3.cross(AY, into);
-    const bow1 = 30 * DEGR * smoothstep(0.3, 0.8, (fk.pos[nd.upperArmL][1] + fk.pos[nd.upperArmR][1]) / 2 - p0[1]), lean1 = 14 * DEGR * smoothstep(0.42, 0.66, v3.dist(fk.pos[ua0], v3.mad(p0, n0, 0.12)));
-    const body = (pose: Pose, bow: number, lean: number) => { const q = (s: number) => quat.mul(quat.axisAngle(ax, lean * s), qPitch(bow * s));
-      this.turn(pose, nd.spine1, q(0.4)); this.turn(pose, nd.spine2, q(0.35)); this.turn(pose, nd.spine3, q(0.25)); this.turn(pose, nd.neck, q(-0.4)); this.turn(pose, nd.head, q(-0.4)); };
-    let shFull: [Vec3, Vec3] | null = null;   // where the shoulders WILL be once he has bowed and leaned in: what the reach is asked of while the hands are still coming up
-    if (live && !done && wWas < 0.97 && bow1 + lean1 > 1e-4) { pB.copy(pA); body(pB, bow1, lean1); fk.run(pB); shFull = [v3.copy(fk.pos[nd.upperArmL]), v3.copy(fk.pos[nd.upperArmR])]; }
-    const ease = wWas * (done ? smoothstep(dur + 0.3, dur, t) : 1), bow = bow1 * ease, lean = lean1 * ease;
-    if (bow + lean > 1e-4) body(pA, bow, lean);
-    if (shFull || bow + lean > 1e-4) fk.run(pA);
-    const un = this.untwist(twY, twP);
-    const pT = un(p0), nT = v3.normalize(v3.sub(un(v3.add(p0, n0)), pT));
-    let r0 = v3.cross(AY, n0); r0 = v3.len(r0) < 1e-4 ? [-1, 0, 0] : v3.normalize(r0);   // the thing's right as he sees it (model −X is his right)
-    const rT = v3.normalize(v3.sub(un(v3.add(p0, r0)), pT)), uT = v3.cross(nT, rT);
-    const at = (x: number, y: number, off: number): Vec3 => v3.mad(v3.mad(v3.mad(pT, rT, x), uT, y), nT, off);
-    if (!done) this.lookAt(pA, at(0, 0, 0), 0.75 * wWas);
-    fk.run(pA);
-    // ---- what each hand does, by kind: the wrist's spot, where the fingers point and the back of the hand faces, the fingers themselves
-    type Shape = { wrist: Vec3; f: Vec3; b: Vec3; curl: number[]; thumb: number; spread: number; body?: boolean };
-    const mix = (A: Shape, B: Shape, k: number): Shape => k <= 0 ? A : k >= 1 ? B : { wrist: v3.lerp(A.wrist, B.wrist, k), f: v3.lerp(A.f, B.f, k), b: v3.lerp(A.b, B.b, k), curl: A.curl.map((c, i) => lerp(c, B.curl[i], k)), thumb: lerp(A.thumb, B.thumb, k), spread: lerp(A.spread, B.spread, k), body: B.body };
-    const flat = (side: 0 | 1, x: number, y: number, off: number): Shape => { const f = v3.normalize(v3.add(v3.scale(uT, 0.9), v3.scale(rT, (side ? 1 : -1) * 0.42))); return { wrist: v3.mad(v3.mad(at(x, y, off), nT, 0.035), f, -0.08), f, b: nT, curl: [0.1, 0.1, 0.15, 0.2], thumb: 0.1, spread: 0.35 }; };   // a palm on the face (the door hand's numbers)
-    const tips = (side: 0 | 1, x: number, y: number, off: number): Shape => { const f = v3.normalize(v3.add(v3.scale(nT, -1), v3.scale(uT, -0.3))); return { wrist: v3.mad(at(x, y, off), f, -0.17), f, b: v3.normalize(v3.add(uT, v3.scale(rT, (side ? 1 : -1) * 0.25))), curl: [0.12, 0.12, 0.16, 0.2], thumb: 0.25, spread: 0.3 }; };   // the same push from further off: the arm long, the fingers' pads on it from a little above
-    const pushOn = (side: 0 | 1, x: number, y: number, off: number): Shape => { const A = flat(side, x, y, off), sh = shFull?.[side] ?? fk.pos[side ? nd.upperArmR : nd.upperArmL]; return mix(A, tips(side, x, y, off), smoothstep(0.48, 0.56, v3.dist(sh, A.wrist))); };   // palm flat where the shoulder is near enough for it, else the long arm
-    const poke = (side: 0 | 1, x: number, y: number, off: number, curl: number[], thumb: number): Shape => { const f = v3.normalize(v3.add(v3.scale(nT, -1), v3.scale(uT, 0.25))); return { wrist: v3.mad(at(x, y, off), f, -WORK.tipLen), f, b: v3.normalize(v3.add(uT, v3.scale(rT, side ? 0.3 : -0.3))), curl, thumb, spread: 0 }; };   // a forefinger's tip at a spot, the wrist behind and a little under it
-    const shape = (side: 0 | 1): Shape => {
-      const sg = side ? 1 : -1, lead = side === main;
-      switch (L.kind) {
-        case 'keys': {
-          const keys = L.keys && L.keys.length ? L.keys : NO_KEYS; let kx = keys[0][0], ky = keys[0][1], press = 0;
-          for (let k = 0; k < 4; k++) { const tk = workKeyBeat(k, dur), key = keys[k % keys.length]; if (k) { const gl = smoothstep(tk - 0.19, tk - 0.06, t); kx = lerp(kx, key[0], gl); ky = lerp(ky, key[1], gl); } press += bump(t, tk - 0.07, tk - 0.005, tk + 0.03, tk + 0.1); }
-          return poke(side, kx, ky, WORK.keyOff + WORK.hover * (1 - press), [0.03, 0.8, 0.88, 0.92], 0.8);
-        }
-        case 'charge': {
-          const u = t / dur, rub = 0.014 * Math.sin(t * 6.5) * bump(u, 0.12, 0.25, 0.5, 0.6);
-          if (!lead) return pushOn(side, sg * 0.05, -0.025 - rub, 0.022);   // the other hand holds it to the face
-          const press = pushOn(side, K.two ? sg * 0.05 : 0, 0.01 + rub, 0.022);
-          return mix(press, poke(side, 0.012 * Math.sin(t * 9), 0.1, 0.03, [0.25, 0.35, 0.85, 0.9], 0.15), smoothstep(0.6, 0.72, u));   // …then the fingers at the cap on its top edge
-        }
-        case 'lever': {
-          const dir = L.dir ?? 1, thr = smoothstep(dur - 0.26, dur - 0.1, t), jig = dur > 1.2 ? bump(t, 0.45, 0.55, 0.62, 0.8) + bump(t, 1.0, 1.1, 1.17, 1.35) : 0;
-          const G = at(0, dir * (WORK.lever * (1 - 2 * thr) - 0.012 * jig), 0.05), f = v3.normalize(v3.add(v3.scale(nT, -1), v3.scale(uT, -0.2)));
-          return { wrist: v3.mad(v3.mad(G, nT, 0.075), uT, 0.03), f, b: uT, curl: [0.7, 0.75, 0.75, 0.75], thumb: 0.55, spread: 0 };   // a fist over the handle from above
-        }
-        default: {   // 'take'
-          const u = clamp(t / dur, 0, 1), out = 0.05 + 0.17 * smoothstep(0.55, 0.96, u) + 0.004 * Math.sin(t * 13) * bump(u, 0.15, 0.25, 0.9, 1);
-          const G = at(K.two ? sg * 0.045 : 0, 0, out), g = smoothstep(0.12, 0.22, u) * 0.6;
-          const hold: Shape = { wrist: v3.mad(G, nT, 0.085), f: v3.scale(nT, -1), b: v3.normalize(v3.add(v3.scale(rT, sg * 0.85), v3.scale(uT, 0.5))), curl: [g, g, g + 0.05, g + 0.1], thumb: 0.45, spread: 0.1 };   // fingers in, palms toward each other, thumbs up
-          if (!done || !lead) return hold;
-          const hp = fk.pos[nd.hips]; const hip = un([hp[0] - sg * 0.17, hp[1] + 0.08, hp[2] + 0.1]);   // put away: the hand carries it down to the pouch at the front of that hip
-          return mix(hold, { wrist: hip, f: [0, -1, 0.2], b: [-sg * 0.9, 0, 0.3], curl: [0.6, 0.6, 0.65, 0.7], thumb: 0.45, spread: 0, body: true }, smoothstep(dur, dur + 0.3, t));
-        }
-      }
-    };
-    // ---- which arms are up, and can each reach (asked inside 0.57 m of the shoulder joint and ahead of it, let go past 0.6; the put-away is on his own body)
-    const sides: (0 | 1)[] = K.two ? [0, 1] : [main];
-    let tgtL = 0, tgtR = 0;
-    if (live) for (const side of sides) {
-      if (done && side !== main) continue;   // (the other hand lets go once the thing is out)
-      const sh = fk.pos[side ? nd.upperArmR : nd.upperArmL], S = shape(side), shF = shFull?.[side]; let d = v3.dist(sh, S.wrist), ahead = S.wrist[2] - sh[2];
-      if (shF) { const dF = v3.dist(shF, S.wrist); if (dF < d) { d = dF; ahead = Math.max(ahead, S.wrist[2] - shF[2]); } }
-      const was = side ? K.okR : K.okL, ok = S.body || (was ? d < 0.6 && d > 0.14 && ahead > 0.0 : d < 0.57 && d > 0.18 && ahead > 0.04);
-      if (side) K.okR = ok; else K.okL = ok;
-      if (ok) { if (side) tgtR = 1; else tgtL = 1; }
-    }
-    const rate = (tg: number, x: number) => tg > x ? 26 : 22;
-    const wL = clamp(K.wL.step(tgtL, rate(tgtL, K.wL.x), dt), 0, 1), wR = clamp(K.wR.step(tgtR, rate(tgtR, K.wR.x), dt), 0, 1);
-    K.shown = main ? wR : wL;
-    for (const side of [0, 1] as const) {
-      const e = side ? wR : wL; if (e < 0.003) continue;
-      const S = shape(side);
-      pB.copy(pA); fk.run(pB);
-      const shN = side ? nd.shoulderR : nd.shoulderL, ua = side ? nd.upperArmR : nd.upperArmL, fa = side ? nd.forearmR : nd.forearmL, hd = side ? nd.handR : nd.handL;
-      const live0 = v3.copy(fk.pos[hd]), rot0: Quat = [...fk.rot[hd]] as Quat;
-      const far = smoothstep(0.38, 0.54, v3.dist(fk.pos[ua], S.wrist)) * e;
-      if (far > 1e-3) { this.turn(pB, shN, quat.mul(qYaw((side ? 1 : -1) * 10 * DEGR * far), qRoll((side ? -1 : 1) * 3 * DEGR * far))); fk.run(pB); }   // the shoulder reaches too (the door hand's turn)
-      twoBoneIK(fk, pB, ua, fa, hd, v3.lerp(live0, S.wrist, e), [(side ? -1 : 1) * 0.45, -1, -0.3], e, quat.nlerp(rot0, this.handRot(side, S.f, S.b), e));   // elbow down and out
-      this.hand(pB, side, S.curl, S.thumb, S.spread);
-      blendPose(pA, pB, smoothstep(0, 0.25, e), side ? this.armROnly : this.armLOnly, pA);
-    }
-  }
 
   /** THE TORCH UP IN THE HAND THAT HOLDS IT (GUNHAND.whistle, gunhand.ts; upper 'torch': a guard answering a whistle). The library's Idle_Torch_Loop is keyed for a
    *  torch in the LEFT hand — a fist out ahead of the chest, thumb up — and ours is in the right, so its arms showed an empty fist raised and the torch left
@@ -6104,22 +4071,13 @@ export class CharacterAnimator {
    *  the chest twist as an arm does, and so does the light: the torch and its lens are placed off this wrist (rigProps.ts rigTorchPos). Up and down on a clock of
    *  its own (`tuK`, 0.4 s, eased at both ends): the hand turns right over on the way, and at the carry weight's own rate that was 20° in a frame. */
   private torchUpLayer(e: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs torch_up)
-    if (g < 0) this.torchUpLayerOwn(e);
-    else if (!LAYERS.both) this.torchUpLayerAsk(g, e);
-    else layerBoth('torchUpLayer', this.pA, this.fk, () => this.torchUpLayerAsk(g, e), () => this.torchUpLayerOwn(e));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs torch_up)
+    this.torchUpLayerAsk(g, e);
+    if (LAYERS.watch) LAYERS.watch('torchUpLayer', this.pA, this.fk, null);
   }
   private torchUpLayerAsk(g: number, e: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[1]; a[o] = e; for (let i = 0; i < 4; i++) a[o + 1 + i] = F[i];
     layerRan(POSE_BENCH.x!.layer_torch_up(g, this.pA.at, this.pB.at), this.fk);
-  }
-  private torchUpLayerOwn(e: number) {
-    const nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
-    pB.copy(pA); fk.run(pB);
-    const sh = fk.pos[nd.upperArmR], live0 = v3.copy(fk.pos[nd.handR]), rot0: Quat = [...fk.rot[nd.handR]] as Quat;
-    const wrist: Vec3 = [sh[0] - 0.07, sh[1] + 0.04, sh[2] + 0.22];
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(live0, wrist, e), [-0.3, -1, 0], e, quat.nlerp(rot0, this.handRot(1, [0, 0.92, 0.38], [-1, 0.1, 0]), e));   // the elbow down and a little out
-    blendPose(pA, pB, smoothstep(0, 0.25, e), this.armROnly, pA);
   }
 
   /** A HAND TO THE RADIO (radio(); rx): the left hand up to the handset clipped at his left collar, thumb on the switch, the head turned and tipped to it — while
@@ -6135,25 +4093,13 @@ export class CharacterAnimator {
   }
   /** the hand at the radio itself, by w, and the head's share hw: the clock above is the animator's */
   private radioPose(w: number, hw: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs radio_pose)
-    if (g < 0) this.radioPoseOwn(w, hw);
-    else if (!LAYERS.both) this.radioPoseAsk(g, w, hw);
-    else layerBoth('radioPose', this.pA, this.fk, () => this.radioPoseAsk(g, w, hw), () => this.radioPoseOwn(w, hw), colsOf(CharacterAnimator.handCols, this));
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs radio_pose)
+    this.radioPoseAsk(g, w, hw);
+    if (LAYERS.watch) LAYERS.watch('radioPose', this.pA, this.fk, colsOf(CharacterAnimator.handCols, this));
   }
   private radioPoseAsk(g: number, w: number, hw: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0]; a[o] = w; a[o + 1] = hw; for (let i = 0; i < 4; i++) a[o + 2 + i] = F[i];
     this.handsAsk(() => POSE_BENCH.x!.layer_radio_pose(g, this.pA.at, this.pB.at, this.rest.at));
-  }
-  private radioPoseOwn(w: number, hw: number) {
-    const nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
-    if (hw > 0.003) { this.turn(pA, nd.neck, quat.mul(qYaw(9 * DEGR * hw), qPitch(5 * DEGR * hw))); this.turn(pA, nd.head, quat.mul(qRoll(-5 * DEGR * hw), quat.mul(qYaw(13 * DEGR * hw), qPitch(8 * DEGR * hw)))); }
-    pB.copy(pA); fk.run(pB);
-    this.turn(pB, nd.shoulderL, qRoll(7 * DEGR * w)); fk.run(pB);
-    const sh = fk.pos[nd.upperArmL]; const live0 = v3.copy(fk.pos[nd.handL]), rot0: Quat = [...fk.rot[nd.handL]] as Quat;
-    const wrist: Vec3 = [sh[0] - 0.035, sh[1] - 0.115, sh[2] + 0.15];   // under and ahead of the collar on that side: the fingers come up onto the handset
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.lerp(live0, wrist, w), [0.75, -1, 0.1], w, quat.nlerp(rot0, this.handRot(0, [-0.4, 0.82, -0.4], [0.3, 0.3, 0.9]), w));
-    this.hand(pB, 0, [0.4, 0.5, 0.6, 0.65], 0.2);
-    blendPose(pA, pB, smoothstep(0, 0.25, w), this.armLOnly, pA);
   }
 
   /** Sam holding a man from behind (holdPose, weight w — HOLD has the numbers): over whatever the legs are doing, the torso comes forward to the man's back (leaning
@@ -6169,10 +4115,9 @@ export class CharacterAnimator {
    *  station, the pistol muzzle-high on the way as in its grab; through the middle the two arm solves cross-fade in joint space, both all but at that point,
    *  so the turn of the wrist from one grip to the other never pops. */
   private holdLayer(w: number, dt: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs hold_layer)
-    if (g < 0) this.holdLayerOwn(w, dt);
-    else if (!LAYERS.both) this.holdLayerAsk(g, w, dt);
-    else layerBoth('holdLayer', this.pA, this.fk, () => this.holdLayerAsk(g, w, dt), () => this.holdLayerOwn(w, dt), this.withHands(CharacterAnimator.holdCols), [this.pB, this.pC]);
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs hold_layer)
+    this.holdLayerAsk(g, w, dt);
+    if (LAYERS.watch) LAYERS.watch('holdLayer', this.pA, this.fk, this.withHands(CharacterAnimator.holdCols), [this.pB, this.pC]);
   }
   /** the hold's columns: five springs (the knife off him, the kill's clock, the choke's eased clock, the lowering, the haul), the sway, where the catch took
    *  the hand from, whether the catch has him, and the catch's mend for catchFix */
@@ -6194,166 +4139,6 @@ export class CharacterAnimator {
     for (let i = 0; i < 3; i++) { a[o + 17 + i] = m ? m[i] : 0; a[o + 26 + i] = sa ? sa[i] : 0; a[o + 35 + i] = rd ? rd[i] : 0; a[o + 46 + i] = U[i]; } for (let i = 0; i < 4; i++) { a[o + 38 + i] = F[0][i]; a[o + 42 + i] = F[1][i]; }
     colsToBench(CharacterAnimator.holdCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_hold_layer(g, this.pA.at, this.pB.at, this.pC.at, this.pAim.at, this.rest.at)); colsFromBench(CharacterAnimator.holdCols, this);
   }
-  private holdLayerOwn(w: number, dt: number) {
-    const H = this.holdPose ?? this.hdLast, K = HOLD; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
-    const ph = H.phase, t = H.t, gunV = H.variant === 'gun', G = K.gun, N = K.knife, F = K.struggle;   // gunV: the variant proper — what the choke, the whip and the flinch key off; gv below is its eased share of the POSE
-    const gv = clamp(this.hdGv.x, 0, 1);
-    const ug = ph === 'grab' ? clamp(t / K.secs.grab, 0, 1) : 1;                              // the reach, 0 → 1
-    const CS = K.catchShape && this.noKnife, CT = K.catch, CR = CS && !gunV && ph === 'grab';   // (HOLD.catch: the bare arm hold's eighth pass. CS = the seat, which gives way to a gun by gv, its EASED share — keyed off the variant itself it dropped whole on the frame of a swap, his hips 10 cm and the man's 18. CR = the reach round his neck, the arm variant's grab)
-    const ck = ph === 'choke' && !gunV ? smoothstep(0, K.secs.choke * 0.75, t) : 0;           // the elbow closing
-    const knE = clamp(this.hdKn.step(ph === 'choke' ? 1 : 0, ph === 'choke' ? 6 / N.offSecs : 3 / N.offSecs, dt), 0, 1), kn = this.noKnife ? 1 : knE;   // the blade coming off him for the choke (and back, slower, off an aborted one) — never on in a gun hold, which has no choke
-    const fight = knE * (ph === 'choke' ? 1 - smoothstep(F.fadeFrom, F.fadeTo, t / K.secs.choke) : 1);                  // what Sam braces against: the man's fight (heldLayer's envelope, near enough), spent as he goes — carried on kn so easing off lets it down gently
-    const wnd = ph === 'whip' ? smoothstep(0, WHIP_WIND, t) : 0;                                                     // the whip: cocked back (and it stays cocked under the strike's blend: wind → hit is one straight whip of the hand)…
-    const stk = ph === 'whip' ? (t < WHIP_STRIKE ? 0 : hermite(t, WHIP_STRIKE, 0, 0, K.secs.whip, 1, 7)) : 0;      // …brought down, ARRIVING fast (≈ 2 m/s at the bone)…
-    const thru = ph === 'whip' ? smoothstep(K.secs.whip, K.secs.whip + WHIP_THRU, t) : 0;                            // …and on through as he drops (the layer lets go after it)
-    // the disarm (HOLD.strip; game/disarm.ts feeds it while the move runs, and only to a hold that is up): the right hand's own errand through the grab and the hold's first beat
-    const SP = this.holdPose?.strip ?? null, ST = K.strip, sT = SP ? SP.t : 0, sArm = !!SP && !gunV && sT < ST.home;
-    // the kill (HOLD.kill): the free hand to his mouth (kW) · the blade drawn across and out wide (kS) · the arm coming down across his chest (kC) · letting him down (kA)
-    const KL = K.kill, kk = killEase(this.hdKc, (H.kill ?? HOLD_SHOW.kill) && ph === 'kill' && !gunV, t, dt), kOn = kk > 1e-4;
-    const kW = kOn ? smoothstep(0, KL.wind, kk) : 0, kS = kOn ? smoothstep(KL.hit - 0.07, KL.out, kk) : 0, kC = kOn ? smoothstep(KL.hit + 0.05, KL.hit + 0.3, kk) : 0, kA = kOn ? smoothstep(KL.go, 1, kk) : 0;
-    // ---- body English straight into pA: lean over the three spine joints (hips lead), head yaw / pitch on neck + head, levelled back out of the lean; the gun hold
-    //      keeps less chest on him, its whip loads the chest back then brings it through; the arm hold sways a couple of degrees against the choke's fight
-    const eBody = smoothstep(0.15, 0.9, ug);
-    // the lowering (HOLD.lower): on an eased copy of the choke's clock, as the man's own (heldLayer's heCk) — an eased-off choke stands both back up over half a second
-    const LW = (H.beats ?? HOLD_SHOW.beats) ? K.beats.lower : K.lower, lck = clamp(this.hdCk.step(ph === 'choke' && !gunV ? clamp(t / K.secs.choke, 0, 1) : 0, ph === 'choke' ? 30 : 9, dt), 0, 1);
-    const lo = lowerEase(this.hdLo, (H.low ?? 0) > 0 ? clamp(H.low!, 0, 1) * smoothstep(LW.from, LW.by, lck) : 0, LW.up, dt) * (1 - clamp(this.hdGv.x, 0, 1)), lw = this.holdPose ? 1 : w;   // (× the arm hold's share, as the man's: a gun drawn mid-rise stands both up together; lw = the layer's weight only while it fades: with a hold up the weight is in the spring, see where hdOn is set)
-    // the haul (HOLD.haul): up and back with him as the arm closes, set down again before the lowering — on the same eased clock; let go of early, eased down
-    const HU = K.haul, hu = haulEase(this.hdHu, !!H.haul && ph === 'choke' && !gunV, smoothstep(HU.in[0], HU.in[1], lck) * (1 - smoothstep(HU.out[0], HU.out[1], lck)), HU.down, dt) * (1 - clamp(this.hdGv.x, 0, 1)) * lw, hauled = hu > 1e-4;
-    const yk = H.yank !== undefined && this.holdPose ? bump(H.yank, 0, K.yank.in, K.yank.in + K.yank.hold, K.yank.in + K.yank.hold + K.yank.out) : 0;   // (HOLD.yank: he sits into the haul)
-    const HT = K.hit, hbS = K.hitShape && CS && H.yank !== undefined ? bump(H.yank, HT.t[0], HT.t[1], HT.t[2], HT.t[3]) * (1 - gv) * w : 0;   // (HOLD.hit: his chest lands on the man's back)
-    const LG = K.lunge, dipW = H.step !== undefined && this.holdPose && ph === 'grab' ? bump(H.step, 0, LG.t[0], LG.t[0] + LG.t[1], LG.t[0] + LG.t[1] + LG.t[2]) : 0;   // (HOLD.lunge: the spring before it)
-    const swS = (this.hdSw = this.noKnife && this.holdPose && ph === 'held' ? Math.sin(t / K.sway.secs * 2 * Math.PI) * smoothstep(0, K.sway.in, t) : damp(this.hdSw, 0, K.sway.out, dt)) * (1 - gv) * w;   // (HOLD.sway: weight from foot to foot — let go of over a few frames when the hold becomes something else, never dropped)
-    const swOn = K.sway.m !== 0 && (1 - gv) * w > 1e-4 && (this.noKnife && this.holdPose && ph === 'held' ? smoothstep(0, K.sway.in, t) > 1e-4 : Math.abs(this.hdSw) > 1e-4);   // (the sway is ON, whatever its sine reads this tick: asked by the sine's own value, the leg solve below dropped out for the one tick in each half swing that lands on zero, and a knee jumped 3 cm and back)
-    const seatF = CS ? (ph === 'grab' ? smoothstep(0.55, 1, ug) : 1) * (1 - gv) * w : 0, seat = seatF * (1 - clamp(lo, 0, 1)) * (1 - clamp(hu, 0, 1));   // (seatF: the FEET's share — where the seat set his rear foot it stays through the lowering and the haul: given up with the rest it slid 19 cm across the floor as he went down)
-    // (HOLD.catch.seat, of `seat`: sat back behind him — given up to the lowering and the haul, which have their own fitted places, and to a gun's share)
-    const PS = H.pull !== undefined && H.yank !== undefined ? H.pull * w : 0, lagS = (i: number) => PS > 1e-4 ? smoothstep(CT.samFeet[i][0], CT.samFeet[i][1], H.yank!) : 1, eSL = lagS(0), eSR = lagS(1), lagOn = PS * (1 - Math.min(eSL, eSR)) > 1e-4;   // (HOLD.catch.samFeet: he goes back with the man in the haul and his feet STEP it, the rear one first — slid with his root they skated 28 cm at one height)
-    const legW = CS ? lerp(0.6 * clamp(8 * Math.max(seatF, lo, kA, yk, dipW, hbS, swOn ? 1 : 0, 20 * PS * (1 - Math.min(eSL, eSR))), 0, 1), 0.6, gv) : 0.6;   // (…and with it the knees' swivel comes on with whatever asks for the solve and goes with it: at a whole 0.6 from its first frame a knee moved 2 cm where the solve began or ended)
-    if (lo > 1e-4 || kA > 1e-4 || yk > 1e-4 || ((LG.dip !== 0 || LG.back !== 0) && dipW > 1e-4) || swOn || seatF > 1e-4 || lagOn || hbS > 1e-4) {   // (a clock with nothing to move enters nothing: with the polish down the legs are as they were)   // he sinks with him: pelvis down over feet pinned where they stand, knees out to either side of the man (the kill: a hand's breadth, to let him down)
-      fk.run(pA);
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      this.shift(pA, nd.hips, kA > 1e-4 ? [0, -LW.samSink * lo * lw - KL.samSink * kA * w, LW.samFwd * lo * lw] : [K.sway.m * swS + CT.seat[2] * seat, -LW.samSink * lo * lw - K.yank.sink * yk * w * (CS ? CT.yankSit : 1) - LG.dip * dipW - CT.seat[1] * seat - HT.samDip * hbS, LW.samFwd * lo * lw - LG.back * dipW - CT.seat[0] * seat + HT.samIn * hbS]); fk.run(pA);
-      const pole = (r: Quat, sx: number): Vec3 => { const k = this.kneePole(r); return v3.normalize([k[0] + sx * LW.samKnees * lo, k[1], k[2]]); };
-      const stepS = (f: Vec3, e: number): Vec3 => lagOn ? [f[0], f[1] + CT.samLift * Math.sin(Math.PI * e) * Math.min(1, PS / 0.1), f[2] + PS * (1 - e)] : f, sL = stepS(fL, eSL), sR = stepS(fR, eSR);
-      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, sL, pole(rL, 1), legW, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, seatF > 1e-4 ? [sR[0] - CT.brace[1] * seatF, sR[1] + (ph === 'grab' ? CT.braceLift * Math.sin(Math.PI * smoothstep(0.55, 1, ug)) * seatF : 0), sR[2] - CT.brace[0] * seatF] : sR, pole(rR, -1), legW, rR, true);   // (HOLD.catch.brace: the rear foot back and out under the seat)
-    }
-    const ckE = (H.low ?? 0) > 0 ? Math.max(ck, smoothstep(0, 0.75, lck)) : ck;   // (with the lowering on, a choke EASED OFF lets the trunk and the arm back out on the eased clock: the choke's own lets go in a frame, and his head went 8 cm with it; ck itself all the way in — the eased clock trails it)
-    const lean0 = lerp(lerp(K.lean, G.lean, gv), K.chokeLean, ckE) * DEGR * w * eBody;
-    const lean1 = lo > 1e-4 ? lean0 + LW.samLean * lo * DEGR * lw : lean0;
-    const lean2 = kOn ? lean1 + (KL.lean[0] * kW * (1 - kA) + KL.lean[1] * kA) * DEGR * w : lean1;
-    const lean = (hauled ? lean2 + HU.samLean * hu * DEGR : lean2) + CT.seatLean * seat * DEGR - HT.heave * hbS * DEGR;   // (the kill: back into the haul on his head, then forward after him)   // (HOLD.catch.seat: over him from further back)
-    const brace = K.brace * Math.sin(this.idleT * 2 * Math.PI * F.hz[2] + 0.7) * fight * DEGR * w;   // (nothing unless the choke is on: fight rides kn)
-    const side = (lerp(N.side, G.side, gv) - (this.noKnife ? K.apart.side * (1 - gv) : 0)) * DEGR * w * eBody + brace;   // (HOLD.apart: further out the way N.side already carries his head)   // (+ roll = left shoulder up = the head carried out to the right)
-    const yawW = (G.windYaw * wnd * (1 - stk) + G.hitYaw * (stk - thru)) * DEGR * w + (sArm ? ST.yaw * bump(sT, ST.take - 0.05, ST.out - 0.02, ST.out + 0.06, ST.drop + 0.14) * DEGR * w : 0);   // (the whip's: zero the rest of the time — and the disarm's: the right shoulder goes back with the gun as it is torn out)
-    const yawB = kOn ? yawW + (KL.yaw[0] * kW * (1 - kS) + KL.yaw[1] * kS * (1 - 0.5 * kA)) * DEGR * w : yawW;   // (the kill's: the chest loads left and comes through to the right with the blade)
-    this.turn(pA, nd.spine1, quat.mul(qYaw(yawB * 0.3), qPitch(lean * 0.45))); this.turn(pA, nd.spine2, quat.mul(qYaw(yawB * 0.35), quat.mul(qRoll(side * 0.4), qPitch(lean * 0.35)))); this.turn(pA, nd.spine3, quat.mul(qYaw(yawB * 0.35), quat.mul(qRoll(side * 0.6), qPitch(lean * 0.2))));
-    const hy = lerp(N.headYaw, G.headYaw, gv) * DEGR * w * eBody - yawB, hp = (lerp(K.headPitch, G.headPitch, gv) * DEGR - lean) * w * eBody + (lo > 1e-4 ? LW.samLook * LW.samLean * lo * DEGR * lw : 0) + (kOn ? KL.look * kA * DEGR * w : 0);   // (the head stays where it looks while the chest loads and comes through under it)
-    this.turn(pA, nd.neck, quat.mul(qRoll(side * 0.8 - brace), quat.mul(qYaw(hy * 0.4), qPitch(hp * 0.4)))); this.turn(pA, nd.head, quat.mul(qRoll(-side * 0.9), quat.mul(qYaw(hy * 0.6), qPitch(hp * 0.6))));   // (the head un-tips itself: eyes level, out beside his — and rides the bracing sway out)
-    this.turn(pA, nd.shoulderL, qRoll(5 * DEGR * w * eBody)); this.turn(pA, nd.shoulderR, qRoll(-lerp(N.clav * (1 - 0.6 * kn), G.clav + 4 * wnd * (1 - stk), gv) * DEGR * w * eBody));   // the choking shoulder comes up and round; the weapon arm's clavicle up with it (less once the knife hand is down on his shoulder)
-    // ---- arms on a copy, against the body as it now is
-    pB.copy(pA); fk.run(pB);
-    const liveL = v3.copy(fk.pos[nd.handL]), liveR = v3.copy(fk.pos[nd.handR]); const rL0 = [...fk.rot[nd.handL]] as Quat, rR0 = [...fk.rot[nd.handR]] as Quat;
-    const limp0 = ph === 'choke' && !gunV ? smoothstep(0.62 * K.secs.choke, 0.95 * K.secs.choke, t) : 0, limp = (H.low ?? 0) > 0 ? Math.max(limp0, smoothstep(0.62, 0.95, lck)) : limp0;   // (the man's own going-limp clock, heldLayer's: as his knees give the arm goes down with him — it is what holds him up)
-    const give: Vec3 = lo > 1e-4 ? [0, -(K.sag[1] - K.sag[0]) * limp - LW.samArm[0] * lo, 0.025 * limp + LW.samArm[1] * lo] : [0, -(K.sag[1] - K.sag[0]) * limp, 0.025 * limp];   // (+ the lowering: the arm goes down with his neck)
-    if (hauled) { give[1] += HU.samArm[0] * hu; give[2] -= HU.samArm[1] * hu; }   // (the haul: the arm goes up and back with his neck)
-    if (seat > 1e-4) give[1] -= CT.sink * seat / Math.max(w, 1e-3);
-    if (hbS > 1e-4) give[1] -= HT.dip * hbS / Math.max(w, 1e-3);   // (HOLD.hit: his knees give under the landing, and the arm goes down with his neck)   // (HOLD.catch: he is sat down into the arm, and the arm is where his neck is)
-    const holdL = v3.add(v3.lerp(K.throat, K.tight, ckE), give), holdR = v3.add(v3.lerp(N.hand, N.offHand, kn), give);   // (the knife hand: at his throat ↔ down on his shoulder)
-    let tgtL: Vec3, tgtR: Vec3;
-    if (ph === 'grab') {   // round the outside of him and on: the left leads (0 → 0.75 of the reach), the right follows (0.2 → 1)
-      const uL = smoothstep(0, 0.75, ug), uR = smoothstep(0.2, 1, ug);
-      if (CR) {   // HOLD.catch: over his left shoulder beside the neck and round the front of the throat — keys that ride the MAN (off: how far he still is from his station, across and ahead), from where the reach had the hand
-        const m = H.man ? this.toModelP(H.man) : null, off: [number, number] = m ? [clamp(m[0], -0.3, 0.3), clamp(m[2] - K.dist, -0.12, 0.45)] : [0, 0], on = (p: Vec3): Vec3 => [p[0] + off[0], p[1], p[2] + off[1]];
-        if (!this.hdFrom) this.hdFrom = v3.copy(this.rdHandL ?? liveL);   // (where the reach had the hand on the frame before, as it was DRAWN — after every layer, the crouch's own among them)
-        tgtL = curve3(uL, [[0, this.hdFrom], [CT.at[0], on(CT.via)], [CT.at[1], on(CT.over)], [1, on(holdL)]]);
-      } else tgtL = curve3(uL, [[0, liveL], [0.4, K.viaL], [0.72, K.overL], [1, holdL]]);
-      tgtR = curve3(uR, [[0, liveR], [0.55, N.via], [1, holdR]]);
-    } else { tgtL = holdL; tgtR = holdR; }
-    if (kOn) {   // the kill: the left hand up over his mouth, then down across his chest and on down with him; the knife fist set at the far side of his neck, drawn across and out wide
-      tgtL = v3.lerp(v3.lerp(tgtL, KL.mouth, kW), v3.lerp(KL.chest, KL.collar, smoothstep(0.3, 1, kA)), kC);
-      tgtR = v3.lerp(kS > 0 ? curve3(kS, [[0, KL.set], [0.4, KL.across], [1, KL.wide]]) : v3.lerp(tgtR, KL.set, kW), KL.low, smoothstep(0.3, 1, kA));
-    }
-    // hands: the left's fingers run on across the throat to his right and hook back round it, palm to the neck (back of the hand forward); the right is the fist round
-    // the knife's handle, turned so the blade out of its thumb side lies where the station wants it (knifeRot)
-    const rotHoldL = this.handRot(0, [-1, 0.12, -0.4], [0.1, 0.35, 1]);
-    const eL = ph === 'grab' ? smoothstep(0.1, 0.7, ug) : 1, eR = ph === 'grab' ? smoothstep(0.3, 0.95, ug) : 1;
-    const csG = CR, uLc = csG ? smoothstep(0, 0.75, ug) : 1, rotReach = csG ? this.handRot(0, [-0.3, 0.1, 1], [0.75, 0.6, -0.1]) : rotHoldL, lv = this.holdPose ? 1 : w;   // (lv: a hold dropped mid-reach lets the arm go WITH the layer's weight — kept whole on the frozen key the hand hung there and then jumped 70 cm)   // (HOLD.catch: the hand stays a reaching hand — fingers ahead — until it is past his shoulder, and only then turns across the throat; turned from the first frame its fingers went through his neck on the way round)
-    const rotL = csG ? quat.nlerp(quat.nlerp(rL0, rotReach, smoothstep(0, CT.armIn, ug)), rotHoldL, smoothstep(CT.at[0], 0.95, uLc)) : quat.nlerp(rL0, rotHoldL, eL);
-    if (csG) { const pole = v3.lerp([0.3, -0.92, 0.15], [0.55, 0.25, 0.85], smoothstep(0.62, 1, uLc)), aIn = smoothstep(0, CT.armIn, ug);   // (the elbow under the wrist and close to him until the hand is round the front of the throat — carried out level it was a wing beside his head — then up onto his collarbone)
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, tgtL, pole, 0.95 * aIn, rotL);
-      this.hdCaught = true; this.hdFix = { tgt: tgtL, pole, poleW: 0.95 * aIn, rot: quat.nlerp(rotReach, rotHoldL, smoothstep(CT.at[0], 0.95, uLc)), w: smoothstep(0, 0.1, ug) * lv, rw: aIn * lv };   // (catchFix, after the layers that still move his trunk)
-    } else {
-    if (this.hdCaught && CS && !gunV && ph === 'held' && this.holdPose && !kOn && t < CT.settle) { const f = 1 - smoothstep(0, CT.settle, t); this.hdFix = { tgt: tgtL, pole: [0.55, 0.25, 0.85], poleW: 0.95, rot: rotHoldL, w: f, rw: f }; } else if (ph !== 'grab') this.hdCaught = false;   // (…and let go of over the hold's first frames: the layers under it are still easing out, and dropped on the phase's frame the hand hopped 1.6 cm. hdCaught: the held that FOLLOWS the catch only — a choke eased off comes back to 'held' at t 0 too)
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, tgtL, kOn ? v3.lerp(v3.lerp([0.55, 0.25, 0.85], [0.9, 0.35, 0.3], kW), [0.85, -0.45, 0.3], kC) : [0.55, 0.25, 0.85], 0.95 * eL, rotL); }   // elbow forward and a little left, up on his left collarbone: the upper arm over his shoulder, the forearm level across the throat
-    const open = 1 - (ph === 'grab' ? smoothstep(0.5, 1, ug) : 1);   // fingers close as the hands arrive
-    const cl = (a: number) => lerp(a, 0.08, open);
-    this.hand(pB, 0, [cl(0.5), cl(0.58), cl(0.64), cl(0.68)], lerp(0.55, 0.1, open), open * 0.4);
-    // ---- the right hand: the knife fist below gv ½, the gun hand above — one or the other from a grab's first frame; between only for the beat of a hand-over
-    //      (see above): xg cross-fades the two arm solves through the middle, backK / backG say how far each grip is withdrawn toward the hand-over point
-    const xg = smoothstep(0.3, 0.7, gv);
-    const backK = ph === 'grab' ? 0 : smoothstep(0, 0.55, gv), backG = ph === 'grab' ? 0 : 1 - smoothstep(0.45, 1, gv);   // (a grab reaches in along its own variant's path: nothing to withdraw)
-    if (xg < 1) {   // the knife fist
-      const eRk = ph === 'grab' ? smoothstep(0.5, 1, ug) : 1;   // the fist keeps the blade pointing ahead (out of the hanging hand's thumb side) round the outside of him, and only turns it across once it is coming in over the shoulder — in front of his face, never through the side of his head
-      const rotK = quat.nlerp(this.knifeRot(N.blade, N.back), this.knifeRot(N.offBlade, N.offBack), kn);
-      const rotR = quat.nlerp(rR0, kS > 0 ? quat.nlerp(rotK, this.knifeRot(KL.wideBlade, KL.wideBack), kS) : rotK, eRk);
-      const poleK = v3.lerp([-0.9, 0.15, -0.4], [-0.8, -0.55, -0.3], kn);
-      const baseR = v3.lerp(tgtR, N.via, backK), poleR = kS > 0 ? v3.lerp(poleK, [-0.85, 0.5, -0.5], kS) : poleK;
-      if (sArm) {
-        // THE DISARM: one path for the wrist, keyed in seconds — round the outside of him onto the gun in his hand (wherever the man's own layer has it: SP.at,
-        // his wrist as last posed), over the top of it; torn out to the right, down and back toward Sam's own hip; let go at the thigh; then up behind the man's
-        // shoulder, where either grab comes in from, and onto its station on him. The hand turns over as it tears (the twist that breaks his grip), opens to let
-        // the gun fall, and is the knife's fist again only once the knife is in it.
-        const M = v3.add(SP!.at ? this.untwist(this.aimYawOffset, -this.aimPitch * this.upperW.aim * 0.35)(this.toModelP(SP!.at)) : [ST.meet[0], ST.meet[1], ST.meet[2] + K.dist], ST.over), back = lerp(ST.drop, ST.home, 0.45);   // (un-twisted: the chest is still coming round from wherever he was looking, and the hand must land on the gun all the same)
-        const p = curve3(stripIn(sT, ST.take), [[0, liveR], [ST.take * 0.55, [lerp(liveR[0], M[0], 0.5) - 0.07, lerp(liveR[1], M[1], 0.6), lerp(liveR[2], M[2], 0.45)]], [ST.take, M], [ST.out, v3.add(M, ST.wrench)], [ST.drop, ST.low], [ST.drop + ST.follow, ST.low], [Math.max(back, ST.drop + ST.follow + 0.06), N.via], [ST.home, baseR]]);
-        const u1 = smoothstep(ST.take * 0.3, ST.take, sT), u2 = smoothstep(ST.take, ST.out, sT), u3 = smoothstep(ST.out, ST.drop, sT), u4 = smoothstep(ST.drop + 0.08, ST.home - 0.06, sT);
-        const rGrip = this.handRot(1, [0.3, -0.5, 0.8], [-0.25, 0.9, 0.3]), rTear = this.handRot(1, [-0.2, -0.8, 0.55], [-0.9, 0.25, 0.3]), rLow = this.handRot(1, [0.05, -1, 0.15], [-1, 0, 0.1]);   // over the top of the gun, fingers round it · rolled out, the back of the hand to the right · hanging at the thigh
-        const grip = smoothstep(ST.take - 0.05, ST.take + 0.02, sT) * (1 - smoothstep(ST.drop, ST.drop + 0.07, sT)), fist = smoothstep(ST.knife - 0.12, ST.knife, sT), cu = (a: number) => lerp(lerp(0.14, 0.7, grip), a, fist);
-        twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, p, v3.lerp([-0.95, -0.3, -0.2], poleR, u4), lerp(0.95 * smoothstep(0, 0.1, sT), 0.9 * Math.max(eR, 0.3), u4), quat.nlerp(quat.nlerp(quat.nlerp(quat.nlerp(rR0, rGrip, u1), rTear, u2), rLow, u3), rotR, u4));
-        this.hand(pB, 1, [cu(0.62), cu(0.68), cu(0.72), cu(0.76)], lerp(lerp(0.15, 0.5, grip), 0.6, fist), 0.25 * (1 - grip) * (1 - fist));
-      } else {
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, baseR, poleR, 0.9 * Math.max(eR, 0.3), rotR);   // elbow out to the right and UP — over the man's shoulder — for the throat; down and back once the fist is on the shoulder
-      this.hand(pB, 1, [0.62, 0.68, 0.72, 0.76], 0.6);   // a fist round the handle from the first frame: the knife is in it the moment the reach begins
-      }
-    }
-    if (xg > 0) {
-      // ---- the gun hand: the right arm re-seeded from the aim clip (its grip and trigger finger — the pistol prop was tuned against that hand), then one rigid turn of
-      //      that grip onto the wanted bore (gripTurn: sights up) and the wrist IK'd to its station; through the grab it comes from wherever the carry had it, wide
-      //      round his right side with the muzzle high, so nothing sweeps his back. Solved on a scratch copy while the knife fist still has a share of the arm.
-      const P = xg < 1 ? this.pC : pB; if (P !== pB) P.copy(pB);
-      const m = this.dynMask; m.fill(0); const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.shoulderR, 1); m[nd.shoulderR] = 0;   // (the clavicle stays the body's: posed above)
-      blendPose(P, this.pAim, 1, m, P); fk.run(P);
-      const pR0 = fk.pos[nd.handR], rAim: Quat = [...fk.rot[nd.handR]] as Quat; const g0 = v3.normalize(v3.sub(fk.pos[nd.middle1R], pR0));   // the clip's bore as posed on this body
-      const gLive = v3.normalize(quat.rotate(quat.mul(rR0, quat.conj(rAim)), g0));                                                             // …and where the carry underneath actually has it pointing
-      const out = clamp(H.gunOut ?? 0, 0, 1) * (1 - wnd), pitch = H.gunPitch ?? 0;
-      const kick = this.shootT >= 0 ? bump(this.shootT, 0, 0.035, 0.06, 0.24) : 0;   // recoil: up in ~35 ms, back down over ~0.2 s
-      // wrist station and bore by phase (a hand-over in progress draws the station back toward its point over his shoulder, muzzle high: backG)
-      const rest = v3.lerp(v3.lerp(G.hand, G.outHand, out), G.viaB, backG);
-      let hand: Vec3, bore: Vec3;
-      const boreRest = v3.normalize(v3.lerp(v3.lerp(G.bore, [0, Math.sin(pitch), Math.cos(pitch)], out), G.viaBore, backG));
-      if (ph === 'grab') {
-        const uR = smoothstep(0.1, 1, ug);
-        hand = SP && SP.at && gunV   // (the disarm, the pistol hold's: the frame comes down on the man's gun wrist on its way round and up to his head)
-          ? (() => { const R = v3.add(this.untwist(this.aimYawOffset, -this.aimPitch * this.upperW.aim * 0.35)(this.toModelP(SP.at!)), ST.rap), g = K.secs.grab; return curve3(stripIn(t, ST.take), [[0, liveR], [ST.take, R], [lerp(ST.take, g, 0.35), G.viaA], [lerp(ST.take, g, 0.7), G.viaB], [g, rest]]); })()
-          : curve3(uR, [[0, liveR], [0.38, G.viaA], [0.7, G.viaB], [1, rest]]);
-        bore = v3.normalize(curve3(uR, [[0, gLive], [0.5, G.viaBore], [1, boreRest]]));
-      } else if (ph === 'whip') {
-        hand = v3.lerp(v3.lerp(v3.lerp(rest, G.windHand, wnd), G.hitHand, stk), G.thruHand, thru);
-        bore = v3.normalize(v3.lerp(v3.lerp(v3.lerp(boreRest, G.windBore, wnd), G.hitBore, stk), G.bore, thru));
-      } else { hand = rest; bore = boreRest; }
-      if (kick > 0) {   // the muzzle flips up about the wrist and the hand comes back along the bore
-        const upK = Math.sin(G.kickPitch * DEGR * kick); bore = v3.normalize([bore[0], bore[1] + upK, bore[2]]);
-        hand = v3.mad(v3.add(hand, [0, 0.01 * kick, 0]), bore, -G.kickBack * kick);
-      }
-      const D = this.gripTurn(g0, rAim, bore, AY);
-      const eG = ph === 'grab' ? smoothstep(0.05, 0.6, ug) : 1;   // (the first frames of the reach: still mostly the carry's own hand)
-      const rotR = quat.nlerp(rR0, quat.mul(D, rAim), eG);
-      const pole = v3.lerp([-1, -0.35, -0.45], [-0.7, 0.2, -0.7], wnd * (1 - stk));   // elbow out to the right and a little down; up and back as it cocks
-      twoBoneIK(fk, P, nd.upperArmR, nd.forearmR, nd.handR, hand, pole, 0.9 * Math.max(eG, 0.3), rotR);
-      if (P !== pB) blendPose(pB, P, xg, this.armROnly, pB);   // (the clavicle is the same on both: only the arm below it moves with the cross-fade)
-    }
-    blendPose(pA, pB, w, this.armsMask, pA);
-    if (csG && this.holdPose && w < 1) { const wL = Math.max(w, smoothstep(0, 0.1, ug)); if (wL > w) blendPose(pA, pB, (wL - w) / (1 - w), this.armLOnly, pA); }   // (HOLD.catch: the left arm is the hold's own before the layer's weight has come in — its path starts where the reach had the hand, so nothing jumps)
-    if (SP && sT < ST.out && w < 1) { const wS = Math.max(w, smoothstep(0, 0.8 * ST.take, sT)); if (wS > w) blendPose(pA, pB, (wS - w) / (1 - w), this.armROnly, pA); }   // (the disarm: the hand is ON the gun at `take`, a tenth of a second before the layer's own weight has come in — its path starts at the live hand, so nothing jumps)
-  }
 
   /** The held man (heldPose, weight w). Body into pA: the spine arched back onto the arm and the head pulled back chin-up (both giving way to a forward loll as a
    *  choke takes him), shoulders hunched, a struggle — shoulder roll, a twist, now and then a jerk — whose size is his agitation, and the pelvis sinking onto soft
@@ -6364,10 +4149,9 @@ export class CharacterAnimator {
    *  come up from wherever they were. A change of variant mid-hold (Sam draws / holsters, E) rides heGv, the eased share of it: the numbers that differ and the
    *  arm targets are blended by it, so his hands re-settle over the beat instead of popping. */
   private heldLayer(w: number, dt: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs held_layer)
-    if (g < 0) this.heldLayerOwn(w, dt);
-    else if (!LAYERS.both) this.heldLayerAsk(g, w, dt);
-    else layerBoth('heldLayer', this.pA, this.fk, () => this.heldLayerAsk(g, w, dt), () => this.heldLayerOwn(w, dt), this.withHands(CharacterAnimator.heldCols), [this.pB]);
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs held_layer)
+    this.heldLayerAsk(g, w, dt);
+    if (LAYERS.watch) LAYERS.watch('heldLayer', this.pA, this.fk, this.withHands(CharacterAnimator.heldCols), [this.pB]);
   }
   /** the held man's columns: seven springs (the choke's eased clock, the kill's, the haul, the lowering's clock, the lowering, the hands off the arm, the
    *  head to the side), the sway, his neck's height over his hips, and each hand's turn as it hung on the frame before */
@@ -6384,172 +4168,6 @@ export class CharacterAnimator {
     for (let i = 0; i < 4; i++) { a[o + 22 + i] = F[0][i]; a[o + 26 + i] = F[1][i]; }
     colsToBench(CharacterAnimator.heldCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_held_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.heldCols, this);
   }
-  private heldLayerOwn(w: number, dt: number) {
-    const H = this.heldPose ?? this.heLast, K = HOLD; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, tt = this.idleT;
-    const ph = H.phase, t = H.t, ag = clamp(H.agitation, 0, 1), G = K.gun, F = K.struggle, TAU = 2 * Math.PI;
-    const gv = clamp(this.heGv.x, 0, 1);   // 0 = the arm at his throat ↔ 1 = the gun at his head (eased across a mid-hold change)
-    const ug = ph === 'grab' ? clamp(t / K.secs.grab, 0, 1) : 1;
-    const ck = clamp(this.heCk.step(ph === 'choke' ? clamp(t / K.secs.choke, 0, 1) : 0, ph === 'choke' ? 30 : 9, dt), 0, 1);   // follows the choke closely, comes back off an aborted one over ~half a second
-    const limp = smoothstep(0.62, 0.95, ck);                                                    // going: the arch and the struggle give way, the head lolls, the hands fall
-    const eIn = smoothstep(0.05, 0.6, ug);                                                     // the startle coming on through the grab
-    const CS = K.catchShape && !!H.bare, CT = K.catch, JT = CT.jolt, CR = CS && H.variant !== 'gun' && ph === 'grab';   // (HOLD.catch: the bare arm hold's eighth pass — CS his seat, given up to a gun by gv, the eased share; CR the arm variant's grab: the jolt and his hands)
-    const jl = CR ? bump(t, JT.t[0], JT.t[1], JT.t[2], JT.t[3]) * w : 0;       // the jolt: he is hit from behind before he is hauled back
-    const HT = K.hit, hb = K.hitShape && CS && H.yank !== undefined ? bump(H.yank, HT.t[0], HT.t[1], HT.t[2], HT.t[3]) * (1 - gv) * w : 0;   // (HOLD.hit: Sam's chest lands on his back — the yank's clock, so nothing in a grab with no step in)
-    const shot = H.shot !== undefined && H.shot >= 0 ? bump(H.shot, 0, 0.05, 0.12, G.duck.secs) * w : 0;   // a round just went past his ear: he ducks off it (only the gun hold fires one; the flinch outlives a holstering by its own half second)
-    const knock = ph === 'whip' ? smoothstep(K.secs.whip - 0.1, K.secs.whip, t) * w : 0;                      // the pistol landing behind his right ear: the head goes with it (and the ragdoll is seeded going that way)
-    // the kill (HOLD.kill), on his own eased copy of its clock: hauled back by the hand on his mouth (kW) · the jolt as the blade goes across (kJ) · his hands at
-    // his throat (kT) and falling (kF) · the head coming forward (kL) · the knees giving, gathering speed (kG: the fall takes it from there)
-    const KL = K.kill, kk = killEase(this.heKc, (H.kill ?? HOLD_SHOW.kill) && ph === 'kill' && H.variant !== 'gun', t, dt), kOn = kk > 1e-4;
-    const kW = kOn ? smoothstep(0, KL.wind, kk) : 0, kJ = kOn ? bump(kk, KL.hit - 0.03, KL.hit + 0.02, KL.hit + 0.08, KL.hit + 0.24) : 0, kT = kOn ? smoothstep(KL.hit, KL.hit + 0.14, kk) : 0;
-    const kF = kOn ? smoothstep(0.58, 1, kk) : 0, kL = kOn ? smoothstep(KL.hit + 0.12, 0.9, kk) : 0, kG = kOn ? clamp((kk - KL.go) / (1 - KL.go), 0, 1) ** 2 * w : 0;   // (kG alone carries the layer's weight: it moves the pelvis and the fold outright; the others sit inside terms that are weighted already)
-    // ---- restlessness: amplitude by agitation (bigger through the grab, gone as he goes limp; smaller with a gun at his head — he holds still for it), and now and
-    //      then a tug at the arm (a jerk of the trunk, the left hand hauling down on the forearm) every 3–6 s
-    const A = (0.35 + 0.65 * ag) * (1 - limp) * (ph === 'grab' ? 1.4 : 1) * lerp(1, 0.55, gv) * w * (kOn ? 1 - kL : 1);
-    const period = 3 + 3 * (0.5 + 0.5 * Math.sin(Math.floor(tt / 4.5) * 12.9898));           // a jerk every 3–6 s (re-dealt each spell), 0.2 s long
-    const jerk = bump(tt % period, 0, 0.06, 0.14, 0.24) * (1 - limp) * w * (0.5 + 0.5 * ag) * (kOn ? 1 - Math.max(kW, kL) : 1);
-    // ---- the choke's fight (arm variant; the gun hold has no choke): an envelope on the EASED choke amount — up fast as the arm closes, spent as he goes, and let
-    //      down gently by heCk if Sam eases off — driving a 2–3 Hz thrash of trunk and head, the hands clawing at the forearm, the knees pumping. Three sines off
-    //      his own desynced clock: deterministic, and no two men fight alike.
-    const S = smoothstep(0, F.rise, ck) * (1 - smoothstep(F.fadeFrom, F.fadeTo, ck)) * (1 - gv) * w;
-    const s1 = Math.sin(tt * TAU * F.hz[0] + 0.4), s2 = Math.sin(tt * TAU * F.hz[1] + 1.3), s3 = Math.sin(tt * TAU * F.hz[2] + 2.1);
-    const roll = (4 * Math.sin(tt * TAU * 0.7) * A + 5 * jerk + F.roll * s3 * S) * DEGR, yawS = (3 * Math.sin(tt * TAU * 0.45 + 1) * A - 7 * jerk + F.yaw * (0.65 * s1 + 0.35 * s2) * S) * DEGR;
-    // ---- hard breathing while he is held (the fight and the going take it over): the chest heaving back and the shoulders lifting on each breath
-    const br = (0.5 - 0.5 * Math.cos(tt * TAU * K.breath.hz)) * (1 - limp) * (1 - 0.7 * S) * lerp(1, 0.6, gv) * w * eIn * (kOn ? 1 - kL : 1);
-    // the haul (HOLD.haul), on his own eased copy of the choke: up and back onto Sam as the arm closes, set down before he is lowered
-    const HU = K.haul, hu = haulEase(this.heHu, !!H.haul && ph === 'choke', smoothstep(HU.in[0], HU.in[1], ck) * (1 - smoothstep(HU.out[0], HU.out[1], ck)), HU.down, dt) * (1 - gv) * (this.heldPose ? 1 : w), hauled = hu > 1e-4;
-    // ---- body: feet noted first (re-planted after the pelvis sinks), then arch / hunch / head
-    fk.run(pA);
-    const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-    const drop = (lerp(K.sag[0], K.sag[1], ck) + 0.02 * shot + F.dip * (0.5 + 0.5 * Math.sin(tt * TAU * 1.3)) * S) * w * eIn + JT.dip * jl;   // (the knees pumping under the fight, giving toward its end)
-    if (drop > 1e-4) { this.shift(pA, nd.hips, [0, -drop, 0]); this.turn(pA, nd.hips, qPitch(drop * 40 * DEGR)); }
-    if (hauled) { this.shift(pA, nd.hips, [0, HU.lift * hu, -HU.back * hu]); this.turn(pA, nd.hips, qPitch(HU.recline * hu * DEGR)); }
-    { const sw = (this.heSw = H.bare && this.heldPose && ph === 'held' ? Math.sin(t / K.sway.secs * 2 * Math.PI) * smoothstep(0, K.sway.in, t) : damp(this.heSw, 0, K.sway.out, dt)) * (1 - gv) * (1 - limp) * w;   // (HOLD.sway: his weight goes from foot to foot with Sam's, and he twists against the arm)
-      if (H.bare) this.turn(pA, nd.neck, qRoll(K.apart.tip * DEGR * w * (1 - gv) * (1 - limp) * (1 - clamp(hu, 0, 1)) * (ph === 'grab' ? smoothstep(0.3, 1, t / K.secs.grab) : 1)));   // (HOLD.apart: his head tips away from Sam's — two heads, seen from above; eased out under the gun's share and the haul, as they ease)
-      if (Math.abs(sw) > 1e-4) { this.shift(pA, nd.hips, [K.sway.m * K.sway.his * sw, 0, 0]); this.turn(pA, nd.spine2, qYaw(K.sway.twist * (0.6 + 0.8 * clamp(H.agitation, 0, 1)) * sw * DEGR)); } }
-    // the lowering (HOLD.lower): as he goes limp he is let down onto his heels, the trunk folding forward under the arm that still has his neck
-    const lk = clamp(this.heLk.step(ph === 'choke' ? clamp(t / K.secs.choke, 0, 1) : 0, ph === 'choke' ? 30 : 9, dt), 0, 1);   // heCk's twin, the lowering's own: reset as a hold begins (heCk never was, and the hold's old sink keeps it so)
-    const BT = K.beats, bt = H.beats ?? HOLD_SHOW.beats;
-    const LW = bt ? BT.lower : K.lower, lo0 = lowerEase(this.heLo, (H.low ?? 0) > 0 ? clamp(H.low!, 0, 1) * smoothstep(LW.from, LW.by, lk) : 0, LW.up, dt), lo = lo0 * (1 - gv) * (this.heldPose ? 1 : w);   // (the layer's weight only while it fades, as Sam's)
-    const bOff = lowerEase(this.heBo, bt ? smoothstep(BT.off[0], BT.off[1], lk) : 0, BT.back, dt), bIn = lowerEase(this.heBc, bt ? smoothstep(BT.clamp[0], BT.clamp[1], lk) : 0, BT.back, dt), tipU = bt ? smoothstep(BT.tipBy[0], BT.tipBy[1], lk) : 0, bTip = tipU * (1 - limp) * (1 - gv);   // the choke's beats: his hands off the arm, his head to the side, before he is lowered — on lk, the clock a fresh hold starts over (on heCk a man re-grabbed after a choke broken off began with his hands already off the arm)
-    const limpA = Math.max(limp, lo0, kF, bOff);   // his ARMS hang for as long as he is down: let back up (the choke eased off) they come back to Sam's forearm with him, not in the tenth of a second the choke's clock takes
-    // HOLD.catch: hauled off his feet's line — sat `sink` m down into the arm (which goes down with his neck: holdLayer's give), the hips ahead of where they
-    // stood with the trunk reclined about his own neck (the turn's angle is the one that puts the neck back), the feet out in front; and through the yank
-    // each foot stays where it stood on the floor and comes after him. Given up to the lowering and the haul, which have their own fitted places.
-    const sit = CS ? (ph === 'grab' ? smoothstep(0.55, 1, ug) : 1) * (1 - gv) * (1 - clamp(lo0, 0, 1)) * (1 - clamp(hu, 0, 1)) * (this.heldPose ? 1 : w) : 0, off = sit * (1 - limp), sitF = CS ? (ph === 'grab' ? smoothstep(0.55, 1, ug) : 1) * (1 - gv) * (this.heldPose ? 1 : w) : 0;   // (sitF: his FEET's share — where the seat set his heels they stay as he goes limp, is lowered or hauled: given up with the rest they slid 12 cm back under him)
-    const foot = (i: number): Vec3 => { if (!CS) return [0, 0, 0]; const P = (H.pull ?? 0) * (1 - limp) * (1 - gv), e = H.yank !== undefined && this.heldPose ? smoothstep(CT.feet[i][0], CT.feet[i][1], H.yank) : 1, lag = P * (1 - e), rest = CT.heels[i] * sitF; return [0, P > 1e-4 ? CT.lift * Math.sin(Math.PI * e) * Math.min(1, P / 0.1) : 0, Math.max(lag, rest)]; };
-    const offL = foot(0), offR = foot(1), offOn = offL[2] > 1e-4 || offR[2] > 1e-4;
-    let hitRec = 0;   // (HOLD.hit: how much further the landing reclines him than the seat does, rad — his head is given that much back, it stays where the arm has it)
-    if (sit > 1e-4 || hb > 1e-4) { if (!this.heSpan) { fk.run(pA); this.heSpan = Math.max(0.2, fk.pos[nd.neck][1] - fk.pos[nd.hips][1]); } const span = this.heSpan, ahead = CT.hips * off + HT.hips * hb, rec = Math.asin(clamp(ahead / span, 0, 0.6)), rec0 = Math.asin(clamp(CT.hips * off / span, 0, 0.6)); hitRec = rec - rec0; this.shift(pA, nd.hips, [0, -CT.sink * sit - HT.dip * hb + span * (Math.cos(rec0) - Math.cos(rec)), ahead]); this.turn(pA, nd.hips, qPitch(-rec)); }   // (HOLD.hit: driven further ahead as the body lands, about the same neck — and up by what the further recline would lower that neck: it is in the arm, and left to drop it went 9 cm out from under the forearm)
-    if (lo > 1e-4) { this.shift(pA, nd.hips, [0, -LW.sink * lo, LW.fwd * lo]); this.turn(pA, nd.hips, qPitch(LW.hip * lo * DEGR)); }
-    if (kG > 1e-4) { this.shift(pA, nd.hips, [0, -KL.sink * kG, KL.fwd * kG]); this.turn(pA, nd.hips, qPitch(KL.hip * kG * DEGR)); }
-    const arch0 = (kOn ? lerp(lerp(lerp(K.arch, 2, limp), KL.arch, kW), 2, kL) : lerp(K.arch, 2, limp)) * DEGR * w * eIn + G.duck.pitch * DEGR * 0.5 * shot;
-    const ykH = H.yank !== undefined && this.heldPose ? bump(H.yank, 0, K.yank.in, K.yank.in + K.yank.hold, K.yank.in + K.yank.hold + K.yank.out) : 0;
-    const archB = H.bare ? (K.bareArch * (1 - limp) * (1 - gv) * eIn + K.yank.arch * ykH) * DEGR * w : 0;   // (HOLD.bareArch / yank: hauled back onto the arm. Under the lifted choke it STAYS: faded as the haul came in, his neck slid 5 cm along the forearm — so the two heads are 3 cm nearer at the haul's height than with a knife in the hand, 19 cm against 22)
-    const arch = ((hauled ? arch0 + HU.arch * hu * DEGR : arch0) + archB) * (1 - jl) + JT.fwd * jl * DEGR;     // (HOLD.catch.jolt: forward first)   // arched back → the arch just gone as he goes (his neck stays in the crook of the arm: it is what holds him up — the head lolls over it, the knees give under it)
-    const heave = -K.breath.pitch * br * DEGR;
-    this.turn(pA, nd.spine1, quat.mul(qYaw(yawS * 0.3), qPitch(arch * 0.3))); this.turn(pA, nd.spine2, quat.mul(qYaw(yawS * 0.4), quat.mul(qRoll(roll * 0.4), qPitch(arch * 0.35 + heave * 0.4)))); this.turn(pA, nd.spine3, quat.mul(qYaw(yawS * 0.3), quat.mul(qRoll(roll * 0.6), qPitch(arch * 0.35 + heave * 0.6))));
-    const clav = (K.clavUp * eIn * (1 - limp) + G.duck.hunch * shot + K.breath.clav * br) * DEGR * w + JT.clav * jl * DEGR; this.turn(pA, nd.shoulderL, qRoll(clav + 3 * s1 * S * DEGR)); this.turn(pA, nd.shoulderR, qRoll(-clav + 3 * s2 * S * DEGR));   // (the shoulders working against the arm, out of step)
-    const aside = lerp(K.aside, G.aside, gv), chinUp = lerp(K.chinUp, G.chinUp, gv);
-    const chin0 = kOn ? lerp(lerp(lerp(chinUp, K.loll, limp), KL.chin, kW), K.loll, kL) + KL.jolt[1] * kJ : lerp(chinUp, K.loll, limp);   // (the kill: hauled back onto Sam's shoulder, a jolt further as the blade goes across, then forward onto his chest)
-    const chin1 = chin0 * DEGR * w * eIn - drop * 40 * DEGR + (G.duck.pitch * shot + G.knock.pitch * knock + F.head * 0.35 * s3 * S) * DEGR - heave;
-    const chin = (hauled ? chin1 + HU.chin * hu * DEGR : chin1) * (1 - jl) + JT.head * jl * DEGR + HT.head * hitRec;   // (the head nods against the heave: the eyes stay put while the chest works)
-    const hr = (K.lollRoll * limp - aside * (1 - limp) * eIn * (kOn ? 1 - kW : 1) * (1 - tipU) + (kOn ? K.lollRoll * kL : 0) + (bt ? BT.tip * bTip : 0) + 3 * Math.sin(tt * 3.1) * A + F.roll * 0.7 * s1 * S - G.duck.roll * shot - G.knock.roll * knock) * DEGR * w;   // (− roll: his head tips out to his left — off the blade hand at his throat, or off the can at his right temple; ducked further off a shot, knocked that way by the whip)
-    const hyw = (6 * Math.sin(tt * 1.7 + 2) * A + 9 * jerk + F.head * (0.6 * s2 + 0.4 * s3) * S + G.awayYaw * eIn * gv + G.duck.yaw * shot + G.knock.yaw * knock + (kOn ? KL.jolt[0] * kJ * w : 0)) * DEGR;
-    this.turn(pA, nd.neck, quat.mul(qYaw(hyw * 0.4), quat.mul(qRoll(hr * 0.4), qPitch(chin * 0.45)))); this.turn(pA, nd.head, quat.mul(qYaw(hyw * 0.6), quat.mul(qRoll(hr * 0.6), qPitch(chin * 0.55))));
-    if (lo > 1e-4) { const f = LW.fold * lo * DEGR; this.turn(pA, nd.spine1, qPitch(f * 0.3)); this.turn(pA, nd.spine2, qPitch(f * 0.35)); this.turn(pA, nd.spine3, qPitch(f * 0.35)); }
-    if (kG > 1e-4) { const f = KL.fold * kG * DEGR; this.turn(pA, nd.spine1, qPitch(f * 0.3)); this.turn(pA, nd.spine2, qPitch(f * 0.35)); this.turn(pA, nd.spine3, qPitch(f * 0.35)); }
-    if (hauled) {   // off his feet: they come up and forward off where they stood, toes down, kicking with the fight
-      const toe = qPitch(HU.toes * hu * DEGR), kf = HU.kick[0] * S * hu, ku = HU.kick[1] * S * hu;
-      const tL: Vec3 = [fL[0], fL[1] + HU.feet[0] * hu + ku * (0.5 + 0.5 * s2) + offL[1], fL[2] + HU.feet[1] * hu + kf * s1 + offL[2]], tR: Vec3 = [fR[0], fR[1] + HU.feet[0] * hu + ku * (0.5 - 0.5 * s2) + offR[1], fR[2] + HU.feet[1] * hu - kf * s1 + offR[2]];
-      fk.run(pA); twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, tL, this.kneePole(rL), 0.6, quat.mul(toe, rL)); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, tR, this.kneePole(rR), 0.6, quat.mul(toe, rR), true);
-    } else if (offOn) { fk.run(pA); twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, v3.add(fL, offL), this.kneePole(rL), 0.6, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, v3.add(fR, offR), this.kneePole(rR), 0.6, rR, true); }
-    else if (drop > 1e-4 || lo > 1e-4 || kG > 1e-4 || hb > 1e-4) { fk.run(pA); twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0.6, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0.6, rR, true); }
-    const hgY = kG > 1e-4 ? LW.hang[0] * lo + KL.hang[0] * kG : LW.hang[0] * lo, hgZ = kG > 1e-4 ? LW.hang[1] * lo + KL.hang[1] * kG : LW.hang[1] * lo, dn = lo > 1e-4 || kG > 1e-4;
-    const hangL: Vec3 = dn ? [K.hang[0][0], K.hang[0][1] - hgY, K.hang[0][2] + hgZ] : K.hang[0], hangR: Vec3 = dn ? [K.hang[1][0], K.hang[1][1] - hgY, K.hang[1][2] + hgZ] : K.hang[1];   // (his hands hang from where his shoulders now are)
-    // ---- arms: the arm hold's set (gv 0) and / or the gun hold's (gv 1) — one of them nearly always; both, blended, for the beat of a mid-hold change
-    pB.copy(pA); fk.run(pB);
-    const liveL = v3.copy(fk.pos[nd.handL]), liveR = v3.copy(fk.pos[nd.handR]); const rL0 = [...fk.rot[nd.handL]] as Quat, rR0 = [...fk.rot[nd.handR]] as Quat;
-    type ArmSet = { tgtL: Vec3; tgtR: Vec3; rotL: Quat; rotR: Quat; poleL: Vec3; poleR: Vec3; curlL: number[]; curlR: number[]; thumbL: number; thumbR: number; spreadL: number; spreadR: number };
-    const armHold = (): ArmSet => {
-      // held: the left hand laid on the forearm by his collarbone (hauling down on it with each tug), the right half up beside his head, open, palm forward, shaking
-      // a little — frozen, pleading, not fighting. The choke changes that (cIn, on the eased amount, so easing off puts them back): both hands come clawing at the
-      // forearm, working up and down it out of step at the fight's rate; then they fall away as he goes.
-      const cIn = Math.max(bt ? bIn : smoothstep(0.04, 0.3, ck), kW);   // (the kill: both come up at the hand on his mouth as they do at the arm)
-      const cR = H.bare ? Math.max(cIn, K.bareGrip) : cIn;   // (HOLD.bareGrip: no blade at his throat to freeze him — his right hand is on the arm from the start)
-      const cwL = kOn ? v3.lerp(K.clawL, v3.lerp(KL.reach[0], KL.clutch[0], kT), kW) : K.clawL, cwR = kOn ? v3.lerp(K.clawR, v3.lerp(KL.reach[1], KL.clutch[1], kT), kW) : K.clawR;   // (…and go to his own throat once it is cut)
-      const hv: Vec3 | null = hauled || sit > 1e-4 ? [0, HU.samArm[0] * hu - CT.sink * sit, -HU.samArm[1] * hu] : null, clL = hv ? v3.add(cwL, hv) : cwL, clR = hv ? v3.add(cwR, hv) : cwR;   // (the haul: his hands go with the forearm they are on)
-      const claw = (o: number): Vec3 => [F.claw * 0.6 * Math.sin(tt * TAU * 1.7 + o) * S, F.claw * Math.sin(tt * TAU * 2.6 + o) * S, F.claw * 0.4 * Math.sin(tt * TAU * 2.6 + o + 1) * S];
-      const snk = CT.sink * sit;   // (HOLD.catch: the forearm his hands are on has gone down with his neck)
-      const rest: Vec3 = [K.restL[0], K.restL[1] - 0.03 * jerk - snk, K.restL[2] - 0.02 * jerk];
-      const up: Vec3 = [K.raisedR[0] + 0.01 * Math.sin(tt * TAU * 1.1) * A, K.raisedR[1] + 0.012 * Math.sin(tt * TAU * 0.9 + 1) * A + 0.03 * jerk - snk, K.raisedR[2] + 0.01 * Math.cos(tt * TAU * 0.6) * A];
-      const cl = lerp(0.62, 0.82, 0.5 + 0.5 * Math.sin(tt * TAU * 2.6)) * S + 0.65 * (1 - S);   // clawing: the fingers working
-      return {
-        tgtL: v3.lerp(v3.lerp(rest, v3.add(clL, claw(0)), cIn), hangL, limpA),
-        tgtR: v3.lerp(v3.lerp(up, v3.add(clR, claw(Math.PI)), cR), hangR, limpA),
-        // hands: the left palm-down over the top of the forearm, fingers down its front (→ hooked up and back over it from below, back of the hand forward, once it claws); the right
-        // fingers up and palm forward beside his head (→ hooked over the forearm from his right)
-        rotL: quat.nlerp(this.handRot(0, [-0.25, -0.8, 0.5], [0, 0.55, 0.8]), this.handRot(0, [-0.5, 0.6, -0.6], [0.2, 0.5, 0.85]), cIn),
-        rotR: quat.nlerp(this.handRot(1, [-0.2, 1, 0.1], [-0.15, 0.1, -1]), this.handRot(1, [0.5, 0.55, -0.6], [-0.2, 0.5, 0.85]), cR),
-        poleL: H.bare ? v3.lerp(v3.lerp([1, -0.9, 0.3], [1, -0.5, 0.55], cIn), [0.45, -1, 0.35], K.bareElbow) : v3.lerp([1, -0.9, 0.3], [1, -0.5, 0.55], cIn), poleR: H.bare ? v3.lerp(v3.lerp([-0.8, -1, 0.15], [-1, -0.6, 0.5], cR), [-0.45, -1, 0.35], K.bareElbow) : v3.lerp([-0.8, -1, 0.15], [-1, -0.6, 0.5], cR),   // elbows: down at his left side, coming forward for the clawing; down and out under the raised hand, coming in and up for the arm
-        curlL: [0.25, 0.3, 0.32, 0.35].map(a => lerp(lerp(a, cl, cIn), 0.2, limpA)), thumbL: lerp(0.15, 0.3, cIn), spreadL: 0,
-        curlR: H.armed ? [0.75, 0.8, 0.8, 0.8].map(a => lerp(a, 0.35, limpA)) : [0.08, 0.1, 0.12, 0.18].map(a => lerp(lerp(a, cl, cR), 0.25, limpA)),   // (a pistol he was grabbed with stays in the fist — pointing at the ceiling out of the raised hand — until killGuard takes it)
-        thumbR: H.armed ? 0.6 : lerp(0.05, 0.3, cR), spreadR: H.armed ? 0 : 0.7 * (1 - cR),   // the raised hand's fingers splayed
-      };
-    };
-    const gunHold = (): ArmSet => {
-      // the gun at his head: both hands half up in front of the shoulders, palms forward, trembling with the struggle, jerked in when a round goes past; whatever
-      // the right holds (torch, pistol) points at the ceiling out of the raised fist
-      const trem = 0.012 * Math.sin(tt * TAU * 1.1) * A, U = G.handsUp;
-      const openL = Math.max(limpA, 0.85), fist = 1 - limpA * 0.7;
-      return {
-        tgtL: v3.lerp([U[0][0] - 0.03 * shot, U[0][1] + trem + 0.05 * shot + 0.03 * jerk, U[0][2] - 0.04 * shot], K.hang[0], limpA),
-        tgtR: v3.lerp([U[1][0] + 0.03 * shot + 0.03 * Math.sin(tt * 0.8) * A, U[1][1] - trem + 0.05 * shot + 0.04 * jerk, U[1][2] - 0.04 * shot + 0.02 * Math.cos(tt * 0.6) * A], K.hang[1], limpA),
-        rotL: this.handRot(0, [0.15, 1, 0.2], [0.1, 0.15, -1]), rotR: this.handRot(1, [-0.15, 1, 0.2], [-0.1, 0.15, -1]),   // fingers up, palms forward
-        poleL: [0.8, -1, 0.2], poleR: [-0.8, -1, 0.2],   // elbows down and a little out
-        curlL: [lerp(0.6, 0.15, openL), lerp(0.7, 0.2, openL), lerp(0.75, 0.25, openL), lerp(0.8, 0.3, openL)], thumbL: lerp(0.3, 0.15, openL), spreadL: 0.35,
-        curlR: [0.2 + 0.55 * fist, 0.25 + 0.55 * fist, 0.3 + 0.55 * fist, 0.3 + 0.55 * fist], thumbR: 0.2 + 0.4 * fist, spreadR: 0,   // (never quite open: the pistol stays in it until killGuard takes it)
-      };
-    };
-    const a = gv < 1 ? armHold() : null, b = gv > 0 ? gunHold() : null;
-    const Z: ArmSet = a && b ? {
-      tgtL: v3.lerp(a.tgtL, b.tgtL, gv), tgtR: v3.lerp(a.tgtR, b.tgtR, gv), rotL: quat.nlerp(a.rotL, b.rotL, gv), rotR: quat.nlerp(a.rotR, b.rotR, gv),
-      poleL: v3.lerp(a.poleL, b.poleL, gv), poleR: v3.lerp(a.poleR, b.poleR, gv), curlL: a.curlL.map((c, i) => lerp(c, b.curlL[i], gv)), curlR: a.curlR.map((c, i) => lerp(c, b.curlR[i], gv)),
-      thumbL: lerp(a.thumbL, b.thumbL, gv), thumbR: lerp(a.thumbR, b.thumbR, gv), spreadL: lerp(a.spreadL, b.spreadL, gv), spreadR: lerp(a.spreadR, b.spreadR, gv),
-    } : (a ?? b)!;
-    let tgtL = Z.tgtL, tgtR = Z.tgtR;
-    if (CR) { const FL = CT.fling, way = (live: Vec3, i: number, end: Vec3): Vec3 => { const n = FL.land[i]; return curve3(clamp(ug / n, 0, 1), [[0, live], [FL.t[0] / n, FL.to[i]], [FL.t[1] / n, v3.add(FL.to[i], FL.drift)], [1, end]]); };
-      // (HOLD.catch.fling: both hands fly out from his sides first — what the camera overhead sees of a man who has been hit — hang there a tenth of a second, one
-      // higher than the other, and come onto the arm from there one after the other)
-      tgtL = way(liveL, 0, tgtL); tgtR = way(liveR, 1, tgtR); }
-    else if (ph === 'grab') { tgtL = v3.lerp(liveL, tgtL, smoothstep(0.15, 0.7, ug)); tgtR = curve3(smoothstep(0.05, 0.85, ug), [[0, liveR], [0.5, K.viaUp], [1, tgtR]]); }
-    // the disarm (HOLD.strip): his gun hand is thrown out beside his ribs as the arm lands — where Sam's hand takes the gun out of it — dragged after the wrench,
-    // let go of, and only then comes up to where the hold has it; the fist round the gun opens as the gun leaves it, not in a frame
-    const SP = this.heldPose?.strip ?? null, ST = K.strip, sT = SP ? SP.t : 0, sOn = !!SP && sT < ST.home;
-    if (sOn) tgtR = curve3(stripIn(sT, ST.take), [[0, liveR], [ST.take, ST.meet], [ST.take + 0.06, ST.torn], [ST.free, ST.torn], [ST.up, Z.tgtR]]);
-    // limp, both hang palm-in
-    const rotHangL = this.handRot(0, [0.1, -1, 0.15], [1, 0, 0.1]), rotHangR = this.handRot(1, [-0.1, -1, 0.15], [-1, 0, 0.1]);
-    const eA = ph === 'grab' ? smoothstep(0.1, 0.75, ug) : 1;
-    // (let back up out of the lowering the blend spends a third of a second between the hang and the hold, whose rotations are all but opposite: which way round
-    //  it goes is then the way it went the frame before — the shorter way changes sides as the hold's own rotation moves, and the hand flipped over in a frame)
-    const toHang = (q: Quat, h: Quat, prev: Quat | null): Quat => {
-      const mix = (s: number): Quat => quat.normalize([lerp(q[0], h[0] * s, limpA), lerp(q[1], h[1] * s, limpA), lerp(q[2], h[2] * s, limpA), lerp(q[3], h[3] * s, limpA)]);
-      const c = quat.nlerp(q, h, limpA); if (!prev) return c;
-      const o = mix(quat.dot(q, h) < 0 ? 1 : -1);
-      return Math.abs(quat.dot(o, prev)) > Math.abs(quat.dot(c, prev)) ? o : c;
-    };
-    const kept = lo0 > 1e-4 || kF > 1e-4 || bOff > 1e-4;
-    const rotL = toHang(quat.nlerp(rL0, Z.rotL, eA), rotHangL, kept ? this.heHr[0] : null);
-    const rotR = toHang(quat.nlerp(rR0, Z.rotR, sOn ? smoothstep(ST.take, ST.up, sT) : eA), rotHangR, kept ? this.heHr[1] : null);
-    this.heHr[0] = kept ? rotL : null; this.heHr[1] = kept ? rotR : null;
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, tgtL, Z.poleL, 0.85 * eA, rotL);
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, tgtR, Z.poleR, sOn ? Math.max(0.85 * eA, 0.9 * smoothstep(0, 0.1, sT) * (1 - smoothstep(ST.up, ST.home, sT))) : 0.85 * eA, rotR);
-    this.hand(pB, 0, Z.curlL, Z.thumbL, Z.spreadL);
-    if (sOn) { const op = smoothstep(ST.take, ST.take + 0.1, sT); this.hand(pB, 1, [0.75, 0.8, 0.8, 0.8].map((a, i) => lerp(a, Z.curlR[i], op)), lerp(0.6, Z.thumbR, op), Z.spreadR * op); }
-    else this.hand(pB, 1, Z.curlR, Z.thumbR, Z.spreadR);
-    const wA = CR ? Math.max(w * eA + w * (1 - eA) * 0.35, smoothstep(CT.fling.armIn[0], CT.fling.armIn[1], ug) * (this.heldPose ? 1 : w)) : w * eA + w * (1 - eA) * 0.35;   // (HOLD.catch.fling: his arms are the move's before the layer's weight is in — their paths start at his own hands)
-    blendPose(pA, pB, wA, this.armsMask, pA);   // (the first frames of the grab: mostly still his own arms)
-    if (sOn && wA < 1) { const wS = Math.max(wA, smoothstep(0, 0.8 * ST.take, sT) * (1 - smoothstep(ST.up, ST.home, sT))); if (wS > wA) blendPose(pA, pB, (wS - wA) / (1 - wA), this.armROnly, pA); }   // (…but his gun arm is where the disarm wants it by `take`)
-  }
   /** Out of a hold, with the layer still on its way out: has he been told to do ANYTHING since it let go (holdOutRate: the slow way up is for a man left standing
    *  idle)? The gun raised to aim, a round, a reload, a throw, a blow, a kick, a signal, a hit taken, the kit, a lock, a body, a thing worked, a door, a
    *  stance, the hands-on ready or the creep, a wound, a scripted act — or any change from what the hold itself had him carry on its last frame (a gun drawn
@@ -6564,12 +4182,6 @@ export class CharacterAnimator {
       || this.shootT >= 0 || this.reloadT >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.kickT >= 0 || this.sigT >= 0 || this.bw !== null || this.kit !== null
       || this.lockpick || !!this.haul || !!this.work || !!this.doorPush || this.stance !== 'none' || !!this.ready || this.creep || !!this.wound || !!this.act;
     return this.hdBusy;
-  }
-  /** The knife fist (holdLayer): the right hand's rotation from where the BLADE is to point (`blade`: out of the fist's thumb side — rigProps.knifeBoxes lays it
-   *  along that axis, edge to the palm side) and which way the back of the hand faces (`back`, squared to the blade here); the knuckles then run blade × back. */
-  private knifeRot(blade: Vec3, back: Vec3): Quat {
-    const T = v3.normalize(blade); const B = v3.normalize(v3.mad(back, T, -v3.dot(back, T)));
-    return this.handRot(1, v3.cross(T, B), B);
   }
 
   /** bigLayer's: the pose under it, and whether update() reads the gun hand's line off that pose this frame (a hammer in the fist) */
@@ -6588,10 +4200,9 @@ export class CharacterAnimator {
     const stowing = B.end >= 0 && B.t >= B.end, us = stowing ? clamp((B.t - B.end) / Math.max(1e-3, B.stow), 0, 1) : 0, ham = B.kind === 'hammer';
     if (!(B.t >= 0) || us >= 1) { this.bigUnder = false; this.bigK = 0; return; }
     if (ham) this.bigBuf ??= this.poses.make(this.pA.numNodes);
-    const g = layerSlot(this.ch, this.pA, this.cast), near = blowsNear(B);   // (RUST.walk: rust/sim/src/layers.rs big_layer)
-    if (g < 0) this.bigLayerOwn(B, near, twY, twP);
-    else if (!LAYERS.both) this.bigLayerAsk(g, B, near, twY, twP);
-    else layerBoth('bigLayer', this.pA, this.fk, () => this.bigLayerAsk(g, B, near, twY, twP), () => this.bigLayerOwn(B, near, twY, twP), this.withHands(CharacterAnimator.bigCols), ham ? [this.pB, this.bigBuf!] : [this.pB]);
+    const g = layerSlot(this.ch, this.pA, this.cast), near = blowsNear(B);   // (rust/sim/src/layers.rs big_layer)
+    this.bigLayerAsk(g, B, near, twY, twP);
+    if (LAYERS.watch) LAYERS.watch('bigLayer', this.pA, this.fk, this.withHands(CharacterAnimator.bigCols), ham ? [this.pB, this.bigBuf!] : [this.pB]);
   }
   /** the big tool's columns: how far it is in the fist, whether the pose under the layer is kept, how much of the fist's place is the tool's on his back and
    *  how far up the handle the fist holds it there */
@@ -6611,116 +4222,6 @@ export class CharacterAnimator {
     for (let i = 0; i < blows.length; i++) a[o + LAYER_KEYS_AT + i] = blows[i];
     colsToBench(CharacterAnimator.bigCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_big_layer(g, this.pA.at, this.pB.at, ham ? this.bigBuf!.at : 0, this.rest.at)); colsFromBench(CharacterAnimator.bigCols, this);
   }
-  private bigLayerOwn(B: NonNullable<CharacterAnimator['bigTool']>, blows: readonly number[], twY: number, twP: number) {
-    const M = BIGMOVE, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ham = B.kind === 'hammer';
-    const t = B.t, stowing = B.end >= 0 && t >= B.end, us = stowing ? clamp((t - B.end) / Math.max(1e-3, B.stow), 0, 1) : 0;
-    this.bigUnder = false;   // (a tool not out, or put away, never comes here: bigLayer takes that way out)
-    const e3 = (u: number) => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
-    // ---- the beat as shares: the blow being wound up (wind, then its swing 0‥1), the one that has just landed (hit, falling off over the rebound), a shell's
-    //      kick, and how far his feet are planted for it (held between two blows of one beat)
-    let prev = -Infinity, next = Infinity; for (const b of blows) { if (b <= t) prev = Math.max(prev, b); else if (!(B.end >= 0 && b > B.end)) next = Math.min(next, b); }
-    let wind = 0, sw = 0, hit = 0, kick = 0, plant = 0;
-    if (ham) { const H = M.hammer;
-      if (next < Infinity) { const ws = Math.max(next - B.windup, prev), D = next - ws;   // (a window never reaches back past the blow before it)
-        if (t >= ws && D > 1e-3) { const SW = Math.min(clamp(H.swing * D, H.swingMin, H.swingMax), D * 0.6); wind = e3((t - ws) / Math.max(1e-3, (D - SW) * H.raise)); sw = clamp((t - (next - SW)) / SW, 0, 1); } }
-      if (prev > -Infinity) hit = 1 - e3((t - prev) / H.rebound);
-      plant = Math.max(wind, prev > -Infinity ? (next < Infinity ? 1 : 1 - e3((t - prev) / H.settle)) : 0);
-    } else if (prev > -Infinity) { const r = t - prev, S = M.shotgun; kick = r < S.kickIn ? r / S.kickIn : Math.exp(-(r - S.kickIn) / S.kickOut); }
-    if (stowing) { const k = 1 - e3(us / (M.put * 0.5)); wind *= k; sw *= k; plant *= k; }
-    const ue = Math.max(clamp(t / Math.max(1e-3, B.equip), 0, 1), wind);   // (a blow asked for before the tool is out: it comes out with the wind-up)
-    const eb = e3((ue - M.grab) / (1 - M.grab)), inHands = stowing ? Math.min(eb, 1 - e3(us / M.put)) : eb, es = Math.pow(sw, 1.8);   // (the swing ARRIVES fast: no ease into the door)
-    { const S = B.snug ? M.snug : M; this.bigK = smoothstep(S.take[0], S.take[1], ue) * (stowing ? 1 - smoothstep(M.put * S.putAt, M.put, us) : 1); }
-    if (ham) { (this.bigBuf ??= this.poses.make(pA.numNodes)).copy(pA); this.bigUnder = true; }
-    // ---- where the point is from where he stands (model space; its bearing off the pelvis, level)
-    fk.run(pA);
-    const at0: Vec3 = Number.isFinite(B.at[0] + B.at[1] + B.at[2]) ? this.toModelP(B.at) : [0, 1, 0.8];
-    let tx = at0[0] - fk.pos[nd.hips][0], tz = at0[2] - fk.pos[nd.hips][2]; const reach = hyp2(tx, tz); if (reach > 1e-3) { tx /= reach; tz /= reach; } else { tx = 0; tz = 1; }
-    const tdir: Vec3 = [tx, 0, tz], tleft: Vec3 = [tz, 0, -tx], psi = clamp(Math.atan2(tx, tz), -1, 1);
-    const turnTo = (() => { const f = this.trunkFrame().fwd; return clamp(wrapAngle(psi - Math.atan2(f[0], f[2])), -1.2, 1.2); })();   // what squares the chest AS THE POSE UNDER IT HAS IT onto the point (the idle stands bladed: wound up from there he was turned twice)
-    // ---- the trunk (yaw + = to his left, as the throw's; the lean is toward the point) and the pelvis under it, by how still he stands
-    const still = 1 - smoothstep(0.2, 1.0, Math.abs(this.speed));
-    let chestYaw = 0, pelYaw = 0, pitch = 0, shF = 0, shS = 0, drop = 0;
-    if (ham) { const H = M.hammer, W = H.woundBody, I = H.blowBody, aW = wind * (1 - es), aI = Math.max(hit, es), far = smoothstep(H.far[0], H.far[1], reach);
-      chestYaw = plant * turnTo * H.face + (aW * W.yaw + aI * I.yaw) * DEGR; pelYaw = (plant * turnTo * H.face * 0.4 + (aW * W.pelYaw + aI * I.pelYaw) * DEGR) * still;
-      pitch = (aW * W.pitch + aI * (I.pitch + far * I.pitchFar)) * DEGR; shF = (aI * (I.fwd + far * I.fwdFar) - aW * W.back) * still; shS = aW * W.side * still; drop = (plant * H.drop + aI * I.drop) * still;
-    } else { const S = M.shotgun; chestYaw = inHands * (turnTo + S.yaw * DEGR); pelYaw = inHands * (turnTo * 0.3 + S.pelYaw * DEGR) * still; pitch = (inHands * S.pitch + kick * S.kickPitch) * DEGR; shF = -S.shove * kick * still; }
-    if (Math.abs(chestYaw) + Math.abs(pelYaw) + Math.abs(pitch) + Math.abs(shF) + Math.abs(shS) + drop > 1e-5) {
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      const axT = v3.cross(AY, tdir), seg = (k: number) => quat.mul(qYaw((chestYaw - pelYaw) * k), quat.axisAngle(axT, pitch * k));   // (the pelvis turn carries the whole spine; the spine joints add the rest)
-      this.shift(pA, nd.hips, [tdir[0] * shF + tleft[0] * shS, -drop, tdir[2] * shF + tleft[2] * shS]);
-      this.turn(pA, nd.hips, qYaw(pelYaw));
-      this.turn(pA, nd.spine1, seg(0.3)); this.turn(pA, nd.spine2, seg(0.35)); this.turn(pA, nd.spine3, seg(0.35));
-      const hq = (k: number) => quat.mul(qYaw(-chestYaw * 0.8 * k), quat.axisAngle(axT, -pitch * 0.8 * k));   // the head: back out of most of it (the look below puts the eyes on the point)
-      this.turn(pA, nd.neck, hq(0.4)); this.turn(pA, nd.head, hq(0.6));
-      if (ham && plant > 0) { const St = M.hammer.stance, k = plant * still, up = St.lift * Math.sin(Math.PI * plant) * still;   // a wider stance for the blow, the left foot toward the point: stepped out to, not slid
-        fL[0] += (tleft[0] * St.l[0] + tdir[0] * St.l[1]) * k; fL[2] += (tleft[2] * St.l[0] + tdir[2] * St.l[1]) * k; fL[1] += up;
-        fR[0] += (tleft[0] * St.r[0] + tdir[0] * St.r[1]) * k; fR[2] += (tleft[2] * St.r[0] + tdir[2] * St.r[1]) * k; fR[1] += up; }
-      fk.run(pA);   // feet back where the locomotion has them, soles as they were
-      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0.6, rL);
-      twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0.6, rR);
-    }
-    const lookW = ham ? plant : inHands; if (lookW > 0.003) { fk.run(pA); this.lookAt(pA, this.untwist(twY, twP)(at0), 0.8 * lookW); }
-    // ---- the arms, by IK on a copy against the body as it now stands
-    pB.copy(pA); fk.run(pB);
-    const F = this.trunkFrame(), dirT = (q: readonly number[]): Vec3 => [F.left[0] * q[0] + F.up[0] * q[1] + F.fwd[0] * q[2], F.left[1] * q[0] + F.up[1] * q[1] + F.fwd[1] * q[2], F.left[2] * q[0] + F.up[2] * q[1] + F.fwd[2] * q[2]];
-    type Spot = { at: Vec3; rot: Quat; f?: Vec3; b?: Vec3 };
-    const sR = v3.copy(fk.pos[nd.upperArmR]), sL = v3.copy(fk.pos[nd.upperArmL]), un = this.untwist(twY, twP), Hp = un(at0), arc = dirT(M.arc);
-    const uR: Spot = { at: v3.copy(fk.pos[nd.handR]), rot: [...fk.rot[nd.handR]] as Quat }, uL: Spot = { at: v3.copy(fk.pos[nd.handL]), rot: [...fk.rot[nd.handL]] as Quat };
-    const mix = (a: Spot, b: Spot, e: number, bow?: Vec3): Spot => e <= 0 ? a : e >= 1 ? b : { at: bow ? v3.mad(v3.lerp(a.at, b.at, e), bow, Math.sin(Math.PI * e)) : v3.lerp(a.at, b.at, e), rot: quat.slerp(a.rot, b.rot, e) };
-    let backR: Spot, held: Spot, leftOn: (wr: Vec3) => Spot;
-    if (ham) { const H = M.hammer, R = BIGRIG.hammer, G = R.grip;
-      type Line = { g: Vec3; d: Vec3 };
-      const off = (S: { g: Vec3; d: Vec3 }): Line => ({ g: v3.add(sR, dirT(S.g)), d: v3.normalize(dirT(S.d)) });
-      const mixL = (a: Line, b: Line, k: number, bow?: Vec3): Line => k <= 0 ? a : k >= 1 ? b : { g: bow ? v3.mad(v3.lerp(a.g, b.g, k), bow, Math.sin(Math.PI * k)) : v3.lerp(a.g, b.g, k), d: dirMix(a.d, b.d, k) };
-      // a fist on the line at g: the handle through it, thumb toward the head; the knuckles lead away from that shoulder (so the wrist follows the forearm), squared to the handle
-      const fist = (side: 0 | 1, g: Vec3, d: Vec3, sh: Vec3): Spot => { let h = v3.add(v3.sub(g, sh), dirT([side ? -0.03 : 0.03, 0, 0.02])); h = v3.mad(h, d, -v3.dot(h, d)); if (v3.len(h) < 1e-3) h = v3.cross(d, F.up);
-        const f = v3.normalize(h), b = side ? v3.cross(f, d) : v3.cross(d, f); return { at: v3.mad(v3.mad(g, f, -G.fwd), b, G.palm), rot: this.handRot(side, f, b), f, b }; };
-      // on his back, as the drawer has it (BIGRIG.hammer.back, through the back's own frame off THIS pose's joints): the fist takes it just under the head
-      // (… and, BIGSLOT.snug: the drawer's joints are the ones AFTER the chest twist still to come — his hips and thighs stay, his shoulders turn. Turned far, aiming
-      //  across himself as he walks off, the fist stopped 13 cm wide of a tool it was to put back. So: the back's frame as it WILL be, and the place that ENDS UP there)
-      const tw = B.snug && (twY || twP) ? this.twisted(twY, twP) : null, uaL = fk.pos[nd.upperArmL], uaR = fk.pos[nd.upperArmR];
-      const bkW = bigBackOf(fk.pos[nd.hips], tw ? tw.spine2 : fk.pos[nd.spine2], fk.pos[nd.thighL], fk.pos[nd.thighR], tw ? tw.at(uaL) : uaL, tw ? tw.at(uaR) : uaR, R.back, this.bigClear);   // (… with whatever else lies across his back under it: the drawer's own word)
-      const bk = tw ? { o: un(bkW.o), z: this.untwistDir(twY, twP)(bkW.z) } : bkW;
-      const backL: Line = { g: v3.mad(bk.o, bk.z, R.headAt - H.grabAt), d: bk.z }, readyL = off(H.ready), woundL = off(H.wound), overL = off(H.over);
-      // the blow: the head ON the point, the butt end by the pelvis on the point's own side
-      const hp = fk.pos[nd.hips], b0: Vec3 = [hp[0] + tleft[0] * H.butt[0] + tdir[0] * H.butt[2], hp[1] + H.butt[1], hp[2] + tleft[2] * H.butt[0] + tdir[2] * H.butt[2]];
-      const di = v3.normalize(v3.sub(Hp, b0)), blowL: Line = { g: v3.mad(Hp, di, -R.headAt), d: di };
-      let U = mixL(backL, readyL, eb, arc);
-      if (hit > 0) U = mixL(U, blowL, hit);
-      if (stowing) U = mixL(U, backL, e3(us / M.put), arc);
-      let L = mixL(U, woundL, wind);
-      if (sw > 0) L = mixL(mixL(L, overL, es), mixL(overL, blowL, es), es);   // over the top and down into it
-      backR = fist(1, backL.g, backL.d, sR); held = fist(1, L.g, L.d, sR);
-      // (packside.ts: how much of the fist's place this frame is the tool's place ON HIS BACK, and how far up the handle it holds it — Character.packSidePass carries the DRAWN hand from there to the side of his pack)
-      { let wb = (1 - eb) * (1 - hit); if (stowing) wb += (1 - wb) * e3(us / M.put); wb *= (1 - wind) * (sw > 0 ? (1 - es) * (1 - es) : 1);
-        this.bigAtBack = ue < M.grab ? e3(ue / M.grab) : stowing && us > M.put ? 1 - e3((us - M.put) / (1 - M.put)) : wb; this.bigGrab = R.headAt - H.grabAt; }
-      leftOn = (wr: Vec3) => { const g = v3.mad(v3.mad(wr, held.f!, G.fwd), held.b!, -G.palm); return fist(0, v3.mad(g, L.d, -R.hands), L.d, sL); };
-    } else { const S = M.shotgun, C = RIG.carbine, adj = C.adj?.off ?? [0, 0, 0], LG = carbineGrip(), A = KIT.apex;
-      backR = { at: v3.add(sR, dirT(A.at)), rot: this.handRot(1, dirT(A.fing), dirT(A.back)) };   // (the rifle's own place over the shoulder: the fist there, the muzzle down his back)
-      const pk = v3.add(sR, dirT(S.pocket)); let z = v3.normalize(v3.sub(Hp, pk)), yu = v3.mad(AY, z, -z[1]); yu = v3.len(yu) > 1e-3 ? v3.normalize(yu) : F.fwd;
-      if (kick > 0) { const a = kick * S.climb * DEGR, cs = Math.cos(a), sn = Math.sin(a), z1 = v3.add(v3.scale(z, cs), v3.scale(yu, sn)); yu = v3.sub(v3.scale(yu, cs), v3.scale(z, sn)); z = z1; }
-      const x = v3.cross(yu, z), inG = (p: readonly number[]): Vec3 => [x[0] * p[0] + yu[0] * p[1] + z[0] * p[2], x[1] * p[0] + yu[1] * p[1] + z[1] * p[2], x[2] * p[0] + yu[2] * p[1] + z[2] * p[2]];
-      const wr0 = v3.add(pk, inG([-adj[0], -adj[1], -C.stockTop.l0 - adj[2] - kick * S.kick]));   // the trigger wrist that puts the butt (the stock's rear end, through the group's own offset) in the pocket
-      const up0: Spot = { at: wr0, rot: this.handRot(1, z, inG([-0.8, 0.6, 0])) };
-      held = mix(backR, up0, inHands, arc);
-      leftOn = (wr: Vec3) => ({ at: v3.add(wr, inG(LG.wrist)), rot: this.handRot(0, inG(LG.fingers), inG(LG.back)) });
-    }
-    const r = ue < M.grab ? mix(uR, backR, e3(ue / M.grab), arc) : stowing && us > M.put ? mix(backR, uR, e3((us - M.put) / (1 - M.put)), arc) : held;
-    const own = e3(ue / 0.2) * (stowing ? 1 - e3((us - M.put) / (1 - M.put)) : 1);   // how much of the elbows is the layer's: none at either end (the pose's own under it)
-    const high = smoothstep(-0.18, 0.1, r.at[1] - sR[1]);   // a hand up by the shoulder: the elbow out and up, not folded into the ribs
-    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, r.at, dirT(v3.lerp([-0.5, -0.8, -0.3], [-1, 0.3, -0.1], high)), 0.85 * own, r.rot);
-    const j = smoothstep(M.join[0], M.join[1], ue) * (stowing ? 1 - smoothstep(0, M.unjoin, us) : 1);
-    let l = mix(uL, { at: v3.add(sL, dirT(M.wait)), rot: this.handRot(0, dirT([-0.25, -0.35, 0.9]), dirT([0.35, 0.9, 0.25])) }, e3(ue / 0.3));   // let go of his gun, waiting in front of him
-    if (j > 0) l = mix(l, leftOn(v3.copy(fk.pos[nd.handR])), e3(j));
-    if (stowing) l = mix(l, uL, e3((us - M.unjoin * 0.5) / (0.92 - M.unjoin * 0.5)));
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, l.at, dirT([0.5, -0.85, -0.15]), 0.6 * own, l.rot);
-    { const gr = smoothstep(M.grab - 0.15, M.grab, ue) * (stowing ? 1 - smoothstep(M.put, M.put + 0.12, us) : 1), c = (i: number, k: number) => lerp(M.open[i], M.fist[i], k);
-      this.hand(pB, 1, [c(0, gr), c(1, gr), c(2, gr), c(3, gr)], lerp(0.25, 0.6, gr)); this.hand(pB, 0, [c(0, j), c(1, j), c(2, j), c(3, j)], lerp(0.25, 0.6, j)); }
-    const m = this.dynMask; m.fill(0);
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
-    setSub(nd.upperArmR, 1); setSub(nd.upperArmL, 1);
-    blendPose(pA, pB, 1, m, pA);
-  }
 
   /** The overhand throw (THR / THROW_*): body English straight into pA — pelvis carried back onto the right foot then through onto the left, turning away and
    *  unwinding ≈ 35 ms ahead of the shoulders (the spine makes up the rest of the chest's turn: −26° at the top of the backswing, +10° past square in the
@@ -6734,11 +4235,10 @@ export class CharacterAnimator {
    *  and end on the live hand positions of the pose underneath, so the layer needs no cross-fade to get in or out (the arm weights only soften the elbow
    *  hand-over at each end). */
   private throwLayer(t: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs throw_layer)
-    if (g < 0) { this.throwLayerOwn(t); return; }
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (rust/sim/src/layers.rs throw_layer)
     const { K1, K3 } = throwTables(this.thrLow >= 0);   // (the swing's tables in the module's order; each fits the layer: layerTablesFit)
-    if (!LAYERS.both) this.throwLayerAsk(g, t, K1, K3);
-    else layerBoth('throwLayer', this.pA, this.fk, () => this.throwLayerAsk(g, t, K1, K3), () => this.throwLayerOwn(t), this.withHands(CharacterAnimator.throwCols), [this.pB]);
+    this.throwLayerAsk(g, t, K1, K3);
+    if (LAYERS.watch) LAYERS.watch('throwLayer', this.pA, this.fk, this.withHands(CharacterAnimator.throwCols), [this.pB]);
   }
   /** the throw's columns: how far a toss lets the other hand down (−1 = not read yet), and where the swing left each hand off its shoulder */
   private static readonly throwCols: LayerCols<CharacterAnimator> = { n: 8,
@@ -6753,97 +4253,6 @@ export class CharacterAnimator {
     a[o] = t; a[o + 1] = this.thrLow; a[o + 2] = this.thrFar; a[o + 3] = this.thrOff ? 1 : 0; a[o + 4] = this.mvs.cf.x; a[o + 5] = this.mvs.dz.x; a[o + 6] = this.thrHit0; a[o + 7] = this.crouch; a[o + 8] = this.speed; a[o + 9] = cin ? 1 : 0;
     for (let i = 0; i < 3; i++) { a[o + 10 + i] = cin ? cin.r[i] : 0; a[o + 13 + i] = cin ? cin.l[i] : 0; } for (let i = 0; i < 4; i++) { a[o + 16 + i] = F[0][i]; a[o + 20 + i] = F[1][i]; }
     colsToBench(CharacterAnimator.throwCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_throw_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.throwCols, this);
-  }
-  private throwLayerOwn(t: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, BY = THROW_BY;
-    // which swing (throwItem): the underhand toss, or the overhand at its size — `full` = as authored, every number below untouched
-    const low = this.thrLow >= 0, full = !low && this.thrFar >= 1, T = low ? THR_LOW : THR;
-    // GUNHAND.throwFree (thrOff): the free hand's throw — the same swing, MIRRORED: the trunk winds the other way, the left arm takes the right arm's path (built
-    // below in the right arm's own terms off the left hand's mirrored start, and mirrored back as it is solved) and the right arm is not touched: it is the long
-    // hold's, the gun in it. `sx` = −1 then; +1 (every product below exact) otherwise
-    const off = this.thrOff, sx = off ? -1 : 1, mir = (p: readonly number[]): Vec3 => [-p[0], p[1], p[2]];
-    // a blast that folds or blinds him MID-swing takes the swing: its arms and body English give way by how far the fold's and the blinded hunch's own weights have
-    // risen since it began (zero on a man in neither, so `give` is 1 and nothing below moves; a throw begun already blind, or in the tail of either, is swung whole)
-    const hit = Math.max(clamp(this.mvs.cf.x, 0, 1), clamp(this.mvs.dz.x, 0, 1)), h0 = this.thrHit0;
-    const give = BY.on && hit > h0 ? 1 - clamp((hit - h0) / Math.max(1 - h0, 0.25), 0, 1) : 1;
-    const kS = low ? lerp(BY.tossMin, 1, this.thrLow) : full ? 1 : lerp(BY.turnMin, 1, this.thrFar), kT = kS * give, kA = low ? kS : full ? 1 : lerp(BY.armMin, 1, this.thrFar), piv = low ? BY.tossPivot : BY.pivot;
-    const cr = clamp(this.crouch, 0, 1), legK = (1 - 0.5 * cr) * (1 - 0.4 * smoothstep(0.3, 1.5, Math.abs(this.speed)));   // the legs' share: halved on bent knees, less again on the move
-    // ---- what is underneath: feet to re-plant, and each hand from its shoulder (the paths' live end keys)
-    fk.run(pA);
-    const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-    const uR = v3.sub(fk.pos[nd.handR], fk.pos[nd.upperArmR]), uL = v3.sub(fk.pos[nd.handL], fk.pos[nd.upperArmL]);
-    const gunP = off ? v3.copy(fk.pos[nd.handR]) : null, gunQ = off ? [...fk.rot[nd.handR]] as Quat : null;   // (thrOff: where the long hold has the trigger hand, before the trunk winds)
-    // ---- body English (every curve is zero at both ends: full weight throughout)
-    const chestYaw = curve(t, T.chestYaw) * DEGR * kT * sx, pelYaw = curve(t, T.pelvisYaw) * DEGR * legK * kT * sx, spYaw = chestYaw - pelYaw;   // the pelvis turn carries the whole spine; the spine joints add the rest
-    const pitch = curve(t, T.pitch) * DEGR * kT, roll = curve(t, T.roll) * DEGR * kT * sx;
-    const ext = low ? 0 : 18 * DEGR * cr * bump(t, 0, 0.12, 0.5, THROW_DUR) * (full ? 1 : lerp(BY.sit, 1, this.thrFar)) * give;   // crouched: sit up out of the clip's hunch to get the arm over (as lockpickLayer un-rounds the back), chest first
-    this.shift(pA, nd.hips, [curve(t, T.pelX) * legK * kT * sx, curve(t, T.pelY) * legK * kT, curve(t, T.pelZ) * legK * kT]);
-    this.turn(pA, nd.hips, qYaw(pelYaw));
-    const seg = (k: number, kp: number, ke: number) => quat.mul(qYaw(spYaw * k), quat.mul(qRoll(roll * k), qPitch(pitch * kp - ext * ke)));
-    this.turn(pA, nd.spine1, seg(0.3 + 0.12 * cr, 0.4, 0.25)); this.turn(pA, nd.spine2, seg(0.35 + 0.13 * cr, 0.35, 0.3)); this.turn(pA, nd.spine3, seg(0.35 - 0.25 * cr, 0.25, 0.45));   // (the crouch clip lays the chest joint almost flat: there the turn is taken lower down, where the spine is still upright enough to twist about the vertical)
-    const hy = -chestYaw * 0.85, hr = -roll * 0.7, hp = -pitch * 0.8 + ext;   // head: stays on the target (keeps 15 % of the turn), levelled out of the lean and the tilt, craned back down out of the sit-up
-    this.turn(pA, nd.neck, quat.mul(qYaw(hy * 0.4), quat.mul(qRoll(hr * 0.4), qPitch(hp * 0.45)))); this.turn(pA, nd.head, quat.mul(qYaw(hy * 0.6), quat.mul(qRoll(hr * 0.6), qPitch(hp * 0.55))));
-    this.turn(pA, off ? nd.shoulderL : nd.shoulderR, quat.mul(qYaw(curve(t, T.clavFwd) * DEGR * kT * sx), qRoll(-curve(t, T.clavUp) * DEGR * kT * sx)));
-    fk.run(pA);   // feet back where the locomotion has them, soles as they were
-    twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0.6, rL);
-    twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0.6, rR);
-    // ---- arms, IK'd on a copy against the body as it now is
-    pB.copy(pA); fk.run(pB);
-    const shR = v3.copy(fk.pos[nd.upperArmR]), shL = v3.copy(fk.pos[nd.upperArmL]); const cin = this.thrCarry;
-    const lowK = 1 - 0.45 * cr;   // crouched: the follow-through stays up off the front knee
-    const lift = (K: Keys3) => K.map(([kt, p]) => [kt, [p[0], p[1] < -0.25 ? -0.25 + (p[1] + 0.25) * lowK : p[1], p[2]]] as const);
-    // a shorter throw: the hand's path drawn in toward its pivot — but it lets go where it lets go: a toss from its swing through on is as authored, and the
-    // overhand's path comes back to its authored size over `through` s either side of the release (it is the wind-up and the tail that are small, with no corner)
-    const near = (K: Keys3): Keys3 => full ? K : K.map(([kt, p]) => { const k = low ? (kt > TOSS_LOW ? 1 : kA) : lerp(kA, 1, 1 - smoothstep(0, BY.through, Math.abs(kt - THROW_RELEASE))); return [kt, [piv[0] + (p[0] - piv[0]) * k, piv[1] + (p[1] - piv[1]) * k, piv[2] + (p[2] - piv[2]) * k]] as const; });
-    const uT = off ? mir(uL) : uR;   // the throwing hand under the layer, in the right arm's terms
-    const r0 = off ? mir(cin?.l ?? uL) : cin?.r ?? uR, l0 = cin?.l ?? uL;
-    let kR = lift(near(T.handR));
-    if (low) {   // a toss from a hand that is nowhere near his hip (a gun up in front of him): no backswing it would have to be whipped into — the further the
-      // authored top is past what `tossIn` m/s reaches by its time, the more the hand just drops, on one arc, to the swing's low point and scoops from there
-      const top = kR[0][1], bot = kR[1][1], d = Math.hypot(top[0] - r0[0], top[1] - r0[1], top[2] - r0[2]), s = smoothstep(0.5, 1, BY.tossIn * TOSS_TOP / Math.max(d, 1e-6));
-      if (s < 1) kR = [[kR[0][0], [lerp(lerp(r0[0], bot[0], 0.6), top[0], s), lerp(lerp(r0[1], bot[1], 0.6), top[1], s), lerp(lerp(r0[2], bot[2], 0.6) - 0.06, top[2], s)]], ...kR.slice(1)];
-    }
-    // the balance arm: all of its reach only for the full throw — a shorter overhand draws its path, and the hand's turn with it, in toward the pose underneath
-    // (from `offMin`). A toss has no use for it: the arm is left to the pose underneath (no weight at all), unless that has the hand up in front of him (a
-    // gun's support grip) — then it is let down to hang by his side; which, is read once, on the throw's first frame (`thrHang`)
-    if (low && !off && this.thrHang < 0) this.thrHang = smoothstep(-0.38, -0.28, uL[1]) * smoothstep(0.15, 0.28, uL[2]);
-    const kB = full ? 1 : lerp(BY.offMin, 1, this.thrFar), offG = low ? this.thrHang : 0, hangY = TOSS_HANG[1] < -0.25 ? -0.25 + (TOSS_HANG[1] + 0.25) * lowK : TOSS_HANG[1];
-    const offAt: Vec3 = [lerp(uL[0], TOSS_HANG[0], offG), lerp(uL[1], hangY, offG), lerp(uL[2], TOSS_HANG[2], offG)];
-    const kL: Keys3 = low ? [[0.32, offAt], [0.42, offAt]] : full ? lift(THR.handL) : lift(THR.handL.map(([kt, p]) => [kt, [uL[0] + (p[0] - uL[0]) * kB, uL[1] + (p[1] - uL[1]) * kB, uL[2] + (p[2] - uL[2]) * kB]] as const));
-    // the ends of each path hang off the live hand: part way toward the first / from the last authored point, bowed out round the body — so an arm that starts
-    // forward (walking), low and wide (crouched) or mid-swing (re-triggered) takes no detour through a waypoint that only suits the standing idle
-    const via = (a: readonly number[], b: readonly number[], s: number, bow: Vec3): Vec3 => [lerp(a[0], b[0], s) + bow[0], lerp(a[1], b[1], s) + bow[1], lerp(a[2], b[2], s) + bow[2]];
-    const topR = kR[0][1], endR = kR[kR.length - 1][1], reachL = kL[0][1], endL = kL[kL.length - 1][1];
-    const offR = low ? curve3(t, [[0, r0], [0.05, via(r0, topR, 0.5, [-0.02, 0, -0.01])], ...kR, [0.62, via(endR, uT, 0.55, [-0.03, 0, 0.04])], [THROW_DUR, uT]])   // (the toss: straight back past the hip and round again, no detour)
-      : curve3(t, [[0, r0], [0.06, via(r0, topR, 0.35, [-0.075 * kA, -0.015 * kA, 0.02 * kA])], [0.125, via(r0, topR, 0.75, [-0.11 * kA, 0.03 * kA, -0.09 * kA])], ...kR, [0.62, via(endR, uT, 0.55, [-0.10, 0.02, -0.02])], [THROW_DUR, uT]]);   // (up: hanging below the lifting elbow, then out behind it at shoulder height before it cocks up over it)
-    const offL = curve3(t, [[0, l0], [0.09, low ? via(l0, reachL, 0.2, [0, 0, 0]) : via(l0, reachL, 0.5, [0.04, 0, 0.02])], ...kL, [0.63, via(endL, uL, 0.5, low ? [0, 0, 0] : [0.03, 0, 0.02])], [THROW_DUR, uL]]);
-    if (off) { const o = mir(offR); twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(shL, o), swivelPole(o, SWIV_REF_L, -curve(t, T.swivR) * DEGR), 1, this.handRot(0, mir(curve3(t, T.fingR)), mir(curve3(t, T.backR)))); }
-    else twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.add(shR, offR), swivelPole(offR, SWIV_REF_R, curve(t, T.swivR) * DEGR), 1, this.handRot(1, curve3(t, T.fingR), curve3(t, T.backR)));
-    // (thrOff) the gun does not swing with the trunk: the trigger hand stays where the long hold had it, turned as it was — the gun is drawn upright off that hand
-    // (rigProps carbineFrame), so a hand rolled over with the shoulders would come off its grip — and the arm bends in the plane it has. LOWERED: a crouched low
-    // ready has the hand out level with the shoulder; through the swing it is let down to a hand's length under it
-    if (gunP) { const dn = Math.max(0, gunP[1] - (shR[1] - 0.12)) * bump(t, 0, 0.12, THROW_DUR - 0.2, THROW_DUR);
-      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, [gunP[0], gunP[1] - dn, gunP[2]], null, 0, gunQ); }
-    // (a toss's other arm: at weight only while it is let down, or while a throw re-triggered mid-swing hands it back to the pose underneath)
-    const wToss = off ? 0 : low ? Math.max(offG, cin ? 1 - smoothstep(0, 0.15, t) : 0) : 1;   // (… and none at all for the hand that has the gun)
-    if (wToss > 0) {
-      const f0 = THR.fingL[0][1], b0 = THR.backL[0][1], fT = low ? f0 : curve3(t, THR.fingL), bT = low ? b0 : curve3(t, THR.backL), sT = low ? THR.swivL[0][1] : curve(t, THR.swivL);   // (a toss: the elbow hangs; the hand keeps the turn it has on its forearm)
-      const part = (a: readonly number[], b: readonly number[]): Vec3 => [lerp(a[0], b[0], kB), lerp(a[1], b[1], kB), lerp(a[2], b[2], kB)];
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(shL, offL), swivelPole(offL, SWIV_REF_L, (full || low ? sT : lerp(THR.swivL[0][1], sT, kB)) * DEGR), 1, low ? null : full ? this.handRot(0, fT as Vec3, bT as Vec3) : this.handRot(0, part(f0, fT), part(b0, bT)));
-    }
-    // fingers: closed round the can, sprung open at the release, hanging loose after; the left hand firms up as it tucks in
-    const open = smoothstep(THROW_RELEASE - 0.025, THROW_RELEASE + 0.03, t), loose = smoothstep(0.34, 0.49, t);
-    const cR = (grip: number, flat: number, hang: number) => lerp(lerp(grip, flat, open), hang, loose);
-    this.hand(pB, off ? 0 : 1, [cR(0.5, 0.05, 0.25), cR(0.55, 0.08, 0.3), cR(0.62, 0.12, 0.35), cR(0.7, 0.15, 0.42)], cR(0.7, 0.1, 0.3));
-    const firm = bump(t, 0.22, 0.32, 0.5, 0.64); const cL = (a: number) => lerp(a, a + 0.25, firm);
-    if (!low && !off) this.hand(pB, 0, [cL(0.3), cL(0.35), cL(0.4), cL(0.45)], lerp(0.3, 0.6, firm));
-    // ---- in through per-arm masks (clavicle subtrees): full weight but for a short hand-over of the elbow at each end; a carried-in restart is already at weight
-    const wR = (cin ? 1 - smoothstep(0.62, THROW_DUR, t) : bump(t, 0, 0.06, 0.62, THROW_DUR)) * give, wL = (cin ? 1 - smoothstep(0.57, 0.72, t) : bump(t, 0, 0.09, 0.57, 0.72)) * wToss * give;
-    const m = this.dynMask; m.fill(0);
-    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
-    if (off) { setSub(nd.shoulderL, wR); setSub(nd.shoulderR, 1); } else { setSub(nd.shoulderR, wR); setSub(nd.shoulderL, wL); } m[nd.shoulderR] = 0; m[nd.shoulderL] = 0;   // (the clavicles themselves are already posed in pA; pB carries the same turn)
-    blendPose(pA, pB, 1, m, pA);
-    fk.run(pA); this.thrLast = { r: v3.sub(fk.pos[nd.handR], fk.pos[nd.upperArmR]), l: v3.sub(fk.pos[nd.handL], fk.pos[nd.upperArmL]) };
   }
 }
 
@@ -7115,10 +4524,9 @@ export class Character extends ManCols {
   /** TURN: bodyYaw / aimYaw as the AI left them this frame are where he WANTS to face (its own easings run on, wish to wish — turnBegin); he comes round to
    *  them as a mass, and the two fields are rewritten with where he has got to: that is what everything else reads until his AI writes again. */
   private turnWeigh(dt: number) {
-    const g = this.anim.ruleSlot();   // (RUST.walk: rust/sim/src/layers.rs turn_weigh)
-    if (g < 0) this.turnWeighOwn(dt);
-    else if (!LAYERS.both) this.turnWeighAsk(dt);
-    else this.anim.ruleBoth('turnWeigh', () => this.turnWeighAsk(dt), () => this.turnWeighOwn(dt), colsOf(Character.turnCols, this));
+    this.anim.ruleSlot();   // (his rig's names stand on the bench for the rule: rust/sim/src/layers.rs turn_weigh)
+    this.turnWeighAsk(dt);
+    if (LAYERS.watch) this.anim.ruleWatch('turnWeigh', colsOf(Character.turnCols, this));
   }
   private turnWeighAsk(dt: number) {
     LAYERS.knobs?.();
@@ -7139,24 +4547,6 @@ export class Character extends ManCols {
       this.anim.turnLead = c[o + 9]; this.bodyYaw = c[o + 10]; this.aimYaw = c[o + 11];
     },
   };
-  private turnWeighOwn(dt: number) {
-    const T = this.tn, W = this.turn;
-    if (!T || hyp2(this.pos[0] - T.x, this.pos[2] - T.z) > TURN.jump || !Number.isFinite(this.bodyYaw + this.aimYaw)) {
-      this.tn = { body: this.bodyYaw, aim: this.aimYaw, wb: 0, wa: 0, ib: this.bodyYaw, ia: this.aimYaw, x: this.pos[0], z: this.pos[2] }; return; }
-    if (this.bodyYaw !== T.body) T.ib = this.bodyYaw; if (this.aimYaw !== T.aim) T.ia = this.aimYaw;   // (untouched since they were handed back: the wish stands)
-    const h = clamp(W.h, 0.2, 1.5), kk = lerp(TURN.green, 1, clamp(W.k, 0, 1)), hb = lerp(1, h, TURN.bodyShare);
-    // his feet: the short way round
-    const sb = turnStep(T.wb, wrapAngle(T.ib - T.body), TURN.body * hb, TURN.bodyAcc * hb * kk, dt); T.body = wrapAngle(T.body + sb[0]); T.wb = sb[1];
-    // the gun, about his waist: from where it pointed (the body under it has just turned) to where it is wanted, through his FRONT — both ends inside the twist
-    // the spine has (the animator's own ±1.9), so a point that passes behind his back swings the gun across his chest instead of through his spine
-    // (the wanted end is measured the way the BODY is going round — the wish's own twist plus what the body still has to turn — so a wish snapped past his back
-    // does not flip the gun to the far shoulder and back while he comes round)
-    const r0 = clamp(wrapAngle(T.aim - T.body), -1.9, 1.9), r1 = clamp(wrapAngle(T.ia - T.ib) + wrapAngle(T.ib - T.body), -1.9, 1.9);
-    const sa = turnStep(T.wa, r1 - r0, TURN.aim * h, TURN.aimAcc * h * kk, dt), rr = clamp(r0 + sa[0], -1.9, 1.9); T.wa = rr === r0 + sa[0] ? sa[1] : 0; T.aim = wrapAngle(T.body + rr);   // (speed it still carried the other way stops at the twist's end)
-    T.x = this.pos[0]; T.z = this.pos[2];
-    this.bodyYaw = T.body; this.aimYaw = T.aim;
-    { const ld = clamp(wrapAngle(T.ia - T.aim), -TURN.lead, TURN.lead), was = this.anim.turnLead; this.anim.turnLead = damp(was, ld, Math.abs(ld) < Math.abs(was) ? TURN.leadRate * 2.5 : TURN.leadRate, dt); }   // (it comes off quicker than it goes on: the head does not carry past the point either)
-  }
   /** TURN, for a checkpoint (savestate.ts GuardSnap.turn, under SAVETIMELINE.turn): the turn he is in the middle of, or null with no weight on him — where his
    *  weight has let him get to (body, aim), the speeds it carries, where his AI wants him, where he stood when it was weighed, and the neck's lead. Put back on
    *  a fresh man by turnPut, his turn goes on from the frame it was filed on; without it he starts from rest facing where he had got to, and his AI eases from
