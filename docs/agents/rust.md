@@ -612,6 +612,16 @@ first system across (the game's own maths). No rule of play has changed and noth
   - **The leaves' list.** The module writes list 0 at the door's own index, so the game's own list must be the doors' leaves in the doors' order
     (`Doors.there` looks; any other list in its place and the TypeScript steps). The same index for the same leaf from tick to tick is also what the
     smoke grid's kept copy of the leaves compares against.
+- **A man's state is columns, from one schema** (`src/sim/men/`, `rust/sim/src/men.rs`, `tools/sim/men.ts`, `tools/qa/men-check.ts`; 2026-11-05). Every man of a game (the player,
+  a guard, a teammate, a civilian) has a row of the `men` part of the game's block: a Character takes it as he is made (`g.men`, a `MenStore`), and his Guard or Player record reads the
+  same row. `src/sim/men/schema.ts` names each column: its type, whose accessor it is, its group (hot, cold, the animator's), whether a digest reads it. `bun run tools/sim/men.ts` writes
+  `src/sim/men/cols.ts` (the accessors `Character`, `Guard` and `Player` inherit, so a column reads as a field) and `rust/sim/src/men.rs` (the struct of columns; a rule reads
+  `state(g).men.<column>[row]` with no copy), and then `bun run tools/sim/build.ts` builds it. The two sides' hash is held as a store is made. A number a digest reads stays a double:
+  a single would round the rules. Rows 256: a man's id is a byte; a level's own men are counted at load (`levelfit.ts`, the `men` row), and a stand past the rows is a mistake that throws by
+  name. A row is his for his life: `manLeaves` frees it, a Guard or Player object that has left throws by name when read, and a `handleOf` word taken before a row changed hands
+  throws by name in `rowOf`. The men move into the block once as a game's first tick opens (the tenant, bit 256) and stay there, whatever the rows of RUST say, so a game's block is
+  open from its first tick. A man of no game (a menu's figure, the viewer's, a tool's) has a row of a store of no game (`loneMen`). The part stands with the parts of a fixed length,
+  before the pools: smoke and poses stay last because a parked block is one run of bytes to the last word in use (state.rs PARTS). `MEN_BREAK=1` turns every line of the check red.
 - **A family whose RULES move: what the doors add to the recipe below** ("A NEW FAMILY, step by step" is the state's half).
   - Its fields become ACCESSORS over columns, in TypeScript too (`Door.angle` → `DoorStore`: an array of the game's, or the block): one read for every
     reader, at home or not, so a checkpoint file, the digest, a probe's `Object.assign(d, …)` and the family's own TypeScript twin need no second way. A

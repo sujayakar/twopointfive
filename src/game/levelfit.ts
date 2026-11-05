@@ -14,15 +14,19 @@ import { BoxFlag, type Box } from '../scene/boxes';
 import { PANE_CAP } from '../scene/boxMirror';
 import { DOOR_CAP } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
+import { MEN_ROWS } from '../sim/men/schema';
 import { isSheet } from './glass';
 
-/** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass */
-export interface LevelFit { doors: number; things: number; parts: number; sheets: number }
+/** the rows a level's own men leave for the players' men (seats.ts allows at most four seats) */
+const SEAT_ROOM = 4;
+
+/** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass · the men it stands (the shift, its civilians, and room for a game's four seats) */
+export interface LevelFit { doors: number; things: number; parts: number; sheets: number; men: number }
 /** …and how many of each the game holds */
-export const levelCaps = (): LevelFit => ({ doors: DOOR_CAP, things: PROP_CAP, parts: PROP_PARTS, sheets: PANE_CAP });
-export function levelCounts(level: { doors: readonly unknown[]; props: readonly { parts: readonly unknown[] }[]; boxes: readonly Box[] }): LevelFit {
+export const levelCaps = (): LevelFit => ({ doors: DOOR_CAP, things: PROP_CAP, parts: PROP_PARTS, sheets: PANE_CAP, men: MEN_ROWS });
+export function levelCounts(level: { doors: readonly unknown[]; props: readonly { parts: readonly unknown[] }[]; boxes: readonly Box[]; routes?: readonly unknown[]; civilians?: readonly unknown[] }): LevelFit {
   let parts = 0, sheets = 0; for (const p of level.props) parts += p.parts.length; for (const b of level.boxes) if (isSheet(b)) sheets++;
-  return { doors: level.doors.length, things: level.props.length, parts, sheets };
+  return { doors: level.doors.length, things: level.props.length, parts, sheets, men: SEAT_ROOM + (level.routes?.length ?? 0) + (level.civilians?.length ?? 0) };
 }
 /** why this level cannot be loaded, in words, or null: it fits */
 export function levelOver(level: Parameters<typeof levelCounts>[0]): string | null {
@@ -31,6 +35,7 @@ export function levelOver(level: Parameters<typeof levelCounts>[0]): string | nu
   if (has.things > cap.things) over.push(`${has.things} loose things of furniture (${cap.things})`);
   if (has.parts > cap.parts) over.push(`loose furniture of ${has.parts} boxes (${cap.parts})`);
   if (has.sheets > cap.sheets) over.push(`${has.sheets} sheets of glass (${cap.sheets})`);
+  if (has.men > cap.men) over.push(`${has.men} men with its seats (${cap.men})`);
   return over.length ? `this level is too big to load: ${over.join(', ')}` : null;
 }
 
@@ -64,5 +69,6 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), room: 1, table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), room: 1, table: 'view' },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, room: 1, table: null },
+    { row: 'men', what: 'men the level stands, with room for the seats (a row a man)', has: L.men, cap: cap.men, room: 1, table: null },
   ];
 }

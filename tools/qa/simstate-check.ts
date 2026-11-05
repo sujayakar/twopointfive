@@ -34,6 +34,7 @@
 //   slabs      …and for the leaves off their hinges (RUST.slabs: each slab's row, src/sim/slabshome.ts; their step, rust/sim/src/slabs.rs): a game whose doors
 //              are blown out of their frames one after another and hung again
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
+// (A game's men are in its block from its first tick, whatever the rows: src/sim/men/store.ts. So "no block left" below is: nothing in the block but the men.)
 // THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself, and "no block left" is only true of a game no other
 // row keeps a block for. Said as the stand's own word, before the harness loads: a stand-up puts every row where its stand has it, and both stands
 // have every row but the maths up (src/sim/sim.ts RUST_ON). A row's own word in the caller's shell still raises that row (the red paths use it).
@@ -111,6 +112,8 @@ async function play(row: (f: number) => boolean): Promise<{ words: number[]; hom
   rows(false);
   return { words, homed: at, posed, s: g.dice.s, n: g.dice.n, W };
 }
+/** nothing of the game's in its block but its men (src/sim/men/store.ts: their tenant's bit, 256, in the head's homes) */
+const onlyMen = (g: any): boolean => !g.sim.open || (g.sim.w[1] & ~256) === 0;
 const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i; return -1; };
 { const off = await play(() => false), on = await play(() => true), flip = await play(f => (f / 40 | 0) % 2 === 0);
   const a = firstOff(off.words, on.words), b = firstOff(off.words, flip.words);
@@ -142,7 +145,7 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
   { rows(false); const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { drive(W3, f3++); W3.step(DT); ws.push(RB.stateHash(g3)); } return ws; };
     go(150); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons, sOut = g3.dice.s; const refOut = go(40);
     rows(true); go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons, sIn = g3.dice.s; const refIn = go(40), homeIn = !!g3.dice.home;
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && !g3.sim.open && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && onlyMen(g3) && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);
     RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; rows(true); const b = !!g3.dice.home && g3.dice.home.st === g3.sim && g3.dice.s === sIn && g3.player.char.anim.pose.home === g3.sim, againIn = go(40);
     const same = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
     verdict(a && b && homeIn && same(refOut, againOut) && same(refIn, againIn), 'across a row change: a snapshot from before the die moved in, and one from after, each put back under the row it was taken under, play as they did',
@@ -236,7 +239,7 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
   { R[F.row] = false; const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { work(W3, f3++); W3.step(DT); ws.push(DG.hashDigest(DG.digestGame(g3)) + ':' + bitsOf(g3)); } return ws; };
     go(130); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons; const refOut = go(60);
     R[F.row] = true; go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons; const refIn = go(60), homeIn = !!at(g3);
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; R[F.row] = false; const a2 = !at(g3) && !g3.sim.open, againOut = go(60);
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; R[F.row] = false; const a2 = !at(g3) && onlyMen(g3), againOut = go(60);
     RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; R[F.row] = true; const b2 = at(g3) === g3.sim, againIn = go(60);
     const alike = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
     verdict(a2 && b2 && homeIn && alike(refOut, againOut) && alike(refIn, againIn), `${F.name}, across a row change: a snapshot from before ${F.cols} moved in, and one from after, each put back under the row it was taken under, play as they did`,
