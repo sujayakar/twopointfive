@@ -13,7 +13,8 @@ import { standUp, ROOT } from './headless.ts';
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const HR = await import(`${ROOT}/src/game/hours.ts`);
-const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
+const { lightEstimateAt, wallPutOut, beamRayEnd, beamFan, beamLens, LIGHTS: SQUAD_LIGHTS } = await import(`${ROOT}/src/game/guards.ts`);
+import { plainOpen } from './beam-reading.ts';
 const { nvgSummary } = await import(`${ROOT}/src/game/nvg.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -135,7 +136,7 @@ export async function hoursRestart(): Promise<boolean> {
 
 export async function hoursTeam(): Promise<boolean> {
   const F = family('hours-team: the squad\'s weapon lights follow the hour\'s light — the rule reads the place, not the clock');
-  const rows: string[] = []; const got: Record<string, { lights: number; goggles: number; placeVis: number }> = {};
+  const rows: string[] = []; const got: Record<string, { lights: number; walled: number; goggles: number; placeVis: number }> = {};
   for (const h of ['night', 'midday', 'dusk']) {
     Math.random = seeded(21); HOUR.sun = 1; HOUR.dry = true; HOUR.id = h; const e = entryOf('compound-four');
     let W: any; try { W = await quiet(() => standUp({ level: levelOf(e.level) })); } finally { HOUR.id = 'night'; } const g = W.game;   // (the visit's hour is module state: never left set for the next probe)
@@ -144,13 +145,19 @@ export async function hoursTeam(): Promise<boolean> {
     // the team told to stack on the front door, from the yard, Sam's own light on — which frees theirs (nvg.ts: 'your light'): what burns is then the light
     // rule's alone (guards.ts LIGHTS — off wherever the place itself reads lit)
     const door = g.doors.byName('front'), O = g.orders; await quiet(() => O.give('stack', O.targetAt(door.frameCentre))); g.player.pistol.lightOn = true; g.player.rifle.lightOn = true;
-    let lights = 0, goggles = 0, n = 0;
-    for (let i = 0; i < 60 * 14; i++) { W.step(1 / 60); if (i >= 60 * 4 && i % 20 === 19) { n++; const s = nvgSummary(g) as string; lights += (s.match(/ light(?= ·|$)/g) ?? []).length; goggles += (s.match(/ goggles(?= ·|$)/g) ?? []).length; } }
-    const at = team[0].char.pos; got[h] = { lights: lights / n, goggles: goggles / n, placeVis: vis(g, lightEstimateAt(g, [at[0], 1.2, at[2]], () => true, true)) };
-    rows.push(`${h}: the stack's place reads ${got[h].placeVis.toFixed(2)}, weapon lights on ${got[h].lights.toFixed(1)} of ${team.length}, goggles down ${got[h].goggles.toFixed(1)}`);
+    // (…and, where the page's wall rule is on, a light it holds off the wall at his muzzle is not a light the hour put out: a man is counted `walled` when
+    //  that rule is what put his light out (guards.ts wallPutOut: the other light rules had it burning) and the check's own reading of his beam, after the
+    //  step, does not find it plainly open — beam-reading.ts, as probes.ts flashweight-lights excuses the same man. The ground is not a wall: a man held
+    //  dark over open floor, the fault this line held until 11-04, is not excused)
+    const walledNow = () => team.filter((x: any) => { const o = x.flashlight && !x.flashlight.enabled && wallPutOut(g, x) ? beamLens(g, x) : null;
+      return !!o && !plainOpen({ fan: beamFan, ray: (a, r, m) => beamRayEnd(g, a, r, m) }, o, x.flashlight.dir, SQUAD_LIGHTS.wallBackM); }).length;
+    let lights = 0, walled = 0, goggles = 0, n = 0;
+    for (let i = 0; i < 60 * 14; i++) { W.step(1 / 60); if (i >= 60 * 4 && i % 20 === 19) { n++; const s = nvgSummary(g) as string; lights += (s.match(/ light(?= ·|$)/g) ?? []).length; walled += walledNow(); goggles += (s.match(/ goggles(?= ·|$)/g) ?? []).length; } }
+    const at = team[0].char.pos; got[h] = { lights: lights / n, walled: walled / n, goggles: goggles / n, placeVis: vis(g, lightEstimateAt(g, [at[0], 1.2, at[2]], () => true, true)) };
+    rows.push(`${h}: the stack's place reads ${got[h].placeVis.toFixed(2)}, weapon lights on ${got[h].lights.toFixed(1)} of ${team.length}${got[h].walled ? ` and ${got[h].walled.toFixed(1)} put out for the wall at his muzzle` : ''}, goggles down ${got[h].goggles.toFixed(1)}`);
   }
-  F.verdict(got.night.lights >= 3 && got.midday.placeVis > 0.8 && got.midday.lights === 0 && got.dusk.lights <= got.night.lights,
-    'the same team stacking on the same door with its lights freed: by night the weapon lights burn (something along each man\'s gun is dark, lamp or no lamp); at midday the yard reads lit throughout and none does — nothing but the light changed', rows.join(' · '));
+  F.verdict(got.night.lights + got.night.walled >= 3 && got.night.lights >= 1 && got.midday.placeVis > 0.8 && got.midday.lights === 0 && got.midday.walled === 0 && got.dusk.lights <= got.night.lights,
+    'the same team stacking on the same door with its lights freed: by night the weapon lights burn, or are put out only for the wall a gun is into (something along each man\'s gun is dark, lamp or no lamp); at midday the yard reads lit throughout and none does — nothing but the light changed', rows.join(' · '));
   return F.done();
 }
 

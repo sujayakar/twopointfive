@@ -1618,8 +1618,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dressed). `tools/qa/wayround-check.ts` counted 9 ways lost and 23 squeezed on the compound, all older than the dressing, and two pieces owned every one
   (found by leaving each lived room, then each piece, out in turn). THE TEA TABLE stood in the middle of the sala (x 16.0 to 17.2, z 16.05 to 16.6), on two
   lines a man of that room walks when a pair goes round: from the north door across to the east door (to the garage: 23.38 m bare, 25.89 with the table,
-  over its limit) and from his post out by the north door (to the guard hut: 45.18 m of 46, 45.85 with it). It stands 0.6 m east and 0.5 south now, the east
-  cushion row drawn up to it and a walk left between it and the west row; twenty-five places were tried and nothing nearer gives both ways back (south alone
+  over its limit) and from his post out by the north door (to the guard hut: 45.18 m of 46, 45.85 with it). It stands 0.6 m east and 0.5 south now, the second
+  cushion row laid along the rug's north edge at its head (a row east of it lay half off the rug; cushions are drawn only and take no way, place or
+  cover) and a walk left between it and the west row; twenty-five places were tried and nothing nearer gives both ways back (south alone
   frees the first and costs the second, east alone the reverse). THE CHAFF CUTTER stood where a man sent round to the shed's south door needed to stand (his
   next way was 56 m) and cost the shed's own man 0.26 m of the 1.1 he has to spare to the guard hut; it stands 0.25 m north (0.2 is not enough) and 0.45
   west, the west only to keep its flywheel clear of the level's own cardboard box, its chaff heap with it. COVER: the table is 0.35 m high and covers

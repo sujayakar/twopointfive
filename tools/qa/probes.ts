@@ -2741,6 +2741,8 @@ if (on('doorbrisk', 'squadorders', 'all')) await run('doorbrisk', async () => (a
 if (on('pacing', 'squadorders', 'all')) await run('pacing', async () => (await import('./pacing-check.ts')).pacingCheck());
 // teammates are slower than the player, and run only for a reason (teampace.ts TEAMPACE.on / ?teampace=0 / TPS_TEAMPACE=1; teampace-check.ts; TEAMPACE_BREAK=1 must fail)
 if (on('teampace', 'squadorders', 'all')) await run('teampace', async () => (await import('./teampace-check.ts')).teampaceCheck());
+// a man walking to a stack looks where he walks, or at what he can see: never through the wall beside him (teampace.ts TEAMPACE.walkAim / ?walkaim=0 / TPS_WALKAIM=1; walkaim-probes.ts; WALKAIM_BREAK=1 must fail)
+if (on('walk-aim', 'squadorders', 'all')) await run('walk-aim', async () => (await import('./walkaim-probes.ts')).walkAim());
 // teammates falling in never shove the player (noshove.ts NOSHOVE.on / ?noshove=0 / TPS_NOSHOVE=1; noshove-check.ts; NOSHOVE_BREAK=1 must fail)
 if (on('noshove', 'squadorders', 'all')) await run('noshove', async () => (await import('./noshove-check.ts')).noshoveCheck());
 // a rear man with no door behind him watches a way in, not a wall (cover.ts COVER.rearRead; rearread-check.ts; REARREAD_BREAK=1 must fail)
@@ -3014,6 +3016,7 @@ if (on('bangs', 'doortools', 'all')) await run('bangs', async () => (await impor
 if (on('seenwalk', 'orders', 'all')) await run('seenwalk', async () => (await import('./seenwalk-check.ts')).seenwalkCheck());   // an ordered walk keeps off lit floor that a room nobody has cleared can see (SEENWALK): the way, the walk, the glasshouse's forecourt, the journal and boot lines
 if (on('heldshut', 'doortools', 'all')) await run('heldshut', async () => (await import('./heldshut-check.ts')).heldshutCheck());   // a bang told at a door held from outside that has since come shut: the leaf is opened again first, no can bursts on the team's side (HELDSHUT_BREAK=1 must fail)
 if (on('chargeopen', 'doortools', 'all')) await run('chargeopen', async () => (await import('./chargeopen-check.ts')).chargeopenCheck());   // a charge order whose door comes open under it: the men still walking stay on their own hand of the opening, nobody crosses it (CHARGEOPEN_BREAK=1 must fail)
+if (on('chargeanswer', 'doortools', 'all')) await run('chargeanswer', async () => (await import('./chargeanswer-check.ts')).chargeanswerCheck());   // a door charge order is carried out or answered (DOORTOOLS.chargeAnswer): no order leaves the book in silence, no man is left on a charge nobody is setting (CHARGEANSWER_BREAK=1 must fail)
 // ---------------------------------------------------------------- a room worked from the threshold (threshold-probes.ts; game/doortools.ts kind 'threshold' — a man on each jamb, shoot who comes to the noise, bang the blind pockets, step in shallow; given here by `doorTools.thresholdOn(door)` — its menu rows are the family after this one): 'threshold' = the family
 if (on('threshold-pair', 'threshold', 'all')) await run('threshold-pair', async () => (await import('./threshold-probes.ts')).thresholdPair());
 if (on('threshold-four', 'threshold', 'all')) await run('threshold-four', async () => (await import('./threshold-probes.ts')).thresholdFour());

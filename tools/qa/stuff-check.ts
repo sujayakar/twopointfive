@@ -168,8 +168,10 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
     const made = L.boxes.filter((b: any) => was.get(b) !== b.albedo), silent = made.filter((b: any) => paintOf(b.albedo)?.stuff !== undefined && b.stuff === undefined), words = new Set(made.map((b: any) => b.stuff ?? 'plain'));
     return { made: made.length, silent: silent.length, said: made.filter((b: any) => b.stuff !== undefined).length, words }; };
   const pass = stand('pass.json', L => { dressFront(L); if (dressLorry(L)) kitLorry(L); dressPass(L); });
-  check(pass.made > 150 && pass.silent === 0 && pass.said > 0.75 * pass.made && ['wood', 'paint', 'mud wall', 'sheet', 'cloth'].every(w => pass.words.has(w)),
-    '12 the look page\'s hand-built pieces say their words: on the pass every box the house front, the lorry and the yard\'s pieces make or repaint in a named paint says what that paint is made of (wood, paint, mud wall, sheet and cloth among them)',
+  // (the lorry's trial makes nothing here since the level's lorry says its own shapes, scene/carShapes.ts: lorryTry.ts dressLorry stands down, and the
+  // 136 boxes are the house front's and the yard's — its sheet steel went with it)
+  check(pass.made > 120 && pass.silent === 0 && pass.said > 0.75 * pass.made && ['wood', 'paint', 'mud wall', 'cloth'].every(w => pass.words.has(w)),
+    '12 the look page\'s hand-built pieces say their words: on the pass every box the house front and the yard\'s pieces make or repaint in a named paint says what that paint is made of (wood, paint, mud wall and cloth among them); the lorry\'s trial stands down, the level\'s lorry saying its own shapes',
     `the pass: ${pass.made} made or repainted, ${pass.said} say a word (${[...pass.words].sort().join(', ')}), ${pass.silent} in a named paint and silent`); }
 
 // 13. THE EDITOR KEEPS A PAINT'S WORD (src/editor/paint.ts): editing a paint's colour or finish leaves what it is made of, a copy of a paint is made of the same,
