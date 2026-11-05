@@ -11,9 +11,7 @@ type Ray = crate::scene_collision::Raycast;
 
 // ---------------------------------------------------------------- seam: what the skeleton still cannot do (notes.md, Skeleton)
 /// `g.level.boxes[i]`: a level box's half size, its centre and its flags, by its place in the level's list. That list is `g.col.boxes` (game.ts:1219).
-fn seam_level_box(g: &mut Game, i: usize) -> (V3, V3, f64) {
-    todo!("needs: the table of Box rows: skeleton 5 has no Level.boxes, g.col.boxes is Vec<BoxId> and no Tab holds a Box (lightswitch.ts:101, :131)")
-}
+fn seam_level_box(g: &mut Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
 
 // ---------------------------------------------------------------- finding them
 /// Is the rule running: nothing under a show. (lightswitch.ts switchesLive)

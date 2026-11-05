@@ -13,9 +13,7 @@ use sim::world::ASK_HOST;
 // ---- small private helpers
 
 /// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// which of the module's worlds is this game's: M.slot, which the mirror's `take` names as the copy first stands
 #[inline]
 fn slot(g: &Game) -> usize {

@@ -35,6 +35,7 @@ import { civilianBodies } from './civilians';
 import { hearPath, airTrans } from './weather';
 import { CameraMachine, LaserMachine, CAM, LASER } from '../sim/lightshome';
 import type { SimState } from '../sim/state';
+import { word } from './belief';
 
 type CameraDef = Extract<DeviceDef, { kind: 'camera' }>;
 type KeypadDef = Extract<DeviceDef, { kind: 'keypad' }>;
@@ -196,7 +197,7 @@ function cameraAlarm(g: Game, c: CameraRt) {
   const p = c.lastSeen!; const where = roomOf(p, g.level);
   control(g, `camera ${c.index}: that's him — the ${where}. all posts, the ${where}`);
   g.alarm.pos[0] = p[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = p[2]; g.alarm.placed = true;   // the floor's fix is the picture's (the spokesman nearest it answers, the lockdown posts by it)
-  for (const gd of g.guards) if (gd.state !== 'dead' && !gd.held && !gd.unit) { gd.lastKnown = v3.copy(p); gd.awareness = Math.max(gd.awareness, 0.5); if (gd.state === 'patrol') { gd.state = 'suspicious'; gd.reactT = 0.8; gd.searchT = 0; gd.path = []; gd.pathGoal = null; } }   // everybody on the net has the fix and comes up sharp; nobody is 'alert' off a monitor (no eyes of their own on him yet)
+  for (const gd of g.guards) if (gd.state !== 'dead' && !gd.held && !gd.unit) { word(g, gd, p); gd.awareness = Math.max(gd.awareness, 0.5); if (gd.state === 'patrol') { gd.state = 'suspicious'; gd.reactT = 0.8; gd.searchT = 0; gd.path = []; gd.pathGoal = null; } }   // everybody on the net has the fix and comes up sharp; nobody is 'alert' off a monitor (no eyes of their own on him yet)
   raiseEscalation(g, escalationOf(g) >= 1 ? 2 : 1, null, 'device');
   chronDevice(g, 'cameraAlarm', { camera: c.def.name, n: c.index }, p);
   g.devices.note(g, { device: c.def.name, what: 'alarm', where, sent: null });

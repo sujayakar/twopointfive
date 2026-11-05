@@ -9,7 +9,7 @@
 //            and thrown and shot, groups, the panel's toggle and repair, a wall switch both ways, the show's day, the hour, a save and a load, a restart, Sam walked
 //            through a camera's picture and a beam). After every tick each lamp with a row: its record in the part is the record the renderer's list holds, to the bit.
 //            A row left a tick stale is red here before any question reads it.
-// LIGHTS_BREAK=1 is the red path: the made-up run's mains tripped a hundredth of a second late once, and a row written a millimetre out once. The run must FAIL.
+// LIGHTS_BREAK=1 is the red path: each made-up seed played again with the mains tripped a hundredth of a second late once (its word must move), and a row written a millimetre out once. The run must FAIL; a made-up half that did not move exits 0.
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -51,7 +51,7 @@ function fold(home: any, into: number): number {
 
 // ---------------------------------------------------------------- PART ONE: made-up fixtures, every event kind on a clock
 function lampDef(i: number, kind: number, enabled: boolean, intensity: number): any { const k = i + 1; return { name: `lamp${i}`, group: 'made', kind, pos: [k * 0.5, 2.5, -k * 0.25], dir: [0, -1, 0], color: [0.9, 0.8, 0.7], intensity, range: 6 + i % 5, innerDeg: 20, outerDeg: 40, radius: 0.1, volumetric: 0, owner: 0, enabled, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: intensity }; }
-function madeUp(seed: number, ticks: number): number {
+function madeUp(seed: number, ticks: number, late = false): number {
   const rnd = rng(seed), st = new ST.SimState(), home = new H.LightHome(st), list: any[] = [], targets: any[] = [];
   const NF = 40, fix = (i: number, extra: any = {}) => ({ name: `f${i}`, group: i % 3 ? 'a' : 'b', kind: i % 4 === 0 ? 'analytic' : 'emissive', pos: [i, 2, 0], boxes: [], baseEmissive: [1, 1, 1], baseIntensity: 2 + i * 0.25, on: i % 5 !== 0, broken: false, disabledUntil: -1, fluorescentFlicker: i % 7 === 0, factor: i % 5 !== 0 ? 1 : 0, mains: i % 3 !== 2, interactive: true, stagger: i * 0.13, ...extra });
   for (let i = 0; i < NF; i++) { const def = fix(i); if (def.kind === 'analytic') { def.light = lampDef(i, 0, def.on, def.baseIntensity); list.push(def.light); } const t = home.add(def); targets.push(t); if (i % 4 === 1) { const al = lampDef(100 + i, 3, def.on, 1.5); list.push(al); t.areaLights = [{ light: al, base: 1.5 }]; } home.in(LIGHT_IN.authored, t, i % 2); }
@@ -75,7 +75,7 @@ function madeUp(seed: number, ticks: number): number {
         case 5: home.in(LIGHT_IN.hand, t, rnd() < 0.5 ? NaN : time); break;
         case 6: home.in(LIGHT_IN.base, t, rnd() * 4); break;
         case 7: home.in(LIGHT_IN.put, t, rnd() < 0.5 ? 1 : 0, rnd() < 0.3 ? 1 : 0, rnd() < 0.5 ? -1 : time + 1, rnd() < 0.5 ? NaN : time - 1); break;
-        case 8: home.in(LIGHT_IN.trip, null, BREAK && tick === 7 * 40 ? time + 0.01 : time, rnd() < 0.15 ? Infinity : rnd() * 7); break;
+        case 8: home.in(LIGHT_IN.trip, null, time, rnd() < 0.15 ? Infinity : rnd() * 7); break;
         case 9: home.in(LIGHT_IN.back, null, time); break;
         case 10: home.in(LIGHT_IN.mains, null, rnd() < 0.5 ? 0 : 1, time + rnd() * 5, time - rnd() * 4, time - rnd() * 2); break;
         case 11: home.in(LIGHT_IN.fix, null, rnd()); break;
@@ -87,6 +87,7 @@ function madeUp(seed: number, ticks: number): number {
       if (rnd() < 0.1) { const L = new H.LaserMachine(lasers[Math.floor(rnd() * lasers.length)], st); L.put(time - rnd() * 8, Math.floor(rnd() * 4), rnd() < 0.3, rnd() < 0.3); }
       if (rnd() < 0.3) { const l = list[Math.floor(rnd() * list.length)]; l.intensity = rnd() * 3; l.pos = [rnd(), rnd(), rnd()]; l.enabled = rnd() < 0.5; if (rnd() < 0.5) l.steady = { intensity: rnd(), pos: [rnd(), rnd(), rnd()], radius: rnd() }; else delete l.steady; home.feed(l); }
     }
+    if (late && tick === 7 * 40) home.in(LIGHT_IN.trip, null, time + 0.01, 3);
     const dt = rnd() < 0.02 ? 0 : DT, near = rnd() < 0.15;
     home.step(time, dt, near, 1 + rnd() * 2, 0.5 + rnd());
     for (const c of cams) { const live = rnd() < 0.9, m = home.cameraPan(c.slot, c.light, dt, live, rnd() < 0.8); if (live && (m & H.CAM.ok)) { const vis = rnd() < 0.6; home.cameraSee(c.slot, time, dt, vis, vis ? rnd() * 3 * (rnd() < 0.2 ? 0 : 1) : 0, [rnd(), 0, rnd()], 0.8, 2); } }
@@ -201,12 +202,16 @@ async function putBack(file: string) {
 const KEEP: Record<string, number> = await Bun.file(FIXTURE).json().catch(() => ({})), KEPT = TICKS === 2400;   // (the words are of 2400 ticks a seed)
 if (!Object.keys(KEEP).length && !has('--write')) fail(`no kept words at ${FIXTURE}: --write makes them`);
 const words: Record<string, number> = {};
+let redWords = 0;   // (the red path's own: a seed whose word the late trip moved. These words are the only hold on the module's arithmetic, so the red path must move them itself and not lean on the rows' red below)
 for (const s of [1, 2, 3]) { const word = madeUp(s, TICKS); words[`seed${s}`] = word;
+  if (BREAK && madeUp(s, TICKS, true) !== word) { redWords++; fail(`made-up seed ${s}: the mains tripped a hundredth of a second late moved the word`); }
   if (KEPT && KEEP[`seed${s}`] !== undefined && KEEP[`seed${s}`] !== word && !has('--write')) fail(`made-up seed ${s}: the word is ${word.toString(16)} and the kept one ${KEEP[`seed${s}`].toString(16)}`); }
 log(`made-up: 3 seeds, ${TICKS} ticks, words ${Object.values(words).map(w => w.toString(16)).join(' ')}`);
 for (const f of LEVELS) { await level(f); log(`${f.padEnd(22)} every row its lamp`); }
 standRefuses(); await rowLess(); for (const f of ['office.json', 'pass.json']) await putBack(f);
 log('a lamp the module writes must have a row, a lamp with no row is switched from the factor, a put-back across a blackout reads the restored timeline');
-if (has('--write')) { await Bun.write(FIXTURE, JSON.stringify(words, null, 1) + '\n'); log('words written'); }
+if (has('--write')) { if (TICKS !== 2400 || BREAK || bad) { fail(`--write keeps the words of a clean run of 2400 ticks, and this one is not (${TICKS} ticks${BREAK ? ', the red path' : ''}, ${bad} difference(s))`); } else { await Bun.write(FIXTURE, JSON.stringify(words, null, 1) + '\n'); log('words written'); } }
+if (BREAK && !redWords) { log('=== lights-ident: the made-up half never went red: its words hold nothing, and this run is not the red path it says it is ==='); process.exit(0); }
+if (!bad) log('- PASS — lights-ident: the kept words stand and every row is its lamp');
 log(bad ? `=== lights-ident: FAIL, ${bad} difference(s)${BREAK ? ' (the red path: as it should)' : ''} ===` : `=== lights-ident: PASS — the kept words stand and every row is its lamp ===`);
 process.exit(bad ? 1 : 0);

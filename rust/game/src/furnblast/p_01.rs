@@ -13,7 +13,7 @@ use crate::wallbreak::{BKind, LevelChange, LevelChangeCause, LevelChangeKind, Wa
 
 // ---------------------------------------------------------------- the one seam left (notes.md, ## Skeleton)
 /// A box's row, `seam_box(g, id)` as index/properties.txt has it: this skeleton has no table of Box rows (`StaticCollision.boxes` is `Vec<BoxId>`)
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows (made boxes too: every piece of a broken thing is one)") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- small readers
 /// the box at index `i` of the level's list, if there is one

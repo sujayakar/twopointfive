@@ -6,7 +6,7 @@
 //   --warm N    the run is played N times first and thrown away (default 1: the numbers are then the WORK's, not the JIT's first sight of the blast's code;
 //               --warm 0 lists the cold run, as a fresh page pays its first charge)
 //   --split     every method of the classes a blast runs through (WallCharge, Destruction, WallBreak, Furniture, Debris, GlassBreak, WallReact, NavGrid,
-//               SoundPaths, StaticCollision, FogOfWar, Game.reachChanged …) wrapped: the blast frame's time by method, self and inclusive (the wrappers
+//               SoundPaths, StaticCollision, FogOfWar …) wrapped: the blast frame's time by method, self and inclusive (the wrappers
 //               cost a little: quote the frame from a run WITHOUT --split)
 //   --gc        a full collection forced before each wall charge's trigger, outside the timing: without it a collection the blast's own garbage sets off can
 //               land in the frame (`each pass` lists every pass's blast frame: a pass well over the others is one)

@@ -299,7 +299,7 @@ const untypedInGame: { row: string; where: string; text: string }[] = [];
 // ---- the rows that are half of a Rust twin are not this tool's (docs/agents/rust.md; the list is the Rust goal's, 2026-11-04): a row read in a file whose
 // functions the module also holds, or named by rust/sim/src/knobs.rs, is retired in both languages on a train of that goal
 const TWIN_FILES = new Set(['src/scene/collision.ts', 'src/scene/boxMirror.ts', 'src/game/fogofwar.ts', 'src/anim/skeleton.ts', 'src/math/dice.ts', 'src/math/exact.ts', 'src/game/sense.ts', 'src/game/doors.ts', 'src/game/doorblast.ts', 'src/game/shards.ts', 'src/sim/fallshome.ts', 'src/game/props.ts', 'src/game/throwables.ts']);
-const twinFn = (n: any) => { const f = rel(n.getSourceFile().fileName); if (!/^src\/game\/(character|guards)\.ts$/.test(f)) return false; const fn = ts.findAncestor(n, (x: any) => (x.kind === SK.MethodDeclaration || x.kind === SK.FunctionDeclaration) && x.name); const nm = fn?.name?.getText?.() ?? ''; return /Own$/.test(nm) || nm === 'eyeContactHere' || nm === 'lampsHere'; };
+const twinFn = (n: any) => { const f = rel(n.getSourceFile().fileName); if (!/^src\/game\/(character|guards)\.ts$/.test(f)) return false; const fn = ts.findAncestor(n, (x: any) => (x.kind === SK.MethodDeclaration || x.kind === SK.FunctionDeclaration) && x.name); const nm = fn?.name?.getText?.() ?? ''; return /Own$/.test(nm); };
 const RUST_KNOBS = existsSync(join(ROOT, 'rust/sim/src/knobs.rs')) ? readFileSync(join(ROOT, 'rust/sim/src/knobs.rs'), 'utf8') : '';
 const twinWhy = new Map<string, string>();
 if (!flag('--twins')) { for (const r of rows) if (RUST_KNOBS.includes(`"${r.row}"`)) twinWhy.set(r.row, 'named by rust/sim/src/knobs.rs');

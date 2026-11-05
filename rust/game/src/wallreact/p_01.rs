@@ -281,9 +281,7 @@ fn cause_of(c: crate::wallbreak::LevelChangeCause) -> BreachCause {
 }
 
 /// `W.box`: its centre, half sizes and yaw (wallreact.ts:239-240). The body is one read of the box's row, once a table holds the rows.
-fn seam_box(g: &mut Game, b: BoxId) -> (V3, V3, f64) {
-    todo!("needs: the table of Box rows: this skeleton has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 /// the breach a wall's row belongs to: a new one, or the one on that wall it widens   (wallreact.ts WallReact.upsert)
 pub fn wall_react_upsert(g: &mut Game, row: &crate::wallbreak::LevelChange) -> Option<WallreactBreachId> {

@@ -64,9 +64,7 @@ pub fn area(r: crate::doorswing::Rect) -> f64 {
 type BoxNumbers = (V3, V3, f64, f64);
 
 /// A static's numbers by its ID (doorswing.ts:56 `level.boxes`, which is `g.col.boxes`).
-fn seam_box_numbers(g: &mut Game, b: BoxId) -> BoxNumbers {
-    todo!("needs: the table of Box rows: g.col.boxes is Vec<BoxId> and no Tab holds a Box")
-}
+fn seam_box_numbers(g: &mut Game, b: BoxId) -> BoxNumbers { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.flags) }
 
 /// roofOver's count over the statics' numbers.
 fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64 {

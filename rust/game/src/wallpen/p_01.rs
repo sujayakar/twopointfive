@@ -15,9 +15,7 @@ fn row_of(i: f64, len: usize) -> Option<usize> {
     if i >= 0.0 && u as f64 == i && u < len { Some(u) } else { None }
 }
 /// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// `g.col.boxes[index]`
 fn static_at(g: &Game, index: f64) -> Option<BoxId> { row_of(index, g.col.boxes.len()).map(|u| g.col.boxes[u]) }
 /// `g.col.dynamicBoxes[i]`

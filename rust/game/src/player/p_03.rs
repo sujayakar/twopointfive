@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---- a seam: the one step the skeleton still cannot give (notes.md, ## Skeleton)
 /// `col.boxes[i]`'s centre, half sizes and yaw: g.col.boxes is Vec<BoxId> and no table holds the rows, while the index says g.col.boxes[id].c (faceAt, player.ts:964)
-fn seam_box_c_h_yaw(g: &mut Game, b: BoxId) -> (V3, V3, f64) { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c") }
+fn seam_box_c_h_yaw(g: &mut Game, b: BoxId) -> (V3, V3, f64) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 
 // ---- the body keepOffGuards keeps off: the player's own (None) or a look ahead's copy (Some)
 fn legs_pos(g: &Game, m: &Option<&mut Legs>) -> V3 {

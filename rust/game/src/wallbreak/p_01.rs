@@ -12,9 +12,7 @@ fn flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::box_flag() }
 /// A box's row (`Box.*`): the one line of this file that says where a box lives. SKELETON-GAP: skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while
 /// index/ids.txt and properties.txt say `g.col.boxes[id]`. With the table the body is one line. Tests have a table of their own, at the foot of this file.
 #[cfg(not(test))]
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// the box a breakable stands in for
 fn own_box(g: &mut Game, b: WallbreakBreakableId) -> &mut crate::scene_boxes::Box { let x = g.tab.wallbreak_breakable[b].box_; seam_box(g, x) }
 /// a static by its place in the level's list: `g.col.boxes[i]` (wallbreak.ts:150, a slot and a key of `owner` are places, not IDs)

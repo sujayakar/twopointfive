@@ -12,9 +12,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 struct Cand { i: usize, s: usize }
 
 /// A box's row, to read and to write through. (src/scene/boxes.ts:66 on, Box.*)
-fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    todo!("needs: a table of Box rows; skeleton 5 has g.col.boxes as Vec<BoxId> and the index says g.col.boxes[id].c")
-}
+fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// What each generator writes for a lamp. (carlamps.ts sigs)
 pub fn sigs() -> Vec<crate::carlamps::LampSig> {

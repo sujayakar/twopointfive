@@ -179,7 +179,7 @@ export const DOORTHROW = { on: false,
   startle: 1.0, wary: 0.5,
   /** an opened leaf only startles (false = the first cut, which a recording made on it replays: any driven leaf short of a boot folds him for `pushSecs`) */
   soft: true,
-  /** the startled defender gets the shared start (startle.ts startleMan: the jolt toward the door, his gun down for the beat; false = the animator's flinch,
+  /** the startled defender gets the shared start (startle.ts giveStartle: the jolt toward the door, his gun down for the beat; false = the animator's flinch,
    *  which a recording from before the shared start replays) */
   jolt: true,
   /** m/s a swinging leaf must still be doing where it meets him (slower, it comes to rest against him as ever) */

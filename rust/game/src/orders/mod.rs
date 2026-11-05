@@ -3,6 +3,7 @@ pub use types::*;
 pub mod sig;
 pub use sig::*;
 // the parts' bodies: a named re-export wins over the stubs of sig.rs
+pub mod b_01;
 pub mod p_01;
 pub use p_01::{digit_of, key_name, compass, hover_store};
 pub mod p_02;

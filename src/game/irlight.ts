@@ -33,8 +33,8 @@
 //     meter has no answer — the CPU's rule is the whole rule, at once, exactly as it was. So his light burns in a room that is sealed and unlit, and
 //     not in one the picture already shows. Off = the CPU's estimate decides everywhere, as it did.
 //   WHAT IT IS. A real light: a wide spot at his brow along the way he faces, tipped a little to the floor, shadowed by every wall, leaf and body like any other.
-//     Its strength is said as what the TUBE makes of it (IRLIGHT.power: on-axis intensity × the picture's exposure — the tube counts exposed luminance, so the
-//     flood reads the same through it at every hour and on every Brightness setting), not as a wattage.
+//     Its strength is said as what the TUBE makes of it (IRLIGHT.power: on-axis intensity × the game's own exposure for the hour, hours.ts exposureOf — the tube counts exposed luminance, so the
+//     flood reads the same through a man's tube at every hour, and a player's Brightness moves it in his picture with everything else), not as a wattage.
 //   WHO SEES BY IT. Only a tube. The lights are kept in a list of their own (render/lights.ts LightSet.ir), never in the list every other reader sums, and are
 //     handed to the renderer flagged infrared: uploaded only on a frame whose picture IS the tube's, where each is a steady light like a torch (the frame
 //     the tube comes off, the engine restarts every screen history: engine.ts), and given NOTHING by
@@ -59,6 +59,7 @@ import type { Character } from './character';
 import { nvgDown, tubeVis, tubeSig, nvgPlaceLight, NVG } from './nvg';
 import { wandEye, WAND } from './wand';
 import { SENSE } from './sense';
+import { exposureOf } from './hours';
 
 export const IRLIGHT = {
   /** off = no infrared light on anybody's goggles (the page turns it on: src/host/profile.ts; ?noirlight) */
@@ -123,7 +124,7 @@ function pose(g: Game, L: RtLight, c: Character) {
   const head = c.bones.head ?? v3.add(c.pos, [0, HEAD_Y, 0]), fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw), dn = Math.sin(IRLIGHT.dip * DEG), fl = Math.cos(IRLIGHT.dip * DEG);
   // (a face against a wall or a leaf: the lens stays at the brow, this side of it — asked here whatever lighting.ts LIGHTWALL says, so that no flood ever starts beyond a wall)
   L.pos = g.col.segmentBlocked(head, [head[0] + fx * LENS_CLEAR, head[1], head[2] + fz * LENS_CLEAR]) ? v3.copy(head) : [head[0] + fx * LENS_AHEAD, head[1], head[2] + fz * LENS_AHEAD]; L.dir = [fx * fl, -dn, fz * fl];
-  const S = g.engine.settings; L.intensity = L.peakIntensity = IRLIGHT.power / (S.exposure > 0 ? S.exposure : 1);
+  L.intensity = L.peakIntensity = IRLIGHT.power / exposureOf(g);   // (the game's own exposure for the hour, hours.ts exposureOf: never a player's Brightness)
   L.range = IRLIGHT.reach; L.outerDeg = clamp(IRLIGHT.cone, 5, 89); L.innerDeg = Math.min(IRLIGHT.core, L.outerDeg - 0.5); L.enabled = true;
 }
 /** IS THIS FLOOR TOO DARK FOR THE TUBE BY ITS OWN LIGHT (IRLIGHT.auto)? The place's light — nothing carried, nothing infrared, so no light of this file's
@@ -295,8 +296,8 @@ export function irShowsAt(g: Game, m: Guard, P: Vec3): boolean {
   if (!irCarried()) return false;
   const c = m.char, dx = P[0] - c.pos[0], dz = P[2] - c.pos[2], d2 = Math.max(dx * dx + dz * dz, 0.25), d = Math.sqrt(d2); if (d >= IRLIGHT.reach) return false;
   if (IRLIGHT.auto && d > LOOK_MAX) return false;   // (his light comes on for dark floor his fan finds, and the fan ends there: past it he is credited with nothing)
-  const x = d / IRLIGHT.reach, w = clamp(1 - x * x * x * x, 0, 1), S = g.engine.settings;
-  return tubeVis(g, IRLIGHT.power / (S.exposure > 0 ? S.exposure : 1) * w * w / d2) >= NVG.blackAt;
+  const x = d / IRLIGHT.reach, w = clamp(1 - x * x * x * x, 0, 1);
+  return tubeVis(g, IRLIGHT.power / exposureOf(g) * w * w / d2) >= NVG.blackAt;
 }
 /** he carries an illuminator of his own (a teammate with goggles, the team half on): nvg.ts asks before it calls a place too dark for his tube */
 export function irCarried(): boolean { return IRLIGHT.on && IRLIGHT.team; }

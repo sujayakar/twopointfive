@@ -18,7 +18,8 @@
 // doorway's light stays where it is while its door swings, and only its strength moves.
 // Nothing here knows a level, a door or a window by name, and it imports nothing from src/game. The check: tools/qa/openings-check.ts.
 import type { Vec3 } from '../math/vec';
-import { BoxFlag, type Box } from './boxes';
+import { whole } from '../render/steps';
+import { BoxFlag, type Box, type PlanBox } from './boxes';
 import { WORLD } from './world';
 import { PLACE, PLACE_W, PLACE_H, PLACE_RES, placeWall, placeSolid, placeRoof, stampCells } from './placePlan';
 import { type Pt, narrowest, footprint, WAY } from './wayThrough';
@@ -88,11 +89,11 @@ export interface Opening {
 
 /** does a box stop light going straight through a wall: solid, drawn, and not glass (a decal, a glow card and a pane do not; a roof the camera cuts away is
  *  above every sample). Of the things that move, a door's leaf alone (placeWall's own test: a man is no part of a wall). */
-const blocks = (b: Box, dynamic: boolean): boolean => (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow)) === 0 && (!dynamic || placeWall(b) === 255);
+const blocks = (b: PlanBox, dynamic: boolean): boolean => (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow)) === 0 && (!dynamic || placeWall(b) === 255);
 
-interface Near { b: Box; c: number; sn: number; rn: number; cn: number }
+interface Near { b: PlanBox; c: number; sn: number; rn: number; cn: number }
 /** the boxes of `from` within reach of the line at L across `axis`, between s0 and s1 along it */
-function nearLine(from: readonly Box[], axis: 0 | 1, L: number, s0: number, s1: number, out: Near[]): void {
+function nearLine(from: readonly PlanBox[], axis: 0 | 1, L: number, s0: number, s1: number, out: Near[]): void {
   out.length = 0;
   for (const b of from) {
     const cs = Math.abs(Math.cos(b.yaw)), sn = Math.abs(Math.sin(b.yaw)), rx = cs * b.h[0] + sn * b.h[2], rz = sn * b.h[0] + cs * b.h[2];
@@ -153,7 +154,12 @@ export function leavesKey(dynamics: readonly Box[]): number {
 
 /** every opening the WALLS of a level leave, as it stands: a door's leaf is no part of this, shut or swinging (`area` = `full` here; openAreas takes the
  *  leaves out). Pure, and the heavy half: made again only when a wall changes. */
-export function planOpenings(statics: readonly Box[]): Opening[] {
+export function planOpenings(statics: readonly PlanBox[]): Opening[] { return whole(planOpeningsSteps(statics)); }
+const BOXES_A_STOP = 96, ROWS_A_STOP = 6, RUNS_A_STOP = 1;   // (a stop every so many boxes laid on the plan, rows of it looked along, and stretches measured)
+/** … MADE IN STEPS (render/steps.ts: in a browser this runs cold each time the walls change, 5 to 10 ms of one frame on the office). IT READS THE BOXES AT
+ *  EVERY STEP, so whoever gives it more than one frame gives it copies taken in one call (scene/boxes.ts planBoxes): engine.ts lookOpeningLights. An
+ *  Opening it returns holds no box. */
+export function* planOpeningsSteps(statics: readonly PlanBox[]): Generator<void, Opening[], void> {
   const W = PLACE_W, H = PLACE_H, N = W * H, K = LOOK_OPENINGS, cell = 1 / PLACE_RES, ox = WORLD.rcMin[0], oz = WORLD.rcMin[2], top = WORLD.ceilingY, SL = 8, step = top / SL;
   // THE PLAN: which eighths of the height from the floor to the ceiling something that stops light fills in each cell, which of them glass fills, and how
   // high the roof over the cell is (scene/placePlan.ts's own plan is cut between a man's shin and his head, for which room a point is in: a strip of glass
@@ -161,13 +167,14 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
   const solid = new Uint8Array(N), glass = new Uint8Array(N), under = new Uint8Array(N).fill(255), roofY = new Float32Array(N).fill(Infinity);
   const bitsOf = (y0: number, y1: number): number => { let m = 0; for (let i = 0; i < SL; i++) { const y = (i + 0.5) * step; if (y0 - 0.02 <= y && y <= y1 + 0.02) m |= 1 << i; } return m; };
   const STAND = bitsOf(PLACE.maxFoot, PLACE.minTop);   // (the heights a standing man takes)
-  for (const b of statics) {
+  for (let n = 0; n < statics.length; n++) { if (n > 0 && n % BOXES_A_STOP === 0) yield; const b = statics[n];
     const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], pane = (b.flags & BoxFlag.Glass) !== 0;
     if (placeRoof(b)) stampCells(b.c[0], b.c[2], b.h[0], b.h[2], b.yaw, k => { if (y0 < roofY[k]) roofY[k] = y0; });
     if (!placeSolid(b)) continue;   // (the place map's own test: not a post, a pipe, a decal or a glow card)
     const bits = bitsOf(y0, y1), to = pane ? glass : solid; if (bits) stampCells(b.c[0], b.c[2], b.h[0], b.h[2], b.yaw, k => { to[k] |= bits; });
   }
   for (let k = 0; k < N; k++) if (roofY[k] < Infinity) { let m = 0; for (let i = 0; i < SL; i++) if ((i + 0.5) * step < roofY[k]) m |= 1 << i; under[k] = m; }
+  yield;
   /** the heights light can pass a cell at: all that nothing solid fills, under its roof */
   const open = (k: number): number => ~solid[k] & under[k];
   const roofed = (k: number): boolean => roofY[k] < Infinity;
@@ -186,7 +193,7 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
         seen[k] = 1; touched.push(k); stack.push(k); if (inn >= 1 && ((solid[k] | glass[k]) & STAND) === 0) n++; } }
     for (const k of touched) seen[k] = 0; touched.length = 0;
     return n >= K.deep; };
-  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+  for (let j = 0; j < H; j++) { if (j > 0 && j % ROWS_A_STOP === 0) yield; for (let i = 0; i < W; i++) {
     const k = j * W + i, a = open(k); if (!a) continue;
     for (const axis of [0, 1] as const) {
       const x = i + (axis === 0 ? 1 : 0), z = j + (axis === 1 ? 1 : 0); if (x >= W || z >= H) continue;
@@ -194,7 +201,8 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
       const sign = roofed(t) ? 1 : -1, di = axis === 0 ? sign : 0, dj = axis === 1 ? sign : 0;
       if (leadsIn(roofed(t) ? x : i, roofed(t) ? z : j, di, dj)) edges.push({ axis, line: axis === 0 ? i + 1 : j + 1, sign, at: axis === 0 ? j : i, top: Math.min(top, roofY[roofed(t) ? t : k]) });
     }
-  }
+  } }
+  yield;
   // 2. edges in one line, side by side, are one stretch of the roof's edge to look along
   edges.sort((p, q) => p.axis - q.axis || p.line - q.line || p.sign - q.sign || p.at - q.at);
   interface Run { axis: 0 | 1; line: number; sign: 1 | -1; a: number; b: number; top: number }
@@ -206,8 +214,8 @@ export function planOpenings(statics: readonly Box[]): Opening[] {
   }
   // 3. measure each: sample the wall's plane across it against the boxes that stand in the straight way through
   const out: Opening[] = [], near: Near[] = [], J = Math.round(K.jamb / K.ds), pad = 2 * cell;   // (the grid rounds a jamb to a cell: the samples find it, and the wall past it)
-  const blockers: Box[] = []; for (const b of statics) if (blocks(b, false) && b.c[1] + b.h[1] > 0.02 && b.c[1] - b.h[1] < top) blockers.push(b);
-  for (const r of runs) {
+  const blockers: PlanBox[] = []; for (const b of statics) if (blocks(b, false) && b.c[1] + b.h[1] > 0.02 && b.c[1] - b.h[1] < top) blockers.push(b);
+  for (let ri = 0; ri < runs.length; ri++) { if (ri > 0 && ri % RUNS_A_STOP === 0) yield; const r = runs[ri];
     const o0 = r.axis === 0 ? ox : oz, oS = r.axis === 0 ? oz : ox, L = o0 + r.line * cell;   // the line's place across the wall, m
     const c0 = oS + r.a * cell, c1 = oS + r.b * cell, s0 = c0 - pad, s1 = c1 + pad;
     nearLine(blockers, r.axis, L, s0, s1, near);

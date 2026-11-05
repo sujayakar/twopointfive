@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ------------------------------------------------------------------ what the skeleton does not reach yet (BODY.md: seams)
 
 /// A box's row, `g.col.boxes[id]` as index/properties.txt has it: skeleton 5 has no table of Box rows (`StaticCollision.boxes` is `Vec<BoxId>`)
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ------------------------------------------------------------------ small helpers of this part
 

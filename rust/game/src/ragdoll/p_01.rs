@@ -43,7 +43,7 @@ fn seam_box_row(g: &Game, b: BoxId) -> (V3, V3, f64) {
     #[cfg(test)]
     return tests::box_row(b);
     #[cfg(not(test))]
-    todo!("needs: a table of Box rows; skeleton 5 has g.col.boxes as Vec<BoxId> and the index says g.col.boxes[id].c")
+    { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw) }
 }
 
 /// A body seeded from pts (RAG_COUNT world positions) and vel (m/s) or none.   (ragdoll.ts Ragdoll.constructor)

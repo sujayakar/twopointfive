@@ -388,7 +388,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   [card|off|you|mate|wiring]` (`probes.ts bigslot`; `bigslot-card` also under `kit`, `bigslot-mate` under `doortools`; in all-quick; BOTH stands — it raises the switch itself;
   `BIGKIT_BREAK=1` must fail the lock lines: 54 lines, 18 red under the break, 10-14), `PORT=<dev server> node tools/qa/bigslot-page.cjs [outDir]` (the real page on the
   software adapter: the card's one Big slot row and wide pip, your hammer on a locked door in the boot's place, `?nobigslot`). The probes written on the old card (`kit-*`, `pouch-*`, `shotgun-*`, `squadsmoke-*`) hold the switch off
-  on every stand (`probes.ts CARDS_AS_THEY_WERE`; `pouch-table` also holds the issue kit's names and your card's door charge, camera and wand rows off, `CARD_AS_IT_WAS`, for its word-for-word
+  on every stand (`tools/qa/holds.ts CARDS_AS_THEY_WERE`; `pouch-table` also holds the issue kit's names and your card's door charge, camera and wand rows off, `CARD_AS_IT_WAS`, for its word-for-word
   lines and its fixture of the build before the pouches rule; `kit-solo`'s first line reads the shipped stand's plain game as the page's `?solo` night, which it is), so on the shipped stand a wall charge set through the big row is covered by bigslot-check alone, and the shotgun as a
   man's GUN is no longer a thing the page can stage. Page: rebuild/kit-slots/read-first.md. NOBODY HAS SEEN IT ON A GPU OR PLAYED ANY OF IT: the harness and the software adapter only; neither
   tool is drawn in YOUR hands, the hammer's blow is a takedown's strike standing in, and a teammate's hammer is not drawn at all (the characters goal's); the Team & kit door picture
@@ -627,7 +627,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
   Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -guns -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
   `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
-  switch held off (`probes.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
+  switch held off (`tools/qa/holds.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
   on, the third is down to a sidearm round 0.50 s after the guns ran dry; off, he was still standing twelve seconds later (one seed, one room).
   `gunslots-off`: ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE:
   a swap ANIMATION on a teammate (his pose changes with the row in his hands, the equip sound plays, nothing is animated between); the dry man's sense
@@ -896,7 +896,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: all five lines pass.
   The lesson bot for Training 4 (`tools/qa/lessons/train-kit.ts`) plays the new presses when the rule is on, read off the page's own table when
   it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
-  off on every stand (`probes.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
+  off on every stand (`tools/qa/holds.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
   too, for a card's note), `sticky-look.cjs` opens with `&slotsetup=0`, and the two key board checks ask their own rules with Z and L as they
   were (`keybinds-check.ts`, `qkey-check.ts`; `keybinds-page.cjs` opens with `&slotsetup=0`). One older line was MOVED to the rule, not held:
   `wallsnap-kit`'s "2 on the stack, the rifle up" asks, with the setup on, that the first 2 opens the setup and changes nothing and the second is

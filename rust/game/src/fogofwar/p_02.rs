@@ -11,9 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 fn sys_of(k: f64) -> u32 { js::to_u32(k) >> 24 }
 
 /// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`: once the table stands, this one line is that row.
-fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: g.col.boxes is Vec<BoxId> and Tabs has no Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// Which thing a keyed box belongs to, or -1 for one the rule leaves alone. (fogofwar.ts thingKeyOf)
 pub fn thing_key_of(g: &mut crate::game::Game, b: BoxId) -> f64 {

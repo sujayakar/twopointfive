@@ -10,9 +10,9 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot do
 
 /// A box's row (Box.* in the TypeScript). On skeleton 5.1, which has the table `g.tab.boxes`, the body is `&mut g.tab.boxes[b]`.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// A box held by value, as a row, for a stub that takes an ID. On skeleton 5.1: `g.tab.boxes.push(cell.clone())`.
-fn seam_box_push(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { todo!("needs: the table of Box rows, or breaks_shed_cell taking the cell by reference") }
+fn seam_box_push(g: &mut Game, cell: &crate::scene_boxes::Box) -> BoxId { crate::scene_boxes::box_new(g, cell.clone()) }
 
 // ---------------------------------------------------------------- local helpers
 

@@ -322,9 +322,7 @@ pub fn wall_normal(g: &mut crate::game::Game, b: BoxId, toward: V3, keep: Option
 }
 
 /// A box's yaw, half sizes and centre. Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.yaw, x.h, x.c)`.
-fn seam_box_numbers(g: &mut crate::game::Game, b: BoxId) -> (f64, V3, V3) {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box_numbers(g: &mut crate::game::Game, b: BoxId) -> (f64, V3, V3) { let x = &g.tab.boxes[b]; (x.yaw, x.h, x.c) }
 
 #[cfg(test)]
 mod tests {

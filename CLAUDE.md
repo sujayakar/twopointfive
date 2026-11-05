@@ -49,6 +49,7 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
   `tools/qa/rollback-exempt.ts`; a die kept in state is a `Die` (`math/dice.ts`), never a closure. The static pass is red otherwise.
 - **`src/game` is one runtime import cycle.** No top-level statement may USE another game module's export (a module-level table or
   `new X()` built from one breaks only in the page's bundle). Build such tables lazily; boot a new module once in the page.
+  The one exception is a leaf of the cycle, a file with type-only imports (`owner.ts`): it has always evaluated first.
 - **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). A GPU value reaches
   game code only through a named `Game.sensors` query with a headless stand-in.
 - **Player-facing rules.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Never harder

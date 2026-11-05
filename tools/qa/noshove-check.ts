@@ -1,7 +1,7 @@
 // TEAMMATES FALLING IN NEVER SHOVE YOU — the check behind src/game/noshove.ts (NOSHOVE.on: on in the page, ?noshove=0; off on the frozen stand, TPS_NOSHOVE=1).
 //   bun run tools/qa/noshove-check.ts [--verbose]      (also `probes.ts noshove`, family squadorders; run it on BOTH stands: plain, and TPS_PROFILE=shipped in front)
-// (probes.ts holds ORDERS.propRound off for this check, WAYS_AS_THEY_WERE: line 9's staging is by the ways the men walked before it. Run alone on the
-// shipped stand: TPS_PROPROUND=0 in front.)
+// (ORDERS.propRound and the pace taken off the player are held off for this check on every stand, tools/qa/holds.ts WAYS_AS_THEY_WERE and PACE_AS_IT_WAS:
+// line 9's staging is by the ways the men walked before them. Run alone it stands the same: its own main runs through the same call as the runner.)
 // Headless; nothing here looks at a picture. room-clear-four with the other side put far off the floor, the switch thrown by hand after the stand-up; the
 // player stands with no key down unless a line says he walks. Each line is played with the switch off (the flaw must SHOW) and on (it must be gone):
 //   1. THE CASE IT WAS FOUND IN, staged small: 'fall in' with one man a pace from the player and his place on the player's far side — off, the player is
@@ -20,6 +20,7 @@
 //  10. the journal: a recording from before the key replays with it off, one that carries it keeps its own word.
 // NOSHOVE_BREAK=1 = the module answers as if the switch were off in the 'on' arms: lines 1 to 9 must fail.   exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
 const { NOSHOVE, NOSHOVE_STATS, noShoveOwn, noShoveKeep } = await import(`${ROOT}/src/game/noshove.ts`);
@@ -234,4 +235,4 @@ export const noshoveCheck = guarded(async () => {
   return F.done();
 });
 
-if (import.meta.main) process.exit((await noshoveCheck()) ? 0 : 1);
+if (import.meta.main) process.exit((await asProbe('noshove', noshoveCheck)) ? 0 : 1);

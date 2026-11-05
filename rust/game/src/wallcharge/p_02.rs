@@ -10,9 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 
 /// A box's row (`Box.*`). Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows; on skeleton 5.1, which has the table `g.tab.boxes`, the body is `&g.tab.boxes[b]`.
-fn seam_box(g: &Game, b: BoxId) -> &crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes")
-}
+fn seam_box(g: &Game, b: BoxId) -> &crate::scene_boxes::Box { &g.tab.boxes[b] }
 
 fn sam_pos(g: &Game) -> V3 { g.ch[g.pl[g.player].ch].pos }
 fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }

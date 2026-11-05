@@ -72,9 +72,7 @@ fn turn_row(c: &mut sim::props::Props, r: usize, y: f64) {
 }
 
 /// A box's row (`Box.c`, `Box.yaw`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows: once the table is back the body is that row
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// a double column of this thing, by the column's offset   (props.ts Prop.f)
 pub fn prop_f(g: &mut crate::game::Game, id: PropId, o: f64) -> f64 {

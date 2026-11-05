@@ -83,9 +83,9 @@ fn drop_stock_word(s: &str) -> &str {
 
 // ---- what skeleton 5 still cannot reach ----
 /// `b.owner`. Once the table of Box rows is there, the body is that row's field
-fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].owner (orders.ts:805, 809)") }
+fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
 /// `b.flags`. As seam_box_owner
-fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].flags (orders.ts:805)") }
+fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String { todo!("needs: a public name for these arms' closures: Door* (orders.ts:854; doortools.ts:808-922)") }
 /// Err(None): false, Err(Some): the word for why not
 fn seam_arm_valid(g: &mut Game, arm: &OrderValid, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<String>> { todo!("needs: a public name for these arms' closures: Door* (orders.ts:852; doortools.ts:810-924)") }

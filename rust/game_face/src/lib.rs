@@ -140,30 +140,27 @@ mod bridge {
     /// before the step that are the game's and not the host's (bit 0 of `pre`: the die taken for the frame; bit 1: the quiet mission's switches), then
     /// `game_step`. The host's half (`hostBefore` / `hostAfter`, the director's input, the journal) is not run: the TypeScript side is exported round its own
     /// `stepSeats`, not round `update`. A panic leaves its message at face_panic_ptr and traps; the game of this handle is gone after one.
-    /// TEMP-BRINGUP (bringup-log.md stops 7, 14, 29): what a game's state and its block do not hold and a tick still reads. `knobs`: table 0 of the
-    /// TypeScript module's rust/sim knobs; the clips, the bench's rig and the furniture's facts are written again from the state. `draws`: what the
-    /// TypeScript tick drew off Math.random (a game with no die of its own). `pending`: asks in the probe's table as the tick opens.
+    /// THE HOST'S STEP AFTER AN IMPORT INTO A FRESH MODULE (bringup2-log.md): rust/sim's tables outside a game's block that the state remembers writing (the furniture's
+    /// facts, the clips' marks), and what `Game.engine` holds that a tick reads and the bridge does not carry (the lights' list, the box world's list, the settings),
+    /// as the text tools/blitz/tc2.ts `engineText` writes. Nothing of the die or the knobs: the game rolls its own die in its block and writes its own knobs.
+    /// Answers how many lines of the text it did not know.
     /// # Safety
-    /// the pointers name bytes the host wrote into memory from face_alloc.
+    /// the pointer names bytes the host wrote into memory from face_alloc.
     #[no_mangle]
-    pub unsafe extern "C" fn face_bringup(h: u32, knobs: *const u8, kn: usize, draws: *const u8, dn: usize, pending: usize) {
-        let k = std::slice::from_raw_parts(knobs, kn);
-        let d: Vec<f64> = std::slice::from_raw_parts(draws, dn * 8).chunks(8).map(|c| f64::from_le_bytes(c.try_into().unwrap())).collect();
-        with(h, |g| game::anim_skeleton::b_01::bringup_module_state(g, k));
-        game::math_dice::b_01::host_draws_set(&d);
-        game::sensors::b_01::host_probe_pending_set(pending);
+    pub unsafe extern "C" fn face_bringup(h: u32, engine: *const u8, en: usize) -> usize {
+        let text = String::from_utf8_lossy(std::slice::from_raw_parts(engine, en)).into_owned();
+        with(h, |g| { game::anim_skeleton::b_01::bringup_module_state(g, None); game::orders::b_01::orders_closures_again(g); game::host_api::b_01::host_engine_fill(g, &text).len() })
     }
-    /// how many of the host's draws the Rust tick has taken
+    /// the die's count of draws in the game's block (slot 0)
     #[no_mangle]
-    pub extern "C" fn face_draws_taken() -> usize {
-        game::math_dice::b_01::host_draws_count().0
+    pub extern "C" fn face_draws_taken() -> f64 {
+        sim::state::state(0).dice.n
     }
     #[no_mangle]
     pub extern "C" fn face_step(h: u32, dt: f64, pre: u32) {
         with(h, |g| {
             if pre & 1 != 0 {
-                let d = g.dice.clone();
-                game::math_dice::use_dice(g, d);
+                game::math_dice::use_dice(g);   // (skeleton 5: the die is the game's own field)
             }
             if pre & 2 != 0 {
                 game::quiet::quiet_mission_current(g);

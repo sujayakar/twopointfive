@@ -8,9 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `b` of the level's boxes, its row. (boxes.ts:66 Box) `g.level.boxes` is `g.col.boxes`, one array (game.ts:1100): the IDs are there, the rows have no table.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// The run-on a thing keeps past its landing where the ground bogs by `bog`, of a hard floor's. (snowBog.ts bogRun)
 pub fn bog_run(g: &mut crate::game::Game, bog: f64) -> f64 {

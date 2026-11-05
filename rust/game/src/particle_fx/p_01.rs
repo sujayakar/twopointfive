@@ -495,9 +495,7 @@ pub fn test_burst(g: &mut crate::game::Game, kind: crate::particle_fx::TestBurst
 }
 
 /// `b.…` of a box. Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].albedo`; once there is a table the body is the row.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].albedo")
-}
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A site's record: fields not written are None, and each site writes speed, life and size.
 type Emit = crate::render_particles::EmitOpts;

@@ -172,7 +172,7 @@ const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith
           for (const l of L.lights) { if (!l.enabled || !(l.intensity > 0)) continue; let e;
             if (l.kind === 2) e = l.intensity * Math.max(0, -l.dir[1]);
             else { const d = [l.pos[0] - P[0], l.pos[1] - P[1], l.pos[2] - P[2]], r2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2], r = Math.sqrt(r2); if (r > l.range) continue; const q = r / l.range, w = Math.max(0, 1 - q ** 4) ** 2; e = l.intensity * w / Math.max(r2, l.radius * l.radius) * Math.max(0, d[1] / r); }
-            const m = l.kind === 2 ? (L.dirMasks && l.reachDir ? l.reachDir : null) : (l.reach ?? null);
+            const K = E.reach, m = l.kind === 2 ? (L.dirMasks ? (K ? K.dirOf(l) : l.reachDir) ?? null : null) : ((K ? K.of(l) : l.reach) ?? null);   // (the keeper's, render/reachKeep.ts; on a build from before 11-05 the light's own)
             out.push({ n: l.name, g: l.group, k: l.kind, e: num(e), reach: m ? (m[ci >> 4] >>> ((ci & 15) * 2)) & 3 : 'all' }); }
           return { restir: !!E.settings.restir, dirMasks: !!L.dirMasks, top: out.sort((a, b) => b.e - a.e).slice(0, 8) }; })();
         return { url: fr.canvas.toDataURL('image/png'), ms, gpuErrs: window.__gpuErrs.splice(0, 4), stats: fr.stats, flick,

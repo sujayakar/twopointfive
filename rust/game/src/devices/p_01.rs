@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- what the skeleton cannot give yet (each one line in notes.md)
 /// devices.ts:370 `out[k].mkey = …`: a made box has no row to write (ids.rs "Box: no table here", StaticCollision.boxes is Vec<BoxId>); the one blocked step of deviceBoxes
-fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { todo!("needs: a table of Box rows (ids.rs: Box has none; StaticCollision.boxes is Vec<BoxId>): g.tab.boxes[b].mkey = Some(mkey)") }
+fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { g.tab.boxes[b].mkey = Some(mkey); }
 
 // ---------------------------------------------------------------- small readers of this file
 /// `c.bones.<b> ?? v3.add(c.pos, off)`

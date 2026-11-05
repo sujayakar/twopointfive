@@ -8,41 +8,15 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// TEMP-BRINGUP: THE TABLE A MADE BOX LIVES IN. SKELETON-GAP: Box has an ID and no table (ids.txt `"table": "none"`): `g.col.boxes` is the statics' own
-// list, and a box made as the game runs (makeBox / boxOf: a device's body, a prop's boxes, a door's leaf, debris, a hand's prop) has nowhere to be.
-// Until the skeleton gives one (and says when a frame's boxes are dropped), a made box goes in this arena of the module, known by an ID past any
-// static's, and is NEVER dropped (one tick's worth in the bring-up). Only scene_boxes' own readers (p_01 `bx`) know the arena: another part that indexes
-// `g.col.boxes` with such an ID panics on the index, which is the next stop to see.
-struct Arena(core::cell::UnsafeCell<Vec<Box<crate::scene_boxes::Box>>>);
-unsafe impl Sync for Arena {}
-static MADE: Arena = Arena(core::cell::UnsafeCell::new(Vec::new()));
-/// the first ID of a made box
-pub const MADE_BASE: usize = 1 << 30;
+// THE BOX TABLE'S MAKERS (skeleton 5.1: every box is a row of `g.tab.boxes`). Invented by the skeleton, so they have no TypeScript line: written here.
 
-/// a made box's row and its ID
-pub fn made_push(b: crate::scene_boxes::Box) -> BoxId {
-    let v = unsafe { &mut *MADE.0.get() };
-    v.push(Box::new(b));
-    BoxId::from_ix(MADE_BASE + v.len() - 1)
+/// a box made to stay: a row of g.tab.boxes for good
+pub fn box_new(g: &mut Game, b: crate::scene_boxes::Box) -> BoxId { g.tab.boxes.push(b) }
+/// a box made for this frame's list: a row freed by boxes_frame_reset is used again, else a new row
+pub fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> BoxId {
+    let id = match g.box_frame_free.pop() { Some(id) => { g.tab.boxes[id] = b; id } None => g.tab.boxes.push(b) };
+    g.box_frame_rows.push(id);
+    id
 }
-/// the made box an ID names (None: a static's ID)
-pub fn made_get(id: BoxId) -> Option<&'static crate::scene_boxes::Box> {
-    let i = id.ix();
-    if i < MADE_BASE { return None; }
-    let v = unsafe { &*MADE.0.get() };
-    Some(&*v[i - MADE_BASE])
-}
-/// how many boxes have been made
-pub fn made_count() -> usize { unsafe { (*MADE.0.get()).len() } }
-
-/// the box an ID names, static or made (TEMP-BRINGUP: a static's row is `g.tab.boxes[id]` since skeleton 5.1; a made box's is still the arena's)
-pub fn any_box(g: &Game, id: BoxId) -> &crate::scene_boxes::Box {
-    match made_get(id) { Some(b) => b, None => &g.tab.boxes[id] }
-}
-/// …to write
-pub fn any_box_mut(g: &mut Game, id: BoxId) -> &mut crate::scene_boxes::Box {
-    let i = id.ix();
-    if i < MADE_BASE { return &mut g.tab.boxes[id]; }
-    let v = unsafe { &mut *MADE.0.get() };
-    &mut *v[i - MADE_BASE]
-}
+/// the frame's boxes may be reused: called as the dyn boxes are rebuilt
+pub fn boxes_frame_reset(g: &mut Game) { let mut rows = core::mem::take(&mut g.box_frame_rows); g.box_frame_free.append(&mut rows); }

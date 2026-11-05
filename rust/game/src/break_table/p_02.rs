@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seam: what skeleton 5 still cannot say (see notes.md)
 /// `b.…` for any box: a box's row. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`.
 /// When the table comes this body is the one line `&mut g.<table>[b]`; every read and write of a box in this file goes through here.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows (made boxes too: every piece of the pool is one)") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- small private helpers
 fn max3(h: V3) -> f64 { m::max_n(&[h[0], h[1], h[2]]) }

@@ -10,9 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ------------------------------------------------------------ seams: what skeleton 5 cannot say yet
 
 /// `box.c`, `box.h` (workthings.ts:117-119): skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of Box rows.
-fn seam_box_c_h(g: &mut Game, b: BoxId) -> (V3, V3) {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box_c_h(g: &mut Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
 
 // ------------------------------------------------------------ small local helpers
 

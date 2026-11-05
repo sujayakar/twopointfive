@@ -47,7 +47,7 @@ const KEPT: Record<FeelName, Record<string, [number, number, number] | null>> = 
 };
 // (the rescue-with-goggles rows, added down here so the tables above stay line for line what the other parts of the build merge against)
 Object.assign(KEPT.NVG, { huntFrees: null });
-// (a silent squad and standing glass, silent.ts silentGlassHolds)
+// (a silent squad and standing glass, silent.ts roundHeldGlass)
 Object.assign(KEPT.SILENT, { glass: null });
 // (frag grenades, frag.ts: the defenders' own, and the numbers of the item itself)
 Object.assign(KEPT.FRAG, { defenders: null, defMax: [0, 6, 1], defShare: [1, 11, 1], defFuse: [2, 6, 0.25], defWind: [0, 3, 0.1], defGap: [0, 60, 1], fuse: [1.5, 6, 0.25], lethalM: [1, 8, 0.5], woundM: [2, 14, 0.5] });

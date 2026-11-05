@@ -13,12 +13,25 @@ use crate::single::{get, put, S};
 use crate::world::{js_abs, js_max, js_min, or_one};
 use prim::floor;
 
-/// the cells of the largest grid searched here (a level's floor is its box grid's, four nav cells to the metre square)
+/// the cells the tables of a search are laid out for (a floor is its box grid's, four nav cells to the metre square)
 pub const MAX_NAV: usize = 1 << 16;
-/// the open list and the list of cells written: a search that would outgrow either is the host's
+/// the open list and the list of cells written
 const MAX_OPEN: usize = 1 << 17;
 /// the waypoints a way can have
-pub const MAX_WAY: usize = 4096;
+pub const MAX_WAY: usize = 1 << 13;
+/// THE FLOOR A SEARCH CAN HOLD, in cells: what the host is told (`nav_cap(0)`) and the most `begin` takes. On a floor of no more cells than this no
+/// table here can be outgrown, whatever cap the caller puts on the search: a search closes a cell once and lists eight more at most as it does (so the
+/// open list and the list of cells written hold 1 + 8 × cells entries at most), and a way has no more waypoints than the floor has cells. The floor is
+/// the BUILD's (src/scene/world.ts WORLD: 40 m × 28 m, four cells to the metre square, 4,480 cells), so one over this is a mistake of the build, said
+/// once by the host (collision.ts NavGrid.there), and never a level's.
+pub const MAX_FLOOR: usize = least(least(MAX_NAV, MAX_WAY), (MAX_OPEN - 1) / 8);
+const fn least(a: usize, b: usize) -> usize {
+    if a < b {
+        a
+    } else {
+        b
+    }
+}
 
 static mut SHUT: [u8; MAX_NAV] = [0; MAX_NAV];
 static mut G: [S; MAX_NAV] = [S::ZERO; MAX_NAV];
@@ -239,8 +252,9 @@ fn begin<P: Prices>(src: &mut P, w: usize, set: i32, ask: u32, gw: usize, gh: us
     if run.live {
         return ASK_HOST;
     }
-    // (each side is under MAX_NAV before the two are multiplied: the product cannot wrap)
-    if gw == 0 || gh == 0 || gw > MAX_NAV || gh > MAX_NAV || gw * gh > MAX_NAV {
+    // (a floor of more cells than a search holds: the host has said so by name before it asks, NavGrid.there. Each side is under MAX_FLOOR before the
+    //  two are multiplied: the product cannot wrap)
+    if gw == 0 || gh == 0 || gw > MAX_FLOOR || gh > MAX_FLOOR || gw * gh > MAX_FLOOR {
         return ASK_HOST;
     }
     // (a point that is no number has no cell: the TypeScript's own answer for it, whatever that is, is the host's to give)
@@ -456,6 +470,7 @@ fn go<P: Prices>(src: &mut P) -> i32 {
                     continue;
                 }
                 closed[cur] = 1;
+                // (cannot be on a floor `begin` took: MAX_FLOOR)
                 if n_open + 8 > MAX_OPEN || n_seen + 8 > MAX_OPEN {
                     full = true;
                     break;
@@ -606,6 +621,7 @@ fn go<P: Prices>(src: &mut P) -> i32 {
             j -= 1;
         }
         let (p0, p2) = centre(cells[j]);
+        // (cannot be on a floor `begin` took: a waypoint is a cell of the way, each once)
         if out >= MAX_WAY {
             return end(ASK_HOST);
         }

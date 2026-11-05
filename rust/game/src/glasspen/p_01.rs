@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- local helpers
 
 /// a Box's row. Skeleton 5 has `g.col.boxes` as a list of BoxIds and no table of the rows they name (scene/boxes.ts:66): the blocked step of every read of `b.h`, `b.yaw`, `b.flags`
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// `g.level.boxes[bi]`: an index with no box is undefined there, None here. That list and `g.col.boxes` are one array in the TypeScript, and an index is a place in it, not a BoxId
 fn level_box(g: &mut Game, bi: f64) -> Option<BoxId> {
     let ix = bi as usize;

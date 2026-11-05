@@ -34,7 +34,7 @@ export async function doorthrowCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { DOORTHROW, DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
   const { DOORTHROW_STATS } = await import(`${ROOT}/src/game/doorthrow.ts`);
-  const { STARTLE_STATS, startled, startleHolds } = await import(`${ROOT}/src/game/startle.ts`);
+  const { STARTLE_STATS, startled, startleGunDown } = await import(`${ROOT}/src/game/startle.ts`);
   const { samStaggered } = await import(`${ROOT}/src/game/samstun.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { EASE_RATE, EASE_MAX } = await import(`${ROOT}/src/game/player.ts`);
@@ -85,7 +85,7 @@ export async function doorthrowCheck(): Promise<boolean> {
     // ------------------------------------------------------------ the fault, and the walk with the rule on
     const walked = async (on: boolean, jolt = true) => {
       const W = await world(on); T.jolt = jolt; const g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), pl = sam(g, F.pt(F.W * 0.6, -1.3));
-      let wide = 0, fold = -1, beat = -1, st = v.state, aw = 0, start = false, down = false; walk(W, F, pl, 2.5, 1.6, () => { wide = Math.max(wide, Math.abs(d.angle)); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); if (beat < 0 && DOORTHROW_STATS.startled) { beat = v.reactT; st = v.state; aw = v.awareness; start = startled(g, v); down = startleHolds(g, v); } });
+      let wide = 0, fold = -1, beat = -1, st = v.state, aw = 0, start = false, down = false; walk(W, F, pl, 2.5, 1.6, () => { wide = Math.max(wide, Math.abs(d.angle)); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); if (beat < 0 && DOORTHROW_STATS.startled) { beat = v.reactT; st = v.state; aw = v.awareness; start = startled(g, v); down = startleGunDown(g, v); } });
       T.jolt = true;
       const moved = flat(v.char.pos, p0), through = F.out(pl.char.pos), look = v.lastKnown ? flat(v.lastKnown, d.frameCentre) : 99;
       return { g, v, wide, fold, beat, st, aw, look, moved, through, start, down, given: STARTLE_STATS.given, startled: DOORTHROW_STATS.startled, thrown: DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked };

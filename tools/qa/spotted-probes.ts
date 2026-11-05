@@ -26,7 +26,9 @@ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`);
+const { silentHoldsRound } = await import(`${ROOT}/src/game/silent.ts`);
 const SPM: any = await import(`${ROOT}/src/game/spotted.ts`);
+const { spottedHoldsRound } = await import(`${ROOT}/src/game/spotted.ts`);
 const NQM: any = await import(`${ROOT}/src/game/netquiet.ts`);
 const SILENT: any = SLM.SILENT, SPOTTED: any = SPM.SPOTTED;
 
@@ -240,7 +242,7 @@ export const spottedCaught = guarded(async () => {
 export const spottedFire = guarded(async () => {
   const { verdict, done } = family('spotted-fire: which rounds are held');
   const R = await rig(11, true); const { game } = R; const st = R.stage({ lit: false, dMin: 8, dMax: 11 }) ?? R.stage({ dMin: 7, dMax: 12 }); if (!st) throw new Error('no spot could be staged');
-  const man = R.mate, h = R.foe, holds = () => ({ base: SLM.silentHolds(game, man, h) as boolean, mine: SPM.spottedHolds(game, man, h) as boolean });
+  const man = R.mate, h = R.foe, holds = () => ({ base: silentHoldsRound(game, man, h) as boolean, mine: spottedHoldsRound(game, man, h) as boolean });
   const set = (state: string, aw: number, o: any = {}) => { R.hold(state, aw, o); R.step(2); R.again(); R.free(); };   // (which rounds are held for a man FACING so: how fast he turns there is another rule's)
   set('suspicious', 0.4, { eyesOn: null }); const s1 = holds(); set('suspicious', 0.7, { eyesOn: null }); const s2 = holds();
   verdict(s1.base && s2.mine && !s2.base, 'suspicious: held at any awareness (the base hold ends at a half)', `awareness 0.4: base ${s1.base}, this ${s1.mine} · awareness 0.7: base ${s2.base}, this ${s2.mine}`);
@@ -266,7 +268,7 @@ export const spottedOff = guarded(async () => {
   const { verdict, done } = family('spotted-off: the switch off acts on nothing; on, with nobody ever suspicious, it changes nothing');
   { const R = await rig(11, false); const s0 = JSON.stringify(SPM.SPOTTED_STATS); const st = R.stage({ lit: false })!; R.step(20); R.hold('suspicious', 0.4, { face: st.at, eyesOn: null }); R.step(60 * 3);
     const feet = SPM.spottedFeet(R.game, R.mate, true, false), keen = SPM.spottedKeen(R.game, R.mate);
-    verdict(JSON.stringify(SPM.SPOTTED_STATS) === s0 && feet === null && !keen && R.mode() === 'calm' && !SPM.spottedHolds(R.game, R.mate, R.foe) && SPM.spottedOf(R.mate) === null && /SILENT/.test(R.label()) && !/low|contact/.test(R.label()),
+    verdict(JSON.stringify(SPM.SPOTTED_STATS) === s0 && feet === null && !keen && R.mode() === 'calm' && !spottedHoldsRound(R.game, R.mate, R.foe) && SPM.spottedOf(R.mate) === null && /SILENT/.test(R.label()) && !/low|contact/.test(R.label()),
       'off, beside a suspicious man: no state kept, no feet, no word, nothing counted', `feet ${feet} · keen ${keen} · mode ${R.mode()} · ${R.label()} · ${SPM.spottedSummary(R.game)}`); }
   const calm = async (on: boolean) => { const R = await rig(11, on); const hs: string[] = []; const g = R.game; const way = R.foe.char.pos;
     R.post = () => { if (R.frames % 20 === 0) hs.push(hashDigest(digestGame(g, true))); };

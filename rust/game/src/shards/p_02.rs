@@ -38,7 +38,7 @@ fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandi
 
 // ---- what the skeleton still cannot do
 /// `b.x` of a Box: the row of a box. Skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of rows.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// The landings waiting, for a tool.   (shards.ts GlassShards.pending)
 pub fn glass_shards_pending(g: &mut crate::game::Game) -> Vec<crate::shards::Pending> {

@@ -364,9 +364,7 @@ fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
 }
 
 /// `b.…` for any box: a box's row, statics and made boxes alike. Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once there is a table the body is the row, and no other line changes.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
 mod tests {

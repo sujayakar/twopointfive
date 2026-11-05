@@ -50,14 +50,10 @@ fn ray_grown(g: &mut crate::game::Game, ro: V3, rd: V3, b: BoxId, h: V3, tmax: f
 }
 
 /// `b.c`, `b.h` of a box's row. (aimcost.ts:88)
-fn seam_box_c_h(g: &mut crate::game::Game, b: BoxId) -> (V3, V3) {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box_c_h(g: &mut crate::game::Game, b: BoxId) -> (V3, V3) { let x = &g.tab.boxes[b]; (x.c, x.h) }
 
 /// `grown.h = h`, on the row itself for the one call. (aimcost.ts:91)
-fn seam_box_set_h(g: &mut crate::game::Game, b: BoxId, h: V3) {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].h")
-}
+fn seam_box_set_h(g: &mut crate::game::Game, b: BoxId, h: V3) { g.tab.boxes[b].h = h; }
 
 /// How near a round's legs pass a point (m; the legs' own lengths, nothing past where it stopped): the cheap test ahead of `lamp_struck`. (aimcost.ts legsNear)
 pub fn legs_near(pos: V3, legs: &[crate::aimcost::RoundLeg]) -> f64 {

@@ -1237,7 +1237,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `STALK_STATS` is a tally (rollback-exempt). CHECK: `bun run tools/qa/stalk-check.ts` (probe `stalk`, family stealth), both stands; `STALK_BREAK=1` must
   fail grab, still, steer and let. Measured there, three seeds: 2.6 m behind a man walking away at 1.15 m/s he is in the arm in 4.22 s, top speed 1.60 m/s,
   the largest change of speed in a frame 0.15 m/s; behind a man who stands, 2.48 s; begun 60° off dead astern it ends 42.6° off. Older probes that read the
-  grab's row or its key run with the stalk held off (`probes.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
+  grab's row or its key run with the stalk held off (`tools/qa/holds.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
   cannot be stalked (nor grabbed before it); the creep makes the crouch's own footfalls and moves under their eyes as any crouched Sam does. NOT DONE: the
   pose does not yet change over the creep (the arm comes up at the grab, as before); nothing at a corner. Driven in the real page on the software adapter
   (`tools/qa/stalk-page.cjs`); never played by a person, never seen on a GPU.
@@ -1570,7 +1570,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   row's words; with the stalk as the page has it the held button's grab is the stalk's own, counted once; with the click the only way
   and with the knife back the row says it and both halves work; off; the harness line. One seed: these are timings of a fixed beat.
   `stalk-page.cjs` drives both on the real page. The probes that read the build before it (the `close-` family, `heldclicks`, the
-  grab's and the knife's: `KNIFE_AS_IT_WAS` in probes.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
+  grab's and the knife's: `KNIFE_AS_IT_WAS` in tools/qa/holds.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
   press). NOT DONE: the choke out of a held button has no pose of its own (it is the grab, then the hold's choke); no sound of its
   own. Nobody has played it or seen it on a GPU.
 - **He watches the man who matters, and gives a man room as he passes (10-23; `SAMLOOK` in `samlook.ts`, the poses `WATCH` in
@@ -1783,7 +1783,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kept `wayReask` 0.5 s (the first frames, before he has a path). A man who only LOOKS (a turned head, a lent hold, a man standing at the thing) and a place the
   floor has no way to keep the straight thread. PICTURE ONLY, so it is ON in the module and on BOTH stands, no `FROZEN_HOLDS` row: nothing in the update reads
   it, and it WRITES NOTHING OF THE GAME'S: the kept answer and the tables the grid is searched on are the ASKER'S (the overlay's own in ui/attentionviz.ts,
-  handed in as `kept`; `NavGrid.findPathAside` searches on them and leaves the grid's own as they were), so a run that asks for every way each frame digests
+  handed in as `kept`; the search itself is the module's, `NavGrid.findPath`, on scratch of the one question, and writes nothing of the grid's), so a run that asks for every way each frame digests
   AND hashes (`stateHash`, statics too) as the run that never asks. A first cut kept the answer in a named side table of the game and searched on the grid's
   own tables: the digest was equal, the state hash was not (`game.col.nav.scratch.open`), which is how a picture gets into a snapshot. Off: `?straightthread` on the address, Tab ▸ the attention group ▸ 'the thread runs the way he will walk'. CHECK `probes.ts
   attentionway` (tools/qa/attentionway-check.ts; `ATTENTIONWAY_BREAK=1` fails `way`), both stands: on tut-quiet, the office and lights-out a knock 5 m off
@@ -1837,7 +1837,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page; `?fogmates=0` = his eye stops at a thin thing, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGMATES=1` raises
   it BUT ACTS ONLY WITH `TPS_FOGTHIN=1` (`FROZEN_HOLDS['FOG.mates']` says so: the frozen stand pins the thin row off too); the journal carries it
   (a recording without the key replays with it off). CHECK: `probes.ts fog-mates` (`tools/qa/fogmates-check.ts`, family `fog`; 5 lines;
-  `FOGMATES_BREAK=1` reds bar, agrees and stood) on both stands. MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
+  `FOGMATES_BREAK=1` reds bar, agrees, stood and switch) on both stands. (THE SWITCH LINE READS ONE LANGUAGE since the senses' TypeScript went: a man's look is handed to the module with his team's mask at the one call there is, and `eyeContact` asks no line of the box world itself. Its red path reads guards.ts with the mask taken off that call.) MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
   a teammate and a defender (sixteen bearings, nine spacings): the row gives him 707 of them, takes none, and his test differs from the fog's
   line on none (on 707 without it); the defender's eye is the same on all 1168; with the thin row off the row gives nothing. Stood: the pair kept across one mark for 30 of the game's own frames: with the row the room fight's
   meter on the man goes to 1.00 and he is the teammate's target on 25 frames; without, meter 0 and no target; the defender never takes the teammate. Played on The Pass,

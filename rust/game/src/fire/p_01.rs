@@ -297,9 +297,7 @@ pub fn plain(g: &mut crate::game::Game, t: FixtureId) {
 // ---- the one seam: what skeleton 5 still cannot do (notes.md, ## Skeleton) ----
 
 /// A box's row (Box.c, Box.h: fire.ts:271, :295). Other parts' notes say skeleton 5.1 has the table `g.tab.boxes`; if so, the body is `&mut g.tab.boxes[b]`.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
 mod tests {

@@ -32,12 +32,12 @@
 //     facing them, to the spot in it where every entry sits inside one `arcDeg` arc (else the narrowest arc there is), goes LOW (half down: `crouch`), on his
 //     gun (roused, as any defender who has taken a new post is: roomfight.ts plant), and holds the doors in his EYES — the floor's eye sits round from a
 //     man's gun, so his gun rests off the arc's middle by what that takes; no wandering glance. He does not rally to a fight next door meanwhile
-//     (roomfight.ts rally → netQuietHolds), nor is he his squad's to send (enemysquads.ts home → netquietfeed.ts). `alertSecs` of nothing seen or heard and
+//     (roomfight.ts rally, `OWN.lastMan`), nor is he his squad's to send (enemysquads.ts home). `alertSecs` of nothing seen or heard and
 //     he is no longer 'alert' — wary (`wary`), still low on the spot; anything he hears has him on his gun again. A living mate at his side for `calmSecs`
-//     and he is up, the act dropped, his owner's again. A man morale.ts's own sequence has (`moraleOwns`) is that file's.
-//   · A MAN WHO HAS RUN (runner.ts `runnerOwns`: the shout, the drop, the run, gone) is nobody's mate on the net: he hears no check, answers none (asked for by name
+//     and he is up, the act dropped, his owner's again. A man morale.ts's own sequence has (`OWN.morale`) is that file's.
+//   · A MAN WHO HAS RUN (runner.ts `OWN.runner`: the shout, the drop, the run, gone) is nobody's mate on the net: he hears no check, answers none (asked for by name
 //     he is a silence like a dead man's), is not whipped, is never the last man — and to the man he left he is one more gone, once that man knows it. The last
-//     man at his act is not stopped at a dark doorway nor called to one (darkdoor.ts asks netquietfeed.ts): his hold wins.
+//     man at his act is not stopped at a dark doorway nor called to one (darkdoor.ts, `OWN.lastMan`): his hold wins.
 //   No health, aim, skill or reaction table is read or written: where he stands, how low, where he looks — and, low on his spot, the floor's own alert /
 //   wary lines (rouse, ease, wary: the only writes to a man's state in this file).
 // SHOW, NOT TELL: nothing is drawn or written for the player but the men themselves. One die (simRandom, only for which line of a pool), no wall clock, no
@@ -48,14 +48,15 @@ import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, DEG } from '../math/vec';
 import { simRandom } from '../math/dice';
-import { MORALE, moraleShock, moraleOwns, rungOf, trainingOf, sawLeaderFall } from './morale';
+import { MORALE, moraleShock, rungOf, trainingOf, sawLeaderFall } from './morale';
 import { squadOf, mate as nameOf } from './enemysquads';
 import { canSee, canSeeChar } from './guards';
 import { isHostile, teamOfId } from './teams';
 import { order } from './squad';
-import { NETFEED, netFeedTake, netFeedHold } from './netquietfeed';
+import { NETFEED, netFeedTake } from './netquietfeed';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { runnerOwns } from './runner';   // (asked inside calls only: false with its switch off)
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { BELIEF } from './belief';
 
 type Def = RoomFight['defs'][number];
 type Room = NonNullable<Def['room']>;
@@ -122,6 +123,7 @@ interface Mind { quiet: number; asked: Set<number>; known: Set<number>; paid: Ma
   heardT: number; cs: number; cl: number; fx: number; fz: number; whipAt: Vec3 | null; whipIn: number; whipT: number; whipHeld: number;
   last: number; t: number; mateT: number; news: number; newsT: number; eye: number; eyeHalf: number; spot: Vec3 | null; yaw: number; arc: number; look: Vec3 | null; low: boolean; }
 const stateOf = new SideMap<Guard, Mind>('netquiet.stateOf');
+ownerWitness('lastMan', gd => { const N = stateOf.get(gd); return live() && !!N && mine(N); });
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const live = () => NETQUIET.on && MORALE.on;
@@ -132,9 +134,9 @@ const loudOf = (gd: Guard) => { const H = gd.witness.heard; return H.shots + H.k
 const side = (g: Game, gd: Guard) => !gd.civ && (gd.team === 'hostile' || gd.team === 'guard') && !(g.rescue?.active && g.rescue.hostiles.includes(gd));
 const ours = (g: Game, gd: Guard) => gd.state !== 'dead' && side(g, gd);
 /** …on the net: alive, not in Sam's arm — and not a man runner.ts has (he has said he is done, dropped it, run: he hears no check and answers none) */
-const onNet = (g: Game, gd: Guard) => ours(g, gd) && !gd.held && !runnerOwns(gd);
+const onNet = (g: Game, gd: Guard) => ours(g, gd) && !gd.held && !hasHim(gd, OWN.runner);
 /** GONE to his mates, whether or not they know it yet: down, taken, run (runner.ts), or off the floor altogether (a man who ran and left it) */
-const lostTo = (g: Game, m: Guard) => m.state === 'dead' || !!m.held || runnerOwns(m) || !g.guards.includes(m);
+const lostTo = (g: Game, m: Guard) => m.state === 'dead' || !!m.held || hasHim(m, OWN.runner) || !g.guards.includes(m);
 function mind(gd: Guard): Mind {
   let N = stateOf.get(gd);
   if (!N) stateOf.set(gd, N = { quiet: 0, asked: new Set(), known: new Set(), paid: new Map(), say: -1, sayT: 0, sayName: '', bark: NETQUIET.barkSecs, lastKind: -1, bodyT: 60, roused: 0,
@@ -198,7 +200,7 @@ function bodyOf(g: Game, finder: Guard, N: Mind, men: readonly Guard[]): Guard |
 }
 /** A BODY FOUND (enemysquads.ts event 'found', guards.ts the staff's body in view): the finder, and the men of `men` he tells */
 export function netQuietBody(g: Game, finder: Guard | null, men: readonly Guard[]) {
-  if (!fed() || !finder || !ours(g, finder) || runnerOwns(finder)) return;
+  if (!fed() || !finder || !ours(g, finder) || hasHim(finder, OWN.runner)) return;
   const K = NETQUIET, N = mind(finder), body = bodyOf(g, finder, N, men), id = body ? body.char.id : -1, again = N.bodyT < 5;   // (two men lying together are one find: one shock, one line — and two men he knows are gone)
   const told = men.filter(m => m !== finder && m.team === finder.team && onNet(g, m));
   if (again) { if (body) for (const m of [finder, ...told]) { const Nm = mind(m); Nm.known.add(id); Nm.paid.set(id, Math.max(Nm.paid.get(id) ?? 0, m === finder ? K.body : K.bodyTold)); } return; }
@@ -298,7 +300,7 @@ function lowSpot(g: Game, gd: Guard, R: Room): Vec3 | null {
 
 // ---------------------------------------------------------------- the tick
 /** may this file act on him this frame: the AI on, no show on the floor, free of Sam's arm, himself (not dazzled, not doubled over), not morale.ts's */
-const free = (g: Game, gd: Guard) => g.aiEnabled && !g.touring && !g.quietUtility && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil && !moraleOwns(gd) && !runnerOwns(gd);
+const free = (g: Game, gd: Guard) => g.aiEnabled && !g.touring && !g.quietUtility && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil && !hasHim(gd, OWN.morale) && !hasHim(gd, OWN.runner);
 /** IS HE THE LAST: 2 = he had mates and none of his side is up anywhere (the world's truth: on its own it only has him ASK — see the tick) · 1 = his squad's
  *  men are all down or taken and he knows it of every one (asked for and silent, seen to fall, found, told of), with no living man of his side inside `mateM`
  *  of him and in the open to him · 0 = neither */
@@ -319,26 +321,27 @@ function knowsSquad(g: Game, gd: Guard, N: Mind): boolean {
 /** the last man at his act, and this file's to keep where he is: his line said, backing, or low — not a man who has waited `giveUp` past his beat for the
  *  fight to hand him back (he is the fight's and his squad's again until he holds) */
 const mine = (N: Mind) => !NETQUIET_QA.broken && N.last >= SAID && N.last <= LOW && !(N.last === SAID && N.t > NETQUIET.lastBeat + NETQUIET.giveUp);
+/** THE RECORD OF WHO IS THE LAST MAN AT HIS ACT (src/game/owner.ts), as the frame's acts leave it: he is not his squad's to send, nor walked off to a fight next door */
+function syncLastMan(g: Game) { for (const gd of g.guards) { const N = stateOf.get(gd); if (N && mine(N)) claimMan(gd, OWN.lastMan, g.time); else releaseMan(gd, OWN.lastMan, g.time); } }
 /** at his post: holding his room, on nobody's scripted leg */
 const posted = (gd: Guard, D: Def) => D.mode === 'hold' && gd.hold && !gd.script;
 /** ONCE A FRAME, right after morale.ts's tick (game.ts update; the rungs are this frame's) and before anybody moves: the lines owed are said, the noises the
  *  men's ears counted last frame are read for a whip, the last man is taken a step through his act. A return on its first line with either switch off. */
 export function netQuietTick(g: Game, dt: number) {
-  if (!(NETFEED.live = live())) return;   // (the squads' seams file through netquietfeed.ts only while this says so)
+  if (!(NETFEED.live = live())) { for (const gd of g.guards) releaseMan(gd, OWN.lastMan, g.time); return; }   // (the squads' seams file through netquietfeed.ts only while this says so)
   const K = NETQUIET, F = g.fight as RoomFight | undefined;
   for (const f of netFeedTake(g)) {   // (enemysquads.ts's two feeds, filed this frame — a book left over from a roster that is gone, a restart's, is read past)
     if (f.by && !g.guards.includes(f.by)) continue;
     if (f.what === 'asked' && f.who) { if (fed()) NETQUIET_STATS.squadAsks++; netQuietAsked(g, f.by, f.who, f.men); } else if (f.what === 'body') { if (fed()) NETQUIET_STATS.squadBodies++; netQuietBody(g, f.by, f.men); }
   }
   for (const gd of g.guards) {
-    if (!ours(g, gd)) { stateOf.delete(gd); netFeedHold(gd, false); continue; }
-    if (runnerOwns(gd)) { const N = stateOf.get(gd); if (N) { N.last = NONE; N.t = 0; N.mateT = 0; N.spot = null; N.look = null; N.whipAt = null; N.whipT = 0; N.say = -1; N.low = false; } netFeedHold(gd, false); continue; }   // (runner.ts has him — the shout, the drop, the run: no line of this file's, no whip, no last man's act; whatever of them he was in is dropped)
+    if (!ours(g, gd)) { stateOf.delete(gd); continue; }
+    if (hasHim(gd, OWN.runner)) { const N = stateOf.get(gd); if (N) { N.last = NONE; N.t = 0; N.mateT = 0; N.spot = null; N.look = null; N.whipAt = null; N.whipT = 0; N.say = -1; N.low = false; } continue; }   // (runner.ts has him — the shout, the drop, the run: no line of this file's, no whip, no last man's act; whatever of them he was in is dropped)
     const N = mind(gd), H = gd.witness.heard, ok = free(g, gd), eyes = g.time - gd.lastSeenT < K.calmSecs;
     const D = F?.defs.find(d => d.gd === gd) ?? null;
     N.bark = Math.min(N.bark + dt, 60); N.bodyT = Math.min(N.bodyT + dt, 60); N.low = false;
     { const news = N.quiet + N.asked.size + N.known.size; if (news !== N.news) { N.news = news; N.newsT = 0; } else N.newsT = Math.min(N.newsT + dt, 60); }   // (how long since he last learned a man was gone)
     N.roused = gd.state === 'patrol' ? 0 : Math.min(N.roused + dt, 60);
-    netFeedHold(gd, mine(N));   // (every frame: a checkpoint restores the act, and this with it)
     // the line owed
     if (N.say >= 0 && (N.sayT -= dt) <= 0) {
       const kind = KINDS[N.say] ?? 'name';   // (not his moment — a man in his eyes, his last words still in the air, morale's hands on him: it WAITS, `sayHold` at the most; it was dropped, and with it a rung of the calls)
@@ -376,18 +379,18 @@ export function netQuietTick(g: Game, dt: number) {
       if (N.newsT < K.askBeat) continue;   // (what he has just seen or heard has its beat before he speaks to it)
       const kind: LineKind = L === 2 ? 'last' : 'alone', said = N.lastKind === KINDS.indexOf(kind) && N.bark < 10;   // (the line a check's silence has just had out of him is the line)
       if (!said && N.bark < K.barkSecs) continue;   // (his last words have their room first)
-      N.last = SAID; N.t = 0; NETQUIET_STATS.last++; netFeedHold(gd, mine(N));   // (from here his squad sends him nowhere: enemysquads.ts home)
+      N.last = SAID; N.t = 0; NETQUIET_STATS.last++;   // (from here his squad sends him nowhere: enemysquads.ts home)
       if (!said) speak(g, gd, N, kind, '', true);
       continue;
     }
     N.t += dt;
     N.mateT = lastKind(g, gd, N) ? 0 : N.mateT + dt;
     if (N.mateT >= K.calmSecs) {   // a living mate has been with him `calmSecs` (a reaction force's man at his side, a man let go and back on the net — not a man walking past): up, and his owner's again
-      N.last = NONE; N.t = 0; N.mateT = 0; N.spot = null; N.look = null; netFeedHold(gd, false); NETQUIET_STATS.released++; continue;
+      N.last = NONE; N.t = 0; N.mateT = 0; N.spot = null; N.look = null; NETQUIET_STATS.released++; continue;
     }
     if (N.last === SAID) {
       if (N.t < K.lastBeat || !ok || eyes) continue;
-      if (!D) { N.last = DONE; netFeedHold(gd, false); continue; }   // (a man who holds no room — the night staff's: his line, and no more)
+      if (!D) { N.last = DONE; continue; }   // (a man who holds no room — the night staff's: his line, and no more)
       const out = D.mode === 'free' && !gd.script;   // (let off his post to hunt or search — his squad's doing, the fight's: he comes back to his room)
       if (!posted(gd, D) && !out) continue;   // (somebody's leg has him — his squad's errand, the fight's: once he holds again; `giveUp` on, he is theirs to send meanwhile — `mine`)
       const to = NETQUIET_QA.broken || !D.room || !D.room.entries.length ? null : lowSpot(g, gd, D.room) ?? (out ? v3.copy(D.station) : null);   // (no room of his, or one with no way in: low where he stands)
@@ -399,7 +402,7 @@ export function netQuietTick(g: Game, dt: number) {
       } else settle(g, gd, N, D);
       continue;
     }
-    if (N.last === BACK) { if (!D) { N.last = DONE; netFeedHold(gd, false); continue; } if (D.mode !== 'move') settle(g, gd, N, D); continue; }   // (planted: there, or stopped short by the fight's own rules)
+    if (N.last === BACK) { if (!D) { N.last = DONE; continue; } if (D.mode !== 'move') settle(g, gd, N, D); continue; }   // (planted: there, or stopped short by the fight's own rules)
     if (N.last !== LOW || !D || D.mode !== 'hold' || !N.spot) continue;
     if (flat(gd.char.pos, N.spot) > 1) settle(g, gd, N, D);   // (the room fight has moved him since — fallen back, taken cover: low again where he is now)
     N.low = ok;
@@ -411,9 +414,10 @@ export function netQuietTick(g: Game, dt: number) {
         N.eye += (wrapAngle(Math.atan2(lx, lz) - c.aimYaw) - N.eye) * k; N.eyeHalf += (Math.acos(clamp(Math.cos(K.eyeDeg * DEG) / Math.max(flatK, 1e-3), -1, 1)) - N.eyeHalf) * k; } }
     watch(N);
     // nothing seen, nothing heard for `alertSecs`: he is no longer 'alert' (as a man his squad calms is not, for ever) — the spot, the crouch and the arc stay
-    if (gd.state === 'alert' && ok && N.t > K.alertSecs && g.time - Math.max(gd.lastSeenT, H.lastT) > K.alertSecs) ease(gd);
+    if (gd.state === 'alert' && ok && N.t > K.alertSecs && g.time - Math.max(gd.lastSeenT, H.lastT) > K.alertSecs && (!BELIEF.on || gd.awareness < 0.85)) ease(gd);   // (BELIEF on: not while he is roused, or his own update has him alert again in the same tick)
     else if (gd.state !== 'alert' && ok) wary(gd);   // (…but a man who knows he is the last does not talk himself calm: wary, on the floor's own line for it)
   }
+  syncLastMan(g);
 }
 /** on his gun, as roomfight.ts plant() leaves any defender who has moved to a new post: roused, at the floor's own alert line. No beat is shortened by it —
  *  the room fight's own reaction beat for going alert is paid here, at the spot, and not in front of the man who comes in. He has cause: nobody acts as the
@@ -438,12 +442,6 @@ function watch(N: Mind) {
 }
 
 // ---------------------------------------------------------------- the seams that pose him
-/** IS HE THE LAST MAN AT HIS ACT (roomfight.ts rally): his line said, backing, or low — he does not walk off to a fight next door where nobody of his is
- *  left to fight it. False on its first line with the switch off. */
-export function netQuietHolds(gd: Guard): boolean {
-  if (!live() || NETQUIET_QA.broken) return false;
-  const N = stateOf.get(gd); return !!N && mine(N);
-}
 /** WHAT A MAN HOLDING A ROOM WATCHES (roomfight.ts applyWatch, after it has written `pt`): the last man's arc, low on his spot; a whip's noise. Untouched
  *  otherwise — and on its first line with the switch off. */
 export function netQuietLook(gd: Guard, pt: Vec3) {
@@ -504,18 +502,17 @@ export function netQuietSnapshot(g: Game): NetQuietSnap | undefined {
     pts: Ns.map(N => N ? [...n3(N.whipAt), ...n3(N.spot), ...n3(N.look)] : null), names: Ns.map(N => N ? N.sayName : null), asked: Ns.map(N => N ? [...N.asked] : null),
     known: Ns.map(N => N ? [...N.known] : null), paid: Ns.map(N => N ? [...N.paid].flat() : null) };
 }
-/** …onto the fresh roster (a file without the slice: every man is met afresh on his first tick). The squads' book and the holds they ask about
- *  (netquietfeed.ts) are set HERE too: the room fight's tick — the squads' with it — runs before this file's on the first frame after a load. */
+/** …onto the fresh roster (a file without the slice: every man is met afresh on his first tick). The squads' book and the record of who holds are set HERE too: the room fight's tick — the squads' with it — runs before this file's on the first frame after a load. */
 export function netQuietRestore(g: Game, s: NetQuietSnap | null | undefined) {
   const f = (x: unknown, d = 0) => typeof x === 'number' && Number.isFinite(x) ? x : d, ids = (a: unknown) => (Array.isArray(a) ? a : []).filter((x): x is number => typeof x === 'number');
   netFeedTake(g); NETFEED.live = live();   // (nothing filed for a roster that is gone is read by this one)
   g.guards.forEach((gd, i) => { const M = s?.men?.[i], P = s?.pts?.[i];
-    if (!M) { stateOf.delete(gd); netFeedHold(gd, false); return; }
+    if (!M) { stateOf.delete(gd); releaseMan(gd, OWN.lastMan, g.time); return; }
     const p3 = (o: number): Vec3 | null => P && Number.isFinite(P[o]) ? [P[o], P[o + 1], P[o + 2]] : null, H = gd.witness.heard;
     const paid = new Map<number, number>(), pp = ids(s?.paid?.[i]); for (let k = 0; k + 1 < pp.length; k += 2) paid.set(pp[k], pp[k + 1]);
     const last = clamp(Math.round(f(M[8])), NONE, DONE);
     stateOf.set(gd, { quiet: Math.max(0, f(M[0])), asked: new Set(ids(s?.asked?.[i])), known: new Set(ids(s?.known?.[i])), paid, say: clamp(Math.round(f(M[1], -1)), -1, KINDS.length - 1), sayT: f(M[2]), sayName: String(s?.names?.[i] ?? ''), bark: f(M[3], NETQUIET.barkSecs), bodyT: f(M[4], 60),
       heardT: f(M[5], H.lastT), whipAt: p3(0), whipIn: f(M[6]), whipT: f(M[7]), last, t: Math.max(0, f(M[9])), mateT: 0, news: f(M[22]), newsT: f(M[23], 60), eye: f(M[20]), eyeHalf: f(M[21], NETQUIET.eyeDeg * DEG), lastKind: clamp(Math.round(f(M[10], -1)), -1, KINDS.length - 1), yaw: f(M[11]), arc: f(M[12]), low: !!M[13],
       cs: f(M[14], H.small), cl: f(M[15], loudOf(gd)), fx: f(M[16], NaN), fz: f(M[17], NaN), whipHeld: f(M[18]), roused: f(M[19]), spot: p3(3), look: p3(6) });
-    netFeedHold(gd, live() && mine(stateOf.get(gd)!)); });
+    if (live() && mine(stateOf.get(gd)!)) claimMan(gd, OWN.lastMan, g.time); else releaseMan(gd, OWN.lastMan, g.time); });
 }

@@ -16,9 +16,7 @@ fn cell_count() -> usize {
 
 /// A door leaf's `c`, `h`, `yaw` and whether it has `rot` (airDust.ts:146, 151, 152). Skeleton 5 holds no Box row for a BoxId (notes, ## Skeleton).
 /// Once `g.col.boxes` is the `Tab<BoxId, Box>` the index says, the body is: `let x = &g.col.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some())`.
-fn seam_box_pose(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) {
-    todo!("needs: a table of Box rows; skeleton 5 has g.col.boxes: Vec<BoxId>")
-}
+fn seam_box_pose(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) }
 
 /// The men's eyes read the field this run. (airDust.ts AirDust.live)
 pub fn air_dust_live(g: &mut crate::game::Game) -> bool {

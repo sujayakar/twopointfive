@@ -10,9 +10,9 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot give
 
 /// `b.owner` of a box made this frame: BoxId has no table of rows in skeleton 5.   (combat.ts:457)
-fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { todo!("needs: a table of Box rows (ids.rs: Box has none; StaticCollision.boxes is Vec<BoxId>)") }
+fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].owner }
 /// `b.mkey = k` of a box made this frame: the same.   (combat.ts:457)
-fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { todo!("needs: a table of Box rows (ids.rs: Box has none; StaticCollision.boxes is Vec<BoxId>)") }
+fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { g.tab.boxes[b].mkey = Some(k); }
 
 // ---------------------------------------------------------------- panels and contact
 
@@ -256,9 +256,11 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
 
 // ---------------------------------------------------------------- what the men carry, as boxes (world.raycast sees them) and the words the figure is told
 
-/// Held and worn props as small boxes, and what each figure is told it holds. The rigKeys call waits on a table of Box rows (notes, Skeleton).   (combat.ts handProps)
+/// Held and worn props as small boxes, and what each figure is told it holds; then every rig box's motion key.   (combat.ts handProps)
 pub fn hand_props(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
+    let n0 = out.len() as f64;
     hand_props_raw(g, out);
+    rig_keys(g, out, n0);
 }
 
 /// Motion identity: every rig box from `n0` on gets its man's id and its ordinal among his boxes this frame. Owner 0 stays on the index rule.   (combat.ts rigKeys)

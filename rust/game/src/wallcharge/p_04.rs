@@ -8,9 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A box's row (Box.* in the TypeScript): the index says g.col.boxes[id], but skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// holeAt's `open`: no solid thing on the rays through the wall at a man's shin and chest
 fn hole_open(g: &mut Game, w: &WallSpot, t: f64, du: f64) -> bool {

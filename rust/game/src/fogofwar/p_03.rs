@@ -8,9 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A box's row. Every box read or written in this file goes through here, so this one body is all that changes when the table of Box rows is back.
-fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: this skeleton has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// The live GPU particle system or None, as a place to write `ours`: `gpu_fx` answers only whether there is one.   (fogofwar.ts `gpuFx(this.g)`, particleFx.ts:25)
 fn gpu_particles(g: &mut Game) -> Option<&mut crate::render_particles::Particles> {

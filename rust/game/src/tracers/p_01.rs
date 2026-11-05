@@ -11,9 +11,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A box's row (`t.box`, tracers.ts:105, :141-143). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while index/properties.txt says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
 #[cfg(not(test))]
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// makeBox and thinNote, here so a test of this file's own arithmetic stands on no stub (a test's versions are at the foot of the file).
 #[cfg(not(test))]
 fn made_box(g: &mut Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { crate::scene_boxes::make_box(g, p) }

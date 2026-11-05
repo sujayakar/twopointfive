@@ -48,6 +48,20 @@ export const BOX_ROUND_BIT = 8;
 import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
+/** the engine's wait for a stale draw order (BoxWorld.upload): `calm` drawn packs the statics must have stood still for, and `still`, upload's own count of
+ *  them, kept by the engine: how many frames have been drawn is the picture's business and no part of the world's state (which a snapshot holds) */
+export interface DrawWait { calm: number; still: number }
+/** WHAT A PLANNER OF THE PICTURE ASKS OF A BOX: where it is, its size and turn, and what kind of thing it is (of its cuts, only whether it has any). A
+ *  planner that is given more than one frame (render/steps.ts) works on copies of these, taken in the call that begins it (planBoxes), so the level it
+ *  plans is one level, as it stood then. The type is the list of what may be asked: a planner that reads another field of a box does not compile until
+ *  the copy carries it. Nothing of a copy is shared with the box it was taken from. */
+export interface PlanBox { c: Vec3; h: Vec3; yaw: number; flags: number; rot?: Quat; cut?: { readonly length: number }; round?: boolean }
+export function planBoxes(list: readonly Box[]): PlanBox[] {
+  const out: PlanBox[] = new Array(list.length);
+  for (let i = 0; i < list.length; i++) { const b = list[i], r = b.rot;
+    out[i] = { c: [b.c[0], b.c[1], b.c[2]], h: [b.h[0], b.h[1], b.h[2]], yaw: b.yaw, flags: b.flags, rot: r ? [r[0], r[1], r[2], r[3]] : undefined, cut: b.cut !== undefined && b.cut.length > 0 ? { length: b.cut.length } : undefined, round: b.round }; }
+  return out;
+}
 export interface Box {
   c: Vec3;            // center
   h: Vec3;            // half extents (local axes)
@@ -159,7 +173,7 @@ export interface Box {
  *  maxBoxes ≤ 65534 (the visible word keeps 1 + index in 16 bits, 0xFFFF = new).
  *  `look` is more than a motion identity: a box keyed in its byte is PICTURE ONLY for the CPU's world ray whatever its flags say (BoxWorld.raycast, lookKeyed
  *  below) — key nothing there that a cursor, an order, a laser or a tripwire should land on. */
-export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24 } as const;   // debris: the destruction lane's rigid chunks (game/debris.ts), keyed off their serial · look: what a broken wall looks like where it broke (game/edgeLook.ts: plates, lintels, rubble)
+export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24, skin: 10 << 24 } as const;   // debris: the destruction lane's rigid chunks (game/debris.ts), keyed off their serial · look: what a broken wall looks like where it broke (game/edgeLook.ts: plates, lintels, rubble) · skin: what stands of the paint on a holed wall (game/wallskin.ts: the authored static × 16 + piece)
 /** a LOOK piece (keyed MKEY.look): drawn and lit, in no collision list — a round, an eye and a boot pass through it. Most are NoShadow; under the cut switch the
  *  bigger ones drop that flag so LIGHT's rays meet them and they cast the shadow they draw, which would also hand them to the CPU's ray: this is how it tells */
 const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24);   // (or a piece of DRESSING under another key: Box.dress)
@@ -250,6 +264,12 @@ export class BoxWorld {
   /** PICTURE ONLY, the renderer's own: dynamic boxes left out of the RASTER this frame (still packed, still what every reader of the list sees, never written) — the squad's
    *  weapon lasers while composite draws them as light in the air (engine.ts ← passes.setBeams, settings.beamAir). null = none, the list drawn as ever. */
   hidePrimary: Set<Box> | null = null;
+  /** STATICS LEFT OUT OF THE PICTURE WITH NO WORD IN THEIR FLAGS (game/wallskin.ts: the paint on a holed wall, drawn as its standing pieces instead): a static
+   *  whose index this holds is not rasterised. Picture only, like trim's rule (trimDrawn): every flag the game and the rays read stands as it was, and
+   *  `boxDrawn` (what a box's own flags say) does not know of it — ask `staticDrawn(i)` for what the list holds. null = none. */
+  undrawn: { has(i: number): boolean } | null = null;
+  /** is static `i` in the picture: drawn by its own flags (boxDrawn) and not left out by `undrawn` */
+  staticDrawn(i: number): boolean { const b = this.statics[i]; return !!b && boxDrawn(this.statics, b) && !(this.undrawn !== null && this.undrawn.has(i)); }
   /** MOTION IDENTITY (Box.mkey): on = a keyed dynamic box hands the g-buffer the index its key had LAST frame in the top 16 bits of its `visible` word (upload();
    *  gbuffer.wgsl vsBox reads its previous transform there); off = every word is the bare index and the vertex stage index-matches as it always did — mirrored from
    *  engine.settings.motionIds each frame. `mkeyPrev` = key → index in last frame's combined list. */
@@ -348,8 +368,17 @@ export class BoxWorld {
    *  only boxes that cannot tie are put in another order. `drawTop[i]` = static i's top as it is drawn (a single float); `drawRank[i]` = its place in the
    *  order; ranked again only when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does (`drawRankN`,
    *  -1 = stale). `drawSlot` is scratch: the sort's list, then the frame's laying out of the drawn statics by rank. The dynamics and the cut list follow
-   *  as they did. */
+   *  as they did.
+   *  THE ORDER MAY WAIT (the page's pace: render/planPace.ts, render/steps.ts). Ranking reads every static and in a browser runs cold, 2 to 7 ms of the
+   *  frame a wall is blown. Given a `DrawWait` (upload's second word: the engine's, and its count of still packs is the engine's to keep, not this
+   *  world's), a stale order is made again only on a drawn pack, once the statics have stood still for `calm` drawn packs; until then THE STATICS ARE
+   *  DRAWN IN THE LIST'S OWN ORDER, which is the order every tie is defined by: the picture is the same, and only the work of shading what is then
+   *  hidden comes back for those frames (and for as long as a static changes more often than that). `drawWaits` (the engine sets it with the pace) =
+   *  a pack with no draw after it never makes the order either. With neither (a tool, a check, `?planpace=old`): at once, on the pack that finds it
+   *  stale, as ever. `drawAskedUndrawn`: a pack with no draw after it found a change (the next drawn pack starts the wait again for it). Two words of
+   *  the picture's are in this world's state for it, `drawWaits` and that one; neither is a count of frames. */
   private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
+  drawWaits = false; private drawAskedUndrawn = false;
   staticsDirty = true;
   /** bumped by game/wallbreak.ts whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
@@ -681,9 +710,9 @@ export class BoxWorld {
   /** THE LIST, THEN THE PACK: every box into its rows for the GPU, the visible and cut lists, the trace grid, and the writes. Call once per drawn frame after dynamics
    *  are set. `between` = a pack with no draw of its own after it (ensurePacked): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the
    *  pack that is drawn still resolves 'where was this box last frame'. */
-  upload(between = false) {
+  upload(between = false, wait: DrawWait | null = null) {
     const nStat = this.list(); const all = this.all;
-    let nv = 0, marked = 0;
+    let nv = 0, marked = 0, asked = false;
     const marksOn = this.markingsEnabled;
     let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
@@ -695,7 +724,7 @@ export class BoxWorld {
     const cutOn = this.cutOn, roundOn = this.roundOn, SC = this.statShadowCut; let nc = 0, nct = 0; this.cutSplit = nStat;
     let np = Math.max(this.cutVisible.length, cutOn ? this.maxBoxes : 0);   // (the cut list is filled from both ends: traceable boxes from the front, picture-only ones from the back)
     if (cutOn && this.cutVisible.length < this.maxBoxes) this.cutVisible = new Uint32Array(this.maxBoxes);
-    const cv = this.cutVisible;
+    const cv = this.cutVisible, und = this.undrawn;
     for (let i = 0; i < nStat; i++) {
       const b = all[i]; const so = i * SS; const c = b.c, h = b.h, al = b.albedo, em = b.fogEmit ?? b.emissive, rot = b.rot, marks = b.marks;
       const mw = matWord(b), mg = b.fogMark ?? b.markGain ?? 1, gd = glassDark(b), a0 = sentAlbedo(b, 0, gd), a1 = sentAlbedo(b, 1, gd), a2 = sentAlbedo(b, 2, gd), ml = marks === undefined ? -1 : marks.length;
@@ -709,7 +738,7 @@ export class BoxWorld {
         this.drawTop[i] = !rot && (b.flags & BoxFlag.Cutaway) && b.cutHeight < c[1] + h[1] ? Math.fround(b.cutHeight) : Math.fround(Math.fround(c[1]) + Math.fround(rot ? BoxWorld.heightExtent(b) : h[1]));
         if (S[so] !== c[0] || S[so + 1] !== c[1] || S[so + 2] !== c[2] || S[so + 3] !== b.yaw || S[so + 4] !== h[0] || S[so + 5] !== h[1] || S[so + 6] !== h[2] || S[so + 15] !== b.cutHeight
           || ((S[so + 7] ^ b.flags) & (BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Cutaway)) !== 0
-          || (rot ? !(S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3]) : S[so + 18] !== 0)) this.drawRankN = -1;   // (its place, size, turn, or whether and how far it is drawn: the order is asked again. Said here, not kept in a local: an upload that throws further on has still said it. Paint, rain's gloss and every other flag ask nothing.)
+          || (rot ? !(S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3]) : S[so + 18] !== 0)) { this.drawRankN = -1; asked = true; }   // (its place, size, turn, or whether and how far it is drawn: the order is asked again. Said here, not kept in a local: an upload that throws further on has still said it. Paint, rain's gloss and every other flag ask nothing.)
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
         S[so + 9] = a0; S[so + 10] = a1; S[so + 11] = a2; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
@@ -717,13 +746,20 @@ export class BoxWorld {
         S[so + 23] = ml; SM[i] = marks; if (cutOn) SC[i] = b.cut;
       }
       if (cutOn && b.cut !== undefined && b.cut.length > 0 && !(b.flags & BoxFlag.NoShadow)) nct++;
-      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn)
+      if (!(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b)) && !(und !== null && und.has(i))) {   // (a static's word is its bare index: pslot 0 = the index rule; a pane is never rasterised; TRIM is drawn while the box that says it is — trimDrawn; `undrawn` leaves a box out)
         if (roundOn && b.round === true) cv[--np] = i;   // (ROUND THINGS: drawn by the cut pipeline, cut always — the rays' round rule is in every program)
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
     }
-    if (this.drawRankN !== nStat) { this.rankStatics(nStat); this.drawRankN = nStat; }
-    if (nv > 0) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
+    if (this.drawRankN !== nStat) {
+      if (this.drawRankN >= 0 || this.statShadowN !== nStat) asked = true;   // (the list grew or shrank: that is a change too)
+      this.drawRankN = -1;
+      let now = !(between && this.drawWaits);
+      if (between) { if (wait !== null) now = false; if (!now && asked) this.drawAskedUndrawn = true; }
+      else { if (wait !== null) { if (asked || this.drawAskedUndrawn) wait.still = 0; else wait.still++; now = wait.still >= wait.calm; } this.drawAskedUndrawn = false; }
+      if (now) { this.rankStatics(nStat); this.drawRankN = nStat; if (wait !== null) wait.still = 0; }   // (the count starts from nothing each time the order is made: a change this pack could not say it saw, an upload that threw part way or a snapshot put back, then waits its full time)
+    }
+    if (nv > 0 && this.drawRankN === nStat) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
       for (let k = 0; k < nv; k++) slot[rank[vis[k]]] = vis[k];
       for (let r = 0, w = 0; w < nv; r++) if (slot[r] !== 0xFFFFFFFF) vis[w++] = slot[r]; }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
@@ -817,7 +853,8 @@ export class BoxWorld {
     gf[o + 4] = b.h[0]; gf[o + 5] = b.h[1]; gf[o + 6] = b.h[2]; gu[o + 7] = flags >>> 0;
     const m = i * MAT_STRIDE;
     mf[m] = a0; mf[m + 1] = a1; mf[m + 2] = a2; mf[m + 3] = b.cutHeight;
-    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
+    mf[m + 4] = em[0]; mf[m + 5] = em[1]; mf[m + 6] = em[2]; mf[m + 7] = matWord(b) + (this.stuffOf ? 8 * this.stuffOf(b, i >= this.cutSplit && !(b.mkey !== undefined && b.mkey >>> 24 === MKEY.skin >>> 24)) : 0);   // (the finish: read through common.wgsl boxFinish by the g-buffer / reflect.wgsl — every other shader ignores the word, as it ignored the owner that sat here)
+      // (what stands of a holed wall's paint is the level's own, handed over with the frame's boxes: it does not MOVE — game/wallskin.ts)
     if (b.rot) { mf[m + 8] = b.rot[0]; mf[m + 9] = b.rot[1]; mf[m + 10] = b.rot[2]; mf[m + 11] = b.rot[3]; }
     else { const s2 = Math.sin(b.yaw / 2), c2 = Math.cos(b.yaw / 2); mf[m + 8] = 0; mf[m + 9] = s2; mf[m + 10] = 0; mf[m + 11] = c2; }   // yaw about +Y (local +X → (cos, 0, −sin), +Z → (sin, 0, cos): the same convention as the packed yaw the rays use)
     mf[m + 12] = s0; mf[m + 13] = s1; mf[m + 14] = s2a; mf[m + 15] = b.fogMark ?? b.markGain ?? 1;   // secondary albedo + the marking emission gain (game/lighting.ts drives it with the switchable's supply)

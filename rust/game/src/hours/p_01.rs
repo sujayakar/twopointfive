@@ -654,9 +654,7 @@ fn set_light_power(g: &mut Game, l: LightId, x: f64) {
 // ---------------------------------------------------------------- seams: what the skeleton still lacks
 
 /// A box's row (Box.* in the TypeScript). On a skeleton with the table `g.tab.boxes` (5.1), the body is `&mut g.tab.boxes[b]`.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box (hours.ts:301, 326-328, 408)")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 fn seam_query_get(q: &crate::Opaque, key: &str) -> Option<String> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:103, 104)") }
 fn seam_query_has(q: &crate::Opaque, key: &str) -> bool { todo!("needs: URLSearchParams.has: q is Opaque (hours.ts:102)") }
 /// `parseFloat(q.get(key))` where the key is there and the number finite (hours.ts:104).

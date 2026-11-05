@@ -121,7 +121,9 @@ did not.
   drawn-only decal hung off the floor falls when the wall breaks. **seen** "zorder issues on the floor", twice. **check**
   `bun run tools/qa/floor-order-check.ts <name>.json`.
 - **No two faces drawn in one plane.** A wall ends at the NEAR face of the wall it meets, never run through to its far
-  face; a post, a lamp's arm or a thing against a wall stops at it or stands a centimetre off. **seen** "a sorting issue
+  face; a post, a lamp's arm or a thing against a wall stops at it or stands a centimetre off. A pole with a shaded head on
+  an arm and a pool under it is the kit's `yardLamp` (a floodlight on a pole its `floodLight`), not boxes written out in the
+  generator. **seen** "a sorting issue
   that's flickering to right of the red door". **check** `bun run tools/qa/zfight-check.ts <name>` (a `seen` line is a
   patch a player can watch flip; a library piece's own are held by `bun run tools/levels/library.ts --check`).
 - **A roof is the kit's ceiling** (`K.ceiling`: flagged `NoPrimary`, so the camera sees the room), at ceiling height if rain

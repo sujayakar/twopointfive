@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// bx.emissive = e (fire.ts:358): skeleton 5 keeps no row of a Box anywhere (`g.col.boxes` and `world.statics` are lists of BoxId, Tabs has no box table).
-fn seam_box_set_emissive(g: &mut Game, bx: BoxId, e: V3) { todo!("needs: a table of Box rows that a BoxId indexes") }
+fn seam_box_set_emissive(g: &mut Game, bx: BoxId, e: V3) { g.tab.boxes[bx].emissive = e; }
 
 /// A lamp's place across: where the level hung it, wandering by two sines. (fire.ts:354, 355)
 fn wander_across(hung: f64, wander: f64, rate_a: f64, phase_a: f64, rate_b: f64, phase_b: f64, time: f64) -> f64 {

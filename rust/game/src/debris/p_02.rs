@@ -44,9 +44,7 @@ fn lay_flat_row(row: &mut crate::scene_boxes::Box, n: V3, k: f64) {
 }
 
 /// A box's row. Once `g.col.boxes` is the table the index says, the body is `&mut g.col.boxes[b]`.
-fn seam_box(g: &mut crate::game::Game, b: BoxId) -> &mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].h")
-}
+fn seam_box(g: &mut crate::game::Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// Any change of a prop's pose changes this (exact float compare: 'did it move', not a hash).   (debris.ts poseKey)
 pub fn pose_key(g: &mut crate::game::Game, p: PropId) -> f64 {

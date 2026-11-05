@@ -42,9 +42,7 @@ fn drive_kind_num(k: crate::doors::DoorDriveKind) -> f64 {
 }
 
 /// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once the table is back, the body is that row (and a leaf is a made box: notes)
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// a column of this door   (doors.ts Door.g)
 pub fn door_g(g: &mut crate::game::Game, id: DoorId, k: f64) -> f64 { col(g, id, k as usize) }

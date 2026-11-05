@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- small helpers
 
 /// a box's row (Box.* in the TypeScript). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box; skeleton 5.1 has g.tab.boxes") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// `g.level.boxes[bi]`: undefined off either end of the list. The level's list IS the collision's (game.ts:1100)
 fn box_at(g: &Game, bi: f64) -> Option<BoxId> {
     if !(bi >= 0.0) || bi != m::floor(bi) || bi as usize >= g.col.boxes.len() { return None; }

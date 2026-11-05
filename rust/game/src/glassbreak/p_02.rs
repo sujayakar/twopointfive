@@ -16,7 +16,7 @@ use crate::Num;
 
 // ---------------------------------------------------------------- seams: what skeleton 5 still lacks
 /// a box's row. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of rows; when it has one this body is one line and no other line moves
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- a pane's row, by its key
 /// the row of pane bi, for a few lines. Nothing a release reaches deletes a row (reset and setType are a restart's and the panel's), so a row in hand stays

@@ -214,9 +214,7 @@ pub fn signed_area(p: &[[f64; 2]]) -> f64 {
 }
 
 /// what fragment_of_box reads of a box: (c, h, yaw, rot, albedo). With a table of Box rows the body is `let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot, x.albedo)`.
-fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, Option<Quat>, V3) {
-    todo!("needs: the table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>; skeleton 5.1 has g.tab.boxes)")
-}
+fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, Option<Quat>, V3) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot, x.albedo) }
 
 /// the base's shard BOX read back as the fragment it stands for: its long sides the outline, its thin one the pane's normal, signed as thrown.   (shards.ts fragmentOfBox)
 pub fn fragment_of_box(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64, seed: f64) -> crate::shards::GlassFragmentLike {

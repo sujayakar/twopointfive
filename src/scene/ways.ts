@@ -43,10 +43,10 @@ const PATH_ITER = 6000, STEP = 0.2;   // (the search's bound, as every asker of 
 export function levelWays(level: Level, scenarios: LevelScenarios | undefined, nav: NavGrid | null, opts: { hints?: readonly WayHint[] } = {}): Ways {
   const cell = nav?.cell ?? 0.5, w = nav?.W ?? Math.round(WORLD.gridW * WORLD.gridCell / cell), h = nav?.H ?? Math.round(WORLD.gridH * WORLD.gridCell / cell);
   const out: Ways = { x0: 0, z0: 0, cell, w, h, patrol: new Float32Array(w * h), team: new Float32Array(w * h), doors: new Float32Array(w * h), hint: new Float32Array(w * h), paths: [], unknown: [], lost: 0 };
-  const own: { s?: object } = {}, mark = new Int32Array(w * h); let gen = 0;
+  const mark = new Int32Array(w * h); let gen = 0;
   /** one way from a to b: each cell it crosses counts `weight`, once */
   const walk = (kind: 'patrol' | 'team' | 'doors' | 'hint', a: Vec3, b: Vec3, weight = 1) => {
-    const ch = out[kind]; let path = nav ? nav.findPathAside(own, a, b, PATH_ITER) : null;
+    const ch = out[kind]; let path = nav ? nav.findPath(a, b, PATH_ITER) : null;
     if (nav && (!path || !path.length)) { out.lost++; path = null; }
     const pts: Vec3[] = path ? [a, ...path] : [a, b]; gen++; out.paths.push({ kind, weight, points: pts });
     const put = (x: number, z: number) => { const i = Math.floor(x / cell), j = Math.floor(z / cell); if (i < 0 || j < 0 || i >= w || j >= h) return; const k = j * w + i; if (mark[k] !== gen && !(nav && nav.blocked[k])) { mark[k] = gen; ch[k] += weight; } };

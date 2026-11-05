@@ -41,8 +41,8 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     let me_cam = g.tab.cmd_seat[me].cam;
     g.ticking = true;
     crate::scene_collision::tick_open(g);
-    // TEMP-BRINGUP: `knobsToRust()` (game.ts:1592) is not called: rustknobs::knobs_to_rust is still a stub of the skeleton's that no part's job holds, and the
-    // block the host hands in holds the knobs. The flag is real: without it every animator's knobsNow would write them again (rustknobs.ts knobsNow).
+    // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; a pose is a handle on the pool from the day it is made, so the poses have nothing to move)
+    crate::rustknobs::knobs_to_rust(g);
     g.m.rustknobs.rust_knobs.tick = true;
     // a record from anyone made one an honest seat could have sent, before anything reads it
     let mut checked: Vec<crate::cmd::PlayerCmd> = Vec::with_capacity(n);

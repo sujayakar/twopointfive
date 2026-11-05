@@ -60,9 +60,7 @@ fn world(w: usize) -> &'static mut sim::world::World {
 }
 
 /// A box's row (Box.* in the TypeScript), by its ID. The one blocked step of this file.
-fn seam_box(g: &mut Game, b: BoxId) -> &mut SBox {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box(g: &mut Game, b: BoxId) -> &mut SBox { &mut g.tab.boxes[b] }
 
 /// `Object.is`: every double by its bits (a −0 is not a 0), and a NaN is itself
 #[inline]

@@ -55,7 +55,7 @@ fn set_fix(g: &mut Game, gd: GuardId, p: V3) {
     man.fix_stamp = man.fix_stamp.wrapping_add(1);
 }
 /// `Box.flags` of a row. Skeleton 5 has no table of Box rows (`g.col.boxes` is `Vec<BoxId>`, ids.txt and properties.txt say otherwise)
-fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { todo!("needs: a table of Box rows, then this is that row's flags") }
+fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { g.tab.boxes[b].flags }
 
 // ---------------------------------------------------------------- what a man sees
 

@@ -117,19 +117,16 @@ pub fn word_for(g: &mut crate::game::Game, albedo: Option<&[f64]>, said: Option<
     }
 }
 
-/// PAINTS.get(row) (stuff.ts:110, 141, 196): the skeleton still has no table (see notes.md, ## Skeleton).
+/// PAINTS.get(row) (stuff.ts:110, 141, 196): skeleton 5.1's table, keyed by the colour's bits (review 5's ruling: the TypeScript keys by the ARRAY's identity, so
+/// two paints of one colour are one here, and a colour written out as numbers that happens to equal a paint's is that paint).
 fn seam_paints_get(g: &mut Game, row: &[f64]) -> Option<Paint> {
-    // TEMP-BRINGUP, SKELETON-GAP: g.m.scene_stuff.paints (stuff.ts:110). Review 5 settled it, keyed on the numbers' bits, and it did not land in skeleton 5.
-    // Until it does NO paint is known: a box made as the game runs gets no finish and no stuff word from its colour (its maker's own `stuff` still stands).
-    // When it lands this body is: g.m.scene_stuff.paints.get([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()]).cloned()
-    let _ = (g, row);
-    None
+    if row.len() < 3 { return None; }
+    g.m.scene_stuff.paints.get([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()]).cloned()
 }
 
 /// PAINTS.set(row, next) (stuff.ts:142): as seam_paints_get.
 fn seam_paints_set(g: &mut Game, row: &[f64], next: Paint) {
-    // When the table lands this body is: g.m.scene_stuff.paints.set([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()], next);
-    todo!("needs: the PAINTS table on g.m.scene_stuff (stuff.ts:110)")
+    g.m.scene_stuff.paints.set([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()], next);
 }
 
 #[cfg(test)]

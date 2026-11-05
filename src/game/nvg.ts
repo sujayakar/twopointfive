@@ -17,8 +17,8 @@
 //     behind his own white light. A man nobody orders about (a drill's, the rescue's flow, the fight AI's) still flips his own goggles; only his light is not ours.
 //
 // WHAT THE GOGGLES DO is the picture's own tube (render/shaders/post.wgsl, the N key): sig = ln(1 + lum · gain) / ln(1 + gain) with lum the radiance a man's
-// clothes send the lens under the scene's exposure and gain the same engine.settings.nvGain the post pass reads — move the panel's tube gain and what the
-// team sees through theirs moves with the picture. tubeVis() turns that screen brightness back into the light meter's 0‥1 (the irradiance that would put the
+// clothes send the lens under the scene's exposure and gain the tube's — the GAME'S OWN two numbers (env.ts; hours.ts exposureOf: equal to the picture's until a player
+// turns his Brightness or a panel slider, which move his picture and nothing a man sees by). tubeVis() turns that screen brightness back into the light meter's 0‥1 (the irradiance that would put the
 // same brightness on a bare-eyed picture, through Game.visibilityOf) and takes off the tube's scintillation where the signal is weakest (the shader's noise
 // term). guards.ts sightGainOn reads it for a goggled eye beside the light ON the man: nothing else about how a teammate sees changes — cone, range, line of
 // sight, smoke, motion, the reaction beats are all as they were. Darkness the meter calls 0 % (E ≈ 0.03) reads ≈ 0.6 through the tube; no light at all
@@ -35,8 +35,9 @@ import type { Game, Guard } from './game';
 import { lightEstimateAt, escalationOf, lightRuled, LIGHTS } from './guards';
 import { fightLive } from './roomfight';
 import { kitGoggles } from './kit';
-import { inEstimate } from './hours';
+import { inEstimate, exposureOf } from './hours';
 import { irOnMan, irCarried } from './irlight';
+import { tubeGain } from './env';
 
 export const NVG = {
   /** off = the team as it was: no goggles, lights by guards.ts LIGHTS alone */
@@ -97,15 +98,15 @@ const note = (g: Game, gd: Guard | null, what: string) => { NVG_LOG.push({ t: g.
 function live(g: Game): Team | null { const T = teams.get(g); return NVG.on && T && T.mode !== 'off' && g.time - T.t >= 0 && g.time - T.t < 0.25 ? T : null; }
 
 /** THE TUBE: the meter's 0‥1 for a man under irradiance `E` (W/m², as the light meter reports it) seen through the goggles — post.wgsl's intensifier curve at
- *  the scene's exposure and the picture's own gain, read back as the irradiance that would show a bare eye the same brightness, less the scintillation. */
+ *  the game's own exposure (hours.ts exposureOf) and tube gain (env.ts), read back as the irradiance that would show a bare eye the same brightness, less the scintillation. */
 export function tubeVis(g: Game, E: number): number {
-  const S = g.engine.settings; const k = NVG.albedo / Math.PI * (S.exposure > 0 ? S.exposure : 1), gain = Math.max(S.nvGain > 0 ? S.nvGain : 1, 1);
+  const k = NVG.albedo / Math.PI * exposureOf(g), gain = tubeGain();
   const sig = clamp(Math.log(1 + Math.max(E, 0) * k * gain) / Math.log(1 + gain), 0, 1);
   return sig > 0 ? g.visibilityOf(sig / k) * sig / (sig + NVG.noise) : 0;
 }
 /** The tube's PICTURE of a matte floor under irradiance `E`: 0‥1 of its range — the same curve as tubeVis above, before it is read back for a man's meter. */
 export function tubeSig(g: Game, E: number): number {
-  const S = g.engine.settings; const k = NVG.albedo / Math.PI * (S.exposure > 0 ? S.exposure : 1), gain = Math.max(S.nvGain > 0 ? S.nvGain : 1, 1);
+  const k = NVG.albedo / Math.PI * exposureOf(g), gain = tubeGain();
   return clamp(Math.log(1 + Math.max(E, 0) * k * gain) / Math.log(1 + gain), 0, 1);
 }
 

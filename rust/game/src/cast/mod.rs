@@ -4,4 +4,4 @@ pub mod sig;
 pub use sig::*;
 // the parts' bodies: a named re-export wins over the stubs of sig.rs
 pub mod b_01;
-pub use b_01::{sneak_suit, cast_parts};
+pub use b_01::{office_dress, operator_at, cast_variant_of, sneak_suit, cast_parts};

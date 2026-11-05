@@ -318,9 +318,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
 }
 
 /// `level.boxes[i]` and `col.boxes[i]` as a row, to read and to write through. (src/scene/boxes.ts:66 on, Box.*)
-fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    todo!("needs: a table of Box rows; this skeleton has g.col.boxes as Vec<BoxId> and no Tab holds a Box")
-}
+fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// `engine.lights.add` of the constructor's literals: owner 0, fixtureBox -1, flicker 0, ttl -1, age 0.
 fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, enabled: bool, peak_intensity: f64, broad: bool, mark_ref: Option<f64>) -> LightId {

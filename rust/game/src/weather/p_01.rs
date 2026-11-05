@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---- this file's reach of a box
 
 /// A box's row (Box.* in the TypeScript): the one seam left. Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`.
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box (weather.ts:68, 79, 88, 438, 439, 448)") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript (game.ts:1219), statics appended later included. `level.boxes` is not a field in Rust.
 fn level_boxes(g: &Game) -> Vec<BoxId> { g.col.boxes.clone() }

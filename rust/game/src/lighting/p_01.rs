@@ -127,8 +127,37 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
         crate::game::game_say(g, near.unwrap(), "breaker's back on", Some(true), None, None);
         mains_back(g);
     }
-    // not picture-only: a light question reads what this writes (guards.ts lampAsked, writeLamps). The rest of the paint is the picture's.
+    // ---- THE PICTURE, FROM THE STATE (lighting.ts:86-95). Not picture-only: a light question reads a lamp's `enabled` / `intensity` (guards.ts lampAsked, writeLamps),
+    // and the fog's memory of a lamp's face reads the boxes' `emissive` (fogofwar.ts lampFace → face_recs), so the boxes are written as the TypeScript writes them.
     crate::sim_lightshome::light_home_paint(g);
+    let es = g.engine.settings.emissive_scale;
+    let mut k = 0;
+    while k < g.targets.len() {
+        let t = g.targets[k];
+        k += 1;
+        let f = crate::sim_lightshome::fixture_factor(g, t);
+        if g.tab.sim_lightshome_fixture[t].lens.is_some() { crate::carlamps::car_lamp_paint(g, t); }
+        if g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Breaker {
+            let e: V3 = if crate::sim_lightshome::fixture_broken(g, t) { [0.0, 0.0, 0.0] } else if crate::sim_lightshome::mains_active(g) { [5.0, 0.3, 0.1] } else { [0.3, 4.0, 0.6] };
+            for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() { let b = g.engine.world.statics[bi as usize]; g.tab.boxes[b].emissive = e; }
+            continue;
+        }
+        // (a lamp with no row is the question's own, and written from the factor here)
+        if g.tab.sim_lightshome_fixture[t].kind == crate::sim_lightshome::FixtureKind::Analytic {
+            if let Some(l) = g.tab.sim_lightshome_fixture[t].light {
+                if g.tab.light[l].row.is_none() { let base = crate::sim_lightshome::fixture_base_intensity(g, t); g.tab.light[l].enabled = f > 0.001; g.tab.light[l].intensity = base * f; }
+            }
+        }
+        if let Some(als) = g.tab.sim_lightshome_fixture[t].area_lights.clone() {
+            for al in als { if g.tab.light[al.light].row.is_none() { g.tab.light[al.light].enabled = f > 0.001; let v = al.base * f * es; g.tab.light[al.light].peak_intensity = v; g.tab.light[al.light].intensity = v; } }
+        }
+        let base = g.tab.sim_lightshome_fixture[t].base_emissive;
+        for bi in g.tab.sim_lightshome_fixture[t].boxes.clone() {
+            let b = g.engine.world.statics[bi as usize];
+            g.tab.boxes[b].emissive = [base[0] * f, base[1] * f, base[2] * f];
+            g.tab.boxes[b].mark_gain = Some(f);
+        }
+    }
 }
 
 /// Trip the mains: everything fed from the breaker goes dark, the men get edgy, the nearest goes to check it.   (lighting.ts setBlackout)

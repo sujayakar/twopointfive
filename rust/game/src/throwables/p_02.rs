@@ -400,9 +400,7 @@ fn item_bounced(g: &mut Game, b: ItemBounce, sp: f64, p: V3, it: ItemId, n: V3) 
 }
 
 /// `out[k].mkey = key` of a box made this frame: it has no row to write yet (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>).   (throwables.ts:507)
-fn seam_box_set_mkey(g: &mut Game, b: BoxId, mkey: f64) {
-    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
-}
+fn seam_box_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { g.tab.boxes[b].mkey = Some(mkey); }
 
 /// Fill 4 to 7's magazines (gunreload.ts): half length, half width, half thickness, colour.   (throwables.ts:502)
 const OWN_MAGS: [(f64, f64, f64, V3); 4] = [

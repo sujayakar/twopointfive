@@ -10,9 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---------------------------------------------------------------- seams: what skeleton 5 cannot give yet
 
 /// A static box's `c`, `h`, `yaw` and whether it has a `rot` (handwork.ts:126). Once a table of Box rows stands, the body is that row's four fields.
-fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) {
-    todo!("needs: the table of Box rows: skeleton 5 has g.col.boxes as Vec<BoxId> and no Tab of Box, while index/properties.txt says g.col.boxes[id].c")
-}
+fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) }
 
 // ---------------------------------------------------------------- private helpers
 

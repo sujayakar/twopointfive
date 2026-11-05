@@ -24,7 +24,7 @@
 // plain static boxes APPENDED to the level's list (StaticCollision.addStatic + BoxWorld.addStatic, registered in the authored box's cells), greedy-merged from
 // the closed cells, re-shaped in place as more goes. So rounds (col.raycast), sight (segmentBlocked), sound / reach (solidBlocked + SoundPaths, its route cache
 // dropped), feet (collideCircle), the trace grid and raster (BoxWorld.upload re-packs changed statics), the smoke solver's obstacles and the lights' reach masks
-// (Game.reachChanged: only the cells behind the opening are decided again, a few lights a frame) all read the same boxes. The NAV GRID is re-baked over the changed footprint with the constructor's own
+// (render/reachKeep.ts, told by `changed`: only the cells behind the opening are decided again, a few lights a frame) all read the same boxes. The NAV GRID is re-baked over the changed footprint with the constructor's own
 // statement (NavGrid.rebake) and the cells that became floor are handed to the AI.
 //
 // THE AI IS TOLD: `walls.serial` goes up with every change and `walls.changes` (a ring of LevelChange rows: kind hole | port | cover | door | reset, where, the nav
@@ -48,13 +48,14 @@ import { gpuFx, type Surf } from './particleFx';
 import { doesOf } from '../scene/materials';
 import { hash01 } from './debris';
 import { NOBODY_ID } from './consts';
-import { DESTRUCTION } from './destructionSwitch';
+import { DESTRUCTION, BLAST_PACE } from './destructionSwitch';
 import { cutBoxesOn } from '../scene/cut';
 import type { ShedBudget } from './breakTable';
 import { WallWear } from './wallwear';
 import { messOpened } from './floormess';
 import { leafRound } from './doorblast';
 import { breakRoom, type BreakRoom } from './levelfit';
+import { WallSkin } from './wallskin';
 
 // ------------------------------------------------------------------ knobs
 export const WALLS = {
@@ -182,6 +183,8 @@ export class WallBreak {
   private ghosts: number[] = [];
   /** LOOK ONLY (wallwear.ts): what a cell shows while it is being shot — marks that grow with its count, on both faces of a thin wall */
   readonly wear = new WallWear();
+  /** LOOK ONLY (wallskin.ts): what is painted on a wall's face is drawn only where the wall still stands behind it. It writes nothing this module reads */
+  readonly skins: WallSkin;
 
   /** THE ROOM THIS LEVEL LEFT FOR ITS PIECES, taken once as it loaded (levelfit.ts breakRoom): what the Rust module's copy of the box world holds beyond the
    *  level as authored, in statics, in entries of the grid's cells and in cut rows. `rebuild` stands no piece up past it, as it stands none up past
@@ -192,6 +195,7 @@ export class WallBreak {
     this.authored = g.col.boxes.length;
     this.index();
     this.room = breakRoom(g.col, g.col.mirror.tables);
+    this.skins = new WallSkin(g, this.authored, j => this.fixtureBoxes.has(j) || !!this.destr.itemOf(j), k => { const B = this.owner.get(k); return B && B.id === k ? B : undefined; }, () => this.list);
   }
   /** would `need` more pieces of B be more than this level may stand up? Every piece is a static, at most one cut row, and an entry in each cell of the
    *  box it was cut from (StaticCollision.addStatic files it by that box): the three tables of the copy a piece takes room in. */
@@ -406,10 +410,11 @@ export class WallBreak {
     g.smoke.obstaclesChanged?.(pos, Math.hypot(x1 - x0, z1 - z0) / 2 + 1.5);
     const opened: number[] = [];
     for (const r of rects) { const ch = g.col.nav.rebake(r[0], r[1], r[2], r[3]); for (let k = 0; k < ch.length; k += 2) if (ch[k + 1] === 0) opened.push(ch[k]); }
-    if (B.kind === 'wall') g.reachChanged([x0, z0, x1, z1]);
+    if (B.kind === 'wall') g.engine.reach?.changed([x0, z0, x1, z1], BLAST_PACE.on ? BLAST_PACE.reachHold : -1);   // (the lights' reach masks are the picture's: told where, and how long the blast's own frame may be spared the reading)
     if (B.hard) for (const c of opened) this.shellGaps.add(c);
     WALL_STATS.navOpened += opened.length;
     this.destr.edgeLook.opened(B, fresh, cause, dir, quiet);   // (picture only: edgeLook.ts)
+    this.skins.opened(B);   // (picture only: wallskin.ts — the paint on the stretch that opened is cut with it)
     if (!quiet && (cause === 'fire' || cause === 'collapse')) messOpened(g, [x0, z0, x1, z1]);   // (picture only: floormess.ts — a blast lays its own, wider)
     const row = this.note({ kind, cause, id: B.id, pos, rect: [x0, z0, x1, z1], opened, walkable: opened.length > 0, sight: true, dead, who });
     WALL_LOG.push(`${g.time.toFixed(2)} ${kind} ${cause} #${B.id} cells ${fresh.length} (${B.nOpen}/${B.open.length}) nav+${opened.length}${dead ? ' DEAD' : ''}`); if (WALL_LOG.length > 200) WALL_LOG.splice(0, 100);
@@ -778,7 +783,7 @@ export class WallBreak {
   // ---------------------------------------------------------------- reset / checkpoints
   /** The level put back (Destruction.reset): authored boxes as they were, every appended static cut off, the nav grid re-baked. Nothing at all when nothing broke. */
   reset(silent = false) {
-    const g = this.g; this.counter = 1; this.wear.reset(); this.hungNow = null; this.hungGone.clear();
+    const g = this.g; this.counter = 1; this.wear.reset(); this.skins.clear(); this.hungNow = null; this.hungGone.clear();
     const letGo = () => { this.shellGaps.clear(); if (this.list.some(B => B.hard)) { for (const B of this.list) if (B.hard) this.owner.delete(B.id); this.list = this.list.filter(B => !B.hard); } };   // (a hard wall is the run's, not the level's: adopt)
     if (!this.dirty && g.col.boxes.length === this.authored) { letGo(); return; }
     for (const [i, f] of this.hidden) g.col.boxes[i].flags = f; this.hidden.clear();
@@ -792,7 +797,7 @@ export class WallBreak {
     if (!any) return;
     g.col.nav.rebake(WORLD.min[0], WORLD.min[2], WORLD.max[0], WORLD.max[2]); g.col.sound.invalidate();
     g.smoke.obstaclesChanged?.([(WORLD.min[0] + WORLD.max[0]) / 2, 1, (WORLD.min[2] + WORLD.max[2]) / 2], 60);
-    g.reachChanged(null);
+    g.engine.reach?.changed(null);
     if (!silent) this.note({ kind: 'reset', cause: 'reset', id: -1, pos: [0, 0, 0], rect: [WORLD.min[0], WORLD.min[2], WORLD.max[0], WORLD.max[2]], opened: [], walkable: false, sight: false, dead: false, who: NOBODY_ID });
   }
   /** what a checkpoint keeps (undefined = the level stands as authored) */

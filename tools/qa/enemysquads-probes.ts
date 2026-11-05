@@ -20,7 +20,8 @@ import { standUp, ROOT } from './headless.ts';
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { SQUADS, squadsReport, squadsLive, squadOwns, squadStaysIn, squadCalls, squadMen, mate } = await import(`${ROOT}/src/game/enemysquads.ts`);   // (mate: a man's name as his own squad says it on the net — it follows the dialogue pass, so the expected lines do too)
+const { SQUADS, squadsReport, squadsLive, squadCalls, squadMen, mate } = await import(`${ROOT}/src/game/enemysquads.ts`);   // (mate: a man's name as his own squad says it on the net — it follows the dialogue pass, so the expected lines do too)
+const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { BODY_LIGHT } = await import(`${ROOT}/src/game/guards.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -68,16 +69,16 @@ export async function enemysquadsStage(): Promise<boolean> {
     F.verdict(rep.map((q: any) => `${q.name} ${q.men}`).join(' · ') === 'Alpha 3 · Bravo 5 · Charlie 3' && squadsLive(g), 'three squads take the eleven defenders by the rooms they were dealt into', rep.map((q: any) => `${q.name} ${q.men} ${q.state}`).join(' · '));
     F.verdict(1 + g.guards.length === 16 && g.nightBreach.hostiles.length === 11, 'sixteen characters on the floor: Sam, the four, eleven defenders', `${1 + g.guards.length} characters · ${g.nightBreach.hostiles.length} defenders`);
     const H = g.nightBreach.hostiles;
-    F.verdict(H.every((h: any) => squadOwns(g, h)) && H.filter((h: any) => squadStaysIn(g, h)).length === 3, 'every defender is a squad\'s man; Charlie\'s three stay in its rooms', `owned ${H.filter((h: any) => squadOwns(g, h)).length}/11 · stay in ${H.filter((h: any) => squadStaysIn(g, h)).length}`);
+    F.verdict(H.every((h: any) => hasHim(h, OWN.squad)) && H.filter((h: any) => h.staysInRooms).length === 3, 'every defender is a squad\'s man; Charlie\'s three stay in its rooms', `owned ${H.filter((h: any) => hasHim(h, OWN.squad)).length}/11 · stay in ${H.filter((h: any) => h.staysInRooms).length}`);
     R.step(6);
     F.verdict(squadsReport(g).every((q: any) => q.state === 'hold' && !q.events.length) && !R.said.length, 'with nothing heard and nobody met, every squad holds and the net is silent', squadsReport(g).map((q: any) => `${q.name} ${q.state}`).join(' · ') + ` · ${R.said.length} radio lines`);
   } finally { R.done(); }
   const Off = await rig('block-squads.json', 1, false);
-  try { F.verdict(!squadsLive(Off.g) && !squadsReport(Off.g).length && !Off.g.nightBreach.hostiles.some((h: any) => squadOwns(Off.g, h)), 'SQUADS.on off: the same eleven men, no squads — one pool', `live ${squadsLive(Off.g)} · ${Off.g.nightBreach.hostiles.length} defenders`); } finally { Off.done(); }
+  try { F.verdict(!squadsLive(Off.g) && !squadsReport(Off.g).length && !Off.g.nightBreach.hostiles.some((h: any) => hasHim(h, OWN.squad)), 'SQUADS.on off: the same eleven men, no squads — one pool', `live ${squadsLive(Off.g)} · ${Off.g.nightBreach.hostiles.length} defenders`); } finally { Off.done(); }
   // (squaddeal.ts, a later rule, cuts a level with no squads block into squads of its rooms: held off for this stand-up by the stand's own word — squaddeal-check.ts holds that rule)
   const sd0 = process.env.TPS_SQUADDEAL; process.env.TPS_SQUADDEAL = '0';
   const B = await rig('records.json', 1).finally(() => { if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; });   // (the block carried no squads until its rebuild dealt its eight men into four; records is a room clear whose file declares none)
-  try { F.verdict(!B.why && B.g.nightBreach.hostiles.length > 0 && !squadsLive(B.g) && !B.g.nightBreach.hostiles.some((h: any) => squadOwns(B.g, h) || squadStaysIn(B.g, h)), 'a level with no squads block (records): its defenders stand, none staged, the seams answer no', `start ${B.why ?? 'ok'} · live ${squadsLive(B.g)} · ${B.g.nightBreach.hostiles.length} defenders`); } finally { B.done(); }
+  try { F.verdict(!B.why && B.g.nightBreach.hostiles.length > 0 && !squadsLive(B.g) && !B.g.nightBreach.hostiles.some((h: any) => hasHim(h, OWN.squad) || h.staysInRooms), 'a level with no squads block (records): its defenders stand, none staged, the seams answer no', `start ${B.why ?? 'ok'} · live ${squadsLive(B.g)} · ${B.g.nightBreach.hostiles.length} defenders`); } finally { B.done(); }
   return F.done();
 }
 

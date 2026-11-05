@@ -25,20 +25,14 @@ const RS: usize = BOX_WORLD_RS as usize;
 /// the box an ID names
 #[cfg(not(test))]
 #[inline]
-fn bx(g: &Game, id: BoxId) -> &Bx {
-    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
-}
+fn bx(g: &Game, id: BoxId) -> &Bx { &g.tab.boxes[id] }
 /// the box an ID names, to write
 #[cfg(not(test))]
 #[inline]
-fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx {
-    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
-}
+fn bx_mut(g: &mut Game, id: BoxId) -> &mut Bx { &mut g.tab.boxes[id] }
 /// a new box into the table of every box (boxes.ts:186 and :204 hand back the object itself)
 #[cfg(not(test))]
-fn seam_box_push(g: &mut Game, b: Bx) -> BoxId {
-    todo!("needs: a table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>)")
-}
+fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { crate::scene_boxes::box_new(g, b) }
 /// the same for `box_of`, whose stub takes no `g`
 #[cfg(not(test))]
 fn seam_box_push_no_g(b: Bx) -> BoxId {

@@ -9,7 +9,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams: what this skeleton still cannot give
 /// a box's row (Box.*, boxes.ts:66). This skeleton has `g.col.boxes: Vec<BoxId>` and no table of Box rows; where the table comes, this is the one line `&mut g.tab.boxes[b]`
-fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { todo!("needs: the table of Box rows: g.col.boxes is Vec<BoxId> and no Tab of Box") }
+fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ---------------------------------------------------------------- helpers
 /// the bits of two flag words or'd   (`a | b`)

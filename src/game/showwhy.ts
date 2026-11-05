@@ -46,9 +46,9 @@ import { isHurt } from './condition';
 import { roomKept } from './rearwatch';
 import { doorwayHeldBy } from './doorway';
 import { CLEARLINE } from './clearline';
-import { silentOnMan } from './silent';
-import { holdFireOnMan } from './holdfire';
-import { unseenMan } from './unseen';
+import { underUnseen } from './unseen';
+import { silentHoldsTarget } from './silent';
+import { holdFireHoldsTarget } from './holdfire';
 
 export const SHOWWHY = {
   /** the switch (false = the build as it was, run for run) */
@@ -144,7 +144,7 @@ function masked(g: Game, gd: Guard): boolean {
   const O = g.fight.opOf(gd), h = O?.tgt; if (!O || !h || h.state === 'dead' || !(O.lineT > 0) || O.lineBy !== 'player' || g.time - O.lineAt > 0.1) return false;
   if (mateNearer(g, gd, h.char.pos)) return false;
   if (h.state === 'alert' || h.state === 'search' || g.fight.hotFor(gd)) return true;
-  return !(silentOnMan(g, gd) || holdFireOnMan(g, gd) || unseenMan(g, gd));
+  return !(silentHoldsTarget(g, gd) || holdFireHoldsTarget(g, gd) || underUnseen(g, gd));
 }
 /** a mate stands in this man's line to `to` nearer to him than the player does: it is the mate he waits on, and the mate who waits on the player */
 function mateNearer(g: Game, gd: Guard, to: Vec3): boolean {

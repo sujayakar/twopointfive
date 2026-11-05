@@ -22,9 +22,7 @@ fn form(h: &mut u32, round: Option<f64>, arc: Option<ShapeFormArc>, cut: Option<
 }
 
 /// A box's row, by its ID. Every line of this file that says where a box lives. SKELETON-GAP: skeleton 5 has `g.col.boxes: Vec<BoxId>` and no `Tab<BoxId, Box>`.
-fn seam_box<'g>(g: &'g Game, b: BoxId) -> &'g crate::scene_boxes::Box {
-    todo!("needs: the table of Box rows (skeleton 5 has g.col.boxes: Vec<BoxId> and no Tab<BoxId, Box>); the body is then &g.tab.boxes[b]")
-}
+fn seam_box<'g>(g: &'g Game, b: BoxId) -> &'g crate::scene_boxes::Box { &g.tab.boxes[b] }
 
 /// A number of the shapes a level stands on, over its first `n` boxes: 0 = no box stands shaped. (shapes.ts shapeStamp)
 pub fn shape_stamp(g: &mut crate::game::Game, boxes: &[BoxId], n: Option<f64>) -> f64 {
