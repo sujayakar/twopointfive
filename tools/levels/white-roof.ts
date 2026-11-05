@@ -34,6 +34,7 @@ import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { MAX_MARKS_PER_BOX, markFromRect, type MarkingDef, type MarkPal } from '../../src/scene/markings';
@@ -209,7 +210,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   mark(deck, MD.hazardMarks('+y', rectTop(deck, 7.8, 15.2, 9.4, 16.4), SIGNAL, undefined, 2, 'coarse', 1), MD.hazardMarks('+y', rectTop(deck, 31.9, 13.7, 33.5, 14.9), SIGNAL, undefined, 2, 'coarse', 1),
     MD.hazardMarks('+y', rectTop(deck, 17.3, 11.2, 18.5, 12.8), SIGNAL, undefined, 2, 'coarse', 1), MD.stencilMarks('+y', 'EXIT→', ...onTop(deck, 26.2, 17.5), SIGNAL));
   grp('drain');   // a grated channel across the plant's front, a yellow line either side
-  slab(24.6, 0.006, 16.5, 28.4, 0.012, 16.74, DARK.albedo, { rough: 0.5, stuff: 'louvre', flags: FLAT });
+  slab(24.6, 0.006, 16.5, 28.4, 0.012, 16.74, saidAs('louvre', DARK.albedo, { rough: 0.5 }), { flags: FLAT });
   film(24.6, 16.42, 28.4, 16.5, LINE_Y, 0.011); film(24.6, 16.74, 28.4, 16.82, LINE_Y, 0.011);
 
   // ---- a railing between the pad and the walk to the service door: orange tube, two rails, a post every stride and a half. In the sun its shadow is a ladder on the deck
@@ -230,15 +231,15 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- lights: tubes in the rooms, a floodlight for a night, the moon (the hour's sun goes in at its place)
   grp('lights');
   G.tube(8.8, 11.0, false, 'service'); G.tube(8.8, 13.4, false, 'service'); G.tube(14.2, 11.0, false, 'lounge'); G.tube(14.2, 13.4, false, 'lounge');
-  for (const [x, z, name, group] of [[8.8, 12.2, 'lamp_service', 'service'], [14.2, 12.2, 'lamp_lounge', 'lounge']] as const)
-    lights.push({ kind: 'point', pos: [x, H - 0.25, z], dir: [0, -1, 0], color: [1.0, 0.98, 0.95], intensity: 60, range: 9, innerDeg: 0, outerDeg: 180, name, group, enabled: true, volumetric: 0.1, radius: 0.3 });
+  // (THE TUBES ARE THE ROOMS' LIGHT, each a light of its own, as in every level of the kit. A point lamp of 60 hung between each pair as well until 11-05: over twice the
+  // kit's bulb, it put 1.75 times the night's white on the floor under it before any bounce, and a night shows a lit room at the night's own exposure. docs/agents/levels.md)
   grp('exterior.lamps');
   G.floodLight(18.5, 22.8, [0.3, -1], 'flood_deck', true);
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.5, -0.5, -0.7]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
 
   // ---- the breaker and one beacon: the game's blackout wants both
   grp('breaker');
-  const brk = add({ c: [6.9, 1.35, 9.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel', stuff: 'enamel' });
+  const brk = add({ c: [6.9, 1.35, 9.16], h: [0.28, 0.36, 0.04], albedo: saidAs('enamel', PANEL_GREY), name: 'breaker_panel' });
   const brkLed = add({ c: [6.72, 1.62, 9.21], h: [0.015, 0.015, 0.01], albedo: [0.02, 0.02, 0.02], rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   const dome = add({ c: [8.8, H - 0.19, 14.4], h: [0.055, 0.07, 0.055], albedo: [0.35, 0.08, 0.05], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

@@ -16,7 +16,7 @@ const DECAL_FACING: f32 = 0.6;        // min cos between the pixel's face normal
 
 struct DecalOut { albedo: vec3f, n: vec3f, keep: f32 };   // keep: multiplier composite applies to the glossy floors' specular (soot is matte)
 
-// MARKS THAT SIT IN THE SURFACE (render/decals.ts Decals.sit = the header's fourth word; the page raises it, ?marksit=0 leaves every mark as it was drawn).
+// MARKS THAT SIT IN THE SURFACE (render/decals.ts MARKSIT = the header's fourth word; the page raises it, ?marksit=0 leaves every mark as it was drawn).
 // A blast's scorch and the film of dust it leaves were each one round stamp: a dozen of them on a yard read as a dozen copies laid on top of the ground. With
 // the word up a mark is off round (a seeded ellipse, its heart off the middle), its thin parts are broken by ONE field anchored to the surface that every
 // mark there shares (two films side by side meet in one shore; soot thins into patches with an edge, not a soft ring), dust takes some of the colour of what

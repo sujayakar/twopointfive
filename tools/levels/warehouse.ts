@@ -53,7 +53,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { drawnAs, PANEL_GREY, CHAIR_GREY, madeOf } from '../../src/scene/stuff';
+import { drawnAs, PANEL_GREY, CHAIR_GREY, RACK_BLACK, madeOf, saidAs } from '../../src/scene/stuff';
 
 export const NAME = 'warehouse';
 export const NOTES = 'The warehouse: a racked hall and a loading dock ringed by small rooms off an L-shaped service corridor, a way in on every face, the team starting outside. Eleven defenders in three squads (floor, dock, office). For the four man squad. One floor, box geometry only, the office\'s shell and kit. Regenerate: bun run tools/levels/export.ts warehouse';
@@ -178,14 +178,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the plant room (x 4..10, z 4..8): p_s on the corridor, plant_ext on the north face ----------------
   grp('plant');
-  add({ c: [9.1, 0.95, 5.0], h: [0.55, 0.95, 0.55], albedo: CHAIR_GREY, rough: 0.4 });                          // boiler
+  add({ c: [9.1, 0.95, 5.0], h: [0.55, 0.95, 0.55], albedo: saidAs('paint', CHAIR_GREY, { rough: 0.4 }) });                          // boiler
   add({ c: [9.2, 0.7, 6.7], h: [0.45, 0.7, 0.45], albedo: [0.2, 0.3, 0.45], rough: 0.4 });                            // pressure vessel
   add({ c: [8.2, 2.55, 4.4], h: [1.6, 0.06, 0.06], albedo: C.metal, flags: BoxFlag.NoShadow });                       // pipe run under the ceiling
   add({ c: [9.1, 2.3, 5.0], h: [0.07, 0.4, 0.07], albedo: C.metal, flags: BoxFlag.NoShadow });                        // flue
   // the control cabinet on the north wall, west of the door: the old mission's rack (a placeholder the level format wants)
   const DRIVE_RACK = 0; const slots: { u: number; y: number; amber: boolean }[] = [];
   for (let u = 0; u < 10; u++) { if (((u * 7) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: u % 7 === 3 }); }
-  const rackBody = add({ c: [4.7, 1.05, 4.75], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
+  const rackBody = add({ c: [4.7, 1.05, 4.75], h: [0.33, 1.05, 0.5], albedo: RACK_BLACK, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
   const rackFront: Vec3 = [4.7, 1.1, 5.28];
   switchables.push({ name: 'rack0_leds', boxes: [rackBody], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker: true, mains: false });
   const brk = add({ c: [5.2, 1.35, 7.9], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
