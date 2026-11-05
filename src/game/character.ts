@@ -6,6 +6,8 @@ import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
 import { NodeOverride, POSEMATH, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerFits, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo, stageOpen, stageShut } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
+import { ManCols } from '../sim/men/cols';
+import { standMan, loneMen, type MenStore } from '../sim/men/store';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
 import { hyp2, hyp3 } from '../math/vec';
@@ -6865,7 +6867,7 @@ interface FallGuide { t: number; end: number; pins: GuidePin[]; release: (rag: R
 /** a sleeping body's breath (Character.breathe): the joints the PICTURE moves and where they stood, model space */
 interface Breath { t: number; due: number; chest: number; at: Vec3; rot: Quat; hold: number[]; holdOv: NodeOverride[]; saved: (NodeOverride | undefined)[]; }
 
-export interface CharacterDesc { id: number; tint: Vec3; tint2: Vec3; pos: Vec3; yaw: number; }
+export interface CharacterDesc { id: number; tint: Vec3; tint2: Vec3; pos: Vec3; yaw: number; /** whose rows his columns take: his game's (sim/men/store.ts). None: a man of no game */ men?: MenStore; }
 
 /** one shadow-proxy record [a, r, b] of Character.capsules(): the segment a → c, its far end carried `extendB` (m) further along it */
 function capRec(a: Vec3, c: Vec3, r: number, extendB = 0): number[] {
@@ -6880,7 +6882,7 @@ function capSole(foot: Vec3, toe: Vec3): number[] {
   const tip: Vec3 = [toe[0], toe[1] - up + 0.033, toe[2]];
   return capRec(heel, tip, 0.033, 0.06);
 }
-export class Character {
+export class Character extends ManCols {
   id: number; tint: Vec3; tint2: Vec3;
   pos: Vec3; vel: Vec3 = [0, 0, 0];
   bodyYaw: number; aimYaw: number; aimPitch = 0;
@@ -6942,6 +6944,7 @@ export class Character {
   private tn: { body: number; aim: number; wb: number; wa: number; ib: number; ia: number; x: number; z: number } | null = null;
 
   constructor(public ch: GltfCharacter, d: CharacterDesc) {
+    super(); standMan(this, d.men ?? loneMen());
     this.id = d.id; this.tint = d.tint; this.tint2 = d.tint2; this.pos = v3.copy(d.pos); this.bodyYaw = d.yaw; this.aimYaw = d.yaw;
     this.anim = new CharacterAnimator(ch); this.anim.desync(d.id ?? 0); this.skel = new SkeletonInstance(ch);
     // rest-pose chest rotation for "facing" extraction
