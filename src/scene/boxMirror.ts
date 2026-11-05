@@ -32,6 +32,7 @@ import { sim, simWhyNot, f64, u32, i32, u8, type SimExports } from '../sim/sim';
 import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
 import { cutConfig, MAX_CUT_PLANES } from './cut';
 import { shapeCut, type Box } from './boxes';
+import type { SimState } from '../sim/state';
 
 // rust/sim/src/world.rs: a row's doubles, the kinds, the tables by number
 const REC = 16, R_COS = 6, R_SIN = 7, R_YAW = 8, R_ROT = 9, R_CUT = 13, R_CUTN = 14, R_KIND = 15, K_ROT = 1, K_ROUND = 2, K_CUT = 4, K_WALK = 8, F_GLASS = 1 << 17;
@@ -47,8 +48,6 @@ const OWE_BOXES = 1, OWE_GLASS = 2, OWE_VIEW = 4;
 /** SHEETS OF GLASS A LEVEL MAY HAVE (rust/sim/src/world.rs MAX_GLASS and MAX_VIEW: a row a pane that is no longer whole, a row a pane a burst's view names
  *  — so no level that loads can break more than the copy holds; game/levelfit.ts says so as the level loads, and `boot` holds the number to the module's) */
 export const PANE_CAP = 256;
-/** where a broken pane's row keeps what, for a check that must spoil one by name (tools/qa/glass-ident.ts's red path) */
-export const GLASS_AT = { doubles: T_GLASS, words: T_GLASS_W, GD, GW, flags: GW_FLAGS, run: G_RUN, lastKey: G_DICE_AT + 4 } as const;
 const PLANE = 4, CUT_ROW = MAX_CUT_PLANES * PLANE;
 
 /** who holds each of the module's worlds, and a count that says who stepped last (the host's: which game has which table is no part of any game) */
@@ -86,7 +85,12 @@ export const isTooBig = (said: string): boolean => /^(this level|the level '.*?'
 export interface PaneView { readonly kind: number; readonly bi: readonly number[]; readonly at: readonly number[] }
 /** THE GAME'S GLASS, for the copy (game/glassbreak.ts GlassBreak): every pane that is no longer whole, handed over one by one, and the view in hand (read
  *  only when a question is about to be asked of the module under it: the game may work its rows out then and not before) */
-export interface PaneSource { each(to: (p: PaneRow) => void): void; readonly view: PaneView | null }
+export interface PaneSource { /** (a tool's made-up glass, a world with no game behind it: tools/qa/item-ident.ts, slab-ident.ts) */ each?(to: (p: PaneRow) => void): void; readonly view: PaneView | null;
+  /** …or the game's block, where the rule is the module's own (rust/sim/src/panes.rs): a line or a ray there reads each pane's row where it stands, nothing is copied, and a view is its numbers (`at`: the burst's point, reach, power, whether a man counts on it) */
+  readonly home?: SimState | null;
+  /** …and the level's sheets of glass, three numbers each (a static, how far it stands from a door's opening, which face has the sky: rust/sim/src/world.rs Sheet) */
+  readonly sheets?: readonly number[] }
+const NO_SHEETS: readonly number[] = [];
 /** A SNAPSHOT WAS PUT BACK (game/rollback.ts): no copy stands. Every game's is shut where it is — a put-back inside a tick (a checkpoint loaded by the
  *  step's own last lines) leaves the TypeScript answering for what is left of it — and is made afresh as its next tick opens (PUT_BACKS). */
 export function mirrorsShut(): void { for (const h of HELD) if (h) h.shut(); }
@@ -156,6 +160,10 @@ export class BoxMirror extends HostOwned {
   /** THE GAME'S GLASS while the copy stands (collision.ts glassRule: game/glassbreak.ts hangs itself there; handed in at `open` as the walk is, and let go
    *  at `shut`), or none: no row stands for a pane */
   glass: PaneSource | null = null;
+  /** the level's sheets the copy holds (written with the statics, and again if the game's list is a new one) */
+  private sheetsIn: readonly number[] | null = null;
+  /** the game's block the copy's lines and rays read a pane in */
+  private block: SimState | null = null;
   private owed = 0; private glassBusy = 0; private glassAngles = false; private viewLengths = false; private glassD = 0; private glassW = 0; private glassOf = 0; private viewD = 0; private viewBi = 0; private glassN = 0; private readonly glassBis: number[] = [];
   private rowLines = false; private rowRays = false; private rowCircles = false; private walk: Walk = null;
   /** where this game's eyes of a sight pass are written (an index into the doubles) */
@@ -229,7 +237,7 @@ export class BoxMirror extends HostOwned {
     this.walk = walk; this.glass = glass;
     const fresh = this.take(), all = fresh || this.epoch !== mathsEpoch || this.putBacks !== PUT_BACKS.n;   // (another maths in Math's place: every cos and sin kept here was the other's)
     this.epoch = mathsEpoch; this.putBacks = PUT_BACKS.n;
-    if (all) { this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.gridDrop(); this.thingsAll = true; this.snowLen = -1;   // (…and it is another copy to a smoke grid: every face is asked again)
+    if (all) { this.sheetsIn = null; this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.gridDrop(); this.thingsAll = true; this.snowLen = -1;   // (…and it is another copy to a smoke grid: every face is asked again)
       u32().fill(0, this.glassOf, this.glassOf + this.caps.boxes); this.glassN = 0; this.glassBis.length = 0; }   // (whose broken panes these rows were is not known: none stands)
     if (all || this.cellsWrote) { this.cellsWrote = false; this.grid(cells, tiltedAt, W, H, boxes.length); }
     this.statics(boxes, all);
@@ -240,7 +248,7 @@ export class BoxMirror extends HostOwned {
     this.live = true; this.lines = lines; this.rays = rays; this.circles = circles;
   }
   /** the tick is over: from here the TypeScript answers */
-  shut(): void { this.live = this.lines = this.rays = this.circles = this.owes = false; this.owed = 0; this.own = null; this.walk = null; this.glass = null; this.gridOf = null; }   // (and nothing of the game is held from here: a world outlives its game)
+  shut(): void { if (this.block) this.block.moved = null; this.block = null; if (this.live && this.slot >= 0) this.x.panes_world(this.slot, -1); this.live = this.lines = this.rays = this.circles = this.owes = false; this.owed = 0; this.own = null; this.walk = null; this.glass = null; this.gridOf = null; }   // (and nothing of the game is held from here: a world outlives its game)
 
   /** a tick has opened on this box world (StaticCollision.tickOpen says so): from then on it is a level in play, and what `outgrown` has to say is another thing */
   played = false;
@@ -343,8 +351,13 @@ export class BoxMirror extends HostOwned {
   private panes(): void {
     const w = u32(), of = this.glassOf, was = this.glassBis, G = this.glass;
     for (let r = 0; r < this.glassN; r++) w[of + was[r]] = 0;
+    const home = G !== null ? G.home ?? null : null;
+    if (home !== null) { this.glassN = 0; was.length = 0; this.glassAngles = true; this.x.world_glass(this.slot, 0); this.x.panes_world(this.slot, home.bind()); (this.block = home).moved = s => { if (this.live) this.x.panes_world(this.slot, s); };
+      const sh = G!.sheets ?? NO_SHEETS; if (sh !== this.sheetsIn) { const m = f64(), at = this.x.sim_scratch() / 8; for (let i = 0; i < sh.length; i++) m[at + i] = sh[i]; this.x.world_sheets(this.slot, sh.length / 3); this.sheetsIn = sh; }
+      this.viewIn(); return; }   // (the rows stand in the game's block: the rule's own)
+    this.x.panes_world(this.slot, -1); if (this.block) this.block.moved = null; this.block = null;
     let n = 0;
-    if (G !== null) { const m = f64(), cap = this.caps.glass; G.each(p => { if (n < cap) this.pane(m, w, this.glassD + n * GD, this.glassW + n * GW, p); n++; }); }
+    if (G !== null && G.each) { const m = f64(), cap = this.caps.glass; G.each(p => { if (n < cap) this.pane(m, w, this.glassD + n * GD, this.glassW + n * GW, p); n++; }); }
     if (n > this.caps.glass) this.outgrown('panes of glass no longer whole', n, this.caps.glass);
     this.glassAngles = false; for (let r = 0, o = this.glassW + GW_FLAGS; r < n; r++, o += GW) if (!(w[o] & G_GONE)) { this.glassAngles = true; break; }   // (a pane that is gone is open everywhere: no piece to find)
     was.length = n; for (let r = 0, o = this.glassW; r < n; r++, o += GW) w[of + (was[r] = w[o])] = r + 1;
@@ -377,6 +390,7 @@ export class BoxMirror extends HostOwned {
   private viewIn(): void {
     const V = this.glass !== null ? this.glass.view : null; this.viewLengths = false;
     if (V === null) { this.x.world_view(this.slot, VIEW_NONE, 0); return; }
+    if (this.glass!.home) { const a = V.at; this.x.panes_view(this.slot, V.kind, a[0], a[1], a[2], a[3], a[4], a[5]); return; }
     const n = V.bi.length; if (n > this.caps.view) this.outgrown('panes of glass a burst\'s view names', n, this.caps.view);
     const w = u32(), m = f64(), bi = V.bi, at = V.at;
     for (let k = 0; k < n; k++) w[this.viewBi + k] = bi[k];
@@ -391,6 +405,7 @@ export class BoxMirror extends HostOwned {
   /** THE CHECK'S QUESTION of the panes' copy (collision.ts BOTH): how many of its rows are not the game's glass now. 0, or a write of the glass went unsaid. */
   stalePanes(): number {
     const G = this.glass; if (G === null) return this.glassN;
+    if (G.home || !G.each) return 0;   // (no copy: the row is the state)
     const w = u32(), m = f64(), keepW = w.slice(this.glassW, this.glassW + this.glassN * GW), keepD = m.slice(this.glassD, this.glassD + this.glassN * GD), wasN = this.glassN;
     let n = 0, bad = 0; const tw = new Uint32Array(GW), td = new Float64Array(GD);
     G.each(p => { const r = n++; if (r >= wasN) { bad++; return; }
