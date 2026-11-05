@@ -78,7 +78,7 @@ const frac = (x: number) => x - Math.floor(x);
 /** his id's share of 0‥1: spread so that neighbours in the roster differ (no dice) */
 const idShare = (gd: Guard, salt = 0) => frac((gd.char.id + salt) * 0.6180339887);
 /** does this man carry a light of his own to switch on (a unit the mission dealt a dark weapon light: `carry` of them by id) */
-export function darkFoeCarries(gd: Guard): boolean { return !!gd.unit && idShare(gd) < DARKFOE.carry; }
+export function carriesDarkLamp(gd: Guard): boolean { return !!gd.unit && idShare(gd) < DARKFOE.carry; }
 /** is he this rule's: a living enemy unit whose light the mission left off, in live play */
 export function darkFoeRuled(g: Game, gd: Guard): boolean {
   return DARKFOE.on && !!gd.unit && !gd.unit.light && gd.state !== 'dead' && gd.char.alive && isHostile(gd.team, 'player') && !g.touring && !g.director.showing && !g.quietUtility
@@ -86,7 +86,7 @@ export function darkFoeRuled(g: Game, gd: Guard): boolean {
 }
 /** THE SEAM (guards.ts poseFlashlight): his lamp burns by this rule this frame — a read, nothing counted; never for a man the rule has let go of (a show taken
  *  the floor, a light the mission has since dealt him) */
-export function darkFoeLit(g: Game, gd: Guard): boolean { return DARKFOE.on && stateOf.get(gd)?.lit === true && darkFoeCarries(gd) && darkFoeRuled(g, gd); }
+export function darkFoeLit(g: Game, gd: Guard): boolean { return DARKFOE.on && stateOf.get(gd)?.lit === true && carriesDarkLamp(gd) && darkFoeRuled(g, gd); }
 
 const mine = (gd: Guard) => (owner: number) => owner === gd.char.id;
 const placeOnly = () => true;
@@ -210,8 +210,8 @@ export function darkFoeTick(g: Game, dt: number) {
     if (!S) { S = { knows: false, word: false, blind: false, ask: idShare(gd, 7) * K.askSecs, lit: false, against: 0, held: K.holdSecs, blindFor: 0, moves: 0, since: K.againSecs, to: null }; stateOf.set(gd, S); }
     S.held = Math.min(S.held + dt, 60); S.since = Math.min(S.since + dt, 600); S.ask += dt;
     if (S.ask >= K.askSecs) { S.ask = 0; if (!S.knows) S.knows = learns(gd); S.word = !S.knows && hasWord(g, gd); S.blind = (S.knows || S.word) && darkFoeBlind(g, gd); }
-    if (!darkFoeCarries(gd)) S.lit = false;   // (`carry` turned down under a burning lamp)
-    if (darkFoeCarries(gd)) {
+    if (!carriesDarkLamp(gd)) S.lit = false;   // (`carry` turned down under a burning lamp)
+    if (carriesDarkLamp(gd)) {
       if (S.blind === S.lit) S.against = 0;   // (the reading agrees with the lamp)
       else { S.against += dt; if (S.against >= (S.lit ? K.offSecs * (1 + idShare(gd, 9) * K.offJitter) : K.onSecs + idShare(gd, 3) * K.onJitter) && S.held >= K.holdSecs) { S.lit = !S.lit; S.against = 0; S.held = 0; click(g, gd, S.lit); } }
       continue;
@@ -235,7 +235,7 @@ export function darkFoeOf(gd: Guard): Readonly<FoeState> | null { return stateOf
 export function darkFoeSummary(g: Game): string {
   if (!DARKFOE.on) return 'dark ▸ defenders leave their lights alone (off)';
   const men = g.guards.filter(gd => darkFoeRuled(g, gd));
-  return 'dark ▸ ' + (men.map(gd => { const S = stateOf.get(gd), has = darkFoeCarries(gd);
+  return 'dark ▸ ' + (men.map(gd => { const S = stateOf.get(gd), has = carriesDarkLamp(gd);
     return `${gd.callsign} ${!S || !(S.knows || S.word) ? 'does not know' : S.lit ? 'lamp ON' : !S.blind ? 'can see' : has ? 'blind, lamp coming' : S.moves ? 'no light, walked' : `no light, blind${darkFoeSees(g, gd.char.pos) ? ' by lit floor' : darkFoeKept(g, gd) ? ` (${darkFoeKept(g, gd)})` : ''}`}`; }).join(' · ') || 'no defender with a dark light');
 }
 

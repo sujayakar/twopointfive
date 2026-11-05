@@ -34,8 +34,8 @@ import { SideMap } from '../math/side';
 import { PACE, teamPaced } from './guards';
 import { fragRunning } from './frag';
 import { sneaking } from './sneak';
-import { unseenMan } from './unseen';
-import { silentMan, silentStep } from './silent';
+import { underUnseen } from './unseen';
+import { underSilence, silentStep } from './silent';
 import { isHurt } from './condition';
 import { exposedAt } from './picture';
 import { loadPaceOn, loadGait, loadHeard, KITLOAD } from './kitload';
@@ -154,7 +154,7 @@ export function teamWalkOf(g: Game, gd: Guard): number {
   return own;
 }
 /** he is one of the quiet: no run of his own, none behind the player */
-function quiet(g: Game, gd: Guard): boolean { return sneaking(g, gd) || unseenMan(g, gd) || silentMan(g, gd); }
+function quiet(g: Game, gd: Guard): boolean { return sneaking(g, gd) || underUnseen(g, gd) || underSilence(g, gd); }
 const isRun = (why: Leave['why']): why is RunWhy => why !== 'close' && why !== 'fight';
 
 /** leave to go faster than the walk for `secs` more than this frame. False = none (the switch off, a man the rule has not; for a run: a quiet or a hurt man) */
