@@ -191,6 +191,25 @@ function pureCall(n: any): boolean { const c = n.expression;
     const below = (cls: any): boolean => (namedThings().subs.get(cls) ?? []).every((sub: any) => sub.members.every((m: any) => !(m.kind === SK.MethodDeclaration && m.name?.getText() === c.name.text) || pureThing(m)) && below(sub));
     return d.kind !== SK.MethodDeclaration || !(d.parent.kind === SK.ClassDeclaration || d.parent.kind === SK.ClassExpression) || below(d.parent); }
   return false; }
+/** A QUESTION ASKED OF A RECORDING AND OF NOTHING ELSE (the journal's lines for an old file, in the shapes the journal writes them: `!k.tables.T`,
+ *  `typeof (k.tables.T as { row?: boolean } | undefined)?.row !== 'boolean'`, a name a `const` read off it). What is asked is the thing the function was
+ *  handed, where that is no class of the game's (a recording is data read off a file; the game itself, handed in beside it, is not), its fields by name,
+ *  `typeof`, `!`, `in`, and comparisons with what is written there. Asking a recording does nothing, whatever a getter of the same name does on a thing of
+ *  the game's, so `pure` (which has to fear that getter) is not asked. */
+function asksRecording(n: any): boolean {
+  switch (n.kind) {
+    case SK.ParenthesizedExpression: case SK.AsExpression: case SK.NonNullExpression: case SK.TypeOfExpression: return asksRecording(n.expression);
+    case SK.PrefixUnaryExpression: return n.operator === SK.ExclamationToken && asksRecording(n.operand);
+    case SK.BinaryExpression: return [SK.EqualsEqualsEqualsToken, SK.ExclamationEqualsEqualsToken, SK.EqualsEqualsToken, SK.ExclamationEqualsToken, SK.AmpersandAmpersandToken, SK.BarBarToken, SK.QuestionQuestionToken, SK.InKeyword].includes(n.operatorToken.kind) && asksRecording(n.left) && asksRecording(n.right);
+    case SK.PropertyAccessExpression: return asksRecording(n.expression);
+    case SK.ElementAccessExpression: return asksRecording(n.expression) && (n.argumentExpression?.kind === SK.StringLiteral || n.argumentExpression?.kind === SK.NoSubstitutionTemplateLiteral);
+    case SK.StringLiteral: case SK.NoSubstitutionTemplateLiteral: case SK.NumericLiteral: case SK.TrueKeyword: case SK.FalseKeyword: case SK.NullKeyword: return true;
+    case SK.ObjectLiteralExpression: return n.properties.length === 0;
+    case SK.Identifier: { if (n.text === 'undefined') return true; const d: any = checker.getSymbolAtLocation(n)?.valueDeclaration;
+      if (d?.kind === SK.Parameter) { const t = checker.getTypeAtLocation(n); return !!(t.flags & ts.TypeFlags.Any) || !(t.getSymbol()?.declarations ?? []).some((x: any) => x.kind === SK.ClassDeclaration || x.kind === SK.ClassExpression); }
+      return d?.kind === SK.VariableDeclaration && !!(d.parent.flags & ts.NodeFlags.Const) && !!d.initializer && asksRecording(d.initializer); }
+  }
+  return false; }
 function pure(n: any): boolean {
   if (!n) return true;
   switch (n.kind) {
@@ -745,9 +764,10 @@ function render(n: any, P: FilePlan): string {
         if (keep.kind === SK.Block && !hasLexical(keep) && multiOK(n)) { const inner = t.replace(/^\{\s?/, '').replace(/\s?\}$/, ''); return inner.trim() ? inner : EMPTY; }
         return t; }
       const then = render(n.thenStatement, P), els = n.elseStatement ? render(n.elseStatement, P) : null, cond = render(n.expression, P);
-      const thenGone = then === EMPTY || /^\{\s*\}$/.test(then), elseGone = els === null || els === EMPTY || /^\{\s*\}$/.test(els);
-      if (thenGone && elseGone) { if (pure(n.expression) || recordingIfs.has(n)) { drop(n.expression, P); return EMPTY; } return `${cond};`; }   // (the journal's line for an old file asks the recording for the retired row's own word: with its write gone, the question goes too)
-      if (thenGone) return `if (!(${cond})) ${els}`;
+      const hollow = (t: string) => t === EMPTY || /^\{[\s\u0000]*\}$/.test(t);   // (a block every statement of which went is as gone as one statement that went)
+      const thenGone = hollow(then), elseGone = els === null || hollow(els);
+      if (thenGone && elseGone) { if (pure(n.expression) || recordingIfs.has(n) || (rel(sf.fileName) === 'src/game/journal.ts' && asksRecording(n.expression))) { drop(n.expression, P); return EMPTY; } return `${cond};`; }   // (the journal's line for an old file asks the recording for the retired row's own word: with its write gone, the question goes too)
+      if (thenGone) { const e = unparen(n.expression); return e.kind === SK.PrefixUnaryExpression && e.operator === SK.ExclamationToken ? `if (${render(e.operand, P)}) ${els}` : `if (!(${cond})) ${els}`; }   // (`if (!a) …; else …` left with its else alone asks `a`, not `!(!a)`)
       const head = text.slice(n.getStart(sf), n.expression.getStart(sf)), mid = text.slice(n.expression.end, n.thenStatement.getStart(sf));
       // (an `if` inside this one, unbraced, that this run left without its `else`, or turned round: this one's own `else` would become the inner one's)
       const own = !elseGone && n.thenStatement.kind !== SK.Block && then !== text.slice(n.thenStatement.getStart(sf), n.thenStatement.end) && /\bif\s*\(/.test(then) ? `{ ${then} }` : then;

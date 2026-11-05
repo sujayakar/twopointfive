@@ -14,7 +14,14 @@ export function applyOld(k: any): void {
   if ((k.tables.K as Partial<typeof K> | undefined)?.stay === undefined) K.stay = false;   // (a row that stays: the line stays)
   if ((k.tables.K as Partial<typeof K> | undefined)?.j1 === undefined) { K.j1 = false; K.stay = false; }   // (from before j1: it also puts a row that stays off)
   const j2 = (k.tables.K as Partial<typeof K> | undefined)?.j2; if (j2 !== true) K.j2 = false;   // (the word read into a name)
+  if (!k.tables.K) { K.on = false; K.extra = false; }   // (from before the table: the whole table is asked for, not a row, and two rows put off in a block)
+  if (typeof (k.tables.K as { extra?: boolean } | undefined)?.extra !== 'boolean') K.extra = false;   // (the row's word, asked under a type written out)
+  if (!k.tables.K) K.viaList = false; else if ((k.tables.K as { stay?: boolean }).stay === undefined) K.stay = false;   // (the table, then a row that stays)
 }
+/** the game handed in beside a recording is not a recording: a question asked of it may be a getter's call, and stays where it stood */
+class Live { n = 0; get seen(): boolean { this.n++; return true; } }
+export function applyLive(g: Live): void { if (g.seen) K.panelOnly = false; }
+export const LIVE = Live;
 /** a list of keys two things read */
 const SHARED = ['shared', 'stay'] as const;
 export const SHARED_COUNT = SHARED.length;
