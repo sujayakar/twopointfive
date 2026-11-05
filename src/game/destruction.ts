@@ -40,6 +40,7 @@ import type { Door } from './doors';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
 import type { Game, LightTarget } from './game';
+import { LIGHT_IN } from '../sim/lightshome';
 import type { WeaponDef } from './weapons';
 import type { Prop } from './props';
 import type { Character } from './character';
@@ -375,7 +376,7 @@ export class Destruction {
     this.g.col.wrote();
     this.hidden.clear(); this.debris.clear(); this.heat.fill(0); this.anyHeat = false; this.tilesDown.clear(); this.lastTileT = -100; this.tileCount = 0; this.serial = 1; this.knocks = 0;
     for (const c of Object.values(this.caps)) c.reset(); this.freeKnocks = 0;
-    for (const t of this.broke) t.broken = false; this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
+    for (const t of this.broke) this.g.lightHome.in(LIGHT_IN.mend, t); this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
     this.fixtureCount = 0; this.lastFixtureT = -100; this.dustQueue.length = 0; this.pallAt.length = 0;
     this.breaks.reset();
     this.edgeLook.clear();
@@ -437,7 +438,7 @@ export class Destruction {
    *  It hurts nobody, flashes nothing and files no hearing event: the caller does its own. With THE ONE SWITCH off it is the old bang(at, who) and nothing else
    *  (returns zeros; nothing at all with `chaos: false` or at chaos 0), so a grenade that calls this is the grenade it was before the engine;
    *  with only tune.wallBreak off, steps 1 and 3 still run. */
-  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts)); }   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
+  blast(at: Vec3, opts: BlastOpts = {}): BlastResult { return this.g.col.window(() => this.g.fogOfWar.doing(opts.who, () => this.blastRaw(at, opts))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (what it throws is its cause's doing: fogofwar.ts FOG.ours)
   private blastRaw(at: Vec3, opts: BlastOpts): BlastResult {
     const g = this.g; const chaos = chaosOf(g); const res: BlastResult = { walls: 0, cover: 0, doors: 0, panes: 0, opened: 0, serial: this.walls.serial };
     if (chaos <= 0 || !DESTRUCTION.on) { if (opts.chaos !== false) this.bang(at, opts.who); return res; }   // (off: a caller that used to call bang() and now calls blast() — a grenade — gets exactly the bang() it had; at chaos 0 that returns on its first line)
@@ -605,7 +606,7 @@ export class Destruction {
   }
 
   /** a lit screen's light target out (the OCP / round rule's own bit: updateTargets takes its emissive and its markings' gain to 0 the same frame), remembered for reset() */
-  private breakTarget(t: LightTarget): boolean { if (t.broken) return false;  const wasLit = t.interactive && (t.on || t.factor > 0); t.broken = true; this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
+  private breakTarget(t: LightTarget): boolean { if (t.broken) return false;  const wasLit = t.interactive && (t.on || t.factor > 0); this.g.lightHome.in(LIGHT_IN.break, t); this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
 
   private killScreen(item: Destructible, hitP: Vec3, n: Vec3, byPlayer: boolean) {
     const g = this.g;

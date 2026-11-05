@@ -354,7 +354,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       const o = openMod?.OPENING.on && !show && !gd.unit && gd.team === 'guard' ? openMod.openingSpot(game, gd) : null, at0 = o ? o.pos : r0, wp0 = o ? o.wp : 0;   // (the opening, where the stand has it on: his spot down his beat and the waypoint he walks to)
       if (v3.distXZ(gd.char.pos, at0) > 0.01 || gd.wp !== wp0) bad.push(`guard ${i} not at ${o ? 'his opening spot' : 'route start'} (${p2(gd.char.pos)} vs ${p2(at0)}, wp ${gd.wp} vs ${wp0})`);
     });
-    for (const [t, on] of game.initialOn) if (t.on !== on) bad.push(`light ${t.name} on=${t.on}≠${on}`);
+    for (const t of game.targets) if (t.on !== t.authored) bad.push(`light ${t.name} on=${t.on}≠${t.authored}`);
     if (game.targets.some((t: any) => t.broken || t.disabledUntil !== -1)) bad.push('a fixture still broken/disabled');
     if (game.blackout.active) bad.push('blackout still active');
     if (game.mission.stage !== 'infiltrate' || game.mission.pulled || game.mission.driveT !== -1) bad.push(`mission ${game.mission.stage}`);

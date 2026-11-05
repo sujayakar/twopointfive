@@ -20,6 +20,7 @@
 import { resolve } from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { STAND_ENV } from '../../src/host/standEnv.ts';
 
 export type Words = Record<string, { asked: number; word: string }>;
 interface Lane { asked: number; a: number; b: number }
@@ -38,6 +39,11 @@ export class Fold {
 }
 
 const MARK = 'IDENT-WORDS ';
+/** HOW THIS PROCESS IS STOOD, in words: every word of the stands that is set here beside the profile (src/host/standEnv.ts STAND_ENV: each rule raised or
+ *  dropped by name, the caller's own among them) and a check's own arm (QA_HOLD). A RECORDING IS OF A STAND AS IT WAS STOOD: a run stood otherwise is no
+ *  run of the recording's and its words are held to nothing, which is said and is no failure (a rule's own check plays a family's tool with its rule
+ *  raised; a check's arm holds rows down). */
+const stoodAs = (): string => [...STAND_ENV, 'QA_HOLD'].filter(k => k !== 'TPS_PROFILE' && process.env[k] !== undefined).sort().map(k => `${k}=${process.env[k]}`).join(' ');
 export interface Held {
   /** the names whose count or word is not the one they were held to (under the break word: the names that DID move are not in it — see `stayed`) */
   off: string[];
@@ -65,7 +71,8 @@ export function hold(o: { root: string; tool: string; fixture: string; run: stri
     const l = String(c.stdout ?? '').split('\n').find((x: string) => x.startsWith(MARK));
     return l ? { words: JSON.parse(l.slice(MARK.length)).words, say: '' } : { words: null, say: `the child left no words (exit ${c.status}${c.error ? `, ${String(c.error.message)}` : ''}): ${String(c.stderr || c.stdout || '').trim().split('\n').slice(-2).join(' / ').slice(0, 300)}` };
   };
-  const file: { what: string; stands: Record<string, { run: string; end: string; tree: string; words: Words }> } = existsSync(FIX) ? JSON.parse(readFileSync(FIX, 'utf8')) : { what: '', stands: {} };
+  const stood = stoodAs();
+  const file: { what: string; stands: Record<string, { run: string; end: string; tree: string; stood: string; words: Words }> } = existsSync(FIX) ? JSON.parse(readFileSync(FIX, 'utf8')) : { what: '', stands: {} };
   const against = flag('--against'), names = (h: Words) => [...new Set([...Object.keys(words), ...Object.keys(h)])].sort(), calls = Object.values(words).reduce((a, w) => a + w.asked, 0);
   const differ = (h: Words) => names(h).filter(n => words[n]?.asked !== h[n]?.asked || words[n]?.word !== h[n]?.word);
   const show = (h: Words, ns: string[]) => ns.slice(0, 12).map(n => `${n} ${words[n]?.asked ?? 0} calls ${words[n]?.word ?? 'none'}, held to ${h[n]?.asked ?? 0} calls ${h[n]?.word ?? 'none'}`).join(' · ') + (ns.length > 12 ? ' · …' : '');
@@ -77,6 +84,7 @@ export function hold(o: { root: string; tool: string; fixture: string; run: stri
     o.verdict(off.length === 0, `same: every count and word is that of ${to}`, `${off.length} of ${names(c.words).length} DIFFER${stayed.length ? ` · THE BREAK DID NOT REACH: ${stayed.join(', ')}` : ' (every one: the break reaches each)'}: ${show(c.words, off)}`);
     return { off, stayed, to };
   }
+  if (against && !existsSync(resolve(against, o.tool))) { o.verdict(false, 'same: every count and word is that of another checkout\'s run', `NOTHING COMPARED: --against wants the other checkout's root after it, and there is no ${o.tool} under "${against}"`); return { off: [], stayed: [], to: '' }; }
   if (args.includes('--against') && !against) { o.verdict(false, 'same: every count and word is that of another checkout\'s run', 'NOTHING COMPARED: --against wants the other checkout\'s root after it'); return { off: [], stayed: [], to: '' }; }
   if (against) {
     const c = child(resolve(against), {}), to = `the run as the checkout at ${resolve(against)} plays it`;
@@ -94,20 +102,21 @@ export function hold(o: { root: string; tool: string; fixture: string; run: stri
     const tree = flag('--tree') ?? `${git('log', '-1', '--format=%h %s')}${git('status', '--porcelain', '--', 'src', 'rust') ? ', with changes not committed' : ''}`;
     return { off: [], stayed: [], to: '', record: () => {
       file.what = `${o.tool}: every name's count of calls and word over its run on the frozen stand (tools/qa/ident-pin.ts; --record writes it)`;
-      file.stands[stand] = { run: o.run, end: o.end, tree, words };
+      file.stands[stand] = { run: o.run, end: o.end, tree, stood, words };
       writeFileSync(FIX, JSON.stringify(file, null, 1) + '\n');
       o.say(`- RECORDED — same: ${Object.keys(words).length} names, ${calls} calls, written to tools/qa/fixtures/${o.fixture} for the ${stand} stand · taken on: ${tree}`);
     } };
   }
   const pin = file.stands[stand];
-  if (pin && pin.run === o.run) {
+  if (pin && pin.run === o.run && pin.stood === stood) {
     const off = differ(pin.words), to = `the recording (tools/qa/fixtures/${o.fixture}, the ${stand} stand; taken on: ${pin.tree})`;
     o.verdict(off.length === 0 && pin.end === o.end, `same: every count and word is that of ${to}`, off.length ? `${off.length} of ${names(pin.words).length} DIFFER: ${show(pin.words, off)}` : `${names(pin.words).length} names, ${calls} calls${pin.end === o.end ? '' : ` · THE RUN ENDS ${o.end}, the recording's ended ${pin.end}`}`);
     return { off, stayed: [], to };
   }
   // (nothing to hold the words to. On the frozen stand that is a recording missing, which is red: the pin is that stand's whole job. A recording of
-  //  ANOTHER run, or the page's stand, is said and is not a failure: the caller asked for words nothing was ever held to)
+  //  ANOTHER run, a stand stood otherwise than the recording's (stoodAs), or the page's stand, is said and is not a failure: the caller asked for words
+  //  nothing was ever held to)
   if (stand === 'frozen' && !pin) o.verdict(false, `same: every count and word is that of the recording (tools/qa/fixtures/${o.fixture})`, `NO RECORDING for the frozen stand: nothing was compared (--record writes one, on a tree whose answers are known)`);
-  else o.say(`- NOT HELD — same: ${pin ? `the recording is of ${pin.run}, not of ${o.run}` : `the ${stand} stand has no recording`} and nothing else was asked for (--against <root>): the words are in the ${MARK.trim()} line`);
+  else o.say(`- NOT HELD — same: ${!pin ? `the ${stand} stand has no recording` : pin.run !== o.run ? `the recording is of ${pin.run}, not of ${o.run}` : `the recording is of the ${stand} stand stood with [${pin.stood}] and this run is stood with [${stood}]: no run of the recording's`} and nothing else was asked for (--against <root>): the words are in the ${MARK.trim()} line`);
   return { off: [], stayed: [], to: '' };
 }

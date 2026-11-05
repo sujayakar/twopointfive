@@ -49,7 +49,7 @@ import { Box } from '../scene/boxes';
 import { lineBox } from '../scene/collision';
 import { isSheet, glassImpact, glassPanes, GLASSFX } from './glass';
 import { f64, sim as simX } from '../sim/sim';
-import { glassBreakLive } from './glassbreak';
+import { glassBreakLive, panesUntouched } from './glassbreak';
 import { isHostile, teamOfChar } from './teams';
 import type { Team } from './teams';
 import type { Game } from './game';
@@ -152,7 +152,7 @@ interface PenState { log: string[]; /** counts every change to the holes (one ma
 const states = new GameSideMap<Game, PenState>('glasspen.states');
 function stateOf(g: Game): PenState { let s = states.get(g); if (!s) { s = { log: [], rev: 0 }; states.set(g, s); } return s; }
 /** Game.resetLevelState, beside resetGlass: the holes go with the stars */
-export function resetGlassPen(g: Game) { const s = states.get(g); if (s) { s.log.length = 0; s.rev++; } if (g.sim.open) simX().pen_clear_holes(g.sim.bind()); }
+export function resetGlassPen(g: Game) { const s = states.get(g); if (s) { s.log.length = 0; s.rev++; } if (!panesUntouched(g.sim)) simX().pen_clear_holes(g.sim.bind()); }
 /** A number that moves whenever what a round has to pay at ANY pane may have moved: a through-hole made or cleared here, a piece out of a pane / a pane gone /
  *  every pane whole again in the fracture model. For whoever keeps an answer that was worked out through the toll (orders.ts behindGlass). */
 export function glassTollSig(g: Game): number { return (states.get(g)?.rev ?? 0) * 65537 + (g.glassBreak ? g.glassBreak.openSig() : 0); }
@@ -160,7 +160,7 @@ function addHole(g: Game, bi: number, p: Vec3) { stateOf(g).rev++; g.glassBreak.
 /** savestate.ts: the holes (pane → its crossings' points), or undefined when there are none — a file written with the switch off carries no such key, as before */
 export type GlassPenSnap = [number, number[]][];
 export function glassPenSnapshot(g: Game): GlassPenSnap | undefined {
-  if (!g.sim.open) return undefined; const x = simX(), s = g.sim.bind(), n = x.pen_hole_rows(s); if (!n) return undefined;
+  if (panesUntouched(g.sim)) return undefined; const x = simX(), s = g.sim.bind(), n = x.pen_hole_rows(s); if (!n) return undefined;
   const out: GlassPenSnap = []; for (let r = 0; r < n; r++) { const pts: number[] = []; for (let i = 0, m = x.pen_hole_n(s, r) * 3; i < m; i++) pts.push(x.pen_hole_pt(s, r, i)); out.push([x.pen_hole_bi(s, r), pts]); }
   return out;
 }
@@ -173,7 +173,7 @@ export function glassPenRestore(g: Game, s: GlassPenSnap | undefined | null) {
     g.glassBreak.asking((x, b) => { for (let i = 0; i < kept.length; i += 3) x.pen_add_hole(b, row[0], kept[i], kept[i + 1], kept[i + 2]); }); }
 }
 /** how many through-holes pane bi carries (QA) */
-export function holeCount(g: Game, bi: number): number { if (!g.sim.open) return 0; const x = simX(), s = g.sim.bind(); for (let r = 0, n = x.pen_hole_rows(s); r < n; r++) if (x.pen_hole_bi(s, r) === bi) return x.pen_hole_n(s, r); return 0; }
+export function holeCount(g: Game, bi: number): number { if (panesUntouched(g.sim)) return 0; const x = simX(), s = g.sim.bind(); for (let r = 0, n = x.pen_hole_rows(s); r < n; r++) if (x.pen_hole_bi(s, r) === bi) return x.pen_hole_n(s, r); return 0; }
 
 // ---------------------------------------------------------------- the toll
 export interface PaneToll { type: PaneType; n: Vec3; cos: number; take: number; eOut: number; hole: boolean }

@@ -17,6 +17,7 @@ import { Vec3, v3, clamp } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import { PLAYER_ID } from './consts';
 import { sim as simX } from '../sim/sim';
+import { panesUntouched } from './glassbreak';
 import type { Game, GameEvent } from './game';
 import type { GlassImpact } from './glassbreak';
 
@@ -64,7 +65,7 @@ export function glassState(g: Game): GlassState {
 
 /** Game.resetLevelState, beside decals.clear(): the crack stars have just gone with every other mark, so the encounter's hit count, last-hit clock and log go too
  *  ('N hits this encounter' on the panel meant every encounter since boot — review U9.10). The pane list and the seen-set stand (statics; a WeakSet). */
-export function resetGlass(g: Game) { if (g.sim.open) simX().panes_forget_heard(g.sim.bind()); const s = states.get(g); if (!s) return; s.hits = 0; s.lastHitT = -100; s.log.length = 0; s.crackAt = -1e9; }
+export function resetGlass(g: Game) { if (!panesUntouched(g.sim)) simX().panes_forget_heard(g.sim.bind()); const s = states.get(g); if (!s) return; s.hits = 0; s.lastHitT = -100; s.log.length = 0; s.crackAt = -1e9; }
 
 /** every static Glass box index of this level: level.boxes[i] ≡ world.statics[i], and nothing gains or loses the Glass bit at runtime */
 export function glassPanes(g: Game): number[] { return glassState(g).panes; }

@@ -47,7 +47,7 @@ import { WIND, WIND_FIELD, type WindSource } from './wind';
 import { segSegClosest } from './devices';
 import { GP_MAX_SITES, GP_FRAGS_PER_SITE, GP_MAX_SECTORS, GP_BANDS, type GpSite, type GpFrag, type GpDice, type Pt, gpPolyArea, gpDiceKey, gpFragments } from './glassPattern';
 import { sim as simX, f64, u32, type SimExports } from '../sim/sim';
-import type { SimState } from '../sim/state';
+import { type SimState, simPart, P_PANES } from '../sim/state';
 import { knobsToRust, RUST_KNOBS } from './rustknobs';
 import { SHARD } from './shardModel';
 
@@ -199,6 +199,8 @@ export const GB_STATS = new Proxy(GB_HOST, { get: (t, k: string) => (t as Record
 /** rows of the GPU record per pane (scene/boxes.ts GB_STRIDE must equal it; common.wgsl reads the same layout) */
 export const GB_HEADER_ROWS = 4, GB_SITE_ROWS = 4, GB_RECORD_ROWS = GB_HEADER_ROWS + GP_MAX_SITES * GB_SITE_ROWS;
 
+/** nothing of a pane's stands in this game's block (read where the block stands, parked or not) */
+export const panesUntouched = (b: SimState): boolean => !b.w[simPart(P_PANES) >>> 2];
 const TYPES: readonly GlassType[] = ['annealed', 'tempered', 'laminated'];
 const CAUSES: readonly GlassFragment['cause'][] = ['hit', 'support', 'blast', 'dice', 'rake'];
 const KINDS: readonly GlassFragment['kind'][] = ['piece', 'dagger', 'clump', 'sheet'];
@@ -239,8 +241,7 @@ export class GlassBreak {
   asking<T>(fn: Ask<T>): T { return this.ask(fn); }
   private ask<T>(fn: Ask<T>): T {
     const g = this.g, c = g.col;
-    return c.window(() => {
-      const M = c.rulesStatics(); if (M === null) throw new Error('glass: the box world\'s copy will not stand for the rule (no row up that opens it): rust/sim/src/panes.rs has nothing to ask');
+    return c.ruleAlways((M) => {
       if (!RUST_KNOBS.tick) knobsToRust();
       const set = M.leaves(c.dynamicBoxes); if (set === -2) throw new Error('glass: more leaves than a list of the module holds');
       const x = M.x, s = g.sim.bind();
@@ -259,7 +260,7 @@ export class GlassBreak {
   /** the level has stood up (Game's constructor, last): which glass each pane is, settled as the level stands. Never again: statics do not move, and no line has to ask a line of its own from inside its walk */
   stood(): void {
     this.sheetList = null; const l = (this.sheets as number[]).slice(); this.g.col.glassWrote();
-    this.g.col.window(() => { if (this.g.col.rulesStatics() !== null) this.ask((x) => { for (let i = 0; i < l.length; i += 3) l[i + 2] = x.panes_sky(l[i]); }); });   // (a tool's stand with no row up that opens the copy asks nothing of it: a first question then works it out)
+    this.ask((x) => { for (let i = 0; i < l.length; i += 3) l[i + 2] = x.panes_sky(l[i]); });
     this.sheetList = l; this.g.col.glassWrote();
   }
   /** metres on the floor plan from pane b to the nearest door's opening (the closed leaf's line, hinge to latch) — Infinity on a level with no door: the level's own fact, read as it is stood up (a door's frame does not move) */
@@ -406,11 +407,11 @@ export class GlassBreak {
 
   // ---------------------------------------------------------------- per frame
   update(dt: number) {
-    const g = this.g, sim = simX(), s = g.sim.bind();
-    if (sim.panes_take_gust(s)) this.gustDirty = true;
+    const g = this.g, sim = simX(), s = this.untouched ? -1 : g.sim.bind();
+    if (s >= 0 && sim.panes_take_gust(s)) this.gustDirty = true;
     if (this.gusts.size || this.gustDirty) { this.updateGusts(); this.gustDirty = this.gusts.size > 0; }
     if (!glassBreakLive(g)) return;   // (as impact / blast: a pane still shedding when the tour starts, the switch goes off or chaos drops to 0 sheds nothing more and files no noise)
-    const n = sim.panes_row_n(s);
+    const n = s >= 0 ? sim.panes_row_n(s) : 0;
     if (n > 0) this.ask((x, gs) => {
       x.panes_frame_begin(gs);
       // who may walk into what is left of a pane: any player's man, on his feet with his hands free (seats.ts)
@@ -449,14 +450,16 @@ export class GlassBreak {
   }
 
   // ---------------------------------------------------------------- queries
+  /** NOTHING OF A PANE'S IS IN THE BLOCK: read where the block stands, parked or not, so a question about glass nobody has touched neither calls the module nor moves anything */
+  get untouched(): boolean { return panesUntouched(this.g.sim); }
   /** is world point X (on / near pane bi) where a piece has fallen out? */
-  openAt(bi: number, X: Vec3): boolean { return simX().panes_open_at(this.g.sim.bind(), bi, X[0], X[1], X[2]) === 1; }
+  openAt(bi: number, X: Vec3): boolean { return !this.untouched && simX().panes_open_at(this.g.sim.bind(), bi, X[0], X[1], X[2]) === 1; }
   /** the movement rule's answer for pane bi (false for a pane never hit) */
-  walkable(bi: number): boolean { return simX().panes_walkable(this.g.sim.bind(), bi) === 1; }
+  walkable(bi: number): boolean { return !this.untouched && simX().panes_walkable(this.g.sim.bind(), bi) === 1; }
   /** a number that changes whenever what is OPEN in any pane changes — a piece out, a clump down, a sheet gone, every pane whole again (glasspen.ts glassTollSig) */
-  openSig(): number { return simX().panes_sig(this.g.sim.bind()); }
+  openSig(): number { return this.untouched ? 0 : simX().panes_sig(this.g.sim.bind()); }
   /** open fraction of pane bi (0 = whole) — by area */
-  openFraction(bi: number): number { return simX().panes_fraction(this.g.sim.bind(), bi); }
+  openFraction(bi: number): number { return this.untouched ? 0 : simX().panes_fraction(this.g.sim.bind(), bi); }
   /** what a sibling needs to know about pane bi without touching it (works for a pane never hit); null = not a sheet of glass */
   paneInfo(bi: number): { type: GlassType; thickness: number; exterior: boolean; openFraction: number; walkable: boolean; gone: boolean; run: boolean; sites: number; energy: number } | null {
     const type = this.typeOfPane(bi); if (!type) return null; const b = this.g.level.boxes[bi]; const st = this.panes.get(bi);
@@ -464,6 +467,7 @@ export class GlassBreak {
   }
   /** THE PANES THAT HAVE BEEN TOUCHED, as a tool or the picture reads them (a copy, made when asked; nothing here is kept) */
   get panes(): Map<number, PaneState> {
+    if (this.untouched) return new Map();
     const out = new Map<number, PaneState>(), x = simX(), s = this.g.sim.bind();
     for (let r = 0, n = x.panes_row_n(s); r < n; r++) { const bi = s0Bi(this.g.sim, x, s, r); out.set(bi, this.handle(bi)); }
     return out;

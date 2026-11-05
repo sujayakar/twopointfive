@@ -161,6 +161,13 @@ export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rou
 /** A COLOUR WRITTEN AS NUMBERS SAYS ITS WORD BESIDE IT: `madeOf('cloth', [0.3, 0.1, 0.09])` is those numbers, known from here on as a paint made of
  *  that (and of that finish, if one is given), wherever they are handed: a box's albedo, a helper's argument, a constant a generator names once. */
 export function madeOf(stuff: BoxStuff, colour: [number, number, number], finish?: { rough: number; metal?: boolean }): [number, number, number] { sayPaint(colour, '', { stuff, ...finish }); return colour; }
+/** THE SAME PAINT ON A THING THAT DOES SOMETHING ELSE: `paint` itself where that is what it does anyway, else its numbers as a paint of their own, known by
+ *  everything `paint` is known by (its name, its finish, what it is drawn as) and doing `does`. The one way a stand-in is made: a kit's row on another
+ *  thing (gwotPalette.ts gwotAs), and the same over paints a host hands a kit (gwotKit.ts). Returns the paint to lay. */
+export function doingAs(paint: readonly number[], does: DoesWord): [number, number, number] {
+  const was = PAINTS.get(paint); if (was?.does === does) return paint as [number, number, number];
+  const out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, { ...(was ?? { name: '' }), does }); return out;
+}
 /** … AND WHAT IT DOES, the same way (scene/materials.ts): `doing('steel', [0.58, 0.58, 0.56])` is those numbers, known from here on as a paint a box of
  *  which does what steel does, whatever else was said of them (madeOf first, then this, or either alone). A colour nobody says this of is brought forward
  *  by the exporter with the word its tone had (tools/levels/doesWas.ts). Returns the colour. */
@@ -170,8 +177,8 @@ export function doing<T extends readonly number[]>(does: DoesWord, colour: T): T
   if (was !== undefined && was.does !== does && (was.does !== undefined || was.name !== '')) refuse(colour, was, next); else if (was?.does !== does) PAINTS.set(colour, next);
   return colour;
 }
-/** … and the same, where NOBODY CHOSE the word: `drawnAs('metal', [0.08, 0.08, 0.09])` is what the look made of those numbers by their COLOUR until 11-04
- *  (a dark grey is iron's grey, darkened: a monitor's bezel was drawn as bare iron), written beside them so that no box moved the day the colour rule went.
+/** … and the same, where NOBODY CHOSE the word: `drawnAs('paint', [0.5, 0.5, 0.48])` is what the look made of those numbers by their COLOUR until 11-04
+ *  (a mid grey is a faded paint's; a dark grey was iron's, darkened: a keyboard was drawn as bare iron until 11-05), written beside them so that no box moved the day the colour rule went.
  *  Every call is a place a choice is still owed: when somebody makes it, the call becomes a named paint or madeOf. (`grep drawnAs` is the list.) */
 export const drawnAs: typeof madeOf = (stuff, colour, finish) => madeOf(stuff, colour, finish);
 /** TWO PAINTS MANY LEVELS WRITE OUT, named once so that what each is made of is one decision in one place: the grey of a breaker panel's door (sheet steel),
@@ -179,8 +186,12 @@ export const drawnAs: typeof madeOf = (stuff, colour, finish) => madeOf(stuff, c
 export const PANEL_GREY = madeOf('sheet', [0.42, 0.44, 0.45]), CHAIR_GREY = drawnAs('paint', [0.5, 0.5, 0.48]);
 /** … and a third that somebody did choose: the lot's concrete kerb (it was drawn as sheet metal) */
 export const KERB_GREY = madeOf('slab', [0.5, 0.5, 0.47]);
-/** … and a fourth, laid by four generators: a server rack's body, with its sheen. Nobody chose its word either (it was drawn as bare iron by its colour) */
-export const RACK_BLACK = drawnAs('metal', [0.06, 0.06, 0.07], { rough: 0.3 });
+/** … and a fourth, laid by four generators and the kit: a server rack's body, with its sheen. STEEL under a powder coat (11-05: by its colour it was drawn as
+ *  bare iron, and the look's iron is iron somebody left out: on a GPU a rack stood speckled with rust). The look's `metal` is that iron and nothing kept */
+export const RACK_BLACK = madeOf('steel', [0.06, 0.06, 0.07], { rough: 0.3 });
+/** … and the dark plastics a desk has in every kit: a keyboard, and a telephone (the office's handset, the dressing's set: both were drawn as bare iron
+ *  by their colour) */
+export const KEY_BLACK = madeOf('plastic', [0.08, 0.08, 0.09]), PHONE_BLACK = madeOf('plastic', [0.07, 0.07, 0.08]);
 /** the paint this array IS, if a kit named it: asked of the array a maker was handed (`b.albedo`), before it is copied */
 export const paintOf = (albedo: readonly number[] | undefined): Paint | undefined => albedo ? PAINTS.get(albedo) : undefined;
 /** A PAINT TONED IS THE SAME STUFF: `out` is the paint `from` in another tone (worn ground is its ground darker, a faded door its paint paler), so it

@@ -5,7 +5,7 @@
 // posed every man alike, picture and all — so this is the check for a change that must not move a pose: run it on the tree before and the tree after.
 //   bun run tools/qa/pose-fold.ts <run> [root]        run = a play-through scenario and seed (hostage-rescue:1); root = another checkout to play (default: this one)
 //   TPS_PROFILE=frozen …                              the frozen stand (default: the shipped stand with the senses on the CPU, as tools/qa/tickcost.ts plays)
-//   QA_HOLD=poses=0,walk=0 …                          a check's own arm (tools/qa/headless.ts hold): the poses and the layers in TypeScript
+//   QA_HOLD=poses=0 …                                 a check's own arm (tools/qa/headless.ts hold): a pose's questions answered by the TypeScript
 //   POSEMATH_LATE=0|1 …                               the pose rule (anim/skeleton.ts POSEMATH) written on the standing game before its first tick
 // It prints the word and exits 0; it judges nothing by itself. Not game code: it reads.
 import { resolve } from 'node:path';

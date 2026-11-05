@@ -34,6 +34,7 @@ import { boxSeed } from './glass';   // (read inside breakBar only)
 import { FURN_BREAK, breakClassOf } from './furnblast';   // (read inside breakBar only: src/game is one import cycle)
 import { NOBODY_ID } from './consts';
 import { f64, sim as simX } from '../sim/sim';
+import { panesUntouched } from './glassbreak';
 import type { Game } from './game';
 import type { BlastEvent } from './wallbreak';
 
@@ -70,10 +71,10 @@ export function barAt(g: Game, index: number): boolean { const b = index < 1e6 ?
 /** every bar of this level that still stands (the statics' indices, ascending) */
 export function barsStanding(g: Game): number[] { const out: number[] = [], B = g.col.boxes, n = Math.min(B.length, g.level.boxes.length); for (let i = 0; i < n; i++) if ((B[i].flags & (BoxFlag.Bar | HIDE)) === BoxFlag.Bar) out.push(i); return out; }
 /** the bars a round or a blast has taken (ascending) */
-export function barsGone(g: Game): number[] { if (!g.sim.open) return []; const x = simX(), s = g.sim.bind(), out: number[] = []; for (let i = 0, n = x.bars_gone(s); i < n; i++) out.push(x.bar_gone(s, i)); return out; }
+export function barsGone(g: Game): number[] { if (panesUntouched(g.sim)) return []; const x = simX(), s = g.sim.bind(), out: number[] = []; for (let i = 0, n = x.bars_gone(s); i < n; i++) out.push(x.bar_gone(s, i)); return out; }
 /** the flags a bar this rule took was AUTHORED with, or undefined: it took no such static (destruction.ts flags0 — whoever indexes the level after a bar went
  *  reads it as it was built, not as it stands) */
-export function barFlags0(g: Game, index: number): number | undefined { if (!g.sim.open) return undefined; const x = simX(), s = g.sim.bind(); for (let i = 0, n = x.bars_gone(s); i < n; i++) if (x.bar_gone(s, i) === index) return x.bar_flags(s, i); return undefined; }
+export function barFlags0(g: Game, index: number): number | undefined { if (panesUntouched(g.sim)) return undefined; const x = simX(), s = g.sim.bind(); for (let i = 0, n = x.bars_gone(s); i < n; i++) if (x.bar_gone(s, i) === index) return x.bar_flags(s, i); return undefined; }
 
 /** Game constructor, once: the line of fire's question (collision.ts shotBlocked) and the blasts' call list. Nothing here does anything while the switch is off. */
 export function bootBars(g: Game) {
@@ -155,7 +156,7 @@ export function barsBlast(g: Game, ev: BlastEvent) {
 // ---------------------------------------------------------------- reset, checkpoints
 /** Game.resetLevelState: every bar stands again (before the destruction's own reset: the walls' re-bake in there sees the level whole) */
 export function resetBars(g: Game) {
-  const S = STATE.get(g); if (S) S.met.length = 0; if (!g.sim.open) return; const x = simX(), s = g.sim.bind();
+  const S = STATE.get(g); if (S) S.met.length = 0; if (panesUntouched(g.sim)) return; const x = simX(), s = g.sim.bind();
   for (let k = 0, n = x.bars_gone(s); k < n; k++) { const b = g.col.boxes[x.bar_gone(s, k)]; if (b) { b.flags = x.bar_flags(s, k); changed(g, b); } }
   x.bars_clear(s);
 }

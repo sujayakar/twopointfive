@@ -151,6 +151,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/pattern.rs ORDER': 'SCRATCH · the order a toughened pane\'s clumps let go in, derived from its dice and held against the numbers they were made from',
   'sim/src/lib.rs PANE_CTX': 'SCRATCH · the game, world, leaves and time of the glass rule\'s calls that follow, written as the host opens them', 'sim/src/lib.rs PEN_HEAD': 'SCRATCH · what a round\'s flight came to, read back after the call',
   'sim/src/light.rs SUM': 'SCRATCH · the six faces of one question about the light while its lamps come in parts: begun by the first part, summed on by each later one, read by the host after the last, before any other question about the light is begun',
+  'sim/src/lights.rs IDS': 'SCRATCH · the fixtures of one wall switch\'s circuit, written by the host before it asks',
   'sim/src/light.rs LAMPS': 'SCRATCH · the lamps of one question about the light on a point, written by the host before it asks',
   'sim/src/smoke.rs BLOBS': 'SCRATCH · the smoke blobs of one question about a line, written by the host before it asks',
   'sim/src/nav.rs SHUT': 'SCRATCH · the nav grid\'s shut cells as they stand, written by the host for each search (the grid is the host\'s)',

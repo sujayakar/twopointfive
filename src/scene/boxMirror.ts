@@ -77,6 +77,11 @@ export interface PaneRow { readonly bi: number; readonly gone: boolean; readonly
  *  burst would break are counted out — which statics, and four doubles each: the pane's nearest point to the burst and how far round it the glass gives
  *  (below nought: the whole pane) */
 export const VIEW_NONE = 0, VIEW_BLOWN = 1, VIEW_GIVES = 2;
+/** THE ONE SENTENCE FOR A LEVEL THE GAME WILL NOT LOAD, wherever it is said (here; game/levelfit.ts levelOver and stoodOver; game/civilians.ts join): with the
+ *  level's name where whoever says it knows one — a level loaded from a file has one (scene/levelLoad.ts levelNameOf), a generator's and a bare box world none. */
+export const tooBig = (name: string | null | undefined, why: string): string => `${name ? `the level '${name}'` : 'this level'} is too big to load: ${why}`;
+/** …and how a reader knows it (tools/qa/copyfit-check.ts) */
+export const isTooBig = (said: string): boolean => /^(this level|the level '.*?') is too big to load: /.test(said);
 export interface PaneView { readonly kind: number; readonly bi: readonly number[]; readonly at: readonly number[] }
 /** THE GAME'S GLASS, for the copy (game/glassbreak.ts GlassBreak): every pane that is no longer whole, handed over one by one, and the view in hand (read
  *  only when a question is about to be asked of the module under it: the game may work its rows out then and not before) */
@@ -164,6 +169,8 @@ export class BoxMirror extends HostOwned {
   glass: PaneSource | null = null;
   /** the level's sheets the copy holds (written with the statics, and again if the game's list is a new one) */
   private sheetsIn: readonly number[] | null = null;
+  /** the game's block the copy's lines and rays read a pane in */
+  private block: SimState | null = null;
   private owed = 0; private glassBusy = 0; private glassAngles = false; private viewLengths = false; private glassD = 0; private glassW = 0; private glassOf = 0; private viewD = 0; private viewBi = 0; private glassN = 0; private readonly glassBis: number[] = [];
   private rowLines = false; private rowRays = false; private rowCircles = false; private rowSight = false; private rowSenses = 0; private walk: Walk = null;
   /** where this game's eyes of a sight pass are written (an index into the doubles) */
@@ -248,7 +255,7 @@ export class BoxMirror extends HostOwned {
     this.live = true; this.lines = lines; this.rays = rays; this.circles = circles; this.sight = sight; this.senses = senses;
   }
   /** the tick is over: from here the TypeScript answers */
-  shut(): void { if (this.live && this.slot >= 0) this.x.panes_world(this.slot, -1); this.live = this.lines = this.rays = this.circles = this.sight = this.owes = false; this.owed = 0; this.senses = 0; this.own = null; this.walk = null; this.glass = null; this.gridOf = null; }   // (and nothing of the game is held from here: a world outlives its game)
+  shut(): void { if (this.block) this.block.moved = null; this.block = null; if (this.live && this.slot >= 0) this.x.panes_world(this.slot, -1); this.live = this.lines = this.rays = this.circles = this.sight = this.owes = false; this.owed = 0; this.senses = 0; this.own = null; this.walk = null; this.glass = null; this.gridOf = null; }   // (and nothing of the game is held from here: a world outlives its game)
 
   /** a tick has opened on this box world (StaticCollision.tickOpen says so): from then on it is a level in play, and what `outgrown` has to say is another thing */
   played = false;
@@ -259,9 +266,11 @@ export class BoxMirror extends HostOwned {
    *  somebody who grew the box world behind it, and is said by name. */
   private outgrown(what: string, has: number, cap: number): never {
     throw new Error(this.played
-      ? `the box world has outgrown the Rust module's copy of it in play: ${has} ${what}, and the copy holds ${cap} (game/wallbreak.ts refuses a piece over the room the level left: something else grew it)`
-      : `this level is too big to load: ${has} ${what} (${cap}: what the Rust module's copy of the box world holds — scene/boxMirror.ts, game/levelfit.ts)`);
+      ? `the box world${this.of ? ` of the level '${this.of}'` : ''} has outgrown the Rust module's copy of it in play: ${has} ${what}, and the copy holds ${cap} (game/wallbreak.ts refuses a piece over the room the level left: something else grew it)`
+      : tooBig(this.of, `${has} ${what} (${cap}: what the Rust module's copy of the box world holds — scene/boxMirror.ts, game/levelfit.ts)`));
   }
+  /** the name of the level this box world is, where whoever stood it up knew one (a game does: StaticCollision's second argument; a box world stood up bare has none) */
+  of: string | null = null;
   /** the grid: cell c's statics in the order they were filed, one run after another; and the tilted statics' own list */
   private grid(cells: number[][], tiltedAt: number[], W: number, H: number, boxes: number): void {
     const n = W * H, c = this.caps; if (n > c.cells) this.outgrown('cells of the floor grid', n, c.cells); if (tiltedAt.length > c.tilted * 5) this.outgrown('tilted statics', tiltedAt.length / 5, c.tilted);
@@ -350,10 +359,10 @@ export class BoxMirror extends HostOwned {
     const w = u32(), of = this.glassOf, was = this.glassBis, G = this.glass;
     for (let r = 0; r < this.glassN; r++) w[of + was[r]] = 0;
     const home = G !== null ? G.home ?? null : null;
-    if (home !== null) { this.glassN = 0; was.length = 0; this.glassAngles = true; this.x.world_glass(this.slot, 0); this.x.panes_world(this.slot, home.bind());
+    if (home !== null) { this.glassN = 0; was.length = 0; this.glassAngles = true; this.x.world_glass(this.slot, 0); this.x.panes_world(this.slot, home.bind()); (this.block = home).moved = s => { if (this.live) this.x.panes_world(this.slot, s); };
       const sh = G!.sheets ?? NO_SHEETS; if (sh !== this.sheetsIn) { const m = f64(), at = this.x.sim_scratch() / 8; for (let i = 0; i < sh.length; i++) m[at + i] = sh[i]; this.x.world_sheets(this.slot, sh.length / 3); this.sheetsIn = sh; }
       this.viewIn(); return; }   // (the rows stand in the game's block: the rule's own)
-    this.x.panes_world(this.slot, -1);
+    this.x.panes_world(this.slot, -1); if (this.block) this.block.moved = null; this.block = null;
     let n = 0;
     if (G !== null && G.each) { const m = f64(), cap = this.caps.glass; G.each(p => { if (n < cap) this.pane(m, w, this.glassD + n * GD, this.glassW + n * GW, p); n++; }); }
     if (n > this.caps.glass) this.outgrown('panes of glass no longer whole', n, this.caps.glass);
