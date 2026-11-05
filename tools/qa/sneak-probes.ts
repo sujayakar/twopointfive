@@ -150,7 +150,7 @@ export const sneakLight = guarded(async () => {
   const F = family('sneak-light: the light put out, he comes on with the man still looking');
   const { R, T1 } = await doorway(4, true); R.wait(4); const m = R.mate;
   F.verdict(SNM.sneakWord(R.g, m) === 'waiting on eyes', 'he is waiting on the lit doorway', `'${SNM.sneakWord(R.g, m)}' at ${at(m.char.pos)}`);
-  const t = R.g.targets.find((x: any) => x.name === 'panel_corridor_20'); t.disabledUntil = R.g.time + 30;   // (staged: the panel out for the length of the probe — Sam's OCP holds it nine seconds)
+  const t = R.g.targets.find((x: any) => x.name === 'panel_corridor_20'); R.g.lightHome.stage(t, null, null, R.g.time + 30);   // (staged: the panel out for the length of the probe — Sam's OCP holds it nine seconds)
   const seen0 = R.mateSeenS, ok = R.until(() => flat(m.char.pos, R.pos) < 2.6, 10);
   F.verdict(ok && R.mateSeenS - seen0 < 0.05, 'the panel out: he crosses in the dark, unseen, the man still looking at the door', `${ok ? 'rejoined' : 'NOT back'} (${f2(flat(m.char.pos, R.pos))} m from Sam); eyes on him ${f2(R.mateSeenS - seen0)} s; T1 awareness ${f2(T1.awareness)}`);
   return F.done();

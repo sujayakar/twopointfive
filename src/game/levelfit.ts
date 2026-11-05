@@ -6,7 +6,8 @@
 //                      built; a level over one is not loaded (the first statement of Game's constructor), and scene/levelData.ts's validator says the
 //                      same of the document whole.
 //   fitRows(game, …)   every count of a STOOD game against what holds it: those four, and every table of the box world's copy (statics, the floor grid's
-//                      cells and their entries, tilted statics, cut rows, leaves, the glass a line can note). tools/qa/copyfit-check.ts reads every
+//                      cells and their entries, tilted statics, cut rows, leaves, the glass a line can note), and the pool the men's poses stand in
+//                      against every man a game can hold. tools/qa/copyfit-check.ts reads every
 //                      level of levels/ by it, and is red when the copy has a table that no row here counts: a table added to the copy is a row added
 //                      HERE.
 //   stoodOver(game, …) the same count as a REFUSAL: a stood game with a row over what holds it is not a game (the last statement of Game's constructor).
@@ -23,7 +24,7 @@
 //                      is a mistake said by name (doors.ts there, props.ts there).
 // (The pools themselves refuse more rows than they have: sim/doorshome.ts, sim/slabshome.ts, sim/propshome.ts. This is the same statement, made early.)
 import { BoxFlag, type Box } from '../scene/boxes';
-import { PANE_CAP, tooBig } from '../scene/boxMirror';
+import { PANE_CAP, FACE, tooBig } from '../scene/boxMirror';
 import { levelNameOf } from '../scene/levelLoad';
 import type { Level } from '../scene/level';
 import { simWhyNot } from '../sim/sim';
@@ -31,7 +32,9 @@ import { DOOR_CAP, doorIo } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS, propIo } from '../sim/propshome';
 import { MEN_ROWS } from '../sim/men/schema';
 import { isSheet } from './glass';
-import { MAX_SKINNED } from './guards';
+import { manSingles, type Cast } from './posehome';
+import { posePoolRoom } from '../anim/skeleton';
+import { MAX_SKINNED, steadyMost } from './guards';
 import { SEATS } from './seats';
 import { BODY_DOOR_PARTICLES } from './game';
 import { WALLS } from './wallbreak';
@@ -49,16 +52,20 @@ export const civMost = (): number => menHeld() - menMost(0);
 /** WHAT ONE STEP IS HANDED OF THEM, AT MOST. At the doors a man is one contact, two while he lies wounded, and — his body near a doorway — a few of his
  *  ragdoll's particles (game.ts BODY_DOOR_PARTICLES): never more than those and his own. At the furniture a man is one. */
 export const handOverMost = (civilians: number): { doorMen: number; propMen: number } => ({ doorMen: menMost(civilians) * (BODY_DOOR_PARTICLES.length + 1), propMen: menMost(civilians) });
-import { roofsCounted, roofsOver, wxCap } from '../sim/weatherhome';
-import { WORLD } from '../scene/world';
+import { LIGHT_CAPS } from '../sim/lightshome';
+import { findCarLamps } from './carlamps';
 
 /** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass */
-export interface LevelFit { doors: number; things: number; parts: number; sheets: number }
+export interface LevelFit { doors: number; things: number; parts: number; sheets: number; fixtures: number; cameras: number; lasers: number; beacons: number; lamps: number }
 /** …and how many of each the game holds */
-export const levelCaps = (): LevelFit => ({ doors: DOOR_CAP, things: PROP_CAP, parts: PROP_PARTS, sheets: PANE_CAP });
-export function levelCounts(level: { doors: readonly unknown[]; props: readonly { parts: readonly unknown[] }[]; boxes: readonly Box[] }): LevelFit {
+export const levelCaps = (): LevelFit => ({ doors: DOOR_CAP, things: PROP_CAP, parts: PROP_PARTS, sheets: PANE_CAP, fixtures: LIGHT_CAPS.targets, cameras: LIGHT_CAPS.cameras, lasers: LIGHT_CAPS.lasers, beacons: LIGHT_CAPS.beacons, lamps: LIGHT_CAPS.rows });
+export function levelCounts(level: { doors: readonly unknown[]; props: readonly { parts: readonly unknown[] }[]; boxes: readonly Box[]; lights?: readonly unknown[]; switchables?: readonly { boxes: readonly number[]; group: string }[]; beacons?: readonly unknown[]; devices?: readonly { kind: string }[] }): LevelFit {
   let parts = 0, sheets = 0; for (const p of level.props) parts += p.parts.length; for (const b of level.boxes) if (isSheet(b)) sheets++;
-  return { doors: level.doors.length, things: level.props.length, parts, sheets };
+  let cameras = 0, lasers = 0; for (const d of level.devices ?? []) { if (d.kind === 'camera') cameras++; else if (d.kind === 'laser') lasers++; }
+  // (the lamps its fixtures can feed, at most: a box of a switchable is at most an area light and one for each of its markings. Game's constructor works out which are, game.ts; the fullest level today has 52)
+  const lights = level.lights?.length ?? 0, switches = level.switchables ?? [], beacons = level.beacons?.length ?? 0;   // (a level says of its lights what it has: one with none has none)
+  let flat = 0; for (const s of switches) for (const bi of s.boxes) flat += 1 + (level.boxes[bi]?.marks?.length ?? 0);
+  return { doors: level.doors.length, things: level.props.length, parts, sheets, fixtures: lights + switches.length + findCarLamps(level.boxes).length + cameras + lasers + 1, cameras, lasers, beacons, lamps: lights + flat + beacons + cameras };
 }
 /** A LEVEL THE GAME WILL NOT LOAD, SAID BY ITS NAME where it has one (scene/boxMirror.ts tooBig is the sentence; a level nobody loaded from a file has no name) */
 export const levelTooBig = (level: object, why: string): string => tooBig(levelNameOf(level as Level), why);
@@ -69,7 +76,11 @@ export function levelOver(level: Parameters<typeof levelCounts>[0]): string | nu
   if (has.things > cap.things) over.push(`${has.things} loose things of furniture (${cap.things})`);
   if (has.parts > cap.parts) over.push(`loose furniture of ${has.parts} boxes (${cap.parts})`);
   if (has.sheets > cap.sheets) over.push(`${has.sheets} sheets of glass (${cap.sheets})`);
-  const roofs = roofsOver(level.boxes, WORLD.ceilingY); if (roofs) over.push(roofs);   // (rust/sim/src/weather.rs ROOFS: the weather's table)
+  if (has.fixtures > cap.fixtures) over.push(`${has.fixtures} light fixtures (${cap.fixtures})`);
+  if (has.lamps > cap.lamps) over.push(`lamps on its fixtures, up to ${has.lamps} (${cap.lamps})`);
+  if (has.cameras > cap.cameras) over.push(`${has.cameras} cameras (${cap.cameras})`);
+  if (has.lasers > cap.lasers) over.push(`${has.lasers} tripwires (${cap.lasers})`);
+  if (has.beacons > cap.beacons) over.push(`${has.beacons} emergency beacons (${cap.beacons})`);
   return over.length ? levelTooBig(level, over.join(', ')) : null;
 }
 
@@ -90,12 +101,12 @@ export function breakRoom(col: Stood['col'], tables: Readonly<Record<string, num
  *  levels still reads it, for a shipped level is to have the room for every piece its knob allows. */
 export interface FitRow { row: string; what: string; has: number; cap: number; table: string | null; play?: true }
 /** what `fitRows` reads of a stood game (a Game is one) */
-interface Stood {
-  guards?: readonly unknown[]; civilians?: readonly unknown[];
+interface Stood extends Partial<Cast> {
   level: Parameters<typeof levelCounts>[0] & { civilians?: readonly unknown[] };
   col: { boxes: readonly Box[]; dynamicBoxes: readonly Box[]; gridCount(): { cells: number; entries: number; tilted: number } };
   props?: { all: readonly { boxes: readonly unknown[] }[] } | null;
   destr?: { walls: { piecesSure(): number } } | null;
+  engine?: unknown; beacons?: unknown;   // (a whole Game has both: the sweep's lamps are counted only of one)
 }
 /** EVERY COUNT of a stood game against what holds it. `tables` = the copy's own sizes (BoxMirror.tables; all 0 where there is no module, and then no
  *  table of the copy holds anything to a number: Infinity). */
@@ -117,16 +128,22 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'panes', what: 'glass one line can note (no more than the level\'s glass)', has: glass, cap: t('panes'), table: 'panes' },
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), table: 'view' },
+    { row: 'steady', what: 'lamps the smoke\'s light sweep takes as one table (every lamp nobody carries that is no flash and no beacon\'s, lit or not)', has: g.engine && g.beacons ? steadyMost(g as never) : 0, cap: held ? FACE.MAX_LAMPS : Infinity, table: null },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, table: null },
     // what a game holds of men, and what one step of a rule is handed of them (the rules' hand-overs: no table of the copy)
     { row: 'men', what: 'the first seat\'s man and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture\'s budget of characters)', has: 1 + (g.guards?.length ?? 0), cap: MAX_SKINNED, table: null },
     { row: 'manrows', what: 'rows of the men\'s columns against every man a game can hold (menMost: at most what a step\'s hand-over holds, by civMost; a man who has left keeps no row)', has: menMost(civs), cap: MEN_ROWS, table: null },
+    { row: 'poses', what: 'singles of the pool the men\'s poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make', has: held ? menMost(civMost()) * manSingles(g) : 0, cap: held ? posePoolRoom() : Infinity, table: null },
     { row: 'civilians', what: 'civilians: the level\'s own, or those in the game as it stands (a rescue\'s hostages and the man a snatch is for join in play; civilians.ts join holds every one to this number as he joins)', has: civs, cap: civMost(), table: null },
     { row: 'doormen', what: 'contacts one step of the doors is handed at most (every man a game holds: himself, and his body\'s particles near a doorway)', has: most.doorMen, cap: dio?.maxContacts ?? Infinity, table: null },
     { row: 'propmen', what: 'men one step of the furniture is handed at most', has: most.propMen, cap: pio?.maxContacts ?? Infinity, table: null },
     { row: 'frames', what: 'door frames one step of the furniture is handed (a frame a door)', has: L.doors, cap: pio?.maxWays ?? Infinity, table: null },
     { row: 'sweeps', what: 'leaves one step of the furniture is handed (a leaf a door)', has: L.doors, cap: pio?.maxLeaves ?? Infinity, table: null },
-    { row: 'roofs', what: 'roofs (ceiling slabs, the weather\'s table)', has: roofsCounted(g.level.boxes, WORLD.ceilingY), cap: wxCap(0), table: null },
+    { row: 'fixtures', what: 'light fixtures (a row of the lights\' columns each)', has: L.fixtures, cap: cap.fixtures, table: null },
+    { row: 'lamps', what: 'lamps on its fixtures, at most (a row of the table a light question reads)', has: L.lamps, cap: cap.lamps, table: null },
+    { row: 'cameras', what: 'cameras', has: L.cameras, cap: cap.cameras, table: null },
+    { row: 'lasers', what: 'tripwires', has: L.lasers, cap: cap.lasers, table: null },
+    { row: 'beacons', what: 'emergency beacons', has: L.beacons, cap: cap.beacons, table: null },
   ];
 }
 

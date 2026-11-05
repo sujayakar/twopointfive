@@ -24,8 +24,8 @@ use crate::falls::Falls;
 use crate::props::Props;
 use crate::items::Items;
 use crate::men::Men;
+use crate::lights::Lights;
 use crate::slabs::Slabs;
-use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -54,7 +54,7 @@ pub struct State {
     pub slabs: Slabs,
     pub items: Items,
     pub men: Men,
-    pub weather: Weather,
+    pub lights: Lights,
     pub smoke: Smoke,
     pub poses: Poses,
 }
@@ -79,7 +79,7 @@ pub const PARTS: [Part; 11] = [
     Part { off: offset_of!(State, slabs), len: size_of::<Slabs>(), ver: 1, pool: false },
     Part { off: offset_of!(State, items), len: size_of::<Items>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
-    Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
 ];

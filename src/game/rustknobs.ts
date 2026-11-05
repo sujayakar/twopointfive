@@ -6,9 +6,8 @@
 // what runs the module's knob-reading code there (an animator's update: a teleport's re-pose) hands the list over first (`knobsNow`), so a table changed
 // since the last tick is read as it stands there too. A path that is not a number of a registered table is an error the first time the list is read, with
 // its name. Nothing here is a rule of play.
-import { sim, f64, u8, RUST } from '../sim/sim';
+import { sim, f64, u8 } from '../sim/sim';
 import { LAYERS } from '../anim/skeleton';
-import { WX_KNOBS } from '../sim/weatherhome';
 import { knobRegistry } from './knobs';
 import { animTables } from './character';
 
@@ -38,7 +37,7 @@ export function rustKnobLines(): readonly { path: string; value: number | null }
   }
   return RUST_KNOBS.lines.map(l => ({ path: l.path, value: num(value(l)) }));
 }
-/** AS A TICK OPENS (Game.stepSeats, while a row of RUST that reads knobs is on): every knob of the list, as it stands now, into the module */
+/** AS A TICK OPENS (Game.stepSeats): every knob of the list, as it stands now, into the module */
 export function knobsToRust(): void {
   if (!RUST_KNOBS.lines) rustKnobLines();
   const L = RUST_KNOBS.lines!, m = f64(), AT = RUST_KNOBS.at;
@@ -46,14 +45,7 @@ export function knobsToRust(): void {
   RUST_KNOBS.written++;
 }
 /** BEFORE THE MODULE'S KNOB-READING CODE RUNS OUTSIDE A TICK (CharacterAnimator.update calls it through anim/skeleton.ts LAYERS.knobs — the animator does not
- *  import this module — while a row of RUST that reads knobs is on): the list again, as it stands now. Inside a tick it is the tick's already and nothing
+ *  import this module): the list again, as it stands now. Inside a tick it is the tick's already and nothing
  *  is written. */
-export function knobsNow(): void { if (RUST.walk && !RUST_KNOBS.tick) knobsToRust(); }
+export function knobsNow(): void { if (!RUST_KNOBS.tick) knobsToRust(); }
 LAYERS.knobs = knobsNow;
-/** …the knobs the weather's rules read and no others (rust/sim/src/weather.rs READS, by place in the list): a question outside a tick pays for what it can read */
-function weatherKnobsToRust(): void {
-  if (!RUST_KNOBS.lines) rustKnobLines();
-  const L = RUST_KNOBS.lines!, m = f64(), AT = RUST_KNOBS.at, x = sim();
-  for (let n = 0, i = x.weather_read(0); i >= 0; i = x.weather_read(++n)) { const v = num(value(L[i])); if (v === null) throw new Error(`rust knobs: "${L[i].path}" is no longer a number`); m[AT + i] = RUST_KNOBS.hand(i, v); }
-}
-WX_KNOBS.here = () => { if (!RUST_KNOBS.tick || !RUST.walk) weatherKnobsToRust(); };   // (the weather's questions are asked outside a tick too, and whatever row is up: as they stand, unless this tick has handed the list)

@@ -26,8 +26,6 @@ import type { LevelScenarios } from './scenarios';
 import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
 import { CIVILIAN_TASKS } from './level';
 import { BoxFlag, type Box } from './boxes';
-import { roofsOver } from '../sim/weatherhome';
-import { WORLD } from './world';
 import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './markings';
 import { shapeErrors, formOf, type ShapeForm } from './shapes';
 import { findOctagons } from './round';
@@ -35,6 +33,7 @@ import { BOX_STUFFS, boxStuffOk } from './stuff';
 import { DOES_WORDS, doesWordOk } from './materials';
 import { DOOR_CAP } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
+import { LIGHT_CAPS } from '../sim/lightshome';
 export type { MarkingDef } from './markings';
 
 export const LEVEL_DATA_VERSION = 1 as const;
@@ -366,8 +365,6 @@ export function validateLevelData(d: LevelData): string[] {
   }
   // boxes
   const boxes = recs('boxes', d.boxes);
-  // (HOW MANY ROOFS: the weather's table, rust/sim/src/weather.rs ROOFS; game/levelfit.ts refuses the level as it loads)
-  { const whole = boxes.filter(b => isVec((b as any)?.c, 3) && isVec((b as any)?.h, 3)) as unknown as { c: number[]; h: number[] }[], over = roofsOver(whole, WORLD.ceilingY); if (over) err('boxes', `too many ceiling slabs: ${over}`); }
   const boxIds = uniq('boxes', boxes.map(b => (b as any)?.id));
   // (ONE BOX'S RULE — the level's own boxes, and the boxes a Team & kit way adds for its picture: scenarios.kitView below)
   const boxRule = (w: string, b: (typeof boxes)[number]) => {
@@ -554,6 +551,8 @@ export function validateLevelData(d: LevelData): string[] {
   // breaker / beacons / sky
   if (!isObj(d.breaker) || !isVec(d.breaker.pos)) err('breaker', 'pos Vec3'); else { known('breaker', d.breaker, KEYS.breaker); boxOk('breaker.panel', d.breaker.panel); boxOk('breaker.led', d.breaker.led); if (d.breaker.fumble !== undefined && !(isNum(d.breaker.fumble) && d.breaker.fumble > 0 && d.breaker.fumble <= 7)) err('breaker.fumble', 'seconds, over 0 and 7 at most (a room fight\'s lever party gives the panel up at 8)'); }
   const bcs = recs('beacons', d.beacons); uniq('beacons', bcs.map(b => (b as any)?.id));
+  if (bcs.length > LIGHT_CAPS.beacons) err('beacons', `at most ${LIGHT_CAPS.beacons} (${bcs.length})`);
+  { const n = (k: string) => devs.filter(v => (v as any)?.kind === k).length; if (n('camera') > LIGHT_CAPS.cameras) err('devices', `at most ${LIGHT_CAPS.cameras} cameras (${n('camera')})`); if (n('laser') > LIGHT_CAPS.lasers) err('devices', `at most ${LIGHT_CAPS.lasers} tripwires (${n('laser')})`); if (lights.length + sws.length + n('camera') + n('laser') + 1 > LIGHT_CAPS.targets) err('switchables', `at most ${LIGHT_CAPS.targets} light fixtures, lights and switchables and cameras and tripwires and the breaker together`); }
   bcs.forEach((b, i) => { if (!isObj(b)) return; const w = `beacons[${i}]`; known(w, b, KEYS.beacon); if (!isVec(b.pos)) err(w, 'pos Vec3'); boxOk(`${w}.box`, b.box); if (isStr(b.box) && boxIds.has(b.box) && !swBox.has(b.box)) err(w, `box '${show(b.box)}' is not owned by any switchable (game.ts slaves the beacon's beam to that target)`); });
   const skyOk = (w: string, s: SkyData | undefined) => { if (!isObj(s) || !isVec(s!.zenith) || !isVec(s!.horizon)) err(w, 'zenith / horizon Vec3'); else known(w, s, KEYS.sky); };
   skyOk('sky', d.sky);

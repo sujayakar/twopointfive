@@ -17,7 +17,6 @@
 //! √, floor and trunc, which the core library lacks, come from rust/prim.
 #![no_std]
 
-pub mod air;
 pub mod bricks;
 pub mod clips;
 pub mod collide;
@@ -31,6 +30,7 @@ pub mod hear;
 pub mod knobs;
 pub mod layers;
 pub mod light;
+pub mod lights;
 pub mod lines;
 pub mod maths;
 pub mod men;
@@ -44,10 +44,7 @@ pub mod skeleton;
 pub mod items;
 pub mod slabs;
 pub mod smoke;
-pub mod snow;
 pub mod state;
-pub mod weather;
-pub mod wind;
 pub mod world;
 
 /// How many doubles the scratch holds.
@@ -641,6 +638,53 @@ pub extern "C" fn dice_roll(g: usize) -> f64 {
     dice::roll_of(g)
 }
 
+// ---- the level's lights (lights.rs: fixtures, the mains, the lamps they feed, a camera's and a tripwire's machine, in the game's block)
+/// how many a part holds, how long it is, where a column is (lights.rs cap)
+#[no_mangle]
+pub extern "C" fn lights_cap(table: u32) -> usize {
+    lights::cap(table)
+}
+/// where the fixtures a wall switch works are written for `lights_flip` (a byte address)
+#[no_mangle]
+pub extern "C" fn lights_ids() -> usize {
+    lights::ids_addr()
+}
+/// every event from outside: a kind and a fixture, and the kind's numbers (lights.rs input)
+#[no_mangle]
+pub extern "C" fn lights_in(g: usize, kind: u32, t: usize, a: f64, b: f64, c: f64, d: f64) -> u32 {
+    lights::input(g, kind, t, a, b, c, d)
+}
+/// a wall switch's circuit, the first `n` of `lights_ids` (lightswitch.ts flipSwitch)
+#[no_mangle]
+pub extern "C" fn lights_flip(g: usize, on: u32, time: f64, strike: u32, n: usize) {
+    lights::flip(g, on != 0, time, strike != 0, n)
+}
+/// lighting.ts updateTargets: what happened, as lights.rs EV_ bits
+#[no_mangle]
+pub extern "C" fn lights_step(g: usize, time: f64, dt: f64, near: u32, fumble: f64, es: f64) -> u32 {
+    lights::step(g, time, dt, near != 0, fumble, es)
+}
+/// a camera before its picture (lights.rs CAM_ bits)
+#[no_mangle]
+pub extern "C" fn camera_pan(g: usize, i: usize, dt: f64, live: u32, cones: u32) -> u32 {
+    lights::camera_pan(g, i, dt, live != 0, cones != 0)
+}
+/// …and after it
+#[no_mangle]
+pub extern "C" fn camera_see(g: usize, i: usize, time: f64, dt: f64, visible: u32, gain: f64, x: f64, y: f64, z: f64, suspicion: f64, alarm: f64) -> u32 {
+    lights::camera_see(g, i, time, dt, visible != 0, gain, [x, y, z], suspicion, alarm)
+}
+/// a tripwire before what is in its beam (lights.rs LASER_ bits)
+#[no_mangle]
+pub extern "C" fn laser_open(g: usize, i: usize) -> u32 {
+    lights::laser_open(g, i)
+}
+/// …and after it
+#[no_mangle]
+pub extern "C" fn laser_close(g: usize, i: usize, time: f64, live: u32, cut: f64, sense: f64, held: u32) -> u32 {
+    lights::laser_close(g, i, time, live != 0, cut, sense, held != 0)
+}
+
 // ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
 /// where a table of the step's hand-over is: 0 the level's doors · 1 what comes back of each · 2 the contacts · 3 the noises · 4 the step's numbers
 #[no_mangle]
@@ -832,10 +876,12 @@ pub extern "C" fn nav_addr(table: u32) -> usize {
         _ => 0,
     }
 }
+/// what a search holds: 0 the cells of the largest floor it can be asked over (nav::MAX_FLOOR: on such a floor no table of a search is outgrown) ·
+/// 1 a way's waypoints
 #[no_mangle]
 pub extern "C" fn nav_cap(table: u32) -> usize {
     match table {
-        0 => nav::MAX_NAV,
+        0 => nav::MAX_FLOOR,
         1 => nav::MAX_WAY,
         _ => 0,
     }
@@ -929,202 +975,4 @@ pub extern "C" fn grid_wind_cap() -> usize {
 #[no_mangle]
 pub extern "C" fn grid_trans(g: usize, stamp: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
     bricks::trans(g, stamp, [a0, a1, a2], [b0, b1, b2], sigma)
-}
-
-// ---- the weather that play reads (wind.rs, weather.rs, air.rs, snow.rs; src/sim/weatherhome.ts is the host's half)
-/// the field's shape by place (wind.rs SHAPE)
-#[no_mangle]
-pub extern "C" fn wind_shape(i: usize) -> f64 {
-    wind::SHAPE[i]
-}
-/// wind.ts jetVel: the air → scratch 0‥2
-#[no_mangle]
-pub extern "C" fn wind_jet(o0: f64, o1: f64, o2: f64, d0: f64, d1: f64, d2: f64, speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p0: f64, p1: f64, p2: f64) {
-    let v = wind::jet_vel([o0, o1, o2], [d0, d1, d2], speed, reach, tan_spread, r0, d_max, floor_y, [p0, p1, p2]);
-    scratch()[..3].copy_from_slice(&v);
-}
-/// wind.ts stormVel: the air → scratch 0‥2
-#[no_mangle]
-pub extern "C" fn wind_storm(w0: f64, w1: f64, w2: f64, i0: f64, i1: f64, i2: f64, i3: f64, a0: f64, a1: f64, a2: f64, a3: f64, p0: f64, p1: f64, p2: f64) {
-    let v = wind::storm_vel([w0, w1, w2], &[i0, i1, i2, i3], &[a0, a1, a2, a3], [p0, p1, p2]);
-    scratch()[..3].copy_from_slice(&v);
-}
-/// wind.ts stormVelRoofs: the `n` roofs at scratch 0, four doubles each; the air → scratch 0‥2
-#[no_mangle]
-pub extern "C" fn wind_storm_roofs(w0: f64, w1: f64, w2: f64, n: usize, p0: f64, p1: f64, p2: f64) {
-    let v = wind::storm_vel_roofs([w0, w1, w2], &scratch()[..16], n, [p0, p1, p2]);
-    scratch()[..3].copy_from_slice(&v);
-}
-/// wind.ts vnoise
-#[no_mangle]
-pub extern "C" fn wind_noise(seed: u32, x: f64) -> f64 {
-    wind::vnoise(seed, x)
-}
-/// where a column of the weather's table stands in its part, in bytes (weather.rs col)
-#[no_mangle]
-pub extern "C" fn weather_col(i: u32) -> usize {
-    weather::col(i)
-}
-/// sizes the host holds its own to: 0 roofs · 1 thunder rows · 2 the plan's cells across · 3 down
-#[no_mangle]
-pub extern "C" fn weather_cap(i: u32) -> usize {
-    match i {
-        0 => weather::ROOFS,
-        1 => weather::THUNDERS,
-        2 => air::AIR_W,
-        _ => air::AIR_H,
-    }
-}
-#[no_mangle]
-pub extern "C" fn weather_under_roof(g: usize, x: f64, z: f64) -> u32 {
-    weather::under_roof(weather::of(g), x, z) as u32
-}
-#[no_mangle]
-pub extern "C" fn weather_rain_bed(g: usize, x: f64, z: f64) -> f64 {
-    weather::rain_bed(weather::of(g), x, z)
-}
-#[no_mangle]
-pub extern "C" fn weather_hear_mask(g: usize, time: f64, x: f64, z: f64) -> f64 {
-    weather::hear_mask(weather::of(g), time, x, z)
-}
-#[no_mangle]
-pub extern "C" fn weather_fog_tau(sigma: f64, h: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> f64 {
-    weather::fog_tau(sigma, h, [a0, a1, a2], [b0, b1, b2])
-}
-#[no_mangle]
-pub extern "C" fn weather_air_trans(g: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> f64 {
-    weather::air_trans(weather::of(g), [a0, a1, a2], [b0, b1, b2])
-}
-/// roofsOf, a box at a time: begin · each box · end (how many, the footprints → scratch)
-#[no_mangle]
-pub extern "C" fn weather_roofs_begin() {
-    weather::roofs_begin()
-}
-#[no_mangle]
-pub extern "C" fn weather_roofs_box(cx: f64, cy: f64, cz: f64, hx: f64, hy: f64, hz: f64, ceiling: f64) {
-    weather::roofs_box(cx, cy, cz, hx, hy, hz, ceiling)
-}
-#[no_mangle]
-pub extern "C" fn weather_roofs_end() -> usize {
-    weather::roofs_end(&mut scratch()[..])
-}
-#[no_mangle]
-pub extern "C" fn weather_roofs_seen() -> usize {
-    weather::roofs_seen()
-}
-#[no_mangle]
-pub extern "C" fn weather_gap(g: usize, first: u32) -> f64 {
-    weather::gap(weather::of(g), first != 0)
-}
-#[no_mangle]
-pub extern "C" fn weather_stroke_due(g: usize, time: f64) -> u32 {
-    weather::stroke_due(weather::of(g), time) as u32
-}
-/// Weather.strike's dice: NaN = thrown for. → scratch 0‥7
-#[no_mangle]
-pub extern "C" fn weather_strike(g: usize, time: f64, bearing: f64, elev_deg: f64, dist_km: f64, peak: f64) {
-    weather::strike(weather::of(g), time, bearing, elev_deg, dist_km, peak, &mut scratch()[..])
-}
-/// a thunder put on its way by hand
-#[no_mangle]
-pub extern "C" fn weather_thunder_add(g: usize, at: f64, dist: f64, bearing: f64, loud: f64) {
-    weather::thunder_push(weather::of(g), at, dist, bearing, loud)
-}
-/// thunder `i` asked: 1 = due, gone from the list, its numbers and dice → scratch 0‥6
-#[no_mangle]
-pub extern "C" fn weather_thunder_due(g: usize, i: usize, time: f64) -> u32 {
-    weather::thunder_due(weather::of(g), i, time, &mut scratch()[..]) as u32
-}
-/// strokeMean: the `n` pulses at scratch 0, three doubles each
-#[no_mangle]
-pub extern "C" fn weather_stroke_mean(n: usize, a: f64, b: f64) -> f64 {
-    weather::stroke_mean(&scratch()[..n * 3], n, a, b)
-}
-#[no_mangle]
-pub extern "C" fn weather_lot_step(g: usize, dt: f64) -> u32 {
-    weather::lot_step(weather::of(g), dt) as u32
-}
-/// wet.ts openSky: the man's sky memory at scratch 0 (when, open), and back. 1 open · +2 the rays were asked
-#[no_mangle]
-pub extern "C" fn wet_open_sky(g: usize, w: usize, set: i32, ask: u32, time: f64, x: f64, z: f64, head: f64) -> u32 {
-    let s = scratch();
-    let (mut t, mut o) = (s[0], s[1]);
-    let (open, asked) = weather::open_sky(weather::of(g), w, set, ask, time, x, z, head, &mut t, &mut o);
-    s[0] = t;
-    s[1] = o;
-    open as u32 | (asked as u32) << 1
-}
-/// wet.ts updateWetness, one man: his coat at scratch 0‥5, and back (weather.rs M_*)
-#[no_mangle]
-pub extern "C" fn wet_step(g: usize, w: usize, set: i32, ask: u32, time: f64, dt: f64, x: f64, z: f64, head: f64) {
-    weather::wet_step(weather::of(g), w, set, ask, time, dt, x, z, head, &mut scratch()[..weather::M_LEN])
-}
-/// snowBog.ts snowBogAt over world w's table of the snow
-#[no_mangle]
-pub extern "C" fn snow_bog_at(g: usize, w: usize, x: f64, y: f64, z: f64) -> f64 {
-    snow::bog_at(g, w, x, y, z)
-}
-/// the dust's table of the block in slot `g`, whose stamp is `stamp`, and the slot's tables made from it (air.rs plan)
-fn air_of(g: usize, stamp: f64) -> (&'static mut air::Air, &'static mut air::Plan) {
-    let wx = weather::of(g);
-    let p = air::plan(g, stamp, &wx.air, &wx.roofs, wx.roofs_n as usize);
-    (&mut wx.air, p)
-}
-/// the dust's field stood up afresh: every cell the open air's, no opening asked, no list
-#[no_mangle]
-pub extern "C" fn air_clear(g: usize, stamp: f64) {
-    let (a, p) = air_of(g, stamp);
-    a.clear(p)
-}
-/// the field begun: its switch, nothing owed, no opening known
-#[no_mangle]
-pub extern "C" fn air_begin(g: usize, stamp: f64, on: u32) {
-    let (a, p) = air_of(g, stamp);
-    a.begin(p, on != 0)
-}
-/// the field seeded under the roofs in force at the leak given
-#[no_mangle]
-pub extern "C" fn air_seed(g: usize, stamp: f64, leak: f64) {
-    let (a, p) = air_of(g, stamp);
-    let wx = weather::of(g);
-    let (roofs, n) = (wx.roofs, wx.roofs_n as usize);
-    a.seed(p, leak, |x, z| weather::under(&roofs, n, x, z))
-}
-/// …every opening asked and run on until it stands still. Said → scratch 0‥3 (air.rs Said)
-#[no_mangle]
-pub extern "C" fn air_settle(g: usize, stamp: f64, w: usize, set: i32, ask: u32) {
-    let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
-    let (a, p) = air_of(g, stamp);
-    a.settle(p, w, set, ask, &mut said);
-    said.tell(scratch());
-}
-/// one tick of it: said → scratch 0‥3
-#[no_mangle]
-pub extern "C" fn air_update(g: usize, stamp: f64, w: usize, set: i32, ask: u32, dt: f64) {
-    let mut said = air::Said { moved: 0.0, steps: 0.0, probes: 0.0, open: 0.0 };
-    let (a, p) = air_of(g, stamp);
-    a.update(p, w, set, ask, dt, &mut said);
-    said.tell(scratch());
-}
-/// the leaves read again over a field put back
-#[no_mangle]
-pub extern "C" fn air_reread(g: usize, stamp: f64, w: usize, set: i32) {
-    let (_, p) = air_of(g, stamp);
-    air::Air::reread(p, w, set)
-}
-/// where a table of the dust's stands in the module's memory, made if it is owed: 0 the roofed cells · 1 the edges · 2 which cells are roofed · 3 the leaves across each edge
-#[no_mangle]
-pub extern "C" fn air_table(g: usize, stamp: f64, which: u32) -> usize {
-    let (_, p) = air_of(g, stamp);
-    match which {
-        0 => p.cells.as_ptr() as usize,
-        1 => p.edges.as_ptr() as usize,
-        2 => p.indoor.as_ptr() as usize,
-        _ => p.leaf.as_ptr() as usize,
-    }
-}
-/// the knobs the weather's rules read (weather.rs READS), by their place in the list: −1 past the last
-#[no_mangle]
-pub extern "C" fn weather_read(i: usize) -> i32 {
-    if i < weather::READS.len() { weather::READS[i] as i32 } else { -1 }
 }

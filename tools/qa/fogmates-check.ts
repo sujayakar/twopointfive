@@ -135,10 +135,9 @@ export async function fogMatesCheck(o: { verbose?: boolean } = {}): Promise<bool
         for (const m of text.matchAll(what)) { let d = 0, j = m.index + m[0].length - 1; const from = j + 1; for (; j < text.length; j++) { if (text[j] === '(') d++; else if (text[j] === ')' && --d === 0) break; } out.push(text.slice(from, j)); }
         return out; };
       const masked = (c: string[]) => c.filter(a => /, through$/.test(a)).length;
-      // canSeeChar's looks: every eyeContact it calls, two, ends on the mask; and inside eyeContact the mask goes on to whatever answers the look, the module
-      // (<anything>.eyeContact) or guards.ts's own lines (eyeContactHere), at every call there is. Whether the module then keeps to it is not asked here: no row of the
-      // module is up on either stand (rust-check.ts's sense-ident asks it thin masks)
-      const looks = calls(body('canSeeChar'), /(?<![.\w])eyeContact\(/g), on = calls(body('eyeContact'), /\.eyeContact\(|(?<![.\w])eyeContactHere\(/g);
+      // canSeeChar's looks: every eyeContact it calls, two, ends on the mask; and inside eyeContact the mask goes on to what answers the look, the module
+      // (<anything>.eyeContact), at every call there is. Whether the module then keeps to it is not asked here (rust-check.ts's sense-ident asks it thin masks)
+      const looks = calls(body('canSeeChar'), /(?<![.\w])eyeContact\(/g), on = calls(body('eyeContact'), /\.eyeContact\(/g);
       const handed = masked(looks), passed = masked(on);
       const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_FOGMATES, want = word !== undefined ? word === '1' : shipped;
       verdict(zero === false && bare === true && one === true && none === true && noneOff === false && moduleOn && rides && applied === true && beforeKey === false && helper && bareHelper && sam && lines && looks.length === 2 && handed === 2 && on.length >= 1 && passed === on.length && asks === 2 && lead === 2 && fights === 6 && (STAND_ENV as string[]).includes('TPS_FOGMATES') && /^TPS_FOGMATES=1 \(acts only under FOG\.thin: with TPS_FOGTHIN=1\)$/.test(PR.FROZEN_HOLDS['FOG.mates'] ?? '') && stood === want,
