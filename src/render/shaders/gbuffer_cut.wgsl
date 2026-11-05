@@ -188,6 +188,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     albedo = lk.albedo; rough = lk.rough;
     if (bent) { n = normalize(n + lk.n - flatN); } else { n = lk.n; lookTilt = lk.tilted; }
   }
+  if (LOOK && !cap && own >= 0 && !side && !oldCut && abs(n.y) < 0.5) { n = lookRollUp(boxStuff(bi), n, v.lc.y, v.hf.y, quatRotate(boxRot(bi), vec3f(0.0, 1.0, 0.0))); }   // a cut plane of a stuff whose arrises are rolled (look.wgsl lookRollUp): a body's rounded corner turns into its top as its flanks do
   if (v.mark != 0u && !cap && (own < 0 || side)) {
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
     albedo = mk.albedo; rough = mk.rough;

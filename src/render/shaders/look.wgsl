@@ -17,7 +17,8 @@
 //   RELIEF    the map's normal, stood on the face. The g-buffer keeps the TILTED normal with alpha 0 (the target's spare code); gdown hands every working-size
 //             pass the box's own face back (common.wgsl lookGeoN), so the filters, the gather and the reservoirs see the flat wall they always saw, and only the
 //             screen-size direct light (sharp_direct.wgsl) and the composite's sky share light the relief.
-//   EDGES     a small box's arrises are rounded in the normal and rubbed pale: a crate stops being twelve triangles.
+//   EDGES     a small box's arrises are rounded in the normal and rubbed pale: a crate stops being twelve triangles. And a stuff that is pressed or
+//             moulded (its own word, `rolled`) has its arrises rolled over a hand or more, whatever its size: a car's panel turns into its roof.
 //   SNOW      on a snow level (snow.wgsl's field is live), lookSnow below: snow blown against the foot of what stands in the open, and lying on what was left out.
 // Numbers the page's panel moves live: lookCfg (render/gbuffer.ts setLook).
 @group(1) @binding(11) var lookA: texture_2d_array<f32>;
@@ -36,6 +37,29 @@ const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, 
  *  detail layer's dust and shoe marks, and what the stuff's `worn` says use does to it (a knocked foot, the dirt feet bring in). Where feet go is not
  *  the word's to say: a lane is trodden and paint is walked off a floor in a kept place as in a ruin. */
 fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }
+/** ROLLED ARRISES (the stuff's own word: lookTex.ts STUFFS' `rolled`, metres; the Edges row). A thing pressed or moulded has no knife edge: over its last
+ *  `r` metres a face's shading normal turns toward the face it meets, as far as the look lets a normal lean (LOOK_MAX_TILT, so every pass that wants the
+ *  face itself still finds it). An upright side turns UP into the top and round an upright arris, never down at its foot; a top turns out at all four
+ *  edges. Shading only: the box, its outline and every ray are as they were.
+ *  `p` = the point along the face's two box axes, metres from its middle; `h` = the face's half sizes; `up` = how far each axis points up in the world
+ *  (a top's are 0 and 0). → how far the normal leans along each axis (a sine). */
+fn lookRoll(r: f32, p: vec2f, h: vec2f, up: vec2f) -> vec2f {
+  if (r <= 0.0) { return vec2f(0.0); }
+  var e = vec2f(0.0);
+  for (var a = 0; a < 2; a++) {
+    if (abs(up[a]) > 0.5) { e[a] = clamp(1.0 - (h[a] - p[a] * sign(up[a])) / min(r, 2.0 * h[a]), 0.0, 1.0) * sign(up[a]); }   // (rolled at its top end alone, so over its whole height if it is that short)
+    else { e[a] = clamp(1.0 - (h[a] - abs(p[a])) / min(r, h[a]), 0.0, 1.0) * sign(p[a]); }
+  }
+  return e * LOOK_MAX_TILT * min(2.0 * lookCfg.b.y, 1.0);   // (whole at the Edges row's own rest under Clarity, gone as the row goes to 0)
+}
+/** … and on an upright face that is no face of its box (a cut plane: gbuffer_cut.wgsl, where the look draws no map): the same turn up into the top.
+ *  `y`, `hy` = the point's height in the box and the box's half height; `upW` = the box's own up in the world. Not marked as a tilt: no box axis is this face. */
+fn lookRollUp(cls: u32, n: vec3f, y: f32, hy: f32, upW: vec3f) -> vec3f {
+  if (cls == 0u) { return n; }
+  let s = lookRoll(LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)], vec2f(y, 0.0), vec2f(hy, 1.0), vec2f(1.0, 1.0)).x;
+  if (s <= 0.0) { return n; }
+  return normalize(n * sqrt(1.0 - s * s) + upW * s);
+}
 /** how a box's markings are drawn: x = how far as brushed paint in place of square cells (the panel's Painted marks row), y = how far that paint is OLD
  *  (rubbed thin by the years, gone a shade into its wall: 1 − lookKept; a kept place's sign is brushed and whole but where feet go, markings.wgsl markSoft) */
 fn lookMarkSoft() -> vec2f { return vec2f(lookCfg.g.x, 1.0 - lookKept()); }
@@ -345,6 +369,15 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       if (cls == 0u) { tilt = e; } else { tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B)); }
       let chip = smoothstep(0.35, 0.75, detailNoise(vec2f(pa + pb, pa - pb) * 23.0 + vec2f(f32(salt % 13u))));
       alb *= 1.0 + 0.3 * wear * wear * chip * k2.y; rough = rough + 0.08 * wear * k2.y;
+    }
+  }
+  // ---- ROLLED ARRISES: a stuff pressed or moulded (its own word, lookRoll above), a thing of any size. Never an underside.
+  if (k2.y > 0.0 && cls != 0u && n.y > -0.5) {
+    let r = LOOK_ROLLED[clamp(i32(cls) - 1, 0, LOOK_LAYERS - 1)];
+    if (r > 0.0) {
+      let TA = quatRotate(q, ea); let TB = quatRotate(q, eb);
+      let e = lookRoll(r, vec2f(dot(lc, ea), dot(lc, eb)), vec2f(dot(abs(ea), hf.xyz), dot(abs(eb), hf.xyz)), vec2f(TA.y, TB.y));
+      tilt += vec2f(dot(TA * e.x + TB * e.y, T), dot(TA * e.x + TB * e.y, B));
     }
   }
   let tl = length(tilt); if (tl > LOOK_MAX_TILT) { tilt *= LOOK_MAX_TILT / tl; }

@@ -396,11 +396,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let kH = max(roughH * roughH, 0.0009) / alpha; let axh = ax * kH; let ayh = min(ay * kH, 1.0);   // the highlights' lobe: the same shape at the texel's roughness
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let base = textureLoad(gAlbedo, full, 0).xyz;                            // base colour (a metal's F0; brighter on a worn edge — the detail layer)
-  let F0 = mix(vec3f(0.04), base, metalness);
+  // WHAT ITS COAT MIRRORS HEAD-ON IS THE STUFF'S WORD (lookTex.ts STUFFS' `mirrors` → the prelude's LOOK_MIRRORS, by the word the box says: common.wgsl
+  // boxStuff; beams.k.z = the look's Finish row, 0 on any other page). Every coat was a plain one, four hundredths; a lacquer says more. Nothing that
+  // moves says a word here that differs, and a box that says none reads the plain coat's.
+  var coat = 0.04; if (LOOK && bidx != 0xFFFFFu) { coat += (LOOK_MIRRORS[boxStuff(bidx)] - 0.04) * beams.k.z; }
+  let F0 = mix(vec3f(coat), base, metalness);
   // … and the highlights': a metal's are a conductor's only as far as its paint is stepped back for its mirror (composite.wgsl metalK: by the mirror's fade
   // and its strength, and only while rays are traced). Where the paint stands in whole for the metal, a highlight on top of it is a coat's: at a conductor's
   // strength it was more than the paint itself.
-  let F0h = mix(vec3f(0.04), base, metalness * select(0.0, (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, roughH)) * min(frame.matCfg.y, 1.0), frame.rtCfg.y >= 1.0));
+  let F0h = mix(vec3f(coat), base, metalness * select(0.0, (1.0 - smoothstep(maxR - 0.12, maxR + 0.001, roughH)) * min(frame.matCfg.y, 1.0), frame.rtCfg.y >= 1.0));
   // THE WET FILM'S SHARE (settings.wetMirror → beams.k.y; 0 = off: wetF stays 1 and the lines below multiply by exactly what they did). The older gloss path (fgather.wgsl
   // glossReflection: what low / verylow draw in a storm) strengthens the film's Fresnel by the ground's wetness; this pass never did, so on the wet lot a traced image came
   // out a third as strong here as there — a lit man's too faint to read, beside a laser's image that had a floor of its own. Traced hits only: the lamps' glints are as they were.
