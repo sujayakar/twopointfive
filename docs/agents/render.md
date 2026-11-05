@@ -108,7 +108,13 @@ through the take. The `smoke` stamp: 0.18 to 0.19 against 0.24 ms in snow (24 br
 before's 0.45 at 1,075 and 0.95 at 2,600 (the pool grew from take to take, so no like pair there). CHECKED WITH NO GPU:
 `tools/qa/perf-sweep-logic.ts` (a real card's page opens on the whole pool at any fill and a software adapter's on the count; the page and the
 solver ask those two rules, read in their source; the flip's reasons, the row on a take; `SMOKEDISPATCH_BREAK=1` must fail) and
-`tools/qa/perf-sweep-selftest.ts` (a row marked by the frame is judged by it). On the software adapter here the page opened on the count, on the
+`tools/qa/perf-sweep-selftest.ts` (a row marked by the frame is judged by it). THIS BUILD'S OWN PAGE, SEEN ON THAT CARD (four boxes, nothing patched, no GPU error,
+no error in the console): it opens with `indirect` off and holds 221 to 240 frames of 240 with a can's smoke in the air (860 to 1,830 bricks; 0 to 2
+long) on the quiet lesson twice and on the vault; the count put on from a script on the same pages gave 158 to 169 with 67 to 72 long, and the page's
+own way again 237 to 239. `?smokeindirect=1` opened on the count (one box, of a slower kind than the others: 58 and 73 frames of 240 with 22 to 36
+bricks of breath, 202 with the whole pool put on from the script). The sweep's row taken alone, live, three rounds: armed with its bricks in the
+label, flipped and put back, 42 to 56 frames in each flipped second where a base second has 59 to 61, the passes' union level (13.0 to 13.5
+ms on both sides), which is what `readBy: 'frame'` is for. On the software adapter here the page opened on the count, on the
 whole pool with `=0` and on the count with `=1`, no error in the console (the lesson held at its first card: nothing stepped). WHAT NO DIGEST CAN
 SAY: the headless game stands no smoke solver (`nullSmoke`), so equal run digests say only that nothing the tick reads moved. NEVER SEEN on Metal or
 D3D: every box that showed the cost is NVIDIA through Vulkan, and no player of this release is on that pair, so whether a Mac ever paid it is not
