@@ -2,7 +2,7 @@
 
 WRITTEN BY `bun run tools/levels/library.ts --write` FROM THE KITS. Do not edit: change the kit, then write it again (`--check` is red when this page is stale).
 
-182 pieces in 6 kits, 115 named paints in 6 tables.
+186 pieces in 6 kits, 115 named paints in 6 tables.
 A piece is something a level asks a kit for by name. Each row is one call laid alone: the call a showroom makes.
 
 - **To a man**, read off the boxes as laid: *solid to h* = feet, sight, rounds and sound meet it, up to h metres; *off the floor* = solid, but nothing of it comes
@@ -20,7 +20,7 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 | Kit | File | Pieces | Its sections |
 |---|---|---|---|
 | gwotKit | `src/scene/gwotKit.ts` | 79 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
-| officeKit | `src/scene/officeGen.ts` | 19 | glass · walls · props · loose props · set dressing helpers · lights · doors |
+| officeKit | `src/scene/officeGen.ts` | 23 | glass · walls · props · loose props · set dressing helpers · lights · doors · what is fixed to a wall's face |
 | livedKit | `tools/levels/livedKit.ts` | 18 | the floor · furniture · clutter · loose things |
 | livedPieces | `tools/levels/livedPieces.ts` | 37 | carcasses · paper, plans, books · instruments and tools · safes · on a wall · on a desk · on the floor · loose |
 | livedQuiet | `tools/levels/lived-quiet.ts` | 11 |  |
@@ -244,6 +244,15 @@ It is no second way of building the name.
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
 | **doorFrame**(d) | the frame round one doorway that gets a leaf: jambs + head slightly proud of the wall, and the frame's stops (the comment at the office's door list says why) | solid to 2.05 | 0.98 × 0.26 × 2.12 | 5 solid | (0.2, 0.21, 0.23) | gwot-yard, library-hall |
+
+### officeKit: what is fixed to a wall's face
+
+| Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
+|---|---|---|---|---|---|---|
+| **band**(axis, line, a, b, side, y0, y1, paint, t = 0.24, proud = 0.008, solid = false) | DECAL: a BAND on a wall's face from a to b, y0‥y1: a painted dado or plinth (hand it the WALL'S OWN stuff in the new colour, `saidAs`: the wall's joints run on under the colour's edge), a plate, a door's skin. 8 mm proud, the other kit's dado's: under a door frame's 12, so a band laid door to door ends beneath the jambs. Returns its box, for what is painted on it | drawn only | 2.3 × 0.01 × 1 | 1 drawn | partBlue | library-hall |
+| **vent**(axis, line, a, b, side, y0, y1, paint, t = 0.24, proud = 0.02, solid = false) | DECAL: a VENT on a wall's face from a to b, y0‥y1: a louvred panel two fingers proud (hand it a paint that says `louvre`) | drawn only | 0.6 × 0.02 × 0.4 | 1 drawn | (0.5, 0.51, 0.52) | library-hall |
+| **conduit**(axis, line, a, b, side, y, paint, clip, drop, t = 0.24, solid = false) | DECAL: a run of CONDUIT on a wall's face from a to b at height y, a clip (`clip`: its paint) every metre and a half; `drop` = a branch down to that height at b, into a box that hangs under it (the box stands 11 cm past b). The run, its clips and its branch are always drawn only; `solid` = the box stands | drawn only | 4.61 × 0.09 × 0.75 | 6 drawn | metal, (0.7, 0.71, 0.72) | library-hall |
+| **pipe**(x, z, y0, y1, r, paint, rings = [], solid = false) | a PIPE standing at (x, z) from y0 to y1, radius r: four slabs turned an eighth each. SOLID, the game stands it up as one round (scene/round.ts); drawn only, it stays the eight-sided post the four slabs make (the round rule takes plain boxes). `rings` = what is round it, each [y0, y1, r]: a flange at its foot, a collar half way | drawn only | 0.23 × 0.23 × 3 | 12 drawn | (0.7, 0.71, 0.72) | library-hall |
 
 ## livedKit
 
@@ -526,11 +535,11 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | concrete | 0.42, 0.41, 0.4 |  |  |  | 2 |
 | ceiling | 0.72, 0.72, 0.7 |  |  |  | 0 |
 | partRed | 0.5, 0.13, 0.1 |  |  |  | 0 |
-| partBlue | 0.13, 0.17, 0.42 |  |  |  | 1 |
+| partBlue | 0.13, 0.17, 0.42 |  |  |  | 2 |
 | partTan | 0.55, 0.47, 0.35 |  |  |  | 0 |
 | wood | 0.52, 0.4, 0.27 |  |  |  | 12 |
 | woodDark | 0.25, 0.18, 0.12 |  |  |  | 15 |
-| metal | 0.3, 0.31, 0.33 |  |  |  | 14 |
+| metal | 0.3, 0.31, 0.33 |  |  |  | 15 |
 | black | 0.04, 0.04, 0.045 |  |  |  | 7 |
 | chair | 0.14, 0.2, 0.45 |  |  |  | 2 |
 | cardboard | 0.58, 0.44, 0.26 |  |  |  | 3 |
@@ -633,6 +642,7 @@ A colour a kit writes by hand, in no table. The look can give such a box no mate
 
 | Colour (linear) | Pieces |
 |---|---|
+| (0.7, 0.71, 0.72) | officeKit.conduit, officeKit.pipe |
 | (0.9, 0.88, 0.8) | officeKit.papers, livedKit.papers |
 | (0.07, 0.08, 0.1) | officeKit.car |
 | (0.08, 0.08, 0.09) | officeKit.monitor |
@@ -642,6 +652,7 @@ A colour a kit writes by hand, in no table. The look can give such a box no mate
 | (0.2, 0.21, 0.23) | officeKit.doorFrame |
 | (0.3, 0.02, 0.02) | officeKit.car |
 | (0.36, 0.3, 0.26) | officeKit.plant |
+| (0.5, 0.51, 0.52) | officeKit.vent |
 | (0.58, 0.58, 0.56) | officeKit.cabinet |
 | (0.594, 0.54, 0.41) | livedPieces.sack |
 | (0.8, 0.8, 0.75) | officeKit.car |
