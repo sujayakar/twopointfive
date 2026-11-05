@@ -1,36 +1,96 @@
-// THE ANIMATOR'S LAYERS IN RUST, ASKED BOTH WAYS (rust/sim/src/layers.rs, the row RUST.walk; docs/agents/rust.md "A layer of the animator") — a scripted
-// mission is played on the server's stand with the poses at home and the row up, and EVERY call of a layer that has moved is run twice on the same pose from
-// the same start, once by the module and once by the TypeScript method (anim/skeleton.ts layerBoth), and the two poses compared single for single, and the run-forward bones and the state each leaves double for double. So the
-// questions are the ones a game asks, with the numbers a game has. With it: the two lists Rust code reads by name (rust/sim/src/knobs.rs: the knobs, the
-// rig's named nodes) are held to the game's own tables.
+// THE ANIMATOR'S LAYERS (rust/sim/src/layers.rs; docs/agents/rust.md "A layer of the animator") — a layer is written once, in Rust, so there is no second
+// language to ask on the same pose. What is left to hold: that a game REACHES every layer and the module runs it; what each layer LEFT, call by call, as a
+// word; the sizes and names the module is handed; and that a thing it cannot take is refused by name. A scripted mission is played on the page's stand
+// and then the drives a mission deals too little of, with a watcher on every layer (anim/skeleton.ts LAYERS.watch): after each call the pose, the
+// run-forward bones, the state the layer keeps, the scratch poses it leaves and its answers are folded into that layer's word.
 //   bun run tools/qa/layer-ident.ts [--run warehouse-four:1]   exit 0 = every line passes · 1 = one failed (named)
+//   … --against <root>                                         the same run played by another checkout's tool: every layer's count and word the same
+//                                                              (for a change that must not move a pose: the tree before, the tree after; any stand)
+//   TPS_PROFILE=frozen … [--record [--forget]]                 THE PIN: the frozen stand with the animator's own rules raised by name (PIN_RULES below),
+//                                                              where a run's course moves only by the frozen digests' ceremony or with one of those
+//                                                              rules. The words are held to tools/qa/fixtures/layer-words.json; --record writes them
+//                                                              there with the tree they were taken on (tools/qa/ident-pin.ts)
 //   RUST_BREAK=1 bun run tools/qa/layer-ident.ts               the red path: every knob is handed to the module a hundredth large, and so is the first of every
-//                                                              layer's own numbers (a layer that reads no knob has a break of its own) — `both` and `changed` must FAIL
+//                                                              layer's own numbers (a layer that reads no knob has a break of its own). The same run is played
+//                                                              plain by a child, and EVERY layer's word must differ from its own: `same` and `changed` must FAIL
+//   … --words                                                  what a parent asks of a child: the run and its words (IDENT-WORDS), no verdict
 // WHAT IS HELD:
 //   list      every path of the knob list is a number of a registered knob table or of the animator's tables (a path that is not is an error as the list is first read)
 //   read      every name of the three lists (knobs, named nodes, lists of nodes) is read by some line of the crate outside knobs.rs (a line nobody reads is rot)
-//   both      every layer in LAYERS_MOVED was asked at least FLOOR times in the run and the quiet walk after it (Sam, hands empty, round a standing guard: the
-//             layers of quiet play, which no scripted mission reaches), and no answer of any layer differs
+//   caps      a size the two languages each write down is one number, and the game's own tables fit what a layer is handed
+//   reach     every layer in LAYERS_MOVED was asked at least FLOOR times in the run and the drives after it (Sam, hands empty, round a standing guard: the
+//             layers of quiet play, which no scripted mission reaches), and nothing was asked under a name that is not in the list
+//             ON THE PIN'S STAND the floor is not asked: a layer that stand does not reach is named, and is held by the red path and --against only
+//   same      every layer's count and word are those of the run it is held to: the recording on the frozen stand, the other checkout's with --against,
+//             the plain child's under RUST_BREAK (where each must DIFFER). With nothing to hold them to (the page's stand, plain) the words are printed
+//   blows     the big tool's layer handed the two blows it reads leaves the pose the whole record leaves
 //   changed   a knob changed between two ticks is the module's by the next tick's opening, and back again; one changed outside a tick is the module's at the
 //             next pose made there (a teleport's)
-//   whole     a layer is asked of the module only for a man whose every pose stands in the module's memory: a set with a pose astray has no slot. A rig
-//             with a table longer than the module holds is a mistake said by name (anim/skeleton.ts layerFits), and nothing of that rig is written over
-//             the names of the one the module holds
+//   whole     a layer is posed only for a man whose every pose stands in the module's memory: with one astray the ask is refused by name. So is a rig
+//             with a table longer than the module holds (anim/skeleton.ts layerFits), and nothing of that rig is written over the names of the one the
+//             module holds; so is a clip the module cannot take
+// THE BAR IS LOWER THAN IT WAS. Until the TypeScript layers were deleted every call was run in both languages on the same pose and compared; now a layer is
+// held to its own earlier answers. The recording was taken on the last tree where both stood and agreed on every call of this same run.
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
+import { Fold, hold } from './ident-pin';
 const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';   // (the rows and the game's own maths are the build's: no word raises them)
+// THE PIN'S STAND (TPS_PROFILE=frozen): the frozen stand with THE ANIMATOR'S OWN RULES RAISED BY NAME. The plain frozen stand holds off the rules that
+// seventeen of the layers are posed under (they are never asked there, and four more hardly), so a recording of it would hold two thirds of them. A word
+// is in this list for the layers written beside it (found by leaving each out in turn, 2026-11-05) and for nothing else: when the rule it raises is
+// retired (its row leaves the frozen stand's holds) the word goes with it. A rule that lands default-on later is NOT added, so the run's course is the
+// frozen stand's but for these, and moves when the frozen digests do or one of these rules changes. NOT REACHED EVEN SO: nvPose and swapPose (both are
+// reached with TPS_MOVES left out, and swapPose with TPS_HANDWORK raised, which loses tellLayer: no one list reaches all sixty-two).
+const PIN_RULES: Record<string, string> = {
+  TPS_MOVES: 'mvPre, mvTrunk, mvPostBody, mvPostArms, toesUp, steadyLayer, handsPass, clutchArm, boundArms, reloadArm, pistolReloadArm',
+  TPS_TURN: 'turnWeigh',
+  TPS_KITANIM: 'kitLayer (a sixth of its calls without), pistolReloadArm, radioPose, smokePose',
+  TPS_GUNHAND: 'torchUpLayer',
+  TPS_SAMLOOK: 'watchLook and watchSlip with a man to look at (without it they are asked for the slip alone, a fiftieth of the calls)',
+  TPS_SAMSLIP: 'watchArm',
+};
+const PIN = process.env.TPS_PROFILE === 'frozen'; if (PIN) for (const w of Object.keys(PIN_RULES)) process.env[w] ??= '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
-/** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
+/** the animator's layers (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts shows a watcher each under */
 const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runArms', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
 let fails = 0;
+/** under --record: what writes the recording (tools/qa/ident-pin.ts hold), called last and only when nothing failed */
+let RECORD: (() => void) | undefined;
+/** what this run's words were held to ('' = nothing: the page's stand, plain) */
+let HELD_TO = '';
 /** what `f` threw ('' = nothing) */
 const thrown = (f: () => void): string => { try { f(); return ''; } catch (e) { return String((e as Error).message); } };
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
+// ---- every layer's calls as a word a layer (tools/qa/ident-pin.ts): what a call left — the pose, the run-forward bones, the columns it may write, the
+//      scratch poses it was handed and the numbers it answered
+const FOLD = new Fold();
+const watcher = (name: string, pose: any, fk: any, cols?: any, also: readonly any[] = [], out: readonly number[] = []) => {
+  const e = FOLD.call(name); FOLD.singles(e, pose.cols);
+  for (const q of fk.rot) FOLD.doubles(e, q); for (const v of fk.pos) FOLD.doubles(e, v);
+  if (cols) { const st: number[] = new Array(cols.n).fill(0); cols.get(st, 0); FOLD.doubles(e, st); }
+  for (const p of also) FOLD.singles(e, p.cols); FOLD.doubles(e, out);
+};
+/** `a` then `b` on the same pose from the same start: '' = the two leave the same pose, run-forward bones, columns and scratch poses (which stand as
+ *  `b` made them), else the first difference */
+const twice = (pose: any, fk: any, cols: any, also: readonly any[], a: () => void, b: () => void): string => {
+  const flat = (): number[] => { const o: number[] = []; for (const q of fk.rot) o.push(q[0], q[1], q[2], q[3]); for (const v of fk.pos) o.push(v[0], v[1], v[2]); return o; };
+  const put = (o: number[]): void => { let k = 0; for (const q of fk.rot) { q[0] = o[k++]; q[1] = o[k++]; q[2] = o[k++]; q[3] = o[k++]; } for (const v of fk.pos) { v[0] = o[k++]; v[1] = o[k++]; v[2] = o[k++]; } };
+  const st = (): number[] => { const o: number[] = new Array(cols ? cols.n : 0).fill(0); if (cols) cols.get(o, 0); return o; };
+  const was = pose.cols.slice(), fkWas = flat(), stWas = st(), alsoWas = also.map(p => p.cols.slice());
+  a(); const got = pose.cols.slice(), fkGot = flat(), stGot = st(), alsoGot = also.map(p => p.cols.slice());
+  pose.cols.set(was); put(fkWas); if (cols) cols.put(stWas, 0); also.forEach((p, i) => p.cols.set(alsoWas[i]));
+  b(); const now = pose.cols, fkNow = flat(), stNow = st();
+  for (let i = 0; i < now.length; i++) if (!Object.is(now[i], got[i])) return `single ${i} the first ${got[i]}, the second ${now[i]}`;
+  for (let i = 0; i < fkNow.length; i++) if (!Object.is(fkNow[i], fkGot[i])) return `run-forward double ${i} the first ${fkGot[i]}, the second ${fkNow[i]}`;
+  for (let i = 0; i < stNow.length; i++) if (!Object.is(stNow[i], stGot[i])) return `column ${i} the first ${stGot[i]}, the second ${stNow[i]}`;
+  for (let p = 0; p < also.length; p++) { const x = also[p].cols, y = alsoGot[p]; for (let i = 0; i < x.length; i++) if (!Object.is(x[i], y[i])) return `scratch pose ${p}, single ${i} the first ${y[i]}, the second ${x[i]}`; }
+  return '';
+};
 console.log(`the animator's layers in Rust · profile ${process.env.TPS_PROFILE}${BREAK ? ' · RUST_BREAK=1 (the red path)' : ''}`);
 const no = S.simWhyNot();
 if (no) { console.log(`- FAIL — the module does not start here: ${no}`); process.exit(1); }
@@ -54,12 +114,12 @@ verdict(!listErr && lines.length > 0 && lines.every(l => typeof l.value === 'num
   verdict(names.length === lines.length + RK.rustList(3).length + RK.rustList(5).length + RK.rustList(8).length && unread.length === 0, 'read: every knob, every named node, every list of nodes and every table of the rig\'s numbers of the lists is read by a line of the crate',
     unread.length ? `NOBODY READS ${unread.join(', ')}` : `${names.length} names in rust/sim/src/knobs.rs, the module lists ${lines.length} + ${RK.rustList(3).length} + ${RK.rustList(5).length} + ${RK.rustList(8).length}, each read outside it`); }
 
-// (the big tool's layer: the module's own room for the blows it is handed, and what the drills of `both` count of the hand-over — the `blows` line)
-const BIG_ROOM = Number(/const BIG_BLOWS_MAX: usize = (\d+);/.exec(readFileSync(`${ROOT}/rust/sim/src/layers.rs`, 'utf8'))?.[1]), WHOLE = 'bigLayer, the whole record', BLOWS = { asked: 0, differ: 0, long: 0, most: 0 };
+// (the big tool's layer: the module's own room for the blows it is handed, and what the big tool's drills count of the hand-over — the `blows` line)
+const BIG_ROOM = Number(/const BIG_BLOWS_MAX: usize = (\d+);/.exec(readFileSync(`${ROOT}/rust/sim/src/layers.rs`, 'utf8'))?.[1]), BLOWS = { asked: 0, differ: 0, long: 0, most: 0, first: '' };
 // ---- caps: a number the two languages each keep a copy of (the most a call may hand over; where the keys ride the bench)
 { const ts = readFileSync(`${ROOT}/src/game/character.ts`, 'utf8') + readFileSync(`${ROOT}/src/anim/skeleton.ts`, 'utf8'), rs = readFileSync(`${ROOT}/rust/sim/src/layers.rs`, 'utf8');
-  const pairs = [['KNIFE_KEYS_MAX', 'KNIFE_KEYS'], ['THROW_KEYS_MAX', 'THROW_KEYS'], ['LAYER_KEYS_AT', 'KEYS_AT'], ['LAYER_KEYS_MAX', 'KEYS_MAX']].map(([h, t]) => ({ h, t, here: Number(new RegExp(`\\b${h} = (\\d+)`).exec(ts)?.[1]), there: Number(new RegExp(`const ${t}: usize = (\\d+);`).exec(rs)?.[1]) }));
-  verdict(pairs.every(q => Number.isFinite(q.here) && q.here === q.there), 'caps: a size the TypeScript and the Rust source each write down is the same number in both',
+  const pairs = [['KNIFE_KEYS_MAX', 'KNIFE_KEYS'], ['THROW_KEYS_MAX', 'THROW_KEYS'], ['LAYER_KEYS_AT', 'KEYS_AT'], ['LAYER_KEYS_MAX', 'KEYS_MAX'], ['WHIP_THRU', 'WHIP_THRU']].map(([h, t]) => ({ h, t, here: Number(new RegExp(`\\b${h} = ([\\d.]+)`).exec(ts)?.[1]), there: Number(new RegExp(`const ${t}: (?:usize|f64) = ([\\d.]+);`).exec(rs)?.[1]) }));
+  verdict(pairs.every(q => Number.isFinite(q.here) && q.here === q.there), 'caps: a number the TypeScript and the Rust source each write down is the same number in both',
     pairs.map(q => `${q.h} ${q.here} = ${q.t} ${q.there}`).join(' · '));
   // …and the game's own tables and records are within them, said OUT LOUD where one is not (anim/skeleton.ts layerFits: no second way poses a longer one).
   // The knife's blows and the throw's swings are read as an animator is made (character.ts layerTablesFit): they fit as they stand, and a blow lengthened to one key
@@ -287,14 +347,14 @@ async function quietWalk(secs: number): Promise<void> {
             const un = o.aim ? pin(an.upperW, { aim: () => 0.6 }) : () => {}; g.teleportPlayer(home);
             try { hold(keys, n, f => { rec.t = (o.t0 ?? 0) + f / 60; if (o.walk && f % 90 < 50) W.input.keys.add('KeyW'); else W.input.keys.delete('KeyW'); }); } finally { un(); W.input.keys.delete('KeyW'); } };
           // (the layer is handed only the blows it reads: character.ts blowsNear. Held on every call of these drills: the module handed the WHOLE record, as it
-          //  was until 2026-11-04, leaves the pose, the run-forward bones and the state that the two blows leave — layerBoth's own comparison, the whole record in
-          //  the module's place and the two in the TypeScript's; and a record longer than the module has room for, a hammer's over many doors, is one more
-          //  drill of `both`, the two languages on the same two blows)
+          //  was until 2026-11-04, leaves the pose, the run-forward bones and the state that the two blows leave (`twice`); and a record longer than the
+          //  module has room for, a hammer's over many doors, is one more drill of the run)
           const askBig = an.bigLayerAsk;
           an.bigLayerAsk = function (this: any, slot: number, B: any, near: number[], twY: number, twP: number) {
             BLOWS.most = Math.max(BLOWS.most, near.length); if (process.env.BLOWS_BREAK) near = near.slice(0, 1);   // (the red path: the blow coming is not handed over)
             if (B.blows.length > BIG_ROOM) { BLOWS.long++; askBig.call(this, slot, B, near, twY, twP); return; }
-            SK.layerBoth(WHOLE, this.pA, this.fk, () => askBig.call(this, slot, B, B.blows, twY, twP), () => askBig.call(this, slot, B, near, twY, twP), this.withHands(this.constructor.bigCols), B.kind === 'hammer' ? [this.pB, this.bigBuf] : [this.pB]); };
+            const bad = twice(this.pA, this.fk, this.withHands(this.constructor.bigCols), B.kind === 'hammer' ? [this.pB, this.bigBuf] : [this.pB], () => askBig.call(this, slot, B, B.blows, twY, twP), () => askBig.call(this, slot, B, near, twY, twP));
+            BLOWS.asked++; if (bad) { BLOWS.differ++; BLOWS.first ||= bad; } };
           try { for (const snug of [false, true]) {
             big({ kind: 'hammer', snug, equip: 0.8, windup: 0.55, stow: 0.8, blows: Array.from({ length: BIG_ROOM + 6 }, (_, i) => 1.5 + i * 0.7), end: 2.1 + (BIG_ROOM + 5) * 0.7, d: 0.8, secs: 5.4, t0: 1.5 + (BIG_ROOM + 5) * 0.7 - 4.2 });
             big({ kind: 'hammer', snug, equip: 0.9, windup: 0.55, stow: 0.8, blows: [1.6, 2.3, 3.0], end: 3.6, d: 0.8, secs: 4.6 });
@@ -306,7 +366,7 @@ async function quietWalk(secs: number): Promise<void> {
             big({ kind: 'shotgun', snug, equip: 0.7, windup: 0, stow: 0.7, blows: [0.9, 1.0], end: 1.6, d: 0.7, x: 0.25, secs: 2.5, yaw: 0.5, walk: true, clear: 0.075 });
             big({ kind: 'shotgun', snug, equip: 0.6, windup: 0, stow: 0.6, blows: [1.0], end: -1, d: 1.2, secs: 1.8, aim: true, yaw: -0.35 });
             big({ kind: 'shotgun', snug, equip: 0.6, windup: 0, stow: 0.6, blows: [], end: 0.3, d: 1.0, secs: 1.2, noAt: true }); }
-          } finally { delete an.bigLayerAsk; const w = SK.LAYERS.by[WHOLE]; if (w) { BLOWS.asked += w.asked; BLOWS.differ += w.differ; delete SK.LAYERS.by[WHOLE]; } } }
+          } finally { delete an.bigLayerAsk; } }
         // …and the throw at every size (the mission throws a few cans: here the full overhand, two shorter ones, a hard throw at a wall two steps off, the
         // underhand toss at two sizes), standing, crouched and walking, a swing begun inside the last, the free hand's throw with a long gun kept in the
         // other, a toss with a hand up on a gun, and a blast that folds him mid-swing (and one begun already folded)
@@ -346,15 +406,25 @@ async function wallHold(): Promise<void> {
   try { await WP.wallPose(); await WP.wallPoseMend(); } finally { console.log = log; }
 }
 
-// ---- both
-{ const [scn, seed] = (flag('--run') ?? 'warehouse-four:1').split(':'); SK.LAYERS.both = true;
-  const t0 = performance.now(), r = await PT.play(scn, Number(seed), 300, false, {}); await quietWalk(80); await wallHold(); SK.LAYERS.both = false;
-  const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
-  console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)
-  verdict(thin.length === 0 && off.length === 0 && stray.length === 0, 'both: every call of a moved layer in a mission, run by the module and by the TypeScript on the same pose, leaves the same pose single for single',
-    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
-  verdict(BLOWS.asked > 0 && BLOWS.differ === 0 && BLOWS.long > 0 && BLOWS.most === 2 && (by.bigLayer?.asked ?? 0) >= BLOWS.asked + BLOWS.long, 'blows: the big tool\'s layer, handed the two blows it reads, leaves the pose the whole record left; a record longer than the module\'s room is posed like any other',
-    `the big tool's drills, the module asked twice on the same pose: ${BLOWS.asked} asked, ${BLOWS.differ} differ · the most blows handed: ${BLOWS.most} · a hammer's record of ${BIG_ROOM + 6} blows (the module's room: ${BIG_ROOM}): ${BLOWS.long} calls, counted under bigLayer in the line above${SK.LAYERS.first?.startsWith(WHOLE) ? ` · first: ${SK.LAYERS.first}` : ''}`); }
+// ---- reach, same, blows: the run under the watcher
+{ const [scn, seed] = (flag('--run') ?? 'warehouse-four:1').split(':');
+  SK.LAYERS.watch = watcher;
+  const t0 = performance.now(), r = await PT.play(scn, Number(seed), 300, false, {}); await quietWalk(80); await wallHold(); SK.LAYERS.watch = null;
+  const words = FOLD.words(), ran = `${scn}:${seed}`, asked = (n: string) => words[n]?.asked ?? 0, out = LAYERS_MOVED.filter(n => asked(n) === 0);
+  // (the floor of calls a layer is the plain run's: the pin's stand reaches what it reaches, and its recording says which)
+  const thin = PIN ? [] : LAYERS_MOVED.filter(n => asked(n) < FLOOR), stray = Object.keys(words).filter(n => !LAYERS_MOVED.includes(n));
+  const whole = !args.includes('--words');
+  if (whole) verdict(thin.length === 0 && stray.length === 0, PIN ? 'reach: no call under a name the tool does not list; a layer the pin\'s stand does not reach is named (the recording holds which are reached)' : 'reach: every layer is reached by the mission and the drives after it, and the module ran each call',
+    `${ran} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${words[n]?.asked ?? 0}`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${PIN ? ` · NOT REACHED ON THIS STAND, held by the red path and --against only: ${out.join(', ') || 'none'}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`);
+  // (what the words are held to: a child's plain run under the red path, another checkout's run, or the frozen stand's recording)
+  const h = hold({ root: ROOT, tool: 'tools/qa/layer-ident.ts', fixture: 'layer-words.json', run: ran, runArgs: ['--run', ran], end: String(r.end), words, breakWord: 'RUST_BREAK',
+    unfit: stray.length ? `a call was watched under a name that is not in LAYERS_MOVED (${stray.join(', ')})` : '', verdict, say: (l: string) => console.log(l) });
+  if (!whole) process.exit(0);
+  RECORD = h.record; HELD_TO = h.to;
+  // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own word must have differed from its plain run's)
+  console.log('LAYER-IDENT ' + JSON.stringify({ by: Object.fromEntries(Object.keys(words).map(n => [n, { asked: words[n].asked, differ: h.off.includes(n) ? 1 : 0 }])) }));
+  verdict(BLOWS.asked > 0 && BLOWS.differ === 0 && BLOWS.long > 0 && BLOWS.most === 2 && (words.bigLayer?.asked ?? 0) >= BLOWS.asked + BLOWS.long, 'blows: the big tool\'s layer, handed the two blows it reads, leaves the pose the whole record left; a record longer than the module\'s room is posed like any other',
+    `the big tool's drills, the module asked twice on the same pose: ${BLOWS.asked} asked, ${BLOWS.differ} differ · the most blows handed: ${BLOWS.most} · a hammer's record of ${BIG_ROOM + 6} blows (the module's room: ${BIG_ROOM}): ${BLOWS.long} calls, counted under bigLayer in the line above${BLOWS.first ? ` · first: ${BLOWS.first}` : ''}`); }
 
 // ---- changed
 { const W: any = await standUp({ seed: 7 }), DT = 1 / 60, at = S.sim().knob_addr(0) / 8, i = lines.findIndex(l => l.path === 'MV.gait.lean'), MV = KN.knobRegistry().MV;
@@ -368,21 +438,19 @@ async function wallHold(): Promise<void> {
 // ---- whole
 { const W: any = await standUp({ seed: 7 }); W.step(1 / 60);
   const an: any = W.game.player.char.anim, slot = (cast: any = an.cast): number => SK.layerSlot(an.ch, an.pA, cast);
-  // (this line walks the ways out on purpose, so the count of them, TPS_FELL, is held down while it does: it is not a run reaching the TypeScript)
-  const counting = S.FELL.on; S.FELL.on = false;
-  const home = slot() >= 0; an.poses.stray = 1; const astray = slot() === -1; an.poses.stray = 0; const back = slot() >= 0;
+  const home = slot() >= 0; an.poses.stray = 1; const lost = thrown(() => slot()), astray = /pose\(s\) the pose pool had no room for/.test(lost); an.poses.stray = 0; const back = slot() >= 0;
   // (a rig met for the first time, with other nodes under every name and a table too long: refused by name, and the module's named nodes are still the first rig's)
   const x = S.sim(), ra = x.knob_addr(2) / 4, rn = x.knob_len(2), roles = (): string => Array.from(S.u32().subarray(ra, ra + rn)).join(',');
   const was = roles(), other = { ...an.cast, nodes: Object.fromEntries(Object.keys(an.cast.nodes).map(k => [k, 1])), nums: { jogSeam: new Float64Array(1 << 16) } };
   SK.LAYERS.roles = null; const said = thrown(() => slot(other)), long = /the rig's table of numbers "jogSeam" has 65536 entries/.test(said), kept = roles() === was && SK.LAYERS.roles === null, again = slot() >= 0 && SK.LAYERS.roles === an.ch && roles() === was;
-  // (the clips: every clip of the character file is one the module holds for a pose of his, so no act or wound of a mission meets the refusal; a clip
-  //  with no track, and one that writes a node past his pose, are each refused by name)
-  const N = an.pA.numNodes, all = [...an.ch.clips.values()] as any[], clipSay = all.map(c => thrown(() => SK.clipNo(c, N))).filter(s => s), some = all.find(c => c.tracks.length > 0);
-  const empty = thrown(() => SK.clipNo({ name: 'no tracks', duration: 1, tracks: [] }, N)), far = thrown(() => SK.clipNo({ name: 'a node too far', duration: some.duration, tracks: [{ ...some.tracks[0], node: N }] }, N));
+  // (the clips, as an animator holds them when it is made — skeleton.ts layerClipsFit: every clip of the character file is one the module holds for a
+  //  pose of his, so no act or wound of a mission meets the refusal; a clip with no track, and one that writes a node past his pose, are each refused by name)
+  const N = an.pA.numNodes, all = [...an.ch.clips.values()] as any[], clipSay = [thrown(() => SK.layerClipsFit(all, N))].filter(s => s), some = all.find(c => c.tracks.length > 0);
+  const empty = thrown(() => SK.layerClipsFit([{ name: 'no tracks', duration: 1, tracks: [] }], N)), far = thrown(() => SK.layerClipsFit([{ name: 'a node too far', duration: some.duration, tracks: [{ ...some.tracks[0], node: N }] }], N));
   const clips = all.length > 0 && clipSay.length === 0 && /does not hold it/.test(empty) && new RegExp(`writes node ${N}, over a pose of ${N} nodes`).test(far);
-  S.FELL.on = counting;
-  verdict(home && astray && back && long && kept && again && clips, 'whole: a man with a pose outside the module has no slot; a rig whose table is too long for the module, and a clip the module cannot take, are refused by name',
-    `every pose at home: a slot ${home} · one astray: none ${astray} · home again: a slot ${back} · another rig with a table of 65536 numbers: ${said || 'NOT REFUSED'} · the module's named nodes untouched ${kept} · his own tables: a slot ${again} · the character's ${all.length} clips: ${clipSay.length ? clipSay[0] : 'each held'} · a clip of no tracks: ${empty || 'NOT REFUSED'} · one that writes a node past the pose: ${far || 'NOT REFUSED'}`); }
+  verdict(home && astray && back && long && kept && again && clips, 'whole: a man with a pose outside the module, a rig whose table is too long for the module, and a clip the module cannot take are each refused by name',
+    `every pose at home: a slot ${home} · one astray: ${lost || 'NOT REFUSED'} · home again: a slot ${back} · another rig with a table of 65536 numbers: ${said || 'NOT REFUSED'} · the module's named nodes untouched ${kept} · his own tables: a slot ${again} · the character's ${all.length} clips: ${clipSay.length ? clipSay[0] : 'each held'} · a clip of no tracks: ${empty || 'NOT REFUSED'} · one that writes a node past the pose: ${far || 'NOT REFUSED'}`); }
 
-console.log(fails ? `=== layer-ident: ${fails} FAILED ===` : '=== layer-ident: PASS — every layer the same pose both ways, every knob the table\'s ===');
+if (RECORD) { if (fails) verdict(false, 'same: the run is recorded', 'NOTHING WRITTEN: a verdict of this run failed, and a recording is the answers of a run that was right'); else RECORD(); }
+console.log(fails ? `=== layer-ident: ${fails} FAILED ===` : `=== layer-ident: PASS — ${PIN ? 'every layer this stand reaches' : 'every layer reached'}${HELD_TO ? ' and its words as held' : RECORD ? ' and its words recorded' : ', its words held to nothing on this stand (the pin is the frozen run)'}, every knob the table's ===`);
 process.exit(fails ? 1 : 0);

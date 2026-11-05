@@ -6,7 +6,8 @@
 //                      built; a level over one is not loaded (the first statement of Game's constructor), and scene/levelData.ts's validator says the
 //                      same of the document whole.
 //   fitRows(game, …)   every count of a STOOD game against what holds it: those four, and every table of the box world's copy (statics, the floor grid's
-//                      cells and their entries, tilted statics, cut rows, leaves, the glass a line can note). tools/qa/copyfit-check.ts reads every
+//                      cells and their entries, tilted statics, cut rows, leaves, the glass a line can note), and the pool the men's poses stand in
+//                      against every man a game can hold. tools/qa/copyfit-check.ts reads every
 //                      level of levels/ by it, and is red when the copy has a table that no row here counts: a table added to the copy is a row added
 //                      HERE.
 //   stoodOver(game, …) the same count as a REFUSAL: a stood game with a row over what holds it is not a game (the last statement of Game's constructor).
@@ -31,6 +32,8 @@ import { DOOR_CAP, doorIo } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS, propIo } from '../sim/propshome';
 import { MEN_ROWS } from '../sim/men/schema';
 import { isSheet } from './glass';
+import { manSingles, type Cast } from './posehome';
+import { posePoolRoom } from '../anim/skeleton';
 import { MAX_SKINNED } from './guards';
 import { SEATS } from './seats';
 import { BODY_DOOR_PARTICLES } from './game';
@@ -87,8 +90,7 @@ export function breakRoom(col: Stood['col'], tables: Readonly<Record<string, num
  *  levels still reads it, for a shipped level is to have the room for every piece its knob allows. */
 export interface FitRow { row: string; what: string; has: number; cap: number; table: string | null; play?: true }
 /** what `fitRows` reads of a stood game (a Game is one) */
-interface Stood {
-  guards?: readonly unknown[]; civilians?: readonly unknown[];
+interface Stood extends Partial<Cast> {
   level: Parameters<typeof levelCounts>[0] & { civilians?: readonly unknown[] };
   col: { boxes: readonly Box[]; dynamicBoxes: readonly Box[]; gridCount(): { cells: number; entries: number; tilted: number } };
   props?: { all: readonly { boxes: readonly unknown[] }[] } | null;
@@ -118,6 +120,7 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     // what a game holds of men, and what one step of a rule is handed of them (the rules' hand-overs: no table of the copy)
     { row: 'men', what: 'the first seat\'s man and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture\'s budget of characters)', has: 1 + (g.guards?.length ?? 0), cap: MAX_SKINNED, table: null },
     { row: 'manrows', what: 'rows of the men\'s columns against every man a game can hold (menMost: at most what a step\'s hand-over holds, by civMost; a man who has left keeps no row)', has: menMost(civs), cap: MEN_ROWS, table: null },
+    { row: 'poses', what: 'singles of the pool the men\'s poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make', has: held ? menMost(civMost()) * manSingles(g) : 0, cap: held ? posePoolRoom() : Infinity, table: null },
     { row: 'civilians', what: 'civilians: the level\'s own, or those in the game as it stands (a rescue\'s hostages and the man a snatch is for join in play; civilians.ts join holds every one to this number as he joins)', has: civs, cap: civMost(), table: null },
     { row: 'doormen', what: 'contacts one step of the doors is handed at most (every man a game holds: himself, and his body\'s particles near a doorway)', has: most.doorMen, cap: dio?.maxContacts ?? Infinity, table: null },
     { row: 'propmen', what: 'men one step of the furniture is handed at most', has: most.propMen, cap: pio?.maxContacts ?? Infinity, table: null },
