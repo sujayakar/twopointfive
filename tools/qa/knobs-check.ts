@@ -14,7 +14,10 @@ const ROOT = resolve(import.meta.dir, '../..');
 
 /** exported tables with an `on` switch that are NOT in the registry, each with why (the six there were when this check went red on a seventh). What that costs a
  *  table: `playthrough.ts --set` cannot reach it, the probe runner does not put it back between probes, a session recording does not carry it, the page's
- *  `__knobs` and tools/qa/shipped-page.cjs do not see it. A table that changes what a run DOES belongs in src/game/knobs.ts, not here. */
+ *  `__knobs` and tools/qa/shipped-page.cjs do not see it. A table that changes what a run DOES belongs in src/game/knobs.ts, not here.
+ *  NOT LISTED, BECAUSE THEY ARE NOT UNDER src/game AND NO GAME RULE READS THEM: the picture's two paces, PLAN_PACE (src/render/planPace.ts; `?planpace=old`) and
+ *  REACH_PACE (src/render/reach.ts; `?reachpace=old`). Each is set only by its address word, which a recording and a perf dump both carry; they move when
+ *  a plan or a mask lands, by a few frames, and nothing a run does. docs/agents/qa.md says the same where the switches are listed. */
 const UNREGISTERED: Record<string, string> = {
   'FEEL (blastFeel.ts)': 'a wall charge going off: the camera kick, picture and sound only',
   'BLAST (blastLook.ts)': 'a set charge and its blast: picture only',

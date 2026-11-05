@@ -447,6 +447,12 @@ but synthetic writes still work.
   draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
   what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
   case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.
+- **Two switches of the picture's are in no registry, by rule** (11-05): `PLAN_PACE` (`src/render/planPace.ts`, the page's `?planpace=old`: the wall
+  sides, the openings and the draw order made whole on the frame that asks, as they were) and `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`: a
+  reach mask decided whole). No game rule reads either, so neither has a knob row, a `FROZEN_HOLDS` row or a place in the journal; `knobs-check` scans
+  `src/game` and does not see them, and the page's `__knobs` does not show them. Each is set only by its address word, and a recording and a perf dump
+  both carry the address: that is how a run says which pace it was made under. `PLAN_PACE` is ON in the page and OFF in the module (both stands and
+  every tool get each plan at once); `REACH_PACE.whole` is off everywhere unless asked. `docs/agents/render.md` has both rules.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
