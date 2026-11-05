@@ -9,6 +9,7 @@
 // touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadout';   // (pure: the loadout's size, its words and its query key — nothing of the game)
+import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../host/runpage';   // (a leaf: the words of a run's page)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
 // two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
@@ -259,7 +260,8 @@ export function quitSearch(search: string): string {
   const q = new URLSearchParams(search); for (const k of SCENARIO_KEYS) q.delete(k);
   q.delete('way');   // (the way in is ONE mission's pick — ui/missions.ts waySearch puts it on that row's link alone; it names no scenario, so it is not a SCENARIO_KEY)
   if (q.get('quietfog') !== '0') q.delete('quietfog');   // (a rung of the fog lever is a QUIET mission's pick — game/quietfog.ts puts it on a quiet row's link alone; `quietfog=0`, the rule's own off switch, is the visitor's flag and stays)
-  for (const k of ['bench', 'benchcap', 'benchrun']) q.delete(k);   // (the benchmark's words, ui/bench.ts and ui/benchrun.ts: one run on the page it was asked on, never carried onto a mission's link)
+  if (heldPage(q)) for (const k of HELD_PAGE_WORDS) q.delete(k);   // (a priced page's own words for a held picture, host/runpage.ts: the run wrote them, so they go with the run's word below)
+  for (const k of ['bench', 'benchcap', ...RUN_PAGE_WORDS, ...PRICE_ASK_WORDS]) q.delete(k);   // (a run's words — the benchmark's, ui/bench.ts and ui/benchrun.ts, and a run's page of any kind, host/runpage.ts: one run on the page it was asked on, never carried onto a mission's link)
   q.delete('cams');   // (… and the sticky cameras handed with it: the button beside the lever, on a quiet row's link alone)
   return bare(q);
 }
