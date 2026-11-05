@@ -27,7 +27,7 @@ const OUT = resolve(ROOT, argv.includes('--out') ? argv[argv.indexOf('--out') + 
 
 // 1. the procedural level, with the editor group of every box recorded on the side
 const trace = { groups: [] as string[] };
-const level = buildOfficeProcedural(trace, RELIEF ? { markings: false, demote: false } : TEXEL !== undefined ? { texel: TEXEL } : {});
+const level = buildOfficeProcedural(trace, RELIEF ? { markings: false, demote: false } : TEXEL !== undefined ? { texel: TEXEL, lived: true } : { lived: true });   // (lived: the FILE carries the office's lived tier, whatever stand this tool runs on)
 if (trace.groups.length !== level.boxes.length) throw new Error(`trace: ${trace.groups.length} groups for ${level.boxes.length} boxes`);
 if (TEXEL !== undefined) level.markTexel = TEXEL;   // (the Level's own: levelToData writes it into the file's meta, the loader hands it back. How kept the office is goes the same way: `level.kept`, set by the builder)
 
@@ -60,7 +60,7 @@ const text = serializeLevelData(data);
 // 4. the proof: text → LevelData → Level must be the generator's Level, field for field (and the data must survive its own round trip)
 const parsed = parseLevelData(text);
 const dataDiffs: string[] = []; const nData = structuralDiff(canonicalLevelData(data), parsed, dataDiffs);
-const reloaded = loadLevel(parsed);
+const reloaded = loadLevel(parsed, { lived: true });   // (the proof is of the whole file, its lived tier in)
 const levelDiffs: string[] = []; const nLevel = structuralDiff(level, reloaded, levelDiffs);
 if (nData || nLevel) {
   console.error(`export REFUSED: the file would not reproduce the level — ${nLevel} Level diff(s), ${nData} data diff(s)`);
