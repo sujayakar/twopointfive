@@ -26,7 +26,7 @@ import { MEN_OUT, MEN_TABLE, layOut, rustText, schemaFaults, schemaHash, tsText,
 const BREAK = process.env.MEN_BREAK === '1', DT = 1 / 60;
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), RB: any = await import(`${ROOT}/src/game/rollback.ts`), LF: any = await import(`${ROOT}/src/game/levelfit.ts`);
 const M: any = await import(`${ROOT}/src/sim/men/store.ts`), C: any = await import(`${ROOT}/src/sim/men/cols.ts`), SC: any = await import(`${ROOT}/src/sim/men/schema.ts`);
-const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), GD: any = await import(`${ROOT}/src/game/guards.ts`);
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 const throwsName = (f: () => unknown, word: string): string => { try { f(); return ''; } catch (e) { const m = String((e as Error).message); return m.includes(word) ? m : ''; } };
@@ -107,10 +107,10 @@ console.log(`a man's columns · profile ${process.env.TPS_PROFILE ?? 'frozen'}${
 
 // ---- every level fits: a game holds at most menMost men, by the doors' and the furniture's hand-over, whatever its level
 { const files = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')); let most = 0, who = '', read = 0; const over: string[] = [];
-  const log = console.log, err = console.error, room = BREAK ? 5 : SC.MEN_ROWS, held = LF.menHeld();
+  const log = console.log, err = console.error, room = BREAK ? 5 : SC.MEN_ROWS, held = LF.menHeld() + GD.MAX_SKINNED;
   for (const f of files) { console.log = console.error = () => {}; let level: any = null; try { level = f === 'office.json' ? null : loadLevel(JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8'))); } catch { /* a document the loader refuses is the level check's */ } console.log = log; console.error = err;
-    if (!level) continue; read++; const n = LF.menMost(level.civilians?.length ?? 0); if (n > most) { most = n; who = f; } if (n > room) over.push(`${f} ${n}`); }
-  verdict(over.length === 0 && read > 10 && held <= room, `levels: every man a game can hold fits the ${SC.MEN_ROWS} rows`, `${read} levels read · the fullest ${most} men at most (${who}) · at most ${held} by what a step's hand-over holds, whatever the level${over.length ? ` · over: ${over.slice(0, 4).join(', ')}` : ''}`); }
+    if (!level) continue; read++; const n = LF.menMost(level.civilians?.length ?? 0) + GD.MAX_SKINNED; if (n > most) { most = n; who = f; } if (n > room) over.push(`${f} ${n}`); }
+  verdict(over.length === 0 && read > 10 && held <= room, `levels: every man a game can hold fits the ${SC.MEN_ROWS} rows`, `${read} levels read · the fullest ${most} men at most (${who}) · at most ${held} whatever the level: what a step's hand-over holds, and as many as the floor holds benched${over.length ? ` · over: ${over.slice(0, 4).join(', ')}` : ''}`); }
 
 // ---- the lint: nothing in src/game reaches the columns but through their accessors
 { const dir = resolve(ROOT, 'src/game'), bad: string[] = [];
