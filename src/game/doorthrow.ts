@@ -37,6 +37,7 @@ import { endGuardScript } from './squad';
 import { toAlarmed } from './civilians';
 import { giveStartle as giveStart } from './startle';
 import { isHostile, type Team } from './teams';
+import { word } from './belief';
 
 /** QA: since the last reset — defenders a leaf opened into them startled · men thrown by a shouldered leaf · by a boot · of those, put on a knee · and
  *  frames a leaf carried a man */
@@ -99,7 +100,7 @@ function throwMan(g: Game, gd: Guard, s: DoorStrike): void {
   gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.speed = 0; c.vel = [0, 0, 0];
   if (s.floor) gd.doorDownUntil = Math.max(gd.doorDownUntil, until);
   const by = teamOf(g, s.by);
-  if (by && isHostile(by, gd.team)) { gd.awareness = Math.max(gd.awareness, T.aware); if (gd.state !== 'alert' || !gd.lastKnown) gd.lastKnown = [at[0], 0, at[2]]; }   // (a foe's leaf: he comes back alert toward the doorway — his own side's only folds him)
+  if (by && isHostile(by, gd.team)) { gd.awareness = Math.max(gd.awareness, T.aware); if (gd.state !== 'alert' || !gd.lastKnown) word(g, gd, [at[0], 0, at[2]]); }   // (a foe's leaf: he comes back alert toward the doorway — his own side's only folds him)
 }
 
 function throwSam(g: Game, s: DoorStrike): void {

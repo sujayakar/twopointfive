@@ -61,6 +61,7 @@ import { teamTread } from './teampace';
 import { loadGait, loadHeard } from './kitload';   // (a teammate's card in the defenders' ears: his footfall as the mixer has it)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { word } from './belief';
 
 export const PRESSURE = {
   /** the master switch: off = none of this file runs */
@@ -577,7 +578,7 @@ export function loose(g: Game, D: Def, at: Vec3) {
   const gd = D.gd;
   if (gd.script) endGuardScript(gd, 'alert');
   D.mode = 'free'; D.freeAt = g.time; D.rallyAt = NaN; gd.hold = false; gd.pinned = false;
-  gd.state = 'alert'; gd.awareness = Math.max(gd.awareness, 0.92); if (g.time - gd.lastSeenT > 1) gd.lastKnown = v3.copy(at); gd.path = []; gd.pathGoal = null;
+  gd.state = 'alert'; gd.awareness = Math.max(gd.awareness, 0.92); if (g.time - gd.lastSeenT > 1) word(g, gd, at); gd.path = []; gd.pathGoal = null;
 }
 /** a man on a scripted leg files his own boots (the fight AI's men do it in guards.ts; a script's tread is sound only), so the team's ears get them */
 export function boots(g: Game, gd: Guard, last: number): number {
