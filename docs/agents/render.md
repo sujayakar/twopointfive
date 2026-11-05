@@ -1893,6 +1893,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
     and up where there is no Worker. `LOOKWORKERS_BREAK=1` (the workers answer with the next layer) must fail, on the bytes line alone.
     `node tools/qa/lookworkers-page.cjs` does the bytes in headless Chromium, on both maths, served and with the bundle OPENED FROM DISK: a plain worker
     does start there from the bundled text.
+    THE WORKER'S ADDRESS AND THE DOWNLOAD LINT (11-05): the pool makes its script's address with `createObjectURL`, which `savefile-check` read as a file
+    leaving the page (red from the step the workers joined). The lint now reads an address as a script's where the module that makes it hands it to a
+    worker and holds no way out of the page (a link, a window, the location, a frame). So `lookWorkers.ts` stays free of those, or the lint is red on it.
     MEASURED (a rented cloud box, an NVIDIA A10G through Vulkan under headless Chrome, 24 cores so 8 workers; the office's look page on High, 21 layers;
     relative only, never a player's seconds; the page loaded once cold, then again and again in a frame of itself with the shaders cached, the workers off
     and on in turn, four boxes on the joined build of 11-05 with the lattice tables in): THE MAPS take 2.2 to 2.8 s on the workers in every one of 10

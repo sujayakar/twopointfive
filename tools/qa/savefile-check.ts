@@ -2,7 +2,7 @@
 // whoever listens and to nobody else: no download is asked for, with a listener or without, and the door answers what became of the file ('sent', 'held',
 // false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. The one kind still downloaded (the editor's level) is asked for once under the file's name and the listener told after it; a download that cannot be asked for THROWS (a
 // caller must not mark the file handed over) and nobody is told. A listener that throws, or whose promise is refused, loses nothing. A saver hears
-// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; the recorder's take and the others go through the door; and no file under src/ makes a download of its own (by `.download =` or createObjectURL). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
+// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; the recorder's take and the others go through the door; and no file under src/ makes a download of its own (by `.download =` or createObjectURL; an address a module hands to a worker, with no way out of the page beside it, is a script's and no file). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -133,7 +133,22 @@ page();
 { // no other door: nothing under src/ makes a download of its own
   const files: string[] = []; const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.ts$/.test(e.name)) files.push(p); } };
   const root = join(import.meta.dir, '../../src'); walk(root);
-  const own = files.filter(f => !/host\/savefile\.ts$/.test(f) && /\.download\s*=|createObjectURL\(|setAttribute\(\s*'download'/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1));
+  // (WHERE AN ADDRESS CAN GO SAYS WHAT IT IS. An address made with createObjectURL is a file leaving the page when the browser is sent to it or handed it to
+  //  keep: a link, a window, the page's own location, a frame. A module that hands its address to a worker and holds none of those ways out has made a
+  //  script's address, which is how a worker gets its script (render/lookWorkers.ts); the address is never a file there, whatever its Blob says of itself.
+  //  The rule names no file and reads no spelling of the Blob. A download's own two spellings are red wherever they stand)
+  const WAY_OUT = /\.download\b|['"`]download['"`]|\bdownload\s*:|<a\s|\.href\b|\bhref\s*[:=]|\.src\s*=|\.click\(|window\.open\(|\blocation\s*=|\blocation\.(assign|replace)\(|createElement\(\s*['"`](a|iframe|embed|object)['"`]|showSaveFilePicker|navigator\.share\(/;
+  const ownDownload = (text: string): boolean => /\.download\s*=|setAttribute\(\s*'download'/.test(text) || (/createObjectURL\(/.test(text) && !(/new\s+(Shared)?Worker\(/.test(text) && !WAY_OUT.test(text)));
+  { const made = "const u = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));", worker = `${made} const w = new Worker(u);`;
+    const tries: [string, string, boolean][] = [
+      ['a worker handed its script', worker, false], ['a worker handed its script, the Blob made first', "const b = new Blob([t[0]], { type: \"text/javascript\" }); const w = new Worker(URL.createObjectURL(b), { name: 'x' });", false],
+      ['an address handed to nothing', made, true], ['a download beside a worker', `${worker} a.download = 'x.js';`, true], ['a download by its attribute', "a.setAttribute('download', name);", true],
+      ['a link beside a worker', `${worker} a.href = u;`, true], ['a link made whole beside a worker', `${worker} Object.assign(document.createElement('a'), { href: u, download: 'x' }).click();`, true],
+      ['a window beside a worker', `${worker} window.open(u);`, true], ['the page sent there beside a worker', `${worker} location.assign(u);`, true], ['a frame beside a worker', `${worker} frame.src = u;`, true],
+      ['a link written out beside a worker', `${worker} el.innerHTML = \`<a download href="\${u}">\`;`, true], ['a plain download', "a.href = URL.createObjectURL(blob); a.download = name; a.click();", true]];
+    const wrong = tries.filter(([, text, want]) => ownDownload(text) !== want).map(([what]) => what);
+    check(wrong.length === 0, `an address a module hands to a worker, with no way out of the page beside it, is a script's and not a file; every other is a download of its own${wrong.length ? ` (read wrongly: ${wrong.join(' · ')})` : ''}`); }
+  const own = files.filter(f => !/host\/savefile\.ts$/.test(f) && ownDownload(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1));
   // (a replay is not the door's: no file with replay in its path imports it, and the door has no kind to save one under. The two patterns are tried on
   // the lines they are for first, so that a pattern that can match nothing does not read as a pass)
   const DOOR = /from\s*['"][^'"]*host\/savefile['"]/, KINDS = /type SavedKind\s*=([^;]*);/;

@@ -107,7 +107,7 @@ const MOVE_KITVIEW: KitViewData = {
       { id: 'tm_062', group: 'tm.drums', c: [9.1, 0.438, 15.9], h: [0.2784, 0.438, 0.1153], yaw: 2.1061, material: 'drumBlue' },
       { id: 'tm_063', group: 'tm.drums', c: [9.1, 0.437, 15.9], h: [0.2784, 0.437, 0.1153], yaw: 2.8915, material: 'drumBlue' },
       { id: 'tm_064', group: 'tm.lamp', c: [11, 1.755, 13], h: [0.04, 1.755, 0.04], material: 'galv' },
-      { id: 'tm_065', group: 'tm.lamp', c: [11, 3.485, 13.3], h: [0.025, 0.025, 0.26], material: 'galv' },
+      { id: 'tm_065', group: 'tm.lamp', c: [11, 3.485, 13.22], h: [0.025, 0.025, 0.18], material: 'galv' },
       { id: 'tm_066', group: 'tm.lamp', c: [11, 3.46, 13.6], h: [0.2, 0.05, 0.2], material: 'plasticBlack' },
       { id: 'tm_067', group: 'tm.lamp', c: [11, 3.4, 13.6], h: [0.12, 0.012, 0.12], material: 'plasticWhite', emissive: [40, 34, 22], flags: ['NoShadow'] },
     ] } },
