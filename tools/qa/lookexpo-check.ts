@@ -2,20 +2,24 @@
 // render/placeField.ts, whose own check is tools/qa/place-field-page.cjs). The maintainer, 10-31, of the day rows mended a case at a time: "i worry that we're
 // finding these cases one by one and not fixing them systematically", and of a store with one bulb in overcast: "compare to night and dusk". One gain a place,
 // no cap on it, and nothing by the pixel but the Light in order row (11-04: a pixel holding more light than its place is shown as that light's place would be). No GPU: the lines are mirrored here as numbers and the picture is never SEEN here.
-//   bun run tools/qa/lookexpo-check.ts   (exit 0 = all pass; LOOKEXPO_BREAK=1 caps a place's gain at six times, as the rows before had it, and must fail)
+//   bun run tools/qa/lookexpo-check.ts   (exit 0 = all pass; LOOKEXPO_BREAK=1 caps a place's gain at six times, as the rows before had it, and must fail;
+//                                         HOURS_BREAK=1 leaves the eyes' widest out of the every-hour model, as a night with no bound, and must fail)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { LOOK_DEFAULTS } from '../../src/render/gbuffer';
 import { lookConfig } from '../../src/render/frame';
-import { lookExpoFrame, LOOK_EXPO } from '../../src/render/lookexpo';
+import { lookExpoFrame, lookExpoBound, lookNightSkyE, LOOK_EXPO } from '../../src/render/lookexpo';
+import { lookGrade, lookGradeFrame, LOOK_GRADE } from '../../src/render/lookgrade';
+import { hourExposure, LUX_PER_UNIT, HOUR_SUN_LUX } from '../../src/render/photometry';
+import { HOURS } from '../../src/game/hours';
 import { PLACE, PLACE_W, PLACE_H, PLACE_BYTES, PLACE_WORDS, PLACE_NEAR } from '../../src/render/placeField';
 import { placeMask, placeWall, placeRoof, doorStep, DOOR_STEPS, DOOR_PER_STOP } from '../../src/scene/placePlan';
 import { makeBox, BoxFlag } from '../../src/scene/boxes';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
-const BREAK = process.env.LOOKEXPO_BREAK === '1', ROOT = resolve(import.meta.dir, '../..');
+const BREAK = process.env.LOOKEXPO_BREAK === '1', HOURS_BREAK = process.env.HOURS_BREAK === '1', ROOT = resolve(import.meta.dir, '../..');
 const COMP = readFileSync(resolve(ROOT, 'src/render/shaders/composite.wgsl'), 'utf8'), COMMON = readFileSync(resolve(ROOT, 'src/render/shaders/place_common.wgsl'), 'utf8');
 const KERNEL = COMMON + COMP, wnum = (name: string) => +(KERNEL.match(new RegExp(`\\nconst ${name} = ([0-9.]+);`))?.[1] ?? NaN);
-const BAND = wnum('EXPO_BAND'), MOST = wnum('EXPO_MOST'), TOP = wnum('EXPO_TOP'), KEY = wnum('EXPO_KEY');   // (the kernel's own numbers: the mirror below runs on what the picture runs on)
+const BAND = wnum('EXPO_BAND'), MOST = wnum('EXPO_MOST'), TOP = wnum('EXPO_TOP'), KEY = wnum('EXPO_KEY'), READ = wnum('EXPO_READ'), LAMP = wnum('EXPO_LAMP');   // (the kernel's own numbers: the mirror below runs on what the picture runs on)
 type V4 = readonly [number, number, number, number];
 const SHADE: V4 = [0.7, 0.1, 6, 1], C = lookConfig.gradeC, P = 1.559, GRADE: V4 = [1 / C, P, 1, 0.6], FLAT: V4 = [0, P, 1, 0.6];
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
@@ -23,7 +27,7 @@ const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
  *  `place` = the levels the field holds (log2): at the pixel, under Sam (null = its eye has no answer yet) and in the open air on this map (the field's word
  *  for the cells under the sky; left out = what open ground would hold); null = this page has no field: `here` is then the cache at the pixel and Sam is
  *  taken to stand in the open. */
-function gains(here: number, eye: V4, place: { u: number; ue: number | null; sky?: number; mid?: number } | null, shade = SHADE, grade = GRADE): [number, number, number] {
+function gains(here: number, eye: V4, place: { u: number; ue: number | null; sky?: number; mid?: number } | null, shade = SHADE, grade = GRADE, widest: readonly [number, number] | null = null): [number, number, number] {
   let rs = 1, openL = shade[1], keyMost = KEY;
   const eyeDark = (ue: number) => Math.pow(clamp(openL / Math.max(ue, 1e-9) / BAND, 1, MOST), clamp(-eye[3] - 1, 0, 1));   // (lookEyeDark)
   if (place) { here = 2 ** place.u; if (place.sky !== undefined) { openL = 2 ** place.sky; if (place.mid !== undefined) keyMost = Math.max(2 ** (place.mid - place.sky) * BAND, 1); }
@@ -35,23 +39,27 @@ function gains(here: number, eye: V4, place: { u: number; ue: number | null; sky
     else { const q = rs / rp, over = outG > 1.001 ? 1 + (outG - 1) * (1 - Math.exp(-(q - 1) / (outG - 1))) : 1; base = key * Math.pow(rp * over, a); }
     if (BREAK) base = Math.min(base, 6);
     if (grade[0] > 0) base *= Math.pow(Math.max(rp / base, 1e-6), 1 - grade[0]);
-    if (eye[0] > 1) base = Math.min(base, eye[0]);
+    if (widest && widest[0] > 0 && !HOURS_BREAK) {   // (THE EYES' WIDEST, the One exposure at every hour row: frame.placeCfg's z and w)
+      const over = Math.max(eye[0], 1); let most = over;
+      if (place) most *= clamp(Math.pow(widest[0] / (over * Math.max(h, READ)), shade[0]), 1, Math.max(widest[1], 1));
+      base = Math.min(base, most); }
+    else if (eye[0] > 1) base = Math.min(base, eye[0]);
     return base; };
   const g = expoFor(here, rs);
   return [g, Math.max(expoFor(here, eyeDark(here)), g), Math.min(expoFor(openL, rs), g)];
 }
 /** place_common.wgsl lookRoll: the shoulder's factor for light `l` that a gain `g` has multiplied */
-function roll(l: number, g: number, shade = SHADE, grade = GRADE): number {
-  const Pr = grade[1] > 0 ? grade[1] : shade[3];
+function roll(l: number, g: number, shade = SHADE, grade = GRADE, everyHour = false): number {
+  let Pr = grade[1] > 0 ? grade[1] : shade[3]; if (everyHour) Pr = Math.max(Pr, LAMP);   // (the One exposure at every hour row: never about less than the night's white)
   if (!(Pr > 0 && g > 1 && l > Pr)) return 1;
   const room = (TOP - 1) * Pr, w = clamp((g - 1) * 2, 0, 1); return 1 - w + w * (Pr + room * (1 - Math.exp(-(l - Pr) / room))) / l;
 }
 /** place_common.wgsl lookShowBy as a factor: light `l0` (before any gain) of a place is shown × this. THE ONE RULE: exposed as for eyes in the place,
  *  rolled off there, taken down to the place's gain now, and never under what the open air shows the same light as. No light named = the place's gain. */
-function gain(here: number, eye: V4, place: { u: number; ue: number | null; sky?: number; mid?: number } | null, shade = SHADE, grade = GRADE, l0 = 0): number {
-  const [g, gf, go] = gains(here, eye, place, shade, grade);
+function gain(here: number, eye: V4, place: { u: number; ue: number | null; sky?: number; mid?: number } | null, shade = SHADE, grade = GRADE, l0 = 0, widest: readonly [number, number] | null = null): number {
+  const [g, gf, go] = gains(here, eye, place, shade, grade, widest);
   if (!(l0 > 0)) return g;
-  return Math.max(l0 * gf * roll(l0 * gf, gf, shade, grade) * (g / gf), l0 * go) / l0;
+  return Math.max(l0 * gf * roll(l0 * gf, gf, shade, grade, !!widest && widest[0] > 0) * (g / gf), l0 * go) / l0;
 }
 /** post.wgsl agx's turn, as light: C times the stops from sunlit ground */
 const shown = (l: number, c = C) => P * Math.pow(l / P, c);
@@ -107,7 +115,7 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
     'with Sam in a dark room its floor is brought to the level the middle of the open air holds (the field\'s second word), the open air itself is still × 1 at both of its words, and a middle under the low word (a bad read) is no key at all');
   // never brighter than the night: the most any place is brought up is the night's exposure over the hour's
   const NIGHT = lookExpoFrame(SHADE, 0.7, 1, lookConfig.glare, 1 / 1152)!, pit = lvl(1e7);
-  check(BREAK || (Math.abs(NIGHT[0] - 1152) < 1e-9 && Math.abs(gain(0, NIGHT, { u: pit, ue: pit, sky, mid }, SHADE, FLAT) - 1152) < 1e-9 && gain(0, NIGHT, { u: pit, ue: pit, sky, mid }) <= 1152 && Math.abs(gain(0, NIGHT, room, SHADE, FLAT) - gain(0, OUT, room, SHADE, FLAT)) < 1e-9 && lookExpoFrame(SHADE, 0.7, 1, lookConfig.glare, 1)![0] === 1 && /if \(frame\.eyeCfg\.x > 1\.0\) \{ base = min\(base, frame\.eyeCfg\.x\); \}/.test(KERNEL)),
+  check(BREAK || (Math.abs(NIGHT[0] - 1152) < 1e-9 && Math.abs(gain(0, NIGHT, { u: pit, ue: pit, sky, mid }, SHADE, FLAT) - 1152) < 1e-9 && gain(0, NIGHT, { u: pit, ue: pit, sky, mid }) <= 1152 && Math.abs(gain(0, NIGHT, room, SHADE, FLAT) - gain(0, OUT, room, SHADE, FLAT)) < 1e-9 && lookExpoFrame(SHADE, 0.7, 1, lookConfig.glare, 1)![0] === 1 && /\} else if \(frame\.eyeCfg\.x > 1\.0\) \{ base = min\(base, frame\.eyeCfg\.x\); \}/.test(KERNEL)),
     'a place is never brought up by more than the night\'s exposure over the hour\'s (× 1,152 on the grey day): a room with no light of its own is shown as the night shows it, a room under that bound is as it was, and a night says no bound');
   const u = lvl(1e6), far = gain(0, OUT, { u, ue: u }, SHADE, FLAT);
   check(BREAK || Math.abs(far - MOST * KEY) < 1e-6, `a place with no light at all in its probes is followed ${Math.log2(MOST)} stops down and no further (× ${MOST})`); }
@@ -202,6 +210,61 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
     `the place field is ${PLACE_W} × ${PLACE_H} cells in the solver, the picture and the page's code, and the picture's buffer is the size the page makes (${PLACE_BYTES} bytes)`);
   const eng = readFileSync(resolve(ROOT, 'src/engine.ts'), 'utf8'), panel = readFileSync(resolve(ROOT, 'src/ui/lookpanel.ts'), 'utf8');
   check(/lookConfig\.on && lookConfig\.expo > 0 \? lookExpoFrame\(/.test(eng) && /\['expo', 'One exposure', /.test(panel) && LOOK_DEFAULTS.expo === 1 && lookConfig.expo === 1, 'the engine runs the model when its row is up, the panel has the row, and the look page starts with it on (?look=expo:0 = the rows as they were)'); }
+{ // ONE EXPOSURE AT EVERY HOUR (the look panel's `hours` and `dark` rows; render/lookexpo.ts lookExpoBound; place_common.wgsl lookExpoFor's last lines)
+  const eng = readFileSync(resolve(ROOT, 'src/engine.ts'), 'utf8'), panel = readFileSync(resolve(ROOT, 'src/ui/lookpanel.ts'), 'utf8'), page = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8');
+  // a night as the field holds it (its own measure, the night's units; read off the block's night): the yard 0.07 under a sky that puts 0.0818 on open ground,
+  // a lit room 0.2, the far end of the weakest lit hall 0.031, a dim room 0.02, the unlit room the team starts in 0.0075
+  const Y = 0.07, L = 0.2, H = 0.031, D = 0.02, U = 0.0075, SKY_E = 0.0818, N_SHADE: V4 = [0.7, 0.0149, 6, SKY_E], X = N_SHADE[0], NIGHT = lookExpoFrame(N_SHADE, 0.7, 1, lookConfig.glare, 1, true)!;
+  const W1 = lookExpoBound(1, SKY_E), W0 = lookExpoBound(0, SKY_E), DIM = W1[0], NOGRADE: V4 = [0, 0, 1, 0.6], EYES = [L, Y, H, D, U, 1e-4];
+  const at = (h: number, eye: number, w: readonly [number, number] | null = W1, f = NIGHT, open = Y, l0 = 0) => gain(0, f, { u: Math.log2(h), ue: Math.log2(eye), sky: Math.log2(open), mid: Math.log2(open) + 0.3 }, N_SHADE, NOGRADE, l0, w);
+  check(LOOK_DEFAULTS.hours === 0 && lookConfig.hours === 0 && LOOK_DEFAULTS.dark === 1 && /\['hours', 'One exposure at every hour', /.test(panel) && /\['dark', 'Eyes open in the dark', /.test(panel) && /'hours', 'dark'/.test(panel.match(/const LIVE[^\n]*/)![0])
+    && lookExpoFrame(N_SHADE, 0.7, 1, lookConfig.glare, 1) !== null && lookExpoFrame([0, 0.0149, 6, SKY_E], 0.7, 1, lookConfig.glare, 1, true) === null && lookExpoFrame([0.7, 0, 6, 0], 0.7, 1, lookConfig.glare, 1, true) === null
+    && /let everyHour = lookConfig\.on && lookConfig\.expo > 0 && lookConfig\.hours > 0;/.test(eng) && /Math\.min\(1, amount\) \* \(everyHour \? 1 : smoothstep\(0\.08, 0\.35, up\)\)/.test(eng) && /if \(everyHour && placeOn\) \{ const own = hourExp < 1 \? lookConfig\.nightSky\?\.\(\) \?\? null : null;/.test(eng)
+    && /eyesWidest = lookExpoBound\(lookConfig\.dark, lookNightSkyE\(hourExp, shadeCfg\?\.\[3\], own && lookExposure\(null, own\.zenith, own\.horizon\) >= 1 \? /.test(eng) && /, this\.settings\.nvAmount\); \}/.test(eng)
+    && /lookExpoFrame\(shadeCfg, lookConfig\.shade, lookConfig\.eyes, lookConfig\.glare, hourExp, everyHour\)/.test(eng) && /lookConfig\.expo = 0; lookAmounts\.expo = 0; if \(everyHour\) \{ everyHour = false; shadeCfg = shadeOf\(\); \}/.test(eng) && /lookConfig\.nightSky = \(\) => level\.sky;/.test(page),
+    'the every-hour row is on the panel and 0 as the page opens; with it at 0 the frame code is handed no word of it (the shade row fades into a night and the model stands down there, as it was); with it up the shade row has no fade, the engine hands the frame the eyes\' widest by the night\'s sky and the goggles, and a device that cannot build the field gets the night as it was from that same frame');
+  check(NIGHT[0] === 1 && NIGHT[1] === 1 && NIGHT[3] === -2 && DIM === LOOK_EXPO.dim && W1[1] === 2 ** LOOK_EXPO.dark && W0[1] === 1 && DIM < Y / 2 && DIM <= H && LOOK_EXPO.dimSky * SKY_E >= LOOK_EXPO.dim
+    && lookExpoBound(1, null)[0] === LOOK_EXPO.dim && Math.abs(lookExpoBound(1, 0.0135)[0] - LOOK_EXPO.dimSky * 0.0135) < 1e-12 && lookExpoBound(1, 0)[0] > 0 && lookExpoBound(1, 0)[0] < 1e-6 && READ === LOOK_EXPO.read
+    && lookNightSkyE(1, 0.05, 0.9) === 0.05 && lookNightSkyE(1, undefined, 0.9) === null && lookNightSkyE(0.5, 2.1, 0.08) === 0.08 && lookNightSkyE(0.5, 2.1, null) === null,
+    `on a night the frame says the whole model (the day's share is 1) and a bound of 1; the dim level (${DIM} in the field's measure and the night's units) is under half the block's yard and under its weakest lit hall, and never over ${LOOK_EXPO.dimSky} of what the night's sky puts on open ground: the sky the frame draws on a night, the level's own while an hour is up, and none where the level is its own day`);
+  check(EYES.every(eye => at(Y, eye) === 1 && at(L, eye) === 1 && at(H, eye) === 1) && Math.abs(at(DIM, U) - 1) < 1e-9 && EYES.every(eye => [Y, L, D, U, 1e-5].every(h => at(h, eye, W0) === 1 && at(h, eye, lookExpoBound(1, SKY_E, 0.5)) === 1 && at(h, eye, lookExpoBound(2, SKY_E, 1)) === 1))
+    && lookExpoBound(1, SKY_E, 0.25)[1] === 2 && lookExpoBound(1, SKY_E, 0.5)[1] === 1,
+    'a night\'s yard and its lit rooms, down to the far end of its weakest lit hall, are sent on exactly as the night drew them wherever the eyes are; with the Eyes open in the dark row at 0 so is every place of a night, and so it is from the goggles\' halfway down, where the picture becomes the tube\'s');
+  { const dark = at(U, U), corner = at(U / 2, U), most = lookExpoBound(2, SKY_E);
+    check(Math.abs(dark - Math.pow(DIM / U, X)) < 1e-9 && EYES.every(eye => Math.abs(at(U, eye) - dark) < 1e-9 && Math.abs(at(D, eye) - Math.pow(DIM / D, X)) < 1e-9) && corner > dark && corner * U / 2 < dark * U && Math.abs(at(1e-5, U) - 4) < 1e-9 && Math.abs(at(1e-5, U, most) - 16) < 1e-9 && dark > 2.5 && dark * U < DIM,
+      `the unlit room the block's team starts in (${(Y / U).toFixed(0)} times under the yard) comes up by the shade row's share of its dark under the dim level (× ${dark.toFixed(2)}), the same from inside it, from the yard and from a lit room; a darker corner of it by more (× ${corner.toFixed(2)}) and still shown darker; a pit by two stops and no more with the row at 1, four at 2`);
+    let ok = true, strict = true; for (const eye of EYES) { let last = Infinity; for (let h = 2; h > 2e-6; h *= 0.97) { const g = at(h, eye), shown = h * g;
+        if (g < 1 || g > 4 + 1e-9 || (g > 1 && shown > DIM + 1e-9) || shown > last + 1e-12) ok = false;
+        if (h < DIM && !(shown < last * 0.9995)) strict = false;   // (every step darker is shown darker: by the share's slope until the two stops are spent, by the place's own after)
+        last = shown; } }
+    check(ok && strict, 'from a lit room down to the read floor, with the eyes in a lit room, in the yard, in the weak hall, in a dim room, in the unlit one and in a pit: no place is shown under the night\'s exposure or over four times it, none is brought past the dim level, and two dark places a step apart are never drawn at one level, wherever the eyes are'); }
+  { // one room at dusk and at night: the hour's exposure times the place's gain against the night's gain; and its light through the shoulder
+    const hx = hourExposure('dusk', HOURS.dusk.sun.intensity), D_SHADE: V4 = [0.7, 0.115, 6, 0.6], DUSK = lookExpoFrame(D_SHADE, 0.7, 1, lookConfig.glare, hx, true)!, open = Math.log2(0.6), mid = 0.6 * 2 ** 0.3, DGRADE: V4 = [1 / 1.2, 0.3, 1, 0.6];
+    const room = (h: number, f = DUSK, shade = D_SHADE, w: readonly [number, number] | null = W1, x = hx, l0 = 0, grade = NOGRADE) => gain(0, f, { u: Math.log2(h * x), ue: Math.log2(h * x), sky: open, mid: open + 0.3 }, shade, grade, l0 * x, w) * x;   // (a room holding `h` of the night's units, the eyes in it: what it, or light `l0` of the night's units in it, is shown by over the night's exposure)
+    const WAS: V4 = [0.7 * 0.578, 0.115, 6, 0.6], wasRoom = room(L, lookExpoFrame(WAS, 0.7, 1, lookConfig.glare, hx)!, WAS, null);
+    // the room lit by its own lamps, bound-held at dusk (its gain is the night's): a face the night shows at 0.6, the floor under the bulb at the night's white, a wall by the bulb at 3
+    const through = [0.3, 0.6, LAMP, 3].map(l => [room(0.6, DUSK, D_SHADE, W1, hx, l, DGRADE), at(0.6, 0.6, W1, NIGHT, Y, l)]);
+    check(hx < 0.02 && Math.abs(DUSK[0] - 1 / hx) < 1e-9 && [L, 0.6, 1.5, 4].every(h => Math.abs(room(h) - Math.min(1, mid / h)) < 1e-9) && Math.abs(room(L) - at(L, L)) < 1e-9 && Math.abs(room(U) - at(U, U)) < 1e-9 && Math.abs(room(D) - at(D, D)) < 1e-9 && wasRoom < 0.5
+      && Math.abs(room(4) - mid / 4) < 1e-9 && through.every(([d, n], i) => n === 1 && (i < 3 ? Math.abs(d - 1) < 1e-9 : d < 1 && d > 0.85)) && DGRADE[1] < LAMP / 2 && LAMP === LOOK_EXPO.lamp && Math.abs(LAMP - LOOK_GRADE.albedo * (15 / LUX_PER_UNIT) / Math.PI) < 0.005,
+      `at dusk a room lit by its own lamps is shown as the night shows it, or where the open air's middle is if that is darker, and never brighter than the night's picture (with the row at 0 the day's fade left the same room at ${wasRoom.toFixed(2)} of the night's); its light up to the night's white (${LAMP}: a pale floor under a 15 lux bulb) is shown at dusk to the number as at night, though dusk's own sunlit ground is a quarter of that, and a wall by the bulb at 3 a little under (${through[3][0].toFixed(2)} of the night's); and an unlit room is brought up as far at dusk as at night (× ${room(U).toFixed(2)} the night's exposure at both)`);
+    // midday and the grey day, by the hours' own numbers: the dim level is at the field's read floor at midday, and the bound is the night's exposure as it ever was
+    const mx = hourExposure('midday', HOURS.midday.sun.intensity), gx = hourExposure('overcast', HOURS.overcast.sun.intensity), DAY: V4 = [0.7, 0.3, 6, 1.9], MID = lookExpoFrame(DAY, 0.7, 1, lookConfig.glare, mx, true)!, MID0 = lookExpoFrame(DAY, 0.7, 1, lookConfig.glare, mx)!, GREY = lookExpoFrame(DAY, 0.7, 1, lookConfig.glare, gx, true)!;
+    let same = true, held = true; for (let h = 5000; h > 1e-4; h *= 0.9) { for (const l of [0, 0.5, 3]) if (room(h, MID, DAY, W1, mx, l, GRADE) !== room(h, MID0, DAY, null, mx, l, GRADE)) same = false; const g = room(h, GREY, DAY, W1, gx); if (g > 4 + 1e-9 || (h >= DIM && g > 1 + 1e-9)) held = false; }
+    check(same && held && DIM * mx < READ && MID.every((v, i) => v === MID0[i]) && GRADE[1] > LAMP && mx === Math.min(1, HOURS.midday.sun.intensity * LUX_PER_UNIT / HOUR_SUN_LUX.midday),
+      `at midday the row moves no place and no light in one (the dim level in a midday's units, ${(DIM * mx).toExponential(1)}, is under the field's read floor, so a black room is not shown by its noise any further than it was; and sunlit ground is over the night's white), and on the grey day no place holding the dim level or more`); }
+  check(gain(0.001, NIGHT, null, N_SHADE, NOGRADE, 0, W1) === 1 && gain(1e-6, NIGHT, null, N_SHADE, NOGRADE, 0, W1) === 1,
+    'until the field is live no place of a night is shown past the night\'s exposure (the cache\'s read is not in the field\'s measure, and the bound takes no number from it)');
+  { // a level under a blacker sky (the solo tutorial's: its sky puts 0.0135 on open ground, its yard holds about 0.012)
+    const ys = 0.012, ws = lookExpoBound(1, 0.0135), a2 = (h: number, eye: number) => at(h, eye, ws, NIGHT, ys);
+    check(ws[0] < ys / 2 && [ys, 0.02, 0.002].every(eye => a2(ys, eye) === 1 && a2(0.02, eye) === 1 && a2(L, eye) === 1) && Math.abs(a2(0.002, 0.002) - Math.pow(ws[0] / 0.002, X)) < 1e-9 && a2(0.002, 0.002) > 1.5,
+      `under a sky six times blacker the dim level goes down with the yard (${ws[0].toFixed(4)}): that yard and a lit hall holding 0.02 are still sent on as the night drew them, from the yard, from the hall and from an unlit room, and the unlit room comes up by the same rule (× ${a2(0.002, 0.002).toFixed(2)})`); }
+  { // light in the unlit room, from a thousandth of the night's white to twenty times it: what the eye is sent
+    const g0 = at(U, U); let rises = true, plain = true, last = 0; for (let l = LAMP / 1000; l < LAMP * 20; l *= 1.05) { const g = at(U, U, W1, NIGHT, Y, l), shown = l * g; if (!(shown >= last) || shown < l - 1e-9) rises = false; if (l * g0 < LAMP && Math.abs(g - g0) > 1e-9) plain = false; last = shown; }
+    check(rises && plain && COMMON.includes('  var P = select(frame.shadeCfg.w, frame.gradeCfg.y, frame.gradeCfg.y > 0.0);\n  if (frame.placeCfg.z > 0.0) { P = max(P, EXPO_LAMP); }'),
+      'in a room brought up, light that stays under the night\'s white is brought up with it to the number, and from there up it never falls and never goes under what the night\'s own exposure shows; the shoulder is about the night\'s white wherever the hour\'s own is dimmer, and only with the row up'); }
+  const bound = "  if (frame.placeCfg.z > 0.0) {\n    let over = max(frame.eyeCfg.x, 1.0); var most = over;\n    if (oa.z > 0.5) { most *= clamp(pow(frame.placeCfg.z / (over * max(here, EXPO_READ)), frame.shadeCfg.x), 1.0, max(frame.placeCfg.w, 1.0)); }";
+  check(COMMON.includes(bound) && COMMON.includes('    base = min(base, most);\n  } else if (frame.eyeCfg.x > 1.0) { base = min(base, frame.eyeCfg.x); }') && /eyesWidest\?\.\[0\] \?\? 0, eyesWidest\?\.\[1\] \?\? 0\]/.test(eng),
+    'the kernel carries the eyes\' widest as the mirror has it, after every other line of a place\'s gain, and with the row at 0 the bound is the line it was'); }
 { // the map: what walls a place off, what a doorway is, and what a corridor is
   const R = 2.5, wallX = (x0: number, x1: number, z: number) => makeBox({ c: [(x0 + x1) / 2, 1.3, z], h: [(x1 - x0) / 2, 1.3, 0.1] });
   const crate = makeBox({ c: [5, 0.4, 5], h: [1, 0.4, 1] }), lintel = makeBox({ c: [5, 2.3, 8], h: [0.5, 0.2, 0.1] }), post = makeBox({ c: [8, 1.3, 5], h: [0.1, 1.3, 0.1] });

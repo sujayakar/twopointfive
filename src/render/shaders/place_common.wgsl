@@ -5,6 +5,8 @@
 const EXPO_BAND = 1.25;
 const EXPO_KEY = 1.8;        // THE KEY where the field has no middle word to say it: with Sam in a dark place the whole picture is exposed up to this many times over the open air's low level, in full from a place 3 times under the open
 const EXPO_MOST = 16384.0;   // the darkest place the exposure follows: 14 stops under the open air (a room with nothing in its probes holds a millionth, and what shows there at that gain is noise)
+const EXPO_LAMP = 1.23;        // THE NIGHT'S WHITE: what a pale floor sends back under a room's own bulb as a night shows it (0.85 of 15 lux over π, the night's units; render/lookexpo.ts LOOK_EXPO.lamp)
+const EXPO_READ = 0.000008;   // a place's level under this is the field's read floor and no reading (three stops over place_field.wgsl's 1e-6): the eyes' widest counts no place darker (render/lookexpo.ts LOOK_EXPO.read)
 const EXPO_TOP = 4.0;        // what a place shows to eyes that are in it is rolled off above sunlit ground's brightness, toward this many times it (a sun patch and the yard in a wet floor, in a room shown hundreds of times brighter)
 const PLACE_W: i32 = 100;
 const PLACE_H: i32 = 70;
@@ -20,7 +22,8 @@ fn placeWord(k: i32) -> f32 { let i = PLACE_W * PLACE_H + k; return placeBuf.v[i
  *  place's own: a sun patch through the door of a room shown hundreds of times brighter, the floor right under its bulb, the yard mirrored in its wet floor,
  *  which the tone map would take to white and the bloom would smear. (No Contrast row: about the sky's light on open ground.) */
 fn lookRoll(l: f32, g: f32) -> f32 {
-  let P = select(frame.shadeCfg.w, frame.gradeCfg.y, frame.gradeCfg.y > 0.0);
+  var P = select(frame.shadeCfg.w, frame.gradeCfg.y, frame.gradeCfg.y > 0.0);
+  if (frame.placeCfg.z > 0.0) { P = max(P, EXPO_LAMP); }   // (the One exposure at every hour row: a room brought to the night's own picture has the night's white, where the hour's sunlit ground is dimmer than that: a night, dawn, dusk, a grey day)
   if (!(frame.eyeCfg.w < 0.0 && P > 0.0 && g > 1.0 && l > P)) { return 1.0; }   // (the One exposure row only: the rows before it are as they were)
   let room = (EXPO_TOP - 1.0) * P;
   return mix(1.0, (P + room * (1.0 - exp(-(l - P) / room))) / l, clamp((g - 1.0) * 2.0, 0.0, 1.0));
@@ -51,7 +54,15 @@ fn lookExpoFor(here: f32, rs: f32, oa: vec3f) -> f32 {
   }
   if (frame.gradeCfg.x > 0.0) { base *= pow(max(rp / base, 1e-6), 1.0 - frame.gradeCfg.x); }
   if (frame.lampCfg.w > 0.0 && base > 1.0) { base = pow(base, frame.lampCfg.w); }   // (THE ROOM BRIGHTNESS ROW, the look panel's `roomb`: the maintainer, 11-01, "exposure does seem a bit too bright when indoors but we can tweak it". A place's gain to this power: 1 = as it was, under 1 = every room darker, a deep one by more; 0 in the frame = the row's light is not this frame's)
-  if (frame.eyeCfg.x > 1.0) { base = min(base, frame.eyeCfg.x); }   // (never brighter than the night would show the same lamps: render/lookexpo.ts)
+  // THE EYES' WIDEST (render/lookexpo.ts). Never brighter than the night would show the same lamps (eyeCfg.x, the night's exposure over the hour's). With the
+  // One exposure at every hour row up (placeCfg.z over 0: the dim level in the night's units) that is said at night too, where it is 1, and a place whose
+  // floor holds less than the dim level is brought up by the shade row's share of its dark under that level, placeCfg.w at the most: the rule the model has
+  // for a place darker than the open air, about the level a night's exposure leaves off at. Wherever the eyes are, so no two dark places are drawn at one level.
+  if (frame.placeCfg.z > 0.0) {
+    let over = max(frame.eyeCfg.x, 1.0); var most = over;
+    if (oa.z > 0.5) { most *= clamp(pow(frame.placeCfg.z / (over * max(here, EXPO_READ)), frame.shadeCfg.x), 1.0, max(frame.placeCfg.w, 1.0)); }   // (`here` is in the field's measure once the field is live, and the buffers hold exposed light: the dim level in this hour's units is z ∕ over. Before the field is live no place is past the night's exposure)
+    base = min(base, most);
+  } else if (frame.eyeCfg.x > 1.0) { base = min(base, frame.eyeCfg.x); }
   return base;
 }
 /** how many times darker than the open air the place the eyes are in counts as (1 until the field is live and has an eye for him) */
