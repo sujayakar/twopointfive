@@ -17,21 +17,32 @@
 //             of one turn (the first of each height, the second of each, …) go to the picture within a frame of each other, and the models answer
 //             what they answer on a walk with no picture, to the bit (the plan's clock stands while the picture answers)
 //   reports   every report under tools/qa/fixtures/modelerr/ (and --report's) against the budget in src/host/modelerr.ts BUDGET: as it was recorded, and,
-//             where this stand is the one the report was made on — its `level` word this stand's, its scene the plain page's with a seed named —
-//             with the models AS THEY ARE NOW against the recorded picture: the report's own questions asked again (its stations, points, lines
-//             and ages — whatever a plan deals today), and a report that is asked again must be asked every question it holds, in its order.
-//             A REPORT THAT IS NOT ASKED AGAIN HOLDS NOTHING HERE: its line says so in capitals and the last line counts it (a page's report is
-//             the page's stand's: TPS_PROFILE=shipped; once the office is edited its picture is of another floor, and a GPU must record a new one)
-// MODELERR_BREAK=1 is the red path: the second walk's smoke is three times as thick (SENSE.smoke.sigma), so `budget` must FAIL.
-// MODELERR_BREAK=move is the other: the walk does not wait for the picture before it changes it, as it did not, so `waits` must FAIL.
-// MODELERR_BREAK=turns is the third: the walk puts its lines to the picture a height at a time, so `waits` must FAIL (its lowest lines frames behind).
+//             where its questions look out on the world they did (its `look` word worked out again on this stand: the lamps, and the walls and
+//             door leaves its own points, lines and stations meet) and its scene is the plain page's with a seed named, with the models AS THEY
+//             ARE NOW against the recorded picture: the report's own questions asked again (its stations, points, lines and ages — whatever a
+//             plan deals today), every one of them, in its order. A REPORT THAT IS NOT ASKED AGAIN HOLDS NOTHING HERE: its line says so in
+//             capitals and the last line counts it.
+//             ON THE PAGE'S STAND (TPS_PROFILE=shipped) A REPORT KEPT IN THAT FOLDER MUST BE ASKED AGAIN, or it is red: a kept picture holds the
+//             models there or nowhere, and a level stood otherwise must not empty the check without a word. (A wall, a door or a lamp its
+//             questions meet has moved: a GPU records a new report, `?modelerr&seed=1&solo`, or whoever moved it takes the report out of the
+//             folder. A report of a scene this tool does not stand up — a mission's own page, no seed — is not asked by design and is no fault.)
+// MODELERR_BREAK is the red paths (a word that is none of these is refused, exit 2):
+//   =1      the second walk's smoke is three times as thick (SENSE.smoke.sigma), so `budget` must FAIL
+//   =move   the walk does not wait for the picture before it changes it, as it did not, so `waits` must FAIL
+//   =turns  the walk puts its lines to the picture a height at a time, so `waits` must FAIL (its lowest lines frames behind)
+//   =look   every kept report is read as looking out on another world, so on the page's stand each kept report must FAIL (on the frozen
+//           stand nothing is owed and nothing fails: the tool says so)
 // EXIT 0 = every line passes · 1 = one fails. Never seen on a GPU: a picture's numbers are in a report only if a page with a GPU put them there.
 import { resolve } from 'path';
 import { readdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
-const ME: any = await import(`${ROOT}/src/host/modelerr.ts`), S: any = await import(`${ROOT}/src/game/sense.ts`), SIM: any = await import(`${ROOT}/src/sim/sim.ts`);
-const BREAK = process.env.MODELERR_BREAK === '1', BREAK_MOVE = process.env.MODELERR_BREAK === 'move', BREAK_TURNS = process.env.MODELERR_BREAK === 'turns';
+const ME: any = await import(`${ROOT}/src/host/modelerr.ts`), S: any = await import(`${ROOT}/src/game/sense.ts`), SIM: any = await import(`${ROOT}/src/sim/sim.ts`), PROFILE: any = await import(`${ROOT}/src/host/profile.ts`);
+/** the red paths: the word, and what must fail under it */
+const BREAKS: Record<string, string> = { '1': '`budget` must be one of them', move: '`waits` must be one of them', turns: '`waits` must be one of them', look: 'on the page\'s stand every kept report must be one of them' };
+const BROKEN = process.env.MODELERR_BREAK ?? '', SHIPPED = PROFILE.harnessProfile() === 'shipped';
+if (BROKEN && !BREAKS[BROKEN]) { console.log(`modelerr: no red path '${BROKEN}' (MODELERR_BREAK=${Object.keys(BREAKS).join(' | ')})`); process.exit(2); }
+const BREAK = BROKEN === '1', BREAK_MOVE = BROKEN === 'move', BREAK_TURNS = BROKEN === 'turns', BREAK_LOOK = BROKEN === 'look';
 const arg = (n: string) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : undefined; };
 const planName = arg('--plan') ?? 'full', PLAN = ME.PLANS[planName];
 if (!PLAN) { console.log(`modelerr: no plan '${planName}' (${Object.keys(ME.PLANS).join(', ')})`); process.exit(2); }
@@ -45,6 +56,7 @@ async function walk(plan: any, name: string, scene = 'seed=1', seed = 1, again: 
   hush(true);
   try {
     const W = await standUp({ uploadEvery: 1000, seed }); for (let i = 0; i < 3; i++) W.step(1 / 60);
+    if (again && ME.lookOf(W.game, again) !== again.look) return null;   // (its questions look out on another world here: a wall, a door leaf or a lamp they meet stands otherwise)
     const run = new ME.ModelErr(W.game, plan, name, scene, false, again);
     for (let i = 0; i < 200000 && !run.done; i++) { W.step(1 / 60); run.frame(); }
     if (!run.done) throw new Error('the plan did not end');
@@ -67,7 +79,7 @@ const A = await walk(PLAN, planName), A2 = await walk(PLAN, planName);
   // (…and no line twice: of one station's lines at one age, no two are one pair of ends, either way round)
   const ends = (s: any) => { const a = s.a.join(','), b = s.b.join(','); return `${s.s}:${s.t}:${a < b ? a + '|' + b : b + '|' + a}`; }, twice = smoke.length - new Set(smoke.map(ends)).size;
   verdict(A.stations.length === PLAN.stations && light.length >= ME.LEAST && heights && twice === 0 && answered && same, 'walks: the plan stands at every station and asks its lines at every height, every model answers, and a second walk is the first to the bit',
-    `${A.stations.length} of ${PLAN.stations} stations · ${light.length} light points, ${smoke.length} sight lines: ${at.map((e: any) => `${e.n} at ${e.h} m (${e.smoked} with smoke on them by the grid)`).join(', ')} · ${twice} asked twice · ${answered ? 'every model answered' : 'A MODEL DID NOT ANSWER'} · a second walk ${same ? 'the same' : 'DIFFERS'} · world ${A.world} · the stand ${process.env.TPS_PROFILE ?? 'frozen'}`);
+    `${A.stations.length} of ${PLAN.stations} stations · ${light.length} light points, ${smoke.length} sight lines: ${at.map((e: any) => `${e.n} at ${e.h} m (${e.smoked} with smoke on them by the grid)`).join(', ')} · ${twice} asked twice · ${answered ? 'every model answered' : 'A MODEL DID NOT ANSWER'} · a second walk ${same ? 'the same' : 'DIFFERS'} · world ${A.world} · the stand ${PROFILE.harnessProfile()}`);
 }
 // ---- spread
 for (const l of ME.reportText(A)) log(`    ${l}`);
@@ -152,15 +164,19 @@ const PLAIN = new Set(['seed', 'solo', 'paused', 'mute', 'quality']);
     const name = f.startsWith(ROOT) ? f.slice(ROOT.length + 1) : f, was = ME.judge(R);
     log(`- report ${name}: ${R.scene || 'the plain page'} · plan ${R.plan} · world ${R.world} · ${R.picture ? `${R.samples.filter((s: any) => s.pic !== null).length} of ${R.samples.length} answered by the picture` : 'NO PICTURE IN IT'}${R.where ? ` · ${Object.entries(R.where).map(([k, v]) => `${k} ${v}`).join(', ')}` : ''}`);
     for (const l of was.lines) log(`    as recorded: ${l}`);
-    let now: any = null; if (R.picture) pictures++;
-    // WHY IT IS NOT ASKED AGAIN HERE, if it is not (null: it is). The level's word is the stand's, whatever the seed (the first walk's report has it)
+    let now: any = null; const isKept = f.startsWith(`${dir}/`); if (R.picture) pictures++;
+    if (BREAK_LOOK && R.look) R.look = `${R.look}?`;
+    // WHY IT IS NOT ASKED AGAIN HERE, if it is not (null: it is, if its questions look out here on the world they did — the walk says)
     const plan = ME.planAgain(R), seed = seedOf(R.scene), odd = [...new URLSearchParams(R.scene).keys()].filter(k => !PLAIN.has(k));
-    const why = !R.picture ? null : !plan ? 'it does not say its plan\'s row and its level (a page from before the reports did)'
-      : R.level !== A.level ? `the level here (${A.level}) is not the one it was made on (${R.level}): a page's report is the page's stand's (TPS_PROFILE=shipped), and an edited office is another floor`
-      : seed === undefined ? 'its scene names no seed: who carries a lamp where is dealt by the game\'s die, and this stand\'s would be another night'
+    const design = !R.picture ? null : seed === undefined ? 'its scene names no seed: who carries a lamp where is dealt by the game\'s die, and this stand\'s would be another night'
       : odd.length ? `its scene is not the plain page's (${odd.join(', ')}): this tool stands up no other` : null;
-    if (why) log(`    NOT ASKED AGAIN HERE — ${why}`);
-    else if (R.picture) { const N = await walk(plan, R.plan, R.scene, seed, R);
+    const N = !R.picture || design || !plan ? null : await walk(plan, R.plan, R.scene, seed, R);
+    const why = !R.picture ? null : design ?? (!plan ? 'it does not say its plan\'s row and its look (a page from before the reports did)'
+      : !N ? 'its questions look out on another world here: a wall, a door leaf or a lamp they meet stands otherwise (on the frozen stand two doors of the office do: a page\'s report is the page\'s stand\'s, TPS_PROFILE=shipped)' : null);
+    if (why) { log(`    NOT ASKED AGAIN HERE — ${why}`);
+      // (held: on the page's stand a report kept here is asked again, unless it is one this tool never asks)
+      if (isKept && SHIPPED && !design) verdict(false, `report ${name}: a kept report is asked again on the page's stand`, `it holds the models nowhere now: a GPU records a new report (?modelerr&seed=1&solo), or the report leaves the folder${BREAK_LOOK ? '\n    EVERY REPORT WAS READ AS LOOKING OUT ON ANOTHER WORLD' : ''}`); }
+    else if (N) {
       const same = N.samples.length === R.samples.length && N.samples.every((s: any, i: number) => s.k === R.samples[i].k && s.s === R.samples[i].s && JSON.stringify(s.p ?? [s.a, s.b, s.t]) === JSON.stringify(R.samples[i].p ?? [R.samples[i].a, R.samples[i].b, R.samples[i].t]));
       if (!same) { verdict(false, `report ${name}: asked again`, `the walk did not ask the report's questions in the report's order (${N.samples.length} of ${R.samples.length} samples)`); continue; }
       again++; N.picture = true; N.v = R.v; const moved: Record<string, number> = {};   // (the picture's answers are the report's: read as that report was made — src/host/modelerr.ts Report.v)
@@ -174,6 +190,7 @@ const PLAIN = new Set(['seed', 'solo', 'paused', 'mute', 'quality']);
     verdict(v.ok, `report ${name}: ${!R.picture ? 'no picture, nothing judged' : !v.judged ? 'no model has a budget row yet, nothing judged' : now ? 'the models as they are now, against the recorded picture' : 'AS RECORDED ONLY (its picture holds nothing of the models here)'}`, v.judged ? `${v.judged} models judged` : 'nothing judged');
   }
 }
+if (BREAK_LOOK && !SHIPPED) log('    MODELERR_BREAK=look fails nothing on this stand: a kept report is owed on the page\'s stand alone (TPS_PROFILE=shipped)');
 const stale = pictures - again, held = pictures ? ` · ${again} of ${pictures} report${pictures > 1 ? 's' : ''} with a picture asked again here${stale ? ` (${stale} HOLD${stale > 1 ? '' : 'S'} NOTHING HERE: see above)` : ''}` : '';
-log(bad ? `\n=== modelerr: ${bad} FAILED${BREAK ? ' (the red path: `budget` must be one of them)' : BREAK_MOVE || BREAK_TURNS ? ' (the red path: `waits` must be one of them)' : ''}${held} ===` : `\n=== modelerr: ALL PASS${held} ===`);
+log(bad ? `\n=== modelerr: ${bad} FAILED${BROKEN ? ` (the red path: ${BREAKS[BROKEN]})` : ''}${held} ===` : `\n=== modelerr: ALL PASS${held} ===`);
 process.exit(bad ? 1 : 0);
