@@ -1021,6 +1021,11 @@ pub extern "C" fn panes_type(bi: u32) -> u32 {
     panes::type_of_pane(&cx(), bi)
 }
 /// glassbreak.ts typeOf: by its wall or its place, whatever word it has been given
+/// glassbreak.ts typeOf of a box the level does not hold: indoors, by its place
+#[no_mangle]
+pub extern "C" fn panes_type_box(h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -> u32 {
+    panes::place_rule(false, h0, h1, h2, cy, gap)
+}
 #[no_mangle]
 pub extern "C" fn panes_type_place(bi: u32) -> u32 {
     panes::type_place(&cx(), bi)
@@ -1142,6 +1147,34 @@ pub extern "C" fn panes_fall(x: f64, y: f64, z: f64, vx: f64, vy: f64, vz: f64) 
 #[no_mangle]
 pub extern "C" fn panes_jet(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, speed: f64, amount: f64, who: f64) {
     panes::jet(&cx(), [x, y, z], [dx, dy, dz], speed, amount, who);
+}
+
+// ---- a window's bar
+/// winbars.ts breakBar: 1 this bar goes, its flags as it stood filed
+#[no_mangle]
+pub extern "C" fn bars_take(bi: u32, flags: u32) -> u32 {
+    panes::bar_take(&cx(), bi, flags) as u32
+}
+/// winbars.ts barsBlast: how many bars a charge takes, and in scratch a static and the point each
+#[no_mangle]
+pub extern "C" fn bars_blast(x: f64, y: f64, z: f64, reach: f64, statics: usize) -> usize {
+    panes::bars_blast(&cx(), [x, y, z], reach, statics, scratch())
+}
+#[no_mangle]
+pub extern "C" fn bars_gone(g: usize) -> u32 {
+    panes::bars_gone(g)
+}
+#[no_mangle]
+pub extern "C" fn bar_gone(g: usize, i: usize) -> u32 {
+    panes::bar_gone(g, i)
+}
+#[no_mangle]
+pub extern "C" fn bar_flags(g: usize, i: usize) -> u32 {
+    panes::bar_flags(g, i)
+}
+#[no_mangle]
+pub extern "C" fn bars_clear(g: usize) {
+    panes::bars_clear(g);
 }
 
 // ---- a round and a pane (pen.rs)

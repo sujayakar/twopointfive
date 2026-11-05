@@ -33,6 +33,8 @@ import { hash01 } from './debris';
 import { boxSeed } from './glass';   // (read inside breakBar only)
 import { FURN_BREAK, breakClassOf } from './furnblast';   // (read inside breakBar only: src/game is one import cycle)
 import { NOBODY_ID } from './consts';
+import { f64, sim as simX } from '../sim/sim';
+import { PANES } from './glassbreak';
 import type { Game } from './game';
 import type { BlastEvent } from './wallbreak';
 
@@ -57,10 +59,10 @@ const LOG: string[] = [];
 const WINBARS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WINBARS_BREAK === '1';
 const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
-/** which bars are gone: the static's index → its flags as it stood */
-interface BarState { gone: Map<number, number>; /** bars out of the way of the round being flown right now (barMeet → barsSettle): empty between rounds */ met: BarMet[] }
+/** WHICH BARS ARE GONE is the game's block (rust/sim/src/panes.rs, the `panes` part: a static and its flags as it stood). What stands here: the bars out of the way of the round being flown right now (barMeet → barsSettle), empty between rounds, for as long as the round's flight is this file's */
+interface BarState { met: BarMet[] }
 const STATE = new GameSideMap<Game, BarState>('winbars.STATE');
-function stateOf(g: Game): BarState { let S = STATE.get(g); if (!S) STATE.set(g, S = { gone: new Map(), met: [] }); return S; }
+function stateOf(g: Game): BarState { let S = STATE.get(g); if (!S) STATE.set(g, S = { met: [] }); return S; }
 
 /** the one gate: the switch, and no showcase running (their choreography was laid with a bar the wall it was) */
 export function barsLive(g: Game): boolean { return WINBARS.on && !WINBARS_BREAK && !g.touring; }
@@ -69,10 +71,10 @@ export function barAt(g: Game, index: number): boolean { const b = index < 1e6 ?
 /** every bar of this level that still stands (the statics' indices, ascending) */
 export function barsStanding(g: Game): number[] { const out: number[] = [], B = g.col.boxes, n = Math.min(B.length, g.level.boxes.length); for (let i = 0; i < n; i++) if ((B[i].flags & (BoxFlag.Bar | HIDE)) === BoxFlag.Bar) out.push(i); return out; }
 /** the bars a round or a blast has taken (ascending) */
-export function barsGone(g: Game): number[] { return [...stateOf(g).gone.keys()].sort((p, q) => p - q); }
+export function barsGone(g: Game): number[] { if (!g.sim.open) return []; const x = simX(), s = g.sim.bind(), out: number[] = []; for (let i = 0, n = x.bars_gone(s); i < n; i++) out.push(x.bar_gone(s, i)); return out; }
 /** the flags a bar this rule took was AUTHORED with, or undefined: it took no such static (destruction.ts flags0 — whoever indexes the level after a bar went
  *  reads it as it was built, not as it stands) */
-export function barFlags0(g: Game, index: number): number | undefined { return STATE.get(g)?.gone.get(index); }
+export function barFlags0(g: Game, index: number): number | undefined { if (!g.sim.open) return undefined; const x = simX(), s = g.sim.bind(); for (let i = 0, n = x.bars_gone(s); i < n; i++) if (x.bar_gone(s, i) === index) return x.bar_flags(s, i); return undefined; }
 
 /** Game constructor, once: the line of fire's question (collision.ts shotBlocked) and the blasts' call list. Nothing here does anything while the switch is off. */
 export function bootBars(g: Game) {
@@ -108,8 +110,9 @@ export function barsSettle(g: Game, met: BarMet[], tHit: number, who: number, le
 /** Bar `index` goes: hidden to every question, its pieces thrown the way `dir` (the round's, or out from a blast) from where it was struck. false = it was
  *  gone already or is no standing bar. */
 function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, cause: 'round' | 'blast'): boolean {
-  const S = stateOf(g), b = g.col.boxes[index]; if (!b || S.gone.has(index) || !barAt(g, index)) return false;
-  S.gone.set(index, b.flags); b.flags |= HIDE;
+  const b = g.col.boxes[index]; if (!b) return false;
+  if (!g.glassBreak.asking((x) => x.bars_take(index, b.flags) === 1)) return false;
+  b.flags |= HIDE;
   changed(g, b);
   WINBARS_STATS.broken++; if (cause === 'round') WINBARS_STATS.byRound++; else WINBARS_STATS.byBlast++;
   // the pieces: the bar cut across into uneven lengths, the struck one thrown hardest
@@ -143,12 +146,19 @@ function changed(g: Game, b: Box) {
  *  not hang in the hole. ALL the bars in reach are judged first, each as if the others were not there (a bar is no shield for the bar behind it, and which
  *  goes does not depend on the order they stand in the level file), then the ones the blast reaches are broken. A bar is asked at three heights — a burst on
  *  the floor at the wall's foot has no line to a bar's foot past its own sill, and has one to its middle. */
-function barsBlast(g: Game, ev: BlastEvent) {
+export function barsBlast(g: Game, ev: BlastEvent) {
   if (!barsLive(g) || WINBARS.blastK <= 0) return;
   const R = ev.radius * WINBARS.blastK, from: Vec3 = [ev.at[0], Math.max(0.3, ev.at[1]), ev.at[2]], B = g.col.boxes;
+  const took = g.glassBreak.asking((x) => { const n = x.bars_blast(from[0], from[1], from[2], R, Math.min(B.length, g.level.boxes.length)), m = f64(), o = x.sim_scratch() / 8, out: { i: number; at: Vec3 }[] = []; for (let k = 0; k < n; k++) out.push({ i: m[o + 4 * k], at: [m[o + 4 * k + 1], m[o + 4 * k + 2], m[o + 4 * k + 3]] }); return out; });
+  if (PANES.both) PANES.both('barsBlast', g.glassBreak.twin, [barsBlastOwn(g, from, R), took], [], []);
+  for (const t of took) { const b = B[t.i], dx = b.c[0] - from[0], dz = b.c[2] - from[2], l = Math.hypot(dx, dz); breakBar(g, t.i, t.at, l > 1e-3 ? [dx / l, 0, dz / l] : [0, 0, 0], ev.who || NOBODY_ID, 'blast'); }
+}
+// (the judgement's TypeScript, the check's)
+function barsBlastOwn(g: Game, from: Vec3, R: number): { i: number; at: Vec3 }[] {
+  const B = g.col.boxes, took: { i: number; at: Vec3 }[] = [];
   const near = barsStanding(g).filter(i => { const b = B[i]; return Math.hypot(b.c[0] - from[0], b.c[2] - from[2]) <= R + Math.max(b.h[0], b.h[2]); });
-  if (!near.length) return;
-  const took: { i: number; at: Vec3 }[] = [], was = near.map(i => B[i].flags);
+  if (!near.length) return took;
+  const was = near.map(i => B[i].flags);
   for (const i of near) B[i].flags |= HIDE;
   g.col.wrote();
   for (const i of near) {
@@ -160,15 +170,15 @@ function barsBlast(g: Game, ev: BlastEvent) {
     }
   }
   near.forEach((i, k) => { B[i].flags = was[k]; }); g.col.wrote();
-  for (const t of took) { const b = B[t.i], dx = b.c[0] - from[0], dz = b.c[2] - from[2], l = Math.hypot(dx, dz); breakBar(g, t.i, t.at, l > 1e-3 ? [dx / l, 0, dz / l] : [0, 0, 0], ev.who || NOBODY_ID, 'blast'); }
+  return took;
 }
 
 // ---------------------------------------------------------------- reset, checkpoints
 /** Game.resetLevelState: every bar stands again (before the destruction's own reset: the walls' re-bake in there sees the level whole) */
 export function resetBars(g: Game) {
-  const S = STATE.get(g); if (!S) return; S.met.length = 0; if (!S.gone.size) return;
-  for (const [i, f] of S.gone) { const b = g.col.boxes[i]; if (b) { b.flags = f; changed(g, b); } }
-  S.gone.clear();
+  const S = STATE.get(g); if (S) S.met.length = 0; if (!g.sim.open) return; const x = simX(), s = g.sim.bind();
+  for (let k = 0, n = x.bars_gone(s); k < n; k++) { const b = g.col.boxes[x.bar_gone(s, k)]; if (b) { b.flags = x.bar_flags(s, k); changed(g, b); } }
+  x.bars_clear(s);
 }
 /** a checkpoint's slice: the bars that are gone (ascending). undefined = none — the file is then byte for byte what it was before this slice existed */
 export interface BarsSave { v: 1; s: number[] }
@@ -182,13 +192,13 @@ export function barsCheck(g: Game, s: BarsSave | undefined): string | null {
 }
 /** apply a checkpoint's slice on the freshly reset level: the same bars gone again, silently (no pieces, no chips, no sound) */
 export function barsRestore(g: Game, s: BarsSave | undefined) {
-  if (!s) return; const S = stateOf(g);
-  for (const i of s.s) { const b = g.col.boxes[i]; if (!b || S.gone.has(i) || !barAt(g, i)) continue; S.gone.set(i, b.flags); b.flags |= HIDE; changed(g, b); }
+  if (!s) return;
+  for (const i of s.s) { const b = g.col.boxes[i]; if (!b || !g.glassBreak.asking((x) => x.bars_take(i, b.flags) === 1)) continue; b.flags |= HIDE; changed(g, b); }
 }
 
 /** panel / console line */
 export function winBarsSummary(g: Game): string {
-  const st = WINBARS_STATS, up = barsStanding(g).length, gone = stateOf(g).gone.size;
+  const st = WINBARS_STATS, up = barsStanding(g).length, gone = barsGone(g).length;
   return `window bars ${WINBARS.on ? (barsLive(g) ? 'ON' : 'on — inert while a showcase runs') : 'off (a bar stops a round like a wall)'} ▸ ${up} standing, ${gone} gone · ${st.byRound} by a round, ${st.byBlast} by a blast · ${st.chunks} pieces (+${st.demoted} as chips)${LOG.length ? ` · last: ${LOG[LOG.length - 1]}` : ''}`;
 }
 /** QA: the last breaks filed, oldest first */

@@ -31,6 +31,8 @@ pub const MAX_SHEETS: usize = 256;
 pub const MAX_ROWS: usize = 256;
 pub const MAX_HOLES: usize = 256;
 pub const MAX_Q: usize = 4096;
+/// the window's bars one level can lose (src/game/levelfit.ts refuses a level of more; the barracks stands 22)
+pub const MAX_BARS: usize = 128;
 /// the crossings one pane remembers (GLASSPEN.holes: its knob is under this)
 pub const HOLE_PTS: usize = 24;
 const MAX_SITES: usize = 8;
@@ -173,7 +175,9 @@ pub struct Panes {
     pub nbl: u32,
     /// the number of the last charge seen
     pub seq: u32,
-    pub spare: u32,
+    /// the window's bars a round or a blast has taken, and which (ascending: a static and its flags as it stood)
+    pub nbars: u32,
+    pub bars: [[u32; 2]; MAX_BARS],
     pub ev: [f64; 2 * EVENTS],
     /// the charges in hand: when, where, and the charge's number
     pub bl: [f64; 5 * CHARGES],
@@ -600,6 +604,7 @@ pub fn boot(g: usize, list: &[f64]) {
     p.nev = 0;
     p.nbl = 0;
     p.seq = 0;
+    p.nbars = 0;
     let n = list.len() / 2;
     p.sheets = (if n < MAX_SHEETS { n } else { MAX_SHEETS }) as u32;
     for s in 0..p.sheets as usize {
@@ -658,7 +663,10 @@ pub fn sky_side(c: &Ctx, s: usize) -> i32 {
 /// glassbreak.ts typeOf: the type a pane breaks as when nobody has said. Outside walls are safety glass, a low clerestory strip laminated; inside, a narrow
 /// sidelight is laminated and a partition float; under GLASSREAL.place the pane's own place decides between toughened and float.
 fn type_by_place(c: &Ctx, s: usize, h0: f64, h1: f64, h2: f64, cy: f64) -> u32 {
-    let outside = sky_side(c, s) != 0;
+    place_rule(sky_side(c, s) != 0, h0, h1, h2, cy, pn(c.g).sheet(s).gap)
+}
+/// the rule itself, on a pane's sizes, the wall it is in and how far it stands from a door
+pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -> u32 {
     if if outside { h1 < 0.4 } else { js_max(h0, h2) < 0.35 } {
         return LAMINATED;
     }
@@ -666,7 +674,6 @@ fn type_by_place(c: &Ctx, s: usize, h0: f64, h1: f64, h2: f64, cy: f64) -> u32 {
         return if outside { TEMPERED } else { ANNEALED };
     }
     let foot = cy - h1;
-    let gap = pn(c.g).sheet(s).gap;
     if foot < k(GR_LOW_M) || (foot < k(GR_DOOR_FOOT_M) && gap <= k(GR_DOOR_M)) {
         TEMPERED
     } else {
@@ -2358,5 +2365,101 @@ pub fn dice_threshold(g: usize, bi: u32) -> f64 {
         -1.0
     } else {
         (order[next - 1].key + order[next].key) / 2.0
+    }
+}
+
+// ---- a window's bar (src/game/winbars.ts, whose TypeScript throws the pieces)
+const F_BAR: u32 = 1 << 19;
+const NO_SHADOW: u32 = crate::world::F_NO_SHADOW;
+/// is static `bi` a window's bar that still stands? (the copy keeps NoShadow of the two bits a broken bar is hidden by)
+#[inline]
+fn bar_stands(o: &World, bi: usize) -> bool {
+    o.flags[bi] & (F_BAR | NO_SHADOW) == F_BAR
+}
+/// winbars.ts breakBar's first question: bar `bi` goes, unless it is gone already or is no standing bar. `flags`: the box's flags as it stands (the copy keeps a part of them)
+pub fn bar_take(c: &Ctx, bi: u32, flags: u32) -> bool {
+    let p = pn(c.g);
+    let (n, b) = (p.nbars as usize, bi as usize);
+    let at = p.bars[..n].iter().position(|r| r[0] >= bi).unwrap_or(n);
+    if (at < n && p.bars[at][0] == bi) || !bar_stands(world(c.w), b) || n >= MAX_BARS {
+        return false;
+    }
+    p.bars.copy_within(at..n, at + 1);
+    p.bars[at] = [bi, flags];
+    p.nbars += 1;
+    true
+}
+/// what bars a charge at `from` takes: every standing bar with a point of its length inside its reach and nothing solid between, each judged as if the others
+/// were not there. Lists (a static, the point: 4 doubles each) in `out`, ascending, and says how many.
+pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, out: &mut [f64]) -> usize {
+    let o = world(c.w);
+    let mut near = [0u32; MAX_BARS];
+    let mut was = [0u32; MAX_BARS];
+    let mut n = 0usize;
+    for bi in 0..statics {
+        if !bar_stands(o, bi) || n >= MAX_BARS {
+            continue;
+        }
+        let b = rec(o, bi);
+        if hypot2(b[R_C] - from[0], b[R_C + 2] - from[2]) <= reach + js_max(b[R_H], b[R_H + 2]) {
+            near[n] = bi as u32;
+            n += 1;
+        }
+    }
+    if n == 0 {
+        return 0;
+    }
+    for i in 0..n {
+        let bi = near[i] as usize;
+        was[i] = o.flags[bi];
+        o.flags[bi] |= NO_SHADOW;
+    }
+    let mut took = 0usize;
+    for i in 0..n {
+        let bi = near[i] as usize;
+        let (cc, h0, h1, h2) = {
+            let b = rec(world(c.w), bi);
+            ([b[R_C], b[R_C + 1], b[R_C + 2]], b[R_H], b[R_H + 1], b[R_H + 2])
+        };
+        for u in [0.0, 0.6, -0.6] {
+            let q = [cc[0], cc[1] + u * h1, cc[2]];
+            if hypot3(from[0] - q[0], from[1] - q[1], from[2] - q[2]) > reach + js_max(h0, h2) {
+                continue;
+            }
+            if solid(c, from, q) {
+                continue;
+            }
+            out[took * 4] = bi as f64;
+            out[took * 4 + 1] = q[0];
+            out[took * 4 + 2] = q[1];
+            out[took * 4 + 3] = q[2];
+            took += 1;
+            break;
+        }
+    }
+    let o = world(c.w);
+    for i in 0..n {
+        o.flags[near[i] as usize] = was[i];
+    }
+    took
+}
+pub fn bars_gone(g: usize) -> u32 {
+    let p = pn(g);
+    if p.used == 0 {
+        0
+    } else {
+        p.nbars
+    }
+}
+pub fn bar_gone(g: usize, i: usize) -> u32 {
+    pn(g).bars[i][0]
+}
+pub fn bar_flags(g: usize, i: usize) -> u32 {
+    pn(g).bars[i][1]
+}
+pub fn bars_clear(g: usize) {
+    let p = pn(g);
+    if p.used != 0 {
+        p.nbars = 0;
     }
 }

@@ -290,14 +290,18 @@ export class GlassBreak {
     }
     x.panes_out_clear();
     if (keep) keep.push(...list);
-    for (const f of list) {
+    for (const f of list) this.letGo(f, x);
+  }
+  /** a fragment the rule let go, told to the game: its one way out */
+  letGo(f: GlassFragment & { key: number; heard: boolean; bi: number }, x: SimExports): void {
+    {
       const key = f.key, V = this.geom(f.bi, x);
       if (f.heard) {   // a round's own piece was heard as the round (glass.ts glassImpact); what falls LATER — by support, a blast, the dice — is heard here, once per pane per crackGap
         const dicing = f.kind === 'clump' || f.kind === 'sheet';
         this.g.audio.play('glassCrack', f.centre, dicing ? 1.0 : 0.75, { rate: dicing ? 0.7 : 1.25 + 0.3 * hash01(key + V.key) });
         glassEvent(this.g, this.g.level.boxes[f.bi], f.centre, 1.0, f.who);
       }
-      if (this.hook) { GB_TWIN.hooked++; this.hook(f); continue; }
+      if (this.hook) { GB_TWIN.hooked++; this.hook(f); return; }
       this.standIn(V, f, key);
     }
   }
@@ -343,7 +347,7 @@ export class GlassBreak {
   // ---------------------------------------------------------------- which glass
   /** the type a pane breaks as when nobody has said (setType): its wall's or its place's word (panes.rs type_by_place) */
   typeOf(b: Box, bi = this.g.level.boxes.indexOf(b)): GlassType {
-    return TYPES[this.ask((x) => x.panes_type_place(bi))];
+    return TYPES[this.ask((x) => bi >= 0 ? x.panes_type_place(bi) : x.panes_type_box(b.h[0], b.h[1], b.h[2], b.c[1], this.doorGap(b)))];   // (a box the level does not hold, a tool's question: indoors, by its place)
   }
   /** the type of pane bi as it will break (an override from setType, else typeOf) — null for anything that is not a sheet of glass */
   typeOfPane(bi: number): GlassType | null {
