@@ -49,6 +49,7 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening }
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'pass';
 export const NOTES = 'The pass: a walled teahouse and truck halt on a high pass road, at night, in winter. Eight men in four rooms round a yard under snow; the snow is in the file (ground, drifts, caps, trodden paths, ruts), laid by hand. Two ways in: the road west of the gate, and the back of the kitchen outside the wall. Regenerate: bun run tools/levels/export.ts pass';
@@ -465,7 +466,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.wire(9.6, 7.0, 11.88, 7.0, 2.8); G.wire(8.6, 9.0, 8.6, 13.5, 2.8); G.wire(12.1, 20.3, 21.0, 22.0, 2.62);
   // ---- the breaker (the lean-to's back wall) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [6.16, 1.35, 8.0], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [6.16, 1.35, 8.0], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [6.21, 1.62, 7.82], h: [0.01, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [17.6, H - 0.06, 8.6], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

@@ -8,6 +8,7 @@ import type { Game } from '../game/game';
 import { reportWarning } from '../cloud/report';
 import { typedInto } from '../host/keymap';
 import { SHADER_ROW_WORDS } from './shaderrows';
+import { lookDressWord } from '../scene/look';
 import { rustWords } from '../sim/sim';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
@@ -267,15 +268,21 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
-export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'savepic', 'pace', 'giveway', 'flight', 'findtuned',
+export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'savepic', 'pace', 'giveway', 'flight', 'findtuned', 'look', 'nosunglint',
   ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'shaderfold', 'gentle', 'plainair', ...rustWords()];   // (the second line: how THIS machine builds its shaders — every row on trial in Options > Graphics, ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
 // (…and the last: which systems run in the Rust module, src/sim/sim.ts rustWords — `rust`, `rust<row>`. This machine's, like the shader words: `?rust=0` typed on a replay's or a networked game's address must still be there when the page reads it, and a recipe recorded under one must not hand it on)
+/** A WORD OF AN ADDRESS, WITH ITS VALUE, IS THE VISIT'S: one of VISIT_FLAGS, but `look` is two things under one word (scene/look.ts). The dress's
+ *  `look=plain|0|off` names the LEVEL a run plays, so it is the run's: it stays in a tape's recipe and in a co-op invite. Every other value is a row of the look
+ *  prototype's page, which is how the page is looked at: the visit's. Ask by pair, never by the list alone, wherever a word is kept or dropped. */
+export const visitWord = (k: string, v: string): boolean => VISIT_FLAGS.includes(k) && (k !== 'look' || !lookDressWord(v));
+/** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
+export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).filter(v => visitWord(k, v)).map(v => [k, v] as [string, string]));
 export function engineUrl(id: number, file: ReplayFile): string | null {
   const T = file.rerun; if (!T || 'dead' in T) return null;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;
   const taped = T.x.reduce((a, row) => row[1] === 'restart' && row[0] > 0 && row[0] + 1 > a ? row[0] + 1 : a, 0);
   const at = Math.min(T.ticks, Math.max(seen, taped));
-  const now = new URLSearchParams(location.search), visit = VISIT_FLAGS.filter(k => k !== 'paused' && now.has(k)).map(k => `&${k}=${encodeURIComponent(now.get(k) ?? '')}`).join('');
+  const now = new URLSearchParams(location.search), visit = visitPairs(now).filter(([k]) => k !== 'paused').map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
   return new URL(`index.html?playtape=${id}${at > 0 ? `&at=${at}` : ''}${visit}`, document.baseURI).href;
 }
 /** a name for this page visit: when it began, and enough dice that two tabs opened in one second differ */

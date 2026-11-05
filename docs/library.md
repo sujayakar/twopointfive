@@ -194,14 +194,14 @@ It is no second way of building the name.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **chair**(x, z, yaw, albedo = C.chair) | PROP (chair): an office CHAIR on casters: seat, back, gas lift, star base | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
+| **chair**(x, z, yaw, albedo = C.chair, made) | PROP (chair): an office CHAIR on casters: seat, back, gas lift, star base | loose | 0.5 × 0.5 × 1.1 | 1 loose (5 parts) | black, chair | library-hall |
 | **cardboardBox**(x, z, s, yaw, y = 0) | PROP (cardboard): a CARTON of side s; with y over 0 it is stacked on the carton already standing there and moves with it | loose | 0.5 × 0.5 × 0.5 | 1 loose (1 part), 4 markings | cardboard | library-hall |
 
 ### officeKit: set dressing helpers
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **rug**(x, z, w, d, albedo, yaw = 0) | DECAL: a plain RUG w × d in the colour given | drawn only | 2.4 × 1.6 × 0.01 | 1 drawn | carpetBlue | library-hall |
+| **rug**(x, z, w, d, albedo, yaw = 0) | DECAL: a plain RUG w × d in the colour given: cloth. Floor paint and a dirt track are no rugs and are laid as their own flat boxes | drawn only | 2.4 × 1.6 × 0.01 | 1 drawn | carpetBlue | library-hall |
 | **plant**(x, z, s = 1) | PROP (plant): a potted PLANT, scale s: a pot and two masses of leaves | loose | 0.58 × 0.56 × 1.26 | 1 loose (3 parts) | plant, (0.138, 0.345, 0.11), (0.36, 0.3, 0.26) | library-hall |
 | **bin**(x, z) | PROP (bin): a waste BIN | loose | 0.26 × 0.26 × 0.4 | 1 loose (1 part) | (0.12, 0.12, 0.13) | library-hall |
 | **cabinet**(x, z, yaw) | COVER: a FILING CABINET 0.46 × 0.6 × 1.32, drawer fronts on local −Z | solid to 1.32 | 0.6 × 0.46 × 1.32 | 1 solid, 1 marking | (0.58, 0.58, 0.56) | library-hall |

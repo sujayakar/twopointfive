@@ -39,7 +39,8 @@ const done = (name: string) => { console.log(`\n=== ${name}: ${section ? `${sect
 export const materialsFailures = () => fails;
 
 /** common.wgsl boxFinish, ported: the one float back to (rough, metal, aniso) */
-function decodeFinish(w: number) { const aniso = w >= 4; if (aniso) w -= 4; const metal = w >= 2; if (metal) w -= 2; return { rough: Math.min(1, Math.max(0, w)), metal, aniso }; }
+function decodeFinish(w: number) { w -= 8 * Math.floor(w / 8);   // (on the look page a word rides above the finish and common.wgsl boxFinish takes it off under LOOK; no word rides in these cases, where this line does nothing: the round trip is tools/qa/lookmaps-check.ts's)
+  const aniso = w >= 4; if (aniso) w -= 4; const metal = w >= 2; if (metal) w -= 2; return { rough: Math.min(1, Math.max(0, w)), metal, aniso }; }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ finish
 export async function materialsFinish() {
@@ -154,7 +155,7 @@ export async function materialsFrame() {
     const m = await import(file); mainWrite = m.writeFrame; mainBytes = m.FRAME_BYTES;
   } catch (e: any) { why = String(e?.message ?? e).split('\n')[0]; }
   if (!mainWrite) { console.log(`  (skipped: main's writeFrame — git show ${MAIN_REF}:src/render/frame.ts — is not reachable from this checkout: ${why || 'no such object'}; the byte comparison needs the private repo's history)`); done('materials-frame'); return; }
-  verdict(mainBytes === MAIN_FRAME_BYTES && FRAME_BYTES === MAIN_FRAME_BYTES + 128, `main's Frame is ${mainBytes} B, this branch's ${FRAME_BYTES} B (sharpCfg + sharpCfgB + sharpCfgC, then the SDF rig's rigCfg + rigCfgB, then giCfg, then weatherE + weatherF — appended, nothing moved)`);   // (+ weatherE @800 / weatherF @816: the particle-rain experiment's near-field disc + its v2 phase)
+  verdict(mainBytes === MAIN_FRAME_BYTES && FRAME_BYTES === MAIN_FRAME_BYTES + 224, `main's Frame is ${mainBytes} B, this branch's ${FRAME_BYTES} B (sharpCfg + sharpCfgB + sharpCfgC, then the SDF rig's rigCfg + rigCfgB, then giCfg, then weatherE + weatherF, then the look prototype's shadeCfg, veilA + veilB, eyeCfg, gradeCfg, lampCfg — appended, nothing moved)`);   // (+ weatherE @800 / weatherF @816: the particle-rain experiment's near-field disc + its v2 phase)
   const ident = (n: number) => { const a = new Float32Array(16); for (let i = 0; i < 16; i++) a[i] = ((i * 7 + n) % 11) / 11 - 0.3; return a; };
   const base: any = {
     viewProj: ident(1), invViewProj: ident(2), prevViewProj: ident(3), camPos: [20, 6, 14], camDir: [0, -0.7, -0.7], time: 12.5, dt: 1 / 60, width: 1777, height: 1000,
@@ -179,6 +180,11 @@ export async function materialsFrame() {
   verdict(f[188] === 45 && f[189] === 20 && f[190] === 1 && f[191] === Math.fround(0.006) && f[192] === 1 && f[193] === 24 && f[194] === Math.fround(0.0015) && f[195] === Math.fround(0.012), 'and rigCfg @752 + rigCfgB @768 (the SDF character rig: bits + soft-query numbers, blend / trace numbers)', `f[188..195] = ${Array.from(f.subarray(188, 196)).map(v => +v.toFixed(4)).join(', ')}`);
   verdict(f[196] === 3 && f[197] === 9376 && f[198] === 4 && f[199] === 0, 'and giCfg @784 (GI in motion: young-history rays k, cap, young length)', `f[196..199] = ${Array.from(f.subarray(196, 200)).join(', ')}`);
   verdict(f[200] === 0 && f[201] === 0 && f[202] === 0 && f[203] === 0 && f[204] === 0 && f[205] === 0 && f[206] === 0 && f[207] === 0, 'and weatherE @800 + weatherF @816 (particle rain\'s near-field disc + its v2 phase: zeros from a WeatherFrame that never rains particles) last', `f[200..207] = ${Array.from(f.subarray(200, 208)).join(', ')}`);
+  verdict(f[208] === 0 && f[209] === 0 && f[210] === 0 && f[211] === 0, 'and shadeCfg @832 (the look prototype\'s shade row: zeros from a frame that gives none = the picture as it was)', `f[208..211] = ${Array.from(f.subarray(208, 212)).join(', ')}`);
+  verdict(f[212] === 0 && f[213] === 0 && f[214] === 0 && f[215] === 0 && f[216] === 0 && f[217] === 0 && f[218] === 0 && f[219] === 0, 'and veilA @848 + veilB @864 (the look prototype\'s loose snow in the air: zeros from a frame that gives none = no powder)', `f[212..219] = ${Array.from(f.subarray(212, 220)).join(', ')}`);
+  verdict(f[220] === 0 && f[221] === 0 && f[222] === 0 && f[223] === 0, 'and eyeCfg @880 (the look prototype\'s Eyes follow Sam row: zeros from a frame that gives none = every place brought up by its own darkness, as before)', `f[220..223] = ${Array.from(f.subarray(220, 224)).join(', ')}`);
+  verdict(f[224] === 0 && f[225] === 0 && f[226] === 0 && f[227] === 0, 'and gradeCfg @896 (the look prototype\'s Contrast row undone under a roof: zeros from a frame that gives none = nothing undone)', `f[224..227] = ${Array.from(f.subarray(224, 228)).join(', ')}`);
+  verdict(f[228] === 0 && f[229] === 0 && f[230] === 0 && f[231] === 0, 'and lampCfg @912 (the look prototype\'s Light stays in its room row by day: zeros from a frame that gives none = every floor and glow as it was)', `f[228..231] = ${Array.from(f.subarray(228, 232)).join(', ')}`);
   done('materials-frame');
 }
 
@@ -258,6 +264,8 @@ export async function materialsArealight() {
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ the traffic map
+/** the office's wall band as every page has it, summed byte by byte (render/wear.ts bandByOccupancy): moved only on purpose */
+const WALL_BAND_SUM = 3450058653;
 export async function materialsWear() {
   console.log('\n=== materials-wear: the detail layer\'s traffic map on the office (render/wear.ts) ===');
   const { buildWearMap, WEAR_RES } = await import(`${ROOT}/src/render/wear.ts`);
@@ -280,6 +288,53 @@ export async function materialsWear() {
   // wall proximity: 1 at the corridor's north wall foot, 0 in the middle of the lobby / the corridor
   const wallFoot = at(17.0, 10.06, 1), midLobby = at(8.0, 20.0, 1), midCorr = at(17.0, 11.1, 1);
   verdict(wallFoot > 0.7 && midLobby < 0.05 && midCorr < 0.05, 'wall proximity: high at the corridor\'s wall foot, ≈ 0 mid-lobby and mid-corridor (GRIME_REACH 16 cm)', `wall foot ${wallFoot.toFixed(2)} · mid-lobby ${midLobby.toFixed(2)} · mid-corridor ${midCorr.toFixed(2)}`);
+  { // the band as every page has it is not to move (the build's grime band reads it): its sum on the office, held to the byte
+    let sum = 0; for (let i = 1; i < A.data.length; i += 2) sum = (Math.imul(sum, 31) + A.data[i]) >>> 0;
+    verdict(sum === WALL_BAND_SUM, 'the wall band every page has is the one it always had: a sum over the office\'s band, byte by byte', `${sum} (held: ${WALL_BAND_SUM})`); }
+  { // THE LOOK'S PAGE (buildWearMap's `longFoot`): the band is a strip along a long face. WEARFOOT_BREAK=1 = the band as every other page has it: must fail.
+    // A made-up floor, each thing far from the next. A long wall (20 cm thick) with a crate pushed against its side and a board leant flat on it; a front of
+    // pier, low sill, pier, then a doorway and a short pier past it, laid along x, along z and at a yaw, each with a crate against its sill; the kit's corner
+    // (24 cm walls on a 44 cm pillar) with a crate touching the pillar; a short wall; a block; four crates in a row along x and along z; a table's leg, a thin
+    // post, a pier, a crate, two crates side by side; a slab standing 3° off true beside a wall.
+    const on = process.env.WEARFOOT_BREAK !== '1';
+    type B = { c: number[]; h: number[]; yaw: number; flags: number };
+    const bx = (c: number[], h: number[], yaw = 0): B => ({ c, h, yaw, flags: 0 });
+    /** boxes authored along x about the origin, turned by `yaw` about +y and put down at `at` (Box.yaw: local +x → (cos, 0, −sin)) */
+    const put = (at: number[], yaw: number, bs: B[]): B[] => bs.map(b => { const c = Math.cos(yaw), s = Math.sin(yaw); return bx([at[0] + c * b.c[0] + s * b.c[2], b.c[1], at[1] - s * b.c[0] + c * b.c[2]], b.h, b.yaw + yaw); });
+    const spot = (at: number[], yaw: number, x: number, z: number): [number, number] => { const c = Math.cos(yaw), s = Math.sin(yaw); return [at[0] + c * x + s * z, at[1] - s * x + c * z]; };
+    const front = (): B[] => [bx([-1, 1.4, 0], [0.4, 1.4, 0.1]), bx([0, 0.45, 0], [0.6, 0.45, 0.1]), bx([1, 1.4, 0], [0.4, 1.4, 0.1]), bx([1.9, 2.45, 0], [0.5, 0.35, 0.1]), bx([2.8, 1.4, 0], [0.4, 1.4, 0.1]), bx([0, 0.3, 0.4], [0.3, 0.3, 0.3])];
+    const FRONTS: [number[], number][] = [[[8, 20], 0], [[20, 20], Math.PI / 2], [[30, 20], 0.6]];
+    const row = (): B[] => [-0.9, -0.3, 0.3, 0.9].map(x => bx([x, 0.3, 0], [0.3, 0.3, 0.3]));
+    const ROWS: [number[], number][] = [[[8, 25], 0], [[14, 25], Math.PI / 2]];
+    const LEG = [10.02, 0.37, 9.02], POST = [14.05, 1, 9.05], PIER = [18, 1, 9], CRATE = [22, 0.3, 9], PAIR = [26, 0.3, 9];
+    const boxes: B[] = [bx([10, 1.2, 5], [4, 1.2, 0.1]), bx([12, 0.3, 5.4], [0.3, 0.3, 0.3]), bx([8, 0.6, 5.12], [0.5, 0.6, 0.02]),
+      bx(LEG, [0.02, 0.37, 0.02]), bx(POST, [0.05, 1, 0.05]), bx(PIER, [0.12, 1, 0.12]), bx(CRATE, [0.3, 0.3, 0.3]), bx([PAIR[0] - 0.3, 0.3, 9], [0.3, 0.3, 0.3]), bx([PAIR[0] + 0.3, 0.3, 9], [0.3, 0.3, 0.3]),
+      bx([22, 1.2, 14], [0.8, 1.2, 0.1]), bx([30, 1, 14], [1.5, 1, 0.5]),
+      ...FRONTS.flatMap(([at, yaw]) => put(at, yaw, front())), ...ROWS.flatMap(([at, yaw]) => put(at, yaw, row())),
+      bx([24, 1.2, 25], [3, 1.2, 0.12]), bx([27.22, 1.2, 25], [0.22, 1.2, 0.22]), bx([27.74, 0.3, 25], [0.3, 0.3, 0.3]),          // the kit's corner and a crate touching its pillar
+      bx([34, 1.2, 8], [0.12, 1.2, 3.9]), bx([33.6, 0.4, 5], [0.28, 0.4, 0.12], Math.PI / 2 + 0.03)];                             // a wall along z and a slab 3° off true at its side
+    const S = buildWearMap({ routes: [], doors: [], boxes } as any, null, on);
+    const g = (x: number, z: number) => S.data[(Math.floor((z - WORLD.min[2]) * WEAR_RES) * S.w + Math.floor((x - WORLD.min[0]) * WEAR_RES)) * 2 + 1] / 255;
+    const round = (c: number[], r: number) => Math.max(g(c[0] + r, c[2]), g(c[0] - r, c[2]), g(c[0], c[2] + r), g(c[0], c[2] - r), g(c[0] + r, c[2] + r), g(c[0] - r, c[2] - r));
+    const wall = g(10, 4.8), beside = Math.min(g(11.62, 5.2), g(12.38, 5.2)), board = g(8, 5.24), leant = Math.max(g(12, 5.8), g(11.6, 5.6), g(12.4, 5.6));
+    const none = Math.max(round(LEG, 0.13), round(POST, 0.15), round(PIER, 0.2), round(CRATE, 0.38), g(26, 9.38), g(26.68, 9), g(25.32, 9), g(26, 8.62), leant);
+    const short = g(22, 14.2), blockSide = g(30, 14.6), blockEnd = g(31.6, 14);
+    // each front: the least along its back face and along its front face clear of the crate (a hand off the face), the most round the crate's free sides, in the doorway and at the pier past it
+    const fr = FRONTS.map(([at, yaw]) => { const q = (x: number, z: number) => g(...spot(at, yaw, x, z)); let least = 1;
+      for (let x = -1.3; x <= 1.3; x += 0.05) { least = Math.min(least, q(x, -0.2)); if (Math.abs(x) > 0.45) least = Math.min(least, q(x, 0.2)); }
+      return { least, crate: Math.max(q(0, 0.82), q(0.42, 0.55), q(-0.42, 0.55)), door: q(1.9, 0.2), past: Math.max(q(2.8, 0.2), q(2.8, -0.2)) }; });
+    const rw = ROWS.map(([at, yaw]) => { const q = (x: number, z: number) => g(...spot(at, yaw, x, z)); let least = 1; for (let x = -1.1; x <= 1.1; x += 0.05) least = Math.min(least, q(x, 0.4), q(x, -0.4)); return { least, end: Math.max(q(1.4, 0), q(-1.4, 0)) }; });
+    const corner = Math.max(g(27.74, 25.42), g(27.74, 24.58), g(28.16, 25)), cornerWall = g(24, 25.24), slab = Math.max(g(33.38, 5), g(33.6, 5.4), g(33.6, 4.6));
+    // a 10 cm wall at every yaw, a hand off its face along six metres of it: the least of them (a run through texels lost the band at the steps of a turned wall)
+    let least = 1, leastAt = 0;
+    for (let k = 0; k < 24; k++) { const yaw = Math.PI * k / 24, at = [20, 14], M = buildWearMap({ routes: [], doors: [], boxes: [bx([20, 1.2, 14], [4, 1.2, 0.05], yaw)] } as any, null, on);
+      for (let t = -3; t <= 3; t += 0.05) { const [x, z] = spot(at, yaw, t, 0.13), v = M.data[(Math.floor((z - WORLD.min[2]) * WEAR_RES) * M.w + Math.floor((x - WORLD.min[0]) * WEAR_RES)) * 2 + 1] / 255; if (v < least) { least = v; leastAt = k * 7.5; } } }
+    const f2 = (v: number) => v.toFixed(2);
+    verdict(wall > 0.5 && beside === wall && board > 0.5 && none === 0 && short > 0.02 && short < wall && blockSide > 0.5 && blockEnd === 0
+      && fr.every(f => f.least > 0.3 && f.crate === 0 && f.door === 0 && f.past === 0) && rw.every(r => r.least > 0.2 && r.end === 0) && Math.abs(rw[0].least - rw[1].least) < 0.15
+      && corner === 0 && cornerWall > 0.5 && slab === 0 && least > 0.3,
+      'on the look\'s page the band is a strip along a long face: whole at a wall, beside a crate pushed against it and along a board leant on it; along a front of piers and a sill laid along x, along z or at a yaw, with nothing round the crate against its sill, in its doorway or at the short pier past it; a 10 cm wall at any of 24 yaws keeps it; a short wall has part of it; a block and a row of four crates have it along their long sides and not at their ends, whichever way the row lies; a table leg, a thin post, a pier, a crate, two crates, a crate against a wall, a crate touching the kit\'s corner pillar and a slab 3° off true beside a wall have none',
+      `wall ${f2(wall)} · beside the leant crate ${f2(beside)} · along the board ${f2(board)} · fronts (least / crate / doorway / pier past) ${fr.map(f => `${f2(f.least)} ${f2(f.crate)} ${f2(f.door)} ${f2(f.past)}`).join(' | ')} · rows (least along / ends) ${rw.map(r => `${f2(r.least)} ${f2(r.end)}`).join(' | ')} · least along a turned wall ${f2(least)} (at ${leastAt}°) · 1.6 m wall ${f2(short)} · block side ${f2(blockSide)} end ${f2(blockEnd)} · corner pillar's crate ${f2(corner)}, its wall ${f2(cornerWall)} · tilted slab ${f2(slab)} · leg, post, pier, crate, two crates, leant crate: ${f2(none)}`); }
   let worn = 0, grimy = 0; const n = A.w * A.h; for (let i = 0; i < n; i++) { if (A.data[i * 2] > 128) worn++; if (A.data[i * 2 + 1] > 128) grimy++; }
   verdict(worn / n > 0.01 && worn / n < 0.25 && grimy / n > 0.02 && grimy / n < 0.35, 'coverage is a minority of the floor: worn (> ½) 1–25 %, grime band (> ½) 2–35 %', `worn ${(100 * worn / n).toFixed(1)} % · grime ${(100 * grimy / n).toFixed(1)} %`);
   done('materials-wear');

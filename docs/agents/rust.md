@@ -1229,17 +1229,21 @@ first system across (the game's own maths). No rule of play has changed and noth
   what's just client side only dressing (debris, smoke details) and uses relaxed simd and/or gpu"). THE RULE: a step of the tick is DRESSING only if the game
   is the same game to the bit without it. Everything else is GAMEPLAY: it runs on the server and on every client, in one arithmetic. Dressing only makes the
   picture; the server need not run it, two machines need not agree on it, and it can read the game and never write it.
-  - **The list is a table, `src/game/dress.ts DRESS`**: a row per picture-only step of the tick, and `game.ts` takes the step only with its row up. Every row
+  - **The list is a table, `src/game/dress.ts DRESS`**: a row per picture-only step of the tick, and `game.ts` takes the step only with its row up (ONE EXCEPTION: `wetGround`'s step is always taken and
+    reads its row itself, because with the row down it must put back what it wrote on the statics: `wetGround.ts follow`). Every row
     is up in the page and on both stands. It is not a rule of play: no `FROZEN_HOLDS` line, not a knob table, no recording carries it. The rows: `air`
-    (airSim), `moths`, `snow` (the lying snow's surface, prints, marks, a blast's dig), `rain` (rainFx), `fires` (fireDraws; the lamp's flicker is a light and
+    (airSim), `moths`, `snow` (the lying snow's surface, prints, marks, a blast's dig), `rain` (rainFx), `wetGround` (the open ground a rain wets, as the renderer's words of the statics: `docs/agents/weather.md`), `fires` (fireDraws; the lamp's flicker is a light and
     is gameplay), `wake` (men pushing the solver's smoke), `men` (skin instances, materials, shadow proxies), `cues`, `recap`, `blastFeel`, `fixtures`, `fx`,
     `stature`, `cases`, `net`, `wind`, and `debris` (the pool of rigid pieces: dressing only under `DEBRIS.dress`, `docs/agents/destruction.md`; without
-    that switch the pool is the game's and is kept whatever the row says): seventeen. `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
+    that switch the pool is the game's and is kept whatever the row says): eighteen. `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
     DOES YET: the game server still takes every step (measured below; its owner's call).
   - **`tools/qa/dress-check.ts` holds it**: the five comparison missions of `rust-check --missions` (the server's stand: shipped, the senses on the CPU), each
     played with every row down and with every row up, and the chained raw bits after EVERY update (`game/digest.ts rawBits`), the end and the run digest are
     the same. `--each` plays a row at a time (which row, when the set is red); `--rows a,b`; `DRESS_TRACE=<file>` in front of `--run` writes each tick's bits
     by part (`rawBitsParts`), which says what a step touched. `DRESS_BREAK=1` puts a gameplay step down with the rows (the doors) and must fail.
+    A ROW THAT WORKS ONLY IN A WEATHER (`rain`, `wetGround`, `wind`) does nothing on a dry night, and the plain run says nothing of it: it is held by
+    `--weather <kind>` (the missions played in that picked weather; RED when no run had anything wet with the rows up). The check is in no gate or
+    probe family: it is run by hand.
     Measured 2026-11-02: 38,634 ticks, the same bits with the sixteen rows down, and the five end words are `rust-check --missions`' own; on the frozen
     stand (`TPS_PROFILE=frozen` in front) two of the missions, 6,080 ticks, the same; the red path parts on both of its runs, and a red path whose runs leave
     nothing is said to be NOT red. What putting the rows down saves a headless host: compound-four played alone, twice each way, 35.1 and 35.0 s with the rows
