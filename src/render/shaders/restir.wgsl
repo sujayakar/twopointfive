@@ -255,7 +255,7 @@ fn prevTexelAt(Pw: vec3f, Px: vec3f, px: vec2u, dims: vec2u, canonical: bool) ->
 /** one shadow ray to lattice point (iu, iv) of light slot `s`: (visibility incl. smoke, penumbra width at the receiver in metres or −1 if clear) — shadowSample with n = 1 */
 fn traceSample(s: u32, Po: vec3f, N: vec3f, owner: u32, iu: u32, iv: u32) -> vec2f { return shadowSample(wgLights[s], Po, N, owner, 0u, 1u, latticeUV(iu, iv)); }
 /** unshadowed target of light slot `s` at (P, N) — 0 when it does not reach (or the reach mask walls it off, `masked`) */
-fn targetAt(s: u32, P: vec3f, N: vec3f, masked: bool) -> f32 { if (masked && lightReachLevel(s, P) == 0u) { return 0.0; } let e = evalLightDirect(wgLights[s], P, N); return select(0.0, luminance(e.E), e.ok); }
+fn targetAt(s: u32, P: vec3f, N: vec3f, masked: bool) -> f32 { if (masked && lightReachLevel(s, P) == 0u) { return 0.0; } let e = evalLight(wgLights[s], P, N); return select(0.0, luminance(e.E), e.ok); }
 /** the hue (colour ÷ its luminance) of light slot `s`: evalLight scales the light's colour by a scalar, so this is the hue of its irradiance anywhere it reaches */
 fn hueOf(s: u32) -> vec3f { let cl = wgLights[s].color; return cl / max(luminance(cl), 1e-6); }
 /** penumbra hint (px) from a blocked ray's width `pw` (m) for a light carrying `share` of the class's luminance — direct.wgsl's rule */
@@ -405,7 +405,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       var i = s; if (tileCull) { i = wgList[s]; }
       let uP = rndPick(cohPick);                                   // the pick's draw for this light — taken for EVERY listed light, before any per-lane early-out, so the tile-shared stream stays in lockstep
       let li = wgLights[i];
-      let ev = evalLightDirect(li, P, N);
+      let ev = evalLight(li, P, N);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
       if (w < 1e-4 * lampFloorK()) { continue; }
@@ -477,16 +477,16 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         // (symmetric: a light that JUMPED up — a fluorescent restrike's strokes go 5 % ↔ 100 % frame to frame — is as badly represented by the history as one that dropped;
         // one-sided, the up-strokes came through at half weight for a frame)
         let lp = ru.prevLights[rSlot(twA)];
-        let ep = evalLightDirect(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok);
+        let ep = evalLight(lp, P, N); pPT[c] = select(0.0, luminance(ep.E), ep.ok);
         if (pPT[c] > 0.0) {
-          // The ratio that cuts confidence is the GEOMETRIC one — each target ÷ its light's power at the time (common.wgsl lightPower: the luminance of the uploaded colour = colour × intensity):
+          // The ratio that cuts confidence is the GEOMETRIC one — each target ÷ its light's power at the time (the luminance of the uploaded colour = colour × intensity):
           // a light that only dimmed, brightened or changed hue (a fluorescent's dropout strokes every other frame, a restrike's 5 % ↔ 100 %, the lightning's decay)
           // keeps its history — the sample's VISIBILITY is exactly as valid as it was, and the MIS below already weighs last frame's target against this frame's, so
           // the estimate follows the light within the frame either way. Cutting M there (the first cut did, symmetrically) rebuilt every reservoir under the panel
           // from one fresh sample twice per flicker period: 1–3-spp penumbrae the shadow filter could neither trust nor clamp, i.e. blotches that pumped with the
           // tube (docs/internal/tjank.md §A). A cone that swept off the pixel or a lamp that moved still lets go as before. ru.cfg.w & 32 = A/B: the raw ratio.
           var r = pT[c] / pPT[c];
-          if ((ru.cfg.w & 32u) == 0u) { let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
+          if ((ru.cfg.w & 32u) == 0u) { let kNow = luminance(wgLights[curT[c]].color); let kPrev = luminance(lp.color); if (kNow > 0.0 && kPrev > 0.0) { r *= kPrev / kNow; } }
           Mt[c] = min(rM(twA), mCapPix) * clamp(min(r, 1.0 / r) * 1.02, 0.0, 1.0);
         }
         else { Mt[c] = min(rM(twA), mCapPix); pPT[c] = pT[c]; }
@@ -546,6 +546,10 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     let st0 = wgP[lidx]; let st1 = wgStash[lidx]; Uv[0] = st0.xyz; Wf[0] = st0.w; Uv[1] = st1.xyz; Wf[1] = st1.w;
     hE0 = wgHeld[lidx].xyz; hE1 = wgHeld[lidx + 64u].xyz;   // (HELD: the leaders' irradiance back)
     for (var c = 0u; c < 2u; c++) {
+      // the pixel's own dark memory: a fresh ray blocked toward a light the tile believes lit (the inside of THIS light's shadow within a lit tile) names it;
+      // seeing that light from here again (a lit fresh ray, or the reservoir holding it lit) clears it. One slot for both classes: the last such light wins.
+      if (VF[c] == 0.0 && pickF[c] < 63u && !tileDark(bel, pickF[c])) { darkSlot = pickF[c] + 1u; }
+      else if ((VF[c] > 0.0 && pickF[c] + 1u == darkSlot) || (validT[c] && VT[c] > 0.0 && curT[c] + 1u == darkSlot)) { darkSlot = 0u; }
       var valid = validT[c];
       // A history sample that WAS visible (stored V > 0) and re-traces OCCLUDED from here is let go (M 0): either the shadow moved, or — every other frame under TAAU's
       // jitter — the reservoir came from the neighbouring texel across a shadow edge, whose visibility is simply not this point's; keeping its confidence at zero
@@ -651,7 +655,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         let slot = select(pickF[c], pickG[c], j == 1u); let pj = select(pF[c], pG[c], j == 1u);
         // its target LAST frame at this point: the same light as it was then (new this frame → 0 → it enters at full weight)
         var pPrev = 0.0;
-        if (M_t > 0.0) { let ps = invSlot(slot); if (ps != 255u) { let evp = evalLightDirect(ru.prevLights[ps], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
+        if (M_t > 0.0) { let ps = invSlot(slot); if (ps != 255u) { let evp = evalLight(ru.prevLights[ps], P, N); if (evp.ok) { pPrev = luminance(evp.E); } } }
         let wj = pj / (M_t * pPrev + Mf * pj) * Vj * Wf[c];        // m_j × p̂_c(x_j)·W_j (= Wf exactly: W_j = 1 / p(x_j) = Wf / p̂ over the set the draw ranged over) × V
         if (wj > 0.0) { wsum += wj; col += hueOf(slot) * wj; if (tileDark(bel, slot) || slot + 1u == darkSlot) { wOut += wj; colOut += hueOf(slot) * wj; } }   // (HUE SPLIT: a fresh sample of its own darkSlot light / a light the tile calls dark)
         if (rnd() * wsum < wj) { ySlot = slot; yUv = select(uvF[c], uvG[c], j == 1u); yV = Vj; yP = pj; }
@@ -738,16 +742,6 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       if (own <= 0.0 && hasT) { own = rHint(twA); }
       aOut[c] = -clamp(min(own, frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0);
       if (own <= 0.0 && softC[c]) { aOut[c] = -SOFT_HINT_FLAG; }   // no box penumbra measured or remembered here, and a man's DRAWN shadow on the pixel: the denoiser takes this frame's ratio as it is (SDF rig iii)
-    }
-    // ---- the pixel's own dark memory, for the NEXT frame: a fresh ray blocked toward a light the tile believes lit (the inside of THIS light's shadow within a lit tile) names it;
-    // seeing that light from here again (a lit fresh ray, or the reservoir holding it lit) clears it. One slot for both classes: the last such light wins.
-    // AFTER THE SHADE, NEVER BEFORE IT: the hue Uv was summed by the word as the frame found it, and the HUE SPLIT above asks of each sample whether its light was in that sum. Moved first (as it was
-    // until 11-04), the word no longer said what Uv held: in a lamp's half shadow, where a pixel's ray is blocked one frame and through the next, Uv had left the lamp out, the ray cleared the word, the
-    // split called the lamp's sample believed, and its light was painted in the hue of whatever was left in Uv. The maintainer on his GPU, the depot at midday: "red rim on shadow also looks odd",
-    // every shadow of the sun edged in the red of the mast's obstruction lamp, which sends that ground under a ten-thousandth of the sun's light.
-    for (var c = 0u; c < 2u; c++) {
-      if (VF[c] == 0.0 && pickF[c] < 63u && !tileDark(bel, pickF[c])) { darkSlot = pickF[c] + 1u; }
-      else if ((VF[c] > 0.0 && pickF[c] + 1u == darkSlot) || (validT[c] && VT[c] > 0.0 && curT[c] + 1u == darkSlot)) { darkSlot = 0u; }
     }
     // + the TRANSIENT stratum (header): E × V of the picked transient ÷ its pick probability = Wt × V, in its own hue, through its own panes — exact in expectation, no history either way
     //   (under the hybrid this is the held TAIL: the carried lights past the two leaders, one importance-picked ray a class)

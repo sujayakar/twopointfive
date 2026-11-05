@@ -12,7 +12,6 @@ import { OFFICE_PALETTE, type officeKit } from '../../src/scene/officeGen';
 import { roundSlabs, tileMarks } from '../../src/scene/gwotKit';
 import { pieces } from '../../src/scene/library';
 import { MAX_MARKS_PER_BOX, faceHalf, faceIndex, type MarkFace, type MarkingDef } from '../../src/scene/markings';
-import { madeOf, toned } from '../../src/scene/stuff';
 
 type Kit = ReturnType<typeof officeKit>;
 const C = OFFICE_PALETTE as Record<string, Vec3>;
@@ -28,7 +27,6 @@ export const LIVED_PAINT = {
   hiVis: [0.85, 0.36, 0.05] as Vec3,
   paper: [0.86, 0.86, 0.82] as Vec3,
 };
-madeOf('cloth', LIVED_PAINT.canvas);   // (canvas is cloth. The rest say nothing yet: by their colours the look drew them plain, and nobody has chosen. scene/stuff.ts)
 const NS = BoxFlag.NoShadow;
 
 export function livedKit(K: Kit) {
@@ -126,7 +124,7 @@ export function livedKit(K: Kit) {
   /** PROP (chair): the office CHAIR, as one of this room's lived things */
   const chair = (x: number, z: number, yaw: number, albedo: Vec3 = C.chair) => { K.chair(x, z, yaw, albedo); return own('chair'); };
   /** PROP (bin): an oil DRUM a man can shove, 0.56 across and 0.88 high (`drumFixed` is the one that stands where it is) */
-  const drum = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, mass = 22) => { prop('bin', x, z, 0.3, mass, [{ off: [0, 0.44, 0], h: [0.28, 0.44, 0.28], yaw: 0, albedo }, { off: [0, 0.886, 0], h: [0.23, 0.006, 0.23], yaw: 0, albedo: toned(albedo, 0.6) }]); return own('drum'); };
+  const drum = (x: number, z: number, albedo: Vec3 = LIVED_PAINT.oxide, mass = 22) => { prop('bin', x, z, 0.3, mass, [{ off: [0, 0.44, 0], h: [0.28, 0.44, 0.28], yaw: 0, albedo }, { off: [0, 0.886, 0], h: [0.23, 0.006, 0.23], yaw: 0, albedo: [albedo[0] * 0.6, albedo[1] * 0.6, albedo[2] * 0.6] }]); return own('drum'); };
   /** PROP (bin): a BUCKET */
   const bucket = (x: number, z: number, albedo: Vec3 = C.metal) => { prop('bin', x, z, 0.2, 2, [{ off: [0, 0.15, 0], h: [0.14, 0.15, 0.14], yaw: 0, albedo }]); return own('bucket'); };
   /** PROP (cardboard): a traffic CONE */

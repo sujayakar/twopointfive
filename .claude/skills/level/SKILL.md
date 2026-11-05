@@ -89,23 +89,7 @@ did not.
 - **Every room they can shut has another way in.** The maintainer: "maybe we just need to design levels so there's always
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
   rooms that could only be opened with a charge or a 40 mm. **check** `bun run tools/qa/second-way-check.ts <name>.json`
-  (export runs it too: red fails the export of a level a squad row plays and is a note on one with no row yet; a changed
-  swing moves that level's tallies and par times).
-- **Its starts and its doors are on a way.** The maintainer: "wear, paths in the ground ... can all tell a story for how
-  people walk through the level, its logic, leading the player". The look's page wears the floor where the level is walked
-  (`src/scene/ways.ts`), so a start no way leaves from, or a door no way crosses or ends at, tells no story. Give it one
-  with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `bun run
-  tools/qa/walked-check.ts <name>` (what is owed is held by name in the level's count file); `bun run
-  tools/levels/walked-overlay.ts <name>` draws the ways over what is laid by hand on the ground.
-- **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
-  stays see-through"; the maintainer: "we don't want them to feel dumb". Dress such a window with the kit's OPEN form
-  (`gwotKit` `boards`, `shutters`, `windowBlanket` take `'shut'` or `'open'`), and stand no cover in a mark's line. **seen**
-  the pass's tea room with its boards and shutters shut: its two men at the glass lost a half and a sixth of the yard they
-  hold; and the block with one leaf shut on a window no defender needs: the scripted team took it 3 times in 24 against 7
-  with the leaves folded back, so a shut window is laid only where the mission's tally was read with it shut. **check**
-  `bun run tools/qa/marksight-check.ts <name>` on both stands (export runs it too; a new level writes its
-  count file with `--write` once on each stand, and a move that makes a man see less carries the file with a `#` line
-  saying why).
+  (export runs it too; a changed swing moves that level's tallies and par times).
 - **A door a held room lists opens into that room**, and can be walked from both faces. **check** `probes.ts oneway-men`,
   `oneway-deal`.
 - **Every door face has floor for a stack**: a man on each jamb, 2 m of wall clear, nothing on the marks. **seen** a carton on
@@ -170,67 +154,12 @@ like that."
   edge with no start on it, are added up apart.
   It does not hold `STYLE.md`'s rule for a patch. Whether it reads is **by eye**, at the level's own hour (a midday
   sun shows ground a night hid). Never seen on a GPU here.
-- **A level says how kept it is, once.** `export const KEPT = <0 to 1>` in the generator (the file's `meta.kept`;
-  absent = 0, a place left to the weather, which is how every level was drawn before the word). A look's second
-  file (`<name>-gwot.ts`) takes the word of the level it dresses unless it exports its own; the office, which has
-  no generator of this kind, says it as `level.kept` in its builder. At 1 nothing blotches, no wall has a damp
-  foot or runs under its head, no rubbish gathers where nobody treads, a mud wall's render has not let go, and
-  paint on a wall is whole and its own colour; what USE does stays (a lane where feet go, paint trodden off a
-  floor), and plaster, block and slab get the knocked foot and the brought-in dirt their kept cousins have.
-  A level built on another's floor with no `DRESS_AS` (a squads level on its plain one) says the word itself:
-  `export { KEPT } from './<plain>'`. Say it before saying a wall again as another stuff to make it look clean.
-  `&kept=<n>` on the look page's address is the word for a visit. **What it does not do:** it changes no stuff's
-  own picture. Rust on a rack is drawn into the `metal` stuff itself, so a clean rack is another stuff's word
-  (`steel`, `enamel`, `brushed`), not a kept level. **seen** an office's half-metre wall numerals drew chipped,
-  because every mark was old paint whatever the place; its racks drew rusty because they were said as `metal`.
-  **check** `probes.ts kept`.
 - **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>`, behind `LIVED.on`.
 - **Clear of doors, stacks, marks and lines**: 1.1 m off a door's line and out of its sweep; a 0.9 m lane between a room's
   doors; nothing on or 0.45 m beside an authored point; never across a mark's aim line; never a new wall; nothing in the
   hidden band under a room's north wall. **seen** a crate stack shut the one way round; furnished barracks played harder
   because of one rack. **check** `bun run tools/qa/lived-check.ts <name>`.
 - **Measure a loud level after furnishing it**, and say the seeds: under 144 paired seeds a difference is noise.
-
-### A hand pass (after a level is dressed)
-
-The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
-the player for game play", and of the look he wants: "it's all quite intentionally dressed". A hand pass adds worn paths, paint and fittings to a
-level that already has its rooms, and moves nobody's fight. The office was the first (`docs/agents/levels.md`, "the office is hand-finished").
-
-- **Read the level first, and tie every item to the read.** Three sources, all headless: the level's marks and routes (`map-plan.ts <mission>
-  --png`), where its ways run (`src/scene/ways.ts`), and six seeds of each mission traced on the page's stand with everybody's place twice a
-  second (`TPS_PROFILE=shipped PT_WHERE=0-600 PT_FOES=<their call signs> bun run tools/qa/playthrough.ts --trace <mission>:<seed>`). Count
-  where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
-- **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
-  patrol. Use a name that is one thing: **seen** `storage` was a door and a room, so the row took the door; a mark inside the room says which.
-  A room's name is the middle of its floor: **seen** the server room's middle is a bank of racks, so three rows ended at the racks' near face
-  and not where anyone stands; a mark on free floor at the thing says where.
-  Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
-  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
-  start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.
-- **No word names a room, and no paint is there for the player.** The maintainer, playing the office's first cut: "i don't like the "lobby"
-  and "conference" labels in the level, pretty lame". A room is shown by what is in it. The test for paint: would THIS building's own people
-  have painted it for themselves? A door's number, a parking bay's number, hatching outside a fire exit pass. A hatched bay on an office
-  floor and a line that leads to a door do not: **seen** both went out of the office with the names. What leads a player is a THING the room
-  would have (a threshold, a mat, a duct), and that is a pass of its own. And his rule for size: "let's avoid large markings (e.g. numbers
-  or room names) where they don't seem realistic". Would this kind of place paint it, at this size, for its own people? A yard paints bays
-  and lines; an office paints almost nothing. Marks are seasoning; the surface carries the look.
-- **Paint on a surface that is there is a marking on that box** (`markingDefaults.ts` `stencilMarks`, `hazardMarks`, the painter's tins
-  `TIN`): four a box, 1.6 m a bitmap. The office kit has the tools: `boxOn(face, x, y, z)` finds the box by where its face is, never by its
-  number; `stencilS` / `stencilTop` lay a word with its middle at a place of the world; `keepClear` hatches a bay on a floor; `bandRuns` paints
-  a band along a wall door to door with names on it; `conduitRuns` lays conduit in lengths. Centre on the box: a doorway is not the middle of
-  its slot. Hand every paint a colour array of its own: **seen** a band took another paint's finish because both were made from one array.
-- **A new thing is a kit piece, drawn only, in the lived tier.** The office kit's `band`, `vent`, `conduit` and `pipe` lie on a wall's face
-  and are drawn only unless told they are solid; a band of paint is the wall's own stuff in another colour (`saidAs`). Groups `lived.<room>`
-  at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
-  hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
-  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
-  seen than before) on both stands, and the three play-through reads against the step before: none moves.
-- **Put it where the play camera reads, and draw your stills from that camera.** It opens at yaw -22 and pitch 55 degrees and turns with him.
-  At rest it shows floors, tops, south faces and west faces, and a wall hides about two metres of floor behind it. **seen** the office's
-  first stills were pinned at yaw 0 and 58: paint on a corridor's floor was all but hidden, a bay behind a parked van was never seen, and
-  one finding (a door "the camera cannot see") was simply wrong from the game's own camera. **By eye**, on a real card, at the mission's own
-  hour, panel shut, the game's AI held still. At night a mark shows only inside a lamp's pool, and the look's worn lanes do not show at all.
 
 ## 5. Light, hour, weather
 
@@ -263,13 +192,6 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   over 5.5 m, a room bulb 26 over 7 m). Between two pools there is ground that neither lights. The kit's floodlight
   (210 over 20 m, a 70 degree cone) is the one that washes: aim it at one stretch and let it be the only one there. A
   court that is bright all over is the moon's or the sun's work. Judgement, from the rule above; not tried.
-- **A lit room's lamp is weighed against the room's own paint, and a fixture that is a light gets no lamp on top.**
-  A night shows a lit room at the night's own exposure, which never comes down, so the lamp decides the picture: the
-  kit's bulb (26 at 2.4 m) puts the night's white on a pale floor in a room of mid paints. The kit's tube is a light
-  of its own already (3.7 each): do not hang a lamp between tubes. In a room that is pale on every face the bounce
-  is a few times the lamp, and it wants a fraction of the bulb. **seen** the white roof's two rooms, a lamp of 60
-  over two tubes: burnt white at night on a GPU, a black suit grey in the glare; the tubes alone were a lit room.
-  **By eye**, at night, with the door shut; `probes.ts` has no line for it.
 - **Every outside frame keeps a dark part, and nothing big goes white.** Stand the camera where the player starts and
   where he fights: about a third of the ground in shadow. A pale wall (0.4 and over by luminance: a blast wall near
   0.45, light plaster near 0.47, whitewash; bare block sits just under at 0.39) under a key light goes white first.

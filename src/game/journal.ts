@@ -158,8 +158,6 @@ import { FRIENDS } from './friends';
 import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
-import { HITSTUFF } from './particleFx';
-import { MARKCUT, MARKSIT } from '../render/decals';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -463,7 +461,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if ((k.tables.TEAMPACE as { doorBrisk?: boolean } | undefined)?.doorBrisk === undefined) TEAMPACE.doorBrisk = false;   // (… and one from before nobody sprinted to a stack: its men ran to cover on the way to a door as on any leg)
-  if ((k.tables.TEAMPACE as { walkAim?: boolean } | undefined)?.walkAim === undefined) TEAMPACE.walkAim = false;   // (… and one from before a walking man looked where he walked: its men carried their guns on an order's point through the walls between)
   if ((k.tables.TEAMPACE as { pacing?: boolean } | undefined)?.pacing === undefined) TEAMPACE.pacing = false;   // (… and one from before a teammate paced himself on the player: its men walked every leg at the flat share of his walk)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
   if (typeof (k.tables.AIM as { player?: { low?: number } } | undefined)?.player?.low !== 'number') AIM.player.low = 0;   // (a file from before a low man was aimed at where he is — its AIM row has no such key: its rounds at a man with his head down went to a standing chest, over him)
@@ -475,9 +472,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.QUICKTHROW) QUICKTHROW.on = true;   // (a file from before the G quick throw left the page: its G presses threw)
   if (!k.tables.LIGHTSWITCH) LIGHTSWITCH.on = false;   // (a file from before a room's lights had a switch on the wall: no plates, no row, nobody at one)
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
-  if (!k.tables.MARKCUT) MARKCUT.on = false;   // (a file with no table for the rule that a mark on a cut face lies where the round met it: its marks there are pulled to the plain box's face, as before the rule. A picture only — and that is also a tape of the hours on 11-05 when the page raised the rule by hand with no table to record it)
-  if (!k.tables.MARKSIT) MARKSIT.on = false;   // (a file with no table for the word for marks that sit in the surface: its blast marks are drawn as before the rule. A picture only — and that is also a tape of 11-04 and 11-05, when the page raised the word by hand with no table to record it)
-  if (!k.tables.HITSTUFF) HITSTUFF.on = false;   // (a file from before a round read what a thing says it is made of: every hit in it was read by the paint's colour)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
   if ((k.tables.THROWBACK as Partial<typeof THROWBACK> | undefined)?.reach === undefined) THROWBACK.reach = false;   // (…and a file from before the throw preview showed what the thing would reach: its arcs had the small ring alone)
@@ -642,7 +636,6 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     else if (dt?.behindSam === undefined) DOORTOOLS.behindSam = false;   // (…and a file from before Sam beyond a door kept the squad's own stun can in the kit: the word at a held door banged its pockets wherever he stood)
     if (typeof k.flags.tossMate === 'boolean') DOORTOOLS.tossMate = k.flags.tossMate;   // (… and the can asked about teammates again as it leaves the hand: with the flags, as behindSam)
     else if ((dt as { tossMate?: boolean } | undefined)?.tossMate === undefined) DOORTOOLS.tossMate = false;   // (…a file from before the key: the row asked when it was given and never again)
-    if ((dt as { chargeAnswer?: boolean } | undefined)?.chargeAnswer === undefined) DOORTOOLS.chargeAnswer = false;   // (…a file from before a door charge order was carried out or answered: ended on a leaf open anywhere, its men left as they were. A recording that carries the key keeps its own.)
     if (dt?.threatFirst === undefined) DOORTOOLS.threatFirst = false; if (dt?.openAir === undefined) DOORTOOLS.openAir = false; if (dt?.flowMax === undefined) DOORTOOLS.flowMax = 0;
     if (dt?.bangWay === undefined) DOORTOOLS.bangWay = false; if (dt?.threatStuck === undefined) DOORTOOLS.threatStuck = 0;   // (…and from before the stun canister's look at the leaf existed; a recording that carries the key replays its own value)
     if (dt?.openHand === undefined) DOORTOOLS.openHand = false; if ((dt as { gateHand?: boolean } | undefined)?.gateHand === undefined) DOORTOOLS.gateHand = false;

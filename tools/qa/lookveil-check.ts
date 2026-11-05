@@ -36,9 +36,6 @@ check(frame(1, [bulb, sun], null) === null && frame(0) === null && lookVeilFrame
   const own = { gain: num('POWDER_GAIN'), thin: num('POWDER_THIN'), thread: num('POWDER_THREAD'), grain: num('POWDER_GRAIN') };
   check(Object.entries(own).every(([k, v]) => v === (POWDER_DRAW_OWN as Record<string, number>)[k] && v === (POWDER_DRAW as Record<string, number>)[k]) && powderDrawWord() === 0,
     `the drawing rows open on the shader's own numbers (${JSON.stringify(own)}) and the frame's word is 0: the picture as it was`);
-  // a thread's reads are under a grain apart WHATEVER the grain's width (the step is said in grains: in metres over the grain's const it was 0.6 on the panel at any row and would have been 1.4 with a tuned width made the const)
-  check(num('POWDER_STEP') > 0 && num('POWDER_STEP') < 1 && /let d = v \* \(POWDER_STEP \* run \/ max\(sp, 1e-3\)\);/.test(src) && !/POWDER_REACH/.test(src),
-    `a thread's reads lie ${num('POWDER_STEP')} of a grain apart, under 1, and the step asks no width: no row of beads at any grain`);
   const units = [...src.matchAll(/powderRow\((\d+)u, POWDER_(\w+), ([0-9. /]+)\)/g)].map(m => [m[2].toLowerCase(), +m[1], m[3].includes('/') ? 1 / 255 : +m[3]] as const);
   const K = POWDER_DRAW_STEP as Record<string, number>, SH: Record<string, number> = { gain: 0, thin: 8, thread: 16, grain: 24 };
   check(units.length === 4 && units.every(([k, sh, u]) => SH[k] === sh && Math.abs(u - K[k]) < 1e-9), `the shader reads each row from its own byte at the table's step (${units.map(u => u.join(' ')).join(' · ')})`);

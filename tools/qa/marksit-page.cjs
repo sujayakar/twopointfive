@@ -1,4 +1,4 @@
-// MARKS THAT SIT IN THE SURFACE, on the page (render/decals.ts MARKSIT, shaders/decals.wgsl dkSit; ?marksit=0): what several hand grenades leave on open
+// MARKS THAT SIT IN THE SURFACE, on the page (render/decals.ts Decals.sit, shaders/decals.wgsl dkSit; ?marksit=0): what several hand grenades leave on open
 // ground of the yard (each one's films of dust and its scorch, laid as the game's records), and stills of the same marks with the word down and up, dry or in the weather asked for.
 //   node tools/qa/marksit-page.cjs [--out DIR] [--level gwot-yard.json] [--hour overcast] [--weather rain] [--bursts 5] [--quality high]
 //   headless Chromium on the software adapter. It shows that the page boots with the shader, that the word changes what the marks look like and that the
@@ -70,7 +70,7 @@ process.on('exit', stop); for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) proce
     at = 'frames'; console.log('marks: ' + at);
     const t0 = performance.now(); for (let i = 0; i < 3; i++) { window.__runFrames(1, 1 / 60); await window.__done(); } const settleMs = Math.round(performance.now() - t0);
     const looks = {}; for (const d of g.decals.list) { const k = d.kind === 'damage' ? 'damage' + Math.floor(d.param) : d.kind; looks[k] = (looks[k] || 0) + 1; }
-    return { settleMs, pipelines: window.__boot && window.__boot.pipelines, spots: spots.map(s => s.map(v => +v.toFixed(1))), wall: !!wall, marks: looks, sit: window.__knobs.registry().MARKSIT.on, weather: g.weather.kind, wetGround: !!g.weather.wetGloss };
+    return { settleMs, pipelines: window.__boot && window.__boot.pipelines, spots: spots.map(s => s.map(v => +v.toFixed(1))), wall: !!wall, marks: looks, sit: g.decals.sit, weather: g.weather.kind, wetGround: !!g.weather.wetGloss };
     } catch (e) { throw new Error(`at ${at}: ${e && e.stack || e}`); }
   }, [SCALE, HOUR, BURSTS]);
   log('booted', JSON.stringify(info));
@@ -83,10 +83,10 @@ process.on('exit', stop); for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) proce
     const shots = {};
     for (const sit of [0, 1]) {
       const r = await page.evaluate(async ([wx, on]) => { const g = window.__game;
-        window.__knobs.registry().MARKSIT.on = on; for (let i = 0; i < 5; i++) { window.__runFrames(1, 1 / 600); await window.__done(); }
+        g.decals.setSit(on); for (let i = 0; i < 5; i++) { window.__runFrames(1, 1 / 600); await window.__done(); }
         const u = await window.__grab(), L = window.__last; if (!u || !L) return { u: null }; let s = 0; for (let i = 0; i < L.d.length; i += 4) s += 0.2126 * L.d[i] + 0.7152 * L.d[i + 1] + 0.0722 * L.d[i + 2];
         const prev = window.__prev; let diff = -1, changed = -1; if (prev && prev.d.length === L.d.length) { diff = 0; changed = 0; for (let i = 0; i < L.d.length; i += 4) { const e = Math.abs(L.d[i] - prev.d[i]) + Math.abs(L.d[i + 1] - prev.d[i + 1]) + Math.abs(L.d[i + 2] - prev.d[i + 2]); diff += e; if (e > 24) changed++; } diff /= (L.d.length / 4) * 3; changed /= L.d.length / 4; }
-        window.__prev = L; return { u, mean: +(s / (L.d.length / 4) / 255).toFixed(4), diff: +diff.toFixed(3), changed: +changed.toFixed(4), weather: g.weather.kind, sit: window.__knobs.registry().MARKSIT.on }; }, [wx, BREAK ? false : !!sit]);
+        window.__prev = L; return { u, mean: +(s / (L.d.length / 4) / 255).toFixed(4), diff: +diff.toFixed(3), changed: +changed.toFixed(4), weather: g.weather.kind, sit: g.decals.sit }; }, [wx, BREAK ? false : !!sit]);
       if (!r.u) { fails.push(`no picture for ${wx} ${sit}`); continue; }
       const f = path.join(OUT, `marks-${wx}-${sit}.png`); fs.writeFileSync(f, Buffer.from(r.u.split(',')[1], 'base64')); delete r.u; r.file = f; shots[sit] = r; log('shot', wx, sit, JSON.stringify(r));
     }

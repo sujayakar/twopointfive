@@ -88,7 +88,6 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/s
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
-import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'quiet-relay';
 export const NOTES = 'The relay station at night, for a pair sneaking: a walled hilltop compound, an antenna mast whose two floodlights wash the face of the hut block (a comms hut joined to an ops room), a generator shed with the breaker, a bunk hut, a fuel point, two pickups. Its one idea: the long way round — both doors are on the lit face, watched by a picket in the dark behind the mast; one of the pair goes round by the alley behind the gate\'s blast wall to his back while the other waits at the door. Seven beats authored, five or six manned a deal; two cameras; four gates. Regenerate: bun run tools/levels/export.ts quiet-relay';
@@ -283,7 +282,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- the generator shed (x 4..9.5, z 19.5..24): the set, its fuel, THE BREAKER on the west wall ----------------
   grp('room.shed');
   G.generator(7.3, 23.1, 0); G.drum(8.95, 22.6, 'drumRed'); G.drum(8.95, 21.9, 'rust'); G.jerryCan(5.0, 23.4, 0.3); G.jerryCan(5.5, 23.5, -0.2, 'jerryYellow');
-  const brk = add({ c: [4.16, 1.35, 21.4], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [4.16, 1.35, 21.4], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [4.21, 1.62, 21.22], h: [0.01, 0.015, 0.015], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [4.16, 2.3, 21.4], h: [0.03, 0.6, 0.03], ...M.iron, flags: BoxFlag.NoShadow });
   downLamp(6.9, H - 0.12, 21.5, 'lamp_shed', 'shed', 52, 22);

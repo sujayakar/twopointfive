@@ -221,10 +221,10 @@ export interface PaneCross extends PaneToll {
   into: number;
 }
 /** the turn: toward the normal by the slant's share, plus the hashed scatter — unit vector out */
-function deflect(b: Box, at: Vec3, d: Vec3, T: PaneToll, eIn: number): Vec3 {
+function deflect(bi: number, at: Vec3, d: Vec3, T: PaneToll, eIn: number): Vec3 {
   const A = GLASSPEN.deflectDeg * Math.PI / 180 * clamp(T.take / Math.max(eIn, 1e-6), 0, 1);   // (a round through a hole: its toll is already the quarter)
   if (A < 1e-6) return d;
-  let s = hitSeed(b, at); s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0;   // (one step off the seed the star's look is drawn from: the turn is not the star's twin)
+  let s = hitSeed(bi, at); s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0;   // (one step off the seed the star's look is drawn from: the turn is not the star's twin)
   const u1 = (s & 0xffff) / 65535, u2 = (s >>> 16) / 65535;
   const up: Vec3 = Math.abs(d[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0]; const e1 = v3.normalize(v3.cross(up, d)), e2 = v3.cross(d, e1);
   const r = Math.tan(A * Math.sqrt(u1)), phi = u2 * Math.PI * 2;   // uniform over the cone's disc
@@ -238,7 +238,7 @@ export function paneCrossing(g: Game, bi: number, o: Vec3, d: Vec3, t: number, e
   const at = v3.mad(o, d, t); const T = paneToll(g, bi, at, d, e, nth); if (!T) return null;
   const b = g.level.boxes[bi]; const te = lineBox(at, d, b)?.t1 ?? -1; const thru = (te > 0 ? te : 2 * Math.min(b.h[0], b.h[2]) / T.cos) + EXIT_EPS;   // (the far end of the sheet's slab along the flight, + a hair)
   const exit = v3.mad(at, d, thru); const into = bornIn(g, exit, d, bi); if (into === -2) return null;   // out of the glass and into the frame it sits in: spent there
-  const dirOut = into >= 0 ? d : deflect(b, at, d, T, e);   // (straight on into a pane abutting this one: that pane does the turning)
+  const dirOut = into >= 0 ? d : deflect(bi, at, d, T, e);   // (straight on into a pane abutting this one: that pane does the turning)
   return { ...T, bi, t, at, exit, dirIn: d, dirOut, eIn: e, turnDeg: Math.acos(clamp(v3.dot(d, dirOut), -1, 1)) * 180 / Math.PI, thru, into };
 }
 

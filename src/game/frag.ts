@@ -225,7 +225,7 @@ export type GlassView = 'blown' | 'wary' | 'counted' | 'whole';
 function throughGlass<T>(g: Game, from: Vec3, view: GlassView, fn: () => T): T {
   const gb = g.glassBreak; if (view === 'whole' || !gb || !glassBreakLive(g)) return fn();
   const size = { radius: FRAG.glassM, power: FRAG.glassPower };
-  return gb.seeThrough(view, from, size, fn);
+  return gb.seeThrough(view === 'blown' ? (bi, X) => gb.goingAt(bi, X) : view === 'wary' ? (bi) => gb.wouldGive(bi, from, size) : (bi, X) => gb.wouldGive(bi, from, size, X), fn);
 }
 /** is a burst's line from a to b stopped — by anything solid (the walk at the head of this file), and by glass as glass is to a burst */
 function burstBlocked(g: Game, a: Vec3, b: Vec3): boolean {

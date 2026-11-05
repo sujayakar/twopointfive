@@ -182,9 +182,9 @@ function bornIn(g: Game, p: Vec3, d: Vec3, self: number): number {
   return -1;
 }
 /** the turn: a hashed scatter inside the cone the toll opens — unit vector out */
-function deflect(b: Box, at: Vec3, d: Vec3, take: number, eIn: number): Vec3 {
+function deflect(index: number, at: Vec3, d: Vec3, take: number, eIn: number): Vec3 {
   const A = WALLPEN.deflectDeg * Math.PI / 180 * clamp(take / Math.max(eIn, 1e-6), 0, 1); if (A < 1e-6) return d;
-  let s = hitSeed(b, at); s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0;
+  let s = hitSeed(index % 1e6, at); s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0;
   const u1 = (s & 0xffff) / 65535, u2 = (s >>> 16) / 65535;
   const up: Vec3 = Math.abs(d[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0]; const e1 = v3.normalize(v3.cross(up, d)), e2 = v3.cross(d, e1);
   const r = Math.tan(A * Math.sqrt(u1)), phi = u2 * Math.PI * 2;
@@ -193,7 +193,7 @@ function deflect(b: Box, at: Vec3, d: Vec3, take: number, eIn: number): Vec3 {
 function crossing(g: Game, index: number, o: Vec3, d: Vec3, t: number, n: Vec3, e: number): WallCross | null {
   const at = v3.mad(o, d, t); const T = thinToll(g, index, at, d, e); if (!T) return null;
   const exit = v3.mad(at, d, T.thru + EXIT_EPS); const b = index >= 1e6 ? g.col.dynamicBoxes[index - 1e6] : g.col.boxes[index];
-  return { ...T, index, t, at, nIn: t > 0 ? n : faceN(b, at), nOut: faceN(b, v3.mad(at, d, T.thru)), exit, dirIn: d, dirOut: deflect(b, at, d, T.take, e), eIn: e, into: bornIn(g, exit, d, index) };   // (t = 0: met where the round was born inside it — no ray gave a face)
+  return { ...T, index, t, at, nIn: t > 0 ? n : faceN(b, at), nOut: faceN(b, v3.mad(at, d, T.thru)), exit, dirIn: d, dirOut: deflect(index, at, d, T.take, e), eIn: e, into: bornIn(g, exit, d, index) };   // (t = 0: met where the round was born inside it — no ray gave a face)
 }
 
 // ---------------------------------------------------------------- the round's flight

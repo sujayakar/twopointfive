@@ -6,7 +6,7 @@
 // `fine` (carton print, LEDs, clock hands, keypads). Palette entries are materials, never shaded colours: albedo (absolute, or × the box's own), roughness,
 // emitted radiance — no gradient, no painted shadow, by construction.
 import type { Vec3 } from '../math/vec';
-import { MarkingDef, MarkFace, MarkPal, MARKING_TEXEL, RES_K, CellCanvas, GEN, markFromRect, markFromArt, marking, stencilWidth } from './markings';
+import { MarkingDef, MarkFace, MarkPal, MARKING_TEXEL, CellCanvas, GEN, markFromRect, markFromArt, marking } from './markings';
 
 export const T = MARKING_TEXEL;               // recipes count in it; a level built at another base texel passes its own (tools/level-export.ts --texel)
 const F2 = 0.5;                               // fine = half a base texel
@@ -337,64 +337,4 @@ export function firstAidMarks(face: MarkFace, t = T): MarkingDef[] {
  *  by one-cell blades of the frame's own pale metal (entry 2), inside the 3 cm rim the rect leaves of the box's face */
 export function ventGrilleMarks(h: Vec3, t = T): MarkingDef[] {
   return some([markFromRect('-y', 'coarse', [-(h[0] - 0.03), -(h[2] - 0.03), h[0] - 0.03, h[2] - 0.03], [{ albedo: [0.04, 0.04, 0.045] }, { albedo: [0.66, 0.67, 0.66], rough: 0.4 }], c => { c.fill(1); GEN.seams(c, 4, 4, 0, 0, 2, 2); }, t)]);
-}
-
-/** THE PAINTER'S TINS: what paint on a building is made of, wherever it is laid (a palette entry each: a material, never a shaded colour). Ink on a pale
- *  surface, chalk on a dark one, signal yellow where a floor is kept clear */
-export const TIN = { ink: { albedo: [0.1, 0.1, 0.11], rough: 0.55 }, chalk: { albedo: [0.84, 0.84, 0.82], rough: 0.5 }, signal: { albedo: [0.88, 0.6, 0.04], rough: 0.4 } } satisfies Record<string, MarkPal>;
-// ---- PAINT ON A BUILDING: what a painter leaves on a kept wall or floor (the white roof's, tools/levels/white-roof.ts; any level's). Rects and places in
-// metres from the face centre, as every recipe above. A bitmap is 32 cells a side at most (1.6 m at coarse): a recipe that is asked for more either cuts
-// its work into several (stencilMarks, hazardMarks) or THROWS and says so. None of them hands back a picture cut short.
-const cellOf = (res: 'fine' | 'base' | 'coarse', t: number) => t * RES_K[res];
-/** a rect as whole cells [U0, V0, U1, V1], snapped inward as markFromRect snaps it */
-const cellsOf = (rect: Rect, k: number): Rect => [Math.ceil(rect[0] / k - 1e-7), Math.ceil(rect[1] / k - 1e-7), Math.floor(rect[2] / k + 1e-7), Math.floor(rect[3] / k + 1e-7)];
-const fits = (what: string, W: number, H: number) => { if (W > 32 || H > 32) throw new Error(`${what}: ${W} by ${H} cells, and a bitmap is 32 a side: ask for a coarser one or cut the rect`); };
-/** STENCILLED TEXT (markings.ts STENCIL: capitals, figures, - / . and → ← ↑ ↓), its bottom-left at (u, v): a letter is 5 × 7 cells × scale, so 12.5 by 17.5 cm at
- *  base and scale 1, 25 by 35 cm at coarse; scale 1 to 4 (a letter of 28 cells; from 2 up a figure is drawn, not scaled: markings.ts NUMERAL). A text wider
- *  than one bitmap (five letters at scale 1, two at 2, one at 3 and 4) is cut into several, and a box carries four */
-export function stencilMarks(face: MarkFace, text: string, u: number, v: number, pal: MarkPal, scale = 1, res: 'fine' | 'base' | 'coarse' = 'coarse', t = T): MarkingDef[] {
-  if (!Number.isInteger(scale) || scale < 1 || scale > 4) throw new Error(`stencilMarks '${text}': scale ${scale}, and a letter is 7 × scale cells of a bitmap's 32 (1 to 4)`);
-  const k = cellOf(res, t); const per = Math.floor((32 + scale) / (6 * scale)); const U0 = Math.round(u / k), V0 = Math.round(v / k);
-  const out: MarkingDef[] = [];
-  for (let a = 0; a < text.length; a += per) {
-    const part = text.slice(a, a + per); if (!part.trim()) continue;
-    const c = new CellCanvas(stencilWidth(part, scale), 7 * scale); GEN.text(c, part, 0, 0, scale, 1);
-    out.push(marking({ face, res, at: [U0 + a * 6 * scale, V0], size: [c.W, c.H], pal: [pal], cells: c.toRows() }));
-  }
-  return out;
-}
-/** WARNING STRIPES over a rect: 45° bands `w` cells wide of two paints (b absent = the face's own paint shows between), an outline `edge` cells wide round
- *  the whole rect if asked (a hatched bay before a door). A rect wider than one bitmap is cut along u, on the lattice, and the stripes run on across the
- *  cuts; one taller than a bitmap throws */
-export function hazardMarks(face: MarkFace, rect: Rect, a: MarkPal, b?: MarkPal, w = 2, res: 'fine' | 'base' | 'coarse' = 'coarse', edge = 0, t = T): MarkingDef[] {
-  const k = cellOf(res, t); const [U0, V0, U1, V1] = cellsOf(rect, k); const H = V1 - V0; fits('hazardMarks', 1, H);
-  const out: MarkingDef[] = [];
-  for (let u = U0; u < U1; u += 32) {
-    const W = Math.min(32, U1 - u); const c = new CellCanvas(W, H); GEN.stripes(c, w, 1, b ? 2 : 0, u - V0);
-    if (edge > 0) { c.fill(1, 0, 0, W, edge); c.fill(1, 0, H - edge, W, H); if (u === U0) c.fill(1, 0, 0, edge, H); if (u + W === U1) c.fill(1, W - edge, 0, W, H); }
-    out.push(marking({ face, res, at: [u, V0], size: [W, H], pal: b ? [a, b] : [a], cells: c.toRows() }));
-  }
-  return out;
-}
-/** a painted OUTLINE round a rect, `w` cells wide (a hatch's edge, a bay to keep clear); gap > 0 = its corners only. One bitmap: a rect over 1.6 m at coarse throws */
-export function outlineMarks(face: MarkFace, rect: Rect, pal: MarkPal, w = 1, gap = 0, res: 'fine' | 'base' | 'coarse' = 'coarse', t = T): MarkingDef[] {
-  const k = cellOf(res, t); const [U0, V0, U1, V1] = cellsOf(rect, k); fits('outlineMarks', U1 - U0, V1 - V0);
-  return some([markFromRect(face, res, rect, [pal], c => GEN.frame(c, w, 1, gap), t)]);
-}
-/** a ROW OF BOLT HEADS along u from u0 to u1 at height v (one cell each, a shade under the plate and a touch duller), `pitch` cells apart, the row centred on
- *  its run. One bitmap: a run over 32 cells throws */
-export function boltMarks(face: MarkFace, u0: number, u1: number, v: number, pitch = 8, res: 'fine' | 'base' | 'coarse' = 'base', t = T): MarkingDef[] {
-  const k = cellOf(res, t); const V = Math.round(v / k - 0.5); const [U0, , U1] = cellsOf([u0, 0, u1, 0], k); const W = U1 - U0; fits('boltMarks', W, 1);
-  if (W < 1) return [];
-  const n = Math.floor((W - 1) / pitch) + 1, first = Math.floor((W - ((n - 1) * pitch + 1)) / 2); const c = new CellCanvas(W, 1);
-  for (let q = 0; q < n; q++) c.set(first + q * pitch, 0, 1);
-  return [marking({ face, res, at: [U0, V], size: [W, 1], pal: [{ mul: 0.5, rough: 0.6 }], cells: c.toRows() })];
-}
-/** a MAKER'S PLATE: a pale label with a dark band along its head and a few bars of print under it, a clear row between (a rating plate on a machine's case) */
-export function ratingPlateMarks(face: MarkFace, rect: Rect, seed = 0, t = T): MarkingDef[] {
-  const k = cellOf('fine', t); const [U0, V0, U1, V1] = cellsOf(rect, k); fits('ratingPlateMarks', U1 - U0, V1 - V0);
-  return some([markFromRect(face, 'fine', rect, [P.label, P.grey, { albedo: [0.1, 0.1, 0.11] }], c => {
-    c.fill(1); c.fill(3, 0, c.H - 2, c.W, c.H);
-    if (c.H >= 6) { const body = new CellCanvas(c.W, c.H - 3); GEN.lines(body, 1, 1, seed, 2); for (let j = 0; j < body.H; j++) for (let i = 0; i < body.W; i++) if (body.get(i, j)) c.set(i, j, 2); }
-  }, t)]);
 }

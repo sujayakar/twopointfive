@@ -1,2 +1,2 @@
-# 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: 11-05, the kit's drums: a drum is steel to a round in any paint (an olive one was dark wood), and a drum on its side is one box that says its round; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-1e97af11d5f32a0bf3b46ef2568529512dbb6d52
+# the yard's own scatter of block on its road is all block: one of its stones was the mud wall's dark row whatever was asked (gwotKit.ts rubble)
+132afb573301fcc38b5412f7e5c4d97a2c17a48a

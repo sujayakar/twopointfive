@@ -150,9 +150,7 @@ export function dealSwings(level: Level, doors: Doors, nav: NavGrid | null, col:
   const S = level.scenarios, rooms = S?.roomClear?.rooms ?? [], plans = [...(level.breach ? [level.breach] : []), ...(level.clearPlans ?? [])];
   let fl: ReturnType<typeof floors> | null | undefined;   // (flooded on the first door that gets as far as asking)
   const toward = (d: Door, r: Rect | undefined): 1 | -1 | 0 => r ? sideOf(d, ...mid(r)) : 0;
-  // (every leaf's room is asked of the box world, about three thousand circles a level and nothing written between but the leaves, which say so
-  //  themselves: one proof of the Rust module's copy for the lot — StaticCollision.window)
-  const all = (): SwingDeal[] => doors.list.map((d): SwingDeal => {
+  return doors.list.map((d): SwingDeal => {
     const name = d.def.name, opens = (s: number) => (s > 0 ? d.maxAuth : -d.minAuth) >= MIN_OPEN;
     const deal = (swing: 1 | -1 | 0, why: SwingWhy, into?: string): SwingDeal | null => swing && (why === 'authored' || opens(swing) || !opens(-swing)) ? { door: name, swing, why, ...(into ? { into } : {}) } : null;   // (never a side its authored stop will not let it open to — a wall behind it — while the other will)
     const tries: (() => SwingDeal | null)[] = [
@@ -180,5 +178,4 @@ export function dealSwings(level: Level, doors: Doors, nav: NavGrid | null, col:
     if (clear) got.clear = clear;
     d.setSwing(got.swing, out ? out.swing : 0, clear ? clear.swing : 0); return got;
   });
-  return col && doors.list.length ? col.window(all) : all();
 }

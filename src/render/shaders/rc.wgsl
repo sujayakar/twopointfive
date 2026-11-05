@@ -65,31 +65,28 @@ fn parentSetup(slot: u32, corner: u32, P: vec3f, py: u32) {
   wgIdx[slot * 4u + corner] = lin;
 }
 
-fn parentRadiance(slot: u32, dirIdx: u32, dirCount: u32) -> vec4f {
+fn parentRadiance(slot: u32, dirIdx: u32, dirCount: u32) -> vec3f {
   let b = slot * 4u;
   var w = vec4f(wgW[b], wgW[b + 1u], wgW[b + 2u], wgW[b + 3u]);
   let sum = w.x + w.y + w.z + w.w;
-  if (sum < 1e-4) { return vec4f(0.0); }
+  if (sum < 1e-4) { return vec3f(0.0); }
   w /= sum;
-  var L = vec4f(0.0);
-  if (w.x > 0.0) { L += w.x * unpackRad(parentBuf[wgIdx[b] * dirCount + dirIdx]); }
-  if (w.y > 0.0) { L += w.y * unpackRad(parentBuf[wgIdx[b + 1u] * dirCount + dirIdx]); }
-  if (w.z > 0.0) { L += w.z * unpackRad(parentBuf[wgIdx[b + 2u] * dirCount + dirIdx]); }
-  if (w.w > 0.0) { L += w.w * unpackRad(parentBuf[wgIdx[b + 3u] * dirCount + dirIdx]); }
+  var L = vec3f(0.0);
+  if (w.x > 0.0) { L += w.x * unpackRad(parentBuf[wgIdx[b] * dirCount + dirIdx]).xyz; }
+  if (w.y > 0.0) { L += w.y * unpackRad(parentBuf[wgIdx[b + 1u] * dirCount + dirIdx]).xyz; }
+  if (w.z > 0.0) { L += w.z * unpackRad(parentBuf[wgIdx[b + 2u] * dirCount + dirIdx]).xyz; }
+  if (w.w > 0.0) { L += w.w * unpackRad(parentBuf[wgIdx[b + 3u] * dirCount + dirIdx]).xyz; }
   return L;
 }
 
-/// .xyz = the radiance along a direction, merged with the cascades above as ever; .w = HOW MUCH OF IT IS THE SKY'S, by luminance (the record's fourth
-/// number, which nothing used). The sky is added where a ray of the top cascade meets nothing, from a probe metres from the one that asked, so no ray
-/// here can say whose sky it is: the dice bake takes a portal's share of it out, at the probe the light is for (rcDice).
-fn mergedInterval(P: vec3f, sd: vec2u, D: u32, slot: u32) -> vec4f {
+fn mergedInterval(P: vec3f, sd: vec2u, D: u32, slot: u32) -> vec3f {
   let dir = octDecode((vec2f(sd) + frame.rcJitter.xy) / f32(D));
   var r = traceInterval(P, dir, rc.tStart, rc.tLen);
   if (r.w > 0.0) {
-    if (rc.hasParent != 0u) { let up = parentRadiance(slot, sd.y * D + sd.x, D * D); return vec4f(r.xyz + up.xyz, up.w); }
-    let sky = skyRadiance(dir); return vec4f(r.xyz + sky, luminance(sky));
+    if (rc.hasParent != 0u) { return r.xyz + parentRadiance(slot, sd.y * D + sd.x, D * D); }
+    return r.xyz + skyRadiance(dir);
   }
-  return vec4f(r.xyz, 0.0);
+  return r.xyz;
 }
 
 // ---------------- upper cascades (n >= 1): work item = (output texel, sub-direction) ----------------
@@ -116,17 +113,17 @@ fn rcUpper(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li
   for (var base = i0; base < i1; base += 64u) {
     let w = base + li;
     let o = w >> 2u; let s = w & 3u;
-    var L = vec4f(0.0);
+    var L = vec3f(0.0);
     if (w < nItems) {
       let cd = vec2u(o % rc.Dout, o / rc.Dout);
       let sd = cd * 2u + vec2u(s & 1u, s >> 1u);
       L = mergedInterval(P, sd, rc.D, 0u);
     }
-    wgAcc[li] = L;
+    wgAcc[li] = vec4f(L, 0.0);
     workgroupBarrier();
     if (s == 0u && w < nItems) {
-      let sum = wgAcc[li] + wgAcc[li + 1u] + wgAcc[li + 2u] + wgAcc[li + 3u];
-      outBuf[probeLin * nOut + o] = packRad(sum * 0.25);
+      let sum = wgAcc[li].xyz + wgAcc[li + 1u].xyz + wgAcc[li + 2u].xyz + wgAcc[li + 3u].xyz;
+      outBuf[probeLin * nOut + o] = packRad(vec4f(sum * 0.25, 0.0));
     }
     workgroupBarrier();
   }
@@ -149,7 +146,7 @@ fn rcC0(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u
   let sd = vec2u(d % rc.D, d / rc.D);
   let L = mergedInterval(P, sd, rc.D, slot);
   let probeLin = (pidx.z * rc.dims.y + pidx.y) * rc.dims.x + pidx.x;
-  outBuf[probeLin * DD + d] = packRad(L);
+  outBuf[probeLin * DD + d] = packRad(vec4f(L, 0.0));
 }
 
 // ---------------- dice bake: c0 → 3D texture (7 slabs along Y: +x -x +y -y +z -z mean) ----------------
@@ -163,9 +160,8 @@ fn rcDice(@builtin(global_invocation_id) gid: vec3u) {
   let DD = rc.D * rc.D;
   var E0 = vec3f(0.0); var E1 = vec3f(0.0); var E2 = vec3f(0.0); var E3 = vec3f(0.0); var E4 = vec3f(0.0); var E5 = vec3f(0.0);
   var mean = vec3f(0.0);
-  var S: array<f32, 7>;   // the sky's part of each face's light, and of the mean's, by luminance (the record's fourth number: mergedInterval)
   for (var d = 0u; d < DD; d++) {
-    let rec = unpackRad(c0Read[probeLin * DD + d]); let L = rec.xyz;
+    let L = unpackRad(c0Read[probeLin * DD + d]).xyz;
     let sd = vec2u(d % rc.D, d / rc.D);
     let dir = octDecode((vec2f(sd) + frame.rcJitter.xy) / f32(rc.D));
     let om = dirOmega[d].x;
@@ -174,32 +170,6 @@ fn rcDice(@builtin(global_invocation_id) gid: vec3u) {
     E0 += Lw * max(dir.x, 0.0);  E1 += Lw * max(-dir.x, 0.0);
     E2 += Lw * max(dir.y, 0.0);  E3 += Lw * max(-dir.y, 0.0);
     E4 += Lw * max(dir.z, 0.0);  E5 += Lw * max(-dir.z, 0.0);
-    let sw = rec.w * om;
-    S[0] += sw * max(dir.x, 0.0); S[1] += sw * max(-dir.x, 0.0); S[2] += sw * max(dir.y, 0.0); S[3] += sw * max(-dir.y, 0.0); S[4] += sw * max(dir.z, 0.0); S[5] += sw * max(-dir.z, 0.0); S[6] += sw;
-  }
-  // DAYLIGHT COUNTED ONCE (common.wgsl LIGHT_PORTAL): the sky this probe sees out of an opening that is lit as a portal is the portal's to send, and comes
-  // out of the probe's light here. HOW MUCH: what the portal sends each face with nothing in the way (its own sum, portalFaces: sixteen directions are
-  // too few for a probe to find a doorway by) × the share of the opening that is open now, and never more than the sky the probe's rays really brought
-  // that face (a wall across the yard had its part already). In the hue of the sky toward the opening. A portal the probe's cell cannot see (its reach
-  // mask) takes nothing. `gave` = what came out of the +y face, by luminance: the place field reads that face as the light that falls on a floor and
-  // must read the same light whoever carries it (place_field.wgsl reading; the slab's fourth number).
-  var gave = 0.0;
-  if (frame.placeCfg.y > 0.5) {
-    let P = probePos(vec3u(px, py, pz), rc.spacing);
-    var V: array<vec3f, 7>; var T: array<f32, 7>;
-    for (var i = u32(frame.placeCfg.y) - 1u; i < frame.numLights; i++) {
-      let li = lights[i];
-      if (!lightPortal(li) || !lightReaches(i, P)) { continue; }
-      let dv = li.pos - P; let dist = length(dv);
-      if (dist > li.range || dot(dv, li.dir) >= 0.0) { continue; }   // (out of its range, or behind it)
-      let k0 = portalArea(li) * li.cosInner * lightWindow(dist, li.range); let sky = skyRadiance(dv / max(dist, 1e-4)); let hue = sky / max(luminance(sky), 1e-9);
-      let F = portalFaces(li, P);
-      for (var f = 0; f < 7; f++) { let p = k0 * F[f]; V[f] += hue * p; T[f] += p; }
-    }
-    E0 = max(E0 - V[0] * min(1.0, S[0] / max(T[0], 1e-9)), vec3f(0.0)); E1 = max(E1 - V[1] * min(1.0, S[1] / max(T[1], 1e-9)), vec3f(0.0));
-    let floorLight = E2; E2 = max(E2 - V[2] * min(1.0, S[2] / max(T[2], 1e-9)), vec3f(0.0)); gave = luminance(floorLight - E2); E3 = max(E3 - V[3] * min(1.0, S[3] / max(T[3], 1e-9)), vec3f(0.0));
-    E4 = max(E4 - V[4] * min(1.0, S[4] / max(T[4], 1e-9)), vec3f(0.0)); E5 = max(E5 - V[5] * min(1.0, S[5] / max(T[5], 1e-9)), vec3f(0.0));
-    mean = max(mean - V[6] * min(1.0, S[6] / max(T[6], 1e-9)), vec3f(0.0));
   }
   mean *= (1.0 / (4.0 * 3.14159265));
   // short EMA against last frame's bake: the direction set is jittered per frame, this keeps bounce / meter / smoke ambient steady. sched.z carries this
@@ -209,7 +179,7 @@ fn rcDice(@builtin(global_invocation_id) gid: vec3u) {
   let c4i = vec3u(px, 4u * dims.y + py, pz); let c5i = vec3u(px, 5u * dims.y + py, pz); let c6i = vec3u(px, 6u * dims.y + py, pz);
   textureStore(diceOut, c0i, vec4f(mix(textureLoad(diceTex, c0i, 0).xyz, E0, k), 1.0));
   textureStore(diceOut, c1i, vec4f(mix(textureLoad(diceTex, c1i, 0).xyz, E1, k), 1.0));
-  { let was = textureLoad(diceTex, c2i, 0); textureStore(diceOut, c2i, vec4f(mix(was.xyz, E2, k), mix(was.w, gave, k))); }   // (the fourth number of THIS slab: what a portal took out of the face, eased as the light is; 0 with no portal lit)
+  textureStore(diceOut, c2i, vec4f(mix(textureLoad(diceTex, c2i, 0).xyz, E2, k), 1.0));
   textureStore(diceOut, c3i, vec4f(mix(textureLoad(diceTex, c3i, 0).xyz, E3, k), 1.0));
   textureStore(diceOut, c4i, vec4f(mix(textureLoad(diceTex, c4i, 0).xyz, E4, k), 1.0));
   textureStore(diceOut, c5i, vec4f(mix(textureLoad(diceTex, c5i, 0).xyz, E5, k), 1.0));

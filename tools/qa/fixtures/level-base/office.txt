@@ -1,2 +1,0 @@
-# the hand pass: paint on what is there, and 62 drawn-only boxes in the lived tier at the tail; no box of the 783 before them moved. The level says it is kept (meta.kept 1). Five boxes a hair smaller, so that no two drawn faces lie in one plane
-f413c624a67d176f7a0c222c20da3676f0f9f7e2

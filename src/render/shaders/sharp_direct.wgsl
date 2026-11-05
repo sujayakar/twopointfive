@@ -114,14 +114,14 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     for (var s = 0u; s < nIter; s++) {
       var i = s; if (tileCull) { i = wgList[s]; }
       let li = wgLights[i];
-      let ev = evalLightDirect(li, P, N);
+      let ev = evalLight(li, P, N);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
       if (w < 1e-4 * lampFloorK()) { continue; }
       let c = select(0u, 1u, lightBroad(li));
       if (c == 1u) { U1 += ev.E; } else { U0 += ev.E; }
       if (lightReachLevel(i, P) == 0u) { if (c == 1u) { Uw1 += ev.E; } else { Uw0 += ev.E; } continue; }   // walled off from this cell: known dark — in U, never the ray's target
-      if (look) { let es = evalLightDirect(li, P, Nl); if (c == 1u) { Us1 += es.E; } else { Us0 += es.E; } }   // (THE LOOK PROTOTYPE: the lights that reach this cell, scored again on the tilted normal)
+      if (look) { let es = evalLight(li, P, Nl); if (c == 1u) { Us1 += es.E; } else { Us0 += es.E; } }   // (THE LOOK PROTOTYPE: the lights that reach this cell, scored again on the tilted normal)
       if (w > topW[c]) { topW[c] = w; topI[c] = i32(i); topE[c] = ev.E; }
     }
     // ---- the visibility ratio from the internal estimate: joint-bilateral over the 2×2 internal texels round this pixel (a 4×4 search if none of them lies on this surface) ----

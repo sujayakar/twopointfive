@@ -257,7 +257,7 @@ fn traceShade(ro: vec3f, dir: vec3f, trOwner: u32, gatherRay: bool, N: vec3f, ow
   let hit = traceClosest(ro, dir, TMAX, trOwner);
   r.specT = select(1e4, hit.t, hit.idx >= 0);
   var L = vec3f(0.0);
-  if (hit.idx < 0) { if (gatherRay) { L = skyThrough(ro, dir); } else { L = skyRadiance(dir); } r.sky = true; r.ok = true; }
+  if (hit.idx < 0) { L = skyRadiance(dir); r.sky = true; r.ok = true; }
   else if (!hit.inside) {
     let Ph = ro + dir * hit.t;
     r.ok = true; r.xs = Ph; r.ns = hit.n; r.t = hit.t;

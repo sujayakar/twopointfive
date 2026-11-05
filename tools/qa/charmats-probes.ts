@@ -213,25 +213,8 @@ export async function charmatsShader() {
   for (const keep of ['o.albedo = select(ch.tint, ch.tint2, matSel > 0.5);', 'o.id = 0xFFFFFu | (ch.owner << 20u) | (1u << 28u);', 'o.mat = vec2f(1.0, 0.0);', 'if (H0.x > 0.5) {', 'let slotted = v.fin.w > 0.5;'])
     if (!src.includes(keep)) f.push(`missing: ${keep}`);
   const comp = readFileSync(`${ROOT}/src/render/shaders/composite.wgsl`, 'utf8');
-  if (!comp.includes('if ((id & 0x50000000u) == 0x50000000u) { let ws = lookShow(wetCoatSpec('))   // (shown by its place like every other light since the one exposure model: composite.wgsl lookShow)
-    f.push('composite no longer lights a bit-28 + bit-30 pixel with wetCoatSpec — the slots\' highlight rides that');
+  if (!comp.includes('if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(')) f.push('composite no longer lights a bit-28 + bit-30 pixel with wetCoatSpec — the slots\' highlight rides that');
   F.verdict(f.length === 0, 'row and slot counts agree; the two-tint statements, the dry id and the matte material word are still there; composite still lights the coat bits', f.join('; ') || `${rows} rows · ${CM.CHAR_SLOT_COUNT} slots`);
-  // THE MEN'S NOISE HOLDS NO LOOP AND NO LOCAL ARRAY, ON PURPOSE (look.wgsl manNoise, manH4: the eight corners of a cell hashed four at a time by vector
-  // arithmetic). The same eight values as the one-corner hash it replaced, by its own integer steps written again here; MANLOOP_BREAK=1 = one step of
-  // the four-at-a-time hash changed, and this must fail
-  { const look = readFileSync(`${ROOT}/src/render/shaders/look.wgsl`, 'utf8'), at = look.indexOf('fn manNoise(p: vec3f) -> f32 {'), body = at < 0 ? '' : look.slice(at, look.indexOf('\n}', at)), h4 = /fn manH4\(h0: vec4u\) -> vec4f \{([^\n]*)\}/.exec(look)?.[1] ?? '';
-    const brk = process.env.MANLOOP_BREAK === '1', M3 = brk ? 277803739 : 277803737;
-    const one = (x: number, y: number, z: number) => { let h = (Math.imul((x + 4096) >>> 0, 73856093) ^ Math.imul((y + 4096) >>> 0, 19349663) ^ Math.imul((z + 4096) >>> 0, 83492791)) >>> 0; h = (Math.imul(h, 747796405) + 2891336453) >>> 0; h = Math.imul(((h >>> ((h >>> 28) + 4)) ^ h) >>> 0, 277803737) >>> 0; return ((h ^ (h >>> 22)) >>> 8) / 16777216; };
-    const four = (h0: number) => { let h = (Math.imul(h0, 747796405) + 2891336453) >>> 0; h = Math.imul(((h >>> ((h >>> 28) + 4)) ^ h) >>> 0, M3) >>> 0; return ((h ^ (h >>> 22)) >>> 8) / 16777216; };
-    let off = 0, n = 0;
-    for (let k = 0; k < 4000; k++) { const ix = ((k * 7919) % 9001) - 4500, iy = ((k * 104729) % 7001) - 3500, iz = ((k * 1299709) % 5003) - 2500, xs = [ix, ix + 1, ix, ix + 1], ys = [iy, iy, iy + 1, iy + 1];
-      for (let c = 0; c < 4; c++) { const xy = (Math.imul((xs[c] + 4096) >>> 0, 73856093) ^ Math.imul((ys[c] + 4096) >>> 0, 19349663)) >>> 0; for (const dz of [0, 1]) { n++; if (four((xy ^ Math.imul((iz + dz + 4096) >>> 0, 83492791)) >>> 0) !== one(xs[c], ys[c], iz + dz)) off++; } } }
-    const text = body.length > 0 && !/\bfor\s*\(|\bloop\b|\bwhile\b|array</.test(body) && !/\bfor\s*\(|array</.test(h4)
-      && h4.includes('var h = h0 * 747796405u + vec4u(2891336453u); h = ((h >> ((h >> vec4u(28u)) + vec4u(4u))) ^ h) * 277803737u; return vec4f((h ^ (h >> vec4u(22u))) >> vec4u(8u)) * (1.0 / 16777216.0);')
-      && body.includes('let xy = (vec4u(vec4i(i.x, i.x + 1, i.x, i.x + 1) + vec4i(4096)) * 73856093u) ^ (vec4u(vec4i(i.y, i.y, i.y + 1, i.y + 1) + vec4i(4096)) * 19349663u);')
-      && body.includes('let a = manH4(xy ^ vec4u(u32(i.z + 4096) * 83492791u)); let b = manH4(xy ^ vec4u(u32(i.z + 4097) * 83492791u));')
-      && body.includes('return mix(mix(mix(a.x, a.y, u.x), mix(a.z, a.w, u.x), u.y), mix(mix(b.x, b.y, u.x), mix(b.z, b.w, u.x), u.y), u.z);') && !/\bfn manH\(/.test(look);
-    F.verdict(text && off === 0, 'the men\'s noise hashes a cell\'s eight corners four at a time with no loop and no local array, and they are the eight values the one-corner hash gave', `${n} corners, ${off} differ · the text ${text ? 'holds' : 'has moved'}`); }
   return F.done();
 }
 

@@ -1,13 +1,11 @@
 // THE PRICING RUN'S JUDGEMENT, held to made-up rows (src/ui/pricerun.ts): the one place a GPU number is judged (priceOver), what counts as a display's wait in
 // the stamps, a row that is not one picture or whose frames were queued ahead of the GPU left unjudged, the report's text, the addresses a run builds and the words it names
 // as left out, and the words a mission's link sheds. No browser, no GPU: tools/qa/pricerun-page.cjs proves the chain of pages, this proves what is said of
-// the numbers.   bun run tools/qa/pricerun-check.ts   (exit 0 = all pass; PRICERUN_BREAK=1 puts the bar out of reach and must fail; PRICERUN_BREAK=late puts
-// the late answer's rule off and must fail on its cases alone; PRICERUN_BREAK=run hands the rows over without their running reads and must fail on the
-// running read's cases alone)
-import { PRICE, priceOver, priceOverRun, rowRun, judgeRow, addedRun, priceReport, priceLeft, priceOverruled, priceLevels, priceLookWords, priceSearch, rungDiffers, spansWait, queuedWords, answerOf, lateRows, type PriceFile, type PriceRow, type PriceWin, type PriceRung } from '../../src/ui/pricerun';
+// the numbers.   bun run tools/qa/pricerun-check.ts   (exit 0 = all pass; PRICERUN_BREAK=1 puts the bar out of reach and must fail)
+import { PRICE, priceOver, priceReport, priceLeft, priceOverruled, priceLevels, priceLookWords, priceSearch, rungDiffers, spansWait, queuedWords, type PriceFile, type PriceRow, type PriceWin, type PriceRung } from '../../src/ui/pricerun';
 import { quitSearch } from '../../src/scene/scenarioList';
-const WORD = (globalThis as any).process?.env?.PRICERUN_BREAK, BREAK = WORD === '1' || WORD === 'late' || WORD === 'run';
-if (WORD === '1') PRICE.gpuMore = 9; if (WORD === 'late') PRICE.lateMs = 0;
+const BREAK = (globalThis as any).process?.env?.PRICERUN_BREAK === '1';
+if (BREAK) PRICE.gpuMore = 9;
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 
 const win = (gpu: number | null, all: number | null, work: number, ms = 16.7): PriceWin => ({ frames: 360, ms, p95: ms, gpu, all, work, lag: +(work / ms).toFixed(2), passes: gpu === null || all === null ? null : { gather: 1.4, gbuffer: +(all - gpu - 0.09).toFixed(2), post: 0.05, fxaa: 0.04 } });
@@ -38,30 +36,6 @@ check(lag3.on.lag === 3 && lag3.over.length === 0 && lag3.apart.length === 0, `d
 { const fast = row('fast', win(5.0, 6.2, 50, 8.33), win(5.1, 6.4, 50, 8.33), win(5.2, 6.5, 50, 8.33));
   check(fast.on.lag === 6 && fast.over.length === 0 && fast.apart.length === 0, `a 120 Hz display whose "done" comes ${fast.on.lag} of its short frames late is judged, and is under the bar (${fast.over.join('; ') || 'no verdict'})`); }
 check(weak.over.length === 1 && /a frame comes every 20\.4 ms with the look on, 20\.0 ms on the page without the look: neither holds sixty a second/.test(weak.over[0]), `a machine at the bar without the look: the frame time is said for both and the look is not blamed: ${weak.over.join('; ')}`);
-// ---- the GPU's answer late for no work of the state's own (PRICE.lateMs): the numbers are a rented card's, 11-05, a walk of 29 levels in one browser
-{ const early = row('early', win(6.27, 6.42, 14.7, 16.8), win(6.3, 6.52, 15.1, 17.0), win(6.35, 6.92, 19.1, 16.95)), mid = row('mid', win(9.24, 9.48, 26.3, 16.85), win(9.3, 9.62, 26.9, 16.85), win(9.32, 10.35, 27.6, 16.9)),
-    busy = row('busy', win(14.94, 15.23, 26.3, 16.71), win(15.0, 15.28, 27.0, 16.9), win(22.43, 23.34, 43.6, 25.67)),          // the GPU full with the look on: two frames of its own passes explain its 44 ms
-    tired = row('tired', win(8.89, 9.11, 47.55, 30.08), win(6.9, 7.54, 36.0, 25.35), win(7.99, 8.77, 37.5, 25.67));             // the look page reads CHEAPER than the page without it: the walk's 24th level
-  const got = lateRows([early, mid, busy, tired]), T = got.rows[3];
-  check(got.least === answerOf(early.page!.win) && got.rows.slice(0, 3).every((r, i) => r === [early, mid, busy][i]) && T.apart.length === 2 && T.over.length === 0 && /^the layers off: /.test(T.apart[0]) && /the page without the look: the GPU's "done" came 48 ms after a frame began for 9\.1 ms of passes, 21 ms more than 2 frames of its own passes and this run's least answer \(8 ms\) explain \(past 12:/.test(T.apart[1]),
-    `a state whose answer comes late against the run's own least puts its row apart, and no other row (least answer ${got.least} ms): ${T.apart[1] ?? T.apart[0] ?? 'not set apart'}`);
-  // a machine whose every answer is slow (a fast display, a browser whose "done" is a few frames long) is not a late state: nothing stands apart from its own least
-  const slow = [row('a', win(5, 5.2, 41, 8.4), win(5.1, 5.3, 42, 8.4), win(5.4, 5.9, 44, 8.4)), row('b', win(9, 9.4, 50, 16.7), win(9.1, 9.5, 52, 16.7), win(9.6, 10.2, 55, 16.7))], gs = lateRows(slow);
-  check(gs.rows.every((r, i) => r === slow[i]) && gs.least !== null && gs.least > 2 * (1000 / 60), `a machine whose answer takes ${gs.least} ms at the least, on every state, has no late row`);
-  // … and so is a machine three and four frames behind on every state (the verdict's own made-up rows `weak` and `weaker`, each a machine of its own above)
-  { const w3 = row('w3', win(15, 15.4, 60, 20.0), win(15.1, 15.5, 61, 20.2), win(15.3, 15.8, 62, 20.4)), w4 = row('w4', win(16.5, 17.0, 80, 20.0), win(16.6, 17.1, 81, 20.2), win(16.8, 17.3, 82, 20.4)), g = lateRows([w3]), g4 = lateRows([w4]);
-    check(g.rows[0] === w3 && g4.rows[0] === w4, `a machine whose "done" is three or four frames behind on all its states is judged by its frame's time, as before (least answers ${g.least} and ${g4.least} ms)`); }
-  // a walk of look pages only: two states a row. The tired level above is caught by them at this bar (its layers off stand 13 over), and says so with one line
-  { const two = (r: PriceRow): PriceRow => ({ ...r, page: undefined }), g2 = lateRows([two(early), two(mid), two(tired)]);
-    check(g2.rows[2].apart.length === 1 && /^the layers off: /.test(g2.rows[2].apart[0]) && g2.rows[0].apart.length === 0, `on a walk with no page without the look the tired level is still set apart: ${g2.rows[2].apart[0] ?? 'not set apart'}`); }
-  // where the g-buffer's stamp holds the display's wait, the passes that count are the compute passes: such a state neither hides a late answer nor makes the run's least
-  { const held = (work: number) => win(5, 16.5, work), fresh = row('fresh', held(19.5), held(19.6), held(19.8)), late = row('late', held(52), held(50), held(51)), g = lateRows([fresh, late]);
-    check(spansWait(held(19.5)) && g.least === 14.5 && g.rows[0] === fresh && g.rows[1].apart.length === 3, `a display that pads the g-buffer's stamp: the least answer is read off the compute passes (${g.least} ms) and a late state is still late (${g.rows[1].apart.length} of 3 states)`); }
-  check(lateRows([early, tired], PRICE.lateMs, 1).rows[1].apart.length === 3 && lateRows([early, tired], 0).least === null, 'a page that keeps one frame with the GPU is allowed one frame of its passes, and a rule that is not asked reads nothing');
-  { const f: PriceFile = { version: 6, what: '', at: '2026-11-05T00:00:00.000Z', startedAt: '', address: '/?look&pricelevels', look: ['look'], userAgent: '', gpu: 'made up', machine: { hz: 60 } as any, screen: '1×1', dpr: 1, quality: 'high', secs: 3, bar: { ...bar, lateMs: 12 }, leastAnswer: got.least!, rows: got.rows, notes: [] }, text = priceReport(f);
-    check(/nor where the answer came over 12 ms later than the frames of its own passes the page keeps with the GPU and the run's least answer \(8\.3 ms\) explain/.test(text) && /tired: the layers off: the GPU's "done" came 36 ms/.test(text) && /NOT JUDG/.test(text), 'the report says the late answer\'s bar and the run\'s least, and names the row it set apart under the table'); }
-  const alone = lateRows([tired]); check(alone.rows[0] === tired, 'a run of one level is read against itself, so a level that is late in all three states says nothing: the rule needs a walk');
-  const blind = row('blind', win(null, null, 30), win(null, null, 30), win(null, null, 30)); check(lateRows([blind]).least === null && lateRows([blind]).rows[0] === blind, 'no stamps, nothing to read: the rows are left as they are'); }
 { const weaker = row('weaker', win(16.5, 17.0, 80, 20.0), win(16.6, 17.1, 81, 20.2), win(16.8, 17.3, 82, 20.4));
   check(weaker.over.length === 1 && /neither holds sixty a second/.test(weaker.over[0]) && !/frames after/.test(weaker.over.join(' ')), `a GPU four frames behind on both pages: the frame's time is the verdict, the lag is none (${weaker.over.join('; ')})`); }
 { const late = row('late', win(6.4, 6.6, 19.5), win(7.0, 7.2, 19.6), win(6.5, 6.8, 4300));
@@ -70,58 +44,6 @@ check(weak.over.length === 1 && /a frame comes every 20\.4 ms with the look on, 
   check(blind.over.length === 0 && blind.apart.length === 1 && /41\.9 frames/.test(blind.apart[0]), `a browser that stamps nothing and answers 42 frames late: not judged (${blind.apart.join('; ')})`); }
 { const both = row('both', win(10, 10.3, 200), win(10.2, 10.6, 19.6), win(10.5, 11.1, 19.8));
   check(both.apart.length === 1 && /^the page without the look: /.test(both.apart[0]), `frames queued on the page without the look put the row apart too (${both.apart.join('; ')})`); }
-
-// ---- THE WORLD RUNNING (PRICE.runS): a read beside the held one, with its own verdict and its own reasons not to be judged
-{ // (a row with a running read on its pages, written and judged BY THE RUN'S OWN TWO FUNCTIONS, rowRun and judgeRow: the look page's read first, then the
-  //  other page's. `plain` null = a walk of look pages only; `why` = the look page's own reasons, `whyPlain` the other's, undefined = that page has no read)
-  const live = (w: PriceWin, at = 34.2) => ({ win: w, at, made: 0 });
-  const running = (r: PriceRow, plain: PriceWin | null | undefined, look: PriceWin, why: string[] = [], whyPlain: string[] = []): PriceRow => { if (WORD === 'run') return r;
-    const a = rowRun(r, true, live(look), why); return judgeRow(plain === null ? a : rowRun(a, false, plain ? live(plain, 34.1) : undefined, whyPlain), bar); };
-  const held = () => row('held', win(10, 10.3, 19.5), win(10.2, 10.6, 19.6), win(10.5, 11.1, 19.8));   // (under the bar held: the verdict's own first row)
-  const calm = running({ ...held(), level: 'calm' }, win(10, 10.3, 19.5), win(10.5, 11.1, 19.8));                 // nothing in its air: running reads as held
-  const snowy = running({ ...held(), level: 'snowy' }, win(11, 11.4, 21), win(13, 14, 24));                       // the solver, the wind and the flakes cost the look page more than the plain one
-  const slow = running({ ...held(), level: 'slow' }, win(10.4, 10.8, 20), win(10.9, 11.5, 24, 19.2));              // within a tenth on the GPU, but sixty a second are lost with the world running
-  check(calm.over.length === 0 && calm.overRun?.length === 0 && calm.runApart?.length === 0 && calm.run?.at === 34.2 && calm.page?.run?.at === 34.1, `a level with nothing in its air is under the bar held and running (${calm.overRun?.join('; ') || 'no verdict'})`);
-  check(snowy.over.length === 0 && snowy.overRun?.length === 2 && /^with the world running, on the GPU the look adds \+18\.2% against the page without the look \(11 → 13 ms/.test(snowy.overRun[0]) && /with the world running and the g-buffer counted the look adds 2\.60 ms, \+23\.6%/.test(snowy.overRun[1]),
-    `under the bar held and over it with the world running: the running read has its own verdict (${snowy.overRun?.join('; ') ?? 'no running verdict'})`);
-  check(slow.overRun?.length === 1 && /^with the world running a frame comes every 19\.2 ms with the look on, 16\.7 ms on the page without the look \(the bar is/.test(slow.overRun[0]), `sixty a second lost only with the world running is said of that read (${slow.overRun?.join('; ') ?? 'no running verdict'})`);
-  { const apart = running({ ...held(), level: 'apart', apart: ['the two pages stood on different rungs'], over: [] }, win(11, 11.4, 21), win(13, 14, 24)), queued = running({ ...held(), level: 'queued' }, win(11, 11.4, 21), win(13, 14, 240));
-    check(apart.run !== undefined && apart.overRun?.length === 0 && queued.over.length === 0 && queued.apart.length === 0 && queued.runApart?.length === 1 && /^the look page with the world running: the GPU's "done" came 14\.4 frames/.test(queued.runApart[0]) && queued.overRun?.length === 0,
-      `a row whose held read is apart has no running verdict, and frames queued in the running turn put that read apart and leave the held one judged (${queued.runApart?.join('; ') ?? 'no running read'})`); }
-  { const only = running({ ...held(), level: 'only', page: undefined }, null, win(10.9, 11.5, 24, 19.2));
-    check(only.run !== undefined && only.overRun?.length === 1 && /^with the world running a frame comes every 19\.2 ms with the look on \(the bar is/.test(only.overRun[0]), `a walk of look pages only judges the running read by its frame's time alone (${only.overRun?.join('; ') ?? 'no running verdict'})`); }
-  // the two pages' own reasons: the other page's are said as its own, a look page with a read beside a page without one is a pair that cannot be judged, and
-  // a read that was never taken leaves the row as it was
-  { const clock = running({ ...held(), level: 'clock' }, win(11, 11.4, 21), win(13, 14, 24), [], ['the game\'s clock stood at 12.00 s after 480 more steps and did not reach 30 s']), lone = running({ ...held(), level: 'lone' }, undefined, win(13, 14, 24)),
-      alert = running({ ...held(), level: 'alert' }, win(11, 11.4, 21), win(13, 14, 24), ['someone went to alert while the world ran (1 alarm episode): a fight may be in this read']), none = rowRun(held(), true, undefined, ['said of nothing']);
-    check(clock.runApart?.length === 1 && /^the page without the look: the game's clock stood at 12\.00 s/.test(clock.runApart[0]) && clock.overRun?.length === 0 && clock.over.length === 0 && clock.apart.length === 0
-      && lone.runApart?.length === 1 && lone.runApart[0] === 'the page without the look has no running read' && lone.overRun?.length === 0 && lone.page?.run === undefined
-      && alert.runApart?.length === 1 && alert.overRun?.length === 0 && none.run === undefined && none.runApart === undefined && (WORD === 'run' || judgeRow(none, bar).overRun === undefined),
-      `a page's own reason puts the running read apart under its own name, a pair with one read is not judged, a fight that began is not a quiet start, and no read leaves no running verdict (${[...(clock.runApart ?? []), ...(lone.runApart ?? [])].join(' | ').slice(0, 160)})`); }
-  // the late answer's rule reads the running states too, against the least of their own kind: a late running state puts THAT read apart, a late held state both
-  { const early = row('early', win(6.27, 6.42, 14.7, 16.8), win(6.3, 6.52, 15.1, 17.0), win(6.35, 6.92, 19.1, 16.95)), fresh = running(row('fresh', win(9.24, 9.48, 26.3, 16.85), win(9.3, 9.62, 26.9, 16.85), win(9.32, 10.35, 27.6, 16.9)), win(9.6, 9.9, 27, 16.9), win(9.8, 10.9, 28.4, 16.9)),
-      lateRun = running(row('laterun', win(9.24, 9.48, 26.3, 16.85), win(9.3, 9.62, 26.9, 16.85), win(9.32, 10.35, 27.6, 16.9)), win(9.6, 9.9, 27, 16.9), win(7.99, 8.77, 47.5, 25.67)),
-      lateHeld = running(row('lateheld', win(8.89, 9.11, 47.55, 30.08), win(6.9, 7.54, 36.0, 25.35), win(7.99, 8.77, 37.5, 25.67)), win(9.6, 9.9, 27, 16.9), win(9.8, 10.9, 28.4, 16.9)), g = lateRows([early, fresh, lateRun, lateHeld]);
-    check(g.rows[1] === fresh && g.rows[2].apart.length === 0 && g.rows[2].over.length === lateRun.over.length && g.rows[2].runApart?.length === 1 && /^the look page with the world running: the GPU's "done" came 48 ms after a frame began for 8\.8 ms of passes/.test(g.rows[2].runApart[0]) && g.rows[2].overRun?.length === 0
-      && g.rows[3].apart.length === 2 && g.rows[3].over.length === 0 && g.rows[3].overRun?.length === 0 && g.rows[3].runApart?.length === 0,
-      `a late answer in the running turn sets the running read apart and leaves the held verdict standing; a late held state leaves neither judged (${g.rows[2].runApart?.[0] ?? 'the running read was not set apart'})`); }
-  // … and each kind of state is read against the least of its own kind. A fast display: its held states answer 36 ms and more after a frame began (120 frames
-  // a second, two with the GPU), its running states sooner (paced to sixty). One least for both would call every held state late; held only, none is
-  { const fast = [running(row('a', win(5, 5.2, 41, 8.4), win(5.1, 5.3, 42, 8.4), win(5.4, 5.9, 44, 8.4)), win(5.2, 5.5, 23, 16.7), win(5.6, 6.2, 24, 16.7)), running(row('b', win(9, 9.4, 50, 8.4), win(9.1, 9.5, 52, 8.4), win(9.6, 10.2, 55, 8.4)), win(9.3, 9.8, 28, 16.7), win(9.9, 10.6, 29, 16.7))], g = lateRows(fast);
-    check(g.rows.every((r, i) => r === fast[i]) && g.least !== null && (WORD === 'run' ? g.leastRun === null : g.leastRun !== null && g.leastRun < g.least - 10), `a fast display's held states are read against the held states' least (${g.least} ms) and its running states against their own (${g.leastRun} ms): no state is late`); }
-  // where a held state says the g-buffer's stamp holds the display's wait, the running read (paced to sixty, so it cannot show that wait itself) judges nothing by it
-  { const waits = running(row('waits', win(5, 16.5, 19.5), win(5.2, 16.6, 19.6), win(5.4, 16.6, 19.8)), win(5, 8.3, 23), win(5.4, 12, 24));
-    const text = WORD === 'run' ? '' : priceReport({ version: 6, what: '', at: '2026-11-05T08:00:00.000Z', startedAt: '', address: '/?look&pricelevels', look: ['look'], userAgent: '', gpu: 'made up', machine: { hz: 120 } as any, screen: '1×1', dpr: 1, quality: 'high', secs: 3, bar: { ...bar, runS: 20 }, rows: [waits], notes: [] }), line = text.split('\n').find(l => l.startsWith('waits')) ?? '';
-    check(spansWait(waits.on) && waits.run !== undefined && !spansWait(waits.run.win) && waits.overRun?.length === 0 && addedRun(waits) === null && !/%\s*\|[^|]*\|[^|]*$/.test(line) && !/\+7\d\.\d%/.test(line), `a display that pads the g-buffer's stamp: the running read judges nothing by "with the g-buffer" either, and the report prints no share it did not judge (${waits.overRun?.join('; ') || 'no running verdict'})`);
-    // … and a page without the look that was read running beside a look page that was not: nothing is kept of it, and the late answer's rule finds no running state
-    const lone = rowRun(row('lonely', win(10, 10.3, 19.5), win(10.2, 10.6, 19.6), win(10.5, 11.1, 19.8)), false, live(win(7.99, 8.77, 47.5, 25.67)), []), gl = lateRows([row('early', win(6.27, 6.42, 14.7, 16.8), win(6.3, 6.52, 15.1, 17.0), win(6.35, 6.92, 19.1, 16.95)), lone]);
-    check(lone.page?.run === undefined && lone.run === undefined && lone.runApart === undefined && lone.notes.length === 1 && gl.leastRun === null && gl.rows[1] === lone, `a running read of the page without the look alone is not kept (${lone.notes[0] ?? 'no note'})`); }
-  // the report: the running columns stand only where a row has such a read, in line with the rest, and the levels over the bar running are named apart
-  { const fr: PriceFile = { version: 6, what: 'made up', at: '2026-11-05T08:00:00.000Z', startedAt: '', address: '/?look&pricelevels', look: ['look'], userAgent: 'unit', gpu: 'made up', machine: { webgpu: 'made up' } as never, screen: '1920×1080', dpr: 1, quality: 'high', secs: 3, bar: { ...bar, runS: 30 }, rows: [calm, snowy, slow], notes: [] }, text = priceReport(fr);
-    const L = text.split('\n'), h = L.findIndex(l => l.startsWith('level')), pipes = (l: string) => [...l].flatMap((c, i) => c === '|' ? [i] : []).join(',');
-    check(/No level whose running read was judged is over|Over the bar with the world running/.test(text) && /No running read was judged\./.test(priceReport({ ...fr, rows: [{ ...snowy, runApart: ['made up'], overRun: [] }] })) && /^WHAT THE LOOK COSTS, a held picture a level, and the world running/.test(text) && /RUNNING, with the g-buffer ms: no look, on/.test(L[h] ?? '') && [0, 1, 2].every(k => pipes(L[h + 1 + k]) === pipes(L[h])) && /\| OVER$/.test(L[h + 2] ?? '') && /Over the bar with the world running:\n  snowy: /.test(text) && /played on by the same scripted steps to 30 s of the game's clock/.test(text) && /NO FIGHT is in either read/.test(text) && /NOBODY HAS RULED ON IT/.test(text) && /Lights in fog\n\s*are in the held read already/.test(text),
-      'a file with running reads shows them in columns of their own in line with the rest, names the levels over the bar running, and says what the running read adds and what neither read prices');
-    check(!/RUNNING/.test(priceReport({ ...fr, bar, rows: [held()] })), 'a file with no running read shows no running column and says nothing of one'); } }
 
 // ---- a display's wait in the stamps, and what is not one
 check(spansWait(metal.on) && metal.allOverPage === null && metal.over.length === 0, `a g-buffer stamp that spans the display's wait: the second span judges nothing (${metal.over.join('; ') || 'no verdict'}; look adds ${metal.allOverPage})`);
@@ -154,7 +76,7 @@ check(/THE PAGES STOOD ON 2 RUNGS though the ladder was off/.test(priceReport({ 
 
 // ---- the addresses a run builds, and the words it names as left out
 const first = priceLevels()[0]?.level ?? '';
-check(priceLevels().length > 1 && new Set(priceLevels().map(l => l.level)).size === priceLevels().length, `the levels a run walks are the list's, none twice (${priceLevels().length})`);
+check(priceLevels().length > 20 && new Set(priceLevels().map(l => l.level)).size === priceLevels().length, `the levels a run walks are the list's, none twice (${priceLevels().length})`);
 { const s = priceSearch(first, 3, 'high', ['look', 'geo=0'], ['mute', 'downloads=1', 'quality=low']), q = new URLSearchParams(s);
   check(q.has('look') && q.get('geo') === '0' && q.get('downloads') === '1' && q.get('quality') === 'high' && q.get('adapt') === '0' && q.get('giveway') === '0' && q.getAll('mute').length === 1 && q.getAll('quality').length === 1 && q.get('pricerun') === '3' && q.get('seed') === '1' && q.has('noverdict') && q.has('nokeep'),
     `a page's address carries the look page's words and the visitor's flags once each, and its own preset wins (${s})`); }
@@ -162,13 +84,13 @@ check(priceLevels().length > 1 && new Set(priceLevels().map(l => l.level)).size 
   check(!a.has('quality') && a.getAll('adapt').length === 1 && a.get('giveway') === '0' && a.getAll('giveway').length === 1, `asked at auto, a page pins no preset, and the window's word is the run's own whatever the visitor's (${a.toString()})`); }
 { const w = priceLookWords('?pricelevels&geo=0'), w2 = priceLookWords('?look=walls:0&pricelevels');
   check(w.includes('look') && w.includes('geo=0') && w2.includes('look=walls:0') && !w2.includes('look'), `the look page's words ride with or without a look word beside them (${w.join('&')} · ${w2.join('&')})`); }
-{ const search = '?look&pricelevels=pass&pricesecs=2&pricelive=20&nosharp&hour=dusk&mute&downloads=1', left = priceLeft(search, first, 'high', priceLookWords(search), ['mute', 'downloads=1']);
+{ const search = '?look&pricelevels=pass&pricesecs=2&nosharp&hour=dusk&mute&downloads=1', left = priceLeft(search, first, 'high', priceLookWords(search), ['mute', 'downloads=1']);
   check(left.join(',') === 'nosharp,hour', `the words of the asking address that no page carries are named, the run's own are not (${left.join(', ')})`); }
 { const search = '?look&pricelevels&adapt=1&giveway=1&seed=7&mute', over = priceOverruled(search, first, 'high', priceLookWords(search), ['mute']);
   check(over.length === 3 && /^adapt=1 \(the pages have adapt=0\)$/.test(over[0]) && /^giveway=1 \(the pages have giveway=0\)$/.test(over[1]) && /^seed=7 \(the pages have seed=1\)$/.test(over[2]) && priceOverruled('?look&pricelevels&quality=high&mute', first, 'high', ['look'], ['mute']).length === 0, `a word the asking address says and the run says otherwise is named with both values, one the run says the same is not (${over.join('; ')})`); }
 { const from = priceSearch(first, 3, 'high', ['look'], ['mute']), left = quitSearch(from), q = new URLSearchParams(left);
   check(!q.has('adapt') && !q.has('giveway') && !q.has('pricerun') && quitSearch('?adapt=0&giveway=0&mute') === '?adapt=0&giveway=0&mute', `a mission picked from a priced page sheds the held picture's words with the run's own; a visitor's own stay on a page that is no run's (${left})`); }
-check(quitSearch('?pricelevels=nosuch&pricesecs=2&pricepage=0&pricelive=20&pricerun=4&mute') === '?mute', `a mission's link sheds every word of a pricing run (${quitSearch('?pricelevels=nosuch&pricesecs=2&pricepage=0&pricelive=20&pricerun=4&mute')})`);
+check(quitSearch('?pricelevels=nosuch&pricesecs=2&pricepage=0&pricerun=4&mute') === '?mute', `a mission's link sheds every word of a pricing run (${quitSearch('?pricelevels=nosuch&pricesecs=2&pricepage=0&pricerun=4&mute')})`);
 
-console.log(red ? `\n=== pricerun-check: ${red} FAILED${BREAK ? ` (PRICERUN_BREAK=${WORD}: as it must)` : ''} ===` : '\n=== pricerun-check: ALL PASS ===');
+console.log(red ? `\n=== pricerun-check: ${red} FAILED${BREAK ? ' (PRICERUN_BREAK=1: as it must)' : ''} ===` : '\n=== pricerun-check: ALL PASS ===');
 process.exit(red ? 1 : 0);

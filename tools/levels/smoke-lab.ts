@@ -28,7 +28,6 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/s
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import * as MD from '../../src/scene/markingDefaults';
-import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'smoke-lab';
 export const NOTES = 'The smoke lab\'s floor: a yard, a tunnel, two rooms with a door between them and a shed, each there to show one thing smoke does. Regenerate: bun run tools/levels/export.ts smoke-lab';
@@ -106,7 +105,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the pantry's far wall, inside) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [20.6, 1.35, 5.16], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [20.6, 1.35, 5.16], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [20.42, 1.62, 5.21], h: [0.015, 0.015, 0.01], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [14.6, H - 0.06, 9.2], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

@@ -71,10 +71,6 @@ function onLost(info: GPUDeviceLostInfo, retry: boolean) {
 export async function openDevice(gpu: GPU | null = 'gpu' in navigator ? navigator.gpu : null): Promise<{ adapter: GPUAdapter; device: GPUDevice; asks: unknown[] }> {
   // (the fast card, else whatever an ask with no preference gives, else an error that holds what the machine said — gpu/adapter.ts)
   const { adapter, asks } = await pickAdapter(gpu, undefined, undefined, line => console.info(line));
-  // THE SHADERS READ A STORAGE TEXTURE (composite.wgsl hiTex: the reflections' highlights; its stage has no sampled texture left). That is a language feature a
-  // browser says it has (Chrome since 124); one that says it has not would refuse the composite, on every preset, with a parse error and no picture. Said
-  // here in words instead. A browser that lists no features at all is not asked.
-  { const lang = gpu?.wgslLanguageFeatures; if (lang && lang.size > 0 && !lang.has('readonly_and_readwrite_storage_textures')) throw new Error('This browser\'s WebGPU is too old for the game: its shader language cannot read a storage texture (readonly_and_readwrite_storage_textures). A current Chrome or Edge has it.'); }
   const want: GPUFeatureName[] = ['timestamp-query', 'float32-filterable'];
   const feats = want.filter(f => adapter.features.has(f));
   const lim = adapter.limits;

@@ -1,2 +1,2 @@
-# 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-2059d37e6b86656a816a4c5b7cf697bcd3856b1d
+# the cut rock is the palette's slab darkened (tools/levels/snowRock.ts)
+6768a8541e439f9c36b011fbfc65f6c9d014513d

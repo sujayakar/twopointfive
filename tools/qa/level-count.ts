@@ -40,4 +40,6 @@ export const AUDIT_BARS = {
   overPass: 1.25,
   /** share of the picture with NO material a level may keep and pass (snow, glass and a thing that glows are not "none") */
   bare: 0.1,
+  /** share of the picture drawn as a material its paint was not written as */
+  chance: 0.02,
 };

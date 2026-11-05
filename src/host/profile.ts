@@ -121,7 +121,7 @@ import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow, rustOn, RUST_ON, fellWord } from '../sim/sim';
+import { rustRows, rustRow, rustOn, RUST_ON } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -150,8 +150,6 @@ import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
-import { HITSTUFF } from '../game/particleFx';
-import { MARKCUT, MARKSIT } from '../render/decals';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -203,7 +201,6 @@ export function pinned(env?: string): boolean { return harnessProfile() === 'fro
 export function pageRows(q: URLSearchParams, over = false): void {
   const plain = q.get('rust') === '0';
   for (const r of rustRows()) { const w = q.get('rust' + r); if (over && w === null && !plain) continue; rustRow(r, w !== null ? w !== '0' : rustOn(r) && !plain); }
-  { const f = q.get('fell'); if (f !== null) fellWord(f); }   // (?fell: the count of questions the TypeScript answered while its row was up, from the first box asked as the level is built — sim.ts FELL; `window.__sim.fell()` reads it)
 }
 export function pageSwitches(q: URLSearchParams): void {
   DESTRUCTION.on = !q.has('nodestruction');   // THE ONE SWITCH of the destruction goal (game/destructionSwitch.ts): on in the page unless the URL says ?nodestruction — raised before the level loads (its dressing)
@@ -269,7 +266,6 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.bangInto = q.get('banginto') !== '0';   // a bang and clear's can leaves the thrower's own hand and is thrown deep into the room (the deepest point its burst lights nearly all the floor from), going off as it gets there (game/doortools.ts bangSpot): ON in the page; ?banginto=0 = it appears in the door frame and goes off 1.6 m inside, as it was
   DOORTOOLS.haltBack = q.get('haltback') !== '0';   // a pair halted 'found shut' on a door the OTHER pair is charging steps back to rear security, out of the backblast, as a pair stacked there before the charge was ordered does (game/doortools.ts haltBack: the same stepBacks / makeRoom; it was asked only as the charge order was given, and the halted pair stood inside the blast): ON in the page; ?haltback=0 = it stays stacked where it halted, as it was
   DOORTOOLS.tossMate = q.get('tossmate') !== '0';   // a bang and clear asks about teammates again as the can is about to leave the hand: one of ours beyond the door, in its reach, and the can stays in the kit and they go in (game/doortools.ts mateBehind): ON in the page; ?tossmate=0 = asked when the row is given and never again, as it was
-  DOORTOOLS.chargeAnswer = q.get('chargeanswer') !== '0';   // a door charge order is carried out or answered: it asks about the leaf what the team's picture has of it, and one over short of its charge leaves its men holding on the door with the reason said (game/doortools.ts short / knownOpen): ON in the page; ?chargeanswer=0 = ended on a leaf open anywhere and its men left as they were, as it was
   DOORTOOLS.behindSam = q.get('behindsam') !== '0';   // Sam beyond a door is one of ours to the squad's own stun can: the word at a held door steps them in with the can kept, and a bang row on it is refused in words (game/doortools.ts samBehind): ON in the page; ?behindsam=0 = only teammates counted, as it was
   DOORTOOLS.podFrames = q.get('podframes') !== '0';   // no point of an entry is dealt in ANOTHER door's frame, or beyond one (game/doortools.ts inFrame; the barracks' n_end entry had a man on n4b's threshold): ON in the page; ?podframes=0 = the points as they were
   DOORTOOLS.thrHand = q.get('thrhand') !== '0';   // a threshold's can is thrown only by a man within reach of the frame, and waits for one (game/doortools.ts thrHand: a frag had run the stack off the door and the can left a doorway nobody stood at): ON in the page; ?thrhand=0 = the thrower wherever he stands
@@ -327,7 +323,6 @@ export function pageSwitches(q: URLSearchParams): void {
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at a share of the player's walk (the flat four fifths, or paced on him: TEAMPACE.pacing below), run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   TEAMPACE.doorBrisk = q.get('doorbrisk') !== '0';   // nobody sprints to a stack: a teammate on a stack order who would run to cover on his way to the door goes at the fight's pace with his gun up (game/teampace.ts teamDash). ?doorbrisk=0 = he sprints there with his gun low, as he did
-  TEAMPACE.walkAim = q.get('walkaim') !== '0';   // a walking teammate looks where he walks, or at what he can see: while he has no line to the point his order aims him at (the door he is sent to), his gun leads the way he walks instead of through the wall beside him (game/teampace.ts walkLead, orders.ts tick). ON in the page; ?walkaim=0 = his gun on the order's point from his first step, as it was
   TEAMPACE.pacing = q.get('pacing') !== '0';   // a teammate paces himself on you: he walks to an order's mark at your walk, slows only while you are behind him and walking after him, and steps up to a brisk walk when you are ahead and bound the same way (game/teampace.ts teamWalkOf). ?pacing=0 = the flat four fifths of your walk, as it was
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
   SLOTSETUP.on = q.get('slotsetup') !== '0';   // the slot in hand pressed again opens its setup (game/slotsetup.ts): 1 or 2 pressed with that gun in the hands lights its rows — 1 semi / auto, 2 the launcher's load, 3 the light — and the Z and L keys give nothing (host/keymap.ts setFree, the same word) — ON in the page; ?slotsetup=0 = 2 again steps the load, Z is the selector and L the light, as they were
@@ -366,9 +361,6 @@ export function pageSwitches(q: URLSearchParams): void {
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
   LIGHTSWITCH.on = q.get('lightswitch') !== '0';   // a room's lights have a switch on the wall beside its door: Space at it puts the room's lights out or back, and a calm defender who saw them go comes to the switch and puts them back (game/lightswitch.ts): ON in the page; ?lightswitch=0 = no plates and no row, as it was
   CARLAMPS.on = q.get('carlamps') !== '0';   // a parked vehicle's lamps can be shot out, head and tail, lit or not (game/carlamps.ts): ON in the page; ?carlamps=0 = no lamp is a target, as it was
-  HITSTUFF.on = q.get('hitstuff') !== '0';   // a round reads what a thing SAYS it is made of (game/particleFx.ts): a box that says its stuff gives what that stuff gives — car paint and steel sparks and no chips, solid glass that is not a pane a crack that stays — and only a box that says nothing is read by the colour of its paint; with it on metal throws no chips anywhere: ON in the page; ?hitstuff=0 = by the colour, as it was
-  MARKCUT.on = q.get('markcut') !== '0';   // a mark on a cut or a round face lies where the round met it (render/decals.ts MARKCUT): ON in the page; ?markcut=0 = pulled to the plain box's face, where the shader drops it, as it was
-  MARKSIT.on = q.get('marksit') !== '0';   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only, one word of the decal buffer's header): ON in the page; ?marksit=0 = every mark as it was drawn
   CLEANRESTART.on = q.get('cleanrestart') !== '0' && !q.has('kitview');   // a restart gives a clean level: the lights stand as a level just opened has them, the last try's lines and clocks are gone, the camera cuts and the picture starts fresh (game/cleanrestart.ts): ON in the page; ?cleanrestart=0 = the restart as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   SAVETIMELINE.on = q.get('savetimeline') !== '0';   // the saves roll (five by hand on F5 beside five autosaves), each keeps a picture, a team on the floor is saved in memory, and the pause and down cards lay this run's out as a strip (game/savestate.ts): ON in the page; ?savetimeline=0 = one checkpoint to go back to, as it was
@@ -544,7 +536,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CUES.overheard = q.get('overheard') !== '0';   // a shout from a defender the fog hides, where your ears or a living teammate's really get it, is a quiet row on the radio strip: his words alone, no name, no place (game/cues.ts overheard): ?overheard=0 = such a shout is no row, as before
   STICKY.mark = q.get('cammark') !== '0';   // his own stuck sticky cameras show in the fog of war: never taken out of the picture, a small lens on each on the HUD (game/stickycam.ts stickyMarks): ?cammark=0 = a camera on floor nobody sees is not drawn and nothing marks one, as before
   WORK.on = !q.has('noworkthings');   // a teammate works a thing in the level (game/workthings.ts): the orders' menu on the breaker, or on the mission's thing once it is to be taken, carries that thing's own order on digit 1 — ON in the page; ?noworkthings = the menu there is the floor's, and the breaker errand goes to the nearest man whoever he is, as it was
-  LIGHTS.wallOff = q.get('walllight') !== '0';   // a teammate's weapon light is dark while its whole beam would end on the wall or the truck at his muzzle — something that stands, never the ground (game/guards.ts wallDark, beamWalled; the maintainer, 10-22: "weird that they are shining the flashlight on the wall immediately in front of them"): ON in the page; ?walllight=0 = the light as the other light rules have it, as it was
+  LIGHTS.wallOff = q.get('walllight') !== '0';   // a teammate's weapon light is dark while its whole beam would end on the wall, the truck or the dirt at his muzzle (game/guards.ts wallDark; the maintainer, 10-22: "weird that they are shining the flashlight on the wall immediately in front of them"): ON in the page; ?walllight=0 = the light as the other light rules have it, as it was
   IR.teamOff = !q.has('teamlasers');   // the team's guns show no laser line (game/irlaser.ts; the maintainer, 10-22: "why do we have the lasers for the guys? i think we can disable"): no infrared line through your goggles, no red one bare-eyed; your own gun keeps its one. A picture only. ON in the page; ?teamlasers = every teammate's laser as it was
   IRLIGHT.on = !q.has('noirlight');   // an infrared light on the goggles (game/irlight.ts): a room with no light of its own shows through night vision, to you and to a goggled teammate and to nobody else — ON in the page; ?noirlight = a tube amplifies only the light that is there, as it was
   IRLIGHT.auto = !q.has('noirauto');   // …and it burns only where the goggles alone show too little (irlight.ts fanDark: the place's own light through the tube, under NVG.blackAt) — ON in the page; ?noirauto = it burns whenever the goggles are down, as it did
@@ -595,6 +587,7 @@ export function shippedBoot(): void {
  *  frozen run where there is one. `probes.ts shipped` stands the game up both ways and is red when this list and the measured difference are not the same list. */
 export const FROZEN_HOLDS: Record<string, string> = {
   // standGame's harness block (src/host/standup.ts)
+  ...Object.fromEntries(RUST_ON.map(r => ['RUST.' + r, 'TPS_RUST' + r.toUpperCase() + '=1'])),   // the rows of the Rust module that are on in the page (src/sim/sim.ts RUST_ON: RUST.lines TPS_RUSTLINES=1, RUST.circles, RUST.fog) — sim.ts imports no game module, so its list is whole when this table is built
   'OPENING.on': 'TPS_OPENING=1',
   'tune.qrfSilent': 'TPS_QRFSILENT=1',
   'tune.qrfSquad': 'TPS_QRFSQUAD=1',
@@ -767,6 +760,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RESCUEEND.on': 'TPS_RESCUEEND=1',
   'SNATCHOUT.on': 'TPS_SNATCHOUT=1',
   'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
+  'EXACT.on': 'TPS_EXACT=1',
   'POSEMATH.singles': 'TPS_POSESINGLES=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
   'DOZE.on': 'TPS_DOZE=1',
@@ -783,7 +777,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'TEAMPACE.on': 'TPS_TEAMPACE=1',
   'TEAMPACE.doorBrisk': 'TPS_DOORBRISK=1',
   'TEAMPACE.pacing': 'TPS_PACING=1',
-  'TEAMPACE.walkAim': 'TPS_WALKAIM=1',
   'NOSHOVE.on': 'TPS_NOSHOVE=1',
   'RAILS.on': 'TPS_RAILS=1',
   'RAILS.cardBeat': 'TPS_CARDBEAT=1 (acts only with the frame up: TPS_RAILS=1)',
@@ -804,9 +797,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRIENDLYFIRE.on': 'TPS_FRIENDLYFIRE=1',
   'LIGHTSWITCH.on': 'TPS_LIGHTSWITCH=1',
   'CARLAMPS.on': 'TPS_CARLAMPS=1',
-  'HITSTUFF.on': 'TPS_HITSTUFF=1',
-  'MARKCUT.on': 'TPS_MARKCUT=1',
-  'MARKSIT.on': 'TPS_MARKSIT=1 (a picture only)',
   'CLEANRESTART.on': 'TPS_CLEANRESTART=1',
   'FIRELINE.on': 'TPS_FIRELINE=1',
   'SAVETIMELINE.on': 'TPS_SAVETIMELINE=1',
@@ -883,7 +873,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.haltBack': 'TPS_HALTBACK=1',
   'DOORTOOLS.behindSam': 'TPS_BEHINDSAM=1',
   'DOORTOOLS.tossMate': 'TPS_TOSSMATE=1',
-  'DOORTOOLS.chargeAnswer': 'TPS_CHARGEANSWER=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
   'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',

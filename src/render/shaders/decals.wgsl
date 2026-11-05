@@ -16,7 +16,7 @@ const DECAL_FACING: f32 = 0.6;        // min cos between the pixel's face normal
 
 struct DecalOut { albedo: vec3f, n: vec3f, keep: f32 };   // keep: multiplier composite applies to the glossy floors' specular (soot is matte)
 
-// MARKS THAT SIT IN THE SURFACE (render/decals.ts MARKSIT = the header's fourth word; the page raises it, ?marksit=0 leaves every mark as it was drawn).
+// MARKS THAT SIT IN THE SURFACE (render/decals.ts Decals.sit = the header's fourth word; the page raises it, ?marksit=0 leaves every mark as it was drawn).
 // A blast's scorch and the film of dust it leaves were each one round stamp: a dozen of them on a yard read as a dozen copies laid on top of the ground. With
 // the word up a mark is off round (a seeded ellipse, its heart off the middle), its thin parts are broken by ONE field anchored to the surface that every
 // mark there shares (two films side by side meet in one shore; soot thins into patches with an edge, not a soft ring), dust takes some of the colour of what
@@ -226,7 +226,7 @@ fn wetPrintMark(o: ptr<function, DecalOut>, q: vec2f, k: f32, seed: u32, fp: f32
 // The destruction lane's marks (game/destruction.ts damageDecal): ONE kind, three looks off floor(param) — 0 a DENT punched into sheet metal (a rack front, a
 // cabinet): a shallow round dimple, its bowl tilted in the normal so one side catches the light, the paint crazed pale round a dark centre; 1 a SHRED in a
 // fabric-covered partition or a chair back: a ragged dark tear with the pale wadding showing through and loose fibres round it; 2 a CRACK in a dark screen:
-// a black impact blotch, a spider of hairlines out of it and a bruise of dead panel round them; 9 a CRACK IN SOLID GLASS: that star, pale and wide enough to read. s = fract(param) = strength 0‥1.
+// a black impact blotch, a spider of hairlines out of it and a bruise of dead panel round them. s = fract(param) = strength 0‥1.
 fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u32, fp: f32, t: vec3f, b: vec3f, w: vec2f) {
   let look = u32(floor(param)); let s = clamp(fract(param) + 0.001, 0.05, 1.0);
   let rho = length(q); let theta = atan2(q.y, q.x);
@@ -311,10 +311,7 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     let dl = length(dv);
     if (dl > 1e-4) { (*o).n = normalize((*o).n + (dv.x * t + dv.y * b) * (0.35 * frag * smoothstep(-0.08, 0.0, bd) / dl)); }   // each piece's rim leans out: it catches the light as a thing lying there
     (*o).keep *= 1.0 - 0.85 * max(smear, frag);
-  } else {   // crack: look 2 in a dark screen; look 9 in SOLID GLASS (game/particleFx.ts HITSTUFF: a car's window, which cracks and stays) — the same star
-             // drawn to be read from the game's camera: a crushed pale heart, frosted lines millimetres wide and a milky bruise. (A black hairline on dark
-             // glass shows nothing: seen on a GPU, 2026-11-04.)
-    let glass = look == 9u;
+  } else {   // crack (a dark screen)
     let core = (1.0 - smoothstep(R * 0.16, R * 0.3 + aa, rho * (0.8 + 0.4 * dkAngNoise(theta, 7.0, seed)))) * s;
     var crack = 0.0;
     let nRad = 5u + seed % 4u;
@@ -323,18 +320,12 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
       let along = dot(q, dv); let lenI = R * (0.55 + 0.5 * dkRand(120u + i, seed));
       if (along <= 0.0 || along > lenI) { continue; }
       let across = (q.x * dv.y - q.y * dv.x) - (dkLineNoise(along * 60.0, seed + 31u * i) - 0.5) * 0.2 * along;
-      let wI = select(0.0006, 0.0026, glass) * (1.0 - 0.6 * along / lenI);
+      let wI = 0.0006 * (1.0 - 0.6 * along / lenI);
       crack = max(crack, dkCrackCov(across, wI, aa) * (1.0 - smoothstep(0.8 * lenI, lenI, along)));
     }
     let bruise = (1.0 - smoothstep(R * 0.3, R * 0.95, rho)) * (0.5 + 0.5 * dkNoise2(q * 45.0, seed + 13u)) * s;
-    if (glass) {   // crazed glass is pale: it scatters the light the pane let through
-      let milk = vec3f(0.8, 0.84, 0.86);
-      alb = mix(alb, milk, max(core * 0.9, crack * 0.9));
-      alb = mix(alb, milk, bruise * 0.2);
-    } else {
-      alb = mix(alb, vec3f(0.004), max(core, crack * 0.85));
-      alb = mix(alb, alb + vec3f(0.05, 0.02, 0.06), bruise * 0.6);   // the dead panel round the hit shows a faint violet bleed
-    }
+    alb = mix(alb, vec3f(0.004), max(core, crack * 0.85));
+    alb = mix(alb, alb + vec3f(0.05, 0.02, 0.06), bruise * 0.6);   // the dead panel round the hit shows a faint violet bleed
     (*o).keep *= 1.0 - max(core, crack) * 0.9;                       // the glass finish is gone along the cracks
   }
   (*o).albedo = alb;

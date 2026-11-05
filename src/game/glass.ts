@@ -96,39 +96,12 @@ function nearestOnBox(b: Box, p: Vec3): { q: Vec3; d: number } {
   const q: Vec3 = [b.c[0] + cs * lx + sn * lz, b.c[1] + ly, b.c[2] - sn * lx + cs * lz];
   return { q, d: v3.dist(p, q) };
 }
-/** one number of a seed, to the millimetre, folded into the word so far */
-const seedMix = (h: number, x: number): number => { h = Math.imul(h ^ (Math.round(x * 1000) | 0), 0x85EBCA77) >>> 0; return (h ^ (h >>> 13)) >>> 0; };
-/** WHAT A BOX IS, as one 32-bit word: its centre and its half sizes to the millimetre. THE SEED OF A HIT ON GLASS OR ON A THIN WALL STARTS HERE (a pane's
- *  star and break, a round's turn through a pane, a partition or a door's leaf) and none of them reads where the box stands in the level's list. A list place
- *  moves with every box written before it, so one crate more or less in a level's file used to move every pane's break and every round's turn on the level,
- *  and with them the run, with no change of play (2026-11-05: a lying drum went from two boxes to one and two lessons read other digests). What a box is does
- *  not move when boxes are added or taken away round it: a hit on THIS box rolls what it rolled. tools/qa/hitseed-check.ts holds it.
- *  - No turn (yaw) in the word: one box can be written with more than one, and its centre and sizes already say which box it is. Two boxes with one centre and
- *    one size are one box to a seed (no sheet of glass and no thin wall of any level is such a pair today).
- *  - A piece cut from a wall is a box of its own and seeds by what it is; a door's leaf by where it stands as it is struck.
- *  - NOT COVERED: the ORDER of work. Where two panes share a frame's budget (glassbreak.ts releasesPerFrame) the one written first in the level is served
- *    first, so two panes written the other way round can still let their pieces go on other frames. And a few seeds outside glass, thin walls and window
- *    bars (winbars.ts starts from this word too) still read a place in a list (a door blown off, a wall's edge look): docs/agents/destruction.md, the hit
- *    seed's bullet, lists them. */
-export function boxSeed(b: Box): number {
-  let h = 0x9E3779B1;
-  for (let k = 0; k < 3; k++) h = seedMix(h, b.c[k]);
-  for (let k = 0; k < 3; k++) h = seedMix(h, b.h[k]);
+/** a 32-bit hash of where a pane was hit (pane index + the point to the millimetre): the crack pattern's seed — the same shot at the same spot draws the same star whatever else has happened */
+export function hitSeed(bi: number, p: Vec3): number {
+  let h = Math.imul(bi + 1, 0x9E3779B1) >>> 0;
+  for (const x of p) { h = Math.imul(h ^ (Math.round(x * 1000) | 0), 0x85EBCA77) >>> 0; h = (h ^ (h >>> 13)) >>> 0; }
   return Math.imul(h, 0xC2B2AE3D) >>> 0;
 }
-/** a box's word (boxSeed) and a point to the millimetre, as one 32-bit word */
-export function pointSeed(word: number, p: Vec3): number {
-  let h = word >>> 0;
-  for (let k = 0; k < 3; k++) h = seedMix(h, p[k]);
-  return Math.imul(h, 0xC2B2AE3D) >>> 0;
-}
-/** a 32-bit hash of where a box was hit: a pane's crack pattern, a round's turn through glass or a thin wall — the same shot at the same spot of the same box
- *  rolls the same whatever else has happened, and whatever else the level holds */
-export function hitSeed(b: Box, p: Vec3): number { return pointSeed(boxSeed(b), p); }
-/** the seed of a BLAST on a box (its word): the charge's point ON THE FLOOR PLAN, its height left out. One charge reaches a pane more than once (the
- *  destruction's feed at its true point, its 'bang' event lifted off the floor, the quiet stars of crackNear below), and each arrival draws the same stars
- *  from here whichever comes first: by the point as each arrival gave it, a can on the floor (y 0.12, its event at 0.3) drew two unrelated sets. */
-export function blastSeed(word: number, at: Vec3): number { return pointSeed(word, [at[0], 0, at[2]]); }
 
 /** THE IMPACT ENTRY POINT (rebuild/glass/fracture.md): a blow of `energy` met pane `pane` (a level box index) at `point` flying `dir` — the crack decal on the face it
  *  came at, the fracture filed (glassbreak.ts impact(): inert with tune.glassBreak off / chaos 0 / the tour — then the pane stays exactly what it was to every ray, foot
@@ -148,7 +121,7 @@ export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null
   if (gb) { if (cause !== 'bang') Object.assign(res, gb.impact(pane, point, dir, energy, who, opts?.through)); else res.type = gb.typeOfPane(pane) ?? 'laminated'; }
   if (res.wasOpen) return res;
   const S = glassState(g);
-  const seed = hitSeed(b, point);
+  const seed = hitSeed(pane, point);
   // the decal: centred where it hit, on the pane's mid-plane (composite finds it from either face), its normal toward the side the blow came from, its reach and
   // its look drawn off the seed; restricted to THIS pane on the GPU (cracks stop at the frame). Nothing when decals are off — the sound and the event still happen.
   let n = paneNormal(b);
@@ -203,7 +176,7 @@ export function crackNear(g: Game, at: Vec3, radius: number, who: number): numbe
   for (const bi of glassPanes(g)) {
     const b = g.level.boxes[bi]; if (!isSheet(b)) continue;   // solid glass (the bottle) does not craze
     const { q, d } = nearestOnBox(b, at); if (d > radius) continue;
-    let s = blastSeed(boxSeed(b), at);
+    let s = hitSeed(bi, at);
     const wide = b.h[0] < b.h[2] ? 2 : 0;                              // the pane's long horizontal local axis
     const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw);
     const axis: Vec3 = wide === 0 ? [cs, 0, -sn] : [sn, 0, cs];

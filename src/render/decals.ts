@@ -14,7 +14,7 @@
 // past CAP, resetLevelState() clears the lot.
 //
 // One buffer, four regions (word offsets exported to the shader by decalWgslConsts, so both sides read one layout):
-//   [0]                       header vec4u: count, list length, serial, 1 while marks SIT IN THE SURFACE (`MARKSIT` below; 0 = every mark drawn as it was)
+//   [0]                       header vec4u: count, list length, serial, 1 while marks SIT IN THE SURFACE (`sit` below; 0 = every mark drawn as it was)
 //   [CELL0, +CELLS_V4)        the cell table: one u32 per 1 m cell = start16 | count16 into the index list (4 cells a vec4)
 //   [LIST0, +LIST_V4)         the index list: decal indices per cell, oldest first (4 a vec4)
 //   [REC0, +3·CAP)            the records, 3 vec4 each: (pos.xyz, radius) (normal.xyz, param) (tangent.xyz, bits(kind3 | attached1 | seed12 | box16))
@@ -111,29 +111,16 @@ const DEFAULTS: Record<DecalKind, { radius: number; param: number }> = {
 };
 const SCUFF_HALF_W = 0.016;
 
-/** A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT. A mark clamped to its box was pulled onto the face of the box's PLAIN shape. On a face a cut
- *  gave the box — a leaning pane, a rounded nose, a crowned bonnet (scene/cut.ts, scene/shapes.ts) — and round the side of a drum (scene/round.ts) that stood
- *  it centimetres off the surface, and the shader's plane test dropped it: no round ever left a mark there (a cloud NVIDIA card's still of a shot car's
- *  glass, 2026-11-04). The picture's alone: where a mark is drawn, never whether one is laid, and nothing the run's digest reads.
- *  THE SWITCH: MARKCUT.on — ON in the page (`?markcut=0` = pulled to the plain box's face, as it was), OFF in the module and on the frozen stand
- *  (FROZEN_HOLDS; TPS_MARKCUT=1 raises it there); in the registry (game/knobs.ts) and the journal. It was a field of one Decals that the page alone
- *  set, so the page's stand run headless did not have it (11-05). CHECK: tools/qa/hitstuff-check.ts lines 0, 5, 6 and 7 (MARKCUT_BREAK=1 fails 7). */
-export const MARKCUT = { on: false };
-/** MARKS THAT SIT IN THE SURFACE (decals.wgsl dkSit): a blast's scorch and its film of dust are drawn off round, broken by one field that every mark on a
- *  surface shares, coloured by what they lie on, and wet where the ground is wet. The picture's alone: it is one word of the uploaded header, nothing the
- *  game reads, so no run differs by it.
- *  THE SWITCH: MARKSIT.on — ON in the page (`?marksit=0` = every mark as it was drawn), OFF in the module and on the frozen stand (FROZEN_HOLDS;
- *  TPS_MARKSIT=1 raises it there); in the registry (game/knobs.ts) and the journal. It was a field of one Decals that the page alone set, so the page's stand
- *  run headless packed the old header (11-05). CHECK: tools/qa/decals-probes.ts decalsSit (MARKSIT_BREAK=1 fails it); the picture itself:
- *  tools/qa/marksit-page.cjs. */
-export const MARKSIT = { on: false };
 export class Decals {
   /** live decals, oldest first (the ring drops from the front) */
   readonly list: Decal[] = [];
   /** off: add() records nothing, frame() uploads nothing, the engine keeps FrameFlags.Decals down — the buffer stays exactly as it was (settings.decals mirrors in here) */
   enabled = true;
-  /** the header's fourth word as last UPLOADED (MARKSIT above): the table moved since = one more build and upload */
-  private sat = false;
+  /** MARKS THAT SIT IN THE SURFACE (decals.wgsl dkSit; the page raises it, `?marksit=0` leaves it down): a blast's scorch and its film of dust are drawn off
+   *  round, broken by one field that every mark on a surface shares, coloured by what they lie on, and wet where the ground is wet. The picture's alone: it is
+   *  one word of the uploaded header, nothing the game reads. Set it with setSit. */
+  sit = false;
+  setSit(on: boolean) { if (this.sit !== on) { this.sit = on; this.dirty = true; } }
   readonly buf: GPUBuffer;
   private data = new ArrayBuffer(DECAL_BYTES); private f32 = new Float32Array(this.data); private u32 = new Uint32Array(this.data);
   private dirty = true; private serial = 0;
@@ -160,7 +147,7 @@ export class Decals {
     let radius = size ?? def.radius;
     if (kind === 'scuff') radius = 0.5 * param + SCUFF_HALF_W + 0.06;   // the streak + its echo mark (decals.wgsl scuffMark) inside one bounding circle
     let p = v3.copy(pos);
-    if (opts.clampTo) p = clampToFace(opts.clampTo, p, n, kind === 'scuff' ? 0.5 * param : radius, MARKCUT.on);
+    if (opts.clampTo) p = clampToFace(opts.clampTo, p, n, kind === 'scuff' ? 0.5 * param : radius);
     const full = this.list.length >= DECAL_CAP, lookAt = full ? this.list.findIndex(x => x.look) : -1;
     if (full && opts.look && lookAt < 0) return null;   // (a full ring of play's marks takes no mark laid only for the picture)
     const serial = ++this.serial;
@@ -201,11 +188,10 @@ export class Decals {
   frame(world: BoxWorld) {
     if (!this.enabled) return;
     this.sync(world);
-    if (MARKSIT.on !== this.sat) this.dirty = true;
     if (!this.dirty) return;
     this.build();
     this.device.queue.writeBuffer(this.buf, 0, this.data, 0, DECAL_BYTES);
-    this.stats.uploads++; this.dirty = false; this.sat = this.u32[3] !== 0;
+    this.stats.uploads++; this.dirty = false;
   }
 
   /** Pack the list: bucket every drawn decal into the 1 m cells its bounding circle overlaps (newest DECAL_MAX_PER_CELL per cell, DECAL_LIST_CAP entries in all —
@@ -241,7 +227,7 @@ export class Decals {
       u[o + 11] = (KIND_CODE[d.kind] | (d.box ? 8 : 0) | (d.seed << 4) | ((d.box ? d.boxIdx : d.pane >= 0 ? d.pane : DECAL_ANY_BOX) << 16)) >>> 0;   // box16: the ridden box, or the crack's own pane, or 'any'
       if (!d.hidden) drawn++;
     }
-    u[0] = list.length; u[1] = k; u[2] = this.serial >>> 0; u[3] = MARKSIT.on ? 1 : 0;
+    u[0] = list.length; u[1] = k; u[2] = this.serial >>> 0; u[3] = this.sit ? 1 : 0;
     this.stats.count = drawn; this.stats.listLen = k; this.stats.maxCell = maxCell; this.stats.dropped = dropped; this.stats.buildMs = performance.now() - t0;
   }
 
@@ -270,13 +256,10 @@ function toWorld(b: Box, l: Vec3, point: boolean): Vec3 {
   else { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); w = [cs * l[0] + sn * l[2], l[1], -sn * l[0] + cs * l[2]]; }
   return point ? v3.add(w, b.c) : w;
 }
-/** Pull `p` (on the face of `b` whose outward normal is `n`) in from that face's edges by `r` and onto the face plane exactly. `onCut`: on a box whose drawn
- *  surface is not its six faces — one that says a cut, or a round thing — a point inside the plain box, more than a millimetre under the face its normal
- *  leans to, is on the surface the cut or the round gave it and is left where it is (MARKCUT above). */
-function clampToFace(b: Box, p: Vec3, n: Vec3, r: number, onCut = false): Vec3 {
+/** Pull `p` (on the face of `b` whose outward normal is `n`) in from that face's edges by `r` and onto the face plane exactly. */
+function clampToFace(b: Box, p: Vec3, n: Vec3, r: number): Vec3 {
   const lp = toLocal(b, p, true), ln = toLocal(b, n, false);
   const a = Math.abs(ln[0]) >= Math.abs(ln[1]) && Math.abs(ln[0]) >= Math.abs(ln[2]) ? 0 : Math.abs(ln[1]) >= Math.abs(ln[2]) ? 1 : 2;
-  if (onCut && (b.cut !== undefined || b.round === true) && Math.abs(lp[a]) < b.h[a] - 1e-3) return v3.copy(p);
   for (let i = 0; i < 3; i++) {
     if (i === a) { lp[i] = (ln[a] >= 0 ? 1 : -1) * b.h[i]; continue; }
     const lim = b.h[i] - r; lp[i] = lim <= 0 ? 0 : Math.max(-lim, Math.min(lim, lp[i]));

@@ -44,14 +44,13 @@ struct Frame {
   giCfg: vec4f,                             // GI-in-motion (docs/internal/gi-motion.md, fgather.wgsl `main`): x = ray multiplier for YOUNG-history gather texels (≤ 1 = off: the gather as it was), y = how many texels a frame may take it (the rest first-come), z = the diffuse history length (frames) under which a texel is young, w spare
   weatherE: vec4f,                          // PARTICLE RAIN (experiment, game/rainFx.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
-  shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade writes it on the look page, zeros anywhere else = the picture as it was; the one exposure model's, place_common.wgsl lookExpoFor): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = spare, w = the irradiance open ground gets from the sky alone (luminance)
+  shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (composite.wgsl lookShadeGain; engine.ts lookShade writes it on the look page, zeros anywhere else = the picture as it was): x = the exponent a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = the most a pixel is ever brought up (×), w = the irradiance open ground gets from the sky alone (luminance): no pixel is brought up past it
   veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros anywhere else = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
   veilB: vec4f,                             // xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height
-  eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, one exposure (render/lookexpo.ts lookExpoFrame, zeros anywhere else = off): x = the most a place is brought up (the night's exposure over the hour's), y = the day's share, z = the power of the eyes' darkness the open is overexposed by, w = −1 − the Eyes follow Sam row: under 0 = the model is on
-  gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (place_common.wgsl lookExpoFor; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
+  eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts, zeros anywhere else = off): x = how many times darker than the open air Sam's place is taken to be, y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground
+  gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
   lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK) · w = the Room brightness row (composite.wgsl lookExpoGain; 0 = not set)
   sideCfg: vec4u,                           // THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros anywhere else = every cache read as it was): x = 1 `sides` is this frame's level · y, z = THE SMOKE LAB's drawing rows (vol_common.wgsl HOW SMOKE IS DRAWN, AS ROWS; zeros = the picture as it was)
-  placeCfg: vec4f,                          // THE LOOK PROTOTYPE, light keeps its order across places (the look panel's row `order`; composite.wgsl lookExpoGain; zeros anywhere else = off): x = how far a pixel's own light caps its place's gain · y = the slot of the light list's first portal + 1, 0 with none (skyKeep below) · z, w = THE EYES' WIDEST (place_common.wgsl lookExpoFor; set whenever the model is on): z = the dim level in the night's units, w = the most a place under it is shown by over the night's exposure
   sides: array<vec4u, 1750>,                // … its words, a u32 a cell of the floor plan (sideAt below)
   sideCols: array<vec4u, 140>,              // … and the place of each probe column of the cache's first cascade, a nibble a column (index z × dims.x + x; lighting_common.wgsl diceTapsBy)
 };
@@ -169,26 +168,22 @@ fn sideAt(x: f32, z: f32) -> u32 {
   if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return SIDE_UNKNOWN; }
   let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u]; let kind = w & 3u;
   if (kind == 0u) { return (w >> 2u) & 31u; }
-  if (kind == 3u) { return SIDE_DOOR; }   // (a doorway's cell that knows its door's line: every place's to a read of the cache; sideLine reads its line)
   if (kind != 1u) { return SIDE_UNKNOWN; }
   let m = q / SIDE_RES;   // (metres from the map's corner)
   let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
   let hx = select(0u, 1u, ((w >> 2u) & 1u) == 1u && m.x >= line.x); let hz = select(0u, 2u, ((w >> 8u) & 1u) == 1u && m.y >= line.y);
   return (w >> (14u + 4u * (hx + hz))) & 15u;
 }
-/// … and THE LINES OF ONE CELL of the plan, asked of any point: how far past each line of cell `c` the point `m` (metres from the map's corner) is, toward +x
-/// and +z. 0 on an axis the cell has no line across, and never 0 on one it has (a point on a line is on its high side, as sideAt has it); (0, 0) for a cell
-/// with no lines (a free cell, a doorway by a shape the plan cannot read, a wall that says nothing) and off the map. The cells with lines are a wall's
-/// (kind 1) and a doorway's (kind 3: its door's line, or its run's own middle). The sign is the step, in cells, toward the point's own side.
-fn sideLine(c: vec2i, m: vec2f) -> vec2f {
-  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2f(0.0); }
+/// … and for a point in a wall's cell that knows its lines: the step, in cells, away from those lines toward the point's own side (0 on an axis the cell has no
+/// line across); (0, 0) anywhere else. The first cell that is no wall along it is the place the point is in (composite.wgsl lookPlaceField).
+fn sideOut(x: f32, z: f32) -> vec2i {
+  let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
+  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2i(0); }
   let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u];
-  if ((w & 1u) == 0u) { return vec2f(0.0); }
-  let d = m - ((vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025);
-  return vec2f(select(0.0, select(min(d.x, -1e-6), max(d.x, 1e-6), d.x >= 0.0), ((w >> 2u) & 1u) == 1u), select(0.0, select(min(d.y, -1e-6), max(d.y, 1e-6), d.y >= 0.0), ((w >> 8u) & 1u) == 1u));
+  if ((w & 3u) != 1u) { return vec2i(0); }
+  let m = q / SIDE_RES; let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
+  return vec2i(select(0, select(-1, 1, m.x >= line.x), ((w >> 2u) & 1u) == 1u), select(0, select(-1, 1, m.y >= line.y), ((w >> 8u) & 1u) == 1u));
 }
-/// is cell `c` a doorway's that knows its line (kind 3)
-fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return false; } let k = u32(c.y * SIDE_W + c.x); return (frame.sides[k >> 2u][k & 3u] & 3u) == 3u; }
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
 /** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */
@@ -215,10 +210,10 @@ fn boxOwner(b: BoxGeo) -> u32 { return (b.flags >> 8u) & 0xffu; }
  *  the reflection pass reads the anisotropy. A box nobody gave a finish reads rough 1 (matte: no reflection ray, no analytic highlight). */
 struct Finish { rough: f32, metal: bool, aniso: bool };
 /** THE LOOK PROTOTYPE: the picture's word for box i, carried above the finish in the same float (8 × it; scene/boxes.ts packBox, render/gbuffer.ts lookWordOf):
- *  bits 0-4 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 5 = it moves (a box past the level's statics),
- *  bits 6-11 a number of the box's own, 0‥44. 0 on every other page. */
+ *  bits 0-3 what it is made of (look.wgsl's classes, 0 = plain; decided on the CPU from the box's own paint), bit 4 = it moves (a box past the level's statics),
+ *  bits 5-11 a number of the box's own, 0‥90. 0 on every other page. */
 fn boxLook(i: u32) -> u32 { return u32(boxMat[i * 4u + 1u].w * 0.125); }
-fn boxStuff(i: u32) -> u32 { return boxLook(i) & 31u; }   // (five bits: render/gbuffer.ts LOOK_WORD)
+fn boxStuff(i: u32) -> u32 { return boxLook(i) & 15u; }
 fn boxFinish(i: u32) -> Finish {
   var w = boxMat[i * 4u + 1u].w; var f: Finish;
   if (LOOK) { w -= 8.0 * floor(w * 0.125); }   // (THE LOOK PROTOTYPE: boxLook's word, above)
@@ -396,37 +391,20 @@ const ROT_IDENTITY: u32 = 0x3C00u;
 // is convex, so the ray's stay inside it is still ONE interval: the slab interval [tN, tF] cut down plane by plane — a plane the ray crosses INTO the kept side may
 // raise tN (and is then the face it enters by), one it crosses OUT of lowers tF. Codes: a box face keeps isectBox's 0‥5, 7 = origin inside the cut solid, and cut
 // plane k answers −1 − k (negative: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face; boxNormalFromCode decodes it).
-// cut.ts cutClip is this, plane by plane, on the CPU (rayBox, lineBox).
+// cut.ts cutClip is this loop on the CPU (rayBox, lineBox).
 fn cutPlaneRow(bi: u32, k: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + k]; }
 /** the row after a box's planes: (the colour its cut faces show, 1), or all zero = they show the box's own (Box.cutCore) */
 fn cutCoreRow(bi: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + CUT_ROWS]; }
-// NO LOOP IN THE BOX TEST (tools/qa/cutboxes-probes.ts holds it). Every box walk has this test written into its own loops, and a loop INSIDE it costs a
-// walk far more than the loop's own work: with the planes taken in a `for`, the fog's march took twice as long on an NVIDIA card with no cut box in the world,
-// and the same planes written straight down took nothing (timed 2026-11-05 on a rented A10: 3.3 ms to 6.6 with the loop, of one plane or of eight; 3.0 with no
-// loop). So the record's eight rows are taken four at a time, with no loop and no branch.
-/** four rows of a box's cut record, from row k0: the ray's stay s = (tN, tF, the code of the face it enters by, 1 while the record goes on) cut down by the
- *  planes among them, in the order isectCut's planes always had: a zero normal ends the record, and of the planes that raise tN the most the FIRST is the
- *  face (a later row at the same t does not take it over). A ray along a plane and on its far side leaves nothing: tF = −1, a miss to every reader. */
-fn cutFour(bi: u32, k0: u32, lo: vec3f, ld: vec3f, s: vec4f) -> vec4f {
-  let q = CUT_BASE + bi * CUT_STRIDE + k0; let p0 = boxMat[q]; let p1 = boxMat[q + 1u]; let p2 = boxMat[q + 2u]; let p3 = boxMat[q + 3u];
-  let n = mat4x3f(p0.xyz, p1.xyz, p2.xyz, p3.xyz);                    // (a vector × this = its dot with each of the four normals)
-  let l0 = (s.w > 0.5) & any(p0.xyz != vec3f(0.0)); let l1 = l0 & any(p1.xyz != vec3f(0.0)); let l2 = l1 & any(p2.xyz != vec3f(0.0)); let l3 = l2 & any(p3.xyz != vec3f(0.0));
-  let live = vec4<bool>(l0, l1, l2, l3);
-  let den = ld * n; let num = vec4f(p0.w, p1.w, p2.w, p3.w) - lo * n;
-  let t = num / select(den, vec4f(1.0), den == vec4f(0.0));
-  let tIn = select(vec4f(-3.0e38), t, live & (den < vec4f(0.0)));    // the planes the ray crosses INTO the kept side …
-  let tOut = select(vec4f(3.0e38), t, live & (den > vec4f(0.0)));    // … and OUT of it
-  let mIn = max(max(tIn.x, tIn.y), max(tIn.z, tIn.w)); let mOut = min(min(tOut.x, tOut.y), min(tOut.z, tOut.w));
-  let gone = any(live & (den == vec4f(0.0)) & (num < vec4f(0.0)));
-  let kf = f32(k0);
-  let face = select(select(select(-4.0 - kf, -3.0 - kf, tIn.z == mIn), -2.0 - kf, tIn.y == mIn), -1.0 - kf, tIn.x == mIn);
-  let up = mIn > s.x;                                                 // (strictly: a plane at the entry the ray already has changes nothing, not even a zero's sign)
-  return vec4f(select(s.x, mIn, up), select(min(s.y, mOut), -1.0, gone), select(s.z, face, up), select(0.0, 1.0, l3));
-}
-const_assert CUT_ROWS == 8u;   // (isectCut takes a record as two fours: more rows want more fours, there and in tools/qa/cut-rule.ts)
 fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi: u32) -> vec2f {
-  let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));   // (CUT_ROWS is 8: two fours)
-  let tN = s.x; let tF = s.y; var code = s.z;
+  var tN = tN0; var tF = tF0; var code = 7.0;
+  for (var k = 0u; k < CUT_ROWS; k++) {
+    let pl = cutPlaneRow(bi, k);
+    if (all(pl.xyz == vec3f(0.0))) { break; }
+    let den = dot(pl.xyz, ld); let num = pl.w - dot(pl.xyz, lo);
+    if (den < 0.0) { let t = num / den; if (t > tN) { tN = t; code = -1.0 - f32(k); } }
+    else if (den > 0.0) { tF = min(tF, num / den); }
+    else if (num < 0.0) { return vec2f(-1.0, 0.0); }
+  }
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   if (code < 0.0) { return vec2f(tN, code); }
@@ -1180,290 +1158,10 @@ fn lightKind(li: Light) -> u32 { return li.kind & 255u; }
 // see); one with LIGHT_FOG_UNSEEN lights only what it does not (a lamp put out where nobody looked, still lit in the picture of that room until somebody looks).
 const LIGHT_FOG_SEEN: u32 = 0x2000000u;
 const LIGHT_FOG_UNSEEN: u32 = 0x4000000u;
-// WHERE A HIGHLIGHT IS DRAWN (reflect.wgsl main's tail writes them, composite.wgsl upsampleHi reads them): the lamps', the panels' and the sun's highlights and
-// a beam's image are drawn whole on a finish up to .x of roughness and fade to nothing at .y. One pair for every preset: a highlight is a sum, it costs its
-// shadow rays and no ray of the lobe, so the presets' cut-off for the MIRROR (frame.rtCfg.x, 0.35 to 0.55: what a ray costs) says nothing of it. Where it
-// ends: at .y a lamp's highlight at its peak is under a tenth of the light the paint beside it sends back. How wide the fade is: a quarter of the scale, so
-// that a finish's gloss map is drawn by its lobe and not by the fade (tools/qa/highlights-check.ts has the arithmetic; the mirror's fade, 0.12 wide, made one
-// twentieth of roughness thirty times the highlight).
-const RT_HI_FADE = vec2f(0.5, 0.75);
-/// … as the page has it (the scene prelude's RT_HI_REACH, render/frame.ts highlightConfig: 1; the address's `&hireach=0` = 0, the highlights fading where the
-/// mirror does, `maxR` = frame.rtCfg.x: the reach they had before 11-05, to hold the two pictures side by side on one card)
-fn rtHiFade(maxR: f32) -> vec2f { return mix(vec2f(maxR - 0.12, maxR + 0.001), RT_HI_FADE, RT_HI_REACH); }
 // AN INFRARED LIGHT (lights.ts LIGHT_IR; game/irlight.ts: the illuminators on the goggles): a light only the intensifier tube sees by. It is in the list only on a
 // frame whose picture is the tube's, and every pass of the picture takes it as a steady light like any other (evalLight; the engine restarts the screen
 // histories the frame the tube comes off). The game's own readings never do: evalLightTrue gives nothing for it, and directIrradiance (the cascades the light meter reads its bounce from) skips it.
 const LIGHT_IR: u32 = 0x8000000u;
-// AN OPENING TO THE OUTSIDE (lights.ts LIGHT_PORTAL; engine.ts lookOpeningLights makes them on the look page, none anywhere else): an area light (kind 3)
-// that is no lamp but a hole the outside is seen through. DAYLIGHT IS COUNTED ONCE: the sky's light that comes through an opening is THIS light's, with a
-// direct light's direction and shadows, and the bounce takes none of it WITHIN THE LIGHT'S REACH (skyKeep below, at every ray of the gather that would have, and the cache's
-// dice: rc.wgsl rcDice). The reach is where the light alone stops being worth a ray (scene/openings.ts openingReach): past it the bounce has the sky,
-// as far as its own rays find the opening and its firefly bound lets them carry it.
-//   what it sends   WHAT THE RECEIVER LOOKS OUT ON through it (portalOutside): above the horizon the sky (skyRadiance, the one function a ray that
-//                   misses asks), under it the ground outside, as bright as the record says (portalGround) × the receiver's and the opening's
-//                   cosines ÷ the distance squared, per m² of the opening, added up piece by piece over its rectangle (portalFlux: a floor
-//                   a hand from the sill, a crate's top that half the opening is under, a sky much brighter low down than overhead, a wall across
-//                   the room that looks out level on the ground and on next to no sky are all in the sum).
-//   its shadow      a ray toward it runs ON THROUGH it (shadowSample): PORTAL_SKY further where it looks up, so a wall across the yard, a shutter
-//                   outside, the reveal of its own hole and a door's leaf at any angle all stand between a point and the sky; where it looks down, until
-//                   it is PORTAL_OUT out from the opening's plane or at the ground, clear of a leaf and the reveal and no further (portalPast: what
-//                   the ground out there is lit by is the record's guess). The ray
-//                   is AIMED AS THE LIGHT COMES: at one of PORTAL_POINTS points of the rectangle, picked in proportion to what each sends the
-//                   receiver. So its answer is a plain yes or no, as every light's is, and the share of a pixel's rays that get through is the share
-//                   of the portal's light that does.
-//   its hole        THE HOLE IS AS DEEP AS ITS WALL, AND THE LIGHT KNOWS IT (portalDeep, portalSeen). From a point off to one side the outside shows through
-//                   only part of the rectangle: the rest of it looks onto the hole's own far side, the wall's thickness. Until 11-04 the light was the whole
-//                   rectangle and every ray found that out for itself, one yes or no a pixel a frame: across the whole fan of a doorway's daylight a third
-//                   to nine tenths of the rays died on the wall the opening is cut in, and in a room shown hundreds of times brighter that chance was the
-//                   picture (the maintainer on his GPU: "boiling in the sun on the ground through the door, especially along left edge"). The far rim is the
-//                   same rectangle a wall's depth further out, so what a point sees through both is A RECTANGLE: the light is that part, its points are laid
-//                   in it, and a ray is left to find only what really stands in the way (a leaf, a man, the wall across the yard). An end with no wall
-//                   behind it has no rim (scene/openings.ts Opening.rims): the hand on which a long strip of glass goes on as the next light. Its
-//                   head and its foot always have one, a doorway's foot too: the threshold in the wall's depth is floor the picture draws and the
-//                   bounce lights, and the ground a portal stands for begins past the wall. The rim is taken half a sample of the walls wider
-//                   than the rectangle (PORTAL_RIM): where the real edge may stand. What the rule leaves in is found by a ray, as before; what it
-//                   left out no ray would look for, and the bounce gives up its sky by the whole rectangle (skyKeep).
-//   its record      colour = a reference radiance (half the low sky and half the ground outside: scene/openings.ts openingLooks) × WHAT IS OPEN of
-//                   the rectangle now (a leaf ajar leaves a hand's width), cosInner = that share of the rectangle (0‥1]; cosOuter = the rectangle's
-//                   half width along the wall, radius its half diagonal (a portal has no cone); bits 11‥20 of the kind word = how deep its hole is, mm,
-//                   and bits 21‥22 = which of its two ends the hole has a far rim at (a lamp's marking rides there, which a portal has none of).
-//   who asks what   evalLightRaw KNOWS NOTHING OF A PORTAL: to it one is an area light as bright as its open part, and that is what every pass but
-//                   the picture's direct light gets (the cache, a bounce's hit off the screen, the light meter, the beams, a mote, a man's rim):
-//                   their ray stops short of it, so a leaf ajar dims it by the record and a wall across the yard does not. It is pasted wherever a
-//                   light is evaluated, some twenty places in the final gather, whose routine stands within a hundredth of the software adapter's
-//                   stack limit (tools/qa/kernel-stack.cjs): a line added there is a line the gather cannot have.
-//                   THE PICTURE'S DIRECT LIGHT (restir, direct, sharp_direct: evalLightDirect, then shadowSample) takes the rectangle (what of it shows the outside, `its hole` above) and
-//                   lets its rays find what of it is leaf, wall or yard.
-const LIGHT_PORTAL: u32 = 0x10000000u;
-const PORTAL_SKY: f32 = 40.0;           // m past the opening a shadow ray that looks up goes on for (the world is 40 m long: what it has not met by then is the sky)
-const PORTAL_OUT: f32 = 1.0;            // … and one that looks down, m out from the opening's plane: clear of a leaf swung either way and of what stands against the wall
-const PORTAL_POINTS: i32 = 8;
-const PORTAL_UP: f32 = 0.3;             // the low sky of the record's reference: this much of the zenith's and the rest of the horizon's (LOOK_OPENINGS.up)
-fn lightPortal(li: Light) -> bool { return (li.kind & LIGHT_PORTAL) != 0u; }
-/// half a portal's height (its radius is the half diagonal, cosOuter the half width), and its rectangle's area
-fn portalHigh(li: Light) -> f32 { return sqrt(max(li.radius * li.radius - li.cosOuter * li.cosOuter, 0.0)); }
-fn portalArea(li: Light) -> f32 { return 4.0 * li.cosOuter * portalHigh(li); }
-/// how deep a portal's hole is, m: from its plane back to the wall's outer face (scene/openings.ts Opening.deep; 0 = no depth is known: the whole rectangle)
-fn portalDeep(li: Light) -> f32 { return f32((li.kind >> 11u) & 0x3ffu) * 0.001; }
-/// which ends of its rectangle the hole has a far rim at (Opening.rims): the low end along the wall (portalSeen's first axis) and the high. Its head
-/// and its foot always have one
-fn portalRims(li: Light) -> vec2<bool> { return (vec2u(li.kind >> 21u) & vec2u(1u, 2u)) != vec2u(0u); }
-/// how much wider than the rectangle the far rim is taken, m along the wall and up it: half a sample of the walls each way (scene/openings.ts K.ds, K.dy),
-/// which is how far the real edge can stand outside the rectangle the samples gave
-const PORTAL_RIM = vec2f(0.025, 0.05);
-/// WHAT OF A PORTAL'S RECTANGLE A POINT SEES THE OUTSIDE THROUGH (`d` = from the point to the rectangle's middle, `hh` = half its height): the part whose
-/// way on also clears the hole's far rim, which is the same rectangle `portalDeep` further out. Seen from the point that rim lies on the portal's plane as
-/// a smaller rectangle drawn toward the point's own foot on it, so the answer is the overlap of the two: (.xy = its middle, .zw = its half sizes), in half
-/// widths along the wall and half heights up it. The whole, (0, 0, 1, 1), where no depth is known; .zw = 0 where nothing shows. An end the hole has no
-/// rim at (portalRims) is cut by nothing.
-fn portalSeen(li: Light, d: vec3f, hh: f32) -> vec4f {
-  let deep = portalDeep(li); let pz = -dot(d, li.dir);
-  if (!(deep > 0.0) || !(pz > 1e-4)) { return vec4f(0.0, 0.0, 1.0, 1.0); }
-  let half = vec2f(li.cosOuter, hh); let p = vec2f(d.z * li.dir.x - d.x * li.dir.z, -d.y);   // (the point's foot on the plane, from the rectangle's middle: along the wall and up)
-  let k = pz / (pz + deep);
-  let rim = portalRims(li);
-  let far = (half + PORTAL_RIM) * k;
-  let lo = select(-half, max(p * (1.0 - k) - far, -half), vec2<bool>(rim.x, true)); let hi = select(half, min(p * (1.0 - k) + far, half), vec2<bool>(rim.y, true));
-  if (hi.x <= lo.x || hi.y <= lo.y) { return vec4f(0.0); }
-  return vec4f((lo + hi) * 0.5, (hi - lo) * 0.5) / vec4f(half, half);
-}
-/// point i of PORTAL_POINTS on a portal's rectangle, in half widths along the wall and half heights up it from the middle: a lattice with one point to
-/// each eighth of the height, spread across by the golden ratio, the whole of it moved round the rectangle by u. What a shadow ray is aimed by (shadowSample); the light's own sum is portalFlux's pieces
-fn portalAt(i: i32, u: vec2f) -> vec2f { let k = f32(i) + 0.5; return fract(vec2f(k * 0.618034 + 0.5, k / f32(PORTAL_POINTS)) + u) * 2.0 - 1.0; }
-/// THE GROUND AN OPENING LOOKS OUT ON, by its own record: the colour is the reference (half the low sky, half the ground) × the open area, so the ground
-/// is twice the reference less that sky. One number an opening for now, the engine's guess at ground in the sun; the sky is never a guess.
-fn portalGround(li: Light) -> vec3f { return max(li.color * (2.0 / max(li.cosInner * portalArea(li), 1e-9)) - mix(frame.skyHorizon, frame.skyZenith, PORTAL_UP), vec3f(0.0)); }
-/// what is outside along L: the sky above the horizon, the ground under it. No ramp between them: which of the two a way looks out on is also how far
-/// its shadow ray has to run (portalPast)
-fn portalOutside(L: vec3f, ground: vec3f) -> vec3f { if (L.y > 0.0) { return skyRadiance(L); } return ground; }
-/// how far past a portal's point a shadow ray from Po along dir runs (dist = from Po to the point). Looking up: PORTAL_SKY, to the sky or to what
-/// hides it. Looking down: until it is PORTAL_OUT clear of the opening's plane, a leaf's length, or at the ground if that comes first (the ground is
-/// what it looks out on, not a thing in its way)
-fn portalPast(li: Light, Po: vec3f, dir: vec3f, dist: f32) -> f32 {
-  if (dir.y > 0.0) { return PORTAL_SKY; }
-  return min(PORTAL_OUT / max(-dot(dir, li.dir), 0.25), max((Po.y - 0.02) / max(-dir.y, 1e-4) - dist, 0.0));
-}
-/// the way from a receiver to a point of a portal (.xyz; d = from the one to the other) and what a m² of opening there sends along it of whatever is
-/// outside (.w: the opening's cosine ÷ the distance squared; soft = the distance squared under which the point is the patch it stands for, portalSoft)
-fn portalRay(li: Light, d: vec3f, soft: f32) -> vec4f {
-  let d2 = dot(d, d); let L = d * inverseSqrt(max(d2, 1e-8));
-  return vec4f(L, max(dot(-L, li.dir), 0.0) / (d2 + soft));
-}
-/// what one point of a portal sends a receiver, per m² of opening: N = the receiver's normal (zero: none, as evalLight has it)
-fn portalPoint(li: Light, d: vec3f, N: vec3f, soft: f32, ground: vec3f) -> vec3f {
-  let r = portalRay(li, d, soft);
-  return portalOutside(r.xyz, ground) * (r.w * select(max(dot(N, r.xyz), 0.0), 1.0, all(N == vec3f(0.0))));
-}
-/// a point's patch over 2π: under the distance squared it keeps a point within twice what the patch it stands for could send a surface that touches it
-/// (a leaf's face a finger from the opening, a floor at the sill), and lets a floor a hand inside the sill have its light (over π it had two thirds)
-fn portalSoft(li: Light, high: f32) -> f32 { return li.cosOuter * high * (2.0 / (3.14159265 * f32(PORTAL_POINTS))); }
-/// THE OPENING'S LIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT. Until 11-04 it was the mean of PORTAL_POINTS points, one to each eighth of the
-/// height: on a face a hand from the opening (a leaf swung into the room, a floor at the sill) each point was its own blob, and the leaf wore eight
-/// bands (the maintainer on his GPU, at dusk: "orange door has horizontal banding when open, not when closed"). A patch of EVEN brightness sends a
-/// face exactly what the angles its edges subtend say (a polygon's vector irradiance: Lambert's sum over its edges, the patch cut at the face's own
-/// horizon first), near or far. So the part of the rectangle a point sees (portalSeen) is cut into PORTAL_PIECES pieces that are each nearly even:
-/// the ground's, below the receiver's own height, which IS one brightness (portalOutside); and the sky above it, cut where skyRadiance's ramp from
-/// the horizon ends over the stretch's middle by angle from the receiver (by height over distance, so the cut moves with the receiver and is no
-/// line on a wall). (Until 11-05 the sky was also cut in two halves along the wall, five pieces in all, "so a long opening seen from close is not
-/// one piece". Against a sum over the opening's own points, tools/qa/portal-check.ts, the halves halved an error that is about a hundredth of a
-/// place's light without them under the most uneven sky an hour has, on every kind of face alike, and they were two fifths of what the sum cost
-/// every pixel in an opening's reach: docs/agents/render.md, AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, has the numbers and what was tried.) A sky piece's brightness runs straight
-/// from its foot to its head and so, near enough, does how squarely the face takes it: the piece counts as bright as the mean of the one weighed by
-/// the other, read where the part of it the face sees lies (portalEnds, portalMean). What is exact is the geometry; the sky's own ramp is followed to a few per
-/// cent from a metre off and to a third in the worst corner tools/qa/portal-check.ts could find (a floor at the sill of a long opening is a fifth
-/// over). The eight points stay as what a shadow ray is AIMED by (direct_common.wgsl shadowSample), where a point is all a ray can be, laid in the
-/// part of the seen rectangle that stands above the face's own horizon (portalAbove), so a face that takes a sliver of the opening has rays on the
-/// sliver.
-const PORTAL_PIECES: i32 = 3;           // the ground's, the sky's ramp, and the sky over the ramp
-const PORTAL_RAMP: f32 = 0.4364;        // the height over the level distance at which skyRadiance's ramp ends (rd.y = 0.4: its 2.5)
-/// one edge's share of a polygon's vector irradiance: half the angle the edge subtends, about the normal of the plane through it and the point (a, b:
-/// unit, from the point to the edge's two ends). The angle over its sine by the fit area lights are drawn with everywhere (a ratio of two quadratics
-/// in the cosine, good to a thousandth): no arc function in a sum that is asked a few times a pixel. Past a right angle the sine is the cross
-/// product's own length (1 − cos² has no bits left as the ends come to stand opposite, which a floor crossing the opening's plane does)
-fn portalEdge(a: vec3f, b: vec3f) -> vec3f {
-  let x = dot(a, b); let y = abs(x); let v = (0.8543985 + (0.4965155 + 0.0145206 * y) * y) / (3.4175940 + (4.1616724 + y) * y); let c = cross(a, b);
-  return c * (3.14159265 * select(0.5 / max(length(c), 1e-7) - v, v, x > 0.0));
-}
-/// the vector irradiance of the part of a four-cornered patch that stands above a face's horizon (c: unit, from the point to its corners, walked the way
-/// portalCorners walks them; N: the face's normal). Its part along N is what the face gets per unit of radiance
-fn portalQuad(c: array<vec3f, 4>, N: vec3f) -> vec3f {
-  var F = vec3f(0.0); var under = vec3f(0.0); var back = vec3f(0.0); var cuts = 0;   // (where the walk goes under the horizon, and where it comes back)
-  for (var i = 0; i < 4; i++) {
-    let a = c[i]; let b = c[(i + 1) & 3]; let da = dot(a, N); let db = dot(b, N);
-    if (da >= 0.0 && db >= 0.0) { F += portalEdge(a, b); }
-    else if (da >= 0.0) { under = normalize(a + (b - a) * (da / (da - db))); F += portalEdge(a, under); cuts++; }
-    else if (db >= 0.0) { back = normalize(a + (b - a) * (da / (da - db))); F += portalEdge(back, b); cuts++; }
-  }
-  if (cuts == 2) { F += portalEdge(under, back); }
-  return F;
-}
-/// piece i of the part of a portal a point sees (d = from the point to the rectangle's middle, see = portalSeen's): 0 = what is below the point's own
-/// height (the ground's), 1 = the sky's ramp, 2 = the sky over it.
-/// Its sides, m: .xy = its two ends along the wall from the point's foot on the plane, .zw = its foot and its head from the point's own height.
-/// .w ≤ .z = no such piece from here
-fn portalPiece(li: Light, d: vec3f, see: vec4f, hh: f32, i: i32) -> vec4f {
-  let pz = -dot(d, li.dir); let px = dot(d, vec3f(li.dir.z, 0.0, -li.dir.x));
-  let X0 = (see.x - see.z) * li.cosOuter + px; let X1 = (see.x + see.z) * li.cosOuter + px; let y0 = (see.y - see.w) * hh + d.y; let y1 = (see.y + see.w) * hh + d.y;
-  if (i == 0) { return vec4f(X0, X1, y0, min(y1, 0.0)); }
-  // the stretch's middle by angle: the way that halves the angle between the ways from the foot to its two ends meets the wall where their lengths divide it
-  let r0 = length(vec2f(X0, pz)); let r1 = length(vec2f(X1, pz));
-  let lo = max(y0, 0.0); let cut = min(max(PORTAL_RAMP * length(vec2f((X0 * r1 + X1 * r0) / (r0 + r1), pz)), lo), y1);   // (the ramp's end over that middle)
-  if (i == 1) { return vec4f(X0, X1, lo, cut); }
-  return vec4f(X0, X1, cut, y1);
-}
-/// a piece's corners from the point, unit, walked so that portalQuad's sum points at the piece (q = portalPiece's; pz = the point's distance from the plane)
-fn portalCorners(li: Light, q: vec4f, pz: f32) -> array<vec3f, 4> {
-  let T = vec3f(li.dir.z, 0.0, -li.dir.x); let o = -li.dir * pz;
-  return array<vec3f, 4>(normalize(o + T * q.x + vec3f(0.0, q.z, 0.0)), normalize(o + T * q.x + vec3f(0.0, q.w, 0.0)), normalize(o + T * q.y + vec3f(0.0, q.w, 0.0)), normalize(o + T * q.y + vec3f(0.0, q.z, 0.0)));
-}
-/// the ways from the point to a piece's foot and to its head (unit), at the place along the wall where the part of it a face sees lies (F = that
-/// part's vector irradiance, portalQuad's: it points at the part's middle)
-fn portalEnds(li: Light, q: vec4f, pz: f32, F: vec3f) -> array<vec3f, 2> {
-  let T = vec3f(li.dir.z, 0.0, -li.dir.x); let fz = -dot(F, li.dir);
-  let x = clamp(select(0.5 * (q.x + q.y), pz * dot(F, T) / max(fz, 1e-9), fz > 1e-9), q.x, q.y); let o = -li.dir * pz + T * x;
-  return array<vec3f, 2>(normalize(o + vec3f(0.0, q.z, 0.0)), normalize(o + vec3f(0.0, q.w, 0.0)));
-}
-/// how bright a piece counts whose brightness runs straight from L0 at its foot to L1 at its head, to a face that takes its foot by d0 and its head by
-/// d1 (the cosines, as they are: under 0 = that end is under the face's horizon), that running straight too: the mean of the product over the mean of
-/// the weight, over the stretch the face sees. With one end under the horizon the stretch starts where the weight crosses 0, at the brightness there;
-/// with both, the brightness of the end that is nearer to rising: no step anywhere as a face turns
-fn portalMean(L0: vec3f, L1: vec3f, d0: f32, d1: f32) -> vec3f {
-  if (d0 <= 0.0 && d1 <= 0.0) { return select(L0, L1, d1 >= d0); }
-  var a = L0; var b = L1; var wa = d0; var wb = d1;
-  if (d0 < 0.0) { a = mix(L0, L1, d0 / (d0 - d1)); wa = 0.0; }
-  if (d1 < 0.0) { b = mix(L1, L0, d1 / (d1 - d0)); wb = 0.0; }
-  return (a * (2.0 * wa + wb) + b * (wa + 2.0 * wb)) / (3.0 * (wa + wb));
-}
-/// the part of the seen rectangle (see = portalSeen's, d = from the point to the rectangle's middle) that stands above a face's horizon, as the
-/// smallest rectangle round it, in portalSeen's own units: what a shadow ray's points are laid in. .zw = 0: none of it
-fn portalAbove(li: Light, d: vec3f, see: vec4f, hh: f32, N: vec3f) -> vec4f {
-  let T = vec3f(li.dir.z, 0.0, -li.dir.x); let half = vec2f(li.cosOuter, hh);
-  let lo = (see.xy - see.zw) * half; let hi = (see.xy + see.zw) * half;
-  var mn = vec2f(1e9); var mx = vec2f(-1e9);
-  for (var i = 0; i < 4; i++) {
-    let j = (i + 1) & 3;
-    let a = vec2f(select(lo.x, hi.x, i >= 2), select(lo.y, hi.y, i == 1 || i == 2)); let b = vec2f(select(lo.x, hi.x, j >= 2), select(lo.y, hi.y, j == 1 || j == 2));
-    let da = dot(d + T * a.x + vec3f(0.0, a.y, 0.0), N); let db = dot(d + T * b.x + vec3f(0.0, b.y, 0.0), N);
-    if (da >= 0.0) { mn = min(mn, a); mx = max(mx, a); }
-    if ((da >= 0.0) != (db >= 0.0)) { let p = mix(a, b, da / (da - db)); mn = min(mn, p); mx = max(mx, p); }
-  }
-  if (mx.x <= mn.x || mx.y <= mn.y) { return vec4f(0.0); }
-  return vec4f((mn + mx) * 0.5, (mx - mn) * 0.5) / vec4f(half, half);
-}
-/// a piece's solid angle (the corner function of a rectangle seen from over its plane)
-fn portalSolid(q: vec4f, pz: f32) -> f32 {
-  let s = atan2(q.y * q.w, pz * sqrt(q.y * q.y + q.w * q.w + pz * pz)) - atan2(q.x * q.w, pz * sqrt(q.x * q.x + q.w * q.w + pz * pz)) - atan2(q.y * q.z, pz * sqrt(q.y * q.y + q.z * q.z + pz * pz)) + atan2(q.x * q.z, pz * sqrt(q.x * q.x + q.z * q.z + pz * pz));
-  return max(s, 0.0);
-}
-/// what the whole opening sends a face with normal N at P, per m² of the opening
-fn portalFlux(li: Light, P: vec3f, N: vec3f) -> vec3f {
-  let hh = portalHigh(li); let d = li.pos - P; let see = portalSeen(li, d, hh); let pz = -dot(d, li.dir);   // (the part of the rectangle the outside shows through from P)
-  if (!(see.z * see.w > 0.0) || !(pz > 1e-4)) { return vec3f(0.0); }
-  let ground = portalGround(li);
-  var s = vec3f(0.0);
-  for (var i = 0; i < PORTAL_PIECES; i++) {
-    let q = portalPiece(li, d, see, hh, i);
-    if (!(q.w > q.z) || !(q.y > q.x)) { continue; }
-    let F = portalQuad(portalCorners(li, q, pz), N); let w = dot(F, N);
-    if (!(w > 0.0)) { continue; }
-    var L = ground;
-    if (i > 0) { let e = portalEnds(li, q, pz, F); L = portalMean(skyRadiance(e[0]), skyRadiance(e[1]), dot(e[0], N), dot(e[1], N)); }
-    s += L * w;
-  }
-  return s / max(portalArea(li), 1e-9);
-}
-/// THE SKY'S PART of the same sum, by luminance, on the six faces of a cube at P and with no face at all (the cache's dice: +x −x +y −y +z −z, the
-/// mean): what a probe's own rays would have brought of the sky by this opening (rc.wgsl rcDice takes it out). The same pieces as portalFlux, each
-/// as bright as the SKY is that way, the piece under the receiver's height too (skyRadiance under the horizon: what a ray that leaves by the opening
-/// and meets nothing brings; read at the piece's foot, since that sky has done all its falling within 7° of the horizon): a change to the one is a
-/// change to the other, or the sky is counted more or less than once
-fn portalFaces(li: Light, P: vec3f) -> array<f32, 7> {
-  let hh = portalHigh(li); let d = li.pos - P; let see = portalSeen(li, d, hh); let pz = -dot(d, li.dir);
-  var s: array<f32, 7>;
-  if (!(see.z * see.w > 0.0) || !(pz > 1e-4)) { return s; }
-  let per = 1.0 / max(portalArea(li), 1e-9);
-  for (var i = 0; i < PORTAL_PIECES; i++) {
-    let q = portalPiece(li, d, see, hh, i);
-    if (!(q.w > q.z) || !(q.y > q.x)) { continue; }
-    let c = portalCorners(li, q, pz);
-    for (var f = 0; f < 6; f++) {
-      var n = vec3f(0.0); n[f >> 1] = 1.0 - 2.0 * f32(f & 1);
-      let F = portalQuad(c, n); let w = dot(F, n);
-      if (!(w > 0.0)) { continue; }
-      let e = portalEnds(li, q, pz, F); let L0 = luminance(skyRadiance(e[0])); let L1 = select(luminance(skyRadiance(e[1])), L0, i == 0);
-      s[f] += portalMean(vec3f(L0), vec3f(L1), dot(e[0], n), dot(e[1], n)).x * w * per;
-    }
-    let m = portalEnds(li, q, pz, vec3f(0.0)); let M0 = luminance(skyRadiance(m[0]));
-    s[6] += 0.5 * (M0 + select(luminance(skyRadiance(m[1])), M0, i == 0)) * portalSolid(q, pz) * per;
-  }
-  return s;
-}
-/// a light's strength as its record has it, for the ratio of two frames' records (restir): the colour's luminance, and for a portal ÷ cosInner, its
-/// whole rectangle at the sky's reference (its colour alone moves with every swing of a leaf, which is no change of the light a pixel's history was
-/// built for)
-fn lightPower(li: Light) -> f32 { return luminance(li.color) / select(1.0, li.cosInner, lightPortal(li)); }
-/// THE SKY A RAY OF THE BOUNCE TAKES WHEN IT MEETS NOTHING (from O along dir): skyRadiance, less what a portal already sends O of it where the ray left by
-/// an opening that is lit as one. THE TWO SHARES ADD UP TO THE SKY: a portal's light fades out toward its range (lightWindow), so the ray keeps the rest
-/// of the window; an opening that is not in the list this frame (more open than are lit at once) is no portal and takes nothing. (A cell the portal's
-/// reach mask leaves out is one that cannot see the opening, so no ray of its own leaves by it: the mask is not asked here.) frame.placeCfg.y = the
-/// slot of the list's first portal + 1 (the engine's own lights go in last, so the walk is the portals' and a few lights'), 0 on a frame with none and
-/// anywhere but the look page: the loop is never entered.
-/// skyKeep = the share of the ray's sky that is still the bounce's.
-fn skyKeep(O: vec3f, dir: vec3f) -> f32 {
-  var keep = 1.0;   // (the list's records read a member at a time: this is pasted into the final gather, which has no stack to spare on the software adapter)
-  if (frame.placeCfg.y > 0.5) {
-    for (var i = u32(frame.placeCfg.y) - 1u; i < frame.numLights; i++) {
-      if ((lights[i].kind & LIGHT_PORTAL) == 0u) { continue; }
-      let dn = dot(dir, lights[i].dir); if (dn > -1e-4) { continue; }           // (out through it: against the way it faces)
-      let t = dot(lights[i].pos - O, lights[i].dir) / dn; if (t <= 0.0) { continue; }
-      let q = O + dir * t - lights[i].pos; let hw = lights[i].cosOuter; let r = lights[i].radius;
-      if (q.y * q.y > r * r - hw * hw || dot(q.xz, q.xz) > hw * hw) { continue; }   // (the opening's rectangle is upright: up it, and along the wall)
-      keep = 1.0 - lightWindow(distance(O, lights[i].pos), lights[i].range); break;
-    }
-  }
-  return keep;
-}
-fn skyThrough(O: vec3f, dir: vec3f) -> vec3f { return skyRadiance(dir) * skyKeep(O, dir); }
 const FOG_SIGHT_BINS: i32 = 2048;       // render/fogofwar.ts FOG_BINS (change both together)
 var<private> fogSeenKeyP: vec3f = vec3f(3e38); var<private> fogSeenKeyN: vec3f = vec3f(0.0); var<private> fogSeenVal: f32 = 1.0;   // the last spot asked and its answer: one spot is asked once however many lights fall on it
 fn fogSightD(k: i32, j: i32) -> f32 { let i = k * FOG_SIGHT_BINS + j; return fogSight.dist[i >> 2u][i & 3]; }
@@ -1578,18 +1276,6 @@ fn evalLight(li: Light, P: vec3f, N: vec3f) -> LightEval {
     let k = lightFogK(li, P, N);
     if (k <= 0.002) { r.ok = false; r.E = vec3f(0.0); } else { r.E *= k; }
   }
-  return r;
-}
-/// evalLight as the DIRECT LIGHT'S ESTIMATORS take it (restir, direct, sharp_direct: whoever follows it with shadowSample): a portal is what of its
-/// rectangle shows the outside, added up piece by piece (portalFlux; LIGHT_PORTAL above; a surface whose plane cuts the opening still has the part above it, which a look at the
-/// middle alone would not say; the fog's light classes do not touch a portal: it is the picture's own and carries neither bit). Any other light as it is.
-fn evalLightDirect(li: Light, P: vec3f, N: vec3f) -> LightEval {
-  if (!lightPortal(li)) { return evalLight(li, P, N); }
-  var r: LightEval; r.ok = false; r.E = vec3f(0.0);
-  let d = li.pos - P; let dist = length(d);
-  if (dist > li.range) { return r; }
-  r.L = d / max(dist, 1e-4); r.dist = vec3f(dist, 0.0, 0.0);
-  r.E = portalFlux(li, P, N) * (portalArea(li) * lightWindow(dist, li.range)); r.ok = any(r.E > vec3f(0.0));
   return r;
 }
 /// the light as it IS (the fog's classes not asked): what the game's own readings take. A light that exists only in the fog's picture (LIGHT_FOG_UNSEEN: a lamp
