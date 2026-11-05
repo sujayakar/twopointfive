@@ -1110,12 +1110,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **WHAT IT IS NOW: ONE FIELD OF POWDER, carried by the air the falling flakes ride.** `render/powderField.ts PowderField` + `shaders/powder_field.wgsl`:
     a texture over the level's floor plan at `POW_RES` 10 cells a metre (the pass: 400 × 280), a texel = how much powder stands over that spot (a column:
     what it hides seen from above) and column × height. One compute kernel a step, old → new, then a copy (the picture always reads the same view):
-    CARRY back along the air field's velocity there (`render/airField.ts`, × `POWDER.velK` 1.08 = the flakes' own share a hand over the ground), read
+    CARRY back along the air field's velocity there (`render/airField.ts`, × `POWDER.velK` 1.1 = the flakes' own share a hand over the ground), read
     with a cubic held inside its four nearest cells (a bilinear read smears a thread into a cloud in a second at these speeds); SETTLE: `life` 12 s in
     air that moves, `lifeStill` 1.4 s in air that does not (a lee clears and its edge is drawn), and thick powder falls out faster than thin (`clump`);
-    PICK-UP from open lying snow (the air map's own "under the sky" share) where the air runs at the ambient wind or over it (`gateLo` ‥ `gateHi` × it:
-    none in a lee, most in the jet through a gap), from small crests (`crest` 0.28 m, the `crestCut` share of the ground gives none) inside gust patches
-    (`patch` 4.5 m) that stand where they are and come and go slowly, so each crest's powder is drawn out downwind into a thread; more where the air's
+    PICK-UP from open lying snow (the air map's own "under the sky" share) where the air runs faster than a share of the ambient wind (`gateLo` ‥
+    `gateHi` × it: none in a lee, most in the jet through a gap), from small
+    crests (`crest` 0.36 m, the `crestCut` share of the ground gives none) inside gust patches (`patch` 3.5 m) that stand where they are and come and go slowly, so each crest's powder is drawn out downwind into a thread; more where the air's
     lift goes up (a wall's windward foot); KICKS (below). A solid cell holds none. The powder has NO WIND OF ITS OWN: that is the whole answer to "does
     not react to walls" and "a wind that does not match the falling snow". The engine (`engine.ts powderLive`) builds it the first frame the look page
     has lying snow (`lookConfig.snow`, the page's word: `game.snowTracks`), an air field and either row up, steps it right after the air's own step on
@@ -1132,13 +1132,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     stands in front of a boot). IT IS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
     snow and snow puffs at all?"). The field is a tenth of a metre a cell and thin (a mean column near 0.04): drawn as it stands it is a faint wash,
     white on white. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (the velocity its b and a carry), and inside
-    it `powderThreads` draws threads a few fingers wide and about 0.45 m long (`POWDER_GRAIN` 0.07 m): a grain averaged over `POWDER_READS` 10
-    reads along the air's way at that spot, `POWDER_REACH` 0.042 m apart (UNDER a grain: at four reads 0.17 m apart each read fell on a grain of its
+    it `powderThreads` draws threads a finger or two wide and six times as long (`POWDER_GRAIN` 0.03 m since 11-05, 0.07 before): a grain averaged over `POWDER_READS` 10
+    reads along the air's way at that spot, `POWDER_STEP` 0.6 of a grain apart (UNDER a grain, and said in grains since 11-05 so that it holds at any width: at four reads 0.17 m apart each read fell on a grain of its
     own and a thread was a row of beads, fish scales over the whole road in a dusk still; the pattern was then tuned in a small offline drawing
     of the same sums before the page was booted again), a sixth of the ground under a thread, and slid along at the air's speed there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1.6 s:
     a pattern slid for ever on air that turns is torn apart), so a thread bends where the air bends and stops where the field has nothing. Nothing in
-    the shader has a wind of its own: the check reads that. The column is drawn × `POWDER_GAIN` 3, with `POWDER_THIN` 0.12 of it between threads
-    and × `POWDER_THREAD` 5 in a thread's middle; a thick column (a boot's puff) is drawn whole by a column of 0.9 and half by 0.55 (whole only past 1, a kick's round was more streaks among the
+    the shader has a wind of its own: the check reads that. The column is drawn × `POWDER_GAIN` 1.75, with `POWDER_THIN` 0.08 of it between threads
+    and × `POWDER_THREAD` 1.2 in a thread's middle (3, 0.12 and 5 before 11-05: the maintainer's numbers, below); a thick column (a boot's puff) is drawn whole by a column of 0.9 and half by 0.55 (whole only past 1, a kick's round was more streaks among the
     streaks half a second on; whole from 0.4, a line of kicks a stride apart was one white haze over the road and its tracks for seconds: both seen); in still air there is no thread and the powder is drawn even (one read of the grain showed the
     grain's own square cells in a yard's lee). A few in a thousand 3 cm spots of powder catch the sun for a tenth of a second. Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
     under it (that reads as smoke), with the sun's share taken back up by the cosine the ground paid (stuff in the air is lit full on by a low sun
@@ -1151,7 +1151,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `render/lookveil.ts lookVeilFrame` writes the frame's `veilA` / `veilB` (@848, @864): where the field lies over the world and where the sun is.
   - **CHECKS.** `tools/qa/powder-field-page.cjs` (the solver alone in headless Chromium on the software adapter, about 0.1 s a step: no NaN, solids
     hold none, a lee holds under 35 % of the open, the jet through a gap over 2.5 × the lee, a sprinter's kicks leave over 1.8 × a walker's, 15 s of still
-    air settles it under 1 %, and its stored velocity is the air's × `velK` by a fit over 560 cells (1.054 against 1.08 ± 0.04: the powder reads the air
+    air settles it under 1 %, and its stored velocity is the air's × `velK` by a fit over 560 cells (1.054 against 1.08 ± 0.04 on 10-28; 1.073 against 1.1 with the maintainer's numbers of 11-05: the powder reads the air
     between its cells, so cell by cell the two differ by a few cm/s); 9 lines, all pass 10-28; `POWDERFIELD_BREAK=1` steps it in air that never moves and fails 3; `--mask FILE` = pictures of it on a level's own air
     map, nothing asserted). `tools/qa/lookveil-check.ts` (5 lines: the frame's side and the two writings of the shader; `LOOKVEIL_BREAK=1` fails 1),
     `tools/qa/snowpuffs-check.ts` (5 lines; `SNOWPUFFS_BREAK=1` fails 3), `frame-layout.ts` / `materials-probes.ts` for the fields. Page hooks:
@@ -1170,6 +1170,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     A ROW'S NAME FITS THE PANEL'S NAME COLUMN (twenty letters; the first names were cut off and two read the same): the full sentence is the head
     of the row's tip. "copy them" hands back the tables' own keys. Checked on the software adapter: the page boots and a picture of the panel
     shows the section with every name whole. NEVER SEEN ON A GPU; no row has been moved by anybody.
+  - **THE WISPS' DEFAULTS ARE THE MAINTAINER'S OWN NUMBERS** (11-05; `render/powderField.ts POWDER`, `POWDER_DRAW`, and the four consts of
+    `shaders/composite.wgsl` and its compact twin, which `lookveil-check` holds alike). He tuned them on his GPU in the section above, copied them
+    out with its button and posted them with "I think we still need a lot of tweaking though": so these are where the next tuner STARTS, not a
+    finished look, and what he still dislikes had been asked and not yet answered when this was written. What moved, old to his: HOW IT IS DRAWN
+    gain 3 to 1.75, between the streaks 0.12 to 0.08, a streak's middle 5 to 1.2, a streak's width 0.07 to 0.03 m (so about a quarter of the
+    column's mean is drawn where the whole was, and a streak is under half as wide); WHAT THE WIND DOES the two gates 0.6 and 1.15 to 1.35 and
+    2.35 of the day's wind, a gust patch 4.5 to 3.5 m, a crest 0.28 to 0.36 m, the powder's speed 1.08 to 1.1 of the air's. WHAT THE GATES
+    DO WAS MEASURED, because the first reading of them was wrong ("both stand over the open wind, so open ground lifts nothing"): on the
+    solver's own page with his five numbers the open ground upwind still carries a mean column of 0.093 (0.103 with the old), the gap's jet
+    0.096 (0.109), and a wall's lee 0.000 (0.003). The gate is a share of the DRIVE's speed and the open air runs well over it, so doubling
+    the gates empties the lee and the slow edges and leaves the open streaming. What changes the picture most is how it is DRAWN: a
+    quarter of the brightness in streaks under half as wide. The other thirteen rows and the six of a boot's kick are as they
+    were. A picture change on every snow level of the look's page. ONE THING HAD TO MOVE WITH THE WIDTH for the defaults to draw what he
+    saw: the step between a thread's reads was metres over the grain's CONST while the panel's row drew the grain, so at his 0.03 m the
+    panel still read every 0.6 of a grain; with 0.03 made the const it would have read every 1.4 (beads, and a different pattern). The step
+    is now `POWDER_STEP` 0.6 grains, the same picture at any width (a review's find, by the sums; `lookveil-check` holds it under 1). His
+    0.08 between the streaks went to his screen as the nearest byte, 0.078: the const draws 0.08. The two gate rows' sliders now reach 2.5
+    and 3.5 (they stopped at 1.5 and 2.5, three steps over where he left them). `tools/qa/powder-field-page.cjs` is untouched and its nine lines pass
+    with his numbers as the page's defaults, on the software adapter (the fit of the powder's speed reads 1.073 against his 1.1 ± 0.04).
+    `lookveil-check` (ten lines now), `snowpuffs-check` green. Never seen on a GPU by us: the picture with these
+    numbers is, by the reading above, the one he had on his screen.
   - **THE POWDER'S STEP IS COMPILED ONCE A DEVICE** (11-03; `render/powderField.ts programOf`). A field is thrown away when both snow rows are at nothing
     and made again when one comes back, and each new field compiled "powder step" again: found by a one-boot read of the pass's page (two switches of the
     look's layers, two more compiles), against his "compile once". The layout and the pipeline are kept by device now; a field is its textures, its
