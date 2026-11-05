@@ -26,7 +26,6 @@ use crate::items::Items;
 use crate::men::Men;
 use crate::lights::Lights;
 use crate::slabs::Slabs;
-use crate::weather::Weather;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -56,7 +55,6 @@ pub struct State {
     pub items: Items,
     pub men: Men,
     pub lights: Lights,
-    pub weather: Weather,
     pub smoke: Smoke,
     pub poses: Poses,
 }
@@ -72,7 +70,7 @@ pub struct Part {
 /// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order). THE ORDER IS THE PARKED BLOCK'S COST: a block that
 /// gives its slot up is kept by the host as ONE run of bytes from its start to the end of the last word in use, so the room a pool does not use is
 /// paid for by every part that stands after it. Parts of a fixed length first, then the pools, the one sized largest LAST.
-pub const PARTS: [Part; 12] = [
+pub const PARTS: [Part; 11] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
     Part { off: offset_of!(State, doors), len: size_of::<Doors>(), ver: 1, pool: false },
@@ -82,7 +80,6 @@ pub const PARTS: [Part; 12] = [
     Part { off: offset_of!(State, items), len: size_of::<Items>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, lights), len: size_of::<Lights>(), ver: 1, pool: false },
-    Part { off: offset_of!(State, weather), len: size_of::<Weather>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
 ];

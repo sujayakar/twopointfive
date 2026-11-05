@@ -1537,3 +1537,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WHAT THE 42 DO NOT SHOW: nobody is ever walking for a silent mate, out for the breaker or off for a coffee in them, even with switches up, nor is a squad silent or unseen, so `owner-check` also runs the
   rules' own families under the same audit.
   NOT SEEN: nothing here changes what is on screen but the debugger's line. Never seen on a GPU.
+<!-- 2026-11-05 -->
+- **What a man believes and what he covers are two things** (`src/game/belief.ts`, `BELIEF.on`: on in the page, `?belief=0`; off on the frozen stand, `TPS_BELIEF=1`; a `FROZEN_HOLDS` row, in the
+  knob registry and a journal's tables). `Guard.lastKnown` is only where he believes the enemy to be. `Guard.covers` is the point his duty has his gun on, said anew each tick (`dutiesAnew` clears it
+  at the tick's top, the room fight and the scenarios say it again before any man's update), so a duty that ends leaves nothing behind. It is not state, and `game/digest.ts` does not read it; what
+  moves a shipped digest is `fix`, the field that no longer holds a door, and the gun's turn in `yaw`. `gunPoint()` is where the gun goes with no man to shoot at: what his eyes put in his belief this
+  very tick, else what he covers, else what he believes. `eyesFix()` answers the rules that ask where his own eyes have the man (roomfight evidence and fixKeep, enemysquads teamKnown / teamKnownHow /
+  contact, buddy, laststand), a fix led to where a lost man was going counting as his eyes' (`Guard.ledAt`). Every other reader takes the belief as it stands: frag's throw, picture's idea of his man,
+  the alarm's place, the response team's best fix, trackFix's stamp. The old "not the door" compare lives on only in the rule's off path (`eyesFix`, `evidence`, `standOn`) and goes with the switch.
+  `word()` is how a report that reaches him outside his senses places his belief (a blast, a mate, the net, a rule that hands him a fix): what he hears of that moment or before does not write over
+  it, however late in the tick's order he comes to hear it (`wordStands`); what he hears after does; his eyes always do. Errands and his own inferences (a task's goal, a stagger's look round, the
+  door force's belief) still write the field directly. The room fight's evidence reads `witness.heard.loudAt`, what the report came to in his head whether or not it moved his belief.
+  WHY: the room fight wrote the door into lastKnown at the top of every tick and his eyes wrote the man back later in it (1,179 ticks in 29 of 42 runs). Traced: nobody sees that flip, he ends each
+  tick on the man, the gun moves 2.5 to 4 degrees following him. The harm was what others read: a door taken for the enemy, a fresh fix stamped when his watch moved, a heard shot kept for one tick.
+  A post is left by the rules that always decided (rally on `noiseAt`, fall-back, press, lanes), never by a belief.
+  CHECK `bun run tools/qa/belief-check.ts` (`probes.ts belief`, family roomfight; both stands); `BELIEF_BREAK=1` puts the door back into his belief and fails lines 1, 2, 4, 11, 12 and 15 on both.
+  MEASURED 11-05 on step 1515, page's stand, the 42, base / both rules / this rule alone: taken 26 / 24 / 24, wiped 8 / 10 / 10, rescued 4 / 5 / 4, lost 4 / 3 / 4, team lost 70 / 75 / 77, defenders killed
+  241 / 231 / 230, game seconds 3,544 / 3,122 / 3,126. Five endings moved with both: block-squads:2 wiped to taken, defuse-four:2 and hall-four:1 and room-clear-pair:2 taken to wiped, rescue-consulate:2 lost
+  to rescued. Off = the build as it was: 42 of 42 digests on both stands. With `fix` taken out of the digest, three runs equal the base (depot-four:1, night-breach:2, snatch-four:1: they moved by the field
+  alone) and 39 moved by the rules. `fights-check`: no lastKnown pair on the page's stand. The tick, five runs: off the same run to the bit, 1 % less; on 2 % more over runs that now play differently.
+  The soak on the page's stand: the base's four kinds and no new one, but more of them (27 first reports against 15; a selector left open 1,165 against 149 frames, knife-missing 2,267 against 2,093). The
+  tour's three red stops are the base's. NOT MEASURED: no response team runs in the 42, so that reader is by code only.
+  NOT SEEN: never on a GPU, never played. What to look for: held men acting on where you actually were, not on their own door.
+- **A man put on a post gives up his walk to a door** (`DOORFORCE.postEnds`, `src/game/doorforce.ts`: on in the page, `?postends=0`; off on the frozen stand, `TPS_POSTENDS=1`; a `FROZEN_HOLDS` row,
+  carried by a journal's DOORFORCE table). Before it lanes.ts stopped him every 0.2 s and doorforce.ts walked him on: a visible stop and step for 4.6 s (rescue-consulate:2, Roamer 1, 21 alternations).
+  Only the walk ends: what he believes of the door stands, so a posted man can still fire on it.
+  CHECK `bun run tools/qa/postends-check.ts` (`probes.ts postends`, family doors; both stands); `POSTENDS_BREAK=1` fails line 1 on both.
+  MEASURED 11-05 on step 1515, page's stand: alone it moves one run of the 42, rescue-consulate:2, lost to rescued (taken 26, wiped 8, rescued 5, lost 3, team lost 68, seconds 3,540).
+  NOT SEEN: never on a GPU, never played.

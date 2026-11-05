@@ -54,6 +54,7 @@ import { digInOrder, digInPhase, digInEntered, digInWedged, digInRelease } from 
 import { NETQUIET, netQuietClosed } from './netquiet';
 import { inSquadRooms } from './enemysquads';
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { eyesFix } from './belief';
 
 export const LASTSTAND = {
   /** REGROUP AND DIG IN LOUDLY (shipped off): the last defenders gather in one room on a spoken order, wedge it and hold it to the end */
@@ -272,7 +273,7 @@ function teamKnown(g: Game, F: RoomFight, near: Vec3): { pts: Vec3[]; last: Vec3
   const pts: Vec3[] = []; let last: Vec3 | null = null, lt = -Infinity;
   for (const D of F.defs) {
     const gd = D.gd; if (!alive(D)) continue;
-    if (gd.lastKnown && gd.lastKnown !== D.pt && gd.lastSeenT > -50) { if (g.time - gd.lastSeenT < LASTSTAND.knownSecs) pts.push(gd.lastKnown); if (gd.lastSeenT > lt) { lt = gd.lastSeenT; last = gd.lastKnown; } }
+    const kn = eyesFix(gd, D.pt); if (kn && gd.lastSeenT > -50) { if (g.time - gd.lastSeenT < LASTSTAND.knownSecs) pts.push(kn); if (gd.lastSeenT > lt) { lt = gd.lastSeenT; last = kn; } }
     if (D.noiseAt) { if (g.time - D.noiseT < LASTSTAND.knownSecs) pts.push(D.noiseAt); if (D.noiseT > lt) { lt = D.noiseT; last = D.noiseAt; } }
   }
   if (!last) { let bd = Infinity; for (const D of F.defs) if (D.gd.state === 'dead') { const d = flat(D.gd.char.pos, near); if (d < bd) { bd = d; last = D.gd.char.pos; } } }

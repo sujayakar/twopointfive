@@ -64,6 +64,7 @@ import { PICTURE, PICTURE_STATS, exposureAsker } from './picture';   // (asked i
 import type { Box } from '../scene/boxes';
 import { railsDown } from './rails';   // (a spared teammate on his knee is not one of the men a defender counts for his grenade)
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { word } from './belief';
 
 /** Every number of the grenade. fuse: seconds from leaving the hand (the player's); orderFuse: a teammate's on an order — cooked a beat, it has less far to go.
  *  lethalM / woundM: the two radii of the model above; woundKill: the chance of a kill at the very edge of lethalM for an exposed man, falling to 0 at woundM;
@@ -394,7 +395,7 @@ function blastRaw(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
       if (!gd.civ) {
         const u = clamp(j.d / wound, 0, 1); const secs = lerp(F.stagger[0], F.stagger[1], u);
         gd.staggerUntil = Math.max(gd.staggerUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs); gd.weapon.burst = null;
-        gd.awareness = Math.max(gd.awareness, 0.92); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+        gd.awareness = Math.max(gd.awareness, 0.92); if (gd.state !== 'alert') word(g, gd, at);
         gd.path = []; gd.pathGoal = null; gd.speed = 0;
         if (j.r === 'wounded') conditionHurt(g, gd);   // (condition.ts: it reached him and left him up — hurt from now; a return on its first line with the switch off)
       }

@@ -159,9 +159,6 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world\'s copy and asked again wherever a static row or a leaf moved (tools/qa/smokegrid-check.ts `faces`: always what a fresh ask gives)',
   'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
   'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and the box world and the copy of it FACES was asked of (the host\'s numbers; where one differs the tables are made again)',
-  'sim/src/air.rs PLANS': 'COPY · which cells are roofed, the lists over them and which edges a leaf stands across, a set a slot of the blocks, made again from the block\'s roofs and the leaves whenever the block that stands there is another or was written wholesale (the stamp)',
-  'sim/src/air.rs NEXT': 'SCRATCH · one step of the dust\'s field, written before any of it is read back',
-  'sim/src/weather.rs ROOF_LIST': 'SCRATCH · a level\'s roofs as its boxes are handed over, read back at the end of that one question',
   'sim/src/glow.rs NEXT': 'SCRATCH · one pass of the bounce, written before any of it is read back',
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };

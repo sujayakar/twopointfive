@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 33;
+export const SIM_ABI = 32;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -142,24 +142,6 @@ export interface SimExports {
   camera_see(g: number, i: number, time: number, dt: number, visible: number, gain: number, x: number, y: number, z: number, suspicion: number, alarm: number): number;
   laser_open(g: number, i: number): number;
   laser_close(g: number, i: number, time: number, live: number, cut: number, sense: number, held: number): number;
-  // the weather that play reads (rust/sim/src/wind.rs, weather.rs, air.rs, snow.rs — src/sim/weatherhome.ts is the host's half)
-  wind_shape(i: number): number; wind_noise(seed: number, x: number): number;
-  /** wind.ts jetVel, stormVel, stormVelRoofs (the roofs at scratch 0): the air → scratch 0‥2 */
-  wind_jet(o0: number, o1: number, o2: number, d0: number, d1: number, d2: number, speed: number, reach: number, tanSpread: number, r0: number, dMax: number, floorY: number, p0: number, p1: number, p2: number): void;
-  wind_storm(w0: number, w1: number, w2: number, i0: number, i1: number, i2: number, i3: number, a0: number, a1: number, a2: number, a3: number, p0: number, p1: number, p2: number): void;
-  wind_storm_roofs(w0: number, w1: number, w2: number, n: number, p0: number, p1: number, p2: number): void;
-  weather_col(i: number): number; weather_cap(i: number): number;
-  weather_under_roof(g: number, x: number, z: number): number; weather_rain_bed(g: number, x: number, z: number): number; weather_hear_mask(g: number, time: number, x: number, z: number): number;
-  weather_fog_tau(sigma: number, h: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number): number;
-  weather_air_trans(g: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number): number;
-  weather_roofs_begin(): void; weather_roofs_box(cx: number, cy: number, cz: number, hx: number, hy: number, hz: number, ceiling: number): void; weather_roofs_end(): number; weather_roofs_seen(): number;
-  weather_gap(g: number, first: number): number; weather_stroke_due(g: number, time: number): number; weather_strike(g: number, time: number, bearing: number, elevDeg: number, distKm: number, peak: number): void;
-  weather_thunder_add(g: number, at: number, dist: number, bearing: number, loud: number): void; weather_thunder_due(g: number, i: number, time: number): number;
-  weather_stroke_mean(n: number, a: number, b: number): number; weather_lot_step(g: number, dt: number): number;
-  wet_open_sky(g: number, w: number, set: number, ask: number, time: number, x: number, z: number, head: number): number;
-  wet_step(g: number, w: number, set: number, ask: number, time: number, dt: number, x: number, z: number, head: number): void;
-  snow_bog_at(g: number, w: number, x: number, y: number, z: number): number;
-  air_clear(g: number, stamp: number): void; air_begin(g: number, stamp: number, on: number): void; air_seed(g: number, stamp: number, leak: number): void; air_settle(g: number, stamp: number, w: number, set: number, ask: number): void; air_update(g: number, stamp: number, w: number, set: number, ask: number, dt: number): void; air_reread(g: number, stamp: number, w: number, set: number): void; air_table(g: number, stamp: number, which: number): number; weather_read(i: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
@@ -171,8 +153,7 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'props_settle', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
   'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap',
-  'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close',
-  'wind_shape', 'wind_noise', 'wind_jet', 'wind_storm', 'wind_storm_roofs', 'weather_col', 'weather_cap', 'weather_under_roof', 'weather_rain_bed', 'weather_hear_mask', 'weather_fog_tau', 'weather_air_trans', 'weather_roofs_begin', 'weather_roofs_box', 'weather_roofs_end', 'weather_roofs_seen', 'weather_gap', 'weather_stroke_due', 'weather_strike', 'weather_thunder_add', 'weather_thunder_due', 'weather_stroke_mean', 'weather_lot_step', 'wet_open_sky', 'wet_step', 'snow_bog_at', 'air_clear', 'air_begin', 'air_seed', 'air_settle', 'air_update', 'air_reread', 'air_table', 'weather_read'];
+  'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close'];
 
 /** A RUNTIME WITH NO WEBASSEMBLY (a browser whose policy turns a site's JIT off has none) DOES NOT PLAY: the simulation is the module's and nothing else
  *  works it out. The page shows these words in place of the game, before anything is built (main.ts); they are the maintainer's, as he chose them. */
