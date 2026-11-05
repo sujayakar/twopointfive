@@ -1864,6 +1864,14 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **A LOOK MAP'S LATTICES ARE HASHED ONCE A LAYER** (11-05; the look's page only, at its boot and whenever a level names a new stuff; no switch, because
+  no map moves by a byte). `render/lookTex.ts cells2` asked nine cells where their points lie for every texel: three hashes and a square root a cell, most
+  of what a layer cost. A lattice (size, seed, jitter) now fills a table once (`cellTable`, emptied as a layer starts and ends), the nine are told apart by
+  squared distance and only the two nearest are rooted. Compared once, layer by layer: all 30 byte for byte the same at 512, 128 and 64 texels, evened and
+  not. Under bun on one thread the thirty took 8.9 s and take 6.2 (tarmac 609 to 362 ms, grass 695 to 444). The check is `lookcells` (family render;
+  `LOOKCELLS_BREAK=1` fails two of its three lines): cells2 against the plain way written out again, 1.7 million answers to the bit, and a lattice that is
+  not whole cells is refused aloud. NOT DONE: `vn` still hashes four corners a call and is most of the hashing left; the layers still wait on one thread
+  (making them on workers is the performance goal's). Nobody has timed a look page's boot with its shaders already cached, in a browser.
 - **A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT** (11-05; the look's page only; `render/lookTex.ts STUFFS`' two new
   words `rolled` and `mirrors`, `look.wgsl lookRoll` / `lookRollUp`, the reflection texts' `coat`). The maintainer, of the cars: "we don't need to go full
   hyperrealistic but we should sell it more", and "how reflective is the car material, btw? it does feel like it should reflect more of the environment

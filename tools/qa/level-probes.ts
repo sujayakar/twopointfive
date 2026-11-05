@@ -12,12 +12,13 @@ import { ROOT, asExporter } from './headless.ts';
 
 const { buildLevel, OFFICE_DATA } = await import(`${ROOT}/src/scene/level.ts`);
 const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/src/scene/officeGen.ts`);
+const { stampDoes } = await import('../levels/doesWas.ts');
 const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData, indexLevelData, freshId } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE, floorAt } = await import(`${ROOT}/src/game/floor.ts`);
 const { EXACT } = await import(`${ROOT}/src/math/exact.ts`);
-const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);
+const { rowWord, rowDoes } = await import(`${ROOT}/src/scene/stuff.ts`);
 
 let failures = 0;
 function verdict(ok: boolean, what: string, detail = '') { if (!ok) failures++; console.log(`  ${ok ? 'PASS' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`); }
@@ -25,7 +26,7 @@ export function levelProbeFailures() { return failures; }
 
 /** the exporter's annotations, rebuilt here so the probes do not depend on the tool (same inputs: palette, floor.ts, WORLD) */
 function exportOpts(trace: { groups: string[] }) {
-  const materials: Record<string, { albedo: number[]; rough?: number; metal?: boolean; stuff?: string }> = {}; for (const [k, a] of Object.entries(OFFICE_PALETTE as Record<string, number[]>)) materials[k] = { albedo: [...a], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[k] ?? {}), ...rowWord(k) };   // palette + finish + what each paint is made of, as tools/level-export.ts builds them
+  const materials: Record<string, { albedo: number[]; rough?: number; metal?: boolean; stuff?: string; does?: string }> = {}; for (const [k, a] of Object.entries(OFFICE_PALETTE as Record<string, number[]>)) materials[k] = { albedo: [...a], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[k] ?? {}), ...rowWord(k), ...rowDoes(k) };   // palette + finish + what each paint is drawn as and what it does, as tools/level-export.ts builds them
   const zoneIds = ['corridor_lino', 'lobby_stone', 'server_tile', 'breakroom_lino'];
   return {
     name: 'office', materials, boxGroups: trace.groups,
@@ -45,6 +46,7 @@ export async function levelIdentity() {
   asExporter(() => {
     const trace = { groups: [] as string[] };
     const A = buildOfficeProcedural(trace);          // the legacy generator
+    stampDoes(A);                                    // (… as its exporter writes it: a box nobody spoke for takes the word its colour had. tools/levels/doesWas.ts)
     const B = buildLevel();                          // the bundled JSON through the loader — what main.ts and the harness boot
     const diffs: string[] = []; const n = structuralDiff(A, B, diffs, 5);
     console.log(`  A (generator): ${A.boxes.length} boxes · ${A.lights.length} lights · ${A.switchables.length} switchables · ${A.doors.length} doors · ${A.routes.length} routes · ${A.props.length} props · ${A.clearPlans.length} clear plans`);
@@ -60,7 +62,7 @@ export async function levelIdentity() {
     // digests: both Levels converted with the same annotations hash alike, and equal the bundled data's digest. THE FILE CARRIES THE OFFICE'S LIVED TIER
     // (the hand pass's drawn-only things, scene/lived.ts), which a stand may load without: A and B above are the office as THIS stand loads it; the file is
     // held against the generator and the loader with the tier in, on every stand
-    const traceF = { groups: [] as string[] }, AF = buildOfficeProcedural(traceF, { lived: true }), BF = loadLevel(OFFICE_DATA, { lived: true });
+    const traceF = { groups: [] as string[] }, AF = buildOfficeProcedural(traceF, { lived: true }), BF = loadLevel(OFFICE_DATA, { lived: true }); stampDoes(AF);
     const dA = levelDataDigest(levelToData(AF, exportOpts(traceF))), dB = levelDataDigest(levelToData(BF, { ...exportOpts(traceF) })), dFile = levelDataDigest(OFFICE_DATA);
     verdict(dA === dB && dB === dFile, 'digest(generator → data) = digest(loaded → data) = digest(levels/office.json)', `${dA} / ${dB} / ${dFile}`);
     // staleness: what the exporter would write now IS the bundled file (byte for byte after canonical serialization)
@@ -69,7 +71,7 @@ export async function levelIdentity() {
   });
   const onDisk = await Bun.file(`${ROOT}/levels/office.json`).text();
   verdict(onDisk === bundled, 'the file on disk is in canonical form (serialize(parse(file)) === file)', onDisk === bundled ? '' : 'hand-edited out of canonical order/format — re-save through serializeLevelData');
-  if (EXACT.on) { let said = 'the generator threw'; try { const d: string[] = [], n = structuralDiff(buildOfficeProcedural({ groups: [] }), buildLevel(), d, 2); said = `${n} difference(s)${n ? `: ${d.join(' | ')}` : ''}`; } catch { /* a note, never a verdict */ }
+  if (EXACT.on) { let said = 'the generator threw'; try { const d: string[] = [], A = buildOfficeProcedural({ groups: [] }); stampDoes(A); const n = structuralDiff(A, buildLevel(), d, 2); said = `${n} difference(s)${n ? `: ${d.join(' | ')}` : ''}`; } catch { /* a note, never a verdict */ }
     console.log(`  note: on this stand's own maths, the generator against the loaded file: ${said} — not gated (a last bit of a sin or a cos; more than a handful means a branch in the generator turns on one)`); }
 }
 
