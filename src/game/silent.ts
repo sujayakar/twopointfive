@@ -63,6 +63,7 @@ import { holdFireHolds, holdFireGlass, holdFireGlassHeld, holdFireLoud } from '.
 import { shotOrigin } from './guards';
 import type { Character } from './character';
 import type { Vec3 } from '../math/vec';
+import { roundHoldRule, roundGlassRule, targetHoldRule } from './roundheld';
 
 export const SILENT = {
   /** THE switch: off = no rows on the menu, no word on the HUD, the team as it was whatever the state says */
@@ -181,7 +182,8 @@ function ownHold(g: Game, gd: Guard, h: Guard): boolean {
   return !(h.state === 'alert' || h.state === 'search' || h.awareness >= SILENT.noticed || urgent(g));
 }
 /** his round at `h` is held: the man has not noticed the team, and nothing loud has reached this teammate (roomfight.ts's fire gate: the gun stays on him) */
-export function silentHolds(g: Game, gd: Guard, h: Guard): boolean {
+roundHoldRule('silent', silentHolds); roundGlassRule(silentGlassHolds); targetHoldRule('silent', silentOnMan);
+function silentHolds(g: Game, gd: Guard, h: Guard): boolean {
   if (!silentMan(g, gd)) return (!holdFireLoud(g) && unseenHolds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g))) || holdFireHolds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g));   // (unseen.ts: a loud squad nobody has found, Sam sneaking — the same hold without the order; false with its switch off)
   if (!ownHold(g, gd, h)) return false;
   SILENT_STATS.held++; return true;
@@ -190,7 +192,7 @@ export function silentHolds(g: Game, gd: Guard, h: Guard): boolean {
  *  door): a silent teammate with a living man as his target whom the fire hold above holds. The hold's own conditions asked afresh, nothing counted, so it
  *  stands through a change of man. Only that hold: a round held for standing glass alone (a man past `noticed` behind a pane) or by another module's rule
  *  (spotted.ts, the pair's 'watch him') is not asked. Never a loud man (holdfire.ts holdFireOnMan is his). False with `stackSet` off. */
-export function silentOnMan(g: Game, gd: Guard): boolean {
+function silentOnMan(g: Game, gd: Guard): boolean {
   if (!SILENT.stackSet || !silentMan(g, gd)) return false;
   const h = g.fight.opOf(gd)?.tgt; return !!h && h.state !== 'dead' && ownHold(g, gd, h);
 }
@@ -198,7 +200,7 @@ export function silentOnMan(g: Game, gd: Guard): boolean {
  *  no hostage's life is on it, and the man has raised no alarm (suspicious, half sure of a shape: he may yet look away — and the pane going tells the floor
  *  where they are, whatever the gun; alert or searching, the floor is up already and he is shot as ever). Part of the fire hold: nothing with `holdFire` off.
  *  Asked by roomfight.ts's fire gate once clearShot has passed the line (`c`: the teammate's own body, for that same line); the gun stays on the man. */
-export function silentGlassHolds(g: Game, gd: Guard, h: Guard, c: Character, to: Vec3): boolean {
+function silentGlassHolds(g: Game, gd: Guard, h: Guard, c: Character, to: Vec3): boolean {
   const sil = silentMan(g, gd), uns = !sil && !holdFireLoud(g) && unseenGlass(g, gd);   // (holdfire.ts: his 'go loud' to a silent squad is standing — the sneak's hold is not asked, here or in silentHolds; false with its switch off)
   if (sil ? !SILENT.glass || !SILENT.holdFire || reached(g, gd) : !uns && !holdFireGlass(g, gd)) return false;   // (… or holdfire.ts: a loud squad nobody has found, whatever Sam's posture — asked only where unseen.ts's does not answer; false with its switch off)   // (… or, for a loud squad, unseen.ts's hold by this same rule — and by ITS switches, UNSEEN.glass / UNSEEN.hold: SILENT.glass / holdFire are a silent man's alone)
   if (h.state === 'alert' || h.state === 'search' || urgent(g)) return false;
