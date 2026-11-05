@@ -15,9 +15,14 @@ pub const WORLDS: usize = 4;
 pub const ASK_HOST: u32 = 0xffff_ffff;
 /// statics a world can hold
 pub const MAX_BOXES: usize = 8192;
+/// what snow a static is (the table `snow`; snowBog.ts SNOW_KIND)
+pub const SNOW_BARE: u8 = 1;
+pub const SNOW_PACKED: u8 = 2;
+pub const SNOW_OLD: u8 = 3;
+pub const SNOW_BANK: u8 = 4;
 /// loose boxes in one list of them, and how many lists are kept: the game's own leaves, the leaves a question swaps in for itself, and THE FURNITURE'S
 /// PARTS (list THING_SET: every part box of every thing in the level, the things in the order of the furniture's own list, a thing's parts together)
-pub const MAX_LEAVES: usize = 256;
+pub const MAX_LEAVES: usize = 512;
 pub const LEAF_SETS: usize = 3;
 pub const THING_SET: usize = 2;
 /// things of furniture a world can hold (props.rs CAP), the doubles kept of each BY ITS ID (where it stands, x and z; its yaw; the radius of the upright
@@ -42,6 +47,15 @@ pub const CUT_PLANES: usize = 8;
 pub const MAX_PANES: usize = 256;
 /// statics one gather can list (the host's own lists are shorter)
 pub const MAX_LIST: usize = 4096;
+/// PANES OF GLASS THAT ARE NO LONGER WHOLE (glass.rs): a row a pane with anything out of it, on its way out, coming down or gone — written by the side
+/// that still owns the breaking (game/glassbreak.ts, through boxMirror.ts), read by every line and ray here that meets the pane. A pane with no row is
+/// shut everywhere. GD doubles and GW words a row (glass.rs names them).
+pub const MAX_GLASS: usize = 256;
+pub const GD: usize = 80;
+pub const GW: usize = 64;
+/// panes a burst's own reckoning of the glass can name (glass.rs, the view): where each gives, four doubles a pane
+pub const MAX_VIEW: usize = 256;
+pub const VD: usize = 4;
 
 /// DOUBLES A BOX: centre, half sizes, cos and sin of its yaw (worked out by the side that owns the maths in place — the same two numbers the TypeScript's own
 /// cache keeps beside the yaw), the yaw itself, the rotation (x y z w), its cut record's place and plane count, and what kind of box it is.
@@ -77,6 +91,10 @@ pub struct World {
     pub pane_t: [f64; MAX_PANES],
     /// the furniture, a thing an id (TH doubles each)
     pub thing: [f64; MAX_THINGS * TH],
+    /// the panes that are no longer whole, GD doubles a row
+    pub glass: [f64; MAX_GLASS * GD],
+    /// a burst's view of the glass, VD doubles a pane it names
+    pub view: [f64; MAX_VIEW * VD],
     /// where the last circle pushed out ended (x, z)
     pub pt: [f64; 2],
     pub cs: f64,
@@ -98,6 +116,17 @@ pub struct World {
     pub thing_live: [u32; MAX_THINGS * TL],
     /// …and how many
     pub things: u32,
+    /// the panes that are no longer whole, GW words a row; which row is static i's (0 = none: the pane is whole; else the row + 1); how many rows
+    pub glass_w: [u32; MAX_GLASS * GW],
+    pub glass_of: [u32; MAX_BOXES],
+    pub glass_n: u32,
+    /// a burst's view: which statics it names, how many, and which kind of view it is (glass.rs VIEW_*)
+    pub view_bi: [u32; MAX_VIEW],
+    pub view_n: u32,
+    pub view_kind: u32,
+    /// WHAT SNOW A STATIC IS, a byte a static (snowBog.ts ground: 0 none · SNOW_BARE ground somebody cleared · SNOW_PACKED trodden · SNOW_OLD old · SNOW_BANK snow
+    /// that stands or caps): where a thrown thing bogs down is asked of these and of the statics' own rows (items.rs bog_at)
+    pub snow: [u8; MAX_BOXES],
     pub w: u32,
     pub h: u32,
     pub boxes: u32,
@@ -113,6 +142,8 @@ const BLANK: World = World {
     cut: [0.0; (MAX_CUTS + LEAF_SETS * MAX_LEAVES) * CUT_PLANES * 4],
     pane_t: [0.0; MAX_PANES],
     thing: [0.0; MAX_THINGS * TH],
+    glass: [0.0; MAX_GLASS * GD],
+    view: [0.0; MAX_VIEW * VD],
     pt: [0.0; 2],
     cs: 0.0,
     flags: [0; MAX_BOXES],
@@ -127,6 +158,13 @@ const BLANK: World = World {
     list: [0; MAX_LIST],
     thing_live: [0; MAX_THINGS * TL],
     things: 0,
+    glass_w: [0; MAX_GLASS * GW],
+    glass_of: [0; MAX_BOXES],
+    glass_n: 0,
+    view_bi: [0; MAX_VIEW],
+    view_n: 0,
+    view_kind: 0,
+    snow: [0; MAX_BOXES],
     w: 0,
     h: 0,
     boxes: 0,
@@ -187,6 +225,12 @@ pub fn addr(w: usize, table: u32) -> usize {
         13 => o.list.as_ptr() as usize,
         14 => o.thing.as_ptr() as usize,
         15 => o.thing_live.as_ptr() as usize,
+        16 => o.glass.as_ptr() as usize,
+        17 => o.glass_w.as_ptr() as usize,
+        18 => o.glass_of.as_ptr() as usize,
+        19 => o.view.as_ptr() as usize,
+        20 => o.view_bi.as_ptr() as usize,
+        21 => o.snow.as_ptr() as usize,
         _ => 0,
     }
 }
@@ -204,6 +248,9 @@ pub fn cap(table: u32) -> usize {
         11 => LEAF_SETS,
         13 => MAX_LIST,
         14 => MAX_THINGS,
+        16 => MAX_GLASS,
+        19 => MAX_VIEW,
+        21 => MAX_BOXES,
         _ => 0,
     }
 }

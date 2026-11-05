@@ -1,5 +1,5 @@
 {
- "what": "tools/qa/level-audit.ts --write-base: every level of the mission list as the look page drew it BEFORE it was dressed (the look as frozen for the join, 2026-11-03). The budget check's \"heaviest level today\" and the table page's \"before\" are read from here; a dressed level does not rewrite its row.",
+ "what": "tools/qa/level-audit.ts --write-base: every level of the mission list as the look page drew it BEFORE it was dressed (the look as frozen for the join, 2026-11-03). The budget check's \"heaviest level today\" and the table page's \"before\" are read from here; a dressed level does not rewrite its row. Its `none` was counted by the colour rule of that day, before a box said what it is made of: a before to read beside today's, not a number to hold a level to by a tenth of a percent.",
  "levels": {
   "tut-road": {
    "boxes": 753,
@@ -14,8 +14,7 @@
    "glowing": 26,
    "openings": 3,
    "props": 5,
-   "none": 0.3934,
-   "byChance": 0
+   "none": 0.3934
   },
   "tut-team": {
    "boxes": 1054,
@@ -30,8 +29,7 @@
    "glowing": 24,
    "openings": 4,
    "props": 10,
-   "none": 0.1225,
-   "byChance": 0
+   "none": 0.1225
   },
   "tut-kit": {
    "boxes": 1096,
@@ -46,8 +44,7 @@
    "glowing": 17,
    "openings": 3,
    "props": 25,
-   "none": 0.0346,
-   "byChance": 0
+   "none": 0.0346
   },
   "tut-queue": {
    "boxes": 678,
@@ -62,8 +59,7 @@
    "glowing": 7,
    "openings": 4,
    "props": 9,
-   "none": 0.0134,
-   "byChance": 0
+   "none": 0.0134
   },
   "tut-quiet": {
    "boxes": 917,
@@ -78,8 +74,7 @@
    "glowing": 20,
    "openings": 2,
    "props": 8,
-   "none": 0.009,
-   "byChance": 0
+   "none": 0.009
   },
   "tut-pair": {
    "boxes": 823,
@@ -94,8 +89,7 @@
    "glowing": 11,
    "openings": 2,
    "props": 21,
-   "none": 0.0274,
-   "byChance": 0
+   "none": 0.0274
   },
   "office": {
    "boxes": 1157,
@@ -110,8 +104,7 @@
    "glowing": 30,
    "openings": 15,
    "props": 61,
-   "none": 0.555,
-   "byChance": 0.3707
+   "none": 0.555
   },
   "records": {
    "boxes": 1128,
@@ -126,8 +119,7 @@
    "glowing": 10,
    "openings": 11,
    "props": 24,
-   "none": 0.0487,
-   "byChance": 0
+   "none": 0.0487
   },
   "depot": {
    "boxes": 976,
@@ -142,8 +134,7 @@
    "glowing": 15,
    "openings": 10,
    "props": 19,
-   "none": 0.0523,
-   "byChance": 0
+   "none": 0.0523
   },
   "block": {
    "boxes": 1311,
@@ -158,8 +149,7 @@
    "glowing": 7,
    "openings": 5,
    "props": 16,
-   "none": 0.1838,
-   "byChance": 0.012
+   "none": 0.1838
   },
   "warehouse": {
    "boxes": 1504,
@@ -174,8 +164,7 @@
    "glowing": 12,
    "openings": 8,
    "props": 39,
-   "none": 0.088,
-   "byChance": 0
+   "none": 0.088
   },
   "compound": {
    "boxes": 1570,
@@ -190,8 +179,7 @@
    "glowing": 11,
    "openings": 11,
    "props": 48,
-   "none": 0.0718,
-   "byChance": 0.0008
+   "none": 0.0718
   },
   "barracks": {
    "boxes": 1666,
@@ -206,8 +194,7 @@
    "glowing": 26,
    "openings": 27,
    "props": 51,
-   "none": 0.0677,
-   "byChance": 0
+   "none": 0.0677
   },
   "registry": {
    "boxes": 1155,
@@ -222,8 +209,7 @@
    "glowing": 12,
    "openings": 8,
    "props": 33,
-   "none": 0.2326,
-   "byChance": 0.0025
+   "none": 0.2326
   },
   "consulate": {
    "boxes": 1249,
@@ -238,8 +224,7 @@
    "glowing": 15,
    "openings": 8,
    "props": 45,
-   "none": 0.2798,
-   "byChance": 0
+   "none": 0.2798
   },
   "snatch": {
    "boxes": 638,
@@ -254,8 +239,7 @@
    "glowing": 10,
    "openings": 5,
    "props": 12,
-   "none": 0.0141,
-   "byChance": 0
+   "none": 0.0141
   },
   "defuse": {
    "boxes": 573,
@@ -270,8 +254,7 @@
    "glowing": 11,
    "openings": 5,
    "props": 12,
-   "none": 0.0481,
-   "byChance": 0
+   "none": 0.0481
   },
   "floodlit": {
    "boxes": 557,
@@ -286,8 +269,7 @@
    "glowing": 19,
    "openings": 5,
    "props": 14,
-   "none": 0.244,
-   "byChance": 0
+   "none": 0.244
   },
   "killhouse": {
    "boxes": 521,
@@ -302,8 +284,7 @@
    "glowing": 5,
    "openings": 6,
    "props": 5,
-   "none": 0.0135,
-   "byChance": 0
+   "none": 0.0135
   },
   "mousehole": {
    "boxes": 516,
@@ -318,8 +299,7 @@
    "glowing": 9,
    "openings": 4,
    "props": 13,
-   "none": 0.0319,
-   "byChance": 0
+   "none": 0.0319
   },
   "hall": {
    "boxes": 550,
@@ -334,8 +314,7 @@
    "glowing": 6,
    "openings": 2,
    "props": 12,
-   "none": 0.0136,
-   "byChance": 0
+   "none": 0.0136
   },
   "glasshouse": {
    "boxes": 500,
@@ -350,8 +329,7 @@
    "glowing": 4,
    "openings": 6,
    "props": 8,
-   "none": 0.0145,
-   "byChance": 0
+   "none": 0.0145
   },
   "pass": {
    "boxes": 1092,
@@ -366,8 +344,7 @@
    "glowing": 15,
    "openings": 10,
    "props": 10,
-   "none": 0.013,
-   "byChance": 0
+   "none": 0.013
   },
   "bazaar": {
    "boxes": 1203,
@@ -382,8 +359,7 @@
    "glowing": 23,
    "openings": 15,
    "props": 33,
-   "none": 0.0314,
-   "byChance": 0
+   "none": 0.0314
   },
   "police-post": {
    "boxes": 1173,
@@ -398,8 +374,7 @@
    "glowing": 18,
    "openings": 7,
    "props": 27,
-   "none": 0.0382,
-   "byChance": 0
+   "none": 0.0382
   },
   "vault": {
    "boxes": 393,
@@ -414,8 +389,7 @@
    "glowing": 17,
    "openings": 4,
    "props": 3,
-   "none": 0.0052,
-   "byChance": 0
+   "none": 0.0052
   },
   "crossing": {
    "boxes": 1177,
@@ -430,8 +404,7 @@
    "glowing": 14,
    "openings": 8,
    "props": 28,
-   "none": 0.0258,
-   "byChance": 0
+   "none": 0.0258
   },
   "quiet-relay": {
    "boxes": 1057,
@@ -446,8 +419,7 @@
    "glowing": 17,
    "openings": 4,
    "props": 32,
-   "none": 0.0388,
-   "byChance": 0
+   "none": 0.0388
   },
   "lights-out": {
    "boxes": 428,
@@ -462,8 +434,7 @@
    "glowing": 20,
    "openings": 6,
    "props": 6,
-   "none": 0.0054,
-   "byChance": 0
+   "none": 0.0054
   }
  }
 }

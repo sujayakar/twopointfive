@@ -32,7 +32,7 @@
 // Callers: Destruction.blast (the wall charge and the frag — after the walls, so the hole is already open), combat.ts detonateStun for a BORROWED charge (the
 // door charge; the wall charge's own borrowed bang lands in the same frame at the same place and is merged).
 import { Vec3, v3, quat, lerp } from '../math/vec';
-import { Box, BoxFlag, makeBox } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, wordOf } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import type { Game } from './game';
 import type { Destruction } from './destruction';
@@ -184,6 +184,7 @@ export class Furniture {
     const others: AABB[] = [];   // every authored static that is NOT furniture: what may be resting on a piece of it (see the load rule below)
     for (let i = 0; i < n; i++) {
       const b = boxes[i];
+      if (b.piece === true) continue;   // TRIM a box says (scene/shapes.ts): drawn and nothing else. It stands on nothing, joins nothing and loads nothing, so the furniture of a level stood on its shapes is the furniture of the plain level; it is drawn while its box is (scene/boxes.ts trimDrawn)
       // by the flags the level was AUTHORED with, not as it stands: the index is made at the first blast, and by then rounds or that very blast may have hidden
       // things — a part missed here would be lost to every later encounter, and the index would depend on when it was made
       const f0 = this.hidden.get(i) ?? this.destr.flags0(i) ?? b.flags;
@@ -471,7 +472,7 @@ export class Furniture {
     const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); const t = BREAKS.steel.sheet;
     const deep: 0 | 2 = b.h[0] <= b.h[2] ? 0 : 2, wide: 0 | 2 = deep === 0 ? 2 : 0;   // the door is on a broad upright face
     const ax: Vec3 = deep === 0 ? [cs, 0, -sn] : [sn, 0, cs]; const sign: 1 | -1 = ax[0] * dir[0] + ax[2] * dir[2] > 0 ? -1 : 1;   // (the broad face that LOOKS AT the blast is the sheet torn off: the carcass goes over away from it, so its open side ends up or sideways — seen — never under it)
-    const part = (l: Vec3, h: Vec3): Box => makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo) });
+    const part = (l: Vec3, h: Vec3): Box => makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) });
     const on = (a: 0 | 1 | 2, s: number, shy: number): SteelPart => { const l: Vec3 = [0, 0, 0], h: Vec3 = [b.h[0] - shy, b.h[1] - shy, b.h[2] - shy]; l[a] = s * (b.h[a] - t); h[a] = t; return { box: part(l, h) }; };
     if (mode === 'apart') { const door = on(deep, sign, 0.012); door.box.c[0] += ax[0] * sign * 0.03; door.box.c[2] += ax[2] * sign * 0.03; return [{ box: part([0, 0, 0], [b.h[0], b.h[1], b.h[2]]), open: { axis: deep, sign }, seed }, door]; }
     return [on(deep, sign, 0.012), on(deep, -sign, 0), on(wide, 1, 2 * t), on(wide, -1, 2 * t), on(1, 1, 2 * t)];
@@ -486,7 +487,7 @@ export class Furniture {
       const l: Vec3 = [0, 0, 0], h: Vec3 = [b.h[0], b.h[1], b.h[2]];
       l[ax[0]] = b.h[ax[0]] * (c1[p] + c1[p + 1]) / 2; h[ax[0]] = b.h[ax[0]] * (c1[p + 1] - c1[p]) / 2;
       l[ax[1]] = b.h[ax[1]] * (c2[q] + c2[q + 1]) / 2; h[ax[1]] = b.h[ax[1]] * (c2[q + 1] - c2[q]) / 2;
-      out.push(makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo) }));
+      out.push(makeBox({ c: [b.c[0] + cs * l[0] + sn * l[2], b.c[1] + l[1], b.c[2] - sn * l[0] + cs * l[2]], h, yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) }));
     }
     return out;
   }
@@ -508,7 +509,7 @@ export class Furniture {
   }
   private breakProp(p: Prop, at: Vec3, fall: number, who: number, budget: { chunks: number }) {
     const g = this.g;
-    for (const b of p.boxes) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, albedo: v3.copy(b.albedo) }), at, 'shatter', fall, FURN_BREAK[breakClassOf(b.albedo)], who, budget, b);   // (its parts are already its pieces: each thrown whole)
+    for (const b of p.boxes) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, albedo: v3.copy(b.albedo), ...wordOf(b) }), at, 'shatter', fall, FURN_BREAK[breakClassOf(b.albedo)], who, budget, b);   // (its parts are already its pieces: each thrown whole)
     for (const c of this.destr.debris.list) if (c.on === p) { c.on = null; c.rest = false; c.stillT = 0; }   // what lay on it falls
     for (const it of g.items.items) if (it.on === p) { it.on = null; it.settled = false; it.vel = [0, 0, 0]; }   // (a can, a dropped magazine: its own rule only looks again when the prop MOVES)
     g.props.remove(p); this.goneProps++; FURN_STATS.propsBroken++;
@@ -519,7 +520,7 @@ export class Furniture {
   private roofed(x: number, z: number): boolean { const I = this.g.reachInterior; if (!I) return true; const cx = Math.floor(x - WORLD.min[0]), cz = Math.floor(z - WORLD.min[2]); return cx >= 0 && cz >= 0 && cx < WORLD.gridW && cz < WORLD.gridH && I[cz * WORLD.gridW + cx] === 1; }
   /** may the mouth rule take the static `i` at all, by what it was AUTHORED as (asked of a blast and of a checkpoint alike)? */
   private mouthOk(i: number, saved = false): boolean {
-    const b = this.g.col.boxes[i]; if (!b || b.rot || this.kept.has(i) || this.destr.walls.breakableAt(i)) return false;
+    const b = this.g.col.boxes[i]; if (!b || b.piece === true || b.rot || this.kept.has(i) || this.destr.walls.breakableAt(i)) return false;   // (trim is no thing: never the mouth's to take, to rest on or to rest)
     if ((this.hidden.get(i) ?? b.flags) & (BoxFlag.Glass | BoxFlag.Dynamic) || (!this.hidden.has(i) && this.destr.flags0(i) === undefined && b.flags & BoxFlag.NoPrimary && !this.destr.itemOf(i))) return false;
     const a = aabbOf(b); return a.y1 <= FURN.mouth.top && (volOf(b) <= FURN.mouth.vol || ((FURN.mouth.snow || saved) && snowPaintOf(b) !== null)) &&   // (a long bank of lying snow is no heavy thing: the size bar is the furniture's — `saved`: a checkpoint's, taken under the switch whatever it says now)
        !this.fronts.some(f => f[0] > a.x0 - 0.3 && f[0] < a.x1 + 0.3 && f[2] > a.z0 - 0.3 && f[2] < a.z1 + 0.3);
@@ -555,7 +556,7 @@ export class Furniture {
    *  where the rule would not run (the switches, a showcase). Whether a thing is takeable does not hang on the zone, so that half is kept for the frame. */
   mouthWouldTake(i: number, r: [number, number, number, number], depth = 0): boolean {
     if (!FURN.mouth.on || !FURNBLAST.on || !DESTRUCTION.on || this.destr.showChaos !== null) return false;
-    const g = this.g, boxes = g.col.boxes, walls = this.destr.walls, n = Math.min(boxes.length, walls.authored), b = boxes[i]; if (!b || i >= n) return false;
+    const g = this.g, boxes = g.col.boxes, walls = this.destr.walls, n = Math.min(boxes.length, walls.authored), b = boxes[i]; if (!b || i >= n || b.piece === true) return false;
     const M = this.mouthMemo, serial = (g.engine.world as { geomSerial?: number }).geomSerial ?? 0; if (M.t !== g.time || M.serial !== serial) { M.t = g.time; M.serial = serial; M.can.clear(); M.under.clear(); }
     const a = aabbOf(b);
     if (overPlan(a, { x0: r[0], z0: r[1], x1: r[2], z1: r[3] })) {   // as a thing in the zone itself
@@ -592,7 +593,7 @@ export class Furniture {
     };
     const cx = (r[0] + r[2]) / 2, cz = (r[1] + r[3]) / 2, hx = (r[2] - r[0]) / 2, hz = (r[3] - r[1]) / 2; const razed: AABB[] = [];
     for (let i = 0; i < n; i++) {
-      const b = boxes[i], reach = Math.max(b.h[0], b.h[2]) * 1.42; if (Math.abs(b.c[0] - cx) > hx + reach || Math.abs(b.c[2] - cz) > hz + reach || done.has(i)) continue;
+      const b = boxes[i], reach = Math.max(b.h[0], b.h[2]) * 1.42; if (b.piece === true || Math.abs(b.c[0] - cx) > hx + reach || Math.abs(b.c[2] - cz) > hz + reach || done.has(i)) continue;
       const a = aabbOf(b); if (!overPlan(a, zone) || a.y0 >= 1.7 || a.y1 <= 0.2) continue;   // (in a walking body's way: on the floor, on legs or on a wall)
       const br = walls.breakableAt(i);
       if (br) {   // the wall engine's cover: the stretch of it in the way (a wall proper is the blast's own business)

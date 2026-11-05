@@ -1042,6 +1042,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   albedo is its mirror, and the packer multiplies albedo by `wetK`). DARKER is what a porous thing does as it drinks; a sealed one (a painted line,
   plastic, a glazed tile) barely darkens in life. Today `wetK` 0.5 is ONE NUMBER STANDING FOR TWO, on sealed and porous alike (the measured look of the
   wet lot): how much a thing darkens belongs in its stuff's row beside whether it soaks, when boxes say what they are made of.
+  A KNOWN MISS UNTIL THEN: A DIRT OR GRAVEL STRIP THAT STANDS FOR GRASS READS MATT WHEN WET. `soaks` reads the paint, and a look paint is read as the office paint
+  it stands for (`particleFx.ts surfOf`). So the 18 strips that stand for the office's grass go darker with no film (15 painted dirt, 2 gravel, 207 m² on
+  warehouse-gwot alone, 1 scrub; about 2,470 m² over ten levels), while the same paints laid as ground shed and take it (74 wet gravel boxes, about
+  2,800 m²; 236 wet dirt boxes, about 9,700 m², the compound twin's yard among them). A review's tallies of every level stood in a picked rain on the
+  software stand; not a repo check. The graphics goal's ruling, 11-04 late, once it had those numbers: THE STUFF'S ROW KEEPS TODAY'S RAIN. Dirt laid as ground films when wet, as it does
+  today, and so does gravel; scrub and grass soak. So the 15 dirt strips and the 2 gravel strips that stand for grass are the miss (they will film like
+  the rest of their stuff, about 2,470 m² from matt to filmed), unless a strip is really a verge, whose box then names scrub. No list of paints goes
+  into `soaks` to mend it: it waits for every box naming its material, where `soaks` is a word of the stuff's row. Whether wet earth should be matt
+  at all is a look call for later, with rain drawn on a GPU: one word in that row then.
   THE LOT stays the weather's: `setWet` soaks its slab in place (the albedo a round's material is read from: gameplay, as measured), and tells the step
   in that same call (`WetGround.follow`), so the lot and the yard are never one wet and one dry for a frame drawn with no update between (a pause, the
   start card); the picture's block of `Game.update` asks again every tick, which follows a level whose boxes changed (`wetGround.ts standing`: one
@@ -1063,7 +1072,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   flag written, no box added, the world's serial not moved) is dry an update later and wet again once put back. TWO BARS OF `hourwx-storm`
   MOVED WITH THE RULE, on purpose: "every wet thing is glossy" is "glossy unless it soaks", and "the level's own storm wets the lot alone" is "the lot
   and the sheets lying on it"; its sky test by collision is asked of the ground (slab and finish) and no longer of a sheet (a stain under a parked lorry
-  is wet with the ground round it: the rain's roofs decide, as they decide where rain is drawn). `dress-check.ts --weather <kind>` is new: the five
+  is wet with the ground round it: the rain's roofs decide, as they decide where rain is drawn). Its two COUNTS are of ground alone since 11-04 late:
+  with the sheets in them (dozens a level) the count of yards could not fail on either stand, nor the level's own storm against the picked rain on
+  the shipped one (the frozen stand's bar, the lot alone, was sound). Now an open slab is wet beside the lot on the compound and on the barracks, BY
+  NAME (a tightening: it was "two somewhere"); and under the level's own storm the compound has no more wet ground than under a picked rain, slab
+  against slab (1 against 2 frozen, 2 against 2 shipped). The film bar asks a thing's paint as authored (`Weather.dryPaint`), the lot's too. MEASURED
+  11-04 on step 1340's tip, software: `probes.ts hourwx` ALL PASS, 6 probes, both stands. Each count shown red on a step got wrong where the old one
+  was green: a slab asked for five open spots of 25 (the barracks' courtyard has four, and stays dry): red on both stands, old green on both; five
+  room floors wetted under the level's own storm: red on both, old green on the shipped stand. `dress-check.ts --weather <kind>` is new: the five
   missions played in a picked weather, red if nothing was wet with the rows up (on a dry night the rain's rows do nothing and a pass says nothing of
   them).
   MEASURED: 11-04, on step 1310 (and before it on step 1302: the same numbers), software only. `wetground-check` 5 of 5 on both stands (shipped, a downpour picked: the crossing

@@ -1,0 +1,16 @@
+# how many of 21 lines each man of glasshouse has open to the ground his gun rests on: his name, the frozen stand's count, the shipped stand's (tools/qa/marksight-check.ts --write, once on each stand; a line that starts # under this one is a note and is kept)
+roomClear.glasshouse.marks#0 21 21
+roomClear.glasshouse.marks#1 19 19
+roomClear.glasshouse.marks#2 12 12
+roomClear.glasshouse.marks#3 12 12
+roomClear.glasshouse.marks#4 12 12
+roomClear.lab.marks#0 12 12
+roomClear.lab.marks#1 6 6
+roomClear.lab.marks#2 15 15
+roomClear.lab.marks#3 9 9
+roomClear.office.marks#0 18 18
+roomClear.office.marks#1 15 15
+roomClear.office.marks#2 12 10
+roomClear.store.marks#0 12 12
+roomClear.store.marks#1 12 12
+roomClear.store.marks#2 9 9

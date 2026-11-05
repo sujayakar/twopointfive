@@ -104,8 +104,6 @@ fn diceMeanRadiance(P: vec3f) -> vec3f {
   for (var i = 0u; i < select(1u, 2u, t.n == 2u); i++) { L += select(t.wa, 1.0 - t.wa, i == 1u) * textureSampleLevel(diceTex, linSamp, diceCoord(select(t.a, t.b, i == 1u), 6.0), 0.0).xyz; }
   return L;
 }
-/// (the lattice read as it is, walls or none: for a caller that picks its own cells one by one and wants each as the lattice holds it)
-fn diceMeanRadiancePlain(P: vec3f) -> vec3f { return textureSampleLevel(diceTex, linSamp, diceCoord(P, 6.0), 0.0).xyz; }
 
 // The cache's irradiance at a gather HIT (Ph, face normal n) reached by a ray that left the surface (P0, N0) — the read the final gather makes for its one bounce. Every dice
 // read samples a full probe spacing off the surface along its normal so the trilinear footprint cannot straddle the wall it is ON; but a face that looks BACK at the surface

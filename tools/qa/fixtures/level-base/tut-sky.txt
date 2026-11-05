@@ -1,2 +1,2 @@
-# the cut rock is the palette's slab darkened (tools/levels/snowRock.ts)
-6768a8541e439f9c36b011fbfc65f6c9d014513d
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+04cd9c31fb8b85b775905ebed643f33db5dac566

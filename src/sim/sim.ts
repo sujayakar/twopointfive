@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 21;
+export const SIM_ABI = 24;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -41,8 +41,9 @@ export interface SimExports {
   // the line tests through it (rust/sim/src/lines.rs — src/scene/collision.ts segmentBlocked / segmentBlockedDynamic past their length)
   lines_blocked(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, len: number, shrink: number, through: number, set: number, ask: number): number;
   lines_leaves(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, len: number, need: number, set: number): number;
-  /** collision.ts raycast: −1 nothing met · −2 the host answers (glass it has a rule for) · else the static's index, or 1e6 + the leaf's; t and the normal → the scratch */
-  lines_ray(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number, set: number): number;
+  /** collision.ts raycast: −1 nothing met · −2 the host answers (a ray that is no number) · else the static's index, or 1e6 + the leaf's; t and the normal → the scratch. `ask` 1 = a pane met where it is open is passed (glass.rs) */
+  lines_ray(w: number, a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, tmax: number, set: number, ask: number): number;
+  world_glass(w: number, n: number): void; world_view(w: number, kind: number, n: number): void; glass_open(w: number, bi: number, x: number, y: number, z: number): number;
   // a circle against it (rust/sim/src/collide.rs — src/scene/collision.ts collideCircle / circleTouches / gather)
   collide_circle(w: number, px: number, pz: number, r: number, y0: number, y1: number, iterations: number): number;
   collide_touches(w: number, x: number, z: number, r: number, y0: number, y1: number, cap: number): number;
@@ -81,6 +82,9 @@ export interface SimExports {
   nav_addr(table: number): number; nav_cap(table: number): number;
   /** collision.ts NavGrid.findPath with no penalty: the waypoints written (x z each) · −1 no way · −2 ask the TypeScript */
   nav_path(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
+  /** …with a penalty: as nav_path, or −3 = `nav_need()` cells (nav_addr(2)) want a price (nav_addr(3)) before `nav_resume()`; `nav_drop()` lets a waiting search go */
+  nav_priced(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
+  nav_need(): number; nav_resume(): number; nav_drop(): void;
   /** collision.ts SoundPaths.propagate up to its memory of routed answers; the straight distance → scratch 0 */
   hear_direct(w: number, set: number, ask: number, s0: number, s1: number, s2: number, d0: number, d1: number, d2: number): number;
   /** …and the way round: the path's length and the point it comes through → scratch 0‥3 */
@@ -127,9 +131,9 @@ export interface SimExports {
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
-  'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
+  'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'world_things', 'world_glass', 'world_view', 'glass_open', 'lines_blocked', 'lines_leaves', 'lines_ray', 'lines_ray_things', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_stand_pose', 'layer_crouch_pose', 'layer_soft_knees', 'layer_run_arms', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms', 'layer_act_pose', 'layer_wound_body', 'layer_wound_limbs', 'layer_long_arms', 'layer_mv_post_arms', 'layer_watch_arm', 'layer_creep_arms', 'layer_clutch_arm', 'layer_bound_arms', 'layer_reload_arm', 'layer_pistol_reload_arm', 'layer_hands_pass', 'layer_throw_layer', 'layer_big_layer', 'layer_hold_layer', 'layer_held_layer', 'layer_catch_arm', 'layer_door_layer', 'layer_work_layer', 'layer_ready_layer', 'layer_kit_layer', 'layer_taken_layer', 'layer_blow_legs', 'layer_blow_trunk', 'layer_blow_arms', 'layer_knife_pose', 'layer_cable_pose', 'layer_stealth_layer', 'layer_swap_pose', 'layer_lockpick_layer', 'layer_haul_layer', 'layer_torch_up', 'layer_radio_pose', 'layer_smoke_pose', 'layer_nv_pose', 'layer_signal_layer', 'layer_tell_layer',
-  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
+  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'nav_priced', 'nav_need', 'nav_resume', 'nav_drop', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
@@ -243,7 +247,7 @@ let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn 
  *          lamps that may be asked. ?rustlight / TPS_RUSTLIGHT=1.
  *  smoke   the game's own smoke along a line (game/sense.ts CpuSmoke.trans, what SENSE.cpu sees through) as one question a line. ?rustsmoke / TPS_RUSTSMOKE=1.
  *  sound   how a sound reaches a listener (scene/collision.ts SoundPaths.propagate: straight, over the top, or round by the floor). ?rustsound / TPS_RUSTSOUND=1.
- *  paths   a way across the floor (collision.ts NavGrid.findPath with no penalty: the A* and its smoothing). ?rustpaths / TPS_RUSTPATHS=1.
+ *  paths   a way across the floor (collision.ts NavGrid.findPath: the A* and its smoothing; with a penalty the search waits for the caller's prices, nav.rs find_priced). ?rustpaths / TPS_RUSTPATHS=1.
  *
  *  THE THINGS of a level, a row a family (each keeps its state in the game's block while its row is on, and WRITES the box world's rows there: the Box
  *  objects the picture draws follow, scene/boxMirror.ts `follow`):
@@ -258,13 +262,13 @@ let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn 
  *          maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustprops / TPS_RUSTPROPS=1.
  *  slabs   a leaf off its hinges, in the air (game/doorblast.ts stepSlab: the loose slab flying, toppling, stopped by what its rays find, slamming flat
  *          and coming to rest clear of every static) from rust/sim/src/slabs.rs, each slab's own numbers at home in the block (sim/slabshome.ts). It
- *          writes no row of the box world: the host poses the slab's box from the columns after each slab's step, as it did. A step whose ray ends on a
- *          pane is handed back to the TypeScript whole (a pane's open question is the host's). ?rustslabs / TPS_RUSTSLABS=1.
+ *          writes no row of the box world: the host poses the slab's box from the columns after each slab's step, as it did. A pane its ray meets is judged
+ *          there (rust/sim/src/glass.rs); nothing of play is handed back. ?rustslabs / TPS_RUSTSLABS=1.
  *  items   what is thrown or dropped (game/throwables.ts Throwables.update: a can, a grenade, a magazine, a gun out of a dying hand — ageing, falling,
  *          bouncing off walls, leaves and furniture, coming to rest, dropping off a chair that moved) from rust/sim/src/items.rs, each thing's own
  *          numbers at home in the block (sim/itemshome.ts). The pool is walked in one call; what a thing does to anything else (a bounce said, a share
- *          of momentum for a chair, its time up) is listed and done by the host after. A row whose ray ends on a pane, or that bounces on ground
- *          that may be lying snow, is handed back to the TypeScript whole. ?rustitems / TPS_RUSTITEMS=1. */
+ *          of momentum for a chair, its time up) is listed and done by the host after. A pane a ray meets and lying snow under a bounce are asked
+ *          there (glass.rs; items.rs bog_at over the level's snow); nothing of play is handed back. ?rustitems / TPS_RUSTITEMS=1. */
 export const RUST = {
   get maths(): boolean { return mathsOn; },
   set maths(v: boolean) { const on = !!v && !simWhyNot(); if (on === mathsOn) return; mathsFrom(on ? mathsOfRust() : null); mathsOn = on; },   // (a runtime that cannot run the module keeps the row off: the same game either way)
@@ -303,15 +307,67 @@ export const RUST = {
   get rays(): boolean { return raysOn; },
   set rays(v: boolean) { raysOn = !!v && !simWhyNot(); },
 };
+/** A QUESTION THE TYPESCRIPT ANSWERED WHILE ITS ROW WAS UP, COUNTED (`?fell` on the page, `TPS_FELL=1` on the harness; `=throw` stops at the first).
+ *  A row that is on sends its questions to the module only where the module can answer: inside a tick with the game's copy standing, under a cap, with a
+ *  shape it knows. Everywhere else the TypeScript still answers, which is why it cannot be deleted yet. This is the list of those places, by row and by
+ *  reason, as a run met them: zero for a row is what lets its TypeScript go. Off (the default) it costs one test at a place that was falling back anyway.
+ *  A tool of the build's, never a rule of play: it counts and changes no answer. */
+/** who asked: the first `n` callers on the stack from frame `skip` on (of the next `span` frames, if given), outside the files `not` names — for the
+ *  count below and for the box world's count of questions asked alone (scene/collision.ts) */
+export function callers(skip: number, n: number, not: RegExp, span = Infinity): string {
+  return (new Error().stack ?? '').split('\n').slice(skip, skip + span).map(l => l.trim().replace(/^at /, '').replace(/\(?[^()\s]*\/(src|tools)\//, '($1/').replace(/:\d+\)?$/, '')).filter(l => !not.test(l)).slice(0, n).join(' < ');
+}
+export const FELL = { on: false, hard: false, who: 0, n: {} as Record<string, number>, red: false, reds: {} as Record<string, number> };
+export function fell(row: string, why: string): void {
+  let k = row + ' · ' + why;
+  if (FELL.who) {   // (`=who`: …and who asked — the first two callers outside the box world's own files, `=who6` the first six, so the count says which code still asks outside a tick)
+    k += ' · asked by ' + callers(3, FELL.who, /scene\/(collision|boxMirror)\.ts/);
+  }
+  FELL.n[k] = (FELL.n[k] ?? 0) + 1;
+  if (FELL.hard) throw new Error(`rust: the TypeScript answered for the row "${row}": ${why}`);
+}
+/** THE ROWS THAT ARE ONE WAY IN: no run of the gate reaches their TypeScript (the box world's lines and circles, the fog's pass, the posing
+ *  functions, the animator's layers). A count on one of them is a way back in that somebody opened, so the tool that counted says so and ends red (headless.ts; the page's
+ *  check reads `fellSealed`). A family adds its row here in the step that closes its last fallback, and its TypeScript can go in the step after.
+ *  `rays` joined when a pane's open question moved to the module (rust/sim/src/glass.rs): until then a ray whose nearest thing was a pane the host
+ *  said was open there flew on in the TypeScript walk, some five hundred a mission with glass in it.
+ *  THE SENSES', all five: `sight`, `light` and `smoke` (every caller's sight line passes glass, and a level's lamps and the game's blobs are fewer
+ *  than a question carries), and `sound` and `paths`, whose lines came to a pane and handed the question back, for the ray's reason, until the
+ *  panes were in the module's copy (`collision.ts paneAsk`). Nothing of the five is counted over the missions on either stand.
+ *  THE RULES OF THE THINGS joined when their last ways back were closed (a pane and lying snow asked in the module, a ray of no length, the landing a
+ *  checkpoint files, a pool that grew, a level too big for a pool stopped as it loads): the doors, what falls, the furniture, a leaf off its hinges, the
+ *  thrown things — and RULES_ROW, the copy of the box world refused to any of them. */
+export const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown things)';
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses', 'rays', 'walk', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'props', 'slabs', 'items', RULES_ROW];
+/** A RULE OF `row` WAS STEPPED IN TYPESCRIPT WHILE THE ROW IS UP (a family's fallback site says so, with the reason in plain words): counted, except
+ *  where the row is idle by its own rule — one that works lengths and angles out answers only under the game's own maths (OWN_MATHS, below) */
+export function ruleFell(row: string, why: string): null { if (FELL.on && (EXACT.on || !OWN_MATHS.includes(row))) fell(row, why); return null; }
+/** THE SEAL'S RED PATH FOR A RULE'S ROW (`FELL.red`, raised by a tool under FELL_BREAK=1 and by nothing else): the first step of each row, and every
+ *  hundredth after, is sent to its TypeScript and counted, so a run with the break up reaches every sealed rule's row that stepped in it, by name. The
+ *  TypeScript's step is the same game; the count says a way back was taken, and the tool must end red. → true: this step is this side's. */
+export function ruleRed(row: string): boolean {
+  if (!FELL.red) return false;
+  const n = FELL.reds[row] = (FELL.reds[row] ?? 0) + 1; if (n % 100 !== 1) return false;
+  fell(row, 'the red path: a step sent to its TypeScript'); return true;
+}
+/** the sealed rows the count has met */
+export const fellSealed = (): string[] => SEALED.filter(r => Object.keys(FELL.n).some(k => k.startsWith(r + ' · ')));
+/** the count's switches from a word (`1`, `throw`, `who`, `who6`; `0` = off): the harness's TPS_FELL, the page's ?fell */
+export function fellWord(w: string): void { if (w === '0') { FELL.on = false; return; }   // (`0` is off, as every word of this family reads it)
+  FELL.on = true; FELL.hard = w === 'throw'; const m = /^who(\d*)$/.exec(w); FELL.who = m ? Number(m[1] || 2) : 0; }
+/** the count so far, the busiest first, as one line a row and reason */
+export const fellLines = (): string[] => Object.entries(FELL.n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${k}`);
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
 const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
-/** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page, and so the shipped stand; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` all of
- *  them): the systems that are the same game to the bit in the module AND cost nothing there, measured. The box world's lines are faster in the module;
- *  a circle against it and the fog's sight pass ask the same copy of the boxes and were measured no slower (docs/agents/rust.md, "Rows that are on", has
- *  the numbers). A row that is not here is a proof and no more yet: its state or its layers are right in the module, but while what calls them is
- *  TypeScript every question crosses, and a crossing costs more than the answer (the poses, the walk's layers, the die, the doors, what falls, the maths). The senses' rows
- *  answer only on the CPU-sense stand. A runtime with no WebAssembly keeps every row off whatever this says (the setters below), and plays the same game. */
-export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog'];
+/** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page and both of the harness's stands; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` /
+ *  `TPS_RUST=0` all of them): EVERY row but the maths. Each is the same game to the bit in the module, by its differential and by the missions under both
+ *  engines (tools/qa/rust-check.ts). They are not all cheaper there yet: the box world's lines, the furniture and the poses with the walk's layers are; a
+ *  row whose callers are still TypeScript pays a crossing a question (the die, a door, a sound's path, a route) and is on all the same, because the
+ *  TypeScript behind it is going and the game must be played the way it will be kept (docs/agents/rust.md, "Rows that are on", has every number).
+ *  The maths stay TypeScript (math/exact.ts): a sine a crossing is the dearest crossing there is, and the module works its own out inside itself.
+ *  The rows that work lengths and angles out (OWN_MATHS) answer only under the game's own maths. A runtime with no WebAssembly keeps every row off
+ *  whatever this says (the setters above), and plays the same game. */
+export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog', 'poses', 'dice', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'walk', 'props', 'slabs', 'items', 'rays'];
 /** is `row` one of them */
 export const rustOn = (row: string): boolean => (RUST_ON as readonly string[]).includes(row);
 /** THE ADDRESS'S WORDS ABOUT THE ROWS (`rust`, and `rust<row>` a row: host/profile.ts pageRows reads them). They are the VISIT's, never a run's: which

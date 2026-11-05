@@ -6,6 +6,7 @@
 // ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module, so everything headless (every probe, frozen digest and level load) stands as it was; the PAGE turns it on at boot before the
 // level and the cast are fetched (host/profile.ts pageSwitches: on unless the URL carries ?look=plain), a harness run under TPS_LOOK=1.
 // No imports here: scene/, game/ and the tools all read it.
+import type { BoxStuff } from './boxes';
 export const LOOK = {
   on: false,
   /** THE SNEAKING SUIT (the maintainer, 10-10: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): with the look on, Sam —
@@ -56,17 +57,22 @@ export const LOOK_LEVELS: Readonly<Record<string, string>> = {
 };
 /** DOOR LEAVES per level (picture only; scene/lookTidy.ts lookDoors): the paint of the outside leaves and, where a level has its own, of the inside ones — for
  *  the levels whose accent is not one of the three paints lookDoors counts off a level's boxes (the compound's blue, the barracks' green, the depot's oxide
- *  red). Without a row here every such level got the barracks' green doors. Keyed by the level's own file, colours as plain numbers (no imports here). */
-export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number, number]; in?: readonly [number, number, number] }>> = {
+ *  red). Without a row here every such level got the barracks' green doors. Keyed by the level's own file, colours as plain numbers (no imports here).
+ *  `stuff` = WHAT THE LEAVES ARE MADE OF (Box.stuff): one word for every leaf, or one for the outside leaves and one for the inside ones. A row's colours are
+ *  numbers and numbers say nothing, so a row that says no word has plain leaves. (Until 11-04 a leaf was whatever its colour was nearest: the records
+ *  office's black lacquer was bare iron and the consulate's dark varnish a blanket, on the leaves whose own shade fell under their paint's and on no other.) */
+export type LookDoorStuff = BoxStuff | { out?: BoxStuff; in?: BoxStuff };
+export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: LookDoorStuff }>> = {
+  'white-roof.json': { out: [0.88, 0.24, 0.03], in: [0.74, 0.74, 0.73], stuff: 'enamel' },   // the look study's roof: orange gloss outside, white inside, kept
   'block.json': { out: [0.22, 0.4, 0.1] }, 'block-squads.json': { out: [0.22, 0.4, 0.1] },   // the telephone exchange: pistachio gloss
-  'warehouse.json': { out: [0.6, 0.42, 0.04] },                                  // the customs shed: safety yellow
-  'registry.json': { out: [0.1, 0.1, 0.105] },                                   // the records office: black lacquer
-  'records.json': { out: [0.2, 0.2, 0.22], in: [0.47, 0.36, 0.22] },             // the land office: grey paint outside, pale poplar inside
-  'consulate.json': { out: [0.21, 0.05, 0.105], in: [0.27, 0.18, 0.12] },        // the consulate: plum outside, dark varnish inside
+  'warehouse.json': { out: [0.6, 0.42, 0.04], stuff: { out: 'paint' } },         // the customs shed: safety yellow
+  'registry.json': { out: [0.1, 0.1, 0.105], stuff: { out: 'paint' } },          // the records office: black lacquer
+  'records.json': { out: [0.2, 0.2, 0.22], in: [0.47, 0.36, 0.22], stuff: { in: 'wood' } },   // the land office: grey paint outside, pale poplar inside
+  'consulate.json': { out: [0.21, 0.05, 0.105], in: [0.27, 0.18, 0.12], stuff: { in: 'wood' } },   // the consulate: plum outside, dark varnish inside
   'defuse.json': { out: [0.3, 0.14, 0.05] },                                     // the bomb maker's house: the firing wire's copper, darker
   'floodlit.json': { out: [0.62, 0.17, 0.03] },                                  // the airstrip's fuel post: aviation orange
   'mousehole.json': { out: [0.05, 0.2, 0.19] },                                 // the clinic: its queue line's teal, darker
-  'killhouse.json': { out: [0.26, 0.12, 0.42], in: [0.55, 0.43, 0.27] },         // the shoot house: its marking paint's violet, darker, outside; raw plywood inside
+  'killhouse.json': { out: [0.26, 0.12, 0.42], in: [0.55, 0.43, 0.27], stuff: { in: 'wood' } },   // the shoot house: its marking paint's violet, darker, outside; raw plywood inside
   'hall.json': { out: [0.16, 0.36, 0.47] },                                      // the scouts' barrack wing: its range card's pale sky blue, darker
 };
 /** the file to LOAD for a level the URL / a mission row names: the look's while the switch is on and the level has one, else the file itself */
@@ -86,7 +92,7 @@ export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('lo
 /** the page is the look's: a row on the address, or the tag a one-file build of it carries (where the address takes no flags) */
 export function lookPageOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0 || (typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-look"]')); }
 /** ITS TRIALS: the address's word of each, and the key under which the look panel's button keeps it on this machine */
-export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', front: 'twopointsix.fronttry', lorry: 'twopointsix.lorrytry', dress: 'twopointsix.passtry' } as const;
+export const LOOK_TRIALS = { geo: 'twopointsix.geotry', hills: 'twopointsix.hillrays', lorry: 'twopointsix.lorrytry' } as const;
 export type LookTrial = keyof typeof LOOK_TRIALS;
 /** a trial's switch: the address's own word wins; else what the panel's button last kept on this machine (on, where it kept nothing) */
 export function lookTrialOn(q: URLSearchParams, word: LookTrial): boolean { if (q.has(word)) return q.get(word) !== '0'; try { return localStorage.getItem(LOOK_TRIALS[word]) !== '0'; } catch { return true; } }
@@ -95,6 +101,6 @@ export function lookTrialsKept(q: URLSearchParams): string[] { const off = (Obje
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (…and the cut boxes' own switch, which four of the five stand on: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? [...off, 'cutboxes=0'] : off; }
 /** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
-const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'firesnow', 'firesoot', 'footing', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook']);
+const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set([...Object.keys(LOOK_TRIALS), 'roll', 'lorrykit', 'seat', 'firefit', 'longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth']);
 /** a word of an address, decoded, is the look page's own */
 export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? !dressOff(v) : k === 'round' ? v === '1' : LOOK_PAGE_WORDS.has(k); }   // (`round=1` is the page's: its round test compiled beside a trial's cut boxes; `round=0` is a rule's off switch, another fight)

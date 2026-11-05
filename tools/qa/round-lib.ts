@@ -14,7 +14,7 @@
 // can meet its curve where it stands, and the caller says so (roundAsked) rather than calling it round.
 // Nothing here is a picture, and nothing here is the level's own: the caller says where the thing is, how wide, and which boxes are it.
 import { ROOT, type Vec3 } from './headless.ts';
-const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+const { BoxFlag, BoxWorld } = await import(`${ROOT}/src/scene/boxes.ts`);
 
 /** the thing: its middle, its radius and half height as the REFERENCE has them (the level's own numbers and round.ts's circle with the octagon's area, written
  *  out by the caller), and which of the world's boxes are it (a round box and its three specks, or the kit's four slabs) */
@@ -39,9 +39,12 @@ export const roundAnswered = (A: RoundAnswers) => A.inStopped === A.sides && A.o
 export const roundAsked = (A: RoundAnswers) => A.outOpen + A.shotOpen + A.bodyOpen > 0;
 
 /** the least distance in XZ from the segment a‥b to the box's footprint, 0 where they cross: a round box's circle, a box turned about y, and for one fully
- *  rotated the square round its longest reach (which only ever calls a side crowded that was not) */
+ *  rotated the rectangle that holds BOTH things the world makes of it: the box as it is turned, which a line and a round meet, and the same box only
+ *  yawed, which a walking body meets (collision.ts collideCircle reads no `rot`). So it only ever calls a side crowded that was not — and no further
+ *  out than that, or a ladder leaned on a wall 3 m off crowds a brazier */
+const both = (a: number[], b: number[]): [number, number] => [Math.max(a[0], b[0]), Math.max(a[1], b[1])];
 function footprintGap(b: any, ax: number, az: number, bx: number, bz: number): number {
-  const reach = b.rot ? Math.hypot(b.h[0], b.h[1], b.h[2]) : 0, hx = b.rot ? reach : b.h[0], hz = b.rot ? reach : b.h[2], yaw = b.rot ? 0 : b.yaw, c = Math.cos(yaw), s = Math.sin(yaw);
+  const [hx, hz] = b.rot ? both(BoxWorld.footprint(b), BoxWorld.footprint({ ...b, rot: undefined })) : [b.h[0], b.h[2]], yaw = b.rot ? 0 : b.yaw, c = Math.cos(yaw), s = Math.sin(yaw);
   const loc = (x: number, z: number): [number, number] => { const dx = x - b.c[0], dz = z - b.c[2]; return [c * dx - s * dz, s * dx + c * dz]; };
   const [px, pz] = loc(ax, az), [qx, qz] = loc(bx, bz), dx = qx - px, dz = qz - pz;
   const len2 = dx * dx + dz * dz, toSeg = (x: number, z: number) => { const t = len2 < 1e-18 ? 0 : Math.max(0, Math.min(1, ((x - px) * dx + (z - pz) * dz) / len2)); return Math.hypot(px + dx * t - x, pz + dz * t - z); };
@@ -55,7 +58,7 @@ function footprintGap(b: any, ax: number, az: number, bx: number, bz: number): n
   const toRect = (x: number, z: number) => Math.hypot(Math.max(Math.abs(x) - hx, 0), Math.max(Math.abs(z) - hz, 0));
   return Math.min(toRect(px, pz), toRect(qx, qz), toSeg(hx, hz), toSeg(hx, -hz), toSeg(-hx, hz), toSeg(-hx, -hz));
 }
-const span = (b: any): [number, number] => { const h = b.rot ? Math.hypot(b.h[0], b.h[1], b.h[2]) : b.h[1]; return [b.c[1] - h, b.c[1] + h]; };
+const span = (b: any): [number, number] => { const h = b.rot ? Math.max(BoxWorld.heightExtent(b) as number, b.h[1]) : b.h[1]; return [b.c[1] - h, b.c[1] + h]; };
 /** sides asked: a count the kit's eight-sided stand-in shares no factor with, so every face of an octagon is met at another place whichever way it is turned */
 const SIDES = 67;
 /** a man's radius (characters.ts: every walker's) */
