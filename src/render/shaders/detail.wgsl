@@ -53,10 +53,10 @@ struct WearOut { albedo: vec3f, rough: f32 };
  *  (`roughIn` under 0.6: the wax or sealer) is scuffed matte and a little ground-in grey; the band a mop does not reach holds dust and dirt, on any floor.
  *  `uneven` = the caller's patchiness at arm's length (0.65‥1.35). ONE COPY OF THE NUMBERS: detailSurface's on every page, and the look layer's on its own
  *  (look.wgsl lookSurface), which reads the map itself and hands the sample with what its weather answers for left out. */
-fn detailFloorWear(albedo: vec3f, rough: f32, roughIn: f32, wm: vec2f, k: f32, uneven: f32) -> WearOut {
+fn detailFloorWear(albedo: vec3f, rough: f32, roughIn: f32, wm: vec3f, k: f32, uneven: f32) -> WearOut {   // (wm: how much the floor is walked, how close a wall's foot is, and how much of the band at that foot is this layer's to draw: 1 on every page but the look's, where the weather has its share of wild ground's — look.wgsl lookSurface)
   var o = WearOut(albedo, rough);
   let traffic = clamp(wm.x * uneven, 0.0, 1.0);
-  let grime = wm.y * wm.y;                                                // (squared: hugs the wall)
+  let grime = wm.y * wm.y * wm.z;                                         // (squared: hugs the wall)
   if (roughIn < 0.6) {                                                    // a finish there is to wear: the wax / sealer scuffed matte, a little ground-in grey
     let worn = traffic * k;
     o.rough = min(o.rough + 0.42 * worn, 1.0);
@@ -97,7 +97,7 @@ fn detailSurface(wp: vec3f, n: vec3f, bi: u32, albedoIn: vec3f, roughIn: f32, me
   // ---- floors: worn paths + the grime band (upward faces at floor level; the traffic map covers the world's grid footprint) ----
   if (floorPix) {
     let uv = (wp.xz - WORLD_MIN.xz) / (vec2f(f32(GRID_W), f32(GRID_H)) * GRID_CELL);
-    let w = detailFloorWear(o.albedo, o.rough, roughIn, textureSampleLevel(wearTex, linSamp, uv, 0.0).xy, k, uneven);
+    let w = detailFloorWear(o.albedo, o.rough, roughIn, vec3f(textureSampleLevel(wearTex, linSamp, uv, 0.0).xy, 1.0), k, uneven);
     o.albedo = w.albedo; o.rough = w.rough;
   }
   // ---- skirting: the bottom hand-width of vertical faces that stand on the floor (walls, cabinets, counters, door leaves) — shoe / trolley / mop marks ----

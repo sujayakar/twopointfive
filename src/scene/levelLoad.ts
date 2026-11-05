@@ -148,6 +148,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
     mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
+    ...(data.meta.kept !== undefined ? { kept: data.meta.kept } : {}),
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: scene/scenarios.ts)
   };
   // TODO(G2): data.floors / data.connectors → per-floor nav + stair links. data.volumes → Level.volumes above (the Director's onEnter).
@@ -193,7 +194,9 @@ export interface LevelToDataOpts {
   materials?: Record<string, MaterialData>;
   /** per box index: the id to write (absent → a semantic id for referenced boxes, else box_NNNN) and the editor group */
   boxIds?: readonly (string | undefined)[]; boxGroups?: readonly (string | undefined)[];
-  floors?: FloorData[]; surfaces?: SurfacesData; meta?: LevelData['meta'];
+  floors?: FloorData[]; surfaces?: SurfacesData;
+  /** (not `markTexel` or `kept`: those two are the Level's own and are written from it. Either one in an object passed here is dropped) */
+  meta?: Omit<LevelData['meta'], 'markTexel' | 'kept'>;
   /** pass-through for what Level has no slot for yet */
   volumes?: LevelData['volumes']; connectors?: LevelData['connectors'];
 }
@@ -273,7 +276,9 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const data: LevelData = {
     version: LEVEL_DATA_VERSION,
     name: opts.name,
-    meta: clone(opts.meta ?? {}),
+    // (what the loader hands back ON THE LEVEL from the file's meta is written from the Level, iff it has it: its marks' texel and how kept it is. The
+    //  Level is the one source: either key in a caller's opts.meta is dropped, so a file cannot say a word its Level does not, and a round trip holds)
+    meta: (() => { const { markTexel: _texel, kept: _kept, ...rest } = clone((opts.meta ?? {}) as LevelData['meta']); return { ...rest, ...(level.markTexel !== undefined ? { markTexel: level.markTexel } : {}), ...(level.kept !== undefined ? { kept: level.kept } : {}) }; })(),
     floors,
     materials,
     ...(opts.surfaces ? { surfaces: clone(opts.surfaces) } : {}),

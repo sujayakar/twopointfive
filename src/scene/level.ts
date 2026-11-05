@@ -189,6 +189,8 @@ export interface Level {
   breach?: BreachPlan;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — main.ts hands it to the engine */
   markTexel?: number;
+  /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): main.ts hands it to the look (scene/look.ts lookKeptOf) */
+  kept?: number;
   /** The one mission thread's geometry (game.ts Mission): the room to reach (floor rectangle) and the door the HUD points at for it, the rack whose drive
    *  gets pulled (its index n names the switchables `rack${n}_leds` / `rack${n}_glow` that go dark; `front` is the marker point on its LED face), the door
    *  to leave by and the x past which you are outside it. */
