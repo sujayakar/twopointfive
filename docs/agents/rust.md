@@ -1682,6 +1682,11 @@ first system across (the game's own maths). No rule of play has changed and noth
     behind the module's step any more. Nothing of play asks either kind (the count over the missions, the soak and the tour read none).
     HELD BY `segment-ident --rust`: one ray in twenty-five with plan to it is asked for two thousand or a million kilometres (7,672 on the
     office alone), each the same answer both ways, and a run with none is not a fair run; the 42 by digest.
+  - MORE ROOFS OVER THE SNOW THAN A WALK IS HANDED CANNOT HAPPEN, AND IS ONE NUMBER. The roofs a thrown thing's walk is handed are the WEATHER'S
+    (`weather.ts roofsNow`: the roofs in force, which change with the weather picked — the weather's state, not the level's statics, so they are
+    handed with each walk and are no table of the copy). The weather keeps at most four (`roofsOf`: a level's biggest; the picture's frame has a
+    slot each) and a walk is handed four, which were two literals. `weatherKinds.ts MAX_ROOFS`, `itemshome.ts ITEM_ROOFS` and `items.rs MAX_ROOFS`
+    are held to one number by `rust-check` (`items`), and the way back is a throw by name.
 
   WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
   - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
