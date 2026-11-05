@@ -33,7 +33,6 @@ import type { Rescue } from './rescue';
 import { endGuardScript, inBounds } from './squad';
 import { resetChase } from './guards';
 import { laneCovers, laneBars, laneKnownAt } from './lanes';
-import { rescueCheckOwns } from './rescuecheck';
 import { w, wg } from './words';
 import { hasHim, OWN } from './owner';
 
@@ -133,7 +132,7 @@ export class RescueFlush {
     if (g.time < this.nextAt) return;
     // the next man: never sent before the men who have been, then the nearest to where he would go
     const free = (h: Guard): boolean => {
-      if (h.state === 'dead' || h.held || g.time < h.dazzledUntil || g.time < h.staggerUntil || hasHim(h, OWN.runner) || hasHim(h, OWN.morale) || rescueCheckOwns(g, h)) return false;
+      if (h.state === 'dead' || h.held || g.time < h.dazzledUntil || g.time < h.staggerUntil || hasHim(h, OWN.runner) || hasHim(h, OWN.morale) || hasHim(h, OWN.walk)) return false;
       if (inBounds(h.char.pos, B) && inRoom) return false;   // in with them: he has them (captor())
       if (g.time - h.lastSeenT < K.busySecs || h.sawFoeThisFrame) return false;   // one of the team in his sights: he is fighting
       const F = g.fight.defs.find(d => d.gd === h); if (F && F.mode === 'move') return false;   // on somebody's errand (the room fight's fall-back, Hard's crew on its way): that first
