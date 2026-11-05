@@ -45,7 +45,7 @@ const BREAK = (() => { try { return String((globalThis as { process?: { env?: Re
 
 /** is this a man the rule has: one of the player's own under 'fall in', on his order's legs (not on the legs a live grenade lends him: guards.ts runs
  *  that leg through the same walker under a borrowed script, and a man leaving a grenade goes straight) */
-export function noShoveMan(g: Game, gd: Guard): boolean {
+export function fallingInYields(g: Game, gd: Guard): boolean {
   if (!NOSHOVE.on || BREAK || !NOSHOVE.round || gd.state === 'dead' || !gd.script) return false;
   const A = g.orders.of(gd); return !!A && A.post === null && !fragRunning(g, gd);
 }
@@ -90,7 +90,7 @@ export function noShoveOwn(g: Game, dx: number, dz: number): [number, number] | 
 /** squad.ts runGuardScript, after his step and its collisions: he stood at (x0, z0) before it. See ROUND in the head. True: he is held short this frame
  *  (the caller stands his legs). */
 export function noShoveKeep(g: Game, gd: Guard, x0: number, z0: number, dt: number): boolean {
-  if (!noShoveMan(g, gd)) return false;
+  if (!fallingInYields(g, gd)) return false;
   const K = NOSHOVE, c = gd.char, s = g.player.char.pos;
   const x1 = c.pos[0], z1 = c.pos[2], l1 = Math.hypot(x1 - s[0], z1 - s[2]); if (l1 >= K.ring) return false;
   const bx = x0 - s[0], bz = z0 - s[2], l0 = Math.hypot(bx, bz);

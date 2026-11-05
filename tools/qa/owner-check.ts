@@ -10,7 +10,7 @@
 //   no asking  none of the ownership questions is exported any more (each that has become a read of the record)
 //   runs       in the missions at both their switches, at every read of the record and at the end of every tick: each man's word against each rule's own state (`ownerWitness`)
 // WHAT THE 42 DO NOT SHOW: a digest says nothing about a rule that never has anybody in the runs. On 2026-11-05, never true in the 42 even with last stand, buddy, pressure and dig-in up:
-// rescueCheckOwns, powerOutOwns, needsBusy, gunHoldKeeps, gunHoldRuns, silentMan, unseenMan, digInStays. True only with those switches up: lastStandMan, pressOwns, buddyOwns. So this
+// rescueCheckOwns, powerOutOwns, needsBusy, standoffFixKept, standoffOnFeet, underSilence, underUnseen, digInStays. True only with those switches up: lastStandMan, pressOwns, buddyOwns. So this
 // check runs an arm with the switches up, and a rule the runs still never exercise says so in its `runs` line (`never held`).
 // Not game code; nothing here has been seen on a GPU.
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
@@ -25,7 +25,10 @@ const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails
 console.log(`who has this man · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · OWNER_BREAK=1 (the red path)' : ''}`);
 
 /** the ownership questions (owner-questions.md) that have become reads of the record */
-const GONE = ['runnerOwns', 'moraleOwns', 'netQuietHolds', 'netFeedHolds', 'laneHolds', 'laneWarns', 'squadOwns', 'squadDefers', 'squadBusy', 'squadStaysIn', 'squadHolds', 'lastStandMan', 'lastStandOwns', 'pressOwns', 'buddyOwns', 'rescueCheckOwns', 'powerOutOwns', 'needsBusy'];
+const GONE = ['runnerOwns', 'moraleOwns', 'lastStandMan', 'lastStandOwns', 'squadOwns', 'squadBusy', 'squadDefers', 'netQuietHolds', 'netFeedHolds', 'laneHolds', 'pressOwns', 'rescueCheckOwns', 'powerOutOwns', 'buddyOwns', 'needsBusy',
+  // the 25 that were never who has him: a field of the man, one shared read (roundheld.ts), or a new name for what they answer
+  'runnerFled', 'squadStaysIn', 'squadHolds', 'laneWarns', 'powerOutMan', 'silentHolds', 'pairHolds', 'spottedHolds', 'silentGlassHolds', 'silentOnMan', 'holdFireOnMan', 'silentMan', 'unseenMan', 'gunHoldKeeps', 'gunHoldRuns', 'darkFoeCarries',
+  'noShoveMan', 'onLitMan', 'seatHas', 'doorwayHeld', 'handleHeld', 'startleHolds', 'rearHolds', 'startleMan'];
 /** the switches the shipped game leaves down, up: what the runs cannot show otherwise */
 const ALL_ON = { LASTSTAND: { regroup: true }, BUDDY: { on: true }, PRESSURE: { on: true }, DIGIN: { on: true } };
 

@@ -50,7 +50,7 @@
 // Off = the cards, the rows, the prices and the run of the build before: `big` is kept on a card, inert (no row, no price, nothing on the man).
 //
 // (src/game is one import cycle: the tables below are plain literals; nothing here is built from another game module's exports at module load.)
-import { eachSeat, seatShare, seatHas, dealSeats } from './seats';
+import { eachSeat, seatShare, inSeat, dealSeats } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -1356,7 +1356,7 @@ export function kitStage(g: Game, ops: Guard[]) {
     if (m.suit !== 'issued') gd.char.tint = [...SUITS[m.suit].tint] as Vec3;
     if (m.trim !== 'issued') gd.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
   });
-  { const rows = ops.slice(0, KIT_MEMBERS - 1).map(gd => [gd, manOf.get(gd)?.kit.shells ?? 0] as const); eachSeat(g, v => squad40Stage(v, g.seats.length === 1 ? rows : rows.filter(r => seatHas(v.seat, r[0])))); }   // (squad40.ts: the 40 mm rounds each teammate's card carries are his to fire on order — none on a card as issued, so nothing is kept)
+  { const rows = ops.slice(0, KIT_MEMBERS - 1).map(gd => [gd, manOf.get(gd)?.kit.shells ?? 0] as const); eachSeat(g, v => squad40Stage(v, g.seats.length === 1 ? rows : rows.filter(r => inSeat(v.seat, r[0])))); }   // (squad40.ts: the 40 mm rounds each teammate's card carries are his to fire on order — none on a card as issued, so nothing is kept)
   // the squad's counted stun canisters and charges: what the men who came carry (kitPool — the number the loadout screen showed before Deploy)
   const n = Math.min(ops.length, KIT_MEMBERS - 1), pool = kitPool(n);
   if (n && (pool.bangs !== DOORTOOLS.bangs || pool.charges !== DOORTOOLS.charges || pool.frags !== FRAG.squad)) eachSeat(g, v => {
