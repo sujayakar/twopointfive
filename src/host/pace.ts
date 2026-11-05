@@ -44,13 +44,35 @@
 // its frame draws about every second frame while nobody is at it, and is back to its own pace on the frame the focus comes back. The window somebody IS at
 // is never held by this: its frames go as they always did. Not while the page measures the machine or records a take.
 // THE MEASURE of a frame's work is the GPU's own timing of its passes where the page has one (`done`'s `own`: the ladder's number), and never more than the
-// time the queue took to answer; where there are no timings it is the queue's answer alone. The answer by itself would count the work of the OTHER windows
-// ahead of this one in the queue, and a window beside a busy one would starve itself. The queue is asked only on a frame worked while away, so the window
-// being played pays nothing for it. The wait runs from the last worked frame's own stamp, which a stall does not forget (the even pace's `at` is forgotten
-// across a stall, so that a late frame moves the beat).
+// time the queue took to answer; where there are no timings it is the queue's answer alone, counted from when the GPU was free of this window's frame
+// before it. The answer by itself would count the work of the OTHER windows ahead of this one in the queue, and a window beside a busy one would starve
+// itself. The wait runs from the last worked frame's own stamp, which a stall does not forget (the even pace's `at` is forgotten across a stall, so that a
+// late frame moves the beat).
 // ON in the page, `?giveway=0` = an unfocused window draws as a focused one does, as it was; OFF here and on a harness stand.
+//
+// THE PAGE WAITS FOR THE GPU BEFORE IT STARTS A FRAME (`flight`, 11-03). The root of both faults above is one sentence of them: nothing in this loop waits for
+// the GPU. The even pace cures frames in pairs only where the ladder's rate divides the display's and the work fits the paced frame; past that (a machine that
+// cannot hold the rate, a 60 Hz display, a pinned preset) frames still pile up behind the GPU and the browser lets them go in bursts. The look page had a trial
+// of the plain cure (its `&pace`: a display frame is passed over whole while two frames are still with the GPU, told by the queue's own
+// `onSubmittedWorkDone`), and the maintainer on his 120 Hz laptop: '&pace looks good, let's make it the default'. So it is this pacer's rule for every window:
+// a frame is not begun while `flight` frames are still with the GPU. Two = one being drawn and one waiting behind it: the GPU never idles, so no frame a
+// second is lost to the wait, and a frame is at most two old. One (`?flight=1`) = a frame is begun only when the last has left: the freshest picture, and
+// the GPU idle until the display's next tick. A window nobody is at keeps to one, as above. The even pace stays under it: it says WHICH display frames are
+// asked for, this says whether the GPU has room for the one asked. With work inside the paced frame nothing is ever held and the pace is the even one;
+// with work over it, frames come as the GPU finishes them, one or two display frames apart, never back to back. A frame held for this is the machine's own
+// pace, so the ladder reads its gap as it reads any other. A benchmark and a sweep wait too, and only the boot's calibration does not (pageRoom below).
+// And not under ?kitview: the kit picture's pacer reads how late its own frames come and steps down to an even pace by that; a frame held here after that
+// pacer had taken it would hide the lateness from it. The queue is asked once for every frame that DREW (a card that hides the picture draws nothing and
+// asks nothing). A FRAME THE QUEUE NEVER ANSWERS FOR is given up after `lost` ms and the page goes on without it: a window held at its limit for good by
+// one lost answer would be a frozen picture with no card to say why. (Ten seconds: a frame on the software adapter is seconds long and is not lost.)
+// ON in the page at two (`FLIGHT_PAGE`), `?flight=0` = nothing waits, as it was; OFF here and on a harness stand.
+/** how many frames the PAGE lets be with the GPU when another is begun (the page's boot, the shipped stand and the check read this one number) */
+export const FLIGHT_PAGE = 2;
 export const EVENPACE = {
   on: false,
+  /** the page waits for the GPU (the block above): how many frames may be with the GPU when another is begun (0 = the rule off), and how long a frame may
+   *  go unanswered before it is given up as lost (ms) */
+  flight: 0, lost: 10000,
   /** a window nobody is at gives way (the block above): the switch, and the most of the GPU's time such a window takes */
   giveway: false, share: 0.5,
   /** …the longest it waits to begin its next frame (ms: the loop's own cap on a step), and how much of one display frame short of its wait a stamp may come
@@ -86,43 +108,64 @@ export function periodOf(G: readonly number[]): number {
   return NaN;
 }
 
+/** HOW MANY FRAMES MAY BE WITH THE GPU WHEN THE PAGE BEGINS ONE (Pacer.skip's `room`; 0 = any number), in one place for the frame loop and the readout.
+ *  `flight` for a player's page, and for a BENCHMARK and a SWEEP (`measuring`): a page that flips a setting and reads the passes' stamps must be no
+ *  further ahead of the GPU than a player's page is. Where nothing else holds its frames back (a headless browser has no display to wait on) a scene the
+ *  card cannot draw at the display's rate queued frames without end: a flipped row's stamps came back seconds late, in another row's turn, and the frame
+ *  rate read the display's whatever the card did. 0 only for the boot's CALIBRATION by itself (a second and a half that counts its frames as they come:
+ *  on an adapter that takes seconds a frame the wait would stretch it without end; under a benchmark it waits like the rest, so a run opens with no
+ *  pile behind it) and under ?kitview, whose own pacer reads how late its frames come. */
+export const pageRoom = (p: { calibrating: boolean; measuring: boolean; kitView: boolean }): number => p.kitView || (p.calibrating && !p.measuring) ? 0 : EVENPACE.flight;
+
 export interface Pacer {
   /** a frame callback stamped `ts` (ms), with the rate being held (0 = none: every frame is worked, and the period is still read). `away` = nobody is at this
-   *  window (it gives way, under `giveway`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
-  skip(ts: number | undefined, target: number, away?: boolean): boolean;
-  /** a frame worked while away has handed its work to the GPU, at `now` (ms); and the queue says that work is finished, at `now`, with the GPU's own timing
-   *  of a frame's passes where the page has one (`own`, ms; 0 = none) */
-  sent(now: number): void;
-  done(now: number, own?: number): void;
+   *  window (it gives way, under `giveway`). `room` = how many frames may be with the GPU when this one is begun (0 = any number: the boot's
+   *  calibration, and ?kitview; left out = `flight`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
+  skip(ts: number | undefined, target: number, away?: boolean, room?: number): boolean;
+  /** a worked frame has handed its work to the GPU, at `now` (ms): the word to give `done` back when the queue says that frame is finished, at `now`, with
+   *  the GPU's own timing of a frame's passes where the page has one (`own`, ms; 0 = none). An answer for a frame already given up as lost changes nothing */
+  sent(now: number): number;
+  done(word: number, now: number, own?: number): void;
   /** a pause: the gap across it is nobody's (the period is kept) */
   reset(): void;
   /** the display's rate as read (0 = not yet), how many display frames a drawn frame takes right now, and how many were passed over and worked since the page began */
   readonly hz: number; readonly every: number; readonly skipped: number; readonly worked: number;
-  /** giving way: how many display frames were passed over for it, the GPU's work over the last frame it was asked about (ms, 0 = not yet), and whether that frame is still with it */
-  readonly gave: number; readonly gpuMs: number; readonly flying: boolean;
+  /** waiting for the GPU: how many frames are with it now, and how many display frames were passed over because it had no room (`held`: a window somebody is
+   *  at; `gave`: one giving way, its share's wait included); the GPU's work over the last frame it answered for (ms, 0 = not yet) */
+  readonly flying: number; readonly held: number; readonly gave: number; readonly gpuMs: number;
+  /** frames the queue never answered for in time, given up */
+  readonly lost: number;
 }
 
 export function pacer(): Pacer {
   const gaps: number[] = [];
-  let lastTs = -1, at = -1, begun = -1, period = 0, every = 1, skipped = 0, worked = 0, gave = 0, gpuMs = 0, flying = false, sentAt = 0;
+  const out: { word: number; at: number }[] = [];   // (the frames still with the GPU, oldest first: each one's word and when it was handed over)
+  let lastTs = -1, at = -1, begun = -1, period = 0, every = 1, skipped = 0, worked = 0, gave = 0, held = 0, gpuMs = 0, lost = 0, words = 0, freeAt = 0;
   return {
-    skip(ts, target, away = false) {
+    skip(ts, target, away = false, room = EVENPACE.flight) {
       if (typeof ts !== 'number') { every = 1; worked++; return false; }
       if (lastTs >= 0) { const d = ts - lastTs;
         if (d > 250 || d < 0) at = -1;   // (a stall, a tab that was away: not a gap of the display's)
         else if (d >= 1.5) { gaps.push(d); if (gaps.length > EVENPACE.gaps) gaps.shift(); if (gaps.length >= EVENPACE.least) { const p = periodOf(gaps); if (p === p) period = p; } } }
       lastTs = ts;
+      while (out.length > 0 && ts - out[0].at > EVENPACE.lost) { out.shift(); lost++; }   // (a frame the queue never answered for: the page goes on without it)
       every = EVENPACE.on && period > 0 ? paceEvery(1000 / period, target) : 1;
       if (every > 1 && at >= 0 && ts - at < (every - EVENPACE.slack) * period) { skipped++; return true; }
       // (a window nobody is at: its last frame is still the GPU's, or the GPU has not yet had as long to itself as that frame took of it)
-      if (away && EVENPACE.giveway && (flying || (begun >= 0 && ts >= begun && ts - begun < Math.min(EVENPACE.longest, gpuMs / EVENPACE.share) - EVENPACE.wobble * period))) { gave++; return true; }
+      if (away && EVENPACE.giveway) { if (out.length > 0 || (begun >= 0 && ts >= begun && ts - begun < Math.min(EVENPACE.longest, gpuMs / EVENPACE.share) - EVENPACE.wobble * period)) { gave++; return true; } }
+      // (…and any window: the GPU still has as many of its frames as it may)
+      else if (room > 0 && out.length >= room) { held++; return true; }
       at = begun = ts; worked++; return false;
     },
-    sent(now) { flying = true; sentAt = now; },
-    done(now, own = 0) { if (!flying) return; flying = false; const took = Math.max(0, now - sentAt); gpuMs = own > 0 ? Math.min(own, took) : took; },
+    sent(now) { out.push({ word: ++words, at: now }); return words; },
+    done(word, now, own = 0) {
+      const i = out.findIndex(o => o.word === word); if (i < 0) return;   // (given up as lost, or answered already)
+      const took = Math.max(0, now - Math.max(out[i].at, freeAt)); out.splice(i, 1); freeAt = now;   // (its own time: from when the GPU had it and was free of the frame before it)
+      gpuMs = own > 0 ? Math.min(own, took) : took;
+    },
     reset() { lastTs = at = begun = -1; },
     get hz() { return period > 0 ? 1000 / period : 0; }, get every() { return every; }, get skipped() { return skipped; }, get worked() { return worked; },
-    get gave() { return gave; }, get gpuMs() { return gpuMs; }, get flying() { return flying; },
+    get flying() { return out.length; }, get held() { return held; }, get gave() { return gave; }, get gpuMs() { return gpuMs; }, get lost() { return lost; },
   };
 }
 

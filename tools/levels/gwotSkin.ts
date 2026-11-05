@@ -1,7 +1,8 @@
 // THE LOOK'S SECOND FILE OF A LEVEL (src/scene/look.ts): tools/levels/<name>-gwot.ts builds the level with ITS OWN generator, lets the exporter dress it
 // exactly as it dresses the plain file, and then `skinLevel` changes its clothes — every box where it was, the size it was, with the flags it had:
-//   · REPAINT   a box's albedo + finish, by its group and the office paint it wore. The new paint STANDS FOR the old one (src/scene/gwotPalette.ts gwotAs): to
-//               a round, a charge and a blast the box is exactly what it was — and `check()` below asks the game's own classifiers before and after;
+//   · REPAINT   a box's albedo + finish, by its group and the office paint it wore. WHAT THE BOX DOES IS NOT ITS PAINT'S (src/scene/materials.ts, Box.does):
+//               every box has its word before the first repaint (tools/levels/doesWas.ts stampDoes, the exporter's own step) and a repaint leaves it, so
+//               to a round, a charge and a blast the box is exactly what it was, in any paint of any colour;
 //   · DECALS    appended LAST under the group 'look': NoShadow boxes only, EVERY ONE FROM THE FLOOR UP (rugs, patches and wear on the ground, the damp foot
 //               of an outside wall and the strip of ground along it, a painted dado indoors) — drawn and lit, invisible to every ray and every collision
 //               query (tools/qa/look-check.ts also asks the three destruction indexes, which find things by shape, whether they list the same boxes in
@@ -10,18 +11,20 @@
 //               is holed: scene/lookTidy.ts, picture only;
 //   · PROPS     keep their kind, place, mass and parts; a part's paint may change (nothing reads it but the renderer).
 // Never touched: lights, doors, routes, marks, scenarios, glass, lit boxes, fixtures, screens, the destruction dressing, and anything small enough to be the
-// clutter / paper the destruction index finds by shape and tone.
+// clutter / paper the destruction index finds (by shape and by what the box does; until 2026-11-05 by tone, which is why the skin left them, and it still does).
 import type { Vec3 } from '../../src/math/vec';
 import { hashStr } from '../../src/math/dice';
 import type { Level, PropDef } from '../../src/scene/level';
 import { Box, BoxFlag, makeBox } from '../../src/scene/boxes';
-import { GWOT_FINISH, GWOT_PALETTE, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from '../../src/scene/gwotPalette';
+import { GWOT_FINISH, GWOT_PALETTE, ROUGH_CLOTH, lookPaintOf, type GwotMat } from '../../src/scene/gwotPalette';
+import { OFFICE_PALETTE } from '../../src/scene/officeGen';
 import { gwotKit, type GwotHost, type GwotKit, type RugStyle } from '../../src/scene/gwotKit';
 import { MARKING_TEXEL, mkHash } from '../../src/scene/markings';
-import { paletteName, surfOf } from '../../src/game/particleFx';
-import { breakClassOf, steelGrey } from '../../src/game/furnblast';
+import { doesOf } from '../../src/scene/materials';
+import { stampDoes } from './doesWas';
 import { DRESS_GROUP } from '../../src/game/destructionSwitch';
 import { isLived } from '../../src/scene/lived';
+import { saidAs, tonedAs, worded, repainted, type BoxStuff } from '../../src/scene/stuff';
 import { flatsOverlap, isFlat, layFlats } from './flatLayers';
 
 export const LOOK_GROUP = 'look';
@@ -29,6 +32,17 @@ export const LOOK_GROUP = 'look';
 export const LOOK_NOTE = ' — IN THE DEFAULT LOOK (2010s GWOT: tools/levels/gwotSkin.ts): the same boxes repainted, decals added; what a man collides with, hides behind or sees through is the plain file\'s.';
 const lum = (a: Vec3) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 const h01 = (a: number, b: number, c = 0) => (mkHash(a | 0, b | 0, c | 0) % 4096) / 4096;
+
+/** ALREADY IN THE LOOK'S OWN PAINT: a paint of the palette or one of its stand-ins, and no paint of the office's. A generator lays such a box when it builds
+ *  with the look's kit (src/scene/gwotKit.ts over gwotOfOffice / gwotOfKit: a round drum, a tyre stack, sandbags in a lived tier). The skin leaves it as it
+ *  is, parts of a prop too: its rules go by the office paint a box WORE, and the simulation reads a kit paint as the office paint it stands for, so by those
+ *  rules a blue drum was a metal thing to paint olive and a field stone a piece of the house's wall. */
+const OFFICE_PAINTS = new Set(Object.values(OFFICE_PALETTE as Record<string, Vec3>).map(a => a.join(',')));
+const inLook = (a: Vec3): boolean => !OFFICE_PAINTS.has(a.join(',')) && lookPaintOf(a) !== undefined;
+/** THE OFFICE PAINT A BOX WEARS, by its numbers (the first row of them): the skin's rules go by the paint a box wore. A question about the PAINT, asked of
+ *  the palette: what the box does is on the box, and nothing here works it out. */
+const OFFICE_NAME = new Map<string, string>(); for (const [n, a] of Object.entries(OFFICE_PALETTE as Record<string, Vec3>)) { const k = a.join(','); if (!OFFICE_NAME.has(k)) OFFICE_NAME.set(k, n); }
+const officeNameOf = (a: Vec3): string | undefined => OFFICE_NAME.get(a.join(','));
 
 /** what a rule is shown of a box */
 export interface SkinCtx {
@@ -38,16 +52,31 @@ export interface SkinCtx {
   y0: number; y1: number; thin: number; long: number;
   /** stands from the floor to (near) the ceiling */
   full: boolean;
-  /** unnamed grey steel that a blast takes apart as a sheet and a carcass (furnblast.ts) */
+  /** a thing of no office paint that a blast takes apart as a sheet and a carcass (what it does says `steel`: scene/materials.ts, furnblast.ts) */
   steel: boolean;
   /** 0‥1, the same for every box of this group */
   gh: number;
 }
+/** ONE PAINT, ANOTHER THING, IN A SKIN (scene/stuff.ts saidAs): the palette row a box wears, to the eye and to a round exactly as that row, SAID to be made
+ *  of something else, with that thing's finish. For a thing the palette has no row for, where a skin would otherwise borrow a row for its colour and get the
+ *  row's stuff with it (a frame in a blanket's brown was cloth: it drew as weave and a round knocked tufts out of it). Why not a new row: the palette is
+ *  written whole into every level file built on the kit, so a row makes every one of them stale. WHERE ONE MAY STAND: a skin's frames and what its own `pick` answers (the boxes
+ *  skinLevel repaints). Not `own` (a generator's colour becomes a palette row, by rule) and not the decals the kit lays by a row's name (the dado). */
+export interface Said { readonly paint: GwotMat; readonly stuff: BoxStuff; readonly rough: number; readonly metal?: boolean }
+/** DARK VARNISHED WOOD, named for what it is and not for who wears it: a door's or a window's frame (the palette's woods are bare poplar, weathered grey and ply) */
+export const VARNISH: Said = { paint: 'blanketBrown', stuff: 'wood', rough: 0.6 };
+export type SkinPaint = GwotMat | Said;
 /** a rule's answer: a paint, or null = leave the box as it is */
-export type Pick = GwotMat | null;
+export type Pick = SkinPaint | null;
 export interface Skin {
   /** the level's own rules, asked FIRST (undefined = no opinion: the shared rules answer) */
   pick?: (c: SkinCtx) => Pick | undefined;
+  /** THE GENERATOR'S OWN COLOURS, by what each is in the look: a paint the generator wrote as numbers (no office name: a lived room's own floor, a yard's
+   *  packed earth, a drum) and the palette paint it wears. Asked after `pick` and before the shared rules, which have no word for such a colour; the colour is
+   *  matched as written. A repaint like any other: the new paint stands for the old one and the check below holds it. A row of the palette only (anything
+   *  else throws): this is how a generator's colour becomes a palette paint, never a way to write a second colour by hand. A ROW THAT NO BOX WEARS
+   *  THROWS TOO: a colour changed in the generator later would leave its row behind, the box unpainted, and the export green. */
+  own?: readonly (readonly [Vec3, GwotMat])[];
   /** the shell and yard walls' stuff, and what the house is rendered in */
   wall?: GwotMat; house?: GwotMat; inner?: GwotMat;
   /** outdoor ground, the verge, the yard inside the perimeter */
@@ -55,7 +84,7 @@ export interface Skin {
   /** indoor floors by the office paint they wore */
   floor?: Partial<Record<string, GwotMat>>;
   /** frames of outside / inside doors */
-  frameOut?: GwotMat; frameIn?: GwotMat;
+  frameOut?: SkinPaint; frameIn?: SkinPaint;
   /** rooms (scenarios.roomClear.rooms ids) that get NO rug, and a style for the ones that should not take the dice's */
   noRug?: RegExp; rugs?: Record<string, RugStyle>;
   /** the damp foot on outside walls (default on) */
@@ -125,37 +154,36 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   const boxes = level.boxes, n0 = boxes.length; const st: SkinStats = { repainted: 0, kept: 0, decals: 0, props: 0, by: {} };
   const fixture = new Set<number>(); for (const s of level.switchables) for (const bi of s.boxes) fixture.add(bi); for (const l of level.lights) if (l.fixtureBox !== undefined && l.fixtureBox >= 0) fixture.add(l.fixtureBox);
   for (const bi of level.breaker?.boxes ?? []) fixture.add(bi); for (const bc of level.beacons ?? []) fixture.add(bc.box);   // (the breaker panel and the beacons are the game's own things: found by index, shot at, lit)
-  const bad: string[] = [];
+  stampDoes(level);   // (every box says what it does BEFORE its paint changes: the plain level's word, which the repaint leaves. The exporter has done it; whoever else calls this has not)
+  for (const [a, m] of S.own ?? []) if (!Object.hasOwn(GWOT_PALETTE, m)) throw new Error(`skinLevel: own maps ${a.join(',')} to '${String(m)}', which is no paint of the palette`);
+  const ownWorn = new Set<number>();   // (the rows of `own` some box wore: one that none did is a row left behind)
   for (let i = 0; i < n0; i++) {
     const b = boxes[i], g = groups[i];
     const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], maxH = Math.max(b.h[0], b.h[1], b.h[2]);
     const lit = b.emissive[0] + b.emissive[1] + b.emissive[2] > 0;
-    if (lit || fixture.has(i) || g === DRESS_GROUP || (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary)) || (maxH <= 0.2 && y0 > 0.3) || ((b.flags & BoxFlag.NoShadow) && y1 > 0.1)) { st.kept++; continue; }
-    const name = paletteName(b.albedo), surf0 = surfOf(b.albedo), steel = !name && steelGrey(b.albedo);
+    if (lit || fixture.has(i) || g === DRESS_GROUP || (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary)) || (maxH <= 0.2 && y0 > 0.3) || ((b.flags & BoxFlag.NoShadow) && y1 > 0.1) || inLook(b.albedo)) { st.kept++; continue; }
+    const name = officeNameOf(b.albedo), steel = !name && !!doesOf(b).steel;
     const c: SkinCtx = { i, b, group: g, name, y0, y1, thin: Math.min(b.h[0], b.h[2]) * 2, long: Math.max(b.h[0], b.h[2]) * 2, full: y0 <= 0.1 && y1 >= 2.2, steel, gh: (hashStr(g) % 4096) / 4096 };
-    const own = S.pick?.(c); const m = own !== undefined ? own : sharedPick(c, S);
-    if (!m) { st.kept++; continue; }
-    const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
-    const before = { name, surf: surf0, cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
-    const old = b.albedo; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH;
-    if (!c.full) { if (GWOT_FINISH[m]?.metal) b.metal = true; else delete b.metal; }
-    // THE CHECK: the game's own classifiers say the same of the box as before (a round, a charge, a blast and the destruction index read nothing else of a paint)
-    const after = { name: paletteName(b.albedo), surf: surfOf(b.albedo), cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
-    const ground = y1 <= 0.02;
-    if (after.name !== before.name || after.surf !== before.surf || after.cls !== before.cls || (!ground && (after.steel !== before.steel || after.dark !== before.dark || (!name && after.pale !== before.pale))))   // (a slab of floor is never a cabinet, a sheet of paper or clutter)
-      bad.push(`box ${i} [${g}] ${name ?? old.join(',')} → ${m}: ${JSON.stringify(before)} ≠ ${JSON.stringify(after)}`);
+    const picked = S.pick?.(c), ownAt = picked === undefined && name === undefined ? (S.own ?? []).findIndex(([a]) => a[0] === b.albedo[0] && a[1] === b.albedo[1] && a[2] === b.albedo[2]) : -1;
+    const own = ownAt >= 0 ? S.own![ownAt][1] : undefined; if (ownAt >= 0) ownWorn.add(ownAt);
+    const pk = picked !== undefined ? picked : own ?? sharedPick(c, S);
+    if (!pk) { st.kept++; continue; }
+    const said = typeof pk === 'string' ? undefined : pk, m: GwotMat = typeof pk === 'string' ? pk : pk.paint;
+    if (!Object.hasOwn(GWOT_PALETTE, m)) throw new Error(`skinLevel: box ${i} [${g}] is to wear '${String(m)}', which is no paint of the palette`);
+    repainted(b, GWOT_PALETTE[m]);   // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is — but a named coat stays under a plain one, so a car in the skin's enamel is still a car. What the box DOES stays as it was. scene/stuff.ts repainted)
+    if (said) repainted(b, saidAs(said.stuff, b.albedo, said));   // (… unless the skin SAID what that paint is on this thing: the same numbers to the eye, another stuff, and its finish said with the word)
+    const finish = said ?? GWOT_FINISH[m];   // (the box takes the finish of what was picked: a said paint's own, which its paint now knows too, else the palette row's)
+    b.rough = finish?.rough ?? ROUGH_CLOTH;
+    if (!c.full) { if (finish?.metal) b.metal = true; else delete b.metal; }
     st.repainted++; st.by[m] = (st.by[m] ?? 0) + 1;
   }
-  if (bad.length) throw new Error(`skinLevel: ${bad.length} repaint(s) would change what the simulation reads\n  ${bad.slice(0, 12).join('\n  ')}`);
+  { const left = (S.own ?? []).filter((_, k) => !ownWorn.has(k)); if (left.length) throw new Error(`skinLevel: ${left.length} row(s) of own that no box wears (the generator's colour changed, the box has an office paint name, the level's pick answered first, or the box is one the skin leaves): ${left.map(([a, m]) => `${a.join(',')} → ${m}`).join(' · ')}`); }
 
   // props: the same bodies in other paint
   level.props.forEach((p: PropDef, k) => {
     const pick = (a: Vec3): GwotMat | null => p.kind === 'chair' ? (lum(a) < 0.06 ? null : CHAIRS[(k * 7 + 3) % CHAIRS.length]) : p.kind === 'bin' ? (['olive', 'drumBlue', 'rust'] as GwotMat[])[k % 3] : p.kind === 'plant' ? (a[1] > a[0] ? (k % 2 ? 'scrub' : 'straw') : 'mudDark') : null;
-    let any = false; for (const part of p.parts) { const m = pick(part.albedo); if (!m) continue; const a = part.albedo, name = paletteName(a), steel = !name && steelGrey(a), surf = surfOf(a);
-      // (a prop that a blast takes apart is classed by its parts' paint like any box: the new paint stands for the old)
-      const next = gwotAs(m, (name ?? (steel ? (surf === 'drywall' ? '~steelPale' : '~steel') : '~' + surf)) as GwotSim);
-      if (paletteName(next) !== name || surfOf(next) !== surf || breakClassOf(next) !== breakClassOf(a) || steelGrey(next) !== steelGrey(a)) throw new Error(`skinLevel: prop ${k} (${p.kind}) part ${a.join(',')} → ${m} would change what the simulation reads`);
-      part.albedo = next; any = true; }
+    let any = false; for (const part of p.parts) { const m = inLook(part.albedo) ? null : pick(part.albedo); if (!m) continue;
+      repainted(part, GWOT_PALETTE[m]); any = true; }   // (the part's word went with its old paint, and the new paint says its own; what the part does stays: scene/stuff.ts repainted)
     if (any) st.props++;
   });
 
@@ -163,7 +191,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   const host: GwotHost = {
     add: b => { if (!((b.flags ?? 0) & BoxFlag.NoShadow) || (b.flags ?? 0) & ~BoxFlag.NoShadow) throw new Error(`skinLevel: the look may only add NoShadow decals (got flags ${b.flags ?? 0} at ${b.c.join(',')})`);
       if (b.c[1] - b.h[1] > 0.06) throw new Error(`skinLevel: a decal of the look starts at the floor (this one at ${(b.c[1] - b.h[1]).toFixed(2)} m, ${b.c.join(',')}) — see the head`);
-      boxes.push(makeBox(b)); groups.push(LOOK_GROUP); st.decals++; return boxes.length - 1; },
+      boxes.push(worded(makeBox(b))); groups.push(LOOK_GROUP); st.decals++; return boxes.length - 1; },   // (a decal is made of what it says, else what its paint is)
     prop: () => { throw new Error('skinLevel: the look adds no props'); }, wallX: () => { throw new Error('skinLevel: the look adds no walls'); }, wallZ: () => { throw new Error('skinLevel: the look adds no walls'); },
     lights: [], switchables: [], marks: true, texel: MARKING_TEXEL,
   };
@@ -174,7 +202,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   const floorAt = (x: number, z: number): Vec3 | null => { let best: Box | null = null, top = -1e9; for (const b of flats) if (Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2] && b.c[1] + b.h[1] > top) { top = b.c[1] + b.h[1]; best = b; } return best ? best.albedo : null; };
   // (how high the topmost flat stands there: a ground decal is not laid where a flat stands over it — a runner, a threshold, the level's own rug — it would be buried, and take that flat's tone for a floor it does not lie on)
   const topAt = (x: number, z: number): number => { let top = -1e9; for (const b of flats) if (Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2]) top = Math.max(top, b.c[1] + b.h[1]); return top; };
-  const tone = (a: Vec3, k: number): Vec3 => [Math.round(a[0] * k * 1e4) / 1e4, Math.round(a[1] * k * 1e4) / 1e4, Math.round(a[2] * k * 1e4) / 1e4];
+  const tone = (a: Vec3, k: number): Vec3 => tonedAs(a, [Math.round(a[0] * k * 1e4) / 1e4, Math.round(a[1] * k * 1e4) / 1e4, Math.round(a[2] * k * 1e4) / 1e4]);   // (the ground's own paint, darker: still that ground's stuff)
   const flat = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0, y = 0.011) => host.add({ c: [x, y, z], h: [w / 2, 0.002, d / 2], yaw, albedo, rough: 1, flags: BoxFlag.NoShadow });
   const roofs = bare.filter(b => (b.flags & BoxFlag.NoPrimary) && b.c[1] - b.h[1] >= 2.2 && b.h[0] >= 0.5 && b.h[2] >= 0.5 && !b.yaw);
   const roofed = (x: number, z: number) => roofs.some(b => Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2]);

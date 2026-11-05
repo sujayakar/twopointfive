@@ -5,7 +5,7 @@
 // the rooms' numbers as tally bars on the gallery floors. The square stays dark and bare of anything large and pale: a man crossing it must stand out.
 import { build as buildPlain, NOTES as PLAIN_NOTES, BARRACKS_ROOMS } from './barracks';
 import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
-import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
+import { GWOT_PALETTE as P, type GwotMat } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
@@ -16,12 +16,31 @@ export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES ?? ''}${LOOK_NOTE}`;
 export const build = buildPlain;
 const R = BARRACKS_ROOMS;
+/** WHAT THE PLAIN FILE WROTE AS COLOURS OF ITS OWN, by what each is (the skin's `own`: the look can only draw such a colour flat, and the shared rules took a
+ *  lived floor for furniture — the grey door mat came out galvanised sheet). The pickup on the east side is the battalion's, in its green; the day room's
+ *  settee is red cloth; army paint is olive. Then the lived floors: the walk to the front door is gravel between its stones, the south gallery's
+ *  runner coir and its door mat grey felt, the sergeants' mat red, the hearth's ash dark wet earth, the armoury's issue line yellow paint */
+const OWN: Skin['own'] = [[[0.2, 0.23, 0.18], 'paintGreen'], [[0.3, 0.12, 0.1], 'rugRed'], [[0.24, 0.235, 0.14], 'olive'],
+  [[0.33, 0.29, 0.2], 'gravel'], [[0.5, 0.37, 0.18], 'rugOchre'], [[0.4, 0.4, 0.38], 'blanketGrey'], [[0.42, 0.1, 0.08], 'rugRed'], [[0.05, 0.05, 0.05], 'damp'], [[0.72, 0.58, 0.1], 'genYellow']];
+const ARMS: GwotMat[] = ['olive', 'olive', 'ply', 'olive', 'woodGrey'];
 const SKIN: Skin = {
   wall: 'whitewash', house: 'whitewash', inner: 'render', frameOut: 'paintGreen', frameIn: 'woodGrey', dado: 'paintGreen',
   floor: { concrete: 'dust', grass: 'dirt', lino: 'slab', stone: 'slab', carpet: 'canvas' },
   rooms: [{ id: 'duty', bounds: R.duty }, { id: 'bunks1', bounds: R.bunks1 }, { id: 'bunks4', bounds: R.bunks4 }, { id: 'arms', bounds: R.arms }, { id: 'wash', bounds: R.wash }],
   rugs: { bunks1: 'felt', bunks2: 'mat', bunks3: 'felt', bunks4: 'mat', bunks5: 'felt', day: 'mat', duty: 'mat' },
-  pick: c => c.name === 'plant' && c.group === 'yard' ? 'scrub' : undefined,                // (the square's planters: camelthorn, not a clipped hedge)
+  pick: c => { const lived = c.group.startsWith('lived.');
+    if (c.name === 'plant' && c.group === 'yard') return 'scrub';                             // (the square's planters: camelthorn, not a clipped hedge)
+    if (c.name === 'cardboard' && c.group === 'arms') return ARMS[(c.i * 7 + 3) % ARMS.length];   // the armoury's shelves and pallet: olive tins and plywood cases, not grocery cartons
+    if (c.name === 'cardboard' && c.group === 'exterior') return 'olive';                     // the stores pallet left out at the south-east corner: olive cases
+    // THE LIVED THINGS IN AN OFFICE PAINT the shared rules leave be or take for something else
+    if (!lived) return undefined;
+    if (c.name === 'plant') return 'paintGreen';                                              // the sentry box and the battalion's sign: boards in police green
+    if (c.name === 'chair') return 'tarpBlue';                                                // the sick bay's screen, the laundry's rack, the bale of blankets: blue cloth
+    if (c.name === 'red') return 'drumRed';                                                   // the fire point's keep-clear square: red paint
+    if (c.name === 'partRed' && c.y1 > 0.1) return 'mudDark';                                 // the tea yard's hearth: two cheeks of fired mud brick
+    if (c.y1 <= 0.1 && c.name === 'white') return 'truckWhite';                               // the inspection line, the fall-in line, the stop lines: white paint
+    return undefined; },
+  own: OWN,
   dress: (G, _level, T) => {
     const M = lookMarks(T), lime = T.tone(P.whitewash, 0.8), green = P.paintGreen;
     // the VOLLEYBALL COURT at the east end of the square: lime lines, the net's line, the two attack lines

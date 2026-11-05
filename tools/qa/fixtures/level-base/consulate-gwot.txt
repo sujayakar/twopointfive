@@ -1,0 +1,4 @@
+# the frames and jambs are dark varnished wood, said over the brown they wear (they said cloth): 65 boxes change word and finish, nothing else moved
+# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+4bdf031139fd1fef06f4184ee2278054b1f40a81

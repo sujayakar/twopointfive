@@ -1,0 +1,3 @@
+# 11-05, a level file names its marks: the office's file gains the marks key (31 marks, as its script joined them on at load), no box and no other key moved; before it: the hand pass: paint on what is there, and 62 drawn-only boxes in the lived tier at the tail; no box of the 783 before them moved. The level says it is kept (meta.kept 1). Five boxes a hair smaller, so that no two drawn faces lie in one plane
+# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+0567a927d3c901bc37c2420364ca5f5e69380036

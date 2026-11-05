@@ -20,6 +20,7 @@ import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
 import type { LevelScenarios, TeamStart } from '../../src/scene/scenarios';
 import type { Vec3 } from '../../src/math/vec';
+import { saidAs } from '../../src/scene/stuff';
 
 export const NAME = 'killhouse-gwot';
 export const DRESS_AS = 'killhouse';
@@ -39,9 +40,19 @@ const SKIN: Skin = {
   rooms: [{ id: 'front hall', bounds: { x0: 12.12, x1: 21.54, z0: 12.06, z1: 14.44 } }, { id: 'far hall', bounds: { x0: 21.66, x1: 27.88, z0: 12.06, z1: 14.44 } }],
   // plywood for everything the plain file has in wood (the barricade, the crates, the targets, the table tops), sandbags and a HESCO berm on the range
   pick: c => c.name === 'wood' ? 'ply' : c.group === 'range' && c.name === 'partTan' ? 'sandbag' : c.group === 'range' && c.name === 'concrete' ? 'hesco' : undefined,
-  dress: (_G, level, T) => {
-    const M = lookMarks(T), tape = T.tone(P.plasticWhite, 0.9), worn = T.tone(VIOLET, 0.8);
+  dress: (G, level, T) => {
+    const M = lookMarks(T), tape = saidAs('paint', T.tone(P.plasticWhite, 0.9)), worn = T.tone(VIOLET, 0.8);
     const rc = (level.scenarios as LevelScenarios | undefined)?.roomClear; if (!rc) throw new Error('killhouse-gwot: the level carries no room clear to read its marks off');
+    // THE GROUND A RANGE WEARS, laid before any paint so the marks lie on it: the range road along the south edge and the spur a truck backs up toward the
+    // ready line (wheels), the beat the details walk round the house a stride off its walls and out to the firing line (feet), and gravel raked between the
+    // firing line and the targets. Each is the lot's own earth darker, or a second finish: nothing here is a colour.
+    { const lot = T.floorAt(9, 24) ?? P.dust;
+      /** a beat feet have worn: the lot's own earth darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
+      const beat = (pts: [number, number][]) => { M.path(pts, 1.2, T.tone(lot, 0.9)); M.path(pts, 0.5, T.tone(lot, 0.78)); };
+      G.ruts(0.6, 26.5, 39.4, 26.5); G.ruts(3.2, 25.6, 3.2, 17.4);
+      beat([[9.1, 15.3], [9.1, 21.9], [29.0, 21.9], [29.0, 18.5]]);          // round the south side, past the back door's box, to the line
+      beat([[9.1, 11.1], [9.1, 5.6], [29.0, 5.6], [29.0, 8.5]]);             // round the dark north side, under the windows
+      M.fill(29.9, 8.7, 33.0, 18.3, P.gravel); }
     /** where a man stands: a tape line half a metre long, a short stride ahead of his feet, square to the way he faces (yaw: he faces (sin, cos)) */
     const toe = (p: Vec3 | [number, number], yaw: number) => { const x = p[0], z = p[p.length - 1], fx = Math.sin(yaw), fz = Math.cos(yaw), cx = x + fx * 0.3, cz = z + fz * 0.3;
       M.seg(cx - fz * 0.25, cz + fx * 0.25, cx + fz * 0.25, cz - fx * 0.25, 0.07, tape); };

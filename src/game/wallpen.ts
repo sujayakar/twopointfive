@@ -40,13 +40,14 @@
 //   TWO FLIGHTS, ON PURPOSE: with this rule off the round flies glasspen.ts roundPath, untouched — the frozen stand's digests are that code's. `thinPath` is
 //   the same loop with thin things added; over glass alone the two answer alike (the check sweeps it), and a mend to one is a mend to the other.
 import { Vec3, v3, clamp } from '../math/vec';
-import { Box, BoxFlag } from '../scene/boxes';
+import { Box, BoxFlag, shapeCut } from '../scene/boxes';
 import { lineBox } from '../scene/collision';
 import { cutConfig } from '../scene/cut';
 import { WORLD } from '../scene/world';
 import { isSheet, hitSeed } from './glass';
 import { GLASSPEN, glassPenLive, paneCrossing, type PaneCross, type RoundPath, type RoundSeg } from './glasspen';
-import { paletteName, surfOf, impactFx } from './particleFx';
+import { impactFx } from './particleFx';
+import { doesOf } from '../scene/materials';
 import { bulletMark, staticSurface } from './marks';
 import { pelletEnd, type Shell } from './shotgun';
 import { WALLS } from './wallbreak';
@@ -113,12 +114,12 @@ function stuffOf(g: Game, index: number, b: Box): ThinStuff | null {
   if (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic) || b.rot || b.metal || b.emissive[0] + b.emissive[1] + b.emissive[2] > 0) return null;
   if (b.c[0] < WORLD.min[0] || b.c[0] > WORLD.max[0] || b.c[2] < WORLD.min[2] || b.c[2] > WORLD.max[2] || g.destr.itemOf(index)) return null;
   for (const t of g.targets) if (t.boxes.includes(index)) return null;
-  const surf = surfOf(b.albedo);
+  const does = doesOf(b), surf = does.surf;   // (what the box DOES, scene/materials.ts: its word's row, and nothing of its paint)
   if (surf === 'wood' || surf === 'cardboard' || surf === 'fabric' || surf === 'foliage') return surf;
   if (surf !== 'drywall') return null;
-  const name = paletteName(b.albedo); if (!name) return null;   // (a pale paint of no name: nobody's plasterboard — the wall engine indexes none either)
-  const part = name === 'partRed' || name === 'partBlue' || name === 'partTan'; const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], full = y0 <= 0.1 && y1 >= WALLS.wallMinTop;
-  if (full && name !== 'wall' && !part) return null;
+  if (!does.board) return null;   // (a pale thing of no row: nobody's plasterboard — the wall engine indexes none either)
+  const part = does.wall === 'screen'; const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], full = y0 <= 0.1 && y1 >= WALLS.wallMinTop;
+  if (full && does.wall === undefined) return null;
   if (!full && part && Math.min(b.h[0], b.h[2]) * 2 <= WALLPEN.thinMax.fabric) return 'fabric';   // (a low screen in the partition paints is the cubicle's fabric: wallbreak.ts, destruction.ts)
   const n = thinN(b), L = Math.max(b.h[0], b.h[2]); const ax: Vec3 = [-n[2], 0, n[0]]; let in2 = 0;
   for (const u of [-0.6, 0, 0.6]) { const px = b.c[0] + ax[0] * u * L, pz = b.c[2] + ax[2] * u * L; if (roofed(g, px + n[0] * 0.6, pz + n[2] * 0.6) && roofed(g, px - n[0] * 0.6, pz - n[2] * 0.6)) in2++; }
@@ -141,7 +142,7 @@ export interface ThinToll { stuff: ThinStuff; take: number; eOut: number; /** me
  *  path through, too little left). Pure: fireWeapon's path and the line-of-fire question read this one function. */
 export function thinToll(g: Game, index: number, at: Vec3, d: Vec3, e: number): ThinToll | null {
   const T = thingAt(g, index); if (!T) return null; const b = T.b;
-  if (Math.min(b.h[0], b.h[2]) * 2 > WALLPEN.thinMax[T.stuff] || (b.cut !== undefined && cutConfig.on && b.cut.length > 0)) return null;
+  if (Math.min(b.h[0], b.h[2]) * 2 > WALLPEN.thinMax[T.stuff] || (b.cut !== undefined && cutConfig.on && b.cut.length > 0 && !shapeCut(b))) return null;   // (a piece broken off a wall is no thin thing; a box that says its SHAPE is the thing it was, and lineBox below gives the round its way through the shaped solid)
   const s = lineBox(at, d, b); if (!s || s.t1 <= 0) return null;
   const thru = s.t1; if (thru > WALLPEN.maxThru[T.stuff]) return null;
   const take = WALLPEN.base[T.stuff] + WALLPEN.perM[T.stuff] * thru, eOut = e - take; if (eOut < WALLPEN.minEnergy) return null;
@@ -182,9 +183,9 @@ function bornIn(g: Game, p: Vec3, d: Vec3, self: number): number {
   return -1;
 }
 /** the turn: a hashed scatter inside the cone the toll opens — unit vector out */
-function deflect(index: number, at: Vec3, d: Vec3, take: number, eIn: number): Vec3 {
+function deflect(b: Box, at: Vec3, d: Vec3, take: number, eIn: number): Vec3 {
   const A = WALLPEN.deflectDeg * Math.PI / 180 * clamp(take / Math.max(eIn, 1e-6), 0, 1); if (A < 1e-6) return d;
-  let s = hitSeed(index % 1e6, at); s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0;
+  let s = hitSeed(b, at); s = (Math.imul(s ^ (s >>> 15), 0x2C1B3C6D) + 0x297A2D39) >>> 0;
   const u1 = (s & 0xffff) / 65535, u2 = (s >>> 16) / 65535;
   const up: Vec3 = Math.abs(d[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0]; const e1 = v3.normalize(v3.cross(up, d)), e2 = v3.cross(d, e1);
   const r = Math.tan(A * Math.sqrt(u1)), phi = u2 * Math.PI * 2;
@@ -193,7 +194,7 @@ function deflect(index: number, at: Vec3, d: Vec3, take: number, eIn: number): V
 function crossing(g: Game, index: number, o: Vec3, d: Vec3, t: number, n: Vec3, e: number): WallCross | null {
   const at = v3.mad(o, d, t); const T = thinToll(g, index, at, d, e); if (!T) return null;
   const exit = v3.mad(at, d, T.thru + EXIT_EPS); const b = index >= 1e6 ? g.col.dynamicBoxes[index - 1e6] : g.col.boxes[index];
-  return { ...T, index, t, at, nIn: t > 0 ? n : faceN(b, at), nOut: faceN(b, v3.mad(at, d, T.thru)), exit, dirIn: d, dirOut: deflect(index, at, d, T.take, e), eIn: e, into: bornIn(g, exit, d, index) };   // (t = 0: met where the round was born inside it — no ray gave a face)
+  return { ...T, index, t, at, nIn: t > 0 ? n : faceN(b, at), nOut: faceN(b, v3.mad(at, d, T.thru)), exit, dirIn: d, dirOut: deflect(b, at, d, T.take, e), eIn: e, into: bornIn(g, exit, d, index) };   // (t = 0: met where the round was born inside it — no ray gave a face)
 }
 
 // ---------------------------------------------------------------- the round's flight

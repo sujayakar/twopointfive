@@ -54,6 +54,13 @@ export async function cardReplayCheck(): Promise<boolean> {
       // the visit's own words ride along (replaykey.ts VISIT_FLAGS): a run played at a chosen quality, or muted, replays the same way; the run's words and the harness's `paused` do not
       search = '?levelFile=pass.json&quality=low&mute&paused&squad4'; const vOnce = engineUrl(7, once), vOld = engineUrl(7, old); search = '';
       verdict(vOnce === 'http://localhost/index.html?playtape=7&mute=&quality=low' && vOld === `${want}${N1 + 1}&mute=&quality=low`, "the replay's address keeps the game page's quality and mute, and nothing else of it", `one try: ${vOnce} · after a restart: ${vOld}`); }
+      // `look` is two things under one word (replaykey.ts visitWord): the dress's `look=plain` is the level the run was played on and stays the tape's; a row of
+      // the look prototype's page is the visit's, this page's own and never the tape's
+      { const rec = { ticks: 1, recipe: { search: '?roomclear&look=plain&look=roomc:0.6', seed: 7 } }, BRK = process.env.LOOKWORD_BREAK === '1';
+        const plain = new URLSearchParams(tapeSearch(rec, new URLSearchParams('?playtape=7'), '7')), onLook = new URLSearchParams(tapeSearch(rec, new URLSearchParams('?playtape=7&look&look=expo:0'), '7'));
+        const { visitWord } = await import(`${ROOT}/src/ui/replaykey.ts`);
+        verdict(!BRK && plain.getAll('look').join('|') === 'plain' && onLook.getAll('look').join('|') === 'plain||expo:0' && visitWord('look', 'roomc:0.6') && visitWord('look', '') && !visitWord('look', 'plain') && !visitWord('look', '0') && !visitWord('look', 'off'),
+          "a tape recorded on the plain dress replays on the plain dress, on a plain page and on a look page; the tape's own look row is dropped and the visit's rides", `plain page: look=${plain.getAll('look').join('|')} · look page: look=${onLook.getAll('look').join('|')}`); }
       // …and on the page that replays it (engineplay.ts tapeSearch): the run's words are the tape's, every visit word is THIS visit's — one the tape was recorded
       // under (a picture word of that day's address) does not come back with it, whichever goal put it on VISIT_FLAGS
       { const words = (VISIT_FLAGS as string[]).filter(k => k !== 'paused'), rec = { ticks: 1, recipe: { search: `?roomclear&squad4&${words.map(k => `${k}=tape`).join('&')}`, seed: 7 } };
@@ -63,9 +70,9 @@ export async function cardReplayCheck(): Promise<boolean> {
           `${words.length} visit words · with none on the address: ${bare.toString()} · tape's words that came back: ${words.filter(k => bare.has(k)).join(' ') || 'none'} · not the visit's own: ${words.filter(k => mine.get(k) !== 'visit').join(' ') || 'none'}`); }
       // …and how THIS machine builds its shaders is the visit's as well: every row on trial in Options > Graphics (its URL words as ui/shaderrows.ts writes
       // them), the compile queue's and the trim's. A replay opened with one keeps it; one the tape was recorded under does not come back
-      { const rows = [...readFileSync(`${ROOT}/src/ui/shaderrows.ts`, 'utf8').matchAll(/\burl: '([a-z]+)'/g)].map(m => m[1]), words = [...rows, 'pipequeue', 'shadertrim'], rec = { ticks: 1, recipe: { search: `?roomclear&squad4&${rows.map(w => `${w}=1`).join('&')}&shadertrim=0`, seed: 7 } };
+      { const rows = [...readFileSync(`${ROOT}/src/ui/shaderrows.ts`, 'utf8').matchAll(/\burl: '([a-z]+)'/g)].map(m => m[1]), words = [...rows, 'pipequeue', 'shadertrim', 'shaderfold'], rec = { ticks: 1, recipe: { search: `?roomclear&squad4&${rows.map(w => `${w}=1`).join('&')}&shadertrim=0&shaderfold=0`, seed: 7 } };
         const q = new URLSearchParams(tapeSearch(rec, new URLSearchParams(`?playtape=7&${rows.map((w, i) => `${w}=${i % 2}`).join('&')}&pipequeue=0`), '7'));
-        verdict(rows.length >= 3 && words.every(w => (VISIT_FLAGS as string[]).includes(w)) && rows.every((w, i) => q.get(w) === String(i % 2)) && q.get('pipequeue') === '0' && !q.has('shadertrim') && q.has('roomclear'), "the replay page keeps its own address's shader words (each row on trial, on or off, the compile queue, the trim) and takes none from the tape",
+        verdict(rows.length >= 3 && words.every(w => (VISIT_FLAGS as string[]).includes(w)) && rows.every((w, i) => q.get(w) === String(i % 2)) && q.get('pipequeue') === '0' && !q.has('shadertrim') && !q.has('shaderfold') && q.has('roomclear'), "the replay page keeps its own address's shader words (each row on trial, on or off, the compile queue, the trim, the fold) and takes none from the tape",
           `${rows.length} rows in ui/shaderrows.ts (${rows.join(' ')}) · not visit words: ${words.filter(w => !(VISIT_FLAGS as string[]).includes(w)).join(' ') || 'none'} · the page's address: ${q.toString()}`); }
       // …and the SENDING words (engineplay.ts SENDING_WORDS): the viewer's own where its address has one; from the tape only its OFF, where the viewer's
       // address says nothing of the word (a visit that did not send does not start sending on its replay's page, and a tape's backend is never the viewer's)

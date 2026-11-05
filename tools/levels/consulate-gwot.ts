@@ -8,7 +8,7 @@
 import { build as buildPlain, NOTES as PLAIN_NOTES, CONSULATE_ROOMS, CONSULATE_SPLIT } from './consulate';
 import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
-import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
+import { skinLevel, LOOK_NOTE, VARNISH, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
 import type { Vec3 } from '../../src/math/vec';
@@ -23,9 +23,15 @@ const R = CONSULATE_ROOMS, SPLIT = CONSULATE_SPLIT;
  *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: src/scene/look.ts LOOK_DOORS */
 const PLUM: Vec3 = [0.15, 0.035, 0.075];
 const SKIN: Skin = {
-  wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: 'blanketBrown', frameIn: 'blanketBrown', dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,
+  wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: VARNISH, frameIn: VARNISH, dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,
   floor: { stone: 'slab', lino: 'slab', carpet: 'blanketBrown', carpetBlue: 'poplar' },   // (the consul's office: bare boards round its two carpets — a fitted carpet in the dark madder read 0.045, a hole in the floor)
   metals: ['woodGrey', 'iron'],
+  // THE LIVED ROOMS' OWN FLOORS (consulate.ts lays one wall to wall in each staff room in a colour of its own): each as the stuff it is, and none of them a
+  // colour — the carpets' plum is this place's one accent, so the staff's floors are told apart by what they are made of: grey felt in the visa office, bare
+  // boards in the records room, matting in the waiting room, hessian in the back office, the slab in the store and under the hall's carpet. (The kitchen's quarry tile keeps the
+  // generator's own terracotta and draws flat: the palette has no tile, and its oxide paint made that floor louder than the plum.)
+  own: [[[0.4, 0.46, 0.53], 'blanketGrey'], [[0.27, 0.13, 0.24], 'woodGrey'], [[0.2, 0.33, 0.36], 'canvas'], [[0.42, 0.35, 0.24], 'coyote'],
+    [[0.27, 0.3, 0.2], 'slab'], [[0.1, 0.27, 0.18], 'slab']],
   // (the rescue names no rooms. The wine wainscot goes round the floors a GUEST walks — each has the level's own rug on it, so the skin lays none; the hall's is
   // laid by hand below — and the staff's rooms stay plain: which of them holds a man is drawn at each staging, and no paint says)
   rooms: [{ id: 'lobby', bounds: R.lobby }, { id: 'corridor', bounds: R.corridor }, { id: 'waiting', bounds: R.waiting }, { id: 'suite', bounds: R.suite }],

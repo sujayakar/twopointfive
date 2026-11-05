@@ -8,6 +8,7 @@
 //   bun run tools/qa/snowglow-check.ts [--verbose]      exit 0 = all pass, 1 = a FAIL line
 //   SNOWGLOW_BREAK=1 …   = the stand's word never raises the switch, and the shader text is read with its SNOW_GLOW guards cut out and the term called from
 //                          evalLight (what a careless edit would do): must fail
+//   GLOWRANGE_BREAK=1 …  = the term is read without its range test before the reach table: the fog line must fail
 //   bun run tools/qa/probes.ts snowglow      (also under `weather`)
 //   Run it on BOTH stands (TPS_PROFILE=shipped in front for the page's).
 //
@@ -69,6 +70,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
   const text: Record<string, string> = {};
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
+    t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
     if (BREAK) {
       t = t.replace(/if \(SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\) \{/g, '{').replace(/select\(1\.0, ([^,()]+(?:\([^()]*\))?[^,()]*), SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\)/g, '$1');
       if (f === 'common.wgsl') t = t.replace('  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) + snowGlow(vec2i(0), P, N, 1.0, vec3f(0.0), vec3f(0.0)); r.ok = true;\n');
@@ -110,7 +112,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
             if (!whole && !mine) badR.push(`${f}:${i + 1}${sz}`);
           } }); }
       const clear = (readFileSync(resolve(ROOT, 'src/render/gbuffer.ts'), 'utf8').match(/normal\w*View, loadOp: 'clear', storeOp: 'store', clearValue: \{ r: 0\.5, g: 1, b: 0\.5, a: 0 \}/g) ?? []).length;
-      const amt = /fn snowGlowAmt\(a: f32\) -> f32 \{ return clamp\(\(1\.0 - a\) \* 1\.5, 0\.0, 1\.0\); \}/.test(text['composite.wgsl']);
+      const amt = /fn snowGlowAmt\(a: f32\) -> f32 \{\s*return clamp\(\(1\.0 - a\) \* 1\.5, 0\.0, 1\.0\); \}/.test(text['composite.wgsl']);
       const men = /if \(sa > 0\.0 && \(\(id >> 28u\) & 3u\) == 0u\) \{/.test(text['composite.wgsl']);
       verdict(writers.length >= 4 && badW.length === 0 && readers.length === 2 && badR.length === 0 && amt && men && clear >= 1,
         'mark — a snow pixel is told by the normal target\'s alpha, written under 1 only behind the switch and read by the term alone', `${writers.length} writers of the target in the shaders (${writers.join(', ')})${badW.length ? ` · NOT 1 and not behind SNOW_GLOW: ${badW.join(', ')}` : ': fsBox and fsSnow under 1 only behind SNOW_GLOW || SNOW_SPARKLE, the rest store 1'} · reads of more than its xyz: ${readers.join(', ') || 'none'}${badR.length ? ` · NOT the term's: ${badR.join(', ')}` : ' (the term\'s own, and gdown.wgsl\'s whole-texel copy)'} · the reader's decode: ${amt} · never on a man's pixel or a cap's: ${men} · nothing drawn = alpha 0 with depth 1, never shaded (${clear} clear values)`); }
@@ -147,7 +149,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
       const rd = (re: RegExp, raw = false) => srcTs.filter(p => { const t = readFileSync(p, 'utf8'); return re.test(raw ? t : t.split('\n').map(code).join('\n')); }).map(p => p.slice(ROOT.length + 5)).sort();
       const swReaders = rd(/SNOW_LOOK\.glow\b/), cfgReaders = rd(/snowLookConfig\.glow\b/, true), wordTs = rd(/\bSNOW_GLOW\b/, true);   // (the last two as written, comments and all: the prelude's line is a template with `//` inside it)
       const game = swReaders.filter(p => p.startsWith('game/') && p !== 'game/journal.ts');
-      const want = ['composite.wgsl', 'gbuffer.wgsl', 'snow.wgsl'];
+      const want = ['composite.wgsl', 'gbuffer.wgsl', 'gbuffer_cut.wgsl', 'snow.wgsl'];   // (gbuffer_cut.wgsl since the look prototype's snow on a cut box: it marks the pixel as gbuffer.wgsl does, under LOOK)
       verdict(named.join() === want.join() && inProbe.length === 0 && decl === 1 && built && dirty.length === 0 && game.length === 0 && cfgReaders.join() === ['main.ts', 'render/frame.ts'].join() && wordTs.join() === 'render/frame.ts',
         'meter — the meter\'s, the probes\' and the bounce\'s programs do not hold the term', `shaders that name the switch or the term: ${named.join(', ')} (want ${want.join(', ')}: the two g-buffer files only mark the pixel) · the probe's program is the prelude + lighting_common.wgsl + probe.wgsl and nothing of composite.wgsl: ${built}; in it the term is named ${inProbe.length} times and the switch ${decl} (its declaration) · evalLight, directIrradiance, hitRadiance, diceIrradiance ${dirty.length ? `NAME SNOW: ${dirty.join(', ')}` : 'do not name snow'} · SNOW_LOOK.glow is read in ${swReaders.join(', ')}${game.length ? ` — A GAME MODULE: ${game.join(', ')}` : ' (in src/game the journal\'s rule alone)'} · snowLookConfig.glow in ${cfgReaders.join(', ')}`); }
 
@@ -158,10 +160,19 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
       const fn = text['composite.wgsl'].slice(text['composite.wgsl'].indexOf('fn snowGlow('));
       const shadowed = /return gS \* vis\.x \+ gB \* vis\.y;/.test(fn) && /let vis = clamp\(S \/ max\(U, vec2f\(1e-4\)\), vec2f\(0\.0\), vec2f\(1\.0\)\) \*/.test(fn) && /var S = vec2f\(luminance\(EdS\), luminance\(EdB\)\);/.test(fn) && /S \+= vec2f\(luminance\(textureLoad\(directTex, q, 0\)\.rgb\), luminance\(textureLoad\(softTex, q, 0\)\.rgb\)\);/.test(fn);
       const reach = /if \(!lightReaches\(i, P\)\) \{ continue; \}\s*\n\s*let li = lights\[i\];\s*\n\s*let ev = evalLight\(li, P, vec3f\(0\.0\)\);/.test(fn);
+      // THE LAMP'S OWN RANGE BEFORE THE TABLE (11-05; GLOWRANGE_BREAK=1 reads the term without the line and must fail): the walk's first statement is evalLight's first exit, written
+      // as evalLightRaw writes it (the same subtraction, dot and square root, the same `>`; lightKind's own mask; a directional lamp has no range), so the lamps that pass are
+      // the lamps that passed. And the composite's other writing (shaders/compact) holds the term word for word
+      const walk = process.env.GLOWRANGE_BREAK === '1' ? fn.replace(/\n[^\n]*if \(sqrt\(dot\(dq, dq\)\) > lights\[i\]\.range\)[^\n]*/, '') : fn;
+      const first = /for \(var i = 0u; i < min\(frame\.numLights, 64u\); i\+\+\) \{\s*\n(?:\s*\/\/[^\n]*\n)*\s*if \(\(lights\[i\]\.kind & 255u\) != 2u\) \{ let dq = lights\[i\]\.pos - P; if \(sqrt\(dot\(dq, dq\)\) > lights\[i\]\.range\) \{ continue; \} \}[^\n]*\n\s*if \(!lightReaches\(i, P\)\)/.test(walk)
+        && /fn lightKind\(li: Light\) -> u32 \{ return li\.kind & 255u; \}/.test(text['common.wgsl'])
+        && /\n  let d = li\.pos - P; let dist2 = dot\(d, d\); let dist = sqrt\(dist2\);\s*\n\s*if \(dist > li\.range\) \{ return r; \}/.test(text['common.wgsl'].slice(text['common.wgsl'].indexOf('fn evalLightRaw(')));
+      const termOf = (s: string) => { const a = s.indexOf('fn snowGlow('); return a < 0 ? '' : s.slice(a, s.indexOf('\n}\n', a)); };
+      const twin = termOf(readFileSync(resolve(SH, 'compact/composite.wgsl'), 'utf8')) === termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')) && termOf(readFileSync(resolve(SH, 'composite.wgsl'), 'utf8')).length > 0;
       const noRay = !/occluded|shadowSample|traceRay|trace\(/.test(fn.slice(0, fn.indexOf('\n}\n')).split('\n').map(code).join('\n'));
       const calls = (text['composite.wgsl'].split('\n').map(code).join('\n').match(/\bsnowGlow\(/g) ?? []).length - 1;   // (less the definition)
-      verdict(iComp > 0 && iFog > iComp && !fogKnows && shadowed && reach && noRay && calls === 1,
-        'fog — the term is under the fog of war and under the direct pass\'s own shadows', `passes.ts encodes the fog of war's pass over hdr AFTER the composite: ${iComp > 0 && iFog > iComp} · fogofwar.wgsl names the term: ${fogKnows} (an unseen pixel is drawn from the paint and the fog's own lights) · the term is × the stencil's shadowed ∕ unshadowed direct light per class (directTex, softTex): ${shadowed} · only lights whose reach mask has the cell, scored by evalLight as it stands: ${reach} · it traces nothing: ${noRay} · called from ${calls} place (the primary hit's diffuse)`); }
+      verdict(iComp > 0 && iFog > iComp && !fogKnows && shadowed && reach && first && twin && noRay && calls === 1,
+        'fog — the term is under the fog of war and under the direct pass\'s own shadows', `passes.ts encodes the fog of war's pass over hdr AFTER the composite: ${iComp > 0 && iFog > iComp} · fogofwar.wgsl names the term: ${fogKnows} (an unseen pixel is drawn from the paint and the fog's own lights) · the term is × the stencil's shadowed ∕ unshadowed direct light per class (directTex, softTex): ${shadowed} · only lights whose reach mask has the cell, scored by evalLight as it stands: ${reach} · a lamp's own range is asked before the table, as evalLight asks it: ${first} · the compact writing holds the term word for word: ${twin} · it traces nothing: ${noRay} · called from ${calls} place (the primary hit's diffuse)`); }
 
     // ---- energy: the shader's numbers, through the shader's own two formulas (asserted as text, then mirrored)
     { const t = text['composite.wgsl']; const num = (n: string) => { const m = t.match(new RegExp(`^const SNOW_GLOW_${n}: f32 = ([0-9.]+);`, 'm')); return m ? +m[1] : NaN; };

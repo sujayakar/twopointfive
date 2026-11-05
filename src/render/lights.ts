@@ -3,6 +3,7 @@ import { Vec3, v3, DEG } from '../math/vec';
 import { makeBuffer } from '../gpu/device';
 import { LightDef } from '../scene/level';
 import { REACH_ROW_WORDS, REACH_ALL } from './reach';
+import { lightDayK } from './photometry';
 
 export interface RtLight {
   name: string; group: string;
@@ -54,6 +55,12 @@ export interface RtLight {
   /** WHOSE DOING THIS LIGHT IS, FOR THE FOG'S CLASS ALONE (game/fogofwar.ts FOG.ours, lightBy): the character who set or threw what made it — a blast's
    *  flash, a round's ember. Not `owner`: the shadow rays still take every body, his too. Absent / 0 = the class goes by `owner` as ever */
   fogBy?: number;
+  /** AN OPENING TO THE SKY (LIGHT_PORTAL; engine.ts lookOpeningLights, the look page's "Daylight at openings" row): a kind 3 light that is no lamp but the
+   *  outside seen through a hole, an upright rectangle about `pos` facing `dir`. `halfWide` = half its width along the wall (`radius` = its half diagonal, so
+   *  the shader has its height too), `share` = how much of it is open now, 0‥1 (a leaf ajar): the light's colour × intensity is what the opening looks
+   *  out on (scene/openings.ts openingLooks) × the OPEN area, which is how bright the opening is to a pass whose ray stops short of it; the picture's direct light takes the rectangle itself (what of it shows the outside past the hole's far rim, `deep` and `rims` below) and
+   *  traces through it (common.wgsl LIGHT_PORTAL). They ride in the record's two cone words, which an area light does not use. Absent = an ordinary light */
+  portal?: { halfWide: number; share: number; deep?: number; rims?: number };   // (deep, rims: how far back from its plane the wall's outer face is, m, and which ends of the hole have a far rim, scene/openings.ts Opening.deep / .rims: the kind word's bits 11‥24, where a lamp's marking rides)
 }
 
 /** the kind word's fog-of-war class bits (common.wgsl LIGHT_FOG_SEEN / LIGHT_FOG_UNSEEN; RtLight.fog) */
@@ -62,7 +69,15 @@ export const LIGHT_FOG_SEEN = 1 << 25, LIGHT_FOG_UNSEEN = 1 << 26;
  *  LightSet.ir and never in `lights`. The picture's passes take it like any light (it is uploaded only while the picture IS the tube's: LightSet.tube); the game's
  *  own readings — probe.wgsl's light meter through evalLightTrue, the cascades the meter reads its bounce from — never do. */
 export const LIGHT_IR = 1 << 27;
+/** the kind word's PORTAL bit (common.wgsl LIGHT_PORTAL; RtLight.portal): an area light that is an OPENING TO THE SKY and not a lamp. What it sends a point is
+ *  the sky that point sees through it (common.wgsl skyRadiance in the direction the point looks out by), its shadow rays run on through it to find that sky,
+ *  and a ray of the bounce that leaves through it takes no sky of its own: the sky's light through an opening is counted once, by the light. */
+export const LIGHT_PORTAL = 1 << 28;
+/** a portal's hole as the kind word carries it: its depth, mm, in bits 11‥20 (common.wgsl portalDeep; a metre at the most, which reads as a shallower hole
+ *  than it is and leaves the rest to the rays; 0 = none known) and its ends' rims in bits 21‥22 (portalRims; none where none are said: what a rim would have cut, a ray finds) */
+export const portalHoleBits = (deep: number | undefined, rims?: number): number => (Math.min(1023, Math.max(0, Math.round((deep ?? 0) * 1000))) << 11) | (((rims ?? 0) & 3) << 21);
 export const MAX_LIGHTS = 64;
+const NO_LIGHTS: readonly RtLight[] = [];
 if (MAX_LIGHTS > 64) throw new Error('lights: MAX_LIGHTS > 64 — volumetrics.wgsl keeps its per-ray beam selection in a 64-bit mask (selLo/selHi); widen it first');   // (a WGSL shift by k ≥ 32 wraps: light 70 would alias light 38)
 /** The per-light reach rows (reach.ts) ride in ONE uniform binding (scene group binding 12, `array<vec4u, REACH_VEC4S>` in common.wgsl — a uniform,
  *  not a seventh scene storage buffer, so every pipeline stays inside the WebGPU default of 8 storage buffers per stage): MAX_LIGHTS rows ×
@@ -96,8 +111,8 @@ export function lightFromDef(d: LightDef): RtLight {
 export function packLight(f: Float32Array, u: Uint32Array, o: number, l: RtLight, inten: number, kindWord: number, volumetric: number, ownerWord: number) {
   f[o] = l.pos[0]; f[o + 1] = l.pos[1]; f[o + 2] = l.pos[2]; u[o + 3] = kindWord;
   f[o + 4] = l.dir[0]; f[o + 5] = l.dir[1]; f[o + 6] = l.dir[2]; f[o + 7] = l.range;
-  f[o + 8] = l.color[0] * inten; f[o + 9] = l.color[1] * inten; f[o + 10] = l.color[2] * inten; f[o + 11] = Math.cos(l.outerDeg * DEG);
-  f[o + 12] = Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG); f[o + 13] = volumetric; u[o + 14] = ownerWord; f[o + 15] = l.radius;
+  f[o + 8] = l.color[0] * inten; f[o + 9] = l.color[1] * inten; f[o + 10] = l.color[2] * inten; f[o + 11] = l.portal ? l.portal.halfWide : Math.cos(l.outerDeg * DEG);   // (a portal has no cone: the two cone words are its own)
+  f[o + 12] = l.portal ? l.portal.share : Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG); f[o + 13] = volumetric; u[o + 14] = ownerWord; f[o + 15] = l.radius;
 }
 
 /** the first n words of two buffers, bit for bit. Read signed and kept out of upload()'s body: mask words run past 2^31, and a loop over them inside that long function ran in a slow tier (0.03 ms a frame in the depot) */
@@ -190,18 +205,29 @@ export class LightSet {
   /** the lowest slot of the last upload holding a TRANSIENT light (ttl / flagged), = the slot count when none: transients are appended as they are born, so they sit at the tail and the
    *  gather's per-hit subtraction walk (gather_common directAtPoint / directOnScreen) can start here — it still tests every slot it visits, so a steady light after it costs nothing but a skip */
   firstTransientSlot = 0;
-  upload(time: number) {
+  /** THE LOOK PROTOTYPE's "Real light values" row (render/photometry.ts; engine.ts sets both each frame): the hour's exposure against the night's (1 = a night, or
+   *  anywhere but the look page: the upload is word for word what it was) and how far toward the real values the row is turned. By day each light that is not the
+   *  hour's own goes up at min(as authored, its real strength × the exposure): photometry.ts lightDayK, by what the light is. Scaled HERE so that the picture, the
+   *  bounce, the beams and the GPU's light meter read one number; `intensity` itself is not touched (the game's own readers of the list see the authored one).
+   *  A lamp remembered in the fog is scaled as a seen one is; an infrared illuminator is not scaled. */
+  dayExp = 1; dayAmount = 1;
+  /** `own` = THE PICTURE'S OWN LIGHTS for this frame (the look page's daylight at openings, engine.ts lookOpeningLights): handed in, never kept here. This set
+   *  is the game's and goes into every checkpoint; a light that is only in the picture must be in neither, and no reader of `lights` (the CPU's light
+   *  estimates, the fog's lamp list, the game's reach masks, the count a new man's torch is held to) can then count one. Uploaded last, steady, each with
+   *  its own reach row; when the 64 slots are full they are the ones left out. */
+  upload(time: number, own: readonly RtLight[] = NO_LIGHTS) {
     const f = this.f32, u = this.u32; let n = 0; this.activeIdx.length = 0; let firstT = -1;
     { const words = Math.max(1, this.activeCount) * 16, p32 = this.prev32; for (let i = 0; i < words; i++) p32[i] = u[i]; } this.prevCount = this.activeCount;   // last frame's records (prevCount × 64 B, word for word), before they are overwritten in place — no per-frame view (review R1.4)
     this.slotFwd.fill(255); this.slotInv.fill(255);
-    const NL = this.lights.length, NI = this.tube ? this.ir.length : 0; this.irCount = 0;
+    const NL = this.lights.length, NI = this.tube ? this.ir.length : 0, ND = own.length; this.irCount = 0;
     if (!NI) for (let i = 0; i < this.ir.length; i++) this.ir[i].slot = -1;
-    for (let i = 0; i < NL + NI; i++) {
-      const ir = i >= NL, l = ir ? this.ir[i - NL] : this.lights[i]; const prevSlot = l.slot ?? -1; l.slot = -1;   // (the infrared ones last, past the transients at `lights`' tail: the gather's walk from the first transient's slot tests each slot it visits and skips them)
+    for (let i = 0; i < NL + NI + ND; i++) {
+      const ir = i >= NL && i < NL + NI, l = i < NL ? this.lights[i] : ir ? this.ir[i - NL] : own[i - NL - NI]; const prevSlot = l.slot ?? -1; l.slot = -1;   // (the infrared ones last, past the transients at `lights`' tail: the gather's walk from the first transient's slot tests each slot it visits and skips them)
       const ghost = (!l.enabled || l.intensity <= 0) && (l.fogGhost ?? 0) > 0;   // out, but lit in the fog's picture (RtLight.fogGhost)
       if (n >= MAX_LIGHTS || (ir && this.irCount >= this.irCap) || ((!l.enabled || l.intensity <= 0) && !ghost)) continue;   // (a lamp over the cap has lost its slot just above, as one out of the list has)
       if (prevSlot >= 0 && prevSlot < this.prevCount) { this.slotFwd[prevSlot] = n; this.slotInv[n] = prevSlot; }   // the same RtLight object, last frame's slot → this frame's
       let inten = ghost ? l.fogGhost! : l.intensity;
+      if (this.dayExp < 1 && !ir) inten *= lightDayK(l, this.dayExp, this.dayAmount);
       if (l.flicker > 0) {
         const s = Math.sin(time * 61 + i * 3.1) * Math.sin(time * 17.3 + i) + Math.sin(time * 7.1 + i * 0.7) * 0.5;
         inten *= 1 - l.flicker * (s > 0.55 ? 0.85 : s > 0.3 ? 0.3 : 0.0);
@@ -209,10 +235,10 @@ export class LightSet {
       const o = n * 16;
       // kind low byte + flags: 256 = transient (ttl light: excluded from accumulated signals), 512 = broad emitter class (wide penumbrae → its own denoise)
       const fc = ir ? 0 : ghost ? 2 : this.fogClass(l);
-      packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
+      packLight(f, u, o, l, inten, l.kind | (ir ? LIGHT_IR : 0) | (l.ttl >= 0 || l.transient ? 256 : 0) | (l.broad ? 512 : 0) | (l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined && l.markRef >= 0 && l.markRef < 16384 ? 1024 | (l.markRef << 11) : 0) | (fc === 1 ? LIGHT_FOG_SEEN : fc === 2 ? LIGHT_FOG_UNSEEN : 0),   // + bit 10 / bits 11‥24: the emissive marking this light stands for (RtLight.markRef)
         l.volumetric, ((l.owner & 0xff) | (((l.glassMask ?? 0) & 0xffffff) << 8)) >>> 0);   // owner byte + the glass pane mask above it (common.wgsl lightGlassMask)
       this.reachData.set((this.dirMasks && l.reachDir) ? l.reachDir : (l.reach ?? REACH_ALL), n * REACH_ROW_WORDS);   // the slot's reach row follows the light into whatever slot it lands in this frame (a directional light's own mask only under dirMasks)
-      this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`)
+      this.activeIdx.push(i); l.slot = n; if (firstT < 0 && !ir && (l.ttl >= 0 || l.transient)) firstT = n; if (ir) { this.irCount++; this.irSpell = true; } n++;   // (activeIdx: an index past `lights` is into `ir`, and past that into `own`)
     }
     this.activeCount = n; this.firstTransientSlot = firstT < 0 ? n : firstT;
     this.device.queue.writeBuffer(this.buf, 0, this.data, 0, Math.max(64, n * 64));

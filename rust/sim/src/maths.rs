@@ -407,7 +407,7 @@ const INV_LN10: f64 = 0.4342944819032518;
 const INV_LN2: f64 = 1.4426950408889634;
 /// the whole number nearest y, a half going up (the language's Math.round)
 #[inline]
-fn round_half_up(y: f64) -> f64 {
+pub fn round_half_up(y: f64) -> f64 {
     let f = floor(y);
     let r = if y - f >= 0.5 { f + 1.0 } else { f };
     if r == 0.0 && y < 0.0 { -0.0 } else { r }

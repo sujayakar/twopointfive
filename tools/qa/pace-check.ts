@@ -2,6 +2,7 @@
 //   bun run tools/qa/pace-check.ts            (and again with TPS_PROFILE=shipped in front: the switch's two stands)
 //   EVENPACE_BREAK=1 bun run tools/qa/pace-check.ts   must FAIL: the pacer passes over a frame that came on time, and the readout is the last frame's own rate
 //   GIVEWAY_BREAK=1 bun run tools/qa/pace-check.ts    must FAIL: a window nobody is at draws as a focused one does (the give-way rule off), so it takes the whole GPU
+//   FLIGHT_BREAK=1 bun run tools/qa/pace-check.ts     must FAIL: nothing waits for the GPU (the rule off), so frames pile up behind it without end
 // What it does, with no page and no display: plays frame stamps through the pacer as a display would hand them over (120, 144, 240 and 60 Hz, a wobble on the
 // stamps, frames the browser held back, frames in pairs from the first one, a window moved to a slower display and back) and reads which were worked and what
 // rate the pacer read off them; plays the gaps of a real recording through the readout; reads the wiring off the page's source as text; stands a game up and
@@ -10,12 +11,15 @@
 // Giving way (EVENPACE.giveway) is played the same way: a GPU that takes so long over a frame, the queue's word coming back when it is done, the focus going
 // and coming back. What it cannot say there: that a second window of a real browser on a real GPU starts beside the first (docs/agents/render.md has what
 // two windows of headless Chromium did on the software adapter).
+// Waiting for the GPU (EVENPACE.flight) is played on the same model: no more frames with the GPU than the rule allows, as many frames a second as the GPU
+// finishes, the even pace untouched where the work fits it. What it cannot say: how late a real browser's queue answers, which is what the rule's cost on a
+// real machine hangs on (the maintainer's own try of the look page's trial on a 120 Hz laptop is the only word on that).
 // exit 0 = all pass · 1 = one failed
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless';
-import { EVENPACE, pacer, paceEvery, periodOf, rateMeter } from '../../src/host/pace';
+import { EVENPACE, FLIGHT_PAGE, pacer, pageRoom, paceEvery, periodOf, rateMeter } from '../../src/host/pace';
 
-const BREAK = process.env.EVENPACE_BREAK === '1', GIVE_BREAK = process.env.GIVEWAY_BREAK === '1';
+const BREAK = process.env.EVENPACE_BREAK === '1', GIVE_BREAK = process.env.GIVEWAY_BREAK === '1', FLIGHT_BREAK = process.env.FLIGHT_BREAK === '1';
 let failed = 0;
 const check = (ok: boolean, what: string) => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); };
 const shipped = process.env.TPS_PROFILE === 'shipped';
@@ -23,9 +27,10 @@ const shipped = process.env.TPS_PROFILE === 'shipped';
 // 0. the switch on this stand: off on the frozen one and in the module, on where the page's own boot ran (the shipped stand)
 { const log = console.log; console.log = () => {}; try { await standUp({ seed: 1 }); } finally { console.log = log; }
   check(EVENPACE.on === shipped, `the switch on the ${shipped ? 'shipped' : 'frozen'} stand is ${shipped ? 'on' : 'off'} (${EVENPACE.on})`);
-  check(EVENPACE.giveway === shipped, `giving way on the ${shipped ? 'shipped' : 'frozen'} stand is ${shipped ? 'on' : 'off'} (${EVENPACE.giveway})`); }
+  check(EVENPACE.giveway === shipped, `giving way on the ${shipped ? 'shipped' : 'frozen'} stand is ${shipped ? 'on' : 'off'} (${EVENPACE.giveway})`);
+  check(FLIGHT_PAGE === 2 && EVENPACE.flight === (shipped ? FLIGHT_PAGE : 0), `waiting for the GPU on the ${shipped ? 'shipped' : 'frozen'} stand is ${shipped ? `on, the page's ${FLIGHT_PAGE} frames with it at the most` : 'off'} (${EVENPACE.flight})`); }
 
-EVENPACE.on = true; EVENPACE.giveway = !GIVE_BREAK;
+EVENPACE.on = true; EVENPACE.giveway = !GIVE_BREAK; EVENPACE.flight = FLIGHT_BREAK ? 0 : FLIGHT_PAGE;
 if (BREAK) { EVENPACE.slack = -0.2; EVENPACE.window = 0; }   // (the break: a frame is 'early' until a fifth of a display frame AFTER it was due, so the one that came on time is passed over; and the readout's window holds one frame)
 
 // 1. how many display frames one drawn frame takes
@@ -97,35 +102,39 @@ const span = (g: number[]) => `${Math.min(...g).toFixed(1)} to ${Math.max(...g).
 { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), fr = main.slice(main.indexOf('  function frame(ts?: number) {'));
   const at = fr.indexOf('pace.skip(ts,'), now = fr.indexOf('const now = performance.now(); const rawDt'), line = at >= 0 ? fr.slice(fr.lastIndexOf('\n', at), fr.indexOf('\n', at)) : '';
   check(at > 0 && now > at && /if \(pace\.skip\(ts, !kitView && /.test(line) && /requestAnimationFrame\(frame\); return;/.test(line), "the frame loop passes a display frame over before it takes the time or steps anything, and holds no rate of its own under ?kitview");
-  check(/const measuring = quality\.calibrating \|\| bench\.active \|\| perfsweep\.active,/.test(fr) && /!kitView && !measuring && \(quality\.adaptive \|\| quality\.auto\) \? quality\.bands\.target : 0/.test(line), "the rate asked for is the ladder's, and none while the boot measures the machine, in a benchmark, in a sweep, or with the ladder off");
+  check(/measuring = quality\.calibrating \|\| tools,/.test(fr) && /!kitView && !measuring && \(quality\.adaptive \|\| quality\.auto\) \? quality\.bands\.target : 0/.test(line), "the rate asked for is the ladder's, and none while the boot measures the machine, in a benchmark, in a sweep, or with the ladder off");
   check(/fpsSm = rate\.push\(now\);/.test(fr) && !/fpsSm \* 0\.95/.test(main), 'the frame rate shown is the frames of the last second over their time, and the mean of rates is gone');
   const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), run = readFileSync(`${ROOT}/src/ui/benchrun.ts`, 'utf8'), key = readFileSync(`${ROOT}/src/ui/replaykey.ts`, 'utf8');
   check(/EVENPACE\.on = q\.get\('pace'\) !== '0';/.test(prof) && /'EVENPACE\.on': 'TPS_EVENPACE=1/.test(prof), "on in the page, ?pace=0 puts it off, and the stands' book has its row");
-  check(/const CARRIED = new RegExp\(`\^\([^`]*\|pace\|/.test(run) && /VISIT_FLAGS = \[[^\]]*'pace'/.test(key), "a benchmark's scene pages keep the visitor's ?pace word (no note says it was left behind), and a tape's player leaves the word to the viewer"); }
+  check(['pace', 'giveway', 'flight'].every(w => new RegExp(`const CARRIED = new RegExp\\(\`\\^\\([^\`]*\\|${w}\\|`).test(run) && new RegExp(`VISIT_FLAGS = \\[[^\\]]*'${w}'`).test(key)), "a benchmark's scene pages keep the visitor's ?pace, ?giveway and ?flight words (no note says one was left behind), and a tape's player leaves them to the viewer"); }
 
 // ---- A WINDOW NOBODY IS AT GIVES WAY ----
 // a display and a GPU: stamps a period apart; a worked frame hands its work over `cpu` ms after its stamp, the GPU takes `gpu` ms over it once it is free of
-// this window's last frame and of `ahead` ms of ANOTHER window's work queued in front, and the queue's word that a frame worked while away is done reaches the
-// pacer before the first callback after it, with the GPU's own timing of the frame (`timed`) or without. `away(i)`: nobody is at the window at callback i.
-// `late(i)`: callback i never comes (a busy page), so the one after it is a stall later.
-interface Gave { gaps: number[]; share: number; overlap: number; gave: number; worked: number; backSkips: number }
-function playAway(hz: number, aim: number, n: number, gpu: number, away: (i: number) => boolean, o: { cpu?: number; ahead?: number; timed?: boolean; late?: (i: number) => boolean } = {}): Gave {
-  const P = pacer(), period = 1000 / hz, gaps: number[] = [], cpu = o.cpu ?? 2, ahead = o.ahead ?? 0; let t = 1000, free = 0, flying = false, doneAt = 0, busy = 0, span = 0, overlap = 0, lastWork = -1, backSkips = 0;
+// this window's earlier frames and of `ahead` ms of ANOTHER window's work queued in front, and the queue's word that a frame is done reaches the pacer, oldest
+// first, before the first callback after it, with the GPU's own timing of the frame (`timed`) or without. A frame is handed to the pacer as the page hands
+// it: when nobody is at the window, or when the page waits for the GPU. `away(i)`: nobody is at the window at callback i. `late(i)`: callback i never comes
+// (a busy page), so the one after it is a stall later. `room`: what the page says of the frames that may be with the GPU (0 = the boot is calibrating).
+interface Gave { gaps: number[]; share: number; overlap: number; gave: number; held: number; worked: number; backSkips: number; most: number; rate: number }
+function playAway(hz: number, aim: number, n: number, gpu: number, away: (i: number) => boolean, o: { cpu?: number; ahead?: number; timed?: boolean; late?: (i: number) => boolean; room?: number } = {}): Gave {
+  const P = pacer(), period = 1000 / hz, gaps: number[] = [], cpu = o.cpu ?? 2, ahead = o.ahead ?? 0, out: { w: number; at: number }[] = []; let t = 1000, free = 0, busy = 0, span = 0, overlap = 0, lastWork = -1, backSkips = 0, most = 0, lateN = 0, w0 = -1, w1 = -1, wn = 0, held0 = 0;
   for (let i = 0; i < n; i++) {
     t += period; if (o.late?.(i)) continue;
-    if (flying && doneAt <= t) { P.done(doneAt, o.timed === false ? 0 : gpu); flying = false; }
+    while (out.length && out[0].at <= t) { const f = out.shift()!; P.done(f.w, f.at, o.timed === false ? 0 : gpu); }
     const a = away(i), judged = i >= 60 && a && away(i - 60);   // (a second into the away spell: the pacer has its measure)
-    const before = P.gave, skip = P.skip(t, aim, a);
+    if (i === 60) held0 = P.held;   // (…and half a second in at the least: the pacer has read the display)
+    const before = P.gave, skip = o.room === undefined ? P.skip(t, aim, a) : P.skip(t, aim, a, o.room);
     if (judged) span += t - (lastT < 0 ? t : lastT); lastT = t;
     if (!a && P.gave !== before) backSkips++;
     if (skip) continue;
     if (a && free > t) overlap++;   // (begun while the GPU still had this window's last frame)
     const start = Math.max(t + cpu, free) + ahead; free = start + gpu; if (judged) busy += gpu;
-    if (a) { P.sent(t + cpu); flying = true; doneAt = free; }
-    if (judged && lastWork >= 0) gaps.push(t - lastWork); lastWork = t;
+    if (a || (o.room ?? EVENPACE.flight) > 0) { out.push({ w: P.sent(t + cpu), at: free }); most = Math.max(most, out.length); } else { lateN = Math.max(lateN, Math.ceil((free - t) / gpu)); most = Math.max(most, lateN); }   // (a frame nobody waits for is with the GPU all the same: how many deep the pile is)
+    if (judged && lastWork >= 0) gaps.push(t - lastWork);
+    if (i >= 60) { if (w0 < 0) w0 = t; w1 = t; wn++; if (!judged && lastWork >= 0 && i > 60) gaps.push(t - lastWork); }
+    lastWork = t;
   }
   lastT = -1;
-  return { gaps, share: span ? busy / span : 0, overlap, gave: P.gave, worked: P.worked, backSkips };
+  return { gaps, share: span ? busy / span : 0, overlap, gave: P.gave, held: P.held - held0, worked: P.worked, backSkips, most, rate: wn > 1 ? (wn - 1) * 1000 / (w1 - w0) : 0 };
 }
 let lastT = -1;
 const mean = (g: number[]) => g.reduce((a, b) => a + b, 0) / Math.max(1, g.length);
@@ -147,33 +156,92 @@ const mean = (g: number[]) => g.reduce((a, b) => a + b, 0) / Math.max(1, g.lengt
 // 15. the focus comes back: from that display frame on nothing is passed over for it, though the last away frame is still with the GPU
 { const r = playAway(60, 60, 1200, 40, i => i < 600);
   const P = pacer(); for (let k = 0; k < 30; k++) { if (!P.skip(1000 + k * 16.7, 60, true)) P.sent(1000 + k * 16.7 + 2); }
-  const held = P.flying && P.skip(1000 + 30 * 16.7, 60, true), back = P.skip(1000 + 31 * 16.7, 60, false);
+  const held = P.flying > 0 && P.skip(1000 + 30 * 16.7, 60, true), back = P.skip(1000 + 31 * 16.7, 60, false);
   check(r.backSkips === 0 && held && !back, `the focus back after ten seconds away: no frame is passed over from then on (${r.backSkips}); a frame held while the last is with the GPU (${held}) is worked the moment somebody is at the window (${!back})`); }
 // 16. the measure: the GPU's own timing of the frame where there is one, never more than the queue's answer took; the answer alone where there is none
-{ const P = pacer(); P.sent(10); P.done(45, 8); const own = P.gpuMs; P.sent(100); P.done(104, 8); const quick = P.gpuMs; P.sent(200); P.done(225); const bare = P.gpuMs; P.done(999, 1);
-  check(own === 8 && quick === 4 && bare === 25 && P.gpuMs === 25 && !P.flying, `an answer after 35 ms with the passes timed at 8: ${own} ms; an answer after 4 ms: ${quick}; no timing: ${bare}; an answer nobody waits for changes nothing (${P.gpuMs})`); }
+{ const P = pacer(); P.done(P.sent(10), 45, 8); const own = P.gpuMs; P.done(P.sent(100), 104, 8); const quick = P.gpuMs; const w = P.sent(200); P.done(w, 225); const bare = P.gpuMs; P.done(w, 999, 1);
+  check(own === 8 && quick === 4 && bare === 25 && P.gpuMs === 25 && P.flying === 0, `an answer after 35 ms with the passes timed at 8: ${own} ms; an answer after 4 ms: ${quick}; no timing: ${bare}; an answer nobody waits for changes nothing (${P.gpuMs})`); }
 // 17. beside a BUSY window: 16 ms of the other window's work goes in front of each of this one's frames. By the GPU's own timing this window's 5 ms is still
 //     under its share and it draws as often as its turn comes; by the queue's answer alone it would count the other window's work as its own
 { const r = playAway(60, 60, 2400, 5, () => true, { ahead: 16 }), bare = playAway(60, 60, 2400, 5, () => true, { ahead: 16, timed: false });
   check(r.overlap === 0 && about(mean(r.gaps), 2000 / 60, 0.03) && mean(bare.gaps) > mean(r.gaps) + 10, `5 ms of its own work behind 16 ms of another window's, on 60 Hz: a frame every ${mean(r.gaps).toFixed(1)} ms, as its turn comes (${r.overlap} begun early); with no timings, every ${mean(bare.gaps).toFixed(1)} ms`); }
 // 18. a busy page: one callback in sixty never comes, so the next is a stall late (the even pace forgets its beat there). The wait is not forgotten
 { const calm = playAway(60, 60, 3600, 2000, () => true), r = playAway(60, 60, 3600, 2000, () => true, { late: i => i % 60 < 18 });
-  const P = pacer(); P.skip(1000, 60, true); P.sent(1002); P.done(1012, 10); P.skip(1300, 60, false); const soon = P.skip(1310, 60, true);
+  const P = pacer(); P.skip(1000, 60, true); P.done(P.sent(1002), 1012, 10); P.skip(1300, 60, false); const soon = P.skip(1310, 60, true);
   check(calm.overlap === 0 && r.overlap === 0 && about(mean(r.gaps), mean(calm.gaps), 0.2), `the GPU 2 s a frame, with a third of a second of every second lost to the page: a frame every ${mean(r.gaps).toFixed(0)} ms (${mean(calm.gaps).toFixed(0)} with none lost), never two with the GPU (${r.overlap})`);
   check(soon, `a frame begun 10 ms ago by a window that has just lost the focus: the next waits its 20 ms (${soon})`); }
 // 19. a long answer once (a compile, a save: 3 s) does not leave the window dark: the next frame is begun within a twentieth of a second of the answer
 { const P = pacer(); let t = 1000; for (let k = 0; k < 12; k++) { t += 1000 / 60; P.skip(t, 60, false); }
-  P.skip(t += 1000 / 60, 60, true); P.sent(t + 2); const sentT = t; let waited = 0; t += 3000; P.done(t - 1);
+  P.skip(t += 1000 / 60, 60, true); const w3 = P.sent(t + 2); const sentT = t; let waited = 0; t += 3000; P.done(w3, t - 1);
   for (let k = 0; k < 12; k++) { t += 1000 / 60; if (!P.skip(t, 60, true)) break; waited++; }
   check(P.gpuMs > 2990 && waited === 0 && t - sentT > 3000, `an answer that took ${Math.round(P.gpuMs)} ms: the next display frame is worked (${waited} passed over after the answer)`); }
-// 20. the wiring, read off the source
+// ---- THE PAGE WAITS FOR THE GPU ----
+// 20. the fault and the rule: a 120 Hz display, no rate held, the GPU 17 ms a frame. Never more than two frames with the GPU, and as many frames a second as
+//     the GPU finishes, where with nothing waiting they pile up without end
+{ const r = playAway(120, 0, 3600, 17, () => false);
+  check(r.most <= 2 && r.held > 0 && about(r.rate, 1000 / 17, 0.03) && r.gaps.every(g => g < 25.1), `a 120 Hz display, the GPU 17 ms a frame, no rate held: ${r.most} frame(s) with the GPU at the most, ${r.rate.toFixed(1)} frames a second (the GPU finishes ${(1000 / 17).toFixed(1)}), ${span(r.gaps)} apart`); }
+// 21. under the even pace, work that fits the paced frame: nothing is ever held, the pace is the even one
+{ const r = playAway(120, 60, 3600, 15, () => false), q = playAway(60, 60, 1800, 5, () => false);
+  check(r.held === 0 && r.gaps.every(g => Math.abs(g - 1000 / 60) < 0.01) && q.held === 0 && q.gaps.every(g => Math.abs(g - 1000 / 60) < 0.01), `the ladder's 60 on 120 Hz with the GPU at 15 ms, and a 60 Hz display with it at 5: no frame is held (${r.held}, ${q.held}), every frame ${span(r.gaps)} apart`); }
+// 22. …work over the paced frame (a machine that cannot hold the rate): frames come as the GPU finishes them, one or two paced frames apart, never back to
+//     back and never more than two with the GPU. On a 60 Hz display too, where the even pace has nothing to say
+{ const r = playAway(120, 60, 3600, 20, () => false), q = playAway(60, 60, 1800, 25, () => false);
+  check(r.most <= 2 && about(r.rate, 50, 0.03) && r.gaps.every(g => g > 16 && g < 25.1), `the ladder's 60 on 120 Hz with the GPU at 20 ms: ${r.rate.toFixed(1)} frames a second, ${span(r.gaps)} apart, ${r.most} with the GPU at the most`);
+  check(q.most <= 2 && about(q.rate, 40, 0.03) && q.gaps.every(g => g > 16 && g < 33.4), `a 60 Hz display with the GPU at 25 ms: ${q.rate.toFixed(1)} frames a second, ${span(q.gaps)} apart, ${q.most} with the GPU at the most`); }
+// 23. a frame held for the GPU is the machine's own pace, not a window giving way: the ladder reads its gap (main.ts `rested` counts only `gave`)
+{ const r = playAway(60, 60, 1800, 25, () => false);
+  check(r.held > 0 && r.gave === 0, `the same 60 Hz display: ${r.held} display frames held for the GPU, none counted as giving way (${r.gave})`); }
+// 24. one at a time (`?flight=1`): a frame is begun only when the last has left the GPU
+{ const was = EVENPACE.flight; if (!FLIGHT_BREAK) EVENPACE.flight = 1; const r = playAway(120, 0, 3600, 17, () => false); EVENPACE.flight = was;
+  check(r.most === 1 && r.gaps.every(g => Math.abs(g - 25) < 0.01), `at one: ${r.most} frame with the GPU at the most, every frame ${span(r.gaps)} apart (the first display frame after the last one's 19 ms)`); }
+// 25. WHO WAITS (host/pace.ts pageRoom, the one rule the frame loop and the readout read): a player's page, a benchmark and a sweep; a calibration under
+//     a benchmark with them, so the run opens with no pile behind it. Not the boot's calibration by itself, and never ?kitview
+{ const R = (calibrating: boolean, measuring: boolean, kitView = false) => pageRoom({ calibrating, measuring, kitView }), F = EVENPACE.flight;
+  check(F === FLIGHT_PAGE && R(false, false) === F && R(false, true) === F && R(true, true) === F && R(true, false) === 0 && R(false, false, true) === 0 && R(false, true, true) === 0 && R(true, true, true) === 0,
+    `who waits for the GPU: a player's page ${R(false, false)}, a benchmark or a sweep ${R(false, true)}, its own calibration ${R(true, true)}; the boot's calibration by itself ${R(true, false)} and ?kitview ${R(false, false, true)}`);
+  // the boot's calibration: nothing is held, though the frames pile up…
+  const cal = playAway(120, 0, 1200, 17, () => false, { room: R(true, false) });
+  check(cal.held === 0 && cal.most > 10, `the boot's calibration: no frame is held (${cal.held}), as it always was (${cal.most} deep at the worst)`);
+  // …and a benchmark holds no rate but waits: on a card that cannot draw the scene at the display's rate (a headless one has no display to hold its
+  // frames back) the frames come at the card's pace, never more than two with it. With nothing waiting they piled up as in the line above, and a row
+  // flipped in a sweep reached the passes' stamps seconds late
+  const B = { room: R(false, true) }, r = playAway(60, 0, 3600, 17.8, () => false, B), q = playAway(120, 0, 3600, 17, () => false, B), light = playAway(60, 0, 1800, 9, () => false, B);
+  check(r.most <= 2 && r.held > 0 && about(r.rate, 1000 / 17.8, 0.03) && q.most <= 2 && about(q.rate, 1000 / 17, 0.03), `a benchmark on a scene the card cannot hold the display's rate on (no rate held, the room a benchmark is given): ${r.rate.toFixed(1)} frames a second at 17.8 ms on 60 Hz and ${q.rate.toFixed(1)} at 17 ms on 120 Hz, the card's own pace, ${Math.max(r.most, q.most)} with the GPU at the most`);
+  check(light.held === 0 && about(light.rate, 60, 0.01), `and on one it can (9 ms on 60 Hz) nothing is held: ${light.rate.toFixed(1)} frames a second, every display frame worked`); }
+// 26. the answers: each frame's own, in any order; with two frames in flight and no timings a frame's time is counted from when the GPU was free of the
+//     one before it, not from when it was handed over
+{ const P = pacer(); const a = P.sent(0), b = P.sent(5); const two = P.flying; P.done(a, 20); const one = P.flying, first = P.gpuMs; P.done(b, 40); const none = P.flying, second = P.gpuMs; P.done(b, 50);
+  check(two === 2 && one === 1 && none === 0 && P.flying === 0 && first === 20 && second === 20, `two frames handed over, two answers: ${two}, ${one}, ${none} with the GPU; each took ${first} and ${second} ms of the GPU though the second waited 35 for its answer; an answer twice changes nothing (${P.flying})`); }
+// 27. a frame the queue never answers for is given up after ten seconds and the page goes on; its answer, if it ever comes, is nobody's
+{ const P = pacer(), p = 1000 / 60; let t = 1000, held = 0, worked = 0; P.skip(t, 0, false); const a = P.sent(t + 2); P.skip(t += p, 0, false); P.sent(t + 2);
+  for (let k = 0; k < 660; k++) { if (P.skip(t += p, 0, false)) held++; else { worked++; P.done(P.sent(t + 2), t + 9); } }
+  const before = P.flying; P.done(a, t);
+  check(held > 570 && held < 610 && worked > 50 && P.lost === 2 && P.flying === before, `two frames never answered for: ${held} display frames held (ten seconds of them), then ${worked} worked in the second after; ${P.lost} given up; the late answer changes nothing`); }
+// 28. A TAB THAT SLEEPS with two frames in flight (a hidden tab gets no frame callbacks; the queue's answers come when they come). Whatever became of the
+//     answers, the page draws on when it wakes: at once where they came while it slept or had ten seconds to; after the answers where the sleep was short
+//     and the GPU still has the frames; and a frame in flight is never counted twice
+{ const p = 1000 / 60, wake = (sleepMs: number, answers: 'asleep' | 'never' | 'after') => {
+    const P = pacer(); let t = 1000; for (let k = 0; k < 20; k++) { if (!P.skip(t += p, 0, false)) P.done(P.sent(t + 2), t + 9); }   // (awake and well: every frame answered inside its own display frame)
+    P.skip(t += p, 0, false); const a = P.sent(t + 2); P.skip(t += p, 0, false); const b = P.sent(t + 2), full = P.flying === 2 && P.skip(t + 1, 0, false);   // (two in flight: a third is held)
+    if (answers === 'asleep') { P.done(a, t + 40); P.done(b, t + 60); }
+    t += sleepMs; let held = 0, worked = 0;
+    for (let k = 0; k < 120; k++) { const ts = t + k * p; if (answers === 'after' && k === 6) { P.done(a, ts - 1); P.done(b, ts - 1); } if (P.skip(ts, 0, false)) held++; else { worked++; P.done(P.sent(ts + 2), ts + 9); } }
+    return { full, held, worked, lost: P.lost, flying: P.flying };
+  };
+  const A = wake(3000, 'asleep'), B = wake(30000, 'never'), C = wake(3000, 'after'), D = wake(3000, 'never');
+  check(A.full && A.held === 0 && A.worked === 120 && A.lost === 0, `asleep 3 s, the answers came meanwhile: awake it draws every frame at once (${A.worked} of 120, ${A.held} held, ${A.lost} given up)`);
+  check(B.held === 0 && B.worked === 120 && B.lost === 2, `asleep 30 s and never answered: both frames are given up on the first frame back and it draws at once (${B.worked} of 120, ${B.lost} given up)`);
+  check(C.held === 6 && C.worked === 114 && C.lost === 0 && C.flying <= 1, `asleep 3 s, the GPU still at the two frames on waking: ${C.held} display frames wait for the answers, then it draws on (${C.worked}), none given up`);
+  check(D.held === 120 && D.worked === 0 && D.lost === 0, `asleep 3 s and never answered: it waits (${D.held} of the two seconds played), and ten seconds from when the frames were handed over is the most it can (the give-up line above)`); }
+// 29. the wiring, read off the source
 { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), fr = main.slice(main.indexOf('  function frame(ts?: number) {')), prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8');
   const aw = fr.indexOf('away = EVENPACE.giveway'), awLine = aw >= 0 ? fr.slice(fr.lastIndexOf('\n', aw), fr.indexOf('\n', aw)) : '', sk = fr.indexOf('pace.skip(ts,'), st = fr.indexOf('      step(dt);'), se = fr.indexOf('pace.sent(');
-  check(aw > 0 && aw < sk && /const measuring = quality\.calibrating \|\| bench\.active \|\| perfsweep\.active, away = EVENPACE\.giveway && !measuring && !perfrec\.recording && !attended\(\);/.test(awLine) && /quality\.bands\.target : 0, away\)\)/.test(fr), 'the frame loop asks who is at the window before it passes a frame over, and never gives way while the page measures the machine or records a take');
-  check(st > 0 && se > st && /if \(away\) \{ pace\.sent\(performance\.now\(\)\);/.test(fr) && /pace\.done\(performance\.now\(\), engine\.timer\.enabled \? engine\.timer\.unionMs\(GPU_RENDER_PASSES\) : 0\)/.test(fr) && /onSubmittedWorkDone\(\)\.then\(end, end\)/.test(fr), "a frame worked while away tells the pacer when its work went to the GPU and when the queue says it is done, with the GPU's own timing of a frame, and only such a frame asks the queue");
-  check(/const rested = pace\.gave !== gaveLast; gaveLast = pace\.gave;/.test(fr) && /&& !rested && rawDt < 0\.5/.test(fr) && /!document\.hidden && !rested, endStage/.test(fr), "the quality ladder and the visit's frame records do not read a frame whose gap held a display frame passed over for giving way, and read every other frame of an unfocused window");
+  check(aw > 0 && aw < sk && /const tools = bench\.active \|\| perfsweep\.active, measuring = quality\.calibrating \|\| tools, away = EVENPACE\.giveway && !measuring && !perfrec\.recording && !attended\(\), room = pageRoom\(\{ calibrating: quality\.calibrating, measuring: tools, kitView: !!kitView \}\);/.test(awLine) && /const waits = pageRoom\(\{ calibrating: quality\.calibrating, measuring: bench\.active \|\| perfsweep\.active, kitView: !!kitView \}\) > 0;/.test(main) && /quality\.bands\.target : 0, away, room\)\)/.test(fr), 'the frame loop asks who is at the window and how many frames the GPU may hold before it passes a frame over; it never gives way while the page measures the machine or records a take, and who waits for the GPU is the one rule the readout reads too (pageRoom)');
+  check(st > 0 && se > st && /if \(\(away \|\| room > 0\) && behind\.drawn !== drawnLast\) \{ drawnLast = behind\.drawn; const w = pace\.sent\(performance\.now\(\)\)/.test(fr) && /pace\.done\(w, performance\.now\(\), away && engine\.timer\.enabled \? engine\.timer\.unionMs\(GPU_RENDER_PASSES\) : 0\)/.test(fr) && /onSubmittedWorkDone\(\)\.then\(end, end\)/.test(fr), "a frame that drew tells the pacer when its work went to the GPU and when the queue says that frame is done (with the GPU's own timing of a frame where a window gives way); a frame that drew nothing, or of a page that waits for nothing, asks the queue nothing");
+  check(/const rested = pace\.gave !== gaveLast; gaveLast = pace\.gave;/.test(fr) && /&& !rested && rawDt < 0\.5/.test(fr) && /!document\.hidden && !rested, endStage/.test(fr), "the quality ladder and the visit's frame records do not read a frame whose gap held a display frame passed over for giving way, and read every other frame: one held for the GPU among them");
   check(/if \(topAsks\) try \{ return \(window\.top \?\? window\)\.document\.hasFocus\(\); \} catch \{ topAsks = false; \} return true; \};/.test(main) && /const t = window\.__testFocus; if \(typeof t === 'boolean'\) return t;/.test(main), "who is at the window is the top window's own focus (the game's page is a frame of the kept page); a top that cannot be asked counts as somebody and is asked once");
-  check(/EVENPACE\.giveway = q\.get\('giveway'\) !== '0';/.test(prof) && /'EVENPACE\.giveway': 'TPS_GIVEWAY=1/.test(prof), "on in the page, ?giveway=0 puts it off, and the stands' book has its row"); }
+  check(/EVENPACE\.giveway = q\.get\('giveway'\) !== '0';/.test(prof) && /'EVENPACE\.giveway': 'TPS_GIVEWAY=1/.test(prof), "on in the page, ?giveway=0 puts it off, and the stands' book has its row");
+  check(/EVENPACE\.flight = q\.get\('flight'\) === '0' \? 0 : q\.get\('flight'\) === '1' \? 1 : FLIGHT_PAGE;/.test(prof) && /'EVENPACE\.flight': 'TPS_FLIGHT=1/.test(prof), "waiting for the GPU is on in the page at two, ?flight=1 is one, ?flight=0 puts it off, and the stands' book has its row"); }
 
 console.log(failed ? `=== pace-check: FAILED (${failed}) ===` : '=== pace-check: ALL PASS ===');
 process.exit(failed ? 1 : 0);

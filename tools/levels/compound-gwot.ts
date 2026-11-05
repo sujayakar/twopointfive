@@ -22,8 +22,8 @@ const SKIN: Skin = {
   rooms: [{ id: 'pantry', bounds: R.pantry }, { id: 'spare', bounds: R.spare }, { id: 'hall', bounds: R.hall }, { id: 'corridor', bounds: R.corridor }],
   rugs: { sala: 'afghan', office: 'baluch', bunk: 'kilim', back: 'felt', pantry: 'mat', spare: 'kilim' },
   metals: ['paintBlue', 'rust', 'galv', 'woodGrey', 'paintGreen'],   // (a family's house: no army olive on its shelves)
-  // the two cars: a dust-tan pickup and a yellow taxi (never a neutral grey or white on the pickup: a plain grey box is a steel cabinet to a blast — furnblast.ts steelGrey — and it was not one)
-  pick: c => { const a = c.b.albedo; if (c.name !== undefined) return undefined; return a[0] === 0.24 && a[1] === 0.27 ? 'truckTan' : a[0] === 0.42 && a[1] === 0.4 && a[2] === 0.36 ? 'jerryYellow' : undefined; },
+  // the two cars: a dust-tan pickup and a yellow taxi (a colour nobody names takes its tone's row, and a plain grey is a steel cabinet to a blast: scene/materials.ts 'unnamed grey'; a car's body says its own word)
+  pick: c => { const a = c.b.albedo; if (c.name !== undefined) return undefined; return a[0] === 0.24 && a[1] === 0.27 ? 'truckTan' : a[0] === 0.42 && a[1] === 0.4 && a[2] === 0.36 ? 'genYellow' : undefined; },   // (a car wears PAINT: the can's yellow it wore is a plastic, which the look draws flat)
   dress: (G, _level, T) => {
     const M = lookMarks(T);
     // the track comes in by the MAIN gate (the only one a car fits through) and turns to where the pickup stands
@@ -37,6 +37,8 @@ const SKIN: Skin = {
       for (let i = 0; i < 6; i++) { const x = 5.0 + i * 0.5; M.seg(x, 9.7, x, 13.1, 0.32, earth);
         for (let k = 0; k < 7; k++) { if ((i * 3 + k) % 5 === 0) continue; M.fill(x - 0.08, 9.95 + k * 0.45, x + 0.08, 10.11 + k * 0.45, (i + k) % 3 ? P.prodGreen : P.scrub); } }
       M.path([[7.8, 12.4], [7.75, 13.3], [4.9, 13.3]], 0.14, P.damp); }
+    // the two walks outside the walls, trodden darker as the ground at every door is: along the north wall to the back gate, down the west wall to the side gate
+    { const fn = T.floorAt(30, 2.2), fw = T.floorAt(2.1, 10); if (fn) M.path([[39.4, 2.3], [26.2, 2.2], [24.25, 3.3]], 0.55, T.tone(fn, 0.8)); if (fw) M.path([[2.2, 4.4], [2.1, 13.2], [3.3, 14.75]], 0.55, T.tone(fw, 0.8)); }
     // the cook fire behind the kitchen: ash on the ground, soot up the wall
     G.patch(14.2, 5.35, 1.5, 1.2, 'damp', 0.2); G.patch(14.25, 5.4, 0.8, 0.65, 'oil', 0.7, 0.0128); G.skirt('x', 6.5, 13.7, 14.8, -1, 'iron', 1.25, 0.24);
     // a chalk hopscotch by the front door (thin lines: the one pale thing on this ground)

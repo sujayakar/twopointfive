@@ -18,19 +18,30 @@
 #![no_std]
 
 pub mod bricks;
+pub mod clips;
 pub mod collide;
 pub mod dice;
+pub mod doors;
+pub mod falls;
 pub mod fog;
+pub mod glass;
 pub mod glow;
 pub mod hear;
+pub mod knobs;
+pub mod layers;
 pub mod light;
 pub mod lines;
 pub mod maths;
+pub mod men;
 pub mod nav;
+pub mod poses;
+pub mod props;
 mod pow10;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
+pub mod items;
+pub mod slabs;
 pub mod smoke;
 pub mod state;
 pub mod world;
@@ -41,7 +52,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 9;
+pub const ABI: u32 = 28;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -120,6 +131,11 @@ pub extern "C" fn world_leaves(w: usize, set: usize, n: u32) {
         world::world(w).leaves[set] = n;
     }
 }
+/// how many things of furniture stand in world `w` now (their parts are list THING_SET of the leaves: world_leaves says how many)
+#[no_mangle]
+pub extern "C" fn world_things(w: usize, n: u32) {
+    world::world(w).things = if (n as usize) < world::MAX_THINGS { n } else { world::MAX_THINGS as u32 };
+}
 /// collision.ts segmentBlocked: −1 blocked · n ≥ 0 clear with n panes listed · −2 the pane list is full
 #[no_mangle]
 pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
@@ -129,6 +145,36 @@ pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1
 #[no_mangle]
 pub extern "C" fn lines_leaves(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32, set: i32) -> u32 {
     lines::leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set) as u32
+}
+/// how many panes of world `w` are no longer whole (the rows of its glass tables that are written: glass.rs)
+#[no_mangle]
+pub extern "C" fn world_glass(w: usize, n: u32) {
+    world::world(w).glass_n = if (n as usize) < world::MAX_GLASS { n } else { world::MAX_GLASS as u32 };
+}
+/// a burst's view of the glass of world `w` for the judgment in hand (glass.rs VIEW_*; 0 = none), and how many panes its rows name
+#[no_mangle]
+pub extern "C" fn world_view(w: usize, kind: u32, n: u32) {
+    let o = world::world(w);
+    o.view_kind = kind;
+    o.view_n = if (n as usize) < world::MAX_VIEW { n } else { world::MAX_VIEW as u32 };
+}
+/// glassbreak.ts `openAt(bi, X) || also(bi, X)`: is static `bi`, a pane of glass, open at the point (1) or not (0)
+#[no_mangle]
+pub extern "C" fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64) -> u32 {
+    let o = world::world(w);
+    ((bi as usize) < world::MAX_BOXES && glass::open(o, bi as usize, x, y, z)) as u32
+}
+/// collision.ts raycast: −1 nothing met · −2 the host answers (a ray that is not a number) · else the static's index, or 1e6 + the leaf's of list `set`;
+/// how far along and the face's normal → scratch 0 … 3. `ask` = 1 where the game has a rule for an open pane: a pane met where it is open is passed.
+#[no_mangle]
+pub extern "C" fn lines_ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: u32) -> i32 {
+    lines::ray(w, a0, a1, a2, r0, r1, r2, tmax, set, ask != 0, &mut scratch()[..4])
+}
+/// props.ts PropSystem.raycast over the furniture's parts as world `w` holds them: −1 nothing met · else which thing of the level's list; how far along,
+/// the face's normal and which part of the parts' list → scratch 0 … 4
+#[no_mangle]
+pub extern "C" fn lines_ray_things(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64) -> i32 {
+    lines::ray_things(w, a0, a1, a2, r0, r1, r2, tmax, &mut scratch()[..5])
 }
 
 // ---- a circle against the box world (collide.rs)
@@ -160,6 +206,317 @@ pub extern "C" fn fog_see(w: usize, set: i32, order: u32, n: u32, want: u32, kin
     fog::see(w, set, order, n, want, kind, through, a0, a1, a2, b0, b1, b2)
 }
 
+// ---- the knobs and the rig's named nodes that Rust code reads (knobs.rs), and the animator's layers that have moved (layers.rs)
+/// where a table of knobs.rs is: 0 the knobs' values · 1 their names · 2 the roles' nodes · 3 their names
+#[no_mangle]
+pub extern "C" fn knob_addr(table: u32) -> usize {
+    knobs::addr(table)
+}
+/// …and how long (values, bytes, nodes, bytes)
+#[no_mangle]
+pub extern "C" fn knob_len(table: u32) -> usize {
+    knobs::len(table)
+}
+// A LAYER (layers.rs) is asked as a question of a pose is (skeleton.rs): 0 = not a pose, or a role with no node · else it ran (bit 0), and a bit above for
+// all of the run-forward bones on the bench being current (bit 1) and for each list of nodes it ran forward there (from bit 2).
+/// CharacterAnimator.mvTrunk
+#[no_mangle]
+pub extern "C" fn layer_mv_trunk(g: usize, at: usize) -> u32 {
+    layers::mv_trunk(g, at)
+}
+/// CharacterAnimator.longBody
+#[no_mangle]
+pub extern "C" fn layer_long_body(g: usize, at: usize) -> u32 {
+    layers::long_body(g, at)
+}
+/// CharacterAnimator.mvPre
+#[no_mangle]
+pub extern "C" fn layer_mv_pre(g: usize, at: usize) -> u32 {
+    layers::mv_pre(g, at)
+}
+/// CharacterAnimator.stanceBody
+#[no_mangle]
+pub extern "C" fn layer_stance_body(g: usize, at: usize) -> u32 {
+    layers::stance_body(g, at)
+}
+/// CharacterAnimator.standPose (jogShape and sprintShape are steps of it), crouchPose
+#[no_mangle]
+pub extern "C" fn layer_stand_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    layers::stand_pose(g, at, at_b, at_c)
+}
+#[no_mangle]
+pub extern "C" fn layer_crouch_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    layers::crouch_pose(g, at, at_b, at_c)
+}
+/// CharacterAnimator.softKnees
+#[no_mangle]
+pub extern "C" fn layer_soft_knees(g: usize, at: usize) -> u32 {
+    layers::soft_knees(g, at)
+}
+/// CharacterAnimator.runArms
+#[no_mangle]
+pub extern "C" fn layer_run_arms(g: usize, at: usize) -> u32 {
+    layers::run_arms(g, at)
+}
+/// CharacterAnimator.runPlant
+#[no_mangle]
+pub extern "C" fn layer_run_plant(g: usize, at: usize) -> u32 {
+    layers::run_plant(g, at)
+}
+/// CharacterAnimator.sneakBody
+#[no_mangle]
+pub extern "C" fn layer_sneak_body(g: usize, at: usize) -> u32 {
+    layers::sneak_body(g, at)
+}
+/// CharacterAnimator.steadyLayer (`at_c`: the pose that holds the cycle's own sample of this frame)
+#[no_mangle]
+pub extern "C" fn layer_steady(g: usize, at: usize, at_c: usize) -> u32 {
+    layers::steady_layer(g, at, at_c)
+}
+/// CharacterAnimator.kickBody (`at_c`: its scratch pose)
+#[no_mangle]
+pub extern "C" fn layer_kick_body(g: usize, at: usize, at_c: usize) -> u32 {
+    layers::kick_body(g, at, at_c)
+}
+/// CharacterAnimator.toesUp
+#[no_mangle]
+pub extern "C" fn layer_toes_up(g: usize, at: usize) -> u32 {
+    layers::toes_up(g, at)
+}
+/// CharacterAnimator.wallBody (`at_c`, `at_b`: the standing and the crouched idle, sampled by the host)
+#[no_mangle]
+pub extern "C" fn layer_wall_body(g: usize, at: usize, at_c: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wall_body(g, at, at_c, at_b, at_rest)
+}
+/// CharacterAnimator.watchSlip, watchLook
+#[no_mangle]
+pub extern "C" fn layer_watch_slip(g: usize, at: usize) -> u32 {
+    layers::watch_slip(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_watch_look(g: usize, at: usize) -> u32 {
+    layers::watch_look(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_mv_post_body(g: usize, at: usize) -> u32 {
+    layers::mv_post_body(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_turn_weigh() -> u32 {
+    layers::turn_weigh()
+}
+#[no_mangle]
+pub extern "C" fn layer_lean_body(g: usize, at: usize) -> u32 {
+    layers::lean_body(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_gaze_keep(g: usize, at: usize) -> u32 {
+    layers::gaze_keep(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_sneak_arms(g: usize, at: usize, at_b: usize) -> u32 {
+    layers::sneak_arms(g, at, at_b)
+}
+#[no_mangle]
+pub extern "C" fn layer_carry_arms(g: usize, at: usize, at_b: usize, at_aim: usize) -> u32 {
+    layers::carry_arms(g, at, at_b, at_aim)
+}
+#[no_mangle]
+pub extern "C" fn layer_wall_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wall_arms(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_act_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::act_pose(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_wound_body(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wound_body(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_wound_limbs(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wound_limbs(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_long_arms(g: usize, at: usize, at_b: usize, at_aim: usize, at_rest: usize) -> u32 {
+    layers::long_arms(g, at, at_b, at_aim, at_rest)
+}
+/// CharacterAnimator.watchArm
+#[no_mangle]
+pub extern "C" fn layer_watch_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::watch_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.creepArms
+#[no_mangle]
+pub extern "C" fn layer_creep_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::creep_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.clutchArm
+#[no_mangle]
+pub extern "C" fn layer_clutch_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::clutch_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.boundArms
+#[no_mangle]
+pub extern "C" fn layer_bound_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::bound_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.reloadArm
+#[no_mangle]
+pub extern "C" fn layer_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::reload_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.pistolReloadArm
+#[no_mangle]
+pub extern "C" fn layer_pistol_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::pistol_reload_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.smokePose
+#[no_mangle]
+pub extern "C" fn layer_smoke_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::smoke_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.nvPose
+#[no_mangle]
+pub extern "C" fn layer_nv_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::nv_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.signalLayer
+#[no_mangle]
+pub extern "C" fn layer_signal_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::signal_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.tellLayer
+#[no_mangle]
+pub extern "C" fn layer_tell_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::tell_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.torchUpLayer
+#[no_mangle]
+pub extern "C" fn layer_torch_up(g: usize, at: usize, at_b: usize) -> u32 {
+    layers::torch_up(g, at, at_b)
+}
+/// CharacterAnimator.radioPose
+#[no_mangle]
+pub extern "C" fn layer_radio_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::radio_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.lockpickLayer
+#[no_mangle]
+pub extern "C" fn layer_lockpick_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::lockpick_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.haulLayer
+#[no_mangle]
+pub extern "C" fn layer_haul_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::haul_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.swapPose
+#[no_mangle]
+pub extern "C" fn layer_swap_pose(g: usize, at: usize, at_b: usize, at_rest: usize, at_sw: usize) -> u32 {
+    layers::swap_pose(g, at, at_b, at_rest, at_sw)
+}
+/// CharacterAnimator.stealthLayer
+#[no_mangle]
+pub extern "C" fn layer_stealth_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::stealth_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.cablePose
+#[no_mangle]
+pub extern "C" fn layer_cable_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::cable_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.takenLayer
+#[no_mangle]
+pub extern "C" fn layer_taken_layer(g: usize, at: usize) -> u32 {
+    layers::taken_layer(g, at)
+}
+/// CharacterAnimator.blowLegs
+#[no_mangle]
+pub extern "C" fn layer_blow_legs(g: usize, at: usize) -> u32 {
+    layers::blow_legs(g, at)
+}
+/// CharacterAnimator.blowTrunk
+#[no_mangle]
+pub extern "C" fn layer_blow_trunk(g: usize, at: usize) -> u32 {
+    layers::blow_trunk(g, at)
+}
+/// CharacterAnimator.blowArms
+#[no_mangle]
+pub extern "C" fn layer_blow_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::blow_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.knifePose
+#[no_mangle]
+pub extern "C" fn layer_knife_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::knife_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.readyLayer
+#[no_mangle]
+pub extern "C" fn layer_ready_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::ready_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.kitLayer
+#[no_mangle]
+pub extern "C" fn layer_kit_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::kit_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.doorLayer
+#[no_mangle]
+pub extern "C" fn layer_door_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::door_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.workLayer
+#[no_mangle]
+pub extern "C" fn layer_work_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::work_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.holdLayer
+#[no_mangle]
+pub extern "C" fn layer_hold_layer(g: usize, at: usize, at_b: usize, at_c: usize, at_aim: usize, at_rest: usize) -> u32 {
+    layers::hold_layer(g, at, at_b, at_c, at_aim, at_rest)
+}
+/// CharacterAnimator.heldLayer
+#[no_mangle]
+pub extern "C" fn layer_held_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::held_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.catchArm
+#[no_mangle]
+pub extern "C" fn layer_catch_arm(g: usize, at: usize) -> u32 {
+    layers::catch_arm(g, at)
+}
+/// CharacterAnimator.bigLayer
+#[no_mangle]
+pub extern "C" fn layer_big_layer(g: usize, at: usize, at_b: usize, at_buf: usize, at_rest: usize) -> u32 {
+    layers::big_layer(g, at, at_b, at_buf, at_rest)
+}
+/// CharacterAnimator.throwLayer
+#[no_mangle]
+pub extern "C" fn layer_throw_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::throw_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.handsPass
+#[no_mangle]
+pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {
+    layers::hands_pass(g, at)
+}
+/// CharacterAnimator.mvPostArms
+#[no_mangle]
+pub extern "C" fn layer_mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::mv_post_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.creepBody
+#[no_mangle]
+pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {
+    layers::creep_body(g, at)
+}
+/// CharacterAnimator.lifeLayer
+#[no_mangle]
+pub extern "C" fn layer_life(g: usize, at: usize) -> u32 {
+    layers::life_layer(g, at)
+}
+
 // ---- posing on the bench (skeleton.rs: the host writes a question's pose there, asks, and reads the answer back)
 /// where a table of the bench is: 0 rot · 1 pos · 2 args · 3 pose · 4 mask · 5 parent · 6 order
 #[no_mangle]
@@ -172,30 +529,66 @@ pub extern "C" fn pose_rig(nodes: u32, order: u32) -> u32 {
     skeleton::bench_rig(nodes, order);
     skeleton::bench_rig_ok() as u32
 }
-/// skeleton.ts blendPose over the poses in places `a`, `b` → `out`
+// A QUESTION OF A POSE says where the pose is (skeleton.rs): `g` = 0xffffffff → place `at` of the bench · else game `g`'s pool, the pose starting at single
+// `at` of the part. 1 = done · 0 = not a pose (or not a node), nothing written.
+/// skeleton.ts blendPose: poses `a`, `b` → `out`. `how`: 1 = with the bench's mask · 2 = worked in singles (the rule POSEMATH.singles, said by whoever
+/// asks: the host reads its own switch as it asks, a layer of the module reads the tick's knob)
 #[no_mangle]
-pub extern "C" fn pose_blend(a: usize, b: usize, w: f64, masked: u32, out: usize, n: usize) {
-    skeleton::bench_blend(a, b, w, masked != 0, out, n)
+pub extern "C" fn pose_blend(g: usize, a: usize, b: usize, w: f64, how: u32, out: usize, n: usize) -> u32 {
+    skeleton::ask_blend(g, a, b, w, how & 1 != 0, out, n, how & 2 != 0) as u32
 }
 /// PoseFK.run (root < 0) / runFrom
 #[no_mangle]
-pub extern "C" fn pose_run(p: usize, root: i32) {
-    skeleton::bench_run(p, root)
+pub extern "C" fn pose_run(g: usize, at: usize, root: i32) -> u32 {
+    skeleton::ask_run(g, at, root) as u32
 }
 /// PoseFK.parentRot → args 0‥3
 #[no_mangle]
-pub extern "C" fn pose_parent_rot(p: usize, i: usize) {
-    skeleton::bench_parent_rot(p, i)
+pub extern "C" fn pose_parent_rot(g: usize, at: usize, i: usize) -> u32 {
+    skeleton::ask_parent_rot(g, at, i) as u32
 }
 /// rotateLocal (0), rotateModel (1), setModelRot (2)
 #[no_mangle]
-pub extern "C" fn pose_turn(p: usize, i: usize, how: u32) {
-    skeleton::bench_turn(p, i, how)
+pub extern "C" fn pose_turn(g: usize, at: usize, nodes: usize, i: usize, how: u32) -> u32 {
+    skeleton::ask_turn(g, at, nodes, i, how) as u32
 }
 /// twoBoneIK
 #[no_mangle]
-pub extern "C" fn pose_ik(p: usize, a: usize, b: usize, c: usize, flags: u32) {
-    skeleton::bench_ik(p, a, b, c, flags)
+pub extern "C" fn pose_ik(g: usize, at: usize, a: usize, b: usize, c: usize, flags: u32) -> u32 {
+    skeleton::ask_ik(g, at, a, b, c, flags) as u32
+}
+/// skeleton.ts sampleClip: clip `clip` at time `t` into the pose (`nodes` = the pose's own count of nodes). `how`: 1 = the clip loops · 2 = the step
+/// between two keys worked in singles (POSEMATH.singles, as `pose_blend`)
+#[no_mangle]
+pub extern "C" fn pose_sample(g: usize, at: usize, nodes: usize, clip: usize, t: f64, how: u32) -> u32 {
+    skeleton::ask_sample(g, at, nodes, clip, t, how & 1 != 0, how & 2 != 0) as u32
+}
+// ---- the clips a pose is sampled from (clips.rs: a character file's animations, copied in once by src/anim/skeleton.ts)
+/// a clip of `tracks` tracks is about to be written: 0 = no room, the host samples it itself
+#[no_mangle]
+pub extern "C" fn clip_begin(duration: f64, tracks: usize) -> u32 {
+    clips::begin(duration, tracks) as u32
+}
+/// its next track: where the host writes the `keys` times, the values after them (an index into the module's singles) · 0xffffffff = refused
+#[no_mangle]
+pub extern "C" fn clip_track(node: usize, path: u32, step: u32, keys: usize) -> u32 {
+    clips::track(node, path, step != 0, keys)
+}
+/// the clip is whole: its number · −1 = refused, nothing of it kept
+#[no_mangle]
+pub extern "C" fn clip_end() -> i32 {
+    clips::end()
+}
+// ---- the poses a game keeps (poses.rs)
+/// room for a pose of `nodes` nodes in game `g`'s pool, zeros: where it starts · 0xffffffff = the pool is full
+#[no_mangle]
+pub extern "C" fn pose_new(g: usize, nodes: usize) -> u32 {
+    poses::new_of(g, nodes)
+}
+/// game `g`'s pool empty again (every pose taken out of it first: game/posehome.ts)
+#[no_mangle]
+pub extern "C" fn pose_clear(g: usize) {
+    poses::clear_of(g)
 }
 
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by src/sim/state.ts)
@@ -224,16 +617,16 @@ pub extern "C" fn state_layout() -> u32 {
 pub extern "C" fn state_parts() -> usize {
     state::PARTS.len()
 }
-/// part `i` of a block: where it starts (`what` 0) or how long it is (1), in bytes
+/// part `i` of a block: where it starts (`what` 0) or how long it is (1), in bytes; whether it is a pool, its first word the bytes of it in use (2)
 #[no_mangle]
 pub extern "C" fn state_part(i: usize, what: u32) -> usize {
     if i >= state::PARTS.len() {
         return 0;
     }
-    if what == 0 {
-        state::PARTS[i].off
-    } else {
-        state::PARTS[i].len
+    match what {
+        0 => state::PARTS[i].off,
+        1 => state::PARTS[i].len,
+        _ => state::PARTS[i].pool as usize,
     }
 }
 
@@ -242,6 +635,142 @@ pub extern "C" fn state_part(i: usize, what: u32) -> usize {
 #[no_mangle]
 pub extern "C" fn dice_roll(g: usize) -> f64 {
     dice::roll_of(g)
+}
+
+// ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
+/// where a table of the step's hand-over is: 0 the level's doors · 1 what comes back of each · 2 the contacts · 3 the noises · 4 the step's numbers
+#[no_mangle]
+pub extern "C" fn doors_addr(table: u32) -> usize {
+    doors::addr(table)
+}
+/// how many rows a table holds (5: the columns of the doors' part of a block)
+#[no_mangle]
+pub extern "C" fn doors_cap(table: u32) -> usize {
+    doors::cap(table)
+}
+/// doors.ts Doors.update for the game in slot `g`, over world `w`: how many noises were listed
+#[no_mangle]
+pub extern "C" fn doors_update(g: usize, w: usize) -> u32 {
+    doors::update(g, w)
+}
+
+// ---- the furniture men shove (props.rs: each thing's state in the game's block, the men, the leaves and the door frames handed in)
+/// where a table of the step's hand-over is: 0 the level's facts of each thing, by row · 2 the men · 3 the leaves · 4 the door frames · 5 the noises ·
+/// 6 the step's numbers
+#[no_mangle]
+pub extern "C" fn props_addr(table: u32) -> usize {
+    props::addr(table)
+}
+/// how many rows a table holds (0, 2 … 6), how wide a row of one is (9 … 12: a thing's facts, a man, a frame, a noise), how long the part is (13), and
+/// where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn props_cap(table: u32) -> usize {
+    props::cap(table)
+}
+/// props.ts PropSystem.update for the game in slot `g`, over world `w`: how many noises were listed
+#[no_mangle]
+pub extern "C" fn props_update(g: usize, w: usize) -> u32 {
+    props::update(g, w)
+}
+/// props.ts PropSystem.settle's passes for the game in slot `g`, over world `w` (the level's furniture resolved out of its authoring overlaps as the
+/// level is stood up): how many times a thing was pushed out of a static
+#[no_mangle]
+pub extern "C" fn props_settle(g: usize, w: usize) -> u32 {
+    props::settle(g, w)
+}
+
+// ---- a leaf off its hinges, in the air (slabs.rs: each slab's state in the game's block, its door's facts handed in)
+/// where the hand-over of one slab's step is (0)
+#[no_mangle]
+pub extern "C" fn slabs_addr(table: u32) -> usize {
+    slabs::addr(table)
+}
+/// how many rows the part holds (0), how long the hand-over is (1), how long the part is (13), and where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn slabs_cap(table: u32) -> usize {
+    slabs::cap(table)
+}
+/// doorblast.ts stepSlab for one slab of the game in slot `g`, over world `w`: 0 = stepped · 1 = the host's to take (nothing written) · 2 = no such step
+#[no_mangle]
+pub extern "C" fn slabs_step(g: usize, w: usize) -> u32 {
+    slabs::step(g, w)
+}
+
+// ---- what is thrown or dropped (items.rs: each thing's state in the game's block, the pool walked in one call)
+/// where the hand-over of one walk is (0) and the events it lists (1)
+#[no_mangle]
+pub extern "C" fn items_addr(table: u32) -> usize {
+    items::addr(table)
+}
+/// how many rows the part holds (0), how long the hand-over is (1), how many events the list holds (2) and how wide one is (3), how long the part is
+/// (13), and where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn items_cap(table: u32) -> usize {
+    items::cap(table)
+}
+/// throwables.ts Throwables.update for the game in slot `g`, over world `w`, from the row the hand-over names down: 0 = every row taken · 1 = the
+/// hand-over's row is the host's to take (the rows above it were) · 2 = no such walk
+#[no_mangle]
+pub extern "C" fn items_update(g: usize, w: usize) -> u32 {
+    items::update(g, w)
+}
+
+// ---- what falls and what it leaves (falls.rs: the landings the simulation has scheduled, a list a kind of thing, and the glass lying on the floor, in the
+// game's block). `l` is the list; one the module does not have is answered as nothing.
+/// 1 = the landing waits · 0 = the list was at its cap, and its glass is laid now
+#[no_mangle]
+pub extern "C" fn falls_schedule(g: usize, l: u32, t: f64, x: f64, y: f64, z: f64, name: f64, gain: f64, rate: f64, amount: f64, who: f64, event: f64, level: f64, dust: f64, cap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::schedule(g, l as usize, t, x, y, z, name, gain, rate, amount, who, event, level, dust, cap)
+}
+/// shards.ts deposit
+#[no_mangle]
+pub extern "C" fn falls_deposit(g: usize, x: f64, z: f64, amount: f64) {
+    falls::deposit(&mut state::state(g).falls, x, z, amount)
+}
+/// the landings of list `l` due at `time`: how many, each falls::DUE doubles of the scratch
+#[no_mangle]
+pub extern "C" fn falls_due(g: usize, l: u32, time: f64, level: f64, gap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::due(g, l as usize, time, level, gap, &mut scratch()[..])
+}
+/// shards.ts step: the level a footfall at (x, z) is filed at; how much glass was underfoot → scratch 0
+#[no_mangle]
+pub extern "C" fn falls_step(g: usize, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64) -> f64 {
+    falls::step(g, x, z, level, crunch_full, grind, gain, add, &mut scratch()[0])
+}
+/// nothing waits in list `l`; all = 1: the floor's memory of that list's last landing is set to `events` too, and with the glass's list the glass that lies goes
+#[no_mangle]
+pub extern "C" fn falls_clear(g: usize, l: u32, all: u32, events: f64) {
+    if (l as usize) < falls::NLIST {
+        falls::clear(g, l as usize, all != 0, events)
+    }
+}
+/// 1 = the floor is told of a landing of list `l` now (and that is remembered)
+#[no_mangle]
+pub extern "C" fn falls_heard(g: usize, l: u32, time: f64, gap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::heard(g, l as usize, time, gap)
+}
+
+/// the falls' own sizes: 0 cells across · 1 cells deep · 2 landings that can wait in a list · 3 columns a landing · 4 doubles a due landing · 5 lists
+#[no_mangle]
+pub extern "C" fn falls_cap(what: u32) -> usize {
+    match what {
+        0 => falls::CELLS_X,
+        1 => falls::CELLS_Z,
+        2 => falls::MAXP,
+        3 => falls::NP,
+        4 => falls::DUE,
+        5 => falls::NLIST,
+        _ => 0,
+    }
 }
 
 // ---- the senses (sight.rs, light.rs, smoke.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
@@ -264,10 +793,14 @@ pub extern "C" fn light_lamps() -> usize {
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
 }
-/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript
+/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `more` ≠ 0: a later
+/// PART of the question the call before began (the faces are kept in light.rs SUM from part to part and summed on, not begun again).
+/// `sigma` > 0: each lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs; `stands` = 0:
+/// no grid stands there), and where the grid cannot answer by the first `nb` blobs written (smoke.rs) under `spread`, `widest`, `rise`, `rise_rate`;
+/// 0: none of those is read
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64) -> u32 {
-    light::estimate(w, set, n, [p0, p1, p2], sigma, &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64, stands: u32, more: u32, nb: usize, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
+    light::asked(w, set, n, [p0, p1, p2], sigma, g, stamp, stands != 0, more != 0, nb, [spread, widest, rise, rise_rate], &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
@@ -283,12 +816,15 @@ pub extern "C" fn smoke_cap() -> usize {
 pub extern "C" fn smoke_trans(w: usize, set: i32, n: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
     smoke::trans(w, set, n, [a0, a1, a2], [b0, b1, b2], sigma, spread, widest, rise, rise_rate, &mut scratch()[0])
 }
-/// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point)
+/// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point) · 2 the cells a
+/// priced search asks the price of · 3 the prices (a double a cell)
 #[no_mangle]
 pub extern "C" fn nav_addr(table: u32) -> usize {
     match table {
         0 => nav::shut_addr(),
         1 => nav::way_addr(),
+        2 => nav::need_addr(),
+        3 => nav::price_addr(),
         _ => 0,
     }
 }
@@ -305,6 +841,25 @@ pub extern "C" fn nav_cap(table: u32) -> usize {
 pub extern "C" fn nav_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
     nav::find_path(w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
 }
+/// collision.ts NavGrid.findPath WITH a penalty: as `nav_path`, or −3 = the search has come to cells it has no price for: `nav_need` of them (a
+/// cell's index each, 32 bits) at `nav_addr(2)`. The host writes each one's price at `nav_addr(3)` (a double a cell, by index) and calls
+/// `nav_resume`, which answers as this does. While a search waits, every other search here answers −2; `nav_drop` lets a waiting one go.
+#[no_mangle]
+pub extern "C" fn nav_priced(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
+    nav::find_priced(w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+}
+#[no_mangle]
+pub extern "C" fn nav_need() -> usize {
+    nav::need_len()
+}
+#[no_mangle]
+pub extern "C" fn nav_resume() -> i32 {
+    nav::resume()
+}
+#[no_mangle]
+pub extern "C" fn nav_drop() {
+    nav::drop_run()
+}
 /// collision.ts SoundPaths.propagate, up to its memory of routed answers: hear::DIRECT (+ the grazes) / OVER / FAR / WALLED · 0xffffffff = ask the
 /// TypeScript. The straight distance → scratch 0.
 #[no_mangle]
@@ -318,44 +873,56 @@ pub extern "C" fn hear_route(w: usize, set: i32, ask: u32, seal: u32, gw: usize,
     hear::route(w, set, ask, seal, gw, gh, cell, [s0, s1, s2], [d0, d1, d2], straight, &mut scratch()[..4])
 }
 
-// ---- the game's own smoke on the coarse grid (bricks.rs): a game's state is `grid_len` doubles at `grid_addr`, written by the host when this copy is not
-// that game's latest (then `grid_fresh`) and read back after a call that changed it
+// ---- the game's own smoke on the coarse grid (bricks.rs): its state is a part of the game's block (state.rs), so a call names the block's slot `g`;
+// one that reads the tables made from the state names the block's `stamp` too (src/sim/state.ts SimState.stamp), and a step the box world `w` it is
+// taken over and that copy's number `copy` (src/scene/boxMirror.ts)
+/// the game in slot `g` has a grid, an empty one (`home` 1), or has none and its part is zeros (0)
 #[no_mangle]
-pub extern "C" fn grid_addr(w: usize) -> usize {
-    bricks::addr(w)
+pub extern "C" fn grid_reset(g: usize, home: u32) {
+    bricks::reset(g, home != 0)
 }
+/// no smoke anywhere in the grid of the game in slot `g` (the plan and the light that comes round stay)
 #[no_mangle]
-pub extern "C" fn grid_len() -> usize {
-    bricks::LEN
+pub extern "C" fn grid_clear(g: usize) {
+    bricks::empty(g)
 }
-/// the host wrote the state, or copied the box world afresh: the index is made again and every face is unknown
-#[no_mangle]
-pub extern "C" fn grid_fresh(w: usize) {
-    bricks::fresh(w)
-}
-/// a static was written inside this rectangle of the plan: the faces near it are asked again at the next step
+/// a static of box world `w` was written inside this rectangle of the plan: the faces near it are asked again at the next step
 #[no_mangle]
 pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
     bricks::dirty(w, x0, z0, x1, z1)
 }
-/// an emitter joins the list: where, how wide (m), what it lets out a second (unit·m³), for how long
-#[no_mangle]
-pub extern "C" fn grid_emit(w: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
-    bricks::emit(w, x, y, z, radius, rate, ttl)
-}
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
-/// on this level. `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs), from that many lamps written as for a question about the light
+/// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
+/// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs),
+/// from that many lamps written as for a question about the light. `wind_x`, `wind_z` not both 0 = the smoke under the open sky drifts by that
+/// vector (m/s), by the shares of it written at `grid_wind` and its rise with height (`wind_low` of it at the ground, `wind_gain` more by
+/// `wind_full_at` metres up); there the smoke keeps `wind_keep` of its own spread
 #[no_mangle]
-pub extern "C" fn grid_step(w: usize, set: i32, n: u32, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64) -> u32 {
-    let k = bricks::K { decay, spread, rise, rise_rate, gone };
+pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64, wind_x: f64, wind_z: f64, wind_low: f64, wind_gain: f64, wind_full_at: f64, wind_keep: f64) -> u32 {
+    // (a wind that is no number, or whose rise with height is none, is still air: the block is the game's state, and what is no number spreads)
+    let real = |v: f64| v - v == 0.0;
+    let windy = real(wind_x) && real(wind_z) && real(wind_low) && real(wind_gain) && real(wind_full_at) && real(wind_keep) && wind_low >= 0.0 && wind_gain >= 0.0 && wind_full_at > 0.0;
+    let (wind_x, wind_z) = if windy { (wind_x, wind_z) } else { (0.0, 0.0) };
+    let k = bricks::K { decay, spread, rise, rise_rate, gone, wind_x, wind_z, wind_low, wind_gain, wind_full_at, wind_keep };
+    let emits = &scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }];
     if lamps < 0 {
-        bricks::step(w, set, n, &k, None)
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
     } else {
-        bricks::step(w, set, n, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
     }
+}
+/// where the host writes the wind's share of each square metre of the plan before a step that has wind (bricks.rs WIND: `grid_wind_cap` doubles, row
+/// by row, twice the plan's bricks to a row)
+#[no_mangle]
+pub extern "C" fn grid_wind() -> *mut f64 {
+    bricks::wind_addr()
+}
+#[no_mangle]
+pub extern "C" fn grid_wind_cap() -> usize {
+    bricks::MAX_GLOW
 }
 /// how much of the light along a → b comes through the grid's smoke (1 = clear air)
 #[no_mangle]
-pub extern "C" fn grid_trans(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
-    bricks::trans(w, [a0, a1, a2], [b0, b1, b2], sigma)
+pub extern "C" fn grid_trans(g: usize, stamp: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
+    bricks::trans(g, stamp, [a0, a1, a2], [b0, b1, b2], sigma)
 }

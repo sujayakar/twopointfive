@@ -16,15 +16,17 @@
 // THE SWITCH: every entry point returns on its first line unless cutBoxesOn() (scene/cut.ts: ?cutboxes) — off, the pool, the walls and the digests are the base
 // build's, statement for statement. Nothing at module level uses another game module (the import cycle: tables are literals, the rest runs inside functions).
 import { Vec3, v3, quat } from '../math/vec';
-import { Box, makeBox, MKEY } from '../scene/boxes';
+import { Box, makeBox, MKEY, wordOf } from '../scene/boxes';
 import { CutPlane, MAX_CUT_PLANES, cutBoxesOn, cutPrism, cutRecord, cutFit, cutThrough, cutToWorld, cutVerts } from '../scene/cut';
 import type { Game } from './game';
 import type { Chunk, ChunkKind, Debris } from './debris';
 import { hash01, supportAlong } from './debris';
-import { gpuFx, surfOf, emitDust, PFX, type Surf } from './particleFx';
+import { gpuFx, emitDust, PFX, type Surf } from './particleFx';
+import { doesOf, type DoesWord } from '../scene/materials';
 import { NOBODY_ID } from './consts';
 import { messEvicted } from './floormess';
-import { EVICT } from './destructionSwitch';   // (the eviction pop's fix: a leaf module, no imports of its own)
+import { EVICT, DEBRIS } from './destructionSwitch';   // (the eviction pop's fix: a leaf module, no imports of its own)
+import { lookDecal } from './lookDecals';
 
 export type Mat = 'plasterboard' | 'masonry' | 'blockwork' | 'wood' | 'metal' | 'glass' | 'glassTough' | 'glassLam' | 'screen' | 'fabric' | 'paper' | 'cardboard' | 'tile' | 'plastic' | 'carpet' | 'plant';
 /** the piece shapes (§5.3): each is ONE box with a cut record. 'panel' = the uncut box */
@@ -127,19 +129,19 @@ export const BREAKS = {
   steel: { sheet: 0.008, kink: [9, 24] as [number, number], dents: [3, 5] as [number, number], dent: [0.025, 0.06] as [number, number], dentMost: 0.14, rim: 0.035, lip: 0.004, inside: 0.16 },
   /** the uprights a plasterboard partition keeps where fire has opened a run of it above a standing sill (one static stand-in each): half width along the wall
    *  (m), its depth as a share of the wall's, its metal */
-  stud: { half: 0.02, depthK: 0.7, foot: 0.13, albedo: [0.56, 0.57, 0.6] as Vec3, rough: 0.35, metal: true },
+  stud: { half: 0.02, depthK: 0.7, foot: 0.13, albedo: [0.56, 0.57, 0.6] as Vec3, rough: 0.35, metal: true, does: 'unnamed light grey' as DoesWord },   // (`does`, scene/materials.ts: what its grey was to a round until 11-05, a light thing that puffs like plaster. Nobody chose it: a stud is steel)
 };
 export const BREAK_STATS = { shaped: 0, plain: 0, refused: 0, again: 0, mayhem: 0, china: 0, crumbled: 0, heap: 0, ragged: 0, planes: 0, dropped: 0, chips: 0, dressed: 0, kinked: 0, loose: 0, sheets: 0, carcasses: 0, notched: 0 };
 
 const SURF_MAT: Record<Surf, Mat> = { metal: 'metal', plastic: 'plastic', glass: 'screen', wood: 'wood', cardboard: 'cardboard', drywall: 'plasterboard', concrete: 'masonry', carpet: 'carpet', fabric: 'fabric', foliage: 'plant' };
 export const matOfSurf = (s: Surf): Mat => SURF_MAT[s];
-/** the row a pool chunk reads: by what the destruction lane already knows the thing is (a tile, a housing, clutter), else by its paint */
-export function matOf(kind: ChunkKind, albedo: Vec3): Mat {
+/** the row a pool chunk reads: by what the destruction lane already knows the thing is (a tile, a housing, clutter), else by what its box does (scene/materials.ts) */
+export function matOf(kind: ChunkKind, box: { does?: string }): Mat {
   if (kind === 'shard') return 'glass';
   if (kind === 'tile') return 'tile';
   if (kind === 'housing') return 'screen';
   if (kind === 'binder') return 'plastic';
-  const s = surfOf(albedo);
+  const s = doesOf(box).surf;
   if (kind === 'clutter') return s === 'foliage' ? 'plant' : 'plastic';   // (desk clutter is painted 'black', which the paint table reads as metal: it is plastic and china)
   return SURF_MAT[s];
 }
@@ -335,14 +337,19 @@ export class Breaks {
   private queue: Chunk[] = [];
   constructor(private g: Game, private debris: Debris) {}
   private hash = (): number => hash01(this.counter++ * 2246822519);
-  reset() { this.counter = 1; this.queue.length = 0; this.kinkT = -1e9; }
+  /** THE POOL'S OWN DIE (DEBRIS.dress — destructionSwitch.ts): what is drawn only because the pool took a piece or refused it (a refused piece's chips, a taken
+   *  piece's torn outline or its kink) comes off a count of its own, so the die above — which lays out what a broken cell THROWS, and so where the simulation's
+   *  landings fall — is drawn the same on a machine whose pool is full, small or absent. With the switch off there is one die, as there always was. */
+  private pcounter = 1;
+  private phash = (): number => DEBRIS.dress ? hash01(this.pcounter++ * 2246822519 + 0x51ed27) : this.hash();
+  reset() { this.counter = 1; this.pcounter = 1; this.queue.length = 0; this.kinkT = -1e9; }
   private small(): boolean { return this.debris.cap() < 64; }
   /** a chunk's serial counted from the pool's last clear(): 1, 2, … in every encounter = a fresh game's own serials, so a restarted or loaded encounter breaks its pieces again as a
    *  fresh game does (the pool's `serial` itself runs on across restarts: motion keys stay unique) */
   private rel(c: Chunk): number { return c.serial - this.debris.serial0 + 1; }
   /** the rigid pool's share of one blast for thrown wall / cover pieces, heap slabs, furniture pieces */
   share(): { thrown: number; heap: number; furniture: number } {
-    const s = this.small() ? BREAKS.share.small : BREAKS.share.big;
+    const s = this.small() && !DEBRIS.dress ? BREAKS.share.small : BREAKS.share.big;   // (DEBRIS.dress: what a blast THROWS is the simulation's and the same on every tier — the full share; a small pool turns what it cannot hold into chips)
     return this.look?.on && BREAKS.lookHeap ? { thrown: s.thrown + s.heap, heap: 0, furniture: s.furniture } : s;   // (somebody's rubble is the heap: its part is thrown)
   }
   /** THE LOAD NUMBER (probes, the panel): pieces moving + particle records waiting to be born */
@@ -350,9 +357,15 @@ export class Breaks {
 
   // ---------------------------------------------------------------- the pool's hooks (game/debris.ts calls them; each is nothing with the switch off)
   /** every chunk the pool takes: its row by what it is, its row's bounce and landing level */
+  /** for the simulation's landing of a piece (debris.ts thrown): the level born() below gives such a chunk, and the puff breakAgain raises when a tile lands hard enough to break again */
+  lands(kind: Chunk['kind'], box: Box, speed: number): { level: number; dust: number } {
+    if (!cutBoxesOn() || kind === 'shard') return { level: 0, dust: 0 };
+    const mat = matOf(kind, box), row = BREAK[mat];
+    return { level: row.level, dust: mat === 'tile' && row.puff > 0 && row.again !== null && speed >= row.again.land ? row.puff : 0 };
+  }
   born(c: Chunk) {
     if (!cutBoxesOn() || c.kind === 'shard') return;
-    this.tag(c, matOf(c.kind, c.box.albedo), 0, c.box.albedo, c.kind === 'binder');
+    this.tag(c, matOf(c.kind, c.box), 0, c.box.albedo, c.kind === 'binder');
   }
   private tag(c: Chunk, mat: Mat, gen: 0 | 1, paint: Vec3, fixed = false) {
     const row = BREAK[mat]; c.mat = { mat, gen, paint: v3.copy(paint) }; if (fixed) c.mat.fixed = true;
@@ -390,7 +403,7 @@ export class Breaks {
    *  extent their scatter) — the shape it had, not a ball at its middle — and its row's dust once, by its size (no sparks: nothing struck it) */
   private dissolve(c: Chunk) {
     const P = gpuFx(this.g); BREAK_STATS.crumbled++; if (!P) return;
-    const m = c.mat ?? { mat: matOf(c.kind, c.box.albedo), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat]; const b = c.box, h = b.h;
+    const m = c.mat ?? { mat: matOf(c.kind, c.box), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat]; const b = c.box, h = b.h;
     const il = h[0] >= h[1] && h[0] >= h[2] ? 0 : h[1] >= h[2] ? 1 : 2; const r = h[il]; const mid = Math.max(...[0, 1, 2].filter(i => i !== il).map(i => h[i]));
     const [n0, n1] = BREAKS.sizedChips, [s0, s1] = BREAKS.sizedSpan; const n = Math.round(n0 + (n1 - n0) * Math.max(0, Math.min(1, (r - s0) / Math.max(1e-3, s1 - s0))));
     const ax = quat.rotate(b.rot ?? quat.yaw(b.yaw), il === 0 ? [1, 0, 0] : il === 1 ? [0, 1, 0] : [0, 0, 1]);
@@ -431,7 +444,7 @@ export class Breaks {
   }
   /** a piece gone into particles of its own material where it is (an eviction, the mayhem rule, china) */
   private crumble(c: Chunk, count: [number, number], speed: number) {
-    const m = c.mat ?? { mat: matOf(c.kind, c.box.albedo), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat];
+    const m = c.mat ?? { mat: matOf(c.kind, c.box), gen: 0 as const, paint: c.box.albedo }; const row = BREAK[m.mat];
     const n = count[0] + Math.floor(hash01(this.rel(c) * 577 + 3) * (count[1] - count[0] + 1));
     const r = Math.max(c.box.h[0], c.box.h[1], c.box.h[2]);
     this.chips(row, m.paint, c.box.c, [0, 1, 0], n, speed, r * 0.6, c.who, Math.max(1, Math.min(2.2, r / 0.08)));
@@ -439,7 +452,7 @@ export class Breaks {
   }
   /** a piece the pool refused (everything in it is still moving): a burst of chips of its material */
   private refuse(row: BreakRow, paint: Vec3, at: Vec3, v: Vec3, who: number) {
-    this.chips(row, paint, at, v3.normalize(v), BREAKS.refuseChips[0] + Math.floor(this.hash() * (BREAKS.refuseChips[1] - BREAKS.refuseChips[0] + 1)), 2.2, 0.05, who, 1.3);
+    this.chips(row, paint, at, v3.normalize(v), BREAKS.refuseChips[0] + Math.floor(this.phash() * (BREAKS.refuseChips[1] - BREAKS.refuseChips[0] + 1)), 2.2, 0.05, who, 1.3);
     BREAK_STATS.refused++;
   }
 
@@ -467,7 +480,7 @@ export class Breaks {
     const rot = b.rot ?? quat.yaw(b.yaw); const nw = quat.rotate(rot, n);
     for (let k = 0; k < 2; k++) {
       const f = cutFit(h, halves[k].cut); const w = cutToWorld(f.off, b.yaw, b.rot); const sgn = k === 0 ? -1 : 1;
-      const box = makeBox({ c: [b.c[0] + w[0], b.c[1] + w[1], b.c[2] + w[2]], h: f.h, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo) });
+      const box = makeBox({ c: [b.c[0] + w[0], b.c[1] + w[1], b.c[2] + w[2]], h: f.h, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), ...wordOf(b) });
       const sep = 0.35 + 0.5 * r(10 + k);
       const v: Vec3 = [c.v[0] + nw[0] * sgn * sep, Math.max(c.v[1], 0) + 0.3 + 0.5 * r(12 + k), c.v[2] + nw[2] * sgn * sep];
       const wv: Vec3 = [c.w[0] + (r(14 + k) - 0.5) * 5, c.w[1] + (r(16 + k) - 0.5) * 3, c.w[2] + (r(18 + k) - 0.5) * 5];
@@ -479,8 +492,8 @@ export class Breaks {
     }
     this.chips(row, m.paint, b.c, [0, 1, 0], a.chips, 1.6, Math.max(h[lg], 0.04) * 0.5, c.who);
     this.fines(row, m.paint, b.c, [0, 1, 0], 0.5);
-    if (row.puff > 0 && m.mat === 'tile') this.g.destr.cellDust(b.c, [0, 1, 0], row.puff, 'drywall');
-    if (row.mark > 0 && c.box.c[1] - supportAlong(b, [0, 1, 0]) < 0.06) this.g.decals.add('chip', [b.c[0], b.c[1] - supportAlong(b, [0, 1, 0]) + 0.002, b.c[2]], [0, 1, 0], row.mark * (0.7 + 0.6 * r(20)));   // (on the floor only: a desk top keeps its finish)
+    if (row.puff > 0 && m.mat === 'tile' && !c.dress) this.g.destr.cellDust(b.c, [0, 1, 0], row.puff, 'drywall');   // (a piece that is dressing puts no smoke where the senses read it: the simulation's landing of it raised this puff — lands() above, debris.ts landings)
+    if (row.mark > 0 && c.box.c[1] - supportAlong(b, [0, 1, 0]) < 0.06) { const d = this.g.decals.add('chip', [b.c[0], b.c[1] - supportAlong(b, [0, 1, 0]) + 0.002, b.c[2]], [0, 1, 0], row.mark * (0.7 + 0.6 * r(20)), c.dress ? { look: true } : {}); if (c.dress) lookDecal(d); }   // (a dressing piece's mark is the picture's too: lookDecals.ts)   // (on the floor only: a desk top keeps its finish)
     BREAK_STATS.again++;
   }
 
@@ -495,7 +508,7 @@ export class Breaks {
     const ax = ([0, 1, 2] as (0 | 1 | 2)[]).sort((i, j) => h[i] - h[j]); const thin = ax[0], mid = ax[1], long = ax[2];
     if (h[long] < 0.04) return;   // a crumb: nothing to show
     if (m === 'metal') { this.kink(c, thin, mid, long); return; }
-    const sb = this.outline(m, row, h, thin, mid, long, this.hash);
+    const sb = this.outline(m, row, h, thin, mid, long, this.phash);
     if (!sb || !sb.cut) { BREAK_STATS.plain++; return; }
     const o = quat.rotate(b.rot ?? quat.yaw(b.yaw), sb.off);
     b.c = [b.c[0] + o[0], b.c[1] + o[1], b.c[2] + o[2]]; b.h = sb.h; b.cut = sb.cut; b.cutCore = faceCore(row, c.mat.paint); b.albedo = this.tint(row, c.mat.paint, BREAKS.coreTint);
@@ -576,7 +589,7 @@ export class Breaks {
     const b = c.box, h = b.h, K = BREAKS.kink;
     if (h[thin] > 0.25 * h[mid] || h[long] < K.minLong || (!every && Math.abs(this.g.time - this.kinkT) < K.gapSecs)) return false;   // plates only; one a blast (a torn-off sheet: every one)
     if (!every) this.kinkT = this.g.time;
-    const alpha = lerp(deg, this.hash()) / 2 * RAD, phi = (this.hash() * 2 - 1) * K.skew * RAD, u0 = (this.hash() - 0.5) * K.off * h[long];
+    const alpha = lerp(deg, this.phash()) / 2 * RAD, phi = (this.phash() * 2 - 1) * K.skew * RAD, u0 = (this.phash() - 0.5) * K.off * h[long];
     const f: Vec3 = [0, 0, 0]; f[long] = Math.cos(phi); f[mid] = Math.sin(phi);   // across the fold, in the plate's plane
     let sMax = 0; for (const sl of [-1, 1]) for (const sm of [-1, 1]) sMax = Math.max(sMax, Math.abs(f[long] * sl * h[long] + f[mid] * sm * h[mid] - u0));
     const ta = Math.tan(alpha), tau = h[thin] / Math.cos(alpha), tc = sMax * ta / 2, len = Math.hypot(1, ta);
@@ -587,7 +600,7 @@ export class Breaks {
     };
     const c0 = half(1), c1 = half(-1); if (!c0 || !c1) return false;
     b.h = H; b.cut = c0;
-    c.mate = makeBox({ c: b.c, h: [H[0], H[1], H[2]], yaw: b.yaw, rot: b.rot, albedo: v3.copy(b.albedo), flags: b.flags, name: 'debris', mkey: MKEY.debris + ((c.serial + 32768) & 65535) });
+    c.mate = makeBox({ c: b.c, h: [H[0], H[1], H[2]], yaw: b.yaw, rot: b.rot, albedo: v3.copy(b.albedo), ...wordOf(b), flags: b.flags, name: 'debris', mkey: MKEY.debris + ((c.serial + 32768) & 65535) });
     c.mate.cut = c1; c.mate.rough = b.rough; c.mate.metal = b.metal;
     BREAK_STATS.kinked++; BREAK_STATS.planes += c0.length + c1.length;
     return true;
@@ -621,7 +634,7 @@ export class Breaks {
       const sp = 1.2 + 2.2 * this.hash(); const v: Vec3 = [out[0] * sp + (this.hash() - 0.5) * 0.8, 0.6 + 1.4 * this.hash(), out[2] * sp + (this.hash() - 0.5) * 0.8];
       const w: Vec3 = [(this.hash() - 0.5) * 9, (this.hash() - 0.5) * 5, (this.hash() - 0.5) * 9];
       const h: Vec3 = sb ? sb.h : (() => { const hh: Vec3 = [S, S, S]; hh[thin] = halfT; hh[vert ? 1 : along] = L; return hh; })();
-      const got = this.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(tinted) }), v, w, who);
+      const got = this.debris.spawn('chunk', makeBox({ c, h, yaw: cell.yaw, albedo: v3.copy(tinted) }), v, w, who, row.level);
       budget.chunks--;
       if (!got) { this.refuse(row, paint, c, v, who); res.refused++; continue; }
       got.box.cut = sb?.cut; if (sb?.cut) got.box.cutCore = faceCore(row, paint); got.box.rough = cell.rough; got.box.metal = cell.metal;
@@ -706,16 +719,16 @@ export class Breaks {
   /** THE STUDS of a holed plasterboard partition: one thin metal upright on every column line that has an OPEN upper cell on both sides and a STANDING sill on
    *  both sides — a port more than one column wide keeps its framing, a hole (the sill gone) does not. Read off the cells alone (not off what opened them), so
    *  a checkpoint's reload stands the same studs. Local centres (the breakable's frame) + half extents; [] with the switch off or for any other material. */
-  studs(B: CellGrid): { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean }[] {
+  studs(B: CellGrid): { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean; does: DoesWord }[] {
     if (!cutBoxesOn() || B.ny < 2 || SURF_MAT[B.surf] !== 'plasterboard' || B.nOpen === 0) return [];
-    const K = BREAKS.stud; const alongX = B.nx > 1 || B.nz === 1 && B.box.h[0] >= B.box.h[2]; const N = alongX ? B.nx : B.nz; const out: { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean }[] = [];
+    const K = BREAKS.stud; const alongX = B.nx > 1 || B.nz === 1 && B.box.h[0] >= B.box.h[2]; const N = alongX ? B.nx : B.nz; const out: { c: Vec3; h: Vec3; albedo: Vec3; rough: number; metal: boolean; does: DoesWord }[] = [];
     const open = (k: number, iy: number) => B.open[alongX ? (iy * B.nz) * B.nx + k : (iy * B.nz + k) * B.nx] === 1;
     const L = alongX ? B.box.h[0] : B.box.h[2], T = alongX ? B.box.h[2] : B.box.h[0]; const y0 = B.yb[1], y1 = B.yb[B.ny];
     for (let k = 0; k + 1 < N; k++) {
       if (!open(k, 1) || !open(k + 1, 1) || open(k, 0) || open(k + 1, 0)) continue;
       const u = -L + 2 * L * (k + 1) / N; const yl = y0 - K.foot; const c: Vec3 = alongX ? [u, (yl + y1) / 2, 0] : [0, (yl + y1) / 2, u];   // (its foot runs down into the sill: a ragged sill top never leaves it hanging)
       const h: Vec3 = alongX ? [K.half, (y1 - yl) / 2, T * K.depthK] : [T * K.depthK, (y1 - yl) / 2, K.half];
-      out.push({ c, h, albedo: K.albedo, rough: K.rough, metal: K.metal });
+      out.push({ c, h, albedo: K.albedo, rough: K.rough, metal: K.metal, does: K.does });
     }
     return out;
   }
