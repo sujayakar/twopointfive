@@ -4110,3 +4110,52 @@ row on his machine is the answer, and the word puts the count back on any machin
   read again after a put-back; a mask asked a third time while part-decided (walls changing faster than it can be decided). LEFT: those; the sight
   lines and rays still run the simulation's exact maths (cos and hypot swapped in for the browser's: 1 to 3 ms of a frame by that profile), which
   the picture need not; the engine's daylight lights keep their own raster and queue (the bullet above).
+- **THE DAYLIGHT'S MASKS BY THE LAMPS' TWO RULES: DECIDED AGAIN ONLY BEHIND WHAT CHANGED, AND IN THE KEEPER'S ONE ALLOWANCE OF TIME** (11-05; the
+  look's page only, since only it has opening lights; `engine.ts lightMasks`, `dayOpenings`, `openMaskSome`, `OpenRec`, `maskOld`;
+  `render/reachKeep.ts KeepGuest`, `ROUND`, `KEEP_MOST`, `tickTimed(n, guests)`; `render/reach.ts wallRasterHandOnSteps` now says WHERE the
+  walls changed. NO SWITCH OF ITS OWN, against the rule for a new one: a registered switch needs `game/knobs.ts`, which is closed to change
+  while the simulation is ported, and a word `main.ts` reads by itself is against `qa.md`'s rule. What it moves is WHEN a mask lands, never
+  its bits, which the check holds; `?planpace=old` and `?reachpace=old` put the clock off as before, and neither puts RULE 1 off: a real box
+  compares it by commit). FOUND by the performance goal's profile on a real box: with the keeper held to 1.2 to 4.6 ms a frame after a
+  charge, what was LARGER was `lookOpeningLights`' own masks: 84 to 90 ms over the 1.8 s after each blast, 63 to 70 of it its own
+  `reachMaskSome`.
+  THE CAUSE was not the pace. A change of the walls ANYWHERE marked EVERY opening's mask old, and an old mask was decided again WHOLE, from
+  nothing: eleven whole-level masks a blast on the pass, where a lamp's has only ever been decided again behind the change (`ReachOnly`).
+  RULE 1, the lamps' own. The finding of the openings returns the rect its raster changed in. Each record keeps what its next mask is OWED: those
+  rects since its last mask was begun, or all of it where there is no telling or more than `OWED_MOST` have piled up (`owed`), and the place its
+  mask was decided at (`at`). Whether a mask is an old one is not a flag anybody sets: it is old when it is owed anything or was decided
+  somewhere else (`maskOld`). A mask is decided again from the old one, the cells whose line to the opening passes no owed rect keeping their
+  level (the rects' wedge: the SAME mask as one decided whole, which the check holds on every scenario), where the old one was decided at this
+  very place (`sameSpot`: the points along the wall that `reach.ts` reads, so a sill that moved is the same mask). A JOB BEGUN IS FINISHED AS
+  BEGUN, of the walls and the place it began with, and its mask is then an old one if either moved meanwhile: walls that change every few
+  frames, or a hole found again a little way off each time, keep no light waiting, and in play no mask is decided whole in one clocked frame
+  (the masks' first frame, a level's or the rooms row's put on, is whole as before). A new opening over an old one takes its mask, its light
+  and its job in hand, and is owed its own whole. A rect inside one already owed adds nothing.
+  RULE 2. On the clock the engine decides no mask itself: `dayOpenings` finds the openings and returns each owed mask as a GUEST, a closure that
+  works a slice of the opening's own job against the engine's own raster; `lightMasks` hands them to the keeper's one step and then writes the
+  lights (a mask is used on the frame it is whole). The keeper works guests and lamps in ONE allowance (`KEEP_MS`) on one clock. WHO LEADS A STEP
+  is the next in a fixed round that owes work: the guests whose light is OUT for want of a mask and would be lit with it (a hole just blown,
+  open, among the lit few, under a sky the picture shows), twice in four; the lamps with the walls' reading; the guests whose old mask serves.
+  The lead has the allowance first and the rest follow with what it left; a class that owes leads one step in four at the least. A waiting note
+  of the walls is counted down once a step, whoever leads. A step also spends no more than `KEEP_MOST` (4) of the count's shares of sight-line
+  steps: a browser that holds its clock to tens of milliseconds cannot say when two are up, and would decide every waiting mask in one frame
+  (the walls' scan and a directional light's cells are not held by it; at the rates measured the time ends a step first).
+  On the count (a stand with no clock, `?planpace=old`, `?reachpace=old`) the keeper's `tick()` and then the openings with their own share,
+  as ever, and no clock is asked.
+  MEASURED, headless (`openings-check`, the pass, one hole in the store's wall): the daylight's masks took 526,745 sight-line steps where they
+  take 2,954,201 with every mask whole again, and the masks are the same. NOT TIMED ON A REAL BOX; the performance goal has the blast profile to
+  run against the tip before. On the count the lamps' masks did not move (`reach-cost --against` the tip before, 956 of 956).
+  THE COST IN THE PICTURE, not seen on a GPU: a hole's light comes on when its mask is whole in two shared milliseconds a frame, where it had
+  60,000 steps a frame of its own; the other openings' are done in a frame or two each, where they queued behind each other. While a hole
+  waits, the lamps lead one step in four where they had every step, so a lamp asked three times while part-decided (its own third go, whole,
+  the keeper's older rule) is likelier than it was.
+  Checks: `openings-check`, one line on both stands, every frame the engine's own `lightMasks` with a scripted clock: a hole and a second wall
+  cut while it is dark (which guest leads, and not when far, shut or unseen; a held note read on time; at rest the count's masks and each the
+  one decided whole); every lamp asked every frame; all three classes owing (the frames go two, one, one); a hole that slides twenty times,
+  moves once, is found off where no wall changed, has a box set down in its view, is taken over with a rect owed, is owed nine rects; no frame
+  over three shares and none beside the keeper's step; a keeper never booted; the row off; the rooms row off and on; a clock that does not
+  run; the cost with every mask whole again. `MASKCLOCK_BREAK=1` and `MASKOWED_BREAK=1` fail it, and each of 28 one-line breaks of the rules,
+  tried by hand, turned it red.
+  `reachkeep-check`, `blast-pace-check`. LEFT, and the end of this road: the engine's daylight lights keep a raster of the walls and a book of
+  what each mask is owed beside the keeper's own; an opening as one more light of the keeper's, with one reading of the walls for both, removes
+  the guests, the round and this book together, and gives the openings the lamps' finer line-by-line test.

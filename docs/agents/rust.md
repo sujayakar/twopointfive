@@ -309,8 +309,9 @@ one stops the tool by name, on an address one does nothing and says so in the co
     under the Rust's own names; `rust-check` reads the Rust sources and is red where one differs.
     - `sight` — an eye on a man (`game/guards.ts eyeContact`: the cone in plan, the lens's elevation, then the line to his chest and, behind a blocked
       chest, to his head) from `sight.rs`. `?rustsight`, `TPS_RUSTSIGHT=1`. Only for an eye whose line passes glass (every eye's does today).
-    - `light` — the lamps on a point (`guards.ts lightEstimateAt`) from `light.rs`. The host keeps the gates that are about WHOSE lamp it is (enabled, the
-      owner skipped, steady or not), in their order, writes a row a lamp that passed and whose reach can hold the point, and asks once; the hour's sun and
+    - `light` — the lamps on a point (`guards.ts lightEstimateAt`) from `light.rs`. The level's own lamps are read where they stand, the rows of the
+      lights' part (THE READER, below); the host keeps the gates of the lamps no fixture feeds (enabled, the owner skipped, passing or not), writes
+      each that passed and whose reach can hold the point, and asks once; the hour's sun and
       sky and a stroke of lightning are added to the same six faces in TypeScript afterwards, as they were (`hours.ts hourLight` keeps its own memory of
       rays, which is state of the host's). `?rustlight`, `TPS_RUSTLIGHT=1`.
     - `smoke` — the game's own smoke along a line (`game/sense.ts CpuSmoke.trans`, what `SENSE.cpu` sees through; now asked as `CpuSmoke.along(col, a, b)`)
@@ -536,6 +537,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   plays, and the frozen stand runs `lines` and `circles` only (the other two need the game's own maths). Probe families with the rows up: destruction,
   furnblast, breaks, winbars, wallbreak and wallcharge were run both ways before the last review's mends (3.3 million questions, none different); the
   door, glass and frag families were not.
+- **What a pane of glass is to play** (`rust/sim/src/panes.rs`, `pattern.rs`, `pen.rs`; the `panes` part, the block's last; 2026-11-05): the rule, a round through glass and the window's bars gone from TypeScript to the module, no row. The whole account, file by file and special case by special case, is `docs/agents/destruction.md`, the bullet of that name. The open question below is still the door lines and rays come by; it reads a row where it stands now, through `World.panes_g`.
 - **A pane's open question** (`rust/sim/src/glass.rs`; the copy's panes, `boxMirror.ts panes` / `PaneSource`; 2026-11-04). Whether a pane of glass
   is open where a line or a ray meets it (`glassbreak.ts openAt(bi, X) || also(bi, X)`, what `col.glassOpen` answers) is answered IN THE MODULE.
   Before it, every rule there that met a pane stopped and handed the question back: the ray was walked again in TypeScript (6,500 rays in twelve
@@ -560,7 +562,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
     `glassbreak.ts` sorted once), so "this clump is out" is "(its key, its number) is no later than the last one out": the row holds that one
     pair and the module works a clump's key out again (`gpDiceKey`, the same arithmetic). The row is written from the clumps that ARE out, not
     from the step's counter: a clump's release is heard by the game before the counter moves, and a question asked from inside that hearing (a
-    shard's ray, a sound's line) must find the clump out. A review found the first version one clump late there; `glass-ident` now asks from
+    shard's ray, a sound's line) must find the clump out. A review found the first version one clump late there; `glass-ident` (gone with the TypeScript rule: `pane-ident` holds it now) asked from
     inside every release.
   - A BURST'S VIEW IS DATA. A blast judges its lines by glass as it is to a burst (`frag.ts throughGlass`), which was a closure hung on the glass
     for the length of one judgment. `GlassBreak.seeThrough(view, from, size, fn)` now says it twice: the closure for this side's walks, and rows
@@ -596,7 +598,7 @@ one stops the tool by name, on an address one does nothing and says so in the co
   - A RULE'S STEP ASKS ONCE (`col.rulesPanes()`): a slab's and a thrown thing's rays ask the pane's rule, so their step takes the answer
     (0 or 1) from one place, which also counts a −1 as the TypeScript's under the rules' own row. The thrown things ask again before each walk:
     a row this side stepped in between may have broken more glass than the copy holds.
-  - WHAT HOLDS IT: `tools/qa/glass-ident.ts` (`GLASS_BREAK=1` must fail it; the section `glass` of `rust-check`, which runs it ON BOTH STANDS:
+  - WHAT HELD IT, until the rule moved here too: `tools/qa/glass-ident.ts` (now `tools/qa/pane-ident.ts`, `PANES_BREAK=1` must fail it; the section `glass` of `rust-check`, which runs it ON BOTH STANDS:
     toughened glass comes down in a wave on the frozen stand and drops after a beat on the page's, and the two reach different rows). The glass
     of four levels, and one block of solid glass a level, broken by the game's own entry points (rounds hard and soft, pellets, blasts, the
     glass's step, a pane made another glass, every pane made whole); points on and off every pane asked of the rule and of the module with no
@@ -644,8 +646,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
 - **The level's lights are the module's (`rust/sim/src/lights.rs`, `src/sim/lightshome.ts`; no row, no twin).** What a run's digest reads: each fixture's on, broken, blind until, what a hand left and factor; the mains (active, permanent, until, since, restored at, the timer at the panel); the lamps fixtures feed; a camera's pan, integrator, state and last sighting; a tripwire's trips, last trip, held, cut and sense. ONE WAY IN: `LightHome.in(kind, fixture, numbers)`, and `flip` for a wall switch's circuit, whose rule reads all its fixtures at once. (What the host itself writes into the part: the level's facts as it is built (`add`, `camera`, `laser`, `stand`), a lamp's record (`feed`), and a machine as a file or a fresh encounter has it (`put`). `Fixture` and `Mains` have no setter.) `tools/qa/lights-lint.ts` is red on any other writer, and the compiler holds the rest: `game.ts LightTarget` is `lightshome.ts Fixture`, whose state is getters.
   - **Ways out are bits on the call's answer, at the place in the tick they always were** (`LIGHT_EV`, `CAM`, `LASER`, `in`'s answer to a trip). What goes with them stays TypeScript: the guards' edge and the die's draws per patrol guard, the errand to the breaker, powerout.ts, words, sounds, the debrief, `sendToLook`. Who is at the panel is an input (`near`); who that is, his hand and his line are the caller's. A camera's picture is an input too (`cameraSee`: the eye test and Sam's meter, handed in as numbers): THE MACHINE NEVER ASKS THE LIGHT.
   - **Dressing reads the simulation.** `updateTargets` calls the step, then `LightHome.paint` copies each row to its `RtLight` and the boxes' emissive, `markGain` and a car lamp's paint are written from the factor. `fixtureBreak.ts`, `moths.ts`, the fog's records read what is there. `settings.emissiveScale` is an input number to the step (a renderer setting a recording carries in `journal.ts EnvSnap`).
-  - **The rows are in the order of `engine.lights`, and a row's index is its place among the rows.** NOT READ YET: the question about the light on a point still walks the `RtLight`s (`guards.ts writeLamps`); the reader (`light.rs`, `glow.rs`) comes with the senses' deletion, and `lights-ident.ts`'s `rows` holds every row to its lamp until then. Stood once as the level is built (`LightHome.stand`): `t.light`, each `areaLights`, each beacon's spot, each camera's cone. A lamp with an owner gets no row. No place is stored: a lamp of the question's own is written with how many rows stand before it in the list, which is what keeps the sum's order, and floats do not commute. A row carries both selves of a lamp: the steady one's columns only where its bit is up (`feed` says, from `RtLight.steady`; `step` never touches them), so no order between the step and the feed matters and a restored block is right by itself. Which classes a question leaves out are bits on the row (PASSING, SCREEN). A lamp the module writes must have a row: `stand` is an error by name on a beacon's or a cone's lamp with an owner.
-  - **Kept, with why.** A fire's lamp is fed from `fire.ts` once a tick right behind `updateFire` (`LightHome.feed`): its flicker and wander stay TypeScript as an input until that file moves, and `render/lights.ts steady`'s authored colour and reach (FIRE.warm, FIRE.reach) have no column, since `writeLamps` reads neither. A fixture's lamp with no row (hung after the level was stood, as the kit picture's is, `host/kitView.ts`, or with an owner) is written by `updateTargets` from the factor, and the question takes it as its own. A game's block now stands from the game's first line (`LightHome` binds it and its tenant's wish is always up, so `settle` never shuts it): a check that said "no block left" no longer can.
+  - **The rows are in the order of `engine.lights`, and a row's index is its place among the rows.** READ WHERE THEY STAND: a question about the light on a point and the sweep of the light that comes round take the rows from the block (`light.rs each`, `glow.rs`: THE READER, below), and `guards.ts writeLamps` writes only the lamps that have none. Stood once as the level is built (`LightHome.stand`): `t.light`, each `areaLights`, each beacon's spot, each camera's cone. A lamp with an owner gets no row. No place is stored: a lamp of the question's own is written with how many rows stand before it in the list, which is what keeps the sum's order, and floats do not commute. A row carries both selves of a lamp: the steady one's columns only where its bit is up (`feed` says, from `RtLight.steady`; `step` never touches them), so no order between the step and the feed matters and a restored block is right by itself. Which classes a question leaves out are bits on the row (PASSING, SCREEN). A lamp the module writes must have a row: `stand` is an error by name on a beacon's or a cone's lamp with an owner.
+  - **Kept, with why.** A fire's lamp is fed from `fire.ts` once a tick right behind `updateFire` (`LightHome.feed`): its flicker and wander stay TypeScript as an input until that file moves, and `render/lights.ts steady`'s authored colour and reach (FIRE.warm, FIRE.reach) have no column, since no light question reads either. A fixture's lamp with no row (hung after the level was stood, as the kit picture's is, `host/kitView.ts`, or with an owner) is written by `updateTargets` from the factor, and the question takes it as its own. A game's block now stands from the game's first line (`LightHome` binds it and its tenant's wish is always up, so `settle` never shuts it): a check that said "no block left" no longer can.
   - **Removed.** `lighting.ts supply`, `Game.initialOn` (a bit on the fixture, `t.authored`), the writes of `blackout` and `breakerFixT` on the Game (getters now), `devices.ts`'s own copies of the machines' numbers.
   - **Checks.** `tools/qa/lights-ident.ts`: a kept word a seed over every column of the part on made-up fixtures, and each row held to its lamp after every tick of whole games (`LIGHTS_BREAK=1` red). Identity with the TypeScript was proved on the port's commit, where that tool ran its arithmetic beside the module on every call and compared every column after it. `lights-lint.ts` (`LIGHTS_LINT_BREAK=1` red; it knows a fixture's lamp by four names, and goes structural when rows are what a question reads, when a stray write to a lamp is painted over by the next tick anyway). A put-back across a blackout reads the restored timeline with nothing further: `engine.lights` is a root of a snapshot (`rollback.ts rootsOf`), and `lights-ident.ts` asks it. `copyfit-check.ts` has rows for fixtures, lamps, cameras, tripwires and beacons, and `levelfit.ts levelOver` refuses a level over one by name.
 - **A family whose RULES move: what the doors add to the recipe below** ("A NEW FAMILY, step by step" is the state's half).
@@ -799,9 +801,12 @@ one stops the tool by name, on an address one does nothing and says so in the co
   sheets of glass), half of the glass GONE a quarter of the way in (the rule and its rows hung as the game's are, so a sound and a way are asked
   past holes; a pane open piece by piece is `glass-ident`'s), 14 leaves that swing a third of the way in, a share of the statics re-shaped and
   said half way, 460 lamps (so a light question goes in parts), the
-  tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. On the frozen stand its seven words are held
+  tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. Its seven words are held
   to `tools/qa/fixtures/sense-words.json` (3,000 questions a kind, 141,533 answers folded); it was RECORDED ON THE COMMIT THAT BROUGHT IT, from a run
-  in which every question was also asked of the TypeScript and agreed. Since that TypeScript went, `--record` writes whatever the module says:
+  in which every question was also asked of the TypeScript and agreed, on the old stand. THE RECORDING A RUN WITH NO WORD IS HELD TO is the
+  page's stand's, taken when the old stand was retired (2026-11-05): six of the seven words are the first recording's to the bit, and the fog's
+  is the word the old stand gives with `FOG.thin` raised and nothing else (`TPS_FOGTHIN=1 TPS_PROFILE=frozen`), so every moved word is that one
+  knob's. The old stand's entry stays beside it while that stand can be stood by name; `--record` writes on the page's stand only. Since that TypeScript went, `--record` writes whatever the module says:
   a recording taken now is one language's word for itself, so record again only for a change whose every moved word is explained, and say so
   in `--tree`. `rust-check`'s `senses` section runs it. OVER LEVELS the words are held to nothing
   by themselves; `--against <root>` plays the same run with another checkout's tool, for a change that must move no answer.
@@ -823,7 +828,8 @@ one stops the tool by name, on an address one does nothing and says so in the co
   and how many; `--against <root>` holds a change to another checkout's words. Its red paths each play the same run plain in a child and are red
   unless the words that must move, and no other, did: `RUST_BREAK=1` (the re-shaped boxes unsaid and the new grid not handed over) a word of every
   kind; `PRICED_BREAK=1` the paths' alone; `LAMPS_BREAK=1` the lamps' block and no kind's of the questions; `SHADE_BREAK=1` (it was
-  `LAMPS_BREAK=shade`) the two cases where no grid answers. A red path that moved too little ends 3, and `rust-check --break` ends 3 with it.
+  `LAMPS_BREAK=shade`) the two cases where no grid answers; `ROWS_BREAK=1` (the rows' order dropped from the lamps the host writes) a light word
+  and none that is not the light's. A red path that moved too little ends 3, and `rust-check --break` ends 3 with it.
   `rust-check`'s server section now wants the senses and the fog's pass in the module with every row held down, and its pairs of runs want the
   same count of them on both sides. THE FOG'S PASS stands the copy for itself when it is asked outside a tick (a check's own `update`), as the
   other five do. WHERE THE MODULE DOES NOT RUN nothing stands (`StaticCollision.stand`): the lines and circles this file can still walk are
@@ -857,9 +863,17 @@ one stops the tool by name, on an address one does nothing and says so in the co
     the run under that name moved, which a break upstream of it does too: only a word that STAYED is certain. Two languages on one input
     said which name's own arithmetic was bent; one language cannot. WHAT KEEPS ONE NAME HONEST is `--against`: a change to one layer shows, against the
     tree before it, that its word moved and no other did.) THE PIN: a fixture
-    under `tools/qa/fixtures`, recorded ON THE FROZEN STAND ONLY (`--record`, which writes the tree it was taken on beside the words), because a
-    run's course moves there only by the frozen digests' ceremony; on the page's stand it moves with every rule that lands, and a recording
-    there would be written again by reflex and hold nothing. A family's FIRST recording is taken on the last tree where both languages stood and
+    under `tools/qa/fixtures`, recorded on ONE stand, the family's (`hold({ stand })`; `--record` writes the tree it was taken on and how the
+    stand was stood beside the words, and is refused on any other stand). From 2026-11-05 that is the page's stand for a family that has recorded
+    there (the glass: `pane-words.json`); the layers' and the senses' recordings are still the old stand's until their owners take them again, and
+    a file may keep the old stand's recording beside the page's while the old stand can be stood. A recording of whole runs on the page's stand
+    moves with every rule that moves play under it: the commit that records again says which rule. A RUN IS HELD OR IT FAILS (the same day; the
+    glass check had printed PASS on both stands with nothing compared, its recording carrying no word of how its stand was stood): no recording
+    for the stand, a recording of another run, or a stand stood with other words than the recording's is a FAIL that says NOT HELD. The one way
+    out is a word: the tool's own `hold({ unpinned: '<why>' })` for a run it keeps no recording of by design (the senses over levels, a run of
+    another length, the layers' plain run while their recording is the old stand's), or `--unpinned` from a caller that plays a tool otherwise
+    than it was recorded; the output then says UNPINNED and why, in a line that is no verdict. `--to-recording` holds a run stood with other
+    words to the recording all the same (how a commit that records again shows which rule moved the run). A family's FIRST recording is taken on the last tree where both languages stood and
     agreed on every call of that same run: that is all the pin ever knew of the TypeScript. `--against <root>`: the same run played by the tool
     of another checkout, every count and word the same; for a change that must move no answer, on any stand, with no file. IT IS A LOWER BAR: a
     mistake both recordings share is held as firmly as the truth, and a branch no run reached while there were two languages was never compared
@@ -2000,6 +2014,34 @@ one stops the tool by name, on an address one does nothing and says so in the co
     fewer; 47 counting those not lit). SINCE THE DELETION OF `lampsHere` it is the row `steady` of the levels' fit (`src/game/levelfit.ts`,
     `guards.ts steadyMost`: every lamp nobody carries that is no flash and no beacon's, lit or not), so a level over it is refused as it loads,
     by name. A lamp stood up in play past it still stops the sweep with no word; the sweep reads the lights' own rows next and the limit goes.
+    (IT HAS GONE, with THE READER below: the row `steady` and `steadyMost` are out. The sweep's table now carries only steady lamps no fixture
+    feeds (a fixture hung late gets rows too: `Game.standLights`), a handful at most; more of those than 256 still leaves the field as it was.)
+  - THE READER: THE LEVEL'S LAMPS ARE READ FROM THEIR ROWS (2026-11-05; `light.rs`, `glow.rs`, module 32). A light question no longer has the
+    level's lamps written to it. `light.rs each` walks ONE LIST in the order of `engine.lights`: the rows of the lights' part of the block and
+    the question's own lamps, each of which is written with how many rows stand before it (`FACE.LAMP` is 16 doubles; `guards.ts writeLamps`
+    counts, and a list whose rows are not in the rows' order is an error by name). The place among the rows is kept from part to part beside
+    the six faces (`light.rs AT`), and the last part takes the rows that are left. THE READER'S GATES (`light.rs row`): the row burns, and
+    nothing else of a row that is out is read; the question does not leave it out; its first self's strength is above nothing; it is no moon.
+    Where the question asks for what the PLACE lights and the row has a steady self, that self's place, size and strength are taken.
+    WHAT A QUESTION SAYS OF THE ROWS (`collision.ts LampRows`, `guards.ts rowsOf`): whose block, the bits it leaves out, steady selves or not.
+    `lightEstimateAt` has a seventh argument, `leave` (`ROW_BIT`): `doze.ts faceLight` leaves the screens' rows out that way and writes no
+    lamp (it put them out by hand around the question before, and is out of `lights-lint`'s list). `lampAsked` has lost its beacon clause: a
+    beacon's lamp always has a row, and passing is that row's bit. THE SWEEP reads the same rows (leaving the passing ones, steady selves) and
+    its word of the lamps is folded a sweep from them, with nothing kept beside the lights; `grid_step` and `light_estimate` are told the slot
+    of the block that holds the rows, since a tool's own grid is another block than the game's. The box test a lamp's reach is now in the sum
+    itself (it only saves a root: a lamp further off along one axis than its range fails the sum's first test anyway).
+    A LAMP WRITTEN BY HAND IS FED: a check that puts a level lamp out on its `RtLight` and asks the light at once calls `lightHome.feed(l)`
+    (the next tick's `paint` would overwrite the hand's write from the row anyway).
+    HELD: the unchanged check `--against` the commit before says every word of every level the same, so rows are the bits the written lamps
+    were. From this commit `sense-ident` asks every light question BOTH WAYS, as the game asks it and again with the rows hidden so that the
+    game writes every lamp (what a row's bits leave out is put out by hand for that one): six faces, the same to the bit, question for
+    question; one in sixteen a third time with the rows' lamps out, and some must be darker. Beside the questions: points round a level's
+    screens with the screens left out; two rows' lamps changed places in the list, which must throw by name; one whole sweep both ways, the
+    grid's row number for number; and, last, the mains tripped and the lights stepped two seconds, where the other way leaves a beacon's lamp
+    out BY WHOSE LAMP IT IS (the gate `lampAsked` had), so the row's passing bit is held to it, and some point before a burning beacon must
+    be darker to who asks what the place lights. The made-up world stands a quarter of
+    its free lamps as rows of the tool's own and its recording has not moved. `ROWS_BREAK=1` = the host says no row stands before any lamp it
+    writes (the sum is not in the list's order): a light word must move, and no word that is not the light's.
   WHAT THE COUNT READS NOW, the 42: `paths · a search with a penalty` and `light · outside a tick` are GONE (8,962 and 5,688 on the page's stand).
   Of the five senses: NOTHING on either stand, in the tour or in the soak, and ALL FIVE ARE SEALED (the soak's watcher asks two eyes between
   ticks: that was `sight · outside a tick` until the eye proved the copy for itself). `sound` and `paths` were counted for the first time by this

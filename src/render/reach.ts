@@ -129,15 +129,16 @@ function* rasterScanSteps(prev: Uint8Array, next: Uint8Array): Generator<void, {
   return { box: x1 < 0 ? null : [x0, z0, x1, z1], closed };
 }
 /** The same for a raster that is NOBODY'S STATE (ReachJob.own: the look page's daylight at openings keeps its own walls and their jump field, and neither
- *  side table of this file knows them): true where `next` differs from `prev`, and where its walls only OPENED (a wall holed: every blast) prev's jump
+ *  side table of this file knows them): the box of sub-cells `next` differs from `prev` in (wallRasterDiff's; null = none differ; true = no telling,
+ *  rasters of two sizes), and where its walls only OPENED (a wall holed: every blast) prev's jump
  *  field is HANDED ON to next, as wallRasterDiff hands the game's. Where any cell closed (a wall put back by a restart, a box set down) it is not, and
  *  the next mask makes the field fresh. Until 11-05 the look made the field again, whole, on the frame it read a blast's walls. In steps: the scan's
  *  own; `prev`'s field is handed on as it stands at the last step. */
-export function* wallRasterHandOnSteps(prev: { solid: Uint8Array; jumps?: Uint8Array }, next: { solid: Uint8Array; jumps?: Uint8Array }): Generator<void, boolean, void> {
+export function* wallRasterHandOnSteps(prev: { solid: Uint8Array; jumps?: Uint8Array }, next: { solid: Uint8Array; jumps?: Uint8Array }): Generator<void, [number, number, number, number] | null | true, void> {
   if (prev.solid.length !== next.solid.length) return true;
   const d = yield* rasterScanSteps(prev.solid, next.solid);
   if (d.box && !d.closed && prev.jumps) next.jumps = prev.jumps;
-  return d.box !== null;
+  return d.box;
 }
 
 /** 2D line of sight over the fine raster from the centre of sub-cell (ax, az) to the centre of (bx, bz), ignoring both end sub-cells.

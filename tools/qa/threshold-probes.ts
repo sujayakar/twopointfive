@@ -669,8 +669,8 @@ export const thresholdPlay = guarded(async () => {
 export const thresholdIdentity = guarded(async () => {
   // (NOT ASKED ON THE SHIPPED STAND: the fixture's digests were frozen on the frozen stand, with the switches of its day held at their old values by name — the
   // shipped stand raises rules that list has never named, so no run of it can meet a frozen digest (all 14 read otherwise there) and the line would say nothing
-  // of the stage. The question is the frozen stand's: `bun run tools/qa/probes.ts threshold-identity` with no TPS_PROFILE)
-  if (harnessProfile() === 'shipped') { console.log('\n=== threshold-identity: NOT ASKED on the shipped stand — its digests are the frozen stand\'s (run it with no TPS_PROFILE) ==='); return true; }
+  // of the stage. The question is the old stand's: `TPS_PROFILE=frozen bun run tools/qa/probes.ts threshold-identity`; a run with no word is the page's and is not asked)
+  if (harnessProfile() === 'shipped') { console.log('\n=== threshold-identity: NOT ASKED on the page\'s stand — its digests are the old (frozen) stand\'s (TPS_PROFILE=frozen in front asks them; they hold nothing here until they are recorded again) ==='); return true; }
   const { verdict, done } = family('threshold-identity: with the stage not ordered, the team on bare eyes and the later feel rules at their old values, the seven scenarios play as frozen (the whole game\'s digest every half second; frozen at af55d89, and again where a step moved every level\'s walls — the fixture names it)');
   const FIX = resolve(ROOT, 'tools/qa/fixtures/threshold-identity.json');
   const fix = JSON.parse(readFileSync(FIX, 'utf8')) as { commit: string; seeds: string; how: string; runs: { scn: string; seed: number; end: string; t: number; digest: string }[] };

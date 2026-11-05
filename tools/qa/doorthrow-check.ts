@@ -27,6 +27,7 @@
 //   journal    a recording from before the table replays with the rule off; one that carries it keeps its own word; one from the first cut of it (no
 //              `soft` key) replays an opened leaf as the fold it was recorded with
 // DOORTHROW_BREAK=1: the rule is left off where the lines want it on — red.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 type Vec3 = [number, number, number];
 const BREAK = process.env.DOORTHROW_BREAK === '1';
 

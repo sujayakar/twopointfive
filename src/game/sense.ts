@@ -25,7 +25,7 @@
 // (src/game is one import cycle: nothing here is built from another game module's export as the file loads.)
 import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter, SmokeSystemLike } from '../smoke/types';
-import { type StaticCollision, type GridWind } from '../scene/collision';
+import { type StaticCollision, type GridWind, type LampRows } from '../scene/collision';
 import { FACE } from '../scene/boxMirror';
 import { sim, simWhyNot } from '../sim/sim';
 import { simTenant, simPart, P_SMOKE, SimState } from '../sim/state';
@@ -130,9 +130,10 @@ export class SmokeGrid {
     P.push(x, y, z, radius, rate, ttl); this.fed = true;
   }
   /** `dt` seconds of the game, inside its tick: the steps that have come due are taken (four at most: a game that stood still does not owe a hundred).
-   *  `lamps`: the light that comes round is stepped too (SENSE.bounce), from the level's steady lamps as this writes them (guards.ts steadyLamps).
+   *  `lamps`: the light that comes round is stepped too (SENSE.bounce), from the level's steady lamps: this writes those of nobody's fixture and says
+   *  how the rows are read (guards.ts steadyLamps; collision.ts gridStep).
    *  `wind`: the smoke under the open sky drifts by it (SENSE.drift; wind.ts stormDrift). Asked only while there is smoke to move (`smoky`). */
-  step(col: StaticCollision, dt: number, lamps: ((col: StaticCollision) => boolean) | null = null, wind: (() => GridWind | null) | null = null): void {
+  step(col: StaticCollision, dt: number, lamps: ((col: StaticCollision) => LampRows | boolean) | null = null, wind: (() => GridWind | null) | null = null): void {
     this.clock += dt; if (this.clock < GRID_STEP) return;
     let left = this.clock, n = 0; while (left >= GRID_STEP && n < 4) { left -= GRID_STEP; n++; }
     this.stands = col.gridStep(this.sim, this.pending, n, SENSE.smoke, lamps ? { K: SENSE.glow, lamps } : null, wind && this.smoky ? wind() : null);

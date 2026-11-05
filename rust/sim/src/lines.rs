@@ -158,7 +158,7 @@ fn ray_box_t(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b:
 }
 
 /// collision.ts lineBox: the interval [t0, t1] over which the LINE lies inside the box, and how deep inside it the origin sits; None = the line misses it
-fn line_box(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64]) -> Option<(f64, f64, f64)> {
+pub fn line_box(o: &World, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, b: &[f64]) -> Option<(f64, f64, f64)> {
     let kind = b[R_KIND] as u32;
     let (ox, oy, oz, dx, dy, dz);
     if kind & K_ROT != 0 {

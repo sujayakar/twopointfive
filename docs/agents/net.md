@@ -379,6 +379,29 @@ line).
   mpserver-check: its scripted hands are timed by the wall clock, and only one run in several comes near a tube's threshold (a dimmed client parted 1
   run of 1 on step 1334 and 0 of 4 on 1515; with the game's own number turned on purpose, 1 of 8), so a red path there would not be red. Nobody has
   looked at a picture: no GPU, no page was opened for this.
+- **A game of two that is still read as a game of one: THE KNOWN SEAT FAULTS** (2026-11-05; found when `seats-check`'s `fight` threw on the page's
+  stand at step 1557, the belief rule; NONE MENDED: `src/game` is frozen until the Rust swap, and each is a line of the port's notes,
+  rebuild/rust-sim/port/blitz/after-swap.md). Three classes, all old (10-16 to 11-02).
+  (1) BARE ASKS: world code asks the Game for a seat's own field (`g.player`, `g.orders`, `g.act`). Inside a tick the page answers the FIRST seat's
+  and counts a miss (`seats.ts SEAT_ASKS`; only a check's `strict` throws), so the second player is read as the first. The places, by the function
+  that is handed the bare Game, with what each wants: `tools/qa/seats-check.ts KNOWN_ASKS` (seventeen rows: morale.ts seenBy and drive, runner.ts
+  closeFoe and foes, roomfight.ts tickMove, doorpath.ts own and drop, wallreact.ts beyond, coverfire.ts charOf, lanes.ts closeFight, doorblast.ts
+  splinter, frag.ts samCue, qrf.ts clearOfFoes, dialogue.ts radioLive, snowBreath.ts and snowTracks.ts, snatch.ts tick). Found by twenty fights of
+  150 s over ten floors on the page's stand: a floor of what there is. Measured for one: doorpath's wrong order book changed no answer in 1,070
+  asks (an entry from a stack has no corners left on its order), and seat 1's pair stacked and entered as seat 0's did.
+  (2) A SEAT'S OWN MODULE SWEEPING ALL THE WORLD'S MEN: each seat has its own `DoorTools`, and `doortools.ts slingTick` walks every man of the floor
+  and puts away a breaching shotgun that is not on one of ITS doors, so seat 1's net slings seat 0's gun every tick. The first player's pair
+  spends 8.40 s on a locked door (2.03 s for the same men in a game of one; seat 1's pair 1.67 s), then boots it. By reading, the hammer's net
+  (`hammerOutTick`'s call) has the same shape. `strict` cannot see this class.
+  (3) A BUDGET COUNTED WITH ONE PLAYER: the skinned buffer is 16 (`anim/characters.ts MAX_CHARS`) and `guards.ts spawnUnit`, `qrf.ts roomFor` and
+  `levelfit.ts`'s `men` row count one player. A full floor in a game of two is 17, and `game.ts drawMen` throws a RangeError the moment the fog
+  has let all 17 be drawn: barracks, dice 3 and 5, at 112 s and 123 s (on die 5 with every enemy down). 17 as stood up on barracks, block-squads, compound,
+  warehouse and tut-squad. NOT RUN in a page or a server process (by reading both draw through the same function).
+  THE CHECK IS LOOSER FOR IT, ON PURPOSE: `seats-check`'s fights ran under `strict` and claimed "a firefight asks the Game for no 'the player'",
+  which 40 s and 30 s on one die never tested. They now run with strict off and every ask counted by place; a place no row of KNOWN_ASKS names
+  FAILS (`fight`, and two `long` lines of 150 s), the fights run to their end so `twin` holds a whole fight, and `SEATS_ASK_BREAK=1` (one more
+  bare ask in every tick of a fight) must fail them. Classes (2) and (3) have no line yet: a line for each (a locked door in under 4 s for
+  each seat's pair; the barracks fight to its end) is red today and waits on the mend or on the Rust co-op check.
 - **What nobody has seen or measured**: a page a person plays as a client (the page check is a script's); two machines; a real network; a Mac; a client through a sandbox's tunnel; two PEOPLE in two seats; the look ahead by eye (its bullet says what); a game longer than
   twenty seconds over the wire; a mission ENDING on a server (the verdict's answer was read by hand, never over the wire); the run's memory on a long
   game (its text is kept for joiners: about 20 KB a second with two seats sending every tick, 80 MB over the longest life); a real socket backing up (the
