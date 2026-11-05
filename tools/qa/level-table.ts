@@ -18,6 +18,9 @@
 //   <dir>/budget.txt                  optional: the budget as it stands, in the folder's own words: its first line is the sentence on who has ruled on what,
 //                                     each further line one row of it. Without the file the page says the rows as they were first proposed
 //   <dir>/parts.json                  optional: { "<task's name>": ["level", …] }, for the levels that have no row yet
+//   <dir>/notice.txt                  optional: what a reader must know before any number here, in the folder's own words. Its first line is printed first on the
+//                                     page; each further line `<level>: <mark>` puts that mark beside the level's name in the rented card's table (a price that
+//                                     no longer stands for the level as it is: say why, in two or three words)
 //
 //   bun run tools/qa/level-table.ts --dir <dir>            writes <dir>/read-first.md, prints what it found and what is missing
 //   bun run tools/qa/level-table.ts --dir <dir> --check    … and exits 1 when a level of the list has nothing in the folder: no row, no audit, no page read
@@ -44,13 +47,13 @@ const D = resolve(DIR), json = (p: string): any => { try { return JSON.parse(rea
 const { listedLevels } = await import(`${ROOT_DIR}/src/scene/scenarioList.ts`), { scenarioQuery } = await import(`${ROOT_DIR}/src/scene/scenarios.ts`), { PRESENT_PASSES } = await import(`${ROOT_DIR}/src/gpu/timer.ts`);
 const { AUDIT_BARS } = await import('./level-count.ts');   // (the budget check's bars: level-audit.ts --check holds a level to them, this page says them)
 
-type Slim = { boxes: number; moving: number; drawn: number; planes: number; round: number; bites: number; lampsOn: number; lamps: number; panels: number; glowing: number; openings: number; props: number; none: number; byChance: number };
+type Slim = { boxes: number; moving: number; drawn: number; planes: number; round: number; bites: number; lampsOn: number; lamps: number; panels: number; glowing: number; openings: number; props: number; none: number };
 // (scene/scenarioList.ts listedLevels: the one answer to which levels the list draws; the pricing run's rows are joined to these by the same names)
 const levels: { level: string; title: string; hour: string; query: string; missions: string[] }[] = (listedLevels() as { level: string; rows: any[] }[]).map(({ level, rows }) => ({ level, title: rows[0].title, hour: rows[0].hour ?? 'night', query: scenarioQuery(rows[0]), missions: rows.map(e => e.title) }));
 const base: Record<string, Slim> = json(`${HERE}/fixtures/level-audit-base.json`)?.levels ?? {};
 const parts: Record<string, string[]> = json(`${D}/parts.json`) ?? {};
 const slimOf = (r: any): Slim | null => r && r.boxes && r.picture ? { boxes: r.boxes.all, moving: r.boxes.moving, drawn: r.boxes.drawn, planes: r.boxes.planes, round: r.shapes.rounds + r.shapes.pass, bites: r.shapes.walls, lampsOn: r.lamps.on, lamps: r.lamps.all,
-  panels: r.lamps.panels, glowing: r.glowing, openings: r.openings.found, props: r.props, none: r.picture.none, byChance: r.picture.byChance } : null;
+  panels: r.lamps.panels, glowing: r.glowing, openings: r.openings.found, props: r.props, none: r.picture.none } : null;
 // THE FILES A GPU HANDED BACK, newest first by the time the run wrote in them (a copy or a checkout gives every file the same age on disk). A LEVEL'S ROW IS
 // ITS NEWEST among the files of one kind with the newest: the same adapter, quality, look and kind of run (with the page without the look, or without).
 // So a later run of three levels mends those three rows and leaves the rest of the full run standing, and a run of another kind takes none of its place
@@ -70,6 +73,9 @@ const macOld = !!mac && (!(mac.rows as any[]).every(r => Array.isArray(r.over)) 
 /** the budget as the folder says it (budget.txt: a sentence on who has ruled on what, then a row a line), else the rows as first proposed */
 const BUDGET: string[] = (existsSync(`${D}/budget.txt`) ? readFileSync(`${D}/budget.txt`, 'utf8').split('\n').map(l => l.trim()).filter(Boolean) : []);
 if (BUDGET.length < 2) BUDGET.splice(0, BUDGET.length, 'The budget is a proposal: nobody has ruled on its numbers.', 'An M4 Max holds 60 on High, with GPU time within 10 % of look off.', 'An RTX 4080 at 4K stays locked at 60. An M1 Max stays under 16.6 ms. The AMD box shows no new failure.', 'Shaders compile once. A layer over 0.5 ms gets a tier row.');
+/** the folder's notice (notice.txt): the line a reader meets first, and a mark a level */
+const NOTICE_LINES: string[] = existsSync(`${D}/notice.txt`) ? readFileSync(`${D}/notice.txt`, 'utf8').split('\n').map(l => l.trim()).filter(Boolean) : [];
+const NOTICE = NOTICE_LINES[0] ?? '', MARKS = new Map(NOTICE_LINES.slice(1).flatMap(l => { const i = l.indexOf(':'); return i > 0 ? [[l.slice(0, i).trim(), l.slice(i + 1).trim()] as [string, string]] : []; }));
 /** a field a row may write as a list or as one line */
 const asList = (a: unknown): string[] => Array.isArray(a) ? a.map(String) : typeof a === 'string' && a.trim() ? [a] : [];
 /** a level is dressed when its row says so outright */
@@ -133,8 +139,7 @@ const rows = levels.map(L => {
   if (now) { for (const [what, k] of [['boxes drawn', 'drawn'], ['boxes that move', 'moving'], ['cut planes', 'planes'], ['lamps burning', 'lampsOn'], ['boxes that glow', 'glowing']] as [string, keyof Slim][]) {
       const [top, n] = heaviest(k); if ((now[k] as number) > AUDIT_BARS.overHeaviest * Math.max(1, n)) over.push(`${what}: ${now[k]}, over ${AUDIT_BARS.overHeaviest} × the heaviest level before dressing (${top}, ${n})`);
       else if (base.pass && L.level !== 'pass' && (now[k] as number) > AUDIT_BARS.overPass * Math.max(1, base.pass[k] as number)) forGpu.push(`${what} ${now[k]} (the pass ${base.pass[k]})`); }
-    if (now.none > AUDIT_BARS.bare) over.push(`${pct(now.none)} of the picture has no material (the bar is ${pct(AUDIT_BARS.bare)})`);
-    if (now.byChance > AUDIT_BARS.chance) over.push(`${pct(now.byChance)} of the picture is a material by chance (the bar is ${pct(AUDIT_BARS.chance)})`); }
+    if (now.none > AUDIT_BARS.bare) over.push(`${pct(now.none)} of the picture has no material (the bar is ${pct(AUDIT_BARS.bare)})`); }
   const ratio = cost?.look?.frameMs?.onOverOff as number | undefined;
   if (!m && ratio !== undefined && passCost !== undefined && L.level !== 'pass' && ratio - 1 > 1.25 * (passCost - 1) && ratio - 1 > 0.05) forGpu.push(`on the software page the layers add ${more(ratio - 1)}, the pass ${more(passCost - 1)}`);
   return { L, row, audit, part, before, after, cost, m, over, apart, forGpu, ratio, stills: { before: still('before.png'), after: still('after.png'), look: existsSync(`${D}/cost/${L.level}/look.png`) ? `cost/${L.level}/look.png` : null, plain: existsSync(`${D}/cost/${L.level}/plain-page.png`) ? `cost/${L.level}/plain-page.png` : null } };
@@ -145,6 +150,7 @@ const dressed = rows.filter(r => isDressed(r.row)).length, priced = rows.filter(
 const out: string[] = [];
 out.push('# Every level in the new look: dressed or not, and what it costs', '');
 out.push(`Built ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC by \`tools/qa/level-table.ts\` from the files in this folder. Do not edit it by hand: the next build writes over it.`, '');
+if (NOTICE) out.push(`**${NOTICE}**`, '');
 out.push(`${dressed} of ${rows.length} levels are dressed. ${priced} of ${rows.length} are priced on your Mac.${cloud ? ` ${cloudRows.length} of ${rows.length} are priced on a rented card, as a relative reading.` : ''} ${read} of ${rows.length} have a software read.`, '');
 out.push('## The budget, and who answers it', '');
 out.push(BUDGET[0], '', ...BUDGET.slice(1).map(l => `- ${l}`), '');
@@ -191,7 +197,7 @@ out.push('- **Software read, layers on** is how much longer a frame takes with t
 if (cloud) { out.push('## On a rented NVIDIA card (relative)', '', CLOUD_WHAT, '', `The file: \`cloud/${cloudFiles[0].f}\`, ${cloudLine}.${cloudNote ? ' ' + cloudNote : ''}`, '');
   const sgn = (v: number | null, pc: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)} ms (${more(pc)})`;
   out.push(`| Level | Without the look, ms |${cloudOff ? ' Look, trials off, ms |' : ''} With the look, ms | The look adds |${cloudOff ? ' With the trials off |' : ''} Of which its layers | Where it rises | ${cloudOff ? 'Where the trials are | ' : ''}Programs made by the switch |`, `|---|---|${cloudOff ? '---|' : ''}---|---|${cloudOff ? '---|' : ''}---|---|${cloudOff ? '---|' : ''}---|`);
-  for (const r of cloudRows) out.push(`| ${cloudTop.has(r.level) ? `**${r.level}**` : r.level} | ${ms2(r.plain)} |${cloudOff ? ` ${ms2(r.bare)} |` : ''} ${ms2(r.look)} | ${sgn(r.adds, r.share)} |${cloudOff ? ` ${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)} |` : ''} ${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`} | ${r.where} | ${cloudOff ? `${r.trials || '—'} | ` : ''}${r.bySwitch} |`);
+  for (const r of cloudRows) out.push(`| ${cloudTop.has(r.level) ? `**${r.level}**` : r.level}${MARKS.has(r.level) ? ` (${MARKS.get(r.level)})` : ''} | ${ms2(r.plain)} |${cloudOff ? ` ${ms2(r.bare)} |` : ''} ${ms2(r.look)} | ${sgn(r.adds, r.share)} |${cloudOff ? ` ${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)} |` : ''} ${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`} | ${r.where} | ${cloudOff ? `${r.trials || '—'} | ` : ''}${r.bySwitch} |`);
   if (cloudReading) out.push('', cloudReading);
   out.push('', CLOUD_LEGEND + (cloudBad.length ? ` Not ranked, because the run says its two pages were not one picture: ${cloudBad.join(', ')}.` : ''), ''); }
 const plainPage = json(`${D}/cost/pass/cost.json`)?.againstPlainPage;
@@ -228,6 +234,8 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 .sheet small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; }
 .sheet code { font: 13px var(--mono); background: var(--panel); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; overflow-wrap: anywhere; }
 .lede { color: var(--muted); max-width: 70ch; }
+.sheet .notice { border: 1px solid var(--warn); border-left: 4px solid var(--warn); background: var(--panel); padding: 12px 16px; max-width: 90ch; margin: 0; font-weight: 500; }
+.frame tbody th .mark { display: block; font: 500 11px var(--mono); color: var(--warn); white-space: normal; }
 .counts { display: flex; flex-wrap: wrap; gap: 8px 28px; font: 500 14px var(--mono); }
 .counts b { font: 600 30px/1 var(--display); color: var(--accent); margin-right: 6px; font-variant-numeric: tabular-nums; }
 .run { border: 1px solid var(--line); border-left: 4px solid var(--accent); background: var(--panel); padding: 16px 18px; }
@@ -250,6 +258,7 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 </style>
 <div class="sheet">
 <header><h1>Levels in the new look</h1><p class="lede">Every level on the mission list: dressed or not, and what the look costs on it. Built ${esc(new Date().toISOString().slice(0, 16).replace('T', ' '))} UTC from the dressing tasks' rows, the level audit and the page reads.</p>
+${NOTICE ? `<p class="notice">${esc(NOTICE)}</p>` : ''}
 <div class="counts"><span><b>${dressed}</b>of ${rows.length} dressed</span><span><b>${priced}</b>of ${rows.length} priced on your Mac</span>${cloud ? `<span><b>${cloudRows.length}</b>of ${rows.length} on a rented card</span>` : ''}<span><b>${read}</b>of ${rows.length} with a software read</span><span><b>${overs.length}</b>over a bar</span></div></header>
 
 <section><h2>Price every level on your Mac</h2>
@@ -290,7 +299,7 @@ ${plainPage ? `<h3>What each page compiles</h3><p>On the pass, on the software p
 ${cloud ? `<section><h2>On a rented NVIDIA card (relative)</h2><p>${esc(CLOUD_WHAT)}</p><p>The file is ${esc(cloudLine)}.${cloudNote ? ' ' + esc(cloudNote) : ''}</p>
 <div class="frame"><table><thead><tr><th>Level</th><th class="n gpu">Without the look, ms</th>${cloudOff ? '<th class="n gpu">Look, trials off, ms</th>' : ''}<th class="n gpu">With the look, ms</th><th class="n gpu">The look adds</th>${cloudOff ? '<th class="n gpu">With the trials off</th>' : ''}<th class="n gpu">Of which its layers</th><th class="words">Where it rises</th>${cloudOff ? '<th class="words">Where the trials are</th>' : ''}<th class="n">Programs made by the switch</th></tr></thead><tbody>
 ${cloudRows.map(r => { const sgn = (v: number | null, pc: number | null) => v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)} ms (${esc(more(pc))})`;
-  return `<tr${cloudTop.has(r.level) ? ' class="dear"' : ''}><th scope="row">${esc(r.level)}</th><td class="n gpu">${ms2(r.plain)}</td>${cloudOff ? `<td class="n gpu">${ms2(r.bare)}</td>` : ''}<td class="n gpu">${ms2(r.look)}</td><td class="n gpu">${sgn(r.adds, r.share)}</td>${cloudOff ? `<td class="n gpu">${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)}</td>` : ''}<td class="n gpu">${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`}</td><td class="words">${esc(r.where)}</td>${cloudOff ? `<td class="words">${esc(r.trials || '—')}</td>` : ''}<td class="n">${r.bySwitch}</td></tr>`; }).join('\n')}
+  return `<tr${cloudTop.has(r.level) ? ' class="dear"' : ''}><th scope="row">${esc(r.level)}${MARKS.has(r.level) ? `<span class="mark">${esc(MARKS.get(r.level)!)}</span>` : ''}</th><td class="n gpu">${ms2(r.plain)}</td>${cloudOff ? `<td class="n gpu">${ms2(r.bare)}</td>` : ''}<td class="n gpu">${ms2(r.look)}</td><td class="n gpu">${sgn(r.adds, r.share)}</td>${cloudOff ? `<td class="n gpu">${sgn(r.bare !== null && r.plain !== null ? r.bare - r.plain : null, r.bareShare)}</td>` : ''}<td class="n gpu">${r.layers === null ? '—' : `${r.layers.toFixed(2)} ms`}</td><td class="words">${esc(r.where)}</td>${cloudOff ? `<td class="words">${esc(r.trials || '—')}</td>` : ''}<td class="n">${r.bySwitch}</td></tr>`; }).join('\n')}
 </tbody></table></div>
 ${cloudReading ? `<p>${esc(cloudReading)}</p>\n` : ''}<p class="legend">${esc(CLOUD_LEGEND + (cloudBad.length ? ` Not ranked, because the run says its two pages were not one picture: ${cloudBad.join(', ')}.` : ''))}</p></section>
 

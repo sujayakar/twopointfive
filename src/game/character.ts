@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, POSEMATH, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo } from '../anim/skeleton';
+import { NodeOverride, POSEMATH, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerFits, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo, stageOpen, stageShut } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -1162,15 +1162,39 @@ const BLOW = {
   tail: 1.0, sink: { chop: 0.8, palm: 0.6, mouth: 1, sweep: 0.75, slash: 0.75 } as Record<BlowStyle, number>, walk: [0.4, 1.5],
 };
 const TAKEN = { sag: { arch: 0.1, hunch: 0.65, snap: 0.15 } as Record<TakenStyle, number>, secs: 1.0 };
-/** the most keys of a knife blow the module's layer is handed (rust/sim/src/layers.rs KNIFE_KEYS; layer-ident's `caps` holds the two to each other) */
+/** the most keys of a knife blow the module's layer is handed (rust/sim/src/layers.rs KNIFE_KEYS; layer-ident's `caps` holds the two to each other;
+ *  layerTablesFit holds the blows to it) */
 const KNIFE_KEYS_MAX = 4;
 /** a blow's style as the module is handed it (rust/sim/src/layers.rs blow_trunk, blow_arms) */
 const BLOW_NO: Record<BlowStyle, number> = { chop: 0, palm: 1, mouth: 2, slash: 3, sweep: 4 };
 /** a hold's phase as the module is handed it (rust/sim/src/layers.rs hold_layer and held_layer read these numbers as they stand here) */
 const HOLD_PH: Record<HoldPhase, number> = { grab: 0, held: 1, choke: 2, whip: 3, kill: 4 };
-/** how many blows of one beat the module's big tool layer is handed, and how many keys a table of the throw (rust/sim/src/layers.rs BIG_BLOWS_MAX,
- *  THROW_KEYS; layer-ident's `caps` holds each pair to each other): a longer record or table is posed by the TypeScript */
-const BIG_BLOWS_MAX = 64, THROW_KEYS_MAX = 16;
+/** how many keys a table of the throw the module's layer is handed (rust/sim/src/layers.rs THROW_KEYS; layer-ident's `caps` holds the two to each other): a
+ *  longer table is a mistake, said by name as the game loads (anim/skeleton.ts layerFits, layerTablesFit) */
+const THROW_KEYS_MAX = 16;
+/** THE BLOWS A BIG TOOL'S LAYER READS at the record's clock: the last one that has landed and the next one coming (a blow past the beat's end is not
+ *  coming), and no other. The layer is handed these, at most two, in both languages. A hammer's record keeps every blow that has landed until the hammer is
+ *  put back, over as many doors as the man breaks: what the layer is handed does not grow with it. */
+function blowsNear(B: { t: number; end: number; blows: readonly number[] }): number[] {
+  let prev = -Infinity, next = Infinity; for (const b of B.blows) { if (b <= B.t) prev = Math.max(prev, b); else if (!(B.end >= 0 && b > B.end)) next = Math.min(next, b); }
+  const near: number[] = []; if (prev > -Infinity) near.push(prev); if (next < Infinity) near.push(next); return near;
+}
+/** THE GAME'S OWN KEY TABLES AGAINST WHAT A LAYER OF THE MODULE IS HANDED: every knife blow's keys and every table of the two swings of a throw, read as an
+ *  animator is made (the first character of a game, a menu's figure), so a table that grew past its layer is found as the game loads and not at the first
+ *  blow or throw of a mission. */
+export function layerTablesFit(): void {
+  const blows: Record<StrikeKind | 'slash' | 'back', { keys: readonly unknown[] }> = { cross: KNIFE_BLOW.cross, jab: KNIFE_BLOW.jab, slash: KNIFE_SLASH, back: KNIFE_BACK };
+  for (const k in blows) layerFits(`the knife's ${k} blow`, blows[k as keyof typeof blows].keys.length, KNIFE_KEYS_MAX);
+  for (const low of [false, true]) { const { K1, K3 } = throwTables(low), all: readonly (readonly unknown[])[] = [...K1, ...K3], names = [...THROW_NUMS, ...THROW_VECS];
+    all.forEach((k, i) => layerFits(`the ${low ? 'underhand' : 'overhand'} throw's table "${names[i]}"`, k.length, THROW_KEYS_MAX, 2)); }
+}
+/** A SWING'S TABLES AS THE MODULE'S LAYER IS HANDED THEM, by name and in its order (rust/sim/src/layers.rs TH_*): eleven of numbers, then six of vectors. The
+ *  underhand swing has the throwing side's own; the left hand's are the overhand's in both. One list for the layer (throwLayer) and for the check of its sizes. */
+const THROW_NUMS = ['chestYaw', 'pelvisYaw', 'pitch', 'roll', 'pelX', 'pelY', 'pelZ', 'clavUp', 'clavFwd', 'swivR', 'swivL'] as const, THROW_VECS = ['handR', 'fingR', 'backR', 'handL', 'fingL', 'backL'] as const;
+function throwTables(low: boolean): { K1: Keys[]; K3: Keys3[] } {
+  const T: Partial<typeof THR> = low ? THR_LOW : THR;
+  return { K1: THROW_NUMS.map(n => T[n] ?? THR[n]), K3: THROW_VECS.map(n => T[n] ?? THR[n]) };
+}
 const WORK_NO: Record<WorkKind, number> = { keys: 0, charge: 1, lever: 2, take: 3 };
 /** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
 const KIT_NO: Record<KitItem, number> = { pistol: 1, rifle: 2, can: 3, knife: 4 }, KIT_OF: (KitItem | null)[] = [null, 'pistol', 'rifle', 'can', 'knife'];
@@ -1929,6 +1953,7 @@ export class CharacterAnimator {
           if (ang > 0.3 * DEGR) this.jogSeam.push({ node: tr.node, axis: [q[0] / s, q[1] / s, q[2] / s], ang });
         }
       } }
+    layerTablesFit();
     // (what a layer of the Rust module is handed with the rig — skeleton.ts layerSlot: the named nodes, the lists of nodes, and the tables of numbers worked out above)
     this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] }, poses: this.poses,
       nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.node, 0, e.d[0], e.d[1], e.d[2], 0] : [e.node, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
@@ -2209,7 +2234,9 @@ export class CharacterAnimator {
   /** which tell is playing (or played last) */
   get tellKind(): TellKind { return this.tellK; }
 
-  update(dt: number) {
+  /** (the update, over poses that stand in a block of the module for its length: anim/skeleton.ts, the stage) */
+  update(dt: number) { const lent = stageOpen(this.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.poses); } }
+  private updateStanding(dt: number) {
     const P = this.params; const c = this.clips; const nd = this.nodes;
     LAYERS.knobs?.();   // (RUST.walk: a pose made outside a tick — a teleport's — reads the knobs as they stand, as a tick's does: game/rustknobs.ts knobsNow)
     if (this.rawClip) {   // raw clip preview: rest pose underneath so nodes the clip does not key stay sane; one-shots cancelled (nothing here would ever finish them)
@@ -2958,7 +2985,8 @@ export class CharacterAnimator {
   }
   private reloadArm(t: number, w: number) {
     const own = this.feed ? feedPath(this.feed, this.rlB, this.feedN, this.feedPort) : null;   // (a gun fed its own way — gunreload.ts: the hand's stations, or a magazine gun's own marks; null with that switch off)
-    const g = own && 'keys' in own && own.keys.length > LAYER_KEYS_MAX ? -1 : layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs reload_arm; more stations than a layer is handed: the TypeScript's)
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs reload_arm)
+    if (g >= 0 && own && 'keys' in own) layerFits('a reload\'s list of the hand\'s stations (gunreload.ts feedPath)', own.keys.length, LAYER_KEYS_MAX);
     if (g < 0) this.reloadArmOwn(t, w, own);
     else if (!LAYERS.both) this.reloadArmAsk(g, t, w, own);
     else layerBoth('reloadArm', this.pA, this.fk, () => this.reloadArmAsk(g, t, w, own), () => this.reloadArmOwn(t, w, own), colsOf(CharacterAnimator.handCols, this));
@@ -4238,8 +4266,10 @@ export class CharacterAnimator {
     else if (!LAYERS.both) this.wallBodyAsk(g, w);
     else layerBoth('wallBody', this.pA, this.fk, () => this.wallBodyAsk(g, w), () => this.wallBodyOwn(w), colsOf(CharacterAnimator.wallCols, this));
   }
-  /** a layer that samples clips for itself is the module's only when the module holds every one of them (`g` = layerSlot's answer; −1 = the TypeScript runs it) */
-  private clipsIn(g: number, ...clips: Clip[]): number { if (g >= 0) for (const c of clips) if (clipNo(c, this.pA.numNodes) < 0) return -1; return g; }
+  /** the clips a layer samples for itself are written into the module BEFORE it is asked, so the ask that follows only looks their numbers up and writes
+   *  nothing into the module while it lays its own numbers on the bench (`g` = layerSlot's answer, handed on; clipNo: a clip the module does not hold is a
+   *  mistake, said by name) */
+  private clipsIn(g: number, ...clips: Clip[]): number { if (g >= 0) for (const c of clips) clipNo(c, this.pA.numNodes); return g; }
   private wallBodyAsk(g: number, w: number) {
     const a = f64(), i = POSE_BENCH.args, ws = this.wst, C = this.chestRestInv, GZ = this.gazeLocal, P0 = this.posIn, T = this.wallTakeFeet, I = this.idleFeet;
     a[i] = w; a[i + 1] = this.crouch; a[i + 2] = ws.side.x; a[i + 3] = ws.side.v; a[i + 4] = ws.peek.x; a[i + 5] = ws.park.x; a[i + 6] = this.upperW.aim; a[i + 7] = this.wallYaw;
@@ -5655,7 +5685,7 @@ export class CharacterAnimator {
   }
   /** …the blow's POSE, its clock being knifeBlow's: `t` the key time (0 = on the hilt), `t0` the seconds to the hilt */
   private knifePose(K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
-    const g = K.keys.length > KNIFE_KEYS_MAX ? -1 : layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs knife_pose; a blow of more keys than a layer is handed: the TypeScript's)
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs knife_pose; a blow's keys fit the layer: layerTablesFit)
     if (g < 0) this.knifePoseOwn(K, t, t0, total, twY, twP);
     else if (!LAYERS.both) this.knifePoseAsk(g, K, t, t0, total, twY, twP);
     else layerBoth('knifePose', this.pA, this.fk, () => this.knifePoseAsk(g, K, t, t0, total, twY, twP), () => this.knifePoseOwn(K, t, t0, total, twY, twP), colsOf(CharacterAnimator.handCols, this));
@@ -6556,36 +6586,37 @@ export class CharacterAnimator {
     const stowing = B.end >= 0 && B.t >= B.end, us = stowing ? clamp((B.t - B.end) / Math.max(1e-3, B.stow), 0, 1) : 0, ham = B.kind === 'hammer';
     if (!(B.t >= 0) || us >= 1) { this.bigUnder = false; this.bigK = 0; return; }
     if (ham) this.bigBuf ??= this.poses.make(this.pA.numNodes);
-    const g = B.blows.length > BIG_BLOWS_MAX ? -1 : layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs big_layer)
-    if (g < 0) this.bigLayerOwn(B, twY, twP);
-    else if (!LAYERS.both) this.bigLayerAsk(g, B, twY, twP);
-    else layerBoth('bigLayer', this.pA, this.fk, () => this.bigLayerAsk(g, B, twY, twP), () => this.bigLayerOwn(B, twY, twP), this.withHands(CharacterAnimator.bigCols), ham ? [this.pB, this.bigBuf!] : [this.pB]);
+    const g = layerSlot(this.ch, this.pA, this.cast), near = blowsNear(B);   // (RUST.walk: rust/sim/src/layers.rs big_layer)
+    if (g < 0) this.bigLayerOwn(B, near, twY, twP);
+    else if (!LAYERS.both) this.bigLayerAsk(g, B, near, twY, twP);
+    else layerBoth('bigLayer', this.pA, this.fk, () => this.bigLayerAsk(g, B, near, twY, twP), () => this.bigLayerOwn(B, near, twY, twP), this.withHands(CharacterAnimator.bigCols), ham ? [this.pB, this.bigBuf!] : [this.pB]);
   }
   /** the big tool's columns: how far it is in the fist, whether the pose under the layer is kept, how much of the fist's place is the tool's on his back and
    *  how far up the handle the fist holds it there */
   private static readonly bigCols: LayerCols<CharacterAnimator> = { n: 4,
     get(c, o) { c[o] = this.bigK; c[o + 1] = this.bigUnder ? 1 : 0; c[o + 2] = this.bigAtBack; c[o + 3] = this.bigGrab; },
     put(c, o) { this.bigK = c[o]; this.bigUnder = c[o + 1] !== 0; this.bigAtBack = c[o + 2]; this.bigGrab = c[o + 3]; } };
-  private bigLayerAsk(g: number, B: NonNullable<CharacterAnimator['bigTool']>, twY: number, twP: number) {
+  /** (`blows`: the blows the layer reads — blowsNear) */
+  private bigLayerAsk(g: number, B: NonNullable<CharacterAnimator['bigTool']>, blows: readonly number[], twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, ham = B.kind === 'hammer', F = this.handFix, gl = this.gazeLocal;
     const p = Number.isFinite(B.at[0] + B.at[1] + B.at[2]) ? this.toModelP(B.at) : [0, 1, 0.8];
-    a[o] = ham ? 1 : 0; a[o + 1] = B.t; a[o + 2] = B.equip; a[o + 3] = B.stow; a[o + 4] = B.end; a[o + 5] = B.snug ? 1 : 0; a[o + 6] = B.windup; a[o + 7] = B.blows.length;
+    a[o] = ham ? 1 : 0; a[o + 1] = B.t; a[o + 2] = B.equip; a[o + 3] = B.stow; a[o + 4] = B.end; a[o + 5] = B.snug ? 1 : 0; a[o + 6] = B.windup; a[o + 7] = blows.length;
     a[o + 11] = twY; a[o + 12] = twP; a[o + 13] = this.speed; a[o + 14] = this.bigClear;
     for (let i = 0; i < 3; i++) { a[o + 8 + i] = p[i]; a[o + 36 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 15 + i] = F[0][i]; a[o + 19 + i] = F[1][i]; }
     // (the shotgun is drawn as the carbine it is: its support grip, its group's offset and its stock's rear end, as rigProps has them now)
     if (ham) for (let i = 23; i < 36; i++) a[o + i] = 0;
     else { const C = RIG.carbine, adj = C.adj?.off ?? [0, 0, 0], LG = carbineGrip(); for (let i = 0; i < 3; i++) { a[o + 23 + i] = LG.wrist[i]; a[o + 26 + i] = LG.fingers[i]; a[o + 29 + i] = LG.back[i]; a[o + 32 + i] = adj[i]; } a[o + 35] = C.stockTop.l0; }
-    for (let i = 0; i < B.blows.length; i++) a[o + LAYER_KEYS_AT + i] = B.blows[i];
+    for (let i = 0; i < blows.length; i++) a[o + LAYER_KEYS_AT + i] = blows[i];
     colsToBench(CharacterAnimator.bigCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_big_layer(g, this.pA.at, this.pB.at, ham ? this.bigBuf!.at : 0, this.rest.at)); colsFromBench(CharacterAnimator.bigCols, this);
   }
-  private bigLayerOwn(B: NonNullable<CharacterAnimator['bigTool']>, twY: number, twP: number) {
+  private bigLayerOwn(B: NonNullable<CharacterAnimator['bigTool']>, blows: readonly number[], twY: number, twP: number) {
     const M = BIGMOVE, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ham = B.kind === 'hammer';
     const t = B.t, stowing = B.end >= 0 && t >= B.end, us = stowing ? clamp((t - B.end) / Math.max(1e-3, B.stow), 0, 1) : 0;
     this.bigUnder = false;   // (a tool not out, or put away, never comes here: bigLayer takes that way out)
     const e3 = (u: number) => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
     // ---- the beat as shares: the blow being wound up (wind, then its swing 0‥1), the one that has just landed (hit, falling off over the rebound), a shell's
     //      kick, and how far his feet are planted for it (held between two blows of one beat)
-    let prev = -Infinity, next = Infinity; for (const b of B.blows) { if (b <= t) prev = Math.max(prev, b); else if (!(B.end >= 0 && b > B.end)) next = Math.min(next, b); }
+    let prev = -Infinity, next = Infinity; for (const b of blows) { if (b <= t) prev = Math.max(prev, b); else if (!(B.end >= 0 && b > B.end)) next = Math.min(next, b); }
     let wind = 0, sw = 0, hit = 0, kick = 0, plant = 0;
     if (ham) { const H = M.hammer;
       if (next < Infinity) { const ws = Math.max(next - B.windup, prev), D = next - ws;   // (a window never reaches back past the blow before it)
@@ -6703,11 +6734,8 @@ export class CharacterAnimator {
   private throwLayer(t: number) {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs throw_layer)
     if (g < 0) { this.throwLayerOwn(t); return; }
-    // (the swing's tables in the module's order, layers.rs TH_*; one of a size the module does not take is posed here)
-    const T = this.thrLow >= 0 ? THR_LOW : THR, K1 = [T.chestYaw, T.pelvisYaw, T.pitch, T.roll, T.pelX, T.pelY, T.pelZ, T.clavUp, T.clavFwd, T.swivR, THR.swivL], K3 = [T.handR, T.fingR, T.backR, THR.handL, THR.fingL, THR.backL];
-    const fits = (k: readonly unknown[]) => k.length >= 2 && k.length <= THROW_KEYS_MAX;
-    if (!K1.every(fits) || !K3.every(fits)) this.throwLayerOwn(t);
-    else if (!LAYERS.both) this.throwLayerAsk(g, t, K1, K3);
+    const { K1, K3 } = throwTables(this.thrLow >= 0);   // (the swing's tables in the module's order; each fits the layer: layerTablesFit)
+    if (!LAYERS.both) this.throwLayerAsk(g, t, K1, K3);
     else layerBoth('throwLayer', this.pA, this.fk, () => this.throwLayerAsk(g, t, K1, K3), () => this.throwLayerOwn(t), this.withHands(CharacterAnimator.throwCols), [this.pB]);
   }
   /** the throw's columns: how far a toss lets the other hand down (−1 = not read yet), and where the swing left each hand off its shoulder */
@@ -6963,7 +6991,9 @@ export class Character {
     return { o, left: quat.rotate(r, [1, 0, 0]), up: quat.rotate(r, [0, 1, 0]), fwd: quat.rotate(r, [0, 0, 1]) };
   }
 
-  update(dt: number) {
+  /** (his turn is a rule asked where his layers are, so the stage is his for the whole of this and not only for the animator's part: anim/skeleton.ts) */
+  update(dt: number) { const lent = stageOpen(this.anim.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.anim.poses); } }
+  private updateStanding(dt: number) {
     if (this.ragdoll) { this.updateRagdoll(dt); return; }
     if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);   // (a man down wounded turns to nothing: wounds.ts dropped his turn as he went)
     else {   // not weighed — or a dt-0 bake: a RE-BAKE in place (game.ts updateProps, a frozen clock: his yaws untouched since they were handed back, or put back to the wish by turnBegin and not rewritten) keeps his turn going; a staging (yaws rewritten, or moved) takes them as written and the next frame starts from them

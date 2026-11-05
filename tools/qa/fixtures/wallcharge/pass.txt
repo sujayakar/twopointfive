@@ -1,2 +1,3 @@
 # places for a wall charge on levels/pass.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
-598 384
+# 11-05, ten fewer on each stand, on purpose: five spots on the lean-to's south wall (z 9), both faces, where three fuel drums and one on its side now stand in the pocket of yard against it. The lean-to is open on its east side and is no room of the fight; every room of the fight keeps every place it had (the tea house front lost none: the bench that took the kitchen's stretch was moved to the wall's west end instead).
+588 374

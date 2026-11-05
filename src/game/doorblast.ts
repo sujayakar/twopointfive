@@ -357,17 +357,18 @@ function stepHere(g: Game, d: Door, r: number, dt: number): SlabMet {
 /** CAN THIS SLAB'S STEP RUN IN THE MODULE: the row on and the slabs' columns at home in the game's block; the game's own maths in Math's place; the box
  *  world's copy standing with the game's own leaves in it as they are now. → the copy to step over and which of its leaves is the slab's own box (−1: none
  *  of them), or null: this file steps, on the same columns. */
-function slabThere(g: Game, d: Door): { M: BoxMirror; but: number } | null {
+function slabThere(g: Game, d: Door): { M: BoxMirror; but: number; ask: number } | null {
   if (!RUST.slabs || g.doors.slabs.home === null || !EXACT.on) return null;
   const dyn = g.col.dynamicBoxes, M = g.col.rulesWorld(dyn); if (!M) return null;
-  return { M, but: dyn.indexOf(d.box) };
+  const ask = g.col.rulesPanes(); if (ask < 0) return null;   // (this file's rays ask the pane's rule)
+  return { M, but: dyn.indexOf(d.box), ask };
 }
 /** the step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. → null: the module hands the
  *  step back with nothing written (a ray of it ended on a pane, which only the host can judge open or shut) */
-function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number }): SlabMet | null {
+function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet | null {
   const io = slabIo(), m = slabMem(), P = io.par, K = DOORBLAST, C = SLABS_STEPPED;
   m[P + SP.dt] = dt; m[P + SP.row] = r; m[P + SP.height] = d.height; m[P + SP.thick] = d.thick; m[P + SP.hu] = d.leafH[0]; m[P + SP.closed] = d.def.closedDir;
-  m[P + SP.fcx] = d.frameCentre[0]; m[P + SP.fcz] = d.frameCentre[2]; m[P + SP.but] = W.but; m[P + SP.ask] = g.col.glassOpen ? 1 : 0;
+  m[P + SP.fcx] = d.frameCentre[0]; m[P + SP.fcz] = d.frameCentre[2]; m[P + SP.but] = W.but; m[P + SP.ask] = W.ask;
   m[P + SP.scrape] = K.scrape; m[P + SP.slam] = K.slam; m[P + SP.slide] = K.slide; m[P + SP.bounce] = K.bounce; m[P + SP.tip] = K.tip;
   const a = io.x.slabs_step(g.doors.slabs.home!.bind(), W.M.slot), q = slabMem();
   C.rays += q[P + SP.rays]; C.gathers += q[P + SP.gathers]; C.substeps += q[P + SP.substeps];
@@ -378,7 +379,7 @@ function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; b
 }
 /** …both ways (collision.ts BOTH): the module's step, then this file's from the same row, the two compared column for column and by what they met; the
  *  game goes on from this file's. → null as stepThere */
-function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number }): SlabMet | null {
+function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet | null {
   const T = g.doors.slabs, before = T.bytes(), A = stepThere(g, d, r, dt, W); if (A === null) return null;
   const there = T.bytes(); T.put(before);
   const B = stepHere(g, d, r, dt), here = T.bytes(), C = SLABS_STEPPED;

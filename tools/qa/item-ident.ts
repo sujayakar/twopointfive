@@ -15,8 +15,8 @@
 //          columns, compared in place (what a played mission does under tools/qa/rust-check.ts --both)
 //   twin   the step as the game takes it with the row on (the module's walk, its events said), then everything put back as it was and the step taken
 //          with the row off, and what each left compared here
-// Levels: `:panes` = three statics in ten made panes of glass with a quarter of their cells fallen out (a ray that ends on a pane is the host's to
-// judge: the module hands that row back); `:snow` = a made-up map of lying snow under the pool (a bounce on ground that may bog is the host's too);
+// Levels: `:panes` = three statics in ten made panes of glass with a quarter of them gone (a ray that meets a pane where it is open flies on, in the
+// module as here); `:snow` = a made-up map of lying snow under the pool (a bounce on ground that may bog is the host's too);
 // `:many` = the pool driven past the module's thirty-two rows with cans on their fuses (its columns grow and stay in TypeScript: nothing may differ
 // there either, and nothing is the module's).
 // A run is FAIR only if it met every kind of thing the step does. ITEMS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one
@@ -24,7 +24,7 @@
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTITEMS = '1';   // (the game's own maths: the step runs in the module under no other)
 process.env.TPS_RUSTLINES = '0'; process.env.TPS_RUSTRAYS = '0'; process.env.TPS_RUSTCIRCLES = '0'; process.env.TPS_RUSTFOG = '0';   // (the TypeScript's arm is all TypeScript, whatever the stand has on: its rays are collision.ts's own walk)
 import { resolve } from 'path';
-import { standUp } from './headless.ts';
+const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`), BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);
@@ -58,7 +58,11 @@ for (const entry of files) {
   if (!X.EXACT.on || !SIM.RUST.items || !P.all.length) { log(`${entry.padEnd(22)} FAIL — ${!P.all.length ? 'the level has no furniture' : 'the stand left the row or the game\'s own maths down'}: nothing was stepped`); bad++; continue; }
   if (mode === 'panes') {   // (made before the first tick opens, so the module's copy has them as the boxes do)
     let q = 12345; for (const b of col.boxes) { q = (Math.imul(q, 1103515245) + 12345) >>> 0; if ((q >>> 16) % 10 < 3 && !(b.flags & BX.BoxFlag.NoShadow)) b.flags |= BX.BoxFlag.Glass; }
-    col.glassWalkable = null; col.glassOpen = (bi: number, p: number[]) => { const o = ((bi * 7919 + Math.floor(p[0] * 3) * 31 + Math.floor(p[1] * 3) * 17 + Math.floor(p[2] * 3)) & 3) === 0; if (o) MET.open++; return o; }; }
+    // (a quarter of the made panes GONE — a made-up state of the glass, said twice as the game's own is: the rule a walk of this side asks, and the rows the
+    //  module's copy holds, boxMirror.ts PaneSource. Where a pane is open piece by piece is tools/qa/glass-ident.ts's to hold.)
+    const goneOf = (bi: number) => (((bi * 7919) >>> 2) & 3) === 0, rows: any[] = [];
+    col.boxes.forEach((b: any, bi: number) => { if ((b.flags & BX.BoxFlag.Glass) && goneOf(bi)) rows.push({ bi, gone: true, run: false, sites: [], open: new Uint8Array(0), pending: [], dice: null }); });
+    col.glassWalkable = null; const said = { each: (to: (r: any) => void) => { for (const r of rows) to(r); }, view: null }; col.glassRule((bi: number) => { const o = goneOf(bi); if (o) MET.open++; return o; }, () => said); }
   // (lying snow, made up: boggy in a chequer of two-metre squares — the rule's own arithmetic is the game's, the map is this tool's)
   if (mode === 'snow') T.bog = { may: () => true, at: (x: number, _y: number, z: number) => { MET.snow++; return ((Math.floor(x / 2) + Math.floor(z / 2)) & 1) ? 0.25 + 0.5 * (((Math.floor(x * 3) * 31 + Math.floor(z * 3) * 17) & 7) / 7) : 0; } };
   const panes: any[] = col.boxes.filter((b: any) => (b.flags & BX.BoxFlag.Glass) && !(b.flags & BX.BoxFlag.NoShadow) && !b.rot);

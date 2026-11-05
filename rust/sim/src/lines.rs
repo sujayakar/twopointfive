@@ -9,13 +9,14 @@
 //! same leaves first, the same cells in the same half-metre steps, the nearest entry kept. Every rule of the things that flies something through a level
 //! asks it (a torn leaf, a thrown can, a round).
 //!
-//! What is not here is a rule of play that is still TypeScript: whether a pane is open where a line crosses it (game/glassbreak.ts), and whether a round gets
-//! through the panes on its line (game/glasspen.ts). The module asks nobody (it imports nothing): where the host has either question, the walk LISTS the
-//! glass the line crosses — which pane, and where the line enters it — and goes on; the host judges the list when the walk is back. A pane's open question
-//! only reads, so asking it after the walk, and not at all when something solid ended it, is the same answer. (THE RAY takes every pane as shut and
-//! says the nearest thing it meets. If that is no pane, no pane stood nearer, open or shut, and the host's walk ends on the same thing; if it is a
-//! pane, the host asks its one question of it: shut, and it is the answer; open, and the ray flies on, which only the host's own walk can follow.)
+//! WHETHER A PANE IS OPEN where a line or a ray meets it is answered here (glass.rs, over the copy of every pane that is no longer whole): a line that
+//! crosses a hole is not stopped by the pane, and a ray flies on through it to what stands beyond, as the TypeScript's own walks do pane by pane.
+//!
+//! What is not here is a rule of play that is still TypeScript: whether a round gets through the panes on its line (game/glasspen.ts). The module asks
+//! nobody (it imports nothing): for a line of fire the walk LISTS the glass the line crosses that is not open there — which pane, and where the line
+//! enters it — and goes on; the host judges the list when the walk is back.
 
+use crate::glass;
 use crate::maths::hypot3;
 use crate::world::*;
 use prim::{floor, sqrt};
@@ -292,12 +293,34 @@ pub fn leaves_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2:
 }
 
 /// what the walk was asked beside the segment
-pub const ASK_GLASS: u32 = 1; // the host has a rule for an open pane: glass in the way is listed for it, not taken for a wall
+pub const ASK_GLASS: u32 = 1; // the game has a rule for an open pane (glass.rs): glass crossed where it is open is not in the way
 pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, and every cell is walked in the old order (the list's order is the scan's)
 
+/// A PANE OF GLASS IN THE WAY OF A LINE that entered it `t0` along (collision.ts segmentBlocked's three statements for one): 0 = the line goes on (the
+/// pane is open there by the game's rule, or it is a line of fire and the pane is noted for the penetration rule) · −1 = the pane stops it · −2 = the
+/// list of panes is full
+#[inline]
+#[allow(clippy::too_many_arguments)]
+fn pane_in_way(o: &mut World, rule: bool, panes: bool, bi: usize, t0: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64) -> i32 {
+    if rule {
+        let te = js_max(0.0, t0);
+        if glass::open(o, bi, a0 + r0 * te, a1 + r1 * te, a2 + r2 * te) {
+            return 0;
+        }
+    }
+    if !panes {
+        return -1;
+    }
+    if o.note(bi, t0) {
+        0
+    } else {
+        -2
+    }
+}
+
 /// collision.ts segmentBlocked, past its length (`len` = the host's own length of b − a, at least 1e-4 and finite): −1 = something solid is in the way ·
-/// n ≥ 0 = nothing solid is, and n panes of glass are (listed in pane_bi / pane_t: 0 unless the host asked) · −2 = more glass than the list holds (the host
-/// asks its own walk instead)
+/// n ≥ 0 = nothing solid is, and n panes of glass are (listed in pane_bi / pane_t: 0 unless it is a line of fire) · −2 = more glass than the list holds
+/// (the host asks its own walk instead)
 pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
     let o = world(w);
     let (d0, d1, d2) = (b0 - a0, b1 - a1, b2 - a2);
@@ -319,7 +342,7 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
     let lxz = sqrt(d0 * d0 + d2 * d2);
     let (gx, gz, g0) = (gw * cs - pad - 0.25, gh * cs - pad - 0.25, pad + 0.25);
     let panes = ask & ASK_PANES != 0;
-    let list = ask != 0;
+    let rule = ask & ASK_GLASS != 0;
     let near = !panes && lxz > 1e-6 && pad < 0.5 && a0 > g0 && a0 < gx && b0 > g0 && b0 < gx && a2 > g0 && a2 < gz && b2 > g0 && b2 < gz;
     let mut n = 0usize;
     o.panes = 0;
@@ -359,11 +382,11 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
                 continue;
             }
             if t1 > shrink && t0 < len - shrink {
-                if list && fl & F_GLASS != 0 {
-                    if !o.note(bi, t0) {
-                        return -2;
+                if fl & F_GLASS != 0 {
+                    match pane_in_way(o, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                        0 => continue,
+                        said => return said,
                     }
-                    continue;
                 }
                 return -1;
             }
@@ -558,11 +581,11 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
                 continue;
             }
             if t1 > shrink && t0 < len - shrink {
-                if list && fl & F_GLASS != 0 {
-                    if !o.note(bi, t0) {
-                        return -2;
+                if fl & F_GLASS != 0 {
+                    match pane_in_way(o, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                        0 => continue,
+                        said => return said,
                     }
-                    continue;
                 }
                 return -1;
             }
@@ -604,8 +627,8 @@ pub fn sight_line(w: usize, set: i32, through: u32, a0: f64, a1: f64, a2: f64, b
     };
     Some(blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, set, 0) == -1)
 }
-/// collision.ts solidBlocked(a, b): the same line with nothing passed. `ask` = ASK_GLASS where the host has a rule for an open pane: a line that meets glass
-/// and nothing solid is then the host's to judge (None), as is one too long to be a line of this world.
+/// collision.ts solidBlocked(a, b): the same line with nothing passed. `ask` = ASK_GLASS where the game has a rule for an open pane. None = a line too
+/// long to be a line of this world: the host's to judge.
 #[inline]
 pub fn solid_line(w: usize, set: i32, ask: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
     let len = match walked(a0, a1, a2, b0, b1, b2) {
@@ -803,15 +826,16 @@ pub const RAY_LEAF: i32 = 1_000_000;
 
 /// collision.ts raycast: the nearest thing the ray from a along the unit r meets within tmax — the leaves of list `set` first (−1: none), then the statics of
 /// the cells round the ray, walked in half-metre steps. → RAY_NONE · RAY_HOST · the
-/// static's index, or RAY_LEAF + the leaf's; and into `out` how far along, then the face's normal. EVERY PANE IS TAKEN AS SHUT (the head of this file).
+/// static's index, or RAY_LEAF + the leaf's; and into `out` how far along, then the face's normal. `ask` = the game has a rule for an open pane: a pane
+/// met where it is open is passed, and the ray flies on to what stands beyond.
 #[allow(clippy::too_many_arguments)]
-pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, out: &mut [f64]) -> i32 {
-    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, -1, out)
+pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: bool, out: &mut [f64]) -> i32 {
+    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, -1, ask, out)
 }
 /// …with ONE LEAF OF THE LIST LEFT OUT, `but` (−1: none): the ray of a thing that is itself one of the leaves (a slab off its hinges is no wall to
 /// itself: doorblast.ts withoutLeaf). The leaves keep their own indices in the answer.
 #[allow(clippy::too_many_arguments)]
-pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, out: &mut [f64]) -> i32 {
+pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
     let o = world(w);
     let (mut best, mut bi, mut bn) = (tmax, -1i32, (0.0, 1.0, 0.0));
     if set >= 0 {
@@ -867,6 +891,9 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
                     }
                     if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.rec[b * REC..b * REC + REC], best) {
                         if t < best {
+                            if ask && fl & F_GLASS != 0 && glass::open(o, b, a0 + r0 * t, a1 + r1 * t, a2 + r2 * t) {
+                                continue;
+                            }
                             best = t;
                             bi = b as i32;
                             bn = (n0, n1, n2);
@@ -889,19 +916,14 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
 }
 
 /// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it, with what only the
-/// host can answer said as RAY_HOST — a ray of no length or of no number (collision.ts walks those itself), and, where the host has a rule for panes
-/// (`ask`), a ray that ends on a pane of glass: shut, the pane is the answer; open, the ray flies on to what stands beyond; which, the host alone can
-/// say. `set` and `but` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the leaf's; `out` as ray writes it.
+/// host can answer said as RAY_HOST — a ray of no length or of no number (collision.ts walks those itself). `set`, `but` and `ask` as ray_but takes
+/// them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the leaf's; `out` as ray writes it.
 #[allow(clippy::too_many_arguments)]
 pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
     if !(tmax > 0.0 && tmax < 1e6) {
         return RAY_HOST;
     }
-    let k = ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, out);
-    if ask && k >= 0 && k < RAY_LEAF && world(w).flags[k as usize] & F_GLASS != 0 {
-        return RAY_HOST;
-    }
-    k
+    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, ask, out)
 }
 
 /// where ray_things says which part it met, after how far along and the normal

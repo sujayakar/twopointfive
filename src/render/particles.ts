@@ -28,6 +28,8 @@ import windFieldSrc from './shaders/wind_field.wgsl' with { type: 'text' };   //
 import { KERNELS } from './kernels';
 const particlesSrc = KERNELS.particles;   // (shaders/particles.wgsl, or its compact writing with that row on: render/kernels.ts)
 import particlesDrawSrc from './shaders/particles_draw.wgsl' with { type: 'text' };
+import { placeNone } from './placeField';
+import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the splat (as in front of the composite and every volumetric march, render/passes.ts)
 import refractCommon from './shaders/refract_common.wgsl' with { type: 'text' };   // the SHARED refraction module (feat/solid-glass-refraction's text, verbatim: Snell / Fresnel / Beer–Lambert / the re-projection and its screen guards; the rain streaks refract the composite's copy through it) — binding-free, prepended to the splat
 
 export type PKind = 'spark' | 'debris' | 'dust' | 'casing' | 'sheet' | 'rain' | 'shard';
@@ -215,6 +217,10 @@ export class Particles {
   private pEmit!: GPUComputePipeline; private pUpdate!: GPUComputePipeline; private pDraw!: GPURenderPipeline;
   private simMod: GPUShaderModule; private drawMod: GPUShaderModule; private simLay: GPUPipelineLayout; private drawLay: GPUPipelineLayout;
   private bgSim: GPUBindGroup | null = null; private bgSimDice: GPUTextureView | null = null;
+  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; particles_draw.wgsl placeBuf @7, read only on the look page while the one exposure
+   *  model is on): null = the zeros that say "none". The engine hands it each frame, as it hands the composite and the smoke march theirs (passes.setPlace) */
+  private placeBuf: GPUBuffer | null = null; private placeNone: GPUBuffer;
+  setPlace(b: GPUBuffer | null) { if (b !== this.placeBuf) { this.placeBuf = b; this.bgDraw = null; } }
   private bgDraw: GPUBindGroup | null = null; private bgDrawKey: [GPUTextureView | null, GPUTextureView | null, GPUTextureView | null, GPUTextureView | null] = [null, null, null, null];
   private readbacks: GPUBuffer[] = []; private inflight: GPUBuffer[] = []; private frameNo = 0;
   private static readonly ZERO_HDR = new Uint32Array(HDR_BYTES / 4);   // (only its first two words are written per frame)
@@ -239,14 +245,16 @@ export class Particles {
       { binding: 4, visibility: FS, texture: { sampleType: 'float', viewDimension: '3d' } },   // the integrated froxel volume (render/froxels.ts; read under FrameFlags.FroxelVol, a dummy otherwise)
       { binding: 5, visibility: FS, texture: { sampleType: 'float', viewDimension: '2d' } },   // PARTICLE RAIN v2: the composite's copy the rain streaks REFRACT (render/passes.ts hdrCopy; a 1×1 black stand-in when there is none — rainCfgC.x is 0 then)
       { binding: 6, visibility: FS, sampler: { type: 'filtering' } },                          // … and its bilinear sampler
+      { binding: 7, visibility: VS, buffer: { type: 'uniform' } },                             // THE LOOK PROTOTYPE: the place field (setPlace; zeros with none): a particle's light is shown by its place's gain (particles_draw.wgsl partShow)
     ] });
     this.sceneDummy = device.createTexture({ label: 'particlesSceneDummy', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     this.sceneDummyView = this.sceneDummy.createView();
+    this.placeNone = placeNone(device);   // (the zeros that say "no field": the same buffer the composite is handed, render/placeField.ts)
     this.sceneSamp = device.createSampler({ label: 'particlesSceneSamp', magFilter: 'linear', minFilter: 'linear', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge' });
     const pre = scenePrelude();
     this.simMod = makeShader(device, pre + lightingCommon + particlesCommon + windFieldSrc + particlesSrc, 'particles');   // (+ the wind field's one text, ahead of the kernels that sum it)
     this.simLay = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lSim] });
-    this.drawMod = makeShader(device, pre + particlesCommon + refractCommon + particlesDrawSrc, 'particlesDraw');   // (+ refract_common.wgsl ahead of the splat: the rain streaks' refraction)
+    this.drawMod = makeShader(device, pre + particlesCommon + refractCommon + placeCommonSrc + particlesDrawSrc, 'particlesDraw');   // (+ refract_common.wgsl ahead of the splat: the rain streaks' refraction; + place_common.wgsl: a particle's light is shown by its place)
     this.drawLay = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lDraw] });   // (the three pipelines: init(), awaited by main.ts before the first frame)
   }
   /** emit + update + the splat, compiled off the GPU process's main thread (gpu/device.ts) — main.ts awaits it with the rest of the game's GPU init; never called by the headless probes */
@@ -296,9 +304,9 @@ export class Particles {
   }
   /** Dev hook (main.ts __hotRain): rebuild ALL THREE pipelines from particle sources handed in (particles_common / particles / particles_draw as they are on disk) with the live preludes —
    *  the rain look's kernels and splat swapped under a staged storm without a reboot. All or nothing: the old pipelines stay on any error. */
-  async hotSwapAll(commonSrc: string, simSrc: string, drawSrc: string, refractSrc: string = refractCommon): Promise<{ ok: boolean; messages: string[] }> {
+  async hotSwapAll(commonSrc: string, simSrc: string, drawSrc: string, refractSrc: string = refractCommon, placeSrc: string = placeCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
     cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
-    const d = this.device; const preS = scenePrelude() + lightingCommon + commonSrc + windFieldSrc; const preD = scenePrelude() + commonSrc + refractSrc;
+    const d = this.device; const preS = scenePrelude() + lightingCommon + commonSrc + windFieldSrc; const preD = scenePrelude() + commonSrc + refractSrc + placeSrc;
     const offS = preS.split('\n').length - 1, offD = preD.split('\n').length - 1;
     const modS = d.createShaderModule({ code: preS + simSrc, label: 'particles-hot' }); const modD = d.createShaderModule({ code: preD + drawSrc, label: 'particlesDraw-hot' });
     const [iS, iD] = await Promise.all([modS.getCompilationInfo(), modD.getCompilationInfo()]);
@@ -327,7 +335,7 @@ export class Particles {
   }
   private async retuneNow(): Promise<{ ok: boolean; messages: string[] }> {
     const d = this.device, common = tuned(particlesCommon), hasCut = !!this.cutSet.cut;
-    const preS = scenePrelude() + lightingCommon + common + windFieldSrc, preC = scenePrelude(true) + lightingCommon + common + windFieldSrc, preD = scenePrelude() + common + refractCommon;
+    const preS = scenePrelude() + lightingCommon + common + windFieldSrc, preC = scenePrelude(true) + lightingCommon + common + windFieldSrc, preD = scenePrelude() + common + refractCommon + placeCommonSrc;
     const sim = tuned(particlesSrc), draw = tuned(particlesDrawSrc), as = common + sim + draw;
     if (as === this.tunedAs) return { ok: true, messages: [] };
     const mods = [{ tag: 'sim', mod: d.createShaderModule({ code: preS + sim, label: 'particles' }), off: preS.split('\n').length - 1 }, { tag: 'draw', mod: d.createShaderModule({ code: preD + draw, label: 'particlesDraw' }), off: preD.split('\n').length - 1 }];
@@ -620,7 +628,7 @@ export class Particles {
     if (nextCopy !== this.rainSceneCopy) { this.rainSceneCopy = nextCopy; }   // (read by prepare() next frame: rainCfgC.x is zeroed while nothing real is bound)
     if (wantScene && scene!.copy) enc.copyTextureToTexture({ texture: scene!.copy.src }, { texture: scene!.copy.dst }, [scene!.copy.w, scene!.copy.h]);
     if (!this.bgDraw || this.bgDrawKey[0] !== depthView || this.bgDrawKey[1] !== volView || this.bgDrawKey[2] !== froxelView || this.bgDrawKey[3] !== sceneView) {
-      this.bgDraw = this.device.createBindGroup({ layout: this.lDraw, entries: [{ binding: 0, resource: { buffer: this.pool } }, { binding: 1, resource: { buffer: this.emitBuf } }, { binding: 2, resource: depthView }, { binding: 3, resource: volView }, { binding: 4, resource: froxelView }, { binding: 5, resource: sceneView }, { binding: 6, resource: this.sceneSamp }] });
+      this.bgDraw = this.device.createBindGroup({ layout: this.lDraw, entries: [{ binding: 0, resource: { buffer: this.pool } }, { binding: 1, resource: { buffer: this.emitBuf } }, { binding: 2, resource: depthView }, { binding: 3, resource: volView }, { binding: 4, resource: froxelView }, { binding: 5, resource: sceneView }, { binding: 6, resource: this.sceneSamp }, { binding: 7, resource: { buffer: this.placeBuf ?? this.placeNone } }] });
       this.bgDrawKey = [depthView, volView, froxelView, sceneView];
     }
     const p = enc.beginRenderPass({ label: 'particlesDraw', colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }, { view: reactView, loadOp: 'clear', storeOp: 'store', clearValue: { r: 0, g: 0, b: 0, a: 0 } }], timestampWrites: ts });
