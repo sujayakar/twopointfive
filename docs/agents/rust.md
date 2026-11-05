@@ -1649,7 +1649,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     answered and nothing heard), and make where it comes to stand HOME, were the step's own two halves called straight (`solveStatics(r, false)`,
     `solvePairs(false)`) on every load of every level. They are those halves in `props.rs` with the same word (`dynamic`), over the things' columns
     in the game's block and the box world's copy, proven once for the lot (`collision.ts rulesStatics`: the statics alone, no leaf is asked for).
-    The way back (no window on the copy: the red path, a level that does not fit) is `ruleFell('props', …)`, a sealed row. `SETTLE_PASSES` is one
+    The way back (no window on the copy: the red path) is `ruleFell('props', …)`, a sealed row. `SETTLE_PASSES` is one
     number in both sources. HELD BY `prop-ident`: for each of its five levels a second set of the furniture is made over the same statics with the
     both-ways switch up, and EVERY LEVEL FILE'S furniture is settled both ways, as it loads and as it loads lived in (111 settles; 99 things moved
     and a thing pushed out of a static 2,292 times; 0 differ); `PROPS_BREAK=1` hands the module every thing a hair wider for its settle and
@@ -1706,6 +1706,37 @@ first system across (the game's own maths). No rule of play has changed and noth
     plugged, as before); the chair's coasts and its `roll` events to the digit, over 5,760 steps (`CHAIRROLL_BREAK=1`: 4 FAILED, as before).
     No other tool steps a system with no game (`leafway-check` and the level editor make `Doors` to deal swings and step nothing; the model
     viewer's stage lives under the workbench and goes with it).
+  - A BOX WORLD THE COPY CANNOT HOLD CANNOT HAPPEN, AT LOAD OR IN PLAY (`game/levelfit.ts stoodOver`, `breakRoom`; `game/wallbreak.ts
+    WallBreak.room`, `over`, `piecesSure`; `boxMirror.ts outgrown`). A level that did not fit a table of the copy was not copied and every question
+    of it went to TypeScript ("the level does not fit the copy": the box world's own way back, and everybody's). Content is never an error and
+    there is nobody to hand a level to, so it is closed in three places, none of which is a bigger table:
+    (1) AS A GAME IS MADE its whole count (`fitRows`: every table of the copy, every pool, every hand-over) is read, and a game with a row over
+    is not a game: `stoodOver`, the last statement of `Game`'s constructor, beside `levelOver` at its first. `BoxMirror.tables` asks the module
+    if nobody has; with no module every table is no number to hold to.
+    (2) ONE RULE GROWS THE BOX WORLD IN PLAY: a holed wall or a chewed crate stands back up as pieces (`wallbreak.ts rebuild`, the one caller
+    of `StaticCollision.addStatic`). A piece is a static, at most one cut row, and an entry in every cell of the box it was cut from. What the
+    copy holds past the level as authored, in those three tables, is the level's ROOM, taken once as it loads (`WallBreak.room`), and `rebuild`
+    refuses a change past THE SMALLER OF ITS KNOB AS IT READS NOW AND THAT ROOM (`over`), exactly as it refused one past the knob: the round only
+    scars, and it is counted. So a knob raised in the debugger, or a level with little room, breaks less and walks nowhere. The old rule was a
+    guess (a level was to leave half of three tables free as it loaded); the count is now what breaking can add. `fitRows` has one row for it,
+    `pieces`: the knob (512) against the pieces the room SURELY holds whichever things break (`piecesSure`: by statics, by cut rows, and by
+    entries were every piece cut from the broadest breakable or wall a charge may take on). It is no reason to refuse a level (`play`), and
+    `copyfit-check` holds every shipped level to it: each has the room for all 512, so no piece is refused for the copy's sake and no game
+    moved. The cut rows are counted by the statics that CARRY a cut record, whatever the cut-pieces switch says, so that switch walks nowhere
+    either.
+    (3) BEHIND BOTH, A THROW BY NAME: `boxMirror.ts outgrown` says which table and by how much (statics, cells, entries, tilted statics, cut
+    rows; and broken panes or a view's panes past their tables, which `levelOver` already made no case). It has two sentences: before a tick has
+    opened on a box world (`BoxMirror.played`, said by `tickOpen`) it is "this level is too big to load", for a game's first questions come as
+    it is made (the paths' bake), before `stoodOver` reads the count, and a box world with no game has no other refusal; after one it is "has
+    outgrown the copy in play", a mistake said by name. `BoxMirror.fit` and the copy's "tried again next tick" are gone, and a tick that opens
+    has a copy that stands.
+    HELD BY `copyfit-check` on both stands (57 levels: `pieces` 512 of 1,024 at the tightest, which is the cut rows; that the wall breaker's
+    sure number is the one its breakables and adoptable walls give; that the room was taken at load; a game one static over a table is refused
+    as it is made; a box world of one static too many is too big to load from the copy itself at its first question; one grown past the copy
+    behind the breaker's back in play throws by name as the next tick opens; `COPYFIT_BREAK=1` red), and by
+    `probes.ts wallbreak-caps`: three lines beside the knob's own, the room made small in statics (the knob as shipped), in cut rows (the knob
+    raised a thousandfold) and in entries, each refused whole with the cells and the nav unchanged (`ROOM_BREAK=1`: the room left the level's
+    own, and those three FAIL). The other cap in `rebuild` (the picture's own box table, less 768) is the renderer's and stands as it was.
 
   WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
   - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
@@ -1744,7 +1775,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     said now before anything of the level is built, the stores refuse more rows than they have (`doorshome.ts`, `slabshome.ts`, `propshome.ts`),
     and the level validator says the same of the document whole (`levelData.ts`: doors, things, the things' boxes). THE COUNT IS ONE SOURCE:
     `levelfit.ts fitRows` is every count of a stood game against what holds it, the pools and every table of the box world's copy (`BoxMirror.tables`),
-    with the share a table that grows in play may fill as a level loads; `copyfit-check` is that function over every level and is red when the copy
+    and the pieces a broken level may stand up against its room for them (below: "a box world the copy cannot hold"); `copyfit-check` is that function over every level and is red when the copy
     has a table no row of it is held by. It reads: doors 27 of 64, things 61 of 128, sheets of glass 22 of 256, and THE FURNITURE'S BOXES 220 OF 512: they were
     220 of 256 on office-relief, with levels being dressed that week, so the copy's leaf lists are twice as long now (`world.rs MAX_LEAVES`,
     `propshome.ts PROP_PARTS`; `boxMirror.ts boot` holds the two together).
@@ -1759,8 +1790,8 @@ first system across (the game's own maths). No rule of play has changed and noth
   the TypeScript does). Each wants its answer before the twin is deleted.
   EVERY LEVEL AGAINST THE COPY'S CAPS: `bun run tools/qa/copyfit-check.ts` (`COPYFIT_BREAK=1` its red path) stands each level of `levels/` up and reads
   what it holds against the module's tables: statics (the fullest level 16 % of 8,192 on the page's stand), cells, the cells' entries, tilted statics,
-  the cut rows the copy spent, leaves, furniture (61 of 128) and its part boxes on the leaves' table (220 of 512), the tightest. A level that does not fit would be a level every question of which is the
-  TypeScript's, and the count says so by its reason.
+  the statics that carry a cut record, leaves, furniture (61 of 128) and its part boxes on the leaves' table (220 of 512), the tightest. A level over a table is not loaded, and the game
+  says which (`levelfit.ts stoodOver`).
   WHAT THE COUNT READS, the 42 on the page's stand (the frozen stand has only the first): `paths · a search with a penalty has no Rust` (some 8,500);
   `light · outside a tick` (5,730, one caller: an order given between ticks places the calm torch); `rays` at an open pane. Each is its family's.
   WHAT WAS RUN: the 42 on both stands with the count, digests equal to the build before; `rust-check` quick on both stands and its red path; `--both` on
