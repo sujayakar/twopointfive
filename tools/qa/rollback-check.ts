@@ -51,7 +51,7 @@ const KNOWN = ['--scn', '--seeds', '--cap', '--every', '--ticks', '--jobs', '--s
 for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} — ${KNOWN.join(' ')}`); process.exit(2); }
 const BREAK = process.env.ROLLBACK_BREAK === '1';
 // SIMSTATE_BREAK=1: a snapshot put back writes nothing into the game's block of the Rust module's memory (src/sim/state.ts) — with a row that keeps state there
-// raised (TPS_RUSTDICE=1) 'put back', 'same game', 'the ring' and 'fresh game' must then FAIL; with none raised no game has a block and nothing changes
+// raised (the build has them up) 'put back', 'same game', 'the ring' and 'fresh game' must then FAIL
 if (process.env.SIMSTATE_BREAK === '1') { const { SimState } = await import(`${ROOT}/src/sim/state.ts`); const P = SimState.prototype as any, put = P.put; P.put = function (this: unknown, c: unknown[]) { if (c.length === 0) put.call(this, c); }; }
 /** the break word, for 'the host's own': the meter's GPU side is made a plain object before the first snapshot, so the snapshot walks it and puts it back as it did
  *  before it was the host's — the mark must then be gone */
