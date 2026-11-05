@@ -48,6 +48,20 @@ export const BOX_ROUND_BIT = 8;
 import { coatRough, SOLIDGLASS } from './stuff';   // (stuff.ts reaches only the look's table of names, a module with no imports of its own: no cycle)
 export type BoxStuff = import('./stuff').BoxStuff;
 export type DoesWord = import('./materials').DoesWord;
+/** the engine's wait for a stale draw order (BoxWorld.upload): `calm` drawn packs the statics must have stood still for, and `still`, upload's own count of
+ *  them, kept by the engine: how many frames have been drawn is the picture's business and no part of the world's state (which a snapshot holds) */
+export interface DrawWait { calm: number; still: number }
+/** WHAT A PLANNER OF THE PICTURE ASKS OF A BOX: where it is, its size and turn, and what kind of thing it is (of its cuts, only whether it has any). A
+ *  planner that is given more than one frame (render/steps.ts) works on copies of these, taken in the call that begins it (planBoxes), so the level it
+ *  plans is one level, as it stood then. The type is the list of what may be asked: a planner that reads another field of a box does not compile until
+ *  the copy carries it. Nothing of a copy is shared with the box it was taken from. */
+export interface PlanBox { c: Vec3; h: Vec3; yaw: number; flags: number; rot?: Quat; cut?: { readonly length: number }; round?: boolean }
+export function planBoxes(list: readonly Box[]): PlanBox[] {
+  const out: PlanBox[] = new Array(list.length);
+  for (let i = 0; i < list.length; i++) { const b = list[i], r = b.rot;
+    out[i] = { c: [b.c[0], b.c[1], b.c[2]], h: [b.h[0], b.h[1], b.h[2]], yaw: b.yaw, flags: b.flags, rot: r ? [r[0], r[1], r[2], r[3]] : undefined, cut: b.cut !== undefined && b.cut.length > 0 ? { length: b.cut.length } : undefined, round: b.round }; }
+  return out;
+}
 export interface Box {
   c: Vec3;            // center
   h: Vec3;            // half extents (local axes)
@@ -354,8 +368,17 @@ export class BoxWorld {
    *  only boxes that cannot tie are put in another order. `drawTop[i]` = static i's top as it is drawn (a single float); `drawRank[i]` = its place in the
    *  order; ranked again only when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does (`drawRankN`,
    *  -1 = stale). `drawSlot` is scratch: the sort's list, then the frame's laying out of the drawn statics by rank. The dynamics and the cut list follow
-   *  as they did. */
+   *  as they did.
+   *  THE ORDER MAY WAIT (the page's pace: render/planPace.ts, render/steps.ts). Ranking reads every static and in a browser runs cold, 2 to 7 ms of the
+   *  frame a wall is blown. Given a `DrawWait` (upload's second word: the engine's, and its count of still packs is the engine's to keep, not this
+   *  world's), a stale order is made again only on a drawn pack, once the statics have stood still for `calm` drawn packs; until then THE STATICS ARE
+   *  DRAWN IN THE LIST'S OWN ORDER, which is the order every tie is defined by: the picture is the same, and only the work of shading what is then
+   *  hidden comes back for those frames (and for as long as a static changes more often than that). `drawWaits` (the engine sets it with the pace) =
+   *  a pack with no draw after it never makes the order either. With neither (a tool, a check, `?planpace=old`): at once, on the pack that finds it
+   *  stale, as ever. `drawAskedUndrawn`: a pack with no draw after it found a change (the next drawn pack starts the wait again for it). Two words of
+   *  the picture's are in this world's state for it, `drawWaits` and that one; neither is a count of frames. */
   private drawTop = new Float32Array(0); private drawRank = new Uint32Array(0); private drawSlot = new Uint32Array(0); private drawRankN = -1;
+  drawWaits = false; private drawAskedUndrawn = false;
   staticsDirty = true;
   /** bumped by game/wallbreak.ts whenever a static was appended, re-shaped in place or cut off at runtime (a holed wall's pieces): upload() re-packs changed statics by
    *  itself; a host that mirrors the statics elsewhere (the native engine's acceleration structure) folds this into its static serial */
@@ -687,9 +710,9 @@ export class BoxWorld {
   /** THE LIST, THEN THE PACK: every box into its rows for the GPU, the visible and cut lists, the trace grid, and the writes. Call once per drawn frame after dynamics
    *  are set. `between` = a pack with no draw of its own after it (ensurePacked): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the
    *  pack that is drawn still resolves 'where was this box last frame'. */
-  upload(between = false) {
+  upload(between = false, wait: DrawWait | null = null) {
     const nStat = this.list(); const all = this.all;
-    let nv = 0, marked = 0;
+    let nv = 0, marked = 0, asked = false;
     const marksOn = this.markingsEnabled;
     let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
@@ -715,7 +738,7 @@ export class BoxWorld {
         this.drawTop[i] = !rot && (b.flags & BoxFlag.Cutaway) && b.cutHeight < c[1] + h[1] ? Math.fround(b.cutHeight) : Math.fround(Math.fround(c[1]) + Math.fround(rot ? BoxWorld.heightExtent(b) : h[1]));
         if (S[so] !== c[0] || S[so + 1] !== c[1] || S[so + 2] !== c[2] || S[so + 3] !== b.yaw || S[so + 4] !== h[0] || S[so + 5] !== h[1] || S[so + 6] !== h[2] || S[so + 15] !== b.cutHeight
           || ((S[so + 7] ^ b.flags) & (BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Cutaway)) !== 0
-          || (rot ? !(S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3]) : S[so + 18] !== 0)) this.drawRankN = -1;   // (its place, size, turn, or whether and how far it is drawn: the order is asked again. Said here, not kept in a local: an upload that throws further on has still said it. Paint, rain's gloss and every other flag ask nothing.)
+          || (rot ? !(S[so + 18] === 1 && S[so + 19] === rot[0] && S[so + 20] === rot[1] && S[so + 21] === rot[2] && S[so + 22] === rot[3]) : S[so + 18] !== 0)) { this.drawRankN = -1; asked = true; }   // (its place, size, turn, or whether and how far it is drawn: the order is asked again. Said here, not kept in a local: an upload that throws further on has still said it. Paint, rain's gloss and every other flag ask nothing.)
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
         S[so + 9] = a0; S[so + 10] = a1; S[so + 11] = a2; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
@@ -728,8 +751,15 @@ export class BoxWorld {
         else if (cutOn && b.cut !== undefined && b.cut.length > 0) { if (b.flags & BoxFlag.NoShadow) cv[--np] = i; else cv[nc++] = i; } else this.visible[nv++] = i;   // (CUT BOXES: a cut static goes to the cut list, drawn by the cut pipeline)
       }
     }
-    if (this.drawRankN !== nStat) { this.rankStatics(nStat); this.drawRankN = nStat; }
-    if (nv > 0) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
+    if (this.drawRankN !== nStat) {
+      if (this.drawRankN >= 0 || this.statShadowN !== nStat) asked = true;   // (the list grew or shrank: that is a change too)
+      this.drawRankN = -1;
+      let now = !(between && this.drawWaits);
+      if (between) { if (wait !== null) now = false; if (!now && asked) this.drawAskedUndrawn = true; }
+      else { if (wait !== null) { if (asked || this.drawAskedUndrawn) wait.still = 0; else wait.still++; now = wait.still >= wait.calm; } this.drawAskedUndrawn = false; }
+      if (now) { this.rankStatics(nStat); this.drawRankN = nStat; if (wait !== null) wait.still = 0; }   // (the count starts from nothing each time the order is made: a change this pack could not say it saw, an upload that threw part way or a snapshot put back, then waits its full time)
+    }
+    if (nv > 0 && this.drawRankN === nStat) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
       for (let k = 0; k < nv; k++) slot[rank[vis[k]]] = vis[k];
       for (let r = 0, w = 0; w < nv; r++) if (slot[r] !== 0xFFFFFFFF) vis[w++] = slot[r]; }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;

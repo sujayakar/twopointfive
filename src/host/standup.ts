@@ -154,6 +154,7 @@ import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
 import { HITSTUFF } from '../game/particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { PLAN_PACE } from '../render/planPace';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { WALLSKIN } from '../game/wallskin';
 import { CLEANRESTART } from '../game/cleanrestart';
@@ -289,6 +290,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_HITSTUFF')) HITSTUFF.on = String((globalThis as any).process?.env?.TPS_HITSTUFF ?? '') === '1';   // a round reads what a thing says it is made of (src/game/particleFx.ts): off, so every hit is read by the colour of the paint, as it was
   if (opts.harness && pinned('TPS_MARKCUT')) MARKCUT.on = String((globalThis as any).process?.env?.TPS_MARKCUT ?? '') === '1';   // a mark on a cut or a round face lies where the round met it (src/render/decals.ts): off, so a mark is pulled to the plain box's face, as it was
   if (opts.harness && pinned('TPS_MARKSIT')) MARKSIT.on = String((globalThis as any).process?.env?.TPS_MARKSIT ?? '') === '1';   // a blast's marks sit in the surface (src/render/decals.ts; a picture only): off, so the decal buffer's header is the old one and every mark is drawn as it was
+  if (opts.harness && pinned('TPS_PLANPACE')) PLAN_PACE.on = String((globalThis as any).process?.env?.TPS_PLANPACE ?? '') === '1';   // the picture's planners at a pace (src/render/planPace.ts; a picture only): off, so every plan is made whole on the frame that asks, as it was
   if (opts.harness && pinned('TPS_WALLSKIN')) WALLSKIN.on = String((globalThis as any).process?.env?.TPS_WALLSKIN ?? '') === '1';   // the paint on a wall goes with the wall (src/game/wallskin.ts): off, so a band on a holed wall is drawn whole across the hole, as it was
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));

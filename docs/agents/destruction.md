@@ -346,8 +346,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   asked by the same oracle three times coarser; sheets that lay only on a thing another lane took are counted apart. `tools/qa/wallskin-page.cjs` asks the heart of it of the real page (headless Chromium, the software adapter), on and under
   `?wallskin=0`, with stills (`STILLS=<dir>`; `CORNER=1` = at a corner where two walls overlap). `hole-watch.ts` (every play-through's JSON,
   `destr.skins`) says how many sheets stood cut as a run ended, so "no digest moved" can say whether the rule was met.
-  MEASURED (11-05, seven joined steps before the tip the change is cut on, none of which touch a file of the rule's but two lines of
-  `destruction.ts`; 42 scripted play-throughs = 21 scenarios, seeds 1 and 2, `PT_DIGEST=1 playthrough.ts --seeds 1-2`). THE PAGE'S STAND, the rule up
+  MEASURED (11-05, twice: fifteen joined steps before the tip the change is cut on, and eight before it; those steps touch the rule's files only in
+  the switch lists, two lines of `destruction.ts` and the pace of the statics' draw order in `scene/boxes.ts`, and the numbers below are the same both
+  times; 42 scripted play-throughs = 21 scenarios, seeds 1 and 2, `PT_DIGEST=1 playthrough.ts --seeds 1-2`). THE PAGE'S STAND, the rule up
   against down (`TPS_WALLSKIN=0`), and each against the tree before the change: 42 of 42 digests the same every way; sheets stood cut at the end of 4
   of those runs (13 sheets, 4 with nothing left standing, 11 pieces). With every held room taken by a wall charge where one fits (`PT_DESTR=1
   PT_WALL=1`), up against down: 42 of 42 the same; sheets stood cut at the end of 24 of the runs (67 sheets, 31 with nothing left standing, 79 pieces,
@@ -366,9 +367,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   first blast) and 0.1 to 0.4 ms on the next frame (the cut); after, about 0.01 ms a frame. The page's own profile of a blast frame was not taken.
   THE FAMILIES `wallskin wallbreak outerwall hungcharge fog-things shapes cleanrestart statediff journal-knobs shipped wallfurn wallreact` green on both
   stands with it, `rollback-check` in full and `--static` on both, `dress-check`. No tour, no soak.
-  SEEN ON A GPU: this cut never. Two earlier cuts of the rule were, once each, on a rented card (an A10G, headless Chromium, quality high), in stills
-  of one wall of one level: the band stood to the hole's edge and under the port's sill, cut clean, where under `?wallskin=0` the holed wall was bare of
-  it. The maintainer has not seen it and nobody has played it. No still of a band that carries markings or of cover that ends ragged.
+  SEEN ON A GPU IN STILLS, and only so: the page script ran on a rented card (an A10G, headless Chromium, quality high, midday) eight joined steps
+  before the tip the change is cut on: at the block's partition, at its corner (`CORNER=1`) and on the snatch (`LEVEL=snatch.json`, a blue dado 6 cm
+  off its partition), every verdict passes with the software adapter's numbers and no page error. In the frames the band stands to the hole's edge and
+  is gone where the wall opened; at the corner it stays on the end of the wall that still stands (a strip a hand wide: hard to read); on the snatch
+  nothing blue hangs in the hole. Three places, once each, about four frames a still. Never seen moving; the maintainer has not seen it and nobody has
+  played it. No still of a band that carries markings or of cover that ends ragged.
 - **A blast's pall: a wall charge, a hand grenade and a 40 mm raise a real cloud of dust and smoke** (`CHAOS.pall`, `destruction.ts`, 10-14; his words:
   "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). BEFORE: a blast raised the bullet's puff a few times over
   (`CHAOS.puff`: radius 0.2, a third of a second, under the round's caps of 2 a frame and 8 a second) and `WALL_BLAST.dust`, particles the picture alone
@@ -1170,7 +1174,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The player's grenade and 40 mm checks run on the loud card** (`frag-player`, `he40-*`, `burst-breaks`; no game code). A night alone on the page
   wears your STEALTH card (`kit.ts KITDEAL.stealth`), which issues no frag and no HE round, so on the shipped stand these stood a Sam with nothing
   to throw or fire and were red from the step that brought that card. They ask the grenade and the round, which only the loud card issues: they
-  are on the probe runner's hold for checks written against one card (`probes.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
+  are on the probe runner's hold for checks written against one card (`tools/qa/holds.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
   stealth run is issued is `kitstealth-check.ts`'s. `he40-keys` (d) also said 'teammates have no such row': a teammate's card has the row where
   his one round can be fired on your order (the card as a tree and `squad40.ts`; `kittree-check.ts` holds it), and the line now asks exactly that.
 - **A burst kills a man who is down and breathing** (`frag.ts FRAG.downKill`, 10-22; from play: two men put out with sponge rounds, a 40 mm burst
