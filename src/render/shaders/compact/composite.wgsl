@@ -216,10 +216,12 @@ fn upsampleHi(pixf: vec2f, z: f32, N: vec3f, r0: f32) -> vec4f {
     if (any(h < vec2i(0)) || any(h >= dims)) { continue; }
     let hi = textureLoad(hiTex, h);
     if (hi.a <= 0.0) { continue; }
+    let wf = wx[o.x] * wy[o.y] * (1.0 - smoothstep(0.1, 0.2, abs(hi.a - 1.0 - r0)));   // the spline's weight × the finish's likeness: what the texel itself says, before its guides are read
+    if (wf <= 0.0) { continue; }
     let src = min(h * di + gi, inHi());                           // guides from exactly the pixel the texel was made at
     let zs = linearDepth(textureLoad(gDepth, gpx(src), 0), ipos(vec2f(src) + 0.5));
     let dz = (zs - z) / max(z * 0.02, 0.02);
-    let w = wx[o.x] * wy[o.y] * exp(-dz * dz) * pow(max(dot(textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0, N), 0.0), 8.0) * (1.0 - smoothstep(0.1, 0.2, abs(hi.a - 1.0 - r0)));
+    let w = wf * exp(-dz * dz) * pow(max(dot(textureLoad(gNormal, gpx(src), 0).xyz * 2.0 - 1.0, N), 0.0), 8.0);
     acc += vec4f(hi.xyz, hi.a - 1.0) * w; wsum += w;
   }
   // (the weights of nine texels that are all this pixel's surface and finish sum to 1. Under a fifth of that, what is left is a neighbour's sliver, not this
