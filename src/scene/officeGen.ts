@@ -1196,27 +1196,32 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // ---- THE CORRIDOR'S NORTH WALL, the face the camera reads the whole game: each of the four rooms' number over its door, in ink on the lintel
     [['01', 9.6], ['02', 17.6], ['03', 25.6], ['04', 32.6]].forEach(([n, x]) => { const i = boxOn('+z', x as number, 2.6, 10.06); stencilS(i, n as string, boxes[i].c[0], 2.34, INK, 3, 'base'); });   // (on the lintel's own middle: a doorway is not the middle of its slot)
     // ---- KEEP CLEAR, on the floors that are there: inside the stair door at the corridor's west end, inside the break room's two outer doors, before the
-    // server room's side door (where the room clear turns: a man finds it by the yellow), and on the car park's tarmac outside the two outer doors, which
-    // from the lot at night were a wall like the rest
+    // server room's side door (where the room clear turns: a man finds it by the yellow), and on the tarmac outside the fire exit (none outside the break
+    // room's south door: the van stands a stride off it and hides that ground from the camera)
     bay(boxOn('+y', 4.5, 0.004, 11.0), 4.14, 10.52, 5.0, 11.5);
     { const lino = boxOn('+y', 32, 0.004, 18); bay(lino, 31.05, 22.75, 32.25, 23.86); bay(lino, 34.7, 20.1, 35.86, 21.4); }
     bay(boxOn('+y', 18, 0.004, 7), 20.95, 8.15, 21.86, 9.35);
-    { const lot = boxOn('+y', 38, 0, 26); bay(lot, 31.05, 24.16, 32.25, 25.3); bay(lot, 36.14, 20.1, 37.3, 21.4); }
-    // ---- the stair tower says what it is, on the face that looks at the lobby's glass
+    bay(boxOn('+y', 38, 0, 26), 36.14, 20.1, 37.3, 21.4);
+    // ---- the stair tower says what it is, on the face that looks at the lobby's glass; and the conference room its name, in chalk on the grey sill under
+    // its glass (the other three rooms' names are on the dado that carries that grey on: the lived tier, below)
     stencilS(boxOn('+z', 2.5, 1.5, 12.87), 'STAIR', 2.5, 1.4, INK, 1, 'coarse');
+    stencilS(boxOn('+z', 7.5, 0.25, 10.06), 'CONFERENCE', 7.5, 0.075, CHALK, 1, 'coarse');
 
     if (opts.lived ?? LIVED.on) {
       const film = (x: number, z: number, w: number, d: number, paint: Vec3) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], albedo: paint, flags: BoxFlag.NoShadow });   // (floorPaint's box, above: a painted panel of floor)
       const coat = madeOf('enamel', [0.62, 0.62, 0.6], { rough: 0.4 }), louvre = madeOf('louvre', [0.5, 0.51, 0.52], { rough: 0.45 }), dark = madeOf('enamel', [0.2, 0.21, 0.23], { rough: 0.4 });
-      // ---- the corridor: the floor says where each door leads, a navy panel in the lino either side of the runner with the room's name in chalk; the grey of
-      // the conference room's sill runs on as a dado along the whole north wall (the same skim, the sill's own paint); conduit under the wall's head from the
-      // server room's door to the manager's and on to a box by the storage door, where the breaker is; a transfer grille high beside the server room
+      // ---- the corridor: the grey of the conference room's sill runs on as a dado along the whole north wall (the same skim, the sill's own paint), and
+      // carries each room's name in chalk beside its door (a name on the floor there would lie behind the corridor's south wall, as the camera stands); the
+      // floor says where each opening on the south side leads, a navy panel in the lino with the name in chalk, read through the opening from the room;
+      // conduit under the wall's head from the server room's door to the manager's and on to a box by the storage door, where the breaker is; a transfer
+      // grille high beside the server room
       grp('lived.corridor');
       const floorName = (text: string, x: number, z: number) => { const w = stencilWidth(text) * 0.05 * k, i = film(x, z, w + 0.2, 0.44, madeOf('enamel', [NAVY[0], NAVY[1], NAVY[2]], { rough: 0.45 }));
         paintOn(i, MD.stencilMarks('+y', text, ...onTop(i, x - w / 2, z + 0.175 * k), CHALK, 1, 'coarse', TX)); };
-      floorName('CONFERENCE', 9.6, 10.3); floorName('SERVER', 17.6, 10.3); floorName('MANAGER', 25.6, 10.3); floorName('STORAGE', 32.6, 10.3);
       floorName('LOBBY', 7.5, 11.9); floorName('DESKS', 15.7, 11.9); floorName('DESKS', 22.7, 11.9); floorName('BREAK ROOM', 30.6, 11.9);
-      for (const [, a, b] of wallRuns(10, 0.12, 4.12, 35.88)) band('x', 10, a, b, 1, 0, 0.5, K.sill, 0.12);
+      { const dado = wallRuns(10, 0.12, 4.12, 35.88).map(([, a, b]): [number, number, number] => [band('x', 10, a, b, 1, 0, 0.5, K.sill, 0.12), a, b]);
+        [['SERVER', 16.0], ['MANAGER', 23.8], ['STORAGE', 30.8]].forEach(([n, x]) => { const half = stencilWidth(n as string) * 0.05 * k / 2, r = dado.find(([, a, b]) => (x as number) - half >= a && (x as number) + half <= b);
+          if (!r) throw new Error(`office, the hand pass: no stretch of the dado holds '${n}' at x ${x}`); stencilS(r[0], n as string, x as number, 0.075, CHALK, 1, 'coarse'); }); }
       conduit('x', 10, 18.4, 24.8, 1, 2.72, coat, C.metal, undefined, 0.12); conduit('x', 10, 26.95, 31.8, 1, 2.72, coat, C.metal, 2.3, 0.12);
       vent('x', 10, 14.0, 14.6, 1, 2.2, 2.6, louvre, 0.12);
       // ---- the break room: its north wall navy to a metre (the placards' navy on the same skim), and the kitchen's extract high on it
