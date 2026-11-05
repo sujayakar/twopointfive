@@ -1584,6 +1584,14 @@ first system across (the game's own maths). No rule of play has changed and noth
   `falls`, `props`, `slabs`, `items` and `a rule's step (doors, furniture, leaves, thrown things)` (`sim.ts RULES_ROW`: the copy refused to one of
   them). A family adds its row in the step that closes its last fallback, and its TypeScript can go in the step after. `rays` joined with "A pane's open question": until then a ray whose nearest thing was a pane the
   host said was open there flew on in the TypeScript walk (some five hundred a mission with glass in it).
+  THE COUNT'S OWN RULES (a review's mends): `TPS_FELL=0` and `?fell=0` are off, as every word of this family; `?fell` is a word of the visit, so a
+  page sent on to a recipe's address keeps it. A WINDOW IS PROVEN BY ITS FIRST QUESTION (`col.window(fn)`: one that asks nothing costs nothing), and
+  the page opens one round the camera's step of a frame and round the sound's probe, which ask their lines between ticks; the `ALONE` line says how
+  many questions proved the copy for themselves and how many windows a question proved. A copy that did not stand because the level does not fit is
+  not asked for again until the next tick or window (the TypeScript answers, as it always did there: slower, never wrong). A game's pose pool with no
+  room does not throw: the pose stays the host's own array, that man's layers are the TypeScript's and counted under `walk`, and it is tried again
+  at every update (when the TypeScript goes, the cast's size is a level's limit: game/levelfit.ts has no row for it yet). Counted since: the fog's
+  pass handed back by the module, a rig the bench did not take, a blend of poses of different sizes.
   WHAT WAS CLOSED FOR THE SEALED ROWS:
   - A QUESTION OUTSIDE A TICK. The module answers only over a copy of the box world that has been PROVEN (every static compared with its row), and a
     tick was the only stretch with a proof. `StaticCollision.window(fn)` proves the copy once and runs `fn` with its questions going to the module; a
@@ -1659,7 +1667,7 @@ first system across (the game's own maths). No rule of play has changed and noth
   the TypeScript does). Each wants its answer before the twin is deleted.
   EVERY LEVEL AGAINST THE COPY'S CAPS: `bun run tools/qa/copyfit-check.ts` (`COPYFIT_BREAK=1` its red path) stands each level of `levels/` up and reads
   what it holds against the module's tables: statics (the fullest level 16 % of 8,192 on the page's stand), cells, the cells' entries, tilted statics,
-  the cut rows the copy spent, leaves, furniture (61 of 128, the tightest). A level that does not fit would be a level every question of which is the
+  the cut rows the copy spent, leaves, furniture (61 of 128) and its part boxes on the leaves' table (220 of 512), the tightest. A level that does not fit would be a level every question of which is the
   TypeScript's, and the count says so by its reason.
   WHAT THE COUNT READS, the 42 on the page's stand (the frozen stand has only the first): `paths · a search with a penalty has no Rust` (some 8,500);
   `light · outside a tick` (5,730, one caller: an order given between ticks places the calm torch); `rays` at an open pane. Each is its family's.
