@@ -2,7 +2,7 @@
 
 WRITTEN BY `bun run tools/levels/library.ts --write` FROM THE KITS. Do not edit: change the kit, then write it again (`--check` is red when this page is stale).
 
-168 pieces in 6 kits, 115 named paints in 6 tables.
+182 pieces in 6 kits, 115 named paints in 6 tables.
 A piece is something a level asks a kit for by name. Each row is one call laid alone: the call a showroom makes.
 
 - **To a man**, read off the boxes as laid: *solid to h* = feet, sight, rounds and sound meet it, up to h metres; *off the floor* = solid, but nothing of it comes
@@ -19,7 +19,7 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 
 | Kit | File | Pieces | Its sections |
 |---|---|---|---|
-| gwotKit | `src/scene/gwotKit.ts` | 65 | walls · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
+| gwotKit | `src/scene/gwotKit.ts` | 79 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
 | officeKit | `src/scene/officeGen.ts` | 19 | glass · walls · props · loose props · set dressing helpers · lights · doors |
 | livedKit | `tools/levels/livedKit.ts` | 18 | the floor · furniture · clutter · loose things |
 | livedPieces | `tools/levels/livedPieces.ts` | 37 | carcasses · paper, plans, books · instruments and tools · safes · on a wall · on a desk · on the floor · loose |
@@ -39,8 +39,10 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | cone | livedKit, livedPieces | 0.34 × 0.34 × 0.56 · 0.3 × 0.3 × 0.49 |
 | crate | livedKit, livedPieces | 0.8 × 0.5 × 0.47 · 0.5 × 0.5 × 0.42 |
 | drum | gwotKit, livedKit | 0.56 × 0.56 × 0.88 · 0.56 × 0.56 × 0.89 |
+| ladder | gwotKit, livedPieces | 0.6 × 0.44 × 2.84 · 2.4 × 0.46 × 0.07 |
 | mat | livedKit, livedQuiet | 1.4 × 1 × 0.02 · 1.6 × 0.9 × 0.01 |
 | mug | livedKit, livedQuiet | 0.07 × 0.07 × 0.09 · 0.08 × 0.08 × 0.1 |
+| pot | gwotKit, livedTrain | 0.34 × 0.34 × 0.14 · 0.4 × 0.4 × 0.34 |
 | rug | gwotKit, officeKit | 3.2 × 3 × 0.01 · 2.4 × 1.6 × 0.01 |
 | shelf | officeKit, livedQuiet | 1.6 × 0.4 × 1.9 · 2 × 0.36 × 1.5 |
 | stool | livedKit, livedPieces, livedQuiet, livedTrain | 0.34 × 0.34 × 0.47 · 0.36 × 0.36 × 0.48 · 0.34 × 0.34 × 0.34 · 0.34 × 0.34 × 0.42 |
@@ -70,7 +72,7 @@ It is no second way of building the name.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **wallX**(z, x0, x1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) *(is `officeKit.wallX`)* | solid to 3 | 10.24 × 0.24 × 3 | 1 solid | mud | gwot-yard |
+| **wallX**(z, x0, x1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) *(is `officeKit.wallX`)* | solid to 3 | 10.24 × 0.24 × 3 | 1 solid | mud | gwot-yard, library-hall |
 | **wallZ**(x, z0, z1, kind = 'mud', openings = [], height = H) | a SHELL wall along X at fixed z (0.24 thick: mud-brick, render, whitewash, bare block); openings as the kits' own (doors 0‥2.2, windows 0.9‥2.4) *(is `officeKit.wallZ`)* | solid to 3 | 5.76 × 0.24 × 3 | 1 solid | mud | gwot-yard |
 | **partX**(z, x0, x1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) *(is `officeKit.wallX`)* | solid to 3 | 4 × 0.12 × 3 | 1 solid | whitewash | library-hall |
 | **partZ**(x, z0, z1, kind = 'mudLight', openings = [], height = H) | an interior PARTITION (0.12 thick) *(is `officeKit.wallZ`)* | solid to 3 | 5.76 × 0.12 × 3 | 3 solid | mudLight | gwot-yard |
@@ -80,7 +82,20 @@ It is no second way of building the name.
 | **skirt**(axis, line, a, b, side, mat = 'mudDark', top = 0.38, t = GW_SHELL) | DECAL: a band on a wall face from the floor to `top` — the damp, darker foot of a mud wall (default), or a painted DADO (`mat` a paint, top 1.1). `axis` 'x' = the wall runs along X at `line`; a‥b along it; `side` ±1 = which face (toward +z / +x is +1); `t` = that wall's thickness | drawn only | 10.3 × 0.01 × 0.38 | 1 drawn | mudDark | gwot-yard |
 | **dado**(axis, line, a, b, side, paint = 'paintBlue', t = GW_SHELL) | DECAL: a painted DADO: the band of `skirt` in a paint, to 1.1 m up the wall's face | drawn only | 5.32 × 0.01 × 1.1 | 1 drawn | paintBlue | gwot-yard |
 | **wallHanging**(axis, line, at, side, style = 'baluch', w = 1.2, hgt = 0.8, t = GW_SHELL) | DECAL: a small rug / cloth hung flat on a wall face, its middle at `at` along the wall, 1.2‥2.0 m up | drawn only | 1.2 × 0.01 × 0.8 | 1 drawn, 1 marking | rugMadder | gwot-yard |
+
+### gwotKit: what is done to a wall's face
+
+| Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
+|---|---|---|---|---|---|---|
 | **gate**(x, z, axis, width = 3.0, side = 1, paint = 'paintBlue', openDeg = 78, height = 2.4) | a sheet-metal GATE in an opening `width` wide centred at (x, z) of a wall along `axis`: two capped posts and two painted leaves standing open by `openDeg` toward `side` (static: a gate that is open tonight). The wall's opening is the caller's (a‥b = centre ∓ width / 2, y1 ≥ the wall's height). | solid to 2.5 | 3.74 × 1.64 × 2.58 | 6 solid, 8 markings | mudLight, paintBlue, render | gwot-yard |
+| **boards**(axis, line, a, b, side, form = 'shut', y0 = 0.9, y1 = 1.85, t = GW_SHELL) | a window BOARDED UP (the opening a‥b of a wall along `axis`, y0‥y1): shut = two planks nailed across, one across those, and one hanging by its last nail — a look and a round pass BETWEEN the planks, not through them. Open = the boards pulled off the opening: one left nailed over the lintel and two swung down on their last nails to hang on the wall beside the jambs. Neither form puts anything on the ground | off the floor | 1.69 × 0.05 × 0.85 | 4 solid | woodGrey, ply, poplar | library-hall |
+| **shutters**(axis, line, a, b, side, form = 'shut', paint = 'paintGreen', y0 = 0.9, y1 = 1.85, t = GW_SHELL) | a window's SHUTTERS, two leaves in a paint: shut = one leaf shut over its half and the other swung out on its hinge (the half behind the shut leaf is blind; the leaves are real). Open = both folded back flat on the wall beside the opening | off the floor | 1.49 × 0.54 × 1.01 | 2 solid, 2 drawn | paintGreen, paintGreen × 0.90 | library-hall |
+| **windowBlanket**(axis, line, a, b, side, form = 'shut', cloth = 'blanketGrey', y0 = 0.9, y1 = 1.85, t = GW_SHELL) | a BLANKET over a window: shut = nailed over the opening under a batten, one lower corner come loose (it is real: a look stops at it). Open = rolled up and tied over the lintel, the opening clear | off the floor | 1.48 × 0.03 × 1.2 | 1 solid, 1 drawn | blanketGrey, woodGrey | library-hall |
+| **wallPatch**(axis, line, at, side, y, w, hgt, mat = 'mudLight', tone = 0.9, t = GW_SHELL) | DECAL: a MEND on a wall's face — a patch of newer or older mud, w × h about `y`, with a rough outline (said as a shape: with shapes off it is the plain rectangle). `tone` darkens the wall paint `mat` in one piece (0.55‥0.99; 1 = the paint as it is). It lies OVER a dado or a skirt (a painted band plastered over) | drawn only | 1 × 0.01 × 1.1 | 1 drawn | mudLight × 0.90 | library-hall |
+| **spout**(axis, line, at, side, y = 2.36, wall = 'mud', t = GW_SHELL) | a roof SPOUT through the wall at `y`, tipped to throw its water clear, and the STREAK the water left down the face (a decal in the wall's own paint, darker) | overhead | 0.26 × 0.2 × 2.36 | 1 solid, 1 drawn | GWOT_PALETTE.iron, mud × 0.60 | library-hall |
+| **beamEnds**(axis, line, a, b, side, y = 2.64, pitch = 1.9, t = GW_SHELL) | the ENDS OF THE ROOF'S BEAMS through a wall a‥b under the roof line (over every head): round poles, unevenly spaced and of uneven reach, one snapped short | overhead | 14.08 × 0.4 × 0.18 | 8 solid | woodGrey | library-hall |
+| **splitWood**(axis, line, a, b, side, rows = 3, t = GW_SHELL) | COVER (knee): SPLIT WOOD stacked against a wall from a to b, `rows` high: round billets end-on to the yard, pale grain showing, each a box of its own. No two billets that touch are as thick, as long or as far out (their girth, length and set-back step through small tables by place and row, and every face lands on an odd millimetre, off the centimetre grid levels are written on): with shapes off they are boxes that overlap, and two of their faces in one plane would flicker | solid to 0.48 | 0.69 × 0.5 × 0.48 | 9 solid | woodGrey, poplar | library-hall |
+| **ladder**(axis, line, at, side, len = 2.84, leanDeg = 15, t = GW_SHELL) | a LADDER leaned on a wall at `at`: two stiles and the rungs between them, one rung gone; its feet stand `len` × sin(lean) out from the face | solid to 2.79 | 0.6 × 0.44 × 2.84 | 8 solid | woodGrey, poplar | library-hall |
 
 ### gwotKit: ground
 
@@ -138,6 +153,12 @@ It is no second way of building the name.
 | **tyres**(x, z, n = 3) | COVER (waist): a stack of TYRES, n high (0.2 m each). One lying alone is a fat one, 0.27 m (as the older kit's is): a solid that tops out between 0.20 and 0.25 m stops a body on a cell the nav grid calls free | solid to 0.6 | 0.68 × 0.64 × 0.6 | 12 solid, 3 round, 1 marking | GWOT_PALETTE.rubber | gwot-yard |
 | **blocks**(x, z, yaw = 0, layers = 2) | COVER (knee): a stack of concrete BLOCKS 0.8 × 0.4 × 0.4, cores up | solid to 0.4 | 0.8 × 0.4 × 0.4 | 1 solid, 3 markings | block | gwot-yard |
 | **woodPile**(x, z, yaw = 0, len = 1.4) | COVER (knee): a WOOD PILE — split poplar, three layers | solid to 0.42 | 1.41 × 0.6 × 0.42 | 3 solid, 9 markings | woodGrey | gwot-yard |
+| **pipes**(x, z, yaw = 0, n = 3, len = 1.8, r = 0.16) | COVER (knee to thigh): steel PIPES stacked along local X — n = 1‥3: two on the ground side by side and the third in the notch between them; one of the ground pair is rust. Their bores are dark at both ends. Hands back each pipe's top (`lay` puts snow along it) | solid to 0.59 | 1.89 × 0.65 × 0.59 | 3 solid | GWOT_PALETTE.iron, rust | library-hall |
+| **log**(x, z, yaw = 0, len = 1.0, r = 0.095, baseY = 0, bark = 'woodGrey', grain = 'poplar') | one LOG lying along local X, bark on, its ends pale grain. WALK-OVER at the default (0.19 across: a top between 0.20 and 0.25 m stops a body on a cell the nav grid calls free, so a single log is under that or over it); `baseY` lifts it onto a pile. Hands back its top | walked over | 1 × 0.19 × 0.19 | 1 solid | woodGrey | library-hall |
+| **choppingBlock**(x, z, yaw = 0) | COVER (knee): a CHOPPING BLOCK — a round of poplar 0.44 across and 0.32 high, its top scored | solid to 0.32 | 0.42 × 0.42 × 0.32 | 4 solid, 1 round, 1 marking | poplar | library-hall |
+| **plankBench**(x, z, yaw = 0, len = 1.12) | COVER (knee): a PLANK BENCH — a board across two stacks of mud brick, `len` long along local X | solid to 0.41 | 1.15 × 0.35 × 0.41 | 3 solid | mud, mudLight, poplar | library-hall |
+| **bricks**(x, z, yaw = 0, n = 5) | WALK-OVER: loose MUD BRICKS left where the work stopped, n of them, some on the others | walked over | 0.95 × 0.49 × 0.18 | 6 solid | mud, mudLight | library-hall |
+| **pot**(x, z, baseY = 0) | a cooking POT, sooted iron, 0.26 across (under 0.2 m of radius a round is two squares: `roundSlabs`); `baseY` stands it on a bench or a stove | off the floor | 0.34 × 0.34 × 0.14 | 2 solid | GWOT_PALETTE.iron | library-hall |
 
 ### gwotKit: machines & vehicles
 
@@ -416,15 +437,15 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 
 | Paint | Colour (linear) | Finish | Stands for | Underfoot | Pieces |
 |---|---|---|---|---|---|
-| mud | 0.42, 0.32, 0.21 | rough 0.97 | concrete |  | 8 |
+| mud | 0.42, 0.32, 0.21 | rough 0.97 | concrete |  | 11 |
 | mudDark | 0.29, 0.22, 0.15 | rough 0.97 | concrete |  | 5 |
-| mudLight | 0.56, 0.46, 0.33 | rough 0.95 | wall |  | 5 |
+| mudLight | 0.56, 0.46, 0.33 | rough 0.95 | wall |  | 8 |
 | render | 0.57, 0.53, 0.45 | rough 0.9 | concrete |  | 1 |
 | whitewash | 0.72, 0.69, 0.61 | rough 0.88 | wall |  | 8 |
 | block | 0.4, 0.39, 0.37 | rough 0.92 | concrete |  | 8 |
 | tWall | 0.46, 0.45, 0.43 | rough 0.9 | concrete |  | 2 |
 | paintBlue | 0.06, 0.19, 0.32 | rough 0.6 | metal |  | 3 |
-| paintGreen | 0.08, 0.24, 0.16 | rough 0.6 | metal |  | 4 |
+| paintGreen | 0.08, 0.24, 0.16 | rough 0.6 | metal |  | 5 |
 | paintRust | 0.3, 0.075, 0.04 | rough 0.65 | metal |  | 1 |
 | paintCream | 0.66, 0.6, 0.44 | rough 0.7 | wall |  | 0 |
 | dust | 0.205, 0.145, 0.085 | rough 1 | asphalt | asphalt | 2 |
@@ -440,7 +461,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | rugOchre | 0.5, 0.33, 0.1 | rough 0.95 | carpet |  | 0 |
 | rugGreen | 0.09, 0.22, 0.13 | rough 0.95 | carpet |  | 0 |
 | canvas | 0.33, 0.31, 0.2 | rough 0.95 | chair |  | 4 |
-| blanketGrey | 0.3, 0.3, 0.31 | rough 0.95 | chair |  | 2 |
+| blanketGrey | 0.3, 0.3, 0.31 | rough 0.95 | chair |  | 3 |
 | blanketBrown | 0.27, 0.18, 0.12 | rough 0.95 | chair |  | 1 |
 | tarpBlue | 0.05, 0.17, 0.48 | rough 0.95 | chair |  | 1 |
 | sack | 0.62, 0.58, 0.48 | rough 0.95 | chair |  | 4 |
@@ -449,8 +470,8 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | olive | 0.15, 0.17, 0.09 | rough 0.75 | woodDark |  | 7 |
 | coyote | 0.4, 0.31, 0.2 | rough 0.85 | chair |  | 2 |
 | stencil | 0.62, 0.5, 0.1 | rough 0.7 | metal |  | 0 |
-| rust | 0.28, 0.12, 0.06 | rough 0.85 | metal |  | 6 |
-| iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | metal |  | 13 |
+| rust | 0.28, 0.12, 0.06 | rough 0.85 | metal |  | 7 |
+| iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | metal |  | 16 |
 | galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | metal |  | 11 |
 | tin | 0.56, 0.55, 0.52 | rough 0.42, bare metal | metal |  | 9 |
 | drumBlue | 0.06, 0.15, 0.33 | rough 0.5 | metal |  | 3 |
@@ -462,9 +483,9 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | ~plastic |  | 10 |
 | jerryYellow | 0.62, 0.46, 0.05 | rough 0.45 | ~plastic |  | 0 |
 | rubber | 0.03, 0.03, 0.033 | rough 0.85 | ~plastic |  | 13 |
-| poplar | 0.47, 0.36, 0.22 | rough 0.8 | wood |  | 10 |
-| woodGrey | 0.33, 0.29, 0.23 | rough 0.85 | wood |  | 18 |
-| ply | 0.55, 0.43, 0.27 | rough 0.75 | wood |  | 3 |
+| poplar | 0.47, 0.36, 0.22 | rough 0.8 | wood |  | 15 |
+| woodGrey | 0.33, 0.29, 0.23 | rough 0.85 | wood |  | 24 |
+| ply | 0.55, 0.43, 0.27 | rough 0.75 | wood |  | 4 |
 | truckWhite | 0.68, 0.68, 0.65 | rough 0.35 | metal |  | 2 |
 | truckTan | 0.5, 0.42, 0.29 | rough 0.4 | metal |  | 0 |
 | truckRed | 0.42, 0.06, 0.05 | rough 0.35 | metal |  | 5 |

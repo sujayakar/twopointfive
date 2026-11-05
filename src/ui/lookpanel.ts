@@ -64,7 +64,7 @@ export const LOOK_SYSTEM = 'Materials prototype';
 // stood over the debugger's own corner, so on this page the debugger's rows (the debug views, the denoiser, the gather) could not be reached while the look's rows
 // were up. Now the rows are the panel's own: its sliders (a dot puts one row back, the section's ↺ puts them all back), its search finds them, its key shuts them.
 // The page still OPENS with them up (panel.show), as the box did.
-export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, front?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }, dress?: { on: boolean; flip: () => void }): void {
+export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }): void {
   const w = window as any;
   const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes · the character lab' });
   here();
@@ -161,11 +161,9 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     { text: 'at next change', run: () => w.__framecap?.arm({}), title: 'waits, then takes the whole picture from the frame the renderer next changes something: a quality step, its size, its targets made again. For a flash that comes and goes' },
   ]);
   // THE TRIALS: each is made when the level loads (or is a const of the ray programs), so its button loads the page again
-  if (front || lorry || dress || shapes || hills) {
+  if (lorry || shapes || hills) {
     const tr = panel.section('Trials', { open: true });
-    if (front) panel.buttons(tr, 'house front', [{ text: front.on ? 'dressed by hand: on' : 'dressed by hand: off', run: front.flip, title: 'the tea house’s yard wall on the pass: its openings, paint and mends differ, and things were left against it. The page loads again to change it' }]);   // A HOUSE FRONT DRESSED BY HAND (scene/frontTry.ts)
     if (lorry) panel.buttons(tr, 'lorry', [{ text: lorry.on ? 'curved: on' : 'curved: off', run: lorry.flip, title: 'the lorry on the pass with a bowed tilt, an arched cab roof, a round bonnet between fenders and round wheels. The page loads again to change it' }]);   // A LORRY WITH CURVES (scene/lorryTry.ts)
-    if (dress) panel.buttons(tr, 'round props', [{ text: dress.on ? 'dressed: on' : 'dressed: off', run: dress.flip, title: 'the pass with pipes, drums, logs and a tyre made of round shapes. The page loads again to change it' }]);   // THE PASS DRESSED WITH ROUND THINGS (scene/passTry.ts)
     if (shapes) panel.buttons(tr, 'shapes', [{ text: shapes.on ? 'round and broken: on' : 'round and broken: off', run: shapes.flip, title: 'round drums and tyres, a bite out of the yard wall’s top. The page loads again to change it' }]);   // A GEOMETRY TRIAL (scene/geoTry.ts)
     if (hills) panel.buttons(tr, 'ground', [{ text: hills.on ? 'hills cast shadows: on' : 'hills cast shadows: off', run: hills.flip, title: 'the snow’s hills stand in the light’s way as their own round shape. The page loads again to change it' }]);   // GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts)
   }

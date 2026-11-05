@@ -1,0 +1,12 @@
+# how many of 21 lines each man of tut-squad has open to the ground his gun rests on: his name, the frozen stand's count, the shipped stand's (tools/qa/marksight-check.ts --write, once on each stand; a line that starts # under this one is a note and is kept)
+roomClear.guardhut.marks#0 3 3
+roomClear.store.marks#0 11 11
+roomClear.store.marks#1 12 12
+roomClear.workshop.marks#0 3 3
+roomClear.nest.marks#0 21 21
+roomClear.nest.marks#1 19 19
+roomClear.hall.marks#0 18 18
+roomClear.hall.marks#1 18 18
+roomClear.road.marks#0 18 18
+roomClear.road.marks#1 21 21
+roomClear.road.marks#2 21 21
