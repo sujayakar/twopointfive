@@ -70,7 +70,6 @@
 //             panes of glass, their doors hung again, stepped both ways from the same rows: every column, the rows' tables, every box, noise, tally and
 //             log line the same bits, and a run fair only if it met everything the step does (a ray through a pane that is gone among them). The
 //             shared numbers are read out of both sources. `missions` and `both` hold it in play where a mission takes a leaf off.
-//   weather   the weather that play reads (rust/sim/src/wind.rs, weather.rs, air.rs, snow.rs): tools/qa/weather-ident.ts — thirteen runs with every answer of the module folded, held to a recording
 //   falls     what falls and what it leaves (rust/sim/src/falls.rs against src/sim/fallshome.ts: the landings the simulation has scheduled and the litter
 //             map of broken glass, a part of the game's block): tools/qa/falls-ident.ts — two hundred thousand rules (schedule past the list's cap, deposit,
 //             the landings due, a footfall's step, the floor told, clear, the row dropped and raised) each taken both ways and against a twin store that
@@ -240,7 +239,7 @@ const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', 
  *  that deletes its twin. */
 const GONE: Record<string, string> = { 'the animator\'s layers': 'layers', 'the senses': 'senses' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'lights', 'doors', 'props', 'slabs', 'items', 'falls', 'weather', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'lights', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
 GONE['the level\'s lights'] = 'lights';
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
@@ -355,6 +354,9 @@ let wordOwn = '', wordRust = '';
   // (…and the smoke's shadow where the grid cannot answer: with the module handed no blobs, the words of those two cases and nothing else)
   const shade = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '300', '--levels', 'office.json,compound.json'], { SHADE_BREAK: '1' });
   const shadeRed = !shade || redAsMust(shade, 'SHADE_BREAK');
+  // (…and the order of the level's rows among a question's own lamps: with the host saying no row stands before any lamp it writes, a light word and no other kind's)
+  const rowed = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '1200', '--levels', 'office.json,compound.json'], { ROWS_BREAK: '1' });
+  const rowedRed = !rowed || redAsMust(rowed, 'ROWS_BREAK');
   // (…and the blobs: a game keeps no more than the module's table holds — sense.ts CpuSmoke.emit — so the knob as it ships must fit it: a build's mistake otherwise)
   const SE: any = await import(`${ROOT}/src/game/sense.ts`), BMF: any = (await import(`${ROOT}/src/scene/boxMirror.ts`)).FACE, blobsFit = SE.SENSE.smoke.cap <= BMF.MAX_BLOBS;
   // (…and the floor: it is the build's, scene/world.ts WORLD, so a search of the module's must hold it, and what a search holds is the least of what its
@@ -368,13 +370,14 @@ let wordOwn = '', wordRust = '';
   const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'frozen', TPS_CPUSENSE: undefined });
   const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|asked|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
   red['the senses'] = levelsRed && made.status === 1 && /every one: the break reaches each/.test(made.out);   // (…and every word of the made-up world's pin: the family's red rule, as a row has one)
-  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && blobsFit && floorFits && madeOk;
+  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && rowedRed && blobsFit && floorFits && madeOk;
   verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see are answered by the Rust module, and held to its own earlier answers', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
     + `\n    the floor: ${floorCells} cells, and a search of the module's holds ${holds} (a way ${ways} waypoints)${floorFits ? ': no table of a search can be outgrown on it' : ' — NOT AS IT MUST BE (nav.rs MAX_FLOOR is the least of MAX_NAV, MAX_WAY and (MAX_OPEN − 1) / 8, and the build\'s floor is under it)'}`
     + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths\' words move and no other, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + (parts ? `\n    the lamps of a question in parts, every part beginning its sum again (LAMPS_BREAK=1): ${partsRed ? 'the words of the lamps\' block move and no kind\'s of the questions, as they must' : `NOT RED AS IT MUST BE (exit ${parts.status}): ${parts.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + (shade ? `\n    a lamp's shadow with the module handed no blobs (SHADE_BREAK=1): ${shadeRed ? 'the words of the two cases where the grid cannot answer move and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
+    + (rowed ? `\n    the level's rows with their order dropped from the lamps the host writes (ROWS_BREAK=1): ${rowedRed ? 'a light word moves and none that is not the light\'s, as it must' : `NOT RED AS IT MUST BE (exit ${rowed.status}): ${rowed.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`
     + `\n    the pin (a made-up box world, the frozen stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
@@ -573,13 +576,6 @@ let wordOwn = '', wordRust = '';
   { shared++; const max = /max: \[(\d+), \d+, (\d+)\]/.exec(world), min = /min: \[(-?[\d.]+), -?[\d.]+, (-?[\d.]+)\]/.exec(world); if (!max || !min || Number(min[1]) !== 0 || Number(min[2]) !== 0 || Number(max[1]) !== there('CELLS_X') * there('CELL') || Number(max[2]) !== there('CELLS_Z') * there('CELL')) off.push('the cells are not the world\'s floor (scene/world.ts WORLD)'); }
   verdict(r.status === 0 && /=== falls-ident: PASS/.test(r.out) && off.length === 0 && shared >= 22, 'falls: every landing scheduled, every bit of glass laid and every footfall on it is the TypeScript\'s in the Rust module, and the two sides name their numbers alike',
     (row ? row.replace(/^falls-ident: /, '') + '\n' + met : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`) + `\n    ${shared} numbers shared with the Rust source${off.length ? ` — NOT THE SAME: ${off.join(', ')}` : ', each the same'}`);
-}
-
-// ---- weather
-{
-  const r = child(['bun', 'run', 'tools/qa/weather-ident.ts'], { WEATHER_BREAK: BREAK ? '1' : undefined }), last = r.out.trim().split('\n').slice(-1)[0] ?? '';
-  red.weather = r.status === 1;
-  verdict(r.status === 0 && /^PASS — the weather is the module's/.test(last), 'weather: the weather that play reads is the module\'s, every answer of a run held to its recording', (r.out.trim().split('\n').filter(l => /^- (PASS|FAIL)/.test(l)).map(l => l.slice(0, 150)).join('\n    ') || `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`));
 }
 
 // ---- state

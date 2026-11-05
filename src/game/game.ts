@@ -210,7 +210,7 @@ import { AirDust } from './airDust';
 import { Moths } from './moths';
 import { WetGround } from './wetGround';
 import { GlassBreak, loadGlassBreak } from './glassbreak';
-import { levelOver, stoodOver } from './levelfit';
+import { flatPanel, levelOver, stoodOver } from './levelfit';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
@@ -1129,11 +1129,10 @@ export class Game {
     // flat emissive fixtures (ceiling panels, monitors, logo, TV, vending fronts, exit signs) light the scene through analytic one-sided area
     // lights; their boxes keep glowing on screen but rays ignore the emissive term (BoxFlag.AreaLit) — kills small-emitter aliasing in the cascades
     for (const t of this.targets) {
-      if (t.kind !== 'emissive' || t.group === 'server_leds' || t.group === 'emergency' || t.group === VEHICLE_GROUP) continue;   // (a vehicle's lamp keeps the picture it had: no area light is stood in for it)
+      if (t.kind !== 'emissive') continue;
       for (const bi of t.boxes) {
-        const b = level.boxes[bi]; const h = b.h;
-        const thin = h[0] <= h[1] && h[0] <= h[2] ? 0 : h[1] <= h[2] ? 1 : 2; if (h[thin] > 0.06) continue;
-        const a0 = (thin + 1) % 3, a1 = (thin + 2) % 3; const area = 4 * h[a0] * h[a1]; if (area < 0.01) continue;
+        const b = level.boxes[bi]; const h = b.h, panel = flatPanel(t.group, h); if (!panel) continue;
+        const { thin, a0, a1, area } = panel;
         // emitting side: ceiling fixtures face down; wall/desk fixtures face whichever side is open (props are authored with the glowing face on
         // local +X/+Z of their backing, which is also the fallback when both sides look open)
         let n: Vec3 = [0, 0, 0];
@@ -1221,8 +1220,7 @@ export class Game {
     this.wind = new Wind(this);          // the air (wind.ts): the level's vents + the storm + a source per exterior door — after the doors exist
     this.airDust = new AirDust(this);    // the weather's dust in the rooms (airDust.ts): seeded with the doors as they stand — after the weather, the doors and the collision exist
     this.moths = new Moths(this);        // moths at the lamps (moths.ts) — after the targets (the lamps are light targets)
-    for (const t of this.targets) this.lightHome.in(LIGHT_IN.authored, t, t.on ? 1 : 0);   // the level as authored, for resetLevelState() (said here, before a tour or the panel touches a switch)
-    this.lightHome.stand(engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot })));   // (the lamps the fixtures feed, as rows in the list's order: rust/sim/src/lights.rs)
+    this.standLights();   // (the lamps the fixtures feed, as rows in the list's order: rust/sim/src/lights.rs)
     spawnCivilians(this);   // the cleaner and the late worker on their marks (civilians.ts — after the shift, whose construction and dice they must not disturb; nothing with tune.civilians off or none authored)
     this.fogOfWar = new FogOfWar(this);         // fog of war (fogofwar.ts): inert until switched on
     this.quiet = new QuietMission(this);        // the quiet mission (quiet.ts): inert until started
@@ -1436,6 +1434,8 @@ export class Game {
   /** Level as authored: every switch / group back to its initial on-off, every door back to its authored angle and lock (picked / kicked locks re-lock). */
   /** was this fixture's switch on in the level as authored (lightswitch.ts: what 'lights on' puts a room back to) */
   authoredOn(t: LightTarget): boolean { return t.authored; }
+  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built, and again when a fixture is hung after that (the kit picture's, host/kitView.ts). So every lamp a fixture feeds has a row and one way of burning. */
+  standLights(): void { this.lightHome.stand(this.engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot }))); }
   resetLevelState() {
     for (const t of this.targets) this.lightHome.in(LIGHT_IN.on, t, t.authored ? 1 : 0);
     for (const d of this.doors.list) d.reset();
