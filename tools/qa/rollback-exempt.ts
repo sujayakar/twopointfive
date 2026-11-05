@@ -365,6 +365,7 @@ export const RAW_WEAK_OK: Record<string, string> = {
   'src/math/side.ts CLOCKED': 'which objects hold a wall-clock reading and in which fields: a mark set where the holder is made (wallClock), read by the state\'s word alone, carried to the object a restore makes for it; no rule reads it',
   'src/game/rollback.ts BROUGHT': 'the snapshot\'s own bookkeeping across two games (which functions a cross-game restore carried over), not the game\'s state',
   'src/scene/stuff.ts PAINTS': 'what a kit said of each of its paints, keyed by the palette row\'s own array: filled as a palette\'s module loads and where a generator or a maker tones or names a colour; a memo of what was said, read only when a box is made, never by a tick',
+  'src/scene/stuff.ts told': 'which paints the page\'s console has been told of once, where a second saying on one array was refused (ONE_PAINT): a memo for the console alone, set only on that refusal, which nothing in the tree reaches; no maker, rule or tick reads it, and under bun the refusal throws before it is touched',
   'src/scene/levelLoad.ts levelFileOf': 'filled while a level file is read, keyed by the level: never written by a tick',
   'src/scene/levelLoad.ts levelNames': 'filled while a level file is read',
   'src/scene/lookTidy.ts tidies': 'a memo of a look file\'s tidy pass, keyed by the look file (load-time data)',
