@@ -294,7 +294,7 @@ interface State {
   stats: ReturnType<typeof newStats>;
 }
 const STATES = new SideMap<Game, State>('pressure.STATES');
-ownerWitness<Game>('press', (gd, g) => { if (!PRESSURE.on || !PRESSURE.press) return false; const D = g.fight.defs.find(X => X.gd === gd); return !!D && pressHas(g, stateOf(g), D); });
+ownerWitness<Game>('press', (gd, g) => { if (!PRESSURE.on || !PRESSURE.press) return false; const st = STATES.get(g), D = g.fight.defs.find(X => X.gd === gd); return !!st && !!D && (st.of.has(D) || st.think.has(D)); });
 const stateOf = (g: Game): State => { let s = STATES.get(g); if (!s) { s = { presses: [], of: new Map(), outs: [], serial: 0, stale: false, think: new Map(), stay: new Map(), called: new Map(), stoodT: -100, sent: new Set(), doneAt: new Map(), last: new Map(), tried: new Map(), ear: new Map(), warn: null, told: new Map(), heard: [], evSeen: new SideSet(), marks: new Map(), bangs: new SideMap(), lastHeld: new Set(), word: null, swept: -Infinity, look: null, out: null, lookLost: false, lookT: -Infinity, stats: newStats() }; STATES.set(g, s); } return s; };
 
 /** PRESSURE.wayOut on a floor whose structure asks for it: the press forms up and holds the lost room's doors from back off them */
@@ -383,23 +383,21 @@ export function picketMarks<M extends { pos: Vec3; aimAt: Vec3; drill?: boolean 
 /** …and once he is spawned on it (nightbreach.ts): `room` = what picketMarks put on his mark */
 export function postPicket(gd: Guard, room: object) { PICKETS.set(gd, room as Room); }
 
-/** WHO THE PRESS HAS (src/game/owner.ts): he is in a press, on his beat toward one, or the one of his room who stays to keep it, so the stock walk-over-by-himself does not start. Anybody this
- *  module has NOT taken (a fight out on the open floor, the press switch off, a man it turned down) is the stock rally's exactly as before: it never leaves a man standing who would have gone.
- *  (PRESSURE.lastHolds: the last of them alive has nobody left to go to, so the stock rally does not walk him off. The other askers read it the same way and lose nothing: no mate is alive to call him (buddy.ts), laststand.ts leaves him be, and cues.ts gives no 'staying' word to an empty net) */
-const pressHas = (g: Game, st: State, D: Def): boolean => {
-  if (st.of.has(D) || st.think.has(D) || lastAlone(g.fight, D) || awaiting(st)) return true;
-  const keep = st.stay.get(D); return !!keep && aim(st, g.fight, D)?.T === keep && staysHome(g.fight, st, D);
-};
-/** said as each frame's fight opens (a mate may have fallen since it last was) and as this file's tick ends */
-export function pressSay(g: Game, F: RoomFight): void {
-  const st = PRESSURE.on && PRESSURE.press ? stateOf(g) : null;
-  for (const gd of g.guards) { const D = st && F.defs.find(X => X.gd === gd); if (st && D && pressHas(g, st, D)) claimMan(gd, OWN.press, g.time); else releaseMan(gd, OWN.press, g.time); }
+/** WHO THE PRESS HAS (src/game/owner.ts): in a press, or on his beat toward one. Its lists change only inside its own tick, so the record is written as that tick ends */
+function pressSay(g: Game): void {
+  const st = PRESSURE.on && PRESSURE.press ? STATES.get(g) : undefined;
+  for (const gd of g.guards) { const D = st && g.fight.defs.find(X => X.gd === gd); if (st && D && (st.of.has(D) || st.think.has(D))) claimMan(gd, OWN.press, g.time); else releaseMan(gd, OWN.press, g.time); }
 }
-/** STOOD TO, NOBODY WALKS OFF TO A REPORT BY HIMSELF, AND WITH `standPress` THE STOCK WALK'S CLOCK DOES NOT RUN ON UNDER IT. The old question stopped the clock as it was asked, so the four askers that were not asking for a word say so here, where they ask: nothing else moves it */
-export function pressStopsClock(g: Game, D: Def): void {
-  if (!PRESSURE.on || !PRESSURE.press) return;
+/** AND WHOM IT KEEPS AT HOME, worked out as it is asked because it turns on what changes between its ticks (who is still alive, what he has just heard): the last of them alive (PRESSURE.lastHolds: nobody is left to go to,
+ *  and the other askers read it the same way and lose nothing: no mate is alive to call him (buddy.ts), laststand.ts leaves him be, and cues.ts gives no 'staying' word to an empty net), everybody while a report is stood to, and
+ *  the man who stays to keep his room. Whoever the press has not taken or kept (a fight out on the open floor, the press switch off, a man it turned down) is the stock rally's exactly as before.
+ *  STOOD TO, NOBODY WALKS OFF TO A REPORT BY HIMSELF, AND WITH `standPress` THE STOCK WALK'S CLOCK DOES NOT RUN ON UNDER IT: that happens as he is asked. `stopClock` false: the asker only wants the word (powerout.ts, darkfoe.ts) */
+export function pressKeepsHome(g: Game, D: Def, stopClock = true): boolean {
+  if (!PRESSURE.on || !PRESSURE.press) return false;
   const st = stateOf(g);
-  if (!st.of.has(D) && !st.think.has(D) && !lastAlone(g.fight, D) && awaiting(st) && PRESSURE.standPress) D.rallyAt = NaN;
+  if (lastAlone(g.fight, D)) return true;
+  if (awaiting(st)) { if (stopClock && PRESSURE.standPress) D.rallyAt = NaN; return true; }
+  const keep = st.stay.get(D); return !!keep && aim(st, g.fight, D)?.T === keep && staysHome(g.fight, st, D);
 }
 /** digin.ts asks this before a man starts on his room: true = he is in a press or on his beat toward one (the press has him first; the man LEFT to keep a room
  *  is not wanted — digin.ts asks `pressKeeps` about him) */
@@ -1061,7 +1059,7 @@ function goLook(g: Game, F: RoomFight, st: State) {
 }
 
 /** once a frame from RoomFight.tick, after the defenders' and the teammates' own ticks */
-export function pressTick(g: Game, F: RoomFight, dt: number) { stepPress(g, F, dt); pressSay(g, F); }
+export function pressTick(g: Game, F: RoomFight, dt: number) { stepPress(g, F, dt); pressSay(g); }
 function stepPress(g: Game, F: RoomFight, _dt: number) {
   // (THE KIT IS ITS OWN LEVER — difficulty.ts `kit`: what a defender carries is handed out whether or not the press is on. With the press off nobody is sent at
   // a door charge first; a man with one uses it where the doorway drill has him go in by a door his side holds dangerous — tactics.ts)
