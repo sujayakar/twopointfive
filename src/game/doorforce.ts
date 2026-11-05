@@ -61,6 +61,8 @@ import { simRandom } from '../math/dice';
 
 export const DOORFORCE = {
   on: false,
+  /** a man walking to boot a door who is put on a post gives the walk up (a switch of its own: ?postends=0, TPS_POSTENDS=1) */
+  postEnds: false,
   /** the two halves, each off = that half as it was: rounds through the leaf · the boot */
   shoot: true, kick: true,
   /** how sure he must be to start on a door · down to what he stays on it · s his sureness takes to fade to a third · s his newest word of it may be old */
@@ -310,16 +312,17 @@ export function doorForce(g: Game, gd: Guard, dt: number): { aim: Vec3; move: nu
 function kickStep(g: Game, S: State, gd: Guard, M: Man, dt: number): { aim: Vec3; move: number } | null {
   const K = DOORFORCE, Kk = M.kick!, d = Kk.door, c = gd.char, an = c.anim;
   const B = M.beliefs.get(d);
-  const end = (why: string | null) => {
+  const end = (why: string | null, believes = false) => {
     if (why) { DOORFORCE_STATS.noKick++; log(g, `${gd.callsign} gives the boot at ${d.def.name} up: ${why}`); }
     if (S.kickers.get(d) === gd) S.kickers.delete(d);
-    if (B) gd.lastKnown = [B.at[0], 0, B.at[2]];
-    M.kick = null; M.on = null; M.beliefs.delete(d); M.rest.set(d, g.time + K.restSecs); gd.path = []; gd.pathGoal = null; gd.stallRef = null;
+    M.kick = null; gd.path = []; gd.pathGoal = null; gd.stallRef = null;
+    if (!believes) { if (B) gd.lastKnown = [B.at[0], 0, B.at[2]]; M.on = null; M.beliefs.delete(d); M.rest.set(d, g.time + K.restSecs); }
     return null;
   };
   const lock: Vec3 = [d.def.hinge[0] + Math.cos(d.def.closedDir) * (d.def.width - 0.2), 0.9, d.def.hinge[1] + Math.sin(d.def.closedDir) * (d.def.width - 0.2)];
   if (Kk.phase !== 'kick' && !shut(d)) return end('it stands open');
   if (Kk.phase === 'walk') {
+    if (K.postEnds && (gd.pinned || gd.hold)) return end('he has been put on a post', true);   // (a rule that stops him short plants him, lanes.ts plantShort: the boot was a free man's, and a walk that went on under the post is a man stopped and stepping, stopped and stepping; what he believes of the door stands, for the rounds)
     if (g.time - Kk.t0 > K.walkSecs) return end('the walk took too long');
     goTo(g, gd, Kk.spot); const arrived = followPath(g, gd, dt, g.tune.guardInvestigate);
     if (flat(c.pos, Kk.spot) < 0.3 || (arrived && flat(c.pos, Kk.spot) < 0.6)) { Kk.phase = 'set'; Kk.setT = g.time; gd.path = []; gd.pathGoal = null; }
