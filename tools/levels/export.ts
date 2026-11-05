@@ -61,6 +61,7 @@ if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.lengt
 { const { layLevelFloor } = await import('./flatLayers.ts'); const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
   const n = layLevelFloor(level.boxes, livedFrom.boxes, nGen, BoxFlag);
   if (n) console.log(`floor: ${n} flat${n > 1 ? 's' : ''} raised to draw in order`); }
+if (gen.KEPT !== undefined) level.kept = gen.KEPT;   // (HOW KEPT THE PLACE IS, a generator's `KEPT` export, 0‥1: the file's meta.kept, docs/level-format.md)
 if (scenarios) level.scenarios = scenarios;   // (an ordinary, enumerable field: the file's own block — levelToData writes it)
 // THE LOOK'S SECOND FILE (tools/levels/gwotSkin.ts): a generator that exports `finish` changes the dressed level's clothes here — it exports `DRESS_AS` = the
 // generator whose level it is, so the dressing above is that level's, box for box

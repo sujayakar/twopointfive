@@ -65,7 +65,7 @@ fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, alb
 struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };
 struct LookGround { n: vec3f, rough: f32 };
 fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround { return LookGround(nIn, roughIn); }
-fn lookMarkSoft() -> f32 { return 0.0; }
+fn lookMarkSoft() -> vec2f { return vec2f(0.0, 1.0); }
 fn lookTrod() -> f32 { return 0.0; }
 fn lookWears(n: vec3f, bi: u32, hf: vec4f) -> bool { return false; }
 struct LookMan { albedo: vec3f, n: vec3f, rough: f32, gain: f32 };
@@ -245,7 +245,7 @@ export class GBuffer {
   setLook() {
     if (!this.lookCfg) return;
     const k = lookAmounts, c = k.clarity;   // CLARITY: one number over the layers that add contrast between neighbours (the relief's depth, the shadow in joints, the rubbed edges, the snow's prints). The maintainer, 10-25, on a GPU: the look "does feel a bit too 'high frequency' for me, like edges are cranked up (e.g. 'clarity' knob in lightroom)"
-    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig, this.lookMen[0], this.lookMen[1], 0, 0, ...this.lookSlotRows()]));
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, lookConfig.kept, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig, this.lookMen[0], this.lookMen[1], 0, 0, ...this.lookSlotRows()]));
   }
   /** the block's slot table (look.wgsl LookCfg.s): a layer's slot in the arrays, −1 where it is not made OR where a layer its drawing reads is not made yet */
   private lookSlotRows(): number[] {

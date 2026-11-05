@@ -206,7 +206,7 @@ export type BreachPlanData = BreachPlan & { id: string };
 export interface LevelData {
   version: typeof LEVEL_DATA_VERSION;
   name: string;
-  meta: { /** editor snap (m) */ grid?: number; /** the traceable world this level must fit (scene/world.ts WORLD.min/max at export) */ bounds?: { min: Vec3; max: Vec3 }; generator?: string; notes?: string; /** the base texel (m) the file's marking bitmaps were generated for (scene/markings.ts MARKING_TEXEL when absent) */ markTexel?: number };
+  meta: { /** editor snap (m) */ grid?: number; /** the traceable world this level must fit (scene/world.ts WORLD.min/max at export) */ bounds?: { min: Vec3; max: Vec3 }; generator?: string; notes?: string; /** the base texel (m) the file's marking bitmaps were generated for (scene/markings.ts MARKING_TEXEL when absent) */ markTexel?: number; /** HOW KEPT THE PLACE IS, 0‥1 (absent = 0, every level before the key): 0 = left to the weather and the years, 1 = cleaned and painted last night. One word for the whole level, read by the look's surfaces and its painted marks (render/shaders/look.wgsl lookKept) */ kept?: number };
   floors: FloorData[];
   materials: Record<string, MaterialData>;
   surfaces?: SurfacesData;
@@ -244,7 +244,7 @@ export interface LevelData {
  *  format = add it to its interface above, to this list, and to both directions in levelLoad.ts. The drill plans are NOT here: they are handled generically. */
 export const KEYS = {
   top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
-  meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
+  meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
   box: ['id', 'floor', 'group', 'name', 'c', 'h', 'yaw', 'rot', 'material', 'albedo', 'emissive', 'rough', 'metal', 'stuff', 'flags', 'cutHeight', 'markings', 'shape'],
@@ -309,6 +309,7 @@ export function validateLevelData(d: LevelData): string[] {
     const b = d.meta.bounds; if (b !== undefined) { if (!(isObj(b) && isVec(b.min) && isVec(b.max))) err('meta.bounds', '{ min: Vec3, max: Vec3 }'); else known('meta.bounds', b, KEYS.bounds); }
     if (d.meta.generator !== undefined && typeof d.meta.generator !== 'string') err('meta.generator', 'string'); if (d.meta.notes !== undefined && typeof d.meta.notes !== 'string') err('meta.notes', 'string');
     if (d.meta.markTexel !== undefined && !(isNum(d.meta.markTexel) && d.meta.markTexel >= 0.005 && d.meta.markTexel <= 0.2)) err('meta.markTexel', 'metres in [0.005, 0.2]');
+    if (d.meta.kept !== undefined && !(isNum(d.meta.kept) && d.meta.kept >= 0 && d.meta.kept <= 1)) err('meta.kept', 'a number in [0, 1]');
   }
   // floors / materials
   const floors = recs('floors', d.floors); if (!floors.length) err('floors', 'at least one floor');
