@@ -1993,20 +1993,33 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   NEVER SEEN: in motion, on his GPU, in rain, a van or a lorry close up. A first study that turned each side 45 degrees, unmarked, through every
   face of a shaped vehicle read rounder; it would have told the fog of war a tall van's flank was a top, and a review found it measured a cut
   plane's roll to edges the plane is not at.
-- **A BLAST'S OPENING LIGHTS ARE PACED** (11-05; the look's page only; no switch: nothing else is drawn, a hole's light only comes on a few frames
-  later). The performance goal profiled three wall charges on the office under the look (Chrome's own CPU profile on a rented box, relative):
-  `engine.ts lookOpeningLights` took 90, 52 and 47 ms of the 0.7 s after each charge, against under 2 percent of a calm stretch: one to four dropped
-  frames a blast that the plain page does not have. Two causes, both on the frame the blast's walls are read. (1) The look keeps its own wall raster
-  for its reach masks (`ReachJob.own`: a picture's light is nobody's state), and made that raster's JUMP FIELD again whole (`reach.ts jumpsFor`), though
-  a blast only opens walls and the old field is still safe; the game's own raster has always handed its field on (`wallRasterDiff`). Now
-  `wallRasterDiffOwn` hands the look's on the same way. (2) A light with NO mask yet was decided WHOLE AT ONCE, 150 to 260 thousand sight-line steps
-  where a frame's share is 60,000 (`REACH_PACE`). That is right on the masks' first frame (a level's first, the rooms row put on: no room is shown dark)
-  and wrong in play. Now only that first frame decides whole (`openBegun`); a hole blown later is first in line for each frame's share and its light
-  comes on with its mask whole, about four frames after the hole is found (itself `LOOK_OPENINGS.settle` frames after the walls stood still).
-  Under bun the frame a hole is read went from 9 to 11 ms to under 5, and no jump field is made. HELD by `tools/qa/openings-check.ts`' wall-holed line
-  (the most steps in a frame, and the fields made; red on the engine as it was: 326,971 steps and a field). NOT TIMED in a browser by this step: the
-  performance goal runs its three blasts again. LEFT: the plan itself (`planOpenings`, the raster, the diff: about 2 ms under bun) is still one frame's;
-  `wallSides.update → placeSides` (20 to 30 ms on that box at a first blast) and `wallsKey` hashing the statics every frame (0.2 ms) are untouched.
+- **A BLAST'S OPENING LIGHTS ARE PACED** (11-05; the look's page only; `?reachpace=old`, the game's own word for the pace as it was, decides a
+  hole's first mask whole at once here too). The performance goal profiled three wall charges on the office under the look (Chrome's own CPU profile
+  on a rented box, relative): `engine.ts lookOpeningLights` took 80 to 90, about 50 and about 45 ms of the 0.7 s after each charge, against under 2
+  percent of a calm stretch, and the frame that read the first blast's walls was 63 ms of render alone. Two causes, both on that frame.
+  (1) THE JUMP FIELD. The look keeps its own wall raster for its reach masks (`ReachJob.own`: a picture's light is nobody's state) and made that
+  raster's field again whole (`reach.ts jumpsFor`), though a blast only opens walls and the old field is still safe; the game's own raster has always
+  handed its field on. `wallRasterHandOn` now hands the look's on the same way (one scan serves both, `rasterScan`): ONLY where no sub-cell went from
+  open ground to a wall or a doorway's gap. A wall put back by a restart or a rollback, or a box set down, closes cells: then it is not handed on and the
+  next mask makes the field fresh. A door shutting moves no cell (a doorway is in the raster by its frame, not its leaf). A handed-on field is a little
+  too careful near the hole (its own first mask took 6 percent more steps in one measure) and is not brought up to date until a cell closes.
+  (2) WHOLE AT ONCE. A light with no mask was decided whole on the spot, 150 to 330 thousand sight-line steps where a frame's share is 60,000
+  (`REACH_PACE`). Now the masks' FIRST FRAME (a level's first, a new level on the same engine, the rooms row put on) gives EVERY opening its mask, the
+  shut and the far too, and in play nothing is decided whole. So that nothing lit goes dark for it, the rule is in the REPLAN: an opening that is new
+  where another stood (a second hole beside the first makes one opening of the two; a hole takes in a window; a wall put back) takes the mask of the
+  nearest it lies over as its OLD mask, and that one's light if it is free; a job in hand is kept across a replan that moved no wall, and after one that
+  did it is finished against the walls it began with and its mask then counts as old. Only an opening where NONE was has no mask: it is first in line for
+  each frame's share and its daylight comes on about five frames after it is found (itself `LOOK_OPENINGS.settle` frames after the walls stood still).
+  A first cut of this (e23b74ff) had none of the replan's rule and a code review showed what that cost: a widened hole dark for five frames, a hole's
+  light starved for good by a crate shot to bits every five frames, doors opened in a level's second frame lit one every six frames.
+  TIMED by the performance goal on the FIRST cut (the same box, a frame recorder): the frame that reads a blast's walls 63 ms to 16 and 17 on a first
+  blast, 19 to 22 to 10 to 20 on later ones; `jumpsFor` gone from the profile. The mended cut is to be timed the same way. Under bun the first frame of a
+  level decides more masks than it did (the office 7 to 11: 2.6 million steps, behind the start card).
+  HELD by `tools/qa/openings-check.ts`: the wall-holed line (the most steps in a frame, the fields made) and "what is lit stays lit and no job is lost"
+  (the openings found again every five frames, a hole widened, a box set down with every mask against a fresh raster's, the wall put back, the first
+  frame's masks, a second level, the old pace). Five one-line breaks of the rule each turn it red.
+  NEVER SEEN ON A GPU: the hole's daylight coming on five frames late. LEFT: `wallSides.update → placeSides` (18 to 19 ms on that box at a first blast,
+  on the frame the charge goes) and `wallsKey` hashing the statics every frame (0.2 ms); `rankStatics` reads 6 to 10 ms on that box on a blast's frame.
 - **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
   it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
   unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk
