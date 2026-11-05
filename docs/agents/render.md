@@ -1864,8 +1864,15 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
-- **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (11-04; the look panel's row `portal` "Daylight counted once", live, 0 ON THE LOOK'S PAGE UNTIL
-  IT HAS BEEN SEEN ON A GPU, `?look=portal:1` = on; `render/lights.ts LIGHT_PORTAL` (bit 28 of a kind 3 light's kind word, `RtLight.portal`),
+- **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
+  it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
+  unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk
+  each opening was (`scene/openings.ts openingRadiance`, its fade out at night, `LOOK_OPENINGS.most` and `least`, the engine's `openAsPortal` and
+  every `portal ?` branch of `engine.ts lookOpeningLights`). `&look=portal:..` on an address is ignored. The "Daylight at openings" row stays, as
+  the switch it already was with this row up. Where this bullet says "with the row up" read "always", and "with the row at 0" read "until 11-04".
+  `openings-check` (its disk lines are gone: an opening is lit at every hour, a night's sky is a sky), `portal-check` (`PORTAL_BREAK=1` fails 2),
+  `lookexpo-check`. The fold's proof in a picture, software adapter, two boots a pair with the row on the old page's address: the white roof at midday and the block at night are each 0 of 2,304,000 bytes off the page as it drew with `&look=portal:1` (the night pair on the final tree; the midday pair on the fold before a review's tidy-ups, which touch no arithmetic: `Opening.area` and its work deleted, the portal record made with the light). The record: 11-04; the look panel's row `portal` "Daylight counted once", live, 0 ON
+  THE LOOK'S PAGE UNTIL IT HAS BEEN SEEN ON A GPU, `?look=portal:1` = on; `render/lights.ts LIGHT_PORTAL` (bit 28 of a kind 3 light's kind word, `RtLight.portal`),
   `common.wgsl` `portalAt` / `portalRay` / `portalOutside` / `portalGround` / `portalPoint` / `portalFlux` / `portalFaces` / `evalLightDirect` /
   `lightPower` / `skyKeep` / `skyThrough`, `direct_common.wgsl shadowSample`, `rc.wgsl rcDice`, `place_field.wgsl reading`, `scene/openings.ts
   openingLooks`, `ajarOf` and `Opening.mid` / `half` / `ajar`, `engine.ts lookOpeningLights`, `frame.placeCfg.y`). The maintainer, of the nine special cases counted on 11-04: "I
@@ -2571,7 +2578,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a wake was drawn. Whether a walker's wake curls, whether the kick reads as his legs or as a pulse, and whether calm smoke is untouched are for a GPU:
   NEVER SEEN ON ONE, in a still or in motion. The numbers to turn there: `SMOKE_STIR` in `game.ts` (the kick's 0.9 and 2.2, the body's 0.24), the
   debugger's "curl round a moving body ×", and the row itself (0 to 2).
-- **THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW** (11-01, in place of the 10-28 "Window light" row and its `render/lookwindow.ts`; the row's key is still
+- **THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW** (SINCE 11-04 EACH OPENING IS A PORTAL AND NOTHING ELSE: see DAYLIGHT COUNTED ONCE. What this bullet says of a
+  light's STRENGTH and HOURS is the record of the disk it was and no longer holds: `openingRadiance`, `LOOK_OPENINGS.most` and `least`, `Opening.area`,
+  "× the row", "nothing is looked for at night" and "light goes straight through a doorway or not at all" are gone; the row is a switch, an opening is
+  lit at every hour, and a door's from the first hand's width. How openings are FOUND, kept, masked and paced is as written. 11-01, in place of the 10-28 "Window light" row and its `render/lookwindow.ts`; the row's key is still
   `windows`: `lookConfig.windows`, 1 on the look page, `?look=windows:0` = none; `scene/openings.ts`, its numbers in `LOOK_OPENINGS`; `engine.ts lookOpeningLights` and
   its `dayLights`, `render/lights.ts upload`'s `own`). The 10-28 row, after the maintainer in a room with every door shut under an overcast sky ("it doesn't really _look_ like all the light is
   coming from the window? feels flat"): a shut room's daylight arrives through the radiance cache alone, probes a metre apart that hold a few broad

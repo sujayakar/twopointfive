@@ -18,7 +18,7 @@ import { PlaceMap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
-import { planOpenings, openAreas, openingRadiance, openingLooks, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
+import { planOpenings, openAreas, openingLooks, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
 import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -142,14 +142,12 @@ export class Engine {
    *  each door's leaf covers when a leaf swings, and the strength and colour are set every frame from the sky and the sun that are up. Each light has the
    *  cells it can reach (render/reach.ts, as a lamp has: without them it is a candidate in every room of the level), decided here against this
    *  method's own raster of the walls, a frame's share of the work at a time, the open and the near first; the old one serves until the new one is whole.
-   *  None off the look page or with the row at 0; under a night's sky all are out and nothing is looked for. */
+   *  None off the look page or with the row at 0. At every hour: one is out only while the picture would show nothing of what it looks out on. */
   private openRecs: { o: Opening; l: RtLight; mask: Uint32Array | null; old: boolean; job: ReachJob | null }[] = [];
   private openLevel: unknown = null; private openSerial = -1; private openTick = 0; private openSeen = NaN; private openPlanned = NaN; private openWait = 0; private openLeaves = NaN;
   private openWalls: { solid: Uint8Array; jumps?: Uint8Array } | null = null;
   /** this frame's opening lights, for the upload (lights.ts upload `own`) and the glass masks */
   private dayLights: RtLight[] = [];
-  /** the openings were last planned as portals (their reach masks are found from the rectangle's width, a disk's from its radius: the row flipped = found again) */
-  private openAsPortal = false;
   private lookOpeningLights() {
     const L = this.lights, W = this.world, K = LOOK_OPENINGS, recs = this.openRecs, day = this.dayLights;
     const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; };
@@ -157,13 +155,11 @@ export class Engine {
     const level = W.statics[0] ?? null;
     if (level !== this.openLevel) { none(); this.openLevel = level; this.openSerial = -1; this.openSeen = this.openPlanned = this.openLeaves = NaN; this.openWait = 0; }   // (a new level: its statics are new boxes)
     const sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
-    // DAYLIGHT COUNTED ONCE (the "Daylight counted once" row, lookConfig.portal; render/lights.ts LIGHT_PORTAL): each opening is a PORTAL, what is seen
-    // through it at every hour (the sky itself, and the ground outside at the engine's guess); the bounce's rays that leave by it take no sky (common.wgsl
-    // skyThrough). With the row at 0 each is the disk it was: as bright as one guess at all it looks out on, by day only, beside the bounce's own share
-    // of the same sky.
-    const portal = lookConfig.portal > 0, isOpen = (o: Opening) => (portal ? o.ajar : o.area) > 0;
-    if (portal !== this.openAsPortal) { this.openAsPortal = portal; for (const r of recs) { r.old = !!r.mask; r.job = null; } }
-    const rad = portal ? openingLooks(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun) : openingRadiance(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun, lookConfig.windows), m = Math.max(rad[0], rad[1], rad[2]);
+    // DAYLIGHT COUNTED ONCE (render/lights.ts LIGHT_PORTAL): each opening is a PORTAL, what is seen through it at every hour (the sky itself, and the
+    // ground outside at the engine's guess); the bounce's rays that leave by it take no sky (common.wgsl skyThrough). The only way since 11-04: until
+    // then, behind a row, each was a disk as bright as one guess at all it looks out on, by day only, beside the bounce's own share of the same sky.
+    const isOpen = (o: Opening) => o.ajar > 0;
+    const rad = openingLooks(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun), m = Math.max(rad[0], rad[1], rad[2]);
     if (!(m > 1e-6)) { for (const r of recs) r.l.enabled = false; return; }   // (a sky that gives nothing)
     // the walls: looked at when the world says a box has changed, and every eighth frame besides (not every change moves the world's serial); found again
     // once they have changed and then stood still (at once on a level's first frame)
@@ -176,7 +172,7 @@ export class Engine {
       const at = (a: Opening, b: Opening) => a.dir[0] * b.dir[0] + a.dir[2] * b.dir[2] > 0.9 ? Math.hypot(a.pos[0] - b.pos[0], a.pos[1] - b.pos[1], a.pos[2] - b.pos[2]) : Infinity;
       // one that is where it was, or has moved a little or grown (a hole blown beside it), keeps its light and its mask; a new one has a new light
       for (const pass of [0.05, K.same]) for (const o of plan) { if (used.has(o)) continue; const r = was.find(w => !used.has(w) && at(w.o, o) < pass); if (r) { used.add(o); used.add(r); next.push({ o, l: r.l, mask: r.mask, old: r.old || pass > 0.05, job: null }); } }
-      for (const o of plan) if (!used.has(o)) next.push({ o, l: { name: 'opening', group: 'sky', kind: 3, pos: [0, 0, 0], dir: [1, 0, 0], color: [1, 1, 1], intensity: 0, range: 0, innerDeg: 0, outerDeg: 90, radius: 0.1, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true }, mask: null, old: false, job: null });
+      for (const o of plan) if (!used.has(o)) next.push({ o, l: { name: 'opening', group: 'sky', kind: 3, pos: [0, 0, 0], dir: [1, 0, 0], color: [1, 1, 1], intensity: 0, range: 0, innerDeg: 0, outerDeg: 90, radius: 0.1, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true, portal: { halfWide: 0, share: 1 } }, mask: null, old: false, job: null });
       for (const r of was) if (!used.has(r)) r.l.slot = -1;
       recs.length = 0; for (const r of next) recs.push(r);
       // the walls as the reach masks read them (render/reach.ts: full-height walls, a doorway open ground that is ranked down, as the game's own raster has
@@ -199,21 +195,21 @@ export class Engine {
         if (!best) break;
         const left = now ? Infinity : REACH_PACE.steps - (REACH_WORK.steps - c0); if (left <= 0) break;
         const job = best.job ??= { budget: left, own: walls }; job.budget = left;
-        const got = reachMaskSome(walls.solid, portal ? best.o.mid : best.o.pos, best.o.dir, portal ? best.o.half[0] : best.o.radius, null, undefined, job);   // (the spread of the light's own points along the wall)
+        const got = reachMaskSome(walls.solid, best.o.mid, best.o.dir, best.o.half[0], null, undefined, job);   // (the spread of the light's own points along the wall)
         if (!got) break; best.mask = got; best.old = false; best.job = null; } }
     day.length = 0;
     for (const r of recs) {
-      // a disk counts what is open of it now, up to `most`. A portal's record is as bright as what is open of its rectangle now, which is all that a pass
-      // whose ray stops short of it can know; beside it the record says what share of the rectangle that is, and the picture's direct light takes the
-      // whole and lets its own rays find what of it is wall or leaf (common.wgsl LIGHT_PORTAL, "its record")
-      const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * (portal ? open : Math.min(o.area, K.most));   // (radiance × area = its strength straight out)
-      const at = portal ? o.mid : o.pos;   // (a portal is its rectangle, about the rectangle's middle; a disk hangs where the open part's weight lies)
-      l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = portal ? Math.hypot(o.half[0], o.half[1]) : o.radius;
-      l.range = Math.min(26, Math.max(3, Math.sqrt(m * (portal ? whole : Math.min(o.full, K.most)) / 0.0015)));   // (as far as it lights anything, wide open: a swinging leaf does not move it)
+      // A portal's record is as bright as what is open of its rectangle now, which is all that a pass whose ray stops short of it can know; beside it the
+      // record says what share of the rectangle that is, and the picture's direct light takes the whole and lets its own rays find what of it is wall
+      // or leaf (common.wgsl LIGHT_PORTAL, "its record")
+      const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * open;   // (radiance × area = its strength straight out)
+      const at = o.mid;   // (a portal is its rectangle, about the rectangle's middle)
+      l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = Math.hypot(o.half[0], o.half[1]);
+      l.range = Math.min(26, Math.max(3, Math.sqrt(m * whole / 0.0015)));   // (as far as it lights anything, wide open: a swinging leaf does not move it)
       l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; l.reach = masks ? r.mask ?? undefined : undefined;
-      if (portal) { const pt = l.portal ??= { halfWide: 0, share: 1 }; pt.halfWide = o.half[0]; pt.share = open / whole; } else l.portal = undefined;
-      // (a disk is lit once a quarter of a square metre is open, and pops on; a portal from the first hand's width, where its own rays let next to nothing through)
-      l.enabled = (portal ? o.ajar > 0 && m * this.settings.exposure > K.seen : o.area > 0 && I > K.least) && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
+      l.portal!.halfWide = o.half[0]; l.portal!.share = open / whole;
+      // (lit from the first hand's width a door opens, where its own rays let next to nothing through, and while the picture would show anything of what it looks out on)
+      l.enabled = o.ajar > 0 && m * this.settings.exposure > K.seen && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
       day.push(l);
     }
   }
@@ -614,7 +610,7 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
-    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, scene/openings.ts)
+    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: each opening to the sky is a light of its own, scene/openings.ts)
     const hourExp = lookConfig.on ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1;   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
     const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
     const placeOn = !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: wherever the model runs, which is wherever the shade row is up, at every hour)
@@ -629,7 +625,7 @@ export class Engine {
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     this.lights.dayExp = lookConfig.lamps > 0 ? hourExp : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
     const numLights = this.lights.upload(time, this.dayLights);
-    let portal0 = 0; for (const l of this.dayLights) if (l.portal && (l.slot ?? -1) >= 0 && (!portal0 || l.slot! + 1 < portal0)) portal0 = l.slot! + 1;   // (the list's first portal, + 1: frame.placeCfg.y, common.wgsl skyKeep)
+    let portal0 = 0; for (const l of this.dayLights) if ((l.slot ?? -1) >= 0 && (!portal0 || l.slot! + 1 < portal0)) portal0 = l.slot! + 1;   // (the list's first portal, + 1: frame.placeCfg.y, common.wgsl skyKeep)
     const place = placeOn && this.place?.ready ? this.place : null; this.passes.setPlace(place ? place.buffer : null);
     const placeSnap = this.lookEye.snap || this.placeWas !== place;   // (a first frame, a restart, a still, a field just come live: the field and its eye are settled outright; cleared below once a field has been stepped)
     const powder = this.powderLive(); this.passes.setPowder(powder?.ready ? powder.view : null);   // (THE LOOK PROTOTYPE's loose snow in the air, above)
