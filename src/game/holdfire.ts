@@ -40,7 +40,7 @@ import { SideMap } from '../math/side';
 import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import { hostileTo } from './teams';
-import { SILENT, silentMan, squadSilent, quietGun, urgent } from './silent';   // (asked inside holdFireOnMan / holdFireSilent / holdFireOrder only)
+import { SILENT, underSilence, squadSilent, quietGun, urgent } from './silent';   // (asked inside holdFireOnMan / holdFireSilent / holdFireOrder only)
 import { targetHoldRule } from './roundheld';
 
 export const HOLDFIRE = {
@@ -163,7 +163,7 @@ export function holdFireHolds(g: Game, gd: Guard, h: Guard, noticed: number, qui
  *  Never a silent man (silent.ts's hold is his own). False with the switch off. Both askers ask only under HOLDFIRE.stackSet. */
 targetHoldRule('holdfire', holdFireOnMan);
 function holdFireOnMan(g: Game, gd: Guard): boolean {
-  if (!HOLDFIRE.on || silentMan(g, gd)) return false;
+  if (!HOLDFIRE.on || underSilence(g, gd)) return false;
   const h = g.fight.opOf(gd)?.tgt; return !!h && h.state !== 'dead' && holds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g));
 }
 /** … and through standing glass the hold is the silent order's own (until the man is alert or searching): is that rule his this frame */

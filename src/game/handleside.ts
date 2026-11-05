@@ -182,11 +182,11 @@ const halt = (gd: Guard, dt: number) => { const c = gd.char; gd.speed = damp(gd.
 export function handleGate(g: Game, gd: Guard, dt: number, speed: number, strafe = false): boolean {
   const mine = gate(g, gd, dt, speed, strafe); if (mine) feet.set(gd, g.time); return mine;
 }
-/** when the gate last had each man's feet (game clock) — `handleHeld`'s memory, read by nothing in this file */
+/** when the gate last had each man's feet (game clock) — `handleGateStopped`'s memory, read by nothing in this file */
 const feet = new SideMap<Guard, number>('handleside.feet');
 /** did this file have his feet this frame or the last: on his way to a leaf's handle, working it, or stood off the swing of one a man of his is working — a
  *  read for whoever counts how long a man has been 'getting nowhere' (an order's stuck clock): time spent here is a door being opened, not a man stuck */
-export function handleHeld(g: Game, gd: Guard): boolean { const t = feet.get(gd); return t !== undefined && g.time >= t && g.time - t < 0.05; }
+export function handleGateStopped(g: Game, gd: Guard): boolean { const t = feet.get(gd); return t !== undefined && g.time >= t && g.time - t < 0.05; }
 function gate(g: Game, gd: Guard, dt: number, speed: number, strafe: boolean): boolean {
   if (!live(g)) return false;
   const K = HANDLE, c = gd.char; let st = states.get(gd);

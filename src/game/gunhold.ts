@@ -31,8 +31,8 @@
 //
 // STATE: per hold (`Known`, keyed by the Hold object) and per man (`St`, keyed by his Standoff record) in WeakMaps — it dies with the hold / the record, as the
 // standoff record itself does; no checkpoint is written with a man in Sam's arm (savestate.ts playerBusy), so nothing here is saved. The die is the game's
-// (simRandom). Seams: guards.ts standoffPerceive (gunHoldSee), standoffAlert (gunHoldFeet, gunHoldFree), standoffUpkeep (gunHoldKeeps), updateGuard's
-// suppression line (gunHoldRuns). Check: `bun run tools/qa/gunhold-check.ts` (`probes.ts gunhold`; `GUNHOLD_BREAK=1` must fail).
+// (simRandom). Seams: guards.ts standoffPerceive (gunHoldSee), standoffAlert (gunHoldFeet, gunHoldFree), standoffUpkeep (standoffFixKept), updateGuard's
+// suppression line (standoffOnFeet). Check: `bun run tools/qa/gunhold-check.ts` (`probes.ts gunhold`; `GUNHOLD_BREAK=1` must fail).
 import { SideMap } from '../math/side';
 import { Vec3, v3, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -121,13 +121,13 @@ function partOf(g: Game, gd: Guard): { K: Known; st: St } | null {
 }
 /** guards.ts standoffUpkeep: out of his sight for LOSE_SECS the record went ('lost'). Behind cover on purpose it is KEPT while somebody of his side has seen the
  *  pair lately and no look has found them gone. */
-export function gunHoldKeeps(g: Game, gd: Guard): boolean {
+export function standoffFixKept(g: Game, gd: Guard): boolean {
   const p = partOf(g, gd); if (!p) return false;
   return p.K.goneT < 0 && g.time - Math.max(gd.standoff!.seenT, p.K.fixT) < GUNHOLD.keepSecs;
 }
 /** updateGuard's suppression line: rounds past a standoff man's head ROOT him where he stands (head down, feet still: suppression.ts never shifts a man of the
  *  standoff). A man this rule has on his feet for cover is not rooted in the open — he is already running bent low for it; behind it, he ducks like anybody. */
-export function gunHoldRuns(g: Game, gd: Guard): boolean {
+export function standoffOnFeet(g: Game, gd: Guard): boolean {
   const p = partOf(g, gd); if (!p) return false;
   if (p.st.phase !== 'cover' && p.st.phase !== 'line') return true;
   return shown(g, p.K, gd.char.pos, p.st.phase === 'cover' && p.st.low);   // (Sam has walked the pair round his cover, or come about on the man at his back: he is not rooted there either)
