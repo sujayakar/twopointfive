@@ -189,6 +189,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     rough = lookCoatRough(lcls, rough, boxFinish(bi).rough);   // STUDY
     if (bent) { n = normalize(n + lk.n - flatN); } else { n = lk.n; lookTilt = lk.tilted; }
   }
+  if (LOOK && !cap) { let ns = lookShoulder(boxStuff(bi), n, bi, v.lc, v.hf.xyz); if (dot(ns, n) < 0.9999) { n = ns; lookTilt = false; } }   // STUDY
   if (v.mark != 0u && !cap && (own < 0 || side)) {
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft(), lookTrod());
     albedo = mk.albedo; rough = mk.rough;

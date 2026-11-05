@@ -161,6 +161,7 @@ fn cubeNormal(vi: u32) -> vec3f {
     albedo = lk.albedo; rough = lk.rough;
     rough = lookCoatRough(boxStuff(bi), rough, boxFinish(bi).rough);   // STUDY
     n = lk.n; lookTilt = lk.tilted;
+    { let ns = lookShoulder(boxStuff(bi), n, bi, v.lc, v.hf.xyz); if (dot(ns, n) < 0.9999) { n = ns; lookTilt = false; } }   // STUDY
   }
   let wetK = floor(frame.rtCfg.z * 0.5) * 0.1;                           // WET GROUND (detail.wgsl wetGround; settings.wetBreakup rides rtCfg.z as 2 × tenths — 0 = nothing here runs)
   if (wetK > 0.0 && wetG && select(n.y, gn.y, LOOK) > 0.9) { rough = wetGround(v.wp, rough, wetK); }
