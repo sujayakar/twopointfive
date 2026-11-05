@@ -39,8 +39,8 @@ export const EVICT = { on: false };
 
 /** THE BLAST FRAME'S PACE (the frame a wall goes on was one long game step: tools/qa/blast-frame.ts). Work on that frame that nothing in play reads is done ahead of
  *  it or handed to the frames after it — play's own state lands on the frame it always did (digests equal either way):
- *  the lights' reach masks (game.ts reachChanged — the picture's alone): a wall's change is noted and the wall raster built `reachHold` frames later, the masks from the
- *  frame after that; the rain's drip lines (rainFx.ts — drawn drops' alone): found again `dripSamples` edge samples a frame once the statics have stood still `dripHold` frames
+ *  the lights' reach masks (the picture's alone, and since 11-05 the picture's to keep: render/reachKeep.ts `changed`, which wallbreak.ts tells with `reachHold`):
+ *  a wall's change is noted and the wall raster built `reachHold` drawn frames later, the masks from the frame after that; the rain's drip lines (rainFx.ts — drawn drops' alone): found again `dripSamples` edge samples a frame once the statics have stood still `dripHold` frames
  *  (a wall's pieces are new statics for some frames after it goes), the old lines dripping meanwhile, and found at all only once a frame somebody could see them or in those same shares; the furniture index (furnblast.ts — made on
  *  the first blast from the level as authored): made when a wall charge is set. ON everywhere; the page's ?blastpace=old and TPS_BLASTPACE=old in front of a headless
  *  tool = all of it on the blast frame, as it was. Under REACH_PACE.whole (?reachpace=old) the masks keep that pace's frame too. */

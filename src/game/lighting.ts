@@ -2,7 +2,7 @@
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import { men } from './seats';
-import { SideMap } from '../math/side';
+import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { leverHands } from './handwork';
 import { missionLive } from './mission';
@@ -178,7 +178,7 @@ export function setGroup(g: Game, group: string, on: boolean) { for (const t of 
 /** What setDaylight(true) found and must put back: every target's switch, the level lights it disabled, the sky, the haze, a PERMANENT blackout it lifted for the
  *  show (the breaker SHOT is mains gone for good, not until ten in the morning: review A6.8 — a timed trip it lifted stays lifted) — and the sun it added. */
 interface DayState { hour: HourId; hourSunK: number; hourSunGiven: boolean; targets: Map<LightTarget, boolean>; lightsOff: RtLight[]; sky: { zenith: Vec3; horizon: Vec3 }; haze: number; exposure: number; sun: RtLight; blackout: { active: boolean; permanent: boolean; until: number; since: number } | null; }
-const dayStates = new SideMap<Game, DayState>('lighting.dayStates');
+const dayStates = new GameSideMap<Game, DayState>('lighting.dayStates');   // (the WORLD's: a seat's view asking the hour, hours.ts exposureOf under a man's tube, finds the Game's row)
 /** Is the daytime variant in (setDaylight)? */
 export function isDaylight(g: Game): boolean { return dayStates.has(g); }
 /** Swap the level's daytime variant in (on) or back out (off): level.daylight — a directional sun added to the light set, the sky lifted, the listed fixture groups
@@ -195,7 +195,7 @@ export function setDaylight(g: Game, on: boolean) {
     const bo = g.blackout; const blackout = bo.active && bo.permanent ? { active: true, permanent: true, until: bo.until, since: bo.since } : null;   // (recorded BEFORE it is lifted, and only the PERMANENT one — the breaker shot to scrap: nothing the show does can mend that, so Off puts it back; a timed trip lifted here is simply over, as if the man sent to the panel had got there — tools/qa breach-daylight holds that half)
     if (bo.active) { g.endBlackout(); g.lightHome.in(LIGHT_IN.mains, null, 0, bo.until, bo.since, -100); for (const t of g.targets) g.lightHome.in(LIGHT_IN.blind, t, -1); }   // (an INSTANT restore for the show: no staggered restrike, no beacons sweeping the 'every fluorescent on' establishing shot — review 08-10 #8)
     const st: DayState = { targets: new Map(), lightsOff: [], sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, sun: L.add(lightFromDef(D.sun)), blackout, hour, hourSunK, hourSunGiven };
-    g.buildDirReach(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
+    g.engine.reach?.dir(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
     for (const t of g.targets) st.targets.set(t, t.on);
     for (const grp of D.groupsOn) setGroup(g, grp, true);
     for (const grp of D.groupsOff) setGroup(g, grp, false);

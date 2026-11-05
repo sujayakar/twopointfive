@@ -64,7 +64,7 @@ const restoreKnobs = () => { for (const k of Object.keys(DEFAULTS)) (WALLS as an
 async function stage(seed: number, chaos: number, level = LEVEL, sw = true) {
   Math.random = seeded(seed); restoreKnobs(); DESTRUCTION.on = sw;   // (the probes raise THE ONE SWITCH themselves; probes.ts' run() puts it back off after each)
   const lv = level === 'office' ? undefined : loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${level}.json`, 'utf8')));
-  const W = await standUp(lv ? { level: lv } : {}); const { game, engine } = W;
+  const W = await standUp(lv ? { level: lv, reach: true } : { reach: true }); const { game, engine } = W;   // (… and the picture's keeper of the reach masks stood up as a page has it, render/reachKeep.ts: these probes read masks)
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   const told: { c: Vec3; r: number }[] = []; W.smoke.obstaclesChanged = (c: Vec3, r: number) => { told.push({ c: [...c] as Vec3, r }); };
   game.godMode = true; game.aiEnabled = false; game.player.visibility = 0.02; game.tune.chaos = chaos; resetStats();
@@ -125,7 +125,7 @@ function fire(W: any, from: Vec3, at: Vec3, n: number, gap = 6): number {
 // ================================================================ blast
 export async function wallbreakBlast(): Promise<boolean> {
   const F = family(`wallbreak-blast: a charge against a partition opens a hole a man fits through — and every question agrees (${LEVEL})`);
-  const { W, game, engine, told } = await stage(11, 0.5);
+  const { W, game, engine, told } = await stage(11, 0.5); const K = (engine as any).reach;
   const inv = game.destr.walls.inventory();
   F.verdict(inv.walls > 0 && inv.cover > 0, 'the level has partitions and cover to break', `${inv.walls} partition walls (${f2(inv.wallM)} m), ${inv.cover} pieces of cover, of ${game.col.boxes.length} statics`);
   const pick = pickWall(game); if (!pick) { F.verdict(false, 'a partition with floor both sides', 'none found'); return F.done(); }
@@ -135,7 +135,7 @@ export async function wallbreakBlast(): Promise<boolean> {
     `wall #${pick.id} at (${f2(mid[0])}, ${f2(mid[2])}): ${words(before)}`);
   // a light whose mask does not reach the far side
   const farCell = Math.floor(b[2] - WORLD.min[2]) * WORLD.gridW + Math.floor(b[0] - WORLD.min[0]); const nearSide = (l: any) => (l.pos[0] - mid[0]) * n[0] + (l.pos[2] - mid[2]) * n[2] > 0;
-  const masks0 = new Map<any, number>(); for (const l of engine.lights.lights) if (l.reach) masks0.set(l, reachLevel(l.reach, farCell));
+  const masks0 = new Map<any, number>(); for (const l of engine.lights.lights) { const m = K.of(l); if (m) masks0.set(l, reachLevel(m, farCell)); }
   const heard: any[] = []; const off = game.destr.walls.onChange((c: any) => heard.push(c));
   const serial0 = game.destr.walls.serial;
   const at: Vec3 = [mid[0] + n[0] * 0.3, 0.3, mid[2] + n[2] * 0.3];
@@ -155,17 +155,17 @@ export async function wallbreakBlast(): Promise<boolean> {
   F.verdict(!lerr && (ab.flags & BoxFlag.NoShadow) !== 0 && (ab.flags & BoxFlag.NoPrimary) !== 0 && game.col.boxes.length > statics0, 'the picture and the collision read the same boxes',
     lerr ?? `${game.col.boxes.length - statics0} pieces appended to both lists (object for object), the authored box hidden from the raster and every ray; geomSerial ${engine.world.geomSerial}`);
   // reach masks
-  let gained = 0, lightsNear = 0; for (const [l, lv0] of masks0) { if (!nearSide(l) || Math.hypot(l.pos[0] - mid[0], l.pos[2] - mid[2]) > l.range) continue; lightsNear++; if (lv0 === 0 && reachLevel(l.reach, farCell) > 0) gained++; }
-  F.verdict(game.reachPending === 0 && (gained > 0 || lightsNear === 0), "the lights' reach masks were re-derived past the hole", `${lightsNear} masked lights in range on the charge's side, ${gained} now reach the far side's cell where they did not; queue drained`);
+  let gained = 0, lightsNear = 0; for (const [l, lv0] of masks0) { if (!nearSide(l) || Math.hypot(l.pos[0] - mid[0], l.pos[2] - mid[2]) > l.range) continue; lightsNear++; if (lv0 === 0 && reachLevel(K.of(l), farCell) > 0) gained++; }
+  F.verdict(K.pending === 0 && (gained > 0 || lightsNear === 0), "the lights' reach masks were re-derived past the hole", `${lightsNear} masked lights in range on the charge's side, ${gained} now reach the far side's cell where they did not; queue drained`);
   { // the masks are re-decided only behind the changed rects (reach.ts ReachOnly): they must equal a whole re-derivation on the level as it now stands
-    const solid = (game as any).reachSolid, interior = game.reachInterior; let cmp = 0, bad = 0;
-    for (const l of (game as any).reachLights) { if (game.beacons.some((b: any) => b.light === l)) continue;   // a beacon's spot turns: its source points are wherever it faced when the mask was made
+    const { solid, interior, lamps } = K.peek(); let cmp = 0, bad = 0;
+    for (const l of lamps) { if (game.beacons.some((b: any) => b.light === l)) continue;   // a beacon's spot turns: its source points are wherever it faced when the mask was made
       const full = reachMaskFor(solid, l.pos, l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0], l.radius, interior); cmp++;
-      const cells: string[] = []; for (let ci = 0; ci < 40 * 28; ci++) { const x = (ci % 40) + 0.5, z = Math.floor(ci / 40) + 0.5; if (Math.hypot(x - l.pos[0], z - l.pos[2]) > l.range + 1) continue;   // past its range a light adds nothing: reachChanged leaves those lights alone
-        if (reachLevel(full, ci) !== reachLevel(l.reach, ci)) cells.push(`${ci % 40},${Math.floor(ci / 40)}:${reachLevel(l.reach, ci)}→${reachLevel(full, ci)}`); }
+      const cells: string[] = []; for (let ci = 0; ci < 40 * 28; ci++) { const x = (ci % 40) + 0.5, z = Math.floor(ci / 40) + 0.5; if (Math.hypot(x - l.pos[0], z - l.pos[2]) > l.range + 1) continue;   // past its range a light adds nothing: the keeper leaves those lights alone
+        if (reachLevel(full, ci) !== reachLevel(K.of(l), ci)) cells.push(`${ci % 40},${Math.floor(ci / 40)}:${reachLevel(K.of(l), ci)}→${reachLevel(full, ci)}`); }
       if (cells.length) { bad++; if (VERBOSE) console.log(`    ${l.name} at ${f2(l.pos[0])},${f2(l.pos[2])} range ${f2(l.range)} r ${l.radius}: ${cells.slice(0, 12).join(' ')}`); } }
     F.verdict(bad === 0, 'every masked light carries the mask a whole re-derivation gives, inside its range', `${cmp} lights compared, ${bad} differ`);
-    let dirs = 0, dbad = 0; for (const l of engine.lights.lights) if (l.kind === 2 && l.reachDir) { const inc = l.reachDir; game.buildDirReach(l); dirs++; for (let k = 0; k < inc.length; k++) if (inc[k] !== l.reachDir[k]) { dbad++; break; } }
+    let dirs = 0, dbad = 0; for (const l of engine.lights.lights) if (l.kind === 2 && K.dirOf(l)) { const inc = K.dirOf(l); K.dir(l); dirs++; const whole = K.dirOf(l); for (let k = 0; k < inc.length; k++) if (inc[k] !== whole[k]) { dbad++; break; } }
     if (dirs) F.verdict(dbad === 0, "the moon's mask too", `${dirs} directional lights compared, ${dbad} differ`);
   }
   F.verdict(told.length > 0, 'the smoke solver was told its obstacles changed', `${told.length} obstaclesChanged calls, the first r ${f2(told[0]?.r ?? 0)} m at (${told[0]?.c.map(f2).join(', ')})`);
@@ -408,7 +408,7 @@ function wreck(W: any, game: any): { pick: any } {
 // ================================================================ reset
 export async function wallbreakReset(): Promise<boolean> {
   const F = family(`wallbreak-reset: a restart puts the level back bit for bit (${LEVEL})`);
-  const { W, game, engine } = await stage(17, 0.5);
+  const { W, game, engine } = await stage(17, 0.5); const K = (engine as any).reach;
   const flags0 = flagsOf(game), nav0 = navHash(game), n0 = game.col.boxes.length;
   const p0 = pickWall(game)!; const q0 = ask(game, p0.a, p0.b, p0.mid);
   const { pick } = wreck(W, game);
@@ -425,7 +425,7 @@ export async function wallbreakReset(): Promise<boolean> {
   F.verdict(rows.length === 1 && rows[0].kind === 'reset', "a 'reset' row is filed", `${rows.map((r: any) => r.kind + '/' + r.cause).join(', ')}`);
   F.verdict(game.destr.walls.snapshot() === undefined, 'nothing left for a checkpoint to carry', `snapshot() → ${JSON.stringify(game.destr.walls.snapshot())}`);
   for (let f = 0; f < 60; f++) W.step(DT);
-  F.verdict(game.reachPending === 0, 'reach masks re-derived', `queue ${game.reachPending}`);
+  F.verdict(K.pending === 0, 'reach masks re-derived', `queue ${K.pending}`);
   return F.done();
 }
 
