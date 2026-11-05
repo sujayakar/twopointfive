@@ -23,9 +23,9 @@ import { men } from './seats';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
 import { leafWrote, type BoxMirror } from '../scene/boxMirror';
-import { BOTH } from '../scene/collision';
+import { BOTH, noNumber } from '../scene/collision';
 import { EXACT } from '../math/exact';
-import { RUST, ruleFell, ruleRed } from '../sim/sim';
+import { RUST, ruleRed } from '../sim/sim';
 import { SP, SLAB_STEPPED, SLAB_HOST, SLABS_STEPPED, slabIo, slabMem, slabDiff } from '../sim/slabshome';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
@@ -341,7 +341,7 @@ function flySlab(g: Game, d: Door, dt: number) {
   const T = g.doors.slabs, r = T.rowOf(d.i); if (r < 0) return;
   const W = slabThere(g, d);
   let M: SlabMet | null = W === null ? null : BOTH.on ? stepBoth(g, d, r, dt, W) : stepThere(g, d, r, dt, W);
-  if (M === null) { if (W !== null) ruleFell('slabs', 'the module handed the step back (a ray that is no number, or longer than any level)'); SLABS_STEPPED.here++; M = stepHere(g, d, r, dt); }
+  if (M === null) { SLABS_STEPPED.here++; M = stepHere(g, d, r, dt); }   // (slabThere said why, where the row is up)
   const S = d.slab!, A = DOORBLAST_STATS;   // (its row, read as it stands: it moves on the next line if the slab came to rest)
   if (S.rest) T.rest(d.i);
   A.nudged += M.nudged; A.nudgeMax = Math.max(A.nudgeMax, M.nudgeMax); A.laid += M.laid;
@@ -365,24 +365,24 @@ function slabThere(g: Game, d: Door): { M: BoxMirror; but: number; ask: number }
   const ask = g.col.rulesPanes(); if (ask < 0) return null;   // (this file's rays ask the pane's rule)
   return { M, but: dyn.indexOf(d.box), ask };
 }
-/** the step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. → null: the module hands the
- *  step back with nothing written (a ray that is no number, or longer than any level: nothing of play) */
-function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet | null {
+/** the step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. (A step the module hands back
+ *  with nothing written met a ray that is no number: a mistake, said by name — collision.ts noNumber.) */
+function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet {
   const io = slabIo(), m = slabMem(), P = io.par, K = DOORBLAST, C = SLABS_STEPPED;
   m[P + SP.dt] = dt; m[P + SP.row] = r; m[P + SP.height] = d.height; m[P + SP.thick] = d.thick; m[P + SP.hu] = d.leafH[0]; m[P + SP.closed] = d.def.closedDir;
   m[P + SP.fcx] = d.frameCentre[0]; m[P + SP.fcz] = d.frameCentre[2]; m[P + SP.but] = W.but; m[P + SP.ask] = W.ask;
   m[P + SP.scrape] = K.scrape; m[P + SP.slam] = K.slam; m[P + SP.slide] = K.slide; m[P + SP.bounce] = K.bounce; m[P + SP.tip] = K.tip;
   const a = io.x.slabs_step(g.doors.slabs.home.bind(), W.M.slot), q = slabMem();
   C.rays += q[P + SP.rays]; C.gathers += q[P + SP.gathers]; C.substeps += q[P + SP.substeps];
-  if (a === SLAB_HOST) { C.host++; return null; }
+  if (a === SLAB_HOST) { C.host++; throw noNumber(); }
   if (a !== SLAB_STEPPED) throw new Error(`the Rust module was asked to step row ${r} of the slabs, which is no slab in the air`);
   C.there++; if (q[P + SP.landed]) C.landed++; if (q[P + SP.rested]) C.rested++;
   return { landed: q[P + SP.landed] !== 0, lx: q[P + SP.landX], lz: q[P + SP.landZ], rested: q[P + SP.rested] !== 0, nudged: q[P + SP.nudged], nudgeMax: q[P + SP.nudgeMax], laid: q[P + SP.laid] };
 }
 /** …both ways (collision.ts BOTH): the module's step, then this file's from the same row, the two compared column for column and by what they met; the
- *  game goes on from this file's. → null as stepThere */
-function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet | null {
-  const T = g.doors.slabs, before = T.bytes(), A = stepThere(g, d, r, dt, W); if (A === null) return null;
+ *  game goes on from this file's. */
+function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet {
+  const T = g.doors.slabs, before = T.bytes(), A = stepThere(g, d, r, dt, W);
   const there = T.bytes(); T.put(before);
   const B = stepHere(g, d, r, dt), here = T.bytes(), C = SLABS_STEPPED;
   const bad = slabDiff(T, here, there, 2); for (const k of Object.keys(B) as (keyof SlabMet)[]) if (!Object.is(Number(A[k]), Number(B[k]))) bad.push(`met.${k} ${B[k]} | ${A[k]}`);
@@ -475,10 +475,9 @@ function runOn(g: Game, d: Door): DoorSlab {
       const was = T.bytes(), tally = { ...SLABS_STEPPED };
       try {
         { const s = T.load(r); s.wedged = 0; T.save(r, s); }
-        let S = T.load(r), there = true;
-        for (let i = 0; i < 480 && !S.rest && there; i++) { there = stepThere(g, d, r, 1 / 60, W) !== null; S = T.load(r); }
-        if (there) return S;
-        ruleFell('slabs', 'the module handed the step back (a ray that is no number, or longer than any level)');
+        let S = T.load(r);
+        for (let i = 0; i < 480 && !S.rest; i++) { stepThere(g, d, r, 1 / 60, W); S = T.load(r); }
+        return S;
       } finally { T.put(was); Object.assign(SLABS_STEPPED, tally); }   // (the game's slabs as they were, and the checks' counts of the game's own steps)
     }
     const S: DoorSlab = T.load(r), quiet = nothingMet(); S.wedged = 0;
