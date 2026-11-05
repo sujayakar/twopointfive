@@ -37,8 +37,9 @@ import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
-import { MAX_MARKS_PER_BOX, markFromRect, type MarkingDef, type MarkPal } from '../../src/scene/markings';
+import { markFromRect, type MarkPal } from '../../src/scene/markings';
 import * as MD from '../../src/scene/markingDefaults';
+import { madeOf } from '../../src/scene/stuff';
 import type { Vec3 } from '../../src/math/vec';
 
 export const NAME = 'white-roof';
@@ -47,7 +48,8 @@ export const MATERIALS = GWOT_MATERIALS;
 
 // ---- the paints: each ONE flat colour (linear), with the finish its stuff is written around (lookTex.ts LOOK_ROUGH)
 type Paint = Pick<Box, 'albedo' | 'rough'> & { stuff: NonNullable<Box['stuff']> };
-const paint = (albedo: Vec3, rough: number, stuff: Paint['stuff']): Paint => ({ albedo, rough, stuff });
+// (each paint is a ROW the kit knows by: its numbers, its finish and its word, so a kit piece handed the row says what the row is. scene/stuff.ts madeOf)
+const paint = (albedo: Vec3, rough: number, stuff: Paint['stuff']): Paint => ({ albedo: madeOf(stuff, [albedo[0], albedo[1], albedo[2]], { rough }), rough, stuff });
 const ORANGE: Vec3 = [0.88, 0.24, 0.03], YELLOW: Vec3 = [0.88, 0.6, 0.04], BLUE: Vec3 = [0.04, 0.2, 0.72];
 const PANEL = paint([0.56, 0.56, 0.54], 0.68, 'cast panel'), PAVER = paint([0.72, 0.73, 0.74], 0.5, 'paver'),   // (cast concrete a step under the white deck it stands on: ground, walls and things sit a step apart before any light falls)
    BLOCK = paint([0.76, 0.77, 0.77], 0.4, 'gloss block'), SKIM = paint([0.78, 0.78, 0.77], 0.55, 'skim');
@@ -56,7 +58,7 @@ const STEEL = paint([0.56, 0.57, 0.58], 0.32, 'brushed');   // (not `metal`: a m
 const COAT = paint([0.7, 0.71, 0.72], 0.35, 'enamel'), CARPET = paint(BLUE, 0.95, 'carpet'), SEAT = paint([0.03, 0.14, 0.55], 0.95, 'carpet');
 const GLOSS_Y = paint(YELLOW, 0.26, 'enamel'), GLOSS_W = paint([0.8, 0.8, 0.8], 0.3, 'enamel'), GLOSS_O = paint(ORANGE, 0.3, 'enamel');
 // ---- the painter's tins (markings' palette entries: a material each, never a shaded colour)
-const INK: MarkPal = { albedo: [0.1, 0.1, 0.11], rough: 0.55 }, CHALK: MarkPal = { albedo: [0.84, 0.84, 0.82], rough: 0.5 }, SIGNAL: MarkPal = { albedo: YELLOW, rough: 0.4 }, RED: MarkPal = { albedo: [0.62, 0.05, 0.04], rough: 0.4 };
+const { ink: INK, chalk: CHALK, signal: SIGNAL } = MD.TIN, RED: MarkPal = { albedo: [0.62, 0.05, 0.04], rough: 0.4 };
 // (a band of colour is PAINT ON THE SAME WALL: the wall's own stuff in another colour, a finger proud, so its joints and holes run on under the colour's edge)
 const PLINTH = paint(ORANGE, 0.5, 'cast panel'), DADO = paint(ORANGE, 0.36, 'gloss block');
 const WOOD = paint([0.4, 0.3, 0.19], 0.84, 'wood'), CARD = paint([0.45, 0.33, 0.2], 0.9, 'plain'), DARK = paint([0.1, 0.1, 0.11], 0.5, 'enamel');
@@ -76,27 +78,17 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   /** a cast block standing on the deck, its top edged */
   const mass = (x0: number, z0: number, x1: number, z1: number, h: number, p: Paint = PANEL) => { const i = slab(x0, 0, z0, x1, h, z1, p.albedo, { rough: p.rough, stuff: p.stuff }); edged(x0, z0, x1, z1, h); return i; };
-  /** PAINT ON A BOX: markings added to what it carries (four a box, scene/markings.ts) */
-  const mark = (i: number, ...ms: MarkingDef[][]) => { const b = K.boxes[i]; b.marks = [...(b.marks ?? []), ...ms.flat()]; if (b.marks.length > MAX_MARKS_PER_BOX) throw new Error(`white-roof: box ${i} carries ${b.marks.length} markings, and a box holds ${MAX_MARKS_PER_BOX}`); return i; };
-  /** a world place on a box's south face (x, y) or on its top (x, z: z is the SOUTH end of what is painted, since the camera reads a top from the south), in
-   *  that face's own metres from its centre */
-  const onS = (i: number, x: number, y: number): [number, number] => [x - K.boxes[i].c[0], y - K.boxes[i].c[1]];
-  const onTop = (i: number, x: number, z: number): [number, number] => [x - K.boxes[i].c[0], K.boxes[i].c[2] - z];
-  /** a world rect on a box's top as that face's rect */
-  const rectTop = (i: number, x0: number, z0: number, x1: number, z1: number): [number, number, number, number] => [x0 - K.boxes[i].c[0], K.boxes[i].c[2] - z1, x1 - K.boxes[i].c[0], K.boxes[i].c[2] - z0];
-  /** a run of conduit on a wall's south face from x0 to x1 at height y, a clip every metre and a half; `drop` = a branch down to that height at x1 */
-  const conduitS = (x0: number, x1: number, y: number, zFace: number, drop?: number) => {
-    slab(x0, y, zFace, x1, y + 0.03, zFace + 0.03, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff, flags: FLAT });
-    for (let x = x0 + 0.4; x < x1 - 0.2; x += 1.5) slab(x - 0.03, y - 0.02, zFace, x + 0.03, y + 0.05, zFace + 0.04, STEEL.albedo, { rough: STEEL.rough, stuff: STEEL.stuff, flags: FLAT });
-    if (drop !== undefined) { slab(x1 - 0.03, drop, zFace, x1, y, zFace + 0.03, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff, flags: FLAT }); slab(x1 - 0.14, drop - 0.3, zFace, x1 + 0.11, drop, zFace + 0.09, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff }); }
-  };
-  /** a round thing standing up: the kit's octagon of four slabs, which the game stands up as one round (scene/round.ts) */
-  const round = (x: number, z: number, y0: number, y1: number, r: number, p: Paint) => {
-    const a = r * 0.96, t = a * 0.4142;
-    for (let k = 0; k < 4; k++) add({ c: [x, (y0 + y1 - 0.002 * k) / 2, z], h: [a, (y1 - 0.002 * k - y0) / 2, t], yaw: k * Math.PI / 4, albedo: p.albedo, rough: p.rough, stuff: p.stuff });
-  };
-  /** a skin on a wall's south face: a band of another stuff a finger proud of it (a plinth, a steel band, a louvre, a door's plate) */
-  const skinS = (x0: number, x1: number, y0: number, y1: number, zFace: number, p: Paint, proud = 0.012) => slab(x0, y0, zFace, x1, y1, zFace + proud, p.albedo, { rough: p.rough, stuff: p.stuff });
+  // paint on what is there: the kit's tools (scene/officeGen.ts: a box by its face, markings added to it, a world place in a face's own metres)
+  const { paintOn: mark, onS, onTop, rectTop } = K;
+  /** a run of conduit on a wall's south face from x0 to x1 at height y, a clip every metre and a half; `drop` = a branch down to that height at x1 (the kit's
+   *  piece, standing: scene/officeGen.ts conduit) */
+  const conduitS = (x0: number, x1: number, y: number, zFace: number, drop?: number) => K.conduit('x', zFace, x0, x1, 1, y, COAT.albedo, STEEL.albedo, drop, 0, true);
+  /** a round thing standing up: the kit's pipe (four slabs, which the game stands up as one round: scene/round.ts), standing */
+  const round = (x: number, z: number, y0: number, y1: number, r: number, p: Paint) => K.pipe(x, z, y0, y1, r, p.albedo, [], true);
+  /** a skin on a wall's south face: a band of another stuff a finger proud of it (a plinth, a steel band, a door's plate), and a louvre: the kit's band
+   *  and vent, standing (the face is given, so the wall has no thickness to add) */
+  const skinS = (x0: number, x1: number, y0: number, y1: number, zFace: number, p: Paint, proud = 0.012) => K.band('x', zFace, x0, x1, 1, y0, y1, p.albedo, 0, proud, true);
+  const ventS = (x0: number, x1: number, y0: number, y1: number, zFace: number, proud = 0.02) => K.vent('x', zFace, x0, x1, 1, y0, y1, LOUVRE.albedo, 0, proud, true);
 
   // ---- the deck: pavers wall to wall, and the dark beyond the parapet (a roof ends in air)
   grp('ground');
@@ -117,7 +109,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   });
   // the painter's stencil, a bay at a time, and the way out; two vents over the plinth in each of the two middle bays; conduit under the wall's head, a box where a run drops
   mark(hall, MD.stencilMarks('+z', 'BAY 1', ...onS(hall, 6.7, 1.55), INK), MD.stencilMarks('+z', 'BAY 2', ...onS(hall, 14.3, 1.55), INK), MD.stencilMarks('+z', 'BAY 3', ...onS(hall, 24.3, 1.55), INK), MD.stencilMarks('+z', 'EXIT→', ...onS(hall, 31.8, 1.55), INK));
-  for (const x of [12.3, 17.4, 22.3, 27.4]) skinS(x - 0.3, x + 0.3, 0.9, 1.3, 5.12, LOUVRE, 0.02);
+  for (const x of [12.3, 17.4, 22.3, 27.4]) ventS(x - 0.3, x + 0.3, 0.9, 1.3, 5.12, 0.02);
   conduitS(5.3, 9.4, 2.6, 5.12, 2.2); conduitS(10.6, 19.4, 2.6, 5.12); conduitS(20.6, 29.4, 2.6, 5.12, 2.2); conduitS(30.6, 34.7, 2.6, 5.12);
 
   // ---- the parapet: a low cast wall on the other three sides, its top edged
@@ -150,11 +142,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   mark(add({ c: [10.7, 1.4, 15.19], h: [0.36, 0.3, 0.06], albedo: GLOSS_W.albedo, rough: GLOSS_W.rough, stuff: GLOSS_W.stuff }), MD.stencilMarks('+z', 'FIRE', -0.2875, 0.02, RED, 1, 'base'), MD.plateMark('+z', [-0.3, -0.2, 0.3, -0.125], RED));
   mark(add({ c: [9.75, 1.6, 15.138], h: [0.16, 0.21, 0.008], albedo: GLOSS_O.albedo, rough: GLOSS_O.rough, stuff: GLOSS_O.stuff, flags: FLAT }), MD.stencilMarks('+z', '1', -0.125, -0.175, CHALK, 2, 'base'));
   mark(add({ c: [17.138, 1.6, 13.15], h: [0.008, 0.21, 0.16], albedo: GLOSS_O.albedo, rough: GLOSS_O.rough, stuff: GLOSS_O.stuff, flags: FLAT }), MD.stencilMarks('+x', '2', -0.125, -0.175, CHALK, 2, 'base'));
-  skinS(13.4, 14.4, 2.15, 2.55, 15.12, LOUVRE, 0.02);
+  ventS(13.4, 14.4, 2.15, 2.55, 15.12, 0.02);
   grp('room.service');
   for (const [x, z] of [[6.32, 9.32], [11.24, 9.32], [6.32, 14.68]] as const) slab(x - 0.2, 0, z - 0.2, x + 0.2, H, z + 0.2, STUCCO.albedo, { rough: STUCCO.rough, stuff: STUCCO.stuff });   // orange piers in three corners (the fourth is the door's)
   for (const x of [7.4, 8.0]) { slab(x - 0.22, 0.08, 9.12, x + 0.22, 1.0, 9.36, STEEL.albedo, { rough: STEEL.rough, stuff: STEEL.stuff }); skinS(x - 0.12, x + 0.12, 0.45, 0.85, 9.36, LINE_Y, 0.004); }   // two steel cabinets, a yellow label each
-  slab(9.4, 0, 9.12, 10.6, 0.9, 9.6, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff }); skinS(9.5, 10.5, 0.15, 0.75, 9.6, LOUVRE, 0.02);   // an air handler under the far wall, a louvre in its face
+  slab(9.4, 0, 9.12, 10.6, 0.9, 9.6, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff }); ventS(9.5, 10.5, 0.15, 0.75, 9.6, 0.02);   // an air handler under the far wall, a louvre in its face
   grp('room.lounge');
   slab(11.56, 0, 9.12, 16.88, H, 9.15, STUCCO.albedo, { rough: STUCCO.rough, stuff: STUCCO.stuff });                                              // the one orange wall
   for (const z of [10.2, 13.6]) { slab(13.2, 0, z - 0.3, 15.2, 0.4, z + 0.3, SEAT.albedo, { rough: SEAT.rough, stuff: SEAT.stuff }); slab(13.2, 0.4, z - 0.3, 15.2, 0.75, z - 0.18, SEAT.albedo, { rough: SEAT.rough, stuff: SEAT.stuff }); }   // two benches
@@ -176,14 +168,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- the plant: four cast volumes of four heights, a louvre and a hatch in their faces, round stacks beside them
   grp('plant');
   // every volume says its number on its top, where the camera reads it; a hatch is a yellow outline; the low one that faces the deck has a striped foot
-  const m1 = mass(21.5, 10.0, 24.5, 13.0, 2.4); skinS(22.0, 24.0, 0.3, 1.5, 13.0, LOUVRE, 0.03);
+  const m1 = mass(21.5, 10.0, 24.5, 13.0, 2.4); ventS(22.0, 24.0, 0.3, 1.5, 13.0, 0.03);
   mark(m1, MD.stencilMarks('+y', '1', ...onTop(m1, 22.0, 12.5), INK, 4), MD.outlineMarks('+y', rectTop(m1, 23.3, 10.4, 24.1, 11.2), SIGNAL), MD.ratingPlateMarks('+z', [1.1, 0.0, 1.4, 0.2], 3));
   const m2 = mass(24.5, 10.0, 27.0, 12.0, 1.5); mark(skinS(25.2, 26.3, 0.1, 1.2, 12.0, STEEL, 0.015), MD.boltMarks('+z', -0.5, 0.5, 0.44, 4, 'coarse'), MD.boltMarks('+z', -0.5, 0.5, -0.44, 4, 'coarse'), MD.ratingPlateMarks('+z', [0.15, 0.15, 0.45, 0.35], 5));
   mark(m2, MD.stencilMarks('+y', '2', ...onTop(m2, 25.0, 11.7), INK, 3));
   const m3 = mass(25.0, 13.5, 28.0, 15.5, 1.0);
   mark(m3, MD.stencilMarks('+y', '3', ...onTop(m3, 25.4, 15.1), INK, 3), MD.outlineMarks('+y', rectTop(m3, 26.9, 13.8, 27.7, 14.6), SIGNAL), MD.hazardMarks('+z', [-1.5, -0.5, 1.5, -0.25], SIGNAL, INK));
   const m4 = mass(27.0, 10.5, 28.5, 12.0, 0.5); mark(m4, MD.stencilMarks('+y', '4', ...onTop(m4, 27.5, 11.65), INK, 2));
-  slab(21.6, 0.06, 14.4, 23.4, 1.0, 15.6, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff }); skinS(21.7, 23.3, 0.16, 0.9, 15.6, LOUVRE, 0.025);   // a condenser: a painted case, a louvre, a fan on top
+  slab(21.6, 0.06, 14.4, 23.4, 1.0, 15.6, COAT.albedo, { rough: COAT.rough, stuff: COAT.stuff }); ventS(21.7, 23.3, 0.16, 0.9, 15.6, 0.025);   // a condenser: a painted case, a louvre, a fan on top
   round(22.5, 15.0, 1.0, 1.06, 0.42, paint([0.1, 0.1, 0.11], 0.5, 'enamel'));
   for (const [x, z, h] of [[24.2, 14.6, 1.3], [24.2, 15.4, 0.9], [29.2, 12.0, 1.6]] as const) { round(x, z, 0, h, 0.2, GLOSS_W); round(x, z, h, h + 0.07, 0.29, GLOSS_W); }   // vent stacks with caps
 
@@ -193,7 +185,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   mark(stair, MD.stencilMarks('+z', 'STAIR', ...onS(stair, 31.98, 2.3), CHALK), MD.stencilMarks('+z', '2', ...onS(stair, 31.35, 0.95), CHALK, 2));   // its name over the door, its number at the door's side
   mark(skinS(32.2, 33.2, 0, 2.05, 13.5, COAT, 0.03), MD.ratingPlateMarks('+z', [-0.15, 0.45, 0.15, 0.65], 9));                                    // a door's face with a notice on it, its kick plate, a vent beside its head
   mark(skinS(32.25, 33.15, 0.02, 0.32, 13.53, STEEL, 0.006), MD.boltMarks('+z', -0.4, 0.4, 0.1, 6, 'base'));
-  skinS(31.3, 31.9, 1.9, 2.5, 13.5, LOUVRE, 0.025);
+  ventS(31.3, 31.9, 1.9, 2.5, 13.5, 0.025);
   // the board beside the door that says what is on which floor: four bars of colour with a line of print each
   mark(add({ c: [33.75, 1.55, 13.508], h: [0.3, 0.25, 0.008], albedo: GLOSS_W.albedo, rough: GLOSS_W.rough, stuff: GLOSS_W.stuff, flags: FLAT }),
     [markFromRect('+z', 'base', [-0.25, -0.2, 0.25, 0.2], [{ albedo: ORANGE, rough: 0.4 }, { albedo: BLUE, rough: 0.4 }, { albedo: [0.42, 0.42, 0.41] }], c => { for (let r = 0; r < 4; r++) { const j = c.H - 3 - 4 * r; c.fill(1 + (r % 2), 0, j, 5 + 2 * ((r * 3) % 4), j + 2); c.fill(3, 13, j, c.W - 2 - (r * 5) % 4, j + 1); } })!]);
