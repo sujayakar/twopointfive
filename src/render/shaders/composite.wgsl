@@ -519,6 +519,10 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
   if (S.x <= 0.0 && S.y <= 0.0) { return vec3f(0.0); }   // no light of either class reaches the stencil (deep shade, under a roof): vis below is exactly 0 — the loop is not walked
   var U = vec2f(0.0); var Q = vec2f(0.0); var gS = vec3f(0.0); var gB = vec3f(0.0);
   for (var i = 0u; i < min(frame.numLights, 64u); i++) {
+    // THE LAMP'S OWN RANGE FIRST: evalLight's first exit (common.wgsl evalLightRaw, `dist > li.range`), in its own arithmetic and from the lamp's own three fields,
+    // before the reach table is read. Most of a level's lamps are out of range of a snow pixel, and the table's read was what a lamp cost here that gave nothing
+    // (timed 11-05: docs/agents/weather.md, the glow's bullet). The same lamps pass as before: one this line drops, evalLight was about to
+    if ((lights[i].kind & 255u) != 2u) { let dq = lights[i].pos - P; if (sqrt(dot(dq, dq)) > lights[i].range) { continue; } }   // (255: lightKind's own mask; 2 = directional, which has no range)
     if (!lightReaches(i, P)) { continue; }
     let li = lights[i];
     let ev = evalLight(li, P, vec3f(0.0));                 // square-on irradiance (no receiver cosine)
