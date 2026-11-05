@@ -27,8 +27,9 @@ const OUT = resolve(ROOT, argv.includes('--out') ? argv[argv.indexOf('--out') + 
 
 // 1. the procedural level, with the editor group of every box recorded on the side
 const trace = { groups: [] as string[] };
-const level = buildOfficeProcedural(trace, RELIEF ? { markings: false, demote: false } : TEXEL !== undefined ? { texel: TEXEL } : {});
+const level = buildOfficeProcedural(trace, RELIEF ? { markings: false, demote: false } : TEXEL !== undefined ? { texel: TEXEL, lived: true } : { lived: true });   // (lived: the FILE carries the office's lived tier, whatever stand this tool runs on)
 if (trace.groups.length !== level.boxes.length) throw new Error(`trace: ${trace.groups.length} groups for ${level.boxes.length} boxes`);
+if (TEXEL !== undefined) level.markTexel = TEXEL;   // (the Level's own: levelToData writes it into the file's meta, the loader hands it back. How kept the office is goes the same way: `level.kept`, set by the builder)
 
 // 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (floor.ts owns it today — mirrored here and
 //    cross-checked by tools/qa/level-probes.ts), one floor, the traceable world bounds
@@ -48,7 +49,7 @@ const data = levelToData(level, {
   name: 'office',
   materials, surfaces, boxGroups: trace.groups,
   floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: WORLD.ceilingY }],
-  meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: 'src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts', notes: 'The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.', ...(TEXEL !== undefined ? { markTexel: TEXEL } : {}) },
+  meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: 'src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts', notes: 'The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.' },
 });
 
 // 3. validate + serialize
@@ -59,8 +60,7 @@ const text = serializeLevelData(data);
 // 4. the proof: text → LevelData → Level must be the generator's Level, field for field (and the data must survive its own round trip)
 const parsed = parseLevelData(text);
 const dataDiffs: string[] = []; const nData = structuralDiff(canonicalLevelData(data), parsed, dataDiffs);
-const reloaded = loadLevel(parsed);
-if (TEXEL !== undefined) (level as any).markTexel = TEXEL;   // (the file's meta carries it; the loader hands it back on the Level)
+const reloaded = loadLevel(parsed, { lived: true });   // (the proof is of the whole file, its lived tier in)
 const levelDiffs: string[] = []; const nLevel = structuralDiff(level, reloaded, levelDiffs);
 if (nData || nLevel) {
   console.error(`export REFUSED: the file would not reproduce the level — ${nLevel} Level diff(s), ${nData} data diff(s)`);

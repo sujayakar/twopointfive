@@ -93,9 +93,11 @@ export function namePaint(row: readonly number[], name: string, finish?: { rough
  *  made of and its finish, said outright */
 export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff } & Finish): void { PAINTS.set(row, record(name, said, said.stuff)); }
 /** ONE PAINT, ANOTHER THING: the same paint to the eye (its numbers, its name, its finish) said to be made of `stuff` where a kit paints two things with
- *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings. */
-export function saidAs(stuff: BoxStuff, paint: readonly number[]): [number, number, number] {
-  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', was, stuff)); return out;
+ *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings.
+ *  `finish` = the thing's own, where its stuff has another than the paint's row (as `madeOf` takes one: the word and its finish are said together, so
+ *  nobody writes a roughness by hand beside the word): `saidAs('paint', dust, { rough: 0.5 })` is an enamel in the colour of dust. */
+export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rough: number; metal?: boolean }): [number, number, number] {
+  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', finish ?? was, stuff)); return out;
 }
 /** A COLOUR WRITTEN AS NUMBERS SAYS ITS WORD BESIDE IT: `madeOf('cloth', [0.3, 0.1, 0.09])` is those numbers, known from here on as a paint made of
  *  that (and of that finish, if one is given), wherever they are handed: a box's albedo, a helper's argument, a constant a generator names once. */
@@ -109,6 +111,8 @@ export const drawnAs: typeof madeOf = (stuff, colour, finish) => madeOf(stuff, c
 export const PANEL_GREY = madeOf('sheet', [0.42, 0.44, 0.45]), CHAIR_GREY = drawnAs('paint', [0.5, 0.5, 0.48]);
 /** … and a third that somebody did choose: the lot's concrete kerb (it was drawn as sheet metal) */
 export const KERB_GREY = madeOf('slab', [0.5, 0.5, 0.47]);
+/** … and a fourth, laid by four generators: a server rack's body, with its sheen. Nobody chose its word either (it was drawn as bare iron by its colour) */
+export const RACK_BLACK = drawnAs('metal', [0.06, 0.06, 0.07], { rough: 0.3 });
 /** the paint this array IS, if a kit named it: asked of the array a maker was handed (`b.albedo`), before it is copied */
 export const paintOf = (albedo: readonly number[] | undefined): Paint | undefined => albedo ? PAINTS.get(albedo) : undefined;
 /** A PAINT TONED IS THE SAME STUFF: `out` is the paint `from` in another tone (worn ground is its ground darker, a faded door its paint paler), so it
