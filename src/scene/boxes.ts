@@ -46,6 +46,7 @@ export const MAX_GLASS = 32;
 export const BOX_ROUND_BIT = 8;
 
 export type BoxStuff = import('./stuff').BoxStuff;
+export type DoesWord = import('./materials').DoesWord;
 export interface Box {
   c: Vec3;            // center
   h: Vec3;            // half extents (local axes)
@@ -79,6 +80,11 @@ export interface Box {
    *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
    *  paint copies it. */
   stuff?: BoxStuff;
+  /** WHAT THIS BOX DOES (scene/materials.ts): the row of the table of materials whose `does` it takes: what it is to a round, a charge and a blast.
+   *  Absent = the default row. GAMEPLAY, where `stuff` is dressing, and never worked out from it or from the colour: written here once by whoever makes
+   *  the box (the loader from the level file, a kit from its paint, the game from the box a piece came off: wordOf below), and read by the rules through
+   *  materials.ts doesOf and nothing else. Whoever REPAINTS a box leaves it alone: a thing in other clothes is the same thing. */
+  does?: DoesWord;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
    *  (game/weather.ts sets it with the rain; runtime only, never authored) */
   aniso?: boolean;
@@ -163,7 +169,7 @@ const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined
  *  (tools/qa/boxshape-check.ts counts them). */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, cutCoreStuff: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, does: undefined, cutCoreStuff: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 /** IS THIS PIECE OF TRIM DRAWN (scene/shapes.ts: `piece`, said by the static `of`)? While the box that says it is: trim has no life of its own, so nothing
@@ -182,13 +188,14 @@ export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
 export function copyBox(b: Box): Box {
   return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
     rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
-    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff, cutCoreStuff: b.cutCoreStuff,
+    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff, does: b.does, cutCoreStuff: b.cutCoreStuff,
   } satisfies { [K in keyof Required<Box>]: Box[K] };
 }
 
-/** WHOEVER COPIES A BOX'S PAINT COPIES ITS WORD (Box.stuff: a piece broken off a thing is made of what the thing is). Spread beside the albedo of the
- *  box being made: `makeBox({ …, albedo: v3.copy(b.albedo), ...wordOf(b) })`. */
-export const wordOf = (b: { stuff?: BoxStuff }): { stuff?: BoxStuff } => b.stuff !== undefined ? { stuff: b.stuff } : {};
+/** WHOEVER COPIES A BOX'S PAINT COPIES ITS WORDS (Box.stuff and Box.does: a piece broken off a thing is made of what the thing is, to the eye and to the
+ *  next round). Spread beside the albedo of the box being made: `makeBox({ …, albedo: v3.copy(b.albedo), ...wordOf(b) })`. */
+export const wordOf = (b: { stuff?: BoxStuff; does?: DoesWord }): { stuff?: BoxStuff; does?: DoesWord } =>
+  b.stuff !== undefined ? (b.does !== undefined ? { stuff: b.stuff, does: b.does } : { stuff: b.stuff }) : b.does !== undefined ? { does: b.does } : {};
 
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
 export const ROUGH_DEFAULT = 1.0;
