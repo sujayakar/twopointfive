@@ -6,7 +6,7 @@
 //           rear marks and last; the same four with issue carbines stack and go as with the switch off
 //   fight   string length by gun: a defender's PKM against the carbine and the AKMS through the fight AI's own trigger; a teammate's Mk 46, Mk 12 and
 //           issue carbine through the room fight's — what the trigger answers, and the gaps between the rounds of a staged fight at nine metres
-//   lanes   the belt-fed defender keeps his post (lanes.ts laneHolds) through a fight next door; the cover's deal: the far opening to the long gun
+//   lanes   the belt-fed defender keeps his post (lanes.ts laneBars) through a fight next door; the cover's deal: the far opening to the long gun
 //           before the pistol
 //   off     off = the run of the build before, by digest; on with nobody dealt and the cards as issued = that run too; the stands' row, the registry,
 //           the page's flag, a recording from before it
