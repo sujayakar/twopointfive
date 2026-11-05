@@ -51,6 +51,7 @@ const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = c
 export async function trainingCheck(): Promise<boolean> {
   const { standUp } = (await import('./headless.ts')) as any;
   const M = await import(`${ROOT}/src/game/morale.ts`);
+  const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
   const { MORALE, MORALE_AT, TRAININGS, NERVES, moraleOf, rungOf, dreadOf, moraleLines, inTheDark, trainingOf, leaderOf, sawLeaderFall, moraleShock, moraleTick, moraleRoster, moraleSnapshot, moraleRestore, moraleManDown, moraleOwns, moraleFromQuery, moraleKeep, moraleReset, moraleSummary, MORALE_STATS } = M;
   const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
   const { RUNNER } = await import(`${ROOT}/src/game/runner.ts`);
@@ -223,7 +224,7 @@ export async function trainingCheck(): Promise<boolean> {
         `${mag0} in the gun · first throw ${b1}, second ${b2} (of ${MORALE.baitShort}), third ${b3} · least in the gun ${least} · frames changing ${changed} · out / spent lines ${out.length} · act ${moraleOf(T)?.act}`);
       // (S) the debugger's switch put off in the hold (ui/bindings.ts: MORALE.on = false; moraleReset(game, true)) and on again
       const sum0: string = moraleSummary(g); MORALE.on = false; moraleReset(g, true); const met = g.guards.filter((x: any) => moraleOf(x)).length; R.step(30); MORALE.on = true; R.step(30); const S2 = moraleOf(T), sum1: string = moraleSummary(g);
-      line(/BROKEN/.test(sum0) && met === 0 && !!S2 && S2.act === 'none' && S2.shock === 0 && S2.rung < 2 && S2.baits === 0 && !moraleOwns(T) && !/BROKEN/.test(sum1),
+      line(/BROKEN/.test(sum0) && met === 0 && !!S2 && S2.act === 'none' && S2.shock === 0 && S2.rung < 2 && S2.baits === 0 && !hasHim(T, OWN.morale) && !/BROKEN/.test(sum1),
         '(S) the switch put off in the middle of his hold and on again: every man\'s state went with it — he starts clean, nobody reads broken',
         `before: '${sum0}' · men met with it off ${met} · back on: act ${S2?.act}, shock ${f2(S2?.shock ?? NaN)}, rung ${S2?.rung} · '${sum1}'`); }
 
@@ -294,7 +295,7 @@ export async function trainingCheck(): Promise<boolean> {
     { const R = await stage(68, { training: 'green', dark: true, nerve: 'brittle' }), g = R.g, T = R.T; MORALE.halfLife = 1e6;   // (his shock held up: only the cap can let him go)
       const s0 = moraleOf(T)?.shock ?? 0; R.shell(); R.step(2); const fedBy = (moraleOf(T)?.shock ?? 0) - s0, stagger = Math.max(0, T.staggerUntil - g.time);
       let holdAt = NaN, freeAt = NaN, again = 0; const N = Math.round((stagger + MORALE.holdMax + 8) * 60);
-      for (let i = 1; i <= N; i++) { R.step(); const a = moraleOf(T)?.act, t = i * DT - stagger; if (Number.isNaN(holdAt) && a === 'hold') holdAt = t; if (!Number.isNaN(holdAt) && Number.isNaN(freeAt) && a === 'none') freeAt = t; else if (!Number.isNaN(freeAt) && (a !== 'none' || moraleOwns(T))) again++; }
+      for (let i = 1; i <= N; i++) { R.step(); const a = moraleOf(T)?.act, t = i * DT - stagger; if (Number.isNaN(holdAt) && a === 'hold') holdAt = t; if (!Number.isNaN(holdAt) && Number.isNaN(freeAt) && a === 'none') freeAt = t; else if (!Number.isNaN(freeAt) && (a !== 'none' || hasHim(T, OWN.morale))) again++; }
       const rungHeld = rungOf(T), alone = !!moraleOf(T)?.alone, dark = !!moraleOf(T)?.dark;
       MORALE.halfLife = was.morale.halfLife; R.step(Math.round(MORALE.halfLife * 4 * 60)); const rungLate = rungOf(T), shockLate = moraleOf(T)?.shock ?? NaN, stand = (moraleOf(T)?.alone ? MORALE.alone : 0) + (moraleOf(T)?.dark ? MORALE.dark : 0);
       line(holdAt < 6 && Math.abs(freeAt - MORALE.holdMax) <= 1.5 && again === 0 && rungLate < 2 && shockLate <= MORALE.holdShock && Math.abs(fedBy - MORALE.blast * MORALE.nerveK.brittle) < 0.01,

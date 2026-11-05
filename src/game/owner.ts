@@ -19,7 +19,9 @@ import type { Guard } from './game';
 const RULES = [
   // HIS BODY: as `updateGuard` tries them (dead, held and script are his own fields, not claims: `ownerOf` reads them in their places)
   { name: 'runner', why: ['has said he is done', 'dropped it and ran'] },
+  { name: 'morale', why: ['a blast has him ducked or broken'] },
   // WHO MAY MOVE HIM OFF HIS POST
+  { name: 'lastMan', why: ['the last man up, at his act'] },
 ] as const;
 export type OwnerRule = typeof RULES[number]['name'];
 
@@ -73,7 +75,7 @@ export function ownerOf(gd: Guard): OwnerRule | 'dead' | 'held' | 'script' | nul
   return r ? rowOf(r).name : null;
 }
 /** the rules of his body stand above `script`, the rest below it */
-const SCRIPT_RANK = rankOf(OWN.runner);
+const SCRIPT_RANK = rankOf(OWN.morale);
 /** what the panel says of one man */
 function ownerWords(gd: Guard, t: number): string {
   const who = ownerOf(gd);
