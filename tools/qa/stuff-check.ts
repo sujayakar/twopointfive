@@ -1,7 +1,7 @@
 // A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; src/scene/levelLoad.ts; src/render/gbuffer.ts lookWordOf).
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
-//                                                    as it stood): lines 2, 3, 4, 7, 13 and 14 must FAIL
+//                                                    as it stood): lines 2, 3, 4, 7, 13, 14 and 15 must FAIL
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
 // stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
@@ -205,6 +205,32 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   check(errs.length === 0 && row !== 'nothing' && said.join() === [row, 'plastic', 'nothing', 'nothing'].join() && stood.join() === said.join() && back.join() === ['nothing', 'plastic', 'nothing', 'plain'].join() && refused,
     '14 a shape\'s piece says its word as a box does: a piece in a named paint is made of what that paint\'s row says, one that says its own word is that, one written as numbers and one that says plain over a row are nothing; the box stood up for each carries the same; the file keeps only the word that is another thing than the row\'s; a word that is no stuff is refused',
     `the row: ${row} · loaded: ${said.join(', ')} · stood up: ${stood.join(', ')} · written back: ${back.join(', ')} · banana refused ${refused} · ${errs.length} errors${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); }
+
+// 15. NO WALL AND NO DOOR FRAME IS CLOTH BY A BORROWED PAINT: a generator or a skin that paints a wall or a frame in a cloth's paint for its COLOUR gets the
+//     cloth with it (the depot's hut walls in the tan partition paint, the consulate's frames in a blanket's brown: drawn as weave, and a round knocked tufts
+//     out of them, until 11-05). Such a thing says its own word over the paint (scene/stuff.ts saidAs; a skin's Said, tools/levels/gwotSkin.ts). A wall of
+//     SACKS is cloth and meant: the sandbag's and the hesco's own paints. Asked of a level's own boxes in its `walls.` and `doorframe.` groups, by the row
+//     each wears (rowOf); a gear screen's set is another floor's backdrop and is not asked. RED PATH: a wall written here in the tan partition paint must be
+//     found, and with STUFF_BREAK (the rows say nothing) it is not.
+{ const CLOTHS = ['cloth', 'fabric', 'carpet'], SACKS = ['sandbag', 'hesco'];
+  /** the walls and frames of a level file that are cloth and are not sacks: what each is, and how many */
+  const clothWalls = (d: any): { asked: number; sacks: number; bad: Map<string, number> } => { let asked = 0, sacks = 0; const bad = new Map<string, number>();
+    for (const b of d.boxes as any[]) { const g: string = b.group ?? ''; if (!g.startsWith('walls.') && !g.startsWith('doorframe.')) continue; asked++;
+      const row = rowOf(d, b), w = b.stuff ?? (row !== undefined ? d.materials[row]?.stuff : undefined); if (!CLOTHS.includes(w)) continue;
+      if (b.stuff === undefined && row !== undefined && SACKS.includes(row)) sacks++; else { const k = `${g.split('.')[0]} in ${row ?? 'a paint written as numbers'} says ${w}`; bad.set(k, (bad.get(k) ?? 0) + 1); } }
+    return { asked, sacks, bad }; };
+  let asked = 0, sacks = 0; const bad: string[] = [];
+  for (const f of FILES) { const r = clothWalls(dataOf(f)); asked += r.asked; sacks += r.sacks; for (const [k, n] of r.bad) bad.push(`${n} × ${f} ${k}`); }
+  // (the red path: a hut wall as the depot's stood, a frame as the consulate's stood, a wall of sacks, a wall that says its own word over the tan)
+  const rows = { partTan: { albedo: [0.55, 0.47, 0.35], stuff: 'cloth' }, sandbag: { albedo: [0.45, 0.39, 0.27], stuff: 'cloth' } } as Record<string, any>; if (BRK) for (const m of Object.values(rows)) delete m.stuff;
+  const made = clothWalls({ materials: rows, boxes: [{ group: 'walls.huts', material: 'partTan' }, { group: 'doorframe.front', albedo: [0.27, 0.18, 0.12], stuff: 'cloth' }, { group: 'walls.exterior', material: 'sandbag' },
+    { group: 'walls.huts', material: 'partTan', stuff: 'stucco' }, { group: 'cubicles', material: 'partTan' }] });
+  // … and the skin's own Said, read off the one file that wears it: every frame of the consulate in the varnish's paint says the varnish's stuff and finish
+  const { VARNISH } = await import(`${ROOT}/tools/levels/gwotSkin.ts`), brown = GWOT_PALETTE[VARNISH.paint], inBrown = (b: any) => b.albedo !== undefined && [0, 1, 2].every(c => Math.abs(b.albedo[c] - brown[c]) <= 0.0025);
+  const frames = (dataOf('consulate-gwot.json').boxes as any[]).filter(b => (b.group ?? '').startsWith('doorframe.') && inBrown(b)), varnished = frames.filter(b => b.stuff === VARNISH.stuff && b.rough === VARNISH.rough).length;
+  check(bad.length === 0 && asked > 5000 && sacks > 0 && made.asked === 4 && made.sacks === 1 && made.bad.size === 2 && frames.length > 40 && varnished === frames.length,
+    '15 no wall and no door frame is cloth by a borrowed paint: in every level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet, but for a wall of sacks in the sandbag\'s or the hesco\'s own paint; a hut wall in the tan partition paint and a frame that says cloth are found, a wall of sacks and a wall that says its own word are not; the consulate\'s frames wear the varnish\'s paint and say its stuff and finish (a skin\'s Said)',
+    `${asked} wall and frame boxes in ${FILES.length} files · ${sacks} of sacks · made up: ${made.bad.size} of 2 found, ${made.sacks} of sacks · the consulate's frames in the varnish's paint: ${frames.length}, ${varnished} say ${VARNISH.stuff} at ${VARNISH.rough}${bad.length ? ` · CLOTH: ${bad.join(' · ')}` : ''}`); }
 
 console.log(`=== stuff: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);

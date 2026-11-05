@@ -23,7 +23,7 @@ import { paletteName, surfOf } from '../../src/game/particleFx';
 import { breakClassOf, steelGrey } from '../../src/game/furnblast';
 import { DRESS_GROUP } from '../../src/game/destructionSwitch';
 import { isLived } from '../../src/scene/lived';
-import { tonedAs, worded } from '../../src/scene/stuff';
+import { saidAs, tonedAs, worded, type BoxStuff } from '../../src/scene/stuff';
 import { flatsOverlap, isFlat, layFlats } from './flatLayers';
 
 export const LOOK_GROUP = 'look';
@@ -52,8 +52,18 @@ export interface SkinCtx {
   /** 0‥1, the same for every box of this group */
   gh: number;
 }
+/** ONE PAINT, ANOTHER THING, IN A SKIN (scene/stuff.ts saidAs): the palette row a box wears, to the eye and to a round exactly as that row, SAID to be made
+ *  of something else, with that thing's finish. For a thing the palette has no row for, where a skin would otherwise borrow a row for its colour and get the
+ *  row's stuff with it (a frame in a blanket's brown was cloth: it drew as weave and a round knocked tufts out of it). Why not a new row: the palette is
+ *  written whole into every level file built on the kit, so a row makes every one of them stale; and a row in another row's numbers is the same paint to a
+ *  round, which knows a paint by its numbers (gwotPalette.ts gwotSimOf). WHERE ONE MAY STAND: a skin's frames and what its own `pick` answers (the boxes
+ *  skinLevel repaints). Not `own` (a generator's colour becomes a palette row, by rule) and not the decals the kit lays by a row's name (the dado). */
+export interface Said { readonly paint: GwotMat; readonly stuff: BoxStuff; readonly rough: number; readonly metal?: boolean }
+/** DARK VARNISHED WOOD, named for what it is and not for who wears it: a door's or a window's frame (the palette's woods are bare poplar, weathered grey and ply) */
+export const VARNISH: Said = { paint: 'blanketBrown', stuff: 'wood', rough: 0.6 };
+export type SkinPaint = GwotMat | Said;
 /** a rule's answer: a paint, or null = leave the box as it is */
-export type Pick = GwotMat | null;
+export type Pick = SkinPaint | null;
 export interface Skin {
   /** the level's own rules, asked FIRST (undefined = no opinion: the shared rules answer) */
   pick?: (c: SkinCtx) => Pick | undefined;
@@ -70,7 +80,7 @@ export interface Skin {
   /** indoor floors by the office paint they wore */
   floor?: Partial<Record<string, GwotMat>>;
   /** frames of outside / inside doors */
-  frameOut?: GwotMat; frameIn?: GwotMat;
+  frameOut?: SkinPaint; frameIn?: SkinPaint;
   /** rooms (scenarios.roomClear.rooms ids) that get NO rug, and a style for the ones that should not take the dice's */
   noRug?: RegExp; rugs?: Record<string, RugStyle>;
   /** the damp foot on outside walls (default on) */
@@ -152,14 +162,18 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     const c: SkinCtx = { i, b, group: g, name, y0, y1, thin: Math.min(b.h[0], b.h[2]) * 2, long: Math.max(b.h[0], b.h[2]) * 2, full: y0 <= 0.1 && y1 >= 2.2, steel, gh: (hashStr(g) % 4096) / 4096 };
     const picked = S.pick?.(c), ownAt = picked === undefined && name === undefined ? (S.own ?? []).findIndex(([a]) => a[0] === b.albedo[0] && a[1] === b.albedo[1] && a[2] === b.albedo[2]) : -1;
     const own = ownAt >= 0 ? S.own![ownAt][1] : undefined; if (ownAt >= 0) ownWorn.add(ownAt);
-    const m = picked !== undefined ? picked : own ?? sharedPick(c, S);
-    if (!m) { st.kept++; continue; }
+    const pk = picked !== undefined ? picked : own ?? sharedPick(c, S);
+    if (!pk) { st.kept++; continue; }
+    const said = typeof pk === 'string' ? undefined : pk, m: GwotMat = typeof pk === 'string' ? pk : pk.paint;
+    if (!Object.hasOwn(GWOT_PALETTE, m)) throw new Error(`skinLevel: box ${i} [${g}] is to wear '${String(m)}', which is no paint of the palette`);
     const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
     const before = { name, surf: surf0, cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
     const old = b.albedo, car = b.stuff === 'carpaint'; b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);
     if (car && b.stuff === 'paint') b.stuff = 'carpaint';   // (A COAT STAYS THE COAT IT WAS: a car's body given one of the skin's enamels is still a car's body — 'paint' is a coat on anything, and says nothing of what is under it)
       // (a word belongs to the paint it was said with: the old paint's goes, and the box is made of what the skin's paint is. scene/stuff.ts)
-    if (!c.full) { if (GWOT_FINISH[m]?.metal) b.metal = true; else delete b.metal; }
+    const finish = said ?? GWOT_FINISH[m];
+    if (said) { b.albedo = saidAs(said.stuff, b.albedo); b.rough = said.rough; delete b.stuff; worded(b); }   // (… unless the skin SAID what that paint is on this thing: the same numbers to the eye and to a round, another stuff and its finish)
+    if (!c.full) { if (finish?.metal) b.metal = true; else delete b.metal; }
     // THE CHECK: the game's own classifiers say the same of the box as before (a round, a charge, a blast and the destruction index read nothing else of a paint)
     const after = { name: paletteName(b.albedo), surf: surfOf(b.albedo), cls: breakClassOf(b.albedo), steel: steelGrey(b.albedo), dark: lum(b.albedo) > 0.1, pale: lum(b.albedo) > 0.7 };
     const ground = y1 <= 0.02;
