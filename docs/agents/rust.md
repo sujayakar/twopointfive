@@ -785,7 +785,23 @@ one stops the tool by name, on an address one does nothing and says so in the co
   opens it: the rows of `RUST_ON` on, the same game), `systems`, `words` (`?rust<row>=0`), `nojit`.
   `senses` (`tools/qa/sense-ident.ts`): random questions over whole levels, doors swung, a share of the statics re-shaped half way and said, a dozen lamps
   of every kind put in, two dozen blobs; each asked of the module and of the TypeScript (the same function with the copy's rows put down for the one
-  call), every number of every answer the same bits, and red if under half of a sense's questions went to the module, or if a level did not stand up.
+  call), every number of every answer the same bits, and red if any of a sense's questions did not go to the module, or if a level did not stand up.
+  A level's questions come off a die of its own (the seed and the level's name), so a level added or taken away moves no other level's.
+  THE SENSES' WORDS AND THEIR PIN (2026-11-05, the step before their TypeScript goes; `tools/qa/ident-pin.ts`, the bullet "What holds a family once
+  its TypeScript is gone"). A WATCHER (`collision.ts SENSE_WATCH`, null in play) is shown every answer the module gives a sense, as its numbers, where
+  the host reads it: an eye's verdict and distance, the six faces of the light on a point, the smoke along a line, what a sound's straight lines
+  said and its way round, a way's waypoints and the cells a priced search asked for, the eyes that have a line. The tool folds them, and beside
+  them WHAT EACH QUESTION HANDS THE GAME (the host's half: a sound's loudness and apparent place, an eye's verdict off its bits), into a word a
+  kind of question and place asked. THE PIN IS NOT TAKEN OVER LEVELS (a level's edit would move it, and it would be recorded again by reflex): it
+  is `sense-ident --made`, the same six kinds (and the light through a field's blobs) over A BOX WORLD OF THE TOOL'S OWN, dealt from the seed
+  alone: 206 statics of every kind a line can meet (walls turned any way, furniture, panes, thin things, tilted, round and cut boxes, decals,
+  sheets of glass), half of the glass GONE a quarter of the way in (the rule and its rows hung as the game's are, so a sound and a way are asked
+  past holes; a pane open piece by piece is `glass-ident`'s), 14 leaves that swing a third of the way in, a share of the statics re-shaped and
+  said half way, 460 lamps (so a light question goes in parts), the
+  tool's own blobs under the tool's own smoke numbers, eyes each with its own wedge and near field. On the frozen stand its seven words are held
+  to `tools/qa/fixtures/sense-words.json` (3,000 questions a kind, 141,533 answers folded); `--record` writes it, and only from a run in which
+  every question was also asked of the TypeScript and agreed. `rust-check`'s `senses` section runs it. OVER LEVELS the words are held to nothing
+  by themselves; `--against <root>` plays the same run with another checkout's tool, for a change that must move no answer.
   The floor's grid is baked again over the re-shaped boxes. Under `RUST_BREAK=1` the re-shape goes unsaid and the new grid is not handed over: it must
   fail, and EVERY sense must differ somewhere (exit 3 names one that did not). In `--missions` a run is a fair pair only if each raised sense answered
   there (`collision.ts SENSED` counts them: some hundred thousand eyes and lights a run, some thousand sounds, some hundred ways; the smoke has no

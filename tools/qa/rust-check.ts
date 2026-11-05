@@ -354,7 +354,11 @@ let wordOwn = '', wordRust = '';
   const WD: any = (await import(`${ROOT}/src/scene/world.ts`)).WORLD, navCell = Number(/class NavGrid \{\s*cell = ([\d.]+);/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/collision.ts'), 'utf8'))?.[1] ?? NaN);
   const floorCells = Math.round(WD.gridW * WD.gridCell / navCell) * Math.round(WD.gridH * WD.gridCell / navCell), holds: number = S.sim().nav_cap(0), ways: number = S.sim().nav_cap(1);
   const floorFits = holds === Math.min(table('MAX_NAV'), table('MAX_WAY'), Math.floor((table('MAX_OPEN') - 1) / 8)) && ways === table('MAX_WAY') && floorCells <= holds;
-  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && blobsFit && floorFits;
+  // (…and THE PIN: the same questions over a box world of the tool's own, on the frozen stand, every word the recording's — tools/qa/fixtures/sense-words.json.
+  //  Under RUST_BREAK the child plays its own red path and must end red)
+  const made = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--made'], { TPS_PROFILE: 'frozen', TPS_CPUSENSE: undefined });
+  const madeSay = made.out.split('\n').filter(l => /^- (PASS|FAIL) — (reach|both ways|same)/.test(l)).map(l => l.replace(/^- /, '').slice(0, 260)), madeOk = made.status === 0 && madeSay.some(l => /^PASS — same: every count and word is that of the recording/.test(l));
+  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 20 && off.length === 0 && orderRed && partsRed && shadeRed && blobsFit && floorFits && madeOk;
   { const d = marked(r.out, 'SENSE-IDENT '); for (const k of [...SENSES, 'fog']) red[k] = !!d && d[k] > 0; }
   verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
@@ -362,7 +366,8 @@ let wordOwn = '', wordRust = '';
     + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + (parts ? `\n    the lamps of a question in parts, every part beginning its sum again (LAMPS_BREAK=1): ${partsRed ? 'the lamps in parts differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${parts.status}): ${parts.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
     + (shade ? `\n    a lamp's shadow with the module handed no blobs (LAMPS_BREAK=shade): ${shadeRed ? 'the two cases where the grid cannot answer differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${shade.status}): ${shade.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : '')
-    + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`);
+    + `\n    the smoke's blobs: the game keeps ${SE.SENSE.smoke.cap} at most and the module's table holds ${BMF.MAX_BLOBS}${blobsFit ? '' : ' — THE KNOB IS PAST THE TABLE'}`
+    + `\n    the pin (a made-up box world, the frozen stand): ${madeOk ? '' : `NOT HELD (exit ${made.status}) · `}${madeSay.length ? madeSay.join(' · ') : (made.err || made.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- poses
