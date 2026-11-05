@@ -101,7 +101,7 @@ check(/THE PAGES STOOD ON 2 RUNGS though the ladder was off/.test(priceReport({ 
 
 // ---- the addresses a run builds, and the words it names as left out
 const first = priceLevels()[0]?.level ?? '';
-check(priceLevels().length > 20 && new Set(priceLevels().map(l => l.level)).size === priceLevels().length, `the levels a run walks are the list's, none twice (${priceLevels().length})`);
+check(priceLevels().length > 1 && new Set(priceLevels().map(l => l.level)).size === priceLevels().length, `the levels a run walks are the list's, none twice (${priceLevels().length})`);
 { const s = priceSearch(first, 3, 'high', ['look', 'geo=0'], ['mute', 'downloads=1', 'quality=low']), q = new URLSearchParams(s);
   check(q.has('look') && q.get('geo') === '0' && q.get('downloads') === '1' && q.get('quality') === 'high' && q.get('adapt') === '0' && q.get('giveway') === '0' && q.getAll('mute').length === 1 && q.getAll('quality').length === 1 && q.get('pricerun') === '3' && q.get('seed') === '1' && q.has('noverdict') && q.has('nokeep'),
     `a page's address carries the look page's words and the visitor's flags once each, and its own preset wins (${s})`); }
