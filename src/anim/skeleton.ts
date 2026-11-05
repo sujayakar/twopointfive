@@ -129,9 +129,9 @@ export function layerBoth(name: string, pose: Pose, fk: PoseFK, ask: () => reado
 function benchRig(ch: GltfCharacter): SimExports | null {
   const n = ch.nodes.length, x = benchFor(n); if (!x) return null;
   if (POSE_BENCH.rig !== ch) {
-    POSE_BENCH.rig = null; if (ch.order.length > n) { POSE_BENCH.asked--; return null; }
+    POSE_BENCH.rig = null; if (ch.order.length > n) { POSE_BENCH.asked--; if (FELL.on) fell('poses', 'a rig whose order is longer than its nodes'); return null; }
     const w = i32(); for (let i = 0; i < n; i++) w[POSE_BENCH.parent + i] = ch.nodes[i].parent; for (let i = 0; i < ch.order.length; i++) w[POSE_BENCH.order + i] = ch.order[i];
-    if (!x.pose_rig(n, ch.order.length)) { POSE_BENCH.asked--; return null; }
+    if (!x.pose_rig(n, ch.order.length)) { POSE_BENCH.asked--; if (FELL.on) fell('poses', 'a rig the bench did not take'); return null; }
     POSE_BENCH.rig = ch;
   }
   return x;
@@ -198,15 +198,17 @@ export function poseSetOut(s: PoseSet): void { s.home = null; s.stray = 0; for (
  *  stage, a block of this file's that holds one animator's poses for the length of his update, and takes them back into arrays of his own as it shuts.
  *  The floats are the same floats either way, so it is the same pose to the bit; what it buys is that no update is one the module cannot run.
  *  `stageOpen` answers whether the stage was lent (the caller then owes `stageShut`); an update inside an update (a character's, then his animator's)
- *  finds the set standing and lends nothing. A pool with no room is loud: a game's holds some 130 men and the stage one, so it is a mistake, not a case. */
+ *  finds the set standing and lends nothing. The stage holds one animator, so its pool with no room is a mistake and loud; a GAME's pool with no room
+ *  (some seventy to a hundred and thirty men, by how many poses each has made) is the case rust/sim/src/poses.rs and game/posehome.ts name: the pose stays
+ *  the host's own array, the man's layers are the TypeScript's and counted, and it is tried again at every update. */
 const STAGE = { st: null as SimState | null, lent: 0 };
 export function stageOpen(s: PoseSet): boolean {
-  if (!RUST.walk) return false;
+  if (!RUST.walk || !RUST.poses || !EXACT.on) return false;   // (what a layer in the module wants, layerSlot and benchFor: without it no update is the module's and nothing is lent)
   const h = s.home;
   if (h !== null) {
     if (h === STAGE.st) return false;
     if (h.where < 0) h.bind();
-    if (s.stray !== 0 && !poseSetIn(s, h)) throw new Error(`posing: the pose pool of a game has no room for a man's ${s.stray} pose(s) (rust/sim/src/poses.rs: the pool is sized for the largest game)`);
+    if (s.stray !== 0) poseSetIn(s, h);   // (a pose made while the block stood parked, or one the pool had no room for: tried again. One that still has no room stays an array of its own and this man's layers are the TypeScript's, the same game, counted by layerSlot under `walk`)
     return false;
   }
   const st = STAGE.st ?? (STAGE.st = new SimState());
@@ -347,7 +349,8 @@ export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
 
 /** out = lerp(a, b, w * mask[node]) — mask null means uniform weight. out may alias a. */
 export function blendPose(a: Pose, b: Pose, w: number, mask: Float32Array | null, out: Pose) {
-  { const x = b.numNodes === a.numNodes && out.numNodes === a.numNodes && (!mask || mask.length === a.numNodes) ? benchFor(a.numNodes) : null; if (x) { const sb = b === a ? 0 : 1, so = out === a ? 0 : out === b ? sb : 2;
+  { const alike = b.numNodes === a.numNodes && out.numNodes === a.numNodes && (!mask || mask.length === a.numNodes); if (!alike && FELL.on && RUST.poses && EXACT.on) fell('poses', 'a blend of poses of different sizes, or a mask of another length');
+    const x = alike ? benchFor(a.numNodes) : null; if (x) { const sb = b === a ? 0 : 1, so = out === a ? 0 : out === b ? sb : 2;
       if (mask) f32().set(mask, POSE_BENCH.mask);
       const g = a.home !== null && b.home === a.home && out.home === a.home ? slotOf(a) : -1;
       if (g >= 0) { POSE_BENCH.inPlace++; known(x.pose_blend(g, a.at, b.at, w, (mask ? 1 : 0) | (POSEMATH.singles ? 2 : 0), out.at, a.numNodes)); return; }

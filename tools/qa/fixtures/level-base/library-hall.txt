@@ -1,2 +1,2 @@
-# the office kit's four wall fittings stand on the hut's south face (a band, a vent, conduit, a pipe: drawn only); nothing else moved
-127f7c3356475d771e068a7d48de4d58bfa06783
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+3c580eecbe9a188922d41fd1d4875d2ec601a68f

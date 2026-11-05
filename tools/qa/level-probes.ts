@@ -57,14 +57,11 @@ export async function levelIdentity() {
     // the strictest leaf check there is: Object.is over every number (−0 is the one thing === forgives) — reported, not gated: the file prints −0 as 0
     let negZeroA = 0; const scan = (v: any) => { if (typeof v === 'number') { if (Object.is(v, -0)) negZeroA++; } else if (v && typeof v === 'object') for (const k of Object.keys(v)) scan(v[k]); }; scan(A);
     console.log(`  note: the generator emits ${negZeroA} negative zero(s) (the bike's tilted-tube quaternions: 0·sin); the file holds them as 0 — equal under ===, and ±0 cannot change a rotation`);
-    // digests: both Levels converted with the same annotations hash alike, and equal the bundled data's digest. THE FILE CARRIES THE OFFICE'S LIVED TIER
-    // (the hand pass's drawn-only things, scene/lived.ts), which a stand may load without: A and B above are the office as THIS stand loads it; the file is
-    // held against the generator and the loader with the tier in, on every stand
-    const traceF = { groups: [] as string[] }, AF = buildOfficeProcedural(traceF, { lived: true }), BF = loadLevel(OFFICE_DATA, { lived: true });
-    const dA = levelDataDigest(levelToData(AF, exportOpts(traceF))), dB = levelDataDigest(levelToData(BF, { ...exportOpts(traceF) })), dFile = levelDataDigest(OFFICE_DATA);
+    // digests: both Levels converted with the same annotations hash alike, and equal the bundled data's digest
+    const dA = levelDataDigest(levelToData(A, exportOpts(trace))), dB = levelDataDigest(levelToData(B, { ...exportOpts(trace) })), dFile = levelDataDigest(OFFICE_DATA);
     verdict(dA === dB && dB === dFile, 'digest(generator → data) = digest(loaded → data) = digest(levels/office.json)', `${dA} / ${dB} / ${dFile}`);
     // staleness: what the exporter would write now IS the bundled file (byte for byte after canonical serialization)
-    const fresh = serializeLevelData(levelToData(AF, exportOpts(traceF))); bundled = serializeLevelData(OFFICE_DATA);
+    const fresh = serializeLevelData(levelToData(A, exportOpts(trace))); bundled = serializeLevelData(OFFICE_DATA);
     verdict(fresh === bundled, 'levels/office.json is what tools/level-export.ts writes from the generator today (not stale)', fresh === bundled ? `${(fresh.length / 1024).toFixed(1)} KB, ${fresh.split('\n').length - 1} lines` : 'run: bun run tools/level-export.ts');
   });
   const onDisk = await Bun.file(`${ROOT}/levels/office.json`).text();
@@ -148,7 +145,7 @@ export async function levelValidate() {
 export async function levelRoundtrip() {
   console.log('\n=== level-roundtrip: LevelData → Level → LevelData, the serializer as a fixed point, no shared state between loads ===');
   const D0 = OFFICE_DATA;
-  const L = loadLevel(D0, { lived: true });   // (the whole file, its lived tier in: a round trip is of the data, whatever this stand loads of it)
+  const L = loadLevel(D0);
   // carry the annotations Level has no slot for (ids, groups, floors, surfaces, meta, materials) across, as the editor would hold them
   const D1 = levelToData(L, { name: D0.name, materials: D0.materials, boxIds: D0.boxes.map((b: any) => b.id), boxGroups: D0.boxes.map((b: any) => b.group), floors: D0.floors, surfaces: D0.surfaces, meta: D0.meta, volumes: D0.volumes, devices: D0.devices, connectors: D0.connectors });
   const diffs: string[] = []; const n = structuralDiff(canonicalLevelData(D0), canonicalLevelData(D1), diffs, 5);
@@ -161,7 +158,7 @@ export async function levelRoundtrip() {
     const C = canonicalLevelData(D0); C.boxes[0].c[0] += 5; C.materials.wall.albedo[0] = 9; C.plans.roomClear[0].stack[0][0] = -1;
     verdict(D0.boxes[0].c[0] !== C.boxes[0].c[0] && D0.materials.wall.albedo[0] !== 9 && D0.plans.roomClear[0].stack[0][0] !== -1, 'canonicalLevelData is a deep copy (mutating it leaves OFFICE_DATA intact)'); }
   // Level → data → Level as well (the direction the game cares about), from the loaded level
-  const L2 = loadLevel(D1, { lived: true }); const d2: string[] = []; const n2 = structuralDiff(L, L2, d2, 5);
+  const L2 = loadLevel(D1); const d2: string[] = []; const n2 = structuralDiff(L, L2, d2, 5);
   verdict(n2 === 0, `level → data → level: ${n2} diff(s)`, d2.join(' | '));
   // the serializer is a fixed point and the parser accepts what it writes
   const t1 = serializeLevelData(D0); const t2 = serializeLevelData(parseLevelData(t1));

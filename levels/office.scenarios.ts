@@ -4,8 +4,6 @@
 // Plain literals and type-only imports: nothing here is built from another module's exports (src/game is one import cycle — this is imported at its top).
 import type { Vec3 } from '../src/math/vec';
 import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData } from '../src/scene/scenarios';
-import type { MarkDef } from '../src/scene/level';
-import type { WayHint } from '../src/scene/ways';
 
 /** the night breach: Sam beside the pair on the breach plan's approach marks, in the cubicles' south aisle, facing east down it */
 const NIGHT_BREACH: NightBreachData = {
@@ -129,48 +127,4 @@ const RESPONSE: ResponseData = {
 /** WHAT THE BREAK ROOM'S TWO INSIDE DOORS ARE CALLED on the squad's rows (game/doornames.ts, WORDS.doors): their ids end in a bearing and the HUD has no
  *  compass, so each is named by what it is taken from, as another level's doors are */
 const DOOR_NAMES = [{ door: 'breakroom_n', name: 'corridor-side break room door' }, { door: 'breakroom_w', name: 'cubicles-side break room door' }];
-/** WHERE A PERSON STANDS TO USE EACH THING ON THE FLOOR, as named marks (scene/level.ts Level.marks; attached at load beside the scenarios). Nothing in
- *  play reads one: a mark is found by name, the Director alone does that, and the office has no script. They are the ends of the ways below. Each is on
- *  free floor a step off the thing it names. The sixteen desks are the four clusters of four (scene/officeGen.ts cubicleCluster: a cluster's middle,
- *  the desks 1.2 m either side of it, the chair 1.33 m out from its spine): the mark is the cell's mouth, a stride behind the chair. */
-const DESK_CLUSTERS: [number, number][] = [[16.5, 15.2], [23.0, 15.2], [16.5, 20.6], [23.0, 20.6]];
-const DESKS: MarkDef[] = DESK_CLUSTERS.flatMap(([cx, cz], c) => ([[-1.2, -1], [1.2, -1], [-1.2, 1], [1.2, 1]] as const).map(([dx, out], i): MarkDef => ({ name: `desk ${c * 4 + i + 1}`, pos: [cx + dx, 0, cz + out * 1.95] })));
-export const OFFICE_MARKS: MarkDef[] = [
-  { name: 'reception', pos: [9.0, 0, 13.6] },           // the visitors' side of the reception counter, on its mat
-  { name: 'couch', pos: [7.6, 0, 20.9] },               // the lounge: the couch's end by the low table
-  { name: 'printer', pos: [13.4, 0, 16.0] },            // in front of the printer on the cubicles' west partition
-  { name: 'cooler', pos: [26.8, 0, 23.0] },             // the water cooler in the cubicles' south-east corner
-  { name: 'conference table', pos: [9.7, 0, 9.0] },     // the table's near side, a step inside the conference room's door
-  { name: 'coffee', pos: [34.6, 0, 15.0] },             // the break room's counter, on the mat along it
-  { name: 'vending', pos: [29.0, 0, 13.9] },            // in front of the two machines
-  { name: 'break table', pos: [30.2, 0, 18.2] },        // the break room's table, at its corner between two chairs
-  ...DESKS,
-  { name: 'bins', pos: [37.9, 0, 16.2] },               // outside: the dumpster on the east side
-  { name: 'bikes', pos: [25.6, 0, 25.85] },             // … the bike rack on the walkway
-  { name: 'red car', pos: [14.8, 0, 25.6] },            // … a door of each parked car, and the van's back doors
-  { name: 'grey car', pos: [21.0, 0, 25.7] },
-  { name: 'van', pos: [27.7, 0, 26.4] },
-];
-
-/** HOW THE OFFICE IS WALKED BY THE PEOPLE WHO WORK IN IT (scene/ways.ts: the look's page wears its floors by the ways field). The level's own ways are the
- *  night shift's three routes, each team's start to its rooms, and the three outer doors door to door: nobody had said how a desk, the printer, the coffee
- *  or a car is reached, the conference room's door had no way through it, and the plain night's own start had none leaving it. A weight is how many ways a
- *  row counts as beside one lap of a patrol (1). THE DAY: everybody comes up the west stair and signs in; each of the sixteen desks is reached from the
- *  stair, goes for coffee and to the printer (a quarter each, so a cell's mouth is faintly trodden and the aisles they share are worn); the manager and the
- *  conference room go for coffee and to each other; the cleaner's round runs from storage to the printer, the counter and out to the bins; the break room's
- *  south door is how the car park comes in (no way is written to the pay machine at the walkway's west end: the red car's nose and a bollard shut the walkway
- *  there, and the walk grid's way to it runs round the north of the building, which nobody walks). THE PLAIN NIGHT: from where Sam starts to the server room's door, and from there to the fire exit. */
-const DAY_DESK: WayHint[] = DESKS.flatMap((d): WayHint[] => [{ from: 'stairwell', to: d.name, weight: 0.25 }, { from: d.name, to: 'coffee', weight: 0.25 }, { from: d.name, to: 'printer', weight: 0.15 }]);
-const WALKED: WayHint[] = [
-  { from: 'stairwell', to: 'reception', weight: 2 }, { from: 'reception', to: 'couch', weight: 0.5 }, { from: 'reception', to: 'coffee', weight: 0.5 }, { from: 'reception', to: 'printer', weight: 0.3 },
-  ...DAY_DESK,
-  { from: 'stairwell', to: 'conference table', weight: 0.5 }, { from: 'conference table', to: 'coffee', weight: 0.5 },
-  { from: 'stairwell', to: "manager's office", weight: 0.5 }, { from: "manager's office", to: 'coffee', weight: 0.5 }, { from: "manager's office", to: 'conference table', weight: 0.5 }, { from: "manager's office", to: 'printer', weight: 0.3 },
-  { from: 'server room', to: 'desk 6', weight: 0.3 },
-  { from: 'storage', to: 'printer', weight: 0.3 }, { from: 'storage', to: 'coffee', weight: 0.3 }, { from: 'storage', to: 'bins', weight: 0.5 }, { from: 'coffee', to: 'bins', weight: 0.5 },
-  { from: 'coffee', to: 'break table', weight: 2 }, { from: 'vending', to: 'break table', weight: 1 }, { from: 'cooler', to: 'desk 12', weight: 0.5 }, { from: 'cooler', to: 'desk 15', weight: 0.5 },
-  { from: 'breakroom_ext', to: 'coffee', weight: 1 }, { from: 'breakroom_ext', to: 'breakroom_n', weight: 2 },
-  { from: 'breakroom_ext', to: 'red car', weight: 0.5 }, { from: 'breakroom_ext', to: 'grey car', weight: 0.5 }, { from: 'breakroom_ext', to: 'van', weight: 0.5 }, { from: 'breakroom_ext', to: 'bikes', weight: 0.5 },
-  { from: 'spawn', to: 'server', weight: 0.45 }, { from: 'server', to: 'fire_exit', weight: 0.45 },
-];
-export const OFFICE_SCENARIOS: LevelScenarios & { nightBreach: NightBreachData; roomClear: StructureData; rescue: RescueData } = { nightBreach: NIGHT_BREACH, roomClear: STRUCTURE, rescue: RESCUE, kitView: KIT_VIEW, response: RESPONSE, doorNames: DOOR_NAMES, walked: WALKED };
+export const OFFICE_SCENARIOS: LevelScenarios & { nightBreach: NightBreachData; roomClear: StructureData; rescue: RescueData } = { nightBreach: NIGHT_BREACH, roomClear: STRUCTURE, rescue: RESCUE, kitView: KIT_VIEW, response: RESPONSE, doorNames: DOOR_NAMES };

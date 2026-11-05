@@ -2324,7 +2324,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   VIEW ALONE at midday the sun's glint on the floor by the door has a speckled band at its upper flank and scalloped edges (one sample a texel
   of a sharp lobe): the played picture hides it in the burnt patch; not chased. NOT SEEN: any of it in motion, by anyone; on an Apple or an AMD
   card; Medium and Ultra.
-- **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (11-04; the look's page, where the openings' lights are; no switch
+- **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (SINCE 11-05 THE PIECES ARE THREE, the sky one stretch along the wall and
+  not two halves: AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, below; this bullet is as written with five. 11-04; the look's page, where the openings' lights are; no switch
   and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
   `portalMean`, `portalSolid`, `portalAbove`; `direct_common.wgsl shadowSample`). The maintainer on his M4 at dusk: "orange door has horizontal
   banding when open, not when closed". DRAWN FIRST: the white roof's service door at dusk, its leaf swung into the room, on the software adapter:
@@ -2550,6 +2551,107 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **WHAT DAYLIGHT THROUGH OPENINGS STILL COSTS, SPLIT ON ONE CARD** (11-05; a measurement, no code: read it before trying to cut the openings'
+  cost again). After the reach rule and the three pieces (the two bullets below), one cloud NVIDIA box a level, High, 1368 by 770, the render
+  size held (`adapt=0`), the clock stopped, every word flipped in the running page (two boxes of one commit differ by 1 to 2 ms, so only a flip
+  inside one page is a timing). Whole frame GPU ms, the direct pass in brackets. THE OFFICE AT MIDDAY, twelve openings lit, their reaches 9 to
+  23 m: 19.9 (8.4) against 13.3 (3.9) with the Daylight at openings row off; before the two mends 24.4 to 24.9 (10.2 to 10.5). THE CONSULATE AT
+  NIGHT: 13.45 (4.74) against 10.7 (3.06); before 20.0 (10.1 to 10.6). The white roof at midday with its doors shut lights no opening and pays
+  nothing (9.1 both ways). WHERE THE OFFICE'S 6.6 ms GOES, each found by a run-time switch on a timing-only tree: the exact sum in pieces
+  against one point, 1.8 in the direct pass and 0.4 in the sharp resolve; the part of a shadow ray that runs on past the opening to the sky,
+  0.8; what is left of the direct pass with the sum as one point and the ray stopped, 1.9 (twelve more lights a pixel through the candidate
+  loop, and the class's rays to them: two rays a pixel for four saves 1.25 with the openings and 0.66 without); the sharp resolve's own share
+  of scoring them, 0.3; THE CACHE'S FOUR CASCADES, 1.07 (3.54 against 2.47), and the reflection pass 0.14: a bounce ray's hit gives every light
+  that reaches its cell a shadow ray (`directIrradiance`, to which an opening is an area light, `evalLightRaw`), and by day every opening is
+  over that loop's threshold; the cache's dice 0.1. The final gather and the fog move by under 0.1. Listing the openings and never scoring them
+  costs nothing (3.93 against 3.86). WHY THE REST STAYS, each lever weighed: (1) a shorter reach by day: the reach is where an opening's own
+  light stops being worth a ray, and past it the bounce carries the sky only as far as its firefly bound lets it, which is relative to what the
+  cache says a point receives and so is no fault of the hour: at 2.5 times the worth a room's far wall drew a step greyer by day. (2) The ray
+  past the opening is what lets a wall across the yard, a shutter and a man outside stand between a room and its sky; the walk already skips
+  empty cells and culls by height, and what is left is the forty cells themselves. (3) At a bounce ray's hit a per-light threshold cannot
+  thin twelve openings of like strength without losing the room's bounced daylight, and drawing them by lot puts noise into the cache, which
+  nobody has judged (a still does not show a boil). (4) Fewer pieces was tried (one point from far off: 20 to 100 % out; one sky piece: five times
+  the error). (5) Two shadow rays a pixel for four is the quality ladder's own number, not a mend. WHAT WOULD BE A LADDER ROW, if one is ever
+  wanted: how many openings are lit at once (`LOOK_OPENINGS.lit`, twelve): the cost by day is near half a millisecond an opening. NOT
+  MEASURED: any other card (Metal, D3D12), a level with more glass than the office, dawn and dusk.
+- **THE MEN'S NOISE HOLDS NO LOOP AND NO LOCAL ARRAY, ON PURPOSE** (11-05; `look.wgsl manNoise`, `manH4`; every look page with men in it: the Men,
+  Kit detail and Printed cloth rows. The same picture by the same arithmetic; no word.) The men's fragment program was 325 KB as a compiler
+  pastes it against a bar of 200: its value noise called a one-corner hash eight times, at each of ninety-two places (195 KB). First mend, the
+  same day: the eight corners filled by one call in a LOOP over a local array (151 KB; drawn on a cloud NVIDIA card, the same man; timed there
+  with a man filling the picture on two boxes a commit, g-buffer 0.49 ms before and after, and by the performance task in a played picture, 1.47
+  and 1.46). It was replaced within the hour all the same, on the performance task's advice: that night a loop inside a function the box walks
+  inline had DOUBLED the fog march on the NVIDIA compiler, with one turn as with eight, and a loop's price is a mode of the compiler that no
+  size tool sees and that nobody here can time on DXC, the AMD driver or Metal; a local array indexed in a loop is what a compiler keeps in
+  memory when it gives up. NOW: the cell's four corners along x and y are folded once as a vec4u, and each of the cell's floor and lid is
+  finished by `manH4`, the old hash's own integer steps a lane (178 KB). DO NOT PUT A LOOP BACK to save text: take call sites out another way.
+  Check: probe `charmats-shader` (its last line: no `for`, no `array<` in the two functions, their text, and 32,000 corners hashed both ways
+  in integer arithmetic with none differing; `MANLOOP_BREAK=1` changes one constant of the four-at-a-time hash and fails it), both stands;
+  `shaderinline-check --setting look`. NOT SEEN on a GPU as this text (the loop form was); stills are asked.
+- **AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, WHERE IT WAS FIVE** (11-05; `common.wgsl PORTAL_PIECES` 3, `portalPiece`; every pass that
+  asks an opening's sum: the direct estimators, the sharp upscale, the cache's dice. THE DAY'S HALF of the openings' cost, after the reach
+  below. NO WORD ON THE ADDRESS, and why: the five-piece text would have to stay in every direct kernel beside the three, which is the second
+  path the shaders' rule forbids and what their size rows are about; the two were held side by side by a timing-only commit and by the check.)
+  The sum cut the part of an opening a point sees into the ground's piece and the sky's in two halves along the wall, each half at its ramp's
+  end: five. IT IS A TRADE, AND THE NUMBERS ARE ITS PRICE. Against a sum over the opening's own points at 2,778 places (eight kinds of face: a
+  floor, a table top, a wall facing the opening, faces that lean and tilt along the wall, a diagonal wall, a side wall; 0.4 to 12 m in and to
+  6 m either side of a door, a window, a glass wall and a long strip of high glass) the error goes as the sky's unevenness: under an even sky
+  both are exact; under the most uneven sky an hour has (dusk, its horizon 2.28 times its zenith by luminance; a night is 2.03, midday 1.70,
+  a grey day 1.07) THREE pieces are off by 1.18% of a place's own light on the mean, nineteen places in twenty under 4.8%, the worst 13.8% (a
+  side wall); FIVE were 0.59%, 2.3% and 11.8%. So the halves halved an error of about a hundredth, on every kind of face alike (the first
+  sample here had no leaning faces and only one side of the opening and read "bought nothing": a review caught it). The error is smooth: a
+  shade, never a band or an edge. WHAT THE HALVES COST, a cloud NVIDIA card, High, 1368 by 770, one box flipping the piece count in the
+  running page (a timing-only commit that still walked five and returned two empty, so the build's own is a little better), at the reach every
+  opening had before the rule below: the office at MIDDAY, direct 10.5 to 9.1 ms, the sharp upscale 2.85 to 1.94, all passes 24.9 to 22.5;
+  the consulate's night, direct 10.6 to 9.6, the upscale 1.64 to 1.25, all passes 20.7 to 19.3. At a quarter of that reach (about the rule's
+  own on a night) it is 0.3 ms. NOT TIMED: the two mends together on one box, by day. TRIED AND DROPPED on the way, so nobody builds them: the
+  sky as ONE piece with no cut at its ramp's end (five times the error); a piece taken as its middle point from far off (20 to 100% off
+  wherever a face's own horizon cuts the piece: a side wall, a table's top); a slanted cut along the ramp's end (worse: the ramp's end is a
+  hollow curve along the wall and a straight edge across it overshoots in the middle); an opening that a wall hides from a pixel's cell scored
+  the cheap way or not at all (timed: 0.2 ms, the pixels behind walls are not the cost); the eight points a ray is aimed by left unweighed
+  (timed: nothing). IF DUSK EVER SHOWS IT (a shade on a leaning face by a long window): the slanted cut SPLIT AT THE RECEIVER'S OWN FOOT where
+  the foot lies inside the stretch measured 0.70%, 2.7% and 9.8% on the same places, at three pieces' cost for every pixel that is not
+  straight in front of the opening; not built. WHAT IS STILL OWED BY DAY and is not waste: the class's rays (two for four a pixel is 2.0 ms)
+  and the sum itself for every pixel in plain sight of an opening; with both mends the office at midday is still some 5 ms over the row off.
+  Check: `bun run tools/qa/probes.ts portal` (the line above by its numbers beside five's, the shader's text, and every older line of the sum,
+  which hold as they did; `PORTALPIECES_BREAK=1` is the sky as one piece, asked of that line alone, and fails it), both stands. NOT SEEN on a
+  GPU as this text: the timing-only twin drew without error; stills of the build's own are asked.
+- **AN OPENING'S OWN LIGHT REACHES AS FAR AS IT IS WORTH A RAY** (11-05; the look's page, wherever an opening is a portal: `scene/openings.ts
+  openingReach`, `LOOK_OPENINGS.worth` 0.04, `.near` 3 m, `.far` 26 m, `.past` 2 m; `engine.ts lookOpeningLights` sets the light's range by it. ONE
+  RULE AT EVERY HOUR, no test of the hour and no second path: the address's `&portalworth=<number>` is the same rule with another worth for the
+  visit, and `&portalworth=0.003` is the reach every opening had until this day, to hold the two pictures and the two costs side by side). IT IS
+  THE NIGHT'S MEND AND ONLY A TENTH OF THE DAY'S: read WHAT IS LEFT before promising a bright interior at speed. WHAT WAS FOUND: a pricing walk of
+  all 29 levels on a cloud card read the look's layers at 3 to 6 ms in the DIRECT pass on indoor levels at night, where they had been 0.3 to 1.1
+  before the light series; one row off at a time named Daylight at openings (the consulate's night: direct 10.1 ms with it, 3.1 without). Split
+  on one box by words flipped in the running page (timing-only commits, not in the build): an opening's sum taken as one point, 2.5 to 3.3 ms
+  less in direct and 0.7 to 1.4 in the sharp upscale; the eight points a ray's aim is weighed by, nothing; the ray stopped at the opening and
+  not 40 m on to the sky, 0.6 less; two rays a pixel for four, 2.0 less; the dim-class trade, nothing; openings listed and never scored, the
+  cost of none; AN OPENING A WALL HIDES FROM A PIXEL'S CELL scored as one point or not at all, 0.2 less (so it is NOT the pixels behind walls:
+  it is the pixels in plain sight, by their number). And their number was the whole building: the range was where the light fell to 0.0015 on a
+  floor facing it, 0.3 of a per cent of white, which on a night is 11 to 18 m from a window (26 from a glass wall) and by day the cap for every
+  opening. THE RULE: the reach is where what the opening alone would SHOW on a floor facing it straight out (what it looks out on × the frame's
+  exposure, the product that already says whether it is lit at all, × the open area of the whole stretch it is a piece of ∕ the distance
+  squared) falls to `worth`, 4% of white; and never less than 2 m past its own rectangle's corner. A long opening lit as several lights reaches
+  as one (`Opening.of`). Past the reach the light has faded out (`lightWindow`) and the bounce's rays that leave by the opening keep the rest of
+  the sky (`skyKeep`), as they did for every opening before 11-04. THAT HAND-OVER IS NOT WHOLE, and a review said why: by day the gather bounds
+  each ray at four times the cache's level (`giFireflyK`), and a ray that leaves by a door carries the sky at many times that, so part of what
+  the bounce is handed is cut; and the cache finds a doorway by its own few rays. So past the reach a deep room is a little darker than it was
+  and has no shadow of a man in the sky's light there; on the look's page the GPU light meter's reading past the reach is the cache's, not a
+  shadowed ray's. WHAT IT COSTS NOW, the same card, High, 1368 by 770, medians on one box, the rule against the old worth and against the row
+  off (timed at the same reaches, before the exposure, the stretch and the corner were in the rule): the consulate's night, direct 10.1 to
+  5.05 ms (3.05 off), all passes 20.0 to 13.9 (10.8 off); the office's night, direct 9.2 to 5.85 (4.2 off), all passes 19.6 to 15.3 (12.9
+  off); THE OFFICE AT MIDDAY, direct 10.2 to 9.1 (3.9 off), all passes 24.4 to 21.6 (14.05 off): by day what an opening looks out on is twenty
+  times a night's, a glass wall still reaches 25 m, and the rooms' light IS the openings'. WHAT IS LEFT, in the order it would pay: the sum made
+  as fine as the angle the opening covers from the pixel (DONE the same day as three pieces for five, the bullet above: by measure it is the sky's unevenness
+  and not the angle that asks for pieces); the sky ray no further than the level's roofs (0.6); and the class's rays, which by day are the
+  room's light and are owed. THE PICTURE, stills on the cloud card at the reach as it was, a half, a quarter, and at three worths: the consulate's and the
+  office's night starts are the same picture at every one (their floors' pools are the moon's); the office at midday and the white roof's
+  service room with its door open are the same at this worth, and at two and a half times it the white roof room's far wall goes a step greyer
+  (the hand-over above). KNOWN, LEFT: a dark place's own gain (up to four times) is not in the rule; dragging the sky's or the sun's sliders by
+  day now moves a reach, and the reservoirs' memory is cut across the band while it moves; the reach masks are still decided over the whole
+  grid. Check: `bun run tools/qa/probes.ts portal` (its last line: the consulate's widest opening 4.9 m where it was 17.9, a door at midday
+  8.7 m, the bounds, a wide opening never short of its own corners, a strip's piece reaching as its strip, the engine's one line, the page's
+  word in both lists; `PORTALREACH_BREAK=1` is the old worth and fails it), both stands. NOT SEEN: any of it in motion; a deep room by day; on
+  the maintainer's GPU. NOT RUN: the digests (nothing under the simulation's folders; the meter's reading above is the look page's only).
 - **TARMAC AND GRASS ARE STUFFS** (11-05; `render/lookTex.ts` `tarmac`, `grass`: two rows of `STUFFS`, two maps, 28 painted layers where there were
   26. NO LEVEL NAMES THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
   its own word a material (`levels/<name>.json materials`), so the page reads the file's word and a change to the table alone moves nothing until the
