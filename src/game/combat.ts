@@ -69,6 +69,7 @@ import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyf
 import { disarmHand } from './disarm';   // (called inside handProps only)
 import { holdFireShot } from './holdfire';   // (called inside fireWeapon only)
 import { sneakSuit } from './cast';   // (called inside handProps only: the sneaking suit's rifle is drawn black)
+import { LIGHT_IN } from '../sim/lightshome';
 
 // ------------------------------------------------------------ shooting
 /** Per-round extras for fireWeapon. Everything a round IS comes from the weapon's row (weapons.ts); these are the shooter's circumstances. */
@@ -275,10 +276,10 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
     //  hand's breadth to half a metre of its line. `legs` null = the rule off, or a show on the stage = the old loop below as it stood.)
     const legs: RoundLeg[] | null = !AIMCOST.lamp || g.touring ? null : !pen ? [{ o: muzzle, d: flown, end: tHit }] : pen.segs.filter(s => s.t0 <= tHit).map(s => ({ o: s.o, d: s.d, end: Math.min(s.len, tHit - s.t0) }));
     const shootOut = (t: LightTarget) => {
-      if (t.kind === 'breaker') { g.engine.lights.flash(t.pos, [0.6, 0.7, 1], 10, 5, 0.2, 0); g.audio.play('lightBreak', t.pos, 1); g.setBlackout(Infinity, 'shot'); t.broken = true; breakerSparkFx(g, t.pos, muzzle); return; }   // (+ the panel arcing over: GPU particles, nothing with them off)
+      if (t.kind === 'breaker') { g.engine.lights.flash(t.pos, [0.6, 0.7, 1], 10, 5, 0.2, 0); g.audio.play('lightBreak', t.pos, 1); g.setBlackout(Infinity, 'shot'); g.lightHome.in(LIGHT_IN.break, t); breakerSparkFx(g, t.pos, muzzle); return; }   // (+ the panel arcing over: GPU particles, nothing with them off)
       if (lampGlass(t)) CARLAMPS_STATS.shot++;
-      if (deadLamp(t)) { t.broken = true; g.msg(`shot out ${t.name}`); g.audio.play('lightBreak', t.pos, 0.8); lensShatterFx(g, t, muzzle); return; }   // (carlamps.ts: a lens that was dark already — the glass and the sound, no arc and no light gone out)
-      t.broken = true; g.msg(`shot out ${t.name}`); g.lightEvent(t); chronLightShot(g, t); g.engine.lights.flash(t.pos, [0.7, 0.8, 1], 6, 4, 0.12, 0); g.audio.play('lightBreak', t.pos, 1); if (lampGlass(t)) lensShatterFx(g, t, muzzle); else if (t.kind !== 'device') fixtureShatterFx(g, t, muzzle);   // (+ the tube's glass and phosphor showering down: GPU particles; a camera / an emitter dies with its own sparks in devices.ts)
+      if (deadLamp(t)) { g.lightHome.in(LIGHT_IN.break, t); g.msg(`shot out ${t.name}`); g.audio.play('lightBreak', t.pos, 0.8); lensShatterFx(g, t, muzzle); return; }   // (carlamps.ts: a lens that was dark already — the glass and the sound, no arc and no light gone out)
+      g.lightHome.in(LIGHT_IN.break, t); g.msg(`shot out ${t.name}`); g.lightEvent(t); chronLightShot(g, t); g.engine.lights.flash(t.pos, [0.7, 0.8, 1], 6, 4, 0.12, 0); g.audio.play('lightBreak', t.pos, 1); if (lampGlass(t)) lensShatterFx(g, t, muzzle); else if (t.kind !== 'device') fixtureShatterFx(g, t, muzzle);   // (+ the tube's glass and phosphor showering down: GPU particles; a camera / an emitter dies with its own sparks in devices.ts)
     };
     if (legs) {
       const stIx = st && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1;

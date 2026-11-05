@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 28;
+export const SIM_ABI = 29;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -132,6 +132,15 @@ export interface SimExports {
   falls_step(g: number, x: number, z: number, level: number, crunchFull: number, grind: number, gain: number, add: number): number;
   falls_heard(g: number, list: number, time: number, gap: number): number;
   falls_clear(g: number, list: number, all: number, events: number): void; falls_cap(what: number): number;
+  // the level's lights (rust/sim/src/lights.rs; sim/lightshome.ts is its face)
+  lights_cap(table: number): number; lights_ids(): number;
+  lights_in(g: number, kind: number, t: number, a: number, b: number, c: number, d: number): number;
+  lights_flip(g: number, on: number, time: number, strike: number, n: number): void;
+  lights_step(g: number, time: number, dt: number, near: number, fumble: number, es: number): number;
+  camera_pan(g: number, i: number, dt: number, live: number, cones: number): number;
+  camera_see(g: number, i: number, time: number, dt: number, visible: number, gain: number, x: number, y: number, z: number, suspicion: number, alarm: number): number;
+  laser_open(g: number, i: number): number;
+  laser_close(g: number, i: number, time: number, live: number, cut: number, sense: number, held: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
@@ -142,7 +151,8 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll', 'men_schema', 'men_col', 'men_fold',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_wind', 'grid_wind_cap', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'props_settle', 'slabs_addr', 'slabs_cap', 'slabs_step', 'items_addr', 'items_cap', 'items_update',
-  'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap'];
+  'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap',
+  'lights_cap', 'lights_ids', 'lights_in', 'lights_flip', 'lights_step', 'camera_pan', 'camera_see', 'laser_open', 'laser_close'];
 
 /** A RUNTIME WITH NO WEBASSEMBLY (a browser whose policy turns a site's JIT off has none) DOES NOT PLAY: the simulation is the module's and nothing else
  *  works it out. The page shows these words in place of the game, before anything is built (main.ts); they are the maintainer's, as he chose them. */
