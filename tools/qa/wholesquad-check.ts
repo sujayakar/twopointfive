@@ -44,7 +44,7 @@ async function rig(seed: number) {
     aim(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return O.hover?.() ?? null; },
     press(code: string) { input.pressed.add(code); R.step(); },
     /** a left click on a man (his chest: the ray meets his own body) */
-    clickMan(m: any) { W.cursorAt([m.char.pos[0], 1.0, m.char.pos[2]]); R.step(); input.clicked |= 1; input.buttons |= 1; R.step(); input.buttons &= ~1; R.step(); },
+    clickMan(m: any) { W.cursorAt([m.char.posX, 1.0, m.char.posZ]); R.step(); input.clicked |= 1; input.buttons |= 1; R.step(); input.buttons &= ~1; R.step(); },
     tail() { return O.log[O.log.length - 1]; },
     /** everything put away and the men back round Sam */
     home() { input.keys.clear(); input.buttons = 0; O.cmdRing = null; O.close(); O.who = 'all';
@@ -76,7 +76,7 @@ export async function wholesquadCheck(): Promise<boolean> {
     const tap = (): string[] => { const n0 = O.log.length; input.keys.add(KEY); input.pressed.add(KEY); R.step(2); input.keys.delete(KEY); R.step(12); const row = R.tail();
       const who = O.log.length > n0 && row ? (row.who ?? []).map(String) : []; O.cmdRing = null; O.close(); return who; };
     const onFloor = () => { const s = floorSpot(R); if (s) R.aim(s); return !!s; };
-    const chest = (m: any) => { R.W.cursorAt([m.char.pos[0], 1.0, m.char.pos[2]]); R.step(); };
+    const chest = (m: any) => { R.W.cursorAt([m.char.posX, 1.0, m.char.posZ]); R.step(); };
     const set = (on: boolean) => { K.wholeSquad = on; };
 
     // 1

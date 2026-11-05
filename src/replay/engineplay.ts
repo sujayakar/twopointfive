@@ -689,9 +689,9 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
   /** what the map shows this frame: the game as it stands on this page, the picture's camera, the trace's rounds of the last second, the notes with a spot */
   private scene(): MapScene {
     const g = this.host!.game, F = this.F!, men: MapMan[] = [], v = this.view(), now = this.traceNow(), pl = g.player;
-    men.push({ x: pl.char.pos[0], z: pl.char.pos[2], aim: pl.char.aimYaw, team: 'player', kind: 'player', down: !!pl.down, name: this.names.get(pl.char.id) ?? '', ring: null });
-    for (const gd of g.guards) men.push({ x: gd.char.pos[0], z: gd.char.pos[2], aim: gd.char.aimYaw, team: gd.team, kind: 'man', down: gd.state === 'dead', name: this.names.get(gd.char.id) ?? '', ring: gd.team !== 'operative' ? MAP_RING[gd.state] ?? null : null });
-    for (const gd of g.civilians) men.push({ x: gd.char.pos[0], z: gd.char.pos[2], aim: gd.char.aimYaw, team: 'civilian', kind: 'civ', down: gd.state === 'dead', name: this.names.get(gd.char.id) ?? '', ring: null });
+    men.push({ x: pl.char.posX, z: pl.char.posZ, aim: pl.char.aimYaw, team: 'player', kind: 'player', down: !!pl.down, name: this.names.get(pl.char.id) ?? '', ring: null });
+    for (const gd of g.guards) men.push({ x: gd.char.posX, z: gd.char.posZ, aim: gd.char.aimYaw, team: gd.team, kind: 'man', down: gd.state === 'dead', name: this.names.get(gd.char.id) ?? '', ring: gd.team !== 'operative' ? MAP_RING[gd.state] ?? null : null });
+    for (const gd of g.civilians) men.push({ x: gd.char.posX, z: gd.char.posZ, aim: gd.char.aimYaw, team: 'civilian', kind: 'civ', down: gd.state === 'dead', name: this.names.get(gd.char.id) ?? '', ring: null });
     const doors = g.doors.list.map(d => { const [ux, uz] = d.dir(); return { hx: d.def.hinge[0], hz: d.def.hinge[1], ux, uz, width: d.def.width, locked: d.locked, broken: d.lockBroken, off: d.off }; });
     const shots: MapScene['shots'] = [], E = F.events;
     if (Number.isFinite(now)) { let lo = 0, hi = E.length; while (lo < hi) { const mid = (lo + hi) >> 1; if (E[mid].r < now - SHOT_S) lo = mid + 1; else hi = mid; }

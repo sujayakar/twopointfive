@@ -40,7 +40,7 @@ async function arm(on: boolean, open: boolean, hand: -1 | 1): Promise<Arm> {
       if (!nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.1, p[2]], front)) spots.push([p[0], 0, p[2]]); }
     if (team.length < 4 || spots.length < team.length + 1) { A.note = `staging: ${team.length} men, ${spots.length} places along the wall past the ${hand < 0 ? 'hinge' : 'latch'}`; return A; }
     const th = d.def.closedDir, face = Math.atan2(Math.cos(th), Math.sin(th));
-    team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = face; });
+    team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = face; });
     await quiet(() => g.teleportPlayer(spots[team.length] as any));
     await quiet(() => step(30));
     const r = await quiet(() => O.give('charge', { kind: 'door', at: [fc[0], 0, fc[2]], door: d, side }, 'all')); if (typeof r === 'string' && r) { A.note = `refused: ${r}`; return A; }

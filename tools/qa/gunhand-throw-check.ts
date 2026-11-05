@@ -66,7 +66,7 @@ export async function gunhandThrowCheck(): Promise<boolean> {
       a.phase = 0; a.trained = 0.12; a.upper = 'none'; a.stance = 'none'; a.longGun = true; a.longSteady = 0; a.longGrip = RP.carbineGrip(); c.muzzleAhead = RP.carbineMuzzleAhead(); return c; };
     interface Rule { on: boolean; key: boolean }
     const set = (r: Rule) => { GUNHAND.on = r.on; GUNHAND.throwFree = r.key; INHAND.on = true; INHAND.long = true; };
-    const step = (c: any, r: Rule) => { set(r); c.inHand = RP.longHold('carbine'); if (c.vel) c.pos = [c.pos[0] + c.vel[0] * DT, c.pos[1], c.pos[2] + c.vel[2] * DT]; c.update(DT); };
+    const step = (c: any, r: Rule) => { set(r); c.inHand = RP.longHold('carbine'); if (c.vel) c.pos = [c.posX + c.velX * DT, c.posY, c.posZ + c.velZ * DT]; c.update(DT); };
     const simOf = (c: any) => JSON.stringify([c.bones, c.gunDir, c.muzzle, c.pos, c.bodyYaw, c.aimYaw]);
     const palette = (c: any) => Array.from(c.skel.jointData as Float32Array).reduce((a: number, x: number) => (Math.imul(a, 31) + Math.round(x * 1e5)) | 0, 7);
     interface Row { t: number; held: boolean; free: boolean; read: string | null; gap: number; wrR: number; gripUp: number; wrL: number; aheadL: number; can: number; sim: string; pal: number }

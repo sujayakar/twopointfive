@@ -49,7 +49,7 @@ export async function squadthrowLobCheck(): Promise<boolean> {
   try {
     // ───────────── 1 · the flight in his head is the pool's flight ─────────────
     await guard('the flight', async () => {
-      const R = await rig(11, true, { walk: true, lob: true }), { game } = R, m = R.team[0], from: number[] = [m.char.pos[0], 1.3, m.char.pos[2]];
+      const R = await rig(11, true, { walk: true, lob: true }), { game } = R, m = R.team[0], from: number[] = [m.char.posX, 1.3, m.char.posZ];
       const spots = floor(R).filter(at => dist(at, from) > 3 && dist(at, from) < 10 && !game.col.solidBlocked(from, [at[0], 1.0, at[2]]));
       const rows: string[] = []; let worst = 0, n = 0, walls = 0, moved = 0;
       for (let i = 0; i < 12 && spots.length; i++) {

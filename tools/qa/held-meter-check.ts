@@ -43,9 +43,9 @@ line(wasLit > 0.9 && Math.abs(victim.visibility - place()) < 0.02 && forgets ===
 
 for (let i = 0; i < 40; i++) { stale(); W.step(DT); } const before = victim.visibility; const p0 = v3.copy(c.pos);
 away(2); { const sp = game.player.char.pos, goal: Vec3 = [sp[0] - 3, 0, sp[2]]; const pup = game.puppet; if (pup) pup.goal = goal;   // (Sam walks the man in his arm down the corridor)
-  for (let i = 0; i < 900 && Math.hypot(c.pos[0] - p0[0], c.pos[2] - p0[2]) < 2; i++) W.step(DT); if (pup) pup.goal = null; }
+  for (let i = 0; i < 900 && Math.hypot(c.posX - p0[0], c.posZ - p0[2]) < 2; i++) W.step(DT); if (pup) pup.goal = null; }
 away(gapFrames);
-const moved = Math.hypot(c.pos[0] - p0[0], c.pos[2] - p0[2]);
+const moved = Math.hypot(c.posX - p0[0], c.posZ - p0[2]);
 stale(); look();
 line(held() && before > 0.9 && moved > HELD_METER.movedM && Math.abs(victim.visibility - met) < 0.02 && forgets === 2, `(c) nobody looking for ${f(gapFrames * DT)} s while the pair moves ${moved.toFixed(1)} m (meter was ${f(before)}): first look ${f(victim.visibility)}, the place as that frame began ${f(met)} (after it ${f(place())}); ${forgets} keys forgotten`);
 

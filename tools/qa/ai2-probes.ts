@@ -61,7 +61,7 @@ export async function darkness() {
       W.step(DT); maxN = Math.max(maxN, game.searchProbeN);
       const P = gd.searchPlan;
       if (P && P.phase !== lastPhase) { lastPhase = P.phase; if (P.phase === 'look') looks.push({ ...P.spots[P.current], t: game.time - t0 }); }
-      if (P && P.phase === 'look' && P.phaseT > 0.5) { const s = P.spots[P.current]; aimErr += Math.abs(wrapAngle(gd.char.aimYaw - Math.atan2(s.pos[0] - gd.char.pos[0], s.pos[2] - gd.char.pos[2]))); aimPitch += gd.char.aimPitch; aimN++; }   // torch INTO the spot: his aim on its bearing (a hand's wobble across it) and pitched down at the floor there
+      if (P && P.phase === 'look' && P.phaseT > 0.5) { const s = P.spots[P.current]; aimErr += Math.abs(wrapAngle(gd.char.aimYaw - Math.atan2(s.pos[0] - gd.char.posX, s.pos[2] - gd.char.posZ))); aimPitch += gd.char.aimPitch; aimN++; }   // torch INTO the spot: his aim on its bearing (a hand's wobble across it) and pitched down at the floor there
       if (tSusp < 0 && gd.state === 'suspicious') tSusp = game.time - t0;
       if (tPatrol < 0 && gd.state === 'patrol') { tPatrol = game.time - t0; break; }
     }
@@ -224,8 +224,8 @@ export async function pieing() {
       gd.lastSeenT = game.time - 0.7; gd.awareness = 1;
       W.step(DT);
       if (gd.pieing) pies++;
-      const dX = v3.distXZ(gd.char.pos, d.frameCentre); if (dX < 1.5 && gd.char.pos[2] > 10) maxSpdNear = Math.max(maxSpdNear, gd.speed);
-      if (gd.char.pos[2] < 9.9) crossed = true;
+      const dX = v3.distXZ(gd.char.pos, d.frameCentre); if (dX < 1.5 && gd.char.posZ > 10) maxSpdNear = Math.max(maxSpdNear, gd.speed);
+      if (gd.char.posZ < 9.9) crossed = true;
     }
     verdict(pies === 0 && crossed && maxSpdNear > 2.0, '(E) through the conference door 0.7 s behind Sam (chasing, not clearing)', `frames with a pie standing ${pies} (want 0); crossed into the room ${crossed} at up to ${maxSpdNear.toFixed(2)} m/s inside 1.5 m of the door (want > 2: no brake); ${(game.time - t0).toFixed(1)} s`);
   }
@@ -242,7 +242,7 @@ export async function pieing() {
     let firstPie = false, inAt = -1, secondPie = false, outAt = -1; const t0 = game.time; let turned = false;
     for (let f = 0; f < 60 * 14; f++) {
       W.step(DT);
-      const z = gd.char.pos[2];
+      const z = gd.char.posZ;
       if (inAt < 0) { if (gd.pieing?.door === d) firstPie = true; if (z < 9.4) inAt = game.time - t0; }
       else if (!turned) { turned = true; gd.lastKnown = [21.5, 0, 11.3]; gd.alertRef = null; gd.awareness = 1; gd.state = 'alert'; gd.lastSeenT = game.time - 3; }   // a new fix straight back out in the corridor: he turns about and takes the same door again
       else { if (gd.pieing?.door === d && gd.pieing.phase !== 'cross') secondPie = true; if (outAt < 0 && z > 10.6) outAt = game.time - t0; }   // (a fresh pie — the corner check of the one going in may still be running the frame he turns)

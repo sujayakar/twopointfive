@@ -211,7 +211,7 @@ export async function unstick() {
       worstPen = Math.max(worstPen, maxPen);
       const moved = v3.distXZ(A.char.pos, s);
       if (UNSTICK.snaps !== snapsS) { snapped++; notes.push(`snapped ${f2(snapD)} m off ${posS(s)}`); }
-      else if (offAt < 0 || moved < 0.5 || (nav.isBlocked(A.char.pos[0], A.char.pos[2]) && A.speed < 0.1)) { stuck++; notes.push(`STUCK at ${posS(s)}: moved ${f2(moved)}, ${A.state} path ${A.pathI}/${A.path.length}, cell ${nav.isBlocked(A.char.pos[0], A.char.pos[2]) ? 'blocked' : 'free'}`); }
+      else if (offAt < 0 || moved < 0.5 || (nav.isBlocked(A.char.posX, A.char.posZ) && A.speed < 0.1)) { stuck++; notes.push(`STUCK at ${posS(s)}: moved ${f2(moved)}, ${A.state} path ${A.pathI}/${A.path.length}, cell ${nav.isBlocked(A.char.posX, A.char.posZ) ? 'blocked' : 'free'}`); }
       else { walked++; offT.push(offAt * DT); }
       if (maxPen > 0.06) notes.push(`${f3(maxPen)} m inside statics on the way off ${posS(s)}`);
     }

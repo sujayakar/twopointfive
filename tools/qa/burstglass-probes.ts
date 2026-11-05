@@ -169,7 +169,7 @@ async function openCase(seed: number, base?: boolean) {
   const p = [5.2, 0, 11.2]; const men: [any, number[], number][] = [[A, [7.0, 0, 9.0], PW], [B, [9.2, 0, 8.6], PM], [C, [10.15, 0, 9.4], PE]];
   for (const [m, q] of men) R.put(m, q, p); R.step(2);
   const stag0 = men.map(([m]) => m.staggerUntil);
-  const body = men.map(([m]) => ({ feet: [...m.char.pos] as Vec3, head: [...(m.char.bones.head ?? [m.char.pos[0], 1.6, m.char.pos[2]])] as Vec3 }));
+  const body = men.map(([m]) => ({ feet: [...m.char.pos] as Vec3, head: [...(m.char.bones.head ?? [m.char.posX, 1.6, m.char.posZ])] as Vec3 }));
   const rep = R.frag(p); R.settle(2.5);
   return { R, g, p, men, stag0, body, rep };
 }

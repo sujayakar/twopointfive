@@ -69,11 +69,11 @@ function parkSam(g: any) {
   for (let z = 0; z < nav.H; z++) for (let x = 0; x < nav.W; x++) {
     if (nav.blocked[z * nav.W + x]) continue; const px = (x + 0.5) * nav.cell, pz = (z + 0.5) * nav.cell;
     let m = Infinity; for (const d of g.doors.list) m = Math.min(m, Math.hypot(px - d.def.hinge[0], pz - d.def.hinge[1]));
-    for (const o of g.guards) m = Math.min(m, Math.hypot(px - o.char.pos[0], pz - o.char.pos[2]) + 1.5);
+    for (const o of g.guards) m = Math.min(m, Math.hypot(px - o.char.posX, pz - o.char.posZ) + 1.5);
     if (m > bd && m < 12) { bd = m; best = [px, 0, pz]; }
   }
   if (best && bd > 2.5) { g.teleportPlayer(best); return bd; }
-  let m = Infinity; for (const d of g.doors.list) m = Math.min(m, Math.hypot(g.player.char.pos[0] - d.def.hinge[0], g.player.char.pos[2] - d.def.hinge[1]));
+  let m = Infinity; for (const d of g.doors.list) m = Math.min(m, Math.hypot(g.player.char.posX - d.def.hinge[0], g.player.char.posZ - d.def.hinge[1]));
   return m;
 }
 /** is anybody standing inside d's swing circle */
@@ -165,7 +165,7 @@ export const stayOpenLock = guarded(async () => {
   const A = off(d, d.keySide, 2.0, 0), B = off(d, -d.keySide as 1 | -1, 2.4, 0);
   gd.hold = false; g.aiEnabled = true; gd.char.pos = [A[0], 0, A[2]]; gd.path = []; gd.pathGoal = null; order(gd, { goal: [B[0], 0, B[2]] });
   let arrived = -1, latchedAfter = false, opened = false; const t1 = g.time;
-  R.secs(14, () => { if (arrived < 0 && Math.hypot(gd.char.pos[0] - B[0], gd.char.pos[2] - B[2]) < 0.6) arrived = g.time - t1; if (!d.latched) opened = true; else if (opened) latchedAfter = true; });
+  R.secs(14, () => { if (arrived < 0 && Math.hypot(gd.char.posX - B[0], gd.char.posZ - B[2]) < 0.6) arrived = g.time - t1; if (!d.latched) opened = true; else if (opened) latchedAfter = true; });
   R.secs(30, () => { if (d.latched) latchedAfter = true; });
   verdict(arrived >= 0 && opened && !latchedAfter && d.locked, `${gd.callsign ?? 'a staff man'}, walked through it on an order: it opens to his key and nothing swings it to behind him (half a minute on it is off its latch, bolt thrown)`, `arrived ${arrived >= 0 ? `+${f2(arrived)} s` : `never (at ${at(gd.char.pos)})`} · opened ${opened} · latched again ${latchedAfter} · angle ${f2(d.angle)} · locked ${d.locked}`);
   return done();
@@ -232,7 +232,7 @@ async function wedge(c: typeof WEDGE[number], stay: boolean) {
   let arrived = -1, latched = false, pulled = false, minA = Math.abs(a0);
   for (let f = 0; f < 60 * 25; f++) {
     W.step(DT); latched ||= d.latched; pulled ||= d.closing; minA = Math.min(minA, Math.abs(d.angle));
-    if (arrived < 0 && (gd.state === 'search' || Math.hypot(gd.char.pos[0] - c.goal[0], gd.char.pos[2] - c.goal[2]) < 1.0)) arrived = f / 60;
+    if (arrived < 0 && (gd.state === 'search' || Math.hypot(gd.char.posX - c.goal[0], gd.char.posZ - c.goal[2]) < 1.0)) arrived = f / 60;
   }
   return { arrived, latched, pulled, a0, a1: d.angle, minA, at: at(gd.char.pos) };
 }
@@ -338,7 +338,7 @@ export const stayOpenFloor = guarded(async () => {
     }
     const open = list.filter(d => !d.latched && Math.abs(d.angle) > 0.25).map(d => d.def.name);
     const stuck = g.guards.filter((x: any) => x.state !== 'dead' && x.stuckT > 4).map((x: any) => `${x.callsign} stuckT ${f2(x.stuckT)} at ${at(x.char.pos)}`);
-    const keyedOpen = list.filter(d => (d.def.locked || d.def.exterior) && d.def.closer !== false && !d.latched && !g.guards.some((x: any) => x.state !== 'dead' && Math.hypot(x.char.pos[0] - d.frameCentre[0], x.char.pos[2] - d.frameCentre[2]) < 2.5)).map(d => `${d.def.name} ${f2(d.angle)}`);
+    const keyedOpen = list.filter(d => (d.def.locked || d.def.exterior) && d.def.closer !== false && !d.latched && !g.guards.some((x: any) => x.state !== 'dead' && Math.hypot(x.char.posX - d.frameCentre[0], x.char.posZ - d.frameCentre[2]) < 2.5)).map(d => `${d.def.name} ${f2(d.angle)}`);
     return { latches, unasked, pushes, open, stuck, n: list.length, keyedPulls, keyedOpen };
   };
   const on = await run(true), was = await run(false);
@@ -384,7 +384,7 @@ export const stayOpenAfter = guarded(async () => {
       for (const o of g.guards) if (o !== gd) { o.hold = true; o.path = []; o.pathGoal = null; }
       const a0 = d.angle; let stamped = false;
       for (let i = 0; i < 90 && !stamped; i++) { gd.hold = false; gd.state = 'patrol'; gd.script = null; gd.awareness = 0; gd.char.pos = [spot[0], 0, spot[2]]; gd.char.bodyYaw = yaw; d.quietT = 5; R.step(1); stamped = d.guardT > -1e8; }
-      const apart = g.guards.every((o: any) => o === gd || o.state === 'dead' || Math.hypot(o.char.pos[0] - fc[0], o.char.pos[2] - fc[2]) >= 2);
+      const apart = g.guards.every((o: any) => o === gd || o.state === 'dead' || Math.hypot(o.char.posX - fc[0], o.char.posZ - fc[2]) >= 2);
       if (stay) { gd.hold = true; R.secs(9); verdict(stamped && d.latched, `doors stay, lockdown: a man passing ${d.def.name} standing open pulls it to`, `asked ${stamped} · ${f2(a0)} → ${f2(d.angle)} · latched ${d.latched} · nobody else at it ${apart}`); }
       else verdict(!stamped, 'closers on, lockdown: he leaves the outside door to its closer, as before', `asked ${stamped}`);
     }

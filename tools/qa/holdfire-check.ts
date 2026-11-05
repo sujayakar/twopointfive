@@ -55,16 +55,16 @@ export async function holdfireCheck(): Promise<boolean> {
   interface Tally { /** EVERY round a teammate fired in the window */ all: number; /** door noises (a handle tried, a leaf worked) — and where each was */ door: number; doorAt: number[][]; /** frames this rule held a round */ held: number; aimed: number; tall: number; walked: number; frames: number;
     /** THE CHECK'S OWN MEASURE of 'nobody has found them', nothing of the rule's asked: frames a living defender had a squad man or Sam inside his cone with a clear line · loud events not the team's own (a round of Sam's or a defender's, a bang, a kick) · the frame of the first of each (−1: none) */
     eyes: number; loud: number; firstEyes: number; firstRound: number }
-  const eyeOf = (c: any) => [c.pos[0], 1.55, c.pos[2]];
+  const eyeOf = (c: any) => [c.posX, 1.55, c.posZ];
   /** does this defender have that body in front of his eyes: inside 62° of his chest or his gun line, within 30 m, nothing solid between (the check's own geometry) */
-  const hasEyes = (R: Run, h: any, c: any) => { const hc = h.char, dx = c.pos[0] - hc.pos[0], dz = c.pos[2] - hc.pos[2], d = Math.hypot(dx, dz); if (d > 30) return false; if (d < 0.8) return true;
+  const hasEyes = (R: Run, h: any, c: any) => { const hc = h.char, dx = c.posX - hc.posX, dz = c.posZ - hc.posZ, d = Math.hypot(dx, dz); if (d > 30) return false; if (d < 0.8) return true;
     const yaw = Math.atan2(dx, dz), off = (y: number) => Math.abs(Math.atan2(Math.sin(yaw - y), Math.cos(yaw - y)));
     return Math.min(off(hc.bodyYaw), off(hc.aimYaw)) < 62 * Math.PI / 180 && !R.g.col.segmentBlocked(eyeOf(hc), eyeOf(c)); };
   const bodies = (R: Run) => [R.g.player.char, ...living(R).map((o: any) => o.char)];
   const anyEyes = (R: Run, skip: any = null) => foes(R).some((h: any) => h !== skip && bodies(R).some(c => hasEyes(R, h, c)));
   /** the defenders kept UNAWARE and looking the other way (their backs to the squad), every frame — all but `skip` */
-  const freeze = (R: Run, skip: any = null) => { const B = bodies(R), cx = B.reduce((a, c) => a + c.pos[0], 0) / B.length, cz = B.reduce((a, c) => a + c.pos[2], 0) / B.length;
-    for (const h of foes(R)) { if (h === skip) continue; h.state = 'patrol'; h.awareness = 0; const c = h.char, yaw = Math.atan2(c.pos[0] - cx, c.pos[2] - cz); c.bodyYaw = c.aimYaw = yaw; for (const k of ['wantBody', 'wantAim']) if (Object.getOwnPropertyDescriptor(c, k)?.writable) c[k] = yaw; } };
+  const freeze = (R: Run, skip: any = null) => { const B = bodies(R), cx = B.reduce((a, c) => a + c.posX, 0) / B.length, cz = B.reduce((a, c) => a + c.posZ, 0) / B.length;
+    for (const h of foes(R)) { if (h === skip) continue; h.state = 'patrol'; h.awareness = 0; const c = h.char, yaw = Math.atan2(c.posX - cx, c.posZ - cz); c.bodyYaw = c.aimYaw = yaw; for (const k of ['wantBody', 'wantAim']) if (Object.getOwnPropertyDescriptor(c, k)?.writable) c[k] = yaw; } };
   /** `secs` of play: the defenders kept unaware and turned away (`frozen`; `each` runs after the freeze, before the step), Sam walking between `ends` upright */
   function play(R: Run, secs: number, ends: number[][] | null, frozen = true, skip: any = null, each: (() => void) | null = null): Tally {
     const g = R.g, T: Tally = { all: 0, door: 0, doorAt: [], held: 0, aimed: 0, tall: 0, walked: 0, frames: 0, eyes: 0, loud: 0, firstEyes: -1, firstRound: -1 }; let leg = 1, prev = [...R.pos]; const h0 = HF.HOLDFIRE_STATS.held;
@@ -77,7 +77,7 @@ export async function holdfireCheck(): Promise<boolean> {
       R.step(); T.frames++; T.walked += flat(R.pos, prev); prev = [...R.pos];
       if (anyEyes(R, skip)) { T.eyes++; if (T.firstEyes < 0) T.firstEyes = i; }
       if (!R.pl.crouch && !R.pl.wall && R.pl.pace > 0.9) T.tall++;
-      if (living(R).some((o: any) => { const t = g.fight.opOf(o)?.tgt; if (!t || t.state === 'dead') return false; const c = o.char, d = [t.char.pos[0] - c.pos[0], t.char.pos[2] - c.pos[2]], yaw = Math.atan2(d[0], d[1]); let e = yaw - c.aimYaw; e = Math.atan2(Math.sin(e), Math.cos(e)); return Math.abs(e) < 0.2; })) T.aimed++;
+      if (living(R).some((o: any) => { const t = g.fight.opOf(o)?.tgt; if (!t || t.state === 'dead') return false; const c = o.char, d = [t.char.posX - c.posX, t.char.posZ - c.posZ], yaw = Math.atan2(d[0], d[1]); let e = yaw - c.aimYaw; e = Math.atan2(Math.sin(e), Math.cos(e)); return Math.abs(e) < 0.2; })) T.aimed++;
     }
     R.goal = null; T.held = HF.HOLDFIRE_STATS.held - h0; return T;
   }
@@ -92,7 +92,7 @@ export async function holdfireCheck(): Promise<boolean> {
   /** would this man's round at that defender be held right now — asked of the fire gate's own function, for every living man against every unaware defender */
   const holdsAll = (R: Run) => { const hs = foes(R).filter((h: any) => h.state === 'patrol' && h.awareness < SL.SILENT.noticed); return hs.length > 0 && living(R).every((o: any) => hs.every((h: any) => SL.silentHolds(R.g, o, h))); };
   /** how far a man's gun is off a point, rad */
-  const gunOff = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.pos[0], at[2] - o.char.pos[2]) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
+  const gunOff = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.posX, at[2] - o.char.posZ) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
   const holdsAny = (R: Run) => { const hs = foes(R).filter((h: any) => h.state === 'patrol' && h.awareness < SL.SILENT.noticed); return living(R).some((o: any) => hs.some((h: any) => SL.silentHolds(R.g, o, h))); };
   const samShot = (R: Run, at: number[]) => { const g = R.g, n0 = g.events.filter((e: any) => e.kind === 'shot' && e.who === PLAYER_ID).length; FRIENDS.lowReady = false;
     R.slot(1); R.cursor(at); R.step(20); R.I.buttons |= 1; R.I.clicked |= 1; R.step(3); R.I.buttons &= ~1; FRIENDS.lowReady = was.low;
@@ -115,7 +115,7 @@ export async function holdfireCheck(): Promise<boolean> {
       const X = foes(R).filter((h: any) => !bodies(R).some(c => !g.col.segmentBlocked(eyeOf(h.char), eyeOf(c)))).sort((a: any, b: any) => flat(b.char.pos, R.pos) - flat(a.char.pos, R.pos))[0];
       if (why || !X) line(false, `A · not staged — ${why ?? 'no defender out of every line'}`); else {
         const at = [...X.char.pos]; let oldFound = 0, ownFound = 0, n = 0, saw = 0;
-        const T = play(R, 10, null, true, X, () => { X.state = 'alert'; X.awareness = 1; X.char.pos[0] = at[0]; X.char.pos[2] = at[2]; n++; if (U.squadFound(g, living(R))) oldFound++; if (HF.holdFireFound(g, living(R))) ownFound++; if (X.lastSeenT >= 0) saw++; });
+        const T = play(R, 10, null, true, X, () => { X.state = 'alert'; X.awareness = 1; X.char.posX = at[0]; X.char.posZ = at[2]; n++; if (U.squadFound(g, living(R))) oldFound++; if (HF.holdFireFound(g, living(R))) ownFound++; if (X.lastSeenT >= 0) saw++; });
         freeze(R, X); X.state = 'alert'; const still = foes(R).filter((h: any) => h !== X).length > 0 && living(R).every((o: any) => foes(R).filter((h: any) => h !== X).every((h: any) => SL.silentHolds(g, o, h)));
         X.lastSeenT = g.time; const seen = !!HF.holdFireFound(g, living(R)) && !holdsAny(R); X.lastSeenT = -100;
         line(T0.all === 0 && T.all === 0 && quiet(T) && T.held > 0 && T.aimed > 0 && saw === 0 && oldFound > n * 0.9 && ownFound === 0 && still && seen,
@@ -166,7 +166,7 @@ export async function holdfireCheck(): Promise<boolean> {
       const w = O.give('stack', O.targetAt(d.frameCentre));
       for (; secs < 30 && !set; secs++) { const T = play(R, 1, null); rounds += T.all; held += T.held; set = living(R).every((o: any) => O.of(o)?.order === 'stack' && O.of(o).arrived); }
       const T = play(R, 6, null); rounds += T.all; freeze(R);
-      const off = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.pos[0], at[2] - o.char.pos[2]) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
+      const off = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.posX, at[2] - o.char.posZ) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
       const men = living(R).map((o: any) => { const A = O.of(o), t = g.fight.opOf(o)?.tgt; return { o, A, t, mark: A?.post ? flat(o.char.pos, A.post) : NaN, man: t ? off(o, t.char.pos) : NaN, door: off(o, d.frameCentre), rule: HF.holdFireOnMan(g, o) as boolean, word: O.statusOf(o) as string }; });
       line(!w && set && rounds === 0 && T.loud === 0 && held > 0 && T.held > 0 && foes(R).length === n0 && Math.abs(d.angle) < 0.05 && men.length === 2
         && men.every((m: any) => m.A?.order === 'stack' && m.A.arrived && m.A.setSaid && m.mark < 0.35 && m.word.startsWith('stacked') && m.t?.state === 'patrol' && m.man < 0.2 && m.door > 0.2 && m.rule),
@@ -198,7 +198,7 @@ export async function holdfireCheck(): Promise<boolean> {
       const w = O.give('stack', O.targetAt(d.frameCentre)), tested0 = g.doorTools.stats.tested; const walk: number[][] = [];   // (door noises on the way to the marks: the handle was tried BEFORE 'set.', so the count runs from the order — at THIS door: a leaf brushed on the walk in is not it)
       for (; secs < 30 && !set; secs++) { walk.push(...play(R, 1, null).doorAt); set = living(R).every((o: any) => O.of(o)?.order === 'stack' && O.of(o).arrived); }
       const T: Tally[] = []; let left = 0, onMan = 0, n = 0; const each = () => { for (const o of living(R)) { n++; if (!O.of(o)?.arrived) left++; if (HF.holdFireOnMan(g, o)) onMan++; } };
-      const m = living(R)[0], t = g.fight.opOf(m)?.tgt, home = [...R.pos], mid = t ? [(m.char.pos[0] + t.char.pos[0]) / 2, 0, (m.char.pos[2] + t.char.pos[2]) / 2] : home;
+      const m = living(R)[0], t = g.fight.opOf(m)?.tgt, home = [...R.pos], mid = t ? [(m.char.posX + t.char.posX) / 2, 0, (m.char.posZ + t.char.posZ) / 2] : home;
       T.push(play(R, 6, null, true, null, each)); T.push(play(R, 10, [home, [2 * mid[0] - home[0], 0, 2 * mid[2] - home[2]]], true, null, each)); R.goal = home; T.push(play(R, 3, null, true, null, each)); R.goal = null;
       const u0 = U.UNSEEN_STATS.held; R.crouch(true); T.push(play(R, 6, null, true, null, each)); const sneak = U.UNSEEN_STATS.held - u0; R.crouch(false);
       const sum = (k: 'all' | 'door' | 'loud') => T.reduce((a, x) => a + x[k], 0), sets = said.filter(x => x === 'set.').length, locked = said.filter(x => /locked/.test(x)).length, tested = g.doorTools.stats.tested - tested0, atDoor = walk.filter(p => !(flat(p, d.frameCentre) > 1.5)).length;

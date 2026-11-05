@@ -81,7 +81,7 @@ export class RescueFlush {
    *  The distance, or Infinity. His facing and the light on her are not asked: he came knowing where she was kept. */
   private line(by: Guard, v: Guard): number {
     const g = this.g, K = RESCUEFLUSH, d = flat(v.char.pos, by.char.pos); if (d >= K.reachM) return Infinity;
-    const e: Vec3 = [by.char.pos[0], 1.5, by.char.pos[2]], c = v.char.bones.chest ?? v3.add(v.char.pos, [0, 0.6, 0]);
+    const e: Vec3 = [by.char.posX, 1.5, by.char.posZ], c = v.char.bones.chest ?? v3.add(v.char.pos, [0, 0.6, 0]);
     if (g.col.shotBlocked(e, c)) return Infinity;
     const T = g.sensors.segment(`rescueS${by.char.id}_${v.char.id}`, e, c);
     return T !== undefined && T < K.smokeK ? Infinity : d;
@@ -181,7 +181,7 @@ export class RescueFlush {
     const R = this.R, S = R.data; if (!S) return null;
     if (goal === 'room' || goal === 'side') {   // (a man sent round walks rescue.sideWay first — tick(): the short way to a point IN the room is the main door)
       const B = R.bounds, v = alive.find(h => inBounds(h.char.pos, B));   // (where he knows they were kept: the room itself once they are not in it)
-      return v ? [v.char.pos[0], 0, v.char.pos[2]] : B ? [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2] : null;
+      return v ? [v.char.posX, 0, v.char.posZ] : B ? [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2] : null;
     }
     if (goal === 'noise' && R.noiseAt) return v3.copy(R.noiseAt);
     return R.ending.out;

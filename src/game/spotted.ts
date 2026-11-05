@@ -122,7 +122,7 @@ export const SPOTTED_STATS = { wary: 0, caught: 0, calm: 0, slips: 0, freezes: 0
 export const SPOTTED_LOG: { t: number; who: string; to: SpottedMode; what: string | null; of: string | null }[] = [];
 
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const eyeOf = (gd: Guard): Vec3 => gd.char.bones.head ?? [gd.char.pos[0], gd.char.pos[1] + 1.6, gd.char.pos[2]];
+const eyeOf = (gd: Guard): Vec3 => gd.char.bones.head ?? [gd.char.posX, gd.char.posY + 1.6, gd.char.posZ];
 const NONE: never[] = [];
 export { shotLine as spottedShotLine };
 /** a line from a man's eyes to a body stood (or knelt) at `q`, asked of the WALLS AND FURNITURE only: a leaf between them is a thing somebody is about to open */
@@ -175,7 +175,7 @@ export function spottedFeet(g: Game, gd: Guard, follower: boolean, aside: boolea
   if (M.mode === 'calm') return null;
   // his GUN: caught, on the man who has them (he is shouting, and shooting); suspicious, on the man whose line he is in — it is there the frame he goes alert
   // (a man POSTED by an order keeps the watch he was given while the floor is only suspicious: his gun is the order's until they are caught)
-  const on = SPOTTED.gun ? (M.mode === 'caught' ? M.by : follower ? M.eyes : null) : null, watch: Vec3 | null = on && on.state !== 'dead' ? [on.char.pos[0], 1.2, on.char.pos[2]] : null;
+  const on = SPOTTED.gun ? (M.mode === 'caught' ? M.by : follower ? M.eyes : null) : null, watch: Vec3 | null = on && on.state !== 'dead' ? [on.char.posX, 1.2, on.char.posZ] : null;
   if (M.mode === 'caught') { const step = follower && !aside && !!M.spot && M.what === 'step'; return step || watch ? { goal: step ? M.spot : null, speed: step ? (SILENT.pace > 0 ? SILENT.pace : null) : null, crouch: false, watch } : null; }
   const crouch = SPOTTED.low && (M.exposed || M.what !== null);
   if (!follower || aside || !M.spot) return crouch || watch ? { goal: null, speed: null, crouch, watch } : null;
@@ -265,7 +265,7 @@ function onHim(g: Game, h: Guard, gd: Guard): boolean {
  *  out of reach, or three seconds have gone without hands on him. */
 function hands(g: Game, gd: Guard, M: Man) {
   const K = SPOTTED, p = gd.char.pos, t = g.time;
-  const open = (h: Guard) => !g.col.solidBlocked([p[0], 1.0, p[2]], [h.char.pos[0], 1.0, h.char.pos[2]]);
+  const open = (h: Guard) => !g.col.solidBlocked([p[0], 1.0, p[2]], [h.char.posX, 1.0, h.char.posZ]);
   let T = M.take;
   if (T) { const h = T.foe, on = T.t0 >= 0;
     if (h.state === 'dead' || !!h.held || !g.guards.includes(h) || (!on && (!K.close || silentReached(g, gd) || flat(p, h.char.pos) > (h.state === 'suspicious' || (T.asked && h.state === 'patrol') ? K.takeM + 1 : K.takeReach + 0.3) || !open(h)))) M.take = T = null;
@@ -314,7 +314,7 @@ function fresh(g: Game): { pos: Vec3; t: number }[] {
   let D = drops.get(g); if (!D) drops.set(g, D = { down: new SideSet(), at: [], seen: false, t: g.time });
   if (g.time - D.t > 0.25 || g.time < D.t) { D.seen = false; D.at.length = 0; }   // (not asked for a while — loud and back, the knob — or a restart: whoever is down now is old news)
   D.t = g.time;
-  for (const h of g.guards) { if (h.state !== 'dead' || D.down.has(h)) continue; D.down.add(h); if (D.seen && h.team !== 'operative') { D.at.push({ pos: [h.char.pos[0], 0, h.char.pos[2]], t: g.time }); SPOTTED_STATS.braces++; } }
+  for (const h of g.guards) { if (h.state !== 'dead' || D.down.has(h)) continue; D.down.add(h); if (D.seen && h.team !== 'operative') { D.at.push({ pos: [h.char.posX, 0, h.char.posZ], t: g.time }); SPOTTED_STATS.braces++; } }
   D.seen = true; while (D.at.length && (g.time - D.at[0].t > SPOTTED.braceSecs || g.time < D.at[0].t)) D.at.shift();
   return D.at;
 }

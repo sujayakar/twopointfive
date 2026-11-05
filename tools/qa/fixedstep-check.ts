@@ -81,7 +81,7 @@ const jit2 = (r: () => number) => r();
 { const SECS = 10, TICKS = SECS * 60;
   const script = (g: any, k: number, input: any) => {   // the input, keyed by the TICK: walk, stop, and from 3 s a man with Sam in front of him
     if (k === 30) input.keys.add('KeyW'); if (k === 120) input.keys.delete('KeyW'); if (k === 150) input.pressed.add('KeyC');
-    if (k === 180) { const gd = g.guards[0]; g.godMode = true; const yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.pos[0] + Math.sin(yaw) * 3.5, 0, gd.char.pos[2] + Math.cos(yaw) * 3.5]); }
+    if (k === 180) { const gd = g.guards[0]; g.godMode = true; const yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.posX + Math.sin(yaw) * 3.5, 0, gd.char.posZ + Math.cos(yaw) * 3.5]); }
   };
   const play = async (name: string, dtOf: (() => number) | null): Promise<{ name: string; rows: unknown[]; text: string; frames: number }> => {
     Math.random = seeded(3); const W = await standUp({ seed: 2026 }); const g = W.game;

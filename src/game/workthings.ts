@@ -250,7 +250,7 @@ export class WorkThings {
   /** where the man who covers goes: a free spot he can reach behind the man at work, on his own side of him (null: none — he is then left out of the order) */
   private coverPost(S: SquadOrders, mate: Guard, th: WorkThing): Vec3 | null {
     const stand = th.stand; if (!stand) return null;
-    const side = Math.sign((mate.char.pos[0] - stand[0]) * th.n[2] - (mate.char.pos[2] - stand[2]) * th.n[0]) || 1;
+    const side = Math.sign((mate.char.posX - stand[0]) * th.n[2] - (mate.char.posZ - stand[2]) * th.n[0]) || 1;
     for (const k of [side, -side, 0]) {
       const post = S.freeSpot([stand[0] + th.n[0] * WORK.buddyM + th.n[2] * 0.5 * k, 0, stand[2] + th.n[2] * WORK.buddyM - th.n[0] * 0.5 * k]);
       if (post && flat(post, stand) > 0.7 && flat(post, stand) < WORK.buddyM + 1.2 && S.reach(mate, post) === null) return post;

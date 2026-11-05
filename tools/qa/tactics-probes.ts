@@ -129,8 +129,8 @@ export async function tacticsSingle() {
     const t = game.time;
     if (!plan && plansOf(game).length) { plan = plansOf(game)[0]; for (const m of plan.members) { const r = plan.roles.get(m); roles[m.callsign] = r.kind; if (r.kind === 'presser') presser = m; if (r.kind === 'second') second = m; } }
     // in the corridor (z > 10.3), both on the move: the second's offset from the presser split along / across the corridor (x runs along it)
-    if (presser && second && plan?.phase === 'approach' && presser.char.pos[2] > 10.3 && second.char.pos[2] > 10.3 && presser.speed > 0.8 && second.speed > 0.8) {
-      const lat = Math.abs(presser.char.pos[2] - second.char.pos[2]), lon = Math.abs(presser.char.pos[0] - second.char.pos[0]);
+    if (presser && second && plan?.phase === 'approach' && presser.char.posZ > 10.3 && second.char.posZ > 10.3 && presser.speed > 0.8 && second.speed > 0.8) {
+      const lat = Math.abs(presser.char.posZ - second.char.posZ), lon = Math.abs(presser.char.posX - second.char.posX);
       sampled++; latMax = Math.max(latMax, lat); longMin = Math.min(longMin, lon); if (lat > 1 || lon < 2.5) abreast++;
     }
     if (f % 30 === 0) trail.push(`${f1(t)}s ` + [A, B].map(m => `${m.callsign} ${m.state} ${posS(m.char.pos)} ${tacticsRoleOf(game, m) ?? '-'} spd ${f2(m.speed)}`).join(' | ') + ` gap ${f2(v3.distXZ(A.char.pos, B.char.pos))}` + (plan ? ` · ${plan.phase}` : ''));
@@ -165,7 +165,7 @@ export async function tacticsLone() {
     for (let f = 0; f < 60 * 26; f++) {
       pl.visibility = 0.02; W.step(DT);
       const t = game.time; const L = loneRecord(game, A);
-      if (L && L.holdT > 0 && !L.released) { if (holdT0 < 0) { holdT0 = t; holdAt = v3.copy(A.char.pos); los = !game.col.segmentBlocked([A.char.pos[0], 1.5, A.char.pos[2]], [FIX[0], 1.0, FIX[2]]); const nav = game.col.nav, cs = nav.cell; const cx = Math.floor(A.char.pos[0] / cs), cz = Math.floor(A.char.pos[2] / cs); walls = 0; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if ((dx || dz) && nav.isBlocked((cx + dx + 0.5) * cs, (cz + dz + 0.5) * cs)) walls++; } holdT1 = t; minDistWhileHeld = Math.min(minDistWhileHeld, v3.distXZ(A.char.pos, FIX)); }
+      if (L && L.holdT > 0 && !L.released) { if (holdT0 < 0) { holdT0 = t; holdAt = v3.copy(A.char.pos); los = !game.col.segmentBlocked([A.char.posX, 1.5, A.char.posZ], [FIX[0], 1.0, FIX[2]]); const nav = game.col.nav, cs = nav.cell; const cx = Math.floor(A.char.posX / cs), cz = Math.floor(A.char.posZ / cs); walls = 0; for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if ((dx || dz) && nav.isBlocked((cx + dx + 0.5) * cs, (cz + dz + 0.5) * cs)) walls++; } holdT1 = t; minDistWhileHeld = Math.min(minDistWhileHeld, v3.distXZ(A.char.pos, FIX)); }
       if (holdT0 >= 0 && movedOnAt < 0 && holdAt && v3.distXZ(A.char.pos, holdAt) > 0.6) movedOnAt = t;
       if (movedOnAt >= 0 && v3.distXZ(A.char.pos, FIX) > 5.2) maxSpeedAfter = Math.max(maxSpeedAfter, A.speed);
       if (f % 60 === 0) trail.push(`${f1(t)}s Kowalski ${A.state} ${posS(A.char.pos)} ${tacticsRoleOf(game, A) ?? '-'} spd ${f2(A.speed)} crouch ${f1(A.char.anim.crouchTarget)} ${f1(v3.distXZ(A.char.pos, FIX))} m off${L ? ` · lone ${L.released ? 'released:' + L.releasedWhy : L.holdT > 0 ? 'holding ' + f1(L.holdT) : 'to corner'}` : ''}`);
@@ -235,12 +235,12 @@ async function doorRun(seed: number, stun: boolean) {
     if (G && gateAt < 0) gateAt = t;
     const ph = G ? G.phase : (gateAt >= 0 ? 'released' : 'none');
     if (ph !== lastPhase) { phases.push(`${f1(t)}s ${ph}`); lastPhase = ph; if (ph === 'wait' && stackedAt < 0) stackedAt = t; if ((ph === 'slice' || ph === 'toss') && drillAt < 0) drillAt = t; if (ph === 'cross' && crossAt < 0) crossAt = t; }
-    if (drillAt < 0) { if (inGap(game, d, A.char.pos)) inGapBefore++; minGapDistBefore = Math.min(minGapDistBefore, Math.abs(A.char.pos[2] - 10)); }
-    if (G?.phase === 'slice' && f % 6 === 0) slicePos.push(`(${f2(A.char.pos[0])},${f2(A.char.pos[2])})→yaw ${Math.round(A.char.aimYaw / DEG)}°`);
+    if (drillAt < 0) { if (inGap(game, d, A.char.pos)) inGapBefore++; minGapDistBefore = Math.min(minGapDistBefore, Math.abs(A.char.posZ - 10)); }
+    if (G?.phase === 'slice' && f % 6 === 0) slicePos.push(`(${f2(A.char.posX)},${f2(A.char.posZ)})→yaw ${Math.round(A.char.aimYaw / DEG)}°`);
     for (const e of game.events) if (e.kind === 'bang' && e.time === t && bangAt < 0) { bangAt = t; bangPos = v3.copy(e.pos); }
-    if (inAt < 0 && A.char.pos[0] > bounds.x0 && A.char.pos[0] < bounds.x1 && A.char.pos[2] < bounds.z1 - 0.3) inAt = t;
+    if (inAt < 0 && A.char.posX > bounds.x0 && A.char.posX < bounds.x1 && A.char.posZ < bounds.z1 - 0.3) inAt = t;
     if (radioT < 0) { const r = lines.find(l => l.radio && l.who === 'Kowalski' && /doorway|door/.test(l.text)); if (r) radioT = r.t; }
-    if (f % 30 === 0) trail.push(`${f1(t)}s Kowalski ${A.state} (${f2(A.char.pos[0])}, ${f2(A.char.pos[2])}) ${tacticsRoleOf(game, A) ?? '-'} ${G ? G.phase : ''} spd ${f2(A.speed)} crouch ${f1(A.char.anim.crouchTarget)} · leaf ${f2(d.angle)}${d.latched ? 'L' : ''}`);
+    if (f % 30 === 0) trail.push(`${f1(t)}s Kowalski ${A.state} (${f2(A.char.posX)}, ${f2(A.char.posZ)}) ${tacticsRoleOf(game, A) ?? '-'} ${G ? G.phase : ''} spd ${f2(A.speed)} crouch ${f1(A.char.anim.crouchTarget)} · leaf ${f2(d.angle)}${d.latched ? 'L' : ''}`);
     if (inAt >= 0 && t - inAt > 1.5) break;
   }
   return { ...S, d, dangerAtOnce, gateAt, stackedAt, drillAt, crossAt, inAt, bangAt, bangPos, inGapBefore, minGapDistBefore, radioT, phases, slicePos, trail, bounds };

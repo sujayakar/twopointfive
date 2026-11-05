@@ -106,7 +106,7 @@ function laneOf(g: Game): Lane | null {
   const K = FIRELINE, pl = g.player, c = pl.char, gun = pl.gunInHand(), F = fired.get(pl);
   if (!gun || !F || Math.abs(g.time - F.liveT) > 1e-6) return null;
   const dx = Math.sin(c.aimYaw), dz = Math.cos(c.aimYaw);
-  return { m: c.muzzle, dx, dz, back: Math.min(0, (c.pos[0] - c.muzzle[0]) * dx + (c.pos[2] - c.muzzle[2]) * dz) - 0.35, k: FRIENDLYFIRE.coneK * K.spread, half: FRIENDLYFIRE.bodyM + K.clearM,
+  return { m: c.muzzle, dx, dz, back: Math.min(0, (c.posX - c.muzzle[0]) * dx + (c.posZ - c.muzzle[2]) * dz) - 0.35, k: FRIENDLYFIRE.coneK * K.spread, half: FRIENDLYFIRE.bodyM + K.clearM,
     energy: shotEnergy(g, c, gun.def), thin: wallPenLive(g) ? roundEnergy(gun.def) : -1 };
 }
 /** is this point of floor inside the lane by its shape alone (no wall asked) */

@@ -127,7 +127,7 @@ export async function runnerCheck(): Promise<boolean> {
       g.items.spawn('mag', a, [(b[0] - a[0]) * k, 1.2, (b[2] - a[2]) * k], { who: PLAYER_ID, fill: 1 });
       for (let i = 0; i < 600 && !(T.reloadT >= 0); i++) step();
       dry = T.reloadT >= 0 && T.weapon.roundsReady === 0 && moraleOf(T)?.act === 'reload'; outT = g.time;
-      if (shoulder) { const q = [T.char.pos[0], 0, T.char.pos[2] + (T.char.pos[2] > p[2] ? -1 : 1) * 1.2]; put(men[1], q); step(20); }   // (in his view, inside morale's aloneM: read on his next asking)
+      if (shoulder) { const q = [T.char.posX, 0, T.char.posZ + (T.char.posZ > p[2] ? -1 : 1) * 1.2]; put(men[1], q); step(20); }   // (in his view, inside morale's aloneM: read on his next asking)
     }
     return { W, g, d, T, men, near, ops, hole, step, put, guns, front, away, held, mag0, dry, yard, outT };
   };
@@ -177,7 +177,7 @@ export async function runnerCheck(): Promise<boolean> {
         `${st(T)} · ${f2(moved)} m from the drop · ${f2(flat(dropPos, him))} → ${f2(flat(T.char.pos, him))} m from the player · top speed ${f2(top)} (chase ${g.tune.guardChase}) · rounds since the shout ${fired(T) - n0}`);
       line(!farTaken && farDry, '(7) dry, alone, broken — and the enemy in his eyes seven metres off: he does not run', `taken ${farTaken} · mid-change ${farDry}`);
       // (14) grabbed after the drop, then let go
-      { g.teleportPlayer([T.char.pos[0] - 0.6, 0, T.char.pos[2]]); startGrab(g, T); let heldF = 0, litHeld = 0, fledHeld = 0;
+      { g.teleportPlayer([T.char.posX - 0.6, 0, T.char.posZ]); startGrab(g, T); let heldF = 0, litHeld = 0, fledHeld = 0;
         for (let i = 0; i < 45; i++) { R.step(); if (T.held) { heldF++; if (T.flashlight?.enabled) litHeld++; if (runnerFled(T)) fledHeld++; } }
         const at = [...T.char.pos]; if (T.held) freeHeld(g, 'cancel'); R.step(110);   // (the player stays where he let go: his eyes on the man, who is therefore still on the floor for (6))
         line(heldF >= 30 && litHeld === 0 && fledHeld === heldF && !T.held && runnerFled(T) && flat(T.char.pos, at) > 1 && g.guards.includes(T) && R.guns().length === 1 && fired(T) === n0,
@@ -244,7 +244,7 @@ export async function runnerCheck(): Promise<boolean> {
       RUNNER.clearM = 1000; const him = R.front(2.5); let lowAt = NaN, phases = '';
       const said = listen(R, [T], 30, t => { const S = runnerOf(T) as any; if (S && !phases.endsWith(S.phase)) phases += (phases ? ' → ' : '') + S.phase;
         if (S?.phase === 'low' && S.script?.arrived && Number.isNaN(lowAt)) lowAt = t; return !Number.isNaN(lowAt) && t >= lowAt + 1.5; });
-      const S = runnerOf(T) as any, away = Math.atan2(T.char.pos[0] - g.player.char.pos[0], T.char.pos[2] - g.player.char.pos[2]), off = Math.abs(wrap(T.char.bodyYaw - away));
+      const S = runnerOf(T) as any, away = Math.atan2(T.char.posX - g.player.char.posX, T.char.posZ - g.player.char.posZ), off = Math.abs(wrap(T.char.bodyYaw - away));
       const words = said.filter(s => !runnerLines('done').includes(s.text));
       line(R.dry && !Number.isNaN(lowAt) && !phases.includes('out') && S?.phase === 'low' && !!S.script.crouch && off < 0.6 && !words.length && runnerFled(T) && g.guards.includes(T) && T.state !== 'dead' && flat(T.char.pos, him) > 2.5,
         '(12) nothing is outside: he goes to the corner farthest from the enemy and stays low there, his face to the wall, without a word — still fled, still on the floor',
@@ -279,11 +279,11 @@ export async function runnerCheck(): Promise<boolean> {
         const R = await stage(25, on, 'parked', true), T = R.T, g = R.g, A = R.ops[0];
         const him = R.front(2.5); if (on) for (let i = 0; i < 120 && !runnerFled(T); i++) R.step();
         const fled = runnerFled(T), tp = T.char.pos, px = -(tp[2] - him[2]), pz = tp[0] - him[0], l = Math.hypot(px, pz) || 1;
-        R.put(A, [him[0] + px / l * 0.9, 0, him[2] + pz / l * 0.9]); A.char.bodyYaw = A.char.aimYaw = Math.atan2(tp[0] - A.char.pos[0], tp[2] - A.char.pos[2]); A.dazzledUntil = -1; A.staggerUntil = -1;
+        R.put(A, [him[0] + px / l * 0.9, 0, him[2] + pz / l * 0.9]); A.char.bodyYaw = A.char.aimYaw = Math.atan2(tp[0] - A.char.posX, tp[2] - A.char.posZ); A.dazzledUntil = -1; A.staggerUntil = -1;
         let bareF = 0;
         const O = g.fight.ops.find((x: any) => x.gd === A), n0 = fired(A); let lineF = 0, onHim = 0, frames = 0;
         for (let i = 0; i < 180 && g.guards.includes(T) && T.state !== 'dead'; i++) { if (bare) { A.script = null; A.state = 'alert'; A.awareness = 1; A.lastKnown = [...T.char.pos]; A.lastSeenT = g.time; } R.step(); frames++; if (!A.script) bareF++;
-          if (!g.col.segmentBlocked(A.char.bones.head ?? [A.char.pos[0], 1.6, A.char.pos[2]], T.char.bones.chest ?? [T.char.pos[0], 1.2, T.char.pos[2]])) lineF++;
+          if (!g.col.segmentBlocked(A.char.bones.head ?? [A.char.posX, 1.6, A.char.posZ], T.char.bones.chest ?? [T.char.posX, 1.2, T.char.posZ])) lineF++;
           if (O?.tgt === T || A.foe === T) onHim++; }
         return { fled, staged: !!A && !!O, lineF, onHim, frames, bareF, rounds: fired(A) - n0, state: T.state, dry: R.dry };
       };
@@ -360,7 +360,7 @@ export async function runnerCheck(): Promise<boolean> {
         let k = 0; for (const o of men) if (o !== G && !(fall && o === L)) { put(o, [4.8 + (k % 4) * 0.9, 0, 5.8 + Math.floor(k / 4) * 0.9]); k++; }
         put(G, doorPt(d, d.def.width / 2, 2.4, inside, 0)); if (fall) put(L, doorPt(d, d.def.width / 2 + 1.6, 3.4, inside, 0));
         step(40);
-        if (fall) { const look = () => Math.atan2(L.char.pos[0] - G.char.pos[0], L.char.pos[2] - G.char.pos[2]);   // (his body turned to his leader, held there: training-check.ts (T6)'s way)
+        if (fall) { const look = () => Math.atan2(L.char.posX - G.char.posX, L.char.posZ - G.char.posZ);   // (his body turned to his leader, held there: training-check.ts (T6)'s way)
           for (let i = 0; i < 20; i++) { G.char.bodyYaw = look(); step(); G.char.bodyYaw = look(); }
           killGuard(g, L, [0, 0, 1], false, 'shot', 'world'); }
         const sawAt = sawLeaderFall(G); step(90);

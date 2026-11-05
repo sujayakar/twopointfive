@@ -57,10 +57,10 @@ export async function run(X: Spec, verbose = false): Promise<Out> {
   const spots: number[][] = [];
   for (const back of [3.2, 4.2, 2.4, 5.2, 6.2]) for (const lat of [1.1, -1.1, 0.4, -0.4, 1.9, -1.9]) { const p = free(outPt(back, lat)); if (p && clearTo(p) && flat(p, ent.at) > 1.8 && !spots.some(s => flat(s, p) < 0.8)) spots.push(p); }
   if (spots.length < team.length + 1) { out.note = `no floor outside for the team (${spots.length} spots)`; return out; }
-  team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-ox, -oz); });
+  team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-ox, -oz); });
   await quiet(!verbose, () => g.teleportPlayer(spots[team.length] as any));
   for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile' || men.includes(x)) continue;
-    const c = [x.char.pos[0], 1.5, x.char.pos[2]]; if ([...spots.slice(0, team.length + 1), gate].some(p => !g.col.solidBlocked(c as any, [p[0], 1.3, p[2]]))) await quiet(!verbose, () => CBM.killGuard(g, x, [0, 0, 1], true)); }
+    const c = [x.char.posX, 1.5, x.char.posZ]; if ([...spots.slice(0, team.length + 1), gate].some(p => !g.col.solidBlocked(c as any, [p[0], 1.3, p[2]]))) await quiet(!verbose, () => CBM.killGuard(g, x, [0, 0, 1], true)); }
   step(10);
   g.events.push({ kind: 'bang', pos: [gate[0], 0.3, gate[2]], time: g.time, loud: true });
   step(240);

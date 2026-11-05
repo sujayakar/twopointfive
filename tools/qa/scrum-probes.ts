@@ -32,7 +32,7 @@ function segToAxis(a: Vec3, b: Vec3, ax: number, az: number, y0: number, y1: num
   const px = a[0] + dx * t, py = a[1] + dy * t, pz = a[2] + dz * t; const ddy = py < y0 ? y0 - py : py > y1 ? py - y1 : 0;
   return Math.hypot(px - ax, pz - az, ddy);
 }
-const axisOf = (o: any) => { const h = o.char.bones.hips ?? o.char.pos; return { x: h[0], z: h[2], y0: o.char.pos[1] + 0.05, y1: o.char.bones.headTop?.[1] ?? 1.75 }; };
+const axisOf = (o: any) => { const h = o.char.bones.hips ?? o.char.pos; return { x: h[0], z: h[2], y0: o.char.posY + 0.05, y1: o.char.bones.headTop?.[1] ?? 1.75 }; };
 
 /** the room's SE corner where the soak's Sam stood, and the ring he sprints round the table: up to the bunch along the south glass from the west, back round the
  *  north side, into them from the east, and round again (a man's body stops him like a wall — player.ts settles him back — so a leg that gets nowhere for half a
@@ -133,7 +133,7 @@ export async function scrum(verbose = process.argv.includes('--verbose')) {
         if (game.time - s.t0 >= 4) {
           const moved = v3.distXZ(c.pos, s.p0);
           if (s.want >= 3.8 && moved < 0.05 && s.reach >= 1.0) outAndBack++;
-          else if (s.want >= 3.8 && moved < 0.05) stuckHits.push(`${name(gd)} at +${(game.time - t0).toFixed(1)} s: ordered ${s.want.toFixed(1)} of 4 s, ended ${moved.toFixed(3)} m from where it began (excursion ${s.reach.toFixed(2)}, ground ${s.ground.toFixed(2)}) at (${c.pos[0].toFixed(2)}, ${c.pos[2].toFixed(2)}) path ${gd.pathI}/${gd.path.length} → ${gd.pathGoal ? `(${gd.pathGoal[0].toFixed(2)}, ${gd.pathGoal[2].toFixed(2)})` : '-'}`);
+          else if (s.want >= 3.8 && moved < 0.05) stuckHits.push(`${name(gd)} at +${(game.time - t0).toFixed(1)} s: ordered ${s.want.toFixed(1)} of 4 s, ended ${moved.toFixed(3)} m from where it began (excursion ${s.reach.toFixed(2)}, ground ${s.ground.toFixed(2)}) at (${c.posX.toFixed(2)}, ${c.posZ.toFixed(2)}) path ${gd.pathI}/${gd.path.length} → ${gd.pathGoal ? `(${gd.pathGoal[0].toFixed(2)}, ${gd.pathGoal[2].toFixed(2)})` : '-'}`);
           s.t0 = game.time; s.p0 = v3.copy(c.pos); s.want = 0; s.ground = 0; s.reach = 0;
         }
         const ordered = gd.speed > 0.3 && pathing; let D = dither.get(gd);
@@ -148,7 +148,7 @@ export async function scrum(verbose = process.argv.includes('--verbose')) {
         const key = `${name(a)}|${name(b)}`; const d = v3.distXZ(a.char.pos, b.char.pos); minPair = Math.min(minPair, d);
         if (d < 0.3) { const acc = (closeT.get(key) ?? 0) + DT; closeT.set(key, acc); maxCloseT = Math.max(maxCloseT, acc); if (acc > 2) merged.add(key); } else closeT.set(key, 0);
       }
-      if (f % 30 === 29) rows.push(`    ${t.toFixed(1).padStart(4)}s ${phase.padEnd(6)} Sam (${game.player.char.pos[0].toFixed(1)}, ${game.player.char.pos[2].toFixed(1)}) · ` + men.map(m => `${name(m.gd)}${m.gd === masked ? '*' : ''} (${m.gd.char.pos[0].toFixed(2)}, ${m.gd.char.pos[2].toFixed(2)}) ${m.gd.state === 'alert' ? '' : m.gd.state + ' '}${m.gd.muzzleDown ? 'DOWN' : 'up'} spd ${m.gd.speed.toFixed(2)} path ${m.gd.pathI}/${m.gd.path.length} r${rounds.get(m.gd)?.length ?? 0}`).join(' · ') + ` · chair (${chair.x.toFixed(2)}, ${chair.z.toFixed(2)})`);
+      if (f % 30 === 29) rows.push(`    ${t.toFixed(1).padStart(4)}s ${phase.padEnd(6)} Sam (${game.player.char.posX.toFixed(1)}, ${game.player.char.posZ.toFixed(1)}) · ` + men.map(m => `${name(m.gd)}${m.gd === masked ? '*' : ''} (${m.gd.char.posX.toFixed(2)}, ${m.gd.char.posZ.toFixed(2)}) ${m.gd.state === 'alert' ? '' : m.gd.state + ' '}${m.gd.muzzleDown ? 'DOWN' : 'up'} spd ${m.gd.speed.toFixed(2)} path ${m.gd.pathI}/${m.gd.path.length} r${rounds.get(m.gd)?.length ?? 0}`).join(' · ') + ` · chair (${chair.x.toFixed(2)}, ${chair.z.toFixed(2)})`);
     }
     game.audio.play = play; game.puppet = null; input.keys.delete('ShiftLeft'); LINE_DEBUG.log = null;
     const totalRounds = standRounds + circleRounds;
@@ -162,7 +162,7 @@ export async function scrum(verbose = process.argv.includes('--verbose')) {
     console.log(`  rounds: ${totalRounds} (${standRounds} while he stood${C.circleSecs ? `, ${circleRounds} while he ran` : ''}; want ≥ ${wantStand} standing${standRounds >= wantStand ? '' : ' ✗'}), ${hits} reached Sam; by man: ${men.map(m => `${name(m.gd)}${m.gd === masked ? '*' : ''} ${rounds.get(m.gd)?.length ?? 0}`).join(', ')}; the masked man's first at ${firstMasked >= 0 ? '+' + firstMasked.toFixed(2) + ' s' : 'never'} (want < ${C.firstRoundWant})${firstMasked >= 0 && firstMasked < C.firstRoundWant ? '' : ' ✗'}`);
     console.log(`  rounds within 0.3 m of a living colleague's axis: ${badRounds}${badRounds ? ' ✗ — ' + badNotes.join('; ') : ''} (nearest ${isFinite(worst) ? worst.toFixed(2) : '—'} m)`);
     if (C.circleSecs) console.log(`  Sam's rings: ${samLaps} full laps of the table in ${C.circleSecs} s, ${samBounces} legs given up against a man in the way`);
-    console.log(`  ends: ${men.map(m => `${name(m.gd)} ${m.gd.state} at (${m.gd.char.pos[0].toFixed(2)}, ${m.gd.char.pos[2].toFixed(2)})`).join(', ')}; chair39 at (${chair.x.toFixed(2)}, ${chair.z.toFixed(2)})`);
+    console.log(`  ends: ${men.map(m => `${name(m.gd)} ${m.gd.state} at (${m.gd.char.posX.toFixed(2)}, ${m.gd.char.posZ.toFixed(2)})`).join(', ')}; chair39 at (${chair.x.toFixed(2)}, ${chair.z.toFixed(2)})`);
     console.log(rows.filter((_, i) => i % 2 === 1).join('\n'));
     if (dbg.length) { console.log(`  lineStep for ${name(masked)} (first 6 s):`); console.log(dbg.join('\n')); }
   }

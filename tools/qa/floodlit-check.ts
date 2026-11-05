@@ -63,7 +63,7 @@ export async function floodlitCheck(): Promise<boolean> {
     else line(litY[0].vis > 0.6 && litY[1].vis > 0.6 && [...litO, ...litM].every(x => x.vis < 0.1 && x.moon < 0.1), 'lit, no lamp outside the wall (the lived things are out): the gate and the yard read bright, the start and the shed door dark by both readings', `${row(litY.slice(0, 2))} · ${row(litO)}`);
     { const seen: string[] = [];
       for (const gd of g.guards) { if (gd.team !== 'hostile' || gd.state === 'dead') continue;
-        for (const [n, x, z] of [...MARKS, OUT[1]]) for (const y of [1.2, 1.6]) if (!g.col.segmentBlocked([gd.char.pos[0], 1.6, gd.char.pos[2]], [x, y, z])) { seen.push(`${gd.callsign} → ${n}`); break; } }
+        for (const [n, x, z] of [...MARKS, OUT[1]]) for (const y of [1.2, 1.6]) if (!g.col.segmentBlocked([gd.char.posX, 1.6, gd.char.posZ], [x, y, z])) { seen.push(`${gd.callsign} → ${n}`); break; } }
       line(seen.length === 0, 'nobody in the building has a line to a start mark or to the shed\'s door', seen.join(' · ')); }
 
     const th = g.work.things().find((x: any) => x.kind === 'breaker'), words = th ? g.work.words(th) : '';

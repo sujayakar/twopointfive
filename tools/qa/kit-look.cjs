@@ -82,7 +82,7 @@ const DRAW = async (n) => {
         const staged = await page.evaluate(() => {
           window.__menu.close(); window.__smoke.params.enabled = false;
           const g = window.__game, e = window.__engine, real = e.render; e.render = () => {}; try { window.__runFrames(60, 1 / 60); } finally { e.render = real; }
-          const men = window.__orders.squad(), c = [0, 0, 0]; for (const x of men) { c[0] += x.char.pos[0] / men.length; c[2] += x.char.pos[2] / men.length; }
+          const men = window.__orders.squad(), c = [0, 0, 0]; for (const x of men) { c[0] += x.char.posX / men.length; c[2] += x.char.posZ / men.length; }
           // the work lamp (QA only): a warm point over the team, and Sam stood in it too
           e.lights.add({ name: 'kitlook', group: 'qa', kind: 0, pos: [c[0], 2.35, c[2]], dir: [0, -1, 0], color: [1, 0.96, 0.9], intensity: 34, range: 9, innerDeg: 0, outerDeg: 0, radius: 0.12, volumetric: 0, owner: 0, enabled: true, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 34 });
           window.__kitC = c;
@@ -96,10 +96,10 @@ const DRAW = async (n) => {
         const c = staged.centre, QUICK = !!process.env.QUICK;
         for (let k = 0; k < (QUICK ? 1 : 4); k++) await still(`team${k}`, { look: [c[0], 1.0, c[2]], yaw: k * Math.PI / 2 + Math.PI / 4, pitch: 0.75, dist: 5.2 });
         if (m[2] !== 'issued' && !QUICK) for (let i = 0; i < staged.men.length; i++) {
-          const p = await page.evaluate((i) => { const x = window.__orders.squad()[i]; return [x.char.pos[0], x.char.pos[2], x.char.aimYaw ?? x.char.yaw ?? 0]; }, i);
+          const p = await page.evaluate((i) => { const x = window.__orders.squad()[i]; return [x.char.posX, x.char.posZ, x.char.aimYaw ?? x.char.yaw ?? 0]; }, i);
           for (const [tag, yaw] of [['a', p[2]], ['b', p[2] + Math.PI]]) await still(`man${i + 1}${tag}`, { look: [p[0], 1.25, p[1]], yaw, pitch: 0.28, dist: 2.3 });
         }
-        if (!QUICK) { const p = await page.evaluate(() => { const x = window.__game.player.char; return [x.pos[0], x.pos[2], x.aimYaw ?? 0]; }); await page.evaluate((p) => { const l = window.__engine.lights.lights.find(x => x.name === 'kitlook'); if (l) l.pos = [p[0], 2.35, p[1]]; }, p);
+        if (!QUICK) { const p = await page.evaluate(() => { const x = window.__game.player.char; return [x.posX, x.posZ, x.aimYaw ?? 0]; }); await page.evaluate((p) => { const l = window.__engine.lights.lights.find(x => x.name === 'kitlook'); if (l) l.pos = [p[0], 2.35, p[1]]; }, p);
           for (const [tag, yaw] of [['a', p[2]], ['b', p[2] + Math.PI]]) await still(`you${tag}`, { look: [p[0], 1.25, p[1]], yaw, pitch: 0.28, dist: 2.3 }); }
         await page.evaluate(() => window.__stage(null, {}));
         if (process.env.PLAY) {   // the run itself through the page's own loop (renderer stubbed between stills): an order on the nearest door that takes one, PLAY seconds, a still

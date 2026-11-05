@@ -38,12 +38,12 @@ const trigger = (B: Bot, at: () => number[], secs: number, stop?: () => boolean)
   B.aim(at()); B.step(); B.I.clicked |= 1;
   try { for (let i = 0; i < secs * 60; i++) { B.aim(at()); B.I.buttons |= 1; if (i % 14 === 13) B.I.clicked |= 1; B.step(); if (stop && stop()) break; } } finally { B.I.buttons &= ~1; B.step(); }   // (a fresh press every quarter second: the pistol fires a round a press)
 };
-const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.pos[0], 1.25, x.char.pos[2]];
+const chest = (x: any): number[] => x.char.bones?.chest ?? [x.char.posX, 1.25, x.char.posZ];
 const up = (x: any) => x.state !== 'dead';
 const foes = (B: Bot): any[] => B.g.guards.filter((x: any) => x.team !== 'operative');
 const named = (B: Bot, names: string[]): any[] => names.map(n => B.g.guards.find((x: any) => x.callsign === n)).filter(Boolean);
 const squad = (B: Bot): any[] => B.g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
-const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.pos[0], 1.5, P.pos[2]]; return !B.g.col.shotBlocked(a, chest(x)); };
+const line = (B: Bot, x: any) => { const P = B.g.player.char, a = P.bones?.head ?? [P.posX, 1.5, P.posZ]; return !B.g.col.shotBlocked(a, chest(x)); };
 const gun = (B: Bot) => B.g.player.slot === 'rifle' ? B.g.player.rifle : B.g.player.pistol;
 const downed = (B: Bot) => foes(B).filter(x => !up(x)).length;
 /** shoot every man he has a line to until `n` are down (reloading as the gun runs dry), for `secs` at most */
@@ -51,7 +51,7 @@ const fight = (B: Bot, n: number, secs: number, move?: () => void, who?: any[]) 
   const P = B.g.player, t0 = B.t();
   while (downed(B) < n && B.t() - t0 < secs && !P.down) {
     const w = gun(B); if (w.roundsReady === 0 && !w.reloading) { B.press('KeyR'); continue; }
-    const x = (who ?? foes(B)).filter((y: any) => up(y) && line(B, y)).sort((a: any, b: any) => Math.hypot(a.char.pos[0] - B.pos()[0], a.char.pos[2] - B.pos()[2]) - Math.hypot(b.char.pos[0] - B.pos()[0], b.char.pos[2] - B.pos()[2]))[0];
+    const x = (who ?? foes(B)).filter((y: any) => up(y) && line(B, y)).sort((a: any, b: any) => Math.hypot(a.char.posX - B.pos()[0], a.char.posZ - B.pos()[2]) - Math.hypot(b.char.posX - B.pos()[0], b.char.posZ - B.pos()[2]))[0];
     if (!x) { if (move) move(); else B.step(); continue; }
     if (P.slot === 'pistol') { for (let i = 0; i < 16 && up(x); i++) { B.aim(chest(x)); B.step(); } B.click(1, chest(x)); B.step(6); }   // (a round a press, once the gun has come round to the cursor: the page's aim has weight)
     else trigger(B, () => chest(x), 1.2, () => !up(x) || !line(B, x));
@@ -91,7 +91,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (brk() === 'early') { const at = [B.pos()[0] + 2, 0.02, B.pos()[2] - 2]; command(B, at); B.aim(at); B.I.pressed.add('KeyB'); B.hold(['KeyB'], 0.5); B.step(4);
       if (B.g.orders.menu || B.g.orders.cmdRing) B.fail('early: the squad\'s ring came up before the line that hands him the command key'); B.wait(1); }
     B.go(INNER_FROM, 30);
-    const far = squad(B).filter(m => m.char.pos[0] > 9.2); if (far.length) B.fail(`${far.map(m => m.callsign).join(', ')} followed him in through the gate: the four wait at the truck until he calls them (${orderOf(B)})`);
+    const far = squad(B).filter(m => m.char.posX > 9.2); if (far.length) B.fail(`${far.map(m => m.callsign).join(', ')} followed him in through the gate: the four wait at the truck until he calls them (${orderOf(B)})`);
   },
   // a TAP of the interaction key, and the tap's row is the door's
   open: B => {
@@ -169,13 +169,13 @@ export const steps: Record<string, (B: Bot) => void> = {
   // the line that only has him look: it goes by once the two stand in the shop's doorway, and not before
   behind: B => {
     B.until(() => !stepIs(B, 'behind'), 9); if (stepIs(B, 'behind')) return;
-    const men = named(B, ['Brandt', 'Marsh']).filter(up), off = men.filter((x: any, k: number) => Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) > 0.8);
+    const men = named(B, ['Brandt', 'Marsh']).filter(up), off = men.filter((x: any, k: number) => Math.hypot(x.char.posX - LAST_MEN[k][0], x.char.posZ - LAST_MEN[k][2]) > 0.8);
     if (men.length < 2 || off.length) B.fail(`the shot is asked for before the two stand in the doorway (${men.length} up, ${off.length} still on the way)`);
   },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
   launch: B => {
     const men = () => named(B, ['Brandt', 'Marsh']);
-    B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
+    B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.posX - LAST_MEN[k][0], x.char.posZ - LAST_MEN[k][2]) < 0.8), 12);
     const x = men().find(up); if (!x) B.fail('nobody came out through the shop');
     if (!(Math.abs(B.g.doors.byName('store')!.angle) > 1)) B.fail('the two are in the doorway and the store\'s back door is not open: they did not come by it');
     if (B.g.player.rifle.attachment !== 'he40') B.fail(`the launcher is on '${B.g.player.rifle.attachment}': the lesson has no line that swaps it`);
@@ -190,11 +190,11 @@ export const steps: Record<string, (B: Bot) => void> = {
   // ---- the squad's kit, on his word ----
   // a tap of the command key on himself: the four come up from the truck, at a run
   call: B => {
-    const home = squad(B).filter(m => m.char.pos[0] < 9.2).length; B.say(`  ${home} of ${squad(B).length} still at the truck as he calls them`);
+    const home = squad(B).filter(m => m.char.posX < 9.2).length; B.say(`  ${home} of ${squad(B).length} still at the truck as he calls them`);
     if (home < squad(B).length) B.fail(`the four did not wait at the truck (${orderOf(B)})`);
     B.go([ARCH_MOUTH[0] + 1.6, 0, AXIS], 10);
     const me = B.pos(); command(B, [me[0], 1.0, me[2]]);
-    if (!B.until(() => squad(B).filter(m => inRect(m.char.pos, INSIDE)).length >= Math.min(3, squad(B).length), 60)) B.fail(`the four did not come up to him (${orderOf(B)}) · they are at ${squad(B).map(m => `(${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)})${m.char.crouch ? ' low' : ''}`).join(' ')} · he is at (${B.pos()[0].toFixed(1)}, ${B.pos()[2].toFixed(1)})`);
+    if (!B.until(() => squad(B).filter(m => inRect(m.char.pos, INSIDE)).length >= Math.min(3, squad(B).length), 60)) B.fail(`the four did not come up to him (${orderOf(B)}) · they are at ${squad(B).map(m => `(${m.char.posX.toFixed(1)}, ${m.char.posZ.toFixed(1)})${m.char.crouch ? ' low' : ''}`).join(' ')} · he is at (${B.pos()[0].toFixed(1)}, ${B.pos()[2].toFixed(1)})`);
     B.until(() => !stepIs(B, 'call'), 6);   // (the line holds a moment once they are in)
   },
   // (the line says a buddy team goes: one man works the box and the other of his pair covers him from behind)

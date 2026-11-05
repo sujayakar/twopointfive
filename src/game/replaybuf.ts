@@ -134,11 +134,11 @@ export class ReplayBuffer {
     { const pl = g.player, c = pl.char, ci = this.castOf(pl, () => ({ kind: 'player', name: PLAYER_NAME, team: 'player', id: c.id }));
       const d: ManDo = { st: pl.down ? 'down' : 'up' }; if (pl.crouch) d.crouch = true; d.slot = `${pl.slot}${pl.holstered ? ' (away)' : ''}`; const nz = Math.round((pl.noise ?? 0) * 10) / 10; if (nz) d.noise = nz;
       { const b = pl.bubble; if (b && g.time - b.t <= b.dur) d.say = b.text.slice(0, SAY_MAX); }
-      put(ci, [ci, r2(c.pos[0]), r2(c.pos[2]), deg(c.bodyYaw), deg(c.aimYaw), Math.round((pl.visibility ?? 0) * 100)], d); }
+      put(ci, [ci, r2(c.posX), r2(c.posZ), deg(c.bodyYaw), deg(c.aimYaw), Math.round((pl.visibility ?? 0) * 100)], d); }
     const men = g.civilians.length ? [...g.guards, ...g.civilians] : g.guards;
     for (const gd of men) {
       const c = gd.char, ci = this.castOf(gd, () => this.castRow(gd));
-      put(ci, [ci, r2(c.pos[0]), r2(c.pos[2]), deg(c.bodyYaw), deg(c.aimYaw), Math.round((gd.awareness ?? 0) * 100)], this.doing(g, gd));
+      put(ci, [ci, r2(c.posX), r2(c.posZ), deg(c.bodyYaw), deg(c.aimYaw), Math.round((gd.awareness ?? 0) * 100)], this.doing(g, gd));
     }
     const gone: number[] = []; for (const ci of this.live) if (!now.has(ci)) { gone.push(ci); this.rows[ci] = null; }
     this.live = now; if (gone.length && !key) S.gone = gone;

@@ -81,7 +81,7 @@ export function throwWalls(g: Game, at: Vec3): Vec3[] {
 /** the hand a throw at `aim` leaves, for a man stood at `p` (squadsmoke.ts squadArcTo's: ahead of him toward it, under his head) — null: it would be in a wall */
 function handAt(g: Game, gd: Guard, p: Vec3, aim: Vec3): Vec3 | null {
   const K = SQUADSMOKE, d = flat(p, aim), k = d > 1e-3 ? K.handAhead / d : 0, head = gd.char.bones.head;
-  const up = Math.max(0.6, Math.min(K.handUp, head ? head[1] - gd.char.pos[1] - K.headDrop : K.handUp));
+  const up = Math.max(0.6, Math.min(K.handUp, head ? head[1] - gd.char.posY - K.headDrop : K.handUp));
   const from: Vec3 = [p[0] + (aim[0] - p[0]) * k, p[1] + up, p[2] + (aim[2] - p[2]) * k];
   return g.col.solidBlocked([p[0], p[1] + up, p[2]], from) ? null : from;
 }

@@ -173,7 +173,7 @@ function sample(g: Game, S: State): void {
   if (!f || f.men.length < n * MAN_STRIDE || f.doors.length !== doors.length * 2) f = { t: 0, n: 0, men: new Float32Array((n + 4) * MAN_STRIDE), doors: new Float32Array(doors.length * 2) };
   f.t = g.time; f.n = n; let i = 0; const men = f.men;
   eachMan(g, (c, down, gd) => {
-    men[i++] = c.id; men[i++] = c.pos[0]; men[i++] = c.pos[2]; men[i++] = c.aimYaw;
+    men[i++] = c.id; men[i++] = c.posX; men[i++] = c.posZ; men[i++] = c.aimYaw;
     men[i++] = (down ? 1 : 0) | (gd && (gd.state === 'alert' || gd.state === 'search') ? 2 : 0) | (!gd && playerOf(g, c)?.crouch ? 4 : 0);
   });
   for (let k = 0; k < doors.length; k++) { const d = doors[k]; if (d.off) { f.doors[k * 2] = NaN; f.doors[k * 2 + 1] = NaN; } else { const u = d.dir(); f.doors[k * 2] = u[0]; f.doors[k * 2 + 1] = u[1]; } }
@@ -252,11 +252,11 @@ function eighth(dx: number, dz: number): [number, number] | null {
   const a = Math.round(Math.atan2(dx, dz) / (Math.PI / 4)) * (Math.PI / 4);
   return [Math.sin(a), Math.cos(a)];
 }
-const headOf = (c: Character): Vec3 => c.bones.head ?? [c.pos[0], c.pos[1] + 1.65, c.pos[2]];
+const headOf = (c: Character): Vec3 => c.bones.head ?? [c.posX, c.posY + 1.65, c.posZ];
 const squadUp = (gd: Guard): boolean => !!gd.unit && gd.team === 'operative' && gd.state !== 'dead';
 /** a line from a man still up to one going down (the room fight's own 'man down' test, with a reach): blind men see nothing */
 function lineTo(g: Game, c: Character, at: [number, number]): boolean {
-  return Math.hypot(c.pos[0] - at[0], c.pos[2] - at[1]) <= RECAP.liveSeeM && !g.col.segmentBlocked(headOf(c), [at[0], 0.4, at[1]]);
+  return Math.hypot(c.posX - at[0], c.posZ - at[1]) <= RECAP.liveSeeM && !g.col.segmentBlocked(headOf(c), [at[0], 0.4, at[1]]);
 }
 /** Did anybody of the squad still up hear it. The sound model's own rule (collision.ts SoundPaths.propagate: a clear line, or over the furniture, else the
  *  walk round at the path's length, a shut leaf across it muffling it hard) asked WITHOUT its cache: that cache is the simulation's own ears', and an entry
@@ -283,12 +283,12 @@ function samSees(g: Game, at: [number, number]): boolean { for (const pl of men(
 function manSees(g: Game, pl: Player, at: [number, number]): boolean {
   const c = pl.char; if (pl.down || g.time < pl.dazzledUntil || !lineTo(g, c, at)) return false;
   if (!FOG.cone) return true;
-  const dx = at[0] - c.pos[0], dz = at[1] - c.pos[2], d = Math.hypot(dx, dz); if (d <= FOG.coneNearM) return true;
+  const dx = at[0] - c.posX, dz = at[1] - c.posZ, d = Math.hypot(dx, dz); if (d <= FOG.coneNearM) return true;
   const u = gazeOf(c); return (dx * u[0] + dz * u[2]) / d >= Math.cos(FOG.coneDeg * Math.PI / 360);
 }
 /** the side of the PLAYER's man a way lies on, in the words of the fog's own calls (fogofwar.ts sideOf, asked of a point a long way off along it) */
 function sideWord(g: Game, pl: Player, u: [number, number]): string {
-  const c = pl.char, s = g.fogOfWar.sideOf([c.pos[0] + u[0] * 50, 0, c.pos[2] + u[1] * 50]);
+  const c = pl.char, s = g.fogOfWar.sideOf([c.posX + u[0] * 50, 0, c.posZ + u[1] * 50]);
   return s === 'front' ? 'from the front' : s === 'behind' ? 'from behind us' : `from the ${s}`;
 }
 /** Each man lost and not yet settled: who has a line to him inside his first second down; after the beat, if somebody saw or ears had it, the squad has the
@@ -307,7 +307,7 @@ function witness(g: Game, S: State): void {
     const by = L.saw && squadUp(L.saw) ? L.saw : null, sam = L.samSaw && !pl.down;   // (a witness who has gone down himself since tells nobody)
     if (!by && !sam && !L.heard) { if (age > RECAP.liveSawSecs) L.done = true; continue; }
     L.done = true; M.knownAt = g.time; M.from = L.src; RECAP_STATS.known++;
-    if (RECAP.live && L.src && by && !sam && !pl.down && Math.hypot(pl.char.pos[0] - M.at[0], pl.char.pos[2] - M.at[1]) <= RECAP.liveSideM
+    if (RECAP.live && L.src && by && !sam && !pl.down && Math.hypot(pl.char.posX - M.at[0], pl.char.posZ - M.at[1]) <= RECAP.liveSideM
       && g.cues.bubbleOf(by) === by.bubble   // (no cue of the cues' own is up over him: a contact call outranks this; his own 'man down.' is followed by it)
       && g.cues.aside(by, `${sideWord(g, pl, L.src)}!`)) RECAP_STATS.calls++;
   }

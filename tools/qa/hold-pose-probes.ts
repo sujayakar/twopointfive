@@ -70,7 +70,7 @@ const sheatheFaults = (r: ReturnType<typeof sheathe>, what: string): string[] =>
 };
 /** the cursor 6 m dead ahead of Sam at chest height: updateHold turns the pair toward the cursor, so this keeps it facing where it faces (his row is THE row while
  *  he holds somebody, wherever the cursor is — Space still lands on it) */
-function ahead(W: any, game: any) { const c = game.player.char; W.cursorAt([c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6]); }
+function ahead(W: any, game: any) { const c = game.player.char; W.cursorAt([c.posX + Math.sin(c.bodyYaw) * 6, 1.0, c.posZ + Math.cos(c.bodyYaw) * 6]); }
 /** grab A and let the hold settle 1.5 s, facing held */
 function grabSettle(W: any, game: any, A: any) { startGrab(game, A); for (let i = 0; i < 90; i++) { ahead(W, game); W.step(DT); } }
 /** what is wrong with this frame's knife boxes if there should be a knife: four of them, Sam's owner byte, traced (Dynamic, not NoShadow), unlit, finite, by his right hand */
@@ -200,7 +200,7 @@ export async function holdStruggle() {
       { const fw = pc.forward(); dLat.push(Math.abs((c.bones.head[0] - prevH[0]) * fw[2] - (c.bones.head[2] - prevH[2]) * fw[0])); }   // the side-to-side share of the head's travel (across the pair's facing): the thrash, not the loll forward or the sag down
       prevH = v3.copy(c.bones.head); prevL = v3.copy(c.bones.handL); prevR = v3.copy(c.bones.handR);
       rootP = Math.max(rootP, v3.distXZ(pc.pos, p0)); rootG = Math.max(rootG, v3.distXZ(c.pos, g0));
-      const f = pc.forward(); station = Math.max(station, Math.hypot(c.pos[0] - (pc.pos[0] + f[0] * HOLD.dist), c.pos[2] - (pc.pos[2] + f[2] * HOLD.dist)));   // (his root off its station HOLD.dist dead ahead of Sam — what a pose leaking into the roots would show as, turn or no turn)
+      const f = pc.forward(); station = Math.max(station, Math.hypot(c.posX - (pc.posX + f[0] * HOLD.dist), c.posZ - (pc.posZ + f[2] * HOLD.dist)));   // (his root off its station HOLD.dist dead ahead of Sam — what a pose leaking into the roots would show as, turn or no turn)
       minY = Math.min(minY, c.bones.head[1]); maxY = Math.max(maxY, c.bones.head[1]);
     }
     const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);

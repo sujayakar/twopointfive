@@ -285,10 +285,10 @@ function friends(g: Game, gd: Guard): { pos: Vec3; vel: Vec3; gd: Guard | null; 
 /** ease `gd` to `p` over open floor (a step of this file's: no plan, a metre or so) — his pace eased in (a teammate's no faster than PACE.accel, like any
  *  walk of his), his feet moved; true = there */
 function stepTo(g: Game, gd: Guard, p: Vec3, pace: number, dt: number, turn: boolean): boolean {
-  const c = gd.char, dx = p[0] - c.pos[0], dz = p[2] - c.pos[2], d = Math.hypot(dx, dz);
+  const c = gd.char, dx = p[0] - c.posX, dz = p[2] - c.posZ, d = Math.hypot(dx, dz);
   if (d < 0.1) { gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0]; return true; }
   const was = gd.speed; gd.speed = damp(gd.speed, pace * clamp(d / 0.45, 0.35, 1), 6, dt); teamLean(g, gd, was, dt); const s = Math.min(d, gd.speed * dt);
-  c.pos[0] += dx / d * s; c.pos[2] += dz / d * s; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed];
+  c.posX += dx / d * s; c.posZ += dz / d * s; c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed];
   if (turn) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(dx, dz), 5.5 * dt);
   return false;
 }
@@ -437,7 +437,7 @@ export function offThreshold(g: Game, gd: Guard, aimAt: Vec3 | null, dt: number,
   for (const [line, cover] of passes) for (const side of sides) for (const lat of [F.W + K.past, -K.past]) {
     if (foe && side === sgn && !cover) continue;   // (the face the half-plane calls theirs: only ever under cover)
     const p: Vec3 = [F.hx + F.ux * lat + F.nx * side * K.through, 0, F.hz + F.uz * lat + F.nz * side * K.through];
-    if (!spotFree(g, gd, p, 0.8) || g.col.solidBlocked([c.pos[0], 0.45, c.pos[2]], [p[0], 0.45, p[2]]) || (line && g.col.shotBlocked([p[0], 1.4, p[2]], aimAt))) continue;
+    if (!spotFree(g, gd, p, 0.8) || g.col.solidBlocked([c.posX, 0.45, c.posZ], [p[0], 0.45, p[2]]) || (line && g.col.shotBlocked([p[0], 1.4, p[2]], aimAt))) continue;
     let bad = false; for (const o of g.doors.list) { if (flat(p, o.frameCentre) > o.def.width + 1) continue; if (inOpening(o, p) || (o !== door && inSweep(o, p))) { bad = true; break; } }
     if (bad) continue;
     // (stepCover) never to a spot more exposed to them than the frame he stands in — a window is no wall — and the cover pass takes covered floor only

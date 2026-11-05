@@ -53,11 +53,11 @@ export async function bangsCheck(): Promise<boolean> {
       { const far = [...spots].sort((x, y) => flat(y, d.frameCentre) - flat(x, d.frameCentre))[0]; spots.splice(spots.indexOf(far), 1); spots.splice(Math.min(team.length, spots.length), 0, far); }   // (Sam on the farthest spot: out of the stack's way)
       if (spots.length < team.length + 1) return null;
       const yawIn = Math.atan2(d.frameCentre[0] - spots[0][0], d.frameCentre[2] - spots[0][2]);
-      team.forEach((x, i) => { const p = spots[i]; x.char.pos[0] = p[0]; x.char.pos[2] = p[2]; x.char.vel = [0, 0, 0]; x.path = []; x.pathGoal = null; x.speed = 0; x.char.bodyYaw = x.char.aimYaw = yawIn; });
+      team.forEach((x, i) => { const p = spots[i]; x.char.posX = p[0]; x.char.posZ = p[2]; x.char.vel = [0, 0, 0]; x.path = []; x.pathGoal = null; x.speed = 0; x.char.bodyYaw = x.char.aimYaw = yawIn; });
       await quiet(() => g.teleportPlayer(spots[team.length] as any));
       d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.place();
       for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile') continue;   // (the entry is counted, not the building: whoever sees the stack gather is taken off the floor)
-        const c = [x.char.pos[0], 1.5, x.char.pos[2]]; if ([...spots.slice(0, team.length + 1), gate].some(p => !g.col.solidBlocked(c as any, [p[0], 1.3, p[2]]))) await quiet(() => killGuard(g, x, [0, 0, 1], true)); }
+        const c = [x.char.posX, 1.5, x.char.posZ]; if ([...spots.slice(0, team.length + 1), gate].some(p => !g.col.solidBlocked(c as any, [p[0], 1.3, p[2]]))) await quiet(() => killGuard(g, x, [0, 0, 1], true)); }
       step(10);
       const mate: any = mateAt ? team.find(x => /^Blue/.test(x.callsign)) : null;
       const t0 = g.time, dz0 = new Map<any, number>(g.guards.map((x: any) => [x, x.dazzledUntil ?? 0])), kf = ORDERS.knownFace, cl = ORDERS.cleared; ORDERS.knownFace = false; ORDERS.cleared = false;   // (the men were set down here by the staging: the face is theirs)
@@ -68,7 +68,7 @@ export async function bangsCheck(): Promise<boolean> {
         op ??= [...D.ops, ...D.done].find((o: any) => o.door === d && o.kind === 'bangClear');
         if (!op) continue;
         // (5): a man of the team who is NOT on the order walks into the room once it is given (given with him in there it is refused in words: 'behind that door'), to where the can went the time before
-        if (mate && !out.mate) { out.mate = mate.callsign; mate.char.pos[0] = mateAt![0]; mate.char.pos[2] = mateAt![2]; mate.path = []; mate.pathGoal = null; await quiet(() => O.give('hold', { kind: 'point', at: [mateAt![0], 0, mateAt![2]] }, [mate])); }
+        if (mate && !out.mate) { out.mate = mate.callsign; mate.char.posX = mateAt![0]; mate.char.posZ = mateAt![2]; mate.path = []; mate.pathGoal = null; await quiet(() => O.give('hold', { kind: 'point', at: [mateAt![0], 0, mateAt![2]] }, [mate])); }
         while (nb < op.beats.length) { const b = op.beats[nb++]; out.beats.push(`${(b.t - t0).toFixed(1)} ${b.what}`); if (/^toss:/.test(b.what)) { out.toss = `${b.what}${out.into ? ` · ${out.into}` : ''}`; out.tToss = b.t; } else if (/^can into the room/.test(b.what)) out.into = b.what; }
         if (!can && op.can) { can = op.can; const th = op.threw.char.pos; out.thrower = op.threw.callsign; out.handM = flat(th, can.pos); out.aim = op.aim ? { in: -offOf(d, op.aim.at, op.side), at: op.aim.at } : null; out.passed = !!op.pass; out.opSide = op.side;
           passTo = op.pass ? [...op.pass.to] : null; out.passMin = passTo ? flat(can.pos, passTo) : null;

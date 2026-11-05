@@ -22,7 +22,7 @@ import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/ou
 /** where the ring would be drawn for the seat's own man (its centre on the floor), null = none: the row off, or he is down */
 export function findMeRing(game: Game): Vec3 | null {
   const pl = game.player; if (pl.down || !FINDME.ring) return null;
-  return [pl.char.pos[0], 0, pl.char.pos[2]];
+  return [pl.char.posX, 0, pl.char.posZ];
 }
 
 /** one man's part of the outline's frame: where he stands, how wide and in what ink, and how strong — his own light's word, eased over `dt` (a frame

@@ -285,7 +285,7 @@ export function irLightAt(g: Game, P: Vec3, skip?: number): number {
 export function irOnMan(g: Game, o: Guard): number {
   if (!IRLIGHT.on || !IRLIGHT.team || !g.engine.lights.ir.length) return 0;
   const K = kitOf(g), had = K.seen.get(o); if (had && had.t === g.time) return had.E;
-  const c = o.char, E = irLightAt(g, c.bones.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]], c.id);
+  const c = o.char, E = irLightAt(g, c.bones.chest ?? [c.posX, c.posY + 1.2, c.posZ], c.id);
   K.seen.set(o, { t: g.time, E }); return E;
 }
 /** would HIS OWN illuminator show him a standing man at P, if he looked that way with a clear line (doortools.ts: floor a jamb man's gun is across with his
@@ -293,7 +293,7 @@ export function irOnMan(g: Game, o: Guard): number {
  *  tube, against the same floor nvg.ts calls black (NVG.blackAt). False with the switch or its team half off. */
 export function irShowsAt(g: Game, m: Guard, P: Vec3): boolean {
   if (!irCarried()) return false;
-  const c = m.char, dx = P[0] - c.pos[0], dz = P[2] - c.pos[2], d2 = Math.max(dx * dx + dz * dz, 0.25), d = Math.sqrt(d2); if (d >= IRLIGHT.reach) return false;
+  const c = m.char, dx = P[0] - c.posX, dz = P[2] - c.posZ, d2 = Math.max(dx * dx + dz * dz, 0.25), d = Math.sqrt(d2); if (d >= IRLIGHT.reach) return false;
   if (IRLIGHT.auto && d > LOOK_MAX) return false;   // (his light comes on for dark floor his fan finds, and the fan ends there: past it he is credited with nothing)
   const x = d / IRLIGHT.reach, w = clamp(1 - x * x * x * x, 0, 1), S = g.engine.settings;
   return tubeVis(g, IRLIGHT.power / (S.exposure > 0 ? S.exposure : 1) * w * w / d2) >= NVG.blackAt;

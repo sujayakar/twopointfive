@@ -54,7 +54,7 @@ A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0,
 W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([AT[0] - GAP, 0, AT[2]]); g.player.crouch = true;
 const frames: Frame[] = [];
 const step = () => {
-  A.char.vel = [0, 0, 0]; W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.step(DT); g.player.visibility = 0.02;
+  A.char.vel = [0, 0, 0]; W.cursorAt([A.char.posX, 1.2, A.char.posZ]); W.step(DT); g.player.visibility = 0.02;
   const o: Frame = { hold: g.player.holding ? String(g.player.holding.phase) : '' };
   for (const [who, c] of [['s', g.player.char], ['m', A.char]] as const) for (const [k, b] of Object.entries(c.bones as Record<string, number[]>)) if (b && typeof b[0] === 'number') o[`${who}.${k}`] = [b[0], b[1], b[2]].map(x => Math.round(x * 1e5) / 1e5);
   frames.push(o);

@@ -32,7 +32,7 @@ const WALL = [30.0, 1.05, 11.0];   // (pass-four: the wall the second pair was s
 async function stand(on: boolean) {
   TEAMPACE.on = true;
   const R = await rig('pass-four', 1), g = R.game, O = R.O as any; TEAMPACE.on = true; TEAMPACE.pacing = on;   // (after: standing a game up puts the stand's own rows back)
-  for (const h of R.hostiles) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+  for (const h of R.hostiles) R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
   const why = O.give(WALL_ORDER, O.targetAt(WALL), 'blue'); if (why) throw new Error(`pacing: the wall charge was refused — ${why}`); R.step(2);
   const m = O.squad().find((x: any) => x.state !== 'dead' && O.of(x)?.order === WALL_ORDER && O.of(x)?.post); if (!m) throw new Error('pacing: nobody took the wall charge');
   return { R, g, O, m, M: [...O.of(m).post] as number[] };
@@ -43,8 +43,8 @@ async function walk(on: boolean, trail = 0) {
   const { R, g, m, M } = await stand(on), sam = g.player.char, t0 = g.time, d0 = flat(m.char.pos, M), track: number[][] = [];
   let top = 0, sum = 0, n = 0, there = -1, topTrailed = 0, trailed = 0;
   for (let f = 0; f < 60 * 40 && there < 0; f++) {
-    track.push([m.char.pos[0], 0, m.char.pos[2]]); const far = flat(m.char.pos, M) > 6, back = track[track.length - 1 - trail * 60];
-    if (trail && far && back && flat(back, m.char.pos) > 1.5) { g.teleportPlayer(back); const dx = m.char.pos[0] - back[0], dz = m.char.pos[2] - back[2], L = Math.hypot(dx, dz) || 1; sam.vel[0] = dx / L * g.tune.playerWalk; sam.vel[2] = dz / L * g.tune.playerWalk; trailed++; }
+    track.push([m.char.posX, 0, m.char.posZ]); const far = flat(m.char.pos, M) > 6, back = track[track.length - 1 - trail * 60];
+    if (trail && far && back && flat(back, m.char.pos) > 1.5) { g.teleportPlayer(back); const dx = m.char.posX - back[0], dz = m.char.posZ - back[2], L = Math.hypot(dx, dz) || 1; sam.velX = dx / L * g.tune.playerWalk; sam.velZ = dz / L * g.tune.playerWalk; trailed++; }
     R.step(); if (m.speed > 0.15) { sum += m.speed; n++; top = Math.max(top, m.speed); } if (trail && far && trailed > 90) topTrailed = Math.max(topTrailed, m.speed);
     if (flat(m.char.pos, M) < 0.5) there = g.time - t0; }
   const out = { leg: d0, top, mean: sum / Math.max(1, n), there, topTrailed, trailed: trailed / 60, flat: teamWalk(g) as number, own: g.tune.playerWalk as number };
@@ -66,10 +66,10 @@ export const pacingCheck = guarded(async () => {
     { const { R, g, m, M } = await stand(true), sam = g.player.char, own = g.tune.playerWalk as number, slow = teamWalk(g) as number, sprint = g.tune.playerSprint as number;
       R.step(240); const p = [...m.char.pos], dm = flat(p, M), ux = (M[0] - p[0]) / dm, uz = (M[2] - p[2]) / dm;   // (four seconds on: mid-leg, the mark well ahead)
       // (`along` his line to the mark, metres from him; the player's pace `v`, turned `deg` off that line)
-      const ask = (along: number, v: number, deg = 0) => { const c = Math.cos(deg * Math.PI / 180), sn = Math.sin(deg * Math.PI / 180); sam.pos[0] = p[0] + ux * along; sam.pos[2] = p[2] + uz * along; sam.vel[0] = (ux * c - uz * sn) * v; sam.vel[2] = (uz * c + ux * sn) * v; return [teamWalkOf(g, m) as number, teamCap(g, m) as number]; };
+      const ask = (along: number, v: number, deg = 0) => { const c = Math.cos(deg * Math.PI / 180), sn = Math.sin(deg * Math.PI / 180); sam.posX = p[0] + ux * along; sam.posZ = p[2] + uz * along; sam.velX = (ux * c - uz * sn) * v; sam.velZ = (uz * c + ux * sn) * v; return [teamWalkOf(g, m) as number, teamCap(g, m) as number]; };
       const cases: [string, number, number, number, number][] = [['behind and coming', -4, own, 0, slow], ['behind and creeping after him', -4, own * 0.5, 0, slow * 0.5], ['behind and walking off at 75°', -4, own, 75, own], ['behind and standing', -4, 0, 0, own], ['behind and walking away', -4, -own, 0, own], ['level', 0, own, 0, own], ['ahead at a walk', 4, own, 0, own], ['ahead at a sprint', 4, sprint, 0, PACE.max], ['ahead and sprinting off at 90°', 4, sprint, 90, own], ['coming from far behind', -(TEAMPACE.paceNear + 3), own, 0, own]];
       const keepP = [...sam.pos], keepV = [...sam.vel]; const got = cases.map(([, a, v, deg]) => ask(a, v, deg)); TEAMPACE.pacing = false; const flatAll = cases.map(([, a, v, deg]) => ask(a, v, deg)); TEAMPACE.pacing = true;
-      sam.pos[0] = keepP[0]; sam.pos[2] = keepP[2]; sam.vel[0] = keepV[0]; sam.vel[2] = keepV[2];
+      sam.posX = keepP[0]; sam.posZ = keepP[2]; sam.velX = keepV[0]; sam.velZ = keepV[2];
       F.verdict(dm > 8 && cases.every(([, , , , want], i) => Math.abs(got[i][0] - want) < 1e-6 && Math.abs(got[i][1] - want) < 1e-6) && PACE.max < TEAMPACE.runAt,
         'rule on, the man mid-leg and the player stood by hand: behind him and walking after him he gets the flat share (half of it behind a player creeping at half a walk); behind and standing, walking away or off to the side, level, ahead at a walk, ahead and sprinting off sideways, or coming from further than paceNear, the player\'s walk; ahead and sprinting for the mark the fight\'s pace, under a run — and that is the cap his legs are given',
         `${f2(dm)} m to his mark · ` + cases.map(([name], i) => `${name} ${f2(got[i][0])}`).join(' · ') + ` (flat share ${f2(slow)}, player's walk ${f2(own)}, the fight's pace ${f2(PACE.max)}, a run from ${f2(TEAMPACE.runAt)})`);

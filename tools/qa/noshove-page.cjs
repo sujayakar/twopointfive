@@ -24,8 +24,8 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
     const g = window.__game, e = window.__engine, real = e.render, K = window.__knobs.registry(); window.__menu.close(); window.__smoke.params.enabled = false;
     const SAM = [9.35, 0, 20.05], pl = g.player, O = g.orders; g.godMode = true;   // (open floor: a body's room and more every way — tools/qa/noshove-check.ts finds the same spot)
     const ops = g.guards.filter(x => x.team === 'operative' && x.state !== 'dead'), foes = g.guards.filter(x => x.team !== 'operative' && !x.civ && x.state !== 'dead');
-    const home = new Map(foes.map(h => [h, [h.char.pos[0], 0, h.char.pos[2]]]));
-    const put = (gd, p) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel[0] = gd.char.vel[2] = 0; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
+    const home = new Map(foes.map(h => [h, [h.char.posX, 0, h.char.posZ]]));
+    const put = (gd, p) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.velX = gd.char.velZ = 0; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
     const calm = () => { for (const h of foes) if (h.state !== 'dead') { h.state = 'patrol'; h.awareness = 0; put(h, home.get(h)); } };
     const step = (n = 1, each = () => { }) => { e.render = () => { e.world.upload(); }; try { for (let i = 0; i < n; i++) { calm(); window.__runFrames(1, 1 / 60, []); each(); } } finally { e.render = real; } };
     const at = i => i === 0 ? [SAM[0], 0, SAM[2] - 0.58] : [SAM[0] + (i - 2) * 0.9, 0, SAM[2] + 2.2 + 0.45 * i];
@@ -33,8 +33,8 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
     g.teleportPlayer([SAM[0] + 60, 0, SAM[2]]); step(2); ops.forEach((o, i) => put(o, at(i)));
     g.teleportPlayer(SAM); step(2); ops.forEach((o, i) => put(o, at(i)));
     const why = O.give('fallIn', O.targetAt(SAM), undefined, { men: ops });
-    const s0 = [pl.char.pos[0], 0, pl.char.pos[2]], m = ops[0]; let shoved = 0, nearest = 9, passed = false;
-    step(5 * 60, () => { shoved = Math.max(shoved, flat(pl.char.pos, s0)); nearest = Math.min(nearest, flat(m.char.pos, pl.char.pos)); if (m.char.pos[2] - pl.char.pos[2] > 0.3) passed = true; });
+    const s0 = [pl.char.posX, 0, pl.char.posZ], m = ops[0]; let shoved = 0, nearest = 9, passed = false;
+    step(5 * 60, () => { shoved = Math.max(shoved, flat(pl.char.pos, s0)); nearest = Math.min(nearest, flat(m.char.pos, pl.char.pos)); if (m.char.posZ - pl.char.posZ > 0.3) passed = true; });
     const r3 = x => +x.toFixed(3);
     return { on: K.NOSHOVE.on, why, shoved: r3(shoved), nearest: r3(nearest), passed, who: m.callsign, up: ops.filter(o => o.state !== 'dead').length };
   };

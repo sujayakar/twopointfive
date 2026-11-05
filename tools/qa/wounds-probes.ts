@@ -93,13 +93,13 @@ function shootAt(g: any, sh: any, v: any, want: Want): boolean {
   const c = sh === 'player' ? g.player.char : sh.char, t = v.char.bones.hips as V3;
   const others: V3[] = [...g.guards.filter((x: any) => x !== v && x !== sh && x.char.alive).map((x: any) => x.char.pos), ...(sh === 'player' ? [] : [g.player.char.pos])];
   for (let k = 0; k < 24; k++) {
-    const a = k * Math.PI / 12, r = k < 12 ? 2.6 : 1.8, p: V3 = [v.char.pos[0] + Math.sin(a) * r, 0, v.char.pos[2] + Math.cos(a) * r], e: V3 = [p[0], 1.3, p[2]];
+    const a = k * Math.PI / 12, r = k < 12 ? 2.6 : 1.8, p: V3 = [v.char.posX + Math.sin(a) * r, 0, v.char.posZ + Math.cos(a) * r], e: V3 = [p[0], 1.3, p[2]];
     if (g.col.nav.isBlocked(p[0], p[2]) || g.col.solidBlocked(e, [t[0], Math.max(0.3, t[1]), t[2]]) || g.col.segmentBlockedDynamic(e, [t[0], Math.max(0.3, t[1]), t[2]])) continue;
     const L = Math.hypot(t[0] - p[0], t[2] - p[2]), ux = (t[0] - p[0]) / L, uz = (t[2] - p[2]) / L;
     if (others.some(o => { const s = (o[0] - p[0]) * ux + (o[2] - p[2]) * uz; return s > -0.6 && s < L + 0.6 && Math.abs((o[0] - p[0]) * uz - (o[2] - p[2]) * ux) < 0.75; })) continue;   // (somebody else in or by the lane: the round would be his)
     const was: V3 = [...c.pos] as V3, yaw0 = c.bodyYaw;
     const yaw = Math.atan2(t[0] - p[0], t[2] - p[2]);
-    if (sh === 'player') g.teleportPlayer(p); else c.pos = [p[0], c.pos[1], p[2]];
+    if (sh === 'player') g.teleportPlayer(p); else c.pos = [p[0], c.posY, p[2]];
     c.bodyYaw = yaw; c.aimYaw = yaw; c.vel = [0, 0, 0]; c.update(0);
     const at = CB.armThrough(g, c) ? null : aimFor(g, v, c.muzzle, want);
     if (!at) { if (sh !== 'player') { c.pos = was; c.bodyYaw = yaw0; c.update(0); } continue; }
@@ -139,7 +139,7 @@ export async function woundsState(): Promise<boolean> {
       'he is down to the floor\'s every question, breathing, not a ragdoll, his gun out of his hand, and it is on the shooter\'s record', describe(v));
     const said: string[] = g.log?.map?.((l: any) => l.text ?? l) ?? [];
     let worst = 0, againAI = 0; const a0 = WM.WOUND_STATS.again; let bad = '';
-    for (let i = 0; i < 240; i++) { S.step(1); if (!finite(v.char)) bad ||= `a bone not finite at frame ${i}`; if (v.state !== 'dead' || !v.wound || v.char.ragdoll) bad ||= `state lost at frame ${i}: ${describe(v)}`; worst = Math.max(worst, Math.hypot(v.char.vel[0], v.char.vel[2])); }
+    for (let i = 0; i < 240; i++) { S.step(1); if (!finite(v.char)) bad ||= `a bone not finite at frame ${i}`; if (v.state !== 'dead' || !v.wound || v.char.ragdoll) bad ||= `state lost at frame ${i}: ${describe(v)}`; worst = Math.max(worst, Math.hypot(v.char.velX, v.char.velZ)); }
     againAI = WM.WOUND_STATS.again - a0;
     const drop = head0 - v.char.bones.head[1], A = v.char.anim, b = v.char.bones;
     const handTo = len(sub(b.handL, v.wound?.zone === 'leg' ? mid(b.thighL, b.shinL, 0.45) : mid(b.hips, b.chest, 0.4)));
@@ -221,7 +221,7 @@ export async function woundsSave(): Promise<boolean> {
     const o = g.guards.find((x: any) => x !== r && x.state !== 'dead'), body = r.char.bones.hips as V3; let q: V3 | null = null;
     for (let k = 0; k < 16 && !q; k++) { const a = k * Math.PI / 8, s: V3 = [body[0] + Math.sin(a) * 3.2, 0, body[2] + Math.cos(a) * 3.2]; if (!g.col.nav.isBlocked(s[0], s[2]) && !g.col.solidBlocked([s[0], 1.5, s[2]], [body[0], 0.3, body[2]]) && !g.col.segmentBlockedDynamic([s[0], 1.5, s[2]], [body[0], 0.3, body[2]])) q = s; }
     if (!o || !q) { F.verdict(false, 'a colleague and a spot with eyes on him', `colleague ${!!o} spot ${!!q}`); return F.done(); }
-    let found = -1; for (let i = 0; i < 600 && found < 0; i++) { if (o.state === 'patrol' || i < 5) { o.char.pos = [q[0], o.char.pos[1], q[2]]; const y = Math.atan2(body[0] - q[0], body[2] - q[2]); o.char.bodyYaw = y; o.char.aimYaw = y; o.path = []; } step(1); if (r.found) found = i; }
+    let found = -1; for (let i = 0; i < 600 && found < 0; i++) { if (o.state === 'patrol' || i < 5) { o.char.pos = [q[0], o.char.posY, q[2]]; const y = Math.atan2(body[0] - q[0], body[2] - q[2]); o.char.bodyYaw = y; o.char.aimYaw = y; o.path = []; } step(1); if (r.found) found = i; }
     F.verdict(found >= 0, 'a colleague with eyes on him finds him and calls it in — a wounded man is a body the floor answers to', found >= 0 ? `${o.callsign} found ${r.callsign} after ${(found * DT).toFixed(1)} s · ${o.callsign} now ${o.state} · bodies on the card ${g.mission.stats.bodies}` : `not found in 10 s · ${o.callsign} ${o.state}`);
   } catch (e) { F.verdict(false, 'the probe ran', String((e as Error)?.stack ?? e)); } finally { restore(); }
   return F.done();
