@@ -151,6 +151,7 @@ import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
 import { HITSTUFF } from '../game/particleFx';
+import { MARKCUT } from '../render/decals';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -366,6 +367,7 @@ export function pageSwitches(q: URLSearchParams): void {
   LIGHTSWITCH.on = q.get('lightswitch') !== '0';   // a room's lights have a switch on the wall beside its door: Space at it puts the room's lights out or back, and a calm defender who saw them go comes to the switch and puts them back (game/lightswitch.ts): ON in the page; ?lightswitch=0 = no plates and no row, as it was
   CARLAMPS.on = q.get('carlamps') !== '0';   // a parked vehicle's lamps can be shot out, head and tail, lit or not (game/carlamps.ts): ON in the page; ?carlamps=0 = no lamp is a target, as it was
   HITSTUFF.on = q.get('hitstuff') !== '0';   // a round reads what a thing SAYS it is made of (game/particleFx.ts): a box that says its stuff gives what that stuff gives — car paint and steel sparks and no chips, solid glass that is not a pane a crack that stays — and only a box that says nothing is read by the colour of its paint; with it on metal throws no chips anywhere: ON in the page; ?hitstuff=0 = by the colour, as it was
+  MARKCUT.on = q.get('markcut') !== '0';   // a mark on a cut or a round face lies where the round met it (render/decals.ts MARKCUT): ON in the page; ?markcut=0 = pulled to the plain box's face, where the shader drops it, as it was
   CLEANRESTART.on = q.get('cleanrestart') !== '0' && !q.has('kitview');   // a restart gives a clean level: the lights stand as a level just opened has them, the last try's lines and clocks are gone, the camera cuts and the picture starts fresh (game/cleanrestart.ts): ON in the page; ?cleanrestart=0 = the restart as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   SAVETIMELINE.on = q.get('savetimeline') !== '0';   // the saves roll (five by hand on F5 beside five autosaves), each keeps a picture, a team on the floor is saved in memory, and the pause and down cards lay this run's out as a strip (game/savestate.ts): ON in the page; ?savetimeline=0 = one checkpoint to go back to, as it was
@@ -802,6 +804,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'LIGHTSWITCH.on': 'TPS_LIGHTSWITCH=1',
   'CARLAMPS.on': 'TPS_CARLAMPS=1',
   'HITSTUFF.on': 'TPS_HITSTUFF=1',
+  'MARKCUT.on': 'TPS_MARKCUT=1',
   'CLEANRESTART.on': 'TPS_CLEANRESTART=1',
   'FIRELINE.on': 'TPS_FIRELINE=1',
   'SAVETIMELINE.on': 'TPS_SAVETIMELINE=1',

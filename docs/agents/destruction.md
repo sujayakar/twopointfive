@@ -1151,17 +1151,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   before. NOT DONE: a shape's trim painted from a row's numbers (the lorry's fittings, a spare wheel, a mirror) says nothing, as before, so the file
   writes 'plain' on it; trim is drawn only, no round meets it. A tail lamp's lens in the red enamel stays 'paint'. The editor's kit-view sets (a
   level file's `sets`) hold older copies of a truck as plain boxes and say nothing. Check line 8. NEVER SEEN ON A GPU.
-  A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (`render/decals.ts Decals.onCut`, raised by the page as `sit` is, `?markcut=0`): a
-  mark clamped to its box was pulled onto the face of the box's PLAIN shape, so on a leaning pane, a rounded nose or a crowned bonnet, and round the
-  side of a drum, it stood centimetres off the surface (87 mm on a pane leaning 12 degrees, 40 mm on a 0.3 m drum 30 degrees round) and the shader's
-  plane test dropped it: no round ever left a mark there. Now a point inside the plain box of a box that says a cut or is round is left where it is.
-  The picture's alone (where a mark is drawn, never whether one is laid). The harness's stands do not raise it (a page word, like `sit`); check line
-  5 raises it with the rule and holds the same digest. It moves a mark on the snapped end of a broken wall piece too (those say a cut): the mark
-  stays on the end, where a wall's wear can take it for the round's own.
+  A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (`render/decals.ts MARKCUT`, a switch of its own): a mark clamped to its box was pulled
+  onto the face of the box's PLAIN shape, so on a leaning pane, a rounded nose or a crowned bonnet, and round the side of a drum, it stood
+  centimetres off the surface (87 mm on a pane leaning 12 degrees, 40 mm on a 0.3 m drum 30 degrees round) and the shader's plane test dropped it:
+  no round ever left a mark there. Now a point inside the plain box of a box that says a cut or is round is left where it is. The picture's alone
+  (where a mark is drawn, never whether one is laid). It moves a mark on the snapped end of a broken wall piece too (those say a cut): the mark
+  stays on the end, where a wall's wear can take it for the round's own. ITS SWITCH: ON in the page (`?markcut=0` = pulled to the plain face, as it
+  was), OFF in the module and on the frozen stand (`TPS_MARKCUT=1`), a `FROZEN_HOLDS` row, in the registry and the journal (a recording from before
+  the table plays with it off). It joined as a field the page alone set (`main.ts`), so the page's stand run headless did not have it: mended 11-05,
+  and the shipped stand is the page here too. A tape with no table for it plays with it off: the build as it was before the rule, and also a tape of
+  the hours of 11-05 when the page raised it by hand (a picture only). Check lines 0, 5 (the run is the same run with this rule down by itself under
+  the hit rule), 6 and 7; `MARKCUT_BREAK=1` fails line 7 on both stands; the check runs in the `decals` family too. MEASURED 11-05 with the mend: 42
+  play-throughs (21 missions, seeds 1 and 2) the same by digest on the frozen stand, on the shipped stand, and on the shipped stand with
+  `TPS_MARKCUT=0`; gates decals, destruction, hitstuff, round, shapes, checkpoints and journal on both stands, green but for what was red on the
+  shipped stand before it (`decals-sites`, three checkpoint probes). NOT SEEN: no mark on a cut or a round face has been looked at on a GPU.
   SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS`
   row, in the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off,
   the same run.
-  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, families `destruction` and `player`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4,
+  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, families `destruction`, `player` and `decals`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4,
   7 and 8), nine lines on both stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the
   hit: the car's body with its word taken off, by its paint, the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and
   no dent; the glass saying 'glass', the crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the
