@@ -17,10 +17,10 @@
 //! share of momentum for a thing of furniture (PropSystem.applyImpulse), a thing whose time is up (the host takes its row out). None of the three is
 //! read by a later row's step: furniture is met by where it STANDS, which an impulse does not move.
 //!
-//! WHAT ONLY THE HOST CAN JUDGE HANDS A ROW BACK. The step works on a copy of the row, and where it comes to a question this module has no answer
-//! to — a ray that is no number, or longer than any level — it writes nothing of that row, lists nothing of it, and returns HOST with the row: the
-//! TypeScript takes that row's step and calls again for the rows under it. Nothing of play is such a question any more: a pane of glass is judged
-//! here (glass.rs), lying snow is asked here (`bog_at`, over the world's table of what snow each static is), and a ray of no length meets nothing.
+//! A QUESTION WITH NO ANSWER HANDS A ROW BACK. The step works on a copy of the row, and where it comes to a ray that is no number it writes nothing
+//! of that row, lists nothing of it, and returns HOST with the row: the host names the mistake. Nothing of play is such a question: a pane of glass
+//! is judged here (glass.rs), lying snow is asked here (`bog_at`, over the world's table of what snow each static is), a ray of no length meets
+//! nothing, and no length is too long.
 use crate::lines::{ray_rule, ray_things, RAY_HOST};
 use crate::maths::{atan2, hypot2, hypot3, round_half_up};
 use crate::state::state;
@@ -311,7 +311,7 @@ fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
     d.rays += 1.0;
     let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out);
     if k == RAY_HOST {
-        d.host = true; // (a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
+        d.host = true; // (a ray that is no number: lines.rs ray_rule)
         return None;
     }
     let st = if k >= 0 { Some((out[0], out[1], out[2], out[3])) } else { None };

@@ -32,6 +32,7 @@ pub mod layers;
 pub mod light;
 pub mod lines;
 pub mod maths;
+pub mod men;
 pub mod nav;
 pub mod poses;
 pub mod props;
@@ -51,7 +52,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 25;
+pub const ABI: u32 = 28;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -670,6 +671,12 @@ pub extern "C" fn props_cap(table: u32) -> usize {
 #[no_mangle]
 pub extern "C" fn props_update(g: usize, w: usize) -> u32 {
     props::update(g, w)
+}
+/// props.ts PropSystem.settle's passes for the game in slot `g`, over world `w` (the level's furniture resolved out of its authoring overlaps as the
+/// level is stood up): how many times a thing was pushed out of a static
+#[no_mangle]
+pub extern "C" fn props_settle(g: usize, w: usize) -> u32 {
+    props::settle(g, w)
 }
 
 // ---- a leaf off its hinges, in the air (slabs.rs: each slab's state in the game's block, its door's facts handed in)
