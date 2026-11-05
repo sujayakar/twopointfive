@@ -7,7 +7,8 @@
 // switchable's boxes, the breaker's pair, a beacon's dome) id ⇄ index. Nothing here is procedural: the one computed thing is a prop's collision footprint
 // fitted from its parts (fitPropFootprint, the generator's own rule), and a file may pin that too (PropData.half / height).
 import type { Vec3 } from '../math/vec';
-import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff } from './boxes';
+import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from './boxes';
+import { DOES_DEFAULT, doesSaid } from './materials';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef, MarkDef } from './level';
 import { withScript } from './level';
 import { LEVEL_SCRIPTS } from './levelScripts';
@@ -65,7 +66,9 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   /** what a box or a part is made of: its own word, else its material row's; nothing for plain (a box that says nothing is plain) */
   const stuffOf = (o: { stuff?: string }, m: MaterialData | undefined): BoxStuff | undefined => { const w = o.stuff ?? m?.stuff; return w === undefined || w === 'plain' ? undefined : w as BoxStuff; };
   /** the same for a box, or a shape's piece, that names its row itself (ONE reader for both, as finishOf is) */
-  const saidOf = (o: { stuff?: string; material?: string }): { stuff?: BoxStuff } => { const w = stuffOf(o, o.material !== undefined ? mats.get(o.material) : undefined); return w !== undefined ? { stuff: w } : {}; };
+  /** … and what it DOES (scene/materials.ts): its own word, else its material row's, written onto the box here, once; nothing for the default row. Never from `stuff`, never from the colour */
+  const doesOf = (o: { does?: string }, m: MaterialData | undefined): { does?: DoesWord } => doesSaid(o.does ?? m?.does);
+  const saidOf = (o: { stuff?: string; does?: string; material?: string }): { stuff?: BoxStuff; does?: DoesWord } => { const m = o.material !== undefined ? mats.get(o.material) : undefined, w = stuffOf(o, m); return { ...(w !== undefined ? { stuff: w } : {}), ...doesOf(o, m) }; };
   // boxes, in file order (index i of the file IS static box i)
   const boxIndex = new Map<string, number>();
   // (the DRESSING — things a level file carries only to be wrecked, appended last by tools/levels/dress.ts — is left out with the destruction switch off: every other
@@ -95,7 +98,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   const bx = (id: string) => { const i = boxIndex.get(id); if (i === undefined) throw new Error(`level '${data.name}': unknown box '${id}'`); return i; };
   // loose props
   const props: PropDef[] = fileProps.map(p => {
-    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; const stuff = stuffOf(q, q.material !== undefined ? mats.get(q.material) : undefined); if (stuff !== undefined) part.stuff = stuff; return part; });
+    const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; const said = saidOf(q); if (said.stuff !== undefined) part.stuff = said.stuff; if (said.does !== undefined) part.does = said.does; return part; });
     const fit = fitPropFootprint(parts);
     return { kind: p.kind, name: p.name ?? p.id, x: p.x, z: p.z, yaw: p.yaw ?? 0, parts, half: p.half ? [p.half[0], p.half[1]] : fit.half, height: p.height ?? fit.height, mass: p.mass };
   });
@@ -206,7 +209,7 @@ export interface LevelToDataOpts {
 export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   const floors: FloorData[] = opts.floors?.map(f => ({ ...f })) ?? [{ id: 'f0', name: 'ground floor', y: 0, ceiling: 3 }];
   const F0 = floors[0].id;
-  const materials: Record<string, MaterialData> = {}; for (const [k, m] of Object.entries(opts.materials ?? {})) materials[k] = { albedo: V(m.albedo), ...(m.rough !== undefined ? { rough: m.rough } : {}), ...(m.metal ? { metal: true } : {}), ...(m.stuff !== undefined ? { stuff: m.stuff } : {}), ...(m.notes ? { notes: m.notes } : {}) };
+  const materials: Record<string, MaterialData> = {}; for (const [k, m] of Object.entries(opts.materials ?? {})) materials[k] = { albedo: V(m.albedo), ...(m.rough !== undefined ? { rough: m.rough } : {}), ...(m.metal ? { metal: true } : {}), ...(m.stuff !== undefined ? { stuff: m.stuff } : {}), ...(m.does !== undefined ? { does: m.does } : {}), ...(m.notes ? { notes: m.notes } : {}) };
   const matByAlbedo = new Map<string, string>(); for (const [k, m] of Object.entries(materials)) { const key = m.albedo.join(','); if (!matByAlbedo.has(key)) matByAlbedo.set(key, k); }
   const paint = (albedo: Vec3): { material: string } | { albedo: Vec3 } => { const m = matByAlbedo.get(albedo.join(',')); return m !== undefined ? { material: m } : { albedo: V(albedo) }; };
   /** the finish a box carries beyond what its paint already says: written per box only where it differs from the material's (or, inline, from matte
@@ -220,9 +223,12 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
   };
   /** what a box says beyond its paint's row (scene/stuff.ts): written per box only where it is another thing than its material says, 'plain' where it is
    *  nothing over a row that says something; a box with an inline albedo writes its word unless it is plain */
-  const says = (b: { stuff?: string }, p: { material?: string }): { stuff?: string } => {
-    const mine = b.stuff ?? 'plain', rows = (p.material !== undefined ? materials[p.material].stuff : undefined) ?? 'plain';
-    return mine !== rows ? { stuff: mine } : {};
+  const says = (b: { stuff?: string; does?: string }, p: { material?: string }): { stuff?: string; does?: string } => {
+    const row = p.material !== undefined ? materials[p.material] : undefined, mine = b.stuff ?? 'plain', rows = row?.stuff ?? 'plain';
+    // … and what it DOES (scene/materials.ts), the same way: per box only where it is another row than its material's, the default row's word where it
+    // does nothing over a row that says something
+    const does = b.does ?? DOES_DEFAULT, rowDoes = row?.does ?? DOES_DEFAULT;
+    return { ...(mine !== rows ? { stuff: mine } : {}), ...(does !== rowDoes ? { does } : {}) };
   };
   // box ids: supplied → the box's own name → what references it (breaker, a light's fixture, a switchable) → box_NNNN
   const firstPiece = level.boxes.findIndex(b => b.piece === true), n = firstPiece < 0 ? level.boxes.length : firstPiece; const ids: string[] = new Array(n);   // (the level's own boxes: a stood level's pieces — scene/shapes.ts — follow them and are written inside the shape that says them)
@@ -246,7 +252,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (b.emissive[0] !== 0 || b.emissive[1] !== 0 || b.emissive[2] !== 0) d.emissive = V(b.emissive);
     const flags = bitsToFlags(fl & ~DERIVED); if (flags.length) d.flags = flags;
     if (b.cutHeight !== 1e6) d.cutHeight = b.cutHeight;
-    const word = says(b, pt as { material?: string }); if (word.stuff !== undefined) d.stuff = word.stuff;
+    const word = says(b, pt as { material?: string }); if (word.stuff !== undefined) d.stuff = word.stuff; if (word.does !== undefined) d.does = word.does;
     const marks = copyMarkings(mk); if (marks) d.markings = marks;
     if (b.shape) {   // A SHAPE (scene/shapes.ts), as it was read: a piece's paint by name where the level has one, its finish and its word only where they are not the material's
       const s = b.shape, sd: ShapeData = { ...formOf(s) };

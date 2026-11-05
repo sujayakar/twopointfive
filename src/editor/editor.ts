@@ -12,7 +12,7 @@ import { lintLevel, idsInMessage, LintOpts, LintReport } from './lint';
 import { dealtSwings } from './swing';
 import type { SwingDeal } from '../game/doorswing';
 import { BOX_PRESETS, LIGHT_PRESETS, BoxPreset, doorFrameBoxes, cutOpeningPlan, pushFace, Face, roundVec, round6, snapTo } from './geom';
-import { materialSet, materialCreate, materialRemove, markTexelOf, faceLattice, clampToFace, fitRows } from './paint';
+import { materialSet, materialCreate, materialRemove, keepDoes, markTexelOf, faceLattice, clampToFace, fitRows } from './paint';
 import { LEAF_W } from '../scene/doorSize';
 
 export type RefKind = 'box' | 'prop' | 'light' | 'sw' | 'door' | 'route' | 'volume' | 'chokepoint' | 'device' | 'floor' | 'mark';
@@ -442,7 +442,7 @@ export class Editor {
   }
   setBoxMaterial(ids: string[], material: string | Vec3) {
     if (typeof material === 'string' && !this.data.materials[material]) throw new Error(`unknown material '${material}'`);
-    this.doc.transact(`paint ${ids.length} box(es) ${typeof material === 'string' ? material : 'inline'}`, () => { for (const id of ids) this.doc.update<BoxData>('boxes', id, b => { const o = { ...b }; if (typeof material === 'string') { o.material = material; delete o.albedo; } else { o.albedo = roundVec(material); delete o.material; } return o; }); });
+    this.doc.transact(`paint ${ids.length} box(es) ${typeof material === 'string' ? material : 'inline'}`, () => { for (const id of ids) this.doc.update<BoxData>('boxes', id, b => { const o = { ...b }; if (typeof material === 'string') { o.material = material; delete o.albedo; } else { o.albedo = roundVec(material); delete o.material; } return keepDoes(this, b, o); }); });   // (a thing painted again does what it did: paint.ts keepDoes)
   }
 
   // ---------------------------------------------------------------- lights + switchables
