@@ -18,6 +18,8 @@
 //   3 doors     every DOOR is on a way: a traced way two metres long or more CROSSES its frame within the frame's width, or ENDS AT it (an end within
 //               0.75 m of the frame's middle: a team sent to a door, the author's row to one, the yard's ways from outer door to outer door). A way
 //               that only passes the door along its wall does not lead to it, and the doorstep every door has in the map is no way
+//               (RULED, the dress goal 11-05: a way that ENDS at a door counts. The check asks whether anything leads a person to the door, and a lane
+//               that arrives there does. "Crosses the frame" alone would ask more than a worn path needs: do not tighten it)
 // WHAT THE RULE DOES NOT YET REACH IS OWED, BY NAME, in a file a level: tools/qa/fixtures/walked/<level>.txt, a line `start <name>` or `door <name>` for
 // each. The check is RED WHEN A LEVEL OWES ONE ITS FILE DOES NOT NAME (a start or a door the rule does not reach was added, or a way was lost). A line
 // whose start or door has a way NOW is said and --write drops it: until then it would excuse that door again, so drop it when it is said. A line that
