@@ -45,7 +45,7 @@ export type LookName = typeof LOOK_NAMES[number];
  *  ground  bare ground: within a stride of lying snow it freezes (ice in the low places, rime over the rest)
  *  sheds   snow does not lie on it or cling to it (bare iron on a snow level is a stove, a flue, a brazier) */
 interface Stuff { rough: number; relief: number; built?: true; fades?: number; soaks?: true; worn?: number; untiles?: true; unit?: readonly [u: number, v: number, bond: boolean, shade: number]; bay?: readonly [along: number, up: number];
-  runs?: 'long' | 'flat'; least?: number; under?: { readonly plinth: LookName; readonly core: LookName; readonly long: number; readonly tall: number }; foot?: LookName; ground?: true; sheds?: true }
+  runs?: 'long' | 'flat'; least?: number; under?: { readonly plinth: LookName; readonly core: LookName; readonly long: number; readonly tall: number }; foot?: LookName; ground?: true; sheds?: true; mirror?: number }
 const STUFFS: Readonly<Record<LookName, Stuff>> = {
   'mud wall': { rough: 0.95, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', under: { plinth: 'field stone', core: 'mud brick', long: 0.6, tall: 0.24 } }, plaster: { rough: 0.86, relief: 1.8, built: true, fades: 1, soaks: true, worn: 1, untiles: true, runs: 'flat' },
   block: { rough: 0.93, relief: 1.5, built: true, fades: 1, soaks: true, worn: 0.8, runs: 'flat' }, earth: { rough: 0.94, relief: 1.6, built: true, fades: 1, soaks: true, untiles: true, runs: 'flat', foot: 'gravel', ground: true },
@@ -53,7 +53,7 @@ const STUFFS: Readonly<Record<LookName, Stuff>> = {
   wood: { rough: 0.84, relief: 1.6, fades: 1, runs: 'long' }, sheet: { rough: 0.5, relief: 1.0, fades: 1, soaks: true, runs: 'flat', least: 0.2 }, cloth: { rough: 0.96, relief: 1.6, fades: 1, soaks: true },
   metal: { rough: 0.75, relief: 1.6, fades: 1, soaks: true, sheds: true }, paint: { rough: 0.5, relief: 1.6, fades: 1, soaks: true },
   veneer: { rough: 0.4, relief: 1.4, fades: 0.3, runs: 'long' }, plastic: { rough: 0.5, relief: 1.4, fades: 0.3 }, fabric: { rough: 0.95, relief: 1.6, fades: 0.3 },
-  steel: { rough: 0.42, relief: 1.4, fades: 0.3 }, carpaint: { rough: 0.26, relief: 1.2, fades: 0.3 },
+  steel: { rough: 0.42, relief: 1.4, fades: 0.3 }, carpaint: { rough: 0.26, relief: 1.2, fades: 0.3, mirror: 0.1 },
   stucco: { rough: 0.42, relief: 1.5, built: true, worn: 1, untiles: true }, skim: { rough: 0.55, relief: 1.6, built: true, worn: 1, untiles: true },
   'gloss block': { rough: 0.4, relief: 1.4, built: true, worn: 0.6, unit: [0.4, 0.2, true, 0.02] }, 'board concrete': { rough: 0.42, relief: 1.6, built: true, worn: 0.8 },
   'cast panel': { rough: 0.68, relief: 1.4, built: true, worn: 0.8, unit: [1.0, 0.5, true, 0.07], bay: [0, 3] }, paver: { rough: 0.5, relief: 1.4, built: true, worn: 1, unit: [0.5, 0.5, false, 0.018], bay: [6, 6] },
@@ -67,6 +67,8 @@ export const LOOK_BUILT: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].built
 export const LOOK_FADES: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].fades ?? 0);
 export const LOOK_SOAKS: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].soaks ? 1 : 0);
 export const LOOK_WORN: readonly number[] = LOOK_NAMES.map(n => STUFFS[n].worn ?? 0);
+/** STUDY: how much each class mirrors head-on, by a box's class number (0 = plain, then LOOK_NAMES' order + 1): 0.04 unless the stuff says */
+export const LOOK_MIRROR: readonly number[] = Array.from({ length: 32 }, (_, c) => c >= 1 && c <= LOOK_NAMES.length ? STUFFS[LOOK_NAMES[c - 1]].mirror ?? 0.04 : 0.04);
 /** how a stuff is laid over more than a piece: (it untiles, pieces a bay along, pieces a bay up, which way it runs: 0 its box's own, 1 flat, 2 long) */
 export const LOOK_LAY: readonly (readonly [number, number, number, number])[] = LOOK_NAMES.map(n => { const st = STUFFS[n]; return [st.untiles ? 1 : 0, st.bay?.[0] ?? 0, st.bay?.[1] ?? 0, st.runs === 'long' ? 2 : st.runs === 'flat' ? 1 : 0]; });
 const layerOf = (n: LookName | undefined): number => n === undefined ? -1 : LOOK_NAMES.indexOf(n);

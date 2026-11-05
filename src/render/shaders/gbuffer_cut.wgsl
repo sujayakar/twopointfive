@@ -186,6 +186,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     var lcls = boxStuff(bi); if (oldCut) { lcls = (cw >> 12u) & 31u; }   // (the box's own word; an old break's core says its stuff in the cut's record: cut.ts CUT_CORE_STUFF)
     let lk = lookSurface(lcls, v.wp, select(n, flatN, bent), bi, lcS, hfS, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
     albedo = lk.albedo; rough = lk.rough;
+    rough = lookCoatRough(lcls, rough, boxFinish(bi).rough);   // STUDY
     if (bent) { n = normalize(n + lk.n - flatN); } else { n = lk.n; lookTilt = lk.tilted; }
   }
   if (v.mark != 0u && !cap && (own < 0 || side)) {

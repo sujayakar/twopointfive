@@ -159,6 +159,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   if (LOOK && !cap) {                                                    // THE LOOK PROTOTYPE (look.wgsl; the page /look — dead code on every other): the paint drawn off its material's maps, weathered as the building is, a small box's edges rounded
     let lk = lookSurface(v.look, v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y, lookW);
     albedo = lk.albedo; rough = lk.rough;
+    rough = lookCoatRough(boxStuff(bi), rough, boxFinish(bi).rough);   // STUDY
     n = lk.n; lookTilt = lk.tilted;
   }
   let wetK = floor(frame.rtCfg.z * 0.5) * 0.1;                           // WET GROUND (detail.wgsl wetGround; settings.wetBreakup rides rtCfg.z as 2 × tenths — 0 = nothing here runs)

@@ -364,7 +364,7 @@ export class LightingPasses implements CutSwappable {
    *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
    *  images on, 2 = the air look on) · k = (rain rate, the wet film's share for the reflection pass (settings.wetMirror; 0 = off), 0, 0). Nothing here writes a box. */
   private beamHide = new Set<Box>();
-  setBeams(list: Box[] | null, is: (b: Box) => boolean, focus: ArrayLike<number>, opts: { reflect: boolean; air: ((b: Box) => Box | null | undefined) | null; A: number; rain: number; wet: number }): Set<Box> | null {
+  setBeams(list: Box[] | null, is: (b: Box) => boolean, focus: ArrayLike<number>, opts: { reflect: boolean; air: ((b: Box) => Box | null | undefined) | null; A: number; rain: number; wet: number; coat: number }): Set<Box> | null {
     const F = this.beamData, U = new Uint32Array(F.buffer); let n = 0; const hide = this.beamHide; hide.clear();
     if (list) {
       const found: { b: Box; d: number; bead: Box | null | undefined }[] = [];
@@ -382,8 +382,8 @@ export class LightingPasses implements CutSwappable {
         F[o + 8] = e[0]; F[o + 9] = e[1]; F[o + 10] = e[2]; F[o + 11] = air ? opts.A : 0; n++;
         if (air) { hide.add(b); if (bead) hide.add(bead); } }
     }
-    if (n === 0 && this.beamN === 0 && F[5] === opts.wet) return null;
-    U[0] = n; U[1] = (opts.reflect ? 1 : 0) | (opts.air ? 2 : 0); F[4] = opts.rain; F[5] = opts.wet; F[6] = 0; F[7] = 0;
+    if (n === 0 && this.beamN === 0 && F[5] === opts.wet && F[6] === Math.fround(opts.coat)) return null;
+    U[0] = n; U[1] = (opts.reflect ? 1 : 0) | (opts.air ? 2 : 0); F[4] = opts.rain; F[5] = opts.wet; F[6] = opts.coat; F[7] = 0;
     this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, BEAM_HEAD + n * 48);
     return hide.size ? hide : null;
   }

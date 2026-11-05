@@ -36,6 +36,7 @@ const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, 
  *  detail layer's dust and shoe marks, and what the stuff's `worn` says use does to it (a knocked foot, the dirt feet bring in). Where feet go is not
  *  the word's to say: a lane is trodden and paint is walked off a floor in a kept place as in a ruin. */
 fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }
+fn lookCoatRough(cls: u32, rough: f32, boxR: f32) -> f32 { if (lookCfg.c.y > 0.0 && LOOK_MIRROR[cls] > 0.04) { return clamp(rough - boxR + lookCfg.c.y, 0.03, 1.0); } return rough; }   // STUDY
 /** how a box's markings are drawn: x = how far as brushed paint in place of square cells (the panel's Painted marks row), y = how far that paint is OLD
  *  (rubbed thin by the years, gone a shade into its wall: 1 − lookKept; a kept place's sign is brushed and whole but where feet go, markings.wgsl markSoft) */
 fn lookMarkSoft() -> vec2f { return vec2f(lookCfg.g.x, 1.0 - lookKept()); }

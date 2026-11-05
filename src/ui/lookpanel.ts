@@ -10,7 +10,7 @@ import type { Panel } from './panel';
 import { POWDER, POWDER_DRAW } from '../render/powderField';
 
 /** rows that are not the materials' own: "plain boxes" leaves them as they are */
-const LIVE: ReadonlySet<string> = new Set(['even', 'size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'stir', 'rooms', 'steady', 'roomb', 'order', 'dark', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
+const LIVE: ReadonlySet<string> = new Set(['even', 'size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'stir', 'rooms', 'steady', 'roomb', 'order', 'dark', 'gexp', 'contrast', 'highs', 'lows', 'colour', 'coat', 'coatr']);
 const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['clarity', 'Clarity', 'one number over Relief, Cavities, Edges and Snow relief: how hard neighbouring detail is set against each other. Lower = calmer surfaces', 1.5],
   ['paint', 'Paint', 'the colour the maps add to the box paint', 1.5],
@@ -52,6 +52,8 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['highs', 'Highlights', 'the bright end only: sunlit snow, sky light on a wall. Under 1 pulls them down so the snow keeps its shape, over 1 pushes them up', 2],
   ['lows', 'Shadows', 'the dark end only. Over 1 opens the shadows, under 1 sinks them', 2],
   ['colour', 'Colour', 'how strong the colours are (1 = as it is)', 2],
+  ['coat', 'Lacquer mirrors', 'STUDY: how much a lacquered stuff (car paint) mirrors head-on. 0 = as it was (four hundredths), 1 = the stuff own number', 4],
+  ['coatr', 'Lacquer finish', 'STUDY: the roughness a lacquered stuff is given whatever its box says. 0 = the box own', 1],
 ];
 
 /** the cloud cover the look page opens a snow level under (main.ts; the game's own snow is 0.9) */
