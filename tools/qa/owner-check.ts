@@ -26,7 +26,7 @@ console.log(`who has this man · profile ${process.env.TPS_PROFILE ?? 'frozen'}$
 
 /** the ownership questions (owner-questions.md) that have become reads of the record */
 const GONE = ['runnerOwns', 'moraleOwns', 'lastStandMan', 'lastStandOwns', 'squadOwns', 'squadBusy', 'squadDefers', 'netQuietHolds', 'netFeedHolds', 'laneHolds', 'pressOwns', 'rescueCheckOwns', 'powerOutOwns', 'buddyOwns', 'needsBusy',
-  // the 25 that were never who has him: a field of the man, one shared read (roundheld.ts), or a new name for what they answer
+  // the 25 that were never who has him: a field of the man, one shared read (roundHeld) and the rest named for what they answer, or a new name for what they answer
   'runnerFled', 'squadStaysIn', 'squadHolds', 'laneWarns', 'powerOutMan', 'silentHolds', 'pairHolds', 'spottedHolds', 'silentGlassHolds', 'silentOnMan', 'holdFireOnMan', 'silentMan', 'unseenMan', 'gunHoldKeeps', 'gunHoldRuns', 'darkFoeCarries',
   'noShoveMan', 'onLitMan', 'seatHas', 'doorwayHeld', 'handleHeld', 'startleHolds', 'rearHolds', 'startleMan'];
 /** the switches the shipped game leaves down, up: what the runs cannot show otherwise */
@@ -90,13 +90,13 @@ if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with last stan
 
 /** the rules' own families, whose checks put a man where the missions never do: the breaker's party, the rescue's walker, a trip for a coffee, the silent and unseen squads, a standoff */
 const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,silent,unseen,spotted,holdfire,laststand,enemysquads,runner,morale,netquiet').split(',').filter(Boolean);
-{ const dir = mkdtempSync(join(tmpdir(), 'owner-fam-')), reads: Record<string, [number, number]> = {}, held: Record<string, number> = {}, first: string[] = [], lost: string[] = []; let next = 0, bad = 0, ticks = 0;
+{ const dir = mkdtempSync(join(tmpdir(), 'owner-fam-')), reads: Record<string, [number, number]> = {}, held: Record<string, number> = {}, first: string[] = [], lost: string[] = [], reds: string[] = []; let next = 0, bad = 0, ticks = 0;
   const jobs = Number(process.env.OWNER_JOBS ?? 4);
   await Promise.all(Array.from({ length: jobs }, async () => { for (;;) {
     const fam = FAMILIES[next++]; if (!fam) return;
     const file = join(dir, `${fam}.json`);
     const pr = Bun.spawn(['bun', '--preload', resolve(import.meta.dir, 'owner-audit.ts'), resolve(import.meta.dir, 'probes.ts'), fam], { cwd: ROOT, env: { ...process.env, OWNER_OUT: file, OWNER_DROP: BREAK ? String(~0 >>> 0) : '0' }, stdout: 'ignore', stderr: 'ignore' });
-    await pr.exited;
+    const exit = await pr.exited; if (exit) reds.push(`${fam} (exit ${exit})`);
     try { const o = JSON.parse(readFileSync(file, 'utf8'));
       ticks += o.ticks; bad += o.bad; for (const f of o.first) if (first.length < 12) first.push(`${fam} ${f}`);
       for (const [k, v] of Object.entries(o.reads) as [string, [number, number]][]) { const R = reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
@@ -106,7 +106,7 @@ const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,
   rmSync(dir, { recursive: true, force: true });
   if (FAMILIES.length) { const rules: string[] = O.ownerWitnessed(), never = rules.filter(r => !held[r]);
     verdict(bad === 0 && !lost.length && (ticks > 0), `runs, the rules' own families (${FAMILIES.join(' ')}): the same, where the missions never put a man`,
-      `${ticks} ticks · ${bad} disagreements${first.length ? `\n    ${first.join('\n    ')}` : ''}${lost.length ? `\n    no count: ${lost.join(', ')}` : ''}\n    ${rules.map(r => `${r}: held ${held[r] ?? 0} man-ticks, read ${reads[r]?.[0] ?? 0} times, ${reads[r]?.[1] ?? 0} of them true`).join('\n    ')}${never.length ? `\n    never held in these runs: ${never.join(', ')}` : ''}`); } }
+      `${ticks} ticks · ${bad} disagreements${reds.length ? ` · a family's own checks were red, which this line does not judge (tools/qa/gate.sh does): ${reds.join(', ')}` : ''}${first.length ? `\n    ${first.join('\n    ')}` : ''}${lost.length ? `\n    no count: ${lost.join(', ')}` : ''}\n    ${rules.map(r => `${r}: held ${held[r] ?? 0} man-ticks, read ${reads[r]?.[0] ?? 0} times, ${reads[r]?.[1] ?? 0} of them true`).join('\n    ')}${never.length ? `\n    never held in these runs: ${never.join(', ')}` : ''}`); } }
 
 console.log(fails ? `owner-check: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (OWNER_BREAK=1: as it must)' : ''}` : 'owner-check: all pass');
 process.exit(fails ? 1 : 0);

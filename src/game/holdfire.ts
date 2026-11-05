@@ -40,8 +40,7 @@ import { SideMap } from '../math/side';
 import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import { hostileTo } from './teams';
-import { SILENT, underSilence, squadSilent, quietGun, urgent } from './silent';   // (asked inside holdFireOnMan / holdFireSilent / holdFireOrder only)
-import { targetHoldRule } from './roundheld';
+import { SILENT, underSilence, squadSilent, quietGun, urgent } from './silent';   // (asked inside holdFireHoldsTarget / holdFireSilent / holdFireOrder only)
 
 export const HOLDFIRE = {
   /** THE switch: off = the team shoots on sight unless silent or sneaking, as it did */
@@ -152,7 +151,7 @@ function holds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, ur
   return held(g, gd) && !urgent();
 }
 /** His round at `h` is held: nobody has found the squad, Sam has neither fired nor ordered it, and this man has not noticed anybody (`noticed`: the silent
- *  order's own bar · `quiet`: his gun is a quiet one · `urgent`: a hostage's life is on it). Asked by silent.ts silentHolds for a LOUD man, after unseen.ts. */
+ *  order's own bar · `quiet`: his gun is a quiet one · `urgent`: a hostage's life is on it). Asked by silent.ts silentHoldsRound for a LOUD man, after unseen.ts. */
 export function holdFireHolds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, urgent: () => boolean): boolean {
   if (!HOLDFIRE.on || !holds(g, gd, h, noticed, quiet, urgent)) return false;
   HOLDFIRE_STATS.held++; return true;
@@ -161,8 +160,7 @@ export function holdFireHolds(g: Game, gd: Guard, h: Guard, noticed: number, qui
  *  before he tries a handle): a loud teammate with a living man in his sight who has not noticed anybody, the squad held. The rule's own conditions, asked
  *  afresh — no stamp, nothing counted — so it stands through a change of man, Sam in his line and the sneak's hold answering first (unseen.ts, Sam low).
  *  Never a silent man (silent.ts's hold is his own). False with the switch off. Both askers ask only under HOLDFIRE.stackSet. */
-targetHoldRule('holdfire', holdFireOnMan);
-function holdFireOnMan(g: Game, gd: Guard): boolean {
+export function holdFireHoldsTarget(g: Game, gd: Guard): boolean {
   if (!HOLDFIRE.on || underSilence(g, gd)) return false;
   const h = g.fight.opOf(gd)?.tgt; return !!h && h.state !== 'dead' && holds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g));
 }

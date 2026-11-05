@@ -44,7 +44,7 @@ import type { DoorOp } from './doortools';
 import type { Assignment } from './orders';
 import { PACE } from './guards';
 import { coverFrom } from './suppression';
-import { roundHeldBy } from './roundheld';
+import { silentHoldsRound } from './silent';
 
 export const CLEARLINE = {
   /** the switch (false = the build as it was, run for run) */
@@ -351,7 +351,7 @@ export function clearLineBlocked(g: Game, gd: Guard, tgt: Guard, to: Vec3, by: '
     if (D.what === 'step' && t <= D.eta && flat(gd.char.pos, D.spot) > 0.25 && spotOk(g, gd, D.spot, to)) return true;   // still walking to a spot that still opens it
   } else if (t - M.since < K.after || t < M.tryT) return true;
   else if (K.afterEdge > K.after && by === 'player' && t - M.runT < K.afterEdge && samAtEdge(g, gd, to)) return true;   // (Sam only at his lane's edge: the longer breath — it mostly opens by itself)
-  if (roundHeldBy('silent', g, gd, tgt)) return false;   // (a silent squad on a man who has not noticed it: no round is wanted, so none is masked — asked here, at a decision, not every frame: it counts)
+  if (silentHoldsRound(g, gd, tgt)) return false;   // (a silent squad on a man who has not noticed it: no round is wanted, so none is masked — asked here, at a decision, not every frame: it counts)
   if (moves) {   // (the player on the move clears the line himself, as a mate does: the base's answer; the rule `still` seconds after he stops)
     if (D?.what === 'kneel') return true;   // (on a knee already: as he is — no step from it for a player on the move)
     CLEARLINE_STATS.moving++; cue(g, gd, M, "no shot — you're in my line!");
