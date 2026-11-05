@@ -26,10 +26,13 @@ export function lookGrade(skyUp: number, skyE: number, lights: readonly { kind: 
  *  roof is fifteen times darker than the stone beside it and three times bluer than the sky that fills it. A camera's curve is nearly straight under its
  *  white: this is that. live: __look.day */
 export const LOOK_DAY = {
-  slope: 0.75,     // stops of screen a stop of the scene's BRIGHTNESS is given under the white (1 = as the light is; a print's 0.75 opens the shade)
-  chroma: 1,       // … and a stop BETWEEN a colour's own channels (1 = a paint keeps its colour whatever the slope; = slope: each channel by itself, which greys a paint)
-  knee: 0.7,       // of the screen's linear range: over it the curve rolls off toward white (a glint, a lamp's glass, the sky in a pane)
-  head: 0.17,      // stops over sunlit ground of LOOK_GRADE.albedo at which the screen is white: lying snow in full sun is shown at nine tenths
+  slope: 0.75,     // stops of screen a stop of the scene's BRIGHTNESS is given under the white (1 = as the light is; a print's 0.75 opens the shade) …
+  toe: 3,          // … down to this many stops under the white (where a shadow on pale stone sits) …
+  under: 1.15,     // … and this under it, so black is black: a doorway's dark and the ground past the level's edge are not a grey veil (seen, with one slope all the way down)
+  chroma: 1,       // a stop BETWEEN a colour's own channels (1 = a paint keeps its colour whatever the slope; = slope: each channel by itself, which greys a paint) …
+  highs: 0.3,      // … but for this share in the last stop and a half under the white, which goes channel by channel as film does (snow in sun is white, not the sky's blue)
+  knee: 0.8,       // of the screen's linear range: over it the curve rolls off toward white (a glint, a lamp's glass, the sky in a pane)
+  head: 0.25,      // stops over sunlit ground of LOOK_GRADE.albedo at which the screen is white: lying snow in full sun is shown at nine tenths
   from: 0.74, full: 0.83,   // the curve comes in as that sunlit ground climbs through this span of the night curve's range: none of it at dusk (0.71 there) or dawn, all of it at a clear midday (0.85), part on a grey day
 };
 /** [how far the day's curve stands in for the night's (0‥1), the stop of its white (0‥1 of the tone map's range)] for the stop sunlit ground sits on this
