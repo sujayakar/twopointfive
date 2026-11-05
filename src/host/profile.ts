@@ -266,6 +266,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.bangInto = q.get('banginto') !== '0';   // a bang and clear's can leaves the thrower's own hand and is thrown deep into the room (the deepest point its burst lights nearly all the floor from), going off as it gets there (game/doortools.ts bangSpot): ON in the page; ?banginto=0 = it appears in the door frame and goes off 1.6 m inside, as it was
   DOORTOOLS.haltBack = q.get('haltback') !== '0';   // a pair halted 'found shut' on a door the OTHER pair is charging steps back to rear security, out of the backblast, as a pair stacked there before the charge was ordered does (game/doortools.ts haltBack: the same stepBacks / makeRoom; it was asked only as the charge order was given, and the halted pair stood inside the blast): ON in the page; ?haltback=0 = it stays stacked where it halted, as it was
   DOORTOOLS.tossMate = q.get('tossmate') !== '0';   // a bang and clear asks about teammates again as the can is about to leave the hand: one of ours beyond the door, in its reach, and the can stays in the kit and they go in (game/doortools.ts mateBehind): ON in the page; ?tossmate=0 = asked when the row is given and never again, as it was
+  DOORTOOLS.chargeAnswer = q.get('chargeanswer') !== '0';   // a door charge order is carried out or answered: it asks about the leaf what the team's picture has of it, and one over short of its charge leaves its men holding on the door with the reason said (game/doortools.ts short / knownOpen): ON in the page; ?chargeanswer=0 = ended on a leaf open anywhere and its men left as they were, as it was
   DOORTOOLS.behindSam = q.get('behindsam') !== '0';   // Sam beyond a door is one of ours to the squad's own stun can: the word at a held door steps them in with the can kept, and a bang row on it is refused in words (game/doortools.ts samBehind): ON in the page; ?behindsam=0 = only teammates counted, as it was
   DOORTOOLS.podFrames = q.get('podframes') !== '0';   // no point of an entry is dealt in ANOTHER door's frame, or beyond one (game/doortools.ts inFrame; the barracks' n_end entry had a man on n4b's threshold): ON in the page; ?podframes=0 = the points as they were
   DOORTOOLS.thrHand = q.get('thrhand') !== '0';   // a threshold's can is thrown only by a man within reach of the frame, and waits for one (game/doortools.ts thrHand: a frag had run the stack off the door and the can left a doorway nobody stood at): ON in the page; ?thrhand=0 = the thrower wherever he stands
@@ -873,6 +874,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.haltBack': 'TPS_HALTBACK=1',
   'DOORTOOLS.behindSam': 'TPS_BEHINDSAM=1',
   'DOORTOOLS.tossMate': 'TPS_TOSSMATE=1',
+  'DOORTOOLS.chargeAnswer': 'TPS_CHARGEANSWER=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
   'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',
