@@ -1,0 +1,2 @@
+# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
+9230a787af404a44516fe7933624ffbdb741cb10
