@@ -54,7 +54,8 @@ function offsets(S: Schema, cols: Col[]): Map<string, number> {
   for (const c of cols) { out.set(c.name, c.kind === 'f64' ? at / 8 : at / 4); at += S.rows * (c.kind === 'f64' ? 8 : 4); }
   return out;
 }
-const CLASS: Record<ColOn, string> = { man: 'ManCols', guard: 'GuardCols', player: 'PlayerCols', anim: 'AnimCols' };
+const INIT: Record<ColOn, string> = { man: 'initMan', guard: 'initGuard', player: 'initPlayer', anim: 'initAnim' };
+const initText = (f: MenField) => (typeof f.init === 'number' && Number.isNaN(f.init) ? 'NaN' : JSON.stringify(f.init));
 
 function accessors(l: Laid, O: Map<string, number>): string[] {
   const f = l.field, n = f.name, t = f.type, doc = f.why ? [`  /** ${f.why} */`] : [];
@@ -73,13 +74,15 @@ function accessors(l: Laid, O: Map<string, number>): string[] {
       `  set ${n}(v: Readonly<Vec3> | null) { const S = this.S, w = ${u(h.col)}, i = S.b8 + this.r; if (v === null) { ${u(h.col)} = w & ${~h.mask >>> 0}; S.d[i + ${O.get(x)}] = 0; S.d[i + ${O.get(y)}] = 0; S.d[i + ${O.get(z)}] = 0; return; } ${u(h.col)} = w | ${h.mask}; S.d[i + ${O.get(x)}] = v[0]; S.d[i + ${O.get(y)}] = v[1]; S.d[i + ${O.get(z)}] = v[2]; }`, ...each];
   }
   const V = `${n.toUpperCase()}_WORDS`;
-  return [...doc, `  get ${n}(): (typeof ${V})[number] { const S = this.S; return ${V}[${u(n)}]; } set ${n}(v: (typeof ${V})[number]) { const S = this.S; ${u(n)} = ${V}.indexOf(v); }`];
+  return [...doc, `  get ${n}(): (typeof ${V})[number] { const S = this.S; return ${V}[${u(n)}]; } set ${n}(v: (typeof ${V})[number]) { const S = this.S, i = ${V}.indexOf(v); if (i < 0) throw new Error(\`${n}: no such word: \${v}\`); ${u(n)} = i; }`];
 }
 
 /** the TypeScript side */
 export function tsText(S: Schema): string {
   const { cols, laid } = layOut(S), O = offsets(S, cols), f64 = cols.filter(c => c.kind === 'f64'), u32 = cols.filter(c => c.kind === 'u32');
   const body = (on: ColOn) => laid.filter(l => l.field.on === on).flatMap(l => accessors(l, O));
+  /** what a new man's columns start at, other than zero: a method of the class his row is read through, which his object's constructor calls */
+  const inits = (on: ColOn) => { const rows = S.fields.filter(f => f.on === on && f.init !== undefined); return rows.length ? [`  ${INIT[on]}(): void { ${rows.map(f => `this.${f.name} = ${initText(f)};`).join(' ')} }`] : []; };
   const lists = laid.filter(l => Array.isArray(l.field.type)).map(l => `const ${l.field.name.toUpperCase()}_WORDS = ${JSON.stringify(l.field.type)} as const;`);
   const uses3 = laid.some(l => l.field.type === 'vec3' || l.field.type === 'vec3?');
   return [
@@ -100,14 +103,17 @@ export function tsText(S: Schema): string {
     `export class ManCols {`,
     `  S!: MenStore; r = -1;`,
     ...body('man'),
+    ...inits('man'),
     `}`,
     `/** a Guard record's own columns (a guard, a teammate, a civilian) */`,
     `export class GuardCols extends ManCols {`,
     ...body('guard'),
+    ...inits('guard'),
     `}`,
     `/** the player's own columns */`,
     `export class PlayerCols extends ManCols {`,
     ...body('player'),
+    ...inits('player'),
     `}`,
     `/** the animator's kept state */`,
     `export class AnimCols {`,
