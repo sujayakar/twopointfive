@@ -49,7 +49,7 @@ const BUDGET_TODAY: [RegExp, number][] = [
   [/^reflect \/ main$/, 274],
   [/^froxel \/ injectJ$/, 216],
   [/^sharpUE? \/ main$/, 256],   // (230 + an opening's light, 23 KB: as direct's and restir's rows above)
-  [/^gbuffer \/ fsBox$/, 302],
+  [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
   [/./, 200],
 ];
 /** the same for THE COMPACT SET (the row 'Compact shaders' on: render/kernels.ts, the ten kernels written with one call site per heavy function), its own rows within a
@@ -66,7 +66,7 @@ const BUDGET_COMPACT: [RegExp, number][] = [
   [/^fgatherS? \/ main$/, 230],
   [/^froxel \/ injectJ$/, 216],
   [/^reflect \/ main$/, 204],
-  [/^gbuffer \/ fsBox$/, 302],
+  [/^gbuffer(Cut)? \/ fsBox(Cut)?$/, 302],   // (… and its twin with the cut rule, the same text and the cut's test: 268 where fsBox is 267. It had no row, so the look's page read red against 200)
   [/./, 200],
 ];
 const BUDGET = COMPACT.on ? BUDGET_COMPACT : BUDGET_TODAY;
