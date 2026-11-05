@@ -268,7 +268,7 @@ export class GlassBreak {
   /** the level has stood up (Game's constructor, last): which glass each pane is, settled as the level stands. Never again: statics do not move, and no line has to ask a line of its own from inside its walk */
   stood(): void {
     this.sheetList = null; const l = (this.sheets as number[]).slice(); this.g.col.glassWrote();
-    this.ask((x) => { for (let i = 0; i < l.length; i += 3) l[i + 2] = x.panes_sky(l[i]); });
+    this.g.col.window(() => { if (this.g.col.rulesStatics() !== null) this.ask((x) => { for (let i = 0; i < l.length; i += 3) l[i + 2] = x.panes_sky(l[i]); }); });   // (a tool's stand with no row up that opens the copy asks nothing of it: a first question then works it out)
     this.sheetList = l; this.g.col.glassWrote();
   }
   /** metres on the floor plan from pane b to the nearest door's opening (the closed leaf's line, hinge to latch) — Infinity on a level with no door: the level's own fact, read as it is stood up (a door's frame does not move) */
