@@ -46,20 +46,21 @@ export const COAST_OF: Readonly<Record<GwotMat, CoastMat>> = {
 };
 
 /** THE QUIET WAY TO WEAR IT (a proposal beside the first, 11-05; the maintainer: "something that feels mirrors edge like", then "a minimalist hotel"): the
- *  same skin with FEWER rows, after the white roof study (tools/levels/white-roof.ts): the ground is a white paver, every wall cast panels a step under it,
- *  their copings and what is plastered a smooth skim, timber and plastic and painted metal white. ONE kit row wears each colour, so a level puts colour only
- *  where it asks for it by name: `paintRust` is the warm one, `paintBlue` the water's. Only what differs from COAST_OF is written */
+ *  same skin in FOUR VALUES: pale stone underfoot, every wall a smooth blank skim (a jointed floor wants a blank wall), timber weathered dark, cloth a linen,
+ *  frames, gates and ironwork a dark bronze, planting a sage. Cast panels are the SERVICE side's alone (`block`, `tWall`): bolts and joints say back of house.
+ *  ONE kit row wears each colour, so a level puts colour only where it asks for it by name: `paintRust` is the clay, `rugRed` the saffron.
+ *  Only what differs from COAST_OF is written */
 export const COAST_QUIET_OF: Readonly<Record<GwotMat, CoastMat>> = { ...COAST_OF,
-  mud: 'castPanel', mudDark: 'castPanel', render: 'castPanel', block: 'castPanel', tWall: 'castPanel', mudLight: 'skimWhite', whitewash: 'skimWhite', paintCream: 'skimWhite',
-  paintBlue: 'accentBlue', paintGreen: 'enamelWhite', paintRust: 'accentRed',
-  dust: 'paverWhite', mudFloor: 'paverWhite', slab: 'paverWhite', gravel: 'paverWhite', dirt: 'paverWhite', damp: 'paverWhite', oil: 'paverWhite',
-  rugRed: 'canvasWhite', rugNavy: 'canvasWhite', rugOchre: 'canvasWhite', rugGreen: 'canvasWhite', rugMadder: 'canvasWhite', blanketBrown: 'canvasWhite', tarpBlue: 'canvasWhite',
-  olive: 'enamelWhite', stencil: 'plasticDark',
-  rust: 'enamelWhite', drumBlue: 'enamelWhite', drumRed: 'enamelWhite', genYellow: 'enamelWhite',
+  mud: 'skimWhite', mudDark: 'skimWhite', render: 'skimWhite', mudLight: 'skimWhite', whitewash: 'skimWhite', paintCream: 'skimWhite', block: 'castPanel', tWall: 'castPanel',
+  paintBlue: 'bronze', paintGreen: 'bronze', paintRust: 'clay',
+  dust: 'stonePale', mudFloor: 'stonePale', slab: 'stonePale', dirt: 'dryEarth', damp: 'dryEarth', oil: 'stoneBand',
+  rugRed: 'saffron', rugNavy: 'canvasWhite', rugOchre: 'canvasWhite', rugGreen: 'canvasWhite', rugMadder: 'canvasWhite', blanketBrown: 'canvasWhite', tarpBlue: 'canvasWhite',
+  olive: 'enamelWhite', stencil: 'bronze',
+  rust: 'bronze', iron: 'bronze', drumBlue: 'enamelWhite', drumRed: 'enamelWhite', genYellow: 'enamelWhite',
   plasticGreen: 'plasticPale', plasticBlue: 'plasticPale', jerryYellow: 'enamelWhite',
-  poplar: 'enamelWhite', woodGrey: 'enamelWhite', ply: 'enamelWhite',
+  poplar: 'timber', woodGrey: 'timber', ply: 'timber',
   truckTan: 'enamelWhite', truckRed: 'enamelWhite',
-  prodOrange: 'enamelWhite', prodRed: 'enamelWhite', prodYellow: 'enamelWhite', straw: 'canvasWhite', prodGreen: 'cypress', scrub: 'cypress',
+  prodOrange: 'enamelWhite', prodRed: 'enamelWhite', prodYellow: 'enamelWhite', straw: 'canvasWhite', prodGreen: 'sage', scrub: 'sage',
 };
 
 /** tools/qa/coast-check.ts's red path: every coast row laid as itself, standing for nothing */

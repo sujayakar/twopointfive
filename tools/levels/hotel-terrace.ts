@@ -72,7 +72,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const skinS = (x0: number, x1: number, y0: number, y1: number, zFace: number, m: CoastMat, proud = 0.012) => slab(x0, y0, zFace, x1, y1, zFace + proud, C[m], row(m));
   /** a pool: a glossy plane inside a smooth coping, a grated channel along its south side. NOT water (the head) */
   const pool = (x0: number, z0: number, x1: number, z1: number) => {
-    const w = slab(x0, 0.006, z0, x1, 0.014, z1, C.accentBlue, { rough: 0.08, flags: FLAT | BoxFlag.Gloss });
+    const w = slab(x0, 0.006, z0, x1, 0.014, z1, C.poolDark, { rough: 0.08, flags: FLAT | BoxFlag.Gloss });
     for (const [a, b, c, d] of [[x0 - 0.4, z0 - 0.4, x1 + 0.4, z0], [x0 - 0.4, z1, x1 + 0.4, z1 + 0.4], [x0 - 0.4, z0, x0, z1], [x1, z0, x1 + 0.4, z1]] as const) mass(a, 0, b, c, 0.1, d, 'skimWhite');
     slab(x0 - 0.4, 0.006, z1 + 0.5, x1 + 0.4, 0.012, z1 + 0.68, C.darkSteel, { ...row('darkSteel'), flags: FLAT });
     for (const [a, b, c, d] of [[x0 + 0.3, z0 + 0.3, x1 - 0.3, z0 + 0.38], [x0 + 0.3, z1 - 0.38, x1 - 0.3, z1 - 0.3], [x0 + 0.3, z0 + 0.38, x0 + 0.38, z1 - 0.38], [x1 - 0.38, z0 + 0.38, x1 - 0.3, z1 - 0.38]] as const) film(a, b, c, d, 'enamelWhite', 0.019);   // a line of white tiles a hand in from every edge
@@ -81,10 +81,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the ground: white pavers wall to wall, in the pieces that carry their own paint ----
   grp('ground');
-  slab(0, -0.25, 0, 40, 0, 28, C.paverWhite, row('paverWhite'));
+  slab(0, -0.25, 0, 40, 0, 28, C.stonePale, row('stonePale'));
   grp('floors');
-  const terrW = film(0.4, 8.9, 13.3, 13.0, 'paverWhite'), terrM = film(13.3, 8.9, 26.7, 13.0, 'paverWhite'), terrE = film(26.7, 8.9, 39.6, 13.0, 'paverWhite');
-  const fore = film(0.4, 21.3, 39.6, 27.6, 'paverWhite');
+  const terrW = film(0.4, 8.9, 13.3, 13.0, 'stonePale'), terrM = film(13.3, 8.9, 26.7, 13.0, 'stonePale'), terrE = film(26.7, 8.9, 39.6, 13.0, 'stonePale');
+  const fore = film(0.4, 21.3, 39.6, 27.6, 'stonePale');
 
   // ---- the parapet: a low cast wall on the three open sides, a smooth cap on it ----
   grp('walls.parapet');
@@ -128,7 +128,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('ceiling');
   slab(13.88, H, 14.88, 26.12, H + 0.2, 21.12, C.skimWhite, { flags: BoxFlag.NoPrimary, rough: COAST_FINISH.skimWhite.rough });
   grp('room.reception');
-  skinS(18.6, 21.4, 0, H, 15.12, 'skimRed', 0.01); slab(25.87, 0, 15.12, 25.88, H, 17.3, C.skimRed, row('skimRed')); slab(25.87, 0, 18.7, 25.88, H, 20.88, C.skimRed, row('skimRed'));   // the warm wall: the pier between the bays and the east wall, what the camera sees through the open side
+  skinS(18.6, 21.4, 0, H, 15.12, 'clay', 0.01); slab(25.87, 0, 15.12, 25.88, H, 17.3, C.clay, row('clay')); slab(25.87, 0, 18.7, 25.88, H, 20.88, C.clay, row('clay'));   // the warm wall: the pier between the bays and the east wall, what the camera sees through the open side
   G.table(17.0, 16.6, 2.6, 0.8, 0); G.plankBench(23.0, 19.6, 0, 1.8); G.plankBench(23.0, 16.4, 0, 1.8); G.tub(14.8, 20.2, 'whitewash'); G.tub(25.2, 20.2, 'whitewash');
   // its door's number, a louvre and a plate on the forecourt side: paint and fittings on the wall that faces the camera
   mark(skinS(18.55, 19.15, 1.35, 1.95, 21.12, 'enamelWhite', 0.01), MD.stencilMarks('+z', '1', -0.125, -0.175, INK, 2, 'base'));   // the door's number on a plate (no word names a place: a number, a depth, a bay, a line are the place's own)

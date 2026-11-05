@@ -84,26 +84,27 @@ export const SNOW_SIM: Readonly<Record<SnowMat, GwotSim>> = { snow: 'asphalt', s
  *  never a new one. Two rows wait for a stuff the look does not have yet and say the nearest honest one meanwhile: `sand` (earth) and `roofTile` (sheet).
  *  NO ROW HAS THE NUMBERS OF ANOTHER PALETTE'S ROW or of one of its stand-ins (a round knows a paint by its numbers: tools/qa/coast-check.ts holds it). */
 export const COAST_PALETTE = {
-  // walls: render in three colours, a smooth skim, fair concrete, precast panels, pale block. NO PALE ROW IS OVER 0.7: the exposure brings a dark place up and
+  // walls: render in three colours, a smooth skim, fair concrete, precast panels, pale block. NO PALE ROW IS OVER 0.53 (on a real card, 11-05, a sunlit plane painted 0.63 still sat at white, where one at 0.35 read as a light stone): the exposure brings a dark place up and
   // never a bright one down, so a big plane painted near white sits AT white in the sun and loses its joints (seen on a real card, 11-05). The sun takes
   // a pale plane the rest of the way
-  stuccoWhite: [0.68, 0.667, 0.635] as Vec3, stuccoSand: [0.63, 0.55, 0.43] as Vec3, terracotta: [0.53, 0.27, 0.17] as Vec3, skimWhite: [0.69, 0.683, 0.662] as Vec3,
+  stuccoWhite: [0.53, 0.52, 0.495] as Vec3, stuccoSand: [0.63, 0.55, 0.43] as Vec3, terracotta: [0.53, 0.27, 0.17] as Vec3, skimWhite: [0.52, 0.505, 0.47] as Vec3,
   fairConcrete: [0.49, 0.485, 0.47] as Vec3, castPanel: [0.585, 0.58, 0.565] as Vec3, paleBlock: [0.535, 0.52, 0.495] as Vec3,
   // ground: two pavings, the road, a pale slab, pale gravel, sand, soil, a lawn. As in the first skin the ground sits under every wall's value
   paverWarm: [0.345, 0.3, 0.245] as Vec3, paverGrey: [0.285, 0.283, 0.275] as Vec3, roadTarmac: [0.072, 0.073, 0.078] as Vec3, paleSlab: [0.405, 0.4, 0.385] as Vec3,
-  paleGravel: [0.325, 0.305, 0.275] as Vec3, sand: [0.585, 0.505, 0.37] as Vec3, soil: [0.098, 0.068, 0.046] as Vec3, lawn: [0.125, 0.215, 0.075] as Vec3,
+  paleGravel: [0.31, 0.265, 0.205] as Vec3, sand: [0.585, 0.505, 0.37] as Vec3, soil: [0.098, 0.068, 0.046] as Vec3, lawn: [0.125, 0.215, 0.075] as Vec3,
   // timber, roof
   deck: [0.395, 0.285, 0.185] as Vec3, deckGrey: [0.415, 0.385, 0.335] as Vec3, roofTile: [0.445, 0.195, 0.115] as Vec3,
   // paint and enamel: one sea colour, one warm, a yellow, a navy, a white
-  paintTeal: [0.045, 0.295, 0.315] as Vec3, paintCoral: [0.615, 0.195, 0.135] as Vec3, paintSun: [0.715, 0.545, 0.075] as Vec3, paintNavy: [0.038, 0.078, 0.195] as Vec3, enamelWhite: [0.675, 0.675, 0.658] as Vec3,
+  paintTeal: [0.045, 0.295, 0.315] as Vec3, paintCoral: [0.615, 0.195, 0.135] as Vec3, paintSun: [0.715, 0.545, 0.075] as Vec3, paintNavy: [0.038, 0.078, 0.195] as Vec3, enamelWhite: [0.515, 0.515, 0.502] as Vec3,
   // metal, plastic, rubber, cloth, leaves
-  brushedSteel: [0.525, 0.545, 0.555] as Vec3, darkSteel: [0.088, 0.093, 0.102] as Vec3, binGreen: [0.058, 0.205, 0.118] as Vec3, plasticPale: [0.665, 0.66, 0.628] as Vec3, plasticDark: [0.052, 0.052, 0.058] as Vec3,
-  tyreRubber: [0.034, 0.034, 0.038] as Vec3, canvasWhite: [0.672, 0.653, 0.596] as Vec3, canvasBlue: [0.095, 0.245, 0.495] as Vec3, towelStripe: [0.655, 0.305, 0.215] as Vec3, foliage: [0.098, 0.235, 0.078] as Vec3,
-  // the quiet way's four (tools/levels/coastSkin.ts COAST_QUIET_OF; the white roof study's vocabulary, tools/levels/white-roof.ts): a white paver the ground is
-  // laid in (walls and things sit a step under it), a smooth wall in the one warm colour, and two clean enamels: that colour on a thing, and the water's blue
-  paverWhite: [0.63, 0.635, 0.64] as Vec3, skimRed: [0.66, 0.165, 0.045] as Vec3, accentRed: [0.66, 0.145, 0.035] as Vec3, accentBlue: [0.02, 0.215, 0.43] as Vec3,
-  // (a cypress and a clipped hedge: the dark green of a tree that keeps its leaves)
-  cypress: [0.03, 0.082, 0.038] as Vec3,
+  brushedSteel: [0.525, 0.545, 0.555] as Vec3, darkSteel: [0.088, 0.093, 0.102] as Vec3, binGreen: [0.058, 0.205, 0.118] as Vec3, plasticPale: [0.505, 0.5, 0.476] as Vec3, plasticDark: [0.052, 0.052, 0.058] as Vec3,
+  tyreRubber: [0.034, 0.034, 0.038] as Vec3, canvasWhite: [0.5, 0.46, 0.39] as Vec3, canvasBlue: [0.095, 0.245, 0.495] as Vec3, towelStripe: [0.655, 0.305, 0.215] as Vec3, foliage: [0.098, 0.235, 0.078] as Vec3,
+  // the quiet way's rows (tools/levels/coastSkin.ts COAST_QUIET_OF, tools/levels/hotel-terrace.ts): FOUR VALUES, pale stone, mid gravel, dark planting and
+  // timber, near-black water. A pale terrace stone, the darker smooth stone of a porch floor and the band a column sets out, dry earth, weathered timber,
+  // dark bronze for frames and drains, a cypress and a sage, deep water, and two colours: clay as one plane in a view, saffron only on things that move
+  stonePale: [0.47, 0.45, 0.405] as Vec3, stoneShade: [0.37, 0.35, 0.315] as Vec3, stoneBand: [0.29, 0.27, 0.24] as Vec3, dryEarth: [0.2, 0.13, 0.078] as Vec3,
+  timber: [0.24, 0.175, 0.12] as Vec3, bronze: [0.07, 0.06, 0.05] as Vec3, cypress: [0.05, 0.075, 0.03] as Vec3, sage: [0.17, 0.2, 0.12] as Vec3,
+  poolDark: [0.02, 0.07, 0.075] as Vec3, clay: [0.36, 0.13, 0.07] as Vec3, saffron: [0.52, 0.31, 0.07] as Vec3,
 };
 export type CoastMat = keyof typeof COAST_PALETTE;
 namePaints(COAST_PALETTE);
@@ -114,7 +115,8 @@ export const COAST_FINISH: Readonly<Record<CoastMat, { rough: number; metal?: bo
   paintTeal: { rough: 0.55 }, paintCoral: { rough: 0.55 }, paintSun: { rough: 0.5 }, paintNavy: { rough: 0.55 }, enamelWhite: { rough: 0.4 },
   brushedSteel: { rough: 0.4, metal: true }, darkSteel: { rough: 0.5, metal: true }, binGreen: { rough: 0.5 }, plasticPale: { rough: 0.45 }, plasticDark: { rough: 0.5 },
   tyreRubber: { rough: 0.85 }, canvasWhite: { rough: 0.95 }, canvasBlue: { rough: 0.95 }, towelStripe: { rough: 0.95 }, foliage: { rough: 1 },
-  paverWhite: { rough: 0.5 }, skimRed: { rough: 0.45 }, accentRed: { rough: 0.35 }, accentBlue: { rough: 0.35 }, cypress: { rough: 1 },
+  stonePale: { rough: 0.6 }, stoneShade: { rough: 0.5 }, stoneBand: { rough: 0.5 }, dryEarth: { rough: 1 }, timber: { rough: 0.85 }, bronze: { rough: 0.45, metal: true }, cypress: { rough: 1 }, sage: { rough: 1 },
+  poolDark: { rough: 0.06 }, clay: { rough: 0.5 }, saffron: { rough: 0.95 },
 };
 export const COAST_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
   (Object.keys(COAST_PALETTE) as CoastMat[]).map(n => [n, { albedo: COAST_PALETTE[n], rough: COAST_FINISH[n].rough, ...(COAST_FINISH[n].metal ? { metal: true } : {}) }]));
@@ -126,7 +128,8 @@ export const COAST_SIM: Readonly<Record<CoastMat, GwotSim>> = {
   paintTeal: 'metal', paintCoral: 'metal', paintSun: 'metal', paintNavy: 'metal', enamelWhite: 'metal',
   brushedSteel: 'metal', darkSteel: 'metal', binGreen: '~plastic', plasticPale: '~plastic', plasticDark: '~plastic',
   tyreRubber: '~plastic', canvasWhite: 'chair', canvasBlue: 'chair', towelStripe: 'chair', foliage: 'plant',
-  paverWhite: 'stone', skimRed: 'wall', accentRed: 'metal', accentBlue: 'metal', cypress: 'plant',
+  stonePale: 'stone', stoneShade: 'stone', stoneBand: 'stone', dryEarth: 'asphalt', timber: 'wood', bronze: 'metal', cypress: 'plant', sage: 'plant',
+  poolDark: 'concrete', clay: 'wall', saffron: 'chair',
 };
 /** the palette + finishes as the exporter's `materials` rows (tools/levels/export.ts: a generator's `MATERIALS` export) */
 export const GWOT_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
