@@ -29,7 +29,7 @@ import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
-import { run, boots, pressStopsClock } from './pressure';
+import { run, boots, pressKeepsHome } from './pressure';
 import { DIGIN, digInSet } from './digin';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
@@ -73,7 +73,7 @@ interface Errand { caller: Def; buddy: Def; phase: 'beat' | 'run' | 'back'; goAt
 const newStats = () => ({ calls: 0, answered: 0, arrived: 0, metOnWay: 0, turnedBack: 0, diedOnWay: 0, short: 0, noOne: 0, secs: 0, metres: 0 });
 interface State { men: Map<Def, Man>; errands: Errand[]; stats: ReturnType<typeof newStats>; stale: boolean }
 const STATES = new SideMap<Game, State>('buddy.STATES');
-ownerWitness<Game>('buddy', (gd, g) => { if (!BUDDY.on) return false; const st = STATES.get(g), D = g.fight.defs.find(X => X.gd === gd); return !!st && !!D && buddyHas(g, st, D); });
+ownerWitness<Game>('buddy', (gd, g) => BUDDY.on && !!STATES.get(g)?.errands.some(e => e.caller.gd === gd));
 const stateOf = (g: Game): State => { let s = STATES.get(g); if (!s) { s = { men: new Map(), errands: [], stats: newStats(), stale: false }; STATES.set(g, s); } return s; };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -128,7 +128,7 @@ function free(g: Game, F: RoomFight, st: State, X: Def, mine: Errand | null = nu
   const gd = X.gd;
   if (!own(g, X) || g.time - gd.lastSeenT < BUDDY.quiet || st.errands.some(e => e !== mine && (e.buddy === X || e.caller === X))) return false;
   if (g.time - (st.men.get(X)?.doneT ?? -100) < BUDDY.again) return false;   // (he has only just come to somebody: not off again on the next call)
-  pressStopsClock(g, X); if (hasHim(X.gd, OWN.press) || gd.staysInRooms || hasHim(gd, OWN.squadWord) || hasHim(gd, OWN.stand)) return false;   // (laststand.ts, default off: a man of the last stand answers nobody's call)
+  if (hasHim(X.gd, OWN.press) || pressKeepsHome(g, X) || gd.staysInRooms || hasHim(gd, OWN.squadWord) || hasHim(gd, OWN.stand)) return false;   // (laststand.ts, default off: a man of the last stand answers nobody's call)
   const set = digInSet(g, gd);
   if (set && (DIGIN.stay || DIGIN.reachM > 0)) return false;                  // (digin.ts's own rules for who holds his room, when they are on, keep him)
   const all = mates(F, X), firm = all.filter(m => m.mode === 'hold' && !st.errands.some(e => e.buddy === m)).length;
@@ -235,12 +235,13 @@ function nearestEntry(R: Room, p: Vec3): number { let best = -1, bd = Infinity; 
 
 /** roomfight.ts rally() asks: true = this man has a colleague on his way to him, or the two of them have only just paired up — he does not walk off to a
  *  fight next door by himself meanwhile (the man who asked for company waits for it). False on its first line with the switch off */
-const buddyHas = (g: Game, st: State, D: Def) => g.time < (st.men.get(D)?.keepT ?? -100) || st.errands.some(e => e.caller === D);
-/** WHO THE CALL HAS (src/game/owner.ts): a colleague is on his way to him, or the two have just paired up. As each frame's fight opens (the pair's time may have run out) and as this file's tick ends */
-export function buddySay(g: Game, F: RoomFight): void {
+/** WHO THE CALL HAS (src/game/owner.ts): a colleague is on his way to him. Its errands change only inside its own tick */
+function buddySay(g: Game, F: RoomFight): void {
   const st = BUDDY.on ? STATES.get(g) : undefined;
-  for (const gd of g.guards) { const D = st && F.defs.find(X => X.gd === gd); if (st && D && buddyHas(g, st, D)) claimMan(gd, OWN.buddy, g.time); else releaseMan(gd, OWN.buddy, g.time); }
+  for (const gd of g.guards) { if (st?.errands.some(e => e.caller.gd === gd)) claimMan(gd, OWN.buddy, g.time); else releaseMan(gd, OWN.buddy, g.time); }
 }
+/** …and for a moment after, the two have just paired up: he waits, and no rally clock is left running to send him the frame he is let go. A time, so asked as it is */
+export function buddyPaired(g: Game, D: Def): boolean { return BUDDY.on && g.time < (STATES.get(g)?.men.get(D)?.keepT ?? -100); }
 /** once a frame from RoomFight.tick, after the defenders', the teammates' and the press's own ticks */
 export function buddyTick(g: Game, F: RoomFight) {
   if (!BUDDY.on) return;

@@ -46,7 +46,7 @@ import { Vec3, v3 } from '../math/vec';
 import { dieOf, roll, type Die } from '../math/dice';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
-import { run, boots, pressStopsClock } from './pressure';
+import { run, boots, pressKeepsHome } from './pressure';
 import { CUES } from './cues';
 import { placeIn } from './dialogue';
 import { WORDS, wg } from './words';
@@ -182,7 +182,7 @@ const fit = (g: Game, D: Def) => fitGd(g, D.gd);
 const calm = (g: Game, D: Def) => fit(g, D) && g.time - D.gd.lastSeenT > LASTSTAND.quiet;
 /** … and free to be sent somewhere: holding a post, and nobody else's man (his squad's word or leg, the press, the rescue's men with the hostages), his hands
  *  not on a door or its furniture this moment (a man SET behind a door he has wedged may leave it for the stand: one room held by all of them, not three by one each) */
-const movable = (g: Game, D: Def) => calm(g, D) && D.mode === 'hold' && D.rallyAt !== Infinity && !hasHim(D.gd, OWN.squadWord) && !hasHim(D.gd, OWN.squadLeg) && (pressStopsClock(g, D), !hasHim(D.gd, OWN.press)) && (digInPhase(g, D.gd) === 'idle' || digInPhase(g, D.gd) === 'set');
+const movable = (g: Game, D: Def) => calm(g, D) && D.mode === 'hold' && D.rallyAt !== Infinity && !hasHim(D.gd, OWN.squadWord) && !hasHim(D.gd, OWN.squadLeg) && !hasHim(D.gd, OWN.press) && !pressKeepsHome(g, D) && (digInPhase(g, D.gd) === 'idle' || digInPhase(g, D.gd) === 'set');
 
 /** where a point is, by the structure's own rooms (dialogue.ts placeName's rule, whatever the cues' switch says) */
 function where(g: Game, p: Vec3): { id: string | null; the: string; at: string } {
