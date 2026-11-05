@@ -58,7 +58,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit, LIVED_PAINT } from './livedKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { drawnAs, PANEL_GREY, RACK_BLACK, madeOf, saidAs } from '../../src/scene/stuff';
+import { drawnAs, PANEL_GREY, madeOf, saidAs } from '../../src/scene/stuff';
 
 export const NAME = 'depot';
 export const NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
@@ -240,7 +240,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const x = 28.2 + i * 0.75, z = 10.15;
     const slots: { u: number; y: number; amber: boolean }[] = [];
     for (let u = 0; u < 10; u++) { if (((u * 7 + i * 3) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + i) % 7 === 3 }); }
-    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: RACK_BLACK, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
+    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
     if (i === DRIVE_RACK) rackFront = [x, 1.1, z + 0.53];
     if (slots.length) switchables.push({ name: `rack${i}_leds`, boxes: [rackBody], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker: i === 0, mains: false });
   }

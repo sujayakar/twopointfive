@@ -86,7 +86,7 @@ import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
-import { drawnAs, PANEL_GREY, RACK_BLACK, madeOf } from '../../src/scene/stuff';
+import { drawnAs, PANEL_GREY, madeOf } from '../../src/scene/stuff';
 
 
 export const NAME = 'block';
@@ -262,7 +262,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const x = 33.0 + i * 0.75, z = 4.75;
     const slots: { u: number; y: number; amber: boolean }[] = [];
     for (let u = 0; u < 10; u++) { if (((u * 7 + i * 3) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + i) % 7 === 3 }); }
-    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: RACK_BLACK, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
+    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
     if (i === DRIVE_RACK) rackFront = [x, 1.1, z + 0.53];
     let lo = 10, hi = -10; for (const sl of slots) { lo = Math.min(lo, sl.y); hi = Math.max(hi, sl.y); }
     if (slots.length) {

@@ -7,7 +7,7 @@
 // the output) and the exported palette. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
 import { Vec3, DEG, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from './boxes';
-import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, RACK_BLACK, madeOf, saidAs } from './stuff';
+import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, madeOf, saidAs } from './stuff';
 import { carShapes, hubPaint, carSays } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
@@ -96,7 +96,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   let section = 'level'; const grp = (name: string) => { section = name; };   // editor grouping recorded per box for the exporter (trace.groups[i] ≡ boxes[i]); no effect on the level
   const add = (b: Partial<Box> & { c: Vec3; h: Vec3 }) => {
     const box = makeBox(b), paint = paintOf(b.albedo);   // (the palette's row, if the call handed one over: `albedo: C.wood`. A colour written as numbers is nobody's paint)
-    if (b.rough === undefined && b.metal === undefined && paint?.rough !== undefined) { box.rough = paint.rough; if (paint.metal) box.metal = true; }   // the paint's finish (an explicit rough / metal on the call wins)
+    if (b.rough === undefined && b.metal === undefined && paint?.rough !== undefined) { box.rough = paint.rough; if (paint.metal) box.metal = true; }   // the paint's finish (an explicit rough / metal on the call wins — the racks, the server floor)
     worded(box);   // what it is made of: the call's word, else its paint's (scene/stuff.ts)
     boxes.push(box); trace?.groups.push(section); return boxes.length - 1;
   };
@@ -224,7 +224,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   /** COVER: a FILING CABINET 0.46 × 0.6 × 1.32, drawer fronts on local −Z */
   function cabinet(x: number, z: number, yaw: number) {   // filing cabinet, drawer fronts on local -Z
     const at = frameAt(x, z, yaw);
-    add({ c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: madeOf('steel', [0.58, 0.58, 0.56]), ...mk(MD.cabinetMarks([0.23, 0.66, 0.3], TX)) });   // (markings: drawer seams + pulls)
+    add({ c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], stuff: 'steel', ...mk(MD.cabinetMarks([0.23, 0.66, 0.3], TX)) });   // (markings: drawer seams + pulls)
     if (!DEMOTE) for (let k = 0; k < 3; k++) add({ c: at(0, 0.3 + k * 0.4, -0.305), h: [0.19, 0.012, 0.006], yaw, albedo: [0.25, 0.25, 0.26], flags: BoxFlag.NoShadow });   // (relief: the pull strips as boxes)
   }
   let paperSeed = 0;
@@ -299,9 +299,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // NOT SAID: the lot (no stuff the look has is tarmac: gravel drew it as cobbles and a slab as cracked paving, so it stays plain) and the lawn (it waits).
   const K = { wall: saidAs('skim', C.wall), sill: saidAs('skim', C.wallDark), shell: saidAs('cast panel', C.concrete), landing: saidAs('board concrete', C.concrete),
     carpet: saidAs('carpet', C.carpet), carpetBlue: saidAs('carpet', C.carpetBlue), carpetRed: saidAs('carpet', C.carpetRed),
-    stone: saidAs('paver', C.stone), lino: saidAs('enamel', C.lino), red: saidAs('enamel', C.red),
-    veneer: saidAs('veneer', C.woodDark),   // (… and its dark wood furniture is veneer on board: the counter, the low tables, the credenza)
-    couch: madeOf('fabric', [0.3, 0.12, 0.1]), sofa: madeOf('fabric', [0.22, 0.2, 0.19]) };   // (the lobby's couch and the manager's sofa: woven cloth on a frame)
+    stone: saidAs('paver', C.stone), lino: saidAs('enamel', C.lino), red: saidAs('enamel', C.red) };
 
   // ---------------- ground & structure ----------------
   grp('ground');
@@ -316,7 +314,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   slab(4, -0.1, 4, 36, 0.001, 24, K.carpet); // whole interior carpet base (thin top at y=0)
   floor(4, 10, 36, 12.2, K.lino, polished);  // corridor
   floor(4, 16, 12, 24, K.stone, polished);   // lobby (its north strip z 12.2‥16, reception side, is the carpet base — the stone and its gloss start at z 16)
-  floor(14, 4, 22, 10, madeOf('paver', [0.2, 0.21, 0.24], { rough: 0.35 }));   // server room raised floor (anti-static laminate tiles, so laid in pieces: a soft sheen under the cold panel — Box.rough, the reflection pass)
+  floor(14, 4, 22, 10, madeOf('paver', [0.2, 0.21, 0.24]), { rough: 0.35 });   // server room raised floor (anti-static laminate tiles, so laid in pieces: a soft sheen under the cold panel — Box.rough, the reflection pass)
   floor(28, 12.2, 36, 24, K.lino, polished); // break room (the same lino as the corridor, so the same finish: the vending fronts and its beacon get a floor to glint in)
   // rugs in cubicle farm (like the reference shots)
   floor(15, 14, 19, 17, K.carpetBlue); floor(21, 18.5, 25, 21.5, K.carpetRed); floor(14.5, 19.5, 18, 22.5, K.carpetRed);
@@ -371,11 +369,11 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // ---------------- lobby (x4..12, z12.2..24) ----------------
   grp('lobby');
   // reception desk (L-shape), couch, low table, plants
-  add({ c: [8.2, 0.55, 15.2], h: [1.6, 0.55, 0.35], albedo: K.veneer }); add({ c: [8.2, 1.12, 15.0], h: [1.7, 0.03, 0.45], albedo: C.stone });
-  add({ c: [9.95, 0.55, 16.1], h: [0.35, 0.55, 0.6], albedo: K.veneer });
+  add({ c: [8.2, 0.55, 15.2], h: [1.6, 0.55, 0.35], albedo: C.woodDark, stuff: 'veneer' }); add({ c: [8.2, 1.12, 15.0], h: [1.7, 0.03, 0.45], albedo: C.stone });
+  add({ c: [9.95, 0.55, 16.1], h: [0.35, 0.55, 0.6], albedo: C.woodDark, stuff: 'veneer' });
   monitor(7.6, 15.1, Math.PI, true, 1.15); chair(8.0, 14.2, Math.PI);   // monitor on the counter top (not in it), chair facing it
-  add({ c: [6.0, 0.22, 21.5], h: [1.1, 0.22, 0.45], albedo: K.couch }); add({ c: [6.0, 0.6, 21.9], h: [1.1, 0.35, 0.12], albedo: K.couch }); // couch
-  add({ c: [6.0, 0.2, 20.2], h: [0.6, 0.2, 0.35], albedo: K.veneer }); // low table
+  add({ c: [6.0, 0.22, 21.5], h: [1.1, 0.22, 0.45], albedo: [0.3, 0.12, 0.1], stuff: 'fabric' }); add({ c: [6.0, 0.6, 21.9], h: [1.1, 0.35, 0.12], albedo: [0.3, 0.12, 0.1], stuff: 'fabric' }); // couch
+  add({ c: [6.0, 0.2, 20.2], h: [0.6, 0.2, 0.35], albedo: C.woodDark, stuff: 'veneer' }); // low table
   add({ c: [10.8, 0.3, 22.8], h: [0.3, 0.3, 0.3], albedo: C.stone }); add({ c: [10.8, 0.95, 22.8], h: [0.35, 0.4, 0.35], albedo: C.plant });
   add({ c: [4.9, 0.3, 13.3], h: [0.3, 0.3, 0.3], albedo: C.stone }); add({ c: [4.9, 0.95, 13.3], h: [0.3, 0.4, 0.3], albedo: C.plant });
   rug(6.2, 20.9, 3.4, 2.6, [0.34, 0.1, 0.09]);                                     // lounge rug under couch + table
@@ -510,7 +508,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
 
   // ---------------- conference room (x4..14, z4..10) ----------------
   grp('conference');
-  add({ c: [9.0, 0.72, 7.0], h: [2.2, 0.04, 0.8], albedo: K.veneer }); add({ c: [8.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black }); add({ c: [10.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black });
+  add({ c: [9.0, 0.72, 7.0], h: [2.2, 0.04, 0.8], albedo: C.woodDark, stuff: 'veneer' }); add({ c: [8.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black }); add({ c: [10.0, 0.35, 7.0], h: [0.25, 0.35, 0.3], albedo: C.black });
   for (let i = 0; i < 4; i++) { chair(7.2 + i * 1.2, 5.75, Math.PI + (i - 1.5) * 0.1); chair(7.2 + i * 1.2, 8.25, (i * 0.13) % 0.4 - 0.2); }
   chair(6.2, 7.0, Math.PI / 2); chair(11.8, 7.0, -Math.PI / 2);
   // wall TV (east wall x=14) — standby: dim; UI can set "presentation" bright
@@ -539,8 +537,8 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   add({ c: [8.05, 0.766, 4.5], h: [0.2, 0.006, 0.14], albedo: [0.14, 0.14, 0.15] });                                                                       // tray on the credenza…
   add({ c: [7.95, 0.872, 4.52], h: [0.05, 0.1, 0.05], albedo: [0.5, 0.58, 0.66] }); add({ c: [7.95, 0.987, 4.52], h: [0.036, 0.015, 0.036], albedo: [0.5, 0.58, 0.66] });   // …water jug and its neck…
   for (const [dx, dz] of [[0.1, -0.06], [0.17, 0.02], [0.09, 0.07]]) add({ c: [8.0 + dx, 0.812, 4.5 + dz], h: [0.024, 0.04, 0.024], albedo: [0.72, 0.75, 0.8] });   // …three glasses
-  const PHONE = madeOf('metal', [0.09, 0.09, 0.1], { rough: 0.92 });   // (the puck's numbers are the car park's paint: by them it had the car park's finish and was drawn as iron. Said here as it was)
-  add({ c: [9.05, 0.775, 7.02], h: [0.11, 0.015, 0.11], albedo: PHONE }); add({ c: [9.05, 0.775, 7.02], h: [0.11, 0.015, 0.11], yaw: Math.PI / 4, albedo: PHONE });   // conference phone: an octagonal puck…
+  const PHONE = { rough: 0.92, stuff: 'metal' } as const;   // (the puck's numbers are the car park's paint: by them it had the car park's finish and was drawn as iron. Said here as it was)
+  add({ c: [9.05, 0.775, 7.02], h: [0.11, 0.015, 0.11], albedo: [0.09, 0.09, 0.1], ...PHONE }); add({ c: [9.05, 0.775, 7.02], h: [0.11, 0.015, 0.11], yaw: Math.PI / 4, albedo: [0.09, 0.09, 0.1], ...PHONE });   // conference phone: an octagonal puck…
   add({ c: [9.05, 0.7915, 7.06], h: [0.05, 0.002, 0.03], albedo: [0.3, 0.31, 0.34], flags: BoxFlag.NoShadow });                                            // …with its keypad
   add({ c: [7.5, 2.46, 9.9], h: [1.46, 0.04, 0.035], albedo: [0.78, 0.77, 0.72] }); add({ c: [11.85, 2.46, 9.9], h: [1.6, 0.04, 0.035], albedo: [0.78, 0.77, 0.72] });   // blind cassettes under the glazing header, both runs…
   add({ c: [6.76, 2.1, 9.905], h: [0.7, 0.32, 0.006], albedo: [0.82, 0.8, 0.74] });                                                                        // …the west third a little way down
@@ -559,7 +557,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     const green: Vec3 = [0.25, 6.0, 0.7]; const amber: Vec3 = [6.0, 2.2, 0.2];
     const slots: { u: number; y: number; amber: boolean }[] = [];
     for (let u = 0; u < 10; u++) { if (((u * 7 + i * 3 + r * 5) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + i) % 7 === 3 }); }   // 4U pitch ≈ 0.178 m from y = 0.32; ~40 % of the slots populated; one amber fault light here and there (the third LED)
-    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: RACK_BLACK, ...mk(MD.rackMarks([0.33, 1.05, 0.5], DEMOTE ? slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })) : [], TX)) });   // (satin powder-coated steel: the reflection pass shows the LED columns and the panel in the cabinet sides — Box.rough)
+    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], DEMOTE ? slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })) : [], TX)) });   // (satin powder-coated steel: the reflection pass shows the LED columns and the panel in the cabinet sides — Box.rough)
     if (r * 4 + i === DRIVE_RACK) rackFront = [x, 1.1, z + 0.53];      // marker point: on the LED face, chest height
     const leds: number[] = []; let lo = 10, hi = -10;
     for (const sl of slots) {
@@ -615,7 +613,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   add({ c: [23.0, 0.35, 5.0], h: [0.4, 0.35, 0.4], albedo: [0.35, 0.25, 0.15] }); add({ c: [23.0, 1.0, 5.0], h: [0.3, 0.35, 0.3], albedo: C.plant });
   rug(26.3, 6.9, 3.4, 2.6, [0.28, 0.14, 0.1]); papers(26.0, 0.76, 6.4, 0.2); bin(27.7, 6.9);
   wallArt(22.09, 1.6, 6.6, 1.2, 0.8, [0.6, 0.55, 0.4], false); plant(29.4, 9.4, 0.9);
-  add({ c: [24.7, 0.3, 4.75], h: [0.9, 0.3, 0.45], albedo: K.sofa }); add({ c: [24.7, 0.62, 4.3], h: [0.9, 0.32, 0.12], albedo: K.sofa });   // low sofa under the north window (keeps the side door to the server room clear)
+  add({ c: [24.7, 0.3, 4.75], h: [0.9, 0.3, 0.45], albedo: [0.22, 0.2, 0.19], stuff: 'fabric' }); add({ c: [24.7, 0.62, 4.3], h: [0.9, 0.32, 0.12], albedo: [0.22, 0.2, 0.19], stuff: 'fabric' });   // low sofa under the north window (keeps the side door to the server room clear)
   // desk lamp: small fixture boxes + warm spot light
   add({ c: [27.2, 0.78, 6.0], h: [0.08, 0.02, 0.08], albedo: C.black }); add({ c: [27.2, 0.98, 6.0], h: [0.015, 0.2, 0.015], albedo: C.black });
   const lampHead = add({ c: [27.12, 1.2, 6.08], h: [0.07, 0.05, 0.07], albedo: C.black, emissive: [0, 0, 0] });
@@ -625,7 +623,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // the sofa, the coat stand in the corner behind his chair (#1's light finds it from the far end of his search leg, 0.7 m short of the credenza); books among the
   // cartons on the east shelves, his certificate beside them, a briefcase against the desk's end panel, the phone. New solids only line the north wall and the
   // desk's east end: the door side, the kneehole #2 lights and every mark keep their room.
-  add({ c: [28.1, 0.375, 4.36], h: [0.9, 0.375, 0.22], albedo: K.veneer });                                  // credenza (x 27.2‥29.0, out to z 4.58)…
+  add({ c: [28.1, 0.375, 4.36], h: [0.9, 0.375, 0.22], albedo: C.woodDark, stuff: 'veneer' });                                  // credenza (x 27.2‥29.0, out to z 4.58)…
   add({ c: [27.62, 0.87, 4.3], h: [0.09, 0.12, 0.02], albedo: [0.66, 0.56, 0.3] });                              // …a framed something on it…
   add({ c: [28.72, 0.83, 4.36], h: [0.08, 0.08, 0.08], albedo: [0.36, 0.3, 0.26] }); add({ c: [28.72, 1.03, 4.36], h: [0.13, 0.12, 0.13], yaw: 0.5, albedo: C.plant });   // …and a pot plant
   wallArt(27.55, 1.5, 4.135, 0.62, 0.82, [0.2, 0.28, 0.42], true); wallArt(28.5, 1.55, 4.135, 0.8, 0.6, [0.62, 0.5, 0.3], true);   // prints over the credenza (under the clerestory sill at 2.05)…

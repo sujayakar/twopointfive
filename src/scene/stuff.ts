@@ -111,8 +111,6 @@ export const drawnAs: typeof madeOf = (stuff, colour, finish) => madeOf(stuff, c
 export const PANEL_GREY = madeOf('sheet', [0.42, 0.44, 0.45]), CHAIR_GREY = drawnAs('paint', [0.5, 0.5, 0.48]);
 /** … and a third that somebody did choose: the lot's concrete kerb (it was drawn as sheet metal) */
 export const KERB_GREY = madeOf('slab', [0.5, 0.5, 0.47]);
-/** … and a fourth, laid by four generators: a server rack's body, with its sheen. Nobody chose its word either (it was drawn as bare iron by its colour) */
-export const RACK_BLACK = drawnAs('metal', [0.06, 0.06, 0.07], { rough: 0.3 });
 /** the paint this array IS, if a kit named it: asked of the array a maker was handed (`b.albedo`), before it is copied */
 export const paintOf = (albedo: readonly number[] | undefined): Paint | undefined => albedo ? PAINTS.get(albedo) : undefined;
 /** A PAINT TONED IS THE SAME STUFF: `out` is the paint `from` in another tone (worn ground is its ground darker, a faded door its paint paler), so it
