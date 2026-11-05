@@ -155,6 +155,11 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'panes_ctx', 'panes_boot', 'panes_booted', 'panes_world', 'panes_view', 'panes_settle_sky', 'panes_impact', 'panes_widen', 'panes_blast_begin', 'panes_blast_sheet', 'panes_sheets', 'panes_sheet_bi', 'panes_frame_begin', 'panes_men_addr', 'panes_men', 'panes_step', 'panes_reset', 'panes_set_type', 'panes_type', 'bars_take', 'bars_blast', 'bars_gone', 'bar_gone', 'bar_flags', 'bars_clear', 'panes_type_place', 'panes_type_box', 'panes_sky', 'panes_open_at', 'panes_walkable', 'panes_fraction', 'panes_sig', 'panes_out_addr', 'panes_out_pts_addr', 'panes_out_n', 'panes_out_clear', 'panes_take_wrote', 'panes_take_gust', 'panes_field', 'panes_row_addr', 'panes_q_addr', 'panes_row_n', 'panes_row_index', 'panes_held', 'panes_tally', 'panes_heard', 'panes_forget_heard', 'panes_dice_threshold', 'panes_box_seed', 'panes_point_seed', 'panes_fall', 'panes_jet',
   'pen_toll', 'pen_cross', 'pen_path', 'pen_path_head', 'pen_arm', 'pen_passes', 'pen_shot', 'pen_add_hole', 'pen_hole_rows', 'pen_hole_bi', 'pen_hole_n', 'pen_hole_pt', 'pen_rev', 'pen_clear_holes'];
 
+/** A RUNTIME WITH NO WEBASSEMBLY (a browser whose policy turns a site's JIT off has none) DOES NOT PLAY: the simulation is the module's and nothing else
+ *  works it out. The page shows these words in place of the game, before anything is built (main.ts); they are the maintainer's, as he chose them. */
+export const NO_WASM_WORDS = "This game needs WebAssembly, and it's turned off in this browser. Try another browser.";
+export class NoWasmError extends Error { constructor(why: string) { super(why); this.name = 'NoWasmError'; } }
+export const noWasm = (): boolean => typeof (globalThis as { WebAssembly?: unknown }).WebAssembly === 'undefined';
 let X: SimExports | null = null, why: string | null = null;
 /** how long the one compile-and-start took, in milliseconds (0 until it has happened): the page's boot line and the check print it */
 export let simBootMs = 0;
@@ -166,8 +171,8 @@ function start(): SimExports {
 }
 /** WHY THIS RUNTIME CANNOT RUN THE MODULE ('' = it can, and it is started). Asked once and kept: the module is started here, so a runtime that has no
  *  WebAssembly (a browser whose policy turns its JIT off has none), one that will not compile it (a page whose policy forbids it) and a built.ts of another
- *  version are all the one answer. Such a page plays on the TypeScript simulation for as long as there is one, and says so (simSay) — it could not play a
- *  build whose update is in Rust alone. */
+ *  version are all the one answer. Such a page does not play: the simulation is the module's alone. With no WebAssembly it shows the card (NO_WASM_WORDS);
+ *  any other reason is a fault of the build and is shown as one. */
 export function simWhyNot(): string {
   if (why === null) { try { X = start(); why = ''; } catch (e) { why = String((e as Error)?.message ?? e); } }
   return why;
@@ -218,73 +223,72 @@ export function mathsOfRust(): Maths {
 }
 
 // ---- WHICH SYSTEMS RUN IN RUST
-let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false, diceOn = false;
-let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false, walkOn = false;
-let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false, itemsOn = false, raysOn = false;
+// (every row but the maths is UP as this module loads: that is how the game is played, on every page and in every tool, whoever stands it up and whether
+//  or not anyone calls rowsUp. A runtime with no WebAssembly does not play: the page shows its card, main.ts)
+let mathsOn = false, linesOn = true, circlesOn = true, fogOn = true, posesOn = true, diceOn = true;
+let sightOn = true, lightOn = true, smokeOn = true, soundOn = true, pathsOn = true, walkOn = true;
+let doorsOn = true, fallsOn = true, propsOn = true, slabsOn = true, itemsOn = true, raysOn = true;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
  *  a rule of play: a recording made with one on replays with it off, and the frozen stand's fixtures do not care. A row is ON in the page once its system is
  *  proven and faster there; until then it is a thing a check raises.
  *
  *  maths   the game's own maths (src/math/exact.ts, when EXACT.on has put them in Math's place) from Rust instead: every sin, cos, atan2, exp … and every
- *          length of math/hyp.ts the update asks for crosses into the module. OFF in the page and on both stands (?rustmaths / TPS_RUSTMATHS=1 raise it): a
+ *          length of math/hyp.ts the update asks for crosses into the module. OFF in the page and on both stands (no word raises it: a check holds it up in its own process, tools/qa/headless.ts hold): a
  *          call from TypeScript into the module costs more than the dozen operations it saves (bun: sin 27 ns here, 44 ns there; V8 about level), so this row
  *          is the proof that the two arithmetics are one — and the Rust systems that follow call the Rust maths with no crossing.
  *  lines   the box world's line tests (src/scene/collision.ts segmentBlocked, shotBlocked through it, segmentBlockedDynamic: every line of sight, every
  *          straight run of a sound, every reach and line of fire) from the module's copy of the box world (src/scene/boxMirror.ts) — INSIDE A TICK: there the
  *          copy is proven against the boxes as the tick opens; a question asked outside one (the page's own, a tool's) is answered in TypeScript as it always
- *          was. ?rustlines / TPS_RUSTLINES=1 raise it.
+ *          was.
  *  rays    the box world's ray (collision.ts raycast: the nearest thing along a ray, how far and by which face — a round's flight, a thrown can's bounce,
  *          a torn leaf's slide) from the same copy, inside a tick. A ROW OF ITS OWN, though it is lines.rs that answers: the lines' row can be on in the
  *          page while this one waits its turn. A rule stepped in the module (the slabs', the thrown things') asks its rays there whatever this row says.
- *          ?rustrays / TPS_RUSTRAYS=1 raise it.
  *  circles a circle against the box world (collision.ts collideCircle, circleTouches, gather: a body's footprint pushed out of the statics, what a prop or a
- *          rag doll rests against) from the same copy, inside a tick. ?rustcircles / TPS_RUSTCIRCLES=1 raise it.
+ *          rag doll rests against) from the same copy, inside a tick.
  *  fog     the fog of war's sight pass (game/fogofwar.ts update: which of the team's eyes has a line to each man and each body): the loop over the eyes and
  *          its lines in the module, a man a question, inside a tick and where the game's own maths stand (EXACT.on: the lengths are worked out there).
- *          ?rustfog / TPS_RUSTFOG=1 raise it.
  *  poses   the poses a character keeps (src/anim/skeleton.ts Pose, PoseSet) live in its game's block of the module's memory (rust/sim/src/poses.rs, a tenant:
  *          game/posehome.ts), and the posing functions (a clip sampled, a pose blended, run forward, a node turned, the two-bone solve) are asked of the module, of a kept
  *          pose where it lives and of a function's scratch pose by a copy onto the bench: A PROOF, not a speed-up (a call a question costs more than the
- *          question), until the animator's layers that ask them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it.
+ *          question), until the animator's layers that ask them are Rust too. Where the game's own maths stand.
  *  dice    the game's own die (src/math/dice.ts SimDice: the word every draw of the simulation comes off, and the count of draws) kept in the game's block of
  *          the module's memory (src/sim/state.ts) and rolled there. THE FIRST STATE OF THE GAME THAT LIVES IN THE MODULE: it is what the rollback snapshot,
  *          the saves in memory and the state's word were taught to carry a block for. A proof like `maths` (a draw from TypeScript then costs a call), and the
- *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens. ?rustdice / TPS_RUSTDICE=1 raise it.
+ *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens.
  *  walk    the animator's layers (game/character.ts CharacterAnimator: what makes a blend of clips a man who leans into his walk, breathes, keeps his soles
  *          where he put them, flinches, holds a wall), a layer at a time (rust/sim/src/layers.rs): each asked once on the pose where it lives, so it needs
  *          `poses` at home and the game's own maths; the TypeScript method stays behind the row as `<name>Own`. Not yet: the two holds, the big tools, the throw, and the update itself.
- *          ?rustwalk / TPS_RUSTWALK=1 raise it.
  *
  *  THE SENSES, a row each (asked through src/scene/collision.ts; every one inside a tick and where the game's own maths stand, since each works its lengths out
  *  in the module):
- *  sight   an eye on a man (game/guards.ts eyeContact: the cone, then the lines to his chest and his head) as one question. ?rustsight / TPS_RUSTSIGHT=1.
+ *  sight   an eye on a man (game/guards.ts eyeContact: the cone, then the lines to his chest and his head) as one question.
  *  light   the light on a point (guards.ts lightEstimateAt: every lamp in reach, each shadowed by a line) as one question a point, the host writing the
- *          lamps that may be asked. ?rustlight / TPS_RUSTLIGHT=1.
- *  smoke   the game's own smoke along a line (game/sense.ts CpuSmoke.trans, what SENSE.cpu sees through) as one question a line. ?rustsmoke / TPS_RUSTSMOKE=1.
- *  sound   how a sound reaches a listener (scene/collision.ts SoundPaths.propagate: straight, over the top, or round by the floor). ?rustsound / TPS_RUSTSOUND=1.
- *  paths   a way across the floor (collision.ts NavGrid.findPath: the A* and its smoothing; with a penalty the search waits for the caller's prices, nav.rs find_priced). ?rustpaths / TPS_RUSTPATHS=1.
+ *          lamps that may be asked.
+ *  smoke   the game's own smoke along a line (game/sense.ts CpuSmoke.trans, what SENSE.cpu sees through) as one question a line.
+ *  sound   how a sound reaches a listener (scene/collision.ts SoundPaths.propagate: straight, over the top, or round by the floor).
+ *  paths   a way across the floor (collision.ts NavGrid.findPath: the A* and its smoothing; with a penalty the search waits for the caller's prices, nav.rs find_priced).
  *
  *  THE THINGS of a level, a row a family (each keeps its state in the game's block from the moment the game is made — sim/state.ts — and, while its row
  *  is on, its step runs there and WRITES the box world's rows: the Box objects the picture draws follow, scene/boxMirror.ts `follow`):
  *  doors   the doors' step (game/doors.ts Doors.update: what was written onto each leaf, the men and bodies in its swing, its swing, stops, closer, latch and
  *          lock's clocks, and where its box stands) from rust/sim/src/doors.rs, the leaves' own numbers at home in the block (sim/doorshome.ts). The state is
- *          at home on either maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustdoors / TPS_RUSTDOORS=1.
+ *          at home on either maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does.
  *  falls   what falls and what it leaves (sim/fallshome.ts FallStore: the landings the simulation has scheduled for things that let go, and the litter map of
- *          broken glass a footfall is louder on) kept in the game's block and worked there (rust/sim/src/falls.rs). Either maths. ?rustfalls / TPS_RUSTFALLS=1.
+ *          broken glass a footfall is louder on) kept in the game's block and worked there (rust/sim/src/falls.rs). Either maths.
  *  props   the furniture men shove (game/props.ts PropSystem.update: each chair, carton, bin and plant coasting, pushed, knocking and coming to rest, and
  *          the scrapes and knocks of it) from rust/sim/src/props.rs, each thing's own numbers at home in the block (sim/propshome.ts). It writes NO row of
  *          the box world (furniture is not in it): the boxes the picture draws are placed from the columns, as they were. The state is at home on either
- *          maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustprops / TPS_RUSTPROPS=1.
+ *          maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does.
  *  slabs   a leaf off its hinges, in the air (game/doorblast.ts stepSlab: the loose slab flying, toppling, stopped by what its rays find, slamming flat
  *          and coming to rest clear of every static) from rust/sim/src/slabs.rs, each slab's own numbers at home in the block (sim/slabshome.ts). It
  *          writes no row of the box world: the host poses the slab's box from the columns after each slab's step, as it did. A pane its ray meets is judged
- *          there (rust/sim/src/glass.rs); nothing of play is handed back. ?rustslabs / TPS_RUSTSLABS=1.
+ *          there (rust/sim/src/glass.rs); nothing of play is handed back.
  *  items   what is thrown or dropped (game/throwables.ts Throwables.update: a can, a grenade, a magazine, a gun out of a dying hand — ageing, falling,
  *          bouncing off walls, leaves and furniture, coming to rest, dropping off a chair that moved) from rust/sim/src/items.rs, each thing's own
  *          numbers at home in the block (sim/itemshome.ts). The pool is walked in one call; what a thing does to anything else (a bounce said, a share
  *          of momentum for a chair, its time up) is listed and done by the host after. A pane a ray meets and lying snow under a bounce are asked
- *          there (glass.rs; items.rs bog_at over the level's snow); nothing of play is handed back. ?rustitems / TPS_RUSTITEMS=1. */
+ *          there (glass.rs; items.rs bog_at over the level's snow); nothing of play is handed back. */
 export const RUST = {
   get maths(): boolean { return mathsOn; },
   set maths(v: boolean) { const on = !!v && !simWhyNot(); if (on === mathsOn) return; mathsFrom(on ? mathsOfRust() : null); mathsOn = on; },   // (a runtime that cannot run the module keeps the row off: the same game either way)
@@ -380,22 +384,30 @@ export function fellWord(w: string): void { if (w === '0') { FELL.on = false; re
 export const fellLines = (): string[] => Object.entries(FELL.n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${k}`);
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
 const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
-/** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page and both of the harness's stands; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` /
- *  `TPS_RUST=0` all of them): EVERY row but the maths. Each is the same game to the bit in the module, by its differential and by the missions under both
+/** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page and both of the harness's stands, and no word of an address or of the environment moves
+ *  one: rowsUp below): EVERY row but the maths. Each is the same game to the bit in the module, by its differential and by the missions under both
  *  engines (tools/qa/rust-check.ts). They are not all cheaper there yet: the box world's lines, the furniture and the poses with the walk's layers are; a
  *  row whose callers are still TypeScript pays a crossing a question (the die, a door, a sound's path, a route) and is on all the same, because the
  *  TypeScript behind it is going and the game must be played the way it will be kept (docs/agents/rust.md, "Rows that are on", has every number).
  *  The maths stay TypeScript (math/exact.ts): a sine a crossing is the dearest crossing there is, and the module works its own out inside itself.
- *  The rows that work lengths and angles out (OWN_MATHS) answer only under the game's own maths. A runtime with no WebAssembly keeps every row off
- *  whatever this says (the setters above), and plays the same game. */
+ *  The rows that work lengths and angles out (OWN_MATHS) answer only under the game's own maths, which is the only maths the game is played on. A
+ *  runtime with no WebAssembly does not play: the page says so on a card (main.ts, NO_WASM_WORDS) and builds no game. */
 export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog', 'poses', 'dice', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'falls', 'walk', 'props', 'slabs', 'items', 'rays'];
 /** is `row` one of them */
 export const rustOn = (row: string): boolean => (RUST_ON as readonly string[]).includes(row);
-/** THE ADDRESS'S WORDS ABOUT THE ROWS (`rust`, and `rust<row>` a row: host/profile.ts pageRows reads them). They are the VISIT's, never a run's: which
- *  language works a system out is this machine's business, so a page sent on to a recipe's address (a replay, a networked game: replay/engineplay.ts
- *  recipeSearch) keeps the visitor's and drops the recipe's own (ui/replaykey.ts VISIT_FLAGS) */
-export const rustWords = (): string[] => ['rust', ...Object.keys(RUST).map(r => 'rust' + r)];
-/** the rows by name, for what treats them all alike: the page's address (?rust<row>), the harness's word (TPS_RUST<ROW>=1), a recording's own (journal.ts) */
+/** EVERY ROW AS THE GAME IS PLAYED (RUST_ON up, the maths down): what the page's boot and the harness's stand-up write, and nothing else writes a row in
+ *  play. A row is NOT a switch: no word of an address, of a tool's environment or of a recording moves one. The table stays a table only so that a
+ *  check that still holds the two languages against each other can put its own row down inside its own process, until that family's TypeScript is gone. */
+export function rowsUp(): void { for (const r of rustRows()) rustRow(r, rustOn(r)); }
+/** THE GAME'S OWN MATHS, ON (math/exact.ts): what the page's boot writes beside the rows. The harness writes its own (standup.ts pinMaths), so that a
+ *  check's own arm can take them out for a red path; nothing else in play writes them */
+export function mathsUp(): void { EXACT.on = true; }
+/** THE WORDS THAT WERE THE ROWS' SWITCHES AND THE MATHS', RETIRED: a tool or an address that still says one is told so, by name (a word that is silently
+ *  nothing is a run that is not what its caller thinks it is). Two lists, since they are two places: a tool's environment, and a page's address (the
+ *  rows' names are spelt out so that no later word that merely begins `rust` is taken for one) */
+export function retiredEnvWord(w: string): boolean { return /^(TPS_RUST[A-Z]*|TPS_EXACT)$/.test(w); }
+export function retiredAddressWord(w: string): boolean { return w === 'rust' || w === 'noexact' || (w.startsWith('rust') && rustRows().includes(w.slice(4))); }
+/** the rows by name, for what treats them all alike (a check's own arm, tools/qa/headless.ts hold; the checks that walk every row) */
 export const rustRows = (): string[] => Object.keys(RUST);
 export function rustRow(row: string, on: boolean): void { if (rustRows().includes(row)) (RUST as Record<string, boolean>)[row] = on; }
 /** WHAT EACH ROW HAS RUNNING IN THE MODULE NOW: a row can be on and idle (the maths cross only while the game's own maths stand in Math's place) */
@@ -403,7 +415,7 @@ function running(): string[] { const R = RUST as Record<string, boolean>; return
 /** one line for the page's console: the module started (or why not), and which rows are on. Starts the module — a page that cannot is known at boot, not at
  *  the first system that needs it. */
 export function simSay(): string {
-  const no = simWhyNot(); if (no) return `rust simulation: NOT RUNNING — ${no}; every system in TypeScript`;
+  const no = simWhyNot(); if (no) return `rust simulation: NOT RUNNING — ${no}; the game does not play here`;
   const on = running();
   return `rust simulation: ${SIM_BYTES} bytes, started in ${simBootMs.toFixed(1)} ms · in Rust: ${on.length ? on.join(' ') : 'nothing yet (rows: ' + Object.keys(RUST).join(' ') + ')'}`;
 }
