@@ -16,8 +16,8 @@
 //   · COME ANOTHER WAY: its floor is `dear` in every walk a man of that side plans (guards.ts goTo — the fight AI's hunters and the scripted legs of a press,
 //     a flank or a squad's errand alike), so a way round is taken wherever the level has one.
 //   · HOLD BACK: a man whose way still lies down it stops at the last floor out of its line and holds there with his gun on its mouth (followPath's gate →
-//     RoomFight.laneStop), and while he is held no press and no noise AT THOSE GUNS takes him off it (`laneHolds`: they would send him at the same guns by
-//     the same way; a fight somewhere else may have him). Nobody who knows of the lane walks over to a fight at its guns BY HIMSELF, held or not (`laneWarns`
+//     RoomFight.laneStop), and while he is held no press and no noise AT THOSE GUNS takes him off it (`laneBars`: they would send him at the same guns by
+//     the same way; a fight somewhere else may have him). Nobody who knows of the lane walks over to a fight at its guns BY HIMSELF, held or not (`laneKnownAt`
 //     in the stock rally — the one-at-a-time feed); a press may still take a man who is not held: together, by its own way. A man caught standing in it off his own post while rounds are still coming down it gets out of the line, to floor the guns do not see even
 //     shifted a stride. A doorway drill (tactics.ts) is not stacked on a jamb the guns see through the opening (`laneCovers`), nor run through a
 //     doorway whose far side is in their line — unless the charge that goes in first will burst on those guns (`laneDoor`).
@@ -57,7 +57,8 @@ import { placeName } from './dialogue';
 import { CUES } from './cues';
 import { doorwayInWay } from './doorway';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { gunKeepsPost } from './gunroles';   // (called inside laneHolds only)
+import { gunKeepsPost } from './gunroles';   // (called inside laneBars only)
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 export const LANES = {
   /** the whole rule. Module default OFF (the frozen stand); the page raises it (src/host/profile.ts pageSwitches; `?nolanes` holds it off) */
@@ -209,6 +210,7 @@ interface State {
   near: { gd: Guard; from: Vec3; at: Vec3; who: number; t: number }[];
 }
 const states = new GameSideMap<Game, State>('lanes.states');
+ownerWitness<Game>('lane', (gd, g) => { const st = states.get(g); return !!st && (st.held.size > 0 || st.peek.size > 0) && live(g) && !!laneOf(st, gd); });
 const fresh = (): State => ({ lanes: [], serial: 0, mask: null, ver: 0, own: new SideMap(), seen: new SideSet(), banged: new SideSet(), push: new Map(), flank: new Map(), flankOf: new Map(), dropped: new SideSet(), failT: new SideMap(), skip: false, held: new Map(), cans: [], roll: 0, due: [], look: new SideMap(), post: new SideMap(), backT: new SideMap(), saidT: -100, t: -1, tickT: 0,
   stats: { lanes: 0, known: 0, unknown: 0, held: 0, rerouted: 0, backedOut: 0, round: 0, stuns: 0, pushes: 0, lapsed: 0, peeks: 0, peekThere: 0, peekClear: 0, peekLost: 0, pins: 0, pinRounds: 0, pinLost: 0, sets: 0, goes: 0, frags: 0, fragLost: 0, fragKept: 0 }, peek: new Map(), reloads: new Map(), fragNo: new SideMap(), near: [] });
 const S = (g: Game): State => { let st = states.get(g); if (!st) { st = fresh(); states.set(g, st); } return st; };
@@ -219,6 +221,18 @@ const SIDE = 'hostile' as const;
 const mine = (g: Game, gd: Guard) => gd.team === SIDE && !!gd.unit && gd.state !== 'dead' && !gd.held;
 const fit = (g: Game, gd: Guard) => mine(g, gd) && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
 const live = (g: Game) => LANES.on && fightLive(g) && g.aiEnabled && !g.touring;
+/** WHO THE LANES HAVE (src/game/owner.ts): a man held short of a lane or out for a look round its corner, while that lane stands */
+const laneOf = (st: State, gd: Guard) => { const h = st.held.get(gd) ?? st.peek.get(gd); return h && st.lanes.find(L => L.id === h.lane); };
+function laneSay(g: Game, st: State, gd: Guard): void { if (laneOf(st, gd)) claimMan(gd, OWN.lane, g.time); else releaseMan(gd, OWN.lane, g.time); }
+type Held = State['held'] extends Map<Guard, infer H> ? H : never;
+function heldOn(g: Game, st: State, gd: Guard, h: Held): void { st.held.set(gd, h); laneSay(g, st, gd); }
+function heldOff(g: Game, st: State, gd: Guard): void { st.held.delete(gd); laneSay(g, st, gd); }
+function peekOn(g: Game, st: State, gd: Guard, p: Peek): void { st.peek.set(gd, p); laneSay(g, st, gd); }
+function peekOff(g: Game, st: State, gd: Guard): void { st.peek.delete(gd); laneSay(g, st, gd); }
+/** every man this file had, let go of: the state goes with them */
+function letGo(g: Game, st: State): void { for (const gd of st.held.keys()) releaseMan(gd, OWN.lane, g.time); for (const gd of st.peek.keys()) releaseMan(gd, OWN.lane, g.time); }
+/** a lane has gone: whoever it held is nobody's until the half-second's sweep says what becomes of him */
+function lanesGone(g: Game, st: State): void { for (const gd of st.held.keys()) laneSay(g, st, gd); for (const gd of st.peek.keys()) laneSay(g, st, gd); }
 const eyeOf = (gd: Guard): Vec3 => gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]);
 const cellAt = (g: Game, p: Vec3) => { const n = g.col.nav; const x = Math.floor(p[0] / n.cell), z = Math.floor(p[2] / n.cell); return x < 0 || z < 0 || x >= n.W || z >= n.H ? -1 : z * n.W + x; };
 const inMask = (g: Game, m: Uint8Array | null, p: Vec3) => { if (!m) return false; const i = cellAt(g, p); return i >= 0 && m[i] === 1; };
@@ -302,7 +316,7 @@ function cost(g: Game, st: State, from: Vec3, at: Vec3, man: Guard, down: boolea
   if (st.lanes.length > K.max) {   // (one too many: the one that matters least goes — a few stray rounds before a lane, an unsaid one before one on the net, then the one longest quiet; the newcomer itself if that is it)
     const rank = (x: Lane) => (x.known ? 2 : 0) + (x.weight >= 1 ? 1 : 0); let o = 0;
     for (let i = 1; i < st.lanes.length; i++) { const a = st.lanes[i], b = st.lanes[o]; if (rank(a) < rank(b) || (rank(a) === rank(b) && a.lastT < b.lastT)) o = i; }
-    const gone = st.lanes.splice(o, 1)[0]; st.stats.lapsed++; if (gone.known) note(g, null, `lane ${gone.id}: dropped for a newer one`); if (gone.cells) remask(g, st);
+    const gone = st.lanes.splice(o, 1)[0]; lanesGone(g, st); st.stats.lapsed++; if (gone.known) note(g, null, `lane ${gone.id}: dropped for a newer one`); if (gone.cells) remask(g, st);
     if (gone === L) return;
   }
   if (L.weight < 1) return;
@@ -381,7 +395,7 @@ export function lanesTick(g: Game, dt: number) {
     if (L.pushUntil >= 0 && g.time >= L.pushUntil) L.pushUntil = -1;
     if (L.can && g.time - L.can.t > 5) L.can = null;
   }
-  const n0 = st.lanes.length; st.lanes = st.lanes.filter(L => { const keep = L.weight >= 1 ? g.time < L.until : g.time - L.lastT < 10; if (!keep && !L.known && L.weight >= 1) st.stats.unknown++; if (!keep && L.known) note(g, null, `lane ${L.id}: forgotten (${L.downs} down, last round ${(g.time - L.lastT).toFixed(0)} s ago)`); return keep; });   // (a few rounds past a man and no more: forgotten in ten seconds)
+  const n0 = st.lanes.length; st.lanes = st.lanes.filter(L => { const keep = L.weight >= 1 ? g.time < L.until : g.time - L.lastT < 10; if (!keep && !L.known && L.weight >= 1) st.stats.unknown++; if (!keep && L.known) note(g, null, `lane ${L.id}: forgotten (${L.downs} down, last round ${(g.time - L.lastT).toFixed(0)} s ago)`); return keep; }); if (st.lanes.length !== n0) lanesGone(g, st);   // (a few rounds past a man and no more: forgotten in ten seconds)
   if (st.lanes.length !== n0) { st.stats.lapsed += n0 - st.lanes.length; changed = true; }
   if (changed) remask(g, st);
   if (st.peek.size) for (const [gd, p] of [...st.peek]) peekStep(g, st, gd, p);
@@ -397,16 +411,16 @@ export function lanesTick(g: Game, dt: number) {
   st.tickT -= dt; if (st.tickT > 0) return; st.tickT = 0.5;
   for (const [gd, h] of st.held) {
     const D = defOf(g, gd);
-    if (!D || !mine(g, gd) || !st.lanes.some(L => L.id === h.lane) || D.mode === 'free') { st.held.delete(gd); continue; }
+    if (!D || !mine(g, gd) || !st.lanes.some(L => L.id === h.lane) || D.mode === 'free') { heldOff(g, st, gd); continue; }
     if (h.aimed) {
-      if (D.mode !== 'hold' || flat(gd.char.pos, h.at) > 2.5) { st.held.delete(gd); continue; }   // (somebody else has moved him since: no longer this rule's man)
+      if (D.mode !== 'hold' || flat(gd.char.pos, h.at) > 2.5) { heldOff(g, st, gd); continue; }   // (somebody else has moved him since: no longer this rule's man)
       // …moved a step all the same (the doorway's manners, a shove) onto floor a gun of the lane has, or left in a doorway: out of it again
       if (K.stopClear && fit(g, gd) && !closeFight(g, gd) && !pushing(g, st, gd) && !flanking(g, st, gd) && !st.flankOf.has(gd) && !st.peek.has(gd) && g.time - gd.lastSeenT > 1 && g.time - (st.backT.get(gd) ?? -100) > 6) {   // (never a man set on the lane's other side: his place a step short of their line is the errand's own)
         const L = st.lanes.find(x => x.id === h.lane); if (L && knows(L, gd) && (doorwayInWay(g, gd.char.pos) || gunOn(g, L, gd.char.pos, K.shiftM)) && !backOut(g, st, gd, L)) st.backT.set(gd, g.time);   // (no cover found: asked again in six seconds, not every tick)
       }
       continue;
     }
-    if (D.mode === 'move') { const sg = gd.script?.goal; if (!sg || flat(sg, h.at) > 0.8) st.held.delete(gd); continue; }   // (on his way to cover — or sent elsewhere meanwhile: then the gate has him again like anybody)
+    if (D.mode === 'move') { const sg = gd.script?.goal; if (!sg || flat(sg, h.at) > 0.8) heldOff(g, st, gd); continue; }   // (on his way to cover — or sent elsewhere meanwhile: then the gate has him again like anybody)
     h.aimed = true; h.at = v3.copy(gd.char.pos);
     if (fit(g, gd) && g.time - gd.lastSeenT > 1) { g.fight.laneStop(gd, h.look); st.stats.held++; }   // (backed out to cover and arrived: his gun on the lane's mouth — unless he has a man in his sights, which is the fight's)
   }
@@ -462,7 +476,7 @@ function backOut(g: Game, st: State, gd: Guard, L: Lane): boolean {
   const spot: Vec3 = [(found % W + 0.5) * n.cell, 0, (((found / W) | 0) + 0.5) * n.cell];
   // (a step further from the lane than its very edge, where the floor allows: the same direction once more)
   { const ex = spot[0] - gd.char.pos[0], ez = spot[2] - gd.char.pos[2], el = Math.hypot(ex, ez) || 1; const far: Vec3 = [spot[0] + ex / el * 0.6, 0, spot[2] + ez / el * 0.6]; const fi = cellAt(g, far); if (fi >= 0 && !n.blocked[fi] && cover(fi)) { spot[0] = far[0]; spot[2] = far[2]; } }
-  st.backT.set(gd, g.time); st.held.set(gd, { lane: L.id, t: g.time, look: mouthOf(g, L, spot), aimed: false, at: v3.copy(spot) }); st.stats.backedOut++;
+  st.backT.set(gd, g.time); heldOn(g, st, gd, { lane: L.id, t: g.time, look: mouthOf(g, L, spot), aimed: false, at: v3.copy(spot) }); st.stats.backedOut++;
   gd.path = []; gd.pathGoal = null; legTo(g, D, spot, null, 0.3);
   if (g.time - st.saidT > 4) { st.saidT = g.time; g.say(gd, 'get back — out of their line!', true); }
   note(g, gd, `lane ${L.id}: in their line, backs out to (${spot[0].toFixed(1)}, ${spot[2].toFixed(1)})`);
@@ -499,7 +513,7 @@ function round(g: Game, st: State, L: Lane, at: Guard[]) {
   }
   for (let i = 0; i < n; i++) {
     const gd = ways[i].gd, D = defOf(g, gd), stop = ways[i].stop; if (!D) continue;
-    st.held.delete(gd); st.flank.set(gd, g.time + Math.min(60, ways[i].len / 2 + 10));
+    heldOff(g, st, gd); st.flank.set(gd, g.time + Math.min(60, ways[i].len / 2 + 10));
     if (ways[i].pin && stop) {   // its end too long in their sight to walk: as far as where the guns would first see him, to hold the lane from that side
       st.flankOf.set(gd, { lane: L.id, phase: 'walk', at: stop, t: g.time, n: 0 }); gd.path = []; gd.pathGoal = null; legTo(g, D, stop, null, 0); gd.lastKnown = v3.copy(L.from); st.stats.round++;
       if (i === 0) { g.say(gd, wg('going around — keep them looking your way!', 'going round — keep them looking your way!'), true); st.saidT = g.time; }
@@ -550,7 +564,7 @@ function bangs(g: Game, st: State) {
       const to: Vec3 = [e.pos[0], 0, e.pos[2]]; let first = true;
       for (const [gd, h] of [...st.held]) {
         if (h.lane !== L.id || !fit(g, gd) || flat(gd.char.pos, L.from) > K.pushM) continue; const D = defOf(g, gd); if (!D) continue;
-        st.held.delete(gd); st.push.set(gd, L.pushUntil); gd.path = []; gd.pathGoal = null; gd.lastKnown = v3.copy(L.from); legTo(g, D, to, null, K.pushFast);   // (a straight run at where the charge went off: the room fight plants him on the first man he sees)
+        heldOff(g, st, gd); st.push.set(gd, L.pushUntil); gd.path = []; gd.pathGoal = null; gd.lastKnown = v3.copy(L.from); legTo(g, D, to, null, K.pushFast);   // (a straight run at where the charge went off: the room fight plants him on the first man he sees)
         if (first) { first = false; g.say(gd, 'they\'re blind — go, go!', true); st.saidT = g.time; }
         note(g, gd, `lane ${L.id}: pushes down it behind the charge`);
       }
@@ -635,7 +649,7 @@ function flankTick(g: Game, st: State, L: Lane) {
       }
       st.flank.delete(gd); f.phase = 'set'; f.t = g.time; f.at = v3.copy(gd.char.pos); st.stats.sets++;
       const look = mouthOf(g, L, gd.char.pos); gd.path = []; gd.pathGoal = null;
-      if (g.fight.laneStop(gd, look)) st.held.set(gd, { lane: L.id, t: g.time, look: v3.copy(look), aimed: true, at: v3.copy(gd.char.pos) });
+      if (g.fight.laneStop(gd, look)) heldOn(g, st, gd, { lane: L.id, t: g.time, look: v3.copy(look), aimed: true, at: v3.copy(gd.char.pos) });
       if (g.time - st.saidT > 2) { st.saidT = g.time; g.say(gd, 'set — I\'ve got an angle on them!', true); }
       note(g, gd, `lane ${L.id}: round and set at (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}), ${flat(gd.char.pos, L.from).toFixed(0)} m from its guns: holds it from this side`);
       L.pinAt = Math.max(L.pinAt, g.time + 1.5);
@@ -655,7 +669,7 @@ function flankGo(g: Game, st: State, L: Lane) {
   const K = LANES; let first = true;
   for (const [gd, f] of st.flankOf) {
     if (f.lane !== L.id || f.phase !== 'set') continue; const D = defOf(g, gd); if (!D || !fit(g, gd)) continue;
-    f.phase = 'go'; f.t = g.time; st.held.delete(gd); st.flank.set(gd, g.time + 12); gd.path = []; gd.pathGoal = null; gd.lastKnown = v3.copy(L.from); legTo(g, D, L.from, null, K.pushFast); st.stats.goes++;
+    f.phase = 'go'; f.t = g.time; heldOff(g, st, gd); st.flank.set(gd, g.time + 12); gd.path = []; gd.pathGoal = null; gd.lastKnown = v3.copy(L.from); legTo(g, D, L.from, null, K.pushFast); st.stats.goes++;
     if (first) { first = false; g.say(gd, 'moving!', true); }
     note(g, gd, `lane ${L.id}: goes in under the fire, ${flat(gd.char.pos, L.from).toFixed(0)} m to its guns`);
   }
@@ -669,7 +683,7 @@ function pinStart(g: Game, st: State, L: Lane) {
   const last = L.pinBy >= 0 ? new Set(g.fight.defs.filter(x => x.gd.char.id === L.pinBy).map(x => x.gd)) : null;   // (in turn: not the man who fired last, if another is placed)
   const pick = (last && stepper(g, st, L, last, true, K.pinMinM)) || stepper(g, st, L, null, true, K.pinMinM); if (!pick) return; const gd = pick.gd, D = defOf(g, gd); if (!D) return;
   const look = st.held.get(gd)?.look ?? mouthOf(g, L, gd.char.pos); L.pinAt = g.time + K.pinGap; L.pinN++; L.peekAt = Math.max(L.peekAt, g.time + K.peekGap);   // (he looks as he fires: no look for news on top of it)
-  st.held.delete(gd); st.peek.set(gd, { lane: L.id, phase: 'out', t: g.time, home: v3.copy(gd.char.pos), look: v3.copy(look), to: pick.to, lineT: -1, fire: { n: K.pinRounds, t: -1, next: 0, saw: false, lineT: -1 } });
+  heldOff(g, st, gd); peekOn(g, st, gd, { lane: L.id, phase: 'out', t: g.time, home: v3.copy(gd.char.pos), look: v3.copy(look), to: pick.to, lineT: -1, fire: { n: K.pinRounds, t: -1, next: 0, saw: false, lineT: -1 } });
   gd.path = []; gd.pathGoal = null; legTo(g, D, pick.to, null, K.pinPace - g.tune.guardChase);
   { let m = L.guns[0] ?? L.from, md = Infinity; for (const q of L.guns) { const d = flat(q, pick.to); if (d < md) { md = d; m = q; } } order(gd, { aimAt: [m[0], 1.2, m[2]] }); }   // (his gun on where the fire came from before he is round the corner)
   st.stats.pins++; L.pinBy = gd.char.id;
@@ -717,7 +731,7 @@ function fragOut(g: Game, st: State, L: Lane, at: Guard[]) {
   if (!can.length) return;
   const skip = new Set<Guard>(); for (const x of g.fight.defs) if (!can.includes(x.gd)) skip.add(x.gd);
   const pick = stepper(g, st, L, skip, false, FRAG.defNear), gd = pick?.gd ?? can[0], look = st.held.get(gd)?.look ?? mouthOf(g, L, gd.char.pos);
-  st.held.delete(gd); st.peek.set(gd, { lane: L.id, phase: 'out', t: g.time, home: v3.copy(gd.char.pos), look: v3.copy(look), to: pick?.to ?? mouthOf(g, L, gd.char.pos), lineT: -1,
+  heldOff(g, st, gd); peekOn(g, st, gd, { lane: L.id, phase: 'out', t: g.time, home: v3.copy(gd.char.pos), look: v3.copy(look), to: pick?.to ?? mouthOf(g, L, gd.char.pos), lineT: -1,
     frag: { at: null, k: 0, next: 0, walk: !!pick, going: false, edge: false, own: false, until: 0, had: 0 } });
 }
 /** the middle of where a lane's fire came from: of the places its guns fired from, the one nearest their mean */
@@ -786,7 +800,7 @@ function peekStart(g: Game, st: State, L: Lane) {
   const pick = stepper(g, st, L, null, false), best = pick?.gd ?? null, to = pick?.to ?? null;
   if (!best || !to) return; const D = defOf(g, best); if (!D) return;
   const look = st.held.get(best)?.look ?? mouthOf(g, L, best.char.pos); L.peekAt = g.time + K.peekGap;
-  st.held.delete(best); st.peek.set(best, { lane: L.id, phase: 'out', t: g.time, home: v3.copy(best.char.pos), look: v3.copy(look), to, lineT: -1 });
+  heldOff(g, st, best); peekOn(g, st, best, { lane: L.id, phase: 'out', t: g.time, home: v3.copy(best.char.pos), look: v3.copy(look), to, lineT: -1 });
   best.path = []; best.pathGoal = null; legTo(g, D, to, null, K.peekPace - g.tune.guardChase); st.stats.peeks++;
   note(g, best, `lane ${L.id}: quiet ${(g.time - L.lastT).toFixed(0)} s — steps to its mouth toward (${to[0].toFixed(1)}, ${to[2].toFixed(1)}) for a look`);
 }
@@ -794,19 +808,19 @@ function peekStart(g: Game, st: State, L: Lane) {
  *  it to where the fire came from and nobody there for `peekLook` = it is clear — forgotten, and the men held on it go on together to where the guns were */
 function peekStep(g: Game, st: State, gd: Guard, p: Peek) {
   const K = LANES, L = st.lanes.find(x => x.id === p.lane), D = defOf(g, gd);
-  if (gd.state === 'dead' && p.frag) { st.peek.delete(gd); st.stats.fragLost++; if (L) { L.fragAt = Math.max(L.fragAt, g.time + K.fragGap); note(g, gd, `lane ${L.id}: the grenade cost him`); } return; }
-  if (gd.state === 'dead' && p.fire) { st.peek.delete(gd); st.stats.pinLost++; if (L) { L.pinN = 0; L.pinAt = g.time + K.pinRest; note(g, gd, `lane ${L.id}: firing down it cost him`); } return; }
-  if (gd.state === 'dead') { st.peek.delete(gd); st.stats.peekLost++; if (L) { L.peekN++; L.peekAt = g.time + K.peekLost; note(g, gd, `lane ${L.id}: the look cost him`); } return; }
+  if (gd.state === 'dead' && p.frag) { peekOff(g, st, gd); st.stats.fragLost++; if (L) { L.fragAt = Math.max(L.fragAt, g.time + K.fragGap); note(g, gd, `lane ${L.id}: the grenade cost him`); } return; }
+  if (gd.state === 'dead' && p.fire) { peekOff(g, st, gd); st.stats.pinLost++; if (L) { L.pinN = 0; L.pinAt = g.time + K.pinRest; note(g, gd, `lane ${L.id}: firing down it cost him`); } return; }
+  if (gd.state === 'dead') { peekOff(g, st, gd); st.stats.peekLost++; if (L) { L.peekN++; L.peekAt = g.time + K.peekLost; note(g, gd, `lane ${L.id}: the look cost him`); } return; }
   if ((!D || !fit(g, gd) || pushing(g, st, gd)) && p.frag) {   // (blind, folded, or in behind a charge with a grenade errand on him: frag.ts has dropped any wind-up — asked again soon; a man who never left his corner is still held on the lane)
-    st.peek.delete(gd); if (L) { L.fragAt = g.time + (p.frag.at ? 6 : 2); if (D && !p.frag.going && flat(gd.char.pos, p.home) < 0.5) st.held.set(gd, { lane: L.id, t: g.time, look: v3.copy(p.look), aimed: true, at: v3.copy(gd.char.pos) }); } return; }
-  if (!D || !fit(g, gd) || pushing(g, st, gd)) { st.peek.delete(gd); if (L) L.peekAt = Math.max(L.peekAt, g.time + K.peekGap); return; }   // (a charge of theirs on the guns, or he is blind: no longer this errand's man — the gate has his feet again, and the next look waits its gap)
+    peekOff(g, st, gd); if (L) { L.fragAt = g.time + (p.frag.at ? 6 : 2); if (D && !p.frag.going && flat(gd.char.pos, p.home) < 0.5) heldOn(g, st, gd, { lane: L.id, t: g.time, look: v3.copy(p.look), aimed: true, at: v3.copy(gd.char.pos) }); } return; }
+  if (!D || !fit(g, gd) || pushing(g, st, gd)) { peekOff(g, st, gd); if (L) L.peekAt = Math.max(L.peekAt, g.time + K.peekGap); return; }   // (a charge of theirs on the guns, or he is blind: no longer this errand's man — the gate has his feet again, and the next look waits its gap)
   const back = () => { p.phase = 'back'; p.t = g.time; gd.path = []; gd.pathGoal = null; legTo(g, D, p.home, null, K.pushFast); };
   if (!L && p.phase !== 'back') { back(); return; }   // (the lane gone meanwhile: back to where he stood, not left a stride into it)
   if (p.phase === 'back') {
     if (D.mode === 'move' && flat(gd.char.pos, p.home) > 0.5 && g.time - p.t < 6) return;
-    st.peek.delete(gd); if (laneOn(g, st, gd.char.pos, gd)) return;   // (stopped in the line — a man in his sights: the fight's, and the tick's own way out of a line)
+    peekOff(g, st, gd); if (laneOn(g, st, gd.char.pos, gd)) return;   // (stopped in the line — a man in his sights: the fight's, and the tick's own way out of a line)
     if (!L && LANES.stopClear) return;   // (his own look cleared it: nothing left to hold him on — the room fight has him back, not this rule's plant on a point nobody is at)
-    if (g.time - gd.lastSeenT > 1 && g.fight.laneStop(gd, p.look) && L) st.held.set(gd, { lane: L.id, t: g.time, look: v3.copy(p.look), aimed: true, at: v3.copy(gd.char.pos) });   // (without the mend above, a lane cleared by his own look still planted him where he stood, his gun where it was — held by nothing)
+    if (g.time - gd.lastSeenT > 1 && g.fight.laneStop(gd, p.look) && L) heldOn(g, st, gd, { lane: L.id, t: g.time, look: v3.copy(p.look), aimed: true, at: v3.copy(gd.char.pos) });   // (without the mend above, a lane cleared by his own look still planted him where he stood, his gun where it was — held by nothing)
     return;
   }
   if (!L) return;
@@ -823,7 +837,7 @@ function peekStep(g: Game, st: State, gd: Guard, p: Peek) {
     note(g, gd, `lane ${L.id}: a look — still held, from (${seen[0].toFixed(1)}, ${seen[2].toFixed(1)}); next no sooner than ${(L.peekAt - g.time).toFixed(0)} s`);
     back(); return;
   }
-  if (D.mode !== 'move' && g.time - gd.lastSeenT < 1) { st.peek.delete(gd); L.peekAt = g.time + K.peekGap; return; }   // (a man in his sights somewhere else: the fight has him)
+  if (D.mode !== 'move' && g.time - gd.lastSeenT < 1) { peekOff(g, st, gd); L.peekAt = g.time + K.peekGap; return; }   // (a man in his sights somewhere else: the fight has him)
   // 'clear' wants the whole of it: the place round EVERY spot the fire came from in his view (a muzzle shows past a corner its man stands behind — the one
   // point proves nothing), and nobody on their net with eyes on one of them there just now. The spots in view but not all the floor round them (a corner by
   // the gun he cannot see behind from here) is HALF a look: it clears the lane only the second time running, and only once it has been quiet `peekSure`
@@ -836,14 +850,14 @@ function peekStep(g: Game, st: State, gd: Guard, p: Peek) {
     if (!full && (++L.peekPart < 2 || g.time - L.lastT < K.peekSure)) {
       L.peekAt = g.time + K.peekGap; note(g, gd, `lane ${L.id}: a look — nobody in his view, but not all of where they stood (${L.peekPart}): back`); back(); return;
     }
-    st.peek.delete(gd); st.stats.peekClear++; st.stats.lapsed++;
-    st.lanes = st.lanes.filter(x => x !== L); st.due = st.due.filter(d => d.lane !== L.id); remask(g, st);   // (forgotten here and now: nobody is stopped short of it on his way out)
-    const mates: Guard[] = []; for (const [o, h] of st.held) if (h.lane === L.id) { st.held.delete(o); if (o !== gd && fit(g, o)) mates.push(o); }
+    peekOff(g, st, gd); st.stats.peekClear++; st.stats.lapsed++;
+    st.lanes = st.lanes.filter(x => x !== L); lanesGone(g, st); st.due = st.due.filter(d => d.lane !== L.id); remask(g, st);   // (forgotten here and now: nobody is stopped short of it on his way out)
+    const mates: Guard[] = []; for (const [o, h] of st.held) if (h.lane === L.id) { heldOff(g, st, o); if (o !== gd && fit(g, o)) mates.push(o); }
     note(g, gd, `lane ${L.id}: a look — nobody on it: clear${mates.length ? `, ${mates.length + 1} move up together` : ', back to his place'}`);
     note(g, null, `lane ${L.id}: forgotten (${L.downs} down, last round ${(g.time - L.lastT).toFixed(0)} s ago)`);
     // with a mate held on it too they go on TOGETHER to where the guns were (what cost them is where they look first); a man by himself goes nowhere on it — back to his place
     if (mates.length) { g.say(gd, 'they\'re off it — move up, together!', true); for (const o of mates) { const Do = defOf(g, o); if (Do) loose(g, Do, L.from); } loose(g, D, L.from); }
-    else { g.say(gd, 'they\'ve moved off it — eyes open!', true); st.peek.set(gd, p); back(); }
+    else { g.say(gd, 'they\'ve moved off it — eyes open!', true); peekOn(g, st, gd, p); back(); }
     st.saidT = g.time;
     return;
   }
@@ -903,7 +917,7 @@ function along(gd: Guard, m: number): Vec3 { let a = gd.char.pos, left = m; for 
 function plantShort(g: Game, st: State, gd: Guard, lane: number, look: Vec3) {
   if (!mine(g, gd) || !st.lanes.some(L => L.id === lane && knows(L, gd)) || !g.fight.laneStop(gd, look)) return;
   gd.path = []; gd.pathGoal = null;
-  st.held.set(gd, { lane, t: g.time, look: v3.copy(look), aimed: true, at: v3.copy(gd.char.pos) }); st.stats.held++;
+  heldOn(g, st, gd, { lane, t: g.time, look: v3.copy(look), aimed: true, at: v3.copy(gd.char.pos) }); st.stats.held++;
   if (g.time - st.saidT > 5) { st.saidT = g.time; g.say(gd, 'holding here — I\'m not walking into that!', true); }
   note(g, gd, `lane ${lane}: stops short of it at (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)})`);
 }
@@ -920,21 +934,21 @@ function ahead(g: Game, m: Uint8Array, gd: Guard, inside: boolean): Vec3 | null 
 /** pressure.ts consider / roomfight.ts rally: he is held short of a lane his side knows is covered, and what wants him (`to`: the noise he would be sent at;
  *  none given = anything) lies at that lane's guns or down it — he keeps its mouth (a press that wants him sends him at the same guns by the same way). A fight
  *  somewhere else may have him: his way there is priced like any, and the gate stops him again if it lies down the lane. */
-export function laneHolds(g: Game, gd: Guard, to?: Vec3 | null): boolean {
+export function laneBars(g: Game, gd: Guard, to: Vec3 | null): boolean {
   if (gunKeepsPost(gd)) return true;   // (gunroles.ts: a defender with the belt-fed gun keeps the post he was dealt — false on its first test with the switch off)
-  const st = states.get(g); if (!st || !(st.held.size || st.peek.size) || !live(g)) return false;
-  const h = st.held.get(gd) ?? st.peek.get(gd); if (!h) return false; const L = st.lanes.find(x => x.id === h.lane); if (!L) return false;
+  const st = states.get(g); if (!st || !live(g) || !hasHim(gd, OWN.lane)) return false;
+  const L = laneOf(st, gd); if (!L) return false;
   return !to || L.guns.some(m => flat(m, to) < LANES.fieldM + 4) || !!L.cells?.has(cellAt(g, to));
 }
 /** roomfight.ts tickDef: he has shouted for a lane and the wind-up still has his arm (LANES.fragOwn) — the dig-in does not adopt him and walk him off his arc.
- *  The dig-in alone: a press, a rally or his squad's errand may still take him, as they may take any man this rule holds (`laneHolds`). */
+ *  The dig-in alone: a press, a rally or his squad's errand may still take him, as they may take any man this rule holds. */
 export function laneThrows(g: Game, gd: Guard): boolean {
   if (!LANES.fragOwn) return false; const st = states.get(g); if (!st || !st.peek.size || !live(g)) return false;
   const F = st.peek.get(gd)?.frag; return !!F && winding(g, gd, F);
 }
 /** roomfight.ts rally: the noise he would walk over to BY HIMSELF is at the guns of a lane he knows is covered, or down it — nobody goes at those alone, held or
  *  not (the one-at-a-time feed). A press may still take a man who is not held: together, by its own way, a charge first. */
-export function laneWarns(g: Game, gd: Guard, to: Vec3 | null): boolean {
+export function laneKnownAt(g: Game, gd: Guard, to: Vec3 | null): boolean {
   if (!to) return false; const st = states.get(g); if (!st || !st.lanes.length || !live(g) || !mine(g, gd)) return false;
   const i = cellAt(g, to);
   for (const L of st.lanes) if (knows(L, gd) && L.cells && (L.cells.has(i) || L.guns.some(m => flat(m, to) < LANES.fieldM + 4))) return true;
@@ -969,7 +983,7 @@ export function laneExposed(g: Game, gd: Guard): boolean {
 /** a magazine change this rule starts for a man behind his corner and counts down itself (lanesTick: one count a frame, whoever else counts it).
  *  The caller's to ask that he is not already changing one */
 export function laneReload(g: Game, gd: Guard) { startReloadBeat(g, gd); S(g).reloads.set(gd, gd.reloadT); }
-export function lanesReset(g: Game) { const st = states.get(g); if (st) states.set(g, Object.assign(fresh(), { stats: st.stats })); }
+export function lanesReset(g: Game) { const st = states.get(g); if (st) { letGo(g, st); states.set(g, Object.assign(fresh(), { stats: st.stats })); } }
 export function lanesStats(g: Game): Record<string, number> { return { ...(states.get(g)?.stats ?? fresh().stats), live: states.get(g)?.lanes.filter(L => L.known).length ?? 0 }; }
 export function lanesSummary(g: Game): string {
   const st = states.get(g); if (!LANES.on) return 'off'; if (!st) return 'none yet';
@@ -987,7 +1001,7 @@ export function lanesSnapshot(g: Game): LanesSave | undefined {
   return { serial: st.serial, lanes: st.lanes.map(L => ({ id: L.id, from: [...L.from], at: [...L.at], t0: L.t0, lastT: L.lastT, until: L.until, weight: L.weight, downs: L.downs, known: L.known, knownAt: L.knownAt, guns: L.guns.map(w => [...w]), wedges: L.wedges.map(w => [...w]), roundAt: L.roundAt, stunAt: L.stunAt, who: [...L.who], peekAt: L.peekAt, peekN: L.peekN, peekPart: L.peekPart, fragAt: L.fragAt || undefined, e: L.e || undefined })) };
 }
 export function lanesRestore(g: Game, s: LanesSave | undefined) {
-  states.delete(g); const st = S(g); st.skip = true; st.t = g.time;   // (the rounds and bangs a load puts back among the events were read before the file was made: not twice)
+  { const was = states.get(g); if (was) letGo(g, was); } states.delete(g); const st = S(g); st.skip = true; st.t = g.time;   // (the rounds and bangs a load puts back among the events were read before the file was made: not twice)
   if (!s || !s.lanes?.length) return;
   st.serial = s.serial;
   for (const r of s.lanes) {

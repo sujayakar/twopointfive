@@ -2136,7 +2136,7 @@ untimed pass (the sweep that found it), so the reading there may move less than 
   6 ms cold on the charge's frame here; on the rented card under about 4); the order's 2 to 7 ms on its calm frame (in steps it would need its boxes
   copied and a key held from its first step to its last, as the openings have); the white wash itself when a hole opens a lamplit room to daylight,
   which is the exposure's and is there with or without the pace; a planner in a wasm module would run at one speed cold or warm, which is the better
-  cure if the picture gets a module of its own (the lamps' reach masks, still in the tick, are the first to weigh it for); `lookTex.ts` keeps its own
+  cure if the picture gets a module of its own (the lamps' reach masks were the first to weigh it for; since 11-05 they are out of the tick and the picture's to keep, `render/reachKeep.ts`, in TypeScript still); `lookTex.ts` keeps its own
   copy of the run-to-the-end loop (it has no imports, for its workers); (`PLAN_PACE` is a registered switch: `docs/agents/qa.md`); a cascade that
   changes size while the sides are being made has them made whole on that frame, as it always did; the drop of a finding in hand when the sky gives
   nothing has no check line.
@@ -3273,7 +3273,7 @@ untimed pass (the sweep that found it), so the reading there may move less than 
   list stops at the first eight men drawn, as it did; the list's room and the info block's layout do not move with it. `foursquad-budget` holds it
   (`ALLPROXIES_BREAK=1` must fail one line). No game table: nothing in the update reads the list. The word never seen on a GPU.
 - **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
-  `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
+  `free` (then `game.ts buildDirReach`'s, since 11-05 `render/reachKeep.ts dirMask`'s), `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
   rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells
   it can reach, and a cell was lit when one of five looks × three heights had a clear path to the sun. The corner looks sit 9 cm inside the cell; a wall on
   a cell line is 12 cm to either side; a look that started INSIDE the wall left through its outer face. So every cell along the inside of an outer wall
@@ -3984,3 +3984,46 @@ untimed pass (the sweep that found it), so the reading there may move less than 
   which is not a run. THE RULE TO TAKE FROM IT: anything that reads every cell of a map belongs in a dispatch over the cells; a one-invocation entry
   is for a few dozen reads. LEFT: the performance goal is putting a timer on each per-frame pass that lacks one, which is how the next of these is
   found; if the sky's atomics ever show (every cell of a yard at one level adds to the same two words), tally a workgroup first and add once a group.
+- **THE LAMPS' REACH MASKS ARE THE PICTURE'S TO KEEP, AND LEFT THE TICK** (11-05; `render/reachKeep.ts ReachKeep`, held by the engine as `engine.reach`
+  and by the host interface as `HostApi.reach?`; `render/lights.ts LightSet.masks`). A mask says which cells a light can reach past the full-height
+  walls and ONLY THE PICTURE READS ONE (the light set's rows). Until now the masks rode on the light objects, and their wall raster, the queue that
+  decides them again after a wall changes and the blast pace's notes were fields of the Game, worked by `Game.reachTick` inside the update: the frame
+  after a blown wall cost the GAME 10 to 42 ms of picture work in a browser (the performance goal's profile), a headless run and a server decided
+  masks nobody drew (some tens of ms at every stand-up as well), and every row of it rode in the rollback snapshot and its hash, where a host's page
+  and its server could pace it differently. WHAT MOVED, all of it: the masks themselves (NO LIGHT CARRIES ONE: `RtLight.reach` and `reachDir` are
+  gone, the light set asks the keeper for a light's row, and the engine's own daylight lights hand theirs to it with `give`), the raster, the queue,
+  the notes, the directional lights' masks and the wide sun's union (`dir`, `sun`: what `Game.buildDirReach` and `hours.ts sunReach` were). The engine
+  takes ONE STEP OF THE KEEPER AT THE HEAD OF EACH DRAWN FRAME. WHAT THE GAME STILL DOES is tell the host three things and read nothing back, as it
+  tells the smoke solver that obstacles changed: the level stands (`boot`, from the Game's constructor), walls changed in this rect or anywhere
+  (`changed`, from `wallbreak.ts`, with how many frames the blast's own frame may be spared the reading: `BLAST_PACE.reachHold`; `null` = the authored
+  walls again, where the boot's raster and masks are put back at once and nothing is read), and a sun wants a mask (`hours.ts`, `lighting.ts`). The Game keeps `reachInterior` (which cells are under a roof), which its own rules read. A STAND WITH NO PICTURE
+  HAS NO KEEPER: the three tells go nowhere, no mask is made, and the harness and a server do no reach work at all. A tool that reads masks asks the
+  stand-up for one (`standUp({ reach: true })`: stood up before the game as a page's is, and stepped once a frame). The engine HANDS the keeper to the
+  light set's `upload` each frame: no object a snapshot walks holds it. NOBODY'S STATE: the keeper is a
+  `HostOwned`, so a snapshot neither copies nor compares it, and its work moves no row of the hash. A SNAPSHOT PUT BACK is noticed by the host's own
+  count (`math/side.ts PUT_BACKS`, read at each step: any put-back, a rollback's as well as a save's, with no caller to remember it): the walls are
+  read again and the masks decided again from where they stand, only where the raster differs; where the walls are the authored ones the masks the
+  level booted with come straight back. A WIDE SUN'S MASK IS OF ITS DISC, which the game changes with the weather and a snapshot can put back: the
+  keeper notes what radius each such mask was made for and each step makes it again where the light's own differs (so the hour's tell is a hint, and
+  asked twice for one disc it is made once: `putIn` used to guard that itself). WHAT IS THE SAME: the rules, the rects, the pace, the frames. With one update a
+  drawn frame a mask lands on the frame it did; under `?reachpace=old` and `?blastpace=old` the raster's read is the next drawn frame's and no
+  longer inside the blast's own call. NEITHER `?reachpace` NOR `?planpace` DECIDES ANYTHING
+  INSIDE THE TICK NOW. WHAT MOVES ONCE: a full state hash loses rows (the Game's reach fields, each light's mask), so any state hash or state diff
+  written down before this is another number after it; none is pinned in the tree (the Rust goal's and multiplayer's own word for theirs).
+  HELD BY `bun run tools/qa/reachkeep-check.ts` (five lines, both stands; `REACHKEEP_BREAK=1` fails three): a stand with no picture has no keeper and a
+  game there, two walls blown, has decided no cell and stepped no sight line; the game's digest is the same with a keeper or without and the keeper's
+  work moves no row of the hash; a snapshot put back with nobody telling it (its raster is then the walls' as they stand, and all 57 masks on the
+  office are the snapshot's moment's to the bit); the wall engine's reset; a wide sun's disc made small and wide again. AGAINST THE BUILD BEFORE IT:
+  `reach-cost.ts --dump` there and `--against` here, 30 blasts on five levels: all 956 masks the same, 628,301 cells equal to a whole derivation;
+  `blast-pace-check`, the `wallbreak` / `destruction` / `outerwall` / `breaks` families (313 lines), `sunreach-check`, `openings-check`,
+  `cleanrestart-check`, `simstate-check`, `teams-check` green on both stands; the 42 play-through digests against the build before it are in the
+  commit's message. IN A PAGE (Chromium on the software adapter, the office, three wall charges blown inside the tick, this build and the one before):
+  a hash of all 45 masks is the same at boot and after each blast, the count still waiting is the same on every frame after a blast (1, 35, 30, 22,
+  21, 13, 5), and the mask work is in the render's time and no longer in the update's; no error. THE WORK IS MOVED, NOT YET MADE CHEAP: a step is
+  still up to 20 ms in a browser on the first frames after a blast (cold code, as the planners' was; its budget is a count of sight-line steps, not
+  time). NEVER SEEN ON A GPU; not timed on a real card. LEFT: the step's budget as time, or the sight lines somewhere that runs at one speed cold and
+  warm; the engine's own daylight lights keep a second raster of the same walls and a queue of their own (`engine.ts lookOpeningLights`), which the
+  keeper could hold (`give` is the seam); a put-back asks the lamps in reach of ONE rect round everything that changed, at the step's own pace,
+  where the snapshot used to carry the masks back whole; a snapshot put into ANOTHER game that has a picture (no caller today) leaves that game's
+  masks keyed to its own light objects, which the put-back has made other lights of; the sun's asks from `hours.ts` and `lighting.ts` are still
+  worked inside the game's call where there is a picture (a few tens of ms when the hour is set or the cloud turns).

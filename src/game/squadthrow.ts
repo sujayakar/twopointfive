@@ -7,7 +7,7 @@
 //
 // THE COUNT is the door tools' own (doortools.ts `frags` / `bangs`: one bag, whoever's hand it leaves) — what the squad block already shows. No kit of its own.
 // WHO THROWS: of the men the menu goes to, the nearest with a throw to the spot — squadsmoke.ts's own test (`squadArcTo`: the hand, the arc solved to bring the
-// thing to REST on the spot, down on the floor, its run clear) and its own exclusions (`squadHandFree`) + `handsBusy` (the man setting a charge, on a door's
+// thing to REST on the spot, down on the floor, its run clear) and its own exclusions (`squadHandFree`) + `handsAtWork` (the man setting a charge, on a door's
 // handle or boot, with a hand on a thing he works, or changing a magazine is passed over), a stun canister with the smoke can's run (one body:
 // throwables.ts) and a frag with its own (SQUADTHROW.fragRollK, measured). The rows are `free` and `only` the thrower's: nobody else answers.
 // HE WORKS HIS THROW OUT (SQUADTHROW.lob / duck / samCall; the maintainer, 10-15: "ordering your squad to throw a grenade is still pretty useless. they should
@@ -170,7 +170,7 @@ const tossing = (s: State | undefined, g: Game, gd: Guard) => { const t = s?.las
 
 /** his hands are on something else: he is the man setting a charge on a door or a wall, the man on the handle / the boot of a door order, he has a hand on
  *  a thing he was sent to work, or he is changing a magazine — another man throws, or nobody does (squad40.ts asks it of the man with the launcher) */
-export function handsBusy(g: Game, gd: Guard): boolean {
+export function handsAtWork(g: Game, gd: Guard): boolean {
   if (g.doorTools.ops.some(o => o.lead === gd && (o.phase === 'place' || o.phase === 'kick'))) return true;
   if (g.wallCharge.ops.some(o => o.lead === gd && o.phase === 'place')) return true;
   if (workHand(g, gd.char)) return true;
@@ -187,7 +187,7 @@ interface Lob { walls: Vec3[]; lim: { n: number }; clean: (th: SquadThrower) => 
 function standThrow(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, lob?: Lob): { gd: Guard; from: Vec3; sol: ThrowSolution; rest: Vec3 } | null {
   const s = states.get(g);
   for (const gd of [...men].sort((a, b) => flat(a.char.pos, at) - flat(b.char.pos, at))) {
-    if (!squadHandFree(g, gd) || handsBusy(g, gd) || tossing(s, g, gd)) continue;
+    if (!squadHandFree(g, gd) || handsAtWork(g, gd) || tossing(s, g, gd)) continue;
     if (s?.walks.has(gd)) continue;   // (on his way to a throw already: that one first)
     const arc = squadArcTo(g, gd, at, rollOf(kind)) ?? (lob ? throwTo(g, gd, at, kind, undefined, lob.walls, lob.lim) : null);
     if (!arc) continue; const th = { gd, ...arc };
@@ -260,7 +260,7 @@ export function mayWalk(g: Game, gd: Guard): boolean {
  *  and the orders' router has a way (a lock, a room). At most `tries` arcs a search. `forced`: the man is ours already (his second look, from where he stopped). */
 function walkSpot(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, forced = false, lob?: Lob): SquadThrower | null {
   const K = SQUADTHROW, S = g.orders, nav = g.col.nav, C = nav.cell, W = nav.W, H = nav.H, s = state(g), col = g.col, rooms = g.cleared;
-  const who = men.filter(gd => gd.state !== 'dead' && squadHandFree(g, gd) && !handsBusy(g, gd) && !tossing(s, g, gd) && (forced || (!s.walks.has(gd) && mayWalk(g, gd))))
+  const who = men.filter(gd => gd.state !== 'dead' && squadHandFree(g, gd) && !handsAtWork(g, gd) && !tossing(s, g, gd) && (forced || (!s.walks.has(gd) && mayWalk(g, gd))))
     .sort((a, b) => flat(a.char.pos, at) - flat(b.char.pos, at)).slice(0, 8);
   if (!who.length) return null;
   let X = s.scratch; if (!X || X.n !== W * H) X = s.scratch = { n: W * H, gen: 0, seen: new Int32Array(W * H), leaf: new Int32Array(W * H), dep: new Uint8Array(W * H), who: new Uint8Array(W * H), q: new Int32Array(W * H) };
@@ -477,7 +477,7 @@ function walkTick(g: Game, S: SquadOrders, gd: Guard, A: Assignment) {
   if (!K.on || !K.walk) return end(null);
   if (W.spent > K.walkSecs) return end("can't get a throw.");
   if (!A.arrived && flat(p, W.post) > 0.4) return;   // (walking)
-  if (!squadHandFree(g, gd) || handsBusy(g, gd)) return;   // (blinded, reeling, a magazine out: he waits — the walk's clock runs)
+  if (!squadHandFree(g, gd) || handsAtWork(g, gd)) return;   // (blinded, reeling, a magazine out: he waits — the walk's clock runs)
   if (W.onT < 0) W.onT = now;
   if (K.lob && (now - W.onT < K.settleSecs || gd.speed > 0.3)) return;   // (still coming to a stand: his hand is not yet where he throws from, nor his feet where he ducks from — the walk's clock runs)
   // (SQUADTHROW.lob: … else the throw he walked here for, made from where his hand now is — one flight — else one he works out afresh; flown once where he

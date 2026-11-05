@@ -61,7 +61,6 @@ import { fireWeapon, killGuard } from './combat';
 import { RescueFlow } from './rescueflow';
 import { RESCUEEND, RescueEnd } from './rescueend';   // (read inside methods only: how a rescue is won — out, or cleared)
 import { RESCUEFLUSH, RescueFlush } from './rescueflush';   // (likewise: the men left alive come for the hostages)
-import { rescueCheckOwns } from './rescuecheck';   // (asked inside defenders() only)
 import { propGap, wallBetween } from './roomclear';   // (used inside checkRescue only: nothing of roomclear.ts is touched at load)
 import { spawnHostage, hostageSay } from './civilians';
 import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -75,6 +74,8 @@ import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain li
 import { SAMESTART } from './samestart';   // (a leaf)
 import { gunDeal } from './gunroles';   // (called inside the staging only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { hasHim, OWN } from './owner';
+import { rescueCheckSay } from './rescuecheck';
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Hostage rescue, __rescue.knobs). Who stands where, the stun, the lights and the clock's dealt length are read at a staging
  *  ('restage' applies them); the clocks' other numbers, blind fire and the clock's own switch are read as it runs. */
@@ -541,6 +542,7 @@ export class Rescue {
     if ([...this.ops, ...this.hostiles].some(x => !g.guards.includes(x)) || this.hostages.some(h => !g.civilians.includes(h))) {   // the cast was taken off the floor under it by something short of a restart: a full restart, which stages
       g.restartEncounter(); if (!this.active) return;
     }
+    rescueCheckSay(g);
     if (this.cut && cam) { this.cut = false; cutToMen(g); }
     this.tickEntry();   // (first: what the door tools did last frame goes into the log at its own time, ahead of what this frame makes of it)
     if (input.hit('KeyF')) this.orderDoor();
@@ -583,7 +585,7 @@ export class Rescue {
       const D = this.defs.get(h)!; if (h.state === 'dead') continue;
       const acting = this.act?.by === h;
       if (hard && D.role !== 'captor' && isNaN(D.learned) && g.time >= this.alarmAt) { D.learned = g.time; this.note(`learned:${h.callsign}`); }   // the captor's word on the net: he knows it is on
-      if (isNaN(D.learned) && (h.state !== 'patrol' || h.awareness >= 0.3) && !rescueCheckOwns(g, h)) {   // (rescuecheck.ts: a man walking to a silent mate's post has learned nothing of the team by it)
+      if (isNaN(D.learned) && (h.state !== 'patrol' || h.awareness >= 0.3) && !hasHim(h, OWN.walk)) {   // (rescuecheck.ts: a man walking to a silent mate's post has learned nothing of the team by it)
         D.learned = g.time; this.note(`learned:${h.callsign}`);
         if (K.start === 'quiet') this.startClock('heard');
       }

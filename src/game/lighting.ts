@@ -2,7 +2,7 @@
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import { men } from './seats';
-import { SideMap } from '../math/side';
+import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { leverHands } from './handwork';
 import { missionLive } from './mission';
@@ -14,7 +14,7 @@ import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId }
 import { isHostile } from './teams';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { breakerErrand, samPanelPoint, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
-import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
+import { powerOut, powerOutRules } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
 import { LIGHT_IN, LIGHT_EV, MAINS } from '../sim/lightshome';   // (the state itself: rust/sim/src/lights.rs)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -76,7 +76,7 @@ export function updateTargets(g: Game, dt: number) {
   const time = g.time, H = g.lightHome, bo = g.blackout;
   // who is at the (intact) panel, for the module's timer (a guard who reaches it resets it after fumbling for a moment): that is one of theirs, and the hand and the words are this file's
   let near: Guard | null = null;
-  if (bo.active && !bo.permanent && time - bo.since > 3) for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
+  for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
   const fumble = g.level.breaker.fumble ?? 2.2, handT = bo.fixT + dt;   // (the level's own number where it gives one: a panel a man is long at)
   const ev = H.step(time, dt, near !== null, fumble, g.engine.settings.emissiveScale);   // (rust/sim/src/lights.rs: the mains' clocks, the beacons, every fixture's factor, every lamp as it burns. The emissive scale is a renderer setting an area light's strength is scaled by, an input: a recording carries it, journal.ts EnvSnap)
   if (ev & LIGHT_EV.ranOut) mainsBack(g);   // (the OCP's timed trip ran out; a hand-thrown breaker is given a day — below — so in practice only a guard's reset or Sam's own re-arm ends it)
@@ -88,9 +88,6 @@ export function updateTargets(g: Game, dt: number) {
     const f = t.factor;
     if (t.lens) carLampPaint(g, t);   // (carlamps.ts: a broken vehicle lamp's box painted dark, a whole one as the level has it)
     if (t.kind === 'breaker') { const e: Vec3 = t.broken ? [0, 0, 0] : bo.active ? [5, 0.3, 0.1] : [0.3, 4, 0.6]; for (const bi of t.boxes) g.engine.world.statics[bi].emissive = e; continue; }
-    // (a lamp with no row is the question's own, and written from the factor here: hung after the level was stood, as the kit picture's is, host/kitView.ts, or with an owner)
-    if (t.kind === 'analytic' && t.light && t.light.row === undefined) { t.light.enabled = f > 0.001; t.light.intensity = t.baseIntensity * f; }
-    if (t.areaLights) for (const al of t.areaLights) if (al.light.row === undefined) { al.light.enabled = f > 0.001; al.light.intensity = al.light.peakIntensity = al.base * f * g.engine.settings.emissiveScale; }
     for (const bi of t.boxes) { const b = g.engine.world.statics[bi]; b.emissive = [t.baseEmissive[0] * f, t.baseEmissive[1] * f, t.baseEmissive[2] * f]; b.markGain = f; }   // (markGain: the box's emissive MARKINGS follow the same supply — the vending window in a blackout, a monitor's UI bars under the OCP)
   }
 }
@@ -108,7 +105,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
   for (const gd of g.guards) {
     if (gd.state === 'dead') continue;
     if (gd.state === 'patrol') { gd.awareness = Math.max(gd.awareness, 0.34); gd.reactT = 1.0 + simRandom(); }
-    const d = v3.dist(gd.char.pos, g.level.breaker.pos); if (d < bd && gd.state !== 'alert' && !gd.held && theirMains(gd) && !workNotHis(gd) && !workStaysPut(g, gd) && !powerOutMan(g, gd)) { bd = d; best = gd; }   // (nor is the errand handed to the man Sam is holding, nor — workthings.ts — to one who cannot leave his post: he would say he was going and stand there)
+    const d = v3.dist(gd.char.pos, g.level.breaker.pos); if (d < bd && gd.state !== 'alert' && !gd.held && theirMains(gd) && !workNotHis(gd) && !workStaysPut(g, gd) && !powerOutRules(g, gd)) { bd = d; best = gd; }   // (nor is the errand handed to the man Sam is holding, nor — workthings.ts — to one who cannot leave his post: he would say he was going and stand there)
   }
   if (best && !best.task) {
     const E = breakerErrand(g), goal: Vec3 = E ? v3.copy(E.goal) : [g.level.breaker.pos[0] - 0.4, 0, g.level.breaker.pos[2] - 0.9];   // (workthings.ts: floor at the panel's own face where the fixed spot is in a wall or behind one)
@@ -178,7 +175,7 @@ export function setGroup(g: Game, group: string, on: boolean) { for (const t of 
 /** What setDaylight(true) found and must put back: every target's switch, the level lights it disabled, the sky, the haze, a PERMANENT blackout it lifted for the
  *  show (the breaker SHOT is mains gone for good, not until ten in the morning: review A6.8 — a timed trip it lifted stays lifted) — and the sun it added. */
 interface DayState { hour: HourId; hourSunK: number; hourSunGiven: boolean; targets: Map<LightTarget, boolean>; lightsOff: RtLight[]; sky: { zenith: Vec3; horizon: Vec3 }; haze: number; exposure: number; sun: RtLight; blackout: { active: boolean; permanent: boolean; until: number; since: number } | null; }
-const dayStates = new SideMap<Game, DayState>('lighting.dayStates');
+const dayStates = new GameSideMap<Game, DayState>('lighting.dayStates');   // (the WORLD's: a seat's view asking the hour, hours.ts exposureOf under a man's tube, finds the Game's row)
 /** Is the daytime variant in (setDaylight)? */
 export function isDaylight(g: Game): boolean { return dayStates.has(g); }
 /** Swap the level's daytime variant in (on) or back out (off): level.daylight — a directional sun added to the light set, the sky lifted, the listed fixture groups
@@ -195,7 +192,7 @@ export function setDaylight(g: Game, on: boolean) {
     const bo = g.blackout; const blackout = bo.active && bo.permanent ? { active: true, permanent: true, until: bo.until, since: bo.since } : null;   // (recorded BEFORE it is lifted, and only the PERMANENT one — the breaker shot to scrap: nothing the show does can mend that, so Off puts it back; a timed trip lifted here is simply over, as if the man sent to the panel had got there — tools/qa breach-daylight holds that half)
     if (bo.active) { g.endBlackout(); g.lightHome.in(LIGHT_IN.mains, null, 0, bo.until, bo.since, -100); for (const t of g.targets) g.lightHome.in(LIGHT_IN.blind, t, -1); }   // (an INSTANT restore for the show: no staggered restrike, no beacons sweeping the 'every fluorescent on' establishing shot — review 08-10 #8)
     const st: DayState = { targets: new Map(), lightsOff: [], sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, sun: L.add(lightFromDef(D.sun)), blackout, hour, hourSunK, hourSunGiven };
-    g.buildDirReach(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
+    g.engine.reach?.dir(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
     for (const t of g.targets) st.targets.set(t, t.on);
     for (const grp of D.groupsOn) setGroup(g, grp, true);
     for (const grp of D.groupsOff) setGroup(g, grp, false);
