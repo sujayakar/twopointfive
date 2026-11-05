@@ -852,14 +852,15 @@ export class Game {
   /** THE GAME'S OWN DIE (math/dice.ts): set by the stand-up when the game was given a seed (the page always is) — every simRandom() draw then comes off it, a checkpoint
    *  carries where it stands, and nothing outside the game can take a number from it. null = the game draws Math.random, as the QA harness's tools expect */
   dice: SimDice | null = null;
-  /** THIS GAME'S STATE IN THE RUST MODULE (sim/state.ts): a block of the module's memory, for the systems whose state lives there (a row of RUST each). The
-   *  rollback snapshot carries it; no other object of the game may keep a typed array over that memory. No block until a tick opens with such a row on. */
+  /** THIS GAME'S BLOCK (sim/state.ts): the one run of bytes the families whose state is columns are parts of from the moment the game is made (the falls
+   *  below, the furniture, the thrown things, the doors and their slabs: each store is made over it), and where the systems that still move keep theirs
+   *  while their row of RUST is on. The rollback snapshot carries it; no other object of the game may keep a typed array over that memory. */
   readonly sim = new SimState();
   /** the pose sets of this game's men that are at home in the block (posehome.ts): what goes back into arrays of its own when the row RUST.poses drops */
   poseSets: PoseSet[] = [];
   /** WHAT FALLS AND WHAT IT LEAVES (sim/fallshome.ts): the landings the simulation has scheduled for things that let go and the litter map of broken glass —
-   *  the gameplay half of shards.ts, in TypeScript or in the Rust module's block (RUST.falls) */
-  readonly falls = new FallStore();
+   *  the gameplay half of shards.ts, a part of the game's block */
+  readonly falls = new FallStore(this.sim);
   aiEnabled = true; godMode = false; infiniteAmmo = false; showDebug = false; spectate = -1;   // (aiEnabled / godMode / infiniteAmmo are also the START CARD's sandbox row — ui/menu.ts `SANDBOX_LS`, kept per machine and applied by main.ts at boot) // guard index the camera follows (-1 = player); infiniteAmmo: sandbox bottomless magazine, applied to whichever pistol the current Player carries (survives restarts)
   playerInvisible = false;   // showcase tour: guards neither see nor hear the idle player
   /** 0‥1, how close Sam is to being walked in on — for the LOOK of his movement only (fed to player.char.anim.deliberate each frame, see update(); the HUD may
@@ -1229,8 +1230,8 @@ export class Game {
     first.player = new Player(ch, level.playerSpawn, this.fn2000);
     // loose furniture: simulated on the CPU, emitted as dynamic boxes every frame (rendered + traced like everything else), deliberately never registered as
     // collision occluders — a chair must not hide the player, muffle a shot or dent the nav grid; guards path through props and shove them aside
-    this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
-    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z), kinds: () => snowBogKinds(this), roofs: () => this.weather.roofsNow() };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
+    this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e), this.sim);
+    this.items = new Throwables(this.col, this.props, this.sim); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z), kinds: () => snowBogKinds(this), roofs: () => this.weather.roofsNow() };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
       // canisters and dropped magazines bounce off (and nudge) the furniture
     this.tracers = new Tracers(engine.lights, sparkSink(this)); this.tracers.fog = { begin: who => this.fogOfWar.begin(who), done: was => this.fogOfWar.done(was), lightBy: (l, who) => this.fogOfWar.lightBy(l, who) };   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
@@ -1321,7 +1322,7 @@ export class Game {
       for (const l of engine.lights.lights) if (l.kind === 2) this.buildDirReach(l);   // the moon: which indoor cells see the sky its way at all (used by the ReSTIR estimator only — lights.ts dirMasks)
       this.reachStats = wallClock({ lights: n, meanFraction: n ? cells / n : 1, ms: performance.now() - t0 }, 'ms'); }
     // doors: leaves are dynamic occluders for sight / sound / projectiles (collision layer)
-    this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e));
+    this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e), this.sim);
     this.props.doorways = this.doors.list.map(d => ({ cx: d.frameCentre[0], cz: d.frameCentre[2], ux: Math.cos(d.def.closedDir), uz: Math.sin(d.def.closedDir), half: d.def.width / 2 - 0.02 }));   // (a door frame guides shoved furniture through: props.ts doorways — half the air between the frame's stops)
     nameDoors(level, dialogue.isOffice(level), this.doors.list);   // what a door with a shorthand id is CALLED, by the rooms it joins (doornames.ts; read only while the dialogue pass is on)
     this.doorDeals = dealSwings(level, this.doors, this.col.nav, this.col);   // the side each leaf opens into (doors.ts DOORWAY; doorswing.ts: into the room it serves) — geometry only, no dice
@@ -1714,7 +1715,7 @@ export class Game {
     if (cmds.length !== n) throw new Error(`stepSeats: ${cmds.length} record(s) for ${n} seat(s)`);
     this.ticking = true; this.col.tickOpen();   // (the box world's copy in the Rust module, where a row of RUST asks it: scene/boxMirror.ts)
     try {   // (…shut however the step ends: a step that throws must not leave the copy answering for boxes nobody compares)
-    this.sim.settle(this);   // (state that lives in the Rust module while its row of RUST is on moves in or out as the tick opens: sim/state.ts)
+    this.sim.settle(this);   // (the block is bound for the tick; a system whose state is in it only while its row of RUST is on — the die, the poses, the smoke grid — moves in or out as the tick opens: sim/state.ts)
     if (RUST.walk) { knobsToRust(); RUST_KNOBS.tick = true; }   // (…and the knobs the module's code reads, as they stand now, before anything of the tick reads one: game/rustknobs.ts)
     let cmd0 = cmds[0];
     if (CMDCHECK.on) for (let i = 0; i < n; i++) { const s = S[i], r = checkCmd(cmds[i], s.remote ? s.view.player.char.pos : null); if (!i) cmd0 = r.cmd; else if (r.cmd !== cmds[i]) (cmds = cmds.slice() as PlayerCmd[])[i] = r.cmd; if (r.fixed) { s.fixed += r.fixed; s.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
