@@ -2974,7 +2974,7 @@ export function resetGuards(g: Game) {
   for (const gd of g.guards) if (gd.unit) releaseUnit(g, gd);
   endEngagement(g, 'reset');
   const old = g.guards, fresh = old.filter(gd => !gd.unit).map(gd => ({ id: gd.char.id, route: gd.route, routeI: gd.routeI, fl: gd.flashlight, tint: gd.char.tint }));
-  for (const gd of old) manLeaves(gd.char, gd);   // (the old shift's rows are free before the new shift takes them)
+  for (const gd of old) manLeaves(gd.char, gd, gd.sup, gd.aim);   // (the old shift's rows are free before the new shift takes them)
   g.guards = fresh.map(o => new Guard(g.men, g.ch, o.id, o.route, o.routeI, o.fl, o.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
   openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
@@ -3556,7 +3556,7 @@ export function despawnUnit(g: Game, gd: Guard): boolean {
     if (o.leader === gd) o.leader = null;
     if (o.task?.kind === 'checkOn' && o.task.who === gd) o.task = null;
   }
-  manLeaves(gd.char, gd);
+  manLeaves(gd.char, gd, gd.sup, gd.aim);
   return true;
 }
 export function despawnUnits(g: Game) { for (const gd of [...g.guards]) if (gd.unit) despawnUnit(g, gd); }

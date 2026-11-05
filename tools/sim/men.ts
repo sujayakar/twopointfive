@@ -21,6 +21,7 @@ export function layOut(S: Schema): { cols: Col[]; laid: Laid[] } {
   const f64: Col[] = [], u32: Col[] = [], laid: Laid[] = [];
   const add = (to: Col[], name: string, group: ColGroup) => { to.push({ name, rust: snake(name), kind: to === f64 ? 'f64' : 'u32', group }); return name; };
   const fields = [...S.fields].sort((a, b) => RANK[a.group] - RANK[b.group]);   // (a stable sort: within a group, the table's order)
+  const colOf = (f: MenField) => f.col ?? f.name;
   /** a truth wants a bit: the current word of its group's, or a new word */
   const words = new Map<ColGroup, { col: string; used: number }>(); let nw = 0;
   const bit = (g: ColGroup) => {
@@ -28,12 +29,12 @@ export function layOut(S: Schema): { cols: Col[]; laid: Laid[] } {
     const mask = (1 << w.used++) >>> 0; return { col: w.col, mask };
   };
   for (const f of fields) {
-    if (f.type === 'f64') laid.push({ field: f, cols: [add(f64, f.name, f.group)] });
+    if (f.type === 'f64') laid.push({ field: f, cols: [add(f64, colOf(f), f.group)] });
     else if (f.type === 'vec3' || f.type === 'vec3?') {
-      const cols = ['X', 'Y', 'Z'].map(a => add(f64, f.name + a, f.group));
+      const cols = ['X', 'Y', 'Z'].map(a => add(f64, colOf(f) + a, f.group));
       laid.push({ field: f, cols, ...(f.type === 'vec3?' ? { has: bit(f.group) } : {}) });
     } else if (f.type === 'bool') laid.push({ field: f, cols: [], bit: bit(f.group) });
-    else laid.push({ field: f, cols: [add(u32, f.name, f.group)] });   // (a word: a place in a list of words, a word of its own, or a man)
+    else laid.push({ field: f, cols: [add(u32, colOf(f), f.group)] });   // (a word: a place in a list of words, a word of its own, or a man)
   }
   const cols = [...f64, { name: 'gen', rust: 'gen', kind: 'u32' as const, group: 'hot' as const }, ...u32];
   return { cols, laid };
@@ -54,20 +55,20 @@ function offsets(S: Schema, cols: Col[]): Map<string, number> {
   for (const c of cols) { out.set(c.name, c.kind === 'f64' ? at / 8 : at / 4); at += S.rows * (c.kind === 'f64' ? 8 : 4); }
   return out;
 }
-const INIT: Record<ColOn, string> = { man: 'initMan', guard: 'initGuard', player: 'initPlayer', anim: 'initAnim' };
+const INIT: Record<ColOn, string> = { man: 'initMan', guard: 'initGuard', player: 'initPlayer', anim: 'initAnim', sup: 'initSup', aim: 'initAim' };
 const isManRef = (t: ColType): t is ManRef => typeof t === 'object' && !Array.isArray(t);
 const initText = (f: MenField) => (typeof f.init === 'number' && Number.isNaN(f.init) ? 'NaN' : JSON.stringify(f.init));
 
 function accessors(l: Laid, O: Map<string, number>): string[] {
   const f = l.field, n = f.name, t = f.type, doc = f.why ? [`  /** ${f.why} */`] : [];
-  const d = (c: string) => `S.d[S.b8 + ${O.get(c)} + this.r]`, u = (c: string) => `S.u[S.b4 + ${O.get(c)} + this.r]`;
+  const c0 = l.cols[0], d = (c: string) => `S.d[S.b8 + ${O.get(c)} + this.r]`, u = (c: string) => `S.u[S.b4 + ${O.get(c)} + this.r]`;
   const num = (name: string, read: string, write: string, type = 'number') => `  get ${name}(): ${type} { const S = this.S; return ${read}; } set ${name}(v: ${type}) { const S = this.S; ${write}; }`;
-  if (t === 'f64') return [...doc, num(n, d(n), `${d(n)} = v`)];
-  if (t === 'u32') return [...doc, num(n, u(n), `${u(n)} = v`)];
-  if (t === 'i32') return [...doc, num(n, `${u(n)} | 0`, `${u(n)} = v`)];
+  if (t === 'f64') return [...doc, num(n, d(c0), `${d(c0)} = v`)];
+  if (t === 'u32') return [...doc, num(n, u(c0), `${u(c0)} = v`)];
+  if (t === 'i32') return [...doc, num(n, `${u(c0)} | 0`, `${u(c0)} = v`)];
   if (t === 'bool') { const b = l.bit!; return [...doc, num(n, `(${u(b.col)} & ${b.mask}) !== 0`, `const w = ${u(b.col)}; ${u(b.col)} = v ? w | ${b.mask} : w & ${~b.mask >>> 0}`, 'boolean')]; }
   if (t === 'vec3' || t === 'vec3?') {
-    const [x, y, z] = l.cols, each = l.cols.map(c => num(c, d(c), `${d(c)} = v`));
+    const [x, y, z] = l.cols, each = l.cols.map((c, i) => num(n + 'XYZ'[i], d(c), `${d(c)} = v`));
     if (t === 'vec3') return [...doc, `  get ${n}(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + ${O.get(x)}], S.d[i + ${O.get(y)}], S.d[i + ${O.get(z)}]]; }`,
       `  set ${n}(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + ${O.get(x)}] = v[0]; S.d[i + ${O.get(y)}] = v[1]; S.d[i + ${O.get(z)}] = v[2]; }`, ...each];
     const h = l.has!;
@@ -76,10 +77,10 @@ function accessors(l: Laid, O: Map<string, number>): string[] {
   }
   if (isManRef(t)) {   // a word that names a man: 0 nobody · 1, 2 … a word of its list · else a handle (never under 256: a live row's generation is odd)
     const also = t.also, ty = [...also.map(w => `'${w}'`), t.man, 'null'].join(' | '), rd = also.map((w, i) => `h === ${i + 1} ? '${w}' : `).join(''), wr = also.map((w, i) => `v === '${w}' ? ${i + 1} : `).join('');
-    return [...doc, `  get ${n}(): ${ty} { const S = this.S, h = ${u(n)}; return h === 0 ? null : ${rd}S.manAt(h) as ${t.man}; } set ${n}(v: ${ty}) { const S = this.S; ${u(n)} = v === null ? 0 : ${wr}S.handleOf((v as ${t.man}).r); }`];
+    return [...doc, `  get ${n}(): ${ty} { const S = this.S, h = ${u(c0)}; return h === 0 ? null : ${rd}S.manAt(h) as ${t.man}; } set ${n}(v: ${ty}) { const S = this.S; ${u(c0)} = v === null ? 0 : ${wr}S.handleOf((v as ${t.man}).r); }`];
   }
   const V = `${n.toUpperCase()}_WORDS`;
-  return [...doc, `  get ${n}(): (typeof ${V})[number] { const S = this.S; return ${V}[${u(n)}]; } set ${n}(v: (typeof ${V})[number]) { const S = this.S, i = ${V}.indexOf(v); if (i < 0) throw new Error(\`${n}: no such word: \${v}\`); ${u(n)} = i; }`];
+  return [...doc, `  get ${n}(): (typeof ${V})[number] { const S = this.S; return ${V}[${u(c0)}]; } set ${n}(v: (typeof ${V})[number]) { const S = this.S, i = ${V}.indexOf(v); if (i < 0) throw new Error(\`${n}: no such word: \${v}\`); ${u(c0)} = i; }`];
 }
 
 /** the TypeScript side */
@@ -121,11 +122,14 @@ export function tsText(S: Schema): string {
     ...body('player'),
     ...inits('player'),
     `}`,
-    `/** the animator's kept state */`,
-    `export class AnimCols {`,
-    `  S!: MenStore; r = -1;`,
-    ...body('anim'),
-    `}`,
+    ...([['anim', 'AnimCols', `the animator's kept state`], ['sup', 'SupCols', `what suppression keeps of him (game/suppression.ts)`], ['aim', 'AimCols', `his aim's track (game/aim.ts)`]] as const).flatMap(([on, name, what]) => [
+      `/** ${what}: a record of its own, on his row */`,
+      `export class ${name} {`,
+      `  S!: MenStore; r = -1;`,
+      ...body(on),
+      ...inits(on),
+      `}`,
+    ]),
     ``,
   ].filter((l, i) => l !== '' || i > 0).join('\n');
 }
@@ -183,7 +187,8 @@ export const MEN_TABLE: Schema = { rows: MEN_ROWS, fields: MEN_FIELDS };
 export function schemaFaults(S: Schema, kept: readonly { name: string; on: ColOn }[] = MEN_KEPT): string[] {
   const out: string[] = [], seen = new Set<string>();
   if (S.rows % 4 !== 0) out.push(`${S.rows} rows is no multiple of four`);
-  for (const f of S.fields) { const k = `${f.on}.${f.name}`; if (seen.has(k)) out.push(`${k} is in the table twice`); seen.add(k); if (f.name === 'S' || f.name === 'r' || f.name === 'gen') out.push(`${k}: the name is the store's`); }
+  const cols = new Set<string>();
+  for (const f of S.fields) { const k = `${f.on}.${f.name}`, c = f.col ?? f.name; if (seen.has(k)) out.push(`${k} is in the table twice`); seen.add(k); if (cols.has(c)) out.push(`the column ${c} (${k}) is in the table twice`); cols.add(c); if (f.name === 'S' || f.name === 'r' || c === 'gen') out.push(`${k}: the name is the store's`); }
   for (const f of kept) if (seen.has(`${f.on}.${f.name}`)) out.push(`${f.on}.${f.name} is a column and kept on the object`);
   return out;
 }

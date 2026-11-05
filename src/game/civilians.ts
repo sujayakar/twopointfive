@@ -195,7 +195,7 @@ export function resetCivilians(g: Game) {
     if (pl.dragging?.civ) s.view.toggleDrag();
     if (pl.takedown?.g.civ) pl.takedown = null;
   }
-  for (const cv of g.civilians) { forgetMeter(g, cv); manLeaves(cv.char, cv); }
+  for (const cv of g.civilians) { forgetMeter(g, cv); manLeaves(cv.char, cv, cv.sup, cv.aim); }
   const F = floorOf(g); F.evacTold = false; F.greetAt = -1e9; F.pending.length = 0;   // (a word due from a man of the old shift is nobody's now)
   spawnCivilians(g);
 }
