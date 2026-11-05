@@ -105,7 +105,7 @@ export const COAST_PALETTE = {
   stonePale: [0.47, 0.45, 0.405] as Vec3, stoneShade: [0.37, 0.35, 0.315] as Vec3, stoneBand: [0.29, 0.27, 0.24] as Vec3, dryEarth: [0.2, 0.13, 0.078] as Vec3,
   timber: [0.24, 0.175, 0.12] as Vec3, bronze: [0.07, 0.06, 0.05] as Vec3, cypress: [0.05, 0.075, 0.03] as Vec3, sage: [0.17, 0.2, 0.12] as Vec3,
   poolDark: [0.02, 0.07, 0.075] as Vec3, clay: [0.36, 0.13, 0.07] as Vec3, saffron: [0.52, 0.31, 0.07] as Vec3,
-  // the hotel corner's second laying (tools/levels/hotel-corner.ts): a smooth coursed stone for a house, a cream for its columns, a rough stone for a garden
+  // the hotel corner's second laying (tools/levels/hotel-corner.ts): a smooth stone for a house's blank walls (a cast panel drew bolt holes on them), a cream for its columns, a rough stone for a garden
   // wall, a smooth warm timber for rafters and shutters, pale shallow water, a paving slab
   limestone: [0.525, 0.5, 0.445] as Vec3, cream: [0.53, 0.506, 0.436] as Vec3, rubble: [0.33, 0.276, 0.206] as Vec3, cedar: [0.32, 0.2, 0.11] as Vec3, poolPale: [0.17, 0.31, 0.276] as Vec3, stoneSlab: [0.445, 0.42, 0.375] as Vec3,
 };

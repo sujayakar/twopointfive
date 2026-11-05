@@ -7,7 +7,7 @@
 //   THE BUILDING SETS OUT THE FLOOR   a column every third metre, a band of darker stone from each to the pool, and every stone cut to lie between two
 //   FOUR VALUES    pale paving underfoot, a darker smooth stone under the colonnade and in every band, dark planting and bronze, and the water
 //   EDGES          no two fields butt: a flush band, a dark slot or a step lies between them
-//   TWO STONES     the house is smooth and coursed, the garden wall is rough; the floor is jointed, so nothing is written or bolted on a wall
+//   TWO STONES     the house is smooth, the garden wall is rough; the floor is jointed, so nothing is written or bolted on a wall
 //   NO MARK WITHOUT A STUFF FOR IT   wet prints and a wet edge were laid twice as flat grey shapes and read as paper: they wait for a soft-edged stain
 //   THE COLONNADE FACES THE SUN   the first laying's porch faced away from it and was a field of blue shade, half the picture. This one is open to the sky
 //                  between its rafters: the sun lies on its floor and its wall, and the rafters' shadows cross both
@@ -130,15 +130,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   film(COLS[0] - 0.15, DZ0, LAST + 0.15, DZ1, 'bronze', TOP);
   for (let x = 16.5; x < LAST; x += 6) film(x - 0.3, DZ0 - 0.02, x + 0.3, DZ1 + 0.02, 'stoneBand', TOP + 0.004);
 
-  // ---- THE GARDEN WALL: rough stone to the house's smooth, a flat cope; along its foot a bed of gravel with sage clipped to low mounds, massed ----
+  // ---- THE GARDEN WALL: rough stone to the house's smooth, a flat cope; along its foot a bed of gravel, bare until the look has leaves ----
   grp('garden');
   mass(10.5, 0, 6.0, 11.0, 1.1, 25.5, 'rubble'); mass(10.47, 1.1, 5.97, 11.03, 1.16, 25.53, 'stoneShade');
   mass(11.0, 0, 25.0, LAST + 0.5, 1.1, 25.5, 'rubble'); mass(11.03, 1.1, 24.97, LAST + 0.53, 1.16, 25.53, 'stoneShade', 0.97);
   film(11.0, WZ1 + 0.3, COLS[0] - 0.15 - GAP, 25.0, 'paleGravel', TOP);
-  const mound = (x: number, z: number, r: number, h: number, t: number) => { K.pipe(x, z, 0, h, r, P('sage', t), [], true); for (const b of K.boxes.slice(-4)) Object.assign(b, row('sage')); };
-  for (const [x, z, r, h, t] of [[11.42, 13.3, 0.36, 0.5, 1.12], [11.48, 13.92, 0.3, 0.38, 1.24], [11.4, 14.5, 0.38, 0.55, 1.1], [11.5, 15.08, 0.27, 0.36, 1.26],
-    [11.44, 21.2, 0.37, 0.52, 1.14], [11.5, 21.82, 0.28, 0.36, 1.24], [11.4, 22.4, 0.38, 0.56, 1.1], [11.46, 23.02, 0.31, 0.42, 1.2], [11.5, 23.56, 0.26, 0.35, 1.26]]) mound(x, z, r, h, t);
-
   // ---- one daybed beside the steps, pulled a little out of line: a plain frame, a thick mattress, a bolster, a folded towel; a small stone table ----
   { const b = at(12.95, Z1 - 1.9, HALF + 0.06); b(0, 0, 0, 0.1, 0.9, 0.36, 'bronze'); b(0, 0, 0.1, 0.2, 1.0, 0.45, 'cedar'); b(-0.02, 0, 0.2, 0.38, 0.94, 0.41, 'canvasWhite'); b(0.74, 0, 0.38, 0.48, 0.13, 0.36, 'canvasWhite', 0.94); b(-0.7, 0.08, 0.38, 0.43, 0.16, 0.22, 'canvasWhite', 0.88); }
   mass(13.62, 0, Z1 - 3.25, 14.0, 0.4, Z1 - 2.87, 'cream', 0.96);

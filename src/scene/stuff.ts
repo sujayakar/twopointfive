@@ -39,7 +39,7 @@ const COAST_STUFF = {
   brushedSteel: 'brushed', darkSteel: 'steel', binGreen: 'plastic', plasticPale: 'plastic', plasticDark: 'plastic',
   tyreRubber: 'rubber', canvasWhite: 'cloth', canvasBlue: 'cloth', towelStripe: 'cloth', foliage: 'waits',
   stonePale: 'paver', stoneShade: 'skim', stoneBand: 'skim', dryEarth: 'earth', timber: 'wood', bronze: 'steel', cypress: 'waits', sage: 'waits', poolDark: 'enamel', clay: 'skim', saffron: 'cloth',
-  limestone: 'cast panel', cream: 'skim', rubble: 'block', cedar: 'veneer', poolPale: 'enamel', stoneSlab: 'skim',
+  limestone: 'skim', cream: 'skim', rubble: 'block', cedar: 'veneer', poolPale: 'enamel', stoneSlab: 'skim',
 } as const satisfies Record<CoastMat, Stuff>;
 
 export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
