@@ -434,14 +434,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.mat(11.0, 15.8, 14.2, 16.0, P.oilDark, 0.012);
     L.hung(17.0, 9.64, true, 1.2, 1.4, 2.0, PALE); L.hung(17.0, 9.66, true, 0.9, 1.6, 1.68, [0.6, 0.12, 0.1], 0.02);   // the speed-limit board on the bar's wall
     // DRAFT (the depot's rework): WHAT HANGS ON THE NORTH ROW'S YARD FACE, the one long wall that looks at the camera, laid with the office kit's wall
-    // pieces: conduit under the eave in lengths (a drop into a box beside a door), two vents; and the three lettered rooms' letters on a wall beside each
-    // one's door, where the camera sees that wall's face
+    // pieces: conduit under the eave in lengths (a drop into a box beside a door) and two vents
     { const COAT = madeOf('enamel', [0.7, 0.71, 0.72], { rough: 0.35 }), CLIP = madeOf('brushed', [0.56, 0.57, 0.58], { rough: 0.32 }), LOUVRE = madeOf('louvre', [0.5, 0.51, 0.52], { rough: 0.45 });
       K.conduitRuns(9.5, 7.2, 11.6, 2.62, COAT, CLIP, 0.24, 2.3); K.conduitRuns(9.5, 13.2, 20.6, 2.62, COAT, CLIP); K.conduitRuns(9.5, 22.2, 23.7, 2.62, COAT, CLIP, 0.24, 2.3);
-      K.vent('x', 9.5, 8.6, 9.2, 1, 1.9, 2.3, LOUVRE); K.vent('x', 9.5, 18.6, 19.2, 1, 1.9, 2.3, LOUVRE);
-      K.stencilS(K.boxOn('+z', 14.0, 1.6, 9.62), 'A', 14.0, 1.1, MD.TIN.ink, 3);
-      K.stencilS(K.boxOn('+z', 27.4, 1.6, 9.62), 'B', 27.4, 1.1, MD.TIN.ink, 3);
-      K.stencilS(K.boxOn('+z', 21.85, 1.6, 18.62), 'C', 21.85, 1.1, MD.TIN.ink, 3); }
+      K.vent('x', 9.5, 8.6, 9.2, 1, 1.9, 2.3, LOUVRE); K.vent('x', 9.5, 18.6, 19.2, 1, 1.9, 2.3, LOUVRE); }
 
     // ---- THE EAST YARD — the fuel point: cans, a NO SMOKING board on the wall, sand buckets; scrap along the south wall
     L.room('east');

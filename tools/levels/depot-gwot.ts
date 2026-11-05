@@ -53,7 +53,8 @@ export const yardSkin = (Y: YardPaints): Skin => ({
   // WHAT EACH THING WEARS, in the kit's rows (the table above says what each row is here): the hardstanding and the hut floors are the two floors; the
   // lorries and the main gate's leaves are the firm's; the cabin and the generating set are the second field's; the drums are the firm's (they stand on the second field's pad); cast iron is dark steel.
   own: [[OWN.hard, 'slab'], [OWN.raised, 'mudFloor'], [OWN.drab, 'olive'], [OWN.shelter, 'genYellow'], [OWN.set, 'genYellow'], [OWN.oxide, 'drumRed'], [OWN.gate, 'paintRust'], [OWN.iron, 'iron']],
-  pick: c => c.name === 'wallDark' ? 'whitewash' : undefined,                          // the wash room's stall partitions
+  // (a lorry's body says car paint and says it still in the firm's colour: the row's own word is a plain enamel)
+  pick: c => c.name === 'wallDark' ? 'whitewash' : c.b.stuff === 'carpaint' ? { paint: 'olive', stuff: 'carpaint', rough: 0.26 } : undefined,   // (and the wash room's stall partitions)
   wall: 'tWall', house: 'render', inner: 'whitewash', ground: 'oil', frameOut: 'paintRust', frameIn: 'paintRust', dado: 'paintRust',
   floor: { carpet: 'mudFloor', stone: 'mudFloor', lino: 'mudFloor' }, noRug: /./, rugs: { crew: 'mat' },
   skirts: false, patches: 0,                                                           // a kept place: no damp foot, no drifts
@@ -82,7 +83,9 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     // ---- THE ONE LONG FACE (the north row's yard wall, z 9.5: a quarter of a frame is wall faces, and this is the biggest that looks at the camera): the wall
     // itself is smooth (the ground is jointed: where the ground is, the wall is quiet); a dado of painted block in the firm's colour to 0.9 m, door to door
     // (the look kit's own band from the floor, in the kit row that wears the field's block). And the hut's west face, which the yard's length looks at.
-    for (const [a, b] of [[4.12, 5.8], [7.0, 11.8], [13.0, 20.8], [22.0, 23.88]] as const) G.skirt('x', 9.5, a, b, 1, 'paintGreen', 0.9, 0.24);
+    for (const [a, b] of [[4.12, 5.8], [7.0, 11.8], [13.0, 20.8], [22.0, 23.88]] as const) { G.skirt('x', 9.5, a, b, 1, 'paintGreen', 0.9, 0.24);
+      // the crew room's letter in chalk on the dado beside its door (paint on the look's own band: the plain file's wall is not touched)
+      if (a === 13.0) { const i = B.length - 1; T.mark(i, MD.stencilMarks('+z', 'A', 13.45 - B[i].c[0], 0.1 - B[i].c[1], CHALK, 2)); } }
     G.skirt('z', 24, 9.62, 15.12, -1, 'paintGreen', 0.9, 0.24);
     // ---- THE HUT'S SOUTH FACE, over the mouth: one whole wall in the second colour (its window is a hole: the colour stops at the sill under it)
     G.skirt('x', 15, 23.88, 24.2, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 25.0, 29.62, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 24.2, 25.0, 1, 'paintBlue', 0.95, 0.24);
@@ -111,8 +114,7 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     figure('1', 12.5, 14.9, 2); figure('2', 17.1, 14.9, 2);
     for (const x of [30.2, 33.0, 35.75]) M.seg(x, 19.6, x, 23.8, 0.1, INKP);
     figure('3', 31.6, 19.9); figure('4', 34.4, 19.9);
-    // ---- THE LETTERS on the ground, where a lettered room's door has no wall face that looks at the camera to carry one (the walls' own are the
-    // generator's: depot.ts): the store's yard door, in chalk on the lane that passes it; and indoors a stride clear of each door's worn threshold
+    // ---- THE LETTERS on the ground, where a lettered room's door has no dado that looks at the camera to carry one: the store's yard door, in chalk on the lane that passes it; and indoors a stride clear of each door's worn threshold
     figure('C', 23.0, 16.9, 3, ROAD);
     figure('A', 17.6, 7.6); figure('B', 27.4, 9.2); figure('C', 16.2, 20.3);
     // ---- THE DOCK: a field of the firm's colour against the hut's west wall (a field in the sun before a pale wall: what its colour is thrown onto), an
