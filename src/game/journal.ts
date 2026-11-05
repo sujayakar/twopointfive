@@ -637,6 +637,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     else if (dt?.behindSam === undefined) DOORTOOLS.behindSam = false;   // (…and a file from before Sam beyond a door kept the squad's own stun can in the kit: the word at a held door banged its pockets wherever he stood)
     if (typeof k.flags.tossMate === 'boolean') DOORTOOLS.tossMate = k.flags.tossMate;   // (… and the can asked about teammates again as it leaves the hand: with the flags, as behindSam)
     else if ((dt as { tossMate?: boolean } | undefined)?.tossMate === undefined) DOORTOOLS.tossMate = false;   // (…a file from before the key: the row asked when it was given and never again)
+    if ((dt as { chargeAnswer?: boolean } | undefined)?.chargeAnswer === undefined) DOORTOOLS.chargeAnswer = false;   // (…a file from before a door charge order was carried out or answered: ended on a leaf open anywhere, its men left as they were. A recording that carries the key keeps its own.)
     if (dt?.threatFirst === undefined) DOORTOOLS.threatFirst = false; if (dt?.openAir === undefined) DOORTOOLS.openAir = false; if (dt?.flowMax === undefined) DOORTOOLS.flowMax = 0;
     if (dt?.bangWay === undefined) DOORTOOLS.bangWay = false; if (dt?.threatStuck === undefined) DOORTOOLS.threatStuck = 0;   // (…and from before the stun canister's look at the leaf existed; a recording that carries the key replays its own value)
     if (dt?.openHand === undefined) DOORTOOLS.openHand = false; if ((dt as { gateHand?: boolean } | undefined)?.gateHand === undefined) DOORTOOLS.gateHand = false;
