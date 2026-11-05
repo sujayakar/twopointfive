@@ -33,7 +33,7 @@ const RULES = [
   { name: 'breaker', why: ['out for the lights, or waiting to be sent'] },
   { name: 'buddy', why: ['a colleague is on his way to him, or the two have just paired up'] },
   { name: 'needs', why: ['off for a coffee, a smoke, some water or a stretch'] },
-  { name: 'squad', why: ['his squad\'s man at rest: where he goes for a fight elsewhere is its call'] },
+  { name: 'squad', why: ['at rest, his squad\'s call'] },
 ] as const;
 export type OwnerRule = typeof RULES[number]['name'];
 

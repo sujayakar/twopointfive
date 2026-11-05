@@ -543,7 +543,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   staged, training 'mixed': shout 0.02 s after the player stood 3 m off with 25 rounds ready, the rifle down a beat on; the control (the same green man
   broken alone, his leader alive) runs only once the bait has run him dry (2.83 s, 0 rounds). The rest of runner-check runs `MORALE.training` 'none' (the
   first slice's men, as it was written) and holds `DARKDOOR.on` off, after every stand-up; 31 lines green on both stands. The panel row moved to Missions ▸
-  'Enemy nerve' ('broken men drop the gun and run'); no reset — a fled man stays empty-handed with the switch put off. Headless only, never seen, never played.
+  'Enemy nerve' ('broken men drop the gun and run'); the switch put off lets go of a run for good (since 2026-11-05; before that it resumed when the row came back up). Headless only, never seen, never played.
   AFTER A PAGE DRIVE (10-13, the hut's man baited dry with the player 3 m off: "I'm out!" and "I'm done!" a frame apart, then "Yard: contact" over the
   shout two frames on): `outSecs` 0.8 — `ripe` waits out morale.ts's bait and gives its 'out' line that long before the shout (still dry, the enemy still in
   his eyes, or no run); and enemysquads.ts `fit` / `contact()` pass over a man `OWN.runner`, so from his shout on he puts nothing on the squad's net.
@@ -1511,7 +1511,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   behaviours (wave 3 of the port). The file is a leaf of the import cycle.
   THE RANKS ARE THE ONE TABLE AT THE TOP OF THE FILE AND DECIDE ONLY WHO IS SHOWN. No asker changes who it yields to in this part: the disagreements are kept and listed, for the maintainer to
   rule on (rebuild/rust-sim/port/owner-questions.md in the project's files).
+  THE RECORD HOLDS WHAT A LIST SAYS; WHAT A TICK COMPUTES IS ASKED. A rule writes the word as it takes him and lets go, or as the one tick its lists can change in ends. An answer that turns on what moves
+  between its ticks (who is still alive, what he just heard, a time) stays the rule's own read, asked when it is wanted: `pressKeepsHome`, `buddyPaired`. Said once a frame it would be stale for an asker
+  that runs before the fight's tick, and the breaker party does. `OWN.walk` is the one word said just before it is read, because its readers all run in one place (`ownerWitness`'s `atRead`).
   A QUESTION THAT IS NOT OWNERSHIP IS NOT AN OWNER: `gd.fled` (the weapon has left his hand; true after he dies) is a fact of the man.
+  THE DEBUGGER'S `RUNNER.on` PUT DOWN MID-RUN DROPS THAT RUN FOR GOOD (it used to resume when the row came back up): the record cannot answer false and hold him. It is no play: nothing but the row does it.
   NO SWITCH: it changes no play. PROOF: the 42's digests at every commit on both stands, an arm with last stand, buddy, pressure and dig-in up against its own base, and
   `bun run tools/qa/owner-check.ts` on both stands (`OWNER_BREAK=1` red on every line): at every read and at every tick's end, each man's word against what each rule's own state says
   (`ownerWitness`, one line in the rule's file). A rule the runs never put a man in says so in its line. `bun run tools/qa/fights-check.ts` on both stands (`FIGHTS_BREAK=1` red): a new pair of
