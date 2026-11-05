@@ -43,10 +43,10 @@ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { SILENT } = await import(`${ROOT}/src/game/silent.ts`);
-const { targetHeld } = await import(`${ROOT}/src/game/roundheld.ts`);
 const { SQUADTHROW } = await import(`${ROOT}/src/game/squadthrow.ts`);
 const { START } = await import(`${ROOT}/src/game/startfile.ts`);
 const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
+const { holdFireHoldsTarget } = await import(`${ROOT}/src/game/holdfire.ts`);
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -349,7 +349,7 @@ export const ordersStack = guarded(async () => {
     verdict(clear && split === !file && o.every(x => x > 0.25 && x < 0.9) && jamb.every(x => x < (split ? 0.8 : 1.7)) && dist(b1.char.pos, b2.char.pos) > 0.6, `${name}: ${file ? 'in file on the one free jamb' : 'a man on each jamb'} — out of the opening, against the wall, on Sam's side of it`,
       `${split ? 'one each side of the door' : 'both in file on one side'} · past the jamb ${jamb.map(f2).join(' / ')} m · off the wall (Sam's side +) ${o.map(f2).join(' / ')} m · opening 0‥${f2(w)}, the men at ${a.map(f2).join(' / ')}`);
     // (holdfire.ts, on as shipped: a man whose gun the rule holds on a man who has not noticed the team — and who has not fired — is not turned to the door; false for every man with the rule off, where each muzzle must be on it)
-    const {  } = await import(`${ROOT}/src/game/holdfire.ts`), onMan = men.map((m: any) => { const t = g.fight.opOf(m)?.tgt; return t ? Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, t.char.pos))) : NaN; }), heldMan = men.map((m: any, i: number) => targetHeld('holdfire', g, m) && (g.fight.opOf(m)?.rounds ?? 0) === 0 && onMan[i] < 0.2), nHeld = heldMan.filter(Boolean).length;
+    const {  } = await import(`${ROOT}/src/game/holdfire.ts`), onMan = men.map((m: any) => { const t = g.fight.opOf(m)?.tgt; return t ? Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, t.char.pos))) : NaN; }), heldMan = men.map((m: any, i: number) => holdFireHoldsTarget(g, m) && (g.fight.opOf(m)?.rounds ?? 0) === 0 && onMan[i] < 0.2), nHeld = heldMan.filter(Boolean).length;
     verdict(men.every((_: any, i: number) => heldMan[i] || (dFace[i] < 0.3 && onDoor[i] < 0.6)), `${name}: bladed along the wall toward the door, muzzles on it`, `${men.length - nHeld} on the door${nHeld ? ` · ${nHeld} held on a man (hold fire, no round fired, gun ${onMan.filter((_: number, i: number) => heldMan[i]).map(f2).join(' / ')} rad off him)` : ''} · off the wall line ${dFace.map(f2).join(' / ')} rad · gun off the doorway ${onDoor.map(f2).join(' / ')} rad · stance ${men.map((m: any) => m.script?.stance).join(' / ')}`);
     // ('the door untouched': with every leaf on its closer (the harness's older stand) the door they stack on is shut, and stays shut. Where doors stay as they
     //  are left (DOORSTAY.on, as the page has it) a pair that came THROUGH it to reach Sam's side has left it open behind them: there the leaf is where their
