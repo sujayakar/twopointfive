@@ -363,7 +363,7 @@ export class BoxWorld {
    *  order; ranked again only when a static's place, size, turn, or whether and how far it is drawn changes, or the list's length does (`drawRankN`,
    *  -1 = stale). `drawSlot` is scratch: the sort's list, then the frame's laying out of the drawn statics by rank. The dynamics and the cut list follow
    *  as they did.
-   *  THE ORDER MAY WAIT (the page's pace: render/planPace.ts, render/steps.ts). Ranking reads every static and in a browser runs cold, 2 to 6 ms of the
+   *  THE ORDER MAY WAIT (the page's pace: render/planPace.ts, render/steps.ts). Ranking reads every static and in a browser runs cold, 2 to 7 ms of the
    *  frame a wall is blown. Given a `DrawWait` (upload's second word: the engine's, and its count of still packs is the engine's to keep, not this
    *  world's), a stale order is made again only on a drawn pack, once the statics have stood still for `calm` drawn packs; until then THE STATICS ARE
    *  DRAWN IN THE LIST'S OWN ORDER, which is the order every tie is defined by: the picture is the same, and only the work of shading what is then
@@ -751,7 +751,7 @@ export class BoxWorld {
       let now = !(between && this.drawWaits);
       if (between) { if (wait !== null) now = false; if (!now && asked) this.drawAskedUndrawn = true; }
       else { if (wait !== null) { if (asked || this.drawAskedUndrawn) wait.still = 0; else wait.still++; now = wait.still >= wait.calm; } this.drawAskedUndrawn = false; }
-      if (now) { this.rankStatics(nStat); this.drawRankN = nStat; }
+      if (now) { this.rankStatics(nStat); this.drawRankN = nStat; if (wait !== null) wait.still = 0; }   // (the count starts from nothing each time the order is made: a change this pack could not say it saw, an upload that threw part way or a snapshot put back, then waits its full time)
     }
     if (nv > 0 && this.drawRankN === nStat) { const rank = this.drawRank, slot = this.drawSlot, vis = this.visible; slot.fill(0xFFFFFFFF, 0, nStat);   // (a static's word is its bare index, and no index is 0xFFFFFFFF)
       for (let k = 0; k < nv; k++) slot[rank[vis[k]]] = vis[k];

@@ -230,7 +230,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
           REACH_PACE.whole = false; st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); settle();
           if (!(found > 0 && litOn === found)) f.push(`with the old pace asked for, the hole was found on frame ${found} and lit on frame ${litOn} (want the same frame)`); else said.push('the old pace asked for: the hole lit on the frame it is found'); }
         check(f.length === 0, 'what is lit stays lit and no job is lost: a hole\'s light comes on though the openings are found again every five frames; a hole widened, and the wall put back, never show fewer lit; a box set down makes the field fresh and every mask a fresh raster\'s; the first frame masks every opening, on a second level too; the old pace asked for is the old pace', f.join('; ') || said.join(' · ')); }
-      // THE OPENINGS ARE FOUND AGAIN A LITTLE A FRAME (render/steps.ts, render/planPace.ts): the plan, the walls' raster and its scan were 9 to 11 ms of one
+      // THE OPENINGS ARE FOUND AGAIN A LITTLE A FRAME (render/steps.ts, render/planPace.ts): the plan, the walls' raster and its scan were 9 to 15 ms of one
       // frame in a browser, cold each time a wall changed. Three stops a frame here, which no clock can change. PLANPACE_BREAK=1 gives no pace: must FAIL.
       { const PB = process.env.PLANPACE_BREAK === '1', bit = (): any => PB ? undefined : { left: 3 }, st = g.engine.world.statics as any[], bump = () => { (g.engine.world as any).geomSerial = ((g.engine.world as any).geomSerial ?? 0) + 1; }, f: string[] = [], said: string[] = [];
         const E5 = mk(), recs = () => E5.openRecs as any[], go = (pace = bit()) => quiet(() => E5.lookOpeningLights(pace));
@@ -282,6 +282,17 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
         else { st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); }
         if (!rest() || shown() !== planNow()) f.push('never at rest (the wall back)');
         check(f.length === 0, 'the openings are found again a little a frame once the walls have stood still: the old plan serves and nothing goes dark, what lands is the plan made at once, one begun lands the level as it took it whatever moves after, a crate moved every six frames cannot stop it, and it takes a step every frame whatever the frame has left; whole on a level\'s first frame, and a new level never gets the old one\'s', f.join('; ') || said.join(' · ')); }
+      // THE ENGINE'S OWN WORDS ON THE PACE (engine.ts framePace, startPlansOver; nothing here calls render): a page's first frames have every plan at once, then
+      // the frame's allowance and the draw order's wait; a restart or a save put back gives up what is in hand and has the frames at once again
+      { const { PLAN_PACE } = await import(`${ROOT}/src/render/planPace.ts`), { WallSides } = await import(`${ROOT}/src/render/wallSides.ts`), was = PLAN_PACE.on, first = LOOK_OPENINGS.settle + 2, f: string[] = [];
+        const EP = Object.assign(mk(), { planFresh: first, drawWait: { calm: 0, still: 0 }, wallSides: new WallSides() }), atOnce = (p: any) => p.wait === null && p.plan.left === Infinity && p.plan.ms === undefined;
+        PLAN_PACE.on = true; let n = 0; while (n < 40 && atOnce(EP.framePace())) n++;
+        if (n !== first) f.push(`a page's first frames: ${n} at once (want ${first})`);
+        const p1 = EP.framePace(); if (atOnce(p1) || p1.plan.ms !== PLAN_PACE.ms || p1.wait !== EP.drawWait || p1.wait.calm !== PLAN_PACE.calm) f.push('after them: not the frame\'s allowance and the order\'s wait');
+        EP.openJob.begin((function* (): Generator<void, any, void> { yield; return null; })()); EP.startPlansOver(); n = 0; while (n < 40 && atOnce(EP.framePace())) n++;
+        if (EP.openJob.busy || EP.wallSides.busy || n !== first) f.push(`the level put back to another state: ${EP.openJob.busy ? 'a finding still in hand, ' : ''}${n} frames at once (want ${first})`);
+        PLAN_PACE.on = false; if (!atOnce(EP.framePace())) f.push('the pace off: a frame not at once'); PLAN_PACE.on = was;
+        check(f.length === 0, 'the engine gives every plan at once on a page\'s first frames and after a restart or a save put back (what is in hand given up), and the frame\'s allowance and the draw order\'s wait otherwise; at once always with the pace off', f.join('; ') || `${first} frames at once, then ${PLAN_PACE.ms} ms a frame and ${PLAN_PACE.calm} still frames for the order`); }
       // the rooms row put off and on, and put on for the first time in the middle of a level: no frame with the rooms dark
       { const n0 = lit().length; lookConfig.rooms = 0; frames(1); const off = lit().length, bare = lit().every(l => !l.reach); lookConfig.rooms = 1; frames(1); const on = lit().length, masked = lit().every(l => !!l.reach);
         lookConfig.rooms = 0; const E2 = mk(); quiet(() => { E2.lookOpeningLights(); E2.lookOpeningLights(); }); const a2 = (E2.dayLights as any[]).filter(l => l.enabled).length; lookConfig.rooms = 1; quiet(() => E2.lookOpeningLights()); const b2 = (E2.dayLights as any[]).filter(l => l.enabled && l.reach).length;

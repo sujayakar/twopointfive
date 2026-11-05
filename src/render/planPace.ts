@@ -7,9 +7,10 @@
 // by a few frames, and the game's light meter reads the picture those plans shape (render/steps.ts).
 export const PLAN_PACE = {
   on: false,
-  /** milliseconds of planning a drawn frame, between all the planners. The jobs in steps stop every quarter to half a millisecond of cold code and run
-   *  over it by a stop or two at most; run warm, each is whole inside it. The place map's draw and the order's making are whole whatever is left
-   *  (2 to 7 ms cold each, on the frame a wall changes and on a calm frame after it): their time is taken off, so the jobs then get their one step */
+  /** milliseconds of planning a drawn frame, between all the planners. The jobs in steps stop often (most stops are a quarter to half a millisecond of
+   *  cold code apart; the longest timed in a page was 3) and run over the allowance by a stop; run warm, each is whole inside it. The place map's draw
+   *  (2 to 6 ms cold, on the frame a wall changes) and the order's making (2 to 7, on a calm frame after it) are whole whatever is left: their time
+   *  is taken off, so the jobs then get their one step */
   ms: 2,
   /** drawn frames the statics must have stood still for before the order they are drawn in is made again; until then they are drawn in the list's own
    *  order. Ten: the order is made whole (2 to 7 ms cold), and for eight or so frames after a blast the game's own update is still long (the pieces

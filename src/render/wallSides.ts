@@ -40,7 +40,7 @@ const WHOLE = 255, REACH = 3, Q_STEP = 0.025, D4: readonly (readonly [number, nu
  *  same boxes and doors. */
 export function placeSides(statics: readonly Box[], mask: Uint8Array, gaps: readonly PlaceGap[] = [], out = new Uint32Array(PLACE_W * PLACE_H)): Uint32Array { return whole(placeSidesSteps(statics, mask, gaps, out)); }
 const WALLS_A_STOP = 32, CELLS_A_STOP = 350;   // (a stop every so many wall boxes laid, and every so many cells of a pass over the map)
-/** … MADE IN STEPS (render/steps.ts: in a browser this runs cold each time a wall changes, 6 to 18 ms of the office's blast frame in one go). EVERYTHING THAT
+/** … MADE IN STEPS (render/steps.ts: in a browser this runs cold each time a wall changes, 13 to 18 ms of the office's blast frame in one go). EVERYTHING THAT
  *  CAN CHANGE UNDER IT IS TAKEN BEFORE THE FIRST STOP: the map's cells, the doors' lines, and of each box that is part of a wall the six numbers asked of
  *  it. From there it reads nothing but what it took, so the words it returns are those of the level as it stood when it began, however many frames it is
  *  given. `out` is written in its last steps and is nobody's until it is returned (WallSides hands it scratch of its own). */

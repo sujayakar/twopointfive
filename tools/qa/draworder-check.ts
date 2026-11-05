@@ -103,7 +103,7 @@ export async function drawOrderCheck(): Promise<boolean> {
       for (let i = 0; i < 300; i++) W.step(DT);
       if ((w.drawRanked as number) !== r0) ff.push(`paint, a floor's gloss, the shadow flag and five seconds of the shift made the order ${(w.drawRanked as number) - r0} times`);
       did.push(`box ${hi} waits for box ${lo}, place ${at0 + 1} of ${base.length}`);
-      // THE ORDER MAY WAIT (render/planPace.ts, the page's pace; BoxWorld.upload's DrawWait). Ranking is cold code in a browser, 2 to 6 ms of the frame a wall is
+      // THE ORDER MAY WAIT (render/planPace.ts, the page's pace; BoxWorld.upload's DrawWait). Ranking is cold code in a browser, 2 to 7 ms of the frame a wall is
       // blown. Under the pace a stale order is made again only when the statics have stood still, and until then they are drawn in the list's own order,
       // which is the order every tie is defined by. PLANPACE_BREAK=1 leaves the pace off: must FAIL.
       { const { PLAN_PACE } = await import(`${ROOT}/src/render/planPace.ts`), PB = process.env.PLANPACE_BREAK === '1', fp: string[] = [], rising = (xs: number[]) => xs.every((v, k) => k === 0 || xs[k - 1] < v);
@@ -116,15 +116,18 @@ export async function drawOrderCheck(): Promise<boolean> {
         for (let i = 0; i < 30; i++) { up(); drawn(); drawn(); } if (ranked() !== r1) fp.push(`a static moved every other frame: the order was made ${ranked() - r1} times in 60 frames`);
         // a pack with no draw after it never makes the order, however long the statics have stood still; and a change such a pack finds starts the wait again
         for (let i = 0; i < 8; i++) w.upload(true); if (ranked() !== r1) fp.push('a pack with no draw after it made the order');
-        drawn(); up(); w.upload(true); drawn(); if (ranked() !== r1) fp.push('a static moved under a pack with no draw: the order was made on the next drawn frame');
-        let n = 0; while (ranked() === r1 && n++ < 12) drawn(); const got = read(), took = n; w.drawRankN = -1; w.drawWaits = false; w.upload(); const fresh = read(); w.drawWaits = !PB;
-        if (!PB && (took !== PLAN_PACE.calm || ranked() !== r1 + 2)) fp.push(`the statics still: the order was made ${took} drawn packs after the one that saw the change, ${ranked() - r1 - 1} time(s) (want ${PLAN_PACE.calm}, once)`); if (!same(got, fresh) || rising(got)) fp.push('the order made once they stood still is not the one made fresh');
+        for (let i = 0; i < PLAN_PACE.calm - 2; i++) drawn(); up(); w.upload(true); drawn(); if (ranked() !== r1) fp.push('a static moved under a pack with no draw, one drawn frame short of the wait: the order was made on the next drawn frame');   // (only the word that pack left says the wait starts again)
+        for (let i = 0; i < PLAN_PACE.calm - 1; i++) { w.upload(true); drawn(); } if (ranked() !== r1) fp.push('packs with no draw and no change between the drawn ones: the order was made early');   // (… and such a pack with no change says nothing: the wait runs on)
+        let n = 0; while (ranked() === r1 && n++ < 12) { w.upload(true); drawn(); } const got = read(), took = n; w.drawRankN = -1; w.drawWaits = false; w.upload(); const fresh = read(); w.drawWaits = !PB;
+        if (!PB && (took !== 1 || ranked() !== r1 + 2)) fp.push(`the statics still: the order was made ${took} drawn packs after the ${PLAN_PACE.calm - 1} that followed the change, ${ranked() - r1 - 1} time(s) (want one more, once)`); if (!same(got, fresh) || rising(got)) fp.push('the order made once they stood still is not the one made fresh');
         // a static that moves after the order was last made starts the wait from nothing (the count of still packs is as high as it last got: a wait that
         // only counted up ranked on the frame of the next change)
         { const r3 = ranked(); up(); drawn(); if (!PB && ranked() !== r3) fp.push('a static moved after the order was last made: the order was made on that frame'); for (let i = 0; i < PLAN_PACE.calm + 2; i++) drawn(); }
         // a list that only grows or shrinks is a change too
         { const extra = { ...B[hi], c: [B[hi].c[0], B[hi].c[1] + 60, B[hi].c[2]], marks: undefined, name: undefined }, r2 = ranked(); w.addStatic(extra); drawn(); w.statics.pop(); w.staticsDirty = true; for (let i = 0; i < PLAN_PACE.calm; i++) drawn(); if (!PB && ranked() !== r2) fp.push('a static added and one taken away on the next frame: the order was made before the list had stood still'); }
-        w.drawWaits = false; b.c = keep.c; W.step(DT); if (!same(read(), base)) fp.push('the pace put off and the static put back: the order is not the one it was');
+        // with no pace a pack with no draw after it makes the order as it always did, and leaves no word for the next drawn pack (the world's state is the old one's)
+        w.drawWaits = false; { const r4 = ranked(); up(); w.upload(true); if (!PB && (ranked() !== r4 + 1 || w.drawAskedUndrawn)) fp.push('with no pace, a pack with no draw after it: the order was not made on it, or it left its word up'); }
+        b.c = keep.c; W.step(DT); if (!same(read(), base)) fp.push('the pace put off and the static put back: the order is not the one it was');
         verdict(fp.length === 0, 'under the page\'s pace a stale order waits for the statics to stand still: on the frame a static moves, and while one keeps moving, they are drawn in the list\'s own order and nothing is ranked; never on a pack with no draw after it; then once, as an order made fresh would have it', fp.join('; ') || `still for ${PLAN_PACE.calm} drawn frames, then ranked once`); } }
     verdict(ff.length === 0, 'the order is made again the same frame when a static is moved aside, raised, made taller, turned, tilted, taken out of the picture, cut down or added, each as an order made fresh would have it and back as it was after; paint, a floor\'s gloss, the shadow flag and five seconds of the shift make nothing',
       ff.join('; ') || did.join(' · ')); }

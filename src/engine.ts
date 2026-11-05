@@ -154,9 +154,19 @@ export class Engine {
    *  until it is whole. `openJobKey` = the boxes' key (openingsKey) as the job took them. */
   private openJob = new Steps<{ plan: Opening[]; walls: { solid: Uint8Array; jumps?: Uint8Array }; changed: boolean }>(); private openJobKey = NaN;
   /** THE PLANNERS' PACE (render/planPace.ts): the wait for a stale draw order (scene/boxes.ts upload), and the drawn frames left in which every plan is
-   *  made at once whatever the pace: a page's first frames, and whenever the picture starts over (a restart, a save put back, the light rig swapped:
-   *  invalidateWorldCache). The level then is not the one the plans in use were made for, and nobody is playing those frames. */
+   *  made at once whatever the pace: a page's first frames, and after the level has been put back to another state under the picture (startPlansOver:
+   *  a restart, a save put back). The level then is not the one the plans in use were made for. */
   private drawWait: DrawWait = { calm: 0, still: 0 }; private planFresh = LOOK_OPENINGS.settle + 2;
+  /** this drawn frame's allowance of planning and its wait for the draw order (null = at once): render's first words on the pace, and a check's */
+  private framePace(): { plan: Pace; wait: DrawWait | null } {
+    const on = PLAN_PACE.on && this.planFresh <= 0; if (this.planFresh > 0) this.planFresh--;
+    this.drawWait.calm = PLAN_PACE.calm;
+    return { plan: on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE, wait: on ? this.drawWait : null };
+  }
+  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: host/api.ts): what the planners have in hand was of the state before, so it is
+   *  given up, and for a few drawn frames every plan is made at once, as on a page's first frames. Not for a change of light or weather: the level
+   *  stands, and a job in hand is still of it. */
+  startPlansOver(): void { this.planFresh = LOOK_OPENINGS.settle + 2; this.wallSides.drop(); this.openJob.drop(); }
   /** EVERYTHING THAT CAN CHANGE UNDER IT IS TAKEN BEFORE ITS FIRST STOP: a copy of what the planners ask of each static (scene/boxes.ts planBoxes) and the
    *  doors' lines. So it is finished whatever moves meanwhile, and what it returns is of ONE level, as it stood in the call that began it. In turn: the
    *  openings the walls leave (scene/openings.ts), the walls as the reach masks read them (render/reach.ts: full-height walls, a doorway open ground that
@@ -414,11 +424,11 @@ export class Engine {
    *  P0-A) AND every parked grid, which would otherwise come back on a later hop holding the field from before the change (a night grid parked through the daytime show, a
    *  day grid swapped in at night: seven frames of the wrong bounce and the wrong light-meter reading — review R10.1). Not for screen events — resize / scale / checkerboard /
    *  divisor flips leave the world cache valid and must not call this. */
-  invalidateWorldCache() { this.rc.invalidateWorld(); for (const parked of this.rcPark.values()) parked.invalidateWorld(); this.planFresh = LOOK_OPENINGS.settle + 2; this.wallSides.drop(); this.openJob.drop(); }   // (… and the planners start over with it: what is in hand was of the level before, and the next of each is made at once)
+  invalidateWorldCache() { this.rc.invalidateWorld(); for (const parked of this.rcPark.values()) parked.invalidateWorld(); }
   /** The LEVEL was put back to its start under the picture (game/cleanrestart.ts: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
    *  screen histories, the reservoirs, the haze volume's history and the radiance cache all still hold the level as it stood, 'wrong wholesale'. Each starts from
    *  nothing, as on a boot's first frame, so the fresh level is not blended in over the frames after. */
-  restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.passes.froxels.restartHistory(); this.invalidateWorldCache(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)
+  restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.passes.froxels.restartHistory(); this.invalidateWorldCache(); this.startPlansOver(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)
 
   /** the scene group's resources over one frame block (binding 0): the one list ensureSceneBG and its output-size twin both build from */
   private sceneGroup(frame: GPUBuffer, fogSight: GPUBuffer = this.fogSight.buf): GPUBindGroup {
@@ -650,10 +660,9 @@ export class Engine {
     // whole, on a drawn frame once they have stood still: its time is taken off the allowance), the openings and the wall sides (each a job in steps,
     // a step at least every frame), and the place map (drawn at once, its time taken off too). At once for all of them with the pace off, and for the
     // few frames after the picture has started over.
-    const paced = PLAN_PACE.on && this.planFresh <= 0; if (this.planFresh > 0) this.planFresh--;
-    const plan: Pace = paced ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE;
-    this.world.drawWaits = paced; this.drawWait.calm = PLAN_PACE.calm;
-    { const ranked = this.world.drawRanked, t = clock(); this.world.upload(false, paced ? this.drawWait : null); if (this.world.drawRanked !== ranked) spend(plan, clock() - t); }
+    const { plan, wait } = this.framePace();
+    this.world.drawWaits = PLAN_PACE.on;   // (under the pace a pack with no draw after it never makes the order, on the frames at once too)
+    { const ranked = this.world.drawRanked, t = clock(); this.world.upload(false, wait); if (this.world.drawRanked !== ranked) spend(plan, clock() - t); }
     cutSwap.frame(this.world.cutTraced);   // CUT BOXES (render/cutSwap.ts): the tracing programs with the cut rule only while a cut box a ray can meet is alive — a calm frame dispatches the boot's
     { // …and the raster follows the rays: a traceable cut box is drawn cut only on a frame whose ray programs carry the rule (the second set still compiling / failed / pinned off by a dev hook = whole
       // for both). The frame standing pieces change shape on — the set arriving under pieces born before it — is a cut for the resolve: its history shows the whole boxes
