@@ -44,7 +44,7 @@ const BUDGET_TODAY: [RegExp, number][] = [
   [/^volumetrics \/ main$/, 667],
   [/^reflectP5 \/ main$/, 640],
   [/^particles \/ update$/, 577],
-  [/^direct \/ main$/, 430],   // (387 + an opening's light, 40 KB at the estimator's call sites: the portal's record and its ray past the opening 19, the hole's far rim 7, the sum over five pieces of its rectangle 14; common.wgsl portalFlux, portalSeen, direct_common.wgsl shadowSample)
+  [/^direct \/ main$/, 430],   // (387 + an opening's light, 40 KB at the estimator's call sites: the portal's record and its ray past the opening 19, the hole's far rim 7, the sum over the pieces of its rectangle 14 (five pieces when this was counted, three since 11-05: the loop is one text either way); common.wgsl portalFlux, portalSeen, direct_common.wgsl shadowSample)
   [/^restirM? \/ main$/, 380],   // (332 + the same 45 KB: 19, 7 and 19; restir asks the sum where it weighs a light and where it shades by it)
   [/^reflect \/ main$/, 274],
   [/^froxel \/ injectJ$/, 216],
