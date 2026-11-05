@@ -5,7 +5,26 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 244–260 -->
-- **THE HARNESS HAS TWO STANDS, AND ONE LIST OF WHAT SEPARATES THEM** (`src/host/profile.ts`). FROZEN (the default) = the stand every frozen digest, tally, probe bound and session
+- **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
+  headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
+  word or `TPS_PROFILE=shipped` = the page's stand, `TPS_PROFILE=frozen` = the old one, any other word stops the tool. `harnessProfile()`
+  (`src/host/profile.ts`) is that function over the environment, and `tools/qa/stand.ts` writes the word down as it loads, for the tools that read it
+  themselves and for a child. A TOOL THAT READS `process.env.TPS_PROFILE` IMPORTS `stand.ts` STATICALLY (or `headless.ts`, which does): a static import
+  loads before the file's own lines, so no tool reads "no word" and calls the page's stand frozen; `shipped-check.ts` is red on one that does not
+  (`STAND_BREAK=1` is its red path; it reads text, so a tool that CLEARS the word for a child is not seen by it). A check is run ONCE.
+  THE OLD STAND is one word, `TPS_PROFILE=frozen`: every newer rule held off as below, kept reachable for the switch cleanup until the off paths are gone
+  (the retire tool's proofs, `stand-bisect.ts`); the process the word is given to says so once on stderr. A TOOL THAT WANTS THE OLD STAND OF A CHILD SAYS
+  THE WORD: giving a child no word asks for the page's (`rerun.ts` for a tape made on the old stand, `rust-check.ts`'s old-stand arms, `lesson-gate.ts`'s
+  frozen runs, `ships.ts` / `kit-cells.ts` / `solo-night.ts` `--base`, `blast-frame.ts --arm round1` all say it). NO NEW FIXTURE IS RECORDED ON IT. What
+  that leaves: (1) the recordings that were made on it stand until each one's owner records it again on the page's stand: `layer-words.json` and
+  `sense-words.json` are still asked, by `rust-check.ts`, of a child it stands on the old stand by name, and `ident-pin.ts` still refuses `--record` on any
+  other stand (the owners lift that as they record); `threshold-identity` and `shotgun-identity`'s two frozen words are asked on the old stand only and
+  hold nothing on a run with no word, and say so; (2) a check that was green on the old stand and red on the page's is red in a plain run now:
+  `tools/qa/expected-red.ts` is where each is named with its cause and whose it is (its page-stand rows are a plain run's rows now); (3) headers that say
+  "frozen by default" or "run it on BOTH stands" are older than this: once, with no word. Proof of the flip itself: `stand-dump.ts` with no word after =
+  with `TPS_PROFILE=shipped` before, and with `TPS_PROFILE=frozen` after = with no word before, byte for byte. The rest of this file, and the area files,
+  still say "the frozen stand" and "the shipped stand" of what was measured where: read "shipped" as "a plain run".
+- **THE HARNESS HAS TWO STANDS, AND ONE LIST OF WHAT SEPARATES THEM** (`src/host/profile.ts`; since 2026-11-05 the default is the SHIPPED one: the bullet above). FROZEN (the default until then) = the stand every frozen digest, tally, probe bound and session
   fixture was recorded on: `src/host/standup.ts standGame({harness})` and `tools/qa/headless.ts` hold the newer rules off, each line behind `pinned('<its env word>')`. SHIPPED
   (`TPS_PROFILE=shipped` in front of any headless tool) = the page as it opens with no URL flag on a machine that has kept nothing: none of those lines runs, `shippedBoot()` calls
   `pageSwitches('')` — THE function `src/main.ts` calls with the page's own query for the switches its boot writes (destruction, furniture, wall reactions, wall charge, the door
