@@ -656,7 +656,7 @@ export class Quality {
     c.t += rawDt; c.dts.push(rawDt);
     const tm = this.engine.timer;
     if (tm.enabled && tm.results.size) {
-      let fixed = 0; for (const [k, v] of tm.results) if (/^rc |^probe$|^smoke$|^taau$|^volFroxel$|^sharpU$|^compS$|^gbaa$|^mesh$|^air$/.test(k)) fixed += v;   // per-probe / per-voxel / per-froxel / per-character work: does not shrink with resolution (nor does the TAAU resolve: it runs at the OUTPUT size, which the render scale leaves alone — and neither do sharp direct's two output-size kernels; 'mesh' = the mesh shadows' skin + refit)
+      let fixed = 0; for (const [k, v] of tm.results) if (/^rc |^probe$|^smoke$|^taau$|^volFroxel$|^sharpU$|^compS$|^gbaa$|^mesh$|^air$|^powder$|^diceRing$|^fogSight$|^place$/.test(k)) fixed += v;   // per-probe / per-voxel / per-froxel / per-character work: does not shrink with resolution (nor does the TAAU resolve: it runs at the OUTPUT size, which the render scale leaves alone — and neither do sharp direct's two output-size kernels; 'mesh' = the mesh shadows' skin + refit)
       c.gpu.push(tm.total(RENDER_PASSES)); c.fixed.push(fixed);
     }
     if (c.dts.length >= 54 || c.t > 3) this.decide();

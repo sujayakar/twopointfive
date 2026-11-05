@@ -3,7 +3,7 @@
 // interactables), guards.ts (perception, state machine, barks, escalation), combat.ts (shots, kills, hand props, live throwables), lighting.ts
 // (fixtures, OCP, blackout), mission.ts (the mission thread), squad.ts (scripted guards).
 import { lookConfig } from '../render/frame';
-import { wallClock, HostOwned } from '../math/side';
+import { HostOwned } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
@@ -35,7 +35,7 @@ import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
 import { SmokeSystemLike } from '../smoke/types';
-import { Box, BoxFlag, rayBox } from '../scene/boxes';
+import { Box, BoxFlag } from '../scene/boxes';
 import { markStats, markWorldRect, AREA_LIT_MARKS, MARKING_TEXEL } from '../scene/markings';
 /** an emissive marking registers a light only from this on-axis intensity up (W/sr): the vending fronts are ≈ 2.2–2.8, a monitor's UI bars 0.02, an LED row 0.01 */
 export const MARK_LIGHT_MIN_I0 = 0.05;
@@ -137,7 +137,6 @@ import { powerOutTick, powerOutReset } from './powerout';
 import { rescueCheckTick, rescueCheckReset } from './rescuecheck';
 import { dozeTick, dozeInChair, dozeReset } from './doze';
 import { wallReactTick, wallReactReset } from './wallreact';
-import { BLAST_PACE } from './destructionSwitch';
 import { loadTeamFeel } from './teamfeel';
 import { nvgTick } from './nvg';
 import { irLightTick, irFlags } from './irlight';
@@ -218,7 +217,7 @@ import type { BigKit } from './kit';
 import type { KitWorn } from './kitload';
 import { loadGait } from './kitload';   // (asked inside the frame only)
 import type { Wound } from './wounds';
-import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reachFraction, reachMaskForDirectional, wallRasterDiff, REACH_WORK, REACH_PACE, type ReachOnly, type ReachJob } from '../render/reach';
+import { buildInteriorCells } from '../render/reach';
 import { WORLD } from '../scene/world';
 import { simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
@@ -671,6 +670,9 @@ export class Guard extends GuardCols {
    *  widening out to a search point away from it ('fan'); null = ordinary suspicion. Cleared whenever he leaves 'suspicious'. */
   bodyDuty: { body: Guard; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: Vec3 | null } | null = null;
   dropped: Item | null = null;   // the torch / pistol that left his hand when he died (the sputtering light rides it)
+  handleGateT = -Infinity;   // when the handle's gate (handleside.ts) last had his feet, by the game's clock
+  staysInRooms = false;   // HIS SQUAD'S ORDER IS TO STAY IN ITS ROOMS (enemysquads.ts, a squad's `mayLeave: false`): a fact of his order, not an owner
+  fled = false;   // THE WEAPON HAS LEFT HIS HAND FOR GOOD (runner.ts): unarmed, out of the fight and nobody's living hostile from that frame on — running, low in a corner, gone or since shot. A fact of the man, not an owner: it outlasts his death
   gunLostAt = -1;   // a LIVING man whose gun was knocked from his hand at the grab (HOLD.dropGun): dropped = that gun, this = when — his hands are empty (guards.ts inHand) and its light dies on the floor; −1 again once he has it back (player.ts handBack)
   torchLostAt = -1;   // a LIVING man whose torch was knocked from his hand (the grab): dropped = that torch, this = when — the beam follows it down and sputters out (guards.ts updateFlashlight); on patrol afterwards his hand is empty
   path: Vec3[] = []; pathI = 0; repathT = 0; pathGoal: Vec3 | null = null;
@@ -885,139 +887,11 @@ export class Game {
   props: PropSystem;
   /** door the player would operate with F right now (also drives the HUD prompt) */
   useDoor: Door | null = null;   // the hovered door when it is within reach (F acts on it)
-  reachStats = wallClock({ lights: 0, meanFraction: 1, ms: 0 }, 'ms');   // reach masks built at construction (render/reach.ts): how many lights got one, the mean fraction of the level they reach, build time
-  /** the cells under the ceiling slab (reach.ts buildInteriorCells), kept for directional lights added later (the breach's sun: lighting.ts setDaylight → buildDirReach) */
+  /** the cells under the ceiling slab (render/reach.ts buildInteriorCells): is there a roof over a point (wallpen.ts, wallbreak.ts, furnblast.ts). The lights'
+   *  REACH MASKS, which stood here with their queue until 11-05, are the picture's and are kept by it (render/reachKeep.ts: the host's `reach`, none on a stand
+   *  with no picture). The game tells it that the level stands (the constructor), where walls changed (wallbreak.ts) and that a sun wants a mask (hours.ts,
+   *  lighting.ts), and reads nothing back. */
   reachInterior: Uint8Array | null = null;
-  /** WALL BREAKING (game/wallbreak.ts): the full-height walls the reach masks were derived from, the lights that carry a mask, and the ones waiting to have theirs
-   *  re-derived because a wall near them opened (or came back) */
-  private reachSolid: Uint8Array | null = null; private reachLights: RtLight[] = []; private reachQueue: { l: RtLight; rects: [number, number, number, number][] | null; boxes: [number, number, number, number][]; job?: ReachJob; restarts: number }[] = []; private reachSolidBoot: Uint8Array | null = null; private reachBoot = new Map<RtLight, Uint32Array>();
-  /** BLAST_PACE: the rects walls changed in, noted on the frame they went and not yet read into the wall raster (reachChanged), and the frames that still waits */
-  private reachHeld: [number, number, number, number][] = []; private reachHold = 0;
-  /** A wall changed inside `rect` [x0, z0, x1, z1] (null = anywhere: a reset): if the wall raster really differs, every masked light whose range reaches the rect is
-   *  queued WITH the rect and `reachTick` re-decides, a few lights a frame, only the cells whose line to the light passes it (render/reach.ts ReachOnly: a whole
-   *  mask is ~13 ms of sight lines on a slow CPU, the wedge behind one hole a fraction of a millisecond; a stale mask in between only keeps a light out of cells
-   *  it could now reach). A RESET puts the masks the level booted with straight back. The simulation never reads a reach mask — the picture's alone. Returns how
-   *  many lights were queued. */
-  reachChanged(rect: [number, number, number, number] | null): number {
-    if (!this.reachSolid) return 0;
-    // BLAST_PACE: a wall's change is only NOTED on the frame it went (that frame is the long one) — reachTick reads the raster `reachHold` frames on, every rect noted
-    // since in one go, and derives from the frame after that. A reset drops the notes with the queue. (Not under the old pace: ?reachpace=old keeps its own frames.)
-    if (rect && BLAST_PACE.on && !REACH_PACE.whole) { if (!this.reachHeld.length) this.reachHold = BLAST_PACE.reachHold; this.reachHeld.push(rect); return 0; }
-    return this.reachRead(rect ? [rect] : null);
-  }
-  /** reachChanged's work: the wall raster built again and set against the last, the lights in reach of `rects` queued (null = a reset) */
-  private reachRead(rects: [number, number, number, number][] | null): number {
-    if (!this.reachSolid) return 0;
-    if (!rects) this.reachHeld.length = 0;
-    const solid = buildWallRaster(this.engine.world.statics, this.level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width })));
-    const box = wallRasterDiff(this.reachSolid, solid);   // the sub-cells that changed: a point light's cells are decided again only where their own sight lines touch them
-    if (!box) return 0;
-    this.reachSolid = solid; let n = 0;
-    const queue = (l: RtLight, r: [number, number, number, number] | null) => {
-      const q = this.reachQueue.find(x => x.l === l);
-      if (!q) { this.reachQueue.push({ l, rects: r ? [r] : null, boxes: [box], restarts: 0 }); n++; return; }
-      if (q.job?.st) { q.job = undefined; q.restarts++; }   // part-decided, and now there is more to decide: it starts over (a light this change does not reach carries on — it would not have been queued for it)
-      if (!r) q.rects = null; else if (q.rects) { q.rects.push(r); if (!q.boxes.includes(box)) q.boxes.push(box); }
-    };
-    if (!rects) {
-      const boot = this.reachSolidBoot; let same = !!boot && boot.length === solid.length; for (let i = 0; same && i < solid.length; i++) if (boot![i] !== solid[i]) same = false;
-      if (same) this.reachSolid = boot;   // the authored walls again: the raster object the level booted with, and with it the sight lines' jump field (reach.ts jumpsOf) — not worked out afresh inside the next break's first tick
-      this.reachQueue.length = 0;
-      for (const [l, m] of this.reachBoot) { if (l.kind === 2) l.reachDir = m; else l.reach = m; }   // a light with no entry was never re-derived: its mask IS the authored level's
-      this.reachBoot.clear();
-      return this.reachLights.length;
-    }
-    for (const r of rects) {   // (the notes of several changes read at once: each light is queued with each rect in its reach, the raster's changed box theirs together, once a light)
-      for (const l of this.reachLights) {
-        const dx = Math.max(r[0] - l.pos[0], 0, l.pos[0] - r[2]), dz = Math.max(r[1] - l.pos[2], 0, l.pos[2] - r[3]); if (Math.hypot(dx, dz) > l.range + 1) continue;
-        queue(l, r);
-      }
-      for (const l of this.engine.lights.lights) if (l.kind === 2 && l.reachDir) queue(l, r);
-    }
-    return n;
-  }
-  /** re-derive queued reach masks, in the queue's order: `steps` sight-line steps a frame (~2 ms on a slow CPU — a mask too big for one frame's share carries on
-   *  where it stopped the next, render/reach.ts ReachJob, and is swapped in whole when its last cell is decided; the moon's rays are a frame's share by themselves),
-   *  at most `n` lights finished (update() calls it once a frame; nothing queued = nothing done). Returns the lights finished. `REACH_PACE.whole` (reach.ts; the
-   *  page's ?reachpace=old) = the pace this replaced: each mask whole, one light at least and more until 60 cells are decided. */
-  reachTick(n = 8, steps = REACH_PACE.steps): number {
-    if (this.reachHeld.length && this.reachHold-- <= 0) { this.reachRead(this.reachHeld.splice(0)); return 0; }   // (BLAST_PACE: the noted changes read into the raster — this frame's share; the masks from the next. While a note waits, masks queued before it carry on below)
-    let done = 0; const c0 = REACH_WORK.steps, k0 = REACH_WORK.cells, whole = REACH_PACE.whole;
-    while (done < n && this.reachQueue.length && this.reachSolid) {
-      const left = whole ? Infinity : steps - (REACH_WORK.steps - c0); if (left <= 0 || (whole && done > 0 && REACH_WORK.cells - k0 >= REACH_PACE.wholeCells)) break;
-      const q = this.reachQueue[0], l = q.l;
-      const boot = () => { if (!this.reachBoot.has(l)) { const m = l.kind === 2 ? l.reachDir : l.reach; if (m) this.reachBoot.set(l, m); } };   // what the level as authored gave it (masks are replaced, never written in place)
-      if (l.kind === 2) {
-        if (!whole && REACH_WORK.steps !== c0) break;
-        boot(); this.buildDirReach(l, q.rects && l.reachDir ? { prev: l.reachDir, rects: q.rects } : undefined);
-        this.reachQueue.shift(); done++; if (whole) continue; break;
-      }
-      const job = q.job ??= { budget: left }; job.budget = q.restarts >= 2 ? Infinity : left;   // (walls changing faster than a big mask can be decided in shares: the third go takes it in one, as every mask once was)
-      const m = reachMaskSome(this.reachSolid, l.pos, l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0], l.radius, this.reachInterior, q.rects && l.reach ? { prev: l.reach, rects: q.rects, boxes: q.boxes, maxDist: l.range + 1.5 } : undefined, job);
-      if (!m) break;
-      boot(); l.reach = m; this.reachQueue.shift(); done++;
-    }
-    return done;
-  }
-  get reachPending(): number { return this.reachQueue.length + this.reachHeld.length; }
-  /** Give a DIRECTIONAL light (kind 2) its reach mask: the outdoor cells, plus every indoor cell with an unblocked static path toward it (render/reach.ts
-   *  reachMaskForDirectional over this level's collision raycast, glass passing). The ReSTIR estimator reads it (lights.ts dirMasks); a few ms, once per light. */
-  buildDirReach(l: RtLight, only?: ReachOnly) {
-    if (l.kind !== 2 || !this.reachInterior) return;
-    const d = l.dir; const len = Math.hypot(d[0], d[1], d[2]) || 1; const toLight: Vec3 = [-d[0] / len, -d[1] / len, -d[2] / len];
-    // ~10 k short rays: the level's raycast is brute force over every static (0.4 s of that), so bucket the shadow-casting statics on the 1 m grid once and give
-    // each ray only the boxes whose cells its XZ span crosses (a couple of dozen) — the same answer in ~20 ms
-    // ~10 k short rays: bucket every SHADOW-CASTING static (NoPrimary ones too — the ceiling slab is exactly what stops the moon; glass passes light) on the 1 m grid once,
-    // then march each ray cell by cell testing the 3×3 buckets round it and stop at the first hit (indoors that is the ceiling within a metre or two): ~30 ms, not
-    // the 0.4 s of the level's brute-force raycast
-    const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell, statics = this.engine.world.statics;
-    const buckets: number[][] = Array.from({ length: W * H }, () => []);
-    statics.forEach((b, i) => {
-      if (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) return;
-      const r = Math.hypot(b.h[0], b.h[2]);   // yawed footprint bound
-      const x0 = Math.max(0, Math.floor((b.c[0] - r - WORLD.min[0]) / cs)), x1 = Math.min(W - 1, Math.floor((b.c[0] + r - WORLD.min[0]) / cs));
-      const z0 = Math.max(0, Math.floor((b.c[2] - r - WORLD.min[2]) / cs)), z1 = Math.min(H - 1, Math.floor((b.c[2] + r - WORLD.min[2]) / cs));
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) buckets[z * W + x].push(i);
-    });
-    const seen = new Uint32Array(statics.length); let stamp = 0;
-    const blocked = (from: Vec3, dir: Vec3, dist: number): boolean => {
-      stamp++;
-      const steps = Math.ceil(dist / 0.5);
-      let lastCell = -1;
-      for (let s = 0; s <= steps; s++) {
-        const t = Math.min(dist, s * 0.5);
-        const cx = Math.floor((from[0] + dir[0] * t - WORLD.min[0]) / cs), cz = Math.floor((from[2] + dir[2] * t - WORLD.min[2]) / cs);
-        const cell = cz * W + cx; if (cell === lastCell) continue; lastCell = cell;
-        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-          const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= W || z >= H) continue;
-          for (const i of buckets[z * W + x]) { if (seen[i] === stamp) continue; seen[i] = stamp; if (rayBox(from, dir, statics[i], dist)) return true; }
-        }
-      }
-      return false;
-    };
-    // a look that fell inside a solid (reach.ts, the header of reachMaskForDirectional): out through the nearest side face of that box that is still in the look's own
-    // cell and in no other box. Upright boxes, turned or not (the walls): a tilted, round or cut box is read as open air, as it was.
-    const solidAt = (x: number, y: number, z: number): Box | null => {
-      const cx = Math.floor((x - WORLD.min[0]) / cs), cz = Math.floor((z - WORLD.min[2]) / cs); if (cx < 0 || cz < 0 || cx >= W || cz >= H) return null;
-      for (const i of buckets[cz * W + cx]) { const b = statics[i]; if (b.rot || b.round === true || (b.cut !== undefined && b.cut.length > 0) || Math.abs(y - b.c[1]) >= b.h[1]) continue;
-        const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = x - b.c[0], dz = z - b.c[2];
-        if (Math.abs(c * dx - s * dz) < b.h[0] && Math.abs(s * dx + c * dz) < b.h[2]) return b; }
-      return null;
-    };
-    const free = (p: Vec3): Vec3 | null => {
-      const b = solidAt(p[0], p[1], p[2]); if (!b) return p;
-      const x0 = Math.floor((p[0] - WORLD.min[0]) / cs) * cs + WORLD.min[0], z0 = Math.floor((p[2] - WORLD.min[2]) / cs) * cs + WORLD.min[2], E = 0.02;
-      const yw = b.yaw ?? 0, c = Math.cos(yw), s = Math.sin(yw), dx = p[0] - b.c[0], dz = p[2] - b.c[2], lx = c * dx - s * dz, lz = s * dx + c * dz;   // (the box's own frame, as editor/lint.ts insideBox turns it)
-      let best: Vec3 | null = null, bd = Infinity;
-      for (const [q0, q1, n0, n1] of [[-(b.h[0] + E), lz, -1, 0], [b.h[0] + E, lz, 1, 0], [lx, -(b.h[2] + E), 0, -1], [lx, b.h[2] + E, 0, 1]]) {
-        const wx = b.c[0] + c * q0 + s * q1, wz = b.c[2] - s * q0 + c * q1, d = Math.abs(q0 - lx) + Math.abs(q1 - lz);
-        // (… with air beyond it: a cabinet 2 cm off a wall put the look ON the wall's face, and a ray that starts on a face does not hit it)
-        if (d < bd && wx > x0 && wx < x0 + cs && wz > z0 && wz < z0 + cs && !solidAt(wx, p[1], wz) && !solidAt(wx + (c * n0 + s * n1) * E, p[1], wz + (-s * n0 + c * n1) * E)) { bd = d; best = [wx, p[1], wz]; }
-      }
-      return best;
-    };
-    l.reachDir = reachMaskForDirectional(toLight, this.reachInterior, blocked, only, free);
-  }
   touring = false;   // the showcase tour is running (demo.ts start/stop) — a plain signal for the HUD / mission getters; quietUtility is NOT it (a stop can run 'live' with the flag down)
   hover: Interactable | null = null; interactables: Interactable[] = []; nearby: Interactable[] = []; aimSnap: Vec3 | null = null;   // aimSnap: where the auto-aim put the reticle this frame (a light or a man's chest), null = raw cursor aim   // hover = the highlighted ROW (what a Space tap / release performs), nearby = the panel's rows (player.ts buildInteractables), interactables = the per-thing markers
   /** The row Space performed THIS frame (interact.ts updateInteract sets it right after the rows are built — a tap released, or Space let go with the selector open —
@@ -1308,19 +1182,9 @@ export class Game {
       const light = engine.lights.add({ name: target.name, group: target.group, kind: 1, pos: v3.copy(b.pos), dir: [1, 0, 0], color: [1.0, 0.22, 0.06], intensity: 55, range: 14, innerDeg: 9, outerDeg: 24, radius: 0.06, volumetric: 1.0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 55 });
       this.beacons.push({ light, phase: i * 1.7, target });
     });
-    // reach masks (render/reach.ts): every static interior light the level built — fixture area lights, analytic lamps, the beacon spots — gets the set of
-    // 1 m cells it can possibly light past the full-height walls (street lamps included); torches, flashes, the rail light and the moon keep the all-ones
-    // mask. Built once here (a few tens of ms), consulted per pixel by the direct pass and per secondary vertex by directIrradiance.
-    { const t0 = performance.now(); const solid = buildWallRaster(engine.world.statics, level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width }))); const interior = buildInteriorCells(engine.world.statics); let n = 0, cells = 0;
-      this.reachSolid = this.reachSolidBoot = solid;
-      for (const l of engine.lights.lights) {
-        if (l.ttl >= 0 || l.kind === 2 || l.group === 'player' || l.group === 'flashlights') continue;
-        this.reachLights.push(l);   // transient / the moon / lights that MOVE (Sam's rail light — parked at y −10 until drawn — and the guards' torches, were they added yet): anywhere. Exterior lamp heads above the roof DO get a mask (they enter the building only through its openings, and indoors they were the worst leader-slot thieves of all) — but only its interior cells (reach.ts)
-        l.reach = reachMaskFor(solid, l.pos, l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0], l.radius, interior); n++; cells += reachFraction(l.reach);
-      }
-      this.reachInterior = interior;
-      for (const l of engine.lights.lights) if (l.kind === 2) this.buildDirReach(l);   // the moon: which indoor cells see the sky its way at all (used by the ReSTIR estimator only — lights.ts dirMasks)
-      this.reachStats = wallClock({ lights: n, meanFraction: n ? cells / n : 1, ms: performance.now() - t0 }, 'ms'); }
+    // the cells under a roof (the game's own rules read them), and the lights' reach masks, made where there is a picture to read them (render/reachKeep.ts boot)
+    this.reachInterior = buildInteriorCells(engine.world.statics);
+    engine.reach?.boot(level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width })), this.reachInterior);
     // doors: leaves are dynamic occluders for sight / sound / projectiles (collision layer)
     this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e), this.sim);
     this.props.doorways = this.doors.list.map(d => ({ cx: d.frameCentre[0], cz: d.frameCentre[2], ux: Math.cos(d.def.closedDir), uz: Math.sin(d.def.closedDir), half: d.def.width / 2 - 0.02 }));   // (a door frame guides shoved furniture through: props.ts doorways — half the air between the frame's stops)
@@ -1810,7 +1674,7 @@ export class Game {
     this.defuse.tick(dt);   // a defuse mission (defuse.ts): the charges' one clock, Sam's own row at one, the blast at zero — a return on its first line on a level without the block
     this.verdict.tick();    // the run's verdict (verdict.ts): after every end this frame could write — read-only
     this.updateProps(dt);
-    this.destr.update(dt); if (this.reachPending) this.reachTick();   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
+    this.destr.update(dt);   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
     this.airDust.update(dt);   // the weather's dust in the rooms (airDust.ts): through the openings as the doors and the walls stand this frame — before the guards' eyes ask the air
     this.events = this.events.filter(e => this.time - e.time < 0.5);
     lightSwitchTick(this);   // a room's wall switch (lightswitch.ts — a return on its first line with its switch off): a defender at one puts a room back, before the fixtures are written

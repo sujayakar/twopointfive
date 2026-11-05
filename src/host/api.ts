@@ -27,6 +27,7 @@ import type { RainShown } from '../game/rainFx';
 import type { SnowBlastShown } from '../game/snowBlast';
 import type { SnowShown } from '../game/snowFx';
 import type { SmokeShown } from '../game/smokebreak';
+import type { ReachKeep } from '../render/reachKeep';
 
 /** the host books, one member a module (see `hostBooks` below): `fire` = game/fire.ts FireShown, the open fires' smoke filed and bed voices asked for ·
  *  `smokeBreak` = game/smokebreak.ts SmokeShown, a smoke break's thread filed with the solver and puffs owed to the pool (dropped too when its switch goes off;
@@ -78,6 +79,9 @@ export interface HostApi {
   restartPicture?(why: string): void;
   /** the level is another state of itself under the picture (a save put back): the picture's planners give up what they have in hand and make their next plans at once (engine.ts startPlansOver; a restart's restartPicture says it too) */
   startPlansOver?(): void;
+  /** the keeper of the lights' reach masks (render/reachKeep.ts), where there is a picture to read them: the game tells it that the level stands, where
+   *  walls changed and that a sun wants a mask, and reads nothing back. Absent on a stand with no picture: no mask is made there. */
+  readonly reach?: ReachKeep;
   // ---- boot-time attach points (game.ts constructor)
   /** the skinned characters' drawable — `engine.skin = this.chars` */
   skin: SkinnedDrawable | null;

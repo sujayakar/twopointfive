@@ -243,7 +243,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   closure, whose word no snapshot can reach (civilians, the Director's run, the radio checks and the last stand were changed to it: same sequences). A named table that
   is a pure function of its key — what a miss would compute, whichever game filled it — says so in the statement after it, `table.asMemo()` (two today:
   `cast.hasNvg`, `character.AT0`): not state, held by no snapshot, compared by nothing. A field that holds a wall-clock reading is marked where its holder is made,
-  `wallClock(obj, 'ms')` (the props', the reach masks' and the rig fit's timers, the checkpoints' `runId`): kept and put back, never compared. `math/side.ts` imports
+  `wallClock(obj, 'ms')` (the props' and the rig fit's timers, the checkpoints' `runId`): kept and put back, never compared. `math/side.ts` imports
   nothing, so a top-level `new SideMap(...)` is safe in the import cycle.
   THE CHECK: `bun run tools/qa/rollback-check.ts` (the frozen stand) and `TPS_PROFILE=shipped bun run tools/qa/rollback-check.ts`; `ROLLBACK_BREAK=1` flips the lowest bit
   of one moving man's position after every restore and the three 'plays on' lines must FAIL (and 'the host's own'). It runs the static pass, then scripted solo and squad play-throughs

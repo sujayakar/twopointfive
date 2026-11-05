@@ -457,7 +457,9 @@ but synthetic writes still work.
   `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`) was the same case and is registered the same way, in a commit of its own: the game's tick
   reads it (to pace the lamps' reach masks, which are the picture's: no sense, rule or run digest reads them, and the 42 play-through digests are the
   same with it forced either way on both stands), so a host's page and its server paced that bookkeeping differently. It is the same on both stands
-  with no word (the shares), so it has no `FROZEN_HOLDS` row. A PAGE RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the
+  with no word (the shares), so it has no `FROZEN_HOLDS` row. SINCE THE MASKS LEFT THE TICK (11-05, `render/reachKeep.ts`; `docs/agents/render.md`)
+  NEITHER `?reachpace` NOR `?planpace` DECIDES ANYTHING INSIDE THE TICK: the picture's keeper paces the masks on drawn frames, and a stand with no
+  picture (the harness, a server) makes no mask and never reads `REACH_PACE`. Both stay registered: a recording still says which pace its page drew at. A PAGE RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the
   clock's: after the first six drawn frames a plan lands when the clock lets it. A rig that reads a frame a fixed number of frames after a door or a
   wall changes puts `planpace=old` on its address (`tools/qa/draw-equal.cjs` does). Neither word is a visit's flag: a joiner's page takes the
   recipe's. `docs/agents/render.md` has both rules.
@@ -1033,3 +1035,10 @@ but synthetic writes still work.
   ways on the page's stand, old and not this change's: `gunhold-cover` (its round line) and `noshove` (the room keeper). Also mended on the way:
   `shotgun-probes.ts --identity` printed its word without the staging the probe reads it under (`COVER.backKeep` held off on the frozen stand), and
   `doortools-probes.ts tally` printed "room's men down N/0" (the count's statement had been swallowed by a comment on its line).
+- **Every GPU pass has a timer, or a row that says why not (2026-11-05).** `bun run tools/qa/passtimer-check.ts` (`probes.ts passtimer`, families `perf`
+  and `render`, a process of its own, under a second; the same on both stands: it reads text). It reads every `beginComputePass(` and
+  `beginRenderPass(` under `src/` (notes blanked as a compiler meets them, strings stepped over), and each must carry `timestampWrites` in its own descriptor or have its file
+  and label in `tools/qa/passtimer-exempt.ts` with a reason of some length; a row no pass uses is red too. Both the reader and the judge are tried on
+  lines of the check's own first. `PASSTIMER_BREAK=1` (the table read as empty) must fail. ADDING A PASS: hand its descriptor
+  `timestampWrites: ts?.('name')`, the engine's `ts` handed in (`docs/agents/render.md`, GPU timing), and say `timer.idle('name')` on a frame it rests; or add the row. Why it exists, and what was measured:
+  that same section.

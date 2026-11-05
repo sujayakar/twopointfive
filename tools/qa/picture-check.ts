@@ -341,12 +341,12 @@ export async function pictureCheck(): Promise<boolean> {
             runnerRestore(G, undefined); t.hold(h, M.h, M.a); G.teleportPlayer(o.sam ?? samFar); t.step(0.3); pictureReset(G); t.step(0);
             if (o.told) { pictureTell(G, h, 'player', o.told, o.age ?? 0); if (o.lost) { const I = ideaOf(G, h, 'player'); if (I) I.lost = true; } }
             PICTURE.run = o.rule; PICTURE_STATS.ran = PICTURE_STATS.ranOff = 0; t.pins.delete(h); const took = runnerBreak(G, h);
-            for (let i = 0; i < 90 && !runnerOf(h)?.fled; i++) t.step(1 / 60);
+            for (let i = 0; i < 90 && !h.fled; i++) t.step(1 / 60);
             const S = runnerOf(h) as any, path = (h.path as Vec3[]).map(q => [q[0], 0, q[2]] as Vec3), goal = S?.goal as Vec3 | null, knew = (ideasOf(G, h) as any[]).length;
             let len = 0, a: number[] = M.h; for (const q of path) { len += flat(a, q); a = q; }
             const nearTo = (q: number[]) => { let d = flat(M.h, q), a: number[] = M.h; for (const b of path) { const L = flat(a, b) || 1e-6, k = Math.max(0, Math.min(1, ((q[0] - a[0]) * (b[0] - a[0]) + (q[2] - a[2]) * (b[2] - a[2])) / (L * L))); d = Math.min(d, flat(q, [a[0] + (b[0] - a[0]) * k, 0, a[2] + (b[2] - a[2]) * k])); a = b; } return d; };
             PICTURE.run = true;
-            return { took, fled: !!S?.fled, phase: S?.phase as string, goal, path, len, knew, nearTo, ran: PICTURE_STATS.ran as number, off: PICTURE_STATS.ranOff as number,
+            return { took, fled: !!h.fled, phase: S?.phase as string, goal, path, len, knew, nearTo, ran: PICTURE_STATS.ran as number, off: PICTURE_STATS.ranOff as number,
               sig: `${S?.phase} ${goal ? at(goal) : '-'} ${path.map(at).join('')}` }; };
           const base = go({ rule: true }), baseOff = go({ rule: false }); if (!base.fled || base.path.length < 2) continue;
           // a place ON his way he has no line to from where he breaks, four metres or more along it, where a true enemy turns the old rule's way

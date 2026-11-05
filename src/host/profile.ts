@@ -154,6 +154,7 @@ import { MARKCUT, MARKSIT } from '../render/decals';
 import { PLAN_PACE } from '../render/planPace';
 import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
+import { WALLSKIN } from '../game/wallskin';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -373,7 +374,8 @@ export function pageSwitches(q: URLSearchParams): void {
   MARKCUT.on = q.get('markcut') !== '0';   // a mark on a cut or a round face lies where the round met it (render/decals.ts MARKCUT): ON in the page; ?markcut=0 = pulled to the plain box's face, where the shader drops it, as it was
   MARKSIT.on = q.get('marksit') !== '0';   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only, one word of the decal buffer's header): ON in the page; ?marksit=0 = every mark as it was drawn
   PLAN_PACE.on = q.get('planpace') !== 'old';   // the picture's planners are made a little a frame (render/planPace.ts; a picture only: engine.ts reads it as it draws, and nothing in the update does): ON in the page; ?planpace=old = the wall sides, the openings and the statics' draw order each made whole on the frame that asks, as they were
-  REACH_PACE.whole = q.get('reachpace') === 'old';   // a reach mask decided whole after a wall changes, the pace before the per-frame shares (render/reach.ts REACH_PACE; the lamps' masks are the picture's, kept in the tick today: no sense, rule or run digest reads them): OFF in the page and on both stands; ?reachpace=old = on. Read here and not by main.ts alone, so a recipe carries it and a server's stand paces as its clients do
+  REACH_PACE.whole = q.get('reachpace') === 'old';   // a reach mask decided whole after a wall changes, the pace before the per-frame shares (render/reach.ts REACH_PACE; the lamps' masks are the picture's and are kept by it on drawn frames, render/reachKeep.ts: nothing in the tick reads the word): OFF in the page and on both stands; ?reachpace=old = on. Read here and not by main.ts alone, so a recipe carries it and a server's stand paces as its clients do
+  WALLSKIN.on = q.get('wallskin') !== '0';   // what is painted on a wall goes with the wall (game/wallskin.ts): a band, a skirt or a dado on a wall's face is drawn only where the wall still stands behind it, cut at the edge of a hole as the wall is — picture only, no box's flags written, the same run by digest: ON in the page; ?wallskin=0 = the band stays whole across the hole, as it was
   CLEANRESTART.on = q.get('cleanrestart') !== '0' && !q.has('kitview');   // a restart gives a clean level: the lights stand as a level just opened has them, the last try's lines and clocks are gone, the camera cuts and the picture starts fresh (game/cleanrestart.ts): ON in the page; ?cleanrestart=0 = the restart as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   SAVETIMELINE.on = q.get('savetimeline') !== '0';   // the saves roll (five by hand on F5 beside five autosaves), each keeps a picture, a team on the floor is saved in memory, and the pause and down cards lay this run's out as a strip (game/savestate.ts): ON in the page; ?savetimeline=0 = one checkpoint to go back to, as it was
@@ -395,7 +397,7 @@ export function pageSwitches(q: URLSearchParams): void {
   QUIETFOG.wand = q.get('quietwand') !== '0';   // a quiet mission under the fog hands you an optical wand with its cameras, whatever your card carries (game/quietfog.ts quietWand): ?quietwand=0 = only a wand in your own pouch
   TAKE.wired = !(q.has('takecheck') && q.get('takecheck') !== '0');   // on a quiet mission a man is sent to look at the emptied holder only where the level says it is wired (game/takecheck.ts): ON in the page; ?takecheck = a man is sent seven seconds after every take, as it was
   HOLDFIRE.on = !q.has('noholdfire');   // a squad nobody has found never fires first (game/holdfire.ts): a teammate's round at a man who has not noticed anybody is held until the player's own shot or an order of his that means fire, walking or sneaking — ON in the page; ?noholdfire = they shoot on sight unless silent or sneaking, as they did
-  SILENT.stackSet = !q.has('nosilentset');   // a silent man told to stack, on his mark with his round held on a man, counts as stacked (game/silent.ts silentOnMan): 'set.' is said and his row reads 'stacked' with his gun still on the man, and no hand goes to the handle while it is. ON in the page; ?nosilentset = he is 'stacking' until his gun is the door's, as it was
+  SILENT.stackSet = !q.has('nosilentset');   // a silent man told to stack, on his mark with his round held on a man, counts as stacked (game/silent.ts silentHoldsTarget): 'set.' is said and his row reads 'stacked' with his gun still on the man, and no hand goes to the handle while it is. ON in the page; ?nosilentset = he is 'stacking' until his gun is the door's, as it was
   START.fallIn = !q.has('nofallin');   // the team starts a mission fallen in (game/startfile.ts): the night breach and a room clear stage the men on the menu's own 'fall in', unspoken (the rescue's men fall in when its clock starts, as they always have) — ON in the page; ?nofallin = they start with no order, as they did
   { const w = q.get('torchwall'); TORCH.wallLow = w !== '0' && w !== 'dark'; TORCH.wallDark = w === 'dark'; }   // a hand torch whose beam would end on the wall at his hand hangs, its beam on the floor at his feet (game/guards.ts torchLow; the maintainer, 10-22: "another example of character shining flashlight at a small point in front of them"): ON in the page; ?torchwall=0 = the carry as it was; ?torchwall=dark = the other answer, the torch put out instead of tipped
   TORCH.calmOff = q.get('calmtorch') !== '0' && !q.has('nocalmtorch');   // a calm patrol's hand torch burns only where his place is dark (game/calmtorch.ts): ON in the page; ?calmtorch=0 = every patrol torch burns wherever he walks, as it did
@@ -812,6 +814,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'MARKCUT.on': 'TPS_MARKCUT=1',
   'MARKSIT.on': 'TPS_MARKSIT=1 (a picture only)',
   'PLAN_PACE.on': 'TPS_PLANPACE=1 (a picture only)',
+  'WALLSKIN.on': 'TPS_WALLSKIN=1',
   'CLEANRESTART.on': 'TPS_CLEANRESTART=1',
   'FIRELINE.on': 'TPS_FIRELINE=1',
   'SAVETIMELINE.on': 'TPS_SAVETIMELINE=1',

@@ -56,7 +56,6 @@ import { shotEnergy } from './glasspen';
 import { w } from './words';
 import { SAMSTUN, foldCancels } from './samstun';
 import { DESTRUCTION } from './destructionSwitch';
-import { runnerOwns } from './runner';   // (asked inside fragThrowTick only)
 import { missionLive } from './mission';   // (asked inside blast only)
 import { conditionHurt, conditionPace } from './condition';   // (called inside blast only)
 import { moraleBlast } from './morale';   // (called inside blast only: src/game is one import cycle)
@@ -64,6 +63,7 @@ import { chaosOf } from './destruction';   // (called inside blast only: src/gam
 import { PICTURE, PICTURE_STATS, exposureAsker } from './picture';   // (asked inside fleeSpot only)
 import type { Box } from '../scene/boxes';
 import { railsDown } from './rails';   // (a spared teammate on his knee is not one of the men a defender counts for his grenade)
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 /** Every number of the grenade. fuse: seconds from leaving the hand (the player's); orderFuse: a teammate's on an order — cooked a beat, it has less far to go.
  *  lethalM / woundM: the two radii of the model above; woundKill: the chance of a kill at the very edge of lethalM for an exposed man, falling to 0 at woundM;
@@ -447,9 +447,10 @@ interface Live { it: Item; side: Team; knows: Map<Guard, number>; shouted: Set<T
 /** men who heard the other side shout a grenade out, and until when it keeps them listening for it (fragThrowTick sets it; the notice test below reads it) */
 const warned = new SideMap<Guard, number>('frag.warned');
 const books = new GameSideMap<Game, Live[]>('frag.books');
+ownerWitness<Game>('frag', (gd, g) => !!books.get(g)?.some(L => !!L.flee.get(gd)));
 const booksOf = (g: Game) => { let b = books.get(g); if (!b) { b = []; books.set(g, b); } return b; };
 /** forget every live grenade's book (a restart, a load): nobody is left running from something that is no longer there */
-export function fragReset(g: Game) { defBooks.delete(g); const B = books.get(g); if (!B) return; for (const L of B) for (const gd of L.flee.keys()) { gd.path = []; gd.pathGoal = null; } B.length = 0; }
+export function fragReset(g: Game) { defBooks.delete(g); const B = books.get(g); if (!B) return; for (const L of B) for (const gd of L.flee.keys()) { gd.path = []; gd.pathGoal = null; releaseMan(gd, OWN.frag, g.time); } B.length = 0; }
 
 /** Where a man in a grenade's line goes with `left` seconds on it: the nearest spot he can make that it has no line to, else the farthest he can get from it,
  *  else (nothing better than where he stands) null — he drops where he is. Straight legs only: there is no time to plan a route. */
@@ -697,7 +698,10 @@ function takenBy(g: Game, L: Live | null, gd: Guard, dz: Vec3): { stay: Vec3[]; 
 export function fleeMates(g: Game, gd: Guard, dz: Vec3): { stay: Vec3[]; go: Vec3[] } | undefined { return FRAG.fleeApart ? takenBy(g, null, gd, dz) : undefined; }
 
 /** Once a frame, before the men move (game.ts): each live grenade's book — who has noticed it, the shout, and the legs of whoever is in its line. */
-export function fragTick(g: Game, _dt: number) {
+export function fragTick(g: Game, dt: number) { stepFrag(g, dt); fragSay(g); }
+/** WHO THE GRENADE'S BOOKS HAVE (src/game/owner.ts): anybody with legs dealt on a live one's line */
+function fragSay(g: Game): void { const B = books.get(g); for (const gd of g.guards) { if (B?.some(L => !!L.flee.get(gd))) claimMan(gd, OWN.frag, g.time); else releaseMan(gd, OWN.frag, g.time); } }
+function stepFrag(g: Game, _dt: number) {
   const B = booksOf(g);
   for (const it of g.items.items) if (it.kind === 'frag' && !it.fired && !B.some(L => L.it === it)) B.push({ it, side: it.who ? teamOfId(g, it.who) : 'guard', knows: new Map(), shouted: new Set(), flee: new Map(), fleeAt: new Map(), dealT: new Map(), counted: new Set(), cued: false });
   for (let i = B.length - 1; i >= 0; i--) {
@@ -837,7 +841,7 @@ export function fragThrowTick(g: Game, dt: number) {
   if (!B || B.men.length !== men.length || B.men.some((m, i) => m !== men[i])) { if (!men.length) return; B = dealCarriers(g, B); }
   for (const C of B.carriers) {
     const gd = C.gd, c = gd.char; if (!C.frags) continue;
-    if (gd.state === 'dead' || gd.held || runnerOwns(gd)) { C.wind = null; continue; }   // (runner.ts, false with its switch off: a man who has said he is done throws nothing — a wind-up under way ends with the grenade on his belt)
+    if (gd.state === 'dead' || gd.held || hasHim(gd, OWN.runner)) { C.wind = null; continue; }   // (runner.ts, false with its switch off: a man who has said he is done throws nothing — a wind-up under way ends with the grenade on his belt)
     const out = g.time < gd.staggerUntil || g.time < gd.dazzledUntil;
     const head = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
     if (C.wind) {   // the second it takes him: shot, folded or blinded in it and the grenade stays on his belt
@@ -943,7 +947,7 @@ export function armRound(g: Game, p: Vec3, to: Vec3): Vec3 {
 function free(g: Game, gd: Guard): { B: DefBook; C: Carrier } | null {
   const F = FRAG; if (!F.on || !F.defenders || !g.aiEnabled || !fightLive(g) || g.director?.theirFragsOff) return null;
   const B = defBooks.get(g), C = B?.carriers.find(x => x.gd === gd); if (!B || !C || !C.frags || C.wind) return null;
-  if (gd.state === 'dead' || gd.held || runnerOwns(gd) || g.time < gd.staggerUntil || g.time < gd.dazzledUntil || fragFlee(g, gd) || g.time - B.lastT < F.defGap) return null;
+  if (gd.state === 'dead' || gd.held || hasHim(gd, OWN.runner) || g.time < gd.staggerUntil || g.time < gd.dazzledUntil || fragFlee(g, gd) || g.time - B.lastT < F.defGap) return null;
   return { B, C };
 }
 /** may he start a throw at the place `at` this moment — everything `fragThrowAt` asks but the arc and his own side (so nobody is walked anywhere to find an

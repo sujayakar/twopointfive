@@ -156,6 +156,7 @@ import { HITSTUFF } from '../game/particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
 import { PLAN_PACE } from '../render/planPace';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
+import { WALLSKIN } from '../game/wallskin';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -290,6 +291,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_MARKCUT')) MARKCUT.on = String((globalThis as any).process?.env?.TPS_MARKCUT ?? '') === '1';   // a mark on a cut or a round face lies where the round met it (src/render/decals.ts): off, so a mark is pulled to the plain box's face, as it was
   if (opts.harness && pinned('TPS_MARKSIT')) MARKSIT.on = String((globalThis as any).process?.env?.TPS_MARKSIT ?? '') === '1';   // a blast's marks sit in the surface (src/render/decals.ts; a picture only): off, so the decal buffer's header is the old one and every mark is drawn as it was
   if (opts.harness && pinned('TPS_PLANPACE')) PLAN_PACE.on = String((globalThis as any).process?.env?.TPS_PLANPACE ?? '') === '1';   // the picture's planners at a pace (src/render/planPace.ts; a picture only): off, so every plan is made whole on the frame that asks, as it was
+  if (opts.harness && pinned('TPS_WALLSKIN')) WALLSKIN.on = String((globalThis as any).process?.env?.TPS_WALLSKIN ?? '') === '1';   // the paint on a wall goes with the wall (src/game/wallskin.ts): off, so a band on a holed wall is drawn whole across the hole, as it was
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
   const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
@@ -611,7 +613,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_UNSEEN')) UNSEEN.on = String((globalThis as any).process?.env?.TPS_UNSEEN ?? '') === '1';   // a squad nobody has found sneaks when Sam sneaks (src/game/unseen.ts): off, so teammates beside a crouched, slow or wall-hugging Sam stand, walk and shoot as in every frozen probe and digest; `TPS_UNSEEN=1` runs any tool with it on, tools/qa/unseen-probes.ts raises it itself
     if (pinned('TPS_WALLBEAT')) UNSEEN.wallBeat = String((globalThis as any).process?.env?.TPS_WALLBEAT ?? '') === '1';   // a wall hold counts as sneaking after a beat (src/game/unseen.ts)
     if (pinned('TPS_HOLDFIRE')) HOLDFIRE.on = String((globalThis as any).process?.env?.TPS_HOLDFIRE ?? '') === '1';   // an unfound squad never fires first (src/game/holdfire.ts): off, so a loud teammate shoots the first man he has a line to, as in every frozen probe, tally and digest; `TPS_HOLDFIRE=1` runs any tool with it on, tools/qa/holdfire-check.ts raises it itself
-    if (pinned('TPS_SILENTSET')) SILENT.stackSet = String((globalThis as any).process?.env?.TPS_SILENTSET ?? '') === '1';   // a silent man held on a man, on his stack mark, is stacked (src/game/silent.ts silentOnMan): off, so a silent stack beside unaware men reads 'stacking' and never says 'set.', as in every frozen probe; `TPS_SILENTSET=1` runs any tool with it on, `probes.ts silent-set` raises it itself
+    if (pinned('TPS_SILENTSET')) SILENT.stackSet = String((globalThis as any).process?.env?.TPS_SILENTSET ?? '') === '1';   // a silent man held on a man, on his stack mark, is stacked (src/game/silent.ts silentHoldsTarget): off, so a silent stack beside unaware men reads 'stacking' and never says 'set.', as in every frozen probe; `TPS_SILENTSET=1` runs any tool with it on, `probes.ts silent-set` raises it itself
     if (pinned('TPS_STACKROOM')) STACKROOM.on = String((globalThis as any).process?.env?.TPS_STACKROOM ?? '') === '1';   // a door stack keeps every man inside the room (src/game/stackroom.ts): off, so every door order deals the marks every frozen probe and digest was recorded on; `TPS_STACKROOM=1` turns it on (the shipped default)
     if (pinned('TPS_TOOLNEAR')) HANDLE.toolNear = String((globalThis as any).process?.env?.TPS_TOOLNEAR ?? '') === '1';   // a door order's lead works the handle from past the latch jamb (src/game/handleside.ts nearStand): off, so he walks to the handle's place in front of the opening as every frozen probe's lead did; TPS_TOOLNEAR=1 raises it
     if (pinned()) SILENT.on = false;                   // the squad's silent / loud order (src/game/silent.ts): off the menu and off the squad block, which is what every older menu probe and frozen digest was written against — `probes.ts silent` turns it on (the shipped default)

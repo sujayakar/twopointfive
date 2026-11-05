@@ -200,19 +200,6 @@ export class StaticCollision {
   /** …and THE WORLD A RULE MAY ASK THE STATICS OF ALONE (the furniture's settle as a level is stood up, game/props.ts: no leaf is asked for, and the game's
    *  own leaves need not be in it yet): the copy, standing with what it owed paid — or null (no window on it: the TypeScript's, and counted by the caller) */
   rulesStatics(): BoxMirror | null { const M = this.ready(); return M.live ? M : null; }
-  /** THE COPY AS A RULE IN THE MODULE THAT ASKS ITS OWN LINES TAKES IT (the weather's: rust/sim/src/weather.rs, air.rs): standing, whatever row is up, with the game's
-   *  leaves in it as they are; `ruleSet` and `rulePanes` on it say which list of leaves and which pane rule to hand it (the module judges a pane wherever it holds the
-   *  panes; a rule a check hung alone, which it cannot judge, is none to these lines). Inside a tick or a window. */
-  ruleOpen(): BoxMirror {
-    const M = this.ready(); if (!M.live) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.rays);
-    const set = M.leaves(this.dynamicBoxes); if (set === -2) throw new Error('a rule of the module was asked with more door leaves than its copy holds');
-    M.ruleSet = set; M.rulePanes = this.paneRule !== null && M.glassIn ? 1 : 0; return M;
-  }
-  /** THE WINDOW A RULE THAT TAKES `ruleOpen` STANDS IN: `window`, and on the path with no windows at all (ANYTIME off: a check's red path, fn just runs) the copy that ruleOpen stood is shut behind it */
-  rule<T>(fn: () => T): T {
-    const M = this.mirror, was = M.live;
-    try { return this.window(fn); } finally { if (!was && M.live && !this.windowed) M.shut(); }
-  }
   /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */
   rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }

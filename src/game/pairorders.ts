@@ -174,7 +174,7 @@ export class PairOrders {
   get quiet(): boolean { return !SILENT.on || squadSilent(this.g); }
   /** a man an order can be about: standing, on the other side from Sam, not in Sam's arm, and seen (the fog of war has not got him) */
   isFoe(h: Guard): boolean { return h.state !== 'dead' && h.team !== 'operative' && HOSTILE.player[h.team] && !h.held && !this.g.fogOfWar.hidden(h); }
-  /** he has noticed somebody: roused, searching, or his meter past the silent order's own `noticed` (silent.ts silentHolds: one number for both) */
+  /** he has noticed somebody: roused, searching, or his meter past the silent order's own `noticed` (silent.ts silentHoldsRound: one number for both) */
   noticed(h: Guard): boolean { return h.state === 'alert' || h.state === 'search' || h.awareness >= SILENT.noticed; }
   /** the men waiting on the mark */
   waiting(): [Guard, Job][] { return [...this.jobs].filter(([gd, J]) => !J.handed && ((J.mode === 'mark' && !J.go) || (!!J.watcher && !J.force && this.g.time - Math.max(J.seenT, J.backT ?? -1e9) < 1)) && gd.state !== 'dead'); }
@@ -628,7 +628,7 @@ export function pairGripBody(g: Game, h: Guard): boolean { return PAIR.gripBody 
 /** guards.ts's eyes: the partner's hands are on this man — he sees nobody until they are off (PAIR.grip) */
 export function pairGripped(g: Game, h: Guard): boolean { return PAIR.grip && ((PAIR.on && g.pair.gripped(h)) || (pairUp('hands') && spottedGripped(g, h))); }   // (… or spotted.ts's hands, under pairup.ts's 'hands': one takedown, one rule for what the man in it sees)
 /** … and one told to WATCH a man keeps his gun on him and fires no round while that man has not noticed (the quiet gun included: 'watch him' is not 'shoot him') */
-export function pairHolds(g: Game, gd: Guard, h: Guard): boolean {
+export function pairHoldsRound(g: Game, gd: Guard, h: Guard): boolean {
   if (!PAIR.on) return false;
   const A = g.orders.of(gd); if (!A || A.order !== 'pairWatch' || A.foe !== h || g.pair.noticed(h) || urgent(g)) return false;
   PAIR_STATS.held++; return true;
