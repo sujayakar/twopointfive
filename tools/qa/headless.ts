@@ -24,8 +24,22 @@ export const ROOT = resolve(import.meta.dir, '../..');
 // the page's boot writes over those defaults. First, before any level is built.
 const { pinned, harnessProfile, shippedBoot } = await import(`${ROOT}/src/host/profile.ts`);
 if (harnessProfile() === 'shipped') shippedBoot();
-{ const { EXACT } = await import(`${ROOT}/src/math/exact.ts`); if (pinned('TPS_EXACT')) EXACT.on = process.env.TPS_EXACT === '1'; }   // TPS_EXACT=1 = the game's own maths (src/math/exact.ts): same bits on every engine. Here as well as in standGame, so a level a tool builds before it stands a game is built on the same functions
+/** the stand this file was loaded on. A tool that names its stand (`process.env.TPS_PROFILE ??= 'shipped'`) above a STATIC import of this file names it too late: imports load first, so the pins
+ *  were lifted at stand-up and shippedBoot never ran, a stand that is neither of the two. standUp refuses that out loud. */
+const STAND_AT_LOAD: string = harnessProfile();
+{ const { EXACT } = await import(`${ROOT}/src/math/exact.ts`); if (pinned('TPS_EXACT')) EXACT.on = (process.env.TPS_EXACT ?? '1') !== '0'; }   // TPS_EXACT=1 = the game's own maths (src/math/exact.ts): same bits on every engine. Here as well as in standGame, so a level a tool builds before it stands a game is built on the same functions
+(await import(`${ROOT}/src/host/standup.ts`)).pinRust();   // …and the rows of the Rust module as this run's stand and words have them (src/sim/sim.ts RUST_ON; TPS_RUST=0, TPS_RUST<ROW>), from here and not only from the first stand-up: a tool that asks the module before it stands a game asks it on its stand
 const { EXACT: EXACT_SWITCH } = await import(`${ROOT}/src/math/exact.ts`);
+// TPS_FELL=1 counts every question the TypeScript answered while its row of the Rust module was up (src/sim/sim.ts FELL) and prints the count as the tool
+// ends, one line `FELL <n> × <row> · <why>` each and `FELL none` when there was none; TPS_FELL=throw stops at the first, TPS_FELL=who adds who asked (the first two callers; who6 = six). A count on a row of sim.ts SEALED ends the tool red (exit 1, `FELL SEALED ROW REACHED`). FELL_BREAK=1 with it = the red path, which must end red. A tool of the build's: no answer changes.
+if (process.env.TPS_FELL) { const S = await import(`${ROOT}/src/sim/sim.ts`); S.fellWord(process.env.TPS_FELL);
+  process.on('exit', () => { const L = S.fellLines(); console.log(L.length ? L.map((l: string) => 'FELL ' + l).join('\n') : 'FELL none');
+    const sealed = S.fellSealed(); if (sealed.length) { console.log(`FELL SEALED ROW REACHED: ${sealed.join(', ')} (src/sim/sim.ts SEALED: a row no run may reach the TypeScript of)`); process.exitCode = 1; } });
+  const C = await import(`${ROOT}/src/scene/collision.ts`); if (S.FELL.who) C.ANYTIME.who = {};
+  if (process.env.FELL_BREAK && process.env.FELL_BREAK !== '1') { if (!(process.env.FELL_BREAK in S.RUST)) throw new Error(`FELL_BREAK=${process.env.FELL_BREAK}: no such row of RUST (src/sim/sim.ts); 1 = the box world's red path`); S.fell(process.env.FELL_BREAK, 'the red path: a question counted by hand'); }   // (FELL_BREAK=<row>: one question of that row counted as the tool opens, so a row that is sealed ends the tool red and one that is not does not — a family's proof that its row is on the list)
+  if (process.env.FELL_BREAK === '1') C.ANYTIME.on = false;   // (the count's red path: a question outside a tick is the TypeScript's again, so the box world's sealed rows are reached and the tool must end red)
+  process.on('exit', () => { console.log(`ALONE ${C.ANYTIME.proofs} questions outside every window had the copy proven for themselves`);
+    if (C.PRICED.n) console.log(`PRICED ${C.PRICED.n} searches with a penalty were the module's: it came back for prices ${C.PRICED.needs} times and ${C.PRICED.cells} cells were priced (${(C.PRICED.cells / C.PRICED.n).toFixed(0)} a search)`); for (const [k, v] of Object.entries(C.ANYTIME.who ?? {}).sort((a: any, b: any) => b[1] - a[1]).slice(0, 25)) console.log(`ALONE ${v} × ${k}`); }); }
 /** `fn` run as a level's EXPORTER runs (tools/level-export.ts and its kin raise no stand): on the engine's own maths, whatever this run's stand — then the stand's
  *  maths back. For a check that holds a level file against the generator that wrote it: under the game's own maths a generator's sin / cos round a last bit
  *  another way than the file was written with, and that is a fact about the writing tool, not a stale file. Besides exact-check.ts, which tests the switch, the one place a tool flips it under itself. */
@@ -132,6 +146,7 @@ export interface Headless {
 /** TPS_SEED: a whole number names the game's own die; anything else stops the tool (a typo must not quietly become seed 0) */
 function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Error(`TPS_SEED=${v}: want a whole number`); return Number(v) >>> 0; }
 export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string } = {}): Promise<Headless> {
+  if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins
     if (opts.env || force !== undefined) { const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`); cutConfig.on = opts.env ? !!opts.env.cutBoxes : /^(1|on|true)$/i.test(force!); }

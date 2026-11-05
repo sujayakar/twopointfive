@@ -1,6 +1,6 @@
 // Screen-space lighting passes: direct (full res), indirect gather (half — a third with the lossy option), volumetrics (half — a quarter likewise), composite, then EITHER the TAAU resolve
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
-import { PLACE_BYTES } from './placeField';
+import { placeNone } from './placeField';
 import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterHold, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE, plainAir } from '../gpu/device';
 import { shaderText } from '../gpu/wgslTrim';
 import { KERNELS, COMPACT } from './kernels';   // (the ten kernels that exist in two writings come from there: today's, or the compact set with its row on)
@@ -319,7 +319,7 @@ export class LightingPasses implements CutSwappable {
   /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts `view`; composite.wgsl powderTex @16, read only under LOOK): null = the 1×1 "none" */
   private powderView: GPUTextureView | null = null; private powderNone: GPUTextureView;
   setPowder(v: GPUTextureView | null) { if (v !== this.powderView) { this.powderView = v; this.bgCompFG = null; this.bgCompS = null; } }
-  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; composite.wgsl placeBuf @17, read only under LOOK with the One exposure row up): null = the zeros that say "none" */
+  /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; composite.wgsl placeBuf @17, read only under LOOK while the one exposure model is on): null = the zeros that say "none" */
   private placeBuf: GPUBuffer | null = null; private placeNone: GPUBuffer;
   setPlace(b: GPUBuffer | null) { if (b !== this.placeBuf) { this.placeBuf = b; this.bgCompFG = null; this.bgCompS = null; this.bgVol = null; } }   // (the volumetric march binds it too, @5: the air's light is shown by its place's gain as a surface's is)
   /** HDR scene colour (composite output) + bloom pyramid: down[0..4] (W/2 … W/32), up[0..3] */
@@ -642,7 +642,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, texture: tex2d('unfilterable-float') }, { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') },
       { binding: 4, visibility: CS, storageTexture: { access: 'write-only', format: 'r32uint', viewDimension: '2d' } } ] });
     this.decalDummy = makeBuffer(device, 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'decalDummy');
-    this.placeNone = device.createBuffer({ label: 'placeNone', size: PLACE_BYTES, usage: GPUBufferUsage.UNIFORM });   // (never written: all zeros = no field)
+    this.placeNone = placeNone(device);   // (never written: all zeros = no field; the one the particles' splat is handed too)
     this.powderNone = device.createTexture({ label: 'powderNone', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }).createView();   // (never written: all zeros = no powder)
     this.lFxaa = device.createBindGroupLayout({ label: 'fxaa', entries: [
       { binding: 0, visibility: FS, texture: tex2d('float') },

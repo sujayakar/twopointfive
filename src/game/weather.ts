@@ -187,8 +187,8 @@ export class Weather {
   private lastBarkT = -1e9;
   private suspended = false;         // day (the breach showcase): the storm holds — no strokes, no rain; back as it was when night returns
   private touched: { box: Box; albedo: Vec3; flags: number; rough: number | undefined; aniso: boolean | undefined }[] = [];   // boxes the wet lot changed, with what to put back (the finish too: the RT reflection pass reads Box.rough / aniso)
-  /** the paint a box had before the wet lot darkened it, if it is one of those (the look page's material maps ask, render/gbuffer.ts lookWordOf: what a slab is
-   *  made of is not changed by rain). Read only */
+  /** the paint a box had before the wet lot darkened it, if it is one of those. Read only (a check asks it to find the wet lot; the look does not: what a
+   *  slab is made of is the word it says, which rain does not touch) */
   dryPaint(b: Box): Readonly<Vec3> | undefined { for (const t of this.touched) if (t.box === b) return t.albedo; return undefined; }
   private glossWas: boolean | null = null;   // settings.gloss before the storm switched it on (null = we have not touched it)
 

@@ -204,7 +204,7 @@ fn trace(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_in
     let hit = traceClosest(Po, dir, TMAX, owner);
     var L = vec3f(0.0);
     var lit = false;
-    if (hit.idx < 0) { L = skyRadiance(dir); }
+    if (hit.idx < 0) { L = skyThrough(Po, dir); }
     else if (!hit.inside) {
       let Ph = Po + dir * hit.t;
       var albedo: vec3f;

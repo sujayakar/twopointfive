@@ -5,8 +5,10 @@
 // = structure, 'wood', 'metal', 'chair' = cloth …) or '~surf' = no office name, that surface. `gwotAs(name, sim)` is the same paint to the eye (≤ 0.0024 off
 // a channel) standing for something else — a mud PARTITION ('wall') beside a mud SHELL ('concrete'), or, in a level that changed its clothes, exactly the
 // office paint the box wore before, so nothing a round or a charge does there differs.
-// No imports but a type: game/ reads this without pulling the kit in.
+// No imports but a type and the table of what a paint is made of (scene/stuff.ts, which imports only the look's list of names): game/ reads this without
+// pulling the kit in.
 import type { Vec3 } from '../math/vec';
+import { namePaints, namePaint } from './stuff';
 
 /** THE PALETTE (linear albedo), by name — a generator that exports `MATERIALS = GWOT_MATERIALS` has these written into its level file's `materials` */
 export const GWOT_PALETTE = {
@@ -42,6 +44,7 @@ export const GWOT_PALETTE = {
   rugMadder: [0.1, 0.03, 0.035] as Vec3,
 };
 export type GwotMat = keyof typeof GWOT_PALETTE;
+namePaints(GWOT_PALETTE);   // (a box made with a row of this palette is made of what the row's NAME says: scene/stuff.ts. No finish is named here: whoever lays a GWOT paint writes its finish, as ever)
 /** THE FINISHES (GGX roughness, bare metal), by the palette's names; absent = matte cloth / earth (0.95). Nothing here is polished: this look has no mirror. */
 export const GWOT_FINISH: Readonly<Partial<Record<GwotMat, { rough: number; metal?: boolean }>>> = {
   mud: { rough: 0.97 }, mudDark: { rough: 0.97 }, mudLight: { rough: 0.95 }, render: { rough: 0.9 }, whitewash: { rough: 0.88 }, block: { rough: 0.92 }, tWall: { rough: 0.9 },
@@ -67,6 +70,7 @@ export const SNOW_PALETTE = {
   snow: [0.66, 0.71, 0.78] as Vec3, snowPacked: [0.43, 0.47, 0.53] as Vec3, snowOld: [0.27, 0.3, 0.34] as Vec3,
 };
 export type SnowMat = keyof typeof SNOW_PALETTE;
+namePaints(SNOW_PALETTE);
 export const SNOW_FINISH: Readonly<Record<SnowMat, { rough: number }>> = { snow: { rough: 1 }, snowPacked: { rough: 0.9 }, snowOld: { rough: 0.95 } };
 export const SNOW_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number }>> = Object.fromEntries(
   (Object.keys(SNOW_PALETTE) as SnowMat[]).map(n => [n, { albedo: SNOW_PALETTE[n], rough: SNOW_FINISH[n].rough }]));
@@ -108,7 +112,10 @@ export const GWOT_DARKER: Readonly<Partial<Record<GwotMat, GwotMat>>> = { mudLig
 const STEP = 0.0008;
 const shifted = (a: Vec3, code: number): Vec3 => [0, 1, 2].map(c => Math.round((a[c] + ((code >> (2 * c)) & 3) * STEP) * 1e4) / 1e4) as Vec3;
 /** the paint `m` STANDING FOR `sim`: the palette colour itself where that is what it is anyway, else the same colour a hair off (see the head) */
-export function gwotAs(m: GwotMat, sim: GwotSim): Vec3 { return sim === GWOT_SIM[m] ? GWOT_PALETTE[m] : shifted(GWOT_PALETTE[m], 1 + GWOT_SIM_NAMES.indexOf(sim)); }
+export function gwotAs(m: GwotMat, sim: GwotSim): Vec3 {
+  if (sim === GWOT_SIM[m]) return GWOT_PALETTE[m];
+  const a = shifted(GWOT_PALETTE[m], 1 + GWOT_SIM_NAMES.indexOf(sim)); namePaint(a, m); return a;   // (the same paint to the eye is the same stuff: the stand-in is known as the row it stands in for)
+}
 /** the lot's slab as the storm wets it (game/weather.ts setWet soak — the same arithmetic, so the same doubles) */
 export const gwotWet = (a: Vec3): Vec3 => [a[0] * 0.5, a[1] * 0.5, a[2] * 0.5 * 1.04];
 let simByAlbedo: Map<string, GwotSim> | null = null;

@@ -34,7 +34,12 @@
 //   slabs      …and for the leaves off their hinges (RUST.slabs: each slab's row, src/sim/slabshome.ts; their step, rust/sim/src/slabs.rs): a game whose doors
 //              are blown out of their frames one after another and hung again
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
-import { standUp, ROOT } from './headless.ts';
+// THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself, and "no block left" is only true of a game no other
+// row keeps a block for. Said as the stand's own word, before the harness loads: a stand-up puts every row where its stand has it, and both stands
+// have every row but the maths up (src/sim/sim.ts RUST_ON). A row's own word in the caller's shell still raises that row (the red paths use it).
+process.env.TPS_RUST = '0';
+export {};   // (a module, for the top-level awaits: the one import below is no longer an `import` statement)
+const { standUp, ROOT } = await import('./headless.ts');   // (after the word: an `import` statement would load the harness before the line above ran)
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`), D: any = await import(`${ROOT}/src/math/dice.ts`);
 const RB: any = await import(`${ROOT}/src/game/rollback.ts`), DG: any = await import(`${ROOT}/src/game/digest.ts`);
 const BREAK = process.env.SIMSTATE_BREAK === '1', DT = 1 / 60;
