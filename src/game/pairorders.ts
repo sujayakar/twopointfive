@@ -40,6 +40,7 @@ import { HOSTILE } from './teams';
 import { partnerBegin, partnerCancel, partnerFall } from './takedown';   // the partner's takedown as a move, and the man it lands on (takedown.ts): poses only
 import { WORD_HEAD, type Assignment, type OrderDef, type SquadOrders } from './orders';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { roundHoldRule } from './roundheld';
 
 export const PAIR = {
   /** THE SWITCH: the quiet orders for one partner (off: the game as it was) */
@@ -628,7 +629,8 @@ export function pairGripBody(g: Game, h: Guard): boolean { return PAIR.gripBody 
 /** guards.ts's eyes: the partner's hands are on this man — he sees nobody until they are off (PAIR.grip) */
 export function pairGripped(g: Game, h: Guard): boolean { return PAIR.grip && ((PAIR.on && g.pair.gripped(h)) || (pairUp('hands') && spottedGripped(g, h))); }   // (… or spotted.ts's hands, under pairup.ts's 'hands': one takedown, one rule for what the man in it sees)
 /** … and one told to WATCH a man keeps his gun on him and fires no round while that man has not noticed (the quiet gun included: 'watch him' is not 'shoot him') */
-export function pairHolds(g: Game, gd: Guard, h: Guard): boolean {
+roundHoldRule('pair', pairHolds);
+function pairHolds(g: Game, gd: Guard, h: Guard): boolean {
   if (!PAIR.on) return false;
   const A = g.orders.of(gd); if (!A || A.order !== 'pairWatch' || A.foe !== h || g.pair.noticed(h) || urgent(g)) return false;
   PAIR_STATS.held++; return true;
