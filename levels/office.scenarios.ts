@@ -157,10 +157,10 @@ export const OFFICE_MARKS: MarkDef[] = [
  *  night shift's three routes, each team's start to its rooms, and the three outer doors door to door: nobody had said how a desk, the printer, the coffee
  *  or a car is reached, the conference room's door had no way through it, and the plain night's own start had none leaving it. A weight is how many ways a
  *  row counts as beside one lap of a patrol (1). THE DAY: everybody comes up the west stair and signs in; each of the sixteen desks is reached from the
- *  stair, goes for coffee and to the printer (a quarter each, so a cell's mouth is faintly trodden and the aisles they share are worn); the manager and the
+ *  stair, goes for coffee and to the printer (a quarter and less each, so a cell's mouth is faintly trodden and the aisles they share are worn); the manager and the
  *  conference room go for coffee and to each other; the cleaner's round runs from storage to the printer, the counter and out to the bins; the break room's
  *  south door is how the car park comes in (no way is written to the pay machine at the walkway's west end: the red car's nose and a bollard shut the walkway
- *  there, and the walk grid's way to it runs round the north of the building, which nobody walks). THE PLAIN NIGHT: from where Sam starts to the server room's door, and from there to the fire exit. */
+ *  there, and the walk grid's way to it runs round the north of the building, which nobody walks). THE PLAIN NIGHT: from where Sam starts into the server room (its room's name: the middle of its floor, between the racks) and from there to the fire exit. */
 const DAY_DESK: WayHint[] = DESKS.flatMap((d): WayHint[] => [{ from: 'stairwell', to: d.name, weight: 0.25 }, { from: d.name, to: 'coffee', weight: 0.25 }, { from: d.name, to: 'printer', weight: 0.15 }]);
 const WALKED: WayHint[] = [
   { from: 'stairwell', to: 'reception', weight: 2 }, { from: 'reception', to: 'couch', weight: 0.5 }, { from: 'reception', to: 'coffee', weight: 0.5 }, { from: 'reception', to: 'printer', weight: 0.3 },

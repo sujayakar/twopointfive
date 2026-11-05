@@ -338,14 +338,40 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
    *  [its box, from, to, its top]: where a band can be painted, door to door. A piece already in `not` (the band's own paint) is left out */
   const wallRuns = (z: number, t: number, x0: number, x1: number, minTop: number, not?: Vec3): [number, number, number, number][] => boxes.flatMap((b, i): [number, number, number, number][] => {
     if (b.yaw || b.rot || (b.flags & (BoxFlag.Glass | BoxFlag.NoShadow)) || b.albedo === not || Math.abs(b.c[2] - z) > 1e-6 || Math.abs(b.h[2] - t / 2) > 1e-6 || b.c[1] - b.h[1] > 1e-6 || b.c[1] + b.h[1] < minTop - 1e-6) return [];
-    const a = Math.max(b.c[0] - b.h[0], x0), c = Math.min(b.c[0] + b.h[0], x1); return c - a > 0.3 ? [[i, a, c, b.c[1] + b.h[1]]] : []; });
+    const a = Math.max(b.c[0] - b.h[0], x0), c = Math.min(b.c[0] + b.h[0], x1); return c - a > 0.25 ? [[i, a, c, b.c[1] + b.h[1]]] : []; });   // (a quarter of a metre: under the 30 cm fill beside a door, which is a piece)
+  /** a word's length on a face, in metres (`res` as the recipes take it: a coarse cell is two base cells) */
+  const wordWide = (text: string, scale = 1, res: 'base' | 'coarse' = 'coarse') => stencilWidth(text, scale) * (res === 'coarse' ? 2 : 1) * MARKING_TEXEL;
+  /** a place on a face's lattice: the cell line nearest `v` metres, a tie taken upward (said here, so that a word centred on a half cell lands the same
+   *  wherever it is laid: left to the recipe's own rounding, two of four identical door numbers sat a cell apart) */
+  const onCell = (v: number, res: 'base' | 'coarse') => { const k = (res === 'coarse' ? 2 : 1) * MARKING_TEXEL; return Math.floor(v / k + 0.5 + 1e-6) * k; };
+  /** A WORD OR A FIGURE STENCILLED on a box's south face, its middle at world x, its foot at world y; and on a box's top, its middle at x, read from the
+   *  south with its foot at world z */
+  const stencilS = (i: number, text: string, x: number, y: number, pal: MarkPal, scale = 1, res: 'base' | 'coarse' = 'coarse') => { const [u, v] = onS(i, x - wordWide(text, scale, res) / 2, y);
+    return paintOn(i, MD.stencilMarks('+z', text, onCell(u, res), onCell(v, res), pal, scale, res)); };
+  const stencilTop = (i: number, text: string, x: number, z: number, pal: MarkPal, scale = 1, res: 'base' | 'coarse' = 'coarse') => { const [u, v] = onTop(i, x - wordWide(text, scale, res) / 2, z);
+    return paintOn(i, MD.stencilMarks('+y', text, onCell(u, res), onCell(v, res), pal, scale, res)); };
+  /** A KEEP-CLEAR BAY on a floor: stripes of `pal` with the floor between them and a line round it, over the world rect given */
+  const keepClear = (i: number, x0: number, z0: number, x1: number, z1: number, pal: MarkPal = MD.TIN.signal) => paintOn(i, MD.hazardMarks('+y', rectTop(i, x0, z0, x1, z1), pal, undefined, 2, 'coarse', 1));
+  /** A BAND OF PAINT ALONG A WALL, DOOR TO DOOR: `band` from the floor to y1 (or to a low piece's own top) on every piece `wallRuns` finds along X at
+   *  `z` between x0 and x1, one box a piece, with `names` stencilled on it in `ink` (each [text, its middle x, its foot y, scale, res], on the piece that
+   *  holds it whole: a name no piece holds throws). Drawn only */
+  type BandName = readonly [text: string, x: number, y: number, scale: number, res: 'base' | 'coarse'];
+  const bandRuns = (z: number, t: number, x0: number, x1: number, y1: number, paint: Vec3, minTop = y1, names: readonly BandName[] = [], ink: MarkPal = MD.TIN.chalk) => {
+    const runs = wallRuns(z, t, x0, x1, minTop, paint).map(([, a, b, top]) => [band('x', z, a, b, 1, 0, Math.min(y1, top), paint, t), a, b] as const);
+    for (const [text, x, y, scale, res] of names) { const half = wordWide(text, scale, res) / 2, r = runs.find(([, a, b]) => x - half >= a && x + half <= b);
+      if (!r) throw new Error(`officeKit bandRuns: no piece of the wall at z ${z} holds '${text}' at x ${x}`); stencilS(r[0], text, x, y, ink, scale, res); }
+    return runs; };
+  /** CONDUIT IN LENGTHS along a wall's south face from a to b: equal lengths of `len` at most, the branch and its box at the far end of the last. A breach
+   *  takes the lengths that hang over the hole and leaves the rest (the note at the head of the fittings) */
+  const conduitRuns = (z: number, a: number, b: number, y: number, paint: Vec3, clip: Vec3, t = 0.24, drop?: number, len = 1.8) => { const n = Math.max(1, Math.ceil((b - a) / len - 1e-9));
+    for (let j = 0; j < n; j++) conduit('x', z, a + (b - a) * j / n, a + (b - a) * (j + 1) / n, 1, y, paint, clip, j === n - 1 ? drop : undefined, t); };
   // the kit's lists and TOOLS, then its PIECES by name (scene/library.ts)
-  return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, frameAt, fitProp, prop, boxOn, paintOn, onS, onTop, rectTop, wallRuns,
+  return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, frameAt, fitProp, prop, boxOn, paintOn, onS, onTop, rectTop, wallRuns, wordWide, stencilS, stencilTop, keepClear, bandRuns, conduitRuns,
     ...pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, band, vent, conduit, pipe }) };
 }
 
 export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
-  const { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, wallX, wallZ, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, band, vent, conduit, pipe, boxOn, paintOn, onS, onTop, rectTop, wallRuns } = officeKit(trace, opts);
+  const { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, wallX, wallZ, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, vent, pipe, boxOn, stencilS, keepClear, bandRuns, conduitRuns } = officeKit(trace, opts);
   /** paint on the floor, or a rubber mat: the flat box a rug is, but no rug, so it says no cloth and its colour speaks */
   const floorPaint = (x: number, z: number, w: number, d: number, albedo: Vec3) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw: 0, albedo, flags: BoxFlag.NoShadow });
   // THE OFFICE IS A PLACE SOMEBODY KEEPS, and its own surfaces say so (scene/stuff.ts saidAs: the kit's paint, its numbers and its finish, said to be another
@@ -1191,73 +1217,51 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   //   PAINT        on a surface that is already there is a MARKING on that box (scene/markings.ts): drawn on both stands, met by nothing.
   //   FITTINGS     and painted floor panels are new boxes: every one DRAWN ONLY (its own flag: no foot, round, ray or sight line meets it), in the LIVED tier
   //                (groups `lived.<room>`, the tail of the list), so the office the frozen stand loads has the boxes, the indices and the fingerprint it had.
-  // ONE PAINTER'S HAND: ink on a pale wall, chalk on a dark one, signal yellow where a floor is to be kept clear, and the placards' navy for the floor's names.
+  // ONE PAINTER'S HAND: ink on a pale wall, chalk on a dark one, signal yellow where a floor is to be kept clear.
+  // NO WORD NAMES A ROOM (the maintainer, 11-05, on the first cut's LOBBY and CONFERENCE: "i don't like the "lobby" and "conference" labels in the level,
+  // pretty lame"): a room is shown by what is in it. What is painted is what a building carries without telling the player anything: a number over a door, a
+  // bay's number, hatching where a floor is kept clear, a line on a floor.
   // The paint is cut for the base lattice: a texel variant of the office (tools/level-export.ts --texel) is the office without its hand pass.
   if (MARKS && TX === MARKING_TEXEL) {
-    const { ink: INK, chalk: CHALK, signal: SIGNAL } = MD.TIN, NAVY: Vec3 = [0.12, 0.2, 0.34];   // (the painter's tins, and the placards' navy)
-    /** a keep-clear bay on a floor: signal stripes with the floor between them and a line round it, over the world rect given */
-    const bay = (i: number, x0: number, z0: number, x1: number, z1: number) => paintOn(i, MD.hazardMarks('+y', rectTop(i, x0, z0, x1, z1), SIGNAL, undefined, 2, 'coarse', 1));
-    /** a word's length on a face, in metres */
-    const wide = (text: string, scale: number, res: 'base' | 'coarse') => stencilWidth(text, scale) * (res === 'coarse' ? 2 : 1) * MARKING_TEXEL;
-    /** a figure or a word stencilled on a south face, its middle at x, its foot at y */
-    const stencilS = (i: number, text: string, x: number, y: number, pal: MarkPal, scale: number, res: 'base' | 'coarse') => paintOn(i, MD.stencilMarks('+z', text, ...onS(i, x - wide(text, scale, res) / 2, y), pal, scale, res));
+    const { ink: INK, signal: SIGNAL } = MD.TIN, NAVY: Vec3 = [0.12, 0.2, 0.34];   // (the painter's tins, and the placards' navy)
+    // (every paint below is made from a COPY of its colour: `madeOf` and `saidAs` know a paint by its array, and a colour shared with a tin or with
+    //  another paint would carry the first one's word and finish to the next)
 
-    // ---- THE CORRIDOR'S NORTH WALL, the face the camera reads the whole game: each of the four rooms' number over its door, in ink on the lintel
-    for (const [n, x] of [['01', 9.6], ['02', 17.6], ['03', 25.6], ['04', 32.6]] as const) { const i = boxOn('+z', x, 2.6, 10.06); stencilS(i, n, boxes[i].c[0], 2.34, INK, 3, 'base'); }   // (on the lintel's own middle: a doorway is not the middle of its slot)
+    // ---- THE CORRIDOR'S NORTH WALL, the face the camera reads at rest: each of the four rooms' number at its door, a hand high in ink on the lintel, as
+    // a door's own number is (the first cut's were half a metre tall and read as signs)
+    for (const [n, x] of [['01', 9.6], ['02', 17.6], ['03', 25.6], ['04', 32.6]] as const) { const i = boxOn('+z', x, 2.6, 10.06); stencilS(i, n, boxes[i].c[0], boxes[i].c[1] - boxes[i].h[1] + 0.075, INK, 1, 'base'); }   // (on the lintel's own middle: a doorway is not the middle of its slot)
     // ---- KEEP CLEAR, on the floors that are there: inside the stair door at the corridor's west end, inside the break room's two outer doors, before the
     // server room's side door (where the room clear turns: a man finds it by the yellow), and on the tarmac outside the fire exit (none outside the break
-    // room's south door: the van stands a stride off it and hides that ground from the camera)
-    bay(boxOn('+y', 4.5, 0.004, 11.0), 4.14, 10.52, 5.0, 11.5);
-    { const lino = boxOn('+y', 32, 0.004, 18); bay(lino, 31.05, 22.75, 32.25, 23.86); bay(lino, 34.7, 20.1, 35.86, 21.4); }
-    bay(boxOn('+y', 18, 0.004, 7), 20.95, 8.15, 21.86, 9.35);
-    bay(boxOn('+y', 38, 0, 26), 36.14, 20.1, 37.3, 21.4);
-    // ---- the stair tower says what it is, on the face that looks at the lobby's glass; and the conference room its name, in chalk on the grey sill under
-    // its glass (the other three rooms' names are on the dado that carries that grey on: the lived tier, below)
-    stencilS(boxOn('+z', 2.5, 1.5, 12.87), 'STAIR', 2.5, 1.4, INK, 1, 'coarse');
-    stencilS(boxOn('+z', 7.5, 0.25, 10.06), 'CONFERENCE', 7.5, 0.075, CHALK, 1, 'coarse');
-    // ---- rooms 02 and 03 are joined by a door of their own, and it stands in the band of floor the corridor's wall hides from the camera: the corridor says
-    // so, in ink between their two doors, where the wall between them meets it. (Paint on a wall is that wall's: a breach that takes the piece takes it.)
-    stencilS(boxOn('+z', 22.0, 2.4, 10.06), '02←→03', 22.0, 2.2, INK, 1, 'coarse');
+    // room's south door: the van stands a stride off it). Three of these lie in floor a wall hides from the camera as it rests (inside the stair door,
+    // inside the south door, before the side door): they are read when the camera turns with him
+    keepClear(boxOn('+y', 4.5, 0.004, 11.0), 4.14, 10.52, 5.0, 11.5);
+    { const lino = boxOn('+y', 32, 0.004, 18); keepClear(lino, 31.05, 22.75, 32.25, 23.86); keepClear(lino, 34.7, 20.1, 35.86, 21.4); }
+    keepClear(boxOn('+y', 18, 0.004, 7), 20.95, 8.15, 21.86, 9.35);
+    keepClear(boxOn('+y', 38, 0, 26), 36.14, 20.1, 37.3, 21.4);
 
     if (opts.lived ?? LIVED.on) {
       const coat = madeOf('enamel', [0.62, 0.62, 0.6], { rough: 0.4 }), louvre = madeOf('louvre', [0.5, 0.51, 0.52], { rough: 0.45 }), dark = madeOf('enamel', [0.2, 0.21, 0.23], { rough: 0.4 });
-      type Name = readonly [text: string, x: number, y: number, scale: number, res: 'base' | 'coarse'];
-      /** a band of paint from the floor to y1 (or to a low piece's own top) on a wall along X, door to door between x0 and x1, a box to each piece of the
-       *  wall, with the names chalked on it (each its middle at x, its foot at y, on the piece that holds it whole) */
-      const banded = (z: number, t: number, x0: number, x1: number, y1: number, paint: Vec3, minTop = y1, names: readonly Name[] = []) => {
-        const runs = wallRuns(z, t, x0, x1, minTop, paint).map(([, a, b, top]) => [band('x', z, a, b, 1, 0, Math.min(y1, top), paint, t), a, b] as const);
-        for (const [text, x, y, scale, res] of names) { const half = wide(text, scale, res) / 2, r = runs.find(([, a, b]) => x - half >= a && x + half <= b);
-          if (!r) throw new Error(`office, the hand pass: no piece of the wall at z ${z} holds '${text}' at x ${x}`); stencilS(r[0], text, x, y, CHALK, scale, res); } };
-      /** conduit from a to b in equal lengths of 1.8 m at most, the branch and its box at the far end of the last: a breach takes the lengths over the
-       *  hole and leaves the rest (the kit's note on a wall's fittings) */
-      const conduits = (z: number, a: number, b: number, y: number, paint: Vec3, t: number, drop?: number) => { const n = Math.ceil((b - a) / 1.8 - 1e-9);
-        for (let j = 0; j < n; j++) conduit('x', z, a + (b - a) * j / n, a + (b - a) * (j + 1) / n, 1, y, paint, C.metal, j === n - 1 ? drop : undefined, t); };
-      // ---- the corridor: the grey of the conference room's sill runs on as a dado along the whole north wall (the same skim, the sill's own paint), and
-      // carries each room's name in chalk beside its door (a name on the floor there would lie behind the corridor's south wall, as the camera stands); the
-      // floor says where each opening on the south side leads, a navy panel in the lino with the name in chalk, read through the opening from the room;
+      // ---- the corridor: the grey of the conference room's sill runs on as a dado along the whole north wall (the same skim, the sill's own paint);
       // conduit under the wall's head from the server room's door to the manager's and on to a box by the storage door, where the breaker is; a transfer
       // grille high beside the server room
       grp('lived.corridor');
-      { const navy = madeOf('enamel', NAVY, { rough: 0.45 });
-        for (const [text, x] of [['LOBBY', 7.5], ['DESKS', 15.7], ['DESKS', 22.7], ['BREAK ROOM', 30.6]] as const) { const w = wide(text, 1, 'coarse'), i = floorPaint(x, 11.9, w + 0.2, 0.44, navy);
-          paintOn(i, MD.stencilMarks('+y', text, ...onTop(i, x - w / 2, 11.9 + 0.175), CHALK, 1, 'coarse')); } }
-      banded(10, 0.12, 4.12, 35.88, 0.5, K.sill, 0.3, [['SERVER', 16.0, 0.075, 1, 'coarse'], ['MANAGER', 23.8, 0.075, 1, 'coarse'], ['STORAGE', 30.8, 0.075, 1, 'coarse']]);
-      conduits(10, 18.4, 24.8, 2.72, coat, 0.12); conduits(10, 26.95, 31.8, 2.72, coat, 0.12, 2.3);
+      bandRuns(10, 0.12, 4.12, 35.88, 0.5, K.sill, 0.3);
+      conduitRuns(10, 18.4, 24.8, 2.72, coat, C.metal, 0.12); conduitRuns(10, 26.95, 31.8, 2.72, coat, C.metal, 0.12, 2.3);
       vent('x', 10, 14.0, 14.6, 1, 2.2, 2.6, louvre, 0.12);
       // ---- the break room: its north wall navy to a metre (the placards' navy on the same skim), and the kitchen's extract high on it
       grp('lived.breakroom');
-      banded(12.2, 0.12, 28.12, 35.88, 1.0, saidAs('skim', NAVY));
+      bandRuns(12.2, 0.12, 28.12, 35.88, 1.0, saidAs('skim', [NAVY[0], NAVY[1], NAVY[2]]));
       vent('x', 12.2, 33.4, 34.0, 1, 2.35, 2.75, louvre, 0.12);
-      // ---- the server room: a yellow line on the raised floor from its corridor door, along the racks' fronts (the stretch of this floor the camera sees:
-      // the corridor's wall hides the two metres under it) and down to the bay before the side door
+      // ---- the server room: a yellow line on the raised floor from its corridor door, along the racks' fronts (the stretch of this floor the camera sees
+      // at rest: the corridor's wall hides the two metres under it) and down to the bay before the side door
       grp('lived.server');
-      { const line = madeOf('enamel', SIGNAL.albedo, { rough: SIGNAL.rough }); floorPaint(19.5, 7.8, 3.86, 0.06, line); floorPaint(17.6, 8.825, 0.06, 1.99, line); floorPaint(21.4, 7.99, 0.06, 0.32, line); }   // (each leg starts at the line's edge: no two strips share floor)
-      // ---- the south face on the car park: a dark plinth to 60 cm in the wall's own cast panel, each bay's number on it in chalk where its car noses in;
-      // conduit along the wall's head to the lamp over the break room's door; the kitchen's vent under it; a downpipe on the pier between the windows and
-      // one at the corner
+      { const line = madeOf('enamel', [SIGNAL.albedo[0], SIGNAL.albedo[1], SIGNAL.albedo[2]], { rough: 0.4 }); floorPaint(19.5, 7.8, 3.86, 0.06, line); floorPaint(17.6, 8.825, 0.06, 1.99, line); floorPaint(21.4, 7.99, 0.06, 0.32, line); }   // (each leg starts at the line's edge: no two strips share floor)
+      // ---- the south face on the car park: a dark plinth to 60 cm in the wall's own cast panel, each bay's number on it in chalk on the bay's own
+      // middle; conduit along the wall's head to the lamp over the break room's door; the kitchen's vent under it; a downpipe on the pier between the
+      // windows and one at the corner
       grp('lived.exterior');
-      banded(24, 0.24, 3.88, 36.12, 0.6, saidAs('cast panel', [0.2, 0.21, 0.23]), 0.6, ([['01', 11.5], ['02', 16.3], ['03', 21.0], ['04', 25.8], ['05', 30.4]] as const).map(([n, x]): Name => [n, x, 0.125, 2, 'base']));
-      conduits(24, 24.4, 31.45, 2.62, dark, 0.24);
+      bandRuns(24, 0.24, 3.88, 36.12, 0.6, saidAs('cast panel', [0.2, 0.21, 0.23]), 0.6, ([['01', 11.5], ['02', 16.3], ['03', 21.0], ['04', 25.8], ['05', 30.7]] as const).map(([n, x]) => [n, x, 0.125, 2, 'base'] as const));
+      conduitRuns(24, 24.4, 31.45, 2.62, dark, C.metal);
       vent('x', 24, 28.3, 28.9, 1, 2.2, 2.55, louvre);
       pipe(19.0, 24.19, 0, H, 0.06, dark, [[0, 0.05, 0.1]]); pipe(36.05, 24.19, 0, H, 0.06, dark, [[0, 0.05, 0.1]]);
     }

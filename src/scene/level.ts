@@ -226,7 +226,7 @@ export function buildBundledLevel(): Level {
 export function withOfficeScript(level: Level): Level { return withMarks(withScenarios(level, OFFICE_SCENARIOS), OFFICE_MARKS); }
 /** … and the office's named marks (levels/office.scenarios.ts OFFICE_MARKS: where a person stands to use each thing, the ends of its `walked` ways), unless the
  *  Level came with marks of its own. The level file has no slot for a mark yet, so they ride as the scenarios do: non-enumerable, for the same reason. */
-export function withMarks(level: Level, marks: MarkDef[]): Level { if (!level.marks) Object.defineProperty(level, 'marks', { value: marks, enumerable: false, writable: true, configurable: true }); return level; }
+export function withMarks(level: Level, marks: MarkDef[]): Level { if (!level.marks) Object.defineProperty(level, 'marks', { value: marks.map(m => ({ ...m, pos: [m.pos[0], m.pos[1], m.pos[2]] as Vec3 })), enumerable: false, writable: true, configurable: true }); return level; }   // (a copy a Level: two boots share no array)
 /** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
  *  (tools/qa level-identity's generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
 export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
