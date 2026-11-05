@@ -1654,10 +1654,19 @@ first system across (the game's own maths). No rule of play has changed and noth
     both-ways switch up, and EVERY LEVEL FILE'S furniture is settled both ways, as it loads and as it loads lived in (111 settles; 99 things moved
     and a thing pushed out of a static 2,292 times; 0 differ); `PROPS_BREAK=1` hands the module every thing a hair wider for its settle and
     `settles differ` must not be 0 (4). The 42 by digest on both stands. A step while a level is still being settled cannot happen and throws.
-  - A RAY INTO THE FURNITURE IS COUNTED, AND STILL ANSWERED HERE (`props.ts PropSystem.raycast`, about thirty callers: rounds, a device's beam, the
-    launcher, debris, marks, morale, cover fire, the sticky camera, a throw's plan). The one place known to `TWIN_ROW` today: 35,135 over four
-    missions on the page's stand, 1,533 on the frozen one. `lines_ray_things` is the module's and is only compared under the both-ways switch.
-    Next: it asks the module.
+  - A RAY INTO THE FURNITURE IS THE MODULE'S (`props.ts PropSystem.raycast`, about thirty callers: rounds, a device's beam, the launcher, debris,
+    marks, morale, cover fire, the sticky camera, a throw's plan — 35,135 over four missions on the page's stand, 1,533 on the frozen one, every
+    one answered in TypeScript until now, with `lines_ray_things` only compared under the both-ways switch). It asks `collision.ts thingsRay`:
+    the copy's list of the furniture's parts as they stand (`boxMirror.ts things`: copied where a part was written since), inside a tick or a
+    window as it stands, outside both proven for the one question (`lone`). This file's walk (`raycastHere`) is the both-ways arm and the counted
+    way back (`ruleFell('props', …)`). WHERE A THING STANDS, WRITTEN BY ANYBODY BUT THE STEP, IS SAID (`Prop.x` and `.z` say `thingWrote`): the copy
+    keeps each thing's place beside its parts for the ray's first test, and a ray asked after a rule stood a thing somewhere else and before it
+    was placed again must read the place it was just given, as the walk here does (without it 1 ray in 30,000 of the check's meets another thing).
+    HELD BY `prop-ident`: four rays a step, the game's road against `raycastHere` — two outside the tick straight after the rules' writes, two
+    inside it, one of those after a thing was moved under it and not placed (30,000 rays at `--n 1500`: 7,631 met a thing, 15,000 outside a tick,
+    2,241 things moved under one; 0 differ; `PROPS_BREAK=1` asks the module from a hair to one side: 2,052 of 12,000 differ) — and by
+    `rust-check --both` over the missions as before. No question more is asked alone: the missions' count of lone proofs did not move (17,270
+    over four on the page's stand). `TWIN_ROW` has no place left and is SEALED: a place found later is red from the day it is counted.
 
   WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
   - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
