@@ -93,7 +93,7 @@ async function recordVolley(seed: number, on: boolean, cut = false, dice = false
       impact: (bi: number) => ({ pane: true, live: false, type: kind(bi) ?? 'laminated', thickness: 0.012, wasOpen: false, punched: false, diced: false, released: 0, cracked: false }),
       hit() {}, widen: () => 0, blast: () => 0, bang: () => 0, breakTest: () => -1, goingAt: () => false, wouldGive: () => false, seeThrough: (_view: unknown, _from: unknown, _size: unknown, fn: () => unknown) => fn(), view: null, each() {},
       openAt: () => false, walkable: () => false, openSig: () => 0, openFraction: () => 0, fill: () => false, update() {}, reset() {}, summary: () => 'cut',
-      toUV: noPane, toWorld: noPane, normalOf: noPane, heldSet: noPane, asking: (fn: any) => real.asking(fn),
+      toUV: noPane, toWorld: noPane, normalOf: noPane, heldSet: noPane, asking: (fn: any) => real.asking(fn), twin: real.twin, letGo() {}, home: real.home,
     } satisfies SeamsOut<GlassBreak> as any;
   }
   const frags: any[] = []; if (!cut) game.glassBreak.onRelease = null;

@@ -55,8 +55,8 @@ pub struct State {
     pub items: Items,
     pub men: Men,
     pub smoke: Smoke,
-    pub panes: Panes,
     pub poses: Poses,
+    pub panes: Panes,
 }
 
 /// A part of the block: where it is, how long, and the version of what is in it (moved on by whoever changes a part's fields without changing its length).
@@ -80,8 +80,8 @@ pub const PARTS: [Part; 11] = [
     Part { off: offset_of!(State, items), len: size_of::<Items>(), ver: 1, pool: false },
     Part { off: offset_of!(State, men), len: size_of::<Men>(), ver: crate::men::SCHEMA, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
-    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 2, pool: true },   // (2: a pose is ten columns of whole vectors, where it was ten singles a node)
+    Part { off: offset_of!(State, panes), len: size_of::<Panes>(), ver: 1, pool: true },   // (last: a game with no pane touched parks no room of it, and no part before it moved)
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();

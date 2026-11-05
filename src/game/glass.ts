@@ -178,7 +178,7 @@ export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null
     const sinceAny = g.time - S.crackAt; const sound = !(GLASS.crackGap > 0 && sinceAny >= 0 && sinceAny < GLASS.crackGap);
     if (sound) S.crackAt = g.time;
     // … and the floor's ears get one event per pane PER SHOOTER per liveGap (a second gun on the same pane is its own noise, under its own id)
-    const key = pane * 1024 + (who & 1023); const last = S.eventAt.get(key); const since = last === undefined ? 1e9 : g.time - last, told = GLASS.liveGap > 0 ? simX().panes_heard(g.sim.bind(), pane, who, g.time, GLASS.liveGap) === 1 : true;
+    const key = pane * 1024 + (who & 1023); const last = S.eventAt.get(key); const since = last === undefined ? 1e9 : g.time - last, told = GLASS.liveGap > 0 && gb ? gb.asking((x, b) => x.panes_heard(b, pane, who, g.time, GLASS.liveGap) === 1) : true;
     if (PANES.both) PANES.both('heard', gb.twin, [!(GLASS.liveGap > 0 && since >= 0 && since < GLASS.liveGap), told], [], []);
     if (!told) {
       if (sound) g.audio.play('glassCrack', point, 0.5, { rate: 0.94 + 0.08 * u + 0.3 * w });

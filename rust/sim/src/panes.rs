@@ -188,11 +188,31 @@ const _: () = assert!(HEAD % 8 == 0);
 const _: () = assert!(size_of::<Row>() % 8 == 0 && size_of::<Hole>() % 8 == 0 && size_of::<Q>() % 8 == 0 && size_of::<Sheet>() % 8 == 0);
 const _: () = assert!(size_of::<Panes>() == HEAD + BODY * 8);
 
+/// a game's panes. A POOL WITH NOTHING IN USE HAS NOTHING IN IT, whatever the slot's memory still says past its first word (another game's, or a put of a take from
+/// before any pane was touched): its counts read none until it is stood up
 #[inline(always)]
 fn pn(g: usize) -> &'static mut Panes {
-    &mut state(g).panes
+    let p = &mut state(g).panes;
+    if p.used == 0 {
+        p.counts_none();
+    }
+    p
 }
 impl Panes {
+    #[cold]
+    fn counts_none(&mut self) {
+        self.sheets = 0;
+        self.n = 0;
+        self.nh = 0;
+        self.nq = 0;
+        self.rev = 0;
+        self.released = 0;
+        self.flags = 0;
+        self.nev = 0;
+        self.nbl = 0;
+        self.seq = 0;
+        self.nbars = 0;
+    }
     #[inline]
     fn mark(&mut self) {
         let words = self.sheets as usize * SHEET_W + self.n as usize * ROW_W + self.nh as usize * HOLE_W + self.nq as usize * Q_W;
