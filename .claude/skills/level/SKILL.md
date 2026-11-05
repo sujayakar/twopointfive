@@ -129,12 +129,18 @@ like that."
   that room has (0.6 m and over, readable from above); clutter of use; its own light or colour; its own floor decal;
   something to shove or break. **check** `lived` (counts things, names bare rooms); the rest **by eye**
   (`lived-check.ts <name> --sheet` prints what each room got).
+- **A thing is asked of the library by name.** `docs/library.md` lists every piece of every kit with its arguments, its
+  size, what it costs and what it is to a man, and every named paint; the two showrooms (`levels/gwot-yard.json`,
+  `levels/library-hall.json`) stand one of each, and a piece's line in a showroom's generator is the call to copy. A
+  thing another level could use is never a stack of boxes in one generator: add it to a kit, stand it in a showroom.
+  **check** `bun run tools/levels/library.ts --check`.
 - **`ground` · The ground is not one flat sheet.** From above, ground is most of the picture, and one paint over a whole
   court reads as a floor plan, not a place. What the renderer can carry, all of it in the look's kit
   (`src/scene/gwotKit.ts`): FINISHES laid as the place is used (`ground`: dust, dirt, gravel, a slab), so a road, a
   court and a lot meet in lines the eye can follow; WEAR where feet and wheels go (`ruts`, a path trodden between the
   doors, the floor darker either side of a door as the look's skin lays it); STAINS where the use leaves them (`patch`:
-  damp at a wall's foot or a tap, oil under an engine, ash round a fire); and things LOW enough to walk over, which take
+  damp at a wall's foot or a tap, oil under an engine; `stain`: the ground's own paint darker, under ruts; a `hearth`
+  lays its own ash); and things LOW enough to walk over, which take
   light and throw a shadow (`rubble`, a kerb, a step). Put them where the player walks and the camera rests (the start,
   the mission's line, every court), not evenly. `STYLE.md` holds the rules: a patch is darker than its ground, never
   paler and never under a third of it; earth stays darker than the walls on it; a floor carries colour only as marks; a

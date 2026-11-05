@@ -13,6 +13,7 @@ import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
 import { roundSlabs } from '../../src/scene/gwotKit';
+import { pieces } from '../../src/scene/library';
 
 export interface LivedHost {
   add: (b: Partial<Box> & { c: Vec3; h: Vec3 }) => number;
@@ -188,6 +189,8 @@ export function livedPieces(H: LivedHost, C: LivedPalette) {
     /** a bucket (a mop bucket, a fire bucket on the floor, a coal scuttle) */
     bucket(x: number, z: number, albedo: Vec3 = C.metal, thing = 'bucket') { return loose(thing, albedo === C.metal ? 'bin' : 'cardboard', x, z, 0.2, 2, [part(0, 0, 0, 0.26, 0.28, 0.26, albedo), part(0, 0.28, 0, 0.3, 0.02, 0.03, tone(albedo, 0.6))]); },
   };
-  return P;
+  // the TOOLS (a frame, a loose prop, a part, a tone, the room), then the PIECES by name (src/scene/library.ts)
+  const { at: _at, loose: _loose, part: _part, tone: _tone, room: _room, ...made } = P;
+  return { ...P, ...pieces('livedPieces', made) };
 }
 export type LivedPieces = ReturnType<typeof livedPieces>;

@@ -2,13 +2,14 @@
 // each preset, the sweep inside the same take, the scene's tail; everything put back at the end and when stopped; a slow machine cut short; the text of the report;
 // a run over a set of scenes, one page each (the lines handed from page to page: src/ui/benchrun.ts on a fake tab), and the scenes' own table.
 // No browser, no GPU.   bun run tools/qa/bench-check.ts   (exit 0 = all pass; BENCH_BREAK=1 leaves a preset on at the end and must fail)
-import { Bench, benchReport, benchSaid, benchNotice, type BenchWent, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
+import { Bench, benchReport, benchStats, GBUFFER_PASS, GBUF_SAID, benchSaid, benchNotice, type BenchWent, BENCH_FRAMES, SIZE_HELD, SIZE_AUTO, SIZE_MOVED, SIZE_UNNAMED, sizeNote, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
 import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows';
 import { SAVED, type Fate, type SavedFile } from '../../src/host/savefile';
 import { AUTO_LADDER } from '../../src/ui/quality';
 import { readFileSync } from 'node:fs';
 const BREAK = (globalThis as any).process?.env?.BENCH_BREAK === '1';
 let now = 0; (performance as any).now = () => now;
+const GBUF_MS = 0.73;   // the fake page's g-buffer stamp, a frame (a drawn pass: among the passes' own times, never in the union)
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 
 /** a frame's cost on the fake machine, ms: the preset's own, less what the sweep's flipped row gives back, times how slow the machine is */
@@ -44,13 +45,13 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
     if (bench.active) (bench.freezing ? frozenIn : liveIn).add(bench.state);
     if (bench.active && !bench.freezing && rec.recording) live++;
     if (!bench.freezing && sceneT >= 0) sceneT += cost;
-    if (rec.recording) frames.push({ t: now, dt: cost, fps: 1000 / cost, cpu: { update: 1, render: 1, other: 0.5 }, gpu: { direct: cost * 0.5, gather: cost * 0.3 }, gpuSum: cost * 0.8, ...(E.timer.enabled ? { gpuUnion: +(cost * 0.9).toFixed(3) } : {}), res: [E.width, E.height], eff: S.renderScale, preset: Q.label, adaptive: true, cam: [0, 0, 0, 0, 0], n: {} });
+    if (rec.recording) frames.push({ t: now, dt: cost, fps: 1000 / cost, cpu: { update: 1, render: 1, other: 0.5 }, gpu: { direct: cost * 0.5, gather: cost * 0.3, ...(E.timer.enabled ? { [GBUFFER_PASS]: GBUF_MS } : {}) }, gpuSum: cost * 0.8, ...(E.timer.enabled ? { gpuUnion: +(cost * 0.9).toFixed(3) } : {}), res: [E.width, E.height], eff: S.renderScale, preset: Q.label, adaptive: true, cam: [0, 0, 0, 0, 0], n: {} });
     if (sw >= 0 && ++swFrames >= 12) { swFrames = 0; if (++sw >= SEQ.length) sw = -1; }
     bench.tick(cost / 1000);
     if (states[states.length - 1] !== bench.state) states.push(bench.state);
   };
   const run = (cap = 200000) => { for (let i = 0; i < cap && bench.active; i++) frame(); };
-  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, went, updates, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
+  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, went, updates, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, E, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
 }
 const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current, p.Q.auto, p.Q.climbed, [...p.Q.failed], [...p.Q.failCount], p.smoke.params.rbIters]);
 
@@ -237,6 +238,21 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const l0 = benchLegOfPage(tab(searchOf(t0.went[0])));
   check(!!l0 && l0.scene.id === BENCH_SCENES[0].id && l0.secs === '2' && l0.cap === 30 && l0.leg.index === 0 && l0.leg.of === BENCH_SCENES.length && l0.leg.set === BENCH_SET && l0.leg.notes.some(n => /started from the title/.test(n)), 'the first scene\'s page finds its part: the seconds a window, the short cap, and the note that its load is a second one');
   check(benchLegOfPage(tab(searchOf(t0.went[0]))) === null && store.size === 0, 'the same page loaded again in the middle is a plain mission page, and the record is dropped');
+  // a run asked for on the look prototype's page (11-02: it dropped the word, so every scene timed the plain build and the report said nothing)
+  { const tl = tab('?look&look=roomc:0.6&l%6Fok=expo:0&hills=0&nocutboxes&round=0&lookkit=1&fow&hour=noon&bench&quality=high'); benchBegin(false, tl);
+    let at = searchOf(tl.went[0] ?? ''), all = tl.went.length === 1; const seen: string[] = [];
+    for (let i = 0; i < BENCH_SCENES.length && all; i++) { const pg = tab(at), l = benchLegOfPage(pg), u = new URLSearchParams(at); seen.push(at);
+      all = !!l && u.getAll('look').join() === ',roomc:0.6,expo:0' && u.get('hills') === '0' && u.has('nocutboxes') && u.get('quality') === 'high' && !u.has('lookkit') && !u.has('fow') && !u.has('hour') && !u.has('round') && u.get('benchrun') === String(i);
+      if (l && i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: l.leg.steps, notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0] ?? ''); } else l?.leg.over(); }
+    check(all && seen.length === BENCH_SCENES.length && store.size === 0, `a run asked for on the look prototype's page keeps the look's rows and its boot words on EVERY scene, written plain or percent-coded, and nothing of the visitor's kit, fog, hour or rule switches (${seen[seen.length - 1]})`);
+    const tp = tab('?look=plain&hills=0&bench'), ok = benchBegin(false, tp) === null && tp.went.length === 1, up = new URLSearchParams(searchOf(tp.went[0] ?? ''));
+    check(ok && !up.has('look') && !up.has('hills'), `the dress's own word is not the look prototype's: nothing of it rides along, nor a look word beside it (${tp.went[0]})`);
+    store.clear();
+    // a trial the look panel's button keeps off on this machine: the run times the look that page shows, and its address says which
+    const kept = new Map<string, string>([['twopointsix.hillrays', '0'], ['twopointsix.geotry', '0'], ['twopointsix.fronttry', '1'], ['twopointsix.cutboxes', '0']]); (globalThis as any).localStorage = { getItem: (k: string) => kept.get(k) ?? null };
+    const tk = tab('?look&geo=1&round=1&bench'), tn = tab('?bench'); benchBegin(false, tk); store.clear(); benchBegin(false, tn); store.clear(); delete (globalThis as any).localStorage;
+    const uk = new URLSearchParams(searchOf(tk.went[0] ?? '')), un = new URLSearchParams(searchOf(tn.went[0] ?? ''));
+    check(tk.went.length === 1 && uk.get('hills') === '0' && uk.get('geo') === '1' && uk.get('cutboxes') === '0' && uk.get('round') === '1' && !un.has('cutboxes') && !uk.has('front') && !uk.has('lorry') && !uk.has('dress') && tn.went.length === 1 && !un.has('hills') && !un.has('geo'), `a look trial this machine keeps off rides along as its own word (the cut boxes' switch with them), the address's word wins over the store, and a plain run takes nothing of it (${tk.went[0]})`); }
   // a run through to the end
   const t1 = tab('?quality=low&bench'); check(benchBegin(false, t1) === null && t1.how[0] === 'replace', 'begun from the address: that address is replaced, so Back does not ask for another run');
   let at = searchOf(t1.went[0]), steps = 0; const closedTo: string[] = [];
@@ -264,12 +280,37 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   // word dropped at the first scene that pair was one run twice
   { store.clear(); const t3 = tab('?bench&savepic=0'); benchBegin(false, t3); const u3 = new URLSearchParams(searchOf(t3.went[0]));
     check(u3.get('savepic') === '0' && benchLegOfPage(tab(searchOf(t3.went[0])))!.leg.notes.every(n => !/played without/.test(n)), `the save picture's word is on the first scene's address, and no note says it was left behind (${t3.went[0]})`); store.clear(); }
+  // …and the word that holds the picture's size still (`?bench&quality=high&adapt=0`, ui/quality.ts visit): with it dropped at the first scene, a run asked
+  // at one size would be played at whatever size held the frame rate, and two runs' GPU milliseconds could not be held against each other
+  { store.clear(); const t4 = tab('?bench&quality=high&adapt=0'); benchBegin(false, t4); const u4 = new URLSearchParams(searchOf(t4.went[0])), pg4 = tab(searchOf(t4.went[0])), l4 = benchLegOfPage(pg4)!;
+    l4.leg.onward({ steps: [{ id: `scene:${l4.scene.id}` } as any], notes: l4.leg.notes, scenes: [], boot: null, away: 0 }); const v4 = new URLSearchParams(searchOf(pg4.went[0]));
+    check(u4.get('adapt') === '0' && u4.get('quality') === 'high' && v4.get('adapt') === '0' && v4.get('quality') === 'high' && l4.leg.notes.every(n => !/played without/.test(n)) && /VISIT_FLAGS = \[[^\n]*'adapt'[,\]]/.test(readFileSync(new URL('../../src/ui/replaykey.ts', import.meta.url), 'utf8')), `the size's word and the tier's are on the first scene's address and on the next, no note says either was left behind, and a replay's page keeps the word (${pg4.went[0]})`); store.clear(); }
+  // …the page reads the address's ladder words once (ui/quality.ts visit: what the words DO is ladder-replay's self test), and Reset puts the visit's own state back; the kit view's frame, which lives on its ladder, is not handed the word
+  { const mainTs = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), opts = readFileSync(new URL('../../src/ui/options.ts', import.meta.url), 'utf8'), kit = readFileSync(new URL('../../src/ui/kitView.ts', import.meta.url), 'utf8');
+    const readAt = mainTs.indexOf('quality.visit(location.search)'), loopAt = mainTs.indexOf('requestAnimationFrame(frame)'), viewer = readFileSync(new URL('../../src/viewer/runtime.ts', import.meta.url), 'utf8');
+    check(readAt > 0 && loopAt > readAt && mainTs.split('quality.visit(').length === 2 && !/quality\.(adaptive|auto) = /.test(mainTs) && /reset = \(\) => \{[^\n]*if \(!visitTier\(search\)\) quality\.setAuto\(\); quality\.visit\(search\); \};/.test(opts) && !/get\('quality'\)/.test(opts + mainTs + viewer) && /this\.quality\.visit\(location\.search\)/.test(viewer) && /const raw = [^\n]*filter\(w => !\/\^adapt\(=\|\$\)\/\.test\(w\)\)/.test(kit), 'the page hands the address to the ladder\'s one reader of its words, once, before a frame is drawn; Options\' Reset puts the defaults back and then the address\'s words by the same reader; nobody else reads the tier\'s word (the viewer calls the reader too); and the kit view\'s frame is opened without the word'); }
+  // …and the card of a run made with the row off says what its own lines show: one size, or not
+  { const L = (id: string, w: number, skipped?: string) => ({ id, res: [w, 720] as [number, number], ...(skipped ? { skipped } : {}) });
+    const lines = [L('opened', 1280), L('scene:a', 1280), L('scene:b', 1280), L('held', 1280), L('verylow', 640), L('high', 1280), L('scene:c', 999, 'not played')];
+    check(sizeNote(lines, { adaptive: false, auto: false }) === SIZE_HELD && sizeNote([...lines, L('scene:d', 1024)], { adaptive: false, auto: false }) === SIZE_MOVED && sizeNote(lines, { adaptive: false, auto: true }) === SIZE_AUTO
+      && sizeNote(lines, { adaptive: true, auto: false }) === null && sizeNote(lines, {}) === null, 'the size\'s line: held where the page\'s own lines share one size (a preset\'s line and a scene not played do not count), moved where they do not, a pin asked for under auto, and nothing with the row on');
+    const said = (r: string, n: string) => r.split('\n').filter(l => l === n).length;
+    const run = (set: (p: ReturnType<typeof page>) => void, mid?: (p: ReturnType<typeof page>) => void) => { const p = page({ scene: 'short' }); set(p); p.bench.start(); if (mid) { for (let i = 0; i < 100000 && p.bench.state !== 'scene'; i++) p.frame(); mid(p); } p.run(); return p.bench.report; };
+    const held = run(p => { p.Q.adaptive = false; p.Q.auto = false; }), auto = run(p => { p.Q.adaptive = false; }), moved = run(p => { p.Q.adaptive = false; p.Q.auto = false; }, p => { p.E.width = 1024; }), on = run(p => { p.Q.adaptive = true; p.Q.auto = false; }), plain = run(() => {});
+    check(said(held, SIZE_HELD) === 1 && said(auto, SIZE_AUTO) === 1 && said(auto, SIZE_HELD) === 0 && said(moved, SIZE_MOVED) === 1 && said(moved, SIZE_HELD) === 0 && [on, plain].every(r => [SIZE_HELD, SIZE_AUTO, SIZE_MOVED, SIZE_UNNAMED].every(n => said(r, n) === 0)),
+      `a whole run's card: 'held' once with the row off and the tier pinned (${said(held, SIZE_HELD)}); under auto it asks for a pin (${said(auto, SIZE_AUTO)}); a window resized in the scene: 'more than one size' (${said(moved, SIZE_MOVED)}); with the row on, or a page that says nothing of it, no such line`);
+    // …and a held run whose address named no tier says so (it stood on a tier nobody measured or chose for the comparison); one that named it does not
+    const at = (search: string) => { const G = globalThis as any, was = G.location; G.location = { search }; try { return run(p => { p.Q.adaptive = false; p.Q.auto = false; }); } finally { if (was === undefined) delete G.location; else G.location = was; } };
+    const bare = at('?bench&adapt=0'), named = at('?bench&quality=high&adapt=0');
+    check(said(held, SIZE_UNNAMED) === 1 && said(bare, SIZE_HELD) === 1 && said(bare, SIZE_UNNAMED) === 1 && said(named, SIZE_HELD) === 1 && said(named, SIZE_UNNAMED) === 0 && [auto, moved].every(r => said(r, SIZE_UNNAMED) === 0) && SIZE_UNNAMED.length <= 150,
+      `a held run with no tier on its address says the tier was not named (${said(bare, SIZE_UNNAMED)}); with one named it does not (${said(named, SIZE_UNNAMED)})`); }
   // the scenes themselves
   const rows = BENCH_SCENES.map(S => SCENARIOS.find(e => e.id === S.scn));
   check(BENCH_SCENES.length >= 2 && rows.every(e => !!e && e.kind === 'roomclear' && e.squad === 4 && !!e.level) && new Set(BENCH_SCENES.map(S => S.id)).size === BENCH_SCENES.length && BENCH_SCENES.every(S => S.name.length <= 21 && Number.isInteger(S.seed) && S.secs >= 60), `every scene is a four-man room clear of the mission list on its own level, with a name that fits its column: ${BENCH_SCENES.map(S => `${S.id} = ${S.scn} seed ${S.seed}`).join(' · ')}`);
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
   check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /new Bench\([^\n]*\brows: shaderRowsOn\b/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
+  check(/lq\.get\('lookkit'\) !== '0' && !lq\.has\(BENCH_RUN_KEY\)/.test(main) && /if \(!gq\.has\(BENCH_RUN_KEY\)\)[^\n]{0,260}buildLookPanel\(/.test(main) && /leg\.index === 0 && lookConfig\.on\) benchPage\.leg\.notes\.push\(/.test(main), 'on a scene\'s address the look prototype\'s page stands its kit, its fog put down and its panel off, and the first scene\'s page says in the notes that the run was played on it (read in main.ts: the page\'s half has no headless stand-in)');
   // …and with the machine's sandbox row off, from BEFORE the mission is staged (with 'no AI' kept the room clear refuses to start: nobody would move)
   check(/\n  if \(!benchSceneWaits\(\)\) loadSandbox\(game\);/.test(main) && main.indexOf('if (!benchSceneWaits()) loadSandbox(game);') < main.indexOf('const booted = scenarioFromUrl(') && main.indexOf('const booted = scenarioFromUrl(') > 0, 'a scene\'s page does not read this machine\'s sandbox row, and that is settled before its mission is staged');
   { store.clear(); const t = tab('?bench'); benchBegin(false, t); const at = searchOf(t.went[0]);
@@ -334,6 +375,33 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const T = benchReport(r);
   check(/SOFTWARE RENDERING/.test(T) && /\(no flags\)/.test(T) && /browser\s+UA\/1/.test(T) && /a note$/.test(T) && !/undefined|NaN/.test(T), 'a bare result still reads: the software adapter is said, nothing undefined');
   check(!/^shaders/m.test(T) && benchReport({ ...r, rows: [...SHADER_ROW_WORDS] }).split('\n').every(l => l.length <= 150), 'an old result with no word of its shader rows has no line of them; with every row on the line still fits the card');
+}
+{ // THE G-BUFFER'S OWN TIME stands beside GPU ms, never in it (BenchStep.gbuf)
+  const f = (union: number | undefined, g: number | undefined, more: Record<string, number> = {}): any => ({ t: 0, dt: 16.7, fps: 60, cpu: { update: 1, render: 1, other: 0 }, gpu: { direct: 5, ...more, ...(g === undefined ? {} : { [GBUFFER_PASS]: g }) }, gpuSum: 5, ...(union === undefined ? {} : { gpuUnion: union }) });
+  const a = benchStats([f(9, 0.5), f(9, 0.9), f(9, 0.7)]), b = benchStats([f(9, 1.5), f(9, 1.9), f(9, 1.7)]);
+  check(a.gbuf === 0.7 && a.gpu === 9 && b.gbuf === 1.7 && b.gpu === 9, `a line's g-buffer time is read off the pass's own stamp, and GPU ms is the compute passes' union whatever the g-buffer cost (${a.gpu} + ${a.gbuf}, ${b.gpu} + ${b.gbuf})`);
+  { // a browser rounds a stamp to a tenth of a millisecond: a pass of 0.02 ms stamps 0 on four frames in five, and one of 0.16 stamps 0.1 or 0.2
+    const short = benchStats(Array.from({ length: 600 }, (_, i) => f(9, i % 5 ? 0 : 0.1))).gbuf!, mid = benchStats(Array.from({ length: 600 }, (_, i) => f(9, i % 5 < 3 ? 0.2 : 0.1))).gbuf!;
+    check(Math.abs(short - 0.02) < 0.006 && Math.abs(mid - 0.16) < 0.006, `on a rounded clock the line reads finer than the clock's step: a 0.02 ms pass ${short}, a 0.16 ms pass ${mid} (a median would say 0 and 0.2)`);
+    const hitch = benchStats([...Array.from({ length: 99 }, () => f(9, 0.7)), f(9, 40)]).gbuf!;
+    check(hitch === 0.7, `one frame in a hundred whose stamp spans a hitch does not move it (${hitch})`); }
+  check(!('gbuf' in benchStats([f(9, undefined), f(9, undefined)])) && !('gbuf' in benchStats([f(undefined, undefined)])) && !('gbuf' in benchStats([f(9, 0), f(9, 0)])) && benchStats([f(9, 0), f(9, 0.1)]).gbuf === 0.05, 'no stamp of the pass on any frame, or nothing but the 0 the timer gives a pair never written: no number at all; a 0 among real stamps counts');
+  { const few = benchStats([...Array.from({ length: 14 }, () => f(9, 0.7)), f(9, 40)]).gbuf!;
+    check(few === 0.7, `a short window (a line at a few frames a second) sheds its two ends too, so one hitch in fifteen frames does not move it (${few})`); }
+  { const eng = readFileSync(new URL('../../src/engine.ts', import.meta.url), 'utf8'), rec = readFileSync(new URL('../../src/ui/perfrec.ts', import.meta.url), 'utf8');
+    check(eng.includes(`ts('${GBUFFER_PASS}')`) && new RegExp(`RENDER_PASS = /\\^\\((?:\\w+\\|)*${GBUFFER_PASS}(?:\\|\\w+)*\\)\\$/`).test(rec), `the engine stamps the pass under the name the column reads ('${GBUFFER_PASS}'), and the recorder holds it among the drawn passes the union leaves out`); }
+  const tableOf = (r: BenchResult) => { const T = benchReport(r).split('\n'), at = T.findIndex(l => /GPU ms/.test(l)), end = T.indexOf('', at); return { T, head: T[at], rows: T.slice(at + 1, end < 0 ? undefined : end).filter(l => !/not run: /.test(l)) }; };
+  { const p = page({ scene: 'none' }); p.bench.start(); for (let i = 0; i < 100000 && p.bench.active; i++) p.frame(); const ran = p.bench.result!.steps.filter(s => !s.skipped);
+    check(ran.length > 0 && ran.every(s => s.gbuf === GBUF_MS), `a whole run: every line that ran carries the g-buffer's time (${ran.map(s => s.gbuf).join(' ')})`);
+    const { T, head, rows } = tableOf(p.bench.result!), at = head.indexOf('g-buf ms');
+    check(/GPU ms\s+g-buf ms\s+page ms$/.test(head) && rows.length === ran.length && rows.every(l => l.slice(at, at + 10).trim() === GBUF_MS.toFixed(2)), `the card has it as its own column between GPU ms and page ms, under its header on every line ("${head.trim()}")`);
+    check(T.filter(l => l === GBUF_SAID).length === 1 && GBUF_SAID.length <= 150 && /isn't in GPU ms/.test(GBUF_SAID) && /checked on an M4 Max only/.test(GBUF_SAID) && !/[;:—]/.test(GBUF_SAID), `and says once, under the table, in plain sentences, that the column is not in GPU ms and how far it is to be believed (${GBUF_SAID.length} characters)`); }
+  { const p = page({ scene: 'none', timers: false }); p.bench.start(); for (let i = 0; i < 100000 && p.bench.active; i++) p.frame(); const ran = p.bench.result!.steps.filter(s => !s.skipped), { T, rows } = tableOf(p.bench.result!);
+    check(ran.length > 0 && rows.length === ran.length && ran.every(s => !('gbuf' in s) && s.gpu === null) && rows.every(l => /n\/a +n\/a +[\d.]+$/.test(l)) && !T.includes(GBUF_SAID), `a browser with no GPU timings: n/a in both columns on all ${rows.length} lines, and no line about a column that has nothing in it`); }
+  { const old: BenchResult = { version: 1, at: '2026-01-02T03:04:05.000Z', query: '', machine: { webgpu: 'x y', browser: '', os: '', userAgent: 'UA/1', dpr: 1 }, boot: null, timers: true, notes: [],
+      steps: [{ id: 'opened', label: 'as it opened', quality: 'high', scale: 0.77, res: [1368, 770], frames: 100, fps: 60, ms: 16.7, p95: 17.1, gpu: 9.4, cpu: 2.1 }] };
+    const { T, rows } = tableOf(old);
+    check(rows.length === 1 && / 9\.4 +n\/a +2\.1$/.test(rows[0]) && !/undefined|NaN/.test(rows[0]) && !T.includes(GBUF_SAID), `a result saved before the column was kept still reads: n/a under it ("${rows[0]?.replace(/ +/g, ' ')}")`); }
 }
 { // (the page's card is not built here: only that its source still puts the notice's line on a card that does not say a copy is being sent)
   const src = (await import('node:fs')).readFileSync(new URL('../../src/ui/bench.ts', import.meta.url), 'utf8');

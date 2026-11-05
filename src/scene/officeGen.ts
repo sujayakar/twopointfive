@@ -13,6 +13,7 @@ import { MarkingDef, MARKING_TEXEL, markStats } from './markings';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
+import { pieces } from './library';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
@@ -70,6 +71,20 @@ export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions
  *  props, ceiling panels) over one fresh set of lists — what buildOfficeProcedural below lays the office out with, statement for statement as they were inside it,
  *  and what a generator for ANOTHER level builds with (tools/levels/: the scenario levels — same boxes, same palette, same finishes, same markings; no new art).
  *  Every call appends to the kit's own `boxes` / `props` / `lights` / `switchables`; `grp(name)` names the editor group of what follows (trace.groups). */
+/** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room; the smoke lab's yard): the upper body's half size and paint, and its
+ *  markings with the emissive field's radiances scaled so the ONE light game.ts registers for it has the LUMINOUS intensity of the slab it replaced (luminance of
+ *  its mean radiance × its area = luminance of the old slab's radiance × the old slab's area; luminance, not the peak channel the light's intensity keys on: the
+ *  field's light is whiter than the pure red or blue slab, and matched on the peak channel the meter read a third more in front of the machines). `red` is the
+ *  drinks machine (a painted red body, satin), `blue` the near-black navy one. colW = the half width of the control column, which stands on a flush block; the
+ *  rest of the front stands on a plinth set 6 cm back, the dispenser's recess. fluxK × the old slabs' intensity. */
+export function vendingSpec(kind: 'red' | 'blue', TX: number, fluxK = 1): { h: Vec3; body: Vec3; marks: MarkingDef[]; colW: number; plinth: Vec3 } {
+  const lum = (c: readonly number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const red = kind === 'red', h: Vec3 = red ? [0.5, 0.775, 0.45] : [0.42, 0.775, 0.45], body: Vec3 = red ? [0.42, 0.05, 0.045] : [0.02, 0.03, 0.085];
+  const e: Vec3 = red ? [2.6, 0.5, 0.35] : [0.4, 0.9, 2.8], L = lum(e) * (red ? 0.84 * 1.3 : 0.72 * 1.1) * fluxK, make = red ? MD.vendingRedMarks : MD.vendingBlueMarks;
+  let marks = make(h, 1, TX);
+  { const st = markStats(marks[0], body, TX); const k = L / Math.max(lum(st.meanL) * st.area, 1e-6); marks = make(h, k, TX); }
+  return { h, body, marks, colW: red ? 0.15 : 0.135, plinth: [0.02, 0.02, 0.024] };
+}
 export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   const MARKS = opts.markings ?? true, DEMOTE = opts.demote ?? true, TX = opts.texel ?? MARKING_TEXEL;
   /** the box's markings, if the lane's markings are on (spread into an add() / a prop part) */
@@ -93,13 +108,16 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // it: rays never see the pane, the raster never draws it, and the analytic test finds the mullion's face nearer than the glass wherever they overlap. What the
   // renderer, the AI's eyes and ears, the rounds and the boot make of it: boxes.ts BoxFlag.Glass, collision.ts segmentBlocked, game/glass.ts.
   const PANE_HALF_T = 0.006;
+  /** a GLASS pane in a wall along X at fixed z, x0‥x1 by y0‥y1, in the tint given: sight passes it, feet and sound do not, a round breaks it */
   const paneX = (z: number, x0: number, x1: number, y0: number, y1: number, tint: Vec3) => add({ c: [(x0 + x1) / 2, (y0 + y1) / 2, z], h: [(x1 - x0) / 2, (y1 - y0) / 2, PANE_HALF_T], albedo: tint, flags: BoxFlag.Glass });   // in a wall along X (fixed z)
+  /** a GLASS pane in a wall along Z at fixed x: as paneX */
   const paneZ = (x: number, z0: number, z1: number, y0: number, y1: number, tint: Vec3) => add({ c: [x, (y0 + y1) / 2, (z0 + z1) / 2], h: [PANE_HALF_T, (y1 - y0) / 2, (z1 - z0) / 2], albedo: tint, flags: BoxFlag.Glass });   // in a wall along Z (fixed x)
   const glaze = (o: Opening, pane: (u0: number, u1: number) => void) => {   // the panes of one opening: per bay or whole
     if (!o.glass) return;
     const n = o.glass === 'bay' && o.mullions ? o.mullions : 1;
     for (let i = 0; i < n; i++) pane(o.a + (o.b - o.a) * i / n, o.a + (o.b - o.a) * (i + 1) / n);
   };
+  // ---- walls ----
   /** Wall running along X at fixed z (thickness t), from x0..x1, with openings (doors: y0=0,y1=2.2; windows: y0=0.9,y1=2.4). */
   function wallX(z: number, x0: number, x1: number, t: number, albedo: Vec3, openings: Opening[] = [], extra: Partial<Box> = {}, height = H) {
     const ops = fitOpenings(openings, x0, x1); let cur = x0;
@@ -131,6 +149,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // ---- props ----
   /** Local→world frame of a yawed prop at (x,z): box local +X → world (cos yaw, −sin yaw), local +Z → (sin yaw, cos yaw). */
   const frameAt = (x: number, z: number, yaw: number) => { const cs = Math.cos(yaw), sn = Math.sin(yaw); return (lx: number, ly: number, lz: number): Vec3 => [x + cs * lx + sn * lz, ly, z - sn * lx + cs * lz]; };
+  /** COVER: a DESK w × d, its top at 0.76 m on panel ends */
   function desk(x: number, z: number, w: number, d: number, yaw = 0, albedo = C.wood) {
     // top + two side panels (as yawed boxes around center)
     const at = frameAt(x, z, yaw);
@@ -139,6 +158,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     add({ c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
     add({ c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo }); // modesty panel
   }
+  /** a MONITOR on a surface at baseY (a desk 0.76, a counter 1.15), lit when `on`, its keyboard in front of it */
   function monitor(x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true, standby = false) {   // baseY = the surface it stands on (desk 0.76, reception counter 1.15); keyboard: false for a second screen; standby (with `on` false): a working screen switched OFF — a switchable built dark, its picture there for when somebody switches it on
     const at = frameAt(x, z, yaw);
     add({ c: at(0, baseY + 0.03, 0), h: [0.1, 0.03, 0.08], yaw, albedo: C.black });
@@ -166,12 +186,14 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     const p: PropDef = { kind, name: `${kind}${props.length}`, x, z, yaw, parts, half: [0, 0], height: 0, mass };
     fitProp(p); if (half) p.half = half; props.push(p); return p;
   }
+  /** PROP (chair): an office CHAIR on casters: seat, back, gas lift, star base */
   function chair(x: number, z: number, yaw: number, albedo = C.chair) {   // office chair on casters: seat, back, gas lift, star base
     prop('chair', x, z, yaw, 12, [
       { off: [0, 0.46, 0], h: [0.24, 0.04, 0.24], yaw: 0, albedo }, { off: [0, 0.8, 0.22], h: [0.23, 0.3, 0.035], yaw: 0, albedo },
       { off: [0, 0.22, 0], h: [0.04, 0.22, 0.04], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.25, 0.03, 0.05], yaw: 0, albedo: C.black }, { off: [0, 0.03, 0], h: [0.05, 0.03, 0.25], yaw: 0, albedo: C.black },
     ]);
   }
+  /** PROP (cardboard): a CARTON of side s; with y over 0 it is stacked on the carton already standing there and moves with it */
   function cardboardBox(x: number, z: number, s: number, yaw: number, y = 0) {
     if (y > 0) {   // sitting on an earlier floor carton: join that prop's rigid group (expressed in its frame) so the stack moves as one
       for (let i = props.length - 1; i >= 0; i--) {
@@ -184,7 +206,9 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     prop('cardboard', x, z, yaw, 1 + 22 * Math.pow(s, 3), [{ off: [0, y + s / 2, 0], h: [s / 2, s / 2, s / 2], yaw: 0, albedo: C.cardboard, ...mk(MD.cartonMarks([s / 2, s / 2, s / 2], TX)) }]);   // half-full moving carton: ~5 kg at 55 cm (markings: tape over the top and down the sides, the print, a label)
   }
   // --- set dressing helpers (all boxes, all diffuse) ---
+  /** DECAL: a plain RUG w × d in the colour given */
   const rug = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, flags: BoxFlag.NoShadow });
+  /** PROP (plant): a potted PLANT, scale s: a pot and two masses of leaves */
   function plant(x: number, z: number, s = 1) {   // pot + two rotated foliage masses as one rigid group; footprint = the foliage's flat sides, not its rotated corners
     prop('plant', x, z, 0, 14 * Math.pow(s, 3), [
       { off: [0, 0.22 * s, 0], h: [0.2 * s, 0.22 * s, 0.2 * s], yaw: 0, albedo: [0.36, 0.3, 0.26] },
@@ -192,20 +216,26 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
       { off: [0.04 * s, 1.08 * s, -0.03 * s], h: [0.19 * s, 0.18 * s, 0.19 * s], yaw: 0.2, albedo: [C.plant[0] * 1.15, C.plant[1] * 1.15, C.plant[2] * 1.1] },
     ], [0.26 * s, 0.26 * s]);
   }
+  /** PROP (bin): a waste BIN */
   const bin = (x: number, z: number) => prop('bin', x, z, 0.3, 2.5, [{ off: [0, 0.2, 0], h: [0.13, 0.2, 0.13], yaw: 0, albedo: [0.12, 0.12, 0.13] }]);
+  /** COVER: a FILING CABINET 0.46 × 0.6 × 1.32, drawer fronts on local −Z */
   function cabinet(x: number, z: number, yaw: number) {   // filing cabinet, drawer fronts on local -Z
     const at = frameAt(x, z, yaw);
     add({ c: [x, 0.66, z], h: [0.23, 0.66, 0.3], yaw, albedo: [0.58, 0.58, 0.56], ...mk(MD.cabinetMarks([0.23, 0.66, 0.3], TX)) });   // (markings: drawer seams + pulls)
     if (!DEMOTE) for (let k = 0; k < 3; k++) add({ c: at(0, 0.3 + k * 0.4, -0.305), h: [0.19, 0.012, 0.006], yaw, albedo: [0.25, 0.25, 0.26], flags: BoxFlag.NoShadow });   // (relief: the pull strips as boxes)
   }
   let paperSeed = 0;
+  /** DECAL: a small pile of PAPERS on a surface at y */
   const papers = (x: number, y: number, z: number, yaw = 0, scribble = false) => { add({ c: [x, y + 0.02, z], h: [0.11, 0.02, 0.15], yaw, albedo: [0.86, 0.86, 0.82], flags: BoxFlag.NoShadow, ...mk(MD.paperMarks([0.11, 0.02, 0.15], 31 + paperSeed, false, TX)) }); add({ c: [x + 0.03, y + 0.05, z - 0.02], h: [0.1, 0.012, 0.14], yaw: yaw + 0.25, albedo: [0.9, 0.88, 0.8], flags: BoxFlag.NoShadow, ...mk(MD.paperMarks([0.1, 0.012, 0.14], 32 + paperSeed, scribble, TX)) }); paperSeed += 2; };   // (markings: text bars ON the sheets — the sheets stay boxes)
+  /** DECAL: a flat panel on a wall (a picture, a board, a notice) w × h, its centre at y, carrying the markings given */
   const wallArt = (x: number, y: number, z: number, w: number, h: number, albedo: Vec3, alongX: boolean, marks: MarkingDef[] = []) => add({ c: [x, y, z], h: alongX ? [w / 2, h / 2, 0.015] : [0.015, h / 2, w / 2], albedo, flags: BoxFlag.NoShadow, ...mk(marks) });
+  /** COVER (knee high): a BENCH 1.4 long, a plank seat on two steel ends */
   function bench(x: number, z: number, yaw: number) {
     const at = frameAt(x, z, yaw);
     add({ c: [x, 0.42, z], h: [0.7, 0.03, 0.2], yaw, albedo: C.woodDark });
     for (const sx of [-0.6, 0.6]) add({ c: at(sx, 0.2, 0), h: [0.03, 0.2, 0.18], yaw, albedo: C.metal });
   }
+  /** COVER: a parked CAR 4.4 × 1.7, nose toward local +X, in the body colour given */
   function car(x: number, z: number, yaw: number, body: Vec3) {   // local +X forward
     const at = frameAt(x, z, yaw);
     add({ c: [x, 0.62, z], h: [2.2, 0.34, 0.86], yaw, albedo: body });                                   // lower body
@@ -215,18 +245,22 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     for (const lz of [0.62, -0.62]) { add({ c: at(2.2, 0.7, lz), h: [0.02, 0.07, 0.14], yaw, albedo: [0.8, 0.8, 0.75], flags: BoxFlag.NoShadow }); add({ c: at(-2.2, 0.75, lz), h: [0.02, 0.06, 0.16], yaw, albedo: [0.3, 0.02, 0.02], emissive: [0.5, 0.03, 0.02], flags: BoxFlag.NoShadow }); }   // head / tail lights
   }
 
+  /** COVER: open SHELVING w × d, `levels` boards up to `hgt` */
   function shelf(x: number, z: number, w: number, d: number, yaw: number, levels = 4, hgt = 2.0) {
     const at = frameAt(x, z, yaw);
     add({ c: at(-w / 2 + 0.02, hgt / 2, 0), h: [0.02, hgt / 2, d / 2], yaw, albedo: C.metal });
     add({ c: at(w / 2 - 0.02, hgt / 2, 0), h: [0.02, hgt / 2, d / 2], yaw, albedo: C.metal });
     for (let i = 0; i < levels; i++) { const y = 0.15 + (hgt - 0.2) * i / (levels - 1); add({ c: at(0, y, 0), h: [w / 2, 0.015, d / 2], yaw, albedo: C.metal }); if (i < levels - 1 && ((i * 7 + Math.floor(x * 3)) % 3 !== 0)) add({ c: at((i % 2 ? -0.15 : 0.12) * w, y + 0.17, 0), h: [w * 0.22, 0.15, d * 0.4], yaw, albedo: C.cardboard, ...mk(MD.shelfCartonMarks([w * 0.22, 0.15, d * 0.4], TX)) }); }
   }
+  // ---- lights ----
+  /** a lit CEILING PANEL w × d (light only: the camera looks through the roof), a switchable in `group` */
   function ceilingPanel(x: number, z: number, on: boolean, group: string, flicker = false, w = 1.2, d = 0.6, radiance: Vec3 = [11, 10.5, 9.5]) {
     const bi = add({ c: [x, H - 0.02, z], h: [w / 2, 0.02, d / 2], albedo: C.white, emissive: on ? radiance : [0, 0, 0], flags: BoxFlag.NoPrimary });
     switchables.push({ name: `panel_${group}_${switchables.length}`, boxes: [bi], group, on, baseEmissive: radiance, flicker });
     return bi;
   }
 
+  // ---- doors ----
   /** the frame round one doorway that gets a leaf: jambs + head slightly proud of the wall, and the frame's stops (the comment at the office's door list says why) */
   function doorFrame(d: LevelDoorDef) {
     fitDoorDef(d);   // (doorSize.ts: a leaf drawn for a 1.2 m slot becomes the real door inside it — the same doorway wallX / wallZ cut for that slot)
@@ -243,7 +277,9 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
     const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
     stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
   }
-  return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, paneZ, wallX, wallZ, frameAt, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame };
+  // the kit's lists and TOOLS, then its PIECES by name (scene/library.ts)
+  return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, frameAt, fitProp, prop,
+    ...pieces('officeKit', { paneX, paneZ, wallX, wallZ, desk, monitor, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame }) };
 }
 
 export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
@@ -636,24 +672,17 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // Calibration: the window's LUMINOUS intensity (luminance of its mean radiance × its area) = the old slab's (luminance of its radiance × its area). Luminance, not the peak
     // channel game.ts keys the light's intensity on: the window's light is whiter than the pure red / blue slab, and it is luminous flux that the light meter and the eye
     // integrate — matched on the peak channel the meter read a third more in front of the machines.
-    const lum = (c: readonly number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     const VENDING_FLUX_K = 1.0;   // TASTE: × the old slabs' luminous intensity. 1 = the break room lit exactly as before (and the fields as pale on screen as the old slabs: AgX desaturates radiance ≈ 2.3 at this exposure); ~0.5 reads a saturated red / blue front in a room half as bright
-    const eA: Vec3 = [2.6, 0.5, 0.35], eB: Vec3 = [0.4, 0.9, 2.8]; const LA = lum(eA) * (0.84 * 1.3) * VENDING_FLUX_K, LB = lum(eB) * (0.72 * 1.1) * VENDING_FLUX_K;
     // Each machine = an UPPER body (the marked front: field + control column) standing on a black PLINTH set 6 cm back over its left two-thirds — the dispenser
     // opening, a real recess with a real shadow, its back wall marked black with the flap bar — and a flush block under the control column. (+3 boxes a machine
-    // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.)
-    const plinth: Vec3 = [0.02, 0.02, 0.024];
-    const bodyA: Vec3 = [0.42, 0.05, 0.045], hA: Vec3 = [0.5, 0.775, 0.45];       // the red machine: painted red body (satin: rough 0.5 — just over high's traced range)
-    let marksA = MD.vendingRedMarks(hA, 1, TX);
-    { const st = markStats(marksA[0], bodyA, TX); const k = LA / Math.max(lum(st.meanL) * st.area, 1e-6); marksA = MD.vendingRedMarks(hA, k, TX); }
-    const vendA = add({ c: [28.62, 1.125, 12.9], h: hA, albedo: bodyA, rough: 0.5, ...mk(marksA) });
+    // over the single body; footprint and height unchanged, so the nav grid and the collision are what they were.) The body, its paint and its calibrated marks are
+    // vendingSpec's (below: the smoke lab's floor stands the same two machines in its yard).
+    const A = vendingSpec('red', TX, VENDING_FLUX_K), B = vendingSpec('blue', TX, VENDING_FLUX_K), plinth = A.plinth;
+    const vendA = add({ c: [28.62, 1.125, 12.9], h: A.h, albedo: A.body, rough: 0.5, ...mk(A.marks) });
     add({ c: [28.47, 0.175, 12.87], h: [0.35, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.35, 0.175, 0.42], TX)) });   // A's dispenser recess (x 28.12‥28.82, 6 cm back)
     add({ c: [28.97, 0.175, 12.9], h: [0.15, 0.175, 0.45], albedo: plinth });                                                          // flush block under A's column
     switchables.push({ name: 'vending', boxes: [vendA], group: 'breakroom', on: true, baseEmissive: [0, 0, 0] });
-    const bodyB: Vec3 = [0.02, 0.03, 0.085], hB: Vec3 = [0.42, 0.775, 0.45];       // the blue machine: near-black navy body (its field's cap and frame)
-    let marksB = MD.vendingBlueMarks(hB, 1, TX);
-    { const st = markStats(marksB[0], bodyB, TX); const k = LB / Math.max(lum(st.meanL) * st.area, 1e-6); marksB = MD.vendingBlueMarks(hB, k, TX); }
-    const vendBBody = add({ c: [29.55, 1.125, 12.9], h: hB, albedo: bodyB, rough: 0.5, ...mk(marksB) });
+    const vendBBody = add({ c: [29.55, 1.125, 12.9], h: B.h, albedo: B.body, rough: 0.5, ...mk(B.marks) });
     add({ c: [29.415, 0.175, 12.87], h: [0.285, 0.175, 0.42], albedo: plinth, ...mk(MD.dispenserMarks([0.285, 0.175, 0.42], TX)) });   // B's dispenser recess (x 29.13‥29.70)
     add({ c: [29.835, 0.175, 12.9], h: [0.135, 0.175, 0.45], albedo: plinth });                                                          // flush block under B's column
     switchables.push({ name: 'vending2', boxes: [vendBBody], group: 'breakroom', on: true, baseEmissive: [0, 0, 0] });

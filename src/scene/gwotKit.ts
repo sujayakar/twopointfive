@@ -24,7 +24,8 @@ import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanva
 
 const H = WORLD.ceilingY;
 
-import { GWOT_PALETTE, GWOT_FINISH, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
+import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
+import { pieces } from './library';
 export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
@@ -169,6 +170,7 @@ export function gwotKit(host: GwotHost) {
     wallX(z, x0, x1, kind, openings, height);
     for (const [a, b] of runs(x0, x1, openings, height)) host.add({ c: [(a + b) / 2, height + 0.035, z], h: [(b - a) / 2, 0.035, GW_SHELL / 2 + 0.03], albedo: M.mudLight.albedo, rough: M.mudLight.rough });
   };
+  /** a COMPOUND (yard) wall along Z at fixed x: as yardWallX */
   const yardWallZ = (x: number, z0: number, z1: number, kind: WallKind = 'mud', openings: GwotOpening[] = [], height = 2.4) => {
     wallZ(x, z0, z1, kind, openings, height);
     for (const [a, b] of runs(z0, z1, openings, height)) host.add({ c: [x, height + 0.035, (a + b) / 2], h: [GW_SHELL / 2 + 0.03, 0.035, (b - a) / 2], albedo: M.mudLight.albedo, rough: M.mudLight.rough });
@@ -181,6 +183,7 @@ export function gwotKit(host: GwotHost) {
     const off = line + side * (t / 2 + 0.004), m = M[mat];
     host.add({ c: axis === 'x' ? [(a + b) / 2, top / 2, off] : [off, top / 2, (a + b) / 2], h: axis === 'x' ? [Math.abs(b - a) / 2, top / 2, 0.004] : [0.004, top / 2, Math.abs(b - a) / 2], albedo: m.albedo, rough: m.rough, flags: DECAL });
   };
+  /** DECAL: a painted DADO: the band of `skirt` in a paint, to 1.1 m up the wall's face */
   const dado = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, paint: Paint = 'paintBlue', t = GW_SHELL) => skirt(axis, line, a, b, side, paint, 1.1, t);
   /** DECAL: a small rug / cloth hung flat on a wall face, its middle at `at` along the wall, 1.2‥2.0 m up */
   const wallHanging = (axis: 'x' | 'z', line: number, at: number, side: 1 | -1, style: RugStyle = 'baluch', w = 1.2, hgt = 0.8, t = GW_SHELL) => {
@@ -211,38 +214,64 @@ export function gwotKit(host: GwotHost) {
   };
 
   // --------------------------------------------------------------- ground ----
+  /** WHAT LIES ON WHAT, on the ground: the TOP of each kind of flat thing (m). A finish is the ground; a stain is that ground in a darker tone, so what was
+   *  driven over the ground (ruts) and what lies on it (a patch of another row's stuff, a seep) show over it. One table, read by every piece below and
+   *  handed out as `lie` with `flatAt` (a generator's own flat helper reads them too: `flatAt(lie.patch)` is a patch's centre). Two decals of one kind that overlap are
+   *  parted by the exporter in the order they were laid (tools/levels/flatLayers.ts). Heights are from the lot's top, y = 0: a finish laid thicker than
+   *  `stain` wants the stain's own `y` said. */
+  const lie = { finish: 0.004, stain: 0.012, ruts: 0.014, patch: 0.015 } as const, FLAT = 0.003;
+  /** the centre of a decal whose top is at `top` (to a tenth of a millimetre, so a file holds 0.009 and not its nearest double) */
+  const flatAt = (top: number) => Math.round((top - FLAT) * 1e4) / 1e4;
   /** a GROUND finish over a rectangle (a thin solid slab like the kits' floor finishes: feet, rounds and light land on it): dust | dirt | gravel | mudFloor | slab */
-  const ground = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dust', y = 0.004) =>
-    host.add({ c: [(x0 + x1) / 2, y / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, y / 2, Math.abs(z1 - z0) / 2], albedo: M[mat].albedo, rough: M[mat].rough });
+  const ground = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dust', y: number = lie.finish) => {
+    laid.push({ x0: Math.min(x0, x1), z0: Math.min(z0, z1), x1: Math.max(x0, x1), z1: Math.max(z0, z1), y, mat });
+    return host.add({ c: [(x0 + x1) / 2, y / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, y / 2, Math.abs(z1 - z0) / 2], albedo: M[mat].albedo, rough: M[mat].rough });
+  };
+  /** every finish `ground` has laid, in order */
+  const laid: { x0: number; z0: number; x1: number; z1: number; y: number; mat: GwotMat }[] = [];
+  /** THE GROUND AT (x, z): the finish this kit laid there, the highest one over the point and of two as high the later; UNDEFINED where it laid none.
+   *  What a piece that is the ground's own paint in another tone asks, so nobody writes the ground twice: a hearth's trodden ash. It knows only `ground`'s
+   *  rectangles laid BEFORE the ask: a floor a level lays some other way (the host kit's slab, a room's floor) is unknown here, and a piece that needs it
+   *  refuses to guess. */
+  const groundAt = (x: number, z: number): GwotMat | undefined => {
+    let at: (typeof laid)[number] | undefined;
+    for (const g of laid) if (x >= g.x0 && x <= g.x1 && z >= g.z0 && z <= g.z1 && (!at || g.y >= at.y)) at = g;
+    return at?.mat;
+  };
   /** DECAL: a patch on the ground — a damp spot, an oil stain, a drift of dust, a scatter of gravel (w × d, any yaw). ANOTHER row's stuff lying on the
    *  ground; for the same ground darker (wet, worn) use `stain` */
-  const patch = (x: number, z: number, w: number, d: number, mat: GwotMat = 'damp', yaw = 0, y = 0.012) =>
-    host.add({ c: [x, y, z], h: [w / 2, 0.003, d / 2], yaw, albedo: M[mat].albedo, rough: M[mat].rough, flags: DECAL });
+  const patch = (x: number, z: number, w: number, d: number, mat: GwotMat = 'damp', yaw = 0, y: number = flatAt(lie.patch)) =>
+    host.add({ c: [x, y, z], h: [w / 2, FLAT, d / 2], yaw, albedo: M[mat].albedo, rough: M[mat].rough, flags: DECAL });
   /** DECAL: a vehicle's two wheel RUTS from (x0, z0) to (x1, z1), 1.5 m apart */
   const ruts = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dirt') => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 1, yaw = Math.atan2(-(z1 - z0), x1 - x0), b = piece((x0 + x1) / 2, (z0 + z1) / 2, yaw);
-    for (const s of [-0.75, 0.75]) b(0, s, 0.008, 0.014, L / 2, 0.16, M[mat], { flags: DECAL });
+    for (const s of [-0.75, 0.75]) b(0, s, flatAt(flatAt(lie.ruts)), lie.ruts, L / 2, 0.16, M[mat], { flags: DECAL });
   };
-  /** WALK-OVER: a scatter of rubble / field stones within r of (x, z) — n small blocks under 0.19 m (lit and shadowed; nobody trips on them) */
+  /** WALK-OVER: a scatter of rubble / field stones within r of (x, z) — n small blocks under 0.19 m (lit and shadowed; nobody trips on them). ALL OF IT IS
+   *  `mat`: three stones in ten are its darker row where the palette holds one (gwotPalette.ts GWOT_DARKER: mud's is mudDark), standing for what `mat` is to
+   *  a round, so a scatter is one thing in two tones and never a second paint; a stone has the row's whole finish (bits of tin sheet are metal). (Those
+   *  three were mudDark whatever was asked: pale clods among dark gravel, mud among offcuts of poplar.) */
   const rubble = (x: number, z: number, r = 0.8, n = 7, mat: GwotMat = 'mud') => {
-    const s = seedOf(x, z);
+    const s = seedOf(x, z), darker = GWOT_DARKER[mat], second = darker ? as(darker, GWOT_SIM[mat]) : M[mat];
     for (let k = 0; k < n; k++) {
-      const a = h01(s, k, 1) * Math.PI * 2, d = Math.sqrt(h01(s, k, 2)) * r, w = 0.07 + h01(s, k, 3) * 0.13, hgt = 0.05 + h01(s, k, 4) * 0.12, m = h01(s, k, 5) < 0.3 ? M.mudDark : M[mat];
-      host.add({ c: [x + Math.cos(a) * d, hgt / 2, z + Math.sin(a) * d], h: [w, hgt / 2, w * (0.6 + h01(s, k, 6) * 0.6)], yaw: h01(s, k, 7) * Math.PI, albedo: m.albedo, rough: m.rough });
+      const a = h01(s, k, 1) * Math.PI * 2, d = Math.sqrt(h01(s, k, 2)) * r, w = 0.07 + h01(s, k, 3) * 0.13, hgt = 0.05 + h01(s, k, 4) * 0.12, m = h01(s, k, 5) < 0.3 ? second : M[mat];
+      host.add({ c: [x + Math.cos(a) * d, hgt / 2, z + Math.sin(a) * d], h: [w, hgt / 2, w * (0.6 + h01(s, k, 6) * 0.6)], yaw: h01(s, k, 7) * Math.PI, albedo: m.albedo, rough: m.rough, ...(m.metal ? { metal: true } : {}) });
     }
   };
 
   /** DECAL: a STAIN that is its ground's own paint darker — wet concrete under a tap, a floor walked dark under a bench. `ground` = the finish it lies on,
-   *  `k` of it (STYLE.md: a patch is darker than its ground and never under a third of it; see `toned`). Wet reads smoother than dry */
-  const stain = (x: number, z: number, w: number, d: number, ground: GwotMat, yaw = 0, k = 0.66, y = 0.012) =>
-    host.add({ c: [x, y, z], h: [w / 2, 0.003, d / 2], yaw, albedo: toned(ground, k), rough: Math.max(0.3, M[ground].rough - 0.35), flags: DECAL });
+   *  `k` of it (STYLE.md: a patch is darker than its ground and never under a third of it; see `toned`). Wet reads smoother than dry. IT LIES UNDER A
+   *  VEHICLE'S RUTS AND UNDER A PATCH (`lie`: a stain is the ground, and what was driven or laid over the ground shows over it; at the patch's height it
+   *  painted the ruts out where they crossed). `y` = its centre, for the one that is meant to lie on something: `flatAt(lie.patch)` is soot over a damp spot */
+  const stain = (x: number, z: number, w: number, d: number, ground: GwotMat, yaw = 0, k = 0.66, y: number = flatAt(lie.stain)) =>
+    host.add({ c: [x, y, z], h: [w / 2, FLAT, d / 2], yaw, albedo: toned(ground, k), rough: Math.max(0.3, M[ground].rough - 0.35), flags: DECAL });
   /** DECAL: a SEEP — where water runs out under a wall and stands: darker earth from (x0, z0) to (x1, z1), in lengths that overlap and wander. The line is
    *  the stain's MIDDLE and a length is up to 1.15 m across: lay it 0.6 m out from the wall's face, not on the wall's own line. `mat` is darker than the
    *  ground it lies on (dirt on dust, damp on dirt) */
   const seep = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'dirt') => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 1, n = Math.max(2, Math.round(L / 2.3)), yaw = Math.atan2(-(z1 - z0), x1 - x0), nx = -(z1 - z0) / L, nz = (x1 - x0) / L, s = seedOf(x0 + x1, z0 + z1);
     for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, off = (h01(s, k, 1) - 0.5) * 0.3;
-      patch(x0 + (x1 - x0) * t + nx * off, z0 + (z1 - z0) * t + nz * off, L / n * 1.2, 0.7 + h01(s, k, 2) * 0.45, mat, yaw + (h01(s, k, 3) - 0.5) * 0.18, 0.012 + 0.001 * (k % 2)); }
+      patch(x0 + (x1 - x0) * t + nx * off, z0 + (z1 - z0) * t + nz * off, L / n * 1.2, 0.7 + h01(s, k, 2) * 0.45, mat, yaw + (h01(s, k, 3) - 0.5) * 0.18, flatAt(lie.patch) + 0.001 * (k % 2)); }
   };
   /** WALK-OVER: KERB STONES — painted stones from (x0, z0) to (x1, z1), `pitch` metres from one to the next (a stride by default; 0.3 = stone against
    *  stone): the edge of a government yard, the side of a track (each 0.26 long, under 0.14 m high) */
@@ -260,10 +289,13 @@ export function gwotKit(host: GwotHost) {
     for (let r = 0; r < rows; r++) { const lz = rows > 1 ? (r - (rows - 1) / 2) * (wid - 0.44) / (rows - 1) : 0, a = -hl + 0.22, e = hl - 0.22, gap = a + (e - a) * (0.25 + 0.5 * h01(s, r, 1)), top = 0.14 + h01(s, r, 2) * 0.03;
       b((a + gap - 0.14) / 2, lz, 0.08, top, (gap - 0.14 - a) / 2, 0.035, M.prodGreen); b((gap + 0.14 + e) / 2, lz, 0.08, top - 0.01, (e - gap - 0.14) / 2, 0.035, M.prodGreen); }
   };
-  /** WALK-OVER: a cold HEARTH — a ring of stones, two charred lengths, the ash trodden round it: where a watch sat last night. `ash` is the patch's paint:
-   *  damp reads on earth (dust, dirt, gravel); on a paler floor name one that is not under a third of it */
-  const hearth = (x: number, z: number, yaw = 0, ash: GwotMat = 'damp') => {
-    const b = piece(x, z, yaw); patch(x, z, 1.5, 1.3, ash, yaw + 0.3);
+  /** WALK-OVER: a cold HEARTH — a ring of stones, two charred lengths, the ash trodden round it: where a watch sat last night. The trodden ash is a
+   *  `stain`: the ground's own paint, darker. `ground` = the finish the fire was lit on: what the kit laid there (`groundAt`). Where the kit laid
+   *  none (a level's own slab) the caller names it, and a hearth that is told nothing there THROWS: it does not guess. (It was a patch of `damp` whatever
+   *  it lay on: a black square on moonlit dust.) */
+  const hearth = (x: number, z: number, yaw = 0, ground: GwotMat | undefined = groundAt(x, z)) => {
+    if (!ground) throw new Error(`gwotKit: the hearth at (${x}, ${z}) stands on no ground this kit laid: name the finish it was lit on (hearth(x, z, yaw, ground))`);
+    const b = piece(x, z, yaw); stain(x, z, 1.5, 1.3, ground, yaw + 0.3);
     for (let k = 0; k < 7; k++) { const a = k * Math.PI * 2 / 7; b(Math.cos(a) * 0.4, Math.sin(a) * 0.4, 0, 0.09 + 0.03 * (k % 3), 0.09, 0.065, M.mudDark, {}, Math.PI / 2 - a); }
     b(0.02, 0, 0, 0.05, 0.22, 0.035, M.woodGrey, {}, 0.5); b(-0.03, 0.02, 0, 0.06, 0.2, 0.03, M.woodGrey, {}, -0.7);
   };
@@ -610,10 +642,10 @@ export function gwotKit(host: GwotHost) {
     host.lights.push({ kind: 'spot', pos: [x + dx * 0.2, height, z + dz * 0.2], dir: [dx * 0.8, -0.6, dz * 0.8], color: [0.92, 0.96, 1.0], intensity: 210, range: 20, innerDeg: 38, outerDeg: 70, name, group: 'exterior', enabled: on, volumetric: 0.14, fixtureBox: fb, radius: 0.14, mains, broad: true });
   };
 
-  return {
-    M, mk, face, marksOf, piece,
+  // the kit's TOOLS, then its PIECES by name (scene/library.ts: the catalogue, docs/library.md, is written from this list)
+  return { M, mk, face, marksOf, piece, as, groundAt, lie, flatAt, ...pieces('gwotKit', {
     // walls
-    as, wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
+    wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
     // ground
     ground, patch, ruts, rubble, stain, seep, kerbStones, kerb, plantBed, hearth,
     // cloth & beds
@@ -626,7 +658,7 @@ export function gwotKit(host: GwotHost) {
     generator, waterTank, pump, pickup, van, motorbike, handcart, stall, container, satDish, bush,
     // lights
     wire, bulb, lantern, tube, floodLight,
-  };
+  }) };
 }
 export type GwotKit = ReturnType<typeof gwotKit>;
 
