@@ -4,11 +4,10 @@
 //                                                              the drum standing, the wood pile's plain boxes for the drum lying) — every line must FAIL
 // Each piece is laid alone in a kit stood up empty (tools/qa/kit-stand.ts). WHAT IS HELD, over EVERY row of the palette (a row added tomorrow is asked
 // the same; a level may paint a drum in any of them):
-//   1 steel      a drum standing and a drum lying, in any row, is METAL to everything of the game that reads a paint: the simulation's table
-//                (gwotPalette.ts gwotSimOf), what a round's hit looks like by colour (game/particleFx.ts surfOf) and what a blast breaks it as
-//                (game/furnblast.ts breakClassOf: metal, never the wood a wall charge chews), and with a hit read from what a thing SAYS
-//                (particleFx.ts HITSTUFF, raised here) it is metal or leaves the hit to its colour. It wears the row to the eye (its colour within a
-//                stand-in's hair of the row's) and is known as the row's paint (scene/stuff.ts paintOf). WHAT IT SAYS: the row's own word where the
+//   1 steel      a drum standing and a drum lying, in any row, is STEEL to the rules: it says it does what steel does (Box.does, the row 'steel' of
+//                scene/materials.ts), so a round's hit knocks out of it what metal gives and a blast breaks it as metal (never the wood a wall
+//                charge chews), and with a hit read from what a thing is DRAWN as (particleFx.ts HITSTUFF, raised here) it is metal or leaves the hit
+//                to what it does. It wears the row to the eye (the row's own numbers) and is known as the row's paint (scene/stuff.ts paintOf). WHAT IT SAYS: the row's own word where the
 //                row is a coat or metal already (`paint`, `enamel`, a row the table reads as metal); in every other row `paint`, with a drum enamel's
 //                finish, never the row's stuff (a drum in the colour of mud is not made of mud). Until 11-05 an olive drum was an ammunition crate's
 //                dark wood to a round, and a level that wanted a steel one picked another colour
@@ -22,36 +21,36 @@
 // judged here; the shape rule's own check (tools/qa/shapes-check.ts) holds what a round box is to a ray and a walker.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
-import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, gwotSimOf } from '../../src/scene/gwotPalette';
-import { paintOf, stuffOfName } from '../../src/scene/stuff';
-import { surfOf, saidSurf, HITSTUFF } from '../../src/game/particleFx';
-import { breakClassOf } from '../../src/game/furnblast';
+import { GWOT_PALETTE, GWOT_FINISH } from '../../src/scene/gwotPalette';
+import { paintOf, stuffOfName, doesOfName } from '../../src/scene/stuff';
+import { doesOf, DOES_DEFAULT } from '../../src/scene/materials';
+import { saidSurf, HITSTUFF } from '../../src/game/particleFx';
 import { laid, lines, ROWS, type Kit } from './kit-stand';
 
 const BREAK = process.env.KITSTORES_BREAK === '1', { check, failed } = lines();
 const solid = (b: Box) => !(b.flags & BoxFlag.NoShadow), top = (b: Box) => b.c[1] + b.h[1];
-const near = (a: readonly number[], b: readonly number[]) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]), Math.abs(a[2] - b[2])) <= 0.0025;   // (a stand-in is the row's colour at most three steps of 0.0008 off a channel: gwotPalette.ts shifted)
-/** is this paint metal to everything of the game that reads one? and what it is where it is not */
+const near = (a: readonly number[], b: readonly number[]) => Math.max(Math.abs(a[0] - b[0]), Math.abs(a[1] - b[1]), Math.abs(a[2] - b[2])) <= 0;   // (a stand-in is the row's own numbers: gwotPalette.ts gwotAs)
+/** does this box do what steel does, to everything of the game that asks? and what it does where it does not */
 HITSTUFF.on = true;   // (what a hit reads from a thing's word is asked too, whatever the stand)
-const readAs = (b: Box): string[] => { const a = b.albedo as Vec3, said = saidSurf(b); return [gwotSimOf(a) === 'metal' ? '' : `the table: ${gwotSimOf(a) ?? 'no palette colour'}`, surfOf(a) === 'metal' ? '' : `a hit by colour: ${surfOf(a)}`, said === undefined || said === 'metal' ? '' : `a hit by its word '${b.stuff}': ${said}`, breakClassOf(a) === 'metal' ? '' : `a blast: ${breakClassOf(a)}`].filter(x => x); };
+const readAs = (b: Box): string[] => { const d = doesOf(b), said = saidSurf(b); return [(b.does ?? DOES_DEFAULT) === 'steel' ? '' : `it says it does '${b.does ?? DOES_DEFAULT}'`, d.surf === 'metal' ? '' : `a hit: ${d.surf}`, said === undefined || said === 'metal' ? '' : `a hit by its word '${b.stuff}': ${said}`, d.breaks === 'metal' ? '' : `a blast: ${d.breaks}`].filter(x => x); };
 console.log(`\n=== kit stores: a drum is steel in any paint, and the one on its side is a round${BREAK ? ' (KITSTORES_BREAK: each line is asked of what a drum once was)' : ''} ===`);
 
 // 1. steel in every row, standing and lying; the row to the eye, the row's word to the picture
 { const wrong: string[] = []; let stoodIn = 0, coated = 0;
   for (const row of ROWS) for (const [how, lay] of [['standing', (G: Kit) => BREAK ? G.crates(0, 0, 0, 1, row) : G.drum(10, 10, row)], ['lying', (G: Kit) => BREAK ? G.crates(0, 0, 0, 1, row) : G.drumDown(10, 10, 0.3, row)]] as const) {
     const body = laid(lay).boxes.filter(b => solid(b) && top(b) > 0.2 && near(b.albedo, GWOT_PALETTE[row]));   // (the drum's own boxes: its chocks, under a hand high, are wood and are not asked)
-    const notSteel = [...new Set(body.flatMap(readAs))], rowWord = stuffOfName(row), own = rowWord === 'paint' || rowWord === 'enamel' || GWOT_SIM[row] === 'metal';
+    const notSteel = [...new Set(body.flatMap(readAs))], rowWord = stuffOfName(row), own = rowWord === 'paint' || rowWord === 'enamel' || doesOfName(row) === 'steel';
     const word = own ? (rowWord === 'plain' || rowWord === 'waits' ? undefined : rowWord) : 'paint', rough = own ? GWOT_FINISH[row]?.rough : GWOT_FINISH.drumBlue?.rough; if (!own) coated++;
     const unnamed = body.filter(b => paintOf(b.albedo)?.name !== row).length, unsaid = body.filter(b => b.stuff !== word).length, unfinished = rough === undefined ? 0 : body.filter(b => b.rough !== rough || (!own && paintOf(b.albedo)?.rough !== rough)).length;   // (the box's own roughness, and for a coat the finish its paint was said with: stuff.ts saidAs)
     if (!body.length || notSteel.length || unnamed || unsaid || unfinished) wrong.push(`${row} ${how}: ${body.length} boxes${notSteel.length ? `, not metal to ${notSteel.join(' · ')}` : ''}${unnamed ? `, ${unnamed} not known as the row's paint` : ''}${unsaid ? `, ${unsaid} not saying ${word ? `'${word}'` : 'nothing'} (says '${body.find(b => b.stuff !== word)?.stuff}')` : ''}${unfinished ? `, ${unfinished} not of roughness ${rough}` : ''}`);
-    if (body.some(b => b.albedo[0] !== GWOT_PALETTE[row][0] || b.albedo[1] !== GWOT_PALETTE[row][1] || b.albedo[2] !== GWOT_PALETTE[row][2])) stoodIn++;
+    if (body.some(b => (b.albedo as readonly number[]) !== GWOT_PALETTE[row] && paintOf(b.albedo)?.does !== doesOfName(row))) stoodIn++;   // (a stand-in: the row's numbers as a paint of their own, that does another thing than the row)
   }
-  check(wrong.length === 0 && stoodIn > 0 && coated > 0 && coated < ROWS.length * 2, `1 a drum, standing or lying, in any of the palette's ${ROWS.length} rows is metal to the simulation's table, to a round's hit by its colour and by its word, and to a blast; it wears the row to the eye and is known as the row's paint; it says the row's word where the row is a coat or metal and 'paint' with an enamel's finish in any other`,
+  check(wrong.length === 0 && stoodIn > 0 && coated > 0 && coated < ROWS.length * 2, `1 a drum, standing or lying, in any of the palette's ${ROWS.length} rows says it does what steel does: metal to a round's hit, by what it does and by its word, and to a blast; it wears the row to the eye and is known as the row's paint; it says the row's word where the row is a coat or metal and 'paint' with an enamel's finish in any other`,
     `${ROWS.length * 2} drums laid, ${stoodIn} of them in a stand-in, ${coated} of them a coat over a row that is neither a coat nor metal${wrong.length ? ' · ' + wrong.slice(0, 5).join(' · ') + (wrong.length > 5 ? ` · and ${wrong.length - 5} more` : '') : ''}`); }
 
 // 2. the drums a level is dealt (dealt at several places: a place deals by its own seed)
 { const body: Box[] = []; for (const [x, z] of [[10, 10], [14.5, 7.25], [22, 31], [3.3, 18.9], [27.1, 5.6], [8.9, 20.3]]) body.push(...laid(G => BREAK ? G.crates(x, z, 0, 3, 'olive') : G.drums(x, z, 6)).boxes.filter(solid));
-  const paints = [...new Set(body.map(b => paintOf(b.albedo)?.name ?? '?'))].sort(), notMetalRow = paints.filter(n => n in GWOT_PALETTE && gwotSimOf(GWOT_PALETTE[n as keyof typeof GWOT_PALETTE]) !== 'metal');
+  const paints = [...new Set(body.map(b => paintOf(b.albedo)?.name ?? '?'))].sort(), notMetalRow = paints.filter(n => n in GWOT_PALETTE && doesOfName(n) !== 'steel');
   const notSteel = body.filter(b => readAs(b).length);
   check(body.length >= 36 * 4 && notSteel.length === 0 && paints.length >= 3 && notMetalRow.length > 0, '2 the drums `drums` deals are steel, each of them, in the paints it deals from, one at least of which is not metal by its row',
     `${body.length} boxes of thirty-six drums in ${paints.join(', ')} (not metal by the row: ${notMetalRow.join(', ') || 'NONE: the line asks nothing'}) · ${notSteel.length} not metal to a round${notSteel.length ? ` (${[...new Set(notSteel.flatMap(readAs))].join(' · ')})` : ''}`); }
