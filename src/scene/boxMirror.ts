@@ -1,0 +1,332 @@
+// THE BOX WORLD'S COPY IN THE RUST MODULE — what src/scene/collision.ts hands the systems that have moved to Rust (docs/agents/rust.md, "the box world's copy").
+//
+// WHOSE THE BOXES ARE. A box is a TypeScript object, and every rule that moves, hides, cuts or flags one writes that object. While those rules are TypeScript the
+// objects are THE TRUTH and the module holds a copy (rust/sim/src/world.rs): flat tables a question there can walk without leaving the module. This file writes
+// the copy and answers the one question a copy raises — is it the boxes as they are NOW:
+//   · the copy answers only INSIDE A TICK (Game.stepSeats opens and shuts it). Outside one — the page's own questions, a tool's, a snapshot put back, a level
+//     edited in the viewer — the TypeScript answers as it always did, and nobody has to say what they wrote.
+//   · as a tick opens, EVERY static is compared with its row, value for value, and a row that differs is written again (about 25 µs for a level's 1,200
+//     boxes). So whatever happened between ticks is in the copy before the first question, with no list of who may have written.
+//   · inside the tick, a rule that writes a static's shape or flags and asks again before the tick ends says so (StaticCollision.wrote), and the leaves — which
+//     swing every tick and are swapped for lists of a question's own — are copied by list (the list, its length, and a count that every write of a leaf moves:
+//     `leafWrote`, said where a leaf is written).
+//   · a snapshot put back (game/rollback.ts) writes into the same objects: every copy is shut there and then (`mirrorsShut`), and made afresh, grid and
+//     all, as its game's next tick opens (math/side.ts PUT_BACKS).
+// tools/qa/rust-check.ts holds it: with the check's own switch every question of a played mission is answered both ways and the two compared, and every row of
+// the copy is compared with its box at each question — so a write that forgot to say so is a counted miss, not a wrong game.
+//
+// A LEVEL TOO BIG FOR A TABLE is not copied (`live` stays false) and the TypeScript answers: slower, never wrong.
+//
+// The copy is a cache of the host's: in no snapshot, never compared, a game's own (HostOwned). The module holds WORLDS of them — a game a world, the least
+// recently stepped one giving way.
+import { HostOwned, PUT_BACKS } from '../math/side';
+import { mathsEpoch } from '../math/exact';
+import { sim, f64, u32, i32, RUST, type SimExports } from '../sim/sim';
+import { cutConfig, MAX_CUT_PLANES } from './cut';
+import { shapeCut, type Box } from './boxes';
+
+// rust/sim/src/world.rs: a row's doubles, the kinds, the tables by number
+const REC = 16, R_COS = 6, R_SIN = 7, R_YAW = 8, R_ROT = 9, R_CUT = 13, R_CUTN = 14, R_KIND = 15, K_ROT = 1, K_ROUND = 2, K_CUT = 4, K_WALK = 8, F_GLASS = 1 << 17;
+const T_REC = 0, T_LEAF = 1, T_CUT = 2, T_PANE_T = 3, T_FLAGS = 4, T_LEAF_FLAGS = 5, T_START = 6, T_ITEMS = 7, T_TILTED = 8, T_PANE_BI = 9, T_WORLDS = 10, T_PT = 12, T_LIST = 13, T_THING = 14, T_THING_LIVE = 15;
+// …the furniture's tables: which list of the leaves its parts are, the doubles kept of a thing by its id (x, z, yaw, radius), the words of a thing in the level (id, where its parts start, how many)
+const THING_SET = 2, TH = 4, TL = 3;
+const PLANE = 4, CUT_ROW = MAX_CUT_PLANES * PLANE;
+
+/** who holds each of the module's worlds, and a count that says who stepped last (the host's: which game has which table is no part of any game) */
+const HELD: (BoxMirror | null)[] = [];
+const CLOCK = { n: 0 };
+/** the copies made afresh in this process, counted: a copy's number (`gridDrop`) is no other copy's */
+const COPIES = { n: 0 };
+/** how many times a leaf has been written (the host's count; a copy of the leaves is good while it stands where it stood when the copy was made) */
+export const LEAVES = { n: 0 };
+/** A LEAF WAS WRITTEN — said by the three places that write one: a door placing its leaf (game/doors.ts Door.place), a door putting its leaf back whole
+ *  (Door.reset), a slab posed off its hinges (game/doorblast.ts poseSlab). Whoever calls those, and when, is no part of the rule. */
+export function leafWrote(): void { LEAVES.n++; }
+/** how many times the furniture has been written: a thing placed (game/props.ts Prop.place — the one place a part's box is written), a thing taken out of
+ *  the level or the level put back (the list the parts are copied in changed). The host's count, as LEAVES is. */
+export const THINGS = { n: 0 };
+export function thingWrote(): void { THINGS.n++; }
+/** the furniture as the copy reads it (game/props.ts PropSystem): every thing by its id, and the ones in the level now in the furniture's own order */
+export interface Furniture { readonly all: readonly FurnitureThing[]; readonly props: readonly FurnitureThing[] }
+export interface FurnitureThing { readonly id: number; readonly x: number; readonly z: number; readonly yaw: number; readonly radius: number; readonly boxes: readonly Box[] }
+/** A SNAPSHOT WAS PUT BACK (game/rollback.ts): no copy stands. Every game's is shut where it is — a put-back inside a tick (a checkpoint loaded by the
+ *  step's own last lines) leaves the TypeScript answering for what is left of it — and is made afresh as its next tick opens (PUT_BACKS). */
+export function mirrorsShut(): void { for (const h of HELD) if (h) h.shut(); }
+
+/** THE FLAGS THE COPY KEEPS (scene/boxes.ts BoxFlag): the ones a question of the CPU's is asked by — NoShadow and Dynamic of the low byte, and everything from
+ *  bit 16 up (SoundSeal, Glass, Thin, Bar: the CPU's own). The rest of the low byte says how a box is DRAWN (Gloss comes and goes with the rain) and the second
+ *  byte whose it is: a write to those is no news here. A question asked by any other flag is answered by the TypeScript (collision.ts). */
+export const MIRRORED = (2 | 8 | ~0xffff) >>> 0;
+/** THE SENSES' ROWS (sim.ts RUST.sight … paths), a bit each: what a tick opens the copy for beside the lines, the circles and the fog's pass */
+export const SENSES = { sight: 1, light: 2, smoke: 4, sound: 8, paths: 16 } as const;
+/** THE NUMBERS THE HOST SHARES WITH THE SENSES' RUST, under the names they have there (light.rs LAMP: doubles a lamp · smoke.rs BLOB: doubles a blob ·
+ *  hear.rs: what the straight lines said, and the way round · sight.rs: the question's bits and the answer's). tools/qa/rust-check.ts reads the Rust
+ *  sources and is red where one of them is another number there. */
+export const FACE = { LAMP: 15, BLOB: 6, GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
+/** …and which of them are on now */
+export function senseRows(): number { return (RUST.sight ? SENSES.sight : 0) | (RUST.light ? SENSES.light : 0) | (RUST.smoke ? SENSES.smoke : 0) | (RUST.sound ? SENSES.sound : 0) | (RUST.paths ? SENSES.paths : 0); }
+const kindOf = (b: Box, cutOn: boolean): number => (b.rot ? K_ROT : 0) | (b.round === true ? K_ROUND : 0) | (b.cut !== undefined && (cutOn || shapeCut(b)) && b.cut.length > 0 ? K_CUT : 0);   // (boxes.ts cutMet: a shape's record whatever the cut-pieces switch says; a piece of trim's only with that switch, as the picture)
+/** a walker's rule for a pane (collision.ts glassWalkable), or none */
+type Walk = ((bi: number) => boolean) | null;
+/** …a static's kind: with the pane rule's answer for it as it stands (the leaves are nobody's panes) */
+const kindAt = (b: Box, i: number, cutOn: boolean, walk: Walk): number => walk !== null && (b.flags & F_GLASS) !== 0 && walk(i) ? kindOf(b, cutOn) | K_WALK : kindOf(b, cutOn);
+/** is row `o` (flags at `fi`) box b as it stands — every double by its bits (a −0 is not a 0, a NaN is itself) */
+function same(m: Float64Array, fl: Uint32Array, o: number, fi: number, b: Box, kind: number, cut0: number): boolean {
+  const c = b.c, h = b.h;
+  if (!Object.is(m[o], c[0]) || !Object.is(m[o + 1], c[1]) || !Object.is(m[o + 2], c[2]) || !Object.is(m[o + 3], h[0]) || !Object.is(m[o + 4], h[1]) || !Object.is(m[o + 5], h[2])
+    || !Object.is(m[o + R_YAW], b.yaw) || fl[fi] !== ((b.flags & MIRRORED) >>> 0) || m[o + R_KIND] !== kind) return false;
+  if (kind === 0) return true;
+  if (kind & K_ROT) { const q = b.rot!; if (!Object.is(m[o + R_ROT], q[0]) || !Object.is(m[o + R_ROT + 1], q[1]) || !Object.is(m[o + R_ROT + 2], q[2]) || !Object.is(m[o + R_ROT + 3], q[3])) return false; }
+  if (kind & K_CUT) {
+    const cut = b.cut!, n = cut.length < MAX_CUT_PLANES ? cut.length : MAX_CUT_PLANES; if (m[o + R_CUTN] !== n) return false;
+    let p = cut0 + m[o + R_CUT] * CUT_ROW;
+    for (let k = 0; k < n; k++, p += PLANE) { const pl = cut[k], v = pl.n; if (!Object.is(m[p], v[0]) || !Object.is(m[p + 1], v[1]) || !Object.is(m[p + 2], v[2]) || !Object.is(m[p + 3], pl.d)) return false; }
+  }
+  return true;
+}
+/** write box b into row `o`; its cut record, if it has one, into record `cutRow`. The cos and sin of its yaw are worked out HERE, by the maths in Math's place —
+ *  the two numbers the TypeScript's own walk would work out — so the module asks for neither. */
+function put(m: Float64Array, fl: Uint32Array, o: number, fi: number, b: Box, kind: number, cut0: number, cutRow: number): void {
+  const c = b.c, h = b.h, yaw = b.yaw;
+  m[o] = c[0]; m[o + 1] = c[1]; m[o + 2] = c[2]; m[o + 3] = h[0]; m[o + 4] = h[1]; m[o + 5] = h[2];
+  m[o + R_COS] = Math.cos(yaw); m[o + R_SIN] = Math.sin(yaw); m[o + R_YAW] = yaw; m[o + R_KIND] = kind; fl[fi] = (b.flags & MIRRORED) >>> 0;
+  if (kind & K_ROT) { const q = b.rot!; m[o + R_ROT] = q[0]; m[o + R_ROT + 1] = q[1]; m[o + R_ROT + 2] = q[2]; m[o + R_ROT + 3] = q[3]; }
+  if (kind & K_CUT) {
+    const cut = b.cut!, n = cut.length < MAX_CUT_PLANES ? cut.length : MAX_CUT_PLANES; m[o + R_CUT] = cutRow; m[o + R_CUTN] = n;
+    let p = cut0 + cutRow * CUT_ROW;
+    for (let k = 0; k < n; k++, p += PLANE) { const pl = cut[k], v = pl.n; m[p] = v[0]; m[p + 1] = v[1]; m[p + 2] = v[2]; m[p + 3] = pl.d; }
+  }
+}
+
+export class BoxMirror extends HostOwned {
+  /** the module, from the first tick this game opens with a row on (a game is made on runtimes that cannot run it too) */
+  x!: SimExports;
+  /** which of the module's worlds is this game's (−1 = none now: another game took it) */
+  slot = -1;
+  /** THE COPY STANDS: inside a tick, proven as it opened. Only then may a question go to the module. */
+  live = false;
+  /** …and the line tests are to be asked there (the copy stands, RUST.lines was on as the tick opened, and no static has been written since it was compared) */
+  lines = false;
+  /** …and a ray into the boxes (the same, by RUST.rays: a row of its own, so that the lines' row can be on without it) */
+  rays = false;
+  /** …and a circle against the boxes (the same, by RUST.circles) */
+  circles = false;
+  /** …and the fog of war's sight pass (the same, by RUST.fog) */
+  sight = false;
+  /** …and the senses' own questions, a bit a row (SENSES; the same, by RUST.sight, light, smoke, sound and paths) */
+  senses = 0;
+  /** a static was written since the statics were compared: the next question owes the compare (`again`) */
+  owes = false;
+  private rowLines = false; private rowRays = false; private rowCircles = false; private rowSight = false; private rowSenses = 0; private walk: Walk = null;
+  /** where this game's eyes of a sight pass are written (an index into the doubles) */
+  eyes = 0;
+  /** where a pushed circle ends (an index into the doubles), and the statics a gather listed (into the words) with how many it can list */
+  pt = 0; list = 0; listCap = 0;
+  /** the module's scratch (an index into the doubles), and the tables a sense's question is written to: the lamps and the blobs (into the doubles, and how
+   *  many each holds), the nav grid's shut cells (into the bytes, and how many) and a way's waypoints (into the doubles). One set a process: each is scratch
+   *  of the one question that wrote it. */
+  scratch = 0; scratchLen = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; wind = 0; windCap = 0; navShut = 0; navCap = 0; way = 0;
+  /** one question's lamps and blobs as they are written (collision.ts lampsBegin … lampsOn, blobsBegin … blobsAlong): the leaves' list to ask with, how many so far */
+  lampSet = -2; lampN = 0; blobSet = -2; blobN = 0;
+  /** WHAT A SMOKE GRID THAT STEPS OVER THIS COPY GOES BY (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): the copy's NUMBER, given anew whenever every
+   *  row of it is written afresh (the world newly this game's, another maths, a snapshot put back), so a grid whose faces were asked of an earlier copy
+   *  asks them all again; and whether a grid has stepped over this one (`gridCopy`), from when on a row that is written is said to it (`grid_dirty`). */
+  private copy = 0; private gridOver = false;
+  private cellsWrote = true;
+  private used = 0; private fits = true;
+  private readonly caps = { boxes: 0, leaves: 0, cuts: 0, panes: 0, cells: 0, items: 0, tilted: 0, things: 0 };
+  // the furniture's copy: where its two tables are, the count of writes it was copied at (−1 = not in this tick), whether it stood then, and whether
+  // every row is owed (the world newly this game's, another maths, a snapshot put back: a row's cos and sin are compared by nobody)
+  private thing = 0; private thingLive = 0; private thingsAt = -1; private thingsOk = false; private thingsAll = true;
+  // where the tables are: an index into the doubles (f64) or the words (u32 / i32) of the module's memory
+  private rec = 0; private leaf = 0; private cut = 0; private paneT = 0; private flags = 0; private leafFlags = 0; private start = 0; private items = 0; private tilted = 0; private paneBi = 0;
+  private boxes = 0; private nTilted = 0; private epoch = -1; private putBacks = -1;
+  // a static's cut record (−1 = none), the records given back, and the next never used
+  private cutOf!: Int32Array; private readonly cutFree: number[] = []; private cutNext = 0;
+  // the game's own list of leaves (the array that stood in collision.ts dynamicBoxes as the tick opened), how long it was when copied, and the count of leaf
+  // writes it was copied at (−1 = not in this tick)
+  private own: Box[] | null = null; private ownLen = 0; private ownAt = -1;
+
+  private boot(): void {
+    const x = this.x = sim(), c = this.caps;
+    c.boxes = x.world_cap(T_REC); c.leaves = x.world_cap(T_LEAF); c.cuts = x.world_cap(T_CUT); c.panes = x.world_cap(T_PANE_T); c.cells = x.world_cap(T_START); c.items = x.world_cap(T_ITEMS);
+    c.tilted = x.world_cap(T_TILTED); this.listCap = x.world_cap(T_LIST); c.things = x.world_cap(T_THING);
+    this.scratch = x.sim_scratch() / 8; this.scratchLen = x.sim_scratch_len(); this.lamps = x.light_lamps() / 8; this.lampCap = x.light_cap(); this.blobs = x.smoke_blobs() / 8; this.blobCap = x.smoke_cap(); this.wind = x.grid_wind() / 8; this.windCap = x.grid_wind_cap();
+    this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8;
+    this.cutOf = new Int32Array(c.boxes).fill(-1);
+    if (!HELD.length) for (let i = x.world_cap(T_WORLDS); i > 0; i--) HELD.push(null);
+  }
+
+  /** this game's world in the module: its own still, or a free one, or the one stepped longest ago (whose game copies afresh when it steps again). True = the
+   *  world is newly this game's and nothing in it is ours. */
+  private take(): boolean {
+    if (!this.x) this.boot();
+    this.used = ++CLOCK.n;
+    if (this.slot >= 0 && HELD[this.slot] === this) return false;
+    let s = 0; for (let i = 0; i < HELD.length; i++) { const h = HELD[i]; if (!h) { s = i; break; } if (h.used < HELD[s]!.used) s = i; }
+    const old = HELD[s]; if (old) { old.slot = -1; old.shut(); }
+    HELD[s] = this; this.slot = s;
+    const x = this.x, at = (t: number, by: number) => x.world_addr(s, t) / by;
+    this.rec = at(T_REC, 8); this.leaf = at(T_LEAF, 8); this.cut = at(T_CUT, 8); this.paneT = at(T_PANE_T, 8); this.flags = at(T_FLAGS, 4); this.leafFlags = at(T_LEAF_FLAGS, 4);
+    this.start = at(T_START, 4); this.items = at(T_ITEMS, 4); this.tilted = at(T_TILTED, 4); this.paneBi = at(T_PANE_BI, 4); this.pt = at(T_PT, 8); this.list = at(T_LIST, 4); this.eyes = x.fog_eyes(s) / 8;
+    this.thing = at(T_THING, 8); this.thingLive = at(T_THING_LIVE, 4);
+    return true;
+  }
+
+  /** A TICK OPENS: the copy is made the boxes as they stand (see the head). → `live`. */
+  open(boxes: Box[], cells: number[][], tiltedAt: number[], W: number, H: number, cs: number, leaves: Box[], walk: Walk, lines: boolean, circles: boolean, sight: boolean, senses = 0, rays = false): void {
+    this.walk = walk;
+    const fresh = this.take(), all = fresh || this.epoch !== mathsEpoch || this.putBacks !== PUT_BACKS.n;   // (another maths in Math's place: every cos and sin kept here was the other's)
+    this.epoch = mathsEpoch; this.putBacks = PUT_BACKS.n;
+    if (all) { this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.fits = true; this.gridDrop(); this.thingsAll = true; }   // (…and it is another copy to a smoke grid: every face is asked again)
+    if (all || this.cellsWrote || !this.fits) { this.cellsWrote = false;   // (a level that did not fit is tried again: a tick's blast may have left it smaller)
+      this.fits = this.grid(cells, tiltedAt, W, H) && boxes.length <= this.caps.boxes; }
+    if (this.fits) this.statics(boxes, all);
+    if (this.fits) this.x.world_shape(this.slot, W, H, cs, boxes.length, this.nTilted);
+    this.ownAt = -1; this.thingsAt = -1; this.own = leaves; this.owes = false; this.rowLines = lines; this.rowRays = rays; this.rowCircles = circles; this.rowSight = sight; this.rowSenses = senses;
+    this.live = this.fits; this.lines = this.live && lines; this.rays = this.live && rays; this.circles = this.live && circles; this.sight = this.live && sight; this.senses = this.live ? senses : 0;
+  }
+  /** the tick is over: from here the TypeScript answers */
+  shut(): void { this.live = this.lines = this.rays = this.circles = this.sight = this.owes = false; this.senses = 0; this.own = null; this.walk = null; }   // (and nothing of the game is held from here: a world outlives its game)
+
+  /** the grid: cell c's statics in the order they were filed, one run after another; and the tilted statics' own list. False = it does not fit. */
+  private grid(cells: number[][], tiltedAt: number[], W: number, H: number): boolean {
+    const n = W * H, c = this.caps; if (n > c.cells || tiltedAt.length > c.tilted * 5) return false;
+    let total = 0; for (let i = 0; i < n; i++) total += cells[i].length; if (total > c.items) return false;
+    const w = u32(), st = this.start, it = this.items; let at = 0;
+    for (let i = 0; i < n; i++) { const cell = cells[i]; w[st + i] = at; for (let k = 0; k < cell.length; k++) w[it + at++] = cell[k]; }
+    w[st + n] = at;
+    const t = i32(), t0 = this.tilted; for (let i = 0; i < tiltedAt.length; i++) t[t0 + i] = tiltedAt[i];
+    this.nTilted = tiltedAt.length / 5;
+    return true;
+  }
+  /** every static against its row; a row that differs (or every row, `all`) written again */
+  private statics(boxes: Box[], all: boolean): void {
+    const n = boxes.length, m = f64(), fl = u32(), cutOn = cutConfig.on, f0 = this.flags, cut0 = this.cut, cutOf = this.cutOf, walk = this.walk;
+    // (the smoke grid keeps which faces between its cells are open: where a row is written, or goes, the faces round where it stood and where it stands
+    //  are asked again — nothing to say when every row is written, for then the grid's faces are all unknown already)
+    const grid = !all && this.gridOver;
+    for (let i = n; i < this.boxes; i++) { if (cutOf[i] >= 0) { this.cutFree.push(cutOf[i]); cutOf[i] = -1; } if (grid) this.gridDirty(m, this.rec + i * REC); }   // (the list was cut back: its records are free again)
+    const was = this.boxes; this.boxes = n;
+    for (let i = 0, o = this.rec; i < n; i++, o += REC) {
+      const b = boxes[i], kind = kindAt(b, i, cutOn, walk);
+      if (!all && i < was && same(m, fl, o, f0 + i, b, kind, cut0)) continue;   // (a row past the list as it was is no row of this list's, whatever was left written there: a wall taken off the end and put back is written, and said to the grid)
+      if (grid) { this.gridDirty(m, o); const c = b.c, h = b.h, e = h[0] + h[1] + h[2]; this.x.grid_dirty(this.slot, c[0] - e, c[2] - e, c[0] + e, c[2] + e); }
+      let row = cutOf[i];
+      if (kind & K_CUT) { if (row < 0) { row = this.cutFree.length ? this.cutFree.pop()! : this.cutNext < this.caps.cuts ? this.cutNext++ : -1; if (row < 0) { this.fits = false; return; } cutOf[i] = row; } }
+      else if (row >= 0) { this.cutFree.push(row); cutOf[i] = -1; }
+      put(m, fl, o, f0 + i, b, kind, cut0, row);
+    }
+  }
+  /** the plan's rectangle round row `o` as the module has it (its three half sides together: its reach in plan whichever way it is turned) */
+  private gridDirty(m: Float64Array, o: number): void { const e = m[o + 3] + m[o + 4] + m[o + 5]; this.x.grid_dirty(this.slot, m[o] - e, m[o + 2] - e, m[o] + e, m[o + 2] + e); }
+  /** THE COPY'S NUMBER, for a step of a smoke grid over it (collision.ts gridStep): from here on a row that is written is said to the grid */
+  gridCopy(): number { this.gridOver = true; return this.copy; }
+  /** this is another copy to a smoke grid: one that steps over it next knows no face and remembers no leaf (and nothing is said to a grid until one does) */
+  gridDrop(): void { this.copy = ++COPIES.n; this.gridOver = false; }
+
+  /** A STATIC WAS WRITTEN INSIDE THE TICK (its shape, its flags, its cut; a pane a walker now goes through): the module is asked nothing more until the statics
+   *  have been compared again — which the next question does (`again`), so a blast that writes forty boxes pays for one compare, and one nobody asks after
+   *  pays for none. The grid is not compared: only addStatic and truncateStatics change it, and they say so themselves. */
+  wrote(): void { if (this.live && !this.owes) { this.owes = true; this.lines = this.rays = this.circles = this.sight = false; this.senses = 0; } }
+  /** …the compare a question owes after `wrote`: the copy stands again, and the rows are back as the tick opened with them */
+  again(boxes: Box[], walk: Walk): void {
+    this.owes = false; if (!this.live) return;
+    this.walk = walk;
+    this.statics(boxes, false); if (!this.fits) { this.shut(); return; }
+    this.lines = this.rowLines; this.rays = this.rowRays; this.circles = this.rowCircles; this.sight = this.rowSight; this.senses = this.rowSenses;
+  }
+  /** …or the GRID was (a static added, the list cut back): the TypeScript answers for what is left of this tick, and the cells are copied as the next opens */
+  wroteGrid(): void { this.cellsWrote = true; this.shut(); }
+
+  /** THE LEAVES A QUESTION IS ASKED WITH (collision.ts dynamicBoxes): which of the module's lists holds them. The game's own list — the array that stood there
+   *  as the tick opened — is list 0, copied at the tick's first question with it and again after a leaf is written (`leafWrote`). Any other array is a list a question
+   *  swapped in for itself (a door's own leaf taken out, a ghost leaf put in); such arrays are scratch that is filled anew between questions, so it is copied
+   *  into list 1 at EVERY question it is asked with — a few leaves. −1 = no leaves (nothing is copied); −2 = more than a list holds (the TypeScript answers). */
+  leaves(dyn: Box[]): number {
+    const n = dyn.length; if (n === 0) return -1;
+    const own = dyn === this.own; if (own && this.ownAt === LEAVES.n && this.ownLen === n) return 0;
+    if (n > this.caps.leaves) return -2;
+    const s = own ? 0 : 1, m = f64(), fl = u32(), cutOn = cutConfig.on, cut0 = this.cut, base = s * this.caps.leaves;
+    for (let i = 0, o = this.leaf + base * REC; i < n; i++, o += REC) { const b = dyn[i]; put(m, fl, o, this.leafFlags + base + i, b, kindOf(b, cutOn), cut0, this.caps.cuts + base + i); }
+    this.x.world_leaves(this.slot, s, n);
+    if (own) { this.ownAt = LEAVES.n; this.ownLen = n; }
+    return s;
+  }
+
+  /** THE FURNITURE'S PARTS, FOR A QUESTION THAT MEETS THEM (the furniture's ray: lines.rs ray_things; the thrown things' walk: items.rs): every part box
+   *  of every thing in the level is list THING_SET of the leaves, a thing's parts together and the things in the furniture's own order, with where each
+   *  thing stands by its id beside them. Copied as the leaves are — at the tick's first question that asks for them, and again after a thing is written
+   *  (`thingWrote`) — but row by row: a part is compared with its row and written only where it differs, so a chair shoved across a room costs its own
+   *  five boxes a tick, not the level's two hundred. → does the copy stand (false: no tick, or more furniture than the tables hold — the TypeScript answers) */
+  things(P: Furniture): boolean {
+    if (!this.live) return false;
+    if (this.thingsAt === THINGS.n) return this.thingsOk;
+    this.thingsAt = THINGS.n; this.thingsOk = false;
+    const all = P.all, L = P.props, c = this.caps; if (all.length > c.things) return false;
+    let parts = 0; for (let r = 0; r < L.length; r++) parts += L[r].boxes.length; if (parts > c.leaves) return false;
+    const m = f64(), w = u32(), cutOn = cutConfig.on, cut0 = this.cut, base = THING_SET * c.leaves, every = this.thingsAll;
+    for (let i = 0, o = this.thing; i < all.length; i++, o += TH) { const p = all[i]; m[o] = p.x; m[o + 1] = p.z; m[o + 2] = p.yaw; m[o + 3] = p.radius; }
+    let at = 0;
+    for (let r = 0, o = this.thingLive; r < L.length; r++, o += TL) {
+      const p = L[r], B = p.boxes; w[o] = p.id; w[o + 1] = at; w[o + 2] = B.length;
+      for (let j = 0; j < B.length; j++, at++) {
+        const b = B[j], kind = kindOf(b, cutOn), row = this.leaf + (base + at) * REC, fi = this.leafFlags + base + at;
+        if (every || !same(m, w, row, fi, b, kind, cut0)) put(m, w, row, fi, b, kind, cut0, c.cuts + base + at);
+      }
+    }
+    this.x.world_leaves(this.slot, THING_SET, parts); this.x.world_things(this.slot, L.length);
+    this.thingsAll = false; return this.thingsOk = true;
+  }
+  /** part `at` of the copied list → its box (what the furniture's ray names) */
+  thingBox(P: Furniture, at: number): Box | null { for (const p of P.props) { if (at < p.boxes.length) return p.boxes[at]; at -= p.boxes.length; } return null; }
+  /** THE CHECK'S QUESTION of the furniture's copy (collision.ts thingsBoth): how many of its rows are not the furniture now. 0, or a write went unsaid. */
+  staleThings(P: Furniture): number {
+    const m = f64(), w = u32(), cutOn = cutConfig.on, base = THING_SET * this.caps.leaves; let bad = 0, at = 0;
+    for (let i = 0, o = this.thing; i < P.all.length; i++, o += TH) { const p = P.all[i]; if (!Object.is(m[o], p.x) || !Object.is(m[o + 1], p.z) || !Object.is(m[o + 2], p.yaw) || !Object.is(m[o + 3], p.radius)) bad++; }
+    for (let r = 0, o = this.thingLive; r < P.props.length; r++, o += TL) {
+      const p = P.props[r]; if (w[o] !== p.id || w[o + 1] !== at || w[o + 2] !== p.boxes.length) bad++;
+      for (let j = 0; j < p.boxes.length; j++, at++) if (!same(m, w, this.leaf + (base + at) * REC, this.leafFlags + base + at, p.boxes[j], kindOf(p.boxes[j], cutOn), this.cut)) bad++;
+    }
+    return bad;
+  }
+
+  /** where the glass the last line crossed is listed: which static (into the words) and how far along the line it is entered (into the doubles) */
+  get glassBi(): number { return this.paneBi; }
+  get glassT(): number { return this.paneT; }
+
+  // ---- A RULE OF THE MODULE'S WRITES THE LEAVES (the doors' step, rust/sim/src/doors.rs place). While a rule that moves a box runs in the module, the ROW it
+  // writes is the original and the Box object the picture draws FOLLOWS: the host writes the object from the row before any TypeScript runs again, so a box and
+  // its row are one outside a call into the module whichever side wrote. (The other way round is as it was: a TypeScript rule writes the object and says so.)
+  /** may a rule of the module's step over this world now, with the game's own leaves `dyn` in list 0 as they stand (copied here if a leaf was written since) */
+  rules(dyn: Box[]): boolean {
+    if (!this.live || this.owes || dyn !== this.own) return false;
+    if (dyn.length !== 0) return this.leaves(dyn) === 0;
+    // (a level with no leaf at all: list 0 is the game's own, and empty — said to the module once, as a list of leaves is copied once)
+    if (this.ownAt !== LEAVES.n || this.ownLen !== 0) { this.x.world_leaves(this.slot, 0, 0); this.ownAt = LEAVES.n; this.ownLen = 0; }
+    return true;
+  }
+  /** leaf i of list 0 as the module's rule left it → its box: the centre (a new array, as Door.place makes one), the yaw, the flags the copy keeps. → the yaw */
+  followLeaf(i: number, b: Box): number {
+    const m = f64(), o = this.leaf + i * REC, yaw = m[o + R_YAW];
+    b.c = [m[o], m[o + 1], m[o + 2]]; b.yaw = yaw; b.flags ^= (b.flags & MIRRORED) ^ u32()[this.leafFlags + i];
+    return yaw;
+  }
+  /** a leaf's row as leafRow read it → its box, the same writes as followLeaf (for a caller that had to read the rows BEFORE something else could ask the
+   *  module and have them copied from the boxes again). → the yaw */
+  followRow(b: Box, r: readonly number[]): number { b.c = [r[0], r[1], r[2]]; b.yaw = r[3]; b.flags ^= (b.flags & MIRRORED) ^ r[4]; return r[3]; }
+  /** leaf i's row of list 0: its centre, its yaw, its flags */
+  leafRow(i: number): number[] { const m = f64(), o = this.leaf + i * REC; return [m[o], m[o + 1], m[o + 2], m[o + R_YAW], u32()[this.leafFlags + i]]; }
+  /** the game's own leaves are being placed box by box while what the rule answered is heard (game/doors.ts takeBack): a question asked meanwhile, and the
+   *  first one after, copies list 0 from the boxes as they stand */
+  leavesTurned(): void { this.ownAt = -1; }
+
+  /** THE CHECK'S QUESTION (tools/qa/rust-check.ts, through collision.ts BOTH): how many rows of the copy are not their box now — the statics, and list `set`
+   *  of the leaves. 0 inside a tick, or a write went unsaid. */
+  stale(boxes: Box[], dyn: Box[], set: number): number {
+    const m = f64(), fl = u32(), cutOn = cutConfig.on; let bad = boxes.length === this.boxes ? 0 : 1;
+    for (let i = 0, o = this.rec; i < boxes.length && i < this.boxes; i++, o += REC) if (!same(m, fl, o, this.flags + i, boxes[i], kindAt(boxes[i], i, cutOn, this.walk), this.cut)) bad++;
+    if (set >= 0) { const base = set * this.caps.leaves; for (let i = 0, o = this.leaf + base * REC; i < dyn.length; i++, o += REC) if (!same(m, fl, o, this.leafFlags + base + i, dyn[i], kindOf(dyn[i], cutOn), this.cut)) bad++; }
+    return bad;
+  }
+}

@@ -131,7 +131,7 @@ export interface Headless {
  *  tool's Math.random, as it always has (a tool that re-seeds Math.random afterwards gets the game's dice either way: dice.ts's one rule). */
 /** TPS_SEED: a whole number names the game's own die; anything else stops the tool (a typo must not quietly become seed 0) */
 function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Error(`TPS_SEED=${v}: want a whole number`); return Number(v) >>> 0; }
-export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null } = {}): Promise<Headless> {
+export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string } = {}): Promise<Headless> {
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins
     if (opts.env || force !== undefined) { const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`); cutConfig.on = opts.env ? !!opts.env.cutBoxes : /^(1|on|true)$/i.test(force!); }
@@ -145,7 +145,7 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
   // the ONE stand-up (src/host/standup.ts): the level's boxes + lights into the stand-in, then `new Game`, then the harness trio — chaos 0 (the game byte for byte as it was before the
   // destruction lane, which is what every frozen digest and exact-count probe was written against), the autosave slots in a Map (no localStorage in bun), the level script strict
   const seed = opts.seed !== undefined ? opts.seed : process.env.TPS_SEED !== undefined && process.env.TPS_SEED !== '' ? envSeed(process.env.TPS_SEED) : null;
-  const { game, level, cam } = await standMod.standGame(engine, { ch, smoke, harness: true, seed, ...(opts.level ? { level: opts.level } : {}) });
+  const { game, level, cam } = await standMod.standGame(engine, { ch, smoke, harness: true, seed, seats: opts.seats, ...(opts.search !== undefined ? { search: opts.search } : {}), ...(opts.level ? { level: opts.level } : {}) });
   if (process.env.QA_DOORSTAY === '1') (await import(`${ROOT}/src/game/doors.ts`)).DOORSTAY.on = true;   // (the harness stands the game up with the door closers of old — standup.ts; this runs any probe, soak or tour with doors staying where they are left, as shipped)
   const audioCounts = new Map<string, number>();
   let audioLog: AudioCall[] | null = null;
@@ -163,7 +163,7 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
-      cam.update(dt, follow ?? game.followPos(), follow || game.spectate >= 0 ? null : game.aimPoint);   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
+      { const me = game.hostSeat().view; cam.update(dt, follow ?? me.followPos(), follow || game.spectate >= 0 ? null : me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;
       if (frame++ % uploadEvery === 0) engine.world.upload();   // CPU pack + grid (what the cursor's raycast and the lasers read); the GPU writes go nowhere

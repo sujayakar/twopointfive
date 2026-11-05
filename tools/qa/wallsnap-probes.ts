@@ -539,16 +539,16 @@ async function kit() {
   };
   if (brk) WALLSNAP.stackDraw = false;
   if (hold('empty', 'pistol')) {
-    want(press('Digit2'), '2 on the back hold', 'stack', true, /^(?!.*once off the wall)/);
+    want(press('Digit2'), '2 on the back hold', 'stack', true, /^(?!.*comes out when you leave the wall)/);
     { const bodyAlong = Math.abs(Math.sin(c.bodyYaw)); if (bodyAlong < 0.8) fails.push(`2 on the back hold: his body is ${(Math.asin(bodyAlong) / DEG).toFixed(0)}° round toward the wall's line (want side-on, ≥ 53°)`); }
-    want(press('Digit1'), '1 on the stack', 'back', false, /once off the wall/);
+    want(press('Digit1'), '1 on the stack', 'back', false, /comes out when you leave the wall/);
     want(press('Digit2'), '2 again', 'stack', true);
     want(press('KeyE'), 'E on the stack', 'back', false);
     want(press('KeyE'), 'E on the back hold, the rifle selected', 'stack', true);
-    want(press('Digit3'), '3 on the stack', 'back', false, /once off the wall/);
+    want(press('Digit3'), '3 on the stack', 'back', false, /comes out when you leave the wall/);
     const r = press('KeyQ', 30); if (pl.wall) fails.push('Q did not let go'); else if (pl.slot !== 'smoke' || pl.holstered) fails.push(`off the wall after choosing the smoke can: slot ${pl.slot}, holstered ${pl.holstered} (want the can in his fist)`); rows.push(`Q: off, ${pl.slot} in hand`); void r;
   } else fails.push('(staging) no back hold');
-  if (hold('empty', 'pistol')) { want(press('KeyE'), 'E on the back hold, the pistol selected', 'back', false, /once off the wall/); }
+  if (hold('empty', 'pistol')) { want(press('KeyE'), 'E on the back hold, the pistol selected', 'back', false, /comes out when you leave the wall/); }
   if (hold('rifle')) { if (pl.wall.kind !== 'stack') fails.push('(staging) Q with the rifle up is not the stack');
     const x0 = c.pos[0]; S.keys('KeyD'); S.step(40); S.tap('Digit1'); let off = false; S.step(40, () => { off ||= !pl.wall; }); S.keys();
     if (off || !pl.wall || pl.wall.kind === 'stack') fails.push(`1 pressed while walking the stack: ${off ? 'he came off the wall' : `hold '${pl.wall?.kind ?? 'back'}'`}`); else rows.push(`1 while walking the stack: stayed on, back hold, ${f2(Math.abs(c.pos[0] - x0))} m along`); msgs.length = 0; }
@@ -572,7 +572,7 @@ async function kit() {
     S.setCursor(null); if (pl.wall) { S.tap('KeyQ'); S.step(30); }
   }
   // the stack switched off: 2 on the wall is the older answer
-  if (!brk) for (const key of ['stackDraw', 'stack'] as const) { WALLSNAP[key] = false; if (hold('empty', 'pistol')) want(press('Digit2'), `${key} off, 2 on the back hold`, 'back', false, /once off the wall/); WALLSNAP[key] = true; }
+  if (!brk) for (const key of ['stackDraw', 'stack'] as const) { WALLSNAP[key] = false; if (hold('empty', 'pistol')) want(press('Digit2'), `${key} off, 2 on the back hold`, 'back', false, /comes out when you leave the wall/); WALLSNAP[key] = true; }
   g.msg = m0;
   verdict(fails.length === 0, 'the kit on the wall: the rifle in his hands is the stack however it got there, anything else is the back hold, and he never leaves the wall for it', fails.length ? fails.join('\n    ') : rows.join('\n    '));
 }

@@ -75,15 +75,29 @@ export function roofsOf(boxes: readonly Box[]): Rect[] {
 
 /** a ground slab a picked rain wets: its top is the ground everybody stands on (the lot's y = 0, or the base a level's houses stand on a millimetre over it —
  *  room floors lie at 4 mm, grass at a centimetre: neither), it is drawn, it is not small, and some of it has no roof over it (the footprints the rain is drawn by) */
-function openGround(b: Box, roofs: readonly Rect[]): boolean {
+export function openGround(b: Box, roofs: readonly Rect[]): boolean {
   const top = b.c[1] + b.h[1];
   if (!(top > -0.011 && top < 0.003) || b.h[0] * b.h[2] < 4 || (b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Dynamic)) !== 0) return false;
-  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) {
-    const x = b.c[0] + b.h[0] * (i - 2) * 0.45, z = b.c[2] + b.h[2] * (j - 2) * 0.45;
-    if (!roofs.some(r => inRect(r, x, z))) return true;
-  }
-  return false;
+  return skyOver(b, roofs);
 }
+/** HOW MUCH OF THIS BOX THE RAIN FALLS ON: of 25 spots over its rectangle (turned with it), how many have no roof over them by the footprints the rain is drawn
+ *  by — counted no further than `enough`. The one reading of the sky over a box, wherever it is asked. `step` = how far apart the spots stand, in half
+ *  extents: 0.45 reaches a tenth short of the edges (is there ANY sky: a slab's rim counts), 0.4 puts each spot in the middle of a twenty-fifth of the
+ *  rectangle (HOW MUCH sky: the count is the share of its area) */
+export function skySpots(b: Box, roofs: readonly Rect[], enough: number, step: number): number {
+  const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); let n = 0;
+  for (let i = 0; i < 5; i++) for (let j = 0; j < 5; j++) {
+    const lx = b.h[0] * (i - 2) * step, lz = b.h[2] * (j - 2) * step, x = b.c[0] + cs * lx + sn * lz, z = b.c[2] - sn * lx + cs * lz;
+    if (!roofs.some(r => inRect(r, x, z)) && ++n >= enough) return n;
+  }
+  return n;
+}
+/** rain falls on SOME of it: a ground slab's test (above). A slab is the ground of the yard round a house and of the house too, one box for both, and where it
+ *  runs under the house the rooms' floors lie over it */
+export const skyOver = (b: Box, roofs: readonly Rect[]): boolean => skySpots(b, roofs, 1, 0.45) >= 1;
+/** rain falls on MOST of it: the test of a thing laid for one place (a finish, a sheet: wetGround.ts). A box is wet whole or not at all, so a pad four fifths
+ *  under its canopy is dry with the marks on it, and a room's floor that runs a hand under its own walls is never rained on */
+export const skyOverMost = (b: Box, roofs: readonly Rect[]): boolean => skySpots(b, roofs, 13, 0.4) >= 13;
 
 /** a level that carries its own places (a quiet mission: its file's scenarios.quiet — scene/scenarios.ts): the office's footprints below are not its building's */
 const ownFloor = (g: Game): boolean => !!g.level?.scenarios?.quiet;
@@ -95,8 +109,8 @@ export const ANNEX: [number, number, number, number] = [1.1, 9.33, 4.0, 12.87];
 const RAIN_TOP = 7.0;            // streaks below this (m): over the sodium heads (5 m), well under the camera
 const RAIN_V = 9.0;              // fall speed the shader animates with (m/s) — −wind ÷ this = the streaks' shear (see update())
 const WET_SECS = 20;             // dry → fully wet (and back) over this long
-const WET_ROUGH = 0.22;          // wet asphalt for the RT reflection pass (Box.rough while it rains; the dry slab keeps whatever the level gave it — 0.92 in the office): a water film over aggregate, glossy but not a mirror
-const WET_ALBEDO = 0.5;          // wet asphalt: darker (the water film kills the diffuse scatter off the aggregate) — and glossy (BoxFlag.Gloss; fgather.wgsl boosts the coat outdoors by the wetness)
+export const WET_ROUGH = 0.22;          // wet asphalt for the RT reflection pass (Box.rough while it rains; the dry slab keeps whatever the level gave it — 0.92 in the office): a water film over aggregate, glossy but not a mirror
+export const WET_ALBEDO = 0.5;          // wet asphalt: darker (the water film kills the diffuse scatter off the aggregate) — and glossy (BoxFlag.Gloss; fgather.wgsl boosts the coat outdoors by the wetness)
 const SPEED_OF_SOUND = 343;
 /** lightning: peak irradiance of the first return stroke on a surface square to it (the daylight sun is 8; a close stroke outshines it for its few milliseconds) */
 const FLASH_PEAK = 18;
@@ -173,8 +187,8 @@ export class Weather {
   private lastBarkT = -1e9;
   private suspended = false;         // day (the breach showcase): the storm holds — no strokes, no rain; back as it was when night returns
   private touched: { box: Box; albedo: Vec3; flags: number; rough: number | undefined; aniso: boolean | undefined }[] = [];   // boxes the wet lot changed, with what to put back (the finish too: the RT reflection pass reads Box.rough / aniso)
-  /** the paint a box had before the wet lot darkened it, if it is one of those (the look page's material maps ask, render/gbuffer.ts lookWordOf: what a slab is
-   *  made of is not changed by rain). Read only */
+  /** the paint a box had before the wet lot darkened it, if it is one of those. Read only (a check asks it to find the wet lot; the look does not: what a
+   *  slab is made of is the word it says, which rain does not touch) */
   dryPaint(b: Box): Readonly<Vec3> | undefined { for (const t of this.touched) if (t.box === b) return t.albedo; return undefined; }
   private glossWas: boolean | null = null;   // settings.gloss before the storm switched it on (null = we have not touched it)
 
@@ -351,7 +365,7 @@ export class Weather {
     for (let i = this.thunders.length - 1; i >= 0; i--) { const th = this.thunders[i]; if (g.time >= th.at) { this.thunders.splice(i, 1); this.playThunder(th); } }
     // ---- the rain bed follows the rate and where the listener stands (outdoors full, indoors a third — the mixer has no windows to open); indoors = the building OR
     //      the roofed stair tower, the two rectangles the rain itself is drawn by (= wet.ts underRoofRect — inlined, wet.ts imports this module; review U9.9)
-    const pp = g.player.char.pos;
+    const pp = g.hostSeat().view.player.char.pos;   // (the listener: the player this host shows — seats.ts; the mix is nobody's simulation)
     g.audio.rain?.(this.rainBed(pp[0], pp[2]));   // (the footprints in force: INTERIOR / ANNEX unless a kind was picked)
     // ---- what the frame draws
     frame.rain = raining ? this.rainRate : 0;
@@ -407,6 +421,10 @@ export class Weather {
 
   /** The wet lot: the asphalt slab darkened + BoxFlag.Gloss (and settings.gloss on, if wetGloss), or everything put back. Idempotent both ways. */
   private wetOn = false;
+  /** is the ground wet now (the threshold as this weather last judged it): what the picture's step wets the open ground by (wetGround.ts). Read only */
+  get groundWet(): boolean { return this.wetOn; }
+  /** the lot's slab, while this weather has it soaked (the slab a finish may lie on: wetGround.ts). Read only */
+  lot: Box | undefined = undefined;
   private setWet(on: boolean) {
     if (on === this.wetOn) return;
     this.wetOn = on;
@@ -418,18 +436,20 @@ export class Weather {
       const asphalt = st.find(b => b.c[1] < 0 && b.c[1] + b.h[1] > -0.01 && b.h[0] > 18 && b.h[2] > 12);   // (40 × 28 m: the interior carpet base is 32 × 20 and must never match)
       const soak = (b: Box) => { this.touched.push({ box: b, albedo: v3.copy(b.albedo), flags: b.flags, rough: b.rough, aniso: b.aniso }); b.albedo = [b.albedo[0] * WET_ALBEDO, b.albedo[1] * WET_ALBEDO, b.albedo[2] * WET_ALBEDO * 1.04]; b.flags |= BoxFlag.Gloss; b.rough = WET_ROUGH; b.aniso = true; };
       if (asphalt) soak(asphalt);
-      // A PICKED weather rains on whatever level it is picked for: every other ground slab with open sky over some of it is wet too (a compound's yard, a barracks'
-      // courtyard — the slab the houses stand on, their own floors lying over it indoors). The level's own storm, no kind picked, wets the lot alone, as it always did.
-      // Those slabs are darkened FOR THE RENDERER ONLY (Box.wetK): their albedo is what a round's material is read from (destruction.ts / particleFx.ts surfOf — a
-      // dirt yard at half its tone reads as metal), and a picked rain must not move a run for the look of the ground. The lot keeps its old way, as measured.
-      const wetOnly = (b: Box) => { this.touched.push({ box: b, albedo: b.albedo, flags: b.flags, rough: b.rough, aniso: b.aniso }); b.wetK = WET_ALBEDO; b.flags |= BoxFlag.Gloss; b.rough = WET_ROUGH; b.aniso = true; };
-      if (this.levelRoofs) for (const b of st) if (b !== asphalt && openGround(b, this.roofs)) wetOnly(b);   // (+ the finish the RT reflection pass reads: standing water at WET_ROUGH, its lobe stretched along the view — the sodium lamp becomes a streak, settings.rtAniso says how long)
+      // A PICKED weather rains on whatever level it is picked for, and every other piece of ground with open sky over it is wet too (a compound's yard, a
+      // barracks' courtyard, a finish laid over the lot): that is the PICTURE's own step (wetGround.ts, dressing), which darkens them for the renderer only
+      // (Box.wetK) and asks this weather whether the ground is wet (`groundWet`), under which roofs, and which slab is the lot. The lot keeps its old way,
+      // as measured: its albedo is what a round's material is read from, and it is written here and nowhere else.
+      this.lot = asphalt;
       if (this.wetGloss && S.gloss !== undefined && this.glossWas === null) { this.glossWas = S.gloss; S.gloss = true; }
     } else {
-      for (const t of this.touched) { t.box.albedo = t.albedo; delete t.box.wetK; t.box.flags = t.flags; if (t.rough === undefined) delete t.box.rough; else t.box.rough = t.rough; if (t.aniso === undefined) delete t.box.aniso; else t.box.aniso = t.aniso; }
-      this.touched.length = 0;
+      for (const t of this.touched) { t.box.albedo = t.albedo; t.box.flags = t.flags; t.box.rough = t.rough; t.box.aniso = t.aniso; }   // (set, never deleted: a box keeps its one layout — scene/boxes.ts boxOf)
+      this.touched.length = 0; this.lot = undefined;
       if (this.glossWas !== null) { if (S.gloss === true) S.gloss = this.glossWas; this.glossWas = null; }   // (only if it is still what we set: a gloss switched off by hand during the storm stays off)
     }
+    // (the rest of the wet ground is the picture's and follows in this very call, not at the next update: the lot and the yard are never one wet and one dry
+    // for a frame drawn with no update between — a pause, the start card, a checkpoint put back. Built after this object: nothing to tell at birth)
+    (g as { wetGround?: { follow(g: Game): void } }).wetGround?.follow(g);
   }
 
   /** everything off and put back: the stroke's light out of the set, thunder forgotten, boxes restored, gloss as it was, the frame zeroed, the rain bed silent */

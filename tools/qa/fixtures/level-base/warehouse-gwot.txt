@@ -1,0 +1,2 @@
+# the look file's own part was repainted when the level was dressed from the library (its paints are materials)
+86c7a8785229856f0c12364246ca1fbba438f330

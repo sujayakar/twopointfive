@@ -5,16 +5,22 @@
 // `twopointsix.replay` = '0' (__replay.on = false writes it) — then no buffer is made and the Game's tap stays null: the build as it was.
 // Its own key listener, as F8's: a replay must save from the pause card, the down card and a frozen frame alike.
 import type { Game } from '../game/game';
+import { reportWarning } from '../cloud/report';
+import { typedInto } from '../host/keymap';
+import { SHADER_ROW_WORDS } from './shaderrows';
+import { lookDressWord } from '../scene/look';
+import { rustWords } from '../sim/sim';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
 import type { ReplayFile } from '../replay/format';
 import { shelfPut } from '../replay/shelf';
-import { CAME_FROM, clock, downloadReplay, errorMarks, lastRun, leaveFor, replayName } from '../replay/format';
+import { CAME_FROM, clock, replayBlob, errorMarks, lastRun, leaveFor, replayName } from '../replay/format';
 import { missionLive } from '../game/mission';
 export { CAME_FROM, leaveFor };
 import { ReplayKeeper } from '../replay/keeper';
 import { KEEP, keptSummary, pruneKept, keepBudget } from '../replay/keepstore';
-import { keptStore, setLiveKeeper, dumpNow, keptWords } from '../replay/dumpui';
+import { keptStore, keptWords } from '../replay/keptui';
+import { cloudUrl, cloudFile, cloudSendsFiles } from '../cloud/cloud';
 
 const LS = 'twopointsix.replay';
 /** EVERY RUN IS KEPT (replay/keeper.ts): the tape is written to this browser's storage in pieces as it is played, nothing pressed. Off for a visit with ?nokeep,
@@ -22,13 +28,23 @@ const LS = 'twopointsix.replay';
 const LS_KEEP = 'twopointsix.keep';
 /** replays an error saves by itself in one page load, and the least time between two tries that made no file */
 const CRASH_MAX = 3, CRASH_TRY_MS = 2000, CRASH_GAP_MS = 60000;
-/** how long the page's own tag shows what F7 did (a shelf that does not answer is the shelf's own wait: shelf.ts SHELF.openMs, then the file is a download) */
+/** how long the page's own tag shows what F7 did (a shelf that does not answer is the shelf's own wait: shelf.ts SHELF.openMs, then the file is sent) */
 const TAG_MS = 7000;
+/** what became of a replay sent to the build's backend (cloud.ts cloudFile's answers) */
+export type ReplaySent = Awaited<ReturnType<typeof cloudFile>>;
+/** how long a save waits on the backend's answer before it says the replay is waiting to be sent and lets the key go (the answer's own line follows) */
+const SEND_SAY_MS = 600;
 /** the tag: under the checkpoint and REC tags (index.html #checkpoint, #journal), over the cards and the debugger's panel, on a plate of its own so it reads over either */
 const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw / var(--tz, 1));z-index:45;padding:3px 7px;border-radius:3px;background:rgba(var(--h-plate,12,11,9),0.94);font:11px/1.4 var(--h-font,sans-serif);letter-spacing:0.01em;text-align:right;color:var(--h-ink,#d2c9b5);pointer-events:none;opacity:0;transition:opacity .3s';
+/** how often the page tells the keeper whether the run is over, and how long the end's beat may wait for an idle moment (keeper.ts watch: a run's end is
+ *  filed at once). A run that ends and is begun again inside one look is not seen: its ending is filed by the next beat, as every ending was before */
+const END_LOOK_MS = 250, END_IDLE_MS = 300;
+/** THE RUN IS OVER, as the page itself knows it: a squad mission's verdict (game/verdict.ts — those end by their own rule and never move the mission's
+ *  stage word, mission.ts) or the stealth mission's stage word in an end. Reads only */
+export const runOver = (g: Game): boolean => !!g.verdict?.result || g.mission?.stage === 'done' || g.mission?.stage === 'failed';
 const OFF = 'Replay buffer is off (?noreplay or the stored switch): F7 has nothing to save';
 /** F7 as a key of ours: plain or with Shift, not a repeat, not typed into a field */
-const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '');
+const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !typedInto(e.target);   // (the hidden text box of a framed page is no field: host/keymap.ts)
 
 export class ReplayKey {
   readonly buf: ReplayBuffer | null;
@@ -37,6 +53,9 @@ export class ReplayKey {
   last: { id: number | null; file: ReplayFile } | null = null;
   /** the tape of this page visit being written out as it is played (null: not kept) */
   keeper: ReplayKeeper | null = null;
+  /** a run's end has just been filed in this browser's store (keeper.ts endBeat): the page's to wire — where a build sends its tapes, this is the moment
+   *  to send them, so that a tab shut seconds after a mission ends has not kept the ending to itself */
+  onEndKept: (() => void) | null = null;
   /** this page visit's name: the kept tape's, and on every file F7 makes during it (so a reader knows the file is a window of that tape) */
   readonly session: string = sessionId();
   private played = false;
@@ -77,12 +96,12 @@ export class ReplayKey {
   }
   private crashAt = -Infinity; private crashTry = -Infinity; private crashing = false; private crashes = 0;
   /** the page hit an error (the window's, or the frame loop's own catch — main.ts): a replay saves by itself. One file a minute at most once one HAS left the
-   *  buffer — onto the shelf, or as the download a browser that keeps no shelf gets instead — and CRASH_MAX a page load (an error that repeats must fill neither
-   *  the shelf, which would push out the replays F7 put there, nor the downloads folder); an error that made no file (nothing played yet) spends neither, and
+   *  buffer — onto the shelf, or to the build's backend where a browser keeps no shelf — and CRASH_MAX a page load (an error that repeats must fill neither
+   *  the shelf, which would push out the replays F7 put there, nor the backend); an error that made no file (nothing played yet) spends neither, and
    *  is asked again no sooner than CRASH_TRY_MS later (its one line on the message row must not repeat every frame).
    *  FIRST, and whatever that budget says, the error is filed in the ring as a line at the play moment it came (ReplayBuffer.pageError, which has its own rule
    *  for an error that repeats — on the play clock): the file this error saves, and every file F7 makes while the ring still holds that moment, carries it —
-   *  which is how the one-file build's 'F7 downloads a replay' file, and an F7 after an error the budget swallowed, say what went wrong */
+   *  which is how an F7 after an error the budget swallowed says what went wrong */
   crashed(msg: unknown): void {
     if (!this.buf) return;
     const now = performance.now(), text = String((msg as Error | undefined)?.message ?? msg).slice(0, 200);
@@ -100,21 +119,28 @@ export class ReplayKey {
   }
   /** start keeping this visit's tape: a piece every KEEP.secs on a timer of the page's own (never inside a game step), in an idle moment where the browser has
    *  them, and what is left the moment the page is hidden or left. Nothing is filed until the game has been stepped in the player's hands (a title page running
-   *  its reel keeps nothing). Old tapes past the budget are let go at boot, oldest and already handed over first. */
+   *  its reel keeps nothing). Old tapes past the budget are let go at boot, oldest first.
+   *  NOT ON THE ONE-FILE PAGE unless its address names a backend (`?cloud=` a local one; tools/build-one.ts bakes none in): that build has no page that lists a
+   *  kept run (and, since 2026-10-27, no hand-over of them as a file), so a tape kept there would be storage nobody can read. F7 there
+   *  sends the last minutes to a backend the address names, and with none says the replay was not kept. Tapes an older one-file page kept in a browser are left as they are: nothing here removes them. */
   private keep(): void {
     const buf = this.buf; if (!buf) return;
-    try { if (new URLSearchParams(location.search).has('nokeep') || localStorage.getItem(LS_KEEP) === '0' || typeof indexedDB === 'undefined') return; } catch { return; }
+    try { if (new URLSearchParams(location.search).has('nokeep') || localStorage.getItem(LS_KEEP) === '0' || typeof indexedDB === 'undefined') return; if (onePage() && !cloudUrl(new URLSearchParams(location.search))) return; } catch { return; }
     try {
       const store = keptStore(), game = this.game;
       const K = this.keeper = new ReplayKeeper(buf, { sid: this.session, store, played: () => this.played, say: s => this.say(s),
         head: () => { let search = ''; try { search = location.search; } catch { /* */ } return buf.head(game, { commit: this.commit, url: search, userAgent: navigator.userAgent, ...this.meta() }); } });
-      setLiveKeeper(async () => { K.beat(); await K.idle(); });   // (packed like any beat's: the plain-text write is for a page that is going)
       const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
       setInterval(() => { if (idle) idle(() => K.beat(), { timeout: 2000 }); else K.beat(); }, KEEP.secs * 1000);
+      // (a run's end is filed about a second after it, not at the next beat: keeper.ts watch. Looked at on a timer of the page's own, never inside a step,
+      // and the beat itself waits for an idle moment like every other, but not for long: the world is still stepping under the end card)
+      setInterval(() => { if (!K.watch(runOver(game), performance.now())) return;
+        const go = () => { void K.endBeat().then(() => { try { this.onEndKept?.(); } catch (e) { reportWarning('replay.keep.end', e); } }); };
+        if (idle) idle(go, { timeout: END_IDLE_MS }); else go(); }, END_LOOK_MS);
       window.addEventListener('pagehide', () => { void K.leave(); });   // (and the visit is marked as left: keeper.ts leave)
       window.addEventListener('pageshow', e => { if (e.persisted) K.back(); });   // (the browser's back button brought this very page back: it is being played again)
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') void K.flush(); else K.back(); });   // (in front again: is its visit still there?)
-      void keepBudget().then(max => pruneKept(store, max, this.session)).catch(() => {});
+      void keepBudget().then(max => pruneKept(store, max, this.session)).catch(e => reportWarning('replay.keep.prune', e));
       try { void navigator.storage?.persist?.().catch(() => {}); } catch { /* */ }
     } catch { this.keeper = null; }
   }
@@ -122,7 +148,7 @@ export class ReplayKey {
   get canView(): boolean { return !!this.buf && !onePage(); }
   /** save the last stretch and play it IN THIS WINDOW (the maintainer, 10-15: "replays should just play in the current window, not open a new tab"): Shift+F7's
    *  work, and the end card's Replay button (ui/menu.ts). The page goes once the shelf has the file, and stays where it is if none was shelved (save() never
-   *  rejects: a save that fails says why and comes back null) or there is no viewer page (a plain save: the one-file build's is a download). One press, one
+   *  rejects: a save that fails says why and comes back null) or there is no viewer page (a plain save: the one-file build's is sent, where it has a backend). One press, one
    *  leaving: a second inside the save's wait, or the first seconds of the going, does nothing. THE WAY BACK is the browser's own Back, and the replay bar's '‹ Game' (replay/engineplay.ts), which
    *  reads the mark left here (replay/format.ts leaveFor / backToGame): the address left, its slot in this window's history, the shelf entry it left for. The page left is LEFT (a mission the key leaves mid-way is over, as a
    *  reload's is; F7 alone saves and stays).
@@ -149,7 +175,7 @@ export class ReplayKey {
   private leaving = 0;
   /** put the last stretch on the shelf; the shelf's id (null: nothing kept — and the message line says why) */
   async save(why = 'key'): Promise<number | null> { return (await this.put(why)).id; }
-  /** save()'s work, saying also whether a file was MADE (shelved, or downloaded where the browser keeps no shelf: id null either way it was not shelved; on the one-file build an error's is made and kept in `last` for F7) */
+  /** save()'s work, saying also whether a file was MADE (shelved, or handed to the build's backend where the browser keeps no shelf: id null either way it was not shelved) */
   private async put(why: string): Promise<{ id: number | null; made: boolean }> {
     try { return await this.put1(why); }
     catch (e) { this.say(`Replay could not be saved: ${String((e as Error | undefined)?.message ?? e).slice(0, 160)}`, !why.startsWith('error')); return { id: null, made: false }; }   // (never quiet: a save that throws used to end in the key's own catch with nothing said)
@@ -161,18 +187,52 @@ export class ReplayKey {
     const B = this.buf!, why0 = String(B.broke).slice(0, 120);
     const stale = B.broke ? ` The replay buffer stopped itself earlier (${why0}): this is what it held.` : !B.on ? ' The replay buffer is switched off (__replay.on): this is what it held when it was.' : '';
     if (!file.samples.length) { this.say(B.broke ? `Replay buffer stopped itself before anything was played: ${why0}` : !B.on ? 'Replay buffer is switched off (__replay.on = true brings it back): nothing held' : 'Replay: nothing played yet', !err); return none; }
-    // (the one-file build has no viewer page to open a shelf with: F7 hands the file itself over. An ERROR there downloads nothing by itself — a file nobody asked
-    // for in a visitor's downloads — it says F7 will, and counts against the errors' budget so the line is not said again and again)
-    if (one && err) { this.last = { id: null, file }; this.say(`The page hit an error: F7 downloads a replay of the last ${clock(file.seconds)}.${stale}`); return { id: null, made: true }; }
     const id = one ? null : await shelfPut(file); this.last = { id, file };   // (null: no shelf here, the browser refused it, or the shelf did not answer inside its own wait — nothing is written later)
     // (a file the KEY made that holds a page error says so, and where: the error's own line is in it at that moment)
     const E = err ? [] : errorMarks(file), held = E.length ? ` This replay holds the page's error, at ${clock(E[E.length - 1].r)}.` : '';
-    if (id === null) { this.download(file); this.say(`${err ? 'The page hit an error: replay' : 'Replay'} of the last ${clock(file.seconds)} downloaded (${one ? 'this build has no viewer page: open the file in a build that has one, or drop it in a thread' : 'this browser would not keep it on the shelf'}).${held}${stale}`); return { id, made: true }; }
+    // (no shelf: the one-file build has no viewer page to open one with, the browser refused it, or it did not answer. NO FILE IS DOWNLOADED — the maintainer,
+    // 2026-10-27: "we should get rid of local downloads entirely" — the replay goes to the build's backend, and the line says what became of it)
+    if (id === null) { await (this.sending = this.send(file, err, one, held + stale)); return { id, made: true }; }
     this.say(`${err ? `The page hit an error: replay of the last ${clock(file.seconds)} saved. Shift+F7 leaves the game for the viewer.` : `Replay saved: the last ${clock(file.seconds)} of play. Shift+F7 leaves the game for the viewer.`}${held}${stale}`);
     return { id, made: true };
   }
-  /** hand a file to the browser as a download (format.ts `downloadReplay`, the one way a replay file leaves a page: gzipped when it is large) */
-  download(file: ReplayFile): void { void downloadReplay(file).catch(() => { /* headless */ }); }
+  /** HOW A REPLAY FILE LEAVES THIS PAGE: to the build's backend, under the visit that is up and by its rules (cloud.ts cloudFile: 'off' where this browser
+   *  does not send files or the build has no backend, 'no' where the file is past the backend's bound). The row says which visit it is a window of. A check
+   *  puts its own here */
+  out: (name: string, blob: Blob, meta: Record<string, string>) => Promise<ReplaySent> = (name, blob, meta) => cloudFile(new URLSearchParams(location.search), name, blob, 'replay', meta);
+  /** WOULD THIS BROWSER SEND A REPLAY FROM HERE NOW: asked before the file is packed, so a page that sends nothing packs nothing (megabytes of text on the
+   *  main thread, for an error that repeats too). The saved files' own question (cloud.ts cloudSendsFiles) AND the replays' word: a browser told not to send
+   *  its replays (?cloudtapes=0) sends none by this road either. A check puts its own here */
+  sends: () => Promise<boolean> = async () => { const q = new URLSearchParams(location.search); return !/^(0|off|false|no)$/i.test(q.get('cloudtapes') ?? '') && await cloudSendsFiles(q); };
+  /** the last send, settled once its last line has been said (a check waits on it; a page never does) */
+  sending: Promise<void> = Promise.resolve();
+  /** send a replay that has no shelf to go on, and say what became of it. It answers inside SEND_SAY_MS where the backend does (or there is none): past that
+   *  the line says the replay is waiting to be sent and the answer's own line follows by itself. Never rejects.
+   *  A LINE NAMES THE TRUE REASON OF EACH HALF: why the file was not stored here (this build has no place for one / this browser would not), and why it did
+   *  not go (the build has no backend / this browser is not sending). The tail (the page's error is in it, the buffer had stopped) is said of a replay that
+   *  exists somewhere, never of one that was not kept */
+  private async send(file: ReplayFile, err: boolean, one: boolean, tail: string): Promise<void> {
+    const R = `${err ? 'The page hit an error, and the' : 'The'} replay of the last ${clock(file.seconds)}`;
+    const said = (end: ReplaySent | 'waits'): void => {
+      let back = false; try { back = !!cloudUrl(new URLSearchParams(location.search)); } catch { /* headless */ }
+      this.say(end === 'sent' ? `${R} was sent.${one ? '' : " This browser won't keep replays, so you can't open it here."}${tail}`
+        : end === 'waits' ? `${R} is waiting to be sent.${tail}`
+        : end === 'failed' ? `${R} couldn't be sent, so it wasn't kept.`
+        : end === 'no' ? `${R} wasn't kept, because it's too big to send.`
+        : one ? (back ? `${R} wasn't kept, because this build can't save one and this browser isn't sending replays.` : `${R} wasn't kept, because this build can't save or send one.`)
+        : back ? `${R} wasn't kept, because this browser won't store it and isn't sending replays.` : `${R} wasn't kept, because this browser won't store it and this build has nowhere to send it.`);
+    };
+    try {
+      if (!(await this.sends())) { said('off'); return; }
+      const { name, blob } = replayBlob(file), meta: Record<string, string> = { savedAt: file.savedAt, why: String(file.why ?? '').slice(0, 200), scenario: String(file.level?.scenario ?? '').slice(0, 120) };
+      if (file.session) meta.session = file.session; if (this.commit) meta.commit = this.commit;
+      const going = this.out(name, blob, meta).catch((): ReplaySent => 'failed');
+      const first = await Promise.race([going, new Promise<'waits'>(r => setTimeout(() => r('waits'), SEND_SAY_MS))]);
+      said(first);
+      // (an answer can be a while: a slow line, or a file that waits for a browser that has not read the sharing notice yet. The line promises neither)
+      if (first === 'waits') this.sending = going.then(said, () => { /* */ });
+    } catch { said('failed'); }   // (headless, or a file that would not pack)
+  }
   /** the console's hook (main.ts __replay) */
   hook() {
     const self = this;
@@ -180,18 +240,17 @@ export class ReplayKey {
       get on() { return !!self.buf && self.buf.on && !self.buf.broke; },
       set on(v: boolean) { try { localStorage.setItem(LS, v ? '1' : '0'); } catch { /* */ } if (self.buf) self.buf.on = !!v; },   // (a buffer the page booted without comes with the next load)
       knobs: REPLAY,
-      save: (why = 'console') => self.save(why), file: (why = 'console') => self.file(why), download: () => { const f = self.file('console'); if (f) self.download(f); return f ? replayName(f) : null; },
+      save: (why = 'console') => self.save(why), file: (why = 'console') => self.file(why), send: () => { const f = self.file('console'); if (f) self.sending = self.send(f, false, onePage(), ''); return f ? replayName(f) : null; },
       open: () => { void self.save('console').then(id => { if (id !== null) leaveFor(viewerUrl(id), id); }); },
       view: (why = 'console') => self.openViewer(why), get canView() { return self.canView; },
       summary: () => self.buf ? self.buf.summary() : 'replay buffer off (?noreplay or the stored switch)',
       get last() { return self.last; },
-      // every run kept, and the hand-over (replay/keeper.ts, replay/dumpui.ts)
+      // every run kept (replay/keeper.ts, replay/keptui.ts)
       get keeping() { return !!self.keeper && !self.keeper.broke; },
       set keeping(v: boolean) { try { localStorage.setItem(LS_KEEP, v ? '1' : '0'); } catch { /* */ } },   // (from the next page load)
       keep: KEEP, session: self.session,
       get keeper() { return self.keeper; }, get buf() { return self.buf; },
-      kept: async () => { await self.keeper?.flush(); const S = await keptSummary(keptStore()); return { words: keptWords(S), keeper: self.keeper?.summary() ?? 'not keeping (?nokeep, the stored switch, or no buffer)', stats: self.keeper?.stats ?? null, ...S }; },
-      dump: (all = false) => dumpNow({ all }, s => self.say(s)),
+      kept: async () => { await self.keeper?.flush(); const S = await keptSummary(keptStore()); return { words: keptWords(S), keeper: self.keeper?.summary() ?? 'not keeping (?nokeep, the stored switch, no buffer, or the one-file page with no backend)', stats: self.keeper?.stats ?? null, ...S }; },
     };
   }
 }
@@ -209,13 +268,21 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
-export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'savepic', 'findtuned', 'surf', 'look'];   // (nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
+export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'adapt', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'sharpcap', 'allproxies', 'framecap', 'savepic', 'pace', 'giveway', 'flight', 'findtuned', 'look', 'nosunglint', 'glintpick', 'holedepth',
+  ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'shaderfold', 'gentle', 'plainair', ...rustWords()];   // (the second line: how THIS machine builds its shaders — every row on trial in Options > Graphics, ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
+// (…and the last: which systems run in the Rust module, src/sim/sim.ts rustWords — `rust`, `rust<row>`. This machine's, like the shader words: `?rust=0` typed on a replay's or a networked game's address must still be there when the page reads it, and a recipe recorded under one must not hand it on)
+/** A WORD OF AN ADDRESS, WITH ITS VALUE, IS THE VISIT'S: one of VISIT_FLAGS, but `look` is two things under one word (scene/look.ts). The dress's
+ *  `look=plain|0|off` names the LEVEL a run plays, so it is the run's: it stays in a tape's recipe and in a co-op invite. Every other value is a row of the look
+ *  prototype's page, which is how the page is looked at: the visit's. Ask by pair, never by the list alone, wherever a word is kept or dropped. */
+export const visitWord = (k: string, v: string): boolean => VISIT_FLAGS.includes(k) && (k !== 'look' || !lookDressWord(v));
+/** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
+export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).filter(v => visitWord(k, v)).map(v => [k, v] as [string, string]));
 export function engineUrl(id: number, file: ReplayFile): string | null {
   const T = file.rerun; if (!T || 'dead' in T) return null;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;
   const taped = T.x.reduce((a, row) => row[1] === 'restart' && row[0] > 0 && row[0] + 1 > a ? row[0] + 1 : a, 0);
   const at = Math.min(T.ticks, Math.max(seen, taped));
-  const now = new URLSearchParams(location.search), visit = VISIT_FLAGS.filter(k => k !== 'paused' && now.has(k)).map(k => `&${k}=${encodeURIComponent(now.get(k) ?? '')}`).join('');
+  const now = new URLSearchParams(location.search), visit = visitPairs(now).filter(([k]) => k !== 'paused').map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('');
   return new URL(`index.html?playtape=${id}${at > 0 ? `&at=${at}` : ''}${visit}`, document.baseURI).href;
 }
 /** a name for this page visit: when it began, and enough dice that two tabs opened in one second differ */

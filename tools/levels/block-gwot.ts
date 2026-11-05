@@ -26,13 +26,24 @@ export const build = buildPlain;
 const R = BLOCK_ROOMS;
 /** the one accent (a word to change it — and the outside doors' paint beside it: src/scene/look.ts LOOK_DOORS) */
 const ACCENT: GwotMat = 'prodGreen';
+/** THE ROOMS' OWN FLOORS (block.ts lays one wall to wall in each lived room, in a colour of its own): what each is made of, by the colour it was written in.
+ *  The shared rules ask a lived thing the furniture questions, and a floor is no furniture: the switch room's grey-green read as a cot's blanket and was
+ *  drawn as cloth, the mess's sage as a steel cabinet, the loading hall's oxide paint as nothing */
+const FLOORS: Skin['own'] = [
+  [[0.33, 0.22, 0.18], 'paintRust'],    // the loading hall: red-oxide floor paint
+  [[0.36, 0.42, 0.35], 'olive'],        // the mess: sage lino
+  [[0.37, 0.3, 0.21], 'woodGrey'],      // the workshop: wood block
+  [[0.2, 0.24, 0.22], 'paintGreen'],    // the switch room: a painted floor
+  [[0.22, 0.42, 0.7], 'paintBlue'],     // the battery room: acid-proof paint under the cells
+];
 /** where the plates are counted from: the loading hall's east wall (block.ts: the partition on x = 11) */
 const ZERO = 11;
 export const SKIN: Skin = {
-  wall: 'hesco', house: 'hesco', inner: 'whitewash', frameOut: ACCENT, frameIn: ACCENT, dado: null, noRug: /./, patches: 6,   // (the dado is laid below: the skin's own comes with a rug, and a rug here would lie under the lockers)
-  floor: { stone: 'slab', lino: 'canvas', carpet: 'slab' },
+  wall: 'render', house: 'render', inner: 'whitewash', frameOut: ACCENT, frameIn: ACCENT, dado: null, noRug: /./, patches: 6,   // (the dado is laid below: the skin's own comes with a rug, and a rug here would lie under the lockers)
+  floor: { stone: 'slab', lino: 'canvas', carpet: 'slab' },   // (lino keeps canvas: the palette has no smooth sheet, and a paint row was tried and read as a floor of rusting steel — the look draws paint chipped to red)
   metals: ['galv', 'iron', 'tin', 'woodGrey'],
   // the gang's lockers in the mess (and any tall steel cabinet of the comms room) in the same paint
+  own: FLOORS,
   pick: c => c.steel && c.y0 < 0.1 && c.y1 > 1.9 && c.b.albedo[0] < 0.4 && (c.group === 'mess' || c.group === 'comms') ? ACCENT : undefined,
   dress: (G, level, T) => {
     const M = lookMarks(T), W = 0.5;

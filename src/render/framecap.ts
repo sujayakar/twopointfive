@@ -24,6 +24,13 @@
 // when it does not (the trace is a few numbers a frame). Nothing here is read by the game.
 
 /** bytes a texel of the formats a target here may have (a format not listed is named in `skipped`) */
+/** THE PAGE'S SWITCH (`?framecap=0`, main.ts). Down = the render targets are made without COPY_SRC, as they were before a capture could read them, no texture
+ *  is watched and F6 does nothing. It is up by default because the usage is a property of a texture from the moment it is made: the key cannot ask for it
+ *  later. Read where the targets are made (passes.ts RT, gbuffer.ts), so it is lowered before the Engine is built. */
+export const FRAMECAP = { on: true };
+/** what a render target adds to its usage so that a capture can read it back (nothing with the switch down) */
+export const capUsage = (): number => FRAMECAP.on ? GPUTextureUsage.COPY_SRC : 0;
+
 export const TEXEL_BYTES: Readonly<Record<string, number>> = {
   r8unorm: 1, r8uint: 1, rg8unorm: 2, rg8uint: 2, rgba8unorm: 4, 'rgba8unorm-srgb': 4, bgra8unorm: 4, 'bgra8unorm-srgb': 4, rgba8uint: 4,
   r16float: 2, r16uint: 2, rg16float: 4, rg16uint: 4, rgba16float: 8, rgba16uint: 8,

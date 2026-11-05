@@ -4,6 +4,7 @@ import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
 import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
 import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT, MAX_CUT_PLANES } from './cut';
+import type { BoxShape } from './shapes';
 import { AIR_ROWS } from './airGrid';
 import { groundRayConfig, GH_ROWS } from './groundField';
 import { roundConfig, packRoundRows, ROUND_CORE_W } from './round';
@@ -35,12 +36,16 @@ export const BoxFlag = {
   // breaks it and a line of fire passes one while WINBARS.on is up (game/winbars.ts; collision.ts shotBlocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
+/** A DRAWN-ONLY SHEET (a stain, ruts, a painted line, a poster: something the picture shows that no ray and no body meets) is a box whose flags under this
+ *  mask are NoShadow alone; a SOLID thing is one with none of them */
+export const SHEET_MASK = BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
 export const MAX_GLASS = 32;
 /** the GPU flag bit of a ROUND box (common.wgsl GEO_ROUND; scene/round.ts). Bit 3 of the geo flags word, which on the CPU is Dynamic: no shader reads that one, and
  *  with the round's GPU half up it is not sent (BoxWorld.packBox). */
 export const BOX_ROUND_BIT = 8;
 
+export type BoxStuff = import('./stuff').BoxStuff;
 export interface Box {
   c: Vec3;            // center
   h: Vec3;            // half extents (local axes)
@@ -67,6 +72,13 @@ export interface Box {
    *  material / per box in the level file (levelData.ts MaterialData.rough / metal, BoxData.rough / metal); the three below reach the GPU as ONE float in boxMat row 1's w
    *  (matWord, decoded by common.wgsl boxFinish) — the g-buffer writes roughness / metalness per pixel from it (+ the detail layer), reflect.wgsl reads the anisotropy. */
   rough?: number; metal?: boolean;
+  /** WHAT THIS BOX IS MADE OF (scene/stuff.ts): a material of the look, 'waits', 'glass' or 'rubber'; absent = plain. It is SAID, never read off the
+   *  colour: by the level file (the box's own `stuff`, else its material row's: levelLoad.ts puts it here when the file is read) or by the code that makes
+   *  the box (a kit's add() from the palette row it was handed, a prop's part, a door's leaf). The look draws exactly this (render/gbuffer.ts lookWordOf),
+   *  and the PICTURE of a round's hit reads it (game/particleFx.ts HITSTUFF: the sparks and chips it knocks out, the crack in solid glass); nothing in the
+   *  simulation does. It is part of the box's PAINT: whoever repaints the box says the new paint's word or drops this one, and whoever copies a box's
+   *  paint copies it. */
+  stuff?: BoxStuff;
   /** anisotropic finish — the lobe stretched along the view direction so a lamp mirrors as a long streak, not a disc: the wet lot's standing water
    *  (game/weather.ts sets it with the rain; runtime only, never authored) */
   aniso?: boolean;
@@ -109,6 +121,9 @@ export interface Box {
   /** AN OLD BREAK (the same trial): the cut faces were not made a moment ago. Picture only, packed with the record: on the look page they take the look's paint
    *  as a face of the core's stuff, and on a snow level the snow lies on the ones that face up. A blast's fresh cut never sets it. Not with cutGlass. */
   cutOld?: boolean;
+  /** WHAT AN OLD BREAK'S CORE IS MADE OF (with cutOld; as `stuff`): where the cut faces show another thing than the box is (a wall broken under its coping
+   *  shows the coping's stuff). Absent = the box's own `stuff`. Picture only, packed with the record on the look page. */
+  cutCoreStuff?: BoxStuff;
   /** ROUND (scene/round.ts — read its head): this box is a ROUND THING, the cylinder about its own y of radius h[0] (= h[2]) and half height h[1]. Every CPU ray
    *  and segment (rayBox, collision.ts lineBox) and what walks against it (collideCircle) meet the cylinder; with roundConfig.gpu so do the picture (the cut pass)
    *  and every GPU ray. Set by round.ts roundLevel as a level is stood up; never with a cut record. */
@@ -116,6 +131,20 @@ export interface Box {
   /** what round.ts roundLevel made this box FROM (the kit's slab as the level file has it): its centre, half extents, flags and marks, put back when the level is
    *  stood up with the switch down, and what the level's fingerprint is taken over */
   was?: { c: Vec3; h: Vec3; yaw: number; flags: number; marks?: MarkingDef[] };
+  /** A SHAPE (scene/shapes.ts — read its head): how this box of a level stands when shapes are on, as its level file says it (BoxData.shape) or as the kit
+   *  that made it said it. Authored data: nothing but shapes.ts shapeLevel reads it, as the level is stood up. */
+  shape?: BoxShape;
+  /** shapes.ts shapeLevel has stood this box as its shape (its record, if its shape has a form, is the shape's and no break's): taken back when the level is
+   *  stood up with the switch down */
+  shaped?: boolean;
+  /** this static is a PIECE of a shape (BoxShape.with): added after the level's own boxes by shapeLevel, taken away by it; never in a level file's list.
+   *  TRIM: drawn and nothing else (it stands NoShadow, so no ray, eye or body meets it); `of` = the number of the box that says it, which it follows out of
+   *  the picture (shapes.ts withPieces) */
+  piece?: boolean;
+  of?: number;
+  /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an
+   *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (game/debris.ts, DEBRIS.dress). */
+  dress?: boolean;
 }
 /** MKEY ranges (Box.mkey): the system in the top byte, its own numbering below — doors (index × 4 + part), props (id × 16 + part), items (serial × 8 + part), the
  *  rig props on a character (owner << 8 | ordinal this frame; the owner-0 lasers stay unkeyed), devices (ordinal over the frame's device boxes), staging / QA boxes
@@ -126,11 +155,34 @@ export interface Box {
 export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24 } as const;   // debris: the destruction lane's rigid chunks (game/debris.ts), keyed off their serial · look: what a broken wall looks like where it broke (game/edgeLook.ts: plates, lintels, rubble)
 /** a LOOK piece (keyed MKEY.look): drawn and lit, in no collision list — a round, an eye and a boot pass through it. Most are NoShadow; under the cut switch the
  *  bigger ones drop that flag so LIGHT's rays meet them and they cast the shadow they draw, which would also hand them to the CPU's ray: this is how it tells */
-const lookKeyed = (b: Box): boolean => b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24;
+const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24);   // (or a piece of DRESSING under another key: Box.dress)
 
-export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
-  return { yaw: 0, albedo: [0.5, 0.5, 0.5], emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1e6, ...p };
+/** ONE LAYOUT FOR EVERY BOX: a box is made with every field of the interface in place, in one order (the optional ones `undefined`), so the engines keep ONE hidden class
+ *  for all of them and every read of a box in a hot loop (the line tests, the rays, the pack, the fog's list) is a plain field load. A field set later (`mkey`, `dc`,
+ *  `marks` …) is then a write to a slot that is there, never a new layout. Make a box through this or through makeBox; a literal elsewhere forks the layout again
+ *  (tools/qa/boxshape-check.ts counts them). */
+export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
+  return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, cutRound: undefined, cutArc: undefined, cutOld: undefined, round: undefined, was: undefined, shape: undefined, shaped: undefined, piece: undefined, of: undefined, dress: undefined, stuff: undefined, cutCoreStuff: undefined,
+  } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
+export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
+  const b = boxOf(p.c, p.h, 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0);
+  for (const k in p) (b as unknown as Record<string, unknown>)[k] = (p as unknown as Record<string, unknown>)[k];   // (the spread's own rule: every key the caller gave, as given)
+  return b;
+}
+/** a COPY of a box to change (a drawn twin, a ghost, a grown hull): every field of the original in boxOf's order, so the one layout — a spread (`{ ...b, h }`) is a
+ *  layout of its own on the engines */
+export function copyBox(b: Box): Box {
+  return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
+    rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
+    cutRound: b.cutRound, cutArc: b.cutArc, cutOld: b.cutOld, round: b.round, was: b.was, shape: b.shape, shaped: b.shaped, piece: b.piece, of: b.of, dress: b.dress, stuff: b.stuff, cutCoreStuff: b.cutCoreStuff,
+  } satisfies { [K in keyof Required<Box>]: Box[K] };
+}
+
+/** WHOEVER COPIES A BOX'S PAINT COPIES ITS WORD (Box.stuff: a piece broken off a thing is made of what the thing is). Spread beside the albedo of the
+ *  box being made: `makeBox({ …, albedo: v3.copy(b.albedo), ...wordOf(b) })`. */
+export const wordOf = (b: { stuff?: BoxStuff }): { stuff?: BoxStuff } => b.stuff !== undefined ? { stuff: b.stuff } : {};
 
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
 export const ROUGH_DEFAULT = 1.0;
@@ -203,6 +255,9 @@ export class BoxWorld {
    *  threw no shadow, stood in no mirror and bounced no light (seen on a thirteen-man mission: two defenders by a window with no shadow beside a stove pipe that had one).
    *  The mesh trees still hold MESH_MAX_CHARS (render/meshbvh.ts): past them a man is his round cones to every ray (common.wgsl meshShadowT / meshClosest). */
   static readonly MAX_CAST = 16;
+  /** …and how many of them a frame's list takes: all of them, or — ?allproxies=0 in the page, main.ts — the eight it took before, so the ninth man drawn is
+   *  again without a shadow. The list's own room (MAX_CAST, the info block's layout) does not move with it. */
+  static castCap = BoxWorld.MAX_CAST;
   static readonly CAPS_PER_CHAR = 15; static readonly MAX_CAPSULES = BoxWorld.MAX_CAST * BoxWorld.CAPS_PER_CHAR;
   // word offsets in infoData (struct SceneInfo): the character bounds, then the globals' height pairs, the grid vec4, the globals' bounds, the glass block
   static readonly INFO_BOUNDS = 24; static readonly INFO_GLOBALS_Y = BoxWorld.INFO_BOUNDS + BoxWorld.MAX_CAST * 4; static readonly INFO_GRID = BoxWorld.INFO_GLOBALS_Y + 32; static readonly INFO_GLOBALS_B = BoxWorld.INFO_GRID + 4;
@@ -298,11 +353,13 @@ export class BoxWorld {
   // dynamics (the tail of `all`) by the same brute force as before. Every static is registered whatever its flags (skipFlags are judged per query exactly as the brute force did:
   // a static hidden by destruction and restored later is findable; a pane IS a hit unless the caller skips Glass), padded RAY_PAD each side so a face on a cell line is in
   // both cells. The per-box test (rayBox with the running best as tmax) is unchanged, so a hit's t and normal are the same bits; the candidate SET is what shrank. The one
-  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt in upload() when the static prefix changed
-  // (the pack shadow's signal or the count); tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
+  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt by list() when a static's SHAPE changed
+  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did; tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
   static readonly RAY_PAD = 1e-3;
   private rgStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1); private rgItems = new Uint32Array(4096); private rgGlobals: number[] = [];
   private rgN = -1;   // statics the ray grid covers (= the static prefix of `all` at its build; −1 = never built)
+  /** the shape each static had when the ray grid was last built (list()): RS doubles a static — centre, yaw, half-sizes, rotated?, the rotation */
+  private static readonly RS = 12; private rgShape = new Float64Array(0);
   private rgFill = new Uint32Array(WORLD.gridW * WORLD.gridH); private rgRanges = new Int32Array(0);
   private rgStamp = new Uint32Array(0); private rgRay = 0;
   private rcBest = 0; private rcBi = -1; private rcBn: Vec3 = [0, 1, 0];
@@ -442,7 +499,7 @@ export class BoxWorld {
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
   /** caps: array of [ax,ay,az, r, bx,by,bz] (exactly CAPS_PER_CHAR entries; pad with zero-radius), bound = [cx,cy,cz,radius]. */
   addCharacterCapsules(owner: number, albedo: Vec3 | Vec3[], caps: number[][], bound: [number, number, number, number]) {
-    if (this.charCount >= BoxWorld.MAX_CAST) return;
+    if (this.charCount >= BoxWorld.castCap) return;
     // (one colour for the whole man, or — character materials, render/charMaterials.ts proxyAlbedos — one per record in caps' order)
     const perCap = Array.isArray(albedo[0]) ? albedo as Vec3[] : null;
     const pack = (a: Vec3) => ((Math.round(Math.min(1, Math.max(0, a[0])) * 31) & 31) << 11) | ((Math.round(Math.min(1, Math.max(0, a[1])) * 63) & 63) << 5) | (Math.round(Math.min(1, Math.max(0, a[2])) * 31) & 31);
@@ -505,16 +562,36 @@ export class BoxWorld {
     return q < 0 ? 0 : q > WORLD.gridYLevels - 1 ? WORLD.gridYLevels - 1 : q;
   }
 
-  /** Rebuild combined list, pack, grid, and upload. Call once per frame after dynamics are set. `between` = a pack BETWEEN two game ticks of one drawn frame (host/loop.ts,
-   *  the fixed step): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the pack that is drawn still resolves 'where was this box last frame'. */
-  upload(between = false) {
+  /** THE LIST — what the GAME reads of the box world: the combined list as of now (`all`: raycast's candidates, an index's box), the glass statics' list, and the
+   *  raycast's grid over the statics, rebuilt when their count changed or one's SHAPE moved (rgShape: centre, half-sizes, turn — all buildRayGrid reads; a changed
+   *  colour, wetness or lamp leaves it standing). Returns the statics' count. Nothing here is the picture's and nothing is written to the GPU. */
+  private list(): number {
     const all = this.all; all.length = 0;
     for (const b of this.statics) all.push(b); for (const b of this.dynamics) all.push(b);
     if (all.length > this.maxBoxes) throw new Error(`too many boxes: ${all.length}`);
+    const nStat = this.statics.length;
+    if (this.staticsDirty || this.glassStaticsN !== nStat) { this.glassStatics.length = 0; for (let i = 0; i < nStat; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i); this.staticsDirty = false; this.glassStaticsN = nStat; }
+    const RS = BoxWorld.RS; if (this.rgShape.length < nStat * RS) { this.rgShape = new Float64Array(Math.max(nStat, this.maxBoxes) * RS); this.rgN = -1; }
+    const G = this.rgShape; let moved = this.rgN !== nStat;
+    for (let i = 0; i < nStat; i++) {
+      const b = all[i], o = i * RS, c = b.c, h = b.h, rot = b.rot;
+      if (G[o] === c[0] && G[o + 1] === c[1] && G[o + 2] === c[2] && G[o + 3] === b.yaw && G[o + 4] === h[0] && G[o + 5] === h[1] && G[o + 6] === h[2]
+        && (rot ? G[o + 7] === 1 && G[o + 8] === rot[0] && G[o + 9] === rot[1] && G[o + 10] === rot[2] && G[o + 11] === rot[3] : G[o + 7] === 0)) continue;
+      moved = true;
+      G[o] = c[0]; G[o + 1] = c[1]; G[o + 2] = c[2]; G[o + 3] = b.yaw; G[o + 4] = h[0]; G[o + 5] = h[1]; G[o + 6] = h[2];
+      if (rot) { G[o + 7] = 1; G[o + 8] = rot[0]; G[o + 9] = rot[1]; G[o + 10] = rot[2]; G[o + 11] = rot[3]; } else { G[o + 7] = 0; G[o + 8] = 0; G[o + 9] = 0; G[o + 10] = 0; G[o + 11] = 0; }
+    }
+    if (moved) this.buildRayGrid(nStat);
+    return nStat;
+  }
+  /** THE LIST, THEN THE PACK: every box into its rows for the GPU, the visible and cut lists, the trace grid, and the writes. Call once per drawn frame after dynamics
+   *  are set. `between` = a pack with no draw of its own after it (ensurePacked): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the
+   *  pack that is drawn still resolves 'where was this box last frame'. */
+  upload(between = false) {
+    const nStat = this.list(); const all = this.all;
     let nv = 0, marked = 0;
-    if (this.staticsDirty || this.glassStaticsN !== this.statics.length) { this.glassStatics.length = 0; for (let i = 0; i < this.statics.length; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i); this.staticsDirty = false; this.glassStaticsN = this.statics.length; }
     const marksOn = this.markingsEnabled;
-    const nStat = this.statics.length; let matched = 0, fresh = 0, unkeyed = 0;
+    let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
     const SS = BoxWorld.SS; let staticsChanged = false;
     if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
@@ -547,8 +624,7 @@ export class BoxWorld {
       }
     }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
-    if (forceAll || staticsChanged) { this.gridStatN = -1; this.rgN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid, and the raycast's grid, are rebuilt from these words below)
-    if (this.rgN !== nStat) this.buildRayGrid(nStat);
+    if (forceAll || staticsChanged) { this.gridStatN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid and the statics' rows go up again from these words below)
     // ---- dynamics: packed every frame, as ever
     const hide = this.hidePrimary;
     for (let i = nStat; i < all.length; i++) {
@@ -591,15 +667,29 @@ export class BoxWorld {
     }
     this.packGlass();
     this.buildGrid();
+    this.packBehind = false;
   }
+  /** THE LIST WITHOUT THE PACK, for a tick that nothing is drawn after — every tick of a game server, every tick but the last of a re-run or of a frame that steps
+   *  twice: between two ticks the cursor's ray, a laser's dot and a device's beam read `all` and the raycast's grid and nothing of the pack (tools/qa/tickcost.ts
+   *  --list plays the scripted runs this way and gets the same run to the bit). The rows on the GPU and the visible list are then BEHIND the list until the next
+   *  upload(): engine.ts packs before every draw, and a GPU pass that reads the rows with no draw before it asks ensurePacked() first. tools/qa/relist-check.ts holds
+   *  both halves: the same game, and the same bytes on the device at every draw. */
+  relist() { this.list(); this.packBehind = true; }
+  /** the rows on the device are an older list's (a relist since the last pack) */
+  private packBehind = false;
+  /** for a GPU pass that reads the box rows, the grid or the info block with NO DRAW before it (the smoke solver stepped alone, a shader run by a tool): packs if
+   *  a relist has left the device behind the list, and is nothing otherwise */
+  ensurePacked() { if (this.packBehind) this.upload(true); }
   /** THE LOOK'S WORD FOR A BOX (the look page's material maps; render/gbuffer.ts lookWordOf, set by the engine on that page): a small whole number that rides above
    *  the finish in the box's mat word (8 × it; common.wgsl boxLook reads it, boxFinish takes it off): what the box is made of, whether it is one that moves (`moves`:
    *  packed past the statics), and a number of its own. Asked at every pack of the box. null (every other page, every headless stand) = the word as it ever was.
    *  Set it with setStuffOf: the statics are packed only when one of their shadowed inputs moves, and this is not one of them. */
   stuffOf: ((b: Box, moves: boolean) => number) | null = null;
-  setStuffOf(f: ((b: Box, moves: boolean) => number) | null) { this.stuffOf = f; this.packEpoch++; }
+  /** … and for an old break's cut faces (Box.cutOld): the stuff of its core, packed with the cut's record (cut.ts packCut). null = none packed, as ever. */
+  coreStuffOf: ((b: Box) => number) | null = null;
+  setStuffOf(f: ((b: Box, moves: boolean) => number) | null, core: ((b: Box) => number) | null) { this.stuffOf = f; this.coreStuffOf = core; this.packEpoch++; }
   /** a dynamic box as the GPU gets it when the game draws it somewhere else than the simulation has it (Box.dc / dh): a copy at the drawn centre and size */
-  private static drawnOf(b: Box): Box { return { ...b, c: b.dc!, h: b.dh ?? b.h }; }
+  private static drawnOf(b: Box): Box { const o = copyBox(b); o.c = b.dc!; o.h = b.dh ?? b.h; return o; }
   /** box i's geo + mat words (the pack proper — statement for statement what upload's one loop did per box; returns whether it counted as marked) */
   private packBox(i: number, b: Box, marksOn: boolean): boolean {
     const gf = this.geoF32, gu = this.geoU32, mf = this.matData; const o = i * GEO_STRIDE; let marked = false;
@@ -617,7 +707,7 @@ export class BoxWorld {
     if (round) {   // ROUND THINGS: the picture's prism in this index's rows of the cut table (no cut bit: a ray meets the cylinder — common.wgsl isectBox — or, in a program compiled with the cut rule, this prism by the cut test: ROUND_AS_CUT)
       const q = i * CUT_STRIDE * 4; packRoundRows(this.cutData, q, b.h[0]); this.cutData[q + 32] = 0; this.cutData[q + 33] = 0; this.cutData[q + 34] = 0; this.cutData[q + 35] = ROUND_CORE_W;
     } else if (cutRows) {   // CUT BOXES: the flag bit + this index's rows of the cut table (uploaded by upload() over the packed range)
-      flags |= BOX_CUT_BIT; packCut(b.cut!, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld, b.cutArc);
+      flags |= BOX_CUT_BIT; packCut(b.cut!, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld, b.cutArc, b.cutOld && this.coreStuffOf ? this.coreStuffOf(b) : 0);
     }
     if (cutRows) { if (i < this.cutSplit) { if (i < this.cutLo) this.cutLo = i; if (i > this.cutHi) this.cutHi = i; } else { if (i < this.cutLoD) this.cutLoD = i; if (i > this.cutHiD) this.cutHiD = i; } }
     gf[o] = b.c[0]; gf[o + 1] = b.c[1]; gf[o + 2] = b.c[2]; gu[o + 3] = pack2x16f(Math.cos(b.yaw), Math.sin(b.yaw));
@@ -906,9 +996,14 @@ export class BoxWorld {
   }
 }
 
+/** is this box's record a SHAPE's (scene/shapes.ts: the box says it, and stands as it) and no break's? */
+export const shapeCut = (b: Box): boolean => b.shaped === true && b.cut !== undefined;
+/** IS THIS BOX'S CUT RECORD MET by the game's rays and segments? Under the cut-pieces switch every record is (scene/cut.ts); a shape's always: a shape is
+ *  the simulation's, and a picture setting may not move it (as a round thing, scene/round.ts). Ask it only of a box that has a record. */
+export const cutMet = (b: Box): boolean => (cutConfig.on || b.shaped === true) && b.cut!.length > 0;
 export function rayBox(ro: Vec3, rd: Vec3, b: Box, tmax: number): { t: number; n: Vec3 } | null {
   if (b.round === true) return rayBoxRound(ro, rd, b, tmax);   // ROUND THINGS (scene/round.ts): the cylinder (below)
-  if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) return rayBoxCut(ro, rd, b, tmax);   // CUT BOXES: the cut solid (below) — every other box takes the lines it always took
+  if (b.cut !== undefined && cutMet(b)) return rayBoxCut(ro, rd, b, tmax);   // CUT BOXES: the cut solid (below) — every other box takes the lines it always took
   if (b.rot) return rayBoxRot(ro, rd, b, tmax);
   // (the CPU-frame lane: the slab loop written out over the three axes and scalars — the same statements in the same order as the array form it replaces, so t and n are the same bits; the two
   //  scratch arrays a test allocated are gone. rayBox is the game's hottest CPU function: ~1000 calls a frame from the raycasts alone.)

@@ -10,10 +10,10 @@ struct RingCfg { n: u32, mask: u32, rows: u32, pad: u32 };
 fn ringMean(@builtin(global_invocation_id) gid: vec3u) {
   let dims = textureDimensions(outDice);
   if (gid.x >= dims.x || gid.y >= dims.y || gid.z >= dims.z) { return; }
-  var sum = vec3f(0.0); var got = 0.0;
+  var sum = vec4f(0.0); var got = 0.0;   // (all four numbers: the +y slab's fourth is what a portal took out of that face, which the place field adds back, rc.wgsl rcDice)
   for (var k = 0u; k < cfg.n; k++) {
     if (((cfg.mask >> k) & 1u) == 0u) { continue; }
-    sum += textureLoad(ring, vec3u(gid.x, gid.y + k * cfg.rows, gid.z), 0).xyz; got += 1.0;
+    sum += textureLoad(ring, vec3u(gid.x, gid.y + k * cfg.rows, gid.z), 0); got += 1.0;
   }
-  textureStore(outDice, gid, vec4f(sum / max(got, 1.0), 1.0));
+  textureStore(outDice, gid, sum / max(got, 1.0));
 }

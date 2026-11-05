@@ -40,7 +40,7 @@
 // rounds' own cadence and cone draw as any round of his does. State per Game in a named side table (math/side.ts: a rollback snapshot holds it); a restart or
 // a checkpoint load forgets it with the roster (game.ts resetGuards), as coverfire.ts's is: a belief is a few seconds old at most.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { SideMap } from '../math/side';
+import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3, clamp, lerp, damp, wrapAngle, approachAngle } from '../math/vec';
 import type { Game, Guard, GameEvent } from './game';
 import type { Door } from './doors';
@@ -100,7 +100,7 @@ interface Kick { door: Door; spot: Vec3; yaw: number; phase: 'walk' | 'set' | 'k
 interface Man { beliefs: Map<Door, Belief>; saw: { at: Vec3; t: number; used: boolean } | null; on: Stand | null; kick: Kick | null; rest: Map<Door, number>; served: number; cfT: number }
 /** `boots`: who threw one of this rule's boots, and when (his own side does not take it for an intruder's) */
 interface State { lastT: number; men: Map<Guard, Man>; kickers: Map<Door, Guard>; boots: Map<number, number> }
-const states = new SideMap<Game, State>('doorforce.states');
+const states = new GameSideMap<Game, State>('doorforce.states');
 
 function live(g: Game): boolean { return DOORFORCE.on && !BREAK && g.aiEnabled && !g.touring; }
 function stateOf(g: Game): State {

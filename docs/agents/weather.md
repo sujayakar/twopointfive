@@ -1019,6 +1019,67 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: on a GPU; a save put back or a restart
   in the page with men breathing (the roads are the game's own, run headless over a recording stand-in for the solver); a file's load (by reading:
   it builds the men anew like a restart).
+- **What lies flat under open sky is wet while the ground is** (the library, 11-04; DRESSING, so no switch: `src/game/dress.ts` row `wetGround`,
+  `src/game/wetGround.ts`). The fault it mends: under a picked rain a yard built on the newer kit stayed DRY. `weather.ts openGround` wets a ground slab
+  whose top is within 3 mm of the lot's, and that kit lays a yard, a road and a pad as FINISHES 4 to 12 mm thick over the lot (`gwotKit.ts ground`): the
+  slab under them was wetted where nobody sees it, and the finish and every mark on it stayed dry. Measured headless before: a downpour on the crossing
+  wetted 1 static of 1001 (with the page's tidy step 24 of 41 flat things in the open), and left its four finishes (879 m²) and the 14 sheets on them
+  dry; the police post, the vault, the relay and the bazaar the same.
+  THE RULE IS ONE, in one step, in this order: (1) the open ground SLABS (`openGround`, unchanged, moved here out of `setWet`: sky over SOME of the slab,
+  which is the ground of the yard round a house and of the house too); (2) a FINISH: a solid flat thing whose top is within `WET_OVER` (20 mm) of a wet
+  slab's or the lot's, its middle over that slab, with sky over MOST of it; (3) a drawn-only SHEET on the ground follows the topmost flat under its
+  middle while most of the sheet itself is under the sky. A box is wet whole or not at all (the renderer reads one word a box), so a thing laid for one
+  place asks for most of the sky: the fuel stop's forecourt, four fifths under its canopy, stays dry with the stains on it, and a room's floor that runs
+  under its own walls is never rained on. The sky is one reading, `weather.ts skySpots` (25 spots over the box by the roof rectangles the rain is drawn
+  by): `skyOver` = any spot, reaching a tenth short of the edges; `skyOverMost` = 13 and more of 25 spots each in the middle of an equal share of the
+  area. 20 mm sits in the gap between what LIES on the ground (the kit's table `lie` tops out at 15 mm, 17 with the exporter's steps; the check holds the
+  table under the number) and what STANDS on it (a mat, a rug, a duckboard from 22). (3) was `scene/lookTidy.ts wetTidy`, a step of the PAGE alone, on
+  levels in the look's paints alone, with no sky test of its own (a sheet in a hut with no floor was wet with the lot): it is deleted there (lookTidy
+  keeps its wall decals), so a sheet's wet word has one writer, and the rule now runs off the page and on every level.
+  HOW WET SHOWS IS WHAT THE THING IS MADE OF: what sheds water takes the film (`BoxFlag.Gloss`, `WET_ROUGH`, `aniso`); what SOAKS it up takes none
+  (`wetGround.ts soaks`: cloth, a lawn, card, read from the paint by `particleFx.ts surfOf`, the one word a box has for it today, and asked only of a
+  box whose albedo is as authored: never of the lot, which the weather halves in place); bare METAL takes the film and is NOT darkened (`wetK` 1: its
+  albedo is its mirror, and the packer multiplies albedo by `wetK`). DARKER is what a porous thing does as it drinks; a sealed one (a painted line,
+  plastic, a glazed tile) barely darkens in life. Today `wetK` 0.5 is ONE NUMBER STANDING FOR TWO, on sealed and porous alike (the measured look of the
+  wet lot): how much a thing darkens belongs in its stuff's row beside whether it soaks, when boxes say what they are made of.
+  THE LOT stays the weather's: `setWet` soaks its slab in place (the albedo a round's material is read from: gameplay, as measured), and tells the step
+  in that same call (`WetGround.follow`), so the lot and the yard are never one wet and one dry for a frame drawn with no update between (a pause, the
+  start card); the picture's block of `Game.update` asks again every tick, which follows a level whose boxes changed (`wetGround.ts standing`: one
+  word of what the rule reads of the low boxes AS THEY STAND, worked out every update the ground is wet, 4 to 6 µs; the list is built again when it moves.
+  No count of what has happened to the level is kept, the world's `geomSerial` least of all: a level restarted after a fight holds, to the bit, what the
+  same level left alone holds, and `cleanrestart-check` has no row for this step. NOT SEEN: a box swapped for another in the same slot with the same
+  place, size and flags; nothing in the game writes a slot of the statics). The step writes `wetK`, `Gloss`, `rough` and `aniso` of statics and nothing else: no albedo, nothing a footstep, an ear, an
+  eye, a round or the Rust module's copy of the boxes reads. The row put down DRIES what the step wetted (the row is read inside `follow`).
+  WHAT CHANGES IN THE PICTURE: under a picked rain (and a squad level's own storm) every yard, road and pad laid as a finish is wet with its marks; and ON
+  THE PLAIN PAGE, where nothing on a lot followed it before: under the office's own storm (the solo night) its six parking-bay lines take the film with
+  the lot and its two grass strips go darker without one. On a look level two sheets that the old step wetted under a roof are dry now (floodlit-gwot's
+  hut).
+  THE CHECK: `bun run tools/qa/wetground-check.ts` on both stands (`probes.ts wetground`, family `weather`; six lines over nine levels;
+  `WETGROUND_BREAK=1` puts the row down and lines 1 to 3 and 6 fail). It asks the sky apart from the step (81 spots, and a line judges only a box clearly out,
+  six tenths and more, or clearly under, four tenths and less): nothing flat lies dry in the open; on a level in the look's paints every wet sheet is
+  one the old step wetted or lies on a newly wet finish, and each of those left dry has a roof over it (the old rule is kept in the check as it was);
+  soaking things take no film and metal keeps its colour; no albedo but the lot's moves and nothing clearly under a roof is wet but a slab; the rain
+  taken away, the yard is dry in that call and every static is as the level stands unrained, and the row down dries it; a wet thing hidden in place (one
+  flag written, no box added, the world's serial not moved) is dry an update later and wet again once put back. TWO BARS OF `hourwx-storm`
+  MOVED WITH THE RULE, on purpose: "every wet thing is glossy" is "glossy unless it soaks", and "the level's own storm wets the lot alone" is "the lot
+  and the sheets lying on it"; its sky test by collision is asked of the ground (slab and finish) and no longer of a sheet (a stain under a parked lorry
+  is wet with the ground round it: the rain's roofs decide, as they decide where rain is drawn). `dress-check.ts --weather <kind>` is new: the five
+  missions played in a picked weather, red if nothing was wet with the rows up (on a dry night the rain's rows do nothing and a pass says nothing of
+  them).
+  MEASURED: 11-04, on step 1310 (and before it on step 1302: the same numbers), software only. `wetground-check` 5 of 5 on both stands (shipped, a downpour picked: the crossing
+  37 wet sheets, 23 the old step wetted + 14 on a newly wet finish; the police post 41 + 16; the vault 4 + 15; the relay 20 + 25; the bazaar 23 + 22;
+  compound-gwot 185 + 0; floodlit-gwot 76 of the old 78, two left dry in the hut; the fuel stop 55; the office under its own storm 6 parking lines with
+  the film, 2 grass strips darker without; 497 with the film, 9 of them metal, and 53 soaked in all); `WETGROUND_BREAK=1` fails lines 1 to 3.
+  `dress-check` (5 missions, every row down against every row up): the same game after every update on a dry night, with `--weather downpour`, and
+  with `wetGround` down alone in the downpour (wet with the rows up: compound-four 186 statics, warehouse-four 101, block-squads 33, hostage-rescue 8;
+  pass-four 0, built for snow). The 42 play-through digests: the same on the frozen stand, on shipped with lived rooms off and on shipped (no rain is
+  picked in those). `probes.ts hourwx` ALL PASS on both stands with the two bars moved; `probes.ts weather` 28 of 29 on both, the one red `rainwalls`,
+  which is red on the base too. `rollback-check --static`, `knobs-check`, `dice-check` pass.
+  NOT DONE, AND WHAT WOULD REMOVE A NUMBER: a slab's "some sky" and a finish's "most" are two answers to one question only because wet is one word a
+  box. The rain is drawn by the roofs' rectangles: were the wet film masked a pixel by those same rectangles, every flat thing could ask for any sky,
+  the picture would be right at a canopy's edge, and the 13 of 25 would go. A renderer follow-up, the graphics goal's to take (its word, 11-04).
+  NOBODY HAS SEEN IT: no GPU has drawn a wet yard; whether a soaked lawn at half albedo with no film reads right beside wet dust, and wet metal at full
+  colour beside it, is for a look.
 - **THE LOOK PROTOTYPE'S TWO SNOW ROWS: LOOSE SNOW IN THE GAME'S OWN AIR (10-28; the maintainer: "prototype getting the wisps of snow from something like the
   fluid sim … I really liked the sand puffs on footsteps … those should all be reactive to the wind, and like, the footsteps should be proportional to the
   amount of force the step is putting down").** On the look page only (`?look`), two rows of the look panel, 1 as the page opens; the build and the game's
@@ -1052,7 +1113,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **DRAWN ON THE PIXEL UNDER IT** (`shaders/composite.wgsl lookPowder`, and its compact twin word for word; the field is `powderTex` @16 of the
     composite's group 1, the LAST of the 16 sampled textures a fragment stage may bind by default: the next one wants a merge): any pixel under the layer's top (0.9 m, never a section cap) is
     seen through the part of the column above it along the eye's ray, read where that ray is halfway up (so a puff has a near side and a far side, and
-    stands in front of a boot). (11-03: THE THREADS ARE GONE, see "A HAZE AND LOOSE FLECKS" below; the account of them that follows is history.) IT WAS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
+    stands in front of a boot). IT IS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
     snow and snow puffs at all?"). The field is a tenth of a metre a cell and thin (a mean column near 0.04): drawn as it stands it is a faint wash,
     white on white. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (the velocity its b and a carry), and inside
     it `powderThreads` draws threads a few fingers wide and about 0.45 m long (`POWDER_GRAIN` 0.07 m): a grain averaged over `POWDER_READS` 10
@@ -1092,44 +1153,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the sun's second read. `lookveil-check` holds the table to the shader's consts, each row to its byte, and the word at 0 untouched (8 lines).
     A ROW'S NAME FITS THE PANEL'S NAME COLUMN (twenty letters; the first names were cut off and two read the same): the full sentence is the head
     of the row's tip. "copy them" hands back the tables' own keys. Checked on the software adapter: the page boots and a picture of the panel
-    shows the section with every name whole.
-  - **THE ROWS AS HE LEFT THEM ARE WHAT THE PAGE OPENS WITH** (11-03, the first numbers moved on a GPU, pasted from "copy them"; the maintainer: "made it a
-    lot subtler but i'm still not sure"). Drawn: strength 3 → 1.95, between the streaks 0.12 → 0.23, a streak's middle 5 → 0.8, its width 0.07 → 0.03 m.
-    The wind: `pick` 1 → 0, `liftPick` 1.5 → 2.4, the gates 0.6 / 1.15 → 1.2 / 2.5, `change` 0.11 → 0.45, `clump` 1.3 → 2.3; the puffs' six untouched.
-    WHAT THAT IS: at `pick` 0 there are no gust patches and no crest streamers, so both gates, `patch` and `crestCut` ask nothing (four rows that now
-    move nothing: the section says so while `pick` is 0). What blows is what RISING air lifts, and that is not only a wall's foot: in the solver check's
-    scene at his numbers the 9 m of open ground upwind of the wall hold a mean column of 0.108, an even sheet, and the lee almost none (measured with
-    `powder-field-page.cjs --powder`; all 9 of its lines pass at his numbers, so the check stays on the page's table). `crest` and `change` still shape
-    the lift's own noise. It is drawn at about a quarter of the old strength with a streak 4 times the haze beside it where it was 40 times: a faint
-    even haze with fine lines, not streamers. So he tuned the threads OUT, which agrees with his 10-31 words (loose flecks off the ground, not this
-    drawing). The shader's consts are his numbers (the word is 0 at them); a streak's read step is now a share of its width (`POWDER_REACH` 0.6 of a
-    grain: it was 0.042 m over a 0.07 m grain, the same 0.6, and with the width row moved the step stayed at 0.6 of the row's grain by the old const, so
-    the picture he saw is the picture kept). Both shader copies compile on the software adapter; the picture at his numbers was seen by him only.
-  - **A HAZE AND LOOSE FLECKS, NOT THREADS** (11-03, the commit after his numbers; `composite.wgsl powderFlecks`, and the compact twin word for word). His
-    words on the threads: 10-30 "pretty bad in motion"; 10-31 "it should feel like tiny loose snowflakes blowing up off the ground, like the sparkles we
-    have on the surface", with a clip of a drift (a thin bright sheet of grains off its lip, a gust lifting a curtain of specks); 11-03 he turned the
-    threads to nearly nothing. The drawing he asked for on 10-31 had never been built, so the rows could only make threads fainter. NOW: the field is
-    read as before (where, how much, which way the air runs) and drawn as (1) its column as an even haze (`POWDER_THIN` of a thin column, a thick one
-    whole: a boot's puff is still a mound with a shaded side), and (2) FLECKS of THIN powder only (none in a puff: a fleck to every patch of one was a
-    lattice of dots over each footfall, by reading). The ground is cut into patches of `POWDER_GRAIN` 0.03 m, never finer than `POWDER_FLECK_PX` 2.5
-    pixels (further off the patches double and each stands for four); a patch holds one fleck or none (the share that hold one = 1 − e^(−`POWDER_SOW`
-    1.5 × the drawn column): more powder = more flecks, not bigger ones) anywhere in it, and the pixel takes the nearest fleck of the nine patches round
-    it. A fleck is `POWDER_FLECK_SIZE` 0.4 of its patch across and never under a pixel, full within its half-width and gone a pixel further out (the
-    surface sparkles' own rule, `snowSparkleFacet`), and one only just sown fades in, so a fleck crossing the powder's edge is not cut. The pattern is
-    slid along at the air's velocity there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1 s: a fleck is seen for that long and travels
-    about half a metre; longer and the shear by a wall draws flecks out into lines), sown afresh each turn. A fleck ADDS `POWDER_FLECK` 1.2 × the light
-    the powder shows on that pixel (the pixel's own sun, shadow, lamps and sky, with the powder's own lit side and shade); seven in a hundred catch the
-    SUN for a tenth of a second, four times as bright, of the sun's share only (none in shade or at night). THE TEMPORAL RESOLVE IS TOLD (`ownReact`,
-    the picture's alpha, the flame's own channel, renamed from `fireReact`): a fleck is new at its pixel every frame with nothing to reproject it by,
-    and averaged it would be a tenth as bright with a trail down the wind, which no software still would have shown. GONE with the threads:
-    `powderThreads`, `powderNoise`, `POWDER_THREAD`, `POWDER_REACH`, `POWDER_READS`, and the powder's old glint line. THE FOUR DRAWING ROWS are now: how
-    strong it looks, haze, fleck brightness (`fleck`, was `thread`), fleck spacing (`grain`); "copy them" hands back `draw.fleck`. His wind numbers are
-    untouched; his drawing numbers are kept where they still mean the same (strength 1.95, haze 0.23, spacing 0.03) and the fleck's brightness is new.
-    TO GO BACK TO HIS PICTURE WITH THREADS: the commit before this one. NOT DONE: the flecks stand at half the column's height along the eye's ray
-    (parallax) but throw no shadow of their own. TUNED in a small offline drawing of the same sums at his screen's scale (66 pixels a metre): white
-    dots two pixels across, sparse in a plume, barely there on sunlit snow, dimmer in a wall's shadow. Both shader copies compile on the software
-    adapter. NEVER SEEN ON A GPU, NEVER SEEN MOVING: how it moves, and what the temporal resolve leaves of it, are his to say. With flecks the open
-    ground's gust patches (`pick`, 0 by his hand) may be worth raising again.
+    shows the section with every name whole. NEVER SEEN ON A GPU; no row has been moved by anybody.
+  - **THE POWDER'S STEP IS COMPILED ONCE A DEVICE** (11-03; `render/powderField.ts programOf`). A field is thrown away when both snow rows are at nothing
+    and made again when one comes back, and each new field compiled "powder step" again: found by a one-boot read of the pass's page (two switches of the
+    look's layers, two more compiles), against his "compile once". The layout and the pipeline are kept by device now; a field is its textures, its
+    uniform buffer and its bind group. `lookveil-check`'s last line counts the compiles on a made-up device (two fields, one compile). The fault was in
+    the tree from the day the field was written (10-28). Not looked for: the same thing in the look's other small programs (the place field's two, the
+    eye's).
   - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
     0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
     stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its

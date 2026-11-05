@@ -39,6 +39,7 @@
 //               the bounce: an answer over the line by itself and under it × settings.indirectScale is dark, and with the scale at 1 it is not. Where the CPU calls the place light nothing is asked.
 //               What a carrier asks is bounded (IRL_METER.slots a beat) and forgotten with his goggles. The stands, the FROZEN_HOLDS row and a
 //               recording from before the key. Its red path: IRMETER_BREAK=1 holds the switch off where this probe turns it on, and it must FAIL.
+//               The budget's own red path: IRSLOTS_BREAK=1 has every carrier ask one point more a beat than the rule's number, and it must FAIL.
 //               irl-auto and the four before it hold this switch OFF (headless it changes nothing: no renderer answers).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -326,6 +327,7 @@ const E_LIT = 0.2, E_DARK = 0, E_EDGE = 0.015;   // (W/m² the planted renderer 
 export const irlMeter = guarded(async () => {
   const F = family('irl-meter: what the CPU calls dark is put to the renderer\'s meter');
   const BRK = !!process.env.IRMETER_BREAK, D: number = NVM.NVG.blackAt, WAIT: number = ILM.IRL_METER.wait, SLOTS: number = ILM.IRL_METER.slots; const SNS: any = (await import(`${ROOT}/src/game/sense.ts`)).SENSE;
+  const SLOTS_BRK = process.env.IRSLOTS_BREAK === '1'; if (SLOTS_BRK) ILM.IRL_METER.slots = SLOTS + 1;   // (the red path of the budget line: every carrier asks one point more a beat than the rule's own number, read above — it must FAIL)
   const meterOn = () => { IRLIGHT.meter = !BRK; };   // (the red path: the switch held off — the rule never hears the renderer)
   let asked = 0, askedMost = 0, litAsked = 0; const cpuWas = SNS.cpu;
   try {
@@ -343,21 +345,23 @@ export const irlMeter = guarded(async () => {
     g.lightForget = (k: string) => { if (k.startsWith('irl')) forgot++; f0(k); };
     /** his goggles up, stood at P, his goggles down afresh, `n` frames on: how many frames his light burned, when it first did after his goggles were down
      *  (and after HIS first question, where he asked one), its strength then, and the most asked in a frame */
-    const fresh = async (P: number[], n: number) => { pl.nv = false; step(40); await quiet(() => g.teleportPlayer(P)); firstAsk = -1; pl.nv = true; let burn = 0, first = -1, firstQ = -1, k0 = 0, most = 0, mateBurn = 0, sum = 0, black = true, downAt = -1;
-      for (let f = 0; f < n; f++) { frameAsks = 0; step(); most = Math.max(most, frameAsks); sum += frameAsks; black &&= tubeAt(g, pl.char.pos[0], pl.char.pos[2]) < D; if (downAt < 0 && pl.nvAmount > 0.5) downAt = g.time;
+    /** the men whose tubes are down this frame: Sam, and each teammate with his goggles down (nvg.ts — theirs come down and go up with the light where they stand) */
+    const carriersNow = () => 1 + mates(g).filter((x: any) => NVM.nvgDown(g, x)).length;
+    // (the budget is each frame's own, asked of the carriers of that frame: a teammate's goggles are down for part of a run)
+    const fresh = async (P: number[], n: number) => { pl.nv = false; step(40); await quiet(() => g.teleportPlayer(P)); firstAsk = -1; pl.nv = true; let burn = 0, first = -1, firstQ = -1, k0 = 0, most = 0, mateBurn = 0, sum = 0, black = true, downAt = -1, over = 0, carriers = 0, carrierSum = 0;
+      for (let f = 0; f < n; f++) { frameAsks = 0; const c0 = carriersNow(); step(); const c = Math.max(c0, carriersNow()); most = Math.max(most, frameAsks); sum += frameAsks; over = Math.max(over, frameAsks - SLOTS * c); carriers = Math.max(carriers, c); carrierSum += c; black &&= tubeAt(g, pl.char.pos[0], pl.char.pos[2]) < D; if (downAt < 0 && pl.nvAmount > 0.5) downAt = g.time;
         const l = samLit(); if (l) { burn++; if (first < 0) { first = downAt < 0 ? 0 : g.time - downAt; firstQ = firstAsk < 0 ? -1 : g.time - firstAsk; k0 = l.intensity * X / IRLIGHT.power; } }
         if (f > 100) mateBurn += L.ir.filter((l: any) => l.owner !== pl.char.id).length; }   // (a teammate lit by the CPU's word before the switch came on is out its hold and its fade later: 2 s, and 40 frames went before these)
-      return { burn, first, firstQ, k0, most, mateBurn, mean: sum / n, black, asks: firstAsk >= 0 }; };
+      return { burn, first, firstQ, k0, most, mateBurn, mean: sum / n, black, asks: firstAsk >= 0, over, carriers, carrierMean: carrierSum / n }; };
     if (dark) {
       // (a) the renderer answers 'lit' on floor the CPU calls black: no light, not for a frame — Sam's or a teammate's
       meterOn(); own = E_LIT; plant = E_LIT; const A = await fresh(dark, 180);
       if (A.black) { asked++; askedMost = Math.max(askedMost, A.most);
-        const carriers = 1 + mates(g).filter((x: any) => NVM.nvgDown(g, x)).length;
         if (!A.asks) fails.push('the rule on, the renderer answering, and it was never asked');
         if (A.burn) fails.push(`the renderer answers lit (${E_LIT} W/m²) on floor the CPU calls black: his light burned ${A.burn} frames of 180`);
         if (A.mateBurn) fails.push(`…and a teammate's burned (${A.mateBurn} light-frames) with every answer lit`);
-        if (A.most > SLOTS * carriers || A.mean > carriers * SLOTS * 4 / 60 + 0.5) fails.push(`asked ${A.most} points in one frame, ${f2(A.mean)} a frame (${carriers} carriers, ${SLOTS} a beat each)`);
-        said.push(`renderer lit on CPU-black floor at ${dark[0].toFixed(1)},${dark[2].toFixed(1)}: 0 frames of light, ${A.most} asked at most in a frame (${f2(A.mean)} a frame)`);
+        if (A.over > 0 || A.mean > A.carrierMean * SLOTS * 4 / 60 + 0.5) fails.push(`asked ${A.most} points in one frame, ${A.over > 0 ? `${A.over} over that frame's carriers' ${SLOTS} a beat each` : 'inside the beat'}, ${f2(A.mean)} a frame (${A.carriers} carriers at most, ${f2(A.carrierMean)} a frame)`);
+        said.push(`renderer lit on CPU-black floor at ${dark[0].toFixed(1)},${dark[2].toFixed(1)}: 0 frames of light, ${A.most} asked at most in a frame by ${A.carriers} carrier(s) at most (${f2(A.mean)} a frame)`);
         // (b) the switch off, the same answers: it burns — the build before
         IRLIGHT.meter = false; const B = await fresh(dark, 60);
         if (B.black && (!B.burn || B.asks)) fails.push(`the switch off: ${B.burn ? '' : 'his light does not burn on CPU-black floor'}${B.asks ? ' the renderer is still asked' : ''}`);

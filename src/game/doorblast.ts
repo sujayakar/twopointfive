@@ -19,9 +19,14 @@
 // (markings want an upright face) and the marks rounds left on it do not ride it down; a checkpoint taken while it flies files it already lying where it
 // will stop, so the load never hears it land.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { SideMap } from '../math/side';
+import { men } from './seats';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
+import { leafWrote, type BoxMirror } from '../scene/boxMirror';
+import { BOTH } from '../scene/collision';
+import { EXACT } from '../math/exact';
+import { RUST } from '../sim/sim';
+import { SP, SLAB_STEPPED, SLAB_HOST, SLABS_STEPPED, slabIo, slabMem, slabDiff } from '../sim/slabshome';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
 import { wandDrop } from './wand';
@@ -150,23 +155,27 @@ function freeSpot(g: Game, x: number, z: number, a: number, hu: number, hn: numb
   }
   return null;
 }
+/** WHAT A STEP OF A SLAB MET, for whoever took the step to say and to tally once it is over (the module's step hands the same back: sim/slabshome.ts SP):
+ *  it slammed flat (and where, for the noise), it came to rest, and what its settling did (slabs moved clear of a static, the furthest, laid in their doorway) */
+interface SlabMet { landed: boolean; lx: number; lz: number; rested: boolean; nudged: number; nudgeMax: number; laid: number }
+const nothingMet = (): SlabMet => ({ landed: false, lx: 0, lz: 0, rested: false, nudged: 0, nudgeMax: 0, laid: 0 });
 /** in the air, once it is out of its frame: a slab that has come to cut into a static (a corner its rays passed either side of, a wall its toppling reached)
- *  is moved to the nearest clear spot and loses what speed it had into the thing */
-const wedged = new SideMap<DoorSlab, number>('doorblast.wedged');   // (a slab with no clear spot in reach: not searched for again for a quarter second of its own clock)
+ *  is moved to the nearest clear spot and loses what speed it had into the thing. (`wedged`: a slab with no clear spot in reach is not searched for again
+ *  for a quarter second of its own clock.) */
 function unstick(g: Game, d: Door, S: DoorSlab) {
   const hu = d.leafH[0], hn = acrossOf(d, S.tip), y0 = 0.06, y1 = Math.max(0.3, 2 * S.p[1] - 0.06);
-  if (S.t < (wedged.get(S) ?? 0) || !overlaps(g, S.p[0], S.p[2], S.a, hu, hn, y0, y1)) return;
-  const to = freeSpot(g, S.p[0], S.p[2], S.a, hu, hn, y0, y1, 0.45); if (!to) { wedged.set(S, S.t + 0.25); return; }
+  if (S.t < (S.wedged ?? 0) || !overlaps(g, S.p[0], S.p[2], S.a, hu, hn, y0, y1)) return;
+  const to = freeSpot(g, S.p[0], S.p[2], S.a, hu, hn, y0, y1, 0.45); if (!to) { S.wedged = S.t + 0.25; return; }
   const sx = to[0] - S.p[0], sz = to[1] - S.p[2], l = Math.hypot(sx, sz) || 1, vn = (S.v[0] * sx + S.v[2] * sz) / l;
   if (vn < 0) { S.v[0] -= vn * sx / l; S.v[2] -= vn * sz / l; }
   S.p[0] = to[0]; S.p[2] = to[1]; S.spin *= 0.3;
 }
 /** AT REST it lies clear of every static, whatever the flight did: where it stopped if that is clear; else the nearest clear spot, as it lies or turned a
  *  little; else laid through its own doorway (the one rectangle of floor a door's width is known to fit) */
-function settle(g: Game, d: Door, S: DoorSlab, quiet: boolean) {
+function settle(g: Game, d: Door, S: DoorSlab, T: SlabMet) {
   const hu = d.leafH[0], hn = d.height / 2, y0 = 0.06, y1 = 0.3;
   if (!overlaps(g, S.p[0], S.p[2], S.a, hu, hn, y0, y1)) return;
-  const T = quiet ? { nudged: 0, nudgeMax: 0, laid: 0 } : DOORBLAST_STATS; T.nudged++;
+  T.nudged++;
   for (const da of [0, 0.2, -0.2, 0.45, -0.45, HALF_PI]) { const to = freeSpot(g, S.p[0], S.p[2], S.a + da, hu, hn, y0, y1, da ? 0.9 : 1.2); if (to) { T.nudgeMax = Math.max(T.nudgeMax, Math.hypot(to[0] - S.p[0], to[1] - S.p[2])); S.p[0] = to[0]; S.p[2] = to[1]; S.a += da; return; } }
   const a = d.def.closedDir, [fx, , fz] = d.frameCentre;
   const to = overlaps(g, fx, fz, a, hu, hn, y0, y1) ? freeSpot(g, fx, fz, a, hu, hn, y0, y1, 1.5) : [fx, fz];
@@ -213,11 +222,12 @@ function reaches(g: Game, d: Door, at: Vec3): boolean {
 /** Sam's hands come off a leaf that has left its frame: easing it, picking its lock, keying its pad — there is no lock left to finish (a pick run on would
  *  file 'lock picked') */
 function handsOff(g: Game, d: Door) {
-  const pl = g.player;
-  if (pl.easing === d) pl.easing = null;
-  if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
-  if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
-  if (pl.wanding?.door === d) wandDrop(pl);   // (wand.ts: the cable was under that leaf)
+  for (const pl of men(g)) {
+    if (pl.easing === d) pl.easing = null;
+    if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
+    if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
+    if (pl.wanding?.door === d) wandDrop(pl);   // (wand.ts: the cable was under that leaf)
+  }
 }
 
 /** THE LEAF COMES OFF: out of its frame away from `from` (where the blast was), thrown `k` (0‥1) of DOORBLAST.speed; `who` is blamed for the crack of it and for
@@ -293,7 +303,7 @@ export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): b
       const top = fly * lerp(K.topple[0], K.topple[1], r2);   // (about the leaf's width axis: its top the way the round left)
       const f = { ...d.box, c: [cx + ux * lx, H / 2 + 0.01 + ly, cz + uz * lx] as Vec3, h: [sw, sl, T / 2] as Vec3, yaw, rot: quat.mul(quat.axisAngle([ux, 0, uz], fly * lerp(K.tilt[0], K.tilt[1], r3)), quat.yaw(yaw)), marks: undefined };
       const v: Vec3 = [dx * sp + ux * sd, lerp(K.up[0], K.up[1], r3), dz * sp + uz * sd], w: Vec3 = [(r1 - 0.5) * K.spin + ux * top, (r2 - 0.5) * 0.6 * K.spin, (r3 - 0.5) * K.spin + uz * top];
-      const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who) ?? null : null;
+      const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who, land.level) ?? null : null;
       if (got) { DOORSHOT_STATS.chunks++; got.level = land.level; got.sfx = land.sfx; g.destr.breaks.retag(got, 'wood'); g.destr.breaks.dress(got); }   // (wood whatever its paint: a snapped end, not a clean rectangle)
       else { DOORSHOT_STATS.demoted++; if (P) P.emit('debris', f.c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), 14, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(albedo), owner: who }); }
     }
@@ -316,14 +326,71 @@ export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): b
   return true;
 }
 
-/** Once a frame (Game.updateDoors, after Doors.update): every loose slab still moving is stepped and posed. */
+/** Once a frame (Game.updateDoors, after Doors.update): every loose slab still moving is stepped and posed, in the order of their doors (the rows in the
+ *  air are in that order: sim/slabshome.ts), each posed before the next is stepped. */
 export function doorSlabs(g: Game, dt: number) {
-  for (const d of g.doors.list) { const S = d.slab; if (!d.off || !S || S.rest) continue; stepSlab(g, d, S, dt, false); poseSlab(d); }
+  const T = g.doors.slabs, n = T.fly; if (n === 0) return;
+  const ids: number[] = []; for (let r = 0; r < n; r++) ids.push(T.doorAt(r));   // (by door: a slab that comes to rest gives its row up to the ones still in the air)
+  for (const i of ids) { const d = g.doors.list[i]; if (!d.off) continue; flySlab(g, d, dt); poseSlab(d); }
+}
+/** ONE SLAB'S STEP, WHEREVER IT IS TAKEN — in the Rust module over the slab's row in the game's block (RUST.slabs: rust/sim/src/slabs.rs), here over the
+ *  same row, or both ways and compared (collision.ts BOTH) — and then what the step met SAID, in one place and after the step on both sides: the tallies,
+ *  the slam for the floor to hear, the log line. The slam is said with the slab's own box out of the list, as the step runs (it was said in the middle of
+ *  the step; whoever hears it and asks a line of the level is asked with the same boxes). */
+function flySlab(g: Game, d: Door, dt: number) {
+  const T = g.doors.slabs, r = T.rowOf(d.i); if (r < 0) return;
+  const W = slabThere(g, d);
+  let M: SlabMet | null = W === null ? null : BOTH.on ? stepBoth(g, d, r, dt, W) : stepThere(g, d, r, dt, W);
+  if (M === null) { SLABS_STEPPED.here++; M = stepHere(g, d, r, dt); }
+  const S = d.slab!, A = DOORBLAST_STATS;   // (its row, read as it stands: it moves on the next line if the slab came to rest)
+  if (S.rest) T.rest(d.i);
+  A.nudged += M.nudged; A.nudgeMax = Math.max(A.nudgeMax, M.nudgeMax); A.laid += M.laid;
+  if (M.landed) { A.landed++; const at: Vec3 = [M.lx, 0.1, M.lz]; withoutLeaf(g, d, () => g.doors.sound(d, 'bang', at, S.who, DOORBLAST.landLevel)); }
+  if (M.rested) { const p = S.p; note(g, `${d.def.name} slab at rest (${p[0].toFixed(2)}, ${p[2].toFixed(2)}) after ${S.t.toFixed(2)} s`); }
+}
+/** the step as this file takes it: the row read out, stepped, written back */
+function stepHere(g: Game, d: Door, r: number, dt: number): SlabMet {
+  const T = g.doors.slabs, S = T.load(r), M = nothingMet();
+  stepSlab(g, d, S, dt, M); T.save(r, S);
+  return M;
+}
+/** CAN THIS SLAB'S STEP RUN IN THE MODULE: the row on and the slabs' columns at home in the game's block; the game's own maths in Math's place; the box
+ *  world's copy standing with the game's own leaves in it as they are now. → the copy to step over and which of its leaves is the slab's own box (−1: none
+ *  of them), or null: this file steps, on the same columns. */
+function slabThere(g: Game, d: Door): { M: BoxMirror; but: number } | null {
+  if (!RUST.slabs || g.doors.slabs.home === null || !EXACT.on) return null;
+  const dyn = g.col.dynamicBoxes, M = g.col.rulesWorld(dyn); if (!M) return null;
+  return { M, but: dyn.indexOf(d.box) };
+}
+/** the step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. → null: the module hands the
+ *  step back with nothing written (a ray of it ended on a pane, which only the host can judge open or shut) */
+function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number }): SlabMet | null {
+  const io = slabIo(), m = slabMem(), P = io.par, K = DOORBLAST, C = SLABS_STEPPED;
+  m[P + SP.dt] = dt; m[P + SP.row] = r; m[P + SP.height] = d.height; m[P + SP.thick] = d.thick; m[P + SP.hu] = d.leafH[0]; m[P + SP.closed] = d.def.closedDir;
+  m[P + SP.fcx] = d.frameCentre[0]; m[P + SP.fcz] = d.frameCentre[2]; m[P + SP.but] = W.but; m[P + SP.ask] = g.col.glassOpen ? 1 : 0;
+  m[P + SP.scrape] = K.scrape; m[P + SP.slam] = K.slam; m[P + SP.slide] = K.slide; m[P + SP.bounce] = K.bounce; m[P + SP.tip] = K.tip;
+  const a = io.x.slabs_step(g.doors.slabs.home!.bind(), W.M.slot), q = slabMem();
+  C.rays += q[P + SP.rays]; C.gathers += q[P + SP.gathers]; C.substeps += q[P + SP.substeps];
+  if (a === SLAB_HOST) { C.host++; return null; }
+  if (a !== SLAB_STEPPED) throw new Error(`the Rust module was asked to step row ${r} of the slabs, which is no slab in the air`);
+  C.there++; if (q[P + SP.landed]) C.landed++; if (q[P + SP.rested]) C.rested++;
+  return { landed: q[P + SP.landed] !== 0, lx: q[P + SP.landX], lz: q[P + SP.landZ], rested: q[P + SP.rested] !== 0, nudged: q[P + SP.nudged], nudgeMax: q[P + SP.nudgeMax], laid: q[P + SP.laid] };
+}
+/** …both ways (collision.ts BOTH): the module's step, then this file's from the same row, the two compared column for column and by what they met; the
+ *  game goes on from this file's. → null as stepThere */
+function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number }): SlabMet | null {
+  const T = g.doors.slabs, before = T.bytes(), A = stepThere(g, d, r, dt, W); if (A === null) return null;
+  const there = T.bytes(); T.put(before);
+  const B = stepHere(g, d, r, dt), here = T.bytes(), C = SLABS_STEPPED;
+  const bad = slabDiff(T, here, there, 2); for (const k of Object.keys(B) as (keyof SlabMet)[]) if (!Object.is(Number(A[k]), Number(B[k]))) bad.push(`met.${k} ${B[k]} | ${A[k]}`);
+  BOTH.asked++; C.asked++;
+  if (bad.length) { const say = `${d.def.name}'s slab, TypeScript | Rust: ${bad.join(' · ')}`; BOTH.differ++; C.differ++; if (!BOTH.first) BOTH.first = say; if (!C.first) C.first = say; }
+  return B;
 }
 
 /** the slab's rigid-ish flight: a plank with its foot on the floor — it translates, drags, topples about its foot onto the face `side` names, slams flat,
  *  slides out; walls stop it dead (a swept ray along its travel, then a push-out along its own two floor axes as toppling lengthens it) */
-function stepSlab(g: Game, d: Door, S: DoorSlab, dt: number, quiet: boolean) {
+function stepSlab(g: Game, d: Door, S: DoorSlab, dt: number, T: SlabMet) {
   const K = DOORBLAST, n = Math.max(1, Math.ceil(dt * 120)), h = dt / n, G = 9.8;
   withoutLeaf(g, d, () => {
     for (let i = 0; i < n && !S.rest; i++) {
@@ -349,12 +416,12 @@ function stepSlab(g: Game, d: Door, S: DoorSlab, dt: number, quiet: boolean) {
       pushOut(g, d, S);
       if (S.t > 0.15) unstick(g, d, S);
       if ((S.tip >= HALF_PI || S.t > 6) && !S.landed) {   // flat: the slam (the six-second cap lands it too — nothing a wall can do keeps it in the air)
-        S.tip = HALF_PI; S.landed = true; S.p[1] = support(d, HALF_PI); settle(g, d, S, quiet); S.v[0] *= K.slam; S.v[2] *= K.slam; if (S.v[1] > 0) S.v[1] = 0;
-        if (!quiet) { DOORBLAST_STATS.landed++; g.doors.sound(d, 'bang', [S.p[0], 0.1, S.p[2]], S.who, K.landLevel); }
+        S.tip = HALF_PI; S.landed = true; S.p[1] = support(d, HALF_PI); settle(g, d, S, T); S.v[0] *= K.slam; S.v[2] *= K.slam; if (S.v[1] > 0) S.v[1] = 0;
+        T.landed = true; T.lx = S.p[0]; T.lz = S.p[2];   // (said by whoever took the step, once it is over: flySlab)
       }
       if (S.landed && ((Math.hypot(S.v[0], S.v[2]) < 0.05 && Math.abs(S.spin) < 0.08) || S.t > 6)) {
-        S.rest = true; S.v = [0, 0, 0]; S.spin = 0; S.p[1] = support(d, HALF_PI); settle(g, d, S, quiet);
-        if (!quiet) note(g, `${d.def.name} slab at rest (${S.p[0].toFixed(2)}, ${S.p[2].toFixed(2)}) after ${S.t.toFixed(2)} s`);
+        S.rest = true; S.v = [0, 0, 0]; S.spin = 0; S.p[1] = support(d, HALF_PI); settle(g, d, S, T);
+        T.rested = true;
       }
     }
   });
@@ -376,9 +443,9 @@ function pushOut(g: Game, d: Door, S: DoorSlab) {
 /** the slab's box (and the two handles on it) where the slab is: tilted by a quaternion while it topples; from the slam on an ordinary yaw-only box lying flat, so
  *  every yaw-only reader of the collision layer's dynamic list (bodies, the smoke bake) has it as what it is */
 export function poseSlab(d: Door) {
-  const S = d.slab; if (!S) return; const b = d.box, W = d.def.width, T = d.thick;
+  const R = d.slabs, r = R.rowOf(d.i); if (r < 0) return; const S = R.load(r), b = d.box, W = d.def.width, T = d.thick;   // (the row read out once)
   const ux = Math.cos(S.a), uz = Math.sin(S.a), lx = (W - 0.14) - (W * 0.5 + 0.01), ly = 1.0 - (d.height / 2 + 0.01), lz = T / 2 + 0.03;
-  b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a;
+  b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a; leafWrote();   // (a leaf is written from here down: scene/boxMirror.ts)
   if (S.landed) {   // (flat — sliding out or at rest)
     const hw = S.bits ? S.bits[0] : d.leafH[0], hl = S.bits ? S.bits[1] : d.height / 2;   // (bits: the lock rail of a leaf gunfire splintered — DOORSHOT)
     b.rot = undefined; b.marks = undefined; b.h = [hw, T / 2, hl]; b.c = [S.p[0], T / 2 + LIFT, S.p[2]];
@@ -396,8 +463,10 @@ export function poseSlab(d: Door) {
 export interface SlabSnap { x: number; z: number; a: number; side: 1 | -1; who: number; /** DOORSHOT: the lock rail of a leaf that went in pieces — its half width and half length, and where on it the handles are (absent: the whole leaf) */ bits?: [number, number, number, number]; }
 export function slabSnapshot(g: Game, d: Door): SlabSnap | null {
   const S0 = d.slab; if (!d.off || !S0) return null;
-  const S: DoorSlab = { ...S0, p: [S0.p[0], S0.p[1], S0.p[2]], v: [S0.v[0], S0.v[1], S0.v[2]] };
-  for (let i = 0; i < 480 && !S.rest; i++) stepSlab(g, d, S, 1 / 60, true);
+  // (a COPY of the row, stepped here whatever the row's switch says and never written back; what it meets is nobody's to hear; and it starts with no
+  //  memory of being wedged, as the copy this was always stepped on had none)
+  const T = g.doors.slabs, S: DoorSlab = T.load(T.rowOf(d.i)), quiet = nothingMet(); S.wedged = 0;
+  for (let i = 0; i < 480 && !S.rest; i++) stepSlab(g, d, S, 1 / 60, quiet);
   const r = (x: number) => Math.round(x * 1e4) / 1e4;
   return { x: r(S.p[0]), z: r(S.p[2]), a: r(S.a), side: S.side, who: S.who, ...(S.bits ? { bits: [r(S.bits[0]), r(S.bits[1]), r(S.bits[2]), r(S.bits[3])] as [number, number, number, number] } : {}) };
 }
@@ -406,9 +475,9 @@ export function slabRestore(d: Door, s: SlabSnap, angleSign = 1) {
   const side = s.side === -1 ? -1 : 1;
   d.off = true; d.vel = 0; d.latched = false; d.closing = false; d.locked = false; d.lockBroken = true; d.passers = 0; d.pick = 0; d.picking = false;
   d.angle = (angleSign < 0 ? -1 : 1) * OFF_ANGLE;
-  d.slab = { p: [fin(s.x, d.frameCentre[0]), 0, fin(s.z, d.frameCentre[2])], v: [0, 0, 0], a: fin(s.a, d.def.closedDir), spin: 0, tip: HALF_PI, tipV: 0, side, rest: true, landed: true, who: fin(s.who, -1), t: 0, ang: d.angle };
-  d.slab.p[1] = support(d, HALF_PI);
-  if (Array.isArray(s.bits) && fin(s.bits[0]) > 0 && fin(s.bits[1]) > 0) { const bw = Math.min(d.leafH[0], fin(s.bits[0])), bl = Math.min(d.height / 2, fin(s.bits[1])); const mx = Math.max(0, bw - 0.065), my = Math.max(0, bl - 0.03); d.slab.bits = [bw, bl, clamp(fin(s.bits[2]), -mx, mx), clamp(fin(s.bits[3]), -my, my)]; }
+  const S: DoorSlab = { p: [fin(s.x, d.frameCentre[0]), support(d, HALF_PI), fin(s.z, d.frameCentre[2])], v: [0, 0, 0], a: fin(s.a, d.def.closedDir), spin: 0, tip: HALF_PI, tipV: 0, side, rest: true, landed: true, who: fin(s.who, -1), t: 0, ang: d.angle };
+  if (Array.isArray(s.bits) && fin(s.bits[0]) > 0 && fin(s.bits[1]) > 0) { const bw = Math.min(d.leafH[0], fin(s.bits[0])), bl = Math.min(d.height / 2, fin(s.bits[1])); const mx = Math.max(0, bw - 0.065), my = Math.max(0, bl - 0.03); S.bits = [bw, bl, clamp(fin(s.bits[2]), -mx, mx), clamp(fin(s.bits[3]), -my, my)]; }
+  d.slab = S;   // (a row of the slabs' columns, written whole: doors.ts Door.slab)
   poseSlab(d);
 }
 

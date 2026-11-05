@@ -532,11 +532,16 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
    *  and that the room clear structure does not list (or a level with no structure): the HUD has no compass. No bearing in a name, no two doors of a level
    *  called the same (probes.ts words-doornames holds both, and the list of doors still owed a name); a door the level has, once (the validator). A door
    *  with no row keeps the name it had. Words only: not in the level's fingerprint. */
-  doorNames?: { door: string; name: string }[] }
+  doorNames?: { door: string; name: string }[];
+  /** WAYS THE LEVEL IS WALKED THAT NOTHING ELSE IN IT SAYS (scene/ways.ts levelWays' hints): from a named thing to a named thing — a door, a mark, a route,
+   *  a room, a place, or `spawn` — and how many ways it counts as (absent: one). The stair to the plant a fitter walks every week, the gate to the
+   *  kitchen door. Its routes, its starts and its doors are counted already. A picture's only (render/wear.ts: where a floor shows feet): not in the
+   *  level's fingerprint, and no rule of the game reads it. */
+  walked?: import('./ways').WayHint[] }
 
 /** THE MISSION LIST'S GROUPS (ui/missions.ts draws a heading per group — the maintainer, 10-10: 'we can build out a few levels in groups. a tutorial group
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A
- *  group is a KIND OF PLAY, every mission is under exactly one, and none holds more than eight (probes.ts missions-list). SHOW, NOT TELL: a heading is a
+ *  group is a KIND OF PLAY, every mission is under exactly one, and none DRAWS more than eight (tools/qa/listed.ts: a row cut from the list, `offList`, is in the table and not counted). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
 export type MissionGroup = 'tutorial' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
 export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[] = [

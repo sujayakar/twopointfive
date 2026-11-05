@@ -18,6 +18,7 @@ import { withDom, El } from './scenario-picker-probes.ts';
 
 const HR = await import(`${ROOT}/src/game/hours.ts`);
 const WK = await import(`${ROOT}/src/game/weatherKinds.ts`);
+const WG = await import(`${ROOT}/src/game/wetGround.ts`);
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -118,20 +119,22 @@ export async function hourwxStorm(): Promise<boolean> {
     // collision, not of the rule's own roofs), the compound's yard and the barracks' courtyard among them; the level's own storm wets the lot alone, as it did
     const rows: string[] = []; let ok = true, yards = 0, compoundWet = 1;
     const big = (b: any) => b.h[0] > 18 && b.h[2] > 12;
+    /** the statics the rain has wet: the lot the weather soaks in place, and the open ground the picture's step wets for the renderer (game/wetGround.ts: Box.wetK) */
+    const wetOf = (g: any): any[] => [...((g.weather as any).touched as any[]).map(t => t.box), ...(g.engine.world.statics as any[]).filter(b => b.wetK !== undefined)];
     const sky = (g: any, b: any) => { for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++) { const x = b.c[0] + b.h[0] * i * 0.24, z = b.c[2] + b.h[2] * j * 0.24; if (!g.col.solidBlocked([x, 0.3, z], [x, 9, z])) return true; } return false; };
     for (const e of SCENARIOS as any[]) {
       const W = await stand(e.level ? e.id : null, 'night', 'rain'), g = W.game; for (let i = 0; i < 5; i++) W.step(1 / 60);
-      const T = (g.weather as any).touched as any[], wet = T.map(t => t.box), other = wet.filter(b => !big(b));
+      const wet = wetOf(g), other = wet.filter(b => !big(b));
       const own = WK.snowLevel(String(e.level ?? '').replace(/\.json$/, '')) && g.weather.kind === 'snow';   // (a level built for snow keeps its own weather — game/weatherKinds.ts SNOW_LEVELS, the switch on: the picked rain never falls there, so nothing is wet)
-      const good = own ? wet.length === 0 : wet.length >= 1 && wet.every(b => (b.flags & 128) !== 0) && other.every(b => sky(g, b));
+      const good = own ? wet.length === 0 : wet.length >= 1 && wet.every(b => ((b.flags & 128) !== 0) === !WG.soaks(b)) && other.every(b => WG.groundSheet(b) || sky(g, b));   // (the film on what sheds water, none on what soaks it up: a lawn. A SHEET lying on the ground is not asked of the collision: it is wet by the rain's own roofs with the ground it lies on — a stain under a parked lorry is — and tools/qa/wetground-check.ts holds that; the ground itself, slab and finish, is asked here as ever)
       if (!good) ok = false; yards += other.length; if (e.id === 'compound-four') compoundWet = wet.length;
       rows.push(`${e.id}: ${wet.length} wet${own ? ' (its own weather, snow: the pick refused)' : ''}${other.length ? ` (${other.map(b => `${(4 * b.h[0] * b.h[2]).toFixed(0)} m²`).join(', ')} beside the lot)` : ''}${good ? '' : ' — NOT ALL UNDER OPEN SKY'}`);
     }
     const base = (g: any) => g.engine.world.statics.find((b: any) => Math.abs(b.h[0] - 16) < 0.01 && Math.abs(b.h[2] - 10) < 0.01 && b.c[1] + b.h[1] < 0.003);
-    const A = await stand('compound-four', 'night', null), ga = A.game; for (let i = 0; i < 5; i++) A.step(1 / 60); const dry = [...base(ga).albedo], own = ((ga.weather as any).touched as any[]).length;
+    const A = await stand('compound-four', 'night', null), ga = A.game; for (let i = 0; i < 5; i++) A.step(1 / 60); const dry = [...base(ga).albedo], own = wetOf(ga).filter(b => !WG.groundSheet(b)).length;   // (the sheets lying on the lot follow it: wetGround.ts)
     const B = await stand('compound-four', 'midday', 'rain'), gb = B.game; for (let i = 0; i < 5; i++) B.step(1 / 60); const wetA = [...base(gb).albedo], wetK = base(gb).wetK;
     gb.weather.setKind(null); for (let i = 0; i < 5; i++) B.step(1 / 60); const back = [...base(gb).albedo], backK = base(gb).wetK;
-    F.verdict(ok && yards >= 2 && own <= (WK.WX_OWN.roofs ? compoundWet : 1) && wetK === 0.5 && String(wetA) === String(dry) && backK === undefined && String(back) === String(dry), 'a picked rain wets the open ground of whatever level it falls on, and only ground with sky over it — darker for the renderer alone (Box.wetK), the albedo a round\'s material is read from untouched; the level\'s own storm wets the lot alone (under the level\'s own roofs — WX_OWN.roofs, the shipped stand — no more ground than the picked rain does); the pick taken away, the yard is as authored', rows.join(' · ') + ` · compound, its own storm: ${own} wet, yard albedo ${dry.map(x => x.toFixed(2))} → rain at midday ${wetA.map(x => x.toFixed(2))} × ${wetK} to the renderer → pick taken away ${back.map(x => x.toFixed(2))} × ${backK ?? 1}`); }
+    F.verdict(ok && yards >= 2 && own <= (WK.WX_OWN.roofs ? compoundWet : 1) && wetK === 0.5 && String(wetA) === String(dry) && backK === undefined && String(back) === String(dry), 'a picked rain wets the open ground of whatever level it falls on, and only ground with sky over it — darker for the renderer alone (Box.wetK), the albedo a round\'s material is read from untouched; the level\'s own storm wets the lot alone, with the sheets lying on it (under the level\'s own roofs — WX_OWN.roofs, the shipped stand — no more ground than the picked rain does); the pick taken away, the yard is as authored', rows.join(' · ') + ` · compound, its own storm: ${own} wet, yard albedo ${dry.map(x => x.toFixed(2))} → rain at midday ${wetA.map(x => x.toFixed(2))} × ${wetK} to the renderer → pick taken away ${back.map(x => x.toFixed(2))} × ${backK ?? 1}`); }
   { const W = await stand('compound-four', 'night', null), g = W.game, rigN = rigOf(g), onN = g.weather.enabled;
     const snapN = JSON.stringify(g.weather.snapshot());
     applyHour(g, 'midday'); const heldA = !g.weather.enabled;
@@ -211,15 +214,15 @@ export async function hourwxSheet(): Promise<boolean> {
     try {
       const ownWx = (h: string) => WK.snowLevelOfQuery(new URLSearchParams(h.slice(h.indexOf('?') + 1)));   // (a level built for snow keeps its own weather: its row's link never carries the Weather row's pick — game/weatherKinds.ts SNOW_LEVELS)
       const hrefs = () => host.all(e => e.cls.has('mrow')).map(e => e.attrs.href ?? ''), once = (h: string, k: string) => (h.match(new RegExp(`[?&]${k}=`, 'g')) ?? []).length === 1;
-      const rowsOf = () => host.all(e => e.cls.has('mdiff') && !(e.cls.has('mway') && e.cls.has('na')) && e.style.display !== 'none').map(e => e.cls.has('mhour') ? 'hour' : e.cls.has('mwx') ? 'weather' : e.cls.has('mway') ? 'way' : e.cls.has('mlever') ? 'lever' : 'defenders').join(',');   // (the Way in row is the room clear's: shown only where the mission names more than one way in; the three lever rows — fog of war, enemy AI, enemy kit, ui/levers.ts — sit right under the defenders' switch; a row the sheet is not showing — the sticky cameras' lever off a quiet mission, ui/levers.ts — is not a row under the plan)
+      const rowsOf = () => host.all(e => e.cls.has('mdiff') && !(e.cls.has('mway') && e.cls.has('na')) && e.style.display !== 'none').map(e => e.cls.has('mhour') ? 'hour' : e.cls.has('mwx') ? 'weather' : e.cls.has('mway') ? 'way' : e.cls.has('mlever') ? 'lever' : 'defenders').join(',');   // (the Way in row is the room clear's: shown only where the mission names more than one way in; the lever rows — fog of war, enemy AI, enemy kit and, where the stand has it up, how much the game tells you (told.ts): how many is the levers' own check's to say — sit right under the defenders' switch; a row the sheet is not showing — the sticky cameras' lever off a quiet mission, ui/levers.ts — is not a row under the plan)
       S.select('compound-four'); const h0 = hrefs();
       S.hour('midday'); S.setWeather('rain'); const h1 = hrefs(), go1 = host.all(e => e.cls.has('mgo'))[0]?.attrs.href ?? '', sel1 = S.hrefOf(S.selected);
       S.hour('night'); const h2 = hrefs();
       S.hour('dawn'); S.setWeather(null); const h3 = hrefs();
       const rowsTwo = rowsOf(); S.select('rescue-registry'); const rowsOne = rowsOf(); S.select('compound-four');
-      F.verdict(rowsTwo === 'defenders,lever,lever,lever,hour,weather,way' && rowsOne === 'defenders,lever,lever,lever,hour,weather' && h0.every(h => !/hour=|weather=/.test(h)) && h1.every(h => once(h, 'hour') && /hour=midday/.test(h) && (ownWx(h) ? !/weather=/.test(h) : once(h, 'weather') && /weather=rain/.test(h))) && go1 === sel1 && /levelFile=compound\.json/.test(go1)
+      F.verdict(/^defenders(,lever)+,hour,weather,way$/.test(rowsTwo) && /^defenders(,lever)+,hour,weather$/.test(rowsOne) && h0.every(h => !/hour=|weather=/.test(h)) && h1.every(h => once(h, 'hour') && /hour=midday/.test(h) && (ownWx(h) ? !/weather=/.test(h) : once(h, 'weather') && /weather=rain/.test(h))) && go1 === sel1 && /levelFile=compound\.json/.test(go1)
         && h2.every(h => !/hour=/.test(h) && (ownWx(h) ? !/weather=/.test(h) : /weather=rain/.test(h))) && h3.every(h => /hour=dawn/.test(h) && !/weather=/.test(h)),
-        'three rows under the plan (defenders with its three levers under it, hour, weather), and a fourth, the way in, only on a mission with more than one; nothing picked = no key on any link; Midday and Rain picked = both keys, once each, on every row\'s link and the start button\'s; either taken off alone leaves the other', `compound: ${rowsTwo} · registry: ${rowsOne} · ${go1} · night + rain: ${h2[0]} · dawn alone: ${h3[0]}`);
+        'three rows under the plan (defenders with its levers under it, hour, weather), and a fourth, the way in, only on a mission with more than one; nothing picked = no key on any link; Midday and Rain picked = both keys, once each, on every row\'s link and the start button\'s; either taken off alone leaves the other', `compound: ${rowsTwo} · registry: ${rowsOne} · ${go1} · night + rain: ${h2[0]} · dawn alone: ${h3[0]}`);
       { const again = () => { M.closeMissions(); return M.openMissions({ root: host as any, search: '?quality=high&mute&hourwx' }); };
         S.setWeather(null); const seq: string[] = []; for (let i = 0; i < 7; i++) { M.missionsKey({ code: 'KeyJ' }); seq.push(S.weather ?? 'as it is'); } M.missionsKey({ code: 'KeyJ', shiftKey: true } as any); const backOne = S.weather;
         const keys = seq.join(' ') === 'clear overcast rain downpour fog dust as it is' && backOne === 'dust';

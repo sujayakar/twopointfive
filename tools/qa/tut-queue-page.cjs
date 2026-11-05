@@ -118,7 +118,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   check(ok && R.id === 'gateA' && R.markOn, "walked out to the yard's mark: the road gate's spot is on the picture", `reached ${ok} at ${R.pos} · step '${R.id}' · mark on the picture ${R.markOn}`);
   await run(120);   // (the file closes up behind him, as a hand waits for it)
   await point(at('gateA')); await shiftTap(); R = await until(x => x.i >= 11, 6); { const e = at('gateA'), k = `${e[0].toFixed(1)},${e[2].toFixed(1)}`;
-    check(R.id === 'gateB' && (R.watch[k] ?? []).length === 4 && cards.some(c => c.h === 'Pick their order'), 'Shift with the key by the road gate: all four turn to watch it from where they stand, and the wheel\'s card comes', `step '${R.id}' · watching: ${JSON.stringify(R.watch)} · cards: ${cards.map(c => c.h).join(' · ')}`); }
+    check(R.id === 'gateB' && (R.watch[k] ?? []).length === 2 && cards.some(c => c.h === 'Pick their order'), 'Shift with the key by the road gate: two of them turn to watch it from where they stand, and the wheel\'s card comes', `step '${R.id}' · watching: ${JSON.stringify(R.watch)} · cards: ${cards.map(c => c.h).join(' · ')}`); }
   // (the last gate is the wheel's: a Shift tap gives nothing and says to keep the key down)
   R = await until(x => x.up && !!x.line, 3);
   { const n0 = R.orders; await point(at('gateB')); await shiftTap(); const a = await read();

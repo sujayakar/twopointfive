@@ -5,8 +5,7 @@
 // and drawn on the pixel under them with that pixel's own light and shadow (composite.wgsl lookPowder).
 // PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock, and it imports nothing from src/game. What lives here: the two textures,
 // the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and the read-back for the test page.
-// Its numbers were first judged on Chromium's software adapter, from pictures of the read-back field (tools/qa/powder-field-page.cjs); those the maintainer
-// has moved on his GPU say so.
+// NEVER SEEN ON A GPU: every number below was judged on Chromium's software adapter, from pictures of the read-back field (tools/qa/powder-field-page.cjs).
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import type { AirField } from './airField';
 import { AIR_RES } from './airField';
@@ -21,20 +20,18 @@ export const POWDER = {
   velK: 1.08,        // × the air field's velocity: the flakes' own height share a hand over the ground (particles.wgsl snowAir: 0.55 at the ground → 1 at 2.5 m, ÷ 0.55)
   life: 12,           // s powder stays up in air that moves
   lifeStill: 1.4,    // s in still air (a lee): it drops out
-  pick: 0,           // column picked up a second at a full crest in a full gust (1 = hides 63 % of the ground seen from above). 0 = no gust patches and no
-                     // crest streamers (the maintainer's number on his GPU, 11-03: "made it a lot subtler but i'm still not sure"): what blows is what RISING
-                     // air lifts, which is wide (the air climbs for metres upwind of a wall), and at 0 the two gates, `patch` and `crestCut` ask nothing
-  liftPick: 2.4,     // column lifted a second per m/s of the air's lift (a wall's windward foot)
-  gateLo: 1.2,       // × the ambient wind: air slower than this lifts nothing …
-  gateHi: 2.5,       // … and at this it lifts in full (as first set, 0.6 and 1.15: a jet round a corner was over the pair and the open wind between them)
+  pick: 1.0,         // column picked up a second at a full crest in a full gust (1 = hides 63 % of the ground seen from above)
+  liftPick: 1.5,     // column lifted a second per m/s of the air's lift (a wall's windward foot)
+  gateLo: 0.6,       // × the ambient wind: air slower than this lifts nothing …
+  gateHi: 1.15,      // … and at this it lifts in full (a jet round a corner is over it; the open wind is between)
   patch: 4.5,        // m: a gust patch's size
   crest: 0.28,       // m: a crest's size (the thread it gives is about this wide)
   crestCut: 0.84,    // 0‥1: the share of the ground that is NOT a crest
-  change: 0.45,      // 1/s: how fast patches and crests come and go where they stand
+  change: 0.11,      // 1/s: how fast patches and crests come and go where they stand
   low: 0.12,         // m: the height wind-lifted powder is put in at
   liftHigh: 0.6,     // m more per m/s of lift
   sink: 5,           // s: the height's own life (powder sinks as it travels)
-  clump: 2.3,        // 1/s per unit of column: thick powder falls out faster than thin (a puff's middle goes in a second; what is left of it the wind keeps)
+  clump: 1.3,        // 1/s per unit of column: thick powder falls out faster than thin (a puff's middle goes in a second; what is left of it the wind keeps)
   seed: 3,
   // A KICK (kick(): a boot, a body, a blast), by its force (a walker's boot about 0.45, a sprinter's 1.2, a blast 2)
   kickColumn: 1.8,   // column at its middle per unit of force, summed over its life
@@ -47,27 +44,42 @@ export const POWDER = {
 };
 
 /** HOW THE POWDER IS DRAWN (shaders/composite.wgsl lookPowder), live: the look panel's Snow wisps section moves these. The numbers ARE the shader's own consts
- *  (POWDER_GAIN, POWDER_THIN, POWDER_FLECK, POWDER_GRAIN: tools/qa/lookveil-check.ts holds the two alike), and a row that stands at its own number goes to
+ *  (POWDER_GAIN, POWDER_THIN, POWDER_THREAD, POWDER_GRAIN: tools/qa/lookveil-check.ts holds the two alike), and a row that stands at its own number goes to
  *  the frame as 0 = the shader's const, so the picture is the same to the bit until a row is moved. */
 export const POWDER_DRAW = {
-  gain: 1.95,     // × the field's column as it is drawn
-  thin: 0.23,     // the share of a thin column that is drawn as haze
-  fleck: 1.2,     // × the light the powder shows that a loose fleck adds
-  grain: 0.03,    // m: the patch of ground a fleck has to itself
+  gain: 3,        // × the field's column as it is drawn
+  thin: 0.12,     // the share of the column that shows between the streaks
+  thread: 5,      // … and in a streak's middle
+  grain: 0.07,    // m: a streak's width (its length goes with it)
 };
-/** the shader's own numbers, and what a byte of the frame's word is worth for each row (frame.sideCfg.w: gain | thin << 8 | fleck << 16 | grain << 24) */
+/** the shader's own numbers, and what a byte of the frame's word is worth for each row (frame.sideCfg.w: gain | thin << 8 | thread << 16 | grain << 24) */
 export const POWDER_DRAW_OWN: Readonly<typeof POWDER_DRAW> = { ...POWDER_DRAW };
-export const POWDER_DRAW_STEP: Readonly<typeof POWDER_DRAW> = { gain: 0.05, thin: 1 / 255, fleck: 0.1, grain: 0.001 };
+export const POWDER_DRAW_STEP: Readonly<typeof POWDER_DRAW> = { gain: 0.05, thin: 1 / 255, thread: 0.1, grain: 0.001 };
 /** the frame's word for the rows as they stand: 0 while none is moved. A moved row is its nearest step, never under one (a byte of 0 is the shader's own) */
 export function powderDrawWord(): number {
   const D = POWDER_DRAW, O = POWDER_DRAW_OWN, K = POWDER_DRAW_STEP;
   const b = (k: keyof typeof POWDER_DRAW) => D[k] === O[k] || !Number.isFinite(D[k]) ? 0 : Math.max(1, Math.min(255, Math.round(D[k] / K[k])));
-  return (b('gain') | b('thin') << 8 | b('fleck') << 16 | b('grain') << 24) >>> 0;
+  return (b('gain') | b('thin') << 8 | b('thread') << 16 | b('grain') << 24) >>> 0;
 }
 
 const U_HEAD = 32, U_WORDS = U_HEAD + POW_KICKS * 8;   // powder_field.wgsl PowU: 128 bytes, then the kicks (2 × vec4f each)
 interface Kick { x: number; z: number; force: number; age: number; dx: number; dz: number; seed: number }
 
+/** THE STEP'S PROGRAM IS THE DEVICE'S, COMPILED ONCE (the maintainer on shaders: "compile once", no compile at a moment of play). A field is thrown away when
+ *  both snow rows are at nothing or the air is made anew, and made again when a row comes back: each new field compiled "powder step" again (found 11-03 by a
+ *  one-boot read of the page: two switches of the look's layers, two more compiles). The layout and the pipeline are kept by device; a field is textures, a
+ *  uniform buffer and a bind group. */
+const PROGRAMS = new WeakMap<GPUDevice, { bgl: GPUBindGroupLayout; pipe: Promise<GPUComputePipeline> }>();
+function programOf(device: GPUDevice): { bgl: GPUBindGroupLayout; pipe: Promise<GPUComputePipeline> } {
+  let p = PROGRAMS.get(device); if (p) return p;
+  const C = GPUShaderStage.COMPUTE;
+  const bgl = device.createBindGroupLayout({ label: 'powder', entries: [
+    { binding: 0, visibility: C, buffer: { type: 'uniform' } }, { binding: 1, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 2, visibility: C, texture: { sampleType: 'uint' } },
+    { binding: 3, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 4, visibility: C, storageTexture: { access: 'write-only', format: 'rgba16float' } }] });
+  const layout = device.createPipelineLayout({ label: 'powder', bindGroupLayouts: [bgl] }), module = makeShader(device, powSrc, 'powder_field');
+  p = { bgl, pipe: computePipelineAsync(device, { label: 'powder step', layout, compute: { module, entryPoint: 'powderStep' } }) };
+  PROGRAMS.set(device, p); return p;
+}
 export class PowderField {
   readonly w: number; readonly h: number;
   /** what the picture reads: rgba16float, w × h, texel (i, j) = cell (i, j)'s centre (world x = (i + ½) / POW_RES): r = the powder's column, g = column × height (m),
@@ -93,12 +105,8 @@ export class PowderField {
     this.nxt = device.createTexture({ label: 'powder next', size: [w, h], format: 'rgba16float', usage: T.STORAGE_BINDING | T.COPY_SRC });
     this.view = this.cur.createView();
     this.ubo = makeBuffer(device, U_WORDS * 4, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'powder uniforms');
-    const C = GPUShaderStage.COMPUTE;
-    const bgl = device.createBindGroupLayout({ label: 'powder', entries: [
-      { binding: 0, visibility: C, buffer: { type: 'uniform' } }, { binding: 1, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 2, visibility: C, texture: { sampleType: 'uint' } },
-      { binding: 3, visibility: C, texture: { sampleType: 'unfilterable-float' } }, { binding: 4, visibility: C, storageTexture: { access: 'write-only', format: 'rgba16float' } }] });
-    const layout = device.createPipelineLayout({ label: 'powder', bindGroupLayouts: [bgl] }); const module = makeShader(device, powSrc, 'powder_field');
-    this.whenReady = computePipelineAsync(device, { label: 'powder step', layout, compute: { module, entryPoint: 'powderStep' } }).then(p => { this.pipe = p; this.ready = true; });
+    const { bgl, pipe } = programOf(device);
+    this.whenReady = pipe.then(p => { this.pipe = p; this.ready = true; });
     this.bind = device.createBindGroup({ label: 'powder', layout: bgl, entries: [
       { binding: 0, resource: { buffer: this.ubo } }, { binding: 1, resource: air.view }, { binding: 2, resource: air.cells },
       { binding: 3, resource: this.view }, { binding: 4, resource: this.nxt.createView() }] });

@@ -12,7 +12,8 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5247, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-const URL = `http://localhost:${PORT}/?roomclear&squad4&paused&quality=${QUALITY}&mute`;
+// (the two rules that came after are held off, so these lines ask the goals as they were built: halftwice-page.cjs has their own)
+const URL = `http://localhost:${PORT}/?roomclear&squad4&paused&quality=${QUALITY}&mute&goalhalf=0&qtwice=0`;
 let red = 0;
 const check = (ok, what, got) => { if (!ok) red++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}: ${got}`); };
 

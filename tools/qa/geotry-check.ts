@@ -2,15 +2,15 @@
 // Two rules rebuild what a level's own boxes already say, and neither knows a level by name:
 //   a ROUND THING is the kit's octagon (four slabs 45° apart) made one twelve-sided prism;
 //   a BROKEN WALL TOP is a bite out of a YARD WALL, and a yard wall is a wall with free floor under the open sky on both hands, on the renderer's own floor
-//   plan (render/placeField.ts skyPlan). Until 11-02 the test was a coping slab on the wall, which one kit lays: the levels built before it had none to find.
+//   plan (scene/placePlan.ts skyPlan). Until 11-02 the test was a coping slab on the wall, which one kit lays: the levels built before it had none to find.
 // Held here to a yard built by hand and to the levels as their files have them. No GPU: the picture is never SEEN here.
 //   bun run tools/qa/geotry-check.ts                  exit 0 = every line passed, 1 = one failed (the same on both stands: it reads level files and no switch)
 //   GEOTRY_BREAK=1 bun run tools/qa/geotry-check.ts   every spot is taken for open sky: must FAIL
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { skyPlan, placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/render/placeField.ts`);
+const { skyPlan, placeMask, PLACE_W, PLACE_RES } = await import(`${ROOT}/src/scene/placePlan.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
 const { geoTryLevel, breakWallTops } = await import(`${ROOT}/src/scene/geoTry.ts`);
@@ -25,8 +25,10 @@ const tried = (L: B[], lights: { pos: number[] }[] = []) => breakWallTops(L, lig
 /** a bite's own boxes: the cut stretches that stand in it */
 const stretches = (L: B[], q: Bite) => L.filter(b => b.cut && b.cutOld && !(b.flags & BoxFlag.NoShadow) && Math.abs(b.c[q.alongX ? 2 : 0] - (q.alongX ? q.z : q.x)) < 1e-6 && b.c[q.alongX ? 0 : 2] > q.s0 && b.c[q.alongX ? 0 : 2] < q.s1);
 /** what is drawn in the way of a bite (in its gap or hung on the wall's face beside it), its own stretches apart */
+/** a box's half-size along the world's x (0) or z (2), turned boxes too (a container stood across the yard is long in z, whatever its own h says) */
+const half = (b: B, ax: 0 | 2) => { const c = Math.abs(Math.cos(b.yaw || 0)), sn = Math.abs(Math.sin(b.yaw || 0)); return ax === 0 ? c * b.h[0] + sn * b.h[2] : sn * b.h[0] + c * b.h[2]; };
 const inGap = (L: B[], q: Bite) => L.filter(b => !(b.flags & BoxFlag.NoPrimary) && !(b.cut && b.cutOld) && b.c[1] + b.h[1] > q.H - q.D && b.c[1] - b.h[1] < q.H + 0.3
-  && Math.abs(b.c[q.alongX ? 0 : 2] - (q.s0 + q.s1) / 2) < (q.s1 - q.s0) / 2 - 0.01 + b.h[q.alongX ? 0 : 2] && Math.abs(b.c[q.alongX ? 2 : 0] - (q.alongX ? q.z : q.x)) < q.T + 0.3 + b.h[q.alongX ? 2 : 0]);
+  && Math.abs(b.c[q.alongX ? 0 : 2] - (q.s0 + q.s1) / 2) < (q.s1 - q.s0) / 2 - 0.01 + half(b, q.alongX ? 0 : 2) && Math.abs(b.c[q.alongX ? 2 : 0] - (q.alongX ? q.z : q.x)) < q.T + 0.3 + half(b, q.alongX ? 2 : 0));
 /** is a roof over this spot, asked of the boxes themselves (not of the plan the rule reads): a slab over head height, wide both ways */
 const roofOver = (L: B[], x: number, z: number) => L.some(b => !b.rot && (b.flags & 3) !== 3 && b.c[1] - b.h[1] >= 1.9 && Math.min(b.h[0], b.h[2]) >= 0.45 && Math.abs(x - b.c[0]) <= b.h[0] && Math.abs(z - b.c[2]) <= b.h[2]);
 
@@ -56,13 +58,26 @@ const roofOver = (L: B[], x: number, z: number) => L.some(b => !b.rot && (b.flag
 const R = `${ROOT}/levels`;
 const load = (name: string): { L: B[]; lights: { pos: number[] }[]; markTexel?: number } => { const f = (LOOK_LEVELS as Record<string, string>)[`${name}.json`] ?? `${name}.json`;
   const lv = loadLevel(parseLevelData(readFileSync(`${R}/${f}`, 'utf8')), { lived: true, dressing: true }); return { L: lv.boxes as B[], lights: lv.lights ?? [], markTexel: lv.markTexel }; };
-const WANT: Record<string, [rounds: number, walls: number]> = { pass: [19, 3], compound: [3, 4], crossing: [28, 6], 'police-post': [19, 5], bazaar: [6, 3], depot: [0, 2], 'tut-pair': [35, 4], 'tut-solo': [29, 5], block: [0, 0], records: [0, 0] };
+// A LEVEL'S COUNTS ARE IN A FILE OF ITS OWN: tools/qa/fixtures/geotry/<level>.txt holds "<round things> <bites>" for levels/<level>.json as the look page
+// opens it (its look twin where it has one, lived in and dressed); no file = none of either. So the commit that gives a level a round thing or a yard wall
+// carries its own count, and no two levels' commits meet in a table in this file (the folder's README says how to write one). Every level file is asked,
+// not a list of them: a level nobody wrote a file for must come out untouched.
+const FIX = `${ROOT}/tools/qa/fixtures/geotry`;
+const twins = new Set(Object.values(LOOK_LEVELS as Record<string, string>));
+const NAMES = readdirSync(R).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json') && !twins.has(f)).map(f => f.slice(0, -5)).sort();
+const badFile: string[] = [];
+const wantOf = (name: string): [number, number] => { const p = `${FIX}/${name}.txt`; if (!existsSync(p)) return [0, 0];
+  const l = readFileSync(p, 'utf8').split('\n').map(x => x.trim()).filter(x => x && !x.startsWith('#')), m = /^(\d+) (\d+)$/.exec(l[0] ?? '');
+  if (l.length !== 1 || !m) { badFile.push(`${name}.txt`); return [-1, -1]; } return [+m[1], +m[2]]; };
+for (const f of existsSync(FIX) ? readdirSync(FIX).filter(f => f.endsWith('.txt')) : []) if (!NAMES.includes(f.slice(0, -4))) badFile.push(`${f} (no such level)`);
 const got: string[] = [], off: string[] = [], low: string[] = [], near: string[] = [], indoors: string[] = [], hung: string[] = [], holed: string[] = [], walls: Record<string, number> = {}; let all = 0;
-for (const name of Object.keys(WANT)) {
+let asked = 0, filed = 0;
+for (const name of NAMES) {
   const { L, lights, markTexel } = load(name), before = L.map(b => ({ ...b })), n0 = L.length, m0 = placeMask(before, []) as Uint8Array;
   const r = geoTryLevel({ boxes: L, lights, markTexel }, BRK ? () => true : skyPlan(before)) as { rounds: number; walls: number; bites: Bite[] }; all += r.walls; walls[name] = r.walls;
-  got.push(`${name} ${r.rounds} round, ${r.walls} bites, ${L.length - n0} boxes more`);
-  if (r.rounds !== WANT[name][0] || r.walls !== WANT[name][1]) off.push(`${name}: ${r.rounds} round things and ${r.walls} bites, not ${WANT[name].join(' and ')}`);
+  const want = wantOf(name); asked++; if (want[0] || want[1]) filed++;
+  if (r.rounds || r.walls) got.push(`${name} ${r.rounds} round, ${r.walls} bites, ${L.length - n0} boxes more`);
+  if (r.rounds !== want[0] || r.walls !== want[1]) off.push(`${name}: ${r.rounds} round things and ${r.walls} bites, not ${want[0] < 0 ? 'a file that can be read' : want.join(' and ')}${existsSync(`${FIX}/${name}.txt`) ? '' : ' (no file: none of either)'}`);
   for (const q of r.bites) { const say = `${name} (${q.x.toFixed(1)}, ${q.z.toFixed(1)})`, st = stretches(L, q);
     if ([-1, 1].some(sd => [0.4, 0.8].some(dd => [q.s0, (q.s0 + q.s1) / 2, q.s1].some(u => roofOver(before, q.alongX ? u : q.x + sd * (q.T + dd), q.alongX ? q.z + sd * (q.T + dd) : u))))) indoors.push(say);
     if (q.H - q.D < 2 - 1e-6 || q.D > 0.4 + 1e-6 || st.length < 3 || st.some(b => b.c[1] + b.h[1] < q.H - q.D - 1e-3 || b.c[1] - b.h[1] > 1e-3)) low.push(`${say} to ${(q.H - q.D).toFixed(2)} m in ${st.length} stretches`);
@@ -76,7 +91,8 @@ for (const name of Object.keys(WANT)) {
   if (freed) holed.push(`${name}: ${freed} cells`);
   if (L.some(b => b.cutRound && b.cut?.length !== 8)) off.push(`${name}: a round thing that is not a prism of twelve sides`);
 }
-check(off.length === 0, 'every level gets what its own boxes say: the kit\'s octagons made round, its yard walls broken', off.length ? off.join('; ') : got.join(' · '));
+check(badFile.length === 0, 'every count file names a level and holds two whole numbers on one line', badFile.join(', '));
+check(off.length === 0 && filed >= 8, `every level gets what its own boxes say, as its count file has it (${asked} levels asked, ${filed} with a file): the kit's octagons made round, its yard walls broken`, off.length ? off.join('; ') : got.join(' · '));
 check(indoors.length === 0 && all > 0, 'no bite is in a wall with a roof on either hand (a room keeps its walls)', indoors.length ? indoors.join('; ') : `${all} bites, no slab over head height two cells out on either hand`);
 check(low.length === 0 && near.length === 0, 'no bite goes under the 2 m line or deeper than 0.4 m, and none is nearer than 10 m to another', [...low, ...near].join('; '));
 check(hung.length === 0, 'nothing drawn is left in a bite\'s gap or hanging on the wall\'s face beside it (a coping, snow, an alarm\'s housing)', hung.join('; '));
