@@ -36,6 +36,7 @@ for (const file of files) {
     cuts: cutRows, leaves: (col.dynamicBoxes as any[]).length, things: (g.props?.all?.length ?? 0),
     parts: ((g.props?.props ?? []) as any[]).reduce((n, q) => n + q.boxes.length, 0),   // (every part box of the furniture is a list of the leaves' table: boxMirror.ts things)
     panes: boxes.reduce((n, q) => n + ((q.flags & BoxFlag.Glass) ? 1 : 0), 0) };   // (the panes one line can note: no more than the level's glass)
+  has.glass = has.view = has.panes;   // (the copy's rows of panes no longer whole, and a burst's view of the glass: a row a pane at most)
   const over: string[] = [];
   for (const c of Object.keys(caps)) if (!Object.keys(has).some(k => (CAP_OF[k] ?? k) === c)) over.push(`the table '${c}' is counted by no row of this check`);   // (a table added to the copy is a row added here)
   for (const k of Object.keys(has)) { const cap = Math.floor((caps[CAP_OF[k] ?? k] ?? 0) * K), room = GROWS[k] ?? 1;

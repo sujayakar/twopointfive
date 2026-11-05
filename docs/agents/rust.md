@@ -44,16 +44,17 @@ first system across (the game's own maths). No rule of play has changed and noth
     in a whole game and not only on a stream of inputs; the Rust systems that follow call the Rust maths with no crossing.
   - `lines` — the box world's line tests (`collision.ts segmentBlocked`, `segmentBlockedDynamic`: every sight line, round and reach) from `rust/sim/src/lines.rs`,
     over the module's copy of the boxes (next bullet), inside a tick. `?rustlines`, `TPS_RUSTLINES=1`. The length is worked out in TypeScript and handed
-    over, so the row answers under either maths. Glass: the module imports nothing, so where the host has a question about a pane (`glassOpen`, a line of
-    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. THE RAY IS A ROW OF ITS OWN, `rays` (`?rustrays`, `TPS_RUSTRAYS=1`; `collision.ts raycast` →
+    over, so the row answers under either maths wherever no pane's rule stands. GLASS: whether a pane is open where a line crosses it is answered in
+    the module (`glass.rs`, the bullet "A pane's open question" below), by the game's own maths, so with glass breaking on the row answers under the
+    game's own maths alone (`collision.ts paneAsk`; under the engine's the TypeScript walks any line that may meet a pane). Only a line of fire still
+    has the walk LIST the glass it crosses that is not open, for the penetration rule (`glasspen.ts`), which is TypeScript. THE RAY IS A ROW OF ITS OWN, `rays` (`?rustrays`, `TPS_RUSTRAYS=1`; `collision.ts raycast` →
     `lines.rs ray`, 2026-11-03: the nearest thing a ray meets, how far along, and the normal of the face it enters by — `boxes.ts rayBox` whole, over
     plain, tilted, round and cut boxes; the leaves standing in `dynamicBoxes` first, then the grid in the same half-metre steps). Every rule of the
     things that flies something through a level asks it (a round, a thrown can, a torn leaf, a piece of debris: 102 callers), so it had to be in the
-    module before any of them could be. THE MODULE'S RAY TAKES EVERY PANE AS SHUT and says the nearest thing it meets. If that
-    is no pane, no pane stood nearer, open or shut, and the TypeScript's walk ends on the same thing. If it is a pane, the host asks its one
-    question of it (`glassOpen`, which only reads): shut, and it is the answer; open, and the ray flies on to what stands beyond, which only the
-    host's own walk can follow, so the ray is asked again in TypeScript whole. `raycastHere` is the TypeScript's own. `RAYS.n` counts the
-    module's, `RAYS.host` the ones walked again (an open pane; a ray that is not a number, which the host's walk fails on loudly). The ray rode the lines' row for a
+    module before any of them could be. A PANE MET WHERE IT IS OPEN IS PASSED IN THE MODULE and the ray flies on to what stands beyond, as the
+    TypeScript's walk does (until the pane's open question moved there the module took every pane as shut and the host walked the ray again:
+    6,500 rays in twelve mission runs). `raycastHere` is the TypeScript's own. `RAYS.n` counts the
+    module's, `RAYS.host` the ones the host walks (a ray that is not a number, which the host's walk fails on loudly). The ray rode the lines' row for a
     day, on no named build; it has its own so that the lines' row can be on in the page while the ray waits its turn, and a rule stepped in the
     module (a slab, a thrown thing) asks its rays there whatever this row says. THE LINES ARE ON IN THE PAGE AND ON THE SHIPPED STAND since 2026-11-03
     (`RUST_ON`: the bullet "Rows that are on"), off on the frozen stand; THE RAY'S ROW IS OFF EVERYWHERE. Measured 2026-11-03 on a 4-core cloud
@@ -260,7 +261,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     block headed "THE SENSES IN THE MODULE"; `senseSet(bit)` is the one gate: inside a tick, the copy standing, the row on, `EXACT.on`, and the
     instance's line tests the class's own: a check that puts its own `segmentBlocked` over one instance gets ITS lines, from the TypeScript). Each works its
     lengths and angles out in the module, so each answers only where the game's own maths stand. Each returns "ask the TypeScript" for what it cannot
-    judge (a length that is no length of this world's, a line that must ask the host about an open pane), and the caller's own statements, kept whole as
+    judge (a length that is no length of this world's; until the pane's open question moved to the module, a line that met a pane), and the caller's own statements, kept whole as
     `…Here`, then answer. What they write to is SCRATCH of one question (the lamps, the blobs, the nav grid's shut cells, a way's waypoints): nothing of the
     game is kept in the module by any of them. The numbers the host shares with these files (doubles a lamp, the answers' codes) are `boxMirror.ts FACE`,
     under the Rust's own names; `rust-check` reads the Rust sources and is red where one differs.
@@ -275,8 +276,8 @@ first system across (the game's own maths). No rule of play has changed and noth
       `?rustsmoke`, `TPS_RUSTSMOKE=1`. Idle where the senses are the renderer's (nothing asks it).
     - `sound` — how a sound reaches a listener (`collision.ts SoundPaths.propagate`) from `hear.rs`, in two questions with the TypeScript's half-second
       memory of routed answers between them: the straight lines (clear, grazed, over the top, walled off, too far), then the way round by the floor (the
-      search of `nav.rs`, each leg measured, the last waypoint the listener has a straight run to, a shut leaf across it). Sound stops at glass, so where
-      glass breaking is on (`glassOpen`) a line that meets a pane and nothing solid is the host's to judge and the whole question goes back to TypeScript.
+      search of `nav.rs`, each leg measured, the last waypoint the listener has a straight run to, a shut leaf across it). Sound stops at glass and
+      passes a hole in it: the lines' own answer in the module (`glass.rs`); before that a line that met a pane sent the whole question back to TypeScript.
       `?rustsound`, `TPS_RUSTSOUND=1`.
     - `paths` — a way across the floor (`collision.ts NavGrid.findPath` with NO penalty: the A* over the half-metre grid, `nearestFree`, the greedy
       smoothing and `walkable`) from `nav.rs`. The grid of shut cells stays the host's (it bakes and re-bakes it) and is written to the module for each
@@ -381,8 +382,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     (`Throwables.sync`), and an item out of the list keeps its numbers as they were. ONE CALL WALKS THE POOL; what a thing does to anything else
     (a bounce said by its callback, a share of momentum for a thing of furniture, its time up) is LISTED and done by the host when the whole
     pool has been stepped, in both languages: a callback is handed what the item was at the bounce, and the item as the step left it. A ROW
-    WHOSE RAY ENDS ON A PANE, OR THAT BOUNCES ON GROUND THAT MAY BE LYING SNOW, IS HANDED BACK (the pane's open question and the snow's map are
-    the host's): the module writes and lists nothing of that row and the TypeScript steps it. A POOL PAST THIRTY-TWO ROWS (every one a can on
+    THAT BOUNCES ON GROUND THAT MAY BE LYING SNOW IS HANDED BACK (the snow's map is the host's; a ray that ended on a pane was too, until the
+    pane's open question moved to the module): the module writes and lists nothing of that row and the TypeScript steps it. A POOL PAST THIRTY-TWO ROWS (every one a can on
     its fuse: never, in play) grows wider columns and is stepped in TypeScript from there on. THE FURNITURE'S RAY came with it
     (`props.ts PropSystem.raycast` | `lines.rs ray_things`, over the box world's copy of the furniture's parts: the bullet "The box world's copy").
     OFF EVERYWHERE. What it taught: "WHAT THE THROWN THINGS ADDED" below.
@@ -459,6 +460,10 @@ first system across (the game's own maths). No rule of play has changed and noth
     the statics again first. `addStatic` / `truncateStatics` say it themselves (the grid changed: TypeScript answers until the next tick). Leaves: the
     three places that write a leaf say so themselves (`boxMirror.ts leafWrote`, called by `Door.place`, and so `Door.reset`, and by `doorblast.ts
     poseSlab`), whoever calls them and when; a list a question swaps in for itself is copied at every question.
+    THE GLASS IS SAID BY ITS WORK, NOT BY ITS WRITES (`col.glassBegin()` / `glassEnd()` round a blow, a blast and the whole of the glass's step):
+    the rule that breaks a pane asks lines and rays of its own between its writes (a fragment's way out), so from begin to end
+    every question writes the panes' rows again first, and so does the first one after. A mark at each write was tried first and was wrong
+    within a day's check: a question in the middle paid the debt and the writes after it went unsaid.
     Today's writers of statics: `destruction.ts`, `furnblast.ts`, `wallbreak.ts`, `winbars.ts`, `glassbreak.ts`. THIS IS THE ONE PART THAT RESTS ON EVERY
     WRITER REMEMBERING, and it ends when those rules are Rust and write the rows themselves. Until then `rust-check --both` is the net: it found the three
     writers nobody had listed (door leaves, a flag weather writes, the breakers' hides).
@@ -488,6 +493,77 @@ first system across (the game's own maths). No rule of play has changed and noth
   plays, and the frozen stand runs `lines` and `circles` only (the other two need the game's own maths). Probe families with the rows up: destruction,
   furnblast, breaks, winbars, wallbreak and wallcharge were run both ways before the last review's mends (3.3 million questions, none different); the
   door, glass and frag families were not.
+- **A pane's open question** (`rust/sim/src/glass.rs`; the copy's panes, `boxMirror.ts panes` / `PaneSource`; 2026-11-04). Whether a pane of glass
+  is open where a line or a ray meets it (`glassbreak.ts openAt(bi, X) || also(bi, X)`, what `col.glassOpen` answers) is answered IN THE MODULE.
+  Before it, every rule there that met a pane stopped and handed the question back: the ray was walked again in TypeScript (6,500 rays in twelve
+  mission runs), a slab's or a thrown thing's step was handed back whole, a sound's line that met glass sent the whole question back, and a line
+  listed its panes for the host to judge. One move ended all of them, where a loop in the host that asks again with the pane left out would have
+  ended one. It is no row of `RUST`: the lines' and the ray's rows answer by it, and the TypeScript rule is its twin until the twins go.
+  - THE STATE IS STILL TYPESCRIPT'S. Breaking glass (`glassbreak.ts`) owns each pane's cracks and pieces. The copy holds a ROW A PANE THAT IS NO
+    LONGER WHOLE (a piece out, a piece queued to leave, toughened glass coming down, gone): eighty doubles (nine a site: where it is, the bearing of
+    radial 0, the four base radii, the ring zone, the merged share; then the dice's blow, half sides, and the key and number of the last clump out) and
+    sixty-four words (the static, flags and site count, the dice's lattice and seed, each site's radials and seed, a bit a piece that is out, a bit
+    a piece queued to leave, a bit a site whose crater is). A pane with cracks and nothing out answers as a whole one and has no row. The rows are
+    written WHOLE every time the copy is proven: a row is a few hundred numbers, a level's broken panes are few, and nobody has to say which pane
+    changed (a put-back and a pane made whole are no case). 256 rows; past that `paneAsk` is −1 and the TypeScript answers what may meet a pane
+    (counted: `fell`, with the reason).
+  - THE RULE AND ITS ROWS ARE HUNG TOGETHER, in one call (`col.glassRule(rule, rows)`; `glassbreak.ts` hangs itself as both). A rule hung alone
+    (`col.glassOpen = …`: a check's made-up closure, a mode's own) has no rows, and the TypeScript answers by it (`paneAsk` −1): the module
+    never judges by rows that were another rule's. The collision keeps the rows' source and hands it to the copy each time it is stood up, as it
+    hands the walk; a copy that is shut holds nothing of the game (a world outlives its game). The source is hung as a FUNCTION, like every hook
+    the game hangs on the collision: an object kept there was a second road to the game's glass, and the restart check, which names what may
+    differ by its road from the game, went red on it.
+  - A DICING PANE NEEDS NO BIT A CLUMP. The clumps of toughened glass let go in one order (their keys, a tie by clump number: the list
+    `glassbreak.ts` sorted once), so "this clump is out" is "(its key, its number) is no later than the last one out": the row holds that one
+    pair and the module works a clump's key out again (`gpDiceKey`, the same arithmetic). The row is written from the clumps that ARE out, not
+    from the step's counter: a clump's release is heard by the game before the counter moves, and a question asked from inside that hearing (a
+    shard's ray, a sound's line) must find the clump out. A review found the first version one clump late there; `glass-ident` now asks from
+    inside every release.
+  - A BURST'S VIEW IS DATA. A blast judges its lines by glass as it is to a burst (`frag.ts throughGlass`), which was a closure hung on the glass
+    for the length of one judgment. `GlassBreak.seeThrough(view, from, size, fn)` now says it twice: the closure for this side's walks, and rows
+    for the module's (`boxMirror.ts PaneView`). The rows are made WHEN THE MODULE IS FIRST ASKED under the view (`GlassBreak.view`, kept for the
+    judgment's length), so a view under which nothing is asked of the module costs nothing. `blown` is answered there from the pieces queued to
+    leave; for `wary` and `counted` the rule that would break the glass is worked out for every sheet of the level at once and handed over as
+    "this pane gives whole" or "it gives within this far of its nearest point". That rule is stated ONCE (`glassbreak.ts give`): `wouldGive`
+    asks it of a point and the view's rows are its answers for a pane, so the two cannot drift. THE PRICE, measured by review on the office (22
+    sheets) before the rows were made from the level's glass alone and not from every box: a burst's line by a pane 10 µs wary and 8 µs
+    counted, against 0.9 µs blown, because a view's rows are worked out for every sheet where the closure asked only the pane the line met. A
+    man scoring spots to flee to asks one view a spot. If that shows in a tick, keep the rows for the same burst across the questions of a tick.
+  - THE GLASS IS SAID BY ITS WORK (`col.glassBegin()` / `glassEnd()`; the bullet "The box world's copy"). The copy's debt names WHAT is owed
+    (the boxes, the panes, the view), so glass at work has only the panes written again before each question and a view only its own rows; the
+    whole of glass's step is one piece of work, and a question from inside it finds the rows as the glass stands at that statement. A write
+    with no question of its own between (a pane made another glass, every pane made whole) says `col.glassWrote()`. THE PRICE, measured by
+    review on the office with 15 broken panes: a solid line asked while the glass is worked on is 2.3 µs against 0.53, and once a pane is
+    touched every tick writes the rows once more (the glass's step is bracketed whole). A count bumped at each write of the glass, as the
+    leaves and the furniture have, would write nothing when nothing changed, but rests on every write site being found, which the bracket does
+    not; the tick's cost did not move (below), so the bracket stands until the glass's rule is Rust and writes the rows itself.
+  - IT NEEDS THE GAME'S OWN MATHS WHERE AN ANGLE OR A LENGTH DECIDES. A piece is found by an angle and a clump by a length, so there the answer is
+    the TypeScript's only where both sides have the same `atan2`, `cos`, `sin` and `hypot`. `paneAsk` is 1 under `EXACT.on`, and under the
+    engine's maths while no row holds a site or a dice and no view gives by a length (`glassPlain`: panes gone and nothing else). A sight line
+    that passes glass by its flag never meets the question and is the module's under either maths. Otherwise, under the engine's maths, the
+    pane's question is IDLE and the TypeScript answers what may meet a pane (`paneAsk` −2). That is the rule of the rows that work a length or
+    an angle out (`sim.ts OWN_MATHS`), kept at the question because the rows that ask it, `lines` and `rays`, answer boxes under either maths;
+    an idle question's reach of the TypeScript is NOT counted as a fall (`paneFell` counts −1 alone: no rows behind the rule, or more than the
+    tables hold), so the sealed rows stay sealed on a stand whose maths are the engine's.
+  - MEASURED 2026-11-04 on a 4-core cloud box under bun, against the tree before it: the twelve mission runs of both stands (`playthrough.ts
+    --seeds 1-2`, `PT_DIGEST=1`) the same by digest, 42 of 42 on each; with `TPS_FELL=1` the count "rays · the nearest thing is a pane"
+    (10,638 over the shipped stand's runs) is gone and no line names a pane. The tick (`tickcost.ts --each --list --rounds 2`, five missions,
+    30,071 ticks): 2.11 → 2.11 ms mean, every run to the bit; the same tree measured twice differs by 1 %. Never seen on a GPU; the page was
+    driven in headless Chromium on the software adapter (`rust-page.cjs`).
+  - A RULE'S STEP ASKS ONCE (`col.rulesPanes()`): a slab's and a thrown thing's rays ask the pane's rule, so their step takes the answer
+    (0 or 1) from one place, which also counts a −1 as the TypeScript's under the rules' own row. The thrown things ask again before each walk:
+    a row this side stepped in between may have broken more glass than the copy holds.
+  - WHAT HOLDS IT: `tools/qa/glass-ident.ts` (`GLASS_BREAK=1` must fail it; the section `glass` of `rust-check`, which runs it ON BOTH STANDS:
+    toughened glass comes down in a wave on the frozen stand and drops after a beat on the page's, and the two reach different rows). The glass
+    of four levels, and one block of solid glass a level, broken by the game's own entry points (rounds hard and soft, pellets, blasts, the
+    glass's step, a pane made another glass, every pane made whole); points on and off every pane asked of the rule and of the module with no
+    view and under each of the three; a solid line and a ray through each asked of both walks; the same asked FROM INSIDE A RELEASE (a piece
+    leaving, a clump leaving, the game hearing either); the copy's rows compared with the glass after every round. Fair only if it met float
+    glass holed and with pieces queued, cracks run, a pane part way down, panes gone, a web, a pane with all eight sites, open and shut under
+    every view, glass on its way out, a pane that gives whole and one that gives near, solid glass, and a question from inside each kind of
+    release. The tool takes its stand from `TPS_PROFILE` given OUTSIDE it (a default written in the tool's first line is read after the harness
+    has stood up, and gives a half stand: the pins lifted, the page's switches not written). `segment-ident --rust` breaks real glass too (it
+    runs under the game's own maths for that), and `slab-ident` / `item-ident` say their made-up panes as rows as well as a rule.
 - **A rule in the module WRITES the box world: whose a row is, for every writer** (decided 2026-11-03 with the doors' step as its first tenant; agreed
   with the senses' owner, whose smoke grid reads the leaves). The families still to move (blasts, breaks, cuts, glass, props) follow this, not a way of
   their own:
@@ -573,11 +649,11 @@ first system across (the game's own maths). No rule of play has changed and noth
       behind the ones in the air (`SlabStore.rest`), a leaf torn off enters in its door's place among them (`enter`), a door hung again gives its
       row up and the row is zeros (`leave`). `row[door]` is the row PLUS ONE: a part of zeros is no slab at all, which is what a part nobody is at
       home in must mean. The host moves rows, on both roads; no rule in the module does.
-    - **A rule that asks the ray may end on a pane, and a pane is the host's.** The module's ray takes every pane as shut; whether one is open
-      where the ray meets it is `glassOpen`, the host's. So a step in the module whose ray ends on a pane cannot go on: IT WORKS ON A COPY OF ITS
-      ROW, writes the row back only if the whole step was its to take, and otherwise answers HOST with nothing written, and the TypeScript takes
-      that slab's step for that tick (`SLABS_STEPPED.host`). The TypeScript step works on the row read out and written back in the same way, so
-      nothing reads a slab half stepped. Whoever moves the next rule that flies something through a level (thrown things, debris) takes this as it is.
+    - **A step that may have to be handed back works on a copy of its row.** Until the pane's open question was in the module a ray that ended
+      on a pane was the host's, so a step whose ray met one could not go on: IT WORKS ON A COPY OF ITS ROW, writes the row back only if the whole
+      step was its to take, and otherwise answers HOST with nothing written, and the TypeScript takes that slab's step for that tick
+      (`SLABS_STEPPED.host`). The pane is no such case any more (a ray flies on through a hole in the module); what is left is a ray of no
+      length or no number. The TypeScript step works on the row read out and written back in the same way, so nothing reads a slab half stepped.
     - **A memo keyed on an object is a column, and WHAT THE KEY WAS is part of the rule.** `wedged` (a slab with no clear spot in reach is not
       searched for again for a quarter second) was a side table keyed on the slab OBJECT. The checkpoint's run-on stepped a COPY, another object,
       which therefore had no memory. It is a column now, and the copy starts with it at 0, as it always in effect did.
@@ -592,10 +668,10 @@ first system across (the game's own maths). No rule of play has changed and noth
       the differential meets some of them once in ten thousand steps. `rust-check`'s slabs section reads the numbers out of each function's body on
       both sides (`stepSlab` | `step`, `pushOut` | `push_out`, …) and is red where the two lists differ.
     - **The differential has to MAKE what play rarely does**: `slab-ident` throws slabs at panes, flags three statics in ten as panes with a quarter of
-      their cells open (`:panes`), buries slabs in the widest walls (the settling's whole ladder, the doorway it falls back to) and ages one to its
+      them gone (`:panes`: a made-up state of the glass, said twice as the game's own is, as the rule its walk asks and as the rows the copy holds), buries slabs in the widest walls (the settling's whole ladder, the doorway it falls back to) and ages one to its
       six-second cap. A one-sided change to any of those was invisible before it did.
-    - LEAD, not done: the module hands a step back for ANY pane a ray ends on, since only the host knows whether a cell has fallen out. If the box
-      world's copy carried "this pane has a hole" (as it carries the walkable kind), an intact pane could answer there and HOST would be rare.
+    - The lead that stood here (the copy should carry a pane's holes, so that a step need not be handed back for a pane) is done: "A pane's open
+      question" below.
     - **A mission set must DO the thing a row moves**: see `@frag` above. A row whose rule no run reaches is held by its differential alone, and
       `rust-check` now says so of the slabs if its set has no such run.
     A CHANGE TO `stepSlab`, `pushOut`, `unstick`, `settle`, `overlaps`, `freeSpot`, `reachAlong`, `support` OR `acrossOf` IS A CHANGE TO `slabs.rs` TOO.
@@ -618,7 +694,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     - **What the module does not have is asked for by handing the row back, and the host says up front whether it can come up**: the snow's map
       is the host's, so a bounce on ground is the host's wherever `BogGround.may()` says snow may lie, and nowhere else. ONE hook answers both
       questions (`may`, `at`), so the two cannot disagree.
-    - **One helper asks a rule's ray** (`lines.rs ray_rule`: a pane with the host's rule standing, a ray of no length or no number → the host's).
+    - **One helper asks a rule's ray** (`lines.rs ray_rule`: a ray of no length or no number → the host's; a pane is judged where it is met).
       The slabs' step and the pool's walk both call it; the next thing that flies does too.
     - **The furniture's parts are a third list of the box world's copy** (the bullet "The box world's copy"): copied row by row where a part
       differs, at the tick's first question that needs them and after `thingWrote` (said by `Prop.place`, the one place a part is written, and
@@ -1396,9 +1472,9 @@ first system across (the game's own maths). No rule of play has changed and noth
   was falling back anyway. A fallback site calls `if (FELL.on) fell('<row>', '<why in plain words>')`: A FALLBACK THAT IS NOT COUNTED IS NOT KNOWN.
   THE SEAL (`sim.ts SEALED`): the rows no run may reach the TypeScript of. A tool that counted one prints `FELL SEALED ROW REACHED` and exits 1, and
   `rust-page.cjs`'s `systems` job fails on one in the real page. `FELL_BREAK=1` with `TPS_FELL=1` is the red path (questions outside a tick go back to
-  the TypeScript; it must end red). SEALED TODAY: `lines`, `circles`, `fog`, `poses`. A family adds its row in the step that closes its last fallback,
-  and its TypeScript can go in the step after. NOT `rays` yet: a ray whose nearest thing is a pane the host says is open there flies on in the
-  TypeScript walk (some five hundred a mission with glass in it) until a pane's state is in the module.
+  the TypeScript; it must end red). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`. A family adds its row in the step that closes its last fallback,
+  and its TypeScript can go in the step after. `rays` joined with "A pane's open question": until then a ray whose nearest thing was a pane the
+  host said was open there flew on in the TypeScript walk (some five hundred a mission with glass in it).
   WHAT WAS CLOSED FOR THE SEALED ROWS:
   - A QUESTION OUTSIDE A TICK. The module answers only over a copy of the box world that has been PROVEN (every static compared with its row), and a
     tick was the only stretch with a proof. `StaticCollision.window(fn)` proves the copy once and runs `fn` with its questions going to the module; a
