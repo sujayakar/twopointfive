@@ -29,8 +29,8 @@ import { Vec3, v3 } from '../math/vec';
 import { isHostile } from './teams';
 import { MORALE, trainingOf, hasMate } from './morale';
 import { coverFrom, endDisplace } from './suppression';
-import { runnerOwns } from './runner';
 import { handCarry } from './guards';
+import { hasHim, OWN } from './owner';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?startle=0 = a man who sees you goes for his gun at once,
  *  as he did). `beat` s of the start; `draw` s after it for the gun to come up before a round can leave it (a man who draws: his feet still, his gun rising); `fresh` s since he last stood calm inside which a sighting still catches him unaware; `late` s past the end of a beat
@@ -68,7 +68,7 @@ const blank = (): St => ({ calmT: -100, calmTorch: false, bySight: false, at: -1
  *  leaves him (startleLeft floors the fight AI's reaction clock each frame). `torch`: the hand torch was in his hand and stays there for it (left out: asked
  *  of him as he stands). False = not given: a dead or held man, a civilian, a man of the runner's, or one still in a start. */
 export function startleMan(g: Game, gd: Guard, at: Vec3, secs = STARTLE.beat, torch?: boolean): boolean {
-  if (gd.state === 'dead' || gd.held || gd.civ || runnerOwns(gd)) return false;
+  if (gd.state === 'dead' || gd.held || gd.civ || hasHim(gd, OWN.runner)) return false;
   let S = stateOf.get(gd); if (!S) stateOf.set(gd, S = blank());
   if (g.time < S.until) return false;
   const c = gd.char;

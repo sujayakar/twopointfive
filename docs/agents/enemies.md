@@ -1500,3 +1500,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the shout, always), the readers above ask under this key; for the 0.6 s between his shout and his drop a mate is company to morale and not to flinch.
   NOT SEEN: never seen on a GPU and never played. The page was only booted on the software adapter (`PORT=<port> node tools/qa/runanyway-page.cjs`: its key-on run, which opens the page as it ships and so with this key on, passes
   with no page error; its second load was cut by the time cap on a loaded machine and proves nothing).
+
+## Who has a man (`src/game/owner.ts`)
+
+- **ONE RECORD A MAN, 2026-11-05 (task GEp4o, the AI cleanup's first step).** Four columns of the men's table, and only `owner.ts` writes them: `owner` a word of claims, a bit a rule, because a
+  man is held by several rules at once all the time (squad and lane 76,426 man-ticks of the 42 runs on the shipped stand); the highest bit set is the rule that has him; `rank` that bit's place;
+  `reason` which of the top rule's reasons it gave; `since` when the claim now on top came to the top (a lower claim surfacing counts from then; "how long has rule X had him" is X's own state).
+  A rule says so once, `claimMan` and `releaseMan`; whoever wants to know reads `hasHim(gd, OWN.x)`, several `|`d for an asker's own list; `ownerOf(gd)` is who has him as `updateGuard` would have
+  it. The debugger's Enemy page says who has each man who is not his own, why, since when and over whom (`ownerSummary`). TypeScript for now: `claimMan` and `releaseMan` move to Rust with the
+  behaviours (wave 3 of the port). The file is a leaf of the import cycle.
+  THE RANKS ARE THE ONE TABLE AT THE TOP OF THE FILE AND DECIDE ONLY WHO IS SHOWN. No asker changes who it yields to in this part: the disagreements are kept and listed, for the maintainer to
+  rule on (rebuild/rust-sim/port/owner-questions.md in the project's files).
+  A QUESTION THAT IS NOT OWNERSHIP IS NOT AN OWNER: `gd.fled` (the weapon has left his hand; true after he dies) is a fact of the man.
+  NO SWITCH: it changes no play. PROOF: the 42's digests at every commit on both stands, an arm with last stand, buddy, pressure and dig-in up against its own base, and
+  `bun run tools/qa/owner-check.ts` on both stands (`OWNER_BREAK=1` red on every line): at every read and at every tick's end, each man's word against what each rule's own state says
+  (`ownerWitness`, one line in the rule's file). A rule the runs never put a man in says so in its line. `bun run tools/qa/fights-check.ts` on both stands (`FIGHTS_BREAK=1` red): a new pair of
+  modules setting one deciding field of one man to different values in a tick is red until someone says who has him or why it is meant; the pairs known today are listed in it with their reason.
+  NOT SEEN: nothing here changes what is on screen but the debugger's line. Never seen on a GPU.
