@@ -6,7 +6,7 @@
 // lanes at a time. The first word column is the row's generation, which is the store's own (src/sim/men/store.ts): odd = a man stands in the row.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { MEN_FIELDS, MEN_KEPT, MEN_ROWS, type ColGroup, type ColOn, type MenField } from '../../src/sim/men/schema';
+import { MEN_FIELDS, MEN_KEPT, MEN_ROWS, type ColGroup, type ColOn, type ColType, type ManRef, type MenField } from '../../src/sim/men/schema';
 
 export interface Schema { rows: number; fields: readonly MenField[] }
 /** a column as both languages see it */
@@ -33,7 +33,7 @@ export function layOut(S: Schema): { cols: Col[]; laid: Laid[] } {
       const cols = ['X', 'Y', 'Z'].map(a => add(f64, f.name + a, f.group));
       laid.push({ field: f, cols, ...(f.type === 'vec3?' ? { has: bit(f.group) } : {}) });
     } else if (f.type === 'bool') laid.push({ field: f, cols: [], bit: bit(f.group) });
-    else laid.push({ field: f, cols: [add(u32, f.name, f.group)] });
+    else laid.push({ field: f, cols: [add(u32, f.name, f.group)] });   // (a word: a place in a list of words, a word of its own, or a man)
   }
   const cols = [...f64, { name: 'gen', rust: 'gen', kind: 'u32' as const, group: 'hot' as const }, ...u32];
   return { cols, laid };
@@ -55,6 +55,7 @@ function offsets(S: Schema, cols: Col[]): Map<string, number> {
   return out;
 }
 const INIT: Record<ColOn, string> = { man: 'initMan', guard: 'initGuard', player: 'initPlayer', anim: 'initAnim' };
+const isManRef = (t: ColType): t is ManRef => typeof t === 'object' && !Array.isArray(t);
 const initText = (f: MenField) => (typeof f.init === 'number' && Number.isNaN(f.init) ? 'NaN' : JSON.stringify(f.init));
 
 function accessors(l: Laid, O: Map<string, number>): string[] {
@@ -73,6 +74,10 @@ function accessors(l: Laid, O: Map<string, number>): string[] {
     return [...doc, `  get ${n}(): Vec3 | null { const S = this.S; if ((${u(h.col)} & ${h.mask}) === 0) return null; const i = S.b8 + this.r; return [S.d[i + ${O.get(x)}], S.d[i + ${O.get(y)}], S.d[i + ${O.get(z)}]]; }`,
       `  set ${n}(v: Readonly<Vec3> | null) { const S = this.S, w = ${u(h.col)}, i = S.b8 + this.r; if (v === null) { ${u(h.col)} = w & ${~h.mask >>> 0}; S.d[i + ${O.get(x)}] = 0; S.d[i + ${O.get(y)}] = 0; S.d[i + ${O.get(z)}] = 0; return; } ${u(h.col)} = w | ${h.mask}; S.d[i + ${O.get(x)}] = v[0]; S.d[i + ${O.get(y)}] = v[1]; S.d[i + ${O.get(z)}] = v[2]; }`, ...each];
   }
+  if (isManRef(t)) {   // a word that names a man: 0 nobody · 1, 2 … a word of its list · else a handle (never under 256: a live row's generation is odd)
+    const also = t.also, ty = [...also.map(w => `'${w}'`), t.man, 'null'].join(' | '), rd = also.map((w, i) => `h === ${i + 1} ? '${w}' : `).join(''), wr = also.map((w, i) => `v === '${w}' ? ${i + 1} : `).join('');
+    return [...doc, `  get ${n}(): ${ty} { const S = this.S, h = ${u(n)}; return h === 0 ? null : ${rd}S.manAt(h) as ${t.man}; } set ${n}(v: ${ty}) { const S = this.S; ${u(n)} = v === null ? 0 : ${wr}S.handleOf((v as ${t.man}).r); }`];
+  }
   const V = `${n.toUpperCase()}_WORDS`;
   return [...doc, `  get ${n}(): (typeof ${V})[number] { const S = this.S; return ${V}[${u(n)}]; } set ${n}(v: (typeof ${V})[number]) { const S = this.S, i = ${V}.indexOf(v); if (i < 0) throw new Error(\`${n}: no such word: \${v}\`); ${u(n)} = i; }`];
 }
@@ -84,10 +89,11 @@ export function tsText(S: Schema): string {
   /** what a new man's columns start at, other than zero: a method of the class his row is read through, which his object's constructor calls */
   const inits = (on: ColOn) => { const rows = S.fields.filter(f => f.on === on && f.init !== undefined); return rows.length ? [`  ${INIT[on]}(): void { ${rows.map(f => `this.${f.name} = ${initText(f)};`).join(' ')} }`] : []; };
   const lists = laid.filter(l => Array.isArray(l.field.type)).map(l => `const ${l.field.name.toUpperCase()}_WORDS = ${JSON.stringify(l.field.type)} as const;`);
-  const uses3 = laid.some(l => l.field.type === 'vec3' || l.field.type === 'vec3?');
+  const uses3 = laid.some(l => l.field.type === 'vec3' || l.field.type === 'vec3?'), mans = [...new Set(laid.flatMap(l => (isManRef(l.field.type) ? [l.field.type.man] : [])))];
   return [
     `// WRITTEN BY tools/sim/men.ts FROM src/sim/men/schema.ts — never by hand (tools/qa/men-check.ts is red on a difference). A man's columns, as the game reads and writes them.`,
     uses3 ? `import type { Vec3 } from '../../math/vec';` : ``,
+    ...(mans.length ? [`import type { ${mans.join(', ')} } from '../../game/game';   // (a type alone: nothing of the game is loaded from here)`] : []),
     `import type { MenStore } from './store';`,
     ``,
     `/** the hash of the layout; the module holds the same one (rust/sim/src/men.rs SCHEMA), and store.ts holds the two to each other as a game starts */`,
