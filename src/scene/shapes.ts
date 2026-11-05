@@ -72,7 +72,7 @@ export type ShapePlane = [number, number, number, number];
 /** the kinds of shape (see the head) */
 export interface ShapeForm { round?: 1 | 3; arc?: { axis: 1 | 3; rise: number }; cut?: ShapePlane[]; old?: true }
 /** a piece of trim that is there only when shapes are on: `off` = its centre from the box's, in the box's frame; `yaw` = from the box's own */
-export interface ShapePiece extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** absent = the box's own paint, finish and word */ albedo?: Vec3; rough?: number; metal?: boolean; /** what the piece is made of (Box.stuff: its own word, else its paint's row's; the loader's) */ stuff?: BoxStuff }
+export interface ShapePiece extends ShapeForm { off: Vec3; h: Vec3; yaw?: number; /** absent = the box's own paint, finish and word */ albedo?: Vec3; rough?: number; metal?: boolean; /** what the piece is made of (Box.stuff: its own word, else its paint's row's; the loader's) */ stuff?: BoxStuff; /** what the piece does (Box.does: the same way) */ does?: import('./boxes').DoesWord }
 /** how a box stands when shapes are on */
 export interface BoxShape extends ShapeForm { with?: ShapePiece[] }
 /** the most planes a shape may say: the record's rows; beside an arc, ARC_PLANES of the box's own (the arc's facets take the rest: arcFacets) */
@@ -185,8 +185,8 @@ export function shapeLevel(boxes: Box[], on: boolean): number {
     for (const w of s.with ?? []) {
       const o = cutToWorld(w.off, b.yaw);   // (the box's own frame: cut.ts)
       const p = makeBox({ c: [b.c[0] + o[0], b.c[1] + o[1], b.c[2] + o[2]], h: [w.h[0], w.h[1], w.h[2]], yaw: b.yaw + (w.yaw ?? 0),   // (its own paint, finish and word, or its box's as the box stands)
-        ...(w.albedo ? { albedo: [w.albedo[0], w.albedo[1], w.albedo[2]] as Vec3, ...(w.rough !== undefined ? { rough: w.rough } : {}), ...(w.metal ? { metal: true } : {}), ...(w.stuff !== undefined ? { stuff: w.stuff } : {}) }
-          : { albedo: [b.albedo[0], b.albedo[1], b.albedo[2]] as Vec3, rough: b.rough, ...(b.metal ? { metal: true } : {}), ...(b.stuff !== undefined ? { stuff: b.stuff } : {}) }),
+        ...(w.albedo ? { albedo: [w.albedo[0], w.albedo[1], w.albedo[2]] as Vec3, ...(w.rough !== undefined ? { rough: w.rough } : {}), ...(w.metal ? { metal: true } : {}), ...(w.stuff !== undefined ? { stuff: w.stuff } : {}), ...(w.does !== undefined ? { does: w.does } : {}) }
+          : { albedo: [b.albedo[0], b.albedo[1], b.albedo[2]] as Vec3, rough: b.rough, ...(b.metal ? { metal: true } : {}), ...(b.stuff !== undefined ? { stuff: b.stuff } : {}), ...(b.does !== undefined ? { does: b.does } : {}) }),
         flags: BoxFlag.NoShadow | (b.flags & BoxFlag.Cutaway), cutHeight: b.cutHeight, piece: true, of: i });   // (cut away with its box, where the box is)
       formBox(p, w); tail.push(p);
     }
