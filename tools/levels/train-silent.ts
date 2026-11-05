@@ -57,7 +57,7 @@ const SILENT_KITVIEW: KitViewData = {
       { id: 'ts_014', group: 'ts.pump', c: [9.97, 0.69, 12.4], h: [0.12, 0.03, 0.03], material: 'paintGreen' },
       { id: 'ts_015', group: 'ts.pump', c: [10.14, 0.23, 12.45], h: [0.13, 0.13, 0.13], material: 'plasticBlue' },
       { id: 'ts_016', group: 'ts.lamp', c: [11.2, 1.755, 11.7], h: [0.04, 1.755, 0.04], material: 'galv' },
-      { id: 'ts_017', group: 'ts.lamp', c: [11.2, 3.485, 12], h: [0.025, 0.025, 0.26], material: 'galv' },
+      { id: 'ts_017', group: 'ts.lamp', c: [11.2, 3.485, 11.92], h: [0.025, 0.025, 0.18], material: 'galv' },
       { id: 'ts_018', group: 'ts.lamp', c: [11.2, 3.46, 12.3], h: [0.2, 0.05, 0.2], material: 'plasticBlack' },
       { id: 'ts_019', group: 'ts.lamp', c: [11.2, 3.4, 12.3], h: [0.12, 0.012, 0.12], material: 'plasticWhite', emissive: [40, 34, 22], flags: ['NoShadow'] },
       { id: 'ts_020', group: 'ts.beans', c: [10.9, 0.8, 7.62], h: [0.02, 0.8, 0.02], material: 'poplar', flags: ['NoShadow'] },
