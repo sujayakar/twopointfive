@@ -4,7 +4,7 @@ import { Box, BoxFlag, rayBox, cutMet } from './boxes';
 import { cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
 import { BoxMirror, MIRRORED, SENSES, FACE, NAV, senseRows, type Furniture, type PaneSource } from './boxMirror';
-import { RUST, FELL, fell, f64, u32, u8, simWhyNot } from '../sim/sim';
+import { RUST, FELL, RULES_ROW, fell, ruleRed, f64, u32, u8, simWhyNot } from '../sim/sim';
 import type { SimState } from '../sim/state';
 import { EXACT } from '../math/exact';
 
@@ -112,8 +112,6 @@ const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes 
 export interface GridWind { x: number; z: number; low: number; gain: number; fullAt: number; share: (x: number, z: number) => number }
 /** a sense's row by its bit (boxMirror.ts SENSES), for the count of questions the TypeScript took */
 function senseName(bit: number): string { for (const [k, v] of Object.entries(SENSES)) if (v === bit) return k; return 'a sense'; }
-/** the count of questions the TypeScript took (sim.ts FELL): the row of a rule's step, named once */
-const RULES_ROW = 'a rule\'s step (doors, furniture, leaves, thrown things)';
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -168,7 +166,7 @@ export class StaticCollision {
      if (RUST.lines || RUST.rays || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props || RUST.slabs || RUST.items) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, S, RUST.rays); else if (M.live) M.shut(); }
   /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
    *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
-  rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); if (M.rules(dyn)) return M;
+  rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (ruleRed(RULES_ROW)) return null; if (M.owes) M.again(this.boxes, this.glassWalkable); if (M.rules(dyn)) return M;
     if (FELL.on) fell(RULES_ROW, !M.live ? this.fellWhy() : 'another list in the leaves\' place, or leaves that do not fit a list'); return null; }
   /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */

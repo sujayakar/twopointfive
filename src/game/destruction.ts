@@ -287,14 +287,14 @@ export class Destruction {
     // small dark parts right under a housing are the monitor's foot and neck, not clutter; a part standing under / beside a FIXTURE (the desk lamp's base under its lit
     // head, a valve head by an indicator) is that fixture's, not clutter; nothing outside the building counts (the lot's machines stay whole)
     const fixtures = [...fixtureBoxes].map(fi => boxes[fi]).filter(Boolean);
-    for (const [i, d] of [...this.items]) {
+    g.col.window(() => { for (const [i, d] of [...this.items]) {   // (a roof's height a thing, by rays and nothing written: one proof of the Rust module's copy for the lot)
       const c = d.box.c;
       if (DESTRUCTION.on ? this.roofY(c[0], c[2]) === null : (c[0] < 4 || c[0] > 36 || c[2] < 4 || c[2] > 24)) { this.items.delete(i); continue; }   // (the switch on: 'inside' is whatever has a roof over it — a loud level's buildings stand anywhere in the world; off: the office's footprint, as ever)
       if (d.kind !== 'clutter' && d.kind !== 'binder') continue;
       if (fixtures.some(f => { const ac = Math.abs(Math.cos(f.yaw)), as = Math.abs(Math.sin(f.yaw)); return Math.abs(f.c[0] - c[0]) < ac * f.h[0] + as * f.h[2] + 0.12 && Math.abs(f.c[2] - c[2]) < as * f.h[0] + ac * f.h[2] + 0.12 && Math.abs(f.c[1] - c[1]) < 0.7; })) { this.items.delete(i); continue; }
       if (lum(d.box.albedo) > 0.1) continue;
       for (const [, o] of this.items) if (o.kind === 'housing' && Math.hypot(o.box.c[0] - c[0], o.box.c[2] - c[2]) < 0.12 && o.box.c[1] > c[1]) { this.items.delete(i); break; }
-    }
+    } });
     // things standing on / against each other go together (a pot and its plant, the phone and its handset, a mug on a saucer): knock one, knock the group
     const smalls = [...this.items.values()].filter(d => d.kind === 'clutter' || d.kind === 'binder');
     for (const d of smalls) for (const o of smalls) {

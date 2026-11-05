@@ -1577,10 +1577,12 @@ first system across (the game's own maths). No rule of play has changed and noth
   was falling back anyway. A fallback site calls `if (FELL.on) fell('<row>', '<why in plain words>')`: A FALLBACK THAT IS NOT COUNTED IS NOT KNOWN.
   THE SEAL (`sim.ts SEALED`): the rows no run may reach the TypeScript of. A tool that counted one prints `FELL SEALED ROW REACHED` and exits 1, and
   `rust-page.cjs`'s `systems` job fails on one in the real page. `FELL_BREAK=1` with `TPS_FELL=1` is the red path (questions outside a tick go back to
-  the TypeScript; it must end red), and `FELL_BREAK=<row>` counts one question of that row by hand as the tool opens: red for a sealed row, not red
+  the TypeScript; it must end red — and the first step of each rule of the things, and every hundredth after, is sent to its TypeScript and counted
+  under its own row, `sim.ts ruleRed`, so every one of those rows that steps in the run is reached by name), and `FELL_BREAK=<row>` counts one question of that row by hand as the tool opens: red for a sealed row, not red
   for another (a family's proof that its row is on the list; a name that is no row of `RUST` is refused, and under `TPS_FELL=throw` the count
-  throws like any other). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`, `walk`, and the senses' `sight`, `light`, `smoke`, `sound`, `paths`. A family adds its row in the step that closes its last fallback,
-  and its TypeScript can go in the step after. `rays` joined with "A pane's open question": until then a ray whose nearest thing was a pane the
+  throws like any other). SEALED TODAY: `lines`, `circles`, `fog`, `poses`, `rays`, `walk`, and the senses' `sight`, `light`, `smoke`, `sound`, `paths`, and the rules of the things: `doors`,
+  `falls`, `props`, `slabs`, `items` and `a rule's step (doors, furniture, leaves, thrown things)` (`sim.ts RULES_ROW`: the copy refused to one of
+  them). A family adds its row in the step that closes its last fallback, and its TypeScript can go in the step after. `rays` joined with "A pane's open question": until then a ray whose nearest thing was a pane the
   host said was open there flew on in the TypeScript walk (some five hundred a mission with glass in it).
   WHAT WAS CLOSED FOR THE SEALED ROWS:
   - A QUESTION OUTSIDE A TICK. The module answers only over a copy of the box world that has been PROVEN (every static compared with its row), and a
@@ -1607,6 +1609,54 @@ first system across (the game's own maths). No rule of play has changed and noth
     room for, a pose not at home, the module not answering posing questions — each only with the `poses` row up, since a row put down by its
     own word (`?rustposes=0`) makes every layer the TypeScript's by that word, which is no way back in. `layer-ident`'s `whole` line walks
     those ways out on purpose and holds the count down while it does.
+  WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
+  - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
+    `flySlab`, `throwables.ts world` and its walk, `fallshome.ts rule`) names its reason through `sim.ts ruleFell(row, why)`. Not counted, because
+    nothing is stepped anywhere: a level with no door, a level with no loose furniture, and a row that is idle by its own rule (the engine's maths:
+    `OWN_MATHS`).
+  - A GAME'S STATE IS AT HOME FROM THE MOMENT THE GAME IS MADE (`host/standup.ts standGame`, the one place a `Game` is made, says `sim.settle`
+    once the die is hung: the statement every tick's open makes). Until then the stores moved into the game's block at its FIRST tick, so every
+    rule that acted before it was the TypeScript's: a level staged or restarted (`FallStore.clear`, four a run), a leaf shot apart on a game just
+    loaded, a checkpoint filed before a tick, a roll of the die. A change to WHEN a block is born, for every tenant, the die and the poses among
+    them; no answer changes (the 42 by digest, both stands; a snapshot taken before any tick and put back replays to the same bits).
+  - THE LEAVES' LIST IS ONE ARRAY FOR THE GAME'S LIFE (`savestate.ts`, where a state is put back). The copy knows the game's own leaves by the array
+    that stood in `col.dynamicBoxes` as the tick opened; a state put back made a new array of the same boxes, and a restart taken INSIDE a tick left
+    every rule of that tick's rest without the copy (the doors', the furniture's, the thrown things'). No run of the 42 does it; a twelve-minute soak
+    did, ten ticks in three seeds ("another list in the leaves' place"). The list is filled anew in place now. THE SOAK AND THE TOUR ARE RUN WITH
+    THE COUNT, as the 42 are: a way back that only chaos finds is still a way back.
+  - LYING SNOW IS ASKED IN THE MODULE (`rust/sim/src/items.rs bog_at` = `snowBog.ts snowBogAt`). A thrown thing that bounced on ground that might be
+    snow handed its row back (60 over the 42 runs, all on the snow level). The snow is data now: what snow each box of the level is, a byte a box
+    (`snowBog.ts SNOW_KIND`, the world's table `snow`, compared and written by `boxMirror.ts snow` at a walk that may meet snow), read with the
+    statics' own rows for where each box is and how it is turned, so nothing is kept twice; the roofs in force (at most four: `weather.ts
+    roofsNow`) and the rule's numbers (`SNOWBOG`) are handed over with each walk. Held by `item-ident` on the two snow levels that have furniture,
+    with the game's own rule on this side and four roofs in force (`ITEMS_BREAK=snow`: the module told another snow, which must differ).
+    `ITEMS_STEPPED.host` is now a failure of that check: no row is handed back.
+  - A RAY OF NO LENGTH meets nothing in a rule's ray too (`lines.rs ray_rule`), as in `collision.ts raycast`.
+  - THE LANDING A CHECKPOINT FILES (`doorblast.ts slabSnapshot` → `runOn`). A slab still in the air was run on to where it lands by 480 steps of the
+    TypeScript's step on a copy of its row. It is the module's step now, on the slab's own row, with the slabs' columns put back as they were and the
+    box world's copy proven once for all of it. `slab-asitwas` files hundreds a run and folds them, and asks each landing again between two ticks
+    (the road an autosave takes): its words did not move on either stand, and no landing differs.
+  - ONE WINDOW A CALLER AS A LEVEL IS STOOD UP: `doorswing.ts dealSwings` (every leaf's room: some 1,370 circles on the office), `props.ts settle`
+    (829) and `destruction.ts index` (a roof's height a thing: 265) each proved the copy a question. 2,501 lone proofs a load of the office are 38
+    (the fixtures' two lines each in `Game`'s constructor, which are not this family's).
+  - A LEVEL TOO BIG FOR A POOL DOES NOT LOAD (`game/levelfit.ts levelOver`, the first statement of `Game`'s constructor). A level of more than 64
+    doors, 128 loose things of furniture (or 256 boxes of them), or 256 sheets of glass was stepped, or judged, in TypeScript without a word. It is
+    said now before anything of the level is built, the stores refuse more rows than they have (`doorshome.ts`, `slabshome.ts`, `propshome.ts`),
+    and the level validator says the same of the document whole (`levelData.ts`: doors, things, the things' boxes). THE COUNT IS ONE SOURCE:
+    `levelfit.ts fitRows` is every count of a stood game against what holds it, the pools and every table of the box world's copy (`BoxMirror.tables`),
+    with the share a table that grows in play may fill as a level loads; `copyfit-check` is that function over every level and is red when the copy
+    has a table no row of it is held by. It reads: doors 27 of 64, things 61 of 128, sheets of glass 22 of 256, and THE FURNITURE'S BOXES 220 OF 512: they were
+    220 of 256 on office-relief, with levels being dressed that week, so the copy's leaf lists are twice as long now (`world.rs MAX_LEAVES`,
+    `propshome.ts PROP_PARTS`; `boxMirror.ts boot` holds the two together).
+  - THE THROWN THINGS' POOL GROWS INSIDE THE MODULE. The game's rule is untouched: thirty-two things, one given up for each new one, and a can on
+    its fuse or venting never given up, so thirty-two live cans grow the pool (the code's own word for that: "never, in play"). A pool that grew
+    used to leave the module for good. Its columns have 64 rows now (`itemshome.ts ITEM_ROWS`, `items.rs CAP`), so it is stepped where every pool
+    is. AT SIXTY-FOUR LIVE CANS THE OLDEST GIVES WAY (`throwables.ts spawn`), where the pool used to grow without end: a limit of the build in a
+    corner twice as far as the one the code calls "never, in play", with no switch; nobody has played it and no run reaches it. `colstore.ts
+    widen` is gone.
+  STILL COUNTED WHERE THEY HAPPEN, and none of the 42 reaches one: more men at the doors, or men, leaves or door frames at the furniture, than a
+  step is handed (256 each); a ray that is no number; the model viewer's stage, whose pool has no game and no block (the workbench goes before
+  the TypeScript does). Each wants its answer before the twin is deleted.
   EVERY LEVEL AGAINST THE COPY'S CAPS: `bun run tools/qa/copyfit-check.ts` (`COPYFIT_BREAK=1` its red path) stands each level of `levels/` up and reads
   what it holds against the module's tables: statics (the fullest level 16 % of 8,192 on the page's stand), cells, the cells' entries, tilted statics,
   the cut rows the copy spent, leaves, furniture (61 of 128, the tightest). A level that does not fit would be a level every question of which is the

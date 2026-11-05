@@ -1,47 +1,43 @@
-// DOES EVERY LEVEL FIT THE RUST MODULE'S COPY OF THE BOX WORLD (src/scene/boxMirror.ts; rust/sim/src/world.rs: the copy's tables are of a fixed size)?
-// A level that does not fit is a level whose every question the TypeScript answers, and the day the TypeScript is gone it is a level that cannot be
-// played. So each level of levels/ is stood up as a game stands it, a tick's open is asked for, and what it holds is read against the module's own caps:
-// statics, grid cells, the cells' entries, tilted statics, the cut rows the copy spent (a cut or a shaped static takes one), door leaves, loose furniture and
-// its part boxes (a list of the leaves' table), the glass a line can note. A table of the copy that no row here counts is a FAIL: the list cannot fall behind.
+// DOES EVERY LEVEL FIT THE RUST MODULE'S COPY OF THE BOX WORLD AND THE RULES' POOLS (src/scene/boxMirror.ts and rust/sim/src/world.rs: the copy's tables
+// are of a fixed size; sim/doorshome.ts, sim/propshome.ts: so are the pools)? A level that does not fit the copy is a level whose every question the
+// TypeScript answers, and the day the TypeScript is gone it is a level that cannot be played; a level over a pool is not loaded at all. So each level
+// of levels/ is stood up as a game stands it, a tick's open is asked for, and what it holds is read against what holds it — BY THE GAME'S OWN COUNT
+// (src/game/levelfit.ts fitRows: one source for the game, the validator and this check): statics, grid cells, the cells' entries, tilted statics, the cut
+// rows the copy spent, leaves, the loose furniture and its part boxes, the glass a line can note, sheets of glass, doors. A TABLE OF THE COPY THAT NO
+// ROW OF THAT COUNT IS HELD BY IS A FAIL: the list cannot fall behind the copy.
 //   bun run tools/qa/copyfit-check.ts [--levels a.json,b.json]   exit 0 = every level fits with the room below · 1 = one does not (named)
 //   COPYFIT_BREAK=1 …                                            the red path: every cap is read as a twentieth of itself, and the check must FAIL
 // THE ROOM: a level's statics grow in play (a wall holed stands back up as pieces, StaticCollision.addStatic), so a level must leave half the statics'
-// table and half the cells' entries free as it loads; the other tables do not grow in play and need only fit.
+// table, half the cells' entries and half the cut rows free as it loads (levelfit.ts says which rows); the other tables do not grow in play and need
+// only fit.
+// A STAND LOADS ITS OWN LEVEL: the page's stand loads the lived-in rooms' furniture and the frozen one does not, so run it on both (TPS_PROFILE=shipped in
+// front); the document as a whole, whatever a stand loads of it, is held to the pools' numbers by the level validator (scene/levelData.ts).
 // Not game code; nothing here needs a GPU.
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+const LF: any = await import(`${ROOT}/src/game/levelfit.ts`);
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const BREAK = process.env.COPYFIT_BREAK === '1', K = BREAK ? 0.05 : 1;
 const files = (flag('--levels') ?? readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).join(',')).split(',');
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
-/** the tables that grow in play, and the share of each a level may fill as it loads */
-const GROWS: Record<string, number> = { boxes: 0.5, items: 0.5, cuts: 0.5 };   // (a blast's pieces are cut boxes: a row each)
-/** a row of this check that is counted against another row's table */
-const CAP_OF: Record<string, string> = { parts: 'leaves' };
 const most: Record<string, { n: number; cap: number; file: string }> = {}; const bad: string[] = []; let stood = 0, skipped = 0;
 for (const file of files) {
   let W: any; hush(true);
-  try { const data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()); W = await standUp({ uploadEvery: 1000, ...(file === 'office.json' ? {} : { level: loadLevel(data) }) }); }
+  try { const data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()), level = file === 'office.json' ? null : loadLevel(data);
+    if (level) { const over = LF.levelOver(level); if (over) { hush(false); bad.push(`${file}: ${over}`); continue; } }   // (the game's own word for a level it will not load: game/levelfit.ts)
+    W = await standUp({ uploadEvery: 1000, ...(level ? { level } : {}) }); }
   catch (e) { hush(false); log(`${file.padEnd(26)} not stood up (${String((e as Error).message).split('\n')[0].slice(0, 90)}) — skipped`); skipped++; continue; }
   hush(false); stood++;
   const g = W.game, col = g.col as any, M = col.mirror as any;
-  col.tickOpen(); const fits = M.live === true; const caps = M.caps as Record<string, number>, cutRows = (M.cutNext as number) - (M.cutFree as number[]).length; col.tickShut();   // (the cut rows the copy itself spent on the statics: a cut box and a shaped one each take one, boxMirror.ts kindOf)
-  const boxes = col.boxes as any[];
-  const has: Record<string, number> = {
-    boxes: boxes.length, cells: col.W * col.H, items: (col.cells as number[][]).reduce((s, c) => s + c.length, 0), tilted: (col.tiltedAt as number[]).length / 5,
-    cuts: cutRows, leaves: (col.dynamicBoxes as any[]).length, things: (g.props?.all?.length ?? 0),
-    parts: ((g.props?.props ?? []) as any[]).reduce((n, q) => n + q.boxes.length, 0),   // (every part box of the furniture is a list of the leaves' table: boxMirror.ts things)
-    panes: boxes.reduce((n, q) => n + ((q.flags & BoxFlag.Glass) ? 1 : 0), 0) };   // (the panes one line can note: no more than the level's glass)
-  has.glass = has.view = has.panes;   // (the copy's rows of panes no longer whole, and a burst's view of the glass: a row a pane at most)
+  col.tickOpen(); const fits = M.live === true, tables = M.tables as Record<string, number>, rows: any[] = LF.fitRows(g, tables); col.tickShut();
   const over: string[] = [];
-  for (const c of Object.keys(caps)) if (!Object.keys(has).some(k => (CAP_OF[k] ?? k) === c)) over.push(`the table '${c}' is counted by no row of this check`);   // (a table added to the copy is a row added here)
-  for (const k of Object.keys(has)) { const cap = Math.floor((caps[CAP_OF[k] ?? k] ?? 0) * K), room = GROWS[k] ?? 1;
-    if (!most[k] || has[k] / cap > most[k].n / most[k].cap) most[k] = { n: has[k], cap, file };
-    if (has[k] > cap * room) over.push(`${k} ${has[k]} of ${cap}${room < 1 ? ` (a table that grows in play: ${Math.round(room * 100)} % at most as it loads)` : ''}`); }
+  for (const c of Object.keys(tables)) if (!rows.some(r => r.table === c)) over.push(`the table '${c}' of the copy is held by no row of game/levelfit.ts fitRows`);   // (a table added to the copy is a row added there)
+  for (const r of rows) { const cap = Math.floor(r.cap * K);
+    if (!most[r.row] || r.has / cap > most[r.row].n / most[r.row].cap) most[r.row] = { n: r.has, cap, file };
+    if (r.has > cap * r.room) over.push(`${r.row} ${r.has} of ${cap}${r.room < 1 ? ` (a table that grows in play: ${Math.round(r.room * 100)} % at most as it loads)` : ''}`); }
   if (!fits && !BREAK) over.push('the copy did not stand as a tick opened');
   if (over.length) bad.push(`${file}: ${over.join(' · ')}`);
 }
