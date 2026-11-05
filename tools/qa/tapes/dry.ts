@@ -23,6 +23,7 @@ const log = console.log, quiet = () => { console.log = console.error = console.w
 const file = /levelFile=([\w-]+\.json)/.exec(page.query)?.[1];
 quiet();
 const W: any = await standUp({ uploadEvery: 4, level: file ? loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'))) : undefined, seed });
+if (/\bnoslots\b/.test(page.query)) (await import(`${ROOT}/src/game/kit.ts`)).SLOTS.on = false;   // (the page reads the flag off its address at boot: game/kit.ts kitLoad)
 const g = W.game; startFromQuery(g, '?' + page.query);
 if (/\bnocivilians\b/.test(page.query)) { g.tune.civilians = false; (await import(`${ROOT}/src/game/civilians.ts`)).resetCivilians(g); }   // (the page reads the flag off its address at boot)
 loud();
