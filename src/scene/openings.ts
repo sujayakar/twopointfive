@@ -50,6 +50,12 @@ export const LOOK_OPENINGS = {
   settle: 4,      // drawn frames the walls must have stood still for before the openings are found again (a blast's own frame is the long one: not on it)
   keep: 32,       // openings a level keeps (the biggest, if it has more) …
   lit: 12,        // … and how many are lit at once: the nearest to Sam (engine.ts)
+  worth: 0.02,    // HOW FAR AN OPENING'S OWN LIGHT IS WORTH A RAY (openingReach): as far as it alone would still put this much on a floor that faces it
+                  // squarely, in the picture's units (the hour's exposure is in them: a night's sky and a noon's are both what the picture shows of them).
+                  // Past that its light has faded out (common.wgsl lightWindow) and the bounce has the same sky back (skyKeep): nothing is lost, the far
+                  // part is only soft. Until 11-05 this was 0.0015 and an opening reached 11 to 18 m on a night and the cap by day: every pixel of a
+                  // building scored every opening and threw the class's rays for a twentieth of a per cent of white
+  near: 3, far: 26,   // … and never under or over these, m (under: a light that stops inside its own doorway; over: the light record's own reach)
 };
 
 export interface Opening {
@@ -290,6 +296,12 @@ export function openAreas(list: readonly Opening[], dynamics: readonly Box[]): v
     if (!near.length) { o.ajar = o.full; continue; }
     o.ajar = ajarOf(o, near);
   }
+}
+
+/** HOW FAR AN OPENING'S OWN LIGHT REACHES, m (LOOK_OPENINGS.worth; `m` = what it looks out on, openingLooks' largest channel; `whole` = its rectangle,
+ *  m²): where radiance × area ∕ distance², what it sends a floor facing it straight out, falls to `worth`. One rule at every hour. */
+export function openingReach(m: number, whole: number, worth: number = LOOK_OPENINGS.worth): number {
+  return Math.min(LOOK_OPENINGS.far, Math.max(LOOK_OPENINGS.near, Math.sqrt(m * whole / worth)));
 }
 
 /** WHAT AN OPENING LOOKS OUT ON, as one radiance (linear RGB, the picture's units): half of what it sees is the sky, low down (common.wgsl skyRadiance's
