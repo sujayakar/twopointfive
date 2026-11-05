@@ -889,7 +889,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a light, and a post and a wall's end are both solid. 12 level files re-exported (gwot-yard, library-hall, pass, police-post, snatch, train-move, tut-kit,
   tut-pair, tut-road, tut-sky, tut-solo, tut-team): 48 boxes, 32 posts (`h` only) and 16 bay sides, none added or removed, no light moved. 206 seen after
   (ONE grew over the check's centimetre: tut-road's hand-built lamp head already bit a centimetre into a gate post with a face in the post's, and is
-  1.6 cm there now; it is one of the lamps owed a piece).
+  1.6 cm there now; it is a sodium lamp on a post's face, not the yard lamp below, and is still owed its own mend).
   TWO RULES of `bun run tools/levels/library.ts --check` keep it so. NO PIECE FLICKERS BY ITSELF: every call a generator makes that lays a box is laid
   alone on a stand of its own and asked by `zfight`: of each CALL, not of each piece once, because the wash line's fault depended on where the line stood
   and its showroom call was clean; and a patch a call shows alone is asked again with everything its generator BUILT round it, in this run and never
@@ -899,7 +899,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the kit as it was before the first step: the three pieces by name, the armchair, and gwot-yard 6, library-hall 4.
   PLAY MOVES, measured in the step's own notes on both stands: a van's bay sides and a gate's posts are solid, so runs on levels that stand them can
   differ by a step. What is left is each level's own: a wall laid THROUGH the wall it meets to its far face (end it at the near face), a lamp's arm in
-  its head's top (four generators build that lamp by hand: it is owed a piece), two things laid over each other. Never seen on a GPU: the check reads files.
+  its head's top (that lamp was built by hand in five generators: it is a piece now, below), two things laid over each other. Never seen on a GPU: the check reads files.
+  THE YARD LAMP IS A PIECE (11-05, `gwotKit yardLamp`; shown in library-hall's north-east corner, where a piece the look's kit gains is stood). A pole,
+  an arm, a shaded head and a lens with a spot under it were written out by hand in five generators (train-ground's `lamp`, which the vault, Lights out
+  and the two trains lay; tut-pair, tut-quiet, tut-solo and tut-kit, the last two with a tall mast as well) and copied as plain boxes into the two trains'
+  Team & kit sets, each with the arm run on INTO the head with its top in the head's top. The piece's arm ENDS at the pole's face and at the head's
+  (it throws, by the lamp's name, where a pole stands too near its head for an arm). Its options are what the five differed in: the lens's height, which
+  way and how far the pole stands from the head (`axis`, `reach`: the HEAD hangs at the piece's x and z, not the pole), the pole's thickness, the cone,
+  strength, reach of the light, colour, haze, group, and `mains`, which is its own supply unless said, as the floodLight's. train-ground's `lamp` IS the
+  piece now; the tutorials call it. Eight level files (lights-out, train-move, train-silent, tut-kit, tut-pair, tut-quiet, tut-solo, vault): 23 arms' `c`
+  and `h`, no box added or removed, no id moved, and every LIGHT what it was to the byte but three: tut-kit's lamps on poles said nothing of the mains
+  and now say `mains: true`, which is what every reader of the word already took silence to mean (`mains !== false`). The two trains' kit sets' copies
+  of the arm are the new one. What an arm gave up lay INSIDE its head (and, on the two masts, inside the pole), so the solid a round, a ray or a foot
+  meets is the same everywhere but one place: a mast's arm used to stick five centimetres out past its pole, 4.7 m up, on tut-kit and tut-solo, and no
+  longer does. 183 seen after. NOT THIS PIECE: a floodlight on a pole is `floodLight`; the sodium lamps of tut-road and tut-sky hang off a wall or a
+  post's face and are another shape, still written in their generators (tut-road's head in a gate post, above, is theirs and stays); the depot's mast and
+  its red lamp, four patches, are the depot's own. NO SWITCH (a picture's mend). MEASURED on the step's own base, before against after, on both stands,
+  by what loads the eight: the nine lessons (tut-kit, tut-pair, tut-quiet and tut-solo are four of them; tut-kit's has the breaker thrown), each the same
+  run by digest; the vault's scripted runs (five plans, the breaker's among them, seeds 1 and 2) and Lights out's (three plans), each record the same.
+  No mission of the list's 21 loads one of the eight, so the 42 say nothing of them (they are the same too). A checkpoint or a recording made on one of
+  the eight before this is refused after it: the level's fingerprint reads every box to the centimetre. Never seen on a GPU and not played.
 - **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
   mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
   suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
