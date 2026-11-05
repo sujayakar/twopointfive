@@ -1,12 +1,13 @@
 // The office, loud, for the sound replays (tools/qa/sound-tapes.cjs; the page bot runs it): what no Training lesson makes a sound of. The OCP's dry click,
-// furniture shoved, a door shut by hand, the corridor's tripwire, a locked door rattled and booted, the conference glazing shot out and walked over, the
-// shift's own pistols, the lobby's toughened front, the steel stair door booted, a stun and a frag at his own feet, a smoke can, the breaker thrown and put
-// back by hand, the response team's boots on the stairs, a pistol run dry, and the storm outside for as long as it all takes. Input only (the keys and the
-// mouse a person has); he cannot be hurt, or the run would end at the first pistol. (The response team is shot as it comes: its carbines are heard in the
-// 'Two pairs, two doors' replay.)
+// furniture shoved, a door shut by hand, the corridor's tripwire, a locked door booted, the conference glazing shot out and walked over where it fell, the
+// shift's own pistols, the lobby's toughened front and a plain window over its sill, the steel stair door's bar tried and the door booted, a stun at his
+// own feet and a smoke can, the breaker thrown and put back by hand, the response team's boots on the stairs and its carbines, a pistol run dry, and the
+// storm outside for as long as it all takes. Input only (the keys and the mouse a person has); he cannot be hurt, or the run would end at the first pistol.
+// THE CANS: the plain night issues none under the pouches rule (game/kit.ts stealthIssue: the mission's kit fills them), so this page has the rule off
+// (`noslots`, which the run tape carries): two smoke cans and a stun, no frag (a quiet mission hands none either way).
 import type { Bot } from '../lesson-run';
 
-export const query = '?solo', title = 'The office, loud';
+export const query = '?solo&noslots', title = 'The office, loud';
 export const mode = { god: true };
 
 /** the left button HELD for `secs` with the cursor kept on a point */
@@ -31,6 +32,15 @@ function fight(B: Bot, secs: number, keep = 0): number {
   return n;
 }
 
+/** a can thrown: its key, then the click once the hand has fetched it (game/kitanim.ts: a click before the can is in the fist throws nothing) */
+function toss(B: Bot, key: string, kind: 'smoke' | 'flash' | 'frag', at: number[], after: number) {
+  const P = B.g.player, n0 = B.g.throwCount(kind);
+  B.press(key, 10); B.aim(at);
+  if (!B.until(() => P.canisterSel === kind && (P.char.anim.kitHold === undefined || (P.char.anim.kitHold === 'can' && P.kitCan === kind)), 4)) B.say(`  the ${kind} can never came to hand (he has ${B.g.throwCount(kind)})`);
+  B.click(1, at); B.wait(0.3); if (B.g.throwCount(kind) === n0 && !P.pendingThrow) B.say(`  no ${kind} can left his hand`);
+  B.wait(after);
+}
+
 export function free(B: Bot) {
   const g = B.g, P = g.player;
   B.wait(1);
@@ -50,13 +60,11 @@ export function free(B: Bot) {
   if (B.g.nearby.some((r: any) => r.kind === 'door' && r.verb === 'push') && B.verb('door', 'push', [9.75, 1.0, 10.0])) B.wait(1.6);
   if (!B.verb('door', 'pull', [9.75, 1.0, 10.0])) B.say('  no row to shut the conference door'); B.wait(2.5);
 
-  // down the corridor through its tripwire to the server room's locked door: the handle tried from a crouch, then the boot (which the whole floor hears)
+  // down the corridor through its tripwire to the server room's locked door: the boot (which the whole floor hears). Its handle is not tried: with the
+  // wand on him and the fog up, a locked door's third row is the wand's (game/player.ts); the stair door's bar is, further on
   B.go([17.9, 0, 10.95], 20);
   const srv = g.doors.byName('server');
-  if (srv?.isClosed()) {
-    B.crouch(true); if (!B.verb('door', 'rattle', [17.9, 1.0, 10.0])) B.say('  no rattle row'); B.wait(1.2); B.crouch(false);
-    if (!B.verb('door', 'kick', [17.9, 1.0, 10.0])) B.say('  no kick row'); B.wait(2);
-  }
+  if (srv?.isClosed()) { if (!B.verb('door', 'kick', [17.9, 1.0, 10.0])) B.say('  no kick row'); B.wait(2); }
 
   // back to the conference room's glass wall with the rifle: rounds into two panes until they come down
   B.go([8.0, 0, 11.75], 30);
@@ -74,7 +82,7 @@ export function free(B: Bot) {
     B.say(`  glass lies on ${S.litter.size} cells, ${cells.length} walked, thickest first: ${cells.map(c => `(${c[0]}, ${c[2]})`).join(' ')}`);
     if (cells.some(c => c[2] < 10) && g.doors.byName('conference')?.isClosed()) { B.go([9.75, 0, 10.8], 10); if (B.verb('door', 'push', [9.75, 1.0, 10.0])) B.wait(1.6); }
     const enough = () => crunched() >= n0 + 3;
-    for (let pass = 0; pass < 3 && !enough(); pass++) { for (const c of cells) { if (enough()) break; B.go(c, 8, { near: 0.15, stop: enough }); }
+    for (let pass = 0; pass < 3 && !enough(); pass++) { for (const c of cells) { if (enough()) break; B.go(c, 8, { near: 0.15, stop: enough }); if (!enough()) B.nudge(c, 1.5, enough); }   // (a toughened pane drops at its own foot, on the wall's line: the walk grid ends short of that cell, a man's feet do not)
       B.say(`  pass ${pass + 1}: at ${B.pos()[0].toFixed(1)}, ${B.pos()[2].toFixed(1)} · ${crunched() - n0} footfalls on glass`); }
     B.say(`  ${crunched() - n0} footfalls on glass`);
     B.go([8.0, 0, 11.4], 12); }
@@ -88,16 +96,20 @@ export function free(B: Bot) {
   B.go([6.5, 0, 19.3], 15); if (P.rifle.mode === 'auto') B.press('KeyZ', 3);
   for (let i = 0; i < 3; i++) { B.click(1, [4.0, 1.5, 19.25]); B.wait(0.3); }
   B.nudge([4.6, 0, 19.3], 2);
+  // …and a window of plain glass over its sill in the lobby's south wall: it breaks in pieces, and they ring where they land
+  B.go([8.6, 0, 22.2], 10);
+  for (let i = 0; i < 4; i++) { B.click(1, [8.75, 1.5 + 0.1 * (i % 3), 24]); B.wait(0.3); }
+  B.wait(2);
 
-  // the steel door to the stairs takes a boot and rings
+  // the steel door to the stairs: its bar tried (it rattles and holds), then a boot, which rings
   B.go([5.0, 0, 11.0], 20);
+  if (!B.verb('door', 'rattle', [4.0, 1.0, 11.3])) B.say('  no row to try the stair door\'s bar'); B.wait(1.2);
   if (!B.verb('door', 'kick', [4.0, 1.0, 11.3])) B.say('  no kick row on the stair door'); B.wait(2);
 
   // up the corridor: a stun and a frag at his own feet on the way (god mode: he is stunned, not hurt), then a smoke can on ahead (it pops and hisses)
   B.go([9.0, 0, 11.1], 20);
-  B.press('Digit4', 10); B.click(1, [10.6, 0.1, 11.1]); B.wait(3.5);
-  B.press('Digit5', 10); B.click(1, [12.5, 0.1, 11.1]); B.wait(5.5);
-  B.press('Digit3', 20); B.click(1, [22.0, 0.1, 11.1]); B.wait(3.5);
+  toss(B, 'Digit4', 'flash', [10.6, 0.1, 11.1], 3.5);
+  toss(B, 'Digit3', 'smoke', [22.0, 0.1, 11.1], 3.5);
 
   // while the response team is on its way: the storage room at the corridor's far end — its lock booted, the breaker thrown by hand and the mains put
   // back the same way
@@ -115,7 +127,7 @@ export function free(B: Bot) {
   B.until(() => g.qrf.state === 'deployed', 110);
   B.say(`  qrf ${g.qrf.state} at ${B.t().toFixed(1)} s · men up ${g.guards.filter(up).length}`);
   // their carbines for a while (they come to him), then the rifle again; an empty magazine clicked on once at the end
-  B.until(() => g.guards.some((x: any) => up(x) && line(B, x)), 40); B.wait(8);
+  B.until(() => g.guards.some((x: any) => up(x) && x.state === 'alert' && line(B, x)), 90); B.wait(8);
   fight(B, 30);
   B.press('Digit1', 20); B.until(() => P.equipT <= 0, 3);
   { const f = P.char.forward?.() ?? [-1, 0, 0], a = [B.pos()[0] + f[0] * 4, 1.2, B.pos()[2] + f[2] * 4];
