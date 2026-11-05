@@ -46,7 +46,7 @@ for (const file of Object.keys(WAS)) {
     data = JSON.parse(got.stdout);
   }
   hush(true); const W: any = await standUp({ uploadEvery: 1000, ...(data ? { level: loadLevel(data) } : {}) }); hush(false);
-  const g = W.game, DL: any[] = g.doors.list, wood = DL.filter(d => !d.def.steel); let h = 0x811c9dc5 >>> 0, n = 0, snaps = 0, torn = 0, landed = 0;
+  const g = W.game, DL: any[] = g.doors.list, wood = DL.filter(d => !d.def.steel); let h = 0x811c9dc5 >>> 0, n = 0, snaps = 0, torn = 0, landed = 0, between = 0, apart = 0;
   const num = (x: number) => { F[0] = x; h = Math.imul(h ^ U[0], 0x01000193) >>> 0; h = Math.imul(h ^ U[1], 0x01000193) >>> 0; n++; };
   const str = (s: string) => { for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; };
   (g.doors as any).emit = (e: any) => { str(e.sound); num(DL.indexOf(e.door)); num(e.pos[0]); num(e.pos[1]); num(e.pos[2]); num(e.who); num(e.level); if (e.sound === 'bang') landed++; };
@@ -56,7 +56,7 @@ for (const file of Object.keys(WAS)) {
     const A = DB.DOORBLAST_STATS; for (const k of Object.keys(A)) num(A[k]); str(DB.DOORBLAST_LOG[DB.DOORBLAST_LOG.length - 1] ?? ''); num(DB.DOORBLAST_LOG.length); };
   for (let r = 0; r < 3000; r++) {
     const DT = rnd() < 0.85 ? 1 / 60 : [1 / 30, 1 / 20, 1 / 120][Math.floor(rnd() * 3)];
-    hush(true); g.col.tickOpen();
+    hush(true); g.col.tickOpen(); let asked: [any, string][] | null = null;
     try { g.sim?.settle?.(g);
       const k = rnd(), hung = wood.filter(d => !d.off), off = wood.length - hung.length;
       if (k < 0.08 && hung.length) { const d = hung[Math.floor(rnd() * hung.length)], [hx, hz] = d.def.hinge, a = d.def.closedDir + d.angle, s = rnd() < 0.5 ? 1 : -1, t = rnd() * d.def.width, o = 0.2 + rnd() * 1.2; if (DB.tearOff(g, d, [hx + Math.cos(a) * t - Math.sin(a) * o * s, 0.2 + rnd(), hz + Math.sin(a) * t + Math.cos(a) * o * s], 10, rnd())) torn++; }
@@ -65,11 +65,15 @@ for (const file of Object.keys(WAS)) {
       else if (k < 0.15) { for (const d of DL) if (d.off) { const s = DB.slabSnapshot(g, d); if (s) { snaps++; str(JSON.stringify(s)); } } }   // (what a checkpoint would file)
       else if (off && (k < 0.155 || off > wood.length * 0.7)) { for (const d of DL) if (d.off) { d.reset(); d.place(); } }
       DB.doorSlabs(g, DT); fold();
+      // (WHERE EACH SLAB IN THE AIR WOULD LAND, asked as the tick ends and again when it is shut — the road an autosave takes, with the box world's copy
+      //  proven for the one question: the same landing, and nothing of the asking left in the game, or the words above move)
+      if (r % 8 === 0) asked = DL.filter(d => d.off && d.slab && !d.slab.rest).map(d => [d, JSON.stringify(DB.slabSnapshot(g, d))]);
     } finally { g.col.tickShut(); hush(false); }
+    if (asked) for (const [d, was] of asked) { between++; hush(true); let now = ''; try { now = JSON.stringify(DB.slabSnapshot(g, d)); } finally { hush(false); } if (now !== was) apart++; }
     g.time += DT;
   }
-  const word = h.toString(36), ok = word === want && torn > 100 && landed > 20 && snaps > 20; if (!ok) bad++;
-  log(`${file.padEnd(22)} ${ok ? 'PASS' : 'FAIL'} — ${wood.length} leaves, ${torn} torn, ${landed} slams, ${snaps} filed, ${n} numbers folded → ${word}${word === want ? '' : ` (it was ${want})`}`);
+  const word = h.toString(36), ok = word === want && torn > 100 && landed > 20 && snaps > 20 && between > 20 && apart === 0; if (!ok) bad++;
+  log(`${file.padEnd(22)} ${ok ? 'PASS' : 'FAIL'} — ${wood.length} leaves, ${torn} torn, ${landed} slams, ${snaps} filed, ${between} landings asked again between two ticks${apart ? ` (${apart} NOT THE SAME)` : ''}, ${n} numbers folded → ${word}${word === want ? '' : ` (it was ${want})`}`);
 }
 log(`=== slab-asitwas (the ${STAND} stand${RECORDED ? ' as recorded before the rows' : process.env.TPS_RUST === '0' ? ', every row down' : ''}): ${bad ? 'FAIL' : 'PASS'} ===`);
 process.exit(bad ? 1 : 0);

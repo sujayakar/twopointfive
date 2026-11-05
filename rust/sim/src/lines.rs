@@ -916,11 +916,15 @@ pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, t
 }
 
 /// A RAY ASKED BY A RULE OF THE MODULE'S (a slab off its hinges, a thrown thing): collision.ts raycast as a rule over there gets it, with what only the
-/// host can answer said as RAY_HOST — a ray of no length or of no number (collision.ts walks those itself). `set`, `but` and `ask` as ray_but takes
-/// them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the leaf's; `out` as ray writes it.
+/// host can answer said as RAY_HOST — a ray a thousand kilometres long or of no number (collision.ts walks those itself). A RAY OF NO LENGTH MEETS
+/// NOTHING, as collision.ts raycast says it once for both walks. `set`, `but` and `ask` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's
+/// index, or RAY_LEAF + the leaf's; `out` as ray writes it.
 #[allow(clippy::too_many_arguments)]
 pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
-    if !(tmax > 0.0 && tmax < 1e6) {
+    if !(tmax > 0.0) {
+        return RAY_NONE;
+    }
+    if !(tmax < 1e6) {
         return RAY_HOST;
     }
     ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, ask, out)

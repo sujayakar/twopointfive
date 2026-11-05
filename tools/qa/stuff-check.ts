@@ -1,14 +1,15 @@
 // A THING IS MADE OF WHAT IT SAYS (src/scene/stuff.ts; src/scene/levelLoad.ts; src/render/gbuffer.ts lookWordOf).
 //   bun run tools/qa/stuff-check.ts            exit 0 = every line passes
 //   STUFF_BREAK=1 bun run tools/qa/stuff-check.ts     every level file is read with its material rows' words struck out (a file from before 11-04, loaded
-//                                                    as it stood): lines 2, 3, 4, 7, 13 and 14 must FAIL
+//                                                    as it stood): lines 2, 3, 4, 7, 13, 14 and 15 must FAIL
+//   COAT_BREAK=1 bun run tools/qa/stuff-check.ts      the table of named coats (scene/stuff.ts COAT_KIND) is emptied: line 8 must FAIL
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
 // this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. The same on both stands: nothing here is a rule of play and no
 // stand's word reaches it. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';
-const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, wordFor, worded } = ST;
+const ST = await import(`${ROOT}/src/scene/stuff.ts`), { PAINT_STUFF, stuffOfName, rowWord, BOX_STUFFS, saidFor, namePaints, paintOf, toned, tonedAs, madeOf, drawnAs, wordFor, worded, repainted, repaintWord, COAT_KIND } = ST;
 const { LOOK_NAMES, LOOK_PAINTED, lookStuffOf } = await import(`${ROOT}/src/render/lookTex.ts`);
 const GB = await import(`${ROOT}/src/render/gbuffer.ts`), { lookWordOf, lookCoreOf, LOOK_WORD } = GB;
 const { GWOT_PALETTE, gwotAs } = await import(`${ROOT}/src/scene/gwotPalette.ts`);
@@ -32,12 +33,12 @@ const said = (c: number) => c === 0 ? 'plain' : LOOK_NAMES[c - 1];
 const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? undefined : w;
 
 // 1. every name a level file writes has a row in the table, and every row says a stuff a box can be
-{ const none = new Map<string, string>(), bad: string[] = [], seen = new Set<string>(), kinds: Record<string, number> = { material: 0, plain: 0, waits: 0 };
+{ const none = new Map<string, string>(), bad: string[] = [], seen = new Set<string>(), kinds: Record<string, number> = { material: 0, plain: 0, waits: 0, hit: 0 };
   for (const f of FILES) for (const name of Object.keys(dataOf(f).materials)) { seen.add(name); if (stuffOfName(name) === undefined && !none.has(name)) none.set(name, f); }
-  for (const [name, stuff] of Object.entries(PAINT_STUFF) as [string, string][]) { if (stuff === 'plain' || stuff === 'waits') kinds[stuff]++; else if (lookStuffOf(stuff) > 0) kinds.material++; else bad.push(`${name}: '${stuff}'`); }
+  for (const [name, stuff] of Object.entries(PAINT_STUFF) as [string, string][]) { if (stuff === 'plain' || stuff === 'waits') kinds[stuff]++; else if (lookStuffOf(stuff) > 0) kinds.material++; else if (stuff === 'glass' || stuff === 'rubber') kinds.hit++; else bad.push(`${name}: '${stuff}'`); }   // (glass and rubber: the two the look draws plain and the picture of a round's hit reads — the vehicles' windows and tyres)
   check(none.size === 0 && bad.length === 0 && seen.size > 60 && stuffOfName('constructor') === undefined && stuffOfName('toString') === undefined && !(Object.values(PAINT_STUFF) as string[]).includes('mixed'),
-    '1 every paint name in every level file has a row of its own in the table, and every row says a material the look draws, or plain, or waits (no name is left to its colour); a name that is a method of every object has no row',
-    `${seen.size} names in ${FILES.length} level files · ${Object.keys(PAINT_STUFF).length} rows: ${kinds.material} a material, ${kinds.plain} plain, ${kinds.waits} waiting${none.size ? ` · NO ROW: ${[...none].map(([n, f]) => `${n} (${f})`).join(', ')}` : ''}${bad.length ? ` · not a material: ${bad.join(', ')}` : ''}`); }
+    '1 every paint name in every level file has a row of its own in the table, and every row says a material the look draws, or plain, or waits, or one of the two a round\'s hit reads and the look draws plain, glass and rubber (no name is left to its colour); a name that is a method of every object has no row',
+    `${seen.size} names in ${FILES.length} level files · ${Object.keys(PAINT_STUFF).length} rows: ${kinds.material} a material, ${kinds.plain} plain, ${kinds.waits} waiting, ${kinds.hit} glass or rubber${none.size ? ` · NO ROW: ${[...none].map(([n, f]) => `${n} (${f})`).join(', ')}` : ''}${bad.length ? ` · not a material: ${bad.join(', ')}` : ''}`); }
 
 // 2. THE FILES SAY IT: every material row of every level file says what it is made of, and a row whose name the table knows says the table's word
 { let rows = 0, silent = 0, other = 0, old = 0; const eg: string[] = [];
@@ -119,12 +120,17 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   // the editor: painting a box with another paint drops the box's own word (the new paint's row speaks), in one command that undoes
   const ED = dataOf('library-hall.json') as any, eb = ED.boxes.find((b: any) => b.material === 'wood'); eb.stuff = 'veneer'; const ed = new Editor(ED, {}); boxPaint(ed, [eb.id], 'concrete');
   const painted = ed.data.boxes.find((b: any) => b.id === eb.id), dropped = painted.material === 'concrete' && painted.stuff === undefined;
-  const skin = readFileSync(`${ROOT}/tools/levels/gwotSkin.ts`, 'utf8').includes('b.albedo = gwotAs(m, sim); b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; delete b.stuff; worded(b);');
+  // a repaint: the one helper gives the new paint's word, and a named coat stays under a plain one; the skin repaints boxes and props' parts through it and nowhere else
+  const coatWas = { ...COAT_KIND }; if (process.env.COAT_BREAK === '1') for (const k of Object.keys(COAT_KIND)) delete (COAT_KIND as any)[k];   // (COAT_BREAK=1: the table of named coats is emptied, so a repaint keeps no coat — this line must FAIL)
+  const rp = (was: string | undefined, paint: readonly number[]) => repainted({ albedo: [0.5, 0.5, 0.5] as readonly number[], ...(was ? { stuff: was } : {}) } as any, paint).stuff as string | undefined;
+  const coats = `${rp('veneer', GWOT_PALETTE.galv)}, ${rp('steel', GWOT_PALETTE.paintGreen)}, ${rp('carpaint', GWOT_PALETTE.paintGreen)}, ${rp('carpaint', GWOT_PALETTE.galv)}, ${rp('carpaint', GWOT_PALETTE.prodOrange) ?? 'nothing'}, ${rp(undefined, GWOT_PALETTE.paintGreen)}`;
+  const skinSrc = readFileSync(`${ROOT}/tools/levels/gwotSkin.ts`, 'utf8'), skin = skinSrc.includes('repainted(b, gwotAs(m, sim))') && skinSrc.includes('repainted(part, next)') && !/delete (b|part)\.stuff/.test(skinSrc) && coats === 'sheet, paint, carpaint, sheet, nothing, paint' && repaintWord('paint', 'paint') === 'paint' && Object.keys(COAT_KIND).length >= 1 && Object.keys(COAT_KIND).every(k => (BOX_STUFFS as string[]).includes(k) && (BOX_STUFFS as string[]).includes((COAT_KIND as any)[k]));
+  Object.assign(COAT_KIND, coatWas);
   // a piece broken off a thing is made of what the thing is
   const from = makeBox({ c: [0, 0, 0], h: [1, 1, 1], albedo: [0.2, 0.2, 0.2], stuff: 'veneer' }), copy = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(from) }), bare = makeBox({ c: [0, 0, 0], h: [0.1, 0.1, 0.1], albedo: [0.2, 0.2, 0.2], ...wordOf(makeBox({ c: [0, 0, 0], h: [1, 1, 1] })) });
   check(says(own, 'veneer') && says(dark, 'veneer') && says(steel, 'steel') && says(white) && says(rug, 'cloth') && JSON.stringify(saidFor('veneer', [0.3, 0.31, 0.33], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && JSON.stringify(saidFor('veneer', [...KIT_PALETTE.wood], KIT_PALETTE.wood, KIT_PALETTE.woodDark)) === '{}' && saidFor('veneer', KIT_PALETTE.wood, KIT_PALETTE.wood).stuff === 'veneer' && dropped && skin && copy.stuff === 'veneer' && bare.stuff === undefined,
-    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks), handed white laminate it says nothing, and handed a COPY of the wood\'s numbers it says nothing either (the row, not its numbers); a rug is cloth in any colour; the skin drops a repainted box\'s old word and gives it its new paint\'s; the editor\'s paint drops a box\'s own word; a piece broken off a thing copies the thing\'s word',
-    `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'}, white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · the skin says the new word: ${skin} · the editor drops it: ${dropped} · a broken piece: ${copy.stuff}`); }
+    '8 a word belongs to the paint it was said with: the kit\'s desk says veneer in its own wood paints; handed the kit\'s steel it is a steel bench (the paint handed over speaks), handed white laminate it says nothing, and handed a COPY of the wood\'s numbers it says nothing either (the row, not its numbers); a rug is cloth in any colour; the skin repaints through the one helper, which drops a repainted thing\'s old word and gives it its new paint\'s — but a named coat stays under a plain one (a car in another enamel is still car paint; in sheet metal it is sheet, in a plain orange nothing); the editor\'s paint drops a box\'s own word; a piece broken off a thing copies the thing\'s word',
+    `desk ${own[0]?.stuff}, dark ${dark[0]?.stuff}, as a steel bench ${steel[0]?.stuff ?? 'no word'}, white ${white[0]?.stuff ?? 'no word'} · rug ${rug[0]?.stuff} · the skin says the new word: ${skin} (veneer → sheet, steel → paint, car paint → paint, → sheet, → plain orange, nothing → paint: ${coats}) · the editor drops it: ${dropped} · a broken piece: ${copy.stuff}`); }
 
 // 9. A PAINT IS KNOWN BY THE ROW HANDED OVER, never by its numbers: a kit's finish and word come with the palette's own array; a copy of its numbers is nobody's
 { const k = newKit(), C = KIT_PALETTE, i0 = KD.add(k, { c: [1, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal }), i1 = KD.add(k, { c: [2, 1, 1], h: [0.2, 0.2, 0.2], albedo: [...C.metal] as any }), i2 = KD.add(k, { c: [3, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal, rough: 0.9 }), i3 = KD.add(k, { c: [4, 1, 1], h: [0.2, 0.2, 0.2], albedo: C.metal, stuff: 'plain' });
@@ -205,6 +211,32 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
   check(errs.length === 0 && row !== 'nothing' && said.join() === [row, 'plastic', 'nothing', 'nothing'].join() && stood.join() === said.join() && back.join() === ['nothing', 'plastic', 'nothing', 'plain'].join() && refused,
     '14 a shape\'s piece says its word as a box does: a piece in a named paint is made of what that paint\'s row says, one that says its own word is that, one written as numbers and one that says plain over a row are nothing; the box stood up for each carries the same; the file keeps only the word that is another thing than the row\'s; a word that is no stuff is refused',
     `the row: ${row} · loaded: ${said.join(', ')} · stood up: ${stood.join(', ')} · written back: ${back.join(', ')} · banana refused ${refused} · ${errs.length} errors${errs.length ? `: ${errs.slice(0, 2).join(' | ')}` : ''}`); }
+
+// 15. NO WALL AND NO DOOR FRAME IS CLOTH BY A BORROWED PAINT: a generator or a skin that paints a wall or a frame in a cloth's paint for its COLOUR gets the
+//     cloth with it (the depot's hut walls in the tan partition paint, the consulate's frames in a blanket's brown: drawn as weave, and a round knocked tufts
+//     out of them, until 11-05). Such a thing says its own word over the paint (scene/stuff.ts saidAs; a skin's Said, tools/levels/gwotSkin.ts). A wall of
+//     SACKS is cloth and meant: the sandbag's and the hesco's own paints. Asked of a level's own boxes in its `walls.` and `doorframe.` groups, by the row
+//     each wears (rowOf); a gear screen's set is another floor's backdrop and is not asked. RED PATH: a wall written here in the tan partition paint must be
+//     found, and with STUFF_BREAK (the rows say nothing) it is not.
+{ const CLOTHS = ['cloth', 'fabric', 'carpet'], SACKS = ['sandbag', 'hesco'];
+  /** the walls and frames of a level file that are cloth and are not sacks: what each is, and how many */
+  const clothWalls = (d: any): { asked: number; sacks: number; bad: Map<string, number> } => { let asked = 0, sacks = 0; const bad = new Map<string, number>();
+    for (const b of d.boxes as any[]) { const g: string = b.group ?? ''; if (!g.startsWith('walls.') && !g.startsWith('doorframe.')) continue; asked++;
+      const row = rowOf(d, b), w = b.stuff ?? (row !== undefined ? d.materials[row]?.stuff : undefined); if (!CLOTHS.includes(w)) continue;
+      if (b.stuff === undefined && row !== undefined && SACKS.includes(row)) sacks++; else { const k = `${g.split('.')[0]} in ${row ?? 'a paint written as numbers'} says ${w}`; bad.set(k, (bad.get(k) ?? 0) + 1); } }
+    return { asked, sacks, bad }; };
+  let asked = 0, sacks = 0; const bad: string[] = [];
+  for (const f of FILES) { const r = clothWalls(dataOf(f)); asked += r.asked; sacks += r.sacks; for (const [k, n] of r.bad) bad.push(`${n} × ${f} ${k}`); }
+  // (the red path: a hut wall as the depot's stood, a frame as the consulate's stood, a wall of sacks, a wall that says its own word over the tan)
+  const rows = { partTan: { albedo: [0.55, 0.47, 0.35], stuff: 'cloth' }, sandbag: { albedo: [0.45, 0.39, 0.27], stuff: 'cloth' } } as Record<string, any>; if (BRK) for (const m of Object.values(rows)) delete m.stuff;
+  const made = clothWalls({ materials: rows, boxes: [{ group: 'walls.huts', material: 'partTan' }, { group: 'doorframe.front', albedo: [0.27, 0.18, 0.12], stuff: 'cloth' }, { group: 'walls.exterior', material: 'sandbag' },
+    { group: 'walls.huts', material: 'partTan', stuff: 'stucco' }, { group: 'cubicles', material: 'partTan' }] });
+  // … and the skin's own Said, read off the one file that wears it: every frame of the consulate in the varnish's paint says the varnish's stuff and finish
+  const { VARNISH } = await import(`${ROOT}/tools/levels/gwotSkin.ts`), brown = GWOT_PALETTE[VARNISH.paint], inBrown = (b: any) => b.albedo !== undefined && [0, 1, 2].every(c => Math.abs(b.albedo[c] - brown[c]) <= 0.0025);
+  const frames = (dataOf('consulate-gwot.json').boxes as any[]).filter(b => (b.group ?? '').startsWith('doorframe.') && inBrown(b)), varnished = frames.filter(b => b.stuff === VARNISH.stuff && b.rough === VARNISH.rough).length;
+  check(bad.length === 0 && asked > 5000 && sacks > 0 && made.asked === 4 && made.sacks === 1 && made.bad.size === 2 && frames.length > 40 && varnished === frames.length,
+    '15 no wall and no door frame is cloth by a borrowed paint: in every level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet, but for a wall of sacks in the sandbag\'s or the hesco\'s own paint; a hut wall in the tan partition paint and a frame that says cloth are found, a wall of sacks and a wall that says its own word are not; the consulate\'s frames wear the varnish\'s paint and say its stuff and finish (a skin\'s Said)',
+    `${asked} wall and frame boxes in ${FILES.length} files · ${sacks} of sacks · made up: ${made.bad.size} of 2 found, ${made.sacks} of sacks · the consulate's frames in the varnish's paint: ${frames.length}, ${varnished} say ${VARNISH.stuff} at ${VARNISH.rough}${bad.length ? ` · CLOTH: ${bad.join(' · ')}` : ''}`); }
 
 console.log(`=== stuff: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);

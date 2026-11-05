@@ -10,7 +10,7 @@ import { leafWrote, MIRRORED, type BoxMirror } from '../scene/boxMirror';
 import { BOTH, type StaticCollision } from '../scene/collision';
 import { WORLD } from '../scene/world';
 import { EXACT } from '../math/exact';
-import { RUST } from '../sim/sim';
+import { RUST, ruleFell, ruleRed } from '../sim/sim';
 import { DoorStore, DC, DD, DO, DK, KF, DE, DOOR_EV, DP, DF, MAN_UNASKED, DOOR_CAP, DOOR_COLS, DOOR_OUTS, DOOR_CONS, DOOR_PARS, DRIVE_KINDS, DOOR_SOUNDS, STRIKE_TIERS, DOORS_STEPPED, doorIo, doorMem } from '../sim/doorshome';
 import { SlabStore, SLF, type SLAB_F64, type SlabNow } from '../sim/slabshome';
 
@@ -646,11 +646,16 @@ export class Doors {
    *  check that puts its own over one gets ITS step); the box world's copy standing with the game's own leaves in it, a door's leaf at the door's index; and
    *  no more contacts than the hand-over holds. → the copy to step over, or null: this file steps, on the same columns. */
   private there(contacts: DoorContact[]): BoxMirror | null {
-    const H = this.host;
-    if (!RUST.doors || this.store.home === null || !EXACT.on || H === null || this.standable !== H.standable || this.settle !== H.settle || this.updateHere !== Doors.prototype.updateHere) return null;
-    if (contacts.length > doorIo().maxContacts) return null;
-    const dyn = H.col.dynamicBoxes, L = this.list, n = L.length; if (dyn.length !== n) return null;
-    for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return null;
+    const H = this.host; if (!RUST.doors || this.list.length === 0) return null;   // (a level with no door has no step, here or there: its columns are no tenant of the block)
+    // (each way back to this file's step is said, for the count of questions the TypeScript took: sim.ts FELL)
+    if (!EXACT.on) return null;   // (idle: a row that works lengths out answers under the game's own maths alone — sim.ts OWN_MATHS)
+    if (ruleRed('doors')) return null;
+    if (this.store.home === null) return ruleFell('doors', 'the leaves are not at home in a block of the module');
+    if (H === null) return ruleFell('doors', 'no game stands behind these doors');
+    if (this.standable !== H.standable || this.settle !== H.settle || this.updateHere !== Doors.prototype.updateHere) return ruleFell('doors', 'a check\'s own step in the rule\'s place');
+    if (contacts.length > doorIo().maxContacts) return ruleFell('doors', 'more men at the doors than a step is handed');
+    const dyn = H.col.dynamicBoxes, L = this.list, n = L.length; if (dyn.length !== n) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
+    for (let i = 0; i < n; i++) if (dyn[i] !== L[i].box) return ruleFell('doors', 'the leaves in the box world are not this level\'s doors');
     return H.col.rulesWorld(dyn);
   }
   /** the step's hand-over written (the level's doors, the contacts, the rules' numbers) and the step taken: how many noises it listed. Nothing of the game

@@ -27,7 +27,16 @@
 import type { Vec3 } from '../math/vec';
 import { cutFit, cutPlane, cutRecord } from './cut';
 import type { BoxShape, ShapePiece, ShapePlane } from './shapes';
+import { saidAs, madeOf } from './stuff';
 
+/** A VEHICLE'S BODY SAYS IT IS A CAR'S COAT, whatever paint it is given: the one place the word is said (the kits' vehicles, the plain car, and a vehicle
+ *  a level builds by hand). A paint's ROW cannot say it: the truck enamels are cots, lockers and floor lines too, a tanker's cream is a wall's. `coated`
+ *  is the same for a kit's Mat. */
+export const carCoat = (paint: readonly number[]): Vec3 => saidAs('carpaint', paint);
+export const coated = <T extends { albedo: readonly number[] }>(m: T): T => ({ ...m, albedo: carCoat(m.albedo) });
+/** WHAT A CAR SAYS IT IS MADE OF, whatever colour it is handed: its coat car paint, its windows glass — SOLID glass, nothing is modelled behind them; a round
+ *  cracks it and it stands (game/particleFx.ts HITSTUFF) — and its tyres rubber. The plain car's three paints (officeGen.ts car, levelKit.ts car). */
+export const carSays = (body: readonly number[], black: readonly number[]) => ({ paint: carCoat(body), glass: madeOf('glass', [0.07, 0.08, 0.1]), tyre: saidAs('rubber', black) });
 /** a paint as a kit hands it (its Mat) */
 export type CarPaint = { albedo: Vec3; rough?: number; metal?: boolean };
 const D = Math.PI / 180, r6 = (x: number) => Math.round(x * 1e6) / 1e6;

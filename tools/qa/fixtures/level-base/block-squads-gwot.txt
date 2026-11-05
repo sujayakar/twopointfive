@@ -1,2 +1,2 @@
-# 11-05, the west window of the flat at x 4 has its shutters folded back on the wall and split wood stacked under it (the kit's shutters and splitWood); before it 11-03: the walls are render, the rooms' own floors go through the skin's own-colour table
-1acd427c295d0bbc1bb3be25a7f9f2952511d2d1
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+46c12fe62356752e8cd268aa7bf3f30cff50864b

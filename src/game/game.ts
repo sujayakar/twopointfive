@@ -30,7 +30,7 @@ import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField
 import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
-import { snowBogAt, snowBogMay } from './snowBog';
+import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
@@ -210,6 +210,7 @@ import { AirDust } from './airDust';
 import { Moths } from './moths';
 import { WetGround } from './wetGround';
 import { GlassBreak, loadGlassBreak } from './glassbreak';
+import { levelOver } from './levelfit';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
@@ -1197,6 +1198,7 @@ export class Game {
     ...DEVICE_TUNE_DEFAULTS };
 
   constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number } = {}) {
+    { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
@@ -1228,7 +1230,7 @@ export class Game {
     // loose furniture: simulated on the CPU, emitted as dynamic boxes every frame (rendered + traced like everything else), deliberately never registered as
     // collision occluders — a chair must not hide the player, muffle a shot or dent the nav grid; guards path through props and shove them aside
     this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
-    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z) };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
+    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z), kinds: () => snowBogKinds(this), roofs: () => this.weather.roofsNow() };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
       // canisters and dropped magazines bounce off (and nudge) the furniture
     this.tracers = new Tracers(engine.lights, sparkSink(this)); this.tracers.fog = { begin: who => this.fogOfWar.begin(who), done: was => this.fogOfWar.done(was), lightBy: (l, who) => this.fogOfWar.lightBy(l, who) };   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)

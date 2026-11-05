@@ -4,7 +4,7 @@ import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld, BoxFlag, type Box } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
-import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig, sheenTop } from './render/frame';
+import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
 import { GBuffer, SkinnedDrawable, lookAmounts, lookWordOf, lookCoreOf } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
@@ -18,7 +18,7 @@ import { PlaceMap } from './scene/placePlan';
 import { WallSides } from './render/wallSides';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
-import { planOpenings, openAreas, openingLooks, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
+import { planOpenings, openAreas, openingLooks, openingReach, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
 import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -156,7 +156,7 @@ export class Engine {
     if (level !== this.openLevel) { none(); this.openLevel = level; this.openSerial = -1; this.openSeen = this.openPlanned = this.openLeaves = NaN; this.openWait = 0; }   // (a new level: its statics are new boxes)
     const sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
     // DAYLIGHT COUNTED ONCE (render/lights.ts LIGHT_PORTAL): each opening is a PORTAL, what is seen through it at every hour (the sky itself, and the
-    // ground outside at the engine's guess); the bounce's rays that leave by it take no sky (common.wgsl skyThrough). The only way since 11-04: until
+    // ground outside at the engine's guess); the bounce's rays that leave by it take no sky WITHIN ITS REACH and the rest of it as the light fades out toward its range (common.wgsl skyKeep; openingReach below: since 11-05 a reach is 3 to 10 m of most rooms, so the far part of a deep room has its sky by the bounce). The only way since 11-04: until
     // then, behind a row, each was a disk as bright as one guess at all it looks out on, by day only, beside the bounce's own share of the same sky.
     const isOpen = (o: Opening) => o.ajar > 0;
     const rad = openingLooks(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun), m = Math.max(rad[0], rad[1], rad[2]);
@@ -205,7 +205,7 @@ export class Engine {
       const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * open;   // (radiance × area = its strength straight out)
       const at = o.mid;   // (a portal is its rectangle, about the rectangle's middle)
       l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = Math.hypot(o.half[0], o.half[1]);
-      l.range = Math.min(26, Math.max(3, Math.sqrt(m * whole / 0.0015)));   // (as far as it lights anything, wide open: a swinging leaf does not move it)
+      l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);   // (as far as its own light is worth a ray, wide open: a swinging leaf does not move it. &portalworth=0.003 = the reach it had until 11-05)
       l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; l.reach = masks ? r.mask ?? undefined : undefined;
       l.portal!.halfWide = o.half[0]; l.portal!.share = open / whole; l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;   // (&holedepth=0: no depth, the whole rectangle and every ray for itself, as it was)
       // (lit from the first hand's width a door opens, where its own rays let next to nothing through, and while the picture would show anything of what it looks out on)
@@ -805,7 +805,7 @@ export class Engine {
       const K = this.passes.den.knobs;
       K.shIters = s.dnShadowIters; K.shCap = s.directHistory > 0 ? s.dnShadowCap : 0; K.shClampK = s.dnShadowClampK; K.shSigmaL = s.dnShadowSigmaL; K.shPrior = s.dnShadowPrior; K.shLitAlike = s.dnShadowLitAlike; K.shOccl = s.dnShadowOccl; K.shMoveCap = s.dnShadowMoveCap; K.shMoveThresh = s.dnShadowMoveThresh; K.shJump = s.dnShadowJump;
       K.giIters = s.dnGiIters; K.giCap = s.dnGiCap; K.giClampK = s.dnGiClampK; K.giSigmaL = s.dnGiSigmaL; K.giFast = s.dnGiFast; K.giFirefly = s.dnGiFirefly; K.giClampCut = s.dnGiClampCut; K.giYoungWiden = s.dnGiYoungWiden;
-      K.spIters = s.dnSpecIters; K.spCap = s.dnSpecCap; K.spClampK = s.dnSpecClampK; K.spSigmaL = s.dnSpecSigmaL; K.spRough = s.dnSpecRough; K.spMaxRough = sheenTop(s.rtMaxRough); K.rfIters = s.rtAtrous; K.rfCap = s.rtHistory;   // (+ the reflection chain's per-pixel cutoff, its own iteration count and history cap)
+      K.spIters = s.dnSpecIters; K.spCap = s.dnSpecCap; K.spClampK = s.dnSpecClampK; K.spSigmaL = s.dnSpecSigmaL; K.spRough = s.dnSpecRough; K.spMaxRough = s.rtMaxRough; K.rfIters = s.rtAtrous; K.rfCap = s.rtHistory;   // (+ the reflection chain's per-pixel cutoff, its own iteration count and history cap)
       K.depthK = s.dnDepthK; K.normalPow = s.dnNormalPow; K.motionVectors = s.dnMotionVectors;   // (the g-buffer writes gVel on both the TAAU and the FXAA path: prev − now through frame.prevViewProj, jittered or not — consistent with the reprojection either way)
       K.ratioHi = (fp.flags & (FrameFlags.TailChroma | FrameFlags.Restir)) ? 4 : 1;   // the ratio clamp's upper bound: shadowed ≤ unshadowed per channel, except the chroma-exact tail's single samples and the ReSTIR estimator's per-light hues (one warm light under a mixed U tops U's red channel legitimately)
       if (this.passes.dnMode === 'v3' || rtOn) this.passes.den.writeParams({ gatherDiv: this.passes.gatherDiv, reflDiv: rtOn ? this.passes.rtDiv : 0, temporalFlag: (fp.flags & FrameFlags.Temporal) !== 0, shadowTemporal: s.directHistory > 0, historyScale: this.passes.directHistoryScale < 1 ? 0.5 : 1, cueUv: s.restir && (fp.flags & FrameFlags.Restir) !== 0, fullRes: this.passes.giFullOn });   // (the reflection chain is the v3 specular client under either core; + the internal-res diffuse chain's block while that path is wanted)
