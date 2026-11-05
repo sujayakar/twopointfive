@@ -2565,6 +2565,39 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **THE DAY'S CURVE, A ROW THAT IS OFF AS THE PAGE OPENS** (11-05; the look panel's "Day curve" row `day`, 0 = the frame as it was, `?look=day:1` to
+  try it; `render/lookgrade.ts LOOK_DAY`, `lookDay`; `shaders/post.wgsl dayCurve`; `engine.ts` beside the Contrast row's lines; `passes.ts gradeD` and the
+  seven numbers after it; live at `__look.day`. PICTURE ONLY, the look page only, so no stand and no knob table). WHY: three pale levels drawn on a cloud
+  card on 11-05 (a depot yard of pavers at 0.5 to 0.66, two corners of a pale stone hotel) washed out at midday: stone, coping and bands at one near
+  white, the shade under a porch a navy fifteen times darker than the stone beside it. Measured on the stills: sunlit stone of 0.47 at 206 of 255 and
+  stone of 0.66 at 216; the porch's shade 48 60 81, its blue to red 2.7 where the sky's own fill is about 1.9. THE CAUSE IS THE CURVE, not the paints or
+  the light (the sun to the sky's fill is 3.4 to 1 on open ground, which is right; a small shadow in open sunlit ground drew 1 to 4.8, which is right).
+  The tone map's sigmoid spreads sixteen and a half stops over the screen, which a night needs, and its top is flat: sunlit ground from 0.25 to 0.85
+  lands 61 values apart. The Contrast row's turn (1.35 about sunlit snow), made to give a day its blacks on that curve, steepens it further the
+  further down it goes: a shadow five stops under the stone is shown six and a third under, and the turn is made channel by channel, which is what
+  takes the shade's blue from 1.9 to 2.7. THE RULE: a camera's curve in the night curve's place, by as much as the hour's light says. Under a white a
+  quarter of a stop over sunlit snow, the screen's linear light falls three quarters of a stop for each stop of BRIGHTNESS down to a toe three stops
+  under the white and 1.15 under it (so black is black); a colour's channels keep the stops between them (a paint keeps its colour whatever the slope),
+  but for three tenths in the last stop and a half, which goes channel by channel as film does; over 0.8 of the screen's range it rolls off. Sunlit
+  ground of 0.25 / 0.47 / 0.66 / 0.85 is then shown at 145 / 187 / 214 / 235, 90 apart; a five-stop shadow five stops under; a void ten stops under,
+  ten and three quarters. HOW FAR IT STANDS IN is asked of the light and not of the clock: `lookDay` brings it in as the stop sunlit ground sits on
+  climbs from 0.74 to 0.83 of the night curve's range, so a clear midday (0.85) has all of it, a grey day (0.78) half, and dusk (0.71), dawn and
+  night none, each read off the page's own numbers on the card. By as much as it stands in, the Contrast row's turn stands down. THE FIRST WRITING had
+  one slope all the way down and its white a sixth of a stop over snow: a reviewer's read of it on five scenes found the dark end lifted into a grey
+  veil (a doorway's dark, the ground past the level's edge), which the toe mends. SEEN ON A CLOUD NVIDIA CARD, the row at 0 and at 1 from one camera
+  (rebuild/graphics-next/pale-midday/day-curve-pairs.jpg outside the repo): THE PALE HOTEL IS THE WIN IT WAS MADE FOR (stone 204 201 194 to 190 185
+  173 with its joints and bands readable, the porch's shade 29 35 47 to 37 40 47, blacks at 0 in both). ON THE LEVELS THAT STAND TODAY IT IS NOT A
+  WIN AND IS NOT TURNED ON: the compound's dust goes darker and browner (134 101 63 to 114 88 61: under the night's curve a bright orange is pulled
+  toward yellow, which is the gold he has liked; this curve shows the paint's own colour), the white roof's orange field goes from apricot to a
+  vivid orange (249 173 87 to 254 143 61, its red at the screen's top), and the snow pass's shade is bluer and its sunlit snow a little blue. So
+  the row is 0, no picture of the build moves, and how a pale level is to get it (the level says so; every bright midday with those levels
+  re-tuned; or by where the eyes are) is the maintainer's to rule: asked 11-05. NOT DONE HERE and each a choice of its own: the midday sky's fill is
+  bluer than a sky's (its zenith 0.30 0.45 0.80 as light on white: a trial at 0.36 0.46 0.68 took a pole's shadow on the white roof from 88 102 132
+  to 93 102 121, and it is REAL light, the game's, not a row of the picture); exposure that follows how pale the ground is. NEVER SEEN on Metal or
+  in motion. Check: `bun run tools/qa/lookgrade-check.ts` (five lines more: the table, the shadows and the void, a colour's channels, how far it
+  comes in by the light, the text; `LOOKDAY_BREAK=1` puts the white at middle grey and fails three). With the row at 0 the tone map does not run
+  the curve's line (`if (post.gradeD > 0.0)`) and the frame is the frame as it was; the post kernel's text and its parameter block (64 to 96
+  bytes) change on every page.
 - **A LEVEL SAYS HOW KEPT IT IS, ONE WORD** (11-05; the look's page; level data, absent = 0 = every level as it was drawn, so no picture moves
   until a level says it. `scene/levelData.ts meta.kept`, `scene/level.ts Level.kept`, `scene/look.ts lookKeptOf`, `main.ts hostLevel`,
   `render/frame.ts lookConfig.kept`, `render/gbuffer.ts setLook` (the look's uniform, c's first number), `shaders/look.wgsl lookKept`,
