@@ -1,14 +1,15 @@
 // WRITTEN BY tools/sim/men.ts FROM src/sim/men/schema.ts — never by hand (tools/qa/men-check.ts is red on a difference). A man's columns, as the game reads and writes them.
 import type { Vec3 } from '../../math/vec';
+import type { Guard } from '../../game/game';   // (a type alone: nothing of the game is loaded from here)
 import type { MenStore } from './store';
 
 /** the hash of the layout; the module holds the same one (rust/sim/src/men.rs SCHEMA), and store.ts holds the two to each other as a game starts */
-export const MEN_SCHEMA = 0x1b0c3164;
+export const MEN_SCHEMA = 0x1a0d4914;
 export const MEN_HEAD = 16;
-export const MEN_F64 = ["posX","posY","posZ","velX","velY","velZ","bodyYaw","aimYaw","aimPitch","radius","stepPhase","speed","lastPosX","lastPosY","lastPosZ","speedSm","hitsLeft","fireCd","noise","visibility","irradiance","awareness","lastSeenT","sightPosX","sightPosY","sightPosZ","sightVelX","sightVelY","sightVelZ","sightT","reactT","heardUpTo","stepTravel","stepOwed","stepAt","since","hurtAt","staggerUntil","dazzledUntil","muzzleAhead","diedAt","killerId","missedAt","muzzleClearT","muzzleEvalT","lineBarkT","lineInT","gunLostAt","torchLostAt","lightDeadUntil","doorDownUntil","reloadT","lastFireT","friendT","hitFlash","doorBashAt","doorBashLean","doorRipUntil","doorHead","doorHeadT","dragYaw","dragNoiseT","dragStuckT","equipT","pace","paceShownT","nvAmount","dazzledAtX","dazzledAtY","dazzledAtZ","ledT","fixT","fixRefX","fixRefY","fixRefZ","searchT","smokeTrans","sawBodyT","alertBest","alertStallT","alertRefX","alertRefY","alertRefZ","chaseT","shotBlockedT","leaderSeenT","leaderSeenPosX","leaderSeenPosY","leaderSeenPosZ","leaderStillT","bodyVisits","bodyVisitT","bodyFan","sweep","beamDirX","beamDirY","beamDirZ","lookPhase"] as const;
-export const MEN_U32 = ["gen","truths0","state","team","owner","rank","reason","downKind","downBy","truths1"] as const;
+export const MEN_F64 = ["posX","posY","posZ","velX","velY","velZ","bodyYaw","aimYaw","aimPitch","radius","stepPhase","speed","lastPosX","lastPosY","lastPosZ","speedSm","hitsLeft","fireCd","noise","visibility","irradiance","awareness","lastSeenT","sightPosX","sightPosY","sightPosZ","sightVelX","sightVelY","sightVelZ","sightT","reactT","heardUpTo","wp","wait","pathI","repathT","pathGoalX","pathGoalY","pathGoalZ","stepTravel","stepOwed","stepAt","since","hurtAt","staggerUntil","dazzledUntil","muzzleAhead","diedAt","killerId","missedAt","muzzleClearT","muzzleEvalT","lineBarkT","lineInT","gunLostAt","torchLostAt","lightDeadUntil","doorDownUntil","reloadT","lastFireT","friendT","hitFlash","doorBashAt","doorBashLean","doorRipUntil","doorHead","doorHeadT","dragYaw","dragNoiseT","dragStuckT","equipT","pace","paceShownT","nvAmount","dazzledAtX","dazzledAtY","dazzledAtZ","ledT","fixT","fixRefX","fixRefY","fixRefZ","searchT","smokeTrans","sawBodyT","alertBest","alertStallT","alertRefX","alertRefY","alertRefZ","chaseT","shotBlockedT","leaderSeenT","leaderSeenPosX","leaderSeenPosY","leaderSeenPosZ","leaderStillT","bodyVisits","bodyVisitT","bodyFan","sweep","beamDirX","beamDirY","beamDirZ","lookPhase","routeI","followT","followGoalX","followGoalY","followGoalZ","stuckT","stuckN","stallRefX","stallRefY","stallRefZ","stallT","lineSide","lineGain","lineStepM","lineStuckT","pieLastT","piePrevX","piePrevY","piePrevZ","piePrevT"] as const;
+export const MEN_U32 = ["gen","truths0","state","team","foe","owner","rank","reason","downKind","downBy","truths1","leader"] as const;
 /** the generation column, as an index into the words from the part's start (the store's own) */
-export const MEN_GEN = 50180;
+export const MEN_GEN = 64004;
 const STATE_WORDS = ["patrol","suspicious","alert","search","dead"] as const;
 const TEAM_WORDS = ["guard","operative","hostile","player","civilian"] as const;
 const DOWNKIND_WORDS = [null,"shot","struck","choked","wounded"] as const;
@@ -33,7 +34,7 @@ export class ManCols {
   get radius(): number { const S = this.S; return S.d[S.b8 + 2306 + this.r]; } set radius(v: number) { const S = this.S; S.d[S.b8 + 2306 + this.r] = v; }
   /** where his walk stands in its cycle */
   get stepPhase(): number { const S = this.S; return S.d[S.b8 + 2562 + this.r]; } set stepPhase(v: number) { const S = this.S; S.d[S.b8 + 2562 + this.r] = v; }
-  get alive(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 1) !== 0; } set alive(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 1 : w & 4294967294; }
+  get alive(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 1) !== 0; } set alive(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 1 : w & 4294967294; }
   /** What he carries and its state (weapons.ts: the row from his route — the 9 mm service pistol unless the level says otherwise — with its chamber and magazine; guards.ts fires it and reads its cadence, fireWeapon its report / flash / spread, killGuard what falls out of the hand). fireCd: seconds until the trigger will go again (the AI's beat: cadence, the reaction on going alert, the shield's floor). */
   get fireCd(): number { const S = this.S; return S.d[S.b8 + 4354 + this.r]; } set fireCd(v: number) { const S = this.S; S.d[S.b8 + 4354 + this.r] = v; }
   /** an AI target's light meter (guards.ts unitLightMeter — only ever fed for a man some other AI side can be hostile to, i.e. never for staff): the renderer's irradiance at his chest / head when the probe answers (the browser), the CPU estimate of the same direct light otherwise (headless, or the first frames), mapped and eased exactly as Sam's meter is (Game.visibilityOf, damp 6). What a hostile AI e */
@@ -41,27 +42,27 @@ export class ManCols {
   /** an AI target's light meter (guards.ts unitLightMeter — only ever fed for a man some other AI side can be hostile to, i.e. never for staff): the renderer's irradiance at his chest / head when the probe answers (the browser), the CPU estimate of the same direct light otherwise (headless, or the first frames), mapped and eased exactly as Sam's meter is (Game.visibilityOf, damp 6). What a hostile AI e */
   get irradiance(): number { const S = this.S; return S.d[S.b8 + 5122 + this.r]; } set irradiance(v: number) { const S = this.S; S.d[S.b8 + 5122 + this.r] = v; }
   /** which rule has him (0: nobody) */
-  get owner(): number { const S = this.S; return S.u[S.b4 + 51204 + this.r]; } set owner(v: number) { const S = this.S; S.u[S.b4 + 51204 + this.r] = v; }
+  get owner(): number { const S = this.S; return S.u[S.b4 + 65284 + this.r]; } set owner(v: number) { const S = this.S; S.u[S.b4 + 65284 + this.r] = v; }
   /** how hard that rule holds him against another */
-  get rank(): number { const S = this.S; return S.u[S.b4 + 51460 + this.r]; } set rank(v: number) { const S = this.S; S.u[S.b4 + 51460 + this.r] = v; }
+  get rank(): number { const S = this.S; return S.u[S.b4 + 65540 + this.r]; } set rank(v: number) { const S = this.S; S.u[S.b4 + 65540 + this.r] = v; }
   /** why it has him */
-  get reason(): number { const S = this.S; return S.u[S.b4 + 51716 + this.r]; } set reason(v: number) { const S = this.S; S.u[S.b4 + 51716 + this.r] = v; }
+  get reason(): number { const S = this.S; return S.u[S.b4 + 65796 + this.r]; } set reason(v: number) { const S = this.S; S.u[S.b4 + 65796 + this.r] = v; }
   /** the game time it took him */
-  get since(): number { const S = this.S; return S.d[S.b8 + 8962 + this.r]; } set since(v: number) { const S = this.S; S.d[S.b8 + 8962 + this.r] = v; }
+  get since(): number { const S = this.S; return S.d[S.b8 + 10754 + this.r]; } set since(v: number) { const S = this.S; S.d[S.b8 + 10754 + this.r] = v; }
   /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
-  get hurtAt(): number { const S = this.S; return S.d[S.b8 + 9218 + this.r]; } set hurtAt(v: number) { const S = this.S; S.d[S.b8 + 9218 + this.r] = v; }
+  get hurtAt(): number { const S = this.S; return S.d[S.b8 + 11010 + this.r]; } set hurtAt(v: number) { const S = this.S; S.d[S.b8 + 11010 + this.r] = v; }
   /** a ring airfoil took him in the body (launcher.ts staggerGuard): doubled over till this time — rooted like the dazzle (reactT), no round from him, but he can SEE, and he comes out of it alert toward the side it came from */
-  get staggerUntil(): number { const S = this.S; return S.d[S.b8 + 9474 + this.r]; } set staggerUntil(v: number) { const S = this.S; S.d[S.b8 + 9474 + this.r] = v; }
+  get staggerUntil(): number { const S = this.S; return S.d[S.b8 + 11266 + this.r]; } set staggerUntil(v: number) { const S = this.S; S.d[S.b8 + 11266 + this.r] = v; }
   /** stun canister with line of sight: no vision, no shooting, rooted to the spot until this time (see Game.detonateStun) */
-  get dazzledUntil(): number { const S = this.S; return S.d[S.b8 + 9730 + this.r]; } set dazzledUntil(v: number) { const S = this.S; S.d[S.b8 + 9730 + this.r] = v; }
+  get dazzledUntil(): number { const S = this.S; return S.d[S.b8 + 11522 + this.r]; } set dazzledUntil(v: number) { const S = this.S; S.d[S.b8 + 11522 + this.r] = v; }
   /** metres along gunDir from the wrist to the muzzle: the row's (weapons.ts WeaponDef.muzzleAhead — 0.26 for a pistol; whoever hands him a weapon writes it — or, for a man dealt the carbine over his sidearm row (game.ts, tune.carbineGuards), rigProps.carbineMuzzleAhead's 0.5 off the drawn prop). The round, the flash, the laser and armThrough all start at `muzzle`. */
-  get muzzleAhead(): number { const S = this.S; return S.d[S.b8 + 9986 + this.r]; } set muzzleAhead(v: number) { const S = this.S; S.d[S.b8 + 9986 + this.r] = v; }
+  get muzzleAhead(): number { const S = this.S; return S.d[S.b8 + 11778 + this.r]; } set muzzleAhead(v: number) { const S = this.S; S.d[S.b8 + 11778 + this.r] = v; }
   /** where the charge that blinded him went off (the motion pass turns him away from it — character.ts MOVES; not saved) */
-  get dazzledAt(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 52484 + this.r] & 1024) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 17154], S.d[i + 17410], S.d[i + 17666]]; }
-  set dazzledAt(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 52484 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 52484 + this.r] = w & 4294966271; S.d[i + 17154] = 0; S.d[i + 17410] = 0; S.d[i + 17666] = 0; return; } S.u[S.b4 + 52484 + this.r] = w | 1024; S.d[i + 17154] = v[0]; S.d[i + 17410] = v[1]; S.d[i + 17666] = v[2]; }
-  get dazzledAtX(): number { const S = this.S; return S.d[S.b8 + 17154 + this.r]; } set dazzledAtX(v: number) { const S = this.S; S.d[S.b8 + 17154 + this.r] = v; }
-  get dazzledAtY(): number { const S = this.S; return S.d[S.b8 + 17410 + this.r]; } set dazzledAtY(v: number) { const S = this.S; S.d[S.b8 + 17410 + this.r] = v; }
-  get dazzledAtZ(): number { const S = this.S; return S.d[S.b8 + 17666 + this.r]; } set dazzledAtZ(v: number) { const S = this.S; S.d[S.b8 + 17666 + this.r] = v; }
+  get dazzledAt(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 66564 + this.r] & 1024) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 18946], S.d[i + 19202], S.d[i + 19458]]; }
+  set dazzledAt(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 66564 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 66564 + this.r] = w & 4294966271; S.d[i + 18946] = 0; S.d[i + 19202] = 0; S.d[i + 19458] = 0; return; } S.u[S.b4 + 66564 + this.r] = w | 1024; S.d[i + 18946] = v[0]; S.d[i + 19202] = v[1]; S.d[i + 19458] = v[2]; }
+  get dazzledAtX(): number { const S = this.S; return S.d[S.b8 + 18946 + this.r]; } set dazzledAtX(v: number) { const S = this.S; S.d[S.b8 + 18946 + this.r] = v; }
+  get dazzledAtY(): number { const S = this.S; return S.d[S.b8 + 19202 + this.r]; } set dazzledAtY(v: number) { const S = this.S; S.d[S.b8 + 19202 + this.r] = v; }
+  get dazzledAtZ(): number { const S = this.S; return S.d[S.b8 + 19458 + this.r]; } set dazzledAtZ(v: number) { const S = this.S; S.d[S.b8 + 19458 + this.r] = v; }
   initMan(): void { this.radius = 0.3; this.alive = true; this.hurtAt = -1; this.staggerUntil = -1; this.dazzledUntil = -1; this.muzzleAhead = 0.26; }
 }
 /** a Guard record's own columns (a guard, a teammate, a civilian) */
@@ -74,18 +75,18 @@ export class GuardCols extends ManCols {
   get lastPosX(): number { const S = this.S; return S.d[S.b8 + 3074 + this.r]; } set lastPosX(v: number) { const S = this.S; S.d[S.b8 + 3074 + this.r] = v; }
   get lastPosY(): number { const S = this.S; return S.d[S.b8 + 3330 + this.r]; } set lastPosY(v: number) { const S = this.S; S.d[S.b8 + 3330 + this.r] = v; }
   get lastPosZ(): number { const S = this.S; return S.d[S.b8 + 3586 + this.r]; } set lastPosZ(v: number) { const S = this.S; S.d[S.b8 + 3586 + this.r] = v; }
-  get state(): (typeof STATE_WORDS)[number] { const S = this.S; return STATE_WORDS[S.u[S.b4 + 50692 + this.r]]; } set state(v: (typeof STATE_WORDS)[number]) { const S = this.S, i = STATE_WORDS.indexOf(v); if (i < 0) throw new Error(`state: no such word: ${v}`); S.u[S.b4 + 50692 + this.r] = i; }
+  get state(): (typeof STATE_WORDS)[number] { const S = this.S; return STATE_WORDS[S.u[S.b4 + 64516 + this.r]]; } set state(v: (typeof STATE_WORDS)[number]) { const S = this.S, i = STATE_WORDS.indexOf(v); if (i < 0) throw new Error(`state: no such word: ${v}`); S.u[S.b4 + 64516 + this.r] = i; }
   /** muzzle discipline (guards.ts muzzleCheck): a living colleague stands in his line this frame, so the pistol is at the low ready and no round leaves it; clearT = seconds the line has been clear again (it comes back up after a beat, not on the frame); evalT = the game time it was last worked out (the alert branch does it early, before the shot); lineBarkT = when he (or the man in his line) last said  */
-  get muzzleDown(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 128) !== 0; } set muzzleDown(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 128 : w & 4294967167; }
+  get muzzleDown(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 128) !== 0; } set muzzleDown(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 128 : w & 4294967167; }
   /** alarm escalation (guards.ts updateEscalation): drawn = the sidearm is out on patrol (level ≥ 1) — handProps / attachFlashlight / killGuard read it where they used to read 'patrol ⇒ torch'; leader = lockdown pairing: trail this man while calm (followT: re-plan clock, ≤ 2 path plans a second; followGoal: his station behind him); post = lockdown: hold this corridor junction instead of walking the rou */
-  get drawn(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 256) !== 0; } set drawn(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 256 : w & 4294967039; }
+  get drawn(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 256) !== 0; } set drawn(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 256 : w & 4294967039; }
   /** SIDES (teams.ts): which side he is on — 'guard' for every man the level's routes stand up (hostile to Sam and nobody else: the game as it was); the showcase spawns 'operative' / 'hostile' units (guards.ts spawnUnit). Read wherever "the player" used to be the only possible enemy and "every other guard" the only possible colleague. */
-  get team(): (typeof TEAM_WORDS)[number] { const S = this.S; return TEAM_WORDS[S.u[S.b4 + 50948 + this.r]]; } set team(v: (typeof TEAM_WORDS)[number]) { const S = this.S, i = TEAM_WORDS.indexOf(v); if (i < 0) throw new Error(`team: no such word: ${v}`); S.u[S.b4 + 50948 + this.r] = i; }
+  get team(): (typeof TEAM_WORDS)[number] { const S = this.S; return TEAM_WORDS[S.u[S.b4 + 64772 + this.r]]; } set team(v: (typeof TEAM_WORDS)[number]) { const S = this.S, i = TEAM_WORDS.indexOf(v); if (i < 0) throw new Error(`team: no such word: ${v}`); S.u[S.b4 + 64772 + this.r] = i; }
   get awareness(): number { const S = this.S; return S.d[S.b8 + 5378 + this.r]; } set awareness(v: number) { const S = this.S; S.d[S.b8 + 5378 + this.r] = v; }
   get lastSeenT(): number { const S = this.S; return S.d[S.b8 + 5634 + this.r]; } set lastSeenT(v: number) { const S = this.S; S.d[S.b8 + 5634 + this.r] = v; }
-  get sawPlayerThisFrame(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 512) !== 0; } set sawPlayerThisFrame(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 512 : w & 4294966783; }
+  get sawPlayerThisFrame(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 512) !== 0; } set sawPlayerThisFrame(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 512 : w & 4294966783; }
   /** a real sighting of his FOE this frame, whoever that is (teams) — sawPlayerThisFrame stays what its name says: eyes on Sam (what the mission's 'spotted' count and the witnesses read), which for the staff is the same thing */
-  get sawFoeThisFrame(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 1024) !== 0; } set sawFoeThisFrame(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 1024 : w & 4294966271; }
+  get sawFoeThisFrame(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 1024) !== 0; } set sawFoeThisFrame(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 1024 : w & 4294966271; }
   /** where and how fast Sam was going the last frame this man had him in view (even faintly), when that was, and the sighting whose loss has already been led (guards.ts leadFix: the fix he is left with runs on the way Sam was going, once, the frame he loses him) */
   get sightPos(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + 5890], S.d[i + 6146], S.d[i + 6402]]; }
   set sightPos(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + 5890] = v[0]; S.d[i + 6146] = v[1]; S.d[i + 6402] = v[2]; }
@@ -102,158 +103,212 @@ export class GuardCols extends ManCols {
   get sightT(): number { const S = this.S; return S.d[S.b8 + 7426 + this.r]; } set sightT(v: number) { const S = this.S; S.d[S.b8 + 7426 + this.r] = v; }
   get reactT(): number { const S = this.S; return S.d[S.b8 + 7682 + this.r]; } set reactT(v: number) { const S = this.S; S.d[S.b8 + 7682 + this.r] = v; }
   get heardUpTo(): number { const S = this.S; return S.d[S.b8 + 7938 + this.r]; } set heardUpTo(v: number) { const S = this.S; S.d[S.b8 + 7938 + this.r] = v; }
-  get diedAt(): number { const S = this.S; return S.d[S.b8 + 10242 + this.r]; } set diedAt(v: number) { const S = this.S; S.d[S.b8 + 10242 + this.r] = v; }
+  get wp(): number { const S = this.S; return S.d[S.b8 + 8194 + this.r]; } set wp(v: number) { const S = this.S; S.d[S.b8 + 8194 + this.r] = v; }
+  get wait(): number { const S = this.S; return S.d[S.b8 + 8450 + this.r]; } set wait(v: number) { const S = this.S; S.d[S.b8 + 8450 + this.r] = v; }
+  get pathI(): number { const S = this.S; return S.d[S.b8 + 8706 + this.r]; } set pathI(v: number) { const S = this.S; S.d[S.b8 + 8706 + this.r] = v; }
+  get repathT(): number { const S = this.S; return S.d[S.b8 + 8962 + this.r]; } set repathT(v: number) { const S = this.S; S.d[S.b8 + 8962 + this.r] = v; }
+  get pathGoal(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 64260 + this.r] & 2048) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 9218], S.d[i + 9474], S.d[i + 9730]]; }
+  set pathGoal(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 64260 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 64260 + this.r] = w & 4294965247; S.d[i + 9218] = 0; S.d[i + 9474] = 0; S.d[i + 9730] = 0; return; } S.u[S.b4 + 64260 + this.r] = w | 2048; S.d[i + 9218] = v[0]; S.d[i + 9474] = v[1]; S.d[i + 9730] = v[2]; }
+  get pathGoalX(): number { const S = this.S; return S.d[S.b8 + 9218 + this.r]; } set pathGoalX(v: number) { const S = this.S; S.d[S.b8 + 9218 + this.r] = v; }
+  get pathGoalY(): number { const S = this.S; return S.d[S.b8 + 9474 + this.r]; } set pathGoalY(v: number) { const S = this.S; S.d[S.b8 + 9474 + this.r] = v; }
+  get pathGoalZ(): number { const S = this.S; return S.d[S.b8 + 9730 + this.r]; } set pathGoalZ(v: number) { const S = this.S; S.d[S.b8 + 9730 + this.r] = v; }
+  /** his foe right now (see Foe): 'player' from birth for the guard side (never anything else — no unit is hostile to staff), chosen each frame by salience among the hostile characters in his sight for the other sides (guards.ts acquireFoe), null = nobody acquired yet / his man is dead and no other shows */
+  get foe(): 'player' | Guard | null { const S = this.S, h = S.u[S.b4 + 65028 + this.r]; return h === 0 ? null : h === 1 ? 'player' : S.manAt(h) as Guard; } set foe(v: 'player' | Guard | null) { const S = this.S; S.u[S.b4 + 65028 + this.r] = v === null ? 0 : v === 'player' ? 1 : S.handleOf((v as Guard).r); }
+  /** scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over) */
+  get hold(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 4096) !== 0; } set hold(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 4096 : w & 4294963199; }
+  /** scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in */
+  get pinned(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 8192) !== 0; } set pinned(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 8192 : w & 4294959103; }
+  get diedAt(): number { const S = this.S; return S.d[S.b8 + 12034 + this.r]; } set diedAt(v: number) { const S = this.S; S.d[S.b8 + 12034 + this.r] = v; }
   /** (dead) how he went down and by whose hand — set once by combat.ts killGuard; null while he lives. isBreathing() reads it: struck / choked = out cold. */
-  get downKind(): (typeof DOWNKIND_WORDS)[number] { const S = this.S; return DOWNKIND_WORDS[S.u[S.b4 + 51972 + this.r]]; } set downKind(v: (typeof DOWNKIND_WORDS)[number]) { const S = this.S, i = DOWNKIND_WORDS.indexOf(v); if (i < 0) throw new Error(`downKind: no such word: ${v}`); S.u[S.b4 + 51972 + this.r] = i; }
+  get downKind(): (typeof DOWNKIND_WORDS)[number] { const S = this.S; return DOWNKIND_WORDS[S.u[S.b4 + 66052 + this.r]]; } set downKind(v: (typeof DOWNKIND_WORDS)[number]) { const S = this.S, i = DOWNKIND_WORDS.indexOf(v); if (i < 0) throw new Error(`downKind: no such word: ${v}`); S.u[S.b4 + 66052 + this.r] = i; }
   /** (dead) how he went down and by whose hand — set once by combat.ts killGuard; null while he lives. isBreathing() reads it: struck / choked = out cold. */
-  get downBy(): (typeof DOWNBY_WORDS)[number] { const S = this.S; return DOWNBY_WORDS[S.u[S.b4 + 52228 + this.r]]; } set downBy(v: (typeof DOWNBY_WORDS)[number]) { const S = this.S, i = DOWNBY_WORDS.indexOf(v); if (i < 0) throw new Error(`downBy: no such word: ${v}`); S.u[S.b4 + 52228 + this.r] = i; }
+  get downBy(): (typeof DOWNBY_WORDS)[number] { const S = this.S; return DOWNBY_WORDS[S.u[S.b4 + 66308 + this.r]]; } set downBy(v: (typeof DOWNBY_WORDS)[number]) { const S = this.S, i = DOWNBY_WORDS.indexOf(v); if (i < 0) throw new Error(`downBy: no such word: ${v}`); S.u[S.b4 + 66308 + this.r] = i; }
   /** (dead) the id of the character whose round put him down, −1 = not by a round / unknown (combat.ts fireWeapon stamps it; the engagement record names him) */
-  get killerId(): number { const S = this.S; return S.d[S.b8 + 10498 + this.r]; } set killerId(v: number) { const S = this.S; S.d[S.b8 + 10498 + this.r] = v; }
+  get killerId(): number { const S = this.S; return S.d[S.b8 + 12290 + this.r]; } set killerId(v: number) { const S = this.S; S.d[S.b8 + 12290 + this.r] = v; }
   /** (dead) somebody has discovered this body — counted once for the debrief */
-  get found(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 1) !== 0; } set found(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 1 : w & 4294967294; }
+  get found(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 1) !== 0; } set found(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 1 : w & 4294967294; }
   /** (dead, not found) the net has called this man and got nothing back — when (guards.ts updateRollcall; -1 = never): from then on the others count him as missing (superviseLockdown stops dealing his corpse a role) — and whether the floor has already been raised once on his account (it is, once, when the man sent round his route comes back with nothing) */
-  get missedAt(): number { const S = this.S; return S.d[S.b8 + 10754 + this.r]; } set missedAt(v: number) { const S = this.S; S.d[S.b8 + 10754 + this.r] = v; }
+  get missedAt(): number { const S = this.S; return S.d[S.b8 + 12546 + this.r]; } set missedAt(v: number) { const S = this.S; S.d[S.b8 + 12546 + this.r] = v; }
   /** (dead, not found) the net has called this man and got nothing back — when (guards.ts updateRollcall; -1 = never): from then on the others count him as missing (superviseLockdown stops dealing his corpse a role) — and whether the floor has already been raised once on his account (it is, once, when the man sent round his route comes back with nothing) */
-  get missingRaised(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 2) !== 0; } set missingRaised(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 2 : w & 4294967293; }
+  get missingRaised(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 2) !== 0; } set missingRaised(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 2 : w & 4294967293; }
   /** muzzle discipline (guards.ts muzzleCheck): a living colleague stands in his line this frame, so the pistol is at the low ready and no round leaves it; clearT = seconds the line has been clear again (it comes back up after a beat, not on the frame); evalT = the game time it was last worked out (the alert branch does it early, before the shot); lineBarkT = when he (or the man in his line) last said  */
-  get muzzleClearT(): number { const S = this.S; return S.d[S.b8 + 11010 + this.r]; } set muzzleClearT(v: number) { const S = this.S; S.d[S.b8 + 11010 + this.r] = v; }
+  get muzzleClearT(): number { const S = this.S; return S.d[S.b8 + 12802 + this.r]; } set muzzleClearT(v: number) { const S = this.S; S.d[S.b8 + 12802 + this.r] = v; }
   /** muzzle discipline (guards.ts muzzleCheck): a living colleague stands in his line this frame, so the pistol is at the low ready and no round leaves it; clearT = seconds the line has been clear again (it comes back up after a beat, not on the frame); evalT = the game time it was last worked out (the alert branch does it early, before the shot); lineBarkT = when he (or the man in his line) last said  */
-  get muzzleEvalT(): number { const S = this.S; return S.d[S.b8 + 11266 + this.r]; } set muzzleEvalT(v: number) { const S = this.S; S.d[S.b8 + 11266 + this.r] = v; }
+  get muzzleEvalT(): number { const S = this.S; return S.d[S.b8 + 13058 + this.r]; } set muzzleEvalT(v: number) { const S = this.S; S.d[S.b8 + 13058 + this.r] = v; }
   /** muzzle discipline (guards.ts muzzleCheck): a living colleague stands in his line this frame, so the pistol is at the low ready and no round leaves it; clearT = seconds the line has been clear again (it comes back up after a beat, not on the frame); evalT = the game time it was last worked out (the alert branch does it early, before the shot); lineBarkT = when he (or the man in his line) last said  */
-  get lineBarkT(): number { const S = this.S; return S.d[S.b8 + 11522 + this.r]; } set lineBarkT(v: number) { const S = this.S; S.d[S.b8 + 11522 + this.r] = v; }
+  get lineBarkT(): number { const S = this.S; return S.d[S.b8 + 13314 + this.r]; } set lineBarkT(v: number) { const S = this.S; S.d[S.b8 + 13314 + this.r] = v; }
   /** alert, licensed to shoot: seconds a colleague has stood in the line of the shot itself (a man crossing is waited out for a beat; one standing there is stepped round) */
-  get lineInT(): number { const S = this.S; return S.d[S.b8 + 11778 + this.r]; } set lineInT(v: number) { const S = this.S; S.d[S.b8 + 11778 + this.r] = v; }
+  get lineInT(): number { const S = this.S; return S.d[S.b8 + 13570 + this.r]; } set lineInT(v: number) { const S = this.S; S.d[S.b8 + 13570 + this.r] = v; }
   /** a LIVING man whose gun was knocked from his hand at the grab (HOLD.dropGun): dropped = that gun, this = when — his hands are empty (guards.ts inHand) and its light dies on the floor; −1 again once he has it back (player.ts handBack) */
-  get gunLostAt(): number { const S = this.S; return S.d[S.b8 + 12034 + this.r]; } set gunLostAt(v: number) { const S = this.S; S.d[S.b8 + 12034 + this.r] = v; }
+  get gunLostAt(): number { const S = this.S; return S.d[S.b8 + 13826 + this.r]; } set gunLostAt(v: number) { const S = this.S; S.d[S.b8 + 13826 + this.r] = v; }
   /** a LIVING man whose torch was knocked from his hand (the grab): dropped = that torch, this = when — the beam follows it down and sputters out (guards.ts updateFlashlight); on patrol afterwards his hand is empty */
-  get torchLostAt(): number { const S = this.S; return S.d[S.b8 + 12290 + this.r]; } set torchLostAt(v: number) { const S = this.S; S.d[S.b8 + 12290 + this.r] = v; }
-  get lightDeadUntil(): number { const S = this.S; return S.d[S.b8 + 12546 + this.r]; } set lightDeadUntil(v: number) { const S = this.S; S.d[S.b8 + 12546 + this.r] = v; }
+  get torchLostAt(): number { const S = this.S; return S.d[S.b8 + 14082 + this.r]; } set torchLostAt(v: number) { const S = this.S; S.d[S.b8 + 14082 + this.r] = v; }
+  get lightDeadUntil(): number { const S = this.S; return S.d[S.b8 + 14338 + this.r]; } set lightDeadUntil(v: number) { const S = this.S; S.d[S.b8 + 14338 + this.r] = v; }
   /** was his light burning the moment it left his hand (killed / grabbed)? a dark weapon light must not sputter ON as it tumbles (review 08-10 #7: the breach hostiles' unlit lights swept the sunlit room the frame each died) */
-  get lightLitAtLoss(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 4) !== 0; } set lightLitAtLoss(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 4 : w & 4294967291; }
+  get lightLitAtLoss(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 4) !== 0; } set lightLitAtLoss(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 4 : w & 4294967291; }
   /** a booted door met him where he stood right at it (doorthrow.ts): on a knee till this time, inside the fold the same blow gave him */
-  get doorDownUntil(): number { const S = this.S; return S.d[S.b8 + 12802 + this.r]; } set doorDownUntil(v: number) { const S = this.S; S.d[S.b8 + 12802 + this.r] = v; }
+  get doorDownUntil(): number { const S = this.S; return S.d[S.b8 + 14594 + this.r]; } set doorDownUntil(v: number) { const S = this.S; S.d[S.b8 + 14594 + this.r] = v; }
   /** a trained man (the response team, game/qrf.ts): the aim-settle model lines him up quicker and his hands are steadier (aim.ts TRAINED — × the settle time, × his row's cone), and qrf.ts keeps his reaction beats short. False for the night staff and the showcase's men: their numbers are untouched. */
-  get trained(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 8) !== 0; } set trained(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 8 : w & 4294967287; }
+  get trained(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 8) !== 0; } set trained(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 8 : w & 4294967287; }
   /** scripted, SHOWCASE CAST ONLY (director.ts LoadoutSpec.god — the day showcase's two operatives): a round that would have found him passes through him as it passes a colleague (combat.ts fireWeapon). The show's doctrine keeps the opposition's rounds off them by construction (laid on their cover, traced: tools/qa/day-probes.ts); this is the net under a stray, never the mechanism, and nothing the play */
-  get god(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 16) !== 0; } set god(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 16 : w & 4294967279; }
+  get god(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 16) !== 0; } set god(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 16 : w & 4294967279; }
   /** rifles (docs/internal/sc20k-design.md §3): dealt the carbine by the sandbox knob (tune.carbineGuards, written by Game.update each frame) — and the deal IS the weapon: while it stands, `weapon` is the AKS-74U row (bursts, the 30-round box, the harder report, the rifle that drops — guards.ts burstTrigger, combat.ts), the RIG in his hands the carbine and his poses the long gun's; dealt away again, hi */
-  get carbine(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 32) !== 0; } set carbine(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 32 : w & 4294967263; }
+  get carbine(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 32) !== 0; } set carbine(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 32 : w & 4294967263; }
   /** What he carries and its state (weapons.ts: the row from his route — the 9 mm service pistol unless the level says otherwise — with its chamber and magazine; guards.ts fires it and reads its cadence, fireWeapon its report / flash / spread, killGuard what falls out of the hand). fireCd: seconds until the trigger will go again (the AI's beat: cadence, the reaction on going alert, the shield's floor). */
-  get reloadT(): number { const S = this.S; return S.d[S.b8 + 13058 + this.r]; } set reloadT(v: number) { const S = this.S; S.d[S.b8 + 13058 + this.r] = v; }
+  get reloadT(): number { const S = this.S; return S.d[S.b8 + 14850 + this.r]; } set reloadT(v: number) { const S = this.S; S.d[S.b8 + 14850 + this.r] = v; }
   /** where and how fast Sam was going the last frame this man had him in view (even faintly), when that was, and the sighting whose loss has already been led (guards.ts leadFix: the fix he is left with runs on the way Sam was going, once, the frame he loses him) */
-  get ledT(): number { const S = this.S; return S.d[S.b8 + 17922 + this.r]; } set ledT(v: number) { const S = this.S; S.d[S.b8 + 17922 + this.r] = v; }
+  get ledT(): number { const S = this.S; return S.d[S.b8 + 19714 + this.r]; } set ledT(v: number) { const S = this.S; S.d[S.b8 + 19714 + this.r] = v; }
   /** when the fix he is working from was PLACED (guards.ts updateGuard stamps it whenever lastKnown jumps): the search reasons about how far Sam can have got since then */
-  get fixT(): number { const S = this.S; return S.d[S.b8 + 18178 + this.r]; } set fixT(v: number) { const S = this.S; S.d[S.b8 + 18178 + this.r] = v; }
+  get fixT(): number { const S = this.S; return S.d[S.b8 + 19970 + this.r]; } set fixT(v: number) { const S = this.S; S.d[S.b8 + 19970 + this.r] = v; }
   /** when the fix he is working from was PLACED (guards.ts updateGuard stamps it whenever lastKnown jumps): the search reasons about how far Sam can have got since then */
-  get fixRef(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 52484 + this.r] & 2048) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 18434], S.d[i + 18690], S.d[i + 18946]]; }
-  set fixRef(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 52484 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 52484 + this.r] = w & 4294965247; S.d[i + 18434] = 0; S.d[i + 18690] = 0; S.d[i + 18946] = 0; return; } S.u[S.b4 + 52484 + this.r] = w | 2048; S.d[i + 18434] = v[0]; S.d[i + 18690] = v[1]; S.d[i + 18946] = v[2]; }
-  get fixRefX(): number { const S = this.S; return S.d[S.b8 + 18434 + this.r]; } set fixRefX(v: number) { const S = this.S; S.d[S.b8 + 18434 + this.r] = v; }
-  get fixRefY(): number { const S = this.S; return S.d[S.b8 + 18690 + this.r]; } set fixRefY(v: number) { const S = this.S; S.d[S.b8 + 18690 + this.r] = v; }
-  get fixRefZ(): number { const S = this.S; return S.d[S.b8 + 18946 + this.r]; } set fixRefZ(v: number) { const S = this.S; S.d[S.b8 + 18946 + this.r] = v; }
-  get searchT(): number { const S = this.S; return S.d[S.b8 + 19202 + this.r]; } set searchT(v: number) { const S = this.S; S.d[S.b8 + 19202 + this.r] = v; }
-  get smokeTrans(): number { const S = this.S; return S.d[S.b8 + 19458 + this.r]; } set smokeTrans(v: number) { const S = this.S; S.d[S.b8 + 19458 + this.r] = v; }
+  get fixRef(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 66564 + this.r] & 2048) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 20226], S.d[i + 20482], S.d[i + 20738]]; }
+  set fixRef(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 66564 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 66564 + this.r] = w & 4294965247; S.d[i + 20226] = 0; S.d[i + 20482] = 0; S.d[i + 20738] = 0; return; } S.u[S.b4 + 66564 + this.r] = w | 2048; S.d[i + 20226] = v[0]; S.d[i + 20482] = v[1]; S.d[i + 20738] = v[2]; }
+  get fixRefX(): number { const S = this.S; return S.d[S.b8 + 20226 + this.r]; } set fixRefX(v: number) { const S = this.S; S.d[S.b8 + 20226 + this.r] = v; }
+  get fixRefY(): number { const S = this.S; return S.d[S.b8 + 20482 + this.r]; } set fixRefY(v: number) { const S = this.S; S.d[S.b8 + 20482 + this.r] = v; }
+  get fixRefZ(): number { const S = this.S; return S.d[S.b8 + 20738 + this.r]; } set fixRefZ(v: number) { const S = this.S; S.d[S.b8 + 20738 + this.r] = v; }
+  get searchT(): number { const S = this.S; return S.d[S.b8 + 20994 + this.r]; } set searchT(v: number) { const S = this.S; S.d[S.b8 + 20994 + this.r] = v; }
+  get smokeTrans(): number { const S = this.S; return S.d[S.b8 + 21250 + this.r]; } set smokeTrans(v: number) { const S = this.S; S.d[S.b8 + 21250 + this.r] = v; }
   /** game time he last discovered a body: a short refractory before he can call in another (two lying together are one 'man down', not two in two frames) */
-  get sawBodyT(): number { const S = this.S; return S.d[S.b8 + 19714 + this.r]; } set sawBodyT(v: number) { const S = this.S; S.d[S.b8 + 19714 + this.r] = v; }
+  get sawBodyT(): number { const S = this.S; return S.d[S.b8 + 21506 + this.r]; } set sawBodyT(v: number) { const S = this.S; S.d[S.b8 + 21506 + this.r] = v; }
   /** alert with a fix: nearest he has got to it, how long without getting nearer, the fix that was measured against (a no-progress exit into 'search', guards.ts — re-based when the fix moves), and the seconds this chase has run without eyes on Sam (its hard backstop) */
-  get alertBest(): number { const S = this.S; return S.d[S.b8 + 19970 + this.r]; } set alertBest(v: number) { const S = this.S; S.d[S.b8 + 19970 + this.r] = v; }
+  get alertBest(): number { const S = this.S; return S.d[S.b8 + 21762 + this.r]; } set alertBest(v: number) { const S = this.S; S.d[S.b8 + 21762 + this.r] = v; }
   /** alert with a fix: nearest he has got to it, how long without getting nearer, the fix that was measured against (a no-progress exit into 'search', guards.ts — re-based when the fix moves), and the seconds this chase has run without eyes on Sam (its hard backstop) */
-  get alertStallT(): number { const S = this.S; return S.d[S.b8 + 20226 + this.r]; } set alertStallT(v: number) { const S = this.S; S.d[S.b8 + 20226 + this.r] = v; }
+  get alertStallT(): number { const S = this.S; return S.d[S.b8 + 22018 + this.r]; } set alertStallT(v: number) { const S = this.S; S.d[S.b8 + 22018 + this.r] = v; }
   /** alert with a fix: nearest he has got to it, how long without getting nearer, the fix that was measured against (a no-progress exit into 'search', guards.ts — re-based when the fix moves), and the seconds this chase has run without eyes on Sam (its hard backstop) */
-  get alertRef(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 52484 + this.r] & 4096) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 20482], S.d[i + 20738], S.d[i + 20994]]; }
-  set alertRef(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 52484 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 52484 + this.r] = w & 4294963199; S.d[i + 20482] = 0; S.d[i + 20738] = 0; S.d[i + 20994] = 0; return; } S.u[S.b4 + 52484 + this.r] = w | 4096; S.d[i + 20482] = v[0]; S.d[i + 20738] = v[1]; S.d[i + 20994] = v[2]; }
-  get alertRefX(): number { const S = this.S; return S.d[S.b8 + 20482 + this.r]; } set alertRefX(v: number) { const S = this.S; S.d[S.b8 + 20482 + this.r] = v; }
-  get alertRefY(): number { const S = this.S; return S.d[S.b8 + 20738 + this.r]; } set alertRefY(v: number) { const S = this.S; S.d[S.b8 + 20738 + this.r] = v; }
-  get alertRefZ(): number { const S = this.S; return S.d[S.b8 + 20994 + this.r]; } set alertRefZ(v: number) { const S = this.S; S.d[S.b8 + 20994 + this.r] = v; }
+  get alertRef(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 66564 + this.r] & 4096) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 22274], S.d[i + 22530], S.d[i + 22786]]; }
+  set alertRef(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 66564 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 66564 + this.r] = w & 4294963199; S.d[i + 22274] = 0; S.d[i + 22530] = 0; S.d[i + 22786] = 0; return; } S.u[S.b4 + 66564 + this.r] = w | 4096; S.d[i + 22274] = v[0]; S.d[i + 22530] = v[1]; S.d[i + 22786] = v[2]; }
+  get alertRefX(): number { const S = this.S; return S.d[S.b8 + 22274 + this.r]; } set alertRefX(v: number) { const S = this.S; S.d[S.b8 + 22274 + this.r] = v; }
+  get alertRefY(): number { const S = this.S; return S.d[S.b8 + 22530 + this.r]; } set alertRefY(v: number) { const S = this.S; S.d[S.b8 + 22530 + this.r] = v; }
+  get alertRefZ(): number { const S = this.S; return S.d[S.b8 + 22786 + this.r]; } set alertRefZ(v: number) { const S = this.S; S.d[S.b8 + 22786 + this.r] = v; }
   /** alert with a fix: nearest he has got to it, how long without getting nearer, the fix that was measured against (a no-progress exit into 'search', guards.ts — re-based when the fix moves), and the seconds this chase has run without eyes on Sam (its hard backstop) */
-  get chaseT(): number { const S = this.S; return S.d[S.b8 + 21250 + this.r]; } set chaseT(v: number) { const S = this.S; S.d[S.b8 + 21250 + this.r] = v; }
+  get chaseT(): number { const S = this.S; return S.d[S.b8 + 23042 + this.r]; } set chaseT(v: number) { const S = this.S; S.d[S.b8 + 23042 + this.r] = v; }
   /** alert with eyes on the player: seconds his line of FIRE (not sight) has been stopped short by something solid — a jamb on his gun-hand side, a leaf, the desk Sam is behind (guards.ts: he closes along the path instead of emptying magazines into the frame) */
-  get shotBlockedT(): number { const S = this.S; return S.d[S.b8 + 21506 + this.r]; } set shotBlockedT(v: number) { const S = this.S; S.d[S.b8 + 21506 + this.r] = v; }
+  get shotBlockedT(): number { const S = this.S; return S.d[S.b8 + 23298 + this.r]; } set shotBlockedT(v: number) { const S = this.S; S.d[S.b8 + 23298 + this.r] = v; }
   /** lockdown follower: when he last had his leader in plain sight (no wall between, inside 16 m) and where the man was then — twenty seconds without, and the man nowhere near that spot, and he reports him missing (guards.ts partnerWatch) */
-  get leaderSeenT(): number { const S = this.S; return S.d[S.b8 + 21762 + this.r]; } set leaderSeenT(v: number) { const S = this.S; S.d[S.b8 + 21762 + this.r] = v; }
+  get leaderSeenT(): number { const S = this.S; return S.d[S.b8 + 23554 + this.r]; } set leaderSeenT(v: number) { const S = this.S; S.d[S.b8 + 23554 + this.r] = v; }
   /** lockdown follower: when he last had his leader in plain sight (no wall between, inside 16 m) and where the man was then — twenty seconds without, and the man nowhere near that spot, and he reports him missing (guards.ts partnerWatch) */
-  get leaderSeenPos(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + 22018], S.d[i + 22274], S.d[i + 22530]]; }
-  set leaderSeenPos(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + 22018] = v[0]; S.d[i + 22274] = v[1]; S.d[i + 22530] = v[2]; }
-  get leaderSeenPosX(): number { const S = this.S; return S.d[S.b8 + 22018 + this.r]; } set leaderSeenPosX(v: number) { const S = this.S; S.d[S.b8 + 22018 + this.r] = v; }
-  get leaderSeenPosY(): number { const S = this.S; return S.d[S.b8 + 22274 + this.r]; } set leaderSeenPosY(v: number) { const S = this.S; S.d[S.b8 + 22274 + this.r] = v; }
-  get leaderSeenPosZ(): number { const S = this.S; return S.d[S.b8 + 22530 + this.r]; } set leaderSeenPosZ(v: number) { const S = this.S; S.d[S.b8 + 22530 + this.r] = v; }
+  get leaderSeenPos(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + 23810], S.d[i + 24066], S.d[i + 24322]]; }
+  set leaderSeenPos(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + 23810] = v[0]; S.d[i + 24066] = v[1]; S.d[i + 24322] = v[2]; }
+  get leaderSeenPosX(): number { const S = this.S; return S.d[S.b8 + 23810 + this.r]; } set leaderSeenPosX(v: number) { const S = this.S; S.d[S.b8 + 23810 + this.r] = v; }
+  get leaderSeenPosY(): number { const S = this.S; return S.d[S.b8 + 24066 + this.r]; } set leaderSeenPosY(v: number) { const S = this.S; S.d[S.b8 + 24066 + this.r] = v; }
+  get leaderSeenPosZ(): number { const S = this.S; return S.d[S.b8 + 24322 + this.r]; } set leaderSeenPosZ(v: number) { const S = this.S; S.d[S.b8 + 24322 + this.r] = v; }
   /** lockdown follower: seconds the man he trails has not moved (planted beside a leader who never moves again, he turns to look at him — guards.ts followLeader) */
-  get leaderStillT(): number { const S = this.S; return S.d[S.b8 + 22786 + this.r]; } set leaderStillT(v: number) { const S = this.S; S.d[S.b8 + 22786 + this.r] = v; }
+  get leaderStillT(): number { const S = this.S; return S.d[S.b8 + 24578 + this.r]; } set leaderStillT(v: number) { const S = this.S; S.d[S.b8 + 24578 + this.r] = v; }
   /** (dead, found) the aftermath script's bookkeeping ON the body (guards.ts bodyAftermath): how many living men have reached it (1 = the finder covering it, 2 = the one who says '…christ') and when the last did, whether that second-man line and the one closing line have been said, and a counter dealing the directions they widen out along */
-  get bodyVisits(): number { const S = this.S; return S.d[S.b8 + 23042 + this.r]; } set bodyVisits(v: number) { const S = this.S; S.d[S.b8 + 23042 + this.r] = v; }
+  get bodyVisits(): number { const S = this.S; return S.d[S.b8 + 24834 + this.r]; } set bodyVisits(v: number) { const S = this.S; S.d[S.b8 + 24834 + this.r] = v; }
   /** (dead, found) the aftermath script's bookkeeping ON the body (guards.ts bodyAftermath): how many living men have reached it (1 = the finder covering it, 2 = the one who says '…christ') and when the last did, whether that second-man line and the one closing line have been said, and a counter dealing the directions they widen out along */
-  get bodyVisitT(): number { const S = this.S; return S.d[S.b8 + 23298 + this.r]; } set bodyVisitT(v: number) { const S = this.S; S.d[S.b8 + 23298 + this.r] = v; }
+  get bodyVisitT(): number { const S = this.S; return S.d[S.b8 + 25090 + this.r]; } set bodyVisitT(v: number) { const S = this.S; S.d[S.b8 + 25090 + this.r] = v; }
   /** (dead, found) the aftermath script's bookkeeping ON the body (guards.ts bodyAftermath): how many living men have reached it (1 = the finder covering it, 2 = the one who says '…christ') and when the last did, whether that second-man line and the one closing line have been said, and a counter dealing the directions they widen out along */
-  get bodyRemarked(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 8192) !== 0; } set bodyRemarked(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 8192 : w & 4294959103; }
+  get bodyRemarked(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 8192) !== 0; } set bodyRemarked(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 8192 : w & 4294959103; }
   /** (dead, found) the aftermath script's bookkeeping ON the body (guards.ts bodyAftermath): how many living men have reached it (1 = the finder covering it, 2 = the one who says '…christ') and when the last did, whether that second-man line and the one closing line have been said, and a counter dealing the directions they widen out along */
-  get bodyClosed(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 16384) !== 0; } set bodyClosed(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 16384 : w & 4294950911; }
+  get bodyClosed(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 16384) !== 0; } set bodyClosed(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 16384 : w & 4294950911; }
   /** (dead, found) the aftermath script's bookkeeping ON the body (guards.ts bodyAftermath): how many living men have reached it (1 = the finder covering it, 2 = the one who says '…christ') and when the last did, whether that second-man line and the one closing line have been said, and a counter dealing the directions they widen out along */
-  get bodyFan(): number { const S = this.S; return S.d[S.b8 + 23554 + this.r]; } set bodyFan(v: number) { const S = this.S; S.d[S.b8 + 23554 + this.r] = v; }
-  get sweep(): number { const S = this.S; return S.d[S.b8 + 23810 + this.r]; } set sweep(v: number) { const S = this.S; S.d[S.b8 + 23810 + this.r] = v; }
-  get beamDir(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + 24066], S.d[i + 24322], S.d[i + 24578]]; }
-  set beamDir(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + 24066] = v[0]; S.d[i + 24322] = v[1]; S.d[i + 24578] = v[2]; }
-  get beamDirX(): number { const S = this.S; return S.d[S.b8 + 24066 + this.r]; } set beamDirX(v: number) { const S = this.S; S.d[S.b8 + 24066 + this.r] = v; }
-  get beamDirY(): number { const S = this.S; return S.d[S.b8 + 24322 + this.r]; } set beamDirY(v: number) { const S = this.S; S.d[S.b8 + 24322 + this.r] = v; }
-  get beamDirZ(): number { const S = this.S; return S.d[S.b8 + 24578 + this.r]; } set beamDirZ(v: number) { const S = this.S; S.d[S.b8 + 24578 + this.r] = v; }
+  get bodyFan(): number { const S = this.S; return S.d[S.b8 + 25346 + this.r]; } set bodyFan(v: number) { const S = this.S; S.d[S.b8 + 25346 + this.r] = v; }
+  get sweep(): number { const S = this.S; return S.d[S.b8 + 25602 + this.r]; } set sweep(v: number) { const S = this.S; S.d[S.b8 + 25602 + this.r] = v; }
+  get beamDir(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + 25858], S.d[i + 26114], S.d[i + 26370]]; }
+  set beamDir(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + 25858] = v[0]; S.d[i + 26114] = v[1]; S.d[i + 26370] = v[2]; }
+  get beamDirX(): number { const S = this.S; return S.d[S.b8 + 25858 + this.r]; } set beamDirX(v: number) { const S = this.S; S.d[S.b8 + 25858 + this.r] = v; }
+  get beamDirY(): number { const S = this.S; return S.d[S.b8 + 26114 + this.r]; } set beamDirY(v: number) { const S = this.S; S.d[S.b8 + 26114 + this.r] = v; }
+  get beamDirZ(): number { const S = this.S; return S.d[S.b8 + 26370 + this.r]; } set beamDirZ(v: number) { const S = this.S; S.d[S.b8 + 26370 + this.r] = v; }
   /** where his idle looking stands: drawn off the die as he is made */
-  get lookPhase(): number { const S = this.S; return S.d[S.b8 + 24834 + this.r]; } set lookPhase(v: number) { const S = this.S; S.d[S.b8 + 24834 + this.r] = v; }
-  initGuard(): void { this.diedAt = -1; this.killerId = -1; this.missedAt = -1; this.muzzleEvalT = -1; this.lineBarkT = -100; this.gunLostAt = -1; this.torchLostAt = -1; this.lightDeadUntil = -1; this.lightLitAtLoss = true; this.doorDownUntil = -1; this.reloadT = -1; this.lastSeenT = -100; this.sightT = -100; this.ledT = -100; this.fixT = -100; this.heardUpTo = -1; this.smokeTrans = 1; this.sawBodyT = -100; this.alertBest = 1000000000; this.leaderSeenT = -1; this.bodyVisitT = -1; }
+  get lookPhase(): number { const S = this.S; return S.d[S.b8 + 26626 + this.r]; } set lookPhase(v: number) { const S = this.S; S.d[S.b8 + 26626 + this.r] = v; }
+  get routeI(): number { const S = this.S; return S.d[S.b8 + 26882 + this.r]; } set routeI(v: number) { const S = this.S; S.d[S.b8 + 26882 + this.r] = v; }
+  /** lockdown pairing: the man he trails while calm */
+  get leader(): Guard | null { const S = this.S, h = S.u[S.b4 + 66820 + this.r]; return h === 0 ? null : S.manAt(h) as Guard; } set leader(v: Guard | null) { const S = this.S; S.u[S.b4 + 66820 + this.r] = v === null ? 0 : S.handleOf((v as Guard).r); }
+  /** alarm escalation (guards.ts updateEscalation): drawn = the sidearm is out on patrol (level ≥ 1) — handProps / attachFlashlight / killGuard read it where they used to read 'patrol ⇒ torch'; followGoal: his station behind him); post = lockdown: hold this corridor junction instead of walking the route */
+  get followT(): number { const S = this.S; return S.d[S.b8 + 27138 + this.r]; } set followT(v: number) { const S = this.S; S.d[S.b8 + 27138 + this.r] = v; }
+  /** alarm escalation (guards.ts updateEscalation): drawn = the sidearm is out on patrol (level ≥ 1) — handProps / attachFlashlight / killGuard read it where they used to read 'patrol ⇒ torch'; followGoal: his station behind him); post = lockdown: hold this corridor junction instead of walking the route */
+  get followGoal(): Vec3 { const S = this.S, i = S.b8 + this.r; return [S.d[i + 27394], S.d[i + 27650], S.d[i + 27906]]; }
+  set followGoal(v: Readonly<Vec3>) { const S = this.S, i = S.b8 + this.r; S.d[i + 27394] = v[0]; S.d[i + 27650] = v[1]; S.d[i + 27906] = v[2]; }
+  get followGoalX(): number { const S = this.S; return S.d[S.b8 + 27394 + this.r]; } set followGoalX(v: number) { const S = this.S; S.d[S.b8 + 27394 + this.r] = v; }
+  get followGoalY(): number { const S = this.S; return S.d[S.b8 + 27650 + this.r]; } set followGoalY(v: number) { const S = this.S; S.d[S.b8 + 27650 + this.r] = v; }
+  get followGoalZ(): number { const S = this.S; return S.d[S.b8 + 27906 + this.r]; } set followGoalZ(v: number) { const S = this.S; S.d[S.b8 + 27906 + this.r] = v; }
+  get stuckT(): number { const S = this.S; return S.d[S.b8 + 28162 + this.r]; } set stuckT(v: number) { const S = this.S; S.d[S.b8 + 28162 + this.r] = v; }
+  get stuckN(): number { const S = this.S; return S.d[S.b8 + 28418 + this.r]; } set stuckN(v: number) { const S = this.S; S.d[S.b8 + 28418 + this.r] = v; }
+  /** walking watchdog (guards.ts notGettingAnywhere): where he last made half a metre of ground from, and the seconds since — a suspicious / searching / body-script leg that goes nowhere is dropped where he stands */
+  get stallRef(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 66564 + this.r] & 32768) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 28674], S.d[i + 28930], S.d[i + 29186]]; }
+  set stallRef(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 66564 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 66564 + this.r] = w & 4294934527; S.d[i + 28674] = 0; S.d[i + 28930] = 0; S.d[i + 29186] = 0; return; } S.u[S.b4 + 66564 + this.r] = w | 32768; S.d[i + 28674] = v[0]; S.d[i + 28930] = v[1]; S.d[i + 29186] = v[2]; }
+  get stallRefX(): number { const S = this.S; return S.d[S.b8 + 28674 + this.r]; } set stallRefX(v: number) { const S = this.S; S.d[S.b8 + 28674 + this.r] = v; }
+  get stallRefY(): number { const S = this.S; return S.d[S.b8 + 28930 + this.r]; } set stallRefY(v: number) { const S = this.S; S.d[S.b8 + 28930 + this.r] = v; }
+  get stallRefZ(): number { const S = this.S; return S.d[S.b8 + 29186 + this.r]; } set stallRefZ(v: number) { const S = this.S; S.d[S.b8 + 29186 + this.r] = v; }
+  /** walking watchdog (guards.ts notGettingAnywhere): where he last made half a metre of ground from, and the seconds since — a suspicious / searching / body-script leg that goes nowhere is dropped where he stands */
+  get stallT(): number { const S = this.S; return S.d[S.b8 + 29442 + this.r]; } set stallT(v: number) { const S = this.S; S.d[S.b8 + 29442 + this.r] = v; }
+  /** the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co */
+  get lineSide(): number { const S = this.S; return S.d[S.b8 + 29698 + this.r]; } set lineSide(v: number) { const S = this.S; S.d[S.b8 + 29698 + this.r] = v; }
+  /** the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co */
+  get lineGain(): number { const S = this.S; return S.d[S.b8 + 29954 + this.r]; } set lineGain(v: number) { const S = this.S; S.d[S.b8 + 29954 + this.r] = v; }
+  /** the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co */
+  get lineStepM(): number { const S = this.S; return S.d[S.b8 + 30210 + this.r]; } set lineStepM(v: number) { const S = this.S; S.d[S.b8 + 30210 + this.r] = v; }
+  /** the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co */
+  get lineStuckT(): number { const S = this.S; return S.d[S.b8 + 30466 + this.r]; } set lineStuckT(v: number) { const S = this.S; S.d[S.b8 + 30466 + this.r] = v; }
+  /** threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again; piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itse */
+  get pieLastT(): number { const S = this.S; return S.d[S.b8 + 30722 + this.r]; } set pieLastT(v: number) { const S = this.S; S.d[S.b8 + 30722 + this.r] = v; }
+  /** threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again; piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itse */
+  get piePrev(): Vec3 | null { const S = this.S; if ((S.u[S.b4 + 66564 + this.r] & 65536) === 0) return null; const i = S.b8 + this.r; return [S.d[i + 30978], S.d[i + 31234], S.d[i + 31490]]; }
+  set piePrev(v: Readonly<Vec3> | null) { const S = this.S, w = S.u[S.b4 + 66564 + this.r], i = S.b8 + this.r; if (v === null) { S.u[S.b4 + 66564 + this.r] = w & 4294901759; S.d[i + 30978] = 0; S.d[i + 31234] = 0; S.d[i + 31490] = 0; return; } S.u[S.b4 + 66564 + this.r] = w | 65536; S.d[i + 30978] = v[0]; S.d[i + 31234] = v[1]; S.d[i + 31490] = v[2]; }
+  get piePrevX(): number { const S = this.S; return S.d[S.b8 + 30978 + this.r]; } set piePrevX(v: number) { const S = this.S; S.d[S.b8 + 30978 + this.r] = v; }
+  get piePrevY(): number { const S = this.S; return S.d[S.b8 + 31234 + this.r]; } set piePrevY(v: number) { const S = this.S; S.d[S.b8 + 31234 + this.r] = v; }
+  get piePrevZ(): number { const S = this.S; return S.d[S.b8 + 31490 + this.r]; } set piePrevZ(v: number) { const S = this.S; S.d[S.b8 + 31490 + this.r] = v; }
+  /** threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again; piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itse */
+  get piePrevT(): number { const S = this.S; return S.d[S.b8 + 31746 + this.r]; } set piePrevT(v: number) { const S = this.S; S.d[S.b8 + 31746 + this.r] = v; }
+  initGuard(): void { this.diedAt = -1; this.killerId = -1; this.missedAt = -1; this.muzzleEvalT = -1; this.lineBarkT = -100; this.gunLostAt = -1; this.torchLostAt = -1; this.lightDeadUntil = -1; this.lightLitAtLoss = true; this.doorDownUntil = -1; this.reloadT = -1; this.lastSeenT = -100; this.sightT = -100; this.ledT = -100; this.fixT = -100; this.heardUpTo = -1; this.smokeTrans = 1; this.sawBodyT = -100; this.alertBest = 1000000000; this.leaderSeenT = -1; this.bodyVisitT = -1; this.foe = "player"; this.lineGain = -1; this.pieLastT = -100; this.piePrevT = -100; }
 }
 /** the player's own columns */
 export class PlayerCols extends ManCols {
   /** his speed, eased */
   get speedSm(): number { const S = this.S; return S.d[S.b8 + 3842 + this.r]; } set speedSm(v: number) { const S = this.S; S.d[S.b8 + 3842 + this.r] = v; }
   /** one 9 mm hit and you are down, same as the guards; Enter restarts the encounter */
-  get down(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 2) !== 0; } set down(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 2 : w & 4294967293; }
-  get crouch(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 4) !== 0; } set crouch(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 4 : w & 4294967291; }
-  get sprinting(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 8) !== 0; } set sprinting(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 8 : w & 4294967287; }
-  get backpedal(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 16) !== 0; } set backpedal(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 16 : w & 4294967279; }
-  get aimHeld(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 32) !== 0; } set aimHeld(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 32 : w & 4294967263; }
+  get down(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 2) !== 0; } set down(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 2 : w & 4294967293; }
+  get crouch(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 4) !== 0; } set crouch(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 4 : w & 4294967291; }
+  get sprinting(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 8) !== 0; } set sprinting(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 8 : w & 4294967287; }
+  get backpedal(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 16) !== 0; } set backpedal(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 16 : w & 4294967279; }
+  get aimHeld(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 32) !== 0; } set aimHeld(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 32 : w & 4294967263; }
   /** he starts with the pistol on the thigh (playtest call: hands free by default — Space grabs, a click behind a man is the takedown); E puts the selected item away / draws it again (Chaos Theory: equip / unequip); holstered + LMB behind a guard in reach = the silent takedown (its one and only input), the pistol's paths all check it */
-  get holstered(): boolean { const S = this.S; return (S.u[S.b4 + 50436 + this.r] & 64) !== 0; } set holstered(v: boolean) { const S = this.S; const w = S.u[S.b4 + 50436 + this.r]; S.u[S.b4 + 50436 + this.r] = v ? w | 64 : w & 4294967231; }
+  get holstered(): boolean { const S = this.S; return (S.u[S.b4 + 64260 + this.r] & 64) !== 0; } set holstered(v: boolean) { const S = this.S; const w = S.u[S.b4 + 64260 + this.r]; S.u[S.b4 + 64260 + this.r] = v ? w | 64 : w & 4294967231; }
   /** one 9 mm hit and you are down, same as the guards; Enter restarts the encounter */
   get hitsLeft(): number { const S = this.S; return S.d[S.b8 + 4098 + this.r]; } set hitsLeft(v: number) { const S = this.S; S.d[S.b8 + 4098 + this.r] = v; }
   /** HUD sound meter: the loudest thing you did lately (hearing-model level, decays) */
   get noise(): number { const S = this.S; return S.d[S.b8 + 4610 + this.r]; } set noise(v: number) { const S = this.S; S.d[S.b8 + 4610 + this.r] = v; }
   /** how far the walk cycle has come since the last footfall filed, in turns, either way added up, 1 at the most (player.ts FOOTFALL.once; 1 = far enough, which is where it starts, and where it stays while the key has never been on) */
-  get stepTravel(): number { const S = this.S; return S.d[S.b8 + 8194 + this.r]; } set stepTravel(v: number) { const S = this.S; S.d[S.b8 + 8194 + this.r] = v; }
+  get stepTravel(): number { const S = this.S; return S.d[S.b8 + 9986 + this.r]; } set stepTravel(v: number) { const S = this.S; S.d[S.b8 + 9986 + this.r] = v; }
   /** how far the walk cycle has come at a footfall's speed since the last edge of it passed or footfall filed, in turns, either way added up (player.ts FOOTFALL.owed: at half a turn a footfall is owed; 0 where it starts, when he slows, after frames the footfall test was not asked, and while the key is down) */
-  get stepOwed(): number { const S = this.S; return S.d[S.b8 + 8450 + this.r]; } set stepOwed(v: number) { const S = this.S; S.d[S.b8 + 8450 + this.r] = v; }
+  get stepOwed(): number { const S = this.S; return S.d[S.b8 + 10242 + this.r]; } set stepOwed(v: number) { const S = this.S; S.d[S.b8 + 10242 + this.r] = v; }
   /** the game clock the footfall test was last asked at with the key up (-1: never) */
-  get stepAt(): number { const S = this.S; return S.d[S.b8 + 8706 + this.r]; } set stepAt(v: number) { const S = this.S; S.d[S.b8 + 8706 + this.r] = v; }
-  get lastFireT(): number { const S = this.S; return S.d[S.b8 + 13314 + this.r]; } set lastFireT(v: number) { const S = this.S; S.d[S.b8 + 13314 + this.r] = v; }
+  get stepAt(): number { const S = this.S; return S.d[S.b8 + 10498 + this.r]; } set stepAt(v: number) { const S = this.S; S.d[S.b8 + 10498 + this.r] = v; }
+  get lastFireT(): number { const S = this.S; return S.d[S.b8 + 15106 + this.r]; } set lastFireT(v: number) { const S = this.S; S.d[S.b8 + 15106 + this.r] = v; }
   /** friends.ts: his raised gun is down for a teammate in its line (FRIENDS.lowReady), and how long that line has been clear */
-  get friendLow(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 64) !== 0; } set friendLow(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 64 : w & 4294967231; }
+  get friendLow(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 64) !== 0; } set friendLow(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 64 : w & 4294967231; }
   /** friends.ts: his raised gun is down for a teammate in its line (FRIENDS.lowReady), and how long that line has been clear */
-  get friendT(): number { const S = this.S; return S.d[S.b8 + 13570 + this.r]; } set friendT(v: number) { const S = this.S; S.d[S.b8 + 13570 + this.r] = v; }
-  get hitFlash(): number { const S = this.S; return S.d[S.b8 + 13826 + this.r]; } set hitFlash(v: number) { const S = this.S; S.d[S.b8 + 13826 + this.r] = v; }
+  get friendT(): number { const S = this.S; return S.d[S.b8 + 15362 + this.r]; } set friendT(v: number) { const S = this.S; S.d[S.b8 + 15362 + this.r] = v; }
+  get hitFlash(): number { const S = this.S; return S.d[S.b8 + 15618 + this.r]; } set hitFlash(v: number) { const S = this.S; S.d[S.b8 + 15618 + this.r] = v; }
   /** a blast that left him up (samstun.ts): folded until / blind until, on the game clock, and where the flash was — the same two stamps a Guard carries */
-  get stunPosed(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 128) !== 0; } set stunPosed(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 128 : w & 4294967167; }
+  get stunPosed(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 128) !== 0; } set stunPosed(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 128 : w & 4294967167; }
   /** a sprint into a door (sprintdoor.ts): when he last put his shoulder through one and which way it turned him, and until when his hand is ripping one round (the run held to a walk) — on the game clock */
-  get doorBashAt(): number { const S = this.S; return S.d[S.b8 + 14082 + this.r]; } set doorBashAt(v: number) { const S = this.S; S.d[S.b8 + 14082 + this.r] = v; }
+  get doorBashAt(): number { const S = this.S; return S.d[S.b8 + 15874 + this.r]; } set doorBashAt(v: number) { const S = this.S; S.d[S.b8 + 15874 + this.r] = v; }
   /** a sprint into a door (sprintdoor.ts): when he last put his shoulder through one and which way it turned him, and until when his hand is ripping one round (the run held to a walk) — on the game clock */
-  get doorBashLean(): number { const S = this.S; return S.d[S.b8 + 14338 + this.r]; } set doorBashLean(v: number) { const S = this.S; S.d[S.b8 + 14338 + this.r] = v; }
+  get doorBashLean(): number { const S = this.S; return S.d[S.b8 + 16130 + this.r]; } set doorBashLean(v: number) { const S = this.S; S.d[S.b8 + 16130 + this.r] = v; }
   /** a sprint into a door (sprintdoor.ts): when he last put his shoulder through one and which way it turned him, and until when his hand is ripping one round (the run held to a walk) — on the game clock */
-  get doorRipUntil(): number { const S = this.S; return S.d[S.b8 + 14594 + this.r]; } set doorRipUntil(v: number) { const S = this.S; S.d[S.b8 + 14594 + this.r] = v; }
+  get doorRipUntil(): number { const S = this.S; return S.d[S.b8 + 16386 + this.r]; } set doorRipUntil(v: number) { const S = this.S; S.d[S.b8 + 16386 + this.r] = v; }
   /** a sprint into a door (sprintdoor.ts): when he last put his shoulder through one and which way it turned him, and until when his hand is ripping one round (the run held to a walk) — on the game clock */
-  get doorKickTail(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 256) !== 0; } set doorKickTail(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 256 : w & 4294967039; }
+  get doorKickTail(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 256) !== 0; } set doorKickTail(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 256 : w & 4294967039; }
   /** the look his head was last given against that turn, and the game time it was given on (player.ts's sprint facing; game.ts takes it back off the frame nobody renews it) */
-  get doorHead(): number { const S = this.S; return S.d[S.b8 + 14850 + this.r]; } set doorHead(v: number) { const S = this.S; S.d[S.b8 + 14850 + this.r] = v; }
+  get doorHead(): number { const S = this.S; return S.d[S.b8 + 16642 + this.r]; } set doorHead(v: number) { const S = this.S; S.d[S.b8 + 16642 + this.r] = v; }
   /** the look his head was last given against that turn, and the game time it was given on (player.ts's sprint facing; game.ts takes it back off the frame nobody renews it) */
-  get doorHeadT(): number { const S = this.S; return S.d[S.b8 + 15106 + this.r]; } set doorHeadT(v: number) { const S = this.S; S.d[S.b8 + 15106 + this.r] = v; }
+  get doorHeadT(): number { const S = this.S; return S.d[S.b8 + 16898 + this.r]; } set doorHeadT(v: number) { const S = this.S; S.d[S.b8 + 16898 + this.r] = v; }
   /** the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor */
-  get dragYaw(): number { const S = this.S; return S.d[S.b8 + 15362 + this.r]; } set dragYaw(v: number) { const S = this.S; S.d[S.b8 + 15362 + this.r] = v; }
+  get dragYaw(): number { const S = this.S; return S.d[S.b8 + 17154 + this.r]; } set dragYaw(v: number) { const S = this.S; S.d[S.b8 + 17154 + this.r] = v; }
   /** the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor */
-  get dragNoiseT(): number { const S = this.S; return S.d[S.b8 + 15618 + this.r]; } set dragNoiseT(v: number) { const S = this.S; S.d[S.b8 + 15618 + this.r] = v; }
+  get dragNoiseT(): number { const S = this.S; return S.d[S.b8 + 17410 + this.r]; } set dragNoiseT(v: number) { const S = this.S; S.d[S.b8 + 17410 + this.r] = v; }
   /** the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor */
-  get dragStuckT(): number { const S = this.S; return S.d[S.b8 + 15874 + this.r]; } set dragStuckT(v: number) { const S = this.S; S.d[S.b8 + 15874 + this.r] = v; }
+  get dragStuckT(): number { const S = this.S; return S.d[S.b8 + 17666 + this.r]; } set dragStuckT(v: number) { const S = this.S; S.d[S.b8 + 17666 + this.r] = v; }
   /** seconds left of the rifle coming off the sling into the hands (or of any change of what is in them that involves it): no round or ring meanwhile */
-  get equipT(): number { const S = this.S; return S.d[S.b8 + 16130 + this.r]; } set equipT(v: number) { const S = this.S; S.d[S.b8 + 16130 + this.r] = v; }
+  get equipT(): number { const S = this.S; return S.d[S.b8 + 17922 + this.r]; } set equipT(v: number) { const S = this.S; S.d[S.b8 + 17922 + this.r] = v; }
   /** walking-pace multiplier set with the mouse wheel, PACE_MIN‥1 of the walk / crouch-walk speed (sprint is its own held modifier); shown as ticks in the kit column */
-  get pace(): number { const S = this.S; return S.d[S.b8 + 16386 + this.r]; } set pace(v: number) { const S = this.S; S.d[S.b8 + 16386 + this.r] = v; }
+  get pace(): number { const S = this.S; return S.d[S.b8 + 18178 + this.r]; } set pace(v: number) { const S = this.S; S.d[S.b8 + 18178 + this.r] = v; }
   /** walking-pace multiplier set with the mouse wheel, PACE_MIN‥1 of the walk / crouch-walk speed (sprint is its own held modifier); shown as ticks in the kit column */
-  get paceShownT(): number { const S = this.S; return S.d[S.b8 + 16642 + this.r]; } set paceShownT(v: number) { const S = this.S; S.d[S.b8 + 16642 + this.r] = v; }
-  get nv(): boolean { const S = this.S; return (S.u[S.b4 + 52484 + this.r] & 512) !== 0; } set nv(v: boolean) { const S = this.S; const w = S.u[S.b4 + 52484 + this.r]; S.u[S.b4 + 52484 + this.r] = v ? w | 512 : w & 4294966783; }
-  get nvAmount(): number { const S = this.S; return S.d[S.b8 + 16898 + this.r]; } set nvAmount(v: number) { const S = this.S; S.d[S.b8 + 16898 + this.r] = v; }
+  get paceShownT(): number { const S = this.S; return S.d[S.b8 + 18434 + this.r]; } set paceShownT(v: number) { const S = this.S; S.d[S.b8 + 18434 + this.r] = v; }
+  get nv(): boolean { const S = this.S; return (S.u[S.b4 + 66564 + this.r] & 512) !== 0; } set nv(v: boolean) { const S = this.S; const w = S.u[S.b4 + 66564 + this.r]; S.u[S.b4 + 66564 + this.r] = v ? w | 512 : w & 4294966783; }
+  get nvAmount(): number { const S = this.S; return S.d[S.b8 + 18690 + this.r]; } set nvAmount(v: number) { const S = this.S; S.d[S.b8 + 18690 + this.r] = v; }
   initPlayer(): void { this.stepTravel = 1; this.stepAt = -1; this.holstered = true; this.hitsLeft = 1; this.lastFireT = -10; this.friendT = -10; this.doorBashAt = -10; this.doorRipUntil = -1; this.doorHeadT = -1; this.pace = 1; this.paceShownT = -10; }
 }
 /** the animator's kept state */

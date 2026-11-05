@@ -12,7 +12,8 @@
 //   group   'hot' read every tick by the fights (position, facing, velocity, stance, health, alert state, goal) · 'cold' the rest · 'animator' the animator's. The
 //           columns are laid out hot before cold, so a walk over the men reads the fewest lines.
 //   type    'f64' a double · 'u32' / 'i32' a word · 'bool' a bit of a word of truths · 'vec3' three doubles · 'vec3?' three doubles and a bit that says there are any ·
-//           an array of strings, a word holding the place in that list.
+//           an array of strings, a word holding the place in that list · { man, also } a word naming a man (null, one of the words `also`, or the man himself, by a
+//           handle: a stale one throws by name) and reading as his object.
 //   digest  game/digest.ts reads it, so a run's digest holds it.
 //   init    what a new man's column starts at, when it is not zero (false, the first word of a list).
 //   why     what it is, when its name does not say.
@@ -20,7 +21,9 @@
 //
 // STAYS WITH THE OBJECT: `KEPT` names a field that belongs to a man and is NOT a column, and why: 'dressing' only the picture, the sound or the HUD reads it · 'object' it
 // holds what a column cannot (a list, a closure, a record that has its own family to move with).
-export type ColType = 'f64' | 'u32' | 'i32' | 'bool' | 'vec3' | 'vec3?' | readonly (string | null)[];
+/** a column that names a man: the class his object is, and the words it may also hold (null, the words, a man) */
+export interface ManRef { readonly man: string; readonly also: readonly string[] }
+export type ColType = 'f64' | 'u32' | 'i32' | 'bool' | 'vec3' | 'vec3?' | readonly (string | null)[] | ManRef;
 export type ColOn = 'man' | 'guard' | 'player' | 'anim';
 export type ColGroup = 'hot' | 'cold' | 'animator';
 export interface MenField { readonly name: string; readonly on: ColOn; readonly group: ColGroup; readonly type: ColType; readonly digest: boolean; readonly why?: string; readonly init?: number | boolean | string }
@@ -142,6 +145,30 @@ export const MEN_FIELDS: readonly MenField[] = [
   {"name": "sweep", "on": "guard", "group": "cold", "type": "f64", "digest": false},
   {"name": "beamDir", "on": "guard", "group": "cold", "type": "vec3", "digest": false},
   { name: 'lookPhase', on: 'guard', group: 'cold', type: 'f64', digest: false, why: 'where his idle looking stands: drawn off the die as he is made' },
+  // WHERE HE IS GOING AND WHY: his route, his goal, the watchdogs on his walk, who he trails
+  {"name": "routeI", "on": "guard", "group": "cold", "type": "f64", "digest": false},
+  {"name": "wp", "on": "guard", "group": "hot", "type": "f64", "digest": true},
+  {"name": "wait", "on": "guard", "group": "hot", "type": "f64", "digest": true},
+  {"name": "pathI", "on": "guard", "group": "hot", "type": "f64", "digest": false},
+  {"name": "repathT", "on": "guard", "group": "hot", "type": "f64", "digest": false},
+  {"name": "pathGoal", "on": "guard", "group": "hot", "type": "vec3?", "digest": false},
+  {"name": "foe", "on": "guard", "group": "hot", "type": {"man": "Guard", "also": ["player"]}, "digest": false, "init": "player", "why": "his foe right now (see Foe): 'player' from birth for the guard side (never anything else — no unit is hostile to staff), chosen each frame by salience among the hostile characters in his sight for the other sides (guards.ts acquireFoe), null = nobody acquired yet / his man is dead and no other shows"},
+  {"name": "leader", "on": "guard", "group": "cold", "type": {"man": "Guard", "also": []}, "digest": false, "why": "lockdown pairing: the man he trails while calm"},
+  {"name": "hold", "on": "guard", "group": "hot", "type": "bool", "digest": false, "why": "scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over)"},
+  {"name": "pinned", "on": "guard", "group": "hot", "type": "bool", "digest": false, "why": "scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in"},
+  {"name": "followT", "on": "guard", "group": "cold", "type": "f64", "digest": false, "why": "alarm escalation (guards.ts updateEscalation): drawn = the sidearm is out on patrol (level ≥ 1) — handProps / attachFlashlight / killGuard read it where they used to read 'patrol ⇒ torch'; followGoal: his station behind him); post = lockdown: hold this corridor junction instead of walking the route"},
+  {"name": "followGoal", "on": "guard", "group": "cold", "type": "vec3", "digest": false, "why": "alarm escalation (guards.ts updateEscalation): drawn = the sidearm is out on patrol (level ≥ 1) — handProps / attachFlashlight / killGuard read it where they used to read 'patrol ⇒ torch'; followGoal: his station behind him); post = lockdown: hold this corridor junction instead of walking the route"},
+  {"name": "stuckT", "on": "guard", "group": "cold", "type": "f64", "digest": false},
+  {"name": "stuckN", "on": "guard", "group": "cold", "type": "f64", "digest": false},
+  {"name": "stallRef", "on": "guard", "group": "cold", "type": "vec3?", "digest": false, "why": "walking watchdog (guards.ts notGettingAnywhere): where he last made half a metre of ground from, and the seconds since — a suspicious / searching / body-script leg that goes nowhere is dropped where he stands"},
+  {"name": "stallT", "on": "guard", "group": "cold", "type": "f64", "digest": false, "why": "walking watchdog (guards.ts notGettingAnywhere): where he last made half a metre of ground from, and the seconds since — a suspicious / searching / body-script leg that goes nowhere is dropped where he stands"},
+  {"name": "lineSide", "on": "guard", "group": "cold", "type": "f64", "digest": false, "why": "the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co"},
+  {"name": "lineGain", "on": "guard", "group": "cold", "type": "f64", "digest": false, "init": -1, "why": "the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co"},
+  {"name": "lineStepM", "on": "guard", "group": "cold", "type": "f64", "digest": false, "why": "the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co"},
+  {"name": "lineStuckT", "on": "guard", "group": "cold", "type": "f64", "digest": false, "why": "the side-step round a colleague (guards.ts lineStep): lineSide = which way the step under way goes (−1 / +1 along the square-off-the-line basis, 0 = none); lineGain / lineStepM = how far last frame's step should have left him from its goal, and how long that step was (a step handed straight back by a chair wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT co"},
+  {"name": "pieLastT", "on": "guard", "group": "cold", "type": "f64", "digest": false, "init": -100, "why": "threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again; piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itse"},
+  {"name": "piePrev", "on": "guard", "group": "cold", "type": "vec3?", "digest": false, "why": "threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again; piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itse"},
+  {"name": "piePrevT", "on": "guard", "group": "cold", "type": "f64", "digest": false, "init": -100, "why": "threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again; piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itse"},
 ];
 
 export const MEN_KEPT: readonly MenKept[] = [];

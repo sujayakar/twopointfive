@@ -576,9 +576,6 @@ export class Guard extends GuardCols {
   char: Character; 
   /** his name on the net (CALLSIGNS by roster index; a spawned unit's given name) */
   callsign: string;
-  /** his foe right now (see Foe): 'player' from birth for the guard side (never anything else — no unit is hostile to staff), chosen each frame by salience among
-   *  the hostile characters in his sight for the other sides (guards.ts acquireFoe), null = nobody acquired yet / his man is dead and no other shows */
-  foe: Foe = 'player';
   /** the player an enemy has in mind, by seat, in a game of more than one seat (seats.ts facedSeat; never written in a game of one) */
   declare faces?: number;
   /** the route he walks: the level's (level.routes[routeI]) for staff, a one-point synthetic one for a spawned unit (routeI −1) — read as gd.route everywhere the
@@ -592,9 +589,7 @@ export class Guard extends GuardCols {
   /** in a room fight (roomfight.ts sets it every frame he is in one): his side's multipliers on the aim model's settle time and cone — takes TRAINED's place, and a
    *  pinned man with it earns his track like anybody instead of standing on 1 */
   skill: { settleK: number; spreadK: number } | null = null;
-  routeI: number; wp = 0; wait = 0; lastKnown: Vec3 | null = null; 
-  hold = false;                  // scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over)
-  pinned = false;                // scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in
+  lastKnown: Vec3 | null = null; 
   /** Sam has him from behind (player.ts Hold — docs/internal/grab-interrogate-design.md §2.1): NOT a state — his `state` stays what it was so what he knew survives
    *  it — but a side record updateGuard branches on before anything else, the way it does for a scripted man: no senses, no feet of his own (updateHold places and
    *  turns him), no voice but his answers to Sam (guards.ts say drops the rest), off the net (guards.ts offNet: the radio check asks after him and sends somebody
@@ -618,12 +613,12 @@ export class Guard extends GuardCols {
    *  wedged against the table, a leaf, a man standing on the spot reads as no gain: lineStuckT counts those seconds); lineFail = the sides that went nowhere from
    *  about `pos` lately (bit 0 = −, bit 1 = +, stamped `t`) — not offered again from there until he has moved off or it has lapsed, so a blocked side and a
    *  colleague-fouled other side make 'none' (push past / wait) instead of the same quarter-metre into the same chair every second for as long as the scrum holds */
-  lineSide = 0; lineGain = -1; lineStepM = 0; lineStuckT = 0; lineFail: { pos: Vec3; sides: number; t: number } | null = null;
+  lineFail: { pos: Vec3; sides: number; t: number } | null = null;
   /** (living) the found body this man's current suspicion is about, and where he is in its short script: walking up ('to' his own spot short of it), covering it,
    *  widening out to a search point away from it ('fan'); null = ordinary suspicion. Cleared whenever he leaves 'suspicious'. */
   bodyDuty: { body: Guard; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: Vec3 | null } | null = null;
   dropped: Item | null = null;   // the torch / pistol that left his hand when he died (the sputtering light rides it)
-  path: Vec3[] = []; pathI = 0; repathT = 0; pathGoal: Vec3 | null = null;
+  path: Vec3[] = []; 
   /** What he carries and its state (weapons.ts: the row from his route — the 9 mm service pistol unless the level says otherwise — with its chamber and magazine;
    *  guards.ts fires it and reads its cadence, fireWeapon its report / flash / spread, killGuard what falls out of the hand). fireCd: seconds until the trigger
    *  will go again (the AI's beat: cadence, the reaction on going alert, the shield's floor). reloadT: his reload BEAT — seconds left standing there changing
@@ -647,7 +642,6 @@ export class Guard extends GuardCols {
   /** a teammate's gun let go of for a two-handed job (workstow.ts mateStow / mateStowTick): the game time his hands left it, the time it is back up (−1: the job
    *  still runs) and whether the job fed it this frame. null = it is in his hands. Not saved: a load finds it there. */
   workStow: { upT: number; fed: boolean } | null = null;
-  stuckT = 0; stuckN = 0;
   /** stamp fixT if the fix has moved since last looked at (called once a frame by updateGuard; a fix that creeps with a man in view moves it along too) */
   trackFix(now: number) { const lk = this.lastKnown; if (!lk) { this.fixRef = null; return; } if (!this.fixRef || Math.hypot(lk[0] - this.fixRefX, lk[2] - this.fixRefZ) > 0.5) { this.fixRef = v3.copy(lk); this.fixT = now; } }
   /** the search that reasons about darkness (guards.ts searchPlanFor): the hide spots dealt round the fix, scored dark × cover × plausible off the renderer's own
@@ -656,18 +650,15 @@ export class Guard extends GuardCols {
   /** threshold discipline (guards.ts pieDoorway): the doorway his alert / search path is taking him through right now and where he is in slicing it — null when
    *  none; pieLast / pieLastT: the door he last went through that way (or any way, while hunting) and when, so the one he has just come through is not pied again;
    *  piePrev / piePrevT: where he stood the last frame that was looked at (the crossing itself is his stride cutting the frame line) */
-  pieing: Pieing | null = null; pieLast: Door | null = null; pieLastT = -100; piePrev: Vec3 | null = null; piePrevT = -100;
+  pieing: Pieing | null = null; pieLast: Door | null = null; 
   /** the human shield's standoff (guards.ts standoffPerceive / standoffAlert, docs/internal/grab-interrogate-design.md §2.2): a colleague held in Sam's arm in his
    *  view — he is 'alert' throughout, but instead of the chase and the shot he keeps his distance, works round toward Sam's back for a clean line, and talks; null
    *  when nobody he can see is being held (dropped the moment the hold ends, or four seconds after he last had the pair in view) */
   standoff: Standoff | null = null;
-  stallRef: Vec3 | null = null; stallT = 0;   // walking watchdog (guards.ts notGettingAnywhere): where he last made half a metre of ground from, and the seconds since — a suspicious / searching / body-script leg that goes nowhere is dropped where he stands
   script: GuardScript | null = null;   // scripted choreography (tour beats / squad drills): while set, squad.ts drives him and the AI state machine is bypassed (the live clearing dispatcher runs a light perception pass for him; tour scripts run blind)
   task: GuardTask | null = null;   // errands that should survive the normal suspicion decay (reset the breaker; look at the rack that dropped off the network; walk a silent colleague's route)
-  /** alarm escalation (guards.ts updateEscalation): drawn = the sidearm is out on patrol (level ≥ 1) — handProps / attachFlashlight / killGuard read it where they
-   *  used to read 'patrol ⇒ torch'; leader = lockdown pairing: trail this man while calm (followT: re-plan clock, ≤ 2 path plans a second; followGoal: his
-   *  station behind him); post = lockdown: hold this corridor junction instead of walking the route */
-  leader: Guard | null = null; followT = 0; followGoal: Vec3 = [0, 0, 0]; post: Chokepoint | null = null;
+  /** post = lockdown: hold this corridor junction instead of walking the route */
+  post: Chokepoint | null = null;
   /** `look` (a spawned unit's, guards.ts spawnUnit — absent for the level's men, whose call is unchanged): the trouser tint, the facing (a one-point route has no
    *  first leg to face down), the name he answers to, his side. */
   constructor(men: MenStore, ch: GltfCharacter, id: number, route: PatrolRoute, routeI: number, flashlight: RtLight, tint: Vec3, look?: { tint2?: Vec3; yaw?: number; name?: string; team?: Team }) {
