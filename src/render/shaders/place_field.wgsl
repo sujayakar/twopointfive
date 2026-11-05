@@ -61,7 +61,8 @@ fn reading(c: vec2i) -> vec2f {
     let pc = (vec2f(p) + 0.5) * toCell; let steps = i32(ceil(length(pc - me) * 2.0)); var seen = true;
     for (var j = 1; j <= steps; j++) { if (maskAt(vec2i(floor(mix(me, pc, f32(j) / f32(steps))))) == 255u) { seen = false; break; } }
     if (!seen) { continue; }
-    let l = dot(textureLoad(diceTex, vec3i(p.x, iy, p.y), 0).xyz, vec3f(0.2126, 0.7152, 0.0722));
+    let tap = textureLoad(diceTex, vec3i(p.x, iy, p.y), 0);
+    let l = dot(tap.xyz, vec3f(0.2126, 0.7152, 0.0722)) + tap.w;   // (+ the sky a portal took out of this face to send itself: rc.wgsl rcDice. 0 with no portal lit)
     let wk = w * select(U.dark, 1.0, l > 1e-6);
     s += wk * log2(max(l, 1e-6)); ws += wk;
   }
