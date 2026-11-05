@@ -130,7 +130,8 @@ export async function netquietCheck(): Promise<boolean> {
   const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
   const { LASTSTAND } = await import(`${ROOT}/src/game/laststand.ts`);
   const D = await import(`${ROOT}/src/game/dialogue.ts`);
-  const { RUNNER, runnerBreak, runnerFled, runnerOwns } = await import(`${ROOT}/src/game/runner.ts`);
+  const { RUNNER, runnerBreak } = await import(`${ROOT}/src/game/runner.ts`);
+  const { hasHim, OWN } = await import(`${ROOT}/src/game/owner.ts`);
   const { DARKDOOR } = await import(`${ROOT}/src/game/darkdoor.ts`);
   const BREAK = process.env.NETQUIET_BREAK === '1'; let all = true;
   const later = { runner: RUNNER.on, door: DARKDOOR.on };
@@ -439,13 +440,13 @@ export async function netquietCheck(): Promise<boolean> {
         R.step(30); for (const t of g.targets) if (!t.on) g.toggleTarget(t);
         const spots: number[][] = []; for (let a = 0; a < 12 && spots.length < dead.length; a++) { const y = a * Math.PI / 6, q = [T.char.pos[0] + Math.sin(y) * 1.7, 0, T.char.pos[2] + Math.cos(y) * 1.7]; if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([T.char.pos[0], 1.5, T.char.pos[2]], [q[0], 1.2, q[2]]) && spots.every(o => flat(o, q) > 0.8)) spots.push(q); }
         const took = run && runnerBreak(g, M); R.step(60);   // (the shout, the beat, the drop: he has run before the others fall)
-        const fled = runnerFled(M), mShock0 = shockOf(M), mLines0 = NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length;
+        const fled = M.fled, mShock0 = shockOf(M), mLines0 = NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length;
         dead.forEach((m, i) => { R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); R.step(1); R.put(m, spots[i] ?? T.char.pos); R.face(T, m.char.pos); killGuard(g, m, [0, 0, 1], true, 'shot', 'player'); });
         // the squad's check, as enemysquads.ts files it: T asks for a dead mate by name on the squad's net (does the man who ran hear it?), then for M himself
         netQuietAsked(g, T, dead[0], squad); const heard = !!netQuietOf(M)?.asked.has(dead[0].char.id), mShock1 = shockOf(M);
         const q0 = netQuietOf(T)?.quiet ?? 0, s0 = shockOf(T); netQuietAsked(g, T, M, squad); const silent = !!netQuietOf(T)?.asked.has(M.char.id), dq = (netQuietOf(T)?.quiet ?? 0) - q0, ds = shockOf(T) - s0;
         let lowAt = NaN, mineM = 0, actM = 0; const said = listen(R, [T], 14, t => { if (Number.isNaN(lowAt) && netQuietOf(T)?.last === 3) lowAt = t; if (netQuietHolds(M) || netFeedHolds(M)) mineM++; actM = Math.max(actM, netQuietOf(M)?.last ?? 0); });
-        return { T, M, took, fled, owned: runnerOwns(M), onFloor: g.guards.includes(M), alive: M.state !== 'dead', heard, mShock: mShock1 - mShock0, silent, dq, ds, want: K.unanswered * kOf(g, T), lowAt, act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0, mineM, actM, mLines: NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length - mLines0, alone: said.find(s => inPool('alone', s.text) || inPool('last', s.text)) };
+        return { T, M, took, fled, owned: hasHim(M, OWN.runner), onFloor: g.guards.includes(M), alive: M.state !== 'dead', heard, mShock: mShock1 - mShock0, silent, dq, ds, want: K.unanswered * kOf(g, T), lowAt, act: netQuietOf(T)?.last, crouch: T.char.anim.crouch ?? 0, mineM, actM, mLines: NETQUIET_LOG.filter((l: any) => l.id === M.char.id).length - mLines0, alone: said.find(s => inPool('alone', s.text) || inPool('last', s.text)) };
       };
       const A = await left(true), C = await left(false);
       line(A.took && A.fled && A.alive && !A.heard && near(A.mShock, 0) && A.silent && A.dq === 1 && near(A.ds, A.want, 1e-6) && A.mineM === 0 && A.actM === 0 && A.mLines === 0 && !!A.alone && A.act === 3 && A.crouch > LOWC,

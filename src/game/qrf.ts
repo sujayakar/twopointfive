@@ -43,7 +43,6 @@ import { radioHand } from './handwork';
 import { MAX_SKINNED, spawnUnit, despawnUnit, escalationOf, hearingCheck, canSee, canSeeChar, sightGain, sightGainOn, bodyInView, pointInView, standoffPerceive, resetChase, bodyPos, bubbleSecs } from './guards';
 import { hostileTo, foeChar } from './teams';
 import { PICTURE, ideasOf } from './picture';
-import { runnerOwns } from './runner';
 import { SQUAD_MAX_MEN } from '../scene/scenarios';
 import { order, endGuardScript, inBounds } from './squad';
 import { sideOf } from './orders';
@@ -61,6 +60,7 @@ import { isBreathing } from './game';
 import { chronRadio, chronicle } from './chronicle';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a spared teammate on his knee is nobody the response makes out: asked inside its sight loop only)
+import { hasHim, OWN } from './owner';
 
 // ================================================================ authored marks (TODO(level-format lane): these belong in LevelData beside routes / chokepoints / clearPlans)
 /** Everything the response needs from THIS level: the door it comes through, where the men stand on the landing behind it (in element order: #1 at the bar), the
@@ -127,7 +127,7 @@ function callers(g: Game): Guard[] {
   const R = responseOf(g), id = R?.raid?.room, nb = g.nightBreach;
   const room = id ? g.roomClear?.rooms.find(r => r.def.id === id) : null;
   const of: readonly Guard[] = room ? room.defenders : id ? [] : nb?.hostiles ?? [];
-  return of.filter(x => x.state !== 'dead' && !x.held && !runnerOwns(x) && g.guards.includes(x));
+  return of.filter(x => x.state !== 'dead' && !x.held && !hasHim(x, OWN.runner) && g.guards.includes(x));
 }
 /** a raid: the man who makes the call now — a caller who heard gunfire himself and has lived `callSecs` since (null: nobody has, yet or ever) */
 function raidVoice(g: Game): Guard | null { const Q = g.qrf; return callers(g).find(x => g.time - (Q.heardAt.get(x) ?? Infinity) >= RESPONSE.callSecs) ?? null; }
@@ -325,7 +325,7 @@ function bestFix(g: Game): { pos: Vec3; t: number } | null {
   return best?.lastKnown ? { pos: v3.copy(best.lastKnown), t: -100 } : null;
 }
 /** RESPONSE.net — is this man on the defenders' net: one of the team's side, up, not in an arm, not a runner (picture.ts onNet's rule for the staff) */
-function onTheirNet(g: Game, x: Guard): boolean { return x.team === sideOfTeam(g) && !x.civ && x.state !== 'dead' && !x.held && !runnerOwns(x) && (!raid(g) || g.qrf.men.includes(x) || callers(g).includes(x)); }   // (a raid: control hears the men at the set — what the rest know reaches it only by being told to them, picture.ts — and the team itself)
+function onTheirNet(g: Game, x: Guard): boolean { return x.team === sideOfTeam(g) && !x.civ && x.state !== 'dead' && !x.held && !hasHim(x, OWN.runner) && (!raid(g) || g.qrf.men.includes(x) || callers(g).includes(x)); }   // (a raid: control hears the men at the set — what the rest know reaches it only by being told to them, picture.ts — and the team itself)
 const netRule = (g: Game) => RESPONSE.on && RESPONSE.net && PICTURE.on && !g.touring;
 /** RESPONSE.net — control keeps what is SAID: every `wordSecs`, each idea a man on the net has held for the picture's `tellSecs` (he has said it) or was
  *  told (somebody did) is the net's word of that enemy if it is the freshest; a place since found empty adds nothing and takes nothing away (the last
@@ -779,7 +779,7 @@ function sweepNext(g: Game, Q: Qrf, from: Vec3, fix: Vec3): Target | null {
 function sweepPlaces(g: Game): { name: string; pos: Vec3 }[] {
   const S = g.level.scenarios; if (S?.response?.sweep?.length) return S.response.sweep;
   const mid = (b: { x0: number; x1: number; z0: number; z1: number }): Vec3 => [(b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2];
-  return [...(S?.quiet?.spots ?? []).map(s => ({ name: s.place, pos: mid(s.area) })), ...(raid(g) ? g.roomClear?.rooms ?? [] : []).filter(r => !r.defenders.some(h => h.state !== 'dead' && !runnerOwns(h))).map(r => ({ name: r.def.name, pos: mid(r.def.bounds) })),
+  return [...(S?.quiet?.spots ?? []).map(s => ({ name: s.place, pos: mid(s.area) })), ...(raid(g) ? g.roomClear?.rooms ?? [] : []).filter(r => !r.defenders.some(h => h.state !== 'dead' && !hasHim(h, OWN.runner))).map(r => ({ name: r.def.name, pos: mid(r.def.bounds) })),
     ...(S?.places?.areas ?? []).map(a => ({ name: a.name, pos: mid(a.bounds) }))];   // (a raid: a held room whose men have all gone quiet is a place to look — one that still answers is not walked through)
 }
 /** THE LEVEL'S BLOCK AGAINST ITS BUILT FLOOR (tools/qa/response-check.ts runs it on every level file that has one): a way's door is a door of the level;

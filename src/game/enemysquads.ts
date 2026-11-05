@@ -58,7 +58,6 @@ import type { RoomFight, FightSkill } from './roomfight';
 import type { SquadData, StructureData, StructureRoom } from '../scene/scenarios';
 import { squadBarricade } from '../scene/scenarios';
 import { frameOf, bodySeen, bodyPos, offNet, gunfireDue } from './guards';
-import { runnerFled, runnerOwns } from './runner';   // (asked inside `alive`, `fit` and contact() only: false with its switch off)
 import { chronRadio } from './chronicle';
 import { cueClass } from './cues';
 import { inBounds, order, endGuardScript } from './squad';
@@ -71,6 +70,7 @@ import { WORDS, wg } from './words';
 import { netFeedAsked, netFeedBody, netFeedHolds } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { STAYASK, stayAskHere } from './stayask';   // (squads that stay in their rooms still miss a room that goes silent: read at staging and in netSend)
+import { hasHim, OWN } from './owner';
 
 export const SQUADS = {
   /** off = a squads block is ignored: the level's defenders are one pool, as on any level without one */
@@ -322,7 +322,7 @@ export function squadSkill(g: Game, base: FightSkill): FightSkill {
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const pick = (r: [number, number]) => r[0] + simRandom() * (r[1] - r[0]);
-const alive = (gd: Guard) => gd.state !== 'dead' && !runnerFled(gd);   // (runner.ts: a man who dropped it and ran is no man of his squad's any more)
+const alive = (gd: Guard) => gd.state !== 'dead' && !gd.fled;   // (runner.ts: a man who dropped it and ran is no man of his squad's any more)
 const grown = (b: StructureRoom['bounds'], m: number) => ({ x0: b.x0 - m, x1: b.x1 + m, z0: b.z0 - m, z1: b.z1 + m });
 const roomOf = (Q: Squad, p: Vec3, m = 0) => Q.rooms.find(r => inBounds(p, m ? grown(r.bounds, m) : r.bounds)) ?? null;
 const note = (g: Game, gd: Guard | null, what: string) => { const L = g.fight.log; L.push({ t: g.time, who: gd ? gd.callsign : '-', what: `[squads] ${what}` }); if (L.length > 600) L.splice(0, 200); };
@@ -399,7 +399,7 @@ export function squadRally(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
 // ---------------------------------------------------------------- the men
 const defOf = (g: Game, gd: Guard): Def | undefined => g.fight.defs.find(D => D.gd === gd);
 /** his own wits about him: alive, not in Sam's arm, not blinded or reeling */
-const fit = (g: Game, m: Guard) => alive(m) && !m.held && g.time >= m.dazzledUntil && g.time >= m.staggerUntil && !runnerOwns(m);   // (runner.ts, false with its switch off: from his shout on he makes no call on the squad's net — his own words stand)
+const fit = (g: Game, m: Guard) => alive(m) && !m.held && g.time >= m.dazzledUntil && g.time >= m.staggerUntil && !hasHim(m, OWN.runner);   // (runner.ts, false with its switch off: from his shout on he makes no call on the squad's net — his own words stand)
 /** laststand.ts: his squad has him out on a leg, or is about to send him (he is not free to be sent anywhere else) */
 /** (the dialogue pass, tactics.ts flankCall) when this man was sent to look where the team was last put (drillLook: his `sent` row's `t0`), or null. Words only. */
 export function squadLookSince(g: Game, gd: Guard): number | null { const s = STATES.get(g)?.of.get(gd)?.sent.find(x => x.gd === gd && x.role === 'look'); return s ? s.t0 : null; }
@@ -712,7 +712,7 @@ function doorAt(g: Game, room: StructureRoom | null, at: Vec3): Door | null {
 function contact(g: Game, st: State, Q: Squad, at: Vec3, room: StructureRoom | null, byDrop = false, by: Guard | null = null, words?: { say: string; why: string }) {
   const was = Q.state, fresh = was !== 'contact'; Q.state = 'contact'; Q.contactT = g.time; Q.ready = false; if (room) Q.hitRoom = room;
   if (netAsks(g)) Q.rc?.netOut?.clear();   // (the errand the net sent its men on is over: a squad in contact counts its men as a squad in a fight does)
-  const caller = (by && !runnerOwns(by) ? by : null) ?? Q.men.find(m => fit(g, m) && !Q.sent.some(s => s.gd === m)) ?? null;   // (`by`, callBeat: the man whose call it is ends it himself)
+  const caller = (by && !hasHim(by, OWN.runner) ? by : null) ?? Q.men.find(m => fit(g, m) && !Q.sent.some(s => s.gd === m)) ?? null;   // (`by`, callBeat: the man whose call it is ends it himself)
   if (caller && (g.time - Q.calledT > SQUADS.recallSecs || fresh && g.time - Q.calledT > 6 || !!room && room !== Q.calledRoom)) {
     const door = byDrop || !SQUADS.goRound ? null : doorAt(g, room, at);
     Q.calledT = g.time; Q.calledRoom = room; st.net.push({ t: g.time, squad: Q, at: v3.copy(at), door }); if (st.net.length > 40) st.net.splice(0, 20);
