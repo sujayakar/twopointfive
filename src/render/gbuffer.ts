@@ -16,6 +16,7 @@ import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S
 import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
 import { LOOK_WITH, LOOK_PAINTED, LOOK_WORDS, lookLayerSliced, lookStuffOf, type LookName } from './lookTex';
+import { LookPool } from './lookWorkers';
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, LOOK_BUILT, LOOK_FADES, LOOK_SOAKS, LOOK_WORN, LOOK_ROLLED, LOOK_UNIT, LOOK_LAY, LOOK_THING, LOOK_UNDER, LOOK_HANDLED, LOOK_GROUND, lookLayer, lookMip } from './lookTex';
 
@@ -226,9 +227,17 @@ export class GBuffer {
       old[0].destroy(); old[1].destroy(); this.lookRoom = slots;   // (a texture destroyed after a submit lives until the work submitted with it is done)
     }
     const tex = this.lookTex;
-    for (const l of make) {
+    // ON WORKERS WHERE THERE ARE ANY (render/lookWorkers.ts): every layer of the batch is asked for at once and taken here in the batch's own order, so the
+    // slots, the order of lookMade and the moment a stuff is pointed at its slot are what they were. A layer no worker made is made here, in slices, as before
+    const pool = LookPool.open(make.length), asked = pool ? make.map(l => pool.make(l, LOOK_N, this.lookEven)) : null;
+    asked?.forEach(p => p.catch(() => { /* taken below, where the layer is then made here */ }));
+    try { for (let k = 0; k < make.length; k++) {
+      const l = make[k];
       await nextTask();
-      const m = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask), slot = this.lookSlots; let lv = [m.a, m.b];
+      let got: Awaited<ReturnType<typeof lookLayerSliced>> | null = null;
+      if (asked) { try { got = await asked[k]; this.lookBy.workers++; } catch { got = null; } }
+      if (!got) { got = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask); this.lookBy.here++; }
+      const m = got, slot = this.lookSlots; let lv = [m.a, m.b];
       for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) {
         for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, slot] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
         if (n > 1) lv = [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
@@ -237,9 +246,11 @@ export class GBuffer {
       this.lookSlots++; this.lookMade.push(LOOK_NAMES[l]);
       // a stuff is pointed at its slot only once every layer its drawing reads is in: until then it draws plain, never against an empty map
       this.lookSlot[l] = slot; this.setLook();
-    }
+    } } finally { pool?.close(); }
     this.lookFillMs += (typeof performance !== 'undefined' ? performance.now() : 0) - t0;
   }
+  /** how many layers were made on workers and how many on this thread (a check reads it; from the console: __engine.gbuffer.lookBy) */
+  lookBy = { workers: 0, here: 0 };
   /** the layers made so far, in the order of their slots (a check reads it; from the console: __engine.gbuffer.lookMade) */
   lookMade: string[] = [];
   /** how long the maps have taken to make, each batch start to end, the boot's other work between the layers included (ms; 0 = none made) */
