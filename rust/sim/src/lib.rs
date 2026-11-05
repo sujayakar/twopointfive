@@ -1149,6 +1149,12 @@ pub extern "C" fn panes_jet(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, s
     panes::jet(&cx(), [x, y, z], [dx, dy, dz], speed, amount, who);
 }
 
+/// what a game holds of what levelfit.ts counts: 0 window's bars gone · 1 clumps of a sheet
+#[no_mangle]
+pub extern "C" fn panes_cap(i: u32) -> u32 {
+    (if i == 0 { panes::MAX_BARS } else { pattern::MAX_CLUMPS }) as u32
+}
+
 // ---- a window's bar
 /// winbars.ts breakBar: 1 this bar goes, its flags as it stood filed
 #[no_mangle]

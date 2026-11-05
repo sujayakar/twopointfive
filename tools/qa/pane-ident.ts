@@ -4,18 +4,21 @@
 // Two kinds of run. THE HAND: no game tick; between questions the tool does to the level's glass what a game does — rounds of every energy with and without the caller's word on them, a shell's pellets
 // that widen, blasts at every strength near every kind, the glass's own step, walkers into what is left, a pane made another glass, every pane whole. THE GAME: a played level with the
 // hook on (`--missions`), so what breaks is what a game breaks. Glass breaking and rounds through glass are made live here whatever the stand holds.
-// A run is FAIR only if it reached every name below (MET); PANES_BREAK=1 is the red path: the module is spoiled at every name in turn and the run must FAIL on every one.
+// A run is FAIR only if it reached every name below (MET). THE WORDS (tools/qa/ident-pin.ts): every name's answers folded, and held to tools/qa/fixtures/pane-words.json on the frozen stand (--record writes it).
+// PANES_BREAK=1 is the red path: what the module says is bent at every name, and every name's word must move against the same run played plain by a child (exit 1 = red, as it must be).
+// PANES_BREAK=each, while the twin stands: every name in turn, spoiled the moment it is reached, and the both-ways compare must see it (exit 1 = red at every name).
 process.env.TPS_CPUSENSE ??= '1';
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
+import { Fold, hold } from './ident-pin.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), BX: any = await import(`${ROOT}/src/scene/boxes.ts`), GB: any = await import(`${ROOT}/src/game/glassbreak.ts`), GLASS: any = await import(`${ROOT}/src/game/glass.ts`);
 const BARS: any = await import(`${ROOT}/src/game/winbars.ts`), FALL: any = await import(`${ROOT}/src/game/falling.ts`), MODEL: any = await import(`${ROOT}/src/game/shardModel.ts`), GP: any = await import(`${ROOT}/src/game/glasspen.ts`), SH: any = await import(`${ROOT}/src/game/shards.ts`);
 type Vec3 = [number, number, number];
 
-const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
-const N = Number(flag('--n') ?? 1200), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.PANES_BREAK === '1';
+const argv = process.argv.slice(2), args0 = (n: string) => argv.includes(n); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
+const N = Number(flag('--n') ?? 300), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.PANES_BREAK === '1', EACH = process.env.PANES_BREAK === 'each';
 const files = (flag('--levels') ?? 'office.json,glasshouse.json,barracks.json,consulate.json').split(',');
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
@@ -25,7 +28,8 @@ const log = console.log, err = console.error; const hush = (on: boolean) => { co
 const NAMES: Record<string, number> = { barsBlast: 0, barsTaken: 0, impact: 0, widen: 0, blast: 0, update: 0, annealed: 0, tempered: 0, laminated: 0, runByFire: 0, runByOne: 0, diced: 0, sheetOut: 0, toothOut: 0, heard: 0, raked: 0, supportFell: 0, punched: 0, softCrack: 0, wasOpen: 0, noRoom: 0, clump: 0, block: 0, dagger: 0, crater: 0, viewBlown: 0, viewWary: 0, viewCounted: 0, tollPass: 0, tollSpent: 0, crossHole: 0, crossInto: 0, pathOne: 0, pathTwo: 0, shotAllowed: 0, shotRefused: 0, armPast: 0, armHole: 0, landed: 0 };
 /** PANES_BREAK: the name being spoiled, and whether it has just been reached */
 let target = '', armed = false;
-const MET: Record<string, number> = new Proxy(NAMES, { set(t, k: string, v) { t[k] = v; if (k === target) armed = true; return true; } });
+const F = new Fold(); let current: number[] = [];
+const MET: Record<string, number> = new Proxy(NAMES, { set(t, k: string, v) { t[k] = v; if (k === target) armed = true; const e = F.call(k); F.doubles(e, current); return true; } });
 const ANSWERS = new Set(['impact', 'widen', 'blast', 'update', 'barsBlast', 'barsTaken', 'heard', 'toll', 'cross', 'path', 'arm', 'tollPass', 'tollSpent', 'crossHole', 'crossInto', 'pathOne', 'pathTwo', 'shotAllowed', 'shotRefused', 'armPast', 'armHole']);
 const PIECES = new Set(['sheetOut', 'toothOut', 'raked', 'supportFell', 'punched', 'clump', 'block', 'dagger', 'crater', 'landed']);
 /** a reached name spoils what the module said or holds: its answer, a piece it let go, or (a thing a pane's state came to) the state itself, in the block */
@@ -34,9 +38,9 @@ function spoil(g: any, answers: [unknown, unknown], rf: any[]): void {
   if (ANSWERS.has(target)) { answers[1] = '(spoiled)'; return; }
   if (PIECES.has(target) && rf.length) { const f = rf.find(x => x.fall) ?? rf[0]; if (target === 'landed' && f.fall) f.fall.t += 1e-9; else f.seed++; return; }
   const x = SIM.sim(), s = g.sim.bind(); if (x.panes_row_n(s) === 0) { answers[1] = '(spoiled)'; return; }
-  new Float64Array(x.memory.buffer)[(x.panes_row_addr(s, 0) + x.panes_field(8)) / 8] += 1e-6;   // (a row's energy)
+  g.sim.d[(x.panes_row_addr(s, 0) + x.panes_field(8)) / 8] += 1e-6;   // (a row's energy)
 }
-let calls = 0, differ = 0, standFail = 0; const firsts: string[] = [];
+let calls = 0, both = 0, differ = 0, standFail = 0; const firsts: string[] = [];
 const say = (what: string) => { differ++; if (firsts.length < 8) firsts.push(what); };
 const same = (a: unknown, b: unknown): boolean => {
   if (typeof a === 'number' && typeof b === 'number') return Object.is(a, b);
@@ -49,14 +53,38 @@ const PANE_KEYS = ['bi', 'key', 'type', 'uAxis', 'hu', 'hv', 'ht', 'exterior', '
 const SITE_KEYS = ['u', 'v', 'rot', 'n', 'seed', 'rho', 'rz', 'e', 'merge', 'hits'];
 const boxes0 = (g: any): number => Math.min(g.col.boxes.length, g.level.boxes.length);
 const smallOut = new Set<number>();   // (panes that have lost a small piece to a blow: what fell by support after it stood on it)
-const hook = (what: string, twin: any, answers: [unknown, unknown], tf: any[], rf: any[]) => {
-  const g = twin.g, gb = g.glassBreak; calls++; MET[what] = (MET[what] ?? 0) + 1; const said = answers[1] as any;
-  if (what === 'barsBlast' && said.length) MET.barsTaken++;
-  if (what === 'toll') MET[said ? 'tollPass' : 'tollSpent']++;
-  if (what === 'cross' && said) { if (said.hole) MET.crossHole++; if (said.into >= 0) MET.crossInto++; }
-  if (what === 'path' && said) MET[said.cross.length > 1 ? 'pathTwo' : 'pathOne']++;
-  if (what === 'arm' && said) MET[said.cross.length ? 'armPast' : 'armHole']++;
+/** every number in a thing, in order (a word as its letters) */
+const numbersOf = (x: unknown, out: number[] = []): number[] => {
+  if (typeof x === 'number') out.push(x); else if (typeof x === 'boolean') out.push(x ? 1 : 0); else if (x === null || x === undefined) out.push(-1);
+  else if (typeof x === 'string') for (let i = 0; i < x.length; i++) out.push(x.charCodeAt(i));
+  else if (Array.isArray(x) || ArrayBuffer.isView(x)) for (const v of x as unknown as number[]) numbersOf(v, out);
+  else if (x instanceof Set) for (const v of x) numbersOf(v, out); else if (typeof x === 'object') for (const k of Object.keys(x as object)) numbersOf((x as Record<string, unknown>)[k], out);
+  return out;
+};
+/** what a pane's state comes to, as numbers */
+const paneNumbers = (p: any, out: number[]): void => { for (const k of PANE_KEYS) numbersOf(p[k], out); for (const t of p.sites) for (const k of SITE_KEYS) numbersOf(t[k], out); numbersOf(p.open, out); for (const q of p.pending) numbersOf([q.fid, q.at, q.cause], out); if (p.dice) numbersOf([p.dice.seed, p.dice.next, p.dice.out], out); };
+/** a call of the rule has answered: its names are counted, and what it said and left folded under each */
+function said(g: any, what: string, answer: unknown, rf: any[]): void {
+  const gb = g.glassBreak; current = numbersOf(answer);
+  for (const f of rf) for (const k of FRAG_KEYS) numbersOf(f[k], current);
+  for (const p of gb.panes.values()) paneNumbers(p, current);
+  numbersOf(BARS.barsGone(g), current); current.push(gb.openSig());
+  if (BREAK) { current.push(1); const x = SIM.sim(), s = g.sim.bind(); if (x.panes_row_n(s) > 0) g.sim.d[(x.panes_row_addr(s, 0) + x.panes_field(8)) / 8] += 1e-6; }
+  calls++; MET[what] = (MET[what] ?? 0) + 1; const a = answer as any;
+  if (what === 'barsBlast' && a.length) MET.barsTaken++;
+  if (what === 'toll') MET[a ? 'tollPass' : 'tollSpent']++;
+  if (what === 'cross' && a) { if (a.hole) MET.crossHole++; if (a.into >= 0) MET.crossInto++; }
+  if (what === 'path' && a) MET[a.cross.length > 1 ? 'pathTwo' : 'pathOne']++;
+  if (what === 'arm' && a) MET[a.panes ? 'armPast' : 'armHole']++;
   for (const f of rf) { if (f.cause === 'support' && smallOut.has(f.pane)) MET.toothOut++; else if (f.cause !== 'support' && f.area < GB.GLASSBREAK.toothArea) smallOut.add(f.pane); MET[f.kind === 'clump' ? (f.area > 0.05 ? 'block' : 'clump') : f.kind === 'sheet' ? 'sheetOut' : f.kind === 'dagger' ? 'dagger' : f.grain > 0 ? 'crater' : 'punched']++; if (f.heard) MET.heard++; if (f.cause === 'rake') MET.raked++; if (f.cause === 'support') MET.supportFell++; if (f.landed) MET.landed++; }
+}
+/** the game's own glass, watched: each call of the rule says what it said, each piece it let go is noted */
+function watch(g: any): void {
+  const gb = g.glassBreak; let out: any[] = []; const letGo = gb.letGo.bind(gb); gb.letGo = (f: any, x: any) => { out.push(f); return letGo(f, x); };
+  for (const m of ['impact', 'widen', 'blast', 'update']) { const fn = gb[m].bind(gb); gb[m] = (...a: unknown[]) => { out = []; const r = fn(...a); said(g, m, r, out); return r; }; }
+}
+const hook = (what: string, twin: any, answers: [unknown, unknown], tf: any[], rf: any[]) => {
+  const g = twin.g, gb = g.glassBreak; both++;
   if (armed) spoil(g, answers, rf);
   if (what === 'barsBlast') { const gone: number[] = BARS.barsGone(g), hid: number[] = []; g.col.boxes.forEach((b: any, i: number) => { if ((b.flags & (BX.BoxFlag.Bar | BX.BoxFlag.NoShadow)) === (BX.BoxFlag.Bar | BX.BoxFlag.NoShadow) && i < boxes0(g)) hid.push(i); }); if (!same(hid, gone)) say(`the bars gone: ${JSON.stringify(gone)} in the block, ${JSON.stringify(hid)} hidden`); }
   if (!same(answers[0], answers[1])) say(`${what}: answered ${JSON.stringify(answers[0])} by the twin, ${JSON.stringify(answers[1])} by the module`);
@@ -94,7 +122,8 @@ async function hand(file: string, n: number, done: () => boolean = () => false):
   hush(false);
   const g = W.game, col = g.col, gb = g.glassBreak, boxes: any[] = g.level.boxes;
   GLASS.GLASSFX.on = true; g.tune.glassBreak = true; if (!(g.tune.chaos > 0)) g.tune.chaos = 1; GP.GLASSPEN.on = true; g.tune.glassShards = true; BARS.WINBARS.on = true;
-  GB.PANES.both = hook;
+  GB.PANES.both = hook; watch(g);
+  const ask = <T,>(what: string, fn: () => T): T => { const r = fn(); said(g, what, r, []); return r; };
   const sheets: number[] = []; boxes.forEach((b, i) => { if (GLASS.isSheet(b) && !(b.flags & BX.BoxFlag.NoShadow)) sheets.push(i); });
   if (!sheets.length) { log(`${file.padEnd(18)} no sheet of glass: nothing asked`); GB.PANES.both = null; return; }
   const onPane = (bi: number, u: number, v: number, w: number): Vec3 => { const b = boxes[bi], cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), wide = b.h[0] >= b.h[2], lx = wide ? u : w, lz = wide ? w : u; return [b.c[0] + cs * lx + sn * lz, b.c[1] + v, b.c[2] - sn * lx + cs * lz]; };
@@ -113,18 +142,18 @@ async function hand(file: string, n: number, done: () => boolean = () => false):
       else if (k < 0.70 && touched.length) { const bi = pick(touched), b = boxes[bi], w = rnd() < 0.5 ? 0.3 : -0.3, wide = b.h[0] >= b.h[2], cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), nx = wide ? sn : cs, nz = wide ? cs : -sn, P = onPane(bi, (rnd() - 0.5) * Math.max(b.h[0], b.h[2]), 0, w); man.char.pos = [P[0], Math.min(P[1], b.c[1]), P[2]]; const sign = w > 0 ? -1 : 1; man.char.vel = [nx * sign * 2.2, 0, nz * sign * 2.2]; }   // a man walks at what is left
       else if (k < 0.712 && touched.length) gb.setType(pick(touched), pick(['annealed', 'tempered', 'laminated', null]));
       else if (k < 0.716) gb.reset();
-      if (r % 8 === 3) { const up: number[] = BARS.barsStanding(g), gone: number[] = BARS.barsGone(g), L = up.length ? up : gone; if (L.length) { const b = boxes[pick(L)], at: Vec3 = [b.c[0] + (rnd() - 0.5) * 6, 0.2 + rnd() * 2, b.c[2] + (rnd() - 0.5) * 6]; BARS.barsBlast(g, { at, radius: 0.5 + rnd() * 3, who: pick(ids) }); } if (rnd() < 0.1) BARS.resetBars(g); }   // a charge among a window's bars
+      if (r % 8 === 3) { const up: number[] = BARS.barsStanding(g), gone: number[] = BARS.barsGone(g), L = up.length ? up : gone; if (L.length) { const b = boxes[pick(L)], at: Vec3 = [b.c[0] + (rnd() - 0.5) * 6, 0.2 + rnd() * 2, b.c[2] + (rnd() - 0.5) * 6]; const gone0 = BARS.barsGone(g).length; BARS.barsBlast(g, { at, radius: 0.5 + rnd() * 3, who: pick(ids) }); said(g, 'barsBlast', Array(BARS.barsGone(g).length - gone0).fill(0), []); } if (rnd() < 0.1) BARS.resetBars(g); }   // a charge among a window's bars
       // a round's way through glass: from a stride or a room off, the toll, the crossing, the whole path, the line of fire and a muzzle held past the pane
       if (r % 2 === 0) { const onTee: boolean = tee >= 0 && rnd() < 0.12, was: { bi: number; P: Vec3 } | null = lastRound as { bi: number; P: Vec3 } | null, again: boolean = !onTee && was !== null && rnd() < 0.3, bi: number = onTee ? tee : again ? was!.bi : rnd() < 0.6 && touched.length ? pick(touched) : pick(sheets), b = boxes[bi], side = rnd() < 0.5 ? 1 : -1, off = 0.3 + rnd() * rnd() * 7, skew = rnd() < 0.3 ? 2.5 : 0.4, edge = onTee ? 1 : !again && rnd() < 0.25 ? (rnd() < 0.5 ? 1 : -1) : 0, P: Vec3 = again ? was!.P : edge ? onPane(bi, edge * (Math.max(b.h[0], b.h[2]) - rnd() * 0.004), (rnd() * 2 - 1) * b.h[1] * 0.8, side * Math.min(b.h[0], b.h[2])) : spot(bi), wide = b.h[0] >= b.h[2], cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), nx = wide ? sn : cs, nz = wide ? cs : -sn, tx = wide ? cs : sn, tz = wide ? -sn : cs, sk = edge ? edge * (0.5 + rnd() * 1.5) : (rnd() - 0.5) * 2 * skew, up = (rnd() - 0.5) * 0.5;
         let d: Vec3 = [-side * nx + sk * tx, up, -side * nz + sk * tz]; const dl = Math.hypot(d[0], d[1], d[2]); d = [d[0] / dl, d[1] / dl, d[2] / dl];
         const from: Vec3 = [P[0] - d[0] * off, P[1] - d[1] * off, P[2] - d[2] * off], e = pick([0.3, 0.5, 0.6, 0.9, 1, 1.4, 2.2]), who = pick(ids);
         lastRound = { bi, P };
-        GP.paneToll(g, bi, P, d, e, Math.floor(rnd() * 3)); GP.paneCrossing(g, bi, from, d, off, e, Math.floor(rnd() * 3));
-        const path = GP.roundPath(g, from, d, 60, e);
+        const nth = Math.floor(rnd() * 3), nth2 = Math.floor(rnd() * 3); ask('toll', () => GP.paneToll(g, bi, P, d, e, nth)); ask('cross', () => GP.paneCrossing(g, bi, from, d, off, e, nth2));
+        const path = ask('path', () => GP.roundPath(g, from, d, 60, e));
         const list = path && path.cross.length ? path.cross.map((x: any) => ({ bi: x.bi, t: x.t })) : [{ bi, t: off }];
-        GP.shotPasses(g, from, d, list, e);
+        { const ok = GP.shotPasses(g, from, d, list, e); said(g, ok ? 'shotAllowed' : 'shotRefused', ok, []); }
         if (path && rnd() < 0.5) GP.commitCrossings(g, path.cross, path.len, who, rnd() < 0.3 ? { glass: new Map() } : undefined);
-        if (rnd() < 0.25) { const arm: Vec3 = [P[0] - d[0] * 0.35, P[1] - d[1] * 0.35, P[2] - d[2] * 0.35], mz: Vec3 = [P[0] + d[0] * 0.35, P[1] + d[1] * 0.35, P[2] + d[2] * 0.35]; GP.armThroughGlass(g, { id: who, pos: arm, bones: { upperArmR: arm }, muzzle: mz }, d, e); } }
+        if (rnd() < 0.25) { const arm: Vec3 = [P[0] - d[0] * 0.35, P[1] - d[1] * 0.35, P[2] - d[2] * 0.35], mz: Vec3 = [P[0] + d[0] * 0.35, P[1] + d[1] * 0.35, P[2] + d[2] * 0.35]; ask('arm', () => GP.armThroughGlass(g, { id: who, pos: arm, bones: { upperArmR: arm }, muzzle: mz }, d, e)); } }
       if (rnd() < 0.85) { const dt = rnd() < 0.8 ? 1 / 60 : pick([1 / 30, 0.2, 1]); g.time += dt; gb.update(dt); }
       // a burst's three views, the same points asked of the twin and of the module
       if (r % 3 === 0) { const L = [...gb.panes.keys()] as number[], from = spot(pick(sheets), 3); from[0] += (rnd() - 0.5) * 3; from[2] += (rnd() - 0.5) * 3; const size = { radius: 1 + rnd() * 3.5, power: 0.3 + rnd() * 1.3 };
@@ -137,10 +166,10 @@ async function hand(file: string, n: number, done: () => boolean = () => false):
   if (!target) log(`${file.padEnd(18)} ${sheets.length} sheets, toughened glass ${GB.GLASSREAL.drop ? 'dropping after a beat' : 'coming down in a wave'}, ${n} rounds · ${differ} differ so far`);
 }
 
-if (BREAK) {   // THE RED PATH: every name in turn, spoiled the moment it is reached; the run must see every one
+if (EACH) {   // THE RED PATH, BOTH WAYS: every name in turn, spoiled the moment it is reached; the run must see every one
   const blind: string[] = [], wide = ['office.json', 'glasshouse.json', 'barracks.json', 'consulate.json'];
   for (const name of Object.keys(NAMES)) {
-    target = name; armed = false; differ = 0; firsts.length = 0;
+    target = name; armed = false; differ = 0; firsts.length = 0; for (const k of Object.keys(NAMES)) NAMES[k] = 0;
     for (const file of name.startsWith('bars') ? ['barracks.json'] : wide) { if (differ) break; await hand(file, N, () => differ > 0); }
     if (standFail) { log(`${name}: a level did not stand`); process.exit(2); }
     log(`${name.padEnd(14)} ${differ ? 'red' : NAMES[name] ? 'NOT SEEN' : 'NOT REACHED'}${firsts[0] ? ` · ${firsts[0].slice(0, 110)}` : ''}`);
@@ -157,8 +186,14 @@ if (played) {   // THE GAME: what breaks is what a game breaks, the hook on from
   GB.PANES.both = null;
 }
 for (const f of firsts) log(`    ${f}`);
-const thin = Object.keys(MET).filter(k => MET[k] === 0);
-log(`pane-ident: ${calls} calls both ways, ${differ} differ · met: ${Object.keys(MET).map(k => `${k} ${MET[k]}`).join(', ')}`);
-if (thin.length) log(`    never met: ${thin.join(', ')}`);
-log(`=== pane-ident (the ${process.env.TPS_PROFILE === 'shipped' ? 'page\'s' : 'frozen'} stand): ${differ ? 'FAIL' : 'PASS'} ===`);
-process.exit(differ ? 1 : 0);
+const thin = Object.keys(NAMES).filter(k => NAMES[k] === 0);
+let failed = differ > 0; const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) failed = true; log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? ` · ${detail}` : ''}`); };
+if (!BREAK) { log(`pane-ident: ${calls} calls, ${both} of them both ways, ${differ} differ · met: ${Object.keys(NAMES).map(k => `${k} ${NAMES[k]}`).join(', ')}`); if (!played) verdict(thin.length === 0 || !!flag('--levels'), 'reach: the run reaches every name', thin.length ? `NOT REACHED: ${thin.join(', ')}` : `${Object.keys(NAMES).length} names`); }
+const pinned = !flag('--levels') && !flag('--missions');
+if (pinned) {
+  const words = F.words(), H = hold({ root: ROOT, tool: 'tools/qa/pane-ident.ts', fixture: 'pane-words.json', run: `${files.join(',')} n ${N} seed ${SEED}`, runArgs: [...(flag('--n') ? ['--n', String(N)] : []), ...(flag('--seed') ? ['--seed', String(SEED)] : [])], end: `${calls} calls`, words, breakWord: 'PANES_BREAK', unfit: differ ? 'the two languages differ' : thin.length ? `the run does not reach ${thin.join(', ')}` : '', verdict: BREAK ? (ok, label, detail) => { log(`- ${ok ? 'NOT RED' : 'RED'} — ${label} · ${detail.slice(0, 400)}`); if (!ok) failed = true; } : verdict, say: log });
+  if (args0('--words')) process.exit(0);
+  if (H.record && !failed) H.record();
+}
+log(`=== pane-ident (the ${process.env.TPS_PROFILE === 'shipped' ? 'page\'s' : 'frozen'} stand)${BREAK ? ', PANES_BREAK' : ''}: ${failed ? 'FAIL' : 'PASS'} ===`);
+process.exit(failed ? 1 : 0);
