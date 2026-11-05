@@ -5,8 +5,10 @@
 // pavers wall to wall and the dark road stops at the wall; the yard wall is cast panels a step under the ground; the huts are painted block, paler, with a
 // dado in the firm's colour along the one long face that looks at the camera; two fields of colour and no more (the firm's, and a second for what burns:
 // the fuel point, the generating set, the cabin in the trailer park); and what the yard's own people painted for themselves: bays and their numbers, the
-// lane a lorry drives from gate to gate, the ways a man walks from door to door along the walls (they are the level's two answers: the stores' way and
-// round the back), a letter at each lettered door, a hatched square where nothing may stand, a dock's load limit. No word names a room.
+// lane a lorry drives from gate to gate, the aprons a man walks from door to door along the walls (they are the level's two answers: the stores' way and
+// round the back), a hatched square where nothing may stand, a small number at a bay's head, a dock's load limit. NOTHING IS PAINTED FOR THE PLAYER (the
+// maintainer, 11-05: "let's avoid large markings (e.g. numbers or room names) where they don't seem realistic"): no letter, no room's name, no figure
+// taller than a forearm. What stands in for them is small and has a cause: where a lorry's tyres turn, where an engine drips, a slab that was relaid.
 // ONE MECHANISM: the skin below speaks the kit's rows as every look file does, and `of` says which row of the second palette each wears here
 // (tools/levels/coastSkin.ts; gwotSkin.ts Skin.of). A palette is a table: `yardOf` is the quiet table with a yard's nine rows changed.
 import { build as buildPlain, NOTES as PLAIN_NOTES, DEPOT_ROOMS, DEPOT_PAINT as OWN } from './depot';
@@ -83,9 +85,7 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     // ---- THE ONE LONG FACE (the north row's yard wall, z 9.5: a quarter of a frame is wall faces, and this is the biggest that looks at the camera): the wall
     // itself is smooth (the ground is jointed: where the ground is, the wall is quiet); a dado of painted block in the firm's colour to 0.9 m, door to door
     // (the look kit's own band from the floor, in the kit row that wears the field's block). And the hut's west face, which the yard's length looks at.
-    for (const [a, b] of [[4.12, 5.8], [7.0, 11.8], [13.0, 20.8], [22.0, 23.88]] as const) { G.skirt('x', 9.5, a, b, 1, 'paintGreen', 0.9, 0.24);
-      // the crew room's letter in chalk on the dado beside its door (paint on the look's own band: the plain file's wall is not touched)
-      if (a === 13.0) { const i = B.length - 1; T.mark(i, MD.stencilMarks('+z', 'A', 13.45 - B[i].c[0], 0.1 - B[i].c[1], CHALK, 2)); } }
+    for (const [a, b] of [[4.12, 5.8], [7.0, 11.8], [13.0, 20.8], [22.0, 23.88]] as const) G.skirt('x', 9.5, a, b, 1, 'paintGreen', 0.9, 0.24);
     G.skirt('z', 24, 9.62, 15.12, -1, 'paintGreen', 0.9, 0.24);
     // ---- THE HUT'S SOUTH FACE, over the mouth: one whole wall in the second colour (its window is a hole: the colour stops at the sill under it)
     G.skirt('x', 15, 23.88, 24.2, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 25.0, 29.62, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 24.2, 25.0, 1, 'paintBlue', 0.95, 0.24);
@@ -109,19 +109,22 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     // a hatched square before the store's hatch, where nothing may stand (a door's own threshold is worn, and says so itself)
     hatch(19.4, 17.5, 21.4, 18.3, APRON);
     // ---- THE BAYS on the yard's south side (the lorry stands in the first; the second is empty, and an empty bay says there is no cover here), and two for
-    // trailers in the east yard. Ink on the pale ground; a number at each bay's mouth
+    // trailers in the east yard. Ink on the pale ground; each bay's number at its head, a forearm tall, as a yard stencils it
     for (const x of [9.6, 15.4, 18.8]) M.seg(x, 14.85, x, 17.32, 0.1, INKP);
-    figure('1', 12.5, 14.9, 2); figure('2', 17.1, 14.9, 2);
+    figure('1', 10.1, 15.35, 1); figure('2', 15.9, 15.35, 1);
     for (const x of [30.2, 33.0, 35.75]) M.seg(x, 19.6, x, 23.8, 0.1, INKP);
-    figure('3', 31.6, 19.9); figure('4', 34.4, 19.9);
-    // ---- THE LETTERS on the ground, where a lettered room's door has no dado that looks at the camera to carry one: the store's yard door, in chalk on the lane that passes it; and indoors a stride clear of each door's worn threshold
-    figure('C', 23.0, 16.9, 3, ROAD);
-    figure('A', 17.6, 7.6); figure('B', 27.4, 9.2); figure('C', 16.2, 20.3);
+    figure('3', 30.7, 20.1, 1); figure('4', 33.5, 20.1, 1);
+    // ---- WHAT USE LEFT, each with its cause and most of the ground blank: the polish of tyres where a lorry leaves the lane and swings into the first
+    // bay; a drip where an engine stands in each bay (the lorry's own is under it); a slab that was lifted and relaid, a shade newer, cut to the joints
+    { const fa = T.floorAt(14, 16); if (fa) { const tyre = T.tone(fa, 0.88), drip = T.tone(fa, 0.62), fresh = T.tone(fa, 1.07);
+      for (const o of [-0.95, 0.95]) M.path(beside([[8.4, 14.15], [10.4, 14.9], [12.2, 16.2]], o), 0.28, tyre);
+      for (const [x, z, w, d, yaw] of [[18.0, 16.25, 0.5, 0.36, 0.3], [18.25, 16.5, 0.22, 0.18, 1.1], [31.9, 22.6, 0.55, 0.4, 0.8], [34.7, 22.9, 0.4, 0.3, 0.2]] as const) T.flat(x, z, w, d, drip, yaw, 0.0117);
+      T.flat(7.25, 16.0, 1.5, 1.0, fresh, 0, 0.0105); T.flat(27.75, 19.5, 1.0, 2.0, fresh, 0, 0.0105); } }
     // ---- THE DOCK: a field of the firm's colour against the hut's west wall (a field in the sun before a pale wall: what its colour is thrown onto), an
-    // edge to its open sides, its load limit, and the hut's letter where a door would be
+    // edge to its open sides, and its load limit along that edge at the size a load limit is
     { const dock = piece(21.2, 10.95, 23.75, 12.9, FIELD);
       M.hazard(21.05, 10.95, 21.2, 13.05, INKP, CHALKP, 0.3); M.hazard(21.2, 12.9, 23.75, 13.05, INKP, CHALKP, 0.3);
-      stencil(dock, '3.5T', 22.2, 12.75, CHALK, 1); stencil(dock, 'B', 23.0, 12.2, CHALK, 3); }
+      stencil(dock, '3.5T', 22.9, 12.75, CHALK, 1); }
     // ---- THE FUEL POINT in the east yard: a pad of the second colour, an edge to it
     field(26.4, 22.2, 28.8, 23.86, SECOND);
     M.hazard(26.25, 22.05, 28.8, 22.2, INKP, CHALKP, 0.3); M.hazard(26.25, 22.2, 26.4, 23.86, INKP, CHALKP, 0.3);
