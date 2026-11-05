@@ -1,4 +1,4 @@
-// THE LOOK'S MAP WORKER (render/lookWorkers.ts starts it; render/lookWorkerSource.ts bundles this file into the text it is started from). One message, one
+// THE LOOK'S MAP WORKER (render/lookWorkers.ts starts it; render/lookWorkerSource.ts bundles this file into the plain script it is started from). One message, one
 // layer: lookTex.ts lookLayer with the caller's arguments, ON THE CALLER'S MATHS (math/exact.ts: the page computes on the game's own sin and cos, a worker
 // starts with the engine's; a map made on the wrong ones differs in a byte here and there), and the two arrays handed back by moving them.
 import { EXACT } from '../math/exact';

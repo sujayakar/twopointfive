@@ -1,9 +1,9 @@
 // what tools/qa/lookworkers-page.cjs loads in a blank page: the look's workers and its generator, and one function that makes every layer both ways
 // in the browser's own engine and says whether they are the same maps
 import { LOOK_WORKERS, LookPool } from '../../src/render/lookWorkers';
-import { LOOK_NAMES, LOOK_N, lookLayer, type LookMaps } from '../../src/render/lookTex';
+import { LOOK_NAMES, LOOK_N, lookLayer } from '../../src/render/lookTex';
+import { sameMaps as same } from './lookworkers-same';
 import { EXACT } from '../../src/math/exact';
-const same = (a: LookMaps, b: LookMaps) => { if (a.tone !== b.tone || a.hollow !== b.hollow || a.a.length !== b.a.length || a.b.length !== b.b.length) return false; for (let i = 0; i < a.a.length; i++) if (a.a[i] !== b.a[i] || a.b[i] !== b.b[i]) return false; return true; };
 (window as unknown as { __lookWorkers: unknown }).__lookWorkers = {
   cores: navigator.hardwareConcurrency,
   async run(most: number, exact: boolean) {

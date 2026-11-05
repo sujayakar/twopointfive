@@ -229,13 +229,13 @@ export class GBuffer {
     const tex = this.lookTex;
     // ON WORKERS WHERE THERE ARE ANY (render/lookWorkers.ts): every layer of the batch is asked for at once and taken here in the batch's own order, so the
     // slots, the order of lookMade and the moment a stuff is pointed at its slot are what they were. A layer no worker made is made here, in slices, as before
-    const pool = await LookPool.open(make.length), asked = pool ? make.map(l => pool.make(l, LOOK_N, this.lookEven)) : null;
-    asked?.forEach(p => p.catch(() => { /* taken below, where the layer is then made here */ }));
+    const pool = await LookPool.open(make.length), asked: (ReturnType<LookPool['make']> | null)[] | null = pool ? make.map(l => pool.make(l, LOOK_N, this.lookEven)) : null;
+    asked?.forEach(p => p!.catch(() => { /* taken below, where the layer is then made here */ }));
     try { for (let k = 0; k < make.length; k++) {
       const l = make[k];
       await nextTask();
       let got: Awaited<ReturnType<typeof lookLayerSliced>> | null = null;
-      if (asked) { try { got = await asked[k]; this.lookBy.workers++; } catch { got = null; } }
+      if (asked) { try { got = await asked[k]; this.lookBy.workers++; } catch { got = null; } asked[k] = null; }   // (… and let go of: a batch's maps are not all held to its end)
       if (!got) { got = await lookLayerSliced(l, LOOK_N, this.lookEven, sliceMs, nextTask); this.lookBy.here++; }
       const m = got, slot = this.lookSlots; let lv = [m.a, m.b];
       for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) {
