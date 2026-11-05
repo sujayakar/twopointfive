@@ -103,15 +103,30 @@ function jumpsFor(solid: Uint8Array): Uint8Array {
  *  are still safe on the new one (every distance only grew), so they are handed over instead of being worked out again. */
 export function wallRasterDiff(prev: Uint8Array, next: Uint8Array): [number, number, number, number] | null {
   if (prev.length !== next.length) return [0, 0, FW - 1, FH - 1];
+  const d = rasterScan(prev, next); if (!d.box) return null;
+  const j = JUMPS.get(prev); if (j && !d.closed) JUMPS.set(next, j);
+  return d.box;
+}
+/** one scan for both: the box of sub-cells that differ, and whether any went from open ground to a wall or a doorway's gap (`closed`: only then can a
+ *  distance to the nearest of them have shrunk, and an old jump field step over something a sight line must read) */
+function rasterScan(prev: Uint8Array, next: Uint8Array): { box: [number, number, number, number] | null; closed: boolean } {
   let x0 = FW, z0 = FH, x1 = -1, z1 = -1, closed = false;
   for (let z = 0, i = 0; z < FH; z++) for (let x = 0; x < FW; x++, i++) {
     if (prev[i] === next[i]) continue;
     if (x < x0) x0 = x; if (x > x1) x1 = x; if (z < z0) z0 = z; if (z > z1) z1 = z;
     if (next[i] && !prev[i]) closed = true;
   }
-  if (x1 < 0) return null;
-  const j = JUMPS.get(prev); if (j && !closed) JUMPS.set(next, j);
-  return [x0, z0, x1, z1];
+  return { box: x1 < 0 ? null : [x0, z0, x1, z1], closed };
+}
+/** The same for a raster that is NOBODY'S STATE (ReachJob.own: the look page's daylight at openings keeps its own walls and their jump field, and neither
+ *  side table of this file knows them): true where `next` differs from `prev`, and where its walls only OPENED (a wall holed: every blast) prev's jump
+ *  field is HANDED ON to next, as wallRasterDiff hands the game's. Where any cell closed (a wall put back by a restart, a box set down) it is not, and
+ *  the next mask makes the field fresh. Until 11-05 the look made the field again, whole, on the frame it read a blast's walls. */
+export function wallRasterHandOn(prev: { solid: Uint8Array; jumps?: Uint8Array }, next: { solid: Uint8Array; jumps?: Uint8Array }): boolean {
+  if (prev.solid.length !== next.solid.length) return true;
+  const d = rasterScan(prev.solid, next.solid);
+  if (d.box && !d.closed && prev.jumps) next.jumps = prev.jumps;
+  return d.box !== null;
 }
 
 /** 2D line of sight over the fine raster from the centre of sub-cell (ax, az) to the centre of (bx, bz), ignoring both end sub-cells.

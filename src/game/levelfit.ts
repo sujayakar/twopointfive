@@ -23,7 +23,9 @@
 //                      is a mistake said by name (doors.ts there, props.ts there).
 // (The pools themselves refuse more rows than they have: sim/doorshome.ts, sim/slabshome.ts, sim/propshome.ts. This is the same statement, made early.)
 import { BoxFlag, type Box } from '../scene/boxes';
-import { PANE_CAP } from '../scene/boxMirror';
+import { PANE_CAP, tooBig } from '../scene/boxMirror';
+import { levelNameOf } from '../scene/levelLoad';
+import type { Level } from '../scene/level';
 import { simWhyNot } from '../sim/sim';
 import { DOOR_CAP, doorIo } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS, propIo } from '../sim/propshome';
@@ -56,6 +58,8 @@ export function levelCounts(level: { doors: readonly unknown[]; props: readonly 
   let parts = 0, sheets = 0; for (const p of level.props) parts += p.parts.length; for (const b of level.boxes) if (isSheet(b)) sheets++;
   return { doors: level.doors.length, things: level.props.length, parts, sheets };
 }
+/** A LEVEL THE GAME WILL NOT LOAD, SAID BY ITS NAME where it has one (scene/boxMirror.ts tooBig is the sentence; a level nobody loaded from a file has no name) */
+export const levelTooBig = (level: object, why: string): string => tooBig(levelNameOf(level as Level), why);
 /** why this level cannot be loaded, in words, or null: it fits */
 export function levelOver(level: Parameters<typeof levelCounts>[0]): string | null {
   const has = levelCounts(level), cap = levelCaps(), over: string[] = [];
@@ -63,7 +67,7 @@ export function levelOver(level: Parameters<typeof levelCounts>[0]): string | nu
   if (has.things > cap.things) over.push(`${has.things} loose things of furniture (${cap.things})`);
   if (has.parts > cap.parts) over.push(`loose furniture of ${has.parts} boxes (${cap.parts})`);
   if (has.sheets > cap.sheets) over.push(`${has.sheets} sheets of glass (${cap.sheets})`);
-  return over.length ? `this level is too big to load: ${over.join(', ')}` : null;
+  return over.length ? levelTooBig(level, over.join(', ')) : null;
 }
 
 /** THE ROOM A LEVEL LEAVES FOR ITS PIECES: how many more statics, entries of the grid's cells and cut rows the copy holds than the level stands with
@@ -126,5 +130,5 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
  *  no reason: `play`) */
 export function stoodOver(g: Stood, tables: Readonly<Record<string, number>>): string | null {
   const over = fitRows(g, tables).filter(r => !r.play && r.has > r.cap);
-  return over.length ? `this level is too big to load: ${over.map(r => `${r.has} ${r.what} (${r.cap})`).join(', ')}` : null;
+  return over.length ? levelTooBig(g.level, over.map(r => `${r.has} ${r.what} (${r.cap})`).join(', ')) : null;
 }

@@ -69,20 +69,19 @@ console.log(`a pose's arithmetic in singles · the ${STAND} stand${BREAK ? ' · 
   line(!!a && !!b && a.differ === 0 && b.differ === 0 && a.asked > 100000 && on.status === 0 && off.status === 0, 'twin: with the rule on every sample and blend is the same bits from the TypeScript twin, the module and the plain definition; with it off, as ever',
     `on: ${a ? `${a.asked} questions, ${a.differ} differ (sample ${a.by.sample}, lines ${a.by.lines}, blend ${a.by.blend})` : last(on.out)} · off: ${b ? `${b.asked} questions, ${b.differ} differ` : last(off.out)}`);
 }
-// ---- layers (the module's layers answer only where the game's own maths stand: the shipped stand)
+// ---- layers (asked on the page's stand: the layers' check plays one scripted mission, and under the frozen stand's rules that mission asks too few of
+//      the layers for the check to call itself fair — its own verdict there is "asked too little", with or without this rule and whatever answers)
 if (STAND === 'shipped') {
   const r = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { [WORD]: '1', RUST_BREAK: undefined, TPS_PROFILE: 'shipped' });
   line(r.status === 0 && /layer-ident: PASS/.test(r.out), 'layers: with the rule on the module\'s layers and the TypeScript\'s leave the same pose', last(r.out));
-} else console.log('- (layers: not asked on the frozen stand, where the module\'s layers do not answer: the engine\'s maths)');
+} else console.log('- (layers: not asked on the frozen stand, where the layers\' check calls its own mission unfair: too few layers asked)');
 // ---- game, rule
 {
-  const fold = (env: Record<string, string | undefined>) => { const r = child(['bun', 'run', 'tools/qa/pose-fold.ts', RUN], { TPS_PROFILE: STAND, TPS_RUSTPOSES: '0', TPS_RUSTWALK: '0', ...env }); return /word ([0-9a-f]{1,8})\b/.exec(r.out)?.[1] ?? `none (${last(r.out)})`; };
+  const fold = (env: Record<string, string | undefined>) => { const r = child(['bun', 'run', 'tools/qa/pose-fold.ts', RUN], { TPS_PROFILE: STAND, QA_HOLD: 'poses=0,walk=0', ...env }); return /word ([0-9a-f]{1,8})\b/.exec(r.out)?.[1] ?? `none (${last(r.out)})`; };
   const word = (w: string) => /^[0-9a-f]{1,8}$/.test(w);
   const on = fold({ [WORD]: '1' }), off = fold({ [WORD]: '0' });
-  // (the rows answer only where the game's own maths stand: on the frozen stand "rows up" would be the TypeScript against itself, so the line is not asked there)
-  if (STAND === 'shipped') { const onRows = fold({ [WORD]: '1', TPS_RUSTPOSES: '1', TPS_RUSTWALK: '1' });
-    line(word(on) && on === onRows, `game: ${RUN} with the rule on folds every pose of every man to one word with the poses' and the walk's rows up and with them off`, `rows off ${on} · rows up ${onRows}`); }
-  else console.log('- (game: not asked on the frozen stand, where the rows do not answer)');
+  { const onRows = fold({ [WORD]: '1', QA_HOLD: undefined });
+    line(word(on) && on === onRows, `game: ${RUN} with the rule on folds every pose of every man to one word with the poses' and the walk's rows up and with them held down`, `rows held down ${on} · rows up ${onRows}`); }
   line(word(off) && word(on) && off !== on, 'rule: with the rule off the word is another: the switch reaches the game', `rule on ${on} · rule off ${off}`);
   // (the rule written on a game that is already standing: the animator's kept tables are measured in doubles under either rule — skeleton.ts inDoubles — so
   //  a game built with the rule on and then put off before its first tick is the game built with it off)

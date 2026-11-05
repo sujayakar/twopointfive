@@ -130,7 +130,8 @@ export class StaticCollision {
   /** shared sound-propagation policy (audio engine + guard hearing) */
   sound!: SoundPaths;
 
-  constructor(public boxes: Box[]) {
+  constructor(public boxes: Box[], of: string | null = null) {
+    this.mirror.of = of;   // (the level's name, where there is one, for the one thing the copy may have to say of it: boxMirror.ts outgrown)
     this.cells = Array.from({ length: this.W * this.H }, () => []);
     boxes.forEach((b, i) => {
       if (b.flags & (BoxFlag.NoShadow | BoxFlag.Dynamic)) return;

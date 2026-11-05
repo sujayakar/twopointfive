@@ -20,7 +20,8 @@ import { readdirSync } from 'fs';
 import { resolve } from 'path';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
-const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { loadLevel, levelNameOf } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { isTooBig } = await import(`${ROOT}/src/scene/boxMirror.ts`);
 const LF: any = await import(`${ROOT}/src/game/levelfit.ts`);
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const BREAK = process.env.COPYFIT_BREAK === '1', K = BREAK ? 0.05 : 1;
@@ -32,7 +33,7 @@ for (const file of files) {
   try { const data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()), level = file === 'office.json' ? null : loadLevel(data);
     if (level) { const over = LF.levelOver(level); if (over) { hush(false); bad.push(`${file}: ${over}`); continue; } }   // (the game's own word for a level it will not load: game/levelfit.ts)
     W = await standUp({ uploadEvery: 1000, ...(level ? { level } : {}) }); }
-  catch (e) { hush(false); if (String((e as Error).message).startsWith('this level is too big to load')) { bad.push(`${file}: ${(e as Error).message}`); continue; }   // (…and its word for a game that stood over a table: stoodOver)
+  catch (e) { hush(false); if (isTooBig(String((e as Error).message))) { bad.push(`${file}: ${(e as Error).message}`); continue; }   // (…and its word for a game that stood over a table: stoodOver)
     log(`${file.padEnd(26)} not stood up (${String((e as Error).message).split('\n')[0].slice(0, 90)}) — skipped`); skipped++; continue; }
   hush(false); stood++;
   const g = W.game, col = g.col as any, M = col.mirror as any;
@@ -56,7 +57,7 @@ for (const file of files) {
   const most: number = LF.civMost(), def = (i: number) => ({ name: `Extra ${i}`, kind: 'worker', tint: [0.4, 0.4, 0.4], pos: [...g.player.char.pos], face: 0 }); let said = '', at = -1;
   try { for (let i = g.civilians.length; i <= most; i++) { at = i; CV.spawnHostage(g, def(i)); } } catch (e) { said = String((e as Error).message); }
   const rows: any[] = LF.fitRows(g, g.col.mirror.tables), men = rows.find(r => r.row === 'doormen'), civ = rows.find(r => r.row === 'civilians');
-  const okJoin = Number.isFinite(most) && most > 0 && g.civilians.length === most && at === most && /too big to load: more than \d+ civilians/.test(said) && !!men && men.has <= men.cap && !!civ && civ.has === most && civ.cap === most;
+  const okJoin = Number.isFinite(most) && most > 0 && g.civilians.length === most && at === most && isTooBig(said) && /too big to load: more than \d+ civilians/.test(said) && !!men && men.has <= men.cap && !!civ && civ.has === most && civ.cap === most;
   log(`  civilians: a game took ${g.civilians.length} of ${most} and refused the next ${said ? 'by name' : '— NOT AT ALL'}; full of them, one step of its doors is handed ${men?.has} contacts of ${men?.cap} at most`);
   if (!okJoin) bad.push(`civilians: a game of ${g.civilians.length} (the most is ${most}) ${said ? `said "${said.slice(0, 80)}"` : 'refused nobody'}; doormen ${men?.has} of ${men?.cap}`); }
 // THE REFUSALS BEHIND THE COUNT: (1) a stood game over a table is refused by name as it is made (game/levelfit.ts stoodOver: the last statement of Game's
@@ -72,6 +73,19 @@ for (const file of files) {
   const { StaticCollision } = await import(`${ROOT}/src/scene/collision.ts`);
   let load = ''; try { const big = new StaticCollision(Array.from({ length: tables.boxes + 1 }, () => makeBox({ c: [1, 1, 1], h: [0.1, 0.1, 0.1] }))) as any; big.tickOpen(); big.tickShut(); } catch (e) { load = String((e as Error).message); }   // (its paths' bake asks the copy first, as a game's does: the box world is refused as it is made)
   if (!/^this level is too big to load: \d+ statics/.test(load)) bad.push(`refusals: a box world of ${tables.boxes + 1} statics was stood up over a copy of ${tables.boxes} without being called too big to load (${load || 'no error'})`);
+  // …AND EACH IS SAID WITH THE LEVEL'S NAME where the one who says it knows one (scene/boxMirror.ts tooBig: a level loaded from a file has a name, a bare
+  // box world and a level nobody loaded have none): the game's count of a level it stood, the pools' count of a level before it is built, with and without a name
+  { const name: string | null = levelNameOf(g.level), head = (n: string | null) => n ? `the level '${n}' is too big to load: ` : 'this level is too big to load: ';
+    const file = files.find(f => f !== 'office.json') ?? 'compound.json', data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()), L = loadLevel(data), caps = LF.levelCaps();
+    L.doors = Array.from({ length: caps.doors + 1 }, () => L.doors[0]);
+    const named: string = LF.levelOver(L) ?? '', bare: string = LF.levelOver({ doors: L.doors, props: [], boxes: [] }) ?? '';
+    if (!BREAK && small !== null && !small.startsWith(head(name))) bad.push(`refusals: the game's count does not say the level's name (${name ?? 'it has none'}): ${small.slice(0, 80)}`);
+    if (!data.name || !named.startsWith(head(data.name)) || !/\d+ doors/.test(named)) bad.push(`refusals: ${file} with a door too many is not refused by its name '${data.name}': ${named.slice(0, 80) || 'not refused'}`);
+    if (!bare.startsWith(head(null))) bad.push(`refusals: a level nobody loaded from a file, a door too many, is not refused as "this level": ${bare.slice(0, 80) || 'not refused'}`);
+    let loadNamed = ''; try { new StaticCollision(Array.from({ length: tables.boxes + 1 }, () => makeBox({ c: [1, 1, 1], h: [0.1, 0.1, 0.1] })), 'a name'); } catch (e) { loadNamed = String((e as Error).message); }   // (as a game stands its box world up: with the level's name)
+    if (!loadNamed.startsWith(head('a name')) || !/\d+ statics/.test(loadNamed)) bad.push(`refusals: a box world stood up with a level's name, one static too many, is not refused by that name: ${loadNamed.slice(0, 80) || 'not refused'}`);
+    if (![small ?? head(name), named, bare, load, loadNamed].every(isTooBig)) bad.push('refusals: one of the refusals is not known as one by boxMirror.ts isTooBig');
+    log(`refusals by name: the game's count says "${head(name).slice(0, -2)}" · a file's level over a pool says "${named.slice(0, named.indexOf(' is too big'))}" · one nobody loaded says "${bare.slice(0, bare.indexOf(' is too big'))}"`); }
   col.tickOpen(); col.tickShut();   // (a tick: the game's box world is a level in play from here)
   let said = ''; for (let i = col.boxes.length; i <= tables.boxes; i++) col.addStatic(makeBox({ c: [1, 1, 1], h: [0.1, 0.1, 0.1] }));
   try { col.tickOpen(); col.tickShut(); } catch (e) { said = String((e as Error).message); }
