@@ -94,7 +94,7 @@ import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx, warmState } from './audio/au
 import { setlistOfQuery, setlistOf, setlistLevel } from './audio/setlist';
 import { MUSIC } from './audio/pieces';
 import { Demo } from './game/demo';
-import { REACH_PACE, REACH_OPTS } from './render/reach';
+import { REACH_OPTS } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
@@ -1160,7 +1160,6 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)
   if (q.get('sunlooks') === 'old') REACH_OPTS.solidLooks = true;   // ?sunlooks=old: the sun's and the moon's reach masks as they were, a look that falls inside a wall counted as seeing the sky (render/reach.ts reachMaskForDirectional)
   (window as any).__reachOpts = REACH_OPTS;   // (a page run can set solidLooks and ask game.buildDirReach again, to draw the old mask and the new in one boot)
-  if (q.get('reachpace') === 'old') REACH_PACE.whole = true;   // ?reachpace=old: reach masks after a wall changes land at the pace before the per-frame shares (render/reach.ts REACH_PACE; same masks, fewer and longer ticks)
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
