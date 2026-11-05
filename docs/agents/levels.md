@@ -1488,3 +1488,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's and the page's with its lived tier off: 16 of 16 run digests the same as the step before, each. The page opened on a software adapter with
   the five boxes at their new sizes and nothing in the console. Never seen on a GPU: the check reads the file, and nobody has watched the eight
   places for a flicker before or after.
+- **A named coat's finish goes wherever its word goes: a vehicle's body is a clear coat** (`scene/stuff.ts COATFINISH`, `coatRough`, `NAMED_COATS`; read
+  by `scene/boxes.ts matWord`; 11-05; the maintainer, playing the preview: "how reflective is the car material, btw? it does feel like it should reflect
+  more of the environment and be quite dynamic as we move around it"). WHAT WAS WRONG, read from the code: a vehicle's body took its finish from the
+  paint's ROW. The truck enamels are satin (0.35, 0.4: a cot's and a locker's finish too), so on High the traced mirror was part faded (it fades over
+  the 0.12 under `rtMaxRough` 0.45) and wide, and on Medium (0.35) there was none; the plain car and the office's van had no finish at all (matte, 1.0:
+  no reflection ray); a twin's skinned car wore its new row's (0.35 to 0.75); the bazaar's cab a 0.5 written by hand. THE RULE: a named coat's row in
+  the table of coats says how smooth it is (carpaint 0.2: under every preset's mirror cut-off less its fade, the number agreed with the look's car
+  paint map, render.md "CAR PAINT IS A STUFF"), and the ONE function that hands a box's finish to the GPU (`matWord`) sends a box that says a named
+  coat no rougher than the coat, whatever row painted it and whatever number stands beside the word. So it holds for a level's statics, a shape's
+  pieces, a piece blown off a car (which copies the word and no finish) and anything made later that says the word. NO BOX IS CHANGED AND NO LEVEL FILE
+  CHANGES: `Box.rough` is the file's, always. THE WORD DECIDES: a thing that should not shine like a car does not say it is car paint (the tanker's
+  burnt cab says plastic). Smoother stays smoother (a body wet with rain). ROUGHNESS ONLY: `metal` stays the paint's, because the game reads that flag
+  (`wallpen.ts`, `wallcharge.ts`) and reads no roughness. (Three cuts were thrown away on review, so nobody tries them again: 0.2 written beside the
+  word on 507 boxes in 40 level files; a rule in the level file's reader and writer; a pass over the level's boxes at stand-up that kept each box's own
+  number in a side table, which no snapshot can list.)
+  THE SWITCH: ON in the page (`?coatfinish=0` = every box sent the finish its file gives it, as it was: the A/B for its cost), OFF in the module and on
+  the frozen stand (`TPS_COATFINISH=1`), a `FROZEN_HOLDS` row (a picture only), `STAND_ENV`, pinned in `standup.ts` beside the shapes' word, in the
+  registry and the journal (a recording with no table plays with it down). It can be flipped on a live page: the statics' packed slice is compared by
+  this float each frame.
+  UNDER THE LOOK the car paint map varies the number (`rough + dr`, its delta taken against the look's own row 0.26): about 0.11 where the coat is
+  clean, 0.37 under road dust.
+  WHAT IT LOOKS LIKE, and it is LITTLE BY ITSELF. Stills on the software adapter (11-05, the yard's white pickup at midday and at night, High): the
+  body at its file's 0.35, at 0.2 and at 0.12 are the same picture to the eye (mean difference 0.08 to 0.22 of 255 a pixel). A non-metal mirrors 4 % face
+  on (`reflect.wgsl` F0), and a sharper 4 % does not show over a bright paint. What the maintainer asked for needs a clear coat as a term of its own
+  in the shader (the renderer's part took it, 11-05), which can key on this word. What this rule gives by itself: Medium traces the bodies at all, the
+  plain cars and the twins' stop being matte, and one number is the coat's. NEVER SEEN ON A GPU.
+  THE CHECK: `bun run tools/qa/probes.ts coatfinish` (`tools/qa/coatfinish-check.ts`, in the `shapes` family), both stands: the stand; the yard as
+  stood, up and down (every box and piece that says car paint sent at the coat's, nothing else moved, no box's own number or metal touched); the
+  cases by hand (a twin's skin-written number, a body smoother than the coat, a bare-metal row, a piece off a car, a plain paint, a word that is no
+  stuff); every level file through the rule (507 boxes in 40 files on the shipped stand); the same seeded run by digest up as down; the rows and an
+  old recording. `COATFINISH_BREAK=1` fails four lines on both stands.
+  NOT DONE: a plain car's and the office van's GLASS says no finish (matte glass; the kits' dark glass is 0.1); the plough lorry's tipper sides are
+  plain orange beside a coated cab; the editor's finish panel shows the file's number, not what is sent. COST: smooth finishes are what the reflection
+  pass traces, and the plain cars are new to it: NOT MEASURED ON A GPU.
+- **A LEVEL FILE NAMES ITS MARKS** (the format, no switch, no rule of play; 2026-11-05). A mark is a named place on the floor where a person stands to
+  use a thing: the end of a `walked` way and a script's place, read by name (`scene/ways.ts`, `game/director.ts`). Until now only the office had any, and
+  only as code joined on at load (`scene/level.ts withMarks`, which is GONE). The file has a slot: top-level `marks: [{ id, pos, yaw? }]`
+  (`levelData.ts MarkData`, validated: an id once, `pos` a Vec3, `yaw` a number), loaded to `Level.marks` and written back by `levelToData`, as `volumes`
+  are. A GENERATOR RETURNS `marks` ON ITS LEVEL and the exporter writes them; absent = none, and no other file changes. THE OFFICE IS THE FIRST: its
+  builder puts `OFFICE_MARKS` (31) on its Level and both its files carry them; a Level's marks are an ordinary key now. An office saved in the editor
+  before the key has no marks until it is saved from a file that has them. DO NOT USE A `scenarios.places` AREA AS A MARK: the game reads places.
+  CHECK: `walked-check` is red on a mark standing where the walk grid is shut; `probes.ts ways` already is on a name that is two things. As measured on
+  the step: the office's two files differ from before by the `marks` key alone, and loaded with the office's script each gives the same 31 marks, the
+  same scenarios and every other key of the Level the same as the build before it. Nothing a page draws moves.

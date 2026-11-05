@@ -150,6 +150,9 @@ export interface ChokepointData { id: string; name?: string; floor?: string; pos
 /** One of the building's night people (scene/level.ts CivilianDef — game/civilians.ts): her loop is a route's shape (points walked, wait stood at each) plus what
  *  she does at each waypoint (`tasks`, one per point, CIVILIAN_TASKS) facing which way (`face`, yaws, one per point). `name` = what the men call her (the id if absent). */
 export interface CivilianData { id: string; name?: string; kind: 'cleaner' | 'worker'; floor?: string; tint: Vec3; tint2?: Vec3; points: Vec3[]; wait: number[]; tasks?: CivilianTask[]; face?: number[]; notes?: string; }
+/** A NAMED MARK (scene/level.ts MarkDef): a place on the floor a level names, where a person stands to use a thing. Read by name: the end of a `walked`
+ *  way (scene/ways.ts) and a level script's place (game/director.ts). No rule of play reads one. `id` is the name; `yaw` = the way a person there faces. */
+export interface MarkData { id: string; pos: Vec3; yaw?: number; }
 /** Authored volumes (none in the office yet): a hide spot the AI treats as cover-dark, a utility closet, a scripted trigger. Oriented box on a floor. */
 export interface VolumeData { id: string; kind: 'hide' | 'utility' | 'trigger'; floor?: string; c: Vec3; h: Vec3; yaw?: number; notes?: string; }
 
@@ -220,6 +223,8 @@ export interface LevelData {
   /** the cleaner / the late worker (game/civilians.ts) — absent = nobody but the shift on the floor */
   civilians?: CivilianData[];
   volumes: VolumeData[];
+  /** named marks — optional block: absent = the level names none (every file before the key) */
+  marks?: MarkData[];
   devices: DeviceData[];
   /** HVAC supply vents (game/wind.ts) — optional block: absent = still air indoors */
   vents?: VentData[];
@@ -243,7 +248,7 @@ export interface LevelData {
  *  hand-edit typo like "emmisive" must fail loudly, not vanish on the next save) and canonicalLevelData (which keeps exactly these). Adding a field to the
  *  format = add it to its interface above, to this list, and to both directions in levelLoad.ts. The drill plans are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
+  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -253,7 +258,7 @@ export const KEYS = {
   light: ['id', 'kind', 'pos', 'dir', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'group', 'enabled', 'volumetric', 'radius', 'mains', 'broad', 'fixture'],
   switchable: ['id', 'boxes', 'group', 'on', 'baseEmissive', 'flicker', 'mains'],
   door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'],
-  route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'],
+  route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'], mark: ['id', 'pos', 'yaw'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'],
   connector: ['id', 'kind', 'from', 'to', 'cost', 'mat', 'notes'], connEnd: ['floor', 'c', 'h'],
@@ -462,6 +467,10 @@ export function validateLevelData(d: LevelData): string[] {
   }
   const vols = recs('volumes', d.volumes); uniq('volumes', vols.map(v => (v as any)?.id));
   vols.forEach((v, i) => { if (!isObj(v)) return; const w = `volumes[${i}]`; known(w, v, KEYS.volume); if (!['hide', 'utility', 'trigger'].includes(v.kind)) err(w, `kind '${show(v.kind)}'`); floorOk(w, v.floor); if (!isVec(v.c) || !isVec(v.h)) err(w, 'c/h Vec3'); if (v.yaw !== undefined && !isNum(v.yaw)) err(w, 'yaw'); });
+  if (d.marks !== undefined) {   // (optional block: absent = none)
+    const ms = recs('marks', d.marks); uniq('marks', ms.map(m => (m as any)?.id));
+    ms.forEach((m, i) => { if (!isObj(m)) return; const w = `marks[${i}] '${show(m.id)}'`; known(w, m, KEYS.mark); if (!isStr(m.id)) err(w, 'id: a non-empty string'); if (!isVec(m.pos)) err(w, 'pos Vec3'); if (m.yaw !== undefined && !isNum(m.yaw)) err(w, 'yaw'); });
+  }
   // devices (game/devices.ts) / connectors (stub: shapes only)
   const devs = recs('devices', d.devices); uniq('devices', devs.map(v => (v as any)?.id));
   const padDoors = new Map<string, string>();   // door id → the keypad that claims it (one per door)
@@ -1059,6 +1068,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     chokepoints: d.chokepoints.map(c => pick(c, KEYS.chokepoint)),
     ...(d.civilians ? { civilians: d.civilians.map(c => pick(c, KEYS.civilian)) } : {}),
     volumes: d.volumes.map(v => pick(v, KEYS.volume)),
+    ...(d.marks?.length ? { marks: d.marks.map(m => pick(m, KEYS.mark)) } : {}),
     devices: d.devices.map(v => v.kind === 'camera' ? pick(v, KEYS.camera) : v.kind === 'keypad' ? pick(v, KEYS.keypad) : pick(v, KEYS.laser)),
     ...(d.vents ? { vents: d.vents.map(v => pick(v, KEYS.vent)) } : {}),
     connectors: d.connectors.map(c => ({ ...pick(c, KEYS.connector), from: pick(c.from, KEYS.connEnd), to: pick(c.to, KEYS.connEnd) })),
