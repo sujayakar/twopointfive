@@ -64,7 +64,12 @@ was and then EVERY OTHER pass the timer holds that ran this frame, so a timed pa
 had none). TWO RENDER PASSES STAY WITHOUT, by a row each: `gdown` and `outline` (a render pass's stamps on Metal can read as a frame and would be in
 every total, the reason `particlesTimeDraw` is off). MEASURED on the rented card (NVIDIA A10G through Vulkan, relative only; the passes timed by their
 labels from a page script, the office mission and the tunnel, High at ×0.77): `place` 1.75 ms before its cut and 0.10 after, `fogSight` 0.08 with the
-fog of war on, `gdown` 0.09, `outline` 0.04. WHAT THIS CHANGES FOR A PLAYER: the ladder's GPU reading now holds these passes, as it should have. No
+fog of war on, `gdown` 0.09, `outline` 0.04. THE BUILD'S OWN ROWS, SEEN ON THAT CARD (three boxes, no GPU error at boot or after, nothing patched): `place`
+0.09 ms on the tunnel and the office under the look, `powder` 0.02 with the world running and 0 with it held (its rest is said), `diceRing` 0.01 on
+the office at midday, `fogSight` 0.06 on the compound. WHAT THIS CHANGES FOR A PLAYER: the ladder's GPU reading now holds these passes, as it should
+have: 0.06 to 0.11 ms more on four addresses (the tunnel, the office with and without the look, the compound), where its first plan answers the same
+preset and scale with the rows and without them. The plan has three lines between 4 and 45 ms from High on a 1000 px page (High to Medium at 13.5 ms),
+so about one first reading in a hundred sits near enough to a line for a tenth of a millisecond to cross it. No
 switch: it is the reading made true, not a rule of the game. Never seen on an Apple chip, where the frame's union already rose and fell with the
 untimed pass (the sweep that found it), so the reading there may move less than the card's. What the check cannot see: a pass whose
 `timestampWrites` is undefined at run time (a caller that hands no `ts`); the headless device has no timer to ask.
