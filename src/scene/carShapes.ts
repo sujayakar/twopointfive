@@ -157,7 +157,7 @@ export const fallOf = (t: BowedTop, s: number): number => { const { R } = bowOf(
  *  lays no sheet). Returns the slab's own shape, or nothing where it need say none. */
 export function layOn(t: BowedTop, c: Vec3, h: Vec3, paint: CarPaint, o: { nth?: number; gap?: number } = {}): BoxShape | undefined {
   const { x, w, R } = bowOf(t), nth = o.nth ?? 0, gap = o.gap ?? 0.02, lift = 0.02, d: Vec3 = sub(c, t.c);
-  const keep = Math.sqrt(2 * R * gap - gap * gap) / 2 ** nth, flat = keep / 2;
+  const keep = Math.sqrt(2 * R * gap - gap * gap) / Math.pow(2, nth), flat = keep / 2;
   // the slab: from (flat, its top) down to (keep, its underside) each side of the crown, which lies −d[x] from the slab's own middle
   const a = keep - flat, b = 2 * h[1], k = b * flat + a * h[1], side = (sg: number): ShapePlane => x === 2 ? plane(0, a, sg * b, k - sg * b * d[2]) : plane(sg * b, a, 0, k - sg * b * d[0]);
   const own = (t.shape.cut ?? []).map(p => moved(p, d, gap));
@@ -222,7 +222,7 @@ export const pickupLens = (h: Vec3, d: Vec3): BoxShape | undefined => { const s 
 export function vanShapes(P: CarPaints) {
   const bodyC: Vec3 = [0, 0.58, 0], bodyH: Vec3 = [2.4, 0.28, 0.9], bodyCut = corners(bodyH, [0.22, 3], [0, 0]);   // (a square tail: a van's tail lamps stand on its back corners, and a corner taken off there took the lamp with it)
   const glassC: Vec3 = [1.3, 1.36, 0], glassH: Vec3 = [0.36, 0.26, 0.84], tilt = { f: 28, r: 0, s: 4 }, bow = 0.06, G = greenhouse(glassH, tilt, [-0.3], 0);   // (the brow stands on the glass, flat underneath: nothing to stop short of)
-  const doorsC: Vec3 = [1.3, 0.98, 0], wheelH: Vec3 = [0.37, 0.37, 0.13], bonnetH: Vec3 = [0.4, 0.1, 0.86], browC: Vec3 = [1.22, 1.785, 0], browH: Vec3 = [0.34, 0.165, 0.86], sideH: Vec3 = [0.25, 0.545, 0.03];
+  const doorsC: Vec3 = [1.3, 0.98, 0], wheelH: Vec3 = [0.37, 0.37, 0.13], bonnetH: Vec3 = [0.4, 0.1, 0.86], browC: Vec3 = [1.22, 1.785, 0], browH: Vec3 = [0.34, 0.165, 0.86], sideH: Vec3 = [0.245, 0.545, 0.03];
   const arches = [-1.45, 1.5].flatMap(lx => [-1, 1].map(s => archPiece([lx, 0.37, s * 0.8], wheelH, s, bodyC)));
   const load: BoxShape = { arc: { axis: 1, rise: bow }, old: true };
   return {
@@ -236,7 +236,7 @@ export function vanShapes(P: CarPaints) {
     // (the brow: its face is the windscreen's own plane carried up — the glass's, said from the brow's centre)
     brow: { arc: { axis: 1, rise: bow }, ...cutOf(browH, [moved(leanPlane(glassH, 1, 0, tilt.f), sub(browC, glassC))]), old: true } as BoxShape,
     load, bayRoof: { arc: { axis: 1, rise: bow }, old: true } as BoxShape,
-    baySide: (s: number) => onCorners(sideH, bodyCut, [-2.15, 0, s * 0.87], 0, [plane(0, 1, 0, sideH[1] - bow)]),   // (its top comes down to the roof's edge; the van's tail is square, so no corner takes anything of it)
+    baySide: (s: number) => onCorners(sideH, bodyCut, [-2.145, 0, s * 0.87], 0, [plane(0, 1, 0, sideH[1] - bow)]),   // (its top comes down to the roof's edge; the van's tail is square, so no corner takes anything of it)
     // (a van's head lamp stands its whole 6 cm in front of the body's face, so it lies that far proud of the corner too: taken back only 12 mm proud, the
     // corner's planes carried forward left a third of its face, and of the lit glow a level hangs on it)
     head: (s: number) => lensShape([0.03, 0.07, 0.16], bodyCut, [2.43, 0, s * 0.66], 0.06), tail: (s: number) => lensShape([0.02, 0.15, 0.04], bodyCut, [-2.41, 0, s * 0.86]),

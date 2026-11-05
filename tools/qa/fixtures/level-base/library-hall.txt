@@ -1,2 +1,2 @@
-# 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the hut wears the kit's four wall fittings (a band, a vent, conduit, a pipe), drawn only, in a group of their own
-d5789aa9968e2fab7f49f59883b4222f95ad5ca9
+# 11-05, a gate's posts stand 6 mm fatter each way along the wall they close and a van's bay sides end at its tail lamps: solid boxes move by millimetres, none added or removed; before it: 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the hut wears the kit's four wall fittings (a band, a vent, conduit, a pipe), drawn only, in a group of their own
+a3ac567c84d63f7010b805aae91c1aa6b2bdfcbc

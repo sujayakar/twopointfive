@@ -1,6 +1,6 @@
 // THE LOOK PAGE's small mends to a level as it loads (main.ts, on that page only; levels/*.json are not touched).
-// SEATED POSTS. The kits stand a gate post in the end of the wall it closes, its face on the gateway exactly on the wall's end face (scene/gwotKit.ts gate: the
-// post's inner face is the opening's edge, and so is the wall's). Two faces in one plane: which one a pixel shows is the depth test's coin, a frame at a time.
+// SEATED POSTS. A post built by hand in the end of the wall it closes has its face on the gateway exactly on the wall's end face (the kit's own gate did
+// until 11-05; scene/gwotKit.ts gate now lays its posts a little fatter, so this mend finds nothing to do on a kit gate). Two faces in one plane: which one a pixel shows is the depth test's coin, a frame at a time.
 // In the game's flat paints the two are near enough one colour that nobody saw it; under the look one is render and the other a mud wall on a stone plinth, and
 // the reveal flickers between them (the maintainer, 10-25, on a GPU: "seems like a sorting issue that's flickering to right of the red door"). Here a post that
 // shares a face with the end of a wall it stands in is made a few millimetres fatter, so its own faces are the ones in front.

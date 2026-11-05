@@ -1691,10 +1691,34 @@ first system across (the game's own maths). No rule of play has changed and noth
     (`sense.ts CpuSmoke.along`), each one question in several calls, stand in a `col.window`; an eye on a man (`collision.ts eyeContact`) is one
     call and proves the copy for itself, as a line does. Inside a tick each is as it was.
   - EVERY HAND-BACK OF THE FIVE IS COUNTED where its caller's own statements then run: a sight line that stops at glass or names a flag the copy
-    does not keep, an eye handed back; more lamps in reach of a point than a question carries (256; counted at the estimate, `lampsFell`, not at
-    the writer the smoke grid's sweep shares), the lamps handed back; more blobs than a question carries (64; the game keeps 48 at most,
-    `sense.ts`), the smoke's line handed back; the sound's straight lines and its way round handed back, a floor larger than the module's table;
+    does not keep, an eye handed back; the lamps handed back (a line too long to be one: more lamps than a part carries is no hand-back since
+    THE LAMPS IN PARTS, below); the smoke's line handed back; the sound's straight lines and its way round handed back, a floor larger than the module's table;
     a search's cap that is no whole number, the search handed back.
+  - THE LAMPS IN PARTS, AND THE SMOKE'S SHADOW IN THE MODULE (2026-11-05, the first of the roads closed so that `lampsHere` can go; the rule for
+    all of them, the Rust goal's: CONTENT IS NEVER AN ERROR — what a level or a fight can hold is asked in parts or is a level's limit said before
+    play, and only a mistake is an error by name). The module's table holds 256 lamps (`light.rs MAX_LAMPS`, `boxMirror.ts FACE`). More than that
+    in reach of a point (a level of many lamps, a fight's flashes) used to hand the whole question back. Now `collision.ts lamp`, meeting a full
+    table, sends it as a PART and begins it again, and `light.rs estimate` sums a later part (`more`) onto the six faces the one before left: one
+    sum in `lampsHere`'s order, its bits, for any number of lamps. The faces are kept from part to part in a static of the light's own (`light.rs
+    SUM`, a `STATICS` row), not in the shared scratch, so a question a caller's gate asks of the module between two parts cannot spoil the sum;
+    the grid's block is bound again a part. `LAMPS.parts` counts the parts sent ahead. THE SHADOW (`SENSE.bounce`): where the smoke grid could not answer a lamp's line (more smoke
+    than bricks; no grid standing) the module handed the question back and `lampsHere` asked the blobs. Now the host writes the field's blobs
+    before the question and `light.rs` asks `smoke.rs` over them inside the lamp loop, under the model's numbers, told whether a grid stands
+    (`sense.ts SmokeGrid.along`'s own first test). THE BLOBS ARE NOT CONTENT: a game keeps `SENSE.smoke.cap` of them (48) and never more than
+    the module's table holds (`smoke.rs MAX_BLOBS` 64, `FACE.MAX_BLOBS`: `CpuSmoke.emit` takes the smaller), because a question carries every
+    blob at once; a list longer than the table is somebody else's doing and an error by name (`collision.ts blobsFit`), and `rust-check` is red if the knob
+    as it ships is past the table. The knob registry keeps no most for a knob and the debugger shows no row of `SENSE`. HELD by `sense-ident`
+    (a level's last line): some six hundred lamps put in reach of forty points, the module in three parts a point against the TypeScript's one
+    loop, the same to the bit; then twenty-four points through smoke with the grid answering, with no grid standing, and with more smoke than
+    bricks, every point to the module, dimmed, the same to the bit. `LAMPS_BREAK=1` = every part begins its sum again: the lamps in parts must
+    differ and no sense of the questions may. `LAMPS_BREAK=shade` = the module is handed no blobs: the two cases where the grid cannot answer
+    must differ, and neither the parts with no smoke nor the grid that answers may (`rust-check`'s senses line runs both). NEVER ASKED: a
+    question handed back in a LATER part (a line too long to be one, after a part has summed): the caller's loop then runs from the start and
+    reads nothing of the module's sum, by the code and by no check. NOT A HAND-BACK AND STILL A LIMIT: THE GRID'S SWEEP OF THE
+    LIGHT THAT COMES ROUND writes the level's steady lamps into the same table (`guards.ts steadyLamps`) and takes no more than 256: past that
+    the field stands as it was and the bounce light stops, with no word. The most a level has today is 33 (the office; every other level 24 or
+    fewer). It is to be a row of the levels' fit (`src/game/levelfit.ts`) with the deletion of `lampsHere`; until then whoever dresses a level
+    with hundreds of fixtures is told here.
   WHAT THE COUNT READS NOW, the 42: `paths · a search with a penalty` and `light · outside a tick` are GONE (8,962 and 5,688 on the page's stand).
   Of the five senses: NOTHING on either stand, in the tour or in the soak, and ALL FIVE ARE SEALED (the soak's watcher asks two eyes between
   ticks: that was `sight · outside a tick` until the eye proved the copy for itself). `sound` and `paths` were counted for the first time by this
