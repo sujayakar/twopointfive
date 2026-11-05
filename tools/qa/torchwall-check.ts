@@ -12,6 +12,7 @@
 //   (f) the stand's own word, and a recording carries the key
 // What it cannot say: what a hanging torch looks like (never seen on a GPU), or what it does to a night of sneaking — nobody has played it.
 // TORCHWALL_BREAK=1 = the rule answers "not at a wall" with its switch on: (b) must fail.   exit 0 = all hold · 1 = one does not
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 

@@ -29,6 +29,7 @@
 //       a wind-up called off before the release keeps its can in the fist, off and on;
 // Not staged here: the two defender call sites (frag.ts, lanes.ts) pass the same distance the same way and are read, not run.
 // THROWBY_BREAK=1 = the switch left off for the 'on' lines: (y), (f) and (k) must fail.   exit 0 = all hold · 1 = one does not
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 

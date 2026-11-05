@@ -24,6 +24,7 @@
 //   shoot                     EXPECTED TO FAIL: every run broke a device with a round and was noticed for it (a man roused, or the player seen)
 //   code · pan · mains        COUNTED, NOT HELD: their numbers are printed (the page quotes them) and never make the exit red
 // VAULT_BREAK=1 = the check's own red path: `round` leaves the gate's lens unanswered, so a run of it must come back red.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';

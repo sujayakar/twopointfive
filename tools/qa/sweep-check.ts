@@ -26,6 +26,7 @@
 // FLANKCALL_BREAK=1 = the dialogue pass taken off under each arm: where the stand has it on (shipped, or TPS_WORDS=1) the flanker's-call line must FAIL.
 // Exit 0 = all pass, 1 = a FAIL or an error. About a minute. Headless only: what a look reads like on the page (the line on the net, two men walking a
 // corridor) has never been seen on a GPU by this check.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 export { };
 const { standUp, ROOT } = await import('./headless.ts');
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
