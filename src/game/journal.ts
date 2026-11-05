@@ -183,6 +183,7 @@ import { HANDLE } from './handleside';
 import { DOORMANNERS } from './doorway';
 import { GEAR } from './gear';
 import { WORDS } from './words';
+import { LIGHT_IN } from '../sim/lightshome';
 
 export const JOURNAL_VERSION = 1;
 /** …and what a file says when a replay cannot do without what came after v1: a slot's text filed at the frame an update read it (`slots.loads`), a last frame
@@ -258,7 +259,7 @@ export function envSnapshot(g: Game): EnvSnap {
 /** the settings half of an env, onto an engine's settings BEFORE the Game is built on it (the marking lights are registered in the constructor) */
 export function applyEnvSettings(settings: Record<string, unknown>, env: EnvSnap): void { settings.debrisCap = env.debrisCap; settings.emissiveScale = env.emissiveScale; settings.flashlightRadius = env.flashlightRadius; settings.markings = env.markings; }
 /** the game half of an env, AFTER the checkpoint is loaded: the fixtures' restrike stagger */
-export function applyEnvGame(g: Game, env: EnvSnap): void { for (const t of g.targets) { const s = env.stagger[t.name]; if (typeof s === 'number' && Number.isFinite(s)) t.stagger = s; } }
+export function applyEnvGame(g: Game, env: EnvSnap): void { for (const t of g.targets) { const s = env.stagger[t.name]; if (typeof s === 'number' && Number.isFinite(s)) g.lightHome.in(LIGHT_IN.stagger, t, s); } }
 export function knobsSnapshot(g: Game): KnobsSnap {
   const tables: Record<string, unknown> = {}; for (const [k, T] of Object.entries(knobTables())) tables[k] = JSON.parse(JSON.stringify(T));
   return { tune: JSON.parse(JSON.stringify(g.tune)), flags: { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible, fn2000: g.fn2000, autosave: !!g.saves?.enabled, fog: !!g.fogOfWar?.on, stalkAmbient: SNEAK.stalkAmbient, roundCap: ORDERS.roundCap, behindSam: DOORTOOLS.behindSam, tossMate: DOORTOOLS.tossMate }, tables };   // (autosave: the controller writes chronicle rows — state, even if the digest leaves them out)

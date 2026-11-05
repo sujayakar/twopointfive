@@ -135,7 +135,7 @@ export async function reviewLightOut() {
   for (let i = 0; i < 3; i++) { pl.visibility = 0.02; W.step(DT); }
   ok = verdict(evs === 1 && t.disabledUntil > game.time, 'the OCP knocks the panel out and files one lightOut event', `${evs} event(s), disabledUntil ${f1(t.disabledUntil)}`) && ok;
   ok = verdict(K.awareness >= 0.15 && K.awareness < 0.3 && !K.lastKnown && K.witness.heard.small >= 1, 'Kowalski (line to it, 5 m, facing it): the OCP\'s spell is a small thing — awareness up but under the suspicious line, NO fix to walk to (he glances and mutters; 08-12: an OCP\'d light must not bring men over)', `aw ${f2(K.awareness)}, fix ${posS(K.lastKnown)}, small ${K.witness.heard.small}`) && ok;
-  { const t2 = t; t2.disabledUntil = 0; game.events.length = 0; K.heardUpTo = N.heardUpTo = game.eventSeq; K.awareness = 0; (game as any).lightEvent(t2, 'shot'); for (let i = 0; i < 3; i++) { pl.visibility = 0.02; W.step(DT); }
+  { const t2 = t; game.lightHome.stage(t2, null, null, 0); game.events.length = 0; K.heardUpTo = N.heardUpTo = game.eventSeq; K.awareness = 0; (game as any).lightEvent(t2, 'shot'); for (let i = 0; i < 3; i++) { pl.visibility = 0.02; W.step(DT); }
     ok = verdict(K.awareness >= 0.38 && !!K.lastKnown && v3.distXZ(K.lastKnown, [t2.pos[0], 0, t2.pos[2]]) < 0.05, 'the same fixture SHOT dark: the old rule — awareness 0.4 and his fix under it (over he comes)', `aw ${f2(K.awareness)}, fix ${posS(K.lastKnown)}`) && ok; }
   ok = verdict(N.awareness < 0.05 && !N.lastKnown && N.witness.heard.small === 0, 'Novak (through the wall, < 10 m): nothing', `aw ${f2(N.awareness)}, fix ${posS(N.lastKnown)}, small ${N.witness.heard.small}, at ${posS(N.char.pos)} ${spotN ? f1(v3.dist(spotN, [t.pos[0], 0, t.pos[2]])) : '?'} m off`) && ok;
   return done('review-lightout', ok);
@@ -213,7 +213,7 @@ export async function reviewBodyLight() {
     killGuard(game, R, [1, 0, 0], true, 'struck', 'world');   // dropped where he stands, quietly, by nobody (no witness, no tally)
     for (let i = 0; i < 90; i++) { pl.visibility = 0.02; W.step(DT); }   // the body settles
     plant(game, K, kAt, -Math.PI / 2);   // his back to it while the room is arranged (the fixtures' lights follow their switches at the END of a frame: lighting.ts updateTargets)
-    if (opts.dark !== false) { const bp = R.char.bones.hips ?? R.char.pos; for (const t of game.targets) if (t.kind !== 'breaker' && v3.dist(t.pos, bp) < 14) t.on = false; for (const g of game.guards) g.flashlight.enabled = false; K.lightDeadUntil = 1e9; }   // pitch dark round the body: every fixture within reach off, every torch out (Kowalski's held dead so attachFlashlight keeps it out)
+    if (opts.dark !== false) { const bp = R.char.bones.hips ?? R.char.pos; for (const t of game.targets) if (t.kind !== 'breaker' && v3.dist(t.pos, bp) < 14) game.lightHome.stage(t, false, null); for (const g of game.guards) g.flashlight.enabled = false; K.lightDeadUntil = 1e9; }   // pitch dark round the body: every fixture within reach off, every torch out (Kowalski's held dead so attachFlashlight keeps it out)
     setup(S, R.char.bones.hips ?? R.char.pos);
     for (let i = 0; i < 10; i++) { pl.visibility = 0.02; W.step(DT); }
     K.char.bodyYaw = K.char.aimYaw = Math.PI / 2; K.char.update(0);   // now he turns and looks down the corridor at it
@@ -357,13 +357,13 @@ export async function reviewDayBlackout() {
   let ok = true;
   if (!game.level.daylight) { ok = verdict(false, 'the level has a daylight variant', 'none'); return done('review-day-blackout', ok); }
   game.setBlackout(Infinity, 'shot'); W.step(DT);
-  const b0 = { ...game.blackout };
-  setDaylight(game, true); W.step(DT); const during = { ...game.blackout };
-  setDaylight(game, false); W.step(DT); const after = { ...game.blackout };
+  const b0 = game.blackout.toJSON();
+  setDaylight(game, true); W.step(DT); const during = game.blackout.toJSON();
+  setDaylight(game, false); W.step(DT); const after = game.blackout.toJSON();
   ok = verdict(b0.active && b0.permanent && !during.active && isDaylight(game) === false && after.active && after.permanent && after.until === Infinity && Math.abs(after.since - b0.since) < 1e-9, 'permanent: active+permanent before, lifted while day is in, active+permanent+until ∞ (same since) after', `before ${JSON.stringify(b0)} · during active ${during.active} · after ${JSON.stringify(after)}`) && ok;
   game.endBlackout(); for (let i = 0; i < 5; i++) W.step(DT);
-  game.setBlackout(30, 'ocp'); W.step(DT); const t0 = { ...game.blackout };
-  setDaylight(game, true); W.step(DT); setDaylight(game, false); const t1 = { ...game.blackout };
+  game.setBlackout(30, 'ocp'); W.step(DT); const t0 = game.blackout.toJSON();
+  setDaylight(game, true); W.step(DT); setDaylight(game, false); const t1 = game.blackout.toJSON();
   ok = verdict(t0.active && !t0.permanent && !t1.active, 'timed (OCP, 30 s): lifted by the day and NOT put back — that trip is over (breach-daylight\'s own premise)', `before ${JSON.stringify(t0)} · after ${JSON.stringify(t1)}`) && ok;
   game.endBlackout(); W.step(DT);
   setDaylight(game, true); W.step(DT); setDaylight(game, false); W.step(DT);
