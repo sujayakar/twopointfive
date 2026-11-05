@@ -21,8 +21,11 @@ const RULES = [
   { name: 'runner', why: ['has said he is done', 'dropped it and ran'] },
   { name: 'morale', why: ['a blast has him ducked or broken'] },
   // WHO MAY MOVE HIM OFF HIS POST
+  { name: 'squadLeg', why: ['his squad has sent him, or is about to'] },
+  { name: 'squadWord', why: ['his squad has heard and not yet said what it does, or has him going round or looking'] },
   { name: 'lastMan', why: ['the last man up, at his act'] },
   { name: 'lane', why: ['held short of a covered lane, or looking round its corner'] },
+  { name: 'squad', why: ['his squad\'s man at rest: where he goes for a fight elsewhere is its call'] },
 ] as const;
 export type OwnerRule = typeof RULES[number]['name'];
 
