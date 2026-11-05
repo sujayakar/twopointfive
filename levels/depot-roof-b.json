@@ -99,7 +99,7 @@
     "petrolBlock": { "albedo": [0.024, 0.218, 0.338], "rough": 0.38, "stuff": "gloss block" },
     "ochreBlock": { "albedo": [0.63, 0.385, 0.035], "rough": 0.38, "stuff": "gloss block" },
     "deepBlock": { "albedo": [0.45, 0.405, 0.325], "rough": 0.38, "stuff": "gloss block" },
-    "limeFloor": { "albedo": [0.42, 0.4, 0.36], "rough": 0.5, "stuff": "skim" },
+    "limeFloor": { "albedo": [0.425, 0.405, 0.365], "rough": 0.5, "stuff": "skim" },
     "greyFloor": { "albedo": [0.4, 0.405, 0.4], "rough": 0.5, "stuff": "skim" },
     "coolFloor": { "albedo": [0.4, 0.415, 0.43], "rough": 0.5, "stuff": "skim" }
   },
