@@ -408,11 +408,11 @@ fn cutCoreRow(bi: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + CUT
  *  planes among them, in the order isectCut's planes always had: a zero normal ends the record, and of the planes that raise tN the most the FIRST is the
  *  face (a later row at the same t does not take it over). A ray along a plane and on its far side leaves nothing: tF = −1, a miss to every reader. */
 fn cutFour(bi: u32, k0: u32, lo: vec3f, ld: vec3f, s: vec4f) -> vec4f {
-  let p0 = cutPlaneRow(bi, k0); let p1 = cutPlaneRow(bi, k0 + 1u); let p2 = cutPlaneRow(bi, k0 + 2u); let p3 = cutPlaneRow(bi, k0 + 3u);
+  let q = CUT_BASE + bi * CUT_STRIDE + k0; let p0 = boxMat[q]; let p1 = boxMat[q + 1u]; let p2 = boxMat[q + 2u]; let p3 = boxMat[q + 3u];
+  let n = mat4x3f(p0.xyz, p1.xyz, p2.xyz, p3.xyz);                    // (a vector × this = its dot with each of the four normals)
   let l0 = (s.w > 0.5) & any(p0.xyz != vec3f(0.0)); let l1 = l0 & any(p1.xyz != vec3f(0.0)); let l2 = l1 & any(p2.xyz != vec3f(0.0)); let l3 = l2 & any(p3.xyz != vec3f(0.0));
   let live = vec4<bool>(l0, l1, l2, l3);
-  let den = vec4f(dot(p0.xyz, ld), dot(p1.xyz, ld), dot(p2.xyz, ld), dot(p3.xyz, ld));
-  let num = vec4f(p0.w - dot(p0.xyz, lo), p1.w - dot(p1.xyz, lo), p2.w - dot(p2.xyz, lo), p3.w - dot(p3.xyz, lo));
+  let den = ld * n; let num = vec4f(p0.w, p1.w, p2.w, p3.w) - lo * n;
   let t = num / select(den, vec4f(1.0), den == vec4f(0.0));
   let tIn = select(vec4f(-3.0e38), t, live & (den < vec4f(0.0)));    // the planes the ray crosses INTO the kept side …
   let tOut = select(vec4f(3.0e38), t, live & (den > vec4f(0.0)));    // … and OUT of it

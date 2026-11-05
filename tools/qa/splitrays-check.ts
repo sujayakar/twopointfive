@@ -17,7 +17,7 @@ import { ROOT } from './headless.ts';
  *  one is a change the split needs too — make it there, then pin the new text here */
 const COPIED: Record<string, string> = { main: 'ba820f9b5b5c', glossReflection: 'ad4738009399', glassShade: '8471046e5bbb' };
 
-type Kernel = { module: string; entry: string; set: string; pipelines: string[]; pasted: number; budgetKB: number | null };
+type Kernel = { module: string; entry: string; set: string; pipelines: string[]; pasted: number; cut?: number; budgetKB: number | null };   // (cut: the cut test's text in it, which the size tool counts apart from the kernel's row)
 type Sizes = { modules: { label: string; h: string }[]; kernels: Kernel[] };
 
 export async function splitraysCheck(): Promise<boolean> {
@@ -93,7 +93,7 @@ export async function splitraysCheck(): Promise<boolean> {
       'the row on: the three split pipelines stand in both sets and no megakernel gather is compiled', `megakernel gathers ${megaOn.length} · boot set: ${pipes('boot') || 'none'} · cut set: ${pipes('cut') || 'none'}`);
     const big = Math.max(0, ...splitOn.map(k => k.pasted));
     line(splitOn.length > 0 && main > 0 && big * 3 < main && on.green && splitOn.every(k => k.budgetKB !== null && k.budgetKB < 300),
-      'each of the split\'s kernels is under a third of today\'s `main` as DXC pastes it, has a budget row of its own, and the size tool is green with the row on', `largest split kernel ${KB(big)} of today's ${KB(main)} · ${[...new Set(splitOn.map(k => `${k.entry} ${KB(k.pasted)} of ${k.budgetKB}`))].join(' · ')} · size tool: ${on.out}`);
+      'each of the split\'s kernels is under a third of today\'s `main` as DXC pastes it, has a budget row of its own, and the size tool is green with the row on', `largest split kernel ${KB(big)} of today's ${KB(main)} · ${[...new Set(splitOn.map(k => `${k.entry} ${KB(k.pasted - (k.cut ?? 0))} of ${k.budgetKB}`))].join(' · ')} (the cut test's text apart) · size tool: ${on.out}`);
     // (a module is in the list once a set it is compiled in: compared as label + text, whichever set it is from)
     const texts = (j: Sizes | null) => (j?.modules ?? []).filter(m => !/^(fgatherS?|gatherSplitS?)$/.test(m.label)).map(m => `${m.label} ${m.h}`).sort();
     const a = texts(off.j), b = texts(on.j), moved = a.filter((x, i) => b[i] !== x).map(x => x.split(' ')[0]);
