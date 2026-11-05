@@ -1111,7 +1111,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the server room's raised floor `paver` (laid in tiles), the lino `enamel` (one waxed sheet: the look's plain gloss coat), the extinguisher, its box and the
   agent cylinder `enamel`, the van and both cars `carpaint`. 95 boxes of 783 say a new word; NO box, colour, finish or number moved (the file differs from the
   one before only by `stuff` words), so the level's fingerprint holds and every checkpoint and tape of the office still loads. NOT SAID, on purpose: the lot (no
-  stuff the look has is tarmac; `gravel` drew it as cobbles and `slab` as cracked paving on the software adapter, so it stays plain) and the lawn (it waits).
+  stuff the look has is tarmac; `gravel` drew it as cobbles and `slab` as cracked paving on the software adapter, so it stays plain) and the lawn (it waits). (BOTH ARE SAID since 11-05, at their paints' rows: "Lots and lawns say tarmac and grass", below.)
   NOT TOUCHED: the kit's own pieces (mullions, door frames, rugs, the things written with `drawnAs`), which every level built on the kit shares; lamps and
   hours; nothing was laid (the office passes `level-needs` `ground` and `lived` as built, and one added box would part every recording made on this floor).
   `levels/office-relief.json` is exported with it and comes back in step (on the step before it lacked the vehicles' 22 shapes). CHECK `stuff-check` line 4
@@ -1510,3 +1510,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `walked-check` is red on a mark standing where the walk grid is shut; `probes.ts ways` already is on a name that is two things. As measured on
   the step: the office's two files differ from before by the `marks` key alone, and loaded with the office's script each gives the same 31 marks, the
   same scenarios and every other key of the Level the same as the build before it. Nothing a page draws moves.
+- **Lots and lawns say tarmac and grass** (the two paints' rows and every level file; no switch of its own; 2026-11-05; the dress goal's ask, the
+  office's follow-up grown to every level, and the step the office's hand pass waits on). The look has had a tarmac and a grass since the same day
+  (`render/lookTex.ts`); the WORDS are said at the paints' rows, `scene/stuff.ts PAINT_STUFF`: `asphalt` was 'plain' and is 'tarmac', `grass` was 'waits'
+  and is 'grass'. A level's FILE carries its rows' words, so ALL 59 LEVEL FILES were exported again and each differs from the step before by exactly
+  those two words (proved file by file with the words struck out) and by nothing else, but for ONE BOX: the compound's mud at the hand pump was laid in
+  the asphalt paint for its darkness and says `earth` now (`compound.ts`, `saidAs`; the same box in its look file). No box, colour, finish or number
+  moves; no base file rides (`lived-check` holds every one as it stands).
+  WHAT A ROUND GETS, and the step's one line under `src/game`: `game/particleFx.ts STUFF_SURF` gains the row `tarmac: 'concrete'` (the row the cars'
+  part asked for; written here and nowhere else). DRY, nothing moves: a lot's paint was concrete to a round by its colour. WET, THE PICTURE OF A HIT
+  MOVES, on the page only (the row rides HITSTUFF: `?hitstuff=0`, `TPS_HITSTUFF=1` on the frozen stand): the storm halves the lot's paint and that tone
+  read as metal (`weather.ts` and `gwotPalette.ts` say so, "as measured", and both are still true of what the SIMULATION reads, `destruction.ts`), so a
+  round on the wet lot threw a metal's sparks and no chips. A lot that says tarmac is concrete wet or dry: a few sparks, chips and dust. Nobody has seen
+  it. A LAWN TAKES NO ROUND: every grass box is a strip no ray meets (`NoShadow`) lying on the lot's slab, so a round into the office's lawn is a round
+  into the slab under it, concrete before and now. A `grass` row would read nothing while lawns are laid so; a lawn that gives blades and earth is a
+  change to how a lawn is laid. One thing for later.
+  THE GROUNDS, READ: every office-kit level lays one 40 by 28 m slab in the asphalt paint under everything: twenty files. For the levels that stay on
+  the mission list each was read against its generator's own words: the office and its relief file (one generator; a car park: tarmac; its two strips
+  are a lawn: grass), the depot (hardstanding and the road: tarmac), the consulate (a street: tarmac; its strip a verge: grass), Mousehole (the yard is
+  grass, the rest asphalt) and the compound (the road south and east: tarmac; its yard has an earth slab of its own over it; its two strips are SCRUB
+  and say grass now: left, the compound is to be re-set). FLIPPED AND NOT READ, each a ground that may be no lot: barracks, block, block-squads, defuse,
+  floodlit, hall, killhouse, kit-yard, quiet-yard, records, registry, sneak-lab, test-rooms, warehouse (asphalt), and the grass of barracks, block,
+  block-squads, defuse, records, registry and warehouse. ALSO FLIPPED, stand-ins: eleven boxes of the gear screen's sets in four plain files (the
+  compound's eight, and the set ground of defuse, the registry and Mousehole) name their paint 'dirt|asphalt' and the like and fall back to the two
+  rows where the file has no look row; they are drawn by the plain file only and are not mended (`stuff-check` line 15's rule).
+  WHERE IT IS DRAWN: a stuff is drawn on the look's page (`?look`) and nowhere else. Fourteen of the twenty have a look file whose skin repaints the
+  ground, and the page draws that file unless the dress is put off, so their tarmac and grass are not drawn. OF THE 29 LEVELS ON THE MISSION LIST ONE
+  CHANGES, THE OFFICE (two rows): its slab (the car park round the building) is tarmac and its two strips, 207 m2, are grass, where both were flat
+  colour; and the compound's 1 m2 of mud is earth. Off the list: the office's relief file, kit-yard, quiet-yard, sneak-lab and test-rooms draw their
+  slab as tarmac. THE PRICE, not measured in a browser: the look makes a stuff's maps once a boot for a level that names it (`render.md`: grass about
+  0.7 s of arithmetic and tarmac 0.55, under bun), and the office names both now, the last two layers made.
+  CHECK: `stuff-check` line 4's bar moved with the word (the office's car park is tarmac where it was plain: a bar moved, not loosened) and asks the
+  lawn; its new line 17 holds the two words to the ground (in every file each box that takes tarmac or grass from its row is a flat box of the
+  `ground` or `floors` group: 20 lots, 22 strips; a mat and a kerb written in the car park's paint are found, one that says earth is not) and a lot
+  to concrete in the picture of a hit; `STUFF_BREAK=1` fails 17 with the rest. `hitstuff`, `marksight`, `lived`, `lookmaps`, `walked` (no `--write`),
+  `probes.ts kept`, `wallfurn` and `wayround` green on both stands; the senses' error tool green on the office on the page's stand.
+  PLAY: no move. The play-through's 42 runs (21 missions, seeds 1 and 2) on the frozen stand, the page's, and the page's with its lived tier off, the
+  step against the tip it is cut on (step 1459): 42 of 42 run digests the same, each. SEEN, on the software adapter only (unsettled frames: what is
+  laid where, not what a material looks like): the office opened under `?look` at midday with the lot and the lawn drawn in their stuffs, 120 of 120
+  pipelines, no page or GPU error. The look task's settled still of the two was drawn on its own branch. Never on a GPU here, and nobody has seen a
+  round on the wet lot.
