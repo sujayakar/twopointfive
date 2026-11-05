@@ -36,10 +36,9 @@
 //     whole (resetLevelState; a checkpoint load is a restart, so holes are never saved — and no static is appended, so savestate's levelFingerprint is untouched).
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import { VIEW_BLOWN, VIEW_GIVES, type PaneRow, type PaneView } from '../scene/boxMirror';
 import type { Game, Player } from './game';
 import { men } from './seats';
-import { hitSeed, glassImpact, glassEvent, GLASSFX, glassPanes, isSheet } from './glass';
+import { hitSeed, glassImpact, glassEvent, GLASSFX } from './glass';
 import { hash01 } from './debris';
 import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
@@ -208,9 +207,7 @@ export class GlassBreak {
   private releasedThisFrame = 0;
   constructor(private g: Game) {
     g.engine.world.glassCellFill = (bi, dst, off) => this.fill(bi, dst, off);
-    // (also: a burst's own view of the glass, for the length of one judgment — seeThrough below; null at every other time. And `this`: the same rule as
-    //  rows, for the lines and rays the Rust module walks — scene/boxMirror.ts PaneSource, `each` and `view` below)
-    g.col.glassRule((bi, p) => this.openAt(bi, p) || (this.also !== null && this.also(bi, p)), () => this);
+    g.col.glassOpen = (bi, p) => this.openAt(bi, p) || (this.also !== null && this.also(bi, p));   // (also: a burst's own view of the glass, for the length of one judgment — seeThrough below; null at every other time)
     g.engine.world.glassOpen = (bi, p) => glassBreakLive(g) && this.openAt(bi, p);   // the aim ray too (BoxWorld.raycast: reticle / arm / throw arc pass through a hole); inert with the switch off like everything else
     g.col.glassWalkable = (bi) => this.walkable(bi);
     // the destruction engine's blast feed, where the build has one (g.destr.onBlast; res.panes is its count of ours). What blast() does is START the break: annealed pieces
@@ -262,9 +259,9 @@ export class GlassBreak {
     return d;
   }
   /** the type of pane bi as it will break (an override from setType, else typeOf) — null for anything that is not a sheet of glass */
-  typeOfPane(bi: number): GlassType | null { const b = this.g.level.boxes[bi]; if (!b || !isSheet(b)) return null; return this.types.get(bi) ?? this.typeOf(b, bi); }
+  typeOfPane(bi: number): GlassType | null { const b = this.g.level.boxes[bi]; if (!b || !(b.flags & BoxFlag.Glass) || Math.min(b.h[0], b.h[2]) > 0.05) return null; return this.types.get(bi) ?? this.typeOf(b, bi); }
   /** make pane bi break as `type` from here on (tuning, probes, a level's own table); the pane is made whole first. null = back to typeOf. An override is the level's word on the pane: reset() keeps it */
-  setType(bi: number, type: GlassType | null) { if (type) this.types.set(bi, type); else this.types.delete(bi); this.panes.delete(bi); this.g.col.wrote(); this.g.col.glassWrote(); this.blasted.length = 0; const src = this.gusts.get(bi); if (src) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); this.gusts.delete(bi); } }
+  setType(bi: number, type: GlassType | null) { if (type) this.types.set(bi, type); else this.types.delete(bi); this.panes.delete(bi); this.g.col.wrote(); this.blasted.length = 0; const src = this.gusts.get(bi); if (src) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); this.gusts.delete(bi); } }
   private stateOf(bi: number): PaneState | null {
     let st = this.panes.get(bi); if (st) return st;
     const type = this.typeOfPane(bi); if (!type) return null;   // (a Glass box thicker than a sheet — solid glass — never comes apart)
@@ -320,9 +317,6 @@ export class GlassBreak {
    *  toward the run), tempered still dices at its break energy (a round can spend itself breaking toughened glass) —
    *  undefined = the glass decides by energy (punchE). glass.ts glassImpact wraps this with the star decal, the crack heard and the hearing event. */
   impact(bi: number, X: Vec3, dir: Vec3 | null, energy: number, who: number, through?: boolean): GlassImpact {
-    const c = this.g.col; c.glassBegin(); try { return this.impactIn(bi, X, dir, energy, who, through); } finally { c.glassEnd(); }   // (the copy's panes follow every write of this: boxMirror.ts glassBegin)
-  }
-  private impactIn(bi: number, X: Vec3, dir: Vec3 | null, energy: number, who: number, through?: boolean): GlassImpact {
     const g = this.g; const b = g.level.boxes[bi]; const isGlass = !!b && (b.flags & BoxFlag.Glass) !== 0;
     const res: GlassImpact = { pane: isGlass, live: false, type: 'annealed', thickness: isGlass ? 2 * Math.min(b.h[0], b.h[2]) : 0, wasOpen: false, punched: false, diced: false, released: 0, cracked: false };
     if (!isGlass) return res;
@@ -380,8 +374,8 @@ export class GlassBreak {
     const st = this.panes.get(bi); if (!st || st.type !== 'annealed') return 0;
     const [u, v] = this.toUVIn(st, X); if (this.openUV(st, u, v)) return 0;
     const fid = gpClassify(st.sites, st.run, u, v); if (fid < 0) return 0;
-    const c = this.g.col; c.glassBegin();
-    try { const n = this.knockOut(st, fid); if (n > 0 && st.nextThink <= 0) st.nextThink = this.g.time + GLASSBREAK.think; return n; } finally { c.glassEnd(); }
+    const n = this.knockOut(st, fid); if (n > 0 && st.nextThink <= 0) st.nextThink = this.g.time + GLASSBREAK.think;
+    return n;
   }
   /** a hard blow on piece fid: it goes now (a crater wedge takes the whole crater with it). Returns fragments let go. */
   private knockOut(st: PaneState, fid: number): number {
@@ -402,9 +396,6 @@ export class GlassBreak {
    *  within 1.4 k + 0.15 m of the nearest point but the teeth on its frame, laminated crazes and (k > blastSheetK) leaves its frame as one sheet. Returns the panes it changed. */
   blast(at: Vec3, opts: GlassBlastOpts = {}): number {
     if (!glassBreakLive(this.g)) return 0;   // (as impact(): nothing with the switch off / at chaos 0 / under the tour)
-    const c = this.g.col; c.glassBegin(); try { return this.blastIn(at, opts); } finally { c.glassEnd(); }
-  }
-  private blastIn(at: Vec3, opts: GlassBlastOpts): number {
     const radius = opts.radius ?? GLASSBREAK.blastM, power = opts.power ?? 1, who = opts.who ?? 0;
     if (!(radius > 0) || !(power > 0)) return 0;
     // ONE charge, one blow: the same blast can arrive twice (destruction's feed AND its 'bang' hearing event through glass.ts, which lifts a can on the floor to 0.3 m and
@@ -454,52 +445,11 @@ export class GlassBreak {
 
   // ---------------------------------------------------------------- a burst's view of the glass (frag.ts: fragments are stopped by glass that stands, and by none that the blast took)
   private also: ((bi: number, X: Vec3) => boolean) | null = null;
-  /** THE PANES THAT ARE NO LONGER WHOLE, for the box world's copy (scene/boxMirror.ts PaneSource): every pane with a piece out, a piece queued to leave,
-   *  coming down or gone. A pane that only has cracks answers as a whole one everywhere and has no row. */
-  each(to: (p: PaneRow) => void): void { for (const st of this.panes.values()) if (st.gone || st.dice !== null || st.nOpen > 0 || st.pending.length > 0) to(st); }
-  /** For the length of `fn`, every solid walk (StaticCollision.segmentBlocked and what is built on it: solidBlocked, shotBlocked) and every ray ALSO passes a
-   *  pane where a burst at `from` of this size sees no glass — on top of what has already fallen out — by the `view` the burst's judgment is made in
-   *  (frag.ts GlassView: 'blown' = goingAt, 'wary' = wouldGive of the whole pane, 'counted' = wouldGive at the point met). Nothing is filed and nothing is
-   *  kept: the view is gone when fn returns (or throws). The view is said twice, as a rule for this side's walks and as rows for the module's (`gives`). */
-  seeThrough<T>(view: 'blown' | 'wary' | 'counted', from: Vec3, size: GlassBlastOpts, fn: () => T): T {
+  /** For the length of `fn`, every solid walk (StaticCollision.segmentBlocked and what is built on it: solidBlocked, shotBlocked) ALSO passes pane bi at X where `also`
+   *  says so — on top of what has already fallen out. Nothing is filed and nothing is kept: the view is gone when fn returns (or throws). */
+  seeThrough<T>(also: (bi: number, X: Vec3) => boolean, fn: () => T): T {
     for (const bi of this.g.engine.world.glassStatics) this.skySide(bi);   // (which glass each pane is, settled BEFORE the view is on: typeOfPane's first answer for a pane casts solid rays of its own — never from inside a walk, and never through this view)
-    const also: (bi: number, X: Vec3) => boolean = view === 'blown' ? (bi, X) => this.goingAt(bi, X) : view === 'wary' ? (bi) => this.wouldGive(bi, from, size) : (bi, X) => this.wouldGive(bi, from, size, X);
-    const was = this.also, wasOf = this.viewOf; this.also = also; this.viewOf = { kind: view, from, size, rows: undefined }; this.g.col.glassViewed();
-    try { return fn(); } finally { this.also = was; this.viewOf = wasOf; this.g.col.glassViewed(); }
-  }
-  /** the view in hand as rows (scene/boxMirror.ts PaneSource), worked out when the copy first reads it and kept for the judgment: 'blown' names no pane
-   *  (the module answers it from the pieces queued to leave); the other two list the panes the burst would break. null = no view, or the model is not live. */
-  get view(): PaneView | null {
-    const V = this.viewOf; if (V === null) return null;
-    if (V.rows === undefined) V.rows = V.kind === 'blown' ? { kind: VIEW_BLOWN, bi: [], at: [] } : this.gives(V.from, V.size, V.kind === 'counted');
-    return V.rows;
-  }
-  private viewOf: { kind: 'blown' | 'wary' | 'counted'; from: Vec3; size: GlassBlastOpts; rows: PaneView | null | undefined } | null = null;
-  /** wouldGive for every sheet of the level at once, as the rows of a view: each pane that gives, its nearest point to the burst and its reach (`give`). A
-   *  pane coming down or gone is not listed: its own row says so. null = the model is not live (wouldGive answers false everywhere). */
-  private gives(at: Vec3, opts: GlassBlastOpts, sure: boolean): PaneView | null {
-    if (!glassBreakLive(this.g)) return null;
-    const rows = { kind: VIEW_GIVES, bi: [] as number[], at: [] as number[] }, radius = opts.radius ?? GLASSBREAK.blastM, power = opts.power ?? 1; if (!(radius > 0) || !(power > 0)) return rows;
-    const boxes = this.g.level.boxes, q: Vec3 = [0, 0, 0];
-    for (const bi of glassPanes(this.g)) {   // (the level's glass, listed once a game: glass.ts)
-      const b = boxes[bi]; if (!isSheet(b)) continue;
-      const reach = this.give(bi, b, at, radius, power, sure, q); if (reach === reach) { rows.bi.push(bi); rows.at.push(q[0], q[1], q[2], reach); }
-    }
-    return rows;
-  }
-  /** HOW A SHEET OF GLASS GIVES to a blast of this size at `at` — wouldGive's rule, stated once: by blast()'s own strengths and nothing of the pane's cracks,
-   *  toughened glass dices or it does not, a laminated sheet leaves its frame or it does not; float glass is counted out whole by a wary man wherever the blast
-   *  touches it at all, and by one who counts on it (`sure`) only inside the reach blast() takes pieces within, round the pane's nearest point, and only where
-   *  the blow is hard enough to take the slivers on the frame with it (toothK). → the reach round the nearest point (written to `q`) within which the glass
-   *  goes: below nought = the whole pane, NaN = it does not give. */
-  private give(bi: number, b: Box, at: Vec3, radius: number, power: number, sure: boolean, q: Vec3): number {
-    const K = GLASSBREAK, p = nearestOn(b, at), k = power * (1 - v3.dist(p, at) / radius); q[0] = p[0]; q[1] = p[1]; q[2] = p[2];
-    if (k < Math.min(K.blastDiceK, K.blastSheetK, sure ? K.toothK : BLAST_MIN_K)) return NaN;   // (under every kind's bar: no need to ask which glass it is, which may cast rays)
-    const type = this.types.get(bi) ?? this.typeOf(b, bi);
-    if (type === 'tempered') return k > K.blastDiceK ? -1 : NaN;
-    if (type === 'laminated') return k > K.blastSheetK ? -1 : NaN;
-    if (!sure) return k > BLAST_MIN_K ? -1 : NaN;
-    const reach = blastReach(k); return k >= K.toothK && reach >= 0 ? reach : NaN;   // (under toothK a sliver on the frame stays in it: not SURE)
+    const was = this.also; this.also = also; try { return fn(); } finally { this.also = was; }
   }
   /** Is the glass of pane bi at X ON ITS WAY OUT: the piece there is queued to leave (by a blast() — a crater's wedges go together within a few frames — or by
    *  anything before it: rounds that ran the pane a moment ago, a piece that lost its support), the pane is toughened glass coming down, or it has gone. What
@@ -520,10 +470,13 @@ export class GlassBreak {
   wouldGive(bi: number, at: Vec3, opts: GlassBlastOpts = {}, X?: Vec3): boolean {
     if (!glassBreakLive(this.g)) return false;
     const st = this.panes.get(bi); if (st && (st.gone || st.dice)) return true;
-    const b = this.g.level.boxes[bi]; if (!b || !isSheet(b)) return false;
+    const b = this.g.level.boxes[bi]; const type = this.typeOfPane(bi); if (!b || !type) return false;
     const radius = opts.radius ?? GLASSBREAK.blastM, power = opts.power ?? 1; if (!(radius > 0) || !(power > 0)) return false;
-    const q: Vec3 = [0, 0, 0], reach = this.give(bi, b, at, radius, power, X !== undefined, q);
-    return reach < 0 || (X !== undefined && v3.dist(X, q) <= reach);
+    const q = nearestOn(b, at); const k = power * (1 - v3.dist(q, at) / radius);
+    if (type === 'tempered') return k > GLASSBREAK.blastDiceK;
+    if (type === 'laminated') return k > GLASSBREAK.blastSheetK;
+    if (!X) return k > BLAST_MIN_K;
+    return k >= GLASSBREAK.toothK && v3.dist(X, q) <= blastReach(k);   // (under toothK a sliver on the frame stays in it: not SURE)
   }
 
   /** a stun charge went off at `at` (glass.ts updateGlass, off the 'bang' event): a blast at bangPower */
@@ -707,26 +660,20 @@ export class GlassBreak {
     if (this.gusts.size || this.gustDirty) { this.updateGusts(); this.gustDirty = this.gusts.size > 0; }
     if (!glassBreakLive(this.g)) return;   // (as impact / blast: a pane still shedding when the tour starts, the switch goes off or chaos drops to 0 sheds nothing more and files no noise)
     const now = this.g.time;
-    if (this.panes.size === 0) return;
-    // (what is stepped below lets pieces go and queues others, and what hears one go asks lines of its own: the glass is worked on from here to there, for
-    //  the box world's copy — boxMirror.ts glassBegin)
-    const c = this.g.col; c.glassBegin();
-    try {
-      for (const st of this.panes.values()) {
-        if (st.gone) continue;
-        if (st.dice) { this.stepDice(st); continue; }
-        if (st.pending.length) {   // what is due, within the frame's budget (the rest wait a frame); then the pass over what that left unheld
-          let went = false;
-          while (st.pending.length && st.pending[0].at <= now && this.releasedThisFrame < GLASSBREAK.releasesPerFrame) {
-            const p = st.pending.shift()!; const f = this.fragsOf(st).find(x => x.fid === p.fid);
-            if (f && !st.open[p.fid]) { if (f.b === 0) this.releaseCrater(st, f.i, p.cause); else this.releaseFrag(st, f, p.cause, p.from, p.k); this.releasedThisFrame++; went = true; }   // (a crater's wedges are crushed glass: they go together, as one fragment, whatever took the first)
-          }
-          if (went && st.nextThink <= 0) st.nextThink = now + GLASSBREAK.think;
+    for (const st of this.panes.values()) {
+      if (st.gone) continue;
+      if (st.dice) { this.stepDice(st); continue; }
+      if (st.pending.length) {   // what is due, within the frame's budget (the rest wait a frame); then the pass over what that left unheld
+        let went = false;
+        while (st.pending.length && st.pending[0].at <= now && this.releasedThisFrame < GLASSBREAK.releasesPerFrame) {
+          const p = st.pending.shift()!; const f = this.fragsOf(st).find(x => x.fid === p.fid);
+          if (f && !st.open[p.fid]) { if (f.b === 0) this.releaseCrater(st, f.i, p.cause); else this.releaseFrag(st, f, p.cause, p.from, p.k); this.releasedThisFrame++; went = true; }   // (a crater's wedges are crushed glass: they go together, as one fragment, whatever took the first)
         }
-        if (st.nextThink > 0 && now >= st.nextThink) { st.nextThink = 0; GB_STATS.thinks++; this.supportPass(st); }
-        if (st.run && !st.walkable && GLASSBREAK.rakeOpen > 0 && st.type === 'annealed') this.rake(st);
+        if (went && st.nextThink <= 0) st.nextThink = now + GLASSBREAK.think;
       }
-    } finally { c.glassEnd(); }
+      if (st.nextThink > 0 && now >= st.nextThink) { st.nextThink = 0; GB_STATS.thinks++; this.supportPass(st); }
+      if (st.run && !st.walkable && GLASSBREAK.rakeOpen > 0 && st.type === 'annealed') this.rake(st);
+    }
   }
   /** RAKING: Sam, on his feet, WALKS INTO what is left of a run pane that is mostly hole — the pieces in his way (not the teeth, nothing wholly above walkClearH) go,
    *  away from him, nearest first; the support pass takes what that leaves hanging. Asked only of panes that have run and are not yet walkable. Sam alone: nobody
@@ -857,7 +804,7 @@ export class GlassBreak {
     for (const st of this.panes.values()) if (st.nOpen || st.dice || st.gone) s += ` | pane ${st.bi} ${st.type} ${Math.round(100 * this.openFraction(st.bi))}% open${st.run ? ' run' : ''}${st.walkable ? ' (walkable)' : ''}`;
     return s;
   }
-  reset() { this.panes.clear(); this.g.col.wrote(); this.g.col.glassWrote(); this.blasted.length = 0; for (const src of this.gusts.values()) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); } this.gusts.clear(); this.gustDirty = false; }
+  reset() { this.panes.clear(); this.g.col.wrote(); this.blasted.length = 0; for (const src of this.gusts.values()) { const i = this.g.wind.all.indexOf(src); if (i >= 0) this.g.wind.all.splice(i, 1); } this.gusts.clear(); this.gustDirty = false; }
 }
 function nearestOn(b: Box, p: Vec3): Vec3 {
   const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); const px = p[0] - b.c[0], pz = p[2] - b.c[2];

@@ -17,7 +17,6 @@ const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, 
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE, floorAt } = await import(`${ROOT}/src/game/floor.ts`);
 const { EXACT } = await import(`${ROOT}/src/math/exact.ts`);
-const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);
 
 let failures = 0;
 function verdict(ok: boolean, what: string, detail = '') { if (!ok) failures++; console.log(`  ${ok ? 'PASS' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`); }
@@ -25,7 +24,7 @@ export function levelProbeFailures() { return failures; }
 
 /** the exporter's annotations, rebuilt here so the probes do not depend on the tool (same inputs: palette, floor.ts, WORLD) */
 function exportOpts(trace: { groups: string[] }) {
-  const materials: Record<string, { albedo: number[]; rough?: number; metal?: boolean; stuff?: string }> = {}; for (const [k, a] of Object.entries(OFFICE_PALETTE as Record<string, number[]>)) materials[k] = { albedo: [...a], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[k] ?? {}), ...rowWord(k) };   // palette + finish + what each paint is made of, as tools/level-export.ts builds them
+  const materials: Record<string, { albedo: number[]; rough?: number; metal?: boolean }> = {}; for (const [k, a] of Object.entries(OFFICE_PALETTE as Record<string, number[]>)) materials[k] = { albedo: [...a], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[k] ?? {}) };   // palette + finish, as tools/level-export.ts builds them
   const zoneIds = ['corridor_lino', 'lobby_stone', 'server_tile', 'breakroom_lino'];
   return {
     name: 'office', materials, boxGroups: trace.groups,

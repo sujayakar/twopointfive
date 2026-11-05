@@ -4,7 +4,7 @@
 // stops from one wall to the other with a 1 m door to the yard, and a room B behind A's far wall, a hundred times darker than the yard and shut off.
 // It asserts (one PASS / FAIL line each, exit 1 on any FAIL): the shader compiles and nothing is non-finite, wall cells and only they hold no level, the yard
 // has the yard's level, room A has ONE level (not its light's 2.6 stops) near the middle of its light, room B keeps its own through the shared wall, an open
-// door does not move room A's level by itself, an opening wider than a doorway joins two places, the field at rest does not creep, a change of light is
+// door moves room A little and a shut one less, an opening wider than a doorway joins two places, the field at rest does not creep, a change of light is
 // followed within seconds, the eye closes faster than it opens, a window (a sill, a pane and a lintel) is a wall, and the field's word for the open air is the
 // level of the cells with no roof over them.
 // Nothing here has been on a GPU: the ms it prints is the software adapter's and says nothing about a Mac.
@@ -53,23 +53,23 @@ function fieldPng(file, f, mask, w, h, K = 6) {
   const run = async o => { const r = await page.evaluate(o => window.__place.run(o), { place: SET, noWalls: BREAK, frames: 240, ...o }); r.f = f32(r.rest); r.g = f32(r.later); r.m = u8(r.mask); for (const e of r.gpuErrors) if (!errors.includes(e)) errors.push(e); return r; };
   let fails = 0, checks = 0; const check = (ok, what) => { checks++; if (!ok) fails++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${what}`); return ok; };
   const n = x => x.toFixed(2), lg = Math.log2;
-  /** over the free cells whose centres lie in a box of metres (a doorway's cells apart: they hold no level): the least, the most and the mean level */
-  const over = (r, f, x0, z0, x1, z1) => { let lo = 1e9, hi = -1e9, s = 0, c = 0; for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) { const x = r.min[0] + (i + 0.5) / r.res, z = r.min[1] + (j + 0.5) / r.res, v = f[j * r.w + i]; if (x < x0 || x > x1 || z < z0 || z > z1 || r.m[j * r.w + i] === 255 || (r.m[j * r.w + i] & 3) === 1) continue; lo = Math.min(lo, v); hi = Math.max(hi, v); s += v; c++; } return { lo, hi, mean: s / Math.max(c, 1), span: hi - lo, n: c }; };
+  /** over the free cells whose centres lie in a box of metres: the least, the most and the mean level */
+  const over = (r, f, x0, z0, x1, z1) => { let lo = 1e9, hi = -1e9, s = 0, c = 0; for (let j = 0; j < r.h; j++) for (let i = 0; i < r.w; i++) { const x = r.min[0] + (i + 0.5) / r.res, z = r.min[1] + (j + 0.5) / r.res, v = f[j * r.w + i]; if (x < x0 || x > x1 || z < z0 || z > z1 || r.m[j * r.w + i] === 255) continue; lo = Math.min(lo, v); hi = Math.max(hi, v); s += v; c++; } return { lo, hi, mean: s / Math.max(c, 1), span: hi - lo, n: c }; };
   const A = [10.2, 8.2, 15.8, 13.8], B = [16.2, 8.2, 21.8, 13.8], FAR = [26, 16, 38, 26], YARD = lg(L.YARD), MID = (lg(L.A_NEAR) + lg(L.A_FAR)) / 2, SPAN = lg(L.A_NEAR / L.A_FAR);
 
   const open = await run({ door: 'open' }), shut = await run({ door: 'shut' }), wide = await run({ door: 'wide' }), win = await run({ door: 'shut', window: true });
   for (const [k, r] of Object.entries({ open, shut, wide })) fieldPng(path.join(OUT_DIR, `place_${k}.png`), r.f, r.m, r.w, r.h);
   log(`solved to rest in ${open.msSettle.toFixed(0)} ms, a drawn frame's sweeps ${open.msFrame.toFixed(1)} ms on this adapter · maps drawn ${open.drawn} · PLACE ${JSON.stringify(open.place)}`);
-  { let bad = 0, walls = 0, doorways = 0, mism = 0; for (const r of [open, shut, wide]) for (let i = 0; i < r.w * r.h; i++) { const v = r.f[i]; if (!Number.isFinite(v)) bad++; if (r.m[i] === 255) walls++; else if ((r.m[i] & 3) === 1) doorways++; if ((r.m[i] === 255 || (r.m[i] & 3) === 1) !== !(v > -500)) mism++; }
+  { let bad = 0, walls = 0, mism = 0; for (const r of [open, shut, wide]) for (let i = 0; i < r.w * r.h; i++) { const v = r.f[i]; if (!Number.isFinite(v)) bad++; if (r.m[i] === 255) walls++; if ((r.m[i] === 255) !== !(v > -500)) mism++; }
     check(errors.length === 0 && bad === 0 && open.f[open.w * open.h + 1] === 1, `the shader compiles, the field says it is live and nothing in it is non-finite (${errors.length} errors, ${bad} non-finite cells)`);
-    check(walls > 300 && doorways > 0 && doorways < 20 && mism === 0, `a wall's cell and a doorway's hold no level and every other free cell holds one (${walls} wall cells and ${doorways} of a doorway over three scenes, ${mism} cells the wrong way)`); }
+    check(walls > 300 && mism === 0, `wall cells hold no level and every free cell holds one (${walls} wall cells over three scenes, ${mism} cells the wrong way)`); }
   const ya = over(open, open.f, ...FAR), a = over(open, open.f, ...A), b = over(open, open.f, ...B), as = over(shut, shut.f, ...A), aw = over(wide, wide.f, ...A);
   check(Math.abs(ya.lo - YARD) < 0.05 && Math.abs(ya.hi - YARD) < 0.05, `the open yard holds the yard's light: ${n(ya.lo)} to ${n(ya.hi)} stops against ${n(YARD)}`);
   const deep = over(open, open.f, 10.2, 8.2, 15.8, 12);
   check(as.span < 0.4 && deep.span < 0.4, `room A has one level: ${n(as.span)} stops from its brightest cell to its darkest with the door shut and ${n(deep.span)} with it open (two metres in from the door), both under 0.4, where its light spans ${n(SPAN)}`);
   check(Math.abs(as.mean - MID) < 0.35, `shut off, room A's level is the middle of its own light: ${n(as.mean)} against ${n(MID)} (within 0.35), with one of its probes holding nothing`);
   check(Math.abs(b.mean - lg(L.B_ROOM)) < 0.15 && b.span < 0.15, `room B, behind A's wall and shut off, keeps its own: ${n(b.mean)} against ${n(lg(L.B_ROOM))}, ${n(b.span)} across`);
-  check(Math.abs(a.mean - as.mean) < 0.02, `an open door does not move room A's level by itself: ${n(a.mean - as.mean)} of the ${n(YARD - MID)} stops between it and the yard (no level is pulled through a doorway; what a room takes from the yard is the light that comes in, which is the cache's to say and is the same in both scenes here)`);
+  check(a.mean - as.mean >= -0.02 && a.mean - as.mean < 0.6, `the open door brings room A up by ${n(a.mean - as.mean)} of the ${n(YARD - MID)} stops between it and the yard (under 0.6): still its own place`);
   check(aw.mean - as.mean > a.mean - as.mean + 0.3, `an opening wider than a doorway joins the two more: room A up by ${n(aw.mean - as.mean)} stops`);
   { const step = over(open, open.f, 12.6, 14.6, 13.4, 15.4), yardBy = over(open, open.f, 12, 17.5, 14, 19);
     check(Math.abs(yardBy.mean - YARD) < 0.25, `two metres out of the door the yard is the yard: ${n(yardBy.mean)} against ${n(YARD)} (the step sits at the threshold: ${n(step.mean)} just outside it)`); }
@@ -84,43 +84,6 @@ function fieldPng(file, f, mask, w, h, K = 6) {
     check(hole === 0 && Math.abs(awn.mean - as.mean) < 0.05 && awn.span < 0.4, `a window in room A's wall (a sill, a pane and a lintel, none a wall's height) leaves no hole in the map, and the room keeps its level: ${n(awn.mean)} against ${n(as.mean)} without it`);
     let sky = 0, roofed = 0; for (let i = 0; i < open.w * open.h; i++) { if (open.m[i] === 255) continue; if (open.m[i] & 4) sky++; else roofed++; }
     check(sky > 4000 && roofed > 300 && roofed < 500 && Math.abs(open.sky - YARD) < 0.05 && Math.abs(open.mid - YARD) < 0.05 && open.mid >= open.sky - 1e-6 && Math.abs(shut.sky - YARD) < 0.05 && Math.abs(wide.sky - YARD) < 0.3, `the two rooms are under a roof (${roofed} cells) and the field's word for the open air is what the cells under the sky hold: ${n(open.sky)} against the yard's ${n(YARD)} (${n(wide.sky)} with the wide opening letting the room's dark out into the yard)`); }
-  { // THE SECOND BLOCK, the brightest place a stride away (PLACE.near, PLACE.nearDoor; shaders/place_field.wgsl hand; what the Light in order row bounds a
-    // pixel's own light by): after the cells and their four words, a number a cell again
-    const N2 = open.w * open.h + 4, cellOf = (r, x, z) => Math.floor((z - r.min[1]) * r.res) * r.w + Math.floor((x - r.min[0]) * r.res), lv = (r, x, z) => r.f[cellOf(r, x, z)], nr = (r, x, z) => r.f[N2 + cellOf(r, x, z)];
-    let under = 0, own = 0, cells = 0; for (const r of [open, shut, wide]) for (let i = 0; i < r.w * r.h; i++) { if (r.m[i] === 255) continue; if (!(r.f[N2 + i] >= r.f[i] - 1e-3)) under++; }
-    for (let j = 0; j < shut.h; j++) for (let i = 0; i < shut.w; i++) { const x = shut.min[0] + (i + 0.5) / shut.res, z = shut.min[1] + (j + 0.5) / shut.res, k = j * shut.w + i; if (shut.m[k] === 255 || x < A[0] || x > B[2] || z < A[1] || z > A[3]) continue; cells++; if (Math.abs(shut.f[N2 + k] - shut.f[k]) < 1e-3) own++; }
-    const d0 = nr(open, 13, 13.6), d1 = nr(open, 13, 12.4), d2 = nr(open, 13, 10.6), bOpen = Math.abs(nr(open, 19, 11) - lv(open, 19, 11)), far = nr(open, 30, 20) - lv(open, 30, 20);
-    check(open.f.length >= 2 * open.w * open.h + 4 && under === 0 && own === cells && cells > 300 && d0 > YARD - 1 && d0 > d1 && d1 > d2 && d2 >= lv(open, 13, 10.6) && d0 - d1 > 0.5 && bOpen < 1e-3 && Math.abs(far) < 0.1,
-      `the brightest place a stride away: never under a cell's own level (${under} cells); with the door shut every cell of both rooms holds its own (${own} of ${cells}); with it open the cell inside the door holds ${n(d0)} against the yard's ${n(YARD)} and it falls into the room (${n(d1)} at 1.6 m, ${n(d2)} at 3.4 m, over the room's ${n(lv(open, 13, 10.6))}); room B behind the wall holds its own (off by ${bOpen.toFixed(4)}); the far yard is the yard's (${n(far)} over its level)`); }
-  { // A DOOR OPENS BY DEGREES (scene/placePlan.ts placeMask `steps`; shaders/place_field.wgsl hand and doorShut): the same room with the map told its
-    // door's line, the leaf at four angles. The door's line is two cells deep here (the wall's middle lies on a cell boundary)
-    const N2 = open.w * open.h + 4, K = open.w * open.h, cellOf = (r, x, z) => Math.floor((z - r.min[1]) * r.res) * r.w + Math.floor((x - r.min[0]) * r.res), STEPS = open.door.steps, PER_STOP = open.door.perStop;
-    const shutD = shut, a29 = await run({ door: 'ajar', swing: 0.5 }), a46 = await run({ door: 'ajar', swing: 0.8 }), openD = open;
-    fieldPng(path.join(OUT_DIR, 'place_ajar.png'), a29.f, a29.m, a29.w, a29.h);
-    const stepOf = m => (m !== 255 && (m & 3) === 1 ? (m >> 3) & 31 : 0), shutOf = m => (stepOf(m) ? (STEPS - stepOf(m)) / PER_STOP : 0);
-    const door = r => { let lo = 99, hi = 0, n = 0; for (const z of [13.8, 14.2]) for (let x = 12.7; x < 13.5; x += 0.4) { const m = r.m[cellOf(r, x, z)]; if (m === 255) continue; n++; lo = Math.min(lo, stepOf(m)); hi = Math.max(hi, stepOf(m)); } return { lo, hi, n }; };
-    const sS = door(shutD), s29 = door(a29), s46 = door(a46), sO = door(openD); let wallsMoved = 0; for (let i = 0; i < K; i++) if ((a29.m[i] === 255) !== (a46.m[i] === 255) || (a29.m[i] === 255) !== (openD.m[i] === 255)) wallsMoved++;
-    check(sS.n === 0 && s29.n >= 4 && s29.lo === s29.hi && s46.lo === s46.hi && sO.lo === sO.hi && s29.lo >= 1 && s29.lo < s46.lo && s46.lo < sO.lo && sO.lo === STEPS && wallsMoved === 0,
-      `by degrees a shut door's line is wall, and the doorway's cells say how open the door is: step ${s29.lo} of ${STEPS} with the leaf at 29 degrees, ${s46.lo} at 46, ${sO.lo} swung clear (a doorway whole); between those three no wall cell of the map moved (${wallsMoved})`);
-    // the second block as the rule says it, from the levels and the map each run handed back: a cell keeps the most of its own level and what each free
-    // neighbour hands it, PLACE.near stops dimmer, or across a doorway's cell PLACE.nearDoor, and ONCE, on the hand out of a door's line, the stops its
-    // door stands under wide open
-    const model = r => { const lvl = r.g, m = r.m, W = r.w, H = r.h, near = new Float32Array(K); for (let i = 0; i < K; i++) near[i] = m[i] === 255 ? -1000 : lvl[i];
-      for (let pass = 0, moved = true; moved && pass < 400; pass++) { moved = false;
-        for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const k = j * W + i; if (m[k] === 255) continue; let v = near[k];
-          for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const x = i + di, z = j + dj; if (x < 0 || z < 0 || x >= W || z >= H) continue; const q = z * W + x; if (m[q] === 255) continue;
-            const isDoor = (m[k] & 3) === 1 || (m[q] & 3) === 1;
-            v = Math.max(v, near[q] - (isDoor ? open.place.nearDoor + Math.max(0, shutOf(m[q]) - shutOf(m[k])) : open.place.near)); }
-          if (v > near[k] + 1e-6) { near[k] = v; moved = true; } } }
-      let worst = 0; for (let i = 0; i < K; i++) if (m[i] !== 255) worst = Math.max(worst, Math.abs(near[i] - r.g[N2 + i])); return worst; };
-    const off = [open, shut, wide, a29, a46].map(model);
-    check(off.every(d => d < 0.02), `the brightest place a stride away is the rule's own answer in every cell of all five scenes, the two with a door ajar among them (the furthest any cell is from it: ${off.map(d => d.toFixed(4)).join(', ')} stops)`);
-    // THE RULE AS IT IS SAID, not as it is coded: the room's first cell inside the door is held to what a wide door gives it, less a stop for each halving
-    // of the door's open share, once, though the hand crosses three cells' edges here
-    const nr = (r, x, z) => r.g[N2 + cellOf(r, x, z)], mean = r => over(r, r.f, ...A).mean, inD = [a29, a46, openD].map(r => nr(r, 13, 13.4)), want = [s29.lo, s46.lo].map(st => inD[2] - (STEPS - st) / PER_STOP);
-    check(Math.abs(inD[0] - want[0]) < 0.05 && Math.abs(inD[1] - want[1]) < 0.05 && inD[0] > a29.g[cellOf(a29, 13, 13.4)] + 0.3
-      && Math.abs(mean(a29) - mean(shutD)) < 0.02 && Math.abs(mean(a46) - mean(shutD)) < 0.02 && Math.abs(mean(openD) - mean(shutD)) < 0.02 && over(a29, a29.f, 10.2, 8.2, 15.8, 12).span < 0.4,
-      `what the room takes from the yard comes in with the swing: the first cell of the room inside the door is held to ${n(inD[2])} with the door swung clear, ${n(inD[1])} at 46 degrees (the rule: ${n(want[1])}) and ${n(inD[0])} at 29 (the rule: ${n(want[0])}; the room's own level there is ${n(a29.g[cellOf(a29, 13, 13.4)])}); room A's own level goes ${n(mean(shutD))}, ${n(mean(a29))}, ${n(mean(a46))}, ${n(mean(openD))} from shut to clear (its own, whatever the door does: the swing moves what the room is held to, not the room's level), one level across at every step`); }
   stop(); console.log(`pictures in ${OUT_DIR}`); if (errors.length) console.log(errors.join('\n'));
   console.log(fails || errors.length ? `=== place-field-page: ${fails} of ${checks} FAILED, ${errors.length} errors ===` : `=== place-field-page: ALL ${checks} PASS ===`); process.exit(fails || errors.length ? 1 : 0);
 })().catch(e => { console.error(e); stop(); process.exit(1); });

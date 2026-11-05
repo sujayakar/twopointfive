@@ -6,7 +6,7 @@
 //     to every way out; no start in plain view of a man on his route's first waypoint
 //   · EVERY DEAL STARTED: each start × spot × patrol set once alone, and each start once with the partner — the mission up, Sam on the start, the dealt men on
 //     the list and nobody else, the partner within reach and on his feet
-// EXIT: 0 = nothing to fix · 1 = faults (each a line an author can act on) · 2 = no such file / no block (a file NAMED that has none; the walk with no name takes only files that have one).
+// EXIT: 0 = nothing to fix · 1 = faults (each a line an author can act on) · 2 = no such file / no block.
 // Headless: no GPU, nothing here saw a picture.
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -18,12 +18,8 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { checkQuiet } = await import(`${ROOT}/src/game/quiet.ts`);
 const { startFromQuery, quitScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 
-// A file carries the block when its scenarios have a `quiet` object. (The word alone is not it: a lesson's rails and a step's own rows say "quiet": true of other
-// things, and the tutorial floors that do were walked as files with a block missing, which is exit 2 for a walk that had nothing wrong.) QUIET_BREAK=1 = the
-// word alone again: the walk must end NOTHING TO CHECK, exit 2.
-const carries = (text: string): boolean => { if (process.env.QUIET_BREAK === '1') return /"quiet"\s*:/.test(text); try { const q = JSON.parse(text)?.scenarios?.quiet; return !!q && typeof q === 'object'; } catch { return false; } };
 const files = names.length ? names.map(n => n.endsWith('.json') ? n : `${n}.json`)
-  : readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && carries(readFileSync(resolve(ROOT, 'levels', f), 'utf8')));
+  : readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && /"quiet"\s*:/.test(readFileSync(resolve(ROOT, 'levels', f), 'utf8')));
 if (!files.length) { console.log('quiet-check: no level file under levels/ carries a scenarios.quiet block'); process.exit(2); }
 
 const log = console.log, hush = () => { console.log = console.error = console.warn = () => { }; }, unhush = () => { console.log = log; console.error = log; console.warn = log; };

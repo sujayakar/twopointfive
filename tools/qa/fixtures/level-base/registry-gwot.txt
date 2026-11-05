@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-74deac300a3e8b7ca0603ef724efc585a19e1141
+# the lived rooms' own floors say what they are (paint only)
+7d822f00bd6691819b3e05bdd7b21b4df96594a8

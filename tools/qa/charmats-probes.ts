@@ -213,8 +213,7 @@ export async function charmatsShader() {
   for (const keep of ['o.albedo = select(ch.tint, ch.tint2, matSel > 0.5);', 'o.id = 0xFFFFFu | (ch.owner << 20u) | (1u << 28u);', 'o.mat = vec2f(1.0, 0.0);', 'if (H0.x > 0.5) {', 'let slotted = v.fin.w > 0.5;'])
     if (!src.includes(keep)) f.push(`missing: ${keep}`);
   const comp = readFileSync(`${ROOT}/src/render/shaders/composite.wgsl`, 'utf8');
-  if (!comp.includes('if ((id & 0x50000000u) == 0x50000000u) { let ws = lookShow(wetCoatSpec('))   // (shown by its place like every other light since the one exposure model: composite.wgsl lookShow)
-    f.push('composite no longer lights a bit-28 + bit-30 pixel with wetCoatSpec — the slots\' highlight rides that');
+  if (!comp.includes('if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(')) f.push('composite no longer lights a bit-28 + bit-30 pixel with wetCoatSpec — the slots\' highlight rides that');
   F.verdict(f.length === 0, 'row and slot counts agree; the two-tint statements, the dry id and the matte material word are still there; composite still lights the coat bits', f.join('; ') || `${rows} rows · ${CM.CHAR_SLOT_COUNT} slots`);
   return F.done();
 }

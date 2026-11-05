@@ -26,7 +26,6 @@ import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '..
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
-import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'snatch';
 export const NOTES = 'The snatch: a house in a walled yard, eight men around one unarmed man to take alive; two doors of his wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch';
@@ -150,7 +149,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the main room's south wall, inside) and one emergency beacon: the game's blackout wants both ----
   grp('breaker');
-  const brk = add({ c: [13.4, 1.35, 17.84], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [13.4, 1.35, 17.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [13.22, 1.62, 17.79], h: [0.015, 0.015, 0.01], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [16, H - 0.06, 14.2], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });

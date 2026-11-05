@@ -1,6 +1,0 @@
-# how many of 21 lines each man of registry has open to the ground his gun rests on: his name, the frozen stand's count, the shipped stand's (tools/qa/marksight-check.ts --write, once on each stand; a line that starts # under this one is a note and is kept)
-rescue.captor 15 15
-rescue.doorMan.inside 12 12
-rescue.doorMan.outside 15 15
-rescue.roamers#0 12 12
-rescue.roamers#1 15 14

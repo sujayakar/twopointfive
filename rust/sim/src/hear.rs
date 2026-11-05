@@ -3,8 +3,8 @@
 //! leg, with the last waypoint the listener still has a straight run to and whether a shut leaf lies across the way. The rule is the TypeScript's, statement
 //! for statement. It is asked in two halves because the TypeScript keeps a short memory of routed answers between them, and that memory stays the host's.
 //!
-//! Sound does not pass glass, and passes a hole in it: where the game has a rule for an open pane (`ask`) the line judges each pane where it meets
-//! it (lines.rs over glass.rs). The lengths are the game's own, so this answers only where EXACT.on.
+//! Sound does not pass glass. Where the host has a rule for an open pane, a line that meets glass and nothing solid is the host's to judge, and so is the
+//! whole question then. The lengths are the game's own, so this answers only where EXACT.on.
 
 use crate::lines;
 use crate::maths::{hypot2, hypot3};

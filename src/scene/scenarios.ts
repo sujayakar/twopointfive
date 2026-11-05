@@ -532,12 +532,7 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
    *  and that the room clear structure does not list (or a level with no structure): the HUD has no compass. No bearing in a name, no two doors of a level
    *  called the same (probes.ts words-doornames holds both, and the list of doors still owed a name); a door the level has, once (the validator). A door
    *  with no row keeps the name it had. Words only: not in the level's fingerprint. */
-  doorNames?: { door: string; name: string }[];
-  /** WAYS THE LEVEL IS WALKED THAT NOTHING ELSE IN IT SAYS (scene/ways.ts levelWays' hints): from a named thing to a named thing — a door, a mark, a route,
-   *  a room, a place, or `spawn` — and how many ways it counts as (absent: one). The stair to the plant a fitter walks every week, the gate to the
-   *  kitchen door. Its routes, its starts and its doors are counted already. A picture's only (render/wear.ts: where a floor shows feet): not in the
-   *  level's fingerprint, and no rule of the game reads it. */
-  walked?: import('./ways').WayHint[] }
+  doorNames?: { door: string; name: string }[] }
 
 /** THE MISSION LIST'S GROUPS (ui/missions.ts draws a heading per group — the maintainer, 10-10: 'we can build out a few levels in groups. a tutorial group
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A

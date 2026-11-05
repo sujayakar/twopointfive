@@ -26,10 +26,10 @@ import type { Game } from './game';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { hyp3 } from '../math/vec';
 import { EXACT } from '../math/exact';
-import { RUST, ruleFell, ruleRed } from '../sim/sim';
+import { RUST } from '../sim/sim';
 import { BOTH } from '../scene/collision';
 import type { BoxMirror } from '../scene/boxMirror';
-import { ItemStore, ITF, IC, ITEM_KINDS, ITEM_CAP, ITEM_ROWS, ITEM_ROOFS, IP, IE, IEK, ITEM_EV, ITEMS_HOST, ITEMS_STEPPED, itemIo, itemMem, itemDiff } from '../sim/itemshome';
+import { ItemStore, ITF, IC, ITEM_KINDS, ITEM_CAP, IP, IE, IEK, ITEM_EV, ITEMS_HOST, ITEMS_STEPPED, itemIo, itemMem, itemDiff } from '../sim/itemshome';
 
 export type ItemKind = (typeof ITEM_KINDS)[number];   // 'smoke' | 'mag' | 'flash' | 'frag' | 'pistol' | 'torch' | 'rifle' | 'ring' | 'shell' (sim/itemshome.ts: a kind is its place in that list)   // pistol / torch / rifle: dropped from a dying hand (combat.ts dropFromHand — the rifle is what the long-gun rows let go of, weapons.ts WeaponDef.drop: a rifleman's whole AKS-74U, or with fill 1 Sam's FN2000) — physical like the rest (tumble, bounce, settle, nudge props), and set dressing once down: nobody picks them up (a guard's magazines would not fit the Five-seveN anyway, and nothing on the floor is ammunition); ring: a spent ring airfoil (launcher.ts hands it over the moment its flight ends — off a wall, off a man — to clatter down and lie there: not retrievable either)
 
@@ -194,10 +194,8 @@ export const bogStick = (bog: number) => bog * SNOWBOG.stick;
 function listed(ev: number[], row: number, kind: number, a: number, p0: number, p1: number, p2: number, v0: number, v1: number, v2: number): void { ev.push(kind, row, a, p0, p1, p2, v0, v1, v2); }
 
 /** LYING SNOW UNDER A POOL (the Game's: snowBog.ts): how boggy the ground is where a thing touched down, 0‥1 (`at`), and whether it may be boggy
- *  ANYWHERE now (`may`: false = `at` answers 0 for every point, which says no map need be asked at all)
- *  — and THE SAME GROUND AS DATA for the Rust module, which asks it there: what snow each box of the level is (`kinds`: snowBog.ts SNOW_KIND, a byte a
- *  box) and the roofs in force (`roofs`: footprints x0, z0, x1, z1; weather.ts). `at` is the rule over exactly these. */
-export interface BogGround { may(): boolean; at(x: number, y: number, z: number): number; kinds(): Uint8Array; roofs(): readonly (readonly number[])[] }
+ *  ANYWHERE now (`may`: false = `at` answers 0 for every point, which is what lets a bounce be worked out where the snow's map is not — the Rust module) */
+export interface BogGround { may(): boolean; at(x: number, y: number, z: number): number }
 
 export class Throwables {
   /** THE POOL, the oldest first: the game's list, anybody's to read and to take an item out of (the head of this file) */
@@ -251,8 +249,6 @@ export class Throwables {
       let i = this.items.findIndex(x => x.kind === 'mag' || x.kind === 'ring' || x.kind === 'shell' || ((x.kind === 'smoke' || x.kind === 'flash' || x.kind === 'frag') && !liveCan(x)));
       if (i < 0) i = this.items.findIndex(x => !liveCan(x));
       if (i >= 0) this.removeAt(i);
-      // (…and SIXTY-FOUR live cans, which is nobody's game: the oldest gives way, so that a pool is never more than its columns — sim/itemshome.ts ITEM_ROWS)
-      if (this.items.length >= ITEM_ROWS) this.removeAt(0);
     }
     const it = new Item(this.store, this.store.enter(), this.props.all);
     for (const k in made) (it as unknown as Record<string, unknown>)[k] = (made as Record<string, unknown>)[k];   // (every field through its own setter: the row is written)
@@ -298,7 +294,6 @@ export class Throwables {
         // the module walks from row r down as far as it can: to the bottom (−1), or to a row only this side can judge, which is stepped here
         r = BOTH.on ? this.walkBoth(dt, M, r, ev) : this.walkThere(dt, M, r, ev);
         if (r < 0) break;
-        ruleFell('items', 'the module handed a row back');
         ITEMS_STEPPED.host++;
       }
       this.stepRow(r, dt, ev); ITEMS_STEPPED.here++;
@@ -309,28 +304,15 @@ export class Throwables {
   /** the box world's copy in the Rust module, if the pool's walk is the module's to take now: the row on, the game's own maths standing, the pool's columns
    *  at home in the game's block, and the copy standing with the game's own leaves and the furniture in it */
   private world(g: Game | null): BoxMirror | null {
-    if (!RUST.items) return null;
-    if (!EXACT.on) return null;   // (idle: sim.ts OWN_MATHS)
-    if (ruleRed('items')) return null;
-    if (g === null) return ruleFell('items', 'a pool with no game (a stage\'s)');
-    if (this.store.home === null) return ruleFell('items', 'the pool is not at home in a block of the module');
-    const M = this.col.rulesWorld(this.col.dynamicBoxes); if (M === null) return null;
-    if (this.col.rulesPanes() < 0) return null;   // (this file's rays ask the pane's rule; each walk below asks it again)
-    return M.things(this.props) ? M : ruleFell('items', 'more furniture, or more parts of it, than the copy holds');
+    if (!RUST.items || g === null || this.store.home === null || !EXACT.on) return null;
+    const M = this.col.rulesWorld(this.col.dynamicBoxes);
+    return M !== null && M.things(this.props) ? M : null;
   }
   /** THE MODULE'S WALK from row `from` down (rust/sim/src/items.rs update): the hand-over written, the walk asked, the tallies kept, what it listed
    *  copied out of the module's memory onto `ev`. → the row it hands back for this side to step, or −1 */
   private walkThere(dt: number, M: BoxMirror, from: number, ev: number[]): number {
-    const ask = this.col.rulesPanes(); if (ask < 0) return from;   // (a row this side stepped broke more glass than the copy holds: every row from here is this side's)
     const io = itemIo(), m = itemMem(), P = io.par, B = this.bog;
-    const bog = B !== null && B.may();
-    m[P + IP.dt] = dt; m[P + IP.from] = from; m[P + IP.ask] = ask; m[P + IP.bog] = bog ? 1 : 0; m[P + IP.rifleShare] = RIFLE_ITEM.propShare;
-    if (bog) {   // lying snow, as the module asks it: the level's table in its copy of the box world, the rule's numbers and the roofs in force handed over
-      const K = SNOWBOG, R = B.roofs(); if (R.length > ITEM_ROOFS) { ruleFell('items', 'more roofs over the snow than a walk is handed'); return from; }
-      M.snow(B.kinds());
-      m[P + IP.snowTop] = K.top; m[P + IP.snowBank] = K.bankM; m[P + IP.snowPacked] = K.packed; m[P + IP.snowOld] = K.old; m[P + IP.snowDead] = K.dead; m[P + IP.snowGrip] = K.grip; m[P + IP.snowStick] = K.stick;
-      m[P + IP.roofs] = R.length; for (let i = 0; i < R.length; i++) { const o = P + IP.roof + i * 4, r = R[i]; m[o] = r[0]; m[o + 1] = r[1]; m[o + 2] = r[2]; m[o + 3] = r[3]; }
-    }
+    m[P + IP.dt] = dt; m[P + IP.from] = from; m[P + IP.ask] = this.col.glassOpen ? 1 : 0; m[P + IP.bog] = B !== null && B.may() ? 1 : 0; m[P + IP.rifleShare] = RIFLE_ITEM.propShare;
     const a = io.x.items_update(this.store.home!.bind(), M.slot), m2 = itemMem(), T = ITEMS_STEPPED;
     if (a !== ITEMS_HOST && a !== 0) throw new Error(`the Rust module would not walk the thrown things from row ${from} of ${this.store.n}`);
     const n = m2[P + IP.events];

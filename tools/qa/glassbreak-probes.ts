@@ -91,7 +91,7 @@ async function recordVolley(seed: number, on: boolean, cut = false, dice = false
       panes: new Map(), log: [], onRelease: null, gustDirty: false,
       typeOf: (b: any, bi?: number) => real.typeOf(b, bi), typeOfPane: kind, setType() {}, paneInfo: () => null,
       impact: (bi: number) => ({ pane: true, live: false, type: kind(bi) ?? 'laminated', thickness: 0.012, wasOpen: false, punched: false, diced: false, released: 0, cracked: false }),
-      hit() {}, widen: () => 0, blast: () => 0, bang: () => 0, breakTest: () => -1, goingAt: () => false, wouldGive: () => false, seeThrough: (_view: unknown, _from: unknown, _size: unknown, fn: () => unknown) => fn(), view: null, each() {},
+      hit() {}, widen: () => 0, blast: () => 0, bang: () => 0, breakTest: () => -1, goingAt: () => false, wouldGive: () => false, seeThrough: (_also: unknown, fn: () => unknown) => fn(),
       openAt: () => false, walkable: () => false, openSig: () => 0, openFraction: () => 0, fill: () => false, update() {}, reset() {}, summary: () => 'cut',
       toUV: noPane, toWorld: noPane, normalOf: noPane, heldSet: noPane,
     } satisfies SeamsOut<GlassBreak> as any;

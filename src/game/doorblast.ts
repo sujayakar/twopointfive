@@ -25,7 +25,7 @@ import { BoxFlag } from '../scene/boxes';
 import { leafWrote, type BoxMirror } from '../scene/boxMirror';
 import { BOTH } from '../scene/collision';
 import { EXACT } from '../math/exact';
-import { RUST, ruleFell, ruleRed } from '../sim/sim';
+import { RUST } from '../sim/sim';
 import { SP, SLAB_STEPPED, SLAB_HOST, SLABS_STEPPED, slabIo, slabMem, slabDiff } from '../sim/slabshome';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
@@ -341,7 +341,7 @@ function flySlab(g: Game, d: Door, dt: number) {
   const T = g.doors.slabs, r = T.rowOf(d.i); if (r < 0) return;
   const W = slabThere(g, d);
   let M: SlabMet | null = W === null ? null : BOTH.on ? stepBoth(g, d, r, dt, W) : stepThere(g, d, r, dt, W);
-  if (M === null) { if (W !== null) ruleFell('slabs', 'the module handed the step back (a ray that is no number, or longer than any level)'); SLABS_STEPPED.here++; M = stepHere(g, d, r, dt); }
+  if (M === null) { SLABS_STEPPED.here++; M = stepHere(g, d, r, dt); }
   const S = d.slab!, A = DOORBLAST_STATS;   // (its row, read as it stands: it moves on the next line if the slab came to rest)
   if (S.rest) T.rest(d.i);
   A.nudged += M.nudged; A.nudgeMax = Math.max(A.nudgeMax, M.nudgeMax); A.laid += M.laid;
@@ -357,21 +357,17 @@ function stepHere(g: Game, d: Door, r: number, dt: number): SlabMet {
 /** CAN THIS SLAB'S STEP RUN IN THE MODULE: the row on and the slabs' columns at home in the game's block; the game's own maths in Math's place; the box
  *  world's copy standing with the game's own leaves in it as they are now. → the copy to step over and which of its leaves is the slab's own box (−1: none
  *  of them), or null: this file steps, on the same columns. */
-function slabThere(g: Game, d: Door): { M: BoxMirror; but: number; ask: number } | null {
-  if (!RUST.slabs) return null;
-  if (!EXACT.on) return null;   // (idle: sim.ts OWN_MATHS)
-  if (ruleRed('slabs')) return null;
-  if (g.doors.slabs.home === null) return ruleFell('slabs', 'the slabs are not at home in a block of the module');
+function slabThere(g: Game, d: Door): { M: BoxMirror; but: number } | null {
+  if (!RUST.slabs || g.doors.slabs.home === null || !EXACT.on) return null;
   const dyn = g.col.dynamicBoxes, M = g.col.rulesWorld(dyn); if (!M) return null;
-  const ask = g.col.rulesPanes(); if (ask < 0) return null;   // (this file's rays ask the pane's rule)
-  return { M, but: dyn.indexOf(d.box), ask };
+  return { M, but: dyn.indexOf(d.box) };
 }
 /** the step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. → null: the module hands the
- *  step back with nothing written (a ray that is no number, or longer than any level: nothing of play) */
-function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet | null {
+ *  step back with nothing written (a ray of it ended on a pane, which only the host can judge open or shut) */
+function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number }): SlabMet | null {
   const io = slabIo(), m = slabMem(), P = io.par, K = DOORBLAST, C = SLABS_STEPPED;
   m[P + SP.dt] = dt; m[P + SP.row] = r; m[P + SP.height] = d.height; m[P + SP.thick] = d.thick; m[P + SP.hu] = d.leafH[0]; m[P + SP.closed] = d.def.closedDir;
-  m[P + SP.fcx] = d.frameCentre[0]; m[P + SP.fcz] = d.frameCentre[2]; m[P + SP.but] = W.but; m[P + SP.ask] = W.ask;
+  m[P + SP.fcx] = d.frameCentre[0]; m[P + SP.fcz] = d.frameCentre[2]; m[P + SP.but] = W.but; m[P + SP.ask] = g.col.glassOpen ? 1 : 0;
   m[P + SP.scrape] = K.scrape; m[P + SP.slam] = K.slam; m[P + SP.slide] = K.slide; m[P + SP.bounce] = K.bounce; m[P + SP.tip] = K.tip;
   const a = io.x.slabs_step(g.doors.slabs.home!.bind(), W.M.slot), q = slabMem();
   C.rays += q[P + SP.rays]; C.gathers += q[P + SP.gathers]; C.substeps += q[P + SP.substeps];
@@ -382,7 +378,7 @@ function stepThere(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; b
 }
 /** …both ways (collision.ts BOTH): the module's step, then this file's from the same row, the two compared column for column and by what they met; the
  *  game goes on from this file's. → null as stepThere */
-function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number; ask: number }): SlabMet | null {
+function stepBoth(g: Game, d: Door, r: number, dt: number, W: { M: BoxMirror; but: number }): SlabMet | null {
   const T = g.doors.slabs, before = T.bytes(), A = stepThere(g, d, r, dt, W); if (A === null) return null;
   const there = T.bytes(); T.put(before);
   const B = stepHere(g, d, r, dt), here = T.bytes(), C = SLABS_STEPPED;
@@ -463,35 +459,15 @@ export function poseSlab(d: Door) {
   for (let s = 0; s < 2; s++) { const hb = d.handleBoxes[s]; hb.rot = q; hb.yaw = -S.a; hb.c = v3.add(b.c, quat.rotate(q, [lx, ly, s === 0 ? lz : -lz])); }
 }
 
-/** A SLAB RUN ON TO WHERE IT LANDS, and nothing of it kept: at most eight seconds of its own step, from its row as it stands but with no memory of being
- *  wedged (the copy this was always stepped on had none); what it meets on the way is nobody's to hear. Where the step is the module's (slabThere) it is
- *  taken there, on the slab's own row, and the slabs' columns are put back as they were — with the box world's copy proven once for all of it if no tick
- *  is open; else here, on a copy of the row. The same landing either way: one step, by slab-ident. */
-function runOn(g: Game, d: Door): DoorSlab {
-  const T = g.doors.slabs, r = T.rowOf(d.i);
-  { const S = T.load(r); if (S.rest) return S; }   // (lying where it came to rest: nothing is stepped, and nothing is asked of the box world)
-  return g.col.window(() => {
-    const W = slabThere(g, d);
-    if (W !== null) {
-      const was = T.bytes(), tally = { ...SLABS_STEPPED };
-      try {
-        { const s = T.load(r); s.wedged = 0; T.save(r, s); }
-        let S = T.load(r), there = true;
-        for (let i = 0; i < 480 && !S.rest && there; i++) { there = stepThere(g, d, r, 1 / 60, W) !== null; S = T.load(r); }
-        if (there) return S;
-        ruleFell('slabs', 'the module handed the step back (a ray that is no number, or longer than any level)');
-      } finally { T.put(was); Object.assign(SLABS_STEPPED, tally); }   // (the game's slabs as they were, and the checks' counts of the game's own steps)
-    }
-    const S: DoorSlab = T.load(r), quiet = nothingMet(); S.wedged = 0;
-    for (let i = 0; i < 480 && !S.rest; i++) stepSlab(g, d, S, 1 / 60, quiet);
-    return S;
-  });
-}
 /** CHECKPOINTS (savestate.ts): a door off its hinges is filed LYING WHERE IT COMES TO REST — a slab still in the air is run on, on a copy, to where it lands */
 export interface SlabSnap { x: number; z: number; a: number; side: 1 | -1; who: number; /** DOORSHOT: the lock rail of a leaf that went in pieces — its half width and half length, and where on it the handles are (absent: the whole leaf) */ bits?: [number, number, number, number]; }
 export function slabSnapshot(g: Game, d: Door): SlabSnap | null {
   const S0 = d.slab; if (!d.off || !S0) return null;
-  const S = runOn(g, d), r = (x: number) => Math.round(x * 1e4) / 1e4;
+  // (a COPY of the row, stepped here whatever the row's switch says and never written back; what it meets is nobody's to hear; and it starts with no
+  //  memory of being wedged, as the copy this was always stepped on had none)
+  const T = g.doors.slabs, S: DoorSlab = T.load(T.rowOf(d.i)), quiet = nothingMet(); S.wedged = 0;
+  for (let i = 0; i < 480 && !S.rest; i++) stepSlab(g, d, S, 1 / 60, quiet);
+  const r = (x: number) => Math.round(x * 1e4) / 1e4;
   return { x: r(S.p[0]), z: r(S.p[2]), a: r(S.a), side: S.side, who: S.who, ...(S.bits ? { bits: [r(S.bits[0]), r(S.bits[1]), r(S.bits[2]), r(S.bits[3])] as [number, number, number, number] } : {}) };
 }
 export function slabRestore(d: Door, s: SlabSnap, angleSign = 1) {

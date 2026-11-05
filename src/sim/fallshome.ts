@@ -13,7 +13,7 @@
 // worked out by either, so the row answers under either maths.
 //
 // (Imports sim.ts and state.ts alone: like the rest of src/sim, this is below the game.)
-import { sim, f64, RUST, ruleFell, ruleRed } from './sim';
+import { sim, f64, RUST } from './sim';
 import { simTenant, simPart, P_FALLS, type SimState } from './state';
 
 /** the floor's cells (rust/sim/src/falls.rs: the world's floor rectangle, 40 m × 28 m from the origin, in half-metre cells) and the landings that can wait */
@@ -92,14 +92,12 @@ export class FallStore {
   heard(time: number, gap: number, l = FALL_GLASS): boolean { return this.rule('heard', () => sim().falls_heard(this.home!.bind(), l, time, gap) !== 0, () => { const d = this.d, o = this.base + O_LAST + l; if (time - d[o] < gap) return false; d[o] = time; return true; }); }
   /** nothing waits in list `l`, and the floor's memory of its last landing is new — with the glass's list, no glass lies either; `listOnly`: the landings
    *  alone are dropped (the rule went inert) */
-  clear(listOnly = false, l = FALL_GLASS): void {
-    this.rule('clear', () => { sim().falls_clear(this.home!.bind(), l, listOnly ? 0 : 1, -1e9); return 0; }, () => { clearHere(this.d, this.base, l, listOnly); return 0; });
-  }
+  clear(listOnly = false, l = FALL_GLASS): void { this.rule('clear', () => { sim().falls_clear(this.home!.bind(), l, listOnly ? 0 : 1, -1e9); return 0; }, () => { clearHere(this.d, this.base, l, listOnly); return 0; }); }
 
   /** ONE RULE, there or here — or both ways for the checks (FALLS.both): the module's taken first with nothing of it kept, then this file's from the same
    *  store, and the two stores and answers compared to the bit */
   private rule<T>(what: string, there: () => T, here: () => T): T {
-    if (!RUST.falls || this.home === null || ruleRed('falls')) { if (RUST.falls && this.home === null) ruleFell('falls', 'the store is not at home in a block of the module'); FALLS.here++; return here(); }
+    if (!RUST.falls || this.home === null) { FALLS.here++; return here(); }
     if (!FALLS.both) { FALLS.there++; return there(); }
     const o = this.base, was = this.home.d.slice(o, o + FALL_LEN), a = there(), after = this.home.d.slice(o, o + FALL_LEN); this.home.d.set(was, o);
     const b = here(), d = this.home.d; let bad = JSON.stringify(a, nanSafe) === JSON.stringify(b, nanSafe) ? '' : `answers ${JSON.stringify(b)} here, ${JSON.stringify(a)} there`;

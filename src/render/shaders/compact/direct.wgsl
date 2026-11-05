@@ -135,7 +135,7 @@ fn shadowPhase(P: vec3f, N: vec3f, Po: vec3f, owner: u32, pxPerMetre: f32, nIter
         if ((frame.flags & FLAG_TAIL_CHROMA) != 0u) {
           // per-channel unbiased form: this light's OWN colour, weighted by 1/p (p = its share of the tail's score). Single samples exceed U per
           // channel (the filter's ratio clamp is opened up for it); exact in expectation for every channel, chroma noise where the tail mixes hues.
-          let ev = evalLightDirect(li, P, N); let w = luminance(ev.E);
+          let ev = evalLight(li, P, N); let w = luminance(ev.E);
           tailS = select(vec3f(0.0), min(ev.E * (vs.x * sumT[c] / max(w, 1e-6)), 4.0 * tail), w > 0.0);   // bounded at 4× the unshadowed tail per channel HERE, so every consumer (the filter's exact shortcut and its ratio path alike) sees one distribution — a small energy loss on saturated minority lights instead of a desaturated band along the penumbra hints
         } else {
           tailS = tail * vs.x;   // luminance-unbiased, bounded by U: the tail keeps its aggregate hue
@@ -234,7 +234,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       var i = s; if (tileCull) { i = wgList[s]; }   // the tile's list (ascending) or, flag off, every light 0..nL as before
       lw[i] = 0.0;
       let li = wgLights[i];
-      let ev = evalLightDirect(li, P, N);
+      let ev = evalLight(li, P, N);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
       if (w < 1e-4 * lampFloorK()) { continue; }

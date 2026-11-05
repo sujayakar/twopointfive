@@ -2,7 +2,7 @@
 // The fault it holds shut: on the compound the last man of the sala's squad ends up planted in the FRONT HALL — floor nobody holds, so no room of the
 // structure — and his answer to the radio check named the nearest held room through a solid wall ('still here — outside the office'), with no marker on the
 // HUD for him: the commander was sent round the wrong room and the tail of the run was a search for a man who had said where he was.
-//   bun run tools/qa/callout-place-check.ts [--level compound] [--seed 5] [--play 22,2] [--off]
+//   bun run tools/qa/callout-place-check.ts [--level compound] [--seed 5] [--play 24,14] [--off]
 // What it does, in one process and then in real play:
 //   STAGED  stands the room clear up on --level, takes every defender down by hand but one, and stands that one in a place of the level that is no room of
 //           the structure (the first of `scenarios.places` that has free floor). Then, reading only what their net said (laststand.ts's own log) and the HUD's
@@ -29,7 +29,7 @@ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const argv = process.argv.slice(2), flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 for (const a of argv) if (a.startsWith('--') && !['--level', '--seed', '--play', '--off'].includes(a)) { console.error(`unknown flag ${a} (--level --seed --play --off)`); process.exit(2); }
 const levelName = flag('--level') ?? 'compound', seed = Number(flag('--seed') ?? 5), off = argv.includes('--off');
-const play = (flag('--play') ?? '22,2').split(',').filter(Boolean).map(Number);
+const play = (flag('--play') ?? '24,14').split(',').filter(Boolean).map(Number);
 if (!Number.isFinite(seed) || play.some(s => !Number.isFinite(s))) { console.error('bad --seed / --play'); process.exit(2); }
 if (!('places' in LASTSTAND)) { console.log('- FAIL — this build has no LASTSTAND.places: the call out names a man by the nearest held room, wherever he stands'); process.exit(1); }
 
@@ -76,7 +76,7 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
   const { h: man, R: home } = all[0];
   for (const x of all) if (x.h !== man && x.h.state !== 'dead') killGuard(g, x.h, [1, 0, 0], true);
   // stood where the fight had planted him in the runs the fault was read on: on floor that is no room of the structure
-  const stand = (p: [number, number, number]) => { const D = g.fight.defs.find((d: any) => d.gd === man); man.char.pos[0] = p[0]; man.char.pos[2] = p[2]; if (D) { D.station = [...p]; D.home = [...p]; D.stallAt = [...p]; } man.path = []; man.pathGoal = null; };   // (an empty path, as the game itself writes one that is over: a null one is no state of a man, and a script that walks him throws on it)
+  const stand = (p: [number, number, number]) => { const D = g.fight.defs.find((d: any) => d.gd === man); man.char.pos[0] = p[0]; man.char.pos[2] = p[2]; if (D) { D.station = [...p]; D.home = [...p]; D.stallAt = [...p]; } man.path = null; };
   const spot = free(place.b)!; stand(spot);
   let line: { text: string; kind: string } | null = null, obj: { text: string; pos: number[] | null } | null = null, at: number[] = [], n0 = 0;
   steps(LASTSTAND.first[1] + LASTSTAND.listen[1] + 8, () => { stand(spot); if (line) return; const l = said().find(x => /At$/.test(x.kind) && x.who === man.callsign); if (l) { line = l; n0 = said().length; at = [man.char.pos[0], man.char.pos[2]]; } });
@@ -106,12 +106,11 @@ if (play.length) {
   let runs: any[] = []; try { runs = JSON.parse(readFileSync(json, 'utf8')).runs ?? []; } catch { /* did not play */ }
   if (runs.length !== play.length) { failed = true; console.log(`- FAIL — ${levelName}-four did not play seeds ${play.join(',')} (${runs.length} runs came back)`); }
   try { unlinkSync(json); } catch { /* nothing written */ }
-  let lines = 0, offRoom = 0; const bad: string[] = [], bySeed = new Map<number, [number, number]>();   // (a seed's lines that say where a man is, and how many of them he said standing in no room: printed, so the seeds to play can be picked again when play moves)
+  let lines = 0, offRoom = 0; const bad: string[] = [];
   for (const r of runs) for (const l of (r.lastStand?.said ?? []) as { t: number; who: string; text: string; at?: [number, number] }[]) {
-    if (!l.at) continue; const h = holds(l.text, l.at[0], l.at[1]); if (!h) continue; const n = bySeed.get(r.seed) ?? [0, 0]; bySeed.set(r.seed, n); n[0]++;
-    lines++; if (!inside(l.at[0], l.at[1]).some(n => n.id)) { offRoom++; n[1]++; } if (!h.ok) bad.push(`seed ${r.seed} ${l.t} s ${l.who} at (${l.at[0].toFixed(1)}, ${l.at[1].toFixed(1)}): '${l.text}' — ${h.why}`);
+    if (!l.at) continue; const h = holds(l.text, l.at[0], l.at[1]); if (!h) continue;
+    lines++; if (!inside(l.at[0], l.at[1]).some(n => n.id)) offRoom++; if (!h.ok) bad.push(`seed ${r.seed} ${l.t} s ${l.who} at (${l.at[0].toFixed(1)}, ${l.at[1].toFixed(1)}): '${l.text}' — ${h.why}`);
   }
-  console.log(`    by seed, lines that say a place / said standing in no room: ${[...bySeed].map(([sd, n]) => `${sd}: ${n[0]}/${n[1]}`).join(' · ') || 'none'}`);
   if (!lines || !offRoom) { failed = true; console.log(`- NO VERDICT — ${lines} lines of their net said where a man was in the played seeds, ${offRoom} of them from a man standing in no room of the structure: the check looked at nothing`); }
   else { looked++; verdict(!bad.length, `played as shipped, seeds ${play.join(',')}: every line that says where a man is holds for where he stood`, `${lines} lines, ${offRoom} said standing in no room of the structure${bad.length ? `, ${bad.length} wrong:\n    ` + bad.slice(0, 6).join('\n    ') : ', none wrong'}`); }
 }

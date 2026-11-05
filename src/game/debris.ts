@@ -9,7 +9,7 @@
 // shooter whose round knocked it off / dropped the tile, the thrower of the charge that shoved it — so a guard's own burst is his side's clumsiness to the men
 // and no row on Sam's debrief, Sam's is heard and chronicled as his; NOBODY_ID when no one did: unexplained to the men, nobody's in the debrief). Deterministic: no Math.random — every wobble is hashed off the chunk's serial. Cleared by a restart / the tour's cuts with the rest of the aftermath.
 import { Vec3, v3, quat, Quat } from '../math/vec';
-import { Box, BoxFlag, makeBox, MKEY, wordOf } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import type { Game } from './game';
 import type { Prop } from './props';
 import { impulseKick, type ImpulseLike, type ImpulseResponse } from './sheetModel';
@@ -147,7 +147,7 @@ export class Debris {
       const gone = this.list.splice(i, 1)[0]; this.stats.evicted++; this.breaks?.evicted(gone);
     }
     const serial = this.serial++;
-    const b = makeBox({ c: v3.copy(box.c), h: v3.copy(box.h), yaw: box.yaw, rot: box.rot ? [box.rot[0], box.rot[1], box.rot[2], box.rot[3]] : quat.yaw(box.yaw), albedo: v3.copy(box.albedo), ...wordOf(box), flags: BoxFlag.Dynamic, name: 'debris', mkey: MKEY.debris + (serial & 65535) });
+    const b = makeBox({ c: v3.copy(box.c), h: v3.copy(box.h), yaw: box.yaw, rot: box.rot ? [box.rot[0], box.rot[1], box.rot[2], box.rot[3]] : quat.yaw(box.yaw), albedo: v3.copy(box.albedo), flags: BoxFlag.Dynamic, name: 'debris', mkey: MKEY.debris + (serial & 65535) });
     const L = LANDING[kind];
     const c: Chunk = { kind, box: b, v: v3.copy(v), w: v3.copy(w), rest: false, stillT: 0, age: 0, sounded: false, level: L.level, sfx: L.sfx, serial, who, on: null, onPose: 0 };
     if (dress) c.dress = true;   // (nothing of the game feels it: no push on what it lands on, no word to the floor, no ray of the game's meets it)

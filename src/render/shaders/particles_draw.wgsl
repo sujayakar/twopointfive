@@ -14,34 +14,6 @@ struct PoolR { hdr: array<vec4u, 4>, parts: array<Particle> };
 @group(1) @binding(4) var froxTex: texture_3d<f32>;  // the integrated froxel volume (froxel.wgsl; FLAG_FROXEL_VOL): the haze to the particle's OWN distance in one fetch — volTex then holds the smoke + rain
 @group(1) @binding(5) var sceneTex: texture_2d<f32>;  // PARTICLE RAIN v2: the composite's copy (render/passes.ts hdrCopy, this pass's own size) the rain streaks REFRACT — a 1×1 black stand-in when em.rainCfgC.x is 0
 @group(1) @binding(6) var sceneSamp: sampler;         // … read bilinear
-@group(1) @binding(7) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this text). Zeros = none, on every other page, and never read there
-/** A PARTICLE'S LIGHT IS SHOWN BY ITS PLACE, AS THE FLOOR IT LIES ON IS (the look page under the one exposure model; the maintainer on his GPU, 11-04:
- *  "GPU particles (like casings) look like they're not lit"). The composite shows each place's surfaces by the place's gain and the smoke march its air;
- *  the splat came after both with no gain at all, so brass on the floor of a room shown thirty times brighter was drawn at a thirtieth of the floor it
- *  lies on. A particle that is LIT (a chip, a case, a puff, a sheet, a shard, a drop) now asks what a point of the floor asks, the same functions in the
- *  same order (place_common.wgsl): its place off the floor plan (lookPlaceLevels: at a wall's foot the room its side of the wall's line, in a doorway the
- *  side of the door's line, between two cells the blend), the Light in order row with the light that falls on it (lookGainsOwn), and the one rule for
- *  what a place sends the eye (lookShowBy). Over the roofs and past the map's edge it is in the open air, as the air's own rule has it (lookAirGains).
- *  THE LIGHT THAT FALLS ON IT is worked back from what it sends on: `c` × π ÷ the share it sends back (`alb`) is the lamps' light whole and the bounce
- *  × frame.indirectScale, as the sim hands a particle its shade (particles.wgsl), so the bounce is put back at its true strength as far as the place's
- *  own level says it (the field holds the bounce that falls on its floor). Deep in a room that is the floor's own number; where the bounce at the
- *  particle is over its place's level (just inside a door) it reads under by that excess × (1 − the scale), and a case's glint reads over: both only
- *  where a brighter place is a stride away, which is the only place the row asks. (And on the top of a mass so wide that no cell within four holds a
- *  level, where a point is its own place, the particle's level is its light as handed on, the bounce still scaled.) ONE CALL, where the vertex stage hands its answer on (vs below), so
- *  no kind's own writing can miss it. A SPARK'S LIGHT IS ITS OWN and is sent on as it was: what a glowing thing is shown by (a lamp's face, a screen, a
- *  spark) is one question, not asked yet. `c` unchanged off the look page, with the shade row down and until the field is live. */
-var<private> partAt: vec4f;   // where the particle of this vertex is (xyz) and the share of the light on it that it sends back (w: its albedo's brightness; 1 for glass and water, which send on what they are handed; 0 = no particle, or one whose light is its own)
-fn partShow(X: vec3f, c: vec3f, alb: f32) -> vec3f {
-  if (!(frame.shadeCfg.x > 0.0 && frame.eyeCfg.w < 0.0)) { return c; }
-  let l = luminance(c);
-  if (!(l > 0.0)) { return c; }
-  let q = (X.xz - RC_MIN.xz) / RC_SIZE.xz;
-  if (X.y >= CEIL_Y || any(q < vec2f(0.0)) || any(q >= vec2f(1.0))) { let oa = lookOpenAir(); return lookShowBy(c, lookGainsAt(oa.x, lookEyeRs(oa), oa)); }
-  let lit = l * 3.14159265 / alb;
-  let lv = lookPlaceLevels(X, vec3f(0.0, 1.0, 0.0), lit);
-  let own = lit + (frame.indirectScale / max(frame.indirectScale, 0.05) - frame.indirectScale) * lv.x;   // (the composite hands the row its drawn bounce ÷ max(the scale, 0.05): the same, for every scale the row can be set to)
-  return lookShowBy(c, lookGainsOwn(lv.x, own, lv.y, frame.placeCfg.x));
-}
 
 const MIN_HALF_PX: f32 = 0.75;   // half-width floor in pixels (a 1.5 px line): thinner is widened and dimmed / thinned in coverage by the same factor
 
@@ -106,12 +78,6 @@ fn shardVertex(p: Particle, corner: u32, k1: vec4f) -> VOut {
 }
 
 @vertex fn vs(@builtin(vertex_index) vi: u32) -> VOut {
-  partAt = vec4f(0.0);
-  var o = vsKind(vi);
-  if (LOOK) { if (partAt.w > 0.0) { o.shade = partShow(partAt.xyz, o.shade, partAt.w); } }   // (THE LOOK PROTOTYPE: a lit particle's light as its place shows it, partShow above; never compiled in off the look page)
-  return o;
-}
-fn vsKind(vi: u32) -> VOut {
   let inst = vi / 6u; let corner = vi % 6u;
   let slot = slotOf3(em.win[0], em.win[1], em.rainWin, inst);   // (the two rings, then the rain ring's window — empty unless it rains particles)
   if (slot == 0xffffffffu) { return cull(); }
@@ -119,7 +85,6 @@ fn vsKind(vi: u32) -> VOut {
   if (p.age >= p.life) { return cull(); }
   let kind = p.bits & PB_KIND; let asleep = (p.bits & PB_ASLEEP) != 0u;
   if (kind != P_RAIN && (p.bits & PB_OURS) == 0u && !((p.bits & PB_KEPT) != 0u && fogKeptOn()) && fogSeenBins(p.pos) < 0.5) { return cull(); }   // (the fog of war's full picture: a spark, a puff, a chip, a case, a leaf of paper or a shard over floor nobody on the team sees is not drawn, unless it is the team's own doing (PB_OURS — game/fogofwar.ts FOG.ours) — the weather is the same everywhere and stays; 1 while no sight table is written)
-  if (kind != P_SPARK) { partAt = vec4f(p.pos, select(1.0, clamp(luminance(unpackRgb8(p.color)), 0.05, 1.0), kind == P_DEBRIS || kind == P_DUST || kind == P_CASING || kind == P_SHEET)); }
   let k1 = em.kp[kind * 2u + 1u];
   if (kind == P_SHEET) { return sheetVertex(p, corner, k1); }
   if (kind == P_RAIN) { return rainVertex(p, corner, em.kp[kind * 2u], k1); }   // the rain drop's streak / its splash crown (below)

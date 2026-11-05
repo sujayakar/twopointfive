@@ -41,12 +41,9 @@ export const slabCols = (cap: number): SlabCols => colsOf(SLAB_HEAD, SLAB_F64, S
 const SWAPPED = ['flags', 'who', 'door'] as const;
 
 /** THE COLUMNS OF ONE SET OF DOORS' SLABS (a level's, or a lone door's): sim/colstore.ts's store, and what its rows mean. `cap` is SLAB_CAP, so that the
- *  bytes are the module's part as they stand; a level of more doors than that is not loaded (the doors' own columns say so first: sim/doorshome.ts). */
+ *  bytes are the module's part as they stand; a level of more doors than that keeps wider columns and stays in TypeScript. */
 export class SlabStore extends ColStore<(typeof SLAB_F64)[number], (typeof SLAB_U32)[number]> {
-  constructor(readonly doors: number) {
-    if (doors > SLAB_CAP) throw new Error(`a level of ${doors} doors: the game holds ${SLAB_CAP} leaves off their hinges (sim/slabshome.ts SLAB_CAP, rust/sim/src/slabs.rs CAP)`);
-    super(SLAB_HEAD, SLAB_F64, SLAB_U32, SLAB_CAP);
-  }
+  constructor(readonly doors: number) { super(SLAB_HEAD, SLAB_F64, SLAB_U32, Math.max(SLAB_CAP, (doors + 3) & ~3)); }
   /** slabs in all, and how many of them are in the air */
   get n(): number { return this.u[this.b4]; }
   get fly(): number { return this.u[this.b4 + 1]; }
@@ -126,15 +123,15 @@ export function slabIo(): SlabIo {
 /** the module's memory as doubles, for the hand-over (never kept) */
 export const slabMem = f64;
 
-/** COUNTS FOR THE CHECKS (the host's: no game reads them): steps of a slab the module took, the TypeScript took, the module handed back (none in
- *  play: a ray that is no number), steps answered both ways and how many of those differed, with the first in words; and what the module's steps asked */
+/** COUNTS FOR THE CHECKS (the host's: no game reads them): steps of a slab the module took, the TypeScript took, the module handed back (a ray that ended
+ *  on a pane), steps answered both ways and how many of those differed, with the first in words; and what the module's steps asked */
 export const SLABS_STEPPED = { there: 0, here: 0, host: 0, asked: 0, differ: 0, first: '', rays: 0, gathers: 0, substeps: 0, landed: 0, rested: 0 };
 
 /** what the tenant asks of a game: its doors' slabs (game/doors.ts Doors.slabs) */
 interface HasSlabs { doors?: { slabs: SlabStore } }
 // the slabs' bytes move into a game's block as its tick opens with RUST.slabs on, and out again with it off (state.ts settle): one copy each way
 simTenant({ name: 'slabs', bit: 64,
-  wants(g: HasSlabs) { const S = g.doors?.slabs; return RUST.slabs && !!S && S.doors > 0; },
+  wants(g: HasSlabs) { const S = g.doors?.slabs; return RUST.slabs && !!S && S.doors > 0 && S.cap === SLAB_CAP; },
   into(g: HasSlabs, st: SimState) { g.doors!.slabs.moveIn(st, simPart(P_SLABS)); },
   outOf(g: HasSlabs, st: SimState) { g.doors?.slabs.moveOut(st, simPart(P_SLABS)); } });
 

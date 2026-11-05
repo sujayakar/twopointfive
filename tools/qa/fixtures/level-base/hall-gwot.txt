@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-7a8eabf5b3744e7b267ecfe6726bb454cefbb3f0
+# the long hall is dressed: its look file lays the camp road and the sentry's beat
+2b225c55421697499a3b9705c3a9d34a31bc33fe

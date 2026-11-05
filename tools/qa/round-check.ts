@@ -17,7 +17,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT, fake } from './headless.ts';
 import { probeRound, roundAnswered, roundAsked } from './round-lib.ts';
-import { cutPlanes } from './cut-rule.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { ROUND, ROUND_STATS, roundConfig, findOctagons, roundLevel, roundTape, packRoundRows, ROUND_CORE_W } = await import(`${ROOT}/src/scene/round.ts`);
@@ -111,7 +110,13 @@ function gpuIsectPrism(b: any, o: Vec3, d: Vec3, tmax: number, rows: Float32Arra
   const tmn = [0, 0, 0], tmx = [0, 0, 0]; let tN = -Infinity, tF = Infinity;
   for (let a = 0; a < 3; a++) { const inv = f(1 / (Math.abs(ld[a]) < 1e-8 ? (ld[a] < 0 ? -1e-8 : 1e-8) : ld[a])); const tA = f((-h[a] - lo[a]) * inv), tB = f((h[a] - lo[a]) * inv); tmn[a] = Math.min(tA, tB); tmx[a] = Math.max(tA, tB); tN = Math.max(tN, tmn[a]); tF = Math.min(tF, tmx[a]); }
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
-  let code: number; [tN, tF, code] = cutPlanes(rows, lo, ld, tN, tF, f);   // (the two fours: tools/qa/cut-rule.ts)
+  let code = 7;
+  for (let k = 0; k < 8; k++) { const n = [rows[k * 4], rows[k * 4 + 1], rows[k * 4 + 2]], w = rows[k * 4 + 3];
+    if (n[0] === 0 && n[1] === 0 && n[2] === 0) break;
+    const den = f(dot(n, ld)), num = f(w - f(dot(n, lo)));
+    if (den < 0) { const t = f(num / den); if (t > tN) { tN = t; code = -1 - k; } }
+    else if (den > 0) tF = Math.min(tF, f(num / den));
+    else if (num < 0) return [-1, 0]; }
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
   if (tN < 0) return [0, 7];
   if (code < 0) return [tN, code];
@@ -137,11 +142,11 @@ export async function roundCheck(): Promise<boolean> {
         const L = levelOf(f), n = findOctagons(L.boxes).length, kn = known(f); const file = flat(L.boxes), count = L.boxes.length;
         if (n !== kn) wrong.push(`${f}: ${n} found, known ${kn}`);
         { const took = new Set<number>(); for (const i of findOctagons(L.boxes)) for (let k = 0; k < 4; k++) took.add(i + k);   // a ring the rule did not take: four solid boxes in a row at one centre, each 45° on from the last
-          const B = L.boxes; for (let i = 0; i + 3 < B.length; i++) { if (took.has(i) || B[i].flags !== 0 || B[i].rot) continue; let ring = true; for (let k = 1; k < 4 && ring; k++) ring = B[i + k].flags === 0 && Math.hypot(B[i + k].c[0] - B[i].c[0], B[i + k].c[2] - B[i].c[2]) < 0.002 && Math.abs(B[i + k].yaw - B[i].yaw - k * Math.PI / 4) < 0.01 && Math.abs(B[i + k].h[0] - B[i].h[0]) < 0.005; if (ring) { loose++; wrong.push(`${f}: boxes ${i}‥${i + 3} are a ring of four the rule left`); } } }
+          const B = L.boxes; for (let i = 0; i + 3 < B.length; i++) { if (took.has(i) || B[i].flags !== 0 || B[i].rot || B[i].h[0] < 0.19) continue; let ring = true; for (let k = 1; k < 4 && ring; k++) ring = B[i + k].flags === 0 && Math.hypot(B[i + k].c[0] - B[i].c[0], B[i + k].c[2] - B[i].c[2]) < 0.002 && Math.abs(B[i + k].yaw - B[i].yaw - k * Math.PI / 4) < 0.01 && Math.abs(B[i + k].h[0] - B[i].h[0]) < 0.005; if (ring) { loose++; wrong.push(`${f}: boxes ${i}‥${i + 3} are a ring of four the rule left`); } } }
         if (n) files++; total += n;
         const made = roundLevel(L.boxes, true, L.markTexel), again = roundLevel(L.boxes, true, L.markTexel);
         const rounds = L.boxes.filter((b: any) => b.round === true), specks = L.boxes.filter((b: any) => b.was && !b.round);
-        const good = rounds.every((b: any) => b.h[0] === b.h[2] && b.h[0] > 0 && b.yaw === 0 && b.flags === 0 && !b.cut && !b.rot) && specks.every((b: any) => (b.flags & BoxFlag.NoPrimary) && (b.flags & BoxFlag.NoShadow) && b.h[0] === 0.01);
+        const good = rounds.every((b: any) => b.h[0] === b.h[2] && b.h[0] > 0.19 && b.yaw === 0 && b.flags === 0 && !b.cut && !b.rot) && specks.every((b: any) => (b.flags & BoxFlag.NoPrimary) && (b.flags & BoxFlag.NoShadow) && b.h[0] === 0.01);
         if (made !== n || again !== n || rounds.length !== n || specks.length !== 3 * n || L.boxes.length !== count || !good) { shape++; wrong.push(`${f}: ${made}/${again} made of ${n}, ${rounds.length} round, ${specks.length} specks`); }
         if (roundLevel(L.boxes, false) !== 0 || flat(L.boxes) !== file || L.boxes.some((b: any) => b.was || b.round)) { back++; wrong.push(`${f}: not put back`); }
       }

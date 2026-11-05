@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-2d05f8ed763bffba256c6c6314ee6ba1b81fa443
+# the kill house is dressed: its look file lays the range's ground under its marks
+1b59479eb5fd6632de6ecf761eff9aa1aa77df60

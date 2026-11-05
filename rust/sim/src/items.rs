@@ -18,19 +18,18 @@
 //! read by a later row's step: furniture is met by where it STANDS, which an impulse does not move.
 //!
 //! WHAT ONLY THE HOST CAN JUDGE HANDS A ROW BACK. The step works on a copy of the row, and where it comes to a question this module has no answer
-//! to — a ray that is no number, or longer than any level — it writes nothing of that row, lists nothing of it, and returns HOST with the row: the
-//! TypeScript takes that row's step and calls again for the rows under it. Nothing of play is such a question any more: a pane of glass is judged
-//! here (glass.rs), lying snow is asked here (`bog_at`, over the world's table of what snow each static is), and a ray of no length meets nothing.
+//! to — a ray that ends on a pane of glass (open or shut is the host's: collision.ts glassOpen), a bounce on ground that may be lying snow (the snow
+//! is the host's map: snowBog.ts) — it writes nothing of that row, lists nothing of it, and returns HOST with the row: the TypeScript takes that
+//! row's step and calls again for the rows under it.
 use crate::lines::{ray_rule, ray_things, RAY_HOST};
 use crate::maths::{atan2, hypot2, hypot3, round_half_up};
 use crate::state::state;
-use crate::world::{js_abs, js_max, js_min, world, MAX_THINGS, REC, R_C, R_COS, R_H, R_SIN, SNOW_BANK, SNOW_OLD, SNOW_PACKED, TH, TH_X, TH_YAW, TH_Z, TL};
+use crate::world::{js_abs, js_max, js_min, world, MAX_THINGS, TH, TH_X, TH_YAW, TH_Z, TL};
 use core::mem::{offset_of, size_of};
 
-/// THE ROWS OF A POOL. The game's own rule keeps a pool to thirty-two things (throwables.ts spawn: a thirty-third gives one up), but never gives up a can
-/// still on its fuse or venting: with thirty-two of those the pool grows, a row a can. These are the rows it may grow to (itemshome.ts ITEM_ROWS:
-/// sixty-four live cans at once is nobody's game, and there the oldest gives way). A multiple of 4.
-pub const CAP: usize = 64;
+/// things a pool holds and still keeps them in the module (throwables.ts spawn: a thirty-third gives one up; a pool that could not, and grew, stays in
+/// TypeScript). A multiple of 4.
+pub const CAP: usize = 32;
 const _: () = assert!(CAP % 4 == 0);
 
 // a thing's truths (`flags`): lying at rest · its fuse has run (another rule's: carried here) · in a hand, placed by whoever carries it
@@ -114,7 +113,7 @@ pub const COLS: [usize; 26] = [
 
 // ---- WHAT THE HOST HANDS IN AND TAKES BACK FOR ONE WALK (scratch)
 // in: the frame's dt · the row to start at (the walk goes down from it) · whether the host has a rule for panes · whether the ground may be lying snow
-// anywhere now (then P_SNOW_* and the roofs below are read) · the share of a bounce's momentum a rifle hands the furniture (throwables.ts RIFLE_ITEM.propShare)
+// anywhere now · the share of a bounce's momentum a rifle hands the furniture (throwables.ts RIFLE_ITEM.propShare)
 pub const P_DT: usize = 0;
 pub const P_FROM: usize = 1;
 pub const P_ASK: usize = 2;
@@ -129,22 +128,7 @@ pub const P_THING_RAYS: usize = 11;
 pub const P_SUBSTEPS: usize = 12;
 pub const P_WALKED: usize = 13;
 pub const P_RESTED: usize = 14;
-// in, LYING SNOW (read only where P_BOG is set; snowBog.ts SNOWBOG, weather.ts roofs): a landing higher than this is not on the ground · snow whose top is
-// within this of the landing is what it landed in · how boggy trodden snow is, and old snow · the share of its bounce and of its slide a thing loses in
-// deep snow, and how much faster than on a floor it may be going and still stop dead · how many roofs the level has in force (at most MAX_ROOFS), and
-// each one's footprint (x0, z0, x1, z1)
-pub const P_SNOW_TOP: usize = 16;
-pub const P_SNOW_BANK: usize = 17;
-pub const P_SNOW_PACKED: usize = 18;
-pub const P_SNOW_OLD: usize = 19;
-pub const P_SNOW_DEAD: usize = 20;
-pub const P_SNOW_GRIP: usize = 21;
-pub const P_SNOW_STICK: usize = 22;
-pub const P_ROOFS: usize = 23;
-pub const P_ROOF: usize = 24;
-pub const MAX_ROOFS: usize = 4;
-pub const NPAR: usize = 40;
-const _: () = assert!(NPAR == P_ROOF + MAX_ROOFS * 4);
+pub const NPAR: usize = 16;
 
 /// an event: what · the row it is of · a number (a bounce: how fast into the face; an impulse: the id of the thing of furniture) · where · a vector
 /// (a bounce: the face's normal; an impulse: the impulse)
@@ -185,7 +169,7 @@ pub fn addr(table: u32) -> usize {
         _ => 0,
     }
 }
-/// 0 = rows · 1 = the hand-over's length · 2 = events the list holds · 3 = doubles an event · 4 = roofs a walk is handed · 13 = the part's length in bytes · 100 + k = where
+/// 0 = rows · 1 = the hand-over's length · 2 = events the list holds · 3 = doubles an event · 13 = the part's length in bytes · 100 + k = where
 /// column k of the part starts (COLS)
 pub fn cap(table: u32) -> usize {
     match table {
@@ -193,7 +177,6 @@ pub fn cap(table: u32) -> usize {
         1 => NPAR,
         2 => MAX_EVENTS,
         3 => EV,
-        4 => MAX_ROOFS,
         13 => size_of::<Items>(),
         k if k >= 100 && ((k - 100) as usize) < COLS.len() => COLS[(k - 100) as usize],
         _ => 0,
@@ -205,80 +188,11 @@ const PI: f64 = core::f64::consts::PI;
 const GRAVITY: f64 = 9.81;
 const SUB: f64 = 2.0;
 
-/// lying snow as the host said it for this walk (P_SNOW_*, P_ROOFS, P_ROOF)
-struct Snow {
-    top: f64,
-    bank: f64,
-    packed: f64,
-    old: f64,
-    dead: f64,
-    grip: f64,
-    stick: f64,
-    roofs: usize,
-    roof: [f64; MAX_ROOFS * 4],
-}
-/// the snow of a walk's hand-over (read where the ground may be snow: `bog`; else nothing of it is). → None: more roofs than a walk is handed
-fn snow_of(p: &[f64; NPAR], bog: bool) -> Option<Snow> {
-    let mut s = Snow { top: p[P_SNOW_TOP], bank: p[P_SNOW_BANK], packed: p[P_SNOW_PACKED], old: p[P_SNOW_OLD], dead: p[P_SNOW_DEAD], grip: p[P_SNOW_GRIP], stick: p[P_SNOW_STICK], roofs: 0, roof: [0.0; MAX_ROOFS * 4] };
-    if bog {
-        if !(p[P_ROOFS] >= 0.0 && p[P_ROOFS] <= MAX_ROOFS as f64) {
-            return None;
-        }
-        s.roofs = p[P_ROOFS] as usize;
-        s.roof.copy_from_slice(&p[P_ROOF..P_ROOF + MAX_ROOFS * 4]);
-    }
-    Some(s)
-}
-/// snowBog.ts `over`: is (x, z) over the static whose row starts at `q`, in plan
-#[inline(always)]
-fn over(rec: &[f64], q: usize, x: f64, z: f64) -> bool {
-    let (cs, sn) = (rec[q + R_COS], rec[q + R_SIN]);
-    let (px, pz) = (x - rec[q + R_C], z - rec[q + R_C + 2]);
-    js_abs(cs * px - sn * pz) <= rec[q + R_H] && js_abs(sn * px + cs * pz) <= rec[q + R_H + 2]
-}
-/// snowBog.ts snowBogAt: HOW BOGGY THE GROUND IS where a thing touched down at (x, y, z), 0‥1 (0 = a floor). Up on something, only snow that stands or
-/// caps as high bogs; at the ground, nothing under a roof does, and a thin lay over the spot says how much: trodden, old, or bare. The statics that
-/// are snow are named by the world's table `snow`; where each is and how it is turned are its own row's.
-fn bog_at(d: &Walk, x: f64, y: f64, z: f64) -> f64 {
-    let o = world(d.w);
-    let (n, s) = (o.boxes as usize, &d.snow);
-    if !(y < s.top) {
-        for bi in 0..n {
-            if o.snow[bi] == SNOW_BANK {
-                let q = bi * REC;
-                if js_abs(o.rec[q + R_C + 1] + o.rec[q + R_H + 1] - y) <= s.bank && over(&o.rec, q, x, z) {
-                    return 1.0;
-                }
-            }
-        }
-        return 0.0;
-    }
-    for r in 0..s.roofs {
-        let q = r * 4;
-        if x >= s.roof[q] && z >= s.roof[q + 1] && x <= s.roof[q + 2] && z <= s.roof[q + 3] {
-            return 0.0;
-        }
-    }
-    let mut k = 1.0;
-    for bi in 0..n {
-        let kind = o.snow[bi];
-        if kind == 0 || kind == SNOW_BANK || !over(&o.rec, bi * REC, x, z) {
-            continue;
-        }
-        let v = if kind == SNOW_PACKED { s.packed } else if kind == SNOW_OLD { s.old } else { 0.0 };
-        if v < k {
-            k = v;
-        }
-    }
-    js_max(0.0, js_min(1.0, k))
-}
-
 /// the walk's world, what the host said of it, and what it has asked so far
 struct Walk {
     w: usize,
     ask: bool,
     bog: bool,
-    snow: Snow,
     rifle_share: f64,
     /// a question came up that only the host can judge
     host: bool,
@@ -311,7 +225,7 @@ fn hit_of(d: &mut Walk, x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, tmax:
     d.rays += 1.0;
     let k = ray_rule(d.w, x, y, z, dx, dy, dz, tmax, 0, -1, d.ask, &mut out);
     if k == RAY_HOST {
-        d.host = true; // (a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
+        d.host = true; // (a pane, or a ray collision.ts walks itself: the host's question — lines.rs ray_rule)
         return None;
     }
     let st = if k >= 0 { Some((out[0], out[1], out[2], out[3])) } else { None };
@@ -358,11 +272,7 @@ pub fn update(g: usize, w: usize) -> u32 {
         return WRONG;
     }
     let dt = p[P_DT];
-    let bog = p[P_BOG] != 0.0;
-    let Some(snow) = snow_of(p, bog) else {
-        return WRONG;
-    };
-    let mut d = Walk { w, ask: p[P_ASK] != 0.0, bog, snow, rifle_share: p[P_RIFLE_SHARE], host: false, rays: 0.0, thing_rays: 0.0, substeps: 0.0 };
+    let mut d = Walk { w, ask: p[P_ASK] != 0.0, bog: p[P_BOG] != 0.0, rifle_share: p[P_RIFLE_SHARE], host: false, rays: 0.0, thing_rays: 0.0, substeps: 0.0 };
     let (mut events, mut walked, mut rested) = (0usize, 0.0, 0.0);
     let mut r = p[P_FROM] as usize;
     let answer = loop {
@@ -456,20 +366,14 @@ pub fn update(g: usize, w: usize) -> u32 {
                         let (vn0, vn1, vn2) = (n0 * vn, n1 * vn, n2 * vn);
                         let (vt0, vt1, vt2) = (vx - vn0, vy - vn1, vz - vn2);
                         let speed = -vn;
-                        // lying snow under it (0 = none, and the lines below are what they were)
-                        let bog = if d.bog && n1 > 0.6 && prop == 0 { bog_at(&d, px, py - radius, pz) } else { 0.0 };
+                        if d.bog && n1 > 0.6 && prop == 0 {
+                            d.host = true; // (lying snow may be under it: the host's map)
+                            break;
+                        }
                         let f = js_max(0.0, 1.0 - friction * (0.5 + 0.5 * js_abs(n1)));
                         vx = vt0 * f + vn0 * -restitution;
                         vy = vt1 * f + vn1 * -restitution;
                         vz = vt2 * f + vn2 * -restitution;
-                        if bog > 0.0 {
-                            // … it keeps little of its slide and of its bounce
-                            let up = vx * n0 + vy * n1 + vz * n2;
-                            let (b, sl) = (1.0 - bog * d.snow.dead, 1.0 - bog * d.snow.grip);
-                            vx = (vx - n0 * up) * sl + n0 * (up * b);
-                            vy = (vy - n1 * up) * sl + n1 * (up * b);
-                            vz = (vz - n2 * up) * sl + n2 * (up * b);
-                        }
                         spin *= 0.6;
                         tumble_rate *= 0.45;
                         bounces = bounces.wrapping_add(1);
@@ -480,7 +384,7 @@ pub fn update(g: usize, w: usize) -> u32 {
                             list(&mut events, EV_BOUNCE, r, speed, px, py, pz, n0, n1, n2);
                         }
                         // settle when slow on an upward-facing surface
-                        if n1 > 0.6 && js_abs(vy) < 0.5 && hypot2(vx, vz) < 0.35 + (if bog > 0.0 { bog * d.snow.stick } else { 0.0 }) {
+                        if n1 > 0.6 && js_abs(vy) < 0.5 && hypot2(vx, vz) < 0.35 {
                             settled = true;
                             on = prop as u32;
                             on_pose = if prop != 0 { pose_key(w, prop - 1) } else { 0.0 };
@@ -501,24 +405,22 @@ pub fn update(g: usize, w: usize) -> u32 {
                 }
                 if py < radius {
                     // safety floor
-                    let bog = if d.bog { bog_at(&d, px, 0.0, pz) } else { 0.0 };
+                    if d.bog {
+                        d.host = true;
+                        break;
+                    }
                     py = radius;
                     if vy < 0.0 {
                         let sp = -vy;
                         vy *= -restitution;
                         vx *= 0.7;
                         vz *= 0.7;
-                        if bog > 0.0 {
-                            vy *= 1.0 - bog * d.snow.dead;
-                            vx *= 1.0 - bog * d.snow.grip;
-                            vz *= 1.0 - bog * d.snow.grip;
-                        }
                         bounces = bounces.wrapping_add(1);
                         if sp > 0.6 {
                             list(&mut events, EV_BOUNCE, r, sp, px, py, pz, 0.0, 1.0, 0.0);
                         }
                     }
-                    if js_abs(vy) < 0.5 && hypot2(vx, vz) < 0.35 + (if bog > 0.0 { bog * d.snow.stick } else { 0.0 }) {
+                    if js_abs(vy) < 0.5 && hypot2(vx, vz) < 0.35 {
                         settled = true;
                         vx = 0.0;
                         vy = 0.0;
