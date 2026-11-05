@@ -58,11 +58,11 @@ export async function everygoneCheck(): Promise<boolean> {
       if (!W) verdict(false, 'a straight wall 5 m long to file three rows on', 'none on this floor');
       else { const c = W.box.c, alongX = W.box.h[0] >= W.box.h[2], at0 = [p[0], p[1], p[2]], n0 = wr.breaches.length;
         const seg = (k: number, s0: number, s1: number) => ({ serial: 90100 + k, t: g.time, kind: 'hole', walkable: false, id: W.id, cause: 'blast', who: NOBODY_ID, pos: [alongX ? c[0] + (s0 + s1) / 2 : c[0], 1, alongX ? c[2] : c[2] + (s0 + s1) / 2], rect: alongX ? [c[0] + s0, c[2] - 0.1, c[0] + s1, c[2] + 0.1] : [c[0] - 0.1, c[2] + s0, c[0] + 0.1, c[2] + s1], opened: [], dead: false });
-        p[0] = c[0] + (alongX ? 0 : 1); p[2] = c[2] + (alongX ? 1 : 0); wr.pend.length = 0;
+        D.gd.char.posX = c[0] + (alongX ? 0 : 1); D.gd.char.posZ = c[2] + (alongX ? 1 : 0); wr.pend.length = 0;
         wr.take(seg(0, -2.0, -1.4)); wr.take(seg(1, 1.4, 2.0)); const two = wr.breaches.length - n0; wr.take(seg(2, -1.5, 1.5));
         const T3 = things(D.gd), live = T3.every((x: any) => x.b && wr.breaches.includes(x.b));
         verdict(two === 2 && wr.breaches.length - n0 === 1 && T3.length === 3 && live, 'three rows of one wall beside him, the third growing two breaches into one: three things, and the breach each is about is the one that is left', `breaches after two rows ${two}, after the third ${wr.breaches.length - n0} · things ${T3.length} · every thing's breach still in the book ${live}`);
-        p[0] = at0[0]; p[2] = at0[2]; wr.pend.length = 0; } }
+        D.gd.char.pos = at0; wr.pend.length = 0; } }
     // a recording from before the key replays with the rule off; one that carries it plays as it says (journal.ts applyKnobs)
     { const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
       WALLREACT.everyGone = true; const old = snap(); delete old.tables.WALLREACT.everyGone; JOURNAL.applyKnobs(g, old); const without = WALLREACT.everyGone;

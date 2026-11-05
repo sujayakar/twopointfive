@@ -73,7 +73,7 @@ export async function doorthrowCheck(): Promise<boolean> {
   const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
   const folded = (g: any, o: any) => Math.min(o.staggerUntil, o.dazzledUntil) - g.time;
   /** walk `pos` at the door from its push face for `secs`, a stride a frame (the leaves read where a body is, whoever moved it) */
-  const walk = (W: any, F: any, who: any, secs: number, speed: number, each?: () => void) => { for (let i = 0; i < secs * 60; i++) { const pos = who.char.pos; pos[0] += F.n[0] * speed * DT; pos[2] += F.n[1] * speed * DT; W.step(DT); each?.(); } };   // (his place is read afresh each frame: a walker's is a new array every step)
+  const walk = (W: any, F: any, who: any, secs: number, speed: number, each?: () => void) => { for (let i = 0; i < secs * 60; i++) { who.char.posX += F.n[0] * speed * DT; who.char.posZ += F.n[1] * speed * DT; W.step(DT); each?.(); } };
 
   try {
     const W0 = await world(true), name = pick(W0.game);
@@ -101,7 +101,7 @@ export async function doorthrowCheck(): Promise<boolean> {
       line(r.start && r.down && r.given === 1 && old.startled === 1 && !old.start && old.given === 0 && old.st === 'suspicious', `the start he gets is the shared one (startle.ts startleMan): he jolts toward the door and his gun stays down for the beat (in a start ${r.start}, gun held down ${r.down}, given ${r.given}) · with DOORTHROW.jolt off he is startled the same with the animator's flinch (given ${old.given}, state ${old.st})`); }
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), pl = sam(g, F.pt(F.W * 0.6, -1.3)); g.aiEnabled = true;   // his wits about him, Sam unseen
       let t0 = -1, near = 99, sus = 0, back = -1, hot = false;
-      for (let i = 0; i < 60 * 14; i++) { if (i < 150) { const pos = pl.char.pos; pos[0] += F.n[0] * 1.6 * DT; pos[2] += F.n[1] * 1.6 * DT; } W.step(DT); if (v.state === 'alert' || v.state === 'search') hot = true;
+      for (let i = 0; i < 60 * 14; i++) { if (i < 150) { pl.char.posX += F.n[0] * 1.6 * DT; pl.char.posZ += F.n[1] * 1.6 * DT; } W.step(DT); if (v.state === 'alert' || v.state === 'search') hot = true;
         if (t0 < 0 && DOORTHROW_STATS.startled) { t0 = g.time; v.hold = false; v.pinned = false; }
         if (t0 >= 0 && back < 0) { if (v.state === 'suspicious') { sus += DT; if (g.time - t0 > T.startle) near = Math.min(near, flat(v.char.pos, d.frameCentre)); } else if (v.state === 'patrol') back = g.time - t0; } }
       line(t0 >= 0 && !hot && near < 0.6 && sus > T.startle + 2 && back > 0 && v.state === 'patrol', `the same walk with his wits about him and nobody to see: he goes to the doorway (to ${f2(near)} m of it), looks about, and is back at his round ${f2(back)} s after it met him (${f2(sus)} s of it suspicious, ${hot ? 'ALERT on the way' : 'never alert'})`); }

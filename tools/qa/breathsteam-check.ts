@@ -134,7 +134,7 @@ export async function breathSteamCheck(): Promise<boolean> {
       verdict(!!e0 && moved && walked && down && dead && off && stale && fogged, 'follows — a source rides the mouth and its velocity is his head\'s facing and his walk; it lets go of a man who lies down, dies or goes into the fog, and when the switch goes off',
         `his head moved half a metre: the source with it ${moved} · walking at 2 m/s: the gas leaves with ${f(K.carry * B.carryK)} of it ${walked} · his head at the ground: let go ${down} · dead: ${dead} · the switch off: ${off} · the breath reseeded under it: ${stale} · a teammate the fog of war hides: ${fogged}`); }
     // ---- sprint
-    { const sam = g.player.char; const run = (R: any, v: number) => { const c = R.g.player.char, mates = R.g.guards.filter((gd: any) => gd.team === 'operative').map((gd: any) => gd.char); return fly(R, 600, { pre: () => { for (const m of mates) { m.vel[0] = 0; m.vel[2] = 0; } c.velX = v; c.velZ = 0; } }).ems.filter(e => near(e, [c])); };
+    { const sam = g.player.char; const run = (R: any, v: number) => { const c = R.g.player.char, mates = R.g.guards.filter((gd: any) => gd.team === 'operative').map((gd: any) => gd.char); return fly(R, 600, { pre: () => { for (const m of mates) { m.velX = 0; m.velZ = 0; } c.velX = v; c.velZ = 0; } }).ems.filter(e => near(e, [c])); };
       const Bq = await rig(true, false);   // (the hard breath rule off)
       const ra = run(A, 4.7), rb = run(Bq, 4.7), sa = run(A, 0), sb = run(Bq, 0); sam.velX = 0; Bq.g.player.char.velX = 0;
       const la = ra[ra.length - 1], lb = rb[rb.length - 1], s0 = sa[0];

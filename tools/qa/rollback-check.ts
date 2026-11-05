@@ -76,7 +76,7 @@ function airborne(g: any): string[] {
 
 class Stop extends Error {}
 /** the red path's hand: the lowest bit of one moving man's position, flipped */
-function flip(g: any): void { const m = g.guards.find((x: any) => x.state !== 'dead') ?? g.player; const p = m.char.pos; const f = new Float64Array([p[0]]), u = new Uint32Array(f.buffer); u[0] ^= 1; p[0] = f[0]; }
+function flip(g: any): void { const m = g.guards.find((x: any) => x.state !== 'dead') ?? g.player; const f = new Float64Array([m.char.posX]), u = new Uint32Array(f.buffer); u[0] ^= 1; m.char.posX = f[0]; }
 /** one play-through of `scn:seed` under an arm: 'plain' = nothing taken; 'moments' = taken, compared and put back as the head says */
 async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: number | null): Promise<Out> {
   const out: Out = { scn, seed, arm, end: 'error', t: 0, digest: '', last: '', frames: 0, moments: [], rawWeak: [], why: [], fns: {} };

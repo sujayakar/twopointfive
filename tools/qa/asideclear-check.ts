@@ -43,7 +43,7 @@ async function spots(scn: string, on: boolean, ref: Map<string, number[] | null>
         for (let k = 0; k < 8; k++) {
           const a = k * Math.PI / 4, s = [m[0] - Math.sin(a) * 1.1, 0, m[2] - Math.cos(a) * 1.1];
           if (g.col.nav.isBlocked(s[0], s[2]) || g.col.solidBlocked([s[0], 0.45, s[2]], [m[0], 0.45, m[2]])) continue;
-          sam[0] = s[0]; sam[2] = s[2]; man.char.posX = m[0]; man.char.posZ = m[2]; O.samV = 1.5; O.samDir = [Math.sin(a), 0, Math.cos(a)]; O.asideMem.delete(man);
+          g.player.char.posX = s[0]; g.player.char.posZ = s[2]; man.char.posX = m[0]; man.char.posZ = m[2]; O.samV = 1.5; O.samDir = [Math.sin(a), 0, Math.cos(a)]; O.asideMem.delete(man);
           const q = O.aside(man) as number[] | null, key = `${d.def.name}|${st}|${ix}|${iz}|${k}`; asked++; keep.set(key, q ? [...q] : null);
           if (q) { got++; if (bad(q)) { inWay++; if (!first) first = `${d.def.name}${st === null ? '' : ` stood at ${st} rad`}: the man at ${fmt(m)}, Sam at ${fmt(s)} → ${fmt(q)}`; } }
           if (ref) { const r = ref.get(key); if (r && !bad(r) && (!q || flat(q, r) > 1e-6)) moved++; }

@@ -44,7 +44,7 @@ async function kit() {
     const g = W.game, F = frame(d), p0 = F.pt(F.W * 0.5, o.out ?? R + d.thick / 2 + 0.12), S0 = { ...g.doors.solids };
     g.teleportPlayer([p0[0], 0, p0[2]]); W.step(DT); o.first?.(g.player.char.pos);
     let crossed = false, deepest = 0, last = read(d, g.player.char.pos);
-    for (let i = 0; i < o.secs * 60; i++) { const pos = g.player.char.pos; pos[0] -= F.n[0] * o.speed * DT; pos[2] -= F.n[1] * o.speed * DT; W.step(DT);
+    for (let i = 0; i < o.secs * 60; i++) { const c = g.player.char; c.posX -= F.n[0] * o.speed * DT; c.posZ -= F.n[1] * o.speed * DT; W.step(DT);
       const r = read(d, g.player.char.pos); if (r.inside && last.inside && r.face !== last.face) crossed = true; if (r.along > 0.14) deepest = Math.max(deepest, r.pen); last = r;
       if (process.env.DOORSOLID_TRACE === '1') console.log(`    ${i} angle ${(d.angle * F.S).toFixed(2)} vel ${(d.vel * F.S).toFixed(1)} along ${r.along.toFixed(2)} face ${r.face * F.S} pen ${(r.pen * 100).toFixed(0)} pullT ${d.pullT.toFixed(2)} solidT ${d.solidT.toFixed(1)}`); }
     const e = g.player.char.pos, q: Vec3 = [e[0], 0, e[2]]; g.col.collideCircle(q, 0.3, 0.2, 1.5, 1);
