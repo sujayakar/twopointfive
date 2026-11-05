@@ -6888,16 +6888,11 @@ export class Character extends ManCols {
   id: number; tint: Vec3; tint2: Vec3;
   anim: CharacterAnimator; skel: SkeletonInstance;
   world: Mat4 = m4.create();
-  alive = true;
   /** cached bone world positions (updated in update()) */
   bones: Record<string, Vec3> = {};
   /** where his feet stood (x, z) when `bones` / `muzzle` were last read: they are a frame old to whoever reads them before his update (game/gunwall.ts moves them on by his step since) */
   bonesAt: [number, number] = [0, 0];
   gunDir: Vec3 = [0, 0, 1]; muzzle: Vec3 = [0, 0, 0]; chestDir: Vec3 = [0, 0, 1];
-  /** metres along gunDir from the wrist to the muzzle: the row's (weapons.ts WeaponDef.muzzleAhead — 0.26 for a pistol; whoever hands him a weapon writes it —
-   *  or, for a man dealt the carbine over his sidearm row (game.ts, tune.carbineGuards), rigProps.carbineMuzzleAhead's 0.5 off the drawn prop).
-   *  The round, the flash, the laser and armThrough all start at `muzzle`. */
-  muzzleAhead = 0.26;
   /** wet from the rain (game/wet.ts drives all three once a frame; game.ts hands them to the renderer per skin instance — gbuffer.wgsl CharInst.wet): the COAT
    *  0 dry ‥ 1 soaked (darker fabric under a glossy film), the BEADS 0‥1 (drops standing on him and running down him — up fast in the rain, run off in
    *  seconds out of it), and the rain rate those drops were fed at (their density and pace). A fresh Character is dry.
@@ -6944,7 +6939,7 @@ export class Character extends ManCols {
 
   constructor(public ch: GltfCharacter, d: CharacterDesc) {
     super(); standMan(this, d.men ?? loneMen());
-    this.radius = 0.3;
+    this.initMan();
     this.id = d.id; this.tint = d.tint; this.tint2 = d.tint2; this.pos = v3.copy(d.pos); this.bodyYaw = d.yaw; this.aimYaw = d.yaw;
     this.anim = new CharacterAnimator(ch); this.anim.desync(d.id ?? 0); this.skel = new SkeletonInstance(ch);
     // rest-pose chest rotation for "facing" extraction
