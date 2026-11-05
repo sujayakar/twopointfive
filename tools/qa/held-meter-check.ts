@@ -24,7 +24,11 @@ game.lightQuery = () => {}; game.lightAt = (k: string) => store.get(k); game.lig
 const STALE = 80, stale = () => { store.set(kc, STALE); store.set(kh, STALE); forgets = 0; };
 const place = () => game.visibilityOf(Math.max(lightEstimateAt(game, c.bones.chest ?? v3.add(c.pos, [0, 1.2, 0])), lightEstimateAt(game, c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]))));
 const obs = others[0];
-const look = () => { const sp = game.player.char.pos; bringIn(game, obs, [sp[0] + 5, 0, sp[2]] as Vec3, sp); obs.hold = false; obs.pinned = false; W.step(DT); };
+/** the looker comes in and one frame runs. `met` = the place's own light at the held man's chest and head AS THAT FRAME BEGAN: the points the game's meter
+ *  reads (guards.ts meterOf reads his bones before the frame poses him). Where a man turns over several frames (the turn rule) the pair swings to face the
+ *  looker and those points move a room's light apart inside the one frame: read after it, the place is not the place the meter was asked about. */
+let met = 0;
+const look = () => { const sp = game.player.char.pos; bringIn(game, obs, [sp[0] + 5, 0, sp[2]] as Vec3, sp); obs.hold = false; obs.pinned = false; met = place(); W.step(DT); };
 const away = (frames: number) => { park(obs, 1); obs.standoff = null; for (let i = 0; i < frames; i++) W.step(DT); };
 const held = () => game.player.holding?.phase === 'held' && game.player.holding.g === victim;
 const lit = game.visibilityOf(STALE), f = (x: number) => x.toFixed(3);
@@ -43,7 +47,7 @@ away(2); { const sp = game.player.char.pos, goal: Vec3 = [sp[0] - 3, 0, sp[2]]; 
 away(gapFrames);
 const moved = Math.hypot(c.pos[0] - p0[0], c.pos[2] - p0[2]);
 stale(); look();
-line(held() && before > 0.9 && moved > HELD_METER.movedM && Math.abs(victim.visibility - place()) < 0.02 && forgets === 2, `(c) nobody looking for ${f(gapFrames * DT)} s while the pair moves ${moved.toFixed(1)} m (meter was ${f(before)}): first look ${f(victim.visibility)}, place ${f(place())}; ${forgets} keys forgotten`);
+line(held() && before > 0.9 && moved > HELD_METER.movedM && Math.abs(victim.visibility - met) < 0.02 && forgets === 2, `(c) nobody looking for ${f(gapFrames * DT)} s while the pair moves ${moved.toFixed(1)} m (meter was ${f(before)}): first look ${f(victim.visibility)}, the place as that frame began ${f(met)} (after it ${f(place())}); ${forgets} keys forgotten`);
 
 for (let i = 0; i < 40; i++) { stale(); W.step(DT); } const before2 = victim.visibility;
 away(gapFrames); stale(); look();

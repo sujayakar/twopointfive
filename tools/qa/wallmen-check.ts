@@ -20,7 +20,7 @@ export async function wallmenCheck(): Promise<boolean> {
   const { WALLPEN, WALLPEN_STATS, WALLPEN_HOOKS, wallMenLive, thinLine, flightLen, thinThing } = await import(`${ROOT}/src/game/wallpen.ts`);
   const { roundEnergy } = await import(`${ROOT}/src/game/glasspen.ts`);
   const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
-  const { surfOf } = await import(`${ROOT}/src/game/particleFx.ts`);
+  const { doesOf } = await import(`${ROOT}/src/scene/materials.ts`);
   const { spawnUnit, shotOrigin } = await import(`${ROOT}/src/game/guards.ts`);
   const { order } = await import(`${ROOT}/src/game/squad.ts`);
   const { COVERFIRE, coverfireSaw, coverfireOn } = await import(`${ROOT}/src/game/coverfire.ts`);
@@ -74,7 +74,7 @@ export async function wallmenCheck(): Promise<boolean> {
     const statics = g.col.boxes.map((b: any, index: number) => ({ b, index }));
     const tall = (b: any) => b.c[1] - b.h[1] <= 0.1 && b.c[1] + b.h[1] >= 2.2;
     const parts = statics.filter(({ b, index }: any) => tall(b) && thinThing(g, index)?.stuff === 'drywall' && Math.max(b.h[0], b.h[2]) >= 1.4);
-    const hard = statics.filter(({ b, index }: any) => tall(b) && !thinThing(g, index) && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && ['concrete', 'metal'].includes(surfOf(b.albedo)) && Math.max(b.h[0], b.h[2]) >= 1.4 && Math.min(b.h[0], b.h[2]) <= 0.3);
+    const hard = statics.filter(({ b, index }: any) => tall(b) && !thinThing(g, index) && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && ['concrete', 'metal'].includes(doesOf(b).surf) && Math.max(b.h[0], b.h[2]) >= 1.4 && Math.min(b.h[0], b.h[2]) <= 0.3);
     const wooden = g.doors.list.map((d: any, i: number) => ({ d, b: d.box, index: 1e6 + i })).filter(({ d }: any) => !d.def.steel && !d.off && Math.abs(d.angle) < 0.02);
     return { parts, hard, wooden };
   };

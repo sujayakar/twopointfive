@@ -32,7 +32,7 @@
 // rectangles, statement for statement.
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import type { Quat } from '../math/vec';
-import { Box, BoxFlag, makeBox } from '../scene/boxes';
+import { Box, BoxFlag, makeBox, wordOf } from '../scene/boxes';
 import type { Game } from './game';
 import type { Chunk } from './debris';
 import { hash01 } from './debris';
@@ -59,6 +59,8 @@ export interface GlassFragmentLike {
   grain: number;
   cause: 'hit' | 'support' | 'blast' | 'dice' | 'rake';
   who: number; seed: number;
+  /** the rule's own answer for where and when it comes down (none: asked here), and whether its landing is already the simulation's (rust/sim/src/panes.rs, under SHARDS.byFall) */
+  fall?: { t: number; pos: Vec3 }; landed?: boolean;
 }
 
 export const SHARDS = {
@@ -155,7 +157,7 @@ const cellName = (ix: number, iz: number) => (ix + 512) * 4096 + (iz + 512);
 
 export class GlassShards {
   /** THE GAMEPLAY HALF — the scheduled landings (sound + litter + at most one hearing event each) and the litter map — is the game's FallStore
-   *  (sim/fallshome.ts, `g.falls`: in TypeScript, or in the Rust module's block while RUST.falls is on). What a tool reads of it: the landings waiting … */
+   *  (sim/fallshome.ts, `g.falls`: a part of the game's block). What a tool reads of it: the landings waiting … */
   get pending(): Pending[] { const F = this.g.falls, out: Pending[] = []; for (let i = 0; i < F.waiting; i++) { const r = F.landing(i); out.push({ t: r.t, pos: [r.x, r.y, r.z], name: r.name ? 'glassShatter' : 'glassTinkle', gain: r.gain, rate: r.rate, amount: r.amount, who: r.who, event: r.event }); } return out; }
   /** births still alive, by expiry (the live estimate) */
   private lives: Life[] = []; private liveEst = 0;
@@ -196,7 +198,7 @@ export class GlassShards {
     // ---- the spray
     const sp = SHARDS.speed;
     const tint = f.tint; const spread = Math.sqrt(A) * 0.45;
-    const fall = this.fallOf(f.centre, f.velocity);
+    const fall = f.fall ?? this.fallOf(f.centre, f.velocity), own = !f.landed;   // (`own`: this landing is scheduled here; a landing the rule has scheduled is the simulation's)
     if (powder) {
       // CRATER: grains about `grain` across thrown the blow's way in a cone, the air stopping them short, + the spall back off the struck face
       const ng = this.budget(clampI(Math.round(A * Math.min(SHARDS.craterPerM2, 0.5 / (f.grain * f.grain)) * (0.5 + 0.5 * E)), SHARDS.fineMin, SHARDS.craterMax));
@@ -205,7 +207,7 @@ export class GlassShards {
         const nb = this.budget(Math.round(ng * SHARDS.backShare));
         this.emit(v3.mad(f.centre, n, -0.03), v3.scale(n, -1), nb, { speed: (1.0 + 0.8 * E) * sp, speedJit: 0.8, spread: 1.0, life: SHARDS.fineLife * 0.8, lifeJit: 0.4, size: f.grain, sizeJit: 0.6, aspect: 1.3, tumble: 45, nrmJit: 1, posJit: spread * 0.6, color: tint }, u32(f.seed ^ 0xBACC));
       }
-      this.schedule({ t: fall.t + 0.05, pos: fall.pos }, 'glassTinkle', 0, 1, A, f.who, false);   // (the blow's own crack is the sound; this is its litter — by either rule)
+      if (own) this.schedule({ t: fall.t + 0.05, pos: fall.pos }, 'glassTinkle', 0, 1, A, f.who, false);   // (the blow's own crack is the sound; this is its litter — by either rule)
     } else if (dice) {
       // DICE: the clump bursts into cubes about `grain` across that pour down with a little of the blow's push; + a sparkle of fines
       const grain = f.grain > 0 ? f.grain : 0.009;
@@ -213,12 +215,12 @@ export class GlassShards {
       this.emit(f.centre, n, nd, { speed: 0.9 * sp * (0.6 + 0.4 * E), speedJit: 0.8, spread: 1.1, life: SHARDS.diceLife, lifeJit: 0.35, size: grain, sizeJit: 0.35, aspect: 1, tumble: 30, nrmJit: 1, posJit: spread, vadd: f.velocity, color: tint }, u32(f.seed ^ 0xD1CE));
       const nf = this.budget(clampI(Math.round(A * SHARDS.finePerM2 * SHARDS.diceFineShare), 4, SHARDS.fineMax));
       this.emit(f.centre, n, nf, { speed: 1.6 * sp, speedJit: 0.85, spread: 1.2, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize * 0.8, sizeJit: 0.5, aspect: 1.2, tumble: 45, nrmJit: 1, posJit: spread, vadd: v3.scale(f.velocity, 0.5), color: tint }, u32(f.seed ^ 0xF17E));
-      this.schedule(fall, 'glassShatter', Math.min(1, 0.35 + A * 4), 1.15 + 0.3 * hash01(f.seed), A * 0.8, f.who);   // (by either rule)
+      if (own) this.schedule(fall, 'glassShatter', Math.min(1, 0.35 + A * 4), 1.15 + 0.3 * hash01(f.seed), A * 0.8, f.who);   // (by either rule)
     } else if (f.kind === 'sheet') {
       // a laminated sheet coming away whole: it sheds a little grit and no more
       const nf = this.budget(clampI(Math.round(A * 60), 4, 40));
       this.emit(f.centre, n, nf, { speed: 0.8 * sp, speedJit: 0.8, spread: 1.2, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize, sizeJit: 0.5, aspect: 1.2, tumble: 40, nrmJit: 1, posJit: spread, vadd: f.velocity, color: tint }, u32(f.seed ^ 0xF17E));
-      if (SHARDS.byFall) this.landing(fall, plateable ? 0 : 0.5, 0.8, A * 0.3, f.who);   // (BY THE FALL: its landing is the simulation's whether or not the pool took its plates — theirs is then the sound)
+      if (!own) { /* (the rule's) */ } else if (SHARDS.byFall) this.landing(fall, plateable ? 0 : 0.5, 0.8, A * 0.3, f.who);   // (BY THE FALL: its landing is the simulation's whether or not the pool took its plates — theirs is then the sound)
       else if (!plated) this.schedule(fall, 'glassTinkle', 0.5, 0.8, A * 0.3, f.who);
     } else {
       // annealed PIECE / DAGGER: mids that carry, fines the air stops, and — off a round or a blast — spall back toward where it came from
@@ -231,7 +233,7 @@ export class GlassShards {
         const nb = this.budget(Math.round(nf * (f.cause === 'hit' ? Math.max(SHARDS.backShare, SHARDS.hitBackShare) : SHARDS.backShare)));
         this.emit(v3.mad(f.centre, n, -0.03), v3.scale(n, -1), nb, { speed: (1.0 + 0.8 * E) * sp, speedJit: 0.8, spread: 1.0, life: SHARDS.fineLife * 0.8, lifeJit: 0.4, size: SHARDS.fineSize * 0.9, sizeJit: 0.6, aspect: 1.3, tumble: 45, nrmJit: 1, posJit: spread * 0.6, color: tint }, u32(f.seed ^ 0xBACC));
       }
-      if (SHARDS.byFall) this.landing(fall, plateable ? 0 : Math.min(0.9, 0.3 + A * 8), 0.9 + 0.5 * hash01(f.seed), A, f.who);   // (BY THE FALL: one landing, all its glass, the floor told — a fragment big enough to plate leaves the sound to its plate)
+      if (!own) { /* (the rule's) */ } else if (SHARDS.byFall) this.landing(fall, plateable ? 0 : Math.min(0.9, 0.3 + A * 8), 0.9 + 0.5 * hash01(f.seed), A, f.who);   // (BY THE FALL: one landing, all its glass, the floor told — a fragment big enough to plate leaves the sound to its plate)
       else if (!plated) this.schedule(fall, 'glassTinkle', Math.min(0.9, 0.3 + A * 8), 0.9 + 0.5 * hash01(f.seed), A, f.who);          // (a plated fragment's first sound is its plate's own landing)
       else this.schedule({ t: fall.t + 0.05, pos: fall.pos }, 'glassTinkle', 0, 1, A * 0.35, f.who, false);                      // … its spray still leaves litter where it comes down
     }
@@ -486,7 +488,7 @@ export class GlassShards {
       const area = 4 * hh[long] * hh[short];
       if (area < SHARDS.childMinArea) { lost += area; continue; }
       const cc = v3.mad(b.c, L, ((a0 + a1) / 2 - 0.5) * 2 * b.h[long]);
-      const box = makeBox({ c: [cc[0], cc[1] + 0.004, cc[2]], h: hh, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), flags: BoxFlag.Dynamic });
+      const box = makeBox({ c: [cc[0], cc[1] + 0.004, cc[2]], h: hh, yaw: b.yaw, rot: [rot[0], rot[1], rot[2], rot[3]], albedo: v3.copy(b.albedo), ...wordOf(b), flags: BoxFlag.Dynamic });
       const side = (j - (k - 1) / 2);
       const vel: Vec3 = v3.add(c.v, v3.add(v3.scale(L, side * (0.5 + 0.5 * h(20 + j))), [(h(30 + j) - 0.5) * 0.5, 0.3 + 0.5 * h(40 + j), (h(50 + j) - 0.5) * 0.5]));
       const w: Vec3 = [(h(60 + j) - 0.5) * 12, (h(70 + j) - 0.5) * 6, (h(80 + j) - 0.5) * 12];
@@ -514,7 +516,7 @@ export class GlassShards {
     if (SHARDS.byFall) {   // (BY THE FALL: the jet's glass is the fines it throws, not the ones the particle budget let it — laid whether or not one was drawn)
       if (want <= 0) return true;
       const d = v3.normalize(x.dirOut), sp = (SHARDS.exitSpeed + 5 * clamp(x.eOut, 0, 1)) * SHARDS.speed;
-      this.schedule(this.fallOf(x.exit, v3.scale(d, sp * 0.35)), 'glassTinkle', 0, 1, want * SHARDS.fineSize * SHARDS.fineSize, who, false);
+      g.glassBreak.asking((m) => m.panes_jet(x.exit[0], x.exit[1], x.exit[2], d[0], d[1], d[2], sp, want * SHARDS.fineSize * SHARDS.fineSize, who));
       if (n > 0) this.emit(v3.mad(x.exit, d, 0.01), d, n, { speed: sp, speedJit: 0.7, spread: 0.3, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize * 0.8, sizeJit: 0.6, aspect: 1.3, tumble: 50, nrmJit: 1, posJit: 0.01, color: v3.copy((g.level.boxes[x.bi] as { albedo?: Vec3 } | undefined)?.albedo ?? [0.72, 0.8, 0.82]) }, u32(Math.imul(++this.serial, 2654435761) ^ 0xE817));
       return true;
     }

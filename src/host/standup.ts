@@ -11,6 +11,7 @@ import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
 import { ROUND, roundLevel } from '../scene/round';
+import { SHAPES, shapeLevel, plainLevel } from '../scene/shapes';
 import { thinClear, thinLevel } from '../scene/thin';
 import { barClear, barLevel } from '../scene/bars';
 import { lightFromDef } from '../render/lights';
@@ -124,7 +125,8 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
-import { rustRows, rustRow } from '../sim/sim';
+import { POSEMATH } from '../anim/skeleton';
+import { rustRows, rustRow, rustOn, retiredEnvWord } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -142,6 +144,7 @@ import { NOSHOVE } from '../game/noshove';
 import { DOORMANNERS } from '../game/doorway';
 import { RAILS } from '../game/rails';
 import { DOORFORCE } from '../game/doorforce';
+import { BELIEF } from '../game/belief';
 import { SLOTSETUP } from '../game/slotsetup';
 import { GLASSREAL } from '../game/glassbreak';
 import { AIMCOST } from '../game/aimcost';
@@ -150,6 +153,11 @@ import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
+import { HITSTUFF } from '../game/particleFx';
+import { MARKCUT, MARKSIT } from '../render/decals';
+import { PLAN_PACE } from '../render/planPace';
+import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
+import { WALLSKIN } from '../game/wallskin';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -163,7 +171,7 @@ import { WINBARS } from '../game/winbars';
 import { FRAG } from '../game/frag';
 import { HOUR, applyHour } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
-import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY } from '../game/character';
+import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH, RUNREADY, RUNARMS } from '../game/character';
 import { WOUND } from '../game/wounds';
 import { DOORSTAY, DOORWAY, DOORTHROW } from '../game/doors';
 import { SHARDS } from '../game/shards';
@@ -187,8 +195,8 @@ export interface StandOpts {
   /** add the level's boxes to host.world and its lights to host.lights before the Game is built (default true; main.ts populates earlier by populateHost — the smoke solver is
    *  constructed between — and passes false) */
   populate?: boolean;
-  /** the QA HARNESS's stand (tools/qa/headless.ts) — FROZEN unless the run says TPS_PROFILE=shipped (src/host/profile.ts: under 'shipped' none of the lines below that
-   *  hold a newer rule off runs, and the game stands as the page's does): chaos 0 (the game byte for byte as it was before the destruction lane — what every frozen digest was recorded against),
+  /** the QA HARNESS's stand (tools/qa/headless.ts) — the page's unless the run says TPS_PROFILE=frozen (src/host/profile.ts: under 'shipped' none of the lines below that
+   *  hold a newer rule off runs, and the game stands as the page's does). On the old stand: chaos 0 (the game byte for byte as it was before the destruction lane — what every frozen digest was recorded against),
    *  the autosave slots in a Map (no localStorage in bun), the level script strict (a throwing beat fails the probe). Off = the page's game */
   harness?: boolean;
   /** THE GAME'S OWN DIE (src/math/dice.ts): a number = the Game owns a die seeded with it, from its construction draws on — the page always passes one (?seed=N, else a
@@ -216,32 +224,50 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 export function populateHost(host: HostApi, level: Level): void {
   thinClear(level.boxes); barClear(level.boxes);   // (a level stood up a second time: last time's thin marks off before the round things are looked for)
   roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
+  plainLevel(level.boxes);   // A BOX SAYS ITS SHAPE (scene/shapes.ts): what an earlier stand-up of this level gave is taken back first, so that the two rules below read the level's plain boxes whatever shapes say
   thinLevel(level.boxes, level.doors);   // THIN THINGS THAT STAND FREE (scene/thin.ts): marked for the fog of war's own eyes (FOG.thin) and a teammate's (FOG.mates), on the list as it now is
   barLevel(level.boxes);   // A WINDOW'S BARS (scene/bars.ts): marked for the one rule that reads them (game/winbars.ts WINBARS)
+  shapeLevel(level.boxes, SHAPES.on);   // …and given: each box that says a shape has its record and its pieces follow the level's last box — before a box goes to the world and before the Game's collision is built from the list
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
 
-/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: off on the frozen stand, so every frozen digest, tally and fixture runs on the functions it was recorded
- *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
- *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
-export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
-/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: off on both stands, as the page (TPS_RUST<ROW>=1 raises a row — TPS_RUSTMATHS, TPS_RUSTLINES — the page's ?rust<row>) */
-export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(); if (pinned(w)) rustRow(r, String((globalThis as any).process?.env?.[w] ?? '') === '1'); } }
+/** THE GAME'S OWN MATHS (src/math/exact.ts) on the harness: on, as the page, and no word takes them out (TPS_EXACT is retired: the Rust module's rows
+ *  answer under no other maths, and they are how the game is played). Written BEFORE anything is built — a level's boxes and a Game's constructor keep
+ *  what they work out — so a tool that builds a level itself calls this first. */
+export function pinMaths(): void { retiredEnv(); EXACT.on = HELD.maths ?? true; }
+/** A CHECK'S OWN ARM, held in the tool's own process and nowhere else: the rows a check of the two languages keeps down for its TypeScript arm (or the
+ *  maths' row up), and the game's own maths taken out for a red path. No word of a stand, an address, a recipe or a recording reaches this: a tool writes
+ *  it (tools/qa/headless.ts hold), says so out loud, and a run that holds anything is no stand's run. It goes with the last TypeScript twin. */
+export const HELD: { rows: Record<string, boolean>; maths: boolean | null } = { rows: {}, maths: null };
+/** a retired word in a tool's environment stops the tool, by name (sim.ts retiredEnvWord) */
+function retiredEnv(): void { const env = ((globalThis as any).process?.env ?? {}) as Record<string, string | undefined>;
+  for (const k of Object.keys(env)) if (retiredEnvWord(k)) throw new Error(`${k}=${env[k]}: the Rust module's rows and the game's own maths are not switches any more (src/sim/sim.ts rowsUp). Take the word out; a check that holds the two languages against each other writes its own row in its own process`); }
+/** A POSE'S BULK ARITHMETIC IN SINGLES (src/anim/skeleton.ts POSEMATH) on the harness: off on the frozen stand (TPS_POSESINGLES=1 raises it); the shipped stand
+ *  keeps the page's (on), and TPS_POSESINGLES=0 there is the page's ?posesingles=0. Written BEFORE the game is built: an animator measures its clips as it is made. */
+export function pinPoseMath(): void { if (pinned('TPS_POSESINGLES')) POSEMATH.singles = String((globalThis as any).process?.env?.TPS_POSESINGLES ?? '') === '1'; }
+/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row of RUST_ON, on both stands, as the page. No word of the environment moves
+ *  one (TPS_RUST, TPS_RUST<ROW> are retired and stop the tool that says them); a check's own arm is HELD, above. */
+export function pinRust(): void { for (const r of rustRows()) rustRow(r, HELD.rows[r] ?? rustOn(r)); }   // (one write a row: a held row is never raised and dropped again, which would remake every constant kept from the maths twice — pinMaths, called beside this, is what reads the environment)
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
   if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1';   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
-  if (pinned('TPS_CPULIGHT')) SENSE.bounce = String((globalThis as any).process?.env?.TPS_CPULIGHT ?? '') === '1'; }   // (…and the light model on that grid: off on both stands, TPS_CPULIGHT=1 raises it, the page's ?cpulight)
+  if (pinned('TPS_CPULIGHT')) SENSE.bounce = String((globalThis as any).process?.env?.TPS_CPULIGHT ?? '') === '1';   // (…and the light model on that grid: off on both stands, TPS_CPULIGHT=1 raises it, the page's ?cpulight)
+  if (pinned('TPS_MOONLIGHT')) SENSE.moon = String((globalThis as any).process?.env?.TPS_MOONLIGHT ?? '') === '1';   // (…and the night's light from the sky in the estimate: off on both stands, TPS_MOONLIGHT=1 raises it, the page's ?moonlight)
+  if (pinned('TPS_SMOKEDRIFT')) SENSE.drift = String((globalThis as any).process?.env?.TPS_SMOKEDRIFT ?? '') === '1'; }   // (…and the grid's smoke drifting with the wind: off on both stands, TPS_SMOKEDRIFT=1 raises it, the page's ?smokedrift)
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
 export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<Stood> {
-  if (opts.harness) { pinMaths(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
+  if (opts.harness) { pinMaths(); pinPoseMath(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
   const level = opts.level ?? buildLevel();
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
   const smoke = opts.smoke ?? nullSmoke();
   if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
+  if (opts.harness && pinned('TPS_SHAPES')) SHAPES.on = String((globalThis as any).process?.env?.TPS_SHAPES ?? '') === '1';   // a box says its shape (src/scene/shapes.ts; read as the level's boxes go to the world, so written before that): off, so every box of a level is the plain box its file has, as when every frozen digest was recorded
+  if (opts.harness && pinned('TPS_COATFINISH')) COATFINISH.on = String((globalThis as any).process?.env?.TPS_COATFINISH ?? '') === '1';   // a named coat's finish goes wherever its word goes (src/scene/stuff.ts; a picture only, read where a box's finish is handed to the GPU): off, so a vehicle's body has the finish its file gives it, as it was
+  if (opts.harness && pinned('TPS_SOLIDGLASS')) SOLIDGLASS.on = String((globalThis as any).process?.env?.TPS_SOLIDGLASS ?? '') === '1';   // a thing of solid glass is dark and smooth (src/scene/stuff.ts; a picture only, read where a box's colour and finish are handed to the GPU): off, so a vehicle's window is the grey its file gives it, as it was
   if (opts.populate !== false) populateHost(host, level);
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
@@ -262,9 +288,18 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_SNOWBREATH')) SNOW_LOOK.breath = String((globalThis as any).process?.env?.TPS_SNOWBREATH ?? '') === '1';   // … and nobody's breath steams in its cold
   if (opts.harness && pinned('TPS_BREATHSTEAM')) SNOW_LOOK.steam = String((globalThis as any).process?.env?.TPS_BREATHSTEAM ?? '') === '1';   // … and where it does, it is the puffs of sprite, not gas in the smoke solver
   if (opts.harness && pinned('TPS_CARLAMPS')) CARLAMPS.on = String((globalThis as any).process?.env?.TPS_CARLAMPS ?? '') === '1';   // a vehicle's lamps are light targets (src/game/carlamps.ts; read when the Game is built, so written before it): off, so no level has one and no round breaks one
+  if (opts.harness && pinned('TPS_HITSTUFF')) HITSTUFF.on = String((globalThis as any).process?.env?.TPS_HITSTUFF ?? '') === '1';   // a round reads what a thing says it is made of (src/game/particleFx.ts): off, so every hit is read by the colour of the paint, as it was
+  if (opts.harness && pinned('TPS_MARKCUT')) MARKCUT.on = String((globalThis as any).process?.env?.TPS_MARKCUT ?? '') === '1';   // a mark on a cut or a round face lies where the round met it (src/render/decals.ts): off, so a mark is pulled to the plain box's face, as it was
+  if (opts.harness && pinned('TPS_MARKSIT')) MARKSIT.on = String((globalThis as any).process?.env?.TPS_MARKSIT ?? '') === '1';   // a blast's marks sit in the surface (src/render/decals.ts; a picture only): off, so the decal buffer's header is the old one and every mark is drawn as it was
+  if (opts.harness && pinned('TPS_PLANPACE')) PLAN_PACE.on = String((globalThis as any).process?.env?.TPS_PLANPACE ?? '') === '1';   // the picture's planners at a pace (src/render/planPace.ts; a picture only): off, so every plan is made whole on the frame that asks, as it was
+  if (opts.harness && pinned('TPS_WALLSKIN')) WALLSKIN.on = String((globalThis as any).process?.env?.TPS_WALLSKIN ?? '') === '1';   // the paint on a wall goes with the wall (src/game/wallskin.ts): off, so a band on a holed wall is drawn whole across the hole, as it was
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
   const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
+  // THE GAME'S STATE THAT STILL MOVES IS AT HOME FROM HERE (sim/state.ts settle, the statement every tick's open makes; said once, where every Game is
+  // made, and after its die is hung): the die and the poses go into the game's block now, so a roll of the die before the first tick is the Rust
+  // module's like any other. (The doors, the falls, the furniture, the slabs and the thrown things were made over the block and need no move.)
+  game.sim.settle(game);
   if (opts.audio) game.audio = opts.audio;
   if (!opts.harness) game.saves.onPutBack = () => hostAfterPutBack(game);   // (a save kept in memory put back — savestate.ts SAVETIMELINE: the GPU's buffers are told so; host/putback.ts)
   if (opts.harness) {
@@ -297,6 +332,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SQUADFIRE')) FOG.squadFire = String((globalThis as any).process?.env?.TPS_SQUADFIRE ?? '') === '1';   // a man the squad is shooting at is in the picture (src/game/fogofwar.ts firedOn): off, so the reticle takes only the men every stored run had in the picture
     if (pinned('TPS_WALLSNAP')) WALLSNAP.on = String((globalThis as any).process?.env?.TPS_WALLSNAP ?? '') === '1';   // back to the wall, the feel pass (src/game/wallsnap.ts): off, so Q takes the wall on the old clock and slings the rifle, as every frozen probe and digest has it; `TPS_WALLSNAP=1` turns it on (the shipped default)
     if (pinned('TPS_WALLPRESS')) WALLSNAP.press = String((globalThis as any).process?.env?.TPS_WALLPRESS ?? '') === '1';   // the wall taken without the key (src/game/wallsnap.ts `press`): off, so only Q takes a wall, as every frozen probe and digest has it; `TPS_WALLPRESS=1` turns it on (the shipped default; it acts only with the feel pass on)
+    if (pinned('TPS_WALLRUN')) WALLSNAP.pressRun = String((globalThis as any).process?.env?.TPS_WALLRUN ?? '') === '1';   // …at a run too (wallsnap.ts `pressRun`): off, so a sprint into a wall stops against it and Shift is always a way off one, as every frozen probe and digest has it; `TPS_WALLRUN=1` turns it on (the shipped default; it acts only with `press`)
     if (pinned('TPS_WALLVOICE')) WALLSNAP.voice = String((globalThis as any).process?.env?.TPS_WALLVOICE ?? '') === '1';   // the hold's two sounds (wallsnap.ts `voice`): off on the frozen stand, where only the old scuff is asked for; `TPS_WALLVOICE=1` turns them on (the shipped default)
     if (pinned('TPS_LEANGUN')) WALLSNAP.leanGun = String((globalThis as any).process?.env?.TPS_LEANGUN ?? '') === '1' ? LEAN_GUN_M : 0;   // the step-out's share for the rifle (wallsnap.ts `leanGun`): 0, so a step-out is 0.6 m whichever side the end is on, as every frozen probe has it; `TPS_LEANGUN=1` turns it on (the shipped default)
     if (pinned('TPS_WALLSLOW')) WALLSNAP.slow = String((globalThis as any).process?.env?.TPS_WALLSLOW ?? '') === '1';   // the unhurried take (wallsnap.ts `slow`): off, so every frozen probe and digest has the take's seconds as they were; `TPS_WALLSLOW=1` turns it on (the shipped default)
@@ -348,12 +384,15 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_THROWBY')) THROW_BY.on = String((globalThis as any).process?.env?.TPS_THROWBY ?? '') === '1';   // a throw reads its distance (src/game/character.ts THROW_BY): off, so every throw is the one overhand every frozen pose, strip and digest was read on; `TPS_THROWBY=1` turns it on (the shipped default)
     if (pinned('TPS_TEAMPACE')) TEAMPACE.on = String((globalThis as any).process?.env?.TPS_TEAMPACE ?? '') === '1';   // teammates slower than the player, running only for a reason (src/game/teampace.ts): off, so the team walks every leg at the pace every frozen probe, digest and tape has it
     if (pinned('TPS_DOORBRISK')) TEAMPACE.doorBrisk = String((globalThis as any).process?.env?.TPS_DOORBRISK ?? '') === '1';   // nobody sprints to a stack (src/game/teampace.ts teamDash): off, so a frozen probe that raises the team's pace sees the runs to cover it saw; TPS_DOORBRISK=1 raises it
+    if (pinned('TPS_WALKAIM')) TEAMPACE.walkAim = String((globalThis as any).process?.env?.TPS_WALKAIM ?? '') === '1';   // a walking teammate's gun goes where he walks while he has no line to his order's aim point (src/game/teampace.ts walkLead): off, so a man sent to a door carries his gun on it from his first step, as in every frozen probe, tally and digest; `TPS_WALKAIM=1` turns it on
     if (pinned('TPS_PACING')) TEAMPACE.pacing = String((globalThis as any).process?.env?.TPS_PACING ?? '') === '1';   // a teammate paces himself on the player (src/game/teampace.ts teamWalkOf): off, so a frozen probe that raises the team's pace reads the flat walk it read; TPS_PACING=1 raises it
     if (pinned('TPS_GLASSDROP')) GLASSREAL.drop = String((globalThis as any).process?.env?.TPS_GLASSDROP ?? '') === '1';   // toughened glass drops at once (src/game/glassbreak.ts GLASSREAL): off, so a diced sheet lets go in the wave every frozen glass probe, tally and tape timed
     if (pinned('TPS_GLASSPLACE')) GLASSREAL.place = String((globalThis as any).process?.env?.TPS_GLASSPLACE ?? '') === '1';   // a pane's glass by where it sits (the same table): off, so outside glass is toughened and inside float, the kinds every frozen glass probe and stack mark was dealt on
     if (pinned('TPS_SLOTSETUP')) SLOTSETUP.pop = SLOTSETUP.on = String((globalThis as any).process?.env?.TPS_SLOTSETUP ?? '') === '1';   // the slot in hand pressed again opens its setup (src/game/slotsetup.ts): off, so 2 pressed with the rifle up steps the launcher's load, as every frozen probe, tape and lesson run has it; TPS_SLOTSETUP=1 raises it
     if (pinned('TPS_SETUPDRAW')) SLOTSETUP.draw = String((globalThis as any).process?.env?.TPS_SETUPDRAW ?? '') === '1';   // a gun's digit pressed again during its own draw opens the setup (src/game/slotsetup.ts `draw`): off, so a double-tapped digit is the draw and no more, as TPS_SLOTSETUP=1 alone has always stood the rule up; TPS_SETUPDRAW=1 raises it
     if (pinned()) SLOTSETUP.mags = false;   // the box's count as rounds in the gun over the magazine's size, a box a spare (slotsetup.ts `mags`): the box's alone, held off here like every newer rule
+    if (pinned('TPS_BELIEF')) BELIEF.on = String((globalThis as any).process?.env?.TPS_BELIEF ?? '') === '1';   // what a man believes and what he covers are two things (src/game/belief.ts): off, every frozen digest was recorded on the door written over his fix
+    if (pinned('TPS_POSTENDS')) DOORFORCE.postEnds = String((globalThis as any).process?.env?.TPS_POSTENDS ?? '') === '1';   // a man walking to boot a door who is put on a post stops (src/game/doorforce.ts)
     if (pinned('TPS_DOORFORCE')) DOORFORCE.on = String((globalThis as any).process?.env?.TPS_DOORFORCE ?? '') === '1';   // an alerted man does not wait at a shut door (src/game/doorforce.ts): off, so a defender who knows a man is behind a shut leaf rests his gun on it or goes to its handle, as in every frozen probe, digest and tally; TPS_DOORFORCE=1 raises it
     if (pinned('TPS_RAILS')) RAILS.on = String((globalThis as any).process?.env?.TPS_RAILS ?? '') === '1';   // a tutorial mission's frame (src/game/rails.ts): off, so a level whose lesson carries a rails record plays as a plain lesson on the frozen stand (no shipped level but the tutorial group's carries one)
     if (pinned('TPS_CARDBEAT')) RAILS.cardBeat = String((globalThis as any).process?.env?.TPS_CARDBEAT ?? '') === '1';   // the step before a card settles (rails.ts RAILS.cardBeat): off, so on a frozen run that raises the frame each step comes up the tick the deed before it is done, as every frozen tutorial fixture was recorded
@@ -486,6 +525,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_HALTBACK')) DOORTOOLS.haltBack = String((globalThis as any).process?.env?.TPS_HALTBACK ?? '') === '1';   // a pair halted on a door the other pair is charging steps back off it (src/game/doortools.ts haltBack): off, so every frozen probe's halted pair stands where it stood; TPS_HALTBACK=1 raises it
     if (pinned('TPS_BEHINDSAM')) DOORTOOLS.behindSam = String((globalThis as any).process?.env?.TPS_BEHINDSAM ?? '') === '1';   // Sam beyond a door counted as one of ours by the squad's own stun can (src/game/doortools.ts samBehind): off, so the word at a held door bangs its pockets wherever he stands, as every frozen probe and digest was made; TPS_BEHINDSAM=1 raises it
     if (pinned('TPS_TOSSMATE')) DOORTOOLS.tossMate = String((globalThis as any).process?.env?.TPS_TOSSMATE ?? '') === '1';   // a bang and clear asking about teammates again as the can leaves the hand (src/game/doortools.ts mateBehind): off, so a can goes into a room a pair entered since the row was given, as every frozen probe and digest was made; TPS_TOSSMATE=1 raises it
+    if (pinned('TPS_CHARGEANSWER')) DOORTOOLS.chargeAnswer = String((globalThis as any).process?.env?.TPS_CHARGEANSWER ?? '') === '1';   // a door charge order carried out or answered (src/game/doortools.ts short / knownOpen): off, so a charge order ends on a leaf open anywhere and leaves its men as they were, as every frozen probe and digest was made; TPS_CHARGEANSWER=1 raises it
     if (pinned('TPS_PODFRAMES')) DOORTOOLS.podFrames = String((globalThis as any).process?.env?.TPS_PODFRAMES ?? '') === '1';   // no entry point dealt in another door's frame (src/game/doortools.ts inFrame): off, the points every frozen run walked to; TPS_PODFRAMES=1 raises it
     if (pinned('TPS_THRHAND')) DOORTOOLS.thrHand = String((globalThis as any).process?.env?.TPS_THRHAND ?? '') === '1';   // a threshold's can only from a hand at the door (src/game/doortools.ts thrHand): off, the thrower every frozen run had; TPS_THRHAND=1 raises it
     if (pinned('TPS_THRNOCAN')) DOORTOOLS.thrNoCan = String((globalThis as any).process?.env?.TPS_THRNOCAN ?? '') === '1';   // the can's wait spent with nobody at the door: no can (src/game/doortools.ts thrNoCan; acts only under thrHand): off, the can as every frozen run threw it; TPS_THRNOCAN=1 raises it
@@ -522,6 +562,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_STALKWIDE')) STALK.wide = String((globalThis as any).process?.env?.TPS_STALKWIDE ?? '') === '1';   // …and his arms out wide and low as he creeps (STALK.wide, under STALK.low): off, his hands by his knees
     if (pinned('TPS_STALKPOLISH')) stalkPolish(String((globalThis as any).process?.env?.TPS_STALKPOLISH ?? '') === '1');   // …and the stalk's polish (stalk.ts stalkPolish, with the hold's share in character.ts): down, so a frozen run raised with TPS_STALK=1 is the stalk as it first stood; acts only under STALK.on
     if (pinned('TPS_RUNREADY')) RUNREADY.on = String((globalThis as any).process?.env?.TPS_RUNREADY ?? '') === '1';   // the sprint with the pistol (src/game/character.ts RUNREADY): off, so the gun rides a pumping fist
+    if (pinned('TPS_RUNARMS')) RUNARMS.on = String((globalThis as any).process?.env?.TPS_RUNARMS ?? '') === '1';   // a run's arms (src/game/character.ts RUNARMS): off, so they are the clips', wide of the shoulders
     if (pinned('TPS_CROUCHRUN')) CROUCHRUN.on = String((globalThis as any).process?.env?.TPS_CROUCHRUN ?? '') === '1';   // Shift in a crouch (src/game/player.ts CROUCHRUN): off, so it stands him up into the sprint
     if (pinned('TPS_SAMLOOK')) SAMLOOK.on = String((globalThis as any).process?.env?.TPS_SAMLOOK ?? '') === '1';   // his head on a man (src/game/samlook.ts): off
     if (pinned('TPS_SAMSLIP')) SAMLOOK.slip = String((globalThis as any).process?.env?.TPS_SAMSLIP ?? '') === '1';   // the room he gives a man in passing (src/game/samlook.ts): off
@@ -575,7 +616,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_UNSEEN')) UNSEEN.on = String((globalThis as any).process?.env?.TPS_UNSEEN ?? '') === '1';   // a squad nobody has found sneaks when Sam sneaks (src/game/unseen.ts): off, so teammates beside a crouched, slow or wall-hugging Sam stand, walk and shoot as in every frozen probe and digest; `TPS_UNSEEN=1` runs any tool with it on, tools/qa/unseen-probes.ts raises it itself
     if (pinned('TPS_WALLBEAT')) UNSEEN.wallBeat = String((globalThis as any).process?.env?.TPS_WALLBEAT ?? '') === '1';   // a wall hold counts as sneaking after a beat (src/game/unseen.ts)
     if (pinned('TPS_HOLDFIRE')) HOLDFIRE.on = String((globalThis as any).process?.env?.TPS_HOLDFIRE ?? '') === '1';   // an unfound squad never fires first (src/game/holdfire.ts): off, so a loud teammate shoots the first man he has a line to, as in every frozen probe, tally and digest; `TPS_HOLDFIRE=1` runs any tool with it on, tools/qa/holdfire-check.ts raises it itself
-    if (pinned('TPS_SILENTSET')) SILENT.stackSet = String((globalThis as any).process?.env?.TPS_SILENTSET ?? '') === '1';   // a silent man held on a man, on his stack mark, is stacked (src/game/silent.ts silentOnMan): off, so a silent stack beside unaware men reads 'stacking' and never says 'set.', as in every frozen probe; `TPS_SILENTSET=1` runs any tool with it on, `probes.ts silent-set` raises it itself
+    if (pinned('TPS_SILENTSET')) SILENT.stackSet = String((globalThis as any).process?.env?.TPS_SILENTSET ?? '') === '1';   // a silent man held on a man, on his stack mark, is stacked (src/game/silent.ts silentHoldsTarget): off, so a silent stack beside unaware men reads 'stacking' and never says 'set.', as in every frozen probe; `TPS_SILENTSET=1` runs any tool with it on, `probes.ts silent-set` raises it itself
     if (pinned('TPS_STACKROOM')) STACKROOM.on = String((globalThis as any).process?.env?.TPS_STACKROOM ?? '') === '1';   // a door stack keeps every man inside the room (src/game/stackroom.ts): off, so every door order deals the marks every frozen probe and digest was recorded on; `TPS_STACKROOM=1` turns it on (the shipped default)
     if (pinned('TPS_TOOLNEAR')) HANDLE.toolNear = String((globalThis as any).process?.env?.TPS_TOOLNEAR ?? '') === '1';   // a door order's lead works the handle from past the latch jamb (src/game/handleside.ts nearStand): off, so he walks to the handle's place in front of the opening as every frozen probe's lead did; TPS_TOOLNEAR=1 raises it
     if (pinned()) SILENT.on = false;                   // the squad's silent / loud order (src/game/silent.ts): off the menu and off the squad block, which is what every older menu probe and frozen digest was written against — `probes.ts silent` turns it on (the shipped default)

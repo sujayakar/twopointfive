@@ -39,7 +39,7 @@
     const v = typeof name === 'string' ? VIEWS[name] : name; if (!v) throw new Error('no view ' + name);
     window.__menu?.close(); seed();
     if (!lit0) lit0 = G().targets.map(t => t.on);   // the level's night state of every fixture, taken once: each view starts from it and lights only its own groups (a view never inherits the last one's panels)
-    G().targets.forEach((t, i) => { t.on = lit0[i]; });
+    G().targets.forEach((t, i) => { G().lightHome.stage(t, lit0[i], null); });
     for (const g of v.groups ?? []) G().setGroup(g, true);
     window.__stage(v.pin, { park: true, guards: v.guards ?? [], player: { pos: [14, 0, 20], yaw: 1.57, holstered: true, invisible: true }, ...extra });
     for (const sg of v.guards ?? []) if (sg.aim) { const gd = G().guards[sg.i]; if (gd) { gd.state = 'suspicious'; gd.awareness = 0.5; gd.reactT = 0; gd.searchT = 0; gd.hold = true; gd.lastKnown = [sg.aim[0], sg.aim[1] - 1.0, sg.aim[2]]; } }   // (guards.ts: a held suspicious man watches lastKnown + 1 m from where he stands)

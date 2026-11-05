@@ -104,11 +104,84 @@ fn markTaps(m: MarkRec, x: f32, y: f32, wT: vec2f) -> vec3f {
 /** cheap reject: does the bitmap (± the filter's reach) contain cell position (x, y)? */
 fn markNear(m: MarkRec, x: f32, y: f32, wT: vec2f) -> bool { let r = max(wT, vec2f(1.0)); return x > -r.x && y > -r.y && x < f32(m.W) + r.x && y < f32(m.H) + r.y; }
 
+fn mkHash(p: vec2f) -> f32 { let q = fract(p * vec2f(0.1031, 0.1030)); let r = q + dot(q, q.yx + 33.33); return fract((r.x + r.y) * r.x); }
+fn mkNoise(p: vec2f) -> f32 { let i = floor(p); let f = p - i; let u = f * f * (3.0 - 2.0 * f); return mix(mix(mkHash(i), mkHash(i + vec2f(1.0, 0.0)), u.x), mix(mkHash(i + vec2f(0.0, 1.0)), mkHash(i + vec2f(1.0, 1.0)), u.x), u.y); }
+const MK_BRIDGE = array<vec2i, 6>(vec2i(-1, 0), vec2i(0, -1), vec2i(2, 1), vec2i(1, 2), vec2i(2, 0), vec2i(0, 2));
+fn mkEntry(e: u32) -> vec3f { return vec3f(f32(e == 1u), f32(e == 2u), f32(e == 3u)); }   // (a cell's entry as a weight vector: none for a bare cell)
+/** THE LOOK PROTOTYPE, the soft read of a marking: ONE read of the block of four cells around (x, y), blended as a plain bilinear ramp between their
+ *  centres (markTaps at a one-cell footprint is not that: it is already a quarter into its minified mean, which puts a step back on every cell edge and
+ *  keeps a staircase a staircase), plus THE BRIDGE of a stroke that runs CORNER TO CORNER: where two cells of one paint meet only at a corner and the other
+ *  two of the block are bare (a stepped diagonal: a gate's diamond) the ramp is exactly half cover at the corner, so the half-cover cut leaves two beads
+ *  that just touch. The bridge adds 0.31 of cover there for that paint and nothing at the block's edges: a neck about 0.8 of a cell wide, as wide as the
+ *  stroke. It is NOT added where both cells are the corners of solid blocks (two squares of a chequer of blocks, or two bare cells meeting inside a painted
+ *  field, stay as ambiguous as they were), nor where the same paint sits on both outer ends of the other diagonal (a chequer of single cells), nor for a
+ *  paint that BURNS. It reads its own record only: a corner on the seam between two records of one face is not joined. */
+fn markSoftRead(m: MarkRec, x: f32, y: f32) -> vec3f {
+  let i0 = i32(floor(x - 0.5)); let j0 = i32(floor(y - 0.5));
+  let u = x - 0.5 - f32(i0); let v = y - 0.5 - f32(j0);
+  let a = markCell(m, i0, j0); let b = markCell(m, i0 + 1, j0); let c = markCell(m, i0, j0 + 1); let d = markCell(m, i0 + 1, j0 + 1);
+  // (whole-vector sums: the same maths as a write to o[entry] a cell)
+  var o = mkEntry(a) * ((1.0 - u) * (1.0 - v)) + mkEntry(b) * (u * (1.0 - v)) + mkEntry(c) * ((1.0 - u) * v) + mkEntry(d) * (u * v);
+  var e = 0u; var flip = false;
+  if (a != 0u && a == d && b == 0u && c == 0u) { e = a; } else if (b != 0u && b == c && a == 0u && d == 0u) { e = b; flip = true; }
+  if (e == 0u || ((m.emask >> (e - 1u)) & 1u) != 0u) { return o; }
+  // the six cells that say what kind of corner it is (MK_BRIDGE: laid out for the a-d diagonal, mirrored for the other): the first four are the far
+  // sides of the two cells (all four of the paint = two blocks), the last two the outer ends of the other diagonal (both of the paint = a chequer).
+  // ONE call site in a loop, on purpose: written as two chains of `&&` over eight markCell calls, the software adapter never finished its first frame.
+  var nb = 0u; var nl = 0u;
+  for (var t = 0u; t < 6u; t++) {
+    let q = MK_BRIDGE[t];
+    if (markCell(m, i0 + select(q.x, 1 - q.x, flip), j0 + q.y) == e) { if (t < 4u) { nb++; } else { nl++; } }
+  }
+  if (nb < 4u && nl < 2u) { o += mkEntry(e) * (5.0 * u * (1.0 - u) * v * (1.0 - v)); }
+  return o;
+}
+/** THE LOOK PROTOTYPE (soft.x > 0 only on that page: gbuffer.wgsl hands lookMarkSoft() = the panel's Painted marks row, 0 to 2, and how far the place's paint
+ *  is OLD, 0 to 1, which is 1 less how kept the level says it is — look.wgsl lookKept): a marking drawn as PAINT A HAND LAID, AND AS OLD AS THE PLACE,
+ *  not as cells. Four parts, and all but the first keep growing to the top of the row, because at the distance the game is played from a cell is two pixels
+ *  and a rounded corner alone is nothing to see (on a GPU the row read as "doesn't look like it does anything" up to 1):
+ *    THE SHAPE (all of it by 1): the bitmap read as a soft picture a cell wide (markSoftRead above: a bilinear ramp between cell centres, with its corner
+ *      bridge) and cut back to an edge, so a staircase of cells is a slanted stroke, a lone cell a dab, a corner round; between two colours the stronger
+ *      takes the pixel;
+ *    THE HAND: where that cut falls wanders slowly along the stroke (a brush pressed harder and lighter: a stripe a cell wide is 0.85 to 1.15 of one at
+ *      1, twice that swing at 2), over a finer ragged line the bristles left. The swing was first more than twice this over half the length, and a row of
+ *      stripes read as dripped wax: a painter's stripe is nearly straight, and it is the wear that says its age;
+ *    THE WEAR: the paint is rubbed thin in patches a hand to a forearm wide, measured in metres on the face and not in cells, each fading out at its rim
+ *      (a quarter of the paint touched at 1, half at 2), by the years (× how far the paint is old) or by feet (where the floor is walked, however kept);
+ *    THE AGE (markTone, the caller's): its colour has gone a shade into the surface under it (× how far the paint is old).
+ *  An entry that BURNS keeps its cells and its colour (an LED is a square). `w` = the crisp weights, `ws` = the soft read (the caller's: markSoftRead has
+ *  ONE call site in the module, on purpose), `t` = metres a cell; returns the weights to use. */
+/** how much of the soft read a pixel takes by its footprint in cells: far off it is the plain coverage again (a tint, never noise) */
+fn markSoftNear(wT: vec2f) -> f32 { return 1.0 - smoothstep(0.75, 1.75, max(wT.x, wT.y)); }
+/** how far an old paint keeps its own colour from the surface under it (× the frame's marking contrast): 0.82 at the row's 1, 0.64 at 2, in a place left
+ *  to the years (soft.y 1); its own colour whole in a place kept like new (soft.y 0) */
+fn markTone(soft: vec2f, near: f32) -> f32 { return 1.0 - 0.18 * min(soft.x, 2.0) * soft.y * near; }
+fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft2: vec2f, salt: f32, ws: vec3f, t: f32, trod: f32) -> vec3f {
+  let soft = soft2.x;
+  let foot = max(wT.x, wT.y); let near = markSoftNear(wT);
+  let amt = min(soft, 1.0) * near; let age = min(soft, 2.0) * near;
+  if (amt <= 0.0) { return w; }
+  let pm = vec2f(x, y) * t;                                            // (metres on the face: the hand and the wear are the painter's and the years', not the bitmap's)
+  let worn = smoothstep(-0.16, 0.16, 0.55 * mkNoise(pm * 3.3 + vec2f(3.0, 9.0 + salt)) + 0.45 * mkNoise(pm * 11.0 + vec2f(salt, 5.0)) - (0.72 - 0.12 * age * soft2.y - 0.16 * trod));   // (`trod`: how much the floor here is walked, the look layer's: paint goes first where feet go)
+  let keep = 1.0 - 0.85 * min(age, 1.0) * worn * max(soft2.y, min(trod, 1.0));   // (TWO THINGS RUB PAINT THIN: the years (soft2.y: how far the paint is OLD, 0 in a place kept like new) and feet (trod). A kept place's sign is whole on its wall and still worn where its floor is walked)
+  let s = ws.x + ws.y + ws.z;
+  if (s <= 0.0) { return w * (1.0 - amt); }
+  let eg = clamp(0.5 * foot, 0.07, 0.5);
+  let rag = (mkNoise(vec2f(x, y) * 2.3 + vec2f(salt, 1.7)) - 0.5) * 0.3 + (mkNoise(vec2f(x, y) * 0.45 + vec2f(7.0, salt)) - 0.5) * 0.18;
+  let cut = clamp(0.5 + 0.32 * age * (mkNoise(pm * 5.0 + vec2f(salt, 21.0)) - 0.5), 0.22, 0.82);
+  let cover = smoothstep(cut - min(eg, cut - 0.02), cut + eg, s + rag * near);
+  let p4 = ws * ws * ws * ws; let share = p4 / max(p4.x + p4.y + p4.z, 1e-6);
+  var o = share * cover * keep;
+  o = select(o, w, vec3<bool>((m.emask & 1u) != 0u, (m.emask & 2u) != 0u, (m.emask & 4u) != 0u));
+  o = mix(w, o, amt);
+  let tot = o.x + o.y + o.z; if (tot > 1.0) { o /= tot; }
+  return o;
+}
 struct MarkGB { albedo: vec3f, rough: f32 };
 /** THE G-BUFFER's evaluation at the primary hit: every record of the box's list on this fragment's face, composited in order over the albedo / roughness the
  *  fragment has so far (contrast = frame.markCfg.y lerps entry albedos from the pixel's own). dwx / dwy = the world position's screen derivatives (fsBox takes
  *  them in uniform control flow); slot = the 1-based first row. */
-fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32) -> MarkGB {
+fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32, soft: vec2f, trod: f32) -> MarkGB {
   var o: MarkGB; o.albedo = albedoIn; o.rough = roughIn;
   let g = boxGeo[bi]; let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);
   let lp = quatRotate(qi, wp - g.c); let ln = quatRotate(qi, n);
@@ -123,14 +196,23 @@ fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f
       let wT = vec2f(abs(du.x) + abs(dv.x), abs(du.y) + abs(dv.y));
       let x = uv.x - f32(m.U0); let y = uv.y - f32(m.V0);
       if (markNear(m, x, y, wT)) {
-        let w = markTaps(m, x, y, wT);
+        var w = markTaps(m, x, y, wT);
+        var tone = 1.0;
+        if (soft.x > 0.0) {
+          let near = markSoftNear(wT);
+          if (near > 0.0) {
+            let ws = markSoftRead(m, x, y);   // (the module's one call site: the software adapter builds a copy of the walk for each)
+            w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u), ws, t, trod);
+            tone = markTone(soft, near);
+          }
+        }
         let sum = w.x + w.y + w.z;
         if (sum > 0.0) {
           var alb = o.albedo * (1.0 - sum); var rgh = o.rough * (1.0 - sum);
           for (var e = 1u; e <= 3u; e++) {
             let we = w[e - 1u]; if (we <= 0.0) { continue; }
             let pa = markPalA(m, e);
-            let a = select(o.albedo, mix(o.albedo, pa.xyz, frame.markCfg.y), ((m.palFlags >> (e - 1u)) & 1u) != 0u);   // an entry without an albedo of its own keeps the pixel's
+            let a = select(o.albedo, mix(o.albedo, pa.xyz, frame.markCfg.y * select(tone, 1.0, ((m.emask >> (e - 1u)) & 1u) != 0u)), ((m.palFlags >> (e - 1u)) & 1u) != 0u);   // an entry without an albedo of its own keeps the pixel's
             alb += a * we;
             rgh += select(o.rough, pa.w, pa.w >= 0.0) * we;
           }

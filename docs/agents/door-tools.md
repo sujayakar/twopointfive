@@ -656,3 +656,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   what the wait costs or saves in a room fight (the men up at the end are the same with and without on every shipped row; one frozen row ends a
   man fewer with the rule). Headless
   only: never played, never heard (the spoken line), never seen on a GPU.
+- **A door charge order is carried out or answered** (`doortools.ts DOORTOOLS.chargeAnswer`: stage 'place', `knownOpen`, `short`, `chargeGone`;
+  11-04). THE SWITCH: ON in the page (`?chargeanswer=0` = as it was), OFF in the module and on the frozen stand (`TPS_CHARGEANSWER=1`); a
+  `FROZEN_HOLDS` row; `STAND_ENV`; it rides the `DOORTOOLS` table, and the journal replays a recording from before the key with it off
+  (`applyKnobs`); a row in the debugger's door page. Off = the build as it was (the old branch is kept word for word; it retires with the switch
+  cleanup's batches). WHY: off the mission cards' dry run of the two hostage rescues, a charge ordered from the mission's start: a defender came
+  through that door and locked it behind him with the pair twenty metres off, the order ended there on "door's open.", and the pair walked up to
+  the shut door and stood at it, one reading 'setting the charge', until the captor's clock ran out. THE RULES: (1) the order asks about the leaf
+  what the PLAYER IS SHOWN of it (`knownOpen`: fogofwar.ts `doorHeld` / `doorShown`, the fog's own record of where an eye of the team's last had
+  the leaf; the leaf itself with the fog off). A leaf that swings and shuts again out of the team's sight is nobody's news: they walk on and the
+  charge goes on the door they find. One the picture has open ends the order, the setter says "door's open."; the row's why-not ("it's open.")
+  asks the same question, so a row is never refused for a door drawn shut. (2) a charge order over short of its charge (`short`: the door open,
+  never made the door, the bag empty at the lock, the charge off a door that came open or went off its hinges) leaves every man still on it
+  HOLDING on that door: the order book's own 'hold' with a door in its arc (gun and light on it, 'to hold · <door>' / 'holding · <door>'), on
+  the stand-off mark he was dealt, or where he stands when the mark is across the open doorway from him (`openHand`, as `stayHands` kept him, now
+  judged against the mark he is being sent to: the setter too). A group of their own. Nobody keeps a 'charge' assignment with no charge order
+  behind it, and they are not a stack: the word and the quick key read them as men holding. (3) a charge that comes off the door under men
+  stood off from it is SAID by the setter ("door's open. charge is off." / "door's gone. charge went with it."), where only the panel's line told
+  it. THE CHECK: `bun run tools/qa/chargeanswer-check.ts` (`probes.ts chargeanswer`, in family `doortools`), 16 lines on each stand, a pair (the
+  office's room clear) and four (the compound), the fog on, the door picked by the game (the farthest one that takes the order and that the
+  picture does not show open when it is put open): every frame watched for an order leaving the book short of its charge with no teammate's voice
+  on that frame (SILENT) and for a living man on a charge assignment with no order behind it (STALE), through a leaf swung unseen (armed), a leaf
+  left open (ended within two frames of the picture showing it), a leaf opened under a set charge, the bag emptied at the lock, the two refusals
+  at the give, a door nothing happens to (beat for beat as with the rule off), the journal and the stand. `CHARGEANSWER_BREAK=1` leaves the rule
+  off: lines (1) to (4) fail on BOTH stands. ON THE PAGE (`PORT=<port> node tools/qa/chargeanswer-page.cjs [outDir]`, headless Chromium on the
+  software adapter, the pair's room clear): the switch on, a leaf swung unseen does not end the order, the charge is armed, the leaf opened under
+  it gets the setter's bubble and both men hold; under `?chargeanswer=0` the same swing ends the order with the men left on its assignments; no
+  page error. WHAT PLAYS DIFFERENTLY: a charge ordered from far off survives a defender using that door out of
+  sight; after a charge order that came to nothing the men hold on the door instead of standing on 'setting the charge' / 'stood off'; two more
+  spoken lines. KNOWN LIMITS: a leaf the team SEES swing open and shut again still ends the order (answered, the men hold; the order is not
+  taken up again by itself); 'never made the door' is read, not staged; the wall charge (`wallcharge.ts`) has the same short ends and is not
+  touched; other door orders' short ends are as they were ('the frag is gone', 'the door held the boot' end with no line of their own); the
+  fight at the door (the dry run's other finding: a pair shot at the lock) is the room fight's. One seed, two levels. Headless only: never
+  played, never heard, never seen on a GPU.

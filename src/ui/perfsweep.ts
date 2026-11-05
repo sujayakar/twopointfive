@@ -12,6 +12,7 @@ import type { Engine } from '../engine';
 import type { Game } from '../game/game';
 import { SCALE_STEP, SCALE_FLOOR, type Quality, type QualityName } from './quality';
 import type { SmokeSystem } from '../smoke/smoke';
+import { smokeIndirectFlip } from './sweepSmoke';
 import type { PerfRecorder } from './perfrec';
 import { savedWords, onThisMachine } from '../host/savefile';
 import { mulberry32 } from '../math/dice';
@@ -20,9 +21,11 @@ import { mulberry32 } from '../math/dice';
  *  few flips that are not a settings write (arm() below); `needs` = settings the row only means something under (else it is skipped and says so); `or` = the flip
  *  the other way, taken when the page already stands at `set` (the ladder's climb takes these rungs itself); `warm` = its first flip compiles a shader (a second or so on a real GPU):
  *  every such row is switched on once, together, before the first segment, so no round times the compile */
-export interface SweepRow { id: string; label: string; set?: Record<string, unknown>; needs?: Record<string, unknown>; or?: { label: string; set: Record<string, unknown> }; warm?: boolean; custom?: 'fog' | 'fogOld' | 'fogEdge' | 'smoke' | 'oneAir' | 'wispMotes' | 'irLight' | 'irLightOne' | 'scaleDown' | 'scaleUp' | 'scaleStart' | 'scaleTop' | 'preset' | 'extra';
+export interface SweepRow { id: string; label: string; set?: Record<string, unknown>; needs?: Record<string, unknown>; or?: { label: string; set: Record<string, unknown> }; warm?: boolean; custom?: 'fog' | 'fogOld' | 'fogEdge' | 'smoke' | 'oneAir' | 'wispMotes' | 'smokeIndirect' | 'irLight' | 'irLightOne' | 'scaleDown' | 'scaleUp' | 'scaleStart' | 'scaleTop' | 'preset' | 'extra';
   /** a row only the RUNNING world shows (Shift+F8): the reason, said when a frozen take skips it */
   liveOnly?: string;
+  /** a row whose cost no pass's stamp holds (it shows as the GPU answering late): the report judges it by the frame's length, not by the passes' union */
+  readBy?: 'frame';
   /** a row whose flip takes seconds to show (a population of particles that fills and drains at its own pace): its flipped segment AND the baseline after it drop this much
    *  of their start, where every other segment drops SweepOpts.settleMs. The segment's line in the take says so (`settleMs`), and the report cuts by it */
   settleMs?: number;
@@ -71,6 +74,7 @@ export const SWEEP_ROWS: SweepRow[] = [
   { id: 'air', label: 'wind sim off', set: { airSim: false }, needs: { airSim: true }, liveOnly: 'a frozen world steps no air', settleAfterMs: SLOW_SNOW_MS },   // (the air solver's compute pass, timed as 'air': a fixed cost on its own grid, stepped only on a frame with time in it that something reads the air on — today the snow. With it off the snow is flakes on the plain storm wind and wisps in gust patches; when it comes back the wisps and the flakes take seconds to stand as they stood (and under ?snowair=0 a whole first set of grains is filed over the ones still in the ring): the baseline after it waits that out. A build from before the solver has no such setting and skips the row)
   { id: 'oneAir', label: 'one snow in one air off: the blown grains of before', custom: 'oneAir', liveOnly: 'a frozen world files no snow', settleMs: SLOW_SNOW_MS },   // (ui/sweepSnow.ts: the snow as it opens against the snow of before it. The grains' first set is filed over nine seconds and lives as long once the switch is back, so each side waits that out. The wind sim steps on both sides: the solver's own price is the row above. The update is the compute pass 'particles'; the DRAW is a render pass the GPU columns leave out: only the frame time sees that)
   { id: 'wispMotes', label: 'blown snow wisps: the combed streak of before', custom: 'wispMotes', liveOnly: 'a frozen world files no snow' },   // (ui/sweepSnow.ts: a wisp as a puff of motes against the streak it was. All of it is the particle DRAW's fragment work, a render pass the GPU columns leave out: only the frame time of a take not held at the display's rate sees it. A wisp keeps the look it was filed with, so each side waits out a wisp's life: the flip names that wait itself, off the wisps' own numbers)
+  { id: 'smokeIndirect', label: 'smoke solver: the dispatch of before (by a GPU-written count)', custom: 'smokeIndirect', liveOnly: 'a frozen world steps no smoke', readBy: 'frame' },   // (ui/sweepSmoke.ts)
   { id: 'restirRays', label: 'direct light: 3 rays a pixel', set: { restirRays: 3 } },
   { id: 'restirSpatial', label: 'direct light: 2 spatial taps', set: { restirSpatial: 2 } },
   { id: 'penRays', label: 'direct light: no second ray in penumbras', set: { restirPenRays: false } },
@@ -178,7 +182,7 @@ export class PerfSweep {
     const secs = Math.round(this.plan.reduce((t, _, i) => t + this.settleOf(i) + this.opts.measureMs, 0) / 1000);
     this.rec.event('sweep', JSON.stringify({ op: 'begin', mode: this.opts.live ? 'live' : 'frozen', rounds: this.opts.rounds, settleMs: this.opts.settleMs, measureMs: this.opts.measureMs, settleFrames: this.opts.settleFrames, measureFrames: this.opts.measureFrames,
       preset: this.quality.label, res: [this.engine.width, this.engine.height], scale: S.renderScale, smoke: this.smoke.stats.live, timers: !!this.engine.timer?.enabled,
-      rows: armed.map(a => ({ id: a.row.id, label: a.label, from: a.from, to: a.to })), skipped }));
+      rows: armed.map(a => ({ id: a.row.id, label: a.label, from: a.from, to: a.to, ...(a.row.readBy ? { by: a.row.readBy } : {}) })), skipped }));
     if (!this.opts.inside) this.note(`SWEEP: measuring for about ${secs >= 90 ? `${Math.round(secs / 60)} min` : `${secs} s`}, hands off. The picture will flicker. F8 stops`);
     this.at = -1;
     const warm = armed.filter(a => a.row.warm);
@@ -347,6 +351,11 @@ export class PerfSweep {
         if (this.opts.live) return 'frozen takes only';
         if (!P.enabled || !n) return 'no dust or smoke is live here';
         return { row, label: `${row.label} (${bricks} bricks of it here)`, from: { smoke: n }, to: { smoke: 0 }, apply: () => { P.enabled = false; return () => { P.enabled = true; }; } };
+      }
+      case 'smokeIndirect': {   // the solver's dispatch of before against the whole pool the page opens on (ui/sweepSmoke.ts): the solver's own knob, flipped and put back
+        if (!this.opts.live) return `live takes only (Shift+F8): ${row.liveOnly}`;
+        const f = smokeIndirectFlip(this.smoke); if (typeof f === 'string') return f;
+        return { row, label: `${row.label} (${this.smoke.stats.pool} bricks in the air as the take began)`, from: f.from, to: f.to, apply: f.apply };
       }
       case 'oneAir': case 'wispMotes': {   // the game's snow, written and put back by the page's hook for the row (ui/sweepSnow.ts)
         const hook = this[row.custom];

@@ -47,7 +47,7 @@ import { drivePulled, rackDist } from './mission';
 import { quietWords, holderStand } from './quiet';
 import { chronObjective } from './chronicle';
 import { sneakLow, SNEAK } from './sneak';
-import { silentHolds } from './silent';
+import { silentHoldsRound } from './silent';
 
 export const WORK = {
   /** the whole of it (false: the menu, the men and lighting.ts as they were) */
@@ -363,16 +363,16 @@ export function workRows(g: Game, t: OrderTarget, page: string | null, rows: Ord
 export function workHand(g: Game, c: Character): DoorPush | null { return firstOf(g, v => v.work ? v.work.hand(c) : null); }
 /** roomfight.ts's eyes and what turns a man with nobody in his sight (a mate's call, footfalls), beside the pair's pairPasses: A MAN STOOD AT THE THING HE
  *  WAS SENT TO WORK DOES NOT TAKE AS A TARGET, OR TURN TO LOOK FOR, A MAN HIS ROUND IS HELD FOR — the squad's fire is held and that man has noticed nobody
- *  (silent.ts silentHolds: the silent order, the sneak, the hold nobody has lifted; each wants him neither alert nor searching and under its `noticed` bar).
+ *  (silent.ts silentHoldsRound: the silent order, the sneak, the hold nobody has lifted; each wants him neither alert nor searching and under its `noticed` bar).
  *  With his muzzle on such a man the room fight kept his chest turned to him, the order kept turning it back to the thing, and for as long as the hold stood
  *  the thing was never worked. He does what he was sent to do; a man who covers him (give(): spare eyes behind him, when he has a partner) has that man. The
  *  frame that hold no longer holds his round (the man has noticed, the alarm is up, the hold is lifted) this is false and the fight has him as ever: the
  *  hand comes off (tick). Only AT the thing: on the walk there his gun goes onto whoever he sees, as it did. NOT passed, his gun staying on them as before:
- *  a man held only by spotted.ts's rule (suspicious, or roused and no danger yet) or only for a pane in the way (silentGlassHolds) — each has noticed
+ *  a man held only by spotted.ts's rule (suspicious, or roused and no danger yet) or only for a pane in the way (silentHoldsGlass) — each has noticed
  *  something, and a back turned on him would be the dumber thing. False with the switch or `heldPass` off. */
 export function workPasses(g: Game, gd: Guard, h: Guard): boolean {
   if (!WORK.on || !WORK.heldPass || !g.work) return false;
-  return g.work.atThing(gd) && silentHolds(g, gd, h);
+  return g.work.atThing(gd) && silentHoldsRound(g, gd, h);
 }
 /** sneak.ts's follower and spotted.ts's feet for a silent partner who is FOLLOWING, asked of each suspicious man that is his business: THE MAN IS WALKING
  *  TO THE BREAKER AND HE IS STOOD ON THAT WALK. Their own answers to a man who is looking are to wait short of what he looks at for his back, to step back

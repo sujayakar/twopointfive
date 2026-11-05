@@ -157,11 +157,13 @@ import type { DevicesSnap } from './devices';
 import type { DecalKind } from '../render/decals';
 import type { Box } from '../scene/boxes';
 import { authoredC, authoredH } from '../scene/round';   // (leaf helpers: a round thing's boxes as the level file has them)
+import { shapeStamp } from '../scene/shapes';   // (a leaf helper: a number of the shapes a level stands on)
 import { LOOK_DECALS, lookDecal } from './lookDecals';
 import { diceInUse } from '../math/dice';
 import { sprintDoorTurning } from './sprintdoor';
 import { seenReset } from './seenwalk';
 import { takeSnapshot, restoreSnapshot, type Snapshot } from './rollback';   // (called inside Checkpoints only)
+import { LIGHT_IN, MAINS } from '../sim/lightshome';
 
 // ================================================================================================================================ the schema
 export const SAVE_VERSION = 1;
@@ -212,7 +214,7 @@ export interface GuardSnap {
   weapon: FirearmSnap; fireCd: number; reactT: number; searchT: number; lookPhase: number; speed: number; stepPhase: number; heardUpTo: number;
   diedAt: number; dazzledUntil: number; staggerUntil: number; hurtAt?: number; doorDownU?: number; lastPos: V3; stuckT: number; stuckN: number; killerId: number; sawBodyT: number;
   alertBest: number; alertStallT: number; alertRef: V3 | null; chaseT: number; shotBlockedT: number;
-  sightPos: V3; sightVel: V3; sightT: number; ledT: number; fixT: number; fixRef: V3 | null;
+  sightPos: V3; sightVel: V3; sightT: number; ledT: number; fixT: number; fixRef: V3 | null; ledAt?: V3 | null; wordT?: number;
   pieLast: number; pieLastT: number; piePrev: V3 | null; piePrevT: number;   // pieLast: door index, −1 none
   stallRef: V3 | null; stallT: number;
   task: TaskSnap | null; drawn: boolean; leader: number; followT: number; followGoal: V3; post: string | null;   // leader: guard index (−1); post: chokepoint name
@@ -388,17 +390,19 @@ function deepClone<T>(x: T): T { return x === undefined ? x : JSON.parse(JSON.st
 /** the level a checkpoint belongs to: door names + route names + box count hashed (a checkpoint of another level, or of this one re-exported with a door
  *  renamed, is refused rather than poured over the wrong indices) */
 export function levelFingerprint(g: Game): SaveState['level'] {
-  const cached = fpCache.get(g.level); if (cached) return cached;
-  const L = g.level; const nBox = g.destr?.walls?.authored ?? L.boxes.length;   // (the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
+  // A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL (scene/shapes.ts): the shapes its boxes stand as are part of what it is, so a checkpoint or a recording made on
+  // them is refused by the plain level and the other way about, and by the level once its shapes have changed. 0 = none stands: the fingerprint it always had.
+  const L = g.level, nBox = g.destr?.walls?.authored ?? L.boxes.length, st = shapeStamp(L.boxes, nBox);
+  const cached = fpCache.get(L); if (cached && cached.st === st) return cached.fp;   // (nBox = the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
   let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
   for (let i = 0; i < nBox; i++) for (const v of [...authoredC(L.boxes[i]), ...authoredH(L.boxes[i])]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
-  const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}`;
+  const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}${st ? `|shapes:${st.toString(16)}` : ''}`;
   // (the count of light targets is the LEVEL's own: a vehicle's lamps — carlamps.ts — are made of the level's boxes by a rule that can be off, and a target is
   //  poured back by name, so a checkpoint or a recording from before that rule, or from a page with it off, is still this level's)
   const fp = { fp: hashStr(s).toString(16), boxes: nBox, routes: L.routes.length, doors: L.doors.length };
-  fpCache.set(g.level, fp); return fp;
+  fpCache.set(L, { st, fp }); return fp;
 }
-const fpCache = new SideMap<object, SaveState['level']>('savestate.fpCache');
+const fpCache = new SideMap<object, { st: number; fp: SaveState['level'] }>('savestate.fpCache');
 function firearmSnap(w: Firearm): FirearmSnap { return { id: w.def.id, chamber: w.chamber, mag: w.mag, spare: [...w.spare], shotsFired: w.shotsFired, mode: w.mode, bursts: w.bursts, lastBurstT: w.lastBurstT }; }
 /** …and back: a reload half done is simply not (see the head: autosave never catches one; a forced save leaves the well as it stood) */
 function firearmApply(w: Firearm, s: FirearmSnap) {
@@ -554,7 +558,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
       weapon: firearmSnap(gd.weapon), fireCd: gd.fireCd, reactT: gd.reactT, searchT: gd.searchT, lookPhase: gd.lookPhase, speed: scripted ? 0 : gd.speed, stepPhase: gd.stepPhase, heardUpTo: gd.heardUpTo,
       diedAt: gd.diedAt, dazzledUntil: gd.dazzledUntil, staggerUntil: gd.staggerUntil, ...(gd.hurtAt >= 0 ? { hurtAt: gd.hurtAt } : {}), ...(gd.doorDownUntil > g.time ? { doorDownU: gd.doorDownUntil } : {}), lastPos: c3(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, killerId: gd.killerId, sawBodyT: gd.sawBodyT,
       alertBest: gd.alertBest, alertStallT: gd.alertStallT, alertRef: c3n(gd.alertRef), chaseT: gd.chaseT, shotBlockedT: gd.shotBlockedT,
-      sightPos: c3(gd.sightPos), sightVel: c3(gd.sightVel), sightT: gd.sightT, ledT: gd.ledT, fixT: gd.fixT, fixRef: c3n(gd.fixRef),
+      sightPos: c3(gd.sightPos), sightVel: c3(gd.sightVel), sightT: gd.sightT, ledT: gd.ledT, fixT: gd.fixT, fixRef: c3n(gd.fixRef), ledAt: c3n(gd.ledAt), wordT: gd.wordT,
       pieLast: gd.pieLast ? g.doors.list.indexOf(gd.pieLast) : -1, pieLastT: gd.pieLastT, piePrev: c3n(gd.piePrev), piePrevT: gd.piePrevT,
       stallRef: c3n(gd.stallRef), stallT: gd.stallT,
       task, drawn: gd.drawn, leader: gi(gd.leader), followT: gd.followT, followGoal: c3(gd.followGoal), post: gd.post?.name ?? null,
@@ -682,7 +686,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
-  g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.breakerFixT = fin(s.breakerFixT); g.lastStingT = fin(s.lastStingT, -100);
+  g.time = fin(s.time, g.time); g.eventSeq = s.eventSeq | 0; g.fxSeed = s.fxSeed | 0; g.ocpCooldown = fin(s.ocpCooldown); g.calledIn = !!s.calledIn; g.stoodDown = !!s.stoodDown; g.lightHome.in(LIGHT_IN.fix, null, fin(s.breakerFixT)); g.lastStingT = fin(s.lastStingT, -100);
   g.aiEnabled = s.flags.aiEnabled !== false; g.godMode = !!s.flags.godMode; g.infiniteAmmo = !!s.flags.infiniteAmmo; g.playerInvisible = !!s.flags.playerInvisible;
   loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (game/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
   g.spectate = -1;
@@ -738,7 +742,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     gd.fireCd = fin(S.fireCd, 1); gd.reloadT = -1; gd.reactT = fin(S.reactT); gd.searchT = fin(S.searchT); gd.lookPhase = fin(S.lookPhase); gd.speed = dead ? 0 : fin(S.speed); gd.stepPhase = fin(S.stepPhase); gd.heardUpTo = fin(S.heardUpTo, -1);
     gd.diedAt = fin(S.diedAt, -1); gd.dazzledUntil = fin(S.dazzledUntil, -1); gd.staggerUntil = fin(S.staggerUntil, -1); gd.doorDownUntil = fin(S.doorDownU ?? -1, -1); gd.hurtAt = fin(S.hurtAt ?? -1, -1); gd.lastPos = c3(S.lastPos ?? S.pos); gd.stuckT = fin(S.stuckT); gd.stuckN = S.stuckN | 0; gd.killerId = S.killerId ?? -1; gd.sawBodyT = fin(S.sawBodyT, -100);
     gd.alertBest = fin(S.alertBest, 1e9); gd.alertStallT = fin(S.alertStallT); gd.alertRef = c3n(S.alertRef); gd.chaseT = fin(S.chaseT); gd.shotBlockedT = fin(S.shotBlockedT);
-    gd.sightPos = c3(S.sightPos ?? [0, 0, 0]); gd.sightVel = c3(S.sightVel ?? [0, 0, 0]); gd.sightT = fin(S.sightT, -100); gd.ledT = fin(S.ledT, -100); gd.fixT = fin(S.fixT, -100); gd.fixRef = c3n(S.fixRef);
+    gd.sightPos = c3(S.sightPos ?? [0, 0, 0]); gd.sightVel = c3(S.sightVel ?? [0, 0, 0]); gd.sightT = fin(S.sightT, -100); gd.ledT = fin(S.ledT, -100); gd.fixT = fin(S.fixT, -100); gd.fixRef = c3n(S.fixRef); gd.ledAt = c3n(S.ledAt ?? null); gd.wordT = fin(S.wordT ?? -100, -100);
     gd.searchPlan = null; gd.pieing = null; gd.standoff = null; gd.script = null; gd.hold = false; gd.pinned = false; gd.held = null;
     gd.pieLast = S.pieLast >= 0 ? g.doors.list[S.pieLast] ?? null : null; gd.pieLastT = fin(S.pieLastT, -100); gd.piePrev = c3n(S.piePrev); gd.piePrevT = fin(S.piePrevT, -100);
     gd.stallRef = c3n(S.stallRef); gd.stallT = fin(S.stallT);
@@ -788,11 +792,13 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     if (D.off) slabRestore(d, D.off, fin(D.angle));   // off its hinges: the slab where it lay (the reset above hung every leaf)
     d.place();
   }
-  g.col.dynamicBoxes = g.doors.leafBoxes();
+  // (THE SAME LIST, FILLED ANEW, never another array in its place: the box world's copy in the Rust module knows the game's own leaves by this array —
+  //  boxMirror.ts `own` — and a state put back inside a tick, a restart's, would leave every rule of that tick's rest without the copy)
+  { const L = g.col.dynamicBoxes, B = g.doors.leafBoxes(); L.length = 0; for (const b of B) L.push(b); }
   s.props.forEach((P, i) => { const p = g.props.all[i]; if (!p) return; p.x = fin(P.x, p.home[0]); p.z = fin(P.z, p.home[1]); p.yaw = fin(P.yaw, p.home[2]); p.vx = fin(P.vx); p.vz = fin(P.vz); p.w = fin(P.w); p.asleep = !!P.asleep; p.idle = fin(P.idle); p.lastWho = P.lastWho | 0; p.noiseT = fin(P.noiseT, -10); p.pushT = fin(P.pushT, -10); p.dirty = true; p.place(); });
   g.props.time = fin(s.propsTime, g.props.time);
-  { const byName = new Map(g.targets.map(t => [t.name, t] as [string, LightTarget])); for (const T of s.targets) { const t = byName.get(T.name); if (!t) continue; t.on = !!T.on; t.broken = !!T.broken; t.disabledUntil = fin(T.disabledUntil, -1); t.handOff = typeof T.hand === 'number' ? fin(T.hand) : undefined; } }
-  { const B = s.blackout, bo = g.blackout; bo.active = !!B.active; bo.until = infIn(B.until); bo.since = fin(B.since, -1); bo.permanent = !!B.permanent; bo.restoredAt = fin(B.restoredAt, -100); }
+  { const byName = new Map(g.targets.map(t => [t.name, t] as [string, LightTarget])); for (const T of s.targets) { const t = byName.get(T.name); if (!t) continue; g.lightHome.in(LIGHT_IN.put, t, T.on ? 1 : 0, T.broken ? 1 : 0, fin(T.disabledUntil, -1), typeof T.hand === 'number' ? fin(T.hand) : NaN); } }
+  { const B = s.blackout; g.lightHome.in(LIGHT_IN.mains, null, (B.active ? MAINS.active : 0) | (B.permanent ? MAINS.permanent : 0), infIn(B.until), fin(B.since, -1), fin(B.restoredAt, -100)); }
   if (s.devices && g.devices) g.devices.restore(g, s.devices);
   // ---- the floor's memory
   g.escalation = s.escalation === 2 ? 2 : s.escalation === 1 ? 1 : 0; g.escalationT = fin(s.escalationT, -1);

@@ -18,6 +18,7 @@
 //   i  the stands            the frozen stand's word, FROZEN_HOLDS, STAND_ENV, the page's flag
 // It writes the switch itself for every arm (and puts it back), so it asks the same on either stand. Nothing here looks at a picture.
 import { standUp, ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 import { tapVerb } from './verbs.ts';
 
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -228,6 +229,6 @@ export async function heldClicksCheck(): Promise<boolean> {
 }
 
 if (import.meta.main) {
-  const ok = await heldClicksCheck();
+  const ok = await asProbe('heldclicks', heldClicksCheck);
   console.log(ok ? '\n=== heldclicks: ALL PASS ===' : '\n=== heldclicks: FAILED ==='); process.exit(ok ? 0 : 1);
 }

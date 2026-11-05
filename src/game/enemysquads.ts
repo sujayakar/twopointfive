@@ -57,20 +57,20 @@ import type { Door } from './doors';
 import type { RoomFight, FightSkill } from './roomfight';
 import type { SquadData, StructureData, StructureRoom } from '../scene/scenarios';
 import { squadBarricade } from '../scene/scenarios';
+import { cover, eyesFix } from './belief';
 import { frameOf, bodySeen, bodyPos, offNet, gunfireDue } from './guards';
-import { runnerFled, runnerOwns } from './runner';   // (asked inside `alive`, `fit` and contact() only: false with its switch off)
 import { chronRadio } from './chronicle';
 import { cueClass } from './cues';
 import { inBounds, order, endGuardScript } from './squad';
 import { PRESSURE, run, loose, boots } from './pressure';
-import { laneHolds, laneWarns } from './lanes';
+import { laneBars, laneKnownAt } from './lanes';
 import { digInPhase } from './digin';
-import { lastStandMan } from './laststand';
 import { wayName } from './dialogue';
 import { WORDS, wg } from './words';
-import { netFeedAsked, netFeedBody, netFeedHolds } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
+import { netFeedAsked, netFeedBody } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { STAYASK, stayAskHere } from './stayask';   // (squads that stay in their rooms still miss a room that goes silent: read at staging and in netSend)
+import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
 
 export const SQUADS = {
   /** off = a squads block is ignored: the level's defenders are one pool, as on any level without one */
@@ -279,6 +279,9 @@ interface State { /** (stayask.ts) every squad here stays in its rooms: the net'
  *  about, the squads nobody asks after again (`done`: men went to its posts — whatever they found — or a body of it was said on the net with nobody of it left to answer) */
 interface NetCheck { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Squad | null; done: Set<Squad>; /** squads asked for by name with nobody sent after (nobody free, or a fight took the net): asked for once more at a later check, and no oftener */ tried: Map<Squad, number>; /** how often a squad that answers has been asked what is going on */ queried: Map<Squad, number>; /** lines said a breath after what they answer */ say: { t: number; gd: Guard; text: string; cls?: number }[]; die: Die; tickT: number }
 const STATES = new GameSideMap<Game, State>('enemysquads.STATES');
+ownerWitness<Game>('squad', (gd, g) => !!STATES.get(g)?.of.has(gd));
+ownerWitness<Game>('squadLeg', (gd, g) => { const Q = STATES.get(g)?.of.get(gd); return !!Q && squadLegOf(Q, gd); });
+ownerWitness<Game>('squadWord', (gd, g) => { const Q = STATES.get(g)?.of.get(gd); return !!Q && squadWordOf(Q, gd); });
 /** the net's ask runs on this floor: its own switch, or (stayask.ts) a floor whose every squad stays in its rooms */
 const netAsks = (g: Game): boolean => SQUADS.netAsk || !!STATES.get(g)?.stayAsk;
 /** hard on a squads level (SQUADS.drill*): the table while harder defenders are on, their `squadDrill` row is, and squads are staged in this game — else null */
@@ -322,7 +325,7 @@ export function squadSkill(g: Game, base: FightSkill): FightSkill {
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const pick = (r: [number, number]) => r[0] + simRandom() * (r[1] - r[0]);
-const alive = (gd: Guard) => gd.state !== 'dead' && !runnerFled(gd);   // (runner.ts: a man who dropped it and ran is no man of his squad's any more)
+const alive = (gd: Guard) => gd.state !== 'dead' && !gd.fled;   // (runner.ts: a man who dropped it and ran is no man of his squad's any more)
 const grown = (b: StructureRoom['bounds'], m: number) => ({ x0: b.x0 - m, x1: b.x1 + m, z0: b.z0 - m, z1: b.z1 + m });
 const roomOf = (Q: Squad, p: Vec3, m = 0) => Q.rooms.find(r => inBounds(p, m ? grown(r.bounds, m) : r.bounds)) ?? null;
 const note = (g: Game, gd: Guard | null, what: string) => { const L = g.fight.log; L.push({ t: g.time, who: gd ? gd.callsign : '-', what: `[squads] ${what}` }); if (L.length > 600) L.splice(0, 200); };
@@ -334,11 +337,22 @@ function along(from: Vec3, path: Vec3[], each: (p: Vec3, s: number) => void): nu
 }
 const pathLen = (from: Vec3, path: Vec3[]) => along(from, path, () => { });
 
+/** WHAT THE SQUADS HAVE, AS THIS FRAME'S TICK LEAVES IT (src/game/owner.ts; nothing outside the tick changes a squad's lists). `OWN.squadLeg`: out on a leg, or about to be sent, so not free to be sent anywhere else. `OWN.squadWord`: his squad has heard and not yet said, he is about to go, on his way round, or looking for a man who does not answer: nothing else starts on him */
+const squadLegOf = (Q: Squad, gd: Guard) => Q.sent.some(s => s.gd === gd) || Q.due.some(d => d.gd === gd);
+const squadWordOf = (Q: Squad, gd: Guard) => Q.state === 'alerted' || Q.due.some(d => d.gd === gd) || SQUADS.goRound && Q.sent.some(s => s.gd === gd && s.role === 'flank' && s.phase !== 'loose') || !!Q.rc?.look.some(l => l.gd === gd);
+function squadSay(g: Game, st: State): void {
+  for (const Q of st.squads) for (const m of Q.men) {
+    if (squadLegOf(Q, m)) claimMan(m, OWN.squadLeg, g.time); else releaseMan(m, OWN.squadLeg, g.time);
+    if (squadWordOf(Q, m)) claimMan(m, OWN.squadWord, g.time); else releaseMan(m, OWN.squadWord, g.time);
+  }
+}
+/** the staging is over: nobody is its man */
+function squadsLetGo(g: Game, st: State | undefined): void { for (const Q of st?.squads ?? []) for (const m of Q.men) { releaseMan(m, OWN.squad | OWN.squadLeg | OWN.squadWord, g.time); m.staysInRooms = false; } }
 // ---------------------------------------------------------------- staging
 /** roomclear.ts onStaged: the squads of this staging — each defender is the squad's whose room he was dealt into (`rooms[i]` = defender i's room id). A
  *  structure with no squads block, or the switch off, stages none (and drops any from the last staging). */
 export function squadsStage(g: Game, S: StructureData | null, hostiles: Guard[], rooms: string[]) {
-  STATES.delete(g);
+  squadsLetGo(g, STATES.get(g)); STATES.delete(g);
   if (!SQUADS.on || !S?.squads?.length) return;
   const squads: Squad[] = [], of = new Map<Guard, Squad>();
   for (const def of S.squads) {
@@ -346,7 +360,7 @@ export function squadsStage(g: Game, S: StructureData | null, hostiles: Guard[],
     const mine = S.rooms.filter(r => def.rooms?.includes(r.id)), men = hostiles.filter((_, i) => def.rooms?.includes(rooms[i]));
     const Q: Squad = { def, name: def.name ?? def.id, rooms: mine, men, barricade: new Set(squadBarricade(def, S.rooms)),
       state: 'hold', state0: null, fix: null, newsT: -100, decideAt: 0, decidedAt: -100, contactT: -100, calledT: -100, calledRoom: null, fallen: new Set(), ready: false, hitRoom: null, sent: [], went: [], due: [], events: [] };
-    squads.push(Q); for (const m of men) of.set(m, Q);
+    squads.push(Q); for (const m of men) { of.set(m, Q); claimMan(m, OWN.squad, g.time); m.staysInRooms = def.mayLeave === false; }
   }
   if (squads.length) STATES.set(g, { S, squads, of, net: [], stayAsk: stayAskHere(g, squads.map(Q => Q.def)) });
 }
@@ -357,7 +371,7 @@ export function squadsStop(g: Game) {
   const st0 = STATES.get(g);
   for (const Q of st0?.squads ?? []) if (Q.rc) for (const a of Q.men) { g.lightForget(`bodyL${a.char.id}`); for (const b of Q.men) if (b !== a) g.lightForget(`bodyS${b.char.id}_${a.char.id}`); }
   if (st0?.nc) for (const Q of st0.squads) for (const a of Q.men) { g.lightForget(`bodyL${a.char.id}`); for (const X of st0.squads) if (X !== Q) for (const b of X.men) g.lightForget(`bodyS${b.char.id}_${a.char.id}`); }   // (netAsk: a man sent to another squad's posts asked the same of ITS bodies)
-  STATES.delete(g); CTX = null;
+  squadsLetGo(g, st0); STATES.delete(g); CTX = null;
 }
 /** squads are on the floor in this game right now */
 export function squadsLive(g: Game): boolean { return STATES.has(g); }
@@ -366,16 +380,10 @@ export function squadOf(g: Game, gd: Guard): { def: SquadData; men: Guard[] } | 
 
 // ---------------------------------------------------------------- the seams (each a return on its first line with no squads staged)
 /** roomfight.ts rally · pressure.ts consider: he is a squad's man — whether he leaves his room for a fight elsewhere is his squad's call, not his own */
-export function squadOwns(g: Game, gd: Guard): boolean { const st = STATES.get(g); return !!st && st.of.has(gd); }
 /** digin.ts think: his squad has heard and not yet said what it does, or he is one of its men about to go — he does not start on his door yet */
-export function squadDefers(g: Game, gd: Guard): boolean {
-  const Q = STATES.get(g)?.of.get(gd); if (!Q) return false;
-  return Q.state === 'alerted' || Q.due.some(d => d.gd === gd) || SQUADS.goRound && Q.sent.some(s => s.gd === gd && s.role === 'flank' && s.phase !== 'loose') || !!Q.rc?.look.some(l => l.gd === gd);   // (goRound: on his way round, or holding the door he was sent to hold — his squad's man, not his room's)
-}
 /** digin.ts startBrace: may his squad wedge this door (its `barricade` list; a man of no squad: yes, as ever) */
 export function squadMayWedge(g: Game, gd: Guard, d: Door): boolean { const Q = STATES.get(g)?.of.get(gd); return !Q || Q.barricade.has(d.def.name); }
 /** roomfight.ts breakOff · pressure.ts lastMan: his squad's men stay in its rooms (`mayLeave: false`) — he gives no room up through a door */
-export function squadStaysIn(g: Game, gd: Guard): boolean { return STATES.get(g)?.of.get(gd)?.def.mayLeave === false; }
 /** roomfight.ts breakOff: where a man who gives ground goes when his squad has a rally point in ANOTHER room of its own than the one he is in, the team is
  *  not known to be in that room, and he can reach it without passing what he is giving ground to — the spot (a free one beside it when a mate is on it), or
  *  null: the room fight's own answer */
@@ -399,18 +407,17 @@ export function squadRally(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
 // ---------------------------------------------------------------- the men
 const defOf = (g: Game, gd: Guard): Def | undefined => g.fight.defs.find(D => D.gd === gd);
 /** his own wits about him: alive, not in Sam's arm, not blinded or reeling */
-const fit = (g: Game, m: Guard) => alive(m) && !m.held && g.time >= m.dazzledUntil && g.time >= m.staggerUntil && !runnerOwns(m);   // (runner.ts, false with its switch off: from his shout on he makes no call on the squad's net — his own words stand)
+const fit = (g: Game, m: Guard) => alive(m) && !m.held && g.time >= m.dazzledUntil && g.time >= m.staggerUntil && !hasHim(m, OWN.runner);   // (runner.ts, false with its switch off: from his shout on he makes no call on the squad's net — his own words stand)
 /** laststand.ts: his squad has him out on a leg, or is about to send him (he is not free to be sent anywhere else) */
 /** (the dialogue pass, tactics.ts flankCall) when this man was sent to look where the team was last put (drillLook: his `sent` row's `t0`), or null. Words only. */
 export function squadLookSince(g: Game, gd: Guard): number | null { const s = STATES.get(g)?.of.get(gd)?.sent.find(x => x.gd === gd && x.role === 'look'); return s ? s.t0 : null; }
-export function squadBusy(g: Game, gd: Guard): boolean { const Q = STATES.get(g)?.of.get(gd); return !!Q && (Q.sent.some(s => s.gd === gd) || Q.due.some(d => d.gd === gd)); }
 /** laststand.ts: is this point in one of his squad's rooms (a squad whose men stay in its rooms gathers only inside them; no squad = anywhere) */
-export function squadHolds(g: Game, gd: Guard, p: Vec3): boolean { const Q = STATES.get(g)?.of.get(gd); return !Q || Q.rooms.some(r => p[0] >= r.bounds.x0 && p[0] <= r.bounds.x1 && p[2] >= r.bounds.z0 && p[2] <= r.bounds.z1); }
+export function inSquadRooms(g: Game, gd: Guard, p: Vec3): boolean { const Q = STATES.get(g)?.of.get(gd); return !Q || Q.rooms.some(r => p[0] >= r.bounds.x0 && p[0] <= r.bounds.x1 && p[2] >= r.bounds.z0 && p[2] <= r.bounds.z1); }
 /** a squad's men at home and free to be told something: fit, holding a post, nobody of the team in their sight these two seconds, not already sent */
 function home(g: Game, Q: Squad): Def[] {
   const out: Def[] = [];
-  for (const m of Q.men) { if (!fit(g, m) || g.time - m.lastSeenT < 2 || Q.sent.some(s => s.gd === m) || lastStandMan(g, m) || Q.rc?.look.some(l => l.gd === m)) continue;   // (laststand.ts: a man of the last stand is not the squad's to send)
-    if (netFeedHolds(m)) continue;   // (netquiet.ts, through netquietfeed.ts — false on its first line with its switch off: the last man up, at his act, is not the squad's to send to a room nobody of his is left in)
+  for (const m of Q.men) { if (!fit(g, m) || g.time - m.lastSeenT < 2 || Q.sent.some(s => s.gd === m) || hasHim(m, OWN.stand) || Q.rc?.look.some(l => l.gd === m)) continue;   // (laststand.ts: a man of the last stand is not the squad's to send)
+    if (hasHim(m, OWN.lastMan)) continue;   // (netquiet.ts, through netquietfeed.ts — false on its first line with its switch off: the last man up, at his act, is not the squad's to send to a room nobody of his is left in)
     if (m.script && g.director?.lessonRuns) continue;   // (a staged moment of a tutorial mission's script has him, as roomfight.ts and lanes.ts leave him to it: not at home — sent to look for a mate gone quiet, he walked out of its hand)
     const D = defOf(g, m); if (D && D.mode === 'hold' && D.rallyAt !== Infinity) out.push(D); }
   return out;
@@ -429,7 +436,7 @@ function teamKnown(g: Game): Vec3[] {
   const out: Vec3[] = [];
   for (const D of g.fight.defs) {
     const gd = D.gd; if (!alive(gd)) continue;
-    if (g.time - gd.lastSeenT < 4 && gd.lastKnown && gd.lastKnown !== D.pt) out.push(gd.lastKnown);
+    const seen = g.time - gd.lastSeenT < 4 ? eyesFix(gd, D.pt) : null; if (seen) out.push(seen);
     if (D.noiseAt && g.time - D.noiseT < 4) out.push(D.noiseAt);
   }
   return out;
@@ -491,7 +498,7 @@ function teamKnownHow(g: Game): Known[] {
   const out: Known[] = [];
   for (const D of g.fight.defs) {
     const gd = D.gd; if (!alive(gd)) continue;
-    if (g.time - gd.lastSeenT < 4 && gd.lastKnown && gd.lastKnown !== D.pt) out.push({ p: gd.lastKnown, firm: true });
+    const seen = g.time - gd.lastSeenT < 4 ? eyesFix(gd, D.pt) : null; if (seen) out.push({ p: seen, firm: true });
     if (D.noiseAt && g.time - D.noiseT < 4) { const c = gd.char.pos; out.push({ p: D.noiseAt, firm: !g.col.solidBlocked([c[0], 1.5, c[2]], [D.noiseAt[0], 1, D.noiseAt[2]]) }); }
   }
   return out;
@@ -544,7 +551,7 @@ function roundCtx(g: Game, T: Room, known: Known[], theirs: Door[]): RoundCtx {
  *  good if it still crosses one. Every spot outside a door is tried. `back` > 0 (the room is lost: he is to hold the door, not go in by it): where his way
  *  would cross open ground in a doorway's lane he stops short of it, with a line on the door. The length limits are wayRound's, against the plain way's
  *  length. The way itself comes back as marks a few metres apart: he is walked along it. */
-function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], taken: Door[], used: Vec3[], back = 0): Way | null {
+function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], taken: Door[], used: Vec3[], back = 0, /** (squadWaysRound, a check's ask) filled with the length limit and the shortest way found, inside it or not */ says?: { limit?: number; best?: number }): Way | null {
   const nav = g.col.nav, c = D.gd.char, K = PRESSURE;
   const T = g.fight.roomAt(at) as Room | null, cell = (p: Vec3) => nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell));
   if (!(T && T !== D.room && T.cells.size <= 500 && T.entries.length > 1)) return wayRound(g, D, at, known.map(k => k.p), taken, used);   // (open floor: as it was)
@@ -585,6 +592,7 @@ function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], ta
     }
   }
   ways.sort((a, b) => a.L - b.L);
+  if (says) { says.limit = Math.min(K.flankMaxM, Math.max(K.flankK * L0, L0 + K.flankSlackM)); says.best = ways[0]?.L; }
   return ways.find(w => !taken.includes(w.door!) && within(w.L, L0)) ?? ways.find(w => within(w.L, L0)) ?? null;
 }
 
@@ -711,7 +719,7 @@ function doorAt(g: Game, room: StructureRoom | null, at: Vec3): Door | null {
 function contact(g: Game, st: State, Q: Squad, at: Vec3, room: StructureRoom | null, byDrop = false, by: Guard | null = null, words?: { say: string; why: string }) {
   const was = Q.state, fresh = was !== 'contact'; Q.state = 'contact'; Q.contactT = g.time; Q.ready = false; if (room) Q.hitRoom = room;
   if (netAsks(g)) Q.rc?.netOut?.clear();   // (the errand the net sent its men on is over: a squad in contact counts its men as a squad in a fight does)
-  const caller = (by && !runnerOwns(by) ? by : null) ?? Q.men.find(m => fit(g, m) && !Q.sent.some(s => s.gd === m)) ?? null;   // (`by`, callBeat: the man whose call it is ends it himself)
+  const caller = (by && !hasHim(by, OWN.runner) ? by : null) ?? Q.men.find(m => fit(g, m) && !Q.sent.some(s => s.gd === m)) ?? null;   // (`by`, callBeat: the man whose call it is ends it himself)
   if (caller && (g.time - Q.calledT > SQUADS.recallSecs || fresh && g.time - Q.calledT > 6 || !!room && room !== Q.calledRoom)) {
     const door = byDrop || !SQUADS.goRound ? null : doorAt(g, room, at);
     Q.calledT = g.time; Q.calledRoom = room; st.net.push({ t: g.time, squad: Q, at: v3.copy(at), door }); if (st.net.length > 40) st.net.splice(0, 20);
@@ -805,7 +813,7 @@ function lookOut(g: Game, st: State) {
   if (g.fight.defs.some(D => alive(D.gd) && D.mode === 'free')) return;   // (a man is out on a hunt of his own: his look is the look)
   const R = g.fight.roomAt(W.at);
   if (R && g.fight.defs.some(D => alive(D.gd) && D.mode === 'hold' && D.room === R)) return;   // (a man of theirs holds the room that word is of: he is looking at it)
-  const may = (D: Def) => { const ph = digInPhase(g, D.gd); return (ph === 'idle' || ph === 'set') && !laneHolds(g, D.gd, W.at) && !laneWarns(g, D.gd, W.at); };   // (not a man on his way to cover or wedging a door; not one who knows a covered lane lies that way)
+  const may = (D: Def) => { const ph = digInPhase(g, D.gd); return (ph === 'idle' || ph === 'set') && !laneBars(g, D.gd, W.at) && !laneKnownAt(g, D.gd, W.at); };   // (not a man on his way to cover or wedging a door; not one who knows a covered lane lies that way)
   let best: { Q: Squad; go: Def[]; d: number } | null = null;
   for (const Q of st.squads) {
     if (Q.state === 'down' || (Q.def.mayLeave === false && !K.sweepStayers)) continue;
@@ -1044,7 +1052,7 @@ function settle(g: Game, L: Looker, D: Def) {
   if (gd.script) endGuardScript(gd, roused ? c.state as 'alert' | 'search' : 'suspicious');
   gd.awareness = roused ? Math.max(gd.awareness, c.awareness) : heard ? Math.max(gd.awareness, c.awareness, 0.35) : Math.min(0.45, Math.max(gd.awareness, c.awareness, 0.35)); gd.hold = c.hold; gd.pinned = c.pinned;   // (wary at the least: a man who heard fire far off on the walk is no less so than one who heard nothing)
   D.mode = 'hold'; D.station = c.station; D.home = c.home; D.room = c.room; D.ev = c.ev; D.watch = c.watch; D.want = c.want; D.pt[0] = c.pt[0]; D.pt[1] = c.pt[1]; D.pt[2] = c.pt[2];
-  D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; gd.lastKnown = D.pt;
+  D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; cover(gd, D.pt);
 }
 /** a man out looking, once a frame (before the room fight's own tick: his leg is ended here, not by its `plant`); true = no longer a looker */
 function looks(g: Game, st: State, Q: Squad, L: Looker): boolean {
@@ -1393,7 +1401,7 @@ export function squadsTick(g: Game) {
       if (Q.sent.some(s => s.gd === m)) continue;
       const D = defOf(g, m), mine = roomOf(Q, m.char.pos, 1); if (!D || !mine) continue;   // (a man of it out on the floor is his own fight, not the squad's rooms')
       if (g.time - m.lastSeenT < 1 && (!K.noticedEyes || noticed(m) || glimpse(g, Q, m))) {
-        const p = m.lastKnown && m.lastKnown !== D.pt ? m.lastKnown : m.char.pos, r = roomOf(Q, p, 0.75) ?? mine;
+        const p = eyesFix(m, D.pt) ?? m.char.pos, r = roomOf(Q, p, 0.75) ?? mine;
         if (!(K.callBeat && noticed(m) && keyUp(g, Q, m, p, r, null))) { at = p; room = r; break; }   // (callBeat, a quiet floor: what he has noticed is his to say first — the squad has it when his call ends)
       }
       if (D.noiseAt && g.time - D.noiseT < 1) { const r = roomOf(Q, D.noiseAt);   // (no margin: a man's ears are a few metres out, and a shot outside the wall is not a fight in the room)
@@ -1487,7 +1495,7 @@ export function squadsTick(g: Game) {
           if (s.hold && there && s.door) {   // what he watches is the door he holds, not the way he came
             const e = D.room ? D.room.entries.findIndex(x => x.door === s.door) : -1;
             if (e >= 0) { D.ev[e] = Math.max(D.ev[e], 1.5); D.watch = D.want = e; D.home = v3.copy(D.room!.entries[e].at); } else if (s.aim) { D.watch = D.want = -1; D.home = v3.copy(s.aim); }
-            D.pt[0] = D.home[0]; D.pt[2] = D.home[2]; if (!seen) gd.lastKnown = D.pt;
+            D.pt[0] = D.home[0]; D.pt[2] = D.home[2]; if (!seen) cover(gd, D.pt);
           }
           if (there && !seen) { s.there = g.time; g.say(gd, `${Q.name}: in position — ${wg("we've got", 'we have')} the door!`, true); event(g, Q, 'in position', `${gd.callsign}${s.door ? ' holding ' + s.door.def.name : ''}, ${(g.time - s.t0).toFixed(1)} s after the word`, gd); }
           else event(g, Q, 'met', `${gd.callsign} has them in sight ${there ? 'from his spot' : 'on his way'}${s.door ? (there ? ' at ' : ' to ') + s.door.def.name : ''} and holds where he is, ${(g.time - s.t0).toFixed(1)} s after the word`, gd);
@@ -1511,6 +1519,7 @@ export function squadsTick(g: Game) {
       if (D.mode === 'hold' && g.time - s.t0 > 6) home();   // calm again and holding where he ended up (roomfight.ts tickFree): at home, wherever that now is
     }
   }
+  squadSay(g, st);
 }
 
 // ---------------------------------------------------------------- what a tally and the panel read
@@ -1525,3 +1534,38 @@ export function squadsSummary(g: Game): string {
 }
 /** a squad's men by its name, the fallen among them (cues.ts: who speaks for it on the net) */
 export function squadMen(g: Game, name: string): Guard[] { return STATES.get(g)?.squads.find(Q => Q.name === name)?.men ?? []; }
+/** A STATIC ASK FOR A CHECK (tools/qa/wayround-check.ts), read only: for every man at home of every squad that may leave its rooms, every OTHER squad's room
+ *  and every door of that room taken as the team's, would he find a way round, the question decide() asks through pair(). Asked twice: with nobody of the
+ *  team known (`team` false), and with THE TEAM IN THE ROOM (`team` true): a man in the team's doorway and one three metres inside it are firm places, as
+ *  the squad's own eyes and the net give them in a fight, so the ground they have a line on is shut to the way as it is then.
+ *  `hold` = the room counted lost (he holds its other door from outside) against going in by it. `L` = the way's length, `limit` = what it may be, `best` =
+ *  the shortest way found whether inside the limit or not (undefined: no standing place at all). Nothing is written: the search's memo is put back. */
+export function squadWaysRound(g: Game): { squad: string; man: string; from: string; room: string; door: string; hold: boolean; team: boolean; way: string | null; L: number; limit?: number; best?: number }[] {
+  const st = STATES.get(g), K = SQUADS, out: ReturnType<typeof squadWaysRound> = [], keep = CTX, r3 = (x: number | undefined) => x === undefined || !Number.isFinite(x) ? undefined : Math.round(x * 1000) / 1000;
+  if (!st) return out;
+  try {
+    // the team heard through the walls anywhere in the room it has taken: a place every two metres of its floor, each a soft one as a noise is
+    const nav = g.col.nav, heardOf = new Map<Room, Known[]>(), heard = (T: Room): Known[] => { let h = heardOf.get(T); if (!h) { h = []; const step = Math.max(1, Math.round(2 / nav.cell));
+      for (const i of T.cells) { const ix = i % nav.W, iz = (i - ix) / nav.W; if (ix % step === 0 && iz % step === 0) h.push({ p: [(ix + 0.5) * nav.cell, 0, (iz + 0.5) * nav.cell], firm: false }); } heardOf.set(T, h); } return h; };
+    for (const Q of st.squads) if (Q.def.mayLeave !== false) for (const D of home(g, Q)) {
+      // where he asks from: his post, and a stride inside each door of the room he holds (a man who has heard the fight is at his door when the word comes)
+      const pos = D.gd.char.pos, post: Vec3 = [pos[0], pos[1], pos[2]], from: { name: string; p: Vec3 }[] = [{ name: 'his post', p: post }];
+      for (const en of (D.room as Room | null)?.entries ?? []) { const q: Vec3 = [en.at[0] - en.out[0], 0, en.at[2] - en.out[1]]; if (!g.col.nav.isBlocked(q[0], q[2])) from.push({ name: en.door.def.name, p: q }); }
+      try {
+        for (const F of from) { pos[0] = F.p[0]; pos[2] = F.p[2];
+          for (const X of st.squads) if (X !== Q) for (const room of X.rooms) {
+            const at: Vec3 = [(room.bounds.x0 + room.bounds.x1) / 2, 0, (room.bounds.z0 + room.bounds.z1) / 2], T = g.fight.roomAt(at) as Room | null;
+            for (const e of T?.entries ?? []) for (const team of K.goRound ? [false, true] : [false]) for (const hold of [false, true]) {
+              const says: { limit?: number; best?: number } = {};
+              const known: Known[] = team ? [{ p: [e.at[0] + e.out[0], 0, e.at[2] + e.out[1]], firm: true }, { p: [e.at[0] - e.out[0] * 3, 0, e.at[2] - e.out[1] * 3], firm: true }, ...heard(T!)] : [];
+              CTX = null;   // (the memo's key counts the known places, it does not tell them apart)
+              const w = K.goRound ? wayRound2(g, D, at, known, [e.door], [], [], hold ? K.holdBackM : 0, says) : wayRound(g, D, at, [], [], []);
+              out.push({ squad: Q.name, man: D.gd.callsign, from: F.name, room: room.name, door: e.door.def.name, hold, team, way: w ? w.door?.def.name ?? 'open floor' : null, L: w ? r3(w.L)! : 0, limit: r3(says.limit), best: r3(says.best) });
+            }
+          }
+        }
+      } finally { pos[0] = post[0]; pos[2] = post[2]; }
+    }
+  } finally { CTX = keep; }
+  return out;
+}

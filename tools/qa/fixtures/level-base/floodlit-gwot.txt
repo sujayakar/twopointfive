@@ -1,2 +1,4 @@
-# dressed: the generator's own colours say what they are, and the look file lays the ground's wear
-fb1516ec93da6f3dd79c81238875be7f65c32d86
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+d48b36412140180079c160a55a918018b98f9f69

@@ -2,13 +2,26 @@
 import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
 import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
-import { BoxWorld } from './scene/boxes';
+import { BoxWorld, BoxFlag, planBoxes, type Box, type DrawWait } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
-import { FRAME_BYTES, MAX_CARDS, FrameFlags, FrameParams, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig } from './render/frame';
-import { GBuffer, SkinnedDrawable } from './render/gbuffer';
+import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
+import { GBuffer, SkinnedDrawable, lookAmounts, lookWordOf, lookCoreOf } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
+import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
 import { LightingPasses, type FireRecord } from './render/passes';
-import { LightSet, cardSlotsFor } from './render/lights';
+import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
+import { emissiveDayK } from './render/photometry';
+import { lookVeilFrame } from './render/lookveil';
+import { PowderField, powderDrawWord } from './render/powderField';
+import { PlaceField } from './render/placeField';
+import { PlaceMap } from './scene/placePlan';
+import { WallSides } from './render/wallSides';
+import { lookGrade, lookGradeFrame } from './render/lookgrade';
+import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
+import { planOpeningsSteps, openAreas, openingLooks, openingReach, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
+import { buildWallRaster, wallRasterHandOnSteps, rasterRect, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob, type ReachOnly } from './render/reach';
+import { Steps, WHOLE, clock, spend, type Pace } from './render/steps';
+import { PLAN_PACE } from './render/planPace';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
@@ -16,9 +29,10 @@ import { Particles } from './render/particles';
 import { cutSwap } from './render/cutSwap';
 import { TexturePool } from './render/texpool';
 import { reachLevel } from './render/reach';
+import { ReachKeep, type KeepGuest } from './render/reachKeep';
 import { WORLD } from './scene/world';
 import { FollowCamera } from './game/camera';
-import { Vec3, m4, v3 } from './math/vec';
+import { Vec3, m4, v3, smoothstep } from './math/vec';
 
 import { RenderSettings, defaultSettings } from './settings';
 import { FogSight, FOG_SIGHT_BYTES, type FogFrame } from './render/fogofwar';
@@ -31,15 +45,34 @@ const rcGridKey = (c: RcConfig) => `${c.nx}x${c.ny}x${c.nz}/d${c.d0}/c${c.cascad
 
 /** What the renderer needs from the smoke sim (smoke/smoke.ts; the readers are shaders/smoke_read.wgsl): the table of loose bounds round the smoke (uniform, eight records), the brick atlas,
  *  the page texture that says which brick is where (scene binding 14), how many bound records to walk (0 = no smoke), and the sim's encoder. */
-export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the volumetric pass runs its dust twin */ dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
+export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the volumetric pass runs its dust twin */ /** look only: the system lets a can's smoke out in bands (the smoke lab's row, SmokeSystem.streak) → a tint is drawn as a tint alone */ streaks?: boolean; dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
 
 /** glassLightMasks' sample lattice: three stations along a pane × a cell just off either face (module consts — review R1.4: no per-light-per-pane literals) */
 const GLASS_STATIONS: readonly number[] = [-0.7, 0, 0.7], GLASS_SIDES: readonly number[] = [-0.55, 0.55];
 
+/** the walls as the daylight's reach masks read them, with their jump field: nobody's state (render/reach.ts ReachJob.own) */
+type OpenWalls = { solid: Uint8Array; jumps?: Uint8Array };
+type Rect4 = [number, number, number, number];
+/** ONE OPENING THE LOOK LIGHTS (engine.ts dayOpenings): where it is now, its light, its reach mask with the place that was decided at, the mask in
+ *  the making (of the walls and the place it was begun with, decided again from `only` or whole), and what the next one is OWED: the rects the
+ *  walls have changed in since the last was begun, or all of it. */
+interface OpenRec { o: Opening; l: RtLight; mask: Uint32Array | null; at: Opening | null;
+  job: (ReachJob & { own: OpenWalls; at: Opening; only: ReachOnly | undefined }) | null; owed: Rect4[] | 'all' }
+/** rects of changed walls an opening's next mask is owed one by one; past these it is owed all of it */
+const OWED_MOST = 8;
+/** was a mask decided at `a` decided for the light `b` gives: the same points along the same wall, under the same roof (all that render/reach.ts
+ *  reads of a light's place: a sill or a head that moved is the same mask) */
+const sameSpot = (a: Opening | null, b: Opening): boolean => a !== null && (a === b || (a.mid[0] === b.mid[0] && a.mid[2] === b.mid[2] && a.dir[0] === b.dir[0] && a.dir[2] === b.dir[2] && a.half[0] === b.half[0] && (a.mid[1] > WORLD.ceilingY) === (b.mid[1] > WORLD.ceilingY)));
+/** an opening's mask is an OLD one (it serves, and is decided again): the walls changed since it was begun, or it was decided somewhere else */
+const maskOld = (r: OpenRec): boolean => r.mask !== null && (r.owed === 'all' || r.owed.length > 0 || !sameSpot(r.at, r.o));
+/** an opening has a mask to be decided: none yet, one in the making, or an old one (a check's too) */
+export const openMaskOwed = (r: OpenRec): boolean => r.mask === null || r.job !== null || maskOld(r);
 export class Engine {
   device: GPUDevice;
   world: BoxWorld;
   lights: LightSet;
+  /** the lights' reach masks and the work of keeping them after a wall changes (render/reachKeep.ts): the picture's, a step of it every drawn frame */
+  reach: ReachKeep;
   rc: RadianceCascades;
   gbuffer: GBuffer;
   passes: LightingPasses;
@@ -98,6 +131,221 @@ export class Engine {
   taaResets = 0; lastTaaReset = '';
   /** CUT BOXES: how many traceable cut boxes this frame's g-buffer draws WHOLE (its ray programs have no cut rule yet — render/cutSwap.ts), and how many were on screen last frame */
   cutWhole = 0; private cutSeen = 0;
+  /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts: the powder the wind picks up and a boot kicks, carried by `air` below, drawn by the
+   *  composite). Built the first frame the look page has lying snow, an air field and either row up; dropped when any of those goes (the rows at 0, the air
+   *  field replaced). Picture only. game/snowFx.ts files the kicks into it. */
+  powder: PowderField | null = null; private powderAir: unknown = null;
+  /** THE LOOK PROTOTYPE's place field (render/placeField.ts: one level of light a room, which the One exposure row shows every place by): built on the look
+   *  page the first frame the row is up by day, kept after that; null anywhere else */
+  diceRing: DiceRing | null = null;   // the look page's steady bounce (render/diceRing.ts): made at the first day frame with the row up
+  /** THE LOOK PROTOTYPE's wall sides (render/wallSides.ts: which place each cell of the floor plan is in, carried by the frame so that every cache read keeps to its own side of a wall): the look page's row `walls` */
+  readonly wallSides = new WallSides();
+  /** HOW SMOKE IS DRAWN, AS ROWS (the smoke lab's section of that name, host/smokelab.ts; nothing else writes them, and all at 0 the frame's two words are 0 = the picture as
+   *  it was). creases: the soft light on a sample dimmed by the smoke round it (0‥2.5) · selfK: the self-shadow's extinction (0 = the shader's own 6) · selfReach: how far
+   *  toward the light it looks, m (0 = 0.72) (vol_common.wgsl). The second word's bit 0 is not a row: it is up while the bound
+   *  smoke system lets a can out in bands (SmokeBinding.streaks), and tells dust_look.wgsl a tint is a streak, drawn as a tint alone. */
+  readonly smokeDraw = { creases: 0, selfK: 0, selfReach: 0, ahead: 0 };   // (ahead: how much a lamp behind smoke glows through it, 0‥1, vol_common.wgsl smokeAheadLobe; 0 = smoke only dims a lamp behind it, as it was)
+  private smokeDrawWords(): [number, number] {
+    const d = this.smokeDraw, b = (x: number, k: number) => Math.max(0, Math.min(255, Math.round(x * k)));
+    return [(b(d.creases, 100) | b(d.selfK, 4) << 8 | b(d.selfReach, 50) << 16 | Math.min(100, b(d.ahead, 100)) << 24) >>> 0, this.smoke?.streaks ? 1 : 0];
+  }
+  /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
+  readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
+  place: PlaceField | null = null; private placeWas: PlaceField | null = null; private placeDead = false;
+  /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: game/airSim.ts says; a still sets it by hand). Picture only. */
+  lookEye = { snap: true };
+  /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's: tools/qa/look-sheet.cjs prints them beside each still) */
+  lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
+  private lookGradeCfg: [number, number, number, number] | null = null;   // (this frame's gradeCfg, render/lookgrade.ts: the day's contrast, which the one exposure model tones a place by)
+  /** THE LOOK PROTOTYPE's daylight at openings (scene/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
+   *  is open to the sky by (a window, an open door, a blown hole, a passage's mouth). THE PICTURE'S ALONE: the lights are this engine's (`dayLights`, written
+   *  here every frame from this method's own records and handed to the upload), never in the light set the game reads and a checkpoint holds, and their
+   *  masks leave no note in reach.ts's side tables: nothing in the update, a checkpoint or a recording can tell the row is on. The openings are found again when the level's boxes have changed and then stood still for a few frames, what
+   *  each door's leaf covers when a leaf swings, and the strength and colour are set every frame from the sky and the sun that are up. Each light has the
+   *  cells it can reach (render/reach.ts, as a lamp has: without them it is a candidate in every room of the level), decided here against this
+   *  method's own raster of the walls, a frame's share of the work at a time, the open and the near first; the old one serves until the new one is whole.
+   *  None off the look page or with the row at 0. At every hour: one is out only while the picture would show nothing of what it looks out on. */
+  private openRecs: OpenRec[] = [];
+  private openLevel: unknown = null; private openSerial = -1; private openTick = 0; private openSeen = NaN; private openPlanned = NaN; private openWait = 0; private openLeaves = NaN;
+  private openWalls: OpenWalls | null = null;
+  /** the masks have had their first frame on this level with the rooms row up: from then on none is decided whole at once (lookOpeningLights, the reach masks) */
+  private openBegun = false;
+  /** the openings being found again and the walls being read again, a little a frame (render/steps.ts, render/planPace.ts): what was last planned serves
+   *  until it is whole. `openJobKey` = the boxes' key (openingsKey) as the job took them. */
+  private openJob = new Steps<{ plan: Opening[]; walls: OpenWalls; changed: boolean; rect: Rect4 | null }>(); private openJobKey = NaN;
+  /** THE PLANNERS' PACE (render/planPace.ts): the wait for a stale draw order (scene/boxes.ts upload), and the drawn frames left in which every plan is
+   *  made at once whatever the pace: a page's first frames, and after the level has been put back to another state under the picture (startPlansOver:
+   *  a restart, a save put back). The level then is not the one the plans in use were made for. */
+  private drawWait: DrawWait = { calm: 0, still: 0 }; private planFresh = LOOK_OPENINGS.settle + 2;
+  /** this drawn frame's allowance of planning and its wait for the draw order (null = at once): render's first words on the pace, and a check's */
+  private framePace(): { plan: Pace; wait: DrawWait | null } {
+    const on = PLAN_PACE.on && this.planFresh <= 0; if (this.planFresh > 0) this.planFresh--;
+    this.drawWait.calm = PLAN_PACE.calm;
+    return { plan: on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE, wait: on ? this.drawWait : null };
+  }
+  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: host/api.ts): what the planners have in hand was of the state before, so it is
+   *  given up, and for a few drawn frames every plan is made at once, as on a page's first frames. Not for a change of light or weather: the level
+   *  stands, and a job in hand is still of it. */
+  startPlansOver(): void { this.planFresh = LOOK_OPENINGS.settle + 2; this.wallSides.drop(); this.openJob.drop(); }
+  /** EVERYTHING THAT CAN CHANGE UNDER IT IS TAKEN BEFORE ITS FIRST STOP: a copy of what the planners ask of each static (scene/boxes.ts planBoxes) and the
+   *  doors' lines. So it is finished whatever moves meanwhile, and what it returns is of ONE level, as it stood in the call that began it. In turn: the
+   *  openings the walls leave (scene/openings.ts), the walls as the reach masks read them (render/reach.ts: full-height walls, a doorway open ground that
+   *  is ranked down, as the lamps' own raster has it, render/reachKeep.ts), and whether that raster differs from the one in use, with WHERE (`rect`, in
+   *  metres; null with `changed` = no telling: all of it) (where the walls only opened, a blast, the old raster's jump field is handed on: reach.ts
+   *  wallRasterHandOnSteps). */
+  private *openReplan(): Generator<void, { plan: Opening[]; walls: OpenWalls; changed: boolean; rect: Rect4 | null }, void> {
+    const boxes = planBoxes(this.world.statics), doors = (lookConfig.doorGaps?.() ?? []).map(g => ({ hinge: [g[0], g[1]] as [number, number], closedDir: Math.atan2(g[3] - g[1], g[2] - g[0]), width: Math.hypot(g[2] - g[0], g[3] - g[1]) }));
+    yield;
+    const plan = yield* planOpeningsSteps(boxes); yield;
+    const walls: OpenWalls = { solid: buildWallRaster(boxes, doors) }; yield;
+    const was = this.openWalls, d = was ? yield* wallRasterHandOnSteps(was, walls) : true;
+    return { plan, walls, changed: d !== null, rect: d === null || d === true ? null : rasterRect(d) };
+  }
+  /** this frame's opening lights, for the upload (lights.ts upload `own`) and the glass masks */
+  private dayLights: RtLight[] = [];
+  /** A SHARE OF ONE OPENING'S MASK: at most `steps` sight-line steps of it; true when it is whole. BEGUN, it is of the walls as they stand and the
+   *  opening where it is, and it is finished as begun whatever changes after: walls that change every few frames, or an opening found again a little
+   *  way off each time, keep no light waiting. Whole, it is the record's, and an OLD one (maskOld: it serves, and is decided again) if the walls
+   *  changed or the opening moved while it was made. DECIDED AGAIN ONLY BEHIND WHAT CHANGED, the lamps' own rule (render/reach.ts ReachOnly: a cell
+   *  whose line to the opening passes no rect the walls changed in keeps its level; the same mask as one decided whole), where the old mask was
+   *  decided at this very place. Until 11-05 every change of the walls anywhere had every opening's mask decided whole again: on a real box 63 to
+   *  70 ms of sight lines after each charge, the larger part of all mask work. */
+  private openMaskSome(r: OpenRec, walls: OpenWalls, steps: number): boolean {
+    let job = r.job;
+    if (!job) { job = r.job = { budget: steps, own: walls, at: r.o, only: r.mask && r.owed !== 'all' && sameSpot(r.at, r.o) ? { prev: r.mask, rects: r.owed } : undefined }; r.owed = []; }
+    job.budget = steps;
+    const got = reachMaskSome(job.own.solid, job.at.mid, job.at.dir, job.at.half[0], null, job.only, job);   // (the spread of the light's own points along the wall)
+    if (!got) return false;
+    r.mask = got; r.at = job.at; r.job = null; return true;
+  }
+  /** A DRAWN FRAME'S MASK WORK AND THE OPENING LIGHTS. On the count (no clock in the frame's pace: a stand with none to keep, a check's;
+   *  `?reachpace=old`) the keeper's step and then the openings, each with its own share of sight-line steps, as they always had. On the clock the
+   *  openings are found, the keeper's ONE step works the lamps' masks and the openings' owed ones as its guests in one allowance of time
+   *  (render/reachKeep.ts), and then the lights are written: a mask is used on the frame it is whole. */
+  private lightMasks(plan: Pace): void {
+    if (plan.ms === undefined || REACH_PACE.whole) { this.reach.tick(); this.lookOpeningLights(plan); return; }
+    // (a finding that throws ends the frame before the keeper's step: the next frame has it, since a finding that threw is not begun again)
+    const day = this.dayOpenings(plan, true);
+    this.reach.tickTimed(8, day?.guests);
+    day?.light();
+  }
+  /** the opening lights of a frame on the count: found, their masks given a share of steps each, written */
+  private lookOpeningLights(pace: Pace = WHOLE): void { this.dayOpenings(pace, false)?.light(); }
+  /** THE OPENINGS OF A FRAME: found again where the walls have changed, and what each is owed noted. On the count their masks are worked here; on
+   *  the clock (`clocked`) the masks owed are returned as the keeper's `guests`. `light()` then writes the lights' records. Null where there is
+   *  nothing to light (off the look's page, the row down, a sky that gives nothing). */
+  private dayOpenings(pace: Pace, clocked: boolean): { guests: KeepGuest[] | undefined; light: () => void } | null {
+    const L = this.lights, W = this.world, K = LOOK_OPENINGS, recs = this.openRecs, day = this.dayLights;
+    const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; this.openBegun = false; this.openJob.drop(); };
+    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (recs.length || day.length || this.openJob.busy) none(); return null; }
+    const level = W.statics[0] ?? null;
+    if (level !== this.openLevel) { none(); this.openLevel = level; this.openSerial = -1; this.openSeen = this.openPlanned = this.openLeaves = NaN; this.openWait = 0; }   // (a new level: its statics are new boxes)
+    const sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
+    // DAYLIGHT COUNTED ONCE (render/lights.ts LIGHT_PORTAL): each opening is a PORTAL, what is seen through it at every hour (the sky itself, and the
+    // ground outside at the engine's guess); the bounce's rays that leave by it take no sky WITHIN ITS REACH and the rest of it as the light fades out toward its range (common.wgsl skyKeep; openingReach below: since 11-05 a reach is 3 to 10 m of most rooms, so the far part of a deep room has its sky by the bounce). The only way since 11-04: until
+    // then, behind a row, each was a disk as bright as one guess at all it looks out on, by day only, beside the bounce's own share of the same sky.
+    const isOpen = (o: Opening) => o.ajar > 0;
+    const rad = openingLooks(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun), m = Math.max(rad[0], rad[1], rad[2]);
+    if (!(m > 1e-6)) { for (const r of recs) r.l.enabled = false; this.openJob.drop(); return null; }   // (a sky that gives nothing; a finding in hand is given up, and the openings are found again when the sky is back)
+    // the walls: looked at when the world says a box has changed, and every eighth frame besides (not every change moves the world's serial); found again
+    // once they have changed and then stood still (at once on a level's first frame), A LITTLE A FRAME (render/planPace.ts: found whole on the frame
+    // the walls had stood still, the plan, the raster and its scan were 9 to 15 ms of that frame in Chromium on the office, cold each time). The
+    // finding takes its own copy of the boxes in the call that begins it and is finished whatever moves after, a step at least every frame: what it
+    // lands is the plan of the level as it stood then (a level whose boxes change every few frames still gets its openings found). `openPlanned` is
+    // then the key the boxes had when it began, as it always was the key last seen: if they have moved since, they are found again once they stand
+    // still. What was planned last serves until each lands. With no pace given, this is the schedule it always had, to the frame.
+    const serial = W.geomSerial;
+    if (serial !== this.openSerial || (this.openTick++ & 7) === 0) { this.openSerial = serial;
+      const key = openingsKey(W.statics); if (key !== this.openSeen) { this.openWait = Number.isNaN(this.openPlanned) ? 0 : K.settle; this.openSeen = key; } }
+    const allow = Number.isNaN(this.openPlanned) ? WHOLE : pace;   // (a level's first plan: whole, on its first frame)
+    if (this.openPlanned !== this.openSeen && this.openWait-- <= 0 && !this.openJob.busy) { this.openJobKey = this.openSeen; this.openJob.begin(this.openReplan()); }
+    let found: ReturnType<typeof this.openJob.go>;
+    try { found = this.openJob.go(allow); } catch (e) { this.openPlanned = this.openJobKey; throw e; }   // (a finding that throws is not begun again for the same boxes: the plan in use serves, as it did when the key was kept before the work)
+    if (found) {
+      this.openPlanned = this.openJobKey; this.openLeaves = NaN;
+      const plan = found.plan, was = recs.slice(), next: typeof recs = [], used = new Set<unknown>();
+      const at = (a: Opening, b: Opening) => a.dir[0] * b.dir[0] + a.dir[2] * b.dir[2] > 0.9 ? Math.hypot(a.pos[0] - b.pos[0], a.pos[1] - b.pos[1], a.pos[2] - b.pos[2]) : Infinity;
+      // one that is where it was, or a little way off, keeps its light, its mask and the job in hand on it (a replan that moved no wall costs it nothing:
+      // until 11-05 every replan dropped every job, and a crate shot to bits every few frames could keep a mask from ever being whole); a mask decided
+      // anywhere but exactly here is an OLD mask (maskOld). ONE THAT IS NEW WHERE ANOTHER STOOD (a second hole blown beside the first makes one opening of the
+      // two, its middle somewhere else; a hole takes in a window) takes the mask of the nearest it lies over, as its old mask, and that one's light
+      // and its job in hand if they are free: what was lit stays lit until its own mask is whole, and a mask half made for a hole that has since
+      // grown is finished and serves; its own is owed whole. Only an opening where none was has no mask, and no light until it has one.
+      for (const pass of [0.05, K.same]) for (const o of plan) { if (used.has(o)) continue; const r = was.find(w => !used.has(w) && at(w.o, o) < pass); if (r) { used.add(o); used.add(r); next.push({ ...r, o }); } }
+      for (const o of plan) { if (used.has(o)) continue;
+        let over: OpenRec | null = null, od = Infinity;   // (the nearest with a mask; with none, the nearest with one in the making)
+        for (const w of was) { if (!w.mask && !w.job) continue; const d = at(w.o, o), s = d + (w.mask ? 0 : 1e6); if (d < w.o.half[0] + o.half[0] && s < od) { od = s; over = w; } }
+        const mine = over !== null && !used.has(over); if (mine) used.add(over!);
+        next.push({ o, l: mine ? over!.l : { name: 'opening', group: 'sky', kind: 3, pos: [0, 0, 0], dir: [1, 0, 0], color: [1, 1, 1], intensity: 0, range: 0, innerDeg: 0, outerDeg: 90, radius: 0.1, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true, portal: { halfWide: 0, share: 1 } }, mask: over ? over.mask : null, at: over ? over.at : null, job: mine ? over!.job : null, owed: over ? 'all' : [] }); }   // (another opening's mask: owed all of it)
+      for (const r of was) if (!used.has(r)) r.l.slot = -1;
+      recs.length = 0; for (const r of next) recs.push(r);
+      // the walls as the reach masks read them: only where THEY have changed is any mask decided again (a pane shot out, a crate gone: none is), the old
+      // one serving until the new is whole. Each mask, and each in the making, is owed the rect that changed (a job in hand is finished against the
+      // walls it began with, and its mask is then an old one), or all of it where there is no telling or the rects have piled up
+      if (found.changed) { this.openWalls = found.walls;
+        const c = found.rect;
+        for (const r of recs) { if ((!r.mask && !r.job) || r.owed === 'all') continue;
+          if (!c) r.owed = 'all'; else if (r.owed.some(q => q[0] <= c[0] && q[1] <= c[1] && q[2] >= c[2] && q[3] >= c[3])) continue;   // (a rect inside one already owed adds nothing: a wall chewed in one place)
+          else if (r.owed.length >= OWED_MOST) r.owed = 'all'; else r.owed.push(c); } }
+    }
+    const leaves = leavesKey(W.dynamics); if (leaves !== this.openLeaves) { this.openLeaves = leaves; openAreas(recs.map(r => r.o), W.dynamics); }   // (a leaf swung)
+    // more open than can be lit at once: the nearest to Sam are (as the pane list is the nearest glass)
+    const e = lookConfig.eyeAt?.() ?? null, fx = e ? e[0] : this.viewFocus[0], fz = e ? e[1] : this.viewFocus[2], masks = lookConfig.rooms > 0;
+    let cut = Infinity;
+    if (recs.length > K.lit) { const far: number[] = []; for (const r of recs) if (isOpen(r.o)) far.push(Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz)); if (far.length > K.lit) cut = far.sort((a, b) => a - b)[K.lit - 1]; }
+    // the reach masks: a frame's share of sight-line steps (render/reach.ts REACH_PACE, the pace the keeper decides a lamp's at). WHOLE AT ONCE only on the masks'
+    // first frame (a level's first frame, the rooms row put on), and then EVERY opening's, shut or far as it may be: no room is shown dark, nobody is
+    // playing that frame, and a door swung or a step taken on the next finds its mask made. IN PLAY NOTHING IS decided whole: an opening where none was
+    // (a hole blown in a wall) is first in line for the frame's share and its light comes on a few frames later, with its mask whole. Until 11-05 it was
+    // decided whole on the frame the blast's walls were read: tens of milliseconds, with the jump field made again beside it. `?reachpace=old`
+    // (REACH_PACE.whole, the game's own word for the pace as it was) decides such a one whole at once here too.
+    if (!masks) this.openBegun = false;
+    let guests: KeepGuest[] | undefined;
+    if (masks && this.openWalls) { const c0 = REACH_WORK.steps, walls = this.openWalls, first = !this.openBegun; this.openBegun = true;
+      // one begun is finished first; then the open before the shut, one with no mask at all before one whose old mask still serves, the near before the far
+      const rank = (r: OpenRec, d: number): number => d + (isOpen(r.o) ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? 2000 : 0);
+      if (first || !clocked) for (;;) {
+        let best: OpenRec | null = null, score = Infinity, now = false;
+        for (const r of recs) { if (!openMaskOwed(r)) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = !r.mask && (first || (REACH_PACE.whole && isOpen(r.o) && d <= cut));
+          const s = rank(r, d) + (urgent ? -5000 : 0); if (s < score) { score = s; best = r; now = urgent; } }
+        if (!best) break;
+        const left = now ? Infinity : REACH_PACE.steps - (REACH_WORK.steps - c0); if (left <= 0) break;
+        if (!this.openMaskSome(best, walls, left)) break; }
+      else {
+        // ON THE CLOCK (the frame's pace carries one, and this is not the masks' first frame): THE MASKS ARE THE KEEPER'S GUESTS (render/reachKeep.ts
+        // KeepGuest), worked in its one allowance of time with the lamps', in the same order. A guest is `first`, in the class that leads most
+        // often, when its light is OUT for want of the mask and would be lit with it (open, among the lit few, under a sky the picture shows): a
+        // hole just blown.
+        const shows = m * this.settings.exposure > K.seen;
+        for (const r of recs) { if (!openMaskOwed(r)) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz);
+          (guests ??= []).push({ rank: rank(r, d), first: !r.mask && isOpen(r.o) && d <= cut && shows, some: steps => this.openMaskSome(r, walls, steps) }); } } }
+    return { guests, light: () => {
+      day.length = 0;
+      for (const r of recs) {
+        // A portal's record is as bright as what is open of its rectangle now, which is all that a pass whose ray stops short of it can know; beside it the
+        // record says what share of the rectangle that is, and the picture's direct light takes the whole and lets its own rays find what of it is wall
+        // or leaf (common.wgsl LIGHT_PORTAL, "its record")
+        const o = r.o, l = r.l, whole = 4 * o.half[0] * o.half[1], open = Math.min(Math.max(o.ajar, 1e-6 * whole), whole), I = m * open;   // (radiance × area = its strength straight out)
+        const at = o.mid;   // (a portal is its rectangle, about the rectangle's middle)
+        l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = Math.hypot(o.half[0], o.half[1]);
+        l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);   // (as far as its own light is worth a ray, wide open: a swinging leaf does not move it. &portalworth=0.003 = the reach it had until 11-05)
+        l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; this.reach.give(l, masks ? r.mask ?? undefined : undefined);
+        l.portal!.halfWide = o.half[0]; l.portal!.share = open / whole; l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;   // (&holedepth=0: no depth, the whole rectangle and every ray for itself, as it was)
+        // (lit from the first hand's width a door opens, where its own rays let next to nothing through, and while the picture would show anything of what it looks out on)
+        l.enabled = o.ajar > 0 && m * this.settings.exposure > K.seen && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
+        day.push(l);
+      }
+    } };
+  }
+  private powderLive(): PowderField | null {
+    const air = this.air;
+    if (!(lookConfig.on && (lookConfig.veil > 0 || lookConfig.puffs > 0) && air?.cells && this.settings.airSim && lookConfig.snow?.())) {
+      if (this.powder) { this.passes.setPowder(null); this.powder.destroy(); this.powder = null; this.powderAir = null; }
+      return null;
+    }
+    if (this.powderAir !== air) { this.passes.setPowder(null); this.powder?.destroy(); this.powder = new PowderField(this.device, { w: air.w, h: air.h, view: air.view, cells: air.cells }); this.powderAir = air; }
+    return this.powder;
+  }
   /** Drop the TAAU history: the next resolve takes this frame's picture outright (a camera cut nobody could reproject across). The engine calls it itself on a jump of the eye
    *  (> 2.5 m or > 30° between two renders), when TAAU or a debug view switches, and on the first frame; game code may call it for cuts it knows about (harmless twice). */
   resetTaa(reason = 'by hand') { this.passes.resetTaa(); this.taaResets++; this.lastTaaReset = reason; }
@@ -137,7 +385,9 @@ export class Engine {
     this.fogSightStand = device.createBuffer({ label: 'fogSightStand', size: FOG_SIGHT_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });   // (zeros: 'no table written' — but for the list of thin statics, which the sight table's own pass reads here: render/fogofwar.ts FogSight.stand)
     this.fogSight.stand = this.fogSightStand;
     this.world = new BoxWorld(device); this.fogSight.world = this.world;
+    if (lookConfig.on) this.world.setStuffOf(lookWordOf(), lookCoreOf());   // (THE LOOK's material maps: a box is drawn as what it SAYS it is made of, its own word or its material row's, put on it when the level was loaded or the box was made: scene/stuff.ts. No colour is asked, so rain on a slab changes nothing here. Set here and nowhere else)
     this.lights = new LightSet(device);
+    this.reach = new ReachKeep(this.world, this.lights);
     this.frameBuf = makeBuffer(device, FRAME_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'frame');
     this.frameBufOut = makeBuffer(device, FRAME_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'frameOut');
     this.dummyStorage = makeBuffer(device, 256, GPUBufferUsage.STORAGE, 'dummy');
@@ -150,7 +400,10 @@ export class Engine {
     this.pool = new TexturePool(device);
     this.gbuffer = new GBuffer(device, this.sceneLayout, this.pool, this.world.maxBoxes);   // (its previous-transform buffer is sized to the world's box capacity)
     this.passes = new LightingPasses(device, this.sceneLayout, gpu.format, gpu.linearSampler, this.pool);
+    if (lookConfig.on) this.buildPlace();   // (THE LOOK PROTOTYPE: its two small programs are asked for with the boot's own, so the page's first frame has a live field. The page's rows are not read yet here, so a page with the shade row at 0 on its address compiles them unused. Until it is live no place takes a gain, composite.wgsl lookPlaceLevels, and a page that got it late would step)
   }
+  /** THE LOOK PROTOTYPE's place field, made once (render/placeField.ts); a device that cannot make it is asked once and no more */
+  private buildPlace(): void { if (this.place || this.placeDead) return; try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }
 
   /** true once init() has resolved: every boot pipeline exists and render() may run */
   ready = false;
@@ -160,7 +413,7 @@ export class Engine {
    *  prepare the sharp-direct trio + its g-buffer down pass / the GBAA kernel, which are otherwise compiled synchronously on the first frame a preset switches them on. Await it
    *  (or use Engine.create) before the first render(); gpu/device.ts pipelineProgress counts the pipelines in for a progress line. */
   init(opts: { sharp?: boolean; gbaa?: boolean; onGroup?: (name: string) => void } = {}): Promise<void> {
-    return this.initP ??= Promise.all([this.rc.init().then(() => opts.onGroup?.('cascades')), this.gbuffer.init({ sharp: opts.sharp }).then(() => opts.onGroup?.('gbuffer')), this.passes.init(opts)])   // (onGroup: the boot timeline's per-group marks — passes reports froxels / denoiser / targetOps / passes itself)
+    return this.initP ??= Promise.all([this.rc.init().then(() => opts.onGroup?.('cascades')), this.gbuffer.init({ sharp: opts.sharp }).then(() => opts.onGroup?.('gbuffer')), this.passes.init(opts), this.gbuffer.fillLook().then(() => { if (lookConfig.on) opts.onGroup?.('materials'); }), this.place ? this.place.whenReady.catch(() => { }) : null])   // (fillLook: the look page's material maps, made a layer at a time while the pipelines above compile; nothing on any other page)   // (onGroup: the boot timeline's per-group marks — passes reports froxels / denoiser / targetOps / passes itself)
       .then(() => { this.ready = true; });   // (memoised: a second caller awaits the same build)
   }
   private initP: Promise<void> | null = null;
@@ -197,7 +450,7 @@ export class Engine {
    *  ITS OWN CLOCK, not once a drawn frame (settings.airSim, live; settings.airEvery): when at least 0.8 of `airEvery` sixtieths of a second have gone by since the last step (a 120 Hz page steps every
    *  other frame, a 30 Hz one once a frame by the solver's own 1/30 s bound), in ONE compute pass timed as 'air' (per-cell work: it does not shrink with the
    *  render scale). */
-  air: { step(enc: GPUCommandEncoder, dt: number, time: number, wind: readonly [number, number], ts?: GPUComputePassTimestampWrites): void; readonly view: GPUTextureView; readonly ready?: boolean; setCells(mask: Uint8Array, rect?: readonly [number, number, number, number]): void; setSources?(recs: Float32Array, n: number): void; reset(): void; readonly w: number; readonly h: number } | null = null;
+  air: { step(enc: GPUCommandEncoder, dt: number, time: number, wind: readonly [number, number], ts?: GPUComputePassTimestampWrites): void; readonly view: GPUTextureView; readonly ready?: boolean; setCells(mask: Uint8Array, rect?: readonly [number, number, number, number]): void; setSources?(recs: Float32Array, n: number): void; reset(): void; readonly w: number; readonly h: number; readonly cells?: GPUTextureView } | null = null;
   airWind: [number, number] = [0, 0];
   airOn = false;
   private airAcc = 0;
@@ -246,7 +499,7 @@ export class Engine {
   /** The LEVEL was put back to its start under the picture (game/cleanrestart.ts: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
    *  screen histories, the reservoirs, the haze volume's history and the radiance cache all still hold the level as it stood, 'wrong wholesale'. Each starts from
    *  nothing, as on a boot's first frame, so the fresh level is not blended in over the frames after. */
-  restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.passes.froxels.restartHistory(); this.invalidateWorldCache(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)
+  restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.passes.froxels.restartHistory(); this.invalidateWorldCache(); this.startPlansOver(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)
 
   /** the scene group's resources over one frame block (binding 0): the one list ensureSceneBG and its output-size twin both build from */
   private sceneGroup(frame: GPUBuffer, fogSight: GPUBuffer = this.fogSight.buf): GPUBindGroup {
@@ -326,8 +579,8 @@ export class Engine {
    *  it per 8×8 tile. lights × panes cheap tests a frame; nothing with the experiment off or no pane listed. */
   private glassLightMasks() {   // (GLASS_STATIONS / GLASS_SIDES below the class: the sample lattice as module consts, not two array literals per light per pane per frame — review R1.4)
     const w = this.world, list = this.settings.glass ? w.glassList : [];
-    const LL = this.lights.lights;
-    if (!list.length) { for (let i = 0; i < LL.length; i++) LL[i].glassMask = 0; return; }
+    const LL = this.lights.lights, DL = this.dayLights;   // (the picture's own lights too: daylight from a window is tinted by the next room's glass like a lamp's)
+    if (!list.length) { for (let i = 0; i < LL.length; i++) LL[i].glassMask = 0; for (let i = 0; i < DL.length; i++) DL[i].glassMask = 0; return; }
     const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell;
     const cellOf = (x: number, z: number) => { const cx = Math.floor((x - WORLD.min[0]) / cs), cz = Math.floor((z - WORLD.min[2]) / cs); return cx < 0 || cz < 0 || cx >= W || cz >= H ? -1 : cz * W + cx; };
     // per listed pane, once a frame (all of it was worked out again for every light): its world half extents in x / z, and the grid cells just off either face at the three
@@ -344,10 +597,10 @@ export class Engine {
       let j = k * NC;
       for (let ui = 0; ui < GLASS_STATIONS.length; ui++) for (let si = 0; si < GLASS_SIDES.length; si++) { const u = GLASS_STATIONS[ui], side = GLASS_SIDES[si], ci = cellOf(b.c[0] + tx * u * half + nx * side, b.c[2] + tz * u * half + nz * side); CELLS[j++] = ci >= 0 ? ci : -1; }   // (a NaN cell — a corrupt pane — must stay 'off the grid', not become cell 0 in the Int32Array)
     }
-    for (let n = 0; n < LL.length; n++) {
-      const l = LL[n]; const ghost = (l.fogGhost ?? 0) > 0 && !(l.enabled && l.intensity > 0);   // (a lamp out but lit in the fog's picture — lights.ts RtLight.fogGhost — shines through the panes it did)
+    for (let n = 0; n < LL.length + DL.length; n++) {
+      const l = n < LL.length ? LL[n] : DL[n - LL.length]; const ghost = (l.fogGhost ?? 0) > 0 && !(l.enabled && l.intensity > 0);   // (a lamp out but lit in the fog's picture — lights.ts RtLight.fogGhost — shines through the panes it did)
       if (!l.enabled && !ghost) { l.glassMask = 0; continue; }
-      let m = 0;
+      let m = 0; const lm = this.reach.of(l);
       const peak = Math.max(l.color[0], l.color[1], l.color[2]) * (ghost ? l.fogGhost! : l.intensity);   // on-axis intensity (W/sr-ish): what evalLight divides by d²
       const cosO = Math.cos(Math.min(89, l.outerDeg + 8) * Math.PI / 180);      // a spot's cone, opened 8° (the pane is judged by a handful of points, not its whole face)
       for (let k = 0; k < list.length && k < 24; k++) {
@@ -370,9 +623,9 @@ export class Engine {
             if (!facing) continue;
           }
         }
-        if (l.reach) {   // some cell just off either face, at three stations along the pane, inside the light's reach
+        if (lm) {   // some cell just off either face, at three stations along the pane, inside the light's reach
           let any = false;
-          for (let j = k * NC, e = j + NC; j < e; j++) { const ci = CELLS[j]; if (ci >= 0 && reachLevel(l.reach, ci) > 0) { any = true; break; } }
+          for (let j = k * NC, e = j + NC; j < e; j++) { const ci = CELLS[j]; if (ci >= 0 && reachLevel(lm, ci) > 0) { any = true; break; } }
           if (!any) continue;
         }
         m |= 1 << k;
@@ -408,8 +661,8 @@ export class Engine {
     this.passes.setTaau(this.settings.taau);   // (mirrored before resize: the output-size target set — the resolve's history pair — exists only while it is on)
     { const S = this.settings, refl = S.beamReflect && S.rtReflect, air = S.beamAir && S.debugView === 0;   // (a debug view shows the boxes: the air look is added in the composite only)
       // how much of a beam the AIR shows (0.4 ≈ the old box's brightness under the tube): a little in clear indoor air, more by the haze, most in rain — smoke is read per pixel in the shader
-      const A = air ? S.beamAirK * (0.03 + 0.09 * Math.min(2, S.hazeDensity / 0.035)) : 0;   // (0.12 at the default haze: the software adapter's stills put the line at the old box's level, clipped, at 0.4)
-      this.world.hidePrimary = this.passes.setBeams(refl || air ? this.world.dynamics : null, thinIs, this.viewFocus, { reflect: refl, air: air ? thinAirOf : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0 });
+      const A = air ? S.beamAirK * (0.03 + 0.09 * Math.min(2, S.hazeDensity * (lookConfig.on ? lookConfig.air : 1) / 0.035)) : 0;   // (0.12 at the default haze: the software adapter's stills put the line at the old box's level, clipped, at 0.4)
+      this.world.hidePrimary = this.passes.setBeams(refl || air ? this.world.dynamics : null, thinIs, this.viewFocus, { reflect: refl, air: air ? thinAirOf : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0, coats: lookConfig.on ? Math.max(0, Math.min(1, lookConfig.pressed)) : 0 });
     }   // (lasers / tracers in the reflections: ≤ 8 segments in a small uniform; none = a zero count, the pass as it was)
     this.passes.setFireLook(this.fireLook);
     this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (game/fire.ts), behind the beams in the same uniform
@@ -474,7 +727,13 @@ export class Engine {
     this.world.rig = this.rigFit ? { r0: this.rigFit.r0, r1: this.rigFit.r1, kPad: RIG_KPAD * Math.max(1, this.settings.sdfRigK ?? 1), byOwner: this.rigFit.byOwner } : null;   // the SDF rig: the fit packed into this frame's proxy list at upload (r0 over the hand radius, r1 in misc's top byte, the cull sphere fitted + the smooth union's bulge at k ≥ 1 — never tighter than the k = 1 sphere: it is also the mesh shadows' broad phase at ultra, and a finger can reach a few cm past the forearm cone) — null = no fit attached: the list as the game wrote it
     this.world.motionIds = this.settings.motionIds !== false;   // motion identity: keyed dynamic boxes hand the g-buffer last frame's index of their key (off = the bare index, the old rule)
     { const mt = Math.max(0.005, Math.min(0.2, this.settings.markingTexel)); if (this.settings.markings && mt !== this.world.markingTexel) this.world.repackMarkings(mt); }   // the base texel moved (the review page's A/B): every list repacked at the new lattice
-    this.world.upload();
+    // THE PLANNERS' PACE (render/planPace.ts, render/steps.ts): this frame's allowance of planning, between the order the statics are drawn in (made
+    // whole, on a drawn frame once they have stood still: its time is taken off the allowance), the openings and the wall sides (each a job in steps,
+    // a step at least every frame), and the place map (drawn at once, its time taken off too). At once for all of them with the pace off, and for the
+    // few frames after the picture has started over.
+    const { plan, wait } = this.framePace();
+    this.world.drawWaits = PLAN_PACE.on;   // (under the pace a pack with no draw after it never makes the order, on the frames at once too)
+    { const ranked = this.world.drawRanked, t = clock(); this.world.upload(false, wait); if (this.world.drawRanked !== ranked) spend(plan, clock() - t); }
     cutSwap.frame(this.world.cutTraced);   // CUT BOXES (render/cutSwap.ts): the tracing programs with the cut rule only while a cut box a ray can meet is alive — a calm frame dispatches the boot's
     { // …and the raster follows the rays: a traceable cut box is drawn cut only on a frame whose ray programs carry the rule (the second set still compiling / failed / pinned off by a dev hook = whole
       // for both). The frame standing pieces change shape on — the set arriving under pieces born before it — is a cut for the resolve: its history shows the whole boxes
@@ -482,10 +741,26 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
+    this.lightMasks(plan);   // (the lights' reach masks: where a wall changed, a step of deciding them again, before anything of this frame reads one; and THE LOOK PROTOTYPE's opening lights, each opening to the sky a light of its own, scene/openings.ts, whose masks are decided in the same step)
+    const hourExp = lookConfig.on ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1;   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
+    const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
+    const placeOn = !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: wherever the model runs, which is wherever the shade row is up, at every hour)
+    if (placeOn) this.buildPlace();   // (a device that cannot build the field shows every place as the open air, with no gain taken: what every page shows for the frames before its field is live, composite.wgsl lookPlaceLevels)
+    let eyesWidest: [number, number] | null = null;   // (frame.placeCfg's z and w, render/lookexpo.ts lookExpoBound)
+    if (placeOn) { const own = hourExp < 1 ? lookConfig.nightSky?.() ?? null : null;   // (with an hour up, the level's own sky by the page's word: a night's unless the level is its own day, which lookExposure says of it as it does of any sky)
+      eyesWidest = lookExpoBound(lookConfig.dark, lookNightSkyE(hourExp, shadeCfg?.[3], own && lookExposure(null, own.zenith, own.horizon) >= 1 ? Math.PI * lookConfig.sky * lookSkyLum(own.zenith, own.horizon, 0.947) : null), this.settings.nvAmount); }
+    { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
+      if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
-    const numLights = this.lights.upload(time);
+    this.lights.dayExp = lookConfig.lamps > 0 ? hourExp : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
+    const numLights = this.lights.upload(time, this.dayLights, this.reach);
+    let portal0 = 0; for (const l of this.dayLights) if ((l.slot ?? -1) >= 0 && (!portal0 || l.slot! + 1 < portal0)) portal0 = l.slot! + 1;   // (the list's first portal, + 1: frame.placeCfg.y, common.wgsl skyKeep)
+    const place = placeOn && this.place?.ready ? this.place : null; { const pb = place ? place.buffer : null; this.passes.setPlace(pb); this.particles?.setPlace(pb); }   // (the composite's, the smoke march's and the particles' splat's: one field, or the zeros that say none)
+    const placeSnap = this.lookEye.snap || this.placeWas !== place;   // (a first frame, a restart, a still, a field just come live: the field and its eye are settled outright; cleared below once a field has been stepped)
+    const powder = this.powderLive(); this.passes.setPowder(powder?.ready ? powder.view : null);   // (THE LOOK PROTOTYPE's loose snow in the air, above)
+    const veil = powder?.ready ? lookVeilFrame({ x: WORLD.min[0], z: WORLD.min[2], w: WORLD.max[0] - WORLD.min[0], d: WORLD.max[2] - WORLD.min[2] }, 1, this.lights.lights) : null;   // (null anywhere else = the frame's two fields stay zeros)
     if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the switch (off = nothing recorded or written); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
     this.passes.setDecalBuffer(this.decals?.buf ?? null);   // (the composite reads it too: the crack stars rounds leave on glass panes — a no-op unless the buffer changed)
     this.cpuMs.boxes = performance.now() - t0;
@@ -525,9 +800,26 @@ export class Engine {
       const mapKey = s.froxelFar * 1000 + s.froxelCurve; if (mapKey !== this.froxelMapKey) { if (this.froxelMapKey) fx.restartHistory(); this.froxelMapKey = mapKey; }   // far / curve moved (a Tab slider): the history is laid out on the old mapping — restart it (near rides the camera every frame and reprojects through prevCam.w)
     } else if (fx.allocated) { fx.idle++; if (fx.idle > 600) { fx.release(); this.passes.froxelViewsChanged(); } }
     this.rc.halfRate = s.rcHalfRate;
+    // THE LOOK PROTOTYPE, light keeps to its room (the look panel's row `rooms`; lookConfig.rooms 0 = the cache as it was; DAY AND NIGHT, and the game's light
+    // meter reads the cache, so on the look page the row changes what the meter and the guards read): the cascades' hand-over overlap (render/rc.ts)
+    // and the cache rays' bounce read (lighting_common.wgsl hitRadiance, FrameFlags.RcRoom). Both stop the open air's daylight reaching a shut room's probes.
+    const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? [] : [];
+    if (lookSides || placeOn) { const t = clock(); this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps); spend(plan, clock() - t); }   // (the map of the level as it stands, ONE a frame and one for both readers: the wall sides here and the place field below. Doors open by degrees in it and no leaf is a wall, scene/placePlan.ts)
+    if (lookSides || placeOn) this.wallSides.update(this.world.statics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, this.placeMap, plan); else this.wallSides.drop();   // (the plan's words: the Walls have two sides row's for the cache reads, and the exposure's for a pixel's place whatever that row says, composite.wgsl lookPlaceLevels. Made again only when the map's shape changes)
+    const sidesStamp = lookSides || placeOn ? this.wallSides.made : -1;   // (which tables the frame block carries this frame; −1 = none)
+    const lookRoom = lookConfig.on && lookConfig.rooms > 0; this.rc.setOverlap(lookRoom ? 1 : 0);
+    const lampK = lookRoom && this.lights.dayExp < 1 ? Math.pow(this.lights.dayExp, Math.min(1, this.lights.dayAmount)) : 1;   // (× the night's strength a fixture is drawn at this hour, render/photometry.ts lightDayK: 1 at night, with the row down and off the look page. Every FIXED night level a lamp's light is tested against is held at this share below: the cache's shadow-ray threshold, the direct estimators' floor, the dim-pixel rule)
     this.rc.amortize = s.rcAmortize; this.rc.setPeriods(s.rcPeriods); this.rc.setChunks(s.rcChunks);   // amortized cascade upkeep (rc.ts): the settings are the source of truth, mirrored like the other cache options
     const jf = (this.rc.staggerUpper || this.rc.halfRate) ? (this.frameIdx >> 1) : this.frameIdx;   // same direction jitter for the pair of frames that share cascade work (stagger: c2+ every other frame; half rate: uppers even / c0 + bake odd)
-    this.rc.setDiceBlend((s.flags & FrameFlags.Temporal) ? 0.3 : 1.0);
+    // STEADY BOUNCE (the look page's row `steady`, render/diceRing.ts; the maintainer on his GPU, 11-01: "lots of temporal instability for midday", "strange
+    // shimmering on metallic barrels", "on the guy's back too", "night, dawn, and dusk look pretty good. midday and overcast are the broken ones"). By day
+    // the cache's direction shift is one of a few points taken in turn and its dice is the mean of its last bake at each, so a still scene's bounce does
+    // not change from frame to frame. At night, with the row down, off the look page and until the ring's one program is ready: the cache's own mean, as it was.
+    const ringN = lookRoom && (s.flags & FrameFlags.Temporal) ? ringPoints(lampK, lookConfig.steady) : 0;
+    if (ringN && !this.diceRing) { try { this.diceRing = new DiceRing(this.device); } catch (err) { console.warn('dice ring: not built on this device', err); lookConfig.steady = 0; lookAmounts.steady = 0; } }
+    const ring = ringN && this.diceRing?.ready && this.diceRing.fits(this.rc.dice) ? this.diceRing : null; if (!ring) this.diceRing?.drop();
+    const ringAt = ring ? ringSlot(jf, ringN) : 0, ringFresh = this.rc.reprimed, jk = ring ? ringAt : jf;
+    this.rc.setDiceBlend((s.flags & FrameFlags.Temporal) && !ring ? 0.3 : 1.0);
     const fp: FrameParams = {
       viewProj: taauOn ? this.vpJ : cam.viewProj, invViewProj: taauOn ? this.invVpJ : cam.invViewProj, prevViewProj: taauOn ? this.prevVpJ : cam.prevViewProj,   // (TAAU off: the camera's own three, untouched — the old path bit for bit)
       camPos: cam.pos, camDir: cam.forward, time, dt, width: this.width, height: this.height,
@@ -535,18 +827,25 @@ export class Engine {
         | (s.nvAmount > 0.001 ? FrameFlags.NightVision : 0) | (s.lightReach ? FrameFlags.ReachMask : 0) | (s.tileCull ? FrameFlags.TileCull : 0) | (s.softTileSkip ? FrameFlags.SoftTileSkip : 0) | (s.checkerDirect ? FrameFlags.CheckerDirect : 0)
         | (s.gridSkip ? FrameFlags.GridSkip : 0) | (s.gridYCull ? FrameFlags.GridYCull : 0) | (s.axisBoxFast ? FrameFlags.AxisBox : 0) | (s.gridSlabs ? FrameFlags.GridSlabs : 0) | (s.gloss && !rtOn ? FrameFlags.Gloss : 0) | (meshOn ? FrameFlags.MeshShadows : 0)
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
-        | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0),
-      exposure: s.exposure,   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
-      skyZenith: s.skyZenith, skyHorizon: s.skyHorizon, hazeDensity: s.hazeDensity,
+        | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0) | (lookRoom ? FrameFlags.RcRoom : 0),
+      shadeCfg: this.lookShadeCfg = shadeCfg, eyeCfg: this.lookEyeCfg = ((lookConfig.on ? lookExpoFrame(shadeCfg, lookConfig.shade, lookConfig.eyes, lookConfig.glare, hourExp) : null) ?? undefined),   // (the one exposure model, render/lookexpo.ts: w under 0 is composite.wgsl lookShadeGain's word; null = no shade row: no pixel takes a gain by its place)
+      veilA: veil?.[0], veilB: veil?.[1], gradeCfg: lookConfig.on ? [this.lookGradeCfg?.[0] ?? 0, this.lookGradeCfg?.[1] ?? 0, 0, 0] : undefined,   // (z and w: spare. z was the read of the cache on this side of a wall, gone with the guess it served, composite.wgsl lookPlaceLevels; w the Room contrast row's)
+      exposure: lookConfig.on ? s.exposure * lookConfig.gradeExp : s.exposure,   // (THE LOOK PROTOTYPE's Exposure row: × the hour's own)   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
+      skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
-      numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale, volSteps: s.volSteps,
+      numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale * emissiveDayK(this.lights.dayExp, this.lights.dayAmount), volSteps: s.volSteps,
       capColor: s.capColor, post: [s.nvAmount, s.nvGain, s.hitFlash, Math.tan(cam.fov / 2)],
       directCfg: [s.directSamplesTop, s.directSamplesOther, s.directBlurCap, s.directHistory * this.passes.directHistoryScale],   // (× ½ / ¾ on the two frames after the direct histories were resampled across a size change — passes.ts directCarryAge; 1 otherwise)
-      rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jf * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jf * 0.5698402909980532) % 1)] : [0.5, 0.5],
+      rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jk * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jk * 0.5698402909980532) % 1)] : [0.5, 0.5],   // (jk: the frame's own point, or under the steady bounce's ring one of its few)
       directAdaptiveMin: s.directAdaptiveMin,
       numTransient: numTransientNow,
-      secMinE: s.secMinE,   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
-      lossyCfg: [this.passes.gatherDiv, this.passes.volDiv, s.dimRays ? Math.max(0, s.dimRaysBelow) : 0, Math.max(0, s.giFireflyK)],   // .w: the gather's relative firefly bound (0 = off)
+      smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
+      sides: lookSides || placeOn ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
+      placeCfg: (placeOn && lookConfig.order > 0) || portal0 > 0 || eyesWidest ? [placeOn && lookConfig.order > 0 ? Math.min(lookConfig.order, 1) : 0, portal0, eyesWidest?.[0] ?? 0, eyesWidest?.[1] ?? 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field · z, w: the eyes' widest, render/lookexpo.ts lookExpoBound)
+      lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
+      secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
+      //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
+      lossyCfg: [this.passes.gatherDiv, this.passes.volDiv, s.dimRays ? Math.max(0, s.dimRaysBelow) * lampK : 0, Math.max(0, s.giFireflyK)],   // .w: the gather's relative firefly bound (0 = off)
       cardSlots,
       weather: this.weather,   // rain / splashes / sky flash: drawn by the volumetric pass under FLAG_VOLUMETRICS (beams off = no weather on screen; the game side carries on)
       glassCfg: [Math.max(0, s.glassReflect), Math.max(0, s.glassTintDepth), Math.max(0, s.glassDust), s.glassRefract && s.glass ? Math.max(1, Math.min(3, s.glassIor || 1.5)) : 0],   // .w: refraction — the index of refraction while on (≥ 1), 0 = off (composite.wgsl glassRefractPath)
@@ -580,9 +879,10 @@ export class Engine {
     this.froxelPrevNear = froxNear;
     this.passes.smokeSlots = fp.numSmoke;   // (what the shaders are told: 0 = no smoke march anywhere this frame, so the smoke diffusion's blur chain has no reader — passes.ts)
     writeFrame(this.frameData, fp);
-    this.device.queue.writeBuffer(this.frameBuf, 0, this.frameData);
+    // (the look prototype's two tables are 30 KB of the block and change when a door comes to rest: they are sent when they have changed, the head every frame)
+    this.device.queue.writeBuffer(this.frameBuf, 0, this.frameData, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSent ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSent = sidesStamp;
     this.passes.edgeRays = !!s.sharpEdgeRays; this.passes.sliverRays = Math.round(s.sharpSliver) >= 1 && Math.round(s.sharpSliverCap) > 0;   // (either ray user picks the sharp kernel's traced variant)
-    if (this.sharpOn) { writeFrameOut(this.frameDataOut, this.frameData, this.outWidth, this.outHeight, decouple ? { viewProj: cam.viewProj, invViewProj: cam.invViewProj, prevViewProj: this.prevVpU } : undefined); this.device.queue.writeBuffer(this.frameBufOut, 0, this.frameDataOut); this.ensureSceneBGOut(); this.passes.sceneBGOut = this.sceneBGOut; }   // the OUTPUT frame block + its scene group for the output-size passes (decoupled: with the camera's own unjittered matrices — its raster stands still)
+    if (this.sharpOn) { writeFrameOut(this.frameDataOut, this.frameData, this.outWidth, this.outHeight, decouple ? { viewProj: cam.viewProj, invViewProj: cam.invViewProj, prevViewProj: this.prevVpU } : undefined); this.device.queue.writeBuffer(this.frameBufOut, 0, this.frameDataOut, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSentOut ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSentOut = sidesStamp; this.ensureSceneBGOut(); this.passes.sceneBGOut = this.sceneBGOut; }   // the OUTPUT frame block + its scene group for the output-size passes (decoupled: with the camera's own unjittered matrices — its raster stands still)
     else this.passes.sceneBGOut = null;
     const jitterRes: [number, number] = decouple ? [0, 0] : this.sharpOn ? [this.jitter[0] * this.outWidth / this.width, this.jitter[1] * this.outHeight / this.height] : this.jitter;   // the resolve reads the jitter in the pixels of the picture it resolves (the output's under sharp direct; none when the output raster is decoupled from the internal jitter)
     if (taauOn) this.passes.setTaauFrame({ prevViewProjU: this.prevVpU, jitter: jitterRes, bypass: s.debugView !== 0, alpha: s.taauAlpha, clipGamma: s.taauClipGamma, reactK: s.taauReactive, kSharp: s.taauKernel, velK: s.taauVelK, sharpen: s.taauSharpen + s.taauSharpenMotion * camMot, camStill, lightJump: s.taauLightJump, motionA: s.taauMotionAlpha, motionClip: s.taauMotionClip, histSharp: s.taauHistSharp,
@@ -595,17 +895,22 @@ export class Engine {
     const timer = this.timer; timer.beginFrame();
     const enc = this.device.createCommandEncoder({ label: 'frame' });
     const ts = (n: string) => timer.pass(n);
-    this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
+    this.fogSight.encode(enc, this.passes.fogOn ? this.fogFrame : null, this.sceneBGPlain!, ts); if (this.fogFrame) this.fogFrame.sight = this.fogSight.live;   // the fog of war's sight table, before anything lights a pixel (a no-op unless the full-picture fog is on)
     if (this.smoke.encode) this.smoke.encode(enc, ts);
     if (meshOn && this.world.charCount > 0) this.meshShadows!.encode(enc, Math.min(this.world.charCount, MESH_MAX_CHARS), ts('mesh'));   // skin + refit every listed character's tree from this frame's joint matrices — before the cascades, the first pass that traces
     this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount, this.cutWhole);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);
+    if (ring && this.rc.diceBaked) ring.step(enc, this.rc.dice, ringAt, ringN, ringFresh, ts); else if (ring) timer.idle('diceRing');   // (the bake just made, kept as its point, and the mean of the points held written back: what every pass below reads)
+    if (place) { place.setMap(this.placeMap); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap, ts); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
     const airRuns = !!this.air && this.airOn && s.airSim && this.air.ready !== false;   // THE AIR (above): at most one step a drawn frame, on its own clock; a paused frame (dt 0) steps nothing
-    if (airRuns) {
+    if (airRuns || powder) {
       this.airAcc += dt;
-      if (dt > 0 && this.airAcc >= 0.8 / 60 * Math.max(1, s.airEvery || 1)) { this.air!.step(enc, Math.min(this.airAcc, 1 / 30), time, this.airWind, ts('air')); this.airAcc = 0; }
-      else timer.idle('air');   // (a frame between two steps — a fast display, airEvery — costs nothing: said, or the pass would go on showing its last step's time)
+      if (dt > 0 && this.airAcc >= 0.8 / 60 * Math.max(1, s.airEvery || 1)) {
+        const h = Math.min(this.airAcc, 1 / 30); this.airAcc = 0;
+        if (airRuns) this.air!.step(enc, h, time, this.airWind, ts('air'));
+        powder?.step(enc, h, time, airRuns ? Math.hypot(this.airWind[0], this.airWind[1]) : 0, Math.min(1, lookConfig.veil), airRuns, ts);   // (the look prototype's powder rides the air as it now stands: stepped on the air's clock, and in air that has come to rest too, where a boot's puff still rises and falls)
+      } else { if (airRuns) timer.idle('air'); if (powder) timer.idle('powder'); }   // (a frame between two steps — a fast display, airEvery — costs nothing: said, or the pass would go on showing its last step's time)
     }
     if (partOn) this.particles!.setAir(airRuns ? this.air!.view : null);   // (what the particle step reads: the field while it is stepped — its stand-in, still air, otherwise)
     if (partOn && this.particles!.hasWork) this.particles!.encodeUpdate(enc, this.sceneBG!, this.rc.diceView, ts('particles'));   // (only ask the timer for a slot when the pass WILL encode: an allocated-but-unwritten timestamp pair resolves to stale garbage — ultra summed a fictional 7–12 ms 'particles' with nothing alive, 08-10 measurements)   // births + the step (collide against this frame's boxes, shade off this frame's lights and dice) — a return with nothing live
@@ -654,3 +959,24 @@ export class Engine {
 }
 
 export { FrameFlags };
+
+/** THE LOOK PROTOTYPE, eyes adjust to shade (frame.shadeCfg; the one exposure model's, render/lookexpo.ts, place_common.wgsl lookExpoFor): the row's amount,
+ *  AT EVERY HOUR (it faded out into a night until 11-04; what holds a night now is the model's own bound, render/lookexpo.ts lookExpoBound), and the two
+ *  things a shaded place is measured against until the place field is live, both from the sky ALONE as common.wgsl skyRadiance paints it (horizon to
+ *  zenith over the first 0.4 of height): the mean radiance open air holds (half the upper hemisphere's mean, 0.8 zenith + 0.2 horizon) and the irradiance
+ *  open ground gets (π × (0.947 zenith + 0.053 horizon)). The third number is spare (it was the most the rows before the model brought a pixel up). */
+function lookShade(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number, amount: number): [number, number, number, number] {
+  const up = skyK * lookSkyLum(zen, hor, 0.8);
+  return [Math.min(1, amount), 0.5 * up, 0, Math.PI * skyK * lookSkyLum(zen, hor, 0.947)];
+}
+/** the sky's luminance, `a` of the zenith and the rest of the horizon (0.8 = the upper hemisphere's mean radiance, 0.947 = its cosine-weighted one, over common.wgsl skyRadiance's ramp) */
+function lookSkyLum(zen: ArrayLike<number>, hor: ArrayLike<number>, a: number): number { const b = 1 - a; return 0.2126 * (a * zen[0] + b * hor[0]) + 0.7152 * (a * zen[1] + b * hor[1]) + 0.0722 * (a * zen[2] + b * hor[2]); }
+
+/** THE LOOK PROTOTYPE's real light values (render/photometry.ts; lights.ts LightSet.dayExp): the exposure of the hour that is up, against the night's.
+ *  `said` = the page's word (main.ts: the game's hour through photometry.ts hourExposure; null = a night, or nobody says). Where nobody says, a level lit as a
+ *  day by its OWN sky (the breach's daylight variant) is taken for a clear midday by how bright that sky is, read WITHOUT the Sky light row: its mean
+ *  radiance from 0.08 to 0.35 runs the exposure from the night's 1 to midday's 1/5,000. A night is 1 exactly: nothing of it is touched. Never a guess from a
+ *  light's strength, since most levels' own moons are 0.9 and one is 2.6. */
+function lookExposure(said: number | null, zen: ArrayLike<number>, hor: ArrayLike<number>): number {
+  return said !== null ? said : Math.pow(10, -3.7 * smoothstep(0.08, 0.35, lookSkyLum(zen, hor, 0.8)));
+}

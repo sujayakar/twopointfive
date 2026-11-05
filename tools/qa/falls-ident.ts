@@ -8,9 +8,11 @@
 //          the two answers and every double of the two stores compared
 //   twin   a second store that never goes near the module, handed the same rules in the same order: after every rule its answer and every one of its
 //          doubles (FALL_LEN of them) must be the first store's (which runs the module's rules for real every other rule)
-// No game is stood up: a store, a block of the module's state, and the tenant's own move in and out (which is tried too, every so often, the row dropped
-// and raised under the run). A run is FAIR only if it met landings due in each list, a full list, crunches, glass off the world's floor, a floor not told for its
-// gap, and a list cleared while the other held landings that then stayed.
+// No game is stood up: a store over a block of its own (as a game's is over the game's, from the moment it is made). Every so often the row is DROPPED
+// for a while under the run (the store's rules are then this file's, over the same doubles of the block) and the block is PARKED (four other blocks take
+// the module's slots: the store's next rule in the module binds it again). A run is FAIR only if it met landings due in each list, a full list, crunches,
+// glass off the world's floor, a floor not told for its gap, a list cleared while the other held landings that then stayed, the row dropped, and the
+// block parked and found bound again.
 // FALLS_BREAK=1 (or RUST_BREAK=1) is the red path: the module's store is handed glass one unit in the last place heavier, and the run must FAIL.
 import { resolve } from 'path';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -21,12 +23,13 @@ let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t 
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== falls-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const x = SIM.sim(), sizes = [x.falls_cap(0), x.falls_cap(1), x.falls_cap(2), x.falls_cap(3), x.falls_cap(5)];
 const laid = sizes[0] === FH.FALL_CELLS_X && sizes[1] === FH.FALL_CELLS_Z && sizes[2] === FH.FALL_MAXP && sizes[3] === Object.keys(FH.FP).length && sizes[4] === FH.FALL_LISTS && ST.simLayout().parts.find((p: any) => p.name === 'falls')?.len === FH.FALL_LEN * 8;
-// the store under test (at home in a block of the module's, as a game's is once its tick has opened with the row on) and its twin (TypeScript only)
-const A = new FH.FallStore(), B = new FH.FallStore(), st = new ST.SimState(), g = { falls: A };
-SIM.RUST.falls = true; st.settle(g);
-const doubles = (S: any): Float64Array => S.home ? S.home.d.slice(S.base, S.base + FH.FALL_LEN) : S.own.slice();
+// the store under test (a part of a block, as a game's is: its rules the module's while the row is on) and its twin (over another block, TypeScript only)
+const st = new ST.SimState(), A = new FH.FallStore(st), B = new FH.FallStore(new ST.SimState()), crowd = Array.from({ length: ST.simLayout().games }, () => new ST.SimState());
+SIM.RUST.falls = true;
+const doubles = (S: any): Float64Array => S.home.d.slice(S.base, S.base + FH.FALL_LEN);
 const here = <T,>(f: () => T): T => { const was = SIM.RUST.falls; SIM.RUST.falls = false; try { return f(); } finally { SIM.RUST.falls = was; } };   // (the twin's rules are this file's, whatever the row says)
-const MET = { due: 0, duePieces: 0, dust: 0, heard: 0, unheard: 0, full: 0, crunch: 0, offFloor: 0, moved: 0, clears: 0, keptOther: 0 };
+const MET = { due: 0, duePieces: 0, dust: 0, heard: 0, unheard: 0, full: 0, crunch: 0, offFloor: 0, dropped: 0, parked: 0, boundAgain: 0, clears: 0, keptOther: 0 };
+let wasParked = false;
 const pick = () => rnd() < 0.7 ? FH.FALL_GLASS : FH.FALL_PIECES;
 let differ = 0, first = '', time = 0;
 const heavier = (a: number) => BREAK ? a * (1 + 2 ** -52) : a;
@@ -42,13 +45,15 @@ for (let i = 0; i < N && differ < 5; i++) {
   else if (r < 0.93) { const [px, pz] = anywhere(), lv = rnd() * 0.6, cf = rnd() < 0.9 ? 0.012 : 0.2; what = 'step'; a = A.step(px, pz, lv, cf, 0.9, 0.6, 0.12); b = here(() => B.step(px, pz, lv, cf, 0.9, 0.6, 0.12)); if ((a as any).k > 0) MET.crunch++; }
   else if (r < 0.97) { const gap = rnd() * 0.5, l = pick(); what = 'heard'; a = A.heard(time, gap, l); b = here(() => B.heard(time, gap, l)); }
   else if (r < 0.973) { const only = rnd() < 0.5, l = pick(), other = A.waitingIn(1 - l); what = 'clear'; A.clear(only, l); here(() => B.clear(only, l)); MET.clears++; if (other > 0 && A.waitingIn(1 - l) === other && A.waitingIn(l) === 0) MET.keptOther++; }
-  else { what = 'the row dropped and raised'; SIM.RUST.falls = false; st.settle(g); const out = !A.home; SIM.RUST.falls = true; if (rnd() < 0.5) st.settle(g); a = out; b = true; MET.moved++; if (!A.home) { /* (left out for a while: its rules are this file's until the next settle) */ } }
-  if (!A.home && rnd() < 0.05) st.settle(g);
+  else if (r < 0.987) { what = 'the row dropped'; SIM.RUST.falls = false; MET.dropped++; }   // (for a while: its rules are this file's, over the same doubles, until it is raised below)
+  else { what = 'the block parked'; for (const c of crowd) c.bind(); a = st.where; b = -1; MET.parked++; wasParked = true; }   // (every slot is another block's: the store's doubles are read where they are parked)
+  if (!SIM.RUST.falls && rnd() < 0.05) SIM.RUST.falls = true;
+  if (wasParked && st.where >= 0) { wasParked = false; MET.boundAgain++; }   // (a rule taken in the module since brought it back)
   const da = doubles(A), db = doubles(B); let bad = JSON.stringify(a) === JSON.stringify(b) ? '' : `answers ${JSON.stringify(a)} | ${JSON.stringify(b)}`;
   for (let k = 0; k < FH.FALL_LEN && !bad; k++) if (!Object.is(da[k], db[k])) bad = `double ${k}: ${da[k]} in the store under test, ${db[k]} in its twin`;
   if (bad) { differ++; if (!first) first = `rule ${i} (${what}): ${bad}`; }
 }
-FH.FALLS.both = false; SIM.RUST.falls = false; st.settle(g);
+FH.FALLS.both = false; SIM.RUST.falls = false;
 const F = FH.FALLS, thin = (Object.keys(MET) as (keyof typeof MET)[]).filter(k => MET[k] === 0);
 const ok = laid && differ === 0 && F.differ === 0 && F.asked > N / 4 && F.there > N / 4 && thin.length === 0;
 console.log(`falls-ident: ${N} rules · the layout the two sides name alike: ${laid} (${sizes.join(' × ')}, ${FH.FALL_LEN} doubles) · ${F.asked} answered both ways, ${F.differ} differ${F.first ? ` (${F.first})` : ''} · ${F.there} the module's alone, the twin ${differ ? `PARTS: ${first}` : 'the same after every rule'}`);

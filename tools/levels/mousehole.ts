@@ -32,6 +32,7 @@ import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene
 import type { SurfacesData } from '../../src/scene/levelData';
 import * as K from '../../src/scene/levelKit';
 import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
+import { KERB_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'mousehole';
 export const NOTES = 'The clinic: the level of the mission Mousehole. Three rooms and a duty room off one lit corridor the duty room covers; blank outer wall and thin partitions for wall charges. Kit pieces only. Regenerate: bun run tools/levels/export.ts mousehole';
@@ -43,7 +44,7 @@ export const MOUSEHOLE_PAINT = {
   carPale: [0.74, 0.74, 0.7] as Vec3,      // the clinic's own car
   carDark: [0.2, 0.22, 0.26] as Vec3,      // the car on the lot
   tank: [0.2, 0.3, 0.42] as Vec3,          // the water tank
-  kerb: [0.5, 0.5, 0.47] as Vec3,          // the lot's precast kerbs
+  kerb: KERB_GREY,                         // the lot's precast kerbs (a slab: scene/stuff.ts)
 };
 
 /** the rooms INSIDE their walls, and the corridor */

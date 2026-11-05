@@ -12,6 +12,7 @@ import type { InHandWord } from './inhand';
 import { longModel, pistolModel, type LongModel, type PistolModel, type ModelCol } from './gunlook';   // (a leaf — called inside the box builders only: a gun drawn as a model of its own)
 import { reloadShow, reloadHandBoxes } from './gunreload';   // (called inside the box builders only: what a reload under way shows on a model)
 import type { GunModelId, WeaponId } from './weapons';
+import { drawnAs, paintOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
 import { GEAR } from './gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
 import { packOf, sideBind, sideSkinned, sidePitch, sidePitched, chestJoint, type SidePlace } from './packside';   // (a leaf — called inside the box builders only: a long thing at the side of the pack he wears)
 
@@ -251,6 +252,9 @@ const COL = {
   brass: [0.5, 0.36, 0.12] as Vec3, shell: [0.26, 0.04, 0.03] as Vec3, cloth: [0.11, 0.1, 0.065] as Vec3,   // gunlook.ts models: a belt's brass, a shotgun shell's red hull, a belt box's coyote nylon
   polymer: [0.045, 0.05, 0.046] as Vec3, darkMetal: [0.026, 0.026, 0.03] as Vec3,   // the SC-20K: a green-black polymer hull and the darker phosphated steel of its can, box, rail and optic (throwables.ts SC20K_ITEM repeats them for the one on the floor)
 };
+// (what the look made of three of these by their COLOUR until 11-04, kept so the picture did not move; nobody chose them: a suppressor as bare iron, flat dark
+// earth furniture as a mud wall, a shell's hull as cloth. A part made with the table's own array carries the word: segAt. scene/stuff.ts drawnAs)
+drawnAs('metal', COL.can); drawnAs('mud wall', COL.fde); drawnAs('cloth', COL.shell);
 /** the tag on the knife's boxes (Box.name): nothing in the game reads it — the QA probes count them by it (tools/qa/hold-pose-probes.ts) */
 export const KNIFE_TAG = 'knife';
 /** …and on the boxes of its sheath on the chest, the sheathed handle included (the probes: a tell shows these and no KNIFE_TAG box) */
@@ -356,7 +360,7 @@ function segAt(out: Box[], g: Frame, s: Seg, adj: Adj | undefined, albedo: Vec3,
   let yaw: number, rot: Quat;
   if (adj) { yaw = Math.atan2(dir[0], dir[2]); rot = quat.fromBasis(f.x, f.y, f.z); }
   else { if (rotOf !== f) { rotYaw = Math.atan2(dir[0], dir[2]); rotQ = quat.fromBasis(f.x, f.y, f.z); rotOf = f; } yaw = rotYaw; rot = [rotQ[0], rotQ[1], rotQ[2], rotQ[3]]; }
-  out.push(boxOf(mid, [s.thick, s.tall, len], yaw, albedo, [emissive[0], emissive[1], emissive[2]], lit ? GLOW_FLAGS : PROP_FLAGS, curOwner, rot, name));   // (makeBox's own object, key for key, without its spread)
+  const made = boxOf(mid, [s.thick, s.tall, len], yaw, albedo, [emissive[0], emissive[1], emissive[2]], lit ? GLOW_FLAGS : PROP_FLAGS, curOwner, rot, name); made.stuff = paintOf(albedo)?.stuff; out.push(made);   // (makeBox's own object, key for key, without its spread; and what the part is made of, if its colour is a paint somebody named — one shape whether it is or not: scene/stuff.ts)
 }
 
 /** Flattened head 'forward' (falls back to the body heading when the head looks nearly straight up/down) — the goggle strap follows the skull's yaw only. */
@@ -527,14 +531,6 @@ function mixAdj(a: Adj | undefined, b: Adj | undefined, k: number): Adj | undefi
   return { off: [l(0, 'off'), l(1, 'off'), l(2, 'off')], rot: [l(0, 'rot'), l(1, 'rot'), l(2, 'rot')] };
 }
 const ADJ_NONE: Adj = { off: [0, 0, 0], rot: [0, 0, 0] };
-/** applyAdj backwards: the PARENT frame whose child by `adj` is g (where a wrist must be, and how its hand must lie, for the gun group it carries to stand at g) */
-export function unAdj(g: Frame, adj?: Adj): Frame {
-  if (!adj) return { o: v3.copy(g.o), x: g.x, y: g.y, z: g.z };
-  const I = applyAdj({ o: [0, 0, 0], x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }, { off: [0, 0, 0], rot: adj.rot });   // the child's axes in the parent's own coordinates
-  const ax = (k: number): Vec3 => [g.x[0] * I.x[k] + g.y[0] * I.y[k] + g.z[0] * I.z[k], g.x[1] * I.x[k] + g.y[1] * I.y[k] + g.z[1] * I.z[k], g.x[2] * I.x[k] + g.y[2] * I.y[k] + g.z[2] * I.z[k]];
-  const x = ax(0), y = ax(1), z = ax(2), a = adj.off;
-  return { o: [g.o[0] - x[0] * a[0] - y[0] * a[1] - z[0] * a[2], g.o[1] - x[1] * a[0] - y[1] * a[1] - z[1] * a[2], g.o[2] - x[2] * a[0] - y[2] * a[1] - z[2] * a[2]], x, y, z };
-}
 /** The thigh holster's group frame off three joints and the body's forward, in whatever ONE space they are given in (holsterBoxes' own construction: the world for
  *  the drawer, the animator's model space for the hand that goes to it) */
 export function holsterFrameOf(th: Vec3, kn: Vec3, hp: Vec3, fwd: Vec3, H: Rig['holster'] = RIG.holster): Frame {

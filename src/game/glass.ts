@@ -16,6 +16,8 @@ import { SideMap, SideSet, GameSideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import { PLAYER_ID } from './consts';
+import { sim as simX } from '../sim/sim';
+import { panesUntouched } from './glassbreak';
 import type { Game, GameEvent } from './game';
 import type { GlassImpact } from './glassbreak';
 
@@ -53,17 +55,17 @@ export function saveGlassFx() { try { localStorage.setItem(FX_KEY, JSON.stringif
 export function glassFxBoot(): boolean { loadGlassFx(); return GLASSFX.on; }
 
 /** per-Game glass bookkeeping (a WeakMap, like the whistle's: nothing on Game itself but the hooks) */
-interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; eventAt: Map<number, number>; crackAt: number; }
+interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; crackAt: number; }
 const states = new GameSideMap<Game, GlassState>('glass.states');
 export function glassState(g: Game): GlassState {
   let s = states.get(g);
-  if (!s) { const panes: number[] = []; g.level.boxes.forEach((b, i) => { if (b.flags & BoxFlag.Glass) panes.push(i); }); s = { panes, seen: new SideSet(), hits: 0, lastHitT: -100, log: [], eventAt: new Map(), crackAt: -1e9 }; states.set(g, s); }
+  if (!s) { const panes: number[] = []; g.level.boxes.forEach((b, i) => { if (b.flags & BoxFlag.Glass) panes.push(i); }); s = { panes, seen: new SideSet(), hits: 0, lastHitT: -100, log: [], crackAt: -1e9 }; states.set(g, s); }
   return s;
 }
 
 /** Game.resetLevelState, beside decals.clear(): the crack stars have just gone with every other mark, so the encounter's hit count, last-hit clock and log go too
  *  ('N hits this encounter' on the panel meant every encounter since boot — review U9.10). The pane list and the seen-set stand (statics; a WeakSet). */
-export function resetGlass(g: Game) { const s = states.get(g); if (!s) return; s.hits = 0; s.lastHitT = -100; s.log.length = 0; s.eventAt.clear(); s.crackAt = -1e9; }
+export function resetGlass(g: Game) { if (!panesUntouched(g.sim)) simX().panes_forget_heard(g.sim.bind()); const s = states.get(g); if (!s) return; s.hits = 0; s.lastHitT = -100; s.log.length = 0; s.crackAt = -1e9; }
 
 /** every static Glass box index of this level: level.boxes[i] ≡ world.statics[i], and nothing gains or loses the Glass bit at runtime */
 export function glassPanes(g: Game): number[] { return glassState(g).panes; }
@@ -96,13 +98,30 @@ function nearestOnBox(b: Box, p: Vec3): { q: Vec3; d: number } {
   const q: Vec3 = [b.c[0] + cs * lx + sn * lz, b.c[1] + ly, b.c[2] - sn * lx + cs * lz];
   return { q, d: v3.dist(p, q) };
 }
-/** a 32-bit hash of where a pane was hit (pane index + the point to the millimetre): the crack pattern's seed — the same shot at the same spot draws the same star whatever else has happened */
-export function hitSeed(bi: number, p: Vec3): number {
-  let h = Math.imul(bi + 1, 0x9E3779B1) >>> 0;
-  for (const x of p) { h = Math.imul(h ^ (Math.round(x * 1000) | 0), 0x85EBCA77) >>> 0; h = (h ^ (h >>> 13)) >>> 0; }
-  return Math.imul(h, 0xC2B2AE3D) >>> 0;
-}
-
+/** one number of a seed, to the millimetre, folded into the word so far */
+const seedMix = (h: number, x: number): number => { h = Math.imul(h ^ (Math.round(x * 1000) | 0), 0x85EBCA77) >>> 0; return (h ^ (h >>> 13)) >>> 0; };
+/** WHAT A BOX IS, as one 32-bit word: its centre and its half sizes to the millimetre. THE SEED OF A HIT ON GLASS OR ON A THIN WALL STARTS HERE (a pane's
+ *  star and break, a round's turn through a pane, a partition or a door's leaf) and none of them reads where the box stands in the level's list. A list place
+ *  moves with every box written before it, so one crate more or less in a level's file used to move every pane's break and every round's turn on the level,
+ *  and with them the run, with no change of play (2026-11-05: a lying drum went from two boxes to one and two lessons read other digests). What a box is does
+ *  not move when boxes are added or taken away round it: a hit on THIS box rolls what it rolled. tools/qa/hitseed-check.ts holds it.
+ *  - No turn (yaw) in the word: one box can be written with more than one, and its centre and sizes already say which box it is. Two boxes with one centre and
+ *    one size are one box to a seed (no sheet of glass and no thin wall of any level is such a pair today).
+ *  - A piece cut from a wall is a box of its own and seeds by what it is; a door's leaf by where it stands as it is struck.
+ *  - NOT COVERED: the ORDER of work. Where two panes share a frame's budget (glassbreak.ts releasesPerFrame) the one written first in the level is served
+ *    first, so two panes written the other way round can still let their pieces go on other frames. And a few seeds outside glass, thin walls and window
+ *    bars (winbars.ts starts from this word too) still read a place in a list (a door blown off, a wall's edge look): docs/agents/destruction.md, the hit
+ *    seed's bullet, lists them. */
+export function boxSeed(b: Box): number { return simX().panes_box_seed(b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2]) >>> 0; }
+/** a box's word (boxSeed) and a point to the millimetre, as one 32-bit word */
+export function pointSeed(word: number, p: Vec3): number { return simX().panes_point_seed(word, p[0], p[1], p[2]) >>> 0; }
+/** a 32-bit hash of where a box was hit: a pane's crack pattern, a round's turn through glass or a thin wall — the same shot at the same spot of the same box
+ *  rolls the same whatever else has happened, and whatever else the level holds */
+export function hitSeed(b: Box, p: Vec3): number { return pointSeed(boxSeed(b), p); }
+/** the seed of a BLAST on a box (its word): the charge's point ON THE FLOOR PLAN, its height left out. One charge reaches a pane more than once (the
+ *  destruction's feed at its true point, its 'bang' event lifted off the floor, the quiet stars of crackNear below), and each arrival draws the same stars
+ *  from here whichever comes first: by the point as each arrival gave it, a can on the floor (y 0.12, its event at 0.3) drew two unrelated sets. */
+export function blastSeed(word: number, at: Vec3): number { return pointSeed(word, [at[0], 0, at[2]]); }
 /** THE IMPACT ENTRY POINT (rebuild/glass/fracture.md): a blow of `energy` met pane `pane` (a level box index) at `point` flying `dir` — the crack decal on the face it
  *  came at, the fracture filed (glassbreak.ts impact(): inert with tune.glassBreak off / chaos 0 / the tour — then the pane stays exactly what it was to every ray, foot
  *  and sound path), the crack heard, the event on the floor's ears. `energy` 1 = one pistol round square on (a rifle round 1.6‥2, a buckshot pellet 0.4, a thrown
@@ -121,7 +140,7 @@ export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null
   if (gb) { if (cause !== 'bang') Object.assign(res, gb.impact(pane, point, dir, energy, who, opts?.through)); else res.type = gb.typeOfPane(pane) ?? 'laminated'; }
   if (res.wasOpen) return res;
   const S = glassState(g);
-  const seed = hitSeed(pane, point);
+  const seed = hitSeed(b, point);
   // the decal: centred where it hit, on the pane's mid-plane (composite finds it from either face), its normal toward the side the blow came from, its reach and
   // its look drawn off the seed; restricted to THIS pane on the GPU (cracks stop at the frame). Nothing when decals are off — the sound and the event still happen.
   let n = paneNormal(b);
@@ -144,13 +163,11 @@ export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null
     const sinceAny = g.time - S.crackAt; const sound = !(GLASS.crackGap > 0 && sinceAny >= 0 && sinceAny < GLASS.crackGap);
     if (sound) S.crackAt = g.time;
     // … and the floor's ears get one event per pane PER SHOOTER per liveGap (a second gun on the same pane is its own noise, under its own id)
-    const key = pane * 1024 + (who & 1023); const last = S.eventAt.get(key); const since = last === undefined ? 1e9 : g.time - last;
-    if (GLASS.liveGap > 0 && since >= 0 && since < GLASS.liveGap) {
+    if (GLASS.liveGap > 0 && gb && !gb.asking((x, b) => x.panes_heard(b, pane, who, g.time, GLASS.liveGap) === 1)) {
       if (sound) g.audio.play('glassCrack', point, 0.5, { rate: 0.94 + 0.08 * u + 0.3 * w });
       { const pl = manById(g, who); if (pl) pl.noise = Math.max(pl.noise, GLASS.hearLevel); }
       return res;
     }
-    if (GLASS.liveGap > 0) S.eventAt.set(key, g.time);
     if (!sound) {   // the event is the floor's, the voice is skipped
       glassEvent(g, b, point, GLASS.hearLevel, who);
       { const pl = manById(g, who); if (pl) pl.noise = Math.max(pl.noise, GLASS.hearLevel); }
@@ -176,7 +193,7 @@ export function crackNear(g: Game, at: Vec3, radius: number, who: number): numbe
   for (const bi of glassPanes(g)) {
     const b = g.level.boxes[bi]; if (!isSheet(b)) continue;   // solid glass (the bottle) does not craze
     const { q, d } = nearestOnBox(b, at); if (d > radius) continue;
-    let s = hitSeed(bi, at);
+    let s = blastSeed(boxSeed(b), at);
     const wide = b.h[0] < b.h[2] ? 2 : 0;                              // the pane's long horizontal local axis
     const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw);
     const axis: Vec3 = wide === 0 ? [cs, 0, -sn] : [sn, 0, cs];

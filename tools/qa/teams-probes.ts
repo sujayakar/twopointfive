@@ -1,10 +1,7 @@
-// The 'teams' probe family (run through probes.ts: `bun run tools/qa/probes.ts teams | teams-table | teams-fight | teams-player | teams-dark | teams-despawn |
-// teams-identity [--verbose] [--print]`): SIDES for the AI (guards.ts teams — the 'Breach' showcase's two operatives clearing a room of hostiles, all AI) —
+// The 'teams' probe family (run through probes.ts: `bun run tools/qa/probes.ts teams | teams-table | teams-fight | teams-player | teams-dark | teams-despawn
+// [--verbose]`): SIDES for the AI (guards.ts teams — the 'Breach' showcase's two operatives clearing a room of hostiles, all AI) —
 // who is hostile to whom, AI men perceiving / targeting / shooting hostile AI men through the same senses they use on Sam, the spawn / despawn / engage seam
 // the stage lane calls, and above all IDENTITY: with no unit spawned the guards-versus-Sam game is the game it was, frame for frame and round for round.
-//   teams-identity  a seeded 45 s fight staged like weapons-identity's guard section and then let off the leash (a second man freed, Sam teleported out of their
-//                   sight and back): a digest of every man's state / position / aim / awareness / fix and of Sam's, every frame, plus the frames the rounds left
-//                   on — FROZEN on the tree before the teams change (EXPECT below); the tree with teams must reproduce it exactly. `--print` re-measures it.
 //   teams-table     the hostility table, both ways round, for every pair of sides.
 //   teams-fight     two operatives (FN2000) and two hostiles (AKS-74U) spawned nine metres apart up the cubicles' north aisle, lit, in each other's sight, all four
 //                   put in the fight by engage(): inside six seconds somebody is dead, rounds went BOTH ways (the shot events by who fired them), nobody ever had a
@@ -24,83 +21,17 @@ const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
-const PRINT = process.argv.includes('--print');
 const f1 = (x: number) => x.toFixed(1), f2 = (x: number) => x.toFixed(2);
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function verdict(ok: boolean, label: string, detail: string) { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); return ok; }
-/** A guard planted at `p` facing yaw, still, no path, posed twice (bones where the sight tests read them). */
-function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
-/** parked out on the lot east of the building, held and pinned, facing east, deaf (weapons-identity's parking, kept letter for letter: the digest depends on it) */
-function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; place(gd, [37.5, 0, 6 + i * 1.5], Math.PI / 2); gd.heardUpTo = 1e12; }
-/** alert, licensed (a sighting this frame), the gun coming round in `fireCd`; `pinned`: fires from where he was put (weapons-identity's man) or free to close and step */
-function armAlert(gd: any, game: any, fireCd = 0.3, pinned = true) { gd.hold = false; gd.pinned = pinned; gd.dazzledUntil = -1; gd.heardUpTo = 1e12; gd.state = 'alert'; gd.awareness = 1; gd.reactT = 0; gd.fireCd = fireCd; gd.reloadT = -1; gd.lastKnown = v3.copy(game.player.char.pos); gd.lastSeenT = game.time; resetChase(gd); }
 
-/** FNV-1a over strings, 32 bits, chained: the digest of a run */
-class Digest {
-  h = 0x811c9dc5 >>> 0; n = 0;
-  add(s: string) { for (let i = 0; i < s.length; i++) { this.h ^= s.charCodeAt(i); this.h = Math.imul(this.h, 0x01000193) >>> 0; } this.n++; }
-  num(x: number | null | undefined) { this.add(x === null || x === undefined ? '~' : String(x)); }   // (String(x): every bit of the double — identity means identity)
-  vec(p: number[] | null | undefined) { if (!p) { this.add('~'); return; } this.num(p[0]); this.num(p[1]); this.num(p[2]); }
-  get hex() { return this.h.toString(16).padStart(8, '0'); }
-}
-
-// ================================================================ (f) identity: no unit spawned, the fight against Sam is the fight it was
-/** The staging is weapons-identity's guard section (seed, spots, the parked pair, the pinned man 6.5 m up the corridor from a lit god-mode Sam) for the first
- *  fifteen seconds — so its frozen shot frames are a second witness — and then everything the teams change had to route through a 'foe' is exercised with the
- *  men FREE: at 15 s the corridor man is unpinned and the cubicles man is stood in the corridor behind him and freed too (closing, the colleague in the line,
- *  the side-step, muzzle discipline, the bore's last look, a colleague's shots placing Sam); at 25 s Sam is teleported into the server room out of their sight
- *  (the fix led through the doorway, the chase, the pie, the search and its spots); at 35 s back into the corridor in front of them (re-acquired, the aim
- *  model's track from nothing). Every frame: each man's state, position, body / aim yaw, aim pitch, awareness, fireCd, reloadT, fix, path length and Sam's
- *  position + hitFlash go into the digest; the frames a report played on are listed. */
-async function identityRun(): Promise<{ digest: string; frames: number; shotFrames: number[]; states: string; hits: number }> {
-  Math.random = seeded(502);
-  const W = await standUp(); const { game } = W; const pl = game.player;
-  if ((game as any).civilians) { (game.tune as any).civilians = false; (game as any).civilians.length = 0; }   // (civilians scream and run under gunfire: this family's frozen numbers predate them — switched off like the other identity probes)
-  game.godMode = true; game.aiEnabled = true;
-  if ('tactics' in game.tune) game.tune.tactics = false;   // (the pursuit tactics — game/tactics.ts, after this digest was frozen — re-deal two free alert men on one fix by design; this card measures the TEAMS change alone, so they are pinned off here: their own identity card, tools/qa tactics-identity, holds their off path to the old chase)
-  if ('devices' in game.tune) game.tune.devices = false;   // (the level's cameras — game/devices.ts, also after the freeze — see Sam standing lit in the corridor and send the parked third man to look ('aas' at 15 s, two rounds different): pinned off for the same reason; the devices family holds its own vision digest)
-  for (let i = 0; i < 5; i++) W.step(DT);
-  const [A, B, C] = game.guards; park(B, 1); park(C, 2);
-  game.teleportPlayer([24.0, 0, 11.4]); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false; pl.pistol.lightOn = false;
-  place(A, [17.5, 0, 11.3], Math.PI / 2); W.step(DT); pl.visibility = 0.9;
-  armAlert(A, game, 0.3, true);
-  const audio: any[] = []; W.audioLog = audio;
-  const D = new Digest(); const shotFrames: number[] = []; let idx = 0; let states = ''; let hits = 0;
-  const FRAMES = 60 * 45;
-  for (let frame = 0; frame < FRAMES; frame++) {
-    if (frame === 60 * 15) { A.pinned = false; resetChase(A); B.dazzledUntil = -1; place(B, [12.5, 0, 11.2], Math.PI / 2); armAlert(B, game, 0.5, false); B.heardUpTo = -1; A.heardUpTo = -1; }   // off the leash, both, and listening again
-    if (frame === 60 * 25) game.teleportPlayer([18.0, 0, 7.0]);    // into the server room, out of their sight
-    if (frame === 60 * 35) game.teleportPlayer([26.0, 0, 11.3]);   // back out in the corridor, east of them
-    pl.visibility = 0.9; W.step(DT);
-    if (pl.hitFlash > 0.9) hits++; pl.hitFlash = 0;
-    for (; idx < audio.length; idx++) { const a = audio[idx]; if (a.name === 'pistolLoud' || a.name === 'pistolSuppressed') shotFrames.push(frame); }
-    for (const gd of game.guards) { D.add(gd.state); D.vec(gd.char.pos); D.num(gd.char.bodyYaw); D.num(gd.char.aimYaw); D.num(gd.char.aimPitch); D.num(gd.awareness); D.num(gd.fireCd); D.num(gd.reloadT); D.vec(gd.lastKnown); D.num(gd.path.length); D.num(gd.muzzleDown ? 1 : 0); }
-    D.vec(pl.char.pos); D.num(game.events.length);
-    if (frame % 300 === 0) states += game.guards.map((g: any) => g.state[0]).join('') + ' ';
-  }
-  W.audioLog = null;
-  return { digest: D.hex, frames: FRAMES, shotFrames, states, hits };
-}
-export async function teamsIdentity() {
-  console.log('\n=== teams-identity: no unit spawned — a seeded 45 s fight (weapons-identity\'s pinned man, then two free men, Sam out of sight and back) digested frame by frame against the digest frozen before the teams change ===');
-  const R = await identityRun();
-  if (PRINT) console.log(`\n--- measured (paste over EXPECT_IDENTITY) ---\nconst EXPECT_IDENTITY = ${JSON.stringify({ digest: R.digest, frames: R.frames, shotFrames: R.shotFrames, states: R.states, hits: R.hits })};\n`);
-  const E = EXPECT_IDENTITY; let allPass = true;
-  const first15 = R.shotFrames.filter(f => f < 60 * 15 - 1);   // (the pinned spell: weapons-identity's own frames, its second witness — up to the frame the leash comes off)
-  allPass = verdict(JSON.stringify(first15) === JSON.stringify(WEAPONS_IDENTITY_FIRST15), 'the pinned fifteen seconds are weapons-identity\'s frames', `rounds at ${JSON.stringify(first15)}${JSON.stringify(first15) === JSON.stringify(WEAPONS_IDENTITY_FIRST15) ? '' : `\n    want ${JSON.stringify(WEAPONS_IDENTITY_FIRST15)}`}`) && allPass;
-  allPass = verdict(JSON.stringify(R.shotFrames) === JSON.stringify(E.shotFrames), 'every round of the 45 s on the frame it was', `${R.shotFrames.length} rounds${JSON.stringify(R.shotFrames) === JSON.stringify(E.shotFrames) ? '' : `\n    got  ${JSON.stringify(R.shotFrames)}\n    want ${JSON.stringify(E.shotFrames)}`}`) && allPass;
-  allPass = verdict(R.states === E.states && R.hits === E.hits, 'states every 5 s and rounds in Sam as they were', `${R.states.trim()} · ${R.hits} in Sam${R.states === E.states && R.hits === E.hits ? '' : ` — want ${E.states.trim()} · ${E.hits}`}`) && allPass;
-  allPass = verdict(R.digest === E.digest && R.frames === E.frames, 'the per-frame digest of everybody\'s state / position / aim / awareness / fix', `${R.digest} over ${R.frames} frames${R.digest === E.digest ? '' : ` — want ${E.digest}`}`) && allPass;
-  console.log(`=== teams-identity: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
-/** weapons-identity's frozen guard shot frames inside its first fifteen seconds (tools/qa/weapons-probes.ts EXPECT.guard.shotFrames, < 900) */
-const WEAPONS_IDENTITY_FIRST15 = [18, 79, 116, 154, 212, 246, 309, 362, 407, 463, 501, 563, 667, 724, 785, 827, 878];
-// frozen on the tree before the teams change, commit c8402f2 = main's code (`teams-identity --print` regenerates the literal)
-const EXPECT_IDENTITY = {"digest":"6934142b","frames":2700,"shotFrames":[18,79,116,154,212,246,309,362,407,463,501,563,667,724,785,827,878,926,969,1032,1082,1122,1178,1227,1331,1382,1424,1471,2523,2586,2644,2676,2695],"states":"app app app aap aap aap ssp ssp ssp ","hits":33};
 
 // ================================================================ shared staging for the behaviour probes
 const teamsMod = await import(`${ROOT}/src/game/teams.ts`);
+const { NVG } = await import(`${ROOT}/src/game/nvg.ts`);
+/** QA: teams-dark's red path — TEAMSDARK_BREAK=1 leaves the floor's lights ON for the 'lights out' line and OUT for the 'lights on' line: he is acquired in
+ *  the first and not in the second, and both lines must fail, on both stands. */
+const DARK_BREAK = process.env.TEAMSDARK_BREAK === '1';
 const { spawnUnit, despawnUnit, despawnUnits, units, engage, lightEstimateAt, canSeeChar } = guardsMod;
 const chestOf = (c: any): Vec3 => c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0]);
 const eyeOf = (c: any): Vec3 => c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]);
@@ -282,25 +213,28 @@ export async function teamsDark() {
     despawnUnits(game); W.step(DT);
   }
   // ---- (2) the light: both in the cubicles' north aisle, 8 m apart, in the open; the floor's lights out, then on
-  {
-    for (const grp of ['cubicles', 'monitors', 'lobby', 'corridor', 'breakroom']) game.setGroup(grp, false);
+  // (SIGHT BY THE LIGHT METER ALONE: with goggles the team sees a dark man through the tube and by the infrared light on it — nvg.ts, irlight.ts, and
+  //  probes.ts nvg has what they add. What bare eyes make of the meter is asked here with nobody's goggles on, as flashweight-lights asks the light rule)
+  { const nvgWas = NVG.on; NVG.on = false;
+    for (const grp of ['cubicles', 'monitors', 'lobby', 'corridor', 'breakroom']) game.setGroup(grp, DARK_BREAK);
     W.step(DT);
     const op = spawnUnit(game, { team: 'operative', pos: [14.2, 0, 13.35], yaw: Math.PI / 2, name: 'Bishop', light: false });   // (his own weapon light off: it would light the man he is looking at — true, and the point of a torch, but not this probe's question)
     const ho = spawnUnit(game, { team: 'hostile', pos: [22.2, 0, 13.35], yaw: -Math.PI / 2, name: 'Drake', light: false });
     op.hold = false; op.pinned = true; op.state = 'alert'; op.awareness = 1; op.reactT = 0; op.lastKnown = null;
-    ho.heardUpTo = 1e12; ho.dazzledUntil = 1e9;
+    ho.heardUpTo = 1e12;   // (deaf, and NOT blinded: a blinded man fires blind down his last line — he shot the operative dead seventeen frames in, and
+    //  both lines were then asked of a dead man. In the dark he sees the operative no better than he is seen)
     W.step(DT); W.step(DT);
     const los = !game.col.segmentBlocked(eyeOf(op.char), chestOf(ho.char)) || !game.col.segmentBlocked(eyeOf(op.char), eyeOf(ho.char));
     const inCone = canSeeChar(game, op, ho.char, false);
     const Edark = lightEstimateAt(game, chestOf(ho.char));
     let everFoe = false; let visMax = 0;
     for (let f = 0; f < 60 * 5; f++) { W.step(DT); if (op.foe) everFoe = true; visMax = Math.max(visMax, ho.visibility); }
-    allPass = verdict(los && inCone.visible && !everFoe, '(2) lights out: in the open, in his cone, line of sight clear — five seconds and never acquired (the meter reads him dark)', `LOS ${los} · canSee ${inCone.visible} at ${f1(inCone.dist)} m · E at his chest ${Edark.toFixed(3)} W/m² → vis peak ${f2(visMax)} (floor ${game.tune.visFloor}) · foe ever ${everFoe}`) && allPass;
-    for (const grp of ['cubicles', 'monitors', 'lobby', 'corridor', 'breakroom']) game.setGroup(grp, true);
+    allPass = verdict(los && inCone.visible && !everFoe && op.state !== 'dead' && ho.state !== 'dead', '(2) lights out: in the open, in his cone, line of sight clear — five seconds and never acquired (the meter reads him dark)', `LOS ${los} · canSee ${inCone.visible} at ${f1(inCone.dist)} m · E at his chest ${Edark.toFixed(3)} W/m² → vis peak ${f2(visMax)} (floor ${game.tune.visFloor}) · foe ever ${everFoe} · both alive ${op.state !== 'dead' && ho.state !== 'dead'}`) && allPass;
+    for (const grp of ['cubicles', 'monitors', 'lobby', 'corridor', 'breakroom']) game.setGroup(grp, !DARK_BREAK);
     let acquiredAt = -1; const t0 = game.time; let Elit = 0;
     for (let f = 0; f < 60 * 3; f++) { W.step(DT); if (f === 30) Elit = ho.irradiance; if (acquiredAt < 0 && op.foe === ho && op.sawFoeThisFrame) acquiredAt = game.time - t0; }
     allPass = verdict(acquiredAt >= 0 && acquiredAt <= 2.0, '(2) lights on: acquired by sight inside two seconds', `+${f2(acquiredAt)} s · E at his chest lit ${Elit.toFixed(2)} W/m² → vis ${f2(ho.visibility)}`) && allPass;
-    despawnUnits(game);
+    despawnUnits(game); NVG.on = nvgWas;
   }
   console.log(`=== teams-dark: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;

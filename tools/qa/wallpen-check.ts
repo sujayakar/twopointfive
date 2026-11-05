@@ -19,7 +19,7 @@ export async function wallpenCheck(): Promise<boolean> {
   const { WALLS, WALL_STATS } = await import(`${ROOT}/src/game/wallbreak.ts`);
   const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
   const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
-  const { surfOf } = await import(`${ROOT}/src/game/particleFx.ts`);
+  const { doesOf } = await import(`${ROOT}/src/scene/materials.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
   const DT = 1 / 60; const f2 = (x: number) => x.toFixed(2);
@@ -68,7 +68,7 @@ export async function wallpenCheck(): Promise<boolean> {
     const statics = g0.col.boxes.map((b: any, index: number) => ({ b, index }));
     const tall = (b: any) => b.c[1] - b.h[1] <= 0.1 && b.c[1] + b.h[1] >= 2.2;
     const parts = statics.filter(({ b, index }: any) => tall(b) && thinThing(g0, index)?.stuff === 'drywall' && Math.max(b.h[0], b.h[2]) >= 1);
-    const hard = statics.filter(({ b, index }: any) => tall(b) && !thinThing(g0, index) && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && ['concrete', 'metal'].includes(surfOf(b.albedo)) && Math.max(b.h[0], b.h[2]) >= 1 && Math.min(b.h[0], b.h[2]) <= 0.3);
+    const hard = statics.filter(({ b, index }: any) => tall(b) && !thinThing(g0, index) && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && ['concrete', 'metal'].includes(doesOf(b).surf) && Math.max(b.h[0], b.h[2]) >= 1 && Math.min(b.h[0], b.h[2]) <= 0.3);
     const count: Record<string, number> = {}; for (const { index } of statics) { const t = thinThing(g0, index); if (t) count[t.stuff] = (count[t.stuff] ?? 0) + 1; }
     const doors = g0.doors.list.map((d: any, i: number) => ({ d, b: d.box, index: 1e6 + i }));
     const wooden = doors.filter(({ d }: any) => !d.def.steel && !d.off && Math.abs(d.angle) < 0.02), steel = doors.filter(({ d }: any) => d.def.steel);
@@ -92,7 +92,7 @@ export async function wallpenCheck(): Promise<boolean> {
     line(!!tS && !!tP && tS.take > tP.take + 0.01 && tG === null, `a slant pays more by the longer path (60° off square: ${f2(tS?.take ?? -1)} against ${f2(tP?.take ?? -1)}), and a round laid along the sheet (84° off) is spent in it`);
     if (H) {
       const hb = H.b, hn = H.n, at: Vec3 = [hb.c[0] + hn[0] * H.half, 1.2, hb.c[2] + hn[2] * H.half];
-      line(thinToll(g0, H.index, at, [-hn[0], 0, -hn[2]], rifle) === null && thinPath(g0, v3.mad(at, hn, 1), [-hn[0], 0, -hn[2]], 30, rifle) === null, `a hard wall (static ${H.index}, ${surfOf(hb.albedo)}, ${f2(H.half * 200)} cm) stops a rifle round: no toll, no flight beyond`);
+      line(thinToll(g0, H.index, at, [-hn[0], 0, -hn[2]], rifle) === null && thinPath(g0, v3.mad(at, hn, 1), [-hn[0], 0, -hn[2]], 30, rifle) === null, `a hard wall (static ${H.index}, ${doesOf(hb).surf}, ${f2(H.half * 200)} cm) stops a rifle round: no toll, no flight beyond`);
     } else line(false, 'no hard full-height wall was found on the office to ask');
     if (steel.length) { const sd = steel[0], n = thinN(sd.b); const at: Vec3 = [sd.b.c[0] + n[0] * Math.min(sd.b.h[0], sd.b.h[2]), 1.2, sd.b.c[2] + n[2] * Math.min(sd.b.h[0], sd.b.h[2])]; line(thinToll(g0, sd.index, at, [-n[0], 0, -n[2]], rifle) === null, `the steel door '${sd.d.def.name}' stops a rifle round`); }
     const fp = thinPath(g0, P.from, P.d, 30, rifle), fp2 = thinPath(g0, P.from, P.d, 30, rifle);

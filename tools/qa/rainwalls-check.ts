@@ -46,22 +46,31 @@ export async function rainWallsCheck(): Promise<boolean> {
       'the depot\'s outer walls: rain shows in front of the outer face of every one, and not in front of its inner face or the floor at its foot',
       `${L.roofs.length} roof(s), ${W.length} outer walls: outer face shown ${face}, inner face dry ${inner}, the floor 10 cm inside dry ${floor} (the bare rectangles hid the outer face of ${oldHid})`); }
   // (2) every level: the faces, and no bare floor let into the rain
-  { let walls = 0, face = 0, inner = 0, oldHid = 0, levels = 0, bare = 0, worst = '', worstA = 0; const miss: string[] = [], wetIn: string[] = [];
+  { let walls = 0, face = 0, inner = 0, oldHid = 0, levels = 0, bare = 0, worst = '', worstA = 0, open = 0, openMost = '', openA = 0, deep = '', deepK = 0; const miss: string[] = [], wetIn: string[] = [];
     for (const file of readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).sort()) {
       let L; try { L = levelOf(file); } catch { continue; } if (!L.roofs.length) continue; levels++;
       const W = outerWalls(L); let f = 0, i = 0;
       for (const w of W) { walls++; if (shown(L.roofs, w.o[0], w.o[1])) { face++; f++; } if (!shown(L.roofs, w.i[0], w.i[1])) { inner++; i++; } if (roofed(L.roofs, w.o[0], w.o[1])) oldHid++; }
       if (f < W.length) miss.push(`${file.replace('.json', '')} ${W.length - f}/${W.length}`); if (i < W.length) wetIn.push(`${file.replace('.json', '')} ${W.length - i}/${W.length}`);
-      // ground the old rule kept dry and this one shows rain in front of, that no box stands on (a wall, the sill under a window, a frame — and 7 cm round it, the roof's own pad): m² on a 5 cm grid
-      const tall = L.boxes.filter(b => b.c[1] + b.h[1] > 0.3 && b.c[1] - b.h[1] < CY - 0.3); let a = 0; const G = 0.05;
+      // ground the old rule kept dry and this one shows rain in front of, that no box stands on (a wall, the sill under a window, a frame — and 7 cm round it, the roof's own pad): m² on a 5 cm grid.
+      // Counted in two, by what stands at the roof's edge there. AT A WALL (a ceiling-high box within half a metre: a doorway's threshold, the strip a packed roof reaches past its wall's face) it is
+      // floor the wall should have kept dry, and the bar is on it. Under an OPEN EDGE (a shelter on posts, a lean-to's open side) the rule's 0.2 m of streaks is rain blown in under a roof with no wall,
+      // which is what the write-up says of it: its AMOUNT is said and not barred, or every shelter a level gains would turn this line red (it did: nine levels with shelters since the bar was set); its DEPTH is barred below.
+      const tall = L.boxes.filter(b => b.c[1] + b.h[1] > 0.3 && b.c[1] - b.h[1] < CY - 0.3), high = L.boxes.filter(b => b.c[1] + b.h[1] >= CY - 0.01 && b.c[1] - b.h[1] < 0.3); let a = 0, o = 0; const G = 0.05;
+      const atWall = (x: number, z: number) => high.some(b => Math.hypot(Math.max(0, Math.abs(x - b.c[0]) - b.h[0]), Math.max(0, Math.abs(z - b.c[2]) - b.h[2])) <= 0.5);
       for (const r of L.roofs) for (let x = r[0] + G / 2; x < r[2]; x += G) for (let z = r[1] + G / 2; z < r[3]; z += G) {
         if (x > r[0] + 0.5 && x < r[2] - 0.5 && z > r[1] + 0.5 && z < r[3] - 0.5) { z = Math.max(z, r[3] - 0.5 - G / 2); continue; }   // (the middle of a rectangle is under it by the rule's own words: only its rim is walked)
         if (!shown(L.roofs, x, z) || L.roofs.indexOf(r) !== L.roofs.findIndex(q => x >= q[0] && z >= q[1] && x <= q[2] && z <= q[3])) continue;
-        if (!tall.some(b => Math.abs(x - b.c[0]) <= b.h[0] + 0.07 && Math.abs(z - b.c[2]) <= b.h[2] + 0.07)) a += G * G; }
-      bare += a; if (a > worstA) { worstA = a; worst = file.replace('.json', ''); } }
-    verdict(levels >= 20 && walls >= 150 && face >= 0.85 * walls && inner >= 0.97 * walls && oldHid >= 0.85 * walls && bare / levels < 0.5 && worstA < 4,
-      'every level under its own roofs: rain shows in front of nearly every outer wall\'s face, in front of next to no inner face, and next to no bare ground is let into it',
-      `${levels} levels, ${walls} outer walls (the bare rectangles hid ${oldHid} faces): outer face shown ${face}, inner face dry ${inner} · ground newly in front of the rain with nothing standing on it (a doorway's threshold, the strip a packed roof reaches past its wall's face, the rim of a roof that stands on no wall): ${bare.toFixed(1)} m² in all, most on ${worst} ${worstA.toFixed(2)} m² · faces still hidden (a third or fourth roof is packed to 0.2 m, rounded outward): ${miss.join(', ') || 'none'} · inner faces shown: ${wetIn.join(', ') || 'none'}`); }
+        if (!tall.some(b => Math.abs(x - b.c[0]) <= b.h[0] + 0.07 && Math.abs(z - b.c[2]) <= b.h[2] + 0.07)) { if (atWall(x, z)) a += G * G; else o += G * G; } }
+      // … and the open edges' own bar: HOW DEEP, never how much. The metres of roof edge with no wall at them and no other roof over them, and the ground counted under them
+      // over that length: the rule's own 0.2 m and no more (a tenth over, and a tenth of a square metre for corners), however many shelters a level has.
+      let e = 0; for (const r of L.roofs) { const lone = (x: number, z: number) => !atWall(x, z) && !roofed(L.roofs.filter(q => q !== r), x, z);
+        for (let x = r[0] + G / 2; x < r[2]; x += G) for (const z of [r[1], r[3]]) if (lone(x, z)) e += G; for (let z = r[1] + G / 2; z < r[3]; z += G) for (const x of [r[0], r[2]]) if (lone(x, z)) e += G; }
+      const k = (o - 0.1) / Math.max(e, 0.5); if (k > deepK) { deepK = k; deep = `${file.replace('.json', '')} ${o.toFixed(2)} m² under ${e.toFixed(1)} m`; }
+      bare += a; if (a > worstA) { worstA = a; worst = file.replace('.json', ''); } open += o; if (o > openA) { openA = o; openMost = file.replace('.json', ''); } }
+    verdict(levels >= 20 && walls >= 150 && face >= 0.85 * walls && inner >= 0.97 * walls && oldHid >= 0.85 * walls && bare / levels < 0.5 && worstA < 4 && deepK <= 0.22,
+      'every level under its own roofs: rain shows in front of nearly every outer wall\'s face, in front of next to no inner face, and next to no bare floor at a wall is let into it',
+      `${levels} levels, ${walls} outer walls (the bare rectangles hid ${oldHid} faces): outer face shown ${face}, inner face dry ${inner} · floor at a wall newly in front of the rain with nothing standing on it (a doorway's threshold, the strip a packed roof reaches past its wall's face): ${bare.toFixed(1)} m² in all, most on ${worst} ${worstA.toFixed(2)} m² (bars: under 0.5 m² a level, under 4 on any one) · under a roof's open edge, where no wall stands: ${open.toFixed(1)} m² in all, most on ${openMost} ${openA.toFixed(2)} m² (its amount is said, not barred; its DEPTH is: no deeper than 0.22 m, the rule's 0.2 and a tenth, deepest ${deep || 'none'} = ${deepK.toFixed(3)} m) · faces still hidden (a third or fourth roof is packed to 0.2 m, rounded outward): ${miss.join(', ') || 'none'} · inner faces shown: ${wetIn.join(', ') || 'none'}`); }
   // (3) where two slabs of one building meet, and the office's own two rectangles
   { const two = [[4, 4, 12, 10.93], [4, 10.81, 12, 20]]; let seam = 0, n = 0; for (let x = 4.5; x < 11.6; x += 0.25) for (let z = 10.5; z < 11.3; z += 0.05) { n++; if (!shown(two, x, z)) seam++; }
     const office = [[4, 4, 36, 24], [1.1, 9.33, 4, 12.87]]; let same = 0, m = 0; for (let x = 0.05; x < 40; x += 0.37) for (let z = 0.05; z < 28; z += 0.37) { m++; if (under(office, x, z, false) === roofed(office, x, z)) same++; }

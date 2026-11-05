@@ -23,7 +23,7 @@ import { standUp, ROOT } from './headless.ts';
 const { ATTENTION, attentionMarks, attentionWay: wayWith, attentionOf } = await import(`${ROOT}/src/game/attention.ts`);
 const { stateHash, stateDiff } = await import(`${ROOT}/src/game/rollback.ts`);
 /** the kept answers, held as the overlay holds them: on the asker's side, never in the game */
-const keptWays = new Map<object, unknown>(), kept = { get: (k: object) => keptWays.get(k), set: (k: object, v: unknown) => keptWays.set(k, v), nav: {} }, attentionWay = (g: any, m: any) => wayWith(g, m, kept);
+const keptWays = new Map<object, unknown>(), kept = { get: (k: object) => keptWays.get(k), set: (k: object, v: unknown) => keptWays.set(k, v) }, attentionWay = (g: any, m: any) => wayWith(g, m, kept);
 const { threadPoints } = await import(`${ROOT}/src/ui/attentionviz.ts`);
 const { RING } = await import(`${ROOT}/src/game/launcher.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);

@@ -1,6 +1,7 @@
 // Doors, for the sound replays (tools/qa/sound-tapes.cjs; the page bot runs it): every way a door is worked on the office floor, one at a time and with
-// nothing else going on. The steel stair door booted (it holds), the conference door pushed shut and eased open, the server room's lock tried from a
-// crouch and then picked, the keypad door tried with no code from the manager's side, the storage room's lock kicked in, the fire exit opened and shut by
+// nothing else going on. The steel stair door's bar tried and the door booted (it holds), the conference door pushed shut and eased open, the server
+// room's lock picked (its handle is not tried: with the wand on him and the fog up, a locked door's third row is the wand's), the keypad door tried
+// with no code from the manager's side, the storage room's lock kicked in, the fire exit opened and shut by
 // hand and then taken at a run. Nobody on the floor is awake (the sandbox's no-AI switch, which the run tape carries; the night staff still walk their
 // beats, so a door of theirs creaks now and then). Input only.
 import type { Bot } from '../lesson-run';
@@ -21,17 +22,16 @@ function settle(B: Bot, tail = 1.2) { const P = B.g.player; B.step(4); B.until((
 export function free(B: Bot) {
   const g = B.g, D = (n: string) => g.doors.byName(n);
   B.wait(1);
-  // the stair door: steel, locked — the boot rings on it and it holds
-  B.go([5.0, 0, 11.0], 12); if (work(B, ['kick'], [4.0, 1.0, 11.3])) B.wait(2.2);
+  // the stair door: steel, locked — its bar tried (it rattles), then the boot, which rings on it, and it holds
+  B.go([5.0, 0, 11.0], 12); if (work(B, ['rattle'], [4.0, 1.0, 11.3])) B.wait(1.4); if (work(B, ['kick'], [4.0, 1.0, 11.3])) B.wait(2.2);
   // the conference door stands open: pull it to, ease it open, push it wide, shut it again
   B.go([9.75, 0, 10.8], 15); const conf = [9.75, 1.0, 10.0];
   work(B, ['pull', 'push'], conf); settle(B);
   work(B, ['ease'], conf); settle(B);
   work(B, ['push', 'pull'], conf); settle(B);
   work(B, ['pull', 'push'], conf); settle(B);
-  // the server room: the handle tried from a crouch, then the lock picked, then in
+  // the server room: the lock picked, then in
   B.go([17.9, 0, 10.95], 20); const srv = [17.9, 1.0, 10.0];
-  B.crouch(true); if (work(B, ['rattle'], srv)) B.wait(1.4); B.crouch(false); B.wait(0.4);
   if (work(B, ['pick'], srv)) { B.until(() => !D('server').locked || !D('server').isClosed(), 8); B.wait(0.8); }
   if (D('server').isClosed()) { work(B, ['push', 'unlock', 'ease'], srv); settle(B); }
   // out again and round by the manager's office (its door stands open) to the keypad door's own face: tried with no code

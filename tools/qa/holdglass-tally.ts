@@ -1,4 +1,4 @@
-// THE OFFICE RESCUE, ARM AGAINST ARM — tables out of playthrough.ts's JSON for the question the 'holdglass' rule is asked (silent.ts silentGlassHolds): does a
+// THE OFFICE RESCUE, ARM AGAINST ARM — tables out of playthrough.ts's JSON for the question the 'holdglass' rule is asked (silent.ts roundHeldGlass): does a
 // squad that holds its fire through the conference glass rescue as often and bring as many teammates home, and is a loud squad the same run it was?
 //   bun run tools/qa/holdglass-tally.ts --col "today=a.json" --col "rule=b.json" [--pair today:rule …] [--same today:rule …] [--boot 4000]
 // One row per --col: runs, rescued, hostages alive, teammates up, the second the floor first went loud (playthrough's def.loudAt), runs with a defender shot in

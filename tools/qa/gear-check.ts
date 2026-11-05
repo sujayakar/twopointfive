@@ -16,7 +16,7 @@
 //   (6) the sponge round: in the air and spent it is three boxes under the ring's flags whichever kit is issued — the ring's three pale slats without the kit,
 //       a slug with a blue nose leading along its flight (and lying flat on the floor, on its side) under it; the kit column's second launcher tag reads HE.
 // Whole runs: `PT_DIGEST=1 bun run tools/qa/playthrough.ts` with the kit off agree digest for digest with the build before it; with TPS_GEAR=1 in front the digest's
-// `pistol` field reads 1+15/15,15,15 for 1+10/10,10,10 and so the folded words differ — the runs themselves are the same. GEAR_BREAK=1 = the goggles' glass lit: must fail.
+// `pistol` field reads 1+15/15,15,15 for 1+10/10,10,10 and so the folded words differ — the runs themselves are the same. GEAR_BREAK=1 = the goggles' glass lit: must fail. GEARSAVE_BREAK=1 = the first checkpoint saved under the new kit: the ten-load line must fail.
 // exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -60,6 +60,8 @@ const offRound = { air: inAir(), spent: spent() };
 { const a = offRound.air, s = offRound.spent, H = RING_ITEM.half, slat = (b: any, h: number[]) => b.h.join() === h.join() && b.albedo.join() === RING_ITEM.albedo.join();
   line(a.length === 3 && s.length === 3 && a.every(b => slat(b, [H[0], H[2], H[1]])) && s.every(b => slat(b, H)) && shellTag() === '40MM',
     `off: the ring is its three pale slats in the air (${a.length}) and spent (${s.length}), and the second launcher tag reads ${shellTag()}`); }
+game.restartEncounter();   // (the game was stood on the stand's kit, the new one where the page raises it: a restart loads the pistol as the switch now says, so the checkpoint below is the old kit's on either stand)
+if (process.env.GEARSAVE_BREAK === '1') { GEAR.on = true; game.restartEncounter(); GEAR.on = false; }   // (the red path: the checkpoint is saved under the new kit after all, as it was on the page's stand — the ten-load line must fail)
 const save10 = W.snapshot('gear-check: saved without the kit');   // (Sam's pistol as the old kit loads it: 1+10/10,10,10)
 
 GEAR.on = true;

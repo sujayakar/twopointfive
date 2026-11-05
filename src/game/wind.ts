@@ -29,9 +29,10 @@ import { INTERIOR, ANNEX } from './weather';
 import { WX_OWN } from './weatherKinds';
 import { isDaylight } from './lighting';
 import { gpuFx } from './particleFx';
+import type { GridWind } from '../scene/collision';
 
 /** the field's shape constants — render/shaders/wind_field.wgsl carries the same five under WIND_* (tools/qa wind-probes compares), + how a vent record becomes a jet */
-export const WIND_FIELD = { deflectH: 0.55, deflectLoss: 0.35, supportSigma: 2.6, stormTop: 8.0, stormLee: 1.5, /** dMax = cutK × reach */ cutK: 2.5, /** r0 = coreK × the face's size */ coreK: 0.4 };
+export const WIND_FIELD = { deflectH: 0.55, deflectLoss: 0.35, supportSigma: 2.6, stormTop: 8.0, stormLee: 1.5, /** the storm's share of its own speed at the ground, what it gains by `stormFullAt` metres up, and that height (wind_field.wgsl windStorm has the same three) */ stormLow: 0.55, stormGain: 0.45, stormFullAt: 2.5, /** dMax = cutK × reach */ cutK: 2.5, /** r0 = coreK × the face's size */ coreK: 0.4 };
 /** The lane's knobs (Tab ▸ Weather ▸ wind rows; persisted with tune.wind). */
 export const WIND = {
   def: 1,                                        // tune.wind's default: the master 0‥1 (× every source's speed; 0 = still air, nothing packed anywhere)
@@ -96,7 +97,7 @@ export function stormVel(wind: Vec3, interior: readonly number[], annex: readonl
   out[0] = 0; out[1] = 0; out[2] = 0;
   if (p[1] > WIND_FIELD.stormTop || p[1] < 0 || inRect(p[0], p[2], interior) || inRect(p[0], p[2], annex)) return out;
   const dOut = Math.max(Math.max(interior[0] - p[0], p[0] - interior[2]), Math.max(interior[1] - p[2], p[2] - interior[3]));
-  const k = smoothstep(0, WIND_FIELD.stormLee, dOut) * (0.55 + 0.45 * Math.max(0, Math.min(1, p[1] / 2.5)));
+  const k = smoothstep(0, WIND_FIELD.stormLee, dOut) * (WIND_FIELD.stormLow + WIND_FIELD.stormGain * Math.max(0, Math.min(1, p[1] / WIND_FIELD.stormFullAt)));
   out[0] = wind[0] * k; out[1] = wind[1] * k; out[2] = wind[2] * k; return out;
 }
 /** metres (x, z) stands outside roof R along its nearer axis (> 0 in the open) — a footprint with no width is no roof: far away (wind_field.wgsl windRoofOut) */
@@ -107,7 +108,7 @@ export function stormVelRoofs(wind: Vec3, roofs: readonly (readonly number[])[],
   if (p[1] > WIND_FIELD.stormTop || p[1] < 0) return out;
   let dOut = 1e6; for (let i = 0; i < roofs.length && i < 4; i++) dOut = Math.min(dOut, roofOut(p[0], p[2], roofs[i]));
   if (dOut <= 0) return out;
-  const k = smoothstep(0, WIND_FIELD.stormLee, dOut) * (0.55 + 0.45 * Math.max(0, Math.min(1, p[1] / 2.5)));
+  const k = smoothstep(0, WIND_FIELD.stormLee, dOut) * (WIND_FIELD.stormLow + WIND_FIELD.stormGain * Math.max(0, Math.min(1, p[1] / WIND_FIELD.stormFullAt)));
   out[0] = wind[0] * k; out[1] = wind[1] * k; out[2] = wind[2] * k; return out;
 }
 
@@ -208,22 +209,46 @@ export class Wind {
    *  it carries each of them (`roofs`: all three readers — the particles, the solver, `at` — then keep the storm out from under each roof and nowhere else).
    *  `interior` / `annex` stay the bounding box either way: off, or one or two roofs, every reader has the two rectangles it always had. */
   private syncField() {
-    const on = WX_OWN.wind, R = this.lvRoofs;
-    this.storm.field = on || undefined; this.storm.roofs = on && R && R.length > 2 ? R : undefined;
+    this.storm.field = WX_OWN.wind || undefined; this.storm.roofs = this.fieldRoofs();
   }
+  /** the roofs the storm blows between one by one, where the switch is up and the level has three or four of its own (else none: the two rectangles) */
+  private fieldRoofs(): readonly (readonly number[])[] | undefined { const R = this.lvRoofs; return WX_OWN.wind && R && R.length > 2 ? R : undefined; }
   /** the share 0‥1 of its own vector the storm's field has at GROUND point (x, z) under the roofs in force: 0 under one, easing to 1 over the lee off it — what
    *  the wisps' births are weighed by (snowFx.ts; particles.wgsl wispShare is this on the GPU) */
-  stormShare(x: number, z: number): number {
+  stormShare(x: number, z: number): number { return this.shareUnder(x, z, this.storm.roofs); }
+  /** …under the roofs given (none = the storm record's two rectangles, which `reroof` writes and no frame's step does) */
+  private shareUnder(x: number, z: number, roofs: readonly (readonly number[])[] | undefined): number {
     const s = this.storm, p = SCRATCH_P, q = SCRATCH_Q; p[0] = x; p[1] = 0; p[2] = z;
-    if (s.roofs) stormVelRoofs(UNIT_X, s.roofs, p, q); else stormVel(UNIT_X, s.interior!, s.annex!, p, q);
-    return Math.max(0, Math.min(1, q[0] / 0.55));
+    if (roofs) stormVelRoofs(UNIT_X, roofs, p, q); else stormVel(UNIT_X, s.interior!, s.annex!, p, q);
+    return Math.max(0, Math.min(1, q[0] / WIND_FIELD.stormLow));
   }
-  /** the storm's wind vector this frame before gusting (m/s), or null when there is none: weather off, day, or a dead calm */
+  /** THE WIND THE GAME'S OWN SMOKE DRIFTS BY (sense.ts SENSE.drift; rust/sim/src/bricks.rs 3b), or null in still air: the weather's vector as the game
+   *  holds it, by `stormWind`'s test of whether the weather blows at all, `stormShare` for where, and the storm field's own rise with height (`low` of
+   *  it at the ground, `gain` more by `fullAt` metres up). It is the game's, so none of a machine's own wind settings is in it (the master,
+   *  `WIND.storm`, `WIND.stormK`, the weather's own on / off: what a player turns down is his picture), and no gust: one vector, from what a
+   *  snapshot carries, the same on every machine that plays the game. */
+  stormDrift(): GridWind | null {
+    const W = this.g.weather; if (!this.blows(false)) return null;
+    const x = W.wind[0], z = W.wind[1]; if (x === 0 && z === 0) return null;
+    // (the footprints as the weather's roofs and the switch give them NOW, not as the storm's record last had them: that record is refreshed by the
+    //  frame's dressing step, `update`, which a host with the wind turned down or no picture does not take. Made for the asker and let go: no function
+    //  is kept on the game)
+    const roofs = this.fieldRoofs();
+    return { x, z, low: WIND_FIELD.stormLow, gain: WIND_FIELD.stormGain, fullAt: WIND_FIELD.stormFullAt, share: (px, pz) => this.shareUnder(px, pz, roofs) };
+  }
+  /** DOES THE WEATHER BLOW AT ALL: at night or in a picked kind (which blows by day and in the dry too: weather.ts), and rain or a storm running. The
+   *  one test, for the picture's storm (`stormWind`, which adds a machine's own wind settings) and the game's drift alike. `session`: …and the
+   *  weather's own switch is up — `?noweather`, the panel's box: the SESSION's (weather.ts restore), so the picture asks it and the game's drift
+   *  does not: what it reads is the hour, the kind and the weather's numbers, which a snapshot and a recording carry */
+  private blows(session: boolean): boolean {
+    const g = this.g, W = g.weather;
+    if (!W || (session && !W.enabled) || (isDaylight(g) && !W.kind)) return false;
+    return !!W.kind || W.rainRate > 0.001 || W.storm > 0.01;
+  }
   /** the storm's wind vector when it should be felt (weather on, night, the storm knob up, rain or storm actually running, a real speed) — null otherwise; glassbreak's gusts through shot-out panes ask the same question (one test) */
   stormWind(): Vec3 | null {
-    const g = this.g; const W = g.weather;
-    if (!W || !W.enabled || (isDaylight(g) && !W.kind) || !WIND.storm) return null;   // (a PICKED weather kind blows by day and in the dry too: weather.ts)
-    if (!W.kind && !(W.rainRate > 0.001 || W.storm > 0.01)) return null;
+    const W = this.g.weather;
+    if (!this.blows(true) || !WIND.storm) return null;
     const wx = W.wind[0] * WIND.stormK, wz = W.wind[1] * WIND.stormK; if (!(Math.hypot(wx, wz) >= 0.05)) return null;   // (× stormK FIRST: a zero knob is a dead calm, not a NaN direction)
     return [wx, 0, wz];
   }

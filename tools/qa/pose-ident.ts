@@ -1,6 +1,7 @@
 // tools/qa/pose-ident.ts — THE POSING FUNCTIONS, the Rust module's against the TypeScript's (src/anim/skeleton.ts against rust/sim/src/skeleton.rs).
 //
 //   bun run tools/qa/pose-ident.ts [--n 20000] [--seed 1]
+//   TPS_POSESINGLES=1 bun run tools/qa/pose-ident.ts   every blend and sample in singles (anim/skeleton.ts POSEMATH; POSEMATH_BREAK=1 beside it = that rule's red path)
 //   RUST_BREAK=1 bun run tools/qa/pose-ident.ts     the red path, must FAIL, and for EVERY KIND of question by a break of its own: the module is handed a
 //                                                   rig with one node hung from the wrong parent (the run, the solve), a turn's first number, a
 //                                                   solve's target, a blend's weight and a sample's time a hair off, and the plain sampler kept here
@@ -17,13 +18,14 @@
 // Not game code: it reads. Nothing here needs a GPU, and nothing here has been seen on one.
 import { ROOT, loadCharacter } from './headless.ts';
 const args = process.argv.slice(2), flag = (k: string) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : undefined; };
-const N = Number(flag('--n') ?? 20000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.RUST_BREAK === '1';
+const N = Number(flag('--n') ?? 20000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.RUST_BREAK === '1', RULE_BREAK = process.env.POSEMATH_BREAK === '1';
 const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), S: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`);
 const { Pose, PoseFK, PoseSet, poseSetIn, sampleClip, clipHeld, blendPose, restPose, rotateLocal, rotateModel, setModelRot, twoBoneIK } = SK;
 const ST: any = await import(`${ROOT}/src/sim/state.ts`);
 const V: any = await import(`${ROOT}/src/math/vec.ts`);
 const why = S.simWhyNot(); if (why) { console.log(`pose-ident: the module does not run here (${why})`); process.exit(1); }
 X.EXACT.on = true;
+SK.POSEMATH.singles = process.env.TPS_POSESINGLES === '1';   // (TPS_POSESINGLES=1: every blend and sample of this run in singles, the rule the page plays by — anim/skeleton.ts POSEMATH; without the word, in doubles)
 const ch = await loadCharacter(), n = ch.nodes.length, clips = [...ch.clips.values()];
 // (a die of the tool's own: xorshift32)
 let s = (SEED * 2654435761) >>> 0 || 1; const rnd = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; };
@@ -32,7 +34,9 @@ const unit = (): number[] => { let q: number[], l: number; do { q = [rnd() * 2 -
 const chains: [number, number, number][] = []; for (let c = 0; c < n; c++) { const b = ch.nodes[c].parent; if (b < 0) continue; const a = ch.nodes[b].parent; if (a >= 0) chains.push([a, b, c]); }
 const masks: (Float32Array | null)[] = [null, new Float32Array(n).map(() => rnd()), new Float32Array(n).map(() => rnd() < 0.5 ? 0 : 1), new Float32Array(n).map(() => rnd() * 1.4 - 0.2)];
 const poseOf = () => { const p = restPose(ch, new Pose(n)); sampleClip(pick(clips), rnd() * 4, rnd() < 0.5, p); return p; };
-const bitsOf = (p: any) => new Uint32Array(p.data.buffer, p.data.byteOffset, p.data.length);
+const bitsOf = (p: any) => new Uint32Array(p.cols.buffer, p.cols.byteOffset, p.cols.length);
+/** single `i` of a pose's columns, in words: which node, which of its ten values */
+const whereOf = (p: any, i: number) => `node ${i % p.rows} value ${Math.floor(i / p.rows)}`;
 const F = new Float64Array(1), U = new Uint32Array(F.buffer);
 const same = (a: number, b: number) => { F[0] = a; const l = U[0], h = U[1]; F[0] = b; return U[0] === l && U[1] === h; };
 let asked = 0, differ = 0, first = '';
@@ -52,39 +56,48 @@ const inX = Object.fromEntries(CALLS.map(k => [k, 0])) as Record<Call, number>;
 /** an at-home round's calls of a pose where it lives: a sample · a blend into a third pose and one in place · the run, a run from a node after each of two
  *  turns, the run after the third · the parent's rotation for the turn about the model's axes · three turns · three solves */
 const ROUND: Record<Call, number> = { pose_sample: 1, pose_blend: 2, pose_run: 4, pose_parent_rot: 1, pose_turn: 3, pose_ik: 3 };
-const poses = (what: string, a: any, b: any) => { const u = bitsOf(a), v = bitsOf(b); for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { say(`${what}: node ${Math.floor(i / 10)} value ${i % 10}: TypeScript ${a.data[i]} (${u[i].toString(16)}), the module ${b.data[i]} (${v[i].toString(16)})`); return; } };
+const poses = (what: string, a: any, b: any) => { const u = bitsOf(a), v = bitsOf(b); for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { say(`${what}: ${whereOf(a, i)}: TypeScript ${a.cols[i]} (${u[i].toString(16)}), the module ${b.cols[i]} (${v[i].toString(16)})`); return; } };
 const runs = (what: string, a: any, b: any) => { for (let i = 0; i < n; i++) { for (let k = 0; k < 4; k++) if (!same(a.rot[i][k], b.rot[i][k])) { say(`${what}: node ${i} rotation ${k}: TypeScript ${a.rot[i][k]}, the module ${b.rot[i][k]}`); return; }
   for (let k = 0; k < 3; k++) if (!same(a.pos[i][k], b.pos[i][k])) { say(`${what}: node ${i} origin ${k}: TypeScript ${a.pos[i][k]}, the module ${b.pos[i][k]}`); return; } } };
 // SAMPLING, AS IT IS DEFINED: every track searched for its own place among its own keys. Both languages find a place once for each set of key times a clip's
 // tracks share (anim/skeleton.ts sideOf, rust/sim/src/clips.rs `end`); this is what they must both still answer, kept here in the plainest words. (Under the
 // break word it is asked a hair off, so that the comparison itself is seen to fail.)
+const R1 = new Float32Array(1), r1 = (v: number): number => { R1[0] = v; return R1[0]; };
 const plain = (clip: any, t: number, loop: boolean, out: any) => {
   if (BREAK) t += 1e-4;
   const dur = clip.duration; if (loop) { t = t % dur; if (t < 0) t += dur; } else t = Math.min(Math.max(t, 0), dur);
-  const d = out.data;
+  const d = out.cols, N = out.rows;
   for (const tr of clip.tracks) {
-    const times = tr.times, vals = tr.values, k = times.length, comps = tr.path === 1 ? 4 : 3, o = tr.node * 10 + (tr.path === 0 ? 0 : tr.path === 1 ? 3 : 7);
-    if (k === 1 || t <= times[0]) { for (let c = 0; c < comps; c++) d[o + c] = vals[c]; continue; }
-    if (t >= times[k - 1]) { for (let c = 0; c < comps; c++) d[o + c] = vals[(k - 1) * comps + c]; continue; }
+    const times = tr.times, vals = tr.values, k = times.length, comps = tr.path === 1 ? 4 : 3, o = (tr.path === 0 ? 0 : tr.path === 1 ? 3 : 7) * N + tr.node;
+    if (k === 1 || t <= times[0]) { for (let c = 0; c < comps; c++) d[o + c * N] = vals[c]; continue; }
+    if (t >= times[k - 1]) { for (let c = 0; c < comps; c++) d[o + c * N] = vals[(k - 1) * comps + c]; continue; }
     let lo = 0, hi = k - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (times[mid] <= t) lo = mid; else hi = mid; }
     const a = lo * comps, b = hi * comps;
-    if (tr.step) { for (let c = 0; c < comps; c++) d[o + c] = vals[a + c]; continue; }
+    if (tr.step) { for (let c = 0; c < comps; c++) d[o + c * N] = vals[a + c]; continue; }
     const f = (t - times[lo]) / Math.max(1e-6, times[hi] - times[lo]);
-    if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c] = vals[a + c] + (vals[b + c] - vals[a + c]) * f; continue; }
+    if (SK.POSEMATH.singles) {   // (the rule in singles, in the plainest words: every result put through a Float32Array of one, which is what a single is)
+      const fs = r1(f), lerp = (u: number, v: number) => r1(u + r1(r1(v - u) * fs));
+      if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = lerp(vals[a + c], vals[b + c]); continue; }
+      const A = [vals[a], vals[a + 1], vals[a + 2], vals[a + 3]], B = [vals[b], vals[b + 1], vals[b + 2], vals[b + 3]];
+      const dot = r1(r1(r1(r1(A[0] * B[0]) + r1(A[1] * B[1])) + r1(A[2] * B[2])) + r1(A[3] * B[3])), sg = dot < 0 ? -1 : 1;
+      const q = A.map((u, c) => lerp(u, sg * B[c])), l = r1(Math.sqrt(r1(r1(r1(r1(q[0] * q[0]) + r1(q[1] * q[1])) + r1(q[2] * q[2])) + r1(q[3] * q[3])))) || 1;
+      for (let c = 0; c < 4; c++) d[o + c * N] = q[c] / l; continue;
+    }
+    if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c * N] = vals[a + c] + (vals[b + c] - vals[a + c]) * f; continue; }
     let bx = vals[b], by = vals[b + 1], bz = vals[b + 2], bw = vals[b + 3]; const ax = vals[a], ay = vals[a + 1], az = vals[a + 2], aw = vals[a + 3];
     if (ax * bx + ay * by + az * bz + aw * bw < 0) { bx = -bx; by = -by; bz = -bz; bw = -bw; }
     const x = ax + (bx - ax) * f, y = ay + (by - ay) * f, z = az + (bz - az) * f, w = aw + (bw - aw) * f, l = V.hyp4(x, y, z, w) || 1;
-    d[o] = x / l; d[o + 1] = y / l; d[o + 2] = z / l; d[o + 3] = w / l;
+    d[o] = x / l; d[o + N] = y / l; d[o + 2 * N] = z / l; d[o + 3 * N] = w / l;
   }
 };
 /** the TypeScript's sample `got` (of the pose `from`) against the definition's */
 const lines = (what: string, clip: any, t: number, loop: boolean, from: any, got: any) => { const want = new Pose(n).copy(from); plain(clip, t, loop, want); const u = bitsOf(got), v = bitsOf(want);
-  for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { say(`lines, ${what}: node ${Math.floor(i / 10)} value ${i % 10}: sampleClip ${got.data[i]} (${u[i].toString(16)}), every track searched ${want.data[i]} (${v[i].toString(16)})`); return; } };
+  for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { say(`lines, ${what}: ${whereOf(got, i)}: sampleClip ${got.cols[i]} (${u[i].toString(16)}), every track searched ${want.cols[i]} (${v[i].toString(16)})`); return; } };
 /** one question both ways: `ask` is run with the row off on the first pair and on on the second */
 const both = (ask: (p: any, fk: any, a: any, b: any) => void, pT: any, fT: any, pR: any, fR: any) => { S.RUST.poses = false; ask(pT, fT, A, Bp); S.RUST.poses = true; ask(pR, fR, AR, BR); S.RUST.poses = false; asked++; };
 // EVERY OTHER ROUND the module's side of a question is asked of poses that LIVE IN A GAME'S BLOCK (src/sim/state.ts; anim/skeleton.ts PoseSet): no copy onto
 // the bench, the pose read and written where it is. Four poses of a set at home, used again each such round.
-const home = new PoseSet(), block = new ST.SimState(); block.bind(); poseSetIn(home, block); const hA = home.make(n), hB = home.make(n), hO = home.make(n), hI = home.make(n);
+const home = new PoseSet(4), block = new ST.SimState(); block.bind(); poseSetIn(home, block); const hA = home.make(n), hB = home.make(n), hO = home.make(n), hI = home.make(n);
 let A: any, Bp: any, AR: any, BR: any;
 S.RUST.poses = true; if (!S.RUST.poses) { console.log('pose-ident: RUST.poses does not come on'); process.exit(1); } S.RUST.poses = false;
 const t0 = performance.now(); let inModule = 0;
@@ -94,7 +107,7 @@ for (let t = 0; t < N; t++) {
   { const clip = pick(clips), tr = pick(clip.tracks) as any, r = rnd(), tt = r < 0.5 ? rnd() * clip.duration : r < 0.7 ? (rnd() * 3 - 1) * clip.duration : r < 0.9 ? tr.times[Math.floor(rnd() * tr.times.length)] : pick([0, -0, clip.duration, -clip.duration, 1e-9, 1e9]), lp = rnd() < 0.5;
     const sT = new Pose(n).copy(A), sR = (there ? hI : new Pose(n)).copy(A); both(p => sampleClip(clip, tt, lp, p), sT, null, sR, null); poses('sampleClip', sT, sR); lines(clip.name, clip, tt, lp, A, sT); }
   // blend into a third pose, and in place
-  const oT = new Pose(n), oR = there ? hO : new Pose(n); if (there) oR.data.fill(0); both((p, _f, a, b) => blendPose(a, b, w, mask, p), oT, null, oR, null); poses('blendPose', oT, oR);
+  const oT = new Pose(n), oR = there ? hO : new Pose(n); if (there) oR.cols.fill(0); both((p, _f, a, b) => blendPose(a, b, w, mask, p), oT, null, oR, null); poses('blendPose', oT, oR);
   const iT = new Pose(n).copy(A), iR = (there ? hI : new Pose(n)).copy(A); both((p, _f, _a, b) => blendPose(p, b, w, mask, p), iT, null, iR, null); poses('blendPose in place', iT, iR);
   // run forward
   const fT = new PoseFK(ch), fR = new PoseFK(ch);
@@ -122,6 +135,7 @@ for (let t = 0; t < N; t++) {
     const x = SK.POSE_BENCH.x, door: any = { ...x }, hair = () => { S.f64()[SK.POSE_BENCH.args] += 1e-6; };
     for (const k of CALLS) door[k] = (g: number, ...r: number[]) => { if (g >= 0) inX[k]++;
       if (BREAK) { if (k === 'pose_blend') r[2] += 1e-9; else if (k === 'pose_sample') r[3] += 1e-4; else if (k === 'pose_turn' || k === 'pose_ik') hair(); }
+      if (RULE_BREAK) { if (k === 'pose_blend') r[3] &= ~2; else if (k === 'pose_sample') r[4] &= ~2; }   // (POSEMATH_BREAK=1, tools/qa/posemath-check.ts: the module is asked WITHOUT the rule's bit while the twin here works in singles)
       return x[k](g, ...r); };
     SK.POSE_BENCH.x = door; }
 }
@@ -153,10 +167,12 @@ const refused = [{ name: 'none', duration: 1, tracks: [] }, { name: 'no key', du
 let refusedOk = true;
 for (const clip of refused) { const pT = restPose(ch, new Pose(n)), pR = restPose(ch, new Pose(n)); A = pT; Bp = pT; AR = pR; BR = pR; both(p => sampleClip(clip, 0.5, false, p), pT, null, pR, null); poses(`sampleClip, a clip the module refuses (${clip.name})`, pT, pR); if (clipHeld(clip) >= 0) refusedOk = false; }
 // …and a clip the module TAKES but that keys a node this pose has not (the table holds poses of up to 128 nodes; the rig has fewer): the host samples it
-// itself, the same pose (what it writes past the pose's end is nowhere, in both)
+// itself, the same pose: the track of the node the pose has not writes NOTHING (in columns a place past the last node is another node's, so the sample
+// skips the track), and the pose is the rest pose with the first track's values on node 2 and no other single moved
 const past = { name: 'made: a node past the pose', duration: 1, tracks: [{ node: 2, path: 0, step: false, times: f32s(0, 1), values: f32s(1, 2, 3, 4, 5, 6) }, { node: n + 3, path: 0, step: false, times: f32s(0, 1), values: f32s(6, 5, 4, 3, 2, 1) }] };
 let pastOk = n + 3 < 128;
-{ const pT = restPose(ch, new Pose(n)), pR = restPose(ch, new Pose(n)), before = SK.POSE_BENCH.asked; A = pT; Bp = pT; AR = pR; BR = pR; both(p => sampleClip(past, 0.5, false, p), pT, null, pR, null); poses(`sampleClip, ${past.name}`, pT, pR); if (clipHeld(past) < 0 || SK.POSE_BENCH.asked !== before) pastOk = false; }
+{ const pT = restPose(ch, new Pose(n)), pR = restPose(ch, new Pose(n)), before = SK.POSE_BENCH.asked; A = pT; Bp = pT; AR = pR; BR = pR; both(p => sampleClip(past, 0.5, false, p), pT, null, pR, null); poses(`sampleClip, ${past.name}`, pT, pR); if (clipHeld(past) < 0 || SK.POSE_BENCH.asked !== before) pastOk = false;
+  const want = restPose(ch, new Pose(n)); want.setPos(2, [2.5, 3.5, 4.5]); const u = bitsOf(pT), v = bitsOf(want); for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { pastOk = false; say(`sampleClip, ${past.name}: ${whereOf(pT, i)} is ${pT.cols[i]}, and the pose the first track alone makes has ${want.cols[i]}`); break; } }
 // A CLIP WRITTEN TWICE IS ONE CLIP IN THE MODULE (clips.rs `end`): the character file's clips made again as new objects, as a file loaded a second time makes
 // them, get the numbers the first have; one that differs from a held clip in ONE single (the last value of its last track) is another clip
 const copyOf = (c: any) => ({ ...c, tracks: c.tracks.map((t: any) => ({ ...t, times: t.times.slice(), values: t.values.slice() })) });

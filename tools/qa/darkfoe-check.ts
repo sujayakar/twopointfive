@@ -134,7 +134,7 @@ export async function darkfoeCheck(): Promise<boolean> {
         const men = foes(g); await shots(W);
         let lit: any = null;   // the man the check's lamp was set for
         if (set) { const nav = g.col.nav, cs = nav.cell; await step(W, 60 * 7);   // (the shots have died away: nobody is 'in a fight')
-          for (const t of g.targets) if (t.kind !== 'breaker') t.broken = true;   // every fixture shot out, by the field: no event, nobody hears it
+          for (const t of g.targets) if (t.kind !== 'breaker') g.lightHome.stage(t, null, true);   // every fixture shot out, by the field: no event, nobody hears it
           await step(W, 30);
           const lamp: any = g.engine.lights.add({ name: 'qa_lamp', group: 'qa', kind: 1, pos: [0, 2.3, 0], dir: [0, -1, 0], color: [1, 0.9, 0.75], intensity: 160, range: 5, innerDeg: 45, outerDeg: 60, radius: 0.05, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 160 });
           const seek = DARKFOE.seek; DARKFOE.seek = true;   // (the search for where to hang it is the same with `seek` off)

@@ -1,2 +1,4 @@
-# the look twin repainted and its ground laid (2026-11-03): the two cars in car paint and dark glass, the kerbs precast, the dado gloss tan, the sofa cloth; wear, ruts and stains under the surveyors' marks
-5774f9177e07472aa84efcaf9501ab7dfb81055d
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
+# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
+5c64f72e60746f0b9ae70dc97b19010f8a32504f

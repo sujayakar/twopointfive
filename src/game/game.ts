@@ -2,7 +2,8 @@
 // The systems live beside it as plain-function modules taking the Game first: player.ts (controller, takedown / drag, throws, the cursor's
 // interactables), guards.ts (perception, state machine, barks, escalation), combat.ts (shots, kills, hand props, live throwables), lighting.ts
 // (fixtures, OCP, blackout), mission.ts (the mission thread), squad.ts (scripted guards).
-import { wallClock, HostOwned } from '../math/side';
+import { lookConfig } from '../render/frame';
+import { HostOwned } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
@@ -11,6 +12,7 @@ import { Level, PatrolRoute, Chokepoint } from '../scene/level';
 import { StaticCollision } from '../scene/collision';
 import { GltfCharacter } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
+import { dutiesAnew } from './belief';
 import { Character, MOVES, inDipLane } from './character';
 import type { Stance, HoldPhase, HoldVariant, KitItem } from './character';
 import { Input } from './input';
@@ -26,14 +28,15 @@ import { statureTick, statureOf, drawnJoints, drawnCapsules, drawnFit, drawnBoxe
 import { Decals } from '../render/decals';
 import { buildWearMap } from '../render/wear';
 import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField';
+import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
-import { snowBogAt, snowBogMay } from './snowBog';
+import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
 import { SmokeSystemLike } from '../smoke/types';
-import { Box, BoxFlag, rayBox } from '../scene/boxes';
+import { Box, BoxFlag } from '../scene/boxes';
 import { markStats, markWorldRect, AREA_LIT_MARKS, MARKING_TEXEL } from '../scene/markings';
 /** an emissive marking registers a light only from this on-axis intensity up (W/sr): the vending fronts are ≈ 2.2–2.8, a monitor's UI bars 0.02, an LED row 0.01 */
 export const MARK_LIGHT_MIN_I0 = 0.05;
@@ -135,7 +138,6 @@ import { powerOutTick, powerOutReset } from './powerout';
 import { rescueCheckTick, rescueCheckReset } from './rescuecheck';
 import { dozeTick, dozeInChair, dozeReset } from './doze';
 import { wallReactTick, wallReactReset } from './wallreact';
-import { BLAST_PACE } from './destructionSwitch';
 import { loadTeamFeel } from './teamfeel';
 import { nvgTick } from './nvg';
 import { irLightTick, irFlags } from './irlight';
@@ -180,6 +182,7 @@ import { registerShutDoor } from './shutdoor';
 import { spawnCivilians, resetCivilians, updateCivilians, civiliansShown, civilianDoorContacts, civilianAnswer, civiliansSummary, loadCivTune, civilianSeated, civilianPushesProps } from './civilians';
 import type { Civ } from './civilians';
 import { updateTargets } from './lighting';
+import { LightHome, LIGHT_IN, type Fixture } from '../sim/lightshome';
 import { carLampTargets, VEHICLE_GROUP } from './carlamps';   // a parked vehicle's lamps are light targets a round breaks (nothing with CARLAMPS down)
 import { setBlackout, endBlackout, lightEvent, ocp, setGroup, toggleTarget, repairLights, freshLights, lensRecheck } from './lighting';
 import { gunWallFresh } from './gunwall';   // (called inside cleanSlate only)
@@ -206,41 +209,31 @@ import { Wind, loadWind } from './wind';
 import { updateAirSim, attachAir, airResend } from './airSim';
 import { AirDust } from './airDust';
 import { Moths } from './moths';
+import { WetGround } from './wetGround';
 import { GlassBreak, loadGlassBreak } from './glassbreak';
+import { flatPanel, levelOver, stoodOver } from './levelfit';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
 import type { KitWorn } from './kitload';
 import { loadGait } from './kitload';   // (asked inside the frame only)
 import type { Wound } from './wounds';
-import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reachFraction, reachMaskForDirectional, wallRasterDiff, REACH_WORK, REACH_PACE, type ReachOnly, type ReachJob } from '../render/reach';
+import { buildInteriorCells } from '../render/reach';
 import { WORLD } from '../scene/world';
 import { simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
 import type { PoseSet } from '../anim/skeleton';
 import { SimState } from '../sim/state';   // (below the game: no part of src/game's import cycle)
+import { MenStore, sameMan, manLeaves } from '../sim/men/store';   // (below the game too; the men's tenant registers itself)
+import { GuardCols, PlayerCols } from '../sim/men/cols';
 import { FallStore } from '../sim/fallshome';   // (below the game too)
 import '../sim/dicehome';   // (the die's home in the Rust module registers itself: sim/state.ts simTenant)
 import './posehome';   // (…and the poses': registered as it loads, by a statement that uses src/sim's export alone)
-import { RUST } from '../sim/sim';
 import { knobsToRust, RUST_KNOBS } from './rustknobs';
 
 // ---------------------------------------------------------------- light targets
-export interface LightTarget {
-  name: string; group: string; kind: 'analytic' | 'emissive' | 'breaker' | 'device';   // device: a camera or a tripwire's emitter (devices.ts) — no boxes or light of its own here, it draws itself off `factor`; the OCP, a round and the mains treat it as any fixture
-  pos: Vec3;                       // fixture position (for targeting / AI)
-  light?: RtLight; boxes: number[]; baseEmissive: Vec3; baseIntensity: number;
-  on: boolean; broken: boolean; disabledUntil: number; fluorescentFlicker: boolean;
-  factor: number;
-  mains: boolean;                  // fed from the breaker (drops in a blackout); false for street lighting, exit signs, UPS-fed LEDs, beacons
-  interactive: boolean;            // can be aimed at / OCP'd / shot as a fixture (server LEDs are scenery: too many, too small, pure UI noise)
-  stagger: number;                 // restrike delay for this fixture's contactor group when the mains come back
-  /** the game time a hand put it out at its wall switch (lightswitch.ts; meaningful only while `on` is false): 'lights on' puts these back, and a defender at the switch does */
-  handOff?: number;
-  areaLights?: { light: RtLight; base: number }[];   // analytic area lights standing in for a flat emissive fixture's emission (smooth direct light + soft shadows instead of cascade rays finding a small bright box)
-  /** a vehicle lamp's own paint as the level has it (carlamps.ts: a broken one is painted dark, a mended one painted this again) */
-  lens?: Vec3;
-}
+/** a light fixture of the level: what the level says of it, and its state read from the Rust module (sim/lightshome.ts: written only through `Game.lightHome.in`) */
+export type LightTarget = Fixture;
 
 /** kick: a door kicked in — carries through the floor and is answered like a shot (guards.ts hearingCheck); every other door noise is 'door' with a level. A round
  *  ('shot' / 'guardShot' out of combat.ts fireWeapon) also says which weapons.ts row fired it and the segment it actually flew, muzzle → where it stopped (from / to):
@@ -300,12 +293,12 @@ export function fmtClock(sec: number): string { const s = Math.max(0, Math.floor
 const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, debrief: false, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
 
 /** the ragdoll particles a door leaf feels (Game.updateDoors): enough of the body that a leaf cannot close through it */
-const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];
+export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];   // (how many of them there are is in the arithmetic of what a doors' step is handed: levelfit.ts handOverMost)
 
 // ---------------------------------------------------------------- player
 /** the query tables the world is asked aside with (Game.aside): scratch of the host's, in no snapshot */
 class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
-export class Player {
+export class Player extends PlayerCols {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
   friendLow = false; friendT = -10;   // friends.ts: his raised gun is down for a teammate in its line (FRIENDS.lowReady), and how long that line has been clear
@@ -457,8 +450,10 @@ export class Player {
    *  FOOTFALL.owed: at half a turn a footfall is owed; 0 where it starts, when he slows, after frames the footfall test was not asked, and while the key
    *  is down), and the game clock the test was last asked at with the key up (-1: never) */
   stepOwed = 0; stepAt = -1;
-  constructor(ch: GltfCharacter, pos: Vec3, hasRifle = true, seat = 0) {   // (`seat`: whose man — seats.ts; the first is PLAYER_ID in the suit he always wore, a second player's wears another trim so the two tell apart)
-    this.char = new Character(ch, { id: seatManId(seat), tint: [0.05, 0.06, 0.07], tint2: seat ? [0.1, 0.2, 0.36] : [0.1, 0.32, 0.18], pos, yaw: Math.PI });
+  constructor(men: MenStore, ch: GltfCharacter, pos: Vec3, hasRifle = true, seat = 0) {   // (`men`: his game's rows · `seat`: whose man — seats.ts; the first is PLAYER_ID in the suit he always wore, a second player's wears another trim so the two tell apart)
+    super();
+    this.char = new Character(ch, { id: seatManId(seat), tint: [0.05, 0.06, 0.07], tint2: seat ? [0.1, 0.2, 0.36] : [0.1, 0.32, 0.18], pos, yaw: Math.PI, men });
+    sameMan(this, this.char);
     this.char.muzzleAhead = this.pistol.def.muzzleAhead;   // (the row's: where the round, the flash and the rail light's beam start along the gun)
     this.hasRifle = hasRifle;
   }
@@ -549,7 +544,7 @@ export function isBreathing(gd: Guard): boolean { return gd.state === 'dead' && 
 export interface Witness {
   /** sounds that actually reached him and raised him (hearingCheck): gunfire (anyone's), doors kicked in, stun charges, and the small stuff — a creak, a scrape, a
    *  footfall, a canister's pop, a light dying near him — with where the last small one seemed to come from (the doorway it spilled through if not direct) */
-  heard: { shots: number; lastShotT: number; kick: number; bang: number; small: number; smallWhere: Vec3 | null; lastT: number };
+  heard: { shots: number; lastShotT: number; kick: number; bang: number; small: number; smallWhere: Vec3 | null; loudAt: Vec3 | null; lastT: number };
   /** the highest his awareness has ever been */
   peakAwareness: number;
   /** what took him to 'alert' the last time he went (the guards.ts transition): eyes on Sam, a sound, word over the net (a colleague's contact, an order), a body —
@@ -567,7 +562,7 @@ export interface Witness {
   /** stun charges that went off in his open view (combat.ts detonateStun) */
   dazzled: number;
 }
-export const newWitness = (): Witness => ({ heard: { shots: 0, lastShotT: -1, kick: 0, bang: 0, small: 0, smallWhere: null, lastT: -1 }, peakAwareness: 0, alertedBy: null, alertT: -1, sawAct: null, sawBody: null, calledToBody: null, sawHeld: null, wasHeld: 0, dazzled: 0 });
+export const newWitness = (): Witness => ({ heard: { shots: 0, lastShotT: -1, kick: 0, bang: 0, small: 0, smallWhere: null, loudAt: null, lastT: -1 }, peakAwareness: 0, alertedBy: null, alertT: -1, sawAct: null, sawBody: null, calledToBody: null, sawHeld: null, wasHeld: 0, dazzled: 0 });
 /** Interrogation progress for this man (dialogue.ts, docs/internal/grab-interrogate-design.md §4): how many exchanges Sam has had out of him (stage: 0 = none yet,
  *  1 the reaction, 2 the pressure, 3 the useful thing or the refusal, 4+ nothing left — it never goes backwards this encounter), the line ids he has said (no
  *  repeats until his pool is dry; saidN counts the repeats after that), the useful things he has given (by kind), when he last spoke, and since when he has been
@@ -591,7 +586,7 @@ export interface UnitInfo { name: string; spawnedAt: number; light: boolean;
 export type PairId = 'red' | 'blue';
 /** Who a man's senses, fix and gun are ON (guards.ts, teams): Sam — every staff guard's for life, and today's whole game — or a hostile AI man, or nobody yet. */
 export type Foe = 'player' | Guard | null;
-export class Guard {
+export class Guard extends GuardCols {
   char: Character; state: GuardState = 'patrol';
   /** his name on the net (CALLSIGNS by roster index; a spawned unit's given name) */
   callsign: string;
@@ -623,6 +618,12 @@ export class Guard {
    *  mapped and eased exactly as Sam's meter is (Game.visibilityOf, damp 6). What a hostile AI eye reads where it reads player.visibility for Sam. */
   visibility = 0; irradiance = 0;
   routeI: number; wp = 0; wait = 0; awareness = 0; lastKnown: Vec3 | null = null; lastSeenT = -100;
+  /** belief.ts: the point his duty has his gun on while no man is in his eyes (the room fight's, the same object as its watched point); lastKnown is only ever where he believes the enemy to be. Always null with BELIEF off */
+  covers: Vec3 | null = null;
+  /** belief.ts word(): when a blast or a mate's word last placed his belief (what he hears of that moment or before does not write over it) */
+  wordT = -100;
+  /** where he worked out a man he lost had gone (guards.ts leadFix): still what his eyes gave him. belief.ts eyesFix */
+  ledAt: Vec3 | null = null;
   hold = false;                  // scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over)
   pinned = false;                // scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in
   /** scripted, SHOWCASE CAST ONLY (director.ts LoadoutSpec.god — the day showcase's two operatives): a round that would have found him passes through him as it passes a colleague (combat.ts
@@ -676,6 +677,9 @@ export class Guard {
    *  widening out to a search point away from it ('fan'); null = ordinary suspicion. Cleared whenever he leaves 'suspicious'. */
   bodyDuty: { body: Guard; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: Vec3 | null } | null = null;
   dropped: Item | null = null;   // the torch / pistol that left his hand when he died (the sputtering light rides it)
+  handleGateT = -Infinity;   // when the handle's gate (handleside.ts) last had his feet, by the game's clock
+  staysInRooms = false;   // HIS SQUAD'S ORDER IS TO STAY IN ITS ROOMS (enemysquads.ts, a squad's `mayLeave: false`): a fact of his order, not an owner
+  fled = false;   // THE WEAPON HAS LEFT HIS HAND FOR GOOD (runner.ts): unarmed, out of the fight and nobody's living hostile from that frame on — running, low in a corner, gone or since shot. A fact of the man, not an owner: it outlasts his death
   gunLostAt = -1;   // a LIVING man whose gun was knocked from his hand at the grab (HOLD.dropGun): dropped = that gun, this = when — his hands are empty (guards.ts inHand) and its light dies on the floor; −1 again once he has it back (player.ts handBack)
   torchLostAt = -1;   // a LIVING man whose torch was knocked from his hand (the grab): dropped = that torch, this = when — the beam follows it down and sputters out (guards.ts updateFlashlight); on patrol afterwards his hand is empty
   path: Vec3[] = []; pathI = 0; repathT = 0; pathGoal: Vec3 | null = null;
@@ -754,9 +758,11 @@ export class Guard {
   drawn = false; leader: Guard | null = null; followT = 0; followGoal: Vec3 = [0, 0, 0]; post: Chokepoint | null = null;
   /** `look` (a spawned unit's, guards.ts spawnUnit — absent for the level's men, whose call is unchanged): the trouser tint, the facing (a one-point route has no
    *  first leg to face down), the name he answers to, his side. */
-  constructor(ch: GltfCharacter, id: number, route: PatrolRoute, routeI: number, flashlight: RtLight, tint: Vec3, look?: { tint2?: Vec3; yaw?: number; name?: string; team?: Team }) {
+  constructor(men: MenStore, ch: GltfCharacter, id: number, route: PatrolRoute, routeI: number, flashlight: RtLight, tint: Vec3, look?: { tint2?: Vec3; yaw?: number; name?: string; team?: Team }) {
+    super();
     const pos = v3.copy(route.points[0]); const p1 = route.points[1 % route.points.length];
-    this.char = new Character(ch, { id, tint, tint2: look?.tint2 ?? [0.02, 0.02, 0.025], pos, yaw: look?.yaw ?? v3.yawTo(pos, p1) });   // facing down the first leg
+    this.char = new Character(ch, { id, tint, tint2: look?.tint2 ?? [0.02, 0.02, 0.025], pos, yaw: look?.yaw ?? v3.yawTo(pos, p1), men });   // facing down the first leg
+    sameMan(this, this.char);
     this.lastPos = v3.copy(pos); this.routeI = routeI; this.route = route; this.flashlight = flashlight; this.callsign = look?.name ?? CALLSIGNS[Math.max(0, id - 10) % CALLSIGNS.length];
     if (look?.team) this.team = look.team;
     if (this.team !== 'guard' && this.team !== 'hostile') this.foe = null;   // a side not hostile to Sam has nobody until a hostile man shows himself (a hostile unit starts on Sam like the staff, and re-targets by salience)
@@ -770,6 +776,10 @@ export class Guard {
 /** the rolling chair's voice (audio.ts `follow`, rollTick below): its level at full speed, the speed (m/s) that counts as full — slower, it is quieter and lower —,
  *  the speed under which a chair is not rolling for anybody's ears, and the seconds without movement after which its voice is let go */
 const ROLL_VOICE = { gain: 0.5, fullV: 2.5, minV: 0.12, grace: 0.5 };
+/** STIRRED SMOKE CURLS (smokeWake below; the look page's Stirred smoke row): a moving man as the smoke solver is told of him. body = his capsule's radius (m), from
+ *  `foot` above the floor to `above` over his hips; a kick behind him at every step of his walk cycle, `back` behind and `low` under his hips, of
+ *  radius kickR, at `kick` × his speed and never over `most` m/s, left out while the sine that picks its side is under `gap`. */
+const SMOKE_STIR = { body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kickR: 0.17, kick: 0.9, most: 2.2, gap: 0.35 };
 /** A castor chair that has started to roll (rollTick): where it was last step, how hard it goes (0‥1), when it last really moved, and its voice's serial (0 = none). */
 interface Roll { p: Prop; x: number; z: number; k: number; moveT: number; voice: number }
 export class Game {
@@ -790,14 +800,15 @@ export class Game {
     if (on) attachSnowBlast(this);   // (a blast over lying snow marks it: snowBlast.ts hears the destruction engine's feed — once an engine, asked each frame)
     const key = (on ? 1 : 0) | (tracks ? 2 : 0); if (key === this.snowLookWas) return;
     this.snowLookWas = key;
-    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind })) : null;
+    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind, roll: groundRayConfig.on ? groundRayConfig.roll : 0 })) : null;
     this.snowTracks = tracks && this.snowField ? (this.snowTracks ?? makeSnowTracks()) : null;
     this.engine.gbuffer?.setSnowField?.(this.snowField, snowCfgRows(this.snowField, this.snowTracks ? TRACK_RES : 0));
+    if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField));   // (ground that rays can see, a trial: scene/groundField.ts — the look's page only)
     this.engine.gbuffer?.setSnowTracks?.(this.snowTracks);
   }
   /** once a frame, after everybody is posed: this frame's footfalls pressed into the snow, and what changed handed to the g-buffer */
   private stepSnowTracks(dt: number) {
-    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug);   // (a blast dug a hill out: snowBlast.ts)
+    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) { this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug); if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField)); }   // (a blast dug a hill out: snowBlast.ts)
     const T = this.snowTracks; if (!T || !this.snowField) return;
     updateSnowTracks(this, T, this.snowField, dt);
     if (SNOW_LOOK.marks) updateSnowMarks(this, T, this.snowField, dt);   // … and every thing that moved over the snow marks it (snowMarks.ts)
@@ -843,14 +854,19 @@ export class Game {
   /** THE GAME'S OWN DIE (math/dice.ts): set by the stand-up when the game was given a seed (the page always is) — every simRandom() draw then comes off it, a checkpoint
    *  carries where it stands, and nothing outside the game can take a number from it. null = the game draws Math.random, as the QA harness's tools expect */
   dice: SimDice | null = null;
-  /** THIS GAME'S STATE IN THE RUST MODULE (sim/state.ts): a block of the module's memory, for the systems whose state lives there (a row of RUST each). The
-   *  rollback snapshot carries it; no other object of the game may keep a typed array over that memory. No block until a tick opens with such a row on. */
+  /** THIS GAME'S BLOCK (sim/state.ts): the one run of bytes the families whose state is columns are parts of from the moment the game is made (the falls
+   *  below, the furniture, the thrown things, the doors and their slabs: each store is made over it), and where the systems that still move keep theirs
+   *  while their row of RUST is on. The rollback snapshot carries it; no other object of the game may keep a typed array over that memory. */
   readonly sim = new SimState();
+  /** A MAN'S STATE, AS COLUMNS (sim/men/): his row is his for his life, in this game's block once its first tick has opened. Every Character of this game is made with it */
+  readonly men = new MenStore();
+  /** THE LEVEL'S LIGHTS (fixtures, the mains, the lamps they feed, the cameras' and tripwires' machines): the `lights` part of the block (rust/sim/src/lights.rs). The one way to write them: `lightHome.in`. */
+  readonly lightHome = new LightHome(this.sim);
   /** the pose sets of this game's men that are at home in the block (posehome.ts): what goes back into arrays of its own when the row RUST.poses drops */
   poseSets: PoseSet[] = [];
   /** WHAT FALLS AND WHAT IT LEAVES (sim/fallshome.ts): the landings the simulation has scheduled for things that let go and the litter map of broken glass —
-   *  the gameplay half of shards.ts, in TypeScript or in the Rust module's block (RUST.falls) */
-  readonly falls = new FallStore();
+   *  the gameplay half of shards.ts, a part of the game's block */
+  readonly falls = new FallStore(this.sim);
   aiEnabled = true; godMode = false; infiniteAmmo = false; showDebug = false; spectate = -1;   // (aiEnabled / godMode / infiniteAmmo are also the START CARD's sandbox row — ui/menu.ts `SANDBOX_LS`, kept per machine and applied by main.ts at boot) // guard index the camera follows (-1 = player); infiniteAmmo: sandbox bottomless magazine, applied to whichever pistol the current Player carries (survives restarts)
   playerInvisible = false;   // showcase tour: guards neither see nor hear the idle player
   /** 0‥1, how close Sam is to being walked in on — for the LOOK of his movement only (fed to player.char.anim.deliberate each frame, see update(); the HUD may
@@ -878,118 +894,11 @@ export class Game {
   props: PropSystem;
   /** door the player would operate with F right now (also drives the HUD prompt) */
   useDoor: Door | null = null;   // the hovered door when it is within reach (F acts on it)
-  reachStats = wallClock({ lights: 0, meanFraction: 1, ms: 0 }, 'ms');   // reach masks built at construction (render/reach.ts): how many lights got one, the mean fraction of the level they reach, build time
-  /** the cells under the ceiling slab (reach.ts buildInteriorCells), kept for directional lights added later (the breach's sun: lighting.ts setDaylight → buildDirReach) */
+  /** the cells under the ceiling slab (render/reach.ts buildInteriorCells): is there a roof over a point (wallpen.ts, wallbreak.ts, furnblast.ts). The lights'
+   *  REACH MASKS, which stood here with their queue until 11-05, are the picture's and are kept by it (render/reachKeep.ts: the host's `reach`, none on a stand
+   *  with no picture). The game tells it that the level stands (the constructor), where walls changed (wallbreak.ts) and that a sun wants a mask (hours.ts,
+   *  lighting.ts), and reads nothing back. */
   reachInterior: Uint8Array | null = null;
-  /** WALL BREAKING (game/wallbreak.ts): the full-height walls the reach masks were derived from, the lights that carry a mask, and the ones waiting to have theirs
-   *  re-derived because a wall near them opened (or came back) */
-  private reachSolid: Uint8Array | null = null; private reachLights: RtLight[] = []; private reachQueue: { l: RtLight; rects: [number, number, number, number][] | null; boxes: [number, number, number, number][]; job?: ReachJob; restarts: number }[] = []; private reachSolidBoot: Uint8Array | null = null; private reachBoot = new Map<RtLight, Uint32Array>();
-  /** BLAST_PACE: the rects walls changed in, noted on the frame they went and not yet read into the wall raster (reachChanged), and the frames that still waits */
-  private reachHeld: [number, number, number, number][] = []; private reachHold = 0;
-  /** A wall changed inside `rect` [x0, z0, x1, z1] (null = anywhere: a reset): if the wall raster really differs, every masked light whose range reaches the rect is
-   *  queued WITH the rect and `reachTick` re-decides, a few lights a frame, only the cells whose line to the light passes it (render/reach.ts ReachOnly: a whole
-   *  mask is ~13 ms of sight lines on a slow CPU, the wedge behind one hole a fraction of a millisecond; a stale mask in between only keeps a light out of cells
-   *  it could now reach). A RESET puts the masks the level booted with straight back. The simulation never reads a reach mask — the picture's alone. Returns how
-   *  many lights were queued. */
-  reachChanged(rect: [number, number, number, number] | null): number {
-    if (!this.reachSolid) return 0;
-    // BLAST_PACE: a wall's change is only NOTED on the frame it went (that frame is the long one) — reachTick reads the raster `reachHold` frames on, every rect noted
-    // since in one go, and derives from the frame after that. A reset drops the notes with the queue. (Not under the old pace: ?reachpace=old keeps its own frames.)
-    if (rect && BLAST_PACE.on && !REACH_PACE.whole) { if (!this.reachHeld.length) this.reachHold = BLAST_PACE.reachHold; this.reachHeld.push(rect); return 0; }
-    return this.reachRead(rect ? [rect] : null);
-  }
-  /** reachChanged's work: the wall raster built again and set against the last, the lights in reach of `rects` queued (null = a reset) */
-  private reachRead(rects: [number, number, number, number][] | null): number {
-    if (!this.reachSolid) return 0;
-    if (!rects) this.reachHeld.length = 0;
-    const solid = buildWallRaster(this.engine.world.statics, this.level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width })));
-    const box = wallRasterDiff(this.reachSolid, solid);   // the sub-cells that changed: a point light's cells are decided again only where their own sight lines touch them
-    if (!box) return 0;
-    this.reachSolid = solid; let n = 0;
-    const queue = (l: RtLight, r: [number, number, number, number] | null) => {
-      const q = this.reachQueue.find(x => x.l === l);
-      if (!q) { this.reachQueue.push({ l, rects: r ? [r] : null, boxes: [box], restarts: 0 }); n++; return; }
-      if (q.job?.st) { q.job = undefined; q.restarts++; }   // part-decided, and now there is more to decide: it starts over (a light this change does not reach carries on — it would not have been queued for it)
-      if (!r) q.rects = null; else if (q.rects) { q.rects.push(r); if (!q.boxes.includes(box)) q.boxes.push(box); }
-    };
-    if (!rects) {
-      const boot = this.reachSolidBoot; let same = !!boot && boot.length === solid.length; for (let i = 0; same && i < solid.length; i++) if (boot![i] !== solid[i]) same = false;
-      if (same) this.reachSolid = boot;   // the authored walls again: the raster object the level booted with, and with it the sight lines' jump field (reach.ts jumpsOf) — not worked out afresh inside the next break's first tick
-      this.reachQueue.length = 0;
-      for (const [l, m] of this.reachBoot) { if (l.kind === 2) l.reachDir = m; else l.reach = m; }   // a light with no entry was never re-derived: its mask IS the authored level's
-      this.reachBoot.clear();
-      return this.reachLights.length;
-    }
-    for (const r of rects) {   // (the notes of several changes read at once: each light is queued with each rect in its reach, the raster's changed box theirs together, once a light)
-      for (const l of this.reachLights) {
-        const dx = Math.max(r[0] - l.pos[0], 0, l.pos[0] - r[2]), dz = Math.max(r[1] - l.pos[2], 0, l.pos[2] - r[3]); if (Math.hypot(dx, dz) > l.range + 1) continue;
-        queue(l, r);
-      }
-      for (const l of this.engine.lights.lights) if (l.kind === 2 && l.reachDir) queue(l, r);
-    }
-    return n;
-  }
-  /** re-derive queued reach masks, in the queue's order: `steps` sight-line steps a frame (~2 ms on a slow CPU — a mask too big for one frame's share carries on
-   *  where it stopped the next, render/reach.ts ReachJob, and is swapped in whole when its last cell is decided; the moon's rays are a frame's share by themselves),
-   *  at most `n` lights finished (update() calls it once a frame; nothing queued = nothing done). Returns the lights finished. `REACH_PACE.whole` (reach.ts; the
-   *  page's ?reachpace=old) = the pace this replaced: each mask whole, one light at least and more until 60 cells are decided. */
-  reachTick(n = 8, steps = REACH_PACE.steps): number {
-    if (this.reachHeld.length && this.reachHold-- <= 0) { this.reachRead(this.reachHeld.splice(0)); return 0; }   // (BLAST_PACE: the noted changes read into the raster — this frame's share; the masks from the next. While a note waits, masks queued before it carry on below)
-    let done = 0; const c0 = REACH_WORK.steps, k0 = REACH_WORK.cells, whole = REACH_PACE.whole;
-    while (done < n && this.reachQueue.length && this.reachSolid) {
-      const left = whole ? Infinity : steps - (REACH_WORK.steps - c0); if (left <= 0 || (whole && done > 0 && REACH_WORK.cells - k0 >= REACH_PACE.wholeCells)) break;
-      const q = this.reachQueue[0], l = q.l;
-      const boot = () => { if (!this.reachBoot.has(l)) { const m = l.kind === 2 ? l.reachDir : l.reach; if (m) this.reachBoot.set(l, m); } };   // what the level as authored gave it (masks are replaced, never written in place)
-      if (l.kind === 2) {
-        if (!whole && REACH_WORK.steps !== c0) break;
-        boot(); this.buildDirReach(l, q.rects && l.reachDir ? { prev: l.reachDir, rects: q.rects } : undefined);
-        this.reachQueue.shift(); done++; if (whole) continue; break;
-      }
-      const job = q.job ??= { budget: left }; job.budget = q.restarts >= 2 ? Infinity : left;   // (walls changing faster than a big mask can be decided in shares: the third go takes it in one, as every mask once was)
-      const m = reachMaskSome(this.reachSolid, l.pos, l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0], l.radius, this.reachInterior, q.rects && l.reach ? { prev: l.reach, rects: q.rects, boxes: q.boxes, maxDist: l.range + 1.5 } : undefined, job);
-      if (!m) break;
-      boot(); l.reach = m; this.reachQueue.shift(); done++;
-    }
-    return done;
-  }
-  get reachPending(): number { return this.reachQueue.length + this.reachHeld.length; }
-  /** Give a DIRECTIONAL light (kind 2) its reach mask: the outdoor cells, plus every indoor cell with an unblocked static path toward it (render/reach.ts
-   *  reachMaskForDirectional over this level's collision raycast, glass passing). The ReSTIR estimator reads it (lights.ts dirMasks); a few ms, once per light. */
-  buildDirReach(l: RtLight, only?: ReachOnly) {
-    if (l.kind !== 2 || !this.reachInterior) return;
-    const d = l.dir; const len = Math.hypot(d[0], d[1], d[2]) || 1; const toLight: Vec3 = [-d[0] / len, -d[1] / len, -d[2] / len];
-    // ~10 k short rays: the level's raycast is brute force over every static (0.4 s of that), so bucket the shadow-casting statics on the 1 m grid once and give
-    // each ray only the boxes whose cells its XZ span crosses (a couple of dozen) — the same answer in ~20 ms
-    // ~10 k short rays: bucket every SHADOW-CASTING static (NoPrimary ones too — the ceiling slab is exactly what stops the moon; glass passes light) on the 1 m grid once,
-    // then march each ray cell by cell testing the 3×3 buckets round it and stop at the first hit (indoors that is the ceiling within a metre or two): ~30 ms, not
-    // the 0.4 s of the level's brute-force raycast
-    const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell, statics = this.engine.world.statics;
-    const buckets: number[][] = Array.from({ length: W * H }, () => []);
-    statics.forEach((b, i) => {
-      if (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) return;
-      const r = Math.hypot(b.h[0], b.h[2]);   // yawed footprint bound
-      const x0 = Math.max(0, Math.floor((b.c[0] - r - WORLD.min[0]) / cs)), x1 = Math.min(W - 1, Math.floor((b.c[0] + r - WORLD.min[0]) / cs));
-      const z0 = Math.max(0, Math.floor((b.c[2] - r - WORLD.min[2]) / cs)), z1 = Math.min(H - 1, Math.floor((b.c[2] + r - WORLD.min[2]) / cs));
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) buckets[z * W + x].push(i);
-    });
-    const seen = new Uint32Array(statics.length); let stamp = 0;
-    const blocked = (from: Vec3, dir: Vec3, dist: number): boolean => {
-      stamp++;
-      const steps = Math.ceil(dist / 0.5);
-      let lastCell = -1;
-      for (let s = 0; s <= steps; s++) {
-        const t = Math.min(dist, s * 0.5);
-        const cx = Math.floor((from[0] + dir[0] * t - WORLD.min[0]) / cs), cz = Math.floor((from[2] + dir[2] * t - WORLD.min[2]) / cs);
-        const cell = cz * W + cx; if (cell === lastCell) continue; lastCell = cell;
-        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-          const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= W || z >= H) continue;
-          for (const i of buckets[z * W + x]) { if (seen[i] === stamp) continue; seen[i] = stamp; if (rayBox(from, dir, statics[i], dist)) return true; }
-        }
-      }
-      return false;
-    };
-    l.reachDir = reachMaskForDirectional(toLight, this.reachInterior, blocked, only);
-  }
   touring = false;   // the showcase tour is running (demo.ts start/stop) — a plain signal for the HUD / mission getters; quietUtility is NOT it (a stop can run 'live' with the flag down)
   hover: Interactable | null = null; interactables: Interactable[] = []; nearby: Interactable[] = []; aimSnap: Vec3 | null = null;   // aimSnap: where the auto-aim put the reticle this frame (a light or a man's chest), null = raw cursor aim   // hover = the highlighted ROW (what a Space tap / release performs), nearby = the panel's rows (player.ts buildInteractables), interactables = the per-thing markers
   /** The row Space performed THIS frame (interact.ts updateInteract sets it right after the rows are built — a tap released, or Space let go with the selector open —
@@ -1019,7 +928,10 @@ export class Game {
   /** room name → game time the pair last called it clear in THIS lockdown (planClears will not send them round the same room again within a minute unless the new
    *  fix is inside it); emptied whenever the lockdown ends (step-down, stand-down, reset) */
   clearedAt = new Map<string, number>();
-  blackout = { active: false, until: -1, since: -1, permanent: false, restoredAt: -100 }; breakerFixT = 0;
+  /** the mains, read */
+  get blackout() { return this.lightHome.mains; }
+  /** how long a man of theirs has been at the panel, read */
+  get breakerFixT() { return this.lightHome.mains.fixT; }
   beacons: { light: RtLight; phase: number; target: LightTarget }[] = [];
   items!: Throwables;
   fx: { box: Box; ttl: number }[] = [];
@@ -1062,6 +974,8 @@ export class Game {
   airDust!: AirDust;
   /** MOTHS (game/moths.ts): a dozen fluttering specks round the lit sodium lamps at night; ticked after the wind, their boxes into the frame's dynamics */
   moths!: Moths;
+  /** WET GROUND (game/wetGround.ts): the open ground a picked rain wets, as the picture draws it — dressing, ticked in the picture's block */
+  wetGround = new WetGround();
   /** GLASS BREAKING (game/glassbreak.ts): the panes' impact lists / Voronoi cells / dropped masks and the shards they become — always constructed (its hooks answer 'whole' for
    *  a pane never hit), inert unless tune.glassBreak (default off) AND chaos > 0 outside the tour; the renderer's half is the boot-time prelude const GLASS_BREAK */
   glassBreak!: GlassBreak;
@@ -1166,6 +1080,7 @@ export class Game {
     ...DEVICE_TUNE_DEFAULTS };
 
   constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number } = {}) {
+    { const over = levelOver(level); if (over) throw new Error(over); }   // (levelfit.ts: a level the pools cannot hold is not loaded, said before anything of it is built)
     this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
     const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
@@ -1182,8 +1097,8 @@ export class Game {
     loadCivTune(this);      // …and the civilians' (civilians.ts: on/off, whether a dead civilian fails the mission)
     loadBodyLight(this.tune);   // …and the bodies-by-light switch with its bar (guards.ts)
     // (the FN2000 is always in the kit now — no per-machine loadout memory; Game.fn2000 / setLoadout stay for the harness)
-    this.col = new StaticCollision(level.boxes);
-    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
+    this.col = new StaticCollision(level.boxes, levelNameOf(level));
+    if (engine.gbuffer?.setWearMap) { const wm = buildWearMap(level, this.col.nav, lookConfig.on && lookConfig.longFoot > 0, lookConfig.on && lookConfig.walked > 0); engine.gbuffer.setWearMap(wm.data, wm.w, wm.h); }   // the detail layer's traffic map (render/wear.ts: the routes over the nav grid + the thresholds, the walls' feet) — the harness's engine stand-in has no g-buffer to hand it to
     this.syncSnowLook();   // a snow level's lying snow as one surface (render/snowField.ts; picture only — nothing below reads it)
     this.chars = new CharacterRenderer(engine.device, ch);
     engine.skin = this.chars;
@@ -1193,11 +1108,11 @@ export class Game {
     if (engine.setParticles) { engine.setParticles(new Particles(engine.device, engine.sceneLayout)); applyDustLook((engine as { particles?: Particles | null }).particles ?? null); }   // GPU particles (experiment E4): only on a real Engine — the harness's stand-in has no setParticles, so every effect site there keeps to the CPU sparks (particleFx.ts gpuFx); the dust LOOK table onto the kind whether or not the switch is on yet
     attachAir(this);   // THE AIR AS A SIMULATED FIELD (airSim.ts, render/airField.ts): the page's engine gets its field once (a real device with the switch up; the harness none)
     this.probe = engine.probe?.() ?? new IrradianceProbe(engine.device, engine.sceneLayout);   // (a host that owns its probe — the native one over the shared query / answer tables — hands it here; else the WebGPU kernel)
-    first.player = new Player(ch, level.playerSpawn, this.fn2000);
+    first.player = new Player(this.men, ch, level.playerSpawn, this.fn2000);
     // loose furniture: simulated on the CPU, emitted as dynamic boxes every frame (rendered + traced like everything else), deliberately never registered as
     // collision occluders — a chair must not hide the player, muffle a shot or dent the nav grid; guards path through props and shove them aside
-    this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
-    this.items = new Throwables(this.col, this.props); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z) };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
+    this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e), this.sim);
+    this.items = new Throwables(this.col, this.props, this.sim); this.items.bog = { may: () => snowBogMay(this), at: (x, y, z) => snowBogAt(this, x, y, z), kinds: () => snowBogKinds(this), roofs: () => this.weather.roofsNow() };   // (… and bog down where they land in lying snow: snowBog.ts, 0 everywhere with its switch off)
       // canisters and dropped magazines bounce off (and nudge) the furniture
     this.tracers = new Tracers(engine.lights, sparkSink(this)); this.tracers.fog = { begin: who => this.fogOfWar.begin(who), done: was => this.fogOfWar.done(was), lightBy: (l, who) => this.fogOfWar.lightBy(l, who) };   // tracer streaks: their head lights live in the engine's LightSet (transient), their embers are sparks — GPU sparks while that path is on, the CPU pool's otherwise (particleFx.ts sparkSink)
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
@@ -1211,21 +1126,20 @@ export class Game {
     for (const l of engine.lights.lights) {
       if (l.ttl >= 0 || l.kind === 2 || l.group === 'player' || l.group === 'flashlights') continue;
       const mains = lightDefs.get(l.name)?.mains !== false;
-      this.targets.push({ name: l.name, group: l.group, kind: 'analytic', pos: v3.copy(l.pos), light: l, boxes: l.fixtureBox >= 0 ? [l.fixtureBox] : [], baseEmissive: l.fixtureBox >= 0 ? v3.copy(level.boxes[l.fixtureBox].emissive) : [0, 0, 0], baseIntensity: l.intensity, on: l.enabled, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains, stagger: staggerOf(l.group), interactive: true });
+      this.targets.push(this.lightHome.add({ name: l.name, group: l.group, kind: 'analytic', pos: v3.copy(l.pos), light: l, boxes: l.fixtureBox >= 0 ? [l.fixtureBox] : [], baseEmissive: l.fixtureBox >= 0 ? v3.copy(level.boxes[l.fixtureBox].emissive) : [0, 0, 0], baseIntensity: l.intensity, on: l.enabled, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains, stagger: staggerOf(l.group), interactive: true }));
     }
     for (const sw of level.switchables) {
       const b = level.boxes[sw.boxes[0]];
-      this.targets.push({ name: sw.name, group: sw.group, kind: 'emissive', pos: v3.copy(b.c), boxes: sw.boxes, baseEmissive: v3.copy(sw.baseEmissive), baseIntensity: 0, on: sw.on, broken: false, disabledUntil: -1, fluorescentFlicker: !!sw.flicker, factor: sw.on ? 1 : 0, mains: sw.mains !== false, stagger: staggerOf(sw.group), interactive: sw.group !== 'server_leds' && sw.group !== 'server_glow' });
+      this.targets.push(this.lightHome.add({ name: sw.name, group: sw.group, kind: 'emissive', pos: v3.copy(b.c), boxes: sw.boxes, baseEmissive: v3.copy(sw.baseEmissive), baseIntensity: 0, on: sw.on, broken: false, disabledUntil: -1, fluorescentFlicker: !!sw.flicker, factor: sw.on ? 1 : 0, mains: sw.mains !== false, stagger: staggerOf(sw.group), interactive: sw.group !== 'server_leds' && sw.group !== 'server_glow' }));
     }
-    for (const t of carLampTargets(level.boxes)) this.targets.push(t);   // (carlamps.ts: the lamps of the level's cars and pickups, one target each — no die drawn, none on the mains)
+    for (const t of carLampTargets(level.boxes)) this.targets.push(this.lightHome.add(t));   // (carlamps.ts: the lamps of the level's cars and pickups, one target each — no die drawn, none on the mains)
     // flat emissive fixtures (ceiling panels, monitors, logo, TV, vending fronts, exit signs) light the scene through analytic one-sided area
     // lights; their boxes keep glowing on screen but rays ignore the emissive term (BoxFlag.AreaLit) — kills small-emitter aliasing in the cascades
     for (const t of this.targets) {
-      if (t.kind !== 'emissive' || t.group === 'server_leds' || t.group === 'emergency' || t.group === VEHICLE_GROUP) continue;   // (a vehicle's lamp keeps the picture it had: no area light is stood in for it)
+      if (t.kind !== 'emissive') continue;
       for (const bi of t.boxes) {
-        const b = level.boxes[bi]; const h = b.h;
-        const thin = h[0] <= h[1] && h[0] <= h[2] ? 0 : h[1] <= h[2] ? 1 : 2; if (h[thin] > 0.06) continue;
-        const a0 = (thin + 1) % 3, a1 = (thin + 2) % 3; const area = 4 * h[a0] * h[a1]; if (area < 0.01) continue;
+        const b = level.boxes[bi]; const h = b.h, panel = flatPanel(t.group, h); if (!panel) continue;
+        const { thin, a0, a1, area } = panel;
         // emitting side: ceiling fixtures face down; wall/desk fixtures face whichever side is open (props are authored with the glowing face on
         // local +X/+Z of their backing, which is also the fallback when both sides look open)
         let n: Vec3 = [0, 0, 0];
@@ -1267,28 +1181,18 @@ export class Game {
     if (this.markLights.length) engine.world.repackMarkings?.();   // (the area-lit bit reaches records packed before the lights existed — the harness's stand-in world has no table)
     for (const b of level.beacons) level.boxes[b.box].flags |= BoxFlag.AreaLit;   // dome glow is screen-only; the beam is the spot light
     // mains breaker (OCP → temporary blackout, bullet → permanent) and the emergency beacons it brings up (each beacon light is slaved to its dome fixture)
-    this.targets.push({ name: 'breaker', group: 'mains', kind: 'breaker', pos: v3.copy(level.breaker.pos), boxes: [level.breaker.boxes[1]], baseEmissive: [0.3, 4, 0.6], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: false, stagger: 0, interactive: true });
+    this.targets.push(this.lightHome.add({ name: 'breaker', group: 'mains', kind: 'breaker', pos: v3.copy(level.breaker.pos), boxes: [level.breaker.boxes[1]], baseEmissive: [0.3, 4, 0.6], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: false, stagger: 0, interactive: true }));
     level.beacons.forEach((b, i) => {
       const target = this.targets.find(t => t.kind === 'emissive' && t.boxes.includes(b.box));
       if (!target) throw new Error(`beacon ${i}: no switchable owns box ${b.box}`);
       const light = engine.lights.add({ name: target.name, group: target.group, kind: 1, pos: v3.copy(b.pos), dir: [1, 0, 0], color: [1.0, 0.22, 0.06], intensity: 55, range: 14, innerDeg: 9, outerDeg: 24, radius: 0.06, volumetric: 1.0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 55 });
       this.beacons.push({ light, phase: i * 1.7, target });
     });
-    // reach masks (render/reach.ts): every static interior light the level built — fixture area lights, analytic lamps, the beacon spots — gets the set of
-    // 1 m cells it can possibly light past the full-height walls (street lamps included); torches, flashes, the rail light and the moon keep the all-ones
-    // mask. Built once here (a few tens of ms), consulted per pixel by the direct pass and per secondary vertex by directIrradiance.
-    { const t0 = performance.now(); const solid = buildWallRaster(engine.world.statics, level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width }))); const interior = buildInteriorCells(engine.world.statics); let n = 0, cells = 0;
-      this.reachSolid = this.reachSolidBoot = solid;
-      for (const l of engine.lights.lights) {
-        if (l.ttl >= 0 || l.kind === 2 || l.group === 'player' || l.group === 'flashlights') continue;
-        this.reachLights.push(l);   // transient / the moon / lights that MOVE (Sam's rail light — parked at y −10 until drawn — and the guards' torches, were they added yet): anywhere. Exterior lamp heads above the roof DO get a mask (they enter the building only through its openings, and indoors they were the worst leader-slot thieves of all) — but only its interior cells (reach.ts)
-        l.reach = reachMaskFor(solid, l.pos, l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0], l.radius, interior); n++; cells += reachFraction(l.reach);
-      }
-      this.reachInterior = interior;
-      for (const l of engine.lights.lights) if (l.kind === 2) this.buildDirReach(l);   // the moon: which indoor cells see the sky its way at all (used by the ReSTIR estimator only — lights.ts dirMasks)
-      this.reachStats = wallClock({ lights: n, meanFraction: n ? cells / n : 1, ms: performance.now() - t0 }, 'ms'); }
+    // the cells under a roof (the game's own rules read them), and the lights' reach masks, made where there is a picture to read them (render/reachKeep.ts boot)
+    this.reachInterior = buildInteriorCells(engine.world.statics);
+    engine.reach?.boot(level.doors.map(d => ({ hinge: d.hinge, closedDir: d.closedDir, width: d.width })), this.reachInterior);
     // doors: leaves are dynamic occluders for sight / sound / projectiles (collision layer)
-    this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e));
+    this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e), this.sim);
     this.props.doorways = this.doors.list.map(d => ({ cx: d.frameCentre[0], cz: d.frameCentre[2], ux: Math.cos(d.def.closedDir), uz: Math.sin(d.def.closedDir), half: d.def.width / 2 - 0.02 }));   // (a door frame guides shoved furniture through: props.ts doorways — half the air between the frame's stops)
     nameDoors(level, dialogue.isOffice(level), this.doors.list);   // what a door with a shorthand id is CALLED, by the rooms it joins (doornames.ts; read only while the dialogue pass is on)
     this.doorDeals = dealSwings(level, this.doors, this.col.nav, this.col);   // the side each leaf opens into (doors.ts DOORWAY; doorswing.ts: into the room it serves) — geometry only, no dice
@@ -1305,12 +1209,12 @@ export class Game {
       (this.destr as unknown as { walls?: { note?: (row: object) => unknown } }).walls?.note?.({ kind: 'door', cause, id: this.doors.list.indexOf(d), name: d.def.name,
         pos: [c[0], c[1], c[2]], rect: [c[0] - r, c[2] - r, c[0] + r, c[2] + r], opened: [], walkable: true, sight: true, dead: true, who });
     });
-    this.devices = new Devices(this);   // cameras + emitters join `targets` (before initialOn below captures the authored switch states); a keypad finds its door
+    this.devices = new Devices(this);   // cameras + emitters join `targets` (before the authored switch states are said, below); a keypad finds its door
     // guards
     const tints: Vec3[] = [[0.42, 0.36, 0.25], [0.3, 0.34, 0.4], [0.38, 0.28, 0.28]];
     level.routes.forEach((r, i) => {
       const fl = engine.lights.add(torchLightDef(`flashlight${i}`, 10 + i, this.tune.flashIntensity, this.tune.flashInner, this.tune.flashOuter));
-      this.guards.push(new Guard(ch, 10 + i, r, i, fl, tints[i % tints.length]));
+      this.guards.push(new Guard(this.men, ch, 10 + i, r, i, fl, tints[i % tints.length]));
     });
     openingStart(this);   // the night's opening (opening.ts): a man whose route starts on top of the way in is found down his beat instead — nothing with OPENING.on off
     { const n = level.mission.rack.index; this.rackTargets = this.targets.filter(t => t.name === `rack${n}_leds` || t.name === `rack${n}_glow`); }   // what goes dark when the drive comes out (level.ts "server room")
@@ -1323,7 +1227,7 @@ export class Game {
     this.wind = new Wind(this);          // the air (wind.ts): the level's vents + the storm + a source per exterior door — after the doors exist
     this.airDust = new AirDust(this);    // the weather's dust in the rooms (airDust.ts): seeded with the doors as they stand — after the weather, the doors and the collision exist
     this.moths = new Moths(this);        // moths at the lamps (moths.ts) — after the targets (the lamps are light targets)
-    this.initialOn = new Map(); for (const t of this.targets) this.initialOn.set(t, t.on);   // the level as authored, for resetLevelState() (captured here, before a tour or the panel touches a switch)
+    this.standLights();   // (the lamps the fixtures feed, as rows in the list's order: rust/sim/src/lights.rs)
     spawnCivilians(this);   // the cleaner and the late worker on their marks (civilians.ts — after the shift, whose construction and dice they must not disturb; nothing with tune.civilians off or none authored)
     this.fogOfWar = new FogOfWar(this);         // fog of war (fogofwar.ts): inert until switched on
     this.quiet = new QuietMission(this);        // the quiet mission (quiet.ts): inert until started
@@ -1351,6 +1255,8 @@ export class Game {
     for (const s of this.seats) registerShutDoor(s.view);                     // (after the door tools: 'shut that door' stands in for their charge row on a door that stands open)
     standMen(this);   // (seats.ts: a second seat's man and his light, made last — a game of one makes nothing here)
     this.director = new Director(this, level.script ?? null);   // the level's script: its define pass run and linted against this level here (nothing of the world touched); programs start on demand
+    this.glassBreak.stood();   // (which glass each pane is, settled as the level stands)
+    { const over = stoodOver(this, this.col.mirror.tables); if (over) throw new Error(over); }   // (levelfit.ts: the game as it stands, against every table and pool that holds it — one over is not a game)
   }
 
   /** the showcase tour flips this so its own plumbing (teleports, resets) stays out of the log while guard barks still show */
@@ -1534,11 +1440,12 @@ export class Game {
   }
 
   /** Level as authored: every switch / group back to its initial on-off, every door back to its authored angle and lock (picked / kicked locks re-lock). */
-  private initialOn: Map<LightTarget, boolean> | null = null;
   /** was this fixture's switch on in the level as authored (lightswitch.ts: what 'lights on' puts a room back to) */
-  authoredOn(t: LightTarget): boolean { return this.initialOn?.get(t) ?? t.on; }
+  authoredOn(t: LightTarget): boolean { return t.authored; }
+  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built, and again when a fixture is hung after that (the kit picture's, host/kitView.ts). So every lamp a fixture feeds has a row and one way of burning. */
+  standLights(): void { this.lightHome.stand(this.engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot }))); }
   resetLevelState() {
-    if (this.initialOn) for (const [t, on] of this.initialOn) t.on = on;
+    for (const t of this.targets) this.lightHome.in(LIGHT_IN.on, t, t.authored ? 1 : 0);
     for (const d of this.doors.list) d.reset();
     this.decals.clear(); resetGlass(this); resetGlassPen(this);   // the marks go with the encounter that made them (a restart, the tour's hand-over) — and the glass's count / log of the crack stars among them (glass.ts, review U9.10)
     resetBars(this);       // …and every window's bar a round or a blast took stands again (winbars.ts) — before the destruction's own reset, like the panes
@@ -1586,7 +1493,8 @@ export class Game {
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
     for (const s of this.seats) { const v = s.view, light = v.player.light;   // (every seat's man afresh — seats.ts: the first on the spawn, the next beside him)
-      v.player = new Player(this.ch, spotBeside(this, v3.copy(this.level.playerSpawn), s.index), this.fn2000, s.index); v.player.light = light; kitFresh(v); v.player.char.update(0); }   // pose + bones exist before this frame's capsule upload
+      manLeaves(v.player.char, v.player);   // (his row is free for the fresh man)
+      v.player = new Player(this.men, this.ch, spotBeside(this, v3.copy(this.level.playerSpawn), s.index), this.fn2000, s.index); v.player.light = light; kitFresh(v); v.player.char.update(0); }   // pose + bones exist before this frame's capsule upload
     this.cues?.reset(); this.squadNet?.reset(); eachSeat(this, v => { holdFireReset(v); resetShowWhy(v); });   // (holdfire.ts: a fresh encounter — nothing has started the fight)
     dialogue.ambientRestart(this);   // (the staff's ambient chat: its first-chat clock runs from this restart, not from the page's first frame)
     this.fogOfWar?.reset();   // (fog of war: its memory of who was seen and its turn at the probe belong to the encounter that just ended)
@@ -1681,8 +1589,8 @@ export class Game {
     if (cmds.length !== n) throw new Error(`stepSeats: ${cmds.length} record(s) for ${n} seat(s)`);
     this.ticking = true; this.col.tickOpen();   // (the box world's copy in the Rust module, where a row of RUST asks it: scene/boxMirror.ts)
     try {   // (…shut however the step ends: a step that throws must not leave the copy answering for boxes nobody compares)
-    this.sim.settle(this);   // (state that lives in the Rust module while its row of RUST is on moves in or out as the tick opens: sim/state.ts)
-    if (RUST.walk) { knobsToRust(); RUST_KNOBS.tick = true; }   // (…and the knobs the module's code reads, as they stand now, before anything of the tick reads one: game/rustknobs.ts)
+    this.sim.settle(this);   // (the block is bound for the tick; a system whose state is in it only while its row of RUST is on — the die, the poses, the smoke grid — moves in or out as the tick opens: sim/state.ts)
+    knobsToRust(); RUST_KNOBS.tick = true;   // (…and the knobs the module's code reads, as they stand now, before anything of the tick reads one: game/rustknobs.ts)
     let cmd0 = cmds[0];
     if (CMDCHECK.on) for (let i = 0; i < n; i++) { const s = S[i], r = checkCmd(cmds[i], s.remote ? s.view.player.char.pos : null); if (!i) cmd0 = r.cmd; else if (r.cmd !== cmds[i]) (cmds = cmds.slice() as PlayerCmd[])[i] = r.cmd; if (r.fixed) { s.fixed += r.fixed; s.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
     this.replayTap?.(dt, cmd0);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
@@ -1695,6 +1603,7 @@ export class Game {
     if (n > 1) dealSeats(this);   // (seats.ts: a team staged or grown since the last tick is cut into the seats' pairs before anybody is ordered)
     for (const s of S) s.view.viewProj = s.cam.viewProj;
     this.time += dt; this.ocpCooldown = Math.max(0, this.ocpCooldown - dt); this.col.sound.tick(this.time);
+    dutiesAnew(this);   // what a man covers is said anew each tick (belief.ts)
     // EACH SEAT'S HALF OF THE TICK runs over that seat's view (seats.ts): `v.player` is its man, `v.orders` its menu — the lines are the ones a game of one always ran
     for (const s of S) { const v = s.view, input = s.input, cam = s.cam, canvas = s.canvas;
     updateAim(v, input, cam, canvas);   // (builds the interaction rows too: player.ts buildInteractables)
@@ -1774,7 +1683,7 @@ export class Game {
     this.defuse.tick(dt);   // a defuse mission (defuse.ts): the charges' one clock, Sam's own row at one, the blast at zero — a return on its first line on a level without the block
     this.verdict.tick();    // the run's verdict (verdict.ts): after every end this frame could write — read-only
     this.updateProps(dt);
-    this.destr.update(dt); if (this.reachPending) this.reachTick();   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
+    this.destr.update(dt);   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
     this.airDust.update(dt);   // the weather's dust in the rooms (airDust.ts): through the openings as the doors and the walls stand this frame — before the guards' eyes ask the air
     this.events = this.events.filter(e => this.time - e.time < 0.5);
     lightSwitchTick(this);   // a room's wall switch (lightswitch.ts — a return on its first line with its switch off): a defender at one puts a room back, before the fixtures are written
@@ -1790,6 +1699,7 @@ export class Game {
     if (DRESS.moths) this.moths.update(dt);              // the moths' orbits (moths.ts) — after the wind that scatters them
     if (DRESS.snow) this.syncSnowLook();
     if (DRESS.rain) updateRainFx(this, dt, me.cam);        // PARTICLE RAIN (rainFx.ts): the near-field drop recycler + drips + the lattice's stand-back disc (frame.weatherE) — after the wind (its drops ride the same field) — a return that zeroes the disc unless settings.particleRain is on and rain is drawn
+    this.wetGround.follow(this);   // WET GROUND (wetGround.ts, dressing: DRESS.wetGround is read inside, so the row put down DRIES what the step wetted): the yard is as wet as the weather just said — the renderer's words of the statics only
     updateItems(this, dt);
     updateGlass(this);   // glass: a stun charge beside the glazing stars the panes near it (this frame's 'bang' events, each looked at once) — and, with glass breaking on, takes cells out of them
     this.glassBreak.update(dt);   // glass breaking (glassbreak.ts): queued cells fall as shards within the frame's budget, the support pass drops the tongues left hanging, the gusts through shot-out exterior panes — nothing to do unless a pane has been hit with the switch on
@@ -1918,9 +1828,24 @@ export class Game {
   /** men moving through smoke push it */
   private smokeWake(all: Character[]) {
     // characters wading through smoke push it around
+    const stir = lookConfig.on ? Math.max(0, lookConfig.stir) : 0;   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
+    this.smoke.setStir?.(stir);
     for (const c of all) {
       const sp = Math.hypot(c.vel[0], c.vel[2]); if (sp < 0.25 || !c.bones.hips) continue;
       const dirv: Vec3 = [c.vel[0] / sp, 0.05, c.vel[2] / sp];
+      if (stir > 0) {
+        // STIRRED SMOKE CURLS (the maintainer, 10-31, of smoke in the yard: "more turbulence or vorticity near the edges, especially when it's driven by player
+        // movement", with the smooth flow the wind makes along a wall kept). HIS BODY is a standing capsule from his shins to his shoulders: the air inside it
+        // goes with him and the solver sends what he displaces round his sides (smoke.wgsl emBody). HIS STRIDE throws the air just behind him out to one side
+        // and then the other, a side a step: the shedding a walking man's legs and arms do, which a lattice this coarse would smooth into two still eddies.
+        // The side is his own walk cycle's (one cycle is two steps), so it changes when his foot does, whichever way he turns.
+        const S = SMOKE_STIR, h = c.bones.hips, hx = dirv[0], hz = dirv[2], top = h[1] + S.above, mid = (top + S.foot) / 2;
+        this.smoke.push({ pos: [h[0], mid, h[2]], dir: [hx, 0, hz], speed: sp, radius: S.body, body: Math.max(0, (top - S.foot) / 2 - S.body) });
+        const side = Math.sin(2 * Math.PI * c.anim.phase);
+        if (Math.abs(side) > S.gap) { const k = Math.sign(side);
+          this.smoke.push({ pos: [h[0] - hx * S.back, h[1] - S.low, h[2] - hz * S.back], dir: [-hz * k, 0, hx * k], speed: Math.min(S.most, sp * S.kick * Math.min(2, stir)), radius: S.kickR }); }
+        continue;
+      }
       this.smoke.push({ pos: c.bones.hips, dir: dirv, speed: sp * 1.15, radius: 0.3 });
       if (c.bones.chest) this.smoke.push({ pos: c.bones.chest, dir: dirv, speed: sp * 1.1, radius: 0.26 });
     }
@@ -1981,7 +1906,7 @@ export class Game {
     const wetOn = (this.engine.settings as { wetChars?: boolean }).wetChars !== false;   // wet characters (wet.ts): the renderer's switch — off (or a dry man) hands the g-buffer zeros, and it shades him exactly as before
     let drawn = bare ? this.fogOfWar.everybody(all) : this.fogOfWar.filter(all);
     if (this.rails.skyOn) { const me = this.player.char; drawn = drawn.filter(c => c !== me); }   // (rails.ts, the sky seat: nobody on the floor is the player — he is parked, and not in the picture)   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
-    if (drawn.length > 8 && (this.nightBreach.active || this.rescue.active)) {   // more men on screen than cast shadows (the four-man squad, nightbreach.ts: Sam + four + up to five defenders — BoxWorld.addCharacterCapsules stops at eight): the men down give up their proxy places first, so it is a body that goes without a shadow before any man standing does. Eight or fewer = the list as it was
+    if (drawn.length > 8 && (this.nightBreach.active || this.rescue.active)) {   // more men on screen than have a mesh tree (the four-man squad, nightbreach.ts: Sam + four + up to five defenders; render/meshbvh.ts MESH_MAX_CHARS is eight. Every drawn man has his round-cone proxies: BoxWorld.MAX_CAST): the men down give up the trees' places first, so it is a body that is shadowed by his cones before any man standing is. Eight or fewer = the list as it was
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];
     }
@@ -2022,7 +1947,8 @@ export class Game {
     // settle. Gone, the blobs answer again. A NEW one with every encounter and whenever the senses come to the game, restartEncounter and above (`renew`):
     // its beat and the light model's sweep then start with the encounter, in a game that has run for an hour and in one a file was just loaded into.
     // With the light model up, the light that comes round is stepped on the same squares: sense.ts SENSE.bounce)
-    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null);
+    // …and under the open sky its smoke drifts with the weather's wind (SENSE.drift; wind.ts stormDrift)
+    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null, SENSE.drift ? () => this.wind.stormDrift() : null);
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {

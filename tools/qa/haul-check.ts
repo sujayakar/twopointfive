@@ -19,6 +19,7 @@
 // HAUL_BREAK=1 = the key left down where `haul` asks for it up: haul must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: bones are read, nothing is drawn. Pictures of the same run: tools/qa/close-stills.ts --scene choke.
 import { standUp, ROOT } from './headless.ts';
+import { asProbe } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { TAKEDOWN } = await import(`${ROOT}/src/game/takedown.ts`);
@@ -125,4 +126,4 @@ export async function haulCheck(): Promise<boolean> {
   finally { Object.assign(TAKEDOWN, was.td); Object.assign(CLOSE, was.close); Math.random = rnd; }
   console.log(`\n=== haul: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
-if (import.meta.main) process.exit(await haulCheck() ? 0 : 1);
+if (import.meta.main) process.exit(await asProbe('haul', haulCheck) ? 0 : 1);

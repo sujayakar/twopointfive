@@ -54,6 +54,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Checked by `bun run tools/qa/wallsafe-check.ts` (`probes.ts wallsafe`, also under `wallcharge`; the office + block-squads (OLD floor) + Mousehole's ward for the walk back: indoors / outdoors read, marks over every site, a man and Sam in
   and out of the radius, indoors further than outdoors, the tight room, the mark behind a locked door, no mark in a room the squad has not been in with the defenders in place, switch off = the old marks and reach; `WALLSAFE_BREAK=1` = the switch left off and the same lines asked: must fail); `probes.ts wallcharge` is green on the frozen stand AND under `TPS_WALLSAFE=1` (its squad line takes a man who crosses past the hole's own record where the blast took the wall too — men stood off further come in at a slant —, its refusal forces the safe marks away as well, its trigger row may name who is too close; blastfeel asks each puff's line on the frame it is made). On a level named by `--scn` (never the two it runs by default) whose every room is too small to get clear in from a fresh start, its played-in-a-room line is staged again with the building taken — every room known, the defenders off the floor — and says so. THE SQUAD BLOCK COUNTS CARRIED WALL CHARGES: `wall charges N` (wallcharge.ts `hudNotes`) while the run brought wall charges of its own (`WallCharge.carried` not null, more than none brought: `setCarried`, or whatever else raises the run's count); no line under the whole-bag rule, whose count is the door tools' own 'charges N' (`probes.ts wallcharge-cost`); read as the count stands — a HUD read never re-syncs the roster. Numbers never played by anybody.
 
+- **A LEVEL'S PLACES FOR A WALL CHARGE ARE HELD** (2026-11-04; `tools/qa/wallfurn-check.ts`, the `held` line; `tools/qa/fixtures/wallcharge/<name>.txt` and
+  its README; a check, no switch and no rule of play). Why: the compound's dressing stood wood piles at the outside foot of the wall the squad breaches and
+  took 23 of its 891 places, and nobody had counted them; the maintainer: a loss is fine "so long as it's deliberate". Each level's file holds two counts,
+  the places the plain rule accepts on the frozen stand and on the shipped one (its lived-in rooms in). The line is red when the level has another number
+  on the stand of the run: fewer (something took a place), more (write it: slack would let a later loss pass), no file, a file that is not two counts, a
+  file for no level. A run that names no level asks every level a mission on the list plays on, tutorials and quiet missions too (30 files with the
+  squads' second block file), the added ones stood up for the count alone: the whole check is about two minutes. A look twin is asked against its
+  level's file. A dressing commit that changes a count carries the file; a loss says which places and why on a `#` line (the hall's firewood stack, the
+  tutorial yard's gate marker, the warehouse's examining table do). `WALLPLACES_BREAK=1` reads the sweep one place short and every line fails, on both
+  stands. It is a count, not the set: a place lost and another gained in one change is not seen. Headless only; nothing here is drawn.
 - **The men who stand off a wall charge keep out of the fire of the enemies the team knows of** (`WALLCHARGE.outOfFire`, 10-14; a mend from the
   maintainer's play of The pass, his F7 tape: "the two guys move away from the wall charge to a place that doesn't make sense (isn't safe since there are known
   enemies that can shoot them from there)"). The switch: ON in the page (`?standfire=0` = the marks as they were; debugger row 'wall charge ▸ stand off out of
@@ -254,6 +264,115 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   room, 4 through), no page error; under `?hungcharge=0` the same charge opens nothing and the board hangs on. NOBODY HAS SEEN IT on a GPU and nobody has
   played it: the stills (`STILLS=<dir>`, `EXTRA='hour=midday&wallsafe=0'`, the camera on the charge's side facing the wall) are the software adapter's
   at verylow; the picture goes dark between about 0.3 and 0.7 s after the blast in them, as after any wall charge (not looked into here).
+- **What is painted on a wall goes with the wall** (`src/game/wallskin.ts`, `WALLSKIN`, 2026-11-05; found by the office's hand pass: a 2.2 m blast on
+  four partitions took the vent over the hole and left every painted band from the floor hanging across its foot, and a length of conduit that carries a
+  branch hanging across the breach with its clips gone). A level's walls carry drawn-only boxes on their faces (the look kit's `skirt` and `dado`, a
+  damp foot, a mend, a stripe, conduit, card boards and the papers on them). `wallbreak.ts hangers` takes what is MOUNTED on the stretch that opened, only
+  from 0.25 m up, only once half of what holds it is gone, and only what rests on nothing: so a band from the floor, a long stripe over a short hole and a
+  conduit run resting on its own branch stayed whole, paint and pipe in the air and a man walking through them. ONE RULE, FOR EVERY SHEET AND EVERY
+  SOLID: A SHEET IS DRAWN WHERE THE SURFACE IT LAY ON STILL STANDS. A SHEET is an authored static that is drawn and nothing else (NoShadow), upright
+  (no deeper than `thick` 4 cm across one of its level axes and no thinner up than across: a sheet lying FLAT, a rug, a decal on the ground, a paper
+  on a desk, is not this rule's and is left exactly as it was), unturned or square to what it lies on, lightless. WHAT IT LIES ON, as the level was
+  authored: every solid static (met by rays and drawn; not tilted, not round) it lies square against, proud of that box's face, its near side within
+  `off` 8 cm of the face; its BACK is the side more of it lies against (a crate stood against a wall does not claim the wall's band), and each part of it
+  lies on THE NEAREST solid behind that part, and on any other within 2 mm of that (two walls' faces in one plane at a corner). So not by a piece's name, a
+  kit, a group or a level, and not by the kind of thing behind. ASKED OF STATICS ONLY: a door leaf, a chair, a body, a thing that rolls are in no
+  sheet's list, and a sheet on one of them is that thing's own business. WHAT STANDS of a solid is the solid's to say: a thing `wallbreak.ts` opens (a
+  partition, a hard wall a charge took on, COVER) by its cells, the layer at the face the sheet lies on; any other solid whole, until something hides
+  it. A part of a sheet goes out of the picture when it lay on something and nothing it lay on stands behind that part: cut square at the cell's
+  edge, and at a corner where two walls overlap the band on the standing wall is whole and so is the opened wall's band over the standing one's end. A
+  part that lay on nothing as authored (a band run across a doorway) stays as authored. WHERE WHAT STANDS ENDS RAGGED (a standing piece under a cut
+  record, which is how cover breaks under the cut switch), the part of the sheet on that piece takes the outline of the piece's FACE, by the piece's
+  own planes stood square to the face (paint is on the face: where the broken core runs on behind it there is none). THE RULE IS TOLD OF CELLS OPENING
+  AND OF NOTHING ELSE (`skins.opened`, the one hook, in `openCells`: rounds, a blast, a charge on a hard wall, a collapse, cover razed, a checkpoint's
+  load), and cuts again once a frame however many cells opened, as the frame's boxes are handed over. SO A SHEET THAT LIES ONLY ON A THING ANOTHER LANE
+  DESTROYS (a label on a crate the furniture lane takes: 5 in the 59 levels) is never asked and stays drawn as before; and a sheet that lies on such a
+  thing AND on something the wall breaker opens keeps the part on the hidden thing until a cell of that wall next opens, then loses it. The same rule
+  would cover both with one more telling (the world's geometry serial moves when the wall breaker, the furniture lane or the window bars hide a
+  box); it is not told today. HIDDEN, NOT THROWN, AND NO FLAG WRITTEN: the authored box is left out of the picture by
+  `BoxWorld.undrawn` (`scene/boxes.ts`: the world's own list of what it draws; `staticDrawn(i)` asks it, `boxDrawn` reads a box's flags alone and does
+  not know), and what stands of it is handed to the frame's dynamic list as boxes of its paint under a key of their own (`MKEY.skin` + the sheet × 16 +
+  one of 16 places, so no two share a key and a piece a later cut leaves alone keeps its; the fog of war passes them as it passes a wall device,
+  `fogofwar.ts THING_PASS`; the look's word says they do not move, `BoxWorld.packBox`, so a stuff laid in place is mapped by the world as on the
+  authored box). A frame whose box list has no room for what stands of a sheet draws the authored sheet whole for that frame: never neither (the room is
+  `edgeLook.ts frameRoom`, one rule for both picture lanes, and no more than the list has left as it stands when the pieces are handed over). Nothing
+  falls, nothing enters the debris pool, no counter of the lane's is drawn from, and the simulation reads every box exactly as it did: what the hangers
+  throw, they throw as before (a sheet they take is hidden by its flags and its pieces go with it). A TOOL THAT ASKS "IS THIS BOX GONE" BY ITS FLAGS
+  will say a cut band stays: ask `game.destr.walls.skins.cut.has(i)` or `world.staticDrawn(i)`. WHY 8 CM: bands are authored on the face or a few
+  millimetres proud, but not all (the snatch's blue dado stands 6 cm off its partition and an office cork board 1.5 cm off its, with nothing between);
+  with each part on the nearest solid, a paper on the front of a solid board is the board's and a floor slab's edge inside a wall's thickness is behind
+  the wall, not under the paint. BY THE RULE AS IT STANDS (the shipped stand, all 59 levels): 1637 sheets in 51 levels: 547 on partitions, 988 on hard walls a charge can take on, 102 on cover alone; 217 of them stand more than 1 cm off the solid behind them, 128 lie on solids that run two ways (a corner), 40 carry markings. A SHEET THAT CARRIES MARKINGS (a band with
+  stripes, a number on a plate, a sign) is cut where the wall is with every mark where it was: a marking is laid out in whole texels from the middle
+  of the box's face, so what stands of such a sheet is THE WHOLE BOX AGAIN (same middle, same size, same markings) under a cut record of the rectangle
+  that stands, four planes at most (`scene/cut.ts`), not a smaller box. That needs the cut switch, which is what draws a record (on in the page; off on
+  the frozen stand): with it off, or on a shaped box with no room for four more planes, a marked sheet is left as it was and counted (`stats.uncut`). A
+  plain sheet that says a cut shape is cut into smaller boxes, each under the shape's own planes. CAPS: `perSkin` 12 pieces of one sheet (16 at most),
+  `maxPieces` 256 in all; past either a sheet first gives up ragged ends, then is cut by whole columns (fewer, taller pieces: the sill under a port is
+  given up), and past that is left as it last stood (`stats.coarse`, `stats.capped`). KNOWN SEAMS: on a WALL the cut is square at the column's edge,
+  where the wall's standing piece ends under the edge look, and `edgeLook.ts`'s plates stand up to a hand into the opening past it in the wall's own
+  paint, bare of the band; a card board cut at a hole's edge is a board sawn square; a sheet the hangers throw AFTER it was cut comes off as the whole
+  box it was authored as (the pool's chunk is not this rule's to size); the pieces are packed with the frame's boxes every frame (256 at most); a stuff
+  that is the box's own (cloth, boards) is laid on each piece afresh; a drawn-only BODY deeper than 4 cm (a duct, a cabinet's front) is the hangers'
+  alone as before, and a thin face on such a body, within 8 cm of the wall, is cut with the wall while the body may hang; what stands of a sheet is
+  drawn AFTER every static, so where two sheets share a plane (14 of the levels' sheets do, a plate over a damp foot) the one that is cut and the one
+  that is not may change which is seen; trim a sheet SAYS (`piece` / `of`) that is not itself a sheet of the rule would stay when its sheet is cut to
+  nothing (no level has such trim today). THE SWITCH: `WALLSKIN.on`, ON
+  in the page (`?wallskin=0` = the bands as they were), OFF in the module and on the frozen stand (`FROZEN_HOLDS`; `TPS_WALLSKIN=1` raises it there), in
+  the registry and the journal (a recording from before the table replays with it down). Raised under a standing game, every wall that has opened is
+  asked again; put down, every sheet is whole again. `stats` says what stands as it is read (sheets cut now, pieces in the last frame's list), not
+  what a run did: a level put back reads nought. State hangs off the Game (`destr.walls.skins`: walked by a snapshot, dropped by `reset()`,
+  re-derived by a checkpoint's load); the world's list is written again every frame (`skins.boxes`), so a tick put back leaves nothing stale. No row in
+  `dress.ts` (edgeLook has none either): a host that draws nothing still runs it. IT TAKES THE PLACE OF `scene/lookTidy.ts lookTidy` on the page: that
+  hid the look's floor decals WHOLE with a holed wall's box (a hole in one cell bared the wall's foot along its length), only on a level in the look's
+  paints, only on the page, and by writing their flags. The page asks it to hide now only where the rule is not in force (`?wallskin=0`; the cut
+  switch down, where no record can be drawn for a marked decal; a level an error put the rule down on) and to rest otherwise (which puts back whatever
+  it hid while the rule was down); it goes when the switch is retired. THE RUST MODULE: the cut lives in TypeScript, in the picture's part of
+  the tick; it reads cells where `wallbreak.ts` opens them and the statics' boxes, asks the collision's copy nothing, adds no static, no cut row and no
+  entry to its tables.
+  THE CHECK: `tools/qa/wallskin-check.ts` (probe `wallskin`, family destruction; `WALLSKIN_BREAK=1` must fail, 20 of its 32 lines; both stands, and each with the
+  cut switch the other way: `CUTBOXES=1` on the frozen stand, `CUTBOXES=0` on the shipped one). ITS ORACLE IS THE LEVEL'S OWN COLLISION and knows
+  nothing of the rule's rectangles or of what the rule thinks a sheet lies on: every sheet's face is sampled every 23.7 mm; a point is DRAWN if
+  `BoxWorld.visible` after the world's own upload covers it (the static by number, the sheet's own pieces by key); what it LAY ON is the first solid
+  surface a short ray straight in met as the floor stood; it has LOST ITS WALL when no solid surface stands at that depth now. No point that has lost
+  its wall may be drawn and none that has not may be lost. It lays its own paint, conduit, board, marked band, a sheet 4 cm off the wall and things
+  that are not the rule's on the office's walls and asks after a blast, a second beside it, rounds for a port and then the sill under it, a
+  checkpoint's load, a tick put back, a charge on a hard wall and a blast on each of two walls in one line; PLAY IS ONE RUN on two floors, the rule up
+  and down, at all ten stages (digest, cells, the feed's serial, the lane's hash counter, the debris and its places, the count of statics, every
+  authored box's flags); the caps, a frame with no room, the switch turned under a standing floor, every piece under a key of its own; and THREE
+  LEVELS' OWN PAINT (lines 6): a corner of the block where two partitions overlap, one's end column opened; a decal on cover on the mousehole, the
+  cover razed; paint on cover on the consulate, the cover opened in part and its standing piece ragged. THE SAME FILE SWEEPS A LEVEL'S OWN PAINT
+  (`bun run tools/qa/wallskin-check.ts --sweep <level.json …|all>`, a tool, no probe runs it): every partition and piece of cover blasted at three
+  places, every hard wall that carries a sheet taken on and breached once, one at a time, every thin drawn-only sheet near (a quarter-turned one too)
+  asked by the same oracle three times coarser; sheets that lay only on a thing another lane took are counted apart. `tools/qa/wallskin-page.cjs` asks the heart of it of the real page (headless Chromium, the software adapter), on and under
+  `?wallskin=0`, with stills (`STILLS=<dir>`; `CORNER=1` = at a corner where two walls overlap). `hole-watch.ts` (every play-through's JSON,
+  `destr.skins`) says how many sheets stood cut as a run ended, so "no digest moved" can say whether the rule was met.
+  MEASURED (11-05, twice: fifteen joined steps before the tip the change is cut on, and eight before it; those steps touch the rule's files only in
+  the switch lists, two lines of `destruction.ts` and the pace of the statics' draw order in `scene/boxes.ts`, and the numbers below are the same both
+  times; 42 scripted play-throughs = 21 scenarios, seeds 1 and 2, `PT_DIGEST=1 playthrough.ts --seeds 1-2`). THE PAGE'S STAND, the rule up
+  against down (`TPS_WALLSKIN=0`), and each against the tree before the change: 42 of 42 digests the same every way; sheets stood cut at the end of 4
+  of those runs (13 sheets, 4 with nothing left standing, 11 pieces). With every held room taken by a wall charge where one fits (`PT_DESTR=1
+  PT_WALL=1`), up against down: 42 of 42 the same; sheets stood cut at the end of 24 of the runs (67 sheets, 31 with nothing left standing, 79 pieces,
+  no cap reached, none left uncut). THE FROZEN STAND: the check and its break word, the families, `rollback-check`; no play-through arm (destruction is
+  off on that stand in a play-through, so the rule is never met there). EVERY LEVEL'S OWN PAINT (`--sweep all`, the page's stand): 59 levels, 3571
+  blasts (457 of them hard walls breached), 7.6 million points of 15,695 sheets asked, 478,873 lost what they lay on: none drawn there, none lost with
+  it still there. Counted apart, 520 points of the 5 sheets that lay only on a thing another lane took, still drawn: the consulate's `box_0458` on
+  `box_0455` (in both its files), the office relief's `box_0751` and `box_0752` on `box_0750`, and its `box_0614` on `box_0590`. ON THE PAGE
+  (`wallskin-page.cjs`, the block's room clear, the software adapter): at a 5.6 m partition with three bands from the floor, two blasts: 16,452 points
+  asked, 5460 lost their wall, none drawn there and none lost, 4 sheets into 8 pieces, no page error; at a corner where two partitions overlap
+  (`CORNER=1`), one's two end columns opened: 23,904 points, 2736 lost their wall, none drawn there and none lost; under `?wallskin=0` both read as the
+  build was (the band gone whole from the holed wall, by `lookTidy`). WHAT IT COSTS (headless, the CPU's side, a cloud box, medians of six runs; three
+  wall charges each on the office, the block and the compound, each blown inside a window as a tick's input is): on a frame where nothing broke,
+  nothing measurable (the rule's two calls read the timer's floor with the rule up and down, and while nothing is cut the world asks no list); on a
+  blast, 0.3 to 0.9 ms inside the blast's own call (finding what each sheet near the wall lies on, the first time that wall opens; 2 ms on a session's
+  first blast) and 0.1 to 0.4 ms on the next frame (the cut); after, about 0.01 ms a frame. The page's own profile of a blast frame was not taken.
+  THE FAMILIES `wallskin wallbreak outerwall hungcharge fog-things shapes cleanrestart statediff journal-knobs shipped wallfurn wallreact` green on both
+  stands with it, `rollback-check` in full and `--static` on both, `dress-check`. No tour, no soak.
+  SEEN ON A GPU IN STILLS, and only so: the page script ran on a rented card (an A10G, headless Chromium, quality high, midday) eight joined steps
+  before the tip the change is cut on: at the block's partition, at its corner (`CORNER=1`) and on the snatch (`LEVEL=snatch.json`, a blue dado 6 cm
+  off its partition), every verdict passes with the software adapter's numbers and no page error. In the frames the band stands to the hole's edge and
+  is gone where the wall opened; at the corner it stays on the end of the wall that still stands (a strip a hand wide: hard to read); on the snatch
+  nothing blue hangs in the hole. Three places, once each, about four frames a still. Never seen moving; the maintainer has not seen it and nobody has
+  played it. No still of a band that carries markings or of cover that ends ragged.
 - **A blast's pall: a wall charge, a hand grenade and a 40 mm raise a real cloud of dust and smoke** (`CHAOS.pall`, `destruction.ts`, 10-14; his words:
   "i'd also expect much more dust/smoke from a wall charge" / "same goes for 40mm" / "and frag"). BEFORE: a blast raised the bullet's puff a few times over
   (`CHAOS.puff`: radius 0.2, a third of a second, under the round's caps of 2 a frame and 8 a second) and `WALL_BLAST.dust`, particles the picture alone
@@ -328,6 +447,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   · KNOWN: 48 newer marks in one 1 m square drop the oldest there from the drawn list (`DECAL_MAX_PER_CELL`) — a film would lose that square, straight
   edged (as a scorch always could). Not dusted: props not under a patch's middle, walls. A film is one flat tone mix (plaster pale `0.68 0.66 0.61`): it
   lifts a dark floor, on a floor near that tone only its grit, soot and matte read.
+- **A blast's marks sit in the surface** (`render/decals.ts MARKSIT`, `shaders/decals.wgsl dkSit`; the maintainer 10-31 on the break lab, a
+  yard at night in rain after a dozen grenades: "the decals are repetitive and look pasted on"). WHAT WAS WRONG, read off his shot and the shader: a film of
+  dust (`damageMark` look 6) and a scorch (`scorchMark`) were each ONE ROUND STAMP with a smooth fall to its rim, so a dozen read as a dozen copies; the
+  film was one fixed pale whatever it lay on; and both made the ground matte, on wet asphalt a dull disc in the middle of the shine. THE SWITCH: the word is
+  the fourth word of the decal buffer's header, ON in the page (`?marksit=0` = every mark as it was drawn), OFF in the module and on the frozen stand, so
+  that stand's packed words are the old ones (a registered switch since 11-05: the bullet at the foot of this file). It is the picture's alone: no game code reads it, no record changes, nothing is added to a mark's cost but two or
+  three noise reads on a scorch or a film. WITH IT UP: a scorch is off round (a seeded ellipse inside the record's reach, its heart off its middle) and a film keeps its reach but is carved by the shared field below, so no two have one outline;
+  its thin parts are broken by ONE FIELD ANCHORED TO THE SURFACE that every mark on that face shares (`dkBanks`, `dkBlotch`, read at `dkWorld2(P, n)`), so
+  two films side by side meet in one shore and thin soot lies in patches with an edge; a film takes some of the colour of what it lies on; and on wet ground
+  (`dkWet`, set by `gbuffer.wgsl` from the box's wet finish on an up face; the cut g-buffer never sets it) both are darker and keep most of the ground's
+  shine. NOT CHANGED: where the game lays a mark and how big (`marks.ts bangScorch`, `floormess.ts`), the grit specks, the rubble marks, bullet holes,
+  scuffs, wall wear. THE CHECK: `node tools/qa/marksit-page.cjs` (the yard: what five hand grenades leave on open ground, laid as the game's records by
+  `CHAOS.mess.burst`'s own numbers, a scorch at each and one on a wall, a still with the word down and one with it up, dry or with `--weather rain` (a page keeps the weather it opened in, so one a run); the word must change over one
+  pixel in a hundred. Not real blasts: what a blast throws, and its pall in the smoke solver, take minutes a frame on the software adapter),
+  `MARKSIT_BREAK=1` must fail. SEEN (stills on the software adapter, 11-01, the yard under a grey day; NEVER SEEN ON A GPU, never in motion, never at night): 118 of 118 pipelines, no error. In rain with the reworked film the word changes 47 % of the picture (mean 0.457 down, 0.441 up): the five scorches lose their one starred outline for soft uneven patches with broken edges, and the pale films stop reading as discs and lie as a thin uneven veil that the wet ground still shines through. Dry, the FIRST version of the film (shrunken ellipses) read as separate cotton puffs with bright specks on bare ground, which is why the film now keeps its reach; the reworked film has no dry still. The break run (`MARKSIT_BREAK=1`) was not run after the rework. The same marks on a wall, glass or a floor indoors are not in any still.
 - **Glass** (E3; docs/internal/exp-glass.md = the branch's record — the SHATTER half of it is superseded): a static box flagged `BoxFlag.Glass` (level flag
   name `Glass`, albedo = transmission tint; 22 panes: conference partition ×6, manager sidelight, lobby frontage 4 + 4, the other windows) is a PANE: never in
   the raster nor the trace grid, listed nearest-first in `SceneInfo.glass` (boxes.ts packGlass, ≤ `MAX_GLASS` 32) and tested analytically by composite
@@ -340,7 +474,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   goes round through the door instead of planting on the corridor putting rounds into the glass, and no corner is taken behind a pane; aim.ts `noteBore`'s
   reach is his own half of the line, so a far jamb eating rounds also moves him); device tripwire beams END at glass like at any solid. A Glass box thicker than `THICK_GLASS_HALF` (5 cm) across its thin axis would be SOLID glass (same pane treatment, glassHit stars only sheets) — nothing in the office uses it since the water-cooler bottle went back to a plain box (a refracting box read as an ice cube). Panes NEVER break IN THIS MODULE'S OWN RULE (what the game is with `?glassfx=0`, and what the harness stands up; since the rebuild the page ships `GLASSFX` on and a pane cracks, lets rounds through and comes apart — the three glass bullets below): `game/glass.ts glassHit(g, bi, p, dir, who)` (combat.ts: a
   round whose static hit is a pane — the round STOPS in it, the next one too — or the pane between shoulder and muzzle when pressed to it) adds a decal of
-  kind `'glassHit'` on that pane (`Decal.pane` = its static index; radius 0.075‥0.2 and the 12-bit look seed from `hitSeed(bi, point)` — the same shot
+  kind `'glassHit'` on that pane (`Decal.pane` = its static index; radius 0.075‥0.2 and the 12-bit look seed from `hitSeed(the pane's box, point)` — the same shot
   draws the same star), plays `glassCrack`, pushes GameEvent `'glass'` (level `GLASS.hearLevel` 0.85, horizon `hearM` 30; guards.ts hearingCheck) and
   ticks Sam's noise; `updateGlass` reads each `'bang'` event once → `crackNear` (`bangM` 2.5): `bangCracks` quiet stars per pane, seeded off the blast's
   position; kicks do nothing. composite.wgsl draws the stars where the view ray crosses the pane (`decals.wgsl glassMarks/glassStar`: hole 8 mm + milky
@@ -381,6 +515,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kind 'damage', a wear look, on the mid-plane of a thin partition with the half thickness folded into its radius — `WEAR_MARK`). The probe now reads which
   of the two the round must leave off the wall it meets (the walls' own gate: `wallBreakOn`, `wear.on`, breakable, not hard) and holds each to its own
   shape: one mark either way, the wall's normal, world-fixed. Green on both stands; no game code changed.
+  · AGAIN ON THE SHIPPED STAND (11-05; red there since rounds go through thin walls, `WALLPEN.on`, found by `stand-bisect`): one round left five marks
+  where the probe wanted one, and the game was right (`wallpen.ts`: a thing crossed gets a mark where the round went in and one on its far face, and the
+  round marks what it meets beyond). The probe's question is the emit site, so it now counts the marks ON THE WALL FIRED INTO and asks the round's flight
+  (the rule's own `WALLPEN_HOOKS.crossed`) which that wall is owed: stopped in it, one mark and nothing anywhere else; gone through it, the mark where it
+  went in (held to its shape as before) and one hole on the far face, no more. What a round leaves beyond the wall is `wallpen-check`'s. Breaks:
+  `DECALSITES_BREAK=1` (a mark no round owes) red on both stands; `DECALSITES_BREAK=far` (no hole on the far face) red on the shipped stand and on the
+  frozen one with `TPS_WALLPEN=1`, green on the plain frozen stand where nothing goes through. Green on both stands and on frozen with the rule raised;
+  no game code changed. Headless only.
 - **GPU particles** (E4, `render/particles.ts` + `shaders/particles*.wgsl`, docs/internal/exp-particles.md): one 16 384 × 80 B pool in two FIFO rings
   (SHORT sparks + dust, LONG chips + brass + paper), emits queued on the CPU (`Particles.emit(kind, pos, dir, count, opts)`, ≤ 128 records a frame in one
   uniform block, seeds off the system's own serial), kernel `emit` + `update` in ONE compute pass after the cascades (collision = `traceClosest` through
@@ -428,8 +570,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dust / screen / hearing / reset / identity / determinism / bounds; identity also under `weapons`).
 - **The blast frame's picture-only work is paced** (`destructionSwitch.ts BLAST_PACE {on, reachHold 1, dripSamples 16, dripHold 8}`, ON on every stand; `?blastpace=old` /
   `TPS_BLASTPACE=old` in front of a headless tool = all of it on the blast frame, as it was; play is the same either way by run digest, so the switch is on knobs-check's
-  `UNREGISTERED` list as picture-only): (1) `game.ts reachChanged(rect)` only NOTES the rect; `reachTick` reads the wall raster one frame later (`reachRead`) and decides masks from
-  the frame after — masks land exactly 2 frames later (`reachPending` counts the notes too; `REACH_PACE.whole` and a null rect = a reset still read at once); (2) `rainFx.ts` re-finds
+  `UNREGISTERED` list as picture-only): (1) the lights' reach masks (SINCE 11-05 THE PICTURE'S KEEPER'S, `render/reachKeep.ts`, stepped on drawn frames and not in the tick: `docs/agents/render.md`; until then `game.ts reachChanged` / `reachTick`): `changed(rect, hold)` only NOTES the rect; a step reads the wall raster one frame later and decides masks from
+  the frame after — masks land exactly 2 frames later (`pending` counts the notes too; under `REACH_PACE.whole` the read is the next step's; a null rect = the authored walls again: the boot's masks at once); (2) `rainFx.ts` re-finds
   the drip lines `dripSamples` edge samples a frame (`dripWalk` over a `DripJob` of plain numbers, in the host's book since 10-23: `docs/agents/weather.md`; an indoor sample costs 1/16) once the statics' count and `geomSerial` have stood still `dripHold` frames,
   the old lines dripping meanwhile (`rainDripPending`; `rainDripPoints` finishes a walk whole); (3) `destr.furn.warm()` makes the furniture index when a wall charge is SET
   (wallcharge.ts, both set sites) — other blast sources still make it on their first blast. Exact and unswitched: `roomfight.ts roomAt`'s flood allocates nothing per cell.
@@ -470,6 +612,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (A row that held this set back until the first cut, Options > Graphics > Shaders "Wall cut shaders when needed", was on trial 2026-10-26 and taken out the next
   day: `render.md`, the bullet on the two rows that built on demand. The set is built in the background after every boot, as above. Kept from that bullet because it is true of the build that stays: `cutSwap.build()` calls the
   set failed if ANY pipeline of the page fails while it compiles, since the count it reads is the page's and not its own.)
+  **THE BOX TEST HAS NO LOOP (2026-11-05; `common.wgsl cutFour`, `isectCut`).** The cut test took a record's planes in a `for`. On a rented NVIDIA card
+  (A10, Vulkan) the fog's march then took TWICE as long in a program with the rule, with no cut box in the world: the tunnel 3.3 ms to 6.6, every other pass
+  within 0.1 ms. It was the loop and nothing else, found by installing edited copies of the shared text in the page (`__traceConfig.common` +
+  `passes.hotSwapVol`) on one held picture: the rule's branch alone 3.48 against 3.3 to 3.5 dead; the loop of ONE plane 6.64, of eight 6.73; the loop with no
+  `return` inside 7.13, with no `break` either 7.15; one plane written straight down, no loop, 2.97 against 2.95, table read and all. Not the round things'
+  prism (the same doubling with `round=0`), not the compact writing (the plain text doubles the same), not size (52 copies of the box test or 22, the same two
+  numbers). The box test is written into every walk's own loops, so a loop inside it sits three or four loops deep in the march; what the driver's compiler
+  stops doing there is a guess. THE RULE: no loop statement between `cutFour` and the end of `isectBox`. A record's eight rows are taken as two fours, with no
+  loop and no branch, in the order the planes always had (a zero normal ends the record; of the planes that raise the entry the most the FIRST is the face; a
+  ray along a plane on its far side leaves nothing), and `const_assert CUT_ROWS == 8u` stops a build whose records grew. WITH IT, the two sets pinned in
+  turn on the same card: the tunnel's march 2.96 boot set, 3.03 cut set (on the tree before: 3.32 and 6.61), all compute passes 15.40 against 15.83 (16.8
+  against 20.9); the pass road's march 4.29 against 4.41 (3.66 against 5.54). THE LOOK PAGE, where every program carries the rule, on the tunnel at High: 17.3
+  ms with the two fours and 20.5 with the loop written back into the same page (the march 3.67 and 6.93), twice each on one held picture. What is left of the
+  rule on that card is about half a millisecond over direct, the gather, the reflections and the cascades. The driver also built the cut set in about the time
+  of the boot's set (27.8 s after a 26.5 s boot, 41.5 after 40.7, 40.0 after 40.8, 26.6 after 27.5) where the loop's set took a fifth to two fifths longer (34.6
+  after 28.7, 35.7 after 25.3, 38.1 after 28.6): one box each, a ratio inside one box. WHAT IT COSTS: text. Eight planes are written out where one stood in a
+  loop, at every copy of the box test: 3.1 KB a copy, and the cut set's kernels 13 % bigger in the compact writing with separate shadow rays, 14 % in the plain
+  one (`tools/qa/shaderinline-check.ts`). THE SIZE CHECK HOLDS IT THREE WAYS: a kernel to its row without the cut test's text; the test to its own number
+  (3.1 of 3.2 KB at one copy of the box test); and every kernel of the cut set to its boot twin, with the round's own test out and the cut test in and a
+  fiftieth of the twin on top, so a call site only the rule's arms hold is red. CHECKS: `cutboxes-ray` holds that no function the box test reaches has a loop
+  statement (it follows the calls), pins the shader's text of the test so `tools/qa/cut-rule.ts`, the checks' one mirror of it, must move with it, and holds
+  the fours bit for bit in f32 to the planes one by one over 300,000 seeded rays with ties, records ended in the middle, an arc on the pad row and rays along
+  a plane (`NOLOOP_BREAK=1` fails both lines); the older lines hold it to the CPU's clip, and `round-check` line 9 to the prism. A review ran the shader's two
+  forms side by side on the software adapter over 400,000 rays: the same hits, misses, faces and distances. On that adapter every tracing kernel of the look
+  page (the rule in each) was built and dispatched (`tools/qa/kernel-stack.cjs`; its five froxel rows fail on a layout the tool cannot read, on the tree
+  before this too). The timings are of the commit before the last (the last makes the entry's comparison strict and adds the assert). NOT SEEN: an
+  Apple chip (graphics read no cost for the loop's set on the M4 Max on 11-04, so nothing may move there), Windows, an AMD card; a picture of a cut piece
+  drawn with the new test on any GPU other than the cloud card's four stills; the wait for the cut set on Windows, which follows the text.
 - **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; `glassBreakPersisted()` is on unless this machine said off; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, `?glassbreak` (`?glassbreak=0` off);
   OFF = main hash for hash: the GPU side is behind the scene prelude's `GLASS_BREAK` const — `frame.ts glassBreakConfig`, raised at BOOT from the persisted switch or the flag, so
   flipping the Tab row wants a reload (the row says so); const off = the shader text main compiled before). **THE FRACTURE MODEL (rebuild, 10-08; pure geometry in
@@ -580,6 +750,77 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   after the drop. NOBODY HAS SEEN any of it on a GPU or played it: the white sheet standing a tenth of a second, the fall, the look of big blocks pouring as
   dice, and how the levels play with their windows float. OPEN, the maintainer's: laminated frontage for a secure building (a level's own word on a pane) is not
   built; the manager's sidelight is laminated still, where the rule for a door's panel would make it toughened.
+- **A hit's seed is the box's own, never its place in the level's list** (2026-11-05; `src/game/glass.ts boxSeed`, `pointSeed`, `hitSeed`, `blastSeed`). A
+  pane's star and break, a round's turn through a pane (`glasspen.ts`) and its turn through a thin wall or a door's leaf (`wallpen.ts`) were seeded by the
+  box's INDEX in the level (`wallpen` passed `index % 1e6`: a static's index, or a leaf's place in the list of leaves). An index moves with every box written
+  before it, so one box more or less in a level's file moved every break and every turn written after it, and with them the digest of every run that met
+  glass or a thin wall, with no change of play. Found the day a lying drum went from two boxes to one and two Training lessons read other digests; one inert
+  box written back after the drum gave the old digests exactly.
+  THE RULE: `boxSeed(b)` is the box's centre and half sizes to the millimetre, as one word; `pointSeed(word, p)` folds a point in; `hitSeed(b, p)` is the two
+  together. `glassbreak.ts` keeps the pane's word (`PaneState.key`) and every hash of the pane's break starts from it where each read `st.bi`: the speed and
+  spin of its pieces, the frames they wait before they go (a star's rings, the support pass, a rake), the gust through a broken outside pane. No turn (yaw)
+  in the word: one box can be written with more than one. A piece cut from a wall seeds by what it is; a leaf by where it stands as it is struck.
+  A BLAST'S SEED IS THE CHARGE'S POINT ON THE FLOOR PLAN (`blastSeed`). One charge reaches a pane more than once (the feed at its true point, its `'bang'`
+  event lifted to 0.3 m, `crackNear`'s quiet stars), and each arrival drew its stars off the point as that arrival gave it: a can on the floor drew two
+  unrelated sets, so the weaker arrival's stars were not the first of the stronger's and a pane could end with a star more than the blast alone leaves. The
+  old seeds hid it (`glassbreak-seams` read 2 stars against 2 by luck; with the box's word it read 2 against 1). By the floor point every arrival draws one
+  set, whichever comes first.
+  NO SWITCH, and why: a switch held off on the frozen stand would leave that stand's digests moving with every box a level gains, which is the fault
+  itself. One function, one path, on every stand. EVERY HIT ON GLASS AND ON A THIN WALL GETS ANOTHER ROLL, ONCE; how glass breaks and how far a round turns
+  are the same rules over the same mixer (120 144 points on the level files' 5 006 sheets and thin uprights: the mean and the variance of each draw as they
+  were to the third place; neither die is a perfect one, 50 to 90 on a chi-square of 32 bins before and 64 to 75 now, 31 expected). A RECORDING MADE BEFORE
+  THIS replays as another run from its first such hit (the maintainer, 11-04, of recordings: "yep breaking replays is fine"): of the five sound replays,
+  `office-loud` matched its tape before and parts at 0:48.6 now, `reloads` and `doors` still match, `chairs` parted and `wall-charge` was refused (its level
+  has changed) before this step too. `office-loud` is NOT recorded again here: played on the page today its script ends at 209 s for the tape's 275 and
+  reaches ten sounds fewer, on the build before this step as well (no 'rattle' row, no glass underfoot, no can thrown), so a new recording is the script's
+  mend first.
+  THE CHECK: `tools/qa/hitseed-check.ts` (`probes.ts hitseed`, also under `glass`, `wallpen` and `all`), 8 lines, both stands; it raises the glass parts,
+  the thin walls and the bars itself. The office is stood up twice from its file, once with ONE INERT BOX WRITTEN FIRST, so every box of the second game stands one
+  place later in the list, and the two are asked the same things: the word of each of the 22 sheets (and that the seed as it was reads another in all 66
+  points), the star of one blow, the break of each kind of glass over six blows and two seconds (every answer, the pane's record, every piece as it lets
+  go), a blast and a stun beside fresh glass, 6 000 rifle flights over the floor (about 490 sheets, 2 600 thin walls and things, 160 door leaves
+  crossed), and, on the barracks stood up the same two ways, one round into each of six window bars (the same pieces: their lengths, their throw, their
+  spin). `HITSEED_BREAK=1` stands the second game's glass and thin things a millimetre higher, so each is another box: 8 of 8 red on both stands, and by
+  the seed alone (every blow is given from the box's own middle and every answer read from it). Tried once by hand, not kept: with the seed by the list
+  place again the seven lines of glass and walls are red; with `hitSeed` alone mended and the pane's own hashes left on `st.bi`, the float and toughened
+  breaks and the blast are red.
+  MEASURED (the cut `29126b9f`, both stands, `playthrough.ts` with digests, 21 missions × seeds 1 and 2): the frozen stand 42 of 42 THE SAME (the glass
+  parts and the thin walls are off there: a seed only draws a star's look). The page's stand: 32 of 42 on other digests and 10 the same; no run ends
+  another way; four end at another second (block-squads:2 138.7 for 138.1, defuse-four:1 111.6 for 111.7, pass-four:2 81.3 for 92.7, records-pair:2 39.6
+  for 26.4). Every one of the 42 on the page's stand asks a seed (7 to 6 000 a run), so none could be said to meet no glass and no wall. The nine
+  lessons (`lesson-run --digest`, seed 1, which raise the parts on either stand): tut-pair and tut-quiet the same, seven on other digests, all nine still
+  played to their end.
+  ONE PIN MOVED and is recorded again: `pellets-identity`'s three words (`tools/qa/pellets-probes.ts WORDS_0EE0094`; the word folds every star's reach),
+  taken on the frozen stand with `--words`. On the page's stand that probe was red before this step and is red after it, on other words. The other
+  identity probes and the kept recordings of the journal family read what they read, on both stands.
+  THE POINT, MEASURED: one inert box written second into EVERY level file. Before this step: 25 of 42 runs on the page's stand and 5 of 9 lessons read
+  other digests (tut-kit and tut-squad read the very digests they had before the drum step). With this step: the frozen stand 42 of 42
+  and the nine lessons on both stands (18 of 18) read the step's own digests, and tut-kit and tut-squad read the same word with a box put back after
+  the lying drum as without it. The page's stand: 38 of 42 by the glass and wall seeds alone. The four that still moved (block-four:2,
+  glasshouse-four:1, pass-four:2, rescue-consulate:2) each broke a WINDOW BAR, whose pieces were thrown by the bar's index.
+  A WINDOW BAR'S BREAK IS SEEDED BY THE BAR ITSELF TOO (`winbars.ts breakBar`, the step after): the lengths it is cut into and the throw of each piece
+  start from `boxSeed` of the bar and where it was struck. WITH IT ONE INERT BOX IN EVERY LEVEL FILE MOVES NOTHING: 42 of 42 on both stands and the nine
+  lessons on both stands read the digests they read without the box. It gives every bar's pieces another roll, once: on the page's stand four of the 42
+  read other digests than with the glass and wall seeds alone (glasshouse-four:1, pass-four:2, rescue-consulate:1 and :2; every run ends as it did, at
+  the same second), the frozen stand 42 of 42 and the nine lessons the same; `winbars-check` green on both stands, `WINBARS_BREAK=1` red.
+  STILL SEEDED BY A PLACE IN A LIST, listed and not mended here: a door blown off its hinges (`doorblast.ts`, the door's place among the doors), a
+  broken wall's edge (`breakTable.ts` and `edgeLook.ts`, the breakable's id: a wall's static index) and its wear marks (`wallbreak.ts`, look only). None
+  moved a run of the 42 or a lesson in the trial above.
+  AND THE ORDER OF WORK IS NOT A SEED: where two panes share a frame's budget (`releasesPerFrame`) the one written first is served first, so two panes
+  written the other way round can still let their pieces go on other frames.
+  THREE STAGED PROBES LEANED ON ONE ROLL and now find their stage instead of naming it (the bars as they were): `gearglass-joined` (b, b') seeks its aim
+  no higher than a man stands and takes the first of 2 to 12 frames after the burst on which pieces are queued; (d) asks the two shares it holds the
+  grenade's report between from the burst's own point, of the man as he stood on its frame (a man standing sways, and a line a hand's breadth from a
+  hole's edge is open from one pose and shut from the next); `glasstune-rake` takes the longest burst of five rounds or fewer that leaves the pane run,
+  open and under `rakeOpen`. `glass-shot`'s decal line follows `hitSeed` by the pane's box.
+  NOBODY HAS SEEN IT: every star, every break and every turn of a round is another roll than it was, and none has been seen on a GPU or played.
+- **What a pane of glass is to play is the Rust module's** (2026-11-05; `rust/sim/src/panes.rs`, `pattern.rs`, `pen.rs`, the `panes` part of a game's block; no switch: the module is the game, and the game's own settings `tune.glassBreak`, `GLASSFX.on`, `GLASSPEN.on`, `GLASSREAL.drop / .place`, `tune.glassShards`, `SHARDS.byFall`, `WINBARS.on` stay what they were and reach it through `knobs.rs`). Cracking, which pieces fall and when, the toughened pane's dice, what a blast takes and what a burst's three views would count on, a round's toll, turn and path through glass, the line of fire past a pane, a muzzle held through one, what the floor hears, and which window's bars are gone: statement for statement the rule the TypeScript had, by the same hashes and the same maths, so nothing about play moved.
+  - **File by file, gameplay against dressing.** `panes.rs` (gameplay): a pane's state and every rule that writes it. `pattern.rs` (gameplay): the crack pattern's geometry and the dice's clumps, kept in scratch and compared against their source numbers, so they are no state. `pen.rs` (gameplay): rounds through glass. `glass.rs` (gameplay): the open question, which now reads a row where it stands in the block. `src/game/glassbreak.ts`: thin calls, and the picture's half: `fill` (the renderer's record), the wind sources (`gustDirty`, `updateGusts`: wind is not ported), what a fragment becomes as `onRelease` hands it on. `src/game/shards.ts` (dressing): plates, spray, chips; its `crossed` asks the module to lay the jet's litter. `src/game/glass.ts`: the seeds and the event gap are calls; the star, the decal, the sound and the 'glass' event stay here until the senses and sounds move. `src/game/glasspen.ts`: thin calls, plus the shell's marks (`shellMark`), which live on the `Shell` for one shell's flight and go with the rounds. `src/game/winbars.ts`: which bars are gone and what a blast takes are the module's; the pieces (`g.destr.debris`, dressing since debris went), the chips and the round's own `met` list (combat.ts flies the round) stay.
+  - **The block.** The part stands LAST, so no part before it moved. Nothing of it is written until something of a pane's is, and when the last of that goes it is as a game that never touched glass has it, to the bit (`panes.rs stand`, `settle`): a game with no pane touched parks and snapshots what it did (a last pool with nothing in use takes no room: `src/sim/state.ts span`), and a restart is a fresh game. A POOL WITH NOTHING IN USE HAS NOTHING IN IT: `pn` reads its counts as none, so a take from before any pane was touched, put back, or a slot another game had, is no glass and not that game's. Its dense runs: a row a pane touched, the through-holes, the queue. A row's first 80 doubles and 64 words are the very layout `glass.rs` reads, so lines and rays read state where it stands and the mirror's pane half writes nothing for a game with a block. **The level's sheets of glass are no state:** which static, which face has the sky, how far from a door's opening stand with the box world's copy (`world.rs Sheet`, written with the statics), settled as the level stands up (`GlassBreak.stood`, Game's constructor, last) where the TypeScript asked each the first time it mattered: statics do not move, and no line asks a line of its own from inside its walk. On the office: block 2.45 → 3.14 MB (692,656 bytes a slot, none of it carried unless used), module memory 32.2 → 49.4 MB (the part in four slots, the world's table, the queue's out-list, the pattern's and the clumps' scratch), parked with no pane touched 445,040 bytes both ways, parked with eight panes broken 2,461,344 (the poses' room stands before it), snapshot with no pane touched +8 bytes, with eight panes broken +13.2 KB.
+  - **Bounds.** Sheets, rows and through-hole rows 256, as the level fit always held (`levelfit.ts`); a sheet's clumps 8,192 and bars gone 128, new rows of the same count (the largest in the level files today: the barracks' 22 bars). The queue holds 4,096 pieces: a piece past that stays in its frame until the next support pass. No run has come near it.
+  - **Special cases removed.** The burst's rows handed over per pane (a view is now the burst's numbers, and each pane answers from its own state). The renderer's `glassStatics` list inside a blast (the world's `sheets`: every sheet of the level, ascending, thick glass no longer among them). The mirror's compare of pane rows (`stalePanes`), which had to find out what had changed. Each fragment's landing crossing back to TypeScript under `SHARDS.byFall` (the rule schedules it in `falls.rs` as the piece lets go, and a jet's the same). Reading a type "as asked" for a box the level does not hold (one function, `place_rule`, takes the sizes, the wall and the door's distance, whoever asks).
+  - **Special cases kept, and why.** A pane's type by where it sits: that is the rule (`GLASSREAL.place`), a building's glass, one function. A word on a pane's glass (`setType`, tools today): 32 of them stand in the block, for it is the game's. The thick-glass test (a half thickness over 5 cm is solid glass, the cooler's bottle, no sheet): it is what a sheet is. The tour (`glassBreakLive` false under `Game.touring`): the showcases' choreography was laid with glass stopping rounds, and the switch is asked in the host, where the question of whether to call starts. The stand-in spawn while `onRelease` is null (`tune.glassShards` off, a game's own setting): dressing, in the host, read by nothing. A blast's `BLAST_MIN_K`, the crater and the dagger's own numbers: the rule's. The fall's `off` path (`SHARDS.byFall` false, a recording from before it): the shards still ask `fallOf`, one rule from either side, until recordings that old are given up.
+  - **Check.** `tools/qa/pane-ident.ts` (`tools/qa/ident-pin.ts`): 43 names over four levels with a tee of panes added (nothing on the level list has a pane running through another's far face), every answer and every pane's whole state folded a name and held to `tools/qa/fixtures/pane-words.json`. That file holds two recordings: the old stand's, taken on the last tree where the TypeScript stood, with every call of that same run asked of both languages, 5,447 calls, none differing, and each of the 43 names spoiled in turn seen by the compare; and the page's stand's (5,453 calls), taken on step 1572 (506e79e7), a tree on which the old stand's run still folds to the first recording's 43 words. A plain run is held to the page's, a run with `TPS_PROFILE=frozen` to the old one. (Until that second recording the check compared nothing and printed PASS: the first one carried no word of how its stand was stood. Nothing held to a recording is a FAIL now, `tools/qa/ident-pin.ts`.) `PANES_BREAK=1` bends what the module says at every name, and every word must move. Never seen on a GPU: the record `fill` writes is the same bytes by `glassbreak-open`, but no eye has checked a crack or a piece on this tree.
 - **Stunned, not killed, behind a wall the burst itself broke** (`frag.ts FRAG.wallStun`, on; false = the game as it was, and a recording from before the key replays with it off —
   journal.ts; the maintainer's tap on the card, 10-13: "Stun, like doors"; an after-close step of the gear goal, commits 2efdff94 (the rule) and 578a922d (glass probes), in the build since efccd497;
   its page is rebuild/gear-and-glass/wall-stun.md; the module's own line is the frag.ts line in overview.md):
@@ -940,7 +1181,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The player's grenade and 40 mm checks run on the loud card** (`frag-player`, `he40-*`, `burst-breaks`; no game code). A night alone on the page
   wears your STEALTH card (`kit.ts KITDEAL.stealth`), which issues no frag and no HE round, so on the shipped stand these stood a Sam with nothing
   to throw or fire and were red from the step that brought that card. They ask the grenade and the round, which only the loud card issues: they
-  are on the probe runner's hold for checks written against one card (`probes.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
+  are on the probe runner's hold for checks written against one card (`tools/qa/holds.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
   stealth run is issued is `kitstealth-check.ts`'s. `he40-keys` (d) also said 'teammates have no such row': a teammate's card has the row where
   his one round can be fired on your order (the card as a tree and `squad40.ts`; `kittree-check.ts` holds it), and the line now asks exactly that.
 - **A burst kills a man who is down and breathing** (`frag.ts FRAG.downKill`, 10-22; from play: two men put out with sponge rounds, a 40 mm burst
@@ -1039,3 +1280,120 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   again, and a plate of a plate (`shards.ts`, by `SHARDS.byFall` when it lands or rests), are what the switch says THEN, not what their piece was;
   the mend is one fact stated by every caller and no switch read in `spawnRaw`. NOT HELD BY A CHECK: the look mark in a full ring, `told` against
   a full list. Not run: any play tally (none of these moves a landing under the page's rules).
+- **What a hit looks like goes by what the thing says it is made of** (`src/game/particleFx.ts HITSTUFF`, 2026-11-04; the maintainer, shooting cars on
+  the look's preview: "shooting metal shouldn't have particle debris, maybe just sparks? shooting glass should make cracks (but maybe not fracture?)",
+  then "for most glass we do want to simulate the fractures -- I think props like cars should be an exception", "since we don't want to model the
+  inside"). THE CAUSE WAS NOT THE CARS: what a round has hit is read from the COLOUR of its paint (`surfOf`: a palette name where the numbers have
+  one, else how bright it is), so a white car was plasterboard (pale chips and a puff of gypsum), a blue one concrete, and its dark glass and tyres
+  metal. A box says what it is made of (`Box.stuff`, `scene/stuff.ts`: its own word or its paint's row's), and with the rule on THE PICTURE OF A HIT
+  reads that word first (`saidSurf`, the table `STUFF_SURF`: car paint, steel, metal and sheet are metal; wood and veneer wood; plaster and skim
+  plasterboard; stucco, mud wall, block, slab, pavers and tarmac concrete; fabric, the fine weave of a seat or a screen, cloth on a frame; cloth, the coarse
+  weave of a carpet, a rug, a sandbag or a tarpaulin, the soft thing that never sparks; rubber and plastic plastic; glass glass). The colour is asked
+  only of a box that says nothing, or whose word is not one thing to a round ('paint' and 'enamel' are a coat on a door, a drum, a pipe or a line on
+  a floor; 'plain' and 'waits' say nothing; the ground is what its paint says).
+  **A RULE OF THE PICTURE ONLY, AND WHY.** The word is the look's: a level's plain file and its look twin can say different words of the same box
+  (whoever repaints a box drops its word), and the two are one simulation. A first cut let the chaos lane read the word and a review measured the two
+  files part (four rounds into a cabinet that says 'steel': 4 dents on the plain file, 4 gypsum puffs on the twin). So the word is read only where no
+  number of the game moves: `hitLook` (the ONE place a hit's picture is worked out: `impactFx`'s sparks, chips and dust, a prop's very part and a
+  door's leaf included); the mark where the round stopped (`marks.ts bulletMark`); the burst a hot zone adds (`destruction.ts burst`, particles only:
+  a soft thing that says so bursts as cloth does, fluff of its own colour; what says plastic or rubber has no burst, as a thing painted so never
+  had); and WHICH mark the chaos lane draws where it lays one on a box that says its stuff (`damageDecal`, the table `LANE_MARK`: the dent for metal,
+  the shred for cloth, the crack for solid glass, each at its own size, else a chip; ONE mark either way, because the run's digest counts decals, and
+  its dice and bucket move as they did; never a second 'bullet', which a wall's wear would take for the round's own hole: `wallwear.ts own`).
+  NOT read by anything the simulation makes of a hit: the chaos lane's surf, its puffs into the smoke, what a round goes through, what a blast
+  breaks, where a charge may be set (`wallpen.ts`, `wallbreak.ts`, `wallcharge.ts`, `furnblast.ts`); `stuff-check` line 10 holds that `saidSurf` is
+  the one reader of the word in `src/game`. SO A WHITE CAR THAT SAYS 'carpaint' CAN STILL COUGH THE LANE'S PALE PUFF INTO THE SMOKE under sustained
+  fire. The simulation hearing a box's word is another change, and it needs a level and its look twin to say the same words first.
+  SOLID GLASS. `'glass'` said by a box that is not a pane is a SOLID thing of glass with nothing modelled behind it (a sheet a round shatters says so
+  with `BoxFlag.Glass` and is the pane engine's, whatever word it says). A round into it (`solidGlass`) leaves a CRACK in place of the hole
+  (`decals.wgsl damageMark` look 9: a dead screen's star drawn PALE and millimetres wide; the screens' own black hairlines showed nothing on dark
+  glass when a cloud NVIDIA card first drew them, 11-04), every round and whatever the chaos dial says, a pinch of glass (`SOLID_GLASS_CHIPS` 3) and
+  no burst, and the box stands; a shell lays a small crack a pellet (`SOLID_GLASS_CRACK`). A THING THE WALL ENGINE BREAKS SHOULD NOT SAY 'glass' (its
+  wear rides a round's hole, and solid glass is given a crack in the hole's place; no level has one). METAL THROWS NO CHIPS with the rule on,
+  anywhere (the row's two dark flecks; the sparks and the dent stay).
+  WHAT IT CHANGES IN THE LEVELS TODAY (counted over the 69 level files with the rule up, 11-05): of 18,306 solid boxes 10,579 say a word a round
+  reads, and 3,041 of those read differently from their paint. The large groups: plaster dark enough to have been concrete throws gypsum (547); wood
+  that was concrete, metal or plasterboard by its tone throws splinters (630); a mud wall pale enough to have been plasterboard is masonry (471); sandbags, sacks,
+  rugs and blankets that were concrete, a seat's cloth or cardboard are the soft thing (839); steel, sheet and metal that were pale or mid-grey spark (276).
+  KNOWN WRONG, AND THE LEVEL'S TO MEND: the depot's hut walls are painted with the partition's tan, whose row says 'cloth' (`stuff.ts`: "drawn as
+  cloth because the tan is a cream rug's"), so 32 boxes of its walls throw tufts where they threw gypsum; the compound's walls of the same paint say
+  'stucco' beside it and are right. THE VEHICLES SAY WHAT THEY ARE MADE OF (11-05, the change after the rule). A vehicle's BODY says
+  'carpaint' ITSELF, whatever paint it wears, through ONE helper (`scene/carShapes.ts carCoat`, `coated` for a kit's paint): the kits' pickup, van,
+  lorry and motorbike (`gwotKit.ts coat`), the plain car (`carSays`: `officeGen.ts car`, `levelKit.ts car`), and the three vehicles a level builds by
+  hand (the bazaar's lorry, tut-road's tanker, the plough lorry of tut-sky and tut-team). A paint's ROW cannot say it: the truck enamels are cots,
+  lockers, floor lines and signs too and stay 'paint', and the tanker's cream is a wall's elsewhere (its row says plaster: a round threw gypsum off a
+  fuel tank). A window is painted from the row glassDark, which says 'glass', and a tyre, a stack of tyres and a mat from the row rubber, which says
+  'rubber'; the plain car says both itself. So a round into a body sparks and throws no chips, a window takes the pale crack and stands (solid
+  glass: no vehicle's window is a pane), a tyre gives plastic's chips and no dent. WHAT THAT CHANGED FOR A ROUND: the windows (by their colour a kit
+  vehicle's was glass that took a hole and threw nine chips, the plain car's was metal), the plain car's body and tyres in its own colours and in a
+  twin's skin (plasterboard, concrete or metal by tone), and the tanker's tank. The kit vehicles' bodies were metal to a round already, by their
+  enamel's colour: for them the word changes the look page only. A NAMED COAT STAYS UNDER A PLAIN ONE (`scene/stuff.ts NAMED_COATS`, `repaintWord`,
+  `repainted`: the one place a thing is painted again, which the default look's skin calls for boxes and for props' parts): a repaint gives a thing
+  its new paint's word, as ever, but 'carpaint' is a kind of plain coat (`PLAIN_COATS`: 'paint' and 'enamel', the two words that are a coat on
+  anything; 'enamel' joined 11-05, when a level's second palette painted its lorries in a row that says enamel and they lost the word), so a twin's
+  plain car in one of the skin's enamels is still car paint. A rule of
+  words, not of cars: the next named coat is a row of the table. (203 steel things the skin gives an enamel become 'paint', as the look wants them
+  drawn, and are metal to a round by their colour: carrying every word through every repaint would be wrong.) `stuff-check` line 8, `COAT_BREAK=1`.
+  ALSO SOLID GLASS NOW, by the same row: a phone shop's display case top (bazaar), a solar panel (police post) and a
+  workshop's tube, a prop's part; every other thing in that paint is drawn only. 51 level files carry the words (two rows, and 839 boxes that say
+  their own); they differ by words only, so every level's fingerprint holds, and no shape was added (the count of cut planes is as it was). ON THE
+  LOOK PAGE a vehicle's body is drawn as car paint where it was the chipped coat 'paint', plaster or plain; glass and rubber are drawn plain as
+  before. NOT DONE: a shape's trim painted from a row's numbers (the lorry's fittings, a spare wheel, a mirror) says nothing, as before, so the file
+  writes 'plain' on it; trim is drawn only, no round meets it. A tail lamp's lens in the red enamel stays 'paint'. The editor's kit-view sets (a
+  level file's `sets`) hold older copies of a truck as plain boxes and say nothing. Check line 8. NEVER SEEN ON A GPU.
+  A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (`render/decals.ts MARKCUT`, a switch of its own): a mark clamped to its box was pulled
+  onto the face of the box's PLAIN shape, so on a leaning pane, a rounded nose or a crowned bonnet, and round the side of a drum, it stood
+  centimetres off the surface (87 mm on a pane leaning 12 degrees, 40 mm on a 0.3 m drum 30 degrees round) and the shader's plane test dropped it:
+  no round ever left a mark there. Now a point inside the plain box of a box that says a cut or is round is left where it is. The picture's alone
+  (where a mark is drawn, never whether one is laid). It moves a mark on the snapped end of a broken wall piece too (those say a cut): the mark
+  stays on the end, where a wall's wear can take it for the round's own. ITS SWITCH: ON in the page (`?markcut=0` = pulled to the plain face, as it
+  was), OFF in the module and on the frozen stand (`TPS_MARKCUT=1`), a `FROZEN_HOLDS` row, in the registry and the journal (a recording from before
+  the table plays with it off). It joined as a field the page alone set (`main.ts`), so the page's stand run headless did not have it: mended 11-05,
+  and the shipped stand is the page here too. A tape with no table for it plays with it off: the build as it was before the rule, and also a tape of
+  the hours of 11-05 when the page raised it by hand (a picture only). Check lines 0, 5 (the run is the same run with this rule down by itself under
+  the hit rule), 6 and 7; `MARKCUT_BREAK=1` fails line 7 on both stands; the check runs in the `decals` family too. MEASURED 11-05 with the mend: 42
+  play-throughs (21 missions, seeds 1 and 2) the same by digest on the frozen stand, on the shipped stand, and on the shipped stand with
+  `TPS_MARKCUT=0`; gates decals, destruction, hitstuff, round, shapes, checkpoints and journal on both stands, green but for what was red on the
+  shipped stand before it (`decals-sites`, three checkpoint probes). NOT SEEN: no mark on a cut or a round face has been looked at on a GPU.
+  SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS`
+  row, in the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off,
+  the same run.
+  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, families `destruction`, `player` and `decals`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4,
+  7 and 8), nine lines on both stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the
+  hit: the car's body with its word taken off, by its paint, the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and
+  no dent; the glass saying 'glass', the crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the
+  box standing; a cabinet that is metal by its paint, the same sparks and no chips; AND THE SAME RUN up as down — by digest, by the chaos lane's own
+  die and counters and by the count of marks, the cut-face word up and down with it — over 68 rounds at the top of the chaos dial (the harness holds
+  the dial at 0: the check raises it): the car's body, glass and a tyre saying their words, a box of each word the level says that a round can reach
+  (eleven met: carpaint, steel, metal, sheet, plastic, wood, veneer, fabric, skim, cast panel, and a soft thing made to say cloth), a wall, a thing of metal and a
+  window pane that says 'glass' too; the words, the lint and the stands; a mark on a leaning face and round a drum's side; and the vehicles as the levels have them, nothing put on by the check: rounds into the office's car and into a body, a window and a tyre
+  in the showroom yard, and every level file's plain cars (29), shaped panels in a truck enamel (369) and plain ones beside a window (41) by their words.
+  MEASURED (11-05, on the build's joined branch): the 42 play-through digests (21 scenarios, seeds 1 and 2) against the branch without it:
+  frozen 42 of 42 the same, shipped 42 of 42, shipped with the rule down (`TPS_HITSTUFF=0`) 42 of 42. Gates `destruction` 108, `decals` 15,
+  `hitstuff` 8, `round` 13 and `shapes` 11 lines green on the frozen stand; on the shipped stand the same but `decals-sites`, whose two wall-wear
+  lines are red there without this change too. All 213 shader texts compile. The page boots on the software adapter with no error, the cut-face
+  word up, and a mark laid round a drum's side stays where it was put (28 mm off with `?markcut=0`).
+  NOT DONE: NEVER SEEN ON A GPU in this form. On the preview a cloud NVIDIA card (Vulkan) drew the trial cars shot, 11-04: sparks off the body and
+  its holes, no chips, the window's pale cracks. Nobody has looked at the crack in play. NOT HELD BY A CHECK: a prop's part and a door's leaf that
+  say a word (the check fires at the level's statics); the burst of a soft thing beyond its being thrown at all.
+- **The word for marks that sit in the surface is a switch the stands know** (`render/decals.ts MARKSIT`, 11-05; the rule itself is the bullet "A blast's
+  marks sit in the surface" above, unchanged). It was a field of one `Decals` (`sit`, `setSit`) that `main.ts` alone set from `?marksit`, so the page had
+  it up and the page's stand run headless packed the old header, the same fault as the cut-face rule's. NOW: the table `MARKSIT`, ON in the page through
+  `pageSwitches` (`?marksit=0`), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row `TPS_MARKSIT=1 (a picture only)`, pinned in `standup.ts`, in
+  `STAND_ENV`), in the registry and `JOURNAL_KNOBS`; `journal.ts applyKnobs` puts it down for a recording from before the table, so a tape made before
+  11-05 plays with its blast marks drawn as they were (the picture only). `Decals.frame` rebuilds once when the table moves (`sat` = the word the buffer
+  last had); `main.ts` no longer sets it. A PICTURE ONLY: one word of the uploaded header, read by `decals.wgsl dkSit` and by no game code. THE CHECK:
+  `bun run tools/qa/probes.ts decals-sit` (in the `decals` family), on both stands: the stand; the header's fourth word follows the table and no other
+  word of the buffer does, one upload a move; the same seeded round and stun charge is the same run by digest with the word up as down; the rows and an
+  old recording. `MARKSIT_BREAK=1` (the word never raised) fails two lines on both stands. `tools/qa/marksit-page.cjs` reads and moves the word through
+  `window.__knobs.registry().MARKSIT` now. MEASURED 11-05: 42 play-throughs (21 missions, seeds 1 and 2) the same by digest on the frozen stand, on the
+  shipped stand, and on the shipped stand with `TPS_MARKSIT=0`; the decals, destruction, checkpoints and journal gates on both stands, green but for
+  what was red on the shipped stand before it (`decals-sites`, three checkpoint probes). THE PAGE CHECK ran once with the table (the yard in rain,
+  software adapter): 118 of 118 pipelines, no error, the word up at boot, and moving the table changes 47 % of the picture (mean 0.457 down, 0.441
+  up), the numbers of 11-01. NOT SEEN: never on a GPU, never in motion; its break run and a dry still were not run.
+- **The wall engine, a round through a wall, a wall charge, the furniture blast and the destruction index know a thing by its word** (2026-11-05;
+  `src/scene/materials.ts`, `Box.does`; no switch, the same game by digest). Where these notes say a rule reads a PAINT, a paint's NAME or a tone
+  (`paletteName`, `surfOf`, `breakClassOf(albedo)`, `steelGrey`, `STRUCT`, "by its paint", "the wall paints"), read: the box's word, through
+  `materials.ts doesOf(box)` and its columns (`wall`, `cover`, `board`, `surf`, `breaks`, `steel`, `struct`, `counter`, `casing`, `paper`, `screen`,
+  `snow`). A piece broken off a thing carries the thing's word (`boxes.ts wordOf`); a slot of the wall engine that turns from a piece into a stud
+  takes the stud's. The whole of it, with its checks and what is still asked of a paint: `docs/agents/levels.md`, "What a box does is said in a word".

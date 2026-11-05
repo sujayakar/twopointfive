@@ -14,19 +14,30 @@
 // for an array of the game's own, and putting it into another game clones the buffer under it, which is the whole memory. State is reached through the
 // SimState, every time. rollback.ts names any such view it meets (`Snapshot.simViews`) and tools/qa/rollback-check.ts is red on one.
 //
-// AT HOME, OR NOT. While a system has a TypeScript twin, its state lives in the block only when its row of RUST is on; else it is in the TypeScript objects, as
-// it always was (a rule that lives only in the module is at home when its own switch is on: either way the system says so itself, `wants`). Which, for THIS
-// game, is a bit in the block's head — state like the rest — and as a tick opens every system whose wish and bit disagree is
-// moved (`settle`: the two functions a system registers, `into` and `outOf`). So a row may be raised or dropped under a running game; a snapshot holds where
-// things were when it was taken; and a checkpoint FILE, which must load with every row off (a browser with no WebAssembly plays the TypeScript), is written
-// from and read into the same fields as ever, through the system's own accessors.
+// A GAME'S BLOCK IS TAKEN AS THE GAME IS MADE. A family whose state is columns (the doors, what falls, the furniture, the leaves off their hinges, the
+// thrown things: sim/colstore.ts and the stores beside it) is made OVER the game's SimState and its columns are that family's part of the block from the
+// store's first line to the game's last (`keep`): the store has no array of its own, nothing moves in or out, and which side STEPS the columns — the
+// module's rule or its TypeScript twin, by the family's row of RUST — is no question of where they are. A block nobody has asked the module about yet is
+// parked like any other (a buffer of this object's), so a game's columns can be made, read and written with no call into the module; it is bound as its first tick or
+// its first question opens (a level's fixtures are that question: sim/lightshome.ts takes them through the module's one way in). A system made with no game behind it (a check's lone furniture, a lone door) has a SimState, and so a block, of its own.
+//
+// AT HOME, OR NOT — the families that still move. A system with a TypeScript twin that keeps its state in fields of its own objects (the die, the poses,
+// the smoke grid) has it in the block only when its row of RUST is on (a rule that lives only in the module: when its own switch is on; either way the
+// system says so itself, `wants`). Which, for THIS game, is a bit in the block's head — state like the rest — and as a tick opens every such system whose
+// wish and bit disagree is moved (`settle`: the two functions a system registers, `into` and `outOf`). So a row may be raised or dropped under a running
+// game; a snapshot holds where things were when it was taken; and a checkpoint FILE is written from and read into the same fields as ever, through the
+// system's own accessors.
+//
+// WITH NO WEBASSEMBLY (a browser with its JIT off plays the TypeScript) there is no module to say how a block is laid out, and a block is still where the
+// columns are: the stores say how long their parts are (`simRoom`: the same numbers the module's layout is held to where there is one), the parts stand
+// end to end in SIM_PARTS' order, and such a block is never bound.
 //
 // (Imports sim.ts and src/math alone: like the rest of src/sim, this is below the game.)
-import { sim, u32 } from './sim';
+import { sim, u32, simWhyNot } from './sim';
 
 /** THE PARTS OF A BLOCK, in the order of rust/sim/src/state.rs PARTS (tools/qa/rust-check.ts holds the two lists to each other) */
-export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'smoke', 'poses'] as const;
-export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_SMOKE = 7, P_POSES = 8;   // (0 is the head; the pools after the parts of a fixed length, the largest last: a parked block is one run of bytes to its last word in use, `span`)
+export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'props', 'slabs', 'items', 'men', 'lights', 'smoke', 'poses', 'panes'] as const;
+export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_PROPS = 4, P_SLABS = 5, P_ITEMS = 6, P_MEN = 7, P_LIGHTS = 8, P_SMOKE = 9, P_POSES = 10, P_PANES = 11;   // (0 is the head; the pools after the parts of a fixed length, and of those every game's by size, then the panes; the largest last: a parked block is one run of bytes to its last word in use, `span`)
 /** the head's words (state.rs Head): the layout's word, the homes */
 const H_LAYOUT = 0, H_HOMES = 1;
 
@@ -40,14 +51,30 @@ const NO_WORDS = new Uint32Array(0), NO_DOUBLES = new Float64Array(0);
 /** what the started module says of a block: its length in words, where each part starts (bytes), how many slots */
 interface Layout { words: number; games: number; word: number; off: number[]; len: number[]; pool: boolean[] }
 let L: Layout | null = null;
+/** how long a part is by the store that lives in it (`simRoom`), in bytes: what a block is laid out by where there is no module */
+const ROOM: number[] = [];
+/** A STORE SAYS HOW LONG ITS PART OF A BLOCK IS (a top-level statement of its module, in bytes). Where the module runs its layout is held to this number;
+ *  where it cannot, a block is laid out from these alone. */
+export function simRoom(part: number, bytes: number): void {
+  if (L !== null && L.len[part] !== bytes) throw new Error(`the ${SIM_PARTS[part]} say their part of a game's block is ${bytes} bytes after a block was laid out with ${L.len[part]} for it${L.games ? ': bun run tools/sim/build.ts' : ' (with no WebAssembly a block is laid out from what the stores say: this store was loaded after the first game was made)'}`);
+  ROOM[part] = bytes;
+}
 function layout(): Layout {
   if (L) return L;
-  const x = sim(), n = x.state_parts(), off: number[] = [], len: number[] = [], pool: boolean[] = [];
+  const off: number[] = [], len: number[] = [], pool: boolean[] = [];
+  if (simWhyNot()) {   // (no module: the head, then each part as long as its store says — a part no store lives in is nothing)
+    let at = 0; for (let i = 0; i < SIM_PARTS.length; i++) { const n = i === 0 ? 16 : ROOM[i] ?? 0; off.push(at); len.push(n); pool.push(false); at += n; }
+    return L = { words: at >>> 2, games: 0, word: 0, off, len, pool };
+  }
+  const x = sim(), n = x.state_parts();
   for (let i = 0; i < n; i++) { off.push(x.state_part(i, 0)); len.push(x.state_part(i, 1)); pool.push(x.state_part(i, 2) !== 0); }
+  for (let i = 0; i < n; i++) if (ROOM[i] !== undefined && ROOM[i] !== len[i]) throw new Error(`the Rust module's ${SIM_PARTS[i] ?? `part ${i}`} are ${len[i]} bytes of a game's block and their store in src/sim says ${ROOM[i]}: bun run tools/sim/build.ts`);
   return L = { words: x.state_len() >>> 2, games: x.state_games(), word: x.state_layout() >>> 0, off, len, pool };
 }
 /** where part `p` of a block starts, in bytes from the block's own start (`st.d[simPart(P) >> 3]` is its first double) */
 export function simPart(p: number): number { return layout().off[p]; }
+/** …and how long part `p` is, in bytes */
+export function simPartLen(p: number): number { return layout().len[p]; }
 /** what the module says of its blocks, for a check: the layout's word, a block's bytes, the slots, each part's start and length */
 export function simLayout(): { word: number; bytes: number; games: number; parts: { name: string; off: number; len: number; pool: boolean }[] } {
   const l = layout(); return { word: l.word, bytes: l.words * 4, games: l.games, parts: l.off.map((off, i) => ({ name: SIM_PARTS[i] ?? `part${i}`, off, len: l.len[i], pool: l.pool[i] })) };
@@ -94,13 +121,23 @@ export class SimState {
   /** views of pieces of the block handed out by `f32` (the host's: made again whenever the block moves; never part of a game's state) */
   private subs = new Map<number, Float32Array>();
 
-  /** this game has a block (some system's state is at home in the module) */
+  /** this game has a block (some system's state is in it) */
   get open(): boolean { return this.w.length !== 0; }
+  /** A FAMILY'S STATE IS IN THE BLOCK FOR THE GAME'S LIFE (a store made over this SimState: sim/colstore.ts): the block is taken if the game had none —
+   *  zeros, parked, no call into the module — and the family's bit stands in the head from here on, so the block is never given up under it (`settle`
+   *  shuts a block only when no system's state is in it). One store a part: a second over the same block would be writing the first's columns. */
+  keep(bit: number, name: string): void {
+    if (this.w.length === 0) this.born();
+    if (this.w[H_HOMES] & bit) throw new Error(`two stores of the ${name} over one game's block: a part of a block is one store's`);
+    this.w[H_HOMES] |= bit;
+  }
 
   /** WHAT TABLES MADE FROM THE BLOCK GO BY: a number no other block of any game has had, given anew whenever the block's bytes were written wholesale or it
    *  changed place (a take put back, parked, brought into a slot, born, shut). A family that keeps tables DERIVED from its state (never in the block: the
    *  block is state and nothing else) keeps the stamp they were made at, and makes them again when it differs. A family's own writes do not change it. */
   stamp = 0;
+  /** whoever reads the block by its slot, for as long as it does (scene/boxMirror.ts: the box world's copy, whose lines and rays read a pane where it stands) */
+  moved: ((slot: number) => void) | null = null;
   /** the slot the block stands in NOW, −1 = parked or none: for a caller that must not move it (anim/skeleton.ts: a question about a pose) */
   get where(): number { return this.slot; }
   /** THE SLOT, for a call into the module: the block is bound first if it was parked (a game with no block gets one) */
@@ -116,9 +153,10 @@ export class SimState {
     for (let i = 0; i < l.games; i++) { const h = HELD[i]; if (!h || h.slot !== i) { s = i; break; } if (h.used < oldest) { oldest = h.used; s = i; } }
     const was = HELD[s]; if (was && was.slot === s) was.park();
     const from = this.w, to = u32(), at = sim().state_addr(s) >>> 2;
-    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2; to.set(from.subarray(o, o + this.live(i)), at + o); }
+    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2, n = this.live(i); if (o >= from.length) to.fill(0, at + o, at + o + n); else to.set(from.subarray(o, o + n), at + o); }   // (past the end of a parked block: a last pool with nothing in it)
     this.own = null; this.slot = s; HELD[s] = this; this.used = this.stamp = ++CLOCK.n; SIM_STATE_TALLY.bound++;
     this.view();
+    this.moved?.(s);
     return s;
   }
   /** a block for a game that had none: zeros under the layout's word, parked */
@@ -126,17 +164,21 @@ export class SimState {
   /** out of the module into a buffer of its own (another game needs the slot) */
   private park(): void {
     const l = layout(), from = this.w, own = new ArrayBuffer(this.span(false)), to = new Uint32Array(own);
-    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2; to.set(from.subarray(o, o + this.live(i)), o); }
+    for (let i = 0; i < l.off.length; i++) { const o = l.off[i] >>> 2; if (o < to.length) to.set(from.subarray(o, o + this.live(i)), o); }
     this.own = own;
     if (HELD[this.slot] === this) HELD[this.slot] = null;
     this.slot = -1; SIM_STATE_TALLY.parked++; this.stamp = ++CLOCK.n;
+    this.moved?.(-1);
     this.view();
   }
   /** HOW MANY BYTES A PARKED BLOCK NEEDS: up to the end of the last word that is state (a pool is sized for the largest game, and a parked game does not
    *  pay for the room it does not use). `empty`: of a block of zeros. A whole number of doubles. */
   private span(empty: boolean): number {
-    const l = layout(); let end = 0;
-    for (let i = 0; i < l.off.length; i++) { const e = (l.off[i] >>> 2) + (empty ? (l.pool[i] ? 2 : l.len[i] >>> 2) : this.live(i)); if (e > end) end = e; }
+    const l = layout(), tail = l.off.length - 1; let end = 0;
+    for (let i = 0; i < l.off.length; i++) {
+      if (i === tail && l.pool[i] && (empty || this.w[l.off[i] >>> 2] === 0)) continue;   // (the last pool, with nothing in it: no room at all, for it lies past every part a game is using)
+      const e = (l.off[i] >>> 2) + (empty ? (l.pool[i] ? 2 : l.len[i] >>> 2) : this.live(i)); if (e > end) end = e;
+    }
     return ((end + 1) >>> 1) << 3;
   }
   /** a parked block made long enough for `words` words (a take put back into it may hold more of a pool than it does) */
@@ -175,7 +217,7 @@ export class SimState {
       if (want) { if (this.w.length === 0) this.born(); t.into(g as never, this); this.w[H_HOMES] |= t.bit; }
       else { t.outOf(g as never, this); this.w[H_HOMES] &= ~t.bit; if (this.w[H_HOMES] === 0) this.shut(); }
     }
-    if (this.w.length !== 0) { if (this.slot < 0) this.bring(); else this.used = ++CLOCK.n; }   // (a game that ticks is not the one to park, though it asks nothing by `bind` all tick)
+    if (this.w.length !== 0 && layout().games > 0) { if (this.slot < 0) this.bring(); else this.used = ++CLOCK.n; }   // (a game that ticks is not the one to park, though it asks nothing by `bind` all tick; with no module there is no slot to stand in)
   }
 
   // ---- what the rollback snapshot does with a block (src/game/rollback.ts)
@@ -189,6 +231,11 @@ export class SimState {
     //  part that holds a piece more or fewer than it did then does not put this part's pieces out of step with the ones they are compared with)
     for (let i = 0, kw = 0; i < l.off.length; i++) {
       const o0 = l.off[i] >>> 2, n = this.live(i), nw = was !== undefined && kw < was.length ? Math.ceil(liveOf(l, i, was[kw][0]) / PIECE) : 0;
+      if (o0 >= w.length) {   // (a last pool with nothing in it, past the end of a parked block: its first words are zeros)
+        const c = nw === 1 ? was![kw] : undefined;
+        if (c !== undefined && c.length === n && c.every(x => x === 0)) out.push(c); else { shared = false; out.push(new Uint32Array(n)); }
+        kw += nw; continue;
+      }
       for (let o = 0, p = 0; o < n; o += PIECE, p++) {
         const e = o + PIECE < n ? o + PIECE : n, c = p < nw ? was![kw + p] : undefined;
         let same = c !== undefined && c.length === e - o;
@@ -205,6 +252,7 @@ export class SimState {
     const l = layout(); let k = 0;
     for (let i = 0; i < l.off.length; i++) {
       const o0 = l.off[i] >>> 2, n = this.live(i);
+      if (o0 >= w.length) { const a = c[k++]; if (a === undefined || a.length !== n || !a.every(x => x === 0)) return false; continue; }
       for (let o = 0; o < n; o += PIECE, k++) {
         const e = o + PIECE < n ? o + PIECE : n, a = c[k]; if (a === undefined || a.length !== e - o) return false;
         for (let j = o0 + o, q = 0, m = e - o; q < m; j++, q++) if (w[j] !== a[q]) return false;
@@ -218,17 +266,19 @@ export class SimState {
     if (c.length === 0) { if (this.w.length !== 0) this.shut(); return; }
     if (this.w.length === 0) this.born();
     const l = layout(); let need = 0;
-    for (let i = 0, k = 0; i < l.off.length; i++) { const n = liveOf(l, i, c[k][0]); k += Math.ceil(n / PIECE); if ((l.off[i] >>> 2) + n > need) need = (l.off[i] >>> 2) + n; }
+    // (a part of no length has no piece — with no module, a part no store lives in: `layout` — and after the last piece there is no first word to read)
+    const live = (i: number, k: number): number => l.len[i] === 0 ? 0 : liveOf(l, i, c[k][0]);
+    for (let i = 0, k = 0; i < l.off.length; i++) { const n = live(i, k), empty = i === l.off.length - 1 && l.pool[i] && l.len[i] !== 0 && c[k][0] === 0; k += Math.ceil(n / PIECE); if (!empty && (l.off[i] >>> 2) + n > need) need = (l.off[i] >>> 2) + n; }
     this.room(need);
     const w = this.w;
-    for (let i = 0, k = 0; i < l.off.length; i++) { const o0 = l.off[i] >>> 2, n = liveOf(l, i, c[k][0]); for (let o = 0; o < n; o += c[k++].length) w.set(c[k], o0 + o); }
+    for (let i = 0, k = 0; i < l.off.length; i++) { const o0 = l.off[i] >>> 2, n = live(i, k); for (let o = 0; o < n; o += c[k++].length) if (o0 + o < w.length) w.set(c[k], o0 + o); }
     this.stamp = ++CLOCK.n;
   }
   /** the block a part at a time, each under its name, as its live words (fresh views, for a walk that reads them at once: never kept) */
   parts(): { name: string; words: Uint32Array }[] {
     if (this.w.length === 0) return [];
     const l = layout(), w = this.w;
-    return l.off.map((off, i) => ({ name: SIM_PARTS[i] ?? `part${i}`, words: w.subarray(off >>> 2, (off >>> 2) + this.live(i)) }));
+    return l.off.map((off, i) => ({ name: SIM_PARTS[i] ?? `part${i}`, words: (off >>> 2) >= w.length ? new Uint32Array(this.live(i)) : w.subarray(off >>> 2, (off >>> 2) + this.live(i)) }));
   }
 }
 

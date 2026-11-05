@@ -18,3 +18,6 @@ __pycache__/
 cloud/.env*
 cloud/.convex/
 cloud-pull/
+
+# frame captures the page sends the dev server (src/render/framecap.ts)
+captures/

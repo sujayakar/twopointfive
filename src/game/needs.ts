@@ -27,6 +27,7 @@ import { chronicle } from './chronicle';
 import { hearPath } from './weather';
 import { dozeAsleep } from './doze';
 import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { claimMan, releaseMan, ownerWitness, OWN } from './owner';
 
 // ================================================================ the kinds and their places (TODO(LevelData): NEED_SPOTS belongs in the level file beside routes / chokepoints — like qrf.ts
 // QRF_MARKS it is checked headlessly against levels/office.json: free nav cells, reachable from every route, the loop's legs walkable, out of every leaf's sweep)
@@ -108,13 +109,13 @@ export interface Trip {
 }
 export interface NeedMem { needs: Need[]; trip: Trip | null; lastBackAt: number; trips: number; cancels: number; shaken: boolean; dealt: boolean; }
 const memOf = new SideMap<Guard, NeedMem>('needs.memOf');
+ownerWitness('needs', gd => !!memOf.get(gd)?.trip);
 function mem(gd: Guard): NeedMem { let M = memOf.get(gd); if (!M) { M = { needs: [], trip: null, lastBackAt: -1e9, trips: 0, cancels: 0, shaken: false, dealt: false }; memOf.set(gd, M); } return M; }
 /** read-only peek for the panel / the probes (null: the needs have never touched this man — the switch off, a unit, a corpse from before) */
 export function needsMem(gd: Guard): Readonly<NeedMem> | null { return memOf.get(gd) ?? null; }
 /** the trip this man is on (telegraphing, away, coming back), or null */
 export function needsTrip(gd: Guard): Readonly<Trip> | null { return memOf.get(gd)?.trip ?? null; }
 /** is he busy with a need — telegraphing one or off his route on one? (dialogue.ts chatty: no small talk with a man who has just told you he is off) */
-export function needsBusy(gd: Guard): boolean { return !!memOf.get(gd)?.trip; }
 
 /** per-Game: when anybody last walked off (the floor-wide gap) */
 const floorOf = new SideMap<object, { lastDepartAt: number }>('needs.floorOf');
@@ -225,7 +226,7 @@ function scheduleTrip(g: Game, gd: Guard, M: NeedMem, kind: NeedKind, forced: bo
   let q = path[0]; for (const p of path) { q = p; if (Math.hypot(p[0] - c.pos[0], p[2] - c.pos[2]) > 2.5) break; }
   const outYaw = Math.atan2(q[0] - c.pos[0], q[2] - c.pos[2]);
   const now = g.time; const F = floor(g);
-  M.trip = { kind, spot, phase: 'telegraph', forced, t0: now, departAt: now + NEEDS.announceLead, leftAt: -1, arrivedAt: -1, dwellUntil: -1, backAt: -1, wp: gd.wp, outYaw,
+  claimMan(gd, OWN.needs, g.time); M.trip = { kind, spot, phase: 'telegraph', forced, t0: now, departAt: now + NEEDS.announceLead, leftAt: -1, arrivedAt: -1, dwellUntil: -1, backAt: -1, wp: gd.wp, outYaw,
     watched: false, told: false, partner: null, radio: false, replyAt: -1, replied: false, necked: false, loopI: -1, line: '', gapBefore: F.lastDepartAt };
   F.lastDepartAt = Math.max(F.lastDepartAt, now + NEEDS.announceLead);   // the floor's gap counts from when he WILL walk (so a second man let go by maxAway ≥ 2 still leaves floorGapSecs after him); given back if the telegraph comes to nothing
   NEEDS_STATS.scheduled++; if (forced) NEEDS_STATS.forced++;
@@ -237,7 +238,7 @@ const pathLen = (from: Vec3, p: Vec3[]) => { let s = 0, prev = from; for (const 
  *  his route's own logic walks him on). No line — whatever interrupted him has his mouth. */
 function cancelTrip(g: Game, gd: Guard, M: NeedMem, why: string) {
   const T = M.trip; if (!T) return;
-  M.trip = null; M.cancels++; NEEDS_STATS.cancelled++;
+  releaseMan(gd, OWN.needs, g.time); M.trip = null; M.cancels++; NEEDS_STATS.cancelled++;
   const n = M.needs.find(x => x.kind === T.kind); if (n) n.level = Math.min(n.level, NEEDS.afterCancel);
   gd.stallRef = null; gd.char.anim.cancelTell();   // (a tell half-way up comes down now: the arm is the aim's / the flinch's from this frame)
   if (T.phase === 'telegraph') { const F = floor(g); if (F.lastDepartAt === T.departAt) F.lastDepartAt = T.gapBefore; }                                // nobody walked: the floor's gap is as it was
@@ -342,7 +343,7 @@ export function needsPatrol(g: Game, gd: Guard, dt: number, walk: number): boole
       if (arrived) {
         gd.stallRef = null;
         if (v3.distXZ(c.pos, goal) > 1.5) { NEEDS_STATS.stuck++; cancelTrip(g, gd, M, 'no way back'); return true; }
-        T.backAt = now; M.trip = null; M.trips++; M.lastBackAt = now; NEEDS_STATS.completed++;
+        T.backAt = now; releaseMan(gd, OWN.needs, g.time); M.trip = null; M.trips++; M.lastBackAt = now; NEEDS_STATS.completed++;
         const n = M.needs.find(x => x.kind === T.kind); if (n) n.level = 0;
         const away = Math.round(now - T.leftAt);
         g.say(gd, pickLine(NEEDS_LINES.back, gd, 'back'));
@@ -428,6 +429,7 @@ export function needsRestore(g: Game, s: NeedsSnap | null | undefined) {
     const T = S.trip;
     M.trip = T && needSpot(g, T.kind) && gd.state !== 'dead' ? { kind: T.kind, spot: needSpot(g, T.kind)!, phase: T.phase, forced: !!T.forced, t0: T.t0, departAt: T.departAt, leftAt: T.leftAt, arrivedAt: T.arrivedAt, dwellUntil: T.dwellUntil, backAt: T.backAt, wp: T.wp | 0, outYaw: T.outYaw,
       watched: !!T.watched, told: !!T.told, partner: T.partner >= 0 ? g.guards[T.partner] ?? null : null, radio: !!T.radio, replyAt: T.replyAt, replied: !!T.replied, necked: !!T.necked, loopI: T.loopI | 0, line: T.line ?? '', gapBefore: T.gapBefore } : null;
+    if (M.trip) claimMan(gd, OWN.needs, g.time); else releaseMan(gd, OWN.needs, g.time);
   });
 }
 

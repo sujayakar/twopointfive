@@ -1,0 +1,2 @@
+# places for a wall charge on levels/police-post.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
+844 654

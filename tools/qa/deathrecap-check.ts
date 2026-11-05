@@ -21,6 +21,7 @@
 //       throughout; off = the row as it was; reads only   (RECAP_BREAK=seen = everybody sees through walls: must fail)
 // RECAP_BREAK=1 = the round's line never reaches the module (neither by the combat.ts seam nor as the shot's event): (1) must fail.   exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
+import { clearLine } from './standwall.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 
 export async function deathrecapCheck(): Promise<boolean> {
@@ -216,10 +217,11 @@ export async function deathrecapCheck(): Promise<boolean> {
             const before = copy(rowOf(g, A.callsign)), calls0 = RECAP_STATS.calls, muzzle = [...H.char.muzzle];
             fireWeapon(g, H.char, chest(A.char), false, { steady: true }); R.step(1); if (A.state !== 'dead') continue;
             const at = [...A.char.pos]; let u = [muzzle[0] - at[0], muzzle[2] - at[2]]; { const L = Math.hypot(u[0], u[1]) || 1; u = [u[0] / L, u[1] / L]; }
-            const seg = g.col.segmentBlocked; if (process.env.RECAP_BREAK === 'seen') { g.col.segmentBlocked = () => false; RECAP.liveSeeM = 1e9; }   // (the break: everybody sees through walls, any distance)
+            // (the break: nothing of the level stands between his mate or Sam and the man, where he lies or where his chest is — standwall.ts clearLine, the boxes on those lines hidden to either language — and everybody sees any distance)
+            const walls = process.env.RECAP_BREAK === 'seen' ? [B.char, g.player.char].flatMap((w: any) => [lie(at), chest(A.char)].map(t => clearLine(g, eye(w), t))) : null; if (walls) RECAP.liveSeeM = 1e9;
             const first = copy(rowOf(g, A.callsign));   // the frame after the fall: before any beat
             if (mode === 'gone') { R.step(12); killGuard(g, B, [0, 0, 1], true, 'struck', 'world'); }
-            R.step(120); g.col.segmentBlocked = seg;
+            R.step(120); if (walls) for (const back of walls.reverse()) back();
             if (mode === 'late') { for (let i = 0; i < 3; i++) { R.put(B, w, at); R.step(1); } R.step(90); }
             const L1 = lostLive(g).find((x: any) => x.id === A.char.id), said = (g.cues as any).bubbles.get(B)?.text ?? '';   // the cue itself: a bark of his own since would stand over it in bubbleOf
             const pc = g.player.char, side = g.fogOfWar.sideOf([pc.pos[0] + u[0] * 50, 0, pc.pos[2] + u[1] * 50]);

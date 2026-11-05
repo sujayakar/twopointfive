@@ -42,14 +42,14 @@ import type { Prop } from './props';
 import { frameOf } from './guards';
 import { order } from './squad';
 import { pressWants, pressKeeps } from './pressure';
-import { squadsLive, squadDefers, squadMayWedge } from './enemysquads';
-import { lastStandMan } from './laststand';
+import { squadsLive, squadMayWedge } from './enemysquads';
 import { hearPath } from './weather';
 import { w, wg, WORDS } from './words';
 import { doorWords } from './orders';   // (call-time only: what a door is called — one name on one HUD)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { gunKeepsPost } from './gunroles';   // (call-time only)
 import { laneCovers } from './lanes';   // (call-time only: is this spot in a lane his side knows is covered)
+import { hasHim, OWN } from './owner';
 
 export const DIGIN = {
   /** THE switch: off = nothing here runs (the room fight as it was) */
@@ -491,7 +491,7 @@ function pushSpot(F: Fight, D: Def, room: Room, e: Entry, pp: Vec3, stand: Vec3)
 // ---------------------------------------------------------------- the phases
 /** furniture for entry `idx` of his room: off to the prop (then hauled, then worked under the door). false = nothing to haul / no time / not that kind of door */
 function startBrace(F: Fight, st: St, D: Def, M: Man, R: RoomSt, idx: number): boolean {
-  const g = F.g, e = R.room.entries[idx]; if (!DIGIN.brace || R.wedged >= DIGIN.wedges || !e || !wedgeable(g, e.door) || st.wedges.has(e.door) || !(squadMayWedge(g, D.gd, e.door) || lastStandMan(g, D.gd))) return false;   // (laststand.ts: the last stand wedges any door of its room)
+  const g = F.g, e = R.room.entries[idx]; if (!DIGIN.brace || R.wedged >= DIGIN.wedges || !e || !wedgeable(g, e.door) || st.wedges.has(e.door) || !(squadMayWedge(g, D.gd, e.door) || hasHim(D.gd, OWN.stand))) return false;   // (laststand.ts: the last stand wedges any door of its room)
   if (flat(heardAt(D, M), e.at) < DIGIN.closeM) return false;                     // they are at that door by the sound of it: no time for furniture
   let p = nearestProp(F, st, D, e);
   const stand = F.freeNear([e.at[0] - e.out[0] * 1.4, 0, e.at[2] - e.out[1] * 1.4]);
@@ -511,7 +511,7 @@ function startBrace(F: Fight, st: St, D: Def, M: Man, R: RoomSt, idx: number): b
     }
   }
   if (!goal) return false;
-  if (lastStandMan(g, D.gd) && !F.inRoom(R.room, goal)) return false;   // (laststand.ts: a man of the last stand does not leave its room for furniture)
+  if (hasHim(D.gd, OWN.stand) && !F.inRoom(R.room, goal)) return false;   // (laststand.ts: a man of the last stand does not leave its room for furniture)
   R.bracer = D.gd; M.brace = idx; M.prop = p; st.used.add(p); M.stand = stand; M.rest = [e.at[0] - e.out[0] * 0.6, 0, e.at[2] - e.out[1] * 0.6];
   M.phase = 'toProp'; DIGIN_STATS.hauls++; move(F, D, goal, g.tune.guardChase);
   return true;
@@ -576,7 +576,7 @@ const holds = (g: Game, e: Entry) => g.doors.wedgeHolds(e.door, [e.at[0] - e.out
 /** …would he have gone to wedge this entry but for the way its door swings: startBrace's own first tests (a door a wedge is allowed on, time for it, furniture
  *  in reach, floor of his room to stand on at it), asked without starting anything — so the rule only ever moves a wedge that was going to be placed */
 function wouldBrace(F: Fight, st: St, D: Def, M: Man, R: RoomSt, e: Entry): boolean {
-  const g = F.g; if (!DIGIN.brace || R.wedged >= DIGIN.wedges || !wedgeable(g, e.door) || st.wedges.has(e.door) || !(squadMayWedge(g, D.gd, e.door) || lastStandMan(g, D.gd))) return false;
+  const g = F.g; if (!DIGIN.brace || R.wedged >= DIGIN.wedges || !wedgeable(g, e.door) || st.wedges.has(e.door) || !(squadMayWedge(g, D.gd, e.door) || hasHim(D.gd, OWN.stand))) return false;
   if (flat(heardAt(D, M), e.at) < DIGIN.closeM || !nearestProp(F, st, D, e)) return false;
   const stand = F.freeNear([e.at[0] - e.out[0] * 1.4, 0, e.at[2] - e.out[1] * 1.4]); return !!stand && F.inRoom(R.room, stand);
 }
@@ -711,7 +711,7 @@ export function digInTick(rf: unknown, def: unknown, _dt: number) {
       if (contact) { M.phase = 'idle'; DIGIN_STATS.aborted++; return; }
       if (!D.room || !isNaN(st.rooms.get(D.room)?.enteredAt ?? NaN) || listeners(F).some(L => F.inRoom(D.room, L.head))) { M.phase = 'idle'; return; }   // they are in his room already (he was blind, or thinking): the room fight's man
       if (g.time < M.until) return;
-      if (squadDefers(g, gd)) return;   // (enemysquads.ts: his squad has heard and not yet said what it does — or he is about to be sent: the door waits for the word)
+      if (hasHim(gd, OWN.squadWord)) return;   // (enemysquads.ts: his squad has heard and not yet said what it does — or he is about to be sent: the door waits for the word)
       if (!DIGIN.stay && !(M.far && DIGIN.reachM > 0) && pressWants(g, D)) return;   // (pressure.ts on as well: he is on his beat toward a press, or in one — the press has him first; whether the man it leaves to keep the room digs in is the next line's)
       if (!DIGIN.keeper && !DIGIN.stay && !(M.far && DIGIN.reachM > 0) && pressKeeps(g, D)) { M.phase = 'idle'; return; }   // (DIGIN.keeper off: made the keeper while he thought — he does not dig in)
       if (!DIGIN.stay && !(M.far && DIGIN.reachM > 0) && !isNaN(D.rallyAt) && D.rallyGo && g.time < D.rallyAt + 0.5) return;   // (stay off) he is weighing the fight next door and means to go: the room fight's rally has him first — only a man who holds his room digs in
@@ -771,7 +771,7 @@ export function digInTick(rf: unknown, def: unknown, _dt: number) {
     case 'set': {
       if (g.time - R!.enteredAt > 1) { M.phase = 'idle'; return; }               // they are in: his fear of that door is no longer topped up, his eye is his own again (the room fight's evidence takes it from here)
       const last = Math.max(D.noiseT, M.knowT, gd.lastSeenT);
-      if (g.time - last > DIGIN.holdSecs && !lastStandMan(g, gd)) { M.phase = 'idle'; log(F, gd, 'stands down'); return; }   // (laststand.ts: the last stand stays set)
+      if (g.time - last > DIGIN.holdSecs && !hasHim(gd, OWN.stand)) { M.phase = 'idle'; log(F, gd, 'stands down'); return; }   // (laststand.ts: the last stand stays set)
       fear(D, M);
       if (!contact && DIGIN.lanes && isNaN(R!.enteredAt) && g.time >= (M.laneT ?? 0) && g.time - M.setAt > DIGIN.laneSecs) {
         if (!laneCovers(g, gd, gd.char.pos)) M.laneT = g.time + 0.5;                   // (asked twice a second, not every frame)

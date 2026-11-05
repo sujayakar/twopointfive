@@ -11,6 +11,15 @@ export function register(SC: Record<string, any>, CH: any) {
   // the player's sprint, three ways (4.7 m/s; the trunk and the legs are the sprint clip's in all three)
   const sprinter = (S: any, set: (c: any) => void, o?: any) => { const c = S.man(o); c.anim.trained = 1; c.anim.upper = 'none'; set(c); walkTo(c, 4.7);
     S.run(1.5); const T = 0.66; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); } };
+  // a run with empty hands, drawn from BEHIND (character.ts RUNARMS: the clips' arms are wide of the shoulders, which only shows from there), and from the side
+  const bare = (S: any, on: boolean, speed = 4.7) => { const was = CH.RUNARMS.on; CH.RUNARMS.on = on && !S.old;
+    try { const c = S.man(); c.anim.trained = 1; c.anim.upper = 'none'; walkTo(c, speed); S.run(1.5); const T = 0.66; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); } } finally { CH.RUNARMS.on = was; } };
+  SC['sprint-bare'] = { title: "Sam's sprint with empty hands, from behind: the arms carried close", opts: { side: 'rear' }, run(S: any) { bare(S, true); } };
+  SC['sprint-bare-was'] = { title: "Sam's sprint with empty hands, from behind, as the clip has it: elbows and hands wide of the shoulders", opts: { side: 'rear' }, run(S: any) { bare(S, false); } };
+  SC['sprint-bare-side'] = { title: "Sam's sprint with empty hands, from his side: the arms carried close", run(S: any) { bare(S, true); } };
+  SC['sprint-bare-slow'] = { title: "a sprint a heavy kit slows (3.5 m/s), empty hands, from behind: the arms carried close", opts: { side: 'rear' }, run(S: any) { bare(S, true, 3.5); } };
+  SC['jog-bare'] = { title: "a jog (3 m/s) with empty hands, from behind: the arms carried close", opts: { side: 'rear' }, run(S: any) { bare(S, true, 3); } };
+  SC['jog-bare-was'] = { title: "a jog (3 m/s) with empty hands, from behind, as the clip has it", opts: { side: 'rear' }, run(S: any) { bare(S, false, 3); } };
   SC['sprint-pistol-old'] = { title: "Sam's sprint with the pistol as it was: the gun in a pumping fist", run(S: any) { sprinter(S, c => { c.__pistol = true; }); } };
   SC['sprint-pistol'] = { title: "Sam's sprint with the pistol: both hands on it, low", run(S: any) { sprinter(S, c => { c.__pistol = true; c.anim.runReady = true; }); } };
   SC['sprint-pistol-turns'] = { title: "into the sprint with the pistol and out of it again: the carry, the low ready, the carry", run(S: any) {

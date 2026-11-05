@@ -67,7 +67,7 @@ so a walkable pane never actually opens a route — the sill still meets the cap
 ≤ 16 sites a pane (the 17th merges into the nearest; crack tips count), ≤ `shardsPerFrame` 6 rigid spawns a frame (+ ≤ 2: the last cell taken may add three), a diced pane ≤ 6
 crumbs, chips through the particle birth cap; the debris pool is destruction's (cap 64 / 32 by tier): a spawn over the cap EVICTS the oldest resting chunk, with none resting it is
 REFUSED and the shard is all chips (`GB_STATS.refused`) — so a charge among the conference panes can evict every resting tile / housing of an earlier burst (one pool, by design;
-probe glassbreak-caps drives 19 panes apart with the pool never over 64). Every choice hashes the pane index, the impact point (`hitSeed`) or a serial; the module never touches
+probe glassbreak-caps drives 19 panes apart with the pool never over 64). Every choice hashes the pane's own word (`glass.ts boxSeed`: what the box is; its index in the level until 2026-11-05), the impact point (`hitSeed`) or a serial; the module never touches
 Math.random (glassbreak-determinism: two seeded volleys + a charge → identical sites / energies / masks / debris rest poses / events / particle records). Holes are NOT saved: a
 checkpoint load is `restartEncounter` → `resetLevelState` → whole panes; no static is ever appended or resized, so `levelFingerprint` is untouched (glassbreak-reset asserts it with
 two panes open) and `journal-fixtures` replays identically.

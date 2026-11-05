@@ -41,6 +41,7 @@ const ORM: any = await import(`${ROOT}/src/game/orders.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
 const DGM: any = await import(`${ROOT}/src/game/digin.ts`).catch(() => null);   // (the dig-in: `digest` pins its later default-on brace rule off where the checkout has it)
 const GEARM: any = await import(`${ROOT}/src/game/gear.ts`).catch(() => null);   // (the 2010s issue kit, where the checkout has it: its goggles are six boxes and dark)
+const ENVM: any = await import(`${ROOT}/src/game/env.ts`).catch(() => null);   // (the game's own tube gain: null in a checkout from before the file)
 const NVM: any = await import(`${ROOT}/src/game/nvg.ts`).catch(() => null);   // (null in a checkout from before the module: only `digest` runs there)
 const RWM: any = await import(`${ROOT}/src/game/rearwatch.ts`).catch(() => null);   // (the stack's rear man on the door behind: a later default-on switch the shipped stand raises at every stand-up, so `digest` pins it off AFTER the stage, where the checkout has it)
 const NVG: any = NVM?.NVG ?? { on: false };
@@ -214,10 +215,10 @@ export const nvgSight = guarded(async () => {
     F.verdict(same, 'post.wgsl still has the tube nvg.ts copies', same ? 'the gain curve, the noise line and the exposure in front of them are where they were' : 'the shader\'s night-vision lines changed: nvg.ts tubeVis must follow them'); }
   const S: any = await quiet(() => stage(IDS[0], 1)); const g = S.g;
   { const Es = [0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 50]; const vs = Es.map(E => NVM.tubeVis(g, E)); let mono = true; for (let i = 1; i < vs.length; i++) if (vs[i] < vs[i - 1] - 1e-9) mono = false;
-    const floorE = g.tune.visFloor ?? 0.03, gain0 = g.engine.settings.nvGain; g.engine.settings.nvGain = gain0 / 8; const lowGain = NVM.tubeVis(g, 0.01); g.engine.settings.nvGain = gain0;
+    const floorE = g.tune.visFloor ?? 0.03, gain0 = ENVM.ENV.tubeGain; ENVM.ENV.tubeGain = gain0 / 8; const lowGain = NVM.tubeVis(g, 0.01); ENVM.ENV.tubeGain = gain0;   // (the game's own gain, src/game/env.ts: the picture's settings.nvGain is no longer what a man's tube is worked out at)
     F.verdict(mono && vs[0] === 0 && vs.every(v => v >= 0 && v <= 1) && NVM.tubeVis(g, floorE) > 0.4 && g.visibilityOf(floorE) < 0.01 && lowGain < NVM.tubeVis(g, 0.01),
       'the tube: nothing from nothing, monotone, and the bare eye\'s zero is plain to it',
-      `E → through the tube: ${Es.map((E, i) => `${E}→${f2(vs[i])}`).join(' · ')} · at the meter's zero (E ${floorE}): bare ${f2(g.visibilityOf(floorE))}, tube ${f2(NVM.tubeVis(g, floorE))} · an eighth of settings.nvGain: 0.01→${f2(lowGain)}`); }
+      `E → through the tube: ${Es.map((E, i) => `${E}→${f2(vs[i])}`).join(' · ')} · at the meter's zero (E ${floorE}): bare ${f2(g.visibilityOf(floorE))}, tube ${f2(NVM.tubeVis(g, floorE))} · an eighth of the game's own tube gain (ENV.tubeGain): 0.01→${f2(lowGain)}`); }
   // every hostile where he stands, at eight metres, to a goggled teammate
   let tubeOnly = 0, both = 0, neither = 0, black = 0, worse = 0, blackGain = 0, hostileDiff = 0, floors = 0; const lines: string[] = [];
   for (const id of IDS) {

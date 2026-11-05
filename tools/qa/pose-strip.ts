@@ -37,6 +37,8 @@ export interface Stage {
   /** a world-space line drawn in every later shot (a wall, a door, a round's line) */
   mark(a: Vec3, b: Vec3, colour?: string): void;
   t: number;
+  /** `--moves off`: a scenario that raises a switch of its own leaves it down too */
+  old?: boolean;
 }
 
 function makeStage(): { S: Stage; shots: Shot[] } {
@@ -81,6 +83,9 @@ function view(name: string, azDeg: number, pitchDeg: number): View {   // the ca
 const SIDE_L = view('side', -90, 0);        // from his LEFT (opts.side 'left': what the support hand does shows): forward runs to the RIGHT
 const SIDE = view('side', 90, 0);          // looking along +x from his right: forward (+z) runs to the LEFT of the picture
 const TOP = view('game', 200, 55);         // the game camera's pitch, from ahead and a little to one side
+const flip = (v: View): View => ({ ...v, r: [-v.r[0], -v.r[1], -v.r[2]] });   // (a view from behind is not mirrored: his right arm on the right of the picture)
+const REAR = flip(view('rear', 0, 0));     // from straight behind him (opts.side 'rear'): how wide the arms are carried shows
+const TOP_REAR = flip(view('game', 0, 55));   // the game camera's pitch from behind: a man running up the screen
 // capsule index → what it is: 0 lower torso, 1 chest, 2 shoulder line, 3 pelvis, 4 head, 5/6 arm L, 7/8 arm R, 9/10/11 leg L, 12/13/14 leg R
 const PART = ['trunk', 'trunk', 'trunk', 'trunk', 'head', 'armL', 'armL', 'armR', 'armR', 'legL', 'legL', 'legL', 'legR', 'legR', 'legR'];
 const COL: Record<string, string[]> = {
@@ -99,7 +104,8 @@ function drawView(sh: Shot, V: View, ox: number, oy: number, W: number, H: numbe
     }
   } else {
     const a = P([centre[0], 0, centre[2]]); s += `<line x1="${ox}" y1="${a[1].toFixed(1)}" x2="${ox + W}" y2="${a[1].toFixed(1)}" stroke="#999" stroke-width="1"/>`;
-    for (let i = -6; i <= 6; i++) { const z = Math.round(centre[2] * 2) / 2 + i * 0.5; const t = P([centre[0], 0, z]); s += `<line x1="${t[0].toFixed(1)}" y1="${t[1].toFixed(1)}" x2="${t[0].toFixed(1)}" y2="${(t[1] + (Math.abs(z % 1) < 1e-6 ? 8 : 4)).toFixed(1)}" stroke="#999" stroke-width="1"/>`; }
+    const acr = Math.abs(V.r[0]) > Math.abs(V.r[2]);   // (a level view along z, the rear one, steps its ticks along x: the axis that runs across its picture)
+    for (let i = -6; i <= 6; i++) { const z = Math.round((acr ? centre[0] : centre[2]) * 2) / 2 + i * 0.5; const t = P(acr ? [z, 0, centre[2]] : [centre[0], 0, z]); s += `<line x1="${t[0].toFixed(1)}" y1="${t[1].toFixed(1)}" x2="${t[0].toFixed(1)}" y2="${(t[1] + (Math.abs(z % 1) < 1e-6 ? 8 : 4)).toFixed(1)}" stroke="#999" stroke-width="1"/>`; }
   }
   for (const m of sh.marks) { const a = P(m[0]), b = P(m[1]); s += `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${m[2]}" stroke-width="3"/>`; }
   // every capsule of every figure, far to near
@@ -116,7 +122,7 @@ function drawView(sh: Shot, V: View, ox: number, oy: number, W: number, H: numbe
   items.sort((x, y) => y.z - x.z); for (const it of items) s += it.svg;
   return s + '</g>';
 }
-function render(name: string, title: string, shots: Shot[], opts: { scale?: number; follow?: boolean; side?: 'left' } = {}): string {
+function render(name: string, title: string, shots: Shot[], opts: { scale?: number; follow?: boolean; side?: 'left' | 'rear' } = {}): string {
   const scale = opts.scale ?? 150, W = 300, Hs = 330, Ht = 330, pad = 6, head = 40;
   const cols = shots.length; const width = cols * (W + pad) + pad, height = head + Hs + Ht + 3 * pad + 18;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Helvetica, Arial, sans-serif"><rect width="100%" height="100%" fill="#fff"/>`;
@@ -125,16 +131,16 @@ function render(name: string, title: string, shots: Shot[], opts: { scale?: numb
     const ox = pad + i * (W + pad);
     // centre each cell on the first figure's pelvis (so a walk shows the grid going by under him), or on the first shot's when not following
     const ref = (opts.follow === false ? shots[0] : sh).figs[0].caps[3]; const centre: Vec3 = [(ref[0] + ref[4]) / 2, 0, (ref[2] + ref[6]) / 2];
-    s += `<rect x="${ox}" y="${head}" width="${W}" height="${Hs}" fill="#fafafa" stroke="#ccc"/>` + drawView(sh, opts.side === 'left' ? SIDE_L : SIDE, ox, head, W, Hs, scale, centre, Hs - 24);
-    s += `<rect x="${ox}" y="${head + Hs + pad}" width="${W}" height="${Ht}" fill="#fafafa" stroke="#ccc"/>` + drawView(sh, TOP, ox, head + Hs + pad, W, Ht, scale, centre, Ht * 0.62);
+    s += `<rect x="${ox}" y="${head}" width="${W}" height="${Hs}" fill="#fafafa" stroke="#ccc"/>` + drawView(sh, opts.side === 'rear' ? REAR : opts.side === 'left' ? SIDE_L : SIDE, ox, head, W, Hs, scale, centre, Hs - 24);
+    s += `<rect x="${ox}" y="${head + Hs + pad}" width="${W}" height="${Ht}" fill="#fafafa" stroke="#ccc"/>` + drawView(sh, opts.side === 'rear' ? TOP_REAR : TOP, ox, head + Hs + pad, W, Ht, scale, centre, Ht * 0.62);
     s += `<text x="${ox + 4}" y="${head + 15}" font-size="13" fill="#222">${sh.label}</text>`;
   });
-  s += `<text x="${pad}" y="${height - 6}" font-size="11" fill="#666">top row: ${opts.side === 'left' ? 'from his left side (forward is to the right)' : 'from his right side (forward is to the left)'} · bottom row: 55° down from ahead, as the game looks · orange = his right arm and leg, blue = his left · dark red = the magazine · black bar = the weapon · grid 0.5 m</text>`;
+  s += `<text x="${pad}" y="${height - 6}" font-size="11" fill="#666">top row: ${opts.side === 'rear' ? 'from straight behind him' : opts.side === 'left' ? 'from his left side (forward is to the right)' : 'from his right side (forward is to the left)'} · bottom row: 55° down from ${opts.side === 'rear' ? 'behind' : 'ahead'}, as the game looks · orange = his right arm and leg, blue = his left · dark red = the magazine · black bar = the weapon · grid 0.5 m</text>`;
   return s + '</svg>';
 }
 
 // ---------------------------------------------------------------- scenarios
-type Scenario = { title: string; opts?: { scale?: number; follow?: boolean; side?: 'left' }; run: (S: Stage) => void };
+type Scenario = { title: string; opts?: { scale?: number; follow?: boolean; side?: 'left' | 'rear' }; run: (S: Stage) => void };
 export const SCENARIOS: Record<string, Scenario> = {};
 const scenariosMod = await import(`${ROOT}/tools/qa/pose-scenarios.ts`);
 scenariosMod.register(SCENARIOS, CH);
@@ -153,7 +159,7 @@ if (import.meta.main) {
     Math.random = mulberry32(7);
     if (CH.MOVES) CH.setMoves?.(!movesOff);
     if (CH.TURN) CH.TURN.on = movesOff ? 0 : 1;   // (the turn weight goes with it: only the turn-* scenarios weigh a man)
-    const { S, shots } = makeStage(); sc.run(S);
+    const { S, shots } = makeStage(); S.old = movesOff; sc.run(S);   // (`old`: a scenario that raises a switch of its own leaves it down with the passes off)
     const svg = render(name + suffix, sc.title + (movesOff ? ' — MOVES off (the build as it was)' : ''), shots, sc.opts);
     const f = `${out}/${name}${suffix}.svg`; writeFileSync(f, svg);
     const m = /width="(\d+)" height="(\d+)"/.exec(svg)!;

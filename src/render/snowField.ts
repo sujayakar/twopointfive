@@ -18,6 +18,7 @@ import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import { SNOW_PALETTE } from '../scene/gwotPalette';
+import { doesOf, type SnowKind } from '../scene/materials';
 
 export const SNOW_RES = 10;           // texels per metre
 /** The look's numbers (judged on software-rendered stills only — the maintainer's to move: `__snow.look` on the console, then `__snow.relook()`). Authored data. */
@@ -65,16 +66,17 @@ export interface SnowField {
   stats: { mounds: number; lays: number; bare: number; roofs: number; quads: number; maxMound: number };
 }
 
-const near = (a: readonly number[], b: readonly number[]) => Math.abs(a[0] - b[0]) < 2e-3 && Math.abs(a[1] - b[1]) < 2e-3 && Math.abs(a[2] - b[2]) < 2e-3;
-/** which snow paint a box wears, by its albedo (a runtime box has no material name: gwotPalette.ts tells paints apart the same way) */
+
 /** is this box a THIN LAY on the ground — a strip of trodden or old snow, swept earth, a mat: at the ground, a finger thick at most, not glass and not the
  *  deep snow's own paint (so never the slab). The bake's rule below and game/snowBog.ts's: one reading of the level's boxes. `bare` = it is ground somebody
  *  CLEARED (any paint that is not snow's, and not a lit thing lying on the snow) */
 export function snowThinLay(b: Box): boolean { const top = b.c[1] + b.h[1]; return !(b.flags & BoxFlag.Glass) && top <= 0.03 && top > 0 && b.c[1] - b.h[1] >= -0.02 && snowPaintOf(b) !== 'snow'; }
 export function snowLayBare(b: Box): boolean { return snowPaintOf(b) === null && b.emissive[0] + b.emissive[1] + b.emissive[2] <= 0; }
-export function snowPaintOf(b: Box): 'snow' | 'snowPacked' | 'snowOld' | null {
-  return near(b.albedo, SNOW_PALETTE.snow) ? 'snow' : near(b.albedo, SNOW_PALETTE.snowPacked) ? 'snowPacked' : near(b.albedo, SNOW_PALETTE.snowOld) ? 'snowOld' : null;
-}
+/** which lying snow a box is, by its word (scene/materials.ts, Box.does: the rows 'snow', 'packed snow' and 'old snow'), or null. THE SNOW FIELD IS ONE
+ *  MODEL THE PICTURE AND THE GAME BOTH READ (game/snowBog.ts wades in what is drawn), so this file of the renderer's asks what a box DOES: the one render
+ *  file that does. Never by the colour. (THE SHADER still knows the three snow paints by their numbers, shaders/snow.wgsl snowIsPaint: so a level's snow
+ *  wears the palette's whites until that reads a word too, or it is snow to the game and plain paint to the picture.) */
+export function snowPaintOf(b: { does?: string }): SnowKind | null { return doesOf(b).snow ?? null; }
 
 // position-seeded value noise (0‥1, C1) — the bake's only irregularity: the same level, the same field
 function hash2(x: number, z: number): number { let h = (Math.imul(x | 0, 73856093) ^ Math.imul(z | 0, 19349663)) >>> 0; h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0; h = Math.imul(h ^ (h >>> 12), 0x297a2d39) >>> 0; return ((h ^ (h >>> 15)) >>> 0) / 4294967296; }
@@ -100,7 +102,10 @@ function toHalf(v: number): number {
 }
 
 /** `breakIt`: the check's break word — the hills are left a finger UNDER their boxes (the boxes then stand out of the surface, as rectangles) */
-export function buildSnowField(level: Level, opts: { wind?: readonly [number, number]; breakIt?: boolean } = {}): SnowField | null {
+/** `roll` (m; GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts, the look's page only): the open ground's lying snow is not flat — a slow swell this
+ *  deep at most stands under the open sky, thinner where the snow is trodden or old and none on cleared ground, under a roof or in a wall. Picture and rays
+ *  only: nothing in the update reads the field. */
+export function buildSnowField(level: Level, opts: { wind?: readonly [number, number]; breakIt?: boolean; roll?: number } = {}): SnowField | null {
   const boxes = level.boxes;
   const w = Math.round(WORLD.gridW * WORLD.gridCell * SNOW_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * SNOW_RES);
   const ox = WORLD.min[0], oz = WORLD.min[2]; const N = w * h;
@@ -212,6 +217,14 @@ export function buildSnowField(level: Level, opts: { wind?: readonly [number, nu
     if (mound[i] < 0.004) mound[i] = 0;
     const up = sstep(0, 0.03, mound[i]);   // standing snow is fresh snow, whatever it stands on
     cover[i] = Math.max(cover[i], up); packed[i] *= 1 - up; old[i] *= 1 - up;
+    if (mound[i] > stats.maxMound) stats.maxMound = mound[i];
+  }
+  if (opts.roll && opts.roll > 0) for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
+    const i = z * w + x; if (wall[i]) continue;
+    const k = cover[i] * (1 - sstep(0.15, 0.6, roof[i])) * (1 - 0.85 * Math.max(packed[i], old[i])); if (k <= 0.02) continue;
+    const wx = ox + (x + 0.5) / SNOW_RES, wz = oz + (z + 0.5) / SNOW_RES, sw = wander(wx + 11.3, wz + 4.1, 3.6);
+    const r = opts.roll * k * Math.max(0, 0.12 + 0.88 * sw * sw * (3 - 2 * sw) + 0.22 * (wander(wx, wz, 1.2) - 0.5));
+    mound[i] += r * (1 - sstep(0, 0.3, mound[i]));   // (a bank keeps its own height: the swell is the open ground's)
     if (mound[i] > stats.maxMound) stats.maxMound = mound[i];
   }
   // ---- the mesh: every lattice quad with snow standing at a corner

@@ -249,5 +249,5 @@ export function beltTorch(c: Character, out: Box[]) {
   const B = INHAND.on && INHAND.belt ? BELT_TORCH.at : BELT_TORCH.was, o = B[0], a = B[1];   // (inhand.ts: at 0.15 / 0.115 three quarters of it was under his shirt — measured on the worn mesh of every defender and responder; outside it at 0.21 / 0.16)
   const at: Vec3 = [hp[0] + r[0] * o + f[0] * a, hp[1] - 0.045, hp[2] + r[2] * o + f[2] * a];
   out.push(makeBox({ c: at, h: [0.017, 0.062, 0.017], yaw: Math.atan2(f[0], f[2]), albedo: [0.05, 0.05, 0.055], flags: BoxFlag.Dynamic | BoxFlag.NoShadow, owner: c.id & 0xff }));
-  out.push(makeBox({ c: [at[0], at[1] - 0.07, at[2]], h: [0.021, 0.012, 0.021], yaw: Math.atan2(f[0], f[2]), albedo: [0.07, 0.07, 0.075], flags: BoxFlag.Dynamic | BoxFlag.NoShadow, owner: c.id & 0xff }));
+  out.push(makeBox({ c: [at[0], at[1] - 0.07, at[2]], h: [0.021, 0.012, 0.021], yaw: Math.atan2(f[0], f[2]), albedo: [0.07, 0.07, 0.075], stuff: 'metal', flags: BoxFlag.Dynamic | BoxFlag.NoShadow, owner: c.id & 0xff }));   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
 }

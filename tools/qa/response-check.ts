@@ -15,7 +15,7 @@
 //       control says so
 //   (7) with no word on the net the team walks the level's named places; where Sam really stands (unseen) changes nothing of it
 //   (8) a man on the net sees him: that place is the net's word, control briefs the team on it, the team goes THERE — not to where he has since gone; the
-//       man who said it dead and unfound, the word stands
+//       man who said it dead, the word stands where he put it (found or not)
 //   (9) a man in an arm says nothing: what he saw reaches the net only when he is back on it
 //   (10) the word is in a save: out and back, the same places at the same ages
 //   (11) whoever is against them is their enemy: the partner in view of the element is contact, and he is the one they turn on
@@ -43,6 +43,8 @@ const Qm = await import(`${ROOT}/src/game/qrf.ts`);
 const { RESPONSE, QRF_MARKS, requestQrf, resetQrf, checkResponse, hasResponse, responseWordSnapshot, responseWordRestore } = Qm;
 const { PICTURE, ideasOf } = await import(`${ROOT}/src/game/picture.ts`);
 const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
+/** the way a round was going when it put a man down (combat.ts killGuard's third argument is a direction: a word there leaves his body at no place at all) */
+const SHOT: Vec3 = [1, 0, 0];
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { raiseEscalation } = await import(`${ROOT}/src/game/guards.ts`);
 
@@ -172,10 +174,13 @@ export async function responseCheck(): Promise<boolean> {
     away(); RESPONSE.deal = false; requestQrf(g, 'gunfire'); RESPONSE.deal = true;
     steps(W, 120, () => notes(g).some(n => n.startsWith('target:')), away);
     const T = Q.target, brief = rx.find(l => /rolling/.test(l.text))?.text ?? '', samNow = g.player.char.pos;
-    killGuard(g, seer, [1, 0, 0], true); steps(W, 3, undefined, away); const kept = Q.word.has('player') && !seer.found;   // (he is down and nobody has found him: what he said is still what control has)
+    killGuard(g, seer, [1, 0, 0], true); steps(W, 3, undefined, away);
+    // (he is down: what he said is still what control has, at the place he said — whether or not a mate has come on his body in those three seconds, which
+    //  turns on where the men stand: with enemies startled at first sight the picket's first man is beside him by then)
+    const wordNow = Q.word.get('player'), kept = !!wordNow && flat(wordNow.at, seenAt) < 0.5;
     const there = !!T && had && flat(T.pos, seenAt) < 6 && flat(T.pos, samNow) > 10 && !notes(g).some(n => n.endsWith(':sweep'));
-    line(had && kept && /last word: one man, /.test(brief) && there, '(8) a man on the net sees him: that place is the net\'s word, control briefs the team on it and the team goes there, not to where he has since gone; the man who said it dead and unfound, the word stands',
-      `seen at ${at(seenAt)} by ${seer.callsign} · word kept past him ${kept} · “${brief.slice(0, 130)}” · first target ${T ? `${T.room} ${at(T.pos)}` : 'none'} · ${T ? f1(flat(T.pos, seenAt)) : '?'} m from the word, ${T ? f1(flat(T.pos, samNow)) : '?'} m from Sam`);
+    line(had && kept && /last word: one man, /.test(brief) && there, '(8) a man on the net sees him: that place is the net\'s word, control briefs the team on it and the team goes there, not to where he has since gone; the man who said it dead, the word stands where he put it',
+      `seen at ${at(seenAt)} by ${seer.callsign} · word kept past him ${kept} (his body ${seer.found ? 'found' : 'not found'} by then) · “${brief.slice(0, 130)}” · first target ${T ? `${T.room} ${at(T.pos)}` : 'none'} · ${T ? f1(flat(T.pos, seenAt)) : '?'} m from the word, ${T ? f1(flat(T.pos, samNow)) : '?'} m from Sam`);
     line(back, '(10) the net\'s word goes into a save\'s rows and comes back the same: who, where, how old', `${rows.length} row(s) · ${before.slice(0, 120)}`); }
 
   // ---- (9) a man in an arm says nothing
@@ -238,7 +243,7 @@ export async function responseCheck(): Promise<boolean> {
 
   // ---- (16) the set taken first: nobody calls
   { const W = await stand('depot.json', 16, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf, rx = tapRadio(g);
-    goLoud(W); const heard = Q.raidT > -1e8; for (const h of hutOf(g)) killGuard(g, h, 'player');   // (inside the six seconds)
+    goLoud(W); const heard = Q.raidT > -1e8; for (const h of hutOf(g)) killGuard(g, h, SHOT);   // (inside the six seconds)
     steps(W, 20); goLoud(W); steps(W, 25);
     const W2 = await stand('depot.json', 16, ON, RAIDS['depot.json']); const g2 = W2.game; goLoud(W2); const called = steps(W2, 14, () => g2.qrf.state !== 'idle');
     line(heard && Q.state === 'idle' && !rx.some(l => /CONTROL/.test(l.text)) && called, '(16) the hut\'s men down before they can say it: nobody calls, the gunfire going on; the same start with them alive is a call',
@@ -247,9 +252,9 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (17) not taken while the team is up
   { const W = await stand('depot.json', 17, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
     steps(W, 14, () => Q.state !== 'idle'); steps(W, 120, () => Q.state === 'arriving'); const came = Q.men.length;
-    for (const h of g.nightBreach.hostiles) if (h.state !== 'dead') killGuard(g, h, 'player'); steps(W, 2);
+    for (const h of g.nightBreach.hostiles) if (h.state !== 'dead') killGuard(g, h, SHOT); steps(W, 2);
     const open = !g.roomClear.end && g.roomClear.active, told = g.roomClear.log?.some?.((l: any) => l.what === 'team-up') ?? false;
-    for (const m of [...Q.men]) killGuard(g, m, 'player'); steps(W, 2);
+    for (const m of [...Q.men]) killGuard(g, m, SHOT); steps(W, 2);
     line(came > 0 && open && told && g.roomClear.end === 'taken', '(17) the depot is not taken while the escort it called is up: the last defender down, the run goes on; the escort down, it is taken',
       `${came} of the escort stood up · every defender down: ${open ? 'the run goes on' : `ended (${g.roomClear.end})`}${told ? ', and says who is left' : ''} · the escort down: ${g.roomClear.end ?? 'still going'}`); }
 
@@ -271,7 +276,7 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (20) the last defender down with the team still on the road
   { const W = await stand('depot.json', 20, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
     const asked = steps(W, 14, () => Q.state !== 'idle'); steps(W, 3);
-    for (const h of g.nightBreach.hostiles) if (h.state !== 'dead') killGuard(g, h, 'player'); steps(W, 2);
+    for (const h of g.nightBreach.hostiles) if (h.state !== 'dead') killGuard(g, h, SHOT); steps(W, 2);
     const end = g.roomClear.end, off = notes(g).some(n => n.startsWith('called-off')); steps(W, 100);
     line(asked && end === 'taken' && off && Q.state === 'idle' && Q.men.length === 0, '(20) the escort still on the road when the last defender falls: the depot is taken, the call is called off, and nobody walks in afterwards',
       `${asked ? 'called' : 'never called'} · every defender down three seconds later: ${end ?? 'still going'} · ${off ? 'called off' : 'not called off'} · a hundred seconds on: the response ${Q.state}, ${Q.men.length} of them on the floor`); }

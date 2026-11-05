@@ -31,11 +31,19 @@
 //   flashweight-feel    the Tab panel's 'Team feel' rows (game/teamfeel.ts) under a stand-in localStorage: only what differs from the build is stored, a fresh
 //                       Game reads it back, a bad stored value is passed over, the reset drops it. Also in the 'ui' family.
 // The family's own red path: FLASHWEIGHT_BREAK=1 bun run tools/qa/probes.ts flashweight-pace must FAIL (the pace rule switched off under the probe).
+// The lights' own: FLASHLIGHTS_BREAK=1 bun run tools/qa/probes.ts flashweight-lights must FAIL on both stands (every teammate's light read as off: a man is
+// then 'lit' only where a rule says his light would help nobody, and in the open no rule says that).
 import { standUp, ROOT } from './headless.ts';
+/** QA: the lights family's red path (see the head) */
+const LIGHTS_BREAK = process.env.FLASHLIGHTS_BREAK === '1';
+/** is his weapon light burning? The ONE place the lights family reads a light, so its red path reads every light as off for every line */
+const burning = (x: any): boolean => !LIGHTS_BREAK && !!x.flashlight?.enabled;
 import { stage, setKnobs } from './bang-tally.ts';
+import { plainOpen, type Beam } from './beam-reading.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
+const LTM: any = await import(`${ROOT}/src/game/lighting.ts`);
 const ORM: any = await import(`${ROOT}/src/game/orders.ts`);
 const CHM: any = await import(`${ROOT}/src/game/character.ts`);
 const FXM: any = await import(`${ROOT}/src/game/effects.ts`);
@@ -279,7 +287,7 @@ async function emptyEntry(scn: string) {
   const cands: { ent: any; dist: number }[] = []; for (const d of S.defs) for (const e of d.room.entries) if (!cands.some(c => c.ent === e)) cands.push({ ent: e, dist: flat(g.player.char.pos, e.at) });
   cands.sort((a, b) => a.dist - b.dist);
   for (const x of g.guards) if (x.team === 'hostile' && x.state !== 'dead') await quiet(() => CBM.killGuard(g, x, [0, 0, 1], true));
-  const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'); const lit = () => team.filter(x => x.flashlight?.enabled).length;
+  const team: any[] = O.squad().filter((x: any) => x.state !== 'dead'); const lit = () => team.filter(burning).length;
   // (LIGHTS.litOff: a light the rule owes is not owed where the place itself is lit. The rule's own last reading says so (placeLitSeen) AND the probe's own
   //  reading of the floor under him agrees (`feet`: the place's lights alone, to within the half second the rule's reading may be old) — a rule that called
   //  a dark place lit is a dark light here. `spared` counts the man-frames that spared a light, `litInLit` the ones a light burned on in a lit place past the
@@ -288,8 +296,29 @@ async function emptyEntry(scn: string) {
   //  floor that is lit — a man who goes through a door behind another, not beside him, crosses nearer the middle of the frame, where that happened)
   const feetAt = (px: number, pz: number) => g.visibilityOf(GDM.lightEstimateAt(g, [px, 1.2, pz], () => true));
   const feet = (x: any) => { const [px, , pz] = x.char.pos; return Math.max(feetAt(px, pz), feetAt(px + 0.3, pz), feetAt(px - 0.3, pz), feetAt(px, pz + 0.3), feetAt(px, pz - 0.3)); };
-  const litOk = (x: any) => !!x.flashlight?.enabled || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
-  const watch = () => { for (const x of team) { const on = !!x.flashlight?.enabled, pl = GDM.placeLitSeen(g, x); if (!on && pl) spared++; if (on && feet(x) < GDM.LIGHTS.litAt) burnDark++; const r = on && pl ? (run.get(x) ?? 0) + 1 : 0; run.set(x, r); if (r > 60 * GDM.LIGHTS.tail + 3) litInLit++; } };
+  // (lit, or dark by a rule that says this light would help nobody: the place is lit — LIGHTS.litOff — or the beam would end on a WALL at his muzzle
+  //  — LIGHTS.wallOff. The wall rule is taken at its word only where it is what put his light out (guards.ts wallPutOut: its clock runs on a man whose
+  //  light is off for any other reason too) and unless the PROBE finds the beam plainly open: read after the step (beam-reading.ts plainOpen, the rule's
+  //  line test ray by ray), some ray of it runs clear past the rule's reach and a margin, or its middle is down on the ground with nothing standing in
+  //  its way. The ground is not a wall: a gun at the low ready over open floor is not a light with a wall in front of it, and a man the rule holds dark
+  //  there is counted dark here — the fault these lines held until 11-04, when the rule counted the ground as something solid)
+  /** what ends his beam, by the probe's own reading: 'wall' = not plainly open: its middle is on something that stands, or too near to call · 'axis' =
+   *  plainly open with something standing in its middle (a ray beside it runs clear) · 'ground' = plainly open, its middle on the ground or clear */
+  const beam: Beam = { fan: GDM.beamFan, ray: (o, r, m) => GDM.beamRayEnd(g, o, r, m) };
+  const wallEnds = (x: any): 'wall' | 'axis' | 'ground' | 'none' => { const o = x.flashlight ? GDM.beamLens(g, x) : null, d = x.flashlight?.dir, m = GDM.LIGHTS.wallBackM; if (!o || !d) return 'none';
+    return !plainOpen(beam, o, d, m) ? 'wall' : beam.ray(o, beam.fan(d)[0], m) >= 2 ? 'axis' : 'ground'; };
+  //  (…or WAS not plainly open within the last `LAG` frames, with a door leaf in reach of his lens: the rule reads his beam where he is posed, before the
+  //  leaves move — lighting.ts lensRecheck has the same order — so a man going through a door with his gun down at the foot of the leaf he is pushing is
+  //  read by the rule against the leaf as it stood and by the probe against the leaf as he has pushed it, for as many frames as the push lasts: one to
+  //  four, where it was looked at, every one with his gun straight down and a leaf beside him. No leaf, no excuse; the old fault lasted for seconds. The
+  //  clock is kept where a man is asked: a man asked for the first time in a stretch has none, and such a frame of his is counted dark)
+  const beamEnds = { wall: 0, leaf: 0, axis: 0, ground: 0, none: 0 }, LAG = 4, wallAt = new Map<any, number>(), frameNo = () => Math.round(g.time * 60);
+  const leafBy = (o: number[]) => g.col.dynamicBoxes.some((b: any) => Math.hypot(b.c[0] - o[0], b.c[2] - o[2]) < GDM.LIGHTS.wallBackM + Math.max(b.h[0], b.h[2]));
+  const wallOk = (x: any): boolean => { if (!GDM.wallPutOut(g, x)) return false; const e = wallEnds(x); if (e === 'wall') { wallAt.set(x, frameNo()); beamEnds.wall++; return true; }
+    const t = wallAt.get(x); if (t !== undefined && frameNo() - t <= LAG && leafBy(x.flashlight.pos)) { beamEnds.leaf++; return true; }
+    beamEnds[e]++; return false; };
+  const litOk = (x: any) => burning(x) || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || wallOk(x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
+  const watch = () => { for (const x of team) { const on = burning(x), pl = GDM.placeLitSeen(g, x); if (!on && pl) spared++; if (on && feet(x) < GDM.LIGHTS.litAt) burnDark++; const r = on && pl ? (run.get(x) ?? 0) + 1 : 0; run.set(x, r); if (r > 60 * GDM.LIGHTS.tail + 3) litInLit++; } };
   const sam = g.player.char.pos;
   step(60 * 6);   // (the hand-off's own noise is out of everybody's ears)
   await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all'));
@@ -308,24 +337,25 @@ async function emptyEntry(scn: string) {
   // (DOORTOOLS.otherDoorM: a man of the entry with a line to another door of the room holds THAT door from where he stands, and a door is held lit by a man
   //  with no goggles (thrDoorsLit) for as long as he holds it — he is judged as a door holder: lit, or in a lit place. 'All dark' and 'lit holding the
   //  room' are everybody else's)
-  const onDoor = (x: any) => (D as any).held?.get(x)?.door ?? null, litFree = () => team.filter(x => !onDoor(x) && x.flashlight?.enabled).length;
+  const onDoor = (x: any) => (D as any).held?.get(x)?.door ?? null, litFree = () => team.filter(x => !onDoor(x) && burning(x)).length;
   const cross = new Map<any, { t: number; lit: boolean; corner: number }>(); let op: any = null, inT = NaN, darkAt = NaN, searching = 0, searchLit = 0;
   for (let f = 0; f < 60 * 60; f++) { step(); op ??= D.ops[0] ?? null;
     if (op) for (const [gd, t] of op.crossed) { if (!cross.has(gd)) cross.set(gd, { t, lit: litOk(gd), corner: NaN });
       const C = op.corner.get(gd), r = cross.get(gd)!; if (C?.pts.length && isNaN(r.corner) && Math.abs(Math.atan2(Math.sin(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.pos[0], C.pts[0][2] - gd.char.pos[2])), Math.cos(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.pos[0], C.pts[0][2] - gd.char.pos[2])))) < DTM.DOORTOOLS.cornerRad) r.corner = g.time - t; }
-    if (op && D.ops.includes(op) && op.phase === 'enter' && cross.size) { searching++; watch(); if ([...cross.keys()].every(gd => litOk(gd))) searchLit++; }
+    if (op && D.ops.includes(op) && op.phase === 'enter' && cross.size) { searching++; watch(); if ([...cross.keys()].map(gd => litOk(gd)).every(Boolean)) searchLit++; /* (every man who has crossed is asked every frame: the wall excuse keeps a clock a man) */ }
     if (op && !D.ops.includes(op) && isNaN(inT)) inT = g.time;
     if (!isNaN(inT)) { if (!litFree() && isNaN(darkAt)) darkAt = g.time - inT; if (g.time - inT > 10) break; } }
-  const held = litFree(), doorMen = team.filter(x => onDoor(x)), doorDark = doorMen.filter(x => !litOk(x)).length, doors = doorMen.map(x => `${x.callsign} on ${onDoor(x).def.name}${x.flashlight?.enabled ? '' : ' (dark)'}`).join(', ');
+  const held = litFree(), doorMen = team.filter(x => onDoor(x)), doorDark = doorMen.filter(x => !litOk(x)).length, doors = doorMen.map(x => `${x.callsign} on ${onDoor(x).def.name}${burning(x) ? '' : ' (dark)'}`).join(', ');
   await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all'));
   const out = inFile(40);
   const beat = (op?.beats ?? []).map((b: any) => b.what).find((w: string) => w.startsWith('searched')) ?? '';
   const m = beat.match(/searched · (\d+) of (\d+) cells unseen · (\d+) moved/);
   const withCorner = [...cross.entries()].filter(([gd]) => op?.corner.get(gd)?.pts.length);
-  return { door: E.ent.door.def.name, team: team.length, why, spared, litInLit, burnDark, follow, walk, walkDark, stacked, cross, withCorner, searching, searchLit, inT, darkAt, held, doorMen: doorMen.length, doorDark, doors, out, ended: op?.ended ?? '(running)', secs: op ? inT - op.t0 : NaN,
+  return { door: E.ent.door.def.name, team: team.length, why, beamEnds, spared, litInLit, burnDark, follow, walk, walkDark, stacked, cross, withCorner, searching, searchLit, inT, darkAt, held, doorMen: doorMen.length, doorDark, doors, out, ended: op?.ended ?? '(running)', secs: op ? inT - op.t0 : NaN,
     unseen: m ? +m[1] : NaN, cells: m ? +m[2] : NaN, moves: m ? +m[3] : NaN, beat };
 }
 export const flashweightLights = guarded(async () => {
+  if (LIGHTS_BREAK) console.log('  (FLASHLIGHTS_BREAK: every teammate\'s light is read as off — the lines below must fail)');
   const F = family('flashweight-lights: weapon lights off until they help — every scenario: dark in file behind Sam, lit walking to a door alone, dark stacked on it, lit through the entry and the search, dark holding the room and following out');
   // (THE LIGHT RULE ALONE: since nvg.ts a quiet team in the dark walks on its goggles with no light at all — probes.ts nvg has that; what LIGHTS does with
   // the lights when they are its own to burn is measured here with the goggles off, as it was written)
@@ -335,7 +365,7 @@ export const flashweightLights = guarded(async () => {
     const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
     const crossed = [...r.cross.values()], litIn = crossed.filter(c => c.lit).length; spared += r.spared; burned += r.litInLit; burnDark += r.burnDark;
     const ok = !r.why && r.follow === 0 && r.stacked === 0 && r.walkDark === 0 && r.litInLit === 0 && crossed.length > 0 && litIn === crossed.length && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= L.afterSecs + L.hotSecs + L.tail + 0.5 && r.held === 0 && r.doorDark === 0 && r.out === 0;
-    F.verdict(ok, `${E.title}: ${r.team} teammates, the ${r.door} door`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}lit in file behind Sam ${r.follow} · DARK while walking to the door on their own ${r.walkDark} of ${r.walk} man-frames · lit stacked on it ${r.stacked} · crossed the frame lit (or in a lit place) ${litIn} of ${crossed.length} · lights the lit place spared ${r.spared} man-frames, burning on in one ${r.litInLit} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the room was called (bound ${f2(L.afterSecs + L.hotSecs + L.tail + 0.5)}) · lit holding the room ${r.held} · holding another door of it ${r.doorMen}${r.doorMen ? ` (${r.doors}), dark where the place is dark ${r.doorDark}` : ''} · following out ${r.out}`);
+    F.verdict(ok, `${E.title}: ${r.team} teammates, the ${r.door} door`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}lit in file behind Sam ${r.follow} · DARK while walking to the door on their own ${r.walkDark} of ${r.walk} man-frames · lit stacked on it ${r.stacked} · crossed the frame lit (or in a lit place, or dark into the wall at his muzzle) ${litIn} of ${crossed.length} · lights the lit place spared ${r.spared} man-frames · asked of a man whose light the wall rule put out, what ended his beam: a wall, or too near one to call ${r.beamEnds.wall} (counted lit) · plainly open for up to four frames with a leaf beside him ${r.beamEnds.leaf} (the leaf moved after he was posed: counted lit) · plainly open, something standing in its middle ${r.beamEnds.axis} · plainly open, its middle on the ground or clear ${r.beamEnds.ground + r.beamEnds.none} (counted dark), burning on in one ${r.litInLit} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the room was called (bound ${f2(L.afterSecs + L.hotSecs + L.tail + 0.5)}) · lit holding the room ${r.held} · holding another door of it ${r.doorMen}${r.doorMen ? ` (${r.doors}), dark where the place is dark ${r.doorDark}` : ''} · following out ${r.out}`);
   }
   // the place rule at the bar it ships with: the start card's floors are night offices, mostly under it — so the lights BURN there (by the probe's own
   // reading of the floor, not the rule's) and none burns on in a place the rule calls lit
@@ -344,7 +374,7 @@ export const flashweightLights = guarded(async () => {
   // of the entry still holding — then the same entry with the rule off burns them, as it was
   { const E = (SCENARIOS as any[]).find(e => e.id === 'room-clear-four') ?? (SCENARIOS as any[])[0], bound = L.afterSecs + L.hotSecs + L.tail + 0.5;
     const whole = (r: any) => { const crossed = [...r.cross.values()]; return !r.why && r.walkDark === 0 && crossed.length > 0 && crossed.every((c: any) => c.lit) && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= bound && r.follow === 0 && r.stacked === 0 && r.held === 0 && r.doorDark === 0 && r.out === 0; };
-    const words = (r: any) => `spared ${r.spared} · burning on in a lit place ${r.litInLit} · dark walking alone ${r.walkDark} of ${r.walk} · crossed lit (or in a lit place) ${[...r.cross.values()].filter((c: any) => c.lit).length} of ${r.cross.size} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the call · lit in file ${r.follow}, stacked ${r.stacked}, holding ${r.held}, on another door ${r.doorMen}${r.doorMen ? ` (${r.doors}; dark in the dark ${r.doorDark})` : ''}, following out ${r.out}`;
+    const words = (r: any) => `spared ${r.spared} · burning on in a lit place ${r.litInLit} · dark walking alone ${r.walkDark} of ${r.walk} · crossed lit (or in a lit place, or dark into the wall at his muzzle) ${[...r.cross.values()].filter((c: any) => c.lit).length} of ${r.cross.size} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the call · lit in file ${r.follow}, stacked ${r.stacked}, holding ${r.held}, on another door ${r.doorMen}${r.doorMen ? ` (${r.doors}; dark in the dark ${r.doorDark})` : ''}, following out ${r.out}`;
     bare({ LIGHTS: { litAt: 0.2 } }); const on = await emptyEntry(E.id); reset(); bare();
     F.verdict(!!on && on.spared > 0 && on.litInLit === 0 && whole(on), `a place over the bar keeps the lights off (${E.title}, LIGHTS.litAt 0.2)`, on ? words(on) : 'nothing staged');
     bare({ LIGHTS: { litAt: 0.2, litOff: false } }); const off = await emptyEntry(E.id); reset(); bare();

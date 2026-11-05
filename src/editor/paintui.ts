@@ -6,6 +6,7 @@
 import type { Vec3 } from '../math/vec';
 import { Panel } from '../ui/panel';
 import type { BoxData } from '../scene/levelData';
+import { BOX_STUFFS } from '../scene/stuff';
 import { Editor } from './editor';
 import type { Tools } from './tools';
 import type { View } from './view';
@@ -159,6 +160,7 @@ export class PaintUi {
     this.roughRows(p, s, () => g()?.rough, v => set({ rough: v }, 'rough'), () => this.seal());
     p.toggleBox(s, 'metal', () => !!g()?.metal, v => { set({ metal: v }, 'metal'); this.seal(); }, 'a bare conductor: F0 = the albedo, most of the diffuse gone (brushed steel 0.28). The format carries metal as yes / no — no fraction');
     p.text(s, () => { const m = g(); if (!m) return ''; const on = !!(S as any).rtReflect; const cut = (S as any).rtMaxRough as number | undefined; const r = m.rough ?? 1; return `${P.traceHint(m.rough)}\nthis view: ${on ? `RT reflections on, cut-off ${cut?.toFixed(2)} → ${r <= (cut ?? 0) ? 'TRACED here' : 'analytic highlight only here'}` : 'RT reflections off at this quality (low / verylow, or switched off) — analytic highlights only'}\naniso: runtime-only (the storm's wet lot) — not a LevelData v1 field`; });
+    textRow(p, s, 'made of', () => g()?.stuff ?? '', v => { set({ stuff: v.trim() ? v.trim() : null }, 'stuff'); this.seal(); }, { title: `what everything in this paint is made of: the word the picture's material maps go by (empty = plain). One of: ${BOX_STUFFS.join(', ')}` });
     textRow(p, s, 'notes', () => g()?.notes ?? '', v => { set({ notes: v.trim() ? v : null }, 'notes'); this.seal(); }, { title: 'free text kept in the file with the paint' });
     p.buttons(s, 'finish', P.FINISH_PRESETS.map(f => ({ text: f.label, title: `${f.title}${f.rough !== undefined ? ` — rough ${f.rough}${f.metal ? ' + metal' : ''}` : ''}`, run: () => this.try(() => { P.materialPreset(ed, name, f.key); this.seal(); this.say(`'${name}': ${f.label} (${f.rough === undefined ? 'unset → matte' : `rough ${f.rough}${f.metal ? ', metal' : ''}`}) — ${P.traceHint(f.rough)}`); }) })));
     p.text(s, () => { const u = P.materialUsers(ed, name); return `used by ${u.boxes.length} box${u.boxes.length === 1 ? '' : 'es'}${u.props.length ? ` · ${u.props.length} prop(s)` : ''}${u.boxes.length ? ` (${u.boxes.slice(0, 4).join(' ')}${u.boxes.length > 4 ? ' …' : ''})` : ''}`; });

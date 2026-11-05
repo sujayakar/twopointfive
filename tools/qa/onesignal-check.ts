@@ -3,7 +3,7 @@
 // really work. and the second team threw a flashbang when our guys were already on the inside".
 //   bun run tools/qa/onesignal-check.ts [--seeds 1,2]      (also `probes.ts onesignal`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/onesignal-check.ts — the same lines on the page's stand
-// The relay post (levels/tut-plan.json, a floor kept for the checks: no mission plays it), the room clear with the squad of four, everybody under
+// The relay post (levels/tut-queue.json, the queueing tutorial's floor), the room clear with the squad of four, everybody under
 // god mode (the lines are about what is ORDERED and when, not who wins). The check raises the ring and the rule itself on either stand.
 //   1. a pair stacked on each door of the guardroom, both standing on their marks, ONE press of the word: the two entries are on one word of the
 //      door tools, the doors open within a second and the first men through the two doors are within a second, no teammate is dazzled. (Plan mode
@@ -25,7 +25,7 @@ const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { DOORTOOLS, offOf, doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
-const VERBOSE = process.argv.includes('--verbose'), BREAK_MATE = process.env.TOSSMATE_BREAK === '1', LEVEL = 'tut-plan', DT = 1 / 60;
+const VERBOSE = process.argv.includes('--verbose'), BREAK_MATE = process.env.TOSSMATE_BREAK === '1', LEVEL = 'tut-queue', DT = 1 / 60;
 const SEEDS = (() => { const i = process.argv.indexOf('--seeds'); return i > 0 ? process.argv[i + 1].split(',').map(Number) : [1, 2]; })();
 type V = number[];
 let stood: { mate: boolean } | null = null;   // (each rule as the stand first stood it up, before the check raises it: the page's stand raises its switches once, at load)

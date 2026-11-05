@@ -4,7 +4,7 @@
 // then in the page's console:
 //     await import('/qa/sparse-lab.js'); await __spl.run()
 // → a table per row (1 / 4 / 8 / 12 canisters, each let run `lead` seconds, the last `take` frames measured), then ONE canister followed through its whole life (40 s, a sample every 2 s: a can
-// vents for 32 s and the pool's bill grows with the plume's age), two more rows of 4 canisters (the step's five parts timed apart; direct in place of indirect dispatch) and a JSON file
+// vents for 32 s and the pool's bill grows with the plume's age), two more rows of 4 canisters (the step's five parts timed apart; the dispatch of before, indirect at any fill, where the page opens on the whole pool since 2026-11-05) and a JSON file
 // downloaded: twopointsix-sparse-lab-sparse-<preset>.json. A part that throws is named under `failed` and the file still comes with everything measured before it; `gpuErrors` = the device's own.
 // The pool runs AS IT SHIPS (calm and far bricks wait, fresh smoke first).
 // ROUND TWO (same boot, after run() or by itself):
@@ -95,8 +95,8 @@
       }
       return o;
     },
-    /** the pool as round one benched it (commit 3781d45's rules): every brick every frame, reads asked brick by brick, first come at a dry pool, indirect dispatch at any fill */
-    BENCHED: { calmMax: 1, farCells: 0, readSkip: false, directAt: 2, fresh: 0, fineDecay: 0, fineShare: 1 },
+    /** the pool as round one benched it (commit 3781d45's rules): every brick every frame, reads asked brick by brick, first come at a dry pool, indirect dispatch at any fill (`indirect` is said here since 2026-11-05: the page boots on the whole pool, smoke/dispatch.ts) */
+    BENCHED: { calmMax: 1, farCells: 0, readSkip: false, indirect: true, directAt: 2, fresh: 0, fineDecay: 0, fineShare: 1 },
     asBenched() { Object.assign(S().sparse, L.BENCHED); return { ...S().sparse }; },
     /** one knob of __smoke.sparse (or of opts.table), `on` against `off`, flipped in place on the field as it stands: `rounds` × (settle, take n) each way, interleaved */
     async lever(key, on, off, opts = {}) {
@@ -115,7 +115,7 @@
       const s = S(), scenes = [], dry = [], failed = [], view0 = L.view;
       const part = async (name, fn) => { try { await fn(); } catch (e) { failed.push({ part: name, error: String(e?.stack ?? e).slice(0, 600) }); console.error('sparse-lab:', name, e); } };
       const run = async secs => { for (let f = 0, n = Math.round(secs / L.dt); f < n; f++) await L.frame(); };
-      const CALM = ['calmMax', 4, 1], READ = ['readSkip', true, false], DIRECT = ['directAt', 0.5, 2], FAR = ['farCells', 1, 0], LAX = ['calmCells', s.params.calmCells, 2 * s.params.calmCells, s.params];   // (LAX: not an off switch — the calm bar as it ships against twice as lax)
+      const CALM = ['calmMax', 4, 1], READ = ['readSkip', true, false], DIRECT = ['indirect', { indirect: false }, { indirect: true, directAt: 2 }],   /* (the dispatch the page boots on, the whole pool, against the GPU-written count AT ANY FILL: with directAt left at 0.5 the way of before goes whole too from half the pool stepping, and at four cans both sides would be one call) */ FAR = ['farCells', 1, 0], LAX = ['calmCells', s.params.calmCells, 2 * s.params.calmCells, s.params];   // (LAX: not an off switch — the calm bar as it ships against twice as lax)
       const { fresh: _f, fineDecay: _g, fineShare: _h, ...costOff } = L.BENCHED, ALL = ['all three', Object.fromEntries(Object.keys(costOff).map(x => [x, s.sparse[x]])), costOff];   // (calm + far, reads, dispatch together as this page booted them: what round two is worth on a frame; `readSkip` boots off since the Mac's take, so it is the same on both sides here)
       const mid = view0.look, k = opts.k ?? 1;   // (k: every lead × k, for a rig that cannot afford the seconds)
       const SC = [
@@ -189,10 +189,10 @@
       await part('no smoke', async () => { rows.push(await L.row(0, { lead: opts.baseLead ?? 1.5, take: opts.baseTake ?? 60 })); });
       for (const n of opts.rows ?? L.rows) await part(`${n} cans`, async () => { rows.push(await L.row(n, opts)); say(rows[rows.length - 1]); });
       if ((opts.lifeSecs ?? L.lifeSecs) > 0) await part('one can, whole life', async () => { life = await L.life(opts); });
-      if (opts.extras !== false) for (const [name, key, val] of [['parts timed apart', 'split', true], ['direct dispatch', 'indirect', false]]) {
-        const k = S().sparse, was = k[key];
-        await part(name, async () => { k[key] = val; extras.push({ what: name, ...await L.row(opts.extraCans ?? 4, opts) }); say(extras[extras.length - 1]); });
-        k[key] = was;
+      if (opts.extras !== false) for (const [name, set] of [['parts timed apart', { split: true }], ['the dispatch of before (indirect at any fill)', { indirect: true, directAt: 2 }]]) {
+        const k = S().sparse, was = { ...k };
+        await part(name, async () => { Object.assign(k, set); extras.push({ what: name, ...await L.row(opts.extraCans ?? 4, opts) }); say(extras[extras.length - 1]); });
+        Object.assign(k, was);
       }
       await part('clear', async () => { S().clearAll(); await L.frame(); });
       E().device.removeEventListener('uncapturederror', onErr);

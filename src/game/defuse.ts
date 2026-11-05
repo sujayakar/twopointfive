@@ -171,7 +171,7 @@ export class Defuse {
       const yaw = Math.atan2(d.n[0], d.n[1]), p = d.pos, cs = Math.cos(yaw), sn = Math.sin(yaw);
       const at = (lx: number, y: number): Vec3 => [p[0] + lx * cs, p[1] + y, p[2] - lx * sn];   // (a part's place along the pack's own long side: a box's local +X is (cos, 0, −sin))
       g.fx.push({ box: makeBox({ c: at(0, -0.02), h: [0.17, 0.06, 0.11], yaw, albedo: [0.2, 0.17, 0.11], flags: BoxFlag.Dynamic }), ttl: 1e-3 });
-      g.fx.push({ box: makeBox({ c: at(-0.09, 0.055), h: [0.045, 0.02, 0.07], yaw, albedo: [0.07, 0.07, 0.07], flags: BoxFlag.Dynamic }), ttl: 1e-3 });
+      g.fx.push({ box: makeBox({ c: at(-0.09, 0.055), h: [0.045, 0.02, 0.07], yaw, albedo: [0.07, 0.07, 0.07], stuff: 'metal', flags: BoxFlag.Dynamic }), ttl: 1e-3 });   // (`stuff`: what the look made of this grey by its COLOUR until 11-04, kept so the picture did not move; nobody chose it. scene/stuff.ts drawnAs)
       const rate = !this.started ? 1 : left > 30 ? 2 : left > 10 ? 4 : 8, lit = s === 'safe' || Math.floor(g.time * rate) % 2 === 0;
       if (!lit) return;
       const safe = s === 'safe';

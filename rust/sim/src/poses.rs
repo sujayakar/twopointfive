@@ -1,18 +1,20 @@
 //! THE POSES OF A GAME (src/anim/skeleton.ts Pose, PoseSet) — every local pose a character keeps from one tick to the next, in the game's block (state.rs), so
 //! that a layer of the animator written here reads and writes them with no crossing and no copy, and a rollback puts them back with everything else.
 //!
-//! A POOL: a pose is `nodes * NODE` singles (skeleton.rs: tx ty tz | qx qy qz qw | sx sy sz a node), handed out one after another as the host asks, and
+//! A POOL: a pose is ten columns of singles (skeleton.rs: tx ty tz | qx qy qz qw | sx sy sz, a node a row, the rows whole vectors of four: `singles`),
+//! handed out one after another as the host asks, and
 //! known by WHERE IT STARTS, a count of singles from the start of this part (so the host needs no number of this file's to find it). No ONE pose is handed back: a man keeps his for as long as he stands.
 //! Men who leave a game for good (a restart makes its guards anew) would fill the pool in time, so whenever a man whose poses are here is no longer on the
 //! game's lists the host takes every pose out, EMPTIES it (`clear_of`) and puts back the men who are there (game/posehome.ts): one rule for whoever left,
 //! however he left. A pool FULL of men who are there is not emptied: the pose that did not fit stays the host's own array and is asked of the bench.
 //! A pose is stored as the TypeScript's Float32Array stores it (single.rs).
 use crate::single::S;
-use crate::skeleton::NODE;
+use crate::skeleton::singles;
 use crate::state::state;
 use core::mem::size_of;
 
-/// singles the pool holds (2 MB a game: a man of the game keeps some seven poses of his rig's 55 nodes, 15 KB, so some 130 men)
+/// singles the pool holds (2 MB a game: a man of the game keeps some seven poses of his rig's 55 nodes, 16 KB, so some 130 men). Every pose starts on a
+/// 16-byte boundary: the part does (state.rs), HEAD is 16 bytes, and a pose is a whole number of vectors
 pub const POOL: usize = 1 << 19;
 /// the bytes before `data`
 pub const HEAD: usize = 16;
@@ -40,7 +42,7 @@ pub fn used(p: &Poses) -> usize {
 /// (the pose stays the host's own)
 pub fn new_of(g: usize, nodes: usize) -> u32 {
     let p = &mut state(g).poses;
-    let (at, n) = (used(p), nodes * NODE);
+    let (at, n) = (used(p), singles(nodes));
     if nodes == 0 || n > POOL - at {
         return u32::MAX;
     }
@@ -67,5 +69,5 @@ pub fn clear_of(g: usize) {
 #[inline(always)]
 pub fn holds(p: &Poses, at: usize, nodes: usize) -> bool {
     let u = used(p);
-    at <= u && nodes * NODE <= u - at
+    at <= u && singles(nodes) <= u - at
 }

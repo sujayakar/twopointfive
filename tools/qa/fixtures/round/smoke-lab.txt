@@ -1,0 +1,2 @@
+# the smoke lab (the look prototype: host/smokelab.ts) is a level of its own with eight round things
+8 8

@@ -30,7 +30,6 @@ import { LOOK_LEVELS } from '../scene/look';   // (a table of file names: read i
 import { roomOf } from './chronicle';
 import { hostileTo } from './teams';
 import { PAR_START_M } from './par';
-import { runnerFled } from './runner';   // (asked inside the verdict only: false with its switch off)
 
 export const VERDICT = {
   on: true,
@@ -238,7 +237,7 @@ export class Verdict {
       return rc.end === 'taken' ? won('CLEAR', rc.endWhy) : rc.end === 'wiped' ? lost('WIPED', rc.endWhy) : null;
     }
     if (kind === 'rescue') { const R = g.rescue.result; return R ? R.state === 'rescued' ? won('RESCUED', R.why) : lost('LOST', R.why) : null; }
-    if (kind === 'nightbreach') { const H = g.nightBreach.hostiles; return H.length && H.every(h => h.state === 'dead' || runnerFled(h)) ? won('CLEAR', '') : m.stage === 'failed' ? lost('FAILED', '') : null; }
+    if (kind === 'nightbreach') { const H = g.nightBreach.hostiles; return H.length && H.every(h => h.state === 'dead' || h.fled) ? won('CLEAR', '') : m.stage === 'failed' ? lost('FAILED', '') : null; }
     return m.stage === 'done' ? won('OUT', '') : m.stage === 'failed' ? lost('FAILED', '') : null;
   }
 

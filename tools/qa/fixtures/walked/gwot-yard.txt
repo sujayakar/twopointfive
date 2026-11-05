@@ -1,0 +1,7 @@
+# what the ways of gwot-yard do not reach yet, as the page loads it: a start no way leaves from, a door no way crosses or ends at (tools/qa/walked-check.ts --write rewrites this first line; a line that starts # under it is a note and is kept)
+door gate_w
+door n_w
+door n_e
+door nm
+door s_n
+door s_w

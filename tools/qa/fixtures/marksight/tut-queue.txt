@@ -1,0 +1,9 @@
+# how many of 21 lines each man of tut-queue has open to the ground his gun rests on: his name, the frozen stand's count, the shipped stand's (tools/qa/marksight-check.ts --write, once on each stand; a line that starts # under this one is a note and is kept)
+roomClear.guardroom.marks#0 6 6
+roomClear.guardroom.marks#1 12 12
+roomClear.hall.marks#0 15 15
+roomClear.hall.marks#1 15 15
+roomClear.road.marks#0 21 21
+roomClear.road.marks#1 18 18
+roomClear.lane.marks#0 21 21
+roomClear.lane.marks#1 19 19

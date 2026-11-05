@@ -166,11 +166,13 @@ export async function glasstuneRake(): Promise<boolean> {
       // (what the office gives: every partition stands on a 0.5 m dwarf wall, so the glass's own answer — walkable — is all there is to hold; where he ends is printed)
       verdict(S.game.col.glassWalkable?.(X.bi) === true, '… and the glass itself no longer stops him (col.glassWalkable; in the office the dwarf wall under the partition still does)', `through ${w1.through == null ? 'never' : f2(w1.through) + ' s into the walk'} · ends ${f2(dist(S, X))} m ${dist(S, X) > 0 ? 'THIS side' : 'beyond'} of the sheet · col.glassWalkable(${X.bi}) ${S.game.col.glassWalkable?.(X.bi)} · other statics across the opening at body height: ${blockers.join(', ') || 'none'}`);
     }
-    // --- a pane only about a third open: a 5-round burst, the rule as shipped
+    // --- a pane open, but under rakeOpen: a short burst, the rule as shipped. How much of a pane a burst takes is the roll of where its rounds landed, so the
+    // stage does not name a count: it is the longest burst of five rounds or fewer that leaves the pane run, open and under rakeOpen (none: the line fails)
     {
-      const S = await stage(), X = S.pane('annealed'); S.stand(X); S.shoot(X, 5, 'hand', 360);
-      const before = S.gb.paneInfo(X.bi); const w = walkAt(S, X), after = S.gb.paneInfo(X.bi); S.game.puppet = null;
-      verdict(!!before && before.run && before.openFraction > 0 && before.openFraction < GLASSBREAK.rakeOpen && GB_STATS.raked === 0 && !after.walkable && dist(S, X) > 0, 'a pane under rakeOpen (a 5-round burst, about a third open) is not raked by walking at it', `after the burst: ${before ? infoStr(before) : 'no record'} (rakeOpen ${GLASSBREAK.rakeOpen}) · walked at it 5 s (peak ${f2(w.vMax)} m/s): raked ${GB_STATS.raked} · ends ${f2(dist(S, X))} m this side · walkable ${after.walkable}`);
+      let S = await stage(), X = S.pane('annealed'), rounds = 0, before: any = null;
+      for (let n = 5; n >= 2 && !rounds; n--) { S = await stage(); X = S.pane('annealed'); S.stand(X); S.shoot(X, n, 'hand', 360); before = S.gb.paneInfo(X.bi); if (before && before.run && before.openFraction > 0 && before.openFraction < GLASSBREAK.rakeOpen) rounds = n; }
+      const w = walkAt(S, X), after = S.gb.paneInfo(X.bi); S.game.puppet = null;
+      verdict(rounds > 0 && !!before && before.run && before.openFraction > 0 && before.openFraction < GLASSBREAK.rakeOpen && GB_STATS.raked === 0 && !after.walkable && dist(S, X) > 0, 'a pane under rakeOpen (a short burst: open, and less than rakeOpen of it) is not raked by walking at it', `${rounds ? `after a burst of ${rounds}` : 'no burst of 2 to 5 rounds left the pane run, open and under rakeOpen; after the last tried'}: ${before ? infoStr(before) : 'no record'} (rakeOpen ${GLASSBREAK.rakeOpen}) · walked at it 5 s (peak ${f2(w.vMax)} m/s): raked ${GB_STATS.raked} · ends ${f2(dist(S, X))} m this side · walkable ${after.walkable}`);
     }
   });
 }

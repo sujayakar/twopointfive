@@ -180,8 +180,8 @@ export function makeApi(H: ApiHost) {
       table: () => P.materialList(ed),
       get: (name: string) => { const m = ed.data.materials[name]; return m ? { name, ...clonePlain(m), users: P.materialUsers(ed, name), trace: P.traceHint(m.rough) } : null; },
       /** set(name, { albedo?, rough? (null = unset → matte), metal?, notes? }) on an existing paint — or set(name, [r,g,b], notes?) which also CREATES (the old signature) */
-      set: (name: string, patchOrAlbedo: Vec3 | { albedo?: Vec3; rough?: number | null; metal?: boolean; notes?: string | null }, notes?: string) => { if (Array.isArray(patchOrAlbedo)) ed.setMaterial(name, patchOrAlbedo, notes); else P.materialSet(ed, name, patchOrAlbedo); return clonePlain(ed.data.materials[name]); },
-      create: (name: string, init?: { albedo?: Vec3; rough?: number; metal?: boolean; notes?: string }, opts?: { after?: string }) => P.materialCreate(ed, name, init, opts),
+      set: (name: string, patchOrAlbedo: Vec3 | { albedo?: Vec3; rough?: number | null; metal?: boolean; stuff?: string | null; notes?: string | null }, notes?: string) => { if (Array.isArray(patchOrAlbedo)) ed.setMaterial(name, patchOrAlbedo, notes); else P.materialSet(ed, name, patchOrAlbedo); return clonePlain(ed.data.materials[name]); },
+      create: (name: string, init?: { albedo?: Vec3; rough?: number; metal?: boolean; stuff?: string; notes?: string }, opts?: { after?: string }) => P.materialCreate(ed, name, init, opts),
       duplicate: (name: string, newName?: string) => P.materialDuplicate(ed, name, newName),
       rename: (oldName: string, newName: string) => { P.materialRename(ed, oldName, newName); return newName; },
       /** refused while boxes / parts use it — unless { repaintTo } moves them to another paint first */

@@ -300,7 +300,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not in that recording). THE RULE: a move key held within `pressDeg` 35° of square INTO a face within `pressNear` 0.6 m of his body runs a clock; at
   `pressSecs` 0.18 s, once he is inside `pressFlow` 0.2 m, it is `wallSnap` kept to THAT face (`findWall`'s new `only`), so the same faces, the same
   refusals, the same hold as Q, and nothing said where the wall refuses. A walk straight at a wall therefore has it before he touches it and at the pace he
-  was walking; a man stood against one waits the 0.18 s. NEVER: at a run; along a wall (a diagonal); on a door's leaf; with his hands on a body, a leaf or a
+  was walking; a man stood against one waits the 0.18 s. NEVER: at a run (but see `pressRun`, the next bullet); along a wall (a diagonal); on a door's leaf; with his hands on a body, a leaf or a
   charge, a list or an order menu up, or a mouse button held; with the gun in his hand reloading or still coming out; inside `pressAfterShot` 1 s of a
   round of his own; with a sidearm or a can in hand while an ENEMY is alert (`pressCalm`: the back hold would put it away; the rifle stacks in his hands
   either way; his own side and civilians do not count). A THING TO USE ON THE FACE (a door, a switch, the breaker, the mission's thing, a sticky camera, a
@@ -333,6 +333,46 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   him to the far wall at once, a Shift tap undoing Q, one latch for every wall (a corner's second wall refused), a pistol reload thrown away, a door's rows
   not counted as a thing, his own side's alert counted as the enemy's. NOBODY HAS PLAYED IT and it has never been seen on a GPU: how often a wall is taken
   that was not wanted in real play is unmeasured, since no recorded human session is in the repo and the tour's man is a puppet the rule leaves alone.
+- **A sprint straight into a wall takes it** (`WALLSNAP.pressRun`, wallsnap.ts `wsPressNear`, player.ts `wallPress / pressFace / wallRanOn`; the maintainer,
+  11-04, from the pass road's cover lesson: "sprinting straight into a wall should snap to cover"). ON in the page (`?wallrun=0` = never at a run, as it
+  was; debugger row 'wall snap: sprint into a wall to take it'; no Options row of its own — it acts only with the walk-in take, so Options ▸ Game ▸ 'Walk
+  into a wall to take it' off puts both off), OFF in the module and on the frozen stand (`TPS_WALLRUN=1`; a `FROZEN_HOLDS` row; the journal carries it and
+  a recording from before the key replays with it off). ONE RULE, NOT A SECOND ONE: with the switch on the walk-in take no longer turns a run away, and
+  that is all of it — the same stick (`pressDeg` 35° of square), the same clock (`pressSecs`), the same faces, refusals and latch, the same hold (the rifle
+  stacks, a pistol goes away unless an enemy is alert, a round of his own or a button held holds it off). Shift in a crouch (the fast crouch walk) takes it
+  too and he stays down. TWO THINGS A RUN NEEDED. (1) WHERE THE CLOCK STARTS: counted from `pressNear` 0.6 m a sprint (4.7 m/s) is at the wall before the
+  0.18 s is up and stands against it for the rest; `wsPressNear` counts from `pressFlow` + `pressSecs` × his speed INTO the face, never less than
+  `pressNear` (a walk of 1.55 m/s: 0.6 m, as it was; a sprint: 1.05 m), so the wait is done as he gets there and a sprint has the wall from `pressFlow`
+  0.2 m short of touching, as a walk has. He is only ever taken from where he would have hit the wall on the next two or three frames: a man who turns
+  before that runs on. (2) THE RUN THAT PUT HIM ON A WALL IS NOT THE RUN THAT TAKES HIM OFF IT (`wallRanOn`; `WallHold.ran` = the move keys that were down as he
+  landed, on the hold, so it dies with the hold): breaking into a run is one of the ways off a wall, and Shift is still down on the frame he lands. While
+  Shift and those same move keys stay down he stays; Shift let go and pressed again, a key of the run let go, or another pressed (along the wall, with
+  Shift down: off at a run) is a way off as ever, and the walk-in's latch then keeps the key still held from putting him back. IT IS READ OFF THE KEYS,
+  NOT OFF WHAT THEY COME TO (a review of the first cut, which read the stick: a blast that rooted him, a list held open or the view turned 51° threw him
+  off the wall with nothing let go): folded with the keys down he is on it after; the view turned a quarter turn leaves him on it, and the same key then
+  slides him along it. R on a stack taken at a run reloads with the keys still down (`reloadInHand`'s 'at a sprint' is not said of a man on that wall). A
+  THING ON THE FACE is read as at a walk, off the rows in reach (`pressThing`): a door's, the breaker's and the mission's thing are out of a SPRINTING
+  man's reach, so there a sprint has the wall as he arrives and the row from the hold (its work steps him off, as from any hold); a body's row, and any
+  row in the crouched dash, is in reach and has the long wait against the wall. A door's leaf is never a face: a sprint into a shut door is still the
+  boot; a sprint THROUGH a door carries on to the wall past it and ends on that wall (`probes.ts sprintdoor` pins the switch off for its own runs, which
+  are read where they end against it). IN A CHECKPOINT (under `SAVETIMELINE.holds`): `wallHold.hold.ran`, there only while the run is held, so a file
+  made off a run is byte for byte what it was. IN THE COVER
+  LESSON (levels/tut-road.json, nothing of it changed): 'Hold Shift to sprint to the wall by the gate' is done 3.5 m out and stays up its card's beat, and
+  a mission that teaches the wall keeps it shut until its line (`rails.ts locksWall`), so he stands against the wall for that beat; as 'Walk into the wall
+  to snap to it for cover' comes up he is on it, the keys never let go (0.18 s after, measured). With the switch off the same keys stand him against the
+  wall for as long as Shift is down, which is what the maintainer met. THE CAMERA: nothing of it is new — the look-at follows him as it follows any stop,
+  and goes into the room as his back lands, as in every take; the check holds that no frame of a sprint's take changes the look-at's speed by more than a
+  walk's take or a sprint the wall stops (30.8 mm against 30.2 and 4.5 on the page's stand; the 30 is the look-at setting off into the room, the hold's
+  own). CHECK: `probes.ts wallrun` (`tools/qa/wallrun-check.ts`, families `wallsnap` / `wall-snap`) 12 of 12 on both stands, `WALLRUN_BREAK=1` fails 9 of
+  12 on both; its camera line asks 192 key-and-camera combinations with Shift stood against the wall (40 take it, none wrong); its lesson line plays the
+  pass road in a process of its own on the page's stand with the scripted player's `sprint` / `wall` steps swapped for a run-in with Shift held (that
+  script's file is not changed; a step of it renamed turns this line red). `probes.ts wallpress` pins the switch off for its own lines ('a run at it is
+  never a hold' is the walk's rule as it was). Measured headless on the office corridor's east end, one seed, seven metres of run-up: the hold begins with
+  0.16 m to go at a full sprint's stride (0.078 m a frame), no frame of the take longer than 0.011 m, his back on the wall 0.35 s later (0.17 s with
+  `slow` off). NOBODY HAS PLAYED IT and it has never been seen on a GPU: the last 0.15 m is covered in a third of a second where the frame before covered
+  half of it, so a sprint ends in a stop a hand short of the wall and a turn onto it — whether that reads as a snap or as a stumble is the first thing to
+  ask; and how often a sprint is taken that meant to turn at the wall is unmeasured (no recorded human session sprints, and the tour's man is a puppet the
+  rule leaves alone).
 - **Q is free: the wall hold has no key on the page's board** (`KEYMAP.qFree`, `src/host/keymap.ts`; the maintainer, 10-21, from play:
   "snapping feels good, we can remove Q"). Walking into a wall takes it (`WALLSNAP.press`) and a step away or a run lets go, so the hold's own key
   is spare. NO RULE OF THE GAME CHANGED: player.ts still asks `input.hit('KeyQ')` and means the wall hold by it, so every probe, tape and journal
@@ -1197,7 +1237,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `STALK_STATS` is a tally (rollback-exempt). CHECK: `bun run tools/qa/stalk-check.ts` (probe `stalk`, family stealth), both stands; `STALK_BREAK=1` must
   fail grab, still, steer and let. Measured there, three seeds: 2.6 m behind a man walking away at 1.15 m/s he is in the arm in 4.22 s, top speed 1.60 m/s,
   the largest change of speed in a frame 0.15 m/s; behind a man who stands, 2.48 s; begun 60° off dead astern it ends 42.6° off. Older probes that read the
-  grab's row or its key run with the stalk held off (`probes.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
+  grab's row or its key run with the stalk held off (`tools/qa/holds.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
   cannot be stalked (nor grabbed before it); the creep makes the crouch's own footfalls and moves under their eyes as any crouched Sam does. NOT DONE: the
   pose does not yet change over the creep (the arm comes up at the grab, as before); nothing at a corner. Driven in the real page on the software adapter
   (`tools/qa/stalk-page.cjs`); never played by a person, never seen on a GPU.
@@ -1530,7 +1570,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   row's words; with the stalk as the page has it the held button's grab is the stalk's own, counted once; with the click the only way
   and with the knife back the row says it and both halves work; off; the harness line. One seed: these are timings of a fixed beat.
   `stalk-page.cjs` drives both on the real page. The probes that read the build before it (the `close-` family, `heldclicks`, the
-  grab's and the knife's: `KNIFE_AS_IT_WAS` in probes.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
+  grab's and the knife's: `KNIFE_AS_IT_WAS` in tools/qa/holds.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
   press). NOT DONE: the choke out of a held button has no pose of its own (it is the grab, then the hold's choke); no sound of its
   own. Nobody has played it or seen it on a GPU.
 - **He watches the man who matters, and gives a man room as he passes (10-23; `SAMLOOK` in `samlook.ts`, the poses `WATCH` in
@@ -1743,7 +1783,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kept `wayReask` 0.5 s (the first frames, before he has a path). A man who only LOOKS (a turned head, a lent hold, a man standing at the thing) and a place the
   floor has no way to keep the straight thread. PICTURE ONLY, so it is ON in the module and on BOTH stands, no `FROZEN_HOLDS` row: nothing in the update reads
   it, and it WRITES NOTHING OF THE GAME'S: the kept answer and the tables the grid is searched on are the ASKER'S (the overlay's own in ui/attentionviz.ts,
-  handed in as `kept`; `NavGrid.findPathAside` searches on them and leaves the grid's own as they were), so a run that asks for every way each frame digests
+  handed in as `kept`; the search itself is the module's, `NavGrid.findPath`, on scratch of the one question, and writes nothing of the grid's), so a run that asks for every way each frame digests
   AND hashes (`stateHash`, statics too) as the run that never asks. A first cut kept the answer in a named side table of the game and searched on the grid's
   own tables: the digest was equal, the state hash was not (`game.col.nav.scratch.open`), which is how a picture gets into a snapshot. Off: `?straightthread` on the address, Tab ▸ the attention group ▸ 'the thread runs the way he will walk'. CHECK `probes.ts
   attentionway` (tools/qa/attentionway-check.ts; `ATTENTIONWAY_BREAK=1` fails `way`), both stands: on tut-quiet, the office and lights-out a knock 5 m off
@@ -1797,7 +1837,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page; `?fogmates=0` = his eye stops at a thin thing, as it was; the debugger's fog page has the row; frozen stand: off, `TPS_FOGMATES=1` raises
   it BUT ACTS ONLY WITH `TPS_FOGTHIN=1` (`FROZEN_HOLDS['FOG.mates']` says so: the frozen stand pins the thin row off too); the journal carries it
   (a recording without the key replays with it off). CHECK: `probes.ts fog-mates` (`tools/qa/fogmates-check.ts`, family `fog`; 5 lines;
-  `FOGMATES_BREAK=1` reds bar, agrees and stood) on both stands. MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
+  `FOGMATES_BREAK=1` reds bar, agrees, stood and switch) on both stands. (THE SWITCH LINE READS ONE LANGUAGE since the senses' TypeScript went: a man's look is handed to the module with his team's mask at the one call there is, and `eyeContact` asks no line of the box world itself. Its red path reads guards.ts with the mask taken off that call.) MEASURED, headless: The Pass, one staging seed: across its 16 thin marks, 1168 pairs of
   a teammate and a defender (sixteen bearings, nine spacings): the row gives him 707 of them, takes none, and his test differs from the fog's
   line on none (on 707 without it); the defender's eye is the same on all 1168; with the thin row off the row gives nothing. Stood: the pair kept across one mark for 30 of the game's own frames: with the row the room fight's
   meter on the man goes to 1.00 and he is the teammate's target on 25 frames; without, meter 0 and no target; the defender never takes the teammate. Played on The Pass,

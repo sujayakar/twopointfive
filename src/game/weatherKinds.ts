@@ -9,6 +9,9 @@
 import type { Vec3 } from '../math/vec';
 
 export type Rect = [number, number, number, number];   // x0, z0, x1, z1
+/** THE ROOFS A WEATHER HAS IN FORCE, AT MOST (weather.ts roofsOf keeps a level's biggest; the picture's frame has a slot each; a thrown thing's walk in the
+ *  Rust module is handed as many: sim/itemshome.ts ITEM_ROOFS, rust/sim/src/items.rs MAX_ROOFS — tools/qa/rust-check.ts holds the three to one number) */
+export const MAX_ROOFS = 4;
 export type WeatherKind = 'clear' | 'overcast' | 'rain' | 'downpour' | 'fog' | 'dust' | 'snow';
 /** the kinds a level can be STARTED in — the Weather row, `?weather=`. NOT 'snow': snow is a LEVEL's own weather (SNOW_LEVELS below), never picked for another */
 export const WEATHER_KINDS: readonly WeatherKind[] = ['clear', 'overcast', 'rain', 'downpour', 'fog', 'dust'];

@@ -9,6 +9,8 @@
 // the same key order — the file's palette order is authored data — where deleting one key and re-inserting it would move it to the end.
 import type { Vec3 } from '../math/vec';
 import { BoxData, MaterialData, KEYS } from '../scene/levelData';
+import { BOX_STUFFS, boxStuffOk } from '../scene/stuff';
+import { DOES_DEFAULT, DOES_WORDS, doesWordOk } from '../scene/materials';
 import { MarkingDef, MarkPal, MarkFace, MarkRes, MARK_FACES, MARK_RES, RES_K, MARKING_TEXEL, MAX_MARKS_PER_BOX, MAX_CELLS_W, MAX_CELLS_H, MAX_PAL, CELL_CHARS, CellCanvas, GEN, GLYPHS, GLYPH_NAMES, marking, markingErrors, faceHalf, faceIndex, markStats, resolveAlbedo } from '../scene/markings';
 import * as MD from '../scene/markingDefaults';
 import { ROUGH_DEFAULT } from '../scene/boxes';
@@ -61,11 +63,20 @@ export function swatchCss(albedo: readonly number[], rough?: number, metal?: boo
 
 export interface MaterialInfo { name: string; albedo: Vec3; rough?: number; metal?: boolean; notes?: string; boxes: number; parts: number }
 /** a material record with only the keys it means, in the file's key order (KEYS.material): what every op below writes */
-export function canonMaterial(m: { albedo: readonly number[]; rough?: number; metal?: boolean; notes?: string }): MaterialData {
+export function canonMaterial(m: { albedo: readonly number[]; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string }): MaterialData {
   const o: MaterialData = { albedo: roundVec(m.albedo.map(x => Math.max(0, x))) };
   if (m.rough !== undefined) o.rough = round6(Math.min(1, Math.max(0, m.rough)));
   if (m.metal) o.metal = true;
+  if (m.stuff) o.stuff = m.stuff;   // (what everything in this paint is made of: the row's word is all the picture reads, scene/stuff.ts. 'plain' said is kept, as the exporters write it: a file whose rows say nothing at all is one from before the rule)
+  if (m.does) o.does = m.does;     // (what everything in this paint DOES: scene/materials.ts. No op here changes it: a repaint is not another thing)
   if (m.notes) o.notes = m.notes;
+  return o;
+}
+/** A THING PAINTED AGAIN DOES WHAT IT DID (scene/materials.ts: Box.does is not part of the paint). `o` = a box or a part as it was, already re-keyed to
+ *  its new paint (`material` set or dropped): its `does` is written where the new paint's row would say another thing, and dropped where it says the same. */
+export function keepDoes<T extends { material?: string; does?: string }>(ed: Editor, was: { material?: string; does?: string }, o: T): T {
+  const did = was.does ?? (was.material !== undefined ? ed.data.materials[was.material]?.does : undefined) ?? DOES_DEFAULT, row = (o.material !== undefined ? ed.data.materials[o.material]?.does : undefined) ?? DOES_DEFAULT;
+  if (did !== row) o.does = did; else delete o.does;
   return o;
 }
 /** how many boxes / prop parts reference each paint */
@@ -86,21 +97,25 @@ export function materialUsers(ed: Editor, name: string): { boxes: string[]; prop
 function need(ed: Editor, name: string): MaterialData { const m = Object.prototype.hasOwnProperty.call(ed.data.materials, name) ? ed.data.materials[name] : undefined; if (!m) throw new Error(`no material '${name}' (palette: ${Object.keys(ed.data.materials).join(' ')})`); return m; }
 /** replace the whole palette record (order as given) — the one write path */
 function writeMaterials(ed: Editor, rec: Record<string, MaterialData>, label: string, coalesce?: string) { ed.doc.setPath(['materials'], rec, { label, coalesce }); }
-/** Edit a paint in place: any of albedo / rough (null = unset → matte) / metal / notes (empty = drop). LIVE: every box using it follows on the next scene sync.
+/** Edit a paint in place: any of albedo / rough (null = unset → matte) / metal / stuff (what it is made of; 'plain' = nothing the look draws; null = unset) / does (what a box of it is to the rules, scene/materials.ts; null = unset: the default row) / notes (empty = drop). LIVE: every box using it follows on the next scene sync.
  *  `coalesce` folds a slider drag into one undo step (seal at the drag's end). */
-export function materialSet(ed: Editor, name: string, patch: { albedo?: readonly number[]; rough?: number | null; metal?: boolean; notes?: string | null }, opts: { coalesce?: string; label?: string } = {}) {
+export function materialSet(ed: Editor, name: string, patch: { albedo?: readonly number[]; rough?: number | null; metal?: boolean; stuff?: string | null; does?: string | null; notes?: string | null }, opts: { coalesce?: string; label?: string } = {}) {
   const cur = need(ed, name);
   if (patch.albedo && (patch.albedo.length !== 3 || patch.albedo.some(x => !Number.isFinite(x)))) throw new Error('albedo: three finite numbers');
   if (patch.rough !== undefined && patch.rough !== null && !Number.isFinite(patch.rough)) throw new Error('rough: a number in [0, 1] (null = unset)');
-  const next = canonMaterial({ albedo: patch.albedo ?? cur.albedo, rough: patch.rough === null ? undefined : patch.rough ?? cur.rough, metal: patch.metal ?? cur.metal, notes: patch.notes === null ? undefined : patch.notes ?? cur.notes });
+  if (patch.stuff != null && !boxStuffOk(patch.stuff)) throw new Error(`stuff: one of ${BOX_STUFFS.join(' ')}`);
+  if (patch.does != null && !doesWordOk(patch.does)) throw new Error(`does: one of ${DOES_WORDS.join(' · ')}`);
+  const next = canonMaterial({ albedo: patch.albedo ?? cur.albedo, rough: patch.rough === null ? undefined : patch.rough ?? cur.rough, metal: patch.metal ?? cur.metal, stuff: patch.stuff === null ? undefined : patch.stuff ?? cur.stuff, does: patch.does === null ? undefined : patch.does ?? cur.does, notes: patch.notes === null ? undefined : patch.notes ?? cur.notes });
   const rec: Record<string, MaterialData> = {}; for (const [k, m] of Object.entries(ed.data.materials)) rec[k] = k === name ? next : m;
   writeMaterials(ed, rec, opts.label ?? `material ${name}`, opts.coalesce);
 }
 /** a new paint at the END of the palette (or right after `after`); refuses an existing name */
-export function materialCreate(ed: Editor, name: string, init: { albedo?: readonly number[]; rough?: number; metal?: boolean; notes?: string } = {}, opts: { after?: string; label?: string } = {}): string {
+export function materialCreate(ed: Editor, name: string, init: { albedo?: readonly number[]; rough?: number; metal?: boolean; stuff?: string; does?: string; notes?: string } = {}, opts: { after?: string; label?: string } = {}): string {
   if (!MATERIAL_NAME_RE.test(name)) throw new Error('material names: a letter then letters / digits / _ (≤ 32)');
   if (Object.prototype.hasOwnProperty.call(ed.data.materials, name)) throw new Error(`material '${name}' exists`);
-  const m = canonMaterial({ albedo: init.albedo ?? [0.5, 0.5, 0.5], rough: init.rough, metal: init.metal, notes: init.notes });
+  if (init.stuff !== undefined && !boxStuffOk(init.stuff)) throw new Error(`stuff: one of ${BOX_STUFFS.join(' ')}`);
+  if (init.does !== undefined && !doesWordOk(init.does)) throw new Error(`does: one of ${DOES_WORDS.join(' · ')}`);
+  const m = canonMaterial({ albedo: init.albedo ?? [0.5, 0.5, 0.5], rough: init.rough, metal: init.metal, stuff: init.stuff, does: init.does, notes: init.notes });
   const rec: Record<string, MaterialData> = {}; let placed = false;
   for (const [k, v] of Object.entries(ed.data.materials)) { rec[k] = v; if (k === opts.after) { rec[name] = m; placed = true; } }
   if (!placed) rec[name] = m;
@@ -130,8 +145,8 @@ export function materialRemove(ed: Editor, name: string, opts: { repaintTo?: str
   const rec: Record<string, MaterialData> = {}; for (const [k, v] of Object.entries(ed.data.materials)) if (k !== name) rec[k] = v;
   ed.doc.transact(`remove material ${name}`, () => {
     if (opts.repaintTo) {
-      for (const id of users.boxes) ed.updateBox(id, { material: opts.repaintTo });
-      for (const pid of users.props) ed.updateProp(pid, x => ({ ...x, parts: x.parts.map(q => q.material === name ? { ...q, material: opts.repaintTo } : q) }));
+      for (const id of users.boxes) ed.updateBox(id, b => { const o = { ...b, material: opts.repaintTo }; delete o.stuff; return keepDoes(ed, b, o); });   // (the new paint's name speaks: the old paint's word goes with it)
+      for (const pid of users.props) ed.updateProp(pid, x => ({ ...x, parts: x.parts.map(q => { if (q.material !== name) return q; const o = { ...q, material: opts.repaintTo }; delete o.stuff; return keepDoes(ed, q, o); }) }));
     }
     writeMaterials(ed, rec, `remove material ${name}`);
   });
@@ -149,7 +164,7 @@ export function resolvedFinish(ed: Editor, b: BoxData): { albedo: Vec3; rough: n
 export function materialFromSelection(ed: Editor, boxIds: string[], name?: string): string {
   const b0 = ed.doc.get<BoxData>('boxes', boxIds[0] ?? ''); if (!b0) throw new Error('new paint from selection: select a box first');
   const f = resolvedFinish(ed, b0); const nm = name ?? freshMaterialName(ed, b0.material ? `${b0.material}_v` : (b0.group ?? 'paint').split('.')[0]);
-  ed.doc.transact(`material ${nm} from ${boxIds[0]}`, () => { materialCreate(ed, nm, { albedo: f.albedo, rough: f.rough, metal: f.metal }, { after: b0.material }); boxPaint(ed, boxIds, nm); });
+  ed.doc.transact(`material ${nm} from ${boxIds[0]}`, () => { materialCreate(ed, nm, { albedo: f.albedo, rough: f.rough, metal: f.metal, stuff: b0.stuff ?? (b0.material !== undefined ? ed.data.materials[b0.material]?.stuff : undefined), does: b0.does ?? (b0.material !== undefined ? ed.data.materials[b0.material]?.does : undefined) }, { after: b0.material }); boxPaint(ed, boxIds, nm); });
   return nm;
 }
 
@@ -159,7 +174,7 @@ export function canonBox(b: BoxData): BoxData { const o: any = {}; for (const k 
 /** paint boxes with a palette entry (dropping an inline albedo) or an inline albedo (dropping the material) — per-box finish overrides are KEPT (clear them apart) */
 export function boxPaint(ed: Editor, ids: string[], material: string | readonly number[], opts: { coalesce?: string; label?: string } = {}) {
   if (typeof material === 'string') need(ed, material);
-  ed.doc.transact(opts.label ?? `paint ${ids.length} box(es) ${typeof material === 'string' ? material : 'inline'}`, () => { for (const id of ids) ed.updateBox(id, b => { const o = { ...b }; if (typeof material === 'string') { o.material = material; delete o.albedo; } else { o.albedo = roundVec((material as number[]).map(x => Math.max(0, x))); delete o.material; } return canonBox(o); }, { coalesce: opts.coalesce }); }, opts.coalesce);
+  ed.doc.transact(opts.label ?? `paint ${ids.length} box(es) ${typeof material === 'string' ? material : 'inline'}`, () => { for (const id of ids) ed.updateBox(id, b => { const o = { ...b }; delete o.stuff; if (typeof material === 'string') { o.material = material; delete o.albedo; } else { o.albedo = roundVec((material as number[]).map(x => Math.max(0, x))); delete o.material; } return canonBox(keepDoes(ed, b, o)); }, { coalesce: opts.coalesce }); }, opts.coalesce);
 }
 /** Per-box overrides on every box in `ids`: `albedo` = go INLINE with that colour (the material link dropped — the box keeps its resolved finish as explicit
  *  rough / metal so the look does not jump), `rough` (null = drop the override), `metal` (null = drop). `patch === null` clears rough + metal overrides
@@ -172,7 +187,7 @@ export function boxOverride(ed: Editor, ids: string[], patch: { albedo?: readonl
       if (patch === null) { delete o.rough; delete o.metal; return canonBox(o); }
       if (patch.albedo !== undefined) {
         if (b.material !== undefined) { if (o.rough === undefined && m?.rough !== undefined) o.rough = m.rough; if (o.metal === undefined && m?.metal) o.metal = true; }   // keep the look it had under the paint
-        o.albedo = roundVec(patch.albedo.map(x => Math.max(0, x))); delete o.material;
+        o.albedo = roundVec(patch.albedo.map(x => Math.max(0, x))); delete o.material; delete o.stuff; keepDoes(ed, b, o);   // (a word belongs to the paint it was said with: scene/stuff.ts. What the box DOES stays: materials.ts)
       }
       if (patch.rough !== undefined) { if (patch.rough === null) delete o.rough; else o.rough = round6(Math.min(1, Math.max(0, patch.rough))); }
       if (patch.metal !== undefined) {

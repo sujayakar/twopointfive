@@ -1,6 +1,6 @@
 // The 'same-way' probe: A PAIR GOES ROUND ONE WAY (orders.ts ORDERS.sameWay — sameWays). Run through probes.ts:
 //   bun run tools/qa/probes.ts same-way        (family: ordereddoor)
-// PASS / FAIL each, headless. The plan lesson's level (levels/tut-plan.json) stood up as its start deals it (the four men; the level's own enemies are at their posts — see rig()): a pair is stood side by side at a
+// PASS / FAIL each, headless. The queueing tutorial's level (levels/tut-queue.json) stood up as its start deals it (the four men; the level's own enemies are at their posts — see rig()): a pair is stood side by side at a
 // row of spots along the front of the hall and told to stack on the hall's back door, as a player tells it. The probe reads each man's planned way (the
 // corners his order was handed, joined by the game's own path search) and measures how far apart the two ways get, with its own ruler:
 //   · with the switch off the flaw is there: at some spot the two ways are a building apart (one man round the hall by each side)
@@ -30,7 +30,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 }
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const LEVEL = 'tut-plan', BACK = [30.8, 19.0], OUT = [30.8, 0, 20.6], DT = 1 / 60;
+const LEVEL = 'tut-queue', BACK = [30.8, 19.0], OUT = [30.8, 0, 20.6], DT = 1 / 60;
 /** the probe's own ruler: how far way `a` gets from way `b`, asked every quarter metre of `a` */
 function apart(a: number[][], b: number[][]): number {
   const off = (x: number, z: number) => { let m = Infinity; for (let i = 1; i < b.length; i++) { const p = b[i - 1], q = b[i], ux = q[0] - p[0], uz = q[2] - p[2], L = ux * ux + uz * uz, k = L > 1e-9 ? Math.max(0, Math.min(1, ((x - p[0]) * ux + (z - p[2]) * uz) / L)) : 0; m = Math.min(m, Math.hypot(x - p[0] - ux * k, z - p[2] - uz * k)); } return m; };

@@ -74,7 +74,7 @@ export function cutOpeningPlan(data: LevelData, d: DoorData, opts: { y1?: number
     if (Math.abs(bx.c[Wa] - w) > bx.h[Wa] + 0.02) continue;                                    // on the wall line
     const u0 = bx.c[U] - bx.h[U], u1 = bx.c[U] + bx.h[U]; if (u1 <= a + 1e-6 || u0 >= b - 1e-6) continue;   // crosses the gap
     remove.push(bx.id);
-    const base: Omit<BoxData, 'id' | 'c' | 'h'> = { ...(bx.floor ? { floor: bx.floor } : {}), ...(bx.group ? { group: bx.group } : {}), ...(bx.name ? { name: bx.name } : {}), ...(bx.material !== undefined ? { material: bx.material } : { albedo: [...bx.albedo!] as Vec3 }), ...(bx.emissive ? { emissive: [...bx.emissive] as Vec3 } : {}), ...(bx.flags?.length ? { flags: [...bx.flags] } : {}) };
+    const base: Omit<BoxData, 'id' | 'c' | 'h'> = { ...(bx.floor ? { floor: bx.floor } : {}), ...(bx.group ? { group: bx.group } : {}), ...(bx.name ? { name: bx.name } : {}), ...(bx.material !== undefined ? { material: bx.material } : { albedo: [...bx.albedo!] as Vec3 }), ...(bx.emissive ? { emissive: [...bx.emissive] as Vec3 } : {}), ...(bx.rough !== undefined ? { rough: bx.rough } : {}), ...(bx.metal !== undefined ? { metal: bx.metal } : {}), ...(bx.stuff !== undefined ? { stuff: bx.stuff } : {}), ...(bx.does !== undefined ? { does: bx.does } : {}), ...(bx.flags?.length ? { flags: [...bx.flags] } : {}) };   // (the pieces of a wall are the wall: its paint, its finish and both its words)
     const piece = (p0: number, p1: number, q0: number, q1: number) => {   // along-wall span p0..p1, height q0..q1, wall-line extent as the original
       if (p1 - p0 < 1e-4 || q1 - q0 < 1e-4) return;
       const c: Vec3 = [0, (q0 + q1) / 2, 0], h: Vec3 = [0, (q1 - q0) / 2, 0];

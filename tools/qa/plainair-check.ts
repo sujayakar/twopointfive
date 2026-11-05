@@ -5,13 +5,14 @@
 //   · the plain module, AS CUT (gpu/wgslTrim.ts: what the browser is given), declares no function that walks the boxes, a light, a shadow or the fog of war's sight —
 //     whatever it calls, however far down — and is a small text
 //   · the numbers the plain march shares with the real one are still the real one's (they are copies: nothing else holds them together)
+//   · any load: the weight of a lamp's glow through smoke reaches the frame at 0, so the real march's cut is the plain one's (the look's row; only its two writers name it)
 // No browser and no compiler: that the plain text COMPILES and DRAWS is the page's to say (tools/qa/plainair-page.cjs).
 //   bun run tools/qa/plainair-check.ts             exit 0 = every check passed, 1 = one failed
 //   TPS_COMPACTSHADERS=1 bun run tools/qa/plainair-check.ts     the page's writing of the march (its froxel twin is then one of the twins not asked for)
-//   PLAINAIR_BREAK=1 bun run tools/qa/plainair-check.ts     the plain-air boot is made with the switch's word off: must FAIL (4 lines; 6 with the compact set)
+//   PLAINAIR_BREAK=1 bun run tools/qa/plainair-check.ts     the plain-air boot is made with the switch's word off: must FAIL (5 lines; 7 with the compact set)
 export {};
 const { ROOT, fake } = await import('./headless.ts');
-const { readFileSync } = await import('node:fs');
+const { readFileSync, readdirSync } = await import('node:fs');
 const { Engine } = await import(`${ROOT}/src/engine.ts`);
 const { gpuStory, PLAIN_AIR } = await import(`${ROOT}/src/gpu/device.ts`) as typeof import('../../src/gpu/device');
 const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
@@ -20,7 +21,7 @@ const BREAK = process.env.PLAINAIR_BREAK === '1';
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 
 /** what one boot of the Engine asks the browser for: every module's label and text, every pipeline's label */
-async function boot(): Promise<{ mods: { label: string; code: string }[]; pipes: string[] }> {
+async function boot(): Promise<{ mods: { label: string; code: string }[]; pipes: string[]; engine: InstanceType<typeof Engine> }> {
   const mods: { label: string; code: string }[] = [], pipes: string[] = [];
   const pipe = () => new Proxy({}, { get: (_t, k) => k === 'then' ? undefined : fake(String(k)) });
   const base = fake('device');
@@ -32,7 +33,7 @@ async function boot(): Promise<{ mods: { label: string; code: string }[]; pipes:
     return t[k]; } });
   const e = new Engine({ device, adapterInfo: 'stand-in', canvas: fake('canvas'), ctx: fake('ctx'), format: 'bgra8unorm', hasTimestamps: false, linearSampler: fake('sampler') } as never);
   await Promise.race([e.init({ sharp: true, gbaa: true }), new Promise(r => setTimeout(r, 2000))]);
-  return { mods, pipes };
+  return { mods, pipes, engine: e };
 }
 const REAL = ['volumetrics', 'volumetricsF', 'volumetricsDust', 'volumetricsK0'], TWINS = ['volFroxel', 'volDust', 'volK0'];
 const fnName = (d: string): string | null => /\bfn\s+([A-Za-z_]\w*)\s*\(/.exec(d)?.[1] ?? null;
@@ -61,9 +62,26 @@ check(pm.length === 1 && kb < 40 && kb < realKb / 3, `and is a small text: ${kb.
   const body = (t: string, fn: string) => new RegExp(`fn ${fn}\\(\\) -> u32 \\{([^}]*)\\}`).exec(t)?.[1]?.trim() ?? null;
   const num = (t: string, c: string) => new RegExp(`const ${c}: f32 = ([0-9.]+);`).exec(t)?.[1] ?? null;
   check(R.every(t => num(t, 'WX_STEP') !== null && num(t, 'WX_STEP') === num(P, 'PLAIN_WX_STEP')) && R.every(t => body(t, 'wxMaxSteps') !== null && body(t, 'wxMaxSteps') === body(P, 'plainWxSteps')), `the weather's air is stepped as the real march steps it (WX_STEP ${num(P, 'PLAIN_WX_STEP')}, the tier's step budget)`);
-  const SAME = ['clamp(u32(span / (vox * 1.5)) + 1u, 4u, 112u)', 'let sigT = dens * 6.0;', 'if (T < 0.01) { break; }', 'let top = CEIL_Y + WX_TOP;'];
+  const SAME = ['clamp(u32(span / (vox * 1.5)) + 1u, 4u, 112u)', 'let sigT = dens * 6.0;', 'let top = CEIL_Y + WX_TOP;'];
   const lost = SAME.filter(s => !P.includes(s) || R.some(t => !t.includes(s)));
+  // THE CUT. The real march stops through the one rule that also marches on to a lamp's glow behind the smoke (vol_common.wgsl smokeMarchDone: with the
+  // glow's row at 0 it is `T < cut`); the plain march lights smoke by no lamp, so it has no glow to march on to and its cut is that rule's first half.
+  const C = src('vol_common.wgsl'), CUT = 'if (T < 0.01) { break; }';
+  if (!P.includes(CUT) || R.some(t => !t.includes('if (smokeMarchDone(T, 0.01)) { break; }')) || !C.includes('fn smokeMarchDone(T: f32, cut: f32) -> bool { return T < cut && smokeAheadW() * smokeAheadT(T) < cut; }')
+    || !C.includes('fn smokeAheadT(t: f32) -> f32 { if (smokeAheadW() <= 0.0) { return 0.0; }') || /smokeAhead|smokeGlow/.test(P)) lost.push(CUT);
   check(lost.length === 0 && R.every(t => t.includes('let sigS = sigT * 0.92;')) && P.includes('* 0.92 *'), `the smoke is marched over the same stretch, at the same steps, with the same extinction, albedo and cut as the real K = 0 march (${lost.join(' · ') || 'every shared statement found in all three texts'})`);
+  // THE GLOW'S WEIGHT ON ANY LOAD. That cut is the plain march's only while smokeAheadW() reads 0, and it reads the top byte of the frame's sideCfg.y. Held here
+  // from the row to the shader: the Engine as any load is built hands the frame a word with that byte at 0; the frame's writer puts that word at sideCfg.y; and
+  // the row has two writers and no third (the look page's table, which tools/qa/smokelook-check.ts holds to the look's switch, and the smoke lab's slider, a
+  // person's hand under ?smokelab). A third writer is not wrong by itself: it is a load where the two marches part, and whoever adds it says here which.
+  { const E = any.engine as unknown as { smokeDraw: { ahead: number }; smokeDrawWords(): [number, number] };
+    if (BREAK) E.smokeDraw.ahead = 0.5;   // (a writer nobody named)
+    const word = E.smokeDrawWords()[0], ts = (f: string) => readFileSync(`${ROOT}/src/${f}`, 'utf8');
+    const WRITERS = ['host/smokelab.ts', 'render/smokeLook.ts'], OWN = ['engine.ts', 'render/frame.ts'];
+    const named = (readdirSync(`${ROOT}/src`, { recursive: true }) as string[]).map(f => f.replace(/\\/g, '/')).filter(f => f.endsWith('.ts') && !OWN.includes(f) && /\bsmokeDraw\b/.test(ts(f))).sort();
+    const carried = ts('engine.ts').includes('smokeDraw: this.smokeDrawWords(),') && ts('render/frame.ts').includes('u[232] = sd && sc ? 1 : 0; u[233] = p.smokeDraw ? p.smokeDraw[0] >>> 0 : 0;')
+      && C.includes('fn smokeAheadW() -> f32 { return f32((frame.sideCfg.y >> 24u) & 255u) * 0.01; }');
+    check(E.smokeDraw.ahead === 0 && word >>> 24 === 0 && carried && named.join() === WRITERS.join(), `any load: the weight of a lamp's glow through smoke reaches the frame at 0, so the real march's cut is the plain one's (the row ${E.smokeDraw.ahead}, the top byte of the frame's word ${word >>> 24}, the word ${carried ? 'carried to sideCfg.y as the shader reads it' : 'NOT carried to sideCfg.y as the shader reads it'}; the row is named by ${named.join(', ') || 'nobody'})`); }
   check(PLAIN_AIR.labels.join() === ['vol', ...TWINS].join(), `the labels a lost device is read against are the pass's four (${PLAIN_AIR.labels.join(', ')})`); }
 console.log(red ? `${red} FAILED` : 'all passed');
 process.exit(red ? 1 : 0);

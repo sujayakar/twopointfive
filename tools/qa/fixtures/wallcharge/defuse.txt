@@ -1,0 +1,2 @@
+# places for a wall charge on levels/defuse.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
+678 638

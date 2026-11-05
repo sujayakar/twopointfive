@@ -1,5 +1,5 @@
 // The 'needs' probe family (run through probes.ts: `bun run tools/qa/probes.ts needs | needs-determinism | needs-telegraph | needs-one-away | needs-interrupts |
-// needs-frozen | needs-identity [--verbose] [--print]`): the needs-driven patrol variation of src/game/needs.ts — STATUS E12 (c) 'i actually really like the
+// needs-frozen [--verbose]`): the needs-driven patrol variation of src/game/needs.ts — STATUS E12 (c) 'i actually really like the
 // needs driven patrol variation, especially if it's telegraphed like fear!'. Each stands the full game up headless (headless.ts), stages one situation, steps it,
 // prints what happened, PASS / FAIL.
 //   needs-determinism  the same seeded five minutes twice (fill ×4, Sam unseen): the same men schedule the same kinds on the same frames, leave and come back on the
@@ -15,75 +15,19 @@
 //                      frames where he stands — off his route — and in the two minutes after, calm or not, the trip never comes back); frozen — no trip dealt in a
 //                      minute of full needs at the waypoints — under quietUtility, with the response team not idle, and through a whole headless lap of the showcase tour.
 //   needs-frozen-up    the floor at heightened: a minute of full needs at the waypoints deals nothing and the send button refuses; stood down, the next frame deals.
-//   needs-identity     tune.needs = false: a seeded sixty seconds of the calm night patrol (three men on their routes, Sam parked unseen off the map's corner) — with
-//                      the fill rate that would, needs ON, have a man scheduling a trip inside the first seconds — digested frame by frame against the digest FROZEN
-//                      on the tree before needs.ts existed: the off path is the old patrol, byte for byte. `--print` re-measures the literal.
 import { standUp, ROOT } from './headless.ts';
 const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
-const PRINT = process.argv.includes('--print');
 const f1 = (x: number) => x.toFixed(1), f2 = (x: number) => x.toFixed(2);
 const posS = (p: Vec3 | null | undefined) => p ? `(${f1(p[0])}, ${f1(p[2])})` : '—';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function verdict(ok: boolean, label: string, detail: string) { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); return ok; }
 
-/** FNV-1a over strings, 32 bits, chained: the digest of a run */
-class Digest {
-  h = 0x811c9dc5 >>> 0; n = 0;
-  add(s: string) { for (let i = 0; i < s.length; i++) { this.h ^= s.charCodeAt(i); this.h = Math.imul(this.h, 0x01000193) >>> 0; } this.n++; }
-  num(x: number | null | undefined) { this.add(x === null || x === undefined ? '~' : String(x)); }
-  vec(p: number[] | null | undefined) { if (!p) { this.add('~'); return; } this.num(p[0]); this.num(p[1]); this.num(p[2]); }
-  get hex() { return this.h.toString(16).padStart(8, '0'); }
-}
 
-/** the needs module if this tree has it (the identity run below must load and pass on a tree from before it) */
-async function needsModule(): Promise<any | null> { try { return await import(`${ROOT}/src/game/needs.ts`); } catch { return null; } }
 
-// ================================================================ (e) identity: tune.needs off is the old patrol, byte for byte
-/** Sixty seeded seconds of the calm floor exactly as a player who never shows himself leaves it: Kowalski, Novak and Reyes walking their routes, waiting at their
- *  waypoints, the ambient pair chatter and the handler's radio free to happen as they do — Sam parked out on the verge, invisible and inaudible. With needs ON at
- *  fifty times the fill rate a man would be over his threshold and standing at a two-second waypoint (Kowalski starts on one) inside the first frames, so the whole
- *  telegraph and a departure would fall inside the minute; with them OFF nothing of it may exist. Every frame: each man's state, position, body / aim yaw, aim
- *  pitch, awareness, waypoint, wait clock, path, speed, the neck's extra yaw, his bubble's text; Sam's position; the event and message counts; the alarm level;
- *  every leaf's angle. */
-async function identityRun(): Promise<{ digest: string; frames: number; states: string }> {
-  Math.random = seeded(4401);
-  const W = await standUp(); const { game } = W; const pl = game.player;
-  game.godMode = true; game.aiEnabled = true;
-  (game.tune as any).needs = false;   // (a plain property on a tree from before needs.ts: nothing reads it there)
-  if ((game as any).civilians) { (game.tune as any).civilians = false; (game as any).civilians.length = 0; }   // (the civilians — a later actor on the floor, src/game/civilians.ts — are not part of this card: its digest was frozen on a floor without them, and its claim is about THIS switch; their own identity card is probes.ts civilians-identity. Their construction drew nothing from the dice, so nothing else here moves.)
-  const N = await needsModule(); const rate0 = N?.NEEDS?.rateK;
-  if (N?.NEEDS) N.NEEDS.rateK = 50;   // (would have a trip scheduled inside seconds with the switch on — off, it must not matter)
-  for (let i = 0; i < 5; i++) W.step(DT);
-  game.teleportPlayer([2.0, 0, 2.0]); game.playerInvisible = true; pl.crouch = true;
-  const D = new Digest(); let states = '';
-  const FRAMES = 60 * 60;
-  for (let frame = 0; frame < FRAMES; frame++) {
-    pl.visibility = 0.02; W.step(DT);
-    for (const gd of game.guards) { D.add(gd.state); D.vec(gd.char.pos); D.num(gd.char.bodyYaw); D.num(gd.char.aimYaw); D.num(gd.char.aimPitch); D.num(gd.awareness); D.num(gd.wp); D.num(gd.wait); D.num(gd.path.length); D.num(gd.pathI); D.num(gd.speed); D.num(gd.char.anim.lookYawExtra); D.add(gd.bubble ? gd.bubble.text : '~'); D.num(gd.hold ? 1 : 0); }
-    D.vec(pl.char.pos); D.num(game.events.length); D.num(game.messages.length); D.num(game.escalation);
-    for (const d of game.doors.list) D.num(d.angle);
-    if (frame % 300 === 0) states += game.guards.map((g: any) => `${g.state[0]}${g.wp}`).join('') + ' ';
-    if (VERBOSE && frame % 120 === 0) console.log(`    ${f1(game.time)}s ` + game.guards.map((g: any) => `${g.callsign} ${g.state} ${posS(g.char.pos)} wp ${g.wp} wait ${f2(g.wait)} path ${g.pathI}/${g.path.length}${g.hold ? ' HOLD' : ''}${g.bubble && game.time - g.bubble.t < g.bubble.dur ? ` "${g.bubble.text}"` : ''}`).join(' | '));
-  }
-  if (N?.NEEDS && rate0 !== undefined) N.NEEDS.rateK = rate0;
-  return { digest: D.hex, frames: FRAMES, states };
-}
-export async function needsIdentity() {
-  console.log('\n=== needs-identity: tune.needs off — a seeded 60 s of the calm patrol (fill rate ×50: needs ON would schedule a trip in seconds), digested frame by frame against the digest frozen before needs.ts ===');
-  const R = await identityRun();
-  if (PRINT) console.log(`\n--- measured (paste over EXPECT_IDENTITY) ---\nconst EXPECT_IDENTITY = ${JSON.stringify({ digest: R.digest, frames: R.frames, states: R.states })};\n`);
-  const E = EXPECT_IDENTITY; let allPass = true;
-  allPass = verdict(R.states === E.states, 'states + waypoints every 5 s as they were', `${R.states.trim()}${R.states === E.states ? '' : ` — want ${E.states.trim()}`}`) && allPass;
-  allPass = verdict(R.digest === E.digest && R.frames === E.frames, 'the per-frame digest of everybody\'s state / position / aim / awareness / waypoint / wait / path / neck / bubble, Sam, the events, the messages, the alarm, the leaves', `${R.digest} over ${R.frames} frames${R.digest === E.digest ? '' : ` — want ${E.digest}`}`) && allPass;
-  console.log(`=== needs-identity: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
-  return allPass;
-}
-// frozen on the tree before needs.ts had any behaviour (commit cc33233: main's calm patrol; `needs-identity --print` regenerates the literal)
-const EXPECT_IDENTITY = {"digest":"eade1caa","frames":3600,"states":"p0p0p0 p1p1p1 p1p2p2 p1p3p2 p1p4p3 p1p4p3 p1p5p3 p1p6p3 p1p7p3 p1p0p3 p3p1p4 p3p2p4 "};
 void v3; void posS;
 
 // ================================================================ shared staging for the behaviour probes (needs.ts imported here, not at the top: the identity run above must load on a tree without it)

@@ -6,12 +6,12 @@
 // runs alone on a plain stage (tools/qa/fire-lab.cjs), where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light).
 //   a = where the coals are (the middle of the drum's mouth) + the mouth's radius (m)      b = flame height (m) · heat 0‥1 · the fire's own seed 0‥1 · its clock (s)
 //   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · spare      d = the bed of coals' radius (m; 0 = none drawn) · under the fog of war: 0 = drawn wherever it stands, 1 = only where the team sees, 2 = only where it does not (the composite's test: fireOver)
-struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (c.w: how much of this fire's flame is the solver's gas, 0‥1 — fireFlame)
+struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (c.w: how much of this fire's flame is the solver's gas, 0‥1 — fireFlame · d.z: how far its smoke is the solver's soot, 0‥1 — fireFlameN)
 // THE LOOK'S NUMBERS, the same for every fire (game/fire.ts FIRE.look, live in the page's fire lab):
 //   a = × the flame's light · × its white heart · how soon it hides what is behind it (1/m) · × how fast it climbs
 //   b = × its height · how torn it is 0‥2 · the smoke off its tips 0‥2 (0 = none) · the shimmer of the hot air over it (m the picture behind is pushed, 0 = none)
 //   c = how dark and sooty its cool edge is 0‥1 · how hard it breathes 0‥2 · spare · spare
-struct FireLook { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (d: x = how far the temporal resolve is told to take a fire's pixels from THIS frame (0‥1) · y = how far the wind leans the flame (m at one flame height, per m/s))
+struct FireLook { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (d: x = how far the temporal resolve is told to take a fire's pixels from THIS frame (0‥1) · y = how far the wind leans the flame (m at one flame height, per m/s) · z = samples of the flame along a ray)
 
 const FIRE_STEPS = 40.0;        // samples of the flame along a pixel's ray when the look row names none (K.d.z = game/fire.ts FIRE.look.steps, 4‥64)
 const FIRE_SMOKE_STEPS = 10.0;  // … and of the smoke over it
@@ -95,6 +95,10 @@ fn fireFlameN(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
     if (rs > 0.0) {
       let ns = 0.65 * fireN(vec3f(q.x * 5.0 + s, (q.y - up * 0.5) * 3.0, q.z * 5.0)) + 0.35 * fireN(vec3f(q.x * 12.0 - s, (q.y - up * 0.62) * 7.0, q.z * 12.0 + s));
       sm = smoothstep(0.46, 0.7, ns + 0.22 * rs) * smoothstep(0.0, 0.35, rs) * smoothstep(0.8, 1.7, y) * (1.0 - smoothstep(FIRE_SMOKE_TOP * 0.55, FIRE_SMOKE_TOP, y)) * (1.0 - f) * min(K.b.z, 2.0);
+      // ONE COLUMN (F.d.z, this fire's own share, eased by the game: game/fire.ts FIRE_LOOK_SMOKE): the solver's soot is born in the flame's tips and is the fire's
+      // smoke from there on, so what is drawn here is only the flame's dark tips, thinner, and gone by two flame heights where the gas has the column to itself.
+      // 0 = a fire whose gas is not filed (far from the view, the rung that sheds it): the drawn plume as ever
+      sm *= mix(1.0, 0.6 * (1.0 - smoothstep(1.15, 2.0, y)), F.d.z);
     }
   }
   return vec3f(f, hot, sm);

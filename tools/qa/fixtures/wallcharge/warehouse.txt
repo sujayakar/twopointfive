@@ -1,0 +1,4 @@
+# places for a wall charge on levels/warehouse.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
+# given up on purpose (the second count): eleven places on the hall's north wall, behind the examining table. It stands there so that the
+# defenders' way round to the dock is open
+896 757

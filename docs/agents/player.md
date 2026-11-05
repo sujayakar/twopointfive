@@ -388,7 +388,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   [card|off|you|mate|wiring]` (`probes.ts bigslot`; `bigslot-card` also under `kit`, `bigslot-mate` under `doortools`; in all-quick; BOTH stands — it raises the switch itself;
   `BIGKIT_BREAK=1` must fail the lock lines: 54 lines, 18 red under the break, 10-14), `PORT=<dev server> node tools/qa/bigslot-page.cjs [outDir]` (the real page on the
   software adapter: the card's one Big slot row and wide pip, your hammer on a locked door in the boot's place, `?nobigslot`). The probes written on the old card (`kit-*`, `pouch-*`, `shotgun-*`, `squadsmoke-*`) hold the switch off
-  on every stand (`probes.ts CARDS_AS_THEY_WERE`; `pouch-table` also holds the issue kit's names and your card's door charge, camera and wand rows off, `CARD_AS_IT_WAS`, for its word-for-word
+  on every stand (`tools/qa/holds.ts CARDS_AS_THEY_WERE`; `pouch-table` also holds the issue kit's names and your card's door charge, camera and wand rows off, `CARD_AS_IT_WAS`, for its word-for-word
   lines and its fixture of the build before the pouches rule; `kit-solo`'s first line reads the shipped stand's plain game as the page's `?solo` night, which it is), so on the shipped stand a wall charge set through the big row is covered by bigslot-check alone, and the shotgun as a
   man's GUN is no longer a thing the page can stage. Page: rebuild/kit-slots/read-first.md. NOBODY HAS SEEN IT ON A GPU OR PLAYED ANY OF IT: the harness and the software adapter only; neither
   tool is drawn in YOUR hands, the hammer's blow is a takedown's strike standing in, and a teammate's hammer is not drawn at all (the characters goal's); the Team & kit door picture
@@ -627,7 +627,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
   Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -guns -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
   `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
-  switch held off (`probes.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
+  switch held off (`tools/qa/holds.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
   on, the third is down to a sidearm round 0.50 s after the guns ran dry; off, he was still standing twelve seconds later (one seed, one room).
   `gunslots-off`: ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE:
   a swap ANIMATION on a teammate (his pose changes with the row in his hands, the equip sound plays, nothing is animated between); the dry man's sense
@@ -896,7 +896,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: all five lines pass.
   The lesson bot for Training 4 (`tools/qa/lessons/train-kit.ts`) plays the new presses when the rule is on, read off the page's own table when
   it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
-  off on every stand (`probes.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
+  off on every stand (`tools/qa/holds.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
   too, for a card's note), `sticky-look.cjs` opens with `&slotsetup=0`, and the two key board checks ask their own rules with Z and L as they
   were (`keybinds-check.ts`, `qkey-check.ts`; `keybinds-page.cjs` opens with `&slotsetup=0`). One older line was MOVED to the rule, not held:
   `wallsnap-kit`'s "2 on the stack, the rifle up" asks, with the setup on, that the first 2 opens the setup and changes nothing and the second is
@@ -1565,3 +1565,28 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   before). NOT TOUCHED: gunhand.ts / inhand.ts (how a gun sits in a hand) and the creep's arms. NOT SEEN, NOT PLAYED: never on a GPU or in the
   page; the numbers are first numbers off the capsule strips and CPU-skinned stills; the way into the sprint and out of it was looked at as a capsule strip only
   (`pose-strip.ts sprint-pistol-turns`: the hands are together inside 0.3 s, a little apart on the way); a sprint into a door's shoulder and a throw out of a sprint were not looked at with it on.
+- **A run carries its arms close** (`RUNARMS`, src/game/character.ts `runArms`, called on the standing pose once idle and gait are blended; 11-01,
+  the maintainer, of Sam sprinting up the screen: "sprint looks dainty when viewed from the back, maybe should have arms closer in?"). WAS: the run
+  clips' arms read as a run from the side and not from behind, where the camera is whenever he runs up the screen. Read in the shoulder line's own
+  frame, the sprint's elbows stand 10 to 20 cm out from the shoulders, its hands swing up to 35 cm wide of them and travel only 24 cm fore and aft
+  (the shoulders' twist, 25° either way, does the rest); the jog's arms are as wide. NOW, with the key on, each hand is put back in that frame:
+  0.3 of its sideways travel about 5 cm out, the elbow swivelled behind and below him, by the RUN's share of the pose (`lg.run`, jog through
+  sprint); and by the SPRINT's share 1.8 × its fore-aft travel and up to 14 cm higher at the front of the swing. Two shares, because a heavy kit
+  slows Sam's sprint to 3.5 m/s, which is part jog: a rule on the sprint clip alone gave that man half the tuck (the first cut of this did).
+  It is the run's own arms, not a layer and not a view's rule: any figure that jogs or sprints has it, every layer that owns an arm writes over it
+  (a sprint with the pistol in both hands, RUNREADY, is as it was), and it is not solved at all under a long gun at full weight. A thing in ONE
+  pumping fist (a can, or the pistol with RUNREADY down) comes in with its arm; the hand keeps its own turn on the forearm. Sam himself never holds
+  a jog (he walks at 1.6 m/s or sprints): the jog's tuck is seen on him only on the way in and out and under a heavy kit, and on a guard or a
+  civilian who runs with nothing in both hands. Switch: ON in the page (`?runarms=0` puts it off; the debugger ▸ the move panel ▸ 'running ▸ arms
+  carried close'), OFF in the module and on the frozen stand (`FROZEN_HOLDS['RUNARMS.on']`: `TPS_RUNARMS=1`); the journal carries the table and a
+  recording from before it replays the clips' arms. CHECK: `probes.ts runarms` (family player; `tools/qa/runarms-check.ts`; `RUNARMS_BREAK=1`
+  fails `arms` and `slowed`), both stands, the lobby, one seed: over a second of the sprint a hand is at most 14 cm out from its shoulder and an
+  elbow 15 (35 and 20 with the key down), nothing comes in past the shoulder, each hand travels 43 cm fore and aft (24); at 3.5 m/s a hand 14 and
+  an elbow 14 (34 and 21), travel 31 (24); with the pistol in both hands and with the rifle elbows and hands are where they are with the key down,
+  to the millimetre. It moves the pose and not the play: a minute of Sam sprinting at three guards with the AI on (the frozen stand, one seed)
+  ends with all four at the same places with the key up and down. LOOK AT IT: `pose-strip.ts sprint-bare` (capsules from straight behind and from the game's pitch behind; `sprint-bare-was` =
+  the clip's; `sprint-bare-side`, `sprint-bare-slow`, `jog-bare`, `jog-bare-was`), `pose-mesh.ts operator_1 sprint --set '{"RUNARMS":{"on":true}}'`
+  + `pose-mesh-raster.py` (the worn mesh). NOT SEEN, NOT PLAYED: never on a GPU; in the page only as numbers and one software still. First numbers
+  off the capsule strips and CPU-skinned stills at three points of the cycle. In the jog's strip the front forearm crosses the chest a little at
+  two points of the cycle. Whether an elbow touches a vest's pouches, the way into the sprint and out of it, a throw out of a sprint, and a
+  guard's or a civilian's run were not looked at.

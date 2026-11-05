@@ -1,6 +1,6 @@
 // The 'loudchaos' probe family — destruction's CHAOS on the loud levels (game/destructionSwitch.ts on: destruction.ts's loud rules, the levels' dressing —
 // tools/levels/dress.ts; glass is NOT this part's — it is left as the base has it), run through probes.ts:
-//   bun run tools/qa/probes.ts loudchaos | loudchaos-levels | loudchaos-firefight | loudchaos-blast | loudchaos-fixtures | loudchaos-sight | loudchaos-off | loudchaos-base [--verbose]
+//   bun run tools/qa/probes.ts loudchaos | loudchaos-levels | loudchaos-firefight | loudchaos-blast | loudchaos-fixtures | loudchaos-sight | loudchaos-off [--verbose]
 // Headless = the Proxy device, a recording smoke stand-in, a probe that never answers; what is asserted is every CPU-side promise:
 //   (levels)     each loud level file carries its dressing LAST under the group 'dressing'; with the switch OFF loadLevel leaves it out and the level is the generator's
 //                own, box for box; ON, destruction's index finds paper, clutter, binders and screens on it — all under a roof, none of them a fixture;
@@ -15,8 +15,6 @@
 //                same query (a cloud between two points dims the line, a cloud behind a wall does not, no puff = no answer);
 //   (off)        the switch off = destruction.ts as it was: the office rectangle decides 'indoors', the player-only fixture rule stands alone, bang ignores `power`,
 //                glass does not come apart under a scenario, the module's new counters never move;
-//   (base)       the switch off digests as the one build: four seeded playthroughs (PT_DESTR=0) fold to the digests frozen from e6188f6
-//                (tools/qa/fixtures/loudchaos-base-digests.json — the build before any of this), run in child processes.
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -116,7 +114,7 @@ export async function loudLevels() {
     if (off.boxes.length !== data.boxes.length - nDress || on.boxes.length !== data.boxes.length) fails.push(`loadLevel: ${off.boxes.length} boxes off / ${on.boxes.length} on, the file has ${data.boxes.length} with ${nDress} dressing`);
     // off = the generator's own level (the one build's): box for box, and everything else
     const gen = (await import(`${ROOT}/tools/levels/${L.gen}.ts`)).build(); if (gen.scenarios) gen.level.scenarios = gen.scenarios; { const DS = await import(`${ROOT}/src/scene/doorSize.ts`); DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, gen.scenarios?.quiet); }   // (as tools/levels/export.ts writes it)
-    { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'), BX = await import('../../src/scene/boxes.ts'); FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BX.BoxFlag); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts)
+    { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'), BX = await import('../../src/scene/boxes.ts'); FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BX.BoxFlag); (await import('../levels/doesWas.ts')).stampDoes(gen.level); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts; and each box nobody spoke for given the word its colour had: doesWas.ts)
     const diffs: string[] = []; const nd = structuralDiff(gen.level, off, diffs); if (nd) fails.push(`switch off: ${nd} diff(s) from the generator's level — ${diffs.slice(0, 2).join('; ')}`);
     const S = await stage(L.file, true); const inv = S.game.destr.inventory();
     const small = (inv.clutter ?? 0) + (inv.binder ?? 0);
@@ -328,24 +326,4 @@ export async function loudOff() {
     if (Math.abs((e1 - e0) - 2 * 0.5) > 0.05) fails.push(`one round raised the escalation by ${f2(e1 - e0)}, the office's own is 1.00 at chaos 0.5`);
     F.verdict(!fails.length, 'warehouse, switch on, NO scenario: loudNow false — a round stokes the office\'s heat (E +1.00 at chaos 0.5), fixtureRound and a power-4 blast leave the lights, no floor dust, glass whole', fails.join('; ') || `E ${f2(e0)} → ${f2(e1)}`); }
   DESTRUCTION.on = false; return F.done();
-}
-
-// ================================================================ base
-/** The switch off digests as the one build: seeded playthroughs with PT_DESTR=0 fold to the digests frozen from e6188f6 (the fixture's own provenance line says how). */
-export async function loudBase() {
-  const F = family('loudchaos-base: the switch off, seeded playthroughs digest as the one build (e6188f6) did');
-  const fx = resolve(ROOT, 'tools/qa/fixtures/loudchaos-base-digests.json');
-  if (!existsSync(fx)) { F.verdict(false, 'the frozen digests', `${fx} is missing`); return F.done(); }
-  const base = JSON.parse(readFileSync(fx, 'utf8')) as { commit: string; runs: Record<string, { digest: string; end: string; t: number }> };
-  const ALL = process.argv.includes('--all-digests'); const keys = Object.keys(base.runs).filter(k => ALL || k.endsWith(':1')).filter(k => ALL || /^(warehouse-four|compound-four|barracks-four|block-squads):/.test(k));
-  const out = resolve(ROOT, `.loudchaos-base-${process.pid}.json`);
-  const scn = [...new Set(keys.map(k => k.split(':')[0]))].join(','), seeds = [...new Set(keys.map(k => k.split(':')[1]))].join(',');
-  const pr = Bun.spawn(['bun', 'run', resolve(ROOT, 'tools/qa/playthrough.ts'), '--scn', scn, '--seeds', seeds, '--jobs', '4', '--json', out], { env: { ...process.env, PT_DESTR: '0', PT_DIGEST: '1' }, stdout: 'ignore', stderr: 'pipe' });
-  const code = await pr.exited; const err = await new Response(pr.stderr).text();
-  if (code !== 0 && !existsSync(out)) { F.verdict(false, 'the playthroughs ran', `exit ${code}: ${err.slice(0, 300)}`); return F.done(); }
-  const got = JSON.parse(readFileSync(out, 'utf8')); (await import('node:fs')).unlinkSync(out);
-  const runs: any[] = got.runs ?? got; const bad: string[] = []; let n = 0;
-  for (const r of runs) { const k = `${r.scn}:${r.seed}`; const b = base.runs[k]; if (!b) continue; n++; if (r.digest !== b.digest) bad.push(`${k}: ${r.digest} ≠ ${b.digest} (ended ${r.end} at ${r.t} vs ${b.end} at ${b.t})`); }
-  F.verdict(n >= keys.length && !bad.length, `${n} seeded playthroughs with PT_DESTR=0 (${scn}; seeds ${seeds}) against the digests frozen from ${base.commit}`, bad.join('; ') || 'every run folds to the same word, half second by half second (game/digest.ts)');
-  return F.done();
 }

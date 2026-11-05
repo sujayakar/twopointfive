@@ -7,7 +7,8 @@
 //      the address the run was started from.
 //   node tools/qa/bench-page.cjs
 //   env: PORT (the dev server's, default 5199) · OUT (a folder for the report and a still per scene, default a temp one) · SIZE (the viewport, default
-//        320x180) · CAP (game seconds each scene plays, default 10) · DEADLINE (minutes the whole check may take, default 150) · STEP=script (below)
+//        320x180) · CAP (game seconds each scene plays, default 10) · DEADLINE (minutes the whole check may take, default 240:
+//        a whole run took 154 on a four-core box) · STEP=script (below)
 // The software adapter takes a second or so to draw a frame and its pass timers time the CPU: this proves the run's mechanics, no number in its report is a price.
 // Quality is pinned on the address (auto never settles on frames this slow, and the sweep waits for it). The run's own options (short windows, two sweep rows, no
 // cut on the wall's clock) are written into the run's record as each page opens, since a run started by the row carries none. A SCENE IS PLAYED BY THE PAGE'S
@@ -18,7 +19,7 @@
 // Exit 0 = every check passed, 1 = one failed (printed) or a page did not boot.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
-const PORT = process.env.PORT || 5199, OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'bench-')), DEADLINE = Number(process.env.DEADLINE || 150), CAP = Number(process.env.CAP || 10), [VW, VH] = (process.env.SIZE || '320x180').split('x').map(Number), SCRIPT = process.env.STEP === 'script';
+const PORT = process.env.PORT || 5199, OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'bench-')), DEADLINE = Number(process.env.DEADLINE || 240), CAP = Number(process.env.CAP || 10), [VW, VH] = (process.env.SIZE || '320x180').split('x').map(Number), SCRIPT = process.env.STEP === 'script';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };

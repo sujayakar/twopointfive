@@ -24,6 +24,7 @@
 //   bun run tools/qa/lesson-run.ts tut-kit                the scripted player through every step to the debrief
 //   page: ?levelFile=tut-kit.json&roomclear=1&squad4&hour=night
 import type { Vec3 } from '../../src/math/vec';
+import { glowShape } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, LessonData, LessonStep, StructureData, Rect, IssueData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -34,6 +35,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from '../../levels/tut-kit.script';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-kit';
 export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by levels/tut-kit.script.ts. Regenerate: bun run tools/levels/export.ts tut-kit';
@@ -223,11 +225,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-kit: the van's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
     const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT[0], mid[1] - VAN_AT[1]), nx = (mid[0] - VAN_AT[0]) / l, nz = (mid[1] - VAN_AT[1]) / l;
     heads.forEach((b, k) => {
-      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], flags: BoxFlag.NoShadow });
+      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], shape: glowShape(b.shape, b.h, [0.008, b.h[1] + 0.006, b.h[2] + 0.006], [0.04, 0, 0], 0.006), flags: BoxFlag.NoShadow });
       lights.push({ kind: 'spot', pos: [b.c[0] + nx * 0.08, b.c[1], b.c[2] + nz * 0.08], dir: norm([nx, -0.1, nz]), color: [1.0, 0.93, 0.78], intensity: 150, range: 14, innerDeg: 12, outerDeg: 30, name: `van_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: fb, radius: 0.06, mains: false });
     });
     tails.forEach((b, k) => {   // (each a small red light of its own, so a round puts the glow out as it does any lamp's)
-      const fb = add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], flags: BoxFlag.NoShadow });
+      const fb = add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], shape: glowShape(b.shape, b.h, [0.006, b.h[1] + 0.006, b.h[2] + 0.006], [-0.03, 0, 0], 0.006), flags: BoxFlag.NoShadow });
       lights.push({ kind: 'point', pos: [b.c[0] - nx * 0.1, b.c[1], b.c[2] - nz * 0.1], dir: [0, -1, 0], color: [1.0, 0.12, 0.08], intensity: 1.6, range: 3, innerDeg: 0, outerDeg: 180, name: `van_tail_${k}`, group: 'exterior', enabled: true, volumetric: 0, fixtureBox: fb, radius: 0.04, mains: false });
     });
     const bay: Vec3 = [VAN_AT[0] - nx * 2.3, 1.84, VAN_AT[1] - nz * 2.3];
@@ -266,13 +268,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // the gun court's own lamp: a mast by the shop's corner, its arm out over the court, the head between the nest and the gap. It lights the gun, the sandbags'
   // far end and the gap, and stops short of the shop's door: the ground he stands on for the door is lit by the shop's lamp alone (the line that has him shoot it out)
-  { const x = 22.3, z = 9.9, h = 4.6, px = 24.6;
-    add({ c: [px, (h + 0.11) / 2, z], h: [0.05, (h + 0.11) / 2, 0.05], ...M.galv });
-    add({ c: [(px + x) / 2, h + 0.085, z], h: [(px - x) / 2 + 0.1, 0.025, 0.025], ...M.galv });
-    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
-    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
-    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 120, range: 10, innerDeg: 34, outerDeg: 58, name: 'lamp_gun', group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1 });
-  }
+  const WARM = { color: [1.0, 0.8, 0.5] as Vec3, volumetric: 0.25, mains: true };                 // (this halt's lamps: warmer and hazier than the kit's own, on the mains)
+  G.yardLamp(22.3, 9.9, 'lamp_gun', { ...WARM, height: 4.6, axis: 'x', reach: 24.6 - 22.3, pole: 0.05, intensity: 120, range: 10, innerDeg: 34, outerDeg: 58 });
 
   // ---- the ground's marks: wheel tracks, worn earth, stains, the stones along the drive ----
   // Flat things are in three layers a millimetre and more apart (worn earth under the wheel tracks under a stain), each darker than what it lies on and none
@@ -381,18 +378,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // (the moon stands behind the shop, low over the back of the halt: the shop's own front, the door he blows and the wall he waits against, is in its
   //  shadow, so the lamp over the door is the one light on him there and shooting it out leaves him in the dark)
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([-0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
-  const lamp = (x: number, z: number, name: string, h = 3.4, outerDeg = 52, side = -1) => {
-    add({ c: [x, (h + 0.11) / 2, z + side * 0.6], h: [0.04, (h + 0.11) / 2, 0.04], ...M.galv });
-    add({ c: [x, h + 0.085, z + side * 0.3], h: [0.025, 0.025, 0.26], ...M.galv });
-    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
-    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
-    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 90, range: 9, innerDeg: outerDeg - 22, outerDeg, name, group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1 });
-  };
-  lamp(10.4, 12.2, 'lamp_gate'); lamp(LAMP[0], LAMP[2], 'lamp_shop', LAMP[1], 46, 1);   // (its pole on the far side of its head: clear of the way from beside the door to the doorway, and of a pistol's line to the lamp from behind the barrier)
+  G.yardLamp(10.4, 12.2, 'lamp_gate', WARM); G.yardLamp(LAMP[0], LAMP[2], 'lamp_shop', { ...WARM, height: LAMP[1], outerDeg: 46, reach: 0.6 });   // (its pole on the far side of its head: clear of the way from beside the door to the doorway, and of a pistol's line to the lamp from behind the barrier)
 
   // ---- the breaker box, on the gun court's north wall where the view sees it, and the beacon every level carries ----
   grp('breaker');
-  const brk = add({ c: [BREAKER[0], BREAKER[1], BREAKER[2]], h: [0.28, 0.36, 0.045], albedo: [0.42, 0.44, 0.45], name: 'mains_box' });
+  const brk = add({ c: [BREAKER[0], BREAKER[1], BREAKER[2]], h: [0.28, 0.36, 0.045], albedo: PANEL_GREY, name: 'mains_box' });
   const led = add({ c: [BREAKER[0] - 0.18, 1.62, BREAKER[2] + 0.05], h: [0.015, 0.015, 0.01], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [BREAKER[0] + 0.2, 2.05, BREAKER[2] - 0.03], h: [0.015, 0.36, 0.012], ...M.plasticBlack });   // its cable, up the wall and over
   grp('beacons');

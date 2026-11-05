@@ -1,5 +1,6 @@
 // The 'wet' family (game/wet.ts — the weather's other half: whoever stands in the rain soaks), run through probes.ts:
 //   bun run tools/qa/probes.ts wet | wet-soak | wet-roof | wet-off | wet-reset | wet-cast | wet-prints | wet-shading   [--verbose]
+//   WET_BREAK=1   every stand-up has a rain that soaks nobody and the wet rows switched off: must FAIL (wet-off alone stays green: it asks for dry men)
 // PASS / FAIL each, all headless (the CPU model is the model; what the renderer makes of the numbers is judged in the browser):
 //   wet-soak      Sam under the open sky at rain rate 1 soaks 0 → 1 in ~6 s (WET.soakPerSec × (0.4 + 0.6 × rate)) with his beads up before him; walked
 //                 back inside the coat dries at WET.dryPerSec (about 25 s to nothing) and the beads are gone in WET.beadRunoffSecs; a lighter rain soaks slower;
@@ -25,6 +26,7 @@ const { makeBox } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { INTERIOR, ANNEX } = await import(`${ROOT}/src/game/weather.ts`);
 
 const DT = 1 / 60;
+const BRK = process.env.WET_BREAK === '1';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -33,7 +35,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 /** park everybody: nobody walks, hears or shoots — the storm and the wet model alone act; storm 0 = rain without strokes (a stroke's light is not the point here) */
-function quiet(W: any, rainRate = 1) { const { game } = W; game.playerInvisible = true; game.godMode = true; for (const gd of game.guards) { gd.hold = true; gd.pinned = true; } game.weather.storm = 0; game.weather.rainRate = rainRate; Object.assign(WET, WET_DEFAULTS); }
+function quiet(W: any, rainRate = 1) { const { game } = W; game.playerInvisible = true; game.godMode = true; for (const gd of game.guards) { gd.hold = true; gd.pinned = true; } game.weather.storm = 0; game.weather.rainRate = rainRate; Object.assign(WET, WET_DEFAULTS);
+  if (BRK) { WET.soakPerSec = 0; (game.engine.settings as any).wetChars = false; } }   // WET_BREAK=1: the rain soaks nobody and the renderer is handed nothing — the family must go red
 const LOT: Vec3 = [16, 0, 26.2];          // open asphalt south of the facade, under nothing
 const LOBBY: Vec3 = [7, 0, 19.5];         // indoors
 async function fresh(seed = 11, rainRate = 1) { Math.random = seeded(seed); const W = await standUp(); quiet(W, rainRate); return W; }
@@ -234,11 +237,16 @@ export async function wetShading() {
   const W = await fresh(71); const { game } = W;
   const c = game.player.char;
   const IF = CHAR_INST_BYTES / 4;   // floats per instance (anim/characters.ts)
-  const inst = (): number[] => Array.from(((game.chars as any).instData as Float32Array).subarray(8, 24));   // Sam is instance 0: floats 8‥11 = wet row, 12‥19 = the look knobs, 20‥23 = the waterline row (line, band, 0, 0)
+  // Sam is instance 0: floats 8‥11 = wet row, 12‥19 = the look knobs, 20‥21 = the waterline (line, band), 23 = spare. Word 22 is NOT a wet float: it is the cast's part mask
+  // (anim/characters.ts PARTS_AT, a u32 on both sides), which a man with a kit carries wet or dry, so it is read apart and held to his own mask.
+  const PARTS_WORD = 22;
+  const inst = (): number[] => { const d = (game.chars as any).instData as Float32Array; return [...d.subarray(8, PARTS_WORD), d[PARTS_WORD + 1]]; };
+  const partsWord = (): number => new Uint32Array(((game.chars as any).instData as Float32Array).buffer)[PARTS_WORD];
+  const partsOk = (when: string) => { if (partsWord() !== ((c.parts ?? 0) >>> 0)) f.push(`${when}: the part mask's word reads ${partsWord()} (his mask ${(c.parts ?? 0) >>> 0})`); };
   const allZero = (a: number[]) => a.every(x => x === 0);
   const f: string[] = [];
   // dry, switch on → zeros
-  W.step(DT); if (!allZero(inst())) f.push(`dry man, switch on: ${inst().map(f2).join(',')}`);
+  W.step(DT); if (!allZero(inst())) f.push(`dry man, switch on: ${inst().map(f2).join(',')}`); partsOk('dry');
   { const out = new Float32Array(4); wetInstance(game, c, true, out, 0); if (!allZero(Array.from(out))) f.push('wetInstance(dry, on) not zero'); }
   // wet, switch on → his numbers + the knobs
   soak(game, c, 0.8, 0.6, 0.9); W.step(DT);
@@ -246,11 +254,11 @@ export async function wetShading() {
     if (!(a[3] > 0)) f.push('phase 0 for Sam (want a per-man offset > 0)');
     const knobs = [WET.beadDensity, WET.beadSize, WET.trailLen, WET.roughWet, WET.roughDry, WET.darken, WET.darkenMul, WET.specGain];
     for (let i = 0; i < 8; i++) if (Math.abs(a[4 + i] - knobs[i]) > 1e-6) f.push(`knob ${i}: ${a[4 + i]} vs ${knobs[i]}`); }
-  { const a = inst(); if (!(a[12] === WET_LINE_ALL && Math.abs(a[13] - WET.lineBand) < 1e-6 && a[14] === 0 && a[15] === 0)) f.push(`waterline row for a rain-soaked man ${a.slice(12, 16).map(f2).join(',')} (want ${WET_LINE_ALL}, ${WET.lineBand}, 0, 0: all of him)`);
+  { const a = inst(); if (!(a[12] === WET_LINE_ALL && Math.abs(a[13] - WET.lineBand) < 1e-6 && a[14] === 0)) f.push(`waterline row for a rain-soaked man ${a.slice(12, 15).map(f2).join(',')} (want ${WET_LINE_ALL}, ${WET.lineBand} and a spare 0: all of him)`); partsOk('soaked');
     soak(game, c, 1, 0, 0, 0.55); W.step(DT); const b = inst(); if (!(Math.abs(b[12] - 0.55) < 1e-6 && b[1] === 0)) f.push(`wet to the knee: line ${f2(b[12])} beads ${f2(b[1])} (want 0.55, 0)`); soak(game, c, 0.8, 0.6, 0.9); W.step(DT); if (inst()[12] !== WET_LINE_ALL) f.push('a whole-man soak after a waded one keeps the old line'); }
   // wet, switch OFF → zeros the very next upload
   (game.engine.settings as any).wetChars = false; W.step(DT);
-  if (!allZero(inst())) f.push(`switch off, still wet: ${inst().map(f2).join(',')} (want zeros)`);
+  if (!allZero(inst())) f.push(`switch off, still wet: ${inst().map(f2).join(',')} (want zeros)`); partsOk('switch off');
   { const out = new Float32Array(4); wetInstance(game, c, false, out, 0); if (!allZero(Array.from(out))) f.push('wetInstance(wet, off) not zero'); }
   // back on → numbers again; then dry by hand → zeros
   (game.engine.settings as any).wetChars = true; W.step(DT); if (allZero(inst())) f.push('switch back on: still zeros');
@@ -258,6 +266,6 @@ export async function wetShading() {
   // a guard's row: instance 1 = guards[0]
   soak(game, game.guards[0].char, 1, 1, 1); W.step(DT);
   { const gc = game.guards[0].char; const g1 = Array.from(((game.chars as any).instData as Float32Array).subarray(IF + 8, IF + 12)); if (!(Math.abs(g1[0] - gc.wet) < 1e-6 && Math.abs(g1[1] - gc.beads) < 1e-6 && gc.wet > 0.98 && gc.beads > 0.98)) f.push(`guard 0's row ${g1.map(f2).join(',')} vs his ${f2(gc.wet)}/${f2(gc.beads)}`); if (!allZero(inst())) f.push('Sam\'s row nonzero while only the guard is wet'); }
-  F.verdict(f.length === 0, 'instance floats 8‥19: zeros for a dry man; (wet, beads, rain, phase>0) + the eight WET knobs when soaked; zeros the frame after settings.wetChars goes off though he is still wet; back when it returns; zeros after dryAll; a wet guard fills HIS row and not Sam\'s', f.join('; ') || 'as specified');
+  F.verdict(f.length === 0, 'instance floats 8‥21 and 23: zeros for a dry man; (wet, beads, rain, phase>0) + the eight WET knobs when soaked; zeros the frame after settings.wetChars goes off though he is still wet; back when it returns; zeros after dryAll; a wet guard fills HIS row and not Sam\'s; word 22 is his part mask, wet or dry', f.join('; ') || 'as specified');
   return F.done();
 }

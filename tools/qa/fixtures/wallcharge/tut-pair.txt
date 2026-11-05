@@ -1,0 +1,4 @@
+# places for a wall charge on levels/tut-pair.json: on the frozen stand, then on the shipped stand (its lived-in rooms in)
+# given up on purpose (the second count): seven places on one metre of the yard's west wall just south of the truck gate, behind the south
+# gate marker (a drum and two tyres), which makes the road read as a road at the gate. Nobody on this mission carries a wall charge
+645 638

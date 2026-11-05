@@ -60,7 +60,7 @@
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
 import { eachSeat, seatShare } from './seats';
 import { SideMap, SideSet } from '../math/side';
-import { HOLDFIRE, holdFireOrder, holdFireOnMan } from './holdfire';   // (called / read inside blow / goMen / testStacks only)
+import { HOLDFIRE, holdFireOrder, holdFireHoldsTarget } from './holdfire';   // (called / read inside blow / goMen / testStacks only)
 import { FRAG, exposedTo, fragRunning } from './frag';
 import { moraleBlast } from './morale';
 import { Vec3, v3, clamp, lerp, wrapAngle } from '../math/vec';
@@ -102,12 +102,13 @@ import { SQUADNET, inFlood, plainCall, roomCall } from './squadnet';   // (calle
 import { inSight } from './autopilot';
 import { STACKROOM, stackRoomFix, stackRoomHas, stackRoomKeeps, stackViewReach, stackViewOpen } from './stackroom';
 import { SAMSTUN, dazzlePlayer } from './samstun';
-import { rearHolds, rearLast, rearWatcher } from './rearwatch';
+import { rearWatcherWaits, rearLast, rearWatcher } from './rearwatch';
 import { gunFirst, gunTurn, gunBefore } from './gunroles';   // (called inside firstIn / enter only)
 import { OWNCHARGE } from './owncharge';   // (a leaf: the player's own charges' one switch)
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { PICTURE, PICTURE_STATS, anyIdea, safestSets } from './picture';
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
+import { word } from './belief';
 
 /** `WORDCUTS_BREAK=1` (a check's own word): the rule's body left out, everything else as it is */
 const WORDCUTS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WORDCUTS_BREAK === '1';
@@ -448,6 +449,19 @@ export const DOORTOOLS = {
    *  `behind` — asks only a squad of four, and only then). false: the row is asked when it is given and never again, as it was. Off here; the
    *  page raises it (`?tossmate=0` off) */
   tossMate: false,
+  /** A DOOR CHARGE ORDER IS CARRIED OUT OR ANSWERED (ON in the page — `?chargeanswer=0` — off here and on the frozen harness stand, `TPS_CHARGEANSWER=1`;
+   *  a FROZEN_HOLDS row). Off the mission cards' dry run of the two hostage rescues (11-04): a charge ordered from the mission's start, a defender came
+   *  through that door and locked it behind him with the pair twenty metres off, the order ended there on "door's open.", and the pair walked up to
+   *  the shut door and stood at it — one reading 'setting the charge' — until the captor's clock ran out. With it: (1) the order asks about the leaf
+   *  what the player is shown of it (`knownOpen`: the fog's own record of the door — where an eye of the team's last had it): a leaf that swings and
+   *  shuts again out of the team's sight is nobody's news, the charge goes on the door they find; one the picture has open ends the order with the
+   *  setter saying so, and the row is refused on the same question. (2) a charge order over short of its charge (`short`: the door open, never made
+   *  the door, the bag empty at the lock, the charge off a door that came open) leaves every man still on it HOLDING on that door — the order book's
+   *  own 'hold', gun on the door, on the stand-off mark he was dealt, or where he stands when the mark is across the open doorway from him (openHand):
+   *  nobody keeps a charge order's assignment with no charge order behind it, and the setter of any squad is off the lock (the four's own case for
+   *  that is this one). (3) a charge that comes off the door under the men stood off from it is SAID by the setter; the panel's line alone told it.
+   *  false = as it was. */
+  chargeAnswer: false,
   /** NO POINT OF AN ENTRY IN ANOTHER DOOR'S FRAME. The barracks (rebuild/missions/faults.md B2): the gallery entry by n_end dealt one of its points on the
    *  threshold of n4b, a door in the gallery's side wall 1.7 m on — its floor is floor to the nav grid and nothing solid stands between, so the hand of the
    *  door with no room took it; a man was left standing in an uncleared doorway, and entrypoints.ts had no floor on that hand to move him to. `podFrames`
@@ -740,7 +754,8 @@ export function doorPt(d: Door, a: number, b: number, side: 1 | -1, y = 0): Vec3
 export const alongOf = (d: Door, p: Vec3) => { const th = d.def.closedDir; return (p[0] - d.def.hinge[0]) * Math.cos(th) + (p[2] - d.def.hinge[1]) * Math.sin(th); };
 /** metres off the frame line on face `side` (negative: the other face) */
 export const offOf = (d: Door, p: Vec3, side: 1 | -1) => { const th = d.def.closedDir; return (Math.cos(th) * (p[2] - d.def.hinge[1]) - Math.sin(th) * (p[0] - d.def.hinge[0])) * side; };
-const isOpen = (d: Door) => !d.latched && Math.abs(d.angle) >= 0.6;
+const OPEN_RAD = 0.6;
+export const isOpen = (d: Door) => !d.latched && Math.abs(d.angle) >= OPEN_RAD;
 const N4: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 /** is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them: a line straight up from head height that meets nothing) */
 const SKY = new SideMap<object, { n: number; open: boolean }>('doortools.SKY');
@@ -809,7 +824,7 @@ export class DoorTools {
         if (this.looseOn(t)) return this.standoffFits(men, t, true);   // (owncharge.ts: a charge the player set by hand, from its own face: they stand off on it)
         if (this.chargeOn(t.door)) return true;
         if (t.door.def.steel) return "steel. a charge won't cut it.";
-        if (isOpen(t.door)) return "it's open.";
+        if (DOORTOOLS.chargeAnswer ? this.knownOpen(t.door) : isOpen(t.door)) return "it's open.";
         if (this.charges <= 0) return 'no charges left.';
         if (this.ops.some(o => o.kind === 'charge' && o.door === t.door && o.phase === 'place')) return 'already on it.';
         return this.standoffFits(men, t);
@@ -1030,7 +1045,7 @@ export class DoorTools {
     const g = this.g, S = g.orders;
     for (const gd of this.roster) { if (gd.state === 'dead') continue; const A = S.of(gd);
       if (!A || A.order !== 'stack' || !A.door || !A.arrived || A.stance !== 'stack' || !A.post || flat(gd.char.pos, A.post) > 0.6) continue;
-      if (HOLDFIRE.stackSet && (holdFireOnMan(g, gd) || (HOLDFIRE.stackWait && this.stackHeld(A.door)))) continue;   // (HOLDFIRE.stackSet, off: the handle is tried as before the key; stackWait off: the lead's own fresh answer only. holdfire.ts: stacked with his gun held on a man nobody may shoot yet — no hand goes to the handle, and no handle's noise to that man, until his gun is the door's; false with its switch off. … or the stamp of the orders' last tick says so of ANY man of this stack: the frame his man is lost the fresh answer is 'no' beside last frame's `arrived`, and a rattle is heard by the man the SECOND is held on as well)
+      if (HOLDFIRE.stackSet && (holdFireHoldsTarget(g, gd) || (HOLDFIRE.stackWait && this.stackHeld(A.door)))) continue;   // (HOLDFIRE.stackSet, off: the handle is tried as before the key; stackWait off: the lead's own fresh answer only. holdfire.ts: stacked with his gun held on a man nobody may shoot yet — no hand goes to the handle, and no handle's noise to that man, until his gun is the door's; false with its switch off. … or the stamp of the orders' last tick says so of ANY man of this stack: the frame his man is lost the fresh answer is 'no' beside last frame's `arrived`, and a rattle is heard by the man the SECOND is held on as well)
       if (A.heldSet) continue;   // (silent.ts SILENT.stackSet: a silent man likewise — read off the answer his `arrived` was counted by, not asked afresh: this runs before the orders' tick, and the frame his man is lost a fresh 'no' beside last frame's `arrived` would put his hand on the handle with his gun still off the door)
       this.test(A.door, sideOf(A.door, gd.char.pos), gd, true); }
     for (const it of g.nearby) if (it.kind === 'door' && it.door && it.inReach && !isOpen(it.door) && (it.verb === 'pick' || it.verb === 'kick' || it.verb === 'rattle' || it.verb === 'nocode' || it.verb === 'code')) this.learn(it.door, sideOf(it.door, g.player.char.pos), false);
@@ -2152,6 +2167,30 @@ export class DoorTools {
     this.beat(op, `end: ${why}`);
     this.done.push(Object.assign(op, { ended: why })); if (this.done.length > 12) this.done.shift();
   }
+  /** DOORTOOLS.chargeAnswer, A CHARGE ORDER OVER SHORT OF ITS CHARGE (a man of it has just said why): the men still on it HOLD on that door, as the
+   *  order book's own 'hold' leaves a man with a door in his arc — gun on it, on the stand-off mark he was dealt; a man whose mark is across the open
+   *  doorway from him holds where he stands (openHand, as stayHands kept him). A group of their own: no other order's 'set.' waits on them. Off = the
+   *  order ends and its men are left as they were. */
+  private short(op: DoorOp, why: string) {
+    if (!DOORTOOLS.chargeAnswer) { this.end(op, why); return; }
+    const S = this.g.orders, d = op.door, c = d.frameCentre, open = isOpen(d) || this.knownOpen(d);
+    const left = op.men.filter(m => m.state !== 'dead' && op.post.has(m) && S.of(m) === op.mine.get(m));
+    const stay = new Set(open && DOORTOOLS.openHand ? left.filter(m => { const P = op.post.get(m)!.pos; return flat(m.char.pos, P) > 0.6 && this.crossesOpen(d, op.side, m.char.pos, P); }) : []);
+    for (const m of stay) { this.stats.handKept++; this.beat(op, `hand kept · ${m.callsign}`); }
+    this.end(op, why); if (!left.length) return;
+    S.newGroup();
+    for (const m of left) { const P = op.post.get(m)!, at: Vec3 = stay.has(m) ? [m.char.pos[0], 0, m.char.pos[2]] : P.pos;
+      S.assign(m, { order: 'hold', post: at, face: stay.has(m) ? Math.atan2(c[0] - at[0], c[2] - at[2]) : P.face, watch: [c[0], 1.1, c[2]], door: d, shy: d, stance: 'none', upper: 'aim', light: NIGHTBREACH.opLights, going: `to hold · ${doorWords(d)}`, there: `holding · ${doorWords(d)}` }); }
+  }
+  /** the charge came off the door under the men stood off from it (tickSet: the leaf came open, or went off its hinges — nothing else takes a set
+   *  charge from under its order): with chargeAnswer the setter says so and they hold (`short`) */
+  private chargeGone(op: DoorOp, hands: boolean) {
+    if (!DOORTOOLS.chargeAnswer) { if (hands && isOpen(op.door)) this.stayHands(op); this.end(op, 'the charge is gone'); return; }
+    this.g.say(op.lead, op.door.off ? "door's gone. charge went with it." : "door's open. charge is off."); this.short(op, 'the charge is gone');
+  }
+  /** the leaf stands open in the team's picture of it (fogofwar.ts doorHeld / doorShown: where an eye of the team's last had it — the leaf itself
+   *  while the picture is up to date, and always with the fog off) */
+  private knownOpen(d: Door): boolean { const F = this.g.fogOfWar; return F.doorHeld(d) ? Math.abs(F.doorShown(d)) >= OPEN_RAD : isOpen(d); }
   /** a canister this op threw and has not fired: left to its own short fuse (never a live can lying about for the long fuse it was thrown on) */
   private defuse(op: DoorOp) { const it = op.can; if (it && !it.fired && op.pass) { it.pos = v3.copy(op.pass.to); it.vel = v3.copy(op.pass.v0); it.heading = v3.yawOf(op.pass.v0); it.bounces = 0; it.settled = false; }   // (bangInto: an order cut short while the can is on its way to the door's edge — it goes in from there all the same, not on down the wall on our side)
     op.pass = undefined; if (it && !it.fired && it.kind !== 'frag') it.fuse = Math.min(it.fuse, DOORTOOLS.fuseAfterLand); }
@@ -2301,7 +2340,7 @@ export class DoorTools {
       }
       case 'enter': {
         if (K.threatFirst) this.threatDeal(op);
-        for (let i = op.queue.length - 1; i >= 0; i--) { const q = op.queue[i]; if (rearHolds(g, op, q.gd) || (DOORPATH.on ? !g.doorPath.mayGo(op, q, i) : t < q.at)) continue; op.queue.splice(i, 1);   // (doorpath.ts: let go by the room the man before him has, not by the clock)
+        for (let i = op.queue.length - 1; i >= 0; i--) { const q = op.queue[i]; if (rearWatcherWaits(g, op, q.gd) || (DOORPATH.on ? !g.doorPath.mayGo(op, q, i) : t < q.at)) continue; op.queue.splice(i, 1);   // (doorpath.ts: let go by the room the man before him has, not by the clock)
           if (op.men.includes(q.gd)) { op.pod.set(q.gd, q.pod); this.assign(op, q.gd, { post: q.pod.pos, face: q.pod.face, watch: null, shy: null, thru: op.door, pace: g.orders.knobs.entry, stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: true, going: `entering · ${name}`, there: 'holding the room' }); if (DOORPATH.on) g.doorPath.sent(op, q.gd, q.pod); } }   // (weapon light on as he takes the frame, as the breach drill's man)
         // Through the frame: his CORNERS first (near, then deep, on his own side of the door), then on his point the muzzle to one hand, to the other — and then
         // the room's floor LOOKED OVER until none of it is left unseen (the room fight takes the muzzle off any of these for a man he sees)
@@ -2358,18 +2397,20 @@ export class DoorTools {
         break;
       }
       case 'place': {   // the charge: he is at the lock for setSecs, then it is on the door and he walks off to the stand-off
-        if (isOpen(d)) { g.say(lead, "door's open.");
+        const A = op.mine.get(lead)!, at = A.arrived && flat(lead.char.pos, d.frameCentre) < 1.6;
+        if (K.chargeAnswer) {   // (the leaf as the team's picture has it — or as he finds it with his hands at the lock)
+          if (this.knownOpen(d) || (isOpen(d) && (at || !isNaN(op.setT)))) { g.say(lead, "door's open."); this.short(op, 'the door opened'); break; }
+        } else if (isOpen(d)) { g.say(lead, "door's open.");
           const P = op.post.get(lead);   // (the four: the OTHER pair opened it under him — he stands off with his mate, not at the lock of an open door reading 'setting the charge')
           if (P && g.orders.big) this.assign(op, lead, { post: P.pos, face: P.face, watch: [d.frameCentre[0], 1.05, d.frameCentre[2]], stance: 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: P.stackSide, going: 'standing off', there: `stood off · ${name}` });
           this.stayHands(op); this.end(op, 'the door opened'); break; }
-        const A = op.mine.get(lead)!;
         if (stowFight(g, lead, A, op)) { op.setT = NaN; op.t0 = t; break; }   // (workstow.ts: the fight has him — his hands are not on a charge; not set, nothing spent, and he starts over when it lets him go, `fightCap` at most at a stretch)
-        if (isNaN(op.setT)) { if (A.arrived && flat(lead.char.pos, d.frameCentre) < 1.6) op.setT = t + mateStowLead(); else if (!this.waiting(op, el)) { g.say(lead, "can't get on that door."); this.end(op, 'never made the door'); } break; }
+        if (isNaN(op.setT)) { if (at) op.setT = t + mateStowLead(); else if (!this.waiting(op, el)) { g.say(lead, "can't get on that door."); this.short(op, 'never made the door'); } break; }
         if (flat(lead.char.pos, d.frameCentre) > 1.6) { op.setT = NaN; break; }   // (walked off it: not set)
         mateStow(g, lead);   // (workstow.ts: his gun is out of his hands for it — the charge's clock began `mateDown` after he came onto it)
         if (t >= op.setT) { const o = doorPt(d, 0, 0, op.side), n1 = doorPt(d, 0, 1, op.side); chargeHands(g, lead.char, doorPt(d, d.def.width - 0.22, 0.025, op.side, 1.05), [n1[0] - o[0], 0, n1[2] - o[2]], t - op.setT, K.setSecs); }   // (handwork.ts: his hands on it while it goes on)
         if (t - op.setT < K.setSecs) break;
-        if (!this.take('charge')) { g.say(lead, 'no charges left.'); this.end(op, 'no charges'); break; }
+        if (!this.take('charge')) { g.say(lead, 'no charges left.'); this.short(op, 'no charges'); break; }
         this.set.push({ door: d, side: op.side, t, by: lead.callsign }); g.audio.play('lockPick', d.pos, 0.6);
         g.say(lead, 'charge set.'); this.beat(op, 'set');
         const P = op.post.get(lead)!;
@@ -2378,14 +2419,14 @@ export class DoorTools {
         break;
       }
       case 'standoff': {
-        if (!this.chargeOn(d)) { if (isOpen(d)) this.stayHands(op); this.end(op, 'the charge is gone'); break; }
+        if (!this.chargeOn(d)) { this.chargeGone(op, true); break; }
         { const near = op.men.filter(gd => flat(gd.char.pos, d.frameCentre) < K.backblastM + 0.05);   // (… and every one of them OUT of the backblast, not merely counted in on a mark a stride outside it: 'arrived' is said a foot short of the mark — so a man still inside it is waited on for as long as he is still walking, up to `stackCap`)
           if (!op.men.every(gd => this.arrived(op, gd)) ? this.waiting(op, el) : near.length > 0 && el < K.stackCap && (el < K.stillSecs || near.some(gd => g.time - op.mine.get(gd)!.movedT < K.stillSecs))) break; }
         g.say(lead, 'stood off. your call.'); g.msg(`charge set on the ${name}. press ${K.blowKey.replace('Key', '')} to blow it`);
         op.phase = 'armed'; op.t0 = t; this.beat(op, 'armed'); if (op.word) op.hold = 1;
         break;
       }
-      case 'armed': if (!this.chargeOn(d)) this.end(op, 'the charge is gone'); break;   // (blow() moves the op on itself)
+      case 'armed': if (!this.chargeOn(d)) this.chargeGone(op, false); break;   // (blow() moves the op on itself)
       case 'slice': {
         if (d.quietT > -1 && isOpen(d)) d.quietT = -1;   // (the opening they are working stays open)
         let all = true;
@@ -3269,7 +3310,7 @@ export class DoorTools {
 
   // ------------------------------------------------------------ the charge
   /** Sam's trigger: the set charge nearest him (or the one given) goes. Returns what it did, null with none set. */
-  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c)); }   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
+  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.col.window(() => this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
   private blowRaw(c: SetCharge | null): { knocked: number; stunned: number; backblast: number } | null {
     if (!c) return null;
     const g = this.g, K = DOORTOOLS, d = c.door, side = c.side, W = d.def.width, into = -side as 1 | -1;
@@ -3319,7 +3360,7 @@ export class DoorTools {
   private dazzle(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.dazzledUntil = Math.max(gd.dazzledUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs);
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     if (g.aiEnabled) gd.witness.dazzled++;
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.dazzledAt = v3.copy(at); gd.char.anim.hitFrom(v3.sub(gd.char.pos, at));
   }

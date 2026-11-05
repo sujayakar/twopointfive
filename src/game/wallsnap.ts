@@ -14,6 +14,7 @@
 //   the step, so the point under the reticle does not swim. No key is held for any of it.
 //
 //   WITHOUT THE KEY (`press`, a switch of its own under `on`): a move key held into a wall he is up against takes it, quiet or loud as above. Its key still does, where the row has one: the page's board gives it none (host/keymap.ts qFree).
+//   …AND AT A RUN (`pressRun`, a switch of its own under `press`): a sprint held straight into a wall takes it too, and is not what then takes him off it.
 //
 //   HEARD AND UNHURRIED (`voice`, `slow`, each a switch of its own under `on`): the landing and the step off have a sound each; the take runs twice as long.
 //
@@ -90,6 +91,11 @@ export const WALLSNAP = {
   pressAfterShot: 1.0,
   /** with a sidearm or a can in the hand (the hold puts it away) the key-less take waits until nobody is alert; false = whenever. The rifle stacks either way. */
   pressCalm: true,
+  /** AT A RUN TOO (a switch of its own; acts only with `press`; false = never at a run, as it was): Shift held with the key straight into a wall takes it as a
+   *  walk does — the same clock, the same faces, the same refusals — and the clock is counted from as far out as his pace needs (wsPressNear), so a sprint
+   *  arrives with the wait done and has the wall from pressFlow short of it, as a walk has. The run that put him on a wall is not then the run that takes him
+   *  off it: Shift is a way off again once it, or any move key of that run, has been let go or another pressed. */
+  pressRun: false,
   // ---- heard, and unhurried (two switches of their own, each acting only with `on`; false = the hold as it was)
   /** HEARD: his back landing on the plaster and his stepping off it each have a voice of their own (sfx 'wallOn' / 'wallOff', the player's ears only: no event is
    *  filed, nobody hears it), at these gains; the landing's replaces the scuff above. false = the scuff alone, and nothing on the way off */
@@ -104,6 +110,10 @@ export function wsTakeSecs(dist: number, turn: number): number {
   const W = WALLSNAP; const t = W.takeBase + W.takePerM * dist + W.takePerTurn * Math.abs(turn) / Math.PI;
   return Math.min(W.takeMax, Math.max(W.takeMin, t)) * (W.slow ? Math.max(0.25, W.slowTake) : 1);
 }
+/** How far out (m between his body and the face) the key-less take's clock starts for a man closing on the face at `into` m/s. pressNear, and with pressRun
+ *  further for a man who would cover more than that inside the wait: pressSecs of his pace short of pressFlow, so the wait is done as he gets there (a walk
+ *  of 1.55 m/s is inside pressNear either way; a sprint of 4.7 is counted from 1.05 m). */
+export function wsPressNear(into: number): number { const W = WALLSNAP; return W.pressRun ? Math.max(W.pressNear, W.pressFlow + W.pressSecs * Math.max(0, into)) : W.pressNear; }
 /** ease-out by power p: 0 → 0, 1 → 1, fastest at the start */
 export function wsEase(s: number, p: number): number { return 1 - Math.pow(1 - clamp01(s), p); }
 /** the landing's settle, t seconds after the back arrived: 0 → 1 at hitPeak → gone by ~6 × that */

@@ -33,7 +33,7 @@
 //                      owner that refuses keeps its men; a show taking the floor drops every order
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
-const { ORDERS, doorIdWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorIdWords: a door's name as the squad says it — it follows the dialogue pass, so the expected words do too)
+const { ORDERS, doorWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorWords: a door's name as the HUD says it — its id's words, or the rooms it joins where the door names rule is on — so the expected words follow the stand)
 const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
 const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
 const { DOORSTAY, DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
@@ -46,6 +46,7 @@ const { SILENT } = await import(`${ROOT}/src/game/silent.ts`);
 const { SQUADTHROW } = await import(`${ROOT}/src/game/squadthrow.ts`);
 const { START } = await import(`${ROOT}/src/game/startfile.ts`);
 const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
+const { holdFireHoldsTarget } = await import(`${ROOT}/src/game/holdfire.ts`);
 
 const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -311,7 +312,7 @@ export const ordersCover = guarded(async () => {
   const ackA = cover('cover that way (a floor point behind them, to the west)', WEST, 2, WORDS.on ? /^covering (?!.*\b(north|south|east|west)\b)\S/ : /^covering west$/, tA);   // (the dialogue pass on: the place by its name or 'that way', never a bearing — a row on the HUD has no compass)
   const tB = g.time;
   const W = R.door('breakroom_w');
-  const ackB = cover('cover this door (the break room\'s west door)', W.frameCentre, 2, new RegExp(`^covering ${doorIdWords('breakroom_w')}$`), tB);
+  const ackB = cover('cover this door (the break room\'s west door)', W.frameCentre, 2, new RegExp(`^covering ${doorWords(W)}$`), tB);
   verdict(ackA.length === 1 && ackB.length === 1, 'each cover order is acknowledged once', `${[...ackA, ...ackB].map(s => `${s.who} "${s.text}"`).join(', ')}`);
   verdict(!R.samHit, 'Sam was not hit', `hit ${R.samHit}`);
   return done();
@@ -348,7 +349,7 @@ export const ordersStack = guarded(async () => {
     verdict(clear && split === !file && o.every(x => x > 0.25 && x < 0.9) && jamb.every(x => x < (split ? 0.8 : 1.7)) && dist(b1.char.pos, b2.char.pos) > 0.6, `${name}: ${file ? 'in file on the one free jamb' : 'a man on each jamb'} — out of the opening, against the wall, on Sam's side of it`,
       `${split ? 'one each side of the door' : 'both in file on one side'} · past the jamb ${jamb.map(f2).join(' / ')} m · off the wall (Sam's side +) ${o.map(f2).join(' / ')} m · opening 0‥${f2(w)}, the men at ${a.map(f2).join(' / ')}`);
     // (holdfire.ts, on as shipped: a man whose gun the rule holds on a man who has not noticed the team — and who has not fired — is not turned to the door; false for every man with the rule off, where each muzzle must be on it)
-    const { holdFireOnMan } = await import(`${ROOT}/src/game/holdfire.ts`), onMan = men.map((m: any) => { const t = g.fight.opOf(m)?.tgt; return t ? Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, t.char.pos))) : NaN; }), heldMan = men.map((m: any, i: number) => holdFireOnMan(g, m) && (g.fight.opOf(m)?.rounds ?? 0) === 0 && onMan[i] < 0.2), nHeld = heldMan.filter(Boolean).length;
+    const {  } = await import(`${ROOT}/src/game/holdfire.ts`), onMan = men.map((m: any) => { const t = g.fight.opOf(m)?.tgt; return t ? Math.abs(wrap(m.char.aimYaw - yawTo(m.char.pos, t.char.pos))) : NaN; }), heldMan = men.map((m: any, i: number) => holdFireHoldsTarget(g, m) && (g.fight.opOf(m)?.rounds ?? 0) === 0 && onMan[i] < 0.2), nHeld = heldMan.filter(Boolean).length;
     verdict(men.every((_: any, i: number) => heldMan[i] || (dFace[i] < 0.3 && onDoor[i] < 0.6)), `${name}: bladed along the wall toward the door, muzzles on it`, `${men.length - nHeld} on the door${nHeld ? ` · ${nHeld} held on a man (hold fire, no round fired, gun ${onMan.filter((_: number, i: number) => heldMan[i]).map(f2).join(' / ')} rad off him)` : ''} · off the wall line ${dFace.map(f2).join(' / ')} rad · gun off the doorway ${onDoor.map(f2).join(' / ')} rad · stance ${men.map((m: any) => m.script?.stance).join(' / ')}`);
     // ('the door untouched': with every leaf on its closer (the harness's older stand) the door they stack on is shut, and stays shut. Where doors stay as they
     //  are left (DOORSTAY.on, as the page has it) a pair that came THROUGH it to reach Sam's side has left it open behind them: there the leaf is where their
@@ -356,7 +357,7 @@ export const ordersStack = guarded(async () => {
     const leaf0 = DOORSTAY.on ? d.angle : 0;
     const here = men.map((m: any) => [...m.char.pos]); R.step(60 * 6); const drift = men.map((m: any, i: number) => dist(m.char.pos, here[i]));
     const sets = R.lines(/^set\.$/, t0); const words = men.map((m: any) => O.statusOf(m));
-    verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => s === `stacked · ${doorIdWords(name)}`) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
+    verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => s === `stacked · ${doorWords(d)}`) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
       `drift ${drift.map(f2).join(' / ')} m · set. ${sets.map(s => `${s.who} @${f2(s.t - t0)} s`).join(', ') || 'never'} · "${words[0]}" · leaf angle ${f2(d.angle)}${leaf0 ? ` (${f2(leaf0)} as the hold began)` : ''}`);
     if (k === 1) {   // the cursor on a stacked man is the man (he stands inside the door's pick radius), on the doorway still the door
       const chest: number[] = [b1.char.pos[0], 1.2, b1.char.pos[2]];

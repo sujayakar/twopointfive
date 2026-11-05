@@ -23,11 +23,12 @@ export async function blastholeCheck(names: string[] = LEVELS, opts: { max?: num
   const { blast, FRAG } = await import(`${ROOT}/src/game/frag.ts`); const { HE40 } = await import(`${ROOT}/src/game/he40.ts`);
   const { FURN } = await import(`${ROOT}/src/game/furnblast.ts`);
   const { DESTRUCTION, FURNBLAST } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
-  const { paletteName } = await import(`${ROOT}/src/game/particleFx.ts`); const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+  const { doesOf } = await import(`${ROOT}/src/scene/materials.ts`); const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
   const BREAK = process.env.BLASTHOLE_BREAK === '1'; let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   const was = { lived: LIVED.on, d: DESTRUCTION.on, f: FURNBLAST.on, m: FURN.mouth.on, rnd: Math.random };
-  const STRUCT = new Set(['carpet', 'carpetBlue', 'carpetRed', 'lino', 'stone', 'asphalt', 'grass', 'wall', 'wallDark', 'concrete', 'ceiling', 'glassFrame', 'glass', 'glassExt', 'partRed', 'partBlue', 'partTan']);
+  /** the building, by what a box does (scene/materials.ts `struct`), less the one row that is also counters and appliances */
+  const structural = (o: any): boolean => { const d = doesOf(o); return !!d.struct && !d.counter; };
   const R = 0.3, Y0 = 0.2, Y1 = 1.7, standoff: number = HE40?.standoff ?? 0.15;
   console.log(`\n=== blasthole: a hole a blast opens can be walked through${BREAK ? ' (BREAK: the rule off)' : ''} ===`);
   try {
@@ -64,7 +65,7 @@ export async function blastholeCheck(names: string[] = LEVELS, opts: { max?: num
         g.restartEncounter(); g.godMode = true; g.aiEnabled = false; W.step(1 / 60);
         const t0 = g.time; blast(g, [S.at[0], S.at[1] - FRAG.lift, S.at[2]], { who: g.player.char.id, name: '40 mm grenade' }); for (let f = 0; f < 3; f++) W.step(1 / 60);
         const took: number[] = g.destr.furn.snapshot()?.m ?? []; if (took.length && !ck) ck = { name, at: [S.at[0], S.at[1], S.at[2]], wall: S.i };
-        for (const j of took) if (!taken.has(j)) { const o = boxes[j]; taken.set(j, `#${j} ${paletteName(o.albedo) ?? 'unnamed'} ${(o.h[0] * 2).toFixed(2)}×${(o.h[1] * 2).toFixed(2)}×${(o.h[2] * 2).toFixed(2)} top ${(o.c[1] + o.h[1]).toFixed(2)}`); }
+        for (const j of took) if (!taken.has(j)) { const o = boxes[j]; taken.set(j, `#${j} ${o.does ?? 'unnamed'} ${(o.h[0] * 2).toFixed(2)}×${(o.h[1] * 2).toFixed(2)}×${(o.h[2] * 2).toFixed(2)} top ${(o.c[1] + o.h[1]).toFixed(2)}`); }
         const rows = walls.changes.filter((c: any) => c.kind === 'hole' && c.id === S.i && c.t >= t0); if (!rows.length) { tally.noHole++; continue; }
         const u0 = Math.min(...rows.map((c: any) => c.rect[lx === 0 ? 0 : 1])), u1 = Math.max(...rows.map((c: any) => c.rect[lx === 0 ? 2 : 3]));
         const face = b.c[ax] + s * b.h[ax], goal = face + s * (R + 0.3);
@@ -88,11 +89,11 @@ export async function blastholeCheck(names: string[] = LEVELS, opts: { max?: num
           for (let j = 0; j < boxes.length; j++) {
             const o = boxes[j]; if (o.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic)) continue; if (o.c[1] - o.h[1] >= Y1 || o.c[1] + o.h[1] <= Y0) continue;
             const dx = Math.max(o.c[0] - o.h[0] - c[0], 0, c[0] - o.c[0] - o.h[0]), dz = Math.max(o.c[2] - o.h[2] - c[2], 0, c[2] - o.c[2] - o.h[2]); if (Math.hypot(dx, dz) >= R) continue;
-            const nm = paletteName(o.albedo), br = walls.breakableAt(j);
+            const br = walls.breakableAt(j);
             const post = Math.min(o.h[0], o.h[2]) < 0.1 && o.c[1] + o.h[1] > 1.5;   // (a door frame's jamb)
-            if (o.flags & BoxFlag.Glass || br?.kind === 'wall' || j >= n && !br || post || (nm && STRUCT.has(nm))) { st = true; continue; }
+            if (o.flags & BoxFlag.Glass || br?.kind === 'wall' || j >= n && !br || post || structural(o)) { st = true; continue; }
             if (fixture.has(j)) { fx = true; continue; }
-            mine.push(`#${j} ${nm ?? 'unnamed'}${br ? ' (cover)' : ''} ${(o.h[0] * 2).toFixed(2)}×${(o.h[1] * 2).toFixed(2)}×${(o.h[2] * 2).toFixed(2)} top ${(o.c[1] + o.h[1]).toFixed(2)} vol ${(o.h[0] * o.h[1] * o.h[2] * 8).toFixed(2)}`);
+            mine.push(`#${j} ${o.does ?? 'unnamed'}${br ? ' (cover)' : ''} ${(o.h[0] * 2).toFixed(2)}×${(o.h[1] * 2).toFixed(2)}×${(o.h[2] * 2).toFixed(2)} top ${(o.c[1] + o.h[1]).toFixed(2)} vol ${(o.h[0] * o.h[1] * o.h[2] * 8).toFixed(2)}`);
           }
           if (st) { structure = true; continue; } if (fx) { fixt = true; continue; }
           for (const row of mine) if (!things.includes(row)) things.push(row);

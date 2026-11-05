@@ -40,6 +40,7 @@ import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedPieces, INK, h01 } from './livedPieces';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'registry';
 export const NOTES = 'The registry: a lobby, a lit gallery past a glass-fronted reading room and a blind copy room to the registrar\'s office, and a long dark way round through the stacks to its side door. The hostage rescue\'s level, built from the office kit. Regenerate: bun run tools/levels/export.ts registry';
@@ -76,7 +77,7 @@ const REGISTRY_KITVIEW: KitViewData = {
     { id: 'rg_lintel', c: [4, 2.525, 14.75], h: [0.12, 0.475, 0.45], material: 'render|concrete' },
     { id: 'rg_floor', c: [7, 0.002, 14], h: [3, 0.002, 10], material: 'stone', flags: ['Gloss'] },
     { id: 'rg_red', c: [7.03, 0.006, 14], h: [2.86, 0.0035, 9.83], albedo: [0.5, 0.15, 0.11], flags: ['NoShadow'] },
-    { id: 'rg_mat', c: [4.36, 0.016, 14.7], h: [0.2, 0.0035, 0.55], albedo: [0.06, 0.06, 0.065], flags: ['NoShadow'] },
+    { id: 'rg_mat', c: [4.36, 0.016, 14.7], h: [0.2, 0.0035, 0.55], albedo: [0.06, 0.06, 0.065], stuff: 'metal', flags: ['NoShadow'] },   // (a rubber mat, drawn as metal by its colour until 11-04: scene/stuff.ts drawnAs)
     { id: 'rg_back', c: [10, 1.5, 14], h: [0.06, 1.5, 10], material: 'wall' },
     { id: 'rg_ceiling', c: [7, 3.1, 14], h: [3.1, 0.1, 10.1], material: 'ceiling', flags: ['NoPrimary'] },
     { id: 'rg_panel', c: [5.3, 2.98, 12.5], h: [0.6, 0.02, 0.3], material: 'white', emissive: [11, 10.5, 9.5], flags: ['NoPrimary'] },
@@ -101,7 +102,7 @@ const REGISTRY_KITVIEW: KitViewData = {
     { id: 'rg_leg_b', group: 'rg.pitch', c: [3.6, 0.33, 9.56], h: [0.025, 0.33, 0.025], material: 'galv|metal' },
     { id: 'rg_leg_c', group: 'rg.pitch', c: [3.2, 0.33, 10.24], h: [0.025, 0.33, 0.025], material: 'galv|metal' },
     { id: 'rg_leg_d', group: 'rg.pitch', c: [3.6, 0.33, 10.24], h: [0.025, 0.33, 0.025], material: 'galv|metal' },
-    { id: 'rg_typer', group: 'rg.pitch', c: [3.42, 0.745, 9.74], h: [0.15, 0.045, 0.17], material: 'asphalt' },
+    { id: 'rg_typer', group: 'rg.pitch', c: [3.42, 0.745, 9.74], h: [0.15, 0.045, 0.17], material: 'asphalt', stuff: 'metal' },
     { id: 'rg_carriage', group: 'rg.pitch', c: [3.52, 0.815, 9.74], h: [0.04, 0.025, 0.2], material: 'metal' },
     { id: 'rg_sheet', group: 'rg.pitch', c: [3.56, 0.9, 9.74], h: [0.02, 0.09, 0.105], albedo: [0.9, 0.89, 0.84], flags: ['NoShadow'] },
     { id: 'rg_paper', group: 'rg.pitch', c: [3.44, 0.72, 10.1], h: [0.105, 0.02, 0.15], albedo: [0.9, 0.89, 0.84], flags: ['NoShadow'] },
@@ -249,7 +250,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   shelf(31.4, 23.5, 2.6, 0.5, 0, 4, 2.0);
   cabinet(35.45, 15.6, -Math.PI / 2); cabinet(35.45, 16.2, -Math.PI / 2);
   // mains breaker panel on the east wall, north end (OCP it for a temporary blackout, shoot it for a permanent one)
-  const brk = add({ c: [35.84, 1.35, 14.2], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [35.84, 1.35, 14.2], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [35.79, 1.62, 14.02], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [35.84, 2.3, 14.2], h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: BoxFlag.NoShadow });
   ceilingPanel(32.5, 18.0, false, 'sorting');
@@ -297,7 +298,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // (registry-gwot.ts: red z 10.4 / 12.42 / x 24.9 / 28.3 / 8.6, the wait line z 6.85, the blue serpentine, the row numbers); everything is 1.05 m or lower but
   // the bundles on the rows' own tops; nothing lies on a surface the dressing deals on (tools/levels/dress.ts) but in the gaps between its things, unyawed.
   { const P = livedPieces({ add, grp, prop: K.prop }, C as unknown as Parameters<typeof livedPieces>[1]), W = Math.PI / 2, E = -Math.PI / 2, S = Math.PI, drawn = { flags: BoxFlag.NoShadow };
-    const PINK: Vec3 = [0.86, 0.58, 0.64], LEMON: Vec3 = [0.9, 0.82, 0.42], GREEN: Vec3 = [0.06, 0.4, 0.2], TONER: Vec3 = [0.03, 0.03, 0.035], ROW_TOPS: Vec3[] = [INK.manila, INK.cream, [0.3, 0.3, 0.46], [0.09, 0.09, 0.1]];
+    const PINK: Vec3 = [0.86, 0.58, 0.64], LEMON: Vec3 = [0.9, 0.82, 0.42], GREEN: Vec3 = [0.06, 0.4, 0.2], TONER: Vec3 = [0.03, 0.03, 0.035], ROW_TOPS: Vec3[] = [INK.manila, INK.cream, [0.3, 0.3, 0.46], INK.iron];
     // lobby — the FORMS LOBBY: the public's writing desk as an island north of the gallery's mouth (a ridge down its middle, three trays of forms a side),
     // the number dispenser on its post, a wet-umbrella mat inside the front door; 'closed' and the fee tin on the enquiries desk
     P.room('lobby');
@@ -396,8 +397,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // height), three canvas sacks hanging open on their frame by the south shelf, the platform scale with a parcel on it; red and blue wire trays (the two lines'
     // colours) and tied bundles on the table, brown-paper offcuts under it. The north end, before the side door, stays bare
     P.room('sorting');
-    P.floor(32.47, 18.37, 6.6, 10.9, [0.3, 0.25, 0.17], 0.014, 0.006);
-    for (const [x, z, w, d, a] of [[31.5, 20.9, 0.7, 0.3, 0.4], [34.2, 19.2, 0.6, 0.25, 1.2]]) P.floor(x, z, w, d, [0.52, 0.4, 0.25], a, 0.012);
+    P.floor(32.47, 18.37, 6.6, 10.9, drawnAs('paint', [0.3, 0.25, 0.17]), 0.014, 0.006);
+    for (const [x, z, w, d, a] of [[31.5, 20.9, 0.7, 0.3, 0.4], [34.2, 19.2, 0.6, 0.25, 1.2]]) P.floor(x, z, w, d, drawnAs('wood', [0.52, 0.4, 0.25]), a, 0.012);
     { const L = P.at(29.38, 19.2, W); L.box(0, 0, 0, 2.4, 0.8, 0.6, C.woodDark); for (const s of [-1, 1]) { L.box(0, 0.8, s * 0.285, 2.4, 0.25, 0.03, C.wood); L.box(s * 1.185, 0.8, 0, 0.03, 0.25, 0.54, C.wood); }
       for (let i = 0; i < 16; i++) if (i !== 3 && i !== 5 && i !== 10 && i !== 12 && i !== 15) L.box(-1.03 + (i >> 1) * 0.295, 0.8, ((i & 1) - 0.5) * 0.27, 0.235, 0.04 + 0.18 * h01(i, 5), 0.2, [INK.paper, INK.cream, INK.manila, C.white, LEMON][Math.floor(h01(i, 6) * 5)]); }
     { const L = P.at(33.38, 23.45, S); for (const s of [-1, 1]) L.box(0, 0.85, s * 0.2, 1.3, 0.04, 0.04, C.metal);

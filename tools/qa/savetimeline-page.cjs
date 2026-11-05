@@ -68,7 +68,7 @@ const LAMP = () => { const g = window.__game, p = g.player.char.pos; let best = 
   if (!best) return null; window.__lamp = best; return { name: best.name, d: +bd.toFixed(1) }; };
 const PIN = (stand) => { const t = window.__lamp; window.__stage({ look: [t.pos[0], 0.6, t.pos[2]], yaw: 0.6, pitch: 0.9, dist: 9 }, stand ? { player: { pos: [t.pos[0], 0, t.pos[2]] } } : {}); };
 const SEEN = () => { const g = window.__game, f = g.fogOfWar, p = g.player.char.pos; return { fog: !!f.active, seen: !f.active || f.lampSeen(window.__lamp), at: [+p[0].toFixed(1), +p[2].toFixed(1)] }; };
-const OUT = () => { const t = window.__lamp; t.on = false; return t.on; };   // (switched off, not broken: the head of this file — broken, 213 to 221 bright pixels of sparks with it out)
+const OUT = () => { const t = window.__lamp; window.__game.lightHome.stage(t, false, null); return t.on; };   // (switched off, not broken: the head of this file — broken, 213 to 221 bright pixels of sparks with it out)
 const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on: t.on }; };
 
 // in the page (card): F5 under a key lock, then on the pause card with the page's own loop running (frozen frames): kept from the browser, nothing written, a tile to come

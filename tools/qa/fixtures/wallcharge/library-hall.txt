@@ -1,0 +1,2 @@
+# places for a wall charge on levels/library-hall.json: on the frozen stand, then on the shipped stand. The showroom: no mission plays on it. Held so that a piece stood against the hut or the house front does not take a place unseen, and so that the check is not red when the showroom is named to it.
+86 86

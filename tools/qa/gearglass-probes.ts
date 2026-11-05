@@ -113,15 +113,18 @@ export const gearglassJoined = guarded(async () => {
     F.verdict(beyond() === 9 && B.state === 'dead', '(a) …and it is nine rounds beyond: the man 1.5 m behind the frame is down', `pellets ended beyond the glazing ${beyond()} of ${SHOTGUN_LAST.ends.length} · ${B.callsign} ${B.state}`); }
   // (b) the panes partly taken: the shell on the SAME floor as the burst, its rows read against a twin floor that had the burst and no shell. The shell is aimed
   // at the edge of what the burst left — the point of the glazing with nearest to half of the glass round it (a pattern's width at 4 m) gone. Twice: with the
-  // glass done falling (2.5 s on), and FOUR FRAMES after the burst (its pieces still queued to leave: the fracture model mid-break under the shell)
-  for (const [tag, wait] of [['b', 2.5], ['b\'', 4 / 60]] as [string, number][]) {
-    const OFF = 3.3;
+  // glass done falling (2.5 s on), and A FEW FRAMES after the burst (its pieces still queued to leave: the fracture model mid-break under the shell). Which
+  // frames a burst's pieces wait on is the roll of each piece, so the stage does not name the frame: it is the first of 2 to 12 frames after the burst on
+  // which pieces are queued (none: the staging line fails). The aim is sought no higher than a man stands (1.5 m): the last line asks for the man behind it
+  for (const [tag, wait0] of [['b', 2.5], ['b\'', 0]] as [string, number][]) {
+    const OFF = 3.3; let wait = wait0;
+    if (!(wait > 0)) { wait = 4 / 60; for (const fr of [4, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12]) { const t = await burstThen(62, 'annealed', OFF, fr / 60); if (PANES.reduce((n, bi) => n + (t.R.gb.panes.get(bi)?.pending.length ?? 0), 0) > 0) { wait = fr / 60; break; } } }
     const { R, rep } = await burstThen(62, 'annealed', OFF, wait);
     const T = await burstThen(62, 'annealed', OFF, wait);   // (the twin: what stood before the pull)
     const was = (x: number, y: number) => T.R.gb.openAt(paneAt(x), [x, y, GZ]);
     const queued = PANES.reduce((n, bi) => n + (R.gb.panes.get(bi)?.pending.length ?? 0), 0);
     let aim: [number, number] = [7.5, 1.35], best = 1;
-    for (let x = 6.3; x <= 8.71; x += 0.1) for (let y = 0.8; y <= 2.21; y += 0.1) { let n = 0, o = 0; for (let dx = -0.2; dx <= 0.201; dx += 0.1) for (let dy = -0.2; dy <= 0.201; dy += 0.1) { n++; if (was(x + dx, y + dy)) o++; } const off = Math.abs(o / n - 0.5); if (off < best - 1e-9) { best = off; aim = [x, y]; } }
+    for (let x = 6.3; x <= 8.71; x += 0.1) for (let y = 0.8; y <= 1.51; y += 0.1) { let n = 0, o = 0; for (let dx = -0.2; dx <= 0.201; dx += 0.1) for (let dy = -0.2; dy <= 0.201; dy += 0.1) { n++; if (was(x + dx, y + dy)) o++; } const off = Math.abs(o / n - 0.5); if (off < best - 1e-9) { best = off; aim = [x, y]; } }
     const from: Vec3 = [aim[0], aim[1], GZ + 4], to: Vec3 = [aim[0], aim[1], GZ - 3]; const B = behind(R, aim[0]);
     const same = PANES.every(bi => R.state(bi) === T.R.state(bi)); const part = wait > 1 ? PANES.every(bi => R.open(bi) > 0.02 && R.open(bi) < 0.98) : PANES.some(bi => R.open(bi) > 0) && PANES.every(bi => R.open(bi) < 0.98);
     F.verdict(!!rep && same && part && best < 0.3 && (wait > 1 ? queued === 0 : queued > 0), `(${tag}) staged: a grenade ${OFF} m off float glazing takes PART of each pane, ${wait > 1 ? 'the glass done falling' : `the shell ${Math.round(wait * 60)} frames behind it, ${queued} pieces still queued to leave`} (a twin floor stands the same, for what stood before the pull); the shell is aimed at the edge of what is left`, `${PANES.map(bi => R.pane(bi)).join(' | ')} · aim (${f2(aim[0])}, ${f2(aim[1])}), ${Math.round(100 * (0.5 - best))}–${Math.round(100 * (0.5 + best))}% of the glass round it gone${same ? '' : ` · TWIN DIFFERS ${PANES.map(bi => T.R.pane(bi)).join(' | ')}`}`);
@@ -179,9 +182,16 @@ export const gearglassJoined = guarded(async () => {
     R.put(A, [x, 0, 9.3], P); A.char.update(0); A.char.update(DT); R.step(2);
     const feet = [...A.char.pos] as Vec3, head = [...(A.char.bones.head ?? [A.char.pos[0], 1.65, A.char.pos[2]])] as Vec3;
     const fr = () => PANES.map(bi => R.gb.paneInfo(bi)?.openFraction.toFixed(4)).join(); const open0 = fr(); share0 = exposure(g, from, feet, head, 'whole');
-    const o0 = R.open(PM); const rep = R.frag(P); const h = rep?.hits.find((q: any) => q.id === A.char.id) ?? null; R.settle(2.5); const open1 = fr();
-    const share1 = exposure(g, from, feet, head, 'whole');   // (what ends open, once the glass the grenade loosened has fallen)
-    F.verdict(!!rep && o0 > 0 && R.open(PM) >= o0 && R.open(PM) < 1, '(d) staged: two shells from 1 m take a hole out of the middle float pane; a grenade 3.7 m off reaches the glass (it loosens a little more of a pane already run) and most of it stands', `${R.pane(PM)} · open fractions before the grenade ${open0} · 2.5 s after ${open1}`);
+    // THE REPORT IS MADE ON THE FRAME OF THE BURST, from the burst's own point, of the man as he stands on that frame: the two shares it is held between are
+    // asked the same way (a man standing still sways, and a line that passes a hand's breadth from a hole's edge is open from one pose and shut from the next).
+    // On that frame the grenade's pieces are queued and none has left (`unfallen`): the glass as it stands is still what was open before it went off
+    const o0 = R.open(PM), n0 = FRAG_LOG.length; g.items.spawn('frag', [P[0], 0.05, P[2]], [0, 0, 0], { fuse: 0.2, who: 1 }); for (let i = 0; i < 120 && FRAG_LOG.length === n0; i++) R.step();
+    const rep = FRAG_LOG[n0] ?? null, at: Vec3 = rep ? [rep.at[0], rep.at[1] + FRAG.lift, rep.at[2]] : from;
+    const feetB = [...A.char.pos] as Vec3, headB = [...(A.char.bones.head ?? [A.char.pos[0], 1.65, A.char.pos[2]])] as Vec3, unfallen = fr() === open0;
+    share0 = exposure(g, at, feetB, headB, 'whole');
+    R.step(1); const h = rep?.hits.find((q: any) => q.id === A.char.id) ?? null; R.settle(2.5); const open1 = fr();
+    const share1 = exposure(g, at, feetB, headB, 'whole');   // (what ends open, once the glass the grenade loosened has fallen)
+    F.verdict(!!rep && unfallen && o0 > 0 && R.open(PM) >= o0 && R.open(PM) < 1, '(d) staged: two shells from 1 m take a hole out of the middle float pane; a grenade 3.7 m off reaches the glass (it loosens a little more of a pane already run) and most of it stands', `${R.pane(PM)} · open fractions before the grenade ${open0} · 2.5 s after ${open1}`);
     F.verdict(!!h && share0 > 0 && h.exposed >= share0 - 1e-9 && h.exposed <= share1 + 1e-9 && h.exposed < 1 && h.result !== 'shielded', '(d) the grenade\'s own report has the man behind that pane in its line by the share the shells\' hole leaves open — part of him: no less than was open before it went off, no more than ends open after', h ? `${A.callsign} at x ${f2(x)}, ${f2(h.d)} m off · open through the hole before ${share0} · the report's share ${h.exposed} · open once the glass has fallen ${share1} · ${h.result}` : `he is not in the report (share before ${share0})`); }
   return F.done();
 });
