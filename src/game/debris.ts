@@ -107,7 +107,7 @@ export class Debris {
     const g = this.g, c = box.c, f = flightOf(this.solids, c, v, G);
     const down = Math.sqrt(v[1] * v[1] + 2 * G * Math.max(0, c[1] - f.pos[1]));
     if (!(down > DEBRIS.minSpeed)) return;
-    const L = this.breaks?.lands?.(kind, box.albedo, down);
+    const L = this.breaks?.lands?.(kind, box, down);
     if (g.falls.schedule(g.time + f.t, f.pos[0], f.pos[1], f.pos[2], '', 0, 1, 0, who, FALL_HEARD, level || L?.level || LANDING[kind].level, FALL_MAXP, FALL_PIECES, L?.dust ?? 0)) this.stats.told++;   // (a list already full: the piece is not heard — FallStore.schedule — and not counted as told)
   }
   /** what a thrown piece can meet, for the simulation's answer: the statics and the pushable things, as a chunk's own flight asks them */
@@ -134,7 +134,7 @@ export class Debris {
   breaks: { born(c: Chunk): void; landed(c: Chunk, speed: number): void; kicked(c: Chunk, kick: number): void; evicted(c: Chunk): void;
     /** (optional) for the simulation's landing of a piece of this kind and paint coming down at `speed` m/s: the hearing level of its material's row (0 = its
      *  kind's) and the dust it raises if that is hard enough to break it again (a puff's scale; 0 = none) */
-    lands?(kind: ChunkKind, paint: Vec3, speed: number): { level: number; dust: number };
+    lands?(kind: ChunkKind, box: Box, speed: number): { level: number; dust: number };
     /** (optional) WHICH piece gives up its slot, among those `ok` allows: an index into the list, −1 = none. Absent = the oldest, as ever. */
     pick?(list: readonly Chunk[], ok: (c: Chunk) => boolean): number } | null = null;
   /** spawn() without the glass door (what spawn() always did; shards.ts places its plates through this) */

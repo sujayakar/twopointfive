@@ -57,7 +57,7 @@ import { DOORTOOLS } from './doortools';
 import { wallBreakOn, WALLS } from './wallbreak';
 import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
-import { surfOf } from './particleFx';
+import { doesOf } from '../scene/materials';
 import { killGuard, detonateStun, hitPlayer } from './combat';
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { chronHit } from './chronicle';
@@ -325,7 +325,7 @@ export function skyAside<T>(g: Game, fn: () => T): T {
 export function outerWall(g: Game, index: number): boolean {
   const K = WALLCHARGE, walls = g.destr?.walls; if (!K.outer || !walls) return false;
   const b = g.col.boxes[index], thin = 2 * Math.min(b.h[0], b.h[2]), long = 2 * Math.max(b.h[0], b.h[2]);
-  if (thin > K.outerThick || long < K.outerMinLen || b.metal || surfOf(b.albedo) === 'metal' || !walls.adoptable(index)) return false;
+  if (thin > K.outerThick || long < K.outerMinLen || b.metal || doesOf(b).surf === 'metal' || !walls.adoptable(index)) return false;
   const sky = skyFaces(g, index); return sky === 1 || (sky === 2 && K.outerYard);
 }
 
@@ -365,7 +365,7 @@ export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallS
     const part = !!B && !B.hard;   // (a partition is the engine's from the start; a hard wall — an outer wall a charge has opened, wallbreak.ts adopt — is still structure, and takes another only while WALLCHARGE.outer)
     if (!part) {   // structure: full height off the floor, long enough to be a wall, in a wall's stuff — said so in words
       if (b.c[1] - b.h[1] > 0.1 || b.c[1] + b.h[1] < WALLS.wallMinTop || long < 0.8 || thin > 1.2) continue;
-      const s = surfOf(b.albedo); if (s !== 'drywall' && s !== 'concrete' && s !== 'metal') continue;
+      const s = doesOf(b).surf; if (s !== 'drywall' && s !== 'concrete' && s !== 'metal') continue;
       why = s === 'metal' || b.metal ? "steel. a charge won't cut it." : thin > WALLS.wallMaxThick || s === 'concrete' ? "concrete. a charge won't cut it." : "outer wall. a charge won't cut it.";
     }
     const d = Math.hypot(dx, dz) - (B ? 1e-3 : 0); if (d >= bd) continue;

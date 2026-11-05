@@ -11,7 +11,7 @@
 // WHAT A RAY AND A BODY MEET IS NOT THE LEVEL'S LORRY: the bonnet (1.5 m high, 0.98 m a side) is a hump 0.56 m a side that tops out at 1.46 m, with a fender
 // of at most 1.08 m beside it and, for 0.63 m in front of each fender, only the 0.78 m bumper; the tilt's eaves come down from 1.95 m to 1.6 m; a tank closes a
 // metre of the gap under the bed on each side. Sight and rounds across the nose change on this page. Never seen on a GPU.
-import { BoxFlag, type Box } from './boxes';
+import { BoxFlag, wordOf, type Box } from './boxes';
 import { cutPlane, cutRecord, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 import { GWOT_PALETTE, gwotAs } from './gwotPalette';
@@ -26,9 +26,9 @@ const at = (lx: number, y: number, lz: number): Vec3 => [LX + lx * CS + lz * SN,
 // the level palette's rows it is made of (scene/gwotPalette.ts): a piece's paint is a row, or a row toned (scene/stuff.ts toned: the row's stuff), and each
 // box made here says what its paint is made of (worded), which is all the look reads
 const RED = GWOT_PALETTE.truckRed, CANVAS = GWOT_PALETTE.canvas, IRON = GWOT_PALETTE.iron, GALV = GWOT_PALETTE.galv;
-const RUST = GWOT_PALETTE.rust, RUBBER = GWOT_PALETTE.rubber, JERRY = GWOT_PALETTE.jerryYellow, POPLAR = GWOT_PALETTE.poplar, WHITE = GWOT_PALETTE.plasticWhite, ORANGE = gwotAs('prodOrange', 'metal'), GLASS = GWOT_PALETTE.glassDark;
+const RUST = GWOT_PALETTE.rust, RUBBER = GWOT_PALETTE.rubber, JERRY = GWOT_PALETTE.jerryYellow, POPLAR = GWOT_PALETTE.poplar, WHITE = GWOT_PALETTE.plasticWhite, ORANGE = gwotAs('prodOrange', 'steel'), GLASS = GWOT_PALETTE.glassDark;
 const of = (row: Vec3, k: number): Vec3 => toned(row, k);
-const gwotOlive = gwotAs('olive', 'metal');
+const gwotOlive = gwotAs('olive', 'steel');
 const box = (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, albedo: Vec3, o: More = {}): Box =>
   worded({ c: at(lx, (y0 + y1) / 2, lz), h: [hx, (y1 - y0) / 2, hz], yaw: YAW, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.5, ...o });
 /** the eight planes that make a box of square section a twelve-sided prism of radius r about its own x (1) or z (3) */
@@ -58,7 +58,7 @@ export function dressLorry(level: { boxes: Box[] }): number {
   if (tilt.shape !== undefined || bonnet.shape !== undefined || roof.shape !== undefined) return 0;   // (THE LEVEL'S LORRY SAYS ITS OWN SHAPES now, scene/carShapes.ts lorryShapes: this trial was their first drawing and stands down — gone over by hand as well, the lorry would be shaped twice)
   const out: Box[] = [];
   const set = (b: Box, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number) => { b.c = at(lx, (y0 + y1) / 2, lz); b.h = [hx, (y1 - y0) / 2, hz]; return b; };
-  const snowOf = (like: Box, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number): Box => box(lx, lz, y0, y1, hx, hz, like.albedo, { flags: like.flags, rough: like.rough });
+  const snowOf = (like: Box, lx: number, lz: number, y0: number, y1: number, hx: number, hz: number): Box => box(lx, lz, y0, y1, hx, hz, like.albedo, { flags: like.flags, rough: like.rough, ...wordOf(like) });   // (more of the snow that lies there: its paint and both its words)
 
   // ---- the tilt: straight to the eave, then bowed over its hoops; the snow lies on the middle of the bow and has slid off its shoulders ----
   { const R = radiusOf(1.06, 0.45), y0 = 2.05 - R;   // the bow's axis
