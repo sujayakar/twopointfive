@@ -338,12 +338,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   · KNOWN: 48 newer marks in one 1 m square drop the oldest there from the drawn list (`DECAL_MAX_PER_CELL`) — a film would lose that square, straight
   edged (as a scorch always could). Not dusted: props not under a patch's middle, walls. A film is one flat tone mix (plaster pale `0.68 0.66 0.61`): it
   lifts a dark floor, on a floor near that tone only its grit, soot and matte read.
-- **A blast's marks sit in the surface** (`render/decals.ts Decals.sit` + `setSit`, `shaders/decals.wgsl dkSit`; the maintainer 10-31 on the break lab, a
+- **A blast's marks sit in the surface** (`render/decals.ts MARKSIT`, `shaders/decals.wgsl dkSit`; the maintainer 10-31 on the break lab, a
   yard at night in rain after a dozen grenades: "the decals are repetitive and look pasted on"). WHAT WAS WRONG, read off his shot and the shader: a film of
   dust (`damageMark` look 6) and a scorch (`scorchMark`) were each ONE ROUND STAMP with a smooth fall to its rim, so a dozen read as a dozen copies; the
   film was one fixed pale whatever it lay on; and both made the ground matte, on wet asphalt a dull disc in the middle of the shine. THE SWITCH: the word is
-  the fourth word of the decal buffer's header, ON in the page (`main.ts`, `?marksit=0` = every mark as it was drawn), OFF in the module, so a headless
-  stand's packed words are the old ones. It is the picture's alone: no game code reads it, no record changes, nothing is added to a mark's cost but two or
+  the fourth word of the decal buffer's header, ON in the page (`?marksit=0` = every mark as it was drawn), OFF in the module and on the frozen stand, so
+  that stand's packed words are the old ones (a registered switch since 11-05: the bullet at the foot of this file). It is the picture's alone: no game code reads it, no record changes, nothing is added to a mark's cost but two or
   three noise reads on a scorch or a film. WITH IT UP: a scorch is off round (a seeded ellipse inside the record's reach, its heart off its middle) and a film keeps its reach but is carved by the shared field below, so no two have one outline;
   its thin parts are broken by ONE FIELD ANCHORED TO THE SURFACE that every mark on that face shares (`dkBanks`, `dkBlotch`, read at `dkWorld2(P, n)`), so
   two films side by side meet in one shore and thin soot lies in patches with an edge; a film takes some of the colour of what it lies on; and on wet ground
@@ -406,6 +406,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kind 'damage', a wear look, on the mid-plane of a thin partition with the half thickness folded into its radius — `WEAR_MARK`). The probe now reads which
   of the two the round must leave off the wall it meets (the walls' own gate: `wallBreakOn`, `wear.on`, breakable, not hard) and holds each to its own
   shape: one mark either way, the wall's normal, world-fixed. Green on both stands; no game code changed.
+  · AGAIN ON THE SHIPPED STAND (11-05; red there since rounds go through thin walls, `WALLPEN.on`, found by `stand-bisect`): one round left five marks
+  where the probe wanted one, and the game was right (`wallpen.ts`: a thing crossed gets a mark where the round went in and one on its far face, and the
+  round marks what it meets beyond). The probe's question is the emit site, so it now counts the marks ON THE WALL FIRED INTO and asks the round's flight
+  (the rule's own `WALLPEN_HOOKS.crossed`) which that wall is owed: stopped in it, one mark and nothing anywhere else; gone through it, the mark where it
+  went in (held to its shape as before) and one hole on the far face, no more. What a round leaves beyond the wall is `wallpen-check`'s. Breaks:
+  `DECALSITES_BREAK=1` (a mark no round owes) red on both stands; `DECALSITES_BREAK=far` (no hole on the far face) red on the shipped stand and on the
+  frozen one with `TPS_WALLPEN=1`, green on the plain frozen stand where nothing goes through. Green on both stands and on frozen with the rule raised;
+  no game code changed. Headless only.
 - **GPU particles** (E4, `render/particles.ts` + `shaders/particles*.wgsl`, docs/internal/exp-particles.md): one 16 384 × 80 B pool in two FIFO rings
   (SHORT sparks + dust, LONG chips + brass + paper), emits queued on the CPU (`Particles.emit(kind, pos, dir, count, opts)`, ≤ 128 records a frame in one
   uniform block, seeds off the system's own serial), kernel `emit` + `update` in ONE compute pass after the cascades (collision = `traceClosest` through
@@ -1151,17 +1159,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   before. NOT DONE: a shape's trim painted from a row's numbers (the lorry's fittings, a spare wheel, a mirror) says nothing, as before, so the file
   writes 'plain' on it; trim is drawn only, no round meets it. A tail lamp's lens in the red enamel stays 'paint'. The editor's kit-view sets (a
   level file's `sets`) hold older copies of a truck as plain boxes and say nothing. Check line 8. NEVER SEEN ON A GPU.
-  A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (`render/decals.ts Decals.onCut`, raised by the page as `sit` is, `?markcut=0`): a
-  mark clamped to its box was pulled onto the face of the box's PLAIN shape, so on a leaning pane, a rounded nose or a crowned bonnet, and round the
-  side of a drum, it stood centimetres off the surface (87 mm on a pane leaning 12 degrees, 40 mm on a 0.3 m drum 30 degrees round) and the shader's
-  plane test dropped it: no round ever left a mark there. Now a point inside the plain box of a box that says a cut or is round is left where it is.
-  The picture's alone (where a mark is drawn, never whether one is laid). The harness's stands do not raise it (a page word, like `sit`); check line
-  5 raises it with the rule and holds the same digest. It moves a mark on the snapped end of a broken wall piece too (those say a cut): the mark
-  stays on the end, where a wall's wear can take it for the round's own.
+  A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT (`render/decals.ts MARKCUT`, a switch of its own): a mark clamped to its box was pulled
+  onto the face of the box's PLAIN shape, so on a leaning pane, a rounded nose or a crowned bonnet, and round the side of a drum, it stood
+  centimetres off the surface (87 mm on a pane leaning 12 degrees, 40 mm on a 0.3 m drum 30 degrees round) and the shader's plane test dropped it:
+  no round ever left a mark there. Now a point inside the plain box of a box that says a cut or is round is left where it is. The picture's alone
+  (where a mark is drawn, never whether one is laid). It moves a mark on the snapped end of a broken wall piece too (those say a cut): the mark
+  stays on the end, where a wall's wear can take it for the round's own. ITS SWITCH: ON in the page (`?markcut=0` = pulled to the plain face, as it
+  was), OFF in the module and on the frozen stand (`TPS_MARKCUT=1`), a `FROZEN_HOLDS` row, in the registry and the journal (a recording from before
+  the table plays with it off). It joined as a field the page alone set (`main.ts`), so the page's stand run headless did not have it: mended 11-05,
+  and the shipped stand is the page here too. A tape with no table for it plays with it off: the build as it was before the rule, and also a tape of
+  the hours of 11-05 when the page raised it by hand (a picture only). Check lines 0, 5 (the run is the same run with this rule down by itself under
+  the hit rule), 6 and 7; `MARKCUT_BREAK=1` fails line 7 on both stands; the check runs in the `decals` family too. MEASURED 11-05 with the mend: 42
+  play-throughs (21 missions, seeds 1 and 2) the same by digest on the frozen stand, on the shipped stand, and on the shipped stand with
+  `TPS_MARKCUT=0`; gates decals, destruction, hitstuff, round, shapes, checkpoints and journal on both stands, green but for what was red on the
+  shipped stand before it (`decals-sites`, three checkpoint probes). NOT SEEN: no mark on a cut or a round face has been looked at on a GPU.
   SWITCH: ON in the page (`?hitstuff=0` = by the colour, as it was), OFF in the module and on the frozen stand (`TPS_HITSTUFF=1`), a `FROZEN_HOLDS`
   row, in the registry and the journal (a recording from before the table plays with it off: `applyKnobs`; the rule is read at each hit). On or off,
   the same run.
-  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, families `destruction` and `player`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4,
+  CHECK: `bun run tools/qa/hitstuff-check.ts` (`probes.ts hitstuff`, families `destruction`, `player` and `decals`; `HITSTUFF_BREAK=1` fails lines 2, 3, 4,
   7 and 8), nine lines on both stands, real rounds on the office with a stand-in for the GPU particles that keeps what the game asks of them at the
   hit: the car's body with its word taken off, by its paint, the same up as down; saying 'carpaint', sparks, no chips, no dust; a tyre saying 'rubber', plastic's chips and
   no dent; the glass saying 'glass', the crack in place of the hole on every round, with the chaos lane off too, six chips from two rounds and the
@@ -1179,3 +1194,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: NEVER SEEN ON A GPU in this form. On the preview a cloud NVIDIA card (Vulkan) drew the trial cars shot, 11-04: sparks off the body and
   its holes, no chips, the window's pale cracks. Nobody has looked at the crack in play. NOT HELD BY A CHECK: a prop's part and a door's leaf that
   say a word (the check fires at the level's statics); the burst of a soft thing beyond its being thrown at all.
+- **The word for marks that sit in the surface is a switch the stands know** (`render/decals.ts MARKSIT`, 11-05; the rule itself is the bullet "A blast's
+  marks sit in the surface" above, unchanged). It was a field of one `Decals` (`sit`, `setSit`) that `main.ts` alone set from `?marksit`, so the page had
+  it up and the page's stand run headless packed the old header, the same fault as the cut-face rule's. NOW: the table `MARKSIT`, ON in the page through
+  `pageSwitches` (`?marksit=0`), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row `TPS_MARKSIT=1 (a picture only)`, pinned in `standup.ts`, in
+  `STAND_ENV`), in the registry and `JOURNAL_KNOBS`; `journal.ts applyKnobs` puts it down for a recording from before the table, so a tape made before
+  11-05 plays with its blast marks drawn as they were (the picture only). `Decals.frame` rebuilds once when the table moves (`sat` = the word the buffer
+  last had); `main.ts` no longer sets it. A PICTURE ONLY: one word of the uploaded header, read by `decals.wgsl dkSit` and by no game code. THE CHECK:
+  `bun run tools/qa/probes.ts decals-sit` (in the `decals` family), on both stands: the stand; the header's fourth word follows the table and no other
+  word of the buffer does, one upload a move; the same seeded round and stun charge is the same run by digest with the word up as down; the rows and an
+  old recording. `MARKSIT_BREAK=1` (the word never raised) fails two lines on both stands. `tools/qa/marksit-page.cjs` reads and moves the word through
+  `window.__knobs.registry().MARKSIT` now. MEASURED 11-05: 42 play-throughs (21 missions, seeds 1 and 2) the same by digest on the frozen stand, on the
+  shipped stand, and on the shipped stand with `TPS_MARKSIT=0`; the decals, destruction, checkpoints and journal gates on both stands, green but for
+  what was red on the shipped stand before it (`decals-sites`, three checkpoint probes). THE PAGE CHECK ran once with the table (the yard in rain,
+  software adapter): 118 of 118 pipelines, no error, the word up at boot, and moving the table changes 47 % of the picture (mean 0.457 down, 0.441
+  up), the numbers of 11-01. NOT SEEN: never on a GPU, never in motion; its break run and a dry still were not run.

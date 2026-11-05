@@ -339,9 +339,6 @@ export function ventGrilleMarks(h: Vec3, t = T): MarkingDef[] {
   return some([markFromRect('-y', 'coarse', [-(h[0] - 0.03), -(h[2] - 0.03), h[0] - 0.03, h[2] - 0.03], [{ albedo: [0.04, 0.04, 0.045] }, { albedo: [0.66, 0.67, 0.66], rough: 0.4 }], c => { c.fill(1); GEN.seams(c, 4, 4, 0, 0, 2, 2); }, t)]);
 }
 
-/** THE PAINTER'S TINS: what paint on a building is made of, wherever it is laid (a palette entry each: a material, never a shaded colour). Ink on a pale
- *  surface, chalk on a dark one, signal yellow where a floor is kept clear */
-export const TIN = { ink: { albedo: [0.1, 0.1, 0.11], rough: 0.55 }, chalk: { albedo: [0.84, 0.84, 0.82], rough: 0.5 }, signal: { albedo: [0.88, 0.6, 0.04], rough: 0.4 } } satisfies Record<string, MarkPal>;
 // ---- PAINT ON A BUILDING: what a painter leaves on a kept wall or floor (the white roof's, tools/levels/white-roof.ts; any level's). Rects and places in
 // metres from the face centre, as every recipe above. A bitmap is 32 cells a side at most (1.6 m at coarse): a recipe that is asked for more either cuts
 // its work into several (stencilMarks, hazardMarks) or THROWS and says so. None of them hands back a picture cut short.

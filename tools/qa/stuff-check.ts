@@ -216,27 +216,75 @@ const plainIs = (w: string | undefined) => w === undefined || w === 'plain' ? un
 //     cloth with it (the depot's hut walls in the tan partition paint, the consulate's frames in a blanket's brown: drawn as weave, and a round knocked tufts
 //     out of them, until 11-05). Such a thing says its own word over the paint (scene/stuff.ts saidAs; a skin's Said, tools/levels/gwotSkin.ts). A wall of
 //     SACKS is cloth and meant: the sandbag's and the hesco's own paints. Asked of a level's own boxes in its `walls.` and `doorframe.` groups, by the row
-//     each wears (rowOf); a gear screen's set is another floor's backdrop and is not asked. RED PATH: a wall written here in the tan partition paint must be
-//     found, and with STUFF_BREAK (the rows say nothing) it is not.
+//     each wears (rowOf), and of A GEAR SCREEN'S SET (scenarios.kitView: no groups there, so a box that stands as a wall: from the floor to 1.8 m, thin, long,
+//     casting a shadow). A set's box names its rows 'look|plain' and IS ASKED AS THE LOOK WEARS IT, its first-named row: a stand-in on its fallback row (the
+//     compound's house in the tan, in the plain file) is not asked and is NOT to be mended: a set is drawn only under the kit view, where the plain file draws
+//     no stuff and nobody fires, and a word for each row would be a change to the set's format that nothing needs.
+//     NOT ASKED YET, on purpose: the look's own painted bands on a wall's face (a dado, a wainscot: decals no ray meets). Two look files lay theirs in a
+//     cloth's paint and are leaving with the setting they were made for; the band's line joins this one with whatever replaces them.
+//     RED PATH: a wall written here in the tan partition paint must be found, and with STUFF_BREAK (the rows say nothing) it is not.
 { const CLOTHS = ['cloth', 'fabric', 'carpet'], SACKS = ['sandbag', 'hesco'];
-  /** the walls and frames of a level file that are cloth and are not sacks: what each is, and how many */
-  const clothWalls = (d: any): { asked: number; sacks: number; bad: Map<string, number> } => { let asked = 0, sacks = 0; const bad = new Map<string, number>();
-    for (const b of d.boxes as any[]) { const g: string = b.group ?? ''; if (!g.startsWith('walls.') && !g.startsWith('doorframe.')) continue; asked++;
-      const row = rowOf(d, b), w = b.stuff ?? (row !== undefined ? d.materials[row]?.stuff : undefined); if (!CLOTHS.includes(w)) continue;
-      if (b.stuff === undefined && row !== undefined && SACKS.includes(row)) sacks++; else { const k = `${g.split('.')[0]} in ${row ?? 'a paint written as numbers'} says ${w}`; bad.set(k, (bad.get(k) ?? 0) + 1); } }
-    return { asked, sacks, bad }; };
-  let asked = 0, sacks = 0; const bad: string[] = [];
-  for (const f of FILES) { const r = clothWalls(dataOf(f)); asked += r.asked; sacks += r.sacks; for (const [k, n] of r.bad) bad.push(`${n} × ${f} ${k}`); }
-  // (the red path: a hut wall as the depot's stood, a frame as the consulate's stood, a wall of sacks, a wall that says its own word over the tan)
+  const standsAsWall = (o: any) => Array.isArray(o.c) && Array.isArray(o.h) && o.c[1] - o.h[1] <= 0.1 && o.c[1] + o.h[1] >= 1.8 && Math.min(o.h[0], o.h[2]) <= 0.15 && Math.max(o.h[0], o.h[2]) >= 0.5 && !(o.flags ?? []).includes('NoShadow');
+  /** the walls and frames of a level file that are cloth and are not sacks: what each is, and how many; and its sets' walls, asked as the look wears them */
+  const clothWalls = (d: any): { asked: number; sacks: number; sets: number; standins: number; bad: Map<string, number> } => { let asked = 0, sacks = 0, sets = 0, standins = 0; const bad = new Map<string, number>();
+    const ask = (o: any, what: string) => { const row = rowOf(d, o), w = o.stuff ?? (row !== undefined ? d.materials[row]?.stuff : undefined); if (!CLOTHS.includes(w)) return;
+      if (o.stuff === undefined && row !== undefined && SACKS.includes(row)) sacks++; else { const k = `${what} in ${row ?? 'a paint written as numbers'} says ${w}`; bad.set(k, (bad.get(k) ?? 0) + 1); } };
+    for (const b of d.boxes as any[]) { const g: string = b.group ?? ''; if (!g.startsWith('walls.') && !g.startsWith('doorframe.')) continue; asked++; ask(b, g.split('.')[0]); }
+    for (const { o, kind } of paintUsers(d)) { if (kind !== 'set' || !standsAsWall(o)) continue; const m = (o as any).material as string | undefined;
+      if (m?.includes('|') && rowOf(d, o) !== m.split('|')[0]) { standins++; continue; } sets++; ask(o, 'a set\'s wall'); }
+    return { asked, sacks, sets, standins, bad }; };
+  let asked = 0, sacks = 0, sets = 0, standins = 0; const bad: string[] = [];
+  for (const f of FILES) { const r = clothWalls(dataOf(f)); asked += r.asked; sacks += r.sacks; sets += r.sets; standins += r.standins; for (const [k, n] of r.bad) bad.push(`${n} × ${f} ${k}`); }
+  // (the red path: a hut wall as the depot's stood, a frame as the consulate's stood, a wall of sacks, a wall that says its own word over the tan; and a set:
+  //  a wall in the tan as its first-named row is found, the same wall on its fallback row is a stand-in, a line of washing is no wall)
   const rows = { partTan: { albedo: [0.55, 0.47, 0.35], stuff: 'cloth' }, sandbag: { albedo: [0.45, 0.39, 0.27], stuff: 'cloth' } } as Record<string, any>; if (BRK) for (const m of Object.values(rows)) delete m.stuff;
-  const made = clothWalls({ materials: rows, boxes: [{ group: 'walls.huts', material: 'partTan' }, { group: 'doorframe.front', albedo: [0.27, 0.18, 0.12], stuff: 'cloth' }, { group: 'walls.exterior', material: 'sandbag' },
-    { group: 'walls.huts', material: 'partTan', stuff: 'stucco' }, { group: 'cubicles', material: 'partTan' }] });
+  const wall = { c: [5, 1.5, 7], h: [4, 1.5, 0.12] };
+  const made = clothWalls({ materials: rows, props: [], boxes: [{ group: 'walls.huts', material: 'partTan' }, { group: 'doorframe.front', albedo: [0.27, 0.18, 0.12], stuff: 'cloth' }, { group: 'walls.exterior', material: 'sandbag' },
+    { group: 'walls.huts', material: 'partTan', stuff: 'stucco' }, { group: 'cubicles', material: 'partTan' }],
+    scenarios: { kitView: { sets: { yard: { boxes: [{ ...wall, material: 'partTan|wall' }, { ...wall, material: 'mud|partTan' }, { c: [3, 1.3, 5], h: [0.2, 0.34, 0.02], albedo: [0.14, 0.2, 0.45], stuff: 'fabric', flags: ['NoShadow'] }] } } } } });
   // … and the skin's own Said, read off the one file that wears it: every frame of the consulate in the varnish's paint says the varnish's stuff and finish
   const { VARNISH } = await import(`${ROOT}/tools/levels/gwotSkin.ts`), brown = GWOT_PALETTE[VARNISH.paint], inBrown = (b: any) => b.albedo !== undefined && [0, 1, 2].every(c => Math.abs(b.albedo[c] - brown[c]) <= 0.0025);
   const frames = (dataOf('consulate-gwot.json').boxes as any[]).filter(b => (b.group ?? '').startsWith('doorframe.') && inBrown(b)), varnished = frames.filter(b => b.stuff === VARNISH.stuff && b.rough === VARNISH.rough).length;
-  check(bad.length === 0 && asked > 5000 && sacks > 0 && made.asked === 4 && made.sacks === 1 && made.bad.size === 2 && frames.length > 40 && varnished === frames.length,
-    '15 no wall and no door frame is cloth by a borrowed paint: in every level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet, but for a wall of sacks in the sandbag\'s or the hesco\'s own paint; a hut wall in the tan partition paint and a frame that says cloth are found, a wall of sacks and a wall that says its own word are not; the consulate\'s frames wear the varnish\'s paint and say its stuff and finish (a skin\'s Said)',
-    `${asked} wall and frame boxes in ${FILES.length} files · ${sacks} of sacks · made up: ${made.bad.size} of 2 found, ${made.sacks} of sacks · the consulate's frames in the varnish's paint: ${frames.length}, ${varnished} say ${VARNISH.stuff} at ${VARNISH.rough}${bad.length ? ` · CLOTH: ${bad.join(' · ')}` : ''}`); }
+  check(bad.length === 0 && asked > 5000 && sacks > 0 && sets > 0 && made.asked === 4 && made.sacks === 1 && made.sets === 1 && made.standins === 1 && made.bad.size === 3 && frames.length > 40 && varnished === frames.length,
+    '15 no wall and no door frame is cloth by a borrowed paint: in every level file no box of a `walls.` or `doorframe.` group is cloth, fabric or carpet, but for a wall of sacks in the sandbag\'s or the hesco\'s own paint; nor is a wall of a gear screen\'s set, asked as the look wears it (a stand-in on its fallback row is not asked); a hut wall in the tan partition paint, a frame that says cloth and a set\'s wall in the tan are found, a wall of sacks and a wall that says its own word are not; the consulate\'s frames wear the varnish\'s paint and say its stuff and finish (a skin\'s Said)',
+    `${asked} wall and frame boxes in ${FILES.length} files · ${sacks} of sacks · ${sets} walls of sets asked, ${standins} stand-ins not asked · made up: ${made.bad.size} of 3 found, ${made.sacks} of sacks, ${made.standins} stand-in · the consulate's frames in the varnish's paint: ${frames.length}, ${varnished} say ${VARNISH.stuff} at ${VARNISH.rough}${bad.length ? ` · CLOTH: ${bad.join(' · ')}` : ''}`); }
+
+// 16. A WORD AND ITS FINISH ARE SAID WITH THE PAINT, NEVER WRITTEN BESIDE IT BY HAND: scene/stuff.ts is the one way a paint says what it is made of
+//     (`madeOf` for a colour written as numbers, `saidAs` for a kit's row that is another thing here, each with the thing's finish where it has its own).
+//     A FINDER OVER THE SOURCE, line by line, of every module under tools/levels that lays boxes, and of the office's generator (scene/officeGen.ts):
+//       · a literal that writes `stuff: '<word>'` beside a paint it names (a kit's row, numbers written out, a paint that has said its word), or with no
+//         paint of its own at all (a word kept apart to spread into boxes, or handed in a call's options beside the paint);
+//       · a `rough` or `metal` written beside a paint that has said its word (a helper's call, or one of the paints named once: PANEL_GREY, CHAIR_GREY,
+//         KERB_GREY, RACK_BLACK, the office's K table), in the same literal or in the options that follow it in the call.
+//     NOT ASKED: a piece that says its word for whatever paint it is HANDED (`albedo, stuff: 'cloth'`: a rug is cloth in any colour), the level format's
+//     own data written as data (a gear screen's set: a literal with an `id`), a skin's Said (a literal with a `paint`), and the modules that ARE the way
+//     or only read files (livedKit, livedPieces, gwotSkin; export, library, libraryDraw, paintUsers, stuff-bake, stuffWas).
+//     WHAT A FINDER OVER LINES CANNOT SEE, said so that nobody takes its green for more: a call split over lines; a finish assigned afterwards
+//     (`b.rough = …`); and a generator that keeps a paint record of its own and passes `stuff: P.stuff` on at every call (white-roof.ts, 11-05: owed
+//     by its owner). RED PATH: eight made-up lines, five that must be found and three that must not; and the step before this line was red on 17.
+{ const HELP = /\b(?:madeOf|saidAs|drawnAs)\((?:[^(){}]|\([^()]*\)|\{[^{}]*\})*\)/g, NAMED = /\b(?:PANEL_GREY|CHAIR_GREY|KERB_GREY|RACK_BLACK)\b|\bK\.[a-z]\w*\b(?!\()/g;
+  /** every `{…}` of a line, innermost first, each with what is nested in it struck out: its own keys */
+  const literals = (code: string): string[] => { const out: string[] = []; for (let s = code, n = 0; n < 60; n++) { const m = /\{[^{}]*\}/.exec(s); if (!m) break; out.push(m[0]); s = s.slice(0, m.index) + '⟨⟩' + s.slice(m.index + m[0].length); } return out; };
+  /** what a line of a generator writes by hand beside a paint: nothing, or what it is */
+  const byHand = (line: string): string[] => { const code = line.replace(/\s\/\/ .*$/, ''), out = new Set<string>(); if (/^\s*(\/\/|\*|\/\*)/.test(code)) return [];
+    const said = code.replace(HELP, '§').replace(NAMED, '§');
+    if (/§\s*,\s*(?:\[[^\[\]]*\]\s*,\s*)?\{[^{}]*\b(?:rough|metal):/.test(said)) out.add('a finish in the options beside a paint that has said its word');
+    for (const lit of literals(said)) { if (/\bid: '/.test(lit) || /\bpaint: '/.test(lit)) continue; const word = /\bstuff: '/.test(lit);
+      if (word && /\balbedo: (?:[A-Z]\w*\.\w+|\[[-\d., ]+\]|§)/.test(lit)) out.add('a word beside a paint named at the call');
+      else if (word && !/\balbedo\b/.test(lit)) out.add('a word in a literal with no paint of its own');
+      if (/\balbedo: §/.test(lit) && /\b(?:rough|metal):/.test(lit)) out.add('a finish beside a paint that has said its word'); }
+    return [...out]; };
+  const NOT = ['livedKit.ts', 'livedPieces.ts', 'gwotSkin.ts', 'export.ts', 'library.ts', 'libraryDraw.ts', 'paintUsers.ts', 'stuff-bake.ts', 'stuffWas.ts'];
+  const files = [...readdirSync(`${ROOT}/tools/levels`).filter(f => f.endsWith('.ts') && !NOT.includes(f)).sort().map(f => `tools/levels/${f}`), 'src/scene/officeGen.ts'];
+  const found: string[] = []; let lines = 0;
+  for (const f of files) readFileSync(`${ROOT}/${f}`, 'utf8').split('\n').forEach((l, i) => { lines++; for (const w of byHand(l)) found.push(`${f}:${i + 1} ${w}`); });
+  const madeUp = ["  add({ c: [1, 1, 1], h: [1, 1, 1], albedo: C.woodDark, stuff: 'veneer' });", "  const PHONE = { rough: 0.92, stuff: 'metal' } as const;", "  floor(14, 4, 22, 10, madeOf('paver', [0.2, 0.21, 0.24]), { rough: 0.35 });",
+    "  const rack = add({ c: [x, 1, z], h: [0.3, 1, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(marks(slots.map(sl => ({ v: sl.y })))) });", "  add({ c: [9, 1, 5], h: [0.5, 1, 0.5], albedo: CHAIR_GREY, rough: 0.4 });",
+    "  add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw, albedo, stuff: 'cloth' });", "  floor(14, 4, 22, 10, madeOf('paver', [0.2, 0.21, 0.24], { rough: 0.35 }));   // { rough: 0.3, stuff: 'metal' }",
+    "    { id: 'cn_rug_a', group: 'cn.bunk', c: [22.7, 0.44, 11.62], h: [0.93, 0.04, 0.4], albedo: [0.27, 0.18, 0.12], stuff: 'cloth' },"].map(l => byHand(l).length ? 1 : 0);
+  check(found.length === 0 && files.length > 60 && lines > 15000 && madeUp.join('') === '11111000',
+    '16 a word and its finish are said with the paint (scene/stuff.ts madeOf, saidAs), never written beside it by hand: in every module that lays a level\'s boxes no line writes a word beside a paint it names or in a literal with no paint of its own, or a finish beside a paint that has said its word; a piece that says its word for whatever paint it is handed, a set\'s data and a skin\'s Said are not asked',
+    `${files.length} modules, ${lines} lines · ${found.length} by hand${found.length ? `: ${found.slice(0, 30).join(' · ')}` : ''} · made up: ${madeUp.join(' ')} (the first five found, the last three not)`); }
 
 console.log(`=== stuff: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);
