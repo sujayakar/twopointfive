@@ -208,7 +208,9 @@ export const REACH_WORK = { cells: 0, steps: 0, fields: 0 };   // fields: jump f
 /** How game.ts reachTick paces the masks decided again after a wall changes. `steps` = sight-line steps a frame, a mask too big for one frame's share carried on the
  *  next (60000: over 31 staged blasts on five levels no blast's masks land later than they did a mask at a time; at 40000 five did, by up to ten frames).
  *  `whole` (the page's ?reachpace=old) = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
- *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs. */
+ *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs. A REGISTERED SWITCH (host/profile.ts
+ *  pageSwitches reads the word, game/knobs.ts lists the table, a recording carries it): the game's tick reads it, so a server's stand must pace as its
+ *  clients do. */
 export const REACH_PACE = { steps: 60000, whole: false, wholeCells: 60 };
 export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [number, number, number, number])[]; /** cells farther than this from the light keep their level too (past its range it lights nothing) */ maxDist?: number;
   /** the wall raster's changed sub-cells, as boxes (wallRasterDiff): given these, a cell is decided again only if one of its OWN sight lines touches one — the same

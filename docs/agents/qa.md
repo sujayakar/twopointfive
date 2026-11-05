@@ -454,11 +454,13 @@ but synthetic writes still work.
   `pageSwitches`, a `FROZEN_HOLDS` row (`TPS_PLANPACE=1 (a picture only)`), `STAND_ENV`, the knob registry, `JOURNAL_KNOBS`, and `applyKnobs` puts it
   down for a file with no table for it; `openings-check` holds all of that on both stands. THE RULE FOR THE NEXT ONE: any word that moves when
   something runs or lands, in the tick or in the picture, goes through `pageSwitches` and the registry; `main.ts` reads no such word by itself.
-  `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`) is the same case and the game's tick reads it (to pace the lamps' reach masks, which are the
-  picture's: no sense, rule or run digest reads them, and the 42 play-through digests are the same with it forced either way on both stands). A PAGE
-  RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the clock's: after the first six drawn frames a plan lands when the clock
-  lets it. A rig that reads a frame a fixed number of frames after a door or a wall changes puts `planpace=old` on its address
-  (`tools/qa/draw-equal.cjs` does). Neither word is a visit's flag: a joiner's page takes the recipe's. `docs/agents/render.md` has both rules.
+  `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`) was the same case and is registered the same way, in a commit of its own: the game's tick
+  reads it (to pace the lamps' reach masks, which are the picture's: no sense, rule or run digest reads them, and the 42 play-through digests are the
+  same with it forced either way on both stands), so a host's page and its server paced that bookkeeping differently. It is the same on both stands
+  with no word (the shares), so it has no `FROZEN_HOLDS` row. A PAGE RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the
+  clock's: after the first six drawn frames a plan lands when the clock lets it. A rig that reads a frame a fixed number of frames after a door or a
+  wall changes puts `planpace=old` on its address (`tools/qa/draw-equal.cjs` does). Neither word is a visit's flag: a joiner's page takes the
+  recipe's. `docs/agents/render.md` has both rules.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),
