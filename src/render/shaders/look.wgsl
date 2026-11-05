@@ -436,14 +436,18 @@ fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround {
 //             side a shirt's placket and buttons, long folds in loose trousers, a wool waistcoat and cap
 // lookCfg.f.z = how much of it (the panel's Men row; 0 = the men as the build draws them). Derivatives are taken by the caller: nothing below needs uniform flow.
 struct LookMan { albedo: vec3f, n: vec3f, rough: f32, gain: f32 };
-fn manH(i: vec3i) -> f32 { var h = (u32(i.x + 4096) * 73856093u) ^ (u32(i.y + 4096) * 19349663u) ^ (u32(i.z + 4096) * 83492791u); h = h * 747796405u + 2891336453u; h = ((h >> ((h >> 28u) + 4u)) ^ h) * 277803737u; return f32((h ^ (h >> 22u)) >> 8u) * (1.0 / 16777216.0); }
+/** the hash of a lattice corner, FOUR CORNERS AT A TIME (h0: each corner's three coordinates already folded together, as the one-corner hash began): the
+ *  same integer steps a lane as one corner's ever were, so the same values. THE MEN'S PROGRAM HOLDS NO LOOP AND NO LOCAL ARRAY ON PURPOSE: written as eight calls of a one-corner hash this was pasted eight
+ *  times at each of ninety-two places (195 KB of the program's 325 as a compiler pastes it); a loop over a local array fixed the size and timed the
+ *  same on one card, but a loop's price is a mode of the compiler that no size tool sees, and nobody here can time DXC, the AMD driver or Metal */
+fn manH4(h0: vec4u) -> vec4f { var h = h0 * 747796405u + vec4u(2891336453u); h = ((h >> ((h >> vec4u(28u)) + vec4u(4u))) ^ h) * 277803737u; return vec4f((h ^ (h >> vec4u(22u))) >> vec4u(8u)) * (1.0 / 16777216.0); }
 /** value noise in the bind pose's space, 0‥1, one lattice cell a unit */
 fn manNoise(p: vec3f) -> f32 {
   let fl = floor(p); let i = vec3i(fl); let f = p - fl; let u = f * f * (3.0 - 2.0 * f);
-  // (the cell's eight corners by ONE call in a loop, then the same blend of them: written as eight calls the hash was pasted eight times at each of this
-  // function's ninety-two places in the men's fragment program, 195 KB of its 325)
-  var h: array<f32, 8>; for (var k = 0; k < 8; k++) { h[k] = manH(i + vec3i(k & 1, (k >> 1) & 1, k >> 2)); }
-  return mix(mix(mix(h[0], h[1], u.x), mix(h[2], h[3], u.x), u.y), mix(mix(h[4], h[5], u.x), mix(h[6], h[7], u.x), u.y), u.z);
+  // (the cell's four corners along x and y, shared by its floor and its lid; then each of the two by its own z)
+  let xy = (vec4u(vec4i(i.x, i.x + 1, i.x, i.x + 1) + vec4i(4096)) * 73856093u) ^ (vec4u(vec4i(i.y, i.y, i.y + 1, i.y + 1) + vec4i(4096)) * 19349663u);
+  let a = manH4(xy ^ vec4u(u32(i.z + 4096) * 83492791u)); let b = manH4(xy ^ vec4u(u32(i.z + 4097) * 83492791u));
+  return mix(mix(mix(a.x, a.y, u.x), mix(a.z, a.w, u.x), u.y), mix(mix(b.x, b.y, u.x), mix(b.z, b.w, u.x), u.y), u.z);
 }
 fn manBump(x: f32, c: f32, w: f32) -> f32 { return 1.0 - smoothstep(0.0, w, abs(x - c)); }
 /** a disruptive print cut from `base`: a dark and a pale shape over the ground colour and dark twigs over the dark, wider than tall, soft-edged to the pixel */
