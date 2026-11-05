@@ -153,6 +153,7 @@ import { CARLAMPS } from '../game/carlamps';
 import { HITSTUFF } from '../game/particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
+import { WALLSKIN } from '../game/wallskin';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
@@ -372,6 +373,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HITSTUFF.on = q.get('hitstuff') !== '0';   // a round reads what a thing SAYS it is made of (game/particleFx.ts): a box that says its stuff gives what that stuff gives — car paint and steel sparks and no chips, solid glass that is not a pane a crack that stays — and only a box that says nothing is read by the colour of its paint; with it on metal throws no chips anywhere: ON in the page; ?hitstuff=0 = by the colour, as it was
   MARKCUT.on = q.get('markcut') !== '0';   // a mark on a cut or a round face lies where the round met it (render/decals.ts MARKCUT): ON in the page; ?markcut=0 = pulled to the plain box's face, where the shader drops it, as it was
   MARKSIT.on = q.get('marksit') !== '0';   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only, one word of the decal buffer's header): ON in the page; ?marksit=0 = every mark as it was drawn
+  WALLSKIN.on = q.get('wallskin') !== '0';   // what is painted on a wall goes with the wall (game/wallskin.ts): a band, a skirt or a dado on a wall's face is drawn only where the wall still stands behind it, cut at the edge of a hole as the wall is — picture only, no box's flags written, the same run by digest: ON in the page; ?wallskin=0 = the band stays whole across the hole, as it was
   CLEANRESTART.on = q.get('cleanrestart') !== '0' && !q.has('kitview');   // a restart gives a clean level: the lights stand as a level just opened has them, the last try's lines and clocks are gone, the camera cuts and the picture starts fresh (game/cleanrestart.ts): ON in the page; ?cleanrestart=0 = the restart as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   SAVETIMELINE.on = q.get('savetimeline') !== '0';   // the saves roll (five by hand on F5 beside five autosaves), each keeps a picture, a team on the floor is saved in memory, and the pause and down cards lay this run's out as a strip (game/savestate.ts): ON in the page; ?savetimeline=0 = one checkpoint to go back to, as it was
@@ -810,6 +812,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HITSTUFF.on': 'TPS_HITSTUFF=1',
   'MARKCUT.on': 'TPS_MARKCUT=1',
   'MARKSIT.on': 'TPS_MARKSIT=1 (a picture only)',
+  'WALLSKIN.on': 'TPS_WALLSKIN=1',
   'CLEANRESTART.on': 'TPS_CLEANRESTART=1',
   'FIRELINE.on': 'TPS_FIRELINE=1',
   'SAVETIMELINE.on': 'TPS_SAVETIMELINE=1',

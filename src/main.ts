@@ -42,6 +42,7 @@ import { pageSwitches, pageRows } from './host/profile';
 import { MARKING_TEXEL } from './scene/markings';
 import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs, lookKeptOf } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
+import { WALLSKIN } from './game/wallskin';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
@@ -1042,7 +1043,7 @@ async function main() {
     charLabFrame(game, cam);   // (the look prototype's character lab, opened from its panel: the camera on you; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
-    lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed — scene/lookTidy.ts)
+    if (!WALLSKIN.on) lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed, WHOLE — scene/lookTidy.ts; it stands only for ?wallskin=0: game/wallskin.ts cuts every wall's paint at the hole's edge on every stand)
     if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
@@ -1095,7 +1096,7 @@ async function main() {
     }
   }
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
-  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
+  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); if (!WALLSKIN.on) lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
   net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
   if (net) coopInvite(net, q);   // (a co-op game's host is shown the code and the link while the server waits for the second player: ui/coop.ts)
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
