@@ -74,6 +74,16 @@ export const EDGE_STATS = { decor: 0, rubble: 0, flying: 0, scorch: 0, shed: 0, 
 /** what this module reads of wallbreak's Breakable (handed over by its one hook — nothing here writes to it) */
 export interface BreakLike { id: number; kind: 'wall' | 'cover'; surf: string; box: Box; nx: number; ny: number; nz: number; yb: number[]; open: Uint8Array }
 
+/** WHAT THE FRAME'S BOX LIST CAN STILL TAKE of a picture-only lane's boxes (this file's, wallskin.ts's), asked before the list is made again: the world's
+ *  room less the statics, less last frame's dynamics other than the `mine` this lane handed over then (g.dynBoxes still holds last frame's list — the
+ *  PICTURE's under the fog of war, which can be longer than the game's own count by the things it remembers: the larger of the two is budgeted by), less
+ *  `slack` rows kept free. With `now` it is asked while the list is being made: less the `now` boxes the list holds as it stands, in place of last
+ *  frame's. null on a host with no box world */
+export function frameRoom(g: Game, mine: number, slack: number, now?: number): number | null {
+  const world = g.engine?.world as { maxBoxes?: number; statics?: unknown[] } | undefined;
+  return world && typeof world.maxBoxes === 'number' && Array.isArray(world.statics) ? world.maxBoxes - world.statics.length - (now ?? Math.max(0, Math.max(g.dynRaw, g.dynBoxes.length) - mine)) - slack : null;
+}
+
 const MKEY_LOOK = MKEY.look;   // (scene/boxes.ts MKEY: a resting piece keeps its motion history when the dynamic list shifts under it — and the key is what keeps every piece out of the CPU's world ray)
 const STEEL: Vec3 = [0.5, 0.52, 0.54], CORE: Vec3 = [0.8, 0.79, 0.75], PAPER: Vec3 = [0.52, 0.47, 0.39];
 const UP: Vec3 = [0, 1, 0];
@@ -117,8 +127,7 @@ export class EdgeLook {
   update(dt: number) {
     // what the frame's box list can still take: last frame's dynamics less ours (g.dynBoxes still holds last frame's list here — the PICTURE's under fog of war, which
     // can be longer than the game's own count by the things it remembers: the larger of the two is budgeted by)
-    const world = this.g.engine.world as { maxBoxes?: number; statics?: unknown[] } | undefined;
-    if (world && typeof world.maxBoxes === 'number' && Array.isArray(world.statics)) this.room = world.maxBoxes - world.statics.length - Math.max(0, Math.max(this.g.dynRaw, this.g.dynBoxes.length) - this.last) - EDGE.boxSlack;
+    this.room = frameRoom(this.g, this.last, EDGE.boxSlack) ?? this.room;
     if (!this.held) try {
       if (this.dirty.size) this.flush();
       else if (this.todo.length) { for (const q of this.todo.splice(0, Math.max(1, EDGE.spread | 0))) this.shed(q.B, q.F, q.c, q.dir, false, q.blast); this.cap(); }

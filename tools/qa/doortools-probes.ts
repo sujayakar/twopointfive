@@ -28,6 +28,7 @@
 //                       and clear and by a charge over six seeds — fewer first men lost behind the bang, and behind the charge, than through the plain door.
 //                       The quiet floor's numbers are printed as information (there the plain door wins by surprise: that is the point of having three tools)
 import { standUp, ROOT } from './headless.ts';
+import { asProbe, asProbes, exitCode, wanted } from './holds.ts';   // (run alone, each part runs as the probe the runner calls it by: one stand both ways)
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { OWNBLOW } = await import(`${ROOT}/src/game/ownblow.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
@@ -352,7 +353,7 @@ export const doortoolsLights = guarded(async () => {
 async function tally(kind: string, seeds: number[], hot: boolean, door = 'breakroom_w', roomId = 'breakroom') {
   const out = { n: 0, first: 0, pair: 0, down: 0, of: 0, taken: 0 };
   for (const seed of seeds) {
-    const R = await rig(seed, { door, hot, deal: false }); const { D } = R; const room = R.room(roomId);   // (a ROOM-FIGHT floor: with squads dealt from the rooms the room's men are their squad's, still thinking four seconds after the bang and dug in behind wedged doors by twenty-five — the plain door then loses nobody, or nobody gets in, and there is nothing for a bang to beat) out.of += room.defenders.length;
+    const R = await rig(seed, { door, hot, deal: false }); const { D } = R; const room = R.room(roomId); out.of += room.defenders.length;   // (a ROOM-FIGHT floor: with squads dealt from the rooms the room's men are their squad's, still thinking four seconds after the bang and dug in behind wedged doors by twenty-five — the plain door then loses nobody, or nobody gets in, and there is nothing for a bang to beat)
     R.give(kind, door); const op = D.ops[0]; if (!op) { out.n++; continue; }
     for (let i = 0; i < 60 * 45 && D.ops.length; i++) { R.step(); if (kind === 'charge' && op.phase === 'armed') R.press('KeyF'); }
     R.step(60 * 6);
@@ -381,7 +382,7 @@ if (import.meta.main && process.argv[2] === 'tally') {
     const F = await import(`${ROOT}/src/game/roomfight.ts`); const T: any = { operative: F.FIGHT_SKILL.operative, hostile: F.FIGHT_SKILL.hostile, ROOMFIGHT: F.ROOMFIGHT, BLIND: (await import(`${ROOT}/src/game/nightbreach.ts`)).BLIND };
     for (const [t, row] of Object.entries(JSON.parse(process.env.TALLY_SET) as Record<string, Record<string, unknown>>)) { if (!T[t]) throw new Error(`TALLY_SET: no table '${t}'`); for (const k of Object.keys(row)) if (!(k in T[t])) throw new Error(`TALLY_SET: no knob '${t}.${k}'`); Object.assign(T[t], row); }
   }
-  const [, , , kind, door, roomId, seeds, mode] = process.argv; const r = await tally(kind, seeds.split(',').map(Number), mode === 'hot', door, roomId);
+  const [, , , kind, door, roomId, seeds, mode] = process.argv; const r = await asProbe('doortools-firstman', () => tally(kind, seeds.split(',').map(Number), mode === 'hot', door, roomId));   // (the count as the probe of that name makes it)
   Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS);
   console.log(`${mode} ${kind} ${door} over ${r.n} seeds: first man lost ${r.first} · pair lost ${r.pair}/${r.n * 2} · room's men down ${r.down}/${r.of} · room taken ${r.taken}`);
-}
+} else if (import.meta.main) process.exit(exitCode(await asProbes({ 'doortools-menu': doortoolsMenu, 'doortools-charge': doortoolsCharge, 'doortools-bang': doortoolsBang, 'doortools-outside': doortoolsOutside, 'doortools-counts': doortoolsCounts, 'doortools-edges': doortoolsEdges, 'doortools-lights': doortoolsLights, 'doortools-firstman': doortoolsFirstMan }, wanted())));   // (`bun run tools/qa/doortools-probes.ts [name …]`: the file's probes alone, each as the runner runs it)

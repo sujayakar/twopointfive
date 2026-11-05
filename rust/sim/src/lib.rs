@@ -53,7 +53,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 29;
+pub const ABI: u32 = 30;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -876,10 +876,12 @@ pub extern "C" fn nav_addr(table: u32) -> usize {
         _ => 0,
     }
 }
+/// what a search holds: 0 the cells of the largest floor it can be asked over (nav::MAX_FLOOR: on such a floor no table of a search is outgrown) ·
+/// 1 a way's waypoints
 #[no_mangle]
 pub extern "C" fn nav_cap(table: u32) -> usize {
     match table {
-        0 => nav::MAX_NAV,
+        0 => nav::MAX_FLOOR,
         1 => nav::MAX_WAY,
         _ => 0,
     }

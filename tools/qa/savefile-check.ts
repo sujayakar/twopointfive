@@ -2,11 +2,11 @@
 // whoever listens and to nobody else: no download is asked for, with a listener or without, and the door answers what became of the file ('sent', 'held',
 // false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. The one kind still downloaded (the editor's level) is asked for once under the file's name and the listener told after it; a download that cannot be asked for THROWS (a
 // caller must not mark the file handed over) and nobody is told. A listener that throws, or whose promise is refused, loses nothing. A saver hears
-// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; the recorder's take and the others go through the door; and no file under src/ makes a download of its own (by `.download =` or createObjectURL; an address a module hands to a worker, with no way out of the page beside it, is a script's and no file). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
+// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; every kind on the door's own list is saved through it by some file; and no file under src/ makes a download of its own (by `.download =` or createObjectURL; an address whose every use in its module is a worker's is a script's and no file). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SAVED, SAVE_UP, saveFile, tellSaved, downloads, wanted, savedWords, savedEnd, type Saved, type SavedDone, type SavedFile, type Went } from '../../src/host/savefile';
+import { SAVED, SAVED_KINDS, SAVE_UP, saveFile, tellSaved, downloads, wanted, savedWords, savedEnd, type Saved, type SavedDone, type SavedFile, type Went } from '../../src/host/savefile';
 import { FileSync, FILESYNC } from '../../src/cloud/files';
 import { wire } from '../../src/cloud/wire';
 const is = (w: Went, went: Saved, local: boolean) => w.went === went && w.local === local;
@@ -31,7 +31,7 @@ page();
 { // nobody listens
   SAVED.sink = null; const went = saveFile('perf', 'a.json', new Blob(['{}'])), went2 = saveFile('level', 'a2.json', new Blob(['{}']));
   check(is(went, false, false) && is(went2, false, true) && !wanted('perf') && wanted('level') && clicks.length === 1 && clicks[0].name === 'a2.json' && /^blob:fake\//.test(clicks[0].href), `nobody listening: a take goes nowhere and the door says so, with no download; a level is still downloaded, once, under its name (${clicks.map(c => c.name).join(', ')})`);
-  check(!downloads('perf') && !downloads('bench') && !downloads('session') && !downloads('checkpoint') && downloads('level') && SAVE_UP.local.join() === 'level' && SAVE_UP.on, `a take, a result, a journal and an exported checkpoint have given their download up; the editor's level is the one kind still downloaded (${SAVE_UP.local.join(', ')})`);
+  check(SAVED_KINDS.filter(k => downloads(k)).join() === 'level' && SAVE_UP.local.join() === 'level' && SAVE_UP.on, `of the door's kinds the editor's level is the one still downloaded; every other has given its download up (${SAVED_KINDS.map(k => `${k}${downloads(k) ? ': downloaded' : ''}`).join(', ')})`);
 }
 { // a listener
   listen(); const blob = new Blob(['{"x":1}'], { type: 'application/json' }), c = clicks.length;
@@ -133,33 +133,71 @@ page();
 { // no other door: nothing under src/ makes a download of its own
   const files: string[] = []; const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.ts$/.test(e.name)) files.push(p); } };
   const root = join(import.meta.dir, '../../src'); walk(root);
-  // (WHERE AN ADDRESS CAN GO SAYS WHAT IT IS. An address made with createObjectURL is a file leaving the page when the browser is sent to it or handed it to
-  //  keep: a link, a window, the page's own location, a frame. A module that hands its address to a worker and holds none of those ways out has made a
-  //  script's address, which is how a worker gets its script (render/lookWorkers.ts); the address is never a file there, whatever its Blob says of itself.
-  //  The rule names no file and reads no spelling of the Blob. A download's own two spellings are red wherever they stand)
-  const WAY_OUT = /\.download\b|['"`]download['"`]|\bdownload\s*:|<a\s|\.href\b|\bhref\s*[:=]|\.src\s*=|\.click\(|window\.open\(|\blocation\s*=|\blocation\.(assign|replace)\(|createElement\(\s*['"`](a|iframe|embed|object)['"`]|showSaveFilePicker|navigator\.share\(/;
-  const ownDownload = (text: string): boolean => /\.download\s*=|setAttribute\(\s*'download'/.test(text) || (/createObjectURL\(/.test(text) && !(/new\s+(Shared)?Worker\(/.test(text) && !WAY_OUT.test(text)));
+  const texts = new Map(files.map(f => [f.slice(root.length + 1), readFileSync(f, 'utf8')] as const));
+  // (WHAT AN ADDRESS IS USED FOR SAYS WHAT IT IS. An address made with createObjectURL is a script's, and no file, when EVERY use of it in the module that
+  //  makes it is one of a worker's: it is made inside `new Worker(…)`, or kept under one name that is only ever handed to a worker, let go
+  //  (revokeObjectURL), emptied, or asked whether it is there. Any other use of that name, or an address made any other way, is a file leaving the page.
+  //  So the rule is a list of what a worker needs, closed, and not a list of the ways out of a page, which has no end; it names no file and reads no
+  //  Blob (render/lookWorkers.ts is the one module it lets by today). A download's own spellings are red wherever they stand. WHAT IT CANNOT SEE: a
+  //  download with no address of the page's making and none of those spellings (a `data:` link written as an object's `download` key))
+  const DOWNLOAD = /\.download\s*=|setAttribute\(\s*['"`]download['"`]|\[\s*['"`]download['"`]\s*\]\s*=/;
+  const scriptOnly = (text: string): boolean => {
+    let rest = text.replace(/new\s+(?:Shared)?Worker\(\s*URL\.createObjectURL\(/g, 'new Worker((');
+    for (const n of new Set([...text.matchAll(/([A-Za-z_$][\w$]*)\s*=\s*URL\.createObjectURL\(/g)].map(m => m[1]))) {
+      const at = `(?:[\\w$]+\\.)*${n.replace(/\$/g, '\\$')}`, worker = new RegExp(`new\\s+(?:Shared)?Worker\\(\\s*${at}\\s*[,)]`, 'g');
+      if (!worker.test(text)) return false;   // (kept, and never handed to a worker)
+      for (const use of [worker, new RegExp(`${at}\\s*=\\s*URL\\.createObjectURL\\(`, 'g'), new RegExp(`revokeObjectURL\\(\\s*${at}\\s*\\)`, 'g'), new RegExp(`${at}\\s*=\\s*''`, 'g'), new RegExp(`\\bif\\s*\\(\\s*${at}\\s*\\)`, 'g')]) rest = rest.replace(use, ' ');
+      if (new RegExp(`(?<![\\w$])${n.replace(/\$/g, '\\$')}(?![\\w$])`).test(rest)) return false;   // (the name is used some other way)
+    }
+    return !/createObjectURL\(/.test(rest);
+  };
+  const ownDownload = (text: string): boolean => DOWNLOAD.test(text) || (/createObjectURL\(/.test(text) && !scriptOnly(text));
   { const made = "const u = URL.createObjectURL(new Blob([text], { type: 'text/javascript' }));", worker = `${made} const w = new Worker(u);`;
     const tries: [string, string, boolean][] = [
-      ['a worker handed its script', worker, false], ['a worker handed its script, the Blob made first', "const b = new Blob([t[0]], { type: \"text/javascript\" }); const w = new Worker(URL.createObjectURL(b), { name: 'x' });", false],
-      ['an address handed to nothing', made, true], ['a download beside a worker', `${worker} a.download = 'x.js';`, true], ['a download by its attribute', "a.setAttribute('download', name);", true],
-      ['a link beside a worker', `${worker} a.href = u;`, true], ['a link made whole beside a worker', `${worker} Object.assign(document.createElement('a'), { href: u, download: 'x' }).click();`, true],
-      ['a window beside a worker', `${worker} window.open(u);`, true], ['the page sent there beside a worker', `${worker} location.assign(u);`, true], ['a frame beside a worker', `${worker} frame.src = u;`, true],
-      ['a link written out beside a worker', `${worker} el.innerHTML = \`<a download href="\${u}">\`;`, true], ['a plain download', "a.href = URL.createObjectURL(blob); a.download = name; a.click();", true]];
+      ['a worker handed its script by a kept name', "class P { private url = ''; open() { this.url = URL.createObjectURL(b); const w = new Worker(this.url, { name: 'x' }); } close() { if (this.url) { URL.revokeObjectURL(this.url); this.url = ''; } } }", false],
+      ['a worker handed its script as it is made', "const w = new Worker(URL.createObjectURL(new Blob([t[0]], { type: \"text/javascript\" })));", false], ['a worker handed its script', worker, false],
+      ['an address handed to nothing', made, true], ['an address made and handed on, beside a worker', `${worker} export const addressOf = (b: Blob) => URL.createObjectURL(b);`, true],
+      ['a link beside a worker', `${worker} a.href = u;`, true], ['a window beside a worker', `${worker} open(u, '_blank');`, true], ['a frame beside a worker', `${worker} f.setAttribute('src', u);`, true],
+      ['a frame written out beside a worker', `${worker} el.innerHTML = \`<iframe src="\${u}">\`;`, true], ['the address given away beside a worker', `${worker} export const where = () => u;`, true],
+      ['a worker only in a note', `// new Worker(u)\n${made} window.open(u);`, true],
+      ['a download', "a.download = name;", true], ['a download by its attribute', "a.setAttribute('download', name);", true], ['a download by its attribute, the other quotes', 'a.setAttribute("download", name);', true], ['a download by its key', "a['download'] = name;", true],
+      ['a download beside a worker', `${worker} a.download = 'x.js';`, true]];
     const wrong = tries.filter(([, text, want]) => ownDownload(text) !== want).map(([what]) => what);
-    check(wrong.length === 0, `an address a module hands to a worker, with no way out of the page beside it, is a script's and not a file; every other is a download of its own${wrong.length ? ` (read wrongly: ${wrong.join(' · ')})` : ''}`); }
-  const own = files.filter(f => !/host\/savefile\.ts$/.test(f) && ownDownload(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1));
+    check(wrong.length === 0, `an address is a script's, and no file, only where every use of it in its module is a worker's; every other address, and every download, is a file leaving the page${wrong.length ? ` (read wrongly: ${wrong.join(' · ')})` : ''}`); }
+  const own = [...texts].filter(([f, text]) => !/host\/savefile\.ts$/.test(f) && ownDownload(text)).map(([f]) => f);
   // (a replay is not the door's: no file with replay in its path imports it, and the door has no kind to save one under. The two patterns are tried on
   // the lines they are for first, so that a pattern that can match nothing does not read as a pass)
-  const DOOR = /from\s*['"][^'"]*host\/savefile['"]/, KINDS = /type SavedKind\s*=([^;]*);/;
-  const replays = files.map(f => f.slice(root.length + 1)).filter(f => /replay/i.test(f) && DOOR.test(readFileSync(join(root, f), 'utf8')));
-  const kinds = KINDS.exec(readFileSync(join(root, 'host/savefile.ts'), 'utf8'))?.[1] ?? '';
-  check(DOOR.test("import { saveFile } from '../host/savefile';") && KINDS.test("export type SavedKind = 'perf' | 'replay';") && /'level'/.test(kinds) && replays.length === 0 && !/replay/.test(kinds) && !SAVE_UP.local.includes('replay' as any),
-    `a replay does not leave the page by this door: no replay file imports it, and it has no such kind (${kinds.trim()})${replays.length ? ` (${replays.join(', ')})` : ''}`);
+  const DOOR = /from\s*['"][^'"]*host\/savefile['"]/;
+  const replays = [...texts].filter(([f, text]) => /replay/i.test(f) && DOOR.test(text)).map(([f]) => f);
+  check(DOOR.test("import { saveFile } from '../host/savefile';") && SAVED_KINDS.includes('level') && replays.length === 0 && !SAVED_KINDS.some(k => /replay/.test(k)) && !SAVE_UP.local.includes('replay' as any),
+    `a replay does not leave the page by this door: no replay file imports it, and it has no such kind (${SAVED_KINDS.join(', ')})${replays.length ? ` (${replays.join(', ')})` : ''}`);
   // … and the file F7 sends is still the replay with its blank notes left out, named by the notes it keeps (replay/format.ts `replayBlob`)
   { const { name, blob } = replayBlob({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 12, notes: [{ t: 1, text: ' ' }, { t: 2, text: 'here' }] } as any), back = JSON.parse(await blob.text());
     check(/^twopointsix-replay-.*-12s-1notes\.json$/.test(name) && back.notes.length === 1 && back.notes[0].text === 'here' && back.seconds === 12, `a replay's file leaves out a note with no words and is named by the notes it keeps (${name})`); }
-  const through = ['ui/perfrec.ts', 'ui/sessionrec.ts', 'ui/bench.ts', 'ui/bindings.ts', 'editor/persist.ts'].filter(f => !/from '\.\.\/host\/savefile'/.test(readFileSync(join(root, f), 'utf8')));
+  // EVERY KIND OF THE DOOR'S IS SAVED THROUGH IT, BY THE DOOR'S OWN LIST (host/savefile.ts SAVED_KINDS; this was five file names written by hand while
+  // the door grew to eight kinds): each kind has a file that hands it to the door (saveFile or tellSaved), and no save's kind is one the lint cannot
+  // read. A kind is read where it is said outright, or by a const the file declares once as a SavedKind and writes no other thing under; a save by
+  // another name for the door, in a file that does not import it, or with any other first word is NOT READ, and red. Notes are left out (a save
+  // spoken of in a note saves nothing). A kind nothing saves is a saver that left the door, or a kind to take off its list
+  const code = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ');
+  const savedBy = (raw: string): { kinds: string[]; unread: number } => { const text = code(raw), kinds: string[] = []; let unread = /\b(?:saveFile|tellSaved)\s+as\s+[\w$]/.test(text) ? 1 : 0;
+    for (const m of text.matchAll(/(?<![\w$.])(?:saveFile|tellSaved)\(\s*([^,)]*)/g)) { const a = m[1].trim(), said = /^'([^']+)'$/.exec(a);
+      if (said) { kinds.push(said[1]); continue; }
+      const held = /^[A-Za-z_$][\w$]*$/.test(a) ? [...text.matchAll(new RegExp(`\\bconst\\s+${a}\\s*:\\s*SavedKind\\s*=\\s*'([^']+)'`, 'g'))] : [];
+      if (held.length === 1 && [...text.matchAll(new RegExp(`(?<![\\w$.])${a}\\s*[:=](?!=)`, 'g'))].length === 1) kinds.push(held[0][1]); else unread++; }
+    return { kinds, unread }; };
+  const saversOf = (list: readonly string[], of: ReadonlyMap<string, string>) => { const savers = new Map<string, string[]>(list.map(k => [k, []])), unread: string[] = [], strange: string[] = [];
+    for (const [name, text] of of) { if (/host\/savefile\.ts$/.test(name)) continue; const r = savedBy(text), in_ = DOOR.test(text) || (/^host\//.test(name) && /from\s*['"]\.\/savefile['"]/.test(text)); if (r.unread || ((r.kinds.length > 0) && !in_)) unread.push(name);
+      for (const k of r.kinds) { const l = savers.get(k); if (!l) strange.push(`${name}: ${k}`); else if (!l.includes(name)) l.push(name); } }
+    return { savers, unread, strange, unsaved: list.filter(k => !savers.get(k)!.length) }; };
+  { const door = "import { saveFile, tellSaved } from '../host/savefile';\n", t = saversOf(['perf', 'bench', 'net-log', 'ninth'], new Map([
+      ['a.ts', `${door}const w = saveFile('perf', name, body);`], ['b.ts', `${door}// (it used to leave by saveFile('bench', n, b))`], ['c.ts', `${door}tellSaved('net-log', n, b); saveFile('odd', n, b);`],
+      ['d.ts', `${door}saveFile(kindOf(x), n, b);`], ['e.ts', `${door}const kind: SavedKind = 'ninth'; export function put(kind: SavedKind) { return saveFile(kind, n, b); }`], ['f.ts', "saveFile('ninth', n, b);"],
+      ['g.ts', "import { saveFile as put } from '../host/savefile'; put(k, n, b);"], ['h.ts', `${door}saveFile("ninth", n, b); saveFile((k as SavedKind), n, b);`], ['host/savefile.ts', "saveFile('bench', n, b);"]]));
+    const k = savedBy(`${door}const KIND: SavedKind = 'modelerr'; saveFile(KIND, n, b);`);
+    check(t.unsaved.join() === 'bench' && t.strange.join() === 'c.ts: odd' && t.unread.join() === 'd.ts,e.ts,f.ts,g.ts,h.ts' && t.savers.get('perf')!.join() === 'a.ts' && t.savers.get('net-log')!.join() === 'c.ts' && t.savers.get('ninth')!.join() === 'f.ts' && k.kinds.join() === 'modelerr' && k.unread === 0,
+      `the walk on lines of its own: a kind only a note speaks of has nobody, a kind off the list is strange, and a save whose kind is not said outright or by one const is not read (nobody: ${t.unsaved.join()} · strange: ${t.strange.join()} · not read: ${t.unread.join()})`); }
+  const { savers, unread, strange, unsaved } = saversOf(SAVED_KINDS, texts);
   const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), main = readFileSync(join(root, 'main.ts'), 'utf8');
   check(sets.join() === 'main.ts' && /SAVED\.sink = cloud \? \(f, done\) => \{ const took = cloud\.save\(f\.name, f\.blob,[^\n]*f\.meta, done\); return took === 'sent' \|\| took === 'held' \? took : false; \} : null;/.test(main), `one place sets the listener: main.ts, to the backend's file intake, and hands its whole answer back (${sets.join(', ') || 'nowhere'})`);
   // the debug panel's checkpoint export (ui/bindings.ts): its line is the door's answer in the shared words, with a second line for the file's end, and
@@ -167,7 +205,8 @@ page();
   { const row = readFileSync(join(root, 'ui/bindings.ts'), 'utf8').split("text: 'export chosen'")[1]?.split("text: 'import…'")[0] ?? '';
     check(/saveFile\('checkpoint', name, [^\n]*\{ done: arrived => game\.msg\(savedEnd\('The checkpoint', arrived\)\) \}/.test(row) && /if \(w\.local\) game\.msg\(`exported /.test(row) && /game\.msg\(savedWords\('The checkpoint', w\.went\)\)/.test(row) && !/title: '[^']*\bdownload the\b/.test(row),
       'the checkpoint export says what became of its file in the shared words (sent, held, not sent, and its end), and says "exported" only of a file the browser was handed'); }
-  check(own.length === 0 && through.length === 0, `no file under src/ makes a download of its own, and the five spots save through the door${own.length ? ` (own: ${own.join(', ')})` : ''}${through.length ? ` (not through it: ${through.join(', ')})` : ''}`);
+  check(own.length === 0, `no file under src/ makes a download of its own${own.length ? ` (own: ${own.join(', ')})` : ''}`);
+  check(SAVED_KINDS.length > 1 && unsaved.length === 0 && unread.length === 0 && strange.length === 0, `every kind of the door's is saved through it, by the door's own list (${SAVED_KINDS.map(k => `${k}: ${savers.get(k)!.join(' + ') || 'NOBODY'}`).join(' · ')})${unread.length ? ` (a save whose kind is not read: ${unread.join(', ')})` : ''}${strange.length ? ` (a kind the door does not list: ${strange.join(', ')})` : ''}`);
 }
 console.log(red ? `\n${red} FAILED` : '\nall pass');
 process.exit(red ? 1 : 0);

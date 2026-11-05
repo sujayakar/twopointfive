@@ -17,6 +17,7 @@
 //   hour      (a game stood here, on this stand) the game's exposure is the night's with the picture's turned to a quarter; under an hour it is the hour's
 //             own, and the picture was told the same number; a turn of the picture under the hour moves the picture's alone; the show's day gives the
 //             day's; and each way back gives the night's again (hours.ts exposureOf, against what putIn and setDaylight write)
+//             — and in a game of two seats each seat's VIEW of the game answers the same (the hour and the day are the world's rows, math/side.ts GameSideMap)
 //   one run   ONE scripted night mission with a squad in goggles (barracks-four, seed 1, the shipped stand: the frozen one has no goggles on anybody) played
 //             plain and with the PICTURE turned three ways (QA_PICTURE, tools/qa/headless.ts: Brightness at each end of its slider, the tube's gain
 //             cut): the same digest, end and second. And the line can go red: the same mission with the GAME'S OWN exposure turned (--set ENV) is
@@ -178,6 +179,11 @@ async function hourLine(): Promise<void> {
   const D = g.level.daylight as { exposure: number } | undefined;
   if (D) { setDaylight(g, true); hold('the show\'s day:', exposureOf(g), D.exposure); S.exposure *= 0.5; hold('the picture halved under it:', exposureOf(g), D.exposure); setDaylight(g, false); hold('the night after it:', exposureOf(g), ENV.exposure); }
   else { ok = false; said.push('THIS LEVEL HAS NO DAY: the show\'s half was not asked'); }
+  // a game of two: a seat's VIEW of the game (seats.ts) is what a man's tube is asked under, and the hour and the show's day are the world's whoever asks
+  { const W2 = await standUp({ seats: 2 }), g2 = W2.game, views = g2.seats.map((s: { view: unknown }) => s.view), D2 = g2.level.daylight as { exposure: number } | undefined;
+    const each = (what: string, want: number) => views.forEach((v: unknown, i: number) => hold(`${what}, seat ${i + 1}'s view:`, exposureOf(v), want));
+    applyHour(g2, 'midday'); each('two seats at midday', HOURS.midday.exposure); applyHour(g2, 'night');
+    if (D2) { setDaylight(g2, true); each('two seats in the show\'s day', D2.exposure); setDaylight(g2, false); each('the night after it', ENV.exposure); } }
   line(ok, `hour: the game's exposure follows what the game keeps and never the picture's — ${said.join(' · ')}`);
 }
 

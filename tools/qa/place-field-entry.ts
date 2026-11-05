@@ -24,13 +24,21 @@ interface RunOpts {
   place?: Partial<typeof PLACE>;
   /** drawn frames to step after the first (which solves to rest), with the light as it is */
   frames?: number;
+  /** the yard's light falls this many stops from the map's low x to its high x (the open air then holds many levels, not one) */
+  yardFall?: number;
+  /** a roof over the whole map: no cell is under the sky */
+  roofAll?: boolean;
+  /** the open air's line alone: after the first frame the WHOLE light drops two stops with nothing told to the field, the frames are stepped, and the run
+   *  ends there (no walk of the eye, no lamp put down, no timing) */
+  brief?: boolean;
 }
 /** the scene's light: the yard holds 0.1; room A (x 10‥16, z 8‥14) falls from 0.03 at its x = 10 wall to 0.005 at x = 16; room B (x 16‥22) holds 0.001;
  *  one probe in room A (13.5, 10.5) holds nothing, as one inside a crate does */
 const YARD = 1.5, A_NEAR = 0.45, A_FAR = 0.075, B_ROOM = 0.015;   // (a grey day's numbers: open ground holds more than 1, which the field's open-air words must count as it counts a dim yard)
+let FALL = 0, ALL = 1;   // (run's yardFall, and the whole light's share in a brief run, while it runs)
 const lightAt = (x: number, z: number): number => {
   if (z > 8 && z < 14) { if (x > 10 && x < 16) return A_NEAR * Math.pow(A_FAR / A_NEAR, (x - 10) / 6); if (x > 16 && x < 22) return B_ROOM; }
-  return YARD; };
+  return YARD * Math.pow(2, -FALL * (x - WORLD.rcMin[0]) / WORLD.rcSize[0]); };
 function scene(o: RunOpts): { statics: Box[]; dynamics: Box[] } {
   const wall = (x0: number, z0: number, x1: number, z1: number): Box => makeBox({ c: [(x0 + x1) / 2, 1.3, (z0 + z1) / 2], h: [Math.max((x1 - x0) / 2, 0.1), 1.3, Math.max((z1 - z0) / 2, 0.1)] });
   const gap = o.door === 'wide' ? [11.8, 14.2] : [12.5, 13.5];
@@ -39,6 +47,7 @@ function scene(o: RunOpts): { statics: Box[]; dynamics: Box[] } {
     makeBox({ c: [5, 0.4, 20], h: [1, 0.4, 1] }),                                   // a crate in the yard: not a wall
     makeBox({ c: [13, 2.3, 14], h: [0.5, 0.2, 0.1] }),                              // the door's lintel: not a wall
     makeBox({ c: [16, 2.7, 11], h: [6.1, 0.1, 3.1] })];                             // the two rooms' ceiling: a roof over their cells, so the yard's are the cells under the open sky
+  if (o.roofAll) statics.push(makeBox({ c: [WORLD.rcMin[0] + WORLD.rcSize[0] / 2, 2.7, WORLD.rcMin[2] + WORLD.rcSize[2] / 2], h: [WORLD.rcSize[0] / 2 + 1, 0.1, WORLD.rcSize[2] / 2 + 1] }));
   const dynamics: Box[] = [];
   if (o.door === 'shut') dynamics.push(makeBox({ c: [13, 1, 14], h: [0.5, 1, 0.03], flags: BoxFlag.Dynamic }));
   if (o.door === 'ajar') { const a = o.swing ?? 0.5; dynamics.push(makeBox({ c: [12.5 + 0.5 * Math.cos(a), 1, 14 + 0.5 * Math.sin(a)], h: [0.5, 1, 0.03], yaw: -a, flags: BoxFlag.Dynamic })); }
@@ -56,12 +65,12 @@ async function boot(): Promise<{ adapter: string }> {
 }
 
 async function run(o: RunOpts) {
-  const dev = device!; const saved = { ...PLACE }; Object.assign(PLACE, o.place ?? {});
+  const dev = device!; const saved = { ...PLACE }; Object.assign(PLACE, o.place ?? {}); FALL = o.yardFall ?? 0;
   // the cache's stand-in: a metre a cell, three cells high, seven slabs; only the third (the light on a face that looks up: what falls on the floor) is filled
   const nx = Math.round(WORLD.rcSize[0]), ny = 4, nz = Math.round(WORLD.rcSize[2]), tex = dev.createTexture({ label: 'dice stand-in', size: [nx, ny * 7, nz], dimension: '3d', format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
   const fill = (dim: number): void => { const px = new Uint16Array(nx * ny * 7 * nz * 4);
     for (let k = 0; k < nz; k++) for (let i = 0; i < nx; i++) { const x = WORLD.rcMin[0] + i + 0.5, z = WORLD.rcMin[2] + k + 0.5;
-      const inWall = x === 13.5 && z === 10.5, v = half(inWall ? 0 : lightAt(x, z) * (z > 8 && z < 14 && x > 10 && x < 16 ? dim : 1));
+      const inWall = x === 13.5 && z === 10.5, v = half(inWall ? 0 : ALL * lightAt(x, z) * (z > 8 && z < 14 && x > 10 && x < 16 ? dim : 1));
       for (let j = ny * 2; j < ny * 3; j++) { const q = ((k * ny * 7 + j) * nx + i) * 4; px[q] = px[q + 1] = px[q + 2] = v; px[q + 3] = 0; } }   // (this slab's fourth number is what a portal took out of the face to send itself, which the field adds back: rc.wgsl rcDice. None here)
     dev.queue.writeTexture({ texture: tex }, px, { bytesPerRow: nx * 8, rowsPerImage: ny * 7 }, [nx, ny * 7, nz]); };
   fill(1);
@@ -72,16 +81,20 @@ async function run(o: RunOpts) {
   const DT = 1 / 60, ROOM: [number, number] = [13, 11], OUT: [number, number] = [5, 20], K = PLACE_W * PLACE_H;
   const t0 = performance.now(); one(DT, ROOM, true); await dev.queue.onSubmittedWorkDone(); const msSettle = performance.now() - t0;
   const rest = await place.readBack();
+  if (o.brief) { ALL = 0.25; fill(1); }
   for (let i = 0; i < (o.frames ?? 0); i++) one(DT, ROOM, false);
-  const later = await place.readBack();
+  const later = await place.readBack(), table = Array.from(await place.readSky());   // (… and the open air's table between two frames: empty)
+  let closing: number[] = [], opening: number[] = [], msFrame = 0; const follow: number[] = [];
+  if (!o.brief) {
   // the eye: from the room out into the yard (it closes), then from the yard into the room (it opens), 0.35 s each
   const walk = async (from: [number, number], to: [number, number]): Promise<number[]> => { one(DT, from, true); const a = (await place.readBack())[K]; for (let i = 0; i < 21; i++) one(DT, to, false); const b = (await place.readBack())[K]; for (let i = 0; i < 600; i++) one(DT, to, false); return [a, b, (await place.readBack())[K]]; };
-  const closing = await walk(ROOM, OUT), opening = await walk(OUT, ROOM);
+  closing = await walk(ROOM, OUT); opening = await walk(OUT, ROOM);
   // the light changes: room A's lamp goes down to a tenth, with nothing told to the field: how far the room's level has followed after 0.5 s and after 3 s
-  one(DT, ROOM, true); fill(0.1); const follow: number[] = [];
+  one(DT, ROOM, true); fill(0.1);
   for (let i = 1; i <= 180; i++) { one(DT, ROOM, false); if (i === 30 || i === 180) { const f = await place.readBack(); follow.push(f[Math.floor((11 - WORLD.rcMin[2]) * PLACE_RES) * PLACE_W + Math.floor((13 - WORLD.rcMin[0]) * PLACE_RES)]); } }
-  const t1 = performance.now(); for (let i = 0; i < 30; i++) one(DT, ROOM, false); await dev.queue.onSubmittedWorkDone(); const msFrame = (performance.now() - t1) / 30;
-  const out = { w: PLACE_W, h: PLACE_H, res: PLACE_RES, min: [WORLD.rcMin[0], WORLD.rcMin[2]], rest: b64(rest), later: b64(later), mask: b64(place.mask), closing, opening, follow, sky: rest[K + 2], mid: rest[K + 3], msSettle, msFrame, drawn: place.drawn, swept: place.swept, place: { ...PLACE }, door: { steps: DOOR_STEPS, perStop: DOOR_PER_STOP }, gpuErrors: gpuErrors.slice() };
-  place.destroy(); tex.destroy(); Object.assign(PLACE, saved); return out;
+  const t1 = performance.now(); for (let i = 0; i < 30; i++) one(DT, ROOM, false); await dev.queue.onSubmittedWorkDone(); msFrame = (performance.now() - t1) / 30;
+  }
+  const out = { w: PLACE_W, h: PLACE_H, res: PLACE_RES, min: [WORLD.rcMin[0], WORLD.rcMin[2]], rest: b64(rest), later: b64(later), mask: b64(place.mask), closing, opening, follow, sky: rest[K + 2], mid: rest[K + 3], table, msSettle, msFrame, drawn: place.drawn, swept: place.swept, place: { ...PLACE }, door: { steps: DOOR_STEPS, perStop: DOOR_PER_STOP }, gpuErrors: gpuErrors.slice() };
+  place.destroy(); tex.destroy(); Object.assign(PLACE, saved); FALL = 0; ALL = 1; return out;
 }
 (window as unknown as { __place: unknown }).__place = { boot, run, light: { YARD, A_NEAR, A_FAR, B_ROOM } };
