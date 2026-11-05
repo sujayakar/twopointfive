@@ -4,8 +4,8 @@
 //   rank    that top bit's place (1 the weakest; 0 nobody).
 //   reason  which of the top rule's reasons it gave (an index into its `why`).
 //   since   the game time that rule came to the top.
-// A rule says so once, as it takes him and as it lets go (`claimMan`, `releaseMan`), and whoever wants to know reads the word (`hasHim`, `ownerOf`). What a rule keeps about what it is doing
-// with him stays the rule's own. Nothing here decides anything: an asker's own list of who it yields to is a mask written where it asks.
+// A rule says so as it takes him and as it lets go (`claimMan`, `releaseMan`), or as the one tick its lists can change in ends, and whoever wants to know reads the word (`hasHim`, `ownerOf`). What
+// a rule keeps about what it is doing with him stays the rule's own, and an answer that turns on what moves between its ticks (who is alive, what he just heard, a time) is the rule's own read, not the word. Nothing here decides anything: an asker's own list of who it yields to is a mask written where it asks.
 //
 // THE RANKS ARE THIS TABLE AND ONLY THIS TABLE, strongest first, in the order the game decides by: `updateGuard` for his body, then who may move him off his post. A rank decides who
 // is shown as having him, never who may take him. Where two modules disagree today about who outranks whom the table cannot say so and does not settle it: the list is

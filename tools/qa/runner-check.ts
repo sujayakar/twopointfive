@@ -196,7 +196,7 @@ export async function runnerCheck(): Promise<boolean> {
       let evPrev: number[][] = near0.map(x => x.D ? [...x.D.ev] : []), evRose = '', rose = 0, noted = 0;
       const said = listen(R, [T], 45, t => {
         const S = runnerOf(T); if (S && !phases.endsWith(S.phase)) phases += (phases ? ' → ' : '') + S.phase;
-        if (S?.fled && !left) { left = true; R.away(); }   // (the player steps back out to the yard: the way is his)
+        if (T.fled && !left) { left = true; R.away(); }   // (the player steps back out to the yard: the way is his)
         if (S?.phase === 'mates') for (const o of R.near) minMate = Math.min(minMate, flat(o.char.pos, T.char.pos));
         if (S && Number.isNaN(tellAt) && S.told > 0) { tellAt = g.time; toldN = S.told;
           near0.forEach((x, k) => { if (!x.D) return; const up = x.D.ev.findIndex((v: number, e: number) => v > (evPrev[k][e] ?? 0)); if (up >= 0) rose++;
@@ -223,7 +223,7 @@ export async function runnerCheck(): Promise<boolean> {
       const said3 = listen(R, [T], 30, t => {
         const S = runnerOf(T); if (S && !phases.endsWith(S.phase)) phases += (phases ? ' → ' : '') + S.phase;
         if (S && Number.isNaN(sayT)) sayT = g.time - DT;   // (the frame of the shout: the tick ran before this frame's clock moved on)
-        if (S?.fled && !left) { left = true; R.away(); }
+        if (T.fled && !left) { left = true; R.away(); }
         if (Number.isNaN(takenAt) && g.roomClear.end === 'taken') { takenAt = t; aliveAtTaken = T.state !== 'dead' && g.guards.includes(T); runningAtTaken = !!S && T.fled && S.phase !== 'gone'; }
         if (S?.phase === 'gone' || !g.guards.includes(T)) { goneAt = t; return true; } });
       line(R.dry && !phases.includes('mates') && phases.includes('out') && !Number.isNaN(goneAt) && T.state !== 'dead' && !g.guards.includes(T),
@@ -267,7 +267,7 @@ export async function runnerCheck(): Promise<boolean> {
     { const R = await stage(29, true, 'none'), T = R.T, g = R.g;
       const him = R.front(1.0); let d0 = NaN, dropAt = NaN, minAfter = Infinity, lowNear = 0;
       listen(R, [T], 6, t => { const S = runnerOf(T) as any, d = flat(T.char.pos, g.player.char.pos);
-        if (S?.fled && Number.isNaN(dropAt)) { dropAt = t; d0 = d; }
+        if (T.fled && Number.isNaN(dropAt)) { dropAt = t; d0 = d; }
         if (!Number.isNaN(dropAt) && t > dropAt + 1.5) { minAfter = Math.min(minAfter, d); if (S?.script?.crouch && d < RUNNER.shyM) lowNear++; }
         return !Number.isNaN(dropAt) && t >= dropAt + 3; });
       const d1 = flat(T.char.pos, g.player.char.pos);
@@ -312,10 +312,10 @@ export async function runnerCheck(): Promise<boolean> {
         '(10) a man of the night staff: his weapon on the floor, never taken off it himself, nobody\'s free man on his round (held and pinned: no chat, no need, no greeting is his), no torch',
         `started ${took} · ${phases || 'never taken'} · on the floor ${g.guards.includes(T)} (${g.guards.length} of ${n0}) · hold ${T.hold} pinned ${T.pinned} state ${T.state} · light ${!!T.flashlight?.enabled} · weapon items of his ${guns}`);
       let snapWhat = 'never asked', snapOk = false;
-      try { const S0 = runnerOf(T) as any, was0 = S0 ? { phase: S0.phase, fled: S0.fled, from: [...S0.from], tries: S0.tries } : null;
+      try { const S0 = runnerOf(T) as any, was0 = S0 ? { phase: S0.phase, fled: T.fled, from: [...S0.from], tries: S0.tries } : null;
         const snap = W.snapshot('runner-check', true), keyed = JSON.stringify(snap).includes('"runner"');
         step(90); W.restore(snap); const T1 = g.guards[idx], S1 = runnerOf(T1) as any, fledAtLoad = T1.fled; step(2);
-        snapOk = !!was0 && was0.fled && !!S1 && S1.phase === was0.phase && S1.fled === true && fledAtLoad && flat(S1.from, was0.from) < 1e-6 && S1.tries === was0.tries && T1.hold === true && T1.pinned === true && T1.weapon.roundsReady === 0;
+        snapOk = !!was0 && was0.fled && !!S1 && S1.phase === was0.phase && T1.fled === true && fledAtLoad && flat(S1.from, was0.from) < 1e-6 && S1.tries === was0.tries && T1.hold === true && T1.pinned === true && T1.weapon.roundsReady === 0;
         snapWhat = `saved ${was0 ? `${was0.phase}${was0.fled ? ' fled' : ''}` : 'nothing'} · the slice in the file ${keyed} · loaded ${st(T1)} · the place to tell ${S1 ? f2(flat(S1.from, was0?.from ?? [0, 0, 0])) : '?'} m off · two frames on: hold ${T1.hold} pinned ${T1.pinned} rounds ready ${T1.weapon.roundsReady}`;
       } catch (e) { snapWhat = `the checkpoint threw: ${e instanceof Error ? e.message : String(e)}`; }
       line(snapOk, '(10) the game\'s own checkpoint (savestate.ts): his run comes back fled, the same phase, the same place to tell, still held, still empty-handed', snapWhat); }
@@ -329,7 +329,7 @@ export async function runnerCheck(): Promise<boolean> {
       for (let i = 0; i < 60 * 3 && H; i++) { step(); const S = runnerOf(H) as any; if (S && !phases.endsWith(S.phase)) phases += (phases ? ' → ' : '') + S.phase; }
       // (its own level is one roof: he cannot get out of it, and a man of the drill's exchange is never taken off the floor by the rule itself — so the check
       // takes him off as runner.ts gone() does, guards.ts despawnUnit, and asks what the scenario's cast test makes of a fled man who is no longer there)
-      const fled = !!H && H.fled; if (H && H.fled !== undefined) went = despawnUnit(g, H) && !g.guards.includes(H);
+      const fled = !!H && H.fled; if (H && runnerOf(H)) went = despawnUnit(g, H) && !g.guards.includes(H);
       console.log(`    (the bare night breach: ${why ? `NOT STAGED — ${why}` : `staged, ${nb.hostiles.length} defenders`} · started ${took} · ${phases || 'never taken'} · fled ${fled} · taken off the floor ${went})`);
       afterGone({ g, step }, 'a bare night breach', nb.active && took && went); }
 

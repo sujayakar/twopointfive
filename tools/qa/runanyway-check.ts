@@ -55,7 +55,7 @@ export async function runanywayCheck(): Promise<boolean> {
     /** he breaks now; `secs` on: what the runner made of him */
     const run = (secs = 25) => {
       const rifle = A.weapon.def.drop === 'rifle', broke = runnerBreak(g, A); let bold = false, first: Vec3 | null = null, low = false, goneAt = NaN, lowAt: Vec3 | null = null; const t0 = g.time;
-      step(secs * 60, () => { const R: any = runnerOf(A); if (!R) return; if (R.bold) bold = true; if (!first && R.fled && R.goal) first = [...R.goal] as Vec3;
+      step(secs * 60, () => { const R: any = runnerOf(A); if (!R) return; if (R.bold) bold = true; if (!first && A.fled && R.goal) first = [...R.goal] as Vec3;
         if (R.phase === 'low') { low = true; lowAt = R.goal ? [...R.goal] as Vec3 : null; } if (isNaN(goneAt) && (R.phase === 'gone' || !g.guards.includes(A))) goneAt = g.time - t0; });
       const mine = (kind: string) => g.items.items.filter((it: any) => it.kind === kind && it.who === A.char.id).length;
       return { broke, bold, rifle, rifles: mine('rifle'), pistols: mine('pistol'), bare: runnerBare(A) as boolean, first: first as Vec3 | null, low, lowAt: lowAt as Vec3 | null, goneAt, end: [...A.char.pos] as Vec3, here: g.guards.includes(A) as boolean, phase: (runnerOf(A) as any)?.phase as string | undefined, stats: { ...RUNNER_STATS } };

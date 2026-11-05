@@ -127,7 +127,8 @@ const unseen = (g: Game, c: Cast[number]) => !(c.gd.lastSeenT > (isNaN(c.learned
 function walk(g: Game, D: Def, to: Vec3) { run(g, D, to, null); order(D.gd, { speed: g.tune.guardInvestigate }); }
 
 /** once a frame, before the room fight's own tick (game.ts) — a return on its first line with the switch off or no rescue on the floor */
-export function rescueCheckTick(g: Game, _dt: number) {
+export function rescueCheckTick(g: Game, dt: number) { stepCheck(g, dt); rescueCheckSay(g); }
+function stepCheck(g: Game, _dt: number) {
   if (!ruled(g)) { const st = STATES.get(g); if (st) { letGo(g, st); STATES.delete(g); } return; }
   const K = RESCUECHECK, cast = g.rescue.cast(); if (cast.length < 2) return;
   let st = STATES.get(g);
