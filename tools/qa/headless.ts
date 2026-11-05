@@ -221,7 +221,7 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
-      if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks at the head of each render: here only where a tool asked for one, and never a real engine's, which steps its own)
+      if (opts.reach) engine.reach.tick();   // (a page's engine steps its keeper of the reach masks once each render, on the clock where the frame has the planners' pace: here on the count, only where a tool asked for one, and never a real engine's, which steps its own)
       { const me = game.hostSeat().view; cam.update(dt, follow ?? me.followPos(), follow || game.spectate >= 0 ? null : me.aimPoint); }   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;

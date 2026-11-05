@@ -20,7 +20,7 @@ import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame, lookExpoBound, lookNightSkyE } from './render/lookexpo';
 import { planOpeningsSteps, openAreas, openingLooks, openingReach, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './scene/openings';
 import { buildWallRaster, wallRasterHandOnSteps, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
-import { Steps, WHOLE, clock, spend, type Pace } from './render/steps';
+import { Steps, WHOLE, clock, spend, paced, type Pace } from './render/steps';
 import { PLAN_PACE } from './render/planPace';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -583,7 +583,6 @@ export class Engine {
   render(cam: FollowCamera, time: number, dt: number, present = true) {
     if (!this.ready) throw new Error('Engine.render() before init() resolved — await engine.init() / Engine.create() first');   // (a readable line instead of setPipeline(undefined) deep in a pass)
     this.lastDt = dt; this.viewFocus = cam.focus;
-    this.reach.tick();   // (the lights' reach masks: where a wall changed, a step of deciding them again, before anything of this frame reads one. Its own budget of sight-line steps, REACH_PACE)
     if (this.outline) { this.outline.exposure = this.settings.exposure; outlineBoxes(this.outline, p => cam.project(p, 1, 1)); }   // THE OUTLINE IN THE DARK (host/findme.ts → render/outline.ts): the box round each man on THIS camera's picture
     this.passes.outline = this.settings.debugView === 0 ? this.outline : null;   // (never under a debug view, as the fog)
     this.passes.dustLook = !!this.smoke.dusty;   // (look only: destruction dust alive in the bound smoke system → render/dustLookVol.ts)
@@ -666,6 +665,7 @@ export class Engine {
     // a step at least every frame), and the place map (drawn at once, its time taken off too). At once for all of them with the pace off, and for the
     // few frames after the picture has started over.
     const { plan, wait } = this.framePace();
+    if (paced(plan)) this.reach.tickTimed(); else this.reach.tick();   // (the lights' reach masks: where a wall changed, a step of deciding them again, before anything of this frame reads one. Where the frame has the planners' pace the step is an allowance of time of its own, render/reachKeep.ts KEEP_MS; else a count of sight-line steps)
     this.world.drawWaits = PLAN_PACE.on;   // (under the pace a pack with no draw after it never makes the order, on the frames at once too)
     { const ranked = this.world.drawRanked, t = clock(); this.world.upload(false, wait); if (this.world.drawRanked !== ranked) spend(plan, clock() - t); }
     cutSwap.frame(this.world.cutTraced);   // CUT BOXES (render/cutSwap.ts): the tracing programs with the cut rule only while a cut box a ray can meet is alive — a calm frame dispatches the boot's

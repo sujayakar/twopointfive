@@ -4027,3 +4027,37 @@ untimed pass (the sweep that found it), so the reading there may move less than 
   where the snapshot used to carry the masks back whole; a snapshot put into ANOTHER game that has a picture (no caller today) leaves that game's
   masks keyed to its own light objects, which the put-back has made other lights of; the sun's asks from `hours.ts` and `lighting.ts` are still
   worked inside the game's call where there is a picture (a few tens of ms when the hour is set or the cloud turns).
+- **THE MASKS' STEP IS ON THE CLOCK WHERE THE FRAME HAS A PACE, AND A BLAST'S MASK WORK IS NO LONGER WHOLE ON ONE FRAME** (11-05, on the bullet above;
+  `render/reachKeep.ts tickTimed`, `KEEP_MS` 2, `readSome`, `dirLightSteps`; `render/reach.ts reachMaskForDirectionalSteps`, `wallRasterDiffSteps`). With
+  the masks moved, the performance goal profiled the keeper's step cold on a real box, three wall charges: a directional light's mask WHOLE IN ONE
+  FRAME on every charge and never cheap (11.1 / 12.2 / 7.2 ms: the level's raycast under it 2.6 to 5.0, the look's way out of a solid 1.1 to 2.0); the
+  read of the walls one 9.6 ms frame on the first charge (the raster 1.7, its scan against the last 5.2); a lamp's first share 13.5 ms cold where the
+  same count of sight-line steps is 2 ms warm. A COUNT IS NOT A BUDGET IN A BROWSER, which is what the planners' pace had already found. NOW the
+  engine takes a step ON THE CLOCK where the frame has the planners' pace (`Engine.framePace`: `tickTimed`) and ON THE COUNT where it has none
+  (`tick`: a tool's stand, `?planpace=old`, a page's first frames, and under `?reachpace=old` either way): two calls, so a rig that drives two builds
+  cannot mean one by the other. On the clock a step is `KEEP_MS`, its own allowance beside the planners': the walls' reading in the scan's own steps
+  (the raster is built when the reading begins; a change noted meanwhile is its own reading after), then a lamp's mask in slices of 4,000 sight-line
+  steps with a look at the clock between, a directional light's a decided cell at a time. ONE SCAN STEP AND ONE SLICE OR CELL AT LEAST, every step:
+  a slow machine still ends, and a reading never keeps the masks waiting (a first cut gave a reading the whole step: a note a frame then starved
+  every mask, a review's count). On the count a step is what it was, to the frame and the bit (a review traced both commits through 14 blasts under
+  five settings). ONE PATH FOR A DIRECTIONAL LIGHT'S MASK (`dirLightSteps`: along its way, and over its disc where it was made for one, one reading
+  of the statics for all five directions; `sun`, `dir`, the queue and a tool's `wholeOf` are it run whole or in steps). That mended a fault older
+  than the move: a WIDE sun's mask decided again after a wall changed was decided along its centre alone and lost the cells only its rim reaches. A
+  DIRECTIONAL MASK KNOWS WHAT IT WAS MADE FOR (`made`: the disc, the way, the walls): each step one that is not waiting and whose disc or walls are
+  another now is made again, whole (the weather turned; a snapshot put the old disc back; made on a holed level since put back as authored). A job in
+  hand reads the statics as they stood when it began; asked again it begins again, and the third go is whole, as a lamp's is. A box's turn (cos and
+  sin of its yaw) is worked out once a box. THE SAME MASKS: on the count `reach-cost --against` the build before the move, 956 of 956. ON THE CLOCK
+  the evidence is `reachkeep-check` line 6 with THE CLOCK SCRIPTED (`ReachKeep.timeNow`: 0.7 ms a look, three looks a step, on any machine): one wall
+  blown and decided on the clock, on the count and with the two mixed, the same bits; a directional mask carried across steps (16 of 97); a second
+  wall blown while it is in hand; the sun's disc turned while it is in hand; and, since a partition's hole changes no directional mask, a wide low
+  sun let in through a gap cut by hand in an outer wall, the whole derivation's over its disc on the count and again with a second gap cut while its
+  job is in hand. Seven one-line breaks of the keeper: six turn a line red (a reset that leaves the queue full does not: it only costs work).
+  `REACHKEEP_BREAK=1` fails four. IN A PAGE, which steps on the clock (Chromium on the software adapter, the office, three wall charges inside the
+  tick, a quiet machine, the first cut of this): the keeper's time on the frames after the first charge 4.0 · 2.2 · 1.4 · 4.3 · 2.1 · 2.1 · 2.0 ·
+  2.0 · 1.4 · 2.6 · 2.0 · 1.8 ms where the move alone had 5.8 · 11.8 · 8.2 · 5.2 and then ones and twos; under the look none over 3.2; the masks are
+  whole 13 to 15 frames after the charge where they were 11; a hash of all 45 masks the same as the old build's after each charge. NOT YET TIMED ON A
+  REAL BOX. STILL WHOLE ON ONE STEP, each rare and none a blast's: the raster's own build on the step a reading begins (1.7 ms on that box, the
+  4.0 above); a directional mask made again because its disc or walls are another (five directions: the weather, a put-back, a reset); the walls
+  read again after a put-back; a mask asked a third time while part-decided (walls changing faster than it can be decided). LEFT: those; the sight
+  lines and rays still run the simulation's exact maths (cos and hypot swapped in for the browser's: 1 to 3 ms of a frame by that profile), which
+  the picture need not; the engine's daylight lights keep their own raster and queue (the bullet above).
