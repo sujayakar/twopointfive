@@ -19,6 +19,7 @@ const DOOR_PER_STOP: f32 = 6.0;
 @group(0) @binding(1) var diceTex: texture_3d<f32>;
 @group(0) @binding(3) var maskTex: texture_2d<u32>;
 @group(0) @binding(4) var<storage, read_write> field: array<f32>;
+@group(0) @binding(6) var<storage, read_write> reads: array<vec2f>;   // what the cache holds over each cell this frame (placeRead), which every sweep of the frame then takes
 
 fn maskAt(c: vec2i) -> u32 { if (c.x < 0 || c.y < 0 || c.x >= PLACE_W || c.y >= PLACE_H) { return 255u; } return textureLoad(maskTex, c, 0).r; }
 /** a cell's level, or PLACE_SOLID: off the map, in a wall, or free since a moment ago with no answer yet */
@@ -83,6 +84,19 @@ fn reading(c: vec2i) -> vec2f {
   return vec2f(s / ws, ws);
 }
 
+/** THE CACHE IS READ ONCE A FRAME, for every cell, into `reads`: a cell's reading is of the cache and the map alone, the same at every sweep of a frame.
+ *  (Until 11-05 each sweep read it again for each of its cells, four probes and their sight lines along the map: that was the sweep's whole cost, and it
+ *  held a frame to four sweeps. The field then closed a quarter of its distance to a new light a frame, and a room whose light changed at a stroke, a wall
+ *  blown open to the day, was shown by the gain of the room it had been for a third of a second. render/placeField.ts PLACE_SWEEPS.) A wall's cell and a
+ *  doorway's hold no reading: the sweep takes none there. */
+@compute @workgroup_size(8, 8)
+fn placeRead(@builtin(global_invocation_id) gid: vec3u) {
+  let c = vec2i(gid.xy); if (c.x >= PLACE_W || c.y >= PLACE_H) { return; }
+  let m = textureLoad(maskTex, c, 0).r;
+  var t = vec2f(0.0); if (m != 255u && (m & 3u) != 1u) { t = reading(c); }
+  reads[c.y * PLACE_W + c.x] = t;
+}
+
 @compute @workgroup_size(8, 8)
 fn placeSweep(@builtin(global_invocation_id) gid: vec3u) {
   let c = vec2i(gid.xy);
@@ -91,7 +105,7 @@ fn placeSweep(@builtin(global_invocation_id) gid: vec3u) {
   if (m == 255u) { field[i] = PLACE_SOLID; field[PLACE_NEAR + i] = PLACE_SOLID; return; }
   let h0 = hand(c + vec2i(1, 0), m); let h1 = hand(c - vec2i(1, 0), m); let h2 = hand(c + vec2i(0, 1), m); let h3 = hand(c - vec2i(0, 1), m);
   if ((m & 3u) == 1u) { field[i] = PLACE_SOLID; field[PLACE_NEAR + i] = max(max(h0.z, h1.z), max(h2.z, h3.z)); return; }   // (a doorway's cell: no level, hand above; the brightest place a stride away goes through it)
-  let t = reading(c);
+  let t = reads[i];
   let s = h0.xy + h1.xy + h2.xy + h3.xy;
   let w = t.y;
   let den = w + s.y; if (den <= 0.0) { return; }   // (no reading and no neighbour with an answer yet: it waits)

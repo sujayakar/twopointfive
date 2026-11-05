@@ -29,6 +29,13 @@ const NONE = new WeakMap<GPUDevice, GPUBuffer>();
  *  are handed off the look page and until the field is live */
 export function placeNone(device: GPUDevice): GPUBuffer { let b = NONE.get(device); if (!b) { b = device.createBuffer({ label: 'placeNone', size: PLACE_BYTES, usage: GPUBufferUsage.UNIFORM }); NONE.set(device, b); } return b; }
 const U_BYTES = 64;
+/** WHOLE SWEEPS (both colours) A DRAWN FRAME. The cache is read once a frame for every cell (place_field.wgsl placeRead) and a sweep is then a cell and
+ *  its four neighbours, so a frame affords this many: the field closes more than half its distance to a new light every frame (the solve leaves 0.93 of
+ *  it a sweep at PLACE.omega) where at four sweeps it closed a quarter. Seen on a real card, the pass's store blown open to midday: the room's level,
+ *  nine stops up, came to within half a stop of the cache's own some ten frames after the cache had it, and the room was shown that long by the gain of
+ *  the dark room it had been. (The plan's own `sweeps`, 4, scene/placePlan.ts, was this count while each sweep read the cache for itself; it is read by
+ *  nothing now.) `step`'s `sweeps` = another count for a visit (the address's &placesweeps=4 = as it was). */
+export const PLACE_SWEEPS = 12;
 /** the open air's table, a word each: 64 counts, 64 sums and the brightest place (place_field.wgsl placeSky writes it, placeEye reads and empties it) */
 export const SKY_WORDS = 129;
 export class PlaceField {
@@ -42,8 +49,8 @@ export class PlaceField {
   drawn = 0; swept = 0;
   readonly mask = new Uint8Array(PLACE_W * PLACE_H);
   private readonly device: GPUDevice;
-  private readonly maskTex: GPUTexture; private readonly ubo: GPUBuffer[] = []; private readonly skyBuf: GPUBuffer;
-  private sweep: GPUComputePipeline | null = null; private sky: GPUComputePipeline | null = null; private eye: GPUComputePipeline | null = null; private readonly bind: GPUBindGroup[] = [];
+  private readonly maskTex: GPUTexture; private readonly ubo: GPUBuffer[] = []; private readonly skyBuf: GPUBuffer; private readonly readBuf: GPUBuffer;
+  private read: GPUComputePipeline | null = null; private sweep: GPUComputePipeline | null = null; private sky: GPUComputePipeline | null = null; private eye: GPUComputePipeline | null = null; private readonly bind: GPUBindGroup[] = [];
   private readonly own = new PlaceMap(); private sentMap: PlaceMap | null = null; private sentDrawn = -1; private dead = false; private fresh = true;
   private readonly bgl: GPUBindGroupLayout; private readonly maskView: GPUTextureView; private dice: GPUTextureView | null = null;
   private readonly u = new ArrayBuffer(U_BYTES); private readonly uf = new Float32Array(this.u); private readonly uu = new Uint32Array(this.u);
@@ -52,12 +59,15 @@ export class PlaceField {
     this.device = device; const B = GPUBufferUsage, C = GPUShaderStage.COMPUTE;
     this.buffer = makeBuffer(device, PLACE_BYTES, B.STORAGE | B.UNIFORM | B.COPY_DST | B.COPY_SRC, 'place field');
     this.skyBuf = makeBuffer(device, SKY_WORDS * 4, B.STORAGE | B.COPY_SRC, 'place sky');   // (zeros as made: an empty table)
+    this.readBuf = makeBuffer(device, PLACE_W * PLACE_H * 8, B.STORAGE, 'place readings');   // (two numbers a cell: the cache's light over it and how much the reading counts; written whole by placeRead before a frame's first sweep)
     this.maskTex = device.createTexture({ label: 'place map', size: [PLACE_W, PLACE_H], format: 'r8uint', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     const bgl = device.createBindGroupLayout({ label: 'place', entries: [
       { binding: 0, visibility: C, buffer: { type: 'uniform' } }, { binding: 1, visibility: C, texture: { sampleType: 'float', viewDimension: '3d' } },
-      { binding: 3, visibility: C, texture: { sampleType: 'uint' } }, { binding: 4, visibility: C, buffer: { type: 'storage' } }, { binding: 5, visibility: C, buffer: { type: 'storage', minBindingSize: SKY_WORDS * 4 } }] });   // (the table's size is held where the pipelines are made, which the trial below reaches, and not first at a frame's dispatch)
+      { binding: 3, visibility: C, texture: { sampleType: 'uint' } }, { binding: 4, visibility: C, buffer: { type: 'storage' } }, { binding: 5, visibility: C, buffer: { type: 'storage', minBindingSize: SKY_WORDS * 4 } },
+      { binding: 6, visibility: C, buffer: { type: 'storage', minBindingSize: PLACE_W * PLACE_H * 8 } }] });   // (the table's size is held where the pipelines are made, which the trial below reaches, and not first at a frame's dispatch)
     const layout = device.createPipelineLayout({ label: 'place', bindGroupLayouts: [bgl] }), module = makeShader(device, placeSrc, 'place_field');
     this.whenReady = Promise.all([
+      computePipelineAsync(device, { label: 'place read', layout, compute: { module, entryPoint: 'placeRead' } }).then(p => { this.read = p; }),
       computePipelineAsync(device, { label: 'place sweep', layout, compute: { module, entryPoint: 'placeSweep' } }).then(p => { this.sweep = p; }),
       computePipelineAsync(device, { label: 'place sky', layout, compute: { module, entryPoint: 'placeSky' } }).then(p => { this.sky = p; }),
       computePipelineAsync(device, { label: 'place eye', layout, compute: { module, entryPoint: 'placeEye' } }).then(p => { this.eye = p; }),
@@ -68,9 +78,9 @@ export class PlaceField {
       const scoped = typeof device.pushErrorScope === 'function' && typeof device.popErrorScope === 'function' && typeof GPUValidationError !== 'undefined';
       if (!scoped) { this.ready = true; return; }
       device.pushErrorScope('validation');
-      try { const enc = device.createCommandEncoder({ label: 'place pipelines tried' }), pass = enc.beginComputePass(); pass.setPipeline(this.sweep!); pass.setPipeline(this.sky!); pass.setPipeline(this.eye!); pass.end(); device.queue.submit([enc.finish()]); } catch { /* the scope says */ }
+      try { const enc = device.createCommandEncoder({ label: 'place pipelines tried' }), pass = enc.beginComputePass(); pass.setPipeline(this.read!); pass.setPipeline(this.sweep!); pass.setPipeline(this.sky!); pass.setPipeline(this.eye!); pass.end(); device.queue.submit([enc.finish()]); } catch { /* the scope says */ }
       return Promise.resolve(device.popErrorScope()).then(err => {
-        if (err instanceof GPUValidationError) { this.sweep = this.sky = this.eye = null; console.warn('place field: not built on this device', err.message); } else this.ready = true;
+        if (err instanceof GPUValidationError) { this.read = this.sweep = this.sky = this.eye = null; console.warn('place field: not built on this device', err.message); } else this.ready = true;
       }, () => { /* a lost device: its own handler speaks */ });
     });
     this.bgl = bgl; this.maskView = this.maskTex.createView();
@@ -83,7 +93,7 @@ export class PlaceField {
   private bindTo(dice: GPUTextureView): void {
     if (this.dice === dice) return; this.dice = dice; this.bind.length = 0;
     for (let k = 0; k < 2; k++) this.bind.push(this.device.createBindGroup({ label: `place ${k}`, layout: this.bgl, entries: [
-      { binding: 0, resource: { buffer: this.ubo[k] } }, { binding: 1, resource: dice }, { binding: 3, resource: this.maskView }, { binding: 4, resource: { buffer: this.buffer } }, { binding: 5, resource: { buffer: this.skyBuf } }] }));
+      { binding: 0, resource: { buffer: this.ubo[k] } }, { binding: 1, resource: dice }, { binding: 3, resource: this.maskView }, { binding: 4, resource: { buffer: this.buffer } }, { binding: 5, resource: { buffer: this.skyBuf } }, { binding: 6, resource: { buffer: this.readBuf } }] }));
   }
 
   /** the map follows the level as it stands: drawn again only when a wall, a pane's box or a leaf has changed. True when it was drawn. */
@@ -96,9 +106,10 @@ export class PlaceField {
   }
 
   /** this frame's sweeps and the eye, encoded on `enc` AFTER the radiance cache's own pass (`dice` = its volume's view as it is this frame). `sam` = where Sam stands (world x, z; null = nobody: the eye
-   *  keeps what it has); `snap` = the eye takes its reading outright, and the field is solved to rest first (a first frame, a restart, a still). */
-  step(enc: GPUCommandEncoder, dice: GPUTextureView, dt: number, sam: readonly [number, number] | null, snap: boolean, ts?: (name: string) => GPUComputePassTimestampWrites | undefined): void {
-    if (this.dead || !this.sweep || !this.sky || !this.eye) return;
+   *  keeps what it has); `snap` = the eye takes its reading outright, and the field is solved to rest first (a first frame, a restart, a still);
+   *  `sweeps` = the whole sweeps of a drawn frame (PLACE_SWEEPS). */
+  step(enc: GPUCommandEncoder, dice: GPUTextureView, dt: number, sam: readonly [number, number] | null, snap: boolean, ts?: (name: string) => GPUComputePassTimestampWrites | undefined, sweeps = PLACE_SWEEPS): void {
+    if (this.dead || !this.read || !this.sweep || !this.sky || !this.eye) return;
     this.bindTo(dice);
     const P = PLACE, first = this.fresh || snap; this.fresh = false;
     const kappa = (P.reach * PLACE_RES) ** 2, ease = (s: number) => (dt > 0 ? 1 - Math.exp(-Math.min(dt, 0.25) / Math.max(s, 1e-3)) : 0);
@@ -108,10 +119,12 @@ export class PlaceField {
       f[8] = Math.min(0.95, Math.max(0.05, (P.y - WORLD.rcMin[1]) / WORLD.rcSize[1])); f[9] = P.dark; f[10] = 0; f[11] = ease(P.skyEase); f[12] = P.skyShare; f[13] = P.near; f[14] = P.nearDoor;
       this.device.queue.writeBuffer(this.ubo[k], 0, this.u);
     }
-    const n = first ? P.settle : P.sweeps, gx = Math.ceil(PLACE_W / 8), gy = Math.ceil(PLACE_H / 8);
+    const n = first ? P.settle : Math.max(1, Math.round(sweeps)), gx = Math.ceil(PLACE_W / 8), gy = Math.ceil(PLACE_H / 8);
     // (THE PASS'S TIMER, gpu/timer.ts: it had none until 11-05 and hid 2 ms of the frame. The frame the field is solved to rest in one go is not stamped: a
     //  timer's row starts from its first reading, and that frame is forty frames' sweeps)
-    const pass = enc.beginComputePass({ label: 'place', timestampWrites: first ? undefined : ts?.('place') }); pass.setPipeline(this.sweep);
+    const pass = enc.beginComputePass({ label: 'place', timestampWrites: first ? undefined : ts?.('place') });
+    pass.setPipeline(this.read); pass.setBindGroup(0, this.bind[0]); pass.dispatchWorkgroups(gx, gy);   // (the cache read once, for every sweep of the frame)
+    pass.setPipeline(this.sweep);
     for (let i = 0; i < n; i++) for (let k = 0; k < 2; k++) { pass.setBindGroup(0, this.bind[k]); pass.dispatchWorkgroups(gx, gy); }
     pass.setPipeline(this.sky); pass.setBindGroup(0, this.bind[0]); pass.dispatchWorkgroups(gx, gy);   // (the open air counted by every cell at once, into the table the eye reads)
     pass.setPipeline(this.eye); pass.dispatchWorkgroups(1);   // (every frame: it also keeps the live word and the brightest place)
@@ -132,7 +145,7 @@ export class PlaceField {
     await buf.mapAsync(GPUMapMode.READ); const res = new Uint32Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy(); return res;
   }
 
-  destroy(): void { if (this.dead) return; this.dead = true; this.buffer.destroy(); this.skyBuf.destroy(); this.maskTex.destroy(); for (const b of this.ubo) b.destroy(); }
+  destroy(): void { if (this.dead) return; this.dead = true; this.buffer.destroy(); this.skyBuf.destroy(); this.readBuf.destroy(); this.maskTex.destroy(); for (const b of this.ubo) b.destroy(); }
 
   /** the field read back (a tool's): PLACE_W × PLACE_H levels, then the eye, the live word and the open air's two, then from PLACE_NEAR the second block */
   async readBack(): Promise<Float32Array> {

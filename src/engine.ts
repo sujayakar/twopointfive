@@ -50,6 +50,24 @@ export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; p
 /** glassLightMasks' sample lattice: three stations along a pane × a cell just off either face (module consts — review R1.4: no per-light-per-pane literals) */
 const GLASS_STATIONS: readonly number[] = [-0.7, 0, 0.7], GLASS_SIDES: readonly number[] = [-0.55, 0.55];
 
+/** AN OPENING'S LIGHT COMES UP NO FASTER THAN THE BOUNCE CAN ANSWER IT (11-05; the look's page only; `settings.openRise`, the address's &openrise=0 = at
+ *  its whole strength on the frame it is lit, as it was). A place is shown by the light its floor holds (render/placeField.ts), which is the bounce's:
+ *  the cache's mean over a few frames (render/diceRing.ts: eight at midday). An opening's own light is drawn whole from the frame it is lit. So a wall
+ *  blown open to the day lit a lamplit room at once with daylight thirty times its lamp's, while the room was still shown by a dark room's gain, and the
+ *  whole room washed to white for a third of a second, until the bounce and then the field had come round (seen on a real card: the pass's store, its
+ *  outer wall blown at midday; the room's level rose nine stops over some thirty frames, the light was whole on the twelfth).
+ *  THE RULE NAMES NO KIND OF OPENING (a hole blown, a pane shot out, a door swung, an opening come into the lit few as Sam walks): a light that was out is
+ *  lit at `first` of its strength, about what the bounce already held of that sky through the bare hole and gives up to the opening the frame it is lit
+ *  (common.wgsl skyKeep), and what is lit grows by e for every `folds` × the bounce's own frames (Engine.bounceLag), never past its strength. A light
+ *  that should be dimmer is dimmer at once (a door shut: the room is then shown a moment darker than it will be, as eyes are in a room gone dark).
+ *  At once and whole on a first frame, a restart and a still (Engine.lookEye.snap), with the field. PICTURE ONLY: the lights are the engine's own. */
+export const OPEN_RISE = { first: 0.1, folds: 1 };
+/** an opening's strength this drawn frame: `was` = what it was drawn at last frame (0 = out), `full` = what it is to come to, `lag` = the bounce's frames. Pure. */
+export function openRise(was: number, full: number, lag: number): number {
+  if (!(full > 0)) return 0;
+  return Math.min(full, Math.max(was * Math.exp(1 / Math.max(OPEN_RISE.folds * lag, 1e-3)), OPEN_RISE.first * full));
+}
+
 export class Engine {
   device: GPUDevice;
   world: BoxWorld;
@@ -185,7 +203,10 @@ export class Engine {
   }
   /** this frame's opening lights, for the upload (lights.ts upload `own`) and the glass masks */
   private dayLights: RtLight[] = [];
-  private lookOpeningLights(pace: Pace = WHOLE) {
+  /** the drawn frames the bounce takes to answer a change of light (the cache's mean: the steady bounce's points, or its own running mean's reach), as the
+   *  last frame set it: what OPEN_RISE paces an opening's light by */
+  private bounceLag = 8;
+  private lookOpeningLights(pace: Pace = WHOLE, atOnce = false) {
     const L = this.lights, W = this.world, K = LOOK_OPENINGS, recs = this.openRecs, day = this.dayLights;
     const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; this.openBegun = false; this.openJob.drop(); };
     if (!lookConfig.on || !(lookConfig.windows > 0)) { if (recs.length || day.length || this.openJob.busy) none(); return; }
@@ -263,7 +284,10 @@ export class Engine {
       const at = o.mid;   // (a portal is its rectangle, about the rectangle's middle)
       l.pos[0] = at[0]; l.pos[1] = at[1]; l.pos[2] = at[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = Math.hypot(o.half[0], o.half[1]);
       l.range = openingReach(m * this.settings.exposure, Math.max(whole, o.of), l.radius, this.settings.portalWorth > 0 ? this.settings.portalWorth : undefined);   // (as far as its own light is worth a ray, wide open: a swinging leaf does not move it. &portalworth=0.003 = the reach it had until 11-05)
-      l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; this.reach.give(l, masks ? r.mask ?? undefined : undefined);
+      // AN OPENING'S LIGHT COMES UP NO FASTER THAN THE BOUNCE CAN ANSWER IT (OPEN_RISE, above the class): from a share of its strength on the frame it is
+      // lit, by a fixed factor a drawn frame. It falls at once. `was` = what it was drawn at last frame (0 = it was out).
+      const was = l.enabled ? l.intensity : 0, shown = atOnce || !this.settings.openRise ? I : openRise(was, I, this.bounceLag);
+      l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = shown; l.peakIntensity = I; this.reach.give(l, masks ? r.mask ?? undefined : undefined);
       l.portal!.halfWide = o.half[0]; l.portal!.share = open / whole; l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;   // (&holedepth=0: no depth, the whole rectangle and every ray for itself, as it was)
       // (lit from the first hand's width a door opens, where its own rays let next to nothing through, and while the picture would show anything of what it looks out on)
       l.enabled = o.ajar > 0 && m * this.settings.exposure > K.seen && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
@@ -675,7 +699,7 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
-    this.lookOpeningLights(plan);   // (THE LOOK PROTOTYPE: each opening to the sky is a light of its own, scene/openings.ts)
+    this.lookOpeningLights(plan, this.lookEye.snap);   // (THE LOOK PROTOTYPE: each opening to the sky is a light of its own, scene/openings.ts; at its whole strength at once on a first frame, a restart and a still, when the place field is settled outright too)
     const hourExp = lookConfig.on ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1;   // (THE LOOK PROTOTYPE: the exposure of the hour that is up against the night's, render/photometry.ts)
     const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below: the share of a darker place's dark the one exposure model brings up, render/lookexpo.ts; at 0 no place takes a gain)
     const placeOn = !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: wherever the model runs, which is wherever the shade row is up, at every hour)
@@ -754,6 +778,7 @@ export class Engine {
     const ring = ringN && this.diceRing?.ready && this.diceRing.fits(this.rc.dice) ? this.diceRing : null; if (!ring) this.diceRing?.drop();
     const ringAt = ring ? ringSlot(jf, ringN) : 0, ringFresh = this.rc.reprimed, jk = ring ? ringAt : jf;
     this.rc.setDiceBlend((s.flags & FrameFlags.Temporal) && !ring ? 0.3 : 1.0);
+    this.bounceLag = (ring ? ringN : (s.flags & FrameFlags.Temporal) ? 3 : 1) * (this.rc.halfRate ? 2 : 1);   // (the ring's points, one a frame; or the running mean's 0.3 a bake, about three bakes; a bake every other frame at half rate)
     const fp: FrameParams = {
       viewProj: taauOn ? this.vpJ : cam.viewProj, invViewProj: taauOn ? this.invVpJ : cam.invViewProj, prevViewProj: taauOn ? this.prevVpJ : cam.prevViewProj,   // (TAAU off: the camera's own three, untouched — the old path bit for bit)
       camPos: cam.pos, camDir: cam.forward, time, dt, width: this.width, height: this.height,
@@ -836,7 +861,7 @@ export class Engine {
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);
     if (ring && this.rc.diceBaked) ring.step(enc, this.rc.dice, ringAt, ringN, ringFresh, ts); else if (ring) timer.idle('diceRing');   // (the bake just made, kept as its point, and the mean of the points held written back: what every pass below reads)
-    if (place) { place.setMap(this.placeMap); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap, ts); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
+    if (place) { place.setMap(this.placeMap); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap, ts, this.settings.placeSweeps > 0 ? this.settings.placeSweeps : undefined); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
     const airRuns = !!this.air && this.airOn && s.airSim && this.air.ready !== false;   // THE AIR (above): at most one step a drawn frame, on its own clock; a paused frame (dt 0) steps nothing
     if (airRuns || powder) {
       this.airAcc += dt;
