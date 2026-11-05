@@ -159,7 +159,7 @@ pub fn door_path_guns(g: &mut crate::game::Game, dt: f64) {
                 };
                 if let Some(go) = carry {
                     let mine: V3 = [p[0] + m::sin(go) * 3.0, 1.2, p[2] + m::cos(go) * 3.0];
-                    g.door_path.lent.push(crate::doorpath::DoorPathLentItem { gd, s, mine, aim_at: s.aim_at, face: s.face, strafe: s.strafe });
+                    g.door_path.lent.push(crate::doorpath::DoorPathLentItem { gd, s: s.serial, mine, aim_at: s.aim_at, face: s.face, strafe: s.strafe });
                     let w = g.gd[gd].script.as_mut().unwrap();
                     w.aim_at = Some(mine);
                     w.strafe = Some(false);
@@ -220,10 +220,11 @@ pub fn door_path_after(g: &mut crate::game::Game) {
     }
     let lent = core::mem::take(&mut g.door_path.lent);
     for x in lent.iter() {
-        if !seam_same_script(g, x.gd, &x.s) {
-            continue;
-        }
-        let Some(s) = g.gd[x.gd].script.as_mut() else { continue };
+        // (`s !== x.s`: the script's serial, dealt where the object is made, says whether it is the one lent to)
+        let s = match g.gd[x.gd].script.as_mut() {
+            Some(s) if s.serial == x.s => s,
+            _ => continue,
+        };
         if s.aim_at == Some(x.mine) {
             s.aim_at = x.aim_at;
         }
@@ -234,11 +235,6 @@ pub fn door_path_after(g: &mut crate::game::Game) {
             s.strafe = x.strafe;
         }
     }
-}
-
-/// doorpath.ts:178 `x.gd.script !== x.s`: the lent item keeps a copy of the script, and a copy has no identity. Skeleton 3.1: GuardScript still has no serial. Reached only with the `gun` word.
-fn seam_same_script(g: &mut Game, gd: GuardId, s: &crate::game::GuardScript) -> bool {
-    todo!("needs: a serial on GuardScript (or on who last set gd.script), kept in DoorPathLentItem, for doorpath.ts:178's identity")
 }
 
 /// The leaf as it stands: hinge → free tip. (doorpath.ts DoorPath.leaf)
@@ -714,9 +710,9 @@ pub fn door_path_may_go(g: &mut crate::game::Game, op: DoorOpId, q: crate::doorp
     }
     let k = g.k.doorpath;
     let t = g.time;
-    let (v_gd, v_n, l_t) = match g.door_path.last_of.get(op) {
+    let (v_gd, v_serial, l_t) = match g.door_path.last_of.get(op) {
         Some(l) => match l.w {
-            Some((v_gd, v_n)) => (v_gd, v_n, l.t),
+            Some((v_gd, v_serial)) => (v_gd, v_serial, l.t),
             None => return true,
         },
         None => return true,
@@ -724,9 +720,9 @@ pub fn door_path_may_go(g: &mut crate::game::Game, op: DoorOpId, q: crate::doorp
     if g.gd[v_gd].state == crate::game::GuardState::Dead {
         return true;
     }
-    // (`walks.get(V.gd) !== V`: the last-of row holds the man and his place in this order's file; n counts up per order, so the same order and n is the same walk. toLine reads the live row)
+    // (`walks.get(V.gd) !== V`: the last-of row holds the man and his walk's serial. toLine reads the live row)
     let v = match g.door_path.walks.get(v_gd) {
-        Some(live) if live.op == op && live.n as u32 == v_n => live.clone(),
+        Some(live) if live.serial == v_serial => live.clone(),
         _ => return true,
     };
     if t - l_t >= k.cap {
@@ -753,6 +749,7 @@ pub fn door_path_sent(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
     let t = g.time;
     let in_m = g.k.doorpath.in_m;
     let door = g.tab.doortools_door_op[op].door;
+    let serial = g.serial();
     let mut w = crate::doorpath::Walk {
         gd,
         op,
@@ -779,11 +776,13 @@ pub fn door_path_sent(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod:
         in_m,
         pod0: [pod.pos[0], 0.0, pod.pos[2]],
         body_t: -1.0,
+        serial,
+        serial_2: serial,
     };
     door_path_own(g, &mut w);
     door_path_lay(g, &mut w);
     g.door_path.walks.set(gd, w);
-    g.door_path.last_of.set(op, crate::doorpath::DoorPathLastOfValue { w: Some((gd, l_n as u32)), n: l_n + 1.0, t });
+    g.door_path.last_of.set(op, crate::doorpath::DoorPathLastOfValue { w: Some((gd, serial)), n: l_n + 1.0, t });
     g.door_path.stats.sent += 1.0;
 }
 
@@ -1039,8 +1038,8 @@ pub fn door_path_tick(g: &mut crate::game::Game, dt: f64) {
 pub fn door_path_summary(g: &mut crate::game::Game) -> String {
     let s = g.door_path.stats;
     alloc::format!(
-        "door paths on · sent {} · walked {} · round a leaf {} (no way {}) · points moved off a leaf {} · held {:.1} s · gave up {} · taken {}",
-        s.sent, s.walked, s.round, s.no_round, s.moved, s.held_s, s.gave_up, s.taken
+        "door paths on · sent {} · walked {} · round a leaf {} (no way {}) · points moved off a leaf {} · held {} s · gave up {} · taken {}",
+        s.sent, s.walked, s.round, s.no_round, s.moved, js::to_fixed(s.held_s, 1), s.gave_up, s.taken
     )
 }
 

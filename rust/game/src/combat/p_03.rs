@@ -38,10 +38,10 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
     };
     let l = crate::effects::spawn_burst(g, at, seed, o);
     if gpu { crate::particle_fx::bang_fx(g, at); }
-    let flash = crate::render_lights::light_set_flash(&mut g.engine.lights, l.pos, l.color, l.intensity, l.range, l.ttl, 0.0);
+    let flash = lights_flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, 0.0);
     let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(who));
     if let Some(r) = l.radius {
-        if js::truthy(r) { seam_light_set_radius(g, light, r); }
+        if js::truthy(r) { g.tab.light[light].radius = r; }
     }
     if !crate::blast_feel::wall_report(g, at) { crate::audio_iface::game_audio_like_play(g, "stunBang", Some(at), Some(1.0), None); }
     crate::marks::bang_scorch(g, at);
@@ -243,7 +243,10 @@ fn on_each_seat(g: &mut Game, f: &mut dyn FnMut(&mut Game)) {
     }
 }
 
-/// light.radius = r: a LightId has no table and no accessor, and RtLight is nowhere in the index.
-fn seam_light_set_radius(g: &mut Game, light: LightId, r: f64) {
-    todo!("needs: a setter of a Light's radius (combat.ts:691)")
+/// g.engine.lights.flash(…): the stub takes `g` and the set, and the set lives in `g`, so it is lent out of `g` for the call and put back.
+fn lights_flash(g: &mut Game, pos: V3, color: V3, intensity: f64, range: f64, ttl: f64, owner: f64) -> LightId {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    let l = crate::render_lights::light_set_flash(g, &mut set, pos, color, intensity, range, ttl, owner);
+    g.engine.lights = set;
+    l
 }

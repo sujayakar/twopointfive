@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ seams: what skeleton 3 cannot say yet
+// ------------------------------------------------------------ seams: what skeleton 4 cannot say yet
 
 /// `g.audio.play(name, at, volume, { rate })`: `opts` of game_audio_like_play holds `crate::Opaque`, which cannot carry the rate. (workthings.ts:304)
 fn seam_audio_play_rate(g: &mut Game, name: &str, at: Option<V3>, volume: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
@@ -33,19 +33,13 @@ fn target_at(t: &crate::orders::OrderTarget) -> V3 {
 }
 /// `v.join(',')`, only ever compared with another such key
 fn join_v3(p: V3) -> String { format!("{},{},{}", p[0], p[1], p[2]) }
-/// `x.toFixed(1)`: an exact tie goes up in magnitude, where Rust's goes to even; only `.25` differs
-fn to_fixed1(x: f64) -> String {
-    let a = m::abs(x);
-    let s = if a - m::floor(a) == 0.25 { format!("{}.3", m::floor(a)) } else { format!("{:.1}", a) };
-    if x < 0.0 { format!("-{}", s) } else { s }
-}
 /// J is one object in TypeScript: what a body wrote on its copy goes to the row, if there still is one
 fn put_job(g: &mut Game, gd: GuardId, j: &Job) {
     if let Some(r) = g.work.jobs.get_mut(gd) { r.t0 = j.t0; r.last_t = j.last_t; }
 }
-/// a floor target standing on the thing
+/// a floor target standing on the thing; a new object each asking, so serial 0: orders.ts:937 stamps the one a menu keeps
 fn thing_target(th: WorkThing) -> crate::orders::OrderTargetFloor {
-    crate::orders::OrderTargetFloor { at: th.stand.unwrap_or([th.face[0], 0.0, th.face[2]]), wall: None, thing: Some(th) }
+    crate::orders::OrderTargetFloor { at: th.stand.unwrap_or([th.face[0], 0.0, th.face[2]]), wall: None, thing: Some(th), serial: 0 }
 }
 
 // ------------------------------------------------------------ the functions
@@ -425,7 +419,7 @@ pub fn work_things_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::
     }
     g.stats.workthings.given += 1;
     let tail = if covers.is_empty() { String::new() } else { format!(" · {} covers", covers.join(", ")) };
-    let what = format!("sent to {} at {},{}{}", verb.as_str(), to_fixed1(stand[0]), to_fixed1(stand[2]), tail);
+    let what = format!("sent to {} at {},{}{}", verb.as_str(), js::to_fixed(stand[0], 1), js::to_fixed(stand[2], 1), tail);
     work_things_note(g, w, &what);
     WorkThingsIssue::Arm1(())
 }
@@ -736,17 +730,4 @@ pub fn work_not_his(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// lighting.ts setBlackout: a man who cannot leave where he stands is not handed the errand. (workthings.ts workStaysPut)
 pub fn work_stays_put(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !g.touring && !g.quiet_utility && (g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// the strings `(x).toFixed(1)` gives under bun
-    #[test]
-    fn to_fixed_one_matches_the_language() {
-        for (x, s) in [(0.25, "0.3"), (-0.25, "-0.3"), (0.75, "0.8"), (1.25, "1.3"), (1.05, "1.1"), (0.0, "0.0"), (-0.0, "0.0"), (-0.04, "-0.0"), (2.5, "2.5"), (-3.14, "-3.1")] {
-            assert_eq!(to_fixed1(x), s, "{}", x);
-        }
-    }
 }

@@ -718,7 +718,7 @@ pub struct ReloadBeat {
     pub dur: f64,
     pub out: Option<f64>,
     pub in_: Option<f64>,
-    pub rack: Option<f64>,
+    pub rack: Option<Option<f64>>,
     pub keep: Option<f64>,
     pub hand: Option<bool>,
     pub exact: Option<bool>,
@@ -1053,13 +1053,12 @@ pub struct Anim {
     pub feed_port: bool,
     pub rl_t: f64,
     pub rl_b: crate::character::AnimRlB,
-    pub rl_src: Option<crate::character::ReloadBeat>,
     pub rlc: crate::character::AnimRlc,
     pub rl_shown: crate::character::AnimRlShown,
     pub kit: Option<crate::character::AnimKit>,
     pub kit_front: bool,
     pub kit_rest: f64,
-    pub kit_hold: Option<crate::character::KitItem>,
+    pub kit_hold: Option<Option<crate::character::KitItem>>,
     pub kit_stow: f64,
     pub kit_roll: f64,
     pub kit_lie: Option<Quat>,
@@ -1255,6 +1254,8 @@ pub struct Anim {
     pub hd_busy: bool,
     pub big_buf: Option<crate::anim_skeleton::Pose>,
     pub big_under: bool,
+    /// INVENTED by a review: see the proposals
+    pub pos_in: V3,
 }
 impl Anim {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -1373,7 +1374,6 @@ impl Anim {
             feed_port: false,
             rl_t: -1.0,
             rl_b: crate::character::AnimRlB { dur: 1.6, out: 0.43, in_: 1.04, rack: 1.36, pull: true, keep: -1.0, hand: false, fresh: 0.7 },
-            rl_src: None,
             rlc: crate::character::AnimRlc { k: 0.0, h: 0.0, ch: None, at: -1.0, still: 0.0 },
             rl_shown: crate::character::AnimRlShown { carry: 0.0, head: 0.0 },
             kit: None,
@@ -1575,6 +1575,7 @@ impl Anim {
             hd_busy: false,
             big_buf: None,
             big_under: false,
+            pos_in: [0.0, 0.0, 0.0],
         }
     }
 }
@@ -3125,12 +3126,12 @@ impl AnimHdIdleCarry {
 pub struct RagDrive {
     pub pose: crate::anim_skeleton::Pose,
     pub ov: Vec<Option<crate::anim_skeleton::NodeOverride>>,
-    pub hips: crate::anim_skeleton::NodeOverride,
+    pub hips: usize,
     pub hips_rot0: Quat,
     pub rot0: Vec<Quat>,
     pub dir0: Vec<V3>,
     pub delta: Vec<Quat>,
-    pub limb_ov: Vec<crate::anim_skeleton::NodeOverride>,
+    pub limb_ov: Vec<usize>,
     pub synced: bool,
 }
 impl RagDrive {
@@ -3139,7 +3140,7 @@ impl RagDrive {
         RagDrive {
             pose: crate::anim_skeleton::Pose::blank(),
             ov: Vec::new(),
-            hips: crate::anim_skeleton::NodeOverride::zeroed(),
+            hips: 0,
             hips_rot0: [0.0; 4],
             rot0: Vec::new(),
             dir0: Vec::new(),

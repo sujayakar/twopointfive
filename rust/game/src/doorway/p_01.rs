@@ -386,11 +386,9 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     let s = st!(g, gd);
     if t - s.t > 0.5 || t < s.t { s.held_t = 0.0; s.spot = None; s.door = None; }
     s.t = t;
-    if st!(g, gd).spot.is_some() {   // given a new walk while he waited at a jamb: the old door is no longer his business (the time held is kept)
-        let key = seam_walk_key(g, gd);
-        let s = st!(g, gd);
-        if s.path != key { s.spot = None; s.door = None; }
-    }
+    let walk = g.gd[gd].path_serial;
+    let s = st!(g, gd);
+    if s.spot.is_some() && s.path != Some(walk) { s.spot = None; s.door = None; }   // given a new walk while he waited at a jamb: the old door is no longer his business (the time held is kept)
     let turn = !match g.gd[gd].script.as_ref().and_then(|s| s.over.as_ref()) { Some(o) => o.walk == Some(true) && o.face.is_some(), None => false };
     // in an opening: he clears it, whoever stands about
     for i in 0..g.doors.list.len() {
@@ -545,12 +543,12 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     if let Some(x) = x {
         if held && hold && st!(g, gd).held_t >= g.k.doormanners.aside && t >= st!(g, gd).no_spot {   // held short of the frame: off to a jamb, out of his way
             if let Some(p) = jamb_spot(g, gd, x.d, x.side) {
-                let key = seam_walk_key(g, gd);
+                let walk = g.gd[gd].path_serial;
                 let s = st!(g, gd);
                 s.spot = Some(p);
                 s.door = Some(x.d);
                 s.side = x.side;
-                s.path = key;
+                s.path = Some(walk);
                 g.stats.doorway.aside += 1;
                 step_to(g, gd, p, m::min(speed, step), dt, turn);
                 return None;
@@ -570,11 +568,6 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
 /// `g.col.nav.isBlocked`.
 fn nav_blocked(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     crate::scene_collision::nav_grid_is_blocked(g, x, z)
-}
-
-/// The identity of `gd.path` as `St.path` keeps it (doorway.ts:328, 396): `gd.path !== st.path`.
-fn seam_walk_key(g: &mut crate::game::Game, gd: GuardId) -> Option<Vec<V3>> {
-    todo!("needs: St.path as Option<u32>, this returning Some(g.gd[gd].path_serial)")
 }
 
 #[cfg(test)]

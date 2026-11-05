@@ -7,28 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---- seams: what skeleton 3 still cannot do (notes.md, ## Skeleton)
+// ---- the one record: GAMES and REC are one table here (g.m.doze.rec), since a game's guards are that game's
 
-/// a light's fields (RtLight, doze.ts:152, 306, 308, 314, 315): a LightId has no table or accessor.
-fn seam_light_pos(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.pos of a LightId") }
-fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.dir of a LightId") }
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled of a LightId") }
-fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { todo!("needs: a write of RtLight.enabled of a LightId") }
-fn seam_light_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.intensity of a LightId") }
-fn seam_light_range(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.range of a LightId") }
-fn seam_light_owner(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.owner of a LightId") }
-
-// ---- the one record: GAMES and REC hold the same object in the TypeScript
-
-/// doze.ts:82-83: one object in both tables. Here a copy in each, same keys in the same order: every change of a row goes to both.
+/// a changed row back onto the books (doze.ts:81, D is a live object there). Nothing on a row already dropped, as a write to a detached object.
 fn flush(g: &mut Game, gd: GuardId, d: Doze) {
     if let Some(r) = g.m.doze.rec.get_mut(gd) { *r = d; }
-    if let Some(r) = g.m.doze.games.as_mut().and_then(|m| m.get_mut(gd)) { *r = d; }
-}
-/// a new row: on the key, then on the books (doze.ts:203, 204, 209, 214, `put(g, gd, blank(...))`)
-fn put_row(g: &mut Game, gd: GuardId, d: Doze) {
-    g.m.doze.rec.set(gd, d);
-    put(g, gd);
 }
 /// g.lightHome.in(LIGHT_IN.on, t, v) (doze.ts:113, 119, 121, 273, 279)
 fn switch(g: &mut Game, t: FixtureId, v: f64) {
@@ -72,10 +55,8 @@ pub fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> {
     }
     g.m.doze.pulls.clone().unwrap()
 }
-/// this game's table of records, made if absent (doze.ts mapOf). A COPY: nothing writes through it (see `flush`).
-pub fn map_of(g: &mut crate::game::Game) -> JsMap<GuardId, crate::doze::Doze> {
-    g.m.doze.games.get_or_insert_with(JsMap::new).clone()
-}
+/// this game's table of records, made if absent (doze.ts mapOf). Nothing to do: the table is g.m.doze.rec, always there.
+pub fn map_of(g: &mut crate::game::Game) {}
 
 /// distance on the floor (doze.ts flat)
 pub fn flat(a: &[f64], x: f64, z: f64) -> f64 { m::hyp2(a[0] - x, a[2] - z) }
@@ -97,14 +78,12 @@ pub fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
     m.team == crate::teams::Team::Guard && m.unit.is_none() && m.civ.is_none() && m.state == crate::game::GuardState::Patrol && m.awareness < 0.15 && m.held.is_none()
         && m.script.is_none() && m.task.is_none() && m.body_duty.is_none() && !m.pinned && m.leader.is_none() && m.post.is_none() && !m.drawn
 }
-/// put his record, already at `g.m.doze.rec[gd]`, on this game's books (doze.ts put)
-pub fn put(g: &mut crate::game::Game, gd: GuardId) {
-    let Some(d) = g.m.doze.rec.get(gd).copied() else { return };
-    g.m.doze.games.get_or_insert_with(JsMap::new).set(gd, d);
+/// put his record on this game's books (doze.ts put)
+pub fn put(g: &mut crate::game::Game, gd: GuardId, d: crate::doze::Doze) {
+    g.m.doze.rec.set(gd, d);
 }
 /// take his record off the books (doze.ts drop)
 pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
-    g.m.doze.games.get_or_insert_with(JsMap::new).delete(gd);
     g.m.doze.rec.delete(gd);
     let c = g.gd[gd].ch;
     g.ch[c].anim.slump = 0.0;
@@ -169,13 +148,8 @@ pub fn span(g: &mut crate::game::Game, r: &[f64]) -> f64 {
 /// the lines, for the words lint (doze.ts dozeLines)
 pub fn doze_lines() -> Vec<String> { screen_lines() }
 
-/// doze.ts screenSeat, with what it returns as the TypeScript has it: the skeleton's `SeatId` is cmd.ts's Seat, not this file's.
-pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<SeatId> { todo!("needs: return type Option<crate::doze::Seat> (body in seat_at_screen)") }
-/// doze.ts findChair, likewise.
-pub fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<SeatId> { todo!("needs: return type Option<crate::doze::Seat> (body in chair_for_wait)") }
-
 /// a chair at a screen: the screen, and the place nearest the chair from which a man facing it has floor under him and it in his eye (doze.ts screenSeat)
-fn seat_at_screen(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<Seat> {
+pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> {
     let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
     let (screen_m, pull_m, chair_m) = (g.k.doze.screen_m, g.k.doze.pull_m, g.k.doze.chair_m);
     let mut out = touch();
@@ -187,11 +161,11 @@ fn seat_at_screen(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<S
         if crate::sim_lightshome::fixture_broken(g, t) { continue; }
         let tpos = g.tab.sim_lightshome_fixture[t].pos;
         if flat(&tpos, px, pz) > screen_m + pull_m { continue; }
-        let used = g.m.doze.games.as_ref().map_or(false, |m| m.values().any(|d| d.mon == Some(t) && is_held_seat(d.phase)));
+        let used = g.m.doze.rec.values().any(|d| d.mon == Some(t) && is_held_seat(d.phase));
         if used { continue; }
         let first = g.tab.sim_lightshome_fixture[t].area_lights.as_ref().and_then(|a| a.first()).map(|a| a.light);
-        let n = match first { Some(l) => Some(seam_light_dir(g, l)), None => None };
-        let eye = match first { Some(l) => seam_light_pos(g, l), None => tpos };
+        let n = first.map(|l| g.tab.light[l].dir);
+        let eye = first.map_or(tpos, |l| g.tab.light[l].pos);
         for off in pulls(g).iter() {
             let (ox, oz) = (off[0], off[1]);
             let ax = px + ox;
@@ -216,7 +190,7 @@ fn seat_at_screen(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<S
     None
 }
 /// the chair for this wait and the way he will sit in it (doze.ts findChair)
-fn chair_for_wait(g: &mut crate::game::Game, gd: GuardId) -> Option<Seat> {
+pub fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Seat> {
     let route = g.gd[gd].route;
     let wp_i = g.gd[gd].wp;
     let wp = g.tab.route[route].points[wp_i];
@@ -232,7 +206,7 @@ fn chair_for_wait(g: &mut crate::game::Game, gd: GuardId) -> Option<Seat> {
         let (px, pz) = (crate::props::prop_x(g, p), crate::props::prop_z(g, p));
         let d = flat(&wp, px, pz);
         if d >= bd && d >= sd { continue; }
-        let mut taken = g.m.doze.games.as_ref().map_or(false, |m| m.values().any(|r| r.chair == Some(p) && is_held_seat(r.phase)));
+        let mut taken = g.m.doze.rec.values().any(|r| r.chair == Some(p) && is_held_seat(r.phase));
         if !taken {
             for ci in 0..g.civilians.len() {
                 let cv = g.civilians[ci];
@@ -245,7 +219,7 @@ fn chair_for_wait(g: &mut crate::game::Game, gd: GuardId) -> Option<Seat> {
         }
         if taken { continue; }
         if d < sd {
-            if let Some(s) = seat_at_screen(g, gd, p) { scr = Some(s); sd = d; }
+            if let Some(s) = screen_seat(g, gd, p) { scr = Some(s); sd = d; }
         }
         if d >= bd || crate::calmtorch::work_lit(g, px, pz, None) { continue; }
         let f0 = chair_face(g, p);
@@ -282,10 +256,10 @@ pub fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -
             let wp_i = g.gd[gd].wp;
             let wp = g.tab.route[route].points[wp_i];
             let stand = g.tab.route[route].wait.get(wp_i).copied().unwrap_or(0.0);
-            let c = if stand > g.k.doze.max_wait || crate::calmtorch::work_lit(g, wp[0], wp[2], None) || !crate::darkfoe::dark_foe_blind(g, gd) { None } else { chair_for_wait(g, gd) };
+            let c = if stand > g.k.doze.max_wait || crate::calmtorch::work_lit(g, wp[0], wp[2], None) || !crate::darkfoe::dark_foe_blind(g, gd) { None } else { find_chair(g, gd) };
             let Some(c) = c else {
                 let no = blank(Phase::No, wp_i as f64, g.time);
-                put_row(g, gd, no);
+                put(g, gd, no);
                 return false;
             };
             let mut d = blank(Phase::Going, wp_i as f64, g.time);
@@ -296,7 +270,7 @@ pub fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -
             d.cz = crate::props::prop_z(g, c.chair);
             d.mon = c.mon;
             d.to = c.to;
-            put_row(g, gd, d);
+            put(g, gd, d);
             d
         }
     };
@@ -317,7 +291,7 @@ pub fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -
         let wp = d.wp;
         drop(g, gd);
         let no = blank(Phase::No, wp, g.time);
-        put_row(g, gd, no);
+        put(g, gd, no);
         return false;
     }
     let to = d.to;
@@ -331,7 +305,7 @@ pub fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -
             let wp = d.wp;
             drop(g, gd);
             let no = blank(Phase::No, wp, g.time);
-            put_row(g, gd, no);
+            put(g, gd, no);
             return false;
         }
         d.phase = Phase::Down;
@@ -392,10 +366,10 @@ pub fn doze_deaf(g: &mut crate::game::Game, gd: GuardId) -> bool {
 /// once a frame: the seated men's clocks, the chair held under them, what wakes a sleeper that is not a sound, the rise at the end of the wait (doze.ts dozeTick)
 pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
     left_tick(g);
-    if g.m.doze.games.as_ref().map_or(true, |m| m.is_empty()) { return; }
+    if g.m.doze.rec.is_empty() { return; }
     let mut walk = 0usize;
-    while let Some(gd) = g.m.doze.games.as_ref().and_then(|m| m.next_key(&mut walk)) {
-        let Some(mut d) = g.m.doze.games.as_ref().and_then(|m| m.get(gd).copied()) else { continue };
+    while let Some(gd) = g.m.doze.rec.next_key(&mut walk) {
+        let Some(mut d) = g.m.doze.rec.get(gd).copied() else { continue };
         if d.phase == Phase::No || d.phase == Phase::Spent { continue; }
         let c = g.gd[gd].ch;
         if !g.guards.contains(&gd) || g.gd[gd].state == crate::game::GuardState::Dead {
@@ -581,8 +555,8 @@ pub fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
         if g.tab.sim_lightshome_fixture[t].group != "monitors" { continue; }
         let Some(items) = g.tab.sim_lightshome_fixture[t].area_lights.clone() else { continue };
         for al in items.iter() {
-            if seam_light_enabled(g, al.light) {
-                seam_light_set_enabled(g, al.light, false);
+            if g.tab.light[al.light].enabled {
+                g.tab.light[al.light].enabled = false;
                 off.push(al.light);
             }
         }
@@ -592,7 +566,7 @@ pub fn face_light(g: &mut crate::game::Game, gd: GuardId, head: V3) -> f64 {
     let mut skip = move |g: &mut Game, owner: f64| -> bool { owner == me || own_side_owns(g, owner, team) };
     let est = crate::guards::light_estimate_at(g, head, Some(&mut skip), None, None, None);
     let v = crate::game::game_visibility_of(g, est);
-    for l in off { seam_light_set_enabled(g, l, true); }
+    for l in off { g.tab.light[l].enabled = true; }
     v
 }
 /// a man of this team carries the lamp with this owner (doze.ts:307, 314)
@@ -609,12 +583,12 @@ pub fn lamp_on(g: &mut crate::game::Game, gd: GuardId, head: V3) -> V3 {
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];
         i += 1;
-        if !seam_light_enabled(g, l) || seam_light_intensity(g, l) <= 0.0 { continue; }
-        let owner = seam_light_owner(g, l);
+        if !g.tab.light[l].enabled || g.tab.light[l].intensity <= 0.0 { continue; }
+        let owner = g.tab.light[l].owner;
         if !js::truthy(owner) || owner == me || own_side_owns(g, owner, team) { continue; }
-        let pos = seam_light_pos(g, l);
+        let pos = g.tab.light[l].pos;
         let d = v3::dist(pos, head);
-        if d >= bd || d > seam_light_range(g, l) || crate::scene_collision::segment_blocked(g, head, pos, None, None, None) { continue; }
+        if d >= bd || d > g.tab.light[l].range || crate::scene_collision::segment_blocked(g, head, pos, None, None, None) { continue; }
         best = Some([pos[0], 0.0, pos[2]]);
         bd = d;
     }
@@ -683,13 +657,12 @@ pub fn doze_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Do
 }
 /// the panel's line: who is at what (doze.ts dozeSummary)
 pub fn doze_summary(g: &mut crate::game::Game) -> String {
-    let books = map_of(g);
     let mut rows: Vec<String> = Vec::new();
-    for (gd, d) in books.iter() {
+    for (gd, d) in g.m.doze.rec.iter() {
         if d.phase == Phase::No { continue; }
         let what = match d.phase {
-            Phase::Asleep => alloc::format!("asleep {} s", m::round(d.t) as i64),
-            Phase::Work => alloc::format!("at his screen {} s", m::round(d.t) as i64),
+            Phase::Asleep => alloc::format!("asleep {} s", js::to_fixed(d.t, 0)),
+            Phase::Work => alloc::format!("at his screen {} s", js::to_fixed(d.t, 0)),
             Phase::Spent | Phase::Stir => alloc::format!("woken ({})", d.why.map_or("null", |w| w.as_str())),
             Phase::Going => String::from("to his chair"),
             Phase::Down => String::from("sitting down"),
@@ -704,7 +677,7 @@ pub fn doze_reset(g: &mut crate::game::Game, load: Option<bool>) {
     let load = load.unwrap_or(false);
     g.m.doze.said = None;
     if load { g.m.doze.left = None; } else { left_off(g); }
-    let Some(rows) = g.m.doze.games.as_ref().map(|m| m.iter().map(|(k, v)| (k, *v)).collect::<Vec<(GuardId, Doze)>>()) else { return };
+    let rows: Vec<(GuardId, Doze)> = g.m.doze.rec.iter().map(|(k, v)| (k, *v)).collect();
     for (gd, d) in rows {
         if !load { dark(g, gd); }
         if seated(d) { up(g, gd); }

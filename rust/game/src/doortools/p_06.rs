@@ -17,6 +17,8 @@ macro_rules! thr { ($g:ident, $op:expr) => { $g.tab.doortools_door_op[$op].thr.a
 macro_rules! sl { ($g:ident, $op:expr, $gd:expr) => { $g.tab.doortools_door_op[$op].slice.get_mut($gd).unwrap() } }
 /// a man's cuts (`s.pie!`)
 macro_rules! pie { ($g:ident, $op:expr, $gd:expr) => { $g.tab.doortools_door_op[$op].slice.get_mut($gd).unwrap().pie.as_mut().unwrap() } }
+/// a search's row (`SR`)
+macro_rules! sr { ($g:ident, $s:expr) => { $g.tab.doortools_room_search[$s] } }
 
 /// what the head of `step` works out once
 struct Cx { d: DoorId, t: f64, el: f64, lead: GuardId, name: String }
@@ -25,8 +27,6 @@ fn tr(b: Option<bool>) -> bool { b.unwrap_or(false) }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn alive(g: &Game, gd: GuardId) -> bool { g.gd[gd].state != crate::game::GuardState::Dead }
 fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None, None); }
-/// `x.toFixed(n)` (only ever a beat's text): a zero has no sign there
-fn fixed(x: f64, n: usize) -> String { let x = if x == 0.0 { 0.0 } else { x }; format!("{:.*}", n, x) }
 fn in_ops(g: &Game, o: DoorOpId) -> bool { g.door_tools.ops.contains(&o) }
 /// `this.lights ?? NIGHTBREACH.opLights` (settled: on)
 fn light_of(g: &Game) -> bool { g.door_tools.lights.unwrap_or(true) }
@@ -62,10 +62,6 @@ fn done_of(op: &DoorOp, why: &str) -> DoorToolsDoneItem {
     }
 }
 
-// ---- the one seam left: what the skeleton still cannot do (notes.md, ## Skeleton)
-/// doortools.ts:2459: `m.flashlight?.enabled`
-fn seam_flashlight_enabled(g: &mut Game, m: GuardId) -> bool { todo!("needs: an accessor for a light's `enabled` on Guard.flashlight (LightId)") }
-
 /// `stowFight(g, lead, A, op)`: the order's `stowOffT` lent to it and written back (workstow.ts writes it)
 fn stow_fight_of(g: &mut Game, gd: GuardId, a: crate::workstow::StowFightA, op: DoorOpId) -> bool {
     let mut s = crate::workstow::StowFightOp { stow_off_t: o!(g, op).stow_off_t };
@@ -73,20 +69,9 @@ fn stow_fight_of(g: &mut Game, gd: GuardId, a: crate::workstow::StowFightA, op: 
     o!(g, op).stow_off_t = s.stow_off_t;
     r
 }
-/// what `thrLitCell`, `thrTubeCell` and `flows` read of the search (`pts` alone), lent while the row itself stays in `g`
-fn lent_cells(g: &mut Game, op: DoorOpId) -> RoomSearch {
-    let pts = door_tools_search_of(g, op, None).map_or(Vec::new(), |s| s.pts.clone());
-    RoomSearch { pts, ..RoomSearch::zeroed() }
-}
 /// the tail of the hold's beats: `SR ? ` · ${SR.left} of ${SR.pts.length} cells unseen` : ''`, read as the beat is said
-fn unseen_of(g: &mut Game, op: DoorOpId) -> String {
-    if o!(g, op).search.is_none() { return String::new(); }
-    door_tools_search_of(g, op, None).map_or(String::new(), |s| format!(" · {} of {} cells unseen", s.left, s.pts.len()))
-}
-
-/// is he on his mark (doortools.ts DoorTools.arrived)
-pub fn door_tools_arrived(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
-    match o!(g, op).mine.get(gd).copied() { Some(a) => asg!(g, a).arrived, None => false }
+fn unseen_of(g: &Game, sr: Option<DoortoolsRoomSearchId>) -> String {
+    sr.map_or(String::new(), |s| format!(" · {} of {} cells unseen", sr!(g, s).left, sr!(g, s).pts.len()))
 }
 
 /// rear security while the door is worked (doortools.ts DoorTools.spareRear)
@@ -474,7 +459,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
             let (what, tag, refund) = if frag { ("frag", "frag", DoorToolsRefundWhat::Frag) } else { ("bang", "can", DoorToolsRefundWhat::Bang) };
             if o!(g, op).frag_way_t.is_none() {
                 o!(g, op).frag_way_t = Some(t);
-                door_tools_beat(g, op, &format!("{} waits: the door is in the way ({} rad)", tag, fixed(angle, 2)));
+                door_tools_beat(g, op, &format!("{} waits: the door is in the way ({} rad)", tag, js::to_fixed(angle, 2)));
             }
             if t - o!(g, op).frag_way_t.unwrap() < g.k.doortools.frag_way_wait { return; }
             let line = crate::words::wg(g, &format!("the door's in the way — no {}. going in.", what), &format!("door is in the way — no {}. going in.", what));
@@ -483,7 +468,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
             o!(g, op).frag = Some(false);
             door_tools_refund(g, refund);
             door_tools_beat(g, op, &format!("{} held", tag));
-            door_tools_note(g, &format!("{} held on {}: the leaf is in its way ({} rad) — in without it", what, dname, fixed(angle, 2)));
+            door_tools_note(g, &format!("{} held on {}: the leaf is in its way ({} rad) — in without it", what, dname, js::to_fixed(angle, 2)));
             door_tools_enter(g, op);
             return;
         }
@@ -521,8 +506,8 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
     if let Some(i) = &into {
         let inside = -off_of(g, d, i.at, side);
         let al = along_of(g, d, i.at) - w / 2.0;
-        let tail = if pass.is_some() { format!(" · passed {} m to the door", fixed(gap, 1)) } else { String::new() };
-        door_tools_beat(g, op, &format!("can into the room · {} m in, {} along · {} of {} places lit{}", fixed(inside, 1), fixed(al, 1), i.n, i.of, tail));
+        let tail = if pass.is_some() { format!(" · passed {} m to the door", js::to_fixed(gap, 1)) } else { String::new() };
+        door_tools_beat(g, op, &format!("can into the room · {} m in, {} along · {} of {} places lit{}", js::to_fixed(inside, 1), js::to_fixed(al, 1), i.n, i.of, tail));
     }
     o!(g, op).can = Some(it);
     o!(g, op).toss_t = t;
@@ -545,7 +530,7 @@ fn step_fuse(g: &mut Game, op: DoorOpId, cx: &Cx) {
         o!(g, op).phase = Phase::Wait;
         let what = if frag {
             let off = off_of(g, d, ip, side);
-            format!("frag · {} {} m", if off < 0.0 { "inside" } else { "OUTSIDE" }, fixed(m::abs(off), 1))
+            format!("frag · {} {} m", if off < 0.0 { "inside" } else { "OUTSIDE" }, js::to_fixed(m::abs(off), 1))
         } else { String::from("bang (its own fuse)") };
         door_tools_beat(g, op, &what);
         if frag { g.door_tools.stats.frags += 1.0; door_tools_close_up(g, op, None); }
@@ -625,9 +610,8 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
             crate::doorpath::door_path_sent(g, op, q.gd, crate::doorpath::DoorPathSentPod { pos: q.pod.pos });
         }
     }
-    // `const SR = this.searchOf(op)`: the row, got again where it is used and never held across a call; `has_sr` is the TypeScript's test of it
-    let has_sr = door_tools_search_of(g, op, None).is_some();
-    if has_sr { door_tools_look(g, op, None, None); }
+    let sr = door_tools_search_of(g, op, None);
+    if let Some(s) = sr { door_tools_look(g, op, s, None, None); }
     let other = g.k.doortools.other_door_m > 0.0 && door_tools_other_doors(g, op, None, None, None);
     let mut swept = true;
     let mut w = 0;
@@ -647,46 +631,46 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
         let t1 = match o!(g, op).on_pod.get(gd).copied() { Some(x) => x, None => { o!(g, op).on_pod.set(gd, t); t } };
         let k = m::floor((t - t1) / g.k.doortools.sweep_secs);
         if other && door_tools_on_other(g, op, gd) { continue; }
-        if k < 2.0 && !has_sr {
+        if k < 2.0 && sr.is_none() {
             swept = false;
             let yaw = pod.face + (if k <= 0.0 { -g.k.doortools.sweep_rad } else { g.k.doortools.sweep_rad });
             asg!(g, a).watch = Some([p[0] + m::sin(yaw) * 4.0, 1.2, p[2] + m::cos(yaw) * 4.0]);
             asg!(g, a).face = Some(yaw);
             continue;
         }
-        if has_sr && door_tools_scan(g, op, gd, a) { swept = false; continue; }
+        if let Some(s) = sr { if door_tools_scan(g, op, s, gd, a) { swept = false; continue; } }
         door_tools_on_sector(g, gd, a, pod);
     }
     let handover = { let r = &o!(g, op);
         match &r.thr { Some(x) => !x.handed && r.queue.is_empty() && x.jamb.iter().all(|&m_| !r.men.contains(&m_) || r.on_pod.has(m_)), None => false } };
     if handover { thr!(g, op).handed = true; door_tools_beat(g, op, "handover"); }
-    let flowing = has_sr && { let c = lent_cells(g, op); door_tools_flows(g, op, &c) };
-    if flowing {
-        let (fight_at, room) = { let s = door_tools_search_of(g, op, None).unwrap(); (s.fight_at, s.room) };
-        if fight_at != Some(t) {
-            // `o.search === SR`: by its room. searchOf hands an order in this room the search of any order still on the list, so on the list one room is one search
+    let flowing = match sr { Some(s) => door_tools_flows(g, op, s), None => false };
+    if let (Some(s), true) = (sr, flowing) {
+        if sr!(g, s).fight_at != Some(t) {
             let mut any = false;
             for x in g.door_tools.ops.clone() {
-                if o!(g, x).search.as_ref().map(|s| s.room) == Some(room) && o!(g, x).crossed.len() > 0 && o!(g, x).men.iter().any(|&m_| g.gd[m_].script.as_ref().map_or(false, |c| c.over.is_some())) { any = true; break; }
+                if o!(g, x).search.flatten() == Some(s) && o!(g, x).crossed.len() > 0 && o!(g, x).men.iter().any(|&m_| g.gd[m_].script.as_ref().map_or(false, |c| c.over.is_some())) { any = true; break; }
             }
-            let s = door_tools_search_of(g, op, None).unwrap();
-            if any { s.fight_t = Some(s.fight_t.unwrap_or(0.0) + v3::clamp(t - s.fight_at.unwrap_or(t), 0.0, 0.05)); }
-            s.fight_at = Some(t);
+            let r = &mut sr!(g, s);
+            if any { r.fight_t = Some(r.fight_t.unwrap_or(0.0) + v3::clamp(t - r.fight_at.unwrap_or(t), 0.0, 0.05)); }
+            r.fight_at = Some(t);
         }
     }
     let (search_cap, in_cap, flow_secs, flow_fight) = { let k = &g.k.doortools; (k.search_cap, k.in_cap, k.flow_secs, k.flow_fight) };
-    let cap = if has_sr {
-        let (flows, closes, fight_t) = { let s = door_tools_search_of(g, op, None).unwrap(); (s.flows.unwrap_or(0.0), s.closes.unwrap_or(0.0), s.fight_t.unwrap_or(0.0)) };
-        search_cap + (if flowing { (flows + closes) * flow_secs + m::min(fight_t, flow_fight) } else { 0.0 })
-    } else { in_cap };
-    if flowing && el >= search_cap && el < cap {
-        let s = door_tools_search_of(g, op, None).unwrap();
-        if !tr(s.late) { s.late = Some(true); g.door_tools.stats.flow_late += 1.0; }
+    let cap = match sr {
+        Some(s) => {
+            let r = &sr!(g, s);
+            search_cap + (if flowing { (r.flows.unwrap_or(0.0) + r.closes.unwrap_or(0.0)) * flow_secs + m::min(r.fight_t.unwrap_or(0.0), flow_fight) } else { 0.0 })
+        }
+        None => in_cap,
+    };
+    if let (Some(s), true) = (sr, flowing) {
+        if el >= search_cap && el < cap && !tr(sr!(g, s).late) { sr!(g, s).late = Some(true); g.door_tools.stats.flow_late += 1.0; }
     }
     if !o!(g, op).queue.is_empty() || (!swept && el < cap) { return; }
-    if has_sr && swept && el < cap && door_tools_move_on(g, op) { return; }
-    if has_sr {
-        let w = { let s = door_tools_search_of(g, op, None).unwrap(); format!("searched · {} of {} cells unseen · {} moved on", s.left, s.pts.len(), s.moves) };
+    if let Some(s) = sr { if swept && el < cap && door_tools_move_on(g, op, s) { return; } }
+    if let Some(s) = sr {
+        let w = { let r = &sr!(g, s); format!("searched · {} of {} cells unseen · {} moved on", r.left, r.pts.len(), r.moves) };
         door_tools_beat(g, op, &w);
     }
     let deal: Vec<GuardId> = o!(g, op).threat.as_ref().and_then(|x| x.deal.as_ref()).map_or(Vec::new(), |m_| m_.keys());
@@ -736,7 +720,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
     let lp = pos_of(g, lead);
     let room = match room_of(g, lp) { Some(r) => Some(r), None => match pod0 { Some(p) => room_of(g, p.pos), None => None } };
     let dead_cells = g.k.doortools.dead_cells;
-    let left = if has_sr { let s = door_tools_search_of(g, op, None).unwrap(); if s.left >= dead_cells { s.left } else { 0.0 } } else { 0.0 };
+    let left = match sr { Some(s) if sr!(g, s).left >= dead_cells => sr!(g, s).left, _ => 0.0 };
     if let Some((id, rname)) = room {
         let mut ins: Vec<GuardId> = Vec::new();
         for x in g.guards.clone() {
@@ -966,19 +950,17 @@ fn step_thr(g: &mut Game, op: DoorOpId, cx: &Cx) {
         }
         if tr(asg!(g, a).search) { asg!(g, a).search_t = Some(t); }
     }
-    // `const SR = op.search ?? null`: asked of the order, never made here
-    if o!(g, op).search.is_some() {
+    let sr = o!(g, op).search.flatten();
+    if let Some(s) = sr {
         if t >= thr!(g, op).los_t && !thr!(g, op).told {
             thr!(g, op).los_t = t + 0.5;
-            let s = door_tools_search_of(g, op, None).unwrap();
-            for &m_ in &jamb { s.los.delete(m_); }
+            for &m_ in &jamb { sr!(g, s).los.delete(m_); }
         }
-        let cells = lent_cells(g, op);
         let mut ok = |g: &mut Game, m_: GuardId, i: f64| -> bool {
-            seam_flashlight_enabled(g, m_) || door_tools_thr_lit_cell(g, op, &cells, i)
-                || (crate::nvg::nvg_down(g, m_) && (door_tools_thr_tube_cell(g, op, &cells, i) || crate::irlight::ir_shows_at(g, m_, cells.pts[i as usize])))
+            g.tab.light[g.gd[m_].flashlight].enabled || door_tools_thr_lit_cell(g, op, s, i)
+                || (crate::nvg::nvg_down(g, m_) && (door_tools_thr_tube_cell(g, op, s, i) || { let q = sr!(g, s).pts[i as usize]; crate::irlight::ir_shows_at(g, m_, q) }))
         };
-        door_tools_look(g, op, Some(&jamb), Some(&mut ok));
+        door_tools_look(g, op, s, Some(&jamb), Some(&mut ok));
     }
     let mut done = true;
     let pie_op = jamb.iter().any(|&m_| o!(g, op).slice.get(m_).map_or(false, |s| s.pie.is_some()));
@@ -1117,7 +1099,7 @@ fn step_thr(g: &mut Game, op: DoorOpId, cx: &Cx) {
                         thr!(g, op).sliced = true;
                         asg!(g, a).watch = Some(mid);
                         asg!(g, a).face = Some(v3::yaw_to(p, mid));
-                        let w = format!("set{}", unseen_of(g, op));
+                        let w = format!("set{}", unseen_of(g, sr));
                         door_tools_beat(g, op, &w);
                     }
                 }
@@ -1127,7 +1109,7 @@ fn step_thr(g: &mut Game, op: DoorOpId, cx: &Cx) {
     }
     if done && pie_op && !thr!(g, op).sliced {
         thr!(g, op).sliced = true;
-        let w = format!("sliced{}", unseen_of(g, op));
+        let w = format!("sliced{}", unseen_of(g, sr));
         door_tools_beat(g, op, &w);
     }
     if !thr!(g, op).hold && door_tools_last_call(g, op) {
@@ -1255,7 +1237,7 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
             if thr!(g, op).shut_t.is_none() {
                 let locked = door_tools_locked_out(g, d, side);
                 thr!(g, op).shut_t = Some(if locked { -1e9 } else { t });
-                door_tools_beat(g, op, &format!("can waits: the door has come shut ({} rad)", fixed(angle, 2)));
+                door_tools_beat(g, op, &format!("can waits: the door has come shut ({} rad)", js::to_fixed(angle, 2)));
                 if !locked { door_tools_shove(g, op); }
             }
             if t - thr!(g, op).shut_t.unwrap() < g.k.doortools.frag_way_wait { return; }
@@ -1288,7 +1270,7 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
                             let off = off.join(", ");
                             format!("but the lead's own ({} not back)", if off.is_empty() { "nobody" } else { &off })
                         } else {
-                            format!("({} {} m off)", g.gd[th].callsign, fixed(v3::dist_xz(pos_of(g, th), g.dr[d].frame_centre), 1))
+                            format!("({} {} m off)", g.gd[th].callsign, js::to_fixed(v3::dist_xz(pos_of(g, th), g.dr[d].frame_centre), 1))
                         };
                         door_tools_beat(g, op, &format!("can waits: no hand at the door {}", what));
                         say(g, lead_now, "hold the bang — back on the door.");
@@ -1364,9 +1346,9 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
             let inside = -off_of(g, d, at, side);
             let al = along_of(g, d, at) - w / 2.0;
             let cooked = if short { format!(" · cooked short, {} m in", first_in) } else { String::new() };
-            format!("pocket · {} cells unseen · {} m in, {} along{}", pick.n, fixed(inside, 1), fixed(al, 1), cooked)
+            format!("pocket · {} cells unseen · {} m in, {} along{}", pick.n, js::to_fixed(inside, 1), js::to_fixed(al, 1), cooked)
         }
-        None => String::from(if o!(g, op).search.is_some() { "no blind pocket: the middle" } else { "no model of the room: the middle" }),
+        None => String::from(if o!(g, op).search.flatten().is_some() { "no blind pocket: the middle" } else { "no model of the room: the middle" }),
     };
     let cs = g.gd[th].callsign.clone();
     door_tools_beat(g, op, &format!("toss:{} · {}{}", cs, head, tail));

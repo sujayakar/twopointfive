@@ -39,7 +39,7 @@ pub fn charge_boxes(g: &mut crate::game::Game, s: crate::blast_look::Seen, out: 
 pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool { todo!() }
 
 /// (src/game/blastLook.ts:219 flashOf)
-pub fn flash_of<'g>(g: &'g mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<&'g mut LightId> { todo!() }
+pub fn flash_of(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> Option<LightId> { todo!() }
 
 /// (src/game/blastLook.ts:225 LUM)
 pub fn lum(r: f64, g_2: f64, b: f64) -> f64 { todo!() }

@@ -1791,7 +1791,7 @@ pub struct Run {
     pub tick_n: f64,
     pub dice: crate::dice::Die,
     pub seed: f64,
-    pub beats: Vec<crate::director::LiveBeat>,
+    pub beats: Vec<DirectorLiveBeatId>,
     pub fired: JsSet<crate::Num>,
     pub signals: Vec<crate::director::RunSignalsItem>,
     pub sig_seen: f64,
@@ -1799,7 +1799,6 @@ pub struct Run {
     pub units: JsMap<crate::Num, crate::director::UnitRec>,
     pub bursts: Vec<crate::director::RunBurstsItem>,
     pub kicks: Vec<crate::director::RunKicksItem>,
-    pub tracks: Vec<crate::director::RunTracksItem>,
     pub show: Option<crate::director::ShowState>,
     pub objective: Option<crate::director::RunObjective>,
     pub systems_saved: Option<JsMap<&'static str, bool>>,
@@ -1827,7 +1826,6 @@ impl Run {
             units: JsMap::new(),
             bursts: Vec::new(),
             kicks: Vec::new(),
-            tracks: Vec::new(),
             show: None,
             objective: None,
             systems_saved: None,
@@ -1946,25 +1944,6 @@ impl RunKicksItem {
 }
 impl Default for RunKicksItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/director.ts:418 Run.tracks, src/game/director.ts:418)
-#[derive(Clone, Copy, Debug)]
-pub struct RunTracksItem {
-    pub gd: GuardId,
-    pub vec: V3,
-    pub tgt: GuardId,
-}
-impl RunTracksItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunTracksItem {
-            gd: GuardId(0),
-            vec: [0.0; 3],
-            tgt: GuardId(0),
-        }
-    }
-}
-impl Default for RunTracksItem { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/director.ts:419 Run.objective, src/game/director.ts:419)
 #[derive(Clone, Debug)]
 pub struct RunObjective {
@@ -2032,11 +2011,11 @@ pub struct Director {
     pub scan: Vec<crate::director::DirectorScanItem>,
     pub armed: bool,
     pub log: Vec<crate::director::LogRow>,
-    pub run: Option<crate::director::Run>,
+    pub run: Option<DirectorRunId>,
     pub last_run: Option<crate::director::DirectorLastRun>,
     pub strict: bool,
     pub frame: Option<crate::director::DirectorFrame>,
-    pub cam: Option<crate::camera::FollowCamera>,
+    pub cam: Option<CameraId>,
     pub input: Option<InputId>,
     pub serial: f64,
     pub seen: JsSet<u32>,
@@ -2175,9 +2154,9 @@ impl ScanShowcaseVerbsItem {
 impl Default for ScanShowcaseVerbsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/director.ts:452 attach(o), src/game/director.ts:452)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct DirectorAttachO {
-    pub cam: Option<crate::camera::FollowCamera>,
+    pub cam: Option<CameraId>,
     pub input: Option<InputId>,
 }
 impl DirectorAttachO {

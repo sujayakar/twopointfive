@@ -275,7 +275,7 @@ pub fn sam_big_lead_of(g: &mut crate::game::Game) -> f64 {
         return 0.0;
     }
     let pid = g.player;
-    let Some(it) = g.pl[pid].kit_was else { return 0.0 };
+    let Some(Some(it)) = g.pl[pid].kit_was else { return 0.0 };
     if crate::kitanim::kit_in_hand(g).is_none() {
         return 0.0;
     }

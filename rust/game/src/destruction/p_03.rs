@@ -228,7 +228,9 @@ pub fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V
     let name = g.tab.sim_lightshome_fixture[t].name.clone();
     dlog(g, &format!("fixture {} out ({})", name, why));
     let pos = g.tab.sim_lightshome_fixture[t].pos;
-    crate::render_lights::light_set_flash(&mut g.engine.lights, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
+    let mut lights = core::mem::take(&mut g.engine.lights);   // (the set is lent while g is lent: flash touches only the new light's row and this list)
+    crate::render_lights::light_set_flash(g, &mut lights, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
+    g.engine.lights = lights;
     crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
         lens_shatter(g, t, from);
@@ -296,8 +298,8 @@ pub fn destruction_summary(g: &mut crate::game::Game) -> String {
     let debris = crate::debris::debris_summary(g);
     let s = &g.stats.destruction;
     format!(
-        "chaos {:.2}{} · heat max {:.1} · {} · papers {} ({} sheets) · puffs {} (−{}) · knocks {} ({} demoted) · screens {} · tiles {} · fixtures {} (−{}) · decals {} · impulses bang {} / impact {} / thud {} (−{}), {} chunks kicked{} · index {}",
-        chaos, imp, heat, debris, s.destr_papers, s.destr_sheets, s.destr_puffs, s.destr_puffs_refused, s.destr_knocks, s.destr_knocks_demoted, s.destr_screens, s.destr_tiles,
+        "chaos {}{} · heat max {} · {} · papers {} ({} sheets) · puffs {} (−{}) · knocks {} ({} demoted) · screens {} · tiles {} · fixtures {} (−{}) · decals {} · impulses bang {} / impact {} / thud {} (−{}), {} chunks kicked{} · index {}",
+        js::to_fixed(chaos, 2), imp, js::to_fixed(heat, 1), debris, s.destr_papers, s.destr_sheets, s.destr_puffs, s.destr_puffs_refused, s.destr_knocks, s.destr_knocks_demoted, s.destr_screens, s.destr_tiles,
         s.destr_fixtures, s.destr_fixtures_refused, s.destr_decals, s.destr_imp_bang, s.destr_imp_impact, s.destr_imp_thud, s.destr_imp_thud_dropped, s.destr_debris_kicked, ps, inventory_json(&inv),
     )
 }
@@ -338,7 +340,6 @@ fn seam_emit_dust(g: &mut Game, p: &mut crate::render_particles::Particles, pos:
 mod tests {
     use super::*;
 
-    /// Math.round(-0.3) is -0 and Math.floor(-0) is -0, and `${-0}` is "0": the square must be one key either way.
     /// What JSON.stringify writes of `{ screen: 3, clutter: 12 }`, and of nothing.
     #[test]
     fn the_inventory_writes_as_json() {
@@ -349,6 +350,7 @@ mod tests {
         assert_eq!(inventory_json(&inv), "{\"screen\":3,\"clutter\":12}");
     }
 
+    /// Math.round(-0.3) is -0 and Math.floor(-0) is -0, and `${-0}` is "0": the square must be one key either way.
     #[test]
     fn a_tile_key_has_no_negative_zero() {
         assert_eq!(tile_key(-0.0, 0.0), "0,0");

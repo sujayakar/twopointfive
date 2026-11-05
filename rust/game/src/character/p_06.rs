@@ -5,11 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-const DEGR: f64 = m::PI / 180.0;
-const AY: V3 = [0.0, 1.0, 0.0];
-const AZ: V3 = [0.0, 0.0, 1.0];
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// the rig's named nodes, as the animator and a layer call them (character.ts N), in the written order
 static N: [(&str, &str); 24] = [
@@ -19,12 +15,8 @@ static N: [(&str, &str); 24] = [
     ("shoulderL", "DEF-shoulder.L"), ("shoulderR", "DEF-shoulder.R"), ("middle1R", "DEF-f_middle.01.R"), ("middle1L", "DEF-f_middle.01.L"),
 ];
 
-// ---- seams: what skeleton 3 still lacks (each has its line in notes.md)
+// ---- seams: what skeleton 4 still lacks (each has its line in notes.md)
 
-/// `this.kitHold = v`, outer None = undefined, Some(None) = null (character.ts:2047, 2051)
-fn seam_set_kit_hold(g: &mut crate::game::Game, c: CharId, v: Option<Option<crate::character::KitItem>>) { todo!("needs: Anim.kit_hold as Option<Option<KitItem>>: readers tell undefined from null") }
-/// `b.rack`, outer None = undefined, Some(None) = null: a round still chambered (character.ts:2023, 2024)
-fn seam_rack(b: &crate::character::ReloadBeat) -> Option<Option<f64>> { todo!("needs: ReloadBeat.rack as Option<Option<f64>>: rl_beat tells undefined from null") }
 /// this.fkList in the constructor (character.ts:1855): the stub takes a CharId and the animator is not on a body yet
 fn seam_fk_list(g: &mut crate::game::Game, ch: RigId, ends: &[f64]) -> Vec<i32> { todo!("needs: fk_list by rig, callable before the animator is on a body") }
 /// this.sampleJog in the constructor (character.ts:1904): the stub takes a CharId and the animator is not on a body yet
@@ -73,9 +65,10 @@ fn desync_hash(seed: f64, k: f64) -> f64 {
 fn round_hash(n: f64) -> f64 {
     js::to_u32(n * 2654435761.0) as f64 / 4294967296.0
 }
-/// the arithmetic of rlBeat, with `b.rack` as read (outer None = undefined, Some(None) = null)
-fn rl_beat_keys(k: &mut crate::character::AnimRlB, b: &crate::character::ReloadBeat, rack: Option<Option<f64>>) {
+/// the arithmetic of rlBeat; `b.rack`: outer None = undefined, Some(None) = null, a round still chambered
+fn rl_beat_keys(k: &mut crate::character::AnimRlB, b: &crate::character::ReloadBeat) {
     let d = m::max(0.3, b.dur);
+    let rack = b.rack;
     let rack_n = rack.flatten();
     if b.exact == Some(true) && b.out.is_some() && b.in_.is_some() {
         k.out = b.out.unwrap();
@@ -177,14 +170,14 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
         let mut hand = Vec::new();
         for f in ["f_index", "f_middle", "f_ring", "f_pinky"] {
             let mut joints = Vec::new();
-            for j in [1, 2, 3] { joints.push(node(g, ch, &format!("DEF-{}.0{}.{}", f, j, s))); }
+            for j in [1, 2, 3] { joints.push(node(g, ch, &alloc::format!("DEF-{}.0{}.{}", f, j, s))); }
             hand.push(joints);
         }
         a.fingers.push(hand);
     }
     for s in ["L", "R"] {
         let mut joints = Vec::new();
-        for j in [1, 2, 3] { joints.push(node(g, ch, &format!("DEF-thumb.0{}.{}", j, s))); }
+        for j in [1, 2, 3] { joints.push(node(g, ch, &alloc::format!("DEF-thumb.0{}.{}", j, s))); }
         a.thumbs.push(joints);
     }
     a.hn.nodes = [0usize, 1].iter().map(|&s| {
@@ -211,18 +204,18 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
     a.head_rest_inv = v3::quat::conj(a.fk.rot[nd.head]);
     a.hand_fix = [nd.hand_l, nd.hand_r].iter().map(|&h| {
         let r = a.fk.rot[h];
-        let f = v3::normalize(v3::quat::rotate(r, AY));
-        let b = v3::normalize(v3::mad(AY, f, -v3::dot(AY, f)));
+        let f = v3::normalize(v3::quat::rotate(r, ay()));
+        let b = v3::normalize(v3::mad(ay(), f, -v3::dot(ay(), f)));
         v3::quat::mul(v3::quat::conj(v3::quat::from_basis(v3::cross(f, b), f, b)), r)
     }).collect();
     crate::anim_skeleton::pose_fk_run(&mut a.fk, &a.p_aim, &g.tab.rig[ch]);
-    a.grip_up = v3::quat::rotate(v3::quat::conj(a.fk.rot[nd.hand_r]), AY);
+    a.grip_up = v3::quat::rotate(v3::quat::conj(a.fk.rot[nd.hand_r]), ay());
 
     {   // the standing idle: the gaze, the feet, and the fist the hand pass measures from
         let mut p = a.rest.clone();
         crate::anim_skeleton::sample_clip(&g.tab.clip[kept(&a, "Idle_Loop")], 0.0, false, &mut p);
         crate::anim_skeleton::pose_fk_run(&mut a.fk, &p, &g.tab.rig[ch]);
-        a.gaze_local = v3::quat::rotate(v3::quat::conj(a.fk.rot[nd.head]), AZ);
+        a.gaze_local = v3::quat::rotate(v3::quat::conj(a.fk.rot[nd.head]), az());
         a.hn.fist = grab(&a.hn.nodes, &mut p);
         let mut pc = a.rest.clone();
         crate::anim_skeleton::sample_clip(&g.tab.clip[kept(&a, "Crouch_Idle_Loop")], 0.0, false, &mut pc);
@@ -578,14 +571,12 @@ pub fn anim_reload(g: &mut crate::game::Game, c: CharId, dur: Option<f64>, beat:
         None => crate::character::ReloadBeat { dur: d, out: None, in_: None, rack: None, keep: None, hand: None, exact: None },
     };
     anim_rl_beat(g, c, b);
-    g.ch[c].anim.rl_src = None;
     g.ch[c].anim.rl_t = 0.0;
 }
 
 /// the hand's keys off a weapon's beat   (character.ts rlBeat)
 pub fn anim_rl_beat(g: &mut crate::game::Game, c: CharId, b: crate::character::ReloadBeat) {
-    let rack = seam_rack(&b);
-    rl_beat_keys(&mut g.ch[c].anim.rl_b, &b, rack);
+    rl_beat_keys(&mut g.ch[c].anim.rl_b, &b);
 }
 
 /// begin a change of what is in the right fist; the seconds until `to` is up   (character.ts kitSwap)
@@ -595,7 +586,7 @@ pub fn anim_kit_swap(g: &mut crate::game::Game, c: CharId, from: Option<crate::c
     let (mut s0, mut roll0, mut re) = (0.0, 0.0, false);
     let mid_swap = g.ch[c].anim.kit.is_some();
     if mid_swap {
-        from = g.ch[c].anim.kit_hold;   // (`?? null`: undefined and null alike)
+        from = g.ch[c].anim.kit_hold.flatten();   // (`?? null`: undefined and null alike)
         s0 = if from.is_some() { g.ch[c].anim.kit_stow } else { 0.0 };
         roll0 = if from.is_some() { g.ch[c].anim.kit_roll } else { 0.0 };
     }
@@ -637,7 +628,7 @@ pub fn anim_kit_swap(g: &mut crate::game::Game, c: CharId, from: Option<crate::c
     };
     let cap = crate::character::AnimKitCap { r, rq, l, lq, mr, ml, mf, mb };
     g.ch[c].anim.kit = Some(crate::character::AnimKit { t: 0.0, from, to, t_a, t_r, d, s0, roll0, re, front, cap });
-    seam_set_kit_hold(g, c, Some(from.or(if re { to } else { None })));
+    g.ch[c].anim.kit_hold = Some(from.or(if re { to } else { None }));
     g.ch[c].anim.kit_stow = s0;
     g.ch[c].anim.kit_roll = roll0;
     d
@@ -646,7 +637,7 @@ pub fn anim_kit_swap(g: &mut crate::game::Game, c: CharId, from: Option<crate::c
 /// the swap dropped where it stands: the kit is where the game says, at once   (character.ts kitCancel)
 pub fn anim_kit_cancel(g: &mut crate::game::Game, c: CharId) {
     g.ch[c].anim.kit = None;
-    seam_set_kit_hold(g, c, None);
+    g.ch[c].anim.kit_hold = None;   // (undefined: the kit is where the game says)
     g.ch[c].anim.kit_roll = 0.0;
     g.ch[c].anim.kit_stow = 0.0;
     g.ch[c].anim.kit_lie = None;
@@ -775,7 +766,7 @@ mod tests {
     fn beat(dur: f64) -> ReloadBeat { ReloadBeat { dur, out: None, in_: None, rack: None, keep: None, hand: None, exact: None } }
     fn keys(b: ReloadBeat, rack: Option<Option<f64>>) -> ([u64; 6], bool, bool) {
         let mut k = AnimRlB::zeroed();
-        rl_beat_keys(&mut k, &b, rack);
+        rl_beat_keys(&mut k, &ReloadBeat { rack, ..b });
         ([k.out.to_bits(), k.in_.to_bits(), k.rack.to_bits(), k.dur.to_bits(), k.keep.to_bits(), k.fresh.to_bits()], k.pull, k.hand)
     }
 

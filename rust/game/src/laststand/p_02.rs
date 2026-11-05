@@ -58,19 +58,8 @@ fn send(g: &mut Game, s: &mut Stand, d: RoomfightDefId, spot: V3, at: f64, quiet
     if quiet { t.quiet += 1.0; }
 }
 
-/// `x.toFixed(digits)`, digits 1 or 2: the language picks the larger n on an exact tie, the formatter the even one. A tie has x = odd / 2^(digits + 1), exactly.
-fn to_fixed(x: f64, digits: usize) -> String {
-    let (neg, a) = (x < 0.0, m::abs(x));
-    let (ten, two) = if digits == 1 { (10.0, 4.0) } else { (100.0, 8.0) };
-    let t = a * two;
-    let tie = t == m::floor(t) && js::rem(t, 2.0) == 1.0;
-    let v = if tie { (a * ten + 0.5) / ten } else { a };
-    let s = alloc::format!("{:.*}", digits, v);
-    if neg { alloc::format!("-{}", s) } else { s }
-}
-
 /// `+x.toFixed(2)`
-fn fixed2(x: f64) -> f64 { to_fixed(x, 2).parse::<f64>().unwrap() }
+fn fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse::<f64>().unwrap() }
 
 /// the die's seed off the room clear's seed and attempt
 fn fresh_seed(seed: f64, attempt: f64) -> f64 {
@@ -290,7 +279,7 @@ pub fn tick_mover(g: &mut crate::game::Game, s: &mut crate::laststand::Stand, m:
             let ns = alloc::format!("{}", n);
             net(g, gd, LineKind::In, Some(&vars(&[("n", ns.as_str()), ("the", s.the.as_str())])), None, None);
         }
-        note(g, Some(gd), &alloc::format!("in {}, {} s after the order", s.the, to_fixed(g.time - m.t0, 1)));
+        note(g, Some(gd), &alloc::format!("in {}, {} s after the order", s.the, js::to_fixed(g.time - m.t0, 1)));
         return true;
     }
     if !contact && s.room.is_some() && { m.tries += 1.0; m.tries } < g.k.laststand.legs && fit(g, d) {
@@ -330,7 +319,7 @@ pub fn come_by(g: &mut crate::game::Game, d: RoomfightDefId, r: RoomfightRoomId)
     // round the room, not through it
     let mut dear = |g: &mut Game, ix: f64, iz: f64| -> f64 {
         let i = crate::scene_collision::nav_grid_idx(g, ix, iz);
-        if g.tab.roomfight_room[r].cells.has(crate::Num(i)) { 30.0 } else { 1.0 }
+        if g.tab.roomfight_room[r].cells.has(crate::Num(i + 0.0)) { 30.0 } else { 1.0 }   // (+ 0.0: a JavaScript Set takes -0 for 0, Num compares bits)
     };
     for x in &entries {
         let p0 = [x.at[0] + x.out[0] * 1.2, 0.0, x.at[2] + x.out[1] * 1.2];
@@ -574,9 +563,8 @@ pub fn last_stand_tick(g: &mut crate::game::Game) {
     names.extend(st(g).spots.keys());
     for d in names { if !alive(g, d) { name(g, d, None); } }
     tick_later(g);
-    if let Some(mut c) = st(g).check.clone() {
-        tick_check(g, &mut c);
-        if st(g).check.is_some() { st(g).check = Some(c); }   // (tick_check closes the check by st.check = None; what it wrote on it is on `c`)
+    if st(g).check.is_some() {
+        tick_check(g);
     } else if g.time >= st(g).next_at {
         start_check(g);
     }
@@ -704,10 +692,10 @@ pub fn last_stand_summary(g: &mut crate::game::Game) -> String {
 mod tests {
     use super::*;
 
-    // the language's own answers, printed by bun: x.toFixed(d), and fresh's (Math.imul(seed | 0, 0x9E3779B1) ^ Math.imul(attempt | 0, 0x85EBCA6B) ^ 0x1A575A4D) | 0
+    // the language's own answers, printed by bun: +x.toFixed(2), and fresh's (Math.imul(seed | 0, 0x9E3779B1) ^ Math.imul(attempt | 0, 0x85EBCA6B) ^ 0x1A575A4D) | 0
     #[test]
-    fn to_fixed_as_the_language_rounds() {
-        for &(x, d, want) in TO_FIXED { assert_eq!(to_fixed(x, d), want, "{}.toFixed({})", x, d); }
+    fn a_count_goes_to_two_places_as_the_language_rounds() {
+        for &(x, want) in FIXED2 { assert_eq!(fixed2(x).to_bits(), want.to_bits(), "+{}.toFixed(2)", x); }
     }
 
     #[test]
@@ -715,6 +703,6 @@ mod tests {
         for &(seed, attempt, want) in SEEDS { assert_eq!(fresh_seed(seed, attempt).to_bits(), want.to_bits(), "{} {}", seed, attempt); }
     }
 
-    const TO_FIXED: &[(f64, usize, &str)] = &[(0.25, 1, "0.3"), (0.75, 1, "0.8"), (1.25, 1, "1.3"), (2.35, 1, "2.4"), (0.05, 1, "0.1"), (0.125, 2, "0.13"), (0.375, 2, "0.38"), (1.005, 2, "1.00"), (2.675, 2, "2.67"), (-0.125, 2, "-0.13"), (-0.001, 2, "-0.00"), (123.456, 2, "123.46"), (0.0, 2, "0.00"), (37.5, 2, "37.50"), (9.995, 2, "9.99"), (1000000.125, 2, "1000000.13"), (0.5, 1, "0.5"), (-1.25, 1, "-1.3")];
+    const FIXED2: &[(f64, f64)] = &[(0.125, 0.13), (0.375, 0.38), (1.005, 1.0), (2.675, 2.67), (-0.125, -0.13), (-0.001, -0.0), (123.456, 123.46), (0.0, 0.0), (37.5, 37.5), (9.995, 9.99), (1000000.125, 1000000.13)];
     const SEEDS: &[(f64, f64, f64)] = &[(0.0, 0.0, 441932365.0), (1.0, 1.0, 25946519.0), (12345.0, 2.0, -1330936078.0), (4294967295.0, 3.0, -363035837.0), (-7.0, 9.0, 57076647.0), (2147483648.0, 1.0, 532451366.0), (3.9, 2.9, -886660216.0), (987654321.0, 1000.0, -1273962284.0)];
 }

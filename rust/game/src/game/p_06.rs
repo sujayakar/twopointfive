@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------ seats and the one seam left
 
@@ -19,7 +19,8 @@ fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
 fn seam_man_leaves(g: &mut Game, c: CharId, pl: PlayerId) { todo!("needs: man_leaves over a CharId and a PlayerId") }
 
 /// A cut: `lens.target = copy(at); lens.desired = copy(at)`. A whole write of `desired` is what Seat.takeCut watches for, here by its serial.   (game.ts:1614, :1665, :1683)
-fn cut_lens(lens: &mut crate::camera::FollowCamera, at: V3) {
+fn cut_lens(g: &mut Game, cam: CameraId, at: V3) {
+    let lens = &mut g.tab.camera[cam];
     lens.target = at;
     lens.desired = at;
     lens.desired_serial += 1;
@@ -77,6 +78,7 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
     g.rings.clear();
     g.shells.clear();
     crate::tracers::tracers_clear(g);
+    crate::particle_fx::clear_particle_fx(g);
     crate::destruction::destruction_clear_moving(g);
     crate::shards::glass_shards_clear(g);
     g.events.clear();
@@ -149,6 +151,7 @@ pub fn game_clean_slate(g: &mut crate::game::Game) {
     g.last_sting_t = -100.0;
     crate::gunwall::gun_wall_fresh(g);
     for &s in &seats { in_seat(g, s, |g| crate::guards::ground_fresh(g)); }
+    crate::wind::wind_fresh(g);
 }
 
 /// The player's restart: restartEncounter, the camera cut to the fresh man, the host told to start the picture's histories from nothing.   (game.ts restart)
@@ -158,8 +161,9 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
     if !g.touring && !crate::director::director_showing(g) && g.spectate < 0.0 {
         let seats = g.seats.clone();
         for s in seats {
+            let lens = g.tab.cmd_seat[s].cam;
             let p = in_seat(g, s, |g| game_follow_pos(g, None));
-            cut_lens(&mut g.tab.cmd_seat[s].cam, p);
+            cut_lens(g, lens, p);
         }
         g.restart_cut = true;
         g.stats.cleanrestart.cuts += 1;
@@ -199,6 +203,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
         });
     }
     crate::cues::cues_reset(g);
+    crate::squadnet::squad_net_reset(g);
     for &s in &seats {
         in_seat(g, s, |g| { crate::holdfire::hold_fire_reset(g); crate::showwhy::reset_show_why(g); });
     }
@@ -228,6 +233,7 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::devices::devices_reset(g);
     let t = g.time;
     g.mission = crate::game::new_mission(t);
+    g.mission.serial = g.serial();   // (a whole write of g.mission is a new run: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity)
     g.chronicle = crate::chronicle::Chronicle::blank();
     crate::director::director_on_encounter_restart(g);
     crate::nightbreach::night_breach_on_encounter_restart(g);
@@ -275,24 +281,26 @@ pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { cra
 // ------------------------------------------------------------ update
 
 /// One tick as a host calls it: its live input and view sampled into the tick's record, the sim run off that record alone.   (game.ts update)
-pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, canvas: crate::host_hud::View) {
+pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     let d = g.dice.clone();
     crate::math_dice::use_dice(g, d);
     crate::quiet::quiet_mission_current(g);
     let me = game_host_seat(g);
     if g.restart_cut {
         g.restart_cut = false;
-        if let Some(cut) = crate::cmd::seat_take_cut(g, me) {
-            let free = match g.director.cam.as_mut() { Some(cam) if cam.pin.is_none() => { cut_lens(cam, cut); true } _ => false };
-            if free { crate::camera::follow_camera_rebuild(g); }
+        let cut = crate::cmd::seat_take_cut(g, me);
+        if let Some(cut) = cut {
+            if g.tab.camera[cam].pin.is_none() {
+                cut_lens(g, cam, cut);
+                crate::camera::follow_camera_rebuild(g, cam);
+            }
         }
     }
     crate::director::director_inject_input(g, input);
     game_host_before(g, input);
-    // (the host's camera stands at g.director.cam already: only the input is handed over)
-    crate::director::director_attach(g, &crate::director::DirectorAttachO { cam: None, input: Some(input) });
+    crate::director::director_attach(g, crate::director::DirectorAttachO { cam: Some(cam), input: Some(input) });
     let into = g.cmd_buf.take();
-    let c = in_seat(g, me, |g| crate::cmd::sample_cmd(g, input, canvas, into.as_ref()));
+    let c = in_seat(g, me, |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
     g.cmd_buf = Some(c.clone());
     if g.seats.len() == 1 {
         game_step(g, dt, &c);
@@ -304,7 +312,7 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, canvas: c
         }
         game_step_seats(g, dt, &cmds);
     }
-    game_host_after(g, input, canvas);
+    game_host_after(g, input, cam, canvas);
 }
 
 /// What the host's input is told before a step: a held press's cursor is followed off the view only while the creep reads the mouse as a stick.   (game.ts hostBefore)
@@ -313,18 +321,17 @@ pub fn game_host_before(g: &mut crate::game::Game, input: InputId) {
 }
 
 /// What the tick hands back for the camera of the seat this host shows, and that seat's live view put back.   (game.ts hostAfter)
-pub fn game_host_after(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) {
+pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     let me = game_host_seat(g);
-    let (peek, kick) = (g.tab.cmd_seat[me].cam.peek_offset, g.tab.cmd_seat[me].cam.kick);
-    if let Some(cam) = g.director.cam.as_mut() { cam.peek_offset = peek; cam.kick = kick; }
-    if let Some(cut) = crate::cmd::seat_take_cut(g, me) {
-        if let Some(cam) = g.director.cam.as_mut() { cut_lens(cam, cut); }
-    }
-    if let Some(vp) = g.director.cam.as_ref().map(|cam| cam.view_proj) {
-        in_seat(g, me, |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
-    }
-    crate::rails::rails_host_view(g);
-    in_seat(g, me, |g| crate::orders::squad_orders_host_view(g, input, canvas));
+    let me_cam = g.tab.cmd_seat[me].cam;
+    let (peek, kick) = (g.tab.camera[me_cam].peek_offset, g.tab.camera[me_cam].kick);
+    g.tab.camera[cam].peek_offset = peek;
+    g.tab.camera[cam].kick = kick;
+    if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
+    let vp = g.tab.camera[cam].view_proj;
+    in_seat(g, me, |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
+    crate::rails::rails_host_view(g, cam);
+    in_seat(g, me, |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
 }
 
 /// The tick for a game of one seat.   (game.ts step)
@@ -344,9 +351,12 @@ pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &
     crate::scene_boxes::box_world_ray_aside(g, &mut ray_own, &mut |g| crate::scene_collision::aside(g, &mut col_own, &mut *fn_))
 }
 
-/// A lens of the host's to put a record's view on while it asks aside; it stands at `g.alone_own.lens`.   (game.ts asideLens)
-pub fn game_aside_lens(g: &mut crate::game::Game) {
-    if g.alone_own.lens.is_none() { g.alone_own.lens = Some(crate::camera::FollowCamera::blank()); }
+/// A lens of the host's to put a record's view on while it asks aside (cmd.ts loadLens): scratch, in no snapshot.   (game.ts asideLens)
+pub fn game_aside_lens(g: &mut crate::game::Game) -> CameraId {
+    if let Some(lens) = g.alone_own.lens { return lens; }
+    let lens = g.tab.camera.push(crate::camera::FollowCamera::blank());
+    g.alone_own.lens = Some(lens);
+    lens
 }
 
 /// THE TICK, off the players' plain records. The order of these lines is the game.   (game.ts stepSeats)
@@ -363,6 +373,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     let seats: Vec<SeatId> = g.seats.clone();
     let n = seats.len();
     let me = game_host_seat(g);
+    let me_cam = g.tab.cmd_seat[me].cam;
     g.ticking = true;
     crate::scene_collision::tick_open(g);
     // a record from anyone made one an honest seat could have sent, before anything reads it
@@ -379,12 +390,13 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::quiet::quiet_mission_current(g);
     crate::game::game_sense_step(g, dt);
     for i in 0..n { crate::cmd::seat_load(g, seats[i], &checked[i]); }
-    let input = g.tab.cmd_seat[seats[0]].input;   // (what a ONE-PLAYER part of the tick reads is the first seat's)
-    crate::rails::rails_gate(g, input, dt);
+    let (input, cam) = (g.tab.cmd_seat[seats[0]].input, g.tab.cmd_seat[seats[0]].cam);   // (what a ONE-PLAYER part of the tick reads is the first seat's)
+    crate::rails::rails_gate(g, input, cam, dt);
     crate::opening::opening_start(g);
     if n > 1 { crate::seats::deal_seats(g); }
     for &s in &seats {
-        let vp = g.tab.cmd_seat[s].cam.view_proj;
+        let lens = g.tab.cmd_seat[s].cam;
+        let vp = g.tab.camera[lens].view_proj;
         in_seat(g, s, |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
     }
     g.time += dt;
@@ -393,25 +405,25 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::scene_collision::sound_paths_tick(g, now);
     // each seat's half of the tick, over that seat's view
     for &s in &seats {
-        let (input, canvas) = (g.tab.cmd_seat[s].input, g.tab.cmd_seat[s].canvas);
+        let (input, cam, canvas) = (g.tab.cmd_seat[s].input, g.tab.cmd_seat[s].cam, g.tab.cmd_seat[s].canvas);
         in_seat(g, s, |g| {
-            crate::player::update_aim(g, input, canvas);
-            crate::orders::squad_orders_input(g, dt, input, canvas);
+            crate::player::update_aim(g, input, cam, canvas);
+            crate::orders::squad_orders_input(g, dt, input, cam, canvas);
             if crate::doortools::door_tools_menu_key(g, input) { let pl = g.player; g.pl[pl].throw_eaten = true; }
             crate::squadsmoke::squad_smoke_key(g, input);
             crate::wandorder::wand_order_key(g, input);
             crate::doortools::door_tools_big_key(g, input);
             if crate::squadthrow::squad_throw_key(g, input) { let pl = g.player; g.pl[pl].throw_eaten = true; }
             crate::squad40::squad40_tick(g);
-            crate::interact::update_interact(g, dt, input, Some(canvas));
+            crate::interact::update_interact(g, dt, input, Some(canvas), Some(cam));
             crate::aim::track_player(g, dt);
             crate::game::game_threat_tick(g);
         });
     }
     crate::suppression::update_suppression(g, dt);
     for &s in &seats {
-        let input = g.tab.cmd_seat[s].input;
-        in_seat(g, s, |g| { crate::player::update_player(g, dt, input); crate::samlook::sam_look_step(g); });
+        let (input, cam) = (g.tab.cmd_seat[s].input, g.tab.cmd_seat[s].cam);
+        in_seat(g, s, |g| { crate::player::update_player(g, dt, input, cam); crate::samlook::sam_look_step(g); });
     }
     if !g.rings.is_empty() { crate::launcher::update_rings(g, dt); }
     for &s in &seats {
@@ -421,7 +433,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     if !g.shells.is_empty() { crate::he40::update_shells(g, dt); }
     g.search_probe_n = 0.0;
     crate::game::game_deal_weapons(g, Some(dt));
-    crate::director::director_tick(g, dt, None);
+    crate::director::director_tick(g, dt, None, None);
     crate::pairorders::pair_orders_input(g, input);
     for &s in &seats {
         let input = g.tab.cmd_seat[s].input;
@@ -431,10 +443,10 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
             crate::wallcharge::wall_charge_input_after(g, input);
         });
     }
-    crate::nightbreach::night_breach_tick(g, dt, input);
-    crate::quiet::quiet_mission_tick(g);
+    crate::nightbreach::night_breach_tick(g, dt, input, Some(cam));
+    crate::quiet::quiet_mission_tick(g, Some(cam));
     crate::roomclear::room_clear_scenario_tick(g, dt);
-    crate::rescue::rescue_tick(g, dt, input);
+    crate::rescue::rescue_tick(g, dt, input, Some(cam));
     crate::wallreact::wall_react_tick_2(g);
     crate::entrypoints::entry_points_tick(g);
     crate::cleared::cleared_rooms_tick(g);
@@ -495,7 +507,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::lighting::update_targets(g, dt);
     crate::fire::update_fire(g, dt);
     crate::devices::update_devices(g, dt);
-    let yaw = g.tab.cmd_seat[me].cam.yaw;
+    let yaw = g.tab.camera[me_cam].yaw;
     crate::weather::weather_update(g, dt, Some(yaw));
     crate::takedown::takedown_tick(g);
     for &s in &seats { in_seat(g, s, |g| crate::disarm::disarm_tick(g, dt)); }
@@ -510,7 +522,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for j in 0..g.guards.len() { let gd = g.guards[j]; all.push(g.gd[gd].ch); }
     for gd in crate::civilians::civilians_shown(g) { all.push(g.gd[gd].ch); }
     let canvas = g.tab.cmd_seat[me].canvas;
-    let statured = crate::game::game_step_fx_and_dyn_boxes(g, &all, dt, canvas);
+    let statured = crate::game::game_step_fx_and_dyn_boxes(g, &all, dt, me_cam, canvas);
     crate::game::game_draw_characters(g, &all, statured);
     crate::smokebreak::update_smoke_break(g, dt);
     crate::game::game_light_meter(g, dt);

@@ -328,7 +328,7 @@ fn foot_at(a: Option<V3>, toe: Option<V3>) -> Option<(V3, f64)> {
 }
 
 /// Q: take hold of the wall findWall offers; moveOnWall eases him onto it. False = nothing in reach, or his hands or feet are busy. (player.ts wallSnap)
-pub fn wall_snap(g: &mut crate::game::Game, why: Option<&mut crate::player::WallSnapWhy>, only: Option<V3>) -> bool {
+pub fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&mut crate::player::WallSnapWhy>, only: Option<V3>) -> bool {
     let pl = g.player;
     let c = g.pl[pl].ch;
     {
@@ -345,7 +345,7 @@ pub fn wall_snap(g: &mut crate::game::Game, why: Option<&mut crate::player::Wall
     let body_yaw = g.ch[c].body_yaw;
     let vt = vel[0] * t[0] + vel[2] * t[2];
     let ft = m::sin(body_yaw) * t[0] + m::cos(body_yaw) * t[2];
-    let rt = crate::camera::follow_camera_planar_basis(g).right;
+    let rt = crate::camera::follow_camera_planar_basis(g, cam).right;
     let side: f64 = if m::abs(vt) > 0.3 { if vt > 0.0 { 1.0 } else { -1.0 } }
         else if m::abs(ft) > 0.4 { if ft > 0.0 { 1.0 } else { -1.0 } }
         else if rt[0] * t[0] + rt[2] * t[2] >= 0.0 { 1.0 } else { -1.0 };
@@ -414,7 +414,8 @@ pub fn release_wall(g: &mut crate::game::Game) {
     g.ch[c].anim.wall_hit = 0.0;
     g.ch[c].anim.stack_press = 0.0;
     g.ch[c].anim.stance_in = 0.0;
-    if w.cam { if let Some(cam) = g.director.cam.as_mut() { cam.peek_offset = None; } }
+    // WallHold.cam is a bool: the camera it remembers is his seat's, the only one updatePlayer is ever handed (game.ts:1749)
+    if w.cam { let seat = crate::seats::seat_of_man(g, pl); let cam = g.tab.cmd_seat[seat].cam; g.tab.camera[cam].peek_offset = None; }
     if w.drawn && !g.pl[pl].down { set_holstered(g, false, None); }
 }
 
@@ -462,14 +463,14 @@ pub fn wall_snap_later(g: &mut crate::game::Game, ml: f64, why: crate::player::W
 }
 
 /// The remembered Q, looked at each frame. (player.ts wallSnapPending)
-pub fn wall_snap_pending(g: &mut crate::game::Game, dt: f64, want_sprint: bool) {
+pub fn wall_snap_pending(g: &mut crate::game::Game, dt: f64, cam: CameraId, want_sprint: bool) {
     let pl = g.player;
     let Some(at) = g.m.player.ws_pend.get(pl).map(|p| p.at) else { return };
     if g.pl[pl].wall.is_some() || want_sprint || g.time - at > dt * 1.5 { g.m.player.ws_pend.delete(pl); return; }
     let now = g.time;
     if let Some(p) = g.m.player.ws_pend.get_mut(pl) { p.at = now; }
     let mut why = WallSnapWhy { blocked: false };
-    if wall_snap(g, Some(&mut why), None) { return; }
+    if wall_snap(g, cam, Some(&mut why), None) { return; }
     let Some(p) = g.m.player.ws_pend.get_mut(pl) else { return };
     p.t -= dt;
     if p.t <= 0.0 {
@@ -518,7 +519,7 @@ pub fn wall_ran_on(g: &mut crate::game::Game, pl: PlayerId, input: InputId) -> b
 }
 
 /// WALLSNAP.press: the wall taken without the key, by a move key held into a face for pressSecs, with its latch. (player.ts wallPress)
-pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, mx: f64, mz: f64, ml: f64, want_sprint: bool) {
+pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, mx: f64, mz: f64, ml: f64, want_sprint: bool) {
     let pl = g.player;
     let now = g.time;
     if !g.m.player.ws_press.has(pl) {
@@ -568,7 +569,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, mx: f64, m
         if p.t < (if thing { press_thing_secs } else { press_secs }) - 1e-6 || face.off > (if thing { press_touch } else { m::max(press_touch, press_flow) }) { return; }
         p.t = 0.0;
     }
-    if !wall_snap(g, None, Some(face.n)) {
+    if !wall_snap(g, cam, None, Some(face.n)) {
         let p = g.m.player.ws_press.get_mut(pl).unwrap();
         p.n = Some(face.n); p.held = true; p.dx = mx; p.dz = mz; p.until = now + press_again;
     } else if want_sprint {

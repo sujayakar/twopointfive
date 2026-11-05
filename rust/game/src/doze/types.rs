@@ -284,8 +284,6 @@ impl Default for DozeOf { fn default() -> Self { Self::zeroed() } }
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct DozeMod {
-    /// (src/game/doze.ts:82 GAMES)
-    pub games: Option<JsMap<GuardId, crate::doze::Doze>>,
     /// (src/game/doze.ts:83 REC)
     pub rec: JsMap<GuardId, crate::doze::Doze>,
     /// (src/game/doze.ts:84 SAID)
@@ -306,7 +304,6 @@ pub struct DozeMod {
 impl DozeMod {
     pub fn blank() -> Self {
         DozeMod {
-            games: None,
             rec: JsMap::new(),
             said: None,
             pulls: None,

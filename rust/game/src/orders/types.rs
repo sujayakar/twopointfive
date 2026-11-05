@@ -400,6 +400,8 @@ pub struct OrderTargetFloor {
     pub at: V3,
     pub wall: Option<crate::wallcharge::WallSpot>,
     pub thing: Option<crate::workthings::WorkThing>,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
 }
 impl OrderTargetFloor {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -408,6 +410,7 @@ impl OrderTargetFloor {
             at: [0.0; 3],
             wall: None,
             thing: None,
+            serial: 0,
         }
     }
 }
@@ -552,10 +555,10 @@ impl SquadOrdersShowsItem {
 impl Default for SquadOrdersShowsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:566 SquadOrders.view, src/game/orders.ts:566)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct SquadOrdersView {
     pub input: Option<InputId>,
-    pub cam: Option<crate::camera::FollowCamera>,
+    pub cam: Option<CameraId>,
     pub canvas: Option<crate::host_hud::View>,
 }
 impl SquadOrdersView {
@@ -1015,6 +1018,8 @@ pub struct Assignment {
     pub lean: Option<f64>,
     pub fit: Option<crate::roomfit::Fit>,
     pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
+    /// INVENTED: true at assign and at the unguarded writes made here (orders.ts:1473, :1475, :1640, :2346, :1457, wallreact.ts:587, pairorders.ts:439, :486, rescue.ts:769), not for doorpath.ts:273, :316, which alias s.goal. orders.ts:1519 passes held: !(a.new_leg && the A.goal arm was chosen) and clears it then
+    pub new_leg: bool,
 }
 impl Assignment {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -1067,6 +1072,7 @@ impl Assignment {
             lean: None,
             fit: None,
             tries: None,
+            new_leg: false,
         }
     }
 }

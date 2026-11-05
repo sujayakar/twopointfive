@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn ir_flags(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/irlight.ts:117 kitOf)
-pub fn kit_of(g: &mut crate::game::Game) -> crate::irlight::Kit { todo!() }
+pub fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit { todo!() }
 
 /// (src/game/irlight.ts:118 lamp)
 pub fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId { todo!() }
@@ -45,7 +45,7 @@ pub fn burn(g: &mut crate::game::Game, key: f64, at: V3, yaw: f64, each: bool, l
 pub fn sam_on(g: &mut crate::game::Game, pl: PlayerId) -> bool { todo!() }
 
 /// (src/game/irlight.ts:214 out)
-pub fn out(l: Option<LightId>) { todo!() }
+pub fn out(g: &mut crate::game::Game, l: Option<LightId>) { todo!() }
 
 /// (src/game/irlight.ts:220 nearK)
 pub fn near_k(g: &mut crate::game::Game, key: f64, l: LightId) -> f64 { todo!() }

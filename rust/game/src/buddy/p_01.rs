@@ -7,6 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
+/// the panel's rows kept in the browser's storage. Host only (conventions 6): where the TypeScript finds no store it does nothing, and the game has none. (buddy.ts saveBuddy)
+pub fn save_buddy(g: &mut crate::game::Game) {}
+
 /// the counts of one run, all nought. (buddy.ts newStats)
 pub fn new_stats() -> crate::buddy::StateStats {
     StateStats { calls: 0.0, answered: 0.0, arrived: 0.0, met_on_way: 0.0, turned_back: 0.0, died_on_way: 0.0, short: 0.0, no_one: 0.0, secs: 0.0, metres: 0.0 }
@@ -74,6 +77,12 @@ pub fn mates(g: &mut crate::game::Game, d: RoomfightDefId) -> Vec<RoomfightDefId
     out
 }
 
+/// `gd.lastKnown === D.pt`: one object in the TypeScript, two copies here. The flag says the fight last wrote pt as the fix; a fix without pt's bits is somebody else's whole write. (the fight's own test, roomfight.ts)
+fn fix_is_pt(g: &mut Game, d: RoomfightDefId) -> bool {
+    let def = &g.tab.roomfight_def[d];
+    def.fix_is_pt && g.gd[def.gd].last_known == Some(def.pt)
+}
+
 /// where the team is, as far as the defenders know. Never the team's true positions. (buddy.ts teamKnown)
 pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
     let mut out = Vec::new();
@@ -85,7 +94,7 @@ pub fn team_known(g: &mut crate::game::Game) -> Vec<V3> {
         if !alive(g, d) {
             continue;
         }
-        if g.time - g.gd[gd].last_seen_t < 4.0 && g.gd[gd].last_known.is_some() && !g.tab.roomfight_def[d].fix_is_pt {
+        if g.time - g.gd[gd].last_seen_t < 4.0 && g.gd[gd].last_known.is_some() && !fix_is_pt(g, d) {
             out.push(g.gd[gd].last_known.unwrap());
         }
         if let Some(at) = g.tab.roomfight_def[d].noise_at {
@@ -173,17 +182,12 @@ pub fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, known: &[V
     if bad || l > g.k.buddy.max_m { None } else { Some(l) }
 }
 
-/// is this row the errand `mine`? (identity in the TypeScript: a man is on one errand at a time, so caller and buddy name it)
-fn is_errand(e: &Errand, mine: &Errand) -> bool {
-    e.caller == mine.caller && e.buddy == mine.buddy
-}
-
 /// may this man answer a call. (buddy.ts free)
-pub fn free(g: &mut crate::game::Game, x: RoomfightDefId, mine: Option<crate::buddy::Errand>) -> bool {
+pub fn free(g: &mut crate::game::Game, x: RoomfightDefId, mine: Option<u32>) -> bool {
     let gd = g.tab.roomfight_def[x].gd;
     if !own(g, x)
         || g.time - g.gd[gd].last_seen_t < g.k.buddy.quiet
-        || state_of(g).errands.iter().any(|e| !mine.as_ref().map_or(false, |o| is_errand(e, o)) && (e.buddy == x || e.caller == x))
+        || state_of(g).errands.iter().any(|e| Some(e.serial) != mine && (e.buddy == x || e.caller == x))
     {
         return false;
     }
@@ -267,10 +271,11 @@ pub fn send(g: &mut crate::game::Game, c_2: RoomfightDefId, a: crate::buddy::Sen
     let answer = g.k.buddy.answer;
     let go_at = g.time + pick(g, answer);
     let home = v3::copy(g.tab.roomfight_def[a.x].station);
-    state_of(g).errands.push(Errand { caller: c_2, buddy: a.x, phase: ErrandPhase::Beat, go_at, spot: a.spot, home, tries: 0.0, step_t: -100.0, t0, l: a.l });
+    let serial = g.serial();
+    state_of(g).errands.push(Errand { caller: c_2, buddy: a.x, phase: ErrandPhase::Beat, go_at, spot: a.spot, home, tries: 0.0, step_t: -100.0, t0, l: a.l, serial });
     let gd = g.tab.roomfight_def[a.x].gd;
     let who = g.gd[g.tab.roomfight_def[c_2].gd].callsign.clone();
-    note(g, gd, &format!("will answer {} ({} m)", who, to_fixed1(a.l)));
+    note(g, gd, &format!("will answer {} ({} m)", who, js::to_fixed(a.l, 1)));
 }
 
 fn send_a(a: Answerer) -> SendA {
@@ -420,7 +425,7 @@ pub fn tick_errand(g: &mut crate::game::Game, e: &mut crate::buddy::Errand) -> b
         if g.time < e.go_at {
             return false;
         }
-        if !wanted || !mates(g, c).is_empty() || !free(g, b, Some(*e)) {
+        if !wanted || !mates(g, c).is_empty() || !free(g, b, Some(e.serial)) {
             reopen(g, c, wanted); // (he has his own trouble now, or somebody else's word)
             return true;
         }
@@ -499,12 +504,13 @@ pub fn tick_errand(g: &mut crate::game::Game, e: &mut crate::buddy::Errand) -> b
         let pick_i = if other >= 0.0 { other } else { mine };
         if pick_i >= 0.0 && (pick_i as usize) < n {
             let at = g.tab.roomfight_room[r].entries[pick_i as usize].at;
+            let aliased = fix_is_pt(g, b); // (asked before pt moves)
             let def = &mut g.tab.roomfight_def[b];
             def.home = v3::copy(at);
             def.pt[0] = at[0];
             def.pt[1] = 0.0;
             def.pt[2] = at[2];
-            let (aliased, pt) = (def.fix_is_pt, def.pt);
+            let pt = def.pt;
             if aliased {
                 g.gd[gd].last_known = Some(pt); // (line 225 moves D.pt in place: a lastKnown that IS it moves with it)
             }
@@ -518,7 +524,7 @@ pub fn tick_errand(g: &mut crate::game::Game, e: &mut crate::buddy::Errand) -> b
         crate::game::game_say(g, gd, "with you — two on this room!", Some(true), None, None);
         let id = g.tab.roomfight_room[r].id;
         let dt = g.time - e.t0;
-        note(g, gd, &format!("with {} in room {}, {} s after the call", c_call, id, to_fixed1(dt)));
+        note(g, gd, &format!("with {} in room {}, {} s after the call", c_call, id, js::to_fixed(dt, 1)));
         return true;
     }
     if !contact {
@@ -629,8 +635,8 @@ pub fn buddy_stats(g: &mut crate::game::Game) -> JsMap<String, f64> {
         ("diedOnWay", s.died_on_way),
         ("short", s.short),
         ("noOne", s.no_one),
-        ("secs", to_fixed1(s.secs).parse::<f64>().unwrap()),
-        ("metres", to_fixed1(s.metres).parse::<f64>().unwrap()),
+        ("secs", js::to_fixed(s.secs, 1).parse::<f64>().unwrap()),
+        ("metres", js::to_fixed(s.metres, 1).parse::<f64>().unwrap()),
     ];
     let mut out = JsMap::new();
     for (k, v) in rows {
@@ -650,33 +656,4 @@ pub fn buddy_summary(g: &mut crate::game::Game) -> String {
     };
     let s = &st.stats;
     format!("{} call{} · {} answered · {} arrived · {} on the way", s.calls, if s.calls == 1.0 { "" } else { "s" }, s.answered, s.arrived, st.errands.len())
-}
-
-/// `x.toFixed(1)`: the nearest tenth, and of two equally near the larger (Rust's `{:.1}` takes the even one, on an exact tie: an odd number of quarters)
-fn to_fixed1(x: f64) -> String {
-    if x.is_nan() {
-        return String::from("NaN");
-    }
-    let a = m::abs(x);
-    let quarters = a * 4.0;
-    let tie = a.is_finite() && m::floor(quarters) == quarters && js::rem(quarters, 2.0) == 1.0;
-    let digits = if tie { format!("{:.1}", m::floor(a * 10.0 + 0.5) / 10.0) } else { format!("{:.1}", a) };
-    if x < 0.0 { format!("-{}", digits) } else { digits }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn to_fixed_takes_the_larger_of_two_equally_near() {
-        // the TypeScript's own answers (bun: x.toFixed(1))
-        let cases: [(f64, &str); 12] = [
-            (0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (2.5, "2.5"), (0.35, "0.3"), (0.05, "0.1"),
-            (0.0, "0.0"), (-0.0, "0.0"), (-0.25, "-0.3"), (-0.01, "-0.0"), (29.95, "29.9"), (12.34, "12.3"),
-        ];
-        for (x, want) in cases {
-            assert_eq!(to_fixed1(x), want, "{}", x);
-        }
-    }
 }

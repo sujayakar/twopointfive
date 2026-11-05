@@ -361,7 +361,7 @@ pub struct GlassBreak {
     pub also: Option<crate::glassbreak::GlassBreakAlso>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
     pub gust_dirty: bool,
-    pub gusts: JsMap<crate::Num, crate::wind::WindSource>,
+    pub gusts: JsMap<crate::Num, WindWindSourceId>,
 }
 impl GlassBreak {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor

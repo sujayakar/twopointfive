@@ -7,26 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// A lamp's fields (RtLight, fire.ts:339 to 357): a LightId has no table or accessor in skeleton 3.
-fn seam_light_fog_ghost(g: &mut Game, l: LightId) -> Option<f64> { todo!("needs: RtLight.fogGhost of a LightId") }
-fn seam_light_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.radius of a LightId") }
-fn seam_light_set_radius(g: &mut Game, l: LightId, radius: f64) { todo!("needs: a write of RtLight.radius of a LightId") }
-fn seam_light_color(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.color of a LightId") }
-fn seam_light_set_color(g: &mut Game, l: LightId, color: V3) { todo!("needs: a write of RtLight.color of a LightId") }
-fn seam_light_range(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.range of a LightId") }
-fn seam_light_set_range(g: &mut Game, l: LightId, range: f64) { todo!("needs: a write of RtLight.range of a LightId") }
-fn seam_light_set_intensity(g: &mut Game, l: LightId, intensity: f64) { todo!("needs: a write of RtLight.intensity of a LightId") }
-fn seam_light_set_pos(g: &mut Game, l: LightId, pos: V3) { todo!("needs: a write of RtLight.pos of a LightId") }
-// A lamp's steady self (RtLight.steady, fire.ts:341 to 353): no type for it in skeleton 3.
-fn seam_light_has_steady(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.steady of a LightId") }
-fn seam_light_steady_stand(g: &mut Game, l: LightId, intensity: f64, pos: V3, radius: f64, color: V3, range: f64) { todo!("needs: a write of RtLight.steady of a LightId") }
-fn seam_light_steady_out(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.steady.out of a LightId") }
-fn seam_light_steady_set_out(g: &mut Game, l: LightId, out: bool) { todo!("needs: a write of RtLight.steady.out of a LightId") }
-fn seam_light_steady_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.steady.radius of a LightId") }
-fn seam_light_steady_color(g: &mut Game, l: LightId) -> Option<V3> { todo!("needs: RtLight.steady.color of a LightId") }
-fn seam_light_steady_range(g: &mut Game, l: LightId) -> Option<f64> { todo!("needs: RtLight.steady.range of a LightId") }
-fn seam_light_steady_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.steady.intensity of a LightId") }
-fn seam_light_steady_set_intensity(g: &mut Game, l: LightId, intensity: f64) { todo!("needs: a write of RtLight.steady.intensity of a LightId") }
 /// g.audio.play(name, at, gain, { rate }) (fire.ts:374): game_audio_like_play's opts are a map of `Opaque`, an empty struct, which cannot hold the rate.
 fn seam_audio_play(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play opts that can hold a rate") }
 
@@ -68,6 +48,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             books.fire = Some(FireShown {
                 n: 0.0, time: 0.0, stir: None, stir_at: None, bed: Vec::new(), smoke: Vec::new(), smokes: 0.0, beds: 0.0,
                 ember: Vec::new(), embers: 0.0, gas: Vec::new(), gas_mix: Vec::new(), gases: 0.0, soot_mix: None, kept: None,
+                serial: 0,   // the picture's to deal, never g.serial(): a load rewinds that and the book stays. Only the bed's voice compares it, and that is not here.
             });
         }
         let p = books.fire.as_mut().unwrap();
@@ -87,11 +68,11 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         let heat = heat_of(g, t);
         if !burns(g, t) {
             // out: while the fog's picture has it lit it is held as a fire's lamp, and for the one frame before the fog has had its say
-            let ghost = seam_light_fog_ghost(g, l).unwrap_or(0.0) > 0.0;
-            let first = seam_light_has_steady(g, l) && !seam_light_steady_out(g, l);
+            let ghost = g.tab.light[l].fog_ghost.unwrap_or(0.0) > 0.0;
+            let first = match g.tab.light[l].steady { Some(st) => !st.out.unwrap_or(false), None => false };
             if ghost || first {
                 held(g, t);
-                seam_light_steady_set_out(g, l, true);
+                g.tab.light[l].steady.as_mut().unwrap().out = Some(true);
             } else {
                 plain(g, t);
             }
@@ -105,28 +86,30 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         let si = m::floor(seed * 65535.0);
         let hung = g.tab.sim_lightshome_fixture[t].pos;
         // the light: the authored lamp x the flicker, its place wandering with the flames; a reader of the place's steady light takes it for the authored lamp
-        if !seam_light_has_steady(g, l) {
-            let (radius, color, range) = (seam_light_radius(g, l), seam_light_color(g, l), seam_light_range(g, l));
-            seam_light_steady_stand(g, l, 0.0, hung, radius, color, range);
+        if g.tab.light[l].steady.is_none() {
+            let lamp = &mut g.tab.light[l];
+            lamp.steady = Some(crate::render_lights::RtLightSteady {
+                intensity: 0.0, pos: hung, radius: lamp.radius, color: Some(lamp.color), range: Some(lamp.range), out: None,
+            });
         }
-        seam_light_steady_set_out(g, l, false);
-        let radius = m::max(seam_light_steady_radius(g, l), g.k.fire.size * mouth.r);
-        seam_light_set_radius(g, l, radius);
+        g.tab.light[l].steady.as_mut().unwrap().out = Some(false);
+        let radius = m::max(g.tab.light[l].steady.unwrap().radius, g.k.fire.size * mouth.r);
+        g.tab.light[l].radius = radius;
         let intensity = crate::sim_lightshome::fixture_base_intensity(g, t) * crate::sim_lightshome::fixture_factor(g, t) * g.k.fire.bright;
-        seam_light_steady_set_intensity(g, l, intensity);
-        let c0 = match seam_light_steady_color(g, l) { Some(c) => c, None => seam_light_color(g, l) };
+        g.tab.light[l].steady.as_mut().unwrap().intensity = intensity;
+        let st = g.tab.light[l].steady.unwrap();
+        let c0 = match st.color { Some(c) => c, None => g.tab.light[l].color };
         let warm = |n: usize| g.k.fire.warm.get(n).copied().unwrap_or(1.0);
         let color = [c0[0] * warm(0), c0[1] * warm(1), c0[2] * warm(2)];
-        seam_light_set_color(g, l, color);
-        let range = match seam_light_steady_range(g, l) { Some(r) => r, None => seam_light_range(g, l) };
-        seam_light_set_range(g, l, range * g.k.fire.reach);
-        let intensity = seam_light_steady_intensity(g, l) * fl;
-        seam_light_set_intensity(g, l, intensity);
+        g.tab.light[l].color = color;
+        let range = match st.range { Some(r) => r, None => g.tab.light[l].range };
+        g.tab.light[l].range = range * g.k.fire.reach;
+        g.tab.light[l].intensity = st.intensity * fl;
         let wander = g.k.fire.wander;
         let x = wander_across(hung[0], wander, 0.83, h01(si + 5.0), 2.9, h01(si + 6.0), time);
         let z = wander_across(hung[2], wander, 0.71, h01(si + 7.0), 3.3, h01(si + 8.0), time);
         let y = wander_height(hung[1], g.k.fire.lift, g.k.fire.wander_up, fl, g.k.fire.depth);
-        seam_light_set_pos(g, l, [x, y, z]);
+        g.tab.light[l].pos = [x, y, z];
         crate::sim_lightshome::light_home_feed(g, l);
         // the coals, at this share of the glow updateTargets painted
         let ck = coal_share(crate::sim_lightshome::fixture_factor(g, t), g.k.fire.coals, g.k.fire.coal_swing, fl);

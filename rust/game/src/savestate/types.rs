@@ -287,7 +287,7 @@ pub struct PlayerSnap {
     pub frags: Option<f64>,
     pub wand: Option<bool>,
     pub big_kit: Option<crate::kit::BigKit>,
-    pub kit_load: Option<crate::kitload::KitWorn>,
+    pub kit_load: Option<Option<crate::kitload::KitWorn>>,
     pub own: Option<crate::savestate::OwnCharges>,
     pub pistol: crate::savestate::PlayerSnapPistol,
     pub rifle: crate::savestate::PlayerSnapRifle,

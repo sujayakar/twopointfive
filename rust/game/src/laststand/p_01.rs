@@ -36,7 +36,7 @@ static LINES: &[(LineKind, f64, &[&str], Option<&[&str]>, Option<&[&str]>)] = &[
     (LineKind::SetLoneOpen, 3.0, &["I'm set in {the}. if anyone's left — I'm not coming out.", "gun's on the door, {the}. I'm staying put."], None, None),
 ];
 
-// ---------------------------------------------------------------- seams: what skeleton 3 cannot do yet (notes.md, ## Skeleton)
+// ---------------------------------------------------------------- seams: what the skeleton cannot do yet (notes.md, ## Skeleton)
 
 /// (:222) a `then` handed to the public `net` kept in Later for a line that must wait: a borrowed closure cannot be kept
 fn seam_keep_then(then: Option<&mut dyn FnMut(&mut Game)>) -> Option<LaterThen> {
@@ -125,6 +125,8 @@ fn net_at_kept(g: &mut Game, d: RoomfightDefId, kind: LineKind, redo: LaterRedo)
 
 /// the row (STATES.get(g)): it stays in g.m.laststand.states while the tick runs; let go of it before the next call that takes g
 fn st_of(g: &mut Game) -> &mut State { g.m.laststand.states.as_mut().unwrap() }
+/// the check that is open (st.check), by its path: tick_check's C
+fn check_of(g: &mut Game) -> &mut Check { st_of(g).check.as_mut().unwrap() }
 /// (:403) member, which needs nothing of g
 fn of_stand(s: &Stand, d: RoomfightDefId) -> bool { s.in_.has(d) || s.out.has(d) || s.movers.iter().any(|m| m.d == d) }
 /// JavaScript's truth of an optional string
@@ -141,16 +143,8 @@ fn vars_of(pairs: &[(&str, &str)]) -> JsMap<String, String> { let mut v = JsMap:
 fn the_word(n: &str) -> String {
     if n.starts_with("the ") || n.ends_with(|c: char| c.is_ascii_digit()) { String::from(n) } else { alloc::format!("the {}", n) }
 }
-/// `+x.toFixed(2)`: the decimal nearest x's exact value; of two equally near the larger magnitude, which only an odd multiple of 1/8 can meet (:211)
-fn to_fixed2(x: f64) -> f64 {
-    if x == 0.0 { return 0.0; }
-    let eighths = m::abs(x) * 8.0;
-    if eighths < 9007199254740992.0 && m::floor(eighths) == eighths && js::rem(eighths, 2.0) == 1.0 {
-        let up = m::ceil(m::abs(x) * 100.0) / 100.0;
-        return if x < 0.0 { -up } else { up };
-    }
-    alloc::format!("{:.2}", x).parse().unwrap_or(f64::NAN)
-}
+/// `+x.toFixed(2)` (:211)
+fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
 /// the cell's number as a Set's key: -0 is 0 to a JavaScript Set
 fn room_has(g: &mut Game, r: RoomfightRoomId, p: V3) -> bool {
     let c = cell_of(g, p);
@@ -419,7 +413,8 @@ pub fn team_known(g: &mut crate::game::Game, near: V3) -> crate::laststand::Team
         if !alive(g, d) { continue; }
         let gd = g.tab.roomfight_def[d].gd;
         if let Some(lk) = g.gd[gd].last_known {
-            if !g.tab.roomfight_def[d].fix_is_pt && g.gd[gd].last_seen_t > -50.0 {
+            let is_pt = g.tab.roomfight_def[d].fix_is_pt && lk == g.tab.roomfight_def[d].pt;   // (gd.lastKnown === D.pt: roomfight's rule, the flag alone can be stale)
+            if !is_pt && g.gd[gd].last_seen_t > -50.0 {
                 let seen = g.gd[gd].last_seen_t;
                 if g.time - seen < known_secs { pts.push(lk); }
                 if seen > lt { lt = seen; last = Some(lk); }
@@ -614,9 +609,9 @@ pub fn start_check(g: &mut crate::game::Game) {
     note(g, Some(caller_gd), &alloc::format!("asks the net who is up (check {}, {} up)", checks, men.len()));
 }
 
-/// the answers on their beats; at its close what the survivors know of each other (laststand.ts tickCheck)
-pub fn tick_check(g: &mut crate::game::Game, c_2: &mut crate::laststand::Check) {
-    let caller = c_2.caller;
+/// the answers on their beats; at its close what the survivors know of each other (laststand.ts tickCheck). C is st.check, read by its path
+pub fn tick_check(g: &mut crate::game::Game) {
+    let caller = check_of(g).caller;
     let caller_gd = g.tab.roomfight_def[caller].gd;
     if !alive(g, caller) {
         let time = g.time;
@@ -626,22 +621,21 @@ pub fn tick_check(g: &mut crate::game::Game, c_2: &mut crate::laststand::Check) 
         note(g, Some(caller_gd), "down mid-check");
         return;
     }
-    for i in 0..c_2.due.len() {
-        let due = c_2.due[i];
+    for i in 0..check_of(g).due.len() {
+        let due = check_of(g).due[i];
         if g.time < due.at || due.at < 0.0 { continue; }
-        c_2.due[i].at = -1.0;
+        check_of(g).due[i].at = -1.0;
         let d = due.d;
         if !calm(g, d) { continue; }
         let free = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free;
         net_at_kept(g, d, if free { LineKind::AnsFreeAt } else { LineKind::AnsAt }, LaterRedo::Answer { d, free });
-        c_2.got.push(d);
+        check_of(g).got.push(d);
         st_of(g).stats.answers += 1.0;
     }
-    // (C is st.check in the TypeScript: what was written above is written through, whichever way the caller got its copy)
-    if g.time < c_2.close_at { st_of(g).check = Some(c_2.clone()); return; }
+    if g.time < check_of(g).close_at { return; }
     let (time, again, every) = (g.time, g.k.laststand.again, g.k.laststand.every);
     let st = st_of(g);
-    st.check = None;
+    let got = st.check.take().unwrap().got;
     let stand = st.stand.clone();
     st.next_at = time + if stand.as_ref().map_or(false, |s| s.set_said) { again } else { every };
     let with_: Vec<RoomfightDefId> = match stand.as_ref() {
@@ -650,7 +644,7 @@ pub fn tick_check(g: &mut crate::game::Game, c_2: &mut crate::laststand::Check) 
     };
     let mut heard: Vec<RoomfightDefId> = Vec::new();
     if alive(g, caller) { heard.push(caller); }
-    for &d in &c_2.got { if alive(g, d) { heard.push(d); } }
+    for &d in &got { if alive(g, d) { heard.push(d); } }
     let mut known = JsSet::new();
     for &d in &heard { known.add(d); }
     for &d in &with_ { known.add(d); }

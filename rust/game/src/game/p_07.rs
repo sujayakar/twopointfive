@@ -7,16 +7,15 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ---- seams: what skeleton 3 still cannot do (each has a line in notes.md)
+// ---- seams: what skeleton 4 still cannot do (a line in notes.md)
 
-/// game.ts:1869 a light's `enabled`, `outerDeg`, `pos`, `dir`
-fn seam_light(g: &mut Game, l: LightId) -> (bool, f64, V3, V3) { todo!("needs: accessors of a LightId (no table, no RtLight in the index)") }
-/// game.ts:2067 `O.solver !== this.smoke`, of the owned solver standing
-fn seam_owned_solver_is_other(g: &mut Game) -> bool { todo!("needs: an identity for the smoke solver (GameSmokeOwned has no fields)") }
-/// game.ts:2068 `O.undo()`
-fn seam_smoke_owned_undo(g: &mut Game) { todo!("needs: GameSmokeOwned to hold what own_smoke answers, and FnField to be something that can be called") }
-/// game.ts:1970, :1973, :1976, :1977 `this.smoke.push({ pos, dir, speed, radius, body })`
-fn seam_smoke_push(g: &mut Game, pos: V3, dir: V3, speed: f64, radius: f64, body: Option<f64>) { todo!("needs: SmokePush's fields (it is an empty struct)") }
+/// game.ts:1970 `this.smoke.push({ pos, dir, speed, radius, body })`: the one push that says `body`
+fn seam_smoke_push_body(g: &mut Game, pos: V3, dir: V3, speed: f64, radius: f64, body: f64) { todo!("needs: SmokePush.body (Option<f64>)") }
+
+/// game.ts:1973, :1976, :1977 a push with no `body`
+fn smoke_push(g: &mut Game, pos: V3, dir: V3, speed: f64, radius: f64) {
+    crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos, dir, speed, radius });
+}
 
 /// game.ts `s.view.…`: one call over a seat's view (conventions 4)
 fn in_seat<R>(g: &mut Game, s: SeatId, f: &mut dyn FnMut(&mut Game) -> R) -> R {
@@ -56,10 +55,9 @@ pub fn game_threat_tick(g: &mut crate::game::Game) {
                 let gd = g.guards[i]; i += 1;
                 if g.time - g.torch_on_t < 1.5 { break; }
                 let fl = g.gd[gd].flashlight;
-                if g.gd[gd].state == GuardState::Dead { continue; }
-                let (enabled, outer_deg, fl_pos, fl_dir) = seam_light(g, fl);
-                if !enabled || g.gd[gd].team == crate::teams::Team::Operative { continue; }
-                let cos_o = m::cos(outer_deg * v3::DEG);
+                if g.gd[gd].state == GuardState::Dead || !g.tab.light[fl].enabled || g.gd[gd].team == crate::teams::Team::Operative { continue; }
+                let (fl_pos, fl_dir) = (g.tab.light[fl].pos, g.tab.light[fl].dir);
+                let cos_o = m::cos(g.tab.light[fl].outer_deg * v3::DEG);
                 for s in spots {
                     let to = v3::sub(s, fl_pos); let d = v3::len(to);
                     if d < 10.0 && d > 1e-3 && v3::dot(to, fl_dir) / d > cos_o && !crate::scene_collision::segment_blocked(g, fl_pos, s, None, None, None) { g.torch_on_t = g.time; break 'torch; }
@@ -165,7 +163,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             let at = if dead { -1.0 }
                 else if reload_t >= 0.0 { r.dur - reload_t }
                 else { match fo { Some(o) if g.tab.roomfight_op[o].reload_until > now => m::max(0.0, r.dur - (g.tab.roomfight_op[o].reload_until - now)), _ => -1.0 } };
-            let row = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack, keep: None, hand: None, exact: None };
+            let row = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack.map(Some), keep: None, hand: None, exact: None };
             let an = &mut g.ch[c].anim;
             an.reload_row = Some(row);
             an.reload_at = at;
@@ -196,7 +194,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
 }
 
 /// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody: never here, the row being the picture's   (game.ts stepFxAndDynBoxes)
-pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, canvas: crate::host_hud::View) -> bool {
+pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, cam: CameraId, canvas: crate::host_hud::View) -> bool {
     g.dyn_boxes.clear();
     // (the list is lent to the callees for the whole gathering: none of them reads g.dyn_boxes)
     let mut out = core::mem::take(&mut g.dyn_boxes);
@@ -213,9 +211,8 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     }
     crate::lightswitch::switch_boxes(g, &mut out);
     if !g.shells.is_empty() { crate::he40::shell_boxes(g, &mut out); }
-    let me = crate::game::game_host_seat(g);
-    let cam = crate::game::GameViewPxCam { distance: g.tab.cmd_seat[me].cam.distance, fov: g.tab.cmd_seat[me].cam.fov };
-    g.m_per_px = game_view_px(g, cam, crate::game::GameViewPxCanvas { height: canvas.height });
+    let lens = crate::game::GameViewPxCam { distance: g.tab.camera[cam].distance, fov: g.tab.camera[cam].fov };
+    g.m_per_px = game_view_px(g, lens, crate::game::GameViewPxCanvas { height: canvas.height });
     let statured = false;   // (DRESS.stature: statureTick is the picture's)
     let rig0 = out.len();
     crate::combat::hand_props(g, &mut out);
@@ -246,16 +243,16 @@ pub fn game_smoke_wake(g: &mut crate::game::Game, all: &[CharId]) {
             let t = crate::game::smoke_stir();
             let (hx, hz) = (dirv[0], dirv[2]);
             let top = h[1] + t.above; let mid = (top + t.foot) / 2.0;
-            seam_smoke_push(g, [h[0], mid, h[2]], [hx, 0.0, hz], sp, t.body, Some(m::max(0.0, (top - t.foot) / 2.0 - t.body)));
+            seam_smoke_push_body(g, [h[0], mid, h[2]], [hx, 0.0, hz], sp, t.body, m::max(0.0, (top - t.foot) / 2.0 - t.body));
             let side = m::sin(2.0 * m::PI * g.ch[c].anim.phase);
             if m::abs(side) > t.gap {
                 let k = m::sign(side);
-                seam_smoke_push(g, [h[0] - hx * t.back, h[1] - t.low, h[2] - hz * t.back], [-hz * k, 0.0, hx * k], m::min(t.most, sp * t.kick * m::min(2.0, stir)), t.kick_r, None);
+                smoke_push(g, [h[0] - hx * t.back, h[1] - t.low, h[2] - hz * t.back], [-hz * k, 0.0, hx * k], m::min(t.most, sp * t.kick * m::min(2.0, stir)), t.kick_r);
             }
             continue;
         }
-        seam_smoke_push(g, h, dirv, sp * 1.15, 0.3, None);
-        if let Some(chest) = g.ch[c].bones.get(Bone::Chest).copied() { seam_smoke_push(g, chest, dirv, sp * 1.1, 0.26, None); }
+        smoke_push(g, h, dirv, sp * 1.15, 0.3);
+        if let Some(chest) = g.ch[c].bones.get(Bone::Chest).copied() { smoke_push(g, chest, dirv, sp * 1.1, 0.26); }
     }
 }
 
@@ -353,19 +350,14 @@ pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, 
 
 /// the top of a step under SENSE.cpu (sense.ts): the game's own smoke put in front of the solver and taken away again, aged by this step   (game.ts senseStep)
 pub fn game_sense_step(g: &mut crate::game::Game, dt: f64) {
-    let on = g.k.sense.cpu; let had = g.smoke_owned.is_some();
-    if on != had || (had && seam_owned_solver_is_other(g)) {
-        if had { seam_smoke_owned_undo(g); }
-        g.smoke_owned = if on {
-            let _undo = crate::sense::own_smoke(g);   // (nothing holds the undo: see the seam)
-            Some(crate::game::GameSmokeOwned::zeroed())
-        } else { None };
-        if on != had {
-            crate::sense::cpu_smoke_clear(g);
-            if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
-            if on { crate::sensors::sensors_set_own(g, Some(&mut |g: &mut Game, a: V3, b: V3| crate::sense::cpu_smoke_along(g, a, b))); }
-            else { crate::sensors::sensors_set_own(g, None); }
-        }
+    // (the tee on the solver is a test of g.smoke_owned where the smoke's calls are made: nothing to install or undo; a game's solver is never replaced, so no identity compare)
+    let on = g.k.sense.cpu;
+    if on != g.smoke_owned {
+        g.smoke_owned = on;
+        crate::sense::cpu_smoke_clear(g);
+        if g.cpu_smoke.grid.is_some() { crate::sense::smoke_grid_renew(g); }
+        if on { crate::sensors::sensors_set_own(g, Some(&mut |g: &mut Game, a: V3, b: V3| crate::sense::cpu_smoke_along(g, a, b))); }
+        else { crate::sensors::sensors_set_own(g, None); }
     }
     if !on { return; }
     crate::sense::cpu_smoke_step(g, dt);
@@ -474,17 +466,15 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     let seats = g.seats.clone(); let n = seats.len();
     g.door_owns.clear();
     let mut contacts: Vec<DoorContact> = Vec::new();
-    // (ALIASING: in the TypeScript a contact's `pos`, `vel` ARE his arrays. Each contact's man here: read as the step opens, written back as it ends. `own_at`: the same object is in `owns`)
+    // (ALIASING: in the TypeScript a contact's `pos`, `vel` ARE his arrays. Each contact's man here: read as the step opens, written back as it ends. g.door_owns: the player's own contact's index in `contacts`)
     let mut of: Vec<Option<CharId>> = Vec::new();
-    let mut own_at: Vec<Option<usize>> = Vec::new();
     for i in 0..n {
         let s = seats[i];
         let own = in_seat(g, s, &mut |g| game_door_contact(g));
-        g.door_owns.push(own.clone());
         if let Some(c) = own {
             let pl = crate::cmd::seat_man(g, s);
-            own_at.push(Some(contacts.len())); of.push(Some(g.pl[pl].ch)); contacts.push(c);
-        } else { own_at.push(None); }
+            g.door_owns.push(Some(contacts.len())); of.push(Some(g.pl[pl].ch)); contacts.push(c);
+        } else { g.door_owns.push(None); }
     }
     let mut i = 0;
     while i < g.guards.len() {
@@ -554,9 +544,8 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     // (…as the step opens: this frame's verbs have moved them)
     for k in 0..contacts.len() { if let Some(c) = of[k] { contacts[k].pos = g.ch[c].pos; if contacts[k].vel.is_some() { contacts[k].vel = Some(g.ch[c].vel); } } }
     crate::doors::doors_update(g, dt, &mut contacts);
-    // (…and as it ends: where the leaves put them, and each player's own contact as the step left it)
+    // (…and as it ends: where the leaves put them)
     for k in 0..contacts.len() { if let Some(c) = of[k] { let p = contacts[k].pos; g.ch[c].pos[0] = p[0]; g.ch[c].pos[2] = p[2]; } }
-    for i in 0..n { if let Some(k) = own_at[i] { g.door_owns[i] = Some(contacts[k].clone()); } }
     crate::doorthrow::door_throw_after(g, &contacts);
     for &(gd, k, x, z) in wounded_at.iter() {
         let mut at = contacts[k].pos;
@@ -577,11 +566,10 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     for i in 0..n {
         let s = seats[i];
         let pl = crate::cmd::seat_man(g, s); let at = g.ch[g.pl[pl].ch].pos;
-        let mut own = g.door_owns[i].clone();
-        if let Some(o) = own.as_mut() { o.pos = at; }   // (his array: wherever he now is)
+        let own = g.door_owns[i];
+        if let Some(k) = own { contacts[k].pos = at; }   // (his array: wherever he now is)
         let (bx, bz) = (g.door_was[2 * i], g.door_was[2 * i + 1]);
-        in_seat(g, s, &mut |g| game_door_after(g, own.as_mut(), bx, bz));
-        g.door_owns[i] = own;
+        in_seat(g, s, &mut |g| game_door_after(g, match own { Some(k) => Some(&mut contacts[k]), None => None }, bx, bz));
     }
     for &(k, ch, i) in body_contacts.iter() {
         let c = contacts[k].pos;

@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool { todo!() }
 
 /// (src/game/tracers.ts:69 Tracers.constructor)
-pub fn tracers_new(g: &mut crate::game::Game, lights: Option<&crate::render_lights::LightSet>, params: Option<crate::tracers::TracersParams>) -> crate::tracers::Tracers { todo!() }
+pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::TracersParams>) -> crate::tracers::Tracers { todo!() }
 
 /// (src/game/tracers.ts:78 Tracers.each)
 pub fn tracers_each(g: &mut crate::game::Game) -> Vec<crate::tracers::Tracer> { todo!() }

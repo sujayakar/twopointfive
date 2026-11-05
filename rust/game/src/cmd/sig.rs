@@ -6,7 +6,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (src/game/cmd.ts:40 sampleCmd)
-pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd { todo!() }
+pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd { todo!() }
 
 /// (src/game/cmd.ts:60 cmdText)
 pub fn cmd_text(c_2: &crate::cmd::PlayerCmd) -> String { todo!() }
@@ -33,7 +33,7 @@ pub fn still_cmd(c_2: &crate::cmd::PlayerCmd) -> crate::cmd::PlayerCmd { todo!()
 pub fn honest_copy(g: &mut crate::game::Game, c_2: &crate::cmd::PlayerCmd, near: Option<V3>) -> crate::cmd::PlayerCmd { todo!() }
 
 /// (src/game/cmd.ts:139 loadLens)
-pub fn load_lens(g: &mut crate::game::Game, v: &crate::cmd::PlayerCmdView) { todo!() }
+pub fn load_lens(g: &mut crate::game::Game, cam: CameraId, v: &crate::cmd::PlayerCmdView) { todo!() }
 
 /// (src/game/cmd.ts:154 Seat.constructor)
 pub fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId { todo!() }

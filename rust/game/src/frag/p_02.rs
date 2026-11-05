@@ -5,19 +5,11 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
-
-use crate::character::Bone;
-use crate::game::{DownBy, DownKind, GuardState};
-use crate::teams::Team;
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams: the steps the skeleton still cannot do
 /// (frag.ts:307 g.audio.play with { rate })
 fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, volume: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to carry a rate (crate::Opaque holds nothing)") }
-/// (frag.ts:306 light.radius = L.radius)
-fn seam_light_set_radius(g: &mut Game, light: LightId, radius: f64) { todo!("needs: a writer of a light's radius by LightId") }
-/// (frag.ts:630 lanePenalty(g, who, tacticsPenalty(g, who, p)))
-fn seam_lane_penalty(g: &mut Game, who: GuardId, base: Option<crate::tactics::TacticsPenalty>) -> Option<crate::lanes::LanePenalty> { todo!("needs: lane_penalty's base as Option<TacticsPenalty>: its answer holds one, and a closure cannot become one") }
 
 // ---------------------------------------------------------------- the answers kept as values: the match where they are called
 /// `eachSeat`: `f` over every seat's view; the Game itself in a game of one. (seats.ts:129; its stub lends two Games, so with_seat)
@@ -67,10 +59,19 @@ fn lane_price(l: &crate::lanes::LanePenalty, ix: f64, iz: f64) -> f64 {
         crate::lanes::LanePenalty::Base { base } => tactics_price(base, ix, iz),
     }
 }
+/// priceOf's answer with `base` under what lane_penalty asked with no base: its stub cannot build one from a closure, and what it asks does not depend on `base`. (lanes.ts priceOf)
+fn lane_over(asked: Option<crate::lanes::LanePenalty>, base: Option<crate::tactics::TacticsPenalty>) -> Option<crate::lanes::LanePenalty> {
+    match (asked, base) {
+        (None, None) => None,
+        (None, Some(base)) => Some(crate::lanes::LanePenalty::Base { base }),
+        (Some(crate::lanes::LanePenalty::Dear { m, w, dear }), Some(base)) => Some(crate::lanes::LanePenalty::DearOver { base, m, w, dear }),
+        (Some(p), _) => Some(p),
+    }
+}
 /// goTo's own planner: the floor's way as this man's feet will find it, at his prices when there is a man. (frag.ts:630)
 fn find_way(g: &mut Game, a: V3, b: V3, nodes: f64, who: Option<GuardId>) -> Option<Vec<V3>> {
     let pen = match who {
-        Some(w) => { let t = crate::tactics::tactics_penalty(g, w, b); seam_lane_penalty(g, w, t) }
+        Some(w) => { let t = crate::tactics::tactics_penalty(g, w, b); let asked = crate::lanes::lane_penalty(g, w, None); lane_over(asked, t) }
         None => None,
     };
     match pen {
@@ -88,7 +89,7 @@ struct Burst {
     wound: f64,
     serial: f64,
     who: f64,
-    side: Team,
+    side: crate::teams::Team,
     mine: bool,
     name: String,
     before: Option<JsMap<crate::Num, f64>>,
@@ -141,12 +142,12 @@ fn away(at: V3, feet: V3) -> V3 {
     if l > 1e-3 { v3::normalize([d[0] / l, 0.45, d[2] / l]) } else { [0.0, 1.0, 0.0] }
 }
 /// `char.bones.<bone> ?? char.pos + [0, up, 0]`
-fn bone_or(g: &Game, c: CharId, bone: Bone, up: f64) -> V3 {
+fn bone_or(g: &Game, c: CharId, bone: crate::character::Bone, up: f64) -> V3 {
     match g.ch[c].bones.get(bone) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
 }
 /// who the kill is down to, as blastRaw says it
-fn down_by(b: &Burst) -> DownBy {
-    if b.mine { DownBy::Player } else if js::truthy(b.who) { DownBy::Guard } else { DownBy::World }
+fn down_by(b: &Burst) -> crate::game::DownBy {
+    if b.mine { crate::game::DownBy::Player } else if js::truthy(b.who) { crate::game::DownBy::Guard } else { crate::game::DownBy::World }
 }
 /// `men(g)`: every seat's man
 fn men_of(g: &mut Game) -> Vec<PlayerId> {
@@ -174,11 +175,11 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     rep.finished += 1.0;
     if same_side(b.side, team) && js::truthy(b.who) { g.stats.frag.own += 1; }
     let dir = away(b.at, pts[0]);
-    let line = format!("{} — the {} reached him where he lay", callsign, b.name);
+    let line = alloc::format!("{} — the {} reached him where he lay", callsign, b.name);
     let fresh = g.gd[gd].died_at == g.time;
-    let had = g.gd[gd].down_by == Some(DownBy::Player) || (!fresh && crate::teamtally::team_tallied(g, gd));
+    let had = g.gd[gd].down_by == Some(crate::game::DownBy::Player) || (!fresh && crate::teamtally::team_tallied(g, gd));
     if g.gd[gd].wound.is_some() { g.gd[gd].wound = None; g.ch[c].anim.wound = None; }
-    g.gd[gd].down_kind = Some(DownKind::Shot);
+    g.gd[gd].down_kind = Some(crate::game::DownKind::Shot);
     g.gd[gd].down_by = Some(down_by(b));
     if js::truthy(b.who) { g.gd[gd].killer_id = b.who; }
     let team_ = !b.mine && crate::teamtally::team_tallied(g, gd);
@@ -187,13 +188,13 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
         if b.mine || !fresh { g.mission.stats.kills += 1.0; }
     }
     if b.mine || (team_ && !fresh) {
-        let weapon = if b.mine { b.name.clone() } else { format!("a teammate's {}", b.name) };
+        let weapon = if b.mine { b.name.clone() } else { alloc::format!("a teammate's {}", b.name) };
         let mut data: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
         data.set(String::from("who"), Some(crate::chronicle::ChronicleDataValue::Text(callsign.clone())));
         data.set(String::from("weapon"), Some(crate::chronicle::ChronicleDataValue::Text(weapon)));
         crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Kill, Some(&data), Some(pts[0]));
     }
-    if b.mine { crate::guards::witness_kill(g, gd, DownKind::Shot, DownBy::Player); }
+    if b.mine { crate::guards::witness_kill(g, gd, crate::game::DownKind::Shot, crate::game::DownBy::Player); }
     if g.ch[c].ragdoll.is_none() {
         let world = crate::ragdoll::RagdollWorld { boxes: g.col.boxes.ids().collect(), dynamic_boxes: g.col.dynamic_boxes.clone() };
         crate::character::character_ragdollize(g, c, Some(&world), dir, true);
@@ -208,13 +209,13 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     if g.pl[pl].down { return; }
-    let head = bone_or(g, c, Bone::Head, 1.6);
+    let head = bone_or(g, c, crate::character::Bone::Head, 1.6);
     let (feet, id) = (g.ch[c].pos, g.ch[c].id);
     let j = judge(g, b, feet, head, id);
     let Some(r) = j.r else { return };
     rep.player = Some(r);
     let behind = if r == BlastResult::Stunned { j.behind } else { None };
-    rep.hits.push(BlastHit { id, name: String::from("you"), team: Team::Player, d: j.d, exposed: j.e, result: r, down: None, behind });
+    rep.hits.push(BlastHit { id, name: String::from("you"), team: crate::teams::Team::Player, d: j.d, exposed: j.e, result: r, down: None, behind });
     let came = if j.behind == Some(BlastHitBehind::Cover) { "the blast broke through your cover" } else { "the blast came through the door" };
     if r == BlastResult::Killed {
         if g.god_mode {
@@ -246,15 +247,10 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
         if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
         g.pl[pl].throw_held = false;
         g.pl[pl].pending_throw = None;
-        let line = if rep.player == Some(BlastResult::Stunned) { format!("the {} — {}, stunned", b.name, came) } else { format!("the {} — caught in the blast, stunned", b.name) };
+        let line = if rep.player == Some(BlastResult::Stunned) { alloc::format!("the {} — {}, stunned", b.name, came) } else { alloc::format!("the {} — caught in the blast, stunned", b.name) };
         crate::game::game_msg(g, &line);
         g.stats.frag.sam_stunned += 1;
     }
-}
-
-/// THE BLAST: the one function for a fragmenting explosion at a point. (frag.ts blast)
-pub fn blast(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpec) -> crate::frag::BlastReport {
-    crate::fogofwar::fog_of_war_doing(g, Some(spec.who), &mut |g: &mut Game| blast_raw(g, at, spec))
 }
 
 /// The burst itself, in its order: flash and sound, glass, lines before the break, destruction, torn leaves, the men, the books. (frag.ts blastRaw)
@@ -265,7 +261,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let from: V3 = [at[0], at[1] + g.k.frag.lift, at[2]];
     let name: String = match &spec.name { Some(n) => n.clone(), None => String::from("frag grenade") };
     let mut rep = BlastReport { at: v3::copy(at), who: spec.who, hits: Vec::new(), killed: 0.0, finished: 0.0, wounded: 0.0, shielded: 0.0, stunned: 0.0, player: None };
-    let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { Team::Guard };
+    let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
     let mine = crate::seats::is_man_id(g, spec.who);
     if spec.fx != Some(false) {
         let gpu = crate::particle_fx::gpu_fx(g).is_some();
@@ -277,13 +273,16 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
         } else { None };
         let l = crate::effects::spawn_burst(g, from, seed, o);
         if gpu { crate::particle_fx::bang_fx(g, from); }
-        let flash = crate::render_lights::light_set_flash(&mut g.engine.lights, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
+        // the stub takes `g` and the set, and the set lives in `g`: lent out for the call (lights.ts flash touches only this.lights and the new light)
+        let mut set = core::mem::take(&mut g.engine.lights);
+        let flash = crate::render_lights::light_set_flash(g, &mut set, l.pos, [1.0, 0.74, 0.42], l.intensity * 0.7, l.range, l.ttl, 0.0);
+        g.engine.lights = set;
         let light = crate::fogofwar::fog_of_war_light_by(g, flash, Some(spec.who));
-        if let Some(r) = l.radius { if js::truthy(r) { seam_light_set_radius(g, light, r); } }
+        if let Some(r) = l.radius { if js::truthy(r) { g.tab.light[light].radius = r; } }
         seam_audio_play_rate(g, "stunBang", from, 1.0, 0.62);
         crate::marks::bang_scorch(g, from);
         let ears = crate::seats::host_man(g);
-        let eye = bone_or(g, g.pl[ears].ch, Bone::Head, 1.6);
+        let eye = bone_or(g, g.pl[ears].ch, crate::character::Bone::Head, 1.6);
         if !g.pl[ears].down && v3::dist(eye, from) < wound && !crate::scene_collision::segment_blocked(g, from, eye, None, None, None) {
             crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.1 - v3::dist(eye, from) / wound, 0.2, 0.7)), None);
         }
@@ -304,9 +303,9 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
         let mut all = g.guards.clone();
         all.extend(crate::civilians::civilians_shown(g));
         for gd in all {
-            if g.gd[gd].state != GuardState::Dead && !g.gd[gd].god {
+            if g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].god {
                 let c = g.gd[gd].ch;
-                let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, Bone::Head, 1.65), g.ch[c].id);
+                let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.65), g.ch[c].id);
                 if v3::dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound { let e = exposure(g, from, feet, head, Some(GlassView::Blown)); map.set(crate::Num(id), e); }
             }
         }
@@ -319,7 +318,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
         for pl in men_of(g) {
             if !g.pl[pl].down {
                 let c = g.pl[pl].ch;
-                let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, Bone::Head, 1.6), g.ch[c].id);
+                let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.6), g.ch[c].id);
                 if v3::dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound { let e = exposure(g, from, feet, head, Some(GlassView::Blown)); map.set(crate::Num(id), e); }
             }
         }
@@ -340,18 +339,19 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let rows: Vec<BoxId> = g.m.frag.torn.as_ref().unwrap().doors.iter().map(|x| x.box_).collect();
     let mut torn: Vec<BoxId> = Vec::new();
     for bx in rows { if torn_door_off(g, bx) { torn.push(bx); } }
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Bang, pos: v3::copy(from), time: g.time, loud: true, level: Some(2.0), who: Some(spec.who), frag: Some(true), ..Default::default() });
+    let ev_serial = g.serial();
+    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Bang, pos: v3::copy(from), time: g.time, loud: true, level: Some(2.0), who: Some(spec.who), frag: Some(true), serial: ev_serial, ..Default::default() });
     let b = Burst { at, from, lethal, wound, serial, who: spec.who, side, mine, name, before, torn };
     // who it touches
     let mut all = g.guards.clone();
     all.extend(crate::civilians::civilians_shown(g));
     for gd in all {
-        if g.gd[gd].state == GuardState::Dead || g.gd[gd].god {
+        if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].god {
             if down_asked(g, gd) { finish(g, &b, &mut rep, gd); }
             continue;
         }
         let c = g.gd[gd].ch;
-        let (pos, head, id) = (g.ch[c].pos, bone_or(g, c, Bone::Head, 1.65), g.ch[c].id);
+        let (pos, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.65), g.ch[c].id);
         let j = judge(g, &b, pos, head, id);
         let Some(r) = j.r else { continue };
         let team = g.gd[gd].team;
@@ -361,9 +361,9 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
         if r == BlastResult::Stunned { rep.stunned += 1.0; }
         if r == BlastResult::Killed {
             rep.killed += 1.0;
-            let line = format!("{} down — the {}", g.gd[gd].callsign, b.name);
+            let line = alloc::format!("{} down — the {}", g.gd[gd].callsign, b.name);
             let dir = away(at, g.ch[c].pos);
-            crate::combat::kill_guard(g, gd, dir, Some(false), Some(DownKind::Shot), Some(down_by(&b)), Some(&line), None);
+            crate::combat::kill_guard(g, gd, dir, Some(false), Some(crate::game::DownKind::Shot), Some(down_by(&b)), Some(&line), None);
             if js::truthy(spec.who) { g.gd[gd].killer_id = spec.who; }
         } else {
             if r == BlastResult::Wounded { rep.wounded += 1.0; }
@@ -379,7 +379,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
                 g.fa[w].burst = None;
                 let man = &mut g.gd[gd];
                 man.awareness = m::max(man.awareness, 0.92);
-                if man.state != GuardState::Alert { man.last_known = Some(v3::copy(at)); }
+                if man.state != crate::game::GuardState::Alert { man.last_known = Some(v3::copy(at)); }
                 man.path = Vec::new();
                 man.path_goal = None;
                 man.speed = 0.0;
@@ -399,8 +399,8 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     if g.m.frag.frag_log.len() > 64 { g.m.frag.frag_log.remove(0); }
     // the count is for eyes that had a line to it: a room nobody has looked into keeps what it did to itself
     let mut eyes: Vec<V3> = Vec::new();
-    for pl in men_of(g) { if !g.pl[pl].down { eyes.push(bone_or(g, g.pl[pl].ch, Bone::Head, 1.6)); } }
-    for o in g.guards.clone() { if g.gd[o].team == Team::Operative && g.gd[o].state != GuardState::Dead { eyes.push(bone_or(g, g.gd[o].ch, Bone::Head, 1.6)); } }
+    for pl in men_of(g) { if !g.pl[pl].down { eyes.push(bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, 1.6)); } }
+    for o in g.guards.clone() { if g.gd[o].team == crate::teams::Team::Operative && g.gd[o].state != crate::game::GuardState::Dead { eyes.push(bone_or(g, g.gd[o].ch, crate::character::Bone::Head, 1.6)); } }
     let mut seen = false;
     for &e in &eyes { if v3::dist(e, from) < 30.0 && !crate::scene_collision::segment_blocked(g, e, from, None, None, None) { seen = true; break; } }
     let folded_men: Vec<GuardId> = if !seen || !js::truthy(rep.stunned) { Vec::new() } else {
@@ -410,8 +410,8 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
             for o in g.guards.clone() {
                 let c = g.gd[o].ch;
                 let id = g.ch[c].id;
-                if g.gd[o].civ.is_none() && g.gd[o].state != GuardState::Dead && hits.iter().any(|h| h.id == id && h.result == BlastResult::Stunned) {
-                    let chest = bone_or(g, c, Bone::Chest, 1.2);
+                if g.gd[o].civ.is_none() && g.gd[o].state != crate::game::GuardState::Dead && hits.iter().any(|h| h.id == id && h.result == BlastResult::Stunned) {
+                    let chest = bone_or(g, c, crate::character::Bone::Chest, 1.2);
                     let mut any = false;
                     for &e in eyes_ { if !crate::scene_collision::segment_blocked(g, e, chest, None, None, None) { any = true; break; } }
                     if any { out.push(o); }
@@ -425,12 +425,12 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let behind = if by_cover { "what it broke" } else { "the door" };
     let tail: String = if !seen { String::from("out of sight") } else {
         let down = rep.killed - rep.finished;
-        let mut s = if js::truthy(down) { format!("{} down", down) } else { String::from("nobody down") };
-        if js::truthy(rep.wounded) { s.push_str(&format!(", {} hit", rep.wounded)); }
-        if folded != 0 { s.push_str(&format!(", {} stunned behind {}", folded, behind)); }
+        let mut s = if js::truthy(down) { alloc::format!("{} down", down) } else { String::from("nobody down") };
+        if js::truthy(rep.wounded) { s.push_str(&alloc::format!(", {} hit", rep.wounded)); }
+        if folded != 0 { s.push_str(&alloc::format!(", {} stunned behind {}", folded, behind)); }
         s
     };
-    let line = format!("{}{} — {}", if side == Team::Hostile { "their " } else { "" }, b.name, tail);
+    let line = alloc::format!("{}{} — {}", if side == crate::teams::Team::Hostile { "their " } else { "" }, b.name, tail);
     crate::game::game_msg(g, &line);
     rep
 }
@@ -603,8 +603,7 @@ pub fn roll_on(g: &mut crate::game::Game, it: ItemId, touch_fuse: Option<f64>, p
 
 /// Where a can thrown from `from` at `v0` will be when it is done moving, or when its fuse finds it. (frag.ts restOfThrow)
 pub fn rest_of_throw(g: &mut crate::game::Game, kind: crate::game::ThrowKind, from: V3, v0: V3) -> crate::frag::RestOfThrow {
-    use crate::game::ThrowKind;
-    let is_frag = kind == ThrowKind::Frag;
+    let is_frag = kind == crate::game::ThrowKind::Frag;
     let (radius, restitution, friction) = if is_frag {
         let b = crate::throwables::frag_item();
         (b.radius, b.restitution, b.friction)
@@ -612,7 +611,7 @@ pub fn rest_of_throw(g: &mut crate::game::Game, kind: crate::game::ThrowKind, fr
         let b = crate::throwables::can_item();
         (b.radius, b.restitution, b.friction)
     };
-    let stun = if kind == ThrowKind::Flash { Some(crate::combat::flash_fuse(g)) } else { None };
+    let stun = if kind == crate::game::ThrowKind::Flash { Some(crate::combat::flash_fuse(g)) } else { None };
     let fuse = if is_frag { g.k.frag.fuse } else if stun.is_some() { crate::effects::bang().max_air } else { 6.0 };
     let r = roll_body(g, RollBody { pos: from, vel: v0, radius, restitution, friction, bounces: 0.0, fuse }, stun, true, true);
     RestOfThrow { at: r.at, path: r.path }
@@ -946,7 +945,7 @@ pub fn flee_by_door(g: &mut crate::game::Game, c_2: crate::frag::FleeByDoorC, at
     let d0 = flat(cpos, at);
     let path0 = door_off_path(g, cpos[0], cpos[2], &wise.path);
     let leaves = open_leaves(g, cpos, reach + 2.0);
-    let ours = match who { None => true, Some(w) => g.gd[w].team == Team::Operative };
+    let ours = match who { None => true, Some(w) => g.gd[w].team == crate::teams::Team::Operative };
     let mut k = DoorDeal { at, d0, path0, wise, leaves, who, ours, best: None, best_s: f64::NEG_INFINITY, via: false };
     let (most, tries, apart_m) = (g.k.frag.flee_door_most, g.k.frag.flee_door_try, g.k.frag.flee_apart_m);
     let mut open: Vec<DoorId> = Vec::new();
@@ -1026,5 +1025,23 @@ mod tests {
         assert_eq!(leaf_dist(&l, 1.9, -1.3).to_bits(), 0x3ff6a09e667f3bcf);
         assert_eq!(leaf_dist(&l, -0.4, 1.1).to_bits(), 0x3fe6666666666666);
         assert_eq!(leaf_dist(&[], 1.0, 1.0).to_bits(), 0x7ff0000000000000);
+    }
+    /// priceOf: no mask is the base as it was; a mask with a base is the dearer of the two, cell by cell
+    #[test]
+    fn a_lane_goes_over_the_tactics_price() {
+        use crate::lanes::LanePenalty;
+        use crate::tactics::TacticsPenalty;
+        let mut doors = JsSet::new();
+        doors.add(crate::Num(5.0));
+        let base = || TacticsPenalty::Cells { w: 4.0, door_idx: Some(doors.clone()), door_mult: 7.0, avoid: None };
+        let mask = vec![0u8, 1, 0, 0, 0, 0, 0, 0];
+        assert!(lane_over(None, None).is_none());
+        let plain = lane_over(None, Some(base())).unwrap();
+        assert_eq!((lane_price(&plain, 1.0, 1.0), lane_price(&plain, 1.0, 0.0)), (7.0, 1.0));
+        let dear = LanePenalty::Dear { m: mask.clone(), w: 4.0, dear: 3.0 };
+        let alone = lane_over(Some(dear.clone()), None).unwrap();
+        assert_eq!((lane_price(&alone, 1.0, 0.0), lane_price(&alone, 1.0, 1.0)), (3.0, 1.0));
+        let over = lane_over(Some(dear), Some(base())).unwrap();
+        assert_eq!((lane_price(&over, 1.0, 0.0), lane_price(&over, 1.0, 1.0), lane_price(&over, 0.0, 0.0)), (3.0, 7.0, 1.0));
     }
 }

@@ -14,7 +14,7 @@ use crate::glass_pattern::{
 use crate::scene_box_mirror::{PaneDice, PaneDiceClumpsItem, PaneRow, PaneRowPendingItem, PaneSite, PaneView, VIEW_BLOWN, VIEW_GIVES};
 use crate::Num;
 
-// ---------------------------------------------------------------- seams: what skeleton 3 still lacks
+// ---------------------------------------------------------------- seams: what skeleton 4 still lacks
 /// g.audio.play(name, at, volume, { rate })
 fn seam_audio_play(g: &mut Game, name: &str, at: V3, volume: f64, rate: f64) { todo!("needs: a rate in game_audio_like_play's opts") }
 /// P.emit('debris', at, dir, count, { shape: 'cone', speed: 1.1, speedJit: 0.8, spread: 1.2, life: 30, lifeJit: 0.4, size, sizeJit: 0.6, aspect: 1.4, posJit, color })
@@ -859,16 +859,6 @@ pub fn glass_break_walkable_now(g: &mut crate::game::Game, st: &mut crate::glass
     true
 }
 
-/// the row of g.wind.all that is pane bi's gust: the same object as gusts' row in the TypeScript, named here (glassbreak.ts:782)
-fn gust_row(g: &Game, name: &str) -> Option<usize> {
-    g.wind.all.iter().position(|s| s.why == crate::wind::WindWhy::Glass && s.name == name)
-}
-fn gust_set_base(g: &mut Game, bi: f64, base: f64) {
-    if let Some(src) = g.glass_break.gusts.get_mut(Num(bi)) { src.base = base; }
-    let name = format!("glass:{}", bi);
-    if let Some(i) = gust_row(g, &name) { g.wind.all[i].base = base; }
-}
-
 /// a wind source through each shot-out exterior pane, its speed each frame the storm at that face times the open share (glassbreak.ts GlassBreak.updateGusts)
 pub fn glass_break_update_gusts(g: &mut crate::game::Game) {
     let swv = crate::wind::wind_storm_wind(g);
@@ -879,50 +869,55 @@ pub fn glass_break_update_gusts(g: &mut crate::game::Game) {
         let bi = key.0;
         if !g.glass_break.panes.get(key).map_or(false, |s| s.exterior) { continue; }
         let open = glass_break_open_fraction(g, bi);
-        let has_src = g.glass_break.gusts.has(key);
+        let src = g.glass_break.gusts.get(key).copied();
         if open < 0.25 || storm_speed < 0.05 {
-            if has_src { gust_set_base(g, bi, 0.0); }
+            if let Some(src) = src { g.tab.wind_wind_source[src].base = 0.0; }
             continue;
         }
-        if !has_src {
-            let st = match take_row(g, bi) { Some(st) => st, None => continue };
-            let n = glass_break_normal_of(g, &st);
-            let c = g.col.boxes[st.box_].c;
-            let (hu, st_key) = (st.hu, st.key);
-            put_row(g, st);
-            let inward: V3 = if glass_break_sky_side(g, bi) > 0.0 { v3::scale(n, -1.0) } else { n };
-            let reach = g.k.wind.door_reach;
-            let d_max = crate::wind::wind_field().cut_k * reach;
-            let tan_spread = m::tan(g.k.wind.door_spread_deg * core::f64::consts::PI / 180.0);
-            let r0 = hu * 0.7;
-            let pos: V3 = [c[0] - inward[0] * 0.15, c[1], c[2] - inward[2] * 0.15];
-            let src = crate::wind::WindSource {
-                kind: crate::wind::WindSourceKind::Jet,
-                why: crate::wind::WindWhy::Glass,
-                name: format!("glass:{}", bi),
-                pos,
-                dir: inward,
-                speed: 0.0,
-                base: 0.0,
-                on: 1.0,
-                gust: 1.0,
-                reach,
-                tan_spread,
-                r0,
-                d_max,
-                bound: crate::smoke_types::WindGpuSourceBound { c: v3::mad(pos, inward, d_max / 2.0), r: m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) + 0.3 },
-                seed: seed_mix_gust(st_key),
-                ..crate::wind::WindSource::zeroed()
-            };
-            g.wind.all.push(src.clone());
-            g.glass_break.gusts.set(key, src);
-            glass_break_note(g, &format!("gust source through pane {}", bi));
-        }
-        let dir = g.glass_break.gusts.get(key).unwrap().dir;
+        let src = match src {
+            Some(src) => src,
+            None => {
+                let st = match take_row(g, bi) { Some(st) => st, None => continue };
+                let n = glass_break_normal_of(g, &st);
+                let c = g.col.boxes[st.box_].c;
+                let (hu, st_key) = (st.hu, st.key);
+                put_row(g, st);
+                let inward: V3 = if glass_break_sky_side(g, bi) > 0.0 { v3::scale(n, -1.0) } else { n };
+                let reach = g.k.wind.door_reach;
+                let d_max = crate::wind::wind_field().cut_k * reach;
+                let tan_spread = m::tan(g.k.wind.door_spread_deg * core::f64::consts::PI / 180.0);
+                let r0 = hu * 0.7;
+                let pos: V3 = [c[0] - inward[0] * 0.15, c[1], c[2] - inward[2] * 0.15];
+                let made = crate::wind::WindSource {
+                    kind: crate::wind::WindSourceKind::Jet,
+                    why: crate::wind::WindWhy::Glass,
+                    name: format!("glass:{}", bi),
+                    pos,
+                    dir: inward,
+                    speed: 0.0,
+                    base: 0.0,
+                    on: 1.0,
+                    gust: 1.0,
+                    reach,
+                    tan_spread,
+                    r0,
+                    d_max,
+                    bound: crate::smoke_types::WindGpuSourceBound { c: v3::mad(pos, inward, d_max / 2.0), r: m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) + 0.3 },
+                    seed: seed_mix_gust(st_key),
+                    ..crate::wind::WindSource::zeroed()
+                };
+                let id = g.tab.wind_wind_source.push(made);
+                g.wind.all.push(id);
+                g.glass_break.gusts.set(key, id);
+                glass_break_note(g, &format!("gust source through pane {}", bi));
+                id
+            }
+        };
+        let dir = g.tab.wind_wind_source[src].dir;
         let s = sw.unwrap();
         let facing = m::max(0.0, (s[0] * dir[0] + s[1] * dir[2]) / m::max(1e-3, storm_speed));
         let base = storm_speed * g.k.wind.door_k * open * (0.35 + 0.65 * facing) * g.k.glassbreak.gust_speed_k / 0.6;
-        gust_set_base(g, bi, base);
+        g.tab.wind_wind_source[src].base = base;
     }
 }
 /// `(0x61A55 ^ Math.imul(key, 2654435761)) >>> 0`
@@ -1100,9 +1095,9 @@ pub fn glass_break_reset(g: &mut crate::game::Game) {
     crate::scene_collision::wrote(g);
     crate::scene_collision::glass_wrote(g);
     g.glass_break.blasted.clear();
-    for key in g.glass_break.gusts.keys() {
-        let name = format!("glass:{}", key.0);
-        if let Some(i) = gust_row(g, &name) { g.wind.all.remove(i); }
+    let gusts: Vec<WindWindSourceId> = g.glass_break.gusts.values().copied().collect();
+    for src in gusts {
+        if let Some(i) = g.wind.all.iter().position(|s| *s == src) { g.wind.all.remove(i); }
     }
     g.glass_break.gusts.clear();
     g.glass_break.gust_dirty = false;

@@ -59,7 +59,7 @@ pub fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::darkdoor::LineK
     pool.extend_from_slice(say);
     pool.extend_from_slice(extra);
     let c = g.gd[gd].ch;
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     let said = s.said;
     s.said += 1.0;
     let i = js::rem(g.ch[c].id + said, pool.len() as f64) as usize;
@@ -132,8 +132,12 @@ pub fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool {
     match g.m.darkdoor.state_of.get(o) { None => true, Some(so) => so.act == DarkDoorAct::None }
 }
 
-/// his row, made if he has none: the row itself.   (darkdoor.ts mind)
-pub fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::darkdoor::Fear {
+/// his row, made if he has none.   (darkdoor.ts mind; the skeleton's signature hands nothing back: `fear` below is the row)
+pub fn mind(g: &mut crate::game::Game, gd: GuardId) {
+    g.m.darkdoor.state_of.get_or_insert_with(gd, fresh_fear);
+}
+/// `mind`'s answer in the TypeScript: his row itself, made if he has none. Use it for a few lines and let it go before a call that takes `g`.
+fn fear<'g>(g: &'g mut Game, gd: GuardId) -> &'g mut crate::darkdoor::Fear {
     g.m.darkdoor.state_of.get_or_insert_with(gd, fresh_fear)
 }
 
@@ -172,7 +176,7 @@ pub fn mate_by(g: &mut crate::game::Game, gd: GuardId, fit: Option<&mut dyn FnMu
 pub fn free_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let k = g.k.darkdoor;
     let p = pos_of(g, gd);
-    let tried = mind(g, gd).tried.clone();
+    let tried = fear(g, gd).tried.clone();
     let mut near: Vec<GuardId> = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {
@@ -329,14 +333,14 @@ pub fn passes(s: &crate::darkdoor::Fear, door: f64, t: f64) -> bool {
 pub fn pass(g: &mut crate::game::Game, gd: GuardId, door: f64) {
     let now = g.time;
     let until = now + g.k.darkdoor.again_secs;
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     s.pass.retain(|p| p.door != door && now < p.until);
     s.pass.push(crate::darkdoor::FearPassItem { door, until });
 }
 
 /// a mate is let go where he is.   (darkdoor.ts drop)
 pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     s.act = DarkDoorAct::None;
     s.t = 0.0;
     s.other = None;
@@ -348,12 +352,12 @@ pub fn drop(g: &mut crate::game::Game, gd: GuardId) {
 /// the act is over: he is his own man again, and a mate still on his way to him with him.   (darkdoor.ts end)
 pub fn end(g: &mut crate::game::Game, gd: GuardId, unresolved: Option<bool>) {
     let unresolved = unresolved.unwrap_or(false);
-    if let Some(o) = mind(g, gd).other {
+    if let Some(o) = fear(g, gd).other {
         let hit = match g.m.darkdoor.state_of.get(o) { Some(so) => so.other == Some(gd) && so.act == DarkDoorAct::Come, None => false };
         if hit { drop(g, o); }
     }
     let now = g.time;
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     s.left = if unresolved && s.act == DarkDoorAct::Balk { now } else { -1e9 };
     s.act = DarkDoorAct::None;
     s.spot = None;
@@ -369,14 +373,14 @@ pub fn end(g: &mut crate::game::Game, gd: GuardId, unresolved: Option<bool>) {
 /// a mate is told to come: the floor's own walk to a fix, the fix on the man who called.   (darkdoor.ts call)
 pub fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     let mp = pos_of(g, m);
-    let row = mind(g, m);
+    let row = fear(g, m);
     row.act = DarkDoorAct::Come;
     row.t = 0.0;
     row.other = Some(gd);
     row.told = false;
     row.spot = Some(v3::copy(mp));
     row.lag = 0.0;
-    mind(g, gd).other = Some(m);
+    fear(g, gd).other = Some(m);
     g.stats.darkdoor.calls += 1;
     let here = pos_of(g, gd);
     let x = &mut g.gd[m];
@@ -392,7 +396,7 @@ pub fn call(g: &mut crate::game::Game, gd: GuardId, m: GuardId) {
     x.path = Vec::new();
     x.path_goal = None;
     x.stall_ref = None;
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     if !s.called {
         s.called = true;
         let radio = flat(pos_of(g, m), pos_of(g, gd)) > g.k.darkdoor.ear_m;
@@ -409,15 +413,15 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
     let x = if act0 == Some(DarkDoorAct::Balk) { None } else { door_ahead(g, gd, k.stop_m) };
     let di = match &x { Some(x) => door_index(g, x.d), None => -1.0 };
     if act0 == Some(DarkDoorAct::Solo) {
-        let door = mind(g, gd).door;
+        let door = fear(g, gd).door;
         if x.is_none() || di != door {
             pass(g, gd, door);
             end(g, gd, None);
             return Some(speed);
         }
-        mind(g, gd).idle = 0.0;
+        fear(g, gd).idle = 0.0;
         if g.gd[gd].state == crate::game::GuardState::Suspicious { g.gd[gd].awareness = m::max(g.gd[gd].awareness, k.keep_aw); }
-        let s = mind(g, gd);
+        let s = fear(g, gd);
         s.t += dt;
         if s.t >= k.nerve_secs { return Some(speed * k.slow_k); }
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
@@ -445,7 +449,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
     if !open(g, x.d) {
         if stands_lit(g, gd, lit_r(r)) {
             let now = g.time;
-            let a = mind(g, gd);
+            let a = fear(g, gd);
             a.armed = di;
             a.arm_t = now;
         }
@@ -455,7 +459,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
     let owed = match g.m.darkdoor.state_of.get(gd) { Some(s0) => s0.armed == di && now - s0.arm_t < k.arm_secs, None => false };
     if !owed && !stands_lit(g, gd, lit_r(r)) { return Some(speed); }
     let now = g.time;
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     let again = s.door == di && now - s.left < k.resume_secs;
     s.quits.retain(|q| now - q.t < k.fed_up_secs);
     s.door = di;
@@ -472,7 +476,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
         s.tried = Vec::new();
         g.stats.darkdoor.balks += 1;
     }
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     if !again && (s.quits.iter().filter(|q| q.room == room).count() as f64) >= k.fed_up_n - 1.0 {
         s.act = DarkDoorAct::Solo;
         bark(g, gd, LineKind::Alone, false);
@@ -481,7 +485,7 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
     }
     s.act = DarkDoorAct::Balk;
     let spot = stand_spot(g, gd, x.d, x.side);
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     s.spot = spot;
     s.at = spot.is_none();
     if !again {
@@ -497,12 +501,12 @@ pub fn dark_door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f6
 pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: bool) -> Option<f64> {
     let k = g.k.darkdoor;
     let c = g.gd[gd].ch;
-    let (door, side) = { let s = mind(g, gd); (s.door, s.side) };
+    let (door, side) = { let s = fear(g, gd); (s.door, s.side) };
     let Some(d) = door_at(g, door) else { return Some(speed) };
     let Some(x) = door_ahead(g, gd, k.stop_m + 4.0) else { return Some(speed) };
     if x.d != d || x.side != side { return Some(speed); }
     let room = crate::cleared::cleared_rooms_room_by(g, d, -side);
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     s.idle = 0.0;
     if !seen { s.t += dt; }
     s.ask += dt;
@@ -513,7 +517,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
             end(g, gd, None);
             return Some(speed);
         }
-        let other = mind(g, gd).other;
+        let other = fear(g, gd).other;
         let mut fit = |g: &mut Game, o: GuardId| Some(o) == other || can_come(g, o);
         let mate = mate_by(g, gd, Some(&mut fit));
         if let Some(mt) = mate {
@@ -525,7 +529,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
                 }
             }
             let at = v3::copy(pos_of(g, mt));
-            let row = mind(g, mt);
+            let row = fear(g, mt);
             row.act = DarkDoorAct::With;
             row.t = 0.0;
             row.other = Some(gd);
@@ -533,7 +537,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
             row.lag = 0.0;
             bark(g, mt, LineKind::With, false);
             pass(g, gd, door);
-            let s = mind(g, gd);
+            let s = fear(g, gd);
             s.act = DarkDoorAct::None;
             s.t = 0.0;
             s.spot = None;
@@ -545,15 +549,15 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
             return Some(speed);
         }
     }
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     if s.other.is_none() && s.call_t >= k.call_secs && s.t < k.wait_secs {
         s.call_t = 0.0;
         if let Some(f) = free_mate(g, gd) { call(g, gd, f); }
     }
-    if mind(g, gd).t >= k.wait_secs {
+    if fear(g, gd).t >= k.wait_secs {
         bark(g, gd, LineKind::Nobody, false);
         let now = g.time;
-        mind(g, gd).quits.push(crate::darkdoor::FearQuitsItem { room, t: now });
+        fear(g, gd).quits.push(crate::darkdoor::FearQuitsItem { room, t: now });
         end(g, gd, None);
         g.stats.darkdoor.quits += 1;
         let id = g.ch[c].id;
@@ -586,7 +590,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
         g.gd[gd].search_t = m::max(0.0, g.gd[gd].search_t - dt);
     }
     let p = g.ch[c].pos;
-    let (spot, at, t) = { let s = mind(g, gd); (s.spot, s.at, s.t) };
+    let (spot, at, t) = { let s = fear(g, gd); (s.spot, s.at, s.t) };
     let d_s = match spot { Some(to) => flat(p, to), None => 0.0 };
     let face = v3::yaw_to(p, g.dr[d].frame_centre);
     let stepping = match spot { Some(to) if !at && d_s > 0.15 && t < 4.0 => Some(to), _ => None };
@@ -600,7 +604,7 @@ pub fn hold(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, seen: b
         g.ch[c].vel = [m::sin(yaw) * sp, 0.0, m::cos(yaw) * sp];
         g.ch[c].pos = v3::mad(g.ch[c].pos, g.ch[c].vel, dt);
     } else {
-        mind(g, gd).at = true;
+        fear(g, gd).at = true;
         g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
         g.ch[c].vel = [0.0, 0.0, 0.0];
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, face, 3.0 * dt);
@@ -622,18 +626,18 @@ pub fn dark_door_look(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
 /// one man's frame of the tick, his act not none.   (darkdoor.ts darkDoorTick, the loop's body past `S.act === 'none'`)
 fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     let k = g.k.darkdoor;
-    let act = mind(g, gd).act;
+    let act = fear(g, gd).act;
     if !g.ai_enabled {
         if act == DarkDoorAct::Come || act == DarkDoorAct::With { lose(g, gd); } else { end(g, gd, None); }
         return;
     }
     if act == DarkDoorAct::Balk || act == DarkDoorAct::Solo {
-        let s = mind(g, gd);
+        let s = fear(g, gd);
         s.idle += dt;
         if s.idle > k.keep_secs || crate::netquietfeed::net_feed_holds(g, gd) { end(g, gd, Some(true)); }
         return;
     }
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     let o = s.other;
     s.t += dt;
     let goal = match o {
@@ -645,7 +649,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     };
     let here = pos_of(g, gd);
     let d_g = match goal { Some(a) => flat(here, a), None => 0.0 };
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     match s.spot {
         Some(sp) if !(flat(here, sp) > 0.5) => s.lag += dt,
         _ => { s.spot = Some(v3::copy(here)); s.lag = 0.0; }
@@ -660,12 +664,12 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     if act == DarkDoorAct::Come {
         let waiting = match g.m.darkdoor.state_of.get(o) { Some(so) => so.act == DarkDoorAct::Balk && so.other == Some(gd), None => false };
         if !waiting { drop(g, gd); return; }
-        let s = mind(g, gd);
+        let s = fear(g, gd);
         if !s.told && s.t >= k.copy_secs {
             s.told = true;
             bark(g, gd, LineKind::Copy, d_g > k.ear_m);
         }
-    } else if mind(g, gd).t >= k.with_secs || !alarmed(g, o) || d_g < 1.5 {
+    } else if fear(g, gd).t >= k.with_secs || !alarmed(g, o) || d_g < 1.5 {
         drop(g, gd);
         return;
     }
@@ -696,7 +700,7 @@ pub fn dark_door_tick(g: &mut crate::game::Game, dt: f64) {
             }
             continue;
         }
-        if mind(g, gd).act == DarkDoorAct::None { continue; }
+        if fear(g, gd).act == DarkDoorAct::None { continue; }
         tick_man(g, gd, dt);
     }
 }
@@ -704,7 +708,7 @@ pub fn dark_door_tick(g: &mut crate::game::Game, dt: f64) {
 /// a mate is lost on the way: dropped, and the man who called him calls the next.   (darkdoor.ts lose)
 pub fn lose(g: &mut crate::game::Game, gd: GuardId) {
     let call_secs = g.k.darkdoor.call_secs;
-    let s = mind(g, gd);
+    let s = fear(g, gd);
     let (other, act) = (s.other, s.act);
     if let Some(o) = other {
         if let Some(so) = g.m.darkdoor.state_of.get_mut(o) {
@@ -793,28 +797,31 @@ mod tests {
         let (a, b) = (GuardId(0), GuardId(1));
         g.time = 100.0;
         let again = g.k.darkdoor.again_secs;
-        mind(g, a).act = DarkDoorAct::Balk;
+        mind(g, a);
+        assert_eq!(g.m.darkdoor.state_of.get(a).unwrap().door, -1.0);
+        fear(g, a).act = DarkDoorAct::Balk;
+        mind(g, a);
         assert_eq!(g.m.darkdoor.state_of.get(a).unwrap().act, DarkDoorAct::Balk);
         pass(g, a, 3.0);
-        assert!(passes(mind(g, a), 3.0, 100.0 + again - 1.0));
-        assert!(!passes(mind(g, a), 4.0, 100.0));
+        assert!(passes(fear(g, a), 3.0, 100.0 + again - 1.0));
+        assert!(!passes(fear(g, a), 4.0, 100.0));
         // a balker with a mate on his way: `end`, unresolved, keeps his clock and drops the mate
-        { let s = mind(g, a); s.other = Some(b); s.t = 6.0; s.called = true; }
-        { let m = mind(g, b); m.act = DarkDoorAct::Come; m.other = Some(a); m.lag = 2.0; }
+        { let s = fear(g, a); s.other = Some(b); s.t = 6.0; s.called = true; }
+        { let m = fear(g, b); m.act = DarkDoorAct::Come; m.other = Some(a); m.lag = 2.0; }
         end(g, a, Some(true));
-        let s = mind(g, a);
+        let s = fear(g, a);
         assert_eq!((s.act, s.other, s.left, s.t, s.called), (DarkDoorAct::None, None, 100.0, 6.0, true));
-        let m = mind(g, b);
+        let m = fear(g, b);
         assert_eq!((m.act, m.other, m.lag), (DarkDoorAct::None, None, 0.0));
         // a mate lost on the way: his caller will not call him again this wait
-        { let s = mind(g, a); s.act = DarkDoorAct::Balk; s.other = Some(b); s.call_t = 0.0; }
-        { let m = mind(g, b); m.act = DarkDoorAct::Come; m.other = Some(a); }
+        { let s = fear(g, a); s.act = DarkDoorAct::Balk; s.other = Some(b); s.call_t = 0.0; }
+        { let m = fear(g, b); m.act = DarkDoorAct::Come; m.other = Some(a); }
         lose(g, b);
         let call_secs = g.k.darkdoor.call_secs;
-        let s = mind(g, a);
+        let s = fear(g, a);
         assert_eq!((s.other, s.call_t), (None, call_secs));
         assert_eq!(s.tried, vec![b]);
-        assert_eq!(mind(g, b).act, DarkDoorAct::None);
+        assert_eq!(fear(g, b).act, DarkDoorAct::None);
         assert_eq!(g.stats.darkdoor.drops, 1);
     }
 }

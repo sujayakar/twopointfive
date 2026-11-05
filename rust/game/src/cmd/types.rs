@@ -81,7 +81,7 @@ pub struct Seat {
     pub index: f64,
     pub own: Option<crate::seats::SeatSet>,
     pub input: InputId,
-    pub cam: crate::camera::FollowCamera,
+    pub cam: CameraId,
     pub canvas: crate::host_hud::View,
     pub cmd: Option<crate::cmd::PlayerCmd>,
     pub remote: bool,
@@ -98,7 +98,7 @@ impl Seat {
             index: 0.0,
             own: None,
             input: InputId(0),
-            cam: crate::camera::FollowCamera::blank(),
+            cam: CameraId(0),
             canvas: crate::host_hud::View { client_width: 0.0, client_height: 0.0, width: 0.0, height: 0.0 },
             cmd: None,
             remote: false,
@@ -150,7 +150,7 @@ impl Default for CheckCmdIn { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct CmdMod {
     /// (src/game/cmd.ts:74 checkLens)
-    pub check_lens: Option<crate::camera::FollowCamera>,
+    pub check_lens: Option<CameraId>,
 }
 impl CmdMod {
     pub fn blank() -> Self {

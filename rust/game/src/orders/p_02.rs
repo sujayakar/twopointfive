@@ -761,7 +761,7 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
     }
     if ds < self_m { return OrderTarget::None(OrderTargetNone { at, man: None }); }
     let base = match squad_orders_free_spot(g, at) {
-        Some(spot) => OrderTarget::Floor(OrderTargetFloor { at: spot, wall: None, thing: None }),
+        Some(spot) => OrderTarget::Floor(OrderTargetFloor { at: spot, wall: None, thing: None, serial: 0 }),   // (serial 0: no menu's yet; orders.ts:937 stamps the one a menu keeps)
         None => OrderTarget::None(OrderTargetNone { at, man: None }),
     };
     crate::wallcharge::wall_target(g, at, &base)   // (wallcharge.ts: a floor target under a wall carries the wall)
@@ -799,8 +799,8 @@ pub fn squad_orders_door_on_ray(g: &mut crate::game::Game, ro: V3, rd: V3, t_sce
 }
 
 /// What the cursor is on, for the menu; with CMDRING.wholeSquad a teammate under it is the squad itself.   (orders.ts SquadOrders.targetUnder)
-pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget {
-    let t = squad_orders_target_under_of(g, input, canvas);
+pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget {
+    let t = squad_orders_target_under_of(g, input, cam, canvas);
     if let OrderTarget::None(x) = &t {
         if x.man.is_some() && squad_orders_whole(g) { return OrderTarget::None(OrderTargetNone { at: x.at, man: None }); }
     }

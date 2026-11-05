@@ -477,25 +477,6 @@ impl CANMIXESValue {
 }
 impl Default for CANMIXESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:454 dealKits, src/game/kit.ts:454)
-#[derive(Clone, Debug)]
-pub struct KitModDealKits {
-    pub t: crate::kit::SlotTable,
-    pub kits: Vec<Vec<crate::kit::MemberKit>>,
-    pub words: JsSet<String>,
-}
-impl KitModDealKits {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModDealKits {
-            t: crate::kit::SlotTable::zeroed(),
-            kits: Vec::new(),
-            words: JsSet::new(),
-        }
-    }
-}
-impl Default for KitModDealKits { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/kit.ts:797 YOU_GUNS_CAN, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
 pub struct YOUGUNSCAN {
@@ -1167,8 +1148,6 @@ pub struct KitMod {
     pub stealth_you: Option<crate::kit::MemberKit>,
     /// (src/game/kit.ts:443 staged)
     pub staged: bool,
-    /// (src/game/kit.ts:454 dealKits)
-    pub deal_kits: Option<crate::kit::KitModDealKits>,
     /// (src/game/kit.ts:499 dealOwn)
     pub deal_own: bool,
     /// (src/game/kit.ts:921 rowCache)
@@ -1209,7 +1188,6 @@ impl KitMod {
             loud_you: None,
             stealth_you: None,
             staged: false,
-            deal_kits: None,
             deal_own: false,
             row_cache: JsMap::new(),
             kit_note: alloc::vec![String::from(""); 5],

@@ -49,6 +49,8 @@ pub struct GuardScript {
     pub direct: Option<bool>,
     pub smoke: Option<bool>,
     pub over: Option<crate::game::GuardScriptOver>,
+    /// INVENTED: g.serial() at the one place a man's own script is made (squad.ts:145 order, when he has none). DoorPath.after asks by identity whether the script it lent to is still his (doorpath.ts:178). A lent script (frag, runner, morale, startle) stays 0: guards.ts:2143-2146 put his own back before anything can read it here
+    pub serial: u32,
 }
 impl GuardScript {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -71,6 +73,7 @@ impl GuardScript {
             direct: None,
             smoke: None,
             over: None,
+            serial: 0,
         }
     }
 }
@@ -293,7 +296,7 @@ pub struct Game {
     pub probe: crate::sensors::ProbeLike,
     pub sensors: crate::sensors::Sensors,
     pub cpu_smoke: crate::sense::CpuSmoke,
-    pub smoke_owned: Option<crate::game::GameSmokeOwned>,
+    pub smoke_owned: bool,
     pub journal: crate::journal::SessionRecorder,
     pub search_probe_n: f64,
     pub time: f64,
@@ -422,7 +425,7 @@ pub struct Game {
     pub men_statured: bool,
     pub men_bare: bool,
     pub fog_held: Option<crate::game::GameFogHeld>,
-    pub door_owns: Vec<Option<crate::doors::DoorContact>>,
+    pub door_owns: Vec<Option<usize>>,
     pub door_was: Vec<f64>,
     pub door_hand_recs: JsMap<CharId, crate::game::GameDoorHandRecsValue>,
     /// INVENTED: what g.serial() deals
@@ -472,7 +475,7 @@ impl Game {
             probe: crate::sensors::ProbeLike::zeroed(),
             sensors: crate::sensors::Sensors::blank(),
             cpu_smoke: crate::sense::CpuSmoke::blank(),
-            smoke_owned: None,
+            smoke_owned: false,
             journal: crate::journal::SessionRecorder::blank(),
             search_probe_n: 0.0,
             time: 0.0,
@@ -723,7 +726,7 @@ impl GameEventCause {
     }
 }
 
-/// (TypeScript: inline at src/game/game.ts:830 Game.smokeOwned, src/game/game.ts:830)
+/// (TypeScript: inline at quiet Game.smokeOwned, src/game/game.ts:830)
 #[derive(Clone, Copy, Debug)]
 pub struct GameSmokeOwned {
 }
@@ -1200,6 +1203,8 @@ impl Default for GameFxItem { fn default() -> Self { Self::zeroed() } }
 pub struct GameMessagesItem {
     pub text: String,
     pub t: f64,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
 }
 impl GameMessagesItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -1207,6 +1212,7 @@ impl GameMessagesItem {
         GameMessagesItem {
             text: String::new(),
             t: 0.0,
+            serial: 0,
         }
     }
 }
@@ -1421,9 +1427,9 @@ impl Roll {
 impl Default for Roll { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AsideOwn, src/game/game.ts:300)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct AsideOwn {
-    pub lens: Option<crate::camera::FollowCamera>,
+    pub lens: Option<CameraId>,
 }
 impl AsideOwn {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -1589,7 +1595,7 @@ pub struct Player {
     pub setup_hand: Option<crate::game::PlayerSetupHand>,
     pub setup_key: Option<crate::game::PlayerSetupKey>,
     pub rifle_gone: bool,
-    pub kit_was: Option<crate::character::KitItem>,
+    pub kit_was: Option<Option<crate::character::KitItem>>,
     pub kit_can: Option<crate::game::ThrowKind>,
     pub launch_held: Option<crate::weapons::RifleAttachment>,
     pub kit_owed: f64,
@@ -3099,20 +3105,26 @@ pub struct Tabs {
     pub ragdoll: Tab<RagdollId, crate::ragdoll::Ragdoll>,
     pub props_prop: Tab<PropId, crate::props::Prop>,
     pub input: Tab<InputId, crate::input::Input>,
+    pub camera: Tab<CameraId, crate::camera::FollowCamera>,
     pub item: Tab<ItemId, crate::throwables::Item>,
     pub debris_chunk: Tab<DebrisChunkId, crate::debris::Chunk>,
     pub cmd_seat: Tab<SeatId, crate::cmd::Seat>,
+    pub light: Tab<LightId, crate::render_lights::RtLight>,
     pub sim_lightshome_fixture: Tab<FixtureId, crate::sim_lightshome::Fixture>,
     pub devices_camera_rt: Tab<CameraRtId, crate::devices::CameraRt>,
     pub devices_laser_rt: Tab<LaserRtId, crate::devices::LaserRt>,
+    pub wallbreak_breakable: Tab<WallbreakBreakableId, crate::wallbreak::Breakable>,
     pub furnblast_member: Tab<FurnblastMemberId, crate::furnblast::Member>,
+    pub wind_wind_source: Tab<WindWindSourceId, crate::wind::WindSource>,
     pub roomfight_def: Tab<RoomfightDefId, crate::roomfight::Def>,
     pub roomfight_room: Tab<RoomfightRoomId, crate::roomfight::Room>,
     pub stickycam_sticky_cam: Tab<StickyCamId, crate::stickycam::StickyCam>,
     pub doortools_door_op: Tab<DoorOpId, crate::doortools::DoorOp>,
     pub orders_assignment: Tab<OrdersAssignmentId, crate::orders::Assignment>,
+    pub doortools_room_search: Tab<DoortoolsRoomSearchId, crate::doortools::RoomSearch>,
     pub doortools_word: Tab<WordId, crate::doortools::Word>,
     pub doortools_door_gate: Tab<DoorGateId, crate::doortools::DoorGate>,
+    pub doortools_known_threat: Tab<DoortoolsKnownThreatId, crate::doortools::KnownThreat>,
     pub doortools_set_charge: Tab<ChargeId, crate::doortools::SetCharge>,
     pub orders_order_def: Tab<OrdersOrderDefId, crate::orders::OrderDef>,
     pub cover_opening: Tab<CoverOpeningId, crate::cover::Opening>,
@@ -3125,7 +3137,9 @@ pub struct Tabs {
     pub enemysquads_squad: Tab<EnemysquadsSquadId, crate::enemysquads::Squad>,
     pub rescueflow_region: Tab<RescueflowRegionId, crate::rescueflow::Region>,
     pub wallcharge_set_wall_charge: Tab<WallChargeId, crate::wallcharge::SetWallCharge>,
+    pub director_live_beat: Tab<DirectorLiveBeatId, crate::director::LiveBeat>,
     pub squad_room_clear: Tab<RoomClearId, crate::squad::RoomClear>,
+    pub director_run: Tab<DirectorRunId, crate::director::Run>,
     pub wallcharge_wall_op: Tab<WallOpId, crate::wallcharge::WallOp>,
     pub route: Tab<RouteId, crate::scene_level::PatrolRoute>,
     pub guards_standoff: Tab<GuardsStandoffId, crate::guards::Standoff>,
@@ -3142,20 +3156,26 @@ impl Tabs {
             ragdoll: Tab::new(),
             props_prop: Tab::new(),
             input: Tab::new(),
+            camera: Tab::new(),
             item: Tab::new(),
             debris_chunk: Tab::new(),
             cmd_seat: Tab::new(),
+            light: Tab::new(),
             sim_lightshome_fixture: Tab::new(),
             devices_camera_rt: Tab::new(),
             devices_laser_rt: Tab::new(),
+            wallbreak_breakable: Tab::new(),
             furnblast_member: Tab::new(),
+            wind_wind_source: Tab::new(),
             roomfight_def: Tab::new(),
             roomfight_room: Tab::new(),
             stickycam_sticky_cam: Tab::new(),
             doortools_door_op: Tab::new(),
             orders_assignment: Tab::new(),
+            doortools_room_search: Tab::new(),
             doortools_word: Tab::new(),
             doortools_door_gate: Tab::new(),
+            doortools_known_threat: Tab::new(),
             doortools_set_charge: Tab::new(),
             orders_order_def: Tab::new(),
             cover_opening: Tab::new(),
@@ -3168,7 +3188,9 @@ impl Tabs {
             enemysquads_squad: Tab::new(),
             rescueflow_region: Tab::new(),
             wallcharge_set_wall_charge: Tab::new(),
+            director_live_beat: Tab::new(),
             squad_room_clear: Tab::new(),
+            director_run: Tab::new(),
             wallcharge_wall_op: Tab::new(),
             route: Tab::new(),
             guards_standoff: Tab::new(),

@@ -27,7 +27,7 @@ pub fn director_new(g: &mut crate::game::Game, script: Option<&crate::scene_leve
 pub fn director_report(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/director.ts:452 Director.attach)
-pub fn director_attach(g: &mut crate::game::Game, o: &crate::director::DirectorAttachO) { todo!() }
+pub fn director_attach(g: &mut crate::game::Game, o: crate::director::DirectorAttachO) { todo!() }
 
 /// (src/game/director.ts:453 Director.programs)
 pub fn director_programs(g: &mut crate::game::Game) -> Vec<String> { todo!() }
@@ -84,64 +84,64 @@ pub fn director_stop(g: &mut crate::game::Game, finished: Option<bool>) { todo!(
 pub fn director_on_encounter_restart(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/director.ts:545 Director.tick)
-pub fn director_tick(g: &mut crate::game::Game, dt: f64, input: Option<InputId>) { todo!() }
+pub fn director_tick(g: &mut crate::game::Game, dt: f64, input: Option<InputId>, cam: Option<CameraId>) { todo!() }
 
 /// (src/game/director.ts:561 Director.fireTriggers)
-pub fn director_fire_triggers(g: &mut crate::game::Game, r: &mut crate::director::Run, fresh: &[crate::director::EventView]) { todo!() }
+pub fn director_fire_triggers(g: &mut crate::game::Game, r: DirectorRunId, fresh: &[crate::director::EventView]) { todo!() }
 
 /// (src/game/director.ts:581 Director.startBeat)
-pub fn director_start_beat(g: &mut crate::game::Game, r: &mut crate::director::Run, name: &str) -> Option<crate::director::LiveBeat> { todo!() }
+pub fn director_start_beat(g: &mut crate::game::Game, r: DirectorRunId, name: &str) -> Option<DirectorLiveBeatId> { todo!() }
 
 /// (src/game/director.ts:594 Director.resumeAll)
-pub fn director_resume_all(g: &mut crate::game::Game, r: &mut crate::director::Run, fresh: Option<&[crate::director::EventView]>) { todo!() }
+pub fn director_resume_all(g: &mut crate::game::Game, r: DirectorRunId, fresh: Option<&[crate::director::EventView]>) { todo!() }
 
 /// (src/game/director.ts:602 Director.resume)
-pub fn director_resume(g: &mut crate::game::Game, r: &mut crate::director::Run, b: &mut crate::director::LiveBeat, fresh: &[crate::director::EventView]) -> bool { todo!() }
+pub fn director_resume(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, fresh: &[crate::director::EventView]) -> bool { todo!() }
 
 /// (src/game/director.ts:621 Director.holds)
-pub fn director_holds(g: &mut crate::game::Game, r: &mut crate::director::Run, c_2: &mut crate::director::Cond, fresh: &[crate::director::EventView]) -> Option<crate::director::CondResult> { todo!() }
+pub fn director_holds(g: &mut crate::game::Game, r: DirectorRunId, c_2: &mut crate::director::Cond, fresh: &[crate::director::EventView]) -> Option<crate::director::CondResult> { todo!() }
 
 /// (src/game/director.ts:633 Director.failBeat)
-pub fn director_fail_beat(g: &mut crate::game::Game, r: &mut crate::director::Run, b: &mut crate::director::LiveBeat, e: crate::Opaque) { todo!() }
+pub fn director_fail_beat(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, e: crate::Opaque) { todo!() }
 
 /// (src/game/director.ts:643 Director.beginFinish)
-pub fn director_begin_finish(g: &mut crate::game::Game, r: &mut crate::director::Run) { todo!() }
+pub fn director_begin_finish(g: &mut crate::game::Game, r: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:650 Director.tail)
-pub fn director_tail(g: &mut crate::game::Game, r: &crate::director::Run, dt: f64) { todo!() }
+pub fn director_tail(g: &mut crate::game::Game, r: DirectorRunId, dt: f64) { todo!() }
 
 /// (src/game/director.ts:663 Director.frameShot)
-pub fn director_frame_shot(g: &mut crate::game::Game, s: &mut crate::director::ShowState, shot: &crate::director::Shot, dt: f64) { todo!() }
+pub fn director_frame_shot(g: &mut crate::game::Game, s_key: DirectorRunId, shot: &crate::director::Shot, dt: f64) { todo!() }
 
 /// (src/game/director.ts:671 Director.lookOf)
 pub fn director_look_of(g: &mut crate::game::Game, s: &crate::director::CameraShotSpec) -> V3 { todo!() }
 
 /// (src/game/director.ts:674 Director.enterShow)
-pub fn director_enter_show(g: &mut crate::game::Game, r: &mut crate::director::Run) { todo!() }
+pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:688 Director.exitShow)
-pub fn director_exit_show(g: &mut crate::game::Game, r: &mut crate::director::Run) { todo!() }
+pub fn director_exit_show(g: &mut crate::game::Game, r: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:711 Director.restoreWeather)
-pub fn director_restore_weather(g: &mut crate::game::Game, s: &mut crate::director::ShowState) { todo!() }
+pub fn director_restore_weather(g: &mut crate::game::Game, s_key: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:713 Director.restoreChaos)
-pub fn director_restore_chaos(g: &mut crate::game::Game, s: &mut crate::director::ShowState) { todo!() }
+pub fn director_restore_chaos(g: &mut crate::game::Game, s_key: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:717 Director.handOver)
-pub fn director_hand_over(g: &mut crate::game::Game, r: &mut crate::director::Run, caption: &str, sub: &str, caller: Option<&crate::director::LiveBeat>) { todo!() }
+pub fn director_hand_over(g: &mut crate::game::Game, r: DirectorRunId, caption: &str, sub: &str, caller: Option<DirectorLiveBeatId>) { todo!() }
 
 /// (src/game/director.ts:738 Director.applySystems)
-pub fn director_apply_systems(g: &mut crate::game::Game, r: &mut crate::director::Run) { todo!() }
+pub fn director_apply_systems(g: &mut crate::game::Game, r: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:744 Director.restoreSystems)
-pub fn director_restore_systems(g: &mut crate::game::Game, r: &mut crate::director::Run) { todo!() }
+pub fn director_restore_systems(g: &mut crate::game::Game, r: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:747 Director.tickDrill)
-pub fn director_tick_drill(g: &mut crate::game::Game, r: &crate::director::Run, d: &mut crate::director::DrillRun, dt: f64) { todo!() }
+pub fn director_tick_drill(g: &mut crate::game::Game, r: DirectorRunId, d: &mut crate::director::DrillRun, dt: f64) { todo!() }
 
 /// (src/game/director.ts:767 Director.endDrill)
-pub fn director_end_drill(g: &mut crate::game::Game, r: &crate::director::Run, d: &mut crate::director::DrillRun) { todo!() }
+pub fn director_end_drill(g: &mut crate::game::Game, r: DirectorRunId, d: &mut crate::director::DrillRun) { todo!() }
 
 /// (src/game/director.ts:777 Director.showMan)
 pub fn director_show_man(g: &mut crate::game::Game, gd: GuardId, on: bool) { todo!() }
@@ -150,13 +150,13 @@ pub fn director_show_man(g: &mut crate::game::Game, gd: GuardId, on: bool) { tod
 pub fn director_tick_shown(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/director.ts:779 Director.tickBursts)
-pub fn director_tick_bursts(g: &mut crate::game::Game, r: &mut crate::director::Run) { todo!() }
+pub fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:795 Director.tickTracks)
-pub fn director_tick_tracks(g: &mut crate::game::Game, r: &mut crate::director::Run, dt: f64) { todo!() }
+pub fn director_tick_tracks(g: &mut crate::game::Game, r: DirectorRunId, dt: f64) { todo!() }
 
 /// (src/game/director.ts:801 Director.tickKicks)
-pub fn director_tick_kicks(g: &mut crate::game::Game, r: &mut crate::director::Run) { todo!() }
+pub fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) { todo!() }
 
 /// (src/game/director.ts:814 Director.placeOf)
 pub fn director_place_of(g: &mut crate::game::Game, p: &crate::director::Place) -> V3 { todo!() }
@@ -165,19 +165,19 @@ pub fn director_place_of(g: &mut crate::game::Game, p: &crate::director::Place) 
 pub fn director_door_of(g: &mut crate::game::Game, d: &crate::director::DoorRef) -> DoorId { todo!() }
 
 /// (src/game/director.ts:821 Director.guardOf)
-pub fn director_guard_of(g: &mut crate::game::Game, r: &crate::director::Run, u: &crate::director::UnitRef) -> GuardId { todo!() }
+pub fn director_guard_of(g: &mut crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> GuardId { todo!() }
 
 /// (src/game/director.ts:827 Director.planOf)
 pub fn director_plan_of(g: &mut crate::game::Game, p: &crate::director::PlanRef) -> crate::director::DirectorPlanOf { todo!() }
 
 /// (src/game/director.ts:831 Director.insideVolume)
-pub fn director_inside_volume(g: &mut crate::game::Game, r: &crate::director::Run, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool { todo!() }
+pub fn director_inside_volume(g: &mut crate::game::Game, r: DirectorRunId, id_2: &str, who: &crate::director::DirectorInsideVolumeWho) -> bool { todo!() }
 
 /// (src/game/director.ts:839 Director.queryOf)
-pub fn director_query_of(g: &mut crate::game::Game, r: &mut crate::director::Run) -> crate::director::Query { todo!() }
+pub fn director_query_of(g: &mut crate::game::Game, r: DirectorRunId) -> crate::director::Query { todo!() }
 
 /// (src/game/director.ts:860 Director.ctxOf)
-pub fn director_ctx_of(g: &mut crate::game::Game, r: &mut crate::director::Run, b: &mut crate::director::LiveBeat) -> crate::director::BeatCtx { todo!() }
+pub fn director_ctx_of(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId) -> crate::director::BeatCtx { todo!() }
 
 /// (src/game/director.ts:1081 condLabel)
 pub fn cond_label(c_2: &crate::director::Cond) -> String { todo!() }
@@ -189,10 +189,10 @@ pub fn near_of(g: &mut crate::game::Game, pos: V3) { todo!() }
 pub fn sam_view_of(g: &mut crate::game::Game) -> crate::director::SamView { todo!() }
 
 /// (src/game/director.ts:1114 viewOf)
-pub fn view_of(g: &mut crate::game::Game, r: &crate::director::Run, e: crate::game::GameEvent) -> crate::director::EventView { todo!() }
+pub fn view_of(g: &mut crate::game::Game, r: DirectorRunId, e: crate::game::GameEvent) -> crate::director::EventView { todo!() }
 
 /// (src/game/director.ts:1115 signalView)
-pub fn signal_view(g: &mut crate::game::Game, r: &crate::director::Run, s: &crate::director::SignalViewS) -> crate::director::EventView { todo!() }
+pub fn signal_view(g: &mut crate::game::Game, r: DirectorRunId, s: &crate::director::SignalViewS) -> crate::director::EventView { todo!() }
 
 pub mod util {
     #[allow(unused_imports)]

@@ -278,27 +278,21 @@ pub fn deal_word(cards: &[crate::kit::MemberKit]) -> String {
     rows.join("|")
 }
 
-/// The issue's and every named kit's cards, made once a table (kit.ts dealTable)
+/// The issue's and every named kit's cards (kit.ts dealTable). The TypeScript kept them once a table (`dealKits`); the skeleton has no such field and they are a pure function of the table, so they are made at each ask
 pub fn deal_table(g: &mut crate::game::Game) -> crate::kit::DealTable {
     let t = table(g);
-    // (`dealKits?.t !== t` was by identity: the cache is a pure function of the table, so the table's contents stand for it)
-    let fresh = match &g.m.kit.deal_kits { Some(d) => format!("{:?}", d.t) != format!("{:?}", t), None => true };
-    if fresh {
-        let issued = issued();
-        let mut kits = alloc::vec![issued.clone()];
-        for l in t.loadouts.iter() {
-            kits.push(issued.iter().enumerate().map(|(i, m)| {
-                let mut o = m.clone();
-                for k in DEALT { *dealt_mut(&mut o, k) = l.counts[i].get(String::from(k)).copied().unwrap_or(0.0); }
-                o
-            }).collect());
-        }
-        let mut words = JsSet::new();
-        for c in kits.iter() { words.add(deal_word(c)); }
-        g.m.kit.deal_kits = Some(crate::kit::KitModDealKits { t, kits, words });
+    let issued = issued();
+    let mut kits = alloc::vec![issued.clone()];
+    for l in t.loadouts.iter() {
+        kits.push(issued.iter().enumerate().map(|(i, m)| {
+            let mut o = m.clone();
+            for k in DEALT { *dealt_mut(&mut o, k) = l.counts[i].get(String::from(k)).copied().unwrap_or(0.0); }
+            o
+        }).collect());
     }
-    let d = g.m.kit.deal_kits.as_ref().unwrap();
-    crate::kit::DealTable { kits: d.kits.clone(), words: d.words.clone() }
+    let mut words = JsSet::new();
+    for c in kits.iter() { words.add(deal_word(c)); }
+    crate::kit::DealTable { kits, words }
 }
 
 /// (kit.ts dealNamed)

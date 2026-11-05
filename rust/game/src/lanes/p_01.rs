@@ -828,13 +828,9 @@ pub fn lanes_tick(g: &mut crate::game::Game, dt: f64) {
         remask(g);
     }
     if !st!(g).peek.is_empty() {
-        let list: Vec<(GuardId, Peek)> = st!(g).peek.iter().map(|(gd, p)| (gd, *p)).collect();
-        for (gd, mut p) in list {
-            peek_step(g, gd, &mut p);
-            // (`p` is his row, lent: what the step wrote goes back, unless the step ended the errand)
-            if let Some(row) = st!(g).peek.get_mut(gd) {
-                *row = p;
-            }
+        // (a step only ever ends its own man's row, so each key still has its row when it is reached)
+        for gd in st!(g).peek.keys() {
+            peek_step(g, gd);
         }
     }
     // a magazine change this rule started behind his corner: the guard code counts a reload down only for a man with somebody to shoot, so it is counted here.

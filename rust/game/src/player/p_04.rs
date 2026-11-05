@@ -38,8 +38,6 @@ fn owed_with(owed: Option<f64>, clicked: f64) -> f64 {
 // ---- what the skeleton still lacks: each body stays whole and only this step waits (notes.md, ## Skeleton)
 /// `g.audio.play(name, at, gain, { rate })` (player.ts:1372, 1518): `game_audio_like_play`'s opts hold `crate::Opaque`, which cannot carry a rate.
 fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
-/// `gd.flashlight.enabled` (player.ts:1587): a LightId has no table and RtLight no accessors.
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled of a LightId (no entry in the index)") }
 
 /// `pl.rifle.attachment` (weapons.ts:533): the stub `rifle_attachment()` takes no id, so the getter is read off the gun's own row here.
 fn rifle_attachment_of(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> {
@@ -54,15 +52,6 @@ fn lose_path(g: &mut Game, gd: GuardId) {
     m_.path_serial = m_.path_serial.wrapping_add(1);
     m_.path_goal = None;
     m_.path_goal_orbit = false;
-}
-
-/// Esc with the launcher's button down: the gesture is let go of, nothing sent.   (player.ts launchCancel)
-pub fn launch_cancel(g: &mut crate::game::Game) -> bool {
-    let p = g.player;
-    if g.pl[p].launch_held.is_none() { return false; }
-    g.pl[p].launch_held = None;
-    g.pl[p].throw_preview = None;
-    true
 }
 
 /// Stacked: is the first WALLSNAP.bore of the rifle's line in a wall?   (player.ts stackInWay)
@@ -187,7 +176,7 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
 }
 
 /// Stacked at an open end: does he step out round it? The signed metres along the wall to stand past his station. `w` is `pl.wall`, read and written there.   (player.ts stackLean)
-pub fn stack_lean(g: &mut crate::game::Game, dt: f64, pl: PlayerId, dir: f64) -> f64 {
+pub fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, dir: f64) -> f64 {
     let p = pl;
     let w0 = g.pl[p].wall.unwrap();
     if w0.lean.is_none() { return 0.0; }
@@ -211,7 +200,7 @@ pub fn stack_lean(g: &mut crate::game::Game, dt: f64, pl: PlayerId, dir: f64) ->
         let mut ap = g.aim_point;
         let u_end = if edge > 0.0 { w0.hi } else { w0.lo };
         if ws.lean_over && ap[1] > ws.lean_over_y && g.aim_guard.is_none() {
-            let cam_pos = g.tab.cmd_seat[g.seat].cam.pos;
+            let cam_pos = g.tab.camera[cam].pos;
             let dy = ap[1] - cam_pos[1];
             if dy < -0.5 {
                 let k = (LEAN_CHEST - ap[1]) / dy;
@@ -324,21 +313,21 @@ pub fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) {
 }
 
 /// The camera on the wall: the look-at eased into the room and toward the side he looks; through a stack's step-out it holds still. `w` is `pl.wall`, read and written there.   (player.ts wallSnapCam)
-pub fn wall_snap_cam(g: &mut crate::game::Game, pl: PlayerId) {
+pub fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) {
     let p = pl;
     let w0 = g.pl[p].wall.unwrap();
     if w0.take_t.is_none() || w0.settle < 1.0 { return; }
     let ws = g.k.wallsnap;
     let (n, t) = (w0.n, w0.along);
-    let po = g.tab.cmd_seat[g.seat].cam.peek_offset.unwrap_or([0.0, 0.0, 0.0]);
+    let po = g.tab.camera[cam].peek_offset.unwrap_or([0.0, 0.0, 0.0]);
     let out = truthy_opt(w0.lean) || yes(w0.lean_want) || truthy_opt(w0.lean_off);
     if !out || w0.cam_along.is_none() {
         w!(g, p).cam_along = Some(w0.side * ws.cam_side * (1.0 - w0.peek));
     }
     let cam_along = un(g.pl[p].wall.unwrap().cam_along);
-    let along = cam_along - (if out { w0.lean_off.unwrap_or(0.0) * (1.0 - g.tab.cmd_seat[g.seat].cam.aim_lead) } else { 0.0 });
+    let along = cam_along - (if out { w0.lean_off.unwrap_or(0.0) * (1.0 - g.tab.camera[cam].aim_lead) } else { 0.0 });
     let room = ws.cam_room * (if w0.kind == Some(WallHoldKind::Stack) { 0.5 } else { 1.0 });
-    g.tab.cmd_seat[g.seat].cam.peek_offset = Some([po[0] + n[0] * room + t[0] * along, 0.0, po[2] + n[2] * room + t[2] * along]);
+    g.tab.camera[cam].peek_offset = Some([po[0] + n[0] * room + t[0] * along, 0.0, po[2] + n[2] * room + t[2] * along]);
     w!(g, p).cam = true;
 }
 
@@ -383,7 +372,7 @@ fn wall_ease(s: f64, take_t: Option<f64>, ease_pow: f64) -> f64 {
 }
 
 /// One frame on the wall, in place of free movement; false = he has just come off it and the caller moves him as a free man this same frame.   (player.ts moveOnWall)
-pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, mx: f64, mz: f64, ml: f64) -> bool {
+pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, mz: f64, ml: f64) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
     let ws = g.k.wallsnap;
@@ -519,7 +508,7 @@ pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, mx: f64, mz: f64, ml: f6
     let u_was = g.pl[p].wall.unwrap().u;
     w!(g, p).u = u;
     // onto the plane at that station, then his own collision and the guards have their say
-    let lo = if ws.on { stack_lean(g, dt, p, dir) } else { 0.0 };
+    let lo = if ws.on { stack_lean(g, dt, cam, p, dir) } else { 0.0 };
     let tx = t[0] * (u + lo) + n[0] * stand;
     let tz = t[2] * (u + lo) + n[2] * stand;
     if e_prev < 1.0 {
@@ -570,9 +559,9 @@ pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, mx: f64, mz: f64, ml: f6
     } else {
         None
     };
-    g.tab.cmd_seat[g.seat].cam.peek_offset = offset;
+    g.tab.camera[cam].peek_offset = offset;
     g.ch[c].anim.look_yaw_extra = -peek_dir * WALL_PEEK_LOOK * e;
-    if ws.on { wall_snap_cam(g, p); }
+    if ws.on { wall_snap_cam(g, cam, p); }
     true
 }
 
@@ -833,7 +822,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     g.ch[gc].vel = [0.0, 0.0, 0.0];
     g.ch[gc].anim.look_yaw_extra = 0.0;
     let flash = g.gd[gd].flashlight;
-    g.gd[gd].light_lit_at_loss = seam_light_enabled(g, flash);
+    g.gd[gd].light_lit_at_loss = g.tab.light[flash].enabled;
     if crate::guards::in_hand(g, gd) == Some(crate::guards::InHand::Torch) {
         let beam = g.gd[gd].beam_dir;
         let item = crate::combat::drop_from_hand(g, gc, crate::combat::DropFromHandKind::Torch, beam, [0.0, 0.0, 0.0], Some(false), Some(true), None);

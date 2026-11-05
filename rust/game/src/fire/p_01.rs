@@ -64,6 +64,7 @@ pub fn fire_shown(g: &mut crate::game::Game) -> Option<crate::fire::FireShown2> 
         gases: f.gases,
         soot_mix: f.soot_mix.clone(),
         kept: f.kept,
+        serial: f.serial,
     })
 }
 
@@ -171,7 +172,7 @@ pub fn mouth_of(g: &mut crate::game::Game, t: FixtureId) -> crate::fire::MouthOf
     };
     let mouth = g.k.fire.mouth;
     if let Some(b) = b {
-        let (c, h) = (seam_box_c(g, b), seam_box_h(g, b));
+        let (c, h) = (g.col.boxes[b].c, g.col.boxes[b].h);
         return crate::fire::MouthOf { pos: [c[0], c[1] + h[1], c[2]], r: m::min(h[0], h[2]) * mouth, lid: m::min(h[0], h[2]) };
     }
     let p = g.tab.sim_lightshome_fixture[t].pos;
@@ -189,7 +190,7 @@ pub fn burns(g: &mut crate::game::Game, t: FixtureId) -> bool {
         return false;
     }
     let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
-    seam_light_enabled(g, l)
+    g.tab.light[l].enabled
 }
 
 /// The wind at a fire's flame: as it blows, how hard, and what leans the flame (capped).   (fire.ts windAt)
@@ -222,7 +223,7 @@ pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> b
     let b = static_at(g, ix);
     let r = m::max(mouth.lid * 1.7, 0.3);
     let Some(b) = b else { return false };
-    let c = seam_box_c(g, b);
+    let c = g.col.boxes[b].c;
     if m::hyp2(c[0] - mouth.pos[0], c[2] - mouth.pos[2]) > 0.05 || c[1] > mouth.pos[1] {
         return false;
     }
@@ -266,86 +267,53 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
 pub fn held(g: &mut crate::game::Game, t: FixtureId) {
     let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
     let tp = g.tab.sim_lightshome_fixture[t].pos;
-    if !seam_steady_is_some(g, l) {
-        let (radius, color, range) = (seam_light_radius(g, l), seam_light_color(g, l), seam_light_range(g, l));
-        seam_steady_make(g, l, 0.0, [tp[0], tp[1], tp[2]], radius, color, range);
+    if g.tab.light[l].steady.is_none() {
+        let lt = &mut g.tab.light[l];
+        lt.steady = Some(crate::render_lights::RtLightSteady { intensity: 0.0, pos: [tp[0], tp[1], tp[2]], radius: lt.radius, color: Some(lt.color), range: Some(lt.range), out: None });
     }
-    let c0 = match seam_steady_color(g, l) {
+    let (s_radius, s_color, s_range) = {
+        let s = g.tab.light[l].steady.as_ref().unwrap();
+        (s.radius, s.color, s.range)
+    };
+    let c0 = match s_color {
         Some(c) => c,
-        None => seam_light_color(g, l),
+        None => g.tab.light[l].color,
     };
     let warm = |i: usize, g: &Game| g.k.fire.warm.get(i).copied().unwrap_or(1.0);
     let w = [warm(0, g), warm(1, g), warm(2, g)];
     let intensity = m::max(1e-4, crate::sim_lightshome::fixture_base_intensity(g, t) * g.k.fire.bright);
-    seam_steady_set_intensity(g, l, intensity);
-    let radius = m::max(seam_steady_radius(g, l), g.k.fire.size * mouth_of(g, t).r);
-    seam_light_set_radius(g, l, radius);
-    let lift = g.k.fire.lift;
-    seam_light_set_pos(g, l, [tp[0], tp[1] + lift, tp[2]]);
-    seam_light_set_color(g, l, [c0[0] * w[0], c0[1] * w[1], c0[2] * w[2]]);
-    let range = match seam_steady_range(g, l) {
+    g.tab.light[l].steady.as_mut().unwrap().intensity = intensity;
+    let radius = m::max(s_radius, g.k.fire.size * mouth_of(g, t).r);
+    let (lift, reach) = (g.k.fire.lift, g.k.fire.reach);
+    let lt = &mut g.tab.light[l];
+    lt.radius = radius;
+    lt.pos = [tp[0], tp[1] + lift, tp[2]];
+    lt.color = [c0[0] * w[0], c0[1] * w[1], c0[2] * w[2]];
+    let range = match s_range {
         Some(r) => r,
-        None => seam_light_range(g, l),
+        None => lt.range,
     };
-    let reach = g.k.fire.reach;
-    seam_light_set_range(g, l, range * reach);
+    lt.range = range * reach;
 }
 
 /// The lamp back as the level hung it, and nothing said to the steady readers.   (fire.ts plain)
 pub fn plain(g: &mut crate::game::Game, t: FixtureId) {
     let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
     let tp = g.tab.sim_lightshome_fixture[t].pos;
-    seam_light_set_pos(g, l, [tp[0], tp[1], tp[2]]);
-    if !seam_steady_is_some(g, l) {
-        return;
+    let lt = &mut g.tab.light[l];
+    lt.pos = [tp[0], tp[1], tp[2]];
+    let Some(s) = lt.steady.take() else { return };
+    lt.radius = s.radius;
+    if let Some(range) = s.range {
+        lt.range = range;
     }
-    let radius = seam_steady_radius(g, l);
-    seam_light_set_radius(g, l, radius);
-    if let Some(range) = seam_steady_range(g, l) {
-        seam_light_set_range(g, l, range);
+    if let Some(c0) = s.color {
+        lt.color = c0;
     }
-    if let Some(c0) = seam_steady_color(g, l) {
-        seam_light_set_color(g, l, [c0[0], c0[1], c0[2]]);
-    }
-    seam_steady_clear(g, l);
 }
 
-// ---- seams: what skeleton 3 still cannot reach (notes.md, ## Skeleton) ----
+// ---- the one seam: what skeleton 4 still cannot reach (notes.md, ## Skeleton) ----
 
-/// `b.c` of a box of the world (fire.ts:271, 295)
-fn seam_box_c(g: &mut Game, b: BoxId) -> V3 { todo!("needs: Box.c of a BoxId") }
-/// `b.h` of a box of the world (fire.ts:271)
-fn seam_box_h(g: &mut Game, b: BoxId) -> V3 { todo!("needs: Box.h of a BoxId") }
-/// `l.enabled` (fire.ts:277)
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled of a LightId") }
-/// `l.radius` (fire.ts:310)
-fn seam_light_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.radius of a LightId") }
-/// `l.radius = x` (fire.ts:312, 316)
-fn seam_light_set_radius(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.radius of a LightId") }
-/// `l.color` (fire.ts:310, 311)
-fn seam_light_color(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.color of a LightId") }
-/// `l.color[0..3] = x` (fire.ts:313, 316)
-fn seam_light_set_color(g: &mut Game, l: LightId, x: V3) { todo!("needs: RtLight.color of a LightId") }
-/// `l.range` (fire.ts:310, 313)
-fn seam_light_range(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.range of a LightId") }
-/// `l.range = x` (fire.ts:313, 316)
-fn seam_light_set_range(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.range of a LightId") }
-/// `l.pos[0..3] = x` (fire.ts:312, 316)
-fn seam_light_set_pos(g: &mut Game, l: LightId, x: V3) { todo!("needs: RtLight.pos of a LightId") }
-/// `l.steady` is there (fire.ts:310, 316)
-fn seam_steady_is_some(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.steady of a LightId") }
-/// `l.steady = { intensity, pos, radius, color, range }` (fire.ts:310)
-fn seam_steady_make(g: &mut Game, l: LightId, intensity: f64, pos: V3, radius: f64, color: V3, range: f64) { todo!("needs: RtLight.steady of a LightId") }
-/// `l.steady.intensity = x` (fire.ts:312)
-fn seam_steady_set_intensity(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.steady of a LightId") }
-/// `l.steady.radius` (fire.ts:312, 316)
-fn seam_steady_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.steady of a LightId") }
-/// `l.steady.color` (fire.ts:311, 316)
-fn seam_steady_color(g: &mut Game, l: LightId) -> Option<V3> { todo!("needs: RtLight.steady of a LightId") }
-/// `l.steady.range` (fire.ts:313, 316)
-fn seam_steady_range(g: &mut Game, l: LightId) -> Option<f64> { todo!("needs: RtLight.steady of a LightId") }
-/// `l.steady = undefined` (fire.ts:316)
-fn seam_steady_clear(g: &mut Game, l: LightId) { todo!("needs: RtLight.steady of a LightId") }
 /// `g.audio.play(name, pos, volume, { rate })` (fire.ts:303): the skeleton's `opts` are `JsMap<String, Opaque>`, which cannot hold the rate
 fn seam_audio_play(g: &mut Game, name: &str, pos: V3, volume: f64, rate: f64) { todo!("needs: GameAudioLike.play's opts to carry a number") }
 
@@ -428,5 +396,76 @@ mod tests {
         state_of(&mut g).cracks += 1.0;
         let s = fire_stats(&mut g);
         assert_eq!((s.frames, s.cracks, s.lo), (3.0, 1.0, m::INF));
+    }
+
+    /// a lamp on a fixture: its box, when it has one, the world's first static
+    fn stand(boxed: bool) -> (crate::game::Game, FixtureId, LightId) {
+        let mut g = crate::game::Game::blank();
+        let l = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        let mut f = crate::sim_lightshome::Fixture::blank();
+        f.pos = [1.0, 2.0, 3.0];
+        f.light = Some(l);
+        if boxed {
+            let mut b = crate::scene_boxes::Box::zeroed();
+            b.c = [1.0, 2.0, 3.0];
+            b.h = [0.5, 0.1, 0.25];
+            let id = g.col.boxes.push(b);
+            g.engine.world.statics.push(id);
+            f.boxes.push(0.0);
+        }
+        let t = g.tab.sim_lightshome_fixture.push(f);
+        (g, t, l)
+    }
+
+    #[test]
+    fn the_mouth_is_the_lid_of_its_box_or_a_hand_under_the_lamp() {
+        let (mut g, t, _) = stand(true);
+        let mouth = g.k.fire.mouth;
+        let a = mouth_of(&mut g, t);
+        assert_eq!((a.pos, a.r, a.lid), ([1.0, 2.0 + 0.1, 3.0], 0.25 * mouth, 0.25));
+        let (mut g, t, _) = stand(false);
+        let a = mouth_of(&mut g, t);
+        assert_eq!((a.pos, a.r, a.lid), ([1.0, 2.0 - 0.16, 3.0], 0.19 * mouth, 0.0));
+    }
+
+    #[test]
+    fn a_round_strikes_the_fire_in_its_own_box_or_the_drum_under_its_mouth() {
+        let (mut g, t, _) = stand(true);
+        // its own box, wherever the round stopped
+        assert!(fire_struck(&mut g, t, [50.0, 50.0, 50.0], 0.0));
+        // past the list's end, a fractional index
+        assert!(!fire_struck(&mut g, t, [1.0, 2.0, 3.0], 9.0));
+        assert!(!fire_struck(&mut g, t, [1.0, 2.0, 3.0], 0.5));
+        let mut drum = crate::scene_boxes::Box::zeroed();
+        drum.c = [1.0, 1.0, 3.0];
+        let id = g.col.boxes.push(drum);
+        g.engine.world.statics.push(id);
+        assert!(fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0));
+        assert!(!fire_struck(&mut g, t, [1.0, 2.2, 3.0], 1.0)); // above the mouth
+        assert!(!fire_struck(&mut g, t, [1.5, 1.5, 3.0], 1.0)); // outside the wall
+        g.col.boxes[id].c = [2.0, 1.0, 3.0];
+        assert!(!fire_struck(&mut g, t, [1.2, 1.5, 3.0], 1.0)); // off the axis
+    }
+
+    #[test]
+    fn plain_puts_the_lamp_back_and_ends_the_steady_row() {
+        let (mut g, t, l) = stand(false);
+        let lt = &mut g.tab.light[l];
+        (lt.pos, lt.radius, lt.range, lt.color) = ([9.0; 3], 9.0, 9.0, [9.0; 3]);
+        // no steady row: only the place moves
+        plain(&mut g, t);
+        let lt = &mut g.tab.light[l];
+        assert_eq!((lt.pos, lt.radius, lt.range, lt.color), ([1.0, 2.0, 3.0], 9.0, 9.0, [9.0; 3]));
+        lt.steady = Some(crate::render_lights::RtLightSteady { intensity: 0.5, pos: [0.0; 3], radius: 1.5, color: Some([0.1, 0.2, 0.3]), range: Some(7.0), out: None });
+        plain(&mut g, t);
+        let lt = &g.tab.light[l];
+        assert_eq!((lt.radius, lt.range, lt.color), (1.5, 7.0, [0.1, 0.2, 0.3]));
+        assert!(lt.steady.is_none());
+        // a row that names no range and no colour leaves the lamp's own
+        let lt = &mut g.tab.light[l];
+        lt.steady = Some(crate::render_lights::RtLightSteady { intensity: 0.5, pos: [0.0; 3], radius: 2.5, color: None, range: None, out: None });
+        plain(&mut g, t);
+        let lt = &g.tab.light[l];
+        assert_eq!((lt.radius, lt.range, lt.color), (2.5, 7.0, [0.1, 0.2, 0.3]));
     }
 }

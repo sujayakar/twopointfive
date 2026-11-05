@@ -199,8 +199,8 @@ pub fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool {
     !(ph > duty)
 }
 
-/// What went to the particles this frame; a copy, the one reader (the panel's view) only reads it. (wind.ts Wind.forParticles)
-pub fn wind_for_particles(g: &mut crate::game::Game) -> Vec<crate::wind::WindSource> {
+/// What went to the particles this frame; a copy of the list of IDs, the one reader (the panel's view) only reads it. (wind.ts Wind.forParticles)
+pub fn wind_for_particles(g: &mut crate::game::Game) -> Vec<WindWindSourceId> {
     g.wind.to_pool.list.clone()
 }
 
@@ -221,7 +221,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         let bc = v3::mad(v.pos, dir, d_max / 2.0);
         let br = m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) * 1.05 + 0.3;
         let seed = crate::math_dice::hash_str(&v.name);
-        w.all.push(WindSource {
+        let id = g.tab.wind_wind_source.push(WindSource {
             why: WindWhy::Vent,
             base: v.speed,
             on: 1.0,
@@ -245,12 +245,13 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
             bound: crate::smoke_types::WindGpuSourceBound { c: bc, r: br },
             vent: Some(v),
         });
+        w.all.push(id);
     }
     let interior = crate::weather::interior();
     let annex = crate::weather::annex();
     let cx = (interior[0] + interior[2]) / 2.0;
     let cz = (interior[1] + interior[3]) / 2.0;
-    w.storm = WindSource {
+    w.storm = g.tab.wind_wind_source.push(WindSource {
         why: WindWhy::Storm,
         base: 0.0,
         on: 1.0,
@@ -273,8 +274,8 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
         roofs: None,
         field: None,
         bound: crate::smoke_types::WindGpuSourceBound { c: [cx, 1.0, cz], r: 1e6 },
-    };
-    w.all.push(w.storm.clone());
+    });
+    w.all.push(w.storm);
     let doors = g.doors.list.clone();
     for d in doors {
         if !g.dr[d].def.exterior.unwrap_or(false) {
@@ -302,7 +303,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
 }
 
 /// The gust through an exterior door: a jet from just outside the frame, chest height, along `inward`. (wind.ts Wind.doorSource)
-pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> crate::wind::WindSource {
+pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId {
     let fc = g.dr[d].frame_centre;
     let reach = g.k.wind.door_reach;
     let d_max = wind_field().cut_k * reach;
@@ -311,7 +312,7 @@ pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> cra
     let pos: V3 = [fc[0] - inward[0] * 0.15, 1.05, fc[2] - inward[2] * 0.15];
     let name = alloc::format!("door:{}", g.dr[d].def.name);
     let seed = crate::math_dice::hash_str(&name);
-    WindSource {
+    g.tab.wind_wind_source.push(WindSource {
         why: WindWhy::Door,
         base: 0.0,
         on: 1.0,
@@ -337,45 +338,7 @@ pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> cra
             c: v3::mad(pos, inward, d_max / 2.0),
             r: m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) + 0.3,
         },
-    }
-}
-
-/// Copy the four fields `reroof` and `syncField` write from `g.wind.storm` to its row in `g.wind.all`: one object in the TypeScript (wind.ts:161).
-fn storm_to_row(g: &mut Game) {
-    let (interior, annex, roofs, field) = (g.wind.storm.interior, g.wind.storm.annex, g.wind.storm.roofs.clone(), g.wind.storm.field);
-    for s in g.wind.all.iter_mut() {
-        if s.why == WindWhy::Storm {
-            s.interior = interior;
-            s.annex = annex;
-            s.roofs = roofs;
-            s.field = field;
-            return;
-        }
-    }
-}
-
-/// The row wrote what the storm record holds: the row and the record are one object in the TypeScript (wind.ts:161).
-fn row_to_storm(g: &mut Game, k: usize) {
-    let (dir, speed, base, on, gust) = {
-        let s = &g.wind.all[k];
-        (s.dir, s.speed, s.base, s.on, s.gust)
-    };
-    let st = &mut g.wind.storm;
-    st.dir = dir;
-    st.speed = speed;
-    st.base = base;
-    st.on = on;
-    st.gust = gust;
-}
-
-/// `active` shares its rows with `all` in the TypeScript (wind.ts:144): a row a reroof just rewrote is read again, by its name.
-fn active_from_all(g: &mut Game) {
-    let w = &mut g.wind;
-    for a in w.active.iter_mut() {
-        if let Some(s) = w.all.iter().find(|s| s.name == a.name) {
-            *a = s.clone();
-        }
-    }
+    })
 }
 
 /// The record a source goes to both consumers as. (WindSource extends WindGpuSource in the TypeScript)
@@ -409,13 +372,16 @@ fn under_any(roofs: &[Vec<f64>], x: f64, z: f64) -> bool {
 
 /// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two. (wind.ts Wind.reroof)
 pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: Option<bool>) {
+    // weather.ts:229 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
+    if g.wind.all.is_empty() {
+        return;
+    }
     let own = own.unwrap_or(false);
     let none: [f64; 4] = [1e6, 1e6, -1e6, -1e6];
     if !g.wind.extra.is_empty() {
-        // wind.ts:187: a row of `extra` is found in `all` by its door, the identity the TypeScript's indexOf has
         let extra = core::mem::take(&mut g.wind.extra);
-        for s in extra.iter() {
-            if let Some(i) = g.wind.all.iter().position(|a| a.why == WindWhy::Door && a.door == s.door) {
+        for s in extra {
+            if let Some(i) = g.wind.all.iter().position(|a| *a == s) {
                 g.wind.all.remove(i);
             }
         }
@@ -431,7 +397,7 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: O
                 continue;
             }
             let s = wind_door_source(g, d, [nx, 0.0, nz]);
-            g.wind.extra.push(s.clone());
+            g.wind.extra.push(s);
             g.wind.all.push(s);
         }
     }
@@ -449,12 +415,14 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: O
         Some(rs) if rs.len() == 2 => [rs[1][0], rs[1][1], rs[1][2], rs[1][3]],
         Some(_) => none,
     };
-    g.wind.storm.interior = Some(i);
-    g.wind.storm.annex = Some(a);
+    let st = g.wind.storm;
+    g.tab.wind_wind_source[st].interior = Some(i);
+    g.tab.wind_wind_source[st].annex = Some(a);
     g.wind.lv_roofs = roofs.map(|rs| rs.iter().map(|r| vec![r[0], r[1], r[2], r[3]]).collect());
     wind_sync_field(g);
     for k in 0..g.wind.all.len() {
-        let d = match (g.wind.all[k].why, g.wind.all[k].door) {
+        let id = g.wind.all[k];
+        let d = match (g.tab.wind_wind_source[id].why, g.tab.wind_wind_source[id].door) {
             (WindWhy::Door, Some(d)) => d,
             _ => continue,
         };
@@ -469,7 +437,7 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: O
                 inward = if a { n1 } else { [-n1[0], 0.0, -n1[2]] };
             }
         }
-        let s = &mut g.wind.all[k];
+        let s = &mut g.tab.wind_wind_source[id];
         s.dir = inward;
         s.pos = [fc[0] - inward[0] * 0.15, 1.05, fc[2] - inward[2] * 0.15];
         s.bound = crate::smoke_types::WindGpuSourceBound {
@@ -477,14 +445,13 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: O
             r: m::hyp2(s.d_max / 2.0, s.r0 + s.d_max * s.tan_spread) + 0.3,
         };
     }
-    active_from_all(g);
 }
 
 /// The storm record says whether the one field outdoors is on, and carries the roofs it blows between. (wind.ts Wind.syncField)
 pub fn wind_sync_field(g: &mut crate::game::Game) {
-    g.wind.storm.field = if g.k.wx_own.wind { Some(true) } else { None };
-    g.wind.storm.roofs = wind_field_roofs(g);
-    storm_to_row(g);
+    let st = g.wind.storm;
+    g.tab.wind_wind_source[st].field = if g.k.wx_own.wind { Some(true) } else { None };
+    g.tab.wind_wind_source[st].roofs = wind_field_roofs(g);
 }
 
 /// The roofs the storm blows between one by one, where the switch is up and the level has three or four of its own. (wind.ts Wind.fieldRoofs)
@@ -500,7 +467,7 @@ pub fn wind_field_roofs(g: &mut crate::game::Game) -> Option<Vec<Vec<f64>>> {
 
 /// The share 0‥1 of its own vector the storm's field has at ground point (x, z) under the roofs in force. (wind.ts Wind.stormShare)
 pub fn wind_storm_share(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
-    let roofs = g.wind.storm.roofs.clone();
+    let roofs = g.tab.wind_wind_source[g.wind.storm].roofs.clone();
     wind_share_under(g, x, z, roofs.as_deref())
 }
 
@@ -509,7 +476,10 @@ pub fn wind_share_under(g: &mut crate::game::Game, x: f64, z: f64, roofs: Option
     let p: V3 = [x, 0.0, z];
     let q = match roofs {
         Some(rs) => storm_vel_roofs(unit_x(), rs, p, None),
-        None => storm_vel(unit_x(), &g.wind.storm.interior.unwrap(), &g.wind.storm.annex.unwrap(), p, None),
+        None => {
+            let s = &g.tab.wind_wind_source[g.wind.storm];
+            storm_vel(unit_x(), &s.interior.unwrap(), &s.annex.unwrap(), p, None)
+        }
     };
     m::max(0.0, m::min(1.0, q[0] / wind_field().storm_low))
 }
@@ -587,12 +557,13 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
     let storm_gust_amp = g.k.wind.storm_gust_amp;
     let storm_gust_period = g.k.wind.storm_gust_period;
     for k in 0..g.wind.all.len() {
+        let id = g.wind.all[k];
         let base;
-        let seed = g.wind.all[k].seed;
-        match g.wind.all[k].why {
+        let seed = g.tab.wind_wind_source[id].seed;
+        match g.tab.wind_wind_source[id].why {
             WindWhy::Vent => {
                 let (speed, due, mains) = {
-                    let v = g.wind.all[k].vent.as_ref().unwrap();
+                    let v = g.tab.wind_wind_source[id].vent.as_ref().unwrap();
                     (v.speed, vent_due(v, t), v.mains.unwrap_or(crate::scene_level_data::vent_defaults().mains))
                 };
                 base = speed * vent_k;
@@ -603,40 +574,38 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                 if mains && crate::sim_lightshome::mains_active(g) {
                     target = 0.0;
                 }
-                let s = &mut g.wind.all[k];
+                let s = &mut g.tab.wind_wind_source[id];
                 let rate = if target > s.on { 1.0 / m::max(0.1, ramp_up) } else { 1.0 / m::max(0.1, ramp_down) };
                 s.on += m::max(-rate * dt, m::min(rate * dt, target - s.on));
                 s.gust = 1.0 + gust_amp * vnoise(seed, t / gust_period);
             }
             WindWhy::Storm => {
+                let s = &mut g.tab.wind_wind_source[id];
                 let w = match sw {
                     Some(w) => w,
                     None => {
-                        let s = &mut g.wind.all[k];
                         s.speed = 0.0;
                         s.base = 0.0;
-                        row_to_storm(g, k);
                         continue;
                     }
                 };
                 base = storm_speed;
-                let s = &mut g.wind.all[k];
                 s.dir = [w[0] / storm_speed, 0.0, w[2] / storm_speed];
                 s.on = 1.0;
                 s.gust = 1.0 + storm_gust_amp * vnoise(seed, t / storm_gust_period);
             }
             WindWhy::Glass => {
-                let s = &mut g.wind.all[k];
+                let s = &mut g.tab.wind_wind_source[id];
                 base = s.base;
                 s.on = 1.0;
                 s.gust = 1.0 + gust_amp * vnoise(seed, t / (0.6 * gust_period));
             }
             WindWhy::Door => {
-                let d = g.wind.all[k].door.unwrap();
+                let d = g.tab.wind_wind_source[id].door.unwrap();
                 let w = match sw {
                     Some(w) => w,
                     None => {
-                        let s = &mut g.wind.all[k];
+                        let s = &mut g.tab.wind_wind_source[id];
                         s.speed = 0.0;
                         s.base = 0.0;
                         continue;
@@ -644,13 +613,13 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                 };
                 let open = m::min(1.0, m::abs(crate::doors::door_angle(g, d)) / g.k.wind.door_open_rad);
                 if open < 0.04 {
-                    let s = &mut g.wind.all[k];
+                    let s = &mut g.tab.wind_wind_source[id];
                     s.speed = 0.0;
                     s.base = 0.0;
                     continue;
                 }
                 let door_k = g.k.wind.door_k;
-                let s = &mut g.wind.all[k];
+                let s = &mut g.tab.wind_wind_source[id];
                 let facing = m::max(0.0, (w[0] * s.dir[0] + w[2] * s.dir[2]) / storm_speed);
                 base = storm_speed * door_k * open * (0.35 + 0.65 * facing);
                 s.on = 1.0;
@@ -658,17 +627,13 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                 g.stats.wind.door_gusts += 1;
             }
         }
-        let s = &mut g.wind.all[k];
+        let s = &mut g.tab.wind_wind_source[id];
         s.base = base;
         s.speed = base * s.on * s.gust * master;
         if s.speed > 0.005 {
-            let row = s.clone();
-            g.wind.active.push(row);
+            g.wind.active.push(id);
         } else {
             s.speed = 0.0;
-        }
-        if g.wind.all[k].why == WindWhy::Storm {
-            row_to_storm(g, k);
         }
     }
     g.stats.wind.active += g.wind.active.len() as i32;
@@ -681,22 +646,23 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
             }
         };
         let near_m = g.k.wind.near_m;
-        let mut pool: Vec<WindSource> = g.wind.active.iter().filter(|s| s.kind == WindSourceKind::Jet && v3::dist(s.bound.c, f) < near_m + s.bound.r).cloned().collect();
+        let tab = &g.tab.wind_wind_source;
+        let mut pool: Vec<WindWindSourceId> = g.wind.active.iter().copied().filter(|&s| tab[s].kind == WindSourceKind::Jet && v3::dist(tab[s].bound.c, f) < near_m + tab[s].bound.r).collect();
         let most = (crate::smoke_types::WIND_GPU_MAX - if sw.is_some() { 1.0 } else { 0.0 }) as usize;
         if pool.len() > most {
-            js::sort_by(&mut pool, |a, b| v3::dist(a.bound.c, f) - v3::dist(b.bound.c, f));
+            js::sort_by(&mut pool, |&a, &b| v3::dist(tab[a].bound.c, f) - v3::dist(tab[b].bound.c, f));
             pool.truncate(most);
         }
-        if sw.is_some() && g.wind.storm.speed > 0.0 {
-            pool.push(g.wind.storm.clone());
+        if sw.is_some() && tab[g.wind.storm].speed > 0.0 {
+            pool.push(g.wind.storm);
         }
-        let recs: Vec<crate::smoke_types::WindGpuSource> = pool.iter().map(gpu_of).collect();
+        let recs: Vec<crate::smoke_types::WindGpuSource> = pool.iter().map(|&s| gpu_of(&tab[s])).collect();
         let knobs = [g.k.wind.sheet_wake, g.k.wind.sheet_kick, g.k.wind.debris_k];
         g.wind.to_pool.list = pool;
         seam_particles_set_wind(g, &recs, knobs);
         g.stats.wind.to_particles += recs.len() as i32;
     }
-    let recs: Vec<crate::smoke_types::WindGpuSource> = g.wind.active.iter().map(gpu_of).collect();
+    let recs: Vec<crate::smoke_types::WindGpuSource> = g.wind.active.iter().map(|&s| gpu_of(&g.tab.wind_wind_source[s])).collect();
     crate::smoke_types::smoke_system_like_set_wind(g, &recs, relax);
     g.stats.wind.to_smoke += recs.len() as i32;
 }
@@ -705,7 +671,8 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
 pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
     g.stats.wind.at_calls += 1;
     let mut sum: V3 = [0.0, 0.0, 0.0];
-    for s in g.wind.active.iter() {
+    for &id in g.wind.active.iter() {
+        let s = &g.tab.wind_wind_source[id];
         let q = if s.kind == WindSourceKind::Storm {
             let w: V3 = [s.dir[0] * s.speed, 0.0, s.dir[2] * s.speed];
             match &s.roofs {
@@ -722,15 +689,17 @@ pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
     put(out, sum)
 }
 
-/// The source called `name`, as a copy: every TypeScript caller only reads it. (wind.ts Wind.byName)
-pub fn wind_by_name(g: &mut crate::game::Game, name: &str) -> Option<crate::wind::WindSource> {
-    g.wind.all.iter().find(|s| s.name == name).cloned()
+/// The source called `name`. (wind.ts Wind.byName)
+pub fn wind_by_name(g: &mut crate::game::Game, name: &str) -> Option<WindWindSourceId> {
+    g.wind.all.iter().copied().find(|&s| g.tab.wind_wind_source[s].name == name)
 }
 
 /// A restart: every vent at once where its own cycle has it, with the mains in. (wind.ts Wind.fresh)
 pub fn wind_fresh(g: &mut crate::game::Game) {
     let t = g.time;
-    for s in g.wind.all.iter_mut() {
+    for k in 0..g.wind.all.len() {
+        let id = g.wind.all[k];
+        let s = &mut g.tab.wind_wind_source[id];
         if s.why == WindWhy::Vent {
             s.on = if vent_due(s.vent.as_ref().unwrap(), t) { 1.0 } else { 0.0 };
         }
@@ -739,7 +708,14 @@ pub fn wind_fresh(g: &mut crate::game::Game) {
 
 /// One line per source for the panel. (wind.ts Wind.describe)
 pub fn wind_describe(g: &mut crate::game::Game) -> Vec<String> {
-    g.wind.all.iter().map(|s| alloc::format!("{:<18} {} speed {:.2} (base {:.2} × on {:.2} × gust {:.2})", s.name, if s.speed > 0.0 { "ON " } else { "off" }, s.speed, s.base, s.on, s.gust)).collect()
+    g.wind
+        .all
+        .iter()
+        .map(|&id| {
+            let s = &g.tab.wind_wind_source[id];
+            alloc::format!("{:<18} {} speed {} (base {} × on {} × gust {})", s.name, if s.speed > 0.0 { "ON " } else { "off" }, js::to_fixed(s.speed, 2), js::to_fixed(s.base, 2), js::to_fixed(s.on, 2), js::to_fixed(s.gust, 2))
+        })
+        .collect()
 }
 
 /// The panel's one line. (wind.ts Wind.summary)
@@ -747,11 +723,13 @@ pub fn wind_summary(g: &mut crate::game::Game) -> String {
     let master = wind_of(g);
     let p = crate::particle_fx::gpu_fx(g);
     let ss = seam_smoke_wind_srcs(g);
+    let tab = &g.tab.wind_wind_source;
     let w = &g.wind;
-    let vents = w.active.iter().filter(|s| s.why == WindWhy::Vent).count();
-    let doors = w.active.iter().filter(|s| s.why == WindWhy::Door).count();
+    let vents = w.active.iter().filter(|&&s| tab[s].why == WindWhy::Vent).count();
+    let doors = w.active.iter().filter(|&&s| tab[s].why == WindWhy::Door).count();
     let still = if master <= 0.0 { " (still air)" } else { "" };
-    let storm = if w.storm.speed > 0.0 { alloc::format!(", storm {:.1} m/s", w.storm.speed) } else { String::new() };
+    let storm_speed = tab[w.storm].speed;
+    let storm = if storm_speed > 0.0 { alloc::format!(", storm {} m/s", js::to_fixed(storm_speed, 1)) } else { String::new() };
     let gusts = if doors > 0 { alloc::format!(", {} door gust(s)", doors) } else { String::new() };
     let parts = match &p {
         Some(p) => alloc::format!("{} records, {} leaves picked up", p.stats.winds, p.stats.wind_woken),
@@ -761,7 +739,7 @@ pub fn wind_summary(g: &mut crate::game::Game) -> String {
         Some(n) => alloc::format!("{} sources", n.unwrap_or(0.0)),
         None => String::from("off"),
     };
-    alloc::format!("wind {:.2}{} · {}/{} sources blowing ({} vents{}{}) · particles {} · solver {}", master, still, w.active.len(), w.all.len(), vents, storm, gusts, parts, solver)
+    alloc::format!("wind {}{} · {}/{} sources blowing ({} vents{}{}) · particles {} · solver {}", js::to_fixed(master, 2), still, w.active.len(), w.all.len(), vents, storm, gusts, parts, solver)
 }
 
 #[cfg(test)]
@@ -853,5 +831,79 @@ mod tests {
         assert!(vent_due(&v, -7.0));
         v.phase = Some(6.0);
         assert!(vent_due(&v, 7.0));
+    }
+
+    fn with_storm() -> (Game, WindWindSourceId) {
+        let mut g = Game::blank();
+        let mut s = WindSource::zeroed();
+        s.why = WindWhy::Storm;
+        s.kind = WindSourceKind::Storm;
+        s.name = String::from("storm");
+        s.interior = Some(I);
+        s.annex = Some(A);
+        let id = g.tab.wind_wind_source.push(s);
+        g.wind.storm = id;
+        g.wind.all.push(id);
+        (g, id)
+    }
+
+    // weather.ts:229 asks before the Wind is built: a blank one has no storm row to write
+    #[test]
+    fn a_reroof_before_the_wind_exists_is_nothing() {
+        let mut g = Game::blank();
+        wind_reroof(&mut g, None, None);
+        assert!(g.wind.lv_roofs.is_none());
+    }
+
+    // wind.ts:161,187: `storm` and its row in `all` are one thing, and a row of `extra` leaves `all` by identity, however many share its name
+    #[test]
+    fn a_reroof_writes_the_one_storm_and_takes_out_only_extra() {
+        let (mut g, st) = with_storm();
+        let mut door = WindSource::zeroed();
+        door.why = WindWhy::Glass;
+        door.name = String::from("twin");
+        let keep = g.tab.wind_wind_source.push(door.clone());
+        let gone = g.tab.wind_wind_source.push(door);
+        g.wind.all.push(keep);
+        g.wind.all.push(gone);
+        g.wind.extra.push(gone);
+        let roofs: Vec<Vec<f64>> = vec![vec![1.0, 2.0, 3.0, 4.0], vec![5.0, 6.0, 7.0, 8.0]];
+        wind_reroof(&mut g, Some(&roofs), Some(false));
+        assert_eq!(g.wind.all, vec![st, keep]);
+        assert!(g.wind.extra.is_empty());
+        assert_eq!(wind_by_name(&mut g, "storm"), Some(st));
+        assert_eq!(g.tab.wind_wind_source[st].interior, Some([1.0, 2.0, 3.0, 4.0]));
+        assert_eq!(g.tab.wind_wind_source[st].annex, Some([5.0, 6.0, 7.0, 8.0]));
+        assert_eq!(g.wind.lv_roofs, Some(roofs));
+    }
+
+    // wind.ts:144: `active` names the row itself, so what a holder writes through its ID is what `at` reads
+    #[test]
+    fn at_reads_the_row_through_active() {
+        let (mut g, st) = with_storm();
+        g.wind.active.push(st);
+        g.tab.wind_wind_source[st].dir = [1.0, 0.0, 0.0];
+        g.tab.wind_wind_source[st].speed = 2.0;
+        let p: V3 = [-4.2, 1.1, 3.3];
+        let want = storm_vel([2.0, 0.0, 0.0], &I, &A, p, None);
+        let mut o: V3 = [9.0, 9.0, 9.0];
+        assert_eq!(bits(wind_at(&mut g, p, Some(&mut o))), bits(want));
+        assert_eq!(o, want);
+        assert_eq!(g.stats.wind.at_calls, 1);
+    }
+
+    #[test]
+    fn share_under_the_storms_rectangles() {
+        let (mut g, _) = with_storm();
+        assert_eq!(wind_share_under(&mut g, 5.0, 5.0, None), 0.0);
+        assert_eq!(wind_storm_share(&mut g, 5.0, 5.0), 0.0);
+        assert_eq!(wind_share_under(&mut g, -50.0, 5.0, None), 1.0);
+    }
+
+    #[test]
+    fn describe_rounds_as_tofixed_does() {
+        let (mut g, st) = with_storm();
+        g.tab.wind_wind_source[st].base = 0.125; // an exact tie: the language gives 0.13
+        assert_eq!(wind_describe(&mut g), vec![String::from("storm              off speed 0.00 (base 0.13 × on 0.00 × gust 0.00)")]);
     }
 }

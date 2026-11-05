@@ -43,7 +43,7 @@ pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics
         let at = if g_2.phase == GatePhase::Slice && !g_2.slice_pts.is_empty() {
             g_2.slice_pts[m::min(g_2.slice_i, g_2.slice_pts.len() as f64 - 1.0) as usize]
         } else if g_2.phase == GatePhase::Open {
-            match g_2.hs { Some(h) => h.pos, None => g_2.spot }
+            match g_2.hs { Some(Some(h)) => h.pos, _ => g_2.spot }
         } else { g_2.spot };
         if !going {
             let far = door_pt(g, d, w / 2.0, 1.2, -g_2.side, None);
@@ -88,21 +88,21 @@ pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics
             true
         }
         GatePhase::Open => {   // a shut leaf: his hand on the lever, shoved into the room and the closer held off; then the charge or the slice
-            // (`G.hs !== null` needs no third state: a null is only ever written on the frame `opened` goes true, below, with no return between)
-            if !g_2.opened && crate::doors::door_is_closed(g, d) {
+            // (hs: None = not asked yet, Some(None) = asked, the stack's own jamb serves; Some(Some) = the handle's place)
+            if !g_2.opened && !matches!(g_2.hs, Some(None)) && crate::doors::door_is_closed(g, d) {
                 // (handleside.ts) the lever is worked from the handle's own place
                 if g_2.hs.is_none() {
                     let pos = g.ch[c].pos;
                     let h = if crate::doors::doors_pull_face(g, d, pos) { crate::handleside::tool_spot(g, d, g_2.side, pos, None, None) } else { None };
-                    g_2.hs = match h { Some(h) if !h.far => Some(GateHs { pos: h.pos, yaw: h.yaw }), _ => None };
+                    g_2.hs = Some(match h { Some(h) if !h.far => Some(GateHs { pos: h.pos, yaw: h.yaw }), _ => None });
                 }
-                if let Some(h) = g_2.hs {
+                if let Some(Some(h)) = g_2.hs {
                     let speed = g.tune.guard_investigate;
                     let stepped = step_gate(g, gd, g_2, dt, h.pos, speed, Some(h.yaw)) && crate::handleside::tool_step(g, gd, h.pos);
                     if !stepped && g_2.t < 3.0 { g_2.look = Some(inside); g_2.crouch = 0.4; return true; }
                     g_2.near_a = w; g_2.spot = h.pos; g_2.face = h.yaw; g_2.t = 0.0;
                 }
-                g_2.hs = None;
+                g_2.hs = Some(None);
             }
             stand_gate(g, gd, dt, Some(g_2.face)); g_2.look = Some(inside); g_2.crouch = 0.4;
             if !g_2.opened {
@@ -291,20 +291,6 @@ pub fn tactics_look(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::tac
     Some(TacticsLook { aim: row.look?, crouch: row.crouch })
 }
 
-/// Number.prototype.toFixed(1): as format's, except that an exact tie takes the larger magnitude (format's goes to even).
-fn to_fixed_1(x: f64) -> String {
-    if x.is_nan() { return String::from("NaN"); }
-    if x.is_infinite() { return String::from(if x > 0.0 { "Infinity" } else { "-Infinity" }); }
-    let (sign, a) = if x < 0.0 { ("-", -x) } else { ("", m::abs(x)) };   // (-0 prints as 0)
-    let four = a * 4.0;
-    if m::floor(four) == four && js::rem(four, 2.0) == 1.0 {   // an odd number of quarters: the only exact ties at one digit
-        let tenths = a * 10.0 + 0.5;
-        let whole = m::floor(tenths / 10.0);
-        return format!("{}{}.{}", sign, whole, tenths - whole * 10.0);
-    }
-    format!("{}{:.1}", sign, a)
-}
-
 /// One line: the plans, the lone men, the dangerous doorways, the men on a gate. '' when nothing is up.   (tactics.ts tacticsSummary)
 pub fn tactics_summary(g: &mut crate::game::Game) -> String {
     let Some(st) = g.m.tactics.states.as_ref() else { return String::from(if g.tune.tactics { "" } else { "tactics ▸ off" }); };
@@ -322,11 +308,11 @@ pub fn tactics_summary(g: &mut crate::game::Game) -> String {
             };
             format!("{} {}{}{}", g.gd[man].callsign, kind, holding, round)
         }).collect();
-        parts.push(format!("plan #{} {} on ({}, {}): {}", p.id, p.phase.as_str(), to_fixed_1(p.target[0]), to_fixed_1(p.target[2]), men.join(", ")));
+        parts.push(format!("plan #{} {} on ({}, {}): {}", p.id, p.phase.as_str(), js::to_fixed(p.target[0], 1), js::to_fixed(p.target[2], 1), men.join(", ")));
     }
     for (man, l) in st.lone.iter() {
         let what = if l.released { format!("on at a walk ({})", l.released_why) }
-            else if l.hold_t > 0.0 { format!("holding {} s{}", to_fixed_1(l.hold_t), if l.called { ", called" } else { "" }) }
+            else if l.hold_t > 0.0 { format!("holding {} s{}", js::to_fixed(l.hold_t, 1), if l.called { ", called" } else { "" }) }
             else { String::from("to his corner") };
         parts.push(format!("{} lone: {}", g.gd[man].callsign, what));
     }
@@ -342,16 +328,4 @@ pub fn tactics_summary(g: &mut crate::game::Game) -> String {
         parts.push(format!("{} on the {} door: {} {}", g.gd[man].callsign, g.dr[row.door].def.name, row.role.as_str(), row.phase.as_str()));
     }
     if parts.is_empty() { String::new() } else { format!("tactics ▸ {}", parts.join(" · ")) }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    /// strings printed by the TypeScript's own toFixed(1) under bun
-    #[test]
-    fn to_fixed_1_as_the_language() {
-        for (x, want) in [(0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (-0.25, "-0.3"), (2.75, "2.8"), (10.25, "10.3"), (0.35, "0.3"), (1.05, "1.1"), (0.0, "0.0"), (-0.0, "0.0"), (-0.04, "-0.0"), (3.0, "3.0"), (-12.34, "-12.3")] {
-            assert_eq!(to_fixed_1(x), want, "{}", x);
-        }
-    }
 }

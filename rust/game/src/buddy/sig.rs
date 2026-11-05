@@ -45,7 +45,7 @@ pub fn spot_by(g: &mut crate::game::Game, c_2: RoomfightDefId) -> V3 { todo!() }
 pub fn way_to(g: &mut crate::game::Game, d: RoomfightDefId, spot: V3, known: &[V3]) -> Option<f64> { todo!() }
 
 /// (src/game/buddy.ts:127 free)
-pub fn free(g: &mut crate::game::Game, x: RoomfightDefId, mine: Option<crate::buddy::Errand>) -> bool { todo!() }
+pub fn free(g: &mut crate::game::Game, x: RoomfightDefId, mine: Option<u32>) -> bool { todo!() }
 
 /// (src/game/buddy.ts:140 answerer)
 pub fn answerer(g: &mut crate::game::Game, c_2: RoomfightDefId) -> Option<crate::buddy::Answerer> { todo!() }

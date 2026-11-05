@@ -7,22 +7,17 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// cmd.ts:40 cam: the host's live camera. The skeleton dropped it as "once", but `g.director.cam` is an Option lent by the host, and the camera's methods have no `this`.
-fn seam_host_lens(g: &mut Game) -> crate::camera::FollowCamera {
-    todo!("needs: sample_cmd's `cam` parameter back (FollowCamera as a value class, `this: &mut FollowCamera`)")
-}
-
 /// The record for this tick, sampled from the host's live input, camera and view; `into` only saved an allocation, and a fresh record holds the same.   (cmd.ts sampleCmd)
-pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd {
+pub fn sample_cmd(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View, into: Option<&crate::cmd::PlayerCmd>) -> crate::cmd::PlayerCmd {
     let aim = g.puppet.as_ref().and_then(|p| p.aim);
     if let Some(aim) = aim {
-        let (sx, sy, front) = crate::camera::follow_camera_project(g, aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
+        let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
         if front {
             g.tab.input[input].mouse_x = sx;
             g.tab.input[input].mouse_y = sy;
         }
     }
-    let cam = seam_host_lens(g);
+    let cam = &g.tab.camera[cam];
     let i = &g.tab.input[input];
     PlayerCmd {
         keys: i.keys.iter().collect(),
@@ -522,18 +517,19 @@ fn check_record(g: &mut Game, raw: Option<PlayerCmd>, near: Option<V3>) -> (Play
     let (mut c, mut fixed, whole) = check_fields(&l, raw, near);
     if near.is_some() || !whole {
         // (`new FollowCamera()`: the class has no constructor, its field initialisers are blank())
-        let mut s = g.m.cmd.check_lens.take().unwrap_or_else(crate::camera::FollowCamera::blank);
-        pose_onto_lens(l.steep, &mut c.view, &mut s, &mut fixed);
-        seam_rebuild(g, &mut s);
-        view_from_lens(&mut c.view, &s, &mut fixed);
-        g.m.cmd.check_lens = Some(s);
+        let s = match g.m.cmd.check_lens {
+            Some(s) => s,
+            None => {
+                let s = g.tab.camera.push(crate::camera::FollowCamera::blank());
+                g.m.cmd.check_lens = Some(s);
+                s
+            }
+        };
+        pose_onto_lens(l.steep, &mut c.view, &mut g.tab.camera[s], &mut fixed);
+        crate::camera::follow_camera_rebuild(g, s);
+        view_from_lens(&mut c.view, &g.tab.camera[s], &mut fixed);
     }
     (c, fixed)
-}
-
-/// cmd.ts:118 S.rebuild(): the stub of FollowCamera.rebuild takes `g` alone and cannot name this lens.
-fn seam_rebuild(g: &mut Game, lens: &mut crate::camera::FollowCamera) {
-    todo!("needs: follow_camera_rebuild on a given lens (the check's own, not the game's)")
 }
 
 /// A record made one an honest seat could have sent; `fixed` = how many things were put right. `raw` None = what was sent was no object.   (cmd.ts checkCmd)
@@ -577,23 +573,20 @@ fn lens_from(cam: &mut crate::camera::FollowCamera, v: &PlayerCmdView) {
     cam.aim_lead = v.aim_lead;
 }
 
-/// cmd.ts:139 cam: the parameter is still dropped as a once-a-game object, but it is a seat's lens or the game's aside lens.
-fn seam_load_lens(g: &mut Game, v: &PlayerCmdView) {
-    todo!("needs: load_lens's `cam` parameter back; its body is then lens_from(cam, v)")
-}
-
 /// A record's view put on a camera of the game's own.   (cmd.ts loadLens)
-pub fn load_lens(g: &mut crate::game::Game, v: &crate::cmd::PlayerCmdView) {
-    seam_load_lens(g, v)
+pub fn load_lens(g: &mut crate::game::Game, cam: CameraId, v: &crate::cmd::PlayerCmdView) {
+    lens_from(&mut g.tab.camera[cam], v);
 }
 
 /// A player's seat: its Input and its camera, of the game's own; the view is seats.ts's to set.   (cmd.ts Seat.constructor)
 pub fn seat_new(g: &mut crate::game::Game, index: Option<f64>) -> SeatId {
     let input = crate::input::input_detached(g);
+    let cam = g.tab.camera.push(crate::camera::FollowCamera::blank());
     let mut s = Seat::blank();
     s.index = index.unwrap_or(0.0);
     s.input = input;
-    s.mark = s.cam.desired_serial;
+    s.cam = cam;
+    s.mark = g.tab.camera[cam].desired_serial;
     g.tab.cmd_seat.push(s)
 }
 
@@ -607,7 +600,7 @@ pub fn seat_man(g: &mut crate::game::Game, id: SeatId) -> PlayerId {
 }
 
 /// The record of the tick loaded into the seat's Input, camera and view size.   (cmd.ts Seat.load)
-fn load_row(s: &mut Seat, i: &mut crate::input::Input, c: &PlayerCmd) {
+fn load_row(s: &mut Seat, i: &mut crate::input::Input, cam: &mut crate::camera::FollowCamera, c: &PlayerCmd) {
     s.cmd = Some(c.clone());
     i.keys.clear();
     for k in &c.keys { i.keys.add(k.clone()); }
@@ -625,13 +618,13 @@ fn load_row(s: &mut Seat, i: &mut crate::input::Input, c: &PlayerCmd) {
     s.canvas.client_height = c.h;
     s.canvas.width = c.pw;
     s.canvas.height = c.ph;
-    lens_from(&mut s.cam, &c.view);
+    lens_from(cam, &c.view);
 }
 
 /// (cmd.ts Seat.load)
 pub fn seat_load(g: &mut crate::game::Game, id: SeatId, c_2: &crate::cmd::PlayerCmd) {
-    let input = g.tab.cmd_seat[id].input;
-    load_row(&mut g.tab.cmd_seat[id], &mut g.tab.input[input], c_2);
+    let (input, cam) = (g.tab.cmd_seat[id].input, g.tab.cmd_seat[id].cam);
+    load_row(&mut g.tab.cmd_seat[id], &mut g.tab.input[input], &mut g.tab.camera[cam], c_2);
 }
 
 /// A record waiting for this seat's next tick.   (cmd.ts Seat.hand)
@@ -663,14 +656,15 @@ pub fn seat_swallow(g: &mut crate::game::Game, id: SeatId, bits: f64) {
 
 /// OUTPUT: the look-at a tick cut the seat's camera to, once; None = no cut since the last call (a cut with the same numbers is still a cut).   (cmd.ts Seat.takeCut)
 pub fn seat_take_cut(g: &mut crate::game::Game, id: SeatId) -> Option<V3> {
-    cut_row(&mut g.tab.cmd_seat[id])
+    let cam = g.tab.cmd_seat[id].cam;
+    cut_row(&mut g.tab.cmd_seat[id], &g.tab.camera[cam])
 }
 
 /// The take on a seat's row: `mark` is the serial of the last write of `desired` taken.   (cmd.ts Seat.takeCut)
-fn cut_row(s: &mut Seat) -> Option<V3> {
-    if s.cam.desired_serial == s.mark { return None; }
-    s.mark = s.cam.desired_serial;
-    Some(s.cam.desired)
+fn cut_row(s: &mut Seat, cam: &crate::camera::FollowCamera) -> Option<V3> {
+    if cam.desired_serial == s.mark { return None; }
+    s.mark = cam.desired_serial;
+    Some(cam.desired)
 }
 
 #[cfg(test)]
@@ -729,13 +723,14 @@ mod tests {
     fn swallow_beats_match_the_typescript() {
         let mut s = Seat::blank();
         let mut input = crate::input::Input::blank();
+        let mut cam = crate::camera::FollowCamera::blank();
         let base = cases().remove(0).1.unwrap();
         for (i, (load, a, b, mask, buttons)) in beats().into_iter().enumerate() {
             if load {
                 let mut c = base.clone();
                 c.buttons = a;
                 c.clicked = b;
-                load_row(&mut s, &mut input, &c);
+                load_row(&mut s, &mut input, &mut cam, &c);
             } else {
                 swallow_row(&mut s, &mut input, a);
             }
@@ -748,10 +743,11 @@ mod tests {
     #[test]
     fn a_cut_is_taken_once_by_its_serial() {
         let mut s = Seat::blank();
-        assert_eq!(cut_row(&mut s), None);
-        s.cam.desired_serial += 1;
-        assert_eq!(cut_row(&mut s), Some(s.cam.desired));
-        assert_eq!(cut_row(&mut s), None);
+        let mut cam = crate::camera::FollowCamera::blank();
+        assert_eq!(cut_row(&mut s, &cam), None);
+        cam.desired_serial += 1;
+        assert_eq!(cut_row(&mut s, &cam), Some(cam.desired));
+        assert_eq!(cut_row(&mut s, &cam), None);
     }
 
     /// A number as the language writes it, against the TypeScript's `String(x)`.

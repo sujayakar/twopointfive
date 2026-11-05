@@ -128,7 +128,7 @@ impl RoomClearScenario {
             clear_due: Vec::new(),
             clear_at: f64::NAN,
             obj: None,
-            layout: crate::nightbreach::NightBreachLayout::zeroed(),
+            layout: crate::nightbreach::NightBreachLayout { name: String::from("room clear") },
         }
     }
 }

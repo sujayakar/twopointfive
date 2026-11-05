@@ -88,12 +88,6 @@ fn pall_near(g: &mut Game, px: f64, y: f64, pz: f64, r: f64) -> Vec<[f64; 2]> {
 
 // ------------------------------------------------------------------ the translation
 
-/// Everything in flight goes.   (destruction.ts clearMoving)
-pub fn destruction_clear_moving(g: &mut crate::game::Game) {
-    crate::debris::debris_clear(g);
-    g.destr.dust_queue.clear();
-}
-
 /// A round stopped at `hit_p`: decals, a screen killed, paper, bursts and dust, knock-offs, tiles, what lies about, and the wall's share.   (destruction.ts round)
 pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &mut crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) {
     let chaos = chaos_of(g);
@@ -545,7 +539,10 @@ pub fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruct
             let pos = g.tab.sim_lightshome_fixture[t].pos;
             crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(if lit { 0.8 } else { 0.4 }), None);
             if lit {
-                crate::render_lights::light_set_flash(&mut g.engine.lights, pos, [0.6, 0.75, 1.0], 4.0, 3.0, 0.1, 0.0);
+                // (the method takes `g` for the flash's row and the set, which lives on `g`: the set is lent out for the call)
+                let mut lights = core::mem::take(&mut g.engine.lights);
+                crate::render_lights::light_set_flash(g, &mut lights, pos, [0.6, 0.75, 1.0], 4.0, 3.0, 0.1, 0.0);
+                g.engine.lights = lights;
                 let name = g.tab.sim_lightshome_fixture[t].name.clone();
                 dlog(g, &format!("screen {} shot dead", name));
                 if by_player {

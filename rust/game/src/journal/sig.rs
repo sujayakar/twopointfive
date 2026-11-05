@@ -33,7 +33,7 @@ pub fn session_recorder_slot_read(g: &mut crate::game::Game, key: &str, text: &m
 pub fn session_recorder_finish(g: &mut crate::game::Game, why: &str, between: Option<bool>, lost: Option<bool>) -> crate::journal::SessionFile { todo!() }
 
 /// (src/game/journal.ts:782 SessionRecorder.frameStart)
-pub fn session_recorder_frame_start(g: &mut crate::game::Game, dt: f64, input: InputId, view: crate::journal::View) { todo!() }
+pub fn session_recorder_frame_start(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, view: crate::journal::View) { todo!() }
 
 /// (src/game/journal.ts:812 SessionRecorder.frameEnd)
 pub fn session_recorder_frame_end(g: &mut crate::game::Game) { todo!() }

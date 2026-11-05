@@ -393,12 +393,6 @@ pub fn anim_mv_trunk_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64,
     layer_ran_of(g, c, code);
 }
 
-/// `this.rlSrc !== this.reloadRow`: the TypeScript compares objects, a row of the weapons' table; here by value (rlBeat is a function of the row alone)
-fn same_beat(a: Option<ReloadBeat>, b: ReloadBeat) -> bool {
-    let Some(a) = a else { return false };
-    a.dur == b.dur && a.out == b.out && a.in_ == b.in_ && a.rack == b.rack && a.keep == b.keep && a.hand == b.hand && a.exact == b.exact
-}
-
 /// MOVES, the second pass: the arms the fight does not read, after every other layer: the magazine change, the hand to his ribs, a figure kept down. (character.ts mvArms)
 pub fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
     let an = &g.ch[c].anim;
@@ -410,10 +404,7 @@ pub fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
         let mut live = false;
         let (reload_at, row) = (g.ch[c].anim.reload_at, g.ch[c].anim.reload_row);
         if let (true, Some(row)) = (reload_at >= 0.0, row) {
-            if !same_beat(g.ch[c].anim.rl_src, row) {
-                anim_rl_beat(g, c, row);
-                g.ch[c].anim.rl_src = Some(row);
-            }
+            anim_rl_beat(g, c, row);   // (`rlSrc` only saved re-running rlBeat, a pure function of the row: rl_b comes out the same each frame)
             let an = &mut g.ch[c].anim;
             an.mv2.rl_at = an.reload_at;
             an.rl_t = -1.0;

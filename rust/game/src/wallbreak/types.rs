@@ -314,8 +314,8 @@ pub struct WallBreak {
     pub serial: f64,
     pub changes: Vec<crate::wallbreak::LevelChange>,
     pub listeners: Vec<crate::wallbreak::ChangeListener>,
-    pub list: Vec<crate::wallbreak::Breakable>,
-    pub owner: JsMap<crate::Num, crate::wallbreak::Breakable>,
+    pub list: Vec<WallbreakBreakableId>,
+    pub owner: JsMap<crate::Num, WallbreakBreakableId>,
     pub hidden: JsMap<crate::Num, f64>,
     pub counter: f64,
     pub dirty: bool,
@@ -579,7 +579,7 @@ impl WallBreakNoteCCause {
 /// (TypeScript: inline at src/game/wallbreak.ts:656 planBlast ->, src/game/wallbreak.ts:656)
 #[derive(Clone, Debug)]
 pub struct WallBreakPlanBlastItem {
-    pub b: crate::wallbreak::Breakable,
+    pub b: WallbreakBreakableId,
     pub cells: Vec<f64>,
     pub d: f64,
 }
@@ -587,7 +587,7 @@ impl WallBreakPlanBlastItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         WallBreakPlanBlastItem {
-            b: crate::wallbreak::Breakable::zeroed(),
+            b: WallbreakBreakableId(0),
             cells: Vec::new(),
             d: 0.0,
         }
@@ -598,7 +598,7 @@ impl Default for WallBreakPlanBlastItem { fn default() -> Self { Self::zeroed() 
 /// (TypeScript: inline at src/game/wallbreak.ts:663 planOf ->, src/game/wallbreak.ts:663)
 #[derive(Clone, Debug)]
 pub struct WallBreakPlanOfItem {
-    pub b: crate::wallbreak::Breakable,
+    pub b: WallbreakBreakableId,
     pub cells: Vec<f64>,
     pub d: f64,
 }
@@ -606,7 +606,7 @@ impl WallBreakPlanOfItem {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         WallBreakPlanOfItem {
-            b: crate::wallbreak::Breakable::zeroed(),
+            b: WallbreakBreakableId(0),
             cells: Vec::new(),
             d: 0.0,
         }

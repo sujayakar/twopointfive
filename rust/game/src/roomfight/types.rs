@@ -154,8 +154,12 @@ pub struct Def {
     pub burst: crate::roomfight::DefBurst,
     pub bolt_until: f64,
     pub bolt_from: Option<crate::game::Foe>,
+    /// INVENTED by a review: see the proposals
+    pub pt_stamp: Option<u32>,
     /// INVENTED: last_known is this very D.pt (roomfight.ts:303, off path with BELIEF on)
     pub fix_is_pt: bool,
+    /// INVENTED: lastKnown === D.pt (roomfight.ts:303) is D.pt_stamp == Some(g.gd[D.gd].fix_stamp). Set where pt is written as the fix: roomfight.ts:699, 728, 889, 902, enemysquads.ts:1048, 1491, powerout.ts:219
+    pub pt_stamp_2: Option<u32>,
 }
 impl Def {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -199,7 +203,9 @@ impl Def {
             burst: crate::roomfight::DefBurst::zeroed(),
             bolt_until: 0.0,
             bolt_from: None,
+            pt_stamp: None,
             fix_is_pt: false,
+            pt_stamp_2: None,
         }
     }
 }
@@ -438,7 +444,6 @@ impl Default for OpKept { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: inline at src/game/roomfight.ts:322 Op.ov, src/game/roomfight.ts:322)
 #[derive(Clone, Copy, Debug)]
 pub struct OpOv {
-    pub aim_at: V3,
     pub face: Option<f64>,
     pub walk: Option<bool>,
 }
@@ -446,7 +451,6 @@ impl OpOv {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         OpOv {
-            aim_at: [0.0; 3],
             face: None,
             walk: None,
         }

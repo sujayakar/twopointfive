@@ -115,8 +115,9 @@ pub fn sky_lamp_of(g: &mut crate::game::Game) -> Option<LightId> {
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];
         i += 1;
-        if seam_light_kind(g, l) != 2.0 || !seam_light_enabled(g, l) || seam_light_ttl(g, l) >= 0.0 || seam_light_transient(g, l) || !(seam_light_dir(g, l)[1] < 0.0) { continue; }
-        let intensity = lum(seam_light_color(g, l)) * seam_light_intensity(g, l);
+        let row = &g.tab.light[l];
+        if row.kind != 2.0 || !row.enabled || row.ttl >= 0.0 || row.transient.unwrap_or(false) || !(row.dir[1] < 0.0) { continue; }
+        let intensity = lum(row.color) * row.intensity;
         if intensity > best { best = intensity; moon = Some(l); }
     }
     moon
@@ -223,10 +224,10 @@ pub fn under_weather(g: &mut crate::game::Game) {
     if soft == st.soft && sky_k == st.sky_k { return; }
     st.soft = soft;
     st.sky_k = sky_k;
-    seam_light_set_color(g, sun, greyed(d.sun.color, soft, None));
-    seam_light_set_volumetric(g, sun, d.sun.volumetric * (1.0 - soft));
+    g.tab.light[sun].color = greyed(d.sun.color, soft, None);
+    g.tab.light[sun].volumetric = d.sun.volumetric * (1.0 - soft);
     let r = d.sun.radius + (m::max(d.sun.radius, SOFT_RADIUS) - d.sun.radius) * soft;
-    if r != seam_light_radius(g, sun) { seam_light_set_radius(g, sun, r); }   // (sunReach, the picture's mask, dropped)
+    if r != g.tab.light[sun].radius { g.tab.light[sun].radius = r; }   // (sunReach, the picture's mask, dropped)
     g.engine.settings.sky_zenith = greyed(d.sky.zenith, soft, Some(sky_k));
     g.engine.settings.sky_horizon = greyed(d.sky.horizon, soft, Some(sky_k));
 }
@@ -289,15 +290,21 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
     let mut i = 0;
     while i < g.engine.lights.lights.len() {
         let l = g.engine.lights.lights[i];
-        if seam_light_kind(g, l) == 2.0 && seam_light_ttl(g, l) < 0.0 && !seam_light_transient(g, l) && seam_light_enabled(g, l) {
-            seam_light_set_enabled(g, l, false);
+        let row = &mut g.tab.light[l];
+        if row.kind == 2.0 && row.ttl < 0.0 && !row.transient.unwrap_or(false) && row.enabled {
+            row.enabled = false;
             moons.push(l);
             at = i + 1;
         }
         i += 1;
     }
     let power = def.sun.intensity * sun_k;
-    let sun = seam_light_new_sun(g, SUN_NAME, SUN_GROUP, 2.0, [0.0, 0.0, 0.0], v3::scale(to_sun, -1.0), v3::copy(def.sun.color), power, 1e6, 0.0, 0.0, def.sun.radius, def.sun.volumetric, 0.0, true, -1.0, 0.0, -1.0, 0.0, power, false);
+    let sun = g.tab.light.push(crate::render_lights::RtLight {
+        name: String::from(SUN_NAME), group: String::from(SUN_GROUP), kind: 2.0, pos: [0.0, 0.0, 0.0], dir: v3::scale(to_sun, -1.0), color: v3::copy(def.sun.color),
+        intensity: power, range: 1e6, inner_deg: 0.0, outer_deg: 0.0, radius: def.sun.radius, volumetric: def.sun.volumetric, owner: 0.0, enabled: true,
+        fixture_box: -1.0, ttl: -1.0, age: 0.0, peak_intensity: power,
+        ..crate::render_lights::RtLight::zeroed()   // every optional field absent, as in the literal
+    });
     g.engine.lights.lights.insert(at, sun);
     g.engine.settings.sky_zenith = v3::copy(def.sky.zenith);
     g.engine.settings.sky_horizon = v3::copy(def.sky.horizon);
@@ -321,8 +328,10 @@ pub fn take_out(g: &mut crate::game::Game) {
     for (t, was) in lamps {
         if !crate::sim_lightshome::fixture_on(g, t) { crate::sim_lightshome::light_home_in(g, on, Some(t), Some(if was { 1.0 } else { 0.0 }), None, None, None); }
     }
-    for l in moons { seam_light_set_enabled(g, l, true); }
-    crate::render_lights::light_set_remove(&mut g.engine.lights, sun);
+    for l in moons { g.tab.light[l].enabled = true; }
+    let mut set = core::mem::take(&mut g.engine.lights);   // (the set is lent while g is: remove touches only the set's list)
+    crate::render_lights::light_set_remove(g, &mut set, sun);
+    g.engine.lights = set;
     g.engine.settings.sky_zenith = v3::copy(sky.zenith);
     g.engine.settings.sky_horizon = v3::copy(sky.horizon);
     g.engine.settings.haze_density = haze;
@@ -394,7 +403,7 @@ pub fn casters_of(g: &mut crate::game::Game) -> f64 {
     let mut i = 0;
     while i < n {
         let s = g.engine.world.statics[i];
-        if js::to_i32(seam_box_flags(g, s)) & no_shadow != 0 { h = js::to_i32(h + (i as f64 + 1.0) * 31.0) as f64; }
+        if js::to_i32(g.col.boxes[s].flags) & no_shadow != 0 { h = js::to_i32(h + (i as f64 + 1.0) * 31.0) as f64; }
         i += 1;
     }
     h
@@ -446,9 +455,8 @@ pub fn box_of(g: &mut crate::game::Game) -> crate::hours::SkyStateBox {
     while i < g.engine.world.statics.len() {
         let s = g.engine.world.statics[i];
         i += 1;
-        if js::to_i32(seam_box_flags(g, s)) & no_shadow != 0 { continue; }
-        let h = seam_box_h(g, s);
-        let c = seam_box_c(g, s);
+        if js::to_i32(g.col.boxes[s].flags) & no_shadow != 0 { continue; }
+        let (c, h) = (g.col.boxes[s].c, g.col.boxes[s].h);
         let r = m::hyp2(h[0], h[2]);
         b.x0 = m::min(b.x0, c[0] - r);
         b.x1 = m::max(b.x1, c[0] + r);
@@ -543,7 +551,7 @@ pub fn moon_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
         Some(s) => SkyStateDome { zenith: s.zenith, horizon: s.horizon },
         None => SkyStateDome { zenith: g.level.sky.zenith, horizon: g.level.sky.horizon },
     };
-    let moon_dir = match moon { Some(l) => Some(seam_light_dir(g, l)), None => None };
+    let moon_dir = moon.map(|l| g.tab.light[l].dir);
     let same = match &g.m.hours.nights {
         None => false,
         Some(n) => n.sun == moon
@@ -583,7 +591,7 @@ pub fn moon_forget(g: &mut crate::game::Game) {
 pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     let Some(st) = sky_ask(g) else { return };
     let i_sun = match st.sun {
-        Some(sun) if seam_light_enabled(g, sun) && seam_light_intensity(g, sun) > 0.0 => lum(seam_light_color(g, sun)) * seam_light_intensity(g, sun),
+        Some(sun) if g.tab.light[sun].enabled && g.tab.light[sun].intensity > 0.0 => lum(g.tab.light[sun].color) * g.tab.light[sun].intensity,
         _ => 0.0,
     };
     if i_sun > 0.002 {
@@ -621,7 +629,7 @@ pub fn sky_light(g: &mut crate::game::Game, p: V3, acc: &mut Vec<f64>) {
     while i < g.col.dynamic_boxes.len() {
         let db = g.col.dynamic_boxes[i];
         i += 1;
-        let dc = seam_box_c(g, db);
+        let dc = g.col.boxes[db].c;
         if m::hyp2(dc[0] - p[0], dc[2] - p[2]) < DOOR_M { leaves.get_or_insert_with(Vec::new).push(db); }
     }
     let (sky_rays, gnd_rays) = ray_tables();
@@ -669,7 +677,7 @@ pub fn hour_summary(g: &mut crate::game::Game) -> String {
     let Some(st) = g.m.hours.states.as_ref() else { return String::from("night (the level as authored)") };
     let d = st.def.clone();
     let (sun, sun_k, given, sky_k, out, storm, cells) = (st.sun, st.sun_k, st.given, st.sky_k, st.lamps.len(), st.storm.is_some(), st.cells.len());
-    let intensity = seam_light_intensity(g, sun);
+    let intensity = g.tab.light[sun].intensity;
     let why = if given {
         String::from(" set")
     } else {
@@ -684,33 +692,15 @@ pub fn hour_summary(g: &mut crate::game::Game) -> String {
     )
 }
 
-// ---------------------------------------------------------------- seams: what the skeleton still lacks
-
 /// `t.intensity = t.peakIntensity = x` of a light (hours.ts:171, 227)
 fn set_light_power(g: &mut Game, l: LightId, x: f64) {
-    seam_light_set_intensity(g, l, x);
-    seam_light_set_peak_intensity(g, l, x);
+    let row = &mut g.tab.light[l];
+    row.intensity = x;
+    row.peak_intensity = x;
 }
-fn seam_light_kind(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.kind of a LightId (hours.ts:159)") }
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled of a LightId (hours.ts:159)") }
-fn seam_light_ttl(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.ttl of a LightId (hours.ts:159)") }
-fn seam_light_transient(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.transient of a LightId (hours.ts:159)") }
-fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.dir of a LightId (hours.ts:159)") }
-fn seam_light_color(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.color of a LightId (hours.ts:159)") }
-fn seam_light_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.intensity of a LightId (hours.ts:159)") }
-fn seam_light_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.radius of a LightId (hours.ts:231)") }
-fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { todo!("needs: a write of RtLight.enabled (hours.ts:260, 274)") }
-fn seam_light_set_intensity(g: &mut Game, l: LightId, x: f64) { todo!("needs: a write of RtLight.intensity (hours.ts:171, 227)") }
-fn seam_light_set_peak_intensity(g: &mut Game, l: LightId, x: f64) { todo!("needs: a write of RtLight.peakIntensity (hours.ts:171, 227)") }
-fn seam_light_set_color(g: &mut Game, l: LightId, c: V3) { todo!("needs: a write of RtLight.color (hours.ts:230)") }
-fn seam_light_set_volumetric(g: &mut Game, l: LightId, x: f64) { todo!("needs: a write of RtLight.volumetric (hours.ts:230)") }
-fn seam_light_set_radius(g: &mut Game, l: LightId, x: f64) { todo!("needs: a write of RtLight.radius (hours.ts:231)") }
-/// The object literal of hours.ts:262-263: a kind-2 light with no row of rust/sim's (lights.md trap 7).
-#[allow(clippy::too_many_arguments)]
-fn seam_light_new_sun(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, owner: f64, enabled: bool, fixture_box: f64, flicker: f64, ttl: f64, age: f64, peak_intensity: f64, broad: bool) -> LightId { todo!("needs: making an RtLight, a LightId for a light with no row (hours.ts:262)") }
-fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { todo!("needs: Box.flags of a BoxId: Box has no table (hours.ts:304, 329)") }
-fn seam_box_c(g: &mut Game, b: BoxId) -> V3 { todo!("needs: Box.c of a BoxId: Box has no table (hours.ts:331, 411)") }
-fn seam_box_h(g: &mut Game, b: BoxId) -> V3 { todo!("needs: Box.h of a BoxId: Box has no table (hours.ts:330)") }
+
+// ---------------------------------------------------------------- seams: what the skeleton still lacks
+
 fn seam_query_get(q: &crate::Opaque, key: &str) -> Option<String> { todo!("needs: URLSearchParams.get: q is Opaque (hours.ts:94, 102)") }
 fn seam_query_has(q: &crate::Opaque, key: &str) -> bool { todo!("needs: URLSearchParams.has: q is Opaque (hours.ts:96, 101)") }
 /// `parseFloat(q.get(key))` where the key is there and the number finite (hours.ts:95, 103).
@@ -869,6 +859,79 @@ mod tests {
         assert_eq!(hour_href("/play?hours=2&hour", Some(HourId::Night)), "/play?hours=2");
         assert_eq!(hour_href("/play", Some(HourId::Midday)), "/play?hour=midday");
         assert_eq!(hour_href("/p?a?b", Some(HourId::Night)), "/p?a");
+    }
+    fn lamp(g: &mut Game, kind: f64, dir: V3, intensity: f64) -> LightId {
+        let l = g.tab.light.push(crate::render_lights::RtLight { kind, dir, color: [1.0, 1.0, 1.0], intensity, enabled: true, ttl: -1.0, ..crate::render_lights::RtLight::zeroed() });
+        g.engine.lights.lights.push(l);
+        l
+    }
+    fn stat(g: &mut Game, c: V3, h: V3, flags: f64) -> BoxId {
+        let b = g.col.boxes.push(crate::scene_boxes::Box { c, h, flags, ..Default::default() });
+        g.engine.world.statics.push(b);
+        b
+    }
+    #[test]
+    fn the_sky_lamp_is_the_brightest_steady_one_pointing_down() {
+        let mut g = Game::blank();
+        assert_eq!(sky_lamp_of(&mut g), None);
+        let dim = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 0.001);       // under the floor of 0.002
+        let moon = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 0.5);
+        let _spot = lamp(&mut g, 1.0, [0.0, -1.0, 0.0], 9.0);       // not directional
+        let _up = lamp(&mut g, 2.0, [0.0, 1.0, 0.0], 9.0);          // from below the horizon
+        let flash = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 9.0);
+        g.tab.light[flash].ttl = 1.0;
+        let held = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 9.0);
+        g.tab.light[held].transient = Some(true);
+        let out = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 9.0);
+        g.tab.light[out].enabled = false;
+        assert_eq!(sky_lamp_of(&mut g), Some(moon));
+        g.k.sense.moon = true;
+        assert!(in_estimate(&mut g, moon));
+        assert!(!in_estimate(&mut g, dim));
+        g.k.sense.moon = false;
+        assert!(!in_estimate(&mut g, moon));
+        g.m.hours.states = Some(HourState { sun: dim, ..HourState::zeroed() });   // an hour in: its sun is the estimate's, the night has no lamp
+        assert_eq!(sky_lamp_of(&mut g), None);
+        assert!(in_estimate(&mut g, dim));
+    }
+    #[test]
+    fn the_sun_strength_lands_in_the_light() {
+        let mut g = Game::blank();
+        let sun = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 0.0);
+        let mut st = HourState { sun, ..HourState::zeroed() };
+        st.def.sun.intensity = 6.0;
+        g.m.hours.states = Some(st);
+        set_sun_strength(&mut g, 0.5, None);
+        assert_eq!((g.tab.light[sun].intensity, g.tab.light[sun].peak_intensity), (3.0, 3.0));
+        assert_eq!((sun_strength(&mut g), sun_given(&mut g)), (0.5, true));
+        set_sun_strength(&mut g, f64::NAN, Some(true));   // not a number: the hour's own
+        assert_eq!(g.tab.light[sun].intensity, 6.0);
+        set_sun_strength(&mut g, 7.0, Some(true));
+        assert_eq!(sun_strength(&mut g), 1.0);
+    }
+    #[test]
+    fn the_casters_fold_and_their_box() {
+        let no_shadow = crate::scene_boxes::box_flag().no_shadow;
+        let mut g = Game::blank();
+        assert_eq!(casters_of(&mut g), 0.0);
+        let b = box_of(&mut g);   // nothing casts: the level's stand-in box
+        assert_eq!((b.x0, b.x1, b.z0, b.z1, b.top), (0.0, 40.0, 0.0, 28.0, 8.0));
+        stat(&mut g, [1.0, 2.0, 3.0], [3.0, 1.0, 4.0], 0.0);
+        let hidden = stat(&mut g, [100.0, 50.0, 100.0], [1.0, 1.0, 1.0], no_shadow);
+        assert_eq!(casters_of(&mut g), (2 * 7919 + 2 * 31) as f64);   // the second, by its place
+        let b = box_of(&mut g);   // a yawed box's circle, radius 5; the hidden one is not in it
+        assert_eq!((b.x0, b.x1, b.z0, b.z1, b.top), (-4.0, 6.0, -2.0, 8.0, 3.1));
+        g.col.boxes[hidden].flags = 0.0;
+        assert_eq!(casters_of(&mut g), (2 * 7919) as f64);
+    }
+    #[test]
+    fn a_ray_runs_until_it_leaves_the_box() {
+        let b = SkyStateBox { x0: -10.0, x1: 10.0, z0: -5.0, z1: 5.0, top: 4.0 };
+        assert_eq!(reach_of(b, [0.0, 0.0, 0.0], [0.0, 1.0, 0.0]), 4.0);
+        assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [1.0, 0.0, 0.0]), 10.0);
+        assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [0.0, 0.0, -1.0]), 5.0);
+        assert_eq!(reach_of(b, [0.0, 1.0, 0.0], [0.0, -1.0, 0.0]), 60.0);   // down: the box has no floor, the 60 m stands
+        assert_eq!(reach_of(b, [20.0, 1.0, 0.0], [1.0, 0.0, 0.0]), 0.0);    // already out
     }
     #[test]
     fn to_fixed_2_is_the_typescripts() {

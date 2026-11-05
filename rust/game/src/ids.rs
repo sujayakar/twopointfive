@@ -48,6 +48,8 @@ id! {
     PropId,
     /// Input: g.tab.input
     InputId,
+    /// FollowCamera: g.tab.camera
+    CameraId,
     /// Item: g.tab.item
     ItemId,
     /// Guard: g.gd
@@ -58,14 +60,20 @@ id! {
     DebrisChunkId,
     /// Seat: g.tab.cmd_seat
     SeatId,
+    /// RtLight: g.tab.light
+    LightId,
     /// Fixture: g.tab.sim_lightshome_fixture
     FixtureId,
     /// CameraRt: g.tab.devices_camera_rt
     CameraRtId,
     /// LaserRt: g.tab.devices_laser_rt
     LaserRtId,
+    /// Breakable: g.tab.wallbreak_breakable
+    WallbreakBreakableId,
     /// Member: g.tab.furnblast_member
     FurnblastMemberId,
+    /// WindSource: g.tab.wind_wind_source
+    WindWindSourceId,
     /// Def: g.tab.roomfight_def
     RoomfightDefId,
     /// Room: g.tab.roomfight_room
@@ -76,10 +84,14 @@ id! {
     DoorOpId,
     /// Assignment: g.tab.orders_assignment
     OrdersAssignmentId,
+    /// RoomSearch: g.tab.doortools_room_search
+    DoortoolsRoomSearchId,
     /// Word: g.tab.doortools_word
     WordId,
     /// DoorGate: g.tab.doortools_door_gate
     DoorGateId,
+    /// KnownThreat: g.tab.doortools_known_threat
+    DoortoolsKnownThreatId,
     /// SetCharge: g.tab.doortools_set_charge
     ChargeId,
     /// OrderDef: g.tab.orders_order_def
@@ -104,8 +116,12 @@ id! {
     RescueflowRegionId,
     /// SetWallCharge: g.tab.wallcharge_set_wall_charge
     WallChargeId,
+    /// LiveBeat: g.tab.director_live_beat
+    DirectorLiveBeatId,
     /// RoomClear: g.tab.squad_room_clear
     RoomClearId,
+    /// Run: g.tab.director_run
+    DirectorRunId,
     /// WallOp: g.tab.wallcharge_wall_op
     WallOpId,
     /// PatrolRoute: g.tab.route
@@ -118,8 +134,6 @@ id! {
     GameTalkId,
     /// Firearm: g.fa
     FirearmId,
-    /// a light: rust/sim's row number
-    LightId,
 }
 
 /// A table of things that never shrinks: `push` gives the new thing's ID, and the ID indexes it for good.

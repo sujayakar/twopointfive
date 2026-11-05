@@ -63,20 +63,15 @@ pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
 /// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0.   (roomfight.ts lampGlare)
 pub fn lamp_glare(g: &mut crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if !g.fight.live { return 0.0; }
-    let flashlight = g.gd[o].flashlight;
-    let l = seam_light(g, flashlight);
-    if !l.0 || !(l.1 > 0.0) || g.gd[o].state == crate::game::GuardState::Dead { return 0.0; }
-    let (pos, dir, range, outer_deg) = (l.2, l.3, l.4, l.5);
+    let l = g.gd[o].flashlight;
+    let light = &g.tab.light[l];
+    if !light.enabled || !(light.intensity > 0.0) || g.gd[o].state == crate::game::GuardState::Dead { return 0.0; }
+    let (pos, dir, range, outer_deg) = (light.pos, light.dir, light.range, light.outer_deg);
     let e = eye_of(g, eye);
     let (dx, dy, dz) = (e[0] - pos[0], e[1] - pos[1], e[2] - pos[2]);
     let len = m::hyp3(dx, dy, dz);
     if len > range || len < 1e-3 { return 0.0; }
     if (dx * dir[0] + dy * dir[1] + dz * dir[2]) / len >= m::cos(outer_deg * v3::DEG) { g.k.roomfight.lamp } else { 0.0 }
-}
-
-/// A lamp's record, which a LightId cannot reach yet: (enabled, intensity, pos, dir, range, outerDeg).   (roomfight.ts:364 to 367)
-fn seam_light(g: &mut crate::game::Game, l: LightId) -> (bool, f64, V3, V3, f64, f64) {
-    todo!("needs: the fields of a light by its LightId (RtLight enabled, intensity, pos, dir, range, outerDeg)")
 }
 
 /// Is the room fight running this frame?   (roomfight.ts fightLive)
@@ -121,7 +116,7 @@ pub fn room_fight_new(g: &mut crate::game::Game) -> crate::roomfight::RoomFight 
 /// May the module run at all: the AI, sides, and no show holding the floor (a tutorial's own program does not hold it).   (roomfight.ts RoomFight.on)
 pub fn room_fight_on(g: &mut crate::game::Game) -> bool {
     if !(g.ai_enabled && g.tune.teams && !g.touring && !g.quiet_utility && g.puppet.is_none()) { return false; }
-    let show_runs = match &g.director.run { Some(r) => !r.ended, None => false };
+    let show_runs = match g.director.run { Some(r) => !g.tab.director_run[r].ended, None => false };
     !(show_runs && !crate::rails::rails_live(g))
 }
 
@@ -275,6 +270,38 @@ mod tests {
         assert!(room_fight_contact(&mut g, by_meter) && !room_fight_contact(&mut g, stale));
         g.gd[h].state = crate::game::GuardState::Dead;
         assert!(!room_fight_contact(&mut g, by_meter));
+    }
+
+    /// The lamp gives him away only burning, in range, inside its cone, with the fight live, and never a dead man's.
+    #[test]
+    fn a_lamp_gives_its_carrier_away_inside_its_cone() {
+        let mut g = Game::blank();
+        g.fight.live = true;
+        let mut lamp = crate::render_lights::RtLight::zeroed();
+        lamp.enabled = true; lamp.intensity = 1.0; lamp.pos = [0.0, 0.0, 0.0]; lamp.dir = [0.0, 0.0, 1.0]; lamp.range = 10.0; lamp.outer_deg = 30.0;
+        let l = g.tab.light.push(lamp);
+        let eye = g.ch.push(crate::character::Character::blank());
+        g.ch[eye].bones.set(crate::character::Bone::Head, [0.0, 0.0, 5.0]);
+        let o = man(&mut g, crate::game::GuardState::Patrol);
+        g.gd[o].flashlight = l;
+        let lit = g.k.roomfight.lamp;
+        assert_eq!(lamp_glare(&mut g, eye, o), lit);
+        g.ch[eye].bones.set(crate::character::Bone::Head, [5.0, 0.0, 1.0]);   // (outside the cone)
+        assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
+        g.ch[eye].bones.set(crate::character::Bone::Head, [0.0, 0.0, 11.0]);   // (past its range)
+        assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
+        g.ch[eye].bones.set(crate::character::Bone::Head, [0.0, 0.0, 5.0]);
+        g.tab.light[l].enabled = false;
+        assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
+        g.tab.light[l].enabled = true;
+        g.tab.light[l].intensity = 0.0;
+        assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
+        g.tab.light[l].intensity = 1.0;
+        g.gd[o].state = crate::game::GuardState::Dead;
+        assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
+        g.gd[o].state = crate::game::GuardState::Patrol;
+        g.fight.live = false;
+        assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
     }
 
     /// The doubles are the TypeScript's own: closeLane under bun with EXACT on, point blank 2.

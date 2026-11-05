@@ -45,6 +45,8 @@ pub struct Errand {
     pub step_t: f64,
     pub t0: f64,
     pub l: f64,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
 }
 impl Errand {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -60,6 +62,7 @@ impl Errand {
             step_t: 0.0,
             t0: 0.0,
             l: 0.0,
+            serial: 0,
         }
     }
 }

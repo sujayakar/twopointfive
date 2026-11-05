@@ -42,13 +42,13 @@ pub fn fighter(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 pub fn foes_of(g: &mut crate::game::Game, team: crate::teams::Team) -> Vec<crate::picture::Who> { todo!() }
 
 /// (src/game/picture.ts:143 learn)
-pub fn learn(g: &mut crate::game::Game, p: &mut crate::picture::Pic, who: crate::picture::Who, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) { todo!() }
+pub fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: crate::picture::Who, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) { todo!() }
 
 /// (src/game/picture.ts:152 look)
-pub fn look(g: &mut crate::game::Game, p: &mut crate::picture::Pic, gd: GuardId) { todo!() }
+pub fn look(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
 /// (src/game/picture.ts:184 lookSam)
-pub fn look_sam(g: &mut crate::game::Game, p: &mut crate::picture::Pic) { todo!() }
+pub fn look_sam(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/picture.ts:201 hear)
 pub fn hear(g: &mut crate::game::Game) { todo!() }

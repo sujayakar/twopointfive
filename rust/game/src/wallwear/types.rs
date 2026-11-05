@@ -9,7 +9,7 @@ pub struct WallWear {
     pub on: bool,
     pub stats: crate::wallwear::WallWearStats,
     pub log: Vec<String>,
-    pub cells: JsMap<crate::Num, Vec<crate::render_decals::Decal>>,
+    pub cells: JsMap<crate::Num, Vec<(f64, f64, f64)>>,
     pub taken: f64,
 }
 impl WallWear {

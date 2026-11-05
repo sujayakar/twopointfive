@@ -32,7 +32,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     // loose furniture and thrown things: never collision occluders
     g.props = crate::props::prop_system_new(g, &level.props, &mut game_on_prop_event, Some(crate::Opaque));
     g.items = crate::throwables::throwables_new(g, Some(crate::Opaque));
-    g.tracers = crate::tracers::tracers_new(g, None, None);   // (its lights are g.engine.lights, reached by path: see notes)
+    g.tracers = crate::tracers::tracers_new(g, None);   // (its lights and its sparks are reached by path)
     let device = g.engine.device;
     g.decals = crate::render_decals::decals_new(g, device);
     if !g.engine.settings.decals { g.decals.enabled = false; }
@@ -40,24 +40,24 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     let p = g.player;
     let player_light = g.tune.player_light;
     let rail = crate::rig_props::rail_light_def(crate::consts::PLAYER_ID, player_light);
-    g.pl[p].light = crate::render_lights::light_set_add(&mut g.engine.lights, rail);
+    g.pl[p].light = lights_add(g, rail);
     // light targets from analytic lights + switchables; contactor groups restrike staggered by order of first appearance
     let mut group_stagger: JsMap<String, f64> = JsMap::new();
     let lights: Vec<LightId> = g.engine.lights.lights.clone();
     for &l in lights.iter() {
-        let group = seam_light_group(g, l);
-        if seam_light_ttl(g, l) >= 0.0 || seam_light_kind(g, l) == 2.0 || group == "player" || group == "flashlights" { continue; }
-        let name = seam_light_name(g, l);
+        let group = g.tab.light[l].group.clone();
+        if g.tab.light[l].ttl >= 0.0 || g.tab.light[l].kind == 2.0 || group == "player" || group == "flashlights" { continue; }
+        let name = g.tab.light[l].name.clone();
         let mains = light_def_mains(&level, &name);
-        let fixture_box = seam_light_fixture_box(g, l);
+        let fixture_box = g.tab.light[l].fixture_box;
         let def = crate::sim_lightshome::FixtureDef {
             name,
-            pos: seam_light_pos(g, l),
+            pos: v3::copy(g.tab.light[l].pos),
             light: Some(l),
             boxes: if fixture_box >= 0.0 { vec![fixture_box] } else { Vec::new() },
             base_emissive: if fixture_box >= 0.0 { level.boxes[fixture_box as usize].emissive } else { [0.0, 0.0, 0.0] },
-            base_intensity: seam_light_intensity(g, l),
-            on: seam_light_enabled(g, l),
+            base_intensity: g.tab.light[l].intensity,
+            on: g.tab.light[l].enabled,
             broken: false,
             disabled_until: -1.0,
             fluorescent_flicker: false,
@@ -132,9 +132,9 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
             let maxc = m::max_n(&[e[0], e[1], e[2], 1e-3]);
             let i0 = maxc * area;   // radiance x area = on-axis intensity
             let on = crate::sim_lightshome::fixture_on(g, t);
-            let light = seam_add_light(g, &format!("{}_area{}", name, bi as i64), &group, 3.0, v3::mad(c, n, h[thin] + 0.07), n, [e[0] / maxc, e[1] / maxc, e[2] / maxc], i0,
+            let light = add_light(g, &format!("{}_area{}", name, bi as i64), &group, 3.0, v3::mad(c, n, h[thin] + 0.07), n, [e[0] / maxc, e[1] / maxc, e[2] / maxc], i0,
                 v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
-                m::max(0.1, m::min(m::sqrt(area / m::PI), m::min(h[a0], h[a1]) + 0.02)), 0.0, on, i0, true, None);
+                m::max(0.1, m::min(m::sqrt(area / m::PI), m::min(h[a0], h[a1]) + 0.02)), 0.0, on, i0);
             g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
             mark_area_lit(g, bi as usize, ids[bi as usize]);
         }
@@ -162,11 +162,9 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
                     let r = crate::scene_markings::mark_world_rect(mk, c, h, yaw, Some(mk_texel));
                     let n = r.n;
                     let on = crate::sim_lightshome::fixture_on(g, t);
-                    let bii = bi as i64;
-                    let mark_ref = if bi < 4096.0 && k < 4 { Some(((bii << 2) | k as i64) as f64) } else { None };
-                    let light = seam_add_light(g, &format!("{}_mark{}_{}", name, bii, k), &group, 3.0, v3::mad(r.centre, n, 0.07), n, [st.mean_l[0] / maxc, st.mean_l[1] / maxc, st.mean_l[2] / maxc], i0,
+                    let light = add_light(g, &format!("{}_mark{}_{}", name, bi as i64, k), &group, 3.0, v3::mad(r.centre, n, 0.07), n, [st.mean_l[0] / maxc, st.mean_l[1] / maxc, st.mean_l[2] / maxc], i0,
                         v3::clamp(m::sqrt(i0 / 0.0015), 3.0, 26.0), 0.0, 90.0,
-                        m::max(0.1, m::min(m::sqrt(st.area / m::PI), m::min(r.hu, r.hv) + 0.02)), 0.0, on, i0, true, mark_ref);
+                        m::max(0.1, m::min(m::sqrt(st.area / m::PI), m::min(r.hu, r.hv) + 0.02)), 0.0, on, i0);
                     g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
                     g.mark_lights.push(crate::game::GameMarkLightsItem { target: name.clone(), box_: bi, face: String::from(mk.face.as_str()), pos: v3::mad(r.centre, n, 0.07), i0, area: st.area, mean_l: st.mean_l });
                 }
@@ -205,9 +203,13 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
         }
         let Some(target) = target else { panic!("beacon {}: no switchable owns box {}", i, b.box_) };
         let (name, group) = { let f = &g.tab.sim_lightshome_fixture[target]; (f.name.clone(), f.group.clone()) };
-        let light = seam_add_light(g, &name, &group, 1.0, b.pos, [1.0, 0.0, 0.0], [1.0, 0.22, 0.06], 55.0, 14.0, 9.0, 24.0, 0.06, 1.0, false, 55.0, false, None);
+        let light = add_light(g, &name, &group, 1.0, b.pos, [1.0, 0.0, 0.0], [1.0, 0.22, 0.06], 55.0, 14.0, 9.0, 24.0, 0.06, 1.0, false, 55.0);
         g.beacons.push(crate::game::GameBeaconsItem { light, phase: i as f64 * 1.7, target });
     }
+    // the ceiling's cells (game.ts:1314,1321, of the reach block, which is otherwise picture): the walls' and the furniture's rules read them
+    let statics: Vec<BoxId> = g.engine.world.statics.clone();
+    let interior = crate::render_reach::build_interior_cells(g, &statics);
+    g.reach_interior = Some(interior);
     // doors: leaves are dynamic occluders for sight / sound / projectiles
     let door_defs: Vec<crate::doors::DoorDef> = level.doors.iter().map(|d| crate::doors::DoorDef {
         name: d.name.clone(),
@@ -246,7 +248,7 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     for (i, &r) in level.routes.iter().enumerate() {
         let id = 10.0 + i as f64;
         let def = crate::rig_props::torch_light_def(&format!("flashlight{}", i), id, g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-        let fl = crate::render_lights::light_set_add(&mut g.engine.lights, def);
+        let fl = lights_add(g, def);
         let gd = crate::game::guard_new(g, men, ch, id, r, i as f64, fl, tints[i % tints.len()], None);
         g.guards.push(gd);
     }
@@ -299,6 +301,40 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
     let tables = crate::scene_box_mirror::box_mirror_tables(g);
     if let Some(over) = crate::levelfit::stood_over(g, &stood, &tables) { panic!("{}", over); }
     core::mem::replace(g, Game::blank())
+}
+
+/// `engine.lights.add(l)`: the stub takes g and the set inside it, so the set is out of g for the call.
+fn lights_add(g: &mut Game, l: LightId) -> LightId {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    let l = crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+    l
+}
+
+/// `engine.lights.add` of the constructor's literals: owner 0, fixtureBox -1, ttl -1, age 0. (`flicker`, `broad`, `markRef` have no field: notes, Skeleton)
+fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, enabled: bool, peak_intensity: f64) -> LightId {
+    let l = g.tab.light.push(crate::render_lights::RtLight {
+        name: String::from(name),
+        group: String::from(group),
+        kind,
+        pos,
+        dir,
+        color,
+        intensity,
+        range,
+        inner_deg,
+        outer_deg,
+        radius,
+        volumetric,
+        owner: 0.0,
+        enabled,
+        fixture_box: -1.0,
+        ttl: -1.0,
+        age: 0.0,
+        peak_intensity,
+        ..crate::render_lights::RtLight::zeroed()
+    });
+    lights_add(g, l)
 }
 
 /// (game.ts constructor, `b.flags |= BoxFlag.AreaLit`) One box in the TypeScript, two holders here: the level's row and the collision's.
@@ -448,8 +484,8 @@ fn door_torn_note(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsO
 
 /// A line for the player's log; the log keeps five. (game.ts Game.msg)
 pub fn game_msg(g: &mut crate::game::Game, text: &str) {
-    let t = g.time;
-    g.messages.push(crate::game::GameMessagesItem { text: String::from(text), t });
+    let (t, serial) = (g.time, g.serial());
+    g.messages.push(crate::game::GameMessagesItem { text: String::from(text), t, serial });
     if g.messages.len() > 5 { g.messages.remove(0); }
     crate::cues::cues_raw(g, text);
 }
@@ -805,18 +841,8 @@ fn audio_play(g: &mut Game, name: &str, pos: V3, gain: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), None);
 }
 
-// ---- seams: each step still blocked in skeleton 3, in the TypeScript's own arguments (notes.md, Skeleton)
+// ---- seams: each step still blocked in skeleton 4, in the TypeScript's own arguments (notes.md, Skeleton)
 
-fn seam_light_ttl(g: &mut Game, l: LightId) -> f64 { todo!("needs: a light's fields by LightId") }
-fn seam_light_kind(g: &mut Game, l: LightId) -> f64 { todo!("needs: a light's fields by LightId") }
-fn seam_light_group(g: &mut Game, l: LightId) -> String { todo!("needs: a light's fields by LightId") }
-fn seam_light_name(g: &mut Game, l: LightId) -> String { todo!("needs: a light's fields by LightId") }
-fn seam_light_pos(g: &mut Game, l: LightId) -> V3 { todo!("needs: a light's fields by LightId") }
-fn seam_light_fixture_box(g: &mut Game, l: LightId) -> f64 { todo!("needs: a light's fields by LightId") }
-fn seam_light_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: a light's fields by LightId") }
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: a light's fields by LightId") }
-/// engine.lights.add of the literal, whose other fields are always owner 0, fixtureBox -1, flicker 0, ttl -1, age 0.
-fn seam_add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, enabled: bool, peak_intensity: f64, broad: bool, mark_ref: Option<f64>) -> LightId { todo!("needs: a maker of a light from the literal's fields (light_set_add takes a LightId, light_from_def lacks markRef)") }
 /// g.audio.play with `{ rate }`.
 fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) { todo!("needs: game_audio_like_play's opts is JsMap<String, Opaque>, which cannot hold the number `rate`") }
 /// audio.play with `follow`: the voice lives while the roll's voice is still `tok`, and asks the prop where it is and the roll how loud (roll row by its prop).

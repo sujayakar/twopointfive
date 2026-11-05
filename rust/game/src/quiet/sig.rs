@@ -66,7 +66,7 @@ pub fn quiet_mission_before_restart(g: &mut crate::game::Game) { todo!() }
 pub fn quiet_mission_on_encounter_restart(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/quiet.ts:195 QuietMission.tick)
-pub fn quiet_mission_tick(g: &mut crate::game::Game) { todo!() }
+pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) { todo!() }
 
 /// (src/game/quiet.ts:211 QuietMission.snapshot)
 pub fn quiet_mission_snapshot(g: &mut crate::game::Game) -> Option<crate::quiet::QuietSnap> { todo!() }

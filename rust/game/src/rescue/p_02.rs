@@ -22,13 +22,6 @@ fn last_log_order(g: &Game) -> Option<u32> { g.orders.log.last().map(|l| l.seria
 fn hot(g: &Game) -> bool { g.k.rescue.start == crate::knobs::RescueKStart::Hot }
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 
-/// (rescue.ts Rescue.note)
-pub fn rescue_note(g: &mut crate::game::Game, what: &str) {
-    let t = g.time;
-    g.rescue.log.push(RescueLogItem { t, what: String::from(what) });
-    if g.rescue.log.len() > 600 { g.rescue.log.drain(0..150); }
-}
-
 /// A line said once a staging. (rescue.ts Rescue.once)
 pub fn rescue_once(g: &mut crate::game::Game, key: &str, text: &str) {
     if !g.rescue.said.has(String::from(key)) {
@@ -271,7 +264,7 @@ pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) {
 }
 
 /// Once a frame from the game's update. (rescue.ts Rescue.tick)
-pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !g.rescue.active { return; }
     let gone = g.rescue.ops.iter().chain(g.rescue.hostiles.iter()).any(|x| !g.guards.contains(x))
         || g.rescue.hostages.iter().any(|h| !g.civilians.contains(h));
@@ -279,7 +272,7 @@ pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId) {
         crate::game::game_restart_encounter(g);
         if !g.rescue.active { return; }
     }
-    if g.rescue.cut { g.rescue.cut = false; crate::seats::cut_to_men(g); }
+    if g.rescue.cut && cam.is_some() { g.rescue.cut = false; crate::seats::cut_to_men(g); }
     rescue_tick_entry(g);
     if crate::input::input_hit(g, input, "KeyF") { rescue_order_door(g); }
     rescue_hear(g);
@@ -316,6 +309,8 @@ pub fn rescue_hear(g: &mut crate::game::Game) {
         if !bang && (e.level.unwrap_or(0.0) < 1.0 || !by_team) { continue; }
         if bang || e.kind == crate::director::EventKind::Shot || e.kind == crate::director::EventKind::GuardShot || e.kind == crate::director::EventKind::Kick {
             g.rescue.noise = Some([e.pos[0], 0.0, e.pos[2]]);
+            let serial = g.serial();
+            g.rescue.noise_serial = Some(serial);
             if hot(g) { rescue_start_clock(g, "noise"); }
         }
     }
@@ -493,7 +488,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
                 g.gd[h].state = GuardState::Alert;
                 g.gd[h].awareness = m::max(g.gd[h].awareness, 0.92);
             }
-            let noise = g.rescue.noise;
+            let noise = g.rescue.noise_serial;
             let row = g.rescue.defs.get_mut(h).unwrap();
             row.crew = DefCrew::Cross; row.look = Some(pt); row.spot = Some(x); row.noise0 = noise;
             rescue_note(g, &format!("crew:cross:{}", name));
@@ -529,7 +524,7 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
                 g.gd[h].state = GuardState::Alert;
                 g.gd[h].awareness = m::max(g.gd[h].awareness, 0.92);
             }
-            let noise = g.rescue.noise;
+            let noise = g.rescue.noise_serial;
             let row = g.rescue.defs.get_mut(h).unwrap();
             row.crew = DefCrew::Wait; row.spot = y; row.noise0 = noise;
             rescue_note(g, &format!("crew:wait:{}", name));
@@ -577,9 +572,9 @@ fn crew_on_row(g: &mut Game, h: GuardId, d: Def, f: Option<RoomfightDefId>) -> b
         }
     }
     g.tab.roomfight_def[f].rally_at = f64::INFINITY;
-    // by value where the TypeScript asks identity: notes.md, ## Skeleton (rescue.ts:675)
+    // N !== D.noise0 asks which noise, not where: by its serial (rescue.ts:675)
     let at_door = match g.rescue.noise {
-        Some(n) => g.rescue.noise != d.noise0 && (flat(n, pt) < 3.0 || in_rect(n, bounds)),
+        Some(n) => g.rescue.noise_serial != d.noise0 && (flat(n, pt) < 3.0 || in_rect(n, bounds)),
         None => false,
     };
     if at_door && g.time - g.gd[h].last_seen_t > 2.5 && g.gd[h].held.is_none() && g.time >= g.gd[h].dazzled_until {
@@ -811,6 +806,7 @@ pub fn rescue_round_by(g: &mut crate::game::Game, op: GuardId) {
     let leg = v3::copy(out);
     g.tab.orders_assignment[a].via = vec![leg];
     g.tab.orders_assignment[a].goal = leg;
+    g.tab.orders_assignment[a].new_leg = true;
 }
 
 /// A man the scenario lets go of where he stands: the order menu's 'cover'. (rescue.ts Rescue.post)
@@ -1123,16 +1119,6 @@ mod tests {
         let h = GuardId(1);
         g.rescue.defs.set(h, Def { crew, look, ..Def::zeroed() });
         h
-    }
-
-    #[test]
-    fn the_log_loses_its_oldest_150_past_600() {
-        let mut g = Game::blank();
-        for _ in 0..600 { rescue_note(&mut g, "x"); }
-        assert_eq!(g.rescue.log.len(), 600);
-        rescue_note(&mut g, "last");
-        assert_eq!(g.rescue.log.len(), 451);
-        assert_eq!(g.rescue.log[450].what, "last");
     }
 
     #[test]

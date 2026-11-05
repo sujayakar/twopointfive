@@ -18,7 +18,7 @@ pub fn wall_wear_reset(g: &mut crate::game::Game) { todo!() }
 pub fn wall_wear_own<'g>(g: &'g mut crate::game::Game, hit_p: V3) -> Option<&'g mut crate::render_decals::Decal> { todo!() }
 
 /// (src/game/wallwear.ts:101 WallWear.shape)
-pub fn wall_wear_shape(g: &mut crate::game::Game, d: &mut crate::render_decals::Decal, s: f64) { todo!() }
+pub fn wall_wear_shape(g: &mut crate::game::Game, s: f64, serial: f64, half: f64, mat: f64) { todo!() }
 
 /// (src/game/wallwear.ts:107 WallWear.throwOut)
 pub fn wall_wear_throw_out(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, hit_p: V3, dir: V3, n: V3, half: f64, through: bool, s: f64) { todo!() }

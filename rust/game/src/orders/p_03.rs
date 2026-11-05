@@ -85,10 +85,8 @@ fn unclick(g: &mut Game, input: InputId, bit: i32) {
 fn row_at(rows: &[OrdersOrderDefId], i: f64) -> Option<OrdersOrderDefId> {
     if i >= 0.0 && i == m::floor(i) && (i as usize) < rows.len() { Some(rows[i as usize]) } else { None }
 }
-/// `v.input = input; v.cam = cam; v.canvas = canvas`: the camera the seat's (a copy: only the HUD's asks read it, between ticks, hostView having taken it afresh)
-fn set_view(g: &mut Game, input: InputId, canvas: crate::host_hud::View) {
-    let s = g.seat;
-    let cam = g.tab.cmd_seat[s].cam.clone();
+/// `v.input = input; v.cam = cam; v.canvas = canvas`
+fn set_view(g: &mut Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     g.orders.view.input = Some(input);
     g.orders.view.cam = Some(cam);
     g.orders.view.canvas = Some(canvas);
@@ -144,7 +142,7 @@ fn drop_stock_word(s: &str) -> &str {
     s
 }
 
-// ---- what skeleton 3 still cannot reach ----
+// ---- what skeleton 4 still cannot reach ----
 fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { todo!("needs: Box.owner of any box of the world: Box has no table (orders.ts:805, 809)") }
 fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { todo!("needs: Box.flags of any box of the world: Box has no table (orders.ts:805)") }
 fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String { todo!("needs: a public name for these arms' closures: Door*, ThrowRow, PairGo (orders.ts:854)") }
@@ -371,20 +369,20 @@ fn people_ray(g: &mut Game, ro: V3, rd: V3, max: f64) -> Option<GuardId> {
 // ---- the bodies ----
 
 /// What the cursor is on, before the whole-squad rule (orders.ts SquadOrders.targetUnderOf)
-pub fn squad_orders_target_under_of(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget {
+pub fn squad_orders_target_under_of(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget {
     if g.puppet.as_ref().map_or(false, |p| p.aim.is_some()) { let a = g.aim_point; return squad_orders_target_at(g, a); }
     let mc = crate::rails::RailsMarkUnderCanvas { client_width: canvas.client_width, client_height: canvas.client_height };
-    if let Some(mk) = crate::rails::rails_mark_under(g, input, mc) { return squad_orders_target_at(g, mk); }
+    if let Some(mk) = crate::rails::rails_mark_under(g, input, cam, mc) { return squad_orders_target_at(g, mk); }
     let (mx, my) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     let (u, v) = (mx / m::max(1.0, canvas.client_width), my / m::max(1.0, canvas.client_height));
-    let ray = crate::camera::follow_camera_ray(g, u, v);
+    let ray = crate::camera::follow_camera_ray(g, cam, u, v);
     let (ro, rd) = (ray.ro, ray.rd);
     let pc = player_ch(g);
     let own_id = g.ch[pc].id;
     let hit = crate::scene_boxes::box_world_raycast(g, ro, rd, Some(200.0), None, Some(own_id), None);
     let p: V3 = match &hit {
         Some(h) => v3::mad(ro, rd, h.t),
-        None => match crate::camera::follow_camera_ground_point(g, u, v, Some(0.0)) { Some(q) => q, None => g.aim_point },
+        None => match crate::camera::follow_camera_ground_point(g, cam, u, v, Some(0.0)) { Some(q) => q, None => g.aim_point },
     };
     let mut man: Option<GuardId> = None;
     let mut best = match &hit { Some(h) => h.t + 0.3, None => 200.0 };
@@ -812,6 +810,7 @@ pub fn squad_orders_assign(g: &mut crate::game::Game, gd: GuardId, a: &crate::or
         lean: a.lean,
         fit: a.fit.clone(),
         tries: a.tries.clone(),
+        new_leg: true,
     };
     let id = g.tab.orders_assignment.push(row);
     g.orders.asg.set(gd, id);
@@ -1098,7 +1097,7 @@ pub fn squad_orders_due(g: &mut crate::game::Game, m: &crate::orders::Menu) -> b
 /// What the cursor is on, for the HUD; kept in the asker's store while the cursor has not moved. Its rays and memos are asked aside (orders.ts SquadOrders.hover)
 pub fn squad_orders_hover(g: &mut crate::game::Game, kept: Option<&mut crate::orders::HoverKept>) -> Option<crate::orders::SquadOrdersHover> {
     let mut kept = kept;
-    let (Some(input), true, Some(canvas)) = (g.orders.view.input, g.orders.view.cam.is_some(), g.orders.view.canvas) else { return None };
+    let (Some(input), Some(cam), Some(canvas)) = (g.orders.view.input, g.orders.view.cam, g.orders.view.canvas) else { return None };
     if !squad_orders_active(g) { return None; }
     let (x, y, t) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y, g.time);
     if let Some(c) = kept.as_ref().and_then(|k| k.hov.as_ref()) {
@@ -1111,7 +1110,7 @@ pub fn squad_orders_hover(g: &mut crate::game::Game, kept: Option<&mut crate::or
         crate::wallcharge::sky_aside(g, &mut |g: &mut Game| {
             crate::workthings::work_things_ask_aside(g, &mut work, &mut |g: &mut Game| {
                 crate::scene_collision::aside(g, &mut col, &mut |g: &mut Game| {
-                    crate::scene_boxes::box_world_ray_aside(g, &mut world, &mut |g: &mut Game| squad_orders_target_under(g, input, canvas))
+                    crate::scene_boxes::box_world_ray_aside(g, &mut world, &mut |g: &mut Game| squad_orders_target_under(g, input, cam, canvas))
                 })
             })
         })
@@ -1156,12 +1155,12 @@ pub fn squad_orders_step_who(g: &mut crate::game::Game, dir: f64, point: Option<
 }
 
 /// After a tick: whoever asks between ticks is answered off the live input and camera (orders.ts SquadOrders.hostView)
-pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) {
-    if g.orders.view.input.is_some() { set_view(g, input, canvas); }
+pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
+    if g.orders.view.input.is_some() { set_view(g, input, cam, canvas); }
 }
 
 /// Once a frame right after the aim is known: T, the press that opens or closes the menu, and the open menu's keys, each taken out of the frame's input (orders.ts SquadOrders.input)
-pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, canvas: crate::host_hud::View) {
+pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     squad_orders_sync(g);
     if g.orders.esc_used { g.orders.esc_used = false; press_delete(g, input, "Escape"); }
     if !squad_orders_active(g) || g.pl[g.player].down {
@@ -1175,19 +1174,19 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
         return;
     }
     if g.orders.tap_was.is_some() && (press_has(g, input, "Blur") || press_has(g, input, "Thawed")) { g.orders.tap_was = None; }
-    set_view(g, input, canvas);
+    set_view(g, input, cam, canvas);
     if !g.orders.lay.laid.is_empty() { crate::planlay::lay_prune(g); }
     if squad_orders_whole(g) {
         g.orders.who = Who::All;
     } else {
         let who_key = g.k.orders.who_key.clone();
         if crate::input::input_hit(g, input, &who_key) {
-            let t = squad_orders_target_under(g, input, canvas);
+            let t = squad_orders_target_under(g, input, cam, canvas);
             squad_orders_step_who(g, 1.0, Some(&to_step_point(&t)));
         }
     }
-    crate::planmode::goal_input(g, input, canvas);
-    if squad_orders_ring_input(g, input, canvas) { return; }
+    crate::planmode::goal_input(g, input, cam, canvas);
+    if squad_orders_ring_input(g, input, cam, canvas) { return; }
     let k = g.k.orders.key.clone();
     let key = crate::input::input_hit(g, input, &k);
     let Some(m) = g.orders.menu.clone() else {
@@ -1202,10 +1201,10 @@ pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, c
         }
         let quick = g.k.orders.quick_key.clone();
         if crate::input::input_hit(g, input, &quick) {
-            let t = squad_orders_target_under(g, input, canvas);
+            let t = squad_orders_target_under(g, input, cam, canvas);
             squad_orders_tap_give(g, &t, input, None);
         } else if key && g.pl[g.player].sel.down_t < 0.0 {
-            let t = squad_orders_target_under(g, input, canvas);
+            let t = squad_orders_target_under(g, input, cam, canvas);
             squad_orders_open(g, Some(&t), None, None);
         }
         return;

@@ -139,8 +139,8 @@ pub fn glass_break_set_type(g: &mut crate::game::Game, bi: f64, type_: Option<cr
     crate::scene_collision::wrote(g);
     crate::scene_collision::glass_wrote(g);
     g.glass_break.blasted.clear();
-    if let Some(src_name) = g.glass_break.gusts.get(crate::Num(bi)).map(|src| src.name.clone()) {
-        if let Some(i) = g.wind.all.iter().position(|s| s.name == src_name) { g.wind.all.remove(i); }
+    if let Some(src) = g.glass_break.gusts.get(crate::Num(bi)).copied() {
+        if let Some(i) = g.wind.all.iter().position(|s| *s == src) { g.wind.all.remove(i); }
         g.glass_break.gusts.delete(crate::Num(bi));
     }
 }

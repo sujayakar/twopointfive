@@ -23,23 +23,18 @@ fn light_in(g: &mut Game, kind: u32, t: Option<FixtureId>, a: f64, b: f64, c: f6
 fn seam_lens_max_back(g: &mut Game, back: f64) {
     todo!("needs: LightingStats.max_back as f64, it is metres: LENS_STATS.maxBack = Math.max(LENS_STATS.maxBack, back) (lighting.ts:49)")
 }
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool {
-    todo!("needs: RtLight.enabled by LightId (lighting.ts:56, 142, 202)")
+// ---- the set of lights: its methods take `g` and the set inside `g`, which cannot both be lent (notes.md, Skeleton), so the set is lent out for the call
+
+fn lights_add(g: &mut Game, l: LightId) -> LightId {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    let l = crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+    l
 }
-fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) {
-    todo!("needs: RtLight.enabled written by LightId (lighting.ts:202, 209)")
-}
-fn seam_light_pos(g: &mut Game, l: LightId) -> V3 {
-    todo!("needs: RtLight.pos by LightId (lighting.ts:56)")
-}
-fn seam_light_set_pos(g: &mut Game, l: LightId, p: V3) {
-    todo!("needs: RtLight.pos written by LightId (lighting.ts:56)")
-}
-fn seam_light_radius(g: &mut Game, l: LightId) -> f64 {
-    todo!("needs: RtLight.radius by LightId (lighting.ts:56)")
-}
-fn seam_light_name(g: &mut Game, l: LightId) -> String {
-    todo!("needs: RtLight.name by LightId (lighting.ts:202)")
+fn lights_remove(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_remove(g, &mut set, l);
+    g.engine.lights = set;
 }
 
 // ---- the bodies
@@ -76,11 +71,9 @@ fn recheck_one(g: &mut Game, l: LightId) {
         Some(from) => *from,
         None => return,
     };
-    if seam_light_enabled(g, l) {
-        let pos = seam_light_pos(g, l);
-        let radius = seam_light_radius(g, l);
-        let p = lens_clear(g, from, pos, radius, None);
-        seam_light_set_pos(g, l, p);
+    if g.tab.light[l].enabled {
+        let (pos, radius) = (g.tab.light[l].pos, g.tab.light[l].radius);
+        g.tab.light[l].pos = lens_clear(g, from, pos, radius, None);
     }
 }
 
@@ -125,7 +118,7 @@ pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
     m::hyp2(p[0] - bp[0], p[2] - (bp[2] - 0.6)) < 1.3
 }
 
-/// The mains' clocks and everything that goes with them, each tick. The paint loop is the picture's.   (lighting.ts updateTargets)
+/// The mains' clocks and everything that goes with them, each tick, then the rows onto the lamps. The boxes' paint is the picture's.   (lighting.ts updateTargets)
 pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
     let time = g.time;
     let mut near: Option<GuardId> = None;
@@ -158,6 +151,8 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
         crate::game::game_say(g, near.unwrap(), "breaker's back on", Some(true), None, None);
         mains_back(g);
     }
+    // not picture-only: a light question reads what this writes (guards.ts lampAsked, writeLamps). The rest of the paint is the picture's.
+    crate::sim_lightshome::light_home_paint(g);
 }
 
 /// Trip the mains: everything fed from the breaker goes dark, the men get edgy, the nearest goes to check it.   (lighting.ts setBlackout)
@@ -308,7 +303,7 @@ pub fn ocpable(g: &mut crate::game::Game) -> bool {
         return false;
     }
     let l = g.gd[gd].flashlight;
-    seam_light_enabled(g, l) && g.time >= g.gd[gd].light_dead_until
+    g.tab.light[l].enabled && g.time >= g.gd[gd].light_dead_until
 }
 
 /// The OCP's press: on a man's light, on the breaker, or on a fixture.   (lighting.ts ocp)
@@ -463,7 +458,7 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
         let haze = g.engine.settings.haze_density;
         let exposure = g.engine.settings.exposure;
         let sun = crate::render_lights::light_from_def(&d.sun);
-        let sun = crate::render_lights::light_set_add(&mut g.engine.lights, sun);
+        let sun = lights_add(g, sun);
         let mut st = crate::lighting::DayState {
             hour,
             hour_sun_k,
@@ -493,9 +488,8 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
         let mut i = 0;
         while i < g.engine.lights.lights.len() {
             let l = g.engine.lights.lights[i];
-            let name = seam_light_name(g, l);
-            if d.lights_off.contains(&name) && seam_light_enabled(g, l) {
-                seam_light_set_enabled(g, l, false);
+            if d.lights_off.contains(&g.tab.light[l].name) && g.tab.light[l].enabled {
+                g.tab.light[l].enabled = false;
                 crate::sim_lightshome::light_home_feed(g, l);
                 st.lights_off.push(l);
             }
@@ -516,14 +510,14 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
             light_in(g, ::sim::lights::IN_ON, Some(t), if *was { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0);
         }
         for &l in cur.lights_off.iter() {
-            seam_light_set_enabled(g, l, true);
+            g.tab.light[l].enabled = true;
             crate::sim_lightshome::light_home_feed(g, l);
         }
         g.engine.settings.sky_zenith = cur.sky.zenith;
         g.engine.settings.sky_horizon = cur.sky.horizon;
         g.engine.settings.haze_density = cur.haze;
         g.engine.settings.exposure = cur.exposure;
-        crate::render_lights::light_set_remove(&mut g.engine.lights, cur.sun);
+        lights_remove(g, cur.sun);
         if let Some(b) = cur.blackout {
             if !crate::sim_lightshome::mains_active(g) {
                 let restored = crate::sim_lightshome::mains_restored_at(g);

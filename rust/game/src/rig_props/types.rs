@@ -1667,20 +1667,11 @@ impl HungBoxesWeapon {
 pub struct RigPropsMod {
     /// (src/game/rigProps.ts:341 curOwner)
     pub cur_owner: f64,
-    /// (src/game/rigProps.ts:352 rotOf)
-    pub rot_of: Option<crate::rig_props::Frame>,
-    /// (src/game/rigProps.ts:352 rotYaw)
-    pub rot_yaw: f64,
-    /// (src/game/rigProps.ts:352 rotQ)
-    pub rot_q: Quat,
 }
 impl RigPropsMod {
     pub fn blank() -> Self {
         RigPropsMod {
             cur_owner: 0.0,
-            rot_of: None,
-            rot_yaw: 0.0,
-            rot_q: [0.0, 0.0, 0.0, 1.0],
         }
     }
 }

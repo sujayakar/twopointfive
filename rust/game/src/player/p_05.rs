@@ -52,7 +52,7 @@ fn unhook(g: &mut Game, gd: GuardId) {
 }
 
 /// One frame with a man in his arm: the beat's clock and inputs, his rows, the gun, then the pair's movement.   (player.ts updateHold)
-pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId) {
     let p = g.player;
     let c = g.pl[p].ch;
     let gd = hold!(g, p).g;
@@ -311,7 +311,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId) {
         // a remark that waited for the man to finish: the answer is down and no question is going up
         if hold!(g, p).after.is_some() && hold!(g, p).phase == Ph::Held && hold!(g, p).ask.is_none() {
             let h = hold!(g, p).clone();
-            if held_talk(g, &h).speaking.is_none() {
+            if !held_talk(g, &h).speaking {
                 say_after(g);
             }
         }
@@ -439,7 +439,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId) {
         // ---- the pair's movement (rooted while the choke / the whip is on; feet still while the selector is open)
         let (mut mx, mut mz) = (0.0, 0.0);
         if phase_after == Ph::Held {
-            let basis = crate::camera::follow_camera_planar_basis(g);
+            let basis = crate::camera::follow_camera_planar_basis(g, cam);
             let (fwd, right) = (basis.fwd, basis.right);
             if !crate::game::player_list_open(g, p) {
                 if crate::input::input_down(g, input, "KeyW") {
@@ -743,7 +743,7 @@ pub fn swap_hold(g: &mut crate::game::Game) {
         g.pl[p].slot = crate::game::SlotKind::Pistol;
         set_holstered(g, false, Some(true));
         let h = hold!(g, p).clone();
-        if !h.remarked && held_talk(g, &h).speaking.is_none() && g.gd[gd].civ.is_none() {
+        if !h.remarked && !held_talk(g, &h).speaking && g.gd[gd].civ.is_none() {
             if let Some(line) = crate::dialogue::sam_remark_for(g, gd, None) {
                 hold!(g, p).remarked = true;
                 let time = g.time;
@@ -877,7 +877,7 @@ pub fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Where the exchange with the man in his arm stands. `speaking` is a COPY of `gd.bubble`: a write goes to `g.gd[h.g].bubble`.   (player.ts heldTalk)
+/// Where the exchange with the man in his arm stands. `speaking` says the man's bubble is his answer: a write goes to `g.gd[h.g].bubble`.   (player.ts heldTalk)
 pub fn held_talk(g: &mut crate::game::Game, h: &crate::player::Hold) -> crate::player::HeldTalk {
     let gd = h.g;
     let talk = g.gd[gd].talk;
@@ -900,7 +900,7 @@ pub fn held_talk(g: &mut crate::game::Game, h: &crate::player::Hold) -> crate::p
             None => true,
             Some(s) => time + 1e-6 >= s.t + s.dur - ANSWER_TAIL,
         };
-    crate::player::HeldTalk { asking, sam_up, ready, settled, speaking }
+    crate::player::HeldTalk { asking, sam_up, ready, settled, speaking: speaking.is_some() }
 }
 
 /// A tap on his row, one EXCHANGE: Sam's line first, up for its beat; the answer follows when it ends.   (player.ts askHeld)
@@ -914,14 +914,14 @@ pub fn ask_held(g: &mut crate::game::Game) {
     }
     let time = g.time;
     if !talk.ready {
-        if talk.speaking.is_some() {
+        if talk.speaking {
             if let Some(b) = g.gd[gd].bubble.as_mut() {
                 b.dur = m::min(b.dur, time - b.t + 0.3);
             }
         }
         return;
     }
-    if talk.speaking.is_some() {
+    if talk.speaking {
         if let Some(b) = g.gd[gd].bubble.as_mut() {
             b.dur = m::min(b.dur, time - b.t);
         }

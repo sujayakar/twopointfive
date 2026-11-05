@@ -375,7 +375,7 @@ pub fn defenders_of(g: &mut crate::game::Game) -> Vec<GuardId> {
 }
 
 /// Deal the floor's frags: one defender in defShare, at most defMax, by a hash of the men's ids.   (frag.ts dealCarriers)
-pub fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBook>) -> crate::frag::DefBook {
+pub fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBook>) {
     let men = defenders_of(g);
     let n = m::min(g.k.frag.def_max, m::ceil(men.len() as f64 / m::max(1.0, g.k.frag.def_share)));
     let mut sorted: Vec<(GuardId, f64)> = men.iter().map(|&gd| (gd, g.ch[g.gd[gd].ch].id)).collect();
@@ -399,8 +399,7 @@ pub fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBoo
             if give { b.carriers.push(c); } else { b.carriers.push(crate::frag::Carrier { frags: 0.0, ..c }); }
         }
     }
-    g.m.frag.def_books = Some(b.clone());
-    b
+    g.m.frag.def_books = Some(b);
 }
 
 /// Who on the defenders' side still carries a frag.   (frag.ts fragCarriers)
@@ -408,8 +407,6 @@ pub fn frag_carriers(g: &mut crate::game::Game) -> Vec<GuardId> {
     let Some(b) = g.m.frag.def_books.as_ref() else { return Vec::new() };
     b.carriers.iter().filter(|c| c.frags > 0.0 && g.gd[c.gd].state != crate::game::GuardState::Dead).map(|c| c.gd).collect()
 }
-
-static SHOUTS: [&str; 3] = ["frag out!", "grenade out!", "fire in the hole!"];
 
 /// `FRAG_WHY[w]++`: why a throw was not looked for.
 fn no(g: &mut Game, w: &str) {
@@ -489,7 +486,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
     // a fix his ears gave him is the doorway on his own side: he throws past it or not at all
     let seen = g.time - g.gd[gd].last_seen_t <= g.k.frag.def_fresh;
     let spots = aim_spots(g, gd, Some(from), fix, if seen { 17.0 } else { 0.0 });
-    let why = match spots.first() { Some(&aim) => wind_up_row(g, ci, head, from, aim, None), None => Some(crate::frag::WindUp::Arc) };
+    let why = match spots.first() { Some(&aim) => wind_up(g, ci, head, from, aim, None), None => Some(crate::frag::WindUp::Arc) };
     if let Some(why) = why { no(g, why.as_str()); }
 }
 
@@ -554,14 +551,6 @@ fn seat_in_bunch(v: &mut Game, gd: GuardId, c: CharId, head: V3, fix: V3) -> boo
     crate::guards::can_see_char(v, gd, pc, true).visible || (v.gd[gd].smoke_trans >= 0.3 && sights(v, gd, c, head, p, ph))
 }
 
-/// `wind_up` for a carrier of the table: the carrier is lent out and what it wrote is put back.
-fn wind_up_row(g: &mut Game, ci: usize, head: V3, from: V3, aim: V3, toward: Option<V3>) -> Option<crate::frag::WindUp> {
-    let mut c = car!(g, ci).clone();
-    let why = wind_up(g, &mut c, head, from, aim, toward);
-    car!(g, ci) = c;
-    why
-}
-
 /// Of `n` spots by the fix, those of open floor with the burst's line to the man's chest; `from` given: only the first his arm lands.   (frag.ts aimSpots)
 pub fn aim_spots(g: &mut crate::game::Game, gd: GuardId, from: Option<V3>, fix: V3, n: f64) -> Vec<V3> {
     let c = g.gd[gd].ch;
@@ -593,8 +582,8 @@ pub fn aim_spots(g: &mut crate::game::Game, gd: GuardId, from: Option<V3>, fix: 
 }
 
 /// The wind-up begins: the scatter, none of his own in reach, then the shout, the floor's clock and the cue. None = he is getting it out; else why not.   (frag.ts windUp)
-pub fn wind_up(g: &mut crate::game::Game, c_2: &mut crate::frag::Carrier, head: V3, from: V3, aim: V3, toward: Option<V3>) -> Option<crate::frag::WindUp> {
-    let gd = c_2.gd;
+pub fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, toward: Option<V3>) -> Option<crate::frag::WindUp> {
+    let gd = car!(g, c_2).gd;
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
     let k = book!(g).serial + 1.0;
@@ -605,18 +594,19 @@ pub fn wind_up(g: &mut crate::game::Game, c_2: &mut crate::frag::Carrier, head: 
     let mut sol = crate::throwables::throwables_solve(g, from, land, Some(11.0));
     if !lands(g, Some(crate::frag::LandsSol { land: sol.land }), land, 1.6) { sol = crate::throwables::throwables_solve(g, from, aim, Some(11.0)); }
     if !own_clear(g, gd, sol.land, None) { return Some(crate::frag::WindUp::Own); }
-    c_2.wind = Some(crate::frag::CarrierWind { until: g.time + g.k.frag.def_wind, at: sol.land, swung: false, last_t: book!(g).last_t, hand: if toward.is_some() { Some(from) } else { None }, toward });
     let now_t = g.time;
+    let wind = crate::frag::CarrierWind { until: now_t + g.k.frag.def_wind, at: sol.land, swung: false, last_t: book!(g).last_t, hand: if toward.is_some() { Some(from) } else { None }, toward };
+    car!(g, c_2).wind = Some(wind);
     book!(g).serial = k;
     book!(g).last_t = now_t;
-    c_2.blocked_t = 0.0;
-    c_2.bunch_t = 0.0;
-    let now: Vec<&'static str> = SHOUTS[1..].to_vec();
-    let was: Vec<&'static str> = SHOUTS.to_vec();
-    let shouts = crate::words::w(g, &now, &was);
-    let len = shouts.len() as f64;
+    car!(g, c_2).blocked_t = 0.0;
+    car!(g, c_2).bunch_t = 0.0;
+    let all = shouts();
+    let now: Vec<String> = all[1..].to_vec();
+    let said = crate::words::w(g, &now, &all);
+    let len = said.len() as f64;
     let pick = js::rem(m::floor(hash01(id, k) * len), len) as usize;
-    crate::game::game_say(g, gd, shouts[pick], None, None, None);
+    crate::game::game_say(g, gd, said[pick].as_str(), None, None, None);
     let mut heard = false;
     for pl in crate::seats::men_up(g) {
         let ph = head_of(g, g.pl[pl].ch);
@@ -658,15 +648,14 @@ pub fn arm_round(g: &mut crate::game::Game, p: V3, to: V3) -> V3 {
     if crate::scene_collision::solid_blocked(g, chest, from, None) { chest } else { from }
 }
 
-/// The book and the carrier of a man who may start a throw this moment (copies: a caller's write goes through the table).   (frag.ts free)
-pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::frag::Free> {
+/// The place in the book of the carrier who may start a throw this moment (the book is `g.m.frag.def_books`).   (frag.ts free)
+pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> {
     if !g.ai_enabled || !crate::roomfight::fight_live(g) || crate::director::director_their_frags_off(g) { return None; }
     let b = g.m.frag.def_books.as_ref()?;
-    let c = b.carriers.iter().find(|x| x.gd == gd)?;
-    if !js::truthy(c.frags) || c.wind.is_some() { return None; }
-    let (b, c) = (b.clone(), c.clone());
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || crate::runner::runner_owns(g, gd) || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until || frag_flee(g, gd).is_some() || g.time - b.last_t < g.k.frag.def_gap { return None; }
-    Some(crate::frag::Free { b, c })
+    let ci = b.carriers.iter().position(|x| x.gd == gd)?;
+    if !js::truthy(b.carriers[ci].frags) || b.carriers[ci].wind.is_some() { return None; }
+    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || crate::runner::runner_owns(g, gd) || g.time < g.gd[gd].stagger_until || g.time < g.gd[gd].dazzled_until || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
+    Some(ci)
 }
 
 /// May he start a throw at the place `at` this moment: everything `frag_throw_at` asks but the arc and his own side.   (frag.ts fragReady)
@@ -677,15 +666,14 @@ pub fn frag_ready(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool {
 /// A throw another rule asks for: only WHERE is the caller's.   (frag.ts fragThrowAt)
 pub fn frag_throw_at(g: &mut crate::game::Game, gd: GuardId, at: V3, stand: V3, toward: V3) -> crate::frag::FragThrowAt {
     use crate::frag::FragThrowAt as R;
-    let Some(x) = free(g, gd) else { return R::Busy };
+    let Some(ci) = free(g, gd) else { return R::Busy };
     if hostage_near(g, at) { return R::Busy; }
     let c = g.gd[gd].ch;
     let d = flat(stand, at);
     if d < g.k.frag.def_near || d > g.k.frag.def_far { return R::Arc; }
-    let ci = x.b.carriers.iter().position(|o| o.gd == gd).unwrap();
     let pos = g.ch[c].pos;
     let time = g.time;
-    let s = match x.c.spots {
+    let s = match car!(g, ci).spots.clone() {
         Some(s) if !(time - s.t > 1.0 || flat(s.at, at) > 0.1 || flat(s.from, pos) > 1.5) => s,
         _ => {
             let list = aim_spots(g, gd, None, at, 17.0);
@@ -702,7 +690,7 @@ pub fn frag_throw_at(g: &mut crate::game::Game, gd: GuardId, at: V3, stand: V3, 
     }
     let Some(aim) = aim else { return R::Arc };
     let head = head_of(g, c);
-    match wind_up_row(g, ci, head, hand, aim, Some(toward)) {
+    match wind_up(g, ci, head, hand, aim, Some(toward)) {
         None => R::Thrown,
         Some(crate::frag::WindUp::Arc) => R::Arc,
         Some(crate::frag::WindUp::Own) => R::Own,

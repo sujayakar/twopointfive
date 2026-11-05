@@ -30,7 +30,7 @@ pub fn outdoors(g: &mut crate::game::Game, x: f64, z: f64) -> bool { todo!() }
 pub fn rim_taper(r01: f64) -> f64 { todo!() }
 
 /// (src/game/rainFx.ts:153 updateRainFx)
-pub fn update_rain_fx(g: &mut crate::game::Game, dt: f64) { todo!() }
+pub fn update_rain_fx(g: &mut crate::game::Game, dt: f64, cam: CameraId) { todo!() }
 
 /// (src/game/rainFx.ts:265 dripLife)
 pub fn drip_life(fall: f64) -> f64 { todo!() }

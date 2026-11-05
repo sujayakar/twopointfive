@@ -129,7 +129,7 @@ pub fn flank_go(g: &mut crate::game::Game, l: &mut crate::lanes::Lane) { todo!()
 pub fn pin_start(g: &mut crate::game::Game, l: &mut crate::lanes::Lane) { todo!() }
 
 /// (src/game/lanes.ts:681 pinStep)
-pub fn pin_step(g: &mut crate::game::Game, gd: GuardId, p: &mut crate::lanes::Peek, l: &mut crate::lanes::Lane, d: RoomfightDefId, seen: Option<V3>, back: &mut dyn FnMut(&mut crate::game::Game)) { todo!() }
+pub fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::lanes::Lane, d: RoomfightDefId, seen: Option<V3>) { todo!() }
 
 /// (src/game/lanes.ts:703 winding)
 pub fn winding(g: &mut crate::game::Game, gd: GuardId, f: crate::lanes::PeekFrag) -> bool { todo!() }
@@ -144,13 +144,13 @@ pub fn guns_mid(l: &crate::lanes::Lane) -> V3 { todo!() }
 pub fn frag_place(g: &mut crate::game::Game, gd: GuardId, to: V3, s: f64, going: bool) -> Option<crate::lanes::FragPlace> { todo!() }
 
 /// (src/game/lanes.ts:751 fragStep)
-pub fn frag_step(g: &mut crate::game::Game, gd: GuardId, p: &mut crate::lanes::Peek, l: &mut crate::lanes::Lane, d: RoomfightDefId, back: &mut dyn FnMut(&mut crate::game::Game)) { todo!() }
+pub fn frag_step(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::lanes::Lane, d: RoomfightDefId) { todo!() }
 
 /// (src/game/lanes.ts:783 peekStart)
 pub fn peek_start(g: &mut crate::game::Game, l: &mut crate::lanes::Lane) { todo!() }
 
 /// (src/game/lanes.ts:795 peekStep)
-pub fn peek_step(g: &mut crate::game::Game, gd: GuardId, p: &mut crate::lanes::Peek) { todo!() }
+pub fn peek_step(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
 /// (src/game/lanes.ts:853 mouthOf)
 pub fn mouth_of(g: &mut crate::game::Game, l: &crate::lanes::Lane, p: V3) -> V3 { todo!() }

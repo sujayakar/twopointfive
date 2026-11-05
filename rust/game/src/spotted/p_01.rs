@@ -161,7 +161,7 @@ pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, asid
     if let Some(tk) = take {
         if !aside {
             let c = pos(g, tk.foe);
-            return Some(SpottedFeet { goal: Some(tk.spot), speed: Some(if pace > 0.0 { pace } else { 1.6 }), crouch: false, watch: Some([c[0], 1.2, c[2]]) });
+            return Some(SpottedFeet { goal: Some(tk.spot), speed: Some(if pace > 0.0 { pace } else { 1.6 }), crouch: false, watch: Some([c[0], 1.2, c[2]]), goal_serial: Some(tk.spot_serial) });
         }
     }
     if mode == crate::spotted::SpottedMode::Calm { return None; }
@@ -173,15 +173,15 @@ pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, asid
     if mode == crate::spotted::SpottedMode::Caught {
         let step = follower && !aside && spot.is_some() && what == Some(crate::spotted::ManWhat::Step);
         if !step && watch.is_none() { return None; }
-        return Some(SpottedFeet { goal: if step { spot } else { None }, speed: if step && pace > 0.0 { Some(pace) } else { None }, crouch: false, watch });
+        return Some(SpottedFeet { goal: if step { spot } else { None }, speed: if step && pace > 0.0 { Some(pace) } else { None }, crouch: false, watch, goal_serial: None });
     }
     let crouch = exposed || what.is_some();
     if !follower || aside || spot.is_none() {
         if !crouch && watch.is_none() { return None; }
-        return Some(SpottedFeet { goal: None, speed: None, crouch, watch });
+        return Some(SpottedFeet { goal: None, speed: None, crouch, watch, goal_serial: None });
     }
     let speed = if what == Some(crate::spotted::ManWhat::Freeze) { 0.0 } else { m::min(1.2, if pace > 0.0 { pace } else { 1.2 }) };
-    Some(SpottedFeet { goal: spot, speed: Some(speed), crouch, watch })
+    Some(SpottedFeet { goal: spot, speed: Some(speed), crouch, watch, goal_serial: None })
 }
 
 /// a change of mode: counted, logged, the spell's fields cleared (spotted.ts set)
@@ -413,7 +413,8 @@ pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
             best = Some(h);
         }
         if let Some(best) = best {
-            man(g, gd).take = Some(ManTake { foe: best, t0: -1.0, born: t, spot: [p[0], 0.0, p[2]], asked: None });
+            let spot_serial = g.serial();
+            man(g, gd).take = Some(ManTake { foe: best, t0: -1.0, born: t, spot: [p[0], 0.0, p[2]], asked: None, spot_serial });
             g.stats.spotted.takes += 1;
             cue(g, gd, "he's on me. taking him.", Some(0.0));
             let mode = man(g, gd).mode;
@@ -469,7 +470,8 @@ pub fn spotted_take(g: &mut crate::game::Game, gd: GuardId, foe: GuardId) -> boo
     let limit = if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search { k.take_reach + 0.3 } else { k.take_m };
     if flat(&p, &c) >= limit || crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [c[0], 1.0, c[2]], None) { return false; }
     let now = g.time;
-    man(g, gd).take = Some(ManTake { foe, t0: -1.0, born: now, spot: [p[0], 0.0, p[2]], asked: Some(true) });
+    let spot_serial = g.serial();
+    man(g, gd).take = Some(ManTake { foe, t0: -1.0, born: now, spot: [p[0], 0.0, p[2]], asked: Some(true), spot_serial });
     g.stats.spotted.takes += 1;
     cue(g, gd, "taking him.", Some(0.0));
     let mode = man(g, gd).mode;

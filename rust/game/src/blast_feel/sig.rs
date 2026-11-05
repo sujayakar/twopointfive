@@ -42,13 +42,13 @@ pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool { todo!() }
 pub fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool { todo!() }
 
 /// (src/game/blastFeel.ts:129 blastFeelTick)
-pub fn blast_feel_tick(g: &mut crate::game::Game) { todo!() }
+pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) { todo!() }
 
 /// (src/game/blastFeel.ts:130 blastFeelTickRaw)
-pub fn blast_feel_tick_raw(g: &mut crate::game::Game) { todo!() }
+pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) { todo!() }
 
 /// (src/game/blastFeel.ts:144 kickOf)
-pub fn kick_of(g: &mut crate::game::Game, pl: PlayerId) -> Option<V3> { todo!() }
+pub fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3> { todo!() }
 
 /// (src/game/blastFeel.ts:162 report)
 pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) { todo!() }

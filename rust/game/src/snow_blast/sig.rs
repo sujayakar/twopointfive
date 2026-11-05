@@ -9,10 +9,10 @@ use alloc::{string::String, vec::Vec};
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::snow_blast::State { todo!() }
 
 /// (src/game/snowBlast.ts:94 shownOf)
-pub fn shown_of(g: &mut crate::game::Game) -> crate::snow_blast::SnowBlastShown { todo!() }
+pub fn shown_of(g: &mut crate::game::Game) -> &mut crate::snow_blast::SnowBlastShown { todo!() }
 
 /// (src/game/snowBlast.ts:96 owedOf)
-pub fn owed_of(b: &mut crate::snow_blast::SnowBlastShown, live: &[crate::snow_blast::Live]) -> Vec<crate::snow_blast::Owed> { todo!() }
+pub fn owed_of(b: &mut crate::snow_blast::SnowBlastShown, live: &[crate::snow_blast::Live]) { todo!() }
 
 /// (src/game/snowBlast.ts:107 owing)
 pub fn owing(g: &mut crate::game::Game) -> Option<crate::snow_blast::Owing> { todo!() }

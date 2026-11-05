@@ -24,4 +24,4 @@ pub fn plan_goal(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) { to
 pub fn goal_shift(g: &mut crate::game::Game, input: InputId) -> bool { todo!() }
 
 /// (src/game/planmode.ts:77 goalInput)
-pub fn goal_input(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) { todo!() }
+pub fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }

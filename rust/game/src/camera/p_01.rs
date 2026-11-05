@@ -7,14 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Which camera `this` is: the skeleton's signatures take `g` alone, and there are many cameras (see notes, Skeleton).
-fn seam_this<R>(g: &mut Game, f: impl FnOnce(&mut FollowCamera) -> R) -> R {
-    todo!("needs: this: &mut FollowCamera (a value class: Seat.cam, AsideOwn.lens, checkLens, the host's; once.txt's g.director.cam is an Option holding a copy of one of them)")
-}
-
 /// Pin the framing, or with None release it and hand back the free camera's angles and zoom. (camera.ts FollowCamera.setPin)
-pub fn follow_camera_set_pin(g: &mut Game, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> {
-    seam_this(g, |c| set_pin(c, p))
+pub fn follow_camera_set_pin(g: &mut Game, id: CameraId, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> {
+    set_pin(&mut g.tab.camera[id], p)
 }
 fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<FollowCameraPin> {
     let p = match p {
@@ -47,8 +42,8 @@ fn set_pin(c: &mut FollowCamera, p: Option<FollowCameraSetPinP>) -> Option<Follo
 }
 
 /// A drawn frame and a tick's follow, together. (camera.ts FollowCamera.update)
-pub fn follow_camera_update(g: &mut Game, dt: f64, follow: V3, aim_point: Option<V3>) {
-    seam_this(g, |c| update(c, dt, follow, aim_point))
+pub fn follow_camera_update(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
+    update(&mut g.tab.camera[id], dt, follow, aim_point)
 }
 fn update(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
     frame(c);
@@ -56,8 +51,8 @@ fn update(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
 }
 
 /// Once a game tick: the follow itself, or the pin verbatim. (camera.ts FollowCamera.step)
-pub fn follow_camera_step(g: &mut Game, dt: f64, follow: V3, aim_point: Option<V3>) {
-    seam_this(g, |c| step(c, dt, follow, aim_point))
+pub fn follow_camera_step(g: &mut Game, id: CameraId, dt: f64, follow: V3, aim_point: Option<V3>) {
+    step(&mut g.tab.camera[id], dt, follow, aim_point)
 }
 fn step(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
     if let Some(pin) = c.pin {
@@ -86,8 +81,8 @@ fn step(c: &mut FollowCamera, dt: f64, follow: V3, aim_point: Option<V3>) {
 }
 
 /// Once a drawn frame: 'previous' becomes the matrix the last frame was drawn with. (camera.ts FollowCamera.frame)
-pub fn follow_camera_frame(g: &mut Game) {
-    seam_this(g, frame)
+pub fn follow_camera_frame(g: &mut Game, id: CameraId) {
+    frame(&mut g.tab.camera[id])
 }
 fn frame(c: &mut FollowCamera) {
     match c.kick_drawn.take() {
@@ -97,8 +92,8 @@ fn frame(c: &mut FollowCamera) {
 }
 
 /// The look-at without the kick or the pose. (camera.ts FollowCamera.focus)
-pub fn follow_camera_focus(g: &mut Game) -> V3 {
-    seam_this(g, |c| focus(c))
+pub fn follow_camera_focus(g: &mut Game, id: CameraId) -> V3 {
+    focus(&g.tab.camera[id])
 }
 fn focus(c: &FollowCamera) -> V3 {
     match (&c.draw_held, c.kick_held) {
@@ -109,8 +104,8 @@ fn focus(c: &FollowCamera) -> V3 {
 }
 
 /// The blast's kick, in for the render. (camera.ts FollowCamera.kickIn)
-pub fn follow_camera_kick_in(g: &mut Game) {
-    seam_this(g, kick_in)
+pub fn follow_camera_kick_in(g: &mut Game, id: CameraId) {
+    kick_in(&mut g.tab.camera[id])
 }
 fn kick_in(c: &mut FollowCamera) {
     let k = match c.kick {
@@ -123,8 +118,8 @@ fn kick_in(c: &mut FollowCamera) {
 }
 
 /// The blast's kick, out again, keeping the matrix the frame was drawn with. (camera.ts FollowCamera.kickOut)
-pub fn follow_camera_kick_out(g: &mut Game) {
-    seam_this(g, kick_out)
+pub fn follow_camera_kick_out(g: &mut Game, id: CameraId) {
+    kick_out(&mut g.tab.camera[id])
 }
 fn kick_out(c: &mut FollowCamera) {
     let t = match c.kick_held {
@@ -139,8 +134,8 @@ fn kick_out(c: &mut FollowCamera) {
 }
 
 /// The picture's pose in for the frame's render; the tick's is kept. (camera.ts FollowCamera.drawIn)
-pub fn follow_camera_draw_in(g: &mut Game, p: FollowCameraDrawInP) {
-    seam_this(g, |c| draw_in(c, p))
+pub fn follow_camera_draw_in(g: &mut Game, id: CameraId, p: FollowCameraDrawInP) {
+    draw_in(&mut g.tab.camera[id], p)
 }
 fn draw_in(c: &mut FollowCamera, p: FollowCameraDrawInP) {
     if c.draw_held.is_some() {
@@ -155,8 +150,8 @@ fn draw_in(c: &mut FollowCamera, p: FollowCameraDrawInP) {
 }
 
 /// The tick's pose put back, keeping the matrix the frame was drawn with. (camera.ts FollowCamera.drawOut)
-pub fn follow_camera_draw_out(g: &mut Game) {
-    seam_this(g, draw_out)
+pub fn follow_camera_draw_out(g: &mut Game, id: CameraId) {
+    draw_out(&mut g.tab.camera[id])
 }
 fn draw_out(c: &mut FollowCamera) {
     let h = match c.draw_held {
@@ -176,8 +171,8 @@ fn draw_out(c: &mut FollowCamera) {
 }
 
 /// The matrices from look-at, angles and distance; the tick calls it too (game.ts:1665, journal.ts:879). (camera.ts FollowCamera.rebuild)
-pub fn follow_camera_rebuild(g: &mut Game) {
-    seam_this(g, rebuild)
+pub fn follow_camera_rebuild(g: &mut Game, id: CameraId) {
+    rebuild(&mut g.tab.camera[id])
 }
 fn rebuild(c: &mut FollowCamera) {
     let (cp, sp, cy, sy) = (m::cos(c.pitch), m::sin(c.pitch), m::cos(c.yaw), m::sin(c.yaw));
@@ -193,14 +188,14 @@ fn rebuild(c: &mut FollowCamera) {
 }
 
 /// Spectating: every half second, pick the yaw the followed man can be seen from. (camera.ts FollowCamera.autoYaw)
-pub fn follow_camera_auto_yaw(g: &mut Game, dt: f64, target: V3, blocked: &mut dyn FnMut(&mut Game, V3, V3) -> bool) {
-    // (the seam twice: `blocked` needs g, so the camera is let go across the search; nothing it does writes a yaw)
-    let yaw = match seam_this(g, |c| auto_yaw_due(c, dt)) {
+pub fn follow_camera_auto_yaw(g: &mut Game, id: CameraId, dt: f64, target: V3, blocked: &mut dyn FnMut(&mut Game, V3, V3) -> bool) {
+    // (`blocked` needs g, so the camera is let go across the search; the level's segment test writes no yaw)
+    let yaw = match auto_yaw_due(&mut g.tab.camera[id], dt) {
         Some(yaw) => yaw,
         None => return,
     };
     let best = auto_yaw_pick(yaw, target, &mut |a, b| blocked(g, a, b));
-    seam_this(g, |c| c.yaw_goal = Some(best));
+    g.tab.camera[id].yaw_goal = Some(best);
 }
 /// The half-second timer: Some(the yaw to search from) when a search is due.
 fn auto_yaw_due(c: &mut FollowCamera, dt: f64) -> Option<f64> {
@@ -238,8 +233,8 @@ fn auto_yaw_pick(from: f64, target: V3, blocked: &mut dyn FnMut(V3, V3) -> bool)
 }
 
 /// Ease toward the autoYaw goal; told to stop, forget it. (camera.ts FollowCamera.easeYaw)
-pub fn follow_camera_ease_yaw(g: &mut Game, dt: f64, on: bool) {
-    seam_this(g, |c| ease_yaw(c, dt, on))
+pub fn follow_camera_ease_yaw(g: &mut Game, id: CameraId, dt: f64, on: bool) {
+    ease_yaw(&mut g.tab.camera[id], dt, on)
 }
 fn ease_yaw(c: &mut FollowCamera, dt: f64, on: bool) {
     if !on {
@@ -256,21 +251,21 @@ fn ease_yaw(c: &mut FollowCamera, dt: f64, on: bool) {
 }
 
 /// (camera.ts FollowCamera.zoom)
-pub fn follow_camera_zoom(g: &mut Game, delta: f64) {
-    seam_this(g, |c| zoom(c, delta))
+pub fn follow_camera_zoom(g: &mut Game, id: CameraId, delta: f64) {
+    zoom(&mut g.tab.camera[id], delta)
 }
 fn zoom(c: &mut FollowCamera, delta: f64) {
     c.desired_distance = v3::clamp(c.desired_distance * m::exp(delta * 0.0012), 6.0, 40.0);
 }
 
 /// (camera.ts FollowCamera.rotate)
-pub fn follow_camera_rotate(g: &mut Game, d_yaw: f64) {
-    seam_this(g, |c| c.yaw += d_yaw)
+pub fn follow_camera_rotate(g: &mut Game, id: CameraId, d_yaw: f64) {
+    g.tab.camera[id].yaw += d_yaw;
 }
 
 /// World point to CSS pixels of a w×h view, and whether it is showable. (camera.ts FollowCamera.project)
-pub fn follow_camera_project(g: &mut Game, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
-    seam_this(g, |c| project(c, p, w, h, margin, min_w))
+pub fn follow_camera_project(g: &mut Game, id: CameraId, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
+    project(&g.tab.camera[id], p, w, h, margin, min_w)
 }
 fn project(c: &FollowCamera, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: Option<f64>) -> (f64, f64, bool) {
     let margin = margin.unwrap_or(f64::INFINITY);
@@ -289,8 +284,8 @@ fn project(c: &FollowCamera, p: V3, w: f64, h: f64, margin: Option<f64>, min_w: 
 }
 
 /// World-space ray through a pixel in [0,1]² UV, origin top-left. (camera.ts FollowCamera.ray)
-pub fn follow_camera_ray(g: &mut Game, u: f64, v: f64) -> FollowCameraRay {
-    seam_this(g, |c| ray(c, u, v))
+pub fn follow_camera_ray(g: &mut Game, id: CameraId, u: f64, v: f64) -> FollowCameraRay {
+    ray(&g.tab.camera[id], u, v)
 }
 fn ray(c: &FollowCamera, u: f64, v: f64) -> FollowCameraRay {
     let (ndc_x, ndc_y) = (u * 2.0 - 1.0, 1.0 - v * 2.0);
@@ -300,8 +295,8 @@ fn ray(c: &FollowCamera, u: f64, v: f64) -> FollowCameraRay {
 }
 
 /// A UV ray against the plane y = h. (camera.ts FollowCamera.groundPoint)
-pub fn follow_camera_ground_point(g: &mut Game, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
-    seam_this(g, |c| ground_point(c, u, v, h))
+pub fn follow_camera_ground_point(g: &mut Game, id: CameraId, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
+    ground_point(&g.tab.camera[id], u, v, h)
 }
 fn ground_point(c: &FollowCamera, u: f64, v: f64, h: Option<f64>) -> Option<V3> {
     let h = h.unwrap_or(0.0);
@@ -317,8 +312,8 @@ fn ground_point(c: &FollowCamera, u: f64, v: f64, h: Option<f64>) -> Option<V3> 
 }
 
 /// Camera-relative planar basis for WASD. (camera.ts FollowCamera.planarBasis)
-pub fn follow_camera_planar_basis(g: &mut Game) -> FollowCameraPlanarBasis {
-    seam_this(g, |c| planar_basis(c))
+pub fn follow_camera_planar_basis(g: &mut Game, id: CameraId) -> FollowCameraPlanarBasis {
+    planar_basis(&g.tab.camera[id])
 }
 fn planar_basis(c: &FollowCamera) -> FollowCameraPlanarBasis {
     let f = v3::normalize([c.forward[0], 0.0, c.forward[2]]);
@@ -465,6 +460,34 @@ mod tests {
         same32(&c.view_proj, &DRAW_OUT_VP);
         frame(&mut c);
         same32(&c.prev_view_proj, &DRAW_PREV);
+    }
+
+    /// `this` is the ID: a method writes the camera it is named, and no other.
+    #[test]
+    fn a_method_reaches_only_its_own_camera() {
+        let mut g = Box::new(Game::blank());
+        let a = g.tab.camera.push(FollowCamera::blank());
+        let b = g.tab.camera.push(FollowCamera::blank());
+        g.tab.camera[a].yaw = 0.7;
+        g.tab.camera[b].yaw = -1.5;
+        let untouched = g.tab.camera[b].clone();
+
+        follow_camera_rotate(&mut g, a, 0.25);
+        same(&[g.tab.camera[a].yaw], &[0.95f64.to_bits()]);
+        follow_camera_zoom(&mut g, a, 120.0);
+        follow_camera_step(&mut g, a, 0.016, [4.0, 0.0, -6.0], None);
+        follow_camera_frame(&mut g, a);
+        assert!(g.tab.camera[a].desired_serial == 1 && g.tab.camera[a].desired == [4.0, 0.0, -6.0]);
+
+        // autoYaw lets the camera go across `blocked`, which is handed g, and files the goal on the same camera
+        let mut seen = 0;
+        follow_camera_auto_yaw(&mut g, a, 0.1, [2.0, 0.0, -3.0], &mut |g, _, _| { seen += g.tab.camera.len(); false });
+        assert_eq!(seen, 64);    // nothing blocked: eight yaws, four samples each, and each call sees both cameras in g
+        assert_eq!(g.tab.camera[a].yaw_goal, Some(0.95));
+        assert!(g.tab.camera[b].yaw_goal.is_none());
+
+        let (bb, ub) = (&g.tab.camera[b], &untouched);
+        assert_eq!((bb.yaw, bb.desired_distance, bb.desired, bb.desired_serial, bb.view_proj), (ub.yaw, ub.desired_distance, ub.desired, ub.desired_serial, ub.view_proj));
     }
 
     #[test]

@@ -16,14 +16,34 @@ pub fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool {
 }
 
 /// The pool: every slot made once, with its lamp. The lights are `g.engine.lights`, reached by path. (tracers.ts Tracers.constructor)
-pub fn tracers_new(g: &mut crate::game::Game, lights: Option<&crate::render_lights::LightSet>, params: Option<crate::tracers::TracersParams>) -> crate::tracers::Tracers {
+pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::TracersParams>) -> crate::tracers::Tracers {
     let params = match params { Some(p) => p, None => crate::effects::tracer_fx() };
     let mut this = Tracers::blank();
     this.params = params;
     let n = m::max(1.0, js::to_i32(params.max_live) as f64);
     let mut i = 0.0;
     while i < n {
-        let lamp = seam_lamp_new(g, params.light_range, params.light_radius, LAMP_TTL);
+        let lamp = g.tab.light.push(crate::render_lights::RtLight {
+            name: String::from("tracer"),
+            group: String::from("tracer"),
+            kind: 0.0,
+            pos: [0.0, -10.0, 0.0],
+            dir: [0.0, -1.0, 0.0],
+            color: [1.0, 0.5, 0.2],
+            intensity: 0.0,
+            range: params.light_range,
+            inner_deg: 0.0,
+            outer_deg: 180.0,
+            radius: params.light_radius,
+            volumetric: 1.0,
+            owner: 0.0,
+            enabled: true,
+            fixture_box: -1.0,
+            ttl: LAMP_TTL,
+            age: 0.0,
+            peak_intensity: 0.0,
+            ..crate::render_lights::RtLight::zeroed() // every optional field of the literal is absent
+        });
         this.pool.push(Tracer {
             alive: false,
             from: [0.0, 0.0, 0.0],
@@ -101,8 +121,22 @@ pub fn tracers_spawn(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, impac
     t.light = None;
     let (lamp, slot_owner) = (t.lamp, t.owner);
     if g.tracers.lit < p.max_lights {
-        seam_lamp_light(g, lamp, color, p.light_intensity, p.light_range, p.light_radius, slot_owner, LAMP_TTL, from);
-        if !g.engine.lights.lights.contains(&lamp) { crate::render_lights::light_set_add(&mut g.engine.lights, lamp); }
+        let l = &mut g.tab.light[lamp];
+        l.color = color;
+        l.intensity = p.light_intensity;
+        l.peak_intensity = l.intensity;
+        l.range = p.light_range;
+        l.radius = p.light_radius;
+        l.owner = slot_owner;
+        l.age = 0.0;
+        l.ttl = LAMP_TTL;
+        l.enabled = true;
+        l.pos = from;
+        if !g.engine.lights.lights.contains(&lamp) {
+            let mut set = core::mem::take(&mut g.engine.lights);
+            crate::render_lights::light_set_add(g, &mut set, lamp);
+            g.engine.lights = set;
+        }
         g.tracers.pool[i].light = Some(lamp);
         g.tracers.lit += 1.0;
     }
@@ -113,7 +147,9 @@ pub fn tracers_spawn(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, impac
 /// Hands the light of the slot at `i` back to the set (idempotent). (tracers.ts Tracers.release)
 fn release_at(g: &mut Game, i: usize) {
     let Some(l) = g.tracers.pool[i].light else { return; };
-    crate::render_lights::light_set_remove(&mut g.engine.lights, l);
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_remove(g, &mut set, l);
+    g.engine.lights = set;
     g.tracers.pool[i].light = None;
     g.tracers.lit = m::max(0.0, g.tracers.lit - 1.0);
 }
@@ -146,8 +182,10 @@ pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<BoxId>, 
         let t = g.tracers.pool[i];
         if let Some(l) = t.light {
             // (5 cm short of the head: never inside the surface it stops at)
-            let pos = [t.from[0] + t.dir[0] * (t.s - 0.05), t.from[1] + t.dir[1] * (t.s - 0.05), t.from[2] + t.dir[2] * (t.s - 0.05)];
-            seam_lamp_ride(g, l, pos);
+            let lamp = &mut g.tab.light[l];
+            lamp.age = 0.0;
+            lamp.enabled = true;
+            lamp.pos = [t.from[0] + t.dir[0] * (t.s - 0.05), t.from[1] + t.dir[1] * (t.s - 0.05), t.from[2] + t.dir[2] * (t.s - 0.05)];
             lit += 1.0;
         }
         live += 1.0;
@@ -164,7 +202,9 @@ pub fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
     let p = g.tracers.params;
     let at = [t.from[0] + t.dir[0] * (t.l - 0.03), t.from[1] + t.dir[1] * (t.l - 0.03), t.from[2] + t.dir[2] * (t.l - 0.03)];
     if p.ember_intensity > 0.0 {
-        let l = crate::render_lights::light_set_flash(&mut g.engine.lights, at, v3::copy(t.color), p.ember_intensity, p.ember_range, p.ember_ttl, 0.0);
+        let mut set = core::mem::take(&mut g.engine.lights);
+        let l = crate::render_lights::light_set_flash(g, &mut set, at, v3::copy(t.color), p.ember_intensity, p.ember_range, p.ember_ttl, 0.0);
+        g.engine.lights = set;
         crate::fogofwar::fog_of_war_light_by(g, l, Some(t.owner));
     }
 }
@@ -180,22 +220,6 @@ pub fn tracers_clear(g: &mut crate::game::Game) {
     g.tracers.lit = 0.0;
 }
 
-/// A slot's lamp, made once and not yet in the set: name and group 'tracer', kind 0, pos [0, -10, 0], dir [0, -1, 0], color [1, 0.5, 0.2],
-/// intensity 0, inner 0, outer 180, volumetric 1, owner 0, enabled, fixtureBox -1, flicker 0, age 0, peakIntensity 0. (tracers.ts:73)
-fn seam_lamp_new(g: &mut Game, range: f64, radius: f64, ttl: f64) -> LightId {
-    todo!("needs: a maker of a light from its fields (RtLight literal)")
-}
-
-/// A lamp lit for a new streak: `peakIntensity = intensity`, age 0, enabled. (tracers.ts:109-111)
-fn seam_lamp_light(g: &mut Game, l: LightId, color: V3, intensity: f64, range: f64, radius: f64, owner: f64, ttl: f64, pos: V3) {
-    todo!("needs: writers of RtLight's color, peakIntensity, intensity, range, radius, owner, age, ttl, enabled, pos")
-}
-
-/// A lamp moved onto its head: age 0, enabled. (tracers.ts:136)
-fn seam_lamp_ride(g: &mut Game, l: LightId, pos: V3) {
-    todo!("needs: writers of RtLight's age, enabled, pos")
-}
-
 #[cfg(test)]
 mod tests {
     extern crate std;
@@ -206,7 +230,7 @@ mod tests {
         std::thread::Builder::new().stack_size(1 << 28).spawn(f).unwrap().join().unwrap();
     }
 
-    /// A game whose pool has `n` slots and no light budget, so no lamp seam is reached.
+    /// A game whose pool has `n` slots and no light budget, so the set's stubs are not reached.
     fn game(n: u32) -> Box<Game> {
         let mut g = Box::new(Game::blank());
         g.tracers = Tracers::blank();
@@ -271,6 +295,36 @@ mod tests {
         assert!(is_tracer_round(&mut g, w)); // every third of the AKS-74U's
         g.fa[w].def = crate::weapons::WeaponId::Fiveseven;
         assert!(!is_tracer_round(&mut g, w)); // a pistol's row declares none
+    }) }
+
+    /// The constructor's slots, each with its own lamp in the table, as the literal has it, and not in the set.
+    #[test]
+    fn each_slot_is_made_with_its_own_lamp() { on_a_big_stack(|| {
+        let mut g = Box::new(Game::blank());
+        let (before, mut p) = (g.tab.light.len(), crate::effects::tracer_fx());
+        p.max_live = 2.9;
+        let t = tracers_new(&mut g, Some(p));
+        assert_eq!((t.pool.len(), g.tab.light.len() - before, t.pool[0].dir, t.pool[0].color), (2, 2, [0.0, 0.0, 1.0], [1.0, 0.5, 0.2]));
+        assert!(t.pool[0].lamp != t.pool[1].lamp && t.pool[0].light.is_none() && g.engine.lights.lights.is_empty());
+        let l = &g.tab.light[t.pool[1].lamp];
+        assert_eq!((l.pos, l.dir, l.range, l.radius, l.ttl, l.fixture_box, l.outer_deg, l.enabled), ([0.0, -10.0, 0.0], [0.0, -1.0, 0.0], 4.0, 0.06, 30.0, -1.0, 180.0, true));
+        p.max_live = 0.0; // never fewer than one
+        assert_eq!(tracers_new(&mut g, Some(p)).pool.len(), 1);
+    }) }
+
+    /// A lit streak's light rides 5 cm behind the head, its age held at 0, and the count of lit heads is the walk's.
+    #[test]
+    fn the_light_rides_the_head() { on_a_big_stack(|| {
+        let mut g = game(1);
+        let lamp = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        g.tracers.pool[0].lamp = lamp;
+        tracers_spawn(&mut g, [1.0, 2.0, 3.0], [0.0, 0.0, 1.0], 50.0, TracerImpact::None, [1.0; 3], 0.0);
+        g.tracers.pool[0].light = Some(lamp); // lit by hand: light_set_add is a stub here
+        g.tab.light[lamp].age = 9.0;
+        let mut out = Vec::new();
+        tracers_update(&mut g, 0.1, &mut out, None);
+        let (l, s) = (&g.tab.light[lamp], g.tracers.pool[0].s);
+        assert_eq!((l.age, l.enabled, l.pos, g.tracers.lit), (0.0, true, [1.0 + 0.0 * (s - 0.05), 2.0 + 0.0 * (s - 0.05), 3.0 + 1.0 * (s - 0.05)], 1.0));
     }) }
 
     /// `force` needs no gun and no row's tracer, and takes the default colour; without it a row with no tracer sends nothing; a contact shot never goes.

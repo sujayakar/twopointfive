@@ -111,7 +111,7 @@ pub fn sprint_facing(g: &mut crate::game::Game, m: &mut crate::player::Legs, dt:
 pub fn hips_turn(m: &mut crate::player::Legs, speed: f64, aiming: bool, orbit: bool, into_door: Option<f64>, by_hand: bool, dt: f64) { todo!() }
 
 /// (src/game/player.ts:483 updatePlayer)
-pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) { todo!() }
+pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId) { todo!() }
 
 /// (src/game/player.ts:838 rifleSpread)
 pub fn rifle_spread(g: &mut crate::game::Game, speed: f64) -> f64 { todo!() }
@@ -138,7 +138,7 @@ pub fn find_wall(g: &mut crate::game::Game, quick: Option<bool>, why: Option<&mu
 pub fn can_wall_snap(g: &mut crate::game::Game) -> bool { todo!() }
 
 /// (src/game/player.ts:1073 wallSnap)
-pub fn wall_snap(g: &mut crate::game::Game, why: Option<&mut crate::player::WallSnapWhy>, only: Option<V3>) -> bool { todo!() }
+pub fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&mut crate::player::WallSnapWhy>, only: Option<V3>) -> bool { todo!() }
 
 /// (src/game/player.ts:1102 releaseWall)
 pub fn release_wall(g: &mut crate::game::Game) { todo!() }
@@ -153,7 +153,7 @@ pub fn wall_voice(g: &mut crate::game::Game, w: crate::player::WallHold, on: boo
 pub fn wall_snap_later(g: &mut crate::game::Game, ml: f64, why: crate::player::WallSnapLaterWhy) -> bool { todo!() }
 
 /// (src/game/player.ts:1139 wallSnapPending)
-pub fn wall_snap_pending(g: &mut crate::game::Game, dt: f64, want_sprint: bool) { todo!() }
+pub fn wall_snap_pending(g: &mut crate::game::Game, dt: f64, cam: CameraId, want_sprint: bool) { todo!() }
 
 /// (src/game/player.ts:1167 pressFace)
 pub fn press_face(g: &mut crate::game::Game, mx: f64, mz: f64) -> Option<crate::player::PressFace> { todo!() }
@@ -165,7 +165,7 @@ pub fn move_keys_down(g: &mut crate::game::Game, input: InputId) -> f64 { todo!(
 pub fn wall_ran_on(g: &mut crate::game::Game, pl: PlayerId, input: InputId) -> bool { todo!() }
 
 /// (src/game/player.ts:1186 wallPress)
-pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, mx: f64, mz: f64, ml: f64, want_sprint: bool) { todo!() }
+pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, mx: f64, mz: f64, ml: f64, want_sprint: bool) { todo!() }
 
 /// (src/game/player.ts:1263 wallStacks)
 pub fn wall_stacks(g: &mut crate::game::Game, w: crate::player::WallHold) -> bool { todo!() }
@@ -189,16 +189,16 @@ pub fn gun_shut(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool { todo!() }
 
 /// (src/game/player.ts:1326 stackLean)
-pub fn stack_lean(g: &mut crate::game::Game, dt: f64, pl: PlayerId, dir: f64) -> f64 { todo!() }
+pub fn stack_lean(g: &mut crate::game::Game, dt: f64, cam: CameraId, pl: PlayerId, dir: f64) -> f64 { todo!() }
 
 /// (src/game/player.ts:1367 wallSnapPose)
 pub fn wall_snap_pose(g: &mut crate::game::Game, dt: f64, aiming: bool) { todo!() }
 
 /// (src/game/player.ts:1390 wallSnapCam)
-pub fn wall_snap_cam(g: &mut crate::game::Game, pl: PlayerId) { todo!() }
+pub fn wall_snap_cam(g: &mut crate::game::Game, cam: CameraId, pl: PlayerId) { todo!() }
 
 /// (src/game/player.ts:1412 moveOnWall)
-pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, mx: f64, mz: f64, ml: f64) -> bool { todo!() }
+pub fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx: f64, mz: f64, ml: f64) -> bool { todo!() }
 
 /// (src/game/player.ts:1503 startTakedown)
 pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::close::CloseKind>, lethal: Option<bool>, loud: Option<bool>) { todo!() }
@@ -216,7 +216,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
 pub fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64) { todo!() }
 
 /// (src/game/player.ts:1626 updateHold)
-pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId) { todo!() }
+pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId) { todo!() }
 
 /// (src/game/player.ts:1757 holdTail)
 pub fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64>) { todo!() }
@@ -345,13 +345,13 @@ pub fn aim_level(c_2: crate::player::AimLevelC) -> V3 { todo!() }
 pub fn cursor_hit(g: &mut crate::game::Game, ray: crate::player::CursorHitRay, own: f64) -> Option<crate::scene_boxes::BoxWorldRaycast> { todo!() }
 
 /// (src/game/player.ts:2235 cursorPoint)
-pub fn cursor_point(g: &mut crate::game::Game, u: f64, v: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> { todo!() }
+pub fn cursor_point(g: &mut crate::game::Game, cam: CameraId, u: f64, v: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> { todo!() }
 
 /// (src/game/player.ts:2238 updateAim)
-pub fn update_aim(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) { todo!() }
+pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
 
 /// (src/game/player.ts:2307 buildInteractables)
-pub fn build_interactables(g: &mut crate::game::Game, mx: f64, my: f64, w: f64, h: f64) { todo!() }
+pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my: f64, w: f64, h: f64) { todo!() }
 
 /// (src/game/player.ts:2539 rowKey)
 pub fn row_key(g: &mut crate::game::Game, r: &crate::game::Interactable) -> String { todo!() }

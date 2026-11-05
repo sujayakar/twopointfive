@@ -93,8 +93,8 @@ pub fn quiet_mission_can_start(g: &mut crate::game::Game, squad: Option<f64>) ->
     if q.starts.is_empty() || q.spots.is_empty() || q.exits.is_empty() { return Some(String::from("its quiet mission wants at least one start, one spot and one exit")); }
     if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) — nobody would walk his route")); }
     if js::truthy(squad) && !g.tune.teams { return Some(String::from("sides are switched off (tune.teams): no partner")); }
-    if let Some(r) = g.director.run.as_ref() {
-        if !r.ended { return Some(format!("the level script's program '{}' is running", r.name)); }
+    if let Some(r) = g.director.run {
+        if !g.tab.director_run[r].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[r].name)); }
     }
     if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
     if g.night_breach.active || g.rescue.active { return Some(String::from("another scenario is staged")); }
@@ -231,16 +231,25 @@ pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     let off: Vec<GuardId> = g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_none() && !manned.contains(&g.tab.route[g.gd[x].route].name)).collect();
     for &gd in &off {
         let l = g.gd[gd].flashlight;
-        seam_light_off(g, l);
-        crate::render_lights::light_set_remove(&mut g.engine.lights, l);
+        g.tab.light[l].enabled = false;
+        lights_remove(g, l);
     }
     if !off.is_empty() { g.guards.retain(|x| !off.contains(x)); }
     g.quiet.benched = off;
 }
 
-/// `gd.flashlight.enabled = false` (quiet.ts:185)
-fn seam_light_off(g: &mut crate::game::Game, l: LightId) {
-    todo!("needs: a light's fields behind LightId (RtLight.enabled): LightId has no table")
+/// `g.engine.lights.add(l)`: the stub takes `g` and the set that lives in `g`, so the set is lent out for the call and put back   (lights.ts:171)
+fn lights_add(g: &mut crate::game::Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+}
+
+/// `g.engine.lights.remove(l)`, lent the same way   (lights.ts:172)
+fn lights_remove(g: &mut crate::game::Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_remove(g, &mut set, l);
+    g.engine.lights = set;
 }
 
 /// restartEncounter's last act: Sam faced as the start has him, the partner staged. A staging that fails ends the mission cleanly   (quiet.ts QuietMission.onEncounterRestart)
@@ -256,7 +265,7 @@ pub fn quiet_mission_on_encounter_restart(g: &mut crate::game::Game) {
 }
 
 /// once a frame: the camera put on a dealt start, the partner told to follow the first tick the orders have him   (quiet.ts QuietMission.tick)
-pub fn quiet_mission_tick(g: &mut crate::game::Game) {
+pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     if !g.quiet.active { return; }
     if js::truthy(g.quiet.squad) {
         if let Some(o) = g.quiet.ops.first().copied() {
@@ -266,11 +275,10 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game) {
             }
         }
     }
-    if g.quiet.cut {   // (`cam` is never null: the one caller is Game.update, whose cam is required)
+    if let (true, Some(cam)) = (g.quiet.cut, cam) {   // (with no camera the cut waits for a tick that has one)
         g.quiet.cut = false;
         let target = v3::copy(crate::game::game_follow_pos(g, None));
-        let first = g.seats[0];   // `cam = S[0].cam` (game.ts:1728)
-        cut_lens(&mut g.tab.cmd_seat[first].cam, target);
+        cut_lens(&mut g.tab.camera[cam], target);
     }
     if !g.quiet.fall_in { return; }
     let m = match g.quiet.ops.first().copied() { Some(m) => m, None => return };
@@ -360,7 +368,7 @@ pub fn quiet_mission_summary(g: &mut crate::game::Game) -> String {
 
 /// a line of the mission's own log   (quiet.ts QuietMission.note)
 pub fn quiet_mission_note(g: &mut crate::game::Game, s: &str) {
-    let line = format!("{:.2} {}", g.time, s);
+    let line = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.quiet.log.push(line);
     if g.quiet.log.len() > 60 { g.quiet.log.drain(0..30); }
 }
@@ -395,7 +403,7 @@ pub fn quiet_mission_unbench(g: &mut crate::game::Game) {
     let benched = g.quiet.benched.clone();
     for &gd in &benched {
         let l = g.gd[gd].flashlight;
-        if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(&mut g.engine.lights, l); }
+        if !g.engine.lights.lights.contains(&l) { lights_add(g, l); }
     }
     let mut staff: Vec<(usize, GuardId)> = g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_none()).chain(benched.iter().copied()).map(|x| (g.gd[x].route_i, x)).collect();
     js::sort_by(&mut staff, |a, b| a.0 as f64 - b.0 as f64);
@@ -616,7 +624,7 @@ pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
                 out.push(format!("{}.mate {} cannot be walked to from sam {}", w, at(mate), at(s.sam)));
             }
             if v3::dist_xz(s.sam, mate) < 0.7 {
-                out.push(format!("{}.mate stands on top of sam ({:.2} m): give them a body's room", w, v3::dist_xz(s.sam, mate)));
+                out.push(format!("{}.mate stands on top of sam ({} m): give them a body's room", w, js::to_fixed(v3::dist_xz(s.sam, mate), 2)));
             }
         }
     }
@@ -649,7 +657,7 @@ pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
         if let Some(d) = crate::doors::doors_by_name(g, &x.door) {
             let c = g.dr[d].frame_centre;
             let far = m::hyp2(c[0] - x.x, c[2] - x.z);
-            if far > 4.0 { out.push(format!("{}: its door '{}' is {:.1} m from its point — the marker would point at the wrong door", w, x.door, far)); }
+            if far > 4.0 { out.push(format!("{}: its door '{}' is {} m from its point — the marker would point at the wrong door", w, x.door, js::to_fixed(far, 1))); }
         }
         outs.push(Some(p));
     }
@@ -684,7 +692,7 @@ pub fn check_quiet(g: &mut crate::game::Game) -> Vec<String> {
                     seen.add(k);
                     let d = v3::dist_xz(eye, p);
                     if d < FIRST_SIGHT_M && !crate::scene_collision::segment_blocked(g, eye, [p[0], 1.0, p[2]], None, None, None) {
-                        out.push(format!("starts[{}].{} {} is in plain view of '{}' on his first waypoint {}, {:.1} m off — the run would begin seen", i, who, at(p), name, at(first), d));
+                        out.push(format!("starts[{}].{} {} is in plain view of '{}' on his first waypoint {}, {} m off — the run would begin seen", i, who, at(p), name, at(first), js::to_fixed(d, 1)));
                     }
                 }
             }

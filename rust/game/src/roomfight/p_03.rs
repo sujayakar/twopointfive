@@ -27,15 +27,14 @@ fn over_is_mine(g: &Game, gd: GuardId) -> bool {
 }
 /// O.ov.aimAt IS O.aim and s.over IS O.ov in the TypeScript: after a write to either, the script's copy follows
 fn over_follow(g: &mut Game, o: RoomfightOpId) {
-    g.tab.roomfight_op[o].ov.aim_at = g.tab.roomfight_op[o].aim;
     let over = over_of(g, o);
     let gd = g.tab.roomfight_op[o].gd;
     if let Some(s) = g.gd[gd].script.as_mut() { if s.over.is_some() { s.over = Some(over); } }
 }
-/// the script's copy of O.ov (OpOv and GuardScriptOver are one object in the TypeScript)
+/// the script's copy of O.ov (OpOv and GuardScriptOver are one object in the TypeScript; its aimAt is O.aim)
 fn over_of(g: &Game, o: RoomfightOpId) -> crate::game::GuardScriptOver {
-    let ov = g.tab.roomfight_op[o].ov;
-    crate::game::GuardScriptOver { aim_at: ov.aim_at, face: ov.face, walk: ov.walk }
+    let (aim, ov) = (g.tab.roomfight_op[o].aim, g.tab.roomfight_op[o].ov);
+    crate::game::GuardScriptOver { aim_at: aim, face: ov.face, walk: ov.walk }
 }
 /// `c.bones.upperArmR ?? c.pos + [0, 1.4, 0]`
 fn shoulder_of(g: &Game, c: CharId) -> V3 {
@@ -227,7 +226,7 @@ pub fn room_fight_new_op(g: &mut crate::game::Game, gd: GuardId) -> RoomfightOpI
     let aim: V3 = [0.0, 0.0, 0.0];
     g.tab.roomfight_op.push(Op {
         gd, meters: JsMap::new(), tgt: None, turn: None, pass: None, kept: None, track: 0.0, pre: false, ready_at: 0.0, n: 0.0, next: 0.0, lost_at: -100.0,
-        fell: None, first: true, aim, ov: OpOv { aim_at: aim, face: None, walk: None }, step: None, hot_t: -100.0, step_t: -100.0, step_by: None, door_by: None,
+        fell: None, first: true, aim, ov: OpOv { face: None, walk: None }, step: None, hot_t: -100.0, step_t: -100.0, step_by: None, door_by: None,
         funnel_t: 0.0, line_t: 0.0, line_by: None, line_at: -100.0, wall_t: 0.0, step_until: 0.0, reload_until: 0.0, said_t: -100.0, rounds: 0.0, held_for_friend: 0.0,
         held_for_line: 0.0, block_t: 0.0, feet_sm: None, feet_t: None, short_seen: -100.0, short_since: -100.0, short_t: -100.0,
     })
@@ -685,8 +684,8 @@ pub fn room_fight_point(g: &mut crate::game::Game, o: RoomfightOpId, to: V3, dt:
         g.tab.roomfight_op[o].aim[1] = 1.2;
         g.tab.roomfight_op[o].aim[2] = pos[2] + m::cos(aim_yaw) * r;
         g.tab.roomfight_op[o].ov.face = None;
-        g.tab.roomfight_op[o].ov.aim_at = g.tab.roomfight_op[o].aim;
-        g.gd[gd].script.as_mut().unwrap().over = Some(over_of(g, o));
+        let over = over_of(g, o);
+        g.gd[gd].script.as_mut().unwrap().over = Some(over);
     }
     for i in 0..3 { g.tab.roomfight_op[o].aim[i] = v3::damp(g.tab.roomfight_op[o].aim[i], to[i], 16.0, dt); }
     let brg = m::atan2(to[0] - pos[0], to[2] - pos[2]);
@@ -1092,4 +1091,75 @@ pub fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3,
     }
     g.tab.roomfight_op[o].step_until = g.time + 1.0;
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A man on the tables at the origin facing +z (yaw 0), carrying this module's overlay, and his Op.
+    fn man_with_overlay() -> (Game, GuardId, RoomfightOpId) {
+        let mut g = Game::blank();
+        let c = g.ch.push(crate::character::Character::blank());
+        let gd = g.gd.push(crate::game::Guard::blank());
+        g.gd[gd].ch = c;
+        g.gd[gd].script = Some(crate::game::GuardScript { over: Some(crate::game::GuardScriptOver { aim_at: [0.0; 3], face: None, walk: None }), ..Default::default() });
+        g.ch[c].pos = [0.0; 3];
+        g.ch[c].vel = [0.0; 3];
+        g.ch[c].body_yaw = 0.0;
+        let o = room_fight_new_op(&mut g, gd);
+        (g, gd, o)
+    }
+    fn at_bearing(a: f64) -> V3 { [m::sin(a) * 5.0, 0.0, m::cos(a) * 5.0] }
+
+    /// `s.over` IS `O.ov` and its aimAt IS O.aim in the TypeScript: what the runner reads must follow every write of `point`.
+    #[test]
+    fn the_scripts_overlay_follows_the_op() {
+        let (mut g, gd, o) = man_with_overlay();
+        room_fight_point(&mut g, o, at_bearing(2.0), 1.0 / 60.0, 0.0);
+        let op = &g.tab.roomfight_op[o];
+        let over = g.gd[gd].script.as_ref().unwrap().over.unwrap();
+        assert_ne!(op.aim, [0.0; 3]);
+        assert_eq!(over.aim_at, op.aim);
+        assert_eq!(over.face, op.ov.face);
+        assert_eq!(over.walk, op.ov.walk);
+        room_fight_restore(&mut g, o);
+        assert!(g.gd[gd].script.as_ref().unwrap().over.is_none());
+    }
+
+    /// Stood still: he turns once a point is past 1.2 rad off his chest, and finishes the turn down to 0.3 rad.
+    #[test]
+    fn a_stood_man_turns_and_finishes_the_turn() {
+        let (mut g, _, o) = man_with_overlay();
+        let dt = 1.0 / 60.0;
+        room_fight_point(&mut g, o, at_bearing(1.0), dt, 0.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, None);
+        let brg = room_fight_point(&mut g, o, at_bearing(1.3), dt, 0.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, Some(brg));
+        let brg = room_fight_point(&mut g, o, at_bearing(0.5), dt, 0.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, Some(brg));
+        room_fight_point(&mut g, o, at_bearing(0.2), dt, 0.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, None);
+        assert_eq!(g.tab.roomfight_op[o].ov.walk, Some(false));
+    }
+
+    /// Walking: the test is on the way he is going, 1.2 rad to start facing and 0.7 rad to stop.
+    #[test]
+    fn a_walking_man_tests_his_path_not_his_chest() {
+        let (mut g, gd, o) = man_with_overlay();
+        let c = g.gd[gd].ch;
+        g.ch[c].vel = [0.0, 0.0, 2.0];
+        g.ch[c].body_yaw = 3.0; // the chest is nowhere near the point: it must not matter
+        let dt = 1.0 / 60.0;
+        room_fight_point(&mut g, o, at_bearing(1.0), dt, 2.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, None);
+        assert_eq!(g.tab.roomfight_op[o].ov.walk, Some(false));
+        let brg = room_fight_point(&mut g, o, at_bearing(1.3), dt, 2.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, Some(brg));
+        assert_eq!(g.tab.roomfight_op[o].ov.walk, Some(true));
+        let brg = room_fight_point(&mut g, o, at_bearing(1.0), dt, 2.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, Some(brg));
+        room_fight_point(&mut g, o, at_bearing(0.5), dt, 2.0);
+        assert_eq!(g.tab.roomfight_op[o].ov.face, None);
+    }
 }

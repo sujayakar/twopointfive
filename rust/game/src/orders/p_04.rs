@@ -118,7 +118,7 @@ fn away(g: &mut Game) {
 }
 
 /// THE RING'S INPUT, ahead of the menu's own: the frame's order input is the ring's if true. (orders.ts ringInput)
-pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> bool {
+pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> bool {
     if g.orders.cmd_ring.is_some() && g.orders.menu.is_none() { g.orders.cmd_ring = None; }
     let key = g.k.cmdring.key.clone();
     if g.orders.cmd_ring.is_none() {
@@ -139,36 +139,36 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, canvas
             let add = p.add.unwrap_or(false) || shift_down(g, input);
             let part = match goal_part_or_nobody(g, &p.t, add) { Some(part) => part, None => return true };
             let t0 = g.time - g.k.cmdring.tap_secs;
-            if !squad_orders_ring_up(g, &p.t, input, canvas, t0, part.as_ref()) { return false; }
-            return if digit { squad_orders_ring_input(g, input, canvas) } else { true };
+            if !squad_orders_ring_up(g, &p.t, input, canvas, t0, Some(cam), part.as_ref()) { return false; }
+            return if digit { squad_orders_ring_input(g, input, cam, canvas) } else { true };
         }
         if !crate::input::input_hit(g, input, &key) || !squad_orders_ring_free(g, input) { return false; }
         pressed_delete(g, input, &key);
         let add = crate::planmode::goals_on(g) && shift_down(g, input);
         if g.k.cmdring.hold_secs > 0.0 && !crate::input::input_down(g, input, &key) {
             g.stats.cmdring.quick += 1;
-            let t = squad_orders_target_under(g, input, canvas);
+            let t = squad_orders_target_under(g, input, cam, canvas);
             squad_orders_tap_give(g, &t, input, Some(add));
             return true;
         }
         if g.k.cmdring.hold_secs > 0.0 {
             let t0 = g.time;
-            let t = squad_orders_target_under(g, input, canvas);
+            let t = squad_orders_target_under(g, input, cam, canvas);
             g.orders.cmd_press = Some(SquadOrdersCmdPress { t0, t, add: if add { Some(true) } else { None } });
-            if squad_orders_ring_digit(g, input) { squad_orders_ring_input(g, input, canvas); }
+            if squad_orders_ring_digit(g, input) { squad_orders_ring_input(g, input, cam, canvas); }
             return true;
         }
-        let t = squad_orders_target_under(g, input, canvas);
+        let t = squad_orders_target_under(g, input, cam, canvas);
         return match goal_part_or_nobody(g, &t, add) {
             None => true,
-            Some(part) => { let t0 = g.time; squad_orders_ring_up(g, &t, input, canvas, t0, part.as_ref()) }
+            Some(part) => { let t0 = g.time; squad_orders_ring_up(g, &t, input, canvas, t0, Some(cam), part.as_ref()) }
         };
     }
     // it stays on its point: its middle put back over the place it was opened on; a cursor the hand has not moved lights no other wedge
     let (w, h) = (canvas.client_width, canvas.client_height);
     let mut still = false;
     if let Some(at) = g.orders.cmd_ring.unwrap().at {
-        let (sx, sy, front) = crate::camera::follow_camera_project(g, at, w, h, None, None);
+        let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, w, h, None, None);
         if front {
             // ringPin reads only the table of numbers on g: R goes back as it comes out
             let mut r = g.orders.cmd_ring.unwrap();
@@ -235,7 +235,7 @@ pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, canvas
     if lmb {
         // on a man: the orders are his, and the ring starts again for him · anywhere else the click gives the lit wedge, below
         let part = g.orders.menu.as_ref().unwrap().part.is_some();
-        let k = if squad_orders_whole(g) || part { -1.0 } else { squad_orders_man_at(g, input, canvas) };
+        let k = if squad_orders_whole(g) || part { -1.0 } else { squad_orders_man_at(g, input, cam, canvas) };
         clicked_off(g, input, 1);
         buttons_off(g, input, 1);
         swallow_if_seat(g, input);
@@ -348,7 +348,7 @@ pub fn squad_orders_ring_digit(g: &mut crate::game::Game, input: InputId) -> boo
 }
 
 /// The order menu put up on `t` as a ring at the cursor (false: no menu opened there). (orders.ts ringUp)
-pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool {
+pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, cam: Option<CameraId>, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool {
     let flat = squad_orders_flat_ring(g);
     if !squad_orders_open(g, Some(t), Some(flat), g_2.map(|p| p.men.as_slice())) { return false; }
     if let Some(p) = g_2 {
@@ -362,16 +362,18 @@ pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderT
     squad_orders_ring_sel(g);
     g.stats.cmdring.opened += 1;
     // it stays on its point: the place, and where its middle stands from it (from the cursor, not from where the view's edge stood it)
-    let at = target_at(t);
-    let (sx, sy, front) = crate::camera::follow_camera_project(g, at, w, h, None, None);
-    if front {
-        let (mx, my) = mouse(g, input);
-        if let Some(r) = g.orders.cmd_ring.as_mut() {
-            r.at = Some(at);
-            r.ox = Some(mx - sx);
-            r.oy = Some(my - sy);
-            r.mx = Some(mx);
-            r.my = Some(my);
+    if let Some(cam) = cam {
+        let at = target_at(t);
+        let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, w, h, None, None);
+        if front {
+            let (mx, my) = mouse(g, input);
+            if let Some(r) = g.orders.cmd_ring.as_mut() {
+                r.at = Some(at);
+                r.ox = Some(mx - sx);
+                r.oy = Some(my - sy);
+                r.mx = Some(mx);
+                r.my = Some(my);
+            }
         }
     }
     true
@@ -583,7 +585,7 @@ pub fn squad_orders_quick_for(g: &mut crate::game::Game, men: &[GuardId], t: &cr
 pub fn squad_orders_cover_for(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> bool {
     let n = g.orders.group;
     g.orders.by_hand = true;
-    let t = OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None });
+    let t = OrderTarget::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 });
     squad_orders_give(g, "cover", Some(&t), None, Some(&opts_men(men.to_vec(), None)));
     g.orders.by_hand = false;
     g.orders.group != n
@@ -605,9 +607,9 @@ pub fn squad_orders_menu_quick(g: &mut crate::game::Game, m: &crate::orders::Men
 }
 
 /// The man of the squad the cursor is on, or whose feet are nearest it on the screen (his place on the roster; -1: nobody). (orders.ts manAt)
-pub fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> f64 {
+pub fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> f64 {
     let squad = squad_orders_squad(g);
-    let t = squad_orders_target_under(g, input, canvas);
+    let t = squad_orders_target_under(g, input, cam, canvas);
     if let OrderTarget::None(OrderTargetNone { man: Some(man), .. }) = t {
         if let Some(k) = squad.iter().position(|&gd| gd == man) {
             if g.gd[man].state != crate::game::GuardState::Dead { return k as f64; }
@@ -620,7 +622,7 @@ pub fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, canvas: cr
     for (k, &gd) in squad.iter().enumerate() {
         if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
         let pos = g.ch[g.gd[gd].ch].pos;
-        let (sx, sy, front) = crate::camera::follow_camera_project(g, pos, w, h, None, None);
+        let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, pos, w, h, None, None);
         if !front { continue; }
         let d = m::hyp2(sx - mx, sy - my);
         if d < bd { bd = d; best = k as f64; }

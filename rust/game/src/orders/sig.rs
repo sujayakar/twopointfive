@@ -105,10 +105,10 @@ pub fn squad_orders_target_at(g: &mut crate::game::Game, p: V3) -> crate::orders
 pub fn squad_orders_door_on_ray(g: &mut crate::game::Game, ro: V3, rd: V3, t_scene: Option<f64>) -> Option<DoorId> { todo!() }
 
 /// (src/game/orders.ts:771 SquadOrders.targetUnder)
-pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget { todo!() }
+pub fn squad_orders_target_under(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget { todo!() }
 
 /// (src/game/orders.ts:775 SquadOrders.targetUnderOf)
-pub fn squad_orders_target_under_of(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget { todo!() }
+pub fn squad_orders_target_under_of(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> crate::orders::OrderTarget { todo!() }
 
 /// (src/game/orders.ts:803 SquadOrders.sceneHit)
 pub fn squad_orders_scene_hit(g: &mut crate::game::Game, ro: V3, rd: V3, first: Option<crate::orders::SquadOrdersSceneHitFirst>) -> crate::orders::SquadOrdersSceneHit { todo!() }
@@ -207,19 +207,19 @@ pub fn squad_orders_who_after_t(g: &mut crate::game::Game, point: Option<&crate:
 pub fn squad_orders_step_who(g: &mut crate::game::Game, dir: f64, point: Option<&crate::orders::SquadOrdersStepWhoPoint>) { todo!() }
 
 /// (src/game/orders.ts:1051 SquadOrders.hostView)
-pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) { todo!() }
+pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
 
 /// (src/game/orders.ts:1052 SquadOrders.input)
-pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, canvas: crate::host_hud::View) { todo!() }
+pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
 
 /// (src/game/orders.ts:1104 SquadOrders.ringInput)
-pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> bool { todo!() }
+pub fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> bool { todo!() }
 
 /// (src/game/orders.ts:1196 SquadOrders.ringDigit)
 pub fn squad_orders_ring_digit(g: &mut crate::game::Game, input: InputId) -> bool { todo!() }
 
 /// (src/game/orders.ts:1198 SquadOrders.ringUp)
-pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool { todo!() }
+pub fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, cam: Option<CameraId>, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool { todo!() }
 
 /// (src/game/orders.ts:1211 SquadOrders.goalPart)
 pub fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, add: bool) -> Option<crate::orders::SquadOrdersGoalPart> { todo!() }
@@ -264,7 +264,7 @@ pub fn squad_orders_quick_words(g: &mut crate::game::Game, t: &crate::orders::Or
 pub fn squad_orders_menu_quick(g: &mut crate::game::Game, m: &crate::orders::Menu) -> Option<String> { todo!() }
 
 /// (src/game/orders.ts:1308 SquadOrders.manAt)
-pub fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) -> f64 { todo!() }
+pub fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> f64 { todo!() }
 
 /// (src/game/orders.ts:1318 SquadOrders.ringKeys)
 pub fn squad_orders_ring_keys(g: &mut crate::game::Game) -> f64 { todo!() }

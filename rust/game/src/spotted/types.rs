@@ -96,6 +96,8 @@ pub struct ManTake {
     pub born: f64,
     pub spot: V3,
     pub asked: Option<bool>,
+    /// INVENTED by a review: see the proposals
+    pub spot_serial: u32,
 }
 impl ManTake {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -106,6 +108,7 @@ impl ManTake {
             born: 0.0,
             spot: [0.0; 3],
             asked: None,
+            spot_serial: 0,
         }
     }
 }
@@ -269,6 +272,8 @@ pub struct SpottedFeet {
     pub speed: Option<f64>,
     pub crouch: bool,
     pub watch: Option<V3>,
+    /// INVENTED by a review: see the proposals
+    pub goal_serial: Option<u32>,
 }
 impl SpottedFeet {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -278,6 +283,7 @@ impl SpottedFeet {
             speed: None,
             crouch: false,
             watch: None,
+            goal_serial: None,
         }
     }
 }

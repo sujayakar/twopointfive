@@ -22,11 +22,6 @@ fn seam_query_number(q: crate::Opaque, key: &str) -> f64 {
     todo!("needs: a type for URLSearchParams with get(key), not crate::Opaque")
 }
 
-/// What `HELD === h` compares: the serial of the hold now up, None with nothing held. (quietfog.ts:179)
-fn seam_held_key(g: &mut Game) -> Option<u32> {
-    todo!("needs: a serial on quietfog::Held, dealt by quiet_fog_start with g.serial(), to tell a hold from a new one made during an aside")
-}
-
 /// The rung a word names, if it names one: the narrowing `isRung` gives the TypeScript. (quietfog.ts:64, 143)
 fn rung_of(v: Option<&str>) -> Option<QuietRung> {
     [QuietRung::Off, QuietRung::Team, QuietRung::Cones, QuietRung::Own].into_iter().find(|r| Some(r.as_str()) == v)
@@ -201,7 +196,8 @@ pub fn lift(g: &mut crate::game::Game, h: &mut crate::quietfog::Held) {
 pub fn quiet_fog_start(g: &mut crate::game::Game, q: crate::Opaque, rung: crate::quietfog::QuietRung) {
     quiet_fog_end(g);
     if rung == QuietRung::Off { return; }
-    g.m.quietfog.held = Some(Held { cone: None, own: None });
+    let serial = g.serial();
+    g.m.quietfog.held = Some(Held { cone: None, own: None, serial });
     if !seam_query_has(q, "fogcone") {
         let put = rung != QuietRung::Team;
         let was = crate::difficulty::cone_visit_now(g);
@@ -227,13 +223,12 @@ pub fn quiet_fog_end(g: &mut crate::game::Game) {
 pub fn quiet_fog_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let Some(mut h) = g.m.quietfog.held else { return fn_(g) };
     if g.m.quietfog.aside { return fn_(g); }
-    let key = seam_held_key(g);
     lift(g, &mut h);
     g.m.quietfog.held = Some(h);
     g.m.quietfog.aside = true;
     let out = fn_(g);
     g.m.quietfog.aside = false;
-    if seam_held_key(g) == key {
+    if g.m.quietfog.held.map(|now| now.serial) == Some(h.serial) {
         if let Some(put) = g.m.quietfog.held.and_then(|h| h.cone).map(|c| c.put) {
             let was = crate::difficulty::cone_visit_now(g);
             if let Some(c) = g.m.quietfog.held.as_mut().and_then(|h| h.cone.as_mut()) { c.was = was; }
@@ -306,14 +301,41 @@ mod tests {
     fn a_row_moved_by_hand_stays_and_is_the_rungs_no_more() {
         let mut g = Game::blank();
         g.k.fog.own = true;
-        let mut h = Held { cone: None, own: Some(HeldOwn { was: false, put: true }) };
+        let mut h = Held { cone: None, own: Some(HeldOwn { was: false, put: true }), serial: 0 };
         lift(&mut g, &mut h);
         assert!(!g.k.fog.own);
         assert!(h.own.is_some());
-        let mut h = Held { cone: None, own: Some(HeldOwn { was: true, put: true }) };
+        let mut h = Held { cone: None, own: Some(HeldOwn { was: true, put: true }), serial: 0 };
         lift(&mut g, &mut h);
         assert!(!g.k.fog.own);
         assert!(h.own.is_none());
+    }
+
+    #[test]
+    fn an_aside_lays_the_rung_back_only_on_the_hold_it_lifted() {
+        // the same hold: the rung off the row inside, back on after, over what the press left
+        let mut g = Game::blank();
+        g.k.fog.own = true;
+        g.m.quietfog.held = Some(Held { cone: None, own: Some(HeldOwn { was: false, put: true }), serial: 7 });
+        let inside = quiet_fog_aside(&mut g, &mut |g: &mut Game| { let lifted = g.k.fog.own; g.k.fog.own = true; lifted });
+        assert!(!inside);
+        assert!(g.k.fog.own);
+        assert_eq!(g.m.quietfog.held.unwrap().own.unwrap().was, true);
+        assert!(!g.m.quietfog.aside);
+        // a new hold made inside, with the same rows: it is not the one lifted, so nothing is laid on it
+        let mut g = Game::blank();
+        g.k.fog.own = true;
+        let same = Held { cone: None, own: Some(HeldOwn { was: false, put: true }), serial: 7 };
+        g.m.quietfog.held = Some(same);
+        quiet_fog_aside(&mut g, &mut |g: &mut Game| { g.m.quietfog.held = Some(Held { serial: 8, ..same }); });
+        assert!(!g.k.fog.own);
+        assert_eq!(g.m.quietfog.held.unwrap().serial, 8);
+        // an aside inside an aside does not lift again
+        let mut g = Game::blank();
+        g.k.fog.own = true;
+        g.m.quietfog.held = Some(same);
+        g.m.quietfog.aside = true;
+        assert!(quiet_fog_aside(&mut g, &mut |g: &mut Game| g.k.fog.own));
     }
 
     #[test]

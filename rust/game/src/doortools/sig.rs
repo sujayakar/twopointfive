@@ -546,16 +546,16 @@ pub fn door_tools_room_in(g: &mut crate::game::Game, op: DoorOpId) -> Option<Roo
 pub fn door_tools_corners_of(g: &mut crate::game::Game, op: DoorOpId, pod: crate::entrypoints::Pod) -> Vec<V3> { todo!() }
 
 /// (src/game/doortools.ts:2955 DoorTools.searchOf)
-pub fn door_tools_search_of<'g>(g: &'g mut crate::game::Game, op: DoorOpId, at: Option<V3>) -> Option<&'g mut crate::doortools::RoomSearch> { todo!() }
+pub fn door_tools_search_of(g: &mut crate::game::Game, op: DoorOpId, at: Option<V3>) -> Option<DoortoolsRoomSearchId> { todo!() }
 
 /// (src/game/doortools.ts:2965 DoorTools.lineTo)
-pub fn door_tools_line_to(g: &mut crate::game::Game, sr_key: DoorOpId, gd: GuardId, i: f64) -> bool { todo!() }
+pub fn door_tools_line_to(g: &mut crate::game::Game, sr: DoortoolsRoomSearchId, gd: GuardId, i: f64) -> bool { todo!() }
 
 /// (src/game/doortools.ts:2972 DoorTools.look)
-pub fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, out: Option<&[GuardId]>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId, f64) -> bool>) { todo!() }
+pub fn door_tools_look(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, out: Option<&[GuardId]>, ok: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId, f64) -> bool>) { todo!() }
 
 /// (src/game/doortools.ts:2983 DoorTools.scan)
-pub fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, a: OrdersAssignmentId) -> bool { todo!() }
+pub fn door_tools_scan(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, gd: GuardId, a: OrdersAssignmentId) -> bool { todo!() }
 
 /// (src/game/doortools.ts:2996 DoorTools.walkLen)
 pub fn door_tools_walk_len(g: &mut crate::game::Game, a: V3, b: V3, lim: f64) -> f64 { todo!() }
@@ -573,13 +573,13 @@ pub fn door_tools_beside_pod(g: &mut crate::game::Game, p: V3, face: f64, mate: 
 pub fn door_tools_send_on(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, pod: &mut crate::entrypoints::Pod, going: &str) { todo!() }
 
 /// (src/game/doortools.ts:3066 DoorTools.flows)
-pub fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: &crate::doortools::RoomSearch) -> bool { todo!() }
+pub fn door_tools_flows(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool { todo!() }
 
 /// (src/game/doortools.ts:3075 DoorTools.flowIn)
-pub fn door_tools_flow_in(g: &mut crate::game::Game, op: DoorOpId, men: &[GuardId]) -> bool { todo!() }
+pub fn door_tools_flow_in(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[GuardId]) -> bool { todo!() }
 
 /// (src/game/doortools.ts:3159 DoorTools.moveOn)
-pub fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId) -> bool { todo!() }
+pub fn door_tools_move_on(g: &mut crate::game::Game, op: DoorOpId, sr: DoortoolsRoomSearchId) -> bool { todo!() }
 
 /// (src/game/doortools.ts:3202 DoorTools.pods)
 pub fn door_tools_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> { todo!() }
@@ -714,10 +714,10 @@ pub fn door_tools_thr_at(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) ->
 pub fn door_tools_thr_pick(g: &mut crate::game::Game, op: DoorOpId, hand: bool, fit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> Option<GuardId> { todo!() }
 
 /// (src/game/doortools.ts:3726 DoorTools.thrLitCell)
-pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: &crate::doortools::RoomSearch, i: f64) -> bool { todo!() }
+pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool { todo!() }
 
 /// (src/game/doortools.ts:3732 DoorTools.thrTubeCell)
-pub fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: &crate::doortools::RoomSearch, i: f64) -> bool { todo!() }
+pub fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool { todo!() }
 
 /// (src/game/doortools.ts:3738 DoorTools.handAt)
 pub fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> V3 { todo!() }

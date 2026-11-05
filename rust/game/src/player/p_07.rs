@@ -145,7 +145,7 @@ fn interact_cmp(g: &mut Game, p: V3, priority: &JsMap<String, f64>, a: &crate::g
 }
 
 /// The markers Space concerns itself with, and the rows: what Space can do right now, one verb a row, the highlighted one.   (player.ts buildInteractables)
-pub fn build_interactables(g: &mut crate::game::Game, mx: f64, my: f64, w: f64, h: f64) {
+pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my: f64, w: f64, h: f64) {
     let pl = g.player;
     let mut list: Vec<crate::game::Interactable> = Vec::new();
     let p = g.ch[g.pl[pl].ch].pos;

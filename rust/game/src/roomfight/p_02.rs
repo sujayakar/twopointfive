@@ -340,7 +340,7 @@ pub fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> RoomfightDefI
         heard_t: H.last_t, cnt: DefCnt { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small }, noise_at: None, noise_t: -100.0, noise_out: false,
         last_state: String::from(g.gd[gd].state.as_str()), last_seen: g.gd[gd].last_seen_t, fix_keep: -1.0, pre: false, nerve, lost_at: 0.0, moved_at: -100.0, rally_at: f64::NAN, rally_go: false,
         mode: DefMode::Hold, move_kind: DefMoveKind::Cover, move_t: 0.0, came_by: None, stall_at: p, stall_t: 0.0, free_at: 0.0,
-        burst: DefBurst { until: -1.0, n: 0.0, next: 0.0, broke: false, daze: 0.0 }, bolt_until: -1.0, bolt_from: None, fix_is_pt: false,
+        burst: DefBurst { until: -1.0, n: 0.0, next: 0.0, broke: false, daze: 0.0 }, bolt_until: -1.0, bolt_from: None, pt_stamp: None, fix_is_pt: false, pt_stamp_2: None,
     };
     g.tab.roomfight_def.push(row)
 }
@@ -367,8 +367,7 @@ pub fn room_fight_tick_def(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
         }
     }
     if g.gd[gd].script.is_some() {
-        use crate::squad::EndGuardScriptState as E;
-        let st = match g.gd[gd].state { crate::game::GuardState::Dead | crate::game::GuardState::Patrol => E::Patrol, crate::game::GuardState::Suspicious => E::Suspicious, crate::game::GuardState::Alert => E::Alert, crate::game::GuardState::Search => E::Search };
+        let st = match g.gd[gd].state { crate::game::GuardState::Dead | crate::game::GuardState::Patrol => crate::squad::EndGuardScriptState::Patrol, crate::game::GuardState::Suspicious => crate::squad::EndGuardScriptState::Suspicious, crate::game::GuardState::Alert => crate::squad::EndGuardScriptState::Alert, crate::game::GuardState::Search => crate::squad::EndGuardScriptState::Search };
         crate::squad::end_guard_script(g, gd, Some(st));
     }
     if !g.gd[gd].hold {
@@ -518,7 +517,7 @@ pub fn room_fight_reactions(g: &mut crate::game::Game, d: RoomfightDefId) {
         g.tab.roomfight_def[d].pre = !dazed && g.gd[gd].state != crate::game::GuardState::Patrol && off < lim && m::abs(v3::wrap_angle(v3::yaw_to(cp, fp) - g.ch[c].aim_yaw)) < lim;
         if caught {
             g.fight.stats.surprised += 1.0;
-            let what = if dazed { String::from("still dazed: the man is a surprise") } else { alloc::format!("surprised {:.0}\u{b0} off his watch", off / v3::DEG) };
+            let what = if dazed { String::from("still dazed: the man is a surprise") } else { alloc::format!("surprised {}\u{b0} off his watch", js::to_fixed(off / v3::DEG, 0)) };
             room_fight_note(g, Some(gd), &what);
         }
     } }
@@ -724,7 +723,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
         let speed = g.tune.guard_chase + 0.3;
         crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(Some(b.spot)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None), upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(false)), ..Default::default() });
         g.fight.stats.fell_back += 1.0;
-        let what = alloc::format!("falls back through {} to {:.1},{:.1}", door_name(g, b.door), b.spot[0], b.spot[2]);
+        let what = alloc::format!("falls back through {} to {},{}", door_name(g, b.door), js::to_fixed(b.spot[0], 1), js::to_fixed(b.spot[2], 1));
         room_fight_note(g, Some(gd), &what);
         let line = if crate::math_dice::sim_random(g) < 0.5 { "fall back \u{2014} fall back!" } else { "they're in \u{2014} get out!" };
         crate::game::game_say(g, gd, line, None, None, None);

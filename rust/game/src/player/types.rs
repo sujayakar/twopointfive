@@ -751,13 +751,13 @@ impl ThrowRest {
 impl Default for ThrowRest { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:1908 heldTalk ->, src/game/player.ts:1908)
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct HeldTalk {
     pub asking: bool,
     pub sam_up: bool,
     pub ready: bool,
     pub settled: bool,
-    pub speaking: Option<crate::game::GuardBubble>,
+    pub speaking: bool,
 }
 impl HeldTalk {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -767,7 +767,7 @@ impl HeldTalk {
             sam_up: false,
             ready: false,
             settled: false,
-            speaking: None,
+            speaking: false,
         }
     }
 }

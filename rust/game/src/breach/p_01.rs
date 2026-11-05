@@ -22,7 +22,7 @@ macro_rules! dr { ($g:expr) => { $g.night_breach.drill.as_mut().unwrap() } }
 /// A line of the plan said by a man (the text is cloned out of the plan before the call).
 macro_rules! say { ($g:expr, $gd:expr, $key:expr, $($path:ident).+) => {{ let s = dr!($g).plan.$($path).+.clone(); breach_drill_say($g, $gd, $key, &s, None); }} }
 
-// ---------------------------------------------------------------- seam: what skeleton 3 cannot yet carry
+// ---------------------------------------------------------------- seam: what skeleton 4 cannot yet carry
 fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) { todo!("needs: GameAudioLike.play's opts able to hold a rate (crate::Opaque holds nothing)") }
 
 // ---------------------------------------------------------------- small private helpers
@@ -34,8 +34,8 @@ fn host(g: &mut Game, k: f64) -> Option<GuardId> { if k < 0.0 { return None; } d
 fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, y: f64) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, y, 0.0]) }
 }
-/// The drill's live object is NightBreach's own, which it writes as play goes: the copy on the drill only says whether there is one.
-fn live_of(g: &mut Game) -> Option<BreachLive> { if dr!(g).live.is_some() { Some(g.night_breach.live) } else { None } }
+/// The live object (`this.live`): its one home is the drill's own field, which NightBreach writes as play goes.
+fn live_of(g: &mut Game) -> Option<BreachLive> { dr!(g).live }
 fn look(table: &'static [(&'static str, &'static str)], key: &str) -> Option<&'static str> { table.iter().find(|r| r.0 == key).map(|r| r.1) }
 /// What a live pair says in place of the show's line (WORDS.on and WORDS.guide settled on).
 fn live_text<'a>(charge: bool, key: &str, text: &'a str) -> &'a str {

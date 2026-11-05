@@ -14,6 +14,8 @@ pub struct BreathShown {
     pub births: f64,
     pub by: Vec<f64>,
     pub men: JsMap<crate::Num, crate::snow_breath::BreathShownMenValue>,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
 }
 impl BreathShown {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -27,6 +29,7 @@ impl BreathShown {
             births: 0.0,
             by: Vec::new(),
             men: JsMap::new(),
+            serial: 0,
         }
     }
 }

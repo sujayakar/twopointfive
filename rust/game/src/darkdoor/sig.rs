@@ -42,7 +42,7 @@ pub fn fight_walk(g: &mut crate::game::Game, gd: GuardId) -> crate::darkdoor::Fi
 pub fn can_come(g: &mut crate::game::Game, o: GuardId) -> bool { todo!() }
 
 /// (src/game/darkdoor.ts:132 mind)
-pub fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::darkdoor::Fear { todo!() }
+pub fn mind(g: &mut crate::game::Game, gd: GuardId) { todo!() }
 
 /// (src/game/darkdoor.ts:139 greenMan)
 pub fn green_man(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }

@@ -60,7 +60,7 @@ pub fn cover_tick(g: &mut crate::game::Game) { todo!() }
 pub fn cover_deal(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/cover.ts:540 Cover.stepDeal)
-pub fn cover_step_deal(g: &mut crate::game::Game, list: &[(GuardId, OrdersAssignmentId)], asg_of: &JsMap<GuardId, OrdersAssignmentId>, got: &JsMap<GuardId, crate::cover::LiveOpening>, live: &[crate::cover::LiveOpening], open: &[CoverOpeningId], bodies: &[(CharId, V3)], spd: &JsMap<GuardId, f64>, w_of: &mut dyn FnMut(&mut crate::game::Game, CoverOpeningId) -> f64, rear_man: Option<GuardId>) { todo!() }
+pub fn cover_step_deal(g: &mut crate::game::Game, list: &[(GuardId, OrdersAssignmentId)], asg_of: &JsMap<GuardId, OrdersAssignmentId>, got: &JsMap<GuardId, CoverOpeningId>, live: &[crate::cover::LiveOpening], open: &[CoverOpeningId], bodies: &[(CharId, V3)], spd: &JsMap<GuardId, f64>, w_of: &mut dyn FnMut(&mut crate::game::Game, CoverOpeningId) -> f64, rear_man: Option<GuardId>) { todo!() }
 
 /// (src/game/cover.ts:584 Cover.pruneSteps)
 pub fn cover_prune_steps(g: &mut crate::game::Game) { todo!() }

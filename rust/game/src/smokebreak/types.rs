@@ -83,6 +83,8 @@ pub struct Man {
     pub outs: f64,
     pub ember_t: f64,
     pub live: bool,
+    /// INVENTED by a review: see the proposals
+    pub out_at: Option<f64>,
 }
 impl Man {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -94,6 +96,7 @@ impl Man {
             outs: 0.0,
             ember_t: 0.0,
             live: false,
+            out_at: None,
         }
     }
 }

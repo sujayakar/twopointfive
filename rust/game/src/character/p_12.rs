@@ -5,10 +5,10 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 
-// ---- the seam: what skeleton 3 still cannot do (notes.md, ## Skeleton) ----
+// ---- the seam: what skeleton 4 still cannot do (notes.md, ## Skeleton) ----
 
 /// standMan(this, men ?? loneMen()): Character holds no ManCols and ManCols is empty, so there is nothing to write his row into (ts:4356)
 fn seam_stand_man(g: &mut Game, id: CharId, men: Option<crate::Opaque>) { todo!("needs: Character to hold his ManCols (the owner part), for stand_man to write his row") }
@@ -611,13 +611,12 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: Option
     }
     let nodes = g.tab.rig[rig].nodes.len();
     let mut ov: Vec<Option<crate::anim_skeleton::NodeOverride>> = vec![None; nodes];
-    let hips = crate::anim_skeleton::NodeOverride { rot: [0.0, 0.0, 0.0, 1.0], pos: Some([0.0, 0.0, 0.0]) };
-    ov[n.hips] = Some(hips);
-    let limb_ov: Vec<crate::anim_skeleton::NodeOverride> = limbs.iter().map(|(node, _, _, _)| { let o = crate::anim_skeleton::NodeOverride { rot: [0.0, 0.0, 0.0, 1.0], pos: None }; ov[*node] = Some(o); o }).collect();
+    ov[n.hips] = Some(crate::anim_skeleton::NodeOverride { rot: [0.0, 0.0, 0.0, 1.0], pos: Some([0.0, 0.0, 0.0]) });
+    let limb_ov: Vec<usize> = limbs.iter().map(|(node, _, _, _)| { ov[*node] = Some(crate::anim_skeleton::NodeOverride { rot: [0.0, 0.0, 0.0, 1.0], pos: None }); *node }).collect();
     let hips_rot0 = v3::quat::mul(y_q, g.ch[id].skel.global_rot[n.hips]);
     let delta: Vec<Quat> = limbs.iter().map(|_| v3::quat::ident()).collect();
     g.ch[id].ragdoll = Some(rag);
-    g.ch[id].rd = Some(RagDrive { pose, ov, hips, hips_rot0, rot0, dir0, delta, limb_ov, synced: false });
+    g.ch[id].rd = Some(RagDrive { pose, ov, hips: n.hips, hips_rot0, rot0, dir0, delta, limb_ov, synced: false });
 }
 /// fallAs, fallFrom, fallTight and fallAhead are read once and cleared
 fn clear_fall(g: &mut Game, id: CharId) {
@@ -671,16 +670,18 @@ pub fn character_update_ragdoll(g: &mut crate::game::Game, id: CharId, dt: f64) 
         let y_q = v3::quat::yaw(c.body_yaw); let yi = v3::quat::conj(y_q);
         c.world = v3::m4::from_trs(c.pos, y_q, [1.0, 1.0, 1.0]);
         let d = rag.rot;
-        rd.hips.rot = v3::quat::mul(yi, v3::quat::mul(d, rd.hips_rot0)); rd.hips.pos = Some([0.0, x[1], 0.0]);   // (pelvis − pos is straight up: yaw leaves it alone)
-        rd.ov[n.hips] = Some(rd.hips);
+        let hips_rot = v3::quat::mul(yi, v3::quat::mul(d, rd.hips_rot0));
+        let hips = rd.ov[rd.hips].as_mut().unwrap();
+        hips.rot = hips_rot; hips.pos = Some([0.0, x[1], 0.0]);   // (pelvis − pos is straight up: yaw leaves it alone)
         for r in 0..limbs.len() {
-            let (node, parent, a, cc) = limbs[r];
+            let (_, parent, a, cc) = limbs[r];
             let dp = if parent < 0.0 { d } else { rd.delta[parent as usize] };
             let d1 = v3::normalize([x[cc * 3] - x[a * 3], x[cc * 3 + 1] - x[a * 3 + 1], x[cc * 3 + 2] - x[a * 3 + 2]]);
             let mm = v3::quat::from_to(rd.dir0[r], v3::quat::rotate(v3::quat::conj(dp), d1));   // swing only, in the parent's frame
             let delta = v3::quat::normalize(v3::quat::mul(dp, mm)); rd.delta[r] = delta;
-            rd.limb_ov[r].rot = v3::quat::mul(yi, v3::quat::mul(delta, rd.rot0[r]));
-            rd.ov[node] = Some(rd.limb_ov[r]);
+            let rot = v3::quat::mul(yi, v3::quat::mul(delta, rd.rot0[r]));
+            let node = rd.limb_ov[r];
+            rd.ov[node].as_mut().unwrap().rot = rot;
         }
     }
     skel_rag_pose(g, id);

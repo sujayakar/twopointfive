@@ -48,6 +48,8 @@ pub struct Rescue {
     pub server_out: Option<V3>,
     pub ending: crate::rescueend::RescueEnd,
     pub flush: crate::rescueflush::RescueFlush,
+    /// INVENTED by a review: see the proposals
+    pub noise_serial: Option<u32>,
 }
 impl Rescue {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -95,6 +97,7 @@ impl Rescue {
             server_out: None,
             ending: crate::rescueend::RescueEnd::blank(),
             flush: crate::rescueflush::RescueFlush::blank(),
+            noise_serial: None,
         }
     }
 }
@@ -239,7 +242,7 @@ pub struct Def {
     pub crew: crate::rescue::DefCrew,
     pub look: Option<V3>,
     pub spot: Option<V3>,
-    pub noise0: Option<V3>,
+    pub noise0: Option<u32>,
 }
 impl Def {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own

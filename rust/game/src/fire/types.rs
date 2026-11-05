@@ -50,6 +50,8 @@ pub struct FireShown {
     pub gases: f64,
     pub soot_mix: Option<Vec<f64>>,
     pub kept: Option<f64>,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
 }
 impl FireShown {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -70,6 +72,7 @@ impl FireShown {
             gases: 0.0,
             soot_mix: None,
             kept: None,
+            serial: 0,
         }
     }
 }
@@ -171,6 +174,8 @@ pub struct FireShown2 {
     pub gases: f64,
     pub soot_mix: Option<Vec<f64>>,
     pub kept: Option<f64>,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
 }
 impl FireShown2 {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -191,6 +196,7 @@ impl FireShown2 {
             gases: 0.0,
             soot_mix: None,
             kept: None,
+            serial: 0,
         }
     }
 }

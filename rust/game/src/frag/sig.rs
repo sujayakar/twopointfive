@@ -144,7 +144,7 @@ pub fn frag_step_off(g: &mut crate::game::Game, speed: Option<f64>) -> Option<V3
 pub fn defenders_of(g: &mut crate::game::Game) -> Vec<GuardId> { todo!() }
 
 /// (src/game/frag.ts:818 dealCarriers)
-pub fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBook>) -> crate::frag::DefBook { todo!() }
+pub fn deal_carriers(g: &mut crate::game::Game, was: Option<&crate::frag::DefBook>) { todo!() }
 
 /// (src/game/frag.ts:829 fragCarriers)
 pub fn frag_carriers(g: &mut crate::game::Game) -> Vec<GuardId> { todo!() }
@@ -156,7 +156,7 @@ pub fn frag_throw_tick(g: &mut crate::game::Game, dt: f64) { todo!() }
 pub fn aim_spots(g: &mut crate::game::Game, gd: GuardId, from: Option<V3>, fix: V3, n: f64) -> Vec<V3> { todo!() }
 
 /// (src/game/frag.ts:915 windUp)
-pub fn wind_up(g: &mut crate::game::Game, c_2: &mut crate::frag::Carrier, head: V3, from: V3, aim: V3, toward: Option<V3>) -> Option<crate::frag::WindUp> { todo!() }
+pub fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, toward: Option<V3>) -> Option<crate::frag::WindUp> { todo!() }
 
 /// (src/game/frag.ts:935 fragInFist)
 pub fn frag_in_fist(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
@@ -165,7 +165,7 @@ pub fn frag_in_fist(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 pub fn arm_round(g: &mut crate::game::Game, p: V3, to: V3) -> V3 { todo!() }
 
 /// (src/game/frag.ts:943 free)
-pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::frag::Free> { todo!() }
+pub fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> { todo!() }
 
 /// (src/game/frag.ts:951 fragReady)
 pub fn frag_ready(g: &mut crate::game::Game, gd: GuardId, at: V3) -> bool { todo!() }

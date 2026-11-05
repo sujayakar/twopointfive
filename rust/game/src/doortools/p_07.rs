@@ -25,11 +25,6 @@ fn segment_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision:
 
 /// `{ rate }` of g.audio.play: `opts` is a map of crate::Opaque, which holds no number
 fn seam_audio_play_rate(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) { todo!("needs: a rate in game_audio_like_play's opts") }
-/// `op.search !== undefined`: the skeleton's Option cannot tell "never asked" from null
-fn seam_search_asked(g: &mut Game, op: DoorOpId) -> bool { todo!("needs: op.search asked or not") }
-fn seam_search_mark_asked(g: &mut Game, op: DoorOpId) { todo!("needs: op.search asked or not") }
-/// `op.search = o.search`: one object shared by two orders
-fn seam_search_share<'g>(g: &'g mut Game, op: DoorOpId, o: DoorOpId) -> Option<&'g mut crate::doortools::RoomSearch> { todo!("needs: a RoomSearch table and ID") }
 
 /// the men of the orders let go on this order's word (doortools.ts bangSpot, bang)
 fn word_ops(g: &Game, op: DoorOpId) -> Vec<DoorOpId> {
@@ -261,7 +256,7 @@ pub fn door_tools_bang(g: &mut crate::game::Game, op: DoorOpId, it: ItemId) {
     g.door_tools.stats.bangs += 1.0;
     if dop!(g, op).thr.is_none() { door_tools_close_up(g, op, None); }
     let off = off_of(g, d, at, side);
-    door_tools_beat(g, op, &format!("bang · {} {:.1} m", if off < 0.0 { "inside" } else { "OUTSIDE" }, m::abs(off)));
+    door_tools_beat(g, op, &format!("bang · {} {} m", if off < 0.0 { "inside" } else { "OUTSIDE" }, js::to_fixed(m::abs(off), 1)));
     if dop!(g, op).thr.is_some() { door_tools_thr_banged(g, op); }
 }
 
@@ -339,33 +334,26 @@ fn cell_of(g: &Game, p: V3) -> f64 {
 fn threat_beyond(g: &mut Game, op: DoorOpId, p: V3) -> bool {
     let (d, side) = (dop!(g, op).door, dop!(g, op).side);
     let key = crate::Num(cell_of(g, p));
-    let (in_room, has_room) = match dop!(g, op).threat.as_ref().and_then(|t| t.room.as_ref()) {
-        Some(r) => (r.cells.has(key), true),
-        None => (false, false),
-    };
-    if in_room { return true; }
-    let reach = if has_room { 1.5 } else { g.k.doortools.look_m };
+    let room = dop!(g, op).threat.as_ref().and_then(|t| t.room);
+    if let Some(r) = room {
+        if g.tab.roomfight_room[r].cells.has(key) { return true; }
+    }
+    let reach = if room.is_some() { 1.5 } else { g.k.doortools.look_m };
     off_of(g, d, p, side) < 0.0 && v3::dist_xz(p, frame(g, d)) < reach
 }
-fn same_threat(a: &crate::doortools::KnownThreat, b: &crate::doortools::KnownThreat) -> bool {
-    a.by == b.by && a.how == b.how && a.t.to_bits() == b.t.to_bits() && a.at.iter().zip(b.at.iter()).all(|(x, y)| x.to_bits() == y.to_bits())
-}
-/// threatNote's `note`. A ThreatWatch's `th` is the same object as a row of `known` in the TypeScript: what is written on the row is written on it.
+/// threatNote's `note`: the row is a thing of its own, so a ThreatWatch dealt it sees what is written on it.
 fn threat_mark(g: &mut Game, op: DoorOpId, by: GuardId, at: V3, how: crate::doortools::KnownThreatHow, t: f64) {
-    let th = dop!(g, op).threat.as_mut().unwrap();
-    if let Some(k) = th.known.iter_mut().find(|x| x.by == Some(by)) {
-        let was = *k;
+    let found = dop!(g, op).threat.as_ref().unwrap().known.iter().copied().find(|x| g.tab.doortools_known_threat[*x].by == Some(by));
+    if let Some(id) = found {
+        let k = &mut g.tab.doortools_known_threat[id];
         k.at = [at[0], 0.0, at[2]];
         k.t = t;
         k.how = how;
-        let now = *k;
-        if let Some(deal) = th.deal.as_mut() {
-            for (_, w) in deal.iter_mut() { if same_threat(&w.th, &was) { w.th = now; } }
-        }
         return;
     }
-    th.known.push(crate::doortools::KnownThreat { at: [at[0], 0.0, at[2]], t, by: Some(by), how });
-    let line = format!("threat known · {} · {} ({:.1}, {:.1})", how.as_str(), g.gd[by].callsign, at[0], at[2]);
+    let id = g.tab.doortools_known_threat.push(crate::doortools::KnownThreat { at: [at[0], 0.0, at[2]], t, by: Some(by), how });
+    dop!(g, op).threat.as_mut().unwrap().known.push(id);
+    let line = format!("threat known · {} · {} ({}, {})", how.as_str(), g.gd[by].callsign, js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     door_tools_beat(g, op, &line);
 }
 
@@ -385,8 +373,8 @@ pub fn door_tools_threat_note(g: &mut crate::game::Game, op: DoorOpId) {
         let near = door_pt(g, d, w / 2.0, 0.9, side, None);
         let key = crate::Num(cell_of(g, near));
         let room = match room {
-            Some(r) if !g.tab.roomfight_room[r].cells.has(key) => Some(crate::doortools::DoorToolsDoneItemThreatRoom { cells: g.tab.roomfight_room[r].cells.clone() }),
-            _ => None,
+            Some(r) if g.tab.roomfight_room[r].cells.has(key) => None,
+            other => other,
         };
         dop!(g, op).threat.as_mut().unwrap().room = room;
     }
@@ -429,7 +417,7 @@ pub fn door_tools_threat_note(g: &mut crate::game::Game, op: DoorOpId) {
     let mut i = dop!(g, op).threat.as_ref().unwrap().known.len();
     while i > 0 {
         i -= 1;
-        let k = dop!(g, op).threat.as_ref().unwrap().known[i];
+        let k = g.tab.doortools_known_threat[dop!(g, op).threat.as_ref().unwrap().known[i]];
         let gone = t - k.t > secs || match k.by {
             Some(by) if dead(g, by) => { let p = pos(g, by); door_tools_sees(g, op, p) }
             _ => false,
@@ -449,7 +437,7 @@ pub fn door_tools_sees(g: &mut crate::game::Game, op: DoorOpId, p: V3) -> bool {
     false
 }
 
-fn threat_watch(th: crate::doortools::KnownThreat, lead: Option<GuardId>) -> crate::doortools::ThreatWatch {
+fn threat_watch(th: DoortoolsKnownThreatId, lead: Option<GuardId>) -> crate::doortools::ThreatWatch {
     crate::doortools::ThreatWatch { th, lead, on: m::NAN, fight: 0.0, last: m::NAN, done_t: m::NAN, faced: None, at: None, still: None }
 }
 
@@ -459,7 +447,7 @@ pub fn door_tools_threat_deal(g: &mut crate::game::Game, op: DoorOpId) {
     dop!(g, op).threat.as_mut().unwrap().deal = Some(JsMap::new());
     let fc = frame(g, dop!(g, op).door);
     let mut known = dop!(g, op).threat.as_ref().unwrap().known.clone();
-    js::sort_by(&mut known, |a, b| v3::dist_xz(a.at, fc) - v3::dist_xz(b.at, fc));
+    js::sort_by(&mut known, |a, b| v3::dist_xz(g.tab.doortools_known_threat[*a].at, fc) - v3::dist_xz(g.tab.doortools_known_threat[*b].at, fc));
     if known.is_empty() || dop!(g, op).queue.is_empty() { return; }
     let m1 = dop!(g, op).queue[0].gd;
     let m2 = dop!(g, op).queue.get(1).map(|q| q.gd);
@@ -470,8 +458,9 @@ pub fn door_tools_threat_deal(g: &mut crate::game::Game, op: DoorOpId) {
         deal.set(m2, if known.len() > 1 { threat_watch(known[1], None) } else { threat_watch(known[0], Some(m1)) });
     }
     for (x, w) in deal.iter() {
-        let by = match w.th.by { Some(b) => g.gd[b].callsign.clone(), None => String::from("a man") };
-        said.push(format!("{} on {}'s place ({:.1}, {:.1}){}", g.gd[x].callsign, by, w.th.at[0], w.th.at[2], if w.lead.is_some() { " until the first man has it" } else { "" }));
+        let th = g.tab.doortools_known_threat[w.th];
+        let by = match th.by { Some(b) => g.gd[b].callsign.clone(), None => String::from("a man") };
+        said.push(format!("{} on {}'s place ({}, {}){}", g.gd[x].callsign, by, js::to_fixed(th.at[0], 1), js::to_fixed(th.at[2], 1), if w.lead.is_some() { " until the first man has it" } else { "" }));
     }
     dop!(g, op).threat.as_mut().unwrap().deal = Some(deal);
     door_tools_beat(g, op, &format!("threat first · {}", said.join(" · ")));
@@ -498,7 +487,7 @@ fn threat_done(g: &mut Game, op: DoorOpId, gd: GuardId, a: OrdersAssignmentId, p
 fn threat_watching(g: &mut Game, op: DoorOpId, gd: GuardId, a: OrdersAssignmentId, pod: crate::entrypoints::Pod, w: &mut crate::doortools::ThreatWatch) -> bool {
     let t = g.time;
     let ch = g.gd[gd].ch;
-    let th = w.th;
+    let th = g.tab.doortools_known_threat[w.th];
     let spot: V3 = [th.at[0], 1.2, th.at[2]];
     if t - th.t > g.k.doortools.threat_secs { return threat_done(g, op, gd, a, &pod, w, "let go: old news"); }
     if let Some(by) = th.by {
@@ -1078,20 +1067,26 @@ pub fn door_tools_corners_of(g: &mut crate::game::Game, op: DoorOpId, pod: crate
 }
 
 /// The room this entry is into as floor to look over, built once. (doortools.ts DoorTools.searchOf)
-pub fn door_tools_search_of<'g>(g: &'g mut crate::game::Game, op: DoorOpId, at: Option<V3>) -> Option<&'g mut crate::doortools::RoomSearch> {
-    if seam_search_asked(g, op) { return dop!(g, op).search.as_mut(); }
-    dop!(g, op).search = None;
-    seam_search_mark_asked(g, op);
+pub fn door_tools_search_of(g: &mut crate::game::Game, op: DoorOpId, at: Option<V3>) -> Option<DoortoolsRoomSearchId> {
+    // (None: never asked. Some(None): asked, no floor. Some(Some(id)): one floor, shared by every order in the room)
+    if let Some(asked) = dop!(g, op).search { return asked; }
+    dop!(g, op).search = Some(None);
     let room = match at { Some(a) => crate::roomfight::room_fight_room_at(g, a), None => door_tools_room_in(g, op) };
     let room = room?;
     if room_open(g, room) { return None; }
     for o in g.door_tools.ops.clone() {
-        if o != op && dop!(g, o).search.as_ref().map_or(false, |s| s.room == room) { return seam_search_share(g, op, o); }
+        if o == op { continue; }
+        if let Some(Some(s)) = dop!(g, o).search {
+            if g.tab.doortools_room_search[s].room == room {
+                dop!(g, op).search = Some(Some(s));
+                return Some(s);
+            }
+        }
     }
     let (nav_w, cs) = (g.col.nav.w, g.col.nav.cell);
     let pts: Vec<V3> = g.tab.roomfight_room[room].cells.iter().map(|ci| [(js::rem(ci.0, nav_w) + 0.5) * cs, 1.0, (js::to_i32(ci.0 / nav_w) as f64 + 0.5) * cs]).collect();
     let n = pts.len();
-    let found = crate::doortools::RoomSearch { room, pts, looked: vec![0u8; n], los: JsMap::new(), yaw: JsMap::new(), at: JsMap::new(), moves: 0.0, left_at_move: m::INF, left: n as f64, flows: None, closes: None, flow_said: None, late: None, cell_at: None, fight_t: None, fight_at: None };
-    dop!(g, op).search = Some(found);
-    dop!(g, op).search.as_mut()
+    let id = g.tab.doortools_room_search.push(crate::doortools::RoomSearch { room, pts, looked: vec![0u8; n], los: JsMap::new(), yaw: JsMap::new(), at: JsMap::new(), moves: 0.0, left_at_move: m::INF, left: n as f64, flows: None, closes: None, flow_said: None, late: None, cell_at: None, fight_t: None, fight_at: None });
+    dop!(g, op).search = Some(Some(id));
+    Some(id)
 }

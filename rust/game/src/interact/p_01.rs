@@ -321,7 +321,7 @@ pub fn ring_spot(g: &mut Game) -> V3 {
 }
 
 /// the ring put on its thing (`open`) and kept there. True: the hand has not moved the cursor since the last look. (interact.ts ringOnThing)
-pub fn ring_on_thing(g: &mut Game, r: &mut crate::cmdring::RingState, input: InputId, view: crate::host_hud::View, open: Option<bool>) -> bool {
+pub fn ring_on_thing(g: &mut Game, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
     let open = open.unwrap_or(false);
     let (mouse_x, mouse_y) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     if open {
@@ -329,7 +329,7 @@ pub fn ring_on_thing(g: &mut Game, r: &mut crate::cmdring::RingState, input: Inp
     } else if r.at.is_none() { return false; }
     let at = ring_spot(g);
     r.at = Some(at);
-    let (sx, sy, front) = crate::camera::follow_camera_project(g, at, view.client_width, view.client_height, None, None);
+    let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, view.client_width, view.client_height, None, None);
     if front { crate::cmdring::ring_pin(g, r, sx, sy, view.client_width, view.client_height); }
     if open { r.armed = m::hyp2(mouse_x - r.ax, mouse_y - r.ay) < g.k.cmdring.flick_px * r.z; }
     let still = r.mx == Some(mouse_x) && r.my == Some(mouse_y);
@@ -355,8 +355,8 @@ fn lend_ring<T>(g: &mut Game, f: impl FnOnce(&mut Game, &mut crate::cmdring::Rin
 }
 
 /// `ringOnThing(g, S.ring, input, cam, view, open)`
-fn ring_on_own(g: &mut Game, input: InputId, view: crate::host_hud::View, open: Option<bool>) -> bool {
-    lend_ring(g, |g, r| ring_on_thing(g, r, input, view, open))
+fn ring_on_own(g: &mut Game, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool {
+    lend_ring(g, |g, r| ring_on_thing(g, r, input, cam, view, open))
 }
 
 /// `input.backHit`: read, not taken; `Keys` is its own type, so it is handed a copy of the frame's presses
@@ -369,7 +369,7 @@ fn input_back_hit(g: &mut Game, input: InputId) -> bool {
 fn off_bits(x: f64, bits: i32) -> f64 { (js::to_i32(x) & !bits) as f64 }
 
 /// Once a frame, straight after the rows are built: the wheel, ↑ / ↓, Esc and the Space press; what is performed goes out as Game.act. (interact.ts updateInteract)
-pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>) {
+pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>, cam: Option<CameraId>) {
     let pl = g.player;
     g.act = None;
     let key = crate::consts::INTERACT_KEY;
@@ -427,7 +427,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
             let o = crate::cmdring::ring_open(g, input, w, h, time, Some(lit));
             g.pl[pl].sel.ring = Some(crate::game::PlayerSelRing { ax: o.ax, ay: o.ay, z: o.z, t0: o.t0, lit: o.lit, armed: o.armed, free: o.free, more: o.more, at: o.at, ox: o.ox, oy: o.oy, mx: o.mx, my: o.my, clear: o.clear, pt: o.pt, key: g.pl[pl].near_key.clone(), whistle: None });
             crate::player::pick_hover(g);
-            if let Some(v) = view { ring_on_own(g, input, v, Some(true)); }
+            if let (Some(c), Some(v)) = (cam, view) { ring_on_own(g, input, c, v, Some(true)); }
         }
         if g.pl[pl].sel.ring.is_some() && g.pl[pl].sel.open {
             if crate::input::input_hit(g, input, "Blur") { close_selector(g, true); return; }
@@ -447,11 +447,11 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
                 let ring = g.pl[pl].sel.ring.as_mut().unwrap();
                 ring.key = near_key; ring.armed = false; ring.clear = Some(false); ring.whistle = Some(false);
                 if ring.at.is_some() {
-                    if let Some(v) = view { ring_on_own(g, input, v, Some(true)); }
+                    if let (Some(c), Some(v)) = (cam, view) { ring_on_own(g, input, c, v, Some(true)); }
                 }
             }
-            let still = match view {
-                Some(v) if g.pl[pl].sel.ring.as_ref().unwrap().at.is_some() => ring_on_own(g, input, v, None),
+            let still = match (cam, view) {
+                (Some(c), Some(v)) if g.pl[pl].sel.ring.as_ref().unwrap().at.is_some() => ring_on_own(g, input, c, v, None),
                 _ => false,
             };
             let wedges = g.k.cmdring.wedges;

@@ -29,11 +29,23 @@ impl Default for SmokeEmitter { fn default() -> Self { Self::zeroed() } }
 /// (TypeScript: SmokePush, src/smoke/types.ts:35)
 #[derive(Clone, Copy, Debug)]
 pub struct SmokePush {
+    /// INVENTED by a review: see the proposals
+    pub pos: V3,
+    /// INVENTED by a review: see the proposals
+    pub dir: V3,
+    /// INVENTED by a review: see the proposals
+    pub speed: f64,
+    /// INVENTED by a review: see the proposals
+    pub radius: f64,
 }
 impl SmokePush {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         SmokePush {
+            pos: [0.0; 3],
+            dir: [0.0; 3],
+            speed: 0.0,
+            radius: 0.0,
         }
     }
 }

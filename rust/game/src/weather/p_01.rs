@@ -7,17 +7,26 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---- seams: what skeleton 3 still lacks (each has its line in notes.md)
+// ---- the one seam: what skeleton 4 still lacks (its line is in notes.md)
 
-/// Makes the `RtLight` literal of strike(), the TypeScript's own fields. No type or table behind a `LightId`; `light_from_def` cannot say `peakIntensity` or `transient`.
-#[allow(clippy::too_many_arguments)]
-fn seam_light_new(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, owner: f64, enabled: bool, fixture_box: f64, flicker: f64, ttl: f64, age: f64, peak_intensity: f64, transient: bool) -> LightId { todo!("needs: a new light from RtLight's fields (weather.ts:330)") }
-/// `light.intensity = i; light.enabled = on`.
-fn seam_light_set(g: &mut Game, l: LightId, intensity: f64, enabled: bool) { todo!("needs: writing a light's intensity and enabled by LightId (weather.ts:391)") }
-/// `light.intensity`, for the panel's line.
-fn seam_light_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: reading a light's intensity by LightId (weather.ts:467)") }
 /// `g.audio.play(name, null, gain, { lowpass, rate, pan, wet })`: game_audio_like_play's opts hold `crate::Opaque`, which carries no number.
 fn seam_audio_play(g: &mut Game, name: &str, gain: f64, lowpass: f64, rate: f64, pan: f64, wet: f64) { todo!("needs: game_audio_like_play's opts to carry lowpass, rate, pan, wet (weather.ts:406)") }
+
+// ---- the lights' set: its stub takes g and the set, and the set lives in g, so it is lent out for the call
+
+/// `g.engine.lights.add(l)`: add touches only the set's own list.
+fn lights_add(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+}
+
+/// `g.engine.lights.remove(l)`: the same.
+fn lights_remove(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_remove(g, &mut set, l);
+    g.engine.lights = set;
+}
 
 // ---- this file's reach of a box
 
@@ -444,8 +453,12 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
         stroke.pulses.push(StrokePulsesItem { t0, amp, tau: 0.03 });
     }
     let dir = dir_of(bearing, elev);
-    let light = seam_light_new(g, "lightning", "weather", 2.0, [0.0, 0.0, 0.0], dir, v3::copy(flash_color()), 0.0, 1e6, 0.0, 0.0, 0.006, 1.3, 0.0, true, -1.0, 0.0, -1.0, 0.0, peak, true);
-    crate::render_lights::light_set_add(&mut g.engine.lights, light);
+    let light = g.tab.light.push(crate::render_lights::RtLight {
+        name: String::from("lightning"), group: String::from("weather"), kind: 2.0, pos: [0.0, 0.0, 0.0], dir, color: v3::copy(flash_color()), intensity: 0.0, range: 1e6, inner_deg: 0.0, outer_deg: 0.0,
+        radius: 0.006, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
+        ..crate::render_lights::RtLight::zeroed()   // (every field the literal leaves absent; `flicker` is not a field in Rust)
+    });
+    lights_add(g, light);
     g.weather.flash = Some(Flash { light, stroke, t: 0.0, peak, dir, bearing, dist_km });
     let at = g.time + dist_km * 1000.0 / SPEED_OF_SOUND;
     g.weather.thunders.push(Thunder { at, dist_km, bearing, loud: v3::clamp(1.15 - dist_km * 0.22, 0.25, 1.0) });
@@ -522,13 +535,15 @@ pub fn weather_apply_flash(g: &mut crate::game::Game, t: f64, dt: f64) {
     let intensity = f.peak * stroke_mean(&f.stroke, t, t + m::max(dt, 1e-4));
     let enabled = intensity > 1e-3 * f.peak;
     let light = f.light;
-    seam_light_set(g, light, intensity, enabled);
+    let l = &mut g.tab.light[light];
+    l.intensity = intensity;
+    l.enabled = enabled;
 }
 
 /// The stroke's light leaves the set. (weather.ts Weather.endFlash)
 pub fn weather_end_flash(g: &mut crate::game::Game) {
     let light = match g.weather.flash.as_ref() { Some(f) => f.light, None => return };
-    crate::render_lights::light_set_remove(&mut g.engine.lights, light);
+    lights_remove(g, light);
     g.weather.flash = None;
 }
 
@@ -636,7 +651,7 @@ pub fn weather_summary(g: &mut crate::game::Game) -> String {
     }
     out.push_str(&format!(" · rain {} wet {} · ", fixed(g.weather.rain_rate, 2), fixed(g.weather.wet, 2)));
     if let Some((t, light)) = g.weather.flash.as_ref().map(|f| (f.t, f.light)) {
-        let i = seam_light_intensity(g, light);
+        let i = g.tab.light[light].intensity;
         out.push_str(&format!("STROKE {} s I={}", fixed(t, 2), fixed(i, 1)));
     } else {
         out.push_str(&format!("next stroke in {} s", fixed(m::max(0.0, g.weather.next_flash_at - g.time), 0)));

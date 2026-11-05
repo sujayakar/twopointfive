@@ -136,7 +136,7 @@ pub struct DoorToolsDoneItem {
     pub slice: JsMap<GuardId, crate::doortools::DoorToolsDoneItemSliceValue>,
     pub crossed: JsMap<GuardId, f64>,
     pub corner: JsMap<GuardId, crate::doortools::DoorToolsDoneItemCornerValue>,
-    pub search: Option<crate::doortools::RoomSearch>,
+    pub search: Option<Option<DoortoolsRoomSearchId>>,
     pub first: Option<GuardId>,
     pub threw: Option<GuardId>,
     pub aim: Option<crate::doortools::DoorToolsDoneItemAim>,
@@ -741,68 +741,6 @@ impl DoorToolsDoneItemCornerValue {
 }
 impl Default for DoorToolsDoneItemCornerValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoomSearch, src/game/doortools.ts:740)
-#[derive(Clone, Debug)]
-pub struct RoomSearch {
-    pub room: RoomfightRoomId,
-    pub pts: Vec<V3>,
-    pub looked: Vec<u8>,
-    pub los: JsMap<GuardId, crate::doortools::RoomSearchLosValue>,
-    pub yaw: JsMap<GuardId, f64>,
-    pub at: JsMap<GuardId, f64>,
-    pub moves: f64,
-    pub left_at_move: f64,
-    pub left: f64,
-    pub flows: Option<f64>,
-    pub closes: Option<f64>,
-    pub flow_said: Option<bool>,
-    pub late: Option<bool>,
-    pub cell_at: Option<JsMap<crate::Num, f64>>,
-    pub fight_t: Option<f64>,
-    pub fight_at: Option<f64>,
-}
-impl RoomSearch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomSearch {
-            room: RoomfightRoomId(0),
-            pts: Vec::new(),
-            looked: Vec::new(),
-            los: JsMap::new(),
-            yaw: JsMap::new(),
-            at: JsMap::new(),
-            moves: 0.0,
-            left_at_move: 0.0,
-            left: 0.0,
-            flows: None,
-            closes: None,
-            flow_said: None,
-            late: None,
-            cell_at: None,
-            fight_t: None,
-            fight_at: None,
-        }
-    }
-}
-impl Default for RoomSearch { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/doortools.ts:740 RoomSearch.los, src/game/doortools.ts:740)
-#[derive(Clone, Debug)]
-pub struct RoomSearchLosValue {
-    pub at: V3,
-    pub ok: Vec<i8>,
-}
-impl RoomSearchLosValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomSearchLosValue {
-            at: [0.0; 3],
-            ok: Vec::new(),
-        }
-    }
-}
-impl Default for RoomSearchLosValue { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/doortools.ts:678 DoorToolsDoneItem.aim, src/game/doortools.ts:678)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorToolsDoneItemAim {
@@ -997,9 +935,9 @@ impl Default for DoorToolsDoneItemOtherValue { fn default() -> Self { Self::zero
 /// (TypeScript: inline at src/game/doortools.ts:697 DoorToolsDoneItem.threat, src/game/doortools.ts:697)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemThreat {
-    pub known: Vec<crate::doortools::KnownThreat>,
+    pub known: Vec<DoortoolsKnownThreatId>,
     pub ev_t: f64,
-    pub room: Option<crate::doortools::DoorToolsDoneItemThreatRoom>,
+    pub room: Option<RoomfightRoomId>,
     pub room_t: Option<f64>,
     pub deal: Option<JsMap<GuardId, crate::doortools::ThreatWatch>>,
 }
@@ -1017,43 +955,7 @@ impl DoorToolsDoneItemThreat {
 }
 impl Default for DoorToolsDoneItemThreat { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KnownThreat, src/game/doortools.ts:700)
-#[derive(Clone, Copy, Debug)]
-pub struct KnownThreat {
-    pub at: V3,
-    pub t: f64,
-    pub by: Option<GuardId>,
-    pub how: crate::doortools::KnownThreatHow,
-}
-impl KnownThreat {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KnownThreat {
-            at: [0.0; 3],
-            t: 0.0,
-            by: None,
-            how: crate::doortools::KnownThreatHow::Shot,
-        }
-    }
-}
-impl Default for KnownThreat { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum KnownThreatHow {
-    Shot,
-    Seen,
-}
-impl KnownThreatHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KnownThreatHow::Shot => "shot",
-            KnownThreatHow::Seen => "seen",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/doortools.ts:697 DoorToolsDoneItemThreat.room, src/game/doortools.ts:697)
+/// (TypeScript: inline at quiet DoorToolsDoneItemThreat.room, src/game/doortools.ts:697)
 #[derive(Clone, Debug)]
 pub struct DoorToolsDoneItemThreatRoom {
     pub cells: JsSet<crate::Num>,
@@ -1071,7 +973,7 @@ impl Default for DoorToolsDoneItemThreatRoom { fn default() -> Self { Self::zero
 /// (TypeScript: ThreatWatch, src/game/doortools.ts:703)
 #[derive(Clone, Copy, Debug)]
 pub struct ThreatWatch {
-    pub th: crate::doortools::KnownThreat,
+    pub th: DoortoolsKnownThreatId,
     pub lead: Option<GuardId>,
     pub on: f64,
     pub fight: f64,
@@ -1085,7 +987,7 @@ impl ThreatWatch {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         ThreatWatch {
-            th: crate::doortools::KnownThreat::zeroed(),
+            th: DoortoolsKnownThreatId(0),
             lead: None,
             on: 0.0,
             fight: 0.0,
@@ -1323,7 +1225,7 @@ pub struct DoorOp {
     pub slice: JsMap<GuardId, crate::doortools::DoorToolsDoneItemSliceValue>,
     pub crossed: JsMap<GuardId, f64>,
     pub corner: JsMap<GuardId, crate::doortools::DoorToolsDoneItemCornerValue>,
-    pub search: Option<crate::doortools::RoomSearch>,
+    pub search: Option<Option<DoortoolsRoomSearchId>>,
     pub first: Option<GuardId>,
     pub threw: Option<GuardId>,
     pub aim: Option<crate::doortools::DoorToolsDoneItemAim>,
@@ -1412,6 +1314,104 @@ impl DoorOp {
     }
 }
 impl Default for DoorOp { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: KnownThreat, src/game/doortools.ts:700)
+#[derive(Clone, Copy, Debug)]
+pub struct KnownThreat {
+    pub at: V3,
+    pub t: f64,
+    pub by: Option<GuardId>,
+    pub how: crate::doortools::KnownThreatHow,
+}
+impl KnownThreat {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        KnownThreat {
+            at: [0.0; 3],
+            t: 0.0,
+            by: None,
+            how: crate::doortools::KnownThreatHow::Shot,
+        }
+    }
+}
+impl Default for KnownThreat { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: words)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum KnownThreatHow {
+    Shot,
+    Seen,
+}
+impl KnownThreatHow {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            KnownThreatHow::Shot => "shot",
+            KnownThreatHow::Seen => "seen",
+        }
+    }
+}
+
+/// (TypeScript: RoomSearch, src/game/doortools.ts:740)
+#[derive(Clone, Debug)]
+pub struct RoomSearch {
+    pub room: RoomfightRoomId,
+    pub pts: Vec<V3>,
+    pub looked: Vec<u8>,
+    pub los: JsMap<GuardId, crate::doortools::RoomSearchLosValue>,
+    pub yaw: JsMap<GuardId, f64>,
+    pub at: JsMap<GuardId, f64>,
+    pub moves: f64,
+    pub left_at_move: f64,
+    pub left: f64,
+    pub flows: Option<f64>,
+    pub closes: Option<f64>,
+    pub flow_said: Option<bool>,
+    pub late: Option<bool>,
+    pub cell_at: Option<JsMap<crate::Num, f64>>,
+    pub fight_t: Option<f64>,
+    pub fight_at: Option<f64>,
+}
+impl RoomSearch {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        RoomSearch {
+            room: RoomfightRoomId(0),
+            pts: Vec::new(),
+            looked: Vec::new(),
+            los: JsMap::new(),
+            yaw: JsMap::new(),
+            at: JsMap::new(),
+            moves: 0.0,
+            left_at_move: 0.0,
+            left: 0.0,
+            flows: None,
+            closes: None,
+            flow_said: None,
+            late: None,
+            cell_at: None,
+            fight_t: None,
+            fight_at: None,
+        }
+    }
+}
+impl Default for RoomSearch { fn default() -> Self { Self::zeroed() } }
+
+/// (TypeScript: inline at src/game/doortools.ts:740 RoomSearch.los, src/game/doortools.ts:740)
+#[derive(Clone, Debug)]
+pub struct RoomSearchLosValue {
+    pub at: V3,
+    pub ok: Vec<i8>,
+}
+impl RoomSearchLosValue {
+    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
+    pub fn zeroed() -> Self {
+        RoomSearchLosValue {
+            at: [0.0; 3],
+            ok: Vec::new(),
+        }
+    }
+}
+impl Default for RoomSearchLosValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DoorGate, src/game/doortools.ts:744)
 #[derive(Clone, Debug)]

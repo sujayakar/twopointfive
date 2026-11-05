@@ -112,7 +112,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
         let waits = (!idle && g.time - done_t < t.settle.unwrap_or(0.0)) || crate::rails::rails_settles(g, &l, i, done_t);
         if !waits {
             if g.time > done_t {
-                let said = format!("'{}' settled {} s", t.id, to_fixed(g.time - done_t, 1));
+                let said = format!("'{}' settled {} s", t.id, js::to_fixed(g.time - done_t, 1));
                 lesson_note(g, &said);
             }
             lesson_advance(g, &l, t);
@@ -157,8 +157,8 @@ pub fn lesson_fresh(g: &mut crate::game::Game, back: Option<f64>) -> crate::less
     let ev = g.chronicle.events.len() as f64;
     let last_order = g.orders.log.last().map(|r| r.serial);
     let last_pair = g.m.pairorders.pair_log.last().map(|r| r.serial);
-    let seat = g.seat;
-    let (yaw, dist) = (g.tab.cmd_seat[seat].cam.yaw, g.tab.cmd_seat[seat].cam.distance);
+    let cam = g.tab.cmd_seat[g.seat].cam;
+    let (yaw, dist) = (g.tab.camera[cam].yaw, g.tab.camera[cam].distance);
     crate::lesson::StepSeen {
         t0: g.time - back,
         n: JsMap::new(),
@@ -182,16 +182,16 @@ pub fn lesson_fresh(g: &mut crate::game::Game, back: Option<f64>) -> crate::less
 
 /// This frame's deeds into the step's counts.   (lesson.ts Lesson.count)
 pub fn lesson_count(g: &mut crate::game::Game, s: &mut crate::lesson::StepSeen) {
-    let seat = g.seat;
+    let cam = g.tab.cmd_seat[g.seat].cam;
     if js::truthy(g.rails.fresh) {
-        let yaw = g.tab.cmd_seat[seat].cam.yaw;
+        let yaw = g.tab.camera[cam].yaw;
         s.yaw_last = yaw;
         s.yaw0 = yaw;
-        s.dist0 = g.tab.cmd_seat[seat].cam.distance;
+        s.dist0 = g.tab.camera[cam].distance;
         s.turned = 0.0;
     }
     {
-        let y = g.tab.cmd_seat[seat].cam.yaw;
+        let y = g.tab.camera[cam].yaw;
         let mut d = y - s.yaw_last;
         d = m::atan2(m::sin(d), m::cos(d));
         s.turned += m::abs(d);
@@ -314,7 +314,7 @@ pub fn lesson_summary(g: &mut crate::game::Game) -> String {
 
 /// One line of the lesson's own log, kept to its last rows.   (lesson.ts Lesson.note)
 pub fn lesson_note(g: &mut crate::game::Game, s: &str) {
-    let row = format!("{} {}", to_fixed(g.time, 2), s);
+    let row = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.lesson.log.push(row);
     if g.lesson.log.len() > 80 {
         g.lesson.log.drain(0..40);
@@ -378,20 +378,6 @@ fn keys_plain(line: &str, say: &mut dyn FnMut(&str) -> String) -> String {
     out
 }
 
-/// `x.toFixed(digits)` for a finite x under 1e21: an exact tie goes away from zero, where Rust's format goes to even, and -0 has no sign.
-fn to_fixed(x: f64, digits: usize) -> String {
-    let a = m::abs(x);
-    let mut scaled = a;
-    for _ in 0..=digits {
-        scaled *= 2.0;
-    }
-    // a decimal tie at `digits` places is exactly an odd number over 2^(digits + 1)
-    let tie = m::floor(scaled) == scaled && js::rem(scaled, 2.0) == 1.0;
-    let a = if tie { f64::from_bits(a.to_bits() + 1) } else { a };
-    let s = format!("{:.*}", digits, a);
-    if x < 0.0 { format!("-{}", s) } else { s }
-}
-
 /// `this.run === g.mission`: the same run, by the Mission's serial.   (lesson.ts:320, 330, 348)
 fn run_is_mission(g: &Game) -> bool {
     g.lesson.run == Some(g.mission.serial)
@@ -406,29 +392,7 @@ fn seam_passes(g: &mut Game, t: &crate::scene_scenarios::LessonTestKind, s: &mut
 mod tests {
     use super::*;
 
-    // Expected strings printed by node from the TypeScript's own expressions.
-    #[test]
-    fn to_fixed_is_the_languages() {
-        let rows: &[(f64, usize, &str)] = &[
-            (0.125, 2, "0.13"),
-            (0.375, 2, "0.38"),
-            (2.5, 0, "3"),
-            (0.25, 1, "0.3"),
-            (0.75, 1, "0.8"),
-            (1.005, 2, "1.00"),
-            (-0.125, 2, "-0.13"),
-            (-0.001, 2, "-0.00"),
-            (-0.0, 2, "0.00"),
-            (0.0, 1, "0.0"),
-            (12.34, 1, "12.3"),
-            (1234.5678, 2, "1234.57"),
-            (0.1 + 0.2, 2, "0.30"),
-        ];
-        for &(x, digits, want) in rows {
-            assert_eq!(to_fixed(x, digits), want, "{x} to {digits}");
-        }
-    }
-
+    // Expected strings printed by node from the TypeScript's own expression.
     #[test]
     fn keys_plain_is_the_regexs() {
         let rows: &[(&str, &str)] = &[

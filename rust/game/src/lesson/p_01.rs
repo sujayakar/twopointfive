@@ -173,7 +173,7 @@ fn line_on_page(written: &str, wedges: f64) -> String {
     replace_words(&s, "Hold Space, wheel to kick, let go", "Hold Space, then 2 kicks it")
 }
 
-// ---- the seams: what skeleton 3 still cannot say
+// ---- the seams: what skeleton 4 still cannot say
 
 /// lesson.ts:212, 233 S.n.set(...): a test writes the step's counts and `passes` has it as `&StepSeen`
 fn seam_seen_set(s: &StepSeen, key: &str, v: f64) { todo!("needs: passes to take s: &mut StepSeen") }
@@ -456,7 +456,8 @@ fn ok_pair(g: &mut Game, what: &str, n: Option<f64>, s: &StepSeen) -> bool {
 }
 
 fn ok_view(g: &mut Game, turned: Option<f64>, zoomed: Option<f64>, panned: Option<f64>, s: &StepSeen) -> bool {
-    let distance = g.tab.cmd_seat[g.seat].cam.distance;
+    let cam = g.tab.cmd_seat[g.seat].cam;
+    let distance = g.tab.camera[cam].distance;
     turned.map_or(true, |d| s.turned * 180.0 / m::PI >= d)
         && zoomed.map_or(true, |z| m::abs(m::log(distance / s.dist0)) >= m::log(z))
         && panned.map_or(true, |d| crate::rails::rails_panned(g) >= d)
@@ -591,7 +592,11 @@ fn check_of(g: &mut Game, t: &LessonTest) -> Option<String> {
             if *quick && (k == Some("frag") || k == Some("he40")) { say("quick: G throws only smoke and the stun can") } else { None }
         }
         T::OrderTo { who } => if matches!(who, crate::orders::Who::Num(_)) { say("who: 'all', 'red' or 'blue'") } else { None },
-        T::StackOn { door, .. } => if doors_by_name(g, door).is_none() { Some(format!("door: no door named '{}'", door)) } else { None },
+        T::StackOn { door, who, .. } => {
+            use crate::orders::SquadOrdersMenSel as Sel;
+            if doors_by_name(g, door).is_none() { return Some(format!("door: no door named '{}'", door)); }
+            if matches!(who, Some(Sel::Num(_) | Sel::Guard(_))) { say("who: 'all', 'red' or 'blue'") } else { None }
+        }
         T::PairsOn { doors } => if count_ok(*doors, 1.0) { None } else { say("doors: how many different doors, ≥ 1") },
         T::Word { doors } => if count_ok(*doors, 1.0) { None } else { say("doors: how many doors go on it, ≥ 1") },
         T::Taken { room } => {

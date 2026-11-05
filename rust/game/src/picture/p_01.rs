@@ -162,13 +162,14 @@ fn learn_now(time: f64, p: &mut Pic, who: Who, at: V3, t: f64, how: IdeaHow, by:
     p.downs.delete(who);
 }
 
-/// (picture.ts learn)
-pub fn learn(g: &mut crate::game::Game, p: &mut crate::picture::Pic, who: crate::picture::Who, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) {
-    learn_now(g.time, p, who, at, t, how, by);
+/// `p` is the picture's owner: None = Sam's (picture.ts learn)
+pub fn learn(g: &mut crate::game::Game, p: Option<GuardId>, who: crate::picture::Who, at: V3, t: f64, how: crate::picture::IdeaHow, by: Option<GuardId>) {
+    let time = g.time;
+    learn_now(time, row!(g, p), who, at, t, how, by);
 }
 
-/// one man's look about him: every enemy his eye has, the place his senses work from, the believed places he sees empty, the men he knows are down (picture.ts look)
-pub fn look(g: &mut crate::game::Game, p: &mut crate::picture::Pic, gd: GuardId) {
+/// one man's look about him, on his row of the table: every enemy his eye has, the place his senses work from, the believed places he sees empty, the men he knows are down (picture.ts look)
+pub fn look(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
     g.stats.picture.looks += 1;
     if g.gd[gd].held.is_some() {
@@ -198,7 +199,7 @@ pub fn look(g: &mut crate::game::Game, p: &mut crate::picture::Pic, gd: GuardId)
         };
         if rate > g.k.picture.glimpse {
             let at = pos_of(g, who);
-            learn(g, p, who, at, now, IdeaHow::Seen, None);
+            learn(g, Some(gd), who, at, now, IdeaHow::Seen, None);
             g.stats.picture.seen += 1;
         }
     }
@@ -210,7 +211,7 @@ pub fn look(g: &mut crate::game::Game, p: &mut crate::picture::Pic, gd: GuardId)
     if let (Some(f), true, Some(known)) = (foe, g.gd[gd].script.is_none(), g.gd[gd].last_known) {
         let fix_t = g.gd[gd].fix_t;
         if up(g, f) && !gone(g, f) && now - fix_t < forget_secs {
-            let i = p.ideas.get(f).copied();
+            let i = pic!(g, gd).ideas.get(f).copied();
             let (heard_m, walk_mps) = (g.k.picture.heard_m, g.k.picture.walk_mps);
             let take = match i {
                 None => true,
@@ -220,17 +221,17 @@ pub fn look(g: &mut crate::game::Game, p: &mut crate::picture::Pic, gd: GuardId)
                 }
             };
             if take {
-                learn(g, p, f, known, m::min(now, fix_t), IdeaHow::Fix, None);
+                learn(g, Some(gd), f, known, m::min(now, fix_t), IdeaHow::Fix, None);
                 g.stats.picture.fixes += 1;
             }
         }
     }
     let blind = now < g.gd[gd].dazzled_until;
     let mut at = 0;
-    while let Some(who) = p.ideas.next_key(&mut at) {
-        let i = *p.ideas.get(who).unwrap();
+    while let Some(who) = pic!(g, gd).ideas.next_key(&mut at) {
+        let i = *pic!(g, gd).ideas.get(who).unwrap();
         if now - i.t > forget_secs || gone(g, who) {
-            p.ideas.delete(who);
+            pic!(g, gd).ideas.delete(who);
             g.stats.picture.forgot += 1;
             continue;
         }
@@ -244,6 +245,7 @@ pub fn look(g: &mut crate::game::Game, p: &mut crate::picture::Pic, gd: GuardId)
                     && (crate::guards::point_in_view(g, gd, [body[0], 0.3, body[2]], Some(16.0), Some(75.0)) || crate::guards::point_in_view(g, gd, [body[0], 0.9, body[2]], Some(16.0), Some(75.0)))
                     && made_out(g, gd, body))
             {
+                let p = pic!(g, gd);
                 p.ideas.delete(who);
                 p.downs.set(who, now);
                 g.stats.picture.downs += 1;
@@ -258,14 +260,14 @@ pub fn look(g: &mut crate::game::Game, p: &mut crate::picture::Pic, gd: GuardId)
             && crate::guards::point_in_view(g, gd, [i.at[0], 0.4, i.at[2]], Some(14.0), Some(58.0))
             && made_out(g, gd, i.at)
         {
-            p.ideas.get_mut(who).unwrap().lost = true;
+            pic!(g, gd).ideas.get_mut(who).unwrap().lost = true;
             g.stats.picture.lost += 1;
         }
     }
 }
 
-/// Sam's own eyes, for the squad's net: a hostile the fog shows him with a line from his head (picture.ts lookSam)
-pub fn look_sam(g: &mut crate::game::Game, p: &mut crate::picture::Pic) {
+/// Sam's own eyes, for the squad's net, on S.sam: a hostile the fog shows him with a line from his head (picture.ts lookSam)
+pub fn look_sam(g: &mut crate::game::Game) {
     let now = g.time;
     let c = g.pl[g.player].ch;
     if g.pl[g.player].down {
@@ -289,9 +291,10 @@ pub fn look_sam(g: &mut crate::game::Game, p: &mut crate::picture::Pic) {
         let who = Who::Guard(o);
         let q = g.ch[g.gd[o].ch].pos;
         if !up(g, who) {
-            if p.ideas.has(who) && !crate::scene_collision::segment_blocked(g, eye, [q[0], 0.3, q[2]], None, None, None) {
-                p.ideas.delete(who);
-                p.downs.set(who, now);
+            if st!(g).sam.ideas.has(who) && !crate::scene_collision::segment_blocked(g, eye, [q[0], 0.3, q[2]], None, None, None) {
+                let sam = &mut st!(g).sam;
+                sam.ideas.delete(who);
+                sam.downs.set(who, now);
             }
             continue;
         }
@@ -308,15 +311,15 @@ pub fn look_sam(g: &mut crate::game::Game, p: &mut crate::picture::Pic) {
             d < g.k.picture.made_out_m || ((q[0] - cpos[0]) * fwd[0] + (q[2] - cpos[2]) * fwd[2] > 0.0 && g.gd[o].visibility >= g.k.picture.made_out)
         };
         if shown && (!crate::scene_collision::segment_blocked(g, eye, [q[0], 1.1, q[2]], Some(0.02), Some(thr), None) || !crate::scene_collision::segment_blocked(g, eye, [q[0], 1.6, q[2]], Some(0.02), Some(thr), None)) {
-            learn(g, p, who, q, now, IdeaHow::Seen, None);
+            learn(g, None, who, q, now, IdeaHow::Seen, None);
         }
     }
     let forget_secs = g.k.picture.forget_secs;
     let mut at = 0;
-    while let Some(who) = p.ideas.next_key(&mut at) {
-        let t = p.ideas.get(who).unwrap().t;
+    while let Some(who) = st!(g).sam.ideas.next_key(&mut at) {
+        let t = st!(g).sam.ideas.get(who).unwrap().t;
         if now - t > forget_secs || gone(g, who) {
-            p.ideas.delete(who);
+            st!(g).sam.ideas.delete(who);
         }
     }
 }
@@ -535,12 +538,9 @@ pub fn picture_tick(g: &mut crate::game::Game, _dt: f64) {
         let look_t = pic_of(g, gd, now).look_t;
         if now >= look_t {
             pic!(g, gd).look_t = m::max(look_t + look_secs, now - look_secs);
-            // (the row is lent as a copy and set back: nothing under a look reads the picture)
             let id = g.ch[g.gd[gd].ch].id;
             let view = crate::seats::view_of_body(g, crate::seats::ViewOfBodyC { id });
-            let mut p = pic!(g, gd).clone();
-            in_seat(g, view, &mut |g: &mut Game| look(g, &mut p, gd));
-            st!(g).men.set(gd, p);
+            in_seat(g, view, &mut |g: &mut Game| look(g, gd));
         }
         let p = pic!(g, gd);
         if (p.step.is_some() || p.step_bad.is_some()) && now - p.step_ask.unwrap_or(-1e9) > 0.25 {
@@ -551,9 +551,7 @@ pub fn picture_tick(g: &mut crate::game::Game, _dt: f64) {
     }
     if ops && now >= st!(g).sam.look_t {
         st!(g).sam.look_t = now + look_secs;
-        let mut sam = st!(g).sam.clone();
-        on_each_seat(g, &mut |g: &mut Game| look_sam(g, &mut sam));
-        st!(g).sam = sam;
+        on_each_seat(g, &mut |g: &mut Game| look_sam(g));
     }
     if !g.events.is_empty() {
         hear(g);
@@ -1148,6 +1146,23 @@ mod tests {
         learn_now(9.0, &mut p, Who::Player, [7.0, 2.0, 8.0], 8.0, IdeaHow::Told, None);
         let i = *p.ideas.get(Who::Player).unwrap();
         assert_eq!((i.at, i.t, i.since, i.how, i.lost), ([7.0, 0.0, 8.0], 8.0, 5.0, IdeaHow::Told, false));
+    }
+
+    /// learn's `p` names the row by its owner, None = Sam's; the idea lands in that row, stamped with g.time
+    #[test]
+    fn learn_writes_the_row_its_owner_names() {
+        let mut g = Game::blank();
+        g.time = 5.0;
+        let gd = GuardId(2);
+        pic_of(&mut g, gd, 5.0);
+        learn(&mut g, Some(gd), Who::Player, [1.0, 2.0, 3.0], 4.0, IdeaHow::Seen, None);
+        learn(&mut g, None, Who::Guard(gd), [7.0, 2.0, 8.0], 3.0, IdeaHow::Told, Some(gd));
+        let man = *pic_of(&mut g, gd, 5.0).ideas.get(Who::Player).unwrap();
+        assert_eq!((man.at, man.t, man.since), ([1.0, 0.0, 3.0], 4.0, 5.0));
+        assert!(pic_of(&mut g, gd, 5.0).ideas.get(Who::Guard(gd)).is_none());
+        let sam = *state_of(&mut g).sam.ideas.get(Who::Guard(gd)).unwrap();
+        assert_eq!((sam.at, sam.how, sam.by), ([7.0, 0.0, 8.0], IdeaHow::Told, Some(gd)));
+        assert!(state_of(&mut g).sam.ideas.get(Who::Player).is_none());
     }
 
     #[test]

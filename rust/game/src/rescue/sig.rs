@@ -108,7 +108,7 @@ pub fn rescue_launch(g: &mut crate::game::Game, fd: DoorId, sd: Option<DoorId>, 
 pub fn rescue_start_clock(g: &mut crate::game::Game, why: &str) { todo!() }
 
 /// (src/game/rescue.ts:538 Rescue.tick)
-pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId) { todo!() }
+pub fn rescue_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) { todo!() }
 
 /// (src/game/rescue.ts:561 Rescue.hear)
 pub fn rescue_hear(g: &mut crate::game::Game) { todo!() }

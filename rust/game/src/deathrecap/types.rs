@@ -325,7 +325,6 @@ pub struct State {
     pub due: Vec<crate::deathrecap::StateDueItem>,
     pub takes: Vec<crate::deathrecap::RecapTake>,
     pub lost: Vec<crate::deathrecap::Lost>,
-    pub lost_pub: Vec<crate::deathrecap::LostMan>,
     pub lost_next: f64,
 }
 impl State {
@@ -348,7 +347,6 @@ impl State {
             due: Vec::new(),
             takes: Vec::new(),
             lost: Vec::new(),
-            lost_pub: Vec::new(),
             lost_next: 0.0,
         }
     }

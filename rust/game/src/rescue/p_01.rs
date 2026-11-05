@@ -7,12 +7,20 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ── seam: the step skeleton 3 cannot take (notes.md, ## Skeleton) ──
-
-/// (rescue.ts:351 gd.flashlight.enabled = false): a light has no table and no accessor
-fn seam_light_disable(g: &mut Game, l: LightId) { todo!("needs: a light's enabled by its LightId") }
-
 // ── small helpers ──
+
+/// `g.engine.lights.add(l)`: the set is lent while g is; add touches only the set's own list
+fn lights_add(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+}
+/// `g.engine.lights.remove(l)`: the same
+fn lights_remove(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_remove(g, &mut set, l);
+    g.engine.lights = set;
+}
 
 /// a number as a template string writes it, for the ordinary range of a mark's coordinates
 fn num(x: f64) -> String { if x == 0.0 { String::from("0") } else { format!("{}", x) } }
@@ -209,8 +217,8 @@ pub fn rescue_can_start(g: &mut crate::game::Game) -> Option<String> {
     if crate::doors::doors_by_name(g, &s.room.door).is_none() { return Some(format!("the door '{}' is not in the level", s.room.door)); }
     if !g.tune.teams { return Some(String::from("sides are switched off (tune.teams)")); }
     if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) \u{2014} nobody would move")); }
-    if let Some(run) = &g.director.run {
-        if !run.ended { return Some(format!("the level script's program '{}' is running", run.name)); }
+    if let Some(run) = g.director.run {
+        if !g.tab.director_run[run].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[run].name)); }
     }
     if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
     if g.night_breach.active {
@@ -252,7 +260,7 @@ pub fn rescue_stop(g: &mut crate::game::Game) {
     if let Some(mut benched) = g.rescue.benched.take() {
         for gd in benched.iter() {
             let l = g.gd[*gd].flashlight;
-            if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(&mut g.engine.lights, l); }
+            if !g.engine.lights.lights.contains(&l) { lights_add(g, l); }
         }
         benched.extend_from_slice(&g.guards);
         g.guards = benched;
@@ -313,8 +321,8 @@ pub fn rescue_bench(g: &mut crate::game::Game) {
     if staff.is_empty() { return; }
     for gd in staff.iter() {
         let l = g.gd[*gd].flashlight;
-        seam_light_disable(g, l);
-        crate::render_lights::light_set_remove(&mut g.engine.lights, l);
+        g.tab.light[l].enabled = false;
+        lights_remove(g, l);
     }
     let mut benched = g.rescue.benched.take().unwrap_or_default();
     benched.extend_from_slice(&staff);
@@ -560,6 +568,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     g.rescue.step = RescueStep::Waiting;
     g.rescue.bark_at = 0.0;
     g.rescue.noise = None;
+    g.rescue.noise_serial = None;
     g.rescue.alarm_at = f64::NAN;
     g.rescue.way = None;
     g.rescue.last_order = g.orders.log.last().map(|o| o.serial);

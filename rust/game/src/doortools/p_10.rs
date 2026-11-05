@@ -54,12 +54,6 @@ fn js_slice<T: Copy>(v: &[T], a: usize, b: usize) -> Vec<T> {
 
 // ---------------------------------------------------------------- the grenade's wait
 
-/// The order's signal has gone: nothing of it waits from here. (doortools.ts DoorTools.fragOn)
-pub fn door_tools_frag_on(g: &mut crate::game::Game, op: DoorOpId) {
-    door_tools_frag_said(g, op);
-    g.tab.doortools_door_op[op].fled_go = Some(true);
-}
-
 /// the names of who ran and is not back (fragStep's `names`)
 fn fled_names(g: &Game, op: DoorOpId) -> String {
     let f = g.tab.doortools_door_op[op].fled.as_ref().map(|f| f.keys()).unwrap_or_default();
@@ -195,8 +189,9 @@ fn thr_pick_fit(g: &mut Game, fit: &mut Option<&mut dyn FnMut(&mut Game, GuardId
 }
 
 /// Is this cell of the room lit by the place itself (asked once a cell an order). (doortools.ts DoorTools.thrLitCell)
-pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: &crate::doortools::RoomSearch, i: f64) -> bool {
-    let (i, n, q) = (i as usize, sr.pts.len(), sr.pts[i as usize]);
+pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
+    let i = i as usize;
+    let (n, q) = (g.tab.doortools_room_search[sr].pts.len(), g.tab.doortools_room_search[sr].pts[i]);
     let c = g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().lit_c.get_or_insert_with(|| vec![-1i8; n])[i];
     if c >= 0 {
         return c == 1;
@@ -209,8 +204,9 @@ pub fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: &
 }
 
 /// Does this cell show a standing man through the goggles by the place's own light (asked once a cell an order). (doortools.ts DoorTools.thrTubeCell)
-pub fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: &crate::doortools::RoomSearch, i: f64) -> bool {
-    let (i, n, q) = (i as usize, sr.pts.len(), sr.pts[i as usize]);
+pub fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
+    let i = i as usize;
+    let (n, q) = (g.tab.doortools_room_search[sr].pts.len(), g.tab.doortools_room_search[sr].pts[i]);
     let c = g.tab.doortools_door_op[t_key].thr.as_mut().unwrap().tube_c.get_or_insert_with(|| vec![-1i8; n])[i];
     if c >= 0 {
         return c == 1;
@@ -235,13 +231,13 @@ pub fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) 
 pub fn door_tools_pocket_of(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> Option<crate::doortools::DoorToolsPocketOf> {
     let (thr_pocket, thr_throw_m, thr_flash_m, air_h) = (g.k.doortools.thr_pocket, g.k.doortools.thr_throw_m, g.k.doortools.thr_flash_m, g.k.doortools.air_h);
     let cell = g.col.nav.cell;
-    let o = &mut g.tab.doortools_door_op[op];
+    let o = &g.tab.doortools_door_op[op];
     let (d, side) = (o.door, o.side);
-    let Some(sr) = o.search.as_ref() else {
+    let Some(sr) = o.search.flatten() else {
         return if js::truthy(o.thr.as_ref().unwrap().tossed) { None } else { Some(DoorToolsPocketOf { at: None, n: 0.0 }) };
     };
-    let (pts, looked) = (sr.pts.clone(), sr.looked.clone());
-    let thr = o.thr.as_mut().unwrap();
+    let (pts, looked) = (g.tab.doortools_room_search[sr].pts.clone(), g.tab.doortools_room_search[sr].looked.clone());
+    let thr = g.tab.doortools_door_op[op].thr.as_mut().unwrap();
     let banged = thr.banged.get_or_insert_with(|| vec![0u8; pts.len()]);
     let mut dark: Vec<V3> = Vec::new();
     for i in 0..pts.len() {
@@ -299,12 +295,11 @@ pub fn door_tools_pocket_of(g: &mut crate::game::Game, op: DoorOpId, th: GuardId
 /// (doortools.ts DoorTools.thrBanged)
 pub fn door_tools_thr_banged(g: &mut crate::game::Game, op: DoorOpId) {
     let (thr_flash_m, thr_next) = (g.k.doortools.thr_flash_m, g.k.doortools.thr_next);
-    let o = &mut g.tab.doortools_door_op[op];
-    let at = o.bang_at;
-    let search = o.search.as_ref().map(|sr| (sr.pts.clone(), sr.looked.clone()));
-    if let (Some((pts, looked)), Some(at)) = (search, at) {
+    let at = g.tab.doortools_door_op[op].bang_at;
+    if let (Some(sr), Some(at)) = (g.tab.doortools_door_op[op].search.flatten(), at) {
+        let (pts, looked) = (g.tab.doortools_room_search[sr].pts.clone(), g.tab.doortools_room_search[sr].looked.clone());
         let (mut lit, mut dark) = (0, 0);
-        let thr = o.thr.as_mut().unwrap();
+        let thr = g.tab.doortools_door_op[op].thr.as_mut().unwrap();
         let mut banged = thr.banged.take().unwrap_or_else(|| vec![0u8; pts.len()]);
         for i in 0..pts.len() {
             if looked[i] != 0 || banged[i] != 0 {

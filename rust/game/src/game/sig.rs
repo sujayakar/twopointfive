@@ -276,13 +276,13 @@ pub fn game_ocp(g: &mut crate::game::Game, t: Option<FixtureId>) { todo!() }
 pub fn game_toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) { todo!() }
 
 /// (src/game/game.ts:1660 Game.update)
-pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, canvas: crate::host_hud::View) { todo!() }
+pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
 
 /// (src/game/game.ts:1677 Game.hostBefore)
 pub fn game_host_before(g: &mut crate::game::Game, input: InputId) { todo!() }
 
 /// (src/game/game.ts:1680 Game.hostAfter)
-pub fn game_host_after(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) { todo!() }
+pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) { todo!() }
 
 /// (src/game/game.ts:1689 Game.step)
 pub fn game_step(g: &mut crate::game::Game, dt: f64, cmd: &crate::cmd::PlayerCmd) { todo!() }
@@ -294,7 +294,7 @@ pub fn game_host_seat(g: &mut crate::game::Game) -> SeatId { todo!() }
 pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T { todo!() }
 
 /// (src/game/game.ts:1710 Game.asideLens)
-pub fn game_aside_lens(g: &mut crate::game::Game) { todo!() }
+pub fn game_aside_lens(g: &mut crate::game::Game) -> CameraId { todo!() }
 
 /// (src/game/game.ts:1715 Game.stepSeats)
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) { todo!() }
@@ -306,7 +306,7 @@ pub fn game_threat_tick(g: &mut crate::game::Game) { todo!() }
 pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) { todo!() }
 
 /// (src/game/game.ts:1925 Game.stepFxAndDynBoxes)
-pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, canvas: crate::host_hud::View) -> bool { todo!() }
+pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, cam: CameraId, canvas: crate::host_hud::View) -> bool { todo!() }
 
 /// (src/game/game.ts:1956 Game.smokeWake)
 pub fn game_smoke_wake(g: &mut crate::game::Game, all: &[CharId]) { todo!() }

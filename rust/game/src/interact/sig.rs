@@ -75,7 +75,7 @@ pub fn close_selector(g: &mut crate::game::Game, spent: bool) { todo!() }
 pub fn ring_spot(g: &mut crate::game::Game) -> V3 { todo!() }
 
 /// (src/game/interact.ts:193 ringOnThing)
-pub fn ring_on_thing(g: &mut crate::game::Game, r: &mut crate::cmdring::RingState, input: InputId, view: crate::host_hud::View, open: Option<bool>) -> bool { todo!() }
+pub fn ring_on_thing(g: &mut crate::game::Game, r: &mut crate::cmdring::RingState, input: InputId, cam: CameraId, view: crate::host_hud::View, open: Option<bool>) -> bool { todo!() }
 
 /// (src/game/interact.ts:205 updateInteract)
-pub fn update_interact(g: &mut crate::game::Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>) { todo!() }
+pub fn update_interact(g: &mut crate::game::Game, dt: f64, input: InputId, view: Option<crate::host_hud::View>, cam: Option<CameraId>) { todo!() }

@@ -1,0 +1,29 @@
+# THE RUST GAME'S FACE: the wasm module the host loads. The game's logic (the crate `game`) names no host and no `std`; this crate is the
+# only place that does: the C exports, the panic's message, the bytes in and out.
+[workspace]
+
+[package]
+name = "game_face"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+game = { path = "../game" }
+sim = { path = "../sim" }
+
+[profile.dev]
+opt-level = 1
+panic = "abort"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[features]
+bridge = []

@@ -51,7 +51,7 @@ pub fn num(v: crate::Opaque, d: f64) -> f64 { todo!() }
 pub fn rim_taper(r01: f64) -> f64 { todo!() }
 
 /// (src/game/snowFx.ts:232 updateSnowFx)
-pub fn update_snow_fx(g: &mut crate::game::Game, dt: f64) { todo!() }
+pub fn update_snow_fx(g: &mut crate::game::Game, dt: f64, cam: CameraId) { todo!() }
 
 /// (src/game/snowFx.ts:335 markKicks)
 pub fn mark_kicks(g: &mut crate::game::Game, st: &mut crate::snow_fx::SnowState, pp: &mut crate::render_particles::Particles, room: f64, size: f64, size_jit: f64, cx: f64, cz: f64, r: f64) -> f64 { todo!() }

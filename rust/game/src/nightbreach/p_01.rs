@@ -7,11 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ---- seam: waits on the next skeleton (notes.md, ## Skeleton)
-
-/// nightbreach.ts:235: `gd.flashlight.enabled = false`; a LightId has no table and no accessor for RtLight's fields.
-fn seam_light_disable(g: &mut Game, l: LightId) { todo!("needs: RtLight.enabled reachable from a LightId") }
-
 // ---- private helpers
 
 /// `T !== applied` by value: only the two rows the write copies, so a start with the same ones writes the same knobs. (nightbreach.ts:179)
@@ -203,7 +198,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
         g.gd[man].hold = true;
         g.gd[man].pinned = true;
     }
-    g.night_breach.live = crate::breach::BreachLive { orders: 0.0, lights: true, loud_boot: true, stun: true, set_hold: None };
+    let live = staged_live();
     g.night_breach.bang_taken = false;
     g.night_breach.bang_by = None;
     g.night_breach.blind = true;
@@ -231,7 +226,7 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
                 .map(|(_, h)| *h)
                 .collect();
             let (a, b) = (g.night_breach.ops[0], g.night_breach.ops[1]);
-            let opts = crate::breach::BreachDrillNewOpts { guarantee_downs: Some(false), live: Some(g.night_breach.live) };
+            let opts = crate::breach::BreachDrillNewOpts { guarantee_downs: Some(false), live: Some(live) };
             let drill = crate::breach::breach_drill_new(g, p, a, b, &men, Some(opts));
             g.night_breach.drill = Some(drill);
             crate::breach::breach_drill_start(g);
@@ -297,16 +292,38 @@ fn stage_checked(g: &mut Game) -> Result<(), String> {
     Ok(())
 }
 
-/// `live` is one object in the TypeScript, the drill's and this class's: write both copies. (nightbreach.ts:161, 268)
+/// `live`'s one home is the drill: with no drill it is the staging's fresh one, no orders given. (nightbreach.ts:161, 268)
+fn live_of(g: &Game) -> crate::breach::BreachLive {
+    g.night_breach.drill.as_ref().and_then(|d| d.live).unwrap_or_else(staged_live)
+}
+
+/// What a staging opens with, the settled rows at the page's values. (nightbreach.ts:261)
+fn staged_live() -> crate::breach::BreachLive {
+    crate::breach::BreachLive { orders: 0.0, lights: true, loud_boot: true, stun: true, set_hold: None }
+}
+
+/// `live.orders = n`. (nightbreach.ts:303, 304, 319)
 fn live_set_orders(g: &mut Game, orders: f64) {
-    g.night_breach.live.orders = orders;
     if let Some(l) = g.night_breach.drill.as_mut().and_then(|d| d.live.as_mut()) { l.orders = orders; }
 }
 
-/// The same for the stun word. (nightbreach.ts:306)
+/// `live.stun = false`. (nightbreach.ts:306)
 fn live_stun_off(g: &mut Game) {
-    g.night_breach.live.stun = false;
     if let Some(l) = g.night_breach.drill.as_mut().and_then(|d| d.live.as_mut()) { l.stun = false; }
+}
+
+/// `g.engine.lights.add(l)`: the set is lent out of g for the call, as add touches only its own list. (lights.ts:171)
+fn lights_add(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+}
+
+/// `g.engine.lights.remove(l)`: the same. (lights.ts:172)
+fn lights_remove(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_remove(g, &mut set, l);
+    g.engine.lights = set;
 }
 
 /// Every man of the list down or fled. (nightbreach.ts:352, 381)
@@ -397,7 +414,8 @@ pub fn night_breach_can_start(g: &mut crate::game::Game, layout: Option<&crate::
     }
     if !g.tune.teams { return Some(String::from("sides are switched off (tune.teams)")); }
     if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) — nobody would move")); }
-    if let Some(run) = g.director.run.as_ref() {
+    if let Some(r) = g.director.run {
+        let run = &g.tab.director_run[r];
         if !run.ended { return Some(format!("the level script's program '{}' is running", run.name)); }
     }
     if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
@@ -438,7 +456,7 @@ pub fn night_breach_stop(g: &mut crate::game::Game) {
     if let Some(benched) = g.night_breach.benched.take() {
         for gd in benched.iter() {
             let l = g.gd[*gd].flashlight;
-            if !g.engine.lights.lights.contains(&l) { crate::render_lights::light_set_add(&mut g.engine.lights, l); }
+            if !g.engine.lights.lights.contains(&l) { lights_add(g, l); }
         }
         let mut guards = benched;
         guards.extend_from_slice(&g.guards);
@@ -480,8 +498,8 @@ pub fn night_breach_bench(g: &mut crate::game::Game) {
     if staff.is_empty() { return; }
     for gd in staff.iter() {
         let l = g.gd[*gd].flashlight;
-        seam_light_disable(g, l);
-        crate::render_lights::light_set_remove(&mut g.engine.lights, l);
+        g.tab.light[l].enabled = false;
+        lights_remove(g, l);
     }
     let mut benched = g.night_breach.benched.take().unwrap_or_default();
     benched.extend_from_slice(&staff);
@@ -523,19 +541,19 @@ pub fn night_breach_order(g: &mut crate::game::Game) -> Option<crate::nightbreac
     if !g.night_breach.active || g.night_breach.drill.is_none() { return None; }
     if crate::seats::all_down(g) { return None; }
     if g.night_breach.drill.as_ref().unwrap().phase == crate::breach::Phase::Done { return None; }
-    if g.night_breach.live.orders == 0.0 {
+    if live_of(g).orders == 0.0 {
         live_set_orders(g, 1.0);
         night_breach_note(g, "order:stack");
         crate::game::game_msg(g, "you: stack up — side door");
         return Some(NightBreachOrder::Stack);
     }
-    if g.night_breach.live.orders == 1.0 {
+    if live_of(g).orders == 1.0 {
         live_set_orders(g, 2.0);
         night_breach_note(g, "order:go");
         for s in g.seats.clone() {
             in_seat(g, s, &mut |v| crate::holdfire::hold_fire_drill(v, None));
         }
-        if g.night_breach.live.stun {
+        if live_of(g).stun {
             let mut by = None;
             for s in g.seats.clone() {
                 if in_seat(g, s, &mut |v| crate::doortools::door_tools_take(v, crate::doortools::DoorToolsTakeWhat::Bang)) {
@@ -607,7 +625,7 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
 }
 
 /// Once a frame from Game.update, after the Director and before the guards move. (nightbreach.ts NightBreach.tick)
-pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !g.night_breach.active { return; }
     let mut gone = g.night_breach.drill.is_none() && !g.night_breach.no_drill;
     if !gone {
@@ -624,7 +642,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId) {
         crate::game::game_restart_encounter(g);
         if !g.night_breach.active || (g.night_breach.drill.is_none() && !g.night_breach.no_drill) { return; }
     }
-    if g.night_breach.cut {
+    if g.night_breach.cut && cam.is_some() {
         g.night_breach.cut = false;
         crate::seats::cut_to_men(g);
     }
@@ -771,7 +789,7 @@ pub fn night_breach_state(g: &mut crate::game::Game) -> crate::nightbreach::Nigh
         crate::breach::Phase::Stack => {
             if d.t_set.is_nan() {
                 NightBreachState::Stacking
-            } else if g.night_breach.live.orders >= 2.0 {
+            } else if live_of(g).orders >= 2.0 {
                 NightBreachState::Going
             } else {
                 NightBreachState::Set
@@ -791,7 +809,7 @@ pub fn night_breach_summary(g: &mut crate::game::Game) -> String {
     format!(
         "night breach {} · orders {}/2 · team {}/{} up · defenders {}/{} up{} · staged ×{}",
         state.as_str(),
-        g.night_breach.live.orders,
+        live_of(g).orders,
         up(g, &ops),
         ops.len(),
         up(g, &hostiles),
@@ -866,7 +884,7 @@ mod tests {
         assert_eq!(night_breach_state(&mut g), NightBreachState::Stacking);
         g.night_breach.drill.as_mut().unwrap().t_set = 1.0;
         assert_eq!(night_breach_state(&mut g), NightBreachState::Set);
-        g.night_breach.live.orders = 2.0;
+        g.night_breach.drill.as_mut().unwrap().live = Some(crate::breach::BreachLive { orders: 2.0, lights: true, loud_boot: true, stun: true, set_hold: None });
         assert_eq!(night_breach_state(&mut g), NightBreachState::Going);
         let d = g.night_breach.drill.as_mut().unwrap();
         d.phase = Phase::Done;

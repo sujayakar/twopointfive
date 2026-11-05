@@ -221,7 +221,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         if crate::character::anim_kit_busy(g, c) {
             crate::character::anim_kit_cancel(g, c);
         }
-        seam_set_kit_was(g, p, None);
+        g.pl[p].kit_was = None;
         return;
     }
     let rest = kit_sling_rest(g).unwrap_or(0.0);
@@ -244,7 +244,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         || (crate::handwork::sam_work(g).is_some() && !crate::workstow::sam_stowing(g))
         || crate::character::anim_in_throw(g, c);
     let quiet = hard || (hands_off_c(g, c) && !carry);
-    let was = seam_kit_was(g, p);
+    let was = g.pl[p].kit_was;
     if was.is_none() || quiet {
         if quiet && crate::character::anim_kit_busy(g, c) {
             crate::character::anim_kit_cancel(g, c);
@@ -253,7 +253,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         let mut now = was;
         if !(was == Some(Some(crate::character::KitItem::Knife)) && !hard) {
             now = if crate::character::anim_in_throw(g, c) && (cur == Some(crate::character::KitItem::Can) || was == Some(None)) { Some(None) } else { Some(cur) };
-            seam_set_kit_was(g, p, now);
+            g.pl[p].kit_was = now;
         }
         if crate::character::anim_in_throw(g, c) && now == Some(None) && (cur == Some(crate::character::KitItem::Pistol) || cur == Some(crate::character::KitItem::Rifle)) {
             g.pl[p].equip_t = m::max(g.pl[p].equip_t, 0.05);
@@ -267,7 +267,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     // which can the fist shows: the selected kind, taken up only while no can is in the fist; another kind picked with one in it is a swap of its own
     let mut same = false;
     if cur == Some(crate::character::KitItem::Can) && sel.is_some() {
-        if seam_kit_hold(g, c) == Some(None) || (!crate::character::anim_kit_busy(g, c) && was != Some(crate::character::KitItem::Can)) {
+        if g.ch[c].anim.kit_hold == Some(None) || (!crate::character::anim_kit_busy(g, c) && was != Some(crate::character::KitItem::Can)) {
             g.pl[p].kit_can = sel;
         } else if !crate::character::anim_kit_busy(g, c) && g.pl[p].kit_can != sel {
             same = true;
@@ -302,7 +302,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         }
         note(g, crate::kitanim::NoteRow { what: crate::kitanim::NoteRowWhat::Swap, from: was, to: cur, kind: None, secs });
     }
-    seam_set_kit_was(g, p, Some(cur));
+    g.pl[p].kit_was = Some(cur);
 }
 
 /// A click that came a moment early is kept and put back in this tick's input the frame the thing is in hand.   (kitanim.ts kitClick)
@@ -335,7 +335,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
         return;
     }
     let not_yet = if is_can {
-        let h = seam_kit_hold(g, c);
+        let h = g.ch[c].anim.kit_hold;
         h.is_some() && !(h == Some(Some(crate::character::KitItem::Can)) && g.pl[p].kit_can == sel)
     } else {
         g.pl[p].equip_t > 0.0
@@ -405,12 +405,12 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     }
     let p = g.player;
     let c = g.pl[p].ch;
-    let h = seam_kit_hold(g, c);
+    let h = g.ch[c].anim.kit_hold;
     if g.pl[p].down {
         return None;
     }
     let mut kit: Option<crate::rig_props::KitDraw> = None;
-    let was = seam_kit_was(g, p);
+    let was = g.pl[p].kit_was;
     if h.is_none()
         && was == Some(Some(crate::character::KitItem::Knife))
         && g.pl[p].holding.is_none()
@@ -472,7 +472,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
 /// No errand has the hands: the gun the light rides is up.   (kitanim.ts kitGunUp)
 pub fn kit_gun_up(g: &mut crate::game::Game) -> bool {
     let c = g.pl[g.player].ch;
-    seam_kit_hold(g, c).is_none()
+    g.ch[c].anim.kit_hold.is_none()
 }
 
 /// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.   (kitanim.ts kitReload)
@@ -530,7 +530,7 @@ fn reload_plan(t: &BeatTable, row_dur: f64, long: bool, keeps: bool, racks: bool
     );
     let (out, in_) = (b.out * k, b.in_ * k);
     let row = crate::weapons::WeaponDefReload { dur, out: Some(out), in_: Some(in_), rack, shell: None };
-    let beat = crate::character::ReloadBeat { dur, out: Some(out), in_: Some(in_), rack, keep: b.keep.map(|x| x * k), hand: Some(!long), exact: None };
+    let beat = crate::character::ReloadBeat { dur, out: Some(out), in_: Some(in_), rack: Some(rack), keep: b.keep.map(|x| x * k), hand: Some(!long), exact: None };
     crate::kitanim::KitReload { kind, row, beat }
 }
 
@@ -551,20 +551,6 @@ pub fn kit_summary(g: &mut crate::game::Game) -> String {
 pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind, secs: f64) {
     *g.stats.kitanim.reloads.get_or_insert_with(kind, || 0) += 1;
     note(g, crate::kitanim::NoteRow { what: crate::kitanim::NoteRowWhat::Reload, kind: Some(kind), from: None, to: None, secs });
-}
-
-// ---- seams: each is one step the skeleton cannot yet say (notes.md, ## Skeleton)
-
-/// `pl.kitWas`: undefined (not watched yet) is told from null.
-fn seam_kit_was(g: &mut crate::game::Game, p: PlayerId) -> Option<Option<crate::character::KitItem>> {
-    todo!("needs: Player.kit_was as Option<Option<crate::character::KitItem>>")
-}
-fn seam_set_kit_was(g: &mut crate::game::Game, p: PlayerId, v: Option<Option<crate::character::KitItem>>) {
-    todo!("needs: Player.kit_was as Option<Option<crate::character::KitItem>>")
-}
-/// `an.kitHold`: undefined (no swap) is told from null (an empty fist).
-fn seam_kit_hold(g: &mut crate::game::Game, c: CharId) -> Option<Option<crate::character::KitItem>> {
-    todo!("needs: Anim.kit_hold as Option<Option<crate::character::KitItem>>")
 }
 
 #[cfg(test)]
@@ -627,7 +613,7 @@ mod tests {
             assert_eq!(p.row.in_.map(f64::to_bits), Some(in_));
             assert_eq!(p.beat.in_.map(f64::to_bits), Some(in_));
             assert_eq!(p.row.rack.map(f64::to_bits), rack);
-            assert_eq!(p.beat.rack.map(f64::to_bits), rack);
+            assert_eq!(p.beat.rack.map(|r| r.map(f64::to_bits)), Some(rack));
             assert_eq!(p.beat.keep.map(f64::to_bits), keep);
             assert_eq!(p.beat.hand, Some(!long));
         }

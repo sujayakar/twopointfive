@@ -31,6 +31,10 @@ pub struct Walk {
     pub in_m: f64,
     pub pod0: V3,
     pub body_t: f64,
+    /// INVENTED by a review: see the proposals
+    pub serial: u32,
+    /// INVENTED: g.serial() where sent() makes the walk (doorpath.ts:309): mayGo asks by identity whether the man's row is still the walk this door last let go (doorpath.ts:299)
+    pub serial_2: u32,
 }
 impl Walk {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -61,6 +65,8 @@ impl Walk {
             in_m: 0.0,
             pod0: [0.0; 3],
             body_t: 0.0,
+            serial: 0,
+            serial_2: 0,
         }
     }
 }
@@ -182,7 +188,7 @@ impl Default for DoorPathStats { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Copy, Debug)]
 pub struct DoorPathLentItem {
     pub gd: GuardId,
-    pub s: crate::game::GuardScript,
+    pub s: u32,
     pub mine: V3,
     pub aim_at: Option<V3>,
     pub face: Option<f64>,
@@ -193,7 +199,7 @@ impl DoorPathLentItem {
     pub fn zeroed() -> Self {
         DoorPathLentItem {
             gd: GuardId(0),
-            s: crate::game::GuardScript::zeroed(),
+            s: 0,
             mine: [0.0; 3],
             aim_at: None,
             face: None,

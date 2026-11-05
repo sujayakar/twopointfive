@@ -35,8 +35,6 @@ fn has(a: &JsSet<String>, k: &str) -> bool { a.has(String::from(k)) }
 fn names(v: &Option<Vec<String>>, k: &str) -> bool { v.as_ref().map_or(false, |l| l.iter().any(|x| x == k)) }
 fn step_at(l: &LessonData, i: f64) -> Option<&LessonStep> { l.steps.get(i as usize) }
 fn word_of(s: &Option<String>) -> bool { s.as_ref().map_or(false, |x| !x.is_empty()) }
-/// the distance of the camera the gate is handed: the first seat's, the game's own lens (game.ts:1728 `S[0].cam`)
-fn first_cam_distance(g: &mut Game) -> f64 { let s = g.seats[0]; g.tab.cmd_seat[s].cam.distance }
 /// `T.done?.is === 'cue'` (rails.ts:488, 499)
 fn done_is_cue(t: &LessonStep) -> bool { matches!(t.done, crate::scene_scenarios::LessonTestKind::Cue { .. }) }
 fn after_said(a: &LessonStepAfter, gave: f64) -> Option<String> { said(&SaidA { line: a.line.clone(), word: a.word.clone() }, gave) }
@@ -243,7 +241,7 @@ fn gate_ok(c: &GateOk, code: &str) -> bool {
 }
 
 /// whatever the step has not unlocked is taken out of the tick (rails.ts Rails.gate)
-pub fn rails_gate(g: &mut crate::game::Game, input: InputId, dt: f64) {
+pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: f64) {
     let a = match rails_allowed(g) { Some(a) => a, None => return };
     let mut keys = JsSet::<String>::new();
     let mut buttons = 0i32;
@@ -280,8 +278,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, dt: f64) {
     let shift_tap = g.k.rails.shift_tap;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
     if rails_sky_on(g) {
-        if has(&a, "pan") { rails_pan(g, input, dt); }
-        rails_keep(g, input, dt);
+        if has(&a, "pan") { rails_pan(g, input, cam, dt); }
+        rails_keep(g, input, cam, dt);
         let i = &mut g.tab.input[input];
         for k in &walk { i.keys.delete(k.clone()); i.pressed.delete(k.clone()); }
         for k in ["KeyW", "KeyA", "KeyS", "KeyD"] { c.keys.delete(String::from(k)); }
@@ -318,10 +316,10 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, dt: f64) {
 }
 
 /// the step's mark under the cursor (rails.ts Rails.markUnder)
-pub fn rails_mark_under(g: &mut crate::game::Game, input: InputId, canvas: crate::rails::RailsMarkUnderCanvas) -> Option<V3> {
+pub fn rails_mark_under(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::rails::RailsMarkUnderCanvas) -> Option<V3> {
     let s = rails_lesson(g)?;
     let at = step_at(&s.l, s.i)?.at?;
-    let (sx, sy, front) = crate::camera::follow_camera_project(g, at, canvas.client_width, canvas.client_height, None, None);
+    let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, at, canvas.client_width, canvas.client_height, None, None);
     if !front { return None; }
     let (mx, my) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     if g.k.rails.snap_px > 0.0 && m::hyp2(mx - sx, my - sy) <= g.k.rails.snap_px { Some(at) } else { None }
@@ -356,12 +354,13 @@ pub fn rails_step_eye(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogE
     g.rails.step_look.map(|l| l.eye)
 }
 /// between ticks, with the host's camera: the mission again opens on the first run's view (rails.ts Rails.hostView)
-pub fn rails_host_view(g: &mut crate::game::Game) {
+pub fn rails_host_view(g: &mut crate::game::Game, cam: CameraId) {
     if !rails_sky_on(g) || !g.rails.sky.parked { return; }
     match g.rails.sky.view {
-        None => { g.rails.sky.view = g.director.cam.as_ref().map(|c| crate::rails::RailsSkyView { yaw: c.yaw, pitch: c.pitch, dist: c.desired_distance }); }
+        None => { let c = &g.tab.camera[cam]; g.rails.sky.view = Some(crate::rails::RailsSkyView { yaw: c.yaw, pitch: c.pitch, dist: c.desired_distance }); }
         Some(v) => if g.rails.sky.again {
-            if let Some(c) = g.director.cam.as_mut() { c.yaw = v.yaw; c.pitch = v.pitch; c.desired_distance = v.dist; c.distance = v.dist; }
+            let c = &mut g.tab.camera[cam];
+            c.yaw = v.yaw; c.pitch = v.pitch; c.desired_distance = v.dist; c.distance = v.dist;
         },
     }
     g.rails.sky.again = false;
@@ -488,7 +487,7 @@ pub fn rails_answer(g: &mut crate::game::Game, s: &crate::rails::RailsAnswerS, a
 /// (rails.ts Rails.startProgram)
 pub fn rails_start_program(g: &mut crate::game::Game, why: &str) {
     if !crate::director::director_programs(g).iter().any(|x| x == "tutorial") { return; }
-    if g.director.run.as_ref().map_or(false, |r| !r.ended) { crate::director::director_stop(g, Some(false)); }
+    if g.director.run.map_or(false, |r| !g.tab.director_run[r].ended) { crate::director::director_stop(g, Some(false)); }
     let no = crate::director::director_start(g, "tutorial", None);
     g.stats.rails.starts += 1;
     let line = match no.filter(|n| !n.is_empty()) {
@@ -545,7 +544,7 @@ pub fn rails_prompt(g: &mut crate::game::Game) -> Option<crate::rails::RailsProm
     let note = match &t.no_tap {
         Some(n) if up && !n.is_empty() && menu.is_none() && d >= 0.0 && d < NOTE_SECS => Some(crate::lesson::lesson_line(g, n)),
         _ => None,
-    };
+    }.filter(|x| !x.is_empty());
     // (the order the step asks for has gone out: the line is what the men are doing; `afterSecs` on, the step asks again)
     let since = g.time - g.rails.gave_t;
     let aft = if up && gave_here && g.k.rails.after_secs > 0.0 && since >= 0.0 && since < g.k.rails.after_secs && g.time - g.rails.gave0 < g.k.rails.after_max {
@@ -577,7 +576,7 @@ pub fn rails_spare(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, t);
     g.gd[gd].door_down_until = m::max(g.gd[gd].door_down_until, t);
     g.stats.rails.spared += 1;
-    let line = format!("{} spared a down: up at {:.1}", g.gd[gd].callsign, t);
+    let line = format!("{} spared a down: up at {}", g.gd[gd].callsign, js::to_fixed(t, 1));
     rails_note(g, &line);
     true
 }
@@ -668,27 +667,27 @@ fn clamp_off(g: &mut Game) {
     }
 }
 /// the walk keys shift the view about the squad (rails.ts Rails.pan)
-pub fn rails_pan(g: &mut crate::game::Game, input: InputId, dt: f64) {
+pub fn rails_pan(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: f64) {
     let (f, r) = {
         let i = &g.tab.input[input];
         let on = |k: &str| if i.keys.has(String::from(k)) { 1.0 } else { 0.0 };
         (on("KeyW") - on("KeyS"), on("KeyD") - on("KeyA"))
     };
     if f == 0.0 && r == 0.0 { return; }
-    let b = crate::camera::follow_camera_planar_basis(g);
-    let k = g.k.rails.pan_speed * (first_cam_distance(g) / 21.0) * dt / m::hyp2(f, r);
+    let b = crate::camera::follow_camera_planar_basis(g, cam);
+    let k = g.k.rails.pan_speed * (g.tab.camera[cam].distance / 21.0) * dt / m::hyp2(f, r);
     g.rails.sky.off[0] += (b.fwd[0] * f + b.right[0] * r) * k;
     g.rails.sky.off[2] += (b.fwd[2] * f + b.right[2] * r) * k;
     clamp_off(g);
 }
 /// the mark stays in the picture (rails.ts Rails.keep)
-pub fn rails_keep(g: &mut crate::game::Game, input: InputId, dt: f64) {
+pub fn rails_keep(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: f64) {
     if !js::truthy(g.k.rails.keep) { return; }
     { let i = &g.tab.input[input]; if walk_keys().iter().any(|k| i.keys.has(k.clone())) { return; } }
     let s = match rails_lesson(g) { Some(s) => s, None => return };
     let at = match step_at(&s.l, s.i).and_then(|t| t.at) { Some(a) => a, None => return };
     let v = match rails_look(g) { Some(v) => v, None => return };
-    let dist = first_cam_distance(g);
+    let dist = g.tab.camera[cam].distance;
     if rails_on_way(g, Some(&crate::rails::RailsOnWayS { l: s.l.clone(), i: s.i })) {
         let o = g.rails.sky.off;
         let d = m::hyp2(o[0], o[2]);
@@ -698,7 +697,7 @@ pub fn rails_keep(g: &mut crate::game::Game, input: InputId, dt: f64) {
         g.rails.sky.off[2] *= k;
         return;
     }
-    let b = crate::camera::follow_camera_planar_basis(g);
+    let b = crate::camera::follow_camera_planar_basis(g, cam);
     let rx = g.k.rails.keep * dist;
     let rf = rx * g.k.rails.keep_deep;
     let (dx, dz) = (at[0] - v[0], at[2] - v[2]);
@@ -763,7 +762,7 @@ pub fn rails_summary(g: &mut crate::game::Game) -> String {
 }
 /// the frame's own log (rails.ts Rails.note)
 pub fn rails_note(g: &mut crate::game::Game, s: &str) {
-    let line = format!("{:.2} {}", g.time, s);
+    let line = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.rails.log.push(line);
     if g.rails.log.len() > 80 { g.rails.log.drain(0..40); }
 }

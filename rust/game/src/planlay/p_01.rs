@@ -120,10 +120,10 @@ pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Op
         let p = g.ch[g.gd[m].ch].pos;
         return Some(TargetOf::None(OrderTargetNone { at: [p[0], 0.0, p[2]], man: Some(m) }));
     }
-    // a wall's or a thing's own order is found again by the point ON it
+    // a wall's or a thing's own order is found again by the point ON it (serial 0: a target made here is no menu's own)
     if let (Some(LaidWhereFound::Wall), Some(pick)) = (o.found, o.pick) {
         let w = crate::wallcharge::wall_at(g, pick, None)?;
-        return Some(TargetOf::Floor(OrderTargetFloor { at, wall: Some(w), thing: None }));
+        return Some(TargetOf::Floor(OrderTargetFloor { at, wall: Some(w), thing: None, serial: 0 }));
     }
     if let (Some(LaidWhereFound::Thing), Some(pick)) = (o.found, o.pick) {
         let w = crate::workthings::work_near(g, pick)?;
@@ -132,7 +132,7 @@ pub fn target_of(g: &mut crate::game::Game, o: &crate::planlay::LaidWhere) -> Op
             _ => None,
         };
     }
-    Some(TargetOf::Floor(OrderTargetFloor { at, wall: None, thing: None }))
+    Some(TargetOf::Floor(OrderTargetFloor { at, wall: None, thing: None, serial: 0 }))
 }
 
 /// `target_of`, for the other modules. (planlay.ts layTarget)
@@ -432,7 +432,7 @@ pub fn lay_summary(g: &mut crate::game::Game) -> String {
                 };
                 format!(" door {}", name)
             }
-            LaidOrderKind::Floor => format!(" {},{}", to_fixed_1(o.at[0]), to_fixed_1(o.at[2])),
+            LaidOrderKind::Floor => format!(" {},{}", js::to_fixed(o.at[0], 1), js::to_fixed(o.at[2], 1)),
             LaidOrderKind::None => String::new(),
         };
         rows.push(format!("{}: {}{}", o.who.join("+"), o.id, place));
@@ -522,27 +522,12 @@ fn round_words(x: f64) -> String {
     if x == 0.0 { String::from("0") } else { format!("{}", x) }
 }
 
-/// `x.toFixed(1)` below 1e21: on a tie the larger n, the sign apart, and −0 has none.
-fn to_fixed_1(x: f64) -> String {
-    if x.is_nan() {
-        return String::from("NaN");
-    }
-    let (sign, a) = if x < 0.0 { ("-", -x) } else { ("", m::abs(x)) };
-    let q = a * 4.0;
-    if q == m::floor(q) && js::rem(q, 2.0) == 1.0 {
-        // an exact tie (k/4, k odd), where format! would go to the even digit
-        let n = m::ceil(a * 10.0);
-        return format!("{}{}.{}", sign, m::floor(n / 10.0), js::rem(n, 10.0));
-    }
-    format!("{}{:.1}", sign, a)
-}
-
-/// `d.only(S, men, t)`: OrderOnly has its arms, but no function a part can call runs them. (planlay.ts:107)
+/// `d.only(S, men, t)`: OrderOnly has its arms, but skeleton 4 has no function that runs them. (planlay.ts:107)
 fn seam_order_def_only(g: &mut Game, d: OrdersOrderDefId, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
     todo!("needs: a function of crate::orders that runs OrderDef.only's arm")
 }
 
-/// `d.can(S, m, t)`: None is `true`, Some is the man's word for why not; OrderCan has its arms, but no function a part can call runs them. (planlay.ts:110)
+/// `d.can(S, m, t)`: None is `true`, Some is the man's word for why not; OrderCan has its arms, but skeleton 4 has no function that runs them. (planlay.ts:110)
 fn seam_order_def_can(g: &mut Game, d: OrdersOrderDefId, m: GuardId, t: &crate::orders::OrderTarget) -> Option<String> {
     todo!("needs: a function of crate::orders that runs OrderDef.can's arm")
 }
@@ -590,14 +575,14 @@ mod tests {
 
     #[test]
     fn to_fixed_is_the_language_s() {
-        // the outputs of the language's own toFixed(1), run under bun
+        // the outputs of the language's own toFixed(1), run under bun: what lay_summary needs of js::to_fixed
         for (x, s) in [
             (0.25, "0.3"), (0.75, "0.8"), (1.25, "1.3"), (-0.25, "-0.3"), (-1.75, "-1.8"), (2.5, "2.5"), (0.05, "0.1"), (0.15, "0.1"),
             (-0.0, "0.0"), (0.0, "0.0"), (-0.01, "-0.0"), (12.34, "12.3"), (1234.25, "1234.3"), (9.96, "10.0"), (9.75, "9.8"),
         ] {
-            assert_eq!(to_fixed_1(x), s, "{x}");
+            assert_eq!(js::to_fixed(x, 1), s, "{x}");
         }
-        assert_eq!(to_fixed_1(f64::NAN), "NaN");
+        assert_eq!(js::to_fixed(f64::NAN, 1), "NaN");
     }
 
     #[test]

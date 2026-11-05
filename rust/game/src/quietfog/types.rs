@@ -27,6 +27,8 @@ impl QuietRung {
 pub struct Held {
     pub cone: Option<crate::quietfog::HeldCone>,
     pub own: Option<crate::quietfog::HeldOwn>,
+    /// INVENTED: g.serial() where quietFogStart makes the Held (quietfog.ts:159): quietFogAside asks by identity whether the Held it lifted is still the one held (quietfog.ts:179)
+    pub serial: u32,
 }
 impl Held {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -34,6 +36,7 @@ impl Held {
         Held {
             cone: None,
             own: None,
+            serial: 0,
         }
     }
 }

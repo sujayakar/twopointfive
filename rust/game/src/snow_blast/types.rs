@@ -245,16 +245,12 @@ impl Default for SNOWBLAST { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct Owing {
     pub live: Vec<crate::snow_blast::Live>,
-    pub b: crate::snow_blast::SnowBlastShown,
-    pub owed: Vec<crate::snow_blast::Owed>,
 }
 impl Owing {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         Owing {
             live: Vec::new(),
-            b: crate::snow_blast::SnowBlastShown::zeroed(),
-            owed: Vec::new(),
         }
     }
 }

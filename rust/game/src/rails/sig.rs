@@ -87,10 +87,10 @@ pub fn rails_on_way(g: &mut crate::game::Game, s: Option<&crate::rails::RailsOnW
 pub fn rails_offers(g: &mut crate::game::Game, verb: &str) -> bool { todo!() }
 
 /// (src/game/rails.ts:336 Rails.gate)
-pub fn rails_gate(g: &mut crate::game::Game, input: InputId, dt: f64) { todo!() }
+pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: f64) { todo!() }
 
 /// (src/game/rails.ts:387 Rails.markUnder)
-pub fn rails_mark_under(g: &mut crate::game::Game, input: InputId, canvas: crate::rails::RailsMarkUnderCanvas) -> Option<V3> { todo!() }
+pub fn rails_mark_under(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::rails::RailsMarkUnderCanvas) -> Option<V3> { todo!() }
 
 /// (src/game/rails.ts:394 Rails.orderRows)
 pub fn rails_order_rows(g: &mut crate::game::Game, rows: &[crate::rails::RailsOrderRowsRowsItem]) -> Vec<crate::rails::RailsOrderRowsRowsItem> { todo!() }
@@ -108,7 +108,7 @@ pub fn rails_eye_view(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn rails_step_eye(g: &mut crate::game::Game) -> Option<crate::fogofwar::FogEye> { todo!() }
 
 /// (src/game/rails.ts:417 Rails.hostView)
-pub fn rails_host_view(g: &mut crate::game::Game) { todo!() }
+pub fn rails_host_view(g: &mut crate::game::Game, cam: CameraId) { todo!() }
 
 /// (src/game/rails.ts:424 Rails.tick)
 pub fn rails_tick(g: &mut crate::game::Game, dt: f64) { todo!() }
@@ -165,10 +165,10 @@ pub fn rails_hold_waiting(g: &mut crate::game::Game, s: &crate::rails::RailsHold
 pub fn rails_unpark(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/rails.ts:550 Rails.pan)
-pub fn rails_pan(g: &mut crate::game::Game, input: InputId, dt: f64) { todo!() }
+pub fn rails_pan(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: f64) { todo!() }
 
 /// (src/game/rails.ts:558 Rails.keep)
-pub fn rails_keep(g: &mut crate::game::Game, input: InputId, dt: f64) { todo!() }
+pub fn rails_keep(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: f64) { todo!() }
 
 /// (src/game/rails.ts:571 Rails.panned)
 pub fn rails_panned(g: &mut crate::game::Game) -> f64 { todo!() }

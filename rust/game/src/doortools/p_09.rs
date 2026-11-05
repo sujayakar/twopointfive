@@ -13,8 +13,6 @@ macro_rules! thr { ($g:expr, $op:expr) => { $g.tab.doortools_door_op[$op].thr.as
 // ---- seams: each waits on the skeleton (notes.md, ## Skeleton)
 /// detonateStun(g, it, true) with nobody on its list (doors-kit.md: combat::detonate_stun's `nobody` argument).
 fn seam_detonate_stun_nobody(g: &mut Game, it: ItemId) { todo!("needs: detonate_stun with a nobody argument") }
-/// !!gd.flashlight?.enabled: a LightId has no table and no `enabled` accessor in the skeleton.
-fn seam_flashlight_on(g: &mut Game, gd: GuardId) -> bool { todo!("needs: a guard's flashlight's enabled") }
 
 // ---- small reads
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
@@ -33,20 +31,6 @@ fn floor_ok(g: &mut Game, from: V3, p: V3) -> bool { !nav_blocked(g, p[0], p[2])
 fn mark_of(g: &Game, op: DoorOpId, gd: GuardId) -> V3 { match o!(g, op).post.get(gd) { Some(p) => p.pos, None => { let p = pos_of(g, gd); [p[0], 0.0, p[2]] } } }
 /// the `hi` closure: is his mark on the latch half of the opening
 fn hi_of(g: &mut Game, op: DoorOpId, gd: GuardId) -> bool { let d = o!(g, op).door; let w = g.dr[d].def.width; let k = mark_of(g, op, gd); super::along_of(g, d, k) > w / 2.0 }
-/// x.toFixed(1): an exact tie goes up, where Rust's `{:.1}` goes to the even digit
-fn to_fixed1(x: f64) -> String {
-    let a = m::abs(x) * 4.0;
-    if m::floor(a) == a && js::rem(a, 4.0) == 1.0 { format!("{:.1}", if x < 0.0 { x - 0.05 } else { x + 0.05 }) } else { format!("{:.1}", x) }
-}
-
-/// Sam's trigger: the set charge nearest him (or the one given) goes.   (doortools.ts DoorTools.blow)
-pub fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Option<crate::doortools::DoorToolsBlow> {
-    let c = match c_2 { Some(c) => Some(c), None => door_tools_nearest(g, None) };
-    let who = sam_id(g);
-    let r = crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
-    r.map(|r| DoorToolsBlow { knocked: r.knocked, stunned: r.stunned, backblast: r.backblast })
-}
-
 /// The charge goes: the leaf, the blast, who it hurts by his side of the door, the order behind it.   (doortools.ts DoorTools.blowRaw)
 pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Option<crate::doortools::DoorToolsBlowRaw> {
     let c = c_2?;
@@ -80,10 +64,9 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
     let spot = door_pt(g, d, w * 0.7, 0.2, into, Some(0.5));
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, spot, [0.0, 0.0, 0.0], Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
     crate::throwables::item_set_fired(g, it, true);
-    let before = g.messages.clone();
+    let last = g.messages.last().map(|m| m.serial);
     seam_detonate_stun_nobody(g, it);
-    let changed = g.messages.len() != before.len() || g.messages.iter().zip(before.iter()).any(|(a, b)| a.text != b.text || a.t.to_bits() != b.t.to_bits());
-    if changed && g.messages.last().map_or(false, |m| m.text.contains("flashbang")) { g.messages.pop(); }
+    if g.messages.last().map_or(false, |m| Some(m.serial) != last && m.text.contains("flashbang")) { g.messages.pop(); }   // ('flashbang went off': this was not one)
     if let Some(ii) = g.items.items.iter().position(|x| *x == it) { g.items.items.remove(ii); }
     let (mut knocked, mut stunned, mut backblast) = (0.0_f64, 0.0_f64, 0.0_f64);
     let fc = g.dr[d].frame_centre;
@@ -212,24 +195,18 @@ pub fn door_tools_draw_charge(g: &mut crate::game::Game, c_2: ChargeId) {
 
 /// the next of this man's cuts that still shows HIM floor no muzzle has been across (-1: none)   (doortools.ts DoorTools.pieNext)
 pub fn door_tools_pie_next(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, s: &crate::doortools::DoorToolsPieNextS) -> f64 {
-    // the search is lent to the two cell asks, which take it by reference and do not reach the order's
-    let sr = o!(g, op).search.take();
-    let r = pie_next_lent(g, op, gd, s, sr.as_ref());
-    o!(g, op).search = sr;
-    r
-}
-fn pie_next_lent(g: &mut Game, op: DoorOpId, gd: GuardId, s: &DoorToolsPieNextS, sr: Option<&RoomSearch>) -> f64 {
     let look_m = g.k.doortools.look_m;
+    let sr = o!(g, op).search.flatten();
     let eyes = &s.pie.as_ref().unwrap().eyes;
-    let lit = seam_flashlight_on(g, gd);
+    let lit = g.tab.light[g.gd[gd].flashlight].enabled;
     let tube = crate::nvg::nvg_down(g, gd);
     let mut k = (s.i + 1.0) as usize;
     while k < s.pts.len() {
         let sr = match sr { Some(sr) => sr, None => return k as f64 };
         let e: V3 = [eyes[k][0], 1.55, eyes[k][2]];
-        for i in 0..sr.pts.len() {
-            if sr.looked[i] != 0 { continue; }
-            let q = sr.pts[i];
+        for i in 0..g.tab.doortools_room_search[sr].pts.len() {
+            if g.tab.doortools_room_search[sr].looked[i] != 0 { continue; }
+            let q = g.tab.doortools_room_search[sr].pts[i];
             let (dx, dz) = (q[0] - e[0], q[2] - e[2]);
             if dx * dx + dz * dz > look_m * look_m || crate::scene_collision::segment_blocked(g, e, q, None, None, None) { continue; }
             if lit || door_tools_thr_lit_cell(g, op, sr, i as f64)
@@ -722,10 +699,10 @@ pub fn door_tools_thr_men(g: &mut crate::game::Game, op: DoorOpId) {
 }
 
 /// the `inRoom` closure of thrWatch
-fn in_room(g: &mut Game, op: DoorOpId, p: V3) -> bool {
+fn in_room(g: &Game, room: Option<RoomfightRoomId>, p: V3) -> bool {
     let (cell, w) = (g.col.nav.cell, g.col.nav.w);
     let ci = m::floor(p[2] / cell) * w + m::floor(p[0] / cell);
-    match o!(g, op).search.as_ref() { Some(sr) => g.tab.roomfight_room[sr.room].cells.has(crate::Num(ci)), None => false }
+    match room { Some(r) => g.tab.roomfight_room[r].cells.has(crate::Num(ci)), None => false }
 }
 /// what the hold listens for: a man at the frame in contact, a defender's round near the door, one of theirs dropping: each puts the quiet clock back   (doortools.ts DoorTools.thrWatch)
 pub fn door_tools_thr_watch(g: &mut crate::game::Game, op: DoorOpId) {
@@ -742,6 +719,7 @@ pub fn door_tools_thr_watch(g: &mut crate::game::Game, op: DoorOpId) {
             }
         }
     }
+    let room = o!(g, op).search.flatten().map(|s| g.tab.doortools_room_search[s].room);
     let ev_t = thr!(g, op).ev_t;
     let shot_m = g.k.doortools.thr_shot_m;
     let mut i = g.events.len();
@@ -751,7 +729,7 @@ pub fn door_tools_thr_watch(g: &mut crate::game::Game, op: DoorOpId) {
         if time < ev_t { break; }
         if kind == crate::director::EventKind::GuardShot {
             if let Some(who) = who {
-                if (v3::dist_xz(pos, fc) < shot_m || in_room(g, op, pos)) && !g.guards.iter().any(|x| operative(g, *x) && g.ch[g.gd[*x].ch].id == who) { thr!(g, op).quiet_t = t; break; }
+                if (v3::dist_xz(pos, fc) < shot_m || in_room(g, room, pos)) && !g.guards.iter().any(|x| operative(g, *x) && g.ch[g.gd[*x].ch].id == who) { thr!(g, op).quiet_t = t; break; }
             }
         }
     }
@@ -763,7 +741,7 @@ pub fn door_tools_thr_watch(g: &mut crate::game::Game, op: DoorOpId) {
         if !dead(g, h) { continue; }
         thr!(g, op).up.remove(i);
         let p = pos_of(g, h);
-        if !(v3::dist_xz(p, fc) < 3.0 || in_room(g, op, p)) { continue; }
+        if !(v3::dist_xz(p, fc) < 3.0 || in_room(g, room, p)) { continue; }
         let r = thr!(g, op);
         r.quiet_t = t; r.down += 1.0;
         let what = format!("down from outside · {}", callsign_or(g, h));
@@ -804,7 +782,7 @@ pub fn door_tools_to_pockets(g: &mut crate::game::Game, op: DoorOpId) {
         o!(g, op).thr = Some(th);
         if tossed < cans && g.door_tools.bangs > 0.0 {
             thr!(g, op).banged = None;
-            door_tools_beat(g, op, &format!("the first can is {} s old · its floor is blind again", to_fixed1(t - bang_t)));
+            door_tools_beat(g, op, &format!("the first can is {} s old · its floor is blind again", js::to_fixed(t - bang_t, 1)));
         }
     }
     let th = door_tools_thr_thrower(g, op);
@@ -825,8 +803,8 @@ pub fn door_tools_held_beat(g: &mut crate::game::Game, op: DoorOpId) {
     let held = g.time - o!(g, op).t0;
     let r = &o!(g, op);
     let th = r.thr.as_ref().unwrap();
-    let mut what = format!("held {} s · {} in contact · {} down", to_fixed1(held), th.contact.len(), th.down);
-    if let Some(sr) = r.search.as_ref() { what.push_str(&format!(" · {} of {} cells unseen", sr.left, sr.pts.len())); }
+    let mut what = format!("held {} s · {} in contact · {} down", js::to_fixed(held, 1), th.contact.len(), th.down);
+    if let Some(sr) = r.search.flatten() { let sr = &g.tab.doortools_room_search[sr]; what.push_str(&format!(" · {} of {} cells unseen", sr.left, sr.pts.len())); }
     door_tools_beat(g, op, &what);
 }
 
@@ -934,18 +912,4 @@ pub fn door_tools_frag_said(g: &mut crate::game::Game, op: DoorOpId) {
 pub fn door_tools_frag_on(g: &mut crate::game::Game, op: DoorOpId) {
     door_tools_frag_said(g, op);
     o!(g, op).fled_go = Some(true);
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn to_fixed1_rounds_a_tie_up_as_the_language_does() {
-        assert_eq!(to_fixed1(0.25), "0.3");
-        assert_eq!(to_fixed1(1.25), "1.3");
-        assert_eq!(to_fixed1(0.75), "0.8");
-        assert_eq!(to_fixed1(-1.25), "-1.3");
-        assert_eq!(to_fixed1(2.04), "2.0");
-        assert_eq!(to_fixed1(3.0), "3.0");
-    }
 }

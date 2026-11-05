@@ -710,23 +710,29 @@ fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut l
     g.cover.live = live.iter().filter(|l| !l.can.is_empty()).cloned().collect();
     let uncovered = g.cover.live.iter().filter(|l| l.by.is_none() && !l.sam && !l.held).count();
     g.cover.stats.uncovered += uncovered as f64;
-    let mut got_rows: JsMap<GuardId, LiveOpening> = JsMap::new();
-    for (gd, &i) in got.iter() { got_rows.set(gd, live[i].clone()); }
+    let mut got_ids: JsMap<GuardId, CoverOpeningId> = JsMap::new();
+    for (gd, &i) in got.iter() { got_ids.set(gd, live[i].o); }
     let bodies = &cx.bodies;
     let near_m = k.near_m;
     let mut w_of = |g: &mut Game, o: CoverOpeningId| 1.0 / (1.0 + near(bodies, g.tab.cover_opening[o].at) / near_m);
-    cover_step_deal(g, list, &cx.asg_of, &got_rows, &live, &open_doors, bodies, &cx.spd, &mut w_of, if rear_l.is_some() { last } else { None });
+    cover_step_deal(g, list, &cx.asg_of, &got_ids, &live, &open_doors, bodies, &cx.spd, &mut w_of, if rear_l.is_some() { last } else { None });
+}
+
+/// The row he was dealt: `got` names its opening, `live` holds it, one row an opening. (cover.ts stepDeal `got.get(gd)`)
+fn got_row<'a>(got: &JsMap<GuardId, CoverOpeningId>, live: &'a [LiveOpening], gd: GuardId) -> Option<&'a LiveOpening> {
+    let o = *got.get(gd)?;
+    live.iter().find(|l| l.o == o)
 }
 
 /// Step to see: every open door nobody has a line into gets one man. (cover.ts stepDeal)
-pub fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of: &JsMap<GuardId, OrdersAssignmentId>, got: &JsMap<GuardId, LiveOpening>, live: &[LiveOpening], open: &[CoverOpeningId], bodies: &[(CharId, V3)], spd: &JsMap<GuardId, f64>, w_of: &mut dyn FnMut(&mut Game, CoverOpeningId) -> f64, rear_man: Option<GuardId>) {
+pub fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of: &JsMap<GuardId, OrdersAssignmentId>, got: &JsMap<GuardId, CoverOpeningId>, live: &[LiveOpening], open: &[CoverOpeningId], bodies: &[(CharId, V3)], spd: &JsMap<GuardId, f64>, w_of: &mut dyn FnMut(&mut Game, CoverOpeningId) -> f64, rear_man: Option<GuardId>) {
     let k = g.k.cover;
     let t = g.time;
     cover_prune_steps(g);
     let mut ready: Vec<GuardId> = Vec::new();
     for &(gd, a) in list {
         let p = pos_of(g, gd);
-        let l = got.get(gd);
+        let l = got_row(got, live, gd);
         let still = *spd.get(gd).unwrap() < 0.3;
         if !still || !g.cover.stood.has(gd) { g.cover.stood.set(gd, t); }
         if let Some(l) = l {
@@ -781,9 +787,9 @@ pub fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg
         if t < g.cover.door_try.get(o).copied().unwrap_or(0.0) { continue; }
         let theirs = g.cover.steps.values().any(|s| s.o == o && (!s.done || s.saw || t - s.t < 3.0));
         if theirs { continue; }   // (one man a door)
-        let idle: Vec<GuardId> = ready.iter().copied().filter(|&gd| in_reach(g, gd) && !seen.contains(&gd) && got.get(gd).map_or(true, |l| l.edge_by == Some(gd))).collect();
+        let idle: Vec<GuardId> = ready.iter().copied().filter(|&gd| in_reach(g, gd) && !seen.contains(&gd) && got_row(got, live, gd).map_or(true, |l| l.edge_by == Some(gd))).collect();
         let busy: Vec<GuardId> = if !seen.is_empty() { Vec::new() } else {
-            ready.iter().copied().filter(|&gd| in_reach(g, gd) && got.get(gd).map_or(false, |l| l.by == Some(gd) && 10.0 * (wo - l.w) > k.sticky + 0.3)).collect()
+            ready.iter().copied().filter(|&gd| in_reach(g, gd) && got_row(got, live, gd).map_or(false, |l| l.by == Some(gd) && 10.0 * (wo - l.w) > k.sticky + 0.3)).collect()
         };
         let mut pick: Option<(GuardId, V3, f64, V3)> = None;
         for tier in [&idle, &busy] {
@@ -1115,7 +1121,7 @@ pub fn cover_name_of(g: &mut Game, o: CoverOpeningId, from: Option<V3>) -> Strin
     let (kind, door, at) = (g.tab.cover_opening[o].kind, g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if kind == OpeningKind::Rear { return String::from("the rear"); }
     if let Some(d) = door { return alloc::format!("the {}", crate::orders::door_words(g, d)); }
-    let from = match from { Some(f) => f, None => return alloc::format!("{} ({:.1}, {:.1})", kind.as_str(), at[0], at[2]) };
+    let from = match from { Some(f) => f, None => return alloc::format!("{} ({}, {})", kind.as_str(), js::to_fixed(at[0], 1), js::to_fixed(at[2], 1)) };
     let what = if kind == OpeningKind::Mouth { "aisle" } else { "gap" };
     let yaw = v3::yaw_to(from, at);
     match crate::dialogue::watched_place(g, from, [at[0] + m::sin(yaw), 0.0, at[2] + m::cos(yaw)]) {

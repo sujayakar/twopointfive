@@ -303,7 +303,7 @@ pub struct Gate {
     pub goal_near: bool,
     pub opened: bool,
     pub crossed: bool,
-    pub hs: Option<crate::tactics::GateHs>,
+    pub hs: Option<Option<crate::tactics::GateHs>>,
     pub action: crate::tactics::GateAction,
     pub thrower: Option<GuardId>,
 }
@@ -366,7 +366,7 @@ impl GateRole {
     }
 }
 
-/// (TypeScript: inline at src/game/tactics.ts:137 Gate.hs, src/game/tactics.ts:137)
+/// (TypeScript: inline at quiet Gate.hs, src/game/tactics.ts:137)
 #[derive(Clone, Copy, Debug)]
 pub struct GateHs {
     pub pos: V3,

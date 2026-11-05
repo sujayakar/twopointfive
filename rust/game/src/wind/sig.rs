@@ -48,13 +48,13 @@ pub fn vnoise(seed: f64, x: f64) -> f64 { todo!() }
 pub fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool { todo!() }
 
 /// (src/game/wind.ts:149 Wind.forParticles)
-pub fn wind_for_particles(g: &mut crate::game::Game) -> Vec<crate::wind::WindSource> { todo!() }
+pub fn wind_for_particles(g: &mut crate::game::Game) -> Vec<WindWindSourceId> { todo!() }
 
 /// (src/game/wind.ts:153 Wind.constructor)
 pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind { todo!() }
 
 /// (src/game/wind.ts:172 Wind.doorSource)
-pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> crate::wind::WindSource { todo!() }
+pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId { todo!() }
 
 /// (src/game/wind.ts:185 Wind.reroof)
 pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[Vec<f64>]>, own: Option<bool>) { todo!() }
@@ -87,7 +87,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) { todo!() }
 pub fn wind_at(g: &mut crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 { todo!() }
 
 /// (src/game/wind.ts:321 Wind.byName)
-pub fn wind_by_name(g: &mut crate::game::Game, name: &str) -> Option<crate::wind::WindSource> { todo!() }
+pub fn wind_by_name(g: &mut crate::game::Game, name: &str) -> Option<WindWindSourceId> { todo!() }
 
 /// (src/game/wind.ts:324 Wind.fresh)
 pub fn wind_fresh(g: &mut crate::game::Game) { todo!() }

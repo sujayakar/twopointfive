@@ -7,14 +7,20 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ the seams: what skeleton 3 still cannot give
+// ------------------------------------------------------------ the seam: what skeleton 4 still cannot give
 
 /// what the round wrote on its shell goes back to the shell the caller holds (`o` is lent read-only, FireOpts.pellet is by value)
 fn seam_shell_back(g: &mut Game, o: &FireOpts, shell: crate::shotgun::Shell) { todo!("needs: FireOpts.pellet that writes through (a ShellId, or &mut FireOpts)") }
-/// g.smoke.push({ pos, dir, speed, radius })
-fn seam_smoke_push(g: &mut Game, pos: V3, dir: V3, speed: f64, radius: f64) { todo!("needs: SmokePush's fields (the struct is empty)") }
 
 // ------------------------------------------------------------ shooting
+
+/// `g.engine.lights.flash(…)`: the set is lent out of g for the call (LightSet's methods take g and the set) and goes back with the new light.
+fn flash(g: &mut Game, pos: V3, color: V3, intensity: f64, range: f64, ttl: f64, owner: f64) -> LightId {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    let l = crate::render_lights::light_set_flash(g, &mut set, pos, color, intensity, range, ttl, owner);
+    g.engine.lights = set;
+    l
+}
 
 /// The Firearm this character carries: the player's gun in hand, else his pistol; a guard's weapon; a stray's 9 mm. (combat.ts firearmOf)
 pub fn firearm_of(g: &mut crate::game::Game, shooter: CharId, is_player: bool) -> FirearmId {
@@ -249,7 +255,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     let pos = g.tab.sim_lightshome_fixture[t].pos;
     let break_ = crate::sim_lightshome::light_in().break_;
     if kind == FixtureKind::Breaker {
-        crate::render_lights::light_set_flash(&mut g.engine.lights, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
+        flash(g, pos, [0.6, 0.7, 1.0], 10.0, 5.0, 0.2, 0.0);
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
         crate::game::game_set_blackout(g, f64::INFINITY, crate::game::GameSetBlackoutCause::Shot);
         crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
@@ -270,7 +276,7 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
     crate::game::game_msg(g, &alloc::format!("shot out {}", name));
     crate::game::game_light_event(g, t, None, None);
     crate::chronicle::chron_light_shot(g, t);
-    crate::render_lights::light_set_flash(&mut g.engine.lights, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
+    flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);
     crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(1.0), None);
     if crate::carlamps::lamp_glass(g, t) {
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
@@ -366,7 +372,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             gas: Some(gas),
         });
         for l in lights {
-            crate::render_lights::light_set_flash(&mut g.engine.lights, l.pos, l.color, l.intensity, l.range, l.ttl, who);
+            flash(g, l.pos, l.color, l.intensity, l.range, l.ttl, who);
         }
     }
     if gpu && lead { crate::particle_fx::muzzle_sparks_fx(g, muzzle, dir, shooter); crate::particle_fx::casing_fx(g, shooter, &def); }
@@ -591,7 +597,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             let p = match &pen { Some(q) => path_at(&q.path, d), None => v3::mad(muzzle, dir, d) };
             if crate::smoke_types::smoke_system_like_in_smoke_domain(g, p) {
                 let along = match &pen { Some(q) => seg_at(&q.path, d).d, None => dir };
-                seam_smoke_push(g, p, along, 5.5, 0.07);
+                crate::smoke_types::smoke_system_like_push(g, crate::smoke_types::SmokePush { pos: p, dir: along, speed: 5.5, radius: 0.07 });
             }
             d += 0.28;
         }
@@ -600,7 +606,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let blind = match hit_guard { Some(h) => crate::fogofwar::fog_of_war_hidden(g, h), None => false };
     if blind { crate::fogofwar::fog_of_war_hush(g); }
     if lead {
-        let fl = crate::render_lights::light_set_flash(&mut g.engine.lights, v3::mad(hit_p, dir, -0.05), [1.0, 0.8, 0.5], 1.5, 2.5, 0.05, 0.0);
+        let fl = flash(g, v3::mad(hit_p, dir, -0.05), [1.0, 0.8, 0.5], 1.5, 2.5, 0.05, 0.0);
         if !blind { crate::fogofwar::fog_of_war_light_by(g, fl, Some(who)); }
     }
     let mut in_glass = false;

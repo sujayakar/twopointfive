@@ -121,7 +121,6 @@ impl Default for Rec { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct State {
     pub recs: Vec<crate::fixture_break::Rec>,
-    pub by: JsMap<FixtureId, crate::fixture_break::Rec>,
     pub prev: JsMap<FixtureId, bool>,
     pub kind: JsMap<FixtureId, f64>,
     pub last_t: f64,
@@ -133,7 +132,6 @@ impl State {
     pub fn zeroed() -> Self {
         State {
             recs: Vec::new(),
-            by: JsMap::new(),
             prev: JsMap::new(),
             kind: JsMap::new(),
             last_t: 0.0,

@@ -9,7 +9,7 @@ use alloc::{string::String, vec::Vec};
 pub fn pulls(g: &mut crate::game::Game) -> Vec<[f64; 2]> { todo!() }
 
 /// (src/game/doze.ts:94 mapOf)
-pub fn map_of(g: &mut crate::game::Game) -> JsMap<GuardId, crate::doze::Doze> { todo!() }
+pub fn map_of(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/doze.ts:99 flat)
 pub fn flat(a: &[f64], x: f64, z: f64) -> f64 { todo!() }
@@ -24,7 +24,7 @@ pub fn live(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool { todo!() }
 
 /// (src/game/doze.ts:110 put)
-pub fn put(g: &mut crate::game::Game, gd: GuardId) { todo!() }
+pub fn put(g: &mut crate::game::Game, gd: GuardId, d: crate::doze::Doze) { todo!() }
 
 /// (src/game/doze.ts:111 drop)
 pub fn drop(g: &mut crate::game::Game, gd: GuardId) { todo!() }
@@ -57,10 +57,10 @@ pub fn span(g: &mut crate::game::Game, r: &[f64]) -> f64 { todo!() }
 pub fn doze_lines() -> Vec<String> { todo!() }
 
 /// (src/game/doze.ts:147 screenSeat)
-pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<SeatId> { todo!() }
+pub fn screen_seat(g: &mut crate::game::Game, gd: GuardId, p: PropId) -> Option<crate::doze::Seat> { todo!() }
 
 /// (src/game/doze.ts:170 findChair)
-pub fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<SeatId> { todo!() }
+pub fn find_chair(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::doze::Seat> { todo!() }
 
 /// (src/game/doze.ts:194 dozePatrol)
 pub fn doze_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool { todo!() }

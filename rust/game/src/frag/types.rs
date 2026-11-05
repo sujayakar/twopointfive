@@ -609,23 +609,6 @@ impl WindUp {
     }
 }
 
-/// (TypeScript: inline at src/game/frag.ts:943 free ->, src/game/frag.ts:943)
-#[derive(Clone, Debug)]
-pub struct Free {
-    pub b: crate::frag::DefBook,
-    pub c: crate::frag::Carrier,
-}
-impl Free {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Free {
-            b: crate::frag::DefBook::zeroed(),
-            c: crate::frag::Carrier::zeroed(),
-        }
-    }
-}
-impl Default for Free { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FragThrowAt {

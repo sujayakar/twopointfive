@@ -139,13 +139,13 @@ pub fn goal_shift(g: &mut crate::game::Game, input: InputId) -> bool {
 }
 
 /// Once a tick with a squad on the floor and Sam up: where the ring has no hold, the pair adds the goal as the key goes down. (planmode.ts goalInput)
-pub fn goal_input(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) {
+pub fn goal_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     if !(goal_shift(g, input) && g.orders.cmd_ring.is_none() && crate::orders::squad_orders_back_free(g)) {
         return;
     }
     let key = g.k.cmdring.key.clone();
     if g.tab.input[input].pressed.delete(key) {
-        let t = crate::orders::squad_orders_target_under(g, input, canvas);
+        let t = crate::orders::squad_orders_target_under(g, input, cam, canvas);
         plan_goal(g, &t);
     }
 }

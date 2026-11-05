@@ -18,7 +18,7 @@ pub fn overlap_xz(a: crate::wallbreak::AABB, b: crate::wallbreak::AABB, eps: Opt
 pub fn wall_break_new(g: &mut crate::game::Game) -> crate::wallbreak::WallBreak { todo!() }
 
 /// (src/game/wallbreak.ts:198 WallBreak.over)
-pub fn wall_break_over(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, need: f64) -> bool { todo!() }
+pub fn wall_break_over(g: &mut crate::game::Game, b: WallbreakBreakableId, need: f64) -> bool { todo!() }
 
 /// (src/game/wallbreak.ts:208 WallBreak.piecesSure)
 pub fn wall_break_pieces_sure(g: &mut crate::game::Game) -> f64 { todo!() }
@@ -51,43 +51,43 @@ pub fn wall_break_all(g: &mut crate::game::Game) -> Vec<crate::wallbreak::WallBr
 pub fn wall_break_hash(g: &mut crate::game::Game) -> f64 { todo!() }
 
 /// (src/game/wallbreak.ts:309 WallBreak.toLocal)
-pub fn wall_break_to_local(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, p: V3) -> V3 { todo!() }
+pub fn wall_break_to_local(g: &mut crate::game::Game, b: WallbreakBreakableId, p: V3) -> V3 { todo!() }
 
 /// (src/game/wallbreak.ts:310 WallBreak.toWorld)
-pub fn wall_break_to_world(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, l: V3) -> V3 { todo!() }
+pub fn wall_break_to_world(g: &mut crate::game::Game, b: WallbreakBreakableId, l: V3) -> V3 { todo!() }
 
 /// (src/game/wallbreak.ts:311 WallBreak.ci)
-pub fn wall_break_ci(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, ix: f64, iy: f64, iz: f64) -> f64 { todo!() }
+pub fn wall_break_ci(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> f64 { todo!() }
 
 /// (src/game/wallbreak.ts:312 WallBreak.xb)
-pub fn wall_break_xb(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, ix: f64) -> f64 { todo!() }
+pub fn wall_break_xb(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64) -> f64 { todo!() }
 
 /// (src/game/wallbreak.ts:313 WallBreak.zb)
-pub fn wall_break_zb(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, iz: f64) -> f64 { todo!() }
+pub fn wall_break_zb(g: &mut crate::game::Game, b: WallbreakBreakableId, iz: f64) -> f64 { todo!() }
 
 /// (src/game/wallbreak.ts:316 WallBreak.cellAt)
-pub fn wall_break_cell_at(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, p: V3, inside: Option<BoxId>) -> [f64; 3] { todo!() }
+pub fn wall_break_cell_at(g: &mut crate::game::Game, b: WallbreakBreakableId, p: V3, inside: Option<BoxId>) -> [f64; 3] { todo!() }
 
 /// (src/game/wallbreak.ts:324 WallBreak.cellCentre)
-pub fn wall_break_cell_centre(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, ix: f64, iy: f64, iz: f64) -> V3 { todo!() }
+pub fn wall_break_cell_centre(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> V3 { todo!() }
 
 /// (src/game/wallbreak.ts:326 WallBreak.cellBox)
-pub fn wall_break_cell_box(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, ix: f64, iy: f64, iz: f64) -> BoxId { todo!() }
+pub fn wall_break_cell_box(g: &mut crate::game::Game, b: WallbreakBreakableId, ix: f64, iy: f64, iz: f64) -> BoxId { todo!() }
 
 /// (src/game/wallbreak.ts:332 WallBreak.rectBox)
-pub fn wall_break_rect_box(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, arg1: [f64; 6]) -> crate::wallbreak::WallBreakRectBox { todo!() }
+pub fn wall_break_rect_box(g: &mut crate::game::Game, b: WallbreakBreakableId, arg1: [f64; 6]) -> crate::wallbreak::WallBreakRectBox { todo!() }
 
 /// (src/game/wallbreak.ts:336 WallBreak.pieces)
-pub fn wall_break_pieces(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, open: Option<&[u8]>) -> Vec<[f64; 6]> { todo!() }
+pub fn wall_break_pieces(g: &mut crate::game::Game, b: WallbreakBreakableId, open: Option<&[u8]>) -> Vec<[f64; 6]> { todo!() }
 
 /// (src/game/wallbreak.ts:350 WallBreak.rebuild)
-pub fn wall_break_rebuild(g: &mut crate::game::Game, b: &mut crate::wallbreak::Breakable) -> bool { todo!() }
+pub fn wall_break_rebuild(g: &mut crate::game::Game, b: WallbreakBreakableId) -> bool { todo!() }
 
 /// (src/game/wallbreak.ts:378 WallBreak.bump)
 pub fn wall_break_bump(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/wallbreak.ts:382 WallBreak.openCells)
-pub fn wall_break_open_cells(g: &mut crate::game::Game, b: &mut crate::wallbreak::Breakable, cells: &[f64], cause: crate::wallbreak::WallBreakOpenCellsCause, who: f64, dir: Option<V3>, quiet: Option<bool>, budget: Option<&mut crate::break_table::ShedBudget>) -> Option<crate::wallbreak::LevelChange> { todo!() }
+pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId, cells: &[f64], cause: crate::wallbreak::WallBreakOpenCellsCause, who: f64, dir: Option<V3>, quiet: Option<bool>, budget: Option<&mut crate::break_table::ShedBudget>) -> Option<crate::wallbreak::LevelChange> { todo!() }
 
 /// (src/game/wallbreak.ts:419 WallBreak.flags0)
 pub fn wall_break_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> { todo!() }
@@ -111,7 +111,7 @@ pub fn wall_break_on_change(g: &mut crate::game::Game, fn_: &crate::wallbreak::C
 pub fn wall_break_since(g: &mut crate::game::Game, serial: f64) -> Option<Vec<crate::wallbreak::LevelChange>> { todo!() }
 
 /// (src/game/wallbreak.ts:461 WallBreak.shed)
-pub fn wall_break_shed(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, cell: BoxId, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget) { todo!() }
+pub fn wall_break_shed(g: &mut crate::game::Game, b: WallbreakBreakableId, cell: BoxId, dir: Option<V3>, who: f64, budget: &mut crate::break_table::ShedBudget) { todo!() }
 
 /// (src/game/wallbreak.ts:483 WallBreak.restsOn)
 pub fn wall_break_rests_on(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, extra: Option<crate::wallbreak::AABB>) -> Vec<crate::wallbreak::AABB> { todo!() }
@@ -123,10 +123,10 @@ pub fn wall_break_held(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
 pub fn wall_break_near(g: &mut crate::game::Game, a: crate::wallbreak::AABB) -> Vec<f64> { todo!() }
 
 /// (src/game/wallbreak.ts:527 WallBreak.settle)
-pub fn wall_break_settle(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) { todo!() }
+pub fn wall_break_settle(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) { todo!() }
 
 /// (src/game/wallbreak.ts:533 WallBreak.drop)
-pub fn wall_break_drop(g: &mut crate::game::Game, b: Option<&crate::wallbreak::Breakable>, queue: &mut Vec<crate::wallbreak::AABB>, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) { todo!() }
+pub fn wall_break_drop(g: &mut crate::game::Game, b: Option<WallbreakBreakableId>, queue: &mut Vec<crate::wallbreak::AABB>, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) { todo!() }
 
 /// (src/game/wallbreak.ts:552 WallBreak.hungAt)
 pub fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) -> Vec<f64> { todo!() }
@@ -135,7 +135,7 @@ pub fn wall_break_hung_at(g: &mut crate::game::Game, wall: f64, at: V3, r: f64) 
 pub fn wall_break_board_like(g: &mut crate::game::Game, j: f64) -> bool { todo!() }
 
 /// (src/game/wallbreak.ts:582 WallBreak.hangers)
-pub fn wall_break_hangers(g: &mut crate::game::Game, b: &crate::wallbreak::Breakable, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, queue: &mut Vec<crate::wallbreak::AABB>, rects: &mut Vec<[f64; 4]>) { todo!() }
+pub fn wall_break_hangers(g: &mut crate::game::Game, b: WallbreakBreakableId, rect: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, queue: &mut Vec<crate::wallbreak::AABB>, rects: &mut Vec<[f64; 4]>) { todo!() }
 
 /// (src/game/wallbreak.ts:612 WallBreak.fall)
 pub fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::AABB, dir: Option<V3>, who: f64, quiet: bool, rects: &mut Vec<[f64; 4]>) -> bool { todo!() }

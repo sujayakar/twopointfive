@@ -187,7 +187,6 @@ impl Default for NavGrid { fn default() -> Self { Self::blank() } }
 /// (TypeScript: NavScratch, src/scene/collision.ts:1188)
 #[derive(Clone, Debug)]
 pub struct NavScratch {
-    pub busy: bool,
     pub g: Vec<f32>,
     pub f: Vec<f32>,
     pub came: Vec<i32>,
@@ -199,7 +198,6 @@ impl NavScratch {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         NavScratch {
-            busy: false,
             g: Vec::new(),
             f: Vec::new(),
             came: Vec::new(),
@@ -507,13 +505,34 @@ impl AsideOwnS {
 impl Default for AsideOwnS { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/collision.ts:239 AsideOwn.q, src/scene/collision.ts:239 AsideOwn.q)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct AsideOwnQ {
+    /// INVENTED by a review: see the proposals
+    pub stamp: Vec<i32>,
+    /// INVENTED by a review: see the proposals
+    pub id: f64,
+    /// INVENTED by a review: see the proposals
+    pub cell: Vec<i32>,
+    /// INVENTED by a review: see the proposals
+    pub seg: Vec<i32>,
+    /// INVENTED by a review: see the proposals
+    pub yaw: Vec<f64>,
+    /// INVENTED by a review: see the proposals
+    pub cos: Vec<f64>,
+    /// INVENTED by a review: see the proposals
+    pub sin: Vec<f64>,
 }
 impl AsideOwnQ {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
     pub fn zeroed() -> Self {
         AsideOwnQ {
+            stamp: Vec::new(),
+            id: 0.0,
+            cell: Vec::new(),
+            seg: Vec::new(),
+            yaw: Vec::new(),
+            cos: Vec::new(),
+            sin: Vec::new(),
         }
     }
 }

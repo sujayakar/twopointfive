@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// the tones in seat order (seats.ts SEAT_TONES; the generated `seat_tones()` holds them as words, and this answers the enum)
 const SEAT_TONES: [SeatTone; 2] = [SeatTone::You, SeatTone::Purple];
 
-// ---------------------------------------------------------------- the seams: what skeleton 3 still does not have
+// ---------------------------------------------------------------- the seams: what skeleton 4 still does not have
 
 /// seats.ts:213 `rawGame(g) !== g` with the first seat on Game: a pass over his view and a pass over the bare Game look alike here
 fn seam_in_first_seat_view(g: &mut Game) -> bool { todo!("needs: a word on Game set by with_seat, for 'inside a seat's view'") }
@@ -62,6 +62,13 @@ fn on_team(g: &Game, gd: GuardId) -> bool {
 /// `gd.unit?.seat ?? 0`
 fn unit_seat(g: &Game, gd: GuardId) -> f64 {
     g.gd[gd].unit.as_ref().and_then(|u| u.seat).unwrap_or(0.0)
+}
+/// `g.engine.lights.add(l)`: the stub takes `g` and the set that lives in `g`, so the set is out of `g` for the call
+fn lights_add(g: &mut Game, l: LightId) -> LightId {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    let l = crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+    l
 }
 /// the character id a player's man carries
 fn man_char_id(g: &Game, p: PlayerId) -> f64 { g.ch[g.pl[p].ch].id }
@@ -313,7 +320,7 @@ pub fn stand_men(g: &mut crate::game::Game) {
         // (written by his seat: with_seat is keyed by a man and he had none till now)
         if g.seat == s { g.player = p; } else { g.tab.cmd_seat[s].own.as_mut().unwrap().player = p; }
         let def = crate::rig_props::rail_light_def(man_char_id(g, p), g.tune.player_light);
-        g.pl[p].light = crate::render_lights::light_set_add(&mut g.engine.lights, def);
+        g.pl[p].light = lights_add(g, def);
     }
 }
 
@@ -378,7 +385,8 @@ pub fn cut_to_men(g: &mut crate::game::Game) {
     for i in 0..g.seats.len() {
         let s = g.seats[i];
         let at = over_seat(g, s, &mut |g: &mut Game| crate::game::game_follow_pos(g, None));
-        let c = &mut g.tab.cmd_seat[s].cam;
+        let cam = g.tab.cmd_seat[s].cam;
+        let c = &mut g.tab.camera[cam];
         c.target = v3::copy(at);
         c.desired = v3::copy(c.target);
         c.desired_serial = c.desired_serial.wrapping_add(1);   // (a whole write of `desired`: Seat.takeCut, cmd.ts:191)

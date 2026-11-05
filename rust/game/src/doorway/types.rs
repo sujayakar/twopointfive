@@ -19,7 +19,7 @@ pub struct St {
     pub spot: Option<V3>,
     pub door: Option<DoorId>,
     pub side: f64,
-    pub path: Option<Vec<V3>>,
+    pub path: Option<u32>,
     pub no_spot: f64,
     pub round_t: f64,
     pub funnel_t: f64,

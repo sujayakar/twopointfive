@@ -41,8 +41,21 @@ fn team_tint2(t: crate::teams::Team) -> V3 {
 fn seam_audio_play(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), None);
 }
-fn seam_steady_lights(g: &mut Game) -> f64 { todo!("needs: a light's ttl behind LightId, for g.engine.lights.lights") }
 fn seam_man_leaves(g: &mut Game, ch: CharId, gd: GuardId) { todo!("needs: ManCols of a body and a man for man_leaves") }
+
+/// `g.engine.lights.add(l)`: the stub takes `g` and the set that lives in `g`, so the set is lent out for the call and put back.   (guards.ts spawnUnit)
+fn lights_add(g: &mut Game, l: LightId) -> LightId {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    let fl = crate::render_lights::light_set_add(g, &mut set, l);
+    g.engine.lights = set;
+    fl
+}
+/// `g.engine.lights.remove(l)`, lent the same way.   (guards.ts releaseUnit)
+fn lights_remove(g: &mut Game, l: LightId) {
+    let mut set = core::mem::take(&mut g.engine.lights);
+    crate::render_lights::light_set_remove(g, &mut set, l);
+    g.engine.lights = set;
+}
 
 /// One more round for a side.   (guards.ts tickEngagement)
 fn rounds_add(r: &mut crate::guards::EngagementRounds, t: crate::teams::Team) {
@@ -455,7 +468,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Gua
         }
         panic!("spawnUnit: {} characters already stand (the player + {} guards/units) and the shadow-capsule budget is {} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first", chars, g.guards.len(), MAX_CHARACTERS);
     }
-    let steady = seam_steady_lights(g);
+    let steady = g.engine.lights.lights.iter().filter(|&&l| g.tab.light[l].ttl < 0.0).count() as f64;
     if steady + 1.0 > crate::render_lights::MAX_LIGHTS {
         panic!("spawnUnit: {} steady lights already exist and the light buffer holds {} (render/lights.ts) — his weapon light would never upload; despawn a unit first", steady, crate::render_lights::MAX_LIGHTS);
     }
@@ -489,7 +502,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Gua
         keys: Some(Vec::new()),
     });
     let def = crate::rig_props::torch_light_def(&format!("unitlight{}", id), id, g.tune.flash_intensity, g.tune.flash_inner, g.tune.flash_outer);
-    let fl = crate::render_lights::light_set_add(&mut g.engine.lights, def);
+    let fl = lights_add(g, def);
     let look = crate::game::GuardNewLook {
         tint2: Some(match o.tint2 { Some(t) => t, None => team_tint2(o.team) }),
         yaw: Some(o.yaw.unwrap_or(0.0)),
@@ -512,7 +525,7 @@ pub fn spawn_unit(g: &mut crate::game::Game, o: &crate::guards::UnitOpts) -> Gua
 /// What of a unit lives outside his row: his weapon light, his meter keys.   (guards.ts releaseUnit)
 pub fn release_unit(g: &mut crate::game::Game, gd: GuardId) {
     let fl = g.gd[gd].flashlight;
-    crate::render_lights::light_set_remove(&mut g.engine.lights, fl);
+    lights_remove(g, fl);
     let c = g.gd[gd].ch;
     let id = g.ch[c].id;
     crate::game::game_light_forget(g, &format!("unitC{}", id));

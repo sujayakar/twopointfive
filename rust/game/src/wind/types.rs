@@ -114,7 +114,7 @@ impl WindSourceKind {
 /// (TypeScript: PoolList, src/game/wind.ts:137)
 #[derive(Clone, Debug)]
 pub struct PoolList {
-    pub list: Vec<crate::wind::WindSource>,
+    pub list: Vec<WindWindSourceId>,
 }
 impl PoolList {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -129,13 +129,13 @@ impl Default for PoolList { fn default() -> Self { Self::blank() } }
 /// (TypeScript: Wind, src/game/wind.ts:142)
 #[derive(Clone, Debug)]
 pub struct Wind {
-    pub all: Vec<crate::wind::WindSource>,
-    pub active: Vec<crate::wind::WindSource>,
+    pub all: Vec<WindWindSourceId>,
+    pub active: Vec<WindWindSourceId>,
     pub to_pool: crate::wind::PoolList,
-    pub storm: crate::wind::WindSource,
+    pub storm: WindWindSourceId,
     pub lv_roofs: Option<Vec<Vec<f64>>>,
     pub annexed: Vec<DoorId>,
-    pub extra: Vec<crate::wind::WindSource>,
+    pub extra: Vec<WindWindSourceId>,
 }
 impl Wind {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
@@ -144,7 +144,7 @@ impl Wind {
             all: Vec::new(),
             active: Vec::new(),
             to_pool: crate::wind::PoolList::blank(),
-            storm: crate::wind::WindSource::zeroed(),
+            storm: WindWindSourceId(0),
             lv_roofs: None,
             annexed: Vec::new(),
             extra: Vec::new(),

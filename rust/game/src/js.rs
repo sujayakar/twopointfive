@@ -193,6 +193,72 @@ pub fn sort_by<T>(v: &mut [T], mut cmp: impl FnMut(&T, &T) -> f64) {
     });
 }
 
+/// `x.toFixed(digits)`: the decimal of the double's EXACT value, rounded half up at `digits` places (a tie goes to the larger number, as
+/// the language says; `format!("{:.1}")` rounds a tie to even and so differs at 0.25). `digits` 0 to 20, as JavaScript's.
+pub fn to_fixed(x: f64, digits: u32) -> alloc::string::String {
+    use alloc::string::{String, ToString};
+    if x.is_nan() {
+        return "NaN".to_string();
+    }
+    if x.is_infinite() {
+        return if x > 0.0 { "Infinity".to_string() } else { "-Infinity".to_string() };
+    }
+    let digits = if digits > 20 { 20 } else { digits };
+    let neg = x < 0.0;
+    let a = if neg { -x } else { x };
+    let bits = a.to_bits();
+    let ex = ((bits >> 52) & 0x7ff) as i32;
+    let frac = bits & 0x000f_ffff_ffff_ffff;
+    // a = mant × 2^e, exactly
+    let (mant, e) = if ex == 0 { (frac as u128, -1074) } else { ((frac | (1 << 52)) as u128, ex - 1075) };
+    let p10 = 10u128.pow(digits);
+    // n = round half up of a × 10^digits, exactly, in 128 bits where it fits (a below about 2^60 at 20 places: every number a game prints)
+    if a >= 1e21 {
+        // JavaScript itself gives up the fixed form here: its plain number-to-string, exponent form ("1e+21")
+        let s = alloc::format!("{:e}", a).replace('e', "e+");
+        return if neg { alloc::format!("-{}", s) } else { s };
+    }
+    // n = round half up of a × 10^digits, exactly. A double with e >= 0 is a whole number (below 2^70 here): its places are zeros.
+    let (n, whole): (u128, bool) = if e >= 0 {
+        (mant << e, true)
+    } else {
+        let s = (-e) as u32;
+        if s > 127 {
+            (0, false)
+        } else {
+            let v = mant * p10; // 53 bits × at most 67: fits
+            ((v + (1u128 << (s - 1))) >> s, false)
+        }
+    };
+    if whole {
+        let mut out = if neg { alloc::format!("-{}", n) } else { n.to_string() };
+        if digits > 0 {
+            out.push('.');
+            for _ in 0..digits {
+                out.push('0');
+            }
+        }
+        return out;
+    }
+    let mut d = n.to_string();
+    let w = digits as usize;
+    while d.len() < w + 1 {
+        d.insert(0, '0');
+    }
+    let mut out = String::new();
+    if neg {
+        out.push('-');
+    }
+    if w == 0 {
+        out.push_str(&d);
+    } else {
+        out.push_str(&d[..d.len() - w]);
+        out.push('.');
+        out.push_str(&d[d.len() - w..]);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -260,5 +326,130 @@ mod tests {
         let mut v = [(2, 'a'), (1, 'b'), (2, 'c'), (1, 'd')];
         sort_by(&mut v, |a, b| (a.0 - b.0) as f64);
         assert_eq!(v, [(1, 'b'), (1, 'd'), (2, 'a'), (2, 'c')]);
+    }
+    #[test]
+    fn to_fixed_is_javascripts() {
+        // (the double's bits, digits, what bun printed for x.toFixed(digits))
+        let cases: &[(u64, u32, &str)] = &[
+            (0x0, 0, "0"),
+            (0x0, 1, "0.0"),
+            (0x0, 2, "0.00"),
+            (0x0, 3, "0.000"),
+            (0x8000000000000000, 0, "0"),
+            (0x8000000000000000, 1, "0.0"),
+            (0x8000000000000000, 2, "0.00"),
+            (0x8000000000000000, 3, "0.000"),
+            (0x3fe0000000000000, 0, "1"),
+            (0x3fe0000000000000, 1, "0.5"),
+            (0x3fe0000000000000, 2, "0.50"),
+            (0x3fe0000000000000, 3, "0.500"),
+            (0x3ff8000000000000, 0, "2"),
+            (0x3ff8000000000000, 1, "1.5"),
+            (0x3ff8000000000000, 2, "1.50"),
+            (0x3ff8000000000000, 3, "1.500"),
+            (0x4004000000000000, 0, "3"),
+            (0x4004000000000000, 1, "2.5"),
+            (0x4004000000000000, 2, "2.50"),
+            (0x4004000000000000, 3, "2.500"),
+            (0x3fd0000000000000, 0, "0"),
+            (0x3fd0000000000000, 1, "0.3"),
+            (0x3fd0000000000000, 2, "0.25"),
+            (0x3fd0000000000000, 3, "0.250"),
+            (0x3fd6666666666666, 0, "0"),
+            (0x3fd6666666666666, 1, "0.3"),
+            (0x3fd6666666666666, 2, "0.35"),
+            (0x3fd6666666666666, 3, "0.350"),
+            (0x3ff0147ae147ae14, 0, "1"),
+            (0x3ff0147ae147ae14, 1, "1.0"),
+            (0x3ff0147ae147ae14, 2, "1.00"),
+            (0x3ff0147ae147ae14, 3, "1.005"),
+            (0xbfe0000000000000, 0, "-1"),
+            (0xbfe0000000000000, 1, "-0.5"),
+            (0xbfe0000000000000, 2, "-0.50"),
+            (0xbfe0000000000000, 3, "-0.500"),
+            (0xbf1a36e2eb1c432d, 0, "-0"),
+            (0xbf1a36e2eb1c432d, 1, "-0.0"),
+            (0xbf1a36e2eb1c432d, 2, "-0.00"),
+            (0xbf1a36e2eb1c432d, 3, "-0.000"),
+            (0x405edd2f1a9fbe77, 0, "123"),
+            (0x405edd2f1a9fbe77, 1, "123.5"),
+            (0x405edd2f1a9fbe77, 2, "123.46"),
+            (0x405edd2f1a9fbe77, 3, "123.456"),
+            (0x444b1ae4d6e2ef50, 0, "1e+21"),
+            (0x444b1ae4d6e2ef50, 1, "1e+21"),
+            (0x444b1ae4d6e2ef50, 2, "1e+21"),
+            (0x444b1ae4d6e2ef50, 3, "1e+21"),
+            (0x4415af1d78b58c40, 0, "100000000000000000000"),
+            (0x4415af1d78b58c40, 1, "100000000000000000000.0"),
+            (0x4415af1d78b58c40, 2, "100000000000000000000.00"),
+            (0x4415af1d78b58c40, 3, "100000000000000000000.000"),
+            (0x3eb0c6f7a0b5ed8d, 0, "0"),
+            (0x3eb0c6f7a0b5ed8d, 1, "0.0"),
+            (0x3eb0c6f7a0b5ed8d, 2, "0.00"),
+            (0x3eb0c6f7a0b5ed8d, 3, "0.000"),
+            (0x3ea0c6f7a0b5ed8d, 0, "0"),
+            (0x3ea0c6f7a0b5ed8d, 1, "0.0"),
+            (0x3ea0c6f7a0b5ed8d, 2, "0.00"),
+            (0x3ea0c6f7a0b5ed8d, 3, "0.000"),
+            (0xbff8000000000000, 0, "-2"),
+            (0xbff8000000000000, 1, "-1.5"),
+            (0xbff8000000000000, 2, "-1.50"),
+            (0xbff8000000000000, 3, "-1.500"),
+            (0x4002c28f5c28f5c3, 0, "2"),
+            (0x4002c28f5c28f5c3, 1, "2.3"),
+            (0x4002c28f5c28f5c3, 2, "2.35"),
+            (0x4002c28f5c28f5c3, 3, "2.345"),
+            (0x4058ffae147ae148, 0, "100"),
+            (0x4058ffae147ae148, 1, "100.0"),
+            (0x4058ffae147ae148, 2, "100.00"),
+            (0x4058ffae147ae148, 3, "99.995"),
+            (0x3fd5555555555555, 0, "0"),
+            (0x3fd5555555555555, 1, "0.3"),
+            (0x3fd5555555555555, 2, "0.33"),
+            (0x3fd5555555555555, 3, "0.333"),
+            (0xc005666666666666, 0, "-3"),
+            (0xc005666666666666, 1, "-2.7"),
+            (0xc005666666666666, 2, "-2.67"),
+            (0xc005666666666666, 3, "-2.675"),
+            (0x4132d687e4189375, 0, "1234568"),
+            (0x4132d687e4189375, 1, "1234567.9"),
+            (0x4132d687e4189375, 2, "1234567.89"),
+            (0x4132d687e4189375, 3, "1234567.891"),
+            (0x3fd3333333333334, 0, "0"),
+            (0x3fd3333333333334, 1, "0.3"),
+            (0x3fd3333333333334, 2, "0.30"),
+            (0x3fd3333333333334, 3, "0.300"),
+            (0x7ff8000000000000, 0, "NaN"),
+            (0x7ff8000000000000, 1, "NaN"),
+            (0x7ff8000000000000, 2, "NaN"),
+            (0x7ff8000000000000, 3, "NaN"),
+            (0x7ff0000000000000, 0, "Infinity"),
+            (0x7ff0000000000000, 1, "Infinity"),
+            (0x7ff0000000000000, 2, "Infinity"),
+            (0x7ff0000000000000, 3, "Infinity"),
+            (0xfff0000000000000, 0, "-Infinity"),
+            (0xfff0000000000000, 1, "-Infinity"),
+            (0xfff0000000000000, 2, "-Infinity"),
+            (0xfff0000000000000, 3, "-Infinity"),
+            (0x4011666666666666, 0, "4"),
+            (0x4011666666666666, 1, "4.3"),
+            (0x4011666666666666, 2, "4.35"),
+            (0x4011666666666666, 3, "4.350"),
+            (0x4020b0a3d70a3d71, 0, "8"),
+            (0x4020b0a3d70a3d71, 1, "8.3"),
+            (0x4020b0a3d70a3d71, 2, "8.35"),
+            (0x4020b0a3d70a3d71, 3, "8.345"),
+            (0x3ff7333333333333, 0, "1"),
+            (0x3ff7333333333333, 1, "1.4"),
+            (0x3ff7333333333333, 2, "1.45"),
+            (0x3ff7333333333333, 3, "1.450"),
+            (0x3fa70a3d70a3d70a, 0, "0"),
+            (0x3fa70a3d70a3d70a, 1, "0.0"),
+            (0x3fa70a3d70a3d70a, 2, "0.04"),
+            (0x3fa70a3d70a3d70a, 3, "0.045"),
+        ];
+        for &(b, f, want) in cases {
+            assert_eq!(to_fixed(f64::from_bits(b), f), want, "{:#x} {}", b, f);
+        }
     }
 }

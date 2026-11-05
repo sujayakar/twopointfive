@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-// ------------------------------------------------------------ what skeleton 3 still blocks (each is a line in notes.md)
+// ------------------------------------------------------------ what skeleton 4 still blocks (each is a line in notes.md)
 
 /// player.ts:266 Rifle.attachment: the getter's stub `rifle_attachment()` takes neither `g` nor the rifle. The fields are there, so this is the getter's own line (weapons.ts:533)
 fn seam_rifle_attachment(g: &mut crate::game::Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> {
@@ -16,14 +16,6 @@ fn seam_rifle_attachment(g: &mut crate::game::Game, rifle: FirearmId) -> Option<
 }
 /// player.ts:265 `rf.attachments[(rf.attIdx + 1) % Math.max(1, rf.attachments.length)]`: next_load's signature has `rf` and no `g`
 fn seam_next_attachment(rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!("needs: next_load(g, rf)") }
-/// player.ts:322 `L.enabled =`: a light's row has no accessor
-fn seam_light_set_enabled(g: &mut crate::game::Game, l: LightId, on: bool) { todo!("needs: a light's enabled, written") }
-/// player.ts:323 `L.radius`: a light's row has no accessor
-fn seam_light_radius(g: &mut crate::game::Game, l: LightId) -> f64 { todo!("needs: a light's radius, read") }
-/// player.ts:323 `L.pos =`: a light's row has no accessor
-fn seam_light_set_pos(g: &mut crate::game::Game, l: LightId, pos: V3) { todo!("needs: a light's pos, written") }
-/// player.ts:323 `L.dir =`: a light's row has no accessor
-fn seam_light_set_dir(g: &mut crate::game::Game, l: LightId, dir: V3) { todo!("needs: a light's dir, written") }
 
 /// a gun's row of WEAPONS (TypeScript: `gun.def`, the object itself)
 fn def_of(g: &crate::game::Game, def: crate::weapons::WeaponId) -> &crate::weapons::WeaponDef {
@@ -290,7 +282,7 @@ pub fn pose_gun_light(g: &mut crate::game::Game) {
     let rifle_up = crate::game::player_rifle_up(g, pl);
     let enabled = ((pistol_up && g.fa[pistol].light_on) || (rifle_up && g.fa[rifle].light_on))
         && !g.pl[pl].sprinting && !g.ch[c].anim.hide_held_item && !g.pl[pl].down && crate::kitanim::kit_gun_up(g);
-    seam_light_set_enabled(g, l, enabled);
+    g.tab.light[l].enabled = enabled;
     if enabled {
         let (lens, dir) = if rifle_up {
             let lp = crate::rig_props::sc20k_light_pose(g, c, None);
@@ -301,11 +293,11 @@ pub fn pose_gun_light(g: &mut crate::game::Game) {
         };
         let sh = g.ch[c].bones.get(Bone::UpperArmR).copied();
         let pos = match sh {
-            Some(sh) => { let r = seam_light_radius(g, l); crate::lighting::lens_clear(g, sh, lens, r, Some(l)) }
+            Some(sh) => { let r = g.tab.light[l].radius; crate::lighting::lens_clear(g, sh, lens, r, Some(l)) }
             None => lens,
         };
-        seam_light_set_pos(g, l, pos);
-        seam_light_set_dir(g, l, dir);
+        g.tab.light[l].pos = pos;
+        g.tab.light[l].dir = dir;
     }
 }
 
@@ -380,7 +372,7 @@ fn shell_row_as_weapon_row(r: &crate::gunreload::ShellRow) -> crate::weapons::We
 
 /// a tube gun's beat as the animator's (the same object in the TypeScript; `exact` is what tells it from a magazine change's)
 fn shell_row_as_beat(r: &crate::gunreload::ShellRow) -> crate::character::ReloadBeat {
-    crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack, keep: None, hand: None, exact: Some(r.exact) }
+    crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: r.rack.map(Some), keep: None, hand: None, exact: Some(r.exact) }
 }
 
 /// feedPlan's answer as the weapon's events hold it (the closures of player.ts:381-384 read it; they are ReloadEvents::Rifle now)
@@ -450,7 +442,7 @@ pub fn reload_in_hand(g: &mut crate::game::Game, sprinting: Option<bool>, bolt_o
                 }
                 None => {
                     let r = def_of(g, def).reload.clone();
-                    let b = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: if rack_it { r.rack } else { None }, keep: None, hand: None, exact: None };
+                    let b = crate::character::ReloadBeat { dur: r.dur, out: r.out, in_: r.in_, rack: if rack_it { r.rack.map(Some) } else { Some(None) }, keep: None, hand: None, exact: None };
                     crate::character::anim_reload(g, c, Some(r.dur), Some(b));
                 }
             }

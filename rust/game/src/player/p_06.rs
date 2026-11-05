@@ -624,18 +624,18 @@ pub fn cursor_hit(g: &mut crate::game::Game, ray: crate::player::CursorHitRay, o
 }
 
 /// The point the cursor's ray gives: where it hit, else the floor under it, else None.   (player.ts cursorPoint)
-pub fn cursor_point(g: &mut crate::game::Game, u: f64, v: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> {
+pub fn cursor_point(g: &mut crate::game::Game, cam: CameraId, u: f64, v: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> {
     match hit {
         Some(h) => Some(v3::mad(ray.ro, ray.rd, h.t)),
-        None => crate::camera::follow_camera_ground_point(g, u, v, Some(0.0)),
+        None => crate::camera::follow_camera_ground_point(g, cam, u, v, Some(0.0)),
     }
 }
 
 /// The frame's aim: the cursor's point, the interaction rows, then the reticle's snap to a man or a light.   (player.ts updateAim)
-pub fn update_aim(g: &mut crate::game::Game, input: InputId, canvas: crate::host_hud::View) {
+pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     let puppet_aim = g.puppet.as_ref().and_then(|p| p.aim);
     if let Some(aim) = puppet_aim {
-        let (sx, sy, front) = crate::camera::follow_camera_project(g, aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
+        let (sx, sy, front) = crate::camera::follow_camera_project(g, cam,aim, canvas.client_width, canvas.client_height, Some(f64::INFINITY), Some(1e-3));
         if front {
             g.tab.input[input].mouse_x = sx;
             g.tab.input[input].mouse_y = sy;
@@ -644,13 +644,13 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, canvas: crate::host
     let (mx, my) = (g.tab.input[input].mouse_x, g.tab.input[input].mouse_y);
     let u = mx / m::max(1.0, canvas.client_width);
     let v = my / m::max(1.0, canvas.client_height);
-    let ray = crate::camera::follow_camera_ray(g, u, v);
+    let ray = crate::camera::follow_camera_ray(g, cam, u, v);
     let me = g.pl[g.player].ch;
     let own = g.ch[me].id;
     let hit = cursor_hit(g, crate::player::CursorHitRay { ro: ray.ro, rd: ray.rd }, own);
     let hit_t = hit.as_ref().map(|h| h.t);
     let hit_index = hit.as_ref().map(|h| h.index);
-    let p = cursor_point(g, u, v, crate::player::CursorPointRay { ro: ray.ro, rd: ray.rd }, hit_t.map(|t| crate::player::CursorPointHit { t }));
+    let p = cursor_point(g, cam, u, v, crate::player::CursorPointRay { ro: ray.ro, rd: ray.rd }, hit_t.map(|t| crate::player::CursorPointHit { t }));
     let p = match p {
         Some(p) => p,
         None => aim_level(crate::player::AimLevelC { pos: g.ch[me].pos, body_yaw: g.ch[me].body_yaw }),
@@ -661,7 +661,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, canvas: crate::host
     };
     g.aim_point = p;
     let (w, h) = (canvas.client_width, canvas.client_height);
-    build_interactables(g, mx, my, w, h);
+    build_interactables(g, cam, mx, my, w, h);
     // A light TAKEN is KEPT while the cursor stays where it took it.
     let reach = m::min(crate::aim::SNAP_PX, g.k.aim.player.light_snap_px);
     let at = g.m.player.light_at.get(g.player).copied();
@@ -685,7 +685,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, canvas: crate::host
             }
             let Some(target) = it.target else { continue };
             let pos = it.pos;
-            let (sx, sy, front) = crate::camera::follow_camera_project(g, pos, w, h, None, None);
+            let (sx, sy, front) = crate::camera::follow_camera_project(g, cam,pos, w, h, None, None);
             if !front {
                 continue;
             }
@@ -712,7 +712,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, canvas: crate::host
             continue;
         }
         let com = chest_or(g, gd, 1.2);
-        let (sx, sy, front) = crate::camera::follow_camera_project(g, com, w, h, None, None);
+        let (sx, sy, front) = crate::camera::follow_camera_project(g, cam,com, w, h, None, None);
         if !front {
             continue;
         }
@@ -735,7 +735,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, canvas: crate::host
                 continue;
             }
             let com = chest_or(g, gd, 0.6);
-            let (sx, sy, front) = crate::camera::follow_camera_project(g, com, w, h, None, None);
+            let (sx, sy, front) = crate::camera::follow_camera_project(g, cam,com, w, h, None, None);
             if !front {
                 continue;
             }
@@ -818,7 +818,7 @@ fn chest_or(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
     }
 }
 
-// ---- seams: what skeleton 3 cannot give yet
+// ---- seams: what skeleton 4 cannot give yet
 
 /// Doors.USE_REACH: a class's static number the skeleton does not carry
 fn seam_use_reach(g: &mut crate::game::Game) -> f64 {

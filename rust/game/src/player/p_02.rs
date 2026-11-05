@@ -11,10 +11,6 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// g.audio.play(name, at, vol, { rate }): the stub's opts are JsMap<String, Opaque>, and Opaque holds no number
 fn seam_audio_play_rate(g: &mut Game, name: &str, at: Option<V3>, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to carry a rate") }
-/// pl.light.enabled = on
-fn seam_light_enabled(g: &mut Game, light: LightId, on: bool) { todo!("needs: a light's fields behind LightId") }
-/// L.peakIntensity = L.intensity = intensity; L.radius = radius
-fn seam_light_power(g: &mut Game, light: LightId, intensity: f64, radius: f64) { todo!("needs: a light's fields behind LightId") }
 /// rifle.attachment: the stub has no gun
 fn seam_rifle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!("needs: rifle_attachment with g and the gun's id") }
 /// rifle.left(a): the stub has no gun
@@ -236,8 +232,20 @@ fn shot_target(g: &mut Game) -> V3 {
     free_aim(g, None)
 }
 
+/// updateWorkPlant moves `W.at`, in the TypeScript the job's own array (handwork.ts samWork hands it on): the spot goes back to the job it came from.
+fn work_spot_back(g: &mut Game, pl: PlayerId, w: &crate::handwork::SamWork) {
+    use crate::handwork::SamWorkKind;
+    let Some(at) = w.at else { return };
+    match w.kind {
+        SamWorkKind::Wall => if let Some(s) = g.wall_charge.sam.as_mut() { s.at = at; },
+        SamWorkKind::Door => if let Some(s) = g.pl[pl].charging.as_mut() { s.at = at; },
+        SamWorkKind::Defuse => if let Some(s) = g.defuse.sam.as_mut() { s.at = at; },
+        SamWorkKind::Breaker | SamWorkKind::Drive | SamWorkKind::Switch => {}
+    }
+}
+
 /// One tick of the player: his keys, his legs, his aim, his guns and throws, his footfalls.   (player.ts updatePlayer)
-pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
+pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: CameraId) {
     use crate::game::{game_msg, SlotKind, ThrowKind};
     use crate::input::{input_lmb, input_lmb_hit, input_rmb, input_rmb_hit};
     use crate::weapons::{firearm_automatic, firearm_cancel_reload, firearm_reloading, firearm_rounds_ready, RifleAttachment};
@@ -246,7 +254,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let gun = g.pl[pl].pistol;
     g.pl[pl].pace = 1.0;
     g.pl[pl].dash = false; g.ch[c].anim.dash = 0.0; g.ch[c].anim.run_ready = false;
-    if let Some(cam) = g.director.cam.as_mut() { cam.peek_offset = None; }
+    g.tab.camera[cam].peek_offset = None;
     crate::aimweight::aim_weigh_begin(g, pl);
     crate::noshove::no_shove_begin(g, None);
     let launch_was = g.pl[pl].launch_held; g.pl[pl].launch_held = None;
@@ -274,7 +282,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
         release_wall(g);
         if g.pl[pl].holding.is_some() { free_held(g, crate::player::FreeHeldWhy::Shot); }
         g.ch[c].vel = [0.0, 0.0, 0.0];
-        let light = g.pl[pl].light; seam_light_enabled(g, light, false);
+        let light = g.pl[pl].light; g.tab.light[light].enabled = false;
         g.pl[pl].throw_preview = None;
         g.ch[c].anim.lockpick = false; g.ch[c].anim.long_gun = false;
         crate::character::character_update(g, c, dt);
@@ -303,10 +311,10 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
         g.ch[c].anim.speed = 0.0; g.ch[c].anim.upper = crate::character::UpperMode::None;
         arm_rifle(g, false, None);
         crate::character::character_update(g, c, dt);
-        let light = g.pl[pl].light; seam_light_enabled(g, light, false);
+        let light = g.pl[pl].light; g.tab.light[light].enabled = false;
         return;
     }
-    if g.pl[pl].holding.is_some() { crate::kitanim::kit_tick(g, None); update_hold(g, dt, input); return; }
+    if g.pl[pl].holding.is_some() { crate::kitanim::kit_tick(g, None); update_hold(g, dt, input, cam); return; }
     if g.pl[pl].pending_throw.is_some() && (g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || crate::handwork::sam_work(g).is_some()) { throw_off(g, pl); }
     if g.pl[pl].kick.is_some() { update_kick(g, dt); return; }
     if g.pl[pl].picking.is_some() { update_picking(g, dt, input); return; }
@@ -319,6 +327,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
             if crate::workstow::sam_stowing(g) { crate::kitanim::kit_tick(g, None); }
             let mut w = w.unwrap();
             update_work_plant(g, dt, &mut w);
+            work_spot_back(g, pl, &w);
             return;
         }
     }
@@ -430,7 +439,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
         reload_in_hand(g, Some(sprinting), None);
     }
     // movement input: none while the selector is open
-    let basis = crate::camera::follow_camera_planar_basis(g);
+    let basis = crate::camera::follow_camera_planar_basis(g, cam);
     let (fwd, right) = (basis.fwd, basis.right);
     let (mut mx, mut mz) = (0.0, 0.0);
     if !crate::game::player_list_open(g, pl) {
@@ -476,16 +485,16 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
         if g.pl[pl].wall.is_some() { wall_step_off(g, mx, mz, ml, crate::player::WallStepOffHow::Q); }
         else if !want_sprint {
             let mut why = crate::player::WallSnapWhy { blocked: false };
-            if !wall_snap(g, Some(&mut why), None) && !wall_snap_later(g, ml, crate::player::WallSnapLaterWhy { blocked: why.blocked }) {
+            if !wall_snap(g, cam, Some(&mut why), None) && !wall_snap_later(g, ml, crate::player::WallSnapLaterWhy { blocked: why.blocked }) {
                 game_msg(g, if g.pl[pl].dragging.is_some() { "hands full" } else if why.blocked { "can't get to the wall here" } else { "nothing to put your back to here" });
             }
         }
     }
-    else if g.k.wallsnap.on { wall_snap_pending(g, dt, want_sprint); }
-    if g.k.wallsnap.on && g.k.wallsnap.press && !rooted && stalk.is_none() && !crate::rails::rails_locks_wall(g) { wall_press(g, dt, input, mx, mz, ml, want_sprint); }
+    else if g.k.wallsnap.on { wall_snap_pending(g, dt, cam, want_sprint); }
+    if g.k.wallsnap.on && g.k.wallsnap.press && !rooted && stalk.is_none() && !crate::rails::rails_locks_wall(g) { wall_press(g, dt, input, cam, mx, mz, ml, want_sprint); }
     let ran_on = wall_ran_on(g, pl, input);
     if g.pl[pl].wall.is_some() && want_sprint && !ran_on { wall_step_off(g, mx, mz, ml, crate::player::WallStepOffHow::Run); }
-    let on_wall = g.pl[pl].wall.is_some() && move_on_wall(g, dt, mx, mz, ml);
+    let on_wall = g.pl[pl].wall.is_some() && move_on_wall(g, dt, cam, mx, mz, ml);
     if !on_wall {
         if want_sprint && g.pl[pl].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
         own_legs(g, pl, |g, m| sprint_stance(g, m, want_sprint, stalk.is_some()));
@@ -847,7 +856,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
         g.pl[pl].throw_preview = Some(sol.clone());
         let hold_ok = match g.ch[c].anim.kit_hold {
             None => true,
-            Some(crate::character::KitItem::Can) => g.pl[pl].kit_can == slot_kind,
+            Some(Some(crate::character::KitItem::Can)) => g.pl[pl].kit_can == slot_kind,
             Some(_) => false,
         };
         if input_lmb_hit(g, input) && g.pl[pl].fire_cd <= 0.0 && hold_ok { do_throw(g, &sol, kind); g.pl[pl].fire_cd = 0.6; }
@@ -884,7 +893,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let infinite = g.infinite_ammo;
     g.fa[gun].infinite = infinite; g.fa[rifle].infinite = infinite;
     let (light, power, radius) = (g.pl[pl].light, g.tune.player_light, g.engine.settings.flashlight_radius * 0.7);
-    seam_light_power(g, light, power, radius);
+    { let l = &mut g.tab.light[light]; l.peak_intensity = power; l.intensity = power; l.radius = radius; }
     pose_gun_light(g);
     // footsteps, for audio and the AI's hearing
     let phase = g.ch[c].anim.phase;

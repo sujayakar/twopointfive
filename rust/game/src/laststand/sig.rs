@@ -99,7 +99,7 @@ pub fn choose(g: &mut crate::game::Game, men: &[RoomfightDefId], known: &[V3], m
 pub fn start_check(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/laststand.ts:365 tickCheck)
-pub fn tick_check(g: &mut crate::game::Game, c_2: &mut crate::laststand::Check) { todo!() }
+pub fn tick_check(g: &mut crate::game::Game) { todo!() }
 
 /// (src/game/laststand.ts:389 lone)
 pub fn lone(st: &mut crate::laststand::State) -> bool { todo!() }

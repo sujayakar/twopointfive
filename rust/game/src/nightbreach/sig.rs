@@ -63,7 +63,7 @@ pub fn night_breach_owns_pair(g: &mut crate::game::Game) -> bool { todo!() }
 pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> { todo!() }
 
 /// (src/game/nightbreach.ts:330 NightBreach.tick)
-pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId) { todo!() }
+pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) { todo!() }
 
 /// (src/game/nightbreach.ts:370 NightBreach.blindFire)
 pub fn night_breach_blind_fire(g: &mut crate::game::Game) { todo!() }
