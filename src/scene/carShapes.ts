@@ -229,7 +229,7 @@ export function vanShapes(P: CarPaints) {
     tops: { load: { c: [-0.5, 1.405, 0], h: [1.4, 0.545, 0.9], shape: load } as BowedTop },
     wheel: (s: number) => wheelShape(wheelH, s, P.hub),
     body: { cut: bodyCut, old: true, with: arches } as BoxShape,
-    bumper: onCorners([0.05, 0.11, 0.9], bodyCut, [2.43, 0, 0], 0.09), step: onCorners([0.05, 0.07, 0.9], bodyCut, [-2.43, 0, 0], 0.09),
+    bumper: onCorners([0.04, 0.11, 0.9], bodyCut, [2.44, 0, 0], 0.09), step: onCorners([0.04, 0.07, 0.9], bodyCut, [-2.44, 0, 0], 0.09),
     bonnet: { arc: { axis: 1, rise: 0.2 }, ...cutOf(bonnetH, [fallPlane(bonnetH, 1, 0.18, 0.15), ...withCorners([cornerPlanes(bodyH, 0.22, 1, 1, 3)[1], cornerPlanes(bodyH, 0.22, 1, -1, 3)[1]], [2.0, 0, 0])]), old: true } as BoxShape,
     doors: { with: rehome(G.posts, sub(doorsC, glassC)) } as BoxShape,
     glass: G.glass,

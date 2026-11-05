@@ -1,2 +1,2 @@
-# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-0837e28a13fe6cd773448158c8079bb8792b3802
+# 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+cbcf310b1f0c923becf747473f2855d7a5b16e9b
