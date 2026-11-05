@@ -45,7 +45,7 @@ export async function rescueflushCheck(): Promise<boolean> {
   const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const { answerStand, seeded } = await import('./answers.ts');
   const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-  const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`), { lanesRestore, laneWarns, laneCovers, LANES } = await import(`${ROOT}/src/game/lanes.ts`);
+  const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`), { lanesRestore, laneKnownAt, laneCovers, LANES } = await import(`${ROOT}/src/game/lanes.ts`);
   const was = { end: { ...RESCUEEND }, flush: { ...RESCUEFLUSH }, lanes: LANES.on }, rnd = Math.random; let all = true;
   const BREAK = process.env.RESCUEFLUSH_BREAK === '1', K = RESCUEFLUSH;
   /** has this mission's hostage room a side door? (asked of its level's own scenario data once a floor stands: (h) is for those) */

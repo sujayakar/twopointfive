@@ -684,6 +684,7 @@ export class Guard extends GuardCols {
    *  widening out to a search point away from it ('fan'); null = ordinary suspicion. Cleared whenever he leaves 'suspicious'. */
   bodyDuty: { body: Guard; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: Vec3 | null } | null = null;
   dropped: Item | null = null;   // the torch / pistol that left his hand when he died (the sputtering light rides it)
+  handleGateT = -Infinity;   // when the handle's gate (handleside.ts) last had his feet, by the game's clock
   staysInRooms = false;   // HIS SQUAD'S ORDER IS TO STAY IN ITS ROOMS (enemysquads.ts, a squad's `mayLeave: false`): a fact of his order, not an owner
   fled = false;   // THE WEAPON HAS LEFT HIS HAND FOR GOOD (runner.ts): unarmed, out of the fight and nobody's living hostile from that frame on — running, low in a corner, gone or since shot. A fact of the man, not an owner: it outlasts his death
   gunLostAt = -1;   // a LIVING man whose gun was knocked from his hand at the grab (HOLD.dropGun): dropped = that gun, this = when — his hands are empty (guards.ts inHand) and its light dies on the floor; −1 again once he has it back (player.ts handBack)

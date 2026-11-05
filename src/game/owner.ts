@@ -18,8 +18,10 @@ import type { Guard } from './game';
 /** the rules that can hold a man, strongest first. `why[0]` is what is shown when nothing more is said, a lower claim coming back to the top included */
 const RULES = [
   // HIS BODY: as `updateGuard` tries them (dead, held and script are his own fields, not claims: `ownerOf` reads them in their places)
+  { name: 'frag', why: ['a live grenade he knows of has a line to him'] },
   { name: 'runner', why: ['has said he is done', 'dropped it and ran'] },
   { name: 'morale', why: ['a blast has him ducked or broken'] },
+  { name: 'startle', why: ['caught alone at first sight, running for cover'] },
   // WHO MAY MOVE HIM OFF HIS POST
   { name: 'stand', why: ['one of the last stand: in its room, on his way to it, or told to hold where he is'] },
   { name: 'squadLeg', why: ['his squad has sent him, or is about to'] },
@@ -85,7 +87,7 @@ export function ownerOf(gd: Guard): OwnerRule | 'dead' | 'held' | 'script' | nul
   return r ? rowOf(r).name : null;
 }
 /** the rules of his body stand above `script`, the rest below it */
-const SCRIPT_RANK = rankOf(OWN.morale);
+const SCRIPT_RANK = rankOf(OWN.startle);
 /** what the panel says of one man */
 function ownerWords(gd: Guard, t: number): string {
   const who = ownerOf(gd);
