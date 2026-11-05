@@ -347,7 +347,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   [--quiet] [--md f] [--json f]` asks the nineteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
   kit picture · look · lived · floor · ground · leak · key · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
-  checks as they stand (export `--check`, level-lint, door-size, second-way-check, marksight-check, lived-check, kitview-plan, level-names-check, floor-order-check,
+  checks as they stand (export `--check`, level-lint, door-size, second-way-check, marksight-check, walked-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
   gaps in seventeen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
@@ -1082,6 +1082,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (frozen; shipped with lived rooms off; shipped) are the step before's, 42 of 42 each. SEEN on the software adapter only (stills of the lot, the cubicles, the
   break room, the server room and the whole floor, the step before against this one); never on a GPU: whether the pavers' joints and the panels' fixing holes
   read at 60 frames, and the lino's shine as enamel, nobody knows.
+- **A level's starts and its doors are on a way, and what is laid by hand is drawn over the ways** (the worn paths, 2026-11-05; tools and count
+  files only: no level file, no page and no run moves). The maintainer, 11-04: "wear, paths in the ground, different materials can all tell a story for
+  how people walk through the level, its logic, leading the player for game play". The rule that works out where a level is walked is the look task's
+  (`src/scene/ways.ts levelWays`; `docs/agents/render.md`, "HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES"). This is what follows on the levels.
+  THE CHECK: `bun run tools/qa/walked-check.ts [level …] [--write]` (`probes.ts walked`, family `missions`; `level-needs.ts --run` lists it). It asks
+  each level AS THE PAGE LOADS IT, the ways' one reader: the lived rooms and the dressing in, said to the loader by word whatever the caller's stand
+  (their furniture is on the walk grid), the office with its script; a look twin is its plain file. (1) No way is without a path, no name its own
+  `scenarios.walked` asks for is missing, every count file is a level's and names what the level has, and a look twin walks as its plain file (grid, doors, ways). (2) From every START the level stands (anything
+  in its scenarios that says where `sam` stands, read as `marksight-check` reads its men: no kind of mission is named; and its own spawn where it
+  stands none or where the plain night is played) a team's way or the author's own LEAVES and runs two metres or more, on the levels the mission list
+  draws. (3) Every DOOR is on a way: a traced way two metres or longer crosses its frame within the frame's width or ends at it (a team sent to a
+  door, the author's row to one, the yard's ways from outer door to outer door). A way that only passes a door along its wall does not lead to it,
+  and the doorstep every door has in the map is no way. WHAT THE RULE DOES NOT REACH IS OWED BY NAME in a file a level
+  (`tools/qa/fixtures/walked/<level>.txt`): red when a level owes one its file does not name; one that has a way now is said and `--write` drops it
+  (until then the line would excuse it again); a `#` line is a note and is kept.
+  AS FIRST RUN: 45 levels, 856 ways, none lost; 50 starts on 29 listed levels, ONE owed (the office's plain night: the rule walks from a spawn only
+  where no scenario stands a team); 393 doors, 84 OWED in 30 files (inner doors nobody's shortest way uses, the block 10 of 16; and the lone outer door of three showrooms).
+  `WALKED_BREAK=1` asks the ways with no routes and no scenarios: red, every start and 209 doors, 40 levels (the five it cannot bite are named). THE LIST IS THE WORK LEFT: a
+  `scenarios.walked` row to a door gives it a way (`docs/level-format.md`), or the rule learns to walk to every door (the look task's function).
+  THE OVERLAY: `bun run tools/levels/walked-overlay.ts <level …> [--out dir] [--px 24]` (the same level, ways and starts as the check's; a look twin
+  asked by name is drawn with its own flat things over its plain file's ways) writes a picture of the level from above (the walk grid, every flat
+  thing lying on the ground in its group's colour, the ways as lines by kind, doors, starts) and a table a group: boxes, square metres, how much of it
+  lies on a lane, and how much of the lanes lies under it, both by area. No list of what a hand-laid path is: a level's groups say (the pass:
+  `snow.paths` 53 % on a lane and under 13 % of the lanes, `snow.cleared` 45 %, `snow.ruts` 8 %; the block's look: 213 flat things, 26 %). It is for
+  deciding, band by band, what the lanes can replace. NO HAND-LAID PATH IS RETIRED BY THIS STEP: the lanes are the look page's only, and the first
+  pair on a real card read the derived lane too weak beside the bands (the dress goal's rule: retire no band until its lane alone reads as clearly).
 - **The pass's dressing is the kit's: what is done to a wall's face, round things that lie, and a window's two forms** (the library, 2026-11-05; no
   switch: kit pieces and the level files that lay them, on every stand; the shapes among them are the shape rule's, `SHAPES`). The maintainer, of
   dressing the levels: "I'd love for us to have a library of objects, materials, etc. that we reuse across them". The pass's house front and its yard's
