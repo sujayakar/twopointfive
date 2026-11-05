@@ -315,7 +315,8 @@ export class Throwables {
     if (g === null) return ruleFell('items', 'a pool with no game (a stage\'s)');
     const M = this.col.rulesWorld(this.col.dynamicBoxes); if (M === null) return null;
     if (this.col.rulesPanes() < 0) return null;   // (this file's rays ask the pane's rule; each walk below asks it again)
-    return M.things(this.props) ? M : ruleFell('items', 'more furniture, or more parts of it, than the copy holds');
+    if (!M.things(this.props)) throw new Error('the box world\'s copy would not take the level\'s furniture: more things, or more boxes of them, than its tables hold — and a level of more is not loaded (game/levelfit.ts levelOver)');   // (cannot happen)
+    return M;
   }
   /** THE MODULE'S WALK from row `from` down (rust/sim/src/items.rs update): the hand-over written, the walk asked, the tallies kept, what it listed
    *  copied out of the module's memory onto `ev`. → the row it hands back for this side to step, or −1 */
