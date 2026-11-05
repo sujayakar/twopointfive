@@ -42,6 +42,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/math/exact.ts other': 'CONFIG · the same fourteen functions from elsewhere (the Rust module\'s: src/sim/sim.ts RUST.maths), the same bits whoever works them out; set by that switch alone',
   'src/math/exact.ts pow10': 'CACHE · the powers of ten by exponent, made on first use from the literals; the same whoever asks',
   'src/math/exact.ts remade': 'CONST · the functions the modules hand to onExact as they load; never written after',
+  'src/math/exact.ts EXACT': 'CONFIG · the switch object over `installed`: written on by the page\'s boot and the harness\'s stand-up before anything is built (sim.ts mathsUp, standup.ts pinMaths) and by nothing in play; no knob table any more, since no recording or recipe may carry it',
   'src/game/dress.ts DRESS': 'CONFIG · which picture-only steps of a tick this host takes (every row up in the page and on both stands; a host that draws nothing may put them down). The game is the same to the bit either way, which tools/qa/dress-check.ts holds: nothing a snapshot must carry',
   'src/sim/men/store.ts held': 'CACHE · the module\'s schema has been held to this file\'s, once a process',
   'src/sim/men/store.ts ownFor': 'CACHE · which store\'s own bytes the view below is of: a view holds nothing of its own',
