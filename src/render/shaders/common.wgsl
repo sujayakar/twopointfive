@@ -1302,16 +1302,19 @@ fn portalSoft(li: Light, high: f32) -> f32 { return li.cosOuter * high * (2.0 / 
 /// bands (the maintainer on his GPU, at dusk: "orange door has horizontal banding when open, not when closed"). A patch of EVEN brightness sends a
 /// face exactly what the angles its edges subtend say (a polygon's vector irradiance: Lambert's sum over its edges, the patch cut at the face's own
 /// horizon first), near or far. So the part of the rectangle a point sees (portalSeen) is cut into PORTAL_PIECES pieces that are each nearly even:
-/// the ground's, below the receiver's own height, which IS one brightness (portalOutside); and the sky above it in two halves along the wall (halves
-/// by angle from the receiver, so a long opening seen from close is not one piece), each half cut where skyRadiance's ramp from the horizon ends
-/// over its middle (by height over distance, so the cut moves with the receiver and is no line on a wall). A sky piece's brightness runs straight
+/// the ground's, below the receiver's own height, which IS one brightness (portalOutside); and the sky above it, cut where skyRadiance's ramp from
+/// the horizon ends over the stretch's middle by angle from the receiver (by height over distance, so the cut moves with the receiver and is no
+/// line on a wall). (Until 11-05 the sky was also cut in two halves along the wall, five pieces in all, "so a long opening seen from close is not
+/// one piece". Against a sum over the opening's own points, tools/qa/portal-check.ts, the halves halved an error that is about a hundredth of a
+/// place's light without them under the most uneven sky an hour has, on every kind of face alike, and they were two fifths of what the sum cost
+/// every pixel in an opening's reach: docs/agents/render.md, AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, has the numbers and what was tried.) A sky piece's brightness runs straight
 /// from its foot to its head and so, near enough, does how squarely the face takes it: the piece counts as bright as the mean of the one weighed by
 /// the other, read where the part of it the face sees lies (portalEnds, portalMean). What is exact is the geometry; the sky's own ramp is followed to a few per
 /// cent from a metre off and to a third in the worst corner tools/qa/portal-check.ts could find (a floor at the sill of a long opening is a fifth
 /// over). The eight points stay as what a shadow ray is AIMED by (direct_common.wgsl shadowSample), where a point is all a ray can be, laid in the
 /// part of the seen rectangle that stands above the face's own horizon (portalAbove), so a face that takes a sliver of the opening has rays on the
 /// sliver.
-const PORTAL_PIECES: i32 = 5;           // the ground's, and the sky's two halves along the wall, each in two: its ramp and what is over it
+const PORTAL_PIECES: i32 = 3;           // the ground's, the sky's ramp, and the sky over the ramp
 const PORTAL_RAMP: f32 = 0.4364;        // the height over the level distance at which skyRadiance's ramp ends (rd.y = 0.4: its 2.5)
 /// one edge's share of a polygon's vector irradiance: half the angle the edge subtends, about the normal of the plane through it and the point (a, b:
 /// unit, from the point to the edge's two ends). The angle over its sine by the fit area lights are drawn with everywhere (a ratio of two quadratics
@@ -1335,20 +1338,18 @@ fn portalQuad(c: array<vec3f, 4>, N: vec3f) -> vec3f {
   return F;
 }
 /// piece i of the part of a portal a point sees (d = from the point to the rectangle's middle, see = portalSeen's): 0 = what is below the point's own
-/// height (the ground's), 1 and 2 = the sky's ramp and what is over it in the half toward the wall's low end, 3 and 4 = the same in the other half.
+/// height (the ground's), 1 = the sky's ramp, 2 = the sky over it.
 /// Its sides, m: .xy = its two ends along the wall from the point's foot on the plane, .zw = its foot and its head from the point's own height.
 /// .w ≤ .z = no such piece from here
 fn portalPiece(li: Light, d: vec3f, see: vec4f, hh: f32, i: i32) -> vec4f {
   let pz = -dot(d, li.dir); let px = dot(d, vec3f(li.dir.z, 0.0, -li.dir.x));
   let X0 = (see.x - see.z) * li.cosOuter + px; let X1 = (see.x + see.z) * li.cosOuter + px; let y0 = (see.y - see.w) * hh + d.y; let y1 = (see.y + see.w) * hh + d.y;
   if (i == 0) { return vec4f(X0, X1, y0, min(y1, 0.0)); }
-  // the two halves by angle: the way that halves the angle between two ways from the foot meets the wall where their lengths divide it
-  let r0 = length(vec2f(X0, pz)); let r1 = length(vec2f(X1, pz)); let Xs = (X0 * r1 + X1 * r0) / (r0 + r1); let rs = length(vec2f(Xs, pz));
-  var xa = X0; var xb = Xs; var ra = r0; var rb = rs;
-  if (i > 2) { xa = Xs; xb = X1; ra = rs; rb = r1; }
-  let lo = max(y0, 0.0); let cut = min(max(PORTAL_RAMP * length(vec2f((xa * rb + xb * ra) / (ra + rb), pz)), lo), y1);   // (the ramp's end over this half's own middle, by angle again)
-  if ((i & 1) == 1) { return vec4f(xa, xb, lo, cut); }
-  return vec4f(xa, xb, cut, y1);
+  // the stretch's middle by angle: the way that halves the angle between the ways from the foot to its two ends meets the wall where their lengths divide it
+  let r0 = length(vec2f(X0, pz)); let r1 = length(vec2f(X1, pz));
+  let lo = max(y0, 0.0); let cut = min(max(PORTAL_RAMP * length(vec2f((X0 * r1 + X1 * r0) / (r0 + r1), pz)), lo), y1);   // (the ramp's end over that middle)
+  if (i == 1) { return vec4f(X0, X1, lo, cut); }
+  return vec4f(X0, X1, cut, y1);
 }
 /// a piece's corners from the point, unit, walked so that portalQuad's sum points at the piece (q = portalPiece's; pz = the point's distance from the plane)
 fn portalCorners(li: Light, q: vec4f, pz: f32) -> array<vec3f, 4> {
