@@ -22,6 +22,8 @@ const { quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { scenePrelude } = await import(`${ROOT}/src/render/frame.ts`);
 const { cutConfig, cutRecord, cutThrough, cutPrism, cutFit, cutContains, cutVerts, packCut, MAX_CUT_PLANES, CUT_ROWS, CUT_STRIDE } = CUT;
 const { makeBox, rayBox, BoxWorld, BoxFlag, GEO_STRIDE } = BX;
+import { cutPlanes, cutPlanesLoop } from './cut-rule.ts';
+import { readFileSync } from 'node:fs';
 
 type Vec3 = [number, number, number];
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -63,15 +65,7 @@ function gpuIsect(b: any, rows: Float32Array, o: Vec3, d: Vec3, tmax: number): [
   const h = b.h.map(Math.fround); const tmn = [0, 0, 0]; let tN = -Infinity, tF = Infinity;
   for (let a = 0; a < 3; a++) { const inv = 1 / (Math.abs(ld[a]) < 1e-8 ? (ld[a] < 0 ? -1e-8 : 1e-8) : ld[a]); const tA = (-h[a] - lo[a]) * inv, tB = (h[a] - lo[a]) * inv; tmn[a] = Math.min(tA, tB); tN = Math.max(tN, tmn[a]); tF = Math.min(tF, Math.max(tA, tB)); }
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
-  let code = 7;
-  for (let k = 0; k < CUT_ROWS; k++) {
-    const q = k * 4; const pl = [rows[q], rows[q + 1], rows[q + 2]], w = rows[q + 3];
-    if (pl[0] === 0 && pl[1] === 0 && pl[2] === 0) break;
-    const den = dot(pl, ld), num = w - dot(pl, lo);
-    if (den < 0) { const t = num / den; if (t > tN) { tN = t; code = -1 - k; } }
-    else if (den > 0) tF = Math.min(tF, num / den);
-    else if (num < 0) return [-1, 0];
-  }
+  let code: number; [tN, tF, code] = cutPlanes(rows, lo, ld, tN, tF, x => x);   // (the two fours: tools/qa/cut-rule.ts)
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
   if (tN < 0) return [0, 7];
   if (code < 0) return [tN, code];
@@ -163,6 +157,37 @@ export async function cutboxesRay(): Promise<boolean> {
     }
     F.verdict(badT === 0 && badN === 0 && badMiss === 0 && hits > 5000 && cutHits > 1000, 'rayBox on a cut box = the world-space half-space clip: same hit or miss, same t, same normal', `${rays} rays · ${hits} hits (${cutHits} on a cut face) · ${badMiss} hit/miss · ${badT} t · ${badN} normal · worst Δt ${worstT.toExponential(1)} · ${planes} planes over 300 boxes (${rotBoxes} fully rotated)`);
     F.verdict(gpuBad === 0 && gpuFace === 0, 'the GPU rule (isectBox + isectCut over the packed f32 rows) lands on the same face at the same t', `${gpuBad} off by > 0.2 mm or missed · ${gpuFace} another face · worst Δt ${gpuWorst.toExponential(1)} m · ${gpuSkip} grazes under 1 mm skipped`);
+    // THE BOX TEST HAS NO LOOP (common.wgsl cutFour: a loop inside the test every walk writes into its own loops doubled the fog's march on an NVIDIA card). Two
+    // halves: the text between cutFour and the box test's end holds no loop statement and takes the record as two fours of the eight rows; and the fours give,
+    // bit for bit in f32, what the planes give one by one (cut-rule.ts cutPlanesLoop: the test as it was, and cutClip's walk) — over seeded records with what a
+    // level's own rarely hold: the same plane twice (a tie: the FIRST is the face), a zero normal in the middle (the record ends there, whatever follows), a pad
+    // row carrying an arc, a ray along a plane, on either side of it. NOLOOP_BREAK=1 (must FAIL, both): a loop written back, and a tie given to the last plane.
+    { const BRK = process.env.NOLOOP_BREAK === '1', fr = Math.fround;
+      const cw = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8');
+      const code = (cw.slice(cw.indexOf('fn cutFour('), cw.indexOf('fn boxNormalFromCode(')) + (BRK ? '\nfor (var k = 0u; k < CUT_ROWS; k++) { }' : '')).replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      const loops = (code.match(/\b(for|while|loop)\b/g) ?? []).length;
+      const fours = code.includes('let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));') && code.includes('fn isectBox(') && code.includes('return isectCut(lo, ld, tmn, tN, tF, tmax, bi);');
+      F.verdict(loops === 0 && fours && CUT_ROWS === 8, 'the box test holds no loop: a record\'s eight rows are taken as two fours', `${loops} loop statement${loops === 1 ? '' : 's'} between cutFour and the box test\'s end · two fours of ${CUT_ROWS} rows ${fours}`);
+      const S = seeded(4711), pick = <T,>(a: T[]): T => a[(S() * a.length) | 0];
+      let n = 0, differ = 0, hitsN = 0, byPlane = 0, ended = 0;
+      for (let it = 0; it < 300000; it++) {
+        const rows = new Float32Array(CUT_ROWS * 4), cnt = (S() * 9) | 0, snap = S() < 0.3;
+        for (let k = 0; k < CUT_ROWS; k++) { const q = k * 4;
+          if (k >= cnt) { rows[q + 3] = 1 + (k === CUT_ROWS - 1 && S() < 0.5 ? S() * 3 : 0); continue; }
+          if (S() < 0.03) { rows[q + 3] = pick([1, -1, 0]); ended++; continue; }
+          let nx = S() - 0.5, ny = S() - 0.5, nz = S() - 0.5;
+          if (snap) { const a = (S() * 3) | 0; nx = a === 0 ? pick([1, -1]) : 0; ny = a === 1 ? pick([1, -1]) : 0; nz = a === 2 ? pick([1, -1]) : 0; if (S() < 0.3) { nx = pick([0, 1, -1, 0.5]); ny = pick([0, 1, -1, 0.5]); } }
+          const L = Math.hypot(nx, ny, nz) || 1; rows[q] = nx / L; rows[q + 1] = ny / L; rows[q + 2] = nz / L; rows[q + 3] = snap ? pick([0, 0.25, 0.5, -0.25, 1]) : (S() - 0.3) * 1.2;
+          if (k > 0 && S() < 0.15) for (let c = 0; c < 4; c++) rows[q + c] = rows[q - 4 + c]; }
+        const lo = (snap ? [pick([0, 0.5, -0.5, 2, -2]), pick([0, 0.5, -0.5, 2]), pick([0, 0.25, -3])] : [(S() - 0.5) * 6, (S() - 0.5) * 6, (S() - 0.5) * 6]).map(fr);
+        let ld = snap ? [pick([0, 1, -1]), pick([0, 1, -1, 0.5]), pick([0, 1, -1])] : [S() - 0.5, S() - 0.5, S() - 0.5]; if (!ld[0] && !ld[1] && !ld[2]) ld = [1, 0, 0]; ld = ld.map(fr);
+        const tN0 = fr(snap ? pick([-1, 0, 0.5, 1, 2]) : (S() - 0.3) * 4), tF0 = fr(tN0 + (snap ? pick([0, 0.5, 1, 4]) : S() * 5)), tmax = fr(S() < 0.2 ? S() * 3 : 100);
+        const end = (r: [number, number, number]): [number, number] => r[0] > r[1] || r[1] < 0 || r[0] > tmax ? [-1, 0] : r[0] < 0 ? [0, 7] : [r[0], r[2]];
+        const one = end(cutPlanesLoop(rows, lo, ld, tN0, tF0, fr)); let four = end(cutPlanes(rows, lo, ld, tN0, tF0, fr));
+        if (BRK && four[1] < 0 && four[1] > -CUT_ROWS && rows.slice((-four[1] - 1) * 4, (-four[1]) * 4).join() === rows.slice((-four[1]) * 4, (-four[1] + 1) * 4).join()) four = [four[0], four[1] - 1];
+        n++; if (one[0] >= 0) hitsN++; if (one[1] < 0) byPlane++;
+        if (!(Object.is(one[0], four[0]) && one[1] === four[1])) differ++; }
+      F.verdict(differ === 0 && hitsN > 50000 && byPlane > 5000 && ended > 10000, 'two fours of a record give what its planes give one by one, bit for bit in f32 (ties, a record ended in the middle, an arc on the pad, a ray along a plane)', `${n} rays over seeded records · ${hitsN} hit · ${byPlane} entered by a cut plane · ${ended} zero normals in mid record · ${differ} differ`); }
     F.verdict(gpuInside === 0 && insideSolid > 1000 && awayHits > 300, 'a ray starting INSIDE the uncut box: in the solid = no hit on the CPU and \'inside\' on the GPU; in the part cut away = outside, and it can hit (counted in the rows above)', `${insideRays} such rays · ${insideSolid} from inside the solid, ${gpuInside} wrong · ${awayHits} hits from the cut-away part`);
     F.verdict(lineBad === 0, 'lineBox (sight lines, rounds, sound, reach) = the same clip\'s interval', `${lines} segments · ${lineBad} disagree`);
     // a world of cut statics + dynamics: BoxWorld.raycast ≡ the brute minimum of rayBox
@@ -359,7 +384,7 @@ export async function cutboxesLines(): Promise<boolean> {
       F.verdict(bad === 0 && n > 300, 'switch off: the same walls and leaves stop the lines through their cut-away part (the whole box)', `${n} lines · ${bad} passed`); }
 
     // ---------------------------------------------------------------- the ragged ends the game itself leaves (a level's partitions blown, its cover shot; the standing pieces asked)
-    { const { standUp } = await import('./headless.ts'); const { readFileSync } = await import('node:fs');
+    { const { standUp } = await import('./headless.ts');
       const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
       const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
       const destr0 = DESTRUCTION.on, rnd0 = Math.random;

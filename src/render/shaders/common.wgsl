@@ -396,20 +396,35 @@ const ROT_IDENTITY: u32 = 0x3C00u;
 // is convex, so the ray's stay inside it is still ONE interval: the slab interval [tN, tF] cut down plane by plane — a plane the ray crosses INTO the kept side may
 // raise tN (and is then the face it enters by), one it crosses OUT of lowers tF. Codes: a box face keeps isectBox's 0‥5, 7 = origin inside the cut solid, and cut
 // plane k answers −1 − k (negative: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face; boxNormalFromCode decodes it).
-// cut.ts cutClip is this loop on the CPU (rayBox, lineBox).
+// cut.ts cutClip is this, plane by plane, on the CPU (rayBox, lineBox).
 fn cutPlaneRow(bi: u32, k: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + k]; }
 /** the row after a box's planes: (the colour its cut faces show, 1), or all zero = they show the box's own (Box.cutCore) */
 fn cutCoreRow(bi: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + CUT_ROWS]; }
+// NO LOOP IN THE BOX TEST (tools/qa/cutboxes-probes.ts holds it). Every box walk has this test written into its own loops, and a loop INSIDE it costs a
+// walk far more than the loop's own work: with the planes taken in a `for`, the fog's march took twice as long on an NVIDIA card with no cut box in the world,
+// and the same planes written straight down took nothing (timed 2026-11-05 on a rented A10: 3.3 ms to 6.6 with the loop, of one plane or of eight; 3.0 with no
+// loop). So the record's eight rows are taken four at a time, with no loop and no branch.
+/** four rows of a box's cut record, from row k0: the ray's stay s = (tN, tF, the code of the face it enters by, 1 while the record goes on) cut down by the
+ *  planes among them, in the order isectCut's planes always had: a zero normal ends the record, and of the planes that raise tN the most the FIRST is the
+ *  face (a later row at the same t does not take it over). A ray along a plane and on its far side leaves nothing: tF = −1, a miss to every reader. */
+fn cutFour(bi: u32, k0: u32, lo: vec3f, ld: vec3f, s: vec4f) -> vec4f {
+  let p0 = cutPlaneRow(bi, k0); let p1 = cutPlaneRow(bi, k0 + 1u); let p2 = cutPlaneRow(bi, k0 + 2u); let p3 = cutPlaneRow(bi, k0 + 3u);
+  let l0 = (s.w > 0.5) & any(p0.xyz != vec3f(0.0)); let l1 = l0 & any(p1.xyz != vec3f(0.0)); let l2 = l1 & any(p2.xyz != vec3f(0.0)); let l3 = l2 & any(p3.xyz != vec3f(0.0));
+  let live = vec4<bool>(l0, l1, l2, l3);
+  let den = vec4f(dot(p0.xyz, ld), dot(p1.xyz, ld), dot(p2.xyz, ld), dot(p3.xyz, ld));
+  let num = vec4f(p0.w - dot(p0.xyz, lo), p1.w - dot(p1.xyz, lo), p2.w - dot(p2.xyz, lo), p3.w - dot(p3.xyz, lo));
+  let t = num / select(den, vec4f(1.0), den == vec4f(0.0));
+  let tIn = select(vec4f(-3.0e38), t, live & (den < vec4f(0.0)));    // the planes the ray crosses INTO the kept side …
+  let tOut = select(vec4f(3.0e38), t, live & (den > vec4f(0.0)));    // … and OUT of it
+  let mIn = max(max(tIn.x, tIn.y), max(tIn.z, tIn.w)); let mOut = min(min(tOut.x, tOut.y), min(tOut.z, tOut.w));
+  let gone = any(live & (den == vec4f(0.0)) & (num < vec4f(0.0)));
+  let kf = f32(k0);
+  let face = select(select(select(-4.0 - kf, -3.0 - kf, tIn.z == mIn), -2.0 - kf, tIn.y == mIn), -1.0 - kf, tIn.x == mIn);
+  return vec4f(max(s.x, mIn), select(min(s.y, mOut), -1.0, gone), select(s.z, face, mIn > s.x), select(0.0, 1.0, l3));
+}
 fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi: u32) -> vec2f {
-  var tN = tN0; var tF = tF0; var code = 7.0;
-  for (var k = 0u; k < CUT_ROWS; k++) {
-    let pl = cutPlaneRow(bi, k);
-    if (all(pl.xyz == vec3f(0.0))) { break; }
-    let den = dot(pl.xyz, ld); let num = pl.w - dot(pl.xyz, lo);
-    if (den < 0.0) { let t = num / den; if (t > tN) { tN = t; code = -1.0 - f32(k); } }
-    else if (den > 0.0) { tF = min(tF, num / den); }
-    else if (num < 0.0) { return vec2f(-1.0, 0.0); }
-  }
+  let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));   // (CUT_ROWS is 8: two fours)
+  let tN = s.x; let tF = s.y; var code = s.z;
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   if (code < 0.0) { return vec2f(tN, code); }

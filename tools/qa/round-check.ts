@@ -17,6 +17,7 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT, fake } from './headless.ts';
 import { probeRound, roundAnswered, roundAsked } from './round-lib.ts';
+import { cutPlanes } from './cut-rule.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { ROUND, ROUND_STATS, roundConfig, findOctagons, roundLevel, roundTape, packRoundRows, ROUND_CORE_W } = await import(`${ROOT}/src/scene/round.ts`);
@@ -110,13 +111,7 @@ function gpuIsectPrism(b: any, o: Vec3, d: Vec3, tmax: number, rows: Float32Arra
   const tmn = [0, 0, 0], tmx = [0, 0, 0]; let tN = -Infinity, tF = Infinity;
   for (let a = 0; a < 3; a++) { const inv = f(1 / (Math.abs(ld[a]) < 1e-8 ? (ld[a] < 0 ? -1e-8 : 1e-8) : ld[a])); const tA = f((-h[a] - lo[a]) * inv), tB = f((h[a] - lo[a]) * inv); tmn[a] = Math.min(tA, tB); tmx[a] = Math.max(tA, tB); tN = Math.max(tN, tmn[a]); tF = Math.min(tF, tmx[a]); }
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
-  let code = 7;
-  for (let k = 0; k < 8; k++) { const n = [rows[k * 4], rows[k * 4 + 1], rows[k * 4 + 2]], w = rows[k * 4 + 3];
-    if (n[0] === 0 && n[1] === 0 && n[2] === 0) break;
-    const den = f(dot(n, ld)), num = f(w - f(dot(n, lo)));
-    if (den < 0) { const t = f(num / den); if (t > tN) { tN = t; code = -1 - k; } }
-    else if (den > 0) tF = Math.min(tF, f(num / den));
-    else if (num < 0) return [-1, 0]; }
+  let code: number; [tN, tF, code] = cutPlanes(rows, lo, ld, tN, tF, f);   // (the two fours: tools/qa/cut-rule.ts)
   if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
   if (tN < 0) return [0, 7];
   if (code < 0) return [tN, code];
