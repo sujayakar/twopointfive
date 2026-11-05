@@ -447,16 +447,18 @@ but synthetic writes still work.
   draws the same dice and makes the same calls after the fold as before it, that the folded tree compiles, and that what names a retired row is gone while
   what only looks like it is not; `RETIRE_BREAK=1` folds one row at the wrong value and must fail. A shape the tool folds wrongly goes into the fixture as a
   case first. Memory: a hundred rows at once is about a minute and 4 GB; all of a family's rows go in one run, not all families in one.
-- **Two switches of the picture's are in no registry, by rule** (11-05): `PLAN_PACE` (`src/render/planPace.ts`, the page's `?planpace=old`: the wall
-  sides, the openings and the draw order made whole on the frame that asks, as they were) and `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`: a
-  reach mask decided whole). Neither has a knob row, a `FROZEN_HOLDS` row or a place in the journal; `knobs-check` scans `src/game` and does not see
-  them, and the page's `__knobs` does not show them. No game code reads `PLAN_PACE`. The game's tick DOES read `REACH_PACE`, to pace the lamps' reach
-  masks: those are the picture's (no sense, rule or run digest reads them), kept in the tick today, so the two paces put that bookkeeping on different
-  ticks and a state hash taken under one is not the other's. Each is set only by its address word, and a recording and a perf dump both carry the
-  address: that is how a run says which pace it was made under. `PLAN_PACE` is ON in the page and OFF in the module, so both stands and every tool
-  UNDER BUN get each plan at once. A PAGE RIG RUNS THE PAGE, where the pace is on and its allowance is the clock's: after the first six drawn frames a
-  plan lands when the clock lets it. A rig that reads a frame a fixed number of frames after a door or a wall changes puts `planpace=old` on its
-  address (`tools/qa/draw-equal.cjs` does). `docs/agents/render.md` has both rules.
+- **A switch that only moves WHEN something lands is still a switch** (11-05; the planners' pace, after the multiplayer goal's read). `PLAN_PACE`
+  (`src/render/planPace.ts`, the page's `?planpace=old`) was first read by `main.ts` alone and kept out of the registry as a picture's pace. That is a
+  special case with a cost: a word `main.ts` reads by itself is in no recipe and no recording, and a server's stand (`tools/mp/stand.ts`:
+  `shippedBoot` and `pageSwitches`) never reads it, so a host's page and its server can stand differently. So it is registered like any other: read in
+  `pageSwitches`, a `FROZEN_HOLDS` row (`TPS_PLANPACE=1 (a picture only)`), `STAND_ENV`, the knob registry, `JOURNAL_KNOBS`, and `applyKnobs` puts it
+  down for a file with no table for it; `openings-check` holds all of that on both stands. THE RULE FOR THE NEXT ONE: any word that moves when
+  something runs or lands, in the tick or in the picture, goes through `pageSwitches` and the registry; `main.ts` reads no such word by itself.
+  `REACH_PACE` (`src/render/reach.ts`, `?reachpace=old`) is the same case and the game's tick reads it (to pace the lamps' reach masks, which are the
+  picture's: no sense, rule or run digest reads them, and the 42 play-through digests are the same with it forced either way on both stands). A PAGE
+  RIG RUNS THE PAGE, where the planners' pace is on and its allowance is the clock's: after the first six drawn frames a plan lands when the clock
+  lets it. A rig that reads a frame a fixed number of frames after a door or a wall changes puts `planpace=old` on its address
+  (`tools/qa/draw-equal.cjs` does). Neither word is a visit's flag: a joiner's page takes the recipe's. `docs/agents/render.md` has both rules.
 - **Not every `FROZEN_HOLDS` word is a `TPS_` word** (10-13, read off `src/host/profile.ts`; the knob registry's owner's note). Raised by a word of their own: the door rules
   (`ONEWAY=1`, `QA_FRAMEHOLDS=1`, `QA_DOORMANNERS=1`, `QA_DOORBLAST=1`, `QA_DOORSTAY=1`), `SLOTS=on`, `CUTBOXES=1`, `GLASSFX=on` (three rows), `SQUADS=radiocheck-call` (three
   rows). No word under probes.ts at all: `DESTRUCTION.on`, `RUBBLE.on`, `EVICT.on` (`PT_DESTR` / `PT_KICK` / `PT_POP`, playthrough.ts alone), `FRAG.defenders` (`--set`),

@@ -2027,7 +2027,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   NEVER SEEN ON A GPU: the hole's daylight coming on five frames late. LEFT: `wallSides.update → placeSides` (18 to 19 ms on that box at a first blast,
   on the frame the charge goes) and `wallsKey` hashing the statics every frame (0.2 ms); `rankStatics` reads 6 to 10 ms on that box on a blast's frame.
 - **THE PICTURE'S PLANNERS HAVE A PACE** (11-05; ON in the page, `?planpace=old` = each made whole on the frame that asks for it, as they were, to
-  the frame; OFF in the module, so a tool or a check under bun gets every plan at once unless it asks for a pace; `render/planPace.ts PLAN_PACE`,
+  the frame; OFF in the module and on the frozen stand (`TPS_PLANPACE=1`), a registered switch a recording carries, and a picture only: a tool or a
+  check under bun draws nothing and gets every plan at once on either stand unless it asks for a pace; `render/planPace.ts PLAN_PACE`,
   `render/steps.ts`). WHY: a planner that reads the whole level runs only when a wall changes, so in a browser it runs COLD every time. The
   performance goal's recorder, with a player's wall charge blown inside the tick on a rented card: the first charge of a mission is one frame of 70 to
   89 ms of CPU, 35 to 40 of it `engine.render`. In Chromium here (software adapter, the CPU's side only, the office under the look) that frame's
@@ -2090,23 +2091,23 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   and nothing goes dark, what lands is what is made at once, one begun lands the level as it took it (boxes changed in place under it) and is made
   again for what moved, a crate every six frames cannot stop it, a step every frame with nothing left of the allowance, at once where it must be, a
   new level never gets the old one's plan, a planner that throws is thrown once and not asked again for the same level. `PLANPACE_BREAK=1` gives no
-  pace and each fails; twenty-five of twenty-six one-line breaks of the code turn a line red (the one that does not is a guard that only matters with no opening on the level). The harness never calls `Engine.render`: the engine's own words on
-  the pace (`framePace`, `startPlansOver`) are held by a line of `openings-check` on a borrowed engine, and the rest of the wiring (the time taken
-  off, who is handed the allowance) is exercised only by the page. The 42 play-through digests (21 missions, seeds 1 and 2) are the same with and
-  without the commit on both stands. TWO CODE REVIEWS: the first found fifteen things in the first cut (a restart not told to the planners, the
-  no-pace schedule a frame or more off the old one, a wall changing every frame holding the sides back, three assertions that could not fail), the
-  second found the mends hold (the no-pace path the same frame for frame over 1,400 frames; 210 real blasts on 21 levels all paced) and one hole after
-  a save put back, mended; a third, over that mend, found no bug that reaches play and eleven smaller things (a count that could outlive an upload
-  that threw, the start-over hung on the light rig's event as well as a restart's, claims and numbers in these notes that did not agree, check lines
-  that could not fail), folded in.
+  pace and each fails; twenty-five of twenty-six one-line breaks of the code turn a line red (the one that does not is a guard that only matters with
+  no opening on the level). The harness never calls `Engine.render`: the engine's own words on the pace (`framePace`, `startPlansOver`) are held by a
+  line of `openings-check` on a borrowed engine, and the rest of the wiring (the time taken off, who is handed the allowance) is exercised only by the
+  page. The 42 play-through digests (21 missions, seeds 1 and 2) are the same with and without the commit on both stands. TWO CODE REVIEWS: the first
+  found fifteen things in the first cut (a restart not told to the planners, the no-pace schedule a frame or more off the old one, a wall changing
+  every frame holding the sides back, three assertions that could not fail), the second found the mends hold (the no-pace path the same frame for
+  frame over 1,400 frames; 210 real blasts on 21 levels all paced) and one hole after a save put back, mended; a third, over that mend, found no bug
+  that reaches play and eleven smaller things (a count that could outlive an upload that threw, the start-over hung on the light rig's event as well
+  as a restart's, claims and numbers in these notes that did not agree, check lines that could not fail), folded in.
   NEVER SEEN IN PLAY on a GPU, and never on an Apple chip (the stills and the timing above are a rented card's). LEFT: the place map's own draw (2 to
   6 ms cold on the charge's frame here; on the rented card under about 4); the order's 2 to 7 ms on its calm frame (in steps it would need its boxes
   copied and a key held from its first step to its last, as the openings have); the white wash itself when a hole opens a lamplit room to daylight,
   which is the exposure's and is there with or without the pace; a planner in a wasm module would run at one speed cold or warm, which is the better
   cure if the picture gets a module of its own (the lamps' reach masks, still in the tick, are the first to weigh it for); `lookTex.ts` keeps its own
-  copy of the run-to-the-end loop (it has no imports, for its workers); `PLAN_PACE` is in no knob registry (`docs/agents/qa.md` says why, and how a
-  run says its pace: by its address); a cascade that changes size while the sides are being made has them made whole on that frame, as it always did;
-  the drop of a finding in hand when the sky gives nothing has no check line.
+  copy of the run-to-the-end loop (it has no imports, for its workers); (`PLAN_PACE` is a registered switch: `docs/agents/qa.md`); a cascade that
+  changes size while the sides are being made has them made whole on that frame, as it always did; the drop of a finding in hand when the sky gives
+  nothing has no check line.
 - **DAYLIGHT COUNTED ONCE: AN OPENING IS A PORTAL** (THE ROW IS GONE SINCE 11-04 AND THIS IS THE ONLY WAY AN OPENING IS LIT: the maintainer played with
   it up on his M4 and chose to keep it on a card at 15:18Z, after saying of it that morning "my preference would be that we use this sampling
   unconditionally and then have no asymmetry between night and day". Deleted in one commit: the `portal` row and `lookConfig.portal`, the disk

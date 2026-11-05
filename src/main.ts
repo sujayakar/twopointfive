@@ -95,7 +95,6 @@ import { setlistOfQuery, setlistOf, setlistLevel } from './audio/setlist';
 import { MUSIC } from './audio/pieces';
 import { Demo } from './game/demo';
 import { REACH_PACE, REACH_OPTS } from './render/reach';
-import { PLAN_PACE } from './render/planPace';   // (the picture's planners are made a little a frame: on in the page, ?planpace=old)
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
@@ -1161,7 +1160,6 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)
   if (q.get('sunlooks') === 'old') REACH_OPTS.solidLooks = true;   // ?sunlooks=old: the sun's and the moon's reach masks as they were, a look that falls inside a wall counted as seeing the sky (render/reach.ts reachMaskForDirectional)
   (window as any).__reachOpts = REACH_OPTS;   // (a page run can set solidLooks and ask game.buildDirReach again, to draw the old mask and the new in one boot)
-  PLAN_PACE.on = q.get('planpace') !== 'old';   // ?planpace=old: the wall sides, the openings and the statics' draw order are each made whole on the frame that asks for them, as they were (render/planPace.ts; the same plans, one long frame when a wall is blown)
   if (q.get('reachpace') === 'old') REACH_PACE.whole = true;   // ?reachpace=old: reach masks after a wall changes land at the pace before the per-frame shares (render/reach.ts REACH_PACE; same masks, fewer and longer ticks)
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }

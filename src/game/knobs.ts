@@ -144,6 +144,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'MARKCUT',
   // a blast's marks sit in the surface (render/decals.ts MARKSIT; a picture only): a recording made with it on draws its scorches and films of dust that way, one with no table for it as they were drawn before the rule
   'MARKSIT',
+  // the picture's planners are made a little a frame (render/planPace.ts PLAN_PACE; a picture only): a recording made with it on says so, one with no table for it had each plan whole on its frame
+  'PLAN_PACE',
   // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
   'COATFINISH',
   // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a recording made with it on draws its vehicles' windows near black and polished, one with no table for it in the grey their files give them
@@ -281,6 +283,7 @@ import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { HITSTUFF } from './particleFx';
 import { MARKCUT, MARKSIT } from '../render/decals';
+import { PLAN_PACE } from '../render/planPace';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
@@ -370,6 +373,8 @@ export function knobRegistry(): Record<string, object> {
     // a mark on a cut or a round face lies where the round met it (render/decals.ts): where a mark is drawn, never whether one is laid
     MARKCUT,
     MARKSIT,
+    // the picture's planners at a pace (render/planPace.ts): when a plan of the picture's lands, never what a run does
+    PLAN_PACE,
     COATFINISH,
     SOLIDGLASS,
     CLEANRESTART,
