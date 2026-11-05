@@ -15,7 +15,7 @@ import { BOTH, StaticCollision } from '../scene/collision';
 import { thingWrote, type BoxMirror } from '../scene/boxMirror';
 import { PropDef, PropKind } from '../scene/level';
 import { EXACT, mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
-import { RUST, FELL, TWIN_ROW, fell, ruleFell, ruleRed } from '../sim/sim';
+import { RUST, ruleFell, ruleRed } from '../sim/sim';
 import { PropStore, PT, PD, PK, PY, PE, PP, PF, PROP_CAP, PROP_EV, PROP_SOUNDS, PROPS_STEPPED, propIo, propMem, propDiff } from '../sim/propshome';
 import { SimState } from '../sim/state';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -79,11 +79,13 @@ export class Prop {
   private pf(o: number, v: number): void { const S = this.S; S.d[S.b8 + o + S.rowOf(this.id)] = v; }
   private bit(m: number): boolean { const S = this.S; return (S.u[S.b4 + S.O.flags + S.rowOf(this.id)] & m) !== 0; }
   private setBit(m: number, v: boolean): void { const S = this.S, i = S.b4 + S.O.flags + S.rowOf(this.id); if (v) S.u[i] |= m; else S.u[i] &= ~m; }
-  get x(): number { return this.f(this.S.O.x); } set x(v: number) { this.pf(this.S.O.x, v); }
-  get z(): number { return this.f(this.S.O.z); } set z(v: number) { this.pf(this.S.O.z, v); }
+  // (WHERE A THING STANDS, WRITTEN BY ANYBODY BUT THE STEP, IS SAID — `thingWrote`: the Rust module's copy of the furniture keeps each thing's place beside
+  //  its parts, for the ray's first test, and a ray asked before the thing is placed again must read the place it was just given, as the walk here did)
+  get x(): number { return this.f(this.S.O.x); } set x(v: number) { this.pf(this.S.O.x, v); thingWrote(); }
+  get z(): number { return this.f(this.S.O.z); } set z(v: number) { this.pf(this.S.O.z, v); thingWrote(); }
   /** its yaw — and, written with it whenever it is written another value, the cos and sin of it (`cs`, `sn`: columns beside it, for the step) */
   get yaw(): number { return this.f(this.S.O.yaw); }
-  set yaw(v: number) { const S = this.S, O = S.O, B = S.b8; freshTrig(S); turnRow(S.d, B + O.yaw, B + O.cs, B + O.sn, S.rowOf(this.id), v); }
+  set yaw(v: number) { const S = this.S, O = S.O, B = S.b8; freshTrig(S); turnRow(S.d, B + O.yaw, B + O.cs, B + O.sn, S.rowOf(this.id), v); thingWrote(); }   // (the copy keeps the yaw too: a thrown thing at rest on this one asks it)
   get vx(): number { return this.f(this.S.O.vx); } set vx(v: number) { this.pf(this.S.O.vx, v); }
   get vz(): number { return this.f(this.S.O.vz); } set vz(v: number) { this.pf(this.S.O.vz, v); }
   get w(): number { return this.f(this.S.O.w); } set w(v: number) { this.pf(this.S.O.w, v); }
@@ -254,9 +256,19 @@ export class PropSystem {
     return bad.length ? `the furniture's settle: ${bad.join(' · ')}` : '';
   }
 
-  /** Closest part box of any prop along the ray (t < tmax), for bullets / thrown items; `box` = the part that was hit (a mark left on it rides that part: marks.ts). */
+  /** Closest part box of any prop along the ray (t < tmax), for bullets / thrown items; `box` = the part that was hit (a mark left on it rides that part: marks.ts).
+   *  THE RAY IS THE RUST MODULE'S where it can be (the row on, the game's own maths standing — a part is met by angles — and the box world's copy
+   *  standing with these things' parts in it: collision.ts thingsRay, lines.rs ray_things), and this file's walk otherwise, which is counted (sim.ts
+   *  FELL); the same answer to the bit either way (tools/qa/rust-check.ts --both, tools/qa/item-ident.ts). */
   raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; n: Vec3; prop: Prop; box: Box } | null {
-    if (FELL.on) fell(TWIN_ROW, 'a ray into the furniture, answered here always (PropSystem.raycast)');
+    if (BOTH.on) { const hit = this.raycastHere(ro, rd, tmax); this.col.thingsBoth(this, ro, rd, tmax, hit); return hit; }   // (the check's, whatever the row says: this file's walk, which the game goes on with, and the module's asked the same and compared)
+    if (!RUST.props || !EXACT.on || this.props.length === 0) return this.raycastHere(ro, rd, tmax);   // (idle: sim.ts OWN_MATHS; a level with no furniture has no part to meet, here or there)
+    const h = this.col.thingsRay(this, ro, rd, tmax);
+    if (h === undefined) { ruleFell('props', 'a ray into the furniture with no copy of it standing'); return this.raycastHere(ro, rd, tmax); }
+    return h === null ? null : { t: h.t, n: h.n, prop: this.props[h.row], box: h.box };
+  }
+  /** raycast as this file answers it */
+  raycastHere(ro: Vec3, rd: Vec3, tmax: number): { t: number; n: Vec3; prop: Prop; box: Box } | null {
     let best = tmax; let bp: Prop | null = null; let bn: Vec3 = [0, 1, 0]; let bb: Box | null = null;
     const fl = Math.hypot(rd[0], rd[2]), S = this.store, d = S.d, X = S.b8 + S.O.x, Z = S.b8 + S.O.z, L = this.props;
     for (let r = 0; r < L.length; r++) { const p = L[r];
@@ -266,9 +278,7 @@ export class PropSystem {
       const perp2 = ox * ox + oz * oz - along * along; if (perp2 > (p.radius + 0.05) * (p.radius + 0.05)) continue;
       for (const b of p.boxes) { const h = rayBox(ro, rd, b, best); if (h && h.t < best) { best = h.t; bp = p; bn = h.n; bb = b; } }
     }
-    const hit = bp && bb ? { t: best, n: bn, prop: bp, box: bb } : null;
-    if (BOTH.on) this.col.thingsBoth(this, ro, rd, tmax, hit);   // (the check's: the Rust module's ray over its copy of these parts, asked the same and compared)
-    return hit;
+    return bp && bb ? { t: best, n: bn, prop: bp, box: bb } : null;
   }
 
   /** Planar impulse J (N·s, y ignored) applied at world point `point`; `who` is blamed for the noise. thud=true reports it as an impact (bullet strike). */
