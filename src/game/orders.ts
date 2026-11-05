@@ -97,8 +97,7 @@ import { watchedPlace } from './dialogue';   // (read inside an order's issue on
 import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's said name)
 import { propGap } from './roomclear';   // (used inside workedMarks only: nothing of roomclear.ts is touched at load)
 import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewOpen, STACKROOM, STACKROOM_STATS } from './stackroom';
-import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
-import { silentOnMan } from './silent';   // (called inside tick only)
+import { HOLDFIRE, holdFireOrder, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, RESTACK_LINES, autoQuick, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), hud() and show() only)
 import { whyWords } from './squadnet';   // (read inside hud() and quickFor() only)
 import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, flatSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
@@ -110,6 +109,7 @@ import { goalInput, goalShift, planGoal, goalsOn, goalMen, goalRingOn, GOAL_NONE
 import { teamFollow, teamDash, teamFight, teamTold, walkLead } from './teampace';   // (read inside update only)
 import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
+import { targetHeld } from './roundheld';
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
 /** … and how near a mark handed out must be to the post a man stands on to be that same mark, metres */
@@ -1477,8 +1477,8 @@ export class SquadOrders {
         if (!st && d < 0.35) { A.had = A.post; if (d < 0.1) A.backN = 0; }
         const was = A.arrived;
         A.arrived = d < 0.35 && (A.watch === null || !!A.fit || (!!A.spare && g.cover.has(gd)) || Math.abs(wrapAngle(gd.char.aimYaw - yawTo(gd.char.pos, A.watch))) < 0.2);   // (… or his gun is on what the cover dealt him; a 'move' is there by his feet, as it was before roomfit.ts gave him a watch)
-        A.heldFire = HOLDFIRE.stackSet && (HOLDFIRE.stackWait || !A.arrived) && d < 0.35 && A.order === 'stack' && holdFireOnMan(g, gd); if (A.heldFire) A.arrived = true;   // (HOLDFIRE.stackSet, off: not asked — he is there by his gun alone, as before the key; stackWait off: asked only of a man his gun has not set, the stamp read by nobody. holdfire.ts: on his mark, his gun on a man nobody may shoot yet and not on the door — he is stacked; false with its switch off. Stamped, as the silent order's below: the handle test runs before this tick and reads the stamp)
-        A.heldSet = !A.arrived && d < 0.35 && A.order === 'stack' && silentOnMan(g, gd); if (A.heldSet) A.arrived = true;   // (silent.ts: the same for a silent man under the order's own fire hold — SILENT.stackSet, false with it off)
+        A.heldFire = HOLDFIRE.stackSet && (HOLDFIRE.stackWait || !A.arrived) && d < 0.35 && A.order === 'stack' && targetHeld('holdfire', g, gd); if (A.heldFire) A.arrived = true;   // (HOLDFIRE.stackSet, off: not asked — he is there by his gun alone, as before the key; stackWait off: asked only of a man his gun has not set, the stamp read by nobody. holdfire.ts: on his mark, his gun on a man nobody may shoot yet and not on the door — he is stacked; false with its switch off. Stamped, as the silent order's below: the handle test runs before this tick and reads the stamp)
+        A.heldSet = !A.arrived && d < 0.35 && A.order === 'stack' && targetHeld('silent', g, gd); if (A.heldSet) A.arrived = true;   // (silent.ts: the same for a silent man under the order's own fire hold — SILENT.stackSet, false with it off)
         if (A.arrived && !was) A.arrT = g.time;
       }
       let pose: { stance: Assignment['stance']; upper: Assignment['upper'] } = A.move && d > 0.6 ? A.move : A;   // on the way to a mark: the gun up and leading; the mark's own carriage as he settles onto it
