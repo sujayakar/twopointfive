@@ -14,7 +14,9 @@ export async function waysCheck(): Promise<boolean> {
   console.log(`\n=== ways: how a level is walked${BRK ? ' (the reader takes none: must fail)' : ''} ===`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { StaticCollision, NavGrid } = await import(`${ROOT}/src/scene/collision.ts`);
   const { levelWays } = await import(`${ROOT}/src/scene/ways.ts`), { buildWearMap, WEAR_RES } = await import(`${ROOT}/src/render/wear.ts`), { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-  const open = (f: string) => { const level = loadLevel(JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8'))), nav = new NavGrid(new StaticCollision(level.boxes)); return { level, nav }; };
+  const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/level.ts`);
+  // (the office's missions and its ways are code beside it, attached as the game attaches them: a level opened without them would be checked with no ways of its own)
+  const open = (f: string) => { const data = JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8')), level = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data), nav = new NavGrid(new StaticCollision(level.boxes)); return { level, nav }; };
   const sumOf = (a: Float32Array) => { let n = 0, most = 0; for (const v of a) { if (v > 0) n++; most = Math.max(most, v); } return { n, most }; };
   // 1. a level of the game with no routes: a team's start has a way to every room, through doors, on free floor only; the same twice; the grid's own search
   //    tables are not this function's

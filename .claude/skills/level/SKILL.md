@@ -191,6 +191,43 @@ like that."
   because of one rack. **check** `bun run tools/qa/lived-check.ts <name>`.
 - **Measure a loud level after furnishing it**, and say the seeds: under 144 paired seeds a difference is noise.
 
+### A hand pass (after a level is dressed)
+
+The maintainer: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading
+the player for game play", and of the look he wants: "it's all quite intentionally dressed". A hand pass adds worn paths, paint and fittings to a
+level that already has its rooms, and moves nobody's fight. The office was the first (`docs/agents/levels.md`, "the office is hand-finished").
+
+- **Read the level first, and tie every item to the read.** Three sources, all headless: the level's marks and routes (`map-plan.ts <mission>
+  --png`), where its ways run (`src/scene/ways.ts`), and six seeds of each mission traced on the page's stand with everybody's place twice a
+  second (`TPS_PROFILE=shipped PT_WHERE=0-600 PT_FOES=<their call signs> bun run tools/qa/playthrough.ts --trace <mission>:<seed>`). Count
+  where men fall. **seen** on the office thirteen of thirty-one fell at one side door that nothing in the picture said was there.
+- **Worn paths are data.** `scenarios.walked` rows between names (a door, a route, a room, a named mark), each with a weight beside one lap of a
+  patrol. Use a name that is one thing: **seen** `storage` was a door and a room, so the row took the door; a mark inside the room says which.
+  Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
+  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
+  start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.
+- **No word names a room, and no paint is there for the player.** The maintainer, playing the office's first cut: "i don't like the "lobby"
+  and "conference" labels in the level, pretty lame". A room is shown by what is in it. The test for paint: would THIS building's own people
+  have painted it for themselves? A door's number, a parking bay's number, hatching outside a fire exit pass. A hatched bay on an office
+  floor and a line that leads to a door do not: **seen** both went out of the office with the names. What leads a player is a THING the room
+  would have (a threshold, a mat, a duct), and that is a pass of its own.
+- **Paint on a surface that is there is a marking on that box** (`markingDefaults.ts` `stencilMarks`, `hazardMarks`, the painter's tins
+  `TIN`): four a box, 1.6 m a bitmap. The office kit has the tools: `boxOn(face, x, y, z)` finds the box by where its face is, never by its
+  number; `stencilS` / `stencilTop` lay a word with its middle at a place of the world; `keepClear` hatches a bay on a floor; `bandRuns` paints
+  a band along a wall door to door with names on it; `conduitRuns` lays conduit in lengths. Centre on the box: a doorway is not the middle of
+  its slot. Hand every paint a colour array of its own: **seen** a band took another paint's finish because both were made from one array.
+- **A new thing is a kit piece, drawn only, in the lived tier.** The office kit's `band`, `vent`, `conduit` and `pipe` lie on a wall's face
+  and are drawn only unless told they are solid; a band of paint is the wall's own stuff in another colour (`saidAs`). Groups `lived.<room>`
+  at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
+  hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
+  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
+  seen than before) on both stands, and the three play-through reads against the step before: none moves.
+- **Put it where the play camera reads, and draw your stills from that camera.** It opens at yaw -22 and pitch 55 degrees and turns with him.
+  At rest it shows floors, tops, south faces and west faces, and a wall hides about two metres of floor behind it. **seen** the office's
+  first stills were pinned at yaw 0 and 58: paint on a corridor's floor was all but hidden, a bay behind a parked van was never seen, and
+  one finding (a door "the camera cannot see") was simply wrong from the game's own camera. **By eye**, on a real card, at the mission's own
+  hour, panel shut, the game's AI held still. At night a mark shows only inside a lamp's pool, and the look's worn lanes do not show at all.
+
 ## 5. Light, hour, weather
 
 **How the light should look.** The maintainer, of a yard under a midday sun: "this tutorial level just looks really
