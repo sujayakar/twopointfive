@@ -1500,3 +1500,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the shout, always), the readers above ask under this key; for the 0.6 s between his shout and his drop a mate is company to morale and not to flinch.
   NOT SEEN: never seen on a GPU and never played. The page was only booted on the software adapter (`PORT=<port> node tools/qa/runanyway-page.cjs`: its key-on run, which opens the page as it ships and so with this key on, passes
   with no page error; its second load was cut by the time cap on a loaded machine and proves nothing).
+
+<!-- 2026-11-05 -->
+- **What a man believes and what he covers are two things** (`src/game/belief.ts`, `BELIEF.on`: on in the page, `?belief=0`; off on the frozen stand, `TPS_BELIEF=1`; a `FROZEN_HOLDS` row, in the
+  knob registry and a journal's tables). `Guard.lastKnown` is only where he believes the enemy to be. `Guard.covers` is the point his duty has his gun on, said anew each tick (`dutiesAnew` clears it
+  at the tick's top, the room fight and the scenarios say it again before any man's update), so a duty that ends leaves nothing behind. It is not state, and `game/digest.ts` does not read it; what
+  moves a shipped digest is `fix`, the field that no longer holds a door, and the gun's turn in `yaw`. `gunPoint()` is where the gun goes with no man to shoot at: what his eyes put in his belief this
+  very tick, else what he covers, else what he believes. `eyesFix()` answers the rules that ask where his own eyes have the man (roomfight evidence and fixKeep, enemysquads teamKnown / teamKnownHow /
+  contact, buddy, laststand), a fix led to where a lost man was going counting as his eyes' (`Guard.ledAt`). Every other reader takes the belief as it stands: frag's throw, picture's idea of his man,
+  the alarm's place, the response team's best fix, trackFix's stamp. The old "not the door" compare lives on only in the rule's off path (`eyesFix`, `evidence`, `standOn`) and goes with the switch.
+  `word()` is how a report that reaches him outside his senses places his belief (a blast, a mate, the net, a rule that hands him a fix): what he hears of that moment or before does not write over
+  it, however late in the tick's order he comes to hear it (`wordStands`); what he hears after does; his eyes always do. Errands and his own inferences (a task's goal, a stagger's look round, the
+  door force's belief) still write the field directly. The room fight's evidence reads `witness.heard.loudAt`, what the report came to in his head whether or not it moved his belief.
+  WHY: the room fight wrote the door into lastKnown at the top of every tick and his eyes wrote the man back later in it (1,179 ticks in 29 of 42 runs). Traced: nobody sees that flip, he ends each
+  tick on the man, the gun moves 2.5 to 4 degrees following him. The harm was what others read: a door taken for the enemy, a fresh fix stamped when his watch moved, a heard shot kept for one tick.
+  A post is left by the rules that always decided (rally on `noiseAt`, fall-back, press, lanes), never by a belief.
+  CHECK `bun run tools/qa/belief-check.ts` (`probes.ts belief`, family roomfight; both stands); `BELIEF_BREAK=1` puts the door back into his belief and fails lines 1, 2, 4, 11, 12 and 15 on both.
+  NOT SEEN: never on a GPU, never played. What to look for: held men acting on where you actually were, not on their own door.

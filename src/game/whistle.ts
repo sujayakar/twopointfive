@@ -25,6 +25,7 @@ import { isHostile } from './teams';
 import { hearPath } from './weather';
 import { w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { wordNow } from './belief';
 
 /** Every number of it (panel-tunable; the QA probes read them rather than copy them). */
 export const WHISTLE = {
@@ -175,7 +176,7 @@ export function hearWhistle(g: Game, gd: Guard, e: GameEvent, keen: number, smal
   // awareness is lifted to the whistle's floor all the same — nothing to a free alert or searching man (he is past it), but the lockdown pair clearing a room
   // are 'searching' under a script with their senses run for them (squad.ts perceive), and a whistle at their backs breaks the clear off the way a creak does.
   if (gd.state === 'alert' || gd.state === 'search' || gd.awareness >= 0.85) {
-    if (gd.state !== 'alert' || !gd.lastKnown || g.time - gd.lastSeenT > 1.0) gd.lastKnown = v3.copy(h.at);
+    if (!wordNow(g, gd) && (gd.state !== 'alert' || !gd.lastKnown || g.time - gd.lastSeenT > 1.0)) gd.lastKnown = v3.copy(h.at);
     gd.awareness = Math.max(gd.awareness, WHISTLE.awareness);
     M.cues++; M.soft = false; WHISTLE_STATS.cued++; return;
   }
@@ -184,7 +185,7 @@ export function hearWhistle(g: Game, gd: Guard, e: GameEvent, keen: number, smal
   // he answers it
   const now = g.time; const twice = now - M.respondedAt <= WHISTLE.twiceWindow;
   M.respondedAt = now; M.responses++; R.answeredBy = gd; WHISTLE_STATS.answered++;
-  gd.lastKnown = v3.copy(h.at); gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.stallT = 0; gd.searchT = 0;
+  if (!wordNow(g, gd)) gd.lastKnown = v3.copy(h.at); gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.stallT = 0; gd.searchT = 0;
   gd.awareness = Math.max(gd.awareness, WHISTLE.awareness);
   const log = WHISTLE_LOG[WHISTLE_LOG.length - 1]; if (log && log.t === R.t) log.answered = gd.callsign;
   if (twice) {   // the second inside the window: a proper search of the place, gun out, no more 'hello?'

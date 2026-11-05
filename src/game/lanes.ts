@@ -58,6 +58,7 @@ import { CUES } from './cues';
 import { doorwayInWay } from './doorway';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { gunKeepsPost } from './gunroles';   // (called inside laneHolds only)
+import { word } from './belief';
 
 export const LANES = {
   /** the whole rule. Module default OFF (the frozen stand); the page raises it (src/host/profile.ts pageSwitches; `?nolanes` holds it off) */
@@ -501,12 +502,12 @@ function round(g: Game, st: State, L: Lane, at: Guard[]) {
     const gd = ways[i].gd, D = defOf(g, gd), stop = ways[i].stop; if (!D) continue;
     st.held.delete(gd); st.flank.set(gd, g.time + Math.min(60, ways[i].len / 2 + 10));
     if (ways[i].pin && stop) {   // its end too long in their sight to walk: as far as where the guns would first see him, to hold the lane from that side
-      st.flankOf.set(gd, { lane: L.id, phase: 'walk', at: stop, t: g.time, n: 0 }); gd.path = []; gd.pathGoal = null; legTo(g, D, stop, null, 0); gd.lastKnown = v3.copy(L.from); st.stats.round++;
+      st.flankOf.set(gd, { lane: L.id, phase: 'walk', at: stop, t: g.time, n: 0 }); gd.path = []; gd.pathGoal = null; legTo(g, D, stop, null, 0); word(g, gd, L.from); st.stats.round++;
       if (i === 0) { g.say(gd, wg('going around — keep them looking your way!', 'going round — keep them looking your way!'), true); st.saidT = g.time; }
       note(g, gd, `lane ${L.id}: goes round, ${ways[i].len.toFixed(0)} m, as far as (${stop[0].toFixed(1)}, ${stop[2].toFixed(1)}) on its other side`);
       continue;
     }
-    loose(g, D, L.from); gd.lastKnown = v3.copy(L.from); st.stats.round++;   // (his way stays priced — the way round — but nothing here stops him short of the guns he was sent at)
+    loose(g, D, L.from); word(g, gd, L.from); st.stats.round++;   // (his way stays priced — the way round — but nothing here stops him short of the guns he was sent at)
     if (i === 0) { g.say(gd, wg('going around — keep them looking your way!', 'going round — keep them looking your way!'), true); st.saidT = g.time; }
     note(g, gd, `lane ${L.id}: goes round, ${ways[i].len.toFixed(0)} m`);
   }
@@ -550,7 +551,7 @@ function bangs(g: Game, st: State) {
       const to: Vec3 = [e.pos[0], 0, e.pos[2]]; let first = true;
       for (const [gd, h] of [...st.held]) {
         if (h.lane !== L.id || !fit(g, gd) || flat(gd.char.pos, L.from) > K.pushM) continue; const D = defOf(g, gd); if (!D) continue;
-        st.held.delete(gd); st.push.set(gd, L.pushUntil); gd.path = []; gd.pathGoal = null; gd.lastKnown = v3.copy(L.from); legTo(g, D, to, null, K.pushFast);   // (a straight run at where the charge went off: the room fight plants him on the first man he sees)
+        st.held.delete(gd); st.push.set(gd, L.pushUntil); gd.path = []; gd.pathGoal = null; word(g, gd, L.from); legTo(g, D, to, null, K.pushFast);   // (a straight run at where the charge went off: the room fight plants him on the first man he sees)
         if (first) { first = false; g.say(gd, 'they\'re blind — go, go!', true); st.saidT = g.time; }
         note(g, gd, `lane ${L.id}: pushes down it behind the charge`);
       }
@@ -655,7 +656,7 @@ function flankGo(g: Game, st: State, L: Lane) {
   const K = LANES; let first = true;
   for (const [gd, f] of st.flankOf) {
     if (f.lane !== L.id || f.phase !== 'set') continue; const D = defOf(g, gd); if (!D || !fit(g, gd)) continue;
-    f.phase = 'go'; f.t = g.time; st.held.delete(gd); st.flank.set(gd, g.time + 12); gd.path = []; gd.pathGoal = null; gd.lastKnown = v3.copy(L.from); legTo(g, D, L.from, null, K.pushFast); st.stats.goes++;
+    f.phase = 'go'; f.t = g.time; st.held.delete(gd); st.flank.set(gd, g.time + 12); gd.path = []; gd.pathGoal = null; word(g, gd, L.from); legTo(g, D, L.from, null, K.pushFast); st.stats.goes++;
     if (first) { first = false; g.say(gd, 'moving!', true); }
     note(g, gd, `lane ${L.id}: goes in under the fire, ${flat(gd.char.pos, L.from).toFixed(0)} m to its guns`);
   }

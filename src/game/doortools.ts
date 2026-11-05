@@ -108,6 +108,7 @@ import { OWNCHARGE } from './owncharge';   // (a leaf: the player's own charges'
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { PICTURE, PICTURE_STATS, anyIdea, safestSets } from './picture';
 import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
+import { word } from './belief';
 
 /** `WORDCUTS_BREAK=1` (a check's own word): the rule's body left out, everything else as it is */
 const WORDCUTS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WORDCUTS_BREAK === '1';
@@ -3359,7 +3360,7 @@ export class DoorTools {
   private dazzle(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.dazzledUntil = Math.max(gd.dazzledUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs);
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     if (g.aiEnabled) gd.witness.dazzled++;
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.dazzledAt = v3.copy(at); gd.char.anim.hitFrom(v3.sub(gd.char.pos, at));
   }
