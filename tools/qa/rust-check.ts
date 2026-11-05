@@ -328,10 +328,17 @@ let wordOwn = '', wordRust = '';
   const fs = await import('node:fs'), face = /export const FACE = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '';
   const rust = ['light', 'smoke', 'hear', 'sight'].map(f => fs.readFileSync(resolve(ROOT, `rust/sim/src/${f}.rs`), 'utf8')).join('\n');
   const pairs = [...face.matchAll(/(\w+):\s*(\d+)/g)].map(m => ({ name: m[1], here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (\\d+);`).exec(rust)?.[1] ?? NaN) }));
-  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 15 && off.length === 0;
+  { const nav = /export const NAV = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '', there = fs.readFileSync(resolve(ROOT, 'rust/sim/src/nav.rs'), 'utf8');   // (boxMirror.ts NAV: what a search answers that is no count)
+    for (const m of nav.matchAll(/(\w+):\s*(-?\d+)/g)) pairs.push({ name: `nav ${m[1]}`, here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (-?\\d+);`).exec(there)?.[1] ?? NaN) }); }
+  // (the order a priced search asks its prices in: the same check with the host pricing last first must end with the paths differing and nothing else,
+  //  exit 1. Not under RUST_BREAK, which is another red path of the same tool)
+  const order = BREAK ? null : child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', '3000', '--levels', 'office.json,compound.json'], { PRICED_BREAK: '1' });
+  const orderRed = !order || (order.status === 1 && /the paths differed and nothing else/.test(order.out));
+  const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 18 && off.length === 0 && orderRed;
   { const d = marked(r.out, 'SENSE-IDENT '); for (const k of [...SENSES, 'fog']) red[k] = !!d && d[k] > 0; }
   verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
-    + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`);
+    + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE, NAV)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`
+    + (order ? `\n    a priced search's prices asked for last first (PRICED_BREAK=1): ${orderRed ? 'the paths differ and nothing else, as they must' : `NOT RED AS IT MUST BE (exit ${order.status}): ${order.out.trim().split('\n').slice(-1)[0].slice(0, 200)}`}` : ''));
 }
 
 // ---- poses
