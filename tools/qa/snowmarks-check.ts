@@ -87,10 +87,14 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
   let YARD: [number, number] = YARD_MIDDLE, YARD_FOUND = true;   // (YARD_FOUND false = no clear open snow within six metres of the middle: the middle is stood on so the lines can run, and the furrow line FAILS and says so. A level dressed until its yard has no clear snow is the level's to mend, or the search's to widen, never a silent pass)
   const standsNear = (boxes: readonly { c: number[]; h: number[]; yaw?: number }[], x: number, z: number, reach: number) => boxes.some(b => { if (b.c[1] + b.h[1] <= 0.2 || b.c[1] - b.h[1] >= 1.1) return false;
     const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0), dx = x - b.c[0], dz = z - b.c[2], lx = cs * dx - sn * dz, lz = sn * dx + cs * dz; return Math.hypot(Math.max(Math.abs(lx) - b.h[0], 0), Math.max(Math.abs(lz) - b.h[2], 0)) < reach; });
+  /** EVERY PLACE A LINE BELOW DROPS, STAMPS OR LOOKS, from the yard's spot: each must be lying snow, or a line that asserts NOTHING was marked there passes
+   *  whatever the code does (found by a review, 11-05: after the spot began to be searched for, the fog line's two dark landings fell where no snow lay) */
+  const USED: readonly (readonly [number, number])[] = [[0, 0], [2, 0], [4, 0], [-2, 0], [-1, 1.5], [-3, 2], [3, 2], [3, -2], [1.5, -2], [1, 1], [3, 1], [-3, -3], [3.2, 0]];
+  const snowAt = (g: any, x: number, z: number) => { const F = g.snowField; if (!F) return false; for (const [dx, dz] of [[0, 0], [0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]]) if (snowFieldAt(F, x + dx, z + dz).cover < 0.9) return false; return true; };
   const standSpot = (g: any, boxes: readonly { c: number[]; h: number[]; yaw?: number }[]): [number, number] | null => { const spots: [number, number, number][] = [];
     for (let dz = -6; dz <= 6; dz += 0.25) for (let dx = -6; dx <= 6; dx += 0.25) spots.push([YARD_MIDDLE[0] + dx, YARD_MIDDLE[1] + dz, Math.hypot(dx, dz)]);
     spots.sort((a, b) => a[2] - b[2] || a[1] - b[1] || a[0] - b[0]);
-    for (const [x, z] of spots) { if (!openAt(g, x, z)) continue; let clear = true; for (let t = 0; t <= 3 && clear; t += 0.25) clear = !standsNear(boxes, x + SHOVE[0] * t, z + SHOVE[1] * t, 0.75); if (clear) return [x, z]; }
+    for (const [x, z] of spots) { if (!openAt(g, x, z) || !USED.every(([dx, dz]) => snowAt(g, x + dx, z + dz))) continue; let clear = true; for (let t = 0; t <= 3 && clear; t += 0.25) clear = !standsNear(boxes, x + SHOVE[0] * t, z + SHOVE[1] * t, 0.75); if (clear) return [x, z]; }
     return null; };
   /** stand a chair of the level on the yard's open snow, still */
   const chairOut = (R: Rig, at: [number, number] = YARD) => { const p = R.g.props.props.find((p: any) => p.def.kind === 'chair'); if (!p) return null; p.x = at[0]; p.z = at[1]; p.vx = 0; p.vz = 0; p.w = 0; p.place(); p.wake(); return p; };
@@ -187,14 +191,20 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
       SM.updateSnowMarks(G, T, F, DT); for (const it of [seenIt, darkIt]) { it.pos[1] = it.radius + 0.002; it.vel[1] = 1; } darkCh.box.c[1] = 0.05; darkCh.v[1] = 0.5;
       SM.updateSnowMarks(G, T, F, DT); ST.settleSnowTracks(T);
       const bs = mostAt(T, x - 3, z + 2, 0.04), bd = mostAt(T, x + 3, z + 2, 0.2), bc = mostAt(T, x + 3, z - 2, 0.3);
+      // THE SAME TWO in a fresh game with the fog lifted: they must MARK, or the two noughts above say nothing (a place where no snow lies reads 0 with the
+      // rule on or off, which is what these two were for a step on 11-05)
+      let ld = 0, lc = 0; { const L = await rig(true); const TL = L.g.snowTracks, FL = L.g.snowField; L.set(); const it = item(x + 3, z + 2, 0.5, -6), ch = chunk(x + 3, z - 2, 0.4, -5);
+        const GL: any = fake([it], [ch]); GL.fogOfWar = { active: true, bared: true, spotSeen: () => true };
+        SM.updateSnowMarks(GL, TL, FL, DT); it.pos[1] = it.radius + 0.002; it.vel[1] = 1; ch.box.c[1] = 0.05; ch.v[1] = 0.5; SM.updateSnowMarks(GL, TL, FL, DT); ST.settleSnowTracks(TL);
+        ld = mostAt(TL, x + 3, z + 2, 0.2); lc = mostAt(TL, x + 3, z - 2, 0.3); }
       // … and the game's own step with every spot in the fog: a chair shoved over the yard cuts nothing; the fog lifted (bared), it does
       const D = await rig(true); const fog = D.g.fogOfWar; const p = chairOut(D); D.step(2);
       Object.defineProperty(fog, 'active', { get: () => true, configurable: true }); const was = fog.spotSeen; fog.spotSeen = () => false; fog.bared = false;
       const m0 = D.g.snowTracks.marks; if (p) shove(D, p, 24, 60); const inFog = D.g.snowTracks.marks - m0, went = p ? Math.hypot(p.x - YARD[0], p.z - YARD[1]) : 0;
       fog.spotSeen = was; delete (fog as any).active;
-      verdict(bs > 200 && bd === 0 && bc === 0 && !!p && went > 0.5 && inFog === 0,
+      verdict(bs > 200 && bd === 0 && bc === 0 && ld > 200 && lc > 0 && !!p && went > 0.5 && inFog === 0,
         'fog — a thing on floor the team does not see marks nothing: a landing, a chunk, a chair shoved',
-        `a landing in sight: byte ${bs} · the same in the fog: ${bd} · a chunk down in the fog: ${bc} · a chair shoved ${went.toFixed(2)} m over the yard with every spot in the fog: ${inFog} marks`); }
+        `a landing in sight: byte ${bs} · the same in the fog: ${bd} (at that spot with the fog lifted: ${ld}) · a chunk down in the fog: ${bc} (with the fog lifted: ${lc}) · a chair shoved ${went.toFixed(2)} m over the yard with every spot in the fog: ${inFog} marks`); }
 
     // ---- where
     { const R = await rig(true); const T = R.g.snowTracks; const p = R.g.props.props.find((p: any) => p.def.kind === 'chair'); const cover = p ? snowFieldAt(R.g.snowField, p.x, p.z).cover : NaN;
