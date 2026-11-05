@@ -2070,6 +2070,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`). (The rows the model
   replaced went in the step after this one: the next bullet.) MEASURED on the software adapter and the CPU only: THE ROWS ON
   HAVE NEVER BEEN SEEN ON A GPU.
+  KNOWN, LEFT (11-05; `shaders/place_common.wgsl lookExpoFor`, `lookRoll`, `EXPO_LAMP`; `render/lookexpo.ts LOOK_EXPO.lamp`): THE MODEL BRINGS A
+  DARK PLACE UP AND NO BRIGHT PLACE DOWN. A place's gain is never under 1, and the shoulder acts only on a place the model has brought up, so
+  a room lit well over the night's white is drawn burnt at night whatever the eyes are doing: the white roof's two rooms were, on a cloud
+  NVIDIA card, under a lamp of 60 (the floor under it held 1.75 times the night's white before any bounce). It was mended in the level
+  (`docs/agents/levels.md`, THE WHITE ROOF, ITS ROOMS AT NIGHT) and a lit room's lamps are therefore authored to the night's white. The rule
+  that would mend it here is the dark rule's twin (a place whose floor sends back more than the night's white is shown down by a share of
+  its excess); it wants a measure the place field does not hold, what a floor sends back with the lamps' own beams in it.
+  THE SAME MISSING MEASURE BY DAY, seen on the same card and read from the code, not measured: the field holds what a face that looks up gets
+  from the cache, so a room lit by fixtures that face down (the kit's tubes) has a level far under the light on its floor, and with the eyes
+  in it by day or at dusk its floor is drawn over the place's white (the white roof's service room, doors shut: floor 233 of 255 at midday and
+  217 at dusk, a black suit 34 and 32). A lamp that also lit the ceiling had hidden it there.
 - **A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, NEVER GUESSED** (11-04; the look page only, no row: it is the only path. (LATER THE SAME DAY the
   rule's text, `lookPlaceLevels` with `placeBlend` and `placeSideCell`, moved word for word from the composite's two writings into
   `place_common.wgsl`, the one text they are built with, when the particles' splat came to ask it: A LIT PARTICLE IS SHOWN BY ITS PLACE.) `composite.wgsl` and
@@ -2324,6 +2335,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   VIEW ALONE at midday the sun's glint on the floor by the door has a speckled band at its upper flank and scalloped edges (one sample a texel
   of a sharp lobe): the played picture hides it in the burnt patch; not chased. NOT SEEN: any of it in motion, by anyone; on an Apple or an AMD
   card; Medium and Ultra.
+  (SINCE 11-05 the white roof's rooms are lit by their ceiling tubes alone, `docs/agents/levels.md`: every record above of its service room at
+  NIGHT, the grains under its lamp and the two boots' specular view among them, was drawn with a point lamp of 60 in the room that is no longer
+  there. The overcast and midday records stand.)
 - **AN OPENING'S DAYLIGHT IS ADDED UP PIECE BY PIECE, NOT POINT BY POINT** (SINCE 11-05 THE PIECES ARE THREE, the sky one stretch along the wall and
   not two halves: AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, below; this bullet is as written with five. 11-04; the look's page, where the openings' lights are; no switch
   and no second path: `common.wgsl portalFlux`, `portalFaces`, with `portalPiece`, `portalCorners`, `portalQuad`, `portalEdge`, `portalEnds`,
@@ -2551,6 +2565,73 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row's `untiles` now, and stucco, skim and carpet have it. CHECK `lookmaps-check` line 11: the four older stuffs still untile and no other of the
   sixteen; nothing made of pieces untiles; a bay is of whole pieces; a bonded map has an even count of courses. Shader texts compile. NEVER SEEN ON A
   GPU; a software draw of the white roof's deck with the row off and on is what was looked at.
+- **A LEVEL SAYS HOW KEPT IT IS, ONE WORD** (11-05; the look's page; level data, absent = 0 = every level as it was drawn, so no picture moves
+  until a level says it. `scene/levelData.ts meta.kept`, `scene/level.ts Level.kept`, `scene/look.ts lookKeptOf`, `main.ts hostLevel`,
+  `render/frame.ts lookConfig.kept`, `render/gbuffer.ts setLook` (the look's uniform, c's first number), `shaders/look.wgsl lookKept`,
+  `lookSurface`'s `left` / `wild`, `lookMarkSoft`, `shaders/markings.wgsl markSoft`, `markTone`; the address's `&kept=<0 to 1>` is the word
+  for a visit). Asked by the level pass: an office's half-metre wall numerals drew "blotched and broken, like chipped paint or dirt",
+  because whether a surface looked looked-after was said STUFF BY STUFF (a stuff with no `fades` is "a place somebody keeps") and every
+  painted mark was old paint by one number for the whole game. A place that should read as cleaned last night had to say every wall again
+  as a kept cousin of its stuff, and its signs still drew rubbed. THE RULE: a level says ONE number, from 0 (left to the weather and the
+  years) to 1 (cleaned and painted last night). `lookSurface` reads it once (`left` = 1 − kept), and HOW WILD A SURFACE IS becomes its
+  stuff's word × the place's (`wild` = the stuff's `fades` > 0 × `left`), where it was the stuff's word alone. Four things follow.
+  (1) THE WEATHER'S AMOUNT on a weathered stuff is the panel's Weather row × `left`: the slow blotches and the drift of hue of a stuff that
+  `fades`, the damp foot, the tide mark, the bleached head and the dark runs of one that `soaks`, the rubbish that gathers at a wall's foot
+  where nobody treads. A mud wall's render that has let go (the masonry rule's patches of bare brick) shrinks with it and is gone at 1; the
+  stone plinth is how the wall was built and stays. (2) WHAT THE WEATHER GIVES UP THE KEPT RULES TAKE, by the same share, so a weathered
+  stuff in a kept place is drawn as a kept one and never as neither: the detail layer's dust band at a wall's foot and its shoe marks on a
+  skirting come in by 1 − `wild`, and so does the No repeat row's drift of three in a hundred. (First built with the weather's amount
+  scaled and the choice of rules left on the stuff alone: at 1 a mud wall had no damp foot AND no skirting marks, the review's find. The
+  dust band's share is `detailFloorWear`'s third number, × its squared nearness, so it is linear in the share: scaling the nearness that
+  goes in gave the square of it, the band weakest half way.) (3) WHAT USE DOES TO A STUFF (`worn`: a piece stained or changed, a wall's
+  foot knocked, the dirt feet bring in) shows by 1 − `wild` too, where it was gated on the stuff having no `fades`. So a weathered stuff
+  may now say `worn`, and plaster, block and slab do, each with its kept cousin's number (skim, cast panel, paver): in a kept office a
+  plaster wall has its knocked foot, in a ruin the weather has it. No picture moves for it until a level says the word.
+  `lookmaps-check`'s line "use shows on kept stuffs only and on none of the older sixteen" is CHANGED for this: it now lists the three by
+  name beside their cousins and refuses any other. (4) A MARK'S PAINT: the years' share of its wear and the colour gone a shade into its wall are × `left`; the brushed shape and the
+  painter's hand stay, so a kept place's sign is whole and its own colour and still paint, not square cells. WHAT DOES NOT ASK IT: where feet go. A
+  trodden lane on bare ground, a floor's scuffed lane, and paint trodden off a floor (a mark's wear is the greater of the years' share and
+  how much its floor is walked) are in a kept place as in a ruin. On a floor whose stuff says `worn` the lane has one answer by share: the
+  weather's (beaten pale) by `wild`, the kept one (the dirt feet bring in, a shade darker) by 1 − `wild`; first built with both whole on
+  a kept slab floor, where they cancelled to a mottle, the third review's find. A knocked foot is a WALL's: a box that moves has none (its
+  run of knocks is laid along the face's plane and hopped as a leaf swung; that was so of any kept stuff before this and is mended here,
+  the one picture this change moves with no word said, if a moving box of stucco, skim or pavers stands on a floor anywhere). WHAT IT CANNOT DO: change a
+  stuff's own picture. The rust and streaks of `metal` are drawn into that stuff's map (the Paint row), so racks that "draw speckled like
+  rust" in a kept office are cured by saying them as `steel`, `enamel` or `brushed`, not by this word. A stuff's own `fades` and `soaks`
+  now say what it does where nobody keeps it, and the kept cousins (stucco and skim of plaster, cast panel and gloss block of block, paver
+  of slab) are no longer the only way to a clean wall; folding each pair into one stuff is not done. WHO SAYS IT: a generator, `export
+  const KEPT = 0.8`; the exporter writes the file's `meta.kept`, and gives a look's second file (`<name>-gwot.ts`, what the look's page
+  loads) the word of the level it dresses unless it says its own (`tools/levels/keptWord.ts`, which the check runs too); a level built on
+  another's floor with no `DRESS_AS` re-exports the word; the office would say it as `level.kept` in its builder (`levelToData` writes
+  the file's meta from the Level and drops either key from a caller's `meta`, a marks' texel the same way now). Every way a level enters
+  the page goes through `main.ts hostLevel`, so the bundled office that stands in for an editor level that cannot stand takes its own
+  word, and its own marks' texel (2.5 cm said outright, where the failed level's stayed). The page logs the word in force when
+  a level or the address says one. ONE WORD A LEVEL: a room's own (a kept office over a derelict cellar) would ride the place field and is
+  not built. Picture only: nothing in the game reads it, and a level's fingerprint (`game/savestate.ts levelFingerprint`: names, counts
+  and the boxes' geometry) does not take it in, so saying the word refuses no checkpoint or recording. With no word the frame is the frame
+  as it was: every new term is × 1 or + 0 at kept 0, written so that holds to the bit. SEEN ON A CLOUD NVIDIA CARD, TWICE. First, the
+  weather's amount and a mark's wear only, the same build with `&kept=0` and `&kept=1`: on the white roof's block wall the red FIRE
+  stencil and its bar, pink and rubbed through at 0, are whole and red at 1, and the chalk 1 on its orange plate is whole, both still
+  brushed; the knocked foot of the orange plinth under them is there in both; the roof's deck, all kept stuffs, does not move (mean
+  difference 0.07 of 255). On the compound at midday the mud walls lose their blotches and their damp foot and the band of stones along
+  the wall is gone, the trodden paths stay. Second, with `wild` by the place (the first review's mends), the compound's start at 0, 0.5
+  and 1: AT 0 IT IS THE FIRST BUILD'S PICTURE AT 0 to the card's own noise (mean difference 0.75 of 255, scattered, on the men's idle
+  and the panel's frame counter, no line along a wall or its foot), which is the one measure there is of "no word, no change"; 0.5 lies
+  between; at 1 the ground along the wall is one pale tone and the wall's stones stay. No error or warning on ten boots. NOT SEEN ON ANY
+  GPU: the second review's mends (the dust band's share made linear; the knocked foot of plaster, block and slab in a kept place; the
+  share on a kept stuff's lane dirt); a mark on a walked floor in a kept place; Metal, where "to the bit" also rests on the driver
+  keeping the order of a product; a level that says the word in its file (none does yet; the office is to be the first). KNOWN, NOT LOOKED AT: block's and slab's own maps hold a slow tone three to four times what the
+  kept stuffs are held to (0.055 and 0.042 against a bar of 0.015, `lookmaps-check`'s measure), and neither untiles. Left to the weather
+  the blotch hides it; at kept 1 a long block wall or slab floor has only the drift of three in a hundred, and may show its 2 m tile. If
+  it does the mend is in the two maps or their rows, not here. Between 0 and 1 a weathered surface pays for both families of rules
+  (about twice the noise reads of either end): a level that settles part way is the look's dearest setting, unmeasured. Check: `bun run tools/qa/probes.ts kept` (family
+  `render`; five lines: the word there and back through the file, the page's rule, the rule by its text in the shaders, their uniform's
+  writer, the page and the exporter, a second writing of the places it acts, the word in each look's second FILE against its
+  generator's; `KEPT_BREAK=1` fails two). It holds the rule by its text and a second writing: nothing in it draws a frame, so that kept 0
+  is the frame as it was rests on the reading of each term and the card pair above, on both
+  stands; the render family's gate, `shaderrows-check`, `shaderinline-check` (both settings), `look-check`, `stuff-check`,
+  `lookmaps-check`, `ways`, `materials`, `level`, `frame-layout`, all 213 shader texts compile, `tsc` both, every level file's export
+  unchanged.
 - **WHAT DAYLIGHT THROUGH OPENINGS STILL COSTS, SPLIT ON ONE CARD** (11-05; a measurement, no code: read it before trying to cut the openings'
   cost again). After the reach rule and the three pieces (the two bullets below), one cloud NVIDIA box a level, High, 1368 by 770, the render
   size held (`adapt=0`), the clock stopped, every word flipped in the running page (two boxes of one commit differ by 1 to 2 ms, so only a flip
@@ -3451,8 +3532,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the lived kit's rubber ink rubber, a quarry-tile floor slab, a gravel hardstanding gravel, sandbags cloth, an exhaust metal; a picture on
   a wall, black file folders, mugs, a planter trough, pull strips and three vehicles' bodies say nothing (the vehicles' words are the
   vehicles task's); the registry's lacquered leaves say paint and the consulate's varnished ones wood.
-  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (15 lines;
-  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13, 14 and 15; line 14 is a shape's piece; line 15 holds that no wall and no door frame is cloth by a borrowed paint; line 10 holds that in `src/game` a box's word is READ in at
+  NO SWITCH: it is not a rule of play and both stands draw the same. THE CHECK: `bun run tools/qa/stuff-check.ts` (16 lines;
+  `STUFF_BREAK=1` strikes the rows' words and fails lines 2, 3, 4, 7, 13, 14 and 15; line 14 is a shape's piece; line 15 holds that no wall and no door frame is cloth by a borrowed paint; line 16 that no generator writes a word or a finish by hand beside a paint; line 10 holds that in `src/game` a box's word is READ in at
   most one place, the picture of a hit) and `bun run tools/qa/stuff-audit.ts --before <ref>`, which prints what every box was and is, by
   kind and file, and exits 1 where one lost or moved its material: against the head before this series it lists the 1,046 below and exits
   1, by design.
@@ -3499,7 +3580,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   text has no stuff's constant and no class test but against plain, and that for each of the 28 stuffs of that day the row says exactly
   what the named rules said, six words each, the old rules written out in the check (`was`: a row changed on purpose changes it there);
   `wgsl-compile`, all 68 texts. Never seen on a GPU by a person.
-- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
+- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()`, whose first number is `lookCfg.g.x` (its second, since 11-05, is how far the place's paint is old: A LEVEL SAYS HOW KEPT IT IS), 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
   (noise by box and marking, so two signs do not share an edge), the shares sharpened so two colours meet in a line and not a blur, and thin rubbed

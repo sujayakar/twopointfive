@@ -170,6 +170,20 @@ like that."
   edge with no start on it, are added up apart.
   It does not hold `STYLE.md`'s rule for a patch. Whether it reads is **by eye**, at the level's own hour (a midday
   sun shows ground a night hid). Never seen on a GPU here.
+- **A level says how kept it is, once.** `export const KEPT = <0 to 1>` in the generator (the file's `meta.kept`;
+  absent = 0, a place left to the weather, which is how every level was drawn before the word). A look's second
+  file (`<name>-gwot.ts`) takes the word of the level it dresses unless it exports its own; the office, which has
+  no generator of this kind, says it as `level.kept` in its builder. At 1 nothing blotches, no wall has a damp
+  foot or runs under its head, no rubbish gathers where nobody treads, a mud wall's render has not let go, and
+  paint on a wall is whole and its own colour; what USE does stays (a lane where feet go, paint trodden off a
+  floor), and plaster, block and slab get the knocked foot and the brought-in dirt their kept cousins have.
+  A level built on another's floor with no `DRESS_AS` (a squads level on its plain one) says the word itself:
+  `export { KEPT } from './<plain>'`. Say it before saying a wall again as another stuff to make it look clean.
+  `&kept=<n>` on the look page's address is the word for a visit. **What it does not do:** it changes no stuff's
+  own picture. Rust on a rack is drawn into the `metal` stuff itself, so a clean rack is another stuff's word
+  (`steel`, `enamel`, `brushed`), not a kept level. **seen** an office's half-metre wall numerals drew chipped,
+  because every mark was old paint whatever the place; its racks drew rusty because they were said as `metal`.
+  **check** `probes.ts kept`.
 - **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>`, behind `LIVED.on`.
 - **Clear of doors, stacks, marks and lines**: 1.1 m off a door's line and out of its sweep; a 0.9 m lane between a room's
   doors; nothing on or 0.45 m beside an authored point; never across a mark's aim line; never a new wall; nothing in the
@@ -208,6 +222,13 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   over 5.5 m, a room bulb 26 over 7 m). Between two pools there is ground that neither lights. The kit's floodlight
   (210 over 20 m, a 70 degree cone) is the one that washes: aim it at one stretch and let it be the only one there. A
   court that is bright all over is the moon's or the sun's work. Judgement, from the rule above; not tried.
+- **A lit room's lamp is weighed against the room's own paint, and a fixture that is a light gets no lamp on top.**
+  A night shows a lit room at the night's own exposure, which never comes down, so the lamp decides the picture: the
+  kit's bulb (26 at 2.4 m) puts the night's white on a pale floor in a room of mid paints. The kit's tube is a light
+  of its own already (3.7 each): do not hang a lamp between tubes. In a room that is pale on every face the bounce
+  is a few times the lamp, and it wants a fraction of the bulb. **seen** the white roof's two rooms, a lamp of 60
+  over two tubes: burnt white at night on a GPU, a black suit grey in the glare; the tubes alone were a lit room.
+  **By eye**, at night, with the door shut; `probes.ts` has no line for it.
 - **Every outside frame keeps a dark part, and nothing big goes white.** Stand the camera where the player starts and
   where he fights: about a third of the ground in shadow. A pale wall (0.4 and over by luminance: a blast wall near
   0.45, light plaster near 0.47, whitewash; bare block sits just under at 0.39) under a key light goes white first.
