@@ -86,6 +86,7 @@ import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { STEALTHPOSE } from './stealthpose';
 import { stealthFeed } from './stealthfeed';   // Sam's hands-empty crouch poses (stealthpose.ts): what the animator is told each frame
 import { takeBegin, takeFall, takeLower, takeKill, takeBeats, takeHaul, TAKEDOWN } from './takedown';   // a takedown's own move and the fall it leaves (takedown.ts): poses only
+import { word } from './belief';
 
 /** the player's movement circle: wider than the body so arms / gun don't clip into walls */
 const BODY_R = 0.42;
@@ -1579,7 +1580,7 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   if (C && C.stage !== 'done' && (C.a === gd || C.b === gd)) {   // one of the pair clearing rooms: the clear is over — his partner comes off the drill toward where he was, on edge (what he then sees is his own senses' business)
     const other = C.a === gd ? C.b : C.a;
     C.cancel(); g.clearing = null;
-    if (other && other.state !== 'dead' && !other.held) { other.state = 'suspicious'; other.awareness = Math.max(other.awareness, 0.6); other.lastKnown = v3.copy(gd.char.pos); other.reactT = 0.7; other.searchT = 0; other.path = []; other.pathGoal = null; other.searchPlan = null; other.pieing = null; }   // (a search plan and a half-pied doorway live inside search / alert — guards.ts drops them itself next frame, but he is 'suspicious' from THIS one: the grab lands after the guards' update)
+    if (other && other.state !== 'dead' && !other.held) { other.state = 'suspicious'; other.awareness = Math.max(other.awareness, 0.6); word(g, other, gd.char.pos); other.reactT = 0.7; other.searchT = 0; other.path = []; other.pathGoal = null; other.searchPlan = null; other.pieing = null; }   // (a search plan and a half-pied doorway live inside search / alert — guards.ts drops them itself next frame, but he is 'suspicious' from THIS one: the grab lands after the guards' update)
   }
   if (gd.script) endGuardScript(gd, gd.state === 'patrol' ? 'patrol' : gd.state === 'search' ? 'search' : 'suspicious');   // (any other choreography: unhooked where he stands, keeping the state he had)
   gd.speed = 0; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.bodyDuty = null; gd.pieing = null; gd.searchPlan = null; gd.muzzleDown = false; gd.stallRef = null;

@@ -35,6 +35,7 @@ import { resetChase } from './guards';
 import { laneCovers, laneBars, laneKnownAt } from './lanes';
 import { w, wg } from './words';
 import { hasHim, OWN } from './owner';
+import { word } from './belief';
 
 export const RESCUEFLUSH = {
   on: false,
@@ -126,7 +127,7 @@ export class RescueFlush {
       if (!S.via.length || h.state === 'dead' || h.held || flat(h.char.pos, S.via[0]) > K.atDoorM) continue;
       if (g.time - h.lastSeenT < K.busySecs || h.sawFoeThisFrame) continue;   // (one of the team in his sights at the mark: the fight is his, the way round waits)
       S.via.shift(); const to = S.via[0] ?? this.pointOf('room', alive); if (!to) continue;
-      h.lastKnown = v3.copy(to); h.path = []; h.pathGoal = null;
+      word(g, h, to); h.path = []; h.pathGoal = null;
       if (!S.via.length) { S.goal = 'room'; R.note(`flush:through:${h.callsign}`); }   // (at the side door: in by it)
     }
     if (g.time < this.nextAt) return;
@@ -191,7 +192,7 @@ export class RescueFlush {
     h.hold = false; h.pinned = false;
     if (F) { F.mode = 'free'; F.freeAt = g.time; F.rallyAt = NaN; }
     if (h.script) endGuardScript(h, 'alert');
-    h.state = 'alert'; h.awareness = 1; h.reactT = 0; h.lastKnown = v3.copy(at); h.path = []; h.pathGoal = null; resetChase(h);
+    h.state = 'alert'; h.awareness = 1; h.reactT = 0; word(g, h, at); h.path = []; h.pathGoal = null; resetChase(h);
     this.sent.set(h, { at: g.time, n: n + 1, goal, via: via.map(p => v3.copy(p)) }); this.count++;
     R.note(`flush:${goal}:${h.callsign}`);
     if (n > 0) return;   // (a man's second errand is not announced: one line a man)

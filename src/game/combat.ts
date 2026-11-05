@@ -70,6 +70,7 @@ import { disarmHand } from './disarm';   // (called inside handProps only)
 import { holdFireShot } from './holdfire';   // (called inside fireWeapon only)
 import { sneakSuit } from './cast';   // (called inside handProps only: the sneaking suit's rifle is drawn black)
 import { LIGHT_IN } from '../sim/lightshome';
+import { word } from './belief';
 
 // ------------------------------------------------------------ shooting
 /** Per-round extras for fireWeapon. Everything a round IS comes from the weapon's row (weapons.ts); these are the shooter's circumstances. */
@@ -719,7 +720,7 @@ function detonateStunRaw(g: Game, it: Item, borrowed: boolean, sam?: { side?: Te
       }
     }
     gd.dazzledUntil = Math.max(gd.dazzledUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs);   // reactT > 0 is the AI's existing "stand and stare" — reused as the stagger
-    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') word(g, gd, at);
     if (g.aiEnabled) gd.witness.dazzled++;   // (his memory of it; the bang itself reaches his ears through hearingCheck like everyone's — nothing is remembered with the AI off)
     gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.dazzledAt = v3.copy(at); gd.char.anim.hitFrom(v3.sub(gd.char.pos, at)); n++;
   }

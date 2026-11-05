@@ -56,6 +56,7 @@ import { order } from './squad';
 import { NETFEED, netFeedTake } from './netquietfeed';
 import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { claimMan, releaseMan, hasHim, ownerWitness, OWN } from './owner';
+import { BELIEF } from './belief';
 
 type Def = RoomFight['defs'][number];
 type Room = NonNullable<Def['room']>;
@@ -413,7 +414,7 @@ export function netQuietTick(g: Game, dt: number) {
         N.eye += (wrapAngle(Math.atan2(lx, lz) - c.aimYaw) - N.eye) * k; N.eyeHalf += (Math.acos(clamp(Math.cos(K.eyeDeg * DEG) / Math.max(flatK, 1e-3), -1, 1)) - N.eyeHalf) * k; } }
     watch(N);
     // nothing seen, nothing heard for `alertSecs`: he is no longer 'alert' (as a man his squad calms is not, for ever) — the spot, the crouch and the arc stay
-    if (gd.state === 'alert' && ok && N.t > K.alertSecs && g.time - Math.max(gd.lastSeenT, H.lastT) > K.alertSecs) ease(gd);
+    if (gd.state === 'alert' && ok && N.t > K.alertSecs && g.time - Math.max(gd.lastSeenT, H.lastT) > K.alertSecs && (!BELIEF.on || gd.awareness < 0.85)) ease(gd);   // (BELIEF on: not while he is roused, or his own update has him alert again in the same tick)
     else if (gd.state !== 'alert' && ok) wary(gd);   // (…but a man who knows he is the last does not talk himself calm: wary, on the floor's own line for it)
   }
   syncLastMan(g);
