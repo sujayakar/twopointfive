@@ -27,6 +27,7 @@ import { PANE_CAP } from '../scene/boxMirror';
 import { simWhyNot } from '../sim/sim';
 import { DOOR_CAP, doorIo } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS, propIo } from '../sim/propshome';
+import { MEN_ROWS } from '../sim/men/schema';
 import { isSheet } from './glass';
 import { MAX_SKINNED } from './guards';
 import { SEATS } from './seats';
@@ -112,6 +113,7 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, table: null },
     // what a game holds of men, and what one step of a rule is handed of them (the rules' hand-overs: no table of the copy)
     { row: 'men', what: 'the first seat\'s man and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture\'s budget of characters)', has: 1 + (g.guards?.length ?? 0), cap: MAX_SKINNED, table: null },
+    { row: 'manrows', what: 'rows of the men\'s columns against every man a game can hold (menMost: at most what a step\'s hand-over holds, by civMost; a man who has left keeps no row)', has: menMost(civs), cap: MEN_ROWS, table: null },
     { row: 'civilians', what: 'civilians: the level\'s own, or those in the game as it stands (a rescue\'s hostages and the man a snatch is for join in play; civilians.ts join holds every one to this number as he joins)', has: civs, cap: civMost(), table: null },
     { row: 'doormen', what: 'contacts one step of the doors is handed at most (every man a game holds: himself, and his body\'s particles near a doorway)', has: most.doorMen, cap: dio?.maxContacts ?? Infinity, table: null },
     { row: 'propmen', what: 'men one step of the furniture is handed at most', has: most.propMen, cap: pio?.maxContacts ?? Infinity, table: null },

@@ -22,6 +22,7 @@
 // showcase tour, the breach's daylight and the attract loop they are not on the floor at all. Authored as data (levels/office.json `civilians`, scene/level.ts
 // CivilianDef: her loop, the task and facing at each waypoint, her tints); the phones and the ways out are CIV_SPOTS below (TODO(LevelData), checked headless
 // like qrf.ts QRF_MARKS). Lines: dialogue.ts CIV_LINES. QA: tools/qa/civilians-probes.ts (`probes.ts civilians`), soak.ts --civilians on|off.
+import { manLeaves } from '../sim/men/store';
 import { men, viewFor } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
@@ -202,7 +203,7 @@ export function resetCivilians(g: Game) {
     if (pl.dragging?.civ) s.view.toggleDrag();
     if (pl.takedown?.g.civ) pl.takedown = null;
   }
-  for (const cv of g.civilians) forgetMeter(g, cv);
+  for (const cv of g.civilians) { forgetMeter(g, cv); manLeaves(cv.char, cv); }
   const F = floorOf(g); F.evacTold = false; F.greetAt = -1e9; F.pending.length = 0;   // (a word due from a man of the old shift is nobody's now)
   spawnCivilians(g);
 }
@@ -346,7 +347,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
   const fl = torchLightDef(`civlight${id}`, id, 0, 10, 20); fl.enabled = false; fl.intensity = 0;                            // a light record for the plumbing that reads one (the grab asks was it lit): never in the engine, never lit
   const p0 = route.points[0], p1 = route.points[1 % route.points.length];
   const yaw = def.face?.[0] ?? (route.points.length > 1 ? v3.yawTo(p0, p1) : 0);
-  const gd = withDice(hashStr(`civ:${def.name}:${i}`), () => new Guard(g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' }));
+  const gd = withDice(hashStr(`civ:${def.name}:${i}`), () => new Guard(g.men, g.ch, id, route, -1, fl, v3.copy(def.tint), { tint2: def.tint2 ? v3.copy(def.tint2) : [0.06, 0.06, 0.08], yaw, name: def.name, team: 'civilian' }));
   gd.foe = null; gd.drawn = false; gd.heardUpTo = g.eventSeq;   // (deaf to what was in the air before she existed)
   const worker = def.kind === 'worker';
   gd.civ = {
