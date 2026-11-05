@@ -42,6 +42,7 @@
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 // THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself. This check's own arm (tools/qa/headless.ts hold), held
 // before a game is stood: a stand-up puts every row where the build has it, which is up (src/sim/sim.ts RUST_ON).
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 export {};   // (a module, for the top-level awaits)
 const { standUp, ROOT, hold } = await import('./headless.ts');
 hold({ rows: false });

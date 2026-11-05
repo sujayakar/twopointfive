@@ -27,6 +27,7 @@
 //
 //   bun run tools/qa/packside-check.ts [--verbose]        (both stands: it raises the switch itself)
 //   PACKSIDE_BREAK=1 …                                    (the rule left off for the 'on' lines: (3) to (7) must fail)
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');

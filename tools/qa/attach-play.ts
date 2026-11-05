@@ -23,6 +23,7 @@
 //   ATTACH_WHY='<regexp over a class>' in front of one child run (see the driver's spawn below) prints, for the first frames a left hand leaves its thing, which of
 //   the animator's plain fields changed since it was last on it.
 // A measuring tool: nothing of the game is edited; the one thing written is the kit cards (ATTACH_KIT) before a mission is staged.
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { resolve } from 'node:path';
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 

@@ -8,6 +8,7 @@
 // Then the FLOOR THERE IS: places hard against the door's own wall on each hand of the opening (a lattice along the wall × off it), on the face's own floor,
 // free, a clear walk from the doorway's front — which of them are out of the line, and how far from the jamb the first of them is.
 export {};
+import './stand.ts';   // (the stand's word, written down before this file reads it)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { standUp, ROOT } = await import('./headless.ts');

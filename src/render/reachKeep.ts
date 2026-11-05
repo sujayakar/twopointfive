@@ -31,10 +31,32 @@ interface Made { r: number; d: Vec3; on: Uint8Array | null }
 /** A STEP'S ALLOWANCE OF TIME (ms) where the frame has the planners' pace (render/planPace.ts; `tickTimed`): the masks waiting are decided for this long
  *  a drawn frame and carried on at the next. Its own allowance, beside the planners': about a wall's worth of masks is 25 to 45 ms of work cold in a
  *  browser, so a dozen or two frames. Where the frame has no pace (a stand with no clock to keep, `?planpace=old`, a page's first frames) the step is
- *  the count of sight-line steps it always was (REACH_PACE.steps). */
+ *  the count of sight-line steps it always was (REACH_PACE.steps). ONE ALLOWANCE FOR ALL THE MASK WORK OF A FRAME, a guest's too (KeepGuest). */
 export const KEEP_MS = 2;
-/** sight-line steps a lamp's mask is given between two looks at the clock */
+/** sight-line steps a mask is given between two looks at the clock */
 const SLICE = 4000;
+/** A STEP ON THE CLOCK SPENDS NO MORE SIGHT-LINE STEPS THAN THIS MANY STEPS ON THE COUNT (REACH_PACE.steps each). Where a browser's clock is
+ *  coarser than the allowance (a clock held to tens of milliseconds for privacy) it does not say when the time is up, and the step would decide
+ *  every waiting mask, the lamps' and the guests', in one frame; with this it is a few of the count's old shares. It bounds the slices of masks
+ *  only: the walls' scan and a directional light's cells run to their end under such a clock, each a step's share by itself as on the count,
+ *  and a lamp's third go is whole as ever. At the rates measured (30 to 47 thousand steps a millisecond warm) the allowance of time ends a step
+ *  long before this does; a core several times faster would be held to it, and its masks land a frame or so later. */
+const KEEP_MOST = 4;
+/** A GUEST'S MASK, decided by its maker a slice at a time IN THIS QUEUE (the picture's own lights: the daylight at an opening, engine.ts, whose masks
+ *  are of the engine's own raster of the walls). Until 11-05 the engine decided them beside the keeper on a count of steps of its own: on a real box
+ *  that was the larger of the two after a blast, 84 to 90 ms over the 1.8 s after each charge, 1 to 5 ms a frame on top of the keeper's two. A guest
+ *  is handed to the step that is to work it (`tickTimed`), which keeps nothing of it: whoever owes the mask says so again at the next step.
+ *  `some(steps)` works at most that many sight-line steps and says whether the mask is whole; `rank` orders guests among
+ *  themselves, lower first; `first` = its light is OUT until the mask is whole (a hole just blown): it is in the class that leads most often. */
+export interface KeepGuest { rank: number; first: boolean; some(steps: number): boolean }
+/** WHO LEADS A STEP ON THE CLOCK: the classes in this round, a place each step, a class that owes nothing passed over. The guests whose light is
+ *  out (F, twice a round), the lamps with the walls' reading (L), the guests whose old mask still serves (O). The one that leads has the allowance
+ *  first; the others follow in the order F, L, O with what it left, and with nothing left they wait a frame. So no class starves another (a hole's
+ *  mask cannot stop the lamps', and walls that change every frame cannot stop the daylight's): a class that owes work leads one step in four at
+ *  the least. A step takes one allowance and the last slice begun, whoever worked. */
+const ROUND = ['F', 'F', 'L', 'O'] as const;
+
+const NO_GUESTS: readonly KeepGuest[] = [], ORDER = ['F', 'L', 'O'] as const, NEVER = (): boolean => false, byRank = (a: KeepGuest, b: KeepGuest): number => a.rank - b.rank;
 
 export class ReachKeep extends HostOwned {
   private readonly world: { readonly statics: Box[] }; private readonly lights: { readonly lights: RtLight[] };
@@ -52,6 +74,8 @@ export class ReachKeep extends HostOwned {
   private held: Rect[] = []; private hold = 0; private now: Rect[] = []; private stale = false; private putBacks = PUT_BACKS.n;
   /** a reading of the walls in hand (on a budget of time: the raster as it was built when the reading began, and the scan that sets it against the last) */
   private reading: { rects: Rect[]; solid: Uint8Array; it: Generator<void, Rect | null, void> } | null = null;
+  /** the place in ROUND that leads the next step with a guest's work in it (it moves on past a class that owes nothing) */
+  private turn = 0;
 
   constructor(world: { readonly statics: Box[] }, lights: { readonly lights: RtLight[] }) { super(); this.world = world; this.lights = lights; }
 
@@ -154,34 +178,59 @@ export class ReachKeep extends HostOwned {
   /** ONE STEP ON THE CLOCK, a drawn frame's where the frame has the planners' pace: the same work for KEEP_MS. The walls' reading in the scan's own
    *  steps; a lamp's mask in slices of sight-line steps; a directional light's a decided cell at a time; each carried on at the next step where it
    *  stopped. One scan step and one slice or cell at least, so a slow machine still ends and a reading never keeps the masks waiting. Under
-   *  `REACH_PACE.whole` it is the count's step (the old pace keeps its frames). */
-  tickTimed(n = 8): number { return this.step(!REACH_PACE.whole, n, REACH_PACE.steps); }
+   *  `REACH_PACE.whole` it is the count's step (the old pace keeps its frames). `guests` = the masks others owe and decide here (KeepGuest): worked
+   *  in the same allowance, the classes leading in turn (ROUND). On the count a guest is its maker's to work: none is taken. */
+  tickTimed(n = 8, guests: readonly KeepGuest[] = NO_GUESTS): number { return this.step(!REACH_PACE.whole, n, REACH_PACE.steps, guests); }
   /** the clock a step on the clock looks at (a check scripts one) */
   timeNow: () => number = clock;
 
-  private step(byTime: boolean, n: number, steps: number): number {
+  private step(byTime: boolean, n: number, steps: number, guests: readonly KeepGuest[] = NO_GUESTS): number {
     const putBack = this.putBacks !== PUT_BACKS.n; this.putBacks = PUT_BACKS.n;
-    if (!this.solid) return 0;
-    if (putBack) this.stale = true;   // (a snapshot was put back since the last step: the walls may be another moment's)
-    if (this.stale) { this.stale = false; this.reread(); }
-    // A DIRECTIONAL LIGHT'S MASK KNOWS WHAT IT WAS MADE FOR (the walls, the way it shone, its disc): one that is not waiting to be decided again and whose
-    // disc is another now (the weather turned; a snapshot put the old one back) or whose walls are not these (made on a holed level since put back as
-    // authored) is made again here, whole. Rare, and never on a blast's frames: a blast asks the light, and a light that waits is the queue's.
-    for (const l of this.lights.lights) { if (l.kind !== 2) continue; const k = this.made.get(l); if (!k || this.queue.some(q => q.l === l)) continue;
-      if ((k.r >= 0 && k.r !== l.radius) || k.on !== this.solid) { this.made.delete(l); if (k.r >= 0) this.sun(l, l.radius); else this.dir(l); } }
-    const old = REACH_PACE.whole, t0 = byTime ? this.timeNow() : 0, late = (): boolean => this.timeNow() - t0 >= KEEP_MS;
+    if (this.solid) {
+      if (putBack) this.stale = true;   // (a snapshot was put back since the last step: the walls may be another moment's)
+      if (this.stale) { this.stale = false; this.reread(); }
+      // A DIRECTIONAL LIGHT'S MASK KNOWS WHAT IT WAS MADE FOR (the walls, the way it shone, its disc): one that is not waiting to be decided again and whose
+      // disc is another now (the weather turned; a snapshot put the old one back) or whose walls are not these (made on a holed level since put back as
+      // authored) is made again here, whole. Rare, and never on a blast's frames: a blast asks the light, and a light that waits is the queue's.
+      for (const l of this.lights.lights) { if (l.kind !== 2) continue; const k = this.made.get(l); if (!k || this.queue.some(q => q.l === l)) continue;
+        if ((k.r >= 0 && k.r !== l.radius) || k.on !== this.solid) { this.made.delete(l); if (k.r >= 0) this.sun(l, l.radius); else this.dir(l); } }
+    }
+    if (!byTime) return this.solid ? this.lamps(false, n, steps, NEVER, { worked: false }, false) : 0;
+    // ON THE CLOCK. A note of the walls that waits is counted down ONCE A STEP, whoever has the allowance (as a step on the count counts it)
+    const ripe = !!this.solid && !this.reading && this.now.length === 0 && this.held.length > 0 && this.hold-- <= 0;
+    const lampsOwe = !!this.solid && (this.reading !== null || this.now.length > 0 || ripe || this.queue.length > 0);
+    if (!guests.length && !lampsOwe) return 0;   // (most frames: nothing is owed, and no clock is asked)
+    // (late: the allowance of time is spent, or KEEP_MOST of the count's own shares of sight-line steps are)
+    const t0 = this.timeNow(), s0 = REACH_WORK.steps, late = (): boolean => REACH_WORK.steps - s0 >= KEEP_MOST * steps || this.timeNow() - t0 >= KEEP_MS, st = { worked: false };
+    if (!guests.length) return this.lamps(true, n, steps, late, st, ripe);
+    // one allowance for the lamps' work and the guests', the classes that owe any leading in turn (ROUND)
+    const firsts = guests.filter(g => g.first).sort(byRank), others = guests.filter(g => !g.first).sort(byRank);
+    const owes = (c: string): boolean => c === 'F' ? firsts.length > 0 : c === 'O' ? others.length > 0 : lampsOwe;
+    let lead: (typeof ROUND)[number] = ROUND[this.turn++ % ROUND.length], done = 0; while (!owes(lead)) lead = ROUND[this.turn++ % ROUND.length];   // (the next in the round that owes work: a class's place comes up every fourth step at the latest, whoever else owes)
+    const slices = (list: readonly KeepGuest[]): void => { for (const g of list) { if (st.worked && late()) return; let ended: boolean; do { ended = g.some(SLICE); st.worked = true; } while (!ended && !late()); if (!ended) return; } };
+    for (const c of [lead, ...ORDER.filter(x => x !== lead && owes(x))]) {
+      if (st.worked && late()) break;
+      if (c === 'F') slices(firsts); else if (c === 'O') slices(others); else done += this.lamps(true, n, steps, late, st, ripe);
+    }
+    return done;
+  }
+  /** the lamps' share of a step: the walls read where a note is due, then the waiting masks (`step` says how; `st.worked` = something of this step's
+   *  allowance has been used, by whoever: one unit of work at least is done before the clock is asked; `ripe` = on the clock, a waiting note of the
+   *  walls is due at this step: `step` counts it down) */
+  private lamps(byTime: boolean, n: number, steps: number, late: () => boolean, st: { worked: boolean }, ripe: boolean): number {
+    const old = REACH_PACE.whole;
     if (this.reading && !byTime) { const R = this.reading; this.reading = null; this.readEnds(R.rects, R.solid, whole(R.it)); }   // (a reading in hand and no clock to keep: ended here)
     if (byTime) {   // THE WALLS, a little a step: a reading in hand goes on; a note that is due begins one (with every rect noted since). The masks asked before it carry on below
-      const due = !this.reading && (this.now.length > 0 || (this.held.length > 0 && this.hold-- <= 0));
+      const due = !this.reading && (this.now.length > 0 || ripe);
       if (this.reading || due) this.readSome(due ? [...this.held.splice(0), ...this.now.splice(0)] : null, late);
     } else {
       if (this.now.length) this.read(this.now.splice(0));
       if (this.held.length && this.hold-- <= 0) { this.read(this.held.splice(0)); return 0; }   // (the noted changes read into the raster: this step's share; the masks from the next. While a note waits, masks asked before it carry on below)
     }
-    let done = 0, worked = false; const c0 = REACH_WORK.steps, k0 = REACH_WORK.cells;
+    let done = 0; const c0 = REACH_WORK.steps, k0 = REACH_WORK.cells;
     while (done < n && this.queue.length) {
       const left = old ? Infinity : steps - (REACH_WORK.steps - c0);
-      if (byTime ? worked && late() : left <= 0 || (old && done > 0 && REACH_WORK.cells - k0 >= REACH_PACE.wholeCells)) break;
+      if (byTime ? st.worked && late() : left <= 0 || (old && done > 0 && REACH_WORK.cells - k0 >= REACH_PACE.wholeCells)) break;
       const q = this.queue[0], l = q.l;
       const boot = () => { if (!this.bootMask.has(l)) { const m = l.kind === 2 ? this.dirs.get(l) : this.point.get(l), k = this.made.get(l); if (m) this.bootMask.set(l, { m, made: k ? { ...k } : undefined }); } };   // what the level as authored gave it (masks are replaced, never written in place)
       if (l.kind === 2) {
@@ -190,7 +239,7 @@ export class ReachKeep extends HostOwned {
         if (byTime && q.restarts < 2) {   // a few cells a step. The job reads the statics as they stood when it began and is begun again if the light is asked again (ask); the third go is whole, as below
           const J = q.dirJob ??= { it: this.dirLightSteps(l.dir, k ? k.r : -1, only), prev };
           let r: IteratorResult<void, Uint32Array | null>;
-          try { r = J.it.next(); worked = true; while (!r.done && !late()) r = J.it.next(); } catch (e) { q.dirJob = undefined; throw e; }
+          try { r = J.it.next(); st.worked = true; while (!r.done && !late()) r = J.it.next(); } catch (e) { q.dirJob = undefined; throw e; }
           if (!r.done) break;
           q.dirJob = undefined;
           if (this.dirs.get(l) !== J.prev) { q.restarts++; continue; }   // (its mask was made anew under the job: decided again from that one)
@@ -198,13 +247,13 @@ export class ReachKeep extends HostOwned {
           this.queue.shift(); done++; continue;
         }
         if (!byTime && !old && REACH_WORK.steps !== c0) break;
-        q.dirJob = undefined; boot(); this.dir(l, only); worked = true;
+        q.dirJob = undefined; boot(); this.dir(l, only); st.worked = true;
         this.queue.shift(); done++; if (old || byTime) continue; break;
       }
       const job = q.job ??= { budget: left }, prev = this.point.get(l), only = prev ? { prev, rects: q.rects, boxes: q.boxes, maxDist: l.range + 1.5 } : undefined, dir: Vec3 = l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0];
       let m: Uint32Array | null;   // (walls changing faster than a big mask can be decided in shares: the third go takes it in one, as every mask once was)
-      if (byTime) do { job.budget = q.restarts >= 2 ? Infinity : SLICE; m = reachMaskSome(this.solid, l.pos, dir, l.radius, this.interior, only, job); worked = true; } while (!m && !late());
-      else { job.budget = q.restarts >= 2 ? Infinity : left; m = reachMaskSome(this.solid, l.pos, dir, l.radius, this.interior, only, job); }
+      if (byTime) do { job.budget = q.restarts >= 2 ? Infinity : SLICE; m = reachMaskSome(this.solid!, l.pos, dir, l.radius, this.interior, only, job); st.worked = true; } while (!m && !late());
+      else { job.budget = q.restarts >= 2 ? Infinity : left; m = reachMaskSome(this.solid!, l.pos, dir, l.radius, this.interior, only, job); }
       if (!m) break;
       boot(); this.point.set(l, m); this.queue.shift(); done++;
     }

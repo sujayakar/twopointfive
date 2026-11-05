@@ -15,7 +15,6 @@ kit, its words), the other the floor itself:
 ```bash
 bun run tools/qa/level-needs.ts <name>            # a second: a PASS, FAIL or NOTE per need (the name in front of each need below)
 bun run tools/qa/level-needs.ts <name> --run      # also runs the level's own checks as they stand, map-check --no-runs among them
-TPS_PROFILE=shipped bun run tools/qa/level-needs.ts <name> --run     # and again on the stand the page opens on
 bun run tools/qa/map-check.ts <name>              # the floor: file, lint, size, structure, squads, nav from every way in, its card, 48 scripted runs
 ```
 
@@ -41,7 +40,7 @@ did not.
   frame's `orders` and `rows`) need no row move at all; a step added or dropped, a `done` test or a mark does. A lesson key the
   tool has in neither of its two tables is red until you put it in one.
 - **Level data is not a switch.** A new RULE that reads level data is (CLAUDE.md: switch, `FROZEN_HOLDS` row, knob table, a
-  check with a `_BREAK` path, both stands). A new field wants its key in `src/scene/levelData.ts`, both directions in
+  check with a `_BREAK` path). A new field wants its key in `src/scene/levelData.ts`, both directions in
   `levelLoad.ts`, and a line in `docs/level-format.md`.
 
 ## 1. The idea (by eye, before any box)
@@ -111,6 +110,13 @@ did not.
 - **Every door face has floor for a stack**: a man on each jamb, 2 m of wall clear, nothing on the marks. **seen** a carton on
   a stack place; a table on the wall refused the order "no room on that door". **check**
   `bun run tools/qa/stack-marks-check.ts <row>`; `lived-stack-check.ts <row>` after moving furniture.
+- **A solid thing by a door is read at that door.** A thing that stops feet (over 0.19 m) laid within a few metres of a door can shut the
+  walk grid's cells on a team's way to its stack, and the entry is then another fight. **seen** a log laid across two others by the
+  pass's chopping block shut a square metre in front of two doors; the stacks' marks and the charges' places were untouched. **check**
+  after adding or moving such a thing, `bun run tools/qa/bang-tally-diff.ts <row> --before <a worktree of the commit before>` (ten
+  minutes a row, twenty when a door is suspect), and say in the step's notes what it printed. A door it NAMES is yours to explain or
+  to mend; its line says whether both trees were staged alike and gives the command that prints one moved entry. Never read a tally's
+  rows by eye on a few seeds: that blamed the wrong door here, twice.
 - **A corridor players walk runs up the screen, or is wide.** The camera looks from the south, so a wall hides about two metres of floor behind it: a corridor 2.4 m wide running along the
   screen hides whoever is in it. **seen** the sneak lab's first dark corridor, Sam under the top of its south wall. **By eye.**
 - **No door close under a tall wall to its south** (the camera looks from the south: the door is never drawn, never under
@@ -231,7 +237,7 @@ level that already has its rooms, and moves nobody's fight. The office was the f
   at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
   hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
   **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
-  seen than before) on both stands, and the three play-through reads against the step before: none moves.
+  seen than before), and the three play-through reads against the step before: none moves.
 - **Put it where the play camera reads, and draw your stills from that camera.** It opens at yaw -22 and pitch 55 degrees and turns with him.
   At rest it shows floors, tops, south faces and west faces, and a wall hides about two metres of floor behind it. **seen** the office's
   first stills were pinned at yaw 0 and 58: paint on a corridor's floor was all but hidden, a bay behind a parked van was never seen, and
@@ -454,8 +460,9 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   `TPS_PROFILE=shipped bun run tools/qa/ships.ts --scn <row> --seeds 1-24`; `plan-fights.ts --scn <row>`.
 - **Some checks name their levels by hand** (a list inside the tool: the hour and weather probes, the blast and door
   probes, the squad deal). A new level is in none of them until added: `grep -ln "depot" tools/qa/*.ts` shows which.
-- **Both stands, every check.** Frozen is the harness default; shipped is the page. A tool's own "as shipped" is not the
-  shipped stand.
+- **One stand, every check, once.** A tool with no word in front stands the game as the page opens it (`TPS_PROFILE=shipped`
+  says the same); `TPS_PROFILE=frozen` is the old stand, kept for the switch cleanup only. A tool's own "as shipped" arm from
+  before that is not the page's stand.
 - **The sound replays saved on the level.** `public/assets/replays` holds recorded runs the sounds page plays: the office
   has four (office-loud, chairs, reloads, doors), Mousehole one (wall-charge). A step that moves the level's fingerprint
   or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight. **check**
