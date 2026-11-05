@@ -6885,7 +6885,7 @@ function capSole(foot: Vec3, toe: Vec3): number[] {
   return capRec(heel, tip, 0.033, 0.06);
 }
 export class Character extends ManCols {
-  id: number; tint: Vec3; tint2: Vec3;
+  tint: Vec3; tint2: Vec3;
   anim: CharacterAnimator; skel: SkeletonInstance;
   world: Mat4 = m4.create();
   /** cached bone world positions (updated in update()) */
@@ -6928,7 +6928,7 @@ export class Character extends ManCols {
   /** HOW THE NEXT QUIET FALL GOES (takedown.ts sets it on the frame before he is put down; ragdollize reads it once and clears it): null = the build's one fall */
   fallAs: FallStyle | null = null;
   /** …where whoever put him down stood (the fall leads him AWAY from there; null = along the shove's own line) · no room that way: the fall keeps to where he stands. Read and cleared with fallAs. */
-  fallFrom: Vec3 | null = null; fallTight = false; /** m the 'sink' fall lays his pelvis further along his facing (HOLD.layAhead; takedown.ts setFall) */ fallAhead = 0;
+  fallFrom: Vec3 | null = null; /** m the 'sink' fall lays his pelvis further along his facing (HOLD.layAhead; takedown.ts setFall) */ 
   /** a body that sleeps BREATHES while this is set (takedown.ts, every frame, for a man out cold): breaths a second · m the chest rises · s it comes in over.
    *  The picture's joints only — the skeleton is posed again, `bones` (what the game reads), the particles and the capsules stand. */
   breathe: { breathHz: number; breathRise: number; breathIn: number } | null = null;
