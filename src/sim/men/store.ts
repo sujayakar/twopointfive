@@ -6,12 +6,12 @@
 //
 // A ROW IS A MAN'S FOR HIS LIFE. `enter` gives the lowest free row, zeros; `leave` frees it. The generation column counts each change of hands (odd: someone stands there), so a
 // HANDLE, what a column of one man keeps of another (`handleOf`: generation and row in one word, never 0), is caught by name when the row has changed hands since (`rowOf`), and
-// never read as the man who stands there now. A man's own object that has left holds GONE instead of a store, so reading him afterwards throws by name too.
+// never read as the man who stands there now. A MAN WHO LEAVES TAKES HIS NUMBERS WITH HIM: the game's side tables and lists may hold his object for as long as they like (and read it,
+// as they always did), so his numbers move to a store of leavers (`manLeaves`), and his row in the game is free the moment he goes.
 //
 // (Imports sim.ts and state.ts alone: like the rest of src/sim, this is below the game.)
 import { sim, simWhyNot } from '../sim';
 import { simTenant, simPart, P_MEN, type SimState } from '../state';
-import { HostOwned } from '../../math/side';
 import { MEN_F64, MEN_U32, MEN_HEAD, MEN_GEN, MEN_SCHEMA, type ManCols } from './cols';
 import { MEN_ROWS } from './schema';
 
@@ -67,6 +67,16 @@ export class MenStore {
     for (let c = 0; c < MEN_AT.length; c++) { if (c < NF) d[this.b8 + MEN_AT[c] + r] = 0; else if (MEN_AT[c] !== MEN_GEN) u[this.b4 + MEN_AT[c] + r] = 0; }
     u[g + r] += 1;
   }
+  /** this store holds the men who have left a game (their rows are never freed: the store goes with the last of them) */
+  isLeavers = false;
+  private kept: MenStore | null = null;
+  /** where a man who leaves this store keeps his numbers: one store until it is full, and then another */
+  leavers(): MenStore { let K = this.kept; if (K === null || K.standing === MEN_ROWS) { K = this.kept = new MenStore(); K.isLeavers = true; } return K; }
+  /** row `from` of store `S`, every column but the generation, into this store's row `to` */
+  copyRow(S: MenStore, from: number, to: number): void {
+    const a = S.d, au = S.u, b = this.d, bu = this.u;
+    for (let c = 0; c < MEN_AT.length; c++) { if (c < NF) b[this.b8 + MEN_AT[c] + to] = a[S.b8 + MEN_AT[c] + from]; else if (MEN_AT[c] !== MEN_GEN) bu[this.b4 + MEN_AT[c] + to] = au[S.b4 + MEN_AT[c] + from]; }
+  }
   /** a word that names the man in row `r` for as long as he stands there: never 0, so a column of zeros is "nobody" */
   handleOf(r: number): number { return (this.u[this.gens + r] << 8 | r) >>> 0; }
   /** the row a handle names: whoever holds a handle to a man who has left is told so, by name */
@@ -79,21 +89,16 @@ export class MenStore {
   get standing(): number { const u = this.u, g = this.gens; let n = 0; for (let r = 0; r < MEN_ROWS; r++) n += u[g + r] & 1; return n; }
 }
 
-/** WHAT A MAN WHO HAS LEFT HOLDS in place of a store: asking it anything throws by name. The host's, one for all games: a snapshot keeps it as it is */
-class Gone extends HostOwned {
-  private no(): never { throw new Error('a man was read or written after he left the game (sim/men/store.ts): his row may be someone else\'s now'); }
-  get d(): Float64Array { return this.no(); }
-  get u(): Uint32Array { return this.no(); }
-  b8 = 0; b4 = 0;
-}
-const GONE = new Gone() as unknown as MenStore;
-
 /** a man's row and store, written into his object as he is made */
 export function standMan(m: ManCols, S: MenStore): void { m.S = S; m.r = S.enter(); }
 /** …and the same row for a second object of the same man (a Guard record and his Character) */
 export function sameMan(m: ManCols, of: ManCols): void { m.S = of.S; m.r = of.r; }
-/** he has left the game: his row is free, and every object of him (`m`, `also`) now throws by name when read */
-export function manLeaves(m: ManCols, ...also: ManCols[]): void { const S = m.S; if (S !== GONE) S.leave(m.r); for (const x of [m, ...also]) { x.S = GONE; x.r = -1; } }
+/** HE HAS LEFT THE GAME: his row is free, and every object of him (`m`, `also`) reads his numbers as they stood, from a store of leavers */
+export function manLeaves(m: ManCols, ...also: ManCols[]): void {
+  const S = m.S; if (S.isLeavers) return;
+  const K = S.leavers(), r = K.enter(); K.copyRow(S, m.r, r); S.leave(m.r);
+  for (const x of [m, ...also]) { x.S = K; x.r = r; }
+}
 
 // THE MEN OF NO GAME (a menu's figure, the viewer's man, a tool's): one store until it is full, and then another. Nobody has their rows back: what is left of a full store goes
 // with the last of its men.
