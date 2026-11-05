@@ -631,6 +631,10 @@ export class Guard extends GuardCols {
    *  mapped and eased exactly as Sam's meter is (Game.visibilityOf, damp 6). What a hostile AI eye reads where it reads player.visibility for Sam. */
   visibility = 0; irradiance = 0;
   routeI: number; wp = 0; wait = 0; awareness = 0; lastKnown: Vec3 | null = null; lastSeenT = -100;
+  /** belief.ts: the point his duty has his gun on while no man is in his eyes (the room fight's, the same object as its watched point); lastKnown is only ever where he believes the enemy to be. Always null with BELIEF off */
+  covers: Vec3 | null = null;
+  /** belief.ts word(): when a blast or a mate's word last placed his belief (only ever compared with the tick's own time) */
+  wordT = -100;
   hold = false;                  // scripted (showcase tour): stand your ground while on patrol / merely suspicious (look, don't walk over)
   pinned = false;                // scripted: in a fight, keep the position you were given (shoot from it, cover the last fix from it) instead of closing in
   /** scripted, SHOWCASE CAST ONLY (director.ts LoadoutSpec.god — the day showcase's two operatives): a round that would have found him passes through him as it passes a colleague (combat.ts

@@ -53,6 +53,7 @@ import { order, endGuardScript } from './squad';
 import { run, boots, pressOwns } from './pressure';
 import { breakerErrand } from './workthings';
 import { breakerResetNear } from './lighting';
+import { cover } from './belief';
 import { lightEstimateAt } from './guards';
 import { darkFoeCarries } from './darkfoe';
 import { squadDefers, squadStaysIn } from './enemysquads';
@@ -216,7 +217,7 @@ export function calmBack(D: Def, c: Calm, wary: boolean) {
   if (gd.script) endGuardScript(gd, wary ? 'suspicious' : 'patrol');
   gd.awareness = wary ? Math.min(0.45, Math.max(c.awareness, 0.35)) : c.awareness; gd.hold = c.hold; gd.pinned = c.pinned;
   D.mode = 'hold'; D.station = c.station; D.home = c.home; D.room = c.room; D.ev = c.ev; D.watch = c.watch; D.want = c.want; D.pt[0] = c.pt[0]; D.pt[1] = c.pt[1]; D.pt[2] = c.pt[2];
-  D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; gd.lastKnown = D.pt;
+  D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; cover(gd, D.pt);
 }
 /** a kept post as a checkpoint carries it (its room by id) and back */
 export type CalmSnap = Omit<Calm, 'room'> & { room: number };

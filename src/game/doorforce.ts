@@ -61,6 +61,8 @@ import { simRandom } from '../math/dice';
 
 export const DOORFORCE = {
   on: false,
+  /** a man walking to boot a door who is put on a post gives the walk up (a switch of its own: ?postends=0, TPS_POSTENDS=1) */
+  postEnds: false,
   /** the two halves, each off = that half as it was: rounds through the leaf · the boot */
   shoot: true, kick: true,
   /** how sure he must be to start on a door · down to what he stays on it · s his sureness takes to fade to a third · s his newest word of it may be old */
@@ -320,6 +322,7 @@ function kickStep(g: Game, S: State, gd: Guard, M: Man, dt: number): { aim: Vec3
   const lock: Vec3 = [d.def.hinge[0] + Math.cos(d.def.closedDir) * (d.def.width - 0.2), 0.9, d.def.hinge[1] + Math.sin(d.def.closedDir) * (d.def.width - 0.2)];
   if (Kk.phase !== 'kick' && !shut(d)) return end('it stands open');
   if (Kk.phase === 'walk') {
+    if (K.postEnds && (gd.pinned || gd.hold)) return end('he has been put on a post');   // (a rule that stops him short plants him, lanes.ts plantShort: the boot was a free man's, and a walk that went on under the post is a man stopped and stepping, stopped and stepping)
     if (g.time - Kk.t0 > K.walkSecs) return end('the walk took too long');
     goTo(g, gd, Kk.spot); const arrived = followPath(g, gd, dt, g.tune.guardInvestigate);
     if (flat(c.pos, Kk.spot) < 0.3 || (arrived && flat(c.pos, Kk.spot) < 0.6)) { Kk.phase = 'set'; Kk.setT = g.time; gd.path = []; gd.pathGoal = null; }

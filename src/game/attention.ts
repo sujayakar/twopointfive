@@ -36,6 +36,7 @@ import { fightLive } from './roomfight';
 import { whistleMem } from './whistle';
 import { nearKnownBody } from './guards';
 import { simRandom } from '../math/dice';
+import { wordNow } from './belief';
 
 /** the switch and every number of it (UNTUNED by play: nobody has sneaked past a held man on a real page yet) */
 export const ATTENTION = {
@@ -159,7 +160,7 @@ export function attentionNoiseK(g: Game, gd: Guard): number { return attentionOf
 export function attentionStep(g: Game, gd: Guard, at: Vec3) {
   const H = attentionOf(g, gd); if (!H) return;
   if (H.mode === 'lent') mem(gd).lentOff = g.time + ATTENTION.lentBackSecs;
-  end(g, gd, 'step'); if (gd.state === 'suspicious') { gd.lastKnown = v3.copy(at); gd.path = []; gd.pathGoal = null; }
+  end(g, gd, 'step'); if (gd.state === 'suspicious') { if (!wordNow(g, gd)) gd.lastKnown = v3.copy(at); gd.path = []; gd.pathGoal = null; }
 }
 /** did he say he was done inside the last few seconds (guards.ts: the walk back's 'must have been nothing' is then already said) */
 export function attentionTold(g: Game, gd: Guard): boolean { if (!ATTENTION.on) return false; const M = memOf.get(gd); return !!M && g.time - M.toldAt < 4; }

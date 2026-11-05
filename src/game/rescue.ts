@@ -75,6 +75,7 @@ import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain li
 import { SAMESTART } from './samestart';   // (a leaf)
 import { gunDeal } from './gunroles';   // (called inside the staging only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { BELIEF, cover, uncover } from './belief';
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Hostage rescue, __rescue.knobs). Who stands where, the stun, the lights and the clock's dealt length are read at a staging
  *  ('restage' applies them); the clocks' other numbers, blind fire and the clock's own switch are read as it runs. */
@@ -598,7 +599,7 @@ export class Rescue {
           D.released = true; h.hold = false; h.pinned = false;
           if (F) { F.mode = 'free'; F.freeAt = g.time; F.rallyAt = NaN; }   // (the way the room fight's own rally lets a man go: he stays on its roster — its skill, its smoke — and holds again where he ends up)
           if (h.script) endGuardScript(h, 'alert');
-          if (h.state !== 'alert' || !h.foe) { h.state = 'alert'; h.awareness = 1; h.reactT = 0; h.lastKnown = v3.copy(this.noise ?? this.roomPoint('outside')); resetChase(h); }
+          if (h.state !== 'alert' || !h.foe || (BELIEF.on && !h.lastKnown)) { h.state = 'alert'; h.awareness = 1; h.reactT = 0; h.lastKnown = v3.copy(this.noise ?? this.roomPoint('outside')); resetChase(h); }
           this.note(`released:${h.callsign}`); continue;
         }
       }
@@ -677,7 +678,7 @@ export class Rescue {
       D.released = true; D.crew = 'out'; h.hold = false; h.pinned = false;
       F.mode = 'free'; F.freeAt = g.time; F.rallyAt = NaN;
       if (h.script) endGuardScript(h, 'alert');
-      if (h.state !== 'alert' || !h.foe) { h.state = 'alert'; h.awareness = 1; h.reactT = 0; h.lastKnown = v3.copy(P); resetChase(h); }
+      if (h.state !== 'alert' || !h.foe || (BELIEF.on && !h.lastKnown)) { h.state = 'alert'; h.awareness = 1; h.reactT = 0; h.lastKnown = v3.copy(P); resetChase(h); }
       this.note(`crew:behind:${h.callsign}`); this.note(`released:${h.callsign}`); g.say(h, 'they\'re on the door — moving up behind!', true);
     }
     return D.role === 'roamer';
@@ -909,7 +910,7 @@ export class Rescue {
       const pl = g.player, upBefore = this.ops.filter(o => o.state !== 'dead').length, flash = pl.hitFlash, down = pl.down;
       fireWeapon(g, c, chest, false, { steady: true, spread: 0.01 });
       const took = pl.down !== down || pl.hitFlash > flash || this.ops.filter(o => o.state !== 'dead').length < upBefore;   // one of the team was standing in the line: the round is his (an AI round tests the men it is hostile to, never a civilian — the hostage's death is the scenario's to deal)
-      this.endAct(); { const A = this.data?.room.doorAim; if (A && (!(RESCUEEND.on || RESCUEFLUSH.on) || inBounds(by.char.pos, this.bounds))) by.lastKnown = [A[0], 0, A[2]]; } by.awareness = 1;   // (back on the door he holds — a man who shot from outside the room, rescueflush.ts, keeps what he was hunting)
+      this.endAct(); { const A = this.data?.room.doorAim; if (A && (!(RESCUEEND.on || RESCUEFLUSH.on) || inBounds(by.char.pos, this.bounds))) cover(by, [A[0], 0, A[2]]); } by.awareness = 1;   // (back on the door he holds — a man who shot from outside the room, rescueflush.ts, keeps what he was hunting)
       if (took) { this.note('act:blocked'); return; }   // (the clock stays where it was: he turns on her again the next moment he can)
       this.executed.add(v); killGuard(g, v, v3.normalize(v3.sub(chest, c.muzzle)), false, 'shot', 'guard');
       if (WORDS.on) { const o = this.hostages.find(h => h !== v && h.state !== 'dead'); if (o) hostageSay(g, o, 'shot', v); this.murmurAt = g.time + 6; }
@@ -933,7 +934,7 @@ export class Rescue {
       // (for that second he is on the scenario's script — and off the room fight's roster, which lets nobody else script a man holding a post of its own: his
       // record is kept and handed back, so what he had heard at which door is not lost — endAct)
       // (and `hold` off for it: the roster takes up any HOLDING hostile it does not have, the same frame)
-      const F = g.fight; const def = F.defs.find(d => d.gd === cap) ?? null; if (def) F.defs = F.defs.filter(d => d !== def);
+      const F = g.fight; const def = F.defs.find(d => d.gd === cap) ?? null; if (def) { F.defs = F.defs.filter(d => d !== def); uncover(cap); }
       const held = cap.hold; cap.hold = false;
       if (cap.script) endGuardScript(cap, cap.state === 'dead' ? 'patrol' : cap.state);
       order(cap, { goal: null, face: v3.yawTo(cap.char.pos, v.char.pos), strafe: false, aimAt: v3.copy(at), stance: 'none', upper: 'aim', crouch: false, hot: true });

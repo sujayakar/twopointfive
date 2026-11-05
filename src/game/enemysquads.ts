@@ -57,6 +57,7 @@ import type { Door } from './doors';
 import type { RoomFight, FightSkill } from './roomfight';
 import type { SquadData, StructureData, StructureRoom } from '../scene/scenarios';
 import { squadBarricade } from '../scene/scenarios';
+import { cover, eyesFix } from './belief';
 import { frameOf, bodySeen, bodyPos, offNet, gunfireDue } from './guards';
 import { runnerFled, runnerOwns } from './runner';   // (asked inside `alive`, `fit` and contact() only: false with its switch off)
 import { chronRadio } from './chronicle';
@@ -429,7 +430,7 @@ function teamKnown(g: Game): Vec3[] {
   const out: Vec3[] = [];
   for (const D of g.fight.defs) {
     const gd = D.gd; if (!alive(gd)) continue;
-    if (g.time - gd.lastSeenT < 4 && gd.lastKnown && gd.lastKnown !== D.pt) out.push(gd.lastKnown);
+    if (g.time - gd.lastSeenT < 4 && eyesFix(gd, D.pt)) out.push(gd.lastKnown!);
     if (D.noiseAt && g.time - D.noiseT < 4) out.push(D.noiseAt);
   }
   return out;
@@ -491,7 +492,7 @@ function teamKnownHow(g: Game): Known[] {
   const out: Known[] = [];
   for (const D of g.fight.defs) {
     const gd = D.gd; if (!alive(gd)) continue;
-    if (g.time - gd.lastSeenT < 4 && gd.lastKnown && gd.lastKnown !== D.pt) out.push({ p: gd.lastKnown, firm: true });
+    if (g.time - gd.lastSeenT < 4 && eyesFix(gd, D.pt)) out.push({ p: gd.lastKnown!, firm: true });
     if (D.noiseAt && g.time - D.noiseT < 4) { const c = gd.char.pos; out.push({ p: D.noiseAt, firm: !g.col.solidBlocked([c[0], 1.5, c[2]], [D.noiseAt[0], 1, D.noiseAt[2]]) }); }
   }
   return out;
@@ -1045,7 +1046,7 @@ function settle(g: Game, L: Looker, D: Def) {
   if (gd.script) endGuardScript(gd, roused ? c.state as 'alert' | 'search' : 'suspicious');
   gd.awareness = roused ? Math.max(gd.awareness, c.awareness) : heard ? Math.max(gd.awareness, c.awareness, 0.35) : Math.min(0.45, Math.max(gd.awareness, c.awareness, 0.35)); gd.hold = c.hold; gd.pinned = c.pinned;   // (wary at the least: a man who heard fire far off on the walk is no less so than one who heard nothing)
   D.mode = 'hold'; D.station = c.station; D.home = c.home; D.room = c.room; D.ev = c.ev; D.watch = c.watch; D.want = c.want; D.pt[0] = c.pt[0]; D.pt[1] = c.pt[1]; D.pt[2] = c.pt[2];
-  D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; gd.lastKnown = D.pt;
+  D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; cover(gd, D.pt);
 }
 /** a man out looking, once a frame (before the room fight's own tick: his leg is ended here, not by its `plant`); true = no longer a looker */
 function looks(g: Game, st: State, Q: Squad, L: Looker): boolean {
@@ -1394,7 +1395,7 @@ export function squadsTick(g: Game) {
       if (Q.sent.some(s => s.gd === m)) continue;
       const D = defOf(g, m), mine = roomOf(Q, m.char.pos, 1); if (!D || !mine) continue;   // (a man of it out on the floor is his own fight, not the squad's rooms')
       if (g.time - m.lastSeenT < 1 && (!K.noticedEyes || noticed(m) || glimpse(g, Q, m))) {
-        const p = m.lastKnown && m.lastKnown !== D.pt ? m.lastKnown : m.char.pos, r = roomOf(Q, p, 0.75) ?? mine;
+        const p = eyesFix(m, D.pt) ?? m.char.pos, r = roomOf(Q, p, 0.75) ?? mine;
         if (!(K.callBeat && noticed(m) && keyUp(g, Q, m, p, r, null))) { at = p; room = r; break; }   // (callBeat, a quiet floor: what he has noticed is his to say first — the squad has it when his call ends)
       }
       if (D.noiseAt && g.time - D.noiseT < 1) { const r = roomOf(Q, D.noiseAt);   // (no margin: a man's ears are a few metres out, and a shot outside the wall is not a fight in the room)
@@ -1488,7 +1489,7 @@ export function squadsTick(g: Game) {
           if (s.hold && there && s.door) {   // what he watches is the door he holds, not the way he came
             const e = D.room ? D.room.entries.findIndex(x => x.door === s.door) : -1;
             if (e >= 0) { D.ev[e] = Math.max(D.ev[e], 1.5); D.watch = D.want = e; D.home = v3.copy(D.room!.entries[e].at); } else if (s.aim) { D.watch = D.want = -1; D.home = v3.copy(s.aim); }
-            D.pt[0] = D.home[0]; D.pt[2] = D.home[2]; if (!seen) gd.lastKnown = D.pt;
+            D.pt[0] = D.home[0]; D.pt[2] = D.home[2]; if (!seen) cover(gd, D.pt);
           }
           if (there && !seen) { s.there = g.time; g.say(gd, `${Q.name}: in position — ${wg("we've got", 'we have')} the door!`, true); event(g, Q, 'in position', `${gd.callsign}${s.door ? ' holding ' + s.door.def.name : ''}, ${(g.time - s.t0).toFixed(1)} s after the word`, gd); }
           else event(g, Q, 'met', `${gd.callsign} has them in sight ${there ? 'from his spot' : 'on his way'}${s.door ? (there ? ' at ' : ' to ') + s.door.def.name : ''} and holds where he is, ${(g.time - s.t0).toFixed(1)} s after the word`, gd);

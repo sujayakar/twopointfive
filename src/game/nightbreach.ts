@@ -56,6 +56,7 @@ import type { SquadSize } from './loadout';
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
 import { holdFireDrill } from './holdfire';   // (called inside order() only)
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { cover } from './belief';
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Night breach, __nightbreach.knobs; read at the next staging — 'restage' applies them). */
 export const NIGHTBREACH = {
@@ -111,7 +112,7 @@ export interface BlindBurst { until: number; n: number; next: number }
 export function blindTurn(g: Game, h: Guard, k: number, B: BlindBurst, door: Vec3): boolean {
   if (h.state === 'dead' || g.time >= h.dazzledUntil) return false;
   if (h.dazzledUntil > B.until + 1e-6) { B.until = h.dazzledUntil; B.n = 0; B.next = g.time + BLIND.after + k * BLIND.stagger; }
-  if (!h.held) h.lastKnown = [door[0], 0, door[2]];                         // (in Sam's arm his fix is not his own)
+  if (!h.held) cover(h, [door[0], 0, door[2]]);                         // (in Sam's arm his fix is not his own)
   if (B.n >= BLIND.rounds || g.time < B.next) return false;
   B.n++; B.next = g.time + BLIND.every;                                     // the turn is spent whether or not a round leaves the barrel
   const c = h.char;

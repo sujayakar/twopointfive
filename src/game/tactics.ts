@@ -57,6 +57,7 @@ import { squadLookSince } from './enemysquads';
 import { toolSpot, toolStep, latchFirst } from './handleside';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (nobody is handed a colleague's man who is on his knee, spared)
+import { word } from './belief';
 
 // ---------------------------------------------------------------- knobs (Game.tune carries them; these are the shipped values and the per-machine copy)
 type TacticsTune = { tactics: boolean; flankWait: number; loneWait: number; doorDanger: number; doorWait: number };
@@ -459,7 +460,7 @@ function tickPlans(g: Game) {
     let fresh: Guard = live[0]; for (const m of live) if (m.fixT > fresh.fixT) fresh = m;
     const fix = fresh.lastKnown!;
     if (flat(fix, plan.target) > REPLAN_M && now - plan.replannedAt > REPLAN_GAP_SECS) {
-      for (const m of live) if (m !== fresh) { m.lastKnown = v3.copy(fix); }
+      for (const m of live) if (m !== fresh) word(g, m, v3.copy(fix));
       if (now - plan.lastRadioT > 4) { g.say(fresh, `${defenderWords(fresh) ? "they've" : "he's"} moved — ${placeName(g.level, fix)}`, true); plan.lastRadioT = now; }
       const far = live.filter(m => flat(m.char.pos, fix) > JOIN_M && !inContact(g, m));
       endPlan(g, plan, 'the fix moved');
