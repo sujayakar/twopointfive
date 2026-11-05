@@ -53,7 +53,7 @@ export const civMost = (): number => menHeld() - menMost(0);
  *  ragdoll's particles (game.ts BODY_DOOR_PARTICLES): never more than those and his own. At the furniture a man is one. */
 export const handOverMost = (civilians: number): { doorMen: number; propMen: number } => ({ doorMen: menMost(civilians) * (BODY_DOOR_PARTICLES.length + 1), propMen: menMost(civilians) });
 import { LIGHT_CAPS } from '../sim/lightshome';
-import { findCarLamps } from './carlamps';
+import { findCarLamps, VEHICLE_GROUP } from './carlamps';
 
 /** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass */
 export interface LevelFit { doors: number; things: number; parts: number; sheets: number; fixtures: number; cameras: number; lasers: number; beacons: number; lamps: number }
@@ -62,13 +62,22 @@ export const levelCaps = (): LevelFit => ({ doors: DOOR_CAP, things: PROP_CAP, p
 export function levelCounts(level: { doors: readonly unknown[]; props: readonly { parts: readonly unknown[] }[]; boxes: readonly Box[]; lights?: readonly unknown[]; switchables?: readonly { boxes: readonly number[]; group: string }[]; beacons?: readonly unknown[]; devices?: readonly { kind: string }[] }): LevelFit {
   let parts = 0, sheets = 0; for (const p of level.props) parts += p.parts.length; for (const b of level.boxes) if (isSheet(b)) sheets++;
   let cameras = 0, lasers = 0; for (const d of level.devices ?? []) { if (d.kind === 'camera') cameras++; else if (d.kind === 'laser') lasers++; }
-  // (the lamps its fixtures can feed, at most: a box of a switchable is at most an area light and one for each of its markings. Game's constructor works out which are, game.ts; the fullest level today has 52)
+  // (the lamps its fixtures can feed, at most: a box of a fixture is an area light if it is a flat panel, and one for each of its markings. Which markings light anything is worked out as the game is built, game.ts; the fullest level today stands 52)
   const lights = level.lights?.length ?? 0, switches = level.switchables ?? [], beacons = level.beacons?.length ?? 0;   // (a level says of its lights what it has: one with none has none)
-  let flat = 0; for (const s of switches) for (const bi of s.boxes) flat += 1 + (level.boxes[bi]?.marks?.length ?? 0);
-  return { doors: level.doors.length, things: level.props.length, parts, sheets, fixtures: lights + switches.length + findCarLamps(level.boxes).length + cameras + lasers + 1, cameras, lasers, beacons, lamps: lights + flat + beacons + cameras };
+  const cars = findCarLamps(level.boxes), marked = (group: string, b: Box | undefined) => (group === 'emergency' || !b || b.rot ? 0 : b.marks?.length ?? 0);
+  let flat = 0; for (const s of switches) for (const bi of s.boxes) { const b = level.boxes[bi]; flat += (b && flatPanel(s.group, b.h) ? 1 : 0) + marked(s.group, b); }
+  for (const c of cars) flat += marked(VEHICLE_GROUP, level.boxes[c.box]);
+  return { doors: level.doors.length, things: level.props.length, parts, sheets, fixtures: lights + switches.length + cars.length + cameras + lasers + 1, cameras, lasers, beacons, lamps: lights + flat + beacons + cameras };
 }
 /** A LEVEL THE GAME WILL NOT LOAD, SAID BY ITS NAME where it has one (scene/boxMirror.ts tooBig is the sentence; a level nobody loaded from a file has no name) */
 export const levelTooBig = (level: object, why: string): string => tooBig(levelNameOf(level as Level), why);
+/** A FIXTURE'S BOX THAT LIGHTS THE ROOM AS A FLAT PANEL, as Game's constructor stands an area light for it, or null: too thick, too small, or a kind of fixture that only glows (a vehicle's lamp keeps the picture it had) */
+export function flatPanel(group: string, h: readonly number[]): { thin: number; a0: number; a1: number; area: number } | null {
+  if (group === 'server_leds' || group === 'emergency' || group === VEHICLE_GROUP) return null;
+  const thin = h[0] <= h[1] && h[0] <= h[2] ? 0 : h[1] <= h[2] ? 1 : 2; if (h[thin] > 0.06) return null;
+  const a0 = (thin + 1) % 3, a1 = (thin + 2) % 3, area = 4 * h[a0] * h[a1];
+  return area < 0.01 ? null : { thin, a0, a1, area };
+}
 /** why this level cannot be loaded, in words, or null: it fits */
 export function levelOver(level: Parameters<typeof levelCounts>[0]): string | null {
   const has = levelCounts(level), cap = levelCaps(), over: string[] = [];
