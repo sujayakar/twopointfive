@@ -2734,7 +2734,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   word in both lists; `PORTALREACH_BREAK=1` is the old worth and fails it), both stands. NOT SEEN: any of it in motion; a deep room by day; on
   the maintainer's GPU. NOT RUN: the digests (nothing under the simulation's folders; the meter's reading above is the look page's only).
 - **TARMAC AND GRASS ARE STUFFS** (11-05; `render/lookTex.ts` `tarmac`, `grass`: two rows of `STUFFS`, two maps, 28 painted layers where there were
-  26. NO LEVEL NAMES THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
+  26. EVERY LEVEL NAMES THEM SINCE THE STEP AFTER (the same day; `docs/agents/levels.md`, "Lots and lawns say tarmac and grass": the two rows say them and every level file was exported again). As this bullet was written, NO LEVEL NAMED THEM YET: `scene/stuff.ts PAINT_STUFF` still says the car park's paint is 'plain' and a lawn's 'waits', and a level's FILE carries
   its own word a material (`levels/<name>.json materials`), so the page reads the file's word and a change to the table alone moves nothing until the
   level is exported again. Naming them is the dressing's step, a level at a time.) The dress goal's ask: the lot under every office-kit level and its
   verges were the two biggest flat colours left in a picture. TARMAC is rolled asphalt years down: black binder with stone chips of two sizes rolled
