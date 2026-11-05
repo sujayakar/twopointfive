@@ -46,6 +46,8 @@ import { powerOutWord } from './powerout';
 import { hasHim, OWN } from './owner';
 import { gunKeepsPost } from './gunroles';
 import { laneKnownAt } from './lanes';
+import { pressKeepsHome } from './pressure';
+import { buddyPaired } from './buddy';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkfoe = defenders leave their lights alone and stand
  *  where they were put, as they did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_DARKFOE=1 turns it on). `litAt` is on the meter's
@@ -195,7 +197,7 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
   if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
-  if (hasHim(D.gd, OWN.press | OWN.buddy)) return 'the press\'s';
+  if (hasHim(D.gd, OWN.press | OWN.buddy) || pressKeepsHome(g, D, false) || buddyPaired(g, D)) return 'the press\'s';
   if (g.rescue.captor() === gd || hasHim(gd, OWN.stand)) return 'the captor / last stand';
   return null;
 }
