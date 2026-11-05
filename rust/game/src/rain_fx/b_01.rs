@@ -19,3 +19,6 @@ pub fn set_drip_edges(st: &mut crate::rain_fx::RainState, out: &[crate::rain_fx:
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/rainFx.ts:282 paceDripEdges)
 pub fn pace_drip_edges(g: &mut crate::game::Game, st: &mut crate::rain_fx::RainState, now: bool) {}
+
+/// BOUNDARY: the host's debug panel writes this line from the particle pool and the frame's rain stats. No stats run here (update_rain_fx is the host's), so it is a fresh book's line.   (src/game/rainFx.ts:341 rainSummary)
+pub fn rain_summary(g: &mut crate::game::Game) -> String { String::from("particle rain: off") }

@@ -10,3 +10,12 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// BOUNDARY NO-OP (round three, written ahead of need; the renderer's keeper of its reach masks is told a wall changed: the host's)   (render/reachKeep.ts:80 ReachKeep.changed)
 pub fn reach_keep_changed(g: &mut crate::game::Game, rect: Option<[f64; 4]>, hold: Option<f64>) {}
+
+/// BOUNDARY: the host's reach keeper takes the level's doors and roofed cells and builds its masks; a run with no picture has no keeper (`engine.reach?.boot`), so nothing happens   (render/reachKeep.ts:64 ReachKeep.boot)
+pub fn reach_keep_boot(g: &mut crate::game::Game, doors: &[crate::render_reach::ReachDoor], interior: &[u8]) {}
+
+/// BOUNDARY: the host's reach keeper makes this directional light's mask; a run with no picture has no keeper (`engine.reach?.dir`), so nothing happens   (render/reachKeep.ts:160 ReachKeep.dir)
+pub fn reach_keep_dir(g: &mut crate::game::Game, l: LightId, only: Option<&crate::render_reach::ReachOnly>) {}
+
+/// BOUNDARY: the host's reach keeper makes this wide sun's mask for its disc; a run with no picture has no keeper (`engine.reach?.sun`), so nothing happens   (render/reachKeep.ts:167 ReachKeep.sun)
+pub fn reach_keep_sun(g: &mut crate::game::Game, l: LightId, radius: f64) {}

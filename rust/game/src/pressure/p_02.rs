@@ -409,7 +409,10 @@ pub fn watch_door(g: &mut crate::game::Game, d: RoomfightDefId, door: DoorId) {
     let de = dfm(g, d);
     de.want = i as f64; de.watch = i as f64;
     de.home = at;
-    crate::roomfight::def_move_pt(g, d, [at[0], 0.0, at[2]]);
+    let (gd, was) = { let x = &g.tab.roomfight_def[d]; (x.gd, x.pt) };
+    let to: V3 = [at[0], 0.0, at[2]];
+    crate::roomfight::def_move_pt(g, d, to);   // (D.pt moved in place: his fix, if it is D.pt, moves with it)
+    if g.gd[gd].covers == Some(was) { g.gd[gd].covers = Some(to); }   // (`covers` IS D.pt in the TypeScript, belief.ts:21; here a copy: equal bits are the same object)
 }
 
 /// a far fight he placed or was told of, while it is still worth going to. (pressure.ts toldOf)

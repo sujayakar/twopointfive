@@ -43,3 +43,6 @@ pub fn edge_look_shed(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike
 
 /// BOUNDARY NO-OP (the picture's / the host's): (src/game/edgeLook.ts:389 EdgeLook.scorch)
 pub fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLike, f: crate::edge_look::Frame, fresh: &[f64], dir: Option<V3>) {}
+
+/// BOUNDARY: the look's books, all empty (the TypeScript's field initialisers; its constructor keeps only `g`, here reached by path); at the swap the picture's side fills them. (src/game/edgeLook.ts:99 EdgeLook.constructor)
+pub fn edge_look_new(g: &mut crate::game::Game) -> crate::edge_look::EdgeLook { EdgeLook::blank() }

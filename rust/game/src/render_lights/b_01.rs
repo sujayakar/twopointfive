@@ -59,3 +59,30 @@ pub fn light_set_update(g: &mut crate::game::Game, dt: f64, time: f64) {
         }
     }
 }
+
+/// A level's light as the list holds it: the row is made here and NOT added to the list (the caller's `light_set_add`). Fields the TypeScript's literal leaves out are absent.   (render/lights.ts:96 lightFromDef)
+pub fn light_from_def(g: &mut crate::game::Game, d: &crate::scene_level::LightDef) -> LightId {
+    use crate::scene_level::LightDefKind;
+    let mut l = RtLight::zeroed();
+    l.name = d.name.clone();
+    l.group = d.group.clone();
+    l.kind = match d.kind { LightDefKind::Point => 0.0, LightDefKind::Spot => 1.0, LightDefKind::Dir => 2.0 };
+    l.pos = v3::copy(d.pos);
+    l.dir = v3::normalize(d.dir);
+    l.color = v3::copy(d.color);
+    l.intensity = d.intensity;
+    l.range = d.range;
+    l.inner_deg = d.inner_deg;
+    l.outer_deg = d.outer_deg;
+    l.radius = if d.kind == LightDefKind::Dir { d.radius.unwrap_or(0.0) } else { d.radius.unwrap_or(0.05) };
+    l.volumetric = d.volumetric;
+    l.owner = 0.0;
+    l.enabled = d.enabled;
+    l.fixture_box = d.fixture_box.unwrap_or(-1.0);
+    l.flicker = 0.0;
+    l.ttl = -1.0;
+    l.age = 0.0;
+    l.peak_intensity = d.intensity;
+    l.broad = d.broad.unwrap_or(false);
+    g.tab.light.push(l)
+}

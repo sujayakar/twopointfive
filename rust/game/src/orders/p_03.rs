@@ -287,6 +287,12 @@ fn seam_arm_issue(g: &mut Game, arm: &OrderIssue, men: &[GuardId], t: &OrderTarg
         OrderIssue::DoorBigClear => { g.door_tools.big_next = true; let r = crate::doortools::door_tools_issue(g, Kind::OpenClear, men, t, Some(on_word)); g.door_tools.big_next = false; issued(r) }
         // doortools.ts:938 `(S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined`
         OrderIssue::DoorThrWord => if squad_orders_big(g) { crate::doortools::door_tools_go_men(g, men, None) } else if crate::doortools::door_tools_pair_word(g, men) { None } else { Some(String::from("nobody's waiting for you to say go.")) },
+        // squad40.ts:208, squadsmoke.ts:135, pairorders.ts:211 / :227 / :240. These bodies are not in the skeleton's sig.rs: the paths resolve only in the joined crate
+        OrderIssue::Shell40 => crate::squad40::p_01::row_issue(g, men, t),
+        OrderIssue::Smoke => crate::squadsmoke::p_01::row_smoke_issue(g, men, t, o),
+        OrderIssue::PairTake { mode } => crate::pairorders::p_01::take_issue(g, *mode, men, t),
+        OrderIssue::PairWatch => crate::pairorders::p_01::watch_issue(g, men, t),
+        OrderIssue::PairDark => crate::pairorders::p_01::dark_issue(g, men, t),
         other => todo!("an OrderIssue arm with no body here (Shell40, Smoke, PairTake, PairWatch, PairDark: orders.ts:877): {:?}", other),
     }
 }

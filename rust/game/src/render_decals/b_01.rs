@@ -17,3 +17,9 @@ pub fn decals_touch(g: &mut crate::game::Game) {}
 /// BOUNDARY NO-OP (round three; the picture's decals: `Game.decals` is not carried by the bridge and marks.ts's head says a run with them on is the run with them off).
 /// NOT SETTLED: triage has marks.ts "unsure" because wet.ts:169 and wallwear.ts:93 read the list; neither is on a rule's path that this bring-up has met.   (render/decals.ts:153 Decals.add)
 pub fn decals_add(g: &mut crate::game::Game, kind: crate::render_decals::DecalKind, pos: V3, normal: V3, size: Option<f64>, opts: Option<crate::render_decals::DecalOpts>) -> Option<crate::render_decals::Decal> { None }
+
+/// A new ring of marks: the class's field initialisers (empty list, enabled, dirty, serial 0) with the device kept.   (src/render/decals.ts:145 Decals.constructor)
+/// BOUNDARY: the host makes the marks' storage buffer here at the swap (makeBuffer(device, DECAL_BYTES, STORAGE | COPY_DST, 'decals')) and keeps it; `buf` stays the blank's Opaque, which nothing in the sim reads.
+pub fn decals_new(g: &mut crate::game::Game, device: crate::Opaque) -> crate::render_decals::Decals {
+    crate::render_decals::Decals { device, ..crate::render_decals::Decals::blank() }
+}
