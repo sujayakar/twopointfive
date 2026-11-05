@@ -106,8 +106,6 @@ export interface Skin {
 }
 /** what a level's `dress` is handed beside the kit: a flat decal in any colour, the floor's paint at a place, a tone of a colour */
 export interface SkinTools { flat: (x: number, z: number, w: number, d: number, albedo: Vec3, yaw?: number, y?: number) => number;
-  /** a BAND on a wall's face from the floor to `top`, in any paint (the kit's `skirt` takes a row; this takes a paint as `flat` does): `axis` 'x' = the wall runs along X at `line`; a‥b along it; `side` ±1 = which face; `t` = the wall's thickness */
-  band: (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, albedo: Vec3, top: number, t?: number) => number;
   /** PAINT ON A DECAL this file laid: markings added to what it carries (four a box, scene/markings.ts) */
   mark: (i: number, ...ms: import('../../src/scene/markings').MarkingDef[][]) => number; floorAt: (x: number, z: number) => Vec3 | null; tone: (a: Vec3, k: number) => Vec3 }
 export interface SkinStats { repainted: number; kept: number; decals: number; props: number; by: Record<string, number>;
@@ -227,8 +225,6 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   const topAt = (x: number, z: number): number => { let top = -1e9; for (const b of flats) if (Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2]) top = Math.max(top, b.c[1] + b.h[1]); return top; };
   const tone = (a: Vec3, k: number): Vec3 => tonedAs(a, [Math.round(a[0] * k * 1e4) / 1e4, Math.round(a[1] * k * 1e4) / 1e4, Math.round(a[2] * k * 1e4) / 1e4]);   // (the ground's own paint, darker: still that ground's stuff)
   const flat = (x: number, z: number, w: number, d: number, albedo: Vec3, yaw = 0, y = 0.011) => lay.add({ c: [x, y, z], h: [w / 2, 0.002, d / 2], yaw, albedo, rough: finishSaid(albedo) ?? 1, flags: BoxFlag.NoShadow });
-  const band = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, albedo: Vec3, top: number, t = 0.24) => { const off = line + side * (t / 2 + 0.004);
-    return lay.add({ c: axis === 'x' ? [(a + b) / 2, top / 2, off] : [off, top / 2, (a + b) / 2], h: axis === 'x' ? [Math.abs(b - a) / 2, top / 2, 0.004] : [0.004, top / 2, Math.abs(b - a) / 2], albedo, rough: finishSaid(albedo) ?? 0.6, flags: BoxFlag.NoShadow }); };
   const mark: SkinTools['mark'] = (i, ...ms) => { if (i < n0) throw new Error(`skinLevel: paint goes on a decal this file laid (box ${i} is the level's own)`); const b = boxes[i]; b.marks = [...(b.marks ?? []), ...ms.flat()]; if (b.marks.length > 4) throw new Error(`skinLevel: decal ${i} carries ${b.marks.length} markings, and a box holds four`); return i; };
   const roofs = bare.filter(b => (b.flags & BoxFlag.NoPrimary) && b.c[1] - b.h[1] >= 2.2 && b.h[0] >= 0.5 && b.h[2] >= 0.5 && !b.yaw);
   const roofed = (x: number, z: number) => roofs.some(b => Math.abs(b.c[0] - x) <= b.h[0] && Math.abs(b.c[2] - z) <= b.h[2]);
@@ -298,7 +294,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
       if (!fits(x, z, w, d, yaw)) continue;
       const lift = put * 0.00003, lay = (px: number, pz: number, pw: number, pd: number, pyaw: number, y: number) => { if (fits(px, pz, pw, pd, pyaw)) G.patch(px, pz, pw, pd, m, pyaw, y + lift); };
       lay(x, z, w, d, yaw, 0.012); lay(x + ca * w * 0.22, z - sa * w * 0.22, w * 0.7, d * 0.75, yaw + 0.55, 0.0125); lay(x - ca * w * 0.2 + sa * d * 0.15, z + sa * w * 0.2 + ca * d * 0.15, w * 0.5, d * 0.6, yaw - 0.6, 0.013); put++; } }
-  S.dress?.(G, level, { flat, floorAt, tone, band, mark });
+  S.dress?.(G, level, { flat, floorAt, tone, mark });
   if (host.lights.length || host.switchables.length) throw new Error(`skinLevel: the look adds no lights (${host.lights.length} lights, ${host.switchables.length} switchables came from the level's dress)`);
   // THE FLAT DECALS IN ORDER (flatLayers.ts): the heights above tell two that cross apart by 20 µm, which the depth buffer cannot see at the camera's distance —
   // where two of different paint overlap, the upper one is raised until it can

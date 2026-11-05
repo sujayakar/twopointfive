@@ -92,6 +92,13 @@
     "lineInk": { "albedo": [0.03, 0.05, 0.06], "rough": 0.55, "stuff": "enamel" },
     "graphite": { "albedo": [0.105, 0.11, 0.12], "rough": 0.5, "stuff": "steel" },
     "limeDeep": { "albedo": [0.44, 0.4, 0.32], "rough": 0.4, "stuff": "enamel" },
+    "jadeBlock": { "albedo": [0.02, 0.27, 0.205], "rough": 0.38, "stuff": "gloss block" },
+    "roseBlock": { "albedo": [0.61, 0.225, 0.18], "rough": 0.38, "stuff": "gloss block" },
+    "figBlock": { "albedo": [0.29, 0.065, 0.225], "rough": 0.38, "stuff": "gloss block" },
+    "pearBlock": { "albedo": [0.46, 0.505, 0.105], "rough": 0.38, "stuff": "gloss block" },
+    "petrolBlock": { "albedo": [0.024, 0.218, 0.338], "rough": 0.38, "stuff": "gloss block" },
+    "ochreBlock": { "albedo": [0.63, 0.385, 0.035], "rough": 0.38, "stuff": "gloss block" },
+    "deepBlock": { "albedo": [0.45, 0.405, 0.325], "rough": 0.38, "stuff": "gloss block" },
     "limeFloor": { "albedo": [0.42, 0.4, 0.36], "rough": 0.5, "stuff": "skim" },
     "greyFloor": { "albedo": [0.4, 0.405, 0.4], "rough": 0.5, "stuff": "skim" },
     "coolFloor": { "albedo": [0.4, 0.415, 0.43], "rough": 0.5, "stuff": "skim" }

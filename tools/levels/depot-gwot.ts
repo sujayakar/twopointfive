@@ -14,7 +14,6 @@ import { COAST_PALETTE as C, COAST_MATERIALS, type CoastMat, type GwotMat } from
 import { skinLevel, type Skin } from './gwotSkin';
 import { COAST_QUIET_OF } from './coastSkin';
 import { lookMarks } from './lookMarks';
-import { saidAs } from '../../src/scene/stuff';
 import { stencilWidth, MARKING_TEXEL, type MarkPal } from '../../src/scene/markings';
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
@@ -28,19 +27,20 @@ export const build = buildPlain;
 const R = DEPOT_ROOMS;
 
 /** A YARD'S PAINTS: four pale planes (the ground, the yard wall a step under it, the huts' block a step over it, a smooth skim indoors), the huts' floors a
- *  mid value (an inside reads as an inside), two fields, the two line paints (rows of the second palette) */
-export interface YardPaints { paver: CoastMat; panel: CoastMat; block: CoastMat; skim: CoastMat; floor: CoastMat; field: CoastMat; second: CoastMat; line: CoastMat; ink: CoastMat }
+ *  mid value (an inside reads as an inside), two fields each as an enamel on a thing and as the huts' block painted (a band on a wall is the wall's own
+ *  stuff in the field's colour: the same blocks run on under the colour's edge), the two line paints (rows of the second palette) */
+export interface YardPaints { paver: CoastMat; panel: CoastMat; block: CoastMat; skim: CoastMat; floor: CoastMat; field: CoastMat; second: CoastMat; fieldWall: CoastMat; secondWall: CoastMat; line: CoastMat; ink: CoastMat }
 /** JADE AND ROSE ON WARM LIMESTONE (the one laid): one secondary colour and one earth colour, a value apart, on a stone a little warm */
-export const YARD_A: YardPaints = { paver: 'limePaver', panel: 'limePanel', block: 'limeBlock', skim: 'limeSkim', floor: 'limeFloor', field: 'jade', second: 'rose', line: 'lineChalk', ink: 'lineInk' };
+export const YARD_A: YardPaints = { paver: 'limePaver', panel: 'limePanel', block: 'limeBlock', skim: 'limeSkim', floor: 'limeFloor', field: 'jade', second: 'rose', fieldWall: 'jadeBlock', secondWall: 'roseBlock', line: 'lineChalk', ink: 'lineInk' };
 /** FIG AND PEAR ON COOL GREY, and PETROL AND OCHRE ON BLUE-WHITE: the two beside it (draft files depot-roof-b / -c) */
-export const YARD_B: YardPaints = { paver: 'greyPaver', panel: 'greyPanel', block: 'greyBlock', skim: 'greySkim', floor: 'greyFloor', field: 'fig', second: 'pear', line: 'lineChalk', ink: 'lineInk' };
+export const YARD_B: YardPaints = { paver: 'greyPaver', panel: 'greyPanel', block: 'greyBlock', skim: 'greySkim', floor: 'greyFloor', field: 'fig', second: 'pear', fieldWall: 'figBlock', secondWall: 'pearBlock', line: 'lineChalk', ink: 'lineInk' };
 /** NO ACCENT (the goal's one corner first: a patch that must convince with its planes, edges and marks alone): the fields wear the planes' own rows */
-export const YARD_N: YardPaints = { paver: 'limePaver', panel: 'limePanel', block: 'limeBlock', skim: 'limeSkim', floor: 'limeFloor', field: 'limeDeep', second: 'limeDeep', line: 'lineChalk', ink: 'lineInk' };
-export const YARD_C: YardPaints = { paver: 'coolPaver', panel: 'coolPanel', block: 'coolBlock', skim: 'coolSkim', floor: 'coolFloor', field: 'petrol', second: 'ochre', line: 'ochre', ink: 'lineInk' };
+export const YARD_N: YardPaints = { paver: 'limePaver', panel: 'limePanel', block: 'limeBlock', skim: 'limeSkim', floor: 'limeFloor', field: 'limeDeep', second: 'limeDeep', fieldWall: 'deepBlock', secondWall: 'deepBlock', line: 'lineChalk', ink: 'lineInk' };
+export const YARD_C: YardPaints = { paver: 'coolPaver', panel: 'coolPanel', block: 'coolBlock', skim: 'coolSkim', floor: 'coolFloor', field: 'petrol', second: 'ochre', fieldWall: 'petrolBlock', secondWall: 'ochreBlock', line: 'ochre', ink: 'lineInk' };
 /** which row of the second palette each of the kit's rows wears in a yard: the quiet table, and what a yard changes in it */
 export const yardOf = (Y: YardPaints): Readonly<Record<GwotMat, CoastMat>> => ({ ...COAST_QUIET_OF,
   slab: Y.paver, dust: Y.paver, mudFloor: Y.floor, tWall: Y.panel, block: 'paleGravel', render: Y.block, whitewash: Y.skim, paintCream: Y.skim, mudLight: Y.skim,
-  olive: Y.field, paintRust: Y.field, paintGreen: Y.field, genYellow: Y.second, paintBlue: Y.second, drumRed: Y.field,
+  olive: Y.field, paintRust: Y.field, genYellow: Y.second, drumRed: Y.field, paintGreen: Y.fieldWall, paintBlue: Y.secondWall,
   oil: 'roadTarmac', dirt: 'roadTarmac', iron: 'graphite', drumBlue: 'graphite', rust: 'graphite', galv: 'brushedSteel', tin: 'brushedSteel' });
 
 export const yardSkin = (Y: YardPaints): Skin => ({
@@ -54,7 +54,7 @@ export const yardSkin = (Y: YardPaints): Skin => ({
   skirts: false, patches: 0,                                                           // a kept place: no damp foot, no drifts
   metals: ['galv', 'tin'],
   rooms: [{ id: 'duty', bounds: R.duty }],
-  dress: (_G, level, T) => {
+  dress: (G, level, T) => {
     const M = lookMarks(T), B = level.boxes, H = WORLD.ceilingY;
     const FIELD = C[Y.field], SECOND = C[Y.second], LINE = C[Y.line], INKP = C[Y.ink];
     const INK: MarkPal = { albedo: INKP, rough: 0.55 }, CHALK: MarkPal = { albedo: C.lineChalk, rough: 0.5 };
@@ -71,13 +71,12 @@ export const yardSkin = (Y: YardPaints): Skin => ({
     const walk = (pts: [number, number][], w = 0.9) => { for (const s of [-1, 1]) M.path(pts.map(([x, z], k): [number, number] => { const [ax, az] = pts[Math.max(0, k - 1)], [bx, bz] = pts[Math.min(pts.length - 1, k + 1)], L = Math.hypot(bx - ax, bz - az) || 1; return [x - (bz - az) / L * s * w / 2, z + (bx - ax) / L * s * w / 2]; }), 0.07, LINE); };
 
     // ---- THE ONE LONG FACE (the north row's yard wall, z 9.5: a quarter of a frame is wall faces, and this is the biggest that looks at the camera): a dado in
-    // the firm's colour to 0.9 m, the same blocks under the colour, door to door. And the hut's west face, which the yard's length looks at.
-    const DADO = saidAs('gloss block', FIELD, { rough: 0.36 });
-    for (const [a, b] of [[4.12, 5.8], [7.0, 11.8], [13.0, 20.8], [22.0, 23.88]] as const) T.band('x', 9.5, a, b, 1, DADO, 0.9);
-    T.band('z', 24, 9.62, 15.12, -1, DADO, 0.9);
+    // the firm's colour to 0.9 m, the same blocks under the colour, door to door (the look kit's own band from the floor, in the kit row that wears the
+    // field's block). And the hut's west face, which the yard's length looks at.
+    for (const [a, b] of [[4.12, 5.8], [7.0, 11.8], [13.0, 20.8], [22.0, 23.88]] as const) G.skirt('x', 9.5, a, b, 1, 'paintGreen', 0.9, 0.24);
+    G.skirt('z', 24, 9.62, 15.12, -1, 'paintGreen', 0.9, 0.24);
     // ---- THE HUT'S SOUTH FACE, over the mouth: one whole wall in the second colour (its window is a hole: the colour stops at the sill under it)
-    const WALL2 = saidAs('gloss block', SECOND, { rough: 0.4 });
-    T.band('x', 15, 23.88, 24.2, 1, WALL2, H); T.band('x', 15, 25.0, 29.62, 1, WALL2, H); T.band('x', 15, 24.2, 25.0, 1, WALL2, 0.95);
+    G.skirt('x', 15, 23.88, 24.2, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 25.0, 29.62, 1, 'paintBlue', H, 0.24); G.skirt('x', 15, 24.2, 25.0, 1, 'paintBlue', 0.95, 0.24);
 
     // ---- THE LANE A LORRY DRIVES, gate to gate: a broken line down its middle, an arrow in from each gate, the line to stop at inside the main gate
     M.seg(5.0, 12.6, 5.0, 15.4, 0.2, LINE);
