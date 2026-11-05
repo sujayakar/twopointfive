@@ -1297,3 +1297,52 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   PLAY: nothing a run reads moves. The three play-through reads (frozen; shipped with lived rooms off; shipped), seeds 1 and 2, against the step
   before on the same box: 42 of 42 each. The senses' error tool is green on the office on the page's stand (the office's generator is touched; no wall, leaf or lamp moves).
   SEEN by nobody and nothing to see: no picture changes.
+- **FOUR WALL FITTINGS OF A KEPT BUILDING ARE KIT PIECES, AND SO ARE THE TOOLS A HAND PASS LAYS PAINT WITH** (11-05; `src/scene/officeGen.ts`
+  `officeKit`; the painter's tins `TIN` in `src/scene/markingDefaults.ts`; catalogue `docs/library.md`; the pieces stand on the showroom hut's south
+  face, `tools/levels/library-hall.ts`). They were the white roof's own helpers and are MOVED, not copied: `tools/levels/white-roof.ts` keeps four
+  one-line adapters for its own coordinates (a face at a given z), takes its paint tools and its ink, chalk and signal yellow from the kit, and
+  `levels/white-roof.json` is byte for byte the file it was. A level's hand pass USES these and copies none of them.
+  THE PIECES, on a wall's face. Arguments as the look kit's wall-face pieces have them: `axis` (`'x'` = the wall runs along X at `line`), `a`‥`b` along
+  it (the same stretch whichever way the wall faces), `side` ±1 (the face toward +z / +x is +1), heights, the paint; `t` is the wall's thickness (0 =
+  `line` is the face itself). Each takes a paint ROW and says the row's word; each is DRAWN ONLY unless its last argument `solid` is true (the white
+  roof passes it and keeps its traced plinths and pipes).
+  · `band(axis, line, a, b, side, y0, y1, paint, t?, proud?, solid?)` TAKES a stretch of a wall's face and two heights; GIVES one box 8 mm proud (the
+    look kit's dado's figure: under a door frame's 12) and returns its index, for what is painted on it. For paint hand it the wall's own stuff in the
+    new colour (`saidAs(<the wall's word>, colour)`), never a second stuff.
+  · `vent(axis, line, a, b, side, y0, y1, paint, t?, proud?, solid?)` TAKES the same; GIVES the same box two fingers proud, for a paint that says
+    `louvre`.
+  · `conduit(axis, line, a, b, side, y, paint, clip, drop?, t?, solid?)` TAKES a stretch, a height, the run's paint and the clips'; GIVES a run with a
+    clip every metre and a half and, with `drop`, a branch down into a box at b (the box stands 11 cm past b). Only the box is ever solid.
+  · `pipe(x, z, y0, y1, r, paint, rings?, solid?)` TAKES a place, two heights and a radius; GIVES a riser of four slabs an eighth of a turn apart, with
+    `rings` ([y0, y1, r] each) for a flange and a collar. Solid, the round rule stands it up as one round; drawn only, it is the eight-sided post.
+  THE TOOLS, for paint on what is there (markings: four a box, 1.6 m a bitmap).
+  · `boxOn(face, x, y, z)` TAKES a face and a point of the world; GIVES the index of the square-standing box whose face holds it, and throws if none
+    does. A box is found by where its face is, never by its number.
+  · `paintOn(box, …markings)` TAKES a box and markings; GIVES the box back with them added, and throws past four.
+  · `onS(box, x, y)`, `onTop(box, x, z)`, `rectTop(box, x0, z0, x1, z1)` TAKE a place or a rect of the world; GIVE it in the face's own metres from its
+    centre, as the marking recipes want it.
+  · `wallRuns(z, t, x0, x1, minTop, not?)` TAKES a wall along X and a stretch; GIVES every piece of it that stands on the floor to `minTop`, cut to
+    the stretch, as [box, from, to, top], door to door. A piece already in the paint `not` is left out.
+  · `wordWide(text, scale?, res?)` GIVES a word's length on a face in metres.
+  · `stencilS(box, text, x, y, pal, scale?, res?)` and `stencilTop(box, text, x, z, pal, scale?, res?)` TAKE a box, a word or a figure and the place
+    of its middle; GIVE it stencilled on the south face or the top, snapped to the marking lattice with a tie taken upward (left to the recipe's own
+    rounding, two of four identical door numbers sat a cell apart).
+  · `keepClear(box, x0, z0, x1, z1, pal?)` TAKES a floor box and a rect of the world; GIVES a hatched bay with a line round it, in signal yellow
+    unless told.
+  · `bandRuns(z, t, x0, x1, y1, paint, minTop?, names?, ink?)` TAKES a wall along X, a stretch, a height and a paint; GIVES a `band` from the floor on
+    every piece `wallRuns` finds, one box a piece, and returns them. It lays NO WORD unless the caller hands it `names` (each [text, x, y, scale,
+    res], stencilled on the piece that holds it whole; a name no piece holds throws). A ROOM'S NAME IS NOT ONE TO HAND IT (the office bullet below).
+  · `conduitRuns(z, a, b, y, paint, clip, t?, drop?, len?)` TAKES a stretch on a wall's south face; GIVES `conduit` in equal lengths of 1.8 m at most,
+    the branch on the last.
+  A PAINT IS KNOWN BY ITS ARRAY (`madeOf`, `saidAs`): hand each a colour array of its own, never one shared with a tin or with another paint, or the
+  second takes the first's word and finish.
+  WHEN A WALL IS BREACHED (`game/wallbreak.ts` `hangers`, not changed): a drawn-only thing a quarter of a metre or more off the floor goes once half
+  the wall behind it is open, so a long run of conduit is laid in lengths; a band from the floor STAYS across the hole, as the look kit's painted
+  dado and skirt do on every level that has one; and a length of conduit with a `drop` hangs on, because by the game's rule it rests on its own
+  branch. One gap for the whole game, not mended here.
+  CHECKS on the step, both stands: `export.ts --check` for all 55 generators that have a file and both office files (none moves but the showroom),
+  `library.ts --check`, `lived-check library-hall white-roof office` (the showroom's base file restamped: the four fittings are its own part),
+  `round-check`, `stuff-check` (its line on a finish written by hand included), `floor-order-check`, both type checks. Two reds stand on the showroom
+  exactly as on the step before: `probes.ts glassreal` line 9 (the showroom's row of the table) and `wallfurn-check --levels library-hall.json` (it
+  has no count file; 86 places before and after on both stands). No mission's level file moves, so no play-through was run for this step alone.
+  NEVER SEEN on any adapter as laid on the showroom; on the white roof the pieces draw as they did.
