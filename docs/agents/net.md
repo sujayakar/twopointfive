@@ -358,16 +358,21 @@ line).
   and there is no word that brings that back. What a player sees change: nothing at default; with Brightness turned, his men's goggles and lights no
   longer follow his slider (they follow the mission's hour), and an illuminator's flood is brighter or dimmer in his picture with everything else.
   THE RULE THIS BEGINS: no sum of the simulation reads the engine's settings. CHECK: `bun run tools/qa/settings-check.ts` (`--static` = its first three
-  lines, also `probes.ts settings-reads` in the journal family): `base` the table equals the picture's defaults · the scan reads its own twelve forms ·
-  `reads` a scan of src/game for every READ of a setting (55 today), each on a named list of 32 rows that says PICTURE, CARRIED (journal.ts EnvSnap,
-  laid over a networked page before every tick) or TO MOVE with a date — a new read is red, and so is a row nothing reads · `hour` a game stood on the
+  lines, also `probes.ts settings-reads` in the journal family): `base` the table equals the picture's defaults · the scan reads its own thirteen forms ·
+  `reads` a scan of the simulation's files (src/game, scene, anim, math, sim and render/reach.ts: rollback-check's ground; 330 files, 59 reads, all
+  under src/game) for every READ of a setting, each COUNTED on a named list of 32 rows that says PICTURE, CARRIED (journal.ts EnvSnap, laid over a
+  networked page before every tick), TO MOVE or TO JUDGE with a date — one read more than a row counts is red (a second read of a key a file already
+  has a row for included), and so is a row that counts more than there are · `hour` a game stood on the
   stand asked: the night's with the picture at a quarter, the hour's own at midday with the picture told the same, the show's day's, the night's again
   each way back · `one run` barracks-four:1 played plain and with the picture turned three ways (`QA_PICTURE='{"exposure":0.5}'` in front of any
   headless tool lays a player's settings over the stand-in's; a key the engine lacks is refused) is one digest, and with the game's own exposure turned
   (`--set '{"ENV":{"exposure":0.5}}'`) another, so the line can go red; its runs are the shipped stand's whichever stand the check is run on (the frozen
   one has no goggles on anybody). `SETTINGS_BREAK=1`: `reads` and `one run` fail. Two older probes now ask the game's own numbers where they asked the
   picture's (nvg-probes `nvg-sight`, irlight-probes). STILL TO MOVE, named on that list: the sky's colours for the hour (hours.ts skyLum),
-  `emissiveScale` and `flashlightRadius` (carried, so a co-op page cannot part by them), `debrisCap`, irlight.ts's `indirectScale`. NOT a line of
+  `emissiveScale` and `flashlightRadius` (carried, so a co-op page cannot part by them), `debrisCap`, irlight.ts's `indirectScale` (the senses' owner's).
+  WHO EMPTIES THE LIST: the multiplayer goal, a mend each on this one's pattern, for every TO MOVE and TO JUDGE row no other owner is named on. NOT ON
+  IT, the same fault by another door: game code reads the picture's CAMERA (`engine.viewFocus`: wind.ts, airSim.ts, fire.ts, snowBreath.ts), and two
+  players have two cameras. NOT a line of
   mpserver-check: its scripted hands are timed by the wall clock, and only one run in several comes near a tube's threshold (a dimmed client parted 1
   run of 1 on step 1334 and 0 of 4 on 1515; with the game's own number turned on purpose, 1 of 8), so a red path there would not be red. Nobody has
   looked at a picture: no GPU, no page was opened for this.

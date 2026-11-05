@@ -3,12 +3,13 @@
 // simulation that reads one is a run that turns on whose machine it is played on.
 //   bun run tools/qa/settings-check.ts                    every line below; exit 0 = all pass · 1 = a line failed · 2 = a run could not be made
 //   bun run tools/qa/settings-check.ts --static           `base` and `reads` alone (no game is stood: a second) — `probes.ts settings-reads`, family journal
-//   SETTINGS_BREAK=1 bun run tools/qa/settings-check.ts   the red path: the list below loses its first row, and the turned runs turn the GAME'S OWN
+//   SETTINGS_BREAK=1 bun run tools/qa/settings-check.ts   the red path: the list below loses its first file's rows, and the turned runs turn the GAME'S OWN
 //                                                         numbers where they should turn the picture's — `reads` and `one run` must FAIL
 // THE LINES:
 //   base      the game's own numbers start where the picture's defaults are (env.ts ENV against src/settings.ts): one model for the picture and the men
-//   reads     no file under src/game READS a setting of the engine's outside the rows of KNOWN below (file · key · why). A new read is named with its
-//             line; a row nothing reads any more is named too, so the list only ever shrinks. What the scan reads: `…settings.key`, a cast's
+//   reads     no file of the simulation (src/game, scene, anim, math, sim and render/reach.ts: rollback-check's ground) READS a setting of the engine's
+//             outside the rows of KNOWN below (file · key · how many · why). A read more than a row counts is named with its lines, and a row that
+//             counts more than there are is named too, so the list only ever shrinks. What the scan reads: `…settings.key`, a cast's
 //             `(…settings as T).key`, `alias.key` where `alias = …engine.settings` (to the end of the block it is declared in), a destructuring off
 //             the settings. A write (`= `, `+=`, `++`) is not a read: the game tells the picture. Any other use of the engine's settings as a value
 //             (handed on whole to a call, indexed by a variable) is named as `*` and needs a row. It is a scan of the text, not of the types: what a
@@ -28,44 +29,51 @@ import { tmpdir } from 'node:os';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.SETTINGS_BREAK === '1';
 let fails = 0; const line = (ok: boolean, what: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
 
-/** THE READS THAT STAND TODAY: `file under src/game` → key → why it may stay, or what moves it. Three kinds:
+/** THE READS THAT STAND TODAY: `file under src` → key → [how many reads, why they may stay or what moves them]. Three kinds:
  *    PICTURE   the read ends in the picture (a draw, a light the renderer alone is handed, a panel's line, a value kept to hand back to the picture)
  *    CARRIED   a recipe and a recording carry the setting (journal.ts EnvSnap) and a networked page lays the server's over its own before every tick
- *    TO MOVE   the simulation reads it and nothing carries it: env.ts is where it goes (dated; the owner named)
- *  A row is a debt or a reason, never a habit: adding one needs the same sentence. */
-const KNOWN: Record<string, Record<string, string>> = {
-  'hours.ts': {
-    exposure: 'PICTURE: what the hour found is kept and handed back to the picture with the player\'s turn of Brightness; the panel\'s line prints it',
-    hazeDensity: 'PICTURE: kept and handed back when the hour goes',
-    skyZenith: 'TO MOVE (2026-11-05, with the hour\'s port): skyLum reads the sky\'s colours for the light on a point; hours.ts and lighting.ts are their only writers in play',
-    skyHorizon: 'TO MOVE (2026-11-05, with the hour\'s port): as skyZenith',
+ *    TO MOVE   the simulation reads it and nothing carries it: src/game/env.ts is where it goes (dated; the owner named)
+ *  A row holds a COUNT: one more read of a key a file already has a row for is red like a new key (a sum reading `exposure` again in hours.ts would
+ *  otherwise hide under the row that lets the picture's bookkeeping read it), and one fewer is red until the count is lowered. Key `*` = uses the scan
+ *  cannot read (the settings indexed by a variable, handed on whole); key `(all)` = every use in the file, counted together, for a file that is all of
+ *  one kind. A row is a debt or a reason, never a habit: adding one, or raising a count, needs the same sentence.
+ *  WHO EMPTIES IT: the multiplayer goal owns every TO MOVE and TO JUDGE row no other owner is named on, a mend each on the pattern of env.ts. */
+type Row = [count: number, why: string];
+const KNOWN: Record<string, Record<string, Row>> = {
+  'game/hours.ts': {
+    exposure: [3, 'PICTURE: what the hour found is kept (putIn) and handed back to the picture with the player\'s turn of Brightness (takeOut); the panel\'s line prints it'],
+    hazeDensity: [1, 'PICTURE: kept and handed back when the hour goes'],
+    skyZenith: [2, 'one PICTURE (kept, handed back), one TO MOVE (2026-11-05, with the hour\'s port, weather\'s owner): skyLum reads the sky\'s colours for the light on a point'],
+    skyHorizon: [2, 'as skyZenith'],
   },
-  'lighting.ts': {
-    exposure: 'PICTURE: what the show\'s day found, kept and handed back',
-    hazeDensity: 'PICTURE: as exposure', skyZenith: 'PICTURE: kept and handed back (the read that reaches a sum is hours.ts\'s)', skyHorizon: 'PICTURE: as skyZenith',
-    emissiveScale: 'CARRIED, TO MOVE (2026-11-05, after the lights\' port): what a fixture gives a light question',
+  'game/lighting.ts': {
+    exposure: [1, 'PICTURE: what the show\'s day found, kept and handed back'],
+    hazeDensity: [1, 'PICTURE: as exposure'], skyZenith: [1, 'PICTURE: kept and handed back (the read that reaches a sum is hours.ts\'s)'], skyHorizon: [1, 'PICTURE: as skyZenith'],
+    emissiveScale: [1, 'CARRIED, TO MOVE (2026-11-05, after the lights\' port): what a fixture gives a light question'],
   },
-  'fogofwar.ts': { emissiveScale: 'CARRIED, TO MOVE (2026-11-05, with lighting.ts\'s): the fog\'s lamps' },
-  'guards.ts': { flashlightRadius: 'CARRIED, TO MOVE (2026-11-05): a torch\'s radius, part of the light on a point' },
-  'player.ts': { flashlightRadius: 'CARRIED, TO MOVE (2026-11-05): as guards.ts' },
-  'debris.ts': { debrisCap: 'CARRIED, TO MOVE (2026-11-05): the pool\'s size; with DEBRIS.dress on the pool is dressing' },
-  'journal.ts': { '*': 'CARRIED: this is the carrying (envSnapshot reads the four settings a file keeps, applyEnvSettings lays them back)' },
-  'irlight.ts': { indirectScale: 'TO MOVE (2026-11-05, senses): the share of bounced light in what a man\'s fan calls dark floor' },
-  'fire.ts': { fireSmoke: 'PICTURE: whether the fire\'s smoke is drawn by the solver (2026-11-05: its owner to judge whether a sum follows)' },
-  'weather.ts': { gloss: 'PICTURE: the wet ground\'s gloss (2026-11-05: its owner to judge)' },
-  'game.ts': {
-    decals: 'TO JUDGE (2026-11-05): whether the decal layer runs; the digest counts decals',
-    markings: 'CARRIED: the floor markings\' lights', markingTexel: 'PICTURE: the markings\' texture',
-    debugView: 'PICTURE: a debug view of the draw', meshShadows: 'PICTURE: the draw block', rtMeshHits: 'PICTURE: the draw block', sdfRigSmooth: 'PICTURE: the draw block', sharpDecouple: 'PICTURE: the draw block',
-    wetChars: 'PICTURE: the draw block (whether a wet man is shaded wet)',
+  'game/fogofwar.ts': { emissiveScale: [2, 'CARRIED, TO MOVE (2026-11-05, with lighting.ts\'s): the fog\'s lamps'] },
+  'game/guards.ts': { flashlightRadius: [3, 'CARRIED, TO MOVE (2026-11-05): a torch\'s radius, part of the light on a point'] },
+  'game/player.ts': { flashlightRadius: [1, 'CARRIED, TO MOVE (2026-11-05): as guards.ts'] },
+  'game/debris.ts': { debrisCap: [1, 'CARRIED, TO MOVE (2026-11-05): the pool\'s size; with DEBRIS.dress on the pool is dressing'] },
+  'game/journal.ts': { '(all)': [5, 'CARRIED: this is the carrying (envSnapshot reads the settings a file keeps, applyEnvSettings lays them back)'] },
+  'game/irlight.ts': { indirectScale: [1, 'TO MOVE (2026-11-05, the senses\' owner has taken it): the share of bounced light in what a man\'s fan calls dark floor'] },
+  'game/fire.ts': { fireSmoke: [1, 'TO JUDGE (2026-11-05): whether the fire\'s smoke is drawn by the solver, on a line that also reads the picture\'s camera'] },
+  'game/weather.ts': { gloss: [3, 'PICTURE: the wet ground\'s gloss, kept and handed back'] },
+  'game/game.ts': {
+    decals: [1, 'TO JUDGE (2026-11-05): whether the decal layer runs; the digest counts decals'],
+    markings: [1, 'CARRIED: the floor markings\' lights'], markingTexel: [1, 'PICTURE: the markings\' texture'],
+    debugView: [1, 'PICTURE: a debug view of the draw'], meshShadows: [1, 'PICTURE: the draw block'], rtMeshHits: [1, 'PICTURE: the draw block'], sdfRigSmooth: [1, 'PICTURE: the draw block'], sharpDecouple: [1, 'PICTURE: the draw block'],
+    wetChars: [1, 'PICTURE: the draw block (whether a wet man is shaded wet)'],
   },
-  'irlaser.ts': { debugView: 'PICTURE: a debug view of the draw' },
-  'charLook.ts': { charMats: 'PICTURE: the men\'s materials' },
-  'particleFx.ts': { gpuParticles: 'PICTURE: whether the particle pass exists' },
-  'snowFx.ts': { '*': 'PICTURE: the flakes that are drawn (the particle rain\'s own settings: count, radius, how it answers a blast)' },
-  'rainFx.ts': { '*': 'PICTURE: the drops that are drawn (the particle rain\'s own settings)' },
-  'airSim.ts': { airSim: 'TO JUDGE (2026-11-05): whether the air field runs; AIR_SIM decides what play reads of it' },
+  'game/irlaser.ts': { debugView: [1, 'PICTURE: a debug view of the draw'] },
+  'game/charLook.ts': { charMats: [1, 'PICTURE: the men\'s materials'] },
+  'game/particleFx.ts': { gpuParticles: [1, 'PICTURE: whether the particle pass exists'] },
+  'game/snowFx.ts': { '(all)': [7, 'PICTURE: the flakes that are drawn (the particle rain\'s own settings: count, radius, how it answers a blast)'] },
+  'game/rainFx.ts': { '(all)': [9, 'PICTURE: the drops that are drawn (the particle rain\'s own settings)'] },
+  'game/airSim.ts': { airSim: [1, 'TO JUDGE (2026-11-05): whether the air field runs; AIR_SIM decides what play reads of it'] },
 };
+/** the simulation's ground, as tools/qa/rollback-check.ts's static pass has it */
+const SIM_DIRS = ['src/game', 'src/scene', 'src/anim', 'src/math', 'src/sim'], SIM_FILES = ['src/render/reach.ts'];
 if (BREAK) delete KNOWN[Object.keys(KNOWN)[0]];
 
 /** the code of a file with every comment and string blanked (same length, same lines); a template's `${…}` is code and stays */
@@ -100,7 +108,7 @@ function afterType(text: string): string {
 export function usesOf(file: string, src: string, keys: Set<string>): Use[] {
   const C = codeOf(src), found = new Map<string, Use>(), lineOf = (p: number) => C.slice(0, p).split('\n').length;
   const isWrite = (p: number) => /^\s*(=(?!=)|\+=|-=|\*=|\/=|\+\+|--)/.test(C.slice(p, p + 6));
-  const put = (key: string, p: number) => { if (key !== '*' && (!keys.has(key) || isWrite(p))) return; const at = lineOf(p); found.set(`${key}@${at}`, { file, key, at }); };
+  const put = (key: string, p: number) => { if (key !== '*' && (!keys.has(key) || isWrite(p))) return; found.set(`${key}@${p}`, { file, key, at: lineOf(p) }); };
   for (const m of C.matchAll(/\bsettings\b/g)) {
     const p = m.index!, before = C.slice(Math.max(0, p - 200), p), after = C.slice(p + 8, p + 200);
     const direct = /^\??\.\s*([A-Za-z_]\w*)/.exec(after); if (direct) { put(direct[1], p + 8 + direct[0].length); continue; }   // …settings.key
@@ -113,7 +121,9 @@ export function usesOf(file: string, src: string, keys: Set<string>): Use[] {
     const alias = bare ? /(?:^|[\s,({;])([A-Za-z_$][\w$]*)\s*(?::[^=,;{}]+)?=\s*[^=;,]*$/.exec(before) : null;
     if (alias) {   // `S = g.engine.settings`: every `S.key` to the end of the block
       let depth = 0, end = C.length; for (let k = p; k < C.length; k++) { if (C[k] === '{') depth++; else if (C[k] === '}' && --depth < 0) { end = k; break; } }
-      for (const u of C.slice(p, end).matchAll(new RegExp(`(?<![\\w$.])${alias[1].replace(/\$/g, '\\$')}\\??\\.\\s*([A-Za-z_]\\w*)`, 'g'))) put(u[1], p + u.index! + u[0].length);
+      const A = alias[1].replace(/\$/g, '\\$'), body = C.slice(p, end);
+      for (const u of body.matchAll(new RegExp(`(?<![\\w$.])${A}\\??\\.\\s*([A-Za-z_]\\w*)`, 'g'))) put(u[1], p + u.index! + u[0].length);
+      for (const u of body.matchAll(new RegExp(`(?<![\\w$.])${A}(?![\\w$])(?!\\s*\\??\\.\\s*[A-Za-z_])(?!\\s*(?::[^=,;{}]+)?=[^=])`, 'g'))) put('*', p + u.index!);   // (the alias itself as a value: indexed by a variable, handed on)
       continue;
     }
     put('*', p);   // handed on whole, indexed by a variable, tested and passed along: this scan cannot say what is read of them
@@ -138,17 +148,19 @@ export async function settingsReads(): Promise<boolean> {
     ['function f(g) { return (g.engine.settings as { nvGain?: number }).nvGain; }', 'nvGain'], ['function f(g) { return helper(g.engine.settings); }', '*'],
     ['function f(g) { const k = "exposure"; return g.engine.settings[k]; }', '*'], ['function f(g) { return `${g.engine.settings.exposure}`; } // g.engine.settings.nvGain', 'exposure'],
     ['function f(e: { settings?: { nvGain: number } }) { const settings = 1; return settings; }', ''],
-    ['function f(g) { const S = g.engine.settings as { nvGain?: number; exposure: number }; return S.nvGain; }', 'nvGain'], ['function f(e) { if (e.engine.settings && e.engine.settings.exposure === 2) return 1; }', 'exposure'],
+    ['function f(g) { const S = g.engine.settings as { nvGain?: number; exposure: number }; return S.nvGain; }', 'nvGain'], ['function f(g, k) { const S = g.engine.settings as Record<string, unknown>; return [S[k], S.exposure, S.exposure]; }', '* exposure exposure'], ['function f(e) { if (e.engine.settings && e.engine.settings.exposure === 2) return 1; }', 'exposure'],
   ];
   const wrong = forms.filter(([src, want]) => T(src) !== want);
   line(wrong.length === 0, `the scan reads its own forms: ${forms.length - wrong.length} of ${forms.length}${wrong.length ? ` — WRONG: ${wrong.map(([src, want]) => `"${src}" read as [${T(src)}], wanted [${want}]`).join(' · ')}` : ''}`);
-  const GAME = join(ROOT, 'src/game'), uses = walk(GAME).flatMap(f => usesOf(relative(GAME, f), readFileSync(f, 'utf8'), keys));
-  const fresh = uses.filter(u => !(KNOWN[u.file]?.[u.key] ?? KNOWN[u.file]?.['*'])), read = new Set(uses.map(u => `${u.file} ${u.key}`));
-  const stale = Object.entries(KNOWN).flatMap(([f, rows]) => Object.keys(rows).filter(k => k === '*' ? !uses.some(u => u.file === f) : !read.has(`${f} ${k}`)).map(k => `${f} ${k}`));
-  const by = new Map<string, number[]>(); for (const u of fresh) by.set(`${u.file} ${u.key}`, [...(by.get(`${u.file} ${u.key}`) ?? []), u.at]);
-  line(fresh.length === 0 && stale.length === 0, `reads: ${uses.length} reads of the picture's settings under src/game, ${read.size} file and key pairs, each on the list of ${Object.values(KNOWN).reduce((a, r) => a + Object.keys(r).length, 0)} rows`
-    + (fresh.length ? `\n    NEW READS (the simulation may not read the picture's settings: src/game/env.ts says where a number of the game's own goes): ${[...by].map(([k, at]) => `${k} at line ${at.join(', ')}`).join(' · ')}` : '')
-    + (stale.length ? `\n    ROWS NOTHING READS ANY MORE (take them off the list): ${stale.join(' · ')}` : ''));
+  const SRC = join(ROOT, 'src'), files = [...SIM_DIRS.flatMap(d => walk(join(ROOT, d))), ...SIM_FILES.map(f => join(ROOT, f))];
+  const uses = files.flatMap(f => usesOf(relative(SRC, f).split('\\').join('/'), readFileSync(f, 'utf8'), keys));
+  // (a file's uses by the row that answers for them: its `(all)` row if it has one, else the key's)
+  const got = new Map<string, number[]>(); for (const u of uses) { const k = `${u.file} ${KNOWN[u.file]?.['(all)'] ? '(all)' : u.key}`; got.set(k, [...(got.get(k) ?? []), u.at]); }
+  const rows = Object.entries(KNOWN).flatMap(([f, r]) => Object.entries(r).map(([k, [n]]) => [`${f} ${k}`, n] as const)), want = new Map(rows);
+  const more = [...got].filter(([k, at]) => at.length > (want.get(k) ?? 0)), fewer = rows.filter(([k, n]) => (got.get(k)?.length ?? 0) < n);
+  line(more.length === 0 && fewer.length === 0, `reads: ${uses.length} reads of the picture's settings in ${files.length} files of the simulation (${SIM_DIRS.join(', ')}, ${SIM_FILES.join(', ')}), each counted on a list of ${rows.length} rows`
+    + (more.length ? `\n    NEW READS (the simulation may not read the picture's settings: src/game/env.ts says where a number of the game's own goes): ${more.map(([k, at]) => `${k}: ${at.length} at line ${at.join(', ')}${want.has(k) ? ` (its row allows ${want.get(k)})` : ' (no row)'}`).join(' · ')}` : '')
+    + (fewer.length ? `\n    FEWER READS THAN A ROW SAYS (lower its count, or take the row off at none): ${fewer.map(([k, n]) => `${k}: ${got.get(k)?.length ?? 0} of ${n}`).join(' · ')}` : ''));
   return fails === before;
 }
 
@@ -198,5 +210,5 @@ if (import.meta.main) {
   await settingsReads();
   if (!process.argv.includes('--static')) { await hourLine(); await oneRun(); }
   console.log(fails ? `settings-check: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (SETTINGS_BREAK=1: `reads` and `one run` must)' : ''}` : 'settings-check: every line passed');
-  process.exit(fails ? 1 : 0);
+  process.exitCode = fails ? 1 : 0; process.exit(fails ? 1 : 0);
 }
