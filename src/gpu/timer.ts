@@ -1,4 +1,11 @@
 // GPU pass timing via timestamp queries (falls back to no-op when unsupported).
+/** THE RENDER PASSES, by the names the page stamps them under. The GPU's busy span (GpuTimer.unionMs) is taken over the OTHERS wherever the page states a
+ *  GPU time, because a render pass that draws to the display has stamps that span the wait for it. ONE list for whoever asks which passes those are: the
+ *  level table (tools/qa/level-table.ts) reads it. The page's own totals (main.ts) and a recording's (ui/perfrec.ts) still spell theirs: not changed here */
+export const RENDER_PASSES: readonly string[] = ['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present'];
+/** … the one of them that draws into the page's own textures, so its stamp follows its own work (read on an M4 Max under Metal against 50,000 recorded frames,
+ *  2026-11-04) · and the rest, which draw to the display or after it: THEIR stamps are the ones that hold the wait */
+export const SURFACE_PASS = 'gbuffer', PRESENT_PASSES: readonly string[] = RENDER_PASSES.filter(p => p !== SURFACE_PASS);
 /** One pass's raw interval in the last resolved frame: ms from that frame's earliest timestamp (see GpuTimer.lastRaw / unionMs). */
 export interface PassInterval { name: string; begin: number; end: number }
 export class GpuTimer {

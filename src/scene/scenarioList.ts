@@ -209,6 +209,13 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
 /** every row that is a lesson: the tutorial's missions (the seven older Training lessons were taken out 2026-10-23) */
 export const LESSON_MISSIONS: ScenarioEntry[] = TUTORIAL_MISSIONS;
 export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS];
+/** EVERY LEVEL THE LIST DRAWS: the rows a player is shown (not `offList`), a level each in the list's order, with the rows that play on it (the first is the
+ *  one a tool opens the level by). The one answer to "which levels are on the mission list": the pricing run and the level tools ask it */
+export function listedLevels(): { level: string; rows: ScenarioEntry[] }[] {
+  const by = new Map<string, { level: string; rows: ScenarioEntry[] }>();
+  for (const e of ALL_MISSIONS) { if (e.offList) continue; const level = levelWords(e), at = by.get(level); if (at) at.rows.push(e); else by.set(level, { level, rows: [e] }); }
+  return [...by.values()];
+}
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
  *  (`?level=` is NOT: a scenario on the
