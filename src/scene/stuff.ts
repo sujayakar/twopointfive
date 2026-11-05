@@ -39,7 +39,7 @@ const COAST_STUFF = {
   brushedSteel: 'brushed', darkSteel: 'steel', binGreen: 'plastic', plasticPale: 'plastic', plasticDark: 'plastic',
   tyreRubber: 'rubber', canvasWhite: 'cloth', canvasBlue: 'cloth', towelStripe: 'cloth', foliage: 'waits',
   paverWhite: 'paver', skimRed: 'skim', accentRed: 'enamel', accentBlue: 'enamel',
-  limePaver: 'paver', limePanel: 'cast panel', limeSkim: 'skim', jade: 'enamel', rose: 'enamel', greyPaver: 'paver', greyPanel: 'cast panel', greySkim: 'skim', fig: 'enamel', pear: 'enamel', coolPaver: 'paver', coolPanel: 'cast panel', coolSkim: 'skim', petrol: 'enamel', ochre: 'enamel', lineChalk: 'enamel', lineInk: 'enamel', graphite: 'steel', yardTarmac: 'tarmac', limeDeep: 'enamel', jadeBlock: 'gloss block', roseBlock: 'gloss block', figBlock: 'gloss block', pearBlock: 'gloss block', petrolBlock: 'gloss block', ochreBlock: 'gloss block', deepBlock: 'gloss block', limeFloor: 'skim', greyFloor: 'skim', coolFloor: 'skim', deepPaver: 'paver', deepPanel: 'cast panel', deepSkim: 'skim', deepFloor: 'skim', bottle: 'enamel', bottleBlock: 'gloss block', oxide: 'enamel', oxideBlock: 'gloss block', lineWorn: 'enamel', lineFaded: 'enamel',
+  lineChalk: 'enamel', lineInk: 'enamel', graphite: 'steel', yardTarmac: 'tarmac', deepPaver: 'paver', deepPanel: 'cast panel', deepSkim: 'skim', deepFloor: 'skim', bottle: 'enamel', bottleBlock: 'gloss block', oxide: 'enamel', oxideBlock: 'gloss block', lineWorn: 'enamel', lineFaded: 'enamel',
 } as const satisfies Record<CoastMat, Stuff>;
 
 export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
