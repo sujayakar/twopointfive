@@ -39,6 +39,7 @@ const LIGHTS_BREAK = process.env.FLASHLIGHTS_BREAK === '1';
 /** is his weapon light burning? The ONE place the lights family reads a light, so its red path reads every light as off for every line */
 const burning = (x: any): boolean => !LIGHTS_BREAK && !!x.flashlight?.enabled;
 import { stage, setKnobs } from './bang-tally.ts';
+import { plainOpen, type Beam } from './beam-reading.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
@@ -295,19 +296,27 @@ async function emptyEntry(scn: string) {
   //  floor that is lit — a man who goes through a door behind another, not beside him, crosses nearer the middle of the frame, where that happened)
   const feetAt = (px: number, pz: number) => g.visibilityOf(GDM.lightEstimateAt(g, [px, 1.2, pz], () => true));
   const feet = (x: any) => { const [px, , pz] = x.char.pos; return Math.max(feetAt(px, pz), feetAt(px + 0.3, pz), feetAt(px - 0.3, pz), feetAt(px, pz + 0.3), feetAt(px, pz - 0.3)); };
-  // (lit, or dark by a rule that says this light would help nobody: the place is lit — LIGHTS.litOff — or the whole beam would end on a WALL at his muzzle
-  //  — LIGHTS.wallOff. The wall rule's own reading is taken only where the PROBE finds a wall there too: every ray of his beam, cut off where it would reach
-  //  the floor, ends on something solid above the floor inside the rule's reach. A beam that ends on the GROUND — a gun at the low ready a pace and a half
-  //  out — is not a light with a wall in front of it, and a man the rule holds dark for that is counted dark here: probes.ts hours-team holds that fault)
-  const FLOOR = 0.05, fanOf = (d: number[]): number[][] => { const out: number[][] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); } for (const e of [-0.3, 0.3]) { const v = [d[0], d[1] + e, d[2]], l = Math.hypot(v[0], v[1], v[2]) || 1; out.push([v[0] / l, v[1] / l, v[2] / l]); } return out; };
-  /** what ends his beam, by the probe's own rays: 'wall' = every ray meets something solid above the floor inside the rule's reach · 'axis' = the middle of
-   *  the beam does and some ray beside it reaches the floor first · 'ground' = the middle of the beam reaches the floor before anything solid */
-  const wallEnds = (x: any): 'wall' | 'axis' | 'ground' | 'none' => { const held = x.char.bones.upperArmR, p = x.flashlight?.pos, d = x.flashlight?.dir; if (!held || !p || !d) return 'none';
-    const o = g.col.segmentBlocked(held, p) ? LTM.lensClear(g, held, p, g.engine.settings.flashlightRadius) : p, m = GDM.LIGHTS.wallBackM;
-    const hit = fanOf(d).map(r => { const toFloor = r[1] < -1e-6 ? (o[1] - FLOOR) / -r[1] : Infinity, reach = Math.min(m, toFloor); return reach > 0 && g.col.segmentBlocked(o, [o[0] + r[0] * reach, o[1] + r[1] * reach, o[2] + r[2] * reach]); });
-    return hit.every(Boolean) ? 'wall' : hit[0] ? 'axis' : 'ground'; };
-  const beamEnds = { wall: 0, axis: 0, ground: 0, none: 0 };
-  const wallOk = (x: any): boolean => { if (!GDM.wallDarkSeen(g, x)) return false; const e = wallEnds(x); beamEnds[e]++; return e === 'wall'; };
+  // (lit, or dark by a rule that says this light would help nobody: the place is lit — LIGHTS.litOff — or the beam would end on a WALL at his muzzle
+  //  — LIGHTS.wallOff. The wall rule is taken at its word only where it is what put his light out (guards.ts wallPutOut: its clock runs on a man whose
+  //  light is off for any other reason too) and unless the PROBE finds the beam plainly open: read after the step (beam-reading.ts plainOpen, the rule's
+  //  line test ray by ray), some ray of it runs clear past the rule's reach and a margin, or its middle is down on the ground with nothing standing in
+  //  its way. The ground is not a wall: a gun at the low ready over open floor is not a light with a wall in front of it, and a man the rule holds dark
+  //  there is counted dark here — the fault these lines held until 11-04, when the rule counted the ground as something solid)
+  /** what ends his beam, by the probe's own reading: 'wall' = not plainly open: its middle is on something that stands, or too near to call · 'axis' =
+   *  plainly open with something standing in its middle (a ray beside it runs clear) · 'ground' = plainly open, its middle on the ground or clear */
+  const beam: Beam = { fan: GDM.beamFan, ray: (o, r, m) => GDM.beamRayEnd(g, o, r, m) };
+  const wallEnds = (x: any): 'wall' | 'axis' | 'ground' | 'none' => { const o = x.flashlight ? GDM.beamLens(g, x) : null, d = x.flashlight?.dir, m = GDM.LIGHTS.wallBackM; if (!o || !d) return 'none';
+    return !plainOpen(beam, o, d, m) ? 'wall' : beam.ray(o, beam.fan(d)[0], m) >= 2 ? 'axis' : 'ground'; };
+  //  (…or WAS not plainly open within the last `LAG` frames, with a door leaf in reach of his lens: the rule reads his beam where he is posed, before the
+  //  leaves move — lighting.ts lensRecheck has the same order — so a man going through a door with his gun down at the foot of the leaf he is pushing is
+  //  read by the rule against the leaf as it stood and by the probe against the leaf as he has pushed it, for as many frames as the push lasts: one to
+  //  four, where it was looked at, every one with his gun straight down and a leaf beside him. No leaf, no excuse; the old fault lasted for seconds. The
+  //  clock is kept where a man is asked: a man asked for the first time in a stretch has none, and such a frame of his is counted dark)
+  const beamEnds = { wall: 0, leaf: 0, axis: 0, ground: 0, none: 0 }, LAG = 4, wallAt = new Map<any, number>(), frameNo = () => Math.round(g.time * 60);
+  const leafBy = (o: number[]) => g.col.dynamicBoxes.some((b: any) => Math.hypot(b.c[0] - o[0], b.c[2] - o[2]) < GDM.LIGHTS.wallBackM + Math.max(b.h[0], b.h[2]));
+  const wallOk = (x: any): boolean => { if (!GDM.wallPutOut(g, x)) return false; const e = wallEnds(x); if (e === 'wall') { wallAt.set(x, frameNo()); beamEnds.wall++; return true; }
+    const t = wallAt.get(x); if (t !== undefined && frameNo() - t <= LAG && leafBy(x.flashlight.pos)) { beamEnds.leaf++; return true; }
+    beamEnds[e]++; return false; };
   const litOk = (x: any) => burning(x) || (GDM.placeLitSeen(g, x) && feet(x) >= GDM.LIGHTS.litAt * 0.8) || wallOk(x); let spared = 0, litInLit = 0, burnDark = 0; const run = new Map<any, number>();
   const watch = () => { for (const x of team) { const on = burning(x), pl = GDM.placeLitSeen(g, x); if (!on && pl) spared++; if (on && feet(x) < GDM.LIGHTS.litAt) burnDark++; const r = on && pl ? (run.get(x) ?? 0) + 1 : 0; run.set(x, r); if (r > 60 * GDM.LIGHTS.tail + 3) litInLit++; } };
   const sam = g.player.char.pos;
@@ -333,7 +342,7 @@ async function emptyEntry(scn: string) {
   for (let f = 0; f < 60 * 60; f++) { step(); op ??= D.ops[0] ?? null;
     if (op) for (const [gd, t] of op.crossed) { if (!cross.has(gd)) cross.set(gd, { t, lit: litOk(gd), corner: NaN });
       const C = op.corner.get(gd), r = cross.get(gd)!; if (C?.pts.length && isNaN(r.corner) && Math.abs(Math.atan2(Math.sin(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.pos[0], C.pts[0][2] - gd.char.pos[2])), Math.cos(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.pos[0], C.pts[0][2] - gd.char.pos[2])))) < DTM.DOORTOOLS.cornerRad) r.corner = g.time - t; }
-    if (op && D.ops.includes(op) && op.phase === 'enter' && cross.size) { searching++; watch(); if ([...cross.keys()].every(gd => litOk(gd))) searchLit++; }
+    if (op && D.ops.includes(op) && op.phase === 'enter' && cross.size) { searching++; watch(); if ([...cross.keys()].map(gd => litOk(gd)).every(Boolean)) searchLit++; /* (every man who has crossed is asked every frame: the wall excuse keeps a clock a man) */ }
     if (op && !D.ops.includes(op) && isNaN(inT)) inT = g.time;
     if (!isNaN(inT)) { if (!litFree() && isNaN(darkAt)) darkAt = g.time - inT; if (g.time - inT > 10) break; } }
   const held = litFree(), doorMen = team.filter(x => onDoor(x)), doorDark = doorMen.filter(x => !litOk(x)).length, doors = doorMen.map(x => `${x.callsign} on ${onDoor(x).def.name}${burning(x) ? '' : ' (dark)'}`).join(', ');
@@ -356,7 +365,7 @@ export const flashweightLights = guarded(async () => {
     const r = await emptyEntry(E.id); if (!r) { F.verdict(false, `${E.title}`, 'no held room to enter'); continue; }
     const crossed = [...r.cross.values()], litIn = crossed.filter(c => c.lit).length; spared += r.spared; burned += r.litInLit; burnDark += r.burnDark;
     const ok = !r.why && r.follow === 0 && r.stacked === 0 && r.walkDark === 0 && r.litInLit === 0 && crossed.length > 0 && litIn === crossed.length && r.searching > 0 && r.searchLit >= r.searching * 0.95 && r.darkAt <= L.afterSecs + L.hotSecs + L.tail + 0.5 && r.held === 0 && r.doorDark === 0 && r.out === 0;
-    F.verdict(ok, `${E.title}: ${r.team} teammates, the ${r.door} door`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}lit in file behind Sam ${r.follow} · DARK while walking to the door on their own ${r.walkDark} of ${r.walk} man-frames · lit stacked on it ${r.stacked} · crossed the frame lit (or in a lit place, or dark into the wall at his muzzle) ${litIn} of ${crossed.length} · lights the lit place spared ${r.spared} man-frames · asked of a man the wall rule held dark, what ended his beam: a wall, every ray ${r.beamEnds.wall} (counted lit) · a wall in its middle, the floor at its edge ${r.beamEnds.axis} · the FLOOR in its middle ${r.beamEnds.ground + r.beamEnds.none} (counted dark), burning on in one ${r.litInLit} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the room was called (bound ${f2(L.afterSecs + L.hotSecs + L.tail + 0.5)}) · lit holding the room ${r.held} · holding another door of it ${r.doorMen}${r.doorMen ? ` (${r.doors}), dark where the place is dark ${r.doorDark}` : ''} · following out ${r.out}`);
+    F.verdict(ok, `${E.title}: ${r.team} teammates, the ${r.door} door`, `${r.why ? `ORDER REFUSED: ${r.why} · ` : ''}lit in file behind Sam ${r.follow} · DARK while walking to the door on their own ${r.walkDark} of ${r.walk} man-frames · lit stacked on it ${r.stacked} · crossed the frame lit (or in a lit place, or dark into the wall at his muzzle) ${litIn} of ${crossed.length} · lights the lit place spared ${r.spared} man-frames · asked of a man whose light the wall rule put out, what ended his beam: a wall, or too near one to call ${r.beamEnds.wall} (counted lit) · plainly open for up to four frames with a leaf beside him ${r.beamEnds.leaf} (the leaf moved after he was posed: counted lit) · plainly open, something standing in its middle ${r.beamEnds.axis} · plainly open, its middle on the ground or clear ${r.beamEnds.ground + r.beamEnds.none} (counted dark), burning on in one ${r.litInLit} · lit through the search ${r.searchLit} of ${r.searching} frames · all dark ${f2(r.darkAt)} s after the room was called (bound ${f2(L.afterSecs + L.hotSecs + L.tail + 0.5)}) · lit holding the room ${r.held} · holding another door of it ${r.doorMen}${r.doorMen ? ` (${r.doors}), dark where the place is dark ${r.doorDark}` : ''} · following out ${r.out}`);
   }
   // the place rule at the bar it ships with: the start card's floors are night offices, mostly under it — so the lights BURN there (by the probe's own
   // reading of the floor, not the rule's) and none burns on in a place the rule calls lit
