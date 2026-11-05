@@ -94,7 +94,7 @@ const lightsFresh = (g: any) => {
 const said = (g: any) => g.messages.map((m: any) => m.text).filter((t: string) => /mains|guards reset|encounter restarted|power/i.test(t));
 const sounded = (W: any, from: number) => (W.audioLog as { name: string }[]).slice(from).map(c => c.name).filter(n => /power/i.test(n));
 /** put a level's lights out by the mains (by hand) and break one fixture: the short wreck the ways-in lines use */
-const darken = (W: any) => { const g = W.game; const t = g.targets.find((x: any) => x.kind !== 'breaker' && x.mains && !x.broken); if (t) t.broken = true; g.setBlackout(86400, 'hand'); steps([W], 90); return { out: g.blackout.active, broke: !!t }; };
+const darken = (W: any) => { const g = W.game; const t = g.targets.find((x: any) => x.kind !== 'breaker' && x.mains && !x.broken); if (t) g.lightHome.stage(t, null, true); g.setBlackout(86400, 'hand'); steps([W], 90); return { out: g.blackout.active, broke: !!t }; };
 
 export async function cleanrestartCheck(): Promise<boolean> {
   let all = true;
