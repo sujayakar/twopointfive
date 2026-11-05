@@ -39,7 +39,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 ## How big a level may be
 
 The rules of doors, loose furniture and glass keep their numbers in pools of a fixed size, so a level has at most **64 doors**, **128 loose things
-of furniture** made of at most **256 boxes** between them, and **256 sheets of glass**. A level over one of these is not loaded: the game says which
+of furniture** made of at most **256 boxes** between them, **256 sheets of glass**, and **4 roofs** (ceiling slabs: the weather's table). A level over one of these is not loaded: the game says which
 as it is made (`game/levelfit.ts`), and `bun run tools/qa/copyfit-check.ts` reads every level of `levels/` against them and against the tables
 the box world is copied into, and says how near each level is.
 

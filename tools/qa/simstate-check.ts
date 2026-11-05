@@ -34,8 +34,8 @@
 //   slabs      …and for the leaves off their hinges (RUST.slabs: each slab's row, src/sim/slabshome.ts; their step, rust/sim/src/slabs.rs): a game whose doors
 //              are blown out of their frames one after another and hung again
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
-// THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself, and "no block left" is only true of a game no other
-// row keeps a block for. Said as the stand's own word, before the harness loads: a stand-up puts every row where its stand has it, and both stands
+// THE STAND THIS CHECK STANDS ON HAS NO ROW UP: it raises and drops the rows it asks about itself, and a system's columns are only its own again in a game no
+// other row keeps them at home for. (The weather's table has no row: every game has a block for it, so a row going down never shuts one.) Said as the stand's own word, before the harness loads: a stand-up puts every row where its stand has it, and both stands
 // have every row but the maths up (src/sim/sim.ts RUST_ON). A row's own word in the caller's shell still raises that row (the red paths use it).
 process.env.TPS_RUST = '0';
 export {};   // (a module, for the top-level awaits: the one import below is no longer an `import` statement)
@@ -62,9 +62,9 @@ const x = S.sim(), L = ST.simLayout();
 // ---- layout
 { let at = 0, tight = true; for (const p of L.parts) { if (p.off !== at || p.len % 8) tight = false; at += p.len; }
   let trap = false; try { x.dice_roll(L.games); } catch { trap = true; }   // (a slot that is not one: the module traps, it does not answer for slot 0)
-  const none = new ST.SimState(); S.RUST.dice = true; none.settle({ dice: null }); S.RUST.dice = false;   // (a game with no die of its own has nothing to move: no block)
-  verdict(L.parts.length === ST.SIM_PARTS.length && tight && at === L.bytes && L.word !== 0 && L.games >= 2 && trap && !none.open, 'layout: the module\'s parts are the ones src/sim/state.ts names, end to end; a slot that is not one traps; a game with no die gets no block',
-    `${L.parts.map((p: any) => `${p.name} ${p.off}+${p.len}`).join(' · ')} · ${L.bytes} bytes a block · ${L.games} slots · layout ${L.word.toString(16)} (state.ts names ${ST.SIM_PARTS.join(' ')}) · slot ${L.games} traps: ${trap} · no die, no block: ${!none.open}`); }
+  const none = new ST.SimState(); S.RUST.dice = true; none.settle({ dice: null }); S.RUST.dice = false;   // (a game with no die of its own has nothing to move: its bit among the head's homes stays down)
+  verdict(L.parts.length === ST.SIM_PARTS.length && tight && at === L.bytes && L.word !== 0 && L.games >= 2 && trap && !(none.w[1] & 1), 'layout: the module\'s parts are the ones src/sim/state.ts names, end to end; a slot that is not one traps; a game with no die has none at home',
+    `${L.parts.map((p: any) => `${p.name} ${p.off}+${p.len}`).join(' · ')} · ${L.bytes} bytes a block · ${L.games} slots · layout ${L.word.toString(16)} (state.ts names ${ST.SIM_PARTS.join(' ')}) · slot ${L.games} traps: ${trap} · no die, none at home: ${!(none.w[1] & 1)}`); }
 
 /** a die at home in a block of its own (as a game's is once its tick has opened with the row on) */
 function homed(seed: number): any { const d = D.newDice(seed), st = new ST.SimState(), g = { dice: d }; S.RUST.dice = true; st.settle(g); S.RUST.dice = false; return { d, st, g }; }
@@ -142,11 +142,11 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
   { rows(false); const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { drive(W3, f3++); W3.step(DT); ws.push(RB.stateHash(g3)); } return ws; };
     go(150); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons, sOut = g3.dice.s; const refOut = go(40);
     rows(true); go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons, sIn = g3.dice.s; const refIn = go(40), homeIn = !!g3.dice.home;
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && !g3.sim.open && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);
     RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; rows(true); const b = !!g3.dice.home && g3.dice.home.st === g3.sim && g3.dice.s === sIn && g3.player.char.anim.pose.home === g3.sim, againIn = go(40);
     const same = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
     verdict(a && b && homeIn && same(refOut, againOut) && same(refIn, againIn), 'across a row change: a snapshot from before the die moved in, and one from after, each put back under the row it was taken under, play as they did',
-      `taken out of the block, put back over a game with a block: the die in its fields, no block left: ${a}, 40 ticks the same word: ${same(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b}, 40 ticks the same word: ${same(refIn, againIn)}`); }
+      `taken out of the block, put back over a game with a block: the die in its fields: ${a}, 40 ticks the same word: ${same(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b}, 40 ticks the same word: ${same(refIn, againIn)}`); }
   // a view over the module's memory kept in the state
   g.strayView = new Uint32Array(x.memory.buffer, x.state_addr(0), 4); const s3 = RB.takeSnapshot(g), s4 = RB.takeSnapshot(g, s3); delete g.strayView;
   let refused = false; try { RB.restoreSnapshot(s3); } catch { refused = true; }
@@ -236,11 +236,11 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
   { R[F.row] = false; const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { work(W3, f3++); W3.step(DT); ws.push(DG.hashDigest(DG.digestGame(g3)) + ':' + bitsOf(g3)); } return ws; };
     go(130); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons; const refOut = go(60);
     R[F.row] = true; go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons; const refIn = go(60), homeIn = !!at(g3);
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; R[F.row] = false; const a2 = !at(g3) && !g3.sim.open, againOut = go(60);
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; R[F.row] = false; const a2 = !at(g3), againOut = go(60);
     RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; R[F.row] = true; const b2 = at(g3) === g3.sim, againIn = go(60);
     const alike = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
     verdict(a2 && b2 && homeIn && alike(refOut, againOut) && alike(refIn, againIn), `${F.name}, across a row change: a snapshot from before ${F.cols} moved in, and one from after, each put back under the row it was taken under, play as they did`,
-      `taken out of the block, put back over a game with one: the columns the game\'s own, no block left: ${a2}, 60 ticks the same game: ${alike(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b2}, 60 ticks the same game: ${alike(refIn, againIn)}`); }
+      `taken out of the block, put back over a game with one: the columns the game\'s own: ${a2}, 60 ticks the same game: ${alike(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b2}, 60 ticks the same game: ${alike(refIn, againIn)}`); }
   R[F.row] = false; }
 { const DH: any = await import(`${ROOT}/src/sim/doorshome.ts`), PH: any = await import(`${ROOT}/src/sim/propshome.ts`), SH: any = await import(`${ROOT}/src/sim/slabshome.ts`), DB: any = await import(`${ROOT}/src/game/doorblast.ts`);
   // the doors: every 25 frames a hand, a boot, a pull or a pull-to on the next door round

@@ -173,6 +173,15 @@ export class StaticCollision {
    *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { if (ruleRed(RULES_ROW)) return null; const M = this.ready(); if (M.rules(dyn)) return M;
     if (FELL.on) fell(RULES_ROW, !M.live ? this.fellWhy() : 'another list in the leaves\' place, or leaves that do not fit a list'); return null; }
+  /** THE COPY AS A RULE IN THE MODULE THAT ASKS ITS OWN LINES TAKES IT (the weather's: rust/sim/src/weather.rs, air.rs): standing, whatever row is up, with the game's
+   *  leaves in it as they are; `ruleSet` and `rulePanes` on it say which list of leaves and which pane rule to hand it (the module judges a pane wherever it holds the
+   *  panes; a rule a check hung alone, which it cannot judge, is none to these lines). Inside a tick or a window. A level the copy cannot hold has no such rule to ask, so that is a mistake and said. */
+  ruleOpen(): BoxMirror {
+    const M = this.ready(); if (!M.live) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, this.glassPanes, RUST.lines, RUST.circles, RUST.fog, EXACT.on ? senseRows() : 0, RUST.rays);
+    if (!M.live) throw new Error('a rule of the module was asked about a level its copy of the box world cannot hold');
+    const set = M.leaves(this.dynamicBoxes); if (set === -2) throw new Error('a rule of the module was asked with more door leaves than its copy holds');
+    M.ruleSet = set; M.rulePanes = this.paneRule !== null && M.glassIn ? 1 : 0; return M;
+  }
   /** …and THE PANE RULE AS A RULE'S STEP TAKES IT (a slab's and a thrown thing's rays ask it; `paneAsk` below): 0 or 1 to hand the module, or −1 — the step
    *  is the TypeScript's, and counted as its own here, once for every rule that asks */
   rulesPanes(): number { const ask = this.paneAsk; if (ask < 0) this.paneFell(RULES_ROW, ask); return ask; }

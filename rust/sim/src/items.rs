@@ -206,16 +206,16 @@ const GRAVITY: f64 = 9.81;
 const SUB: f64 = 2.0;
 
 /// lying snow as the host said it for this walk (P_SNOW_*, P_ROOFS, P_ROOF)
-struct Snow {
-    top: f64,
-    bank: f64,
-    packed: f64,
-    old: f64,
-    dead: f64,
-    grip: f64,
-    stick: f64,
-    roofs: usize,
-    roof: [f64; MAX_ROOFS * 4],
+pub(crate) struct Snow {
+    pub(crate) top: f64,
+    pub(crate) bank: f64,
+    pub(crate) packed: f64,
+    pub(crate) old: f64,
+    pub(crate) dead: f64,
+    pub(crate) grip: f64,
+    pub(crate) stick: f64,
+    pub(crate) roofs: usize,
+    pub(crate) roof: [f64; MAX_ROOFS * 4],
 }
 /// the snow of a walk's hand-over (read where the ground may be snow: `bog`; else nothing of it is). → None: more roofs than a walk is handed
 fn snow_of(p: &[f64; NPAR], bog: bool) -> Option<Snow> {
@@ -240,8 +240,12 @@ fn over(rec: &[f64], q: usize, x: f64, z: f64) -> bool {
 /// caps as high bogs; at the ground, nothing under a roof does, and a thin lay over the spot says how much: trodden, old, or bare. The statics that
 /// are snow are named by the world's table `snow`; where each is and how it is turned are its own row's.
 fn bog_at(d: &Walk, x: f64, y: f64, z: f64) -> f64 {
-    let o = world(d.w);
-    let (n, s) = (o.boxes as usize, &d.snow);
+    bog_of(d.w, &d.snow, x, y, z)
+}
+/// …the one rule, as whoever asks it hands it the world and the snow (snow.rs: the weather's roofs and the rule's numbers as they stand)
+pub(crate) fn bog_of(w: usize, s: &Snow, x: f64, y: f64, z: f64) -> f64 {
+    let o = world(w);
+    let n = o.boxes as usize;
     if !(y < s.top) {
         for bi in 0..n {
             if o.snow[bi] == SNOW_BANK {

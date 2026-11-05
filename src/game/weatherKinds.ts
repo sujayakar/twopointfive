@@ -7,6 +7,8 @@
 // roof. composite.wgsl draws it along every pixel's ray (common.wgsl wxFogTau) and the men's eyes are cut by exactly it (weather.ts airTrans → guards.ts). So both
 // read the SAME numbers the fog is QUANTISED into the 32 bits the renderer gets (packFog), and the simulation uses what unpackFog hands back.
 import type { Vec3 } from '../math/vec';
+import { sim } from '../sim/sim';
+import { WX_WATCH } from '../sim/weatherhome';
 
 export type Rect = [number, number, number, number];   // x0, z0, x1, z1
 export type WeatherKind = 'clear' | 'overcast' | 'rain' | 'downpour' | 'fog' | 'dust' | 'snow';
@@ -131,6 +133,10 @@ export function unpackFog(w: number): FogSpec | null {
 }
 /** optical depth of the fog along the straight line a → b: the closed form of ∫ σ0 e^(−y ∕ H) (common.wgsl wxFogTau is this statement for statement), before any roof */
 export function fogTau(f: FogSpec, a: Vec3, b: Vec3): number {
+  const r = sim().weather_fog_tau(f.sigma, f.H, a[0], a[1], a[2], b[0], b[1], b[2]);
+  return WX_WATCH.on ? WX_WATCH.said('fog.tau', r, [f.sigma, f.H, ...a, ...b], WX_WATCH.both ? fogTauOwn(f, a, b) : null) : r;
+}
+export function fogTauOwn(f: FogSpec, a: Vec3, b: Vec3): number {
   const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]); if (!(L > 0)) return 0;
   if (!(f.H > 0)) return f.sigma * L;
   const ya = Math.max(a[1], 0) / f.H, k = (Math.max(b[1], 0) - Math.max(a[1], 0)) / f.H;

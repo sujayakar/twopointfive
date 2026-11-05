@@ -15,6 +15,8 @@ import { PANE_CAP } from '../scene/boxMirror';
 import { DOOR_CAP } from '../sim/doorshome';
 import { PROP_CAP, PROP_PARTS } from '../sim/propshome';
 import { isSheet } from './glass';
+import { roofsCounted, wxCap } from '../sim/weatherhome';
+import { WORLD } from '../scene/world';
 
 /** what of a level is counted before it is built, and what it has of each: doors · loose things of furniture · the boxes those are made of · sheets of glass */
 export interface LevelFit { doors: number; things: number; parts: number; sheets: number }
@@ -31,6 +33,7 @@ export function levelOver(level: Parameters<typeof levelCounts>[0]): string | nu
   if (has.things > cap.things) over.push(`${has.things} loose things of furniture (${cap.things})`);
   if (has.parts > cap.parts) over.push(`loose furniture of ${has.parts} boxes (${cap.parts})`);
   if (has.sheets > cap.sheets) over.push(`${has.sheets} sheets of glass (${cap.sheets})`);
+  { const roofs = roofsCounted(level.boxes, WORLD.ceilingY), most = wxCap(0); if (roofs > most) over.push(`${roofs} roofs (${most})`); }   // (rust/sim/src/weather.rs ROOFS: the weather's table)
   return over.length ? `this level is too big to load: ${over.join(', ')}` : null;
 }
 
@@ -64,5 +67,6 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), room: 1, table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), room: 1, table: 'view' },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, room: 1, table: null },
+    { row: 'roofs', what: 'roofs (ceiling slabs, the weather\'s table)', has: roofsCounted(g.level.boxes, WORLD.ceilingY), cap: wxCap(0), room: 1, table: null },
   ];
 }
