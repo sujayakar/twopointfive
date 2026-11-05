@@ -498,7 +498,7 @@ export async function kitSlots() {
       const able = ocpable(game); msgs.length = 0; W.cursorAt(light.pos); input.clicked |= 4; W.step(DT);
       tr.push(`pistol+light: ocpable ${able}, charge ${f2(pl.ocp.charge)}, "${msgs.at(-1) ?? ''}"`);
       if (!able || pl.ocp.charge > 0.05 || !(light.disabledUntil > game.time) || !msgs.some(m => /^OCP → /.test(m))) fails.push(`pistol + light: ocpable ${able}, charge ${f2(pl.ocp.charge)}, disabledUntil ${f2(light.disabledUntil)}, "${msgs.at(-1)}"`);
-      pl.ocp.charge = 1; light.disabledUntil = -1;
+      pl.ocp.charge = 1; game.lightHome.stage(light, null, null, -1);
       // the rifle up over the same light (the RING on its button — a rifle with a launcher always has a load up): the OCP stays the pistol's and nothing is said
       // of it any more; the press begins the ring's gesture as it would anywhere, held it sends nothing, and Esc drops it unsent — the button still down begins nothing
       pl.slot = 'rifle'; rf.attIdx = 0; pl.ocpHinted = false; settle(40); msgs.length = 0; const rounds0 = rf.spent, rings0 = rf.rings;

@@ -40,6 +40,7 @@ import type { Door } from './doors';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
 import type { Game, LightTarget } from './game';
+import { LIGHT_IN } from '../sim/lightshome';
 import type { WeaponDef } from './weapons';
 import type { Prop } from './props';
 import type { Character } from './character';
@@ -375,7 +376,7 @@ export class Destruction {
     this.g.col.wrote();
     this.hidden.clear(); this.debris.clear(); this.heat.fill(0); this.anyHeat = false; this.tilesDown.clear(); this.lastTileT = -100; this.tileCount = 0; this.serial = 1; this.knocks = 0;
     for (const c of Object.values(this.caps)) c.reset(); this.freeKnocks = 0;
-    for (const t of this.broke) t.broken = false; this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
+    for (const t of this.broke) this.g.lightHome.in(LIGHT_IN.mend, t); this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
     this.fixtureCount = 0; this.lastFixtureT = -100; this.dustQueue.length = 0; this.pallAt.length = 0;
     this.breaks.reset();
     this.edgeLook.clear();
@@ -605,7 +606,7 @@ export class Destruction {
   }
 
   /** a lit screen's light target out (the OCP / round rule's own bit: updateTargets takes its emissive and its markings' gain to 0 the same frame), remembered for reset() */
-  private breakTarget(t: LightTarget): boolean { if (t.broken) return false;  const wasLit = t.interactive && (t.on || t.factor > 0); t.broken = true; this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
+  private breakTarget(t: LightTarget): boolean { if (t.broken) return false;  const wasLit = t.interactive && (t.on || t.factor > 0); this.g.lightHome.in(LIGHT_IN.break, t); this.broke.add(t); if (wasLit) this.g.lightEvent(t); return wasLit; }   // (→ whether a LIGHT went out: a dark / dead screen breaks silently — nobody notices a light that was not on, combat.ts's fixture rule)
 
   private killScreen(item: Destructible, hitP: Vec3, n: Vec3, byPlayer: boolean) {
     const g = this.g;
