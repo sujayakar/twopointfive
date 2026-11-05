@@ -440,8 +440,10 @@ fn manH(i: vec3i) -> f32 { var h = (u32(i.x + 4096) * 73856093u) ^ (u32(i.y + 40
 /** value noise in the bind pose's space, 0‥1, one lattice cell a unit */
 fn manNoise(p: vec3f) -> f32 {
   let fl = floor(p); let i = vec3i(fl); let f = p - fl; let u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(mix(manH(i), manH(i + vec3i(1, 0, 0)), u.x), mix(manH(i + vec3i(0, 1, 0)), manH(i + vec3i(1, 1, 0)), u.x), u.y),
-             mix(mix(manH(i + vec3i(0, 0, 1)), manH(i + vec3i(1, 0, 1)), u.x), mix(manH(i + vec3i(0, 1, 1)), manH(i + vec3i(1, 1, 1)), u.x), u.y), u.z);
+  // (the cell's eight corners by ONE call in a loop, then the same blend of them: written as eight calls the hash was pasted eight times at each of this
+  // function's ninety-two places in the men's fragment program, 195 KB of its 325)
+  var h: array<f32, 8>; for (var k = 0; k < 8; k++) { h[k] = manH(i + vec3i(k & 1, (k >> 1) & 1, k >> 2)); }
+  return mix(mix(mix(h[0], h[1], u.x), mix(h[2], h[3], u.x), u.y), mix(mix(h[4], h[5], u.x), mix(h[6], h[7], u.x), u.y), u.z);
 }
 fn manBump(x: f32, c: f32, w: f32) -> f32 { return 1.0 - smoothstep(0.0, w, abs(x - c)); }
 /** a disruptive print cut from `base`: a dark and a pale shape over the ground colour and dark twigs over the dark, wider than tall, soft-edged to the pixel */
