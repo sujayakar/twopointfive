@@ -11,13 +11,11 @@
 //            TypeScript, by digest and by every frame's bits
 //   systems  the same with every row but the maths raised by name (?rustlines&rustcircles&rustfog …: whatever src/sim/sim.ts RUST lists): the box world's
 //            questions are asked of the module's copy inside every tick (src/scene/boxMirror.ts), and the game is the same game, as `plain`
-//            …and with ?fell the page counts the questions its TypeScript answered while a row was up: none may be of a row that is one way in (sim.ts SEALED)
 //   words    ?rust<row>=0 for the first default row: that row, and it alone, is off (the page is not played)
 //   replay   `plain`'s frames as a replay file, opened as ?playtape=<file>: with no word the page stands on the recipe's rows (the three), with ?rust=0 the
 //            word is still on the address the page is sent on to, every row is off, and the tape plays to its end on its trace either way
 //   nojit    the same address in a page with no WebAssembly (a browser whose policy turns its JIT off has none): the page boots, says the module is not
 //            running, leaves every row off (the default ones, asked for by saying nothing, and the rest, asked for by name), and plays the same game by digest
-//            ALONE_WHO=1: …and says who asked the box world a question alone, outside a tick and every window (the address carries ?fell=who)
 // exit 0 = every job, with no page error · 1 = otherwise. RUST_BREAK=1: `loads` hands the module's set the ENGINE's cosine, `rows` plays on it, and `systems`
 // and `plain` are told every line is clear: all four must FAIL.
 // THE FRAMES ARE NOT DRAWN (the software adapter takes minutes over a frame of a level): this is the page's bundle, its boot and its game logic. Nothing
@@ -105,16 +103,11 @@ const FOLD = async (brk) => {
     if (up.includes('fog') && !(k.sees > 0)) throw new Error(`the fog's pass asked no man of the module in ${FRAMES} frames (${JSON.stringify(k)})`);
     if (!played) throw new Error('`loads` did not play: nothing to hold this game to (run both jobs)');
     if (d.digest !== played.digest || d.bits !== played.bits) throw new Error(`${what} (${up.join(', ')} in the module) is not the game in TypeScript: digest ${d.digest} · ${played.digest}, bits ${d.bits} · ${played.bits}`);
-    // (ONE WAY IN: with ?fell on the address the page counts every question its TypeScript answered while the row was up, from the level's building on — src/sim/sim.ts FELL.
-    //  A count on a row of SEALED is a way back into TypeScript that a boot or a tick of the real page still takes)
-    const fellSay = name !== 'systems' ? '' : await page.evaluate(() => { const L = window.__sim.fell(), sealed = window.__sim.fellSealed(); return (sealed.length ? 'SEALED ' + sealed.join(', ') + ' · ' : '') + (L.length ? L.join(' | ') : 'none'); });
-    const alone = name !== 'systems' ? null : await page.evaluate(() => window.__sim.alone?.() ?? null);   // (the copy's proofs outside a tick over these frames: questions that proved it for themselves, and windows a question proved — scene/collision.ts ANYTIME)
-    if (fellSay.startsWith('SEALED')) throw new Error(`a sealed row's question was answered by the TypeScript in the page: ${fellSay.slice(0, 600)}`);
     if (name === 'plain') tapeText = await page.evaluate(() => JSON.stringify(window.__replay?.file?.('rust-page') ?? null)).catch(() => '');   // (the replay of these frames, recorded with the rows on: `replay` plays it)
-    pass(name, `${s.say} · ${FRAMES} frames, ${k.lines} ticks on the module's lines, ${k.circles} on its circles, ${k.fog} with its sight pass (${k.sees} men asked): digest ${d.digest}, bits ${d.bits} — the game in TypeScript, to the bit${fellSay ? ` · the TypeScript answered: ${fellSay.slice(0, 400)}` : ''}${alone ? ` · outside a tick the copy was proven ${alone[0]} times for a question alone and ${alone[1]} times for a window${alone[2] ? ' · alone: ' + Object.entries(alone[2]).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${v} × ${k}`).join(' | ') : ''}` : ''}`);
+    pass(name, `${s.say} · ${FRAMES} frames, ${k.lines} ticks on the module's lines, ${k.circles} on its circles, ${k.fog} with its sight pass (${k.sees} men asked): digest ${d.digest}, bits ${d.bits} — the game in TypeScript, to the bit`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); };
   if (want('plain')) await boxJob('plain', (rows, def) => rows.filter(r => def.includes(r)), () => '', 'the page as a player opens it');
-  if (want('systems')) await boxJob('systems', (rows) => rows.filter(r => r !== 'maths'), (up) => up.map(r => '&rust' + r).join('') + (process.env.ALONE_WHO === '1' ? '&fell=who' : '&fell'), 'the address that names every row but the maths');
+  if (want('systems')) await boxJob('systems', (rows) => rows.filter(r => r !== 'maths'), (up) => up.map(r => '&rust' + r).join(''), 'the address that names every row but the maths');
 
   if (want('words')) { const name = 'words', { browser, page, errs } = await open(); try {
     if (!rowNames || !defNames || !defNames.length) throw new Error('`loads` did not say which rows there are (run both jobs)');

@@ -216,7 +216,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
     let demoPos: Vec3 | null, attractPos: Vec3 | null;
     // the camera's own step: come round a spectated man, the pitch ease, the follow — once a frame on the frame's dt, or (the fixed step) once a TICK on the tick's:
     // the input record takes its view from this camera (cmd.ts sampleCmd), so a camera eased by the display's frame time would make two displays two games
-    const camStepIn = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
+    const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
       const ds: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
       const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
       const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
@@ -247,9 +247,6 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
-    /** …inside one window on the box world's copy (scene/collision.ts): the camera's own lines of a frame (the spectator's side, the turn, the sway) are asked
-     *  between ticks, and one proof of the copy serves them all; a frame that asks none proves nothing */
-    const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => game.col.window(() => camStepIn(cdt, dp, ap, tick));
     if (!fixed) {
       if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; if (!frozen && ctx.fixed.orbit) { cam.rotate(ctx.fixed.orbit); ctx.fixed.orbit = 0; } }   // (a hand's turn the fixed step still owed a tick)
       ctx.ticks = frozen ? 0 : 1;

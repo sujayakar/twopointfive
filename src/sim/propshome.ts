@@ -19,12 +19,8 @@ import { sim, f64, RUST, type SimExports } from './sim';
 import { simTenant, simPart, P_PROPS, type SimState } from './state';
 import { ColStore, colsOf, colDiff, type ColsOf } from './colstore';
 
-/** loose things of furniture a level can have (rust/sim/src/props.rs CAP; a level of more is not loaded: game/levelfit.ts) */
+/** things a level can have and still keep them in the module (rust/sim/src/props.rs CAP; more: they stay in TypeScript, the row on or not) */
 export const PROP_CAP = 128;
-/** …and the boxes all of a level's furniture is made of, at most (the Rust module's copy of the box world lists them as one list of leaves:
- *  rust/sim/src/world.rs MAX_LEAVES, held to this number by scene/boxMirror.ts as it boots; game/levelfit.ts says so as a level loads). 256 until
- *  2026-11-04, when the fullest level stood at 220. */
-export const PROP_PARTS = 512;
 /** THE COLUMNS in the part's order (props.rs COLS; tools/qa/rust-check.ts holds the names and propIo() the offsets to the module's own): the doubles — the
  *  hot ones first — then the words */
 export const PROP_F64 = ['x', 'z', 'yaw', 'vx', 'vz', 'w', 'cs', 'sn', 'idle', 'pushT', 'noiseT'] as const;
@@ -41,13 +37,12 @@ export type PropCols = ColsOf<(typeof PROP_F64)[number], (typeof PROP_U32)[numbe
 export const propCols = (cap: number): PropCols => colsOf(PROP_HEAD, PROP_F64, PROP_U32, cap);
 
 /** THE COLUMNS OF ONE SET OF FURNITURE (a level's, or a lone stage's): sim/colstore.ts's store, and what its rows mean. `cap` is PROP_CAP, so that the
- *  bytes are the module's part as they stand; a level of more things than that is not loaded, and says so. */
+ *  bytes are the module's part as they stand; a level of more things than that keeps wider columns and stays in TypeScript. */
 export class PropStore extends ColStore<(typeof PROP_F64)[number], (typeof PROP_U32)[number]> {
   /** the maths the kept cos and sin were worked out under (math/exact.ts mathsEpoch: the host's, game/props.ts keeps it fresh) */
   epoch = -1;
   constructor(readonly total: number) {
-    if (total > PROP_CAP) throw new Error(`a level of ${total} loose things of furniture: the game holds ${PROP_CAP} (sim/propshome.ts PROP_CAP, rust/sim/src/props.rs CAP)`);   // (said as the level loads: there is no other step for the furniture of a bigger one)
-    super(PROP_HEAD, PROP_F64, PROP_U32, PROP_CAP);
+    super(PROP_HEAD, PROP_F64, PROP_U32, Math.max(PROP_CAP, (total + 3) & ~3));
     const d = this.d, u = this.u, O = this.O;
     u[2] = total; u[3] = total;
     // (a thing as it is made: in its own row, asleep, to be placed, its clocks long past, the cos and sin of a yaw of 0)
@@ -120,7 +115,7 @@ export const PROPS_STEPPED = { there: 0, here: 0, noises: 0, asked: 0, differ: 0
 interface HasProps { props?: { store: PropStore } }
 // the furniture's bytes move into a game's block as its tick opens with RUST.props on, and out again with it off (state.ts settle): one copy each way
 simTenant({ name: 'props', bit: 32,
-  wants(g: HasProps) { const S = g.props?.store; return RUST.props && !!S && S.total > 0; },
+  wants(g: HasProps) { const S = g.props?.store; return RUST.props && !!S && S.total > 0 && S.cap === PROP_CAP; },
   into(g: HasProps, st: SimState) { g.props!.store.moveIn(st, simPart(P_PROPS)); },
   outOf(g: HasProps, st: SimState) { g.props?.store.moveOut(st, simPart(P_PROPS)); } });
 

@@ -56,7 +56,7 @@ Paths such as "Tab ▸ X" and numbers are as of the date each bullet was written
   denoiser's SPECULAR client in per-pixel mode (`denoise.ts writeParams({reflDiv})` → a second uniform block `paramsRefl`; denoise.wgsl `perPixelSpec()`: roughness
   from gMat, mirror-image reprojection through `frame.prevCam` validated on the pixel's plane, hitT smoothed in the fast slot, cap `settings.rtHistory` 32 shrunk to ~6
   on polish and by clamp distance, à-trous `settings.rtAtrous` passes with reach = the lobe's footprint (contact hardening), no-term texels filled with the tile mean so
-  composite took ONE bilinear fetch until 11-04; now the four texels round the pixel by depth and stored normal, `docs/agents/render.md`) → composite adds it × `reflK` = (1 − smoothstep(maxR−0.12, maxR, rough)) × `settings.rtStrength` × the decal gloss-keep, and
+  composite takes ONE bilinear fetch) → composite adds it × `reflK` = (1 − smoothstep(maxR−0.12, maxR, rough)) × `settings.rtStrength` × the decal gloss-keep, and
   steps metal diffuse back × (1 − 0.7·metalK). `frame.rtCfg` = (maxRough, rays, aniso, divisor — **.w 0 = the pass is OFF**: no flag bit was spent on it) and `frame.matCfg` = (highlight gain, strength, ray luminance bound 60, detail amount). ON in ultra (÷2, 2 rays, ≤ 0.55, 4 à-trous) / high (÷2, 1, ≤ 0.45,
   3) / medium (÷3, 1, ≤ 0.35, 3), OFF in low / verylow (`quality.ts RtTier`, `REF.reflect` in auto's cost model); while on it holds `FrameFlags.Gloss` DOWN whatever
   `settings.gloss` says (rtReflect ⊃ gloss; the glass panes keep fgather's glassShade → the gather-res chain). Targets are pooled, made on FIRST use (an off machine

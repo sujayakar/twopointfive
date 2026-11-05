@@ -31,12 +31,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   carry is clear; `wallDark`: out there, never tipped); `TORCHWALL_BREAK=1` fails it on both. The calm torch's own check and both tutorial scripted
   runs pass with it on. THE MAINTAINER'S CALL IS OPEN (hang, put out, or leave as it was): this default is the lean, not his pick. NOT MEASURED: what
   it does to a night of sneaking (a hanging torch lights the floor at his feet where it lit the wall). NEVER SEEN ON A GPU; nobody has played it.
-  11-04: the reading is `guards.ts beamWalled`, shared with the teammates' weapon lights: the carry is into a wall when its MIDDLE ends on something
-  that stands inside the distance and no ray of it runs clear; a ray that is down at floor level has ended on the floor and is neither
-  (`docs/agents/team-feel.md`, the wall rule's bullet). For a torch that moves one thing: its down-tipped ray is at floor level 1.2 m out and met
-  the ground itself 1.61 m out, a centimetre past `wallBackM`, so it used to read "clear" and bring a hung torch up; now the carry comes up when a
-  ray that is not on the floor runs clear to 1.6 m. `torch-wall` is 7 of 7 on both stands; on the page's a torch hung for 636 man-frames of 27000 where it
-  hung for 420 (342 where 226 with the rule raised on the frozen stand). Not measured on a night of sneaking.
 - **The difficulty switch + the harder defenders (10-07;** record rebuild/harder-defenders/numbers.md, the two parts' own pages beside it):
   `src/game/difficulty.ts` is ONE row — the start card's *Defenders: standard | hard* over the scenario picker (ui/menu.ts `difficultyRow`), Tab ▸ Sandbox ▸
   Difficulty, `?hard` / `?hard=0` / `?difficulty=hard|standard` — over two tables that both ship OFF: `pressure.ts PRESSURE` (defenders come to a held room

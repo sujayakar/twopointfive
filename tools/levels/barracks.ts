@@ -43,7 +43,6 @@ import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
 import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 import { GWOT_FINISH, GWOT_PALETTE as GP, ROUGH_CLOTH, type GwotMat } from '../../src/scene/gwotPalette';
-import { drawnAs, PANEL_GREY, CHAIR_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'barracks';
 export const NOTES = 'The barracks: two wings of small rooms, each off a gallery that looks onto the yard through unglazed openings, joined by a link block with the mess hall. Eleven defenders in three squads (a wing each and the link), seven doors and an arch in from outside. For the four man squad. One floor, box geometry only, the office\'s rectangle and kit. Regenerate: bun run map:export barracks';
@@ -186,9 +185,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   add({ c: [9.75, 0.5, 8.7], h: [1.15, 0.5, 0.3], albedo: C.white, ...mk(MD.cupboardMarks([1.15, 0.5, 0.3], '+z', 3, TX)) }); add({ c: [9.75, 1.03, 8.7], h: [1.2, 0.03, 0.34], albedo: [0.2, 0.2, 0.22] });   // the servery
   wallArt(4.135, 1.6, 13.6, 1.6, 0.9, [0.2, 0.35, 0.3], false);                                           // notice board beside the front door
   add({ c: [4.14, 2.47, 15.4], h: [0.02, 0.12, 0.3], albedo: C.white, emissive: [0.3, 3.2, 0.6] });      // exit sign over the front door
-  chair(5.4, 16.2, 0.6, CHAIR_GREY); bin(4.5, 16.5); cardboardBox(4.6, 12.2, 0.5, 0.2);            // loose things along the walls, clear of every door
+  chair(5.4, 16.2, 0.6, [0.5, 0.5, 0.48]); bin(4.5, 16.5); cardboardBox(4.6, 12.2, 0.5, 0.2);            // loose things along the walls, clear of every door
   cardboardBox(11.6, 14.6, 0.55, 0.1);
-  chair(11.5, 10.6, 2.4, CHAIR_GREY);
+  chair(11.5, 10.6, 2.4, [0.5, 0.5, 0.48]);
   cardboardBox(11.2, 19.35, 0.5, 0.3);
   cardboardBox(6.0, 19.35, 0.5, 0.2);
   // LOOSE THINGS AND DOORS: nothing a man can push stands in a gallery or within a leaf's length (1.7 m of the hinge) of a door on its own side of
@@ -208,7 +207,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('duty');
   desk(6.4, 22.4, 1.8, 0.8, Math.PI / 2); monitor(6.3, 22.4, Math.PI / 2, true); chair(7.3, 22.4, -Math.PI / 2); papers(6.4, 0.76, 21.8, 0.3);
   cabinet(4.5, 20.3, -Math.PI / 2); cabinet(4.5, 20.9, -Math.PI / 2); shelf(10.4, 23.6, 2.4, 0.45, 0, 4, 1.9);
-  const brk = add({ c: [4.16, 1.35, 22.6], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
+  const brk = add({ c: [4.16, 1.35, 22.6], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [4.21, 1.62, 22.42], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   bin(11.7, 20.1); cardboardBox(11.88, 23.5, 0.5, 0);
   ceilingPanel(8.0, 21.8, false, 'duty');
@@ -216,11 +215,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---------------- the north wing ----------------
   grp('bunks1');   // EMPTY. n1 on the gallery, n12 into bunks 2
   cot(13.4, 4.62, true); cot(16.2, 4.62, true); cot(12.8, 6.9, false); locker(17.85, 7.5, false);
-  chair(16.8, 7.4, 0.4, CHAIR_GREY);
+  chair(16.8, 7.4, 0.4, [0.5, 0.5, 0.48]);
   ceilingPanel(15.2, 6.2, false, 'bunks1');
   grp('bunks2');   // EMPTY AND DARK (it was held: its man is the gallery post's second). n2 on the gallery, n12 from bunks 1
   cot(19.9, 4.62, true); cot(22.2, 4.62, true); locker(22.85, 6.6, false);
-  chair(21.2, 6.3, -0.4, CHAIR_GREY); cardboardBox(21.05, 5.35, 0.5, 0.2);
+  chair(21.2, 6.3, -0.4, [0.5, 0.5, 0.48]); cardboardBox(21.05, 5.35, 0.5, 0.2);
   ceilingPanel(20.8, 6.2, false, 'bunks2');   // off: nothing burns in a room nobody holds (it was on while the room was held)
   grp('arms');     // EMPTY: the armoury. One door, no window: racking on three walls, a pallet on the floor
   shelf(25.25, 4.45, 3.2, 0.45, 0, 4, 1.9); shelf(23.62, 6.3, 2.2, 0.45, Math.PI / 2, 4, 1.9); shelf(26.88, 6.0, 2.6, 0.45, Math.PI / 2, 4, 1.9);
@@ -234,21 +233,21 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
                    // in the gallery's end. Whoever moves this door next: count the runs)
   locker(31.9, 7.68, false);
   add({ c: [31.6, 0.72, 5.4], h: [0.8, 0.03, 0.4], albedo: C.wood }); for (const s of [-0.6, 0.6]) add({ c: [31.6 + s, 0.35, 5.4], h: [0.04, 0.35, 0.3], albedo: C.metal });   // the table
-  chair(31.0, 6.2, 0.2, CHAIR_GREY); chair(32.3, 6.2, -0.3, CHAIR_GREY); papers(31.7, 0.75, 5.4, 0.4);
+  chair(31.0, 6.2, 0.2, [0.5, 0.5, 0.48]); chair(32.3, 6.2, -0.3, [0.5, 0.5, 0.48]); papers(31.7, 0.75, 5.4, 0.4);
   add({ c: [29.4, 0.22, 4.6], h: [1.0, 0.22, 0.42], albedo: [0.3, 0.12, 0.1] }); add({ c: [29.4, 0.6, 4.28], h: [1.0, 0.35, 0.12], albedo: [0.3, 0.12, 0.1] });   // the settee, its back to the north wall
   shelf(35.5, 5.15, 2.0, 0.45, Math.PI / 2, 4, 1.9);   // on the east wall, up in the north-east corner (z 4.15..6.15). At z 5..7 it took the floor east of n4b: four
                                                        // coming in by that door had no east hand and two of their points fell down the door's line (barracks-check B2)
-  cardboardBox(27.75, 5.45, 0.5, 0.2); bin(27.7, 4.6); cardboardBox(34.7, 6.2, 0.55, 0.1); chair(33.2, 5.3, -2.2, CHAIR_GREY);
+  cardboardBox(27.75, 5.45, 0.5, 0.2); bin(27.7, 4.6); cardboardBox(34.7, 6.2, 0.55, 0.1); chair(33.2, 5.3, -2.2, [0.5, 0.5, 0.48]);
   ceilingPanel(30.0, 6.0, true, 'day'); ceilingPanel(34.0, 6.2, false, 'day');
 
   // ---------------- the south wing ----------------
   grp('bunks3');   // HELD. s1 on the gallery, o_s1 from the duty office
   cot(12.8, 20.85, false); cot(14.9, 23.38, true); cot(17.6, 23.38, true); locker(18.85, 20.4, false); locker(18.85, 21.4, false);
-  chair(16.8, 20.3, 2.8, CHAIR_GREY); cardboardBox(13.45, 23.45, 0.5, 0.2); bin(12.7, 23.5);
+  chair(16.8, 20.3, 2.8, [0.5, 0.5, 0.48]); cardboardBox(13.45, 23.45, 0.5, 0.2); bin(12.7, 23.5);
   ceilingPanel(15.6, 21.8, true, 'bunks3');
   grp('bunks4');   // EMPTY. s2 on the gallery
   cot(20.3, 23.38, true); cot(23.2, 23.38, true); cot(19.8, 20.85, false); locker(24.85, 20.4, false); locker(24.85, 21.4, false);
-  chair(23.6, 20.4, 2.4, CHAIR_GREY);
+  chair(23.6, 20.4, 2.4, [0.5, 0.5, 0.48]);
   ceilingPanel(22.2, 21.8, false, 'bunks4');
   grp('bunks5');   // HELD. s3 on the gallery, s34 from the wash room
   cot(26.6, 23.38, true); cot(29.1, 20.35, true); locker(25.65, 20.5, false);
@@ -471,7 +470,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // with the ledger and a slate of blankets out; spare frames on end against the east wall, mattresses rolled and stood on end in a rank on the west wall,
     // folded blankets in piles of different counts on the west bed (what lies on a bed is drawn only; the rolls and the bale stand on the floor as soft cover)
     L.room('bunks4');
-    for (const [x, z, ax] of [[20.3, 23.38, true], [19.8, 20.85, false]] as const) onCot(x, z, ax, 0.24, 1, 0.012, drawnAs('cloth', [0.2, 0.2, 0.21]));   // the springs (steel)
+    for (const [x, z, ax] of [[20.3, 23.38, true], [19.8, 20.85, false]] as const) onCot(x, z, ax, 0.24, 1, 0.012, [0.2, 0.2, 0.21]);   // the springs (steel)
     add({ c: [23.2, 0.67, 23.38], h: [0.82, 0.12, 0.39], albedo: TICK, flags: NS });                             // three mattresses stacked flat on the east bed, ticking up:
     add({ c: [23.2, 0.793, 23.38], h: [0.8, 0.003, 0.08], albedo: [0.4, 0.5, 0.68], flags: NS });                // its stripe
     add({ c: [19.56, 0.44, 22.36], h: [0.17, 0.44, 0.54], albedo: C.chair });                                    // three mattresses rolled, on end: what stops a round is one soft block,
@@ -517,10 +516,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       add({ c: [x, 0.5, z - 0.26], h: [0.14, 0.362, 0.17], albedo: a as Vec3, flags: NS }); add({ c: [x, 0.48, z + 0.22], h: [0.14, 0.385, 0.2], albedo: b as Vec3, flags: NS }); }
     add({ c: [32.85, 0.43, 22.26], h: [0.11, 0.012, 0.17], yaw: 0.2, albedo: C.wood, flags: NS });               // the scrubbing board
     add({ c: [31.5, 0.07, 22.3], h: [0.22, 0.07, 0.2], yaw: 0.3, albedo: SERGE, flags: NS });                    // dirty washing on the floor by the first tub
-    for (const [x, top] of [[32.1, [0.2, 0.3, 0.42]], [32.85, C.white], [33.6, [0.22, 0.23, 0.15]]] as [number, Vec3][]) {   // the tubs: water, suds, uniforms soaking
-      L.round(x, 22.38, 0, 0.4, 0.27, GP.tin, 0, { lid: top }); }
+    for (const [x, top] of [[32.1, [0.2, 0.3, 0.42]], [32.85, [0.8, 0.8, 0.78]], [33.6, [0.22, 0.23, 0.15]]] as const) {   // the tubs: water, suds, uniforms soaking
+      L.round(x, 22.38, 0, 0.4, 0.27, GP.tin, 0, { lid: top as unknown as Vec3 }); }
     add({ c: [34.55, 0.5, 22.62], h: [0.02, 0.5, 0.02], albedo: IRON, flags: NS });                              // the stand pipe
-    L.mat(34.3, 22.05, 34.8, 22.57, drawnAs('metal', [0.08, 0.08, 0.09]));                                                         // the floor grate under it
+    L.mat(34.3, 22.05, 34.8, 22.57, [0.08, 0.08, 0.09]);                                                         // the floor grate under it
     L.bucket(34.55, 22.32, P.enamelBlue);                                                                        // the bucket under the tap
 
     // ---- THE NORTH GALLERY — the orders walk. NOTHING STANDS IN A GALLERY BAY but paint: a file of three or four stacking on a gallery door stands down the
@@ -550,7 +549,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (const x of [22.4, 22.78]) laid(x, 0.415, 17.46, 0.1, 0.06, 0.085, C.black);                             // two pairs of boots, toes out
     for (const [x, w] of [[21.85, 0.1], [21.96, 0.1], [22.55, -0.2], [22.66, -0.2]] as const) add({ c: [x, 0.02, 17.52], h: [0.04, 0.02, 0.1], yaw: w, albedo: [0.45, 0.33, 0.2], flags: NS });   // sandals on the floor under the shelf
     L.hung(22.0, 17.39, true, 0.45, 0.95, 1.8, P.oliveDrab); L.hung(22.6, 17.39, true, 0.45, 1.0, 1.8, SERGE); add({ c: [23.25, 1.62, 17.42], h: [0.12, 0.08, 0.05], albedo: [0.16, 0.17, 0.15], flags: NS });   // two capes, a helmet
-    L.mat(22.1, 19.3, 22.7, 19.65, drawnAs('block', [0.4, 0.4, 0.38]), 0.027);                                                     // the mat, in front of the door
+    L.mat(22.1, 19.3, 22.7, 19.65, [0.4, 0.4, 0.38], 0.027);                                                     // the mat, in front of the door
     L.mat(13.2, 18.2, 16.6, 18.85, [0.5, 0.37, 0.18], 0.027);                                                    // west bay: a coir runner
     L.mat(28.0, 18.0, 30.9, 18.24, [0.2, 0.23, 0.28], 0.027);                                                    // east bay: a wet mop streak
 
@@ -583,7 +582,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (const z of [10.7, 11.9]) add({ c: [2.6, 0.95, z], h: [0.04, 0.95, 0.04], albedo: C.metal });
     add({ c: [2.6, 1.45, 11.3], h: [0.03, 0.4, 0.66], albedo: C.plant });
     add({ c: [2.6, 1.862, 11.3], h: [0.06, 0.012, 0.68], albedo: C.white, flags: NS });                          // its cap
-    L.mat(0.05, 14.78, 3.2, 16.02, drawnAs('cloth', [0.33, 0.29, 0.2]), 0.027);                                                    // the walk
+    L.mat(0.05, 14.78, 3.2, 16.02, [0.33, 0.29, 0.2], 0.027);                                                    // the walk
     for (const z of [14.5, 16.3]) G.kerbStones(0.6, z, 2.7, z, 'whitewash', 1.05);                                                // its two rows of whitewashed stones
     add({ c: [0.99, 1.0, 13.26], h: [0.445, 1.0, 0.04], albedo: C.plant }); add({ c: [0.59, 0.99, 13.74], h: [0.04, 0.99, 0.44], albedo: C.plant });   // the sentry box: north and west sides,
     add({ c: [1.41, 0.98, 13.74], h: [0.04, 0.98, 0.44], albedo: C.plant });                                       // the east side; open to the SOUTH, on the walk

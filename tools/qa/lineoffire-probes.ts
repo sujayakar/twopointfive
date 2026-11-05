@@ -46,12 +46,6 @@ const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`);
 const CLM: any = await import(`${ROOT}/src/game/clearline.ts`);
 const CLEARLINE = CLM.CLEARLINE;
 const BREAK = !!process.env.LINEOFFIRE_BREAK;
-// THE MAN BEHIND THEM ON A DOOR ORDER THROWS NOTHING (entry()): he is staged to stand in a teammate's line with the player between, and a defender who can
-// throw (frag.ts FRAG.defenders: on in the page) throws at the stack instead — the second man then runs from the grenade, as he should, and is through the door
-// seconds late for a reason that is none of this rule's. The staging holds the defenders' grenades off for its run and puts the switch back.
-// LOFENTRY_BREAK=1 leaves them ON for it: 'they hold their way in' must FAIL on either stand.
-const { FRAG } = await import(`${ROOT}/src/game/frag.ts`);
-const ENTRY_BREAK = process.env.LOFENTRY_BREAK === '1';
 const DT = 1 / 60;
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -272,7 +266,6 @@ async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: n
   for (const k of Object.keys(CLM.CLEARLINE_STATS)) CLM.CLEARLINE_STATS[k] = 0; CLM.CLEARLINE_LOG.length = 0;
   Math.random = seeded(0x10f + (o.seed ?? 1) * 7919);
   const W: any = await quiet(() => standUp()); const g = W.game;
-  const theirFrags = FRAG.defenders; FRAG.defenders = ENTRY_BREAK;   // (after the stand-up, which writes the switch; put back below)
   for (const gd of g.guards) { gd.flashlight.enabled = false; g.engine.lights.remove(gd.flashlight); }
   g.guards = []; g.tune.civilians = false; g.tune.qrf = false; g.tune.devices = false; g.tune.chaos = 0;
   await quiet(() => g.restartEncounter());
@@ -298,7 +291,6 @@ async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: n
       // on his point: the door tools say so — or (set and taken back inside one tick: sent straight on) his entry assignment has been replaced
       if (op.phase === 'enter' && op.pod.has(m) && !op.queue.some((q: any) => q.gd === m)) { const A = g.orders.of(m); if (!A0.has(m)) A0.set(m, A); if (!point.has(m) && (op.onPod.has(m) || A0.get(m) !== A)) point.set(m, t); } }
   }
-  FRAG.defenders = theirFrags;
   const log = CLM.CLEARLINE_LOG.map((n: any) => ({ ...n, t: n.t - t0 })), acts = log.filter((n: any) => n.what !== 'end');
   /** the rule's acts on a man between the shove (the can thrown) and his point */
   const inWindow = acts.filter((n: any) => { const m = men.find(x => x.callsign === n.who); return 'toss' in at && n.t >= at.toss && n.t <= (point.get(m) ?? at.end ?? Infinity); });

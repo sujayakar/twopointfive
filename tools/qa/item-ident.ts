@@ -15,27 +15,26 @@
 //          columns, compared in place (what a played mission does under tools/qa/rust-check.ts --both)
 //   twin   the step as the game takes it with the row on (the module's walk, its events said), then everything put back as it was and the step taken
 //          with the row off, and what each left compared here
-// Levels: `:panes` = three statics in ten made panes of glass with a quarter of them gone (a ray that meets a pane where it is open flies on, in the
-// module as here); `:snow` = a level of lying snow with the game's own rule over it (snowBog.ts, forced on whatever the stand: the module asks the same ground of its copy);
-// `:many` = the pool driven past the rule's thirty-two with cans on their fuses (it grows, a row a can, and is stepped in the module all the same:
-// nothing may differ there either).
+// Levels: `:panes` = three statics in ten made panes of glass with a quarter of their cells fallen out (a ray that ends on a pane is the host's to
+// judge: the module hands that row back); `:snow` = a made-up map of lying snow under the pool (a bounce on ground that may bog is the host's too);
+// `:many` = the pool driven past the module's thirty-two rows with cans on their fuses (its columns grow and stay in TypeScript: nothing may differ
+// there either, and nothing is the module's).
 // A run is FAIR only if it met every kind of thing the step does. ITEMS_BREAK=1 (or RUST_BREAK=1) is the red path: the module is handed a tick one
 // unit in the last place too long, and the run must FAIL.
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1'; process.env.TPS_RUSTITEMS = '1';   // (the game's own maths: the step runs in the module under no other)
 process.env.TPS_RUSTLINES = '0'; process.env.TPS_RUSTRAYS = '0'; process.env.TPS_RUSTCIRCLES = '0'; process.env.TPS_RUSTFOG = '0';   // (the TypeScript's arm is all TypeScript, whatever the stand has on: its rays are collision.ts's own walk)
 import { resolve } from 'path';
-const { standUp } = await import('./headless.ts');   // (not a static import: those load before this file's first line, and the harness reads the stand as it loads)
+import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`), BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);
 const BX: any = await import(`${ROOT}/src/scene/boxes.ts`);
 const IH: any = await import(`${ROOT}/src/sim/itemshome.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`);
-const SB: any = await import(`${ROOT}/src/game/snowBog.ts`), WK: any = await import(`${ROOT}/src/game/weatherKinds.ts`);
 type Vec3 = [number, number, number];
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
-const N = Number(flag('--n') ?? 4000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.ITEMS_BREAK === '1' || process.env.RUST_BREAK === '1', SNOW_BREAK = process.env.ITEMS_BREAK === 'snow';
-const files = (flag('--levels') ?? 'office.json,compound.json,consulate-gwot.json,mousehole.json,office.json:panes,tut-road.json:snow,tut-quiet.json:snow,mousehole.json:many').split(',');
+const N = Number(flag('--n') ?? 4000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.ITEMS_BREAK === '1' || process.env.RUST_BREAK === '1';
+const files = (flag('--levels') ?? 'office.json,compound.json,consulate-gwot.json,mousehole.json,office.json:panes,compound.json:snow,mousehole.json:many').split(',');
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const pick = <T,>(a: readonly T[]): T => a[Math.floor(rnd() * a.length)];
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== item-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
@@ -44,16 +43,13 @@ if (BREAK) { const io = IH.itemIo(), x = io.x, m = () => IH.itemMem(); io.x = { 
 const is = Object.is;
 const hex = (b: Uint8Array) => { let h = 2166136261; for (let i = 0; i < b.length; i++) { h ^= b[i]; h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + ':' + b.length; };
 
-const MET = { thrown: 0, there: 0, atPane: 0, open: 0, snow: 0, snowDeep: 0, snowPart: 0, snowNone: 0, snowUp: 0, snowBank: 0, snowRoof: 0, roofs: 0, impulses: 0, bounces: 0, gone: 0, onThing: 0, dropped: 0, inHand: 0, stood: 0, givenUp: 0, takenOut: 0, grown: 0, meddled: 0, thingRays: 0, rays: 0, rested: 0, substeps: 0, furnitureRays: 0, furnitureHits: 0, parked: 0, shoved: 0, levelBack: 0 };
+const MET = { thrown: 0, there: 0, host: 0, atPane: 0, open: 0, snow: 0, impulses: 0, bounces: 0, gone: 0, onThing: 0, dropped: 0, inHand: 0, stood: 0, givenUp: 0, takenOut: 0, grown: 0, meddled: 0, thingRays: 0, rays: 0, rested: 0, substeps: 0, furnitureRays: 0, furnitureHits: 0, parked: 0, shoved: 0, levelBack: 0 };
 let bad = 0, steps = 0, differ = 0; const firsts: string[] = [];
 // enough other games to put any game's block out of the module (a callback below binds them: whoever hears a bounce may do as much)
 const others: any[] = Array.from({ length: ST.simLayout().games + 1 }, () => new ST.SimState());
 const KINDS: string[] = [...IH.ITEM_KINDS];
-const STAND_SNOW = [WK.SNOW.on, SB.SNOWBOG.on];
 for (const entry of files) {
   const [file, mode] = entry.split(':');
-  WK.SNOW.on = STAND_SNOW[0]; SB.SNOWBOG.on = STAND_SNOW[1];   // (the stand's own, whatever the entry before this one forced)
-  if (mode === 'snow') { WK.SNOW.on = true; SB.SNOWBOG.on = true; }   // (a snow level is born in its snow: before the game is made)
   let W: any; hush(true);
   try { const data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()); W = await standUp({ uploadEvery: 1000, ...(file === 'office.json' ? {} : { level: loadLevel(data) }) }); }
   catch (e) { hush(false); log(`${entry.padEnd(22)} FAIL — not stood up (${String((e as Error).message).split('\n')[0].slice(0, 90)}): nothing was stepped`); bad++; continue; }
@@ -62,28 +58,9 @@ for (const entry of files) {
   if (!X.EXACT.on || !SIM.RUST.items || !P.all.length) { log(`${entry.padEnd(22)} FAIL — ${!P.all.length ? 'the level has no furniture' : 'the stand left the row or the game\'s own maths down'}: nothing was stepped`); bad++; continue; }
   if (mode === 'panes') {   // (made before the first tick opens, so the module's copy has them as the boxes do)
     let q = 12345; for (const b of col.boxes) { q = (Math.imul(q, 1103515245) + 12345) >>> 0; if ((q >>> 16) % 10 < 3 && !(b.flags & BX.BoxFlag.NoShadow)) b.flags |= BX.BoxFlag.Glass; }
-    // (a quarter of the made panes GONE — a made-up state of the glass, said twice as the game's own is: the rule a walk of this side asks, and the rows the
-    //  module's copy holds, boxMirror.ts PaneSource. Where a pane is open piece by piece is tools/qa/glass-ident.ts's to hold.)
-    const goneOf = (bi: number) => (((bi * 7919) >>> 2) & 3) === 0, rows: any[] = [];
-    col.boxes.forEach((b: any, bi: number) => { if ((b.flags & BX.BoxFlag.Glass) && goneOf(bi)) rows.push({ bi, gone: true, run: false, sites: [], open: new Uint8Array(0), pending: [], dice: null }); });
-    col.glassWalkable = null; const said = { each: (to: (r: any) => void) => { for (const r of rows) to(r); }, view: null }; col.glassRule((bi: number) => { const o = goneOf(bi); if (o) MET.open++; return o; }, () => said); }
-  // (LYING SNOW, THE GAME'S OWN: the level's lays and banks and its roofs, by snowBog.ts's rule on this side and by the same ground in the module's copy
-  //  on the other. What this side's rule answered is only counted here.)
-  let snowy: any[] = [];
-  if (mode === 'snow') {
-    WK.SNOW.on = true; SB.SNOWBOG.on = true; const real = T.bog, K = real.kinds() as Uint8Array;
-    if (!real.may() || !K.some((k: number) => k !== 0)) { log(`${entry.padEnd(22)} FAIL — the level has no lying snow on this stand: nothing was stepped`); bad++; continue; }
-    snowy = col.boxes.filter((_b: any, i: number) => K[i] !== 0);
-    // (FOUR ROOFS in force, where the level has one: three made up over lays of its snow — the weather's own list, so this side's rule and the walk's
-    //  hand-over read the same four)
-    { const lays = col.boxes.filter((_b: any, i: number) => K[i] !== 0 && K[i] !== SB.SNOW_KIND.bank), W0 = g.weather; W0.roofsNow();
-      const made = [0.2, 0.5, 0.8].map(f => lays[Math.floor(f * lays.length)]).filter(Boolean).map((b: any) => { const r = Math.max(b.h[0], b.h[2]) * 0.5 + 0.5; return [b.c[0] - r, b.c[2] - r, b.c[0] + r, b.c[2] + r]; });
-      W0.roofs = [...W0.roofs.slice(0, 1), ...made].slice(0, IH.ITEM_ROOFS); MET.roofs = Math.max(MET.roofs, W0.roofs.length); }
-    // (ITEMS_BREAK=snow, the snow's own red path: the module is told another snow than the level's — trodden for bare, nothing for a bank — and must differ)
-    const told = SNOW_BREAK ? K.map((k: number) => k === SB.SNOW_KIND.bare ? SB.SNOW_KIND.packed : k === SB.SNOW_KIND.packed ? SB.SNOW_KIND.bare : k === SB.SNOW_KIND.bank ? SB.SNOW_KIND.none : k) : null;
-    T.bog = { may: () => real.may(), kinds: () => told ?? real.kinds(), roofs: () => real.roofs(), at: (x: number, y: number, z: number) => { const v = real.at(x, y, z); MET.snow++;
-      if (!(y < SB.SNOWBOG.top)) { MET.snowUp++; if (v > 0) MET.snowBank++; } else if (g.weather.underRoof(x, z)) MET.snowRoof++; else if (v >= 1) MET.snowDeep++; else if (v > 0) MET.snowPart++; else MET.snowNone++; return v; } };
-  }
+    col.glassWalkable = null; col.glassOpen = (bi: number, p: number[]) => { const o = ((bi * 7919 + Math.floor(p[0] * 3) * 31 + Math.floor(p[1] * 3) * 17 + Math.floor(p[2] * 3)) & 3) === 0; if (o) MET.open++; return o; }; }
+  // (lying snow, made up: boggy in a chequer of two-metre squares — the rule's own arithmetic is the game's, the map is this tool's)
+  if (mode === 'snow') T.bog = { may: () => true, at: (x: number, _y: number, z: number) => { MET.snow++; return ((Math.floor(x / 2) + Math.floor(z / 2)) & 1) ? 0.25 + 0.5 * (((Math.floor(x * 3) * 31 + Math.floor(z * 3) * 17) & 7) / 7) : 0; } };
   const panes: any[] = col.boxes.filter((b: any) => (b.flags & BX.BoxFlag.Glass) && !(b.flags & BX.BoxFlag.NoShadow) && !b.rot);
   const walls: any[] = col.boxes.filter((b: any) => !(b.flags & BX.BoxFlag.NoShadow) && b.c[1] + b.h[1] > 1 && b.c[1] - b.h[1] < 0.3);
   const ids: number[] = [g.player.char.id, ...g.guards.map((x: any) => x.char.id)];
@@ -102,7 +79,6 @@ for (const entry of files) {
   };
   // a place to throw from: beside a thing of furniture, a wall, a pane, or over the middle of a room
   const near = (): Vec3 => { const k = rnd();
-    if (snowy.length && rnd() < 0.6) { const G = pick(snowy), th = rnd() * 6.283, o = Math.max(G.h[0], G.h[2]) * rnd() * 1.3; return [G.c[0] + Math.sin(th) * o, G.c[1] + G.h[1] + 0.2 + rnd() * 1.6, G.c[2] + Math.cos(th) * o]; }   // (over a lay or a bank of snow, and a little off it)
     if (k < 0.45) { const p = pick(P.all as any[]), th = rnd() * 6.283, o = rnd() * (p.radius + 1.2); return [p.x + Math.sin(th) * o, 0.2 + rnd() * 1.6, p.z + Math.cos(th) * o]; }
     if (k < 0.6 && panes.length) { const G = pick(panes), thinX = G.h[0] < G.h[2], sg = rnd() < 0.5 ? 1 : -1, o = Math.min(G.h[0], G.h[2]) + 0.3 + rnd() * 1.2; MET.atPane++; return [G.c[0] + (thinX ? sg * o : (rnd() - 0.5) * G.h[0]), Math.max(0.2, G.c[1] + (rnd() - 0.5) * G.h[1]), G.c[2] + (thinX ? (rnd() - 0.5) * G.h[2] : sg * o)]; }
     if (k < 0.8 && walls.length) { const G = pick(walls), th = rnd() * 6.283, o = Math.max(G.h[0], G.h[2]) * rnd() + 0.4; return [G.c[0] + Math.sin(th) * o, 0.2 + rnd() * 1.6, G.c[2] + Math.cos(th) * o]; }
@@ -129,15 +105,14 @@ for (const entry of files) {
       g.sim.settle(g);
       // the rules' own writes between steps
       const k = rnd(), flying = L.filter(it => !it.settled).length;
-      // (forty live cans at once: the rule gives none of them up, so the pool GROWS past its thirty-two — and is stepped in the module all the same)
-      if (mode === 'many' && r === Math.floor(N / 3)) { for (let i = 0; i < 40; i++) toss(true); if (L.length > IH.ITEM_CAP && L.length <= IH.ITEM_ROWS) MET.grown++; }
+      if (mode === 'many' && r === Math.floor(N / 3)) { const cap0 = S.cap; for (let i = 0; i < 40; i++) toss(true); if (S.cap > cap0) MET.grown++; }
       if (flying < 3 && k < 0.5 || k < 0.08) { toss(); if (rnd() < 0.4) toss(); if (L.length >= IH.ITEM_CAP) MET.givenUp++; }
       else if (k < 0.11 && L.length) { const it = pick(L); it.carried = true; it.pos = near(); it.vel = [0, 0, 0]; MET.inHand++; }   // (taken in a hand: placed by whoever carries it)
       else if (k < 0.14) { for (const it of L) if (it.carried) { it.carried = rnd() < 0.5 ? false : undefined; it.settled = false; it.vel = [(rnd() - 0.5) * 3, -rnd() * 2, (rnd() - 0.5) * 3]; } }   // (…and let go)
       else if (k < 0.17 && L.length) { const it = pick(L); if (it.settled) { it.pos = near(); it.vel = [(rnd() - 0.5) * 10, rnd() * 4, (rnd() - 0.5) * 10]; it.heading = Math.atan2(it.vel[0], it.vel[2]); it.bounces = 0; it.settled = false; MET.stood++; } }   // (a can passed on from where it lay: doortools.ts — what it lay on is not forgotten)
       else if (k < 0.19 && L.length) {   // the list changed from outside the pool, as the game's rules change it: an item spliced out, the oldest shifted off, two put the other way round, all of it emptied — and, once out, one put back in
         const w = rnd(), i = Math.floor(rnd() * L.length);
-        if (w < 0.5) out.push(L.splice(i, 1)[0]); else if (w < 0.65) out.push(L.shift()); else if (w < 0.8 && L.length > 1) { const j = (i + 1) % L.length, t = L[i]; L[i] = L[j]; L[j] = t; } else if (w < 0.85) { out.push(...L); L.length = 0; } else if (out.length && L.length < IH.ITEM_ROWS) L.splice(Math.min(i, L.length), 0, out.pop());   // (put back only where the pool has a row for it: a list longer than its columns is a fault, sim/itemshome.ts)
+        if (w < 0.5) out.push(L.splice(i, 1)[0]); else if (w < 0.65) out.push(L.shift()); else if (w < 0.8 && L.length > 1) { const j = (i + 1) % L.length, t = L[i]; L[i] = L[j]; L[j] = t; } else if (w < 0.85) { out.push(...L); L.length = 0; } else if (out.length) L.splice(Math.min(i, L.length), 0, out.pop());
         MET.takenOut++; }
       else if (k < 0.27) { const on = L.filter(it => it.settled && it.on), p: any = on.length && rnd() < 0.7 ? pick(on).on : pick(P.props as any[]);   // a thing of furniture shoved (from under what lies on it, more often than not)
         if (p) { const far = rnd() < 0.5; p.x += (rnd() - 0.5) * (far ? 1.6 : 0.05); p.z += (rnd() - 0.5) * (far ? 1.6 : 0.05); if (rnd() < 0.5) p.yaw += (rnd() - 0.5) * 1.2; p.place(); MET.shoved++; } }
@@ -168,7 +143,7 @@ for (const entry of files) {
         line = out.length ? `the pool's step (twin): ${out.join(' · ')}` : '';
       }
       const T1 = IH.ITEMS_STEPPED;
-      if (T1.there === T0.there && n0 > 0 && r % 3 !== 2) here++;
+      if (T1.there === T0.there && n0 > 0 && r % 3 !== 2 && S.cap === IH.ITEM_CAP) here++;
       MET.bounces += sent.filter(e => e[0] === 'bounce').length; MET.gone += Math.max(0, n0 - L.length);
       const onNow = L.filter(it => it.settled && it.on).length; if (onNow > onBefore) MET.onThing += onNow - onBefore; else if (onNow < onBefore) MET.dropped += onBefore - onNow;
     } catch (e) { why ||= String((e as Error).stack ?? e).slice(0, 600); line ||= `threw: ${String((e as Error).message).slice(0, 200)}`; }
@@ -179,12 +154,10 @@ for (const entry of files) {
   if (levelBad || here > N / 10) bad++;
   log(`${entry.padEnd(22)} ${levelBad || here > N / 10 ? 'FAIL' : 'PASS'} — ${P.all.length} things of furniture, ${N} steps (${twins} of them the twin${here ? `; ${here} with a pool the module could not walk` : ''}): ${levelBad} differ${why ? ` · a rule worked between steps threw: ${why.slice(0, 300)}` : ''}`);
 }
-const handedBack = IH.ITEMS_STEPPED.host;   // (rows the module handed back for this side to step: nothing of play is such a row any more — a pane, lying snow and a ray of no length are all asked there)
-if (handedBack > 0 && !BREAK && !SNOW_BREAK) { log(`    THE MODULE HANDED ${handedBack} ROW(S) BACK: every row of these levels is its own to step`); bad++; }
-{ const T = IH.ITEMS_STEPPED; MET.there = T.there; MET.rays = T.rays; MET.thingRays = T.thingRays; MET.rested = T.rested; MET.substeps = T.substeps; }
+{ const T = IH.ITEMS_STEPPED; MET.there = T.there; MET.host = T.host; MET.rays = T.rays; MET.thingRays = T.thingRays; MET.rested = T.rested; MET.substeps = T.substeps; }
 for (const f of firsts) log(`    ${f}`);
 const thin = (Object.keys(MET) as (keyof typeof MET)[]).filter(k => MET[k] === 0);
 log(`item-ident: ${steps} steps over ${files.length} levels, ${differ} differ · met: ${(Object.keys(MET) as (keyof typeof MET)[]).map(k => `${k} ${MET[k]}`).join(', ')}`);
-if (thin.length && !BREAK && !SNOW_BREAK) { log(`    NOT A FAIR RUN: never met ${thin.join(', ')}`); bad++; }
-log(`=== item-ident: ${bad ? 'FAIL' : 'PASS'}${BREAK || SNOW_BREAK ? ' (the red path: FAIL is what it must say)' : ''} ===`);
+if (thin.length && !BREAK) { log(`    NOT A FAIR RUN: never met ${thin.join(', ')}`); bad++; }
+log(`=== item-ident: ${bad ? 'FAIL' : 'PASS'}${BREAK ? ' (the red path: FAIL is what it must say)' : ''} ===`);
 process.exit(bad ? 1 : 0);

@@ -424,7 +424,7 @@ function deviceBoxesRaw(g: Game, out: Box[]) {
   for (const K of D.keypads) {
     const d = K.def; const n = K.n; const yaw = d.yaw;
     out.push(makeBox({ c: v3.mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw, albedo: PAD_COL, flags: deco }));   // the plate (a decal's depth: nobody's collision, no ray minds it)
-    out.push(makeBox({ c: v3.add(v3.mad(d.pos, n, 0.026), [0, -0.015, 0]), h: [0.03, 0.035, 0.003], yaw, albedo: [0.06, 0.06, 0.07], stuff: 'metal', flags: deco }));   // the key block (`stuff`: as its colour was drawn until 11-04, nobody chose it: scene/stuff.ts drawnAs)
+    out.push(makeBox({ c: v3.add(v3.mad(d.pos, n, 0.026), [0, -0.015, 0]), h: [0.03, 0.035, 0.003], yaw, albedo: [0.06, 0.06, 0.07], flags: deco }));   // the key block
     const locked = K.door.locked && K.door.latched; const busy = men(g).some(pl => pl.coding === K.door);
     const led: Vec3 = busy ? v3.scale(AMBER, Math.sin(g.time * 30) > 0 ? 1 : 0.2) : locked ? RED : GREEN;
     out.push(makeBox({ c: v3.add(v3.mad(d.pos, n, 0.026), [0, 0.045, 0]), h: [0.012, 0.006, 0.003], yaw, albedo: [0.04, 0.04, 0.04], emissive: v3.scale(led, 0.5), flags: deco }));

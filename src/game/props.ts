@@ -15,7 +15,7 @@ import { BOTH, StaticCollision } from '../scene/collision';
 import { thingWrote, type BoxMirror } from '../scene/boxMirror';
 import { PropDef, PropKind } from '../scene/level';
 import { EXACT, mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
-import { RUST, ruleFell, ruleRed } from '../sim/sim';
+import { RUST } from '../sim/sim';
 import { PropStore, PT, PD, PK, PY, PE, PP, PF, PROP_CAP, PROP_EV, PROP_SOUNDS, PROPS_STEPPED, propIo, propMem, propDiff } from '../sim/propshome';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
@@ -106,7 +106,7 @@ export class Prop {
     this.mass = def.mass; this.invMass = 1 / def.mass;
     this.invI = 1 / (def.mass * (this.hx * this.hx + this.hz * this.hz) / 3 * 1.5);   // slab inertia ×1.5: a little sluggish in yaw reads as weight and keeps corner contacts calm
     this.tune = KIND[def.kind];
-    this.boxes = def.parts.map((p, j) => makeBox({ c: [0, 0, 0], h: [p.h[0], p.h[1], p.h[2]], yaw: 0, albedo: p.albedo, flags: BoxFlag.Dynamic, name: def.name, mkey: MKEY.prop + id * 16 + j, ...(p.marks?.length ? { marks: p.marks } : {}), ...(p.stuff !== undefined ? { stuff: p.stuff } : {}) }));   // (mkey: motion identity per part — scene/boxes.ts)   // (the part's markings ride on its box: the tape and glyphs on a carton turn with it)
+    this.boxes = def.parts.map((p, j) => makeBox({ c: [0, 0, 0], h: [p.h[0], p.h[1], p.h[2]], yaw: 0, albedo: p.albedo, flags: BoxFlag.Dynamic, name: def.name, mkey: MKEY.prop + id * 16 + j, ...(p.marks?.length ? { marks: p.marks } : {}) }));   // (mkey: motion identity per part — scene/boxes.ts)   // (the part's markings ride on its box: the tape and glyphs on a carton turn with it)
     this.place();
   }
   /** the cos and sin of its yaw (columns beside it: written where the yaw is) */
@@ -212,9 +212,7 @@ export class PropSystem {
   /** Authoring overlaps (a chair tucked 5 cm under a table edge, a bin grazing a desk corner) are resolved once, silently; the settled pose becomes home. */
   private settle() {
     this.muted = true; for (const p of this.props) p.dirty = true;   // dirty = "consider me" for the pair pass (everything starts asleep and freshly placed)
-    // (twelve passes of every thing against the statics, which nothing here writes: one proof of the Rust module's copy for the lot — StaticCollision.window)
-    const passes = () => { for (let it = 0; it < 12; it++) { for (let r = 0; r < this.props.length; r++) this.solveStatics(r, false); this.solvePairs(false); } };
-    if (this.props.length) this.col.window(passes);
+    for (let it = 0; it < 12; it++) { for (let r = 0; r < this.props.length; r++) this.solveStatics(r, false); this.solvePairs(false); }
     for (const p of this.props) { p.vx = p.vz = p.w = 0; p.asleep = true; p.home = [p.x, p.z, p.yaw]; p.place(); }
     this.muted = false;
   }
@@ -289,17 +287,11 @@ export class PropSystem {
    *  none in the level), and every leaf handed in one of them; and no more men, leaves or frames than the hand-over holds. → the copy to step over and
    *  which of its leaves sweep, or null: this file steps, on the same columns. */
   private there(contacts: PropContact[], leaves: Box[]): { M: BoxMirror; leaves: number[] | null; n: number } | null {
-    if (!RUST.props || this.all.length === 0) return null;   // (a level with no loose furniture has no step, here or there: its columns are no tenant of the block)
-    // (each way back to this file's step is said, for the count of questions the TypeScript took: sim.ts FELL)
-    if (!EXACT.on) return null;   // (idle: a row that works lengths out answers under the game's own maths alone — sim.ts OWN_MATHS)
-    if (ruleRed('props')) return null;
-    if (this.store.home === null) return ruleFell('props', 'the furniture is not at home in a block of the module');
-    if (this.muted) return ruleFell('props', 'a step while the level is still being settled');
-    if (this.step !== PropSystem.prototype.step || this.updateHere !== PropSystem.prototype.updateHere) return ruleFell('props', 'a check\'s own step in the rule\'s place');
+    if (!RUST.props || this.store.home === null || !EXACT.on || this.muted || this.step !== PropSystem.prototype.step || this.updateHere !== PropSystem.prototype.updateHere) return null;
     const io = propIo(), dyn = this.col.dynamicBoxes;
-    if (contacts.length > io.maxContacts || leaves.length > io.maxLeaves || this.doorways.length > io.maxWays) return ruleFell('props', 'more men, leaves or door frames than a step is handed');
+    if (contacts.length > io.maxContacts || leaves.length > io.maxLeaves || this.doorways.length > io.maxWays) return null;
     let idx: number[] | null = null;
-    if (leaves !== dyn) { idx = []; for (const b of leaves) { const i = dyn.indexOf(b); if (i < 0) return ruleFell('props', 'a leaf handed in that is not in the box world'); idx.push(i); } }
+    if (leaves !== dyn) { idx = []; for (const b of leaves) { const i = dyn.indexOf(b); if (i < 0) return null; idx.push(i); } }
     const M = this.col.rulesWorld(dyn); return M ? { M, leaves: idx, n: leaves.length } : null;
   }
   /** the step's hand-over written (the level's facts of each thing by row, the men, the leaves, the door frames, the rules' numbers) and the step taken:

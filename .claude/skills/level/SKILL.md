@@ -90,15 +90,6 @@ did not.
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
   rooms that could only be opened with a charge or a 40 mm. **check** `bun run tools/qa/second-way-check.ts <name>.json`
   (export runs it too; a changed swing moves that level's tallies and par times).
-- **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
-  stays see-through"; the maintainer: "we don't want them to feel dumb". Dress such a window with the kit's OPEN form
-  (`gwotKit` `boards`, `shutters`, `windowBlanket` take `'shut'` or `'open'`), and stand no cover in a mark's line. **seen**
-  the pass's tea room with its boards and shutters shut: its two men at the glass lost a half and a sixth of the yard they
-  hold; and the block with one leaf shut on a window no defender needs: the scripted team took it 3 times in 24 against 7
-  with the leaves folded back, so a shut window is laid only where the mission's tally was read with it shut. **check**
-  `bun run tools/qa/marksight-check.ts <name>` on both stands (export runs it too; a new level writes its
-  count file with `--write` once on each stand, and a move that makes a man see less carries the file with a `#` line
-  saying why).
 - **A door a held room lists opens into that room**, and can be walked from both faces. **check** `probes.ts oneway-men`,
   `oneway-deal`.
 - **Every door face has floor for a stack**: a man on each jamb, 2 m of wall clear, nothing on the marks. **seen** a carton on

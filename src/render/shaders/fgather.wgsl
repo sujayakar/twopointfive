@@ -327,7 +327,7 @@ fn youngRay(Po: vec3f, N: vec3f, owner: u32, Lcap: f32, kx: u32, Kx: u32) -> vec
   let dir = cosineDirK(N, kx, Kx);
   let hit = traceClosest(Po, dir, TMAX, owner);
   var L = vec3f(0.0);
-  if (hit.idx < 0) { L = skyThrough(Po, dir); }
+  if (hit.idx < 0) { L = skyRadiance(dir); }
   else if (!hit.inside) {
     let Ph = Po + dir * hit.t;
     var albedo: vec3f;
@@ -414,7 +414,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     let dir = cosineDirK(N, k, RAYS);   // (= cosineDir(N) unless GATHER_STRATA: ray k from stratum (k + frame) mod 4 — settings.gatherStrata)
     let hit = traceClosest(Po, dir, TMAX, owner);
     var L = vec3f(0.0);
-    if (hit.idx < 0) { L = skyThrough(Po, dir); }
+    if (hit.idx < 0) { L = skyRadiance(dir); }
     else if (!hit.inside) {
       let Ph = Po + dir * hit.t;
       var albedo: vec3f;
@@ -510,7 +510,7 @@ fn giTraceShade(Po: vec3f, N0: vec3f, dir: vec3f, owner: u32, cap: f32) -> GiRay
   var r: GiRay; r.L = vec3f(0.0); r.LoD = vec3f(0.0); r.alb = vec3f(0.0); r.xs = Po; r.ns = dir; r.t = GI_SKY_D; r.sky = false; r.ok = false; r.cap = false; r.bi = GI_NOBOX;
   let hit = traceClosest(Po, dir, TMAX, owner);
   var L = vec3f(0.0); var Lb = vec3f(0.0);                                   // Lb = the cache-bounce share of L (albedo × dice / π) — subtracted back out for LoD
-  if (hit.idx < 0) { L = skyThrough(Po, dir); r.sky = true; r.ok = true; }
+  if (hit.idx < 0) { L = skyRadiance(dir); r.sky = true; r.ok = true; }
   else if (!hit.inside) {
     let Ph = Po + dir * hit.t;
     r.ok = true; r.xs = Ph; r.ns = hit.n; r.t = hit.t;

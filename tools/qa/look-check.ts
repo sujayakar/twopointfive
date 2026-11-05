@@ -43,9 +43,7 @@ let ok = true; const check = (pass: boolean, what: string) => { console.log(`- $
 const J = (f: string) => JSON.parse(readFileSync(resolve(ROOT, 'levels', f), 'utf8'));
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 const albedoOf = (b: any, mats: any): number[] => b.albedo ?? mats[b.material]?.albedo;
-/** the generator of a level file, by name: tools/levels/<stem>.ts, or the stem without its dashes (block-squads.json is tools/levels/blocksquads.ts) */
-const genOf = (file: string): string | undefined => { const stem = file.replace(/\.json$/, ''); return [stem, stem.replace(/-/g, '')].find(n => existsSync(resolve(ROOT, 'tools/levels', `${n}.ts`))); };
-const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff']);   // (what a box says it is made of is part of its paint: the skin drops it with the paint it repaints)
+const PAINT = new Set(['albedo', 'material', 'rough', 'metal']);
 
 // the palette
 { const seen = new Map<string, string>(); let clash = 0, wrong = 0;
@@ -56,7 +54,7 @@ const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff']);   // (
   // (built in the kit = its generator imports the kit, or imports a generator beside it that does: the training yards share tools/levels/train-ground.ts)
   const KIT = /gwotKit|gwotSkin|gwotPalette/;
   const inKit = (f: string): boolean => {
-    const name = genOf(f), gen = name && resolve(ROOT, 'tools/levels', `${name}.ts`); if (!gen) return false;
+    const gen = resolve(ROOT, 'tools/levels', f.replace(/\.json$/, '.ts')); if (!existsSync(gen)) return false;
     const src = readFileSync(gen, 'utf8'); if (KIT.test(src)) return true;
     return [...src.matchAll(/from '\.\/([\w-]+)'/g)].some(m => { const dep = resolve(ROOT, 'tools/levels', `${m[1]}.ts`); return existsSync(dep) && KIT.test(readFileSync(dep, 'utf8')); });
   };
@@ -68,7 +66,7 @@ const PAINT = new Set(['albedo', 'material', 'rough', 'metal', 'stuff']);   // (
 
 for (const [plain, look] of Object.entries(LOOK_LEVELS as Record<string, string>)) {
   console.log(`\n${plain} ↔ ${look}`);
-  { const gen = genOf(plain) ?? plain.replace(/\.json$/, '');
+  { const stem = plain.replace(/\.json$/, ''), gen = existsSync(resolve(ROOT, 'tools/levels', `${stem}.ts`)) ? stem : stem.replace(/-/g, '');   // (block-squads.json is tools/levels/blocksquads.ts)
     const p = Bun.spawnSync(['bun', 'run', resolve(ROOT, 'tools/levels/export.ts'), gen, '--check'], { cwd: ROOT });   // (the exporter checks a level's file in the look with it)
     check(p.exitCode === 0 && p.stdout.toString().includes(look), `levels/${plain} and levels/${look} are what their generators give now (export ${gen} --check: exit ${p.exitCode})`); }
   const A = J(plain), B = J(look); const nA = A.boxes.length;
@@ -76,10 +74,7 @@ for (const [plain, look] of Object.entries(LOOK_LEVELS as Record<string, string>
   for (let i = 0; i < nA; i++) {
     const a = A.boxes[i], b = B.boxes[i]; if (!b) { moved++; continue; }
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]); let diff = false, paint = false;
-    // (a shape's TRIM wears paint as a box does — scene/shapes.ts ShapePiece — and a file names that paint as it names a box's: a row where it has the
-    // row, numbers where it has not. So two shapes that differ only in what their pieces wear differ in paint, and in nothing else)
-    const bare = (sh: any) => sh?.with ? { ...sh, with: sh.with.map((w: any) => Object.fromEntries(Object.entries(w).filter(([k]) => !PAINT.has(k)))) } : sh;
-    for (const k of keys) { if (same(a[k], b[k])) continue; if (PAINT.has(k) || (k === 'shape' && same(bare(a[k]), bare(b[k])))) paint = true; else diff = true; }
+    for (const k of keys) { if (same(a[k], b[k])) continue; if (PAINT.has(k)) paint = true; else diff = true; }
     if (diff) { moved++; continue; }
     if (!paint) continue;
     const pa = albedoOf(a, A.materials), pb = albedoOf(b, B.materials); if (same(pa, pb)) continue; repainted++;

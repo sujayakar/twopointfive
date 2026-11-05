@@ -16,11 +16,11 @@
 // Nothing about a piece is typed here: the one table below says where each kit lives and how to stand it up empty.
 // THE LIBRARY'S RULES (--check): every piece stands in a showroom; every piece says what it is; no piece tops out where a body is stopped on floor the nav
 // grid calls free (0.20 to 0.25 m: tools/qa/lived-check.ts holds the same band on a level); every kit that hands pieces out has its row here; docs/library.md
-// is up to date; a piece laid on a wall's face lies the same on all four ways a wall can face (skewOf).
+// is up to date.
 import { basename, resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import type { Vec3 } from '../../src/math/vec';
-import { BoxFlag, BoxWorld, type Box } from '../../src/scene/boxes';
+import { BoxFlag, type Box } from '../../src/scene/boxes';
 import type { Level, LightDef, PropDef } from '../../src/scene/level';
 import { watchPieces } from '../../src/scene/library';
 import { officeKit, buildOfficeProcedural, OFFICE_PALETTE } from '../../src/scene/officeGen';
@@ -169,8 +169,6 @@ export interface Piece {
   kit: string; name: string; id: string; section: string; doc: string; params: string; line: number;
   /** the level whose call was laid: a showroom, another level, or none (no level lays it) */
   sample: string | null; error?: string;
-  /** laid on a wall's face, and not the same on all four ways a wall can face: what differs (skewOf) */
-  skew?: string;
   /** the piece this one IS (`officeKit.chair`): it lays nothing of its own, only that one piece of another kit, taken into this kit */
   is?: string;
   /** WHAT IT IS TO A MAN, read off its boxes as laid: 'solid' (feet, sight, rounds and sound meet it, up to `reach` m) · 'raised' (solid, but nothing of it
@@ -242,30 +240,7 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
     const word = p.k === undefined ? rowName(p.row) : `${rowName(p.row)} × ${p.k.toFixed(2)}`, w = worn.get(word) ?? { row: p.row, n: 0, k: p.k }; w.n++; worn.set(word, w); }
   piece.paints = [...worn].sort((a, b) => b[1].n - a[1].n || a[0].localeCompare(b[0])).map(([w]) => w); piece.unnamed = [...unnamed].sort();
   piece.rows = [...new Set([...worn.values()].map(w => w.row))];
-  piece.skew = skewOf(name, sample.args, stand);
   return piece;
-}
-/** A PIECE LAID ON A WALL'S FACE (its first words are the wall's axis and its line, and a later one the side it faces: `boards('x', 11, a, b, 1)`) LIES THE
- *  SAME ON ALL FOUR WAYS A WALL CAN FACE: laid alone with its showroom's own words on each of the four, its boxes reach as far past each end of the stretch
- *  (in either order: a frame is a turn, so two of the four are the other two seen from behind), as far out from the face and as far into the wall, and
- *  there are as many of them. Says what differs, or nothing. (11-05: split wood and beam ends were dealt from the stretch's low end in a frame that ran the
- *  other way on two facings, and lay outside it there; no level had yet asked for those two.) */
-function skewOf(name: string, args: readonly unknown[], stand: () => Stood): string | undefined {
-  const side = args.findIndex((a, i) => i >= 3 && (a === 1 || a === -1));
-  if ((args[0] !== 'x' && args[0] !== 'z') || typeof args[1] !== 'number' || typeof args[2] !== 'number' || side < 0) return undefined;
-  const line = args[1], ends = side > 3 && typeof args[3] === 'number' ? [args[2], args[3]] : [args[2], args[2]], lo = Math.min(...ends), hi = Math.max(...ends), mm = (v: number) => Math.round(v * 1000);
-  const seen: number[][] = [];   // (a facing's five numbers: boxes, past the near end, past the far end, least out, most out; held to 2 mm, a turn's rounding)
-  for (const axis of ['x', 'z'] as const) for (const s of [1, -1]) {
-    const S = stand(), from = S.boxes.length, words = [...args]; words[0] = axis; words[side] = s;
-    try { (S.fns[name] as (...a: unknown[]) => unknown)(...words); } catch (e) { return `${axis} ${s}: ${firstLine(e)}`; }
-    const made = S.boxes.slice(from); if (!made.length) { seen.push([0, 0, 0, 0, 0]); continue; }
-    let a0 = Infinity, a1 = -Infinity, o0 = Infinity, o1 = -Infinity;
-    for (const b of made) { const [fx, fz] = BoxWorld.footprint(b), along = axis === 'x' ? [b.c[0], fx] : [b.c[2], fz], across = axis === 'x' ? [b.c[2], fz] : [b.c[0], fx];
-      a0 = Math.min(a0, along[0] - along[1]); a1 = Math.max(a1, along[0] + along[1]); o0 = Math.min(o0, s * (across[0] - line) - across[1]); o1 = Math.max(o1, s * (across[0] - line) + across[1]); }
-    seen.push([made.length, ...[lo - a0, a1 - hi].sort((p, q) => p - q), o0, o1]);
-  }
-  const say = (v: number[]) => `${v[0]} boxes, ${mm(v[1])} and ${mm(v[2])} mm past the stretch's ends, ${mm(v[3])} to ${mm(v[4])} mm out`;
-  return seen.every(v => v[0] === seen[0][0] && v.every((x, i) => Math.abs(x - seen[0][i]) < 0.002)) ? undefined : `x+ ${say(seen[0])} · x- ${say(seen[1])} · z+ ${say(seen[2])} · z- ${say(seen[3])}`;
 }
 const catalogue: Piece[] = [];
 for (const k of KITS) {
@@ -275,12 +250,11 @@ for (const k of KITS) {
 
 // ------------------------------------------------------------------ the library's rules ----
 const problems: string[] = [], plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-const notShown = catalogue.filter(p => !SHOWROOMS.some(s => s in p.uses)), unsaid = catalogue.filter(p => !p.doc), banded = catalogue.filter(p => p.inBand), broken = catalogue.filter(p => p.error), skewed = catalogue.filter(p => p.skew);
+const notShown = catalogue.filter(p => !SHOWROOMS.some(s => s in p.uses)), unsaid = catalogue.filter(p => !p.doc), banded = catalogue.filter(p => p.inBand), broken = catalogue.filter(p => p.error);
 const noRow = [...pieceNames.keys()].filter(k => !KITS.some(r => r.name === k)), noPieces = KITS.filter(r => !pieceNames.get(r.name)?.size).map(r => r.name);
 if (notShown.length) problems.push(`${plural(notShown.length, 'piece does', 'pieces do')} not stand in a showroom (tools/levels/${SHOWROOMS.join('.ts, ')}.ts): ${notShown.map(p => p.id).join(', ')}`);
 if (unsaid.length) problems.push(`${plural(unsaid.length, 'piece does', 'pieces do')} not say what it is (a /** comment */ over its definition in the kit's file): ${unsaid.map(p => p.id).join(', ')}`);
 if (banded.length) problems.push(`${plural(banded.length, 'piece tops', 'pieces top')} out between 0.20 and 0.25 m, where a body is stopped on floor the nav grid calls free: ${banded.map(p => p.id).join(', ')}`);
-if (skewed.length) problems.push(`${plural(skewed.length, 'piece', 'pieces')} laid on a wall's face ${skewed.length === 1 ? 'does' : 'do'} not lie the same on all four ways a wall can face: ${skewed.map(p => `${p.id} (${p.skew})`).join('; ')}`);
 if (broken.length) problems.push(`${plural(broken.length, 'piece', 'pieces')} could not be laid alone: ${broken.map(p => `${p.id} (${p.error})`).join(', ')}`);
 if (noRow.length) problems.push(`${plural(noRow.length, 'kit hands', 'kits hand')} pieces out and has no row in tools/levels/library.ts KITS: ${noRow.join(', ')}`);
 if (noPieces.length) problems.push(`${plural(noPieces.length, 'row', 'rows')} of KITS named no kit that hands pieces out (a kit renamed, or a name mistyped in its pieces() call): ${noPieces.join(', ')}`);

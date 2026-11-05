@@ -9,7 +9,7 @@
 // Headless (tools/qa/editor-probes.ts) the same code runs over BoxWorld / LightSet on the fake device.
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
-import { Box, BoxFlag, BoxWorld, makeBox, rayBox, wordOf } from '../scene/boxes';
+import { Box, BoxFlag, BoxWorld, makeBox, rayBox } from '../scene/boxes';
 import { LightSet, RtLight, lightFromDef } from '../render/lights';
 import type { RenderSettings } from '../engine';
 import type { Level } from '../scene/level';
@@ -76,7 +76,7 @@ export class Scene {
     this.propRanges.length = 0;
     level.props.forEach((p, i) => {
       const start = statics.length; const cs = Math.cos(p.yaw), sn = Math.sin(p.yaw);
-      for (const q of p.parts) statics.push(makeBox({ c: [p.x + cs * q.off[0] + sn * q.off[2], q.off[1], p.z - sn * q.off[0] + cs * q.off[2]], h: v3.copy(q.h), yaw: p.yaw + q.yaw, albedo: v3.copy(q.albedo), ...wordOf(q), ...(q.marks?.length ? { marks: q.marks } : {}) }));   // (the part's markings ride on its box, as props.ts makes it: the tape and glyphs on a carton show in the editor too)
+      for (const q of p.parts) statics.push(makeBox({ c: [p.x + cs * q.off[0] + sn * q.off[2], q.off[1], p.z - sn * q.off[0] + cs * q.off[2]], h: v3.copy(q.h), yaw: p.yaw + q.yaw, albedo: v3.copy(q.albedo), ...(q.marks?.length ? { marks: q.marks } : {}) }));   // (the part's markings ride on its box, as props.ts makes it: the tape and glyphs on a carton show in the editor too)
       this.propRanges.push({ id: this.ed.data.props[i].id, start, count: statics.length - start });
     });
     // volumes: twelve thin emissive sticks along the edges (the renderer has no transparency; sticks read as a wire box and cost few rays: NoShadow)

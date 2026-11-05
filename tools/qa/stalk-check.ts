@@ -26,7 +26,6 @@
 // STALK_BREAK=1 = the key left down where grab, still, steer and let ask for it up, the tell off where it is asked for, the step in at 0 s, the corner off, the duck at 0, the catch's two keys down, the old recording's keys left in: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here says how it looks or feels. tools/qa/stalk-page.cjs drives the real page on the software adapter.
 import { standUp, ROOT } from './headless.ts';
-import { standWall, wallBetween } from './standwall.ts';
 
 const { STALK, STALK_STATS, stalkOn, stalkPolish } = await import(`${ROOT}/src/game/stalk.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
@@ -49,9 +48,6 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 const up = () => !BREAK;
 
 interface Ctx { W: any; g: any; A: any; walk: number; f: number; top: number; jerk: number; step(): void; press(): void; lift(): void; held(): boolean; gap(): number; astern(): number }
-/** SOMETHING SOLID COMES BETWEEN THEM: a wall stood across the line from Sam to his man, half way (standwall.ts: a box, met by every reader of the box
- *  world in either language — the stalk's own solid line among them). It stands for what is left of that world's run */
-const between = (C: Ctx) => { standWall(C.g, [wallBetween(C.g.player.char.pos, C.A.char.pos)]); };
 /** the lobby with the floor's men parked far off, one man `gap` m east of Sam facing east (walking away at `walk` m/s, moved by the check: the AI is off), Sam
  *  crouched with empty hands `bearing` degrees off the man's facing (180 = dead astern) */
 async function world(on: boolean, seed: number, gap: number, walk: number, bearing = 180, shift: [number, number] = [0, 0]): Promise<Ctx> {
@@ -123,7 +119,7 @@ async function out() {
   const cases: [string, (C: Ctx) => void][] = [
     ['he turns to face Sam', C => { C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; }],
     ['he is suddenly five metres off', C => { C.A.char.pos[0] += 5; }],
-    ['something solid comes between them', C => { between(C); }],
+    ['something solid comes between them', C => { C.g.col.solidBlocked = () => true; }],
     ['he is onto Sam', C => { C.A.state = 'alert'; }],
     ['a move key of the player\'s own', C => { C.W.input.keys.add('KeyA'); }],
   ];
@@ -147,8 +143,8 @@ async function out() {
     const turn = (C: Ctx) => { C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; }, onto = (C: Ctx) => { C.A.state = 'alert'; }, quarter = (C: Ctx) => { C.A.char.bodyYaw = C.A.char.aimYaw = 0; };   // (a quarter turn: Sam at his shoulder — the stalk ends, he is not faced)
     const T = await duck(1, turn), H = await duck(1, onto), F = await duck(1, C => { C.A.char.pos[0] += 5; }), N = await duck(1, turn, false), D = await duck(0, turn), Q = await duck(1, quarter);
     const L = await duck(1, quarter, true, [12, turn]), X = await duck(1, quarter, true, [Math.ceil(STALK.joltSecs * 60) + 6, turn]), O = await duck(1, quarter, true, [12, onto]);   // (the quarter turn, then: round to face him a fifth of a second on · the same after joltSecs · onto him a fifth of a second on)
-    const W2 = await duck(1, quarter, true, [12, C => { between(C); turn(C); }]);   // (…round to face him with something solid between them)
-    STALK.joltFace = 180; STALK.joltAtOnce = up(); const F5 = await duck(1, C => { between(C); quarter(C); }); STALK.joltAtOnce = false; const F6 = await duck(1, C => { between(C); quarter(C); }); STALK.joltFace = face;   // (a recording of the fifth pass replays with joltAtOnce: any turn that ends the stalk, on that frame, whatever stands between them · joltFace 180 alone, the lab's top, keeps the wall's test)
+    const W2 = await duck(1, quarter, true, [12, C => { C.g.col.solidBlocked = () => true; turn(C); }]);   // (…round to face him with something solid between them)
+    STALK.joltFace = 180; STALK.joltAtOnce = up(); const F5 = await duck(1, C => { C.g.col.solidBlocked = () => true; quarter(C); }); STALK.joltAtOnce = false; const F6 = await duck(1, C => { C.g.col.solidBlocked = () => true; quarter(C); }); STALK.joltFace = face;   // (a recording of the fifth pass replays with joltAtOnce: any turn that ends the stalk, on that frame, whatever stands between them · joltFace 180 alone, the lab's top, keeps the wall's test)
     verdict(F5.shown > 0.1 && F6.shown === 0 && T.shown > 0.1 && H.shown > T.shown && !T.hands && !H.hands && F.shown === 0 && N.shown === 0 && D.shown === 0 && !D.hit && Q.shown === 0 && Q.out && L.early === 0 && L.shown > 0.1 && X.shown === 0 && O.shown > L.shown && W2.shown === 0,
       'with the stalk on, the man who turns round to face him makes Sam duck inside a fifth of a second and the man who is onto him more — the soft duck, never the start that takes his hands; a quarter turn ends the stalk and gives none — until he comes on round to face him inside joltSecs (the duck), or is onto him (the whole of it), and not after joltSecs nor with something solid between them; a man who is merely far gives none, nor does the same turn with no stalk on; with the MOVES pass down nothing shows, not the old hit twitch either; and with joltAtOnce (raised only for a recording of the fifth pass) any turn that ends the stalk gives the duck on that frame, a wall between or not, where joltFace 180 alone still asks for a clear line',
       `the duck shown: he turns to face him ${f2(T.shown)} · a quarter turn ${f2(Q.shown)} (the stalk ended ${Q.out}), then round to face him ${f2(L.shown)} (before that ${f2(L.early)}), the same too late ${f2(X.shown)}, onto him ${f2(O.shown)}, a wall between ${f2(W2.shown)} · he is onto Sam ${f2(H.shown)} · he is five metres off ${f2(F.shown)} · he turns, the button never pressed ${f2(N.shown)} · MOVES down ${f2(D.shown)}, a hit twitch ${D.hit} · a start that takes the hands ${T.hands || H.hands} · a quarter turn with a wall between: joltAtOnce ${f2(F5.shown)}, joltFace 180 alone ${f2(F6.shown)}`);

@@ -107,7 +107,7 @@ import { handsBusy } from './interact';   // (read inside ringInput only: his ha
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
 import { goalInput, goalShift, planGoal, goalsOn, goalMen, goalRingOn, GOAL_NONE, PLAN_STATS } from './planmode';   // (planmode.ts: Shift + the key adds a goal, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
-import { teamFollow, teamDash, teamFight, teamTold, walkLead } from './teampace';   // (read inside update only)
+import { teamFollow, teamDash, teamFight, teamTold } from './teampace';   // (read inside update only)
 import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
@@ -1489,9 +1489,6 @@ export class SquadOrders {
       if (cov) { watch = cov.at; face = cov.face; strafe = cov.strafe; pose = AIM; }
       const sp = spottedFeet(g, gd, A.post === null, stepping);   // (spotted.ts: a silent man with a suspicious defender about goes low / still / out of his line; caught, he steps to a line — null with its switch off)
       if (sp?.watch && !g.pair.finishing(gd)) { watch = sp.watch; face = yawTo(gd.char.pos, sp.watch); strafe = false; pose = AIM; }
-      // (teampace.ts TEAMPACE.walkAim: in the walking carriage — the gun up and LEADING, above — with no line to the order's own watch, the door he is sent to, the
-      //  gun leads the way he walks, not into the wall between; he sees it and it is his again. The cover's point and spotted.ts's are theirs; null with its switch off)
-      if (pose === A.move && watch !== null && watch === A.watch) { const ahead = walkLead(g, gd, watch); if (ahead) { watch = ahead; strafe = false; } }
       // (doorway.ts DOORMANNERS.watch: the rear man's gun is the cover's for his whole walk now, doors and corners included, and a back-pedal has no stuck
       //  watchdog — the runner's strafe keeps the path it has. So: his next corner behind a wall — a handle walked him off his way — and the way is found
       //  again from where he stands; a second without moving, short of his mark, and he walks it the plain way for three: followPath's side-step and re-path)

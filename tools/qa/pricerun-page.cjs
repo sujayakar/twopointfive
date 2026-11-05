@@ -8,19 +8,15 @@
 //       mission list unless some are named. The same checks; what it times is that machine's, named in the file. Files go to --out, or $OUT.
 //       --look "look=walls:0&geo=0" = the look page's own words for the whole run (default `look`); --look-only = no page without the look (pricepage=0).
 //       --play N = the mission is played N seconds of its own clock before its picture is held (the run's own: 4), to see what a longer stand-up changes.
-//       --each N = A FRESH BROWSER EVERY N LEVELS (default 10; 0 = one browser for all). A walk of 29 levels in one browser tires: on a rented card, 11-05, the
-//       GPU's answer came later and later from about the 15th level and the last seven rows read nonsense with every check green; the same seven alone read
-//       sane. So a long walk is run in even parts on one dev server, each this tool again on its own levels, its files in <out>/part-<k> (cleared first): every
-//       part's price file is also copied to <out> (the table tool reads the files of one kind together), and the walk passes when every part does.
 // No dev server on the port: one is started from this checkout and stopped again by its pid. One software page at a time on a machine.
 // Exit 0 = the last page came up with a row for every level, each with its three states, no program made by the switch, the file handed over, no page error.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path'), http = require('http');
-const { spawn, execFileSync } = require('child_process');
+const { spawn } = require('child_process');
 const ROOT = path.resolve(__dirname, '../..');
 const argv = process.argv.slice(2); const opt = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const flag = k => { const i = argv.indexOf('--' + k); if (i < 0) return false; argv.splice(i, 1); return true; };
-const REAL = flag('real'), ONLY = flag('look-only'), SERVED = flag('served') /* (this tool's own word to a part: the walk holds the dev server) */, LOOK = opt('look', 'look'), PLAY = Number(opt('play', 0)) || 0, EACH = Math.max(0, Number(opt('each', 10)) || 0);
+const REAL = flag('real'), ONLY = flag('look-only'), LOOK = opt('look', 'look'), PLAY = Number(opt('play', 0)) || 0;
 const PORT = Number(opt('port', process.env.PORT || 5199)), OUT = path.resolve(opt('out', process.env.OUT || path.join(ROOT, 'dist/pricerun'))), QUALITY = opt('quality', REAL ? '' : 'verylow');
 const [VW, VH] = opt('size', REAL ? '1920x1080' : '320x180').split('x').map(Number), LEVELS = argv.length ? argv : REAL ? [] : ['vault'];   // (none named on a real run = every level on the list)
 // (…and the page is not told a script drives it: navigator.webdriver false, so it boots as it does for a person — the load brief, the attract reel, the device's retry)
@@ -29,42 +25,17 @@ const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000
 const up = () => new Promise(res => { const r = http.get({ host: 'localhost', port: PORT, path: '/', timeout: 2000 }, x => { x.resume(); res(x.statusCode === 200); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); });
 let red = false; const check = (ok, what, detail = '') => { red = red || !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
 
-let server = null, browser = null, part = null;   // (let go however the run ends: a throw below must not leave a dev server on the port for the next run to find)
-for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { try { part?.kill(sig); } catch { /* gone */ } try { server?.kill(); } catch { /* gone */ } Promise.resolve(browser?.close()).catch(() => { }).finally(() => process.exit(130)); });   // (… nor a signal from outside, which reaches the part that is walking too)
-/** a dev server on the port: the one that is there, or one started from this checkout (true: this process started it and stops it) */
-const serve = async () => { if (await up()) { log(SERVED ? `the walk's dev server on ${PORT}` : `A DEV SERVER WAS ALREADY ON ${PORT} and is used as it is: this tool cannot tell whose checkout it serves (the run's file names its build where the page knows it)`); return false; }
-  log(`no dev server on ${PORT}: starting one from this checkout`); server = spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
-  for (let i = 0; i < 60 && !(await up()); i++) await new Promise(r => setTimeout(r, 500)); return true; };
-// A LONG WALK IN PARTS (--each): this tool again for every part, a fresh browser and a fresh GPU process each, one after another, on ONE dev server. The
-// parts are even (11 levels at ten each are 6 and 5, not 10 and 1: the run reads a late answer against its own least, and one level has little to be read
-// against). The levels, where none are named, are THIS CHECKOUT'S list (the run's own order): a server from another checkout may list others.
-const PART_LIMIT_MS = 150 * 60e3;   // (a part that hangs is stopped: its own loop gives a page two hours)
-async function inParts(list) {
-  const k = Math.ceil(list.length / EACH), size = Math.ceil(list.length / k), parts = []; for (let i = 0; i < list.length; i += size) parts.push(list.slice(i, i + size));
-  console.log(`=== pricerun-page${REAL ? ' --real' : ''}: ${list.length} levels in ${parts.length} parts of ${parts.map(p => p.length).join(' + ')}, a fresh browser each (--each ${EACH}) ===`);
-  fs.mkdirSync(OUT, { recursive: true }); await serve(); let bad = 0; const reports = [];
-  for (let i = 0; i < parts.length; i++) { const levels = parts[i], out = path.join(OUT, `part-${i + 1}`);
-    fs.rmSync(out, { recursive: true, force: true });   // (what an earlier walk left there is not this part's)
-    console.log(`\n--- part ${i + 1} of ${parts.length}: ${levels.join(', ')} ---`);
-    const code = await new Promise(res => { part = spawn(process.execPath, [__filename, ...(REAL ? ['--real'] : []), '--served', '--each', '0', '--port', String(PORT), '--out', out, '--size', `${VW}x${VH}`, '--look', LOOK, ...(QUALITY ? ['--quality', QUALITY] : []), ...(ONLY ? ['--look-only'] : []), ...(PLAY ? ['--play', String(PLAY)] : []), ...levels], { stdio: 'inherit' });
-      const t = setTimeout(() => { console.log(`part ${i + 1} ran past ${PART_LIMIT_MS / 60e3} minutes and is stopped`); try { part.kill('SIGKILL'); } catch { /* gone */ } }, PART_LIMIT_MS);
-      part.on('exit', c => { clearTimeout(t); part = null; res(c ?? 1); }); part.on('error', () => { clearTimeout(t); part = null; res(1); }); });
-    if (code !== 0) bad++;
-    for (const f of fs.existsSync(out) ? fs.readdirSync(out) : []) { if (/^price-levels-.*\.json$/.test(f)) fs.copyFileSync(path.join(out, f), path.join(OUT, f)); if (f === 'report.txt') reports.push(`part ${i + 1} of ${parts.length}: ${levels.join(', ')}\n\n` + fs.readFileSync(path.join(out, f), 'utf8')); } }
-  if (server) { server.kill(); server = null; }
-  if (reports.length) fs.writeFileSync(path.join(OUT, 'report.txt'), reports.join('\n\n'));
-  console.log(bad ? `\n=== pricerun-page: FAILED (${bad} of ${parts.length} parts) ===` : `\n=== pricerun-page: ALL PASS (${parts.length} parts, ${list.length} levels) ===`);
-  process.exit(bad ? 1 : 0);
-}
+let server = null, browser = null;   // (let go however the run ends: a throw below must not leave a dev server on the port for the next run to find)
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { try { server?.kill(); } catch { /* gone */ } Promise.resolve(browser?.close()).catch(() => { }).finally(() => process.exit(130)); });   // (… nor a signal from outside)
 (async () => {
-  if (EACH > 0) { const list = LEVELS.length ? LEVELS : JSON.parse(execFileSync('bun', ['-e', "import { priceLevels } from './src/ui/pricerun.ts'; console.log(JSON.stringify(priceLevels().map(l => l.level)))"], { cwd: ROOT, encoding: 'utf8' }));
-    if (list.length > EACH) return inParts(list); }
   fs.mkdirSync(OUT, { recursive: true });
-  await serve();
+  if (!(await up())) { log(`no dev server on ${PORT}: starting one from this checkout`); server = spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
+    for (let i = 0; i < 60 && !(await up()); i++) await new Promise(r => setTimeout(r, 500)); }
+  else log(`A DEV SERVER WAS ALREADY ON ${PORT} and is used as it is: this tool cannot tell whose checkout it serves (the run's file names its build where the page knows it)`);
   browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, acceptDownloads: true });
   // a frame is seconds long here: a turn is a frame dropped and two kept, and a long frame is not the tab having been away
-  await ctx.addInitScript(([real, play]) => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600, lateMs: 0 /* (the late answer's rule is not asked here: a frame is seconds long and the timer drops a pass over a second, so there is nothing for it to read) */ }; if (play > 0) window.__priceOpts = { ...(window.__priceOpts || {}), playS: play }; }, [REAL, PLAY]);   // (half a second of the game's clock: thirty steps of the page's own scripted step, each drawn, after the page's own warm-up; no wait for the GPU to catch up before the turns, whose frame is seconds long here)
+  await ctx.addInitScript(([real, play]) => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; if (play > 0) window.__priceOpts = { ...(window.__priceOpts || {}), playS: play }; }, [REAL, PLAY]);   // (half a second of the game's clock: thirty steps of the page's own scripted step, each drawn, after the page's own warm-up; no wait for the GPU to catch up before the turns, whose frame is seconds long here)
   const page = await ctx.newPage(), errors = [], pages = []; let saved = null, gaveUp = '';
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
   page.on('console', m => { const x = m.text(); if (/price every level/.test(x)) { log('page:', x.slice(0, 300)); gaveUp = gaveUp || x.slice(0, 300); } if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); });   // (the run's own word on the console is always its end without a file: stopped, refused, or no session store — not waited on for the cap)
