@@ -49,7 +49,7 @@ import { order, endGuardScript } from './squad';
 import { isHostile } from './teams';
 import { sideShotEnergy } from './glasspen';
 import { DIGIN, digInStays, digInSet, digInRefuge, digInPhase } from './digin';
-import { squadOwns, squadStaysIn, squadsLive } from './enemysquads';
+import { squadsLive } from './enemysquads';
 import { silentStep } from './silent';
 import { lastStandMan } from './laststand';
 import { bang } from './effects';
@@ -61,6 +61,7 @@ import { laneExposed, laneBars, laneKnownAt } from './lanes';
 import { teamTread } from './teampace';
 import { loadGait, loadHeard } from './kitload';   // (a teammate's card in the defenders' ears: his footfall as the mixer has it)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { hasHim, OWN } from './owner';
 
 export const PRESSURE = {
   /** the master switch: off = none of this file runs */
@@ -610,7 +611,7 @@ function consider(g: Game, F: RoomFight, st: State, D: Def) {
     && g.time - (st.doneAt.get(D) ?? -100) > PRESSURE.againSecs && !st.outs.some(o => o.def === D)
     && !lastStandMan(g, gd)                // (laststand.ts, default off: a man of the last stand is not the press's)
     && !laneBars(g, gd, D.noiseAt)        // (lanes.ts: held short of a covered lane, and this fight is at its guns — he keeps its mouth)
-    && !squadOwns(g, gd)                   // (enemysquads.ts: on a squads level who leaves his room for a fight elsewhere is his squad's call)
+    && !hasHim(gd, OWN.squad)                   // (enemysquads.ts: on a squads level who leaves his room for a fight elsewhere is his squad's call)
     && !(DIGIN.on && digInStays(g, gd));   // (digin.ts's reach rule: the fight is too far for him to join in time — his room is his job, and he digs in)
   // PRESSURE.lastHolds: the last of them alive has no others to go to, and nobody on the net to call — he keeps his room (counted once, the first time he would have gone)
   const ok = ok0 && !lastAlone(F, D);
@@ -841,7 +842,7 @@ function lastMan(g: Game, F: RoomFight, st: State, D: Def) {
   const ok = D.mode === 'hold' && !st.of.has(D) && D.room && D.room.cells.size <= ROOM_CELLS && !gd.held && !(D.lostAt > g.time) && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil
     && g.time - D.movedAt > 6 && g.time - (st.tried.get(D) ?? -100) > 6 && !st.outs.some(o => o.def === D)
     && !F.defs.some(X => X !== D && alive(X) && X.room === D.room && X.mode !== 'free')
-    && !squadStaysIn(g, gd)    // (enemysquads.ts: a squad told to stay in its rooms — mayLeave false — gives none up)
+    && !gd.staysInRooms    // (enemysquads.ts: a squad told to stay in its rooms — mayLeave false — gives none up)
     && !lastStandMan(g, gd);   // (laststand.ts: nor does a man of the last stand)
   if (!ok) { st.last.delete(D); return; }
   const R = D.room!; let why: 'seen' | 'door' | null = null, threat: Vec3 = gd.sightPos, shut = -1;
@@ -1026,7 +1027,7 @@ function goLook(g: Game, F: RoomFight, st: State) {
   const w = st.word; if (!w || st.lookLost) return;
   const dug = (D: Def) => { const ph = digInPhase(g, D.gd); return ph !== 'idle' && ph !== 'set'; };   // (on his way to cover or at a door with a wedge: busy. Set on his door, he has done getting ready)
   const free = (D: Def) => alive(D) && D.mode === 'hold' && !st.of.has(D) && !D.gd.held && D.rallyAt !== Infinity && g.time >= D.gd.dazzledUntil && g.time >= D.gd.staggerUntil
-    && !st.outs.some(o => o.def === D) && !lastStandMan(g, D.gd) && !squadOwns(g, D.gd) && !dug(D) && !laneBars(g, D.gd, w.p) && !laneKnownAt(g, D.gd, w.p);
+    && !st.outs.some(o => o.def === D) && !lastStandMan(g, D.gd) && !hasHim(D.gd, OWN.squad) && !dug(D) && !laneBars(g, D.gd, w.p) && !laneKnownAt(g, D.gd, w.p);
   const L = st.look;
   if (L) {
     if (w.t > L.w || !L.men.every(free)) { st.look = null; st.stats.lookOff++; if (w.t <= L.w) st.swept = -Infinity; return; }   // (word of them in the beat, or a man of the pair taken: nobody goes on the old call — the next quiet spell is its own)

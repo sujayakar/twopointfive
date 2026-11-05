@@ -43,7 +43,6 @@ import { isHostile } from './teams';
 import { order } from './squad';
 import { lastStandMan } from './laststand';
 import { digInPhase } from './digin';
-import { squadDefers, squadStaysIn } from './enemysquads';
 import { pressOwns } from './pressure';
 import { buddyOwns } from './buddy';
 import { powerOutWord } from './powerout';
@@ -150,7 +149,7 @@ function threatOf(g: Game, D: Def): Vec3 {
   return bi >= 0 && D.room ? D.room.entries[bi].at : D.pt;
 }
 /** his room is his fence: always, unless `roam` — and then still for a man of a squad that may not leave (enemysquads.ts mayLeave false) */
-const fenced = (g: Game, gd: Guard) => !DARKFOE.roam || squadStaysIn(g, gd);
+const fenced = (g: Game, gd: Guard) => !DARKFOE.roam || gd.staysInRooms;
 /** a way of no more than `walkM` to a spot — never by way of a doorway of his room, nor out of it (digin.ts's own rule) — or nothing */
 function wayTo(g: Game, D: Def, q: Vec3): boolean {
   const c = D.gd.char, path = g.col.nav.findPath(c.pos, q, 6000); if (!path?.length) return false;
@@ -197,7 +196,7 @@ export function darkFoeKept(g: Game, gd: Guard, D: Def | undefined = g.fight.def
   if (gd.state !== 'alert') return 'not alert';   // (the walk ends in the room fight's plant(), which makes a man alert: only one who is already is sent)
   if (g.time - gd.lastSeenT < DARKFOE.quietSecs || g.time - gd.witness.heard.lastShotT < DARKFOE.calmSecs || gd.sup.v > 0.05) return 'in a fight';
   if (digInPhase(g, gd) !== 'idle') return 'dug in';
-  if (squadDefers(g, gd)) return 'his squad\'s';
+  if (hasHim(gd, OWN.squadWord)) return 'his squad\'s';
   if (gunKeepsPost(gd) || hasHim(gd, OWN.lane)) return 'holds a lane';
   const rally = D.rallyAt, press = pressOwns(g, D); D.rallyAt = rally;   // (pressOwns is roomfight's hook and may stop his rally clock as it answers: asked here it changes nothing)
   if (press || buddyOwns(g, D)) return 'the press\'s';
