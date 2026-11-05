@@ -178,7 +178,7 @@ fn line_on_page(written: &str, wedges: f64) -> String {
 /// lesson.ts:212, 233 S.n.set(...): a test writes the step's counts and `passes` has it as `&StepSeen`
 fn seam_seen_set(s: &StepSeen, key: &str, v: f64) { todo!("needs: passes to take s: &mut StepSeen") }
 /// lesson.ts:217 r.attachment: rifle_attachment() takes no rifle
-fn seam_rifle_attachment(g: &mut Game, r: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!("needs: rifle_attachment to take g and the FirearmId") }
+fn seam_rifle_attachment(g: &mut Game, r: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[r].att_idx; if i >= 0 { g.fa[r].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
 
 // ---- the tests
 

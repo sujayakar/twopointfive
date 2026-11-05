@@ -295,7 +295,7 @@ fn posture_given(g: &mut Game, def: OrdersOrderDefId) {
     let loud = is_loud_row(&g.tab.orders_order_def[def].id);
     silent_tool(g, loud);
 }
-fn seam_posture(g: &mut Game) -> crate::orders::SquadOrdersPosture { todo!("needs: SquadOrdersPosture able to call posture_word, posture_mark, posture_given (silent.ts:242)") }
+fn seam_posture(g: &mut Game) -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrdersPosture {} }   // (the one maker of a posture is this module: a posture that is Some IS these three functions, and p_orders_03 calls silent_tool on that reading)
 
 /// once a frame, before the orders pose the men: the rows, a new cast, the one line when loud reaches the squad   (silent.ts silentTick)
 pub fn silent_tick(g: &mut crate::game::Game) {

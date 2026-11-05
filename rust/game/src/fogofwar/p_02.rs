@@ -803,21 +803,21 @@ pub fn fog_of_war_door_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
 // ---------------------------------------------------------------- what the skeleton lacks: each one line in notes.md
 
 /// g.probe.room (fogofwar.ts:680)
-fn seam_probe_room(g: &mut Game) -> Option<f64> { todo!("needs: sensors::ProbeLike.room") }
+fn seam_probe_room(g: &mut Game) -> Option<f64> { let _ = g; Some(crate::sensors::b_01::host_probe_room()) }   // TEMP-BRINGUP, SKELETON-GAP: sensors::ProbeLike.room (the bring-up counts the asks: sensors/b_01.rs)
 /// b.mkey! (fogofwar.ts:365)
-fn seam_box_mkey(g: &mut Game, b: BoxId) -> f64 { todo!("needs: a reader of a BoxId's row: mkey") }
+fn seam_box_mkey(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).mkey.expect("thingKeyOf: a box with no mkey (fogofwar.ts:365 `b.mkey!`)") } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 /// st[i].flags (fogofwar.ts:697)
-fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { todo!("needs: a reader of a BoxId's row: flags") }
+fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).flags } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 /// G.c = c; G.yaw = yaw (fogofwar.ts:790, 792)
-fn seam_box_pose(g: &mut Game, b: BoxId, c: V3, yaw: f64) { todo!("needs: a writer of a BoxId's row: c, yaw") }
+fn seam_box_pose(g: &mut Game, b: BoxId, c: V3, yaw: f64) { let x = crate::scene_boxes::b_01::any_box_mut(g, b); x.c = c; x.yaw = yaw; } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 /// G[0].flags = d.box.flags (fogofwar.ts:790)
-fn seam_box_take_flags(g: &mut Game, to: BoxId, from: BoxId) { todo!("needs: a reader and writer of a BoxId's row: flags") }
+fn seam_box_take_flags(g: &mut Game, to: BoxId, from: BoxId) { let f = crate::scene_boxes::b_01::any_box(g, from).flags; crate::scene_boxes::b_01::any_box_mut(g, to).flags = f; } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 /// G[0].rot truthy (fogofwar.ts:791)
-fn seam_box_has_rot(g: &mut Game, b: BoxId) -> bool { todo!("needs: a reader of a BoxId's row: rot") }
+fn seam_box_has_rot(g: &mut Game, b: BoxId) -> bool { crate::scene_boxes::b_01::any_box(g, b).rot.is_some() } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 /// G[0].h = d.leafH; G[0].marks = d.leafMarks; G[0].rot = undefined (fogofwar.ts:791)
 fn seam_box_hung(g: &mut Game, b: BoxId, d: DoorId) { todo!("needs: a writer of a BoxId's row: h, marks, rot") }
 /// G.rot = undefined (fogofwar.ts:791)
-fn seam_box_clear_rot(g: &mut Game, b: BoxId) { todo!("needs: a writer of a BoxId's row: rot") }
+fn seam_box_clear_rot(g: &mut Game, b: BoxId) { crate::scene_boxes::b_01::any_box_mut(g, b).rot = None; } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 
 #[cfg(test)]
 mod tests {

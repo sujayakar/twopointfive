@@ -12,7 +12,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `g.audio.play(name, at, vol, { rate })` (handwork.ts:105; game_audio_like_play's opts are a map of `Opaque`, which cannot hold a rate)
 fn seam_audio_play(g: &mut Game, name: &str, at: V3, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts to carry a rate") }
 /// A static box's `c`, `h`, `yaw` and whether it has a `rot` (handwork.ts:125; BoxId has no table: ids.rs "no table here", properties.txt `g.none[id]`)
-fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { todo!("needs: the table a Box lives in, for c, h, yaw, rot by BoxId") }
+fn seam_box_read(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) { let x = crate::scene_boxes::b_01::any_box(g, b); (x.c, x.h, x.yaw, x.rot.is_some()) } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 
 // ---------------------------------------------------------------- private helpers
 

@@ -11,11 +11,15 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// this.samOf   (doortools.ts:896)
 fn seam_sam_of(g: &mut Game) -> Option<PlayerId> {
-    todo!("needs: DoorTools.sam_of as Option<PlayerId> (DoorToolsSamOf is an empty struct)")
+    // SKELETON-GAP: DoorTools.sam_of as Option<PlayerId> (doortools.ts:949 holds the Player object). TEMP-BRINGUP: the empty struct says only THAT one is held,
+    // so a held one is taken for the man on Game now. Wrong after a restart that makes the man anew (the charges' hand-back of :896 would not run).
+    let p = g.player;
+    g.door_tools.sam_of.as_ref().map(|_| p)
 }
 /// this.samOf = g.player   (doortools.ts:896)
 fn seam_set_sam_of(g: &mut Game, p: PlayerId) {
-    todo!("needs: DoorTools.sam_of as Option<PlayerId> (DoorToolsSamOf is an empty struct)")
+    let _ = p;
+    g.door_tools.sam_of = Some(crate::doortools::DoorToolsSamOf {});
 }
 
 /// `DoorTools.go_key` holds `null` (no such row) as this: `undefined` is its None, and the word's key is never '' on the page (`wordOnKey` settled)

@@ -33,7 +33,7 @@ macro_rules! line_of {
 /// g.audio.play(name, pos, vol, { rate }) (squad.ts:277, 329): `opts` is a map of Opaque, which cannot hold the rate.
 fn seam_audio_play(g: &mut Game, name: &str, pos: V3, vol: f64, rate: f64) { todo!("needs: g.audio.play opts able to carry a rate") }
 /// gd.flashlight.enabled = on (squad.ts:126): LightId has no table and no accessor for `enabled`.
-fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { todo!("needs: a writer of a light's enabled") }
+fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { g.tab.light[l].enabled = on; } // (skeleton 4 has the row)
 
 // ---- orders
 

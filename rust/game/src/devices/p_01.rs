@@ -12,7 +12,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 #[allow(clippy::too_many_arguments)]
 fn seam_add_cone(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner_deg: f64, outer_deg: f64, radius: f64, volumetric: f64, owner: f64, enabled: bool, fixture_box: f64, flicker: f64, ttl: f64, age: f64, peak_intensity: f64) -> Option<LightId> { todo!("needs: a maker of an RtLight") }
 /// devices.ts:369 `out[k].mkey = …`: a made box has no setter (BoxId's table is "none", so the index's g.none[id].mkey names nothing on Game)
-fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { todo!("needs: a setter of a box's mkey") }
+fn seam_set_mkey(g: &mut Game, b: BoxId, mkey: f64) { crate::scene_boxes::b_01::any_box_mut(g, b).mkey = Some(mkey); } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 
 // ---------------------------------------------------------------- small readers of this file
 /// `men(g)`: the skeleton's stub also takes the `Pick<Game, 'seats' | 'player'>`, here made from g

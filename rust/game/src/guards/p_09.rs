@@ -14,16 +14,16 @@ use crate::teams::Team;
 // ---- seams: what skeleton 3 still cannot do
 
 /// guards.ts 2914 and on: an RtLight's fields have no accessor (LightId has neither table nor properties).
-fn seam_light_set_pos(g: &mut Game, l: LightId, p: V3) { todo!("needs: RtLight.pos accessor for a LightId") }
-fn seam_light_set_dir(g: &mut Game, l: LightId, d: V3) { todo!("needs: RtLight.dir accessor for a LightId") }
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled accessor for a LightId") }
-fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { todo!("needs: RtLight.enabled accessor for a LightId") }
-fn seam_light_peak(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.peakIntensity accessor for a LightId") }
-fn seam_light_set_peak(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.peakIntensity accessor for a LightId") }
-fn seam_light_set_intensity(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.intensity accessor for a LightId") }
-fn seam_light_set_inner(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.innerDeg accessor for a LightId") }
-fn seam_light_set_outer(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.outerDeg accessor for a LightId") }
-fn seam_light_set_radius(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.radius accessor for a LightId") }
+fn seam_light_set_pos(g: &mut Game, l: LightId, p: V3) { g.tab.light[l].pos = p; } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_dir(g: &mut Game, l: LightId, d: V3) { g.tab.light[l].dir = d; } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_enabled(g: &mut Game, l: LightId, on: bool) { g.tab.light[l].enabled = on; } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_peak(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].peak_intensity } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_peak(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].peak_intensity = x; } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_intensity(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].intensity = x; } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_inner(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].inner_deg = x; } // SKELETON-GAP was: RtLight.innerDeg by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_outer(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].outer_deg = x; } // SKELETON-GAP was: RtLight.outerDeg by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_radius(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].radius = x; } // SKELETON-GAP was: RtLight.radius by LightId; skeleton 4 has the row (g.tab.light)
 /// guards.ts 2979 `manLeaves(gd.char, gd)`: ManCols came out empty, and a Character / a Guard do not turn into one.
 fn seam_man_leaves(g: &mut Game, gd: GuardId) { todo!("needs: man_leaves by his CharId and GuardId") }
 /// guards.ts 3118, 3138 `g.audio.play(name, at, vol, { rate })`: game_audio_like_play's opts hold `crate::Opaque`, which cannot carry a number.

@@ -17,7 +17,11 @@ sim = { path = "../sim" }
 
 [profile.dev]
 opt-level = 1
+debug = false
 panic = "abort"
+
+[profile.dev.package."*"]
+debug = false
 
 [profile.release]
 opt-level = 3

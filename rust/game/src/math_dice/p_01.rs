@@ -111,12 +111,14 @@ fn seam_home_n(h: DiceHome) -> f64 {
 
 /// dice.ts:56,59 `Math.random === d.sys`
 fn seam_math_random_is_own(g: &mut Game) -> bool {
-    todo!("needs: where a die standing in Math.random's place is kept (with_dice, the journal's die)")
+    // TEMP-BRINGUP: nothing in the Rust game puts another die in Math.random's place (with_dice and the journal's die are the host's), so a die in use is the game's own
+    true
 }
 
 /// dice.ts:59 `Math.random()`
 fn seam_math_random(g: &mut Game) -> f64 {
-    todo!("needs: the draw of what stands in Math.random's place, and what a game with no die draws")
+    // TEMP-BRINGUP (b_01.rs): the host's own stream, handed in draw by draw
+    super::b_01::host_draw()
 }
 
 #[cfg(test)]

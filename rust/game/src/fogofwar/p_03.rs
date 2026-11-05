@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A box's row. The index still says `g.none[id]`; `g.col.boxes` is the one `Tab<BoxId, Box>`, as scene_boxes and scene_collision read it: see the notes' Skeleton.
 fn bx<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box {
-    &mut g.col.boxes[b]
+    crate::scene_boxes::b_01::any_box_mut(g, b)   // TEMP-BRINGUP: a made box lives in the bring-up's arena (scene_boxes/b_01.rs)
 }
 
 /// Has the team a look at this fixture: an eye on the floor under it, a line to the fixture itself, or seen floor within two metres that it lights.   (fogofwar.ts FogOfWar.lampSeen)
@@ -696,7 +696,7 @@ pub fn fog_of_war_summary(g: &mut crate::game::Game) -> String {
 
 /// `l.fogBy = who`: a light row's field, which the skeleton has no way to reach.   (fogofwar.ts:1136)
 fn seam_set_light_fog_by(g: &mut Game, l: LightId, who: f64) {
-    todo!("needs: a writer of RtLight.fogBy on a LightId")
+    g.tab.light[l].fog_by = Some(who); // (skeleton 4 has the row)
 }
 
 /// `P.ours = ours` on `gpuFx(g)`: its stub hands the Particles over by value, so a write is lost.   (fogofwar.ts:1140, 1141, 1146)

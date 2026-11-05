@@ -16,7 +16,7 @@ fn cell_count() -> usize {
 
 /// A door leaf's `c`, `h`, `yaw` and whether it has `rot` (airDust.ts:146, 151, 152): BoxId has no table (ids.rs "no table here", properties.txt `g.none[id]`).
 fn seam_box_pose(g: &mut Game, b: BoxId) -> (V3, V3, f64, bool) {
-    todo!("needs: a box's c, h, yaw, rot by BoxId")
+    let x = crate::scene_boxes::b_01::any_box(g, b); (x.c, x.h, x.yaw, x.rot.is_some()) // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 }
 
 /// The men's eyes read the field this run. (airDust.ts AirDust.live)

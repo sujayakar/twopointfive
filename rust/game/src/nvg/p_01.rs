@@ -10,19 +10,19 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---- what the skeleton does not reach yet: the next skeleton changes these, not the bodies
 
 /// `l.kind` of a light (nvg.ts:126).
-fn seam_light_kind(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.kind by LightId") }
+fn seam_light_kind(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].kind } // SKELETON-GAP was: RtLight.kind by LightId; skeleton 4 has the row (g.tab.light)
 /// `l.enabled` of a light (nvg.ts:126, 183, 208).
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled by LightId") }
+fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
 /// `l.intensity` of a light (nvg.ts:126, 127).
-fn seam_light_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.intensity by LightId") }
+fn seam_light_intensity(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].intensity } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
 /// `l.transient` of a light; absent reads false (nvg.ts:126).
-fn seam_light_transient(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.transient by LightId") }
+fn seam_light_transient(g: &mut Game, l: LightId) -> bool { g.tab.light[l].transient.unwrap_or(false) } // SKELETON-GAP was: RtLight.transient by LightId; skeleton 4 has the row (g.tab.light)
 /// `l.ttl` of a light (nvg.ts:126).
-fn seam_light_ttl(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.ttl by LightId") }
+fn seam_light_ttl(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].ttl } // SKELETON-GAP was: RtLight.ttl by LightId; skeleton 4 has the row (g.tab.light)
 /// `l.dir` of a light (nvg.ts:127).
-fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.dir by LightId") }
+fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
 /// `l.color` of a light (nvg.ts:127).
-fn seam_light_color(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.color by LightId") }
+fn seam_light_color(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].color } // SKELETON-GAP was: RtLight.color by LightId; skeleton 4 has the row (g.tab.light)
 
 // ---- the team's state
 

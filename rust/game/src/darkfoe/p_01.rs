@@ -519,7 +519,7 @@ pub fn dark_foe_summary(g: &mut crate::game::Game) -> String {
 
 /// (darkfoe.ts:120, 174 o.flashlight.enabled) RtLight's `enabled` has no accessor over a LightId.
 fn seam_light_enabled(g: &mut Game, l: LightId) -> bool {
-    todo!("needs: an accessor of RtLight.enabled by LightId (darkfoe.ts:120, 174)")
+    g.tab.light[l].enabled // (skeleton 4 has the row)
 }
 
 #[cfg(test)]

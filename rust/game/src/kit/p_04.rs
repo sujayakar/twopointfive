@@ -18,9 +18,9 @@ fn seam_rifle_new(g: &mut Game, def: &crate::weapons::WeaponDef) -> FirearmId { 
 /// `new Pistol(def)` (pistol_new takes no game and returns Opaque)
 fn seam_pistol_new(g: &mut Game, def: &crate::weapons::WeaponDef) -> FirearmId { todo!("needs: pistol_new(g, def) -> FirearmId") }
 /// `rf.left(a)` (rifle_left has no `this`)
-fn seam_rifle_left(g: &mut Game, rf: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { todo!("needs: rifle_left(g, rf, a)") }
+fn seam_rifle_left(g: &mut Game, rf: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { match a { crate::weapons::RifleAttachment::Ring => g.fa[rf].rings, crate::weapons::RifleAttachment::Cam => g.fa[rf].cams, _ => g.fa[rf].shells } } // SKELETON-GAP: crate::weapons::rifle_left taking g and the FirearmId (weapons.ts:533-538)
 /// `rf.attachment` (rifle_attachment has no `this`)
-fn seam_rifle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!("needs: rifle_attachment(g, rf)") }
+fn seam_rifle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[rf].att_idx; if i >= 0 { g.fa[rf].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
 
 // ------------------------------------------------------------ small asks of this file
 

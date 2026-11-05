@@ -10,7 +10,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ---- the one seam left: it waits on the next skeleton (notes.md, ## Skeleton)
 
 /// Doors.USE_REACH, a class's static the skeleton does not have (doors.ts:1183)
-fn seam_use_reach() -> f64 { todo!("needs: Doors.USE_REACH as a const of crate::doors") }
+const DOORS_USE_REACH: f64 = 1.35; // SKELETON-GAP: crate::doors::DOORS_USE_REACH (doors.ts:1183)
+fn seam_use_reach() -> f64 { DOORS_USE_REACH }
 
 // ---- buildInteractables' closures, as private functions
 

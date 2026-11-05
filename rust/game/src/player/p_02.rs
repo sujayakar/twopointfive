@@ -12,11 +12,11 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// g.audio.play(name, at, vol, { rate }): the stub's opts are JsMap<String, Opaque>, and Opaque holds no number
 fn seam_audio_play_rate(g: &mut Game, name: &str, at: Option<V3>, vol: f64, rate: f64) { todo!("needs: game_audio_like_play's opts able to carry a rate") }
 /// rifle.attachment: the stub has no gun
-fn seam_rifle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!("needs: rifle_attachment with g and the gun's id") }
+fn seam_rifle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[rifle].att_idx; if i >= 0 { g.fa[rifle].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
 /// rifle.left(a): the stub has no gun
-fn seam_rifle_left(g: &mut Game, rifle: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { todo!("needs: rifle_left with g and the gun's id") }
+fn seam_rifle_left(g: &mut Game, rifle: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { match a { crate::weapons::RifleAttachment::Ring => g.fa[rifle].rings, crate::weapons::RifleAttachment::Cam => g.fa[rifle].cams, _ => g.fa[rifle].shells } } // SKELETON-GAP: crate::weapons::rifle_left taking g and the FirearmId (weapons.ts:533-538)
 /// rifle.cycleAttachment(): the stub has no gun
-fn seam_rifle_cycle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> { todo!("needs: rifle_cycle_attachment with g and the gun's id") }
+fn seam_rifle_cycle_attachment(g: &mut Game, rifle: FirearmId) -> Option<crate::weapons::RifleAttachment> { let n = g.fa[rifle].attachments.len() as i32; g.fa[rifle].att_idx = if n > 0 { (g.fa[rifle].att_idx + 1) % n } else { -1 }; let i = g.fa[rifle].att_idx; if i >= 0 { g.fa[rifle].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_cycle_attachment taking g and the FirearmId (weapons.ts:533-538)
 
 // ---- small lookups of the tick ----
 

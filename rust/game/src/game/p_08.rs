@@ -12,7 +12,8 @@ use crate::doors::{doors_boot_holds, doors_crack, doors_has_closer, doors_locked
 use crate::game::{GameDoorHandRecsValue, GameSetBlackoutCause, GuardState, Interactable, InteractableKind, Verb};
 
 /// (doors.ts:1183 Doors.USE_REACH) a static of the class the skeleton has no entry for
-fn seam_use_reach() -> f64 { todo!("needs: Doors.USE_REACH (doors.ts:1183) as a const of crate::doors") }
+const DOORS_USE_REACH: f64 = 1.35; // SKELETON-GAP: crate::doors::DOORS_USE_REACH (doors.ts:1183)
+fn seam_use_reach() -> f64 { DOORS_USE_REACH }
 
 /// the row a click with empty hands is on: the first guard in reach who is no hostage and nobody the snatch has out (game.ts:2192)
 fn click_row(g: &mut Game) -> Option<Interactable> {

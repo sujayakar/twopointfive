@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---- seams: the steps the skeleton cannot do yet (notes.md, ## Skeleton) ----
 
 /// `swing.sweeps(x, z, pad)` (doors.ts:559): the closure on DoorSwing has no Rust name.
-fn seam_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool { todo!("needs: crate::doors::door_swing_sweeps(&DoorSwing, x, z, pad)") }
+fn seam_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool { crate::doors::p_02::swing_sweeps(s, x, z, pad) } // SKELETON-GAP: crate::doors::door_swing_sweeps(&DoorSwing, x, z, pad) (doors.ts:559); the body is doors/p_02.rs swing_sweeps
 
 // ---- local helpers ----
 

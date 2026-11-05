@@ -384,7 +384,10 @@ fn seam_audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64)
 
 /// Picture only (blitz/doors-kit.md "Throwables.boxes only draws: leave it"): not translated, as the skeleton's stub.   (throwables.ts Throwables.boxes)
 pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<BoxId>) {
-    todo!("picture only: the renderer's, not a rule of play")
+    // BRING-UP: game_step_fx_and_dyn_boxes calls this (p_game_07 holds that the dyn boxes are state). With nothing thrown the TypeScript's loop makes no box
+    // (throwables.ts:437), so that case returns; a thrown thing's boxes are still not translated.
+    if g.items.items.is_empty() { return; }
+    todo!("picture only by blitz/doors-kit.md, yet the tick calls it: the boxes of a thrown thing (throwables.ts:436) are not translated")
 }
 
 /// A canister that is still something: its fuse not yet gone, or (smoke) gone and still venting.   (throwables.ts liveCan)

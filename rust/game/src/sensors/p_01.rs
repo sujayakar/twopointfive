@@ -566,7 +566,11 @@ pub fn first(r: Option<&[f64]>) -> Option<f64> {
 
 /// `this.put({ key, pos, skipOwner, b, rank })` (render/probe.ts 73, 75, 81): ProbeLike holds only `results`, so the frame's table of asks has no home.
 fn seam_probe_put(g: &mut crate::game::Game, key: &str, pos: V3, skip_owner: f64, b: Option<V3>, rank: f64) {
-    todo!("needs: ProbeLike's table of asks (pending, answered, serial, tight)")
+    // BOUNDARY (bring-up): the ask goes to the picture's probe (render/probe.ts put), whose table of asks is the host's and no part of the game's state.
+    // Nothing is recorded for the host yet: a headless host answers none, so `g.probe.results` stays as it is and every read is "no answer".
+    // SKELETON-GAP: a host seam that takes the ask (key, pos, skip_owner, b, rank), and `room` back for the callers that test it.
+    let _ = (g, key, pos, skip_owner, b, rank);
+    super::b_01::host_probe_put();   // TEMP-BRINGUP: the count `room` is read off (b_01.rs)
 }
 
 #[cfg(test)]

@@ -267,7 +267,7 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
 
 /// `fl.enabled = false; fl.intensity = 0`: LightId has no table and no setters in the skeleton (civilians.ts:347).
 fn seam_light_off(g: &mut Game, fl: LightId) {
-    todo!("needs: a light's enabled and intensity reachable from its LightId")
+    g.tab.light[fl].enabled = false; g.tab.light[fl].intensity = 0.0; // (skeleton 4 has the row)
 }
 
 /// A hostage: a civilian of the usual make at `pos`, down and told to stay down with no end to it.   (civilians.ts spawnHostage)

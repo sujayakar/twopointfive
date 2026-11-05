@@ -419,7 +419,7 @@ pub fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) 
         if let Some(t) = ch.tn { a[o] = 1.0; a[o + 1] = t.body; a[o + 2] = t.aim; a[o + 3] = t.wb; a[o + 4] = t.wa; a[o + 5] = t.ib; a[o + 6] = t.ia; a[o + 7] = t.x; a[o + 8] = t.z; }
         a[o + 9] = ch.anim.turn_lead; a[o + 10] = ch.body_yaw; a[o + 11] = ch.aim_yaw;
     }
-    let code = ::sim::layers::turn_weigh();
+    let code = ({ let ran__ = ::sim::layers::turn_weigh(); crate::anim_skeleton::b_01::stage_back(); ran__ });
     anim_rule_ran(g, id, code as f64);
     // Character.turnCols.put
     let mut c = [0.0f64; 12];

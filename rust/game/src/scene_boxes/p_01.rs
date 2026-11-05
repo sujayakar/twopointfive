@@ -27,16 +27,18 @@ const USAGE_STORAGE: f64 = 128.0;
 /// the box an ID names: the one place that says which table holds it
 #[inline]
 fn bx(g: &Game, id: BoxId) -> &Bx {
+    if let Some(b) = super::b_01::made_get(id) { return b; }   // TEMP-BRINGUP: a made box (b_01.rs)
     &g.col.boxes[id]
 }
 
 /// a new box into the game's table (boxes.ts:171 and :182 hand back the object itself)
 fn seam_box_push(g: &mut Game, b: Bx) -> BoxId {
-    todo!("needs: the table every Box lives in (ids.txt: Box has no table; g.col.boxes is the statics' list, where a drawn or dynamic box would shift the indices)")
+    let _ = g;
+    super::b_01::made_push(b)   // TEMP-BRINGUP, SKELETON-GAP: the table every Box lives in (b_01.rs)
 }
 /// the same for `box_of`, whose stub takes no `g`
 fn seam_box_push_no_g(b: Bx) -> BoxId {
-    todo!("needs: `g` on box_of, and the table every Box lives in")
+    super::b_01::made_push(b)   // TEMP-BRINGUP, SKELETON-GAP: the table every Box lives in (b_01.rs)
 }
 /// `device.queue.writeBuffer(matBuf, offset, data, 0, bytes)` (boxes.ts:312, :317)
 fn seam_write_mat_buf(g: &mut Game, offset: f64, data: &[f32], bytes: f64) {

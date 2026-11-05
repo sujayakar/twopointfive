@@ -535,7 +535,7 @@ fn swing_seg(s: &crate::doors::DoorSwing, x: f64, z: f64, a: f64) -> f64 {
     m::hyp2(x - hx - vx * t, z - hz - vz * t)
 }
 /// is the floor point inside the area the leaf sweeps, with `pad` m of slack. The closure of the TypeScript's DoorSwing; the skeleton's has no place for it yet (notes)   (doors.ts DoorSwing.sweeps)
-fn swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool {
+pub fn swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool {
     let (px, pz) = (x - s.hinge[0], z - s.hinge[2]);
     let r = m::hyp2(px, pz);
     if r > s.radius + pad { return false; }

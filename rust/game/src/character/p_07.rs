@@ -154,17 +154,55 @@ fn ready_knife(k: ReadyKind) -> bool { ready().get(String::from(k.as_str())).unw
 fn blow_clip(s: BlowStyle) -> f64 { *blow().clip.get(String::from(s.as_str())).unwrap() }
 
 /// `this.runArms(this.pA, w, ws)`
-fn seam_run_arms(g: &mut Game, c: CharId, w: f64, ws: f64) { todo!("needs: anim_run_arms' pose as &mut Pose: the layer writes it, and a &Pose of pA beside g can only be a clone, whose write is lost (TS 2282, 3094)") }
+fn seam_run_arms(g: &mut Game, c: CharId, w: f64, ws: f64) {
+    // BRING-UP: pA is lent out of g for the call; the layer's write comes back into it through the stage (anim_skeleton/b_01.rs stage_back writes the pose's own store)
+    let pose = core::mem::replace(&mut g.ch[c].anim.p_a, crate::anim_skeleton::Pose::blank());
+    anim_run_arms(g, c, &pose, w, ws);
+    g.ch[c].anim.p_a = pose;
+}
 /// `this.softKnees(this.pA, w)`
-fn seam_soft_knees(g: &mut Game, c: CharId, w: f64) { todo!("needs: anim_soft_knees' pose as &mut Pose: the layer writes it, and a &Pose of pA beside g can only be a clone, whose write is lost (TS 2283, 3125)") }
+fn seam_soft_knees(g: &mut Game, c: CharId, w: f64) {
+    // BRING-UP: as seam_run_arms
+    let pose = core::mem::replace(&mut g.ch[c].anim.p_a, crate::anim_skeleton::Pose::blank());
+    anim_soft_knees(g, c, &pose, w);
+    g.ch[c].anim.p_a = pose;
+}
 /// `this.kitHold !== undefined`
-fn seam_kit_hold_defined(g: &mut Game, c: CharId) -> bool { todo!("needs: Anim.kit_hold as Option<Option<KitItem>>: its reader tells undefined from null (TS 2517)") }
+fn seam_kit_hold_defined(g: &mut Game, c: CharId) -> bool { g.ch[c].anim.kit_hold.is_some() }   // (skeleton 4 has it as Option<Option<KitItem>>: None = undefined)
 /// The swap's clock, read off `carry`. Once Anim.carry and AnimSw.cur are Option<Option<_>> (None = undefined, Some(None) = null):
 /// want = if bake { S.cur } else { carry }; if !bake { carry = None }; then, unless bake:
 /// want None: cur = None, t = wait = -1. cur None: cur = want, t = wait = -1. want != cur: if both are Some(Some(_)) and t < 0
 /// { if wait < 0 { wait = swap_lag }; if wait > 0 && shoot_t < 0 { wait = max(0, wait - dt) } else { from = cur; to = want; t = 0;
 /// dur = want == weapon ? swap().draw : swap().stow; cur = want; wait = -1 } } else { t = wait = -1; cur = want }. Else wait = -1.
-fn seam_swap_clock(g: &mut Game, c: CharId, bake: bool, dt: f64) { todo!("needs: Anim.carry and AnimSw.cur as Option<Option<_>>: the reader tells undefined from null (TS 2438-2447)") }
+fn seam_swap_clock(g: &mut Game, c: CharId, bake: bool, dt: f64) {
+    // SKELETON-GAP: Anim.carry and AnimSw.cur as Option<Option<_>> (undefined | null | a kind). With one Option the two merge, and by reading that changes nothing here:
+    // `t` is -1 whenever `cur` is null or undefined (every path into either sets it), so "want null, cur null: wait = -1" and "want undefined: t = wait = -1" leave the
+    // same numbers; and a `cur` of null or undefined takes a `want` the same way (cur = want, t = wait = -1). What IS lost is the state's own word (the bridge's diff).
+    use crate::character::{AnimCarry, AnimSwCur, AnimSwFrom, AnimSwTo};
+    if bake { return; }
+    let (draw, stow) = (swap().draw, swap().stow);
+    let a = &mut g.ch[c].anim;
+    let want = a.carry.take().map(|k| match k { AnimCarry::Torch => AnimSwCur::Torch, AnimCarry::Weapon => AnimSwCur::Weapon });
+    match (want, a.sw.cur) {
+        (None, _) => { a.sw.cur = None; a.sw.t = -1.0; a.sw.wait = -1.0; }
+        (Some(w), None) => { a.sw.cur = Some(w); a.sw.t = -1.0; a.sw.wait = -1.0; }
+        (Some(w), Some(cur)) if w != cur => {
+            if a.sw.t < 0.0 {
+                if a.sw.wait < 0.0 { a.sw.wait = a.swap_lag; }
+                if a.sw.wait > 0.0 && a.shoot_t < 0.0 { a.sw.wait = m::max(0.0, a.sw.wait - dt); }
+                else {
+                    a.sw.from = Some(match cur { AnimSwCur::Torch => AnimSwFrom::Torch, AnimSwCur::Weapon => AnimSwFrom::Weapon });
+                    a.sw.to = Some(match w { AnimSwCur::Torch => AnimSwTo::Torch, AnimSwCur::Weapon => AnimSwTo::Weapon });
+                    a.sw.t = 0.0;
+                    a.sw.dur = if w == AnimSwCur::Weapon { draw } else { stow };
+                    a.sw.cur = Some(w);
+                    a.sw.wait = -1.0;
+                }
+            } else { a.sw.t = -1.0; a.sw.wait = -1.0; a.sw.cur = Some(w); }
+        }
+        _ => { a.sw.wait = -1.0; }
+    }
+}
 
 /// The animator's whole frame: every layer, in order, over pA; then the pose and the twists.   (character.ts updateStanding)
 pub fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {

@@ -8,9 +8,9 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// `gd.flashlight.pos`: a light's row has no accessor (guards.ts 1632, 1644)
-fn seam_light_pos(g: &mut Game, l: LightId) -> V3 { todo!("needs: an accessor for Light.pos") }
+fn seam_light_pos(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].pos } // (skeleton 4 has the row)
 /// `gd.flashlight.dir`: a light's row has no accessor (guards.ts 1644)
-fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { todo!("needs: an accessor for Light.dir") }
+fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // (skeleton 4 has the row)
 /// `was.tgt === key`: the man by his ID, 'pt' by its word, null by None (guards.ts 1562)
 fn same_key(a: &Option<LitSeenTgt>, b: &Option<LitSeenTgt>) -> bool {
     match (a, b) {

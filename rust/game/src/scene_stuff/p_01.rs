@@ -119,7 +119,11 @@ pub fn word_for(g: &mut crate::game::Game, albedo: Option<&[f64]>, said: Option<
 
 /// PAINTS.get(row) (stuff.ts:110, 141, 196): the table and the array's identity are not in the skeleton.
 fn seam_paints_get(g: &mut Game, row: &[f64]) -> Option<Paint> {
-    todo!("needs: the PAINTS table on g.m.scene_stuff and a key for a paint's array (TypeScript keys by the array's identity; a slice has none)")
+    // TEMP-BRINGUP, SKELETON-GAP: the PAINTS table (stuff.ts:110, a WeakMap by the ARRAY's identity) and a name for a paint (an ID or a word, not its numbers).
+    // Until then NO paint is known: a box made as the game runs gets no finish and no stuff word from its colour (its maker's own `stuff` still stands).
+    // Wrong wherever a made box's material is read by a rule (what a round does to it, its sound).
+    let _ = (g, row);
+    None
 }
 
 /// PAINTS.set(row, next) (stuff.ts:142): as seam_paints_get.

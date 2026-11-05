@@ -10,35 +10,35 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 // ------------------------------------------------------------ seams: the one step the skeleton does not give yet
 
 /// RtLight.enabled. (guards.ts:2652)
-fn seam_lamp_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled of a LightId") }
+fn seam_lamp_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.intensity. (guards.ts:2652)
-fn seam_lamp_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.intensity of a LightId") }
+fn seam_lamp_intensity(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].intensity } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.kind, the number. (guards.ts:2652)
-fn seam_lamp_kind(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.kind of a LightId") }
+fn seam_lamp_kind(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].kind } // SKELETON-GAP was: RtLight.kind by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.owner; 0 where it has none. (guards.ts:2652)
-fn seam_lamp_owner(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.owner of a LightId") }
+fn seam_lamp_owner(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].owner } // SKELETON-GAP was: RtLight.owner by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.ttl. (guards.ts:2653)
-fn seam_lamp_ttl(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.ttl of a LightId") }
+fn seam_lamp_ttl(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].ttl } // SKELETON-GAP was: RtLight.ttl by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.transient. (guards.ts:2653)
-fn seam_lamp_transient(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.transient of a LightId") }
+fn seam_lamp_transient(g: &mut Game, l: LightId) -> bool { g.tab.light[l].transient.unwrap_or(false) } // SKELETON-GAP was: RtLight.transient by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.steady: its pos, radius, intensity. (guards.ts:2662)
-fn seam_lamp_steady(g: &mut Game, l: LightId) -> Option<(V3, f64, f64)> { todo!("needs: RtLight.steady of a LightId") }
+fn seam_lamp_steady(g: &mut Game, l: LightId) -> Option<(V3, f64, f64)> { g.tab.light[l].steady.map(|s| (s.pos, s.radius, s.intensity)) } // (skeleton 4 has the row)
 /// RtLight.pos. (guards.ts:2662)
-fn seam_lamp_pos(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.pos of a LightId") }
+fn seam_lamp_pos(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].pos } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.pos written. (guards.ts:2902)
-fn seam_lamp_set_pos(g: &mut Game, l: LightId, pos: V3) { todo!("needs: RtLight.pos written of a LightId") }
+fn seam_lamp_set_pos(g: &mut Game, l: LightId, pos: V3) { g.tab.light[l].pos = pos; } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.range. (guards.ts:2662)
-fn seam_lamp_range(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.range of a LightId") }
+fn seam_lamp_range(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].range } // SKELETON-GAP was: RtLight.range by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.radius. (guards.ts:2664)
-fn seam_lamp_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.radius of a LightId") }
+fn seam_lamp_radius(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].radius } // SKELETON-GAP was: RtLight.radius by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.dir. (guards.ts:2664)
-fn seam_lamp_dir(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.dir of a LightId") }
+fn seam_lamp_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.outerDeg. (guards.ts:2664)
-fn seam_lamp_outer_deg(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.outerDeg of a LightId") }
+fn seam_lamp_outer_deg(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].outer_deg } // SKELETON-GAP was: RtLight.outerDeg by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.innerDeg. (guards.ts:2664)
-fn seam_lamp_inner_deg(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.innerDeg of a LightId") }
+fn seam_lamp_inner_deg(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].inner_deg } // SKELETON-GAP was: RtLight.innerDeg by LightId; skeleton 4 has the row (g.tab.light)
 /// RtLight.color. (guards.ts:2664)
-fn seam_lamp_color(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.color of a LightId") }
+fn seam_lamp_color(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].color } // SKELETON-GAP was: RtLight.color by LightId; skeleton 4 has the row (g.tab.light)
 
 // ------------------------------------------------------------ small private helpers
 

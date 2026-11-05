@@ -35,47 +35,47 @@ fn las_slot(g: &Game, id: LaserRtId) -> usize {
 
 // ---- the seams: what the skeleton has no way to reach yet. A lamp (`RtLight`) is a bare `LightId` with no record behind it (notes.md, ## Skeleton).
 /// (lightshome.ts:188,190,204,216,252 `l.row`) undefined = none
-fn seam_lamp_row(g: &mut Game, l: LightId) -> Option<usize> { todo!("needs: RtLight.row, a lamp's record") }
+fn seam_lamp_row(g: &mut Game, l: LightId) -> Option<usize> { g.tab.light[l].row.map(|r| r as usize) } // SKELETON-GAP was: RtLight.row by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:188,190 `l.row = …`)
-fn seam_lamp_set_row(g: &mut Game, l: LightId, row: Option<usize>) { todo!("needs: RtLight.row, a lamp's record") }
+fn seam_lamp_set_row(g: &mut Game, l: LightId, row: Option<usize>) { g.tab.light[l].row = row.map(|r| r as f64); } // SKELETON-GAP was: RtLight.row by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:188 `l.owner`)
-fn seam_lamp_owner(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.owner, a lamp's record") }
+fn seam_lamp_owner(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].owner } // SKELETON-GAP was: RtLight.owner by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:196 `l.name`, in the error)
-fn seam_lamp_name(g: &mut Game, l: LightId) -> String { todo!("needs: RtLight.name, a lamp's record") }
+fn seam_lamp_name(g: &mut Game, l: LightId) -> String { g.tab.light[l].name.clone() } // SKELETON-GAP was: RtLight.name by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:184 `b.light.peakIntensity`)
-fn seam_lamp_peak_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.peakIntensity, a lamp's record") }
+fn seam_lamp_peak_intensity(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].peak_intensity } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:245 `l.peakIntensity = …`)
-fn seam_lamp_set_peak_intensity(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.peakIntensity, a lamp's record") }
+fn seam_lamp_set_peak_intensity(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].peak_intensity = x; } // SKELETON-GAP was: RtLight.peakIntensity by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:206 `l.pos`)
-fn seam_lamp_pos(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.pos, a lamp's record") }
+fn seam_lamp_pos(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].pos } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:252 `cone.pos = …`)
-fn seam_lamp_set_pos(g: &mut Game, l: LightId, x: V3) { todo!("needs: RtLight.pos, a lamp's record") }
+fn seam_lamp_set_pos(g: &mut Game, l: LightId, x: V3) { g.tab.light[l].pos = x; } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:206 `l.range`)
-fn seam_lamp_range(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.range, a lamp's record") }
+fn seam_lamp_range(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].range } // SKELETON-GAP was: RtLight.range by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:206 `l.radius`)
-fn seam_lamp_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.radius, a lamp's record") }
+fn seam_lamp_radius(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].radius } // SKELETON-GAP was: RtLight.radius by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:206 `l.kind`)
-fn seam_lamp_kind(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.kind, a lamp's record") }
+fn seam_lamp_kind(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].kind } // SKELETON-GAP was: RtLight.kind by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:207 `l.dir`)
-fn seam_lamp_dir(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.dir, a lamp's record") }
+fn seam_lamp_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:246,252 `l.dir = …`)
-fn seam_lamp_set_dir(g: &mut Game, l: LightId, x: V3) { todo!("needs: RtLight.dir, a lamp's record") }
+fn seam_lamp_set_dir(g: &mut Game, l: LightId, x: V3) { g.tab.light[l].dir = x; } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:207 `l.outerDeg`)
-fn seam_lamp_outer_deg(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.outerDeg, a lamp's record") }
+fn seam_lamp_outer_deg(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].outer_deg } // SKELETON-GAP was: RtLight.outerDeg by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:207 `l.innerDeg`)
-fn seam_lamp_inner_deg(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.innerDeg, a lamp's record") }
+fn seam_lamp_inner_deg(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].inner_deg } // SKELETON-GAP was: RtLight.innerDeg by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:208 `l.color`)
-fn seam_lamp_color(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.color, a lamp's record") }
+fn seam_lamp_color(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].color } // SKELETON-GAP was: RtLight.color by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:208 `l.intensity`)
-fn seam_lamp_intensity(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.intensity, a lamp's record") }
+fn seam_lamp_intensity(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].intensity } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:244 `l.intensity = …`)
-fn seam_lamp_set_intensity(g: &mut Game, l: LightId, x: f64) { todo!("needs: RtLight.intensity, a lamp's record") }
+fn seam_lamp_set_intensity(g: &mut Game, l: LightId, x: f64) { g.tab.light[l].intensity = x; } // SKELETON-GAP was: RtLight.intensity by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:210,215 `l.enabled`)
-fn seam_lamp_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled, a lamp's record") }
+fn seam_lamp_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:244,252 `l.enabled = …`)
-fn seam_lamp_set_enabled(g: &mut Game, l: LightId, x: bool) { todo!("needs: RtLight.enabled, a lamp's record") }
+fn seam_lamp_set_enabled(g: &mut Game, l: LightId, x: bool) { g.tab.light[l].enabled = x; } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
 /// (lightshome.ts:205 `l.steady`) its intensity, pos, radius
-fn seam_lamp_steady(g: &mut Game, l: LightId) -> Option<(f64, V3, f64)> { todo!("needs: RtLight.steady, a lamp's record") }
+fn seam_lamp_steady(g: &mut Game, l: LightId) -> Option<(f64, V3, f64)> { g.tab.light[l].steady.map(|s| (s.intensity, s.pos, s.radius)) } // (skeleton 4 has the row)
 
 /// Where the columns stand is the block's own struct here: what is left of the TypeScript's reading of them is that the module and this file agree on how much a part holds. (lightshome.ts columns)
 pub fn columns(g: &mut crate::game::Game) {

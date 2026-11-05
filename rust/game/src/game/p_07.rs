@@ -215,7 +215,11 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     g.m_per_px = game_view_px(g, lens, crate::game::GameViewPxCanvas { height: canvas.height });
     let statured = false;   // (DRESS.stature: statureTick is the picture's)
     let rig0 = out.len();
-    crate::combat::hand_props(g, &mut out);
+    // TEMP-BRINGUP: hand props skipped. What hangs on the men and lies in their hands as BOXES (combat.ts handProps: the rig, the kit, the pack, the gun's
+    // boxes) is the picture's list, and its way runs through the pose (hands' bones), packside, cast and the paints. Put the call back when poses are handles
+    // and Box has a table. With it out, `fog_of_war.rig_from..rig_to` is an empty run.
+    const HAND_PROPS: bool = false;
+    if HAND_PROPS { crate::combat::hand_props(g, &mut out); }
     g.fog_of_war.rig_from = rig0 as f64; g.fog_of_war.rig_to = out.len() as f64;
     g.fx.clear();   // (DRESS.fx down: a host that draws nothing keeps no list of them)
     if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }

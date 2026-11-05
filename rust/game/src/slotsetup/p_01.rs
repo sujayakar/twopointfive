@@ -317,16 +317,10 @@ fn back_take_lent(g: &mut Game, input: InputId) -> bool {
 // The skeleton's gaps, each one step (notes.md, ## Skeleton).
 
 /// rf.attachment (slotsetup.ts:93, 122): rifle_attachment takes neither g nor the gun
-fn seam_rifle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> {
-    todo!("needs: rifle_attachment(g, id)")
-}
+fn seam_rifle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { let i = g.fa[rf].att_idx; if i >= 0 { g.fa[rf].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_attachment taking g and the FirearmId (weapons.ts:533-538)
 
 /// rf.left(a) (slotsetup.ts:93, 122): rifle_left takes neither g nor the gun
-fn seam_rifle_left(g: &mut Game, rf: FirearmId, a: crate::weapons::RifleAttachment) -> f64 {
-    todo!("needs: rifle_left(g, id, a)")
-}
+fn seam_rifle_left(g: &mut Game, rf: FirearmId, a: crate::weapons::RifleAttachment) -> f64 { match a { crate::weapons::RifleAttachment::Ring => g.fa[rf].rings, crate::weapons::RifleAttachment::Cam => g.fa[rf].cams, _ => g.fa[rf].shells } } // SKELETON-GAP: crate::weapons::rifle_left taking g and the FirearmId (weapons.ts:533-538)
 
 /// rf.cycleAttachment() (slotsetup.ts:127): rifle_cycle_attachment takes neither g nor the gun
-fn seam_rifle_cycle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> {
-    todo!("needs: rifle_cycle_attachment(g, id)")
-}
+fn seam_rifle_cycle_attachment(g: &mut Game, rf: FirearmId) -> Option<crate::weapons::RifleAttachment> { let n = g.fa[rf].attachments.len() as i32; g.fa[rf].att_idx = if n > 0 { (g.fa[rf].att_idx + 1) % n } else { -1 }; let i = g.fa[rf].att_idx; if i >= 0 { g.fa[rf].attachments.get(i as usize).copied() } else { None } } // SKELETON-GAP: crate::weapons::rifle_cycle_attachment taking g and the FirearmId (weapons.ts:533-538)

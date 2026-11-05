@@ -77,7 +77,7 @@ fn to_fixed_2(x: f64) -> String {
 }
 
 /// The body of gapsOf, the openings as values. (cover.ts gapsOf)
-fn gap_openings(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, mut solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<Opening> {
+pub fn gap_openings(nav: &crate::cover::GapsOfNav, along_x: bool, k: &crate::knobs::CoverK, mut solid: Option<&mut dyn FnMut(V3, V3) -> bool>) -> Vec<Opening> {
     let (nav_w, nav_h) = (nav.w as i32, nav.h as i32);
     let grid = Grid { nav, along_x, w: if along_x { nav_w } else { nav_h }, h: if along_x { nav_h } else { nav_w }, c: nav.cell };
     let (w, h) = (grid.w, grid.h);

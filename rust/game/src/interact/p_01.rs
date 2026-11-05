@@ -566,7 +566,8 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
 }
 
 /// (interact.ts:54 `Doors.USE_REACH`, doors.ts:1183) a class's static the skeleton has no entry for
-fn seam_doors_use_reach() -> f64 { todo!("needs: Doors.USE_REACH as a const") }
+const DOORS_USE_REACH: f64 = 1.35; // SKELETON-GAP: crate::doors::DOORS_USE_REACH (doors.ts:1183)
+fn seam_doors_use_reach() -> f64 { DOORS_USE_REACH }
 
 #[cfg(test)]
 mod tests {

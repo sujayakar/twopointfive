@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 // ---- the one seam left: one step the skeleton cannot yet do (notes.md, ## Skeleton)
 
 /// pose.at, the pose's place for a layer of rust/sim: a by-value Pose has none (index: no Pose.at)
-fn seam_pose_at(pose: &crate::anim_skeleton::Pose) -> usize { todo!("needs: Pose.at, a by-value pose's place for sim::layers (with_pose takes a pool or bench place)") }
+fn seam_pose_at(pose: &crate::anim_skeleton::Pose) -> usize { crate::anim_skeleton::b_01::stage_pose(pose) } // SKELETON-GAP: Pose.at (skeleton.ts:145): the bring-up stages the pose, anim_skeleton/b_01.rs
 
 // ---- small helpers
 
@@ -61,24 +61,24 @@ fn tell_dur_of(kind: TellKind) -> f64 { *crate::character::tell_dur().get(String
 
 // ---- the layers of rust/sim (args: their numbers already on the bench)
 
-fn ask_crouch_pose(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::crouch_pose(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.p_c)) as f64 }
-fn ask_run_arms(slot: f64, pose: &crate::anim_skeleton::Pose) -> f64 { ::sim::layers::run_arms(slot_no(slot), seam_pose_at(pose)) as f64 }
-fn ask_soft_knees(slot: f64, pose: &crate::anim_skeleton::Pose) -> f64 { ::sim::layers::soft_knees(slot_no(slot), seam_pose_at(pose)) as f64 }
-fn ask_run_plant(g: &Game, c: CharId, slot: f64) -> f64 { ::sim::layers::run_plant(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)) as f64 }
-fn ask_life(g: &Game, c: CharId, slot: f64) -> f64 { ::sim::layers::life_layer(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)) as f64 }
-fn ask_sneak_body(g: &Game, c: CharId, slot: f64) -> f64 { ::sim::layers::sneak_body(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)) as f64 }
-fn ask_sneak_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::sneak_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b)) as f64 }
-fn ask_steady(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::steady_layer(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_c)) as f64 }
-fn ask_carry_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::carry_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.p_aim)) as f64 }
-fn ask_long_body(g: &Game, c: CharId, slot: f64) -> f64 { ::sim::layers::long_body(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)) as f64 }
-fn ask_long_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::long_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.p_aim), seam_pose_at(&a.rest)) as f64 }
-fn ask_wall_body(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::wall_body(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_c), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)) as f64 }
-fn ask_wall_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::wall_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)) as f64 }
-fn ask_kick_body(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::kick_body(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_c)) as f64 }
-fn ask_signal(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::signal_layer(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)) as f64 }
-fn ask_smoke_pose(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::smoke_pose(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)) as f64 }
-fn ask_nv_pose(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::nv_pose(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)) as f64 }
-fn ask_tell(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ::sim::layers::tell_layer(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)) as f64 }
+fn ask_crouch_pose(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::crouch_pose(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.p_c)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_run_arms(slot: f64, pose: &crate::anim_skeleton::Pose) -> f64 { ({ let ran__ = ::sim::layers::run_arms(slot_no(slot), seam_pose_at(pose)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_soft_knees(slot: f64, pose: &crate::anim_skeleton::Pose) -> f64 { ({ let ran__ = ::sim::layers::soft_knees(slot_no(slot), seam_pose_at(pose)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_run_plant(g: &Game, c: CharId, slot: f64) -> f64 { ({ let ran__ = ::sim::layers::run_plant(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_life(g: &Game, c: CharId, slot: f64) -> f64 { ({ let ran__ = ::sim::layers::life_layer(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_sneak_body(g: &Game, c: CharId, slot: f64) -> f64 { ({ let ran__ = ::sim::layers::sneak_body(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_sneak_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::sneak_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_steady(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::steady_layer(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_c)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_carry_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::carry_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.p_aim)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_long_body(g: &Game, c: CharId, slot: f64) -> f64 { ({ let ran__ = ::sim::layers::long_body(slot_no(slot), seam_pose_at(&g.ch[c].anim.p_a)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_long_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::long_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.p_aim), seam_pose_at(&a.rest)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_wall_body(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::wall_body(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_c), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_wall_arms(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::wall_arms(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_kick_body(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::kick_body(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_c)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_signal(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::signal_layer(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_smoke_pose(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::smoke_pose(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_nv_pose(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::nv_pose(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
+fn ask_tell(g: &Game, c: CharId, slot: f64) -> f64 { let a = &g.ch[c].anim; ({ let ran__ = ::sim::layers::tell_layer(slot_no(slot), seam_pose_at(&a.p_a), seam_pose_at(&a.p_b), seam_pose_at(&a.rest)); crate::anim_skeleton::b_01::stage_back(); ran__ }) as f64 }
 
 // ---- the layers' columns (the static LayerCols tables: get and put, by the order rust/sim/src/layers.rs gives)
 

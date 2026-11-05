@@ -17,9 +17,14 @@ const CONE_TAIL: &str = ". Under the fog of war each teammate sees only the cone
 
 // ---------------------------------------------------------------- seams
 
+/// HARD_AT's one row: the structure and its `stuns` (difficulty.ts:92-94)
+const HARD_AT_THE_BLOCK: (&str, f64) = ("the block", 1.0); // SKELETON-GAP: crate::knobs::HardAtK with its rows
+
 /// HARD_AT[structure]?.stuns. (difficulty.ts:92, read at :150, :167, :352, :354)
 fn seam_hard_at_stuns(g: &mut Game, structure: &str) -> Option<f64> {
-    todo!("needs: g.k.hard_at as rows, HardAtK came out empty; TypeScript's one row is 'the block' -> stuns 1")
+    // SKELETON-GAP: g.k.hard_at as rows by structure name (HardAtK is an empty struct). The table's one row, as difficulty.ts:92 has it.
+    let _ = g;
+    if structure == HARD_AT_THE_BLOCK.0 { Some(HARD_AT_THE_BLOCK.1) } else { None }
 }
 
 /// the store's kept levers written as just these, or dropped if neither. (difficulty.ts:277)

@@ -70,7 +70,7 @@ struct StrokeLamp {
 
 /// `l.enabled`, `l.color`, `l.intensity`, `l.dir` of an `RtLight` (weather.ts:493 to 495)
 fn seam_stroke_lamp(g: &mut Game, l: LightId) -> StrokeLamp {
-    todo!("needs: a way to read an RtLight's fields from its LightId")
+    let r = &g.tab.light[l]; StrokeLamp { enabled: r.enabled, color: r.color, intensity: r.intensity, dir: r.dir } // (skeleton 4 has the row)
 }
 
 #[cfg(test)]

@@ -376,6 +376,9 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     let me_cam = g.tab.cmd_seat[me].cam;
     g.ticking = true;
     crate::scene_collision::tick_open(g);
+    // BRING-UP: `RUST_KNOBS.tick = true` (game.ts:1721). The write of the knobs into the module (knobsToRust) is still dropped: the block the host
+    // hands in holds them. Without the flag every animator's knobsNow would write them again (character.ts LAYERS.knobs).
+    g.m.rustknobs.rust_knobs.tick = true;
     // a record from anyone made one an honest seat could have sent, before anything reads it
     let mut checked: Vec<crate::cmd::PlayerCmd> = Vec::with_capacity(n);
     for i in 0..n {
@@ -534,4 +537,5 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::teamtally::team_tally_tick(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
+    g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1855, the finally)
 }

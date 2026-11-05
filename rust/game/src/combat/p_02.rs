@@ -12,15 +12,15 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// `g.audio.play(name, at, gain, { duration })`: `opts` is a map of `crate::Opaque`, which holds no number.   (combat.ts:660)
 fn seam_audio_play(g: &mut Game, name: &str, at: V3, gain: f64, duration: f64) { todo!("needs: game_audio_like_play's opts able to hold rate and duration") }
 /// `gd.flashlight.enabled`: a LightId has no table and RtLight no accessors.   (combat.ts:399, 549)
-fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { todo!("needs: RtLight.enabled of a LightId") }
+fn seam_light_enabled(g: &mut Game, l: LightId) -> bool { g.tab.light[l].enabled } // SKELETON-GAP was: RtLight.enabled by LightId; skeleton 4 has the row (g.tab.light)
 /// `gd.flashlight.color`: a LightId has no table and RtLight no accessors.   (combat.ts:549)
-fn seam_light_color(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.color of a LightId") }
+fn seam_light_color(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].color } // SKELETON-GAP was: RtLight.color by LightId; skeleton 4 has the row (g.tab.light)
 /// `sideLocal(c.ch, p)`: it wants a `&PackChar` where a body holds a `RigId`.   (combat.ts:506)
 fn seam_side_local(g: &mut Game, c: CharId, p: crate::packside::SidePlace) -> Option<crate::packside::SidePlace> { todo!("needs: side_local taking the body's RigId") }
 /// `b.owner` of a box made this frame: Box has no table for a made box (`g.none`).   (combat.ts:456)
-fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { todo!("needs: the table a made Box lives in") }
+fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).owner } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 /// `b.mkey = k` of a box made this frame: the same.   (combat.ts:456)
-fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { todo!("needs: the table a made Box lives in") }
+fn seam_box_set_mkey(g: &mut Game, b: BoxId, k: f64) { crate::scene_boxes::b_01::any_box_mut(g, b).mkey = Some(k); } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 
 // ---------------------------------------------------------------- panels and contact
 

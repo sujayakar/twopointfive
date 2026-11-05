@@ -274,12 +274,12 @@ pub fn game_reach_pending(g: &mut crate::game::Game) -> f64 {
 
 fn seam_same_man(g: &mut Game, gd: GuardId, c: CharId) { todo!("needs: what sameMan becomes (game.ts:756): ManCols is empty and neither Guard nor Character holds one, so same_man(&mut ManCols, ManCols) has nothing to be given; Guard holds owner, rank, reason and since as plain fields") }
 fn seam_route_i_negative(route_i: f64) -> usize { todo!("needs: Guard.route_i to hold -1 (game.ts:602, 757; needs.ts:146, opening.ts:81 test < 0): it is usize") }
-fn seam_light_kind(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.kind by LightId (game.ts:926, 935, 949, 950)") }
-fn seam_light_pos(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.pos by LightId (game.ts:932, 956)") }
-fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { todo!("needs: RtLight.dir by LightId (game.ts:956)") }
-fn seam_light_range(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.range by LightId (game.ts:932, 956)") }
-fn seam_light_radius(g: &mut Game, l: LightId) -> f64 { todo!("needs: RtLight.radius by LightId (game.ts:956)") }
-fn seam_light_reach(g: &mut Game, l: LightId) -> Option<Vec<u32>> { todo!("needs: RtLight.reach by LightId (game.ts:949, 956)") }
-fn seam_light_reach_dir(g: &mut Game, l: LightId) -> Option<Vec<u32>> { todo!("needs: RtLight.reachDir by LightId (game.ts:935, 949, 952)") }
-fn seam_light_set_reach(g: &mut Game, l: LightId, mask: Vec<u32>) { todo!("needs: a writer of RtLight.reach by LightId (game.ts:926, 958)") }
-fn seam_light_set_reach_dir(g: &mut Game, l: LightId, mask: Vec<u32>) { todo!("needs: a writer of RtLight.reachDir by LightId (game.ts:926)") }
+fn seam_light_kind(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].kind } // SKELETON-GAP was: RtLight.kind by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_pos(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].pos } // SKELETON-GAP was: RtLight.pos by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_dir(g: &mut Game, l: LightId) -> V3 { g.tab.light[l].dir } // SKELETON-GAP was: RtLight.dir by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_range(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].range } // SKELETON-GAP was: RtLight.range by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_radius(g: &mut Game, l: LightId) -> f64 { g.tab.light[l].radius } // SKELETON-GAP was: RtLight.radius by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_reach(g: &mut Game, l: LightId) -> Option<Vec<u32>> { g.tab.light[l].reach.clone() } // SKELETON-GAP was: RtLight.reach by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_reach_dir(g: &mut Game, l: LightId) -> Option<Vec<u32>> { g.tab.light[l].reach_dir.clone() } // SKELETON-GAP was: RtLight.reachDir by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_reach(g: &mut Game, l: LightId, mask: Vec<u32>) { g.tab.light[l].reach = Some(mask); } // SKELETON-GAP was: RtLight.reach by LightId; skeleton 4 has the row (g.tab.light)
+fn seam_light_set_reach_dir(g: &mut Game, l: LightId, mask: Vec<u32>) { g.tab.light[l].reach_dir = Some(mask); } // SKELETON-GAP was: RtLight.reachDir by LightId; skeleton 4 has the row (g.tab.light)

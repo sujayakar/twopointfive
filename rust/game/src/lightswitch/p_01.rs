@@ -11,7 +11,7 @@ type Ray = crate::scene_collision::Raycast;
 
 // ---------------------------------------------------------------- seam: what the skeleton still cannot do (notes.md, Skeleton)
 /// `S.sweeps(x, z, pad)`: the closure of `doors.swingOf`'s answer, which `DoorSwing` lost
-fn seam_swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool { todo!("needs: DoorSwing.sweeps as a function") }
+fn seam_swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: f64) -> bool { crate::doors::p_02::swing_sweeps(s, x, z, pad) } // SKELETON-GAP: crate::doors::door_swing_sweeps(&DoorSwing, x, z, pad), the closure of swingOf's answer (doors.ts:559); the body is doors/p_02.rs swing_sweeps
 
 // ---------------------------------------------------------------- finding them
 /// Is the rule running: nothing under a show. (lightswitch.ts switchesLive)

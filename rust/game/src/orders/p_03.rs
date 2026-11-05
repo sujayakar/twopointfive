@@ -143,8 +143,8 @@ fn drop_stock_word(s: &str) -> &str {
 }
 
 // ---- what skeleton 4 still cannot reach ----
-fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { todo!("needs: Box.owner of any box of the world: Box has no table (orders.ts:805, 809)") }
-fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { todo!("needs: Box.flags of any box of the world: Box has no table (orders.ts:805)") }
+fn seam_box_owner(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).owner } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
+fn seam_box_flags(g: &mut Game, b: BoxId) -> f64 { crate::scene_boxes::b_01::any_box(g, b).flags } // TEMP-BRINGUP: the bring-up's table of made boxes (scene_boxes/b_01.rs)
 fn seam_arm_label(g: &mut Game, arm: &OrderLabel, t: &OrderTarget) -> String { todo!("needs: a public name for these arms' closures: Door*, ThrowRow, PairGo (orders.ts:854)") }
 /// Err: the word he says for why not
 fn seam_arm_can(g: &mut Game, arm: &OrderCan, gd: GuardId, t: &OrderTarget) -> Result<(), String> { todo!("needs: a public name for these arms' closures: PairTake, PairDark (orders.ts:850, 868)") }

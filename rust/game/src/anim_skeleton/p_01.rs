@@ -55,7 +55,8 @@ fn cast_nums<'a>(cast: &'a LayerCast, name: &str) -> Option<&'a Vec<f64>> {
 
 /// The slot to ask a layer of `pose` in, the rig `ch` with its roles, lists and tables written onto the bench first. A pose is held by value, so the slot is −1, the bench.   (skeleton.ts layerSlot)
 pub fn layer_slot(g: &mut crate::game::Game, ch: RigId, pose: &crate::anim_skeleton::Pose, cast: &crate::anim_skeleton::LayerCast) -> f64 {
-    let slot = slot_of(pose);
+    // BRING-UP (SKELETON-GAP: Pose.home): a pose has no home, and a layer runs only in a pool: the stage's slot, where the caller's `pose.at` seams put the poses (b_01.rs)
+    let slot = crate::anim_skeleton::b_01::STAGE_SLOT as f64;
     if bench_rig(g, ch, Some(true)).is_none() {
         panic!("posing: a layer was asked of a rig the module's bench does not hold (anim/skeleton.ts benchRig: the rig's nodes or its order are more than the bench has room for)");
     }
@@ -432,7 +433,7 @@ pub fn clip_in(g: &mut crate::game::Game, x: crate::sim_sim::SimExports, clip: C
 }
 
 /// The tracks of a clip into rust/sim/src/clips.rs. None: not asked of the module at all, its number stays −1.
-fn clip_write(clip: &crate::anim_gltf::Clip) -> Option<f64> {
+pub fn clip_write(clip: &crate::anim_gltf::Clip) -> Option<f64> {
     if clip.tracks.is_empty() || !clip.tracks.iter().all(|t| !t.times.is_empty() && t.values.len() == t.times.len() * (if t.path == 1.0 { 4 } else { 3 })) {
         return None;
     }
@@ -485,7 +486,9 @@ pub fn layer_clips_fit(g: &mut crate::game::Game, clips: &[ClipId], nodes: f64) 
 
 /// skeleton.ts:332 POSEMATH.singles, a row that stays a test: sample_clip has no g to read g.k.posemath.singles by.
 fn seam_posemath_singles() -> bool {
-    todo!("needs: sample_clip's `singles: bool` parameter, as blend_pose has (g.k.posemath.singles)")
+    // SKELETON-GAP: sample_clip(clip, t, loop_, out, singles: bool), as blend_pose has. Until then THE PAGE'S value, which is what a tick reads; the one
+    // place that turns the row off (the animator's constructor measuring in doubles, character.ts:1837) cannot reach this and would sample in singles.
+    crate::knobs::page_posemath().singles
 }
 
 /// Sample clip at time t (seconds, wrapped if loop) into pose (only nodes with tracks are written).   (skeleton.ts sampleClip)
