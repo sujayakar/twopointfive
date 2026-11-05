@@ -68,7 +68,7 @@ const N = Number(flag('--n') ?? 200000), SEED = Number(flag('--seed') ?? 1);
 const files = (flag('--levels') ?? readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).join(',')).split(',');
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 const RUSTED = argv.includes('--rust'), UNSAID = RUSTED && process.env.RUST_BREAK === '1';
-const SIM: any = RUSTED ? await import(`${ROOT}/src/sim/sim.ts`) : null;
+const SIM: any = await import(`${ROOT}/src/sim/sim.ts`);
 if (RUSTED) { const no = SIM.simWhyNot(); if (no) { console.log(`=== segment-ident --rust: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const RAYED = { n: 0, there: 0, hit: 0, leaf: 0, tilted: 0, round: 0, cut: 0, roundT: 0, cutT: 0, swapped: 0, turned: 0 };   // (the rays over every level: asked, the module's, and what they hit)
 let bad = 0; const ever = { lines: 0, rays: 0, circles: 0 };   // (answers that differed over every level, by the row that gave them: the red path must turn BOTH red)
@@ -117,6 +117,7 @@ for (const file of files) {
   const realOpen = col.glassOpen; const holes = (bi: number, p: Vec3) => ((bi * 7919 + Math.floor(p[0] * 3) * 31 + Math.floor(p[1] * 3) * 17 + Math.floor(p[2] * 3)) & 3) === 0;   // (a made-up set of fallen cells, the same for both)
   let diff = 0, diffL = 0, diffC = 0, diffR = 0, blockedN = 0, paneN = 0, first = '', inRust = 0;   // (of `diff`: diffL the module's line answers, diffC its circles'; the rest is the walk as it was, or a copy that fell)
   if (RUSTED) { CUT.cutConfig.on = true; SIM.RUST.lines = SIM.RUST.rays = SIM.RUST.circles = true; col.tickOpen(); }   // (the row raised here: standing a level up puts every row down, as the stand has them — and the copy made the boxes as they stand, the questions below sent to the module)
+  else SIM.RUST.lines = SIM.RUST.rays = SIM.RUST.circles = false;   // (the plain run holds the TypeScript walk to this file's own: it puts the module's rows down itself, after the level is stood, whatever the stand has up — the module lists no pane on a line something solid ended, which --rust allows for and this comparison does not)
   for (let i = 0; i < N; i++) {
     if (i === (N >> 1)) { for (const B of broken) reshape(B); if (RUSTED && !UNSAID) col.wrote(); }
     const a = pick(); let b = pick(); const r = rnd();

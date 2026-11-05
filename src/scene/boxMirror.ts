@@ -133,7 +133,12 @@ export class BoxMirror extends HostOwned {
    *  asks them all again; and whether a grid has stepped over this one (`gridCopy`), from when on a row that is written is said to it (`grid_dirty`). */
   private copy = 0; private gridOver = false;
   private cellsWrote = true;
+  /** the grid of the tick that is open, for the compare a question owes after the grid was written inside it (`again`): the box world's own arrays, held for the
+   *  length of the tick and let go as it shuts */
+  private gridOf: { cells: number[][]; tiltedAt: number[]; W: number; H: number; cs: number } | null = null;
   private used = 0; private fits = true;
+  /** did the level fit the copy when a tick last opened it (false = every question of this world is the TypeScript's) */
+  get fit(): boolean { return this.fits; }
   private readonly caps = { boxes: 0, leaves: 0, cuts: 0, panes: 0, cells: 0, items: 0, tilted: 0, things: 0 };
   // the furniture's copy: where its two tables are, the count of writes it was copied at (−1 = not in this tick), whether it stood then, and whether
   // every row is owed (the world newly this game's, another maths, a snapshot put back: a row's cos and sin are compared by nobody)
@@ -183,11 +188,12 @@ export class BoxMirror extends HostOwned {
       this.fits = this.grid(cells, tiltedAt, W, H) && boxes.length <= this.caps.boxes; }
     if (this.fits) this.statics(boxes, all);
     if (this.fits) this.x.world_shape(this.slot, W, H, cs, boxes.length, this.nTilted);
+    this.gridOf = { cells, tiltedAt, W, H, cs };
     this.ownAt = -1; this.thingsAt = -1; this.own = leaves; this.owes = false; this.rowLines = lines; this.rowRays = rays; this.rowCircles = circles; this.rowSight = sight; this.rowSenses = senses;
     this.live = this.fits; this.lines = this.live && lines; this.rays = this.live && rays; this.circles = this.live && circles; this.sight = this.live && sight; this.senses = this.live ? senses : 0;
   }
   /** the tick is over: from here the TypeScript answers */
-  shut(): void { this.live = this.lines = this.rays = this.circles = this.sight = this.owes = false; this.senses = 0; this.own = null; this.walk = null; }   // (and nothing of the game is held from here: a world outlives its game)
+  shut(): void { this.live = this.lines = this.rays = this.circles = this.sight = this.owes = false; this.senses = 0; this.own = null; this.walk = null; this.gridOf = null; }   // (and nothing of the game is held from here: a world outlives its game)
 
   /** the grid: cell c's statics in the order they were filed, one run after another; and the tilted statics' own list. False = it does not fit. */
   private grid(cells: number[][], tiltedAt: number[], W: number, H: number): boolean {
@@ -233,11 +239,16 @@ export class BoxMirror extends HostOwned {
   again(boxes: Box[], walk: Walk): void {
     this.owes = false; if (!this.live) return;
     this.walk = walk;
+    const G = this.gridOf!;
+    if (this.cellsWrote) { this.cellsWrote = false; this.fits = this.grid(G.cells, G.tiltedAt, G.W, G.H) && boxes.length <= this.caps.boxes; if (!this.fits) { this.shut(); return; } }   // (…the grid too, where it was the grid: what a tick's open does)
     this.statics(boxes, false); if (!this.fits) { this.shut(); return; }
+    this.x.world_shape(this.slot, G.W, G.H, G.cs, boxes.length, this.nTilted);
     this.lines = this.rowLines; this.rays = this.rowRays; this.circles = this.rowCircles; this.sight = this.rowSight; this.senses = this.rowSenses;
   }
-  /** …or the GRID was (a static added, the list cut back): the TypeScript answers for what is left of this tick, and the cells are copied as the next opens */
-  wroteGrid(): void { this.cellsWrote = true; this.shut(); }
+  /** …or the GRID was (a static added, the list cut back): the same debt, and the compare that pays it copies the cells again first. (Until the count of
+   *  questions the TypeScript took — sim.ts FELL — this shut the copy for what was left of the tick: a wall holed was a tick whose every later question,
+   *  the senses' and the rules' steps among them, the TypeScript answered.) Outside a tick nothing is owed: the next open copies the cells. */
+  wroteGrid(): void { this.cellsWrote = true; this.wrote(); }
 
   /** THE LEAVES A QUESTION IS ASKED WITH (collision.ts dynamicBoxes): which of the module's lists holds them. The game's own list — the array that stood there
    *  as the tick opened — is list 0, copied at the tick's first question with it and again after a leaf is written (`leafWrote`). Any other array is a list a question

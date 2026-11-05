@@ -303,6 +303,33 @@ export const RUST = {
   get rays(): boolean { return raysOn; },
   set rays(v: boolean) { raysOn = !!v && !simWhyNot(); },
 };
+/** A QUESTION THE TYPESCRIPT ANSWERED WHILE ITS ROW WAS UP, COUNTED (`?fell` on the page, `TPS_FELL=1` on the harness; `=throw` stops at the first).
+ *  A row that is on sends its questions to the module only where the module can answer: inside a tick with the game's copy standing, under a cap, with a
+ *  shape it knows. Everywhere else the TypeScript still answers, which is why it cannot be deleted yet. This is the list of those places, by row and by
+ *  reason, as a run met them: zero for a row is what lets its TypeScript go. Off (the default) it costs one test at a place that was falling back anyway.
+ *  A tool of the build's, never a rule of play: it counts and changes no answer. */
+export const FELL = { on: false, hard: false, who: 0, n: {} as Record<string, number> };
+export function fell(row: string, why: string): void {
+  let k = row + ' · ' + why;
+  if (FELL.who) {   // (`=who`: …and who asked — the first two callers outside the box world's own files, `=who6` the first six, so the count says which code still asks outside a tick)
+    const st = (new Error().stack ?? '').split('\n').slice(2).map(l => l.trim().replace(/^at /, '').replace(/\(?[^()\s]*\/(src|tools)\//, '($1/').replace(/:\d+\)?$/, '')).filter(l => !/scene\/(collision|boxMirror)\.ts/.test(l));
+    k += ' · asked by ' + st.slice(0, FELL.who).join(' < ');
+  }
+  FELL.n[k] = (FELL.n[k] ?? 0) + 1;
+  if (FELL.hard) throw new Error(`rust: the TypeScript answered for the row "${row}": ${why}`);
+}
+/** THE ROWS THAT ARE ONE WAY IN: no run of the gate reaches their TypeScript (the box world's lines and circles, the fog's pass, the posing
+ *  functions). A count on one of them is a way back in that somebody opened, so the tool that counted says so and ends red (headless.ts; the page's
+ *  check reads `fellSealed`). A family adds its row here in the step that closes its last fallback, and its TypeScript can go in the step after.
+ *  NOT YET `rays`: a ray whose nearest thing is a pane the host says is open there flies on in the TypeScript walk (collision.ts raycast; some five
+ *  hundred a mission with glass in it), until a pane's open cells are in the module's copy and the module's ray flies on by itself. */
+export const SEALED: readonly string[] = ['lines', 'circles', 'fog', 'poses'];
+/** the sealed rows the count has met */
+export const fellSealed = (): string[] => SEALED.filter(r => Object.keys(FELL.n).some(k => k.startsWith(r + ' · ')));
+/** the count's switches from a word (`1`, `throw`, `who`, `who6`): the harness's TPS_FELL, the page's ?fell */
+export function fellWord(w: string): void { FELL.on = true; FELL.hard = w === 'throw'; const m = /^who(\d*)$/.exec(w); FELL.who = m ? Number(m[1] || 2) : 0; }
+/** the count so far, the busiest first, as one line a row and reason */
+export const fellLines = (): string[] => Object.entries(FELL.n).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${v} × ${k}`);
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
 const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk', 'props', 'slabs', 'items'];
 /** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page and both of the harness's stands; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` /

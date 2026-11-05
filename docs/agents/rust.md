@@ -1469,6 +1469,42 @@ first system across (the game's own maths). No rule of play has changed and noth
   THE PAGE (`rust-page.cjs`, headless Chromium on the software adapter; never seen on a GPU): `plain` and `systems` play with the seventeen rows up,
   240 frames, the game in TypeScript to the bit; `nojit` still boots and plays with every row off. THE DAY THE TWINS GO, A PAGE WITH NO WEBASSEMBLY
   CANNOT PLAY, and says so on a card instead.
+- **One way in** (2026-11-04; the maintainer: "let's get the rust merged asap and delete the typescript"). A row that is on sends its questions to the
+  module only where the module can answer; everywhere else the TypeScript still did, quietly, which is why a twin could not be deleted. This is the step
+  that finds those places and closes them, a family at a time. NO RULE OF PLAY MOVES: every answer is the same answer, by digest (the 42 on both stands).
+  THE COUNT (`src/sim/sim.ts FELL`, `fell(row, why)`): `TPS_FELL=1` in front of any headless tool counts every question the TypeScript answered while its
+  row was up and prints `FELL <n> × <row> · <why>` as the tool ends (`FELL none`); a play-through prints the sum of its runs. `TPS_FELL=who` adds the
+  first two callers (`who6`: six), `=throw` stops at the first. On the page: `?fell`, read by `window.__sim.fell()`. Off it costs one test at a place that
+  was falling back anyway. A fallback site calls `if (FELL.on) fell('<row>', '<why in plain words>')`: A FALLBACK THAT IS NOT COUNTED IS NOT KNOWN.
+  THE SEAL (`sim.ts SEALED`): the rows no run may reach the TypeScript of. A tool that counted one prints `FELL SEALED ROW REACHED` and exits 1, and
+  `rust-page.cjs`'s `systems` job fails on one in the real page. `FELL_BREAK=1` with `TPS_FELL=1` is the red path (questions outside a tick go back to
+  the TypeScript; it must end red). SEALED TODAY: `lines`, `circles`, `fog`, `poses`. A family adds its row in the step that closes its last fallback,
+  and its TypeScript can go in the step after. NOT `rays` yet: a ray whose nearest thing is a pane the host says is open there flies on in the
+  TypeScript walk (some five hundred a mission with glass in it) until a pane's state is in the module.
+  WHAT WAS CLOSED FOR THE SEALED ROWS:
+  - A QUESTION OUTSIDE A TICK. The module answers only over a copy of the box world that has been PROVEN (every static compared with its row), and a
+    tick was the only stretch with a proof. `StaticCollision.window(fn)` proves the copy once and runs `fn` with its questions going to the module; a
+    single line, circle or ray asked outside every window proves the copy for itself and shuts it behind the answer (`collision.ts lone`; `ANYTIME.proofs`
+    counts those: code that asks many in a row opens a window). A tick's open is still a tick's: the window and the lone question stand the copy by
+    a step of their own (`stand`), so a check that counts ticks by `tickOpen` counts ticks.
+  - THE GRID WRITTEN INSIDE A TICK (`boxMirror.ts wroteGrid`). A wall holed (`addStatic`) or the list cut back used to SHUT the copy for what was
+    left of the tick, and every later question of that tick, the senses' and the rules' steps among them, was the TypeScript's. It is a debt now, as
+    `wrote` is, and the compare that pays it copies the cells first.
+  - A RAY OF NO LENGTH meets nothing, said once at the top of `collision.ts raycast` for both walks.
+  - THE STAGE (`anim/skeleton.ts stageOpen`, `stageShut`; `Character.update` and `CharacterAnimator.update` open it). An animator's layers are handed
+    their poses by their places in one pool of the module, so an update's poses must STAND IN A BLOCK. A man of a ticking game has his in the game's
+    block. Every other update had none and was posed by the TypeScript: a man posed as he is spawned, before any tick has opened over him; a menu's
+    figure, who is in no game; a game whose block another game's tick has parked. Now a set at home has its block bound as the update opens, and a set
+    with no home is lent the stage, a block of that file's own, for the one update. The same floats either way. A pool with no room is an error.
+  EVERY LEVEL AGAINST THE COPY'S CAPS: `bun run tools/qa/copyfit-check.ts` (`COPYFIT_BREAK=1` its red path) stands each level of `levels/` up and reads
+  what it holds against the module's tables: statics (the fullest level 16 % of 8,192 on the page's stand), cells, the cells' entries, tilted statics,
+  the cut rows the copy spent, leaves, furniture (61 of 128, the tightest). A level that does not fit would be a level every question of which is the
+  TypeScript's, and the count says so by its reason.
+  WHAT THE COUNT READS, the 42 on the page's stand (the frozen stand has only the first): `paths · a search with a penalty has no Rust` (some 8,500);
+  `light · outside a tick` (5,730, one caller: an order given between ticks places the calm torch); `rays` at an open pane. Each is its family's.
+  WHAT WAS RUN: the 42 on both stands with the count, digests equal to the build before; `rust-check` quick on both stands and its red path; `--both` on
+  runs that hole walls inside ticks (0 answers differ, 0 stale rows); layer-ident, simstate, rollback static, knobs, dice; the page check with `?fell`
+  (headless Chromium, software adapter; never seen on a GPU).
 - **The data's layout** (2026-11-03; the maintainer: "we should also start changing our data layout to be more cache and simd friendly"). MEASURED
   FIRST, one blend of two 55-node poses in a module, an x86 cloud box, bun 1.4 | node 24: as it stood (ten singles a node, worked in doubles) 1334 |
   1391 ns · the same arithmetic over columns 1334 | 1390 · columns, two lanes of doubles, THE SAME BITS 1204 | 964 · doubles, the length a plain root

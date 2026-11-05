@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, POSEMATH, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo } from '../anim/skeleton';
+import { NodeOverride, POSEMATH, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo, stageOpen, stageShut } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -2209,7 +2209,9 @@ export class CharacterAnimator {
   /** which tell is playing (or played last) */
   get tellKind(): TellKind { return this.tellK; }
 
-  update(dt: number) {
+  /** (the update, over poses that stand in a block of the module for its length: anim/skeleton.ts, the stage) */
+  update(dt: number) { const lent = stageOpen(this.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.poses); } }
+  private updateStanding(dt: number) {
     const P = this.params; const c = this.clips; const nd = this.nodes;
     LAYERS.knobs?.();   // (RUST.walk: a pose made outside a tick — a teleport's — reads the knobs as they stand, as a tick's does: game/rustknobs.ts knobsNow)
     if (this.rawClip) {   // raw clip preview: rest pose underneath so nodes the clip does not key stay sane; one-shots cancelled (nothing here would ever finish them)
@@ -6963,7 +6965,9 @@ export class Character {
     return { o, left: quat.rotate(r, [1, 0, 0]), up: quat.rotate(r, [0, 1, 0]), fwd: quat.rotate(r, [0, 0, 1]) };
   }
 
-  update(dt: number) {
+  /** (his turn is a rule asked where his layers are, so the stage is his for the whole of this and not only for the animator's part: anim/skeleton.ts) */
+  update(dt: number) { const lent = stageOpen(this.anim.poses); try { this.updateStanding(dt); } finally { if (lent) stageShut(this.anim.poses); } }
+  private updateStanding(dt: number) {
     if (this.ragdoll) { this.updateRagdoll(dt); return; }
     if (this.turn.on && TURN.on > 0.5 && dt > 0 && !this.anim.wound) this.turnWeigh(dt);   // (a man down wounded turns to nothing: wounds.ts dropped his turn as he went)
     else {   // not weighed — or a dt-0 bake: a RE-BAKE in place (game.ts updateProps, a frozen clock: his yaws untouched since they were handed back, or put back to the wish by turnBegin and not rewritten) keeps his turn going; a staging (yaws rewritten, or moved) takes them as written and the next frame starts from them
