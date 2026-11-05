@@ -1,2 +1,2 @@
-# the kits' vehicles say their shapes: the boxes of each vehicle carry a shape, and a pickup's bonnet no longer carries its two panel lines
-29af779cbd2160dc0655cebfca7cdb8eec098b7c
+# the office says what a kept place is made of: its own floors, walls and vehicles carry their words; no box, colour or number moved
+2ad93d98974f05b3385f0a2b7dbe6a4d0f20dd83

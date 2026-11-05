@@ -1065,3 +1065,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: nothing here has been seen on a GPU in this form, the round shading among it, and that shading is not timed (a trial on the look page drew
   the same shapes); the car of `levelKit` / `officeGen`,
   painted in plain numbers, does not yet say carpaint, glass and rubber, and trim in numbers says nothing (a follow-up, with the hit picture's rule).
+- **The office says what a kept place is made of** (level data, no new switch; 2026-11-05; "we'll want to dress up all the levels and check their budget";
+  of the office, 10-10: "awesome and it has a lot of personality per room"). The office's paints are the kit's, and the kit's NAMES say what a paint is on any
+  floor built with it (`scene/stuff.ts PAINT_STUFF`): a rendered wall, a poured slab, a coarse cloth, the stuffs of a house left to the weather. On the look page
+  that drew the office's partitions peeling at the skirting, its carpet stained wall to wall and its lino cracked. `officeGen.ts buildOfficeProcedural` now says
+  the office's OWN words over those names, once, at its head (`K`, through `saidAs`: the kit's paint, its numbers and finish, another thing here): partitions and
+  the conference sill `skim`, the shell and the stair tower `cast panel`, the landing's floor `board concrete`, the three carpets `carpet`, the lobby's stone and
+  the server room's raised floor `paver` (laid in tiles), the lino `enamel` (one waxed sheet: the look's plain gloss coat), the extinguisher, its box and the
+  agent cylinder `enamel`, the van and both cars `carpaint`. 95 boxes of 783 say a new word; NO box, colour, finish or number moved (the file differs from the
+  one before only by `stuff` words), so the level's fingerprint holds and every checkpoint and tape of the office still loads. NOT SAID, on purpose: the lot (no
+  stuff the look has is tarmac; `gravel` drew it as cobbles and `slab` as cracked paving on the software adapter, so it stays plain) and the lawn (it waits).
+  NOT TOUCHED: the kit's own pieces (mullions, door frames, rugs, the things written with `drawnAs`), which every level built on the kit shares; lamps and
+  hours; nothing was laid (the office passes `level-needs` `ground` and `lived` as built, and one added box would part every recording made on this floor).
+  `levels/office-relief.json` is exported with it and comes back in step (on the step before it lacked the vehicles' 22 shapes). CHECK `stuff-check` line 4
+  holds both halves: what each name is, and what the office's own surfaces say over it. Nothing in the simulation reads a word: the three play-through reads
+  (frozen; shipped with lived rooms off; shipped) are the step before's, 42 of 42 each. SEEN on the software adapter only (stills of the lot, the cubicles, the
+  break room, the server room and the whole floor, the step before against this one); never on a GPU: whether the pavers' joints and the panels' fixing holes
+  read at 60 frames, and the lino's shine as enamel, nobody knows.
