@@ -43,6 +43,7 @@ const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const GDM: any = await import(`${ROOT}/src/game/guards.ts`);
 const NVM: any = await import(`${ROOT}/src/game/nvg.ts`);
 const SLM: any = await import(`${ROOT}/src/game/silent.ts`);
+const { roundHeldBy, targetHeld } = await import(`${ROOT}/src/game/roundheld.ts`);
 const SILENT: any = SLM.SILENT;
 
 const DT = 1 / 60;
@@ -445,17 +446,17 @@ export const silentFire = guarded(async () => {
   verdict(K.a.shots > 0 && K.a.held === 0, 'with holdFire off a silent four shoot as a loud one does', `rounds in the first 25 s: ${K.a.shots} · held ${K.a.held}`);
   // noise from before the order is not a compromise; a captor at his last warning holds nothing back
   { const R = await rig(7); const { game } = R; const man = R.team[0], foe = R.hostiles.find((h: any) => h.state !== 'dead'); foe.state = 'patrol'; foe.awareness = 0;
-    game.fight.hotT = game.time; R.step(3); const c0 = SLM.SILENT_STATS.compromised; R.give('silent', AISLE); R.step(30); const stale = { comp: SLM.SILENT_STATS.compromised - c0, label: R.label(), holds: SLM.silentHolds(game, man, foe) };
-    game.fight.hotT = game.time; R.step(3); const fresh = { comp: SLM.SILENT_STATS.compromised - c0, label: R.label(), holds: SLM.silentHolds(game, man, foe) };
+    game.fight.hotT = game.time; R.step(3); const c0 = SLM.SILENT_STATS.compromised; R.give('silent', AISLE); R.step(30); const stale = { comp: SLM.SILENT_STATS.compromised - c0, label: R.label(), holds: roundHeldBy('silent', game, man, foe) };
+    game.fight.hotT = game.time; R.step(3); const fresh = { comp: SLM.SILENT_STATS.compromised - c0, label: R.label(), holds: roundHeldBy('silent', game, man, foe) };
     verdict(stale.comp === 0 && !/compromised/.test(stale.label) && stale.holds && fresh.comp === 1 && /compromised/.test(fresh.label) && !fresh.holds,
       'told silent 3 frames after a loud fight: not compromised, fire still held — a loud thing AFTER the order is what compromises', `noise before the order: compromised ×${stale.comp}, holds ${stale.holds}, ${stale.label} · noise after: ×${fresh.comp}, holds ${fresh.holds}, ${fresh.label}`); }
   { const R = await rig(7); const { game } = R; const man = R.team[0], foe = R.hostiles.find((h: any) => h.state !== 'dead'); foe.state = 'patrol'; foe.awareness = 0; R.give('silent', AISLE); R.step(2);
-    const k0 = SLM.SILENT_STATS.locked, calm = { holds: SLM.silentHolds(game, man, foe), boot: SLM.silentNoBoot(game) }; const was = game.rescue.lastWarning; game.rescue.lastWarning = () => true;
-    const last = { holds: SLM.silentHolds(game, man, foe), boot: SLM.silentNoBoot(game) }; game.rescue.lastWarning = was;
+    const k0 = SLM.SILENT_STATS.locked, calm = { holds: roundHeldBy('silent', game, man, foe), boot: SLM.silentNoBoot(game) }; const was = game.rescue.lastWarning; game.rescue.lastWarning = () => true;
+    const last = { holds: roundHeldBy('silent', game, man, foe), boot: SLM.silentNoBoot(game) }; game.rescue.lastWarning = was;
     verdict(calm.holds && calm.boot && !last.holds && !last.boot && SLM.SILENT_STATS.locked - k0 === 1, 'a captor at his last warning: no round and no boot is held (silent never costs the hostage)', `calm: holds fire ${calm.holds}, holds the boot ${calm.boot} · last warning: ${last.holds}, ${last.boot}`);
     // the gun: the team's rifle is loud by its report; a quiet gun (the loadout's seam) is not held
-    const rep = man.weapon.def.report, was2 = { ...rep }; const loudGun = SLM.quietGun(man); Object.assign(rep, { level: 0.6, loud: false }); const q = { quiet: SLM.quietGun(man), holds: SLM.silentHolds(game, man, foe) }; Object.assign(rep, was2);
-    verdict(!loudGun && q.quiet && !q.holds && SLM.silentHolds(game, man, foe), 'the team\'s rifle is not a quiet gun (its report is a gunshot\'s), so its rounds are held; a gun whose report is quiet is not held (quietGun: the kit\'s seam)', `rifle: report level ${was2.level}, quiet ${loudGun} · a 0.6 report: quiet ${q.quiet}, holds ${q.holds}`); }
+    const rep = man.weapon.def.report, was2 = { ...rep }; const loudGun = SLM.quietGun(man); Object.assign(rep, { level: 0.6, loud: false }); const q = { quiet: SLM.quietGun(man), holds: roundHeldBy('silent', game, man, foe) }; Object.assign(rep, was2);
+    verdict(!loudGun && q.quiet && !q.holds && roundHeldBy('silent', game, man, foe), 'the team\'s rifle is not a quiet gun (its report is a gunshot\'s), so its rounds are held; a gun whose report is quiet is not held (quietGun: the kit\'s seam)', `rifle: report level ${was2.level}, quiet ${loudGun} · a 0.6 report: quiet ${q.quiet}, holds ${q.holds}`); }
   // told loud, the cue is gone
   S.R.give('loud', AISLE); S.R.step(5);
   verdict(!S.R.silent() && /squad · loud ·/.test(S.R.label()), 'told loud: the word on the HUD is "loud" again', S.R.label());
@@ -536,7 +537,7 @@ export const silentSet = guarded(async () => {
     const all = () => men().length === 2 && men().every((x: any) => O.of(x)?.order === 'stack' && O.of(x).arrived);
     let secs = 0; for (; secs < 30 && !all(); secs++) R.step(60);
     let left = 0, n = 0; for (let i = 0; i < 60 * 8; i++) { R.step(); for (const x of men()) { n++; if (!O.of(x)?.arrived) left++; } }
-    const rows = men().map((x: any) => { const A = O.of(x), t = game.fight.opOf(x)?.tgt; return { cs: x.callsign as string, arrived: !!A?.arrived, mark: A?.post ? dist(x.char.pos, A.post) : NaN, man: t ? off(x, t.char.pos) : NaN, door: off(x, d.frameCentre), tgt: (t?.callsign ?? 'nobody') as string, calm: t?.state === 'patrol', rule: SLM.silentOnMan(game, x) as boolean, word: O.statusOf(x) as string }; });
+    const rows = men().map((x: any) => { const A = O.of(x), t = game.fight.opOf(x)?.tgt; return { cs: x.callsign as string, arrived: !!A?.arrived, mark: A?.post ? dist(x.char.pos, A.post) : NaN, man: t ? off(x, t.char.pos) : NaN, door: off(x, d.frameCentre), tgt: (t?.callsign ?? 'nobody') as string, calm: t?.state === 'patrol', rule: targetHeld('silent', game, x) as boolean, word: O.statusOf(x) as string }; });
     const out = { R, w, set: all(), secs, left, n, rows, rounds: R.opShots, held: SLM.SILENT_STATS.held - h0, tested: D.stats.tested - t0, sets: said.filter(x => x === 'set.').length, lockedSaid: said.filter(x => /locked/.test(x)).length, leaf: Math.abs(d.angle), silent: R.silent(), up0, up: R.hostiles.filter((h: any) => h.state !== 'dead').length };
     game.say = say0; return out; };
   const show = (a: Awaited<ReturnType<typeof run>>) => `${a.w ? `refused: ${a.w}` : 'given'} · set ${a.set} after ${a.secs} s · man-frames not arrived in the 8 s after ${a.left}/${a.n} · 'set.' said ${a.sets} · team rounds ${a.rounds} · frames a round was held ${a.held} · handles tried ${a.tested} · 'locked' said ${a.lockedSaid} · leaf ${f2(a.leaf)} · still silent ${a.silent} · defenders up ${a.up}/${a.up0} · ${a.rows.map(m => `${m.cs}: ${f2(m.mark)} m off his mark, gun ${f2(m.man)} rad off ${m.tgt} and ${f2(m.door)} rad off the doorway, held on him by the order ${m.rule}, "${m.word}"`).join(' · ')}`;
@@ -563,10 +564,10 @@ export const silentSet = guarded(async () => {
   verdict(!E.w && E.set && E.tested > 0 && E.lockedSaid > 0 && E.up === 0 && E.rows.every(m => !m.rule), 'CONTROL — the same locked door with nobody in the room: no gun is held on a man, so the stacked lead tries the handle and says what he found',
     show(E));
   // the rule's own edges, asked of the function on the set pair: a man who has noticed, a loud squad, the fire hold off
-  { const { R } = A, { game } = R, m = R.team[0], t = game.fight.opOf(m)?.tgt; const calm = SLM.silentOnMan(game, m) as boolean;
+  { const { R } = A, { game } = R, m = R.team[0], t = game.fight.opOf(m)?.tgt; const calm = targetHeld('silent', game, m) as boolean;
     let noticed = true, noHold = true, loud = true;
-    if (t) { t.state = 'alert'; noticed = SLM.silentOnMan(game, m); t.state = 'patrol'; SILENT.holdFire = false; noHold = SLM.silentOnMan(game, m); SILENT.holdFire = true; }
-    R.give('loud', AISLE); loud = SLM.silentOnMan(game, m);
+    if (t) { t.state = 'alert'; noticed = targetHeld('silent', game, m); t.state = 'patrol'; SILENT.holdFire = false; noHold = targetHeld('silent', game, m); SILENT.holdFire = true; }
+    R.give('loud', AISLE); loud = targetHeld('silent', game, m);
     verdict(!!t && calm && !noticed && !noHold && !loud, 'the question is the order\'s own hold: true on the unaware man; false once he is alert, with the fire hold off, and for a squad told loud',
       `on ${t?.callsign ?? 'nobody'}, unaware: ${calm} · him alert: ${noticed} · holdFire off: ${noHold} · told loud: ${loud}`); R.post = null; }
   // CONTROL (plumbing, not the rule: SILENTSET_BREAK does not touch it): the stands, and what a recording carries

@@ -41,6 +41,7 @@ import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import { hostileTo } from './teams';
 import { SILENT, silentMan, squadSilent, quietGun, urgent } from './silent';   // (asked inside holdFireOnMan / holdFireSilent / holdFireOrder only)
+import { targetHoldRule } from './roundheld';
 
 export const HOLDFIRE = {
   /** THE switch: off = the team shoots on sight unless silent or sneaking, as it did */
@@ -160,7 +161,8 @@ export function holdFireHolds(g: Game, gd: Guard, h: Guard, noticed: number, qui
  *  before he tries a handle): a loud teammate with a living man in his sight who has not noticed anybody, the squad held. The rule's own conditions, asked
  *  afresh — no stamp, nothing counted — so it stands through a change of man, Sam in his line and the sneak's hold answering first (unseen.ts, Sam low).
  *  Never a silent man (silent.ts's hold is his own). False with the switch off. Both askers ask only under HOLDFIRE.stackSet. */
-export function holdFireOnMan(g: Game, gd: Guard): boolean {
+targetHoldRule('holdfire', holdFireOnMan);
+function holdFireOnMan(g: Game, gd: Guard): boolean {
   if (!HOLDFIRE.on || silentMan(g, gd)) return false;
   const h = g.fight.opOf(gd)?.tgt; return !!h && h.state !== 'dead' && holds(g, gd, h, SILENT.noticed, quietGun(gd), () => urgent(g));
 }
