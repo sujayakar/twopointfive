@@ -24,8 +24,10 @@ import { Run } from './pairsneak.ts';
 
 export async function holdfireCheck(): Promise<boolean> {
   const HF: any = await import(`${ROOT}/src/game/holdfire.ts`);
+  const { holdFireHoldsTarget } = await import(`${ROOT}/src/game/holdfire.ts`);
   const U: any = await import(`${ROOT}/src/game/unseen.ts`);
   const SL: any = await import(`${ROOT}/src/game/silent.ts`);
+  const { silentHoldsRound } = await import(`${ROOT}/src/game/silent.ts`);
   const { FRIENDS } = (await import(`${ROOT}/src/game/friends.ts`)) as any;
   const { PLAYER_ID } = (await import(`${ROOT}/src/game/consts.ts`)) as any;
   const { DOORTOOLS } = (await import(`${ROOT}/src/game/doortools.ts`)) as any;
@@ -90,10 +92,10 @@ export async function holdfireCheck(): Promise<boolean> {
     return g.orders.give('move', { kind: 'floor', at: R.free([c[0] - nx * sd * 0.9, 0, c[2] - nz * sd * 0.9]) });
   }
   /** would this man's round at that defender be held right now — asked of the fire gate's own function, for every living man against every unaware defender */
-  const holdsAll = (R: Run) => { const hs = foes(R).filter((h: any) => h.state === 'patrol' && h.awareness < SL.SILENT.noticed); return hs.length > 0 && living(R).every((o: any) => hs.every((h: any) => SL.silentHolds(R.g, o, h))); };
+  const holdsAll = (R: Run) => { const hs = foes(R).filter((h: any) => h.state === 'patrol' && h.awareness < SL.SILENT.noticed); return hs.length > 0 && living(R).every((o: any) => hs.every((h: any) => silentHoldsRound(R.g, o, h))); };
   /** how far a man's gun is off a point, rad */
   const gunOff = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.pos[0], at[2] - o.char.pos[2]) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
-  const holdsAny = (R: Run) => { const hs = foes(R).filter((h: any) => h.state === 'patrol' && h.awareness < SL.SILENT.noticed); return living(R).some((o: any) => hs.some((h: any) => SL.silentHolds(R.g, o, h))); };
+  const holdsAny = (R: Run) => { const hs = foes(R).filter((h: any) => h.state === 'patrol' && h.awareness < SL.SILENT.noticed); return living(R).some((o: any) => hs.some((h: any) => silentHoldsRound(R.g, o, h))); };
   const samShot = (R: Run, at: number[]) => { const g = R.g, n0 = g.events.filter((e: any) => e.kind === 'shot' && e.who === PLAYER_ID).length; FRIENDS.lowReady = false;
     R.slot(1); R.cursor(at); R.step(20); R.I.buttons |= 1; R.I.clicked |= 1; R.step(3); R.I.buttons &= ~1; FRIENDS.lowReady = was.low;
     const ev = g.events.filter((e: any) => e.kind === 'shot' && e.who === PLAYER_ID); return { n: ev.length - n0, level: ev[ev.length - 1]?.level as number | undefined }; };
@@ -116,7 +118,7 @@ export async function holdfireCheck(): Promise<boolean> {
       if (why || !X) line(false, `A · not staged — ${why ?? 'no defender out of every line'}`); else {
         const at = [...X.char.pos]; let oldFound = 0, ownFound = 0, n = 0, saw = 0;
         const T = play(R, 10, null, true, X, () => { X.state = 'alert'; X.awareness = 1; X.char.pos[0] = at[0]; X.char.pos[2] = at[2]; n++; if (U.squadFound(g, living(R))) oldFound++; if (HF.holdFireFound(g, living(R))) ownFound++; if (X.lastSeenT >= 0) saw++; });
-        freeze(R, X); X.state = 'alert'; const still = foes(R).filter((h: any) => h !== X).length > 0 && living(R).every((o: any) => foes(R).filter((h: any) => h !== X).every((h: any) => SL.silentHolds(g, o, h)));
+        freeze(R, X); X.state = 'alert'; const still = foes(R).filter((h: any) => h !== X).length > 0 && living(R).every((o: any) => foes(R).filter((h: any) => h !== X).every((h: any) => silentHoldsRound(g, o, h)));
         X.lastSeenT = g.time; const seen = !!HF.holdFireFound(g, living(R)) && !holdsAny(R); X.lastSeenT = -100;
         line(T0.all === 0 && T.all === 0 && quiet(T) && T.held > 0 && T.aimed > 0 && saw === 0 && oldFound > n * 0.9 && ownFound === 0 && still && seen,
           `A · ${X.callsign} made 'alert' in another room, having seen nobody: the hold stands for 10 s (not a team round, guns on unaware men) where the old found test called them found; the same man WITH a sighting ends it for everybody`,
@@ -167,7 +169,7 @@ export async function holdfireCheck(): Promise<boolean> {
       for (; secs < 30 && !set; secs++) { const T = play(R, 1, null); rounds += T.all; held += T.held; set = living(R).every((o: any) => O.of(o)?.order === 'stack' && O.of(o).arrived); }
       const T = play(R, 6, null); rounds += T.all; freeze(R);
       const off = (o: any, at: number[]) => { const e = Math.atan2(at[0] - o.char.pos[0], at[2] - o.char.pos[2]) - o.char.aimYaw; return Math.abs(Math.atan2(Math.sin(e), Math.cos(e))); };
-      const men = living(R).map((o: any) => { const A = O.of(o), t = g.fight.opOf(o)?.tgt; return { o, A, t, mark: A?.post ? flat(o.char.pos, A.post) : NaN, man: t ? off(o, t.char.pos) : NaN, door: off(o, d.frameCentre), rule: HF.holdFireOnMan(g, o) as boolean, word: O.statusOf(o) as string }; });
+      const men = living(R).map((o: any) => { const A = O.of(o), t = g.fight.opOf(o)?.tgt; return { o, A, t, mark: A?.post ? flat(o.char.pos, A.post) : NaN, man: t ? off(o, t.char.pos) : NaN, door: off(o, d.frameCentre), rule: holdFireHoldsTarget(g, o) as boolean, word: O.statusOf(o) as string }; });
       line(!w && set && rounds === 0 && T.loud === 0 && held > 0 && T.held > 0 && foes(R).length === n0 && Math.abs(d.angle) < 0.05 && men.length === 2
         && men.every((m: any) => m.A?.order === 'stack' && m.A.arrived && m.A.setSaid && m.mark < 0.35 && m.word.startsWith('stacked') && m.t?.state === 'patrol' && m.man < 0.2 && m.door > 0.2 && m.rule),
         `C · told to stack on a door inside the room, unaware men in view: the pair is SET (on its marks, 'set.' said, the row says stacked) with not a round fired and each gun still held on a man`,
@@ -178,9 +180,9 @@ export async function holdfireCheck(): Promise<boolean> {
     { const R = await stand('roomclear=7&squad=2', true), g = R.g, O = g.orders, d = R.door('breakroom_n'), dw = R.door('breakroom_w'); let secs = 0, there = false, rounds = 0, arr = 0, n = 0; HF.HOLDFIRE.stackSet = false;
       dw.angle = (dw.swing ?? 1) > 0 ? dw.maxA : dw.minA; dw.latched = false; dw.vel = 0; dw.quietT = -3600; g.teleportPlayer([30.75, 0, 14.4]); rounds += play(R, 1, null).all;
       const w = O.give('stack', O.targetAt(d.frameCentre));
-      for (; secs < 30 && !there; secs++) { rounds += play(R, 1, null).all; there = living(R).every((o: any) => { const A = O.of(o); return A?.order === 'stack' && !!A.post && flat(o.char.pos, A.post) < 0.35 && HF.holdFireOnMan(g, o); }); }
+      for (; secs < 30 && !there; secs++) { rounds += play(R, 1, null).all; there = living(R).every((o: any) => { const A = O.of(o); return A?.order === 'stack' && !!A.post && flat(o.char.pos, A.post) < 0.35 && holdFireHoldsTarget(g, o); }); }
       const T = play(R, 8, null, true, null, () => { for (const o of living(R)) { n++; if (O.of(o)?.arrived) arr++; } }); rounds += T.all; freeze(R);
-      const men = living(R).map((o: any) => { const A = O.of(o); return { o, order: A?.order, arrived: !!A?.arrived, said: !!A?.setSaid, stamp: !!A?.heldFire, mark: A?.post ? flat(o.char.pos, A.post) : NaN, rule: HF.holdFireOnMan(g, o) as boolean, word: O.statusOf(o) as string }; });
+      const men = living(R).map((o: any) => { const A = O.of(o); return { o, order: A?.order, arrived: !!A?.arrived, said: !!A?.setSaid, stamp: !!A?.heldFire, mark: A?.post ? flat(o.char.pos, A.post) : NaN, rule: holdFireHoldsTarget(g, o) as boolean, word: O.statusOf(o) as string }; });
       const off = men.length === 2 && men.every((m: any) => m.order === 'stack' && !m.arrived && !m.said && !m.stamp && m.mark < 0.35 && m.rule && !m.word.startsWith('stacked'));
       HF.HOLDFIRE.stackSet = true; const T2 = play(R, 2, null); rounds += T2.all; freeze(R);
       const on = living(R).length === 2 && living(R).every((o: any) => O.of(o)?.arrived && O.of(o).setSaid && (O.statusOf(o) as string).startsWith('stacked'));
@@ -197,7 +199,7 @@ export async function holdfireCheck(): Promise<boolean> {
       let rattles = 0; const rattle0 = g.doors.rattle; g.doors.rattle = function (this: any, ...a: any[]) { rattles++; return rattle0.apply(this, a); };   // (a handle worked in its frame, from the order on)
       const w = O.give('stack', O.targetAt(d.frameCentre)), tested0 = g.doorTools.stats.tested; const walk: number[][] = [];   // (door noises on the way to the marks: the handle was tried BEFORE 'set.', so the count runs from the order — at THIS door: a leaf brushed on the walk in is not it)
       for (; secs < 30 && !set; secs++) { walk.push(...play(R, 1, null).doorAt); set = living(R).every((o: any) => O.of(o)?.order === 'stack' && O.of(o).arrived); }
-      const T: Tally[] = []; let left = 0, onMan = 0, n = 0; const each = () => { for (const o of living(R)) { n++; if (!O.of(o)?.arrived) left++; if (HF.holdFireOnMan(g, o)) onMan++; } };
+      const T: Tally[] = []; let left = 0, onMan = 0, n = 0; const each = () => { for (const o of living(R)) { n++; if (!O.of(o)?.arrived) left++; if (holdFireHoldsTarget(g, o)) onMan++; } };
       const m = living(R)[0], t = g.fight.opOf(m)?.tgt, home = [...R.pos], mid = t ? [(m.char.pos[0] + t.char.pos[0]) / 2, 0, (m.char.pos[2] + t.char.pos[2]) / 2] : home;
       T.push(play(R, 6, null, true, null, each)); T.push(play(R, 10, [home, [2 * mid[0] - home[0], 0, 2 * mid[2] - home[2]]], true, null, each)); R.goal = home; T.push(play(R, 3, null, true, null, each)); R.goal = null;
       const u0 = U.UNSEEN_STATS.held; R.crouch(true); T.push(play(R, 6, null, true, null, each)); const sneak = U.UNSEEN_STATS.held - u0; R.crouch(false);
@@ -231,8 +233,8 @@ export async function holdfireCheck(): Promise<boolean> {
       if (w || !set || !lead || !second || !keep) line(false, `C · only the second man held: not staged — ${w ?? `set ${set}, a lead ${!!lead}, a second man ${!!second} with a man in his sight ${!!keep}`}`); else {
         const early = g.doorTools.stats.tested - tested0; for (const h of foes(R)) if (h !== keep) killGuard(g, h, [0, 0, 1], true);
         let n = 0, sec = 0, ld = 0, door = 0, left = 0, tryAt = -1, tryOff = NaN, pre = NaN, preSec = false, trySec = false;
-        const each = () => { if (tryAt < 0 && g.doorTools.stats.tested > tested0) { tryAt = n - 1; tryOff = pre; trySec = preSec; } lead.dazzledUntil = g.time + 1; n++; const A = O.of(lead); pre = A?.watch ? gunOff(lead, A.watch) : NaN; preSec = !!O.of(second)?.heldFire || HF.holdFireOnMan(g, second);
-          if (HF.holdFireOnMan(g, second)) sec++; if (HF.holdFireOnMan(g, lead)) ld++; if (A?.arrived && pre < 0.2) door++; if (!O.of(second)?.arrived) left++; };
+        const each = () => { if (tryAt < 0 && g.doorTools.stats.tested > tested0) { tryAt = n - 1; tryOff = pre; trySec = preSec; } lead.dazzledUntil = g.time + 1; n++; const A = O.of(lead); pre = A?.watch ? gunOff(lead, A.watch) : NaN; preSec = !!O.of(second)?.heldFire || holdFireHoldsTarget(g, second);
+          if (holdFireHoldsTarget(g, second)) sec++; if (holdFireHoldsTarget(g, lead)) ld++; if (A?.arrived && pre < 0.2) door++; if (!O.of(second)?.arrived) left++; };
         const T = play(R, 12, null, true, null, each); if (tryAt < 0 && g.doorTools.stats.tested > tested0) { tryAt = n - 1; tryOff = pre; trySec = preSec; } const tested = g.doorTools.stats.tested - tested0, locked = said.filter(x => /locked/.test(x)).length;
         line(wait ? early === 0 && T.all === 0 && T.loud === 0 && sec === n && ld < 30 && door > n / 2 && left === 0 && keep.state === 'patrol' && tested === 0 && rattles === 0 && locked === 0 && T.door === 0 && Math.abs(d.angle) < 0.05
           : early === 0 && tested === 1 && rattles === 1 && locked === 1 && tryAt >= 0 && trySec && Math.abs(d.angle) < 0.05,
@@ -258,7 +260,7 @@ export async function holdfireCheck(): Promise<boolean> {
       line(fresh, `6 · a restart resets it: nothing lifted, every man holds`, `${HF.holdFireSummary(g)}`);
       // 5: found
       const h = foes(R)[0]; h.state = 'alert'; h.awareness = 1; h.lastSeenT = g.time; const roused = !holdsAny(R); h.state = 'patrol'; h.awareness = 0; h.lastSeenT = -100; const calm = holdsAll(R);
-      h.awareness = SL.SILENT.noticed + 0.05; const one = living(R).every((o: any) => !SL.silentHolds(g, o, h)); const others = foes(R).length < 2 || living(R).every((o: any) => foes(R).filter((x: any) => x !== h).every((x: any) => SL.silentHolds(g, o, x))); h.awareness = 0;
+      h.awareness = SL.SILENT.noticed + 0.05; const one = living(R).every((o: any) => !silentHoldsRound(g, o, h)); const others = foes(R).length < 2 || living(R).every((o: any) => foes(R).filter((x: any) => x !== h).every((x: any) => silentHoldsRound(g, o, x))); h.awareness = 0;
       g.fight.opOf(living(R)[0]).hotT = g.time; const heard = !holdsAny(R);
       const lw = g.rescue.lastWarning; g.fight.opOf(living(R)[0]).hotT = -100; const calm2 = holdsAll(R); g.rescue.lastWarning = () => true; const urgent = !holdsAny(R); g.rescue.lastWarning = lw;
       line(roused && calm && one && others && heard && calm2 && urgent, `5 · found means found: one defender roused with eyes on them, or gunfire in ONE teammate's ears, and no man of the squad holds; a man who has noticed is shot while the others are still held on; a captor's last warning holds nothing`,

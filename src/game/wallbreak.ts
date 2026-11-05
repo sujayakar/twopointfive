@@ -24,7 +24,7 @@
 // plain static boxes APPENDED to the level's list (StaticCollision.addStatic + BoxWorld.addStatic, registered in the authored box's cells), greedy-merged from
 // the closed cells, re-shaped in place as more goes. So rounds (col.raycast), sight (segmentBlocked), sound / reach (solidBlocked + SoundPaths, its route cache
 // dropped), feet (collideCircle), the trace grid and raster (BoxWorld.upload re-packs changed statics), the smoke solver's obstacles and the lights' reach masks
-// (Game.reachChanged: only the cells behind the opening are decided again, a few lights a frame) all read the same boxes. The NAV GRID is re-baked over the changed footprint with the constructor's own
+// (render/reachKeep.ts, told by `changed`: only the cells behind the opening are decided again, a few lights a frame) all read the same boxes. The NAV GRID is re-baked over the changed footprint with the constructor's own
 // statement (NavGrid.rebake) and the cells that became floor are handed to the AI.
 //
 // THE AI IS TOLD: `walls.serial` goes up with every change and `walls.changes` (a ring of LevelChange rows: kind hole | port | cover | door | reset, where, the nav
@@ -48,7 +48,7 @@ import { gpuFx, type Surf } from './particleFx';
 import { doesOf } from '../scene/materials';
 import { hash01 } from './debris';
 import { NOBODY_ID } from './consts';
-import { DESTRUCTION } from './destructionSwitch';
+import { DESTRUCTION, BLAST_PACE } from './destructionSwitch';
 import { cutBoxesOn } from '../scene/cut';
 import type { ShedBudget } from './breakTable';
 import { WallWear } from './wallwear';
@@ -410,7 +410,7 @@ export class WallBreak {
     g.smoke.obstaclesChanged?.(pos, Math.hypot(x1 - x0, z1 - z0) / 2 + 1.5);
     const opened: number[] = [];
     for (const r of rects) { const ch = g.col.nav.rebake(r[0], r[1], r[2], r[3]); for (let k = 0; k < ch.length; k += 2) if (ch[k + 1] === 0) opened.push(ch[k]); }
-    if (B.kind === 'wall') g.reachChanged([x0, z0, x1, z1]);
+    if (B.kind === 'wall') g.engine.reach?.changed([x0, z0, x1, z1], BLAST_PACE.on ? BLAST_PACE.reachHold : -1);   // (the lights' reach masks are the picture's: told where, and how long the blast's own frame may be spared the reading)
     if (B.hard) for (const c of opened) this.shellGaps.add(c);
     WALL_STATS.navOpened += opened.length;
     this.destr.edgeLook.opened(B, fresh, cause, dir, quiet);   // (picture only: edgeLook.ts)
@@ -797,7 +797,7 @@ export class WallBreak {
     if (!any) return;
     g.col.nav.rebake(WORLD.min[0], WORLD.min[2], WORLD.max[0], WORLD.max[2]); g.col.sound.invalidate();
     g.smoke.obstaclesChanged?.([(WORLD.min[0] + WORLD.max[0]) / 2, 1, (WORLD.min[2] + WORLD.max[2]) / 2], 60);
-    g.reachChanged(null);
+    g.engine.reach?.changed(null);
     if (!silent) this.note({ kind: 'reset', cause: 'reset', id: -1, pos: [0, 0, 0], rect: [WORLD.min[0], WORLD.min[2], WORLD.max[0], WORLD.max[2]], opened: [], walkable: false, sight: false, dead: false, who: NOBODY_ID });
   }
   /** what a checkpoint keeps (undefined = the level stands as authored) */

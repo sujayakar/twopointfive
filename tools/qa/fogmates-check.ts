@@ -1,6 +1,7 @@
 // A TEAMMATE SEES WHAT THE PICTURE SHOWS (src/game/fogofwar.ts FOG.mates; src/game/guards.ts eyeThrough). The maintainer, 10-25, asked whether the men's own
 // eyes should pass thin things as the fog's lines do: "i think teammates should see whatever we see".
-//   bun run tools/qa/probes.ts fog-mates        (family fog; FOGMATES_BREAK=1 = the row is put off where the lines ask for it: they must go red)
+//   bun run tools/qa/probes.ts fog-mates        (family fog; FOGMATES_BREAK=1 = the row is put off where the lines ask for it, and guards.ts is read
+//                                                 with the mask dropped from the look it hands the module: every line must go red)
 //   bar       The Pass, the squad staged: a teammate and a defender either side of a thing the level marked thin, facing each other. Without the row his own
 //             sight test does not have the man, with it it does; with the thin row off it does not, whatever this row says; the defender's eye on HIM is the
 //             same with and without; a wall between them is a wall either way
@@ -11,7 +12,8 @@
 //   played    the squad on the pass under the fog, sent at a man it hides, 20 s: this row with the thin row off is the run without either, by its digest
 //             every half second and its dice (one seed); with both rows on, two seeds, no defender's sight of a teammate differs by the row on any
 //             sampled frame (reported: the pairs it gave a teammate)
-//   switch    the address, the journal, the two stands (the word acts only with the thin row's), the written lines
+//   switch    the address, the journal, the two stands (the word acts only with the thin row's), and the code as written: a man's look goes to the
+//             module with his team's mask, and nothing else answers it (the game has no line of sight of its own to a man: rust/sim/src/sight.rs)
 import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -123,11 +125,13 @@ export async function fogMatesCheck(o: { verbose?: boolean } = {}): Promise<bool
       FOG.mates = true; const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W2.game))), old = JSON.parse(JSON.stringify(snap)); const rides = snap.tables.FOG?.mates === true;
       FOG.mates = false; JR.applyKnobs(W2.game, snap); const applied = FOG.mates; delete old.tables.FOG.mates; FOG.mates = true; JR.applyKnobs(W2.game, old); const beforeKey = FOG.mates;
       const fogText = readFileSync(resolve(ROOT, 'src/game/fogofwar.ts'), 'utf8'), moduleOn = /\n  mates: true,\n/.test(fogText);
-      const gt = readFileSync(resolve(ROOT, 'src/game/guards.ts'), 'utf8');
+      // (the red path reads the file with the mask taken off the one call that hands a look to the module: `passed` below must then miss it)
+      const gtRead = readFileSync(resolve(ROOT, 'src/game/guards.ts'), 'utf8'), HANDS = 'g.col.eyeContact(E, tgt, tgt2, blind || (!isPlayer && !pc.alive), smoked, through);';
+      const gt = BREAK ? gtRead.replace(HANDS, HANDS.replace(', through);', ');')) : gtRead;
       const helper = /export function teamThrough\(\): number \{ return FOG\.mates \? fogThrough\(\) : BoxFlag\.Glass; \}\nexport function eyeThrough\(gd: Guard\): number \{ return gd\.team === 'operative' \? teamThrough\(\) : BoxFlag\.Glass; \}/.test(gt) && /export function fogThrough\(\): number \{ return FOG\.thin \? BoxFlag\.Glass \| BoxFlag\.Thin : BoxFlag\.Glass; \}/.test(fogText);
       const pt = readFileSync(resolve(ROOT, 'src/game/picture.ts'), 'utf8'), sam = /thr = teamThrough\(\);/.test(pt) && (pt.match(/, 0\.02, thr\)/g) ?? []).length === 2;
       const rf = readFileSync(resolve(ROOT, 'src/game/roomfight.ts'), 'utf8'), bareHelper = /export function eyeBlocked\(g: Game, gd: Guard, a: Vec3, b: Vec3\): boolean \{ return g\.col\.segmentBlocked\(a, b, 0\.02, eyeThrough\(gd\)\); \}/.test(gt), fights = (rf.match(/eyeBlocked\(g, O\.gd, /g) ?? []).length, lead = (gt.match(/eyeBlocked\(g, gd, eye, /g) ?? []).length;
-      const lines = /const blocked = \(g\.col\.segmentBlocked\(eye, tgt, 0\.02, through\) && g\.col\.segmentBlocked\(eye, tgt2, 0\.02, through\)\)/.test(gt), asks = (gt.match(/eyeThrough\(gd\)/g) ?? []).length;
+      const asks = (gt.match(/eyeThrough\(gd\)/g) ?? []).length;
       // a function of guards.ts as code (its line comments taken out), and every call of `what` in such a text: each call's own argument list, by its own brackets (a
       // `, through)` further along the line is some other call's). Text, so with text's limits: a bracket inside a string of the arguments would cut one short
       const body = (name: string): string => { const i = gt.indexOf(`function ${name}(`), j = i < 0 ? -1 : gt.indexOf('\n}\n', i); return j < 0 ? '' : gt.slice(i, j).split('\n').slice(1).map(l => l.replace(/\/\/.*$/, '')).join('\n'); };
@@ -136,13 +140,14 @@ export async function fogMatesCheck(o: { verbose?: boolean } = {}): Promise<bool
         return out; };
       const masked = (c: string[]) => c.filter(a => /, through$/.test(a)).length;
       // canSeeChar's looks: every eyeContact it calls, two, ends on the mask; and inside eyeContact the mask goes on to what answers the look, the module
-      // (<anything>.eyeContact), at every call there is. Whether the module then keeps to it is not asked here (rust-check.ts's sense-ident asks it thin masks)
-      const looks = calls(body('canSeeChar'), /(?<![.\w])eyeContact\(/g), on = calls(body('eyeContact'), /\.eyeContact\(/g);
-      const handed = masked(looks), passed = masked(on);
+      // (<anything>.eyeContact), at the one call there is. NOTHING ELSE ANSWERS A LOOK: eyeContact asks no line of the box world itself (the game's own
+      // two lines of sight went with the senses' TypeScript). Whether the module then keeps to the mask is not asked here (sense-ident asks it thin masks)
+      const looks = calls(body('canSeeChar'), /(?<![.\w])eyeContact\(/g), on = calls(body('eyeContact'), /\.eyeContact\(/g), own = calls(body('eyeContact'), /segmentBlocked\w*\(/g).length;
+      const handed = masked(looks), passed = masked(on), alone = on.length === 1 && own === 0;
       const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_FOGMATES, want = word !== undefined ? word === '1' : shipped;
-      verdict(zero === false && bare === true && one === true && none === true && noneOff === false && moduleOn && rides && applied === true && beforeKey === false && helper && bareHelper && sam && lines && looks.length === 2 && handed === 2 && on.length >= 1 && passed === on.length && asks === 2 && lead === 2 && fights === 6 && (STAND_ENV as string[]).includes('TPS_FOGMATES') && /^TPS_FOGMATES=1 \(acts only under FOG\.thin: with TPS_FOGTHIN=1\)$/.test(PR.FROZEN_HOLDS['FOG.mates'] ?? '') && stood === want,
-        'switch — on in the module, ?fogmates=0 puts it off and a bare or =1 word on, no word leaves it; it rides a recording\'s tables and a recording from before the key replays with it off; a man\'s line is handed the marks by the one helper, as written: in canSeeChar\'s two looks (and guards.ts hands it on to whichever answers the look, the module or its own lines), and through the bare line in the lost-behind-something test and the room fight\'s six lines from a teammate\'s eye to a man; the player\'s own line for the squad\'s net takes the team\'s mask; a row of the two stands\' list with its word; up on the shipped stand, down on the frozen one unless its word raises it',
-        `?fogmates=0 → ${zero} · bare → ${bare} · =1 → ${one} · no word → ${none} / ${noneOff} · the module's on: ${moduleOn} · rides the tables ${rides}, applied ${applied}, before the key ${beforeKey} · the helper as written ${helper}, the two lines ${lines}, canSeeChar's looks handed it ${handed} of ${looks.length}, passed on inside eyeContact at ${passed} of ${on.length} calls, asked ${asks} times, the bare line as written ${bareHelper}: the lead test's ${lead}, the room fight's ${fights}, the player's line for the net ${sam} · ${shipped ? 'shipped' : 'frozen'} stand${word !== undefined ? ` with TPS_FOGMATES=${word}` : ''}: stood up ${stood}`);
+      verdict(zero === false && bare === true && one === true && none === true && noneOff === false && moduleOn && rides && applied === true && beforeKey === false && helper && bareHelper && sam && alone && looks.length === 2 && handed === 2 && passed === on.length && asks === 2 && lead === 2 && fights === 6 && (STAND_ENV as string[]).includes('TPS_FOGMATES') && /^TPS_FOGMATES=1 \(acts only under FOG\.thin: with TPS_FOGTHIN=1\)$/.test(PR.FROZEN_HOLDS['FOG.mates'] ?? '') && stood === want,
+        'switch — on in the module, ?fogmates=0 puts it off and a bare or =1 word on, no word leaves it; it rides a recording\'s tables and a recording from before the key replays with it off; a man\'s line is handed the marks by the one helper, as written: in canSeeChar\'s two looks (and guards.ts hands it on to the module, which alone answers a look: the game asks no line of its own to a man), and through the bare line in the lost-behind-something test and the room fight\'s six lines from a teammate\'s eye to a man; the player\'s own line for the squad\'s net takes the team\'s mask; a row of the two stands\' list with its word; up on the shipped stand, down on the frozen one unless its word raises it',
+        `?fogmates=0 → ${zero} · bare → ${bare} · =1 → ${one} · no word → ${none} / ${noneOff} · the module's on: ${moduleOn} · rides the tables ${rides}, applied ${applied}, before the key ${beforeKey} · the helper as written ${helper}, canSeeChar's looks handed it ${handed} of ${looks.length}, passed on inside eyeContact at ${passed} of ${on.length} calls to the module, lines of its own there ${own}, asked ${asks} times, the bare line as written ${bareHelper}: the lead test's ${lead}, the room fight's ${fights}, the player's line for the net ${sam} · ${shipped ? 'shipped' : 'frozen'} stand${word !== undefined ? ` with TPS_FOGMATES=${word}` : ''}: stood up ${stood}`);
     }
   } finally {
     FOG.mates = stood ?? matesWas; FOG.thin = stoodThin ?? thinWas;   // (as the stand left them: the probes after this one in the process run on the stand they were asked for)

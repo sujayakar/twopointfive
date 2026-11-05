@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 30;
+export const SIM_ABI = 32;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -74,8 +74,9 @@ export interface SimExports {
   /** guards.ts eyeContact: 1 visible + 2 in the cone; the distance → scratch 0 */
   sight_contact(w: number, set: number, through: number, q: number, e0: number, e1: number, e2: number, l0: number, l1: number, l2: number, range: number, halfDeg: number, nearM: number, nearDeg: number, vHalfDeg: number, c0: number, c1: number, c2: number, h0: number, h1: number, h2: number): number;
   light_lamps(): number; light_cap(): number;
-  /** guards.ts lightEstimateAt's lamps, a part of them: the six faces → scratch 0‥5 */
-  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number, g: number, stamp: number, stands: number, more: number, nb: number, spread: number, widest: number, rise: number, riseRate: number): number;
+  /** guards.ts lightEstimateAt's lamps, a part of them: the six faces → scratch 0‥5. `lg`, `leave`, `how`: the level's rows the question reads where
+   *  they stand (the slot of the block that holds them, the rows' bits it leaves out, and 1 they are read · 2 as their steady selves · 4 the last part) */
+  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number, g: number, stamp: number, stands: number, more: number, nb: number, spread: number, widest: number, rise: number, riseRate: number, lg: number, leave: number, how: number): number;
   smoke_blobs(): number; smoke_cap(): number;
   /** sense.ts CpuSmoke.blobsAlong over the blobs written: the transmittance → scratch 0 */
   smoke_trans(w: number, set: number, n: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number;
@@ -100,7 +101,7 @@ export interface SimExports {
   // the game's own smoke on the coarse grid (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): its state is a part of the game's block (state.ts), so a call
   // names the block's slot `g` (`st.bind()`), with the block's `stamp` where it reads the tables made from the state, and a step the box world and its copy
   grid_reset(g: number, home: number): void; grid_clear(g: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
-  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number, windX: number, windZ: number, windLow: number, windGain: number, windFullAt: number, windKeep: number): number;
+  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number, windX: number, windZ: number, windLow: number, windGain: number, windFullAt: number, windKeep: number, lg: number, leave: number, how: number): number;
   /** where the wind's share of each square metre of the plan is written before a step that has wind, and how many doubles it holds (bricks.rs WIND) */
   grid_wind(): number; grid_wind_cap(): number;
   grid_trans(g: number, stamp: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;

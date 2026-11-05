@@ -22,14 +22,15 @@ const { HOURS } = await import(`${ROOT}/src/game/hours.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { Steps } = await import(`${ROOT}/src/render/steps.ts`);
+const { ReachKeep } = await import(`${ROOT}/src/render/reachKeep.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const BRK = process.env.OPENINGS_BREAK === '1'; let red = false;
 const check = (ok: boolean, what: string, detail = '') => { red ||= !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
 console.log(`\n=== openings: where a level is open to the sky${BRK ? ' (glass taken for wall: must fail)' : ''} ===`);
 type O = { pos: number[]; dir: number[]; ajar: number; mid: [number, number, number]; half: [number, number]; full: number; radius: number };
 const say = (o: O) => `(${o.pos[0].toFixed(2)}, ${o.pos[2].toFixed(2)}) ${o.ajar.toFixed(2)} m²`;
-const stand = async (name: string) => { const l = console.log, w = console.warn; console.log = console.warn = () => { };
-  const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'))), seed: 1 }); for (let i = 0; i < 10; i++) W.step(1 / 60); console.log = l; console.warn = w;
+const stand = async (name: string, reach = false) => { const l = console.log, w = console.warn; console.log = console.warn = () => { };
+  const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'))), seed: 1, reach }); for (let i = 0; i < 10; i++) W.step(1 / 60); console.log = l; console.warn = w;
   const g = W.game, world = g.engine.world; g.godMode = true; g.aiEnabled = false;
   const gaps = () => g.doors.list.map((d: any) => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, wd = d.def.width; return [hx, hz, hx + Math.cos(a) * wd, hz + Math.sin(a) * wd]; });
   const hang = (n: string, a: number) => { const d = g.doors.byName(n); d.latched = a === 0; d.vel = 0; d.angle = a; };
@@ -92,7 +93,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
   check(O.length === win.length + high.length + porch.length + shed.length, 'and nothing else is: not a stall\'s awning on four posts, a canopy on posts against a wall, glass between two rooms or glass out of doors', O.map(say).join(' · ')); }
 
 // ---- the pass
-{ const S = await stand('pass'), { g } = S; S.shut();
+{ const S = await stand('pass', true), { g } = S; S.shut();   // (… with the picture's keeper of the game's own lamps' masks stood up, render/reachKeep.ts: line 5 holds that the openings' lights are in none of its lists)
   const { m, O, all } = S.read(), glazed = O.filter(o => Math.abs(o.pos[1] - 1.35) < 0.08 && o.full < 2), sides = O.filter(o => !glazed.includes(o));
   // 1. its windows: the four the glass-only rule found, where it hung them (17 cm inside the glass: 5 cm off the wall's inside face)
   { const tea = glazed.filter(o => Math.abs(o.pos[2] - 10.83) < 0.02 && o.pos[0] > 12 && o.pos[0] < 22 && o.dir[2] === -1), kit = glazed.filter(o => Math.abs(o.pos[2] - 10.83) < 0.02 && o.pos[0] > 22 && o.pos[0] < 28 && o.dir[2] === -1);
@@ -130,8 +131,9 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
   // (the harness's engine is a stand-in with the real light list and world: the real method is run on one that borrows both)
   { const { Engine } = await import(`${ROOT}/src/engine.ts`), { REACH_PACE, REACH_WORK } = await import(`${ROOT}/src/render/reach.ts`), { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`), { stateHash } = await import(`${ROOT}/src/game/rollback.ts`);
     const LS = g.engine.lights;
-    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null, openJob: new Steps() }) as any;
-    const E = mk();
+    const KEEPS: any[] = [];   // (every borrowed engine's keeper of its own lights' masks: render/reachKeep.ts)
+    const mk = () => Object.assign(Object.create(Engine.prototype), { lights: LS, world: g.engine.world, settings: { skyZenith: HOURS.overcast.sky.zenith, skyHorizon: HOURS.overcast.sky.horizon, exposure: HOURS.overcast.exposure }, viewFocus: [20, 0, 10], openRecs: [], dayLights: [], openLevel: null, openSerial: -1, openTick: 0, openSeen: NaN, openPlanned: NaN, openWait: 0, openLeaves: NaN, openWalls: null, openJob: new Steps(), reach: KEEPS[KEEPS.push(new ReachKeep(g.engine.world, LS)) - 1] }) as any;   // (… and a keeper of its own for the masks of its own lights: render/reachKeep.ts)
+    const E = mk(), M = (l: any) => { if (l) for (const k of KEEPS) { const m = k.of(l); if (m) return m; } return undefined; };   // (a day light's mask: the engine's keeper holds it, no light carries one)
     const was = { on: lookConfig.on, windows: lookConfig.windows, rooms: lookConfig.rooms, eye: lookConfig.eyeAt, gaps: lookConfig.doorGaps, lit: LOOK_OPENINGS.lit };
     const quiet = <T>(f: () => T): T => { const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
     try { lookConfig.on = true; lookConfig.windows = 1; lookConfig.rooms = 1;
@@ -139,21 +141,21 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
       lookConfig.doorGaps = () => g.doors.list.map((d: any) => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, wd = d.def.width; return [hx, hz, hx + Math.cos(a) * wd, hz + Math.sin(a) * wd]; });
       // (a drawn frame: the engine's pass alone. The game is NOT stepped between them: behind the start card and on a paused page it is not either)
       const frames = (n: number) => quiet(() => { for (let i = 0; i < n; i++) E.lookOpeningLights(); });
-      const day = () => E.dayLights as any[], lit = () => day().filter(l => l.enabled), game = () => (LS.lights as any[]).map(l => l.name).join(','), reachN = () => (g as any).reachLights.length + (g as any).reachQueue.length;
+      const day = () => E.dayLights as any[], lit = () => day().filter(l => l.enabled), game = () => (LS.lights as any[]).map(l => l.name).join(','), reachN = () => { const P = (g.engine as any).reach.peek(); return P.lamps.length + P.queue.length; };   // (the game's own lamps' masks are the stand's keeper's: the openings' lights must be in neither of its lists)
       const before = { list: game(), reach: reachN(), steady: (LS.lights as any[]).filter(l => l.ttl < 0).length, hash: quiet(() => stateHash(g)) };
-      S.shut(); const s0 = REACH_WORK.steps; frames(1); const first = lit().length, firstMasks = day().filter(l => l.reach).length, s1 = REACH_WORK.steps; let most = 0, n = 1;
-      while (day().some(l => !l.reach) && n < 400) { const c = REACH_WORK.steps; frames(1); most = Math.max(most, REACH_WORK.steps - c); n++; }
+      S.shut(); const s0 = REACH_WORK.steps; frames(1); const first = lit().length, firstMasks = day().filter(l => M(l)).length, s1 = REACH_WORK.steps; let most = 0, n = 1;
+      while (day().some(l => !M(l)) && n < 400) { const c = REACH_WORK.steps; frames(1); most = Math.max(most, REACH_WORK.steps - c); n++; }
       const lit0 = lit(), used0 = day().slice(), sAll = REACH_WORK.steps; frames(5); const quietAfter = REACH_WORK.steps === sAll, hash1 = quiet(() => stateHash(g));
       const tea = g.doors.byName('tea'), [hx, hz] = tea.def.hinge, mx = hx + Math.cos(tea.def.closedDir) * tea.def.width * 0.5, mz = hz + Math.sin(tea.def.closedDir) * tea.def.width * 0.5, doorL = used0.find(l => Math.hypot(l.pos[0] - mx, l.pos[2] - mz) < 0.5);
-      S.hang('tea', 1.5); quiet(() => S.W.step(1 / 60)); frames(1); const open = !!doorL?.enabled, I = doorL?.intensity ?? 0, mask = doorL?.reach, range1 = doorL?.range, pos1 = JSON.stringify(doorL?.pos);
-      S.hang('tea', 0); quiet(() => S.W.step(1 / 60)); frames(1); const shutOut = !!doorL && !doorL.enabled && doorL.range === range1 && doorL.reach === mask && JSON.stringify(doorL.pos) === pos1 && REACH_WORK.steps === sAll;
+      S.hang('tea', 1.5); quiet(() => S.W.step(1 / 60)); frames(1); const open = !!doorL?.enabled, I = doorL?.intensity ?? 0, mask = M(doorL), range1 = doorL?.range, pos1 = JSON.stringify(doorL?.pos);
+      S.hang('tea', 0); quiet(() => S.W.step(1 / 60)); frames(1); const shutOut = !!doorL && !doorL.enabled && doorL.range === range1 && M(doorL) === mask && JSON.stringify(doorL.pos) === pos1 && REACH_WORK.steps === sAll;
       check(used0.length === all.length && lit0.length === O.length && first === O.length && firstMasks === all.length && most <= REACH_PACE.steps * 1.6 && quietAfter && !!doorL && !lit0.includes(doorL) && open && I > 0.3 && !!mask && shutOut,
         `the engine keeps one light an opening: on a level\'s first frame EVERY opening has its reach mask whole, the shut ones too (since 11-05: a door opened on the next frame finds its mask made), and those open are lit; after it none is decided but a frame\'s share of the work at a time (the game\'s own pace for a lamp\'s), with the game standing still as it does behind the start card; a door\'s comes on as it opens and goes out as it shuts, and neither moves it, its range or its mask`,
         `${used0.length} openings · ${first} lit and ${firstMasks} masked on the first frame (${s1 - s0} sight-line steps) · all ${used0.length} masks whole ${n} frames on, ${most} steps in the longest of them (the pace is ${REACH_PACE.steps}) and none after · the tea door open: ${I.toFixed(2)}`);
       // DAYLIGHT COUNTED ONCE (render/lights.ts LIGHT_PORTAL; tools/qa/portal-check.ts asks what the light is): each light is the whole rectangle its
       // walls leave with the sky's reference divided back out, lit under a night's sky too. The only way since 11-04 (the disks and their row are gone)
       { const lumOf = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2], daySky = E.settings, recs = E.openRecs as any[], sunL = (LS.lights as any[]).find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0), refLum = lumOf(openingLooks(daySky.skyZenith, daySky.skyHorizon, lookConfig.sky, sunL));
-        frames(1); const P = lit(), masked = day().every(l => !!l.reach);
+        frames(1); const P = lit(), masked = day().every(l => !!M(l));
         // a door's leaf: lit from the first hand's width, as bright to a pass whose ray stops short as what is open, the whole rectangle written beside it
         const shareOf = (l: any) => l.portal.share as number, leafAt = (a: number) => { S.hang('tea', a); quiet(() => S.W.step(1 / 60)); frames(1); return { on: !!doorL.enabled, I: doorL.intensity as number, E: doorL.intensity * lumOf(doorL.color), share: doorL.enabled && doorL.portal ? shareOf(doorL) : 0 }; };
         const ajar = leafAt(0.3), half = leafAt(0.7), wide = leafAt(1.5), shut = leafAt(0), oT = recs.find(r => r.l === doorL).o, rectT = 4 * oT.half[0] * oT.half[1];
@@ -178,7 +180,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
         eye = [14, 12]; E.viewFocus = [14, 0, 12]; frames(1); const a = set(); E.viewFocus = [34, 0, 8]; frames(1); const b = set(); eye = [34, 8]; frames(1); const c = set(); LOOK_OPENINGS.lit = was.lit; eye = [20, 10]; frames(1);
         check(a.split(' ').length === 3 && a === b && c !== a && c.split(' ').length === 3 && lit().length === O.length, 'when more are open than are lit at once, the nearest to Sam are lit and the camera has no say', `three by Sam at the tea house: ${a} · the camera moved to the store: ${b} · Sam moved there: ${c}`); }
       // a wall changes: found again once it has stood still, each light kept where its opening still is, lit by its old mask until the new one is whole
-      { const st = g.engine.world.statics as any[], wall = st.find(b => !b.rot && b.h[0] < 0.2 && b.h[1] > 1.2 && b.h[2] > 1.6 && Math.abs(b.c[0] - 34) < 0.2 && Math.abs(b.c[2] - 8) < b.h[2] - 1.2), keepL = lit0[0], oldMask = keepL.reach;
+      { const st = g.engine.world.statics as any[], wall = st.find(b => !b.rot && b.h[0] < 0.2 && b.h[1] > 1.2 && b.h[2] > 1.6 && Math.abs(b.c[0] - 34) < 0.2 && Math.abs(b.c[2] - 8) < b.h[2] - 1.2), keepL = lit0[0], oldMask = M(keepL);
         const c0 = wall.c[2], h0 = wall.h[2], z0 = c0 - h0, z1 = c0 + h0, bump = () => { (g.engine.world as any).geomSerial = ((g.engine.world as any).geomSerial ?? 0) + 1; };
         // (a hole 1.5 m wide in the middle of the store's outer wall: the wall is cut short of it and a second piece stands past it)
         wall.c[2] = (z0 + c0 - 0.75) / 2; wall.h[2] = (c0 - 0.75 - z0) / 2; st.push({ ...wall, c: [wall.c[0], wall.c[1], (c0 + 0.75 + z1) / 2], h: [wall.h[0], wall.h[1], (z1 - c0 - 0.75) / 2] }); bump();
@@ -186,9 +188,9 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
         //  the hole's own first mask included. Until 11-05 that mask was decided whole on the frame the walls were read, this hole's 327 thousand steps, and the field made beside it)
         const fields0 = REACH_WORK.fields; let most = 0; const one = () => { const s0 = REACH_WORK.steps; frames(1); most = Math.max(most, REACH_WORK.steps - s0); };
         one(); const waits = day().length === used0.length; for (let i = 0; i < LOOK_OPENINGS.settle + 1; i++) one();
-        const holeL = day().find(l => !used0.includes(l)), kept = day().includes(keepL) && keepL.enabled && !!keepL.reach, dark = !!holeL && (!holeL.enabled || !!holeL.reach); let k = 0; while (!(holeL?.enabled && holeL.reach) && k++ < 400) one(); const late = k; k = 0; while (day().some(l => !l.reach) && k++ < 400) one(); for (let i = 0; i < 80; i++) one();
+        const holeL = day().find(l => !used0.includes(l)), kept = day().includes(keepL) && keepL.enabled && !!M(keepL), dark = !!holeL && (!holeL.enabled || !!M(holeL)); let k = 0; while (!(holeL?.enabled && M(holeL)) && k++ < 400) one(); const late = k; k = 0; while (day().some(l => !M(l)) && k++ < 400) one(); for (let i = 0; i < 80; i++) one();
         const fieldsMade = REACH_WORK.fields - fields0, noField = fieldsMade === 0, paced = most <= REACH_PACE.steps * 1.6;   // (1.6: a share and the cell that crossed it, as the pace's own line above allows)
-        const litHole = !!holeL?.enabled && !!holeL.reach, fresh = keepL.reach !== oldMask, at = holeL ? `at (${holeL.pos[0].toFixed(2)}, ${holeL.pos[2].toFixed(2)}) ${holeL.intensity.toFixed(2)}` : 'none';
+        const litHole = !!holeL?.enabled && !!M(holeL), fresh = M(keepL) !== oldMask, at = holeL ? `at (${holeL.pos[0].toFixed(2)}, ${holeL.pos[2].toFixed(2)}) ${holeL.intensity.toFixed(2)}` : 'none';
         st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); frames(LOOK_OPENINGS.settle + 2); const gone = !!holeL && !day().includes(holeL) && day().length === used0.length;
         check(waits && !!holeL && kept && dark && litHole && fresh && gone && noField && paced, `a wall holed is a new opening ${LOOK_OPENINGS.settle} frames after it has stood still (never on the frame of the blast): its light comes on with its mask whole, a few frames on, the others stay lit by their old masks until theirs are decided again; no frame of it spends more than its share of sight-line steps and no jump field is made again; the wall put back, its light is gone`,
           `the hole\'s light ${at} · not on the first frame: ${waits} · a window\'s light kept and lit throughout: ${kept} · its mask decided again: ${fresh} · lit: ${litHole}, ${late} frames after the frames that found it · the most steps in a frame ${most} (a share is ${REACH_PACE.steps}) · jump fields made for the hole ${fieldsMade} · gone with the wall back: ${gone}`); }
@@ -201,7 +203,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
         // a hole, and a static that is no wall nudged every five frames from the frame it is found (a crate shot to bits, a pane gone: the openings are found again each time)
         wall.c[2] = (z0 + c0 - 0.75) / 2; wall.h[2] = (c0 - 0.75 - z0) / 2; const second = { ...wall, c: [wall.c[0], wall.c[1], (c0 + 0.75 + z1) / 2], h: [wall.h[0], wall.h[1], (z1 - c0 - 0.75) / 2] }; st.push(second); bump();
         const crate = st.find(b => b !== wall && b !== second && b.h[1] < 0.6 && b.c[1] < 1.2), y0 = crate.c[1]; let flip = false, litAt = -1;
-        for (let k = 1; k <= 200 && litAt < 0; k++) { if (k >= 6 && (k - 6) % 5 === 0) { flip = !flip; crate.c[1] = y0 + (flip ? 0.02 : 0); bump(); } frames(1); const h = day().find(l => !known.has(l)); if (h?.enabled && h.reach) litAt = k; }
+        for (let k = 1; k <= 200 && litAt < 0; k++) { if (k >= 6 && (k - 6) % 5 === 0) { flip = !flip; crate.c[1] = y0 + (flip ? 0.02 : 0); bump(); } frames(1); const h = day().find(l => !known.has(l)); if (h?.enabled && M(h)) litAt = k; }
         crate.c[1] = y0; bump(); settle();
         if (!(litAt > 0 && litAt <= 20)) f.push(`with the openings found again every five frames the hole's light ${litAt < 0 ? 'never came on in 200 frames' : `came on at frame ${litAt}`} (a job in hand is kept where no wall moved)`); else said.push(`found again every five frames, the hole lit at frame ${litAt}`);
         // a second hole beside the first: one opening of the two, its middle 0.75 m off, so a new record. Nothing that was lit goes dark
@@ -226,7 +228,7 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
           const s0 = st[0]; st[0] = { ...s0 }; quiet(() => { E3.lookOpeningLights(); E3.lookOpeningLights(); }); const R4 = E3.openRecs as any[]; if (!R4.length || R4.some(r => !r.mask)) f.push(`a new level on the same engine: ${R4.filter(r => !r.mask).length} of ${R4.length} openings with no mask after its first frames`); st[0] = s0; }
         // ?reachpace=old (REACH_PACE.whole): a hole's first mask whole at once, as it was
         { REACH_PACE.whole = true; const known2 = new Set(day()); wall.c[2] = (z0 + c0 - 0.75) / 2; wall.h[2] = (c0 - 0.75 - z0) / 2; st.push({ ...wall, c: [wall.c[0], wall.c[1], (c0 + 0.75 + z1) / 2], h: [wall.h[0], wall.h[1], (z1 - c0 - 0.75) / 2] }); bump();
-          let found = -1, litOn = -1; for (let k = 1; k <= 60 && litOn < 0; k++) { frames(1); const h = day().find(l => !known2.has(l)); if (h && found < 0) found = k; if (h?.enabled && h.reach) litOn = k; }
+          let found = -1, litOn = -1; for (let k = 1; k <= 60 && litOn < 0; k++) { frames(1); const h = day().find(l => !known2.has(l)); if (h && found < 0) found = k; if (h?.enabled && M(h)) litOn = k; }
           REACH_PACE.whole = false; st.pop(); wall.c[2] = c0; wall.h[2] = h0; bump(); settle();
           if (!(found > 0 && litOn === found)) f.push(`with the old pace asked for, the hole was found on frame ${found} and lit on frame ${litOn} (want the same frame)`); else said.push('the old pace asked for: the hole lit on the frame it is found'); }
         check(f.length === 0, 'what is lit stays lit and no job is lost: a hole\'s light comes on though the openings are found again every five frames; a hole widened, and the wall put back, never show fewer lit; a box set down makes the field fresh and every mask a fresh raster\'s; the first frame masks every opening, on a second level too; the old pace asked for is the old pace', f.join('; ') || said.join(' · ')); }
@@ -313,8 +315,8 @@ if (process.argv.includes('--hole')) { await hole(); process.exit(red ? 1 : 0); 
           if (/q\.get\('(planpace|reachpace)'\)/.test(readFileSync(`${ROOT}/src/main.ts`, 'utf8'))) f.push('main.ts reads a pace\'s word by itself'); }
         check(f.length === 0, 'the engine gives every plan at once on a page\'s first frames and after a restart or a save put back (what is in hand given up), and the frame\'s allowance and the draw order\'s wait otherwise; at once always with the pace off; the planners\' pace and the reach masks\' are switches the stands, the registry and a recording know, read with the page\'s other switches', f.join('; ') || `${first} frames at once, then ${PLAN_PACE.ms} ms a frame and ${PLAN_PACE.calm} still frames for the order`); }
       // the rooms row put off and on, and put on for the first time in the middle of a level: no frame with the rooms dark
-      { const n0 = lit().length; lookConfig.rooms = 0; frames(1); const off = lit().length, bare = lit().every(l => !l.reach); lookConfig.rooms = 1; frames(1); const on = lit().length, masked = lit().every(l => !!l.reach);
-        lookConfig.rooms = 0; const E2 = mk(); quiet(() => { E2.lookOpeningLights(); E2.lookOpeningLights(); }); const a2 = (E2.dayLights as any[]).filter(l => l.enabled).length; lookConfig.rooms = 1; quiet(() => E2.lookOpeningLights()); const b2 = (E2.dayLights as any[]).filter(l => l.enabled && l.reach).length;
+      { const n0 = lit().length; lookConfig.rooms = 0; frames(1); const off = lit().length, bare = lit().every(l => !M(l)); lookConfig.rooms = 1; frames(1); const on = lit().length, masked = lit().every(l => !!M(l));
+        lookConfig.rooms = 0; const E2 = mk(); quiet(() => { E2.lookOpeningLights(); E2.lookOpeningLights(); }); const a2 = (E2.dayLights as any[]).filter(l => l.enabled).length; lookConfig.rooms = 1; quiet(() => E2.lookOpeningLights()); const b2 = (E2.dayLights as any[]).filter(l => l.enabled && M(l)).length;
         check(n0 === O.length && off === n0 && bare && on === n0 && masked && a2 === n0 && b2 === n0, 'with "Light stays in its room" put off the lights are lit with no mask, and put on again, or on for the first time in the middle of a level, every one is lit on that same frame with its mask', `${n0} lit · the row off ${off} · on again ${on} · a level begun with the row off ${a2}, the row put on ${b2}`); }
       lookConfig.windows = 0; frames(1); check(day().length === 0, 'the row at 0 takes every one of them out');
     } finally { lookConfig.on = was.on; lookConfig.windows = was.windows; lookConfig.rooms = was.rooms; lookConfig.eyeAt = was.eye; lookConfig.doorGaps = was.gaps; LOOK_OPENINGS.lit = was.lit; } }

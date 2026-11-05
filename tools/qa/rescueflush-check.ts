@@ -45,7 +45,7 @@ export async function rescueflushCheck(): Promise<boolean> {
   const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const { answerStand, seeded } = await import('./answers.ts');
   const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
-  const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`), { lanesRestore, laneWarns, laneCovers, LANES } = await import(`${ROOT}/src/game/lanes.ts`);
+  const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`), { lanesRestore, laneKnownAt, laneCovers, LANES } = await import(`${ROOT}/src/game/lanes.ts`);
   const was = { end: { ...RESCUEEND }, flush: { ...RESCUEFLUSH }, lanes: LANES.on }, rnd = Math.random; let all = true;
   const BREAK = process.env.RESCUEFLUSH_BREAK === '1', K = RESCUEFLUSH;
   /** has this mission's hostage room a side door? (asked of its level's own scenario data once a floor stands: (h) is for those) */
@@ -131,7 +131,7 @@ export async function rescueflushCheck(): Promise<boolean> {
         lanesRestore(g, { serial: 1, lanes: [{ id: 1, from: mid, at: [...R.outsidePoint], t0: now, lastT: now, until: now + 150, weight: 1, downs: 1, known: true, knownAt: now, guns: [mid], wedges: [], roundAt: now + 1e6, stunAt: now + 1e6 }] });
         F.step(1);
         const outside = F.up(R.hostiles).filter((h: any) => !F.inB(h.char.pos)), so = R.sideOutside;
-        const warned = outside.filter((h: any) => laneWarns(g, h, R.outsidePoint) && (!so || laneWarns(g, h, so))).length;
+        const warned = outside.filter((h: any) => laneKnownAt(g, h, R.outsidePoint) && (!so || laneKnownAt(g, h, so))).length;
         F.step(K.afterSecs + outside.length * K.gapSecs + 12);
         const words = F.lines(/^flush:(room|side|noise|out):/), first = words[0], named = new Set(words.map((l: any) => l.what.split(':')[2])), missed = outside.filter((h: any) => h.state !== 'dead' && !named.has(h.callsign)).map((h: any) => h.callsign);
         line(outside.length > 0 && warned === outside.length && !!first && Math.abs(first.t - K.afterSecs) < 0.2 && !missed.length, `(g) ${tag}: a lane they know of at both doors keeps nobody back — every man outside is still sent`,

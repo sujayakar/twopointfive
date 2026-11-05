@@ -89,6 +89,7 @@ import { WEAPONS } from './game/weapons';
 import { Overlay } from './ui/overlay';
 import { Bubbles } from './ui/bubbles';
 import { SmokeSystem } from './smoke/smoke';
+import { pageIndirect } from './smoke/dispatch';
 import { Panel } from './ui/panel';
 import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx, warmState } from './audio/audio';
 import { setlistOfQuery, setlistOf, setlistLevel } from './audio/setlist';
@@ -356,6 +357,11 @@ async function main() {
   const ch = await chP;
   if (lookConfig.on && ch.cast) { lookParts.suit = ch.cast.parts.indexOf('op_suit') + 1; lookParts.rig = ch.cast.parts.indexOf('chest_rig') + 1; engine.gbuffer.setLook(); }   // (THE LOOK PROTOTYPE's men: which part is the plate carrier's and which the chest rig, look.wgsl manWeb)
   const smoke = new SmokeSystem(engine);
+  // THE SOLVER'S DISPATCH AS THIS PAGE OPENS (smoke/dispatch.ts): the whole pool, the GPU's own count on a software adapter. ?smokeindirect=1 = the GPU's
+  // count on any card (the dispatch of before), =0 = the whole pool on any adapter. Not a setting to play with: the word is kept to set the two ways side by
+  // side on a machine nobody has read (a Mac, a D3D card), and goes when they have been. The visit's word, never a run's (ui/replaykey.ts VISIT_FLAGS); a
+  // benchmark asked beside it carries it (ui/benchrun.ts CARRIED)
+  smoke.sparse.indirect = pageIndirect(q.get('smokeindirect'), gpu.adapterFallback === true);
   engine.setSmoke(smoke.binding);
   const smokeInit = timed('smoke', smoke.init())!; smokeInit.catch(() => { /* awaited below */ });   // (its kernels join the ones in flight)
   await tick();
@@ -1160,7 +1166,7 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('roundexact') === '1') roundConfig.exact = true;   // ?roundexact=1: the ray programs with the cut rule test a round thing's cylinder as well, as they did at first (scene/round.ts roundConfig; common.wgsl ROUND_AS_CUT) — a picture comparison only, and more than a newer software adapter runs
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)
   if (q.get('sunlooks') === 'old') REACH_OPTS.solidLooks = true;   // ?sunlooks=old: the sun's and the moon's reach masks as they were, a look that falls inside a wall counted as seeing the sky (render/reach.ts reachMaskForDirectional)
-  (window as any).__reachOpts = REACH_OPTS;   // (a page run can set solidLooks and ask game.buildDirReach again, to draw the old mask and the new in one boot)
+  (window as any).__reachOpts = REACH_OPTS;   // (a page run can set solidLooks and ask engine.reach.dir again, to draw the old mask and the new in one boot)
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline

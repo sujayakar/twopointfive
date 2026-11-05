@@ -147,7 +147,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'MARKSIT',
   // the picture's planners are made a little a frame (render/planPace.ts PLAN_PACE; a picture only): a recording made with it on says so, one with no table for it had each plan whole on its frame
   'PLAN_PACE',
-  // the pace the lamps' reach masks are decided at after a wall changes (render/reach.ts REACH_PACE; the game's tick reads it, the masks are the picture's): a recording says which, one with no table for it had the shares
+  // the pace the lamps' reach masks are decided at after a wall changes (render/reach.ts REACH_PACE; the picture's keeper reads it on drawn frames, render/reachKeep.ts: nothing in the tick does): a recording says which, one with no table for it had the shares
   'REACH_PACE',
   // a named coat's finish goes wherever its word goes (scene/stuff.ts COATFINISH; a picture only): a recording made with it on draws its vehicles' bodies as a clear coat, one with no table for it with the finish their files give them
   'COATFINISH',
@@ -187,6 +187,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'NOSHOVE',
   // a tutorial mission's frame (rails.ts RAILS): a recording made with it on replays its locked keys dropped and its spared teammates up again, one from before as a plain lesson
   'RAILS',
+  // what a man believes and what he covers are two things (belief.ts BELIEF): a recording made with it on replays its men on a post keeping what they saw and heard, one from before has the door they watch written over it every tick
+  'BELIEF',
   // an alerted man does not wait at a shut door (doorforce.ts DOORFORCE): a recording made with it on replays its defenders firing through a leaf and booting it in, one from before has them wait or use the handle
   'DOORFORCE',
   // the slot in hand pressed again opens its setup (slotsetup.ts SLOTSETUP): a recording made with it on replays its second press of a gun's digit as the setup, one from before as the launcher's next load
@@ -311,6 +313,7 @@ import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
 import { RAILS } from './rails';
 import { DOORFORCE } from './doorforce';
+import { BELIEF } from './belief';
 import { SLOTSETUP } from './slotsetup';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
@@ -410,6 +413,8 @@ export function knobRegistry(): Record<string, object> {
     NOSHOVE,
     // a tutorial mission's frame (rails.ts): the switch, the sky seat's pan and how long a spared teammate is on his knee — what the tick's input and a teammate's fall read
     RAILS,
+    // what a man believes and what he covers (belief.ts): the switch
+    BELIEF,
     // an alerted man does not wait at a shut door (doorforce.ts): the switch, its two halves, how sure he must be and how long before the boot — when a defender's rounds go through a leaf and when it is kicked in reads them
     DOORFORCE,
     // the slot in hand pressed again opens its setup (slotsetup.ts): the switch, how long it stays up unused, and whether a pick shuts it — what a digit pressed with a gun in the hands does reads them
