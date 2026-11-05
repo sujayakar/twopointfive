@@ -102,7 +102,7 @@ export async function clearDoctrine() {
     for (let f = 0; f < 60 * 18; f++) {
       clear.tick(t, DT); W.step(DT); t += DT; phases.add(clear.phase);
       if (isNaN(tOpen) && !d.latched) tOpen = t;
-      if ((P.breach ?? 'kick') === 'kick' && !isNaN(tOpen) && t > tOpen + 0.5 && isNaN(clear.tEnter) && !inFunnel && funnel(a.char.pos)) inFunnel = `#1 in the opening at (${f2(a.char.pos[0])}, ${f2(a.char.pos[2])}) ${f2(t - tOpen)} s after the leaf went`;
+      if ((P.breach ?? 'kick') === 'kick' && !isNaN(tOpen) && t > tOpen + 0.5 && isNaN(clear.tEnter) && !inFunnel && funnel(a.char.pos)) inFunnel = `#1 in the opening at (${f2(a.char.posX)}, ${f2(a.char.posZ)}) ${f2(t - tOpen)} s after the leaf went`;
       starts[0] = clear.tEnter; starts[1] = clear.tEnter2;
       [a, b].forEach((gd: any, i: number) => {
         const t0 = starts[i]; if (isNaN(t0)) return; const c = gd.char, dtIn = t - t0;

@@ -109,7 +109,7 @@ const PLAY = ({ secs, tap, cursor }) => {
   // (`right`: the camera goes round to his gun-hand side by `turn`, whichever sign that is — the hand's own trip to the belt is the subject)
   const guardPin = (i, turn = 0.9, dist = 2.4, pitch = 0.42, right = false, h = 1.25) => page.evaluate(({ i, turn, dist, pitch, right, h }) => { const g = window.__game, c = g.guards[i].char, y = c.bodyYaw, b = c.bones;
     if (right && b.upperArmR && b.upperArmL) { const rx = b.upperArmR[0] - b.upperArmL[0], rz = b.upperArmR[2] - b.upperArmL[2]; if (Math.sin(y + turn) * rx + Math.cos(y + turn) * rz < 0) turn = -turn; }
-    window.__stage({ look: [c.pos[0], h, c.pos[2]], yaw: y + turn, pitch, dist }, {}); return { p: [c.pos[0], h, c.pos[2]], n: [Math.sin(y), 0, Math.cos(y)], name: g.guards[i].callsign, turn }; }, { i, turn, dist, pitch, right, h });
+    window.__stage({ look: [c.posX, h, c.posZ], yaw: y + turn, pitch, dist }, {}); return { p: [c.posX, h, c.posZ], n: [Math.sin(y), 0, Math.cos(y)], name: g.guards[i].callsign, turn }; }, { i, turn, dist, pitch, right, h });
   if (ONLY.includes('radio') || ONLY.includes('swap') || ONLY.includes('guard')) await sam([8, 0, 17]);   // (Sam out of these: the guards are the subject)
   if (ONLY.includes('radio')) {   // ---- a hand to the radio while his line is on the net
     await ai(false); await play(0.5);
@@ -119,11 +119,11 @@ const PLAY = ({ secs, tap, cursor }) => {
   if (ONLY.includes('swap')) {   // ---- the torch put away and the sidearm drawn: a strip
     // (out onto open floor first: on his beat among the desks a cabinet or a chair stands between any close camera and his belt)
     const open = await page.evaluate(() => { const g = window.__game, c = g.guards[1].char, nav = g.col.nav; let best = null, bs = 1e9;
-      for (let dx = -9; dx <= 9; dx += 0.5) for (let dz = -9; dz <= 9; dz += 0.5) { const x = c.pos[0] + dx, z = c.pos[2] + dz; let ok = !nav.isBlocked(x, z);
+      for (let dx = -9; dx <= 9; dx += 0.5) for (let dz = -9; dz <= 9; dz += 0.5) { const x = c.posX + dx, z = c.posZ + dz; let ok = !nav.isBlocked(x, z);
         for (let a = 0; a < 12 && ok; a++) for (const r of [0.6, 1.2, 1.8, 2.4]) if (nav.isBlocked(x + Math.cos(a * Math.PI / 6) * r, z + Math.sin(a * Math.PI / 6) * r)) { ok = false; break; }
         for (const p of g.props.props) if (ok && Math.hypot(p.x - x, p.z - z) < 2.6 + p.radius) ok = false;
         const d = dx * dx + dz * dz; if (ok && d < bs) { bs = d; best = [x, 0, z]; } }
-      if (best) { c.pos[0] = best[0]; c.pos[2] = best[2]; } return best; });
+      if (best) { c.posX = best[0]; c.posZ = best[2]; } return best; });
     log('open floor', JSON.stringify(open));
     await ai(true); await play(0.3); let G1 = await guardPin(1, 1.1, 1.9, 0.3, true, 1.1); await lamp(G1.p, G1.n, G1.turn); await play(0.05); await still('swap-0-torch');
     await page.evaluate(() => window.__game.escalate());

@@ -102,7 +102,7 @@ export async function guardKey() {
     if (A.keys.size) fails.push(`his belt still holds [${[...A.keys].join(',')}]`);
     const clack = log.filter(c => c.name === 'lockPick' && Math.abs(c.t - landT) < DT + 1e-6);
     if (clack.length !== 1) fails.push(`lockPick ×${clack.length} on the frame the key was taken (want 1 — the clip off his belt)`);
-    else { const c = clack[0]; const d = c.pos ? Math.hypot(c.pos[0] - A.char.pos[0], c.pos[2] - A.char.pos[2]) : 99; if (d > 0.5 || !c.pos || c.pos[1] < 0.8 || c.pos[1] > 1.2 || !((c.opts?.rate as number) > 1.3)) fails.push(`the clack at ${c.pos ? posS(c.pos as Vec3) + ' y ' + f2(c.pos[1]) : 'nowhere'} rate ${c.opts?.rate} (want on him at hip height, pitched up)`); }
+    else { const c = clack[0]; const d = c.pos ? Math.hypot(c.pos[0] - A.char.posX, c.pos[2] - A.char.posZ) : 99; if (d > 0.5 || !c.pos || c.pos[1] < 0.8 || c.pos[1] > 1.2 || !((c.opts?.rate as number) > 1.3)) fails.push(`the clack at ${c.pos ? posS(c.pos as Vec3) + ' y ' + f2(c.pos[1]) : 'nowhere'} rate ${c.opts?.rate} (want on him at hip height, pitched up)`); }
     if (!msgs.some(m => m.t === landT && /^you took Kowalski's key/.test(m.text))) fails.push(`no 'took Kowalski's key…' log line that frame (log: ${msgs.slice(-4).map(m => m.text).join(' | ')})`);
     if (game.mission.stats.keys !== 1) fails.push(`stats.keys ${game.mission.stats.keys} (want 1)`);
     const line = remark ? D.SAM_LINES.find((l: any) => l.id === remark.id) : null;
@@ -166,7 +166,7 @@ export async function guardKey() {
     notes.push(`tap → open in ${openAt >= 0 ? f2(openAt) : '—'} s, events [${evTap.map(e => `${e.kind} ${e.level}`).join(', ')}]`);
     // walk through into the server room, then let the closer take it: latched AND still locked behind him
     game.puppet = { goal: [17.6, 0, 7.8], aim: [17.6, 1.0, 5.0] };   // well clear of the leaf's swing on the far side, so the closer has nothing resting on it
-    let inAt = -1; for (let i = 0; i < 60 * 5; i++) { W.step(DT); if (inAt < 0 && game.player.char.pos[2] < 9.5) inAt = game.time - tTap; }
+    let inAt = -1; for (let i = 0; i < 60 * 5; i++) { W.step(DT); if (inAt < 0 && game.player.char.posZ < 9.5) inAt = game.time - tTap; }
     game.puppet = null;
     if (inAt < 0) fails.push(`Sam never got through the doorway (at ${posS(game.player.char.pos)}, leaf ${f2(server.angle)})`);
     let relatchAt = -1; for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (relatchAt < 0 && server.latched) relatchAt = game.time - tTap; }
@@ -201,7 +201,7 @@ export async function guardKey() {
     server.reset(); game.teleportPlayer([17.6, 0, 11.4]); game.player.crouch = true; W.step(DT);
     game.puppet = { goal: [17.6, 0, 8.4], aim: [17.6, 1.0, 5.0] };
     let pushedAt = -1, throughAt = -1, blocked = 0; const tW = game.time;
-    for (let i = 0; i < 60 * 6; i++) { W.step(DT); if (pushedAt < 0 && !server.latched) pushedAt = game.time - tW; if (throughAt < 0 && game.player.char.pos[2] < 9.5) throughAt = game.time - tW; if (game.player.char.pos[2] > 10.3 && game.time - tW > 2) blocked++; }
+    for (let i = 0; i < 60 * 6; i++) { W.step(DT); if (pushedAt < 0 && !server.latched) pushedAt = game.time - tW; if (throughAt < 0 && game.player.char.posZ < 9.5) throughAt = game.time - tW; if (game.player.char.posZ > 10.3 && game.time - tW > 2) blocked++; }
     game.puppet = null;
     if (pushedAt < 0 || throughAt < 0) fails.push(`walking into it: unlatched at ${pushedAt >= 0 ? f2(pushedAt) : 'never'}, through at ${throughAt >= 0 ? f2(throughAt) : 'never'} (Sam at ${posS(game.player.char.pos)}) — the leaf walled him`);
     if (game.player.kick || game.player.picking) fails.push('walking into it started a kick / pick');
@@ -240,7 +240,7 @@ export async function guardKey() {
     { at(true); game.selectVerb('door', 'pick'); const hv = game.hover?.verb; W.input.pressed.add(IK); let picking = false; for (let i = 0; i < Math.round(1.2 / DT); i++) { W.step(DT); picking ||= game.player.picking === server; } const stillAt = game.player.picking === server; for (let i = 0; i < 10; i++) W.step(DT);
       if (hv !== 'pick' || !picking || !stillAt || Math.abs(server.angle) > 1e-3) fails.push(`plain tap: highlight ${hv}, picking ${picking} (1.2 s on: ${stillAt}), angle ${f2(server.angle)} (want the pick highlighted, him planted at the cylinder and staying there, the leaf shut)`); notes.push(`tap (${hv}) → picking ${picking}, pick ${f2(server.pick)}`); }
     // walk into it → walled
-    { at(true); game.teleportPlayer([17.6, 0, 11.4]); W.step(DT); game.puppet = { goal: [17.6, 0, 8.4], aim: [17.6, 1.0, 5.0] }; let minZ = 99; for (let i = 0; i < 60 * 3; i++) { W.step(DT); minZ = Math.min(minZ, game.player.char.pos[2]); } game.puppet = null;
+    { at(true); game.teleportPlayer([17.6, 0, 11.4]); W.step(DT); game.puppet = { goal: [17.6, 0, 8.4], aim: [17.6, 1.0, 5.0] }; let minZ = 99; for (let i = 0; i < 60 * 3; i++) { W.step(DT); minZ = Math.min(minZ, game.player.char.posZ); } game.puppet = null;
       if (minZ < 10.25 || !server.latched) fails.push(`walked into it keyless: got to z ${f2(minZ)}, latched ${server.latched} (want stopped at the leaf, ≥ 10.25)`); notes.push(`walk-in keyless → min z ${f2(minZ)}, latched ${server.latched}`); }
     verdict(fails.length === 0, '(c) control, no key: the rows are pick / kick (+ try the handle crouched); the kick row is loud and tears the keep out, the handle only rattles, a plain tap plants him picking on his own clock, and walked into it the leaf is a wall', notes.join(' · '), fails);
   }

@@ -34,7 +34,7 @@ const PLAY = ({ secs, keys, at }) => {
 };
 const STATE = () => { const g = window.__game, pl = g.player, w = pl.wall, c = pl.char;
   return { on: window.__wallsnap?.on, wall: !!w, kind: w?.kind ?? null, feel: w ? w.takeT !== undefined : null, settle: w ? +w.settle.toFixed(2) : null, lean: w?.lean ?? null, atEdge: w?.atEdge ?? null,
-    stance: c.anim.stance, long: c.anim.longStance, slot: pl.slot, holstered: pl.holstered, pos: [+c.pos[0].toFixed(2), +c.pos[2].toFixed(2)] }; };
+    stance: c.anim.stance, long: c.anim.longStance, slot: pl.slot, holstered: pl.holstered, pos: [+c.posX.toFixed(2), +c.posZ.toFixed(2)] }; };
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let bad = 0; const report = [];

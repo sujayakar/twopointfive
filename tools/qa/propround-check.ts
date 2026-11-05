@@ -35,7 +35,7 @@ const CHAIR = [22.76, 0, 10.12], FROM = [22.55, 0, 9.04], FRONT = [23.25, 0, 10.
 async function stage(on: boolean) {
   LIVED.on = true; TEAMPACE.on = true; ORDERS.propRound = on;   // (before the level is built: the chair is one of the lived-in rooms' things)
   const R = await rig('compound-four', 5), g = R.game, O = R.O as any; TEAMPACE.on = true; ORDERS.propRound = on;   // (after: standing a game up puts the stand's own rows back)
-  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+  for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
   const chair = [...g.props.props].sort((a: any, b: any) => Math.hypot(a.x - CHAIR[0], a.z - CHAIR[2]) - Math.hypot(b.x - CHAIR[0], b.z - CHAIR[2]))[0];
   const men: any[] = O.squad().filter((x: any) => x.state !== 'dead'), man = men[0], idx = O.squad().indexOf(man);
   O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(3);

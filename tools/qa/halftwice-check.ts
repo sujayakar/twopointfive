@@ -164,7 +164,7 @@ export async function halftwiceCheck(): Promise<boolean> {
     for (const n of [2, 3]) { const R2 = await rig(true, { goalHalf: !HBREAK, twice: !TBREAK }, `squad=${n}`), O2 = R2.O, A2 = R2.door('guard'), B2 = R2.door('guard_side'), all: any[] = O2.men('all');
       R2.home(); const onA = !!A2 && R2.onDoor(A2), parts: any[][] = n === 2 ? all.map((m: any) => [m]) : O2.pairs().map((id: any) => all.filter((m: any) => O2.pairOf(m) === id)).filter((l: any[]) => l.length > 0);
       // (… and whichever part a point is nearer is the part the rule names for it: asked at each part's own feet, before anything is given)
-      const feet = (l: any[]): V => [l.reduce((x: number, m: any) => x + m.char.pos[0], 0) / l.length, 0, l.reduce((x: number, m: any) => x + m.char.pos[2], 0) / l.length], each = parts.map(l => names(PM.goalMen(O2, { kind: 'floor', at: feet(l) })?.men ?? []));
+      const feet = (l: any[]): V => [l.reduce((x: number, m: any) => x + m.char.posX, 0) / l.length, 0, l.reduce((x: number, m: any) => x + m.char.posZ, 0) / l.length], each = parts.map(l => names(PM.goalMen(O2, { kind: 'floor', at: feet(l) })?.men ?? []));
       const near0 = A2 ? [...parts].sort((x, y) => far(x, A2) - far(y, A2))[0] : []; R2.key(true); const a = A2 ? R2.onStack(A2) : [], rest = all.filter((m: any) => !a.includes(m)), kept = rest.every((m: any) => { const q = O2.of(m); return !q || q.post === null; });
       R2.step(20); const onB = !!B2 && R2.onDoor(B2); R2.key(true); const b = B2 ? R2.onStack(B2) : [], a2 = A2 ? R2.onStack(A2) : [];
       line(all.length === n && onA && onB && a.length > 0 && a.length < n && names(a) === names(near0) && each.every((x, i) => x === names(parts[i])) && kept && names(b) === names(rest) && names(a2) === names(a),

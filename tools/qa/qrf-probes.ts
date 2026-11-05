@@ -166,7 +166,7 @@ export async function qrfElement() {
     const el = Q.men.filter((m: any) => m.state !== 'dead');
     if (Q.state === 'deployed' && Q.phase === 'move' && el.length === 4) {
       moveFrames++;
-      if (moveFrames > 90) { let s = 0; for (const a of el) for (const b of el) s = Math.max(s, v3.distXZ(a.char.pos, b.char.pos)); if (s > maxSpread) { maxSpread = s; spreadAt = `t ${f1(game.time)} ${el.map((m: any) => `${m.callsign}@${f1(m.char.pos[0])},${f1(m.char.pos[2])}`).join(' ')}`; } }
+      if (moveFrames > 90) { let s = 0; for (const a of el) for (const b of el) s = Math.max(s, v3.distXZ(a.char.pos, b.char.pos)); if (s > maxSpread) { maxSpread = s; spreadAt = `t ${f1(game.time)} ${el.map((m: any) => `${m.callsign}@${f1(m.char.posX)},${f1(m.char.posZ)}`).join(' ')}`; } }
     } else moveFrames = 0;
     if (Q.phase === 'stack' && isNaN(tStack) && Q.target?.room === 'server room') tStack = game.time;
     if (!isNaN(tStack) && Q.target?.room === 'server room') {
@@ -188,7 +188,7 @@ export async function qrfElement() {
   F.verdict(Q.log.some((l: any) => l.what === 'bang') && Q.bangs === 3 && Q.cleared.has('server room') && game.clearedAt.has('server room'), 'a stun charge went in ahead of them (the pool 4 → 3), the room was called and written to the ledger the shift\'s pair reads', `bangs ${Q.bangs} · cleared ${[...Q.cleared.keys()].join(', ')} · shift ledger ${[...game.clearedAt.keys()].join(', ')}`);
   // the fight: Sam stood lit in the corridor in front of them → every man alert inside a second, on Sam; then Sam gone → after ~8 s cold they re-form and move again
   game.playerInvisible = false; const lead = Q.men.find((m: any) => m.state !== 'dead');
-  const spot: Vec3 = [lead.char.pos[0] + Math.sin(lead.char.bodyYaw) * 3, 0, lead.char.pos[2] + Math.cos(lead.char.bodyYaw) * 3];
+  const spot: Vec3 = [lead.char.posX + Math.sin(lead.char.bodyYaw) * 3, 0, lead.char.posZ + Math.cos(lead.char.bodyYaw) * 3];
   const free = game.col.nav.isBlocked(spot[0], spot[2]) ? game.col.nav.nearestFreePoint(spot[0], spot[2]) : spot;
   game.teleportPlayer(free); game.player.crouch = false;
   let tAlert = NaN; const tShow = game.time;
@@ -330,7 +330,7 @@ export async function qrfPerimeter() {
     if (game.mission.stage === 'done') done = true;
   }
   W.input.keys.delete('KeyD');
-  F.verdict(done, 'the mission still completes through the fire exit (god mode: he walks out through the frame and it is done)', `stage ${game.mission.stage} · Sam at ${f1(game.player.char.pos[0])},${f1(game.player.char.pos[2])}`);
+  F.verdict(done, 'the mission still completes through the fire exit (god mode: he walks out through the frame and it is done)', `stage ${game.mission.stage} · Sam at ${f1(game.player.char.posX)},${f1(game.player.char.posZ)}`);
   console.log(`    (exfil under the perimeter, walking straight out lit by the east lamp: the fire-exit post had eyes on him ${isNaN(tSeen) ? 'NEVER in 12 s' : `+${f2(tSeen)} s after the door`}; his meter out there read ${f2(game.player.visibility)}; Sam ${game.player.down ? 'DOWN' : 'up (god mode)'} — the post man ${post ? `${post.gd.callsign} ${post.gd.state}, ${f1(v3.distXZ(post.gd.char.pos, game.player.char.pos))} m off` : 'absent'})`);
   // restart: lamps back as authored
   game.restartEncounter(); step(W, 3);

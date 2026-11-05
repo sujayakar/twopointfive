@@ -34,12 +34,12 @@ async function play(on: boolean | null): Promise<Tally> {
     const m = g.guards.find((x: any) => x.team === 'operative' && x.unit && x.state !== 'dead'), A = m ? g.orders.of(m) : null, go = String(A?.going ?? '');
     const waiting = go.startsWith('waiting'), onMan = waiting || go.startsWith('moving up on') || go.startsWith('on ') || go.startsWith('set on');
     if (!m || !onMan) { hist.length = 0; waitT = -1; began = -1; return r; }
-    T.onMan++; const c = m.char, t = g.time, yaw = c.bodyYaw; if (began < 0) began = t; if (A.face != null) faceT = t; hist.push({ t, yaw, x: c.pos[0], z: c.pos[2], f: t - faceT < 0.5 }); while (hist.length && t - hist[0].t > 1.5) hist.shift();
+    T.onMan++; const c = m.char, t = g.time, yaw = c.bodyYaw; if (began < 0) began = t; if (A.face != null) faceT = t; hist.push({ t, yaw, x: c.posX, z: c.posZ, f: t - faceT < 0.5 }); while (hist.length && t - hist[0].t > 1.5) hist.shift();
     // an about-turn: the swing since any sample of the last second and a half, his feet near where it began. Not from a sample taken while a wait that
     // lasted had him squared to his man (the order's own `face`, or the half second after it lets go): turning back onto his way from that is the wait
     // ending, not a corner he has passed (the pair lesson's rebuilt level has one such wait, 121 degrees off his way)
     if (t > aboutUntil && t - began > 2) for (const h of hist)   // (not the turn he sets off with: the job's first two seconds)
-       if (!h.f && Math.abs(wrap(yaw - h.yaw)) > 120 * Math.PI / 180 && Math.hypot(c.pos[0] - h.x, c.pos[2] - h.z) < 1.5) { T.about++; T.when.push(`${t.toFixed(1)}s ${go.slice(0, 22)} ${(h.yaw * 57.3).toFixed(0)}→${(yaw * 57.3).toFixed(0)}`); aboutUntil = t + 1.5; break; }
+       if (!h.f && Math.abs(wrap(yaw - h.yaw)) > 120 * Math.PI / 180 && Math.hypot(c.posX - h.x, c.posZ - h.z) < 1.5) { T.about++; T.when.push(`${t.toFixed(1)}s ${go.slice(0, 22)} ${(h.yaw * 57.3).toFixed(0)}→${(yaw * 57.3).toFixed(0)}`); aboutUntil = t + 1.5; break; }
     // a flinch: parked on a watched way, his chest swung inside the wait's first second
     if (waiting) { if (waitT < 0) { waitT = t; waitYaw = hist.length > 1 ? hist[hist.length - 2].yaw : yaw; flinched = false; faced = false; T.waits++; }
       const sw = Math.abs(wrap(yaw - waitYaw)); if (!flinched && t - waitT < 1.0 && sw > 45 * Math.PI / 180) { flinched = true; T.flinch++; }
@@ -48,7 +48,7 @@ async function play(on: boolean | null): Promise<Tally> {
     } else waitT = -1;
     // a step back: the corner he is sent to lies behind the way he is walking
     const sp = Math.hypot(c.vel?.[0] ?? 0, c.vel?.[2] ?? 0);
-    if (!waiting && A?.goal && t > backUntil && hist.length > 6) { const h = hist[hist.length - 7], mx = c.pos[0] - h.x, mz = c.pos[2] - h.z, ml = Math.hypot(mx, mz), gx = A.goal[0] - c.pos[0], gz = A.goal[2] - c.pos[2], gl = Math.hypot(gx, gz);
+    if (!waiting && A?.goal && t > backUntil && hist.length > 6) { const h = hist[hist.length - 7], mx = c.posX - h.x, mz = c.posZ - h.z, ml = Math.hypot(mx, mz), gx = A.goal[0] - c.posX, gz = A.goal[2] - c.posZ, gl = Math.hypot(gx, gz);
       if (ml > 0.06 && sp > 0.5 && gl > 0.3 && gl < 2 && (mx * gx + mz * gz) / (ml * gl) < Math.cos(100 * Math.PI / 180)) { T.back++; backUntil = t + 1; } }
     return r; };
   const railsWas = process.env.TPS_RAILS; if (process.env.TPS_PROFILE !== 'shipped') process.env.TPS_RAILS = '1';   // (a tutorial mission is the page's: on the frozen stand its frame is raised for the run, as lesson-gate does)

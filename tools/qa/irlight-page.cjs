@@ -88,7 +88,7 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
       if (vault) { window.__stage({ look: [21.5, 1.0, 13], yaw: 0.5, pitch: 1.05, dist: 17 }, { player: { pos: [21.5, 0, 13.6], yaw: 0.35 } }); window.__mouse(innerWidth / 2, innerHeight / 2);
         return { irlight: K ? { ...K } : null, squad: window.__orders.squad().length, exposure: window.__engine.settings.exposure, nvGain: window.__engine.settings.nvGain, fog: g.fogOfWar.on, sam: [21.5, 13.6], room: [21.5, 11],
           bulb: (window.__engine.lights.lights.find(l => l.name === 'bulb_strong') || {}).enabled ?? null, doorShut: g.doors.list.filter(d => d.def.name === 'strongroom').map(d => Math.abs(d.angle ?? 0) < 0.05) }; }
-      if (yard) { const c = g.player.char; door = [c.pos[0], c.pos[2]]; room = [c.pos[0] + Math.sin(c.aimYaw) * 3, c.pos[2] + Math.cos(c.aimYaw) * 3];
+      if (yard) { const c = g.player.char; door = [c.posX, c.posZ]; room = [c.posX + Math.sin(c.aimYaw) * 3, c.posZ + Math.cos(c.aimYaw) * 3];
         window.__stage({ look: [door[0], 1.0, door[1]], yaw: 0, pitch: 1.25, dist: 15 }, { player: { pos: [door[0], 0, door[1]], yaw: c.aimYaw } }); window.__mouse(innerWidth / 2, innerHeight / 2);
         return { irlight: K ? { ...K } : null, squad: window.__orders.squad().length, exposure: window.__engine.settings.exposure, nvGain: window.__engine.settings.nvGain, fog: g.fogOfWar.on, sam: door, room }; }
       window.__stage({ look: [room[0], 1.0, room[1]], yaw: 0, pitch: 1.25, dist: 15 }, { player: { pos: [door[0], 0, door[1]], yaw: Math.atan2(room[0] - door[0], room[1] - door[1]), invisible: true } });

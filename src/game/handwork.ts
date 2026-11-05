@@ -70,15 +70,15 @@ const rightOf = (n: Vec3): Vec3 => [n[2], 0, -n[0]];
 export function workStand(c: Character, p: Vec3, n: Vec3, dt: number, hand: 0 | 1 = 1, pace = HANDWORK.stepPace): number {
   const K = HANDWORK, r = rightOf(n), s = hand ? -K.standSide : K.standSide;
   const tx = p[0] + n[0] * K.standM + r[0] * s, tz = p[2] + n[2] * K.standM + r[2] * s;
-  const d = Math.hypot(tx - c.pos[0], tz - c.pos[2]), k = d > 1e-4 ? Math.min(1 - Math.exp(-K.stepRate * dt), pace * dt / d) : 0;
-  if (d < 1.8) { c.pos[0] += (tx - c.pos[0]) * k; c.pos[2] += (tz - c.pos[2]) * k; }
+  const d = Math.hypot(tx - c.posX, tz - c.posZ), k = d > 1e-4 ? Math.min(1 - Math.exp(-K.stepRate * dt), pace * dt / d) : 0;
+  if (d < 1.8) { c.posX += (tx - c.posX) * k; c.posZ += (tz - c.posZ) * k; }
   return Math.atan2(-n[0], -n[2]);
 }
 /** has his hand got to the thing (p, n: its spot and face)? A verb's clock waits for it — handWait counts the wait (slowly while he is still walking in) and gives
  *  up at waitSecs: a hand that cannot get there holds nothing up for long */
 function handThere(pl: Player, dt: number, p: Vec3, n: Vec3): boolean {
   const c = pl.char; if (c.anim.workInfo().w > 0.85) return true;
-  const off = (c.pos[0] - p[0]) * n[0] + (c.pos[2] - p[2]) * n[2];
+  const off = (c.posX - p[0]) * n[0] + (c.posZ - p[2]) * n[2];
   pl.handWait += off > HANDWORK.standM + 0.15 ? dt * 0.35 : dt; return pl.handWait > HANDWORK.waitSecs;
 }
 /** WHICH OF SAM'S HANDS works a thing — the one rule, for the step in (workStand) and the pose (as the hint: the animator cannot tell a pistol in a hand that
@@ -192,9 +192,9 @@ export function leverStand(g: Game, gd: Guard, dt: number): { yaw: number; speed
   if (!live('work')) return null;
   const c = gd.char;
   if (!breakerResetNear(g, gd)) return null;
-  const F = breakerFace(g, c.pos), x = c.pos[0], z = c.pos[2];
+  const F = breakerFace(g, c.pos), x = c.posX, z = c.posZ;
   const yaw = workStand(c, F.p, F.n, dt, 0, 1.3)   // (a guard's right hand has his torch or his sidearm: the left works);
-  return { yaw, speed: dt > 0 ? Math.hypot(c.pos[0] - x, c.pos[2] - z) / dt : 0 };
+  return { yaw, speed: dt > 0 ? Math.hypot(c.posX - x, c.posZ - z) / dt : 0 };
 }
 
 /** mission.ts, once a frame of the drive stage: both hands in the rack while it comes out, then the thing put away at his hip; `pulled` = this is the frame it came free */

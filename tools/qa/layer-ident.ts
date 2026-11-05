@@ -96,7 +96,7 @@ async function quietWalk(secs: number): Promise<void> {
     const A = g.guards[0], home = [...g.player.char.pos]; A.hold = true;
     for (let f = 0; f < secs * 60; f++) {
       if (f === secs * 30) CL.CLOSE.noKnife = false; if (f === secs * 45) KA.KITANIM.close = false;
-      if (f % 60 === 0) { const a = A.char.bodyYaw + Math.PI + (f / 60) * 0.9, d = 1.2 + ((f / 60) % 4) * 0.9; g.teleportPlayer([A.char.pos[0] + Math.sin(a) * d, 0, A.char.pos[2] + Math.cos(a) * d]); g.player.crouch = (f / 60) % 3 !== 0; }
+      if (f % 60 === 0) { const a = A.char.bodyYaw + Math.PI + (f / 60) * 0.9, d = 1.2 + ((f / 60) % 4) * 0.9; g.teleportPlayer([A.char.posX + Math.sin(a) * d, 0, A.char.posZ + Math.cos(a) * d]); g.player.crouch = (f / 60) % 3 !== 0; }
       if (f % 60 < 40) W.input.keys.add(f % 120 < 60 ? 'KeyW' : 'KeyA'); else { W.input.keys.delete('KeyW'); W.input.keys.delete('KeyA'); }
       g.player.visibility = 0.02; W.step(DT);
     }
@@ -123,7 +123,7 @@ async function quietWalk(secs: number): Promise<void> {
           if (s < 3) an.flinchFrom(d, s === 1 ? 0.5 : 1, s === 2);
           else if (s < 6) an.startleFrom(d);
           else if (s < 9) an.hitFrom(d);
-          else if (s === 9) { m.dazzledUntil = g.time + 0.8; m.dazzledAt = [m.char.pos[0] + d[0], 0, m.char.pos[2] + d[2]]; }
+          else if (s === 9) { m.dazzledUntil = g.time + 0.8; m.dazzledAt = [m.char.posX + d[0], 0, m.char.posZ + d[2]]; }
           else if (s === 10) m.staggerUntil = g.time + 0.8;
           else if (s === 11) m.hurtAt = g.time;
           else if (s === 13) an.tossItem();
@@ -233,7 +233,7 @@ async function quietWalk(secs: number): Promise<void> {
       // busy and with both hands free, a charge pressed on at chest height, low, at arm's length and out of reach, a lever thrown each way with its
       // jiggle and without, a thing taken out with two hands and with one and put away, a verb left half way, three of them with no twist in the chest; and
       // the door hand on the right arm
-      const C = g.player.char, M = (x: number, y: number, z: number) => { const cy = Math.cos(C.bodyYaw), sy = Math.sin(C.bodyYaw); return [C.pos[0] + x * cy + z * sy, y, C.pos[2] - x * sy + z * cy]; };
+      const C = g.player.char, M = (x: number, y: number, z: number) => { const cy = Math.cos(C.bodyYaw), sy = Math.sin(C.bodyYaw); return [C.posX + x * cy + z * sy, y, C.posZ - x * sy + z * cy]; };
       const out = () => { const cy = Math.cos(C.bodyYaw), sy = Math.sin(C.bodyYaw); return [-sy, 0, -cy]; };
       const work = (kind: string, y: number, z: number, o: { more?: object; dur?: number; free?: boolean; stop?: number; after?: number; x?: number; flat?: boolean } = {}) => { const dur = o.dur ?? 2.4, n = Math.round((o.stop ?? dur) * 60); let t = 0, at = 0;
         hold({ work: () => at < n ? { kind, p: M(o.x ?? 0, y, z), n: out(), t, dur, ...o.more } : null, stowed: () => !!o.free, ...(o.flat ? { aimYawOffset: () => 0 } : {}) }, n + (o.after ? 40 : 0), f => { at = f; t += DT; if (f === n && o.after) an.workAfter(o.after); }); };
@@ -260,8 +260,8 @@ async function quietWalk(secs: number): Promise<void> {
           const sam = () => { const P = now(), T = f / 60; return { ...P, ...both(), ...(o.cs ? { yank: T, man: P.phase === 'grab' && !o.noMan ? [...A.char.pos] : undefined, pull: Math.min(0.3, T * 0.4) } : {}), step: (o.cs || o.step) && P.phase === 'grab' ? P.t : undefined,
             gunOut: o.gun ? Math.min(1, T) : undefined, gunPitch: o.gun ? 0.3 * Math.sin(T * 2) : undefined, strip: strip(true) }; };
           const man = () => { const T = f / 60; return { ...now(), ...both(), agitation: o.ag ?? 0, bare: o.bare || undefined, shot: shotAt >= 0 ? (f - shotAt) / 60 : -1, armed: o.armed, strip: strip(false), ...(o.cs ? { yank: T, pull: Math.min(0.3, T * 0.4) } : {}) }; };
-          HM.HOLD.catchShape = !!o.cs; CL.CLOSE.noKnife = !!o.bare; { const d = o.d ?? 0.45, x = o.x ?? 0, sy = Math.sin(A.char.bodyYaw), cy = Math.cos(A.char.bodyYaw); g.teleportPlayer([A.char.pos[0] - sy * d + cy * x, 0, A.char.pos[2] - cy * d - sy * x]); }
-          if (o.tell) { const u = pin(an, { ready: () => 'grab', readyAt: () => [A.char.pos[0], 1.45, A.char.pos[2]], noKnife: () => !!o.bare, readyAmt: () => 1 }); try { for (let k = 0; k < 45; k++) W.step(DT); } finally { u(); } }
+          HM.HOLD.catchShape = !!o.cs; CL.CLOSE.noKnife = !!o.bare; { const d = o.d ?? 0.45, x = o.x ?? 0, sy = Math.sin(A.char.bodyYaw), cy = Math.cos(A.char.bodyYaw); g.teleportPlayer([A.char.posX - sy * d + cy * x, 0, A.char.posZ - cy * d - sy * x]); }
+          if (o.tell) { const u = pin(an, { ready: () => 'grab', readyAt: () => [A.char.posX, 1.45, A.char.posZ], noKnife: () => !!o.bare, readyAmt: () => 1 }); try { for (let k = 0; k < 45; k++) W.step(DT); } finally { u(); } }
           const un = [pin(an, { holdPose: sam, noKnife: () => !!o.bare }), pin(ga, { heldPose: man })];
           try { for (f = 0; f < n; f++) { for (const q of o.sw ?? []) if (q[0] === f) v = q[1]; if (o.shot === f) { an.fire(); shotAt = f; } W.step(DT); } } finally { for (const u of un) u(); }
           for (let k = 0; k < 80; k++) W.step(DT); };

@@ -56,7 +56,7 @@ async function strip(low: 0 | 1, gun: 'rifle' | 'pistol', D: number, pose: Pose,
   const on = () => { keep(); g.player.crouch = samLow; W.cursorAt(gd.char.bones.chest); W.step(DT); };
   for (let i = 0; i < 90; i++) { keep(); W.cursorAt(ahead(Math.min(3, D * 0.5))); W.step(DT); }
   for (let i = 0; i < 40; i++) on();
-  const R: Shot = { taken: g.aimGuard === gd, pitch: g.player.char.aimPitch * DEG, crown: gd.char.bones.headTop?.[1] ?? NaN, chest: gd.char.bones.chest[1], rounds: 0, to: null, over: NaN, dead: false, manX: gd.char.pos[0] };
+  const R: Shot = { taken: g.aimGuard === gd, pitch: g.player.char.aimPitch * DEG, crown: gd.char.bones.headTop?.[1] ?? NaN, chest: gd.char.bones.chest[1], rounds: 0, to: null, over: NaN, dead: false, manX: gd.char.posX };
   for (let k = 0; k < clicks && gd.state !== 'dead'; k++) {
     const seen = new Set(g.events); keep(); W.cursorAt(gd.char.bones.chest); input.clicked |= 1; input.buttons |= 1; W.step(DT); input.buttons = 0;
     for (const e of g.events) if (!seen.has(e) && e.kind === 'shot' && e.to) { R.to = [e.to[0], e.to[1], e.to[2]]; R.rounds++; if (e.from) R.over = heightAt(e.from, e.to, gd.char.pos); }
@@ -94,7 +94,7 @@ async function real(low: 0 | 1) {
   const ent = E.ent, d = ent.door, ox = ent.out[0], oz = ent.out[1];
   const outPt = (back: number, lat: number): number[] => [ent.at[0] + ox * back - oz * lat, 0, ent.at[2] + oz * back + ox * lat];
   const men: any[] = S.defs.filter((x: any) => x.room === E.room).map((x: any) => x.gd);
-  O.squad().filter((x: any) => x.state !== 'dead').forEach((gd: any, i: number) => { const p = outPt(5 + i, 1.5); gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.path = []; gd.pathGoal = null; });
+  O.squad().filter((x: any) => x.state !== 'dead').forEach((gd: any, i: number) => { const p = outPt(5 + i, 1.5); gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.path = []; gd.pathGoal = null; });
   g.teleportPlayer(outPt(2.5, 0) as any); O.give('hold', O.targetAt(outPt(6.5, 0)), 'all'); step(5);
   { const s = -g.doors.side(d, outPt(0.6, 0)); d.latched = false; d.closing = false; d.vel = s * 5.5; d.quietT = -3600; d.lastWho = g.player.char.id; if (d.locked && !d.lockBroken) d.lockBroken = true; step(24); }
   let land: number[] = outPt(-1.2, 0); for (const b of [1.8, 1.5, 1.2, 0.9]) { const p = outPt(-b, 0); if (!nav.isBlocked(p[0], p[2])) { land = p; break; } }
@@ -107,9 +107,9 @@ async function real(low: 0 | 1) {
   const gd = men.filter(x => x.state !== 'dead' && x.dazzledUntil > g.time).sort((a, b) => flat(a.char.pos, g.player.char.pos) - flat(b.char.pos, g.player.char.pos))[0];
   if (!gd) return null;
   let put: number[] | null = null;
-  for (let a = 0; a < 16 && !put; a++) { const p = [gd.char.pos[0] + Math.cos(a * Math.PI / 8) * 4, 0, gd.char.pos[2] + Math.sin(a * Math.PI / 8) * 4]; if (!nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([p[0], 1.3, p[2]], [gd.char.pos[0], 1.2, gd.char.pos[2]]) && !g.col.segmentBlocked([p[0], 0.4, p[2]], [gd.char.pos[0], 0.4, gd.char.pos[2]])) put = p; }
+  for (let a = 0; a < 16 && !put; a++) { const p = [gd.char.posX + Math.cos(a * Math.PI / 8) * 4, 0, gd.char.posZ + Math.sin(a * Math.PI / 8) * 4]; if (!nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([p[0], 1.3, p[2]], [gd.char.posX, 1.2, gd.char.posZ]) && !g.col.segmentBlocked([p[0], 0.4, p[2]], [gd.char.posX, 0.4, gd.char.posZ])) put = p; }
   if (!put) return null;
-  const pl = g.player.char; g.teleportPlayer(put as any); pl.bodyYaw = pl.aimYaw = Math.atan2(gd.char.pos[0] - put[0], gd.char.pos[2] - put[2]);
+  const pl = g.player.char; g.teleportPlayer(put as any); pl.bodyYaw = pl.aimYaw = Math.atan2(gd.char.posX - put[0], gd.char.posZ - put[2]);
   const on = () => { W.cursorAt(gd.char.bones.chest); g.player.visibility = 0.05; W.step(DT); };
   for (let i = 0; i < 60; i++) on();
   const R = { ducked: gd.char.anim.crouch > 0.5, blind: gd.dazzledUntil > g.time, taken: g.aimGuard === gd, crown: gd.char.bones.headTop?.[1] ?? NaN, pitch: pl.aimPitch * DEG, over: NaN, dead: false };

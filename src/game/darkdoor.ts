@@ -103,8 +103,8 @@ function bark(g: Game, gd: Guard, S: Fear, kind: LineKind, radio: boolean) {
 }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const chestOf = (c: Character): Vec3 => c.bones.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
-const headOf = (c: Character): Vec3 => c.bones.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]];
+const chestOf = (c: Character): Vec3 => c.bones.chest ?? [c.posX, c.posY + 1.2, c.posZ];
+const headOf = (c: Character): Vec3 => c.bones.head ?? [c.posX, c.posY + 1.6, c.posZ];
 /** a man this file is about at all: a living defender or a man of the night staff — never a civilian, an operative, a body, a man in Sam's arm */
 const ours = (gd: Guard) => gd.state !== 'dead' && !gd.civ && !gd.held && (gd.team === 'hostile' || gd.team === 'guard');
 const rescued = (g: Game, gd: Guard) => !!g.rescue?.active && g.rescue.hostiles.includes(gd);

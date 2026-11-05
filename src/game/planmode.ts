@@ -45,7 +45,7 @@ export function goalMen(S: SquadOrders, t: OrderTarget): { men: Guard[]; how: 'h
   const on = t.kind === 'door' ? groups.find(G => G.every(m => S.of(m)?.door === t.door)) : null;
   if (on) return { men: on, how: 'same' };
   if (idle.length && !half) return { men: idle, how: 'idle' };
-  const far = (men: Guard[]) => men.reduce((s, m) => s + Math.hypot(m.char.pos[0] - t.at[0], m.char.pos[2] - t.at[2]), 0) / men.length;
+  const far = (men: Guard[]) => men.reduce((s, m) => s + Math.hypot(m.char.posX - t.at[0], m.char.posZ - t.at[2]), 0) / men.length;
   const line = (men: Guard[]) => spot ? men.filter(m => S.hasLine(m, t)).length / men.length : 0;   // (a spot to watch: the men who can see it)
   const best = (ls: Guard[][]) => ls.reduce((a, b) => line(b) > line(a) || (line(b) === line(a) && far(b) < far(a) - 1e-6) ? b : a);
   const pool = half ? [all] : groups, size = Math.max(...pool.map(G => G.length)); if (size < 2) return null;

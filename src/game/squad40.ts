@@ -246,7 +246,7 @@ export function squad40Tick(g: Game) {
 export interface Squad40Plan { gd: Guard; from: Vec3; points: Vec3[]; land: Vec3; kind: 'shell'; preview?: true; walk?: undefined }
 export function squad40Plans(g: Game): Squad40Plan[] {
   const s = states.get(g), out: Squad40Plan[] = []; if (!s || !squad40Here()) return out;
-  const of = (a: Shot, preview?: true): Squad40Plan => ({ gd: a.gd, from: [a.gd.char.pos[0], 0, a.gd.char.pos[2]], points: a.sol.points, land: a.burst, kind: 'shell', preview });
+  const of = (a: Shot, preview?: true): Squad40Plan => ({ gd: a.gd, from: [a.gd.char.posX, 0, a.gd.char.posZ], points: a.sol.points, land: a.burst, kind: 'shell', preview });
   for (const W of s.turns.values()) if (W.firedT < 0 && W.gd.state !== 'dead' && g.orders.of(W.gd) === W.A) out.push(of(W.shot));
   const M = g.orders.menu;
   if (M && M.target.kind === 'floor' && M.rows[M.sel]?.id === SHELL_THERE) { const a = plan(g, M.men, M.target.at, null); if (typeof a !== 'string' && !a.who) out.push(of(a.a, true)); }

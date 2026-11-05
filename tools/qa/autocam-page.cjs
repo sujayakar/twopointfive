@@ -42,7 +42,7 @@ const LOCK = ([m, n]) => { const g = window.__game, c = window.__cam; g.fogOfWar
       for (let i = 0; i < 16 && !L; i++) { const a = i * Math.PI / 8, dx = Math.sin(a), dz = Math.cos(a); let clear = true; for (let s = 0.5; s <= 9.5 && clear; s += 0.5) { if (s >= 2 && g.col.nav.isBlocked(q[0] + dx * s, q[2] + dz * s)) clear = false; for (const h of [1.3, 0.4]) if (g.col.segmentBlocked([q[0], h, q[2]], [q[0] + dx * s, h, q[2] + dz * s])) clear = false; } if (clear) L = { gd, at: [q[0], q[2]], dir: [dx, dz] }; }
       if (L) break; }
     if (!L) return null; window.__lockT = L; }
-  const pin = () => { for (const o of g.guards) { if (o === L.gd) { o.char.pos[0] = L.at[0]; o.char.pos[2] = L.at[1]; o.state = 'patrol'; } else if (o.team !== 'operative') { o.char.pos[0] = L.at[0] - L.dir[0] * 60; o.char.pos[2] = L.at[1] - L.dir[1] * 60; } } };
+  const pin = () => { for (const o of g.guards) { if (o === L.gd) { o.char.posX = L.at[0]; o.char.posZ = L.at[1]; o.state = 'patrol'; } else if (o.team !== 'operative') { o.char.posX = L.at[0] - L.dir[0] * 60; o.char.posZ = L.at[1] - L.dir[1] * 60; } } };
   pin(); g.teleportPlayer([L.at[0] + L.dir[0] * m, 0, L.at[1] + L.dir[1] * m]); let most = 0, prev = NaN;
   for (let i = 0; i < n; i++) { pin(); window.__runFrames(1, 1 / 60, [], i % 60 === 59 ? false : 'none'); if (i > 1) most = Math.max(most, Math.abs(c.desiredDistance - prev)); prev = c.desiredDistance; }
   const P = g.player.char.pos; return { d: c.desiredDistance, most, dist: Math.hypot(P[0] - L.at[0], P[2] - L.at[1]), on: window.__knobs.registry().AUTOCAM.lock }; };

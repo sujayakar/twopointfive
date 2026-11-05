@@ -24,16 +24,16 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       for (const x of g.doors.list) { x.reset(); if (x === d) { x.angle = 0; x.vel = 0; x.latched = true; x.closing = false; x.locked = false; x.place(); } }
       const a = d.def.closedDir, ux = Math.cos(a), uz = Math.sin(a), W = d.def.width, S = d.swing, n = [-uz * S, ux * S];   // n: the side it opens into
       const at = (along, out) => [d.def.hinge[0] + ux * along + n[0] * out, 0, d.def.hinge[1] + uz * along + n[1] * out];
-      const v = g.guards[0], p0 = at(W * 0.6, 0.48); v.hold = true; v.pinned = true; v.dazzledUntil = -1; v.staggerUntil = -1; v.char.pos[0] = p0[0]; v.char.pos[2] = p0[2]; v.char.update(0);
+      const v = g.guards[0], p0 = at(W * 0.6, 0.48); v.hold = true; v.pinned = true; v.dazzledUntil = -1; v.staggerUntil = -1; v.char.posX = p0[0]; v.char.posZ = p0[2]; v.char.update(0);
       g.guards.forEach((o, i) => { if (i) { o.hold = true; o.pinned = true; } });
       g.teleportPlayer(at(W * 0.6, -1.3)); pl.crouch = false; await window.__runFrames(3);
       let yaw = 0, best = -2; for (let i = 0; i < 720; i++) { cam.yaw = i * Math.PI / 360; cam.rebuild(); const f = cam.planarBasis().fwd, dot = f[0] * n[0] + f[2] * n[1]; if (dot > best) { best = dot; yaw = cam.yaw; } }
       let fold = -1, wide = 0, st = '', beat = 0, look = 99;
       for (let k = 0; k < 150; k++) { cam.yaw = yaw; cam.rebuild(); await window.__runFrames(1, 1 / 60, ['KeyW']); wide = Math.max(wide, Math.abs(d.angle)); if (fold < 0 && Math.max(v.staggerUntil, v.dazzledUntil) > g.time) fold = 1;
         if (!st && v.state !== 'patrol') { st = v.state; beat = v.reactT; look = v.lastKnown ? Math.hypot(v.lastKnown[0] - d.frameCentre[0], v.lastKnown[2] - d.frameCentre[2]) : 99; } }
-      const through = (c.pos[0] - d.def.hinge[0]) * n[0] + (c.pos[2] - d.def.hinge[1]) * n[1];
+      const through = (c.posX - d.def.hinge[0]) * n[0] + (c.posZ - d.def.hinge[1]) * n[1];
       return { fatal: document.getElementById('fatal')?.textContent || '', on: !!(T && T.on), push: T ? T.pushSecs : 0, oneWay: !!window.__knobs.registry().DOORWAY.oneWay, startle: T ? T.startle : 0, fold, st, beat, look, wide, through,
-        moved: Math.hypot(v.char.pos[0] - p0[0], v.char.pos[2] - p0[2]), alive: v.state !== 'dead' && !v.wound };
+        moved: Math.hypot(v.char.posX - p0[0], v.char.posZ - p0[2]), alive: v.state !== 'dead' && !v.wound };
     }, DOOR);
     const want = name === 'on', f = x => Number.isFinite(x) ? x.toFixed(2) : '—';
     const ok = !r.fatal && !errors.length && r.on === want && r.alive && (want ? r.fold < 0 && r.st === 'suspicious' && r.beat > r.startle - 0.1 && r.look < 0.05 && r.moved > 0.2 && r.wide > 0.9 && r.through > 0 : r.fold < 0 && !r.st && r.moved < 0.15 && r.wide < 0.5 && r.through < 0);

@@ -124,9 +124,9 @@ const weightOf = (g: Game, gd: Guard) => (gd.weapon.def.cls === 'pistol' ? WALLS
 // ---------------------------------------------------------------- what he knows
 function see(g: Game, S: State, gd: Guard, who: Who, low: boolean) {
   const c = charOf(g, who); const trunk = c.bones.spine2 ?? c.bones.hips ?? c.pos;
-  const at: Vec3 = [trunk[0], c.pos[1] + (low ? 0.8 : 1.25), trunk[2]];
+  const at: Vec3 = [trunk[0], c.posY + (low ? 0.8 : 1.25), trunk[2]];
   const M = manOf(S, gd); const K = M.know.find(k => k.who === who);
-  if (K) { K.at = at; K.y0 = c.pos[1]; K.v = [c.vel[0], c.vel[2]]; K.t = g.time; K.call = false; } else M.know.push({ who, at, y0: c.pos[1], v: [c.vel[0], c.vel[2]], t: g.time });
+  if (K) { K.at = at; K.y0 = c.posY; K.v = [c.velX, c.velZ]; K.t = g.time; K.call = false; } else M.know.push({ who, at, y0: c.posY, v: [c.velX, c.velZ], t: g.time });
 }
 /** a mate's call he is acting on becomes a place HE knows (as old as the mate's own sighting: it goes stale like one of his) — and stays a CALL: the place
  *  alone, good for a crate and not for a wall, until his own eyes have the man */
@@ -253,7 +253,7 @@ function choose(g: Game, S: State, gd: Guard, K: Know, call: boolean, seen: bool
  *  `to` anyway, because what blocks it is breakable and worth the rounds. The caller's own gates, cadence and cone fire it. */
 export function coverSeen(g: Game, gd: Guard, who: Who | null, to: Vec3): boolean {
   if (!live(g) || !who) return false;
-  const S = stateOf(g); const Cw = choose(g, S, gd, { who, at: to, y0: charOf(g, who).pos[1], v: [0, 0], t: g.time }, false, true); if (!Cw) return false;
+  const S = stateOf(g); const Cw = choose(g, S, gd, { who, at: to, y0: charOf(g, who).posY, v: [0, 0], t: g.time }, false, true); if (!Cw) return false;
   if (!coverLane(g, gd, gd.char.muzzle, Cw.to)) { bump(S, 'heldFriend'); return false; }
   return true;
 }
@@ -268,7 +268,7 @@ export function coverBlind(g: Game, gd: Guard, dt: number): Vec3 | null {
   if (!Cw) return null;
   const to = Cw.to, P = AIM.guard; const dist = flat(c.pos, to);
   if (gd.reloadT < 0 && !coverLane(g, gd, c.muzzle, to)) { bump(S, 'heldFriend'); return null; }   // (a round he may not fire is no reason to stand on it: the branch goes on as it always did)
-  const facingErr = Math.abs(wrapAngle(Math.atan2(to[0] - c.pos[0], to[2] - c.pos[2]) - c.aimYaw));
+  const facingErr = Math.abs(wrapAngle(Math.atan2(to[0] - c.posX, to[2] - c.posZ) - c.aimYaw));
   const on = facingErr < 0.25 && !gd.muzzleDown;
   const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * (gd.skill ? gd.skill.settleK : 1);
   Cw.lay = !g.tune.aimModel ? (on ? 1 : 0) : on ? Math.min(1, Cw.lay + dt / settle) : Math.max(0, Cw.lay - P.loseRate * dt);

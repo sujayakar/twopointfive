@@ -16,8 +16,8 @@ export async function standoffFitCheck(): Promise<boolean> {
   const why = await quiet(async () => startFromQuery(g, new URLSearchParams('roomclear=1&squad4')).why); if (why) { verdict(false, 'the office floor with the squad of four stands up', `start refused — ${why}`); return false; }
   await quiet(() => { for (let i = 0; i < 20; i++) W.step(1 / 60); });
   const O = g.orders, D = g.doorTools as any, nav = g.col.nav, flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]), f = (p: number[]) => `${p[0].toFixed(2)},${p[2].toFixed(2)}`;
-  const put = (gd: any, p: number[]) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; };
-  for (const h of g.guards) if (h.team === 'hostile') put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);   // (nobody to walk round: a refusal here is the check's own)
+  const put = (gd: any, p: number[]) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; };
+  for (const h of g.guards) if (h.team === 'hostile') put(h, [h.char.posX + 400, 0, h.char.posZ]);   // (nobody to walk round: a refusal here is the check's own)
   const squad: any[] = O.squad().filter((x: any) => x.state !== 'dead'), men = squad.slice(0, 2), home = squad.map(m => [...m.char.pos]);
   if (squad.length < 4) { verdict(false, 'the squad of four is on the floor', `${squad.length} teammates`); return false; }
   const same = (a: number[], b: number[]) => flat(a, b) < 1e-6, idx = (posts: any[], p: number[]) => posts.findIndex(P => same(P.pos, p));

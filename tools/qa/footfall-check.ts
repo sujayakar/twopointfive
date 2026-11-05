@@ -70,8 +70,8 @@ async function world(once: boolean, crouch: boolean, seed: number, near = false,
   const pl = g.player.char, seen = new Set<object>(); let path = 0, last = [...pl.pos];
   const C: Ctx = { W, g, f: 0, falls: [], A, moved: () => path, keys: (...k) => { W.input.keys.clear(); for (const x of k) W.input.keys.add(x); }, step: aim => {
     const v = pl.vel, sp = Math.hypot(v[0], v[2]), d = sp > 0.05 ? [v[0] / sp, v[2] / sp] : [1, 0], k = aim === 'ahead' ? 4 : -4;
-    W.cursorAt(typeof aim === 'string' ? [pl.pos[0] + d[0] * k, 1.0, pl.pos[2] + d[1] * k] : aim); W.step(DT); g.player.visibility = 0.02; C.f++;
-    path += Math.hypot(pl.pos[0] - last[0], pl.pos[2] - last[2]); last = [...pl.pos];
+    W.cursorAt(typeof aim === 'string' ? [pl.posX + d[0] * k, 1.0, pl.posZ + d[1] * k] : aim); W.step(DT); g.player.visibility = 0.02; C.f++;
+    path += Math.hypot(pl.posX - last[0], pl.posZ - last[2]); last = [...pl.pos];
     for (const e of g.events) if (e.kind === 'step' && !seen.has(e)) { seen.add(e); C.falls.push({ f: C.f, level: e.level }); }
   } };
   A.char.pos = near ? [START[0] + 1.8, 0, START[2]] : [37.5, 0, 4.5]; A.char.bodyYaw = A.char.aimYaw = Math.PI / 2; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; if (!near) A.heardUpTo = 1e12;
@@ -87,7 +87,7 @@ const leastGap = (F: Fall[]) => F.reduce((m, x, i) => i ? Math.min(m, x.f - F[i 
 function rockRun(C: Ctx, n: number, after = 90, fwd = FWD, back = BACK, leg = 1): { from: number; inRock: number; at: P3 } {
   C.keys(fwd); let from = -1;
   for (let i = 0; i < 240 && from < 0; i++) { const had = C.falls.length; C.step('ahead'); if (i > 40 && C.falls.length > had) from = C.f; }
-  const pl = C.g.player.char, v = pl.vel, sp = Math.hypot(v[0], v[2]) || 1, far: P3 = [pl.pos[0] + v[0] / sp * 5, 1.0, pl.pos[2] + v[2] / sp * 5];
+  const pl = C.g.player.char, v = pl.vel, sp = Math.hypot(v[0], v[2]) || 1, far: P3 = [pl.posX + v[0] / sp * 5, 1.0, pl.posZ + v[2] / sp * 5];
   const at = [...pl.pos]; for (let i = 0; i < n; i++) { C.keys(Math.floor(i / leg) % 2 ? fwd : back); C.step(far); }
   const inRock = C.falls.filter(x => x.f > from && x.f <= from + n).length;
   if (after > 0) C.keys(fwd); else C.keys(); for (let i = 0; i < Math.abs(after); i++) C.step(far);
@@ -149,8 +149,8 @@ async function held() {
   console.log('\n=== held: a man walked in the arm (the second place a footfall is filed) ===');
   const run = async (once: boolean) => {
     const C = await world(false, true, SEEDS[0], true), g = C.g, A = C.A; CLOSE.on = true; A.pinned = true;
-    g.teleportPlayer([A.char.pos[0] - 0.8, 0, A.char.pos[2]]); for (let i = 0; i < 40; i++) C.step([A.char.pos[0], 1.2, A.char.pos[2]]);
-    startGrab(g, A); for (let i = 0; i < 90; i++) C.step([A.char.pos[0] + 3, 1.2, A.char.pos[2]]);
+    g.teleportPlayer([A.char.posX - 0.8, 0, A.char.posZ]); for (let i = 0; i < 40; i++) C.step([A.char.posX, 1.2, A.char.posZ]);
+    startGrab(g, A); for (let i = 0; i < 90; i++) C.step([A.char.posX + 3, 1.2, A.char.posZ]);
     const holding = !!g.player.holding; FOOTFALL.once = FOOTFALL.owed = once; C.falls.length = 0;
     const R = rockRun(C, 20, 200, BACK, FWD); return { holding, R, falls: C.falls.slice(), still: !!g.player.holding, after: C.falls.filter(x => x.f > R.from + 20).length };
   };
@@ -161,7 +161,7 @@ async function held() {
 async function ears() {
   console.log('\n=== ears: a calm man a stride in front of eight frames of it ===');
   const run = async (once: boolean) => { const C = await world(once, true, SEEDS[0], true); C.g.aiEnabled = true; C.g.playerInvisible = false; let peak = 0; const st = C.step; C.step = a => { st(a); peak = Math.max(peak, C.A.awareness); };
-    const R = rockRun(C, 8, -45); return { peak, state: C.A.state as string, n: R.inRock, d: Math.hypot(R.at[0] - C.A.char.pos[0], R.at[2] - C.A.char.pos[2]) }; };
+    const R = rockRun(C, 8, -45); return { peak, state: C.A.state as string, n: R.inRock, d: Math.hypot(R.at[0] - C.A.char.posX, R.at[2] - C.A.char.posZ) }; };
   const a = await run(false), b = await run(!BREAK);
   verdict(b.n <= 1 && a.n >= 5 && a.peak > b.peak + 0.02 && a.d < 1.6 && Math.abs(a.d - b.d) < 1e-9, 'a calm man with his back to it, a stride in front: eight frames of rocking are in his ears with the key down, and are not with it up', `key down: ${a.n} footfalls in it ${a.d.toFixed(2)} m behind him, his awareness peaks ${a.peak.toFixed(3)}, he ends ${a.state} · key up: ${b.n} at ${b.d.toFixed(2)} m, peak ${b.peak.toFixed(3)}, ${b.state}`);
 }
@@ -254,7 +254,7 @@ async function nudge() {
   const beat = async (owed: boolean, at = -1) => { const C = await world(true, true, SEEDS[0], true, owed), g = C.g, pl = g.player, A = C.A; A.char.pos = [37.5, 0, 4.5]; C.keys(FWD); let began = -1, debt = 0, ended = -1;
     for (let i = 0; i < 600 && (ended < 0 || C.f <= ended + 60); i++) {
       if (began < 0 && (at >= 0 ? C.f === at : i > 40 && pl.stepOwed >= 0.42 && pl.stepOwed < 0.5)) { began = C.f; debt = pl.stepOwed; A.state = 'dead'; pl.takedown = { g: A, t: 0 }; }
-      const had = !!pl.takedown; C.step(began < 0 ? (Math.floor(i / 10) % 2 ? 'behind' : 'ahead') : [pl.char.pos[0] + 4, 1.0, pl.char.pos[2]]);
+      const had = !!pl.takedown; C.step(began < 0 ? (Math.floor(i / 10) % 2 ? 'behind' : 'ahead') : [pl.char.posX + 4, 1.0, pl.char.posZ]);
       if (began >= 0 && ended < 0 && had && !pl.takedown) ended = C.f;
     }
     return { began, debt, ended, F: C.falls.filter(x => x.f >= began) }; };
@@ -265,8 +265,8 @@ async function heldOwed() {
   console.log('\n=== held, the second key: a man walked in the arm ===');
   const run = async (owed: boolean) => {
     const C = await world(true, true, SEEDS[0], true, owed), g = C.g, A = C.A; CLOSE.on = true; A.pinned = true;
-    g.teleportPlayer([A.char.pos[0] - 0.8, 0, A.char.pos[2]]); for (let i = 0; i < 40; i++) C.step([A.char.pos[0], 1.2, A.char.pos[2]]);
-    startGrab(g, A); for (let i = 0; i < 90; i++) C.step([A.char.pos[0] + 3, 1.2, A.char.pos[2]]);
+    g.teleportPlayer([A.char.posX - 0.8, 0, A.char.posZ]); for (let i = 0; i < 40; i++) C.step([A.char.posX, 1.2, A.char.posZ]);
+    startGrab(g, A); for (let i = 0; i < 90; i++) C.step([A.char.posX + 3, 1.2, A.char.posZ]);
     const holding = !!g.player.holding, m0 = C.moved(); C.falls.length = 0; const far: P3 = [START[0] + 12, 1.2, START[2]];
     C.keys(BACK); for (let i = 0; i < 180; i++) C.step(far);
     return { holding: holding && !!g.player.holding, falls: C.falls.slice(), m: C.moved() - m0 };

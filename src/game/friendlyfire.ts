@@ -67,7 +67,7 @@ export function friendInCone(g: Game, self: Guard, muzzle: Vec3, to: Vec3, sprea
   const w = def ?? self.weapon.def, energy = shotEnergy(g, self.char, w), thin = wallPenLive(g) ? roundEnergy(w) : -1;
   const reaches = (p: Vec3) => !g.col.shotBlocked(muzzle, p, 0.02, energy) || (thin >= 0 && thinLine(g, muzzle, p, thin) !== null);
   let past = Infinity;   // (how far along the line a friend still counts: all the way, unless the round is sure to stop in the man it is for)
-  if (on && on.alive) { const ch = on.bones.chest ?? [on.pos[0], on.pos[1] + 1.2, on.pos[2]]; if (Math.hypot(to[0] - ch[0], to[1] - ch[1], to[2] - ch[2]) < 0.35 && k * L <= K.sureM) past = L + 0.3; }
+  if (on && on.alive) { const ch = on.bones.chest ?? [on.posX, on.posY + 1.2, on.posZ]; if (Math.hypot(to[0] - ch[0], to[1] - ch[1], to[2] - ch[2]) < 0.35 && k * L <= K.sureM) past = L + 0.3; }
   let best: 'player' | Guard | null = null, bt = Infinity;
   const ask = (c: Character, who: 'player' | Guard) => {
     const hips = c.bones.hips ?? c.pos, chest = c.bones.chest ?? hips;
@@ -76,9 +76,9 @@ export function friendInCone(g: Game, self: Guard, muzzle: Vec3, to: Vec3, sprea
     let t = Infinity;   // (how far along the line his hips or his chest — a man leaning round a jamb — come inside the cone)
     for (const p of [hips, chest]) { const rx = p[0] - muzzle[0], rz = p[2] - muzzle[2]; const a = rx * dx + rz * dz; if (a > 0 && a < t && Math.abs(rx * dz - rz * dx) <= K.bodyM + a * k) t = a; }
     if (t >= bt || t > 60 || t > past) return;
-    const y = muzzle[1] + rise * t, top = (c.bones.headTop?.[1] ?? c.pos[1] + 1.8) + 0.1;   // (a round laid on a man on the floor two strides off goes into the floor, not into a friend across the room)
-    if (y - t * k > top || y + t * k < c.pos[1]) return;
-    const cy = c.bones.chest ? chest[1] : c.pos[1] + 1.2, head: Vec3 = c.bones.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]];
+    const y = muzzle[1] + rise * t, top = (c.bones.headTop?.[1] ?? c.posY + 1.8) + 0.1;   // (a round laid on a man on the floor two strides off goes into the floor, not into a friend across the room)
+    if (y - t * k > top || y + t * k < c.posY) return;
+    const cy = c.bones.chest ? chest[1] : c.posY + 1.2, head: Vec3 = c.bones.head ?? [c.posX, c.posY + 1.6, c.posZ];
     // something solid between them that his round does not go through: asked of his middle, his head and the two edges of his column as the line sees it (a man half out of a doorway is in the doorway)
     if (!reaches([chest[0], cy, chest[2]]) && !reaches(head) && !reaches([hips[0] + dz * 0.25, cy, hips[2] - dx * 0.25]) && !reaches([hips[0] - dz * 0.25, cy, hips[2] + dx * 0.25])) return;
     bt = t; best = who;

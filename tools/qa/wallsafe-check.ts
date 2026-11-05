@@ -65,7 +65,7 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
         line(n >= 2 && bad === 0 && least.out >= 4 - 0.05 && least.in >= 6 - 0.05, 'every stand-off mark is out of the blast: at the radius or more (4 m outdoors, 6 m indoors), or with something solid between it and the charge (a door leaf and a pane of glass do not count), and on floor the squad holds',
           `${n} places · nearest mark with a line to the charge: ${f2(least.out)} m outdoors, ${isFinite(least.in) ? `${f2(least.in)} m` : 'none (all out of its line)'} indoors · ${hidden} marks out of its line · ${fell} places with no room fell back to the old marks${worst.length ? ` · ${worst.slice(0, 3).join(' · ')}` : ''}`); }
       // (3) the blast, staged on each of the two walls: three men by distance, Sam outside the reach and then inside it
-      const far = (gd: any, i: number) => R.put(gd, [gd.char.pos[0] + 400 + i, 0, gd.char.pos[2]]);
+      const far = (gd: any, i: number) => R.put(gd, [gd.char.posX + 400 + i, 0, gd.char.posZ]);
       const caught: Record<string, boolean> = {};
       for (const [name, W] of [['outdoors', Wout], ['indoors', Win]] as [string, any][]) {
         const r = safeRadius(g, W), dA = 0.6 * r.reach, dB = r.reach + 0.5, [A, B, M] = R.up, c0 = wallPt(W, 0, 0);
@@ -113,12 +113,12 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
       //  levels this check runs by default: they have such a place from a fresh start, and one gone missing there is the rule broken, not the staging)
       for (const taken of want === 'room' ? [false, true] : [false]) for (const scn of scns) { if (done) break; if (taken && FRESH.includes(scn)) continue;
         const R = await rig(scn, 7), g = R.game, C = R.C; WALLCHARGE.safe = ON; R.kit();
-        if (taken) { const nav = g.col.nav; for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]); R.step(2);
+        if (taken) { const nav = g.col.nav; for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]); R.step(2);
           for (let z = 0; z < nav.H; z++) for (let x = 0; x < nav.W; x++) g.cleared.mark([(x + 0.5) * nav.cell, 0, (z + 0.5) * nav.cell]); }
         if (want === 'tight') { WALLCHARGE.safeStandoff = [40, 40]; WALLCHARGE.safeHideM = 0; }   // (no room: the same place, the radius asked for more floor than the level has and no corner looked for)
         const P0 = partition(R), sites = [...(P0 ? [P0] : []), ...outerSites(R, 'inside', 6)].filter((s: any) => chargeIndoors(g, s.W) && (!ON || !!C.safePosts(s.W, 4, wallPt(s.W, 0, WALLCHARGE.setOff)) === (want === 'room')));
         const P = sites[0]; if (!P) continue;
-        R.gather(P.near); for (const h of R.hostiles) if (h.state !== 'dead' && flat(h.char.pos, wallPt(P.W, 0, 0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]); R.step(2);
+        R.gather(P.near); for (const h of R.hostiles) if (h.state !== 'dead' && flat(h.char.pos, wallPt(P.W, 0, 0)) < DOORTOOLS.stunM + 1) R.put(h, [h.char.posX + 400, 0, h.char.posZ]); R.step(2);
         const tAt: Vec3 = [P.p[0], 0, P.p[2]], why = g.orders.give(WALL_ORDER, wallTarget(g, tAt, { kind: 'floor', at: g.orders.freeSpot(tAt) ?? tAt }), 'all'), op = C.ops[0]; if (!op) { line(false, `played (${want}, ${scn}): the order is taken`, `refused: ${why}`); done = true; break; }
         const W = op.wall, r = safeRadius(g, W), c0 = wallPt(W, 0, 0), armed = R.until(() => op.phase === 'armed', 90), men: any[] = [...op.men];
         const share = men.map(m => ({ m, d: flat(m.char.pos, c0), k: C.blastShare(W, m.char.pos) })), words = R.spoke.filter((s: any) => /your call/.test(s.text)).map((s: any) => s.text), tightWords = words.filter((t: string) => /can't get clear/.test(t));
@@ -137,7 +137,7 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
     // (6) a mark the men cannot walk to is no mark: the block's mess wall, where the floor straight back from the charge is behind a locked door — the
     //     marks along the wall are dealt, never the old ones with 'no room' (the scripted commander's wall: all four were caught there before this was asked)
     if (scns.includes('block-squads')) { const R = await rig('block-squads', 1), g = R.game, C = R.C; WALLCHARGE.safe = ON; R.kit();
-      for (const h of R.hostiles) R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]); R.gather([8.3, 0, 13.7]);
+      for (const h of R.hostiles) R.put(h, [h.char.posX + 400, 0, h.char.posZ]); R.gather([8.3, 0, 13.7]);
       const why = C.order([11.0, 0, 11.3], 'all'), op = C.ops[0], posts: [any, Vec3][] = op ? [...op.post] : [], W = op?.wall;
       line(!!op && !op.close && posts.length >= 2 && posts.every(([m, q]) => !g.orders.reach(m, q) && C.blastShare(W, q) === 0),
         'a place behind a locked door is passed over: every dealt mark is one its man can walk to, out of the blast', op ? `block-squads, wall ${W.index}: ${posts.map(([m, q]) => `${m.callsign} ${at(q)} ${f2(flat(q, wallPt(W, 0, 0)))} m`).join(' · ')} · close ${op.close}` : `refused: ${why}`); }
@@ -157,7 +157,7 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
       let op: any = null; for (const x of [12, 12.6, 11.4, 13.2, 10.8, 13.8, 10.2]) { give([x, 0, 7.0]); op = C.ops[0]; if (op) break; }
       const in1 = !!op && R.until(() => op.phase === 'armed' || !C.ops.includes(op), 90) && op.phase === 'armed';
       if (in1) { const W = op.wall, q = [20, -20, 8, -8, 6, -6].map(d => wallPt(W, d, 3) as Vec3).find(p => R.free(p) && C.blastShare(W, p) === 0) ?? g.player.char.pos; g.teleportPlayer([q[0], 0, q[2]]); R.step(2); C.blow(C.nearest()); R.until(() => !C.ops.includes(op), 30); }
-      for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+      for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.posX + 400, 0, h.char.posZ]);
       const inWard = in1 && R.gather([12, 0, 11], 40); R.step(60);
       if (!inWard) line(false, 'the ward: a way in blown through its yard wall and the four gathered inside', `the first charge ${in1 ? 'blown' : 'never armed'}`);
       else {

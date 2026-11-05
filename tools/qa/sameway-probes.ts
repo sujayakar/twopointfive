@@ -48,8 +48,8 @@ async function rig(): Promise<Rig> {
   const men = g.guards.filter((m: any) => m.team === 'operative' && m.unit && m.state !== 'dead'), door = g.doors.list.find((d: any) => Math.hypot(d.pos[0] - BACK[0], d.pos[2] - BACK[1]) < 0.7);
   if (!door || men.length < 4) throw new Error(`the staging is not there: ${men.length} men, the back door ${door ? 'found' : 'not found'}`);
   const nav = g.col.nav;
-  const way = (m: any): number[][] | null => { const A = g.orders.of(m); if (!A?.post) return null; const w: number[][] = [[m.char.pos[0], 0, m.char.pos[2]]]; let q = w[0]; for (const v of [...A.via, A.post]) { const leg = nav.findPath(q, v); if (!leg) return null; w.push(...leg); q = v; } return w; };
-  const put = (m: any, p: number[]) => { m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; m.char.vel[0] = m.char.vel[2] = 0; if (m.path) m.path.length = 0; m.pathI = 0; };
+  const way = (m: any): number[][] | null => { const A = g.orders.of(m); if (!A?.post) return null; const w: number[][] = [[m.char.posX, 0, m.char.posZ]]; let q = w[0]; for (const v of [...A.via, A.post]) { const leg = nav.findPath(q, v); if (!leg) return null; w.push(...leg); q = v; } return w; };
+  const put = (m: any, p: number[]) => { m.char.posX = p[0]; m.char.posZ = p[2]; m.char.velX = m.char.velZ = 0; if (m.path) m.path.length = 0; m.pathI = 0; };
   const tell = (who: any) => g.orders.give('stack', { kind: 'door', at: door.frameCentre, door, side: OM.sideOf(door, OUT) }, who);
   return { g, W, men, door, way, put, tell };
 }

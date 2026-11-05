@@ -105,7 +105,7 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       // A TAB THAT SLEEPS, twice, the walk key down as it goes: first with nothing said (the server holds the seat's keys: the man walks on), then with the
       // hands taken off as a hidden tab or a card does (one record: he stays). Each time the page wakes far behind and catches up to the server's word.
       const main = { base, confirmed: S().confirmed, wordsOk: S().wordsOk, words: S().wordsOk - w0, secs: +((performance.now() - tm) / 1000).toFixed(1) };
-      const yieldNow = () => new Promise(r => setTimeout(r, 0)), at = () => [g.player.char.pos[0], g.player.char.pos[2]];
+      const yieldNow = () => new Promise(r => setTimeout(r, 0)), at = () => [g.player.char.posX, g.player.char.posZ];
       const level = async keys => { const t = performance.now(); let far = false; while ((S().behind > 2 || S().far) && !S().bad && performance.now() - t < 180000) { window.__runFrames(10, 1 / 60, keys, 'none'); far = far || S().far; await yieldNow(); } return far; };
       const walk = async (key, n) => { const a = at(); for (let i = 0; i < n; i++) { window.__runFrames(10, 1 / 60, [key], 'none'); await yieldNow(); } await level([key]); const b = at(); return Math.hypot(b[0] - a[0], b[1] - a[1]); };
       // (the floor for the walk: the way a nap walks is back over floor he has just walked, so a wall at his shoulder says nothing. He walks each way two
@@ -139,7 +139,7 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         if (!on() || S().far || !(moving() > 0.02)) { ahead.gave = { down: !!g.player.down, over: !!S().outcome, far: S().far, state: S().state, behind: S().behind, pending: S().pending, tick: S().confirmed, tries,
           // (what else takes his legs from him or the camera off him: said, so a red line names its cause — player.ts legsOwn, foresee.ts `his`)
           legs: ['takedown', 'holding', 'kick', 'picking', 'wanding', 'coding', 'wall', 'dragging', 'haul', 'doorMove', 'crouch'].filter(k => g.player[k]).concat(g.puppet ? ['puppet'] : [], g.touring ? ['touring'] : []).join(' '),
-          cam: (() => { try { return g.followPos() === g.player.char.pos; } catch { return null; } })(), look: S().ahead }; break; }
+          cam: (() => { try { const f = g.followPos(), p = g.player.char.pos; return f[0] === p[0] && f[1] === p[1] && f[2] === p[2]; } catch { return null; } })(), look: S().ahead }; break; }
         window.__runFrames(1, 1 / 60, keys, true);
         const L = window.__net.ahead && window.__net.ahead.last; ahead.drawn++; if (L && L.on) { ahead.moved++; ahead.men = Math.max(ahead.men, L.men); ahead.caps = Math.max(ahead.caps, L.caps); ahead.boxes = Math.max(ahead.boxes, L.boxes); ahead.lights = Math.max(ahead.lights, L.lights); }
         await tick0(); await even(keys);

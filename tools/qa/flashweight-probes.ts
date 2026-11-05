@@ -88,7 +88,7 @@ async function paceRun(scn: string): Promise<PaceRun> {
   const WIN = 15;   // a quarter second of frames
   const watch = () => { for (const x of team) { if (x.state === 'dead') continue;
     out.asked = Math.max(out.asked, x.speed); out.rise = Math.max(out.rise, (x.speed - was.get(x)!) / DT); was.set(x, x.speed);
-    const tr = trail.get(x)!; tr.push([x.char.pos[0], 0, x.char.pos[2]]); if (tr.length > WIN) { const a = tr[tr.length - 1 - WIN]; let L = 0; for (let i = tr.length - WIN; i < tr.length; i++) L += flat(tr[i], tr[i - 1]); if (flat(a, tr[tr.length - 1]) < 1.5) out.covered = Math.max(out.covered, L / (WIN * DT)); tr.shift(); }   // (a jump of a metre and a half inside the window is a stager's teleport, not a pace)
+    const tr = trail.get(x)!; tr.push([x.char.posX, 0, x.char.posZ]); if (tr.length > WIN) { const a = tr[tr.length - 1 - WIN]; let L = 0; for (let i = tr.length - WIN; i < tr.length; i++) L += flat(tr[i], tr[i - 1]); if (flat(a, tr[tr.length - 1]) < 1.5) out.covered = Math.max(out.covered, L / (WIN * DT)); tr.shift(); }   // (a jump of a metre and a half inside the window is a stager's teleport, not a pace)
     if (x.speed > 1.6) out.moved = true; } };
   const tick = (n = 1) => { for (let i = 0; i < n; i++) { step(); watch(); } };
   // Sam sprints: out along the walkable floor to the far end of a path and back, the team falling in behind him
@@ -101,7 +101,7 @@ async function paceRun(scn: string): Promise<PaceRun> {
     let i = 1; const at = [...start]; const SPRINT = g.tune.playerSprint ?? 4.7;
     for (let f = 0; f < 60 * 14 && i < lap.length; f++) { let left = SPRINT * DT;
       while (left > 0 && i < lap.length) { const d = flat(at, lap[i]); if (d <= left) { at[0] = lap[i][0]; at[2] = lap[i][2]; left -= d; i++; } else { at[0] += (lap[i][0] - at[0]) / d * left; at[2] += (lap[i][2] - at[2]) / d * left; left = 0; } }
-      g.player.char.pos[0] = at[0]; g.player.char.pos[2] = at[2]; tick(); }
+      g.player.char.posX = at[0]; g.player.char.posZ = at[2]; tick(); }
   }
   tick(90);
   // onto the nearest held room's door, and through it
@@ -143,7 +143,7 @@ async function flashRun(scn: string, opts: { shut?: boolean } = {}) {
   const others = g.guards.filter((x: any) => x.team === 'hostile' && !men.includes(x) && x.state !== 'dead'); for (const x of others) await quiet(() => CBM.killGuard(g, x, [0, 0, 1], true));
   // the team outside, square to the opening so the can inside is in plain view of each
   const spots: number[][] = []; for (const back of [3.4, 4.2, 5.0, 5.8]) for (const lat of [0, 0.5, -0.5]) { const p = outPt(back, lat); if (!nav.isBlocked(p[0], p[2]) && !spots.some(s => flat(s, p) < 0.7)) spots.push(p); }
-  team.forEach((gd, i) => { const p = spots[i % Math.max(1, spots.length)] ?? outPt(4, 0); gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
+  team.forEach((gd, i) => { const p = spots[i % Math.max(1, spots.length)] ?? outPt(4, 0); gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
   await quiet(() => g.teleportPlayer(outPt(6.5, 0) as any)); await quiet(() => O.give('hold', O.targetAt(outPt(6.5, 0)), 'all'));
   step(5);
   if (!opts.shut) { const s = -g.doors.side(d, outPt(0.6, 0)); d.latched = false; d.closing = false; d.vel = s * 5.5; d.quietT = -3600; d.lastWho = g.player.char.id; if (d.locked && !d.lockBroken) d.lockBroken = true; step(24); }
@@ -153,7 +153,7 @@ async function flashRun(scn: string, opts: { shut?: boolean } = {}) {
   for (let i = 0; i < 120 && isNaN(bangT); i++) { step(); for (const e of g.events) if (!seen.has(e)) { seen.add(e); if (e.kind === 'bang') { bangT = e.time; bangAt = e.pos; } } }
   if (isNaN(bangT) || !bangAt) return null;
   const B = FXM.bang, from = [bangAt[0], bangAt[1] + 0.3, bangAt[2]];
-  const head = (x: any) => x.char.bones.head ?? [x.char.pos[0], 1.65, x.char.pos[2]];
+  const head = (x: any) => x.char.bones.head ?? [x.char.posX, 1.65, x.char.posZ];
   const row = (x: any) => ({ gd: x, d: Math.hypot(head(x)[0] - bangAt![0], head(x)[1] - bangAt![1], head(x)[2] - bangAt![2]), line: !g.col.segmentBlocked(from as any, head(x)), blind: x.dazzledUntil - bangT, folded: x.staggerUntil - bangT });
   const inside = men.filter(x => x.state !== 'dead').map(row), ours = team.filter(x => x.state !== 'dead').map(row);
   // rounds from the room's men while each is folded
@@ -254,7 +254,7 @@ export const flashweightFog = guarded(async () => {
         let at: number[] | null = null;
         for (const back of [1.6, 2.4, 1.0, 3.2]) for (const lat of [0, 0.6, -0.6, 1.2, -1.2]) { if (at) break; const p = [e.at[0] + o[0] * back - o[1] * lat, 0, e.at[2] + o[1] * back + o[0] * lat]; if (g.col.nav.isBlocked(p[0], p[2])) continue; await quiet(() => g.teleportPlayer(p as any)); step(2); if (FW.seen(gd)) at = p; }
         if (!at) { dd.angle = 0; dd.place(); dd.quietT = 10; dd.latched = true; step(1); continue; }
-        const c = gd.char, chest = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]]; let full = 0, drawn = 0, wrong = 0, samples = 0, clipped = 0, dots = 0, dotsWrong = 0;
+        const c = gd.char, chest = c.bones.chest ?? [c.posX, 1.2, c.posZ]; let full = 0, drawn = 0, wrong = 0, samples = 0, clipped = 0, dots = 0, dotsWrong = 0;
         for (let k = 0; k < 8; k++) {
           const dir = [Math.sin(k * Math.PI / 4), 0, Math.cos(k * Math.PI / 4)]; c.gunDir = dir; c.muzzle = [chest[0] + dir[0] * 0.5, chest[1], chest[2] + dir[2] * 0.5];
           CBM.LASER.enemy = true;   // (the fog's cut of an enemy's beam is measured with the enemies' lasers on, as before combat.ts LASER — off, there is nothing to cut: laser-probes.ts)
@@ -341,7 +341,7 @@ async function emptyEntry(scn: string) {
   const cross = new Map<any, { t: number; lit: boolean; corner: number }>(); let op: any = null, inT = NaN, darkAt = NaN, searching = 0, searchLit = 0;
   for (let f = 0; f < 60 * 60; f++) { step(); op ??= D.ops[0] ?? null;
     if (op) for (const [gd, t] of op.crossed) { if (!cross.has(gd)) cross.set(gd, { t, lit: litOk(gd), corner: NaN });
-      const C = op.corner.get(gd), r = cross.get(gd)!; if (C?.pts.length && isNaN(r.corner) && Math.abs(Math.atan2(Math.sin(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.pos[0], C.pts[0][2] - gd.char.pos[2])), Math.cos(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.pos[0], C.pts[0][2] - gd.char.pos[2])))) < DTM.DOORTOOLS.cornerRad) r.corner = g.time - t; }
+      const C = op.corner.get(gd), r = cross.get(gd)!; if (C?.pts.length && isNaN(r.corner) && Math.abs(Math.atan2(Math.sin(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.posX, C.pts[0][2] - gd.char.posZ)), Math.cos(gd.char.aimYaw - Math.atan2(C.pts[0][0] - gd.char.posX, C.pts[0][2] - gd.char.posZ)))) < DTM.DOORTOOLS.cornerRad) r.corner = g.time - t; }
     if (op && D.ops.includes(op) && op.phase === 'enter' && cross.size) { searching++; watch(); if ([...cross.keys()].map(gd => litOk(gd)).every(Boolean)) searchLit++; /* (every man who has crossed is asked every frame: the wall excuse keeps a clock a man) */ }
     if (op && !D.ops.includes(op) && isNaN(inT)) inT = g.time;
     if (!isNaN(inT)) { if (!litFree() && isNaN(darkAt)) darkAt = g.time - inT; if (g.time - inT > 10) break; } }

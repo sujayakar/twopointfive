@@ -39,7 +39,7 @@ async function floor(seed: number, sam: Vec3) {
 /** press V this frame and step once; returns whether an event went out (the blown counter moved) */
 function pressV(W: any): boolean { const n0 = WHISTLE_STATS.blown; W.input.pressed.add('KeyV'); W.step(DT); return WHISTLE_STATS.blown > n0; }
 /** what the propagation says between Sam's mouth and a man's head right now (the numbers hearWhistle works from) */
-function propTo(game: any, gd: any) { const c = game.player.char; return game.col.sound.propagate([c.pos[0], game.player.crouch ? 1.0 : 1.55, c.pos[2]], v3.add(gd.char.pos, [0, 1.5, 0])); }
+function propTo(game: any, gd: any) { const c = game.player.char; return game.col.sound.propagate([c.posX, game.player.crouch ? 1.0 : 1.55, c.posZ], v3.add(gd.char.pos, [0, 1.5, 0])); }
 
 // ================================================================ (a) reach in open air: 6 m behind a calm man → he answers; 11 m → nothing
 export async function whistleReach(): Promise<boolean> {
@@ -60,7 +60,7 @@ export async function whistleReach(): Promise<boolean> {
       if (!went) f.push('no event went out on V');
       if (whD !== 1) f.push(`the whistle voice played ${whD}× (want 1)`);
       if (gd.state !== 'suspicious') f.push(`state ${gd.state} (want suspicious)`);
-      if (!gd.lastKnown || v3.distXZ(gd.lastKnown, game.player.char.pos) > 0.3) f.push(`fix ${gd.lastKnown ? `(${f2(gd.lastKnown[0])}, ${f2(gd.lastKnown[2])})` : 'none'} is not Sam's spot (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})`);
+      if (!gd.lastKnown || v3.distXZ(gd.lastKnown, game.player.char.pos) > 0.3) f.push(`fix ${gd.lastKnown ? `(${f2(gd.lastKnown[0])}, ${f2(gd.lastKnown[2])})` : 'none'} is not Sam's spot (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})`);
       if (Math.abs(gd.awareness - WHISTLE.awareness) > 0.02) f.push(`awareness ${f2(gd.awareness)} (want ${WHISTLE.awareness})`);
       if (!said || !LOOK.has(said)) f.push(`said ${JSON.stringify(said)} (want one of the look lines)`);
       if (gd.bubble?.radio) f.push('his line went out over the radio');
@@ -145,7 +145,7 @@ export async function whistleDoor(): Promise<boolean> {
     if (answered && (!fix || v3.distXZ(fix, via) > 0.6)) f.push(`his fix (${f2(fix?.[0] ?? NaN)}, ${f2(fix?.[2] ?? NaN)}) is not the doorway it came through (${f2(via[0])}, ${f2(via[2])})`);
     if (answered && fix && v3.distXZ(fix, game.player.char.pos) < 1.0) f.push('his fix is Sam himself through the wall (want the doorway)');
     verdict(f.length === 0, `(a4) Sam ${f2(v3.distXZ(game.player.char.pos, gd.char.pos))} m off round the corner, door open: ${shouldHear ? 'heard through the doorway — he answers, and walks to the DOORWAY' : 'too far round — nothing'}`,
-      `propagation: ${pr.direct ? 'direct' : pr.routed ? 'routed' : 'sealed'} via (${f2(via[0])}, ${f2(via[2])}), path ${f2(pr.pathLen)} m, muffle ${f2(pr.muffle)}, carry ${f2(pr.carry)} → reach ${f2(reach)} m · ${answered ? `answered: fix (${f2(fix![0])}, ${f2(fix![2])}), Sam at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])})` : `state ${gd.state} aw ${f2(gd.awareness)}`}${f.length ? '\n    ✗ ' + f.join('\n    ✗ ') : ''}`);
+      `propagation: ${pr.direct ? 'direct' : pr.routed ? 'routed' : 'sealed'} via (${f2(via[0])}, ${f2(via[2])}), path ${f2(pr.pathLen)} m, muffle ${f2(pr.muffle)}, carry ${f2(pr.carry)} → reach ${f2(reach)} m · ${answered ? `answered: fix (${f2(fix![0])}, ${f2(fix![2])}), Sam at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)})` : `state ${gd.state} aw ${f2(gd.awareness)}`}${f.length ? '\n    ✗ ' + f.join('\n    ✗ ') : ''}`);
   }
   return allPass;
 }
@@ -316,7 +316,7 @@ export async function whistleAlert(): Promise<boolean> {
     if (!M || M.cues !== 1 || M.responses !== 0) f.push(`memory ${JSON.stringify(M)} (want 1 cue, no answer)`);
     if (handCarry(gd) !== 'weapon') f.push('the gun is not out');
     verdict(f.length === 0, '(e1) alert (no eyes on Sam for a while): the fix jumps to the whistle, state and gun stay, no whistle line',
-      `state ${gd.state} · fix ${gd.lastKnown ? `(${f2(gd.lastKnown[0])}, ${f2(gd.lastKnown[2])})` : 'none'} vs Sam (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}) · said ${JSON.stringify(said)} · cues ${M?.cues}${f.length ? '\n    ✗ ' + f.join('\n    ✗ ') : ''}`);
+      `state ${gd.state} · fix ${gd.lastKnown ? `(${f2(gd.lastKnown[0])}, ${f2(gd.lastKnown[2])})` : 'none'} vs Sam (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}) · said ${JSON.stringify(said)} · cues ${M?.cues}${f.length ? '\n    ✗ ' + f.join('\n    ✗ ') : ''}`);
   }
   // ---- alert WITH eyes on Sam this second: he trusts his eyes (the fix stays)
   {
@@ -348,7 +348,7 @@ export async function whistleAlert(): Promise<boolean> {
     if (!fix1 || v3.distXZ(fix1, game.player.char.pos) > 1.0) f.push(`the plan's fix is (${f2(fix1?.[0] ?? NaN)}, ${f2(fix1?.[2] ?? NaN)}), not the whistle's spot`);
     if ((M?.cues ?? 0) !== 1) f.push(`cues ${M?.cues}`);
     verdict(f.length === 0, '(e3) searching: the whistle moves his fix and the plan of hiding places is dealt again round it',
-      `plan fix (${f2(fix0?.[0] ?? NaN)}, ${f2(fix0?.[2] ?? NaN)}) → (${f2(fix1?.[0] ?? NaN)}, ${f2(fix1?.[2] ?? NaN)}) · Sam at (${f2(game.player.char.pos[0])}, ${f2(game.player.char.pos[2])}) · state ${gd.state}${f.length ? '\n    ✗ ' + f.join('\n    ✗ ') : ''}`);
+      `plan fix (${f2(fix0?.[0] ?? NaN)}, ${f2(fix0?.[2] ?? NaN)}) → (${f2(fix1?.[0] ?? NaN)}, ${f2(fix1?.[2] ?? NaN)}) · Sam at (${f2(game.player.char.posX)}, ${f2(game.player.char.posZ)}) · state ${gd.state}${f.length ? '\n    ✗ ' + f.join('\n    ✗ ') : ''}`);
   }
   return allPass;
 }

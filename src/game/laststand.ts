@@ -208,7 +208,7 @@ function spoken(g: Game, p: Vec3): { id: string | null; the: string; at: string;
 function voice(g: Game, F: RoomFight, st: State, gd: Guard, kind: LineKind, text: string, cls: number) {
   g.msg(`${gd.callsign} (radio): ${text}`);
   g.cues?.net(gd, text, cls);
-  st.said.push({ t: +g.time.toFixed(2), who: gd.callsign, kind, text, at: [+gd.char.pos[0].toFixed(2), +gd.char.pos[2].toFixed(2)] }); if (st.said.length > 200) st.said.splice(0, 50);
+  st.said.push({ t: +g.time.toFixed(2), who: gd.callsign, kind, text, at: [+gd.char.posX.toFixed(2), +gd.char.posZ.toFixed(2)] }); if (st.said.length > 200) st.said.splice(0, 50);
   st.stats.lines++; note(g, F, gd, `net: ${text}`);
 }
 /** the strip takes one line of a class every few seconds and DROPS the rest (cues.ts `gaps`, whoever spoke last — the squads' and the dig-in's lines too): a

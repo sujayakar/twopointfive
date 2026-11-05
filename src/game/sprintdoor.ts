@@ -69,17 +69,17 @@ const KICK_NEAR = 0.06;
  *  (he runs on, and if he reaches the leaf it is the handle). */
 export function sprintDoorKick(g: Game, pl: Player): Door | null {
   if (!SPRINTDOOR.kick || !live(g, pl) || !pl.sprinting || pl.kick || pl.picking || pl.coding || pl.takedown || pl.holding || !DOORBLAST.on) return null;
-  const c = pl.char, vx = c.vel[0], vz = c.vel[2];
+  const c = pl.char, vx = c.velX, vz = c.velZ;
   for (const d of g.doors.list) {
     if (d.locked || !g.doors.bootHolds(d, c.pos)) continue;
-    const a = d.def.closedDir + d.angle, ux = Math.cos(a), uz = Math.sin(a), px = c.pos[0] - d.def.hinge[0], pz = c.pos[2] - d.def.hinge[1];
+    const a = d.def.closedDir + d.angle, ux = Math.cos(a), uz = Math.sin(a), px = c.posX - d.def.hinge[0], pz = c.posZ - d.def.hinge[1];
     const perp = ux * pz - uz * px, s = perp >= 0 ? 1 : -1, off = Math.abs(perp);
     const into = (uz * vx - ux * vz) * s;   // his speed INTO the leaf (its normal on his side is (−u.z, u.x)·s)
     if (into < SPRINTDOOR.kickInto || off > KICK_OFF + into / KICK_EASE || off < KICK_OFF - KICK_NEAR) continue;
     const meet = px * ux + pz * uz + (vx * ux + vz * uz) * (off / into);   // where along the leaf his run lands
     if (meet < 0.1 || meet > d.def.width - 0.05) continue;
     const spot = g.doors.kickSpot(d, c.pos).pos;
-    if (g.col.nav.isBlocked(spot[0], spot[2]) || g.col.solidBlocked([c.pos[0], 0.5, c.pos[2]], [spot[0], 0.5, spot[2]])) continue;
+    if (g.col.nav.isBlocked(spot[0], spot[2]) || g.col.solidBlocked([c.posX, 0.5, c.posZ], [spot[0], 0.5, spot[2]])) continue;
     return d;
   }
   return null;
@@ -93,20 +93,20 @@ const SETTLE = 0.2;
 /** After the doors have been resolved: what the leaf he ran open or ripped round cost him. */
 export function sprintDoorAfter(g: Game, pl: Player, own: DoorContact): void {
   const c = pl.char; if (!own.run) return;
-  const sp = Math.hypot(c.vel[0], c.vel[2]);
+  const sp = Math.hypot(c.velX, c.velZ);
   if (own.bashed && g.time - pl.doorBashAt >= AGAIN) { const d = own.bashed;
     // the part of his run that went into the leaf, as it stood when he met it (ajar, less of it does: a leaf half open across his way is a glancing blow)
-    const a = d.def.closedDir + (own.bashedAt ?? 0), nx = -Math.sin(a), nz = Math.cos(a); const sq = sp > 1e-3 ? Math.min(1, Math.abs(c.vel[0] * nx + c.vel[2] * nz) / sp) : 1;
+    const a = d.def.closedDir + (own.bashedAt ?? 0), nx = -Math.sin(a), nz = Math.cos(a); const sq = sp > 1e-3 ? Math.min(1, Math.abs(c.velX * nx + c.velZ * nz) / sp) : 1;
     const k = 1 - (1 - SPRINTDOOR.keep) * sq;
-    pl.speedSm *= k; c.vel = [c.vel[0] * k, 0, c.vel[2] * k];
+    pl.speedSm *= k; c.vel = [c.velX * k, 0, c.velZ * k];
     // the shoulder nearer the latch leads: which way that turns him is the side of his run the hinge is on
-    const hx = d.def.hinge[0] - c.pos[0], hz = d.def.hinge[1] - c.pos[2]; const cross = c.vel[0] * hz - c.vel[2] * hx;
+    const hx = d.def.hinge[0] - c.posX, hz = d.def.hinge[1] - c.posZ; const cross = c.velX * hz - c.velZ * hx;
     pl.doorBashAt = g.time; pl.doorBashLean = cross >= 0 ? -1 : 1;
     SPRINTDOOR_STATS.bashes++;
   }
   if (own.ripped) {
-    const cap = g.tune.playerSprint * SPRINTDOOR.ripPace, now = Math.hypot(c.vel[0], c.vel[2]);
-    if (now > cap) { const k = cap / now; c.vel = [c.vel[0] * k, 0, c.vel[2] * k]; }
+    const cap = g.tune.playerSprint * SPRINTDOOR.ripPace, now = Math.hypot(c.velX, c.velZ);
+    if (now > cap) { const k = cap / now; c.vel = [c.velX * k, 0, c.velZ * k]; }
     pl.speedSm = Math.min(pl.speedSm, cap); pl.doorRipUntil = g.time + SPRINTDOOR.ripSecs;
     SPRINTDOOR_STATS.rips++;
   }

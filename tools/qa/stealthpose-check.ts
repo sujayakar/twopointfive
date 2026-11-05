@@ -65,7 +65,7 @@ async function play(part: Part, first: () => void): Promise<Run> {
     if (part === 'idle') go(150);
     else if (part === 'walk') { S.W.input.keys.add('KeyD'); go(150); }
     else if (part === 'rise') { S.W.input.keys.add('KeyD'); go(50); g.player.crouch = false; go(70); g.player.crouch = true; go(60); }
-    else if (part === 'creep') { const A = g.guards[0]; ST.place(A, [10.2, 0, 19.5], EAST); A.hold = true; A.pinned = true; S.W.input.keys.add('KeyD'); let n = 0; while (g.player.char.pos[0] < 10.2 - 1.3 && n++ < 500) go(1); }
+    else if (part === 'creep') { const A = g.guards[0]; ST.place(A, [10.2, 0, 19.5], EAST); A.hold = true; A.pinned = true; S.W.input.keys.add('KeyD'); let n = 0; while (g.player.char.posX < 10.2 - 1.3 && n++ < 500) go(1); }
     else { go(30); S.W.input.pressed.add('KeyE'); go(40); }
   }
   return { recs, hash, digest: J(digestGame(g, true)) };

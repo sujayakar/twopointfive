@@ -616,8 +616,8 @@ export async function turnGame(): Promise<boolean> {
     const last = new Map<any, { a: number; b: number; x: number; z: number }>(); let top = 0, topB = 0, bad = '', who = '';
     for (let i = 0; i < 60 * 40 && !bad; i++) { step(1);
       for (const x of g.guards) { const c = x.char; if (x.state === 'dead' || !c.turn.on) { last.delete(x); continue; } if (!Number.isFinite(c.aimYaw + c.bodyYaw)) bad = x.callsign;
-        const L = last.get(x); if (L && Math.hypot(c.pos[0] - L.x, c.pos[2] - L.z) < 0.5) { const wb = Math.abs(wrapA(c.bodyYaw - L.b)) / DT, wa = Math.abs(wrapA(c.aimYaw - L.a)) / DT - wb; if (wb > topB) topB = wb; if (wa > top) { top = wa; who = x.callsign; } }
-        last.set(x, { a: c.aimYaw, b: c.bodyYaw, x: c.pos[0], z: c.pos[2] }); } }
+        const L = last.get(x); if (L && Math.hypot(c.posX - L.x, c.posZ - L.z) < 0.5) { const wb = Math.abs(wrapA(c.bodyYaw - L.b)) / DT, wa = Math.abs(wrapA(c.aimYaw - L.a)) / DT - wb; if (wb > topB) topB = wb; if (wa > top) { top = wa; who = x.callsign; } }
+        last.set(x, { a: c.aimYaw, b: c.bodyYaw, x: c.posX, z: c.posZ }); } }
     const T = CH.TURN;
     F.verdict(!bad && topB <= T.body + 0.05 && top <= T.aim + 0.05, 'forty seconds of the night breach: no body over the body\'s top rate, no muzzle over the weapon\'s on top of it, every yaw finite',
       bad ? `not finite: ${bad}` : `fastest body ${deg(topB)}/s (cap ${deg(T.body)}) · fastest muzzle over its body ${deg(top)}/s (${who}; cap ${deg(T.aim)})`);
@@ -730,10 +730,10 @@ export async function movesSteady(): Promise<boolean> {
       if (a.kit === 'rifle') { an.longGun = true; an.longStance = a.stack || a.low ? 'lowLong' : 'shoulder'; an.longSteady = a.loose ? 0 : 1; if (a.low) an.upper = 'none'; } if (a.creep) an.creep = true; if (a.stack) { an.stance = 'stack'; an.stackSide = 1; an.upper = 'none'; } return c; };
     const pp = (v: number[]) => Math.max(...v) - Math.min(...v), mean = (v: number[]) => v.reduce((x, y) => x + y, 0) / v.length;
     /** two whole cycles of a steady gait after three seconds of it: what goes side to side, the base, the stride, and every frame's bones */
-    const gait = (on: number, a: Ask) => { const c = stand(on, a), an = c.anim; an.speed = a.speed; const adv = () => { c.pos = [0, 0, c.pos[2] + a.speed * DT]; c.update(DT); };
+    const gait = (on: number, a: Ask) => { const c = stand(on, a), an = c.anim; an.speed = a.speed; const adv = () => { c.pos = [0, 0, c.posZ + a.speed * DT]; c.update(DT); };
       for (let i = 0; i < 180; i++) adv(); const rows: any[] = []; let prev = an.phase, wraps = 0, bits = '';
       for (let i = 0; i < 1200 && wraps < 3; i++) { adv(); if (an.phase - prev < -0.5) wraps++; prev = an.phase; if (wraps < 1 || wraps > 2) continue; const b = c.bones;
-        rows.push({ gun: [...c.gunDir], hand: [...b.handR], hips: [...b.hips], neck: [...b.neck], head: [...b.head], aL: [...b.upperArmL], aR: [...b.upperArmR], tL: [...b.thighL], tR: [...b.thighR], kL: [...b.shinL], kR: [...b.shinR], fL: [b.footL[0], b.footL[1], b.footL[2] - c.pos[2]], fR: [b.footR[0], b.footR[1], b.footR[2] - c.pos[2]] });
+        rows.push({ gun: [...c.gunDir], hand: [...b.handR], hips: [...b.hips], neck: [...b.neck], head: [...b.head], aL: [...b.upperArmL], aR: [...b.upperArmR], tL: [...b.thighL], tR: [...b.thighR], kL: [...b.shinL], kR: [...b.shinR], fL: [b.footL[0], b.footL[1], b.footL[2] - c.posZ], fR: [b.footR[0], b.footR[1], b.footR[2] - c.posZ] });
         bits += JSON.stringify(b) + ';'; }
       const x = (k: string) => rows.map(q => q[k][0]); const plant = (k: string) => { const lo = Math.min(...rows.map(q => q[k][1])) + 0.015; return mean(rows.filter(q => q[k][1] < lo).map(q => q[k][0])); };
       const roll = rows.map(q => Math.atan2(q.tL[1] - q.tR[1], q.tL[0] - q.tR[0])), lean = rows.map(q => Math.atan2(q.neck[0] - q.hips[0], q.neck[1] - q.hips[1])), sh = rows.map(q => Math.atan2(q.aL[1] - q.aR[1], q.aL[0] - q.aR[0])), tilt = rows.map(q => Math.atan2(q.head[0] - q.neck[0], q.head[1] - q.neck[1]));
@@ -774,7 +774,7 @@ export async function movesSteady(): Promise<boolean> {
       F.verdict(ok, 'at a creep, half way between the still crouch and the walk: the same carriage, less rock', out.join('\n    ')); }
     { // the held gait (the close-in mode: the stride stands where he stopped), turned on the spot — the foot lock comes after this part, so it is never fought
       const sweep = (on: number, turn: number) => { const c = stand(on, { speed: 0, crouch: 1, kit: 'none' }), an = c.anim; an.creep = true; an.phase = 0.35;
-        const step = (sp: number, dy = 0) => { an.speed = sp; c.bodyYaw += dy; c.aimYaw = c.bodyYaw; c.pos = [c.pos[0] + Math.sin(c.bodyYaw) * sp * DT, 0, c.pos[2] + Math.cos(c.bodyYaw) * sp * DT]; c.update(DT); };
+        const step = (sp: number, dy = 0) => { an.speed = sp; c.bodyYaw += dy; c.aimYaw = c.bodyYaw; c.pos = [c.posX + Math.sin(c.bodyYaw) * sp * DT, 0, c.posZ + Math.cos(c.bodyYaw) * sp * DT]; c.update(DT); };
         for (let i = 0; i < 90; i++) step(1.3); for (let i = 0; i < 60; i++) step(0); let path = 0, held = 0, prev = [[...c.bones.footL], [...c.bones.footR]], fin = true; const sw = [-1, -1];
         for (let i = 0; i < 90; i++) { step(0, i < 60 ? turn / 60 : 0); [c.bones.footL, c.bones.footR].forEach((q: number[], k: number) => { const d = Math.hypot(q[0] - prev[k][0], q[2] - prev[k][2]), s = an.feet[k ? 'R' : 'L'].swing; path += d; if (s < 0 && sw[k] < 0) held += d; sw[k] = s; prev[k] = [...q]; fin &&= q.every(Number.isFinite); }); }
         return { path, held, fin }; };
@@ -785,7 +785,7 @@ export async function movesSteady(): Promise<boolean> {
       const was = gait(0, SNEAK), one = gait(1, SNEAK), two = gait(2, SNEAK); let dy = 0, dz = 0; const n = Math.min(was.rows.length, two.rows.length);
       for (let i = 0; i < n; i++) for (const k of ['fL', 'fR']) { dy = Math.max(dy, Math.abs(was.rows[i][k][1] - two.rows[i][k][1])); dz = Math.max(dz, Math.abs(was.rows[i][k][2] - two.rows[i][k][2])); }
       const up = two.hipsY - one.hipsY, headUp = mean(two.rows.map((q: any) => q.head[1])) - mean(one.rows.map((q: any) => q.head[1]));
-      const ride = (on: number) => { const c = stand(on, SNEAK), an = c.anim, ys: number[] = []; let sp = 0; for (let i = 0; i < 300; i++) { const want = Math.floor(i * DT / 0.7) % 2 ? 0 : 1.3; sp += Math.sign(want - sp) * Math.min(Math.abs(want - sp), 6 * DT); an.speed = sp; c.pos = [0, 0, c.pos[2] + sp * DT]; c.update(DT); ys.push(c.bones.hips[1]); } return ys; };
+      const ride = (on: number) => { const c = stand(on, SNEAK), an = c.anim, ys: number[] = []; let sp = 0; for (let i = 0; i < 300; i++) { const want = Math.floor(i * DT / 0.7) % 2 ? 0 : 1.3; sp += Math.sign(want - sp) * Math.min(Math.abs(want - sp), 6 * DT); an.speed = sp; c.pos = [0, 0, c.posZ + sp * DT]; c.update(DT); ys.push(c.bones.hips[1]); } return ys; };
       const r1 = ride(1), r2 = ride(2); let jerk = 0; for (let i = 1; i < r1.length; i++) jerk = Math.max(jerk, Math.abs((r2[i] - r1[i]) - (r2[i - 1] - r1[i - 1])));
       F.verdict(jerk < 0.012 && Math.abs(one.hipsY - was.hipsY) < 1e-6 && up > 0.03 && up < CH.MV.steady.rise + 1e-6 && two.kneeLow > 0.12 && dy < 0.002 && dz < 0.002 && two.frames === was.frames && two.finite && two.head < 0.09 && two.roll < 0.105 && Math.abs(two.base - one.base) < 0.005,
         'setting 2 (not the default): the same steps ridden higher — the rear knee no longer comes down to a hand off the floor; the default leaves his height alone',
@@ -822,7 +822,7 @@ export async function movesSteady(): Promise<boolean> {
       // part-off run plants them (the rest of him the same but for the rifle hands' springs still settling from another road in — millimetres, gone by the last)
       const take = (on: number) => { const c = stand(on, SNEAK), an = c.anim; let sp = 0, fin = true, slide = 0; let pf: number[] | null = null; const rest: any[] = [];
         for (let i = 0; i < 60 * 12; i++) { const t = i * DT; const want = t > 1 && t < 3 ? 1.3 : t > 4 && t < 5 ? 0.4 : t > 6 && t < 9 ? 1.3 : 0; sp += Math.sign(want - sp) * Math.min(Math.abs(want - sp), 6 * DT); if (t > 7) an.crouchTarget = 0;
-          an.speed = sp; c.pos = [0, 0, c.pos[2] + sp * DT]; c.update(DT); const b = c.bones; fin &&= Object.values(b).every((v: any) => v.every(Number.isFinite));
+          an.speed = sp; c.pos = [0, 0, c.posZ + sp * DT]; c.update(DT); const b = c.bones; fin &&= Object.values(b).every((v: any) => v.every(Number.isFinite));
           const f = [b.footL[0], b.footR[0]]; if (pf) slide = Math.max(slide, Math.abs(f[0] - pf[0]), Math.abs(f[1] - pf[1])); pf = f;
           if (i === 60 * 4 - 1 || i === 60 * 6 - 1 || i === 60 * 12 - 1) rest.push(JSON.parse(JSON.stringify(b))); }
         return { fin, rest, slide }; };

@@ -21,7 +21,7 @@ const STAGE = async (PLACE) => {
   g.godMode = true; g.tune.chaos = 0.5; step(60);
   const mid = [PLACE.mid[0], 0, PLACE.mid[1]], defs = F.defs.filter(D => D.gd.state !== 'dead').sort((x, y) => flat(x.gd.char.pos, mid) - flat(y.gd.char.pos, mid));
   if (defs.length < 2) return { err: 'fewer than two defenders on the floor' };
-  const post = (D, p2, f2) => { const p = [p2[0], 0, p2[1]], to = [f2[0], 0, f2[1]], gd = D.gd, c = gd.char; c.pos[0] = p[0]; c.pos[2] = p[2]; c.bodyYaw = c.aimYaw = Math.atan2(to[0] - p[0], to[2] - p[2]); gd.path = []; gd.pathGoal = null; if (gd.script) gd.script = null;
+  const post = (D, p2, f2) => { const p = [p2[0], 0, p2[1]], to = [f2[0], 0, f2[1]], gd = D.gd, c = gd.char; c.posX = p[0]; c.posZ = p[2]; c.bodyYaw = c.aimYaw = Math.atan2(to[0] - p[0], to[2] - p[2]); gd.path = []; gd.pathGoal = null; if (gd.script) gd.script = null;
     gd.hold = true; gd.pinned = true; D.mode = 'hold'; D.station = [p[0], 0, p[2]]; D.room = F.roomAt(p); D.ev = D.room ? D.room.entries.map(() => 0) : []; D.watch = D.want = D.glanceTo = -1; D.glanceUntil = -1; D.glanceNext = g.time + 60; D.home = [to[0], 0, to[2]]; D.pt[0] = to[0]; D.pt[2] = to[2]; };
   // (the fault needs the THIRD room to be one the fight already knows — a cached Room is what the first row's fill stops at. In play a room is known once a
   //  defender is dealt into it or the fight asks about it; the check knows them all from looking for its place. Here: every room of the floor asked for once)

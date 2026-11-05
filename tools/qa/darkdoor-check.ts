@@ -168,7 +168,7 @@ export async function darkdoorCheck(): Promise<boolean> {
         '(6) nobody to come: he waits the wait out on his own face of the frame, says so once, is let go with his fix where he stands, and is back on his route inside half a minute',
         `lines: ${kinds(said) || 'none'} · '${nb[0]?.text ?? 'no line'}' at ${f2(nb[0]?.t ?? NaN)} s (stopped at ${f2(self?.t ?? NaN)} s; the wait is ${K.waitSecs} s) · through the frame ${crossed} · let go at ${f2(freeAt)} s, his fix ${f2(fixAt)} m from his feet · on patrol again at ${f2(calmAt)} s`);
       put(T, R.start, R.d.frameCentre); R.send(); let tT = -1, vIn = 0, vUp = 0, soloAt = -1, movedAt = -1; const p0: number[] = [];
-      const again = listen(R, [T], 16, t => { const v = Math.hypot(T.char.vel[0], T.char.vel[2]), pp = R.perp(T.char.pos), S = darkDoorOf(T); if (pp > 3.5) vUp = Math.max(vUp, v);
+      const again = listen(R, [T], 16, t => { const v = Math.hypot(T.char.velX, T.char.velZ), pp = R.perp(T.char.pos), S = darkDoorOf(T); if (pp > 3.5) vUp = Math.max(vUp, v);
         if (S?.act === 'solo') { if (soloAt < 0) { soloAt = t; p0.push(...T.char.pos); } else if (movedAt < 0 && flat(T.char.pos, p0) > 0.3) movedAt = t; if (pp < 0.8) vIn = Math.max(vIn, v); }
         if (R.through(T)) { tT = t; return true; } });
       const al = of(again, 'alone')[0];
@@ -207,7 +207,7 @@ export async function darkdoorCheck(): Promise<boolean> {
     { const R = await stage(31, { others: 'held' }), T = R.T, K = DARKDOOR; R.chase(); let crossedWaiting = false, quitAt = -1, stateAt = '', fixAt = NaN, tT = -1, soloBefore = false, vIn = 0;
       const said = listen(R, [T], K.waitSecs + 50, t => { const S = darkDoorOf(T), thr = R.through(T);
         if (quitAt < 0) { if (thr) crossedWaiting = true; if (DARKDOOR_STATS.quits > 0 && S?.act === 'none' && of([{ text: T.bubble?.text ?? '' }], 'nobody').length) { quitAt = t; stateAt = T.state; fixAt = T.lastKnown ? flat(T.lastKnown, T.char.pos) : NaN; } }
-        else { if (S?.act === 'solo') { soloBefore = true; if (R.perp(T.char.pos) < 0.8) vIn = Math.max(vIn, Math.hypot(T.char.vel[0], T.char.vel[2])); } if (thr && tT < 0) { tT = t; return true; } } });
+        else { if (S?.act === 'solo') { soloBefore = true; if (R.perp(T.char.pos) < 0.8) vIn = Math.max(vIn, Math.hypot(T.char.velX, T.char.velZ)); } if (thr && tT < 0) { tT = t; return true; } } });
       const first = mine(said)[0], nb = of(said, 'nobody')[0], al = of(said, 'alone')[0], after = tT < 0 ? 'he did not go through that door again' : `through at ${f2(tT)} s, nerved first ${soloBefore}, '${al?.text ?? 'no line'}', ${f2(vIn)} m/s in the doorway`;
       line(!!first && (first === of(said, 'self')[0]) && !!nb && !crossedWaiting && stateAt === 'search' && fixAt < 0.6 && (tT < 0 || (soloBefore && !!al && al.t < tT && vIn < 2)),
         '(12) an alert chase of a fix inside: he balks the same, waits it out, and the chase is given up to a search where he stands — which goes through that door slowly and said first, or not at all',

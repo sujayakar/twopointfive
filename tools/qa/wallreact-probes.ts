@@ -58,11 +58,11 @@ export async function rig(level: string, seed: number, on = true) {
     ops(): any[] { return g.orders.squad().filter((m: any) => m.state !== 'dead'); },
     /** a defender's post moved: he holds at `p`, facing `to`, as the room fight plants a man */
     post(D: any, p: Vec3, to: Vec3) {
-      const gd = D.gd, c = gd.char; c.pos[0] = p[0]; c.pos[2] = p[2]; c.bodyYaw = c.aimYaw = v3.yawTo(p, to); gd.path = []; gd.pathGoal = null; if (gd.script) gd.script = null;
+      const gd = D.gd, c = gd.char; c.posX = p[0]; c.posZ = p[2]; c.bodyYaw = c.aimYaw = v3.yawTo(p, to); gd.path = []; gd.pathGoal = null; if (gd.script) gd.script = null;
       gd.hold = true; gd.pinned = true; D.mode = 'hold'; D.station = [p[0], 0, p[2]]; D.room = R.F.roomAt(p); D.ev = D.room ? D.room.entries.map(() => 0) : []; D.watch = D.want = D.glanceTo = -1; D.glanceUntil = -1; D.glanceNext = g.time + 60;
       D.home = [to[0], 0, to[2]]; D.pt[0] = to[0]; D.pt[2] = to[2]; },
     /** a teammate put on a hold at `p` */
-    hold(gd: any, p: Vec3, to: Vec3) { const c = gd.char; c.pos[0] = p[0]; c.pos[2] = p[2]; c.bodyYaw = c.aimYaw = v3.yawTo(p, to); gd.path = []; gd.pathGoal = null;
+    hold(gd: any, p: Vec3, to: Vec3) { const c = gd.char; c.posX = p[0]; c.posZ = p[2]; c.bodyYaw = c.aimYaw = v3.yawTo(p, to); gd.path = []; gd.pathGoal = null;
       g.orders.assign(gd, { order: 'hold', post: [p[0], 0, p[2]], face: v3.yawTo(p, to), going: 'holding', there: 'holding' }); },
   };
   R.step(1.0);
@@ -180,7 +180,7 @@ export async function wallreactPort(level: string): Promise<boolean> {
   const back = [3.4, 2.8, 2.4].map(d => v3.mad(S.mid, S.n, d) as Vec3).find(p => !g.col.nav.isBlocked(p[0], p[2]) && !g.col.segmentBlocked([p[0], 1.55, p[2]], [S.mid[0] + S.n[0] * 0.3, 1.3, S.mid[2] + S.n[2] * 0.3])) ?? S.a;
   R.post(D, back, v3.mad(back, S.u, 6) as Vec3); R.step(0.5);
   const src: Vec3 = [S.mid[0] - S.n[0] * 1.4, 1.3, S.mid[2] - S.n[2] * 1.4];
-  const far = defs.filter(x => x !== D).map(x => ({ x, L: g.col.sound.propagate(src, [x.gd.char.pos[0], 1.55, x.gd.char.pos[2]]).pathLen })).sort((p, q) => q.L - p.L)[0];
+  const far = defs.filter(x => x !== D).map(x => ({ x, L: g.col.sound.propagate(src, [x.gd.char.posX, 1.55, x.gd.char.posZ]).pathLen })).sort((p, q) => q.L - p.L)[0];
   const res = blow(R, S, 1.4); R.step(0.05);
   const B = R.wr().breaches[0];
   const sight = !g.col.segmentBlocked([S.a[0], 1.5, S.a[2]], [S.b[0], 1.5, S.b[2]]), feet = g.col.nav.isBlocked(S.mid[0], S.mid[2]);
@@ -194,7 +194,7 @@ export async function wallreactPort(level: string): Promise<boolean> {
   else console.log(`    (no defender on this floor is out of earshot of that wall: the furthest is ${far ? f1(far.L) : '-'} m of sound path off — the fog-of-war line is not asked here)`);
   // the team: it knows only if one of them heard or saw it; unknown, their book has no such opening
   const teamHeard = B.ops >= 0, listed = g.cover.openings.some((o: any) => o.id === B.key);
-  F.verdict(teamHeard === listed, 'the squad\'s book lists it exactly when the team knows of it', `team knows: ${teamHeard}${teamHeard ? ` (since ${f1(B.ops)} s)` : ''} · in cover.openings: ${listed} · Sam is ${f1(g.col.sound.propagate(src, [g.player.char.pos[0], 1.55, g.player.char.pos[2]]).pathLen)} m of sound path off`);
+  F.verdict(teamHeard === listed, 'the squad\'s book lists it exactly when the team knows of it', `team knows: ${teamHeard}${teamHeard ? ` (since ${f1(B.ops)} s)` : ''} · in cover.openings: ${listed} · Sam is ${f1(g.col.sound.propagate(src, [g.player.char.posX, 1.55, g.player.char.posZ]).pathLen)} m of sound path off`);
   // a door with fresh evidence takes him back; the port keeps one gun when nothing else is going on
   R.step(35);
   const on20 = [...wr.watching.entries()].filter(([m, b]: any) => b === B && m.state !== 'dead').map(([m]: any) => m.callsign);
@@ -325,7 +325,7 @@ export async function wallreactFlank(level: string): Promise<boolean> {
   if (!best || defs.length < 2) { F.verdict(false, 'a long way round a partition and two defenders to stage', `walls with a walk of 8 m or more round them: ${best ? 1 : 0} · defenders ${defs.length}`); return F.done(); }
   const S = best.S, fix = v3.mad(S.mid, S.n, -2.4) as Vec3, [D1, D2] = [...defs].sort((x, y) => flat(x.gd.char.pos, S.mid) - flat(y.gd.char.pos, S.mid));
   const men = [D1.gd, D2.gd], ps = [v3.mad(v3.mad(S.mid, S.n, 2.4), S.u, 0.9), v3.mad(v3.mad(S.mid, S.n, 2.4), S.u, -0.9)] as Vec3[];
-  men.forEach((m: any, i: number) => { const p = nav.isBlocked(ps[i][0], ps[i][2]) ? v3.mad(S.mid, S.n, 2.4 + i) as Vec3 : ps[i]; m.char.pos[0] = p[0]; m.char.pos[2] = p[2]; m.script = null; m.hold = false; m.pinned = false; m.state = 'alert'; m.awareness = 1; m.lastKnown = [...fix]; m.fixT = g.time; m.lastSeenT = g.time - 5; m.path = []; m.pathGoal = null; });
+  men.forEach((m: any, i: number) => { const p = nav.isBlocked(ps[i][0], ps[i][2]) ? v3.mad(S.mid, S.n, 2.4 + i) as Vec3 : ps[i]; m.char.posX = p[0]; m.char.posZ = p[2]; m.script = null; m.hold = false; m.pinned = false; m.state = 'alert'; m.awareness = 1; m.lastKnown = [...fix]; m.fixT = g.time; m.lastSeenT = g.time - 5; m.path = []; m.pathGoal = null; });
   R.F.defs.forEach((D: any) => { if (men.includes(D.gd)) D.mode = 'free'; });
   const P0 = planApproach(g, men, fix, 'probe');
   if (!P0) { F.verdict(false, 'the tactics deal the two a plan on that fix', `no plan: the way round is ${f1(best.gain)} m`); return F.done(); }

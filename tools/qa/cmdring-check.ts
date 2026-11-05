@@ -182,18 +182,18 @@ export async function cmdringCheck(): Promise<boolean> {
     {
       R.aim(spot); R.down();
       R.input.wheel = 70; R.step(); const w1 = O.who; R.input.wheel = -70; R.step(); const w2 = O.who;
-      const k = 2, man = R.team[k]; R.W.cursorAt([man.char.pos[0], man.char.pos[1], man.char.pos[2]]); R.step(); const onWay = O.cmdRing?.lit;
+      const k = 2, man = R.team[k]; R.W.cursorAt([man.char.posX, man.char.posY, man.char.posZ]); R.step(); const onWay = O.cmdRing?.lit;
       const shots0 = g.mission.stats.shots, f0 = S.fired; R.input.clicked |= 1; R.input.buttons |= 1; R.step(); R.input.buttons &= ~1; R.step(4);
       const w3 = O.who, lit3 = O.cmdRing?.lit, up3 = !!O.cmdRing, n0 = O.log.length;
       R.up(); const row = R.tail(), who = (row?.who ?? []).join('+');
       // … his body, not his feet: still him (the who key's own reading of the cursor)
-      const other = R.team[0]; R.aim(spot); R.down(); R.W.cursorAt([other.char.pos[0], other.char.pos[1] + 1.2, other.char.pos[2]]); R.step();
+      const other = R.team[0]; R.aim(spot); R.down(); R.W.cursorAt([other.char.posX, other.char.posY + 1.2, other.char.posZ]); R.step();
       R.input.clicked |= 1; R.input.buttons |= 1; R.step(); R.input.buttons &= ~1; const wBody = O.who, upBody = !!O.cmdRing; R.press('Escape'); R.up(); O.who = 'all';
       // … a ring opened with the cursor ON a man is his; another clicked, it is the other's
       let on: any = null;
-      for (const c of R.team) { if (c === man || on) continue; for (const y of [1.2, 0.9, 0.5, 1.6, 0]) { const h = R.aim([c.char.pos[0], c.char.pos[1] + y, c.char.pos[2]]); if (h?.kind === 'none' && h.man === c) { on = c; break; } } }
+      for (const c of R.team) { if (c === man || on) continue; for (const y of [1.2, 0.9, 0.5, 1.6, 0]) { const h = R.aim([c.char.posX, c.char.posY + y, c.char.posZ]); if (h?.kind === 'none' && h.man === c) { on = c; break; } } }
       R.down(); const menOn = (O.menu?.men ?? []).map((m: any) => m.callsign).join('+');
-      R.W.cursorAt([man.char.pos[0], man.char.pos[1], man.char.pos[2]]); R.step(); R.input.clicked |= 1; R.input.buttons |= 1; R.step(); R.input.buttons &= ~1;
+      R.W.cursorAt([man.char.posX, man.char.posY, man.char.posZ]); R.step(); R.input.clicked |= 1; R.input.buttons |= 1; R.step(); R.input.buttons &= ~1;
       const r4 = O.menu?.rows.find((r: any) => r.key === 4); R.press('Digit4'); const n1 = O.log.length; R.up(); const row2 = R.tail(), who2 = (row2?.who ?? []).join('+');
       line(w1 !== 'all' && w2 === 'all' && w3 === k && up3 && lit3 === 1 && S.fired === f0 && g.mission.stats.shots === shots0 && O.log.length >= n0 + 1 && row?.order === 'move' && row?.who?.length === 1 && row.who[0] === man.callsign
         && wBody === 0 && upBody && !!on && menOn === on.callsign && !!r4 && O.log.length === n1 + 1 && row2?.order === r4.id && who2 === man.callsign,
@@ -236,7 +236,7 @@ export async function cmdringCheck(): Promise<boolean> {
       const okDoor = !!hd && hd.kind === 'door' && !!mid && dist(mid, D.frameCentre) < 0.05 && Math.abs(dist(hd.seg![0], hd.seg![1]) - D.def.width) < 0.01;
       R.down(); R.aim(spot); const hh = O.hintView(), rv = O.ringView();
       const okHeld = !!hh && hh.kind === 'door' && hh.held && !!rv && hh.x === rv.x && hh.y === rv.y; R.press('Escape'); R.up();
-      let man: any = null, hm: any = null; for (const c of R.team) { if (man) break; for (const y of [1.2, 0.9, 0.5]) { const h = R.aim([c.char.pos[0], c.char.pos[1] + y, c.char.pos[2]]); if (h?.kind === 'none' && h.man === c) { man = c; hm = O.hintView(); break; } } }
+      let man: any = null, hm: any = null; for (const c of R.team) { if (man) break; for (const y of [1.2, 0.9, 0.5]) { const h = R.aim([c.char.posX, c.char.posY + y, c.char.posZ]); if (h?.kind === 'none' && h.man === c) { man = c; hm = O.hintView(); break; } } }
       // (… in the colour the ring then opens in: the man's own element, not the standing one)
       let toneUp: any; if (man) { R.down(); toneUp = O.ringView()?.tone; R.press('Escape'); R.up(); }
       const okMan = !!hm && hm.kind === 'man' && !!hm.ring && dist(hm.ring.at, man.char.pos) < 0.05 && hm.tone === toneUp && toneUp !== undefined;

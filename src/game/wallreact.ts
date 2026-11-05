@@ -338,7 +338,7 @@ export class WallReact {
     const g = this.g, K = WALLREACT, R = row.cause === 'blast' ? K.hearBlastM : row.cause === 'fire' ? K.hearFireM : K.hearFallM, src: Vec3 = [row.pos[0], 1.3, row.pos[2]];
     const hears = (head: Vec3) => flat(head, src) < R && g.col.sound.propagate(src, head).pathLen < R;
     const ours = row.who !== undefined && isManId(row.who);
-    if (ours || menUp(g).some(pl => hears([pl.char.pos[0], EYE, pl.char.pos[2]]))) this.opsKnow(b, ours ? 'the player made it' : 'the player heard it');
+    if (ours || menUp(g).some(pl => hears([pl.char.posX, EYE, pl.char.posZ]))) this.opsKnow(b, ours ? 'the player made it' : 'the player heard it');
     for (const gd of g.guards) {
       if (gd.state === 'dead') continue; const made = gd.char.id === row.who;
       if (!made && !hears(this.head(gd))) continue;
@@ -534,7 +534,7 @@ export class WallReact {
     return best;
   }
   private reconsider(P: Pend): 'moved' | 'fine' | 'later' {
-    const r = this.reconsider1(P); WALLREACT_DEBUG.log?.(`  asked ${P.gd.callsign} at (${P.gd.char.pos[0].toFixed(1)}, ${P.gd.char.pos[2].toFixed(1)}) about ${P.b ? P.b.key : 'cover'}: ${r[1]}`); return r[0];
+    const r = this.reconsider1(P); WALLREACT_DEBUG.log?.(`  asked ${P.gd.callsign} at (${P.gd.char.posX.toFixed(1)}, ${P.gd.char.posZ.toFixed(1)}) about ${P.b ? P.b.key : 'cover'}: ${r[1]}`); return r[0];
   }
   private reconsider1(P: Pend): ['moved' | 'fine' | 'later', string] {
     const g = this.g, gd = P.gd; if (gd.state === 'dead') return ['fine', 'dead'];
@@ -555,7 +555,7 @@ export class WallReact {
       D.mode = 'move'; D.moveKind = 'cover'; D.cameBy = null; D.moveT = 0; D.stallAt = v3.copy(c.pos); D.stallT = 0; D.movedAt = g.time; gd.pinned = false; this.watching.delete(gd);
       order(gd, { goal: p, speed: g.tune.guardChase, face: null, strafe: false, aimAt: null, upper: 'aim', stance: 'none', crouch: true });
       const F = this.fight; F.stats.tookCover++; F.log.push({ t: g.time, who: gd.callsign, what: 'his cover is gone: takes cover' });
-      WALLREACT_STATS.movedDef++; this.movedT.set(gd, g.time); note(g, `${gd.callsign} (holding) leaves (${c.pos[0].toFixed(1)}, ${c.pos[2].toFixed(1)}) for (${p[0].toFixed(1)}, ${p[2].toFixed(1)})`);
+      WALLREACT_STATS.movedDef++; this.movedT.set(gd, g.time); note(g, `${gd.callsign} (holding) leaves (${c.posX.toFixed(1)}, ${c.posZ.toFixed(1)}) for (${p[0].toFixed(1)}, ${p[2].toFixed(1)})`);
       if (WALLREACT.say) g.say(gd, "cover's gone — moving!");
       return ['moved', 'moved'];
     }
@@ -584,7 +584,7 @@ export class WallReact {
     const taken: Vec3[] = [g.player.char.pos]; for (const m of g.orders.squad()) { if (m === gd || m.state === 'dead') continue; taken.push(m.char.pos); const B = g.orders.of(m); if (B?.post) taken.push(B.post); }
     const pb = Q.X.b, p = this.stepOut(gd, A.post, threat, 1.2, pb, taken) ?? this.stepOut(gd, A.post, threat, 1.2, pb, taken, true); if (!p) { WALLREACT_STATS.noCover++; return 'later'; }
     note(g, `${gd.callsign} (${A.order}) mark (${A.post[0].toFixed(1)}, ${A.post[2].toFixed(1)}) → (${p[0].toFixed(1)}, ${p[2].toFixed(1)})`);
-    A.post = p; A.goal = v3.copy(p); A.via.length = 0; A.arrived = false; A.markT = A.movedT = g.time; A.mark[0] = gd.char.pos[0]; A.mark[2] = gd.char.pos[2];
+    A.post = p; A.goal = v3.copy(p); A.via.length = 0; A.arrived = false; A.markT = A.movedT = g.time; A.mark[0] = gd.char.posX; A.mark[2] = gd.char.posZ;
     WALLREACT_STATS.movedOp++; this.movedT.set(gd, g.time);
     if (WALLREACT.say && flat(gd.char.pos, p) > 0.6) g.say(gd, 'moving off the hole.');
     return 'moved';

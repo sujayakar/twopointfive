@@ -216,7 +216,7 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
       readWhen(vars, ['SNOWBLAST.flakes', 'SNOWBLAST.flakeUp', 'SNOWBLAST.flakeLife'], oneAir);
       // (the switch is read by every blast as it goes off: live, so the layer stands on a page opened with it off too. The button marks the snow three metres ahead of you as a frag there would — no blast, no sound, nothing the game reads)
       layers.push({ id: 'blast', name: 'Blast marks', group: 'Ground', vars, on: { get: () => SNOW_LOOK.blast, set: on => { SNOW_LOOK.blast = on; } },
-        act: { label: 'blast', note: 'mark the snow three metres ahead of you as a grenade there would (picture only: no blast, no sound)', run: () => { const c = game.player.char; snowBlastAt(game, [c.pos[0] + Math.sin(c.aimYaw) * 3, 0.2, c.pos[2] + Math.cos(c.aimYaw) * 3], 2.5); } },
+        act: { label: 'blast', note: 'mark the snow three metres ahead of you as a grenade there would (picture only: no blast, no sound)', run: () => { const c = game.player.char; snowBlastAt(game, [c.posX + Math.sin(c.aimYaw) * 3, 0.2, c.posZ + Math.cos(c.aimYaw) * 3], 2.5); } },
         stat: () => { const s = snowBlastStats(game); return s.blasts ? `${s.marked} of ${s.blasts} marked${s.why !== 'marked' ? ` · ${s.why}` : ''}` : ''; } }); }
   }
 

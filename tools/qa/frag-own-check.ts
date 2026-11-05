@@ -40,9 +40,9 @@ async function stage(name: string, door: string, sam: number[], block: number | 
   // the far face's normal: off the leaf's line, away from where Sam (and so the stack) stands
   const [hx, hz] = d.def.hinge, fc = d.frameCentre, ux = fc[0] - hx, uz = fc[2] - hz, ul = Math.hypot(ux, uz); let nx = -uz / ul, nz = ux / ul;
   if (nx * (sam[0] - fc[0]) + nz * (sam[2] - fc[2]) > 0) { nx = -nx; nz = -nz; }
-  const back = block || 0.42, spot = [fc[0] + nx * back, 0, fc[2] + nz * back], man = block ? foes.filter(h => h.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - spot[0], a.char.pos[2] - spot[2]) - Math.hypot(b.char.pos[0] - spot[0], b.char.pos[2] - spot[2]))[0] : null;
+  const back = block || 0.42, spot = [fc[0] + nx * back, 0, fc[2] + nz * back], man = block ? foes.filter(h => h.state !== 'dead').sort((a, b) => Math.hypot(a.char.posX - spot[0], a.char.posZ - spot[2]) - Math.hypot(b.char.posX - spot[0], b.char.posZ - spot[2]))[0] : null;
   // (rooted, gun down, no round — the stagger's own state — and put back on his spot every frame: a man who has walked up behind the door and stands there)
-  function hold() { if (!man || man.state === 'dead') return; man.char.pos[0] = spot[0]; man.char.pos[2] = spot[2]; man.staggerUntil = g.time + 1; }
+  function hold() { if (!man || man.state === 'dead') return; man.char.posX = spot[0]; man.char.posZ = spot[2]; man.staggerUntil = g.time + 1; }
   if (block && !man) { out.why = 'staging: no defender to stand behind the door'; return out; }
   step(30); g.teleportPlayer(sam); step(5);
   if (lock) { d.locked = true; d.latched = true; d.angle = 0; d.vel = 0; }

@@ -137,15 +137,15 @@ export function nvgPlaceLight(g: Game, P: Vec3): number {
 const LOOK_M = [2, 5, 8, 12, 16], TUBE_M = 8;
 function readPlace(g: Game, gd: Guard, M: Man) {
   if (g.time - M.placeT >= 0 && g.time - M.placeT < 0.5) return;
-  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw);
+  const c = gd.char, eye: Vec3 = [c.posX, 1.5, c.posZ], fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw);
   let dim = false, black = false;
   const lamp = irCarried();   // (irlight.ts: a man with an illuminator on his goggles has no place too dark for his tube — the white-light fallback is for the man without one)
   const at = (x: number, z: number, tube = true) => { const E = nvgPlaceLight(g, [x, 1.2, z]); if (g.visibilityOf(E) < NVG.darkAt) dim = true; if (tube && !lamp && tubeVis(g, E) < NVG.blackAt) black = true; };
-  at(c.pos[0], c.pos[2], false);
+  at(c.posX, c.posZ, false);
   for (const r of LOOK_M) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break; at(P[0], P[2], r <= TUBE_M); }
   const A = orderOf(g, gd); if (A?.post && !A.arrived && v3.distXZ(c.pos, A.post) < LIGHTS.litMarkM) at(A.post[0], A.post[2]);
   const O = g.fight.opOf(gd);
-  if (O?.tgt && O.tgt.state !== 'dead') at(O.tgt.char.pos[0], O.tgt.char.pos[2], false);
+  if (O?.tgt && O.tgt.state !== 'dead') at(O.tgt.char.posX, O.tgt.char.posZ, false);
   if (O?.stepBy && g.time - O.stepBy.t < LIGHTS.stepSecs) at(O.stepBy.at[0], O.stepBy.at[2]);
   if (O?.turn?.pt) at(O.turn.pt[0], O.turn.pt[2]);
   M.placeT = g.time; M.dim = dim;

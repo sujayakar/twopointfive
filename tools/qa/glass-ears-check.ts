@@ -43,12 +43,12 @@ export async function glassEarsCheck(): Promise<boolean> {
     const point: Vec3 = [b.c[0] + along[0] * u + n[0] * out * half, AT[1], b.c[2] + along[2] * u + n[2] * out * half];
     g.teleportPlayer([point[0] + n[0] * out * 1.6, 0, point[2] + n[2] * out * 1.6]); g.playerInvisible = true;
     const men = g.guards.filter((gd: any) => gd.unit && gd.team === 'hostile' && gd.state !== 'dead');
-    const near = men.filter((gd: any) => Math.hypot(gd.char.pos[0] - point[0], gd.char.pos[2] - point[2]) < 10);
+    const near = men.filter((gd: any) => Math.hypot(gd.char.posX - point[0], gd.char.posZ - point[2]) < 10);
     const before = g.events.length;
     glassImpact(g, pane, point, [-n[0] * out, 0, -n[2] * out], 1, PLAYER_ID, 'shot');
     const e = g.events[g.events.length - 1]; const filed = g.events.length > before && e?.kind === 'glass';
     const side = (q: Vec3) => (q[0] - b.c[0]) * n[0] + (q[2] - b.c[2]) * n[2];
-    const ear = (gd: any): Vec3 => [gd.char.pos[0], gd.char.pos[1] + 1.5, gd.char.pos[2]];
+    const ear = (gd: any): Vec3 => [gd.char.posX, gd.char.posY + 1.5, gd.char.posZ];
     const plain = (gd: any) => weight(hearPath(g, [e.pos[0], e.pos[1] + 1, e.pos[2]], ear(gd)), e.level);
     const ruled = (gd: any) => weight(glassHeard(g, e, ear(gd)), e.level);
     const wPlain = new Map<any, number>(men.map((gd: any) => [gd, plain(gd)])), wRuled = new Map<any, number>(men.map((gd: any) => [gd, ruled(gd)]));

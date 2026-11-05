@@ -46,7 +46,7 @@ export async function litmanRule(): Promise<boolean> {
     F.verdict(lit.e >= LIGHTS.litAt && dark.e < LIGHTS.litAt * 0.5 && !!dark2, 'the floor has standing room the place lights and standing room it leaves dark',
       `${spots.length} places read · brightest ${f2(lit.e)} at ${at(lit.p)} · darkest ${f2(dark.e)} at ${at(dark.p)}${dark2 ? ` and ${f2(dark2.e)} at ${at(dark2.p)}` : ''} · the bar (LIGHTS.litAt) ${LIGHTS.litAt}`);
     if (!(lit.e >= LIGHTS.litAt) || !dark2) return F.done();
-    const put = (who: any, p: number[]) => { who.char.pos[0] = p[0]; who.char.pos[2] = p[2]; };
+    const put = (who: any, p: number[]) => { who.char.posX = p[0]; who.char.posZ = p[2]; };
     const later = () => { g.time += 0.3; };   // (the rule's answer is kept a quarter of a second per man: every question here is a fresh one)
     const eyes = (tgt: any, kept: any = null, turn: any = null) => { op.tgt = tgt; op.kept = kept; op.turn = turn; later(); };
     const ask = () => ({ rule: !!GDM.onLitMan(g, gd), light: !!GDM.teamLit(g, gd) });
