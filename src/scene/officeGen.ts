@@ -12,7 +12,6 @@ import { carShapes, hubPaint, carSays } from './carShapes';
 import { WORLD } from './world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, markStats, stencilWidth, type MarkFace, type MarkPal } from './markings';
-import { LIVED } from './lived';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
@@ -26,10 +25,7 @@ export interface GeneratorTrace { groups: string[]; }
  *  on the parent face instead — never a free-standing object (papers, notes, books, trays keep their boxes: the sheet's edge is what makes it a thing on the
  *  table). Both default ON; both off = the office exactly as it was before the lane (levels/office-relief.json, ?level=relief — the ray-cost A/B's 'before'
  *  and the identity reference). `texel` = the base lattice the bitmaps are generated for (the page's world-resolution strip: 2 / 2.5 / 4 cm). */
-export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: number;
-  /** the office's lived tier (the hand pass's drawn-only things, groups `lived.<room>` at the tail): laid or left out. Absent = as the level is loaded here
-   *  (scene/lived.ts LIVED.on), so the generator and the loaded file are the same Level on either stand; the exporter asks for it, since the FILE carries it */
-  lived?: boolean; }
+export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: number; }
 
 const H = WORLD.ceilingY;
 
@@ -371,7 +367,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
 }
 
 export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
-  const { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, wallX, wallZ, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame, vent, pipe, boxOn, stencilS, keepClear, bandRuns, conduitRuns } = officeKit(trace, opts);
+  const { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, wallX, wallZ, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame } = officeKit(trace, opts);
   /** paint on the floor, or a rubber mat: the flat box a rug is, but no rug, so it says no cloth and its colour speaks */
   const floorPaint = (x: number, z: number, w: number, d: number, albedo: Vec3) => add({ c: [x, 0.018, z], h: [w / 2, 0.006, d / 2], yaw: 0, albedo, flags: BoxFlag.NoShadow });
   // THE OFFICE IS A PLACE SOMEBODY KEEPS, and its own surfaces say so (scene/stuff.ts saidAs: the kit's paint, its numbers and its finish, said to be another
@@ -1209,55 +1205,6 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
       push1: '', under2: '', nothing2: '', corner1: '', empty2: '', radio1: '' },
     breachLines: { breach1: 'breaching.', bang2: 'bang out!', going1: 'go! go! go!', clear1: 'right side — clear. two down.', clear2: 'left clear — one down. i have the door.', roomClear1: 'room clear — three down.', next1: 'north door — stack on it. you\'re point.', radio1: 'entry team: break room secure, moving to the corridor door.' },
   };
-
-  // ================================================================ THE HAND PASS (11-05) ====
-  // What a painter and a fitter left on a kept building, laid where the floor is walked and fought (how that was read: docs/agents/levels.md, the hand pass).
-  // The maintainer, 11-04: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading the
-  // player for game play", and of the look he is after: "it's all quite intentionally dressed". Three kinds of thing, each through the system that owns it:
-  //   WORN PATHS   are not here: the ways the day's people walk are named marks and `walked` rows beside the office's scenarios (levels/office.scenarios.ts),
-  //                and the look's page wears the floor by them.
-  //   PAINT        on a surface that is already there is a MARKING on that box (scene/markings.ts): drawn on both stands, met by nothing.
-  //   FITTINGS     and painted floor panels are new boxes: every one DRAWN ONLY (its own flag: no foot, round, ray or sight line meets it), in the LIVED tier
-  //                (groups `lived.<room>`, the tail of the list), so the office the frozen stand loads has the boxes, the indices and the fingerprint it had.
-  // NO WORD NAMES A ROOM, AND NO PAINT IS THERE FOR THE PLAYER (the maintainer, 11-05, on the first cut's LOBBY and CONFERENCE: "i don't like the "lobby"
-  // and "conference" labels in the level, pretty lame"): a room is shown by what is in it. The same cut led the player with a yellow line across the server
-  // room's floor and hatched four floors indoors; nobody paints either in an office, and they are out with the names. What is painted is what this
-  // building's own people would have painted for themselves: a door's number, a parking bay's number, hatching on the ground outside a fire exit.
-  // The paint is cut for the base lattice: a texel variant of the office (tools/level-export.ts --texel) is the office without its hand pass.
-  if (MARKS && TX === MARKING_TEXEL) {
-    const INK = MD.TIN.ink, NAVY: Vec3 = [0.12, 0.2, 0.34];   // (the painter's ink, and the placards' navy)
-    // (every paint below is made from a COPY of its colour: `madeOf` and `saidAs` know a paint by its array, and a colour shared with a tin or with
-    //  another paint would carry the first one's word and finish to the next)
-
-    // ---- THE CORRIDOR'S NORTH WALL, the face the camera reads at rest: each of the four rooms' number at its door, a hand high in ink on the lintel, as
-    // a door's own number is (the first cut's were half a metre tall and read as signs)
-    for (const [n, x] of [['01', 9.6], ['02', 17.6], ['03', 25.6], ['04', 32.6]] as const) { const i = boxOn('+z', x, 2.6, 10.06); stencilS(i, n, boxes[i].c[0], boxes[i].c[1] - boxes[i].h[1] + 0.075, INK, 1, 'base'); }   // (on the lintel's own middle: a doorway is not the middle of its slot)
-    // ---- KEEP CLEAR, on the ground outside the fire exit: the one place of this building where hatching is painted
-    keepClear(boxOn('+y', 38, 0, 26), 36.14, 20.1, 37.3, 21.4);
-
-    if (opts.lived ?? LIVED.on) {
-      const coat = madeOf('enamel', [0.62, 0.62, 0.6], { rough: 0.4 }), louvre = madeOf('louvre', [0.5, 0.51, 0.52], { rough: 0.45 }), dark = madeOf('enamel', [0.2, 0.21, 0.23], { rough: 0.4 });
-      // ---- the corridor: the grey of the conference room's sill runs on as a dado along the whole north wall (the same skim, the sill's own paint);
-      // conduit under the wall's head from the server room's door to the manager's and on to a box by the storage door, where the breaker is; a transfer
-      // grille high beside the server room
-      grp('lived.corridor');
-      bandRuns(10, 0.12, 4.12, 35.88, 0.5, K.sill, 0.3);
-      conduitRuns(10, 18.4, 24.8, 2.72, coat, C.metal, 0.12); conduitRuns(10, 26.95, 31.8, 2.72, coat, C.metal, 0.12, 2.3);
-      vent('x', 10, 14.0, 14.6, 1, 2.2, 2.6, louvre, 0.12);
-      // ---- the break room: its north wall navy to a metre (the placards' navy on the same skim), and the kitchen's extract high on it
-      grp('lived.breakroom');
-      bandRuns(12.2, 0.12, 28.12, 35.88, 1.0, saidAs('skim', [NAVY[0], NAVY[1], NAVY[2]]));
-      vent('x', 12.2, 33.4, 34.0, 1, 2.35, 2.75, louvre, 0.12);
-      // ---- the south face on the car park: a dark plinth to 60 cm in the wall's own cast panel, each bay's number on it in chalk on the bay's own
-      // middle; conduit along the wall's head to the lamp over the break room's door; the kitchen's vent under it; a downpipe on the pier between the
-      // windows and one at the corner
-      grp('lived.exterior');
-      bandRuns(24, 0.24, 3.88, 36.12, 0.6, saidAs('cast panel', [0.2, 0.21, 0.23]), 0.6, ([['01', 11.5], ['02', 16.3], ['03', 21.0], ['04', 25.8], ['05', 30.7]] as const).map(([n, x]) => [n, x, 0.125, 2, 'base'] as const));
-      conduitRuns(24, 24.4, 31.45, 2.62, dark, C.metal);
-      vent('x', 24, 28.3, 28.9, 1, 2.2, 2.55, louvre);
-      pipe(19.0, 24.19, 0, H, 0.06, dark, [[0, 0.05, 0.1]]); pipe(36.05, 24.19, 0, H, 0.06, dark, [[0, 0.05, 0.1]]);
-    }
-  }
 
   return {
     boxes, props, lights, switchables, daylight, breach,
