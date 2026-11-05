@@ -395,7 +395,7 @@ export function lanesTick(g: Game, dt: number) {
     if (L.pushUntil >= 0 && g.time >= L.pushUntil) L.pushUntil = -1;
     if (L.can && g.time - L.can.t > 5) L.can = null;
   }
-  const n0 = st.lanes.length; st.lanes = st.lanes.filter(L => { const keep = L.weight >= 1 ? g.time < L.until : g.time - L.lastT < 10; if (!keep && !L.known && L.weight >= 1) st.stats.unknown++; if (!keep && L.known) note(g, null, `lane ${L.id}: forgotten (${L.downs} down, last round ${(g.time - L.lastT).toFixed(0)} s ago)`); return keep; }); lanesGone(g, st);   // (a few rounds past a man and no more: forgotten in ten seconds)
+  const n0 = st.lanes.length; st.lanes = st.lanes.filter(L => { const keep = L.weight >= 1 ? g.time < L.until : g.time - L.lastT < 10; if (!keep && !L.known && L.weight >= 1) st.stats.unknown++; if (!keep && L.known) note(g, null, `lane ${L.id}: forgotten (${L.downs} down, last round ${(g.time - L.lastT).toFixed(0)} s ago)`); return keep; }); if (st.lanes.length !== n0) lanesGone(g, st);   // (a few rounds past a man and no more: forgotten in ten seconds)
   if (st.lanes.length !== n0) { st.stats.lapsed += n0 - st.lanes.length; changed = true; }
   if (changed) remask(g, st);
   if (st.peek.size) for (const [gd, p] of [...st.peek]) peekStep(g, st, gd, p);

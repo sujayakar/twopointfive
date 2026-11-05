@@ -346,7 +346,7 @@ export async function pictureCheck(): Promise<boolean> {
             let len = 0, a: number[] = M.h; for (const q of path) { len += flat(a, q); a = q; }
             const nearTo = (q: number[]) => { let d = flat(M.h, q), a: number[] = M.h; for (const b of path) { const L = flat(a, b) || 1e-6, k = Math.max(0, Math.min(1, ((q[0] - a[0]) * (b[0] - a[0]) + (q[2] - a[2]) * (b[2] - a[2])) / (L * L))); d = Math.min(d, flat(q, [a[0] + (b[0] - a[0]) * k, 0, a[2] + (b[2] - a[2]) * k])); a = b; } return d; };
             PICTURE.run = true;
-            return { took, fled: !!S?.fled, phase: S?.phase as string, goal, path, len, knew, nearTo, ran: PICTURE_STATS.ran as number, off: PICTURE_STATS.ranOff as number,
+            return { took, fled: !!h.fled, phase: S?.phase as string, goal, path, len, knew, nearTo, ran: PICTURE_STATS.ran as number, off: PICTURE_STATS.ranOff as number,
               sig: `${S?.phase} ${goal ? at(goal) : '-'} ${path.map(at).join('')}` }; };
           const base = go({ rule: true }), baseOff = go({ rule: false }); if (!base.fled || base.path.length < 2) continue;
           // a place ON his way he has no line to from where he breaks, four metres or more along it, where a true enemy turns the old rule's way
