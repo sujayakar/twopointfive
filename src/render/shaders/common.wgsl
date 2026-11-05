@@ -1329,6 +1329,7 @@ fn portalPiece(li: Light, d: vec3f, see: vec4f, hh: f32, i: i32) -> vec4f {
   let r0 = length(vec2f(X0, pz)); let r1 = length(vec2f(X1, pz)); let Xs = (X0 * r1 + X1 * r0) / (r0 + r1); let rs = length(vec2f(Xs, pz));
   var xa = X0; var xb = Xs; var ra = r0; var rb = rs;
   if (i > 2) { xa = Xs; xb = X1; ra = rs; rb = r1; }
+  if (frame.shadeCfg.z >= 39.5) { if (i > 2) { return vec4f(0.0); } xa = X0; xb = X1; ra = r0; rb = r1; }   // DIAGNOSTIC: three pieces
   let lo = max(y0, 0.0); let cut = min(max(PORTAL_RAMP * length(vec2f((xa * rb + xb * ra) / (ra + rb), pz)), lo), y1);   // (the ramp's end over this half's own middle, by angle again)
   if ((i & 1) == 1) { return vec4f(xa, xb, lo, cut); }
   return vec4f(xa, xb, cut, y1);
