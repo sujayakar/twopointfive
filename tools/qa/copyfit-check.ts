@@ -41,6 +41,14 @@ for (const file of files) {
   if (!fits && !BREAK) over.push('the copy did not stand as a tick opened');
   if (over.length) bad.push(`${file}: ${over.join(' · ')}`);
 }
+// THE CIVILIANS' ONE WAY IN (civilians.ts join): a game takes civilians up to levelfit.ts civMost and refuses the next by name, whoever adds him
+{ hush(true); const W: any = await standUp({ uploadEvery: 1000 }), g = W.game, CV: any = await import(`${ROOT}/src/game/civilians.ts`); hush(false);
+  const most: number = LF.civMost(), def = (i: number) => ({ name: `Extra ${i}`, kind: 'worker', tint: [0.4, 0.4, 0.4], pos: [...g.player.char.pos], face: 0 }); let said = '', at = -1;
+  try { for (let i = g.civilians.length; i <= most; i++) { at = i; CV.spawnHostage(g, def(i)); } } catch (e) { said = String((e as Error).message); }
+  const rows: any[] = LF.fitRows(g, g.col.mirror.tables), men = rows.find(r => r.row === 'doormen'), civ = rows.find(r => r.row === 'civilians');
+  const okJoin = Number.isFinite(most) && most > 0 && g.civilians.length === most && at === most && /too big to load: more than \d+ civilians/.test(said) && !!men && men.has <= men.cap && !!civ && civ.has === most && civ.cap === most;
+  log(`  civilians: a game took ${g.civilians.length} of ${most} and refused the next ${said ? 'by name' : '— NOT AT ALL'}; full of them, one step of its doors is handed ${men?.has} contacts of ${men?.cap} at most`);
+  if (!okJoin) bad.push(`civilians: a game of ${g.civilians.length} (the most is ${most}) ${said ? `said "${said.slice(0, 80)}"` : 'refused nobody'}; doormen ${men?.has} of ${men?.cap}`); }
 log(`${stood} levels stood up${skipped ? `, ${skipped} skipped` : ''}${BREAK ? ' · RED PATH: every cap read as a twentieth of itself' : ''}`);
 for (const [k, m] of Object.entries(most)) log(`  ${k.padEnd(7)} fullest ${String(m.n).padStart(6)} of ${String(m.cap).padStart(6)} (${(100 * m.n / m.cap).toFixed(1)} %) · ${m.file}`);
 for (const b of bad) log(`- FAIL — ${b}`);

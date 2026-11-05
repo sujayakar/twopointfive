@@ -304,7 +304,7 @@ export function fmtClock(sec: number): string { const s = Math.max(0, Math.floor
 const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: -1, pulled: false, alarmOn: false, sweepAt: -1, spottedT: -100, debrief: false, downCardAt: -1, handsOn: false, stats: { elapsed: 0, alerts: 0, spotted: 0, bodies: 0, shots: 0, kills: 0, knockouts: 0, keys: 0, blackout: false, sandbox: false, qrf: 0, qrfAt: -1 } });
 
 /** the ragdoll particles a door leaf feels (Game.updateDoors): enough of the body that a leaf cannot close through it */
-const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];
+export const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];   // (how many of them there are is in the arithmetic of what a doors' step is handed: levelfit.ts handOverMost)
 
 // ---------------------------------------------------------------- player
 /** the query tables the world is asked aside with (Game.aside): scratch of the host's, in no snapshot */

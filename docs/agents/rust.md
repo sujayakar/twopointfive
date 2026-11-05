@@ -1687,6 +1687,17 @@ first system across (the game's own maths). No rule of play has changed and noth
     handed with each walk and are no table of the copy). The weather keeps at most four (`roofsOf`: a level's biggest; the picture's frame has a
     slot each) and a walk is handed four, which were two literals. `weatherKinds.ts MAX_ROOFS`, `itemshome.ts ITEM_ROOFS` and `items.rs MAX_ROOFS`
     are held to one number by `rust-check` (`items`), and the way back is a throw by name.
+  - MORE MEN THAN A STEP IS HANDED CANNOT HAPPEN, BY ARITHMETIC (`game/levelfit.ts menMost`, `handOverMost`, `civMost`, six rows of `fitRows`). The doors'
+    step is handed 256 contacts and the furniture's 256 men, and each fell back to TypeScript past that. A game holds at once the first seat's
+    man and the guards and units (`guards.ts spawnUnit` refuses one more than `MAX_SKINNED`, sixteen, whoever asks), its civilians and the other
+    seats' men. CIVILIANS COME INTO A GAME IN ONE PLACE (`civilians.ts join`: the level's own as it is stood up, a rescue's hostages, the man a
+    snatch is for), which holds them to `levelfit.ts civMost`: what a step's hand-over leaves after every other man, fifteen as the numbers stand,
+    and one more is a level too big, said by name as he would join (`copyfit-check` fills a game and reads the refusal and the row). At the doors a man is one contact, two while he lies wounded, and — his body near a doorway —
+    seven of his ragdoll's particles (`game.ts BODY_DOOR_PARTICLES`): eight a man at most. So the most a step can be handed is a number, and
+    `copyfit-check` reads it against the hand-over for every level on both stands: `civilians` 2 of 15, `doormen` 152 of 256 and `propmen` 19 of 256 (the office with its
+    two night people), `frames` and `sweeps` (a door each) 27 of 256 and of 512, `men` 12 of 16 as the fullest level stands (`COPYFIT_BREAK=1`
+    reddens them with the rest). Behind it the ways back are throws by name
+    (`doors.ts there`, `props.ts there`), as is furniture the copy would not take (`throwables.ts world`: a level of more is not loaded).
 
   WHAT WAS CLOSED FOR THE RULES OF THE THINGS (doors, what falls, furniture, a leaf off its hinges, thrown things; 2026-11-04):
   - EVERY WAY BACK IS SAID. Each rule's choice between the module and this side (`doors.ts there`, `props.ts there`, `doorblast.ts slabThere` and
