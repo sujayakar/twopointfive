@@ -90,13 +90,14 @@ export function mirrorsShut(): void { for (const h of HELD) if (h) h.shut(); }
 export const MIRRORED = (2 | 8 | ~0xffff) >>> 0;
 /** THE SENSES' ROWS (sim.ts RUST.sight … paths), a bit each: what a tick opens the copy for beside the lines, the circles and the fog's pass */
 export const SENSES = { sight: 1, light: 2, smoke: 4, sound: 8, paths: 16 } as const;
-/** THE NUMBERS THE HOST SHARES WITH THE SENSES' RUST, under the names they have there (light.rs LAMP: doubles a lamp · smoke.rs BLOB: doubles a blob ·
+/** THE NUMBERS THE HOST SHARES WITH THE SENSES' RUST, under the names they have there (light.rs LAMP: doubles a lamp, MAX_LAMPS: lamps a part of a
+ *  question carries · smoke.rs BLOB: doubles a blob, MAX_BLOBS: the blobs its table holds, which is the most a game keeps — sense.ts CpuSmoke.emit ·
  *  hear.rs: what the straight lines said, and the way round · sight.rs: the question's bits and the answer's). tools/qa/rust-check.ts reads the Rust
  *  sources and is red where one of them is another number there. */
 /** …and what a search across the floor answers that is no count of waypoints (rust/sim/src/nav.rs; the same check reads them): no way · the host's own
  *  search · the search waits for the prices it has listed (find_priced) */
 export const NAV = { NO_WAY: -1, ASK_HOST: -2, NEED: -3 } as const;
-export const FACE = { LAMP: 15, BLOB: 6, GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
+export const FACE = { LAMP: 15, MAX_LAMPS: 256, BLOB: 6, MAX_BLOBS: 64, GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
 /** …and which of them are on now */
 export function senseRows(): number { return (RUST.sight ? SENSES.sight : 0) | (RUST.light ? SENSES.light : 0) | (RUST.smoke ? SENSES.smoke : 0) | (RUST.sound ? SENSES.sound : 0) | (RUST.paths ? SENSES.paths : 0); }
 const kindOf = (b: Box, cutOn: boolean): number => (b.rot ? K_ROT : 0) | (b.round === true ? K_ROUND : 0) | (b.cut !== undefined && (cutOn || shapeCut(b)) && b.cut.length > 0 ? K_CUT : 0);   // (boxes.ts cutMet: a shape's record whatever the cut-pieces switch says; a piece of trim's only with that switch, as the picture)
