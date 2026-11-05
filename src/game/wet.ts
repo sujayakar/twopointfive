@@ -23,6 +23,7 @@ import type { WeatherFrame } from '../render/frame';
 import type { Decal } from '../render/decals';
 import { INTERIOR, ANNEX } from './weather';
 import { gpuFx } from './particleFx';
+import { lookDecal } from './lookDecals';
 
 /** The knobs (Tab ▸ Weather ▸ wet characters; kept per machine like the whistle's). The first block is the model's, the second the look's — those ride to the
  *  GPU per character instance (anim/characters.ts setInstance) so the shaders need no uniform of their own. */
@@ -154,7 +155,7 @@ export function wetFootfall(g: Game, leftHint: boolean) {
   // onto whatever he stands on: the floor under the sole (a rug, a runner, the raised floor — the nearest static top face under it)
   const hit = g.col.raycast([centre[0], 0.4, centre[2]], [0, -1, 0], 0.8);
   const y = hit ? 0.4 - hit.t : 0; centre[1] = y + 0.003;
-  const d = g.decals.add('wetprint', centre, [0, 1, 0], 0.17, { tangent: dir, param: k, seed: (left ? 0 : 1) | ((WET_STATS.prints * 37) & 0xffe) });   // seed bit 0 = which foot (the sole is mirrored), the rest = look
+  const d = lookDecal(g.decals.add('wetprint', centre, [0, 1, 0], 0.17, { tangent: dir, param: k, seed: (left ? 0 : 1) | ((WET_STATS.prints * 37) & 0xffe) }));   // seed bit 0 = which foot (the sole is mirrored), the rest = look. A mark for the picture alone: nothing in play reads a wet print, so it is out of the digest's count of decals (lookDecals.ts)
   if (!d) return;
   printsOf(g).list.push({ d, t0: g.time, k0: k }); WET_STATS.prints++;
 }
