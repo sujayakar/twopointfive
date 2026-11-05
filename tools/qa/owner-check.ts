@@ -25,7 +25,7 @@ const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails
 console.log(`who has this man · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · OWNER_BREAK=1 (the red path)' : ''}`);
 
 /** the ownership questions (owner-questions.md) that have become reads of the record */
-const GONE = ['runnerOwns', 'moraleOwns', 'netQuietHolds', 'netFeedHolds', 'laneHolds', 'laneWarns', 'squadOwns', 'squadDefers', 'squadBusy', 'squadStaysIn', 'squadHolds', 'lastStandMan', 'lastStandOwns', 'pressOwns', 'buddyOwns'];
+const GONE = ['runnerOwns', 'moraleOwns', 'netQuietHolds', 'netFeedHolds', 'laneHolds', 'laneWarns', 'squadOwns', 'squadDefers', 'squadBusy', 'squadStaysIn', 'squadHolds', 'lastStandMan', 'lastStandOwns', 'pressOwns', 'buddyOwns', 'rescueCheckOwns', 'powerOutOwns', 'needsBusy'];
 /** the switches the shipped game leaves down, up: what the runs cannot show otherwise */
 const ALL_ON = { LASTSTAND: { regroup: true }, BUDDY: { on: true }, PRESSURE: { on: true }, DIGIN: { on: true } };
 
@@ -84,6 +84,26 @@ async function arm(label: string, set: object): Promise<void> {
 }
 await arm('as the stand has them', {});
 if (!process.env.OWNER_SCN || process.env.OWNER_ALLON) await arm('with last stand, buddy, pressure and dig-in up', ALL_ON);
+
+/** the rules' own families, whose checks put a man where the missions never do: the breaker's party, the rescue's walker, a trip for a coffee, the silent and unseen squads, a standoff */
+const FAMILIES = (process.env.OWNER_FAMS ?? 'rescuecheck,powerout,needs,gunhold,silent,unseen,spotted,holdfire,laststand,enemysquads,runner,morale,netquiet').split(',').filter(Boolean);
+{ const dir = mkdtempSync(join(tmpdir(), 'owner-fam-')), reads: Record<string, [number, number]> = {}, held: Record<string, number> = {}, first: string[] = [], lost: string[] = []; let next = 0, bad = 0, ticks = 0;
+  const jobs = Number(process.env.OWNER_JOBS ?? 4);
+  await Promise.all(Array.from({ length: jobs }, async () => { for (;;) {
+    const fam = FAMILIES[next++]; if (!fam) return;
+    const file = join(dir, `${fam}.json`);
+    const pr = Bun.spawn(['bun', '--preload', resolve(import.meta.dir, 'owner-audit.ts'), resolve(import.meta.dir, 'probes.ts'), fam], { cwd: ROOT, env: { ...process.env, OWNER_OUT: file, OWNER_DROP: BREAK ? String(~0 >>> 0) : '0' }, stdout: 'ignore', stderr: 'ignore' });
+    await pr.exited;
+    try { const o = JSON.parse(readFileSync(file, 'utf8'));
+      ticks += o.ticks; bad += o.bad; for (const f of o.first) if (first.length < 12) first.push(`${fam} ${f}`);
+      for (const [k, v] of Object.entries(o.reads) as [string, [number, number]][]) { const R = reads[k] ??= [0, 0]; R[0] += v[0]; R[1] += v[1]; }
+      for (const [k, v] of Object.entries(o.held) as [string, number][]) held[k] = (held[k] ?? 0) + v; }
+    catch { lost.push(fam); }
+  } }));
+  rmSync(dir, { recursive: true, force: true });
+  if (FAMILIES.length) { const rules: string[] = O.ownerWitnessed(), never = rules.filter(r => !held[r]);
+    verdict(bad === 0 && !lost.length && (ticks > 0), `runs, the rules' own families (${FAMILIES.join(' ')}): the same, where the missions never put a man`,
+      `${ticks} ticks · ${bad} disagreements${first.length ? `\n    ${first.join('\n    ')}` : ''}${lost.length ? `\n    no count: ${lost.join(', ')}` : ''}\n    ${rules.map(r => `${r}: held ${held[r] ?? 0} man-ticks, read ${reads[r]?.[0] ?? 0} times, ${reads[r]?.[1] ?? 0} of them true`).join('\n    ')}${never.length ? `\n    never held in these runs: ${never.join(', ')}` : ''}`); } }
 
 console.log(fails ? `owner-check: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (OWNER_BREAK=1: as it must)' : ''}` : 'owner-check: all pass');
 process.exit(fails ? 1 : 0);
