@@ -119,9 +119,8 @@ import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
-import { EXACT } from '../math/exact';
 import { POSEMATH } from '../anim/skeleton';
-import { rustRows, rustRow, rustOn, RUST_ON, fellWord } from '../sim/sim';
+import { rowsUp, mathsUp, retiredAddressWord, RUST_ON, fellWord } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -196,14 +195,13 @@ export function pinned(env?: string): boolean { return harnessProfile() === 'fro
 /** THE SWITCHES THE PAGE'S BOOT WRITES FROM ITS URL, in one place: src/main.ts calls this with the page's query before the level is built, the harness's shipped
  *  stand calls it with an empty one (shippedBoot below) — so 'the page with no flag' is this function's answer to '', by construction.
  *  (Switches a game module reads off the URL itself as it loads are shared already: under bun there is no `location`, and the module's own default stands.) */
-/** WHICH SYSTEMS RUN IN THE RUST MODULE, BY THE ADDRESS (src/sim/sim.ts RUST): the rows of RUST_ON are on in the page (lines, circles, fog: the same game to
- *  the bit there, and no slower); any other is off unless the address says ?rust<row> (?rustmaths, ?rustposes). ?rust=0 = none unless named, the game in
- *  TypeScript as it was; ?rust<row>=0 = that one off. `over` = the address read again OVER rows something else has since written (a recipe's tables: a
- *  replay, a networked game's): only what the address SAYS is written, so a word typed to rule the module out holds on such a page too, and a page with no
- *  word keeps the recipe's rows. A row is this machine's way of working the same game out, never a rule of play, so the address's word may always win. */
-export function pageRows(q: URLSearchParams, over = false): void {
-  const plain = q.get('rust') === '0';
-  for (const r of rustRows()) { const w = q.get('rust' + r); if (over && w === null && !plain) continue; rustRow(r, w !== null ? w !== '0' : rustOn(r) && !plain); }
+/** THE RUST MODULE'S ROWS AND THE GAME'S OWN MATHS ON THE PAGE (src/sim/sim.ts): every row of RUST_ON and the maths, always. The address has no word
+ *  for either any more (?rust, ?rust<row>, ?noexact were the switches while the TypeScript was a second way to play): one that still says so is told on
+ *  the console, once a page and a word, as a note and not a warning (a visitor's old bookmark is no fault of the page's), and is not obeyed. */
+export const RETIRED_SAID = new Set<string>();
+export function pageRows(q: URLSearchParams): void {
+  mathsUp(); rowsUp();
+  for (const k of q.keys()) if (retiredAddressWord(k) && !RETIRED_SAID.has(k)) { RETIRED_SAID.add(k); console.info(`?${k}: the Rust module's rows and the game's own maths are not switches any more; the word does nothing`); }
   { const f = q.get('fell'); if (f !== null) fellWord(f); }   // (?fell: the count of questions the TypeScript answered while its row was up, from the first box asked as the level is built — sim.ts FELL; `window.__sim.fell()` reads it)
 }
 export function pageSwitches(q: URLSearchParams): void {
@@ -433,7 +431,6 @@ export function pageSwitches(q: URLSearchParams): void {
   RESCUEEND.on = !q.has('norescueend');   // how a rescue is won (game/rescueend.ts): the hostages led out the way the team came in (Space on one: on your feet — with me), or nobody of theirs left on the floor — ON in the page; ?norescueend = the room held fifteen seconds wins it, as it was
   RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
-  EXACT.on = !q.has('noexact');   // the game's own maths (math/exact.ts): sin, cos, atan2 and the rest worked out the same on every JavaScript engine, so a page and a server (or the headless harness) compute one game from one seed and one set of inputs: ON in the page; ?noexact = the engine's own functions, as it was
   POSEMATH.singles = q.get('posesingles') !== '0';   // a pose's bulk arithmetic in singles (anim/skeleton.ts): blendPose and sampleClip's step worked in singles, a rotation's length a plain root, in both languages — what lets the module work four nodes a step. ON in the page; ?posesingles=0 = in doubles, as it was
   pageRows(q);   // which systems run in the Rust module (src/sim/sim.ts RUST): the rows of RUST_ON are ON in the page — pageRows below has the words
   SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.

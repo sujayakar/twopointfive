@@ -3309,7 +3309,7 @@ export class DoorTools {
 
   // ------------------------------------------------------------ the charge
   /** Sam's trigger: the set charge nearest him (or the one given) goes. Returns what it did, null with none set. */
-  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c)); }   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
+  blow(c: SetCharge | null = this.nearest()): { knocked: number; stunned: number; backblast: number } | null { return this.g.col.window(() => this.g.fogOfWar.doing(this.g.player.char.id, () => this.blowRaw(c))); }   // (ONE WINDOW ROUND THE BLOW, scene/collision.ts window: in play it is entered inside a tick and this is nothing; entered between ticks — a tool, a page's hook, the debugger's button — its hundreds of lines would each prove the module's copy of the box world for itself)   // (a door charge's blast is the team's doing: fogofwar.ts FOG.ours)
   private blowRaw(c: SetCharge | null): { knocked: number; stunned: number; backblast: number } | null {
     if (!c) return null;
     const g = this.g, K = DOORTOOLS, d = c.door, side = c.side, W = d.def.width, into = -side as 1 | -1;
