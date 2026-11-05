@@ -153,7 +153,7 @@ async function play(quiet: boolean): Promise<any> {
       + `\n    cost here: ${N} records ahead ${aheadMs.toFixed(2)} ms · 8 records ${eightMs.toFixed(3)} ms · a whole tick ${fullMs.toFixed(2)} ms`); }
   // ---- host
   { const was = g.localSeat; let inTick = 'no throw';
-    g.localSeat = g.seats[1]; const his = g.player === v1.player && g.followPos() === v1.player.char.pos && g.orders === v1.orders;
+    g.localSeat = g.seats[1]; const his = g.player === v1.player && String(g.followPos()) === String(v1.player.char.pos) && g.orders === v1.orders;
     g.localSeat = g.seats[0]; const mine = g.player === v0.player && g.orders === v0.orders; g.localSeat = was;
     g.ticking = true; try { void g.player; } catch { inTick = 'throws'; } g.ticking = false;
     say(his && mine && inTick === 'throws' && v0.player !== v1.player, "host: outside a tick the Game's own player is the seat this host shows; inside one there is none",
