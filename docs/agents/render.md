@@ -1875,6 +1875,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
     `twopointsix.lookWorkersGaveUp`), because a mission is a page load and a place whose workers start and never answer would wait the 30 s at every one; a layer the
     generator itself throws on is refused alone. A macro that cannot bundle hands over an empty text (no workers), never a failed build.
     `__engine.gbuffer.lookBy` counts the layers made each way.
+    THE SMALLER SIZES COME FROM THE WORKER TOO (11-05, a step after the first): a worker hands back each map with its nine smaller sizes made (the
+    same `lookMip`, each from the size above, down to one texel), so a layer from a worker costs the page's thread its twenty texture writes and nothing
+    else. WHY: a batch asked for IN PLAY (`needLook(LOOK_SLICE.play)`, when a blast shows a stuff no box had been) goes through the same pool, and the
+    page making the smaller sizes itself was 5 to 12 ms of one frame a layer. A layer made on the page's own thread makes its sizes there, as before.
+    `lookworkers-check` holds every smaller size a worker hands back to the page's own, byte for byte (30 layers, both maths). NOT TIMED on a GPU: on
+    the office no blast makes a map in play (nine wall charges profiled on the cloud box: none), so there was nothing there to time it on.
     **Switch**: `LOOK_WORKERS.on`: ON in the page (`?lookworkers=0` = every layer on the page's own thread, as it was), OFF in the module, so the headless
     harness makes its maps as it did on either stand. Not a rule of the game: NO REGISTRY ROW, no journal key, no `FROZEN_HOLDS` row (the maps are the same
     bytes either way, and nothing of the simulation reads them). So `knobs-check` does not hold it (it reads `src/game`'s tables) and a recording cannot
