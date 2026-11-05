@@ -75,6 +75,6 @@ export class HoleWatch {
       for (const kind of KINDS) if (this.rects.some(r => r.kind === kind && crosses(k.pos, m.char.pos, r.rect))) { this.killed[side][kind]++; break; }
     }
   }
-  close() { return { made: this.made, firstHole: this.firstHole, through: this.through, throughMen: { team: this.men.team.size, theirs: this.men.theirs.size }, killed: this.killed, watch: this.watch, react: since(WALLREACT_STATS, this.base.react), walls: since(WALL_STATS, this.base.walls),
+  close() { return { made: this.made, firstHole: this.firstHole, through: this.through, throughMen: { team: this.men.team.size, theirs: this.men.theirs.size }, killed: this.killed, watch: this.watch, react: since(WALLREACT_STATS, this.base.react), walls: since(WALL_STATS, this.base.walls), skins: { ...(this.g.destr?.walls?.skins?.stats ?? {}) },   // (skins: wallskin.ts's own counts at the end — how many of the walls' painted bands this run cut, so 'no digest moved' can say whether the rule was met)
     wallLog: ((this.g.wallCharge?.log ?? []) as { t: number; what: string }[]).map(x => `${x.t.toFixed(1)} ${x.what}`) }; }   // (the wall charge's own beats: who set, who was dealt which door inside)
 }

@@ -61,7 +61,7 @@ import { LOOK_WORKERS } from './render/lookWorkers';   // (the look's maps on wo
 import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, sunGlintConfig, glintPickConfig, highlightConfig, wallSidesConfig, smokeLabConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
-import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
+import { cutConfig, initCutSwitch, cutBoxesOn, type CutPlane } from './scene/cut';
 import { geoTryLevel } from './scene/geoTry';
 import { skyPlan } from './scene/placePlan';
 import { seatPosts } from './scene/lookMend';
@@ -1046,7 +1046,7 @@ async function main() {
     charLabFrame(game, cam);   // (the look prototype's character lab, opened from its panel: the camera on you; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
-    lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed — scene/lookTidy.ts)
+    lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn());   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed, WHOLE — scene/lookTidy.ts; it hides only where game/wallskin.ts is not in force (?wallskin=0, or the cut switch down), and rests where that rule cuts every wall's paint at the hole's edge)
     if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
     modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
@@ -1100,7 +1100,7 @@ async function main() {
     }
   }
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
-  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
+  tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world, game.destr.walls.skins.live && cutBoxesOn()); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
   net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
   if (net) coopInvite(net, q);   // (a co-op game's host is shown the code and the link while the server waits for the second player: ui/coop.ts)
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
