@@ -36,6 +36,7 @@ import type { RtLight } from '../render/lights';
 import { rayBox, BoxFlag, type Box } from '../scene/boxes';
 import type { WeatherSnap } from './weather';
 import { isDaylight } from './lighting';
+import { ENV } from './env';
 import { SENSE } from './sense';
 import { LIGHT_IN } from '../sim/lightshome';
 
@@ -144,6 +145,13 @@ const nights = new GameSideMap<Game, SkyState>('hours.nights');
 export const SUN_NAME = 'sun', SUN_GROUP = 'hour';
 /** the hour this game stands at ('night' = the level as authored) */
 export function hourOf(g: Game): HourId { return states.get(g)?.def.id ?? 'night'; }
+/** THE EXPOSURE THE GAME'S SCENE IS TAKEN AT NOW (env.ts): the show's day's while it is in (lighting.ts setDaylight), else the hour's own, else the level's
+ *  night's (ENV.exposure) — the numbers putIn and setDaylight write to the picture, read here from what the game keeps and never from the picture's
+ *  settings, which a player's Brightness turns. Never 0: a sum divides by it. */
+export function exposureOf(g: Game): number {
+  const e = isDaylight(g) ? g.level.daylight?.exposure ?? ENV.exposure : states.get(g)?.def.exposure ?? ENV.exposure;
+  return e > 0 ? e : 1;
+}
 /** the hour's sun in this game's light set (null at night) */
 export function hourSun(g: Game): RtLight | null { return states.get(g)?.sun ?? null; }
 export function isHourSun(g: Game, l: RtLight): boolean { return states.get(g)?.sun === l; }

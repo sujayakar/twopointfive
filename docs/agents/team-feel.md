@@ -207,7 +207,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   only men `lightRuled` has) — except, on own judgement, where what he is looking at within 8 m is BLACK EVEN TO THE TUBE two readings running (`blackAt`;
   the CPU's direct light + the moon, no bounce, so it fires more headless than the picture warrants). GOGGLES DOWN = his light off and his place dim
   (`darkAt` 0.5: feet, 2‥16 m along the gun, his mark, his target; `downSecs` / `upSecs` dwell). WHAT THEY DO = one term in `sightGainOn`: `light = max(visibility,
-  lampGlare, nvgSight)` with `tubeVis(g, E)` = post.wgsl's intensifier curve at `settings.nvGain` / exposure read back onto the meter's 0‥1 (E 0.03 = bare 0,
+  lampGlare, nvgSight)` with `tubeVis(g, E)` = post.wgsl's intensifier curve at the GAME'S OWN tube gain and exposure for the hour (`env.ts ENV.tubeGain`, `hours.ts exposureOf`: never the
+  picture's `settings.nvGain` / `settings.exposure`, which a player's Brightness turns — `docs/agents/net.md`, "A player's Brightness is his picture's alone") read back onto the meter's 0‥1 (E 0.03 = bare 0,
   tube 0.59; E 0 = 0 — a tube amplifies) — cone, range, smoke, motion untouched; hostiles never have it. Drawn by combat.ts handProps (`nvgWorn` / `nvgDown` →
   rigProps `gogglesBoxes`; a downed teammate keeps his). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'night vision ▸ …' / 'nv ▸ …' (teamfeel.ts `KEPT.NVG`) + `nvgSummary`.
   QA `probes.ts nvg` (quiet / lead / loud / sight / fight / rig / off; `NVG_BREAK=1 … nvg-quiet` must fail). Older probes that assumed bare eyes are PINNED to them
@@ -360,8 +361,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   while `Player.nvAmount` > 0.5, post.wgsl's own swap — no tube frame without it, no bare-eyed frame with it; no key, it is part of the goggles; at a
   door with the wand under it and `WAND.nv`, the flood is the lens's); with `IRLIGHT.team` (on) every teammate whose goggles are down (`nvgDown`). Enemies
   have no night vision and nothing of theirs reads it. WHAT: a real spot light at the brow along `aimYaw`, tipped `dip` 6° down, half angle `cone` 65°
-  (`core` 20°), `reach` 22 m, shadowed like any light; `power` 8 (30, 40° and 11° until 10-16: below) = on-axis intensity × the picture's exposure (the tube counts exposed luminance, so the
-  flood reads the same through it at every hour and Brightness). HOW IT STAYS OUT OF THE ONE MODEL — by construction, four ways: (1) the lights live in
+  (`core` 20°), `reach` 22 m, shadowed like any light; `power` 8 (30, 40° and 11° until 10-16: below) = on-axis intensity × the game's own exposure for the hour (`hours.ts exposureOf`; the tube counts exposed luminance, so the
+  flood reads the same through a man's tube at every hour, and a player's Brightness moves it in his picture with everything else: net.md, as above). HOW IT STAYS OUT OF THE ONE MODEL — by construction, four ways: (1) the lights live in
   `LightSet.ir` (render/lights.ts), never in `lights.lights`, so no CPU reader, digest, fog class, reach mask, bounce card or glass mask counts them;
   (2) they are uploaded only on a frame whose picture is the tube's (`LightSet.tube` = `settings.nvAmount > 0.5`, post.wgsl's own swap), flagged
   `LIGHT_IR` (bit 27 of the kind word) and NOT transient: in a tube frame each is a steady light like a carried torch — reservoirs, bounce, reflections
