@@ -32,9 +32,6 @@ export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: n
   lived?: boolean; }
 
 const H = WORLD.ceilingY;
-/** How far one drawn face is sunk behind another that would lie in its plane, so that the depth test can choose between them (two faces in one plane, drawn
- *  differently, flicker: tools/qa/zfight-check.ts). Under half a centimetre: the level's fingerprint reads a box to the centimetre (game/savestate.ts). */
-const HAIR = 0.004;
 
 // palette (linear)
 const C = {
@@ -463,7 +460,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   add({ c: [6.0, 0.22, 21.5], h: [1.1, 0.22, 0.45], albedo: K.couch }); add({ c: [6.0, 0.6, 21.9], h: [1.1, 0.35, 0.12], albedo: K.couch }); // couch
   add({ c: [6.0, 0.2, 20.2], h: [0.6, 0.2, 0.35], albedo: K.veneer }); // low table
   add({ c: [10.8, 0.3, 22.8], h: [0.3, 0.3, 0.3], albedo: C.stone }); add({ c: [10.8, 0.95, 22.8], h: [0.35, 0.4, 0.35], albedo: C.plant });
-  add({ c: [4.9, 0.3, 13.3], h: [0.3, 0.3, 0.3], albedo: C.stone }); add({ c: [4.9, 0.95, 13.3], h: [0.3 - HAIR, 0.4, 0.3 - HAIR], albedo: C.plant });   // (the plant stands 5 cm into its pot: its sides a hair inside the pot's)
+  add({ c: [4.9, 0.3, 13.3], h: [0.3, 0.3, 0.3], albedo: C.stone }); add({ c: [4.9, 0.95, 13.3], h: [0.3, 0.4, 0.3], albedo: C.plant });
   rug(6.2, 20.9, 3.4, 2.6, [0.34, 0.1, 0.09]);                                     // lounge rug under couch + table
   papers(6.2, 0.4, 20.25, 0.4); add({ c: [5.75, 0.43, 20.1], h: [0.05, 0.03, 0.05], albedo: C.white });   // magazines + cup on the low table
   rug(8.3, 13.9, 2.6, 1.5, [0.16, 0.17, 0.2]);                                      // mat in front of reception
@@ -504,7 +501,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   function cubicleCluster(cx: number, cz: number, colorA: Vec3, colorB: Vec3, seed: number) {
     // central spine partition along X and cross partition along Z
     add({ c: [cx, 0.7, cz], h: [2.4, 0.7, 0.04], albedo: colorA, stuff: 'fabric' });   // (a partition is cloth over a board: its paint's name is a car's body and a hut's stucco as well, so it says so itself)
-    add({ c: [cx, 0.7 - HAIR / 2, cz], h: [0.04, 0.7 - HAIR / 2, 1.6], albedo: colorB, stuff: 'fabric' });   // (it crosses the spine in another cloth: its top a hair under the spine's)
+    add({ c: [cx, 0.7, cz], h: [0.04, 0.7, 1.6], albedo: colorB, stuff: 'fabric' });
     // end caps
     add({ c: [cx - 2.4, 0.7, cz], h: [0.04, 0.7, 0.9], albedo: colorA, stuff: 'fabric' }); add({ c: [cx + 2.4, 0.7, cz], h: [0.04, 0.7, 0.9], albedo: colorA, stuff: 'fabric' });
     // conventional cubicle cells: the desk runs along the spine partition with the screen against it, the worker faces the
@@ -1274,7 +1271,6 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     routes, chokepoints, clearPlans, civilians,
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.04, 0.05, 0.08] },
     mission: { serverRoom: { x0: 14.12, x1: 21.88, z0: 4.12, z1: 9.94 }, entryDoor: 'server', rack: { index: DRIVE_RACK, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 36.5, exfilZ: exitThrough(doorDefs.find(d => d.name === 'fire_exit')!, 36.5, 20.6)[1] },   // room = inside its partitions; exfilX = clear of the east wall (x 36 ± 0.12): past it you are in the lot
-    kept: 1,   // (a let office with a cleaner on contract: its paint is whole and its walls one shade. The word is the level's own, the file's meta.kept: docs/agents/render.md, A LEVEL SAYS HOW KEPT IT IS)
   };
 }
 
