@@ -23,15 +23,20 @@
 @group(1) @binding(11) var lookA: texture_2d_array<f32>;
 @group(1) @binding(12) var lookB: texture_2d_array<f32>;
 @group(1) @binding(13) var lookSamp: sampler;
-struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f, h: vec4f, s: array<vec4f, 9> };   // s = each layer's SLOT in the two arrays, −1 = not made: a level has the maps it draws and no others (render/gbuffer.ts needLook) ·   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = free (the layers' base roughness is the prelude's LOOK_BASE) · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w = the cast's part ids the men's webbing is told apart by (manWeb: 1 + the suit's + 64 × (1 + the chest rig's)) · h.x, h.y = the cloth layer's tone and hollow before it was evened (lookTex.ts lookLayer; 1 and 0 = it was not): lookMan's cloth
+struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f, h: vec4f, s: array<vec4f, 9> };   // s = each layer's SLOT in the two arrays, −1 = not made: a level has the maps it draws and no others (render/gbuffer.ts needLook) ·   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c.x = how kept the place is (lookKept below) · c.yzw, d, e.xyz = free (the layers' base roughness is the prelude's LOOK_BASE) · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring, g.z = the men's print (manCamo2) · g.w = the cast's part ids the men's webbing is told apart by (manWeb: 1 + the suit's + 64 × (1 + the chest rig's)) · h.x, h.y = the cloth layer's tone and hollow before it was evened (lookTex.ts lookLayer; 1 and 0 = it was not): lookMan's cloth
 @group(1) @binding(14) var<uniform> lookCfg: LookCfg;
 
 const LOOK_TILE: f32 = 2.0;        // metres a map covers (render/lookTex.ts LOOK_TILE)
 const LOOK_MAX_TILT: f32 = 0.48;   // the tangent part of the shading normal is held under this (29°): lookGeoN's snap back to the face must never pick a neighbour, and a wall's facet never reads as a top (fogofwar.wgsl asks N.y > 0.5)
 const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, unmarked (a flat stretch of a map costs no second light score)
 
-/** how far a box's markings are drawn as brushed paint in place of square cells (the panel's Painted marks row) */
-fn lookMarkSoft() -> f32 { return lookCfg.g.x; }
+/** HOW KEPT THE PLACE IS (the block's c, first number: the level's own word, its file's meta.kept, or the address's &kept; scene/look.ts lookKeptOf): 0 = left to the weather
+ *  and the years, as every level was drawn before the word; 1 = cleaned and painted last night. The weather's rules below and a mark's wear ask it. What USE
+ *  does to a stuff somebody keeps (`worn`: a lane, a knocked skirting) is not weather and does not. */
+fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }
+/** how a box's markings are drawn: x = how far as brushed paint in place of square cells (the panel's Painted marks row), y = how far that paint is OLD
+ *  (rubbed thin, gone a shade into its wall: 1 − lookKept; a kept place's sign is brushed and whole) */
+fn lookMarkSoft() -> vec2f { return vec2f(lookCfg.g.x, 1.0 - lookKept()); }
 /** how much the FLOOR at the pixel lookSurface last dressed is walked and how close a wall's foot is (the level's traffic map; zeros where the pixel is no
  *  floor or the layer read none), and the first of the two for the paint drawn on that floor after it (markings.wgsl markSoft) */
 var<private> lookWay: vec2f;
@@ -159,6 +164,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
   var T: vec3f; var B: vec3f; var uv: vec2f;
   var alb = albedoIn; var rough = roughIn;
   let k = lookCfg.a; let k2 = lookCfg.b;
+  let kw = k.w * (1.0 - lookKept());   // THE WEATHER'S AMOUNT HERE: the panel's row × how far the place is left to it (lookKept). The rules for a stuff the weather touches ask this; the rules of use ask k.w
   let word = boxLook(bi); let moves = (word & 32u) != 0u;        // not one of the level's statics: rebuilt every frame, wherever the game has it now
   let salt = word >> 6u;                                          // the box's own number (0‥44; render/gbuffer.ts lookWordOf): never its place in the list, which moves when a wall is breached
   // ---- USE AND DIRT: ONE ANSWER A MARK. The level's traffic map is read ONCE a pixel, here (a floor where it is; a kept wall's foot a stride out on the
@@ -250,7 +256,7 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
       let wm = lookWay;   // (read once, above)
       let rag = lookSlow(uv * 0.9);
       let walked = clamp(wm.x * (0.5 + rag), 0.0, 1.0) * k.w * select(1.0, step(0.6, roughIn), wears);   // (a floor with a finish has its lane from the detail layer's scuff, above: one answer a mark)
-      let lee = smoothstep(0.25, 0.75, wm.y * (0.55 + 0.9 * rag)) * k.w;      // against the walls, where nobody treads
+      let lee = smoothstep(0.25, 0.75, wm.y * (0.55 + 0.9 * rag)) * kw;      // against the walls, where nobody treads and nobody sweeps (kw: a kept place has none; the lane above is use, and stays)
       if (thing.y >= 0.0 && lee > 0.02) {                                      // the stuff's `foot`: stones and rubbish work their way to the wall's foot, another stuff's map coming up through this one by height
         let gv = lookTap(i32(thing.y), st * 1.3 + vec2f(0.21, 0.43), dx * 1.3, dy * 1.3);
         let up = smoothstep(0.45, 0.75, lee * 0.9 + (gv.a.a - 0.55) * 0.9);
@@ -281,24 +287,24 @@ fn lookSurface(cls0: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, al
     T = quatRotate(q, ea); B = quatRotate(q, eb); uv = vec2f(dot(wp, T), dot(wp, B));
   }
   // ---- WEATHER on anything that stands on the ground or lies in the open: slow blotches; a wall's foot and head
-  if (k.w > 0.0 && cls != 0u && wild > 0.0) {   // (wild: none of it on what somebody keeps. Every stuff that soaks also fades: lookTex.ts STUFFS)
+  if (kw > 0.0 && cls != 0u && wild > 0.0) {   // (wild: none of it on what somebody keeps. Every stuff that soaks also fades: lookTex.ts STUFFS)
     let slow = lookSlow(uv * 0.33 + vec2f(5.0, 2.0)); let slower = detailNoise(uv * 0.09 + vec2f(1.3, 8.1));
-    alb *= 1.0 + k.w * select(1.0, 1.7, lying) * keep.y * (0.3 * (slow - 0.5) + 0.2 * (slower - 0.5));   // (the ground most of all: forty metres of one paint)
-    alb *= mix(vec3f(1.0), mix(vec3f(1.05, 1.0, 0.93), vec3f(0.95, 1.0, 1.06), smoothstep(0.3, 0.7, detailNoise(uv * 0.13 + vec2f(9.7, 4.2)))), 0.6 * k.w);   // … and no two stretches quite one hue
+    alb *= 1.0 + kw * select(1.0, 1.7, lying) * keep.y * (0.3 * (slow - 0.5) + 0.2 * (slower - 0.5));   // (the ground most of all: forty metres of one paint)
+    alb *= mix(vec3f(1.0), mix(vec3f(1.05, 1.0, 0.93), vec3f(0.95, 1.0, 1.06), smoothstep(0.3, 0.7, detailNoise(uv * 0.13 + vec2f(9.7, 4.2)))), 0.6 * kw);   // … and no two stretches quite one hue
     if (!lying && keep.z > 0.5) {   // (lookTex.ts LOOK_SOAKS: not boards, not what a factory made, not a place somebody keeps)
       let foot0 = b.c.y - b.h.y;
       if (foot0 < LOOK_GROUND.z) {                                              // the wall stands on the ground: splash, damp and the dirt the rain throws up, to a ragged line
         let line = 0.18 + 0.55 * detailNoise(vec2f(uv.x * 0.7, 3.3)) + 0.16 * detailNoise(vec2f(uv.x * 6.0, 9.1)) + 0.05 * detailNoise(uv * vec2f(23.0, 9.0));
-        let foot = (1.0 - smoothstep(0.0, line, wp.y)) * k.w;
-        let rim = smoothstep(line * 0.72, line, wp.y) * (1.0 - smoothstep(line, line * 1.18, wp.y)) * k.w;   // the tide mark: salts left where the damp stops
+        let foot = (1.0 - smoothstep(0.0, line, wp.y)) * kw;
+        let rim = smoothstep(line * 0.72, line, wp.y) * (1.0 - smoothstep(line, line * 1.18, wp.y)) * kw;   // the tide mark: salts left where the damp stops
         alb = mix(alb, alb * vec3f(0.6, 0.55, 0.5), foot * 0.85); rough = rough - 0.07 * foot;
         alb *= 1.0 + 0.16 * rim;
       }
       let top = b.c.y + b.h.y;
       if (b.h.y > 0.6 && top < CEIL_Y + 0.6) {                                  // its head: bleached and worn back, and the dark runs the rain leaves under it
         let dTop = top - wp.y;
-        let bleach = (1.0 - smoothstep(0.05, 0.3 + 0.35 * detailNoise(vec2f(uv.x * 1.3, 6.6)), dTop)) * k.w;
-        let run = pow(detailNoise(vec2f(uv.x * 7.0, 1.7)), 3.0) * smoothstep(0.45, 0.7, detailNoise(vec2f(uv.x * 0.55, 12.3))) * (1.0 - smoothstep(0.2, 1.3 + 1.2 * detailNoise(vec2f(uv.x * 2.1, 4.4)), dTop)) * smoothstep(0.02, 0.12, dTop) * k.w;
+        let bleach = (1.0 - smoothstep(0.05, 0.3 + 0.35 * detailNoise(vec2f(uv.x * 1.3, 6.6)), dTop)) * kw;
+        let run = pow(detailNoise(vec2f(uv.x * 7.0, 1.7)), 3.0) * smoothstep(0.45, 0.7, detailNoise(vec2f(uv.x * 0.55, 12.3))) * (1.0 - smoothstep(0.2, 1.3 + 1.2 * detailNoise(vec2f(uv.x * 2.1, 4.4)), dTop)) * smoothstep(0.02, 0.12, dTop) * kw;
         alb *= 1.0 + 0.22 * bleach; alb *= 1.0 - 0.3 * run;   // (runs come in stretches, under where the head sheds, never as a fence of stripes)
       }
     }
