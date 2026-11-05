@@ -56,8 +56,8 @@ export interface Box {
   flags: number;
   owner: number;      // 0 = world, 1..255 = character id (rays from a character skip its own proxies)
   cutHeight: number;  // world Y above which the box is hidden from primary visibility when Cutaway
-  /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK, while `albedo` itself — which the simulation reads (a round's material by
-   *  its paint, destruction's index by shape and tone) — stays as authored. weather.ts darkens rained-on ground with it. */
+  /** RENDER-ONLY albedo factor (absent = 1): what the renderer packs is albedo × wetK, while `albedo` itself stays as authored (no rule reads a material from it: what a
+   *  box does is its word, scene/materials.ts; the wet lot's answer is the row's own `wet`). weather.ts darkens rained-on ground with it. */
   wetK?: number;
   /** optional full 3D orientation (unit quaternion, world) for the few things that tilt: hand props, goggles, spark streaks, tumbling
    *  canisters. Raster and rays both honour it (BoxFlag.Rot is set on upload; the grid footprint and CPU picking use it too); `yaw`
