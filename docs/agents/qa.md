@@ -955,30 +955,3 @@ but synthetic writes still work.
   the browser, short stays or full. Why those three, nobody knows; it is the driver's and nothing of the game's. So: A WARM BOOT TIMED ON A CLOUD BOX
   IS NOT TO BE TRUSTED BEFORE ITS FOURTH VISIT, and it says how the driver's cache behaves there, NOT whether a player's browser keeps its shaders. On
   Windows Chrome's own store is what has to hold them and is too small for this game (the shader rows above); on an Apple chip nobody has looked.
-- **A game stood up has done with the last one: `standUp` asks for a full collection first** (2026-11-05; `tools/qa/headless.ts STANDUP_COLLECTS`; the
-  harness only, nothing of the game). FOUND by the merge: the workers of `bang-tally.ts` (the `flashweight` family's tally, missions back to back in one
-  process) grew about 1.6 GB a minute on the page's stand and two died at a 12 GB limit; old, on every build looked at. Reproduced here: one worker from
-  0.4 GB to 6.4 GB in two and a half minutes. WHAT IT IS NOT: a mission's world being held, or the tally. After ONE forced full collection a process that
-  has played forty-two missions over twenty-one scenarios is 350 to 450 MB, the size of one that has played two. WHY THE GAMES STAY: these tools run a
-  whole batch without once going back to the event loop (every `await` is on work already done), and that is where bun's collector does its full
-  collections from; so a dropped game (30 to 45 MB of heap a mission on the page's stand, about 7 on the frozen one) stays as garbage, and the heap
-  itself grows, not only what lies outside it. Shown both ways: with no collection asked, ONE turn of the event loop between bare stand-ups holds the
-  heap as well as the collection does (growth 29 to 38 MB over 25 games against 141 to 184); between missions it gives two to five times less growth,
-  the collection ten times less.
-  THE CURE is in the one place every tool stands a game up: `Bun.gc(true)` at the head of `standUp`, from a process's second stand-up on. The same
-  worker then stays under 0.8 GB (nine minutes, four workers at once). WHAT IT COSTS: about 50 ms a stand-up, more with a bigger live heap (0.2 s at
-  worst seen): the doors family, 247 stand-ups, paid 12 s of 381; a loop of bare stand-ups is 6 to 10 % slower; missions of a second or more are not
-  slower for it (32 tally missions: 91 s with it, 93 without). `QA_STANDUP_GC=0` = the stand-up as it was, for measuring; any other value but `1`
-  stops the tool. It does nothing for garbage that is not a dropped game (a single long game's own: one game restarted in place thirty times grows
-  77 MB uncollected on the frozen stand and is 112 MB after one collection).
-  **Check**: `bun run tools/qa/standupgc-check.ts` (`probes.ts standupgc`, family `perf`, run as a process of its own), both stands, about 8 s:
-  twenty-five games stood up back to back, twenty steps each, nothing collected by the script, the word unset as every tool runs; the heap may grow
-  60 MB from the second game to the last. Measured: 28 MB (frozen) and 32 (the page's stand) with the collection, 141 and 184 without. A second line:
-  a spelling of the word the harness does not know stops the tool by name. `STANDUPGC_BREAK=1` (the script under `QA_STANDUP_GC=0`) must fail.
-  WITH IT IN, green on this machine: the `checkpoints` (13 probes), `replay` and `journal` families on the frozen stand and `rollback-check` whole on
-  both. Nothing a game can observe depends on when a collection runs (the one `WeakRef` user in the simulation's folders, `math/side.ts`, is read
-  through reachability by the rollback).
-  THE PAGE: not this. In a browser a mission is a page load and its world goes with the page; the page's own way to play again without a load, the
-  restart in place, keeps nothing (one game restarted thirty times with four seconds of play between: 116 MB to 121 after a full collection, the
-  page's stand). Nobody has watched a browser's heap through a long session; nothing here says it grows. A TOOL THAT KEEPS GAMES ALIVE ON PURPOSE
-  (two stood side by side, a list of them) is not helped by this and is as big as its games.

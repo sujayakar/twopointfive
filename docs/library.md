@@ -2,7 +2,7 @@
 
 WRITTEN BY `bun run tools/levels/library.ts --write` FROM THE KITS. Do not edit: change the kit, then write it again (`--check` is red when this page is stale).
 
-187 pieces in 6 kits, 115 named paints in 6 tables.
+186 pieces in 6 kits, 115 named paints in 6 tables.
 A piece is something a level asks a kit for by name. Each row is one call laid alone: the call a showroom makes.
 
 - **To a man**, read off the boxes as laid: *solid to h* = feet, sight, rounds and sound meet it, up to h metres; *off the floor* = solid, but nothing of it comes
@@ -19,7 +19,7 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 
 | Kit | File | Pieces | Its sections |
 |---|---|---|---|
-| gwotKit | `src/scene/gwotKit.ts` | 80 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
+| gwotKit | `src/scene/gwotKit.ts` | 79 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
 | officeKit | `src/scene/officeGen.ts` | 23 | glass · walls · props · loose props · set dressing helpers · lights · doors · what is fixed to a wall's face |
 | livedKit | `tools/levels/livedKit.ts` | 18 | the floor · furniture · clutter · loose things |
 | livedPieces | `tools/levels/livedPieces.ts` | 37 | carcasses · paper, plans, books · instruments and tools · safes · on a wall · on a desk · on the floor · loose |
@@ -186,7 +186,6 @@ It is no second way of building the name.
 | **lantern**(x, z, name, group, baseY = 0, on = true) | a hurricane LANTERN standing on something `baseY` high (0 = the floor; a low table 0.3, a table 0.75): a small warm light, its own fuel (not the mains) | off the floor, lit | 0.14 × 0.14 × 0.29 | 1 solid, 2 drawn, 1 lamp | paintBlue, plasticWhite | gwot-yard |
 | **tube**(x, z, alongX, group, on = true, flicker = false) | a bare fluorescent TUBE under a roof (light-only, like the kits' ceiling panels — the camera looks through the roof): a switchable in `group` | overhead, lit | 1.2 × 0.1 × 0.04 | 1 solid, 1 fixture | plasticWhite | gwot-yard |
 | **floodLight**(x, z, dir, name, on = true, height = 3.4, mains = false) | a work FLOODLIGHT on a pole `height` tall at (x, z), thrown along `dir` (an XZ direction): white, wide, off the yard's own supply (group 'exterior') | solid to 3.4, lit | 0.32 × 0.23 × 3.52 | 2 solid, 1 drawn, 1 lamp | galv, plasticBlack, plasticWhite | gwot-yard, library-hall |
-| **yardLamp**(x, z, name, o = {}) | a yard LAMP: a pole with a shaded head on an arm, throwing a POOL straight down (about 7 m across the ground at the default cone) and little past it: a thing to walk round, where the floodLight washes a whole yard. The HEAD hangs at (x, z), not the pole: the pole stands `reach` from it along `axis` ('z' and -0.6, north, unless said), so the light is under the head with nothing solid round it and the pole's thin shadow falls away from the pool's middle. The arm ENDS AT the pole's face and at the head's: it runs into neither, so no top of the three lies in another's. A fixture like any other: a round or the OCP puts it out. Options: `on`; `mains` (the breaker takes it too; its own supply unless said); `height` of the lens (3.4); `axis` and `reach`; `pole`, its half width (0.04); `outerDeg` (52) and `innerDeg` (22 under it); `intensity` (90); `range` (9); `color`; `volumetric`; `group` ('exterior'). Returns the lens (the light's fixture box) and the head's `top`, for what a level lays on it | solid to 3.51, lit | 0.84 × 0.4 × 3.51 | 3 solid, 1 drawn, 1 lamp | galv, plasticBlack, plasticWhite | library-hall |
 
 ## officeKit
 
@@ -482,15 +481,15 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 | stencil | 0.62, 0.5, 0.1 | rough 0.7 | steel |  | 0 |
 | rust | 0.28, 0.12, 0.06 | rough 0.85 | steel |  | 7 |
 | iron | 0.098, 0.1, 0.112 | rough 0.5, bare metal | steel |  | 16 |
-| galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | steel |  | 12 |
+| galv | 0.5, 0.52, 0.53 | rough 0.38, bare metal | steel |  | 11 |
 | tin | 0.56, 0.55, 0.52 | rough 0.42, bare metal | steel |  | 9 |
 | drumBlue | 0.06, 0.15, 0.33 | rough 0.5 | steel |  | 3 |
 | drumRed | 0.4, 0.07, 0.05 | rough 0.5 | steel |  | 2 |
 | genYellow | 0.6, 0.42, 0.04 | rough 0.5 | steel |  | 2 |
-| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | grey plastic |  | 8 |
+| plasticWhite | 0.7, 0.7, 0.66 | rough 0.45 | grey plastic |  | 7 |
 | plasticGreen | 0.08, 0.28, 0.14 | rough 0.45 | plastic |  | 1 |
 | plasticBlue | 0.03, 0.12, 0.36 | rough 0.45 | plastic |  | 5 |
-| plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | dark plastic |  | 11 |
+| plasticBlack | 0.045, 0.045, 0.05 | rough 0.5 | dark plastic |  | 10 |
 | jerryYellow | 0.62, 0.46, 0.05 | rough 0.45 | plastic |  | 0 |
 | rubber | 0.03, 0.03, 0.033 | rough 0.85 | dark plastic |  | 13 |
 | poplar | 0.47, 0.36, 0.22 | rough 0.8 | wood |  | 15 |

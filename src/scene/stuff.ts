@@ -161,13 +161,6 @@ export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rou
 /** A COLOUR WRITTEN AS NUMBERS SAYS ITS WORD BESIDE IT: `madeOf('cloth', [0.3, 0.1, 0.09])` is those numbers, known from here on as a paint made of
  *  that (and of that finish, if one is given), wherever they are handed: a box's albedo, a helper's argument, a constant a generator names once. */
 export function madeOf(stuff: BoxStuff, colour: [number, number, number], finish?: { rough: number; metal?: boolean }): [number, number, number] { sayPaint(colour, '', { stuff, ...finish }); return colour; }
-/** THE SAME PAINT ON A THING THAT DOES SOMETHING ELSE: `paint` itself where that is what it does anyway, else its numbers as a paint of their own, known by
- *  everything `paint` is known by (its name, its finish, what it is drawn as) and doing `does`. The one way a stand-in is made: a kit's row on another
- *  thing (gwotPalette.ts gwotAs), and the same over paints a host hands a kit (gwotKit.ts). Returns the paint to lay. */
-export function doingAs(paint: readonly number[], does: DoesWord): [number, number, number] {
-  const was = PAINTS.get(paint); if (was?.does === does) return paint as [number, number, number];
-  const out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, { ...(was ?? { name: '' }), does }); return out;
-}
 /** … AND WHAT IT DOES, the same way (scene/materials.ts): `doing('steel', [0.58, 0.58, 0.56])` is those numbers, known from here on as a paint a box of
  *  which does what steel does, whatever else was said of them (madeOf first, then this, or either alone). A colour nobody says this of is brought forward
  *  by the exporter with the word its tone had (tools/levels/doesWas.ts). Returns the colour. */

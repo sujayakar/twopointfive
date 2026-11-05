@@ -241,7 +241,8 @@ export class GlassBreak {
   asking<T>(fn: Ask<T>): T { return this.ask(fn); }
   private ask<T>(fn: Ask<T>): T {
     const g = this.g, c = g.col;
-    return c.ruleAlways((M) => {
+    return c.window(() => {
+      const M = c.rulesStatics(); if (M === null) throw new Error('glass: the box world\'s copy will not stand for the rule: rust/sim/src/panes.rs has nothing to ask');
       if (!RUST_KNOBS.tick) knobsToRust();
       const set = M.leaves(c.dynamicBoxes); if (set === -2) throw new Error('glass: more leaves than a list of the module holds');
       const x = M.x, s = g.sim.bind();

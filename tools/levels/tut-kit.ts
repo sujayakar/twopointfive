@@ -268,8 +268,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // the gun court's own lamp: a mast by the shop's corner, its arm out over the court, the head between the nest and the gap. It lights the gun, the sandbags'
   // far end and the gap, and stops short of the shop's door: the ground he stands on for the door is lit by the shop's lamp alone (the line that has him shoot it out)
-  const WARM = { color: [1.0, 0.8, 0.5] as Vec3, volumetric: 0.25, mains: true };                 // (this halt's lamps: warmer and hazier than the kit's own, on the mains)
-  G.yardLamp(22.3, 9.9, 'lamp_gun', { ...WARM, height: 4.6, axis: 'x', reach: 24.6 - 22.3, pole: 0.05, intensity: 120, range: 10, innerDeg: 34, outerDeg: 58 });
+  { const x = 22.3, z = 9.9, h = 4.6, px = 24.6;
+    add({ c: [px, (h + 0.11) / 2, z], h: [0.05, (h + 0.11) / 2, 0.05], ...M.galv });
+    add({ c: [(px + x) / 2, h + 0.085, z], h: [(px - x) / 2 + 0.1, 0.025, 0.025], ...M.galv });
+    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
+    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
+    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 120, range: 10, innerDeg: 34, outerDeg: 58, name: 'lamp_gun', group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1 });
+  }
 
   // ---- the ground's marks: wheel tracks, worn earth, stains, the stones along the drive ----
   // Flat things are in three layers a millimetre and more apart (worn earth under the wheel tracks under a stain), each darker than what it lies on and none
@@ -378,7 +383,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // (the moon stands behind the shop, low over the back of the halt: the shop's own front, the door he blows and the wall he waits against, is in its
   //  shadow, so the lamp over the door is the one light on him there and shooting it out leaves him in the dark)
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([-0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
-  G.yardLamp(10.4, 12.2, 'lamp_gate', WARM); G.yardLamp(LAMP[0], LAMP[2], 'lamp_shop', { ...WARM, height: LAMP[1], outerDeg: 46, reach: 0.6 });   // (its pole on the far side of its head: clear of the way from beside the door to the doorway, and of a pistol's line to the lamp from behind the barrier)
+  const lamp = (x: number, z: number, name: string, h = 3.4, outerDeg = 52, side = -1) => {
+    add({ c: [x, (h + 0.11) / 2, z + side * 0.6], h: [0.04, (h + 0.11) / 2, 0.04], ...M.galv });
+    add({ c: [x, h + 0.085, z + side * 0.3], h: [0.025, 0.025, 0.26], ...M.galv });
+    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
+    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
+    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 90, range: 9, innerDeg: outerDeg - 22, outerDeg, name, group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1 });
+  };
+  lamp(10.4, 12.2, 'lamp_gate'); lamp(LAMP[0], LAMP[2], 'lamp_shop', LAMP[1], 46, 1);   // (its pole on the far side of its head: clear of the way from beside the door to the doorway, and of a pistol's line to the lamp from behind the barrier)
 
   // ---- the breaker box, on the gun court's north wall where the view sees it, and the beacon every level carries ----
   grp('breaker');

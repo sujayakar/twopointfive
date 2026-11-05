@@ -169,21 +169,7 @@ export interface Headless {
  *  tool's Math.random, as it always has (a tool that re-seeds Math.random afterwards gets the game's dice either way: dice.ts's one rule). */
 /** TPS_SEED: a whole number names the game's own die; anything else stops the tool (a typo must not quietly become seed 0) */
 function envSeed(v: string): number { if (!/^\d+$/.test(v.trim())) throw new Error(`TPS_SEED=${v}: want a whole number`); return Number(v) >>> 0; }
-/** A GAME STOOD UP HAS DONE WITH THE LAST ONE (2026-11-05). A tool that stands games up back to back in one process grew without end: a dropped game is 7 to
- *  45 MB of heap that is garbage and stays (measured: one worker of bang-tally.ts from 0.4 GB to 6.4 GB in two and a half minutes; the merge's box lost two
- *  such workers at a 12 GB limit). NOTHING HOLDS THOSE GAMES: after one full collection a process that has played forty-two missions is the size of one that
- *  has played two. WHY THEY STAY: these tools run a whole batch without once going back to the event loop (every await is on work already done), and that is
- *  where bun's collector does its full collections from. One turn of the event loop between games gives two to five times less growth; the collection asked
- *  for here gives nearly all of it back, so the stand-up asks, before it builds, from a process's second stand-up on (the first has nothing to collect).
- *  WHAT IT COSTS: about 50 ms each, more with a bigger live heap (0.2 s at worst seen). A family that stood up 247 games paid 12 s of 381; a loop of bare
- *  stand-ups is 6 to 10 % slower; missions of a second or more are not slower for it (32 tally missions: 91 s with it, 93 without).
- *  `QA_STANDUP_GC=0` = the stand-up as it was, for measuring; any other value but 1 stops the tool (a typo must not quietly measure the wrong arm).
- *  tools/qa/standupgc-check.ts holds it, both ways. It does nothing for garbage that is not a dropped game (a single long game's own). */
-function envCollects(v: string | undefined): boolean { if (v === undefined || v === '1') return true; if (v === '0') return false; throw new Error(`QA_STANDUP_GC=${v}: want 0 (the stand-up as it was) or 1`); }
-export const STANDUP_COLLECTS = envCollects(process.env.QA_STANDUP_GC);
-let stoodBefore = false;
 export async function standUp(opts: { uploadEvery?: number; env?: any; level?: any; cast?: boolean; ch?: any; seed?: number | null; seats?: number; /** the address the game is stood up from, for the words standGame reads off it (`seats=2`) */ search?: string } = {}): Promise<Headless> {
-  if (STANDUP_COLLECTS && stoodBefore) Bun.gc(true); stoodBefore = true;
   if (harnessProfile() !== STAND_AT_LOAD) throw new Error(`the stand was '${STAND_AT_LOAD}' when tools/qa/headless.ts loaded and is '${harnessProfile()}' now: TPS_PROFILE was set after the harness was imported (a static import loads before the file's first line). Set it before the import: \`const { standUp } = await import('./headless.ts')\` below the line that sets it`);
   const ch = opts.ch ?? await (opts.cast ? loadCastCharacter() : loadCharacter());
   { const force = process.env.CUTBOXES ?? process.env.CUT_BOXES;   // CUTBOXES=1 | 0 in front of any headless tool forces the cut switch (CUT_BOXES is read too); a replay's env wins

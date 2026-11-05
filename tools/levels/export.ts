@@ -1,5 +1,5 @@
 // Write a level file from its generator: tools/levels/<name>.ts exports build() → { level, scenarios?, groups, surfaces? } (a Level made with src/scene/officeGen.ts
-// officeKit or src/scene/levelKit.ts, and the scenario data that goes in the file's `scenarios` block) and optionally NAME, NOTES, MATERIALS, PALETTE, DRESS_AS and finish.
+// officeKit or src/scene/levelKit.ts, and the scenario data that goes in the file's `scenarios` block) and optionally NAME, NOTES, MATERIALS, DRESS_AS and finish.
 // Here the doors are fitted (doorSize.ts), the loud levels dressed (dress.ts) after the lived-in tail, the floor's flats put in order (flatLayers.ts) and a look
 // file's skin run (finish); then Level → level data → validate → canonical text → parse → load, and the loaded Level must be the generator's, field for field, or
 // nothing is written. A level with a tools/levels/<name>-gwot.ts beside it is exported / checked together with that look file.
@@ -85,21 +85,13 @@ const rowDoes = (name: string, albedo: readonly number[]): { does?: string } => 
   for (const [m, alb] of Object.entries(OFFICE_PALETTE as Record<string, [number, number, number]>)) { const k = alb.join(','); if (seen.has(k)) continue; seen.add(k);
     materials[m] = { albedo: [alb[0], alb[1], alb[2]], ...((OFFICE_FINISH as Record<string, { rough: number; metal?: boolean }>)[m] ?? {}), ...rowWord(m), ...rowDoes(m, alb) }; }
   // a generator's OWN materials (its `MATERIALS` export — the GWOT kit's palette, src/scene/gwotKit.ts GWOT_MATERIALS): added after the office's, a colour the office already names keeps the office's name
-  for (const [m, row] of Object.entries({ ...(gen.PALETTE ?? {}), ...(gen.MATERIALS ?? {}) } as Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string; does?: string }>)) { const k = row.albedo.join(','); if (seen.has(k) || materials[m]) continue; seen.add(k);
-    materials[m] = { albedo: [row.albedo[0], row.albedo[1], row.albedo[2]], ...(row.rough !== undefined ? { rough: row.rough } : {}), ...(row.metal ? { metal: true } : {}), ...(row.stuff !== undefined ? { stuff: row.stuff } : rowWord(m)), ...(row.does !== undefined ? (row.does !== DOES_DEFAULT ? { does: row.does } : {}) : rowDoes(m, row.albedo)) }; } }   // (what the paint is made of: the generator's own word for its row, else the table's for the name. scene/stuff.ts)
+  for (const [m, row] of Object.entries((gen.MATERIALS ?? {}) as Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string }>)) { const k = row.albedo.join(','); if (seen.has(k) || materials[m]) continue; seen.add(k);
+    materials[m] = { albedo: [row.albedo[0], row.albedo[1], row.albedo[2]], ...(row.rough !== undefined ? { rough: row.rough } : {}), ...(row.metal ? { metal: true } : {}), ...(row.stuff !== undefined ? { stuff: row.stuff } : rowWord(m)), ...rowDoes(m, row.albedo) }; } }   // (what the paint is made of: the generator's own word for its row, else the table's for the name. scene/stuff.ts)
 const data = levelToData(level, {
   name: gen.NAME ?? name, materials, boxGroups: groups, ...(surfaces ? { surfaces } : {}),
   floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: WORLD.ceilingY }],
   meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: `tools/levels/${name}.ts build → tools/levels/export.ts`, notes: gen.NOTES ?? '' },
 });
-// A PALETTE'S ROWS ARE WRITTEN ONLY WHERE THE FILE WEARS THEM (a generator's `PALETTE` export: rows as `MATERIALS` has them, each free to say its own
-// `stuff` and `does`; ./wornRows.ts). So a row added to such a palette tomorrow moves no file that does not wear it. `MATERIALS` is written whole, which
-// is why a new row of the kit's palette makes every look file stale: moving that table here is one step that rewrites those files' materials blocks.
-if (gen.PALETTE) { const { dropUnworn } = await import('./wornRows.ts'), P = gen.PALETTE as Record<string, { albedo: readonly number[] }>;
-  // (a palette's row may not take the name of a material the file already has in other numbers, the office's or the kit's: one of the two would be lost with no word)
-  const clash = Object.keys(P).filter(m => Object.hasOwn(materials, m) && materials[m].albedo.join(',') !== P[m].albedo.join(','));
-  if (clash.length) { console.error(`export ${name}: PALETTE names ${clash.length} row(s) the file already has in other numbers: ${clash.join(', ')}`); process.exit(1); }
-  dropUnworn(data, P); }
 const errs = validateLevelData(data);
 if (errs.length) { console.error(`validateLevelData: ${errs.length} error(s)\n  ${errs.slice(0, 30).join('\n  ')}`); process.exit(1); }
 const text = serializeLevelData(data);

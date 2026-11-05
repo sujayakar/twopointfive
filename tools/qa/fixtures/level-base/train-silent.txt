@@ -1,3 +1,3 @@
-# 11-05, a yard lamp's arm ends at its pole's face and at its head's: the arm's box is shorter, nothing added or removed, every light where it was and as bright; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
+# the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
 # every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-0ba150ffbbb62ec7fdd4c9e029dca86d777509bc
+033f66a9dc543936d312888a8e10081b3c90ae0d

@@ -7,7 +7,7 @@
 // No imports but a type and the table of what a paint is made of and does (scene/stuff.ts, which imports only the look's list of names): game/ reads this
 // without pulling the kit in.
 import type { Vec3 } from '../math/vec';
-import { namePaints, namePaint, sayPaint, doingAs, doesOfName, type BoxStuff } from './stuff';
+import { namePaints, namePaint, doesOfName } from './stuff';
 import type { DoesWord } from './materials';
 
 /** THE PALETTE (linear albedo), by name — a generator that exports `MATERIALS = GWOT_MATERIALS` has these written into its level file's `materials` */
@@ -89,26 +89,9 @@ export const GWOT_DARKER: Readonly<Partial<Record<GwotMat, GwotMat>>> = { mudLig
 /** THE PAINT `m` ON A THING THAT DOES `does` (a row of the table of materials: scene/materials.ts): the palette's own row where that is what the row's
  *  name says anyway, else the same numbers as a paint of their own, known by the row's name and by what it does. Handed to a kit's add() it makes a box
  *  drawn exactly as the row and doing the other thing; in a level file the box wears the row and says its own `does`. */
-export function gwotAs(m: GwotMat, does: DoesWord): Vec3 { return doingAs(GWOT_PALETTE[m], does); }
-/** THE PAINTS A KIT IS HANDED: a colour and a finish for every row the kit knows by name. The kit's own are the palette itself (GWOT_PAINTS); a level in
- *  other clothes hands it another set (paintsOf below), and no piece knows: a piece is written once, in the kit's row names. */
-export interface KitPaints { readonly paints: Readonly<Record<GwotMat, Vec3>>; readonly finish: Readonly<Partial<Record<GwotMat, { rough: number; metal?: boolean }>>> }
-export const GWOT_PAINTS: KitPaints = { paints: GWOT_PALETTE, finish: GWOT_FINISH };
-/** THE KIT'S ROWS IN ANOTHER PALETTE'S PAINT. `of` says which row of `palette` each row of the kit wears (data: one line a row, and the compiler holds it
- *  to every row of the kit). What comes back is, for each kit row, that palette row's numbers as a paint of its own: KNOWN BY THE PALETTE ROW'S NAME (so a
- *  box of it is drawn as what that name is made of, or as `words` says the row is), with that row's finish, and DOING WHAT THE KIT'S ROW DOES (scene/stuff.ts
- *  PAINT_DOES; scene/materials.ts): a drum is steel to a round in coral as it was in red, and a partition a charge cuts is one in any plaster. Many kit
- *  rows may wear one palette row; each is its own paint, since they do different things. Hand the answer to a kit through its host (gwotKit.ts
- *  GwotHost.paints) or to a look file's skin (tools/levels/gwotSkin.ts Skin.of). In a level file a box of it wears the palette's row by its numbers. */
-export function paintsOf(palette: Readonly<Record<string, Vec3>>, finish: Readonly<Record<string, { rough: number; metal?: boolean } | undefined>>, of: Readonly<Record<GwotMat, string>>, words: Readonly<Record<string, BoxStuff>> = {}): KitPaints {
-  const paints = {} as Record<GwotMat, Vec3>, fin: Partial<Record<GwotMat, { rough: number; metal?: boolean }>> = {};
-  const own = <T>(o: Readonly<Record<string, T>>, k: string): T | undefined => Object.hasOwn(o, k) ? o[k] : undefined;   // (a row may be named anything: 'constructor' is a name, not a member)
-  for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) { const name = own(of as Record<string, string>, m), row = name === undefined ? undefined : own(palette, name);
-    if (name === undefined || !row) throw new Error(`paintsOf: the kit's row '${m}' wears ${name === undefined ? 'nothing' : `'${name}', which is no row of the palette`}`);
-    const a: Vec3 = [row[0], row[1], row[2]], f = own(finish, name), w = own(words, name);
-    if (w !== undefined) sayPaint(a, name, { stuff: w, does: doesOfName(m), ...(f ?? {}) }); else namePaint(a, name, f, doesOfName(m));
-    paints[m] = a; if (f) fin[m] = f; }
-  return { paints, finish: fin };
+export function gwotAs(m: GwotMat, does: DoesWord): Vec3 {
+  if (does === doesOfName(m)) return GWOT_PALETTE[m];
+  const a: Vec3 = [GWOT_PALETTE[m][0], GWOT_PALETTE[m][1], GWOT_PALETTE[m][2]]; namePaint(a, m, undefined, does); return a;
 }
 /** which paint of the look's a colour is, by its numbers: a row of the palette or of the snow paints, or undefined. `eps` > 0 = to within that much a
  *  channel (a file written before 2026-11-05 carries stand-ins up to 0.0024 off their rows). THE PICTURE'S AND THE LEVEL TOOLS' QUESTION (does this level

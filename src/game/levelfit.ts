@@ -24,7 +24,7 @@
 //                      is a mistake said by name (doors.ts there, props.ts there).
 // (The pools themselves refuse more rows than they have: sim/doorshome.ts, sim/slabshome.ts, sim/propshome.ts. This is the same statement, made early.)
 import { BoxFlag, type Box } from '../scene/boxes';
-import { PANE_CAP, tooBig } from '../scene/boxMirror';
+import { PANE_CAP, FACE, tooBig } from '../scene/boxMirror';
 import { levelNameOf } from '../scene/levelLoad';
 import type { Level } from '../scene/level';
 import { sim as simX, simWhyNot } from '../sim/sim';
@@ -34,8 +34,8 @@ import { MEN_ROWS } from '../sim/men/schema';
 import { isSheet } from './glass';
 import { manSingles, type Cast } from './posehome';
 import { posePoolRoom } from '../anim/skeleton';
+import { MAX_SKINNED, steadyMost } from './guards';
 import { GLASSBREAK } from './glassbreak';
-import { MAX_SKINNED } from './guards';
 import { SEATS } from './seats';
 import { BODY_DOOR_PARTICLES } from './game';
 import { WALLS } from './wallbreak';
@@ -107,6 +107,7 @@ interface Stood extends Partial<Cast> {
   col: { boxes: readonly Box[]; dynamicBoxes: readonly Box[]; gridCount(): { cells: number; entries: number; tilted: number } };
   props?: { all: readonly { boxes: readonly unknown[] }[] } | null;
   destr?: { walls: { piecesSure(): number } } | null;
+  engine?: unknown; beacons?: unknown;   // (a whole Game has both: the sweep's lamps are counted only of one)
 }
 /** EVERY COUNT of a stood game against what holds it. `tables` = the copy's own sizes (BoxMirror.tables; all 0 where there is no module, and then no
  *  table of the copy holds anything to a number: Infinity). */
@@ -128,6 +129,7 @@ export function fitRows(g: Stood, tables: Readonly<Record<string, number>>): Fit
     { row: 'panes', what: 'glass one line can note (no more than the level\'s glass)', has: glass, cap: t('panes'), table: 'panes' },
     { row: 'sheets', what: 'sheets of glass (a row a pane that is no longer whole)', has: L.sheets, cap: Math.min(t('glass'), cap.sheets), table: 'glass' },
     { row: 'view', what: 'sheets of glass (a row a pane a burst\'s view names)', has: L.sheets, cap: t('view'), table: 'view' },
+    { row: 'steady', what: 'lamps the smoke\'s light sweep takes as one table (every lamp nobody carries that is no flash and no beacon\'s, lit or not)', has: g.engine && g.beacons ? steadyMost(g as never) : 0, cap: held ? FACE.MAX_LAMPS : Infinity, table: null },
     { row: 'clumps', what: 'clumps the largest sheet of glass dices into', has: clumpsMost(g.level.boxes), cap: held ? simX().panes_cap(1) : Infinity, table: null },
     { row: 'bars', what: 'window\'s bars (a row a bar gone, in the game\'s block)', has: col.boxes.filter(b => b.flags & BoxFlag.Bar).length, cap: held ? simX().panes_cap(0) : Infinity, table: null },
     { row: 'doors', what: 'doors (a row a door, and a row a leaf off its hinges)', has: L.doors, cap: cap.doors, table: null },

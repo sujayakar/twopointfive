@@ -82,7 +82,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('yard.office');
   K.bench(13.6, 2.2, 0); K.car(18.6, 3.6, 0.08, C.partBlue);
   // THE LOOK'S KIT: the pieces its own showroom does not stand (gwot-yard's kept part is held as it is by lived-check, so a piece the look's kit gains is
-  // stood HERE): three by the car, the newer ground pieces a bay each on their own stretch, and its yard lamp with the hall's own lamps below
+  // stood HERE): three by the car, and the newer ground pieces a bay each on their own stretch
   grp('yard.gwot');
   G.drum(22.6, 2.2, 'drumRed', 0.3); G.van(28.4, 3.6, 0, 'truckWhite'); G.partX(3.6, 32.6, 36.6, 'whitewash');
   { let x: number, z: number;
@@ -110,10 +110,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     G.splitWood('x', Z, 26.3, 27.15, 1, 3); G.ladder('x', Z, 24.4, 1);
     G.plankBench(17.0, Z + 0.5, 0); G.pot(17.25, Z + 0.5, 0.41); G.bricks(12.7, Z + 0.45, 0.1, 6);
   }
-  // the hall's own light: the moon, and four floodlights that all throw the same way (one key: no lamp fills another's shadows), so the pieces stand lit at night too (the yard lamp shown in the north-east corner throws its pool straight down there, on no piece)
+  // the hall's own light: the moon, and four floodlights that all throw the same way (one key: no lamp fills another's shadows), so the pieces stand lit at night too
   grp('exterior.lamps');
   for (const [i, x] of [8, 17, 26, 35].entries()) G.floodLight(x, i % 2 ? 19.0 : 11.7, [0.3, 1], `flood_${i}`, true);
-  G.yardLamp(38.8, 4.8, 'lamp_yard');                                                         // the look's kit's yard lamp (the head hangs here: the pole is 0.6 m north), in the north-east corner past the car's row
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.45, -0.5, -0.74]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
   // the breaker and one emergency beacon: the game's blackout wants both
   grp('breaker');

@@ -76,8 +76,19 @@ export function trainGround() {
   const dome = add({ c: [20.3, 2.16, 6.2], h: [0.055, 0.07, 0.055], albedo: [0.35, 0.08, 0.05], flags: BoxFlag.NoShadow });
   switchables.push({ name: 'beacon0', boxes: [dome], group: 'emergency', on: false, baseEmissive: [9, 1.2, 0.35], mains: false });
 
-  /** a yard LAMP is the kit's piece (`gwotKit yardLamp`): a pool straight down to walk round, its own supply unless `mains` says the breaker takes it */
-  const lamp = G.yardLamp;
+  const LAMP_ARM = 0.6;
+  /** A yard LAMP: a pole with a shaded head throwing a POOL straight down (about 7 m across the ground at the default cone) and little past it — a thing to walk
+   *  round, where the kit's floodLight washes a whole yard. A fixture like any other: a round or the OCP puts it out; `mains` = the breaker takes it too. */
+  const lamp = (x: number, z: number, name: string, o: { on?: boolean; mains?: boolean; height?: number; outerDeg?: number; intensity?: number; group?: string } = {}) => {
+    const h = o.height ?? 3.4, on = o.on ?? true;
+    // the pole stands LAMP_ARM north of the head, which hangs off an arm: the light is under the head with nothing solid round it (a light inside its own pole is
+    // a lint error: its shadow rays would start in the dark), and the pole's thin shadow falls north, away from the pool's middle
+    add({ c: [x, (h + 0.11) / 2, z - LAMP_ARM], h: [0.04, (h + 0.11) / 2, 0.04], ...GWOT_MATERIALS.galv });
+    add({ c: [x, h + 0.085, z - LAMP_ARM / 2], h: [0.025, 0.025, LAMP_ARM / 2 - 0.04], ...GWOT_MATERIALS.galv });
+    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...GWOT_MATERIALS.plasticBlack });
+    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...GWOT_MATERIALS.plasticWhite, emissive: on ? [40, 34, 22] : [0, 0, 0], flags: BoxFlag.NoShadow });
+    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.86, 0.6], intensity: o.intensity ?? 90, range: 9, innerDeg: (o.outerDeg ?? 52) - 22, outerDeg: o.outerDeg ?? 52, name, group: o.group ?? 'exterior', enabled: on, volumetric: 0.2, fixtureBox: fb, radius: 0.1, mains: o.mains ?? false });
+  };
 
   /** A room: shell walls on the rect's lines, a floor, a roof, each door's 1.2 m opening cut and its leaf hung (hinge at the opening's low end). Returns the
    *  room's inside rect (the walls' inner faces) — a quiet spot's `area`, a lesson's `in` test. */
