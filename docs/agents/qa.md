@@ -982,3 +982,35 @@ but synthetic writes still work.
   restart in place, keeps nothing (one game restarted thirty times with four seconds of play between: 116 MB to 121 after a full collection, the
   page's stand). Nobody has watched a browser's heap through a long session; nothing here says it grows. A TOOL THAT KEEPS GAMES ALIVE ON PURPOSE
   (two stood side by side, a list of them) is not helped by this and is as big as its games.
+- **A check run as a file and run by the runner stand on one stand: `tools/qa/holds.ts`** (2026-11-05; tools only, no rule of play). Some probes were written
+  against a rule's build before it (a card's one gun row, the grab on its key, the knife) and run with the newer rule held off on EVERY stand. The runner
+  (`probes.ts run`) held those rows by the probe's NAME, in fifteen lists of its own; a check file's own main held nothing. So on the page's stand a check was
+  red run as a file and green in its family: `sticky-check.ts` and `reachup-check.ts` were found so on one day, and of the 22 check files with a main of
+  their own that hold such a probe, 18 said other lines alone than by their family names (frozen: the same both ways, since the rows are off there anyway).
+  NOW: the lists are ONE table in `holds.ts` (`HOLDS`; a row keeps its list's old name, `GRAB_ROW_AS_IT_WAS` …, which is what the area files call it by;
+  its probes are written as names, not a pattern: `'reachup'` that probe, `'close-*'` every probe that begins so, `'sticky(-*)'` both),
+  `holdsOf(name)` says what a probe is owed, and `asProbe(name, fn)` is the one way a probe is run under it: the holds, and round them the runner's fence
+  (every knob table copied and put back, the cut-pieces switch, the plain night's card, the loud card first). `probes.ts run` calls it for every probe; a
+  check file's main calls it too — `asProbe('reachup', reachUpCheck)` for one probe, `asProbes({ 'sticky-kit': stickyKit, … }, wanted())` for a file of
+  several (parts by name, whole or without the family: `sticky-check.ts kit`; a name the file has not is said and exits 2, where seven of these mains ran
+  nothing and exited 0). `holdOff(heldList('<ROW>'))` holds one row round a block of a check's own lines (`lesson-check.ts`). A word whoever runs the tool
+  set himself wins: `=1` is his to ask, anything else is the hold itself (a stand-up raises a row for `1` alone), so a child of a held probe stands where
+  its parent stands.
+  A NEW ROW OF THE TABLE, OR A NEW MAIN IN A FILE THAT HOLDS A PROBE OF THE TABLE, is red in `bun run tools/qa/holds-check.ts` (`probes.ts holds`, in the
+  quick gate; seven lines, the same on both stands; `HOLDS_BREAK=1` = 4 FAIL) until that main runs the probe through `asProbe` by its name: the table's
+  rows are switches the registry has under the words `FROZEN_HOLDS` gives them, every held probe of the runner runs with its words at 0 and its rows off and
+  both are back after, the fence puts back what a probe wrote, a file's table of its probes has each name beside the function the runner calls for it, no
+  name in the table is one the runner no longer has, and `probes.ts selftest-holds` asks the runner's own `run()`. WHAT IT CANNOT SEE: that every arm of
+  a main goes through the call (it reads the file's text); a check file none of whose probes is in the table (some three hundred have a main of their own:
+  run alone their parts have no fence between them, as before); and a dispatch line in a shape it does not read is said, not guessed (write the name and
+  the import on one line). ONE THING THE RUNNER STILL DOES MORE: it fails a probe that prints a FAIL or an error line and returns true; a file's own exit
+  code is what its probes return. WHEN A HELD ROW RETIRES its line of the table goes with it (`holdOff` stops by name
+  on a row the registry has not) and the probes it held are restaged or lose their old-card lines.
+  MEASURED on the batch-two cut with the stand-up's collection on it, 24 files (the 22, and `doortools-probes.ts` and `shotgun-probes.ts`, which can now be
+  run alone), each alone and by its probes' names, PASS and FAIL lines compared: the same both ways on the page's stand, 24 of 24, and on the frozen stand,
+  24 of 24; the runner's lines before against after, 22 of 22 on each stand; `lesson-check.ts` 112 lines the same before and after on both; the new table
+  against the old lists, every one of the runner's 1515 names owed the same words; the files' 24 break words (`STICKY_BREAK`, `REACHUP_BREAK`,
+  `BIGKIT_BREAK` …) each still red, alone, on both stands. Still red both
+  ways on the page's stand, old and not this change's: `gunhold-cover` (its round line) and `noshove` (the room keeper). Also mended on the way:
+  `shotgun-probes.ts --identity` printed its word without the staging the probe reads it under (`COVER.backKeep` held off on the frozen stand), and
+  `doortools-probes.ts tally` printed "room's men down N/0" (the count's statement had been swallowed by a comment on its line).
