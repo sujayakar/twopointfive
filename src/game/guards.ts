@@ -79,6 +79,7 @@ import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } fro
 import { TAPSTEP, tapHears } from './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { railsDown } from './rails';   // (a tutorial mission's spared teammate is a man down to the enemy's eye: asked inside acquireFoe only)
+import { LIGHT_IN } from '../sim/lightshome';
 
 /** A/B switches for the AI passes (the QA probes flip them to print before / after off the same build; play never touches them): motion acuity in the sight
  *  gain, the search that deals hide spots and reads the renderer's light (off: the old sweep-and-wander), threshold discipline at doorways (off: straight through). */
@@ -2979,7 +2980,7 @@ export function resetGuards(g: Game) {
   g.guards = fresh.map(o => new Guard(g.men, g.ch, o.id, o.route, o.routeI, o.fl, o.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
   openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
-  g.breakerFixT = 0; eachSeat(g, v => { v.aimGuard = null; });
+  g.lightHome.in(LIGHT_IN.fix, null, 0); eachSeat(g, v => { v.aimGuard = null; });
   g.escalation = 0; g.escalationT = -1; g.alarm.episode = false; g.alarm.placed = false; g.alarm.apartT = 0;   // fresh men have no memory of an alarm: calm floor, torches out (the pairing / posts lived on the old Guard objects)
   g.clearing = null; g.clearedAt.clear();   // (so did the scripts of a pair that was clearing rooms, and their ledger of rooms done)
   const R = rollcallState(g); R.stage = 'idle'; R.nextAt = -1; R.caller = null; R.missing = null;   // and the net's radio check starts its clock again with them

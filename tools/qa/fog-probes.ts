@@ -348,7 +348,7 @@ export async function fogFiled(): Promise<boolean> {
   const atHome = (i: number, h: number[][]) => { const g = ghostOf(props[i]); return g.length === props[i].boxes.length && g.every((b: any, k: number) => Math.hypot(b.c[0] - h[k][0], b.c[1] - h[k][1], b.c[2] - h[k][2]) < 1e-6) && !liveIn(props[i]); };
   const swing = (d: any) => { d.angle = d.maxA > 0.5 ? Math.min(d.maxA, 1.5) : Math.max(d.minA, -1.5); d.vel = 0; d.latched = false; d.quietT = -3600; d.closing = false; d.place(); };
   const shove = (i: number) => { const p = props[i]; p.x += 0.7; p.z += 0.3; p.yaw += 0.6; p.dirty = true; p.place(); };
-  swing(doors[di]); targets[ti].on = false; shove(pi); R.step(3);
+  swing(doors[di]); game.lightHome.stage(targets[ti], false, null); shove(pi); R.step(3);
   const picture = () => { const d = doors[di], t = targets[ti];
     return { door: FW.doorHeld(d) && Math.abs(FW.doorShown(d)) < 0.01 && Math.abs(d.angle) > 1, lamp: t.boxes.every((bi: number, i: number) => Math.abs(sum(statics()[bi].fogEmit) - glow[i]) < 1e-6 && sum(statics()[bi].emissive) === 0), thing: atHome(pi, home) }; };
   const plain = () => { const d = doors[di], t = targets[ti], p = props[pi];
@@ -546,7 +546,7 @@ export async function fogThings(): Promise<boolean> {
       // the six, against a real panel: break one and read the boxes fixtureBreak.ts makes for it — the body is its last six, parts 0‥5, and nothing before them is
       const { fixtureBreakBoxes } = await import(`${ROOT}/src/game/fixtureBreak.ts`); const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
       const was = DESTRUCTION.on; DESTRUCTION.on = true; let got: any[] = []; let which = -1;
-      for (let k = 0; k < game.targets.length && which < 0; k++) { const t = game.targets[k]; if (t.broken) continue; t.broken = true; const o: any[] = []; fixtureBreakBoxes(game, o, 0); t.broken = false; DESTRUCTION.on = false; fixtureBreakBoxes(game, [], 0); DESTRUCTION.on = true;
+      for (let k = 0; k < game.targets.length && which < 0; k++) { const t = game.targets[k]; if (t.broken) continue; game.lightHome.stage(t, null, true); const o: any[] = []; fixtureBreakBoxes(game, o, 0); game.lightHome.stage(t, null, false); DESTRUCTION.on = false; fixtureBreakBoxes(game, [], 0); DESTRUCTION.on = true;
         if (o.length > 6) { got = o; which = k; } }
       DESTRUCTION.on = was;
       const parts = got.map(x => x.mkey & 31), tail = parts.slice(-6), head = parts.slice(0, -6);
@@ -676,13 +676,13 @@ export async function fogLit(): Promise<boolean> {
     const far = litOnes.find((t: any) => !seenAt(t)), near = litOnes.find((t: any) => seenAt(t));
     let kept = false, held = 0, gone = false, nearGone = !near, back = false;
     if (far) {
-      far.on = false; R.step(3); kept = lightsOf(far).some(has); held = FW.litStats.held;
+      game.lightHome.stage(far, false, null); R.step(3); kept = lightsOf(far).some(has); held = FW.litStats.held;
       const real = FW.spotSeen.bind(FW); FW.spotSeen = (x: number, z: number) => (Math.abs(x - far.pos[0]) < 1e-6 && Math.abs(z - far.pos[2]) < 1e-6) || real(x, z);   // (an eye on that one spot of floor: lampSeen's first way)
       R.step(2); gone = !lightsOf(far).some(has); FW.spotSeen = real;
-      far.on = true; R.step(3); back = !lightsOf(far).some(has) && FW.litStats.held >= 1;   // (switched back on unseen: the fog keeps it dark, as last seen)
+      game.lightHome.stage(far, true, null); R.step(3); back = !lightsOf(far).some(has) && FW.litStats.held >= 1;   // (switched back on unseen: the fog keeps it dark, as last seen)
       FW.reset(); R.step(3);
     }
-    if (near) { near.on = false; R.step(2); nearGone = !lightsOf(near).some(has); near.on = true; R.step(2); }
+    if (near) { game.lightHome.stage(near, false, null); R.step(2); nearGone = !lightsOf(near).some(has); game.lightHome.stage(near, true, null); R.step(2); }
     verdict(!!far && kept && held >= 1 && gone && back && nearGone, 'a lit lamp switched off where the team has no look at it (not the floor under it, not the fixture, not floor it lights) stays lit in the fog (and is counted as held) until an eye has the floor under it; switched back on unseen it stays dark; a lamp the team sees follows at once',
       `${litOnes.length} lit fixtures in the list, one unseen: ${far ? far.name : '—'} · off, unseen → still in the list: ${kept} (held ${held}) · its floor seen → gone: ${gone} · on again, unseen → still out: ${back} · a seen one (${near ? near.name : 'none in sight: not asked'}) off → gone: ${nearGone}`);
   }
@@ -792,15 +792,15 @@ export async function fogFull(): Promise<boolean> {
     const far = litOnes.find((t: any) => !FW.lampSeen(t)), near = litOnes.find((t: any) => FW.lampSeen(t));
     let ghost = false, up = false, gone = false, back = false, nearGhost = false, held = 0;
     if (far) {
-      far.on = false; R.step(3); L.upload(game.time); const ls = lightsOf(far); held = FW.fullStats.held;
+      game.lightHome.stage(far, false, null); R.step(3); L.upload(game.time); const ls = lightsOf(far); held = FW.fullStats.held;
       ghost = ls.every((l: any) => !(l.enabled && l.intensity > 0) && l.fogGhost > 0);
       up = ls.every((l: any) => word(l) >= 0 && (word(l) & LIGHT_FOG_UNSEEN) !== 0 && (L as any).f32[l.slot * 16 + 8] + (L as any).f32[l.slot * 16 + 9] + (L as any).f32[l.slot * 16 + 10] > 0);
       const real = FW.spotSeen.bind(FW); FW.spotSeen = (x: number, z: number) => (Math.abs(x - far.pos[0]) < 1e-6 && Math.abs(z - far.pos[2]) < 1e-6) || real(x, z);
       R.step(2); L.upload(game.time); gone = ls.every((l: any) => !l.fogGhost && l.slot < 0); FW.spotSeen = real;
-      far.on = true; R.step(3); L.upload(game.time); back = ls.every((l: any) => l.fog === 1 && (word(l) & LIGHT_FOG_SEEN) !== 0);
+      game.lightHome.stage(far, true, null); R.step(3); L.upload(game.time); back = ls.every((l: any) => l.fog === 1 && (word(l) & LIGHT_FOG_SEEN) !== 0);
       FW.reset(); R.step(3);
     }
-    if (near) { near.on = false; R.step(2); L.upload(game.time); nearGhost = lightsOf(near).some((l: any) => l.fogGhost > 0 || l.slot >= 0); near.on = true; R.step(2); }
+    if (near) { game.lightHome.stage(near, false, null); R.step(2); L.upload(game.time); nearGhost = lightsOf(near).some((l: any) => l.fogGhost > 0 || l.slot >= 0); game.lightHome.stage(near, true, null); R.step(2); }
     verdict(!!far && ghost && up && held >= 1 && gone && back && !nearGhost, 'a lit lamp switched off where the team has no look at it is uploaded all the same, at its own strength, as a light of what the team does NOT see (and counted as held); the frame an eye has the floor under it, it is gone; switched on again unseen it lights only what the team sees; a lamp the team sees is simply out',
       `${litOnes.length} lit fixtures, one unseen: ${far ? far.name : '—'} · off, unseen → kept for the fog: ${ghost}, uploaded with the bit and its light: ${up} (held ${held}) · its floor seen → gone: ${gone} · on again, unseen → class 1: ${back} · a seen one (${near ? near.name : 'none in sight: not asked'}) off → kept: ${nearGhost}`);
   }
@@ -1682,22 +1682,22 @@ export async function fogKept(): Promise<boolean> {
     let before = false, kept = false, realDark = false, ghost = false, seenGone = false, back = false, realLit = false, fresh = false, rowOff = false, rowOffGhost = false, notFull = false, nearNone = true;
     if (far) {
       before = face(far).none && face(far).real > 0;
-      far.on = false; R.step(3); { const f = face(far); kept = f.shown && f.lit; realDark = f.real === 0; asGlowed = far.boxes.every((bi: number, i: number) => Math.abs(sum(statics[bi].fogEmit) - wasGlow[i]) < 1e-6);
+      game.lightHome.stage(far, false, null); R.step(3); { const f = face(far); kept = f.shown && f.lit; realDark = f.real === 0; asGlowed = far.boxes.every((bi: number, i: number) => Math.abs(sum(statics[bi].fogEmit) - wasGlow[i]) < 1e-6);
         FW.viewer = true; game.fogLift(true); lifted = face(far).none; game.fogBack(); relaid = face(far).shown && face(far).lit; FW.viewer = false;   // (the viewer's picture without the fog: the lamps as they are — and the step's faces again after it)
         if (far.mains) { setBlackout(game, 3600, 'debug'); R.step(3); blackout = face(far).none; game.endBlackout(); R.step(3); blackout &&= face(far).shown; R.step(360); } }   // (… and the supply's restrike run out, so the lamp glows whole again for what follows)
       { // a face that glows at a share of the level's emission (a fire's coals): what is kept is what it glowed, not the level's
-        far.on = true; FW.reset(); R.step(3); const recs = (FW as any).faceRecs.get(far) as number[][] | undefined; if (recs) for (const k of recs) { k[0] *= 0.25; k[1] *= 0.25; k[2] *= 0.25; }
-        far.on = false; R.step(1); dimmed = !!recs && far.boxes.every((bi: number, i: number) => Math.abs(sum(statics[bi].fogEmit) - sum(recs[i])) < 1e-6 && sum(statics[bi].fogEmit) < 0.3 * sum(far.baseEmissive) && sum(statics[bi].fogEmit) > 0);
-        far.on = true; FW.reset(); R.step(3); far.on = false; R.step(3); }
+        game.lightHome.stage(far, true, null); FW.reset(); R.step(3); const recs = (FW as any).faceRecs.get(far) as number[][] | undefined; if (recs) for (const k of recs) { k[0] *= 0.25; k[1] *= 0.25; k[2] *= 0.25; }
+        game.lightHome.stage(far, false, null); R.step(1); dimmed = !!recs && far.boxes.every((bi: number, i: number) => Math.abs(sum(statics[bi].fogEmit) - sum(recs[i])) < 1e-6 && sum(statics[bi].fogEmit) < 0.3 * sum(far.baseEmissive) && sum(statics[bi].fogEmit) > 0);
+        game.lightHome.stage(far, true, null); FW.reset(); R.step(3); game.lightHome.stage(far, false, null); R.step(3); }
       { ghost = [far.light, ...(far.areaLights ?? []).map((a: any) => a.light)].filter(Boolean).every((l: any) => l.fogGhost > 0); }
       const real = FW.spotSeen.bind(FW); FW.spotSeen = (x: number, z: number) => (Math.abs(x - far.pos[0]) < 1e-6 && Math.abs(z - far.pos[2]) < 1e-6) || real(x, z);   // (an eye on that one spot)
       R.step(2); seenGone = face(far).none; FW.spotSeen = real;
-      far.on = true; R.step(3); { const f = face(far); back = f.shown && f.dark; realLit = f.real > 0; }
+      game.lightHome.stage(far, true, null); R.step(3); { const f = face(far); back = f.shown && f.dark; realLit = f.real > 0; }
       FW.reset(); R.step(3); fresh = face(far).none;
-      FOG.kept = false; far.on = false; R.step(3); rowOff = face(far).none; rowOffGhost = [far.light, ...(far.areaLights ?? []).map((a: any) => a.light)].filter(Boolean).every((l: any) => l.fogGhost > 0);
-      FOG.kept = !brk; R.step(2); const again = face(far).shown; FOG.full = false; R.step(2); notFull = again === !brk && face(far).none; FOG.full = true; far.on = true; FW.reset(); R.step(3);
+      FOG.kept = false; game.lightHome.stage(far, false, null); R.step(3); rowOff = face(far).none; rowOffGhost = [far.light, ...(far.areaLights ?? []).map((a: any) => a.light)].filter(Boolean).every((l: any) => l.fogGhost > 0);
+      FOG.kept = !brk; R.step(2); const again = face(far).shown; FOG.full = false; R.step(2); notFull = again === !brk && face(far).none; FOG.full = true; game.lightHome.stage(far, true, null); FW.reset(); R.step(3);
     }
-    if (near) { near.on = false; R.step(2); nearNone = face(near).none; near.on = true; R.step(2); }
+    if (near) { game.lightHome.stage(near, false, null); R.step(2); nearNone = face(near).none; game.lightHome.stage(near, true, null); R.step(2); }
     const boxes = src('scene/boxes.ts'), reads = (boxes.match(/em = b\.fogEmit \?\? b\.emissive/g) ?? []).length, gains = (boxes.match(/b\.fogMark \?\? b\.markGain \?\? 1/g) ?? []).length, raw = (strip(boxes).match(/b\.emissive\[/g) ?? []).length;
     const others = (fsrc.readdirSync(`${ROOT}/src/game`) as string[]).filter(f => f.endsWith('.ts') && f !== 'fogofwar.ts' && /fogEmit|fogMark/.test(strip(src(`game/${f}`))));
     verdict(!!far && before && kept && asGlowed && dimmed && lifted && relaid && blackout && realDark && ghost && seenGone && back && realLit && fresh && rowOff && rowOffGhost && notFull && nearNone && reads === 2 && gains === 2 && raw === 0 && others.length === 0,
@@ -1747,7 +1747,7 @@ export async function fogKept(): Promise<boolean> {
   }
   { // a fight with it and without: the picture alone
     const fight = async (seed: number, kept: boolean) => { const Q = await rig(seed, { fog: true, chaos: 0.5 }); FOG.full = true; FOG.kept = kept; let faces = 0;
-      Q.step(40); const lamp = (Q.game.targets as any[]).find(t => (t.light || t.areaLights) && t.boxes.length > 0 && t.baseEmissive[0] + t.baseEmissive[1] + t.baseEmissive[2] > 0 && t.on && !t.broken && !Q.FW.lampSeen(t)); if (lamp) lamp.on = false;   // (a lamp the fog has as lit, put out where nobody looks: the row has a face to keep while the fight goes)
+      Q.step(40); const lamp = (Q.game.targets as any[]).find(t => (t.light || t.areaLights) && t.boxes.length > 0 && t.baseEmissive[0] + t.baseEmissive[1] + t.baseEmissive[2] > 0 && t.on && !t.broken && !Q.FW.lampSeen(t)); if (lamp) Q.game.lightHome.stage(lamp, false, null);   // (a lamp the fog has as lit, put out where nobody looks: the row has a face to keep while the fight goes)
       Q.step(3); faces = (Q.game.engine.world.statics as any[]).filter(b => b.fogEmit !== undefined && b.fogEmit[0] + b.fogEmit[1] + b.fogEmit[2] > 0).length; Q.NB.order(); Q.step(60 * 7); Q.NB.order(); Q.step(60 * 14);
       return { d: JSON.stringify(digestGame(Q.game)), draws: (Q.dice as any).draws(), state: Q.NB.state as string, kept: Q.FW.frame.kept, faces, lamp: lamp?.name as string | undefined }; };
     const rows: string[] = []; let fought = true, told = true, moved = 0, faces = 0;

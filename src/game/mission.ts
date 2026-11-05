@@ -13,6 +13,7 @@ import { chronSpotted, chronObjective, tickChronicle, debriefOf } from './chroni
 import { handlerBeat } from './dialogue';
 import { takeTold } from './takecheck';
 import { quietOf, quietWords, outThrough, exitTaken, nearestExit, exitPoint, holderStand } from './quiet';   // (called inside functions only: src/game is one import cycle)
+import { LIGHT_IN } from '../sim/lightshome';
 
 // ------------------------------------------------------------ mission
 /** Live = a run is on and it really is the player playing. The showcase tour drives the player through these very rooms and flips switches, none of
@@ -63,7 +64,7 @@ export const DOWN_CARD_SECS = 2.6;
 export function updateMission(g: Game, dt: number, input: Input) {
   const m = g.mission, pl = g.player, p = pl.char.pos, M = g.level.mission;
   if ((g.quietUtility || g.puppet) && !g.missionInTour) { m.driveT = -1; return; }   // the tour is running (see missionLive) — and a pull it interrupted does not resume on its own
-  if (m.pulled) for (const t of g.rackTargets) t.on = false;    // the drive is out: its rack stays dark whatever the Lights panel switches back on (restartEncounter relights it: resetLevelState + a fresh Mission)
+  if (m.pulled) for (const t of g.rackTargets) if (t.on) g.lightHome.in(LIGHT_IN.on, t, 0);    // the drive is out: its rack stays dark whatever the Lights panel switches back on (restartEncounter relights it: resetLevelState + a fresh Mission)
   if (m.sweepAt > 0 && g.time >= m.sweepAt) { m.sweepAt = -1; sendRackCheck(g); }
   if (m.stage === 'failed' && m.downCardAt > 0 && g.time >= m.downCardAt) { m.downCardAt = -1; m.debrief = true; }   // the down card, a beat after he dropped (main.ts opens whichever card mission.debrief asks for; headless nobody does and the flag just stands)
   if (m.stage === 'done' || m.stage === 'failed') return;
@@ -111,7 +112,7 @@ export function drivePulled(g: Game) {
   chronObjective(g, W ? `${W.thing} is out of ${W.holder}` : `the drive is out — rack ${M.rack.index + 1} goes dark`, rf);
   driveHands(g, DRIVE_SECS, true);   // (handwork.ts: …and it goes away at his hip)
   m.driveT = -1; m.pulled = true; m.stage = 'exfil'; m.sweepAt = takeTold(g) ? g.time + 7 : -1;   // (takecheck.ts: on a quiet mission a man is sent only to a holder the level says is wired)
-  for (const t of g.rackTargets) t.on = false;
+  for (const t of g.rackTargets) g.lightHome.in(LIGHT_IN.on, t, 0);
   g.audio.play('rack', rf, 0.5, { rate: 0.7 }); g.audio.play('lightOff', rf, 0.7);
   g.events.push({ kind: 'prop', pos: [rf[0], 0, rf[2]], time: g.time, loud: false, level: 0.35, who: g.player.char.id }); g.player.noise = Math.max(g.player.noise, 0.35);   // heard like a knocked chair: a look if he is close, no alarm
   if (W) { g.msg(`${W.bare} out. leave through ${W.outs}`); return; }
