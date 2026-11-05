@@ -18,23 +18,17 @@
 // judged here.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
-import { officeKit } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, gwotAs, gwotSimOf, type GwotMat } from '../../src/scene/gwotPalette';
+import { standKit as stand, laid, lines, ROWS, type Kit } from './kit-stand';
 import { isLived } from '../../src/scene/lived';
 import { livedTail } from '../levels/livedKit';
 
 const BREAK = process.env.GROUNDPIECES_BREAK === '1';
-let failed = 0;
-const check = (ok: boolean, what: string, detail = '') => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
-type Kit = ReturnType<typeof gwotKit>;
-/** a kit stood up empty, with the group of every box it is handed */
-const stand = () => { const groups: string[] = [], K = officeKit({ groups }); return { K, G: gwotKit(gwotOfOffice(K)), groups }; };
+const { check, failed } = lines();
 /** what one call of `lay` adds to a kit stood up empty (after `before`, which is not counted) */
-const laidBy = (lay: (G: Kit) => void, before?: (G: Kit) => void): Box[] => { const { K, G } = stand(); before?.(G); const n = K.boxes.length; lay(G); return K.boxes.slice(n); };
+const laidBy = (lay: (G: Kit) => void, before?: (G: Kit) => void): Box[] => laid(lay, before).boxes;
 const same = (a: readonly number[], b: readonly number[]) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 const top = (b: Box) => b.c[1] + b.h[1], mm = (y: number) => `${(y * 1000).toFixed(1)} mm`;
-const ROWS = Object.keys(GWOT_PALETTE) as GwotMat[];
 
 // 1. a scatter is one row in two tones at most, with the row's finish, and one thing to a round
 { const wrong: string[] = []; let two = 0, metal = 0;
@@ -85,5 +79,5 @@ const ROWS = Object.keys(GWOT_PALETTE) as GwotMat[];
   check(isLived(groups[a]) && !isLived(groups[b]) && stray === b, '5 when a lived tail is done the generator is in no lived group: a box laid after it is not a lived thing by accident, and is the stray the exporter refuses',
     `in the room: ${groups[a]} · after done(): ${groups[b]}`); }
 
-console.log(failed ? `=== ground pieces: ${failed} FAILED ===` : '=== ground pieces: ALL PASS ===');
-process.exit(failed ? 1 : 0);
+console.log(failed() ? `=== ground pieces: ${failed()} FAILED ===` : '=== ground pieces: ALL PASS ===');
+process.exit(failed() ? 1 : 0);

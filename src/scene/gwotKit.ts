@@ -28,7 +28,7 @@ const H = WORLD.ceilingY;
 
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SIM, GWOT_DARKER, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
 import { pieces } from './library';
-import { tonedAs, wordFor } from './stuff';
+import { tonedAs, wordFor, saidAs, stuffOfName } from './stuff';
 export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
@@ -125,10 +125,15 @@ export function gwotKit(host: GwotHost) {
    *  gwotSimOf knows a paint by its exact colour). Throws when the tone is ANOTHER row's colour (gravel × 0.7 is `oil`), which would be drawn as that row; a tone still near its own row is that row. */
   const toned = (m: GwotMat, k: number): Vec3 => {
     if (!(k > TONE.lo && k < TONE.hi)) throw new Error(`gwotKit: a tone of ${m} at ${k} is outside ${TONE.lo}‥${TONE.hi}`);
-    const p = GWOT_PALETTE[m], a: Vec3 = [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4];
-    for (const n of Object.keys(GWOT_PALETTE) as GwotMat[]) { const q = GWOT_PALETTE[n]; if (n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near) throw new Error(`gwotKit: ${m} × ${k} is the colour of ${n}: pick another k`); }
-    return tonedAs(p, a);
+    const a = toneOf(m, k), clash = (Object.keys(GWOT_PALETTE) as GwotMat[]).find(n => { const q = GWOT_PALETTE[n]; return n !== m && Math.abs(a[0] - q[0]) < TONE.near && Math.abs(a[1] - q[1]) < TONE.near && Math.abs(a[2] - q[2]) < TONE.near; });
+    if (clash) throw new Error(`gwotKit: ${m} × ${k} is the colour of ${clash}: pick another k`);
+    return tonedAs(GWOT_PALETTE[m], a);
   };
+  const toneOf = (m: GwotMat, k: number): Vec3 => { const p = GWOT_PALETTE[m]; return [Math.round(p[0] * k * 1e4) / 1e4, Math.round(p[1] * k * 1e4) / 1e4, Math.round(p[2] * k * 1e4) / 1e4]; };
+  /** … and the same FOR A SHAPE'S TRIM, in any paint a caller hands the piece (a drum's ribs in the drum's paint): k of the paint, the row's word kept.
+   *  `toned` refuses a tone that is another row's colour because a round reads a BOX by its colour; a trim is drawn only and says its own word, so no
+   *  round, blast or reader of colours meets it, and the piece need not send its caller back for another k */
+  const trimTone = (m: GwotMat, k: number): Vec3 => tonedAs(GWOT_PALETTE[m], toneOf(m, k));
   type CellFn = (i: number, j: number, W: number, Hc: number) => number;
   /** one face's markings, not yet cut to a box: resolved against the box's own half extents when the box is added (so a bitmap can never leave its face) */
   type Art = { f: MarkFace; res: MarkRes; pal: MarkPal[]; fn: CellFn; inset: number; max: number };
@@ -160,13 +165,14 @@ export function gwotKit(host: GwotHost) {
   };
   /** TRIM IN A PAINT OF ITS OWN (a log's pale end, a pipe's bore, the ties on a rolled blanket): the paint, its finish, and WHAT THAT PAINT IS MADE OF — a
    *  shape's piece is of its box's stuff unless it says another (scene/shapes.ts ShapePiece), and nothing reads a word off a colour */
-  const trimIn = (albedo: Vec3, rough: number) => ({ albedo, rough, ...wordFor(albedo) });
+  const trimIn = (albedo: Vec3, rough: number, metal?: boolean) => ({ albedo, rough, ...(metal ? { metal: true } : {}), ...wordFor(albedo) });
   /** A ROUND THING LYING, the one way the kit writes it: ONE box along the piece's local X, square across it, that says `round: 1` (scene/shapes.ts: a
    *  twelve-sided prism with shapes on, the plain box with them off — so what walks meets the box either way). `ends` = its two ends as trim in another paint
-   *  (a pipe's dark bore, a log's pale grain). Its middle is `y` over the floor. Hands back its top, so a level lays snow or dust along it with `lay` */
-  const lying = (b: Put, lx: number, lz: number, y: number, len: number, r: number, m: Mat, ends?: { albedo: Vec3; rough: number }, inset = 0.9): BowedTop => {
-    const caps: ShapePiece[] = ends ? [-1, 1].map(s => ({ off: [s * (len / 2 + 0.003), 0, 0] as Vec3, h: [0.003, r * inset, r * inset] as Vec3, round: 1 as const, ...trimIn(ends.albedo, ends.rough) })) : [];
-    const shape: BoxShape = { round: 1, ...(caps.length ? { with: caps } : {}) };
+   *  (a pipe's dark bore, a log's pale grain); `more` = other trim it wears (a drum's ribs). Its middle is `y` over the floor. Hands back its top, so a
+   *  level lays snow or dust along it with `lay` */
+  const lying = (b: Put, lx: number, lz: number, y: number, len: number, r: number, m: Mat, ends?: { albedo: Vec3; rough: number; metal?: boolean }, inset = 0.9, more: ShapePiece[] = []): BowedTop => {
+    const caps: ShapePiece[] = ends ? [-1, 1].map(s => ({ off: [s * (len / 2 + 0.003), 0, 0] as Vec3, h: [0.003, r * inset, r * inset] as Vec3, round: 1 as const, ...trimIn(ends.albedo, ends.rough, ends.metal) })) : [];
+    const trim = [...caps, ...more], shape: BoxShape = { round: 1, ...(trim.length ? { with: trim } : {}) };
     b(lx, lz, y - r, y + r, len / 2, r, m, { shape });
     return { c: [lx, y, lz], h: [len / 2, r, r], shape };
   };
@@ -529,13 +535,24 @@ export function gwotKit(host: GwotHost) {
   };
 
   // ------------------------------------------------------- stores & cover ----
-  /** COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid */
+  /** A DRUM IS STEEL, WHATEVER IT IS PAINTED, and says so itself, the word and the finish together (scene/stuff.ts saidAs). To a round, a charge and a
+   *  blast it is metal in any row: a row that is something else to them (olive is an ammunition crate's wood) stands in a hair off, which the simulation
+   *  reads as metal and the eye as the row (gwotPalette.ts gwotAs). To the picture it is what the row says where the row is a coat or bare metal
+   *  already (the drum enamels, olive, rust, galvanised: `paint` is a coat, and says nothing of what is under it); in ANY OTHER row (a mud, a cloth,
+   *  a wood) it is that colour as a coat of enamel: `paint`, with a drum enamel's finish, never the row's stuff. So no level picks a drum's colour for
+   *  what a round does at it or how a hit on it looks */
+  const steelIn = (colour: GwotMat): Mat => {
+    const P = as(colour, 'metal'), word = stuffOfName(colour);
+    if (word === 'paint' || word === 'enamel' || GWOT_SIM[colour] === 'metal') return P;
+    const enamel = { rough: M.drumBlue.rough }; return { albedo: saidAs('paint', P.albedo, enamel), ...enamel };
+  };
+  /** COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid. Steel in any paint (`steelIn`) */
   const drum = (x: number, z: number, colour: GwotMat = 'drumBlue', yaw = 0) => {
     const b = piece(x, z, yaw), s = 0.29 * 0.93, rib = [{ mul: 0.62 } as MarkPal];
     const ribs = (f: MarkFace) => face(f, 'coarse', rib, (i, j, W, Hc) => j === Math.floor(Hc / 3) || j === Math.floor(2 * Hc / 3) ? 1 : 0, 0, 1);
     const sides = mk([...ribs('+x'), ...ribs('-x'), ...ribs('+z'), ...ribs('-z')]);
     const lid = mk([...face('+y', 'base', [{ mul: 0.55 } as MarkPal, palOf('tin')], (i, j, W, Hc) => Math.min(i, W - 1 - i, j, Hc - 1 - j) === 1 ? 1 : i === W - 6 && j === Hc - 6 ? 2 : 0, 0, 1), ...ribs('+x'), ...ribs('-x'), ...ribs('+z')]);
-    round(b, 0, 0, 0, 0.88, 0.29, M[colour], lid, sides);
+    round(b, 0, 0, 0, 0.88, 0.29, steelIn(colour), lid, sides);
   };
   /** a group of drums: n standing in a tight cluster from (x, z), colours dealt by position */
   const drums = (x: number, z: number, n = 3, yaw = 0) => {
@@ -543,11 +560,16 @@ export function gwotKit(host: GwotHost) {
     const spots: [number, number][] = [[0, 0], [0.64, 0.06], [0.3, 0.6], [-0.36, 0.56], [0.94, 0.62], [1.28, 0.04]];
     for (let k = 0; k < Math.min(n, spots.length); k++) { const p = at(spots[k][0], 0, spots[k][1]); drum(p[0], p[2], cols[mkHash(s, k, 1) % cols.length], h01(s, k, 2) * 0.7); }
   };
-  /** COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked */
+  /** COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked, 0.88 long along local X. Steel in any paint (`steelIn`). Hands back
+   *  its top, so a level lays snow or dust along it with `lay` */
   const drumDown = (x: number, z: number, yaw = 0, colour: GwotMat = 'rust') => {
-    const b = piece(x, z, yaw);
-    b(0, 0, 0.02, 0.58, 0.44, 0.27, M[colour], mk(face('+y', 'coarse', [{ mul: 0.62 }], (i, j, W) => i === Math.floor(W / 3) || i === Math.floor(2 * W / 3) ? 1 : 0)));
-    b(0, 0, 0.1, 0.5, 0.445, 0.29, M[colour]); for (const s of [-1, 1]) b(s * 0.25, 0.3, 0, 0.08, 0.08, 0.05, M.woodGrey);
+    const b = piece(x, z, yaw), P = steelIn(colour), r = 0.29, len = 0.88, say = wordFor(P.albedo);   // (its trim is made of what the drum is: a tone of the row would say the row's stuff)
+    // (ONE box that says its round, as a pipe and a log are: with shapes off it is the plain box 0.58 square on, and what walks meets the box either way.
+    // Its two ribs are rings of trim a finger proud of it, its ends a rim's width in: all drawn only, in the paint a shade down, bare where the paint is)
+    const ribs: ShapePiece[] = [-1, 1].map(s => ({ off: [s * len / 6, 0, 0] as Vec3, h: [0.012, r + 0.008, r + 0.008] as Vec3, round: 1 as const, ...trimIn(trimTone(colour, 0.62), P.rough, P.metal), ...say }));
+    const top = lying(b, 0, 0, r, len, r, P, { albedo: saidAs(say.stuff ?? 'plain', trimTone(colour, 0.8)), rough: P.rough, metal: P.metal }, 0.88, ribs);
+    for (const s of [-1, 1]) b(s * 0.25, 0.26, 0, 0.08, 0.08, 0.09, M.woodGrey);   // (its chocks, wedged under the round: 8 cm up, the belly's flank is 20 cm out and they reach in to 17; with shapes off they stand 6 cm proud of the box's side)
+    return top;
   };
   /** PROP (bin): a JERRY CAN, 20 l — olive steel, or the yellow / blue plastic ones that carry everything */
   const jerryCan = (x: number, z: number, yaw = 0, colour: GwotMat = 'olive') => {

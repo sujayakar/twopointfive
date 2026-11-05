@@ -93,9 +93,11 @@ export function namePaint(row: readonly number[], name: string, finish?: { rough
  *  made of and its finish, said outright */
 export function sayPaint(row: readonly number[], name: string, said: { stuff?: BoxStuff } & Finish): void { PAINTS.set(row, record(name, said, said.stuff)); }
 /** ONE PAINT, ANOTHER THING: the same paint to the eye (its numbers, its name, its finish) said to be made of `stuff` where a kit paints two things with
- *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings. */
-export function saidAs(stuff: BoxStuff, paint: readonly number[]): [number, number, number] {
-  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', was, stuff)); return out;
+ *  it and the row can say only one: `saidAs('plain', C.asphalt)` is the lot under a level, whose paint's row says metal for the iron fittings.
+ *  `finish` = the thing's own, where its stuff has another than the paint's row (as `madeOf` takes one: the word and its finish are said together, so
+ *  nobody writes a roughness by hand beside the word): `saidAs('paint', dust, { rough: 0.5 })` is an enamel in the colour of dust. */
+export function saidAs(stuff: BoxStuff, paint: readonly number[], finish?: { rough: number; metal?: boolean }): [number, number, number] {
+  const was = PAINTS.get(paint), out: [number, number, number] = [paint[0], paint[1], paint[2]]; PAINTS.set(out, record(was?.name ?? '', finish ?? was, stuff)); return out;
 }
 /** A COLOUR WRITTEN AS NUMBERS SAYS ITS WORD BESIDE IT: `madeOf('cloth', [0.3, 0.1, 0.09])` is those numbers, known from here on as a paint made of
  *  that (and of that finish, if one is given), wherever they are handed: a box's albedo, a helper's argument, a constant a generator names once. */
