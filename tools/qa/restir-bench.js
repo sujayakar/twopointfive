@@ -77,7 +77,7 @@
       const rows = [];
       const m0 = await B.measure(n); rows.push({ off: 'none', lights: m0.lights, direct: m0.direct.mean, union: m0.union.mean });
       for (const grp of groups) { g.setGroup(grp, false); for (const l of E().lights.lights) if (l.group === grp) l.enabled = false; window.__runFrames(3, 1 / 60); const m = await B.measure(n); rows.push({ off: grp, lights: m.lights, direct: m.direct.mean, union: m.union.mean }); }
-      g.targets.forEach((t, i) => { t.on = was[i]; }); E().lights.lights.forEach((l, i) => { l.enabled = wasL[i]; }); window.__runFrames(3, 1 / 60);
+      g.targets.forEach((t, i) => { g.lightHome.stage(t, was[i], null); }); E().lights.lights.forEach((l, i) => { l.enabled = wasL[i]; }); window.__runFrames(3, 1 / 60);
       const pts = rows.map(r => [r.lights, r.direct]);
       const mx = pts.reduce((a, p) => a + p[0], 0) / pts.length, my = pts.reduce((a, p) => a + p[1], 0) / pts.length;
       const slope = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0) / Math.max(1e-9, pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0));

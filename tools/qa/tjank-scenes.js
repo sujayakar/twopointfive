@@ -58,7 +58,6 @@
     const t = panel11(); const es = S().emissiveScale;
     for (const al of t.areaLights || []) { al.light.enabled = f > 0.001; al.light.intensity = al.light.peakIntensity = al.base * f * es; }
     for (const bi of t.boxes) { const b = E().world.statics[bi]; b.emissive = [t.baseEmissive[0] * f, t.baseEmissive[1] * f, t.baseEmissive[2] * f]; }
-    t.factor = f;
   }
   let testTorch = null;
   const norm = v => { const l = Math.hypot(...v); return v.map(x => x / l); };
