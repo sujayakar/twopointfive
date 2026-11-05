@@ -153,6 +153,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'COATFINISH',
   // a thing of solid glass is dark and smooth (scene/stuff.ts SOLIDGLASS; a picture only): a recording made with it on draws its vehicles' windows near black and polished, one with no table for it in the grey their files give them
   'SOLIDGLASS',
+  // the paint on a wall goes with the wall (wallskin.ts WALLSKIN): picture only — a recording made with it on shows its holed walls' bands cut, one from before shows them whole
+  'WALLSKIN',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
   // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
@@ -294,6 +296,7 @@ import { MARKCUT, MARKSIT } from '../render/decals';
 import { PLAN_PACE } from '../render/planPace';
 import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
+import { WALLSKIN } from './wallskin';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
@@ -389,6 +392,8 @@ export function knobRegistry(): Record<string, object> {
     REACH_PACE,
     COATFINISH,
     SOLIDGLASS,
+    // the paint on a wall goes with the wall (wallskin.ts): the switch, what counts as a skin (how thick, how far off the face) and the caps on its standing pieces
+    WALLSKIN,
     CLEANRESTART,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,

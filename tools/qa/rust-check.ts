@@ -62,6 +62,7 @@
 //             only if it met everything the step does. The shared numbers are read out of both sources. `missions` and `both` hold it in play.
 //   slabs     a leaf off its hinges, in the air (rust/sim/src/slabs.rs against src/game/doorblast.ts stepSlab, each slab's numbers a row of the game's block):
 //             tools/qa/slab-ident.ts — leaves torn out of four levels from either face, hard and weakly, two at once, taken apart by gunfire, thrown at
+//   lights    the level's lights (rust/sim/src/lights.rs, no TypeScript beside it): tools/qa/lights-ident.ts holds the module's arithmetic to kept words and every row to its lamp, tools/qa/lights-lint.ts the one way in.
 //   items     what is thrown or dropped (rust/sim/src/items.rs against src/game/throwables.ts stepRow, each thing's numbers a row of the game's block),
 //             and the furniture's ray it needs (lines.rs ray_things against props.ts PropSystem.raycast, over the box world's copy of the furniture's
 //             parts): tools/qa/item-ident.ts — things of every kind thrown, dropped, set down on chairs, sent at panes and over made-up snow, taken in a
@@ -238,7 +239,8 @@ const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', 
  *  that deletes its twin. */
 const GONE: Record<string, string> = { 'the animator\'s layers': 'layers', 'the senses': 'senses' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'glass', 'senses', 'poses', 'layers', 'lights', 'doors', 'props', 'slabs', 'items', 'falls', 'state, dice', 'server', 'server as the page', 'missions', 'both'];
+GONE['the level\'s lights'] = 'lights';
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; const k = label.split(':')[0]; said[k] = (said[k] ?? true) && ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -401,6 +403,13 @@ let wordOwn = '', wordRust = '';
   if (!BREAK) { const p = child(['bun', 'run', 'tools/qa/layer-ident.ts'], { TPS_PROFILE: 'frozen' }), same = p.out.split('\n').find(l => /^- (PASS|FAIL|RECORDED|NOT HELD) — same:/.test(l));
     verdict(p.status === 0 && /^- PASS — same: every count and word is that of the recording/.test(same ?? ''), 'layers: on the frozen stand every layer\'s calls fold to the word the recording holds',
       same ? same.replace(/^- \w+( \w+)? — /, '') + (p.status === 0 ? '' : ` · exit ${p.status}`) : `the pin left nothing (exit ${p.status}): ${(p.err || p.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`); }
+}
+// ---- lights
+{
+  const r = child(['bun', 'run', 'tools/qa/lights-ident.ts'], { LIGHTS_BREAK: BREAK ? '1' : undefined }), lint = child(['bun', 'run', 'tools/qa/lights-lint.ts'], { LIGHTS_LINT_BREAK: BREAK ? '1' : undefined });
+  red['the level\'s lights'] = r.status === 1 && lint.status === 1;   // (lights-ident exits 0 on the red path when its made-up half did not move)
+  const row = r.out.split('\n').find(l => /^made-up: /.test(l)) ?? `the check left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`;
+  verdict(r.status === 0 && lint.status === 0, 'lights: the module\'s arithmetic folds to the kept words, every row is its lamp, and nothing writes the lights but the one way in', `${row}${lint.status === 0 ? '' : ' · lights-lint is red'}`);
 }
 // ---- doors
 {

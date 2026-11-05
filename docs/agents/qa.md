@@ -1033,3 +1033,10 @@ but synthetic writes still work.
   ways on the page's stand, old and not this change's: `gunhold-cover` (its round line) and `noshove` (the room keeper). Also mended on the way:
   `shotgun-probes.ts --identity` printed its word without the staging the probe reads it under (`COVER.backKeep` held off on the frozen stand), and
   `doortools-probes.ts tally` printed "room's men down N/0" (the count's statement had been swallowed by a comment on its line).
+- **Every GPU pass has a timer, or a row that says why not (2026-11-05).** `bun run tools/qa/passtimer-check.ts` (`probes.ts passtimer`, families `perf`
+  and `render`, a process of its own, under a second; the same on both stands: it reads text). It reads every `beginComputePass(` and
+  `beginRenderPass(` under `src/` (notes blanked as a compiler meets them, strings stepped over), and each must carry `timestampWrites` in its own descriptor or have its file
+  and label in `tools/qa/passtimer-exempt.ts` with a reason of some length; a row no pass uses is red too. Both the reader and the judge are tried on
+  lines of the check's own first. `PASSTIMER_BREAK=1` (the table read as empty) must fail. ADDING A PASS: hand its descriptor
+  `timestampWrites: ts?.('name')`, the engine's `ts` handed in (`docs/agents/render.md`, GPU timing), and say `timer.idle('name')` on a frame it rests; or add the row. Why it exists, and what was measured:
+  that same section.

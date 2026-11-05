@@ -4,20 +4,20 @@
 // the module's copy), or the state kept a second time on an object. (`enabled` is held by four names only: once the rows are what a question reads, a stray write is painted over by the next tick.)
 //   bun run tools/qa/lights-lint.ts        exit 0 clean · 1 a line breaks it, named
 //   LIGHTS_LINT_BREAK=1 …                  the red path: a made-up line is read too, and the run must FAIL
-// (tools/qa is not read: a check's line through `any` that writes a getter throws by itself, TypeError, in the run; a page's line, sloppy, is why tools/qa's .cjs were grepped by hand at the port.)
+// (Of tools/qa only what no compiler and no headless run sees is read: the page's scripts, .js, .cjs and .mjs. A check's .ts line through `any` that writes a getter throws by itself, TypeError, in its run.)
 // Not game code; nothing here runs the game.
 import { readdirSync, readFileSync, statSync } from 'fs';
 import { join, relative, resolve } from 'path';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.LIGHTS_LINT_BREAK === '1';
 /** a write of the fixture's state, by any name: never right outside the home */
-const STATE = /\.(disabledUntil|handOff|baseIntensity)\s*(=[^=>]|\+=|-=)|(\b(t|tg|target|lamp|panel|fixture|pool|had|mon)|\.target|\.mon|\.t)\.(on|broken|factor|stagger)\s*(=[^=>]|\+=|-=)/;
+const STATE = /\.(disabledUntil|handOff|baseIntensity)\s*(=[^=>]|\+=|-=)|(\b(t|tg|target|lamp|panel|fixture|pool|had|mon|lw|best)|\.target|\.mon|\.t)\.(on|broken|factor|stagger)\s*(=[^=>]|\+=|-=)/;
 /** a fixture's own lamp written from outside: `enabled` on `t.light`, `al.light`, `b.light`, a camera's cone */
 const LAMP = /\b(t\.light|al\.light|b\.light|c\.cone|cone)\.enabled\s*=[^=]/;
 /** a second copy of the state on a Game */
-const COPY = /\b(g|game|this|G)\.(blackout|breakerFixT)\s*=[^=>]/;
+const COPY = /\b(g|game|this|G)\.(blackout|breakerFixT)\s*=[^=>]|\.\.\.g\.blackout\b|\binitialOn\b/;
 /** what may: the home itself, the kit picture's lamp (the host's still picture, followed by `feed`), and the words after a `//` are no code */
 const HOME = new Set(['src/sim/lightshome.ts']);
-const LAMP_OK = new Set(['src/host/kitView.ts', 'src/game/lighting.ts', 'src/game/doze.ts']);   // (lighting.ts: a lamp hung after the level was stood, which has no row. doze.ts: faceLight's screens put out around one question, until the question takes a mask of what it leaves out)
+const LAMP_OK = new Set(['src/host/kitView.ts', 'src/game/lighting.ts', 'src/game/doze.ts', 'tools/qa/tjank-scenes.js']);   // (tjank-scenes.js: renders only, no game step follows it. lighting.ts: a lamp hung after the level was stood, which has no row. doze.ts: faceLight's screens put out around one question, until the question takes a mask of what it leaves out)
 const out: string[] = [];
 function read(file: string, text: string): void {
   text.split('\n').forEach((raw, i) => {
@@ -32,8 +32,10 @@ function walk(dir: string): void {
     const file = relative(ROOT, p); if (HOME.has(file) || e === 'built.ts') continue; read(file, readFileSync(p, 'utf8')); }
 }
 walk(join(ROOT, 'src'));
+for (const e of readdirSync(join(ROOT, 'tools/qa'))) if (/\.(js|cjs|mjs)$/.test(e)) read(`tools/qa/${e}`, readFileSync(join(ROOT, 'tools/qa', e), 'utf8'));
 if (BREAK) read('(the red path)', 't.broken = true;\nc.target.disabledUntil = 3;\nt.light.enabled = false;\n');
 if (!/get on\(\): boolean/.test(readFileSync(join(ROOT, 'src/sim/lightshome.ts'), 'utf8')) || !/export type LightTarget = Fixture/.test(readFileSync(join(ROOT, 'src/game/game.ts'), 'utf8'))) out.push('game.ts LightTarget is no longer sim/lightshome.ts Fixture, whose state is getters: the compiler stops holding it');
 for (const o of out) console.log(`- FAIL — ${o}`);
+if (!out.length) console.log('- PASS — lights-lint: nothing writes the lights but the one way in');
 console.log(out.length ? `=== lights-lint: FAIL, ${out.length} line(s)${BREAK ? ' (the red path: as it should)' : ''} ===` : '=== lights-lint: PASS — nothing writes the lights but the one way in ===');
 process.exit(out.length ? 1 : 0);
