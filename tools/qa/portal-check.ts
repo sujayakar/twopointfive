@@ -18,11 +18,11 @@ import { resolve } from 'node:path';
 import { ROOT } from './headless.ts';
 type V3 = [number, number, number];
 export async function portalCheck(): Promise<boolean> {
-  const BRK = process.env.PORTAL_BREAK === '1'; let all = true;
+  const BRK = process.env.PORTAL_BREAK === '1'; let all = true;   // (PORTALDEEP_BREAK=1 and PORTALRIMS_BREAK=1, read where the light's sum is mirrored below: the light is its whole rectangle, as it was, or has a rim at both ends whatever stands there, and the line on the hole's sides or on its rims must fail)
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== portal: daylight counted once${BRK ? ' (the bounce keeps the sky it leaves by: must fail)' : ''} ===`);
   const { rayBox, BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`), { planOpenings, openAreas, openingLooks, LOOK_OPENINGS } = await import(`${ROOT}/src/scene/openings.ts`);
-  const { LIGHT_PORTAL, packLight } = await import(`${ROOT}/src/render/lights.ts`);
+  const { LIGHT_PORTAL, packLight, portalHoleBits } = await import(`${ROOT}/src/render/lights.ts`);
   const { WAY } = await import(`${ROOT}/src/scene/wayThrough.ts`);
   const text = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
 
@@ -33,7 +33,8 @@ export async function portalCheck(): Promise<boolean> {
   box([16, 1.5, 11], [T, 1.5, 1]); box([16, 1.5, 13.95], [T, 1.5, 1.05]); box([16, 2.525, 12.45], [T, 0.475, 0.45]);     // the east wall either side of the doorway, and its lintel
   box([13, 3.1, 12.5], [3 + T, 0.1, 2.5 + T]);                                          // the roof
   box([19, 1.5, 12.5], [T, 1.5, 3.5]);                                                  // the wall across the yard
-  const plan = planOpenings(B) as { pos: V3; mid: V3; dir: V3; half: [number, number]; full: number }[], o = plan[0];
+  type Hole = { pos: V3; mid: V3; dir: V3; half: [number, number]; full: number; deep: number; rims: number };
+  const plan = planOpenings(B) as Hole[]; let o = plan[0];   // (`o`: the opening every helper below asks of; the line on a long strip of glass puts its own in its place for a while)
   const ZEN = 0.12, HOR = 1.0;   // (a sky much brighter low down than overhead: a light that took one radiance for every direction would be far off)
   // how near the portal's must be to the reference: a fifth at any point, and a third a hand from the sill, where a point of the sum stands for a patch as wide as the distance
   const within = (name: string, k: number) => name.includes('sill') ? k > 0.66 && k < 1.34 : k > 0.8 && k < 1.2;
@@ -60,26 +61,38 @@ export async function portalCheck(): Promise<boolean> {
   // each with its own ray (the hemisphere above has a few dozen rays in a doorway seen from across the room, which is no measure to hold a fifth against)
   const skyBy = (P: V3, N: V3) => { const Po: V3 = [P[0] + N[0] * 0.01, P[1] + N[1] * 0.01, P[2] + N[2] * 0.01], n = 48; let s = 0;
     for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const q = sub([o.mid[0] + o.dir[2] * ((i + 0.5) / n * 2 - 1) * o.half[0], o.mid[1] + ((j + 0.5) / n * 2 - 1) * o.half[1], o.mid[2] - o.dir[0] * ((i + 0.5) / n * 2 - 1) * o.half[0]], Po), d2 = dot(q, q), ql = Math.sqrt(d2), qd: V3 = [q[0] / ql, q[1] / ql, q[2] / ql];
-      const w = outside(qd[1]) * Math.max(-dot(qd, o.dir), 0) * Math.max(dot(N, qd), 0) / d2; if (w > 0 && !hits(Po, qd, qd[1] > 0 ? 200 : ql - 0.03 + past(Po, qd, ql))) s += w; }
+      const sill = qd[1] < 0 && ((Po[1] - 0.02) / -qd[1] - ql) * -dot(qd, o.dir) < o.deep;   // (a way down that meets the floor in the wall's own depth: the threshold, which is floor the bounce lights and not the ground a portal stands for)
+      const w = outside(qd[1]) * Math.max(-dot(qd, o.dir), 0) * Math.max(dot(N, qd), 0) / d2; if (w > 0 && !sill && !hits(Po, qd, qd[1] > 0 ? 200 : ql - 0.03 + past(Po, qd, ql))) s += w; }
     return s * 4 * o.half[0] * o.half[1] / (n * n); };
   // the portal's, as the shaders have it. common.wgsl portalPoint: what one point of the opening sends, per m² and per unit of the sky's hue (the distance
   // squared held off by portalSoft, a point's own patch over 2π); portalAt: the lattice of PORTAL_POINTS points; portalFlux: their mean
-  const SUN = { intensity: 3, dir: [0.3, -0.8, 0.52], color: [1, 1, 1] }, ref = openingLooks([ZEN, ZEN, ZEN], [HOR, HOR, HOR], 1, SUN)[0], groundOf = 2 * ref - (LOOK_OPENINGS.up * ZEN + (1 - LOOK_OPENINGS.up) * HOR), area = 4 * o.half[0] * o.half[1], radius = Math.hypot(o.half[0], o.half[1]), POINTS = 8, soft = o.half[0] * o.half[1] * 2 / (Math.PI * POINTS);
-  const fr = (x: number) => x - Math.floor(x), along: V3 = [o.dir[2], 0, -o.dir[0]];
+  const SUN = { intensity: 3, dir: [0.3, -0.8, 0.52], color: [1, 1, 1] }, ref = openingLooks([ZEN, ZEN, ZEN], [HOR, HOR, HOR], 1, SUN)[0], groundOf = 2 * ref - (LOOK_OPENINGS.up * ZEN + (1 - LOOK_OPENINGS.up) * HOR), POINTS = 8;
+  let area = 0, radius = 0, soft = 0, along: V3 = [0, 0, 0];   // (the opening's own figures, taken again whenever another opening is asked of)
+  const use = (h: Hole) => { o = h; area = 4 * o.half[0] * o.half[1]; radius = Math.hypot(o.half[0], o.half[1]); soft = o.half[0] * o.half[1] * 2 / (Math.PI * POINTS); along = [o.dir[2], 0, -o.dir[0]]; }; use(o);
+  const fr = (x: number) => x - Math.floor(x);
   const latt = (i: number, u: number, v: number): [number, number] => [fr((i + 0.5) * 0.618034 + 0.5 + u) * 2 - 1, fr((i + 0.5) / POINTS + v) * 2 - 1];
   const to = (d: V3, a: [number, number]): V3 => [d[0] + along[0] * a[0] * o.half[0], d[1] + a[1] * o.half[1], d[2] + along[2] * a[0] * o.half[0]];
-  const point = (d: V3, N: V3) => { const d2 = dot(d, d), dl = Math.sqrt(d2), L: V3 = [d[0] / dl, d[1] / dl, d[2] / dl]; return outside(L[1]) * Math.max(-dot(L, o.dir), 0) * Math.max(dot(N, L), 0) / (d2 + soft); };
-  const flux = (P: V3, N: V3) => { const d = sub(o.mid, P); let s = 0; for (let i = 0; i < POINTS; i++) s += point(to(d, latt(i, 0, 0)), N); return s / POINTS; };
-  // evalLightDirect's figure (U: the whole rectangle, nothing in the way) and shadowSample's rays over a lattice of pixels, two rays a pixel as restir
+  const point = (d: V3, N: V3, sf = soft) => { const d2 = dot(d, d), dl = Math.sqrt(d2), L: V3 = [d[0] / dl, d[1] / dl, d[2] / dl]; return outside(L[1]) * Math.max(-dot(L, o.dir), 0) * Math.max(dot(N, L), 0) / (d2 + sf); };
+  // common.wgsl portalSeen: the part of the rectangle a point sees the outside through, past the hole's far rim `deep` further out (the middle and the half
+  // sizes, in half widths and half heights). `whole` = the light as it was until 11-04, all of its rectangle (PORTALDEEP_BREAK=1 asks every line of it)
+  let whole = process.env.PORTALDEEP_BREAK === '1', walled = process.env.PORTALRIMS_BREAK === '1';   // (walled: a far rim at both ends, whatever the opening says: PORTALRIMS_BREAK=1, and the line on the rims must fail)
+  const RIM = [0.025, 0.05];   // common.wgsl PORTAL_RIM: the far rim is taken half a sample of the walls wider than the rectangle
+  const seen = (d: V3): [number, number, number, number] => { const pz = -dot(d, o.dir); if (whole || !(o.deep > 0) || !(pz > 1e-4)) return [0, 0, 1, 1];
+    const px = d[2] * o.dir[0] - d[0] * o.dir[2], py = -d[1], k = pz / (pz + o.deep), hw = o.half[0], hh = o.half[1];
+    const rim = walled ? 3 : o.rims, fx = (hw + RIM[0]) * k, fy = (hh + RIM[1]) * k, lx = rim & 1 ? Math.max(px * (1 - k) - fx, -hw) : -hw, hx = rim & 2 ? Math.min(px * (1 - k) + fx, hw) : hw, ly = Math.max(py * (1 - k) - fy, -hh), hy = Math.min(py * (1 - k) + fy, hh);
+    return hx <= lx || hy <= ly ? [0, 0, 0, 0] : [(lx + hx) / 2 / hw, (ly + hy) / 2 / hh, (hx - lx) / 2 / hw, (hy - ly) / 2 / hh]; };
+  const into = (see: [number, number, number, number], a: [number, number]): [number, number] => [see[0] + a[0] * see[2], see[1] + a[1] * see[3]];
+  const flux = (P: V3, N: V3) => { const d = sub(o.mid, P), see = seen(d), part = see[2] * see[3]; if (!(part > 0)) return 0; let s = 0; for (let i = 0; i < POINTS; i++) s += point(to(d, into(see, latt(i, 0, 0))), N, soft * part); return s * part / POINTS; };
+  // evalLightDirect's figure (U: what of the rectangle shows the outside, nothing in the way) and shadowSample's rays over a lattice of pixels, two rays a pixel as restir
   // has them: each ray aimed at one of the points moved round by its two numbers, picked by what the point sends, run on PORTAL_SKY past it; yes or no.
   //   E = what a pixel of the picture gets · plain = what a pass whose ray stops short gets (evalLightRaw's area light as bright as what is open: the
   //   cache, a bounce's hit off the screen, the meter) · vis = the share of the rays that reach sky
   const portal = (P: V3, N: V3, openShare = 1) => { const d = sub(o.mid, P), dist = len(d); if (dist > range) return { E: 0, U: 0, plain: 0, vis: 0 };
-    const Po: V3 = [P[0] + N[0] * 0.01, P[1] + N[1] * 0.01, P[2] + N[2] * 0.01], U = area * win(dist) * flux(P, N), toC = sub(o.mid, Po); let yes = 0, all = 0; const n = 24;
-    if (U > 0) for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) for (let k = 0; k < 2; k++) { const ur = fr((i + 0.5) / n + k * 0.618034), ua = fr((j + 0.37) / n + k * 0.7548777), w: number[] = []; let sum = 0;
-      for (let q = 0; q < POINTS; q++) { w[q] = point(to(toC, latt(q, ur, ua)), N); sum += w[q]; }
+    const Po: V3 = [P[0] + N[0] * 0.01, P[1] + N[1] * 0.01, P[2] + N[2] * 0.01], U = area * win(dist) * flux(P, N), toC = sub(o.mid, Po), see = seen(toC), part = see[2] * see[3]; let yes = 0, all = 0; const n = 48;   // (48 by 48 pixels: at 24 a point that 4 % of the rays reach sky from read 0.78 × one way and 0.97 × the other by the count alone)
+    if (U > 0 && part > 0) for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) for (let k = 0; k < 2; k++) { const ur = fr((i + 0.5) / n + k * 0.618034), ua = fr((j + 0.37) / n + k * 0.7548777), w: number[] = []; let sum = 0;
+      for (let q = 0; q < POINTS; q++) { w[q] = point(to(toC, into(see, latt(q, ur, ua))), N, soft * part); sum += w[q]; }
       all++; if (sum <= 0) continue; let x = fr(ur * 61 + ua * 37 + 0.5) * sum, sel = POINTS - 1; for (let q = 0; q < POINTS; q++) { x -= w[q]; if (x < 0) { sel = q; break; } }
-      const q = to(toC, latt(sel, ur, ua)), ql = len(q), qd: V3 = [q[0] / ql, q[1] / ql, q[2] / ql]; if (dot(qd, N) > 0 && !hits(Po, qd, ql - 0.03 + past(Po, qd, ql))) yes++; }
+      const q = to(toC, into(see, latt(sel, ur, ua))), ql = len(q), qd: V3 = [q[0] / ql, q[1] / ql, q[2] / ql]; if (dot(qd, N) > 0 && !hits(Po, qd, ql - 0.03 + past(Po, qd, ql))) yes++; }
     const L: V3 = [d[0] / dist, d[1] / dist, d[2] / dist], ce = -dot(L, o.dir), c0 = Math.max(dot(N, L), 0);
     const plain = ce > 0 && c0 > 0 && !hits(Po, L, dist - 0.02) ? ref * area * openShare * (win(dist) / Math.max(dist * dist, radius * radius)) * ce * c0 : 0;
     return { E: all ? U * yes / all : 0, U, plain, vis: all ? yes / all : 0 }; };
@@ -125,10 +138,44 @@ export async function portalCheck(): Promise<boolean> {
       'what stands outside is in the light: the wall across the yard takes sky from the portal, as it took it from the bounce, and with the yard open the portal is the bounce\'s share again',
       `2.5 m in: ${(withWall.vis * 100).toFixed(0)} % of the portal's rays reach sky with the yard wall, ${(without.vis * 100).toFixed(0)} % without · portal ${withWall.E.toFixed(4)} and ${without.E.toFixed(4)} · the yard open: ` + free.map(r => `${r.name} ${(r.p.E / r.b.whole).toFixed(2)} ×`).join(', ')); }
 
+  // 4z. THE HOLE'S OWN SIDES ARE IN THE LIGHT, NOT IN A RAY'S LUCK (common.wgsl portalSeen, 11-04; the maintainer on his GPU: "boiling in the sun on the
+  // ground through the door, especially along left edge"). A doorway's daylight fans over the floor, and the fan's sides are the wall the doorway is
+  // cut in: from a point off to one side most of the rectangle looks onto the hole's far side. Until then the light was the whole rectangle and each ray
+  // found that out by chance. With the yard open, at points across the fan: the share of a pixel's rays that reach the sky, as it is and as it was, and
+  // the light itself both ways (the same light: what the rays lost is now out of the sum they are weighed against).
+  { const wallB = B.pop(), at: { name: string; P: V3; N: V3 }[] = [{ name: 'floor 1 m in and 1.5 m to the side', P: [15, 0, 13.95], N: [0, 1, 0] }, { name: 'floor 1 m in and 2 m to the side', P: [15, 0, 14.45], N: [0, 1, 0] }, { name: 'floor 2.5 m in and 1.5 m to the side', P: [13.5, 0, 14], N: [0, 1, 0] }, { name: 'floor 2.5 m in and 2.4 m to the side', P: [13.5, 0, 14.85], N: [0, 1, 0] }, { name: 'a side wall at 1.2 m', P: [14, 1.2, 15 - T], N: [0, 0, -1] }, { name: 'floor 2.5 m in, square on', P: [13.5, 0, 12.45], N: [0, 1, 0] }];
+    const now = at.map(a => ({ ...portal(a.P, a.N), truth: skyBy(a.P, a.N) })); const keep = whole; whole = true; const was = at.map(a => portal(a.P, a.N)); whole = keep; B.push(wallB);
+    const lit = now.map((r, i) => r.truth > 2e-4 || was[i].E > 2e-4), ok = now.every((r, i) => !lit[i] || (r.vis > 0.93 && r.E > 0.8 * r.truth && r.E < 1.2 * r.truth)), lost = was.filter((r, i) => lit[i] && r.vis < 0.75).length, same = now.every((r, i) => !lit[i] || Math.abs(r.E - was[i].E) < 0.2 * Math.max(r.E, was[i].E));
+    verdict(o.deep > 0.2 && o.deep < 0.4 && lit.filter(Boolean).length >= 5 && ok && lost >= 3 && same,
+      'the hole\'s own sides are in the light and not in a ray\'s luck: across the fan of a doorway\'s daylight nearly every ray of a pixel now reaches the sky, where a third to most of them died on the wall the doorway is cut in; the light is the same light, the sum over the doorway to a fifth',
+      `the hole is ${o.deep.toFixed(2)} m deep · ` + at.map((a, i) => `${a.name}: ${(100 * now[i].vis).toFixed(0)} % of its rays reach sky (it was ${(100 * was[i].vis).toFixed(0)} %), the light ${now[i].E.toFixed(4)} (it was ${was[i].E.toFixed(4)}; the sum over the doorway ${now[i].truth.toFixed(4)})`).join(' · ')); }
+
+  // 4y. A SIDE WITH NO WALL BEHIND IT HAS NO RIM (scene/openings.ts Opening.rims, common.wgsl portalRims). The hand on which a long opening goes on: a
+  // strip of glass 4 m long is two lights side by side, each with the wall at one end and its neighbour at the other, and from the floor under it each
+  // is seen whole on its neighbour's side. In each of the room's four walls the rim must be at the end the shader calls it (toward −(dir.z, 0, −dir.x)
+  // for bit 1); in two of them each light against the sum over its own rectangle with a ray a point, and against the same light with a rim at both
+  // ends.
+  { const door = o, keep = walled, room = B.splice(0), rows: { name: string; now: number; truth: number; vis: number; walled: number }[] = [], ends: string[] = []; let endsOk = true;
+    for (const wall of ['east', 'west', 'north', 'south'] as const) {
+      B.length = 0; box([13, -0.1, 12.5], [9, 0.1, 6]); box([13, 3.1, 12.5], [3 + T, 0.1, 2.5 + T]);   // the same room, the strip of glass from 1 to 2 m up in one wall, 4 m long
+      if (wall !== 'west') box([10, 1.5, 12.5], [T, 1.5, 2.5 + T]); if (wall !== 'east') box([16, 1.5, 12.5], [T, 1.5, 2.5 + T]); if (wall !== 'south') box([13, 1.5, 10], [3 + T, 1.5, T]); if (wall !== 'north') box([13, 1.5, 15], [3 + T, 1.5, T]);
+      if (wall === 'east' || wall === 'west') { const x = wall === 'east' ? 16 : 10; box([x, 1.5, 10.25], [T, 1.5, 0.25]); box([x, 1.5, 14.75], [T, 1.5, 0.25]); box([x, 0.5, 12.5], [T, 0.5, 2]); box([x, 2.5, 12.5], [T, 0.5, 2]); }
+      else { const z = wall === 'north' ? 15 : 10; box([10.5, 1.5, z], [0.5, 1.5, T]); box([15.5, 1.5, z], [0.5, 1.5, T]); box([13, 0.5, z], [2, 0.5, T]); box([13, 2.5, z], [2, 0.5, T]); }
+      const tOf = (h: Hole) => h.mid[0] * h.dir[2] - h.mid[2] * h.dir[0], parts = (planOpenings(B) as Hole[]).sort((a, b) => tOf(a) - tOf(b));   // (in order along the shader's first axis)
+      const good = parts.length === 2 && parts[0].rims === 1 && parts[1].rims === 2 && parts.every(h => h.deep > 0.2 && h.deep < 0.4); endsOk &&= good; ends.push(`${wall} ${parts.map(h => h.rims).join(' and ')}`);
+      if (good && (wall === 'east' || wall === 'north')) for (const [i, h] of parts.entries()) { use(h); for (const t of [-0.75, 0, 0.75]) { const P: V3 = [h.mid[0] + h.dir[0] + along[0] * t, 0, h.mid[2] + h.dir[2] + along[2] * t], N: V3 = [0, 1, 0], now = portal(P, N), truth = skyBy(P, N); walled = true; const w = portal(P, N); walled = keep;
+        rows.push({ name: `${wall} part ${i + 1}, ${t} m along`, now: now.E, truth, vis: now.vis, walled: w.E }); } } }
+    B.length = 0; B.push(...room); use(door);
+    const sumNow = rows.reduce((s, r) => s + r.now, 0), sumWalled = rows.reduce((s, r) => s + r.walled, 0);
+    const ok = door.rims === 3 && endsOk && rows.length === 12 && rows.every(r => r.truth > 0 && r.now > 0.8 * r.truth && r.now < 1.2 * r.truth && r.vis > 0.9) && sumWalled < 0.95 * sumNow;
+    verdict(ok, 'a side with no wall behind it has no rim: each half of a long strip of glass is seen whole on its neighbour\'s side, in whichever wall it is; each is the sum over its own rectangle to a fifth, and a rim at both ends would cost it light',
+      `the doorway's rims ${door.rims} (3: a wall at both ends) · a strip's two lights in order along the wall (1 and 2: each its own end): ${ends.join(', ')} · ` + rows.map(r => `${r.name}: ${r.now.toFixed(4)} (${(r.now / r.truth).toFixed(2)} × the sum, ${(100 * r.vis).toFixed(0)} % of its rays reach sky; with a rim on its open end ${r.walled.toFixed(4)})`).join(' · ') + ` · all of them: ${(sumWalled / sumNow).toFixed(2)} × with a rim at both ends`); }
+
   // 4a. THE GROUND OUTSIDE is in the light too (common.wgsl portalGround, portalOutside): under the horizon a point looks out on the ground, as bright as
   // the record says (twice its reference less the low sky). A wall across the room looks out level, on the ground and on next to no sky: with the sky
   // alone it would be all but dark by day. Against the same sum over the doorway with a ray a point, each run as far as the shader's (portalPast)
-  { const wallB = B.pop(), at: { name: string; P: V3; N: V3 }[] = [{ name: 'the far wall at 1.5 m', P: [10 + T, 1.5, 12.45], N: [1, 0, 0] }, { name: 'the ceiling 2 m in', P: [14, 3 - 0.001, 12.45], N: [0, -1, 0] }, { name: 'floor 2.5 m in', P: [13.5, 0, 12.45], N: [0, 1, 0] }];
+  { const wallB = B.pop(), at: { name: string; P: V3; N: V3 }[] = [{ name: 'the far wall at 1.5 m', P: [10 + T, 1.5, 12.45], N: [1, 0, 0] }, { name: 'the ceiling 2 m in', P: [14, 3 - 0.001, 12.45], N: [0, -1, 0] }, { name: 'floor 2.5 m in', P: [13.5, 0, 12.45], N: [0, 1, 0] },
+      { name: 'the ceiling 1 m in', P: [14.83, 3 - 0.001, 12.45], N: [0, -1, 0] }, { name: 'the ceiling 0.5 m in', P: [15.33, 3 - 0.001, 12.45], N: [0, -1, 0] }, { name: 'a shelf\'s underside at 1.2 m, 0.6 m in', P: [15.23, 1.2, 12.45], N: [0, -1, 0] }];
     const sky = at.map(a => portal(a.P, a.N).E); G = groundOf; const both = at.map(a => ({ E: portal(a.P, a.N).E, truth: skyBy(a.P, a.N) })); G = 0; B.push(wallB);
     const ok = both.every((r, i) => r.truth > 0 && r.E > 0.8 * r.truth && r.E < 1.2 * r.truth) && both[0].E > 1.3 * sky[0] && both[1].E > 0 && sky[1] === 0 && both[2].E < 1.15 * sky[2];
     verdict(groundOf > 0 && ok, 'the ground outside is in the portal\'s light: a wall that looks out level gets half as much again as the sky gave it with the yard open, a ceiling gets it where the sky gave nothing, a floor gets none of it, and each is the sum over the doorway to a fifth',
@@ -168,15 +215,23 @@ export async function portalCheck(): Promise<boolean> {
         && dc.includes('var d = (li.pos + T * (cos(a) * r) + B * (sin(a) * r)) - Po; var past = 0.0;')],   // (… and any other light's ray is written as it was, to the last rounding)
       ['restir weighs a portal by its whole rectangle from frame to frame', common.includes('fn lightPower(li: Light) -> f32 { return luminance(li.color) / select(1.0, li.cosInner, lightPortal(li)); }') && ['restir', 'compact/restir'].every(f => text(`src/render/shaders/${f}.wgsl`).includes('let kNow = lightPower(wgLights[curT[c]]); let kPrev = lightPower(lp);'))],
       ['a blocker past the opening hands on the opening\'s own size', count(dc, 'select(li.radius * dOcc / max(lightDist - dOcc, 0.05), li.radius, dOcc >= lightDist)') === 2],
-      ['the direct estimators take the whole rectangle, and no other pass does', ['restir', 'direct', 'sharp_direct', 'compact/restir', 'compact/direct', 'compact/sharp_direct'].every(f => { const t = text(`src/render/shaders/${f}.wgsl`); return count(t, 'evalLightDirect(') >= 2 && !/\bevalLight\(/.test(t); }) && count(fg + gs + cf + rc + gc + text('src/render/shaders/probe.wgsl'), 'evalLightDirect(') === 0],
+      ['the direct estimators take the rectangle itself and trace through it, and no other pass does', ['restir', 'direct', 'sharp_direct', 'compact/restir', 'compact/direct', 'compact/sharp_direct'].every(f => { const t = text(`src/render/shaders/${f}.wgsl`); return count(t, 'evalLightDirect(') >= 2 && !/\bevalLight\(/.test(t); }) && count(fg + gs + cf + rc + gc + text('src/render/shaders/probe.wgsl'), 'evalLightDirect(') === 0],
       ['the bounce keeps what a portal does not send, and walks the list from its first portal', common.includes('for (var i = u32(frame.placeCfg.y) - 1u; i < frame.numLights; i++) {') && common.includes('keep = 1.0 - lightWindow(distance(O, lights[i].pos), lights[i].range); break;') && common.includes('fn skyThrough(O: vec3f, dir: vec3f) -> vec3f { return skyRadiance(dir) * skyKeep(O, dir); }')],
       ['every diffuse ray of the gather asks which sky is its own', count(fg, 'L = skyThrough(Po, dir);') === 3 && count(fg, 'L = skyRadiance(dir);') === 1 && count(gs, 'L = skyThrough(Po, dir);') === 1 && cf.includes('if (gatherRay) { L = skyThrough(ro, dir); } else { L = skyRadiance(dir); }')],
       ['and so does the cache, at the probe the light is for: the cascades carry how much of a direction\'s light is the sky\'s, and the dice bake takes a portal\'s own sum out of it, by the share that is open and never more than the sky that came; the place field is handed back what left the face it reads, through the steady bounce\'s ring too', rc.includes('let sky = skyRadiance(dir); return vec4f(r.xyz + sky, luminance(sky));') && rc.includes('return vec4f(r.xyz + up.xyz, up.w); }')
         && rc.includes('outBuf[probeLin * nOut + o] = packRad(sum * 0.25);') && rc.includes('outBuf[probeLin * DD + d] = packRad(L);') && count(rc, 'skyThrough(') === 0 && count(rc, 'skyKeep(') === 0
         && rc.includes('if (!lightPortal(li) || !lightReaches(i, P)) { continue; }') && rc.includes('let k0 = portalArea(li) * li.cosInner * lightWindow(dist, li.range);') && rc.includes('for (var f = 0; f < 7; f++) { let p = k0 * F[f]; V[f] += hue * p; T[f] += p; }')
-        && common.includes('let k = luminance(skyRadiance(r.xyz)) * r.w / f32(PORTAL_POINTS);') && common.includes('s[0] += k * max(r.x, 0.0); s[1] += k * max(-r.x, 0.0); s[2] += k * max(r.y, 0.0); s[3] += k * max(-r.y, 0.0); s[4] += k * max(r.z, 0.0); s[5] += k * max(-r.z, 0.0); s[6] += k; }')
+        && common.includes('let k = luminance(skyRadiance(r.xyz)) * r.w * part / f32(PORTAL_POINTS);') && common.includes('s[0] += k * max(r.x, 0.0); s[1] += k * max(-r.x, 0.0); s[2] += k * max(r.y, 0.0); s[3] += k * max(-r.y, 0.0); s[4] += k * max(r.z, 0.0); s[5] += k * max(-r.z, 0.0); s[6] += k; }')
         && rc.includes('gave = luminance(floorLight - E2);') && rc.includes('mix(was.w, gave, k)') && text('src/render/shaders/place_field.wgsl').includes('vec3f(0.2126, 0.7152, 0.0722)) + tap.w;') && text('src/render/shaders/dice_ring.wgsl').includes('textureStore(outDice, gid, sum / max(got, 1.0));')
         && rc.includes('E0 = max(E0 - V[0] * min(1.0, S[0] / max(T[0], 1e-9)), vec3f(0.0));') && rc.includes('mean = max(mean - V[6] * min(1.0, S[6] / max(T[6], 1e-9)), vec3f(0.0));')],
+      ['the hole\'s depth rides the kind word where a lamp\'s marking does, and the light is the part of its rectangle a point sees past the hole\'s far rim: one function, asked by the light\'s sum, the cache\'s and the ray\'s aim',
+        portalHoleBits(0.29) === 290 << 11 && portalHoleBits(0.29, 3) === ((290 << 11) | (3 << 21)) && portalHoleBits(undefined, 1) === 1 << 21 && portalHoleBits(99, 0) === 1023 << 11 && (portalHoleBits(99, 3) & (255 | 256 | 512 | 1024 | LIGHT_PORTAL | (1 << 25) | (1 << 26) | (1 << 27))) === 0
+        && common.includes('fn portalDeep(li: Light) -> f32 { return f32((li.kind >> 11u) & 0x3ffu) * 0.001; }') && common.includes('fn portalRims(li: Light) -> vec2<bool> { return (vec2u(li.kind >> 21u) & vec2u(1u, 2u)) != vec2u(0u); }') && common.includes('fn lightMarkRef(li: Light) -> i32 { return select(-1, i32((li.kind >> 11u) & 0x3fffu), (li.kind & 1024u) != 0u); }')
+        && common.includes('  let half = vec2f(li.cosOuter, hh); let p = vec2f(d.z * li.dir.x - d.x * li.dir.z, -d.y);') && common.includes('  let k = pz / (pz + deep);\n  let rim = portalRims(li);\n  let far = (half + PORTAL_RIM) * k;\n  let lo = select(-half, max(p * (1.0 - k) - far, -half), vec2<bool>(rim.x, true)); let hi = select(half, min(p * (1.0 - k) + far, half), vec2<bool>(rim.y, true));\n  if (hi.x <= lo.x || hi.y <= lo.y) { return vec4f(0.0); }\n  return vec4f((lo + hi) * 0.5, (hi - lo) * 0.5) / vec4f(half, half);')
+        && common.includes(`const PORTAL_RIM = vec2f(${LOOK_OPENINGS.ds * 0.5}, ${LOOK_OPENINGS.dy * 0.5});`) && RIM[0] === LOOK_OPENINGS.ds * 0.5 && RIM[1] === LOOK_OPENINGS.dy * 0.5
+        && count(common, 'let see = portalSeen(li, d, hh); let part = see.z * see.w;') === 2 && count(dc, 'let see = portalSeen(li, toC, hh); let part = see.z * see.w;') === 1 && count(common + dc + rc, 'portalSeen(') === 4 && count(common, 'let a = see.xy + portalAt(i, vec2f(0.0)) * see.zw;') === 2 && count(dc, 'see.xy + portalAt(') === 2
+        && common.includes('return s * (part / f32(PORTAL_POINTS));') && count(common + dc, 'portalSoft(li, hh) * part') === 3
+        && text('src/render/lights.ts').includes('(l.portal ? LIGHT_PORTAL | portalHoleBits(l.portal.deep, l.portal.rims) : 0) | (!l.portal && l.markRef !== undefined') && text('src/engine.ts').includes('l.portal!.deep = this.settings.portalHole ? o.deep : 0; l.portal!.rims = o.rims;') && text('src/main.ts').includes("if (q.get('holedepth') === '0') engine.settings.portalHole = false;") && /VISIT_FLAGS = \[[^\]]*'holedepth'/.test(text('src/ui/replaykey.ts')) && /LOOK_PAGE_WORDS[^\n]*'holedepth'/.test(text('src/scene/look.ts')) && text('src/scene/openings.ts').includes('half: [hw, hh], deep: holeDeep, rims: ((lowS0 ? first : last) ? 1 : 0) | ((lowS0 ? last : first) ? 2 : 0),') && text('src/scene/openings.ts').includes('const lowS0 = r.axis === 1 ? r.sign > 0 : r.sign < 0;')],
       ['the table still knows where an opening looks', LOOK_OPENINGS.up > 0 && LOOK_OPENINGS.up < 1 && (BoxFlag.Glass | 0) !== 0] ];
     verdict(pins.every(p => p[1]), 'the light\'s record and the shaders say the same rule', pins.map(p => `${p[1] ? 'ok' : 'NOT'}: ${p[0]}`).join(' · ')); }
   console.log(all ? 'portal: all passed' : 'portal: FAILED');
