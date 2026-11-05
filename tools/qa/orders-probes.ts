@@ -359,7 +359,7 @@ export const ordersStack = guarded(async () => {
     verdict(drift.every(x => x < 0.1) && sets.length === 1 && words.every((s: string) => s === `stacked · ${doorWords(d)}`) && Math.abs(d.angle - leaf0) < 0.05, `${name}: they hold the stack (six seconds, the door untouched), "set." called once, the HUD says "stacked"`,
       `drift ${drift.map(f2).join(' / ')} m · set. ${sets.map(s => `${s.who} @${f2(s.t - t0)} s`).join(', ') || 'never'} · "${words[0]}" · leaf angle ${f2(d.angle)}${leaf0 ? ` (${f2(leaf0)} as the hold began)` : ''}`);
     if (k === 1) {   // the cursor on a stacked man is the man (he stands inside the door's pick radius), on the doorway still the door
-      const chest: number[] = [b1.char.pos[0], 1.2, b1.char.pos[2]];
+      const chest: number[] = [b1.char.posX, 1.2, b1.char.posZ];
       R.openX(chest, 0.4); const tM = O.menu?.target; R.esc();
       R.openX(d.frameCentre, 0.4); const tD = O.menu?.target; R.esc();
       verdict(tM?.kind === 'none' && tM.man === b1 && tD?.kind === 'door' && tD.door === d, `${name}: the cursor on a man stacked beside the door addresses the man; on the doorway, the door`, `on Blue One (${f2(dist(b1.char.pos, d.frameCentre))} m from the doorway's centre): ${tM?.kind} ${tM?.man?.callsign ?? ''} · on the doorway: ${tD?.kind} ${tD?.door?.def.name ?? ''}`);
@@ -384,13 +384,13 @@ export const ordersFallIn = guarded(async () => {
     `${logLine(l)} · from ${far.map(f2).join(' / ')} m to ${near.map(f2).join(' / ')} m of Sam in ${f2(g.time - t0 - 1)} s · apart ${f2(dist(b1.char.pos, b2.char.pos))} m`);
   // turning on the spot: the men do not shuffle round him
   const here = men.map((m: any) => [...m.char.pos]);
-  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; R.aim([sam.pos[0] + Math.sin(a) * 4, 0, sam.pos[2] + Math.cos(a) * 4]); R.step(30); }
+  for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; R.aim([sam.posX + Math.sin(a) * 4, 0, sam.posZ + Math.cos(a) * 4]); R.step(30); }
   const shuffled = men.map((m: any, i: number) => dist(m.char.pos, here[i]));
   verdict(shuffled.every(d => d < 0.15), 'Sam looks all the way round on the spot: the men stay where they stood', `moved ${shuffled.map(f2).join(' / ')} m while his reticle went round the compass`);
   // the walk: the aisle → the west door → across the break room → out of the north door → along the corridor
   const Wd = R.door('breakroom_w'), Nd = R.door('breakroom_n');
   const legs: number[][] = [[26.6, 0, 17.6], [29.6, 0, 17.6], [30.75, 0, 13.6], [30.75, 0, 11.0], [24, 0, 11.0]];
-  const path: number[][] = [[sam.pos[0], 0, sam.pos[2]]]; let noPath = '';
+  const path: number[][] = [[sam.posX, 0, sam.posZ]]; let noPath = '';
   for (const p of legs) { const leg = g.col.nav.findPath(path[path.length - 1], p); if (!leg) { noPath = `no nav path to ${at(p)}`; break; } for (const q of leg) path.push([q[0], 0, q[2]]); path.push(p); }
   let seg = 0, t = 0; const SPEED = 1.55; let walked = 0;
   const worst = [0, 0], sum = [0, 0]; let frames = 0, far4 = 0; const nAngle: number[] = []; let nOpenedAt = NaN, firstManNorthAt = NaN;
@@ -405,8 +405,8 @@ export const ordersFallIn = guarded(async () => {
     walked += dist(sam.pos, lastAt); lastAt = [...sam.pos];
     while (seg < path.length - 1 && dist(sam.pos, path[seg + 1]) < 0.15) seg++;
     if (seg >= path.length - 1) { R.input.keys.delete('KeyW'); return; }
-    const b = path[seg + 1], dx = b[0] - sam.pos[0], dz = b[2] - sam.pos[2], l = Math.hypot(dx, dz) || 1; const fwd = [dx / l, 0, dz / l], right = [-fwd[2], 0, fwd[0]];
-    g.seat.cam.planarBasis = () => ({ fwd, right }); R.input.keys.add('KeyW'); R.aim([sam.pos[0] + fwd[0] * 4, 0, sam.pos[2] + fwd[2] * 4]);
+    const b = path[seg + 1], dx = b[0] - sam.posX, dz = b[2] - sam.posZ, l = Math.hypot(dx, dz) || 1; const fwd = [dx / l, 0, dz / l], right = [-fwd[2], 0, fwd[0]];
+    g.seat.cam.planarBasis = () => ({ fwd, right }); R.input.keys.add('KeyW'); R.aim([sam.posX + fwd[0] * 4, 0, sam.posZ + fwd[2] * 4]);
   } : () => {
     if (seg >= path.length - 1) return;
     let stepLeft = SPEED * DT;
@@ -416,9 +416,9 @@ export const ordersFallIn = guarded(async () => {
   };
   const tWalk = g.time; let nAtSamCross = NaN;
   while (seg < path.length - 1 && g.time - tWalk < 90) {
-    const zBefore = sam.pos[2]; R.step();
-    if (zBefore >= 12.2 && sam.pos[2] < 12.2) nAtSamCross = Nd.angle;
-    men.forEach((m: any, i: number) => { const d = dist(m.char.pos, sam.pos); worst[i] = Math.max(worst[i], d); sum[i] += d; if (d > 4) far4++; if (isNaN(firstManNorthAt) && m.char.pos[2] < 12.0) firstManNorthAt = g.time - tWalk; });
+    const zBefore = sam.posZ; R.step();
+    if (zBefore >= 12.2 && sam.posZ < 12.2) nAtSamCross = Nd.angle;
+    men.forEach((m: any, i: number) => { const d = dist(m.char.pos, sam.pos); worst[i] = Math.max(worst[i], d); sum[i] += d; if (d > 4) far4++; if (isNaN(firstManNorthAt) && m.char.posZ < 12.0) firstManNorthAt = g.time - tWalk; });
     if (isNaN(nOpenedAt) && Math.abs(Nd.angle) > 0.3) nOpenedAt = g.time - tWalk;
     frames++;
   }
@@ -611,7 +611,7 @@ export const ordersEdges = guarded(async () => {
   verdict(keysN.join(' | ') === '3 fall in | 4 hold position' && keysF.join(' | ') === '1 move there | 2 cover that way | 3 fall in | 4 hold position', 'the digits are the same on every target: fall in is 3 and hold is 4 with or without a target\'s own orders above them', `on Sam: ${keysN.join(' | ')} · on the floor: ${keysF.join(' | ')}`);
   verdict(blurGone && selRow === 1 && selDown < 0 && O.menu === null && spaceN === 1 && spaceGave?.order === 'cover', 'the page losing focus takes the list down with no order; Space under the open list gives the highlighted row (wheel to row 2: cover) and does not arm the Space selector', `after the blur: menu gone, no order ${blurGone} · highlight ${selRow} · Space → ${logLine(spaceGave)} (${spaceN} order) · selector down-time ${selDown}`);
   // (e) Sam in the line of a man's gun: the muzzle comes down until he is clear
-  const p1 = b1.char.pos; const through: number[] = [p1[0] + (sam.pos[0] - p1[0]) * 3, 0, p1[2] + (sam.pos[2] - p1[2]) * 3];
+  const p1 = b1.char.pos; const through: number[] = [p1[0] + (sam.posX - p1[0]) * 3, 0, p1[2] + (sam.posZ - p1[2]) * 3];
   O.give('cover', { kind: 'floor', at: through }, 0); R.step(60); const upIn = b1.script?.upper, stIn = b1.script?.stance, lowIn = O.of(b1)?.low;
   const samWas = [...sam.pos]; g.teleportPlayer([samWas[0] + 2.2, 0, samWas[2] - 1.5]); R.step(60); const upOut = b1.script?.upper, lowOut = O.of(b1)?.low;
   verdict(lowIn === true && upIn === 'none' && stIn === 'lowReady' && lowOut === false && upOut === 'aim', 'cover ordered straight through Sam: the man faces it with his muzzle down, and brings the gun up once Sam has stepped out of the line', `Sam in the line: upper ${upIn}, stance ${stIn} · Sam clear: upper ${upOut}`);
@@ -619,7 +619,7 @@ export const ordersEdges = guarded(async () => {
   // (f) fall in, then Sam walks out and doubles straight back along his own trail: the file gets out of his way
   O.give('fallIn', { kind: 'none', at: [...sam.pos] }, 'all'); R.until(() => men.every((m: any) => O.of(m)?.arrived), 10); R.step(30);
   const out = g.col.nav.findPath(sam.pos, AISLE_FAR) ?? [];
-  const route: number[][] = [[sam.pos[0], 0, sam.pos[2]], ...out.map((q: number[]) => [q[0], 0, q[2]]), AISLE_FAR];
+  const route: number[][] = [[sam.posX, 0, sam.posZ], ...out.map((q: number[]) => [q[0], 0, q[2]]), AISLE_FAR];
   const back = [...route].reverse().slice(1); const whole = [...route, ...back.slice(0, Math.max(1, back.length - 2))];
   let seg = 0, t = 0; const SPEED = 1.55; let turnedAt = -1; let minBack = Infinity, minOut = Infinity;
   R.pre = () => { if (seg >= whole.length - 1) return; let left = SPEED * DT;
@@ -632,11 +632,11 @@ export const ordersEdges = guarded(async () => {
   // (g) the file closes up when the man ahead is taken off it
   const first = men.find((m: any) => O.of(m)?.follow === 0), second = men.find((m: any) => m !== first);
   const dSecond0 = dist(second.char.pos, sam.pos); O.give('hold', { kind: 'none', at: [...first.char.pos], man: first }); R.step(1);
-  const rank = O.of(second)?.follow; g.teleportPlayer([sam.pos[0] - 3, 0, sam.pos[2]]); R.step(60 * 5); const dSecond1 = dist(second.char.pos, sam.pos);
+  const rank = O.of(second)?.follow; g.teleportPlayer([sam.posX - 3, 0, sam.posZ]); R.step(60 * 5); const dSecond1 = dist(second.char.pos, sam.pos);
   verdict(rank === 0 && O.of(first)?.order === 'hold' && dSecond1 < 2.0, 'the first man in the file is told to hold: the man behind him takes the first place behind Sam', `${second.callsign}'s place in the file ${rank} · he was ${f2(dSecond0)} m from Sam, after Sam moved on ${f2(dSecond1)} m`);
   // (g2) Sam leans 1.4 m out and comes back: nobody follows the lean
   O.give('fallIn', { kind: 'none', at: [...sam.pos] }, 'all'); R.until(() => men.every((m: any) => O.of(m)?.arrived), 10); R.step(60);
-  { const o = [...sam.pos]; const away = men.reduce((a: number[], m: any) => [a[0] + o[0] - m.char.pos[0], 0, a[2] + o[2] - m.char.pos[2]], [0, 0, 0]); const L = Math.hypot(away[0], away[2]) || 1; const u = [away[0] / L, 0, away[2] / L];   // straight away from the men
+  { const o = [...sam.pos]; const away = men.reduce((a: number[], m: any) => [a[0] + o[0] - m.char.posX, 0, a[2] + o[2] - m.char.posZ], [0, 0, 0]); const L = Math.hypot(away[0], away[2]) || 1; const u = [away[0] / L, 0, away[2] / L];   // straight away from the men
     const along = (q: number[]) => (q[0] - o[0]) * u[0] + (q[2] - o[2]) * u[2]; const before = men.map((m: any) => along(m.char.pos)); let x = 0, dirn = 1, peak = -Infinity;
     R.pre = () => { if (dirn === 0) return; x += dirn * 1.55 * DT; if (x >= 1.4) dirn = -1; if (x <= 0 && dirn < 0) { x = 0; dirn = 0; } g.teleportPlayer([o[0] + u[0] * x, 0, o[2] + u[2] * x]); };
     for (let i = 0; i < 60 * 6; i++) { R.step(); peak = Math.max(peak, ...men.map((m: any) => along(m.char.pos))); } R.pre = null;
@@ -673,7 +673,7 @@ export const ordersEdges = guarded(async () => {
   // (i) one man ordered off a breach stack that is still forming: the other does not walk on to the door alone
   const R2 = await rig(11); const { game: g2, O: O2, NB: NB2 } = R2; const [c1, c2] = O2.squad();
   R2.step(60); R2.key('KeyF'); R2.step(60); const st = NB2.state;
-  const chest: number[] = [c1.char.pos[0], 1.2, c1.char.pos[2]]; R2.quick(chest); const l2 = lastOrder(O2); const c2At = [...c2.char.pos]; R2.step(60 * 4);
+  const chest: number[] = [c1.char.posX, 1.2, c1.char.posZ]; R2.quick(chest); const l2 = lastOrder(O2); const c2At = [...c2.char.pos]; R2.step(60 * 4);
   const c2Moved = dist(c2.char.pos, c2At);
   verdict(st === 'stacking' && l2?.order === 'fallIn' && l2.who.length === 1 && NB2.state === 'staged' && c2Moved < 0.6 && c2.speed < 0.1, 'the pair is on its way to the breach stack and one man is ordered to fall in: the breach is off and the other man stops where he is', `night breach ${st} → ${NB2.state} · ${logLine(l2)} · ${c2.callsign} moved ${f2(c2Moved)} m in the next 4 s, "${O2.statusOf(c2)}"`);
   return done();

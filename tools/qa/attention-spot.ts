@@ -75,7 +75,7 @@ export async function attentionSpot(seeds: number[] = [1, 2, 3], trace = false):
     { const Q = g.quiet, d = Q.deal; A.deal = `the deal: start ${d.start + 1}, ${Q.thing} in ${Q.spot?.holder}, ${Q.spot?.place}, on shift: ${Q.patrol.join(', ')}; ${mate ? 'the partner up' : 'alone'}`; }   // (its own words but the start's name: no compass word in a printed line)
     const ops: any[] = g.quiet.ops, staff: any[] = g.guards.filter((x: any) => !ops.includes(x)), K = staff.find((x: any) => g.level.routes[x.routeI]?.name === 'yard');
     if (!K) { A.why = 'no man on the route `yard` in this deal'; return A; } A.man = K.callsign;
-    const pos = (): number[] => g.player.char.pos, bone = (c: any, b: string, h: number): P3 => c.bones?.[b] ?? [c.pos[0], c.pos[1] + h, c.pos[2]];
+    const pos = (): number[] => g.player.char.pos, bone = (c: any, b: string, h: number): P3 => c.bones?.[b] ?? [c.posX, c.posY + h, c.posZ];
     let t = 0, goal: P3 | null = null, phase = 'in', lastLine = '', hadHold = false;
     const say = (s: string) => { const l = `${t.toFixed(1).padStart(6)}  ${s}`; A.trace.push(l); };
     const C = A.cross;
@@ -113,12 +113,12 @@ export async function attentionSpot(seeds: number[] = [1, 2, 3], trace = false):
       if (!go([GATE_IN, MOUTH, HIDE], 14)) { A.why = `Sam never reached the gap (at ${at(pos())})`; return; }
       say(`Sam in the gap at ${at(pos())}, light ${f2(g.player.visibility)}; ${where()}; a line to him: ${canSee(g, K).visible}`);
       // ---- the lure, as the man walks away along the bottom wall
-      const along = (x: number) => K.state === 'patrol' && K.char.pos[2] > 19.3 && K.char.pos[0] >= x;
+      const along = (x: number) => K.state === 'patrol' && K.char.posZ > 19.3 && K.char.posX >= x;
       if (lure !== 'whistle') {
         if (!until(() => along(15.5), 90)) { A.why = `${K.callsign} never came along the bottom wall (${where()})`; return; }
         g.events.push(lure === 'ring' ? { kind: 'prop', pos: [LURE[0], 0, LURE[2]], time: g.time, loud: false, level: RING.clackNoise, who: 0, lure: true } : { kind: 'prop', pos: [LURE[0], 0, LURE[2]], time: g.time, loud: false, level: KNOCK, who: 0 });
       } else {
-        if (!until(() => K.state === 'patrol' && K.char.pos[2] > 18.3 && K.char.pos[0] > 11.5, 90)) { A.why = `${K.callsign} never came along the bottom wall (${where()})`; return; }
+        if (!until(() => K.state === 'patrol' && K.char.posZ > 18.3 && K.char.posX > 11.5, 90)) { A.why = `${K.callsign} never came along the bottom wall (${where()})`; return; }
         if (!go([MOUTH, OUT, LURE], 12)) { A.why = `Sam never reached the corner (at ${at(pos())})`; return; }
         if (!tryWhistle(g)) { A.why = 'the whistle was refused'; return; }
       }

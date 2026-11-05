@@ -77,7 +77,7 @@ const drawOld = (g: any, gd: any) => { const out: any[] = []; laserBoxesOld(g, g
 const same = (a: any, b: any) => JSON.stringify(a) === JSON.stringify(b);
 /** lay a man's laser by hand: a muzzle half a metre off his chest and a unit bore (what the draw reads; nothing is stepped in between) */
 const WAYS: number[][] = []; for (let k = 0; k < 8; k++) WAYS.push([Math.sin(k * Math.PI / 4 + 0.2), 0, Math.cos(k * Math.PI / 4 + 0.2)]);
-const lay = (gd: any, dir: number[]) => { const c = gd.char, ch = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]]; c.muzzle = [ch[0] + dir[0] * 0.5, ch[1], ch[2] + dir[2] * 0.5]; c.gunDir = [...dir]; };
+const lay = (gd: any, dir: number[]) => { const c = gd.char, ch = c.bones.chest ?? [c.posX, 1.2, c.posZ]; c.muzzle = [ch[0] + dir[0] * 0.5, ch[1], ch[2] + dir[2] * 0.5]; c.gunDir = [...dir]; };
 /** the picture: the tube's (as the shader has it once the goggles are down) or the bare eye's — written straight, for a draw asked between frames */
 const picture = (g: any, tube: boolean) => { g.player.nv = tube; g.player.nvAmount = BREAK ? 1 : tube ? 1 : 0; };
 const mates = (g: any): any[] => g.orders.squad().filter((x: any) => x.state !== 'dead');
@@ -140,7 +140,7 @@ async function play(id: string, nv: boolean, irOn: boolean): Promise<Play | null
   const shots0 = foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0);
   const frame = () => { step(); R.frames++;
     H.eat(JSON.stringify(digestGame(g, true)));
-    for (const x of g.guards) H.eat(`${x.callsign}:${x.state}:${x.awareness.toFixed(5)}:${x.flashlight?.enabled ? 1 : 0}:${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)}:${(x.irradiance ?? 0).toFixed(5)}:${(x.visibility ?? 0).toFixed(5)}|`);
+    for (const x of g.guards) H.eat(`${x.callsign}:${x.state}:${x.awareness.toFixed(5)}:${x.flashlight?.enabled ? 1 : 0}:${x.char.posX.toFixed(4)},${x.char.posZ.toFixed(4)},${x.char.aimYaw.toFixed(4)}:${(x.irradiance ?? 0).toFixed(5)}:${(x.visibility ?? 0).toFixed(5)}|`);
     for (const c of g.devices?.cameras ?? []) { H.eat(`cam:${c.seen.toFixed(5)}:${c.state}|`); R.camSeen = Math.max(R.camSeen, c.seen); }
     const L = g.engine.lights.lights; R.lightsMin = Math.min(R.lightsMin, L.length); R.lightsMax = Math.max(R.lightsMax, L.length);
     for (const l of L) H.eat(`${l.name}:${l.kind}:${l.enabled ? 1 : 0}:${l.intensity.toFixed(4)}:${l.pos[0].toFixed(3)},${l.pos[1].toFixed(3)},${l.pos[2].toFixed(3)}|`);
@@ -189,7 +189,7 @@ export const irUnseen = guarded(async () => {
       const foe = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead'), cams: any[] = g.devices?.cameras ?? [];
       if (what === 'foe' ? !foe : !cams.length) { reset(); if (!id) Math.random = dice; return null; }
       const H = fnv(); let peak = 0, ir = 0, frames = 0, who = '';
-      if (what === 'foe') { who = foe.callsign; await quiet(() => g.teleportPlayer([foe.char.pos[0] + Math.sin(foe.char.bodyYaw) * 3.5, 0, foe.char.pos[2] + Math.cos(foe.char.bodyYaw) * 3.5])); }
+      if (what === 'foe') { who = foe.callsign; await quiet(() => g.teleportPlayer([foe.char.posX + Math.sin(foe.char.bodyYaw) * 3.5, 0, foe.char.posZ + Math.cos(foe.char.bodyYaw) * 3.5])); }
       else { const c = cams[0]; who = c.def.name ?? 'camera 1'; const p = c.def.pos, y = c.def.yaw; await quiet(() => g.teleportPlayer([p[0] + Math.sin(y) * 3, 0, p[2] + Math.cos(y) * 3])); }
       for (let f = 0; f < 60 * 8; f++) { await quiet(lit); frames++; if (what === 'foe' ? samIr(g).length : g.dynBoxes.some(isIr)) ir++;
         for (const c of cams) { H.eat(`cam:${c.seen.toFixed(6)}:${c.state}|`); if (what === 'cam') peak = Math.max(peak, c.seen); }
@@ -261,7 +261,7 @@ export const irTeam = guarded(async () => {
   F.verdict(foes > 0 && foeOn === foes, 'an enemy is not a teammate: the hunting man\'s laser still reads on (it is drawn only where the sandbox gives him one)', `${foeOn} of ${foes} hostile men asked while hunting`);
   // a picture only: the same scripted stretch with it on and off is the same game
   { const run = async (off: boolean) => { const S: any = await quiet(() => stage(IDS[0], 1)); const { g, step } = S; const O = g.orders; IR.teamOff = off; const H = fnv(); g.player.nv = true;
-      const frame = () => { step(); H.eat(JSON.stringify(digestGame(g, true))); for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)}`); };
+      const frame = () => { step(); H.eat(JSON.stringify(digestGame(g, true))); for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.posX.toFixed(4)},${x.char.posZ.toFixed(4)},${x.char.aimYaw.toFixed(4)}`); };
       const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); for (let f = 0; f < 120; f++) frame();
       let fc: any = null; for (const e of doorsOf(S)) { fc = e.door.frameCentre; if (!(await quiet(() => O.give('stack', O.targetAt(fc), 'all')))) break; } for (let f = 0; f < 60 * 8; f++) frame();
       await quiet(() => O.give('openClear', O.targetAt(fc), 'all')); for (let f = 0; f < 60 * 20; f++) frame();
@@ -289,7 +289,7 @@ export async function digestLines(): Promise<string[]> {
   for (const id of IDS) {
     const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IR.on = false; teamDrawn(); if (ILM) ILM.IRLIGHT.on = false; if (CUM) CUM.CUES.on = false; if ('litMan' in GDM.LIGHTS) GDM.LIGHTS.litMan = false; if ('wallOff' in GDM.LIGHTS) GDM.LIGHTS.wallOff = false; if ('sights' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.sights = false; if ('workOut' in O.knobs) O.knobs.workOut = false; if ('hallFile' in O.knobs) O.knobs.hallFile = false; if ('secondFloor' in O.knobs) O.knobs.secondFloor = false; if ('cleared' in O.knobs) Object.assign(O.knobs, { cleared: false, knownFace: false, ownDoor: false }); if ('roundCap' in O.knobs) O.knobs.roundCap = 0; if ('fileHold' in O.knobs) O.knobs.fileHold = false; if ('asideClear' in O.knobs) O.knobs.asideClear = false; if ('fileQueue' in O.knobs) O.knobs.fileQueue = false; if ('propRound' in O.knobs) O.knobs.propRound = false; if ('backEnd' in O.knobs) O.knobs.backEnd = false; if ('inWay' in O.knobs) O.knobs.inWay = false; if ('walkTries' in O.knobs) O.knobs.walkTries = false; if ('sameWay' in O.knobs) O.knobs.sameWay = false; if ('trailDoors' in O.knobs) O.knobs.trailDoors = false; if ('buddy' in DTM.DOORTOOLS) DTM.DOORTOOLS.buddy = false; if ('otherDoorM' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).otherDoorM = 0; if ('ownCan' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).ownCan = false; if ('behindSam' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).behindSam = false; if ('tossMate' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).tossMate = false; if ('haltBack' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).haltBack = false; if ('thrHand' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).thrHand = false; for (const k of ['thrNoCan', 'thrFragHold', 'fragHold', 'thrDoorsLeaf']) if (k in DTM.DOORTOOLS) (DTM.DOORTOOLS as any)[k] = false; if (BDM) BDM.BUDDY.on = false; if (SLM) SLM.SILENT.on = false; if (DWM) DWM.DOORMANNERS.on = false; if (RWM) { RWM.REARWATCH.on = false; RWM.REARWATCH.room = false; } if ('fallBackIn' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.fallBackIn = false; if ('coverKeep' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.coverKeep = false; if ('doorShots' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.doorShots = false; const H = fnv(); let lasers = 0;   // (litMan, sights: later default-on rules, off where the checkout has them so this stays the base's digest; stage() puts them back)
     const frame = () => { step(); H.eat(JSON.stringify(digestGame(g, true)));
-      for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)}`);
+      for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.posX.toFixed(4)},${x.char.posZ.toFixed(4)},${x.char.aimYaw.toFixed(4)}`);
       for (const b of g.dynBoxes) { H.eat(`${b.c[0].toFixed(4)},${b.c[1].toFixed(4)},${b.c[2].toFixed(4)};${b.h[0].toFixed(4)},${b.h[1].toFixed(4)},${b.h[2].toFixed(4)};${b.flags};${b.emissive ? b.emissive.map((e: number) => e.toFixed(3)).join(',') : ''}|`); if (isRed(b)) lasers++; } };
     const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); for (let f = 0; f < 120; f++) frame();
     let fc: any = null; for (const e of doorsOf(S)) { fc = e.door.frameCentre; if (!(await quiet(() => O.give('stack', O.targetAt(fc), 'all')))) break; }

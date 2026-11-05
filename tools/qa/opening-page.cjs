@@ -15,7 +15,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&${q}`);
     const R = await page.evaluate(async () => { await window.__ready; const g = window.__game, s = g.level.playerSpawn;
-      return { fatal: document.getElementById('fatal')?.textContent || '', men: g.guards.filter(x => !x.unit && x.team === 'guard').map(x => ({ who: x.callsign, at: [+x.char.pos[0].toFixed(1), +x.char.pos[2].toFixed(1)], wp: x.wp, d: +Math.hypot(x.char.pos[0] - s[0], x.char.pos[2] - s[2]).toFixed(1) })) }; });
+      return { fatal: document.getElementById('fatal')?.textContent || '', men: g.guards.filter(x => !x.unit && x.team === 'guard').map(x => ({ who: x.callsign, at: [+x.char.posX.toFixed(1), +x.char.posZ.toFixed(1)], wp: x.wp, d: +Math.hypot(x.char.posX - s[0], x.char.posZ - s[2]).toFixed(1) })) }; });
     const near = R.men.filter(m => m.d < 8), ok = !R.fatal && !errors.length && R.men.length > 0 && (wantNear ? near.length > 0 : near.length === 0);
     if (!ok) failed = true;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${R.men.map(m => `${m.who} (${m.at[0]}, ${m.at[1]}) ${m.d} m from the spawn, next waypoint ${m.wp}`).join(' · ') || 'no shift'}${R.fatal ? ' · FATAL ' + R.fatal : ''}${errors.length ? ' · errors: ' + errors.slice(0, 3).join(' | ') : ''}`);

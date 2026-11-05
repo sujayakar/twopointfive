@@ -174,7 +174,7 @@ function bend(gd: Guard, d: Door, A: { k: number }, a: Vec3, b: Vec3): boolean {
   const rest = gd.path.slice(A.k); while (rest.length > 1 && flat(rest[0], b) < 0.7) rest.shift();   // (the walk's own first step beyond the frame is this one)
   gd.path = [a, b, ...rest]; gd.pathI = 0; return true;
 }
-const halt = (gd: Guard, dt: number) => { const c = gd.char; gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0]; gd.lastPos = [c.pos[0], c.pos[1], c.pos[2]]; gd.stuckT = 0; };
+const halt = (gd: Guard, dt: number) => { const c = gd.char; gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0]; gd.lastPos = [c.posX, c.posY, c.posZ]; gd.stuckT = 0; };
 
 /** THE GATE (the first thing followPath and the scripted strafe ask, after their own): true = this file has his feet this frame — he is on his way to a
  *  leaf's handle, or working it, or keeping out of the swing of one a man of his is working. `strafe`: his body is somebody else's to turn (the script's
@@ -199,12 +199,12 @@ function gate(g: Game, gd: Guard, dt: number, speed: number, strafe: boolean): b
     if (fresh(g, theirs) && theirs.door === d) {   // a man of his has that leaf in hand: he keeps out of where it is coming round
       if (!pull || !wantsHand(g, gd, d, c.pos)) return false;
       const S = g.doors.swingOf(d), F = frameOf(d), pad = K.body + 0.1;
-      if (S.sweeps(c.pos[0], c.pos[2], pad)) {   // (in it already: a step straight back off the door, where there is floor)
-        const bx = c.pos[0] + F.nx * side * 0.3, bz = c.pos[2] + F.nz * side * 0.3;
-        if (!g.col.nav.isBlocked(bx, bz)) { const v = Math.min(speed, 1.3); c.vel = [F.nx * side * v, 0, F.nz * side * v]; c.pos = [c.pos[0] + c.vel[0] * dt, c.pos[1], c.pos[2] + c.vel[2] * dt]; gd.speed = v; gd.lastPos = [c.pos[0], c.pos[1], c.pos[2]]; gd.stuckT = 0; HANDLE_STATS.held++; return true; }
+      if (S.sweeps(c.posX, c.posZ, pad)) {   // (in it already: a step straight back off the door, where there is floor)
+        const bx = c.posX + F.nx * side * 0.3, bz = c.posZ + F.nz * side * 0.3;
+        if (!g.col.nav.isBlocked(bx, bz)) { const v = Math.min(speed, 1.3); c.vel = [F.nx * side * v, 0, F.nz * side * v]; c.pos = [c.posX + c.velX * dt, c.posY, c.posZ + c.velZ * dt]; gd.speed = v; gd.lastPos = [c.posX, c.posY, c.posZ]; gd.stuckT = 0; HANDLE_STATS.held++; return true; }
         halt(gd, dt); HANDLE_STATS.held++; return true; }
-      const wp = gd.path[gd.pathI], dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2], L = Math.hypot(dx, dz) || 1;
-      if (S.sweeps(c.pos[0] + dx / L * 0.25, c.pos[2] + dz / L * 0.25, pad)) { halt(gd, dt); HANDLE_STATS.held++; return true; }
+      const wp = gd.path[gd.pathI], dx = wp[0] - c.posX, dz = wp[2] - c.posZ, L = Math.hypot(dx, dz) || 1;
+      if (S.sweeps(c.posX + dx / L * 0.25, c.posZ + dz / L * 0.25, pad)) { halt(gd, dt); HANDLE_STATS.held++; return true; }
       return false; }
     const R = rested.get(gd); if (R && R.door === d && g.time < R.until) return false;
     if (pull ? !K.pull : !K.push) return false;
@@ -226,7 +226,7 @@ function gate(g: Game, gd: Guard, dt: number, speed: number, strafe: boolean): b
     const way = wayTo(g, c.pos, H.pos);   // (the floor's own way there: round a corner of the frame, a pillar by the jamb)
     if (!way) { const near = walled(g, c.pos, H.pos); if (!near) HANDLE_STATS.noSpot++; rested.set(gd, { door: d, until: g.time + (near ? 0.5 : K.rest) }); return false; }   // (no way there — or not yet: round the corner first, his own walk brings him nearer, and he is asked again in half a second)
     st = { door: d, side, spot: H.pos, phase: 'go', t: 0, seen: g.time, way }; states.set(gd, st); hands.set(d, gd);
-    HANDLE_DEBUG.log?.(`${g.time.toFixed(2)}s HANDLE ${d.def.name}: ${gd.callsign} at (${c.pos[0].toFixed(2)}, ${c.pos[2].toFixed(2)}) goes for its handle at (${H.pos[0].toFixed(2)}, ${H.pos[2].toFixed(2)}) · leaf ${(d.angle * d.swing).toFixed(2)} rad${d.latched ? ' latched' : ''}`);
+    HANDLE_DEBUG.log?.(`${g.time.toFixed(2)}s HANDLE ${d.def.name}: ${gd.callsign} at (${c.posX.toFixed(2)}, ${c.posZ.toFixed(2)}) goes for its handle at (${H.pos[0].toFixed(2)}, ${H.pos[2].toFixed(2)}) · leaf ${(d.angle * d.swing).toFixed(2)} rad${d.latched ? ' latched' : ''}`);
     } }
     if (!st) return false;
   }
@@ -241,11 +241,11 @@ function gate(g: Game, gd: Guard, dt: number, speed: number, strafe: boolean): b
   if (st.phase === 'go') {
     if (!wantsHand(g, gd, d, c.pos)) { release(gd, st, false, g); return false; }   // (somebody opened it meanwhile)
     if (speed < 0.05) { halt(gd, dt); st.t -= dt; return true; }   // (whoever moves him wants him still this frame: he waits where he is)
-    if (!st.at || st.t - st.atT! > 0.6) { const stalled = !!st.at && flat(st.at, c.pos) < 0.08; st.at = [c.pos[0], 0, c.pos[2]]; st.atT = st.t;
+    if (!st.at || st.t - st.atT! > 0.6) { const stalled = !!st.at && flat(st.at, c.pos) < 0.08; st.at = [c.posX, 0, c.posZ]; st.atT = st.t;
       if (stalled || st.t > K.goCap || sideAt(d, c.pos) !== st.side) {   // not getting there (a man of his on it, a chair): he takes it at the long reach from where he is, if that is no place its leaf comes round through — else he gives its handle up
-        const F = frameOf(d), along = (c.pos[0] - F.hx) * F.ux + (c.pos[2] - F.hz) * F.uz, hd = handleAt(d);
+        const F = frameOf(d), along = (c.posX - F.hx) * F.ux + (c.posZ - F.hz) * F.uz, hd = handleAt(d);
         const close = flat(c.pos, st.spot) < 0.3;   // (a man of his shoulder to shoulder with him at the jamb: as good as there — the leaf's edge may brush him)
-        if (!(sideAt(d, c.pos) === st.side && along >= F.W / 2 && flat(c.pos, hd) <= K.farReach && !g.doors.swingOf(d).sweeps(c.pos[0], c.pos[2], close ? K.body - 0.08 : K.body + 0.05) && !walled(g, c.pos, ptOf(d, F.W - K.handleIn, 0.2, st.side)))) {
+        if (!(sideAt(d, c.pos) === st.side && along >= F.W / 2 && flat(c.pos, hd) <= K.farReach && !g.doors.swingOf(d).sweeps(c.posX, c.posZ, close ? K.body - 0.08 : K.body + 0.05) && !walled(g, c.pos, ptOf(d, F.W - K.handleIn, 0.2, st.side)))) {
           HANDLE_STATS.gaveUp++; HANDLE_DEBUG.log?.(`${g.time.toFixed(2)}s HANDLE ${d.def.name}: ${gd.callsign} gives its handle up ${flat(c.pos, st.spot).toFixed(2)} m short`); release(gd, st, true, g); return false; }
         st.way = []; } }
     const way = st.way!; while (way.length > 1 && flat(c.pos, way[0]) < 0.3) way.shift();
@@ -254,7 +254,7 @@ function gate(g: Game, gd: Guard, dt: number, speed: number, strafe: boolean): b
     st.phase = 'turn'; st.t = 0;
   }
   halt(gd, dt);
-  const hd = handleAt(d), yaw = Math.atan2(hd[0] - c.pos[0], hd[2] - c.pos[2]), open = d.angle * d.swing, ajar = ajarOf(g, d), far = flat(c.pos, hd) > K.reach + 0.05;
+  const hd = handleAt(d), yaw = Math.atan2(hd[0] - c.posX, hd[2] - c.posZ), open = d.angle * d.swing, ajar = ajarOf(g, d), far = flat(c.pos, hd) > K.reach + 0.05;
   if (st.phase === 'turn') {
     if (!wantsHand(g, gd, d, c.pos)) { release(gd, st, false, g); return false; }
     if (!strafe) c.bodyYaw = approachAngle(c.bodyYaw, yaw, 7 * dt);
@@ -266,7 +266,7 @@ function gate(g: Game, gd: Guard, dt: number, speed: number, strafe: boolean): b
   if (!strafe) c.bodyYaw = approachAngle(c.bodyYaw, yaw, 7 * dt);
   if (open < Math.min(K.clear, ajar) && !(st.t > 0.3 && Math.abs(d.vel) < 0.4) && st.t < K.wait) {
     const u = d.dir(), hx = d.def.hinge[0] + u[0] * (d.def.width - K.handleIn), hz = d.def.hinge[1] + u[1] * (d.def.width - K.handleIn);
-    if (open + Math.abs(d.vel) / 2.2 < ajar + 0.05 && (far || Math.hypot(hx - c.pos[0], hz - c.pos[2]) < K.reach + 0.1)) g.doors.pull(d, c.id, silentEase(g, gd));
+    if (open + Math.abs(d.vel) / 2.2 < ajar + 0.05 && (far || Math.hypot(hx - c.posX, hz - c.posZ) < K.reach + 0.1)) g.doors.pull(d, c.id, silentEase(g, gd));
     return true; }
   const A = ahead(g, gd), via = faceOf(g, d, st.side).via, clearNow = open >= Math.min(K.clear, ajar);
   if (clearNow && A && A.d === d && via) {   // … onto the line through the handle half, as any man goes through one standing open (the leaf is let go of: the next man's)
@@ -288,15 +288,15 @@ function wayTo(g: Game, a: Vec3, to: Vec3): Vec3[] | null {
 }
 /** a man's feet taken the last of the way onto `to` (straight at it inside a stride — he does not circle it): true once he stands on it */
 function stepTo(g: Game, gd: Guard, to: Vec3, dt: number, speed: number, strafe: boolean, pass = false): boolean {
-  const c = gd.char, dx = to[0] - c.pos[0], dz = to[2] - c.pos[2], dist = Math.hypot(dx, dz);
+  const c = gd.char, dx = to[0] - c.posX, dz = to[2] - c.posZ, dist = Math.hypot(dx, dz);
   if (dist <= (pass ? 0.08 : HANDLE.near)) return true;
   const was = gd.speed, want = speed * (pass ? clamp(dist / 0.3, 0.6, 1) : clamp(dist / 0.6, 0.3, 1));   // (`pass`: a point he walks through, not one he stops on)
   if (strafe || dist < 0.35) { gd.speed = damp(gd.speed, want, 4, dt); teamLean(g, gd, was, dt); c.vel = [dx / dist * gd.speed, 0, dz / dist * gd.speed]; }
   else { const yaw = Math.atan2(dx, dz), facing = Math.cos(wrapAngle(yaw - c.bodyYaw));
     gd.speed = damp(gd.speed, want * clamp(facing * 1.5, 0.15, 1), 4, dt); teamLean(g, gd, was, dt);
     c.bodyYaw = approachAngle(c.bodyYaw, yaw, 5.5 * dt); c.vel = [Math.sin(c.bodyYaw) * gd.speed, 0, Math.cos(c.bodyYaw) * gd.speed]; }
-  const step = Math.min(dist, Math.max(gd.speed, 0.3) * dt), vl = Math.hypot(c.vel[0], c.vel[2]), ux = vl > 1e-4 ? c.vel[0] / vl : dx / dist, uz = vl > 1e-4 ? c.vel[2] / vl : dz / dist; c.pos = [c.pos[0] + ux * step, c.pos[1], c.pos[2] + uz * step];
-  gd.lastPos = [c.pos[0], c.pos[1], c.pos[2]]; gd.stuckT = 0;
+  const step = Math.min(dist, Math.max(gd.speed, 0.3) * dt), vl = Math.hypot(c.velX, c.velZ), ux = vl > 1e-4 ? c.velX / vl : dx / dist, uz = vl > 1e-4 ? c.velZ / vl : dz / dist; c.pos = [c.posX + ux * step, c.posY, c.posZ + uz * step];
+  gd.lastPos = [c.posX, c.posY, c.posZ]; gd.stuckT = 0;
   return false;
 }
 /** the seconds a man's body must lean on a leaf, from the face it opens into, before it is pulled round as it was before (doors.ts DoorContact.hand — game.ts

@@ -136,7 +136,7 @@ export async function snatchoutCheck(): Promise<boolean> {
     { const A = await stage(), { g, S, X, N } = A, O = g.orders; await A.thin(2);
       // the four brought to him as a file behind Sam, then tied
       const p = S.man.char.pos; g.teleportPlayer([p[0] - 1.6, 0, p[2] + 0.3]);
-      await quiet(() => { const spots = [[-2.6, 0.6], [-2.6, 1.4], [-3.6, 0.6], [-3.6, 1.4]]; A.ops().forEach((m: any, i: number) => { m.char.pos[0] = p[0] + spots[i][0]; m.char.pos[2] = p[2] + spots[i][1]; }); O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); });
+      await quiet(() => { const spots = [[-2.6, 0.6], [-2.6, 1.4], [-3.6, 0.6], [-3.6, 1.4]]; A.ops().forEach((m: any, i: number) => { m.char.posX = p[0] + spots[i][0]; m.char.posZ = p[2] + spots[i][1]; }); O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); });
       await A.step(SNATCH.cuffSecs + 3, () => S.tied); await A.step(1);
       const before = A.ops().map((m: any) => O.of(m)?.order).join(',');
       X.word(g.player.char); await A.step(1.2);
@@ -153,21 +153,21 @@ export async function snatchoutCheck(): Promise<boolean> {
     }
     { const A = await stage(), { g, S, X, N } = A; await A.thin(2); await A.take();
       const V: Vec3 = N.van.pos; X.word(g.player.char); await A.step(0.3);
-      await quiet(() => { S.man.char.pos[0] = V[0] + 4.5; S.man.char.pos[2] = V[2] - 0.6; g.teleportPlayer([V[0] + 1.4, 0, V[2] - 0.5]); g.player.down = true; });
+      await quiet(() => { S.man.char.posX = V[0] + 4.5; S.man.char.posZ = V[2] - 0.6; g.teleportPlayer([V[0] + 1.4, 0, V[2] - 0.5]); g.player.down = true; });
       await A.step(4, () => !!S.end);
       line(S.end !== 'won' && X.inAt < 0, `the one he follows goes down a step from the doors: nothing is won behind a man on the floor (${S.end ?? 'no end'}, in the van: ${X.inAt >= 0})`);
       g.player.down = false;
     }
     { const A = await stage(), { g, S, X } = A, O = g.orders; await A.thin(2);
       const p = S.man.char.pos; g.teleportPlayer([p[0] - 1.6, 0, p[2] + 0.3]);
-      await quiet(() => { const spots = [[-2.6, 0.6], [-2.6, 1.4], [-3.6, 0.6], [-3.6, 1.4]]; A.ops().forEach((m: any, i: number) => { m.char.pos[0] = p[0] + spots[i][0]; m.char.pos[2] = p[2] + spots[i][1]; }); O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); });
+      await quiet(() => { const spots = [[-2.6, 0.6], [-2.6, 1.4], [-3.6, 0.6], [-3.6, 1.4]]; A.ops().forEach((m: any, i: number) => { m.char.posX = p[0] + spots[i][0]; m.char.posZ = p[2] + spots[i][1]; }); O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); });
       await A.step(SNATCH.cuffSecs + 3, () => S.tied);
       // one pair is the player's (a move order), a man of the other stands in the nearest doorway at the word: he does not plant in it
       const red = A.ops().filter((m: any) => O.pairOf(m) === O.pairOf(A.ops()[0])), blue = A.ops().filter((m: any) => !red.includes(m));
       // (staged at the house's front door, where there is floor to step to on either stand: he sits out in the courtyard, Sam beside him, the door between them and nothing)
       const door = g.cover.openings.find((o: any) => o.id === 'door:front'), free = (k: number, side: number): Vec3 => [door.at[0] + door.n[0] * k - door.n[1] * side, 0, door.at[2] + door.n[1] * k + door.n[0] * side];
       const out = [1, -1].find(k => !g.col.nav.isBlocked(...([free(4 * k, 0)[0], free(4 * k, 0)[2]] as [number, number])) && flat(free(4 * k, 0), A.N.van.pos) > flat(free(-4 * k, 0), A.N.van.pos)) ?? 1;
-      await quiet(() => { const put = (c: any, q: Vec3) => { c.pos[0] = q[0]; c.pos[2] = q[2]; };
+      await quiet(() => { const put = (c: any, q: Vec3) => { c.posX = q[0]; c.posZ = q[2]; };
         put(S.man.char, free(4.5 * out, 0)); g.teleportPlayer(free(4.5 * out, 1.4)); put(red[0].char, free(0, 0)); put(red[1].char, free(2.4 * out, -1.6)); put(blue[0].char, free(3 * out, 3)); put(blue[1].char, free(3 * out, 4)); });
       await quiet(() => O.give('hold', O.targetAt(blue[0].char.pos), O.pairOf(blue[0])));
       X.word(g.player.char); await A.step(1.2);

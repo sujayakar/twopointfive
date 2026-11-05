@@ -54,7 +54,7 @@ interface St { low: boolean; /** Game.time of the last answer */ t: number; /** 
   /** seconds a man in a fight has had his settled gun in a panel */ wood: number; /** this frame's answer let the gun go that the last one held */ rose: boolean;
   /** his feet's own speed over the floor (Character.vel is the COMMANDED velocity: a man queued behind another has it and stands still): the last sample and when */ px: number; pz: number; vt: number; vx: number; vz: number }
 const ST = new SideMap<Character, St>('gunwall.ST');
-const st = (c: Character): St => { let s = ST.get(c); if (!s) ST.set(c, s = { low: false, t: -1, mine: false, hold: null, wood: 0, rose: false, px: c.pos[0], pz: c.pos[2], vt: -1, vx: 0, vz: 0 }); return s; };
+const st = (c: Character): St => { let s = ST.get(c); if (!s) ST.set(c, s = { low: false, t: -1, mine: false, hold: null, wood: 0, rose: false, px: c.posX, pz: c.posZ, vt: -1, vx: 0, vz: 0 }); return s; };
 
 const STAND_SH = 1.4, CROUCH_SH = 0.99;   // the gun shoulder's height standing / crouched (the mannequin's, measured): how far down he is, for the carriages' crouched numbers
 const TUCK_REACH = 0.235;                 // where WALL_TUCK leaves the muzzle ahead of his feet at gunWall 1 (measured: 0.21‥0.235 over the FN2000, the AKS-74U and the pistol)
@@ -85,7 +85,7 @@ const showing = (g: Game): boolean => g.touring || !!g.director?.showing;
 /** His frame: forward and right on the floor along `yaw`, the gun shoulder's height over his feet, how crouched that says he is (0‥1) */
 function frame(c: Character, yaw: number) {
   const f: Vec3 = [Math.sin(yaw), 0, Math.cos(yaw)], r: Vec3 = [-Math.cos(yaw), 0, Math.sin(yaw)];
-  const sh = (c.bones.upperArmR?.[1] ?? c.pos[1] + STAND_SH) - c.pos[1];
+  const sh = (c.bones.upperArmR?.[1] ?? c.posY + STAND_SH) - c.posY;
   return { f, r, sh, k: clamp((STAND_SH - sh) / (STAND_SH - CROUCH_SH), 0, 1) };
 }
 const at = (o: Vec3, F: { f: Vec3; r: Vec3 }, fwd: number, right: number, y: number): Vec3 =>
@@ -94,9 +94,9 @@ const at = (o: Vec3, F: { f: Vec3; r: Vec3 }, fwd: number, right: number, y: num
 function track(g: Game, c: Character, S: St): void {
   if (S.vt === g.time) return;
   const h = g.time - S.vt;
-  const dx = c.pos[0] - S.px, dz = c.pos[2] - S.pz;
+  const dx = c.posX - S.px, dz = c.posZ - S.pz;
   if (h > 1e-5 && h < 0.1 && Math.hypot(dx, dz) < TELEPORT_M) { S.vx = dx / h; S.vz = dz / h; } else S.vx = S.vz = 0;   // (a gap, the clock gone back — a load —, or put somewhere else: standing)
-  S.px = c.pos[0]; S.pz = c.pos[2]; S.vt = g.time;
+  S.px = c.posX; S.pz = c.posZ; S.vt = g.time;
 }
 /** how fast he closes along `f`, m/s (never negative: backing off buys nothing early) */
 const closing = (S: St, f: Vec3) => Math.max(0, S.vx * f[0] + S.vz * f[2]);
@@ -119,7 +119,7 @@ function raisedLine(c: Character, up: GunUp, yaw: number, o: Vec3 = c.pos): { a:
  *  carriage's own number), each with the arm behind it — the collision rays the rule itself asks. (player.ts stackLean: how far round an end on his gun
  *  side a step-out has to go before a round can leave.) */
 export function gunClearFrom(g: Game, c: Character, x: number, z: number, to: Vec3, ahead: number): boolean {
-  const yaw = Math.atan2(to[0] - x, to[2] - z), F = frame(c, yaw), M = raisedLine(c, 'aim', yaw, [x, c.pos[1], z]);
+  const yaw = Math.atan2(to[0] - x, to[2] - z), F = frame(c, yaw), M = raisedLine(c, 'aim', yaw, [x, c.posY, z]);
   const sh: Vec3 = [x + F.r[0] * 0.14 - F.f[0] * 0.15, M.a[1] + 0.11, z + F.r[2] * 0.14 - F.f[2] * 0.15];
   const hits = (a: Vec3, b: Vec3, most = Infinity): boolean => { const d = v3.sub(b, a), L = v3.len(d); return L > 1e-3 && !!g.col.raycast(a, v3.scale(d, 1 / L), Math.min(L, most)); };
   for (const w of [0, CLEAR_WIDE]) {
@@ -167,14 +167,14 @@ function walledNow(g: Game, c: Character, up: GunUp, to: Vec3 | null, S: St, dt:
   };
   if (S.low && S.hold) {   // found in the wood as drawn: down until he is off that pose, or the wood is off that line
     const H = S.hold;
-    const same = Math.hypot(c.pos[0] - H.x, c.pos[2] - H.z) < HOLD_M && Math.abs(wrapAngle(c.aimYaw - H.yaw)) < HOLD_RAD && Math.abs(F.sh - H.sh) < HOLD_M && Math.abs(c.aimPitch - H.pitch) < HOLD_RAD;
+    const same = Math.hypot(c.posX - H.x, c.posZ - H.z) < HOLD_M && Math.abs(wrapAngle(c.aimYaw - H.yaw)) < HOLD_RAD && Math.abs(F.sh - H.sh) < HOLD_M && Math.abs(c.aimPitch - H.pitch) < HOLD_RAD;
     if (same && (H.hot ? panel(g, H.a, H.b) : cast(H.a, H.b, 0))) return true;
     S.hold = null;
   }
   const hand = c.bones.handR, sh = c.bones.upperArmR, B = c.bonesAt;   // (the bones are a frame old: they stand where his feet were when they were read)
   const settled = up === 'aim' && !!hand && !!sh
-    && (c.muzzle[0] - B[0]) * F.f[0] + (c.muzzle[2] - B[1]) * F.f[2] > (M.b[0] - c.pos[0]) * F.f[0] + (M.b[2] - c.pos[2]) * F.f[2] - SETTLED_M && Math.abs(c.muzzle[1] - M.b[1]) < 2 * SETTLED_M;
-  const held = (a: Vec3, b: Vec3): true => { S.hold = { x: c.pos[0], z: c.pos[2], yaw: c.aimYaw, pitch: c.aimPitch, sh: F.sh, a: v3.copy(a), b: v3.copy(b), hot }; return true; };
+    && (c.muzzle[0] - B[0]) * F.f[0] + (c.muzzle[2] - B[1]) * F.f[2] > (M.b[0] - c.posX) * F.f[0] + (M.b[2] - c.posZ) * F.f[2] - SETTLED_M && Math.abs(c.muzzle[1] - M.b[1]) < 2 * SETTLED_M;
+  const held = (a: Vec3, b: Vec3): true => { S.hold = { x: c.posX, z: c.posZ, yaw: c.aimYaw, pitch: c.aimPitch, sh: F.sh, a: v3.copy(a), b: v3.copy(b), hot }; return true; };
   if (hot) {
     if (S.low) return panel(g, M.a, M.b);   // down already (a calm man's wall, or off a hold): up once the worked-out line is out of the panel
     S.wood = settled && armThrough(g, c) && panel(g, sh!, c.muzzle) ? S.wood + dt : 0;
@@ -183,7 +183,7 @@ function walledNow(g: Game, c: Character, up: GunUp, to: Vec3 | null, S: St, dt:
   S.wood = 0;
   const lead = closing(S, F.f) * K.leadS;
   if (!S.low && settled) {   // up and settled: the gun as drawn, moved on by his step since
-    const dx = c.pos[0] - B[0], dz = c.pos[2] - B[1], mv = (p: Vec3): Vec3 => [p[0] + dx, p[1], p[2] + dz];
+    const dx = c.posX - B[0], dz = c.posZ - B[1], mv = (p: Vec3): Vec3 => [p[0] + dx, p[1], p[2] + dz];
     const h = mv(hand!), m = mv(c.muzzle), s = mv(sh!);
     return cast(h, m, K.downM + lead) ? held(h, m) : cast(s, h, 0) && held(s, h);
   }

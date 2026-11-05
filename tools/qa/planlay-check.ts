@@ -72,7 +72,7 @@ function doorsNear(R: any): { d: any; t: any }[] {
   for (const d of [...R.game.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s) - dist(b.frameCentre, s))) { const t = R.O.targetAt(d.frameCentre); if (t.kind === 'door' && t.door === d) out.push({ d, t }); }
   return out;
 }
-const places = (R: any) => R.team.map((m: any) => [m.char.pos[0], 0, m.char.pos[2]]);
+const places = (R: any) => R.team.map((m: any) => [m.char.posX, 0, m.char.posZ]);
 const moved = (a: number[][], b: number[][]) => Math.max(...a.map((p, i) => dist(p, b[i])));
 
 let fails = 0;
@@ -234,7 +234,7 @@ export async function planlayCheck(): Promise<boolean> {
         const h0 = TQ.stats.halted, on = Q.wait(), picked = on && Q.row('openClear'); Q.step(30);
         const waited = Q.laid().length, idle = TQ.ops.length === 0; if (waited) { OQ.who = 'all'; Q.key(F); Q.step(2); }
         const halted = Q.until(() => TQ.stats.halted > h0, 40); Q.step(240);
-        const men = OQ.men('red').map((m: any) => { const A = OQ.of(m); return { order: A?.order ?? '-', door: A?.door?.def.name ?? '-', post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.pos[0], 0, m.char.pos[2]] }; });
+        const men = OQ.men('red').map((m: any) => { const A = OQ.of(m); return { order: A?.order ?? '-', door: A?.door?.def.name ?? '-', post: A?.post ? [A.post[0], 0, A.post[2]] : null, pos: [m.char.posX, 0, m.char.posZ] }; });
         const out = { door: x.d.def.name as string, picked, waited, idle, halted, ops: TQ.ops.filter((o: any) => o.door === x.d).length, line: said.find(t => /holding on it/.test(t)) ?? '', men };
         PLANLAY.on = on0; DOORTOOLS.testDoor = test0; return out;
       };
@@ -259,7 +259,7 @@ export async function planlayCheck(): Promise<boolean> {
       const gate = at(0.7, 0), spots: number[][] = [];
       for (const back of [2.4, 3.2, 4.2, 1.6]) for (const lat of [3.5, -3.5, 4.5, -4.5, 2.6, -2.6, 5.5, -5.5, 1.5, -1.5, 0.4]) { const p = at(back, lat); if (nav.isBlocked(p[0], p[2]) || spots.some(q => dist(q, p) < 0.8)) continue;
         const path = nav.findPath(p, gate); if (!path || !path.length) continue; let len = 0, q = p; for (const w of path) { len += dist(q, w); q = w; } if (len < 9) spots.push(p); }
-      team.forEach((gd, i) => { const p = spots[i]; if (!p) return; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
+      team.forEach((gd, i) => { const p = spots[i]; if (!p) return; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; });
       await mute(() => gb.teleportPlayer([1e4, 0, 1e4] as any)); const posts: number[][] = (OB.stackPostsWait(d, side, team) ?? []).map((P: any) => [P.pos[0], 0, P.pos[2]]);
       const aside = spots.slice(team.length).find(p => posts.every(q => dist(p, q) >= 1.5)), last = posts[posts.length - 1];
       if (spots.length < team.length + 1 || !last || !aside) line(false, "a stack refused for Sam's own body is refused at the lay", `sg_w: ${spots.length} spots, ${posts.length} places with Sam away, ${aside ? 'a' : 'no'} spot off them for him`);

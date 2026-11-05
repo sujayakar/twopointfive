@@ -88,7 +88,7 @@ async function play(arm: Arm, seed: number, cap: number, verbose: boolean, set: 
     const O = g.orders, DTL = g.doorTools, RC = g.roomClear, DF = g.defuse, NB = g.nightBreach;
     const ops: any[] = NB.ops.slice(); out.of = ops.length; const hostiles = () => g.guards.filter((x: any) => x.unit && x.team === 'hostile'); out.hostilesOf = hostiles().length;
     const up = (m: any) => m.state !== 'dead';
-    let stand: Vec3 = [g.player.char.pos[0], 0, g.player.char.pos[2]]; const ghost = arm !== 'sam';
+    let stand: Vec3 = [g.player.char.posX, 0, g.player.char.posZ]; const ghost = arm !== 'sam';
     if (ghost) g.teleportPlayer(PARK);
     W.step(DT); if (!DF.active) throw new Error('the defuse overlay is not live on this staging');
     const here = <X>(at: Vec3, fn: () => X): X => { if (!ghost) return fn(); g.teleportPlayer(at); try { return fn(); } finally { g.teleportPlayer(PARK); } };
@@ -96,7 +96,7 @@ async function play(arm: Arm, seed: number, cap: number, verbose: boolean, set: 
     const give = (id: string, target: any, who: any, at: Vec3): string | null => { const r = here(at, () => O.give(id, target, who)); out.orders++; say(`${clock()} ▸ ${id} → ${who}${target?.door ? ` on ${target.door.def?.name ?? target.door.name ?? '?'}` : ''}${r ? ` — REFUSED: ${r}` : ''}`); if (r) out.refused.push(`${id}: ${r}`); return r; };
     const clock = () => `${out.t.toFixed(1).padStart(6)} s [${Number.isFinite(DF.left) ? DF.left.toFixed(0).padStart(3) : '  –'}]`;
     // (the face a door order is given on: the side the plan comes to it from — or, `auto`, the side the men it is for are standing on: the hunt after the charges)
-    const middle = (who: Group['who']): Vec3 => { const m = O.men(who); return m.length ? [m.reduce((a: number, x: any) => a + x.char.pos[0], 0) / m.length, 0, m.reduce((a: number, x: any) => a + x.char.pos[2], 0) / m.length] : stand; };
+    const middle = (who: Group['who']): Vec3 => { const m = O.men(who); return m.length ? [m.reduce((a: number, x: any) => a + x.char.posX, 0) / m.length, 0, m.reduce((a: number, x: any) => a + x.char.posZ, 0) / m.length] : stand; };
     const doorT = (name: string, auto?: Group['who']) => { const d = door(name); return { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: sideOf(d, auto ? middle(auto) : FROM[name] ?? stand) }; };
     const devPos = (i: number): Vec3 => DF.data.devices[i].pos;
     const mk = (who: Group['who'], plan: Step[]): Group => ({ who, plan, i: 0, st: 'give', t: 0, t0: 0, tries: 0, bang: true, idle: 0 });
@@ -111,8 +111,8 @@ async function play(arm: Arm, seed: number, cap: number, verbose: boolean, set: 
         const left = hostiles().filter(up);
         if (G.st === 'give') {
           if (out.t < G.t) return; if (!left.length) { G.i++; return; }
-          const m = middle(G.who), h = left.reduce((a: any, b: any) => Math.hypot(b.char.pos[0] - m[0], b.char.pos[2] - m[2]) < Math.hypot(a.char.pos[0] - m[0], a.char.pos[2] - m[2]) ? b : a);
-          const r = give('move', { kind: 'floor', at: [h.char.pos[0], 0, h.char.pos[2]] }, G.who, m);
+          const m = middle(G.who), h = left.reduce((a: any, b: any) => Math.hypot(b.char.posX - m[0], b.char.posZ - m[2]) < Math.hypot(a.char.posX - m[0], a.char.posZ - m[2]) ? b : a);
+          const r = give('move', { kind: 'floor', at: [h.char.posX, 0, h.char.posZ] }, G.who, m);
           if (r) { if (++G.tries > 3) { G.i++; G.tries = 0; } G.t = out.t + 1.5; return; }
           G.st = 'wait'; G.t0 = out.t; G.tries = left.length;
         } else if (left.length < G.tries || out.t - G.t0 > 12) { G.i++; G.st = 'give'; G.tries = 0; G.t = 0; }
@@ -167,7 +167,7 @@ async function play(arm: Arm, seed: number, cap: number, verbose: boolean, set: 
           const has = (id: string) => !!RC.rooms.find((r: any) => r.def.id === id)?.cleared;   // (a wing's room is taken from its workshop where that is the team's already)
           const doorOf: Record<string, string> = { wroom: has('wshop') ? 'shop_1' : 'hall_1', wshop: has('wroom') || !byBack ? 'shop_1' : 'back_1', eroom: has('eshop') ? 'shop_2' : 'hall_2', eshop: has('eroom') || !byBack ? 'shop_2' : 'back_2' };
           // (a defender who has walked out of the rooms still to take — into the hall, or out of the house by a back door — is gone to, as a player would: no door order finds him)
-          const inTodo = (h: any) => todo.some(id => { const b = RC.rooms.find((r: any) => r.def.id === id)?.def.bounds; return b && h.char.pos[0] > b.x0 && h.char.pos[0] < b.x1 && h.char.pos[2] > b.z0 && h.char.pos[2] < b.z1; });
+          const inTodo = (h: any) => todo.some(id => { const b = RC.rooms.find((r: any) => r.def.id === id)?.def.bounds; return b && h.char.posX > b.x0 && h.char.posX < b.x1 && h.char.posZ > b.z0 && h.char.posZ < b.z1; });
           const out2 = hostiles().filter(up).some((h: any) => !inTodo(h)), go = !todo.length || (out2 && hunt >= 1) || hunt >= 3;
           hunt++; hunting = true; say(`${clock()}   hunt ${hunt}: ${go ? 'to where the nearest defender stands' : todo.join(' ')}`);
           groups = [mk('all', go ? [{ k: 'go' }] : todo.map(id => ({ k: 'door', door: doorOf[id], room: id } as Step)))];
@@ -181,7 +181,7 @@ async function play(arm: Arm, seed: number, cap: number, verbose: boolean, set: 
       if (DF.end === 'failed') { out.end = 'failed'; out.why = `a charge went off (${DF.states.join(', ')})`; for (let k = 0; k < 90; k++) W.step(DT); break; }
       if (DF.end === 'safe' && RC.end === 'taken') { out.end = 'won'; out.why = RC.endWhy ?? ''; break; }
       if (teamUp === 0 || RC.end === 'wiped') { out.end = 'wiped'; out.why = 'the squad down'; break; }
-      if (f === cap60 - 1) { out.end = 'stalled'; out.why = `time cap · charges ${DF.states.join(', ')} · room clear ${RC.end ?? 'running'} · ${hostiles().filter(up).map((h: any) => `${h.callsign} at ${h.char.pos[0].toFixed(1)},${h.char.pos[2].toFixed(1)} ${h.state}`).join(' · ') || 'no'} defenders up · rooms left ${RC.rooms.filter((r: any) => !r.cleared).map((r: any) => r.def.id).join(' ') || 'none'} · team ${ops.filter(up).map((o: any) => `${o.callsign} at ${o.char.pos[0].toFixed(1)},${o.char.pos[2].toFixed(1)}`).join(' · ')}`; }
+      if (f === cap60 - 1) { out.end = 'stalled'; out.why = `time cap · charges ${DF.states.join(', ')} · room clear ${RC.end ?? 'running'} · ${hostiles().filter(up).map((h: any) => `${h.callsign} at ${h.char.posX.toFixed(1)},${h.char.posZ.toFixed(1)} ${h.state}`).join(' · ') || 'no'} defenders up · rooms left ${RC.rooms.filter((r: any) => !r.cleared).map((r: any) => r.def.id).join(' ') || 'none'} · team ${ops.filter(up).map((o: any) => `${o.callsign} at ${o.char.posX.toFixed(1)},${o.char.posZ.toFixed(1)}`).join(' · ')}`; }
     }
     out.safe = DF.states.filter((s: string) => s === 'safe').length; out.left = DF.end === 'safe' ? +(DF.data.secs - Math.max(...out.safeAt.map(x => x ?? 0))).toFixed(1) : 0;
     out.team = ops.filter(up).length; if (out.end !== 'failed') out.teamPre = out.team; out.hostiles = hostiles().filter((x: any) => !up(x)).length; out.taken = RC.end === 'taken';

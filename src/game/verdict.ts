@@ -160,7 +160,7 @@ export class Verdict {
     this.wallSerial = g.destr?.walls?.serial ?? 0;
     this.tracks.clear(); this.foes.clear(); this.fell.clear(); this.fellAt = [];
     const P = men(g), p0 = P[0].char.pos, p = g.roomClear?.active ? g.roomClear.startAt ?? p0 : p0;
-    this.origins = P.map(pl => [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]);
+    this.origins = P.map(pl => [pl.char.posX, pl.char.posY, pl.char.posZ]);
     this.origin = [p[0], p[1], p[2]]; this.order0 = tail; this.fired0 = this.fired();
     // a checkpoint load is a fresh mission object carrying the old run's chronicle: its clock the mission's own (the page counts the load as another try)
     this.resumed = (g.chronicle?.counts?.loads ?? 0) > 0;
@@ -193,7 +193,7 @@ export class Verdict {
     let hunting = false;
     for (const h of this.foes) {
       if (h.state === 'dead') {
-        if (!this.fell.has(h)) { this.fell.add(h); this.fellAt.push(h.char.pos[0], h.char.pos[2]); const by = this.tracks.get(h.killerId) ?? (h.killerId < 0 && h.downBy === 'player' ? this.tracks.get(g.player.char.id) : undefined) ?? this.onlyMate(h); by?.drops.push(now); }
+        if (!this.fell.has(h)) { this.fell.add(h); this.fellAt.push(h.char.posX, h.char.posZ); const by = this.tracks.get(h.killerId) ?? (h.killerId < 0 && h.downBy === 'player' ? this.tracks.get(g.player.char.id) : undefined) ?? this.onlyMate(h); by?.drops.push(now); }
       } else if (h.state === 'alert' || h.state === 'search') hunting = true;
     }
     if (g.mission.stats.blackout && this.darkAt < 0) this.darkAt = now;
@@ -218,10 +218,10 @@ export class Verdict {
         continue;
       }
       if (now >= T.next || !T.path.length) {
-        T.path.push(c.pos[0], c.pos[2], now); T.next = now + T.every;
+        T.path.push(c.posX, c.posZ, now); T.next = now + T.every;
         if (T.path.length >= PATH_CAP * 3) { const half: number[] = []; for (let i = 0; i < T.path.length; i += 6) half.push(T.path[i], T.path[i + 1], T.path[i + 2]); T.path = half; T.every *= 2; }
       }
-      if (!this.through) for (const h of this.holes) if (Math.hypot(c.pos[0] - h[0], c.pos[2] - h[2]) < HOLE_M) { this.through = true; break; }
+      if (!this.through) for (const h of this.holes) if (Math.hypot(c.posX - h[0], c.posZ - h[2]) < HOLE_M) { this.through = true; break; }
     }
   }
 

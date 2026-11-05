@@ -318,7 +318,7 @@ export const squadplayKey = guarded(async () => {
     verdict(NB.state === 'stacking', '… and with every entry over, F is the drill\'s key again', `drill '${NB.state}'`); }
   // ---- the go row on a menu opened on ONE man names him, not everybody waiting
   { const R = await rig(9, CORRIDOR); const { O, D } = R;
-    const stacked = stackBoth(R); R.who('all'); const b1 = R.ops[2]; R.cursor([b1.char.pos[0], 1.2, b1.char.pos[2]]); R.press(K.key); R.step(10);
+    const stacked = stackBoth(R); R.who('all'); const b1 = R.ops[2]; R.cursor([b1.char.posX, 1.2, b1.char.posZ]); R.press(K.key); R.step(10);
     const who = O.hud().menu?.rows[0].label, row = R.row('F'); R.press(F); const l = R.last(), away = O.menu === null;
     verdict(stacked && who === 'orders to Blue One' && row?.text === 'go · Blue One' && l?.order === 'go' && l.who.join(' + ') === 'Blue One' && away && D.stats.words === 1, 'both pairs waiting, the orders to gold, X on Blue One: his menu\'s F row reads \'go · Blue One\' — who it would send — and F with that menu up sends him and nobody else (the menu goes away)', `"${who}" · row "${row?.key} ${row?.text}" · ${line(l)} · menu away ${away} · words ${D.stats.words}`); }
   // ---- a charge that is not the addressed men's: the block does not say F blows it while F is their word

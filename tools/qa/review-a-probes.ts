@@ -284,7 +284,7 @@ export async function reviewRingCiv() {
   game.teleportPlayer([14, 0, 11.25]); pl.crouch = false; W.step(DT);
   M.char.pos = v3.copy(mAt); M.char.update(0);
   const head = v3.add(M.char.bones.head ?? v3.add(M.char.pos, [0, 1.6, 0]), [0, 0.04, 0]) as Vec3;
-  const from: Vec3 = [pl.char.pos[0] + 0.4, 1.35, pl.char.pos[2]];
+  const from: Vec3 = [pl.char.posX + 0.4, 1.35, pl.char.posZ];
   fireRing(game, pl.char, from, head);
   for (let i = 0; i < 40; i++) { pl.visibility = 0.02; W.step(DT); M.char.vel = [0, 0, 0]; }
   const koRow = game.chronicle.events.find((e: any) => e.kind === 'civilianKO' && e.data?.who === 'Marta');
@@ -293,7 +293,7 @@ export async function reviewRingCiv() {
   const oAt: Vec3 = [26, 0, 11.25]; O.char.pos = v3.copy(oAt); O.char.vel = [0, 0, 0]; O.char.bodyYaw = O.char.aimYaw = -Math.PI / 2; O.path = []; O.pathGoal = null; O.civ.state = 'work'; O.char.anim.act = null; O.char.update(0); O.char.update(DT);
   game.teleportPlayer([20.5, 0, 11.6]); W.step(DT); O.char.pos = v3.copy(oAt); O.char.update(0);
   const hips = O.char.bones.hips ?? v3.add(O.char.pos, [0, 0.95, 0]);
-  fireRing(game, pl.char, [pl.char.pos[0] + 0.4, 1.0, pl.char.pos[2]], [hips[0], hips[1] + 0.05, hips[2]]);
+  fireRing(game, pl.char, [pl.char.posX + 0.4, 1.0, pl.char.posZ], [hips[0], hips[1] + 0.05, hips[2]]);
   let oState = O.civ.state;
   for (let i = 0; i < 30; i++) { pl.visibility = 0.02; W.step(DT); if (O.civ.state === 'alarmed') oState = 'alarmed'; }
   ok = verdict(O.state !== 'dead' && oState === 'alarmed', 'the ring in his ribs: on his feet and frightened (alarmed)', `Owen ${O.state}, civ ${O.civ.state} (saw ${oState}), cause ${O.civ.cause}`) && ok;

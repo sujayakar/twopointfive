@@ -59,7 +59,7 @@ function walkStats(R: Run, fn: () => void) {
   const m = R.mate, trail: number[][] = []; let low = 0, up = 0, top = 0, off = 0, stops = 0, wasMoving = false, lightOn = 0, gogglesDown = 0, n = 0;
   const step0 = R.step.bind(R);
   (R as any).step = (k = 1) => { for (let i = 0; i < k; i++) { step0(1); n++;
-    const sp = Math.hypot(m.char.vel[0], m.char.vel[2]); top = Math.max(top, sp);
+    const sp = Math.hypot(m.char.velX, m.char.velZ); top = Math.max(top, sp);
     if (!trail.length || flat(trail[trail.length - 1], R.pos) > 0.1) trail.push([R.pos[0], 0, R.pos[2]]);
     const moving = sp > 0.3; if (moving) { if (m.char.anim.crouch > 0.5) low += 1 / 60; else up += 1 / 60; let d = 1e9; for (const q of trail) d = Math.min(d, flat(q, m.char.pos)); if (trail.length > 20) off = Math.max(off, d); }
     if (wasMoving && !moving && R.g.orders.samV > 0.5) stops++; wasMoving = moving;
@@ -94,14 +94,14 @@ const EAST_SIDE = (R: Run) => { R.crouch(true); R.go(R.free([24.6, 0, 11.2]), 60
 const gaze = new WeakMap<object, number[]>();
 const stare = (_R: Run, h: any, to: number[]) => {
   const c = h.char;
-  if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.pos[0], dz = t[2] - c.pos[2], l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; };
+  if (!gaze.has(c)) { const dir = () => { const t = gaze.get(c)!, dx = t[0] - c.posX, dz = t[2] - c.posZ, l = Math.hypot(dx, dz) || 1; return [dx / l, 0, dz / l]; };
     Object.defineProperty(c, 'chestDir', { get: dir, set: () => {}, configurable: true }); c.headDir = dir; }
   gaze.set(c, [to[0], 0, to[2]]); };
 
 export const sneakSteps = guarded(async () => {
   const F = family("sneak-steps: he walks Sam's own steps");
   const out: Record<string, number> = {};
-  for (const sneak of [true, false]) { const R = await rig(5, sneak); for (const h of R.hostiles) stare(R, h, [h.char.pos[0] - 6, 0, h.char.pos[2] + 1]);   // (both men looking west, away from the east side: nobody waits on anybody)
+  for (const sneak of [true, false]) { const R = await rig(5, sneak); for (const h of R.hostiles) stare(R, h, [h.char.posX - 6, 0, h.char.posZ + 1]);   // (both men looking west, away from the east side: nobody waits on anybody)
     out[String(sneak)] = walkStats(R, () => EAST_SIDE(R)).off; }
   F.verdict(out.true <= 0.4, "on: his feet stay within 0.4 m of Sam's trail", `furthest off the trail: on ${f2(out.true)} m · off ${f2(out.false)} m`);
   F.verdict(out.true <= out.false + 0.05, '… no further off it than the build before', `on ${f2(out.true)} m · off ${f2(out.false)} m`);
@@ -113,9 +113,9 @@ export const sneakSteps = guarded(async () => {
 async function doorway(dice: number, sneak: boolean, set: Record<string, unknown> = {}, closer = false) {
   const R = await rig(dice, sneak, set), T1 = R.hostiles[0], d = R.door('breakroom_n'), fc = d.frameCentre;
   if (!closer) d.def.closer = false;   // (the leaf stays where Sam eased it: the read of the doorway is the man's line, not the closer's timing — sneak-fallin leaves it on)
-  const spot = R.free([fc[0], 0, fc[2] + STARE_M]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];
+  const spot = R.free([fc[0], 0, fc[2] + STARE_M]); T1.char.posX = spot[0]; T1.char.posZ = spot[2];
   const look = (to: (h: any) => number[]) => { for (const h of R.hostiles) stare(R, h, to(h)); };
-  look(h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]);
+  look(h => [h.char.posX + 1, 0, h.char.posZ + 8]);
   R.crouch(true); R.go(R.free([24.6, 0, 11.2]), 60); R.gather(); R.toDoor('breakroom_n'); R.gather();
   R.ease('breakroom_n'); R.holster(true); R.through('breakroom_n', 1.0);
   look(() => [fc[0], 0, fc[2]]); const seen0 = R.mateSeenS, mateAt = [...R.mate.char.pos], cues0 = SNM.SNEAK_STATS.cues, cross0 = SNM.SNEAK_STATS.crossings;
@@ -131,13 +131,13 @@ export const sneakWaits = guarded(async () => {
   { const { R, T1, fc, seen0, mateAt, look, cues0, cross0 } = await doorway(2, true);
     R.wait(SNEAK.nagSecs + 3);
     const m = R.mate, word = SNM.sneakWord(R.g, m), mySide = Math.sign(sideOf(R, 'breakroom_n', R.pos)), his = sideOf(R, 'breakroom_n', m.char.pos) * mySide;
-    F.verdict(word === 'waiting on eyes' && Math.hypot(m.char.vel[0], m.char.vel[2]) < 0.05, 'the man looking at the lit doorway: the partner waits, still', `after ${SNEAK.nagSecs + 3} s: '${word}', at ${at(m.char.pos)} (he was at ${at(mateAt)} when the man turned), ${f2(flat(m.char.pos, fc))} m from the frame, Sam at ${at(R.pos)}, T1 at ${at(T1.char.pos)}`);
+    F.verdict(word === 'waiting on eyes' && Math.hypot(m.char.velX, m.char.velZ) < 0.05, 'the man looking at the lit doorway: the partner waits, still', `after ${SNEAK.nagSecs + 3} s: '${word}', at ${at(m.char.pos)} (he was at ${at(mateAt)} when the man turned), ${f2(flat(m.char.pos, fc))} m from the frame, Sam at ${at(R.pos)}, T1 at ${at(T1.char.pos)}`);
     F.verdict(his < -0.3, "… on the corridor's side of the door, not in it", `${f2(-his)} m short of the frame's line`);
     F.verdict(m.char.anim.crouch > 0.5, '… low', `crouch ${f2(m.char.anim.crouch)}`);
     F.verdict(R.mateSeenS - seen0 < 0.35, "… and the man's eyes barely have him (the moment he turned, at most)", `eyes on the partner since the man turned: ${f2(R.mateSeenS - seen0)} s; T1 awareness ${f2(T1.awareness)}`);
     F.verdict(SNM.SNEAK_STATS.cues - cues0 >= 1 && /still on it/.test(m.bubble?.text ?? ''), `he says so over the net — and what he is waiting for after ${SNEAK.nagSecs} s (never chattier than a line every ${SNEAK.cueGap} s but for that one)`, `lines since the man turned: ${SNM.SNEAK_STATS.cues - cues0} · his bubble now: ${m.bubble ? `“${m.bubble.text}”${m.bubble.radio ? ' (radio)' : ''}` : '—'}`);
     // the eyes come off it
-    look(h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]); R.wait(1.2);
+    look(h => [h.char.posX + 1, 0, h.char.posZ + 8]); R.wait(1.2);
     const seen1 = R.mateSeenS, ok = R.until(() => flat(m.char.pos, R.pos) < 2.6, 12);
     F.verdict(ok, 'the man turned away: he crosses and is back at Sam’s shoulder', `${ok ? 'rejoined' : 'NOT back'}: ${f2(flat(m.char.pos, R.pos))} m from Sam at ${at(m.char.pos)}; eyes on him in the crossing ${f2(R.mateSeenS - seen1)} s; T1 awareness ${f2(T1.awareness)}`);
     F.verdict(SNM.SNEAK_STATS.crossings - cross0 >= 1, '… counted as a crossing', `crossings since the man first turned: ${SNM.SNEAK_STATS.crossings - cross0}`); }
@@ -160,9 +160,9 @@ export const sneakLight = guarded(async () => {
 export const sneakFallIn = guarded(async () => {
   const F = family("sneak-fallin: told to fall in from a hold, he comes on by the steps Sam took meanwhile — and waits on the same eyes, through a door that shuts");
   const R = await rig(8, true), T1 = R.hostiles[0], d = R.door('breakroom_n'), fc = d.frameCentre, m = R.mate;
-  const spot = R.free([fc[0], 0, fc[2] + STARE_M]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];
+  const spot = R.free([fc[0], 0, fc[2] + STARE_M]); T1.char.posX = spot[0]; T1.char.posZ = spot[2];
   const look = (to: (h: any) => number[]) => { for (const h of R.hostiles) stare(R, h, to(h)); };
-  look(h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]);
+  look(h => [h.char.posX + 1, 0, h.char.posZ + 8]);
   R.crouch(true); R.go(R.free([24.6, 0, 11.2]), 60); R.gather();
   const why = R.g.orders.give('hold', { kind: 'none', at: [R.pos[0], 0, R.pos[2]] }), held = [...m.char.pos];
   R.toDoor('breakroom_n'); R.ease('breakroom_n'); R.holster(true); R.through('breakroom_n', 1.0); R.go(R.free([32.8, 0, 13.5]), 10);
@@ -177,7 +177,7 @@ export const sneakFallIn = guarded(async () => {
   // (where leaves stay as they are left — the page's stand — no closer does it: the leaf is pulled to, as a hand lets it go shut)
   d.def.closer = true; d.quietT = 3; if (!R.g.doors.hasCloser(d)) R.g.doors.pullTo(d, d.lastWho); R.until(() => d.isClosed(), 6); const shutAt = R.t; R.wait(4);
   F.verdict(d.isClosed() && side() < -0.3 && SNM.sneakWord(R.g, m) === 'waiting on eyes', 'the door swung shut between them: four seconds on he is still waiting (he remembers who was looking)', `door ${d.isClosed() ? 'shut' : 'OPEN'} at ${f2(shutAt)} s; '${SNM.sneakWord(R.g, m)}' at ${at(m.char.pos)}`);
-  look(h => [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]);
+  look(h => [h.char.posX + 1, 0, h.char.posZ + 8]);
   const ok = R.until(() => flat(m.char.pos, R.pos) < 2.6, SNEAK.memory + 8);
   F.verdict(ok && T1.state === 'patrol', `… and comes on once that has gone stale (${SNEAK.memory} s): through the door and at Sam’s shoulder, nobody the wiser`, `${ok ? `rejoined ${f2(R.t - shutAt)} s after it shut` : 'NOT back'} (${f2(flat(m.char.pos, R.pos))} m from Sam at ${at(m.char.pos)}); eyes on him since the order ${f2(R.mateSeenS - seen0)} s; T1 ${T1.state}, awareness ${f2(T1.awareness)}`);
   return F.done();
@@ -189,7 +189,7 @@ export const sneakStand = guarded(async () => {
   for (const sneak of [true, false]) {
     const R = await rig(6, sneak), d = R.door('breakroom_n');
     R.crouch(true); R.go(R.free([24.6, 0, 11.2]), 60); R.gather(); R.toDoor('breakroom_n'); R.gather();
-    for (const h of R.hostiles) stare(R, h, [h.char.pos[0] + 1, 0, h.char.pos[2] + 8]);   // (looking away south: nobody WATCHES the doorway — but the near man has a line to it)
+    for (const h of R.hostiles) stare(R, h, [h.char.posX + 1, 0, h.char.posZ + 8]);   // (looking away south: nobody WATCHES the doorway — but the near man has a line to it)
     R.ease('breakroom_n'); R.holster(true); R.through('breakroom_n', 1.3); R.wait(7);
     const m = R.mate, p = m.char.pos, low = m.char.anim.crouch > 0.5;
     const lit = m.visibility, pc = m.char.bones.chest, ph = m.char.bones.head;   // (his own meter and his own bones: what the eye test reads)
@@ -209,10 +209,10 @@ export const sneakAside = guarded(async () => {
   const res: Record<string, { lit: number; line: boolean; funnel: boolean; d: number; p: number[]; seen: number; aw: number; asides: number }> = {};
   for (const sneak of [true, false]) {
     const R = await rig(6, sneak), d = R.door('breakroom_w'), fc = d.frameCentre, T1 = R.hostiles[0]; d.def.closer = false; const asides0 = SNM.SNEAK_STATS.asides;
-    const th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.pos[0] - fc[0]) * nx + (T1.char.pos[2] - fc[2]) * nz) || 1;
-    const spot = R.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];   // (square to the door, 4.3 m inside it: the night breach's near man)
+    const th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.posX - fc[0]) * nx + (T1.char.posZ - fc[2]) * nz) || 1;
+    const spot = R.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.posX = spot[0]; T1.char.posZ = spot[2];   // (square to the door, 4.3 m inside it: the night breach's near man)
     const look = (to: (h: any) => number[]) => { for (const h of R.hostiles) stare(R, h, to(h)); };
-    look(h => [h.char.pos[0] + nx * in0 * 8, 0, h.char.pos[2] + nz * in0 * 8]);   // (their backs to the door)
+    look(h => [h.char.posX + nx * in0 * 8, 0, h.char.posZ + nz * in0 * 8]);   // (their backs to the door)
     R.crouch(true); R.go(R.free([fc[0] - nx * in0 * 5.5, 0, fc[2] - nz * in0 * 5.5]), 60); R.gather(); R.toDoor('breakroom_w'); R.ease('breakroom_w'); R.wait(4);
     const m = R.mate;
     look(() => [fc[0], 0, fc[2]]); const seen0 = R.mateSeenS; R.wait(4);
@@ -235,12 +235,12 @@ export const sneakDoor = guarded(async () => {
   const res: Record<string, { lit: number; funnel: boolean; d: number; p: number[]; v: number; seen: number; aw: number; moved: number }> = {};
   for (const door of [true, false]) {
     const R = await rig(6, true, door ? {} : { door: false }), d = R.door('breakroom_w'), fc = d.frameCentre, T1 = R.hostiles[0]; d.def.closer = false;
-    const th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.pos[0] - fc[0]) * nx + (T1.char.pos[2] - fc[2]) * nz) || 1;
-    const spot = R.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.pos[0] = spot[0]; T1.char.pos[2] = spot[2];
+    const th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th), in0 = Math.sign((T1.char.posX - fc[0]) * nx + (T1.char.posZ - fc[2]) * nz) || 1;
+    const spot = R.free([fc[0] + nx * in0 * 4.3, 0, fc[2] + nz * in0 * 4.3 + 0.3]); T1.char.posX = spot[0]; T1.char.posZ = spot[2];
     const look = (to: (h: any) => number[]) => { for (const h of R.hostiles) stare(R, h, to(h)); };
-    look(h => [h.char.pos[0] + nx * in0 * 8, 0, h.char.pos[2] + nz * in0 * 8]);   // (their backs to the door)
+    look(h => [h.char.posX + nx * in0 * 8, 0, h.char.posZ + nz * in0 * 8]);   // (their backs to the door)
     R.crouch(true); R.go(R.free([fc[0] - nx * in0 * 5.5, 0, fc[2] - nz * in0 * 5.5]), 60); R.gather(); R.toDoor('breakroom_w'); R.wait(5);   // (the leaf untouched: five seconds at it, as long as a pick)
-    const m = R.mate, p0 = [...m.char.pos], e = T1.char.pos, lit = m.visibility, v = Math.hypot(m.char.vel[0], m.char.vel[2]);
+    const m = R.mate, p0 = [...m.char.pos], e = T1.char.pos, lit = m.visibility, v = Math.hypot(m.char.velX, m.char.velZ);
     const A = d.def.hinge, B = [A[0] + Math.cos(th) * d.def.width, A[1] + Math.sin(th) * d.def.width], o = (px: number, pz: number, qx: number, qz: number, rx: number, rz: number) => (qx - px) * (rz - pz) - (qz - pz) * (rx - px);
     const funnel = o(e[0], e[2], p0[0], p0[2], A[0], A[1]) * o(e[0], e[2], p0[0], p0[2], B[0], B[1]) <= 0 && o(A[0], A[1], B[0], B[1], e[0], e[2]) * o(A[0], A[1], B[0], B[1], p0[0], p0[2]) <= 0;
     look(() => [fc[0], 0, fc[2]]); const seen0 = R.mateSeenS; R.ease('breakroom_w'); R.wait(1.5);   // (the man turned to the door as it opens)
@@ -261,7 +261,7 @@ export const sneakPost = guarded(async () => {
     const m = R.mate, to = R.free([20, 0, 11.2]);
     R.g.orders.assign(m, { order, post: [to[0], 0, to[2]], face: null, watch: null, stance: 'none', upper: 'aim', move: { stance: 'none', upper: 'aim' }, going: 'moving', there: 'set' });
     let low = 0, up = 0, top = 0;
-    for (let i = 0; i < 480 && flat(m.char.pos, to) > 0.5; i++) { R.step(1); const sp = Math.hypot(m.char.vel[0], m.char.vel[2]); top = Math.max(top, sp); if (sp > 0.3) { if (m.char.anim.crouch > 0.5) low += 1 / 60; else up += 1 / 60; } }
+    for (let i = 0; i < 480 && flat(m.char.pos, to) > 0.5; i++) { R.step(1); const sp = Math.hypot(m.char.velX, m.char.velZ); top = Math.max(top, sp); if (sp > 0.3) { if (m.char.anim.crouch > 0.5) low += 1 / 60; else up += 1 / 60; } }
     R.wait(1);
     return { low, up, top, d: flat(m.char.pos, to), kneels: m.char.anim.crouch > 0.5 };
   };

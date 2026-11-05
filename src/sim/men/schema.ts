@@ -29,6 +29,20 @@ export interface MenKept { readonly name: string; readonly on: ColOn; readonly s
 export const MEN_ROWS = 64;
 
 export const MEN_FIELDS: readonly MenField[] = [
+  // WHERE HE IS AND HOW HE IS MOVING
+  { name: 'pos', on: 'man', group: 'hot', type: 'vec3', digest: true },
+  { name: 'vel', on: 'man', group: 'hot', type: 'vec3', digest: true },
+  { name: 'bodyYaw', on: 'man', group: 'hot', type: 'f64', digest: true },
+  { name: 'aimYaw', on: 'man', group: 'hot', type: 'f64', digest: true },
+  { name: 'aimPitch', on: 'man', group: 'hot', type: 'f64', digest: true },
+  { name: 'radius', on: 'man', group: 'hot', type: 'f64', digest: false },
+  { name: 'stepPhase', on: 'man', group: 'hot', type: 'f64', digest: false, why: 'where his walk stands in its cycle' },
+  { name: 'speed', on: 'guard', group: 'hot', type: 'f64', digest: true, why: 'how fast his feet are going (m/s)' },
+  { name: 'lastPos', on: 'guard', group: 'hot', type: 'vec3', digest: false, why: 'where his watchdog last saw him' },
+  { name: 'speedSm', on: 'player', group: 'hot', type: 'f64', digest: false, why: 'his speed, eased' },
+  { name: 'stepTravel', on: 'player', group: 'cold', type: 'f64', digest: false, why: 'how far the walk cycle has come since the last footfall filed, in turns, either way added up, 1 at the most (player.ts FOOTFALL.once; 1 = far enough, which is where it starts, and where it stays while the key has never been on)' },
+  { name: 'stepOwed', on: 'player', group: 'cold', type: 'f64', digest: false, why: 'how far the walk cycle has come at a footfall\'s speed since the last edge of it passed or footfall filed, in turns, either way added up (player.ts FOOTFALL.owed: at half a turn a footfall is owed; 0 where it starts, when he slows, after frames the footfall test was not asked, and while the key is down)' },
+  { name: 'stepAt', on: 'player', group: 'cold', type: 'f64', digest: false, why: 'the game clock the footfall test was last asked at with the key up (-1: never)' },
   // WHO HAS THIS MAN: the one record the "does X have this man?" questions become. Written and read by the game's owner rules (they are not moved here: they arrive empty).
   { name: 'owner', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'which rule has him (0: nobody)' },
   { name: 'rank', on: 'man', group: 'cold', type: 'u32', digest: false, why: 'how hard that rule holds him against another' },

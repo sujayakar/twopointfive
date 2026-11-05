@@ -102,9 +102,9 @@ const wholeGame = (g: any): string => { const bad: string[] = [], ok = (x: unkno
 
   // ---- far
   const g = W.game, pc = g.player.char; g.seat.remote = true; raise(true);
-  const c = fresh(); c.view.target = [pc.pos[0] + 400, 0, pc.pos[2] - 300]; c.view.pos = [c.view.target[0], 30, c.view.target[2] + 20];
+  const c = fresh(); c.view.target = [pc.posX + 400, 0, pc.posZ - 300]; c.view.pos = [c.view.target[0], 30, c.view.target[2] + 20];
   let threw = ''; try { g.step(DT, c); } catch (e) { threw = (e as Error).message; }
-  const t = g.seat.cam.target, d = Math.hypot(t[0] - pc.pos[0], t[1] - pc.pos[1], t[2] - pc.pos[2]);
+  const t = g.seat.cam.target, d = Math.hypot(t[0] - pc.posX, t[1] - pc.posY, t[2] - pc.posZ);
   verdict(!threw && d <= CMDCHECK.reach + 0.5, 'far: a remote seat looking from across the map is looking near its own man when the tick reads it',
     threw ? `the step threw: ${threw}` : `asked for a look-at 500 m from its man; the tick read one ${d.toFixed(1)} m away (the bound: ${CMDCHECK.reach} m)`);
   g.seat.remote = false;

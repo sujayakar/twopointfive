@@ -22,14 +22,14 @@ for (let i = 0; i < 40; i++) W.step(DT);
 if (WALK) { input.keys.add('KeyS'); for (let i = 0; i < 30; i++) W.step(DT); }   // (cam yaw 0: W = north = +z?) walking at the wall first — see the print for which way he went
 const row = (f: number, tag: string) => {
   const w = pl.wall, an = c.anim; const st = (an as any).st?.w?.x ?? NaN;
-  const off = w ? c.pos[0] * w.n[0] + c.pos[2] * w.n[2] - (w.d + 0.45) : NaN;
+  const off = w ? c.posX * w.n[0] + c.posZ * w.n[2] - (w.d + 0.45) : NaN;
   const yawErr = w ? wrapA(c.bodyYaw - Math.atan2(w.n[0], w.n[2])) / DEG : NaN;
   const hips = c.bones.hips, head = c.bones.head;
-  console.log(`${tag} f${String(f).padStart(3)} pos z ${c.pos[2].toFixed(3)} x ${c.pos[0].toFixed(3)}  off ${off.toFixed(3)}  yawErr ${yawErr.toFixed(1).padStart(7)}  stanceW ${st.toFixed(2)}  speed ${Math.hypot(c.vel[0], c.vel[2]).toFixed(2)}  moved ${(v3.distXZ(c.pos, last) / DT).toFixed(2)} m/s  hipsY ${hips ? hips[1].toFixed(3) : '?'} headY ${head ? head[1].toFixed(3) : '?'}  stance ${an.stance} long ${an.longStance ?? '-'} holst ${pl.holstered}`);
+  console.log(`${tag} f${String(f).padStart(3)} pos z ${c.posZ.toFixed(3)} x ${c.posX.toFixed(3)}  off ${off.toFixed(3)}  yawErr ${yawErr.toFixed(1).padStart(7)}  stanceW ${st.toFixed(2)}  speed ${Math.hypot(c.velX, c.velZ).toFixed(2)}  moved ${(v3.distXZ(c.pos, last) / DT).toFixed(2)} m/s  hipsY ${hips ? hips[1].toFixed(3) : '?'} headY ${head ? head[1].toFixed(3) : '?'}  stance ${an.stance} long ${an.longStance ?? '-'} holst ${pl.holstered}`);
   last = v3.copy(c.pos);
 };
 let last = v3.copy(c.pos);
-console.log(`start: pos (${c.pos[0].toFixed(2)}, ${c.pos[2].toFixed(2)}) yaw ${(c.bodyYaw / DEG).toFixed(0)}° vel (${c.vel[0].toFixed(2)}, ${c.vel[2].toFixed(2)})  switch ${ON ? 'ON' : 'off'}${RIFLE ? ' rifle' : ''}`);
+console.log(`start: pos (${c.posX.toFixed(2)}, ${c.posZ.toFixed(2)}) yaw ${(c.bodyYaw / DEG).toFixed(0)}° vel (${c.velX.toFixed(2)}, ${c.velZ.toFixed(2)})  switch ${ON ? 'ON' : 'off'}${RIFLE ? ' rifle' : ''}`);
 input.pressed.add('KeyQ');
 for (let f = 0; f < 36; f++) { W.step(DT); row(f, 'take'); }
 for (const k of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) input.keys.delete(k);

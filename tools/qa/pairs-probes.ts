@@ -81,8 +81,8 @@ async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; quiet?: bool
           // to it — what can be measured is how often a man fires with a friend in his lane)
           if (e.kind !== 'guardShot' || !e.from || !e.to) continue; const sh = R.ops.find((x: any) => x.char.id === e.who); if (!sh) continue; R.rounds++;
           const ax = e.from[0], az = e.from[2], bx = e.to[0] - ax, bz = e.to[2] - az, L2 = bx * bx + bz * bz || 1;
-          for (const m of R.ops) { if (m === sh || m.state === 'dead') continue; const k = ((m.char.pos[0] - ax) * bx + (m.char.pos[2] - az) * bz) / L2; if (k <= 0.02 || k >= 1) continue;
-            const y = e.from[1] + (e.to[1] - e.from[1]) * k - m.char.pos[1]; if (Math.hypot(ax + bx * k - m.char.pos[0], az + bz * k - m.char.pos[2]) < 0.28 && y > 0 && y < 1.8) { R.through.push(`${sh.callsign} through ${m.callsign} at ${f2(game.time)} s`); break; } } }
+          for (const m of R.ops) { if (m === sh || m.state === 'dead') continue; const k = ((m.char.posX - ax) * bx + (m.char.posZ - az) * bz) / L2; if (k <= 0.02 || k >= 1) continue;
+            const y = e.from[1] + (e.to[1] - e.from[1]) * k - m.char.posY; if (Math.hypot(ax + bx * k - m.char.posX, az + bz * k - m.char.posZ) < 0.28 && y > 0 && y < 1.8) { R.through.push(`${sh.callsign} through ${m.callsign} at ${f2(game.time)} s`); break; } } }
         for (const [x, st] of was) if (st !== 'dead' && x.state === 'dead') R.downs.push({ who: x, t: game.time, by: game.guards.find((k: any) => k.char.id === x.killerId) ?? null });
         R.post?.();
       }
@@ -431,7 +431,7 @@ export const pairsLanes = guarded(async () => {
     O.give('move', O.targetAt(FLANK), 'red'); R.set('red', 25); O.give('hold', R.here(), 'red'); R.step(60); const arcs = red.map((m: any) => O.of(m)?.there).join(' / ');
     let crossed = 0, up = 0, lowSeen = 0;
     R.post = () => { for (const w of red) { const a = O.of(w); if (!a?.watch || !a.arrived) continue; const p = w.char.pos, yaw = Math.atan2(a.watch[0] - p[0], a.watch[2] - p[2]), fx = Math.sin(yaw), fz = Math.cos(yaw), len = dist(p, a.watch);
-      const hit = R.men('blue').some((m: any) => { const sx = m.char.pos[0] - p[0], sz = m.char.pos[2] - p[2], al = sx * fx + sz * fz; return al > 0.3 && al < len - 0.1 && Math.abs(sx * fz - sz * fx) < 0.3; });
+      const hit = R.men('blue').some((m: any) => { const sx = m.char.posX - p[0], sz = m.char.posZ - p[2], al = sx * fx + sz * fz; return al > 0.3 && al < len - 0.1 && Math.abs(sx * fz - sz * fx) < 0.3; });
       if (hit) { crossed++; if (!a.low) up++; } if (a.low) lowSeen++; } };
     O.give('move', O.targetAt([34.5, 0, 11.0]), 'blue'); R.set('blue', 30); R.step(30); const east = R.men('blue').map((m: any) => at(m.char.pos)).join(' '), eastLow = red.map((m: any) => !!O.of(m)?.low);
     O.give('move', O.targetAt([17.5, 0, 11.0]), 'blue'); R.set('blue', 40); R.step(90); const after = red.map((m: any) => !!O.of(m)?.low);

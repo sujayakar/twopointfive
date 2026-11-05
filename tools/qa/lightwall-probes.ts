@@ -47,7 +47,7 @@ function samAt(W: any, z: number, gun: 'rifle' | 'pistol') {
   if (!(gun === 'rifle' ? pl.rifleUp : pl.pistolUp)) { input.pressed.add(gun === 'rifle' ? 'Digit2' : 'Digit1'); W.step(DT); }
   hold(W, [X, 0, 3.7], 60); if (!pl.light.enabled) { input.pressed.add('KeyL'); hold(W, [X, 0, 3.7], 30); }
   const c = pl.char, lens = (gun === 'rifle' ? sc20kLightPose(c) : rigLightPose(c));
-  return { L: pl.light, at: v3.copy(pl.light.pos) as Vec3, beam: v3.copy(pl.light.dir) as Vec3, lit: pl.light.enabled as boolean, r: pl.light.radius as number, lens: lens.pos as Vec3, dir: lens.dir as Vec3, sh: v3.copy(c.bones.upperArmR) as Vec3, z: c.pos[2] as number, up: gun === 'rifle' ? pl.rifleUp : pl.pistolUp };
+  return { L: pl.light, at: v3.copy(pl.light.pos) as Vec3, beam: v3.copy(pl.light.dir) as Vec3, lit: pl.light.enabled as boolean, r: pl.light.radius as number, lens: lens.pos as Vec3, dir: lens.dir as Vec3, sh: v3.copy(c.bones.upperArmR) as Vec3, z: c.posZ as number, up: gun === 'rifle' ? pl.rifleUp : pl.pistolUp };
 }
 /** is there a static or a leaf between the shoulder and the light as it stands? (the watcher's question: tools/qa/lightwall-watch.ts) */
 function beyond(W: any, sh: Vec3, at: Vec3): boolean { const d = v3.sub(at, sh), L = v3.len(d); return L > 1e-3 && !!W.game.col.raycast(sh, v3.scale(d, 1 / L), L); }
@@ -73,7 +73,7 @@ async function wallSam() {
 /** a unit stood facing the wall by an order, gun up, light burning; the frames run until his pose has settled */
 function manAt(W: any, team: 'operative' | 'guard', weapon: string, z: number) {
   const g = W.game; const gd = spawnUnit(g, { team, pos: [X + (team === 'guard' ? 3 : -3), 0, z], yaw: NORTH, weapon, light: true });
-  const at: Vec3 = [gd.char.pos[0], 0, z]; order(gd, { goal: at, face: NORTH, aimAt: [at[0], 1.35, 12], upper: 'aim', light: true, hot: true });
+  const at: Vec3 = [gd.char.posX, 0, z]; order(gd, { goal: at, face: NORTH, aimAt: [at[0], 1.35, 12], upper: 'aim', light: true, hot: true });
   for (let i = 0; i < 90; i++) W.step(DT);
   return gd;
 }
@@ -89,7 +89,7 @@ async function wallMen() {
     if (beyond(Wn, b.char.bones.upperArmR, B.pos)) fails.push('on: something solid still stands between his shoulder and the light');
     if (v3.len(v3.sub(A.dir, B.dir)) > 0.02) fails.push('the beam points another way with the rule on');
     verdict(!fails.length, `${what}: off the light stands ${A.pos[2] > FAR ? 'THROUGH the wall' : 'INSIDE the wall'}; on it is ${f2(NEAR - B.pos[2])} m short of the face`,
-      fails.join('; ') || `he stands at z ${f2(b.char.pos[2])} · wall ${f2(NEAR)} … ${f2(FAR)} · off: light ${p3(A.pos)} · on: light ${p3(B.pos)}`);
+      fails.join('; ') || `he stands at z ${f2(b.char.posZ)} · wall ${f2(NEAR)} … ${f2(FAR)} · off: light ${p3(A.pos)} · on: light ${p3(B.pos)}`);
   }
 }
 

@@ -66,7 +66,7 @@ export function doorThrowAfter(g: Game, contacts: DoorContact[]): void {
     if (c.moved) DOORTHROW_STATS.carried++;
     { const mine = viewOfId(g, c.who); if (mine) { if (c.struck && c.struck.tier !== 'open') throwSam(mine, c.struck); continue; } }
     const gd = manOf(g, c.who); if (!gd || gd.state === 'dead') continue;
-    if (c.moved) { const p = gd.char.pos; g.col.collideCircle(p, 0.3, 0.2, 1.5); g.col.clampToWorld(p, 0.3); gd.char.update(0); }   // (he has no walk this frame to keep him out of the wall the leaf carried him at: the statics are asked here, and his bones re-baked where he now is)
+    if (c.moved) { const p = gd.char.pos; g.col.collideCircle(p, 0.3, 0.2, 1.5); g.col.clampToWorld(p, 0.3); gd.char.pos = p; gd.char.update(0); }   // (he has no walk this frame to keep him out of the wall the leaf carried him at: the statics are asked here, and his bones re-baked where he now is)
     if (c.struck) { if (c.struck.tier === 'open') startleMan(g, gd, c.struck); else throwMan(g, gd, c.struck); }
   }
 }

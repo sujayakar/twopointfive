@@ -141,7 +141,7 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
     if (!M) throw new Done('stalled', 'no mission after the deal');
     if (arm !== 'alone' && !mate) throw new Done('error', 'squad 1 asked for and no partner staged');
     const pl = () => g.player, pos = (): number[] => g.player.char.pos;
-    const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
+    const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.posX, c.posY + 1.6, c.posZ], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.posX, c.posY + 1.2, c.posZ];
     /** the shift: the level's own men (never the partner) */
     const shift = (): any[] => g.guards.filter((x: any) => x.team !== 'operative');
     const up = (x: any) => x.state !== 'dead' && !x.ko && x.char.alive !== false;
@@ -290,7 +290,7 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
     /** WHO WOULD SEE IT, asked at 'set' BEFORE any mark (what a player reads off two men facing each other): the game's own answer (g.pair.watcher: eyes on the
      *  partner, or the man's floor in a mate's body view and lit) — and besides it any living guard of the man's side within 12 m of him with a clear line to
      *  his hips whose CHEST (not his head: a glance comes back) holds him within 70° */
-    const wouldSee = (foe: any): any | null => { const w = g.pair.watcher(foe, mate); if (w) return w; const hp = foe.char.bones?.hips ?? [foe.char.pos[0], 1.0, foe.char.pos[2]];
+    const wouldSee = (foe: any): any | null => { const w = g.pair.watcher(foe, mate); if (w) return w; const hp = foe.char.bones?.hips ?? [foe.char.posX, 1.0, foe.char.posZ];
       for (const h of shift()) { if (!up(h) || h === foe || h.held || h.team !== foe.team || flat(h.char.pos, hp) > 12) continue; const eye = eyeOf(h.char), cd = h.char.chestDir, dx = hp[0] - eye[0], dz = hp[2] - eye[2];
         if ((dx * cd[0] + dz * cd[2]) / ((Math.hypot(dx, dz) || 1) * (Math.hypot(cd[0], cd[2]) || 1)) < Math.cos(70 * Math.PI / 180)) continue;
         if (!g.col.segmentBlocked(eye, [hp[0], hp[1], hp[2]]) || !g.col.segmentBlocked(eye, [hp[0], hp[1] + 0.3, hp[2]]) || !g.col.segmentBlocked(eye, eyeOf(foe.char))) return h; } return null; };   // (his hips — or a hand above them, the point bodySeen asks for a man going down, or his head: a low crate hides the first and nothing else)
@@ -300,8 +300,8 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
       const still = () => { const me = pos(); goal = safe && watched(me) && flat(me, safe) > 0.35 && flat(me, safe) < 4 ? safe : null;
         const cp = Wm.char.pos, dx = cp[0] - me[0], dz = cp[2] - me[2], L = Math.hypot(dx, dz) || 1, ca = Math.cos(1.1), sa = Math.sin(1.1); cursor([me[0] + (dx * ca - dz * sa) / L * 2.5, 0.2, me[2] + (dx * sa + dz * ca) / L * 2.5]); step(); };
       const off = (why: string) => { bump(O.why, why); say(`(the order on ${name} is off: ${why})`); };
-      for (let i = 0; i < 60 && Math.hypot(pl().char.vel[0], pl().char.vel[2]) > 0.1; i++) still();
-      const whyNot = g.orders.give('pairMark', { kind: 'foe', at: [Wm.char.pos[0], 0, Wm.char.pos[2]], foe: Wm }, 'all');
+      for (let i = 0; i < 60 && Math.hypot(pl().char.velX, pl().char.velZ) > 0.1; i++) still();
+      const whyNot = g.orders.give('pairMark', { kind: 'foe', at: [Wm.char.posX, 0, Wm.char.posZ], foe: Wm }, 'all');
       O.given++; nextOrderT = t + K.cool;
       if (whyNot) { O.refused++; bump(O.why, `refused: ${whyNot}`); say(`order: take ${name} · on your mark — REFUSED: ${whyNot}`); fallIn('the order was refused'); return false; }
       say(`order: take ${name} · on your mark (Sam ${f1(flat(pos(), Wm.char.pos))} m from him; ${mate.callsign} ${f1(flat(mate.char.pos, Wm.char.pos))} m)`);
@@ -343,7 +343,7 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
       if (O.given >= K.max) return no(`${K.max} orders given already`); if (!g.pair?.up) return no('the rows are not on the menu (g.pair.up is false)'); if (anyRoused()) return no('a man is roused');
       const all = [...new Set([...watchers(ah), ...watchers(me)])], men = all.filter(h => g.guards.includes(h));
       if (!men.length) return no(`the watcher is no guard (${all.map(x => x.callsign ?? 'a civilian').join(', ') || 'nobody'})`);
-      const Ws = men.filter(h => g.pair.isFoe(h) && (triedN.get(h) ?? 0) < 2 && (!K.still || Math.hypot(h.char.vel[0], h.char.vel[2]) < 0.2)).sort((a, b) => flat(a.char.pos, me) - flat(b.char.pos, me));
+      const Ws = men.filter(h => g.pair.isFoe(h) && (triedN.get(h) ?? 0) < 2 && (!K.still || Math.hypot(h.char.velX, h.char.velZ) < 0.2)).sort((a, b) => flat(a.char.pos, me) - flat(b.char.pos, me));
       if (!Ws.length) return no(`${men.map(h => `${h.callsign}: ${!g.pair.isFoe(h) ? 'no order target (the fog of war hides him, or he is held)' : (triedN.get(h) ?? 0) >= 2 ? 'tried twice' : 'walking (QP_STILL)'}`).join(' · ')}`);
       noWhy = '';
       return command(Ws[0], safe) ? 'moved' : 'stayed';
@@ -440,11 +440,11 @@ async function one(seed: number, arm: Arm, cap: number, verbose: boolean, levelF
           if (![a, b, m, s, bb, P(0, -1.2), P(0, -3.5), P(4.6, -3.5), P(5.8, -3.5)].every(ok) || !los(a, b) || !los(m, a) || !los(s, P(5.8, -3.5)) || !los(P(5.8, -3.5), bb) || !los(bb, b)) continue;
           const lit = g.pair.litAt(a); if (!stage || (wantLit ? Math.abs(lit - RIG_LIT) < Math.abs(stage.lit - RIG_LIT) : lit < stage.lit)) stage = { a, b, s, m, f, r: rt, lit, litB: g.pair.litAt(b) }; }
         if (!stage) throw new Done('stalled', 'the rig found no open floor for its figure (5 m × 7 m) on this level');
-        const put = (x: any, p: Vec3, yaw: number) => { x.char.pos[0] = p[0]; x.char.pos[2] = p[2]; x.char.bodyYaw = x.char.aimYaw = yaw; x.hold = true; x.pinned = true; x.awareness = 0; x.state = 'patrol'; x.path = []; };
+        const put = (x: any, p: Vec3, yaw: number) => { x.char.posX = p[0]; x.char.posZ = p[2]; x.char.bodyYaw = x.char.aimYaw = yaw; x.hold = true; x.pinned = true; x.awareness = 0; x.state = 'patrol'; x.path = []; };
         const yawF = Math.atan2(stage.f[0], stage.f[1]), yawBA = Math.atan2(stage.a[0] - stage.b[0], stage.a[2] - stage.b[2]);
         put(A, stage.a, yawF); put(B, stage.b, yawF);
         for (const x of H.slice(2)) { x.hold = true; x.pinned = true; }   // (the others stand where they are: the rig is about two men)
-        g.teleportPlayer([stage.s[0], 0, stage.s[2]]); mate.char.pos[0] = stage.m[0]; mate.char.pos[2] = stage.m[2];
+        g.teleportPlayer([stage.s[0], 0, stage.s[2]]); mate.char.posX = stage.m[0]; mate.char.posZ = stage.m[2];
         step(30); say(`RIG ${RIG}: ${A.callsign} at ${at(stage.a)} (his floor reads ${r2(stage.lit)} on the steady lamps) and ${B.callsign} 5 m to his right at ${at(stage.b)} (${r2(stage.litB)}), both looking the same way; ${mate.callsign} 7 m behind ${A.callsign}, Sam 7 m behind and 1.5 m inside ${B.callsign}. When ${mate.callsign} is set, ${B.callsign} is turned to look at ${A.callsign}${B.flashlight?.enabled ? ` (his torch is lit)` : ''}`);
         rigOnSet = () => { B.char.bodyYaw = B.char.aimYaw = yawBA; say(`RIG: ${B.callsign} turns to look at ${A.callsign}`); };
         const moved = command(A, null); try { step(120); } catch (e) { if (!(e instanceof Done)) throw e; }

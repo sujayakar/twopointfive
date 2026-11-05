@@ -36,7 +36,7 @@ export async function deathrecapCheck(): Promise<boolean> {
   console.log('\n=== deathrecap: the end card knows who shot whom, from where — and says nothing while the run is on ===');
   const was = { ...RECAP }; const brk = process.env.RECAP_BREAK === '1';
   const P: number[] = [22, 0, 17.6];   // the corridor outside the break room (frag-probes.ts P0)
-  const chest = (c: any): number[] => c.bones?.chest ?? [c.pos[0], 1.2, c.pos[2]];
+  const chest = (c: any): number[] => c.bones?.chest ?? [c.posX, 1.2, c.posZ];
   /** Sam and one man of the shift in the open with a line between them, Sam's back to him, the AI off; `shoot()` = that man's one steady round at Sam's chest */
   const stage = async (seed: number) => {
     const R = await rig(seed); const g = R.game, pl = g.player, gd = g.guards[0]; g.aiEnabled = false; g.godMode = false;
@@ -92,8 +92,8 @@ export async function deathrecapCheck(): Promise<boolean> {
       const civ = g.civilians[0];
       if (!civ) line(false, 'a civilian stands on this floor to be lost (the stand has none: nothing was checked)');
       else { pl.holstered = false; pl.slot = 'pistol'; let n = 0;
-        while (civ.state !== 'dead' && n < 8) { const k = n++ * 0.785, c = civ.char.pos; g.teleportPlayer([c[0] + Math.sin(k) * 1.8, 0, c[2] + Math.cos(k) * 1.8]); const y = Math.atan2(c[0] - pl.char.pos[0], c[2] - pl.char.pos[2]); pl.char.bodyYaw = y; pl.char.aimYaw = y; R.step(20);
-          if (Math.hypot(pl.char.pos[0] - civ.char.pos[0], pl.char.pos[2] - civ.char.pos[2]) > 2.6) continue; fireWeapon(g, pl.char, chest(civ.char), true); R.step(2); }
+        while (civ.state !== 'dead' && n < 8) { const k = n++ * 0.785, c = civ.char.pos; g.teleportPlayer([c[0] + Math.sin(k) * 1.8, 0, c[2] + Math.cos(k) * 1.8]); const y = Math.atan2(c[0] - pl.char.posX, c[2] - pl.char.posZ); pl.char.bodyYaw = y; pl.char.aimYaw = y; R.step(20);
+          if (Math.hypot(pl.char.posX - civ.char.posX, pl.char.posZ - civ.char.posZ) > 2.6) continue; fireWeapon(g, pl.char, chest(civ.char), true); R.step(2); }
         R.step(90); const ds = recapDeathsForChecks(g), d = ds[ds.length - 1];
         line(civ.state === 'dead' && !!d && d.victim === civ.char.id && d.by === pl.char.id && d.byName === 'Player' && !d.player && deathRecapOf(g) === null && (await panel(g)) === null,
           'one of ours lost while a player still plays is kept, by name — and nothing is handed out, no panel', d ? `${d.name} by ${d.byName} (${d.cause}) · handed out: ${deathRecapOf(g) ? 'YES' : 'no'}` : `no death kept (civilian ${civ.state})`); }
@@ -102,28 +102,28 @@ export async function deathrecapCheck(): Promise<boolean> {
     {
       const fresh = async (seed: number) => { RECAP.on = true; const R = await rig(seed); const g = R.game; g.aiEnabled = false; R.step(10); return { R, g, pl: g.player, civ: g.civilians[0], civ2: g.civilians[1] }; };
       const kept = (g: any) => { const ds = recapDeathsForChecks(g); return ds[ds.length - 1]; };
-      const away = (g: any, c: any) => g.teleportPlayer([c.pos[0] < 20 ? 34 : 6, 0, 14]);
+      const away = (g: any, c: any) => g.teleportPlayer([c.posX < 20 ? 34 : 6, 0, 14]);
       { const A = await fresh(6); if (!A.civ) line(false, 'a civilian to put out cold');
         else { killGuard(A.g, A.civ, [0, 0, 1], true, 'choked', 'player'); A.R.step(30);
           line(A.civ.state === 'dead' && recapDeathsForChecks(A.g).length === 0, 'a civilian put out cold by a hand is not a death to explain', `${A.civ.callsign} ${A.civ.state} (${A.civ.downKind}) · kept ${recapDeathsForChecks(A.g).length}`); } }
       { const A = await fresh(7); if (!A.civ) line(false, 'a civilian beside a stun canister');
-        else { away(A.g, A.civ.char); A.R.step(2); const at = [A.civ.char.pos[0] + 1, 0.2, A.civ.char.pos[2]];
+        else { away(A.g, A.civ.char); A.R.step(2); const at = [A.civ.char.posX + 1, 0.2, A.civ.char.posZ];
           A.g.events.push({ kind: 'bang', pos: at, time: A.g.time, loud: true }); killGuard(A.g, A.civ, [0, 0, 1], false, 'shot', 'world'); A.R.step(30); const d = kept(A.g);
-          const B = await fresh(7); away(B.g, B.civ.char); B.R.step(2); const at2 = [B.civ.char.pos[0] + 1, 0.2, B.civ.char.pos[2]];
+          const B = await fresh(7); away(B.g, B.civ.char); B.R.step(2); const at2 = [B.civ.char.posX + 1, 0.2, B.civ.char.posZ];
           B.g.events.push({ kind: 'bang', pos: at2, time: B.g.time, loud: true, level: 2, who: B.pl.char.id, frag: true }); killGuard(B.g, B.civ, [0, 0, 1], false, 'shot', 'world'); B.R.step(30); const e = kept(B.g);
           line(!!d && d.cause === 'unknown' && !!e && e.cause === 'blast' && e.by === B.pl.char.id, 'a stun canister going off beside a man who drops is not named his killer; a fragmentation burst is', `stun: ${d?.cause} · frag: ${e?.cause} by ${e?.byName}`); } }
       { const A = await fresh(8); const gd = A.g.guards[0]; let d: any = null, tried = 0;
         if (A.civ && gd) { away(A.g, A.civ.char); const c = A.civ.char;
-          for (let k = 0; k < 8 && !d; k++) { const a = k * 0.785, p = [c.pos[0] + Math.sin(a) * 2.2, 0, c.pos[2] + Math.cos(a) * 2.2], face = Math.atan2(c.pos[0] - p[0], c.pos[2] - p[2]);
+          for (let k = 0; k < 8 && !d; k++) { const a = k * 0.785, p = [c.posX + Math.sin(a) * 2.2, 0, c.posZ + Math.cos(a) * 2.2], face = Math.atan2(c.posX - p[0], c.posZ - p[2]);
             for (let i = 0; i < 20; i++) { A.R.put(gd, p, c.pos); A.R.step(1); }
-            if (Math.hypot(gd.char.pos[0] - p[0], gd.char.pos[2] - p[2]) > 0.3 || A.g.col.shotBlocked(gd.char.muzzle, chest(c), 0.05)) continue; tried++;
+            if (Math.hypot(gd.char.posX - p[0], gd.char.posZ - p[2]) > 0.3 || A.g.col.shotBlocked(gd.char.muzzle, chest(c), 0.05)) continue; tried++;
             fireWeapon(A.g, gd.char, chest(c), false, { steady: true, spread: 0.01 });   // rescue.ts's execution, statement for statement: an AI round never tests a civilian, the game puts her down by hand
             killGuard(A.g, A.civ, [Math.sin(face), 0, Math.cos(face)], false, 'shot', 'guard'); A.R.step(30); d = kept(A.g); } }
         line(!!d && d.cause === 'round' && d.by === gd.char.id && d.byName === gd.callsign && !!d.from && !!d.weapon, 'a hostage shot the way a captor shoots one (his round through her, put down by the game) is his round, by name', d ? `${d.name} by ${d.byName} · ${d.weapon} · ${d.cause}` : `not kept (${tried} clear lines tried)`); }
       { const A = await fresh(9); if (!A.civ || !A.civ2) line(false, 'two civilians: one lost before the run ends, one after');
-        else { away(A.g, A.civ.char); A.R.step(2); A.g.events.push({ kind: 'bang', pos: [A.civ.char.pos[0] + 1, 0.2, A.civ.char.pos[2]], time: A.g.time, loud: true, frag: true, who: A.pl.char.id }); killGuard(A.g, A.civ, [0, 0, 1], false, 'shot', 'world'); A.R.step(120);
+        else { away(A.g, A.civ.char); A.R.step(2); A.g.events.push({ kind: 'bang', pos: [A.civ.char.posX + 1, 0.2, A.civ.char.posZ], time: A.g.time, loud: true, frag: true, who: A.pl.char.id }); killGuard(A.g, A.civ, [0, 0, 1], false, 'shot', 'world'); A.R.step(120);
           const before = deathRecapOf(A.g); A.g.mission.stage = 'done'; A.R.step(5); const atEnd = deathRecapOf(A.g);
-          A.g.events.push({ kind: 'bang', pos: [A.civ2.char.pos[0] + 1, 0.2, A.civ2.char.pos[2]], time: A.g.time, loud: true, frag: true, who: A.pl.char.id }); killGuard(A.g, A.civ2, [0, 0, 1], false, 'shot', 'world'); A.R.step(120);
+          A.g.events.push({ kind: 'bang', pos: [A.civ2.char.posX + 1, 0.2, A.civ2.char.posZ], time: A.g.time, loud: true, frag: true, who: A.pl.char.id }); killGuard(A.g, A.civ2, [0, 0, 1], false, 'shot', 'world'); A.R.step(120);
           const on = deathRecapOf(A.g), n = recapDeathsForChecks(A.g).length;
           line(before === null && !!atEnd && atEnd.takes.length === 1 && n === 2 && !!on && on.takes.length === 1 && on.takes[0].death.victim === A.civ.char.id,
             'a run played on past its end shows what happened up to the end and nothing after it', `before the end: ${before ? 'handed out' : 'nothing'} · at the end: ${atEnd?.takes.length ?? 0} · played on, ${n} lost: ${on?.takes.length ?? 0} shown`); } }
@@ -140,7 +140,7 @@ export async function deathrecapCheck(): Promise<boolean> {
         for (let i = 0; i < 300; i++) {   // he comes in from 2.5 m further out at a jog and stands on his mark the last three seconds; Sam's gun line swings meanwhile
           const k = Math.max(0, 1 - i / 110), p = [b[0] + ux / L * 2.5 * k, 0, b[2] + uz / L * 2.5 * k], w = Math.sin(i * 0.03) * 0.6, c = Math.cos(w), sn = Math.sin(w);
           R.W.cursorAt([a[0] - (ux * c - uz * sn) * 3, 1, a[2] - (ux * sn + uz * c) * 3]); R.put(gd, p, a); R.step(1);
-          log.push({ t: g.time, sx: pl.char.pos[0], sz: pl.char.pos[2], sa: pl.char.aimYaw, gx: gd.char.pos[0], gz: gd.char.pos[2] }); }
+          log.push({ t: g.time, sx: pl.char.posX, sz: pl.char.posZ, sa: pl.char.aimYaw, gx: gd.char.posX, gz: gd.char.posZ }); }
         T.shoot(); R.step(1); if (!pl.down) continue; R.step(Math.ceil((RECAP.after + 0.5) * 60));
         const rec = deathRecapOf(g), take = rec?.takes[rec.main]; done = true;
         if (!take) { line(false, 'the playback has a take to play'); break; }
@@ -191,7 +191,7 @@ export async function deathrecapCheck(): Promise<boolean> {
     }
     // (11) while the run is on: a man of the squad lost, as much as the squad knows
     { const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`); const { lostLive, RECAP_STATS } = M;
-      const eye = (c: any): number[] => c.bones?.head ?? [c.pos[0], 1.65, c.pos[2]], lie = (p: number[]): number[] => [p[0], 0.4, p[2]];
+      const eye = (c: any): number[] => c.bones?.head ?? [c.posX, 1.65, c.posZ], lie = (p: number[]): number[] => [p[0], 0.4, p[2]];
       const rowOf = (g: any, name: string) => g.orders.hud().status.flatMap((r: any) => r.opts).find((o: any) => o.text.includes(name));
       const copy = (r: any) => r ? { gone: !!r.gone, from: r.lost ? r.lost.from && [...r.lost.from] : undefined } : null;   // (copied: the row hands out the live record)
       /** A room clear's pair. A defender puts one round into the first man at a place neither his mate nor Sam has a line to.
@@ -224,7 +224,7 @@ export async function deathrecapCheck(): Promise<boolean> {
             R.step(120); if (walls) for (const back of walls.reverse()) back();
             if (mode === 'late') { for (let i = 0; i < 3; i++) { R.put(B, w, at); R.step(1); } R.step(90); }
             const L1 = lostLive(g).find((x: any) => x.id === A.char.id), said = (g.cues as any).bubbles.get(B)?.text ?? '';   // the cue itself: a bark of his own since would stand over it in bubbleOf
-            const pc = g.player.char, side = g.fogOfWar.sideOf([pc.pos[0] + u[0] * 50, 0, pc.pos[2] + u[1] * 50]);
+            const pc = g.player.char, side = g.fogOfWar.sideOf([pc.posX + u[0] * 50, 0, pc.posZ + u[1] * 50]);
             const out = { g, A, B, H, before, first, L: L1 ? { ...L1, from: L1.from && [...L1.from] } : null, keys: Object.keys(L1 ?? {}).sort().join(' '), row: copy(rowOf(g, A.callsign)), said, side, u, calls: RECAP_STATS.calls - calls0, card: deathRecapOf(g), digest: '' };
             R.step(60); out.digest = JSON.stringify(digestGame(g, true));
             return out;

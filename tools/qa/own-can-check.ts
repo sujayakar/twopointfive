@@ -20,7 +20,7 @@ const SCN = arg('--scn', 'barracks-four'), SEED = +arg('--seed', '1'), BREAK = p
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const log = console.log, quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { const e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = e; console.warn = w; } };
 let all = true; const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-const put = (gd: any, p: number[]) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
+const put = (gd: any, p: number[]) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
 const frame = (d: any, side: 1 | -1) => { const th = d.def.closedDir, u = [Math.cos(th), Math.sin(th)], n = [-u[1] * side, u[0] * side], c = d.frameCentre;
   return { at: (b: number, l: number): number[] => [c[0] + n[0] * b + u[0] * l, 0, c[2] + n[1] * b + u[1] * l], off: (p: number[]) => (p[0] - c[0]) * n[0] + (p[2] - c[2]) * n[1] }; };
 const s1 = (x: number) => x.toFixed(1);
@@ -70,7 +70,7 @@ log(`=== own-can-check: ${SCN}, seed ${SEED} ===`);
     const n0 = D.stats.ownFlashed, why = await quiet(() => D.order('bangClear', red, d, side)); if (typeof why === 'string') return { why };
     let op: any = null; await quiet(() => { for (let i = 0; i < 60 * 30; i++) { S.step(1); pin(); op = [...D.ops, ...D.done].find((o: any) => o.door === d && !isNaN(o.bangT)); if (op) break; } });
     if (!op) return { why: 'no bang inside 30 s' };
-    return { why: null, at: op.bangAt as number[], dist: blue.map(x => Math.hypot(x.char.pos[0] - op.bangAt[0], x.char.pos[2] - op.bangAt[2])), blind: blue.map(x => Math.max(0, x.dazzledUntil - g.time)), fold: blue.map(x => Math.max(0, x.staggerUntil - g.time)),
+    return { why: null, at: op.bangAt as number[], dist: blue.map(x => Math.hypot(x.char.posX - op.bangAt[0], x.char.posZ - op.bangAt[2])), blind: blue.map(x => Math.max(0, x.dazzledUntil - g.time)), fold: blue.map(x => Math.max(0, x.staggerUntil - g.time)),
       red: red.map(x => Math.max(0, x.dazzledUntil - g.time)), counted: D.stats.ownFlashed - n0, names: blue.map(x => x.callsign ?? '?') }; };
   const S0: any = await quiet(() => BT.stage(SCN, SEED)); const doors: { name: string; side: 1 | -1 }[] = [];
   for (const d of S0.g.doors.list) for (const side of [1, -1] as const) doors.push({ name: d.def.name, side });

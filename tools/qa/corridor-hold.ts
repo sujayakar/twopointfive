@@ -102,13 +102,13 @@ export async function holdRun(scn: string, seed: number, secs = SECS, set = SET,
     const eye = (c: any): number[] => [c.pos[0], c.pos[1] + 1.45, c.pos[2]], chest = (c: any): number[] => [c.pos[0], c.pos[1] + 1.1, c.pos[2]];
     const inLine = (h: any) => { const p = chest(h.char); for (const o of team()) { if (o.state === 'dead') continue; if (flat(o.char.pos, h.char.pos) < 45 && !col.shotBlocked(eye(o.char), p)) return true; } return flat(sam, h.char.pos) < 45 && !col.shotBlocked(eye(g.player.char), p); };
     const doing = (h: any) => { const D = fight.defs?.find((d: any) => d.gd === h); return `${D ? D.mode : '—'}/${h.state}${h.script ? '/script' : ''}`; };
-    const home = new Map<any, number[]>(); for (const h of foes()) home.set(h, [h.char.pos[0], 0, h.char.pos[2]]);
+    const home = new Map<any, number[]>(); for (const h of foes()) home.set(h, [h.char.posX, 0, h.char.posZ]);
     const spell = new Map<any, WalkIn>(), was = new Map<any, { p: number[]; line: boolean; up: boolean }>(), losses: { t: number; at: number[] }[] = [];
     // THE ROOM THAT IS HIT: the held room nearest the team, and in it the defender nearest the team — he is shot at the start (the team's round, as if through
     // the doorway), and the gunfire of the hold is heard at his place and at the team's from then on. That is what brings the others: a room of theirs hit.
     let hitAt: number[] | null = null;
     if (!NOHIT) { let best: any = null, bd = Infinity; for (const h of foes()) { const D = fight.defs?.find((d: any) => d.gd === h); if (!D?.room) continue; const d = flat(h.char.pos, sam); if (d < bd) { bd = d; best = h; } }
-      if (best) { hitAt = [best.char.pos[0], 1, best.char.pos[2]]; out.notes.push(`first hit: ${best.callsign} ${at(best.char.pos)}`); const d = [best.char.pos[0] - sam[0], 0, best.char.pos[2] - sam[2]], l = Math.hypot(d[0], d[2]) || 1;
+      if (best) { hitAt = [best.char.posX, 1, best.char.posZ]; out.notes.push(`first hit: ${best.callsign} ${at(best.char.pos)}`); const d = [best.char.posX - sam[0], 0, best.char.posZ - sam[2]], l = Math.hypot(d[0], d[2]) || 1;
         home.delete(best); g.events.push({ kind: 'shot', pos: [sam[0], 1, sam[2]], time: g.time, loud: true, level: 1, who: g.player.char.id } as any); killGuard(g, best, [d[0] / l, 0, d[2] / l], false, 'shot', 'player'); was.set(best, { p: hitAt, line: false, up: false }); out.hostiles--; } }
     let t0 = g.time, nextNoise = 1, downSeen = 0, k = 0, hf = 0, seenAt = new Map<any, number>(), nextShot = 0, left = false, flipped = false;
     for (let f = 0; f < secs * 60; f++) {
@@ -119,14 +119,14 @@ export async function holdRun(scn: string, seed: number, secs = SECS, set = SET,
         const pc = g.player.char; let tgt: any = null, td = Infinity;
         for (const h of foes()) { if (h.state === 'dead') { seenAt.delete(h); continue; } const d = flat(pc.pos, h.char.pos); if (d > 45 || col.shotBlocked(eye(pc), chest(h.char))) { seenAt.delete(h); continue; }
           if (!seenAt.has(h)) seenAt.set(h, t); if (t - seenAt.get(h)! >= 0.33 && d < td) { td = d; tgt = h; } }
-        if (tgt && t >= nextShot) { nextShot = t + 0.33; const c = chest(tgt.char); pc.aimYaw = pc.bodyYaw = Math.atan2(c[0] - pc.pos[0], c[2] - pc.pos[2]); fireWeapon(g, pc, c, true, { weapon: WEAPONS.fn2000 }); say(`  ${t.toFixed(1).padStart(6)}  ● Sam's round at ${tgt.callsign} ${at(tgt.char.pos)}`); }
+        if (tgt && t >= nextShot) { nextShot = t + 0.33; const c = chest(tgt.char); pc.aimYaw = pc.bodyYaw = Math.atan2(c[0] - pc.posX, c[2] - pc.posZ); fireWeapon(g, pc, c, true, { weapon: WEAPONS.fn2000 }); say(`  ${t.toFixed(1).padStart(6)}  ● Sam's round at ${tgt.callsign} ${at(tgt.char.pos)}`); }
       }
       if (t >= nextNoise) { nextNoise += NOISE; const p = hitAt && (k++ % 2 === 0) ? hitAt : [sam[0], 1, sam[2]]; g.events.push({ kind: 'shot', pos: [p[0], 1, p[2]], time: g.time, loud: true, level: 1, who: g.player.char.id } as any); }
       step(1);
       { const h = g.player.hitFlash ?? 0; if (h > hf + 1e-6) { out.samHits++; say(`  ${t.toFixed(1).padStart(6)}  ✚ Sam hit (he cannot be hurt here: ${out.samHits})`); } hf = h; }
       if (f % 6) continue;
       for (const h of foes()) {
-        const w = was.get(h), up = h.state !== 'dead', line = up ? inLine(h) : (w?.line ?? false), p = [h.char.pos[0], 0, h.char.pos[2]];
+        const w = was.get(h), up = h.state !== 'dead', line = up ? inLine(h) : (w?.line ?? false), p = [h.char.posX, 0, h.char.posZ];
         if (w?.up && !up) {
           const k: Kill = { t: +t.toFixed(1), who: h.callsign, at: [+w.p[0].toFixed(1), +w.p[2].toFixed(1)], doing: (h as any).__doing ?? '—', inLine: w.line, by: h.downBy ?? '—', off: +flat(w.p, home.get(h) ?? w.p).toFixed(1) };
           out.kills.push(k); if (w.line) losses.push({ t, at: w.p });

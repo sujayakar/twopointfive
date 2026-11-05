@@ -193,7 +193,7 @@ interface State { trail: Crumb[]; off: number; t: number; men: WeakMap<Guard, Ma
 const states = new SideMap<Game, State>('sneak.states');
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const DEG = Math.PI / 180;
-const note = (g: Game, gd: Guard, what: string) => { SNEAK_LOG.push({ t: g.time, who: gd.callsign, what, at: [gd.char.pos[0], gd.char.pos[2]] }); if (SNEAK_LOG.length > 300) SNEAK_LOG.splice(0, 100); };
+const note = (g: Game, gd: Guard, what: string) => { SNEAK_LOG.push({ t: g.time, who: gd.callsign, what, at: [gd.char.posX, gd.char.posZ] }); if (SNEAK_LOG.length > 300) SNEAK_LOG.splice(0, 100); };
 
 /** the sneak is live for the squad this frame: the switch, the silent order standing and unbroken, Sam on his feet, and no defender hunting (one read a frame) */
 const liveAt = new SideMap<Game, { t: number; v: boolean }>('sneak.liveAt');
@@ -569,7 +569,7 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
             // swung to on its closer): he takes him to be looking still, for `memory` seconds — unless the light on it has gone, or he is past it
             const m = M.mem, a = Math.max(0, idx(m.a)), b = Math.min(T.length - 1, idx(m.b)), hc = m.h.char;
             let lit = false; for (let k = a; k <= b && !lit; k++) lit = litAt(g, T[k], true) >= K.litAt;
-            const sees = !g.col.segmentBlocked(gd.char.bones.head ?? [p[0], 1.0, p[2]], hc.bones.head ?? [hc.pos[0], 1.65, hc.pos[2]]);
+            const sees = !g.col.segmentBlocked(gd.char.bones.head ?? [p[0], 1.0, p[2]], hc.bones.head ?? [hc.posX, 1.65, hc.posZ]);
             if (g.time - m.t > K.memory || g.time < m.t || m.h.state === 'dead' || idx(m.b) < 0 || i >= a || sees || !lit) M.mem = null;
             else { mode = 'wait'; why = 'lit'; }
           }

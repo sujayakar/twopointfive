@@ -58,10 +58,10 @@ export async function standfireCheck(): Promise<boolean> {
       WALLCHARGE.outer = true; WALLCHARGE.safe = true; WALLCHARGE.outOfFire = false;   // (after the stand-up: the frozen stand holds them off)
       const why = await quiet(async () => startFromQuery(g, '?levelFile=pass.json&roomclear&squad4').why); if (why) throw new Error(`start refused — ${why}`);
       const step = (secs: number) => { for (let i = 0; i < Math.round(secs * 60); i++) W.step(1 / 60); };
-      const put = (gd: any, p: number[]) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
+      const put = (gd: any, p: number[]) => { gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.path = []; gd.pathGoal = null; gd.speed = 0; };
       const O = g.orders, C = g.wallCharge; if (C.carried !== null) C.setCarried(2);   // (the shipped stand's kit: a wall charge is carried or there is none)
       const fog = g.fogOfWar, foes: any[] = g.guards.filter((h: any) => h.team === 'hostile');
-      for (const h of foes) put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
+      for (const h of foes) put(h, [h.char.posX + 400, 0, h.char.posZ]);
       const men: any[] = O.men('all'), one = men.find(m => m.callsign === 'Red One'); if (one) killGuard(g, one, [1, 0, 0], true);
       for (const m of men) if (MEN[m.callsign]) put(m, MEN[m.callsign]);
       g.teleportPlayer(SAM); step(0.5); for (const m of men) if (MEN[m.callsign]) put(m, MEN[m.callsign]);
@@ -69,7 +69,7 @@ export async function standfireCheck(): Promise<boolean> {
       /** what the team knows: the fog on, and of the living enemies only these — each last seen `age` s ago at his place (he stands 400 m off) */
       const know = (list: [Vec3, number][]) => { fog.on = true; for (const h of foes) fog.recs.delete(h);
         list.forEach(([p, age], i) => fog.recs.set(foes[i], { seen: false, t: g.time - age, at: [p[0], 0, p[2]], body: false, smoked: false, smokeF: -1e9 })); };
-      const sam = (p: Vec3) => { g.player.char.pos[0] = p[0]; g.player.char.pos[2] = p[2]; };
+      const sam = (p: Vec3) => { g.player.char.posX = p[0]; g.player.char.posZ = p[2]; };
       /** the three marks the stand-off search deals, the rule on or off */
       const deal = (on: boolean): Vec3[] | null => { WALLCHARGE.outOfFire = on; try { return C.safePosts(Wl, 3, spot); } finally { WALLCHARGE.outOfFire = false; } };
       const fire = (q: Vec3): number => C.fireAt(q, Wl), words = (P: Vec3[] | null) => P ? P.map(q => `${at(q)} fire ${fire(q)}`).join(' · ') : 'none';

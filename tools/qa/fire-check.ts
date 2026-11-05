@@ -371,7 +371,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           const bx = g.engine.world.statics[t.boxes[0]], at: [number, number, number] = [bx.c[0], bx.c[1] * 0.5, bx.c[2]]; let spot: number[] | null = null;   // (the middle of the drum, under the lid)
           for (let k = 0; k < 48 && !spot; k++) { const a = k / 48 * Math.PI * 2, q = [at[0] + Math.sin(a) * 3, 0, at[2] + Math.cos(a) * 3], e = [q[0], 1.35, q[2]], d = [at[0] - e[0], at[1] - e[1], at[2] - e[2]], n = Math.hypot(d[0], d[1], d[2]);
             const h = g.col.raycast(e, [d[0] / n, d[1] / n, d[2] / n], 60); if (!h || h.t < n - 0.45) continue;   // (clear to the drum: the fire's own box is its lid, the drum is the level's)
-            g.teleportPlayer(q); A.step(4); g.player.aim?.clear?.(); if (Math.hypot(c.pos[0] - q[0], c.pos[2] - q[2]) < 0.1) spot = q; }
+            g.teleportPlayer(q); A.step(4); g.player.aim?.clear?.(); if (Math.hypot(c.posX - q[0], c.posZ - q[2]) < 0.1) spot = q; }
           if (!spot) return { spot: false, on: 0, off: 0, lit: !t.broken };
           const one = (rule: boolean) => { AIMCOST.lamp = rule; const m0 = log.length; for (let i = 0; i < 3; i++) { A.W.cursorAt(at); A.step(1); } fireWeapon(g, c, at, true, { spread: 0 }); A.step(30); return log.slice(m0).filter(x => x.name === 'fireCrack' && x.opts?.rate === 0.7).length; };
           try { const on = one(true), off = one(false); return { spot: true, on, off, lit: !t.broken && (g.engine.fires ?? []).length === 1 }; } finally { AIMCOST.lamp = lamp0; }

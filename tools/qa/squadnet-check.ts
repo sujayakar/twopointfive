@@ -109,9 +109,9 @@ export async function squadnetWhy(): Promise<boolean> {
     // 2. an enemy the team has in sight inside (a staged sight, as autopilot-check stages it)
     { const foe = g.guards.find((o: any) => o.state !== 'dead' && o.team !== 'operative' && o.team !== 'civilian' && o.team !== 'player'); let seen = '', inRoom = false, why = '';
       if (foe) { const Fg = g.fogOfWar, seen0 = Fg.seen, was = [...foe.char.pos], on0 = Fg.on, c = D.frameCentre, th = D.def.closedDir, k = -tm.side * 1.5;
-        foe.char.pos[0] = c[0] - Math.sin(th) * k; foe.char.pos[2] = c[2] + Math.cos(th) * k; inRoom = g.cleared.roomAt(foe.char.pos) === far; Fg.on = true; Fg.seen = (o: any) => o === foe || seen0.call(Fg, o);
+        foe.char.posX = c[0] - Math.sin(th) * k; foe.char.posZ = c[2] + Math.cos(th) * k; inRoom = g.cleared.roomAt(foe.char.pos) === far; Fg.on = true; Fg.seen = (o: any) => o === foe || seen0.call(Fg, o);
         T.bangs = 1; seen = R.hudQ(at); why = autoEntries(g, tm).why;
-        Fg.seen = seen0; Fg.on = on0; foe.char.pos[0] = was[0]; foe.char.pos[1] = was[1]; foe.char.pos[2] = was[2]; }
+        Fg.seen = seen0; Fg.on = on0; foe.char.posX = was[0]; foe.char.posY = was[1]; foe.char.posZ = was[2]; }
       F.verdict(!!foe && inRoom && why === 'contact' && /bang and clear/.test(seen) && tail(seen) === 'they see one inside', 'an enemy in sight inside: the last stun goes, and the row says they see one', `staged ${!!foe}${inRoom ? '' : ' (NOT in the room)'} · why ${why} · "${seen}"`); }
     // 3. a plain open says nothing more: a silent squad
     { T.bangs = 3; SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); const silent = SIL.squadSilent(g), quiet = R.hudQ(at), w = whyWords(autoPick(g, O.targetAt(at), false))?.row ?? null; SIL.setSilent(g, false); R.step(2);
@@ -199,14 +199,14 @@ export async function squadnetNet(): Promise<boolean> {
     const view = (on: boolean) => { g.viewProj = on ? [0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, -0.5 * pl[0], -0.5 * pl[2], 0, 1] : vp0; };
     const clicks = () => R.play.filter((p: any) => p.name === 'radio' && p.rate === SQUADNET.clickRate && Math.abs(p.gain - SQUADNET.click) < 1e-6).length;
     const was = [...mate.char.pos], head0 = mate.char.bones.head ? [...mate.char.bones.head] : null;
-    const put = (p: number[]) => { mate.char.pos[0] = p[0]; mate.char.pos[2] = p[2]; if (mate.char.bones.head) { mate.char.bones.head[0] = p[0]; mate.char.bones.head[2] = p[2]; } };
+    const put = (p: number[]) => { mate.char.posX = p[0]; mate.char.posZ = p[2]; if (mate.char.bones.head) { mate.char.bones.head[0] = p[0]; mate.char.bones.head[2] = p[2]; } };
     view(true);
     // 1. his head off the screen: the line clicks, once a frame
     put([pl[0] + 30, 0, pl[2]]); const l0 = N.stats.lines, c0 = clicks(); g.say(mate, 'stacked up.'); g.say(mate, 'moving.'); const due = N.stats.lines - l0; N.tick(); const far = clicks() - c0;
     // 2. on the screen: nothing
     put([pl[0] + 0.5, 0, pl[2] + 0.5]); const l1 = N.stats.lines, c1 = clicks(); g.say(mate, 'on it.'); N.tick(); const nearL = N.stats.lines - l1, nearC = clicks() - c1;
     // 3. a defender off the screen: nothing
-    let foeL = -1, foeC = -1; if (foe) { const fw = [...foe.char.pos]; foe.char.pos[0] = pl[0] + 30; if (foe.char.bones.head) foe.char.bones.head[0] = pl[0] + 30; const l2 = N.stats.lines, c2 = clicks(); g.say(foe, 'who\'s there?', false, true); N.tick(); foeL = N.stats.lines - l2; foeC = clicks() - c2; foe.char.pos[0] = fw[0]; }
+    let foeL = -1, foeC = -1; if (foe) { const fw = [...foe.char.pos]; foe.char.posX = pl[0] + 30; if (foe.char.bones.head) foe.char.bones.head[0] = pl[0] + 30; const l2 = N.stats.lines, c2 = clicks(); g.say(foe, 'who\'s there?', false, true); N.tick(); foeL = N.stats.lines - l2; foeC = clicks() - c2; foe.char.posX = fw[0]; }
     put(was); if (head0 && mate.char.bones.head) { mate.char.bones.head[0] = head0[0]; mate.char.bones.head[2] = head0[2]; } view(false);
     F.verdict(due === 2 && far === 1 && nearL === 0 && nearC === 0 && foeL === 0 && foeC === 0, 'a teammate\'s line with his head off the screen clicks once; one on the screen and a defender\'s do not',
       `off the screen: ${due} lines, ${far} click · on it: ${nearL} lines, ${nearC} clicks · a defender off it: ${foeL} lines, ${foeC} clicks`);

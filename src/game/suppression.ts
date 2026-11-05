@@ -238,7 +238,7 @@ export function headDown(g: Game, gd: Guard, dt: number): 'none' | 'down' | 'dis
     const threat = sup.src && g.time - sup.srcT < S.srcMemorySecs ? sup.src : gd.lastKnown;
     const p = threat ? coverFrom(g, gd, threat) : null;
     if (p) { sup.cover = p; sup.displacedAt = g.time; sup.displaces++; sup.pinnedT = 0; sup.downT = 0; sup.latched = false; gd.path = []; gd.pathGoal = null; gd.stallRef = null; supBark(g, gd, 'displace', true); SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} DISPLACES to (${p[0].toFixed(2)}, ${p[2].toFixed(2)}), ${v3.distXZ(p, gd.char.pos).toFixed(2)} m, threat at (${threat![0].toFixed(1)}, ${threat![2].toFixed(1)})`); return 'displace'; }
-    sup.pinnedT = S.displaceAfter - 1.5; SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} would displace: no cover found from (${gd.char.pos[0].toFixed(1)}, ${gd.char.pos[2].toFixed(1)}) — stays down, looks again in 1.5 s`);   // nowhere to go from here: stay down, look again shortly
+    sup.pinnedT = S.displaceAfter - 1.5; SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} would displace: no cover found from (${gd.char.posX.toFixed(1)}, ${gd.char.posZ.toFixed(1)}) — stays down, looks again in 1.5 s`);   // nowhere to go from here: stay down, look again shortly
   }
   return 'down';
 }
@@ -247,7 +247,7 @@ export function headDown(g: Game, gd: Guard, dt: number): 'none' | 'down' | 'dis
 export function endDisplace(g: Game, gd: Guard, why: string) {
   const sup = gd.sup; sup.cover = null; sup.coverUntil = g.time + SUPPRESSION.coverHold; sup.pinnedT = 0; sup.downT = 0; sup.latched = false;
   gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.fireCd = Math.max(gd.fireCd, SUPPRESSION.headDownDelay);
-  SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} shift over (${why}) at (${gd.char.pos[0].toFixed(2)}, ${gd.char.pos[2].toFixed(2)})`);
+  SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} shift over (${why}) at (${gd.char.posX.toFixed(2)}, ${gd.char.posZ.toFixed(2)})`);
 }
 /** may the plain fight close on Sam right now, or is he holding the cover he has just reached */
 export function holdingCover(g: Game, gd: Guard): boolean { return g.tune.suppression && g.time < gd.sup.coverUntil; }

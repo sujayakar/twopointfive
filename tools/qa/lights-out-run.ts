@@ -98,7 +98,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   const held = new Set<string>(), was = new Map<any, string>(), roused = new Set<string>(), alert = new Set<string>();
   const say = (s: string) => { lines.push(`${t.toFixed(1).padStart(6)}  ${s}`); if (trace) log(lines[lines.length - 1]); };
   class Stop extends Error { }
-  const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
+  const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.posX, c.posY + 1.6, c.posZ], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.posX, c.posY + 1.2, c.posZ];
   const pos = (): number[] => g.player.char.pos;
   const own = (id: number) => id === PLAYER_ID;
   // --moon: the moonlight the headless estimate leaves out (lightEstimateAt skips directional lights; the page's meter counts them), by pair-sneak.ts's rule:
@@ -178,7 +178,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   /** a calm man standing out a wait on his beat looks the way he stands (his head turns some): a place well behind his shoulders, more than a couple of
    *  strides off, is not in his line — what a player watching him from the gate reads off his back */
   const backTo = (gd: any, p: number[]): boolean => { if (gd.state !== 'patrol' || gd.task || !(gd.wait > 0.5)) return false;
-    const f = gd.char.forward(), dx = p[0] - gd.char.pos[0], dz = p[2] - gd.char.pos[2], L = Math.hypot(dx, dz) || 1; return L > 2.5 && (f[0] * dx + f[2] * dz) / L < -0.35; };
+    const f = gd.char.forward(), dx = p[0] - gd.char.posX, dz = p[2] - gd.char.posZ, L = Math.hypot(dx, dz) || 1; return L > 2.5 && (f[0] * dx + f[2] * dz) / L < -0.35; };
   const watchers = (pts: number[][], skip: any = null): any[] => g.guards.filter((gd: any) => gd.state !== 'dead' && gd.team !== 'operative' && gd !== skip && pts.some(p => {
     const d = flat(gd.char.pos, p); if (d > (litAt(p) > 0.12 ? 22 : 6) || backTo(gd, p)) return false;
     return !g.col.segmentBlocked(eyeOf(gd.char), [p[0], 1.2, p[2]]); }));
@@ -186,7 +186,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
    *  What a player gets by watching a patrol go round once; nothing the men do off their routes is foreseen */
   function ahead(gd: any, T: number): number[][] {
     const calm = gd.state === 'patrol' && !gd.task, R = gd.route, n = R?.points?.length ?? 0, v = calm ? 1.7 : 2.4, spots: number[][] = [];
-    let x = gd.char.pos[0], z = gd.char.pos[2], wp = gd.wp, wait = calm ? Math.max(0, gd.wait) : 0, guard = 0;
+    let x = gd.char.posX, z = gd.char.posZ, wp = gd.wp, wait = calm ? Math.max(0, gd.wait) : 0, guard = 0;
     const legs: number[][] = (gd.path ?? []).slice(gd.pathI ?? 0).map((q: number[]) => [q[0], q[2]]);
     const next = () => legs.push([R.points[wp][0], R.points[wp][2]]);
     if (calm && n > 1 && wait <= 0 && !legs.length) next();
@@ -276,7 +276,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
   /** the codebook, then out by the fire door and the east gate — begun when the man on the east strip is walking away up it */
   function takeAndLeave() {
     go(C.safeStand[0], C.safeStand[2], { near: 0.25 });
-    const E = eastMan(), away = () => !E || E.state === 'dead' || (E.state === 'patrol' && !E.task && !(E.wait > 0) && E.char.forward()[2] < -0.5 && E.char.pos[2] > 14.3 && E.char.pos[2] < 17.8);
+    const E = eastMan(), away = () => !E || E.state === 'dead' || (E.state === 'patrol' && !E.task && !(E.wait > 0) && E.char.forward()[2] < -0.5 && E.char.posZ > 14.3 && E.char.posZ < 17.8);
     const t0 = t; if (!until(away, 150)) { say(`  the east strip's man never walked away up it in 150 s (he is ${E?.state} at ${at(E.char.pos)}) — going anyway`); out.forced++; } else if (t - t0 > 1) say(`  waited ${(t - t0).toFixed(0)} s for the east strip's man to walk away`);
     if (!verb('objective', 'drive', C.safeFront)) throw new Stop(`no row at the strongbox (stage ${g.mission.stage})`);
     if (!until(() => g.mission.stage === 'exfil', 20)) throw new Stop(`the codebook was not taken (stage ${g.mission.stage})`);
@@ -318,7 +318,7 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
     press('KeyE', 20);
     go(C.cage[0], C.cage[2]); crouch(true);
     // … and until the man sent to the panel has walked back through the gap to his own side of the inner wall
-    const busy = () => g.guards.some((x: any) => x.team !== 'operative' && x.state !== 'dead' && (x.task || x.state !== 'patrol' || x.char.pos[0] < 17.5));
+    const busy = () => g.guards.some((x: any) => x.team !== 'operative' && x.state !== 'dead' && (x.task || x.state !== 'patrol' || x.char.posX < 17.5));
     step(240); const t0 = t; until(() => !busy(), 240); say(`  waited ${(t - t0 + 4).toFixed(0)} s in the cage: ${busy() ? 'the floor has NOT settled' : 'every man is back on his own side, on his beat'}`);
     if (toDoor) { toDoorSide(true); go(C.nookMouth[0], C.nookMouth[2]); }
   }
@@ -331,10 +331,10 @@ async function one(plan: Plan, seed: number, deal: number | null, trace: boolean
       panelShot(false); const N = northMan();
       go(C.gapWait[0], C.gapWait[2]); clear('gap in the inner wall', GAP, 240, null, 4.5);
       go(C.gapWest[0], C.gapWest[2]); go(C.gapEast[0], C.gapEast[2]); go(C.laneTop[0], C.laneTop[2]); crouch(true); go(19.3, 9.9);
-      const t0 = t; if (!until(() => N.state === 'patrol' && !N.task && N.wait > 9 && N.char.pos[2] > C.sentry[2] - 0.25, 90)) { say(`  the sentry never settled at his window in 90 s (${N.state} at ${at(N.char.pos)}) — going anyway`); out.forced++; }
+      const t0 = t; if (!until(() => N.state === 'patrol' && !N.task && N.wait > 9 && N.char.posZ > C.sentry[2] - 0.25, 90)) { say(`  the sentry never settled at his window in 90 s (${N.state} at ${at(N.char.pos)}) — going anyway`); out.forced++; }
       else say(`  waited ${(t - t0).toFixed(0)} s for the sentry to settle at his window (${N.wait.toFixed(0)} s of his look left)`);
-      go(N.char.pos[0], N.char.pos[2] - 0.85, { near: 0.12 });
-      if (!verb('guard', 'grab', [N.char.pos[0], 1.35, N.char.pos[2]])) throw new Stop(`no row to grab the sentry from ${at(pos())} (he is ${N.state} at ${at(N.char.pos)})`);
+      go(N.char.posX, N.char.posZ - 0.85, { near: 0.12 });
+      if (!verb('guard', 'grab', [N.char.posX, 1.35, N.char.posZ])) throw new Stop(`no row to grab the sentry from ${at(pos())} (he is ${N.state} at ${at(N.char.pos)})`);
       step(40); if (!verb('held', 'choke')) throw new Stop('no row to choke the held sentry');
       if (!until(() => N.state === 'dead', 15)) throw new Stop('the choke did not put the sentry out');
       say(`  the sentry is out cold at ${at(N.char.pos)}`); step(60);

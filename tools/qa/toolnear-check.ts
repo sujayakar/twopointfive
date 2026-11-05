@@ -52,7 +52,7 @@ async function play(scn: string, door: string, row: { id: string; hold?: boolean
   for (const lat of [1.1, 1.9, 2.7, 3.5, 0.4, -0.4, -1.1, -1.9]) for (const back of [2.4, 3.4, 4.4, 5.4]) { const p = pt(W / 2 + lat, back, side);
     if (!nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.1, p[2]], [gate[0], 1.1, gate[2]]) && !spots.some(s => flat(s, p) < 0.8)) spots.push(p); }
   if (spots.length < team.length + 1) { R.note = `no floor outside for the team (${spots.length} spots)`; return R; }
-  team.forEach((gd, i) => { const p = spots[i]; gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-F.nx * side, -F.nz * side); });
+  team.forEach((gd, i) => { const p = spots[i]; gd.char.posX = p[0]; gd.char.posZ = p[2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.bodyYaw = gd.char.aimYaw = Math.atan2(-F.nx * side, -F.nz * side); });
   await quiet(() => g.teleportPlayer(spots[team.length] as any)); await quiet(() => S.step(30));
   for (const k of Object.keys(HANDLE_STATS)) HANDLE_STATS[k] = 0;
   R.why = await quiet(() => O.give(row.id, O.targetAt(d.frameCentre), 'all')); const op = D.ops[0];

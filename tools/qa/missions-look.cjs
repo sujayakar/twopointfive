@@ -74,7 +74,7 @@ const tap = (page, sel) => page.locator(sel).first().evaluate(e => e.click());
     await tap(page, '#missions .mrow[data-mission="warehouse-four"]');
     await page.keyboard.press('KeyD'); const hard = await page.evaluate(STATE); await page.keyboard.press('KeyA'); const std = await page.evaluate(STATE);
     check(a === 1 && b === 2 && c === 1 && hard.hard && /difficulty=hard/.test(hard.href) && !std.hard && !/difficulty=hard/.test(std.href), 'real keys: S and ↓ move down, W up; D puts the defenders on hard (on the link too), A back', `highlight ${a} ${b} ${c} · ${hard.href} · ${std.href}`);
-    const still = await page.evaluate(() => ({ t: window.__game.time, x: window.__game.player.char.pos[0], z: window.__game.player.char.pos[2] }));
+    const still = await page.evaluate(() => ({ t: window.__game.time, x: window.__game.player.char.posX, z: window.__game.player.char.posZ }));
     await page.setViewportSize({ width: 640, height: 720 }); await page.waitForTimeout(400); const narrow = await page.evaluate(STATE); await shot(page, 'list-narrow'); await page.setViewportSize({ width: W, height: H }); await page.waitForTimeout(300);
     check(narrow.fits && narrow.go, 'at a 640 px window the card still fits (the list stacks over the sheet, the plan goes) and the Start button is whole on the sheet', `fits ${narrow.fits} · start button whole: ${narrow.go}`);
     const tabs = []; for (let i = 0; i < 6; i++) { await page.keyboard.press('Tab'); tabs.push(await page.evaluate(() => { const a = document.activeElement; return a?.closest('#missions') ? (a.textContent || '').trim().toLowerCase() : a?.closest('#menu') ? `MENU:${a.textContent}` : a === document.body ? 'page' : a?.tagName ?? 'none'; })); }

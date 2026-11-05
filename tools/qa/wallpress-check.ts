@@ -126,7 +126,7 @@ export async function wallPressCheck(): Promise<boolean> {
       // the hold itself, taken with Q, the pistol in hand (the walk-in take off: the file is the saves' business, not the take's)
       WALLSNAP.press = false; S.place(21, 10.6, 0, 'pistol'); S.tap('KeyQ'); S.step(90); const on = !!pl.wall && pl.wall.settle >= 1 && pl.holstered && pl.wall.drawn;
       const file = await save('on the wall'), inFile = !!file.wallHold?.hold; SS.SAVETIMELINE.holds = false; const plain = await save('the switch off'); SS.SAVETIMELINE.holds = true;
-      const walk = () => { const out: number[] = []; S.keys('KeyD'); for (let f = 0; f < 90; f++) { S.step(1); out.push(P().char.pos[0], P().char.pos[2], P().wall ? P().wall.u : -1); } S.keys('KeyS'); for (let f = 0; f < 60; f++) { S.step(1); out.push(P().char.pos[0], P().char.pos[2], P().wall ? 1 : 0); } S.keys(); S.step(40); return out; };
+      const walk = () => { const out: number[] = []; S.keys('KeyD'); for (let f = 0; f < 90; f++) { S.step(1); out.push(P().char.posX, P().char.posZ, P().wall ? P().wall.u : -1); } S.keys('KeyS'); for (let f = 0; f < 60; f++) { S.step(1); out.push(P().char.posX, P().char.posZ, P().wall ? 1 : 0); } S.keys(); S.step(40); return out; };
       const a = walk(), gunA = !P().holstered; await load(file); const back = !!P().wall && Math.abs(P().wall.n[2] - 1) < 0.01 && P().wall.settle >= 1; const b = walk(), gunB = !P().holstered, worst = worstOf(a, b);
       set(true); await load(latched); S.keys('KeyW'); const lb = hold(), retaken = la.includes(1) || lb.includes(1);
       const cut = JSON.parse(JSON.stringify(latched)); delete cut.wallHold; await load(cut); S.keys('KeyW'); const lc = hold(), cutRetaken = lc.includes(1); S.keys(); S.step(20);

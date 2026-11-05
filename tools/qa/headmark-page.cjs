@@ -47,9 +47,9 @@ const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftsha
     const { g, own, foes, give, step, yellow, shown } = window.__hm;
     const fog = g.fogOfWar, hid = fog.hidden; fog.hidden = () => false;   // (the reading only: a defender nobody on the team sees has no mark at all)
     // one defender stood two metres from Sam for the reading, so that one of them is on the screen whatever room they were dealt
-    const near = foes[0], was = near ? [...near.char.pos] : null, at = g.player.char.pos; if (near) { near.char.pos[0] = at[0] + 2; near.char.pos[2] = at[2]; near.char.vel[0] = near.char.vel[2] = 0; }
+    const near = foes[0], was = near ? [...near.char.pos] : null, at = g.player.char.pos; if (near) { near.char.posX = at[0] + 2; near.char.posZ = at[2]; near.char.velX = near.char.velZ = 0; }
     give(own, 0.92); give(foes, 0.2); step(3); const b = { yellow: yellow(), shown: shown() }; fog.hidden = hid;
-    if (near && was) { near.char.pos[0] = was[0]; near.char.pos[2] = was[2]; }
+    if (near && was) { near.char.posX = was[0]; near.char.posZ = was[2]; }
     return { b };
   });
   const R = { ...A, ...B };

@@ -101,7 +101,7 @@ export async function snowBreathCheck(o: { verbose?: boolean; fast?: boolean } =
       verdict(distinct >= out.length - 1 && gap > 30 && first.every(f => f >= 0), 'rhythm — no two start together', `the frame each man's first breath starts on: ${first.join(', ')} (${distinct} different, ${(gap * DT).toFixed(1)} s between the first and the last)`); }
     // ---- effort
     { const m = ops[0].char; const v0 = [...m.vel];
-      const run = fly(A, 600, { pre: () => { m.vel[0] = 4.5; m.vel[2] = 0; } }); m.vel[0] = v0[0]; m.vel[1] = v0[1]; m.vel[2] = v0[2];
+      const run = fly(A, 600, { pre: () => { m.velX = 4.5; m.velZ = 0; } }); m.velX = v0[0]; m.velY = v0[1]; m.velZ = v0[2];
       const rest = on.by(m.id), hard = run.by(m.id); const nr = breathsOf(rest), nh = breathsOf(hard); const late = hard[hard.length - 1]; const r0 = rest[0]?.opts ?? { steam: 0, size: 0 };
       const others = out.filter(c => c !== m).every(c => run.by(c.id).map(key).join('|') === on.by(c.id).map(key).join('|'));
       verdict(nh >= nr + 2 && !!late && nr > 0 && late.opts.steam > r0.steam * 1.2 && late.opts.size > r0.size * 1.2 && late.opts.steam <= 1 && others,
@@ -112,7 +112,7 @@ export async function snowBreathCheck(o: { verbose?: boolean; fast?: boolean } =
     // ---- who (last on this game: it kills a man)
     { const dead = ops[1], lying = ops[2], fogged = ops[3]; const fog = g.fogOfWar as any;
       const keep = { state: dead.state, alive: dead.char.alive, y: lying.char.bones.head[1] };
-      dead.state = 'dead'; dead.char.alive = false; lying.char.bones.head[1] = lying.char.pos[1] + 0.25;
+      dead.state = 'dead'; dead.char.alive = false; lying.char.bones.head[1] = lying.char.posY + 0.25;
       fog.hidden = (gd: any) => gd === fogged;   // (every other man bared: the defenders indoors are then kept out by their roof alone)
       const w = fly(A, 600);
       delete fog.hidden; dead.state = keep.state; dead.char.alive = keep.alive; lying.char.bones.head[1] = keep.y;
