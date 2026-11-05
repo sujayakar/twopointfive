@@ -126,16 +126,32 @@ const cellOut: Cell = { f1: 0, f2: 0, id: 0, dx: 0, dy: 0 };
 /** the nearest two feature points of a jittered `p` × `p` lattice: distances in CELLS, the nearest one's hash and the offset to it (cells) */
 function cells(u: number, v: number, p: number, seed: number, jitter = 0.85): Cell { return cells2(u, v, p, p, seed, jitter); }
 /** the same on a `p` × `q` lattice (a cell wider than tall when p < q) */
-function cells2(u: number, v: number, p: number, q: number, seed: number, jitter = 0.85): Cell {
-  const x = u * p, y = v * q, ix = Math.floor(x), iy = Math.floor(y);
-  let f1 = 9, f2 = 9, id = 0, bx = 0, by = 0;
-  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-    const cx = wrap(ix + i, p), cy = wrap(iy + j, q);
-    const px = ix + i + 0.5 + (hash(cx, cy, seed) - 0.5) * jitter, py = iy + j + 0.5 + (hash(cx, cy, seed + 1) - 0.5) * jitter;
-    const dx = px - x, dy = py - y, d = Math.hypot(dx, dy);
-    if (d < f1) { f2 = f1; f1 = d; id = hash(cx, cy, seed + 2); bx = dx; by = dy; } else if (d < f2) f2 = d;
+export function cells2(u: number, v: number, p: number, q: number, seed: number, jitter = 0.85): Cell {
+  const x = u * p, y = v * q, ix = Math.floor(x), iy = Math.floor(y), T = cellTable(p, q, seed, jitter);
+  let d1 = 99, d2 = 99, id = 0, bx = 0, by = 0, sx = 0, sy = 0;
+  for (let j = -1; j <= 1; j++) {
+    const row = wrap(iy + j, q) * p;
+    for (let i = -1; i <= 1; i++) {
+      const o = (row + wrap(ix + i, p)) * 3;
+      const px = ix + i + 0.5 + T[o], py = iy + j + 0.5 + T[o + 1];
+      const dx = px - x, dy = py - y, d = dx * dx + dy * dy;
+      if (d < d1) { d2 = d1; sx = bx; sy = by; d1 = d; id = T[o + 2]; bx = dx; by = dy; } else if (d < d2) { d2 = d; sx = dx; sy = dy; }
+    }
   }
-  cellOut.f1 = f1; cellOut.f2 = f2; cellOut.id = id; cellOut.dx = bx; cellOut.dy = by; return cellOut;
+  cellOut.f1 = Math.hypot(bx, by); cellOut.f2 = Math.hypot(sx, sy); cellOut.id = id; cellOut.dx = bx; cellOut.dy = by; return cellOut;
+}
+/** A LATTICE'S FEATURE POINTS, WORKED OUT ONCE. A texel asks its nine neighbouring cells where their points lie, and a cell is asked by every texel near
+ *  it: three hashes a cell a texel was most of what a layer cost. Here a lattice (its size, its seed, its jitter) hashes each cell once: two offsets and an id.
+ *  The few lattices one material asks for are found by looking down a short list; the list is emptied as a layer starts and as it ends (lookLayerSteps):
+ *  a table found is always the right one (its key is all it is made from), so two layers made in turns only make each other's again.
+ *  Only the two nearest points' distances are rooted: the nine are told apart by their squares (tools/qa/lookcells-check.ts holds this to the plain way). */
+const cellTables: { p: number; q: number; seed: number; jitter: number; t: Float64Array }[] = [];
+function cellTable(p: number, q: number, seed: number, jitter: number): Float64Array {
+  for (let k = 0; k < cellTables.length; k++) { const c = cellTables[k]; if (c.p === p && c.q === q && c.seed === seed && c.jitter === jitter) return c.t; }
+  if (!(Number.isInteger(p) && Number.isInteger(q) && p > 0 && q > 0 && Number.isFinite(seed) && Number.isFinite(jitter))) throw new Error(`look map: a lattice of ${p} by ${q} cells, seed ${seed}, jitter ${jitter} (whole cells and finite numbers only)`);
+  const t = new Float64Array(p * q * 3);
+  for (let cy = 0, o = 0; cy < q; cy++) for (let cx = 0; cx < p; cx++, o += 3) { t[o] = (hash(cx, cy, seed) - 0.5) * jitter; t[o + 1] = (hash(cx, cy, seed + 1) - 0.5) * jitter; t[o + 2] = hash(cx, cy, seed + 2); }
+  cellTables.push({ p, q, seed, jitter, t }); return t;
 }
 
 /** one texel as a material writes it: height (m), paint multiplier, roughness */
@@ -708,6 +724,7 @@ function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<voi
   const mat = MATS[layer], H = new Float32Array(N * N), a = new Uint8Array(N * N * 4), b = new Uint8Array(N * N * 4), R = new Float32Array(N * N), P = new Float32Array(N * N * 3);
   const t: Tex = { h: 0, r: 1, g: 1, b: 1, rough: 1 };
   let lo = 1e9, hi = -1e9, sum = 0;
+  cellTables.length = 0;   // (the last layer's lattices are not this one's)
   for (let y = 0; y < N; y++) { if (y) yield; for (let x = 0; x < N; x++) {
     t.h = 0; t.r = t.g = t.b = 1; t.rough = LOOK_ROUGH[layer];
     mat((x + 0.5) / N, (y + 0.5) / N, t);
@@ -734,6 +751,7 @@ function* lookLayerSteps(layer: number, N: number, even: boolean): Generator<voi
     b[i * 4] = Math.round(255 * (0.5 - 0.5 * sx * il)); b[i * 4 + 1] = Math.round(255 * (0.5 - 0.5 * sy * il));
     b[i * 4 + 2] = Math.round(255 * clamp01(R[i])); b[i * 4 + 3] = Math.round(255 * clamp01(0.5 * open[i] + hollow));
   }
+  cellTables.length = 0;
   return { a, b, tone, hollow };
 }
 /** the next mip of one map (a 2 × 2 mean; for B the normal is left SHORT where its four texels disagree, and that shortfall is put into the roughness: relief too fine
