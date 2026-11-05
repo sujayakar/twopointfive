@@ -25,7 +25,7 @@ const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails
 console.log(`who has this man · profile ${process.env.TPS_PROFILE ?? 'frozen'}${BREAK ? ' · OWNER_BREAK=1 (the red path)' : ''}`);
 
 /** the ownership questions (owner-questions.md) that have become reads of the record */
-const GONE = ['runnerOwns', 'moraleOwns', 'netQuietHolds', 'netFeedHolds'];
+const GONE = ['runnerOwns', 'moraleOwns', 'netQuietHolds', 'netFeedHolds', 'laneHolds', 'laneWarns'];
 /** the switches the shipped game leaves down, up: what the runs cannot show otherwise */
 const ALL_ON = { LASTSTAND: { regroup: true }, BUDDY: { on: true }, PRESSURE: { on: true }, DIGIN: { on: true } };
 

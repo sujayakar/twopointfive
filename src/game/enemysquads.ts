@@ -62,7 +62,7 @@ import { chronRadio } from './chronicle';
 import { cueClass } from './cues';
 import { inBounds, order, endGuardScript } from './squad';
 import { PRESSURE, run, loose, boots } from './pressure';
-import { laneHolds, laneWarns } from './lanes';
+import { laneBars, laneKnownAt } from './lanes';
 import { digInPhase } from './digin';
 import { lastStandMan } from './laststand';
 import { wayName } from './dialogue';
@@ -806,7 +806,7 @@ function lookOut(g: Game, st: State) {
   if (g.fight.defs.some(D => alive(D.gd) && D.mode === 'free')) return;   // (a man is out on a hunt of his own: his look is the look)
   const R = g.fight.roomAt(W.at);
   if (R && g.fight.defs.some(D => alive(D.gd) && D.mode === 'hold' && D.room === R)) return;   // (a man of theirs holds the room that word is of: he is looking at it)
-  const may = (D: Def) => { const ph = digInPhase(g, D.gd); return (ph === 'idle' || ph === 'set') && !laneHolds(g, D.gd, W.at) && !laneWarns(g, D.gd, W.at); };   // (not a man on his way to cover or wedging a door; not one who knows a covered lane lies that way)
+  const may = (D: Def) => { const ph = digInPhase(g, D.gd); return (ph === 'idle' || ph === 'set') && !laneBars(g, D.gd, W.at) && !laneKnownAt(g, D.gd, W.at); };   // (not a man on his way to cover or wedging a door; not one who knows a covered lane lies that way)
   let best: { Q: Squad; go: Def[]; d: number } | null = null;
   for (const Q of st.squads) {
     if (Q.state === 'down' || (Q.def.mayLeave === false && !K.sweepStayers)) continue;
