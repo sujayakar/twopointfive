@@ -336,7 +336,7 @@ export class LightingPasses implements CutSwappable {
   /** post look: bloom strength (fraction of the blurred frame added back) and AgX look saturation */
   bloom = 0.06; saturation = 1.15; grain = 0.022; nvPhosphor = 0.09;
   /** THE LOOK PROTOTYPE's grading rows (post.wgsl agx; the engine writes them from frame.ts lookConfig each frame): × the look's saturation, the contrast (1 = as it is), and what is added to the highlights' and the shadows' stops (0 = nothing) */
-  gradeSat = 1; gradeC = 1; gradeH = 0; gradeS = 0; gradeP = 0.606; gradeD = 0; gradeW = 0.86; gradeSl = 0.75; gradeCs = 1; gradeKn = 0.8; gradeSu = 1.15; gradeToe = 3; gradeHi = 0.3;   // (gradeD…: the day's curve, post.wgsl dayCurve; the engine writes them from render/lookgrade.ts each frame, 0 = not run)
+  gradeSat = 1; gradeC = 1; gradeH = 0; gradeS = 0; gradeP = 0.606; gradeD = 0; gradeW = 0; gradeSl = 0; gradeCs = 0; gradeKn = 0; gradeSu = 0; gradeToe = 0; gradeHi = 0;   // (gradeD…: the day's curve, post.wgsl dayCurve. The engine writes all of them from render/lookgrade.ts LOOK_DAY in any frame gradeD is over 0; at 0 the curve is not run and none is read, so none is said a second time here)
     // (gradeP: the stop the contrast turns about, 0‥1 of the tone map's range; 0.606 = middle grey)
   /** the goggles' dark eyepiece edge over the picture: 0 = none (the default: it hid too much of the screen), 1 = the oval as it was (`?nvoval=1`, or the Look panel's row) */
   nvOval = 0;
@@ -1817,7 +1817,7 @@ export class LightingPasses implements CutSwappable {
       p.dispatchWorkgroups(Math.ceil(this.ow / 8), Math.ceil(this.oh / 8)); p.end();
     }
     {
-      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation * this.gradeSat; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; d[8] = this.nvOval; d[9] = this.gradeC; d[10] = this.gradeH; d[11] = this.gradeS; d[12] = this.gradeP; d[13] = Math.max(0, Math.min(1, this.smokeDiffuseKeep)); d[14] = this.gradeD; d[15] = this.gradeW; d[16] = this.gradeSl; d[17] = this.gradeCs; d[18] = Math.min(0.99, this.gradeKn); d[19] = this.gradeSu; d[20] = this.gradeToe; d[21] = this.gradeHi; writeWordsIfChanged(this.device, this.postParams, 0, this.postBits, this.postSent); }
+      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation * this.gradeSat; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; d[8] = this.nvOval; d[9] = this.gradeC; d[10] = this.gradeH; d[11] = this.gradeS; d[12] = this.gradeP; d[13] = Math.max(0, Math.min(1, this.smokeDiffuseKeep)); d[14] = this.gradeD; d[15] = this.gradeW; d[16] = this.gradeSl; d[17] = this.gradeCs; d[18] = Number.isFinite(this.gradeKn) ? Math.min(0.98, Math.max(0.05, this.gradeKn)) : 0.8; d[19] = this.gradeSu; d[20] = this.gradeToe; d[21] = this.gradeHi; d[22] = this.gradeSat; writeWordsIfChanged(this.device, this.postParams, 0, this.postBits, this.postSent); }
       this.grainSeed = (this.grainSeed + 1) % 4096; this.writeFxaaParams();   // grain animates per frame and is applied after FXAA / the sharpen
       const p = enc.beginComputePass({ label: 'bloom', timestampWrites: ts('bloom') });
       p.setBindGroup(0, sceneBG);

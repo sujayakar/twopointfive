@@ -2,7 +2,7 @@
 // dither → LDR. Debug views that are not scene-referred (albedo, normals, depth, hints) pass straight through.
 @group(1) @binding(0) var hdrTex: texture_2d<f32>;
 @group(1) @binding(1) var bloomTex: texture_2d<f32>;     // half-res, top of the upsampled chain
-struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32, gradeC: f32, gradeH: f32, gradeS: f32, gradeP: f32, smokeKeep: f32, gradeD: f32, gradeW: f32, gradeSl: f32, gradeCs: f32, gradeKn: f32, gradeSu: f32, gradeToe: f32, gradeHi: f32 };   // gradeD…: THE DAY'S CURVE (dayCurve below; render/lookgrade.ts LOOK_DAY, lookDay): how far it stands in for the night's curve (0 = not run), the stop of its white, its slope for brightness and for colour, its knee, its slope under the toe, the toe in stops under the white, and how far the bright end goes channel by channel   // smokeKeep: the smoke lab's row, how much of a plume's own light is kept out of the diffusion's blur (0 = the mix as it was; passes.smokeDiffuseKeep)     // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
+struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32, gradeC: f32, gradeH: f32, gradeS: f32, gradeP: f32, smokeKeep: f32, gradeD: f32, gradeW: f32, gradeSl: f32, gradeCs: f32, gradeKn: f32, gradeSu: f32, gradeToe: f32, gradeHi: f32, gradeSr: f32 };   // gradeD…: THE DAY'S CURVE (dayCurve below; render/lookgrade.ts LOOK_DAY, lookDay): how far it stands in for the night's curve (0 = not run), the stop of its white, its slope for brightness and for colour, its knee, its slope under the toe, the toe in stops under the white, how far the bright end goes channel by channel, and the Colour row alone (the saturation the day's curve is given: the night curve's own 1.15 is not its)   // smokeKeep: the smoke lab's row, how much of a plume's own light is kept out of the diffusion's blur (0 = the mix as it was; passes.smokeDiffuseKeep)     // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
 @group(1) @binding(2) var<uniform> post: PostParams;
 @group(1) @binding(3) var volTexP: texture_2d<f32>;    // the volumetric pass's react texture at half the internal size — .g = the SMOKE-ONLY transmittance of the pixel's ray (haze excluded: a far wall in clear air stays sharp)
 @group(1) @binding(4) var blur1Tex: texture_2d<f32>;   // this frame plainly box-downsampled to a quarter size then Gaussian-blurred there (passes.diffBlur[1]: energy-conserving, band-limited — its texel lattice cannot print through a bilinear read)
@@ -39,7 +39,7 @@ fn dayCurve(v: vec3f) -> vec3f {
   let c = post.gradeCs - (post.gradeCs - post.gradeSl) * post.gradeHi * smoothstep(-1.5, 0.0, d);   // (… and in the last stop and a half under the white a share of the colour goes channel by channel, as film does: sunlit snow is white and not the sky's blue)
   let x = exp2(b + (v - g) * 16.5 * c);
   let k = post.gradeKn;
-  let y = select(k + (1.0 - k) * (1.0 - exp(-(x - k) / (1.0 - k))), x, x < vec3f(k));
+  let y = select(k + (1.0 - k) * (1.0 - exp(-max(x - k, vec3f(0.0)) / (1.0 - k))), x, x < vec3f(k));   // (max: the lane select() throws away must not overflow under the knee)
   return pow(clamp(y, vec3f(0.0), vec3f(1.0)), vec3f(1.0 / 2.2));
 }
 fn agx(cin: vec3f) -> vec3f {
@@ -64,8 +64,13 @@ fn agx(cin: vec3f) -> vec3f {
   if (post.gradeD > 0.0) { v = mix(agxContrast(v), dayCurve(v), post.gradeD); } else { v = agxContrast(v); }   // (THE DAY'S CURVE by as much as the hour's light and the row say; 0 = the night's curve alone, and the day's is not run)
   // look: a touch of punch so mid-tones do not go flat/grey (slope 1, power 1.15, sat from params)
   let lum = dot(v, vec3f(0.2126, 0.7152, 0.0722));
-  v = pow(v, vec3f(1.15));
-  v = lum + post.saturation * (v - lum);
+  if (post.gradeD > 0.0) {   // THE PUNCH AND ITS SATURATION ARE THE NIGHT CURVE'S: they give back what its flat top takes out. Laid over the day's curve too they made its slopes 0.86 and 1.3 where the table says 0.75 and 1.15, and a paint's colour a third stronger than the paint (a review's find, by the sums; the white roof's orange field went to the screen's top). They stand down by as much as the day's curve stands in, and the Colour row alone is left
+    v = pow(v, vec3f(mix(1.15, 1.0, post.gradeD)));
+    v = lum + mix(post.saturation, post.gradeSr, post.gradeD) * (v - lum);
+  } else {
+    v = pow(v, vec3f(1.15));
+    v = lum + post.saturation * (v - lum);
+  }
   let outset = mat3x3f(vec3f(1.19687900512017, -0.0528968517574562, -0.0529716355144438),
                        vec3f(-0.0980208811401368, 1.15190312990417, -0.0980434501171241),
                        vec3f(-0.0990297440797205, -0.0989611768448433, 1.15107367264116));

@@ -624,7 +624,7 @@ export class Engine {
         // its blacks on the night's curve; the day's curve has them of itself, and the two together crush the shade twice. Row at 0: g is g0, untouched.
         const d = lookConfig.gradeDay > 0 ? lookDay(g0[1], lookConfig.gradeDay) : null, g: [number, number] = d && d[0] > 0 ? [1 + (g0[0] - 1) * (1 - d[0]), g0[1]] : g0;
         if (d && d[0] > 0) { P.gradeD = d[0]; P.gradeW = d[1]; P.gradeSl = LOOK_DAY.slope; P.gradeCs = LOOK_DAY.chroma; P.gradeKn = LOOK_DAY.knee; P.gradeSu = LOOK_DAY.under; P.gradeToe = LOOK_DAY.toe; P.gradeHi = LOOK_DAY.highs; }
-        P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
+        P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp, !!d && d[0] > 0); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)

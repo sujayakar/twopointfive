@@ -21,18 +21,18 @@ export function lookGrade(skyUp: number, skyE: number, lights: readonly { kind: 
   return [1 + (amount - 1) * day, Math.min(K.top, Math.max(K.grey, stop))];
 }
 /** THE DAY'S CURVE (the look panel's Day curve row; post.wgsl dayCurve; docs/agents/render.md has the why). The tone map's own curve spreads sixteen and a
- *  half stops over the screen, which a night needs, and its top is flat: by day everything pale and sunlit (ground of 0.25 to 0.85) lands in two fifths of a
- *  stop of screen, and the Contrast row's turn, made to give a day its blacks, sets whatever is under sunlit snow a third further down, so a shadow under a
- *  roof is fifteen times darker than the stone beside it and three times bluer than the sky that fills it. A camera's curve is nearly straight under its
+ *  half stops over the screen, which a night needs, and its top is flat: by day everything pale and sunlit (ground of 0.25 to 0.85, nearly two stops of
+ *  light) lands in under one stop of screen, and the Contrast row's turn, made to give a day its blacks, sets whatever is under sunlit snow a third further
+ *  down, so a shadow under a roof is fifteen times darker than the stone beside it and half as blue again as the sky that fills it. A camera's curve is nearly straight under its
  *  white: this is that. live: __look.day */
 export const LOOK_DAY = {
-  slope: 0.75,     // stops of screen a stop of the scene's BRIGHTNESS is given under the white (1 = as the light is; a print's 0.75 opens the shade) …
+  slope: 0.86,     // stops of screen a stop of the scene's BRIGHTNESS is given under the white (1 = as the light is; under 1 opens the shade) …
   toe: 3,          // … down to this many stops under the white (where a shadow on pale stone sits) …
-  under: 1.15,     // … and this under it, so black is black: a doorway's dark and the ground past the level's edge are not a grey veil (seen, with one slope all the way down)
+  under: 1.32,     // … and this under it, so black is black: a doorway's dark and the ground past the level's edge are not a grey veil (seen, with one slope all the way down)
   chroma: 1,       // a stop BETWEEN a colour's own channels (1 = a paint keeps its colour whatever the slope; = slope: each channel by itself, which greys a paint) …
   highs: 0.3,      // … but for this share in the last stop and a half under the white, which goes channel by channel as film does (snow in sun is white, not the sky's blue)
   knee: 0.8,       // of the screen's linear range: over it the curve rolls off toward white (a glint, a lamp's glass, the sky in a pane)
-  head: 0.25,      // stops over sunlit ground of LOOK_GRADE.albedo at which the screen is white: lying snow in full sun is shown at nine tenths
+  head: 0.26,      // stops over sunlit ground of LOOK_GRADE.albedo at which the screen is white: lying snow in full sun is shown at nine tenths
   from: 0.74, full: 0.83,   // the curve comes in as that sunlit ground climbs through this span of the night curve's range: none of it at dusk (0.71 there) or dawn, all of it at a clear midday (0.85), part on a grey day
 };
 /** [how far the day's curve stands in for the night's (0‥1), the stop of its white (0‥1 of the tone map's range)] for the stop sunlit ground sits on this
@@ -45,7 +45,7 @@ export function lookDay(stop: number, amount: number): [number, number] {
  *  before the exposure (the composite's own units). THE DAY'S CONTRAST IS THE OPEN AIR'S: the shade row and Sam's eye bring a room up to a level the picture
  *  can show, and a turn about sunlit ground would push it back down by a third of its distance under the snow. So the one exposure model tones a place
  *  as the open air is and only then shows it as much darker as it is to be (place_common.wgsl lookExpoFor's line on gradeCfg.x), and a room is shown as
- *  it was with the row at 1. */
-export function lookGradeFrame(g: readonly [number, number], exposure: number): [number, number, number, number] | null {
-  return g[0] > 1 && exposure > 0 ? [1 / g[0], Math.pow(2, g[1] * LOOK_GRADE.stops + LOOK_GRADE.minEv) / exposure, 0, 0] : null;
+ *  it was with the row at 1. (Under the day's curve a room is toned by that curve's own slopes and the model is told nothing of them: not looked at.) */
+export function lookGradeFrame(g: readonly [number, number], exposure: number, always = false): [number, number, number, number] | null {
+  return (g[0] > 1 || (always && g[0] >= 1)) && exposure > 0 ? [1 / g[0], Math.pow(2, g[1] * LOOK_GRADE.stops + LOOK_GRADE.minEv) / exposure, 0, 0] : null;   // (`always`: the day's curve is up. The turn it stood down may be exactly 1, and the model still wants y: the roll-off of a room it has brought up is about sunlit ground's brightness, place_common.wgsl lookRoll, which fell back to the sky's light alone when this handed nothing. x is then 1: nothing undone)
 }
